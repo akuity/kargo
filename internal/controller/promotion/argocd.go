@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"path"
+	"sort"
 	"strings"
 
 	"github.com/gobwas/glob"
@@ -18,13 +19,22 @@ import (
 	"github.com/akuity/kargo/internal/logging"
 )
 
-const authorizedStageAnnotationKey = "kargo.akuity.io/authorized-stage"
+const (
+	authorizedStageAnnotationKey = "kargo.akuity.io/authorized-stage"
+
+	applicationOperationInitiator = "kargo-controller"
+)
 
 // argoCDMechanism is an implementation of the Mechanism interface that updates
 // Argo CD Application resources.
 type argoCDMechanism struct {
 	argocdClient client.Client
 	// These behaviors are overridable for testing purposes:
+	mustPerformUpdateFn func(
+		ctx context.Context,
+		update kargoapi.ArgoCDAppUpdate,
+		newFreight kargoapi.FreightReference,
+	) (argocd.OperationPhase, bool, error)
 	doSingleUpdateFn func(
 		ctx context.Context,
 		stageMeta metav1.ObjectMeta,
@@ -55,6 +65,7 @@ func newArgoCDMechanism(argocdClient client.Client) Mechanism {
 	a := &argoCDMechanism{
 		argocdClient: argocdClient,
 	}
+	a.mustPerformUpdateFn = a.mustPerformUpdate
 	a.doSingleUpdateFn = a.doSingleUpdate
 	a.getArgoCDAppFn = getApplicationFn(argocdClient)
 	a.applyArgoCDSourceUpdateFn = applyArgoCDSourceUpdate
@@ -93,7 +104,38 @@ func (a *argoCDMechanism) Promote(
 	logger := logging.LoggerFromContext(ctx)
 	logger.Debug("executing Argo CD-based promotion mechanisms")
 
+	var updateResults = make([]argocd.OperationPhase, 0, len(updates))
 	for _, update := range updates {
+		// Check if the update needs to be performed and retrieve its phase.
+		phase, mustUpdate, err := a.mustPerformUpdateFn(ctx, update, newFreight)
+
+		// If we have a phase, append it to the results.
+		if phase != "" {
+			updateResults = append(updateResults, phase)
+		}
+
+		// If we don't need to perform an update, further processing depends on
+		// the phase and whether an error occurred.
+		if !mustUpdate {
+			if err != nil {
+				if phase == "" {
+					// If we do not have a phase, we cannot continue processing
+					// this update by waiting.
+					return nil, newFreight, err
+				}
+				// Log the error as a warning, but continue to the next update.
+				logger.Warn(err)
+			}
+			if phase.Failed() {
+				// If the update failed, we can short-circuit. This is
+				// effectively "fail fast" behavior.
+				break
+			}
+			// If we get here, we can continue to the next update.
+			continue
+		}
+
+		// Perform the update.
 		if err := a.doSingleUpdateFn(
 			ctx,
 			stage.ObjectMeta,
@@ -102,11 +144,99 @@ func (a *argoCDMechanism) Promote(
 		); err != nil {
 			return nil, newFreight, err
 		}
+		// As we have initiated an update, we should wait for it to complete.
+		updateResults = append(updateResults, argocd.OperationRunning)
+	}
+
+	aggregatedPhase := operationPhaseToPromotionPhase(updateResults...)
+	if aggregatedPhase == "" {
+		return nil, newFreight, fmt.Errorf(
+			"could not determine promotion phase from operation phases: %v",
+			updateResults,
+		)
 	}
 
 	logger.Debug("done executing Argo CD-based promotion mechanisms")
+	return promo.Status.WithPhase(aggregatedPhase), newFreight, nil
+}
 
-	return promo.Status.WithPhase(kargoapi.PromotionPhaseSucceeded), newFreight, nil
+func (a *argoCDMechanism) mustPerformUpdate(
+	ctx context.Context,
+	update kargoapi.ArgoCDAppUpdate,
+	newFreight kargoapi.FreightReference,
+) (phase argocd.OperationPhase, mustUpdate bool, err error) {
+	namespace := update.AppNamespace
+	if namespace == "" {
+		namespace = libargocd.Namespace()
+	}
+	app, err := a.getArgoCDAppFn(ctx, namespace, update.AppName)
+	if err != nil {
+		return "", false, fmt.Errorf(
+			"error finding Argo CD Application %q in namespace %q: %w",
+			update.AppName,
+			namespace,
+			err,
+		)
+	}
+	if app == nil {
+		return "", false, fmt.Errorf(
+			"unable to find Argo CD Application %q in namespace %q: %w",
+			update.AppName,
+			namespace,
+			err,
+		)
+	}
+
+	status := app.Status.OperationState
+	if status == nil {
+		// The application has no operation.
+		return "", true, nil
+	}
+
+	if status.Operation.InitiatedBy.Username != applicationOperationInitiator {
+		// The operation was not initiated by the expected user.
+		if !status.Phase.Completed() {
+			// We should wait for the operation to complete before attempting to
+			// apply an update ourselves.
+			// NB: We return the current phase here because we want the caller
+			//     to know that an operation is still running.
+			return status.Phase, false, fmt.Errorf(
+				"current operation was not initiated by %q and not by %q: waiting for operation to complete",
+				applicationOperationInitiator, status.Operation.InitiatedBy.Username,
+			)
+		}
+		// Initiate our own operation.
+		return "", true, nil
+	}
+
+	if !status.Phase.Completed() {
+		// The operation is still running.
+		return status.Phase, false, nil
+	}
+
+	// The operation has completed. Check if the desired revision was applied.
+	desiredRevision := libargocd.GetDesiredRevision(app, newFreight)
+	if desiredRevision == "" {
+		// We cannot determine the desired revision. Performing an update in this
+		// case wouldn't change anything. Instead, we should error out.
+		return "", false, errors.New("unable to determine desired revision")
+	}
+	if status.SyncResult == nil {
+		// We do not have a sync result, so we cannot determine if the operation
+		// was successful. The best recourse is to retry the operation.
+		return "", true, errors.New("operation completed without a sync result")
+	}
+	if status.SyncResult.Revision != desiredRevision {
+		// The operation did not result in the desired revision being applied.
+		// We should attempt to retry the operation.
+		return "", true, fmt.Errorf(
+			"operation result revision %q does not match desired revision %q",
+			status.SyncResult.Revision, desiredRevision,
+		)
+	}
+
+	// The operation has completed.
+	return status.Phase, false, nil
 }
 
 func (a *argoCDMechanism) doSingleUpdate(
@@ -178,7 +308,7 @@ func (a *argoCDMechanism) doSingleUpdate(
 		string(argocd.RefreshTypeHard)
 	app.Operation = &argocd.Operation{
 		InitiatedBy: argocd.OperationInitiator{
-			Username:  "kargo-controller",
+			Username:  applicationOperationInitiator,
 			Automated: true,
 		},
 		Info: []*argocd.Info{
@@ -459,4 +589,23 @@ func buildHelmParamChangesForArgoCDAppSource(
 		}
 	}
 	return changes
+}
+
+func operationPhaseToPromotionPhase(phases ...argocd.OperationPhase) kargoapi.PromotionPhase {
+	if len(phases) == 0 {
+		return ""
+	}
+
+	sort.Sort(libargocd.ByOperationPhase(phases))
+
+	switch phases[0] {
+	case argocd.OperationRunning, argocd.OperationTerminating:
+		return kargoapi.PromotionPhaseRunning
+	case argocd.OperationFailed, argocd.OperationError:
+		return kargoapi.PromotionPhaseFailed
+	case argocd.OperationSucceeded:
+		return kargoapi.PromotionPhaseSucceeded
+	default:
+		return ""
+	}
 }

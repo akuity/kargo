@@ -2,8 +2,11 @@ package promotions
 
 import (
 	"context"
+	"fmt"
 
 	log "github.com/sirupsen/logrus"
+	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -11,6 +14,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/kubeclient"
+	"github.com/akuity/kargo/internal/logging"
 )
 
 // EnqueueHighestPriorityPromotionHandler is an event handler that enqueues the next
@@ -139,5 +144,94 @@ func (e *EnqueueHighestPriorityPromotionHandler) enqueueNext(
 			"stage":     promo.Spec.Stage,
 		}).Debug("enqueued promo")
 		return
+	}
+}
+
+// UpdatedArgoCDAppHandler is an event handler that enqueues Promotions for
+// reconciliation when an associated ArgoCD Application is updated.
+type UpdatedArgoCDAppHandler struct {
+	kargoClient   client.Client
+	shardSelector labels.Selector
+}
+
+// Create implements EventHandler.
+func (u *UpdatedArgoCDAppHandler) Create(
+	context.Context,
+	event.CreateEvent,
+	workqueue.RateLimitingInterface,
+) {
+	// No-op
+}
+
+// Delete implements EventHandler.
+func (u *UpdatedArgoCDAppHandler) Delete(
+	context.Context,
+	event.DeleteEvent,
+	workqueue.RateLimitingInterface,
+) {
+	// No-op
+}
+
+// Generic implements EventHandler.
+func (u *UpdatedArgoCDAppHandler) Generic(
+	context.Context,
+	event.GenericEvent,
+	workqueue.RateLimitingInterface,
+) {
+	// No-op
+}
+
+// Update implements EventHandler.
+func (u *UpdatedArgoCDAppHandler) Update(
+	ctx context.Context,
+	e event.UpdateEvent,
+	wq workqueue.RateLimitingInterface,
+) {
+	logger := logging.LoggerFromContext(ctx)
+
+	if e.ObjectNew == nil || e.ObjectOld == nil {
+		logger.Errorf("Update event has no new or old object to update: %v", e)
+		return
+	}
+
+	promotions := &kargoapi.PromotionList{}
+	if err := u.kargoClient.List(
+		ctx,
+		promotions,
+		&client.ListOptions{
+			FieldSelector: fields.OneTermEqualSelector(
+				kubeclient.RunningPromotionsByArgoCDApplicationsIndexField,
+				fmt.Sprintf(
+					"%s:%s",
+					e.ObjectNew.GetNamespace(),
+					e.ObjectNew.GetName(),
+				),
+			),
+			LabelSelector: u.shardSelector,
+		},
+	); err != nil {
+		logger.Errorf(
+			"error listing Promotions for Application %q in namespace %q: %s",
+			e.ObjectNew.GetName(),
+			e.ObjectNew.GetNamespace(),
+			err,
+		)
+		return
+	}
+
+	for _, promotion := range promotions.Items {
+		wq.Add(
+			reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: promotion.Namespace,
+					Name:      promotion.Name,
+				},
+			},
+		)
+		logger.WithFields(log.Fields{
+			"namespace": promotion.Namespace,
+			"promotion": promotion.Name,
+			"app":       e.ObjectNew.GetName(),
+		}).Debug("enqueued Promotion for reconciliation")
 	}
 }

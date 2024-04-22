@@ -11,6 +11,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	libargocd "github.com/akuity/kargo/internal/argocd"
+	"github.com/akuity/kargo/internal/logging"
 )
 
 const (
@@ -23,6 +24,8 @@ const (
 	// indices are used by different components.
 	PromotionsByStageIndexField            = "stage"
 	NonTerminalPromotionsByStageIndexField = "stage"
+
+	RunningPromotionsByArgoCDApplicationsIndexField = "applications"
 
 	PromotionPoliciesByStageIndexField   = "stage"
 	StagesByAnalysisRunIndexField        = "analysisRun"
@@ -155,6 +158,83 @@ func indexPromotionsByStage(predicates ...func(*kargoapi.Promotion) bool) client
 			}
 		}
 		return []string{promo.Spec.Stage}
+	}
+}
+
+func IndexRunningPromotionsByArgoCDApplications(
+	ctx context.Context,
+	mgr ctrl.Manager,
+	shardName string,
+) error {
+	return mgr.GetFieldIndexer().IndexField(
+		ctx,
+		&kargoapi.Promotion{},
+		RunningPromotionsByArgoCDApplicationsIndexField,
+		indexRunningPromotionsByArgoCDApplications(ctx, mgr.GetClient(), shardName),
+	)
+}
+
+func indexRunningPromotionsByArgoCDApplications(
+	ctx context.Context,
+	c client.Client,
+	shardName string,
+) client.IndexerFunc {
+	logger := logging.LoggerFromContext(ctx)
+
+	return func(obj client.Object) []string {
+		// Return early if:
+		//
+		// 1. This is the default controller, but the object is labeled for a
+		//    specific shard.
+		//
+		// 2. This is a shard-specific controller, but the object is not labeled for
+		//    this shard.
+		objShardName, labeled := obj.GetLabels()[kargoapi.ShardLabelKey]
+		if (shardName == "" && labeled) || (shardName != "" && shardName != objShardName) {
+			return nil
+		}
+
+		promo, ok := obj.(*kargoapi.Promotion)
+		if !ok {
+			return nil
+		}
+
+		if promo.Status.Phase != kargoapi.PromotionPhaseRunning {
+			// We are only interested in running Promotions.
+			return nil
+		}
+
+		stage := kargoapi.Stage{}
+		if err := c.Get(
+			ctx,
+			client.ObjectKey{
+				Namespace: promo.Namespace,
+				Name:      promo.Spec.Stage,
+			},
+			&stage,
+		); err != nil {
+			err = fmt.Errorf("can not get Stage for running Promotion %q in namespace %q: %w",
+				promo.Name, promo.Namespace, err)
+			logger.Errorf("failed to index running Promotion by Argo CD Applications: %v", err)
+			return nil
+		}
+
+		if stage.Spec == nil || stage.Spec.PromotionMechanisms == nil ||
+			len(stage.Spec.PromotionMechanisms.ArgoCDAppUpdates) == 0 {
+			// If the Stage has no Argo CD Application promotion mechanisms,
+			// then we have nothing to index.
+			return nil
+		}
+
+		res := make([]string, len(stage.Spec.PromotionMechanisms.ArgoCDAppUpdates))
+		for i, appUpdate := range stage.Spec.PromotionMechanisms.ArgoCDAppUpdates {
+			namespace := appUpdate.AppNamespace
+			if namespace == "" {
+				namespace = libargocd.Namespace()
+			}
+			res[i] = fmt.Sprintf("%s:%s", namespace, appUpdate.AppName)
+		}
+		return res
 	}
 }
 

@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"path"
 	"slices"
 
 	"k8s.io/apimachinery/pkg/types"
@@ -12,7 +11,6 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
-	"github.com/akuity/kargo/internal/git"
 )
 
 // healthErrorConditions are the v1alpha1.ApplicationConditionType conditions
@@ -181,7 +179,7 @@ func (h *applicationHealth) GetApplicationHealth(
 	// is syncing to it. We do not further care about the cluster being in sync
 	// with the desired revision, as some applications may be out of sync by
 	// default.
-	if desiredRevision := getDesiredRevision(app, freight); desiredRevision != "" {
+	if desiredRevision := GetDesiredRevision(app, freight); desiredRevision != "" {
 		if healthState, err := stageHealthForAppSync(app, desiredRevision); err != nil {
 			return healthState, healthStatus, syncStatus, err
 		}
@@ -199,8 +197,6 @@ func stageHealthForAppSync(app *argocd.Application, revision string) (kargoapi.H
 	switch {
 	case revision == "":
 		return kargoapi.HealthStateHealthy, nil
-	// TODO(hidde): When https://github.com/akuity/kargo/pull/1753 is merged,
-	//  this can rely on the operation state from the Status.
 	case app.Operation != nil && app.Operation.Sync != nil:
 		err := fmt.Errorf(
 			"Argo CD Application %q in namespace %q is being synced",
@@ -257,33 +253,4 @@ func filterAppConditions(
 		}
 	}
 	return errs
-}
-
-// getDesiredRevision returns the desired revision for an Argo CD Application
-// based on the provided v1alpha1.FreightReference.
-// TODO(hidde): This function can be removed when
-//
-//	https://github.com/akuity/kargo/pull/1753 is merged.
-func getDesiredRevision(app *argocd.Application, freight kargoapi.FreightReference) string {
-	if app.Spec.Source.Chart == "" {
-		// This source points to a git repository
-		sourceGitRepoURL := git.NormalizeURL(app.Spec.Source.RepoURL)
-		for _, commit := range freight.Commits {
-			if git.NormalizeURL(commit.RepoURL) == sourceGitRepoURL {
-				if commit.HealthCheckCommit != "" {
-					return commit.HealthCheckCommit
-				}
-				return commit.ID
-			}
-		}
-	} else {
-		// This source points to a Helm chart
-		for _, chart := range freight.Charts {
-			// path.Join accounts for the possibility that chart.Name is empty
-			if path.Join(chart.RepoURL, chart.Name) == path.Join(app.Spec.Source.RepoURL, app.Spec.Source.Chart) {
-				return chart.Version
-			}
-		}
-	}
-	return ""
 }
