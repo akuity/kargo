@@ -12,6 +12,16 @@ const (
 	// AliasShortFlag is the short flag name for the alias flag.
 	AliasShortFlag = "a"
 
+	// AsKubernetesResourcesFlag is the flag name for the as-kubernetes-resources
+	// flag.
+	AsKubernetesResourcesFlag = "as-kubernetes-resources"
+	// AsKubernetesResourcesShortFlag is the short flag name for the
+	// as-kubernetes-resources flag.
+	AsKubernetesResourcesShortFlag = "k"
+
+	// EmailFlag is the flag name for the email flag.
+	EmailFlag = "email"
+
 	// FilenameFlag is the flag name for the filename flag.
 	FilenameFlag = "filename"
 	// FilenameShortFlag is the short flag name for the filename flag.
@@ -25,6 +35,9 @@ const (
 
 	// GitFlag is the flag name for the git flag.
 	GitFlag = string(credentials.TypeGit)
+
+	// GroupFlag is the flag name for the group flag.
+	GroupFlag = "group"
 
 	// HelmFlag is the flag name for the helm flag.
 	HelmFlag = string(credentials.TypeHelm)
@@ -72,8 +85,23 @@ const (
 	// RepoURLFlag is the flag name for the repo-url flag.
 	RepoURLFlag = "repo-url"
 
+	// ResourceGroupFlag is the flag name for the resource-group flag.
+	ResourceGroupFlag = "resource-group"
+
+	// ResourceNameFlag is the flag name for the resource-name flag.
+	ResourceNameFlag = "resource-name"
+
+	// ResourceTypeFlag is the flag name for the resource-type flag.
+	ResourceTypeFlag = "resource-type"
+
+	// RoleFlag is the flag name for the role flag.
+	RoleFlag = "role"
+
 	// StageFlag is the flag name for the stage flag.
 	StageFlag = "stage"
+
+	// SubFlag is the flag name for the sub flag.
+	SubFlag = "sub"
 
 	// SubscribersOfFlag is the flag name for the subscribers-of flag.
 	SubscribersOfFlag = "subscribers-of"
@@ -83,6 +111,9 @@ const (
 
 	// UsernameFlag is the flag name for the username flag.
 	UsernameFlag = "username"
+
+	// VerbFlag is the flag name for the verb flag.
+	VerbFlag = "verb"
 
 	// WaitFlag is the flag name for the wait flag.
 	WaitFlag = "wait"
@@ -96,6 +127,28 @@ func Alias(fs *pflag.FlagSet, stage *string, usage string) {
 // Aliases adds a multi-value AliasFlag to the provided flag set.
 func Aliases(fs *pflag.FlagSet, stage *[]string, usage string) {
 	fs.StringArrayVar(stage, AliasFlag, nil, usage)
+}
+
+// AsKubernetesResources adds the AsKubernetesResourcesFlag and
+// AsKubernetesResourcesShortFlag to the provided flag set.
+func AsKubernetesResources(fs *pflag.FlagSet, asKubernetesResources *bool, usage string) {
+	fs.BoolVarP(
+		asKubernetesResources,
+		AsKubernetesResourcesFlag,
+		AsKubernetesResourcesShortFlag,
+		false,
+		usage,
+	)
+}
+
+// Description adds the DescriptionFlag to the provided flag set.
+func Description(fs *pflag.FlagSet, stage *string, usage string) {
+	fs.StringVar(stage, DescriptionFlag, "", usage)
+}
+
+// Emails adds a multi-value EmailFlag to the provided flag set.
+func Emails(fs *pflag.FlagSet, emails *[]string, usage string) {
+	fs.StringSliceVar(emails, EmailFlag, nil, usage)
 }
 
 // Filenames adds the FilenameFlag and FilenameShortFlag to the provided flag set.
@@ -116,6 +169,11 @@ func FreightAlias(fs *pflag.FlagSet, stage *string, usage string) {
 // Git adds the GitFlag to the provided flag set.
 func Git(fs *pflag.FlagSet, git *bool, usage string) {
 	fs.BoolVar(git, GitFlag, false, usage)
+}
+
+// Groups adds a multi-value GroupFlag to the provided flag set.
+func Groups(fs *pflag.FlagSet, groups *[]string, usage string) {
+	fs.StringSliceVar(groups, GroupFlag, nil, usage)
 }
 
 // Helm adds the HelmFlag to the provided flag set.
@@ -146,11 +204,6 @@ func Name(fs *pflag.FlagSet, stage *string, usage string) {
 // Names adds a multi-value NameFlag to the provided flag set.
 func Names(fs *pflag.FlagSet, stage *[]string, usage string) {
 	fs.StringArrayVar(stage, NameFlag, nil, usage)
-}
-
-// Description adds the DescriptionFlag to the provided flag set.
-func Description(fs *pflag.FlagSet, stage *string, usage string) {
-	fs.StringVar(stage, DescriptionFlag, "", usage)
 }
 
 // NewAlias adds the NewAliasFlag to the provided flag set.
@@ -202,9 +255,34 @@ func Regex(fs *pflag.FlagSet, regex *bool, usage string) {
 	fs.BoolVar(regex, RegexFlag, false, usage)
 }
 
+// ResourceGroup adds the ResourceGroupFlag to the provided flag set.
+func ResourceGroup(fs *pflag.FlagSet, resourceGroup *string, usage string) {
+	fs.StringVar(resourceGroup, ResourceGroupFlag, "", usage)
+}
+
+// ResourceName adds the ResourceNameFlag to the provided flag set.
+func ResourceName(fs *pflag.FlagSet, resourceName *string, usage string) {
+	fs.StringVar(resourceName, ResourceNameFlag, "", usage)
+}
+
+// ResourceType adds the ResourceTypeFlag to the provided flag set.
+func ResourceType(fs *pflag.FlagSet, repoType *string, usage string) {
+	fs.StringVar(repoType, ResourceTypeFlag, "", usage)
+}
+
+// Role adds the RoleFlag to the provided flag set.
+func Role(fs *pflag.FlagSet, role *string, usage string) {
+	fs.StringVar(role, RoleFlag, "", usage)
+}
+
 // Stage adds the StageFlag to the provided flag set.
 func Stage(fs *pflag.FlagSet, stage *string, usage string) {
 	fs.StringVar(stage, StageFlag, "", usage)
+}
+
+// Subs adds a multi-value SubFlag to the provided flag set.
+func Subs(fs *pflag.FlagSet, subs *[]string, usage string) {
+	fs.StringSliceVar(subs, SubFlag, nil, usage)
 }
 
 // SubscribersOf adds the SubscribersOfFlag to the provided flag set.
@@ -220,6 +298,11 @@ func Type(fs *pflag.FlagSet, repoType *string, usage string) {
 // Username adds the UsernameFlag to the provided flag set.
 func Username(fs *pflag.FlagSet, username *string, usage string) {
 	fs.StringVar(username, UsernameFlag, "", usage)
+}
+
+// Verbs adds a multi-value VerbFlag to the provided flag set.
+func Verbs(fs *pflag.FlagSet, verbs *[]string, usage string) {
+	fs.StringSliceVar(verbs, VerbFlag, nil, usage)
 }
 
 // Wait adds the WaitFlag to the provided flag set.

@@ -14,6 +14,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/option"
+	"github.com/akuity/kargo/internal/cli/rbac"
 	"github.com/akuity/kargo/internal/cli/templates"
 )
 
@@ -47,6 +48,7 @@ kargo get promotions --project=my-project --stage=my-stage
 	cmd.AddCommand(newGetFreightCommand(cfg, streams, cmdOpts))
 	cmd.AddCommand(newGetProjectsCommand(cfg, streams, cmdOpts))
 	cmd.AddCommand(newGetPromotionsCommand(cfg, streams, cmdOpts))
+	cmd.AddCommand(newRolesCommand(cfg, streams, cmdOpts))
 	cmd.AddCommand(newGetStagesCommand(cfg, streams, cmdOpts))
 	cmd.AddCommand(newGetWarehousesCommand(cfg, streams, cmdOpts))
 
@@ -97,6 +99,10 @@ func printObjects[T runtime.Object](
 		printObj = newProjectTable(list)
 	case *kargoapi.Promotion:
 		printObj = newPromotionTable(list)
+	case *rbac.Role:
+		printObj = newRoleTable(list)
+	case *rbac.RoleResources:
+		printObj = newRoleResourcesTable(list)
 	case *kargoapi.Stage:
 		printObj = newStageTable(list)
 	case *kargoapi.Warehouse:
