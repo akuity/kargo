@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -14,6 +15,8 @@ import (
 )
 
 const (
+	EventsByInvolvedObjectAPIGroupIndexField = "involvedObject.apiGroup"
+
 	FreightByVerifiedStagesIndexField     = "verifiedIn"
 	FreightApprovedForStagesIndexField    = "approvedFor"
 	FreightByWarehouseIndexField          = "warehouse"
@@ -35,6 +38,25 @@ const (
 	ServiceAccountsByOIDCGroupIndexField   = "groups"
 	ServiceAccountsByOIDCSubjectIndexField = "subjects"
 )
+
+func IndexEventsByInvolvedObjectAPIGroup(ctx context.Context, mgr ctrl.Manager) error {
+	return mgr.GetFieldIndexer().IndexField(
+		ctx,
+		&corev1.Event{},
+		EventsByInvolvedObjectAPIGroupIndexField,
+		indexEventsByInvolvedObjectAPIGroup,
+	)
+}
+
+func indexEventsByInvolvedObjectAPIGroup(obj client.Object) []string {
+	event := obj.(*corev1.Event) // nolint: forcetypeassert
+	// Ignore invalid APIVersion
+	gv, _ := schema.ParseGroupVersion(event.InvolvedObject.APIVersion)
+	if gv.Empty() {
+		return nil
+	}
+	return []string{gv.Group}
+}
 
 func IndexStagesByAnalysisRun(ctx context.Context, mgr ctrl.Manager, shardName string) error {
 	return mgr.GetFieldIndexer().IndexField(

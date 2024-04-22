@@ -203,6 +203,11 @@ func registerKargoIndexers(ctx context.Context, mgr ctrl.Manager) error {
 		return fmt.Errorf("index ServiceAccounts by OIDC subjects: %w", err)
 	}
 
+	// Index Events by InvolvedObject's API Group
+	if err := kubeclient.IndexEventsByInvolvedObjectAPIGroup(ctx, mgr); err != nil {
+		return fmt.Errorf("index Events by InvolvedObject's API group: %w", err)
+	}
+
 	return nil
 }
 
