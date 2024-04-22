@@ -55,7 +55,7 @@ func TestArgoCDPromote(t *testing.T) {
 			name:      "no updates",
 			promoMech: &argoCDMechanism{},
 			stage: &kargoapi.Stage{
-				Spec: &kargoapi.StageSpec{
+				Spec: kargoapi.StageSpec{
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
 				},
 			},
@@ -74,7 +74,7 @@ func TestArgoCDPromote(t *testing.T) {
 			name:      "argo cd integration disabled",
 			promoMech: &argoCDMechanism{},
 			stage: &kargoapi.Stage{
-				Spec: &kargoapi.StageSpec{
+				Spec: kargoapi.StageSpec{
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{
 						ArgoCDAppUpdates: []kargoapi.ArgoCDAppUpdate{
 							{},
@@ -110,7 +110,7 @@ func TestArgoCDPromote(t *testing.T) {
 				},
 			},
 			stage: &kargoapi.Stage{
-				Spec: &kargoapi.StageSpec{
+				Spec: kargoapi.StageSpec{
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{
 						ArgoCDAppUpdates: []kargoapi.ArgoCDAppUpdate{
 							{},
@@ -150,7 +150,7 @@ func TestArgoCDPromote(t *testing.T) {
 				},
 			},
 			stage: &kargoapi.Stage{
-				Spec: &kargoapi.StageSpec{
+				Spec: kargoapi.StageSpec{
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{
 						ArgoCDAppUpdates: []kargoapi.ArgoCDAppUpdate{
 							{},
@@ -182,7 +182,7 @@ func TestArgoCDPromote(t *testing.T) {
 				},
 			},
 			stage: &kargoapi.Stage{
-				Spec: &kargoapi.StageSpec{
+				Spec: kargoapi.StageSpec{
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{
 						ArgoCDAppUpdates: []kargoapi.ArgoCDAppUpdate{
 							{},
@@ -215,7 +215,7 @@ func TestArgoCDPromote(t *testing.T) {
 				},
 			},
 			stage: &kargoapi.Stage{
-				Spec: &kargoapi.StageSpec{
+				Spec: kargoapi.StageSpec{
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{
 						ArgoCDAppUpdates: []kargoapi.ArgoCDAppUpdate{
 							{},
@@ -256,7 +256,7 @@ func TestArgoCDPromote(t *testing.T) {
 				},
 			},
 			stage: &kargoapi.Stage{
-				Spec: &kargoapi.StageSpec{
+				Spec: kargoapi.StageSpec{
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{
 						ArgoCDAppUpdates: []kargoapi.ArgoCDAppUpdate{
 							{},
@@ -312,7 +312,7 @@ func TestArgoCDPromote(t *testing.T) {
 				},
 			},
 			stage: &kargoapi.Stage{
-				Spec: &kargoapi.StageSpec{
+				Spec: kargoapi.StageSpec{
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{
 						ArgoCDAppUpdates: []kargoapi.ArgoCDAppUpdate{
 							{},
@@ -346,7 +346,7 @@ func TestArgoCDPromote(t *testing.T) {
 				},
 			},
 			stage: &kargoapi.Stage{
-				Spec: &kargoapi.StageSpec{
+				Spec: kargoapi.StageSpec{
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{
 						ArgoCDAppUpdates: []kargoapi.ArgoCDAppUpdate{
 							{},
@@ -378,7 +378,7 @@ func TestArgoCDPromote(t *testing.T) {
 				},
 			},
 			stage: &kargoapi.Stage{
-				Spec: &kargoapi.StageSpec{
+				Spec: kargoapi.StageSpec{
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{
 						ArgoCDAppUpdates: []kargoapi.ArgoCDAppUpdate{
 							{},

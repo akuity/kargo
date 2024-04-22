@@ -61,9 +61,7 @@ func TestDefault(t *testing.T) {
 					Operation: admissionv1.Create,
 				},
 			},
-			stage: &kargoapi.Stage{
-				Spec: &kargoapi.StageSpec{},
-			},
+			stage: &kargoapi.Stage{},
 			assertions: func(t *testing.T, stage *kargoapi.Stage, err error) {
 				require.NoError(t, err)
 				require.Empty(t, stage.Labels)
@@ -84,7 +82,7 @@ func TestDefault(t *testing.T) {
 				},
 			},
 			stage: &kargoapi.Stage{
-				Spec: &kargoapi.StageSpec{
+				Spec: kargoapi.StageSpec{
 					Shard: testShardName,
 				},
 			},
@@ -113,7 +111,6 @@ func TestDefault(t *testing.T) {
 						kargoapi.ShardLabelKey: testShardName,
 					},
 				},
-				Spec: &kargoapi.StageSpec{},
 			},
 			assertions: func(t *testing.T, stage *kargoapi.Stage, err error) {
 				require.NoError(t, err)
@@ -147,7 +144,6 @@ func TestDefault(t *testing.T) {
 						kargoapi.AnnotationKeyReverify: "fake-id",
 					},
 				},
-				Spec: &kargoapi.StageSpec{},
 			},
 			assertions: func(t *testing.T, stage *kargoapi.Stage, err error) {
 				require.NoError(t, err)
@@ -191,7 +187,6 @@ func TestDefault(t *testing.T) {
 						}).String(),
 					},
 				},
-				Spec: &kargoapi.StageSpec{},
 			},
 			assertions: func(t *testing.T, stage *kargoapi.Stage, err error) {
 				require.NoError(t, err)
@@ -235,7 +230,6 @@ func TestDefault(t *testing.T) {
 						}).String(),
 					},
 				},
-				Spec: &kargoapi.StageSpec{},
 			},
 			assertions: func(t *testing.T, stage *kargoapi.Stage, err error) {
 				require.NoError(t, err)
@@ -286,7 +280,6 @@ func TestDefault(t *testing.T) {
 						}).String(),
 					},
 				},
-				Spec: &kargoapi.StageSpec{},
 			},
 			assertions: func(t *testing.T, stage *kargoapi.Stage, err error) {
 				require.NoError(t, err)
@@ -337,7 +330,6 @@ func TestDefault(t *testing.T) {
 						}).String(),
 					},
 				},
-				Spec: &kargoapi.StageSpec{},
 			},
 			assertions: func(t *testing.T, stage *kargoapi.Stage, err error) {
 				require.NoError(t, err)
@@ -376,7 +368,6 @@ func TestDefault(t *testing.T) {
 						kargoapi.AnnotationKeyReverify: "",
 					},
 				},
-				Spec: &kargoapi.StageSpec{},
 			},
 			assertions: func(t *testing.T, stage *kargoapi.Stage, err error) {
 				require.NoError(t, err)
@@ -412,7 +403,6 @@ func TestDefault(t *testing.T) {
 						}).String(),
 					},
 				},
-				Spec: &kargoapi.StageSpec{},
 			},
 			assertions: func(t *testing.T, stage *kargoapi.Stage, err error) {
 				require.NoError(t, err)
@@ -460,7 +450,6 @@ func TestDefault(t *testing.T) {
 						}).String(),
 					},
 				},
-				Spec: &kargoapi.StageSpec{},
 			},
 			assertions: func(t *testing.T, stage *kargoapi.Stage, err error) {
 				require.NoError(t, err)
@@ -497,7 +486,6 @@ func TestDefault(t *testing.T) {
 						kargoapi.AnnotationKeyAbort: "fake-id",
 					},
 				},
-				Spec: &kargoapi.StageSpec{},
 			},
 			assertions: func(t *testing.T, stage *kargoapi.Stage, err error) {
 				require.NoError(t, err)
@@ -541,7 +529,6 @@ func TestDefault(t *testing.T) {
 						}).String(),
 					},
 				},
-				Spec: &kargoapi.StageSpec{},
 			},
 			assertions: func(t *testing.T, stage *kargoapi.Stage, err error) {
 				require.NoError(t, err)
@@ -585,7 +572,6 @@ func TestDefault(t *testing.T) {
 						}).String(),
 					},
 				},
-				Spec: &kargoapi.StageSpec{},
 			},
 			assertions: func(t *testing.T, stage *kargoapi.Stage, err error) {
 				require.NoError(t, err)
@@ -636,7 +622,6 @@ func TestDefault(t *testing.T) {
 						}).String(),
 					},
 				},
-				Spec: &kargoapi.StageSpec{},
 			},
 			assertions: func(t *testing.T, stage *kargoapi.Stage, err error) {
 				require.NoError(t, err)
@@ -687,7 +672,6 @@ func TestDefault(t *testing.T) {
 						}).String(),
 					},
 				},
-				Spec: &kargoapi.StageSpec{},
 			},
 			assertions: func(t *testing.T, stage *kargoapi.Stage, err error) {
 				require.NoError(t, err)
@@ -726,7 +710,6 @@ func TestDefault(t *testing.T) {
 						kargoapi.AnnotationKeyAbort: "",
 					},
 				},
-				Spec: &kargoapi.StageSpec{},
 			},
 			assertions: func(t *testing.T, stage *kargoapi.Stage, err error) {
 				require.NoError(t, err)
@@ -762,7 +745,6 @@ func TestDefault(t *testing.T) {
 						}).String(),
 					},
 				},
-				Spec: &kargoapi.StageSpec{},
 			},
 			assertions: func(t *testing.T, stage *kargoapi.Stage, err error) {
 				require.NoError(t, err)
@@ -810,7 +792,6 @@ func TestDefault(t *testing.T) {
 						}).String(),
 					},
 				},
-				Spec: &kargoapi.StageSpec{},
 			},
 			assertions: func(t *testing.T, stage *kargoapi.Stage, err error) {
 				require.NoError(t, err)
@@ -1043,7 +1024,7 @@ func TestValidateSpec(t *testing.T) {
 			name: "invalid",
 			spec: &kargoapi.StageSpec{
 				// Has two conflicting types of subs...
-				Subscriptions: &kargoapi.Subscriptions{
+				Subscriptions: kargoapi.Subscriptions{
 					Warehouse: "test-warehouse",
 					UpstreamStages: []kargoapi.StageSubscription{
 						{},
@@ -1061,7 +1042,7 @@ func TestValidateSpec(t *testing.T) {
 						{
 							Type:     field.ErrorTypeInvalid,
 							Field:    "spec.subscriptions",
-							BadValue: spec.Subscriptions,
+							BadValue: &spec.Subscriptions,
 							Detail: "exactly one of spec.subscriptions.warehouse or " +
 								"spec.subscriptions.upstreamStages must be defined",
 						},
@@ -1082,9 +1063,9 @@ func TestValidateSpec(t *testing.T) {
 		{
 			name: "valid",
 			spec: &kargoapi.StageSpec{
-				// Nil subs and promo mechanisms are caught by declarative validation,
-				// so for the purposes of this test, leaving those completely undefined
-				// should surface no errors.
+				Subscriptions: kargoapi.Subscriptions{
+					Warehouse: "test-warehouse",
+				},
 			},
 			assertions: func(t *testing.T, _ *kargoapi.StageSpec, errs field.ErrorList) {
 				require.Nil(t, errs)

@@ -219,8 +219,7 @@ func indexRunningPromotionsByArgoCDApplications(
 			return nil
 		}
 
-		if stage.Spec == nil || stage.Spec.PromotionMechanisms == nil ||
-			len(stage.Spec.PromotionMechanisms.ArgoCDAppUpdates) == 0 {
+		if stage.Spec.PromotionMechanisms == nil || len(stage.Spec.PromotionMechanisms.ArgoCDAppUpdates) == 0 {
 			// If the Stage has no Argo CD Application promotion mechanisms,
 			// then we have nothing to index.
 			return nil

@@ -168,9 +168,6 @@ func (s *server) findStageSubscribers(ctx context.Context, stage *kargoapi.Stage
 	var subscribers []kargoapi.Stage
 	for _, s := range allStages.Items {
 		s := s
-		if s.Spec.Subscriptions == nil {
-			continue
-		}
 		for _, upstream := range s.Spec.Subscriptions.UpstreamStages {
 			if upstream.Name != stage.Name {
 				continue

@@ -54,7 +54,7 @@ func NewPromotion(
 			Namespace:   stage.Namespace,
 			Annotations: annotations,
 		},
-		Spec: &kargoapi.PromotionSpec{
+		Spec: kargoapi.PromotionSpec{
 			Stage:   stage.Name,
 			Freight: freight,
 		},

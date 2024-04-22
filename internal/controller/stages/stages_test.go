@@ -92,8 +92,8 @@ func TestSyncControlFlowStage(t *testing.T) {
 		{
 			name: "error listing Freight from Warehouse",
 			stage: &kargoapi.Stage{
-				Spec: &kargoapi.StageSpec{
-					Subscriptions: &kargoapi.Subscriptions{
+				Spec: kargoapi.StageSpec{
+					Subscriptions: kargoapi.Subscriptions{
 						Warehouse: "fake-warehouse",
 					},
 				},
@@ -130,8 +130,8 @@ func TestSyncControlFlowStage(t *testing.T) {
 		{
 			name: "error listing Freight verified in upstream Stages",
 			stage: &kargoapi.Stage{
-				Spec: &kargoapi.StageSpec{
-					Subscriptions: &kargoapi.Subscriptions{
+				Spec: kargoapi.StageSpec{
+					Subscriptions: kargoapi.Subscriptions{
 						UpstreamStages: []kargoapi.StageSubscription{
 							{Name: "fake-stage"},
 						},
@@ -174,8 +174,8 @@ func TestSyncControlFlowStage(t *testing.T) {
 		{
 			name: "error marking Freight as verified in Stage",
 			stage: &kargoapi.Stage{
-				Spec: &kargoapi.StageSpec{
-					Subscriptions: &kargoapi.Subscriptions{
+				Spec: kargoapi.StageSpec{
+					Subscriptions: kargoapi.Subscriptions{
 						Warehouse: "fake-warehouse",
 					},
 				},
@@ -225,8 +225,8 @@ func TestSyncControlFlowStage(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Generation: 42,
 				},
-				Spec: &kargoapi.StageSpec{
-					Subscriptions: &kargoapi.Subscriptions{
+				Spec: kargoapi.StageSpec{
+					Subscriptions: kargoapi.Subscriptions{
 						Warehouse: "fake-warehouse",
 					},
 				},
@@ -377,7 +377,7 @@ func TestSyncNormalStage(t *testing.T) {
 						kargoapi.AnnotationKeyReverify: "fake-id",
 					},
 				},
-				Spec: &kargoapi.StageSpec{
+				Spec: kargoapi.StageSpec{
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
 					Verification:        &kargoapi.Verification{},
 				},
@@ -447,7 +447,7 @@ func TestSyncNormalStage(t *testing.T) {
 						kargoapi.AnnotationKeyReverify: "wrong-fake-analysis-run",
 					},
 				},
-				Spec: &kargoapi.StageSpec{
+				Spec: kargoapi.StageSpec{
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
 					Verification:        &kargoapi.Verification{},
 				},
@@ -500,7 +500,7 @@ func TestSyncNormalStage(t *testing.T) {
 		{
 			name: "error starting verification",
 			stage: &kargoapi.Stage{
-				Spec: &kargoapi.StageSpec{
+				Spec: kargoapi.StageSpec{
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
 					Verification:        &kargoapi.Verification{},
 				},
@@ -582,7 +582,7 @@ func TestSyncNormalStage(t *testing.T) {
 		{
 			name: "retryable error starting verification",
 			stage: &kargoapi.Stage{
-				Spec: &kargoapi.StageSpec{
+				Spec: kargoapi.StageSpec{
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
 					Verification:        &kargoapi.Verification{},
 				},
@@ -642,7 +642,7 @@ func TestSyncNormalStage(t *testing.T) {
 		{
 			name: "error checking verification result",
 			stage: &kargoapi.Stage{
-				Spec: &kargoapi.StageSpec{
+				Spec: kargoapi.StageSpec{
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
 					Verification:        &kargoapi.Verification{},
 				},
@@ -721,7 +721,7 @@ func TestSyncNormalStage(t *testing.T) {
 		{
 			name: "retryable error checking verification result",
 			stage: &kargoapi.Stage{
-				Spec: &kargoapi.StageSpec{
+				Spec: kargoapi.StageSpec{
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
 					Verification:        &kargoapi.Verification{},
 				},
@@ -792,7 +792,7 @@ func TestSyncNormalStage(t *testing.T) {
 						kargoapi.AnnotationKeyAbort: "fake-id",
 					},
 				},
-				Spec: &kargoapi.StageSpec{
+				Spec: kargoapi.StageSpec{
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
 					Verification:        &kargoapi.Verification{},
 				},
@@ -889,7 +889,7 @@ func TestSyncNormalStage(t *testing.T) {
 						kargoapi.AnnotationKeyAbort: "fake-id",
 					},
 				},
-				Spec: &kargoapi.StageSpec{
+				Spec: kargoapi.StageSpec{
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
 					Verification:        &kargoapi.Verification{},
 				},
@@ -977,7 +977,7 @@ func TestSyncNormalStage(t *testing.T) {
 		{
 			name: "error marking Freight as verified in Stage",
 			stage: &kargoapi.Stage{
-				Spec: &kargoapi.StageSpec{
+				Spec: kargoapi.StageSpec{
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
 				},
 				Status: kargoapi.StageStatus{
@@ -1017,8 +1017,8 @@ func TestSyncNormalStage(t *testing.T) {
 		{
 			name: "error checking if auto-promotion is permitted",
 			stage: &kargoapi.Stage{
-				Spec: &kargoapi.StageSpec{
-					Subscriptions: &kargoapi.Subscriptions{
+				Spec: kargoapi.StageSpec{
+					Subscriptions: kargoapi.Subscriptions{
 						Warehouse: "fake-warehouse",
 					},
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
@@ -1083,8 +1083,8 @@ func TestSyncNormalStage(t *testing.T) {
 		{
 			name: "auto-promotion is not permitted",
 			stage: &kargoapi.Stage{
-				Spec: &kargoapi.StageSpec{
-					Subscriptions: &kargoapi.Subscriptions{
+				Spec: kargoapi.StageSpec{
+					Subscriptions: kargoapi.Subscriptions{
 						Warehouse: "fake-warehouse",
 					},
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
@@ -1143,8 +1143,8 @@ func TestSyncNormalStage(t *testing.T) {
 		{
 			name: "error getting latest Freight",
 			stage: &kargoapi.Stage{
-				Spec: &kargoapi.StageSpec{
-					Subscriptions: &kargoapi.Subscriptions{
+				Spec: kargoapi.StageSpec{
+					Subscriptions: kargoapi.Subscriptions{
 						Warehouse: "fake-warehouse",
 					},
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
@@ -1216,8 +1216,8 @@ func TestSyncNormalStage(t *testing.T) {
 		{
 			name: "no Freight found",
 			stage: &kargoapi.Stage{
-				Spec: &kargoapi.StageSpec{
-					Subscriptions: &kargoapi.Subscriptions{
+				Spec: kargoapi.StageSpec{
+					Subscriptions: kargoapi.Subscriptions{
 						Warehouse: "fake-warehouse",
 					},
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
@@ -1273,8 +1273,8 @@ func TestSyncNormalStage(t *testing.T) {
 		{
 			name: "Stage already has latest Freight",
 			stage: &kargoapi.Stage{
-				Spec: &kargoapi.StageSpec{
-					Subscriptions: &kargoapi.Subscriptions{
+				Spec: kargoapi.StageSpec{
+					Subscriptions: kargoapi.Subscriptions{
 						Warehouse: "fake-warehouse",
 					},
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
@@ -1333,8 +1333,8 @@ func TestSyncNormalStage(t *testing.T) {
 		{
 			name: "Promotion already exists",
 			stage: &kargoapi.Stage{
-				Spec: &kargoapi.StageSpec{
-					Subscriptions: &kargoapi.Subscriptions{
+				Spec: kargoapi.StageSpec{
+					Subscriptions: kargoapi.Subscriptions{
 						Warehouse: "fake-warehouse",
 					},
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
@@ -1405,8 +1405,8 @@ func TestSyncNormalStage(t *testing.T) {
 		{
 			name: "error creating Promotion",
 			stage: &kargoapi.Stage{
-				Spec: &kargoapi.StageSpec{
-					Subscriptions: &kargoapi.Subscriptions{
+				Spec: kargoapi.StageSpec{
+					Subscriptions: kargoapi.Subscriptions{
 						Warehouse: "fake-warehouse",
 					},
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
@@ -1500,8 +1500,8 @@ func TestSyncNormalStage(t *testing.T) {
 					Generation: 42,
 					Name:       "fake-stage",
 				},
-				Spec: &kargoapi.StageSpec{
-					Subscriptions: &kargoapi.Subscriptions{
+				Spec: kargoapi.StageSpec{
+					Subscriptions: kargoapi.Subscriptions{
 						Warehouse: "fake-warehouse",
 					},
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
@@ -1632,8 +1632,8 @@ func TestSyncNormalStage(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Generation: 42,
 				},
-				Spec: &kargoapi.StageSpec{
-					Subscriptions: &kargoapi.Subscriptions{
+				Spec: kargoapi.StageSpec{
+					Subscriptions: kargoapi.Subscriptions{
 						Warehouse: "fake-warehouse",
 					},
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
@@ -2390,13 +2390,13 @@ func TestGetLatestAvailableFreight(t *testing.T) {
 	now := time.Now().UTC()
 	testCases := []struct {
 		name       string
-		subs       *kargoapi.Subscriptions
+		subs       kargoapi.Subscriptions
 		reconciler *reconciler
 		assertions func(*testing.T, *kargoapi.Freight, error)
 	}{
 		{
 			name: "error getting latest Freight from Warehouse",
-			subs: &kargoapi.Subscriptions{
+			subs: kargoapi.Subscriptions{
 				Warehouse: "fake-warehouse",
 			},
 			reconciler: &reconciler{
@@ -2416,7 +2416,7 @@ func TestGetLatestAvailableFreight(t *testing.T) {
 		},
 		{
 			name: "found no Freight from Warehouse",
-			subs: &kargoapi.Subscriptions{
+			subs: kargoapi.Subscriptions{
 				Warehouse: "fake-warehouse",
 			},
 			reconciler: &reconciler{
@@ -2435,7 +2435,7 @@ func TestGetLatestAvailableFreight(t *testing.T) {
 		},
 		{
 			name: "success getting latest Freight from Warehouse",
-			subs: &kargoapi.Subscriptions{
+			subs: kargoapi.Subscriptions{
 				Warehouse: "fake-warehouse",
 			},
 			reconciler: &reconciler{
@@ -2454,7 +2454,7 @@ func TestGetLatestAvailableFreight(t *testing.T) {
 		},
 		{
 			name: "error getting latest Freight verified in upstream Stages",
-			subs: &kargoapi.Subscriptions{
+			subs: kargoapi.Subscriptions{
 				UpstreamStages: []kargoapi.StageSubscription{{}},
 			},
 			reconciler: &reconciler{
@@ -2478,7 +2478,7 @@ func TestGetLatestAvailableFreight(t *testing.T) {
 		},
 		{
 			name: "error getting latest Freight approved for Stage",
-			subs: &kargoapi.Subscriptions{
+			subs: kargoapi.Subscriptions{
 				UpstreamStages: []kargoapi.StageSubscription{{}},
 			},
 			reconciler: &reconciler{
@@ -2509,7 +2509,7 @@ func TestGetLatestAvailableFreight(t *testing.T) {
 		},
 		{
 			name: "found no suitable Freight",
-			subs: &kargoapi.Subscriptions{
+			subs: kargoapi.Subscriptions{
 				UpstreamStages: []kargoapi.StageSubscription{{}},
 			},
 			reconciler: &reconciler{
@@ -2535,7 +2535,7 @@ func TestGetLatestAvailableFreight(t *testing.T) {
 		},
 		{
 			name: "only found latest Freight verified in upstream Stages",
-			subs: &kargoapi.Subscriptions{
+			subs: kargoapi.Subscriptions{
 				UpstreamStages: []kargoapi.StageSubscription{{}},
 			},
 			reconciler: &reconciler{
@@ -2561,7 +2561,7 @@ func TestGetLatestAvailableFreight(t *testing.T) {
 		},
 		{
 			name: "only found latest Freight approved for Stage",
-			subs: &kargoapi.Subscriptions{
+			subs: kargoapi.Subscriptions{
 				UpstreamStages: []kargoapi.StageSubscription{{}},
 			},
 			reconciler: &reconciler{
@@ -2587,7 +2587,7 @@ func TestGetLatestAvailableFreight(t *testing.T) {
 		},
 		{
 			name: "latest verified Freight is newer than latest approved Freight",
-			subs: &kargoapi.Subscriptions{
+			subs: kargoapi.Subscriptions{
 				UpstreamStages: []kargoapi.StageSubscription{{}},
 			},
 			reconciler: &reconciler{
@@ -2628,7 +2628,7 @@ func TestGetLatestAvailableFreight(t *testing.T) {
 		},
 		{
 			name: "latest approved Freight is newer than latest verified Freight",
-			subs: &kargoapi.Subscriptions{
+			subs: kargoapi.Subscriptions{
 				UpstreamStages: []kargoapi.StageSubscription{{}},
 			},
 			reconciler: &reconciler{
@@ -2674,7 +2674,7 @@ func TestGetLatestAvailableFreight(t *testing.T) {
 				context.Background(),
 				"fake-namespace",
 				&kargoapi.Stage{
-					Spec: &kargoapi.StageSpec{
+					Spec: kargoapi.StageSpec{
 						Subscriptions: testCase.subs,
 					},
 				},

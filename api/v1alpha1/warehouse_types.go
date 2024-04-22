@@ -34,7 +34,7 @@ type Warehouse struct {
 	// Spec describes sources of artifacts.
 	//
 	//+kubebuilder:validation:Required
-	Spec *WarehouseSpec `json:"spec" protobuf:"bytes,2,opt,name=spec"`
+	Spec WarehouseSpec `json:"spec" protobuf:"bytes,2,opt,name=spec"`
 	// Status describes the Warehouse's most recently observed state.
 	Status WarehouseStatus `json:"status,omitempty" protobuf:"bytes,3,opt,name=status"`
 }

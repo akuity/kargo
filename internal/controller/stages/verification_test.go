@@ -114,7 +114,7 @@ func TestStartVerification(t *testing.T) {
 						kargoapi.AnnotationKeyReverify: "fake-id",
 					},
 				},
-				Spec: &kargoapi.StageSpec{
+				Spec: kargoapi.StageSpec{
 					Verification: &kargoapi.Verification{
 						AnalysisTemplates: []kargoapi.AnalysisTemplateReference{{}},
 					},
@@ -192,7 +192,7 @@ func TestStartVerification(t *testing.T) {
 		{
 			name: "error getting AnalysisTemplate",
 			stage: &kargoapi.Stage{
-				Spec: &kargoapi.StageSpec{
+				Spec: kargoapi.StageSpec{
 					Verification: &kargoapi.Verification{
 						AnalysisTemplates: []kargoapi.AnalysisTemplateReference{{}},
 					},
@@ -234,7 +234,7 @@ func TestStartVerification(t *testing.T) {
 		{
 			name: "AnalysisTemplate not found",
 			stage: &kargoapi.Stage{
-				Spec: &kargoapi.StageSpec{
+				Spec: kargoapi.StageSpec{
 					Verification: &kargoapi.Verification{
 						AnalysisTemplates: []kargoapi.AnalysisTemplateReference{{}},
 					},
@@ -276,7 +276,7 @@ func TestStartVerification(t *testing.T) {
 		{
 			name: "error getting Freight",
 			stage: &kargoapi.Stage{
-				Spec: &kargoapi.StageSpec{
+				Spec: kargoapi.StageSpec{
 					Verification: &kargoapi.Verification{
 						AnalysisTemplates: []kargoapi.AnalysisTemplateReference{{}},
 					},
@@ -325,7 +325,7 @@ func TestStartVerification(t *testing.T) {
 		{
 			name: "Freight not found",
 			stage: &kargoapi.Stage{
-				Spec: &kargoapi.StageSpec{
+				Spec: kargoapi.StageSpec{
 					Verification: &kargoapi.Verification{
 						AnalysisTemplates: []kargoapi.AnalysisTemplateReference{{}},
 					},
@@ -374,7 +374,7 @@ func TestStartVerification(t *testing.T) {
 		{
 			name: "error building AnalysisRun",
 			stage: &kargoapi.Stage{
-				Spec: &kargoapi.StageSpec{
+				Spec: kargoapi.StageSpec{
 					Verification: &kargoapi.Verification{
 						AnalysisTemplates: []kargoapi.AnalysisTemplateReference{{}},
 					},
@@ -429,7 +429,7 @@ func TestStartVerification(t *testing.T) {
 		{
 			name: "error creating AnalysisRun",
 			stage: &kargoapi.Stage{
-				Spec: &kargoapi.StageSpec{
+				Spec: kargoapi.StageSpec{
 					Verification: &kargoapi.Verification{
 						AnalysisTemplates: []kargoapi.AnalysisTemplateReference{{}},
 					},
@@ -492,7 +492,7 @@ func TestStartVerification(t *testing.T) {
 		{
 			name: "validation error creating AnalysisRun",
 			stage: &kargoapi.Stage{
-				Spec: &kargoapi.StageSpec{
+				Spec: kargoapi.StageSpec{
 					Verification: &kargoapi.Verification{
 						AnalysisTemplates: []kargoapi.AnalysisTemplateReference{{}},
 					},
@@ -556,7 +556,7 @@ func TestStartVerification(t *testing.T) {
 		{
 			name: "success",
 			stage: &kargoapi.Stage{
-				Spec: &kargoapi.StageSpec{
+				Spec: kargoapi.StageSpec{
 					Verification: &kargoapi.Verification{
 						AnalysisTemplates: []kargoapi.AnalysisTemplateReference{{}},
 					},
@@ -970,7 +970,7 @@ func TestBuildAnalysisRun(t *testing.T) {
 					Name:      "fake-stage",
 					Namespace: "fake-namespace",
 				},
-				Spec: &kargoapi.StageSpec{
+				Spec: kargoapi.StageSpec{
 					Verification: &kargoapi.Verification{
 						AnalysisRunMetadata: &kargoapi.AnalysisRunMetadata{
 							Labels: map[string]string{
@@ -1062,7 +1062,7 @@ func TestBuildAnalysisRun(t *testing.T) {
 				},
 			},
 			stage: &kargoapi.Stage{
-				Spec: &kargoapi.StageSpec{
+				Spec: kargoapi.StageSpec{
 					Verification: &kargoapi.Verification{},
 				},
 				Status: kargoapi.StageStatus{
@@ -1087,7 +1087,7 @@ func TestBuildAnalysisRun(t *testing.T) {
 			name:       "Flattens multiple templates",
 			reconciler: &reconciler{},
 			stage: &kargoapi.Stage{
-				Spec: &kargoapi.StageSpec{
+				Spec: kargoapi.StageSpec{
 					Verification: &kargoapi.Verification{},
 				},
 				Status: kargoapi.StageStatus{
@@ -1151,7 +1151,7 @@ func TestBuildAnalysisRun(t *testing.T) {
 			name:       "Merges flattened template args with stage args",
 			reconciler: &reconciler{},
 			stage: &kargoapi.Stage{
-				Spec: &kargoapi.StageSpec{
+				Spec: kargoapi.StageSpec{
 					Verification: &kargoapi.Verification{
 						Args: []kargoapi.AnalysisRunArgument{
 							{
@@ -1200,7 +1200,7 @@ func TestBuildAnalysisRun(t *testing.T) {
 			name:       "Sets owner reference to Freight",
 			reconciler: &reconciler{},
 			stage: &kargoapi.Stage{
-				Spec: &kargoapi.StageSpec{
+				Spec: kargoapi.StageSpec{
 					Verification: &kargoapi.Verification{},
 				},
 				Status: kargoapi.StageStatus{
@@ -1242,7 +1242,7 @@ func TestBuildAnalysisRun(t *testing.T) {
 						}).String(),
 					},
 				},
-				Spec: &kargoapi.StageSpec{
+				Spec: kargoapi.StageSpec{
 					Verification: &kargoapi.Verification{},
 				},
 				Status: kargoapi.StageStatus{
@@ -1287,7 +1287,7 @@ func TestBuildAnalysisRun(t *testing.T) {
 						}).String(),
 					},
 				},
-				Spec: &kargoapi.StageSpec{
+				Spec: kargoapi.StageSpec{
 					Verification: &kargoapi.Verification{},
 				},
 				Status: kargoapi.StageStatus{

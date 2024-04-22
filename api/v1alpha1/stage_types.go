@@ -128,7 +128,7 @@ type Stage struct {
 	// Freight into the Stage.
 	//
 	//+kubebuilder:validation:Required
-	Spec *StageSpec `json:"spec" protobuf:"bytes,2,opt,name=spec"`
+	Spec StageSpec `json:"spec" protobuf:"bytes,2,opt,name=spec"`
 	// Status describes the Stage's current and recent Freight, health, and more.
 	Status StageStatus `json:"status,omitempty" protobuf:"bytes,3,opt,name=status"`
 }
@@ -150,7 +150,7 @@ type StageSpec struct {
 	// field.
 	//
 	//+kubebuilder:validation:Required
-	Subscriptions *Subscriptions `json:"subscriptions" protobuf:"bytes,1,opt,name=subscriptions"`
+	Subscriptions Subscriptions `json:"subscriptions" protobuf:"bytes,1,opt,name=subscriptions"`
 	// PromotionMechanisms describes how to incorporate Freight into the Stage.
 	// This is an optional field as it is sometimes useful to aggregates available
 	// Freight from multiple upstream Stages without performing any actions. The

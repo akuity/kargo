@@ -55,8 +55,8 @@ type Promotion struct {
 	// Spec describes the desired transition of a specific Stage into a specific
 	// Freight.
 	//
-	//+kubebuilder:validation:Required
-	Spec *PromotionSpec `json:"spec" protobuf:"bytes,2,opt,name=spec"`
+	// +kubebuilder:validation:Required
+	Spec PromotionSpec `json:"spec" protobuf:"bytes,2,opt,name=spec"`
 	// Status describes the current state of the transition represented by this
 	// Promotion.
 	Status PromotionStatus `json:"status,omitempty" protobuf:"bytes,3,opt,name=status"`

@@ -95,9 +95,7 @@ func TestDefault(t *testing.T) {
 					client.Client,
 					types.NamespacedName,
 				) (*kargoapi.Stage, error) {
-					return &kargoapi.Stage{
-						Spec: &kargoapi.StageSpec{},
-					}, nil
+					return &kargoapi.Stage{}, nil
 				},
 			},
 			assertions: func(t *testing.T, _ *kargoapi.Promotion, err error) {
@@ -117,7 +115,7 @@ func TestDefault(t *testing.T) {
 					types.NamespacedName,
 				) (*kargoapi.Stage, error) {
 					return &kargoapi.Stage{
-						Spec: &kargoapi.StageSpec{
+						Spec: kargoapi.StageSpec{
 							PromotionMechanisms: &kargoapi.PromotionMechanisms{},
 							Shard:               "fake-shard",
 						},
@@ -134,7 +132,7 @@ func TestDefault(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			promo := &kargoapi.Promotion{
-				Spec: &kargoapi.PromotionSpec{
+				Spec: kargoapi.PromotionSpec{
 					Stage: "fake-stage",
 				},
 			}
@@ -266,7 +264,7 @@ func TestValidateCreate(t *testing.T) {
 			_, err := testCase.webhook.ValidateCreate(
 				ctx,
 				&kargoapi.Promotion{
-					Spec: &kargoapi.PromotionSpec{
+					Spec: kargoapi.PromotionSpec{
 						Freight: "fake-freight",
 					},
 				},
@@ -309,7 +307,7 @@ func TestValidateUpdate(t *testing.T) {
 						Name:      "fake-name",
 						Namespace: "fake-namespace",
 					},
-					Spec: &kargoapi.PromotionSpec{
+					Spec: kargoapi.PromotionSpec{
 						Stage:   "fake-stage",
 						Freight: "fake-freight",
 					},
@@ -336,7 +334,7 @@ func TestValidateUpdate(t *testing.T) {
 						Name:      "fake-name",
 						Namespace: "fake-namespace",
 					},
-					Spec: &kargoapi.PromotionSpec{
+					Spec: kargoapi.PromotionSpec{
 						Stage:   "fake-stage",
 						Freight: "fake-freight",
 					},
@@ -508,7 +506,7 @@ func TestAuthorize(t *testing.T) {
 							Name:      "fake-promotion",
 							Namespace: "fake-namespace",
 						},
-						Spec: &kargoapi.PromotionSpec{
+						Spec: kargoapi.PromotionSpec{
 							Stage: "fake-stage",
 						},
 					},

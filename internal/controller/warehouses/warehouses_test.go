@@ -45,9 +45,7 @@ func TestNewReconciler(t *testing.T) {
 func TestSyncWarehouse(t *testing.T) {
 	scheme := k8sruntime.NewScheme()
 	require.NoError(t, kargoapi.SchemeBuilder.AddToScheme(scheme))
-	testWarehouse := &kargoapi.Warehouse{
-		Spec: &kargoapi.WarehouseSpec{},
-	}
+	testWarehouse := &kargoapi.Warehouse{}
 	testCases := []struct {
 		name       string
 		reconciler *reconciler
@@ -360,7 +358,6 @@ func TestGetLatestFreightFromRepos(t *testing.T) {
 						Namespace: "fake-namespace",
 						Name:      testWarehouseName,
 					},
-					Spec: &kargoapi.WarehouseSpec{},
 				},
 			)
 			testCase.assertions(t, freight, err)

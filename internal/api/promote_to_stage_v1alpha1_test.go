@@ -146,8 +146,8 @@ func TestPromoteToStage(t *testing.T) {
 					types.NamespacedName,
 				) (*kargoapi.Stage, error) {
 					return &kargoapi.Stage{
-						Spec: &kargoapi.StageSpec{
-							Subscriptions: &kargoapi.Subscriptions{
+						Spec: kargoapi.StageSpec{
+							Subscriptions: kargoapi.Subscriptions{
 								UpstreamStages: []kargoapi.StageSubscription{
 									{
 										Name: "fake-upstream-stage",
@@ -192,8 +192,8 @@ func TestPromoteToStage(t *testing.T) {
 					types.NamespacedName,
 				) (*kargoapi.Stage, error) {
 					return &kargoapi.Stage{
-						Spec: &kargoapi.StageSpec{
-							Subscriptions: &kargoapi.Subscriptions{
+						Spec: kargoapi.StageSpec{
+							Subscriptions: kargoapi.Subscriptions{
 								UpstreamStages: []kargoapi.StageSubscription{
 									{
 										Name: "fake-upstream-stage",
@@ -242,8 +242,8 @@ func TestPromoteToStage(t *testing.T) {
 					types.NamespacedName,
 				) (*kargoapi.Stage, error) {
 					return &kargoapi.Stage{
-						Spec: &kargoapi.StageSpec{
-							Subscriptions: &kargoapi.Subscriptions{
+						Spec: kargoapi.StageSpec{
+							Subscriptions: kargoapi.Subscriptions{
 								UpstreamStages: []kargoapi.StageSubscription{
 									{
 										Name: "fake-upstream-stage",
@@ -295,8 +295,8 @@ func TestPromoteToStage(t *testing.T) {
 					types.NamespacedName,
 				) (*kargoapi.Stage, error) {
 					return &kargoapi.Stage{
-						Spec: &kargoapi.StageSpec{
-							Subscriptions: &kargoapi.Subscriptions{
+						Spec: kargoapi.StageSpec{
+							Subscriptions: kargoapi.Subscriptions{
 								UpstreamStages: []kargoapi.StageSubscription{
 									{
 										Name: "fake-upstream-stage",
@@ -355,8 +355,8 @@ func TestPromoteToStage(t *testing.T) {
 					types.NamespacedName,
 				) (*kargoapi.Stage, error) {
 					return &kargoapi.Stage{
-						Spec: &kargoapi.StageSpec{
-							Subscriptions: &kargoapi.Subscriptions{
+						Spec: kargoapi.StageSpec{
+							Subscriptions: kargoapi.Subscriptions{
 								UpstreamStages: []kargoapi.StageSubscription{
 									{
 										Name: "fake-upstream-stage",
@@ -420,8 +420,8 @@ func TestPromoteToStage(t *testing.T) {
 					types.NamespacedName,
 				) (*kargoapi.Stage, error) {
 					return &kargoapi.Stage{
-						Spec: &kargoapi.StageSpec{
-							Subscriptions: &kargoapi.Subscriptions{
+						Spec: kargoapi.StageSpec{
+							Subscriptions: kargoapi.Subscriptions{
 								UpstreamStages: []kargoapi.StageSubscription{
 									{
 										Name: "fake-upstream-stage",

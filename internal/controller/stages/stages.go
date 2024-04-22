@@ -907,8 +907,7 @@ func (r *reconciler) syncNormalStage(
 	}
 
 	// Stop here if we have no chance of finding any Freight to promote.
-	if stage.Spec.Subscriptions == nil ||
-		(stage.Spec.Subscriptions.Warehouse == "" && len(stage.Spec.Subscriptions.UpstreamStages) == 0) {
+	if stage.Spec.Subscriptions.Warehouse == "" && len(stage.Spec.Subscriptions.UpstreamStages) == 0 {
 		logger.Warn(
 			"Stage has no subscriptions. This may indicate an issue with resource" +
 				"validation logic.",

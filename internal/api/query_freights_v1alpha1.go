@@ -80,7 +80,7 @@ func (s *server) QueryFreight(
 			ctx,
 			project,
 			stageName,
-			*stage.Spec.Subscriptions,
+			stage.Spec.Subscriptions,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("get available freight for stage: %w", err)

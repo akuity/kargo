@@ -49,7 +49,7 @@ func (pqs *promoQueues) initializeQueues(ctx context.Context, promos kargoapi.Pr
 	logger := logging.LoggerFromContext(ctx)
 	for _, promo := range promos.Items {
 		promo := promo // This is to sidestep implicit memory aliasing in this for loop
-		if promo.Status.Phase.IsTerminal() || promo.Spec == nil {
+		if promo.Status.Phase.IsTerminal() || len(promo.Spec.Stage) == 0 {
 			continue
 		}
 		stage := types.NamespacedName{
@@ -86,11 +86,11 @@ func (pqs *promoQueues) initializeQueues(ctx context.Context, promos kargoapi.Pr
 	}
 }
 
-// tryBegin tries to mark the given Pending promotion as the active one so it can reconcile.
+// tryBegin tries to mark the given Pending promotion as the active one, so it can reconcile.
 // Returns true if the promo is already active or became active as a result of this call.
 // Returns false if it should not reconcile (another promo is active, or next in line).
 func (pqs *promoQueues) tryBegin(ctx context.Context, promo *kargoapi.Promotion) bool {
-	if promo == nil || promo.Spec == nil {
+	if promo == nil || len(promo.Spec.Stage) == 0 {
 		return false
 	}
 	stageKey := types.NamespacedName{
@@ -104,7 +104,7 @@ func (pqs *promoQueues) tryBegin(ctx context.Context, promo *kargoapi.Promotion)
 
 	pq, ok := pqs.pendingPromoQueuesByStage[stageKey]
 	if !ok {
-		// PriorityQueue for the stage has not been been initialized
+		// PriorityQueue for the stage has not been initialized
 		pq = newPriorityQueue()
 		pqs.pendingPromoQueuesByStage[stageKey] = pq
 	}
@@ -122,7 +122,7 @@ func (pqs *promoQueues) tryBegin(ctx context.Context, promo *kargoapi.Promotion)
 	}
 	if activePromoName == "" {
 		// If we get here, the Stage does not have any active Promotions Running against it.
-		// Now check if it this promo is the one that should run next.
+		// Now check if it is this promo is the one that should run next.
 		// NOTE: first will never be empty because of the push call above
 		first := pq.Peek()
 		if first.GetNamespace() == promo.Namespace && first.GetName() == promo.Name {
