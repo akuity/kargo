@@ -188,7 +188,7 @@ func registerKargoIndexers(ctx context.Context, mgr ctrl.Manager) error {
 		return fmt.Errorf("index Freight by Stages for which it has been approved: %w", err)
 	}
 
-	// Index ServiceAccounts by ODIC email
+	// Index ServiceAccounts by OIDC email
 	if err := kubeclient.IndexServiceAccountsByOIDCEmail(ctx, mgr); err != nil {
 		return fmt.Errorf("index ServiceAccounts by OIDC email: %w", err)
 	}
