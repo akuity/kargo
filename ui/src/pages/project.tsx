@@ -1,4 +1,9 @@
-import { faChartBar, faDiagramProject, faIdBadge } from '@fortawesome/free-solid-svg-icons';
+import {
+  faChartBar,
+  faClockRotateLeft,
+  faDiagramProject,
+  faIdBadge
+} from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Tabs } from 'antd';
 import { generatePath, useNavigate, useParams } from 'react-router-dom';
@@ -6,6 +11,7 @@ import { generatePath, useNavigate, useParams } from 'react-router-dom';
 import { paths } from '@ui/config/paths';
 import { AnalysisTemplatesList } from '@ui/features/project/analysis-templates/analysis-templates-list';
 import { CredentialsList } from '@ui/features/project/credentials/credentials-list';
+import { Events } from '@ui/features/project/events/events';
 import { Pipelines } from '@ui/features/project/pipelines/pipelines';
 
 const tabs = {
@@ -23,6 +29,11 @@ const tabs = {
     path: paths.projectAnalysisTemplates,
     label: 'Analysis Templates',
     icon: faChartBar
+  },
+  events: {
+    path: paths.projectEvents,
+    label: 'Events',
+    icon: faClockRotateLeft
   }
 };
 
@@ -41,6 +52,8 @@ export const Project = ({ tab = 'pipelines' }: { tab?: ProjectTab }) => {
         return <CredentialsList />;
       case 'analysisTemplates':
         return <AnalysisTemplatesList />;
+      case 'events':
+        return <Events />;
       default:
         return <Pipelines />;
     }

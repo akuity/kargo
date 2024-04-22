@@ -155,6 +155,9 @@ const (
 	// KargoServiceGetAnalysisRunProcedure is the fully-qualified name of the KargoService's
 	// GetAnalysisRun RPC.
 	KargoServiceGetAnalysisRunProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/GetAnalysisRun"
+	// KargoServiceListProjectEventsProcedure is the fully-qualified name of the KargoService's
+	// ListProjectEvents RPC.
+	KargoServiceListProjectEventsProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/ListProjectEvents"
 )
 
 // These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
@@ -203,6 +206,7 @@ var (
 	kargoServiceGetAnalysisTemplateMethodDescriptor       = kargoServiceServiceDescriptor.Methods().ByName("GetAnalysisTemplate")
 	kargoServiceDeleteAnalysisTemplateMethodDescriptor    = kargoServiceServiceDescriptor.Methods().ByName("DeleteAnalysisTemplate")
 	kargoServiceGetAnalysisRunMethodDescriptor            = kargoServiceServiceDescriptor.Methods().ByName("GetAnalysisRun")
+	kargoServiceListProjectEventsMethodDescriptor         = kargoServiceServiceDescriptor.Methods().ByName("ListProjectEvents")
 )
 
 // KargoServiceClient is a client for the akuity.io.kargo.service.v1alpha1.KargoService service.
@@ -252,6 +256,7 @@ type KargoServiceClient interface {
 	GetAnalysisTemplate(context.Context, *connect.Request[v1alpha1.GetAnalysisTemplateRequest]) (*connect.Response[v1alpha1.GetAnalysisTemplateResponse], error)
 	DeleteAnalysisTemplate(context.Context, *connect.Request[v1alpha1.DeleteAnalysisTemplateRequest]) (*connect.Response[v1alpha1.DeleteAnalysisTemplateResponse], error)
 	GetAnalysisRun(context.Context, *connect.Request[v1alpha1.GetAnalysisRunRequest]) (*connect.Response[v1alpha1.GetAnalysisRunResponse], error)
+	ListProjectEvents(context.Context, *connect.Request[v1alpha1.ListProjectEventsRequest]) (*connect.Response[v1alpha1.ListProjectEventsResponse], error)
 }
 
 // NewKargoServiceClient constructs a client for the akuity.io.kargo.service.v1alpha1.KargoService
@@ -522,6 +527,12 @@ func NewKargoServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(kargoServiceGetAnalysisRunMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
+		listProjectEvents: connect.NewClient[v1alpha1.ListProjectEventsRequest, v1alpha1.ListProjectEventsResponse](
+			httpClient,
+			baseURL+KargoServiceListProjectEventsProcedure,
+			connect.WithSchema(kargoServiceListProjectEventsMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -570,6 +581,7 @@ type kargoServiceClient struct {
 	getAnalysisTemplate       *connect.Client[v1alpha1.GetAnalysisTemplateRequest, v1alpha1.GetAnalysisTemplateResponse]
 	deleteAnalysisTemplate    *connect.Client[v1alpha1.DeleteAnalysisTemplateRequest, v1alpha1.DeleteAnalysisTemplateResponse]
 	getAnalysisRun            *connect.Client[v1alpha1.GetAnalysisRunRequest, v1alpha1.GetAnalysisRunResponse]
+	listProjectEvents         *connect.Client[v1alpha1.ListProjectEventsRequest, v1alpha1.ListProjectEventsResponse]
 }
 
 // GetVersionInfo calls akuity.io.kargo.service.v1alpha1.KargoService.GetVersionInfo.
@@ -790,6 +802,11 @@ func (c *kargoServiceClient) GetAnalysisRun(ctx context.Context, req *connect.Re
 	return c.getAnalysisRun.CallUnary(ctx, req)
 }
 
+// ListProjectEvents calls akuity.io.kargo.service.v1alpha1.KargoService.ListProjectEvents.
+func (c *kargoServiceClient) ListProjectEvents(ctx context.Context, req *connect.Request[v1alpha1.ListProjectEventsRequest]) (*connect.Response[v1alpha1.ListProjectEventsResponse], error) {
+	return c.listProjectEvents.CallUnary(ctx, req)
+}
+
 // KargoServiceHandler is an implementation of the akuity.io.kargo.service.v1alpha1.KargoService
 // service.
 type KargoServiceHandler interface {
@@ -838,6 +855,7 @@ type KargoServiceHandler interface {
 	GetAnalysisTemplate(context.Context, *connect.Request[v1alpha1.GetAnalysisTemplateRequest]) (*connect.Response[v1alpha1.GetAnalysisTemplateResponse], error)
 	DeleteAnalysisTemplate(context.Context, *connect.Request[v1alpha1.DeleteAnalysisTemplateRequest]) (*connect.Response[v1alpha1.DeleteAnalysisTemplateResponse], error)
 	GetAnalysisRun(context.Context, *connect.Request[v1alpha1.GetAnalysisRunRequest]) (*connect.Response[v1alpha1.GetAnalysisRunResponse], error)
+	ListProjectEvents(context.Context, *connect.Request[v1alpha1.ListProjectEventsRequest]) (*connect.Response[v1alpha1.ListProjectEventsResponse], error)
 }
 
 // NewKargoServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -1104,6 +1122,12 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(kargoServiceGetAnalysisRunMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
+	kargoServiceListProjectEventsHandler := connect.NewUnaryHandler(
+		KargoServiceListProjectEventsProcedure,
+		svc.ListProjectEvents,
+		connect.WithSchema(kargoServiceListProjectEventsMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/akuity.io.kargo.service.v1alpha1.KargoService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case KargoServiceGetVersionInfoProcedure:
@@ -1192,6 +1216,8 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 			kargoServiceDeleteAnalysisTemplateHandler.ServeHTTP(w, r)
 		case KargoServiceGetAnalysisRunProcedure:
 			kargoServiceGetAnalysisRunHandler.ServeHTTP(w, r)
+		case KargoServiceListProjectEventsProcedure:
+			kargoServiceListProjectEventsHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -1371,4 +1397,8 @@ func (UnimplementedKargoServiceHandler) DeleteAnalysisTemplate(context.Context, 
 
 func (UnimplementedKargoServiceHandler) GetAnalysisRun(context.Context, *connect.Request[v1alpha1.GetAnalysisRunRequest]) (*connect.Response[v1alpha1.GetAnalysisRunResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.GetAnalysisRun is not implemented"))
+}
+
+func (UnimplementedKargoServiceHandler) ListProjectEvents(context.Context, *connect.Request[v1alpha1.ListProjectEventsRequest]) (*connect.Response[v1alpha1.ListProjectEventsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.ListProjectEvents is not implemented"))
 }
