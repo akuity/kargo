@@ -27,11 +27,11 @@ func (p *ProjectPhase) IsTerminal() bool {
 	}
 }
 
-//+kubebuilder:object:root=true
-//+kubebuilder:resource:scope=Cluster
-//+kubebuilder:subresource:status
-//+kubebuilder:printcolumn:name=Phase,type=string,JSONPath=`.status.phase`
-//+kubebuilder:printcolumn:name=Age,type=date,JSONPath=`.metadata.creationTimestamp`
+// +kubebuilder:object:root=true
+// +kubebuilder:resource:scope=Cluster
+// +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name=Phase,type=string,JSONPath=`.status.phase`
+// +kubebuilder:printcolumn:name=Age,type=date,JSONPath=`.metadata.creationTimestamp`
 
 // Project is a resource type that reconciles to a specially labeled namespace
 // and other TODO: TBD project-level resources.
@@ -58,8 +58,8 @@ type ProjectSpec struct {
 // PromotionPolicy defines policies governing the promotion of Freight to a
 // specific Stage.
 type PromotionPolicy struct {
-	//+kubebuilder:validation:MinLength=1
-	//+kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
 	Stage string `json:"stage" protobuf:"bytes,1,opt,name=stage"`
 	// AutoPromotionEnabled indicates whether new Freight can automatically be
 	// promoted into the Stage referenced by the Stage field. Note: There are may
@@ -81,7 +81,7 @@ type ProjectStatus struct {
 	Message string `json:"message,omitempty" protobuf:"bytes,2,opt,name=message"`
 }
 
-//+kubebuilder:object:root=true
+// +kubebuilder:object:root=true
 
 // ProjectList is a list of Project resources.
 type ProjectList struct {

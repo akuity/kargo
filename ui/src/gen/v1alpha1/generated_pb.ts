@@ -3475,7 +3475,7 @@ export class Verification extends Message<Verification> {
   analysisTemplates: AnalysisTemplateReference[] = [];
 
   /**
-   * AnalysisRunMetadata is contains optional metadata that should be applied to
+   * AnalysisRunMetadata contains optional metadata that should be applied to
    * all AnalysisRuns.
    *
    * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.AnalysisRunMetadata analysisRunMetadata = 2;

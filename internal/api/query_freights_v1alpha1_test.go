@@ -161,11 +161,7 @@ func TestQueryFreight(t *testing.T) {
 					client.Client,
 					types.NamespacedName,
 				) (*kargoapi.Stage, error) {
-					return &kargoapi.Stage{
-						Spec: &kargoapi.StageSpec{
-							Subscriptions: &kargoapi.Subscriptions{},
-						},
-					}, nil
+					return &kargoapi.Stage{}, nil
 				},
 				getAvailableFreightForStageFn: func(
 					context.Context,

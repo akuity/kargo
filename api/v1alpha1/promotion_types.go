@@ -38,14 +38,14 @@ func (p *PromotionPhase) IsTerminal() bool {
 	}
 }
 
-//+kubebuilder:resource:shortName={promo,promos}
-//+kubebuilder:object:root=true
-//+kubebuilder:subresource:status
-//+kubebuilder:printcolumn:name=Shard,type=string,JSONPath=`.metadata.labels.kargo\.akuity\.io/shard`
-//+kubebuilder:printcolumn:name=Stage,type=string,JSONPath=`.spec.stage`
-//+kubebuilder:printcolumn:name=Freight,type=string,JSONPath=`.spec.freight`
-//+kubebuilder:printcolumn:name=Phase,type=string,JSONPath=`.status.phase`
-//+kubebuilder:printcolumn:name=Age,type=date,JSONPath=`.metadata.creationTimestamp`
+// +kubebuilder:resource:shortName={promo,promos}
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name=Shard,type=string,JSONPath=`.metadata.labels.kargo\.akuity\.io/shard`
+// +kubebuilder:printcolumn:name=Stage,type=string,JSONPath=`.spec.stage`
+// +kubebuilder:printcolumn:name=Freight,type=string,JSONPath=`.spec.freight`
+// +kubebuilder:printcolumn:name=Phase,type=string,JSONPath=`.status.phase`
+// +kubebuilder:printcolumn:name=Age,type=date,JSONPath=`.metadata.creationTimestamp`
 
 // Promotion represents a request to transition a particular Stage into a
 // particular Freight.
@@ -55,8 +55,8 @@ type Promotion struct {
 	// Spec describes the desired transition of a specific Stage into a specific
 	// Freight.
 	//
-	//+kubebuilder:validation:Required
-	Spec *PromotionSpec `json:"spec" protobuf:"bytes,2,opt,name=spec"`
+	// +kubebuilder:validation:Required
+	Spec PromotionSpec `json:"spec" protobuf:"bytes,2,opt,name=spec"`
 	// Status describes the current state of the transition represented by this
 	// Promotion.
 	Status PromotionStatus `json:"status,omitempty" protobuf:"bytes,3,opt,name=status"`
@@ -73,13 +73,13 @@ type PromotionSpec struct {
 	// applies. The Stage referenced by this field MUST be in the same
 	// namespace as the Promotion.
 	//
-	//+kubebuilder:validation:MinLength=1
-	//+kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
 	Stage string `json:"stage" protobuf:"bytes,1,opt,name=stage"`
 	// Freight specifies the piece of Freight to be promoted into the Stage
 	// referenced by the Stage field.
 	//
-	//+kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MinLength=1
 	Freight string `json:"freight" protobuf:"bytes,2,opt,name=freight"`
 }
 
@@ -110,7 +110,7 @@ func (p *PromotionStatus) WithPhase(phase PromotionPhase) *PromotionStatus {
 	return status
 }
 
-//+kubebuilder:object:root=true
+// +kubebuilder:object:root=true
 
 // PromotionList contains a list of Promotion
 type PromotionList struct {

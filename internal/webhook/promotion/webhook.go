@@ -245,7 +245,7 @@ func (w *webhook) ValidateUpdate(
 	}
 
 	// PromotionSpecs are meant to be immutable
-	if *promo.Spec != *(oldObj.(*kargoapi.Promotion).Spec) { // nolint: forcetypeassert
+	if promo.Spec != (oldObj.(*kargoapi.Promotion).Spec) { // nolint: forcetypeassert
 		return nil, apierrors.NewInvalid(
 			promotionGroupKind,
 			promo.Name,

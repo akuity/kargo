@@ -1057,7 +1057,7 @@ message Verification {
   // downstream.
   repeated AnalysisTemplateReference analysisTemplates = 1;
 
-  // AnalysisRunMetadata is contains optional metadata that should be applied to
+  // AnalysisRunMetadata contains optional metadata that should be applied to
   // all AnalysisRuns.
   optional AnalysisRunMetadata analysisRunMetadata = 2;
 

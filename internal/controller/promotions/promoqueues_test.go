@@ -57,7 +57,7 @@ func newPromo(namespace, name, stage string,
 			Name:              name,
 			Namespace:         namespace,
 		},
-		Spec: &kargoapi.PromotionSpec{
+		Spec: kargoapi.PromotionSpec{
 			Stage: stage,
 		},
 		Status: kargoapi.PromotionStatus{

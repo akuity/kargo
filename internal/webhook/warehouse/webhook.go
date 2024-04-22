@@ -115,7 +115,7 @@ func (w *webhook) validateCreateOrUpdate(
 	warehouse *kargoapi.Warehouse,
 ) (admission.Warnings, error) {
 	if errs :=
-		w.validateSpecFn(field.NewPath("spec"), warehouse.Spec); len(errs) > 0 {
+		w.validateSpecFn(field.NewPath("spec"), &warehouse.Spec); len(errs) > 0 {
 		return nil, apierrors.NewInvalid(warehouseGroupKind, warehouse.Name, errs)
 	}
 	return nil, nil

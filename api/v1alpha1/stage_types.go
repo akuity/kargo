@@ -27,7 +27,7 @@ type VerificationPhase string
 
 const (
 	// VerificationPhasePending denotes a verification process that has not yet
-	// started yet.
+	// started.
 	VerificationPhasePending VerificationPhase = "Pending"
 	// VerificationPhaseRunning denotes a verification that is currently running.
 	VerificationPhaseRunning VerificationPhase = "Running"
@@ -112,13 +112,13 @@ const (
 	ArgoCDAppSyncStateOutOfSync ArgoCDAppSyncState = "OutOfSync"
 )
 
-//+kubebuilder:object:root=true
-//+kubebuilder:subresource:status
-//+kubebuilder:printcolumn:name=Shard,type=string,JSONPath=`.spec.shard`
-//+kubebuilder:printcolumn:name=Current Freight,type=string,JSONPath=`.status.currentFreight.name`
-//+kubebuilder:printcolumn:name=Health,type=string,JSONPath=`.status.health.status`
-//+kubebuilder:printcolumn:name=Phase,type=string,JSONPath=`.status.phase`
-//+kubebuilder:printcolumn:name=Age,type=date,JSONPath=`.metadata.creationTimestamp`
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name=Shard,type=string,JSONPath=`.spec.shard`
+// +kubebuilder:printcolumn:name=Current Freight,type=string,JSONPath=`.status.currentFreight.name`
+// +kubebuilder:printcolumn:name=Health,type=string,JSONPath=`.status.health.status`
+// +kubebuilder:printcolumn:name=Phase,type=string,JSONPath=`.status.phase`
+// +kubebuilder:printcolumn:name=Age,type=date,JSONPath=`.metadata.creationTimestamp`
 
 // Stage is the Kargo API's main type.
 type Stage struct {
@@ -127,8 +127,8 @@ type Stage struct {
 	// Spec describes sources of Freight used by the Stage and how to incorporate
 	// Freight into the Stage.
 	//
-	//+kubebuilder:validation:Required
-	Spec *StageSpec `json:"spec" protobuf:"bytes,2,opt,name=spec"`
+	// +kubebuilder:validation:Required
+	Spec StageSpec `json:"spec" protobuf:"bytes,2,opt,name=spec"`
 	// Status describes the Stage's current and recent Freight, health, and more.
 	Status StageStatus `json:"status,omitempty" protobuf:"bytes,3,opt,name=status"`
 }
@@ -149,8 +149,8 @@ type StageSpec struct {
 	// Subscriptions describes the Stage's sources of Freight. This is a required
 	// field.
 	//
-	//+kubebuilder:validation:Required
-	Subscriptions *Subscriptions `json:"subscriptions" protobuf:"bytes,1,opt,name=subscriptions"`
+	// +kubebuilder:validation:Required
+	Subscriptions Subscriptions `json:"subscriptions" protobuf:"bytes,1,opt,name=subscriptions"`
 	// PromotionMechanisms describes how to incorporate Freight into the Stage.
 	// This is an optional field as it is sometimes useful to aggregates available
 	// Freight from multiple upstream Stages without performing any actions. The
@@ -177,8 +177,8 @@ type Subscriptions struct {
 type StageSubscription struct {
 	// Name specifies the name of a Stage.
 	//
-	//+kubebuilder:validation:MinLength=1
-	//+kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
 	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
 }
 
@@ -202,8 +202,8 @@ type PromotionMechanisms struct {
 type GitRepoUpdate struct {
 	// RepoURL is the URL of the repository to update. This is a required field.
 	//
-	//+kubebuilder:validation:MinLength=1
-	//+kubebuilder:validation:Pattern=`^https?://(\w+([\.-]\w+)*@)?\w+([\.-]\w+)*(:[\d]+)?(/.*)?$`
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Pattern=`^https?://(\w+([\.-]\w+)*@)?\w+([\.-]\w+)*(:[\d]+)?(/.*)?$`
 	RepoURL string `json:"repoURL" protobuf:"bytes,1,opt,name=repoURL"`
 	// InsecureSkipTLSVerify specifies whether certificate verification errors
 	// should be ignored when connecting to the repository. This should be enabled
@@ -218,14 +218,14 @@ type GitRepoUpdate struct {
 	// what branch of a repository can be treated as a source of manifests or
 	// other configuration when a Stage has no subscription to that repository.
 	//
-	//+kubebuilder:validation:Optional
-	//+kubebuilder:validation:Pattern=`^(\w+([-/]\w+)*)?$`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Pattern=`^(\w+([-/]\w+)*)?$`
 	ReadBranch string `json:"readBranch,omitempty" protobuf:"bytes,3,opt,name=readBranch"`
 	// WriteBranch specifies the particular branch of the repository to be
 	// updated. This is a required field.
 	//
-	//+kubebuilder:validation:MinLength=1
-	//+kubebuilder:validation:Pattern=`^\w+([-/]\w+)*$`
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Pattern=`^\w+([-/]\w+)*$`
 	WriteBranch string `json:"writeBranch" protobuf:"bytes,4,opt,name=writeBranch"`
 	// PullRequest will generate a pull request instead of making the commit directly
 	PullRequest *PullRequestPromotionMechanism `json:"pullRequest,omitempty" protobuf:"bytes,5,opt,name=pullRequest"`
@@ -263,7 +263,7 @@ type KargoRenderPromotionMechanism struct {
 	// will be passed to Kargo Render in the form <image name>:<tag>. (e.g. Will
 	// not use digests by default.)
 	//
-	//+kubebuilder:validation:Optional
+	// +kubebuilder:validation:Optional
 	Images []KargoRenderImageUpdate `json:"images,omitempty" protobuf:"bytes,1,rep,name=images"`
 }
 
@@ -272,12 +272,12 @@ type KargoRenderPromotionMechanism struct {
 type KargoRenderImageUpdate struct {
 	// Image specifies a container image (without tag). This is a required field.
 	//
-	//+kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MinLength=1
 	Image string `json:"image" protobuf:"bytes,1,opt,name=image"`
 	// UseDigest specifies whether the image's digest should be used instead of
 	// its tag.
 	//
-	//+kubebuilder:validation:Optional
+	// +kubebuilder:validation:Optional
 	UseDigest bool `json:"useDigest" protobuf:"varint,2,opt,name=useDigest"`
 }
 
@@ -287,7 +287,7 @@ type KustomizePromotionMechanism struct {
 	// Images describes images for which `kustomize edit set image` should be
 	// executed and the paths in which those commands should be executed.
 	//
-	//+kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MinItems=1
 	Images []KustomizeImageUpdate `json:"images" protobuf:"bytes,1,rep,name=images"`
 }
 
@@ -296,18 +296,18 @@ type KustomizePromotionMechanism struct {
 type KustomizeImageUpdate struct {
 	// Image specifies a container image (without tag). This is a required field.
 	//
-	//+kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MinLength=1
 	Image string `json:"image" protobuf:"bytes,1,opt,name=image"`
 	// Path specifies a path in which the `kustomize edit set image` command
 	// should be executed. This is a required field.
 	//
-	//+kubebuilder:validation:MinLength=1
-	//+kubebuilder:validation:Pattern=^[\w-\.]+(/[\w-\.]+)*$
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Pattern=^[\w-\.]+(/[\w-\.]+)*$
 	Path string `json:"path" protobuf:"bytes,2,opt,name=path"`
 	// UseDigest specifies whether the image's digest should be used instead of
 	// its tag.
 	//
-	//+kubebuilder:validation:Optional
+	// +kubebuilder:validation:Optional
 	UseDigest bool `json:"useDigest" protobuf:"varint,3,opt,name=useDigest"`
 }
 
@@ -327,19 +327,19 @@ type HelmPromotionMechanism struct {
 type HelmImageUpdate struct {
 	// Image specifies a container image (without tag). This is a required field.
 	//
-	//+kubebuilder:validation:MinLength=1
-	//+kubebuilder:validation:Pattern=`^(\w+([\.-]\w+)*(:[\d]+)?/)?(\w+([\.-]\w+)*)(/\w+([\.-]\w+)*)*$`
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Pattern=`^(\w+([\.-]\w+)*(:[\d]+)?/)?(\w+([\.-]\w+)*)(/\w+([\.-]\w+)*)*$`
 	Image string `json:"image" protobuf:"bytes,1,opt,name=image"`
 	// ValuesFilePath specifies a path to the Helm values file that is to be
 	// updated. This is a required field.
 	//
-	//+kubebuilder:validation:MinLength=1
-	//+kubebuilder:validation:Pattern=^[\w-\.]+(/[\w-\.]+)*$
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Pattern=^[\w-\.]+(/[\w-\.]+)*$
 	ValuesFilePath string `json:"valuesFilePath" protobuf:"bytes,2,opt,name=valuesFilePath"`
 	// Key specifies a key within the Helm values file that is to be updated. This
 	// is a required field.
 	//
-	//+kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MinLength=1
 	Key string `json:"key" protobuf:"bytes,3,opt,name=key"`
 	// Value specifies the new value for the specified key in the specified Helm
 	// values file. Valid values are:
@@ -365,8 +365,8 @@ type HelmChartDependencyUpdate struct {
 	// match the values of these two fields to your Warehouse; match them to the
 	// Chart.yaml. This is a required field.
 	//
-	//+kubebuilder:validation:MinLength=1
-	//+kubebuilder:validation:Pattern=`^(((https?)|(oci))://)([\w\d\.\-]+)(:[\d]+)?(/.*)*$`
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Pattern=`^(((https?)|(oci))://)([\w\d\.\-]+)(:[\d]+)?(/.*)*$`
 	Repository string `json:"repository" protobuf:"bytes,1,opt,name=repository"`
 	// Name along with Repository identifies a subchart of the umbrella chart at
 	// ChartPath whose version should be updated. The values of both fields should
@@ -375,12 +375,12 @@ type HelmChartDependencyUpdate struct {
 	// match the values of these two fields to your Warehouse; match them to the
 	// Chart.yaml. This is a required field.
 	//
-	//+kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name" protobuf:"bytes,2,opt,name=name"`
 	// ChartPath is the path to an umbrella chart.
 	//
-	//+kubebuilder:validation:MinLength=1
-	//+kubebuilder:validation:Pattern=^[\w-\.]+(/[\w-\.]+)*$
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Pattern=^[\w-\.]+(/[\w-\.]+)*$
 	ChartPath string `json:"chartPath" protobuf:"bytes,3,opt,name=chartPath"`
 }
 
@@ -390,15 +390,15 @@ type ArgoCDAppUpdate struct {
 	// AppName specifies the name of an Argo CD Application resource to be
 	// updated.
 	//
-	//+kubebuilder:validation:MinLength=1
-	//+kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
 	AppName string `json:"appName" protobuf:"bytes,1,opt,name=appName"`
 	// AppNamespace specifies the namespace of an Argo CD Application resource to
 	// be updated. If left unspecified, the namespace of this Application resource
 	// will use the value of ARGOCD_NAMESPACE or "argocd"
 	//
-	//+kubebuilder:validation:Optional
-	//+kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
 	AppNamespace string `json:"appNamespace,omitempty" protobuf:"bytes,2,opt,name=appNamespace"`
 	// SourceUpdates describes updates to be applied to various sources of the
 	// specified Argo CD Application resource.
@@ -417,7 +417,7 @@ type ArgoCDSourceUpdate struct {
 	// Warehouse; match them to the Application source you wish to update. This is
 	// a required field.
 	//
-	//+kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MinLength=1
 	RepoURL string `json:"repoURL" protobuf:"bytes,1,opt,name=repoURL"`
 	// Chart along with the RepoURL field identifies which of an Argo CD
 	// Application's sources this update is intended for. Note: As of Argo CD 2.6,
@@ -427,7 +427,7 @@ type ArgoCDSourceUpdate struct {
 	// the source. i.e. Do not match the values of these two fields to your
 	// Warehouse; match them to the Application source you wish to update.
 	//
-	//+kubebuilder:validation:Optional
+	// +kubebuilder:validation:Optional
 	Chart string `json:"chart,omitempty" protobuf:"bytes,2,opt,name=chart"`
 	// UpdateTargetRevision is a bool indicating whether the source should be
 	// updated such that its TargetRevision field points at the most recently git
@@ -447,7 +447,7 @@ type ArgoCDKustomize struct {
 	// Images describes how specific image versions can be incorporated into an
 	// Argo CD Application's Kustomize parameters.
 	//
-	//+kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MinItems=1
 	Images []ArgoCDKustomizeImageUpdate `json:"images" protobuf:"bytes,1,rep,name=images"`
 }
 
@@ -457,7 +457,7 @@ type ArgoCDHelm struct {
 	// Images describes how specific image versions can be incorporated into an
 	// Argo CD Application's Helm parameters.
 	//
-	//+kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MinItems=1
 	Images []ArgoCDHelmImageUpdate `json:"images" protobuf:"bytes,1,rep,name=images"`
 }
 
@@ -466,12 +466,12 @@ type ArgoCDHelm struct {
 type ArgoCDKustomizeImageUpdate struct {
 	// Image specifies a container image (without tag). This is a required field.
 	//
-	//+kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MinLength=1
 	Image string `json:"image" protobuf:"bytes,1,opt,name=image"`
 	// UseDigest specifies whether the image's digest should be used instead of
 	// its tag.
 	//
-	//+kubebuilder:validation:Optional
+	// +kubebuilder:validation:Optional
 	UseDigest bool `json:"useDigest" protobuf:"varint,2,opt,name=useDigest"`
 }
 
@@ -480,12 +480,12 @@ type ArgoCDKustomizeImageUpdate struct {
 type ArgoCDHelmImageUpdate struct {
 	// Image specifies a container image (without tag). This is a required field.
 	//
-	//+kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MinLength=1
 	Image string `json:"image" protobuf:"bytes,1,opt,name=image"`
 	// Key specifies a key within an Argo CD Application's Helm parameters that is
 	// to be updated. This is a required field.
 	//
-	//+kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MinLength=1
 	Key string `json:"key" protobuf:"bytes,2,opt,name=key"`
 	// Value specifies the new value for the specified key in the Argo CD
 	// Application's Helm parameters. Valid values are:
@@ -666,7 +666,7 @@ type ArgoCDAppSyncStatus struct {
 	Revisions []string           `json:"revisions,omitempty" protobuf:"bytes,3,rep,name=revisions"`
 }
 
-//+kubebuilder:object:root=true
+// +kubebuilder:object:root=true
 
 // StageList is a list of Stage resources.
 type StageList struct {
@@ -691,7 +691,7 @@ type Verification struct {
 	// should be created to verify a Stage's current Freight is fit to be promoted
 	// downstream.
 	AnalysisTemplates []AnalysisTemplateReference `json:"analysisTemplates,omitempty" protobuf:"bytes,1,rep,name=analysisTemplates"`
-	// AnalysisRunMetadata is contains optional metadata that should be applied to
+	// AnalysisRunMetadata contains optional metadata that should be applied to
 	// all AnalysisRuns.
 	AnalysisRunMetadata *AnalysisRunMetadata `json:"analysisRunMetadata,omitempty" protobuf:"bytes,2,opt,name=analysisRunMetadata"`
 	// Args lists arguments that should be added to all AnalysisRuns.
@@ -703,7 +703,7 @@ type AnalysisTemplateReference struct {
 	// Name is the name of the AnalysisTemplate in the same project/namespace as
 	// the Stage.
 	//
-	//+kubebuilder:validation:Required
+	// +kubebuilder:validation:Required
 	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
 }
 
@@ -720,11 +720,11 @@ type AnalysisRunMetadata struct {
 type AnalysisRunArgument struct {
 	// Name is the name of the argument.
 	//
-	//+kubebuilder:validation:Required
+	// +kubebuilder:validation:Required
 	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
 	// Value is the value of the argument.
 	//
-	//+kubebuilder:validation:Required
+	// +kubebuilder:validation:Required
 	Value string `json:"value,omitempty" protobuf:"bytes,2,opt,name=value"`
 }
 

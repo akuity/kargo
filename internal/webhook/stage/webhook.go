@@ -181,7 +181,7 @@ func (w *webhook) ValidateDelete(
 func (w *webhook) validateCreateOrUpdate(
 	s *kargoapi.Stage,
 ) (admission.Warnings, error) {
-	if errs := w.validateSpecFn(field.NewPath("spec"), s.Spec); len(errs) > 0 {
+	if errs := w.validateSpecFn(field.NewPath("spec"), &s.Spec); len(errs) > 0 {
 		return nil, apierrors.NewInvalid(stageGroupKind, s.Name, errs)
 	}
 	return nil, nil
@@ -194,12 +194,13 @@ func (w *webhook) validateSpec(
 	if spec == nil { // nil spec is caught by declarative validations
 		return nil
 	}
-	errs := w.validateSubs(f.Child("subscriptions"), spec.Subscriptions)
+	errs := w.validateSubs(f.Child("subscriptions"), &spec.Subscriptions)
 	return append(
 		errs,
 		w.validatePromotionMechanisms(
 			f.Child("promotionMechanisms"),
-			spec.PromotionMechanisms)...,
+			spec.PromotionMechanisms,
+		)...,
 	)
 }
 

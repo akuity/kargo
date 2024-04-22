@@ -3,8 +3,9 @@ package v1alpha1
 import "encoding/json"
 
 const (
-	// AnnotationKeyCreateActor is an annotation key that can be injected to a resource
-	// by the Kargo controlplane to indicate the actor that created the resource.
+	// AnnotationKeyCreateActor is an annotation key that can be injected to a
+	// resource by the Kargo control plane to indicate the actor that created
+	// the resource.
 	AnnotationKeyCreateActor = "kargo.akuity.io/create-actor"
 
 	// AnnotationKeyRefresh is an annotation key that can be set on a resource
@@ -25,27 +26,34 @@ const (
 	// aborted.
 	AnnotationKeyAbort = "kargo.akuity.io/abort"
 
+	// AnnotationKeyDescription is an annotation key that can be set on a
+	// resource to provide a description of it. The value of the annotation may
+	// be used by the Kargo UI to display additional information about the
+	// resource.
 	AnnotationKeyDescription = "kargo.akuity.io/description"
 
-	AnnotationKeyOIDCEmails   = "rbac.kargo.akuity.io/email"
-	AnnotationKeyOIDCGroups   = "rbac.kargo.akuity.io/groups"
-	AnnotationKeyOIDCSubjects = "rbac.kargo.akuity.io/sub"
+	// AnnotationKeyOIDCEmails is an annotation key that can be set on a
+	// ServiceAccount to associate it with a list of email addresses. The
+	// annotation is used to grant permissions to the ServiceAccount based on
+	// the email claim from a user who authenticates using OIDC.
+	// The value of the annotation should be a comma-separated list.
+	AnnotationKeyOIDCEmails = "rbac.kargo.akuity.io/email"
 
-	AnnotationKeyEventActor                  = "event.kargo.akuity.io/actor"
-	AnnotationKeyEventProject                = "event.kargo.akuity.io/project"
-	AnnotationKeyEventPromotionName          = "event.kargo.akuity.io/promotion-name"
-	AnnotationKeyEventPromotionCreateTime    = "event.kargo.akuity.io/promotion-create-time"
-	AnnotationKeyEventFreightAlias           = "event.kargo.akuity.io/freight-alias"
-	AnnotationKeyEventFreightName            = "event.kargo.akuity.io/freight-name"
-	AnnotationKeyEventFreightCreateTime      = "event.kargo.akuity.io/freight-create-time"
-	AnnotationKeyEventFreightCommits         = "event.kargo.akuity.io/freight-commits"
-	AnnotationKeyEventFreightImages          = "event.kargo.akuity.io/freight-images"
-	AnnotationKeyEventFreightCharts          = "event.kargo.akuity.io/freight-charts"
-	AnnotationKeyEventStageName              = "event.kargo.akuity.io/stage-name"
-	AnnotationKeyEventAnalysisRunName        = "event.kargo.akuity.io/analysis-run-name"
-	AnnotationKeyEventVerificationPending    = "event.kargo.akuity.io/verification-pending"
-	AnnotationKeyEventVerificationStartTime  = "event.kargo.akuity.io/verification-start-time"
-	AnnotationKeyEventVerificationFinishTime = "event.kargo.akuity.io/verification-finish-time"
+	// AnnotationKeyOIDCGroups is an annotation key that can be set on a
+	// ServiceAccount to associate it with a list of groups from an OIDC
+	// provider. The annotation is used to grant permissions to the
+	// ServiceAccount based on the groups claim from a user who authenticates
+	// using OIDC.
+	// The value of the annotation should be a comma-separated list.
+	AnnotationKeyOIDCGroups = "rbac.kargo.akuity.io/groups"
+
+	// AnnotationKeyOIDCSubjects is an annotation key that can be set on a
+	// ServiceAccount to associate it with a list of subjects from an OIDC
+	// provider. The annotation is used to grant permissions to the
+	// ServiceAccount based on the subject claim from a user who authenticates
+	// using OIDC.
+	// The value of the annotation should be a comma-separated list.
+	AnnotationKeyOIDCSubjects = "rbac.kargo.akuity.io/sub"
 )
 
 // RefreshAnnotationValue returns the value of the AnnotationKeyRefresh

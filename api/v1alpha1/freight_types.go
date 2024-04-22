@@ -7,15 +7,16 @@ import (
 	"sort"
 	"strings"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"github.com/akuity/kargo/internal/git"
 	"github.com/akuity/kargo/internal/helm"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-//+kubebuilder:object:root=true
-//+kubebuilder:subresource:status
-//+kubebuilder:printcolumn:name=Alias,type=string,JSONPath=`.metadata.labels.kargo\.akuity\.io/alias`
-//+kubebuilder:printcolumn:name=Age,type=date,JSONPath=`.metadata.creationTimestamp`
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name=Alias,type=string,JSONPath=`.metadata.labels.kargo\.akuity\.io/alias`
+// +kubebuilder:printcolumn:name=Age,type=date,JSONPath=`.metadata.creationTimestamp`
 
 // Freight represents a collection of versioned artifacts.
 type Freight struct {
@@ -151,7 +152,7 @@ type VerifiedStage struct{}
 // approved.
 type ApprovedStage struct{}
 
-//+kubebuilder:object:root=true
+// +kubebuilder:object:root=true
 
 // FreightList is a list of Freight resources.
 type FreightList struct {

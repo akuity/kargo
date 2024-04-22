@@ -32,9 +32,7 @@ func TestDefault(t *testing.T) {
 	w := &webhook{}
 
 	t.Run("shard stays default when not specified at all", func(t *testing.T) {
-		warehouse := &kargoapi.Warehouse{
-			Spec: &kargoapi.WarehouseSpec{},
-		}
+		warehouse := &kargoapi.Warehouse{}
 		err := w.Default(context.Background(), warehouse)
 		require.NoError(t, err)
 		require.Empty(t, warehouse.Labels)
@@ -43,7 +41,7 @@ func TestDefault(t *testing.T) {
 
 	t.Run("sync shard label to non-empty shard field", func(t *testing.T) {
 		warehouse := &kargoapi.Warehouse{
-			Spec: &kargoapi.WarehouseSpec{
+			Spec: kargoapi.WarehouseSpec{
 				Shard: testShardName,
 			},
 		}
@@ -60,7 +58,6 @@ func TestDefault(t *testing.T) {
 					kargoapi.ShardLabelKey: testShardName,
 				},
 			},
-			Spec: &kargoapi.WarehouseSpec{},
 		}
 		err := w.Default(context.Background(), warehouse)
 		require.NoError(t, err)
@@ -246,7 +243,7 @@ func TestValidateCreateOrUpdate(t *testing.T) {
 func TestValidateSpec(t *testing.T) {
 	testCases := []struct {
 		name       string
-		spec       *kargoapi.WarehouseSpec
+		spec       kargoapi.WarehouseSpec
 		assertions func(*testing.T, *kargoapi.WarehouseSpec, field.ErrorList)
 	}{
 		{
@@ -257,7 +254,7 @@ func TestValidateSpec(t *testing.T) {
 		},
 		{
 			name: "invalid",
-			spec: &kargoapi.WarehouseSpec{
+			spec: kargoapi.WarehouseSpec{
 				Subscriptions: []kargoapi.RepoSubscription{
 					{
 						Git: &kargoapi.GitSubscription{
@@ -320,7 +317,7 @@ func TestValidateSpec(t *testing.T) {
 		},
 		{
 			name: "valid",
-			spec: &kargoapi.WarehouseSpec{
+			spec: kargoapi.WarehouseSpec{
 				// Nil subs are caught by declarative validation, so for the purposes of
 				// this test, leaving that completely undefined should surface no
 				// errors.
@@ -332,13 +329,14 @@ func TestValidateSpec(t *testing.T) {
 	}
 	w := &webhook{}
 	for _, testCase := range testCases {
+		testCase := testCase
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
 				t,
-				testCase.spec,
+				&testCase.spec,
 				w.validateSpec(
 					field.NewPath("spec"),
-					testCase.spec,
+					&testCase.spec,
 				),
 			)
 		})

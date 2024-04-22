@@ -503,7 +503,7 @@ spec:
                 properties:
                   analysisRunMetadata:
                     description: |-
-                      AnalysisRunMetadata is contains optional metadata that should be applied to
+                      AnalysisRunMetadata contains optional metadata that should be applied to
                       all AnalysisRuns.
                     properties:
                       annotations:

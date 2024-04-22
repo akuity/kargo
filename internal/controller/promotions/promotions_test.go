@@ -155,9 +155,7 @@ func TestReconcile(t *testing.T) {
 			r := newFakeReconciler(t, recorder, tc.promos...)
 			promoteWasCalled := false
 			r.getStageFn = func(context.Context, client.Client, types.NamespacedName) (*kargoapi.Stage, error) {
-				return &kargoapi.Stage{
-					Spec: &kargoapi.StageSpec{},
-				}, nil
+				return &kargoapi.Stage{}, nil
 			}
 			r.promoteFn = func(ctx context.Context, p v1alpha1.Promotion,
 				f *v1alpha1.Freight) (*kargoapi.PromotionStatus, error) {

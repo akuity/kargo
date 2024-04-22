@@ -141,7 +141,7 @@ func TestGitPromote(t *testing.T) {
 			status, newFreightOut, err := testCase.promoMech.Promote(
 				context.Background(),
 				&kargoapi.Stage{
-					Spec: &kargoapi.StageSpec{
+					Spec: kargoapi.StageSpec{
 						PromotionMechanisms: &kargoapi.PromotionMechanisms{},
 					},
 				},
