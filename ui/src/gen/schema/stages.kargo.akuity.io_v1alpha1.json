@@ -383,7 +383,7 @@
           "description": "Verification describes how to verify a Stage's current Freight is fit for\npromotion downstream.",
           "properties": {
             "analysisRunMetadata": {
-              "description": "AnalysisRunMetadata is contains optional metadata that should be applied to\nall AnalysisRuns.",
+              "description": "AnalysisRunMetadata contains optional metadata that should be applied to\nall AnalysisRuns.",
               "properties": {
                 "annotations": {
                   "additionalProperties": {

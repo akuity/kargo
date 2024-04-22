@@ -3,8 +3,9 @@ package v1alpha1
 import "encoding/json"
 
 const (
-	// AnnotationKeyCreateActor is an annotation key that can be injected to a resource
-	// by the Kargo controlplane to indicate the actor that created the resource.
+	// AnnotationKeyCreateActor is an annotation key that can be injected to a
+	// resource by the Kargo control plane to indicate the actor that created
+	// the resource.
 	AnnotationKeyCreateActor = "kargo.akuity.io/create-actor"
 
 	// AnnotationKeyRefresh is an annotation key that can be set on a resource

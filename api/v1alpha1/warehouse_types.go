@@ -22,10 +22,10 @@ const (
 	ImageSelectionStrategySemVer      ImageSelectionStrategy = "SemVer"
 )
 
-//+kubebuilder:object:root=true
-//+kubebuilder:subresource:status
-//+kubebuilder:printcolumn:name=Shard,type=string,JSONPath=`.spec.shard`
-//+kubebuilder:printcolumn:name=Age,type=date,JSONPath=`.metadata.creationTimestamp`
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name=Shard,type=string,JSONPath=`.spec.shard`
+// +kubebuilder:printcolumn:name=Age,type=date,JSONPath=`.metadata.creationTimestamp`
 
 // Warehouse is a source of Freight.
 type Warehouse struct {
@@ -33,7 +33,7 @@ type Warehouse struct {
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 	// Spec describes sources of artifacts.
 	//
-	//+kubebuilder:validation:Required
+	// +kubebuilder:validation:Required
 	Spec WarehouseSpec `json:"spec" protobuf:"bytes,2,opt,name=spec"`
 	// Status describes the Warehouse's most recently observed state.
 	Status WarehouseStatus `json:"status,omitempty" protobuf:"bytes,3,opt,name=status"`
@@ -58,7 +58,7 @@ type WarehouseSpec struct {
 	// Subscriptions describes sources of artifacts to be included in Freight
 	// produced by this Warehouse.
 	//
-	//+kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MinItems=1
 	Subscriptions []RepoSubscription `json:"subscriptions" protobuf:"bytes,1,rep,name=subscriptions"`
 }
 
@@ -77,8 +77,8 @@ type RepoSubscription struct {
 type GitSubscription struct {
 	// URL is the repository's URL. This is a required field.
 	//
-	//+kubebuilder:validation:MinLength=1
-	//+kubebuilder:validation:Pattern=`^https?://(\w+([\.-]\w+)*@)?\w+([\.-]\w+)*(:[\d]+)?(/.*)?$`
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Pattern=`^https?://(\w+([\.-]\w+)*@)?\w+([\.-]\w+)*(:[\d]+)?(/.*)?$`
 	RepoURL string `json:"repoURL" protobuf:"bytes,1,opt,name=repoURL"`
 	// CommitSelectionStrategy specifies the rules for how to identify the newest
 	// commit of interest in the repository specified by the RepoURL field. This
@@ -94,8 +94,8 @@ type GitSubscription struct {
 	// CommitSelectionStrategy is NewestFromBranch or unspecified), the
 	// subscription is implicitly to the repository's default branch.
 	//
-	//+kubebuilder:validation:MinLength=1
-	//+kubebuilder:validation:Pattern=`^\w+([-/]\w+)*$`
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Pattern=`^\w+([-/]\w+)*$`
 	Branch string `json:"branch,omitempty" protobuf:"bytes,3,opt,name=branch"`
 	// SemverConstraint specifies constraints on what new tagged commits are
 	// considered in determining the newest commit of interest. The value in this
@@ -105,14 +105,14 @@ type GitSubscription struct {
 	// should be taken with leaving this field unspecified, as it can lead to the
 	// unanticipated rollout of breaking changes.
 	//
-	//+kubebuilder:validation:Optional
+	// +kubebuilder:validation:Optional
 	SemverConstraint string `json:"semverConstraint,omitempty" protobuf:"bytes,4,opt,name=semverConstraint"`
 	// AllowTags is a regular expression that can optionally be used to limit the
 	// tags that are considered in determining the newest commit of interest. The
 	// value in this field only has any effect when the CommitSelectionStrategy is
 	// Lexical, NewestTag, or SemVer. This field is optional.
 	//
-	//+kubebuilder:validation:Optional
+	// +kubebuilder:validation:Optional
 	AllowTags string `json:"allowTags,omitempty" protobuf:"bytes,5,opt,name=allowTags"`
 	// IgnoreTags is a list of tags that must be ignored when determining the
 	// newest commit of interest. No regular expressions or glob patterns are
@@ -120,7 +120,7 @@ type GitSubscription struct {
 	// CommitSelectionStrategy is Lexical, NewestTag, or SemVer. This field is
 	// optional.
 	//
-	//+kubebuilder:validation:Optional
+	// +kubebuilder:validation:Optional
 	IgnoreTags []string `json:"ignoreTags,omitempty" protobuf:"bytes,6,rep,name=ignoreTags"`
 	// InsecureSkipTLSVerify specifies whether certificate verification errors
 	// should be ignored when connecting to the repository. This should be enabled
@@ -138,7 +138,7 @@ type GitSubscription struct {
 	// Paths selected by IncludePaths may be unselected by ExcludePaths. This
 	// is a useful method for including a broad set of paths and then excluding a
 	// subset of them.
-	//+kubebuilder:validation:Optional
+	// +kubebuilder:validation:Optional
 	IncludePaths []string `json:"includePaths,omitempty" protobuf:"bytes,8,rep,name=includePaths"`
 	// ExcludePaths is a list of selectors that designate paths in the repository
 	// that should NOT trigger the production of new Freight when changes are
@@ -153,7 +153,7 @@ type GitSubscription struct {
 	// Paths selected by IncludePaths may be unselected by ExcludePaths. This
 	// is a useful method for including a broad set of paths and then excluding a
 	// subset of them.
-	//+kubebuilder:validation:Optional
+	// +kubebuilder:validation:Optional
 	ExcludePaths []string `json:"excludePaths,omitempty" protobuf:"bytes,9,rep,name=excludePaths"`
 }
 
@@ -162,16 +162,16 @@ type ImageSubscription struct {
 	// RepoURL specifies the URL of the image repository to subscribe to. The
 	// value in this field MUST NOT include an image tag. This field is required.
 	//
-	//+kubebuilder:validation:MinLength=1
-	//+kubebuilder:validation:Pattern=`^(\w+([\.-]\w+)*(:[\d]+)?/)?(\w+([\.-]\w+)*)(/\w+([\.-]\w+)*)*$`
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Pattern=`^(\w+([\.-]\w+)*(:[\d]+)?/)?(\w+([\.-]\w+)*)(/\w+([\.-]\w+)*)*$`
 	RepoURL string `json:"repoURL" protobuf:"bytes,1,opt,name=repoURL"`
 	// GitRepoURL optionally specifies the URL of a Git repository that contains
 	// the source code for the image repository referenced by the RepoURL field.
 	// When this is specified, Kargo MAY be able to infer and link to the exact
 	// revision of that source code that was used to build the image.
 	//
-	//+kubebuilder:validation:Optional
-	//+kubebuilder:validation:Pattern=`^https?://(\w+([\.-]\w+)*@)?\w+([\.-]\w+)*(:[\d]+)?(/.*)?$`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Pattern=`^https?://(\w+([\.-]\w+)*@)?\w+([\.-]\w+)*(:[\d]+)?(/.*)?$`
 	GitRepoURL string `json:"gitRepoURL,omitempty" protobuf:"bytes,2,opt,name=gitRepoURL"`
 	// ImageSelectionStrategy specifies the rules for how to identify the newest version
 	// of the image specified by the RepoURL field. This field is optional. When
@@ -191,19 +191,19 @@ type ImageSubscription struct {
 	// changes. Refer to Image Updater documentation for more details.
 	// More info: https://github.com/masterminds/semver#checking-version-constraints
 	//
-	//+kubebuilder:validation:Optional
+	// +kubebuilder:validation:Optional
 	SemverConstraint string `json:"semverConstraint,omitempty" protobuf:"bytes,4,opt,name=semverConstraint"`
 	// AllowTags is a regular expression that can optionally be used to limit the
 	// image tags that are considered in determining the newest version of an
 	// image. This field is optional.
 	//
-	//+kubebuilder:validation:Optional
+	// +kubebuilder:validation:Optional
 	AllowTags string `json:"allowTags,omitempty" protobuf:"bytes,5,opt,name=allowTags"`
 	// IgnoreTags is a list of tags that must be ignored when determining the
 	// newest version of an image. No regular expressions or glob patterns are
 	// supported yet. This field is optional.
 	//
-	//+kubebuilder:validation:Optional
+	// +kubebuilder:validation:Optional
 	IgnoreTags []string `json:"ignoreTags,omitempty" protobuf:"bytes,6,rep,name=ignoreTags"`
 	// Platform is a string of the form <os>/<arch> that limits the tags that can
 	// be considered when searching for new versions of an image. This field is
@@ -214,7 +214,7 @@ type ImageSubscription struct {
 	// OS/architecture than the Kargo controller. At present this is uncommon, but
 	// not unheard of.
 	//
-	//+kubebuilder:validation:Optional
+	// +kubebuilder:validation:Optional
 	Platform string `json:"platform,omitempty" protobuf:"bytes,7,opt,name=platform"`
 	// InsecureSkipTLSVerify specifies whether certificate verification errors
 	// should be ignored when connecting to the repository. This should be enabled
@@ -233,8 +233,8 @@ type ChartSubscription struct {
 	// a specific chart and the Name field MUST NOT be used. The RepoURL field is
 	// required.
 	//
-	//+kubebuilder:validation:MinLength=1
-	//+kubebuilder:validation:Pattern=`^(((https?)|(oci))://)([\w\d\.\-]+)(:[\d]+)?(/.*)*$`
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Pattern=`^(((https?)|(oci))://)([\w\d\.\-]+)(:[\d]+)?(/.*)*$`
 	RepoURL string `json:"repoURL" protobuf:"bytes,1,opt,name=repoURL"`
 	// Name specifies the name of a Helm chart to subscribe to within a classic
 	// chart repository specified by the RepoURL field. This field is required
@@ -248,7 +248,7 @@ type ChartSubscription struct {
 	// lead to the unanticipated rollout of breaking changes.
 	// More info: https://github.com/masterminds/semver#checking-version-constraints
 	//
-	//+kubebuilder:validation:Optional
+	// +kubebuilder:validation:Optional
 	SemverConstraint string `json:"semverConstraint,omitempty" protobuf:"bytes,3,opt,name=semverConstraint"`
 }
 
@@ -269,7 +269,7 @@ type WarehouseStatus struct {
 	LastFreight *FreightReference `json:"lastFreight,omitempty" protobuf:"bytes,5,opt,name=lastFreight"`
 }
 
-//+kubebuilder:object:root=true
+// +kubebuilder:object:root=true
 
 // WarehouseList is a list of Warehouse resources.
 type WarehouseList struct {

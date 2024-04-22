@@ -91,7 +91,7 @@ func GetFreightByAlias(
 //
 //  1. No upstreamStages are specified
 //     OR
-//  2. The Freight has has been verified in ANY of the specified upstream stages
+//  2. The Freight has been verified in ANY of the specified upstream stages
 //     OR
 //  3. The Freight is approved for the specified stage
 //
