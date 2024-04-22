@@ -5,6 +5,7 @@ package akuity.io.kargo.service.v1alpha1;
 import "google/protobuf/timestamp.proto";
 import "v1alpha1/generated.proto";
 import "k8s.io/api/core/v1/generated.proto";
+import "k8s.io/api/rbac/v1/generated.proto";
 import "rollouts/api/v1alpha1/generated.proto";
 
 option go_package = "github.com/akuity/kargo/pkg/api/service/v1alpha1;svcv1alpha1";
@@ -92,6 +93,16 @@ service KargoService {
   /* Event APIs */
 
   rpc ListProjectEvents(ListProjectEventsRequest) returns (ListProjectEventsResponse);
+
+  /* Role APIs */
+
+  rpc CreateRole(CreateRoleRequest) returns (CreateRoleResponse);
+  rpc DeleteRole(DeleteRoleRequest) returns (DeleteRoleResponse);
+  rpc GetRole(GetRoleRequest) returns (GetRoleResponse);
+  rpc Grant(GrantRequest) returns (GrantResponse);
+  rpc ListRoles(ListRolesRequest) returns (ListRolesResponse);
+  rpc Revoke(RevokeRequest) returns (RevokeResponse);
+  rpc UpdateRole(UpdateRoleRequest) returns (UpdateRoleResponse);
 }
 
 message ComponentVersions {
@@ -574,7 +585,6 @@ message GetAnalysisRunResponse {
   }
 }
 
-
 message DeleteAnalysisTemplateRequest {
   string project = 1;
   string name = 2;
@@ -590,4 +600,110 @@ message ListProjectEventsRequest {
 
 message ListProjectEventsResponse {
   repeated k8s.io.api.core.v1.Event events = 1;
+}
+
+message CreateRoleRequest {
+  Role role = 1;
+}
+
+message CreateRoleResponse {
+  Role role = 1;
+}
+
+message DeleteRoleRequest {
+  string project = 1;
+  string name = 2;
+}
+
+message DeleteRoleResponse {
+  /* explicitly empty */
+}
+
+message GetRoleRequest {
+  string project = 1;
+  string name = 2;
+  bool as_resources = 3;
+  RawFormat format = 4;
+}
+
+message GetRoleResponse {
+  oneof result {
+    Role role = 1;
+    RoleResources resources = 2;
+    bytes raw = 3;
+  }
+}
+
+message GrantRequest {
+  string project = 1;
+  string role = 2;
+  oneof request {
+    UserClaims user_claims = 3;
+    ResourceDetails resource_details = 4;
+  }
+}
+
+message UserClaims {
+  repeated string subs = 1;
+  repeated string emails = 2;
+  repeated string groups = 3;
+}
+
+message ResourceDetails {
+  string resource_group = 1;
+  string resource_type = 2;
+  string resource_name = 3;
+  repeated string verbs = 4;
+}
+
+message GrantResponse {
+  Role role = 1;
+}
+
+message ListRolesRequest {
+  string project = 1;
+  bool as_resources = 2;
+}
+
+message ListRolesResponse {
+  // Note: oneof and repeated do not work together
+  repeated Role roles = 1;
+  repeated RoleResources resources = 2;
+}
+
+message RevokeRequest {
+  string project = 1;
+  string role = 2;
+  oneof request {
+    UserClaims user_claims = 3;
+    ResourceDetails resource_details = 4;
+  }
+}
+
+message RevokeResponse {
+  Role role = 1;
+}
+
+message UpdateRoleRequest {
+  Role role = 1;
+}
+
+message UpdateRoleResponse {
+  Role role = 1;
+}
+
+message Role {
+  string project = 1;
+  string name = 2;
+  google.protobuf.Timestamp creation_timestamp = 3;
+  repeated string subs = 4;
+  repeated string emails = 5;
+  repeated string groups = 6;
+  repeated k8s.io.api.rbac.v1.PolicyRule rules = 7;
+}
+
+message RoleResources {
+  k8s.io.api.core.v1.ServiceAccount service_account = 1;
+  repeated k8s.io.api.rbac.v1.Role roles = 2;
+  repeated k8s.io.api.rbac.v1.RoleBinding role_bindings = 3;
 }
