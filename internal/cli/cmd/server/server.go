@@ -12,6 +12,7 @@ import (
 	"github.com/akuity/kargo/internal/api"
 	apiconfig "github.com/akuity/kargo/internal/api/config"
 	"github.com/akuity/kargo/internal/api/kubernetes"
+	"github.com/akuity/kargo/internal/api/rbac"
 	"github.com/akuity/kargo/internal/cli/option"
 	"github.com/akuity/kargo/internal/cli/templates"
 	fakeevent "github.com/akuity/kargo/internal/kubernetes/event/fake"
@@ -100,6 +101,7 @@ func (o *serverOptions) run(ctx context.Context) error {
 		},
 		client,
 		client,
+		rbac.NewKubernetesRolesDatabase(client),
 		&fakeevent.EventRecorder{},
 	)
 	if err := srv.Serve(ctx, l); err != nil {
