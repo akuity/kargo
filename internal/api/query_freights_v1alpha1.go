@@ -7,7 +7,7 @@ import (
 	"sort"
 
 	"connectrpc.com/connect"
-	"github.com/Masterminds/semver"
+	"github.com/Masterminds/semver/v3"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"

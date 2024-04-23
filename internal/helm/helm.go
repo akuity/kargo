@@ -10,7 +10,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/Masterminds/semver"
+	"github.com/Masterminds/semver/v3"
 	"gopkg.in/yaml.v3"
 	"oras.land/oras-go/pkg/registry"
 	"oras.land/oras-go/pkg/registry/remote"
