@@ -7,7 +7,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/Masterminds/semver"
+	"github.com/Masterminds/semver/v3"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 
