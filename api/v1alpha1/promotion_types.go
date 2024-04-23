@@ -101,12 +101,21 @@ type PromotionStatus struct {
 	// Metadata holds arbitrary metadata set by promotion mechanisms
 	// (e.g. for display purposes, or internal bookkeeping)
 	Metadata map[string]string `json:"metadata,omitempty" protobuf:"bytes,3,rep,name=metadata" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	// Freight is the detail of the piece of freight that was referenced by this promotion.
+	Freight *FreightReference `json:"freight,omitempty" protobuf:"bytes,5,opt,name=freight"`
 }
 
 // WithPhase returns a copy of PromotionStatus with the given phase
 func (p *PromotionStatus) WithPhase(phase PromotionPhase) *PromotionStatus {
 	status := p.DeepCopy()
 	status.Phase = phase
+	return status
+}
+
+// WithFreight returns a copy of PromotionStatus with the given freight
+func (p *PromotionStatus) WithFreight(freight *FreightReference) *PromotionStatus {
+	status := p.DeepCopy()
+	status.Freight = freight
 	return status
 }
 

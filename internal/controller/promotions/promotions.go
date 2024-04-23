@@ -271,7 +271,7 @@ func (r *reconciler) Reconcile(
 			}
 			return ctrl.Result{}, nil
 		}
-		logger.Infof("began promotion")
+		logger.Info("began promotion")
 	}
 
 	// Update promo status as Running to give visibility in UI. Also, a promo which
@@ -442,7 +442,6 @@ func (r *reconciler) promote(
 		Charts:    targetFreight.Charts,
 		Warehouse: targetFreight.Warehouse,
 	}
-
 	err = kubeclient.PatchStatus(ctx, r.kargoClient, stage, func(status *kargoapi.StageStatus) {
 		status.Phase = kargoapi.StagePhasePromoting
 		status.CurrentPromotion = &kargoapi.PromotionInfo{
@@ -458,6 +457,7 @@ func (r *reconciler) promote(
 	if err != nil {
 		return nil, err
 	}
+	newStatus = newStatus.WithFreight(&nextFreight)
 
 	logger.Debugf("promotion %s", newStatus.Phase)
 
