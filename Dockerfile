@@ -3,15 +3,16 @@
 ####################################################################################################
 FROM --platform=$BUILDPLATFORM docker.io/library/node:20.12.2 AS ui-builder
 
-RUN npm install --global pnpm@9.0.2
+ARG PNPM_VERSION=9.0.3
+RUN npm install --global pnpm@${PNPM_VERSION}
+
 WORKDIR /ui
 COPY ["ui/package.json", "ui/pnpm-lock.yaml", "./"]
-ARG VERSION
 
 RUN pnpm install
-
 COPY ["ui/", "."]
 
+ARG VERSION
 RUN NODE_ENV='production' VERSION=${VERSION} pnpm run build
 
 ####################################################################################################
@@ -106,7 +107,8 @@ CMD ["/usr/local/bin/kargo"]
 ####################################################################################################
 FROM --platform=$BUILDPLATFORM docker.io/library/node:20.12.2 AS ui-dev
 
-RUN npm install --global pnpm@9.0.2
+ARG PNPM_VERSION=9.0.3
+RUN npm install --global pnpm@${PNPM_VERSION}
 WORKDIR /ui
 COPY ["ui/package.json", "ui/pnpm-lock.yaml", "./"]
 
