@@ -338,8 +338,8 @@ github.com/technosophos/moniker v0.0.0-20210218184952-3ea787d3943b h1:fo0GUa0B+v
 github.com/technosophos/moniker v0.0.0-20210218184952-3ea787d3943b/go.mod h1:O1c8HleITsZqzNZDjSNzirUGsMT0oGu9LhHKoJrqO+A=
 github.com/withfig/autocomplete-tools/integrations/cobra v1.2.1 h1:+dBg5k7nuTE38VVdoroRsT0Z88fmvdYrI2EjzJst35I=
 github.com/withfig/autocomplete-tools/integrations/cobra v1.2.1/go.mod h1:nmuySobZb4kFgFy6BptpXp/BBw+xFSyvVPP6auoJB4k=
-github.com/xanzy/go-gitlab v0.102.0 h1:ExHuJ1OTQ2yt25zBMMj0G96ChBirGYv8U7HyUiYkZ+4=
-github.com/xanzy/go-gitlab v0.102.0/go.mod h1:ETg8tcj4OhrB84UEgeE8dSuV/0h4BBL1uOV/qK0vlyI=
+github.com/xanzy/go-gitlab v0.103.0 h1:J9pTQoq0GsEFqzd6srCM1QfdfKAxSNz6mT6ntrpNF2w=
+github.com/xanzy/go-gitlab v0.103.0/go.mod h1:ETg8tcj4OhrB84UEgeE8dSuV/0h4BBL1uOV/qK0vlyI=
 github.com/xlab/treeprint v1.2.0 h1:HzHnuAF1plUN2zGlAFHbSQP2qJ0ZAD3XF5XD7OesXRQ=
 github.com/xlab/treeprint v1.2.0/go.mod h1:gj5Gd3gPdKtR1ikdDK6fnFLdmIS0X30kTTuNd/WEJu0=
 github.com/yuin/goldmark v1.1.27/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
