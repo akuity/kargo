@@ -7,9 +7,11 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/spf13/cobra"
+	"golang.org/x/sync/errgroup"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/cli/client"
 	"github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/io"
@@ -17,6 +19,7 @@ import (
 	"github.com/akuity/kargo/internal/cli/option"
 	"github.com/akuity/kargo/internal/cli/templates"
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
+	"github.com/akuity/kargo/pkg/api/service/v1alpha1/svcv1alpha1connect"
 )
 
 type promotionOptions struct {
@@ -31,6 +34,7 @@ type promotionOptions struct {
 	FreightAlias  string
 	Stage         string
 	SubscribersOf string
+	Wait          bool
 }
 
 func NewCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams) *cobra.Command {
@@ -117,6 +121,7 @@ func (o *promotionOptions) addFlags(cmd *cobra.Command) {
 			option.StageFlag,
 		),
 	)
+	option.Wait(cmd.Flags(), &o.Wait, false, "Wait for the promotion(s) to complete.")
 
 	cmd.MarkFlagsOneRequired(option.FreightFlag, option.FreightAliasFlag)
 	cmd.MarkFlagsMutuallyExclusive(option.FreightFlag, option.FreightAliasFlag)
@@ -177,6 +182,11 @@ func (o *promotionOptions) run(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("promote stage: %w", err)
 		}
+		if o.Wait {
+			if err = waitForPromotion(ctx, kargoSvcCli, res.Msg.GetPromotion()); err != nil {
+				return fmt.Errorf("wait for promotion: %w", err)
+			}
+		}
 		_ = printer.PrintObj(res.Msg.GetPromotion(), o.IOStreams.Out)
 		return nil
 	case o.SubscribersOf != "":
@@ -194,10 +204,66 @@ func (o *promotionOptions) run(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("promote stage subscribers: %w", err)
 		}
+		if o.Wait {
+			if err = waitForPromotions(ctx, kargoSvcCli, res.Msg.GetPromotions()...); err != nil {
+				return fmt.Errorf("wait for promotions: %w", err)
+			}
+		}
 		for _, p := range res.Msg.GetPromotions() {
 			_ = printer.PrintObj(p, o.IOStreams.Out)
 		}
 		return nil
 	}
 	return nil
+}
+
+func waitForPromotions(
+	ctx context.Context,
+	kargoSvcCli svcv1alpha1connect.KargoServiceClient,
+	p ...*kargoapi.Promotion,
+) error {
+	g, ctx := errgroup.WithContext(ctx)
+	for _, promo := range p {
+		promo := promo
+		g.Go(func() error {
+			return waitForPromotion(ctx, kargoSvcCli, promo)
+		})
+	}
+	return g.Wait()
+}
+
+func waitForPromotion(
+	ctx context.Context,
+	kargoSvcCli svcv1alpha1connect.KargoServiceClient,
+	p *kargoapi.Promotion,
+) error {
+	if p == nil || p.Status.Phase.IsTerminal() {
+		// No need to wait for a promotion that is already terminal.
+		return nil
+	}
+
+	res, err := kargoSvcCli.WatchPromotion(ctx, connect.NewRequest(&v1alpha1.WatchPromotionRequest{
+		Project: p.Namespace,
+		Name:    p.Name,
+	}))
+	if err != nil {
+		return fmt.Errorf("watch promotion: %w", err)
+	}
+	defer func() {
+		if conn, connErr := res.Conn(); connErr == nil {
+			_ = conn.CloseRequest()
+		}
+	}()
+	for {
+		if !res.Receive() {
+			if err = res.Err(); err != nil {
+				return fmt.Errorf("watch promotion: %w", err)
+			}
+			return errors.New("unexpected end of watch stream")
+		}
+		msg := res.Msg()
+		if msg.GetPromotion().Status.Phase.IsTerminal() {
+			return nil
+		}
+	}
 }
