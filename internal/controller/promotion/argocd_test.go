@@ -89,11 +89,8 @@ func TestArgoCDPromote(t *testing.T) {
 				_ kargoapi.FreightReference,
 				err error,
 			) {
-				require.Error(t, err)
-				require.Contains(
-					t,
-					err.Error(),
-					"Argo CD integration is disabled on this controller",
+				require.ErrorContains(
+					t, err, "Argo CD integration is disabled on this controller",
 				)
 			},
 		},
@@ -682,9 +679,8 @@ func TestArgoCDDoSingleUpdate(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "error finding Argo CD Application")
-				require.Contains(t, err.Error(), "something went wrong")
+				require.ErrorContains(t, err, "error finding Argo CD Application")
+				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
 		{
@@ -699,8 +695,7 @@ func TestArgoCDDoSingleUpdate(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "unable to find Argo CD Application")
+				require.ErrorContains(t, err, "unable to find Argo CD Application")
 			},
 		},
 		{
@@ -725,8 +720,7 @@ func TestArgoCDDoSingleUpdate(t *testing.T) {
 				Namespace: "fake-namespace",
 			},
 			assertions: func(t *testing.T, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "does not permit mutation by")
+				require.ErrorContains(t, err, "does not permit mutation by")
 			},
 		},
 		{
@@ -768,13 +762,8 @@ func TestArgoCDDoSingleUpdate(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, err error) {
-				require.Error(t, err)
-				require.Contains(
-					t,
-					err.Error(),
-					"error updating source of Argo CD Application",
-				)
-				require.Contains(t, err.Error(), "something went wrong")
+				require.ErrorContains(t, err, "error updating source of Argo CD Application")
+				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
 		{
@@ -818,13 +807,8 @@ func TestArgoCDDoSingleUpdate(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, err error) {
-				require.Error(t, err)
-				require.Contains(
-					t,
-					err.Error(),
-					"error updating source(s) of Argo CD Application",
-				)
-				require.Contains(t, err.Error(), "something went wrong")
+				require.ErrorContains(t, err, "error updating source(s) of Argo CD Application")
+				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
 		{
@@ -859,13 +843,8 @@ func TestArgoCDDoSingleUpdate(t *testing.T) {
 				Namespace: "fake-namespace",
 			},
 			assertions: func(t *testing.T, err error) {
-				require.Error(t, err)
-				require.Contains(
-					t,
-					err.Error(),
-					"error patching Argo CD Application",
-				)
-				require.Contains(t, err.Error(), "something went wrong")
+				require.ErrorContains(t, err, "error patching Argo CD Application")
+				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
 		{

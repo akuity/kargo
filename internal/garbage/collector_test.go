@@ -58,12 +58,9 @@ func TestRun(t *testing.T) {
 				return errors.New("something went wrong")
 			},
 			assertions: func(t *testing.T, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "something went wrong")
-				require.Contains(
-					t,
-					err.Error(),
-					"error listing projects; no garbage collection performed",
+				require.ErrorContains(t, err, "something went wrong")
+				require.ErrorContains(
+					t, err, "error listing projects; no garbage collection performed",
 				)
 			},
 		},

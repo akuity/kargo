@@ -187,8 +187,7 @@ func TestAllClientOperations(t *testing.T) {
 			op:      getOp,
 			allowed: true,
 			assertions: func(t *testing.T, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "not found")
+				require.ErrorContains(t, err, "not found")
 			},
 		},
 
@@ -242,8 +241,7 @@ func TestAllClientOperations(t *testing.T) {
 			op:      deleteOp,
 			allowed: true,
 			assertions: func(t *testing.T, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "not found")
+				require.ErrorContains(t, err, "not found")
 			},
 		},
 
@@ -261,8 +259,7 @@ func TestAllClientOperations(t *testing.T) {
 			op:      updateOp,
 			allowed: true,
 			assertions: func(t *testing.T, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "not found")
+				require.ErrorContains(t, err, "not found")
 			},
 		},
 
@@ -280,8 +277,7 @@ func TestAllClientOperations(t *testing.T) {
 			op:      patchOp,
 			allowed: true,
 			assertions: func(t *testing.T, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "not found")
+				require.ErrorContains(t, err, "not found")
 			},
 		},
 
@@ -317,8 +313,7 @@ func TestAllClientOperations(t *testing.T) {
 			op:      updateStatusOp,
 			allowed: true,
 			assertions: func(t *testing.T, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "not found")
+				require.ErrorContains(t, err, "not found")
 			},
 		},
 
@@ -336,8 +331,7 @@ func TestAllClientOperations(t *testing.T) {
 			op:      patchStatusOp,
 			allowed: true,
 			assertions: func(t *testing.T, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "not found")
+				require.ErrorContains(t, err, "not found")
 			},
 		},
 

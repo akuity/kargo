@@ -49,8 +49,7 @@ func TestGetChartVersionsFromClassicRepo(t *testing.T) {
 			repoURL: fmt.Sprintf("%s/non-existent-repo", testServer.URL),
 			chart:   "fake-chart",
 			assertions: func(t *testing.T, _ []string, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "received unexpected HTTP 404")
+				require.ErrorContains(t, err, "received unexpected HTTP 404")
 			},
 		},
 		{
@@ -58,8 +57,7 @@ func TestGetChartVersionsFromClassicRepo(t *testing.T) {
 			repoURL: fmt.Sprintf("%s/bad-repo", testServer.URL),
 			chart:   "fake-chart",
 			assertions: func(t *testing.T, _ []string, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "error unmarshaling repository index")
+				require.ErrorContains(t, err, "error unmarshaling repository index")
 			},
 		},
 		{
@@ -67,9 +65,8 @@ func TestGetChartVersionsFromClassicRepo(t *testing.T) {
 			repoURL: fmt.Sprintf("%s/fake-repo", testServer.URL),
 			chart:   "non-existent-chart",
 			assertions: func(t *testing.T, _ []string, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "no versions of chart")
-				require.Contains(t, err.Error(), "found in repository index")
+				require.ErrorContains(t, err, "no versions of chart")
+				require.ErrorContains(t, err, "found in repository index")
 			},
 		},
 		{
@@ -126,8 +123,7 @@ func TestGetLatestVersion(t *testing.T) {
 			unsorted:   []string{"1.0.0"},
 			constraint: "invalid",
 			assertions: func(t *testing.T, _ string, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "error parsing constraint")
+				require.ErrorContains(t, err, "error parsing constraint")
 			},
 		},
 		{

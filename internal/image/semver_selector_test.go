@@ -23,8 +23,7 @@ func TestNewSemVerSelector(t *testing.T) {
 			name:       "invalid semver constraint",
 			constraint: "invalid",
 			assertions: func(t *testing.T, _ Selector, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "error parsing semver constraint")
+				require.ErrorContains(t, err, "error parsing semver constraint")
 			},
 		},
 		{

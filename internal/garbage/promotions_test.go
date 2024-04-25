@@ -31,9 +31,8 @@ func TestCleanProjectPromotions(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "error listing Stages in Project")
-				require.Contains(t, err.Error(), "something went wrong")
+				require.ErrorContains(t, err, "error listing Stages in Project")
+				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
 
@@ -55,12 +54,7 @@ func TestCleanProjectPromotions(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, err error) {
-				require.Error(t, err)
-				require.Contains(
-					t,
-					err.Error(),
-					"error cleaning Promotions to one or more Stages",
-				)
+				require.ErrorContains(t, err, "error cleaning Promotions to one or more Stages")
 			},
 		},
 
@@ -118,9 +112,8 @@ func TestCleanStagePromotions(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "error listing Promotions to Stage")
-				require.Contains(t, err.Error(), "something went wrong")
+				require.ErrorContains(t, err, "error listing Promotions to Stage")
+				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
 		{
@@ -188,12 +181,7 @@ func TestCleanStagePromotions(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, err error) {
-				require.Error(t, err)
-				require.Contains(
-					t,
-					err.Error(),
-					"error deleting one or more Promotions from Stage",
-				)
+				require.ErrorContains(t, err, "error deleting one or more Promotions from Stage")
 			},
 		},
 		{

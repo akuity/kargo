@@ -78,9 +78,8 @@ func TestGetImageByTag(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, _ *Image, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "error retrieving manifest")
-				require.Contains(t, err.Error(), "something went wrong")
+				require.ErrorContains(t, err, "error retrieving manifest")
+				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
 		{
@@ -103,13 +102,8 @@ func TestGetImageByTag(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, _ *Image, err error) {
-				require.Error(t, err)
-				require.Contains(
-					t,
-					err.Error(),
-					"error extracting image from manifest",
-				)
-				require.Contains(t, err.Error(), "something went wrong")
+				require.ErrorContains(t, err, "error extracting image from manifest")
+				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
 		{
@@ -198,9 +192,8 @@ func TestGetImageByDigest(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, _ *Image, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "error retrieving manifest")
-				require.Contains(t, err.Error(), "something went wrong")
+				require.ErrorContains(t, err, "error retrieving manifest")
+				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
 		{
@@ -223,13 +216,8 @@ func TestGetImageByDigest(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, _ *Image, err error) {
-				require.Error(t, err)
-				require.Contains(
-					t,
-					err.Error(),
-					"error extracting image from manifest",
-				)
-				require.Contains(t, err.Error(), "something went wrong")
+				require.ErrorContains(t, err, "error extracting image from manifest")
+				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
 		{
@@ -378,12 +366,7 @@ func TestExtractImageFromV1Manifest(t *testing.T) {
 			manifest: &schema1.SignedManifest{}, // nolint: staticcheck
 			client:   &repositoryClient{},
 			assertions: func(t *testing.T, _ *Image, err error) {
-				require.Error(t, err)
-				require.Contains(
-					t,
-					err.Error(),
-					"no history information found in V1 manifest",
-				)
+				require.ErrorContains(t, err, "no history information found in V1 manifest")
 			},
 		},
 		{
@@ -399,8 +382,7 @@ func TestExtractImageFromV1Manifest(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, _ *Image, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "error unmarshaling V1 manifest")
+				require.ErrorContains(t, err, "error unmarshaling V1 manifest")
 			},
 		},
 		{
@@ -437,8 +419,7 @@ func TestExtractImageFromV1Manifest(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, _ *Image, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "error parsing createdAt timestamp")
+				require.ErrorContains(t, err, "error parsing createdAt timestamp")
 			},
 		},
 		{
@@ -491,9 +472,8 @@ func TestExtractImageFromV2Manifest(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, _ *Image, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "error fetching blob")
-				require.Contains(t, err.Error(), "something went wrong")
+				require.ErrorContains(t, err, "error fetching blob")
+				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
 		{
@@ -504,8 +484,7 @@ func TestExtractImageFromV2Manifest(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, _ *Image, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "error unmarshaling blob")
+				require.ErrorContains(t, err, "error unmarshaling blob")
 			},
 		},
 		{
@@ -532,8 +511,7 @@ func TestExtractImageFromV2Manifest(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, _ *Image, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "error parsing createdAt timestamp")
+				require.ErrorContains(t, err, "error parsing createdAt timestamp")
 			},
 		},
 		{
@@ -583,9 +561,8 @@ func TestExtractImageFromOCIManifest(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, _ *Image, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "error fetching blob")
-				require.Contains(t, err.Error(), "something went wrong")
+				require.ErrorContains(t, err, "error fetching blob")
+				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
 		{
@@ -597,7 +574,7 @@ func TestExtractImageFromOCIManifest(t *testing.T) {
 			},
 			assertions: func(t *testing.T, _ *Image, err error) {
 				require.Error(t, err)
-				require.Contains(t, err.Error(), "error unmarshaling blob")
+				require.ErrorContains(t, err, "error unmarshaling blob")
 			},
 		},
 		{
@@ -636,8 +613,7 @@ func TestExtractImageFromOCIManifest(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, _ *Image, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "error parsing createdAt timestamp")
+				require.ErrorContains(t, err, "error parsing createdAt timestamp")
 			},
 		},
 		{
@@ -689,8 +665,7 @@ func TestExtractImageFromCollection(t *testing.T) {
 			collection: &manifestlist.DeserializedManifestList{},
 			client:     &repositoryClient{},
 			assertions: func(t *testing.T, _ *Image, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "empty V2 manifest list or OCI index")
+				require.ErrorContains(t, err, "empty V2 manifest list or OCI index")
 			},
 		},
 		{
@@ -744,11 +719,7 @@ func TestExtractImageFromCollection(t *testing.T) {
 			client: &repositoryClient{},
 			assertions: func(t *testing.T, _ *Image, err error) {
 				require.Error(t, err)
-				require.Contains(
-					t,
-					err.Error(),
-					"expected only one reference to match platform",
-				)
+				require.ErrorContains(t, err, "expected only one reference to match platform")
 			},
 		},
 		{
@@ -779,12 +750,7 @@ func TestExtractImageFromCollection(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, _ *Image, err error) {
-				require.Error(t, err)
-				require.Contains(
-					t,
-					err.Error(),
-					"error getting image from manifest",
-				)
+				require.ErrorContains(t, err, "error getting image from manifest")
 			},
 		},
 		{
@@ -815,9 +781,8 @@ func TestExtractImageFromCollection(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, _ *Image, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "expected manifest for digest")
-				require.Contains(t, err.Error(), "to match platform")
+				require.ErrorContains(t, err, "expected manifest for digest")
+				require.ErrorContains(t, err, "to match platform")
 			},
 		},
 		{
@@ -880,12 +845,7 @@ func TestExtractImageFromCollection(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, _ *Image, err error) {
-				require.Error(t, err)
-				require.Contains(
-					t,
-					err.Error(),
-					"error getting image from manifest",
-				)
+				require.ErrorContains(t, err, "error getting image from manifest")
 			},
 		},
 		{
@@ -912,8 +872,7 @@ func TestExtractImageFromCollection(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, _ *Image, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "found no image for manifest")
+				require.ErrorContains(t, err, "found no image for manifest")
 			},
 		},
 		{

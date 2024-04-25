@@ -61,8 +61,7 @@ func TestDefault(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, _ *kargoapi.Promotion, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "something went wrong")
+				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
 		{
@@ -80,8 +79,7 @@ func TestDefault(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, _ *kargoapi.Promotion, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "could not find Stage")
+				require.ErrorContains(t, err, "could not find Stage")
 			},
 		},
 		{
@@ -99,8 +97,7 @@ func TestDefault(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, _ *kargoapi.Promotion, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "has no PromotionMechanisms")
+				require.ErrorContains(t, err, "has no PromotionMechanisms")
 			},
 		},
 		{
@@ -294,8 +291,7 @@ func TestValidateUpdate(t *testing.T) {
 				return errors.New("something went wrong")
 			},
 			assertions: func(t *testing.T, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "something went wrong")
+				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
 
@@ -320,9 +316,8 @@ func TestValidateUpdate(t *testing.T) {
 				return nil
 			},
 			assertions: func(t *testing.T, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "\"fake-name\" is invalid")
-				require.Contains(t, err.Error(), "spec is immutable")
+				require.ErrorContains(t, err, `"fake-name" is invalid`)
+				require.ErrorContains(t, err, "spec is immutable")
 			},
 		},
 
@@ -376,8 +371,7 @@ func TestValidateDelete(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "something went wrong")
+				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
 		{
@@ -424,11 +418,8 @@ func TestAuthorize(t *testing.T) {
 				return admission.Request{}, errors.New("something went wrong")
 			},
 			assertions: func(t *testing.T, err error) {
-				require.Error(t, err)
-				require.Contains(
-					t,
-					err.Error(),
-					"error retrieving admission request from context; refusing to",
+				require.ErrorContains(
+					t, err, "error retrieving admission request from context; refusing to",
 				)
 			},
 		},
@@ -447,8 +438,7 @@ func TestAuthorize(t *testing.T) {
 				return errors.New("something went wrong")
 			},
 			assertions: func(t *testing.T, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "error creating SubjectAccessReview")
+				require.ErrorContains(t, err, "error creating SubjectAccessReview")
 			},
 		},
 		{
@@ -467,8 +457,7 @@ func TestAuthorize(t *testing.T) {
 				return nil
 			},
 			assertions: func(t *testing.T, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "is not permitted")
+				require.ErrorContains(t, err, "is not permitted")
 			},
 		},
 		{

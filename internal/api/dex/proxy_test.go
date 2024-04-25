@@ -59,9 +59,8 @@ func TestNewProxy(t *testing.T) {
 				}
 			},
 			assertions: func(t *testing.T, _ *httputil.ReverseProxy, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "error reading CA cert file")
-				require.Contains(t, err.Error(), "/bogus/path")
+				require.ErrorContains(t, err, "error reading CA cert file")
+				require.ErrorContains(t, err, "/bogus/path")
 			},
 		},
 		{
@@ -75,8 +74,7 @@ func TestNewProxy(t *testing.T) {
 				return cfg
 			},
 			assertions: func(t *testing.T, _ *httputil.ReverseProxy, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "error building CA cert pool")
+				require.ErrorContains(t, err, "error building CA cert pool")
 			},
 		},
 		{

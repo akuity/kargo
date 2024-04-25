@@ -68,8 +68,7 @@ func TestReconcile(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, _ ctrl.Result, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "something went wrong")
+				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
 		{
@@ -185,9 +184,8 @@ func TestReconcile(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, _ ctrl.Result, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "error deleting Project")
-				require.Contains(t, err.Error(), "something went wrong")
+				require.ErrorContains(t, err, "error deleting Project")
+				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
 		{
@@ -220,9 +218,8 @@ func TestReconcile(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, _ ctrl.Result, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "error removing finalizer")
-				require.Contains(t, err.Error(), "something went wrong")
+				require.ErrorContains(t, err, "error removing finalizer")
+				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
 		{

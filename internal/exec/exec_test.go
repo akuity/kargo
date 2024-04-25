@@ -20,7 +20,8 @@ func TestExec(t *testing.T) {
 			// This command should fail, but ALSO produce some output
 			cmd: exec.Command("expr", "100", "/", "0"),
 			assertions: func(t *testing.T, _ []byte, err error) {
-				require.Error(t, err)
+				require.ErrorContains(t, err, "expr 100 / 0")
+				require.ErrorContains(t, err, "expr: division by zero")
 				var exitErr *ExitError
 				ok := errors.As(err, &exitErr)
 				require.True(t, ok)
@@ -28,8 +29,6 @@ func TestExec(t *testing.T) {
 				require.True(t, strings.HasSuffix(exitErr.Command, "expr 100 / 0"))
 				require.Equal(t, "expr: division by zero\n", string(exitErr.Output))
 				require.NotEmpty(t, exitErr.ExitCode)
-				require.Contains(t, err.Error(), "expr 100 / 0")
-				require.Contains(t, err.Error(), "expr: division by zero")
 			},
 		},
 		{
