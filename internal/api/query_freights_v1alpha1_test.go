@@ -56,8 +56,7 @@ func TestQueryFreight(t *testing.T) {
 				_ *connect.Response[svcv1alpha1.QueryFreightResponse],
 				err error,
 			) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "something went wrong")
+				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
 		{
@@ -204,8 +203,7 @@ func TestQueryFreight(t *testing.T) {
 				_ *connect.Response[svcv1alpha1.QueryFreightResponse],
 				err error,
 			) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "something went wrong")
+				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
 
@@ -437,13 +435,10 @@ func TestGetAvailableFreightForStage(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, _ []kargoapi.Freight, err error) {
-				require.Error(t, err)
-				require.Contains(
-					t,
-					err.Error(),
-					"error listing Freight verified in Stages upstream from Stage",
+				require.ErrorContains(
+					t, err, "error listing Freight verified in Stages upstream from Stage",
 				)
-				require.Contains(t, err.Error(), "something went wrong")
+				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
 		{
@@ -472,13 +467,8 @@ func TestGetAvailableFreightForStage(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, _ []kargoapi.Freight, err error) {
-				require.Error(t, err)
-				require.Contains(
-					t,
-					err.Error(),
-					"error listing Freight approved for Stage",
-				)
-				require.Contains(t, err.Error(), "something went wrong")
+				require.ErrorContains(t, err, "error listing Freight approved for Stage")
+				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
 		{
@@ -558,9 +548,8 @@ func TestGetFreightFromWarehouse(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, _ []kargoapi.Freight, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "something went wrong")
-				require.Contains(t, err.Error(), "error listing Freight for Warehouse")
+				require.ErrorContains(t, err, "something went wrong")
+				require.ErrorContains(t, err, "error listing Freight for Warehouse")
 			},
 		},
 		{
@@ -624,13 +613,8 @@ func TestGetVerifiedFreight(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, _ []kargoapi.Freight, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "something went wrong")
-				require.Contains(
-					t,
-					err.Error(),
-					"error listing Freight verified in Stage",
-				)
+				require.ErrorContains(t, err, "something went wrong")
+				require.ErrorContains(t, err, "error listing Freight verified in Stage")
 			},
 		},
 		{

@@ -394,12 +394,7 @@ func TestGetReadRef(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, _ string, _ int, err error) {
-				require.Error(t, err)
-				require.Contains(
-					t,
-					err.Error(),
-					"because it will form a subscription loop",
-				)
+				require.ErrorContains(t, err, "because it will form a subscription loop")
 			},
 		},
 		{
@@ -449,9 +444,8 @@ func TestGetRepoCredentials(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, _ *git.RepoCredentials, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "error obtaining credentials")
-				require.Contains(t, err.Error(), "something went wrong")
+				require.ErrorContains(t, err, "error obtaining credentials")
+				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
 		{

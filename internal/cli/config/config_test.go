@@ -25,8 +25,7 @@ func TestLoadCLIConfig(t *testing.T) {
 				return getTestConfigPath()
 			},
 			assertions: func(t *testing.T, _ CLIConfig, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "no configuration file was found")
+				require.ErrorContains(t, err, "no configuration file was found")
 			},
 		},
 		{
@@ -38,8 +37,7 @@ func TestLoadCLIConfig(t *testing.T) {
 				return configPath
 			},
 			assertions: func(t *testing.T, _ CLIConfig, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "error parsing configuration file")
+				require.ErrorContains(t, err, "error parsing configuration file")
 			},
 		},
 		{

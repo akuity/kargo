@@ -54,12 +54,7 @@ func TestDefault(t *testing.T) {
 			webhook: &webhook{},
 			freight: &kargoapi.Freight{},
 			assertions: func(t *testing.T, _ *kargoapi.Freight, err error) {
-				require.Error(t, err)
-				require.Contains(
-					t,
-					err.Error(),
-					"error getting admission request from context",
-				)
+				require.ErrorContains(t, err, "error getting admission request from context")
 			},
 		},
 		{
@@ -86,9 +81,8 @@ func TestDefault(t *testing.T) {
 			},
 			freight: &kargoapi.Freight{},
 			assertions: func(t *testing.T, _ *kargoapi.Freight, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "get available freight alias")
-				require.Contains(t, err.Error(), "something went wrong")
+				require.ErrorContains(t, err, "get available freight alias")
+				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
 		{
@@ -261,11 +255,8 @@ func TestValidateCreate(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, err error) {
-				require.Error(t, err)
-				require.Contains(
-					t,
-					err.Error(),
-					"freight must contain at least one commit, image, or chart",
+				require.ErrorContains(
+					t, err, "freight must contain at least one commit, image, or chart",
 				)
 			},
 		},
@@ -418,9 +409,8 @@ func TestValidateUpdate(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, _ *fakeevent.EventRecorder, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "is invalid")
-				require.Contains(t, err.Error(), "freight is immutable")
+				require.ErrorContains(t, err, "is invalid")
+				require.ErrorContains(t, err, "freight is immutable")
 			},
 		},
 
@@ -448,9 +438,8 @@ func TestValidateUpdate(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, _ *fakeevent.EventRecorder, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "is invalid")
-				require.Contains(t, err.Error(), "freight is immutable")
+				require.ErrorContains(t, err, "is invalid")
+				require.ErrorContains(t, err, "freight is immutable")
 			},
 		},
 		{

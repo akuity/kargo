@@ -35,8 +35,7 @@ func TestNewSelector(t *testing.T) {
 				AllowRegex: "(invalid", // Invalid regex due to unclosed parenthesis
 			},
 			assertions: func(t *testing.T, _ Selector, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "error compiling regular expression")
+				require.ErrorContains(t, err, "error compiling regular expression")
 			},
 		},
 		{
@@ -46,8 +45,7 @@ func TestNewSelector(t *testing.T) {
 				Platform: "invalid",
 			},
 			assertions: func(t *testing.T, _ Selector, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "error parsing platform constraint")
+				require.ErrorContains(t, err, "error parsing platform constraint")
 			},
 		},
 		{
@@ -58,8 +56,7 @@ func TestNewSelector(t *testing.T) {
 				Constraint: "invalid", // Not a semver
 			},
 			assertions: func(t *testing.T, _ Selector, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "invalid image selection strategy")
+				require.ErrorContains(t, err, "invalid image selection strategy")
 			},
 		},
 		{

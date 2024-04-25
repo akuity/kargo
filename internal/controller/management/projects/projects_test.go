@@ -74,8 +74,7 @@ func TestReconcile(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, _ ctrl.Result, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "something went wrong")
+				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
 		{
@@ -130,8 +129,7 @@ func TestReconcile(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, _ ctrl.Result, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "something went wrong")
+				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
 		{
@@ -189,8 +187,7 @@ func TestSyncProject(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, status kargoapi.ProjectStatus, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "something went wrong")
+				require.ErrorContains(t, err, "something went wrong")
 				// Still initializing because retry could succeed
 				require.Equal(t, kargoapi.ProjectPhaseInitializing, status.Phase)
 			},
@@ -208,8 +205,7 @@ func TestSyncProject(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, status kargoapi.ProjectStatus, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "something went very wrong")
+				require.ErrorContains(t, err, "something went very wrong")
 				// Failed because retry cannot possibly succeed
 				require.Equal(
 					t,
@@ -235,8 +231,7 @@ func TestSyncProject(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, status kargoapi.ProjectStatus, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "something went wrong")
+				require.ErrorContains(t, err, "something went wrong")
 				// Still initializing because retry could succeed
 				require.Equal(t, kargoapi.ProjectPhaseInitializing, status.Phase)
 			},
@@ -304,9 +299,8 @@ func TestEnsureNamespace(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, status kargoapi.ProjectStatus, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "something went wrong")
-				require.Contains(t, err.Error(), "error getting namespace")
+				require.ErrorContains(t, err, "something went wrong")
+				require.ErrorContains(t, err, "error getting namespace")
 				// Phase wasn't changed
 				require.Equal(t, kargoapi.ProjectPhaseInitializing, status.Phase)
 			},
@@ -342,9 +336,8 @@ func TestEnsureNamespace(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, status kargoapi.ProjectStatus, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "error updating namespace")
-				require.Contains(t, err.Error(), "something went wrong")
+				require.ErrorContains(t, err, "error updating namespace")
+				require.ErrorContains(t, err, "something went wrong")
 				// Phase wasn't changed
 				require.Equal(t, kargoapi.ProjectPhaseInitializing, status.Phase)
 			},
@@ -403,8 +396,7 @@ func TestEnsureNamespace(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, status kargoapi.ProjectStatus, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "failed to initialize Project")
+				require.ErrorContains(t, err, "failed to initialize Project")
 				// Phase reflects the unrecoverable failure
 				require.Equal(t, status.Phase, kargoapi.ProjectPhaseInitializationFailed)
 			},
@@ -466,9 +458,8 @@ func TestEnsureNamespace(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, status kargoapi.ProjectStatus, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "something went wrong")
-				require.Contains(t, err.Error(), "error creating namespace")
+				require.ErrorContains(t, err, "something went wrong")
+				require.ErrorContains(t, err, "error creating namespace")
 				// Phase wasn't changed
 				require.Equal(t, kargoapi.ProjectPhaseInitializing, status.Phase)
 			},
@@ -533,9 +524,8 @@ func TestEnsureSecretPermissions(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "error creating role binding")
-				require.Contains(t, err.Error(), "something went wrong")
+				require.ErrorContains(t, err, "error creating role binding")
+				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
 		{

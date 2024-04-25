@@ -37,13 +37,8 @@ func TestSelectCommits(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, commits []kargoapi.GitCommit, err error) {
-				require.Error(t, err)
-				require.Contains(
-					t,
-					err.Error(),
-					"error obtaining credentials for git repo",
-				)
-				require.Contains(t, err.Error(), "something went wrong")
+				require.ErrorContains(t, err, "error obtaining credentials for git repo")
+				require.ErrorContains(t, err, "something went wrong")
 				require.Empty(t, commits)
 			},
 		},
@@ -71,13 +66,8 @@ func TestSelectCommits(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, commits []kargoapi.GitCommit, err error) {
-				require.Error(t, err)
-				require.Contains(
-					t,
-					err.Error(),
-					"error determining latest commit ID of git repo",
-				)
-				require.Contains(t, err.Error(), "something went wrong")
+				require.ErrorContains(t, err, "error determining latest commit ID of git repo")
+				require.ErrorContains(t, err, "something went wrong")
 				require.Empty(t, commits)
 			},
 		},
@@ -152,8 +142,7 @@ func TestSelectCommitMeta(t *testing.T) {
 			},
 			reconciler: &reconciler{},
 			assertions: func(t *testing.T, _ *gitMeta, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "error cloning git repo")
+				require.ErrorContains(t, err, "error cloning git repo")
 			},
 		},
 		{
@@ -201,13 +190,8 @@ func TestSelectCommitID(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, _, _ string, err error) {
-				require.Error(t, err)
-				require.Contains(
-					t,
-					err.Error(),
-					"error determining commit ID at head of branch",
-				)
-				require.Contains(t, err.Error(), "something went wrong")
+				require.ErrorContains(t, err, "error determining commit ID at head of branch")
+				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
 		{
@@ -241,13 +225,10 @@ func TestSelectCommitID(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, _, _ string, err error) {
-				require.Error(t, err)
-				require.Contains(
-					t,
-					err.Error(),
-					"error getting diffs since commit \"sha\" in git repo \"\":",
+				require.ErrorContains(
+					t, err, `error getting diffs since commit "sha" in git repo "":`,
 				)
-				require.Contains(t, err.Error(), "something went wrong")
+				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
 		{
@@ -265,18 +246,10 @@ func TestSelectCommitID(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, _, _ string, err error) {
-				require.Error(t, err)
-				require.Contains(
-					t,
-					err.Error(),
-					"error checking includePaths/excludePaths match for commit",
+				require.ErrorContains(
+					t, err, "error checking includePaths/excludePaths match for commit",
 				)
-				require.Contains(
-					t,
-					err.Error(),
-					"error parsing regexp: missing closing ]",
-				)
-				require.Contains(t, err.Error(), "error parsing regexp: missing closing ]")
+				require.ErrorContains(t, err, "error parsing regexp: missing closing ]")
 			},
 		},
 		{
@@ -294,11 +267,10 @@ func TestSelectCommitID(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, _, _ string, err error) {
-				require.Error(t, err)
-				require.Contains(
+				require.ErrorContains(
 					t,
-					err.Error(),
-					"commit \"fake-commit\" not applicable due to includePaths/excludePaths configuration for repo",
+					err,
+					`commit "fake-commit" not applicable due to includePaths/excludePaths configuration for repo`,
 				)
 			},
 		},
@@ -313,9 +285,8 @@ func TestSelectCommitID(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, _, _ string, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "error listing tags from git repo")
-				require.Contains(t, err.Error(), "something went wrong")
+				require.ErrorContains(t, err, "error listing tags from git repo")
+				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
 		{
@@ -330,8 +301,7 @@ func TestSelectCommitID(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, _, _ string, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "error compiling regular expression")
+				require.ErrorContains(t, err, "error compiling regular expression")
 			},
 		},
 		{
@@ -346,8 +316,7 @@ func TestSelectCommitID(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, _, _ string, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "found no applicable tags in repo")
+				require.ErrorContains(t, err, "found no applicable tags in repo")
 			},
 		},
 		{
@@ -361,8 +330,7 @@ func TestSelectCommitID(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, _, _ string, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "unknown commit selection strategy")
+				require.ErrorContains(t, err, "unknown commit selection strategy")
 			},
 		},
 		{
@@ -379,9 +347,8 @@ func TestSelectCommitID(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, _, _ string, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "error checking out tag")
-				require.Contains(t, err.Error(), "something went wrong")
+				require.ErrorContains(t, err, "error checking out tag")
+				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
 		{
@@ -401,9 +368,8 @@ func TestSelectCommitID(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, _, _ string, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "error determining commit ID of tag")
-				require.Contains(t, err.Error(), "something went wrong")
+				require.ErrorContains(t, err, "error determining commit ID of tag")
+				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
 		{
@@ -462,8 +428,7 @@ func TestSelectCommitID(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, _, _ string, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "error parsing semver constraint")
+				require.ErrorContains(t, err, "error parsing semver constraint")
 			},
 		},
 		{
@@ -608,8 +573,7 @@ func TestSelectSemverTag(t *testing.T) {
 			constraint: "invalid",
 			tags:       nil,
 			assertions: func(t *testing.T, _ string, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "error parsing semver constraint")
+				require.ErrorContains(t, err, "error parsing semver constraint")
 			},
 		},
 		{
@@ -746,8 +710,7 @@ func TestMatchesPathsFilters(t *testing.T) {
 			excludePaths: []string{regexpPrefix + "nonexistent", regexpPrefix + ".*val.*", regexPrefix + "["},
 			diffs:        []string{"path1/values.yaml", "path2/_helpers.tpl"},
 			assertions: func(t *testing.T, _ bool, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "error parsing regexp: missing closing ]: `[`")
+				require.ErrorContains(t, err, "error parsing regexp: missing closing ]: `[`")
 			},
 		},
 		{

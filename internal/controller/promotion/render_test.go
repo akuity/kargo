@@ -95,9 +95,8 @@ func TestKargoRenderApply(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, _ []string, _ string, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "error rendering manifests via Kargo Render")
-				require.Contains(t, err.Error(), "something went wrong")
+				require.ErrorContains(t, err, "error rendering manifests via Kargo Render")
+				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
 		{

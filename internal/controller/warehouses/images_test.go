@@ -41,13 +41,8 @@ func TestSelectImages(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, _ []kargoapi.Image, err error) {
-				require.Error(t, err)
-				require.Contains(
-					t,
-					err.Error(),
-					"error getting latest suitable image",
-				)
-				require.Contains(t, err.Error(), "something went wrong")
+				require.ErrorContains(t, err, "error getting latest suitable image")
+				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
 

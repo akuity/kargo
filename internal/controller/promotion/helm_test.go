@@ -100,9 +100,8 @@ func TestHelmerApply(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, _ []string, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "error updating values in file")
-				require.Contains(t, err.Error(), "something went wrong")
+				require.ErrorContains(t, err, "error updating values in file")
+				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
 		{
@@ -126,13 +125,8 @@ func TestHelmerApply(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, _ []string, err error) {
-				require.Error(t, err)
-				require.Contains(
-					t,
-					err.Error(),
-					"error preparing changes to affected Chart.yaml files",
-				)
-				require.Contains(t, err.Error(), "something went wrong")
+				require.ErrorContains(t, err, "error preparing changes to affected Chart.yaml files")
+				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
 		{
@@ -163,13 +157,8 @@ func TestHelmerApply(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, _ []string, err error) {
-				require.Error(t, err)
-				require.Contains(
-					t,
-					err.Error(),
-					"error updating dependencies for chart",
-				)
-				require.Contains(t, err.Error(), "something went wrong")
+				require.ErrorContains(t, err, "error updating dependencies for chart")
+				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
 		{
@@ -200,13 +189,8 @@ func TestHelmerApply(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, _ []string, err error) {
-				require.Error(t, err)
-				require.Contains(
-					t,
-					err.Error(),
-					"error updating dependencies for chart",
-				)
-				require.Contains(t, err.Error(), "something went wrong")
+				require.ErrorContains(t, err, "error updating dependencies for chart")
+				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
 		{

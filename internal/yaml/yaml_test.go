@@ -24,8 +24,7 @@ characters:
 	affiliation: Light side
 `),
 			assertions: func(t *testing.T, bytes []byte, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "error unmarshaling input")
+				require.ErrorContains(t, err, "error unmarshaling input")
 				require.Nil(t, bytes)
 			},
 		},

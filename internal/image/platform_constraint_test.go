@@ -80,8 +80,7 @@ func TestParsePlatformConstraint(t *testing.T) {
 			name:        "invalid",
 			platformStr: "invalid",
 			assertions: func(t *testing.T, _ platformConstraint, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "error parsing platform constraint")
+				require.ErrorContains(t, err, "error parsing platform constraint")
 			},
 		},
 		{

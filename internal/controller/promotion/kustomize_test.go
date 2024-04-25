@@ -91,9 +91,8 @@ func TestKustomizerApply(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, _ []string, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "error updating image")
-				require.Contains(t, err.Error(), "something went wrong")
+				require.ErrorContains(t, err, "error updating image")
+				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
 		{

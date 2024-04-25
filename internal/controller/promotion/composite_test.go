@@ -75,13 +75,8 @@ func TestCompositePromote(t *testing.T) {
 				_ kargoapi.FreightReference,
 				err error,
 			) {
-				require.Error(t, err)
-				require.Contains(
-					t,
-					err.Error(),
-					"error executing fake promotion mechanism",
-				)
-				require.Contains(t, err.Error(), "something went wrong")
+				require.ErrorContains(t, err, "error executing fake promotion mechanism")
+				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
 		{

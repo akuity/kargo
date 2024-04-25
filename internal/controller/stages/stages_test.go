@@ -117,9 +117,8 @@ func TestSyncControlFlowStage(t *testing.T) {
 				newStatus kargoapi.StageStatus,
 				err error,
 			) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "error listing Freight from Warehouse")
-				require.Contains(t, err.Error(), "something went wrong")
+				require.ErrorContains(t, err, "error listing Freight from Warehouse")
+				require.ErrorContains(t, err, "something went wrong")
 				// Status should be returned unchanged
 				require.Equal(t, initialStatus, newStatus)
 
@@ -157,13 +156,10 @@ func TestSyncControlFlowStage(t *testing.T) {
 				newStatus kargoapi.StageStatus,
 				err error,
 			) {
-				require.Error(t, err)
-				require.Contains(
-					t,
-					err.Error(),
-					"error getting all Freight verified in Stages upstream from Stage",
+				require.ErrorContains(
+					t, err, "error getting all Freight verified in Stages upstream from Stage",
 				)
-				require.Contains(t, err.Error(), "something went wrong")
+				require.ErrorContains(t, err, "something went wrong")
 				// Status should be returned unchanged
 				require.Equal(t, initialStatus, newStatus)
 
@@ -209,9 +205,8 @@ func TestSyncControlFlowStage(t *testing.T) {
 				newStatus kargoapi.StageStatus,
 				err error,
 			) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "error marking Freight")
-				require.Contains(t, err.Error(), "something went wrong")
+				require.ErrorContains(t, err, "error marking Freight")
+				require.ErrorContains(t, err, "something went wrong")
 				// Status should be returned unchanged
 				require.Equal(t, initialStatus, newStatus)
 
@@ -999,9 +994,8 @@ func TestSyncNormalStage(t *testing.T) {
 				newStatus kargoapi.StageStatus,
 				err error,
 			) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "something went wrong")
-				require.Contains(t, err.Error(), "error marking Freight")
+				require.ErrorContains(t, err, "something went wrong")
+				require.ErrorContains(t, err, "error marking Freight")
 				// Since no verification process was defined and the Stage is healthy,
 				// the Stage should have transitioned to a Steady phase.
 				require.Equal(t, kargoapi.StagePhaseSteady, newStatus.Phase)
@@ -1068,13 +1062,8 @@ func TestSyncNormalStage(t *testing.T) {
 					event.Annotations[kargoapi.AnnotationKeyEventVerificationFinishTime],
 				)
 
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "something went wrong")
-				require.Contains(
-					t,
-					err.Error(),
-					"error checking if auto-promotion is permitted",
-				)
+				require.ErrorContains(t, err, "something went wrong")
+				require.ErrorContains(t, err, "error checking if auto-promotion is permitted")
 				// Status should be returned unchanged
 				require.Equal(t, initialStatus, newStatus)
 			},
@@ -1201,13 +1190,8 @@ func TestSyncNormalStage(t *testing.T) {
 					event.Annotations[kargoapi.AnnotationKeyEventVerificationFinishTime],
 				)
 
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "something went wrong")
-				require.Contains(
-					t,
-					err.Error(),
-					"error finding latest Freight for Stage",
-				)
+				require.ErrorContains(t, err, "something went wrong")
+				require.ErrorContains(t, err, "error finding latest Freight for Stage")
 				// Status should be returned unchanged
 				require.Equal(t, initialStatus, newStatus)
 			},
@@ -1485,9 +1469,8 @@ func TestSyncNormalStage(t *testing.T) {
 					event.Annotations[kargoapi.AnnotationKeyEventVerificationFinishTime],
 				)
 
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "something went wrong")
-				require.Contains(t, err.Error(), "error creating Promotion of Stage")
+				require.ErrorContains(t, err, "something went wrong")
+				require.ErrorContains(t, err, "error creating Promotion of Stage")
 				// Status should be returned unchanged
 				require.Equal(t, initialStatus, newStatus)
 			},
@@ -1813,9 +1796,8 @@ func TestSyncStageDelete(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, initialStatus, newStatus kargoapi.StageStatus, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "error clearing verifications for Stage")
-				require.Contains(t, err.Error(), "something went wrong")
+				require.ErrorContains(t, err, "error clearing verifications for Stage")
+				require.ErrorContains(t, err, "something went wrong")
 				// Status should be returned unchanged
 				require.Equal(t, initialStatus, newStatus)
 			},
@@ -1831,9 +1813,8 @@ func TestSyncStageDelete(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, initialStatus, newStatus kargoapi.StageStatus, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "error clearing approvals for Stage")
-				require.Contains(t, err.Error(), "something went wrong")
+				require.ErrorContains(t, err, "error clearing approvals for Stage")
+				require.ErrorContains(t, err, "something went wrong")
 				// Status should be returned unchanged
 				require.Equal(t, initialStatus, newStatus)
 			},
@@ -1848,9 +1829,8 @@ func TestSyncStageDelete(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, initialStatus, newStatus kargoapi.StageStatus, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "error clearing AnalysisRuns for Stage")
-				require.Contains(t, err.Error(), "something went wrong")
+				require.ErrorContains(t, err, "error clearing AnalysisRuns for Stage")
+				require.ErrorContains(t, err, "something went wrong")
 				// Status should be returned unchanged
 				require.Equal(t, initialStatus, newStatus)
 			},
@@ -1904,9 +1884,8 @@ func TestClearVerification(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "error listing Freight verified in Stage")
-				require.Contains(t, err.Error(), "something went wrong")
+				require.ErrorContains(t, err, "error listing Freight verified in Stage")
+				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
 		{
@@ -1935,9 +1914,8 @@ func TestClearVerification(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "error patching status of Freight")
-				require.Contains(t, err.Error(), "something went wrong")
+				require.ErrorContains(t, err, "error patching status of Freight")
+				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
 		{
@@ -2001,9 +1979,8 @@ func TestClearApprovals(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "error listing Freight approved for Stage")
-				require.Contains(t, err.Error(), "something went wrong")
+				require.ErrorContains(t, err, "error listing Freight approved for Stage")
+				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
 		{
@@ -2032,9 +2009,8 @@ func TestClearApprovals(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "error patching status of Freight")
-				require.Contains(t, err.Error(), "something went wrong")
+				require.ErrorContains(t, err, "error patching status of Freight")
+				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
 		{
@@ -2098,8 +2074,7 @@ func TestHasNonTerminalPromotions(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, _ bool, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "something went wrong")
+				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
 		{
@@ -2171,10 +2146,9 @@ func TestVerifyFreightInStage(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, updated bool, err error) {
-				require.Error(t, err)
 				require.False(t, updated)
-				require.Contains(t, err.Error(), "something went wrong")
-				require.Contains(t, err.Error(), "error finding Freight")
+				require.ErrorContains(t, err, "something went wrong")
+				require.ErrorContains(t, err, "error finding Freight")
 			},
 		},
 		{
@@ -2189,9 +2163,8 @@ func TestVerifyFreightInStage(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, updated bool, err error) {
-				require.Error(t, err)
 				require.False(t, updated)
-				require.Contains(t, err.Error(), "found no Freight")
+				require.ErrorContains(t, err, "found no Freight")
 			},
 		},
 		{
@@ -2235,8 +2208,7 @@ func TestVerifyFreightInStage(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, updated bool, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "something went wrong")
+				require.ErrorContains(t, err, "something went wrong")
 				require.False(t, updated)
 			},
 		},
@@ -2295,9 +2267,8 @@ func TestIsAutoPromotionPermitted(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, allowed bool, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "something went wrong")
-				require.Contains(t, err.Error(), "error finding Project")
+				require.ErrorContains(t, err, "something went wrong")
+				require.ErrorContains(t, err, "error finding Project")
 				require.False(t, allowed)
 			},
 		},
@@ -2313,9 +2284,8 @@ func TestIsAutoPromotionPermitted(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, allowed bool, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "Project")
-				require.Contains(t, err.Error(), "not found")
+				require.ErrorContains(t, err, "Project")
+				require.ErrorContains(t, err, "not found")
 				require.False(t, allowed)
 			},
 		},
@@ -2409,9 +2379,8 @@ func TestGetLatestAvailableFreight(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, _ *kargoapi.Freight, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "something went wrong")
-				require.Contains(t, err.Error(), "error checking Warehouse")
+				require.ErrorContains(t, err, "something went wrong")
+				require.ErrorContains(t, err, "error checking Warehouse")
 			},
 		},
 		{
@@ -2467,12 +2436,9 @@ func TestGetLatestAvailableFreight(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, _ *kargoapi.Freight, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "something went wrong")
-				require.Contains(
-					t,
-					err.Error(),
-					"error finding latest Freight verified in Stages upstream from Stage",
+				require.ErrorContains(t, err, "something went wrong")
+				require.ErrorContains(
+					t, err, "error finding latest Freight verified in Stages upstream from Stage",
 				)
 			},
 		},
@@ -2498,13 +2464,8 @@ func TestGetLatestAvailableFreight(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, _ *kargoapi.Freight, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "something went wrong")
-				require.Contains(
-					t,
-					err.Error(),
-					"error finding latest Freight approved for Stage",
-				)
+				require.ErrorContains(t, err, "something went wrong")
+				require.ErrorContains(t, err, "error finding latest Freight approved for Stage")
 			},
 		},
 		{
@@ -2702,8 +2663,7 @@ func TestGetLatestFreightFromWarehouse(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, _ *kargoapi.Freight, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "something went wrong")
+				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
 		{
@@ -2791,13 +2751,8 @@ func TestGetAllVerifiedFreight(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, _ []kargoapi.Freight, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "something went wrong")
-				require.Contains(
-					t,
-					err.Error(),
-					"error listing Freight verified in Stage",
-				)
+				require.ErrorContains(t, err, "something went wrong")
+				require.ErrorContains(t, err, "error listing Freight verified in Stage")
 			},
 		},
 		{
@@ -2885,8 +2840,7 @@ func TestGetLatestVerifiedFreight(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, _ *kargoapi.Freight, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "something went wrong")
+				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
 		{

@@ -31,9 +31,8 @@ func TestCleanProjectFreight(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "error listing Warehouses in Project")
-				require.Contains(t, err.Error(), "something went wrong")
+				require.ErrorContains(t, err, "error listing Warehouses in Project")
+				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
 		{
@@ -54,11 +53,8 @@ func TestCleanProjectFreight(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, err error) {
-				require.Error(t, err)
-				require.Contains(
-					t,
-					err.Error(),
-					"error cleaning Freight from one or more Warehouses",
+				require.ErrorContains(
+					t, err, "error cleaning Freight from one or more Warehouses",
 				)
 			},
 		},
@@ -115,9 +111,8 @@ func TestCleanWarehouseFreight(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "error listing Freight from Warehouse")
-				require.Contains(t, err.Error(), "something went wrong")
+				require.ErrorContains(t, err, "error listing Freight from Warehouse")
+				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
 		{
@@ -166,9 +161,8 @@ func TestCleanWarehouseFreight(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "error listing Stages in Project")
-				require.Contains(t, err.Error(), "something went wrong")
+				require.ErrorContains(t, err, "error listing Stages in Project")
+				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
 		{
@@ -217,11 +211,8 @@ func TestCleanWarehouseFreight(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, err error) {
-				require.Error(t, err)
-				require.Contains(
-					t,
-					err.Error(),
-					"error deleting one or more Freight from Warehouse",
+				require.ErrorContains(
+					t, err, "error deleting one or more Freight from Warehouse",
 				)
 			},
 		},

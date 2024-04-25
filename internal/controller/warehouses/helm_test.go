@@ -39,13 +39,8 @@ func TestSelectCharts(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, _ []kargoapi.Chart, err error) {
-				require.Error(t, err)
-				require.Contains(
-					t,
-					err.Error(),
-					"error obtaining credentials for chart",
-				)
-				require.Contains(t, err.Error(), "something went wrong")
+				require.ErrorContains(t, err, "error obtaining credentials for chart")
+				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
 
@@ -71,13 +66,8 @@ func TestSelectCharts(t *testing.T) {
 				return "", errors.New("something went wrong")
 			},
 			assertions: func(t *testing.T, _ []kargoapi.Chart, err error) {
-				require.Error(t, err)
-				require.Contains(
-					t,
-					err.Error(),
-					"error searching for latest version of chart",
-				)
-				require.Contains(t, err.Error(), "something went wrong")
+				require.ErrorContains(t, err, "error searching for latest version of chart")
+				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
 
@@ -103,8 +93,7 @@ func TestSelectCharts(t *testing.T) {
 				return "", nil
 			},
 			assertions: func(t *testing.T, _ []kargoapi.Chart, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "found no suitable version of chart")
+				require.ErrorContains(t, err, "found no suitable version of chart")
 			},
 		},
 

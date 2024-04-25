@@ -100,11 +100,10 @@ func TestCleanProject(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "error cleaning Promotions in Project")
-				require.Contains(t, err.Error(), "something went wrong")
-				require.Contains(t, err.Error(), "error cleaning Freight in Project")
-				require.Contains(t, err.Error(), "something else went wrong")
+				require.ErrorContains(t, err, "error cleaning Promotions in Project")
+				require.ErrorContains(t, err, "something went wrong")
+				require.ErrorContains(t, err, "error cleaning Freight in Project")
+				require.ErrorContains(t, err, "something else went wrong")
 			},
 		},
 		{

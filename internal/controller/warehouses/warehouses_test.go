@@ -62,13 +62,8 @@ func TestSyncWarehouse(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "something went wrong")
-				require.Contains(
-					t,
-					err.Error(),
-					"error getting latest Freight from repos",
-				)
+				require.ErrorContains(t, err, "something went wrong")
+				require.ErrorContains(t, err, "error getting latest Freight from repos")
 			},
 		},
 
@@ -133,9 +128,8 @@ func TestSyncWarehouse(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "something went wrong")
-				require.Contains(t, err.Error(), "error creating Freight")
+				require.ErrorContains(t, err, "something went wrong")
+				require.ErrorContains(t, err, "error creating Freight")
 			},
 		},
 
@@ -195,9 +189,8 @@ func TestGetLatestFreightFromRepos(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, _ *kargoapi.Freight, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "error syncing git repo subscription")
-				require.Contains(t, err.Error(), "something went wrong")
+				require.ErrorContains(t, err, "error syncing git repo subscription")
+				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
 
@@ -221,13 +214,8 @@ func TestGetLatestFreightFromRepos(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, _ *kargoapi.Freight, err error) {
-				require.Error(t, err)
-				require.Contains(
-					t,
-					err.Error(),
-					"error syncing image repo subscriptions",
-				)
-				require.Contains(t, err.Error(), "something went wrong")
+				require.ErrorContains(t, err, "error syncing image repo subscriptions")
+				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
 
@@ -258,13 +246,8 @@ func TestGetLatestFreightFromRepos(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, _ *kargoapi.Freight, err error) {
-				require.Error(t, err)
-				require.Contains(
-					t,
-					err.Error(),
-					"error syncing chart repo subscriptions",
-				)
-				require.Contains(t, err.Error(), "something went wrong")
+				require.ErrorContains(t, err, "error syncing chart repo subscriptions")
+				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
 
