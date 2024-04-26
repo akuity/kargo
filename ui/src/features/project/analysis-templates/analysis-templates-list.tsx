@@ -1,5 +1,5 @@
 import { useMutation, useQuery } from '@connectrpc/connect-query';
-import { faEye, faPlus, faTrash } from '@fortawesome/free-solid-svg-icons';
+import { faPencil, faPlus, faTrash } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Table } from 'antd';
 import { format } from 'date-fns';
@@ -14,14 +14,14 @@ import {
 } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 
 import { CreateAnalysisTemplateModal } from './create-analysis-template-modal';
-import { PreviewAnalysisTemplateModal } from './preview-analysis-template-modal';
+import { EditAnalysisTemplateModal } from './edit-analysis-template-modal';
 
 export const AnalysisTemplatesList = () => {
   const { name } = useParams();
   const confirm = useConfirmModal();
 
   const { data, refetch } = useQuery(listAnalysisTemplates, { project: name });
-  const { show: showPreview } = useModal();
+  const { show: showEdit } = useModal();
   const { show: showCreate } = useModal((p) => (
     <CreateAnalysisTemplateModal {...p} namespace={name || ''} />
   ));
@@ -62,12 +62,19 @@ export const AnalysisTemplatesList = () => {
           render={(_, template) => (
             <div className='flex gap-2 justify-end'>
               <Button
-                icon={<FontAwesomeIcon icon={faEye} />}
+                icon={<FontAwesomeIcon icon={faPencil} />}
+                className='mr-2 ml-auto'
                 onClick={() => {
-                  showPreview((p) => <PreviewAnalysisTemplateModal {...p} template={template} />);
+                  showEdit((p) => (
+                    <EditAnalysisTemplateModal
+                      {...p}
+                      templateName={template.metadata?.name || ''}
+                      projectName={name || ''}
+                    />
+                  ));
                 }}
               >
-                Preview
+                Edit
               </Button>
               <Button
                 icon={<FontAwesomeIcon icon={faTrash} />}
