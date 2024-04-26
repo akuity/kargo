@@ -112,13 +112,6 @@ func (p *PromotionStatus) WithPhase(phase PromotionPhase) *PromotionStatus {
 	return status
 }
 
-// WithFreight returns a copy of PromotionStatus with the given freight
-func (p *PromotionStatus) WithFreight(freight *FreightReference) *PromotionStatus {
-	status := p.DeepCopy()
-	status.Freight = freight
-	return status
-}
-
 // +kubebuilder:object:root=true
 
 // PromotionList contains a list of Promotion
