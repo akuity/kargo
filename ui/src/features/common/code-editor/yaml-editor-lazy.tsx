@@ -1,5 +1,5 @@
 import Editor, { loader } from '@monaco-editor/react';
-import { Typography } from 'antd';
+import { Spin, Typography } from 'antd';
 import type { JSONSchema4 } from 'json-schema';
 import * as monaco from 'monaco-editor';
 import { configureMonacoYaml } from 'monaco-yaml';
@@ -18,11 +18,13 @@ export interface YamlEditorProps {
   height?: string;
   schema?: JSONSchema4;
   placeholder?: string;
+  isLoading: boolean;
 }
 
 const YamlEditor: FC<YamlEditorProps> = (props) => {
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
-  const { value, disabled, onChange, className, width, height, schema, placeholder } = props;
+  const { value, disabled, onChange, className, width, height, schema, placeholder, isLoading } =
+    props;
 
   const handleOnChange = (value: string | undefined) => {
     onChange?.(value);
@@ -49,6 +51,14 @@ const YamlEditor: FC<YamlEditorProps> = (props) => {
   const handleEditorDidMount = (editor: monaco.editor.IStandaloneCodeEditor) => {
     editorRef.current = editor;
   };
+
+  if (isLoading) {
+    return (
+      <Spin tip='Loading' size='small'>
+        <div className='content py-8' />
+      </Spin>
+    );
+  }
 
   return (
     <>

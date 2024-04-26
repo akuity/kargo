@@ -27,22 +27,11 @@ export const EditAnalysisTemplateModal = ({ visible, hide, templateName, project
     onSuccess: () => hide()
   });
 
-  const { data: templateResponse } = useQuery(getAnalysisTemplate, {
+  const { data: templateResponse, isLoading } = useQuery(getAnalysisTemplate, {
     project: projectName,
     name: templateName,
     format: RawFormat.YAML
   });
-
-  const { data: templateResponse2 } = useQuery(getAnalysisTemplate, {
-    project: projectName,
-    name: templateName,
-    format: RawFormat.UNSPECIFIED
-  });
-
-  console.log(
-    templateResponse2?.result.case === 'analysisTemplate' &&
-      templateResponse2?.result.value.toJson()
-  );
 
   const manifest = new TextDecoder().decode(
     templateResponse?.result.case === 'raw'
@@ -87,6 +76,7 @@ export const EditAnalysisTemplateModal = ({ visible, hide, templateName, project
             onChange={(e) => onChange(e || '')}
             height='500px'
             placeholder={getAnalysisTemplateYAMLExample(projectName)}
+            isLoading={isLoading}
           />
         )}
       </FieldContainer>
