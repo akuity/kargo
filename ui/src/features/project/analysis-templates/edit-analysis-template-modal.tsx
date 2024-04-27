@@ -69,7 +69,7 @@ export const EditAnalysisTemplateModal = ({ visible, hide, templateName, project
       okButtonProps={{ loading: isPending }}
       width={700}
     >
-      <FieldContainer name='value' control={control} label='Spec'>
+      <FieldContainer name='value' control={control}>
         {({ field: { value, onChange } }) => (
           <YamlEditor
             value={value}
@@ -77,6 +77,8 @@ export const EditAnalysisTemplateModal = ({ visible, hide, templateName, project
             height='500px'
             placeholder={getAnalysisTemplateYAMLExample(projectName)}
             isLoading={isLoading}
+            isHideManagedFieldsDisplayed
+            label='Spec'
           />
         )}
       </FieldContainer>

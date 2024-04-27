@@ -20,7 +20,7 @@ export const AnalysisTemplatesList = () => {
   const { name } = useParams();
   const confirm = useConfirmModal();
 
-  const { data, refetch } = useQuery(listAnalysisTemplates, { project: name });
+  const { data, isLoading, refetch } = useQuery(listAnalysisTemplates, { project: name });
   const { show: showEdit } = useModal();
   const { show: showCreate } = useModal((p) => (
     <CreateAnalysisTemplateModal {...p} namespace={name || ''} />
@@ -35,6 +35,7 @@ export const AnalysisTemplatesList = () => {
         dataSource={data?.analysisTemplates}
         pagination={{ hideOnSinglePage: true }}
         rowKey={(i) => i.metadata?.name || ''}
+        loading={isLoading}
       >
         <Table.Column<AnalysisTemplate>
           title='Creation Date'
