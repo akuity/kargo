@@ -1,9 +1,10 @@
 import Editor, { loader } from '@monaco-editor/react';
-import { Spin, Typography } from 'antd';
+import { Checkbox, Flex, Spin, Typography } from 'antd';
 import type { JSONSchema4 } from 'json-schema';
 import * as monaco from 'monaco-editor';
 import { configureMonacoYaml } from 'monaco-yaml';
 import React, { FC, useEffect, useRef } from 'react';
+import yaml from 'yaml';
 
 import styles from './yaml-editor.module.less';
 
@@ -18,16 +19,30 @@ export interface YamlEditorProps {
   height?: string;
   schema?: JSONSchema4;
   placeholder?: string;
-  isLoading: boolean;
+  isLoading?: boolean;
+  isHideManagedFieldsDisplayed?: boolean;
+  label?: string;
 }
 
 const YamlEditor: FC<YamlEditorProps> = (props) => {
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
-  const { value, disabled, onChange, className, width, height, schema, placeholder, isLoading } =
-    props;
+  const {
+    value,
+    disabled,
+    onChange,
+    className,
+    width,
+    height,
+    schema,
+    placeholder,
+    isLoading,
+    isHideManagedFieldsDisplayed,
+    label
+  } = props;
+  const [hideManagedFields, setHideManagedFields] = React.useState(!!isHideManagedFieldsDisplayed);
 
-  const handleOnChange = (value: string | undefined) => {
-    onChange?.(value);
+  const handleOnChange = (newValue: string | undefined) => {
+    onChange?.(newValue);
   };
 
   useEffect(() => {
@@ -52,6 +67,21 @@ const YamlEditor: FC<YamlEditorProps> = (props) => {
     editorRef.current = editor;
   };
 
+  const filteredValue = React.useMemo(() => {
+    if (!hideManagedFields) {
+      return value;
+    }
+
+    try {
+      const data = yaml.parse(value);
+      delete data.metadata.managedFields;
+
+      return yaml.stringify(data);
+    } catch (err) {
+      return value;
+    }
+  }, [value, hideManagedFields]);
+
   if (isLoading) {
     return (
       <Spin tip='Loading' size='small'>
@@ -62,6 +92,19 @@ const YamlEditor: FC<YamlEditorProps> = (props) => {
 
   return (
     <>
+      <Flex justify='space-between' className={isHideManagedFieldsDisplayed || label ? 'my-1' : ''}>
+        <div>{label}</div>
+        {isHideManagedFieldsDisplayed && (
+          <label>
+            <Checkbox
+              className='mr-2'
+              checked={hideManagedFields}
+              onChange={(e) => setHideManagedFields(e.target.checked)}
+            />
+            Hide Managed Fields
+          </label>
+        )}
+      </Flex>
       <div
         style={{ border: '1px solid #d9d9d9', height, overflow: 'hidden' }}
         className={className}
@@ -82,7 +125,7 @@ const YamlEditor: FC<YamlEditorProps> = (props) => {
           width={width}
           height={height}
           language='yaml'
-          value={value}
+          value={filteredValue}
           onChange={handleOnChange}
           onMount={handleEditorDidMount}
         />
@@ -94,7 +137,7 @@ const YamlEditor: FC<YamlEditorProps> = (props) => {
               editorRef.current?.focus?.();
             }}
           >
-            {!value &&
+            {!filteredValue &&
               placeholder
                 ?.trim()
                 ?.split('\n')
