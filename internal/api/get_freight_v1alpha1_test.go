@@ -14,6 +14,7 @@ import (
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api/kubernetes"
@@ -24,16 +25,10 @@ import (
 
 func TestGetFreight(t *testing.T) {
 	testCases := map[string]struct {
-		req                       *svcv1alpha1.GetFreightRequest
-		objects                   []client.Object
-		getFreightByNameOrAliasFn func(
-			ctx context.Context,
-			c client.Client,
-			project string,
-			name string,
-			alias string,
-		) (*kargoapi.Freight, error)
-		assertions func(*testing.T, *connect.Response[svcv1alpha1.GetFreightResponse], error)
+		req         *svcv1alpha1.GetFreightRequest
+		objects     []client.Object
+		interceptor interceptor.Funcs
+		assertions  func(*testing.T, *connect.Response[svcv1alpha1.GetFreightResponse], error)
 	}{
 		"empty project": {
 			req: &svcv1alpha1.GetFreightRequest{
@@ -98,7 +93,6 @@ func TestGetFreight(t *testing.T) {
 				Project: "kargo-demo",
 				Name:    "test",
 			},
-			getFreightByNameOrAliasFn: kargoapi.GetFreightByNameOrAlias,
 			objects: []client.Object{
 				mustNewObject[corev1.Namespace]("testdata/namespace.yaml"),
 				&kargoapi.Freight{
@@ -124,7 +118,6 @@ func TestGetFreight(t *testing.T) {
 				Project: "kargo-demo",
 				Alias:   "test-alias",
 			},
-			getFreightByNameOrAliasFn: kargoapi.GetFreightByNameOrAlias,
 			objects: []client.Object{
 				mustNewObject[corev1.Namespace]("testdata/namespace.yaml"),
 				&kargoapi.Freight{
@@ -153,7 +146,6 @@ func TestGetFreight(t *testing.T) {
 				Project: "kargo-demo",
 				Name:    "non-existing",
 			},
-			getFreightByNameOrAliasFn: kargoapi.GetFreightByNameOrAlias,
 			objects: []client.Object{
 				mustNewObject[corev1.Namespace]("testdata/namespace.yaml"),
 			},
@@ -168,7 +160,6 @@ func TestGetFreight(t *testing.T) {
 				Project: "kargo-demo",
 				Alias:   "non-existing",
 			},
-			getFreightByNameOrAliasFn: kargoapi.GetFreightByNameOrAlias,
 			objects: []client.Object{
 				mustNewObject[corev1.Namespace]("testdata/namespace.yaml"),
 			},
@@ -183,14 +174,35 @@ func TestGetFreight(t *testing.T) {
 				Project: "kargo-demo",
 				Name:    "test",
 			},
-			getFreightByNameOrAliasFn: func(
-				context.Context,
-				client.Client,
-				string,
-				string,
-				string,
-			) (*kargoapi.Freight, error) {
-				return nil, apierrors.NewServiceUnavailable("test")
+			interceptor: interceptor.Funcs{
+				Get: func(
+					_ context.Context,
+					_ client.WithWatch,
+					_ client.ObjectKey,
+					_ client.Object,
+					_ ...client.GetOption,
+				) error {
+					return apierrors.NewServiceUnavailable("test")
+				},
+			},
+			objects: []client.Object{
+				mustNewObject[corev1.Namespace]("testdata/namespace.yaml"),
+			},
+			assertions: func(t *testing.T, c *connect.Response[svcv1alpha1.GetFreightResponse], err error) {
+				require.Error(t, err)
+				require.Equal(t, connect.CodeUnknown, connect.CodeOf(err))
+				require.Nil(t, c)
+			},
+		},
+		"error getting Freight by alias": {
+			req: &svcv1alpha1.GetFreightRequest{
+				Project: "kargo-demo",
+				Alias:   "test",
+			},
+			interceptor: interceptor.Funcs{
+				List: func(_ context.Context, _ client.WithWatch, _ client.ObjectList, _ ...client.ListOption) error {
+					return apierrors.NewServiceUnavailable("test")
+				},
 			},
 			objects: []client.Object{
 				mustNewObject[corev1.Namespace]("testdata/namespace.yaml"),
@@ -207,7 +219,6 @@ func TestGetFreight(t *testing.T) {
 				Name:    "test",
 				Format:  svcv1alpha1.RawFormat_RAW_FORMAT_JSON,
 			},
-			getFreightByNameOrAliasFn: kargoapi.GetFreightByNameOrAlias,
 			objects: []client.Object{
 				mustNewObject[corev1.Namespace]("testdata/namespace.yaml"),
 				&kargoapi.Freight{
@@ -249,7 +260,6 @@ func TestGetFreight(t *testing.T) {
 				Name:    "test",
 				Format:  svcv1alpha1.RawFormat_RAW_FORMAT_YAML,
 			},
-			getFreightByNameOrAliasFn: kargoapi.GetFreightByNameOrAlias,
 			objects: []client.Object{
 				mustNewObject[corev1.Namespace]("testdata/namespace.yaml"),
 				&kargoapi.Freight{
@@ -309,7 +319,7 @@ func TestGetFreight(t *testing.T) {
 						_ *rest.Config,
 						scheme *runtime.Scheme,
 					) (client.Client, error) {
-						c := fake.NewClientBuilder().WithScheme(scheme)
+						c := fake.NewClientBuilder().WithScheme(scheme).WithInterceptorFuncs(testCase.interceptor)
 						if len(testCase.objects) > 0 {
 							c.WithObjects(testCase.objects...)
 						}
@@ -322,7 +332,6 @@ func TestGetFreight(t *testing.T) {
 			svr := &server{
 				client:                    client,
 				externalValidateProjectFn: validation.ValidateProject,
-				getFreightByNameOrAliasFn: testCase.getFreightByNameOrAliasFn,
 			}
 			res, err := (svr).GetFreight(ctx, connect.NewRequest(testCase.req))
 			testCase.assertions(t, res, err)

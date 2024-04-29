@@ -6,12 +6,14 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/stretchr/testify/require"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api/kubernetes"
@@ -21,9 +23,10 @@ import (
 
 func TestGetProject(t *testing.T) {
 	testCases := map[string]struct {
-		req        *svcv1alpha1.GetProjectRequest
-		objects    []client.Object
-		assertions func(*testing.T, *connect.Response[svcv1alpha1.GetProjectResponse], error)
+		req         *svcv1alpha1.GetProjectRequest
+		objects     []client.Object
+		interceptor interceptor.Funcs
+		assertions  func(*testing.T, *connect.Response[svcv1alpha1.GetProjectResponse], error)
 	}{
 		"empty name": {
 			req: &svcv1alpha1.GetProjectRequest{
@@ -47,6 +50,30 @@ func TestGetProject(t *testing.T) {
 				Name: "kargo-x",
 			},
 			objects: []client.Object{},
+			assertions: func(t *testing.T, c *connect.Response[svcv1alpha1.GetProjectResponse], err error) {
+				require.Error(t, err)
+				require.Equal(t, connect.CodeNotFound, connect.CodeOf(err))
+				require.Nil(t, c)
+			},
+		},
+		"error getting Project": {
+			req: &svcv1alpha1.GetProjectRequest{
+				Name: "kargo-demo",
+			},
+			objects: []client.Object{},
+			interceptor: interceptor.Funcs{
+				// This interceptor will be called when the client.Get method is called.
+				// It will return an error to simulate a failure in the client.Get method.
+				Get: func(
+					_ context.Context,
+					_ client.WithWatch,
+					_ client.ObjectKey,
+					_ client.Object,
+					_ ...client.GetOption,
+				) error {
+					return apierrors.NewServiceUnavailable("test")
+				},
+			},
 			assertions: func(t *testing.T, c *connect.Response[svcv1alpha1.GetProjectResponse], err error) {
 				require.Error(t, err)
 				require.Equal(t, connect.CodeUnknown, connect.CodeOf(err))
@@ -172,7 +199,7 @@ func TestGetProject(t *testing.T) {
 						_ *rest.Config,
 						scheme *runtime.Scheme,
 					) (client.Client, error) {
-						c := fake.NewClientBuilder().WithScheme(scheme)
+						c := fake.NewClientBuilder().WithScheme(scheme).WithInterceptorFuncs(testCase.interceptor)
 						if len(testCase.objects) > 0 {
 							c.WithObjects(testCase.objects...)
 						}

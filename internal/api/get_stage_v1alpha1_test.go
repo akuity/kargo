@@ -7,11 +7,13 @@ import (
 	"connectrpc.com/connect"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api/kubernetes"
@@ -22,8 +24,9 @@ import (
 
 func TestGetStage(t *testing.T) {
 	testSets := map[string]struct {
-		req        *svcv1alpha1.GetStageRequest
-		assertions func(*testing.T, *connect.Response[svcv1alpha1.GetStageResponse], error)
+		req         *svcv1alpha1.GetStageRequest
+		interceptor interceptor.Funcs
+		assertions  func(*testing.T, *connect.Response[svcv1alpha1.GetStageResponse], error)
 	}{
 		"empty project": {
 			req: &svcv1alpha1.GetStageRequest{
@@ -78,6 +81,28 @@ func TestGetStage(t *testing.T) {
 			req: &svcv1alpha1.GetStageRequest{
 				Project: "kargo-demo",
 				Name:    "non-existing",
+			},
+			assertions: func(t *testing.T, c *connect.Response[svcv1alpha1.GetStageResponse], err error) {
+				require.Error(t, err)
+				require.Equal(t, connect.CodeNotFound, connect.CodeOf(err))
+				require.Nil(t, c)
+			},
+		},
+		"error getting Stage": {
+			req: &svcv1alpha1.GetStageRequest{
+				Project: "kargo-demo",
+				Name:    "test",
+			},
+			interceptor: interceptor.Funcs{
+				Get: func(
+					_ context.Context,
+					_ client.WithWatch,
+					_ client.ObjectKey,
+					_ client.Object,
+					_ ...client.GetOption,
+				) error {
+					return apierrors.NewServiceUnavailable("test")
+				},
 			},
 			assertions: func(t *testing.T, c *connect.Response[svcv1alpha1.GetStageResponse], err error) {
 				require.Error(t, err)
@@ -171,6 +196,7 @@ func TestGetStage(t *testing.T) {
 								mustNewObject[corev1.Namespace]("testdata/namespace.yaml"),
 								mustNewObject[kargoapi.Stage]("testdata/stage.yaml"),
 							).
+							WithInterceptorFuncs(ts.interceptor).
 							Build(), nil
 					},
 				},

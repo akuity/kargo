@@ -7,12 +7,14 @@ import (
 	"connectrpc.com/connect"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api/kubernetes"
@@ -23,9 +25,10 @@ import (
 
 func TestGetWarehouse(t *testing.T) {
 	testSets := map[string]struct {
-		req        *svcv1alpha1.GetWarehouseRequest
-		objects    []client.Object
-		assertions func(*testing.T, *connect.Response[svcv1alpha1.GetWarehouseResponse], error)
+		req         *svcv1alpha1.GetWarehouseRequest
+		objects     []client.Object
+		interceptor interceptor.Funcs
+		assertions  func(*testing.T, *connect.Response[svcv1alpha1.GetWarehouseResponse], error)
 	}{
 		"empty project": {
 			req: &svcv1alpha1.GetWarehouseRequest{
@@ -101,6 +104,33 @@ func TestGetWarehouse(t *testing.T) {
 			},
 			objects: []client.Object{
 				mustNewObject[corev1.Namespace]("testdata/namespace.yaml"),
+			},
+			assertions: func(t *testing.T, c *connect.Response[svcv1alpha1.GetWarehouseResponse], err error) {
+				require.Error(t, err)
+				require.Equal(t, connect.CodeNotFound, connect.CodeOf(err))
+				require.Nil(t, c)
+			},
+		},
+		"error getting Warehouse": {
+			req: &svcv1alpha1.GetWarehouseRequest{
+				Project: "kargo-demo",
+				Name:    "test",
+			},
+			objects: []client.Object{
+				mustNewObject[corev1.Namespace]("testdata/namespace.yaml"),
+			},
+			interceptor: interceptor.Funcs{
+				// This interceptor will be called when the client.Get method is called.
+				// It will return an error to simulate a failure in the client.Get method.
+				Get: func(
+					_ context.Context,
+					_ client.WithWatch,
+					_ client.ObjectKey,
+					_ client.Object,
+					_ ...client.GetOption,
+				) error {
+					return apierrors.NewServiceUnavailable("test")
+				},
 			},
 			assertions: func(t *testing.T, c *connect.Response[svcv1alpha1.GetWarehouseResponse], err error) {
 				require.Error(t, err)
@@ -215,7 +245,7 @@ func TestGetWarehouse(t *testing.T) {
 						_ *rest.Config,
 						scheme *runtime.Scheme,
 					) (client.Client, error) {
-						c := fake.NewClientBuilder().WithScheme(scheme)
+						c := fake.NewClientBuilder().WithScheme(scheme).WithInterceptorFuncs(ts.interceptor)
 						if ts.objects != nil {
 							c.WithObjects(ts.objects...)
 						}

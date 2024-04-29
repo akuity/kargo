@@ -10,10 +10,10 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	"github.com/akuity/kargo/internal/api/config"
 	"github.com/akuity/kargo/internal/api/kubernetes"
@@ -25,14 +25,10 @@ import (
 
 func TestGetAnalysisTemplate(t *testing.T) {
 	testCases := map[string]struct {
-		req                   *svcv1alpha1.GetAnalysisTemplateRequest
-		rolloutsDisabled      bool
-		getAnalysisTemplateFn func(
-			context.Context,
-			client.Client,
-			types.NamespacedName,
-		) (*rollouts.AnalysisTemplate, error)
-		assertions func(*testing.T, *connect.Response[svcv1alpha1.GetAnalysisTemplateResponse], error)
+		req              *svcv1alpha1.GetAnalysisTemplateRequest
+		rolloutsDisabled bool
+		interceptor      interceptor.Funcs
+		assertions       func(*testing.T, *connect.Response[svcv1alpha1.GetAnalysisTemplateResponse], error)
 	}{
 		"empty project": {
 			req: &svcv1alpha1.GetAnalysisTemplateRequest{
@@ -72,7 +68,6 @@ func TestGetAnalysisTemplate(t *testing.T) {
 				Project: "kargo-demo",
 				Name:    "test",
 			},
-			getAnalysisTemplateFn: rollouts.GetAnalysisTemplate,
 			assertions: func(t *testing.T, c *connect.Response[svcv1alpha1.GetAnalysisTemplateResponse], err error) {
 				require.NoError(t, err)
 
@@ -89,7 +84,6 @@ func TestGetAnalysisTemplate(t *testing.T) {
 				Project: "non-existing-project",
 				Name:    "test",
 			},
-			getAnalysisTemplateFn: rollouts.GetAnalysisTemplate,
 			assertions: func(t *testing.T, c *connect.Response[svcv1alpha1.GetAnalysisTemplateResponse], err error) {
 				require.Error(t, err)
 				require.Equal(t, connect.CodeNotFound, connect.CodeOf(err))
@@ -101,12 +95,18 @@ func TestGetAnalysisTemplate(t *testing.T) {
 				Project: "kargo-demo",
 				Name:    "test",
 			},
-			getAnalysisTemplateFn: func(
-				context.Context,
-				client.Client,
-				types.NamespacedName,
-			) (*rollouts.AnalysisTemplate, error) {
-				return nil, apierrors.NewServiceUnavailable("test")
+			interceptor: interceptor.Funcs{
+				// This interceptor will be called when the client.Get method is called.
+				// It will return an error to simulate a failure in the client.Get method.
+				Get: func(
+					_ context.Context,
+					_ client.WithWatch,
+					_ client.ObjectKey,
+					_ client.Object,
+					_ ...client.GetOption,
+				) error {
+					return apierrors.NewServiceUnavailable("test")
+				},
 			},
 			assertions: func(t *testing.T, c *connect.Response[svcv1alpha1.GetAnalysisTemplateResponse], err error) {
 				require.Error(t, err)
@@ -132,7 +132,6 @@ func TestGetAnalysisTemplate(t *testing.T) {
 				Name:    "test",
 				Format:  svcv1alpha1.RawFormat_RAW_FORMAT_JSON,
 			},
-			getAnalysisTemplateFn: rollouts.GetAnalysisTemplate,
 			assertions: func(t *testing.T, c *connect.Response[svcv1alpha1.GetAnalysisTemplateResponse], err error) {
 				require.NoError(t, err)
 
@@ -161,7 +160,6 @@ func TestGetAnalysisTemplate(t *testing.T) {
 				Name:    "test",
 				Format:  svcv1alpha1.RawFormat_RAW_FORMAT_YAML,
 			},
-			getAnalysisTemplateFn: rollouts.GetAnalysisTemplate,
 			assertions: func(t *testing.T, c *connect.Response[svcv1alpha1.GetAnalysisTemplateResponse], err error) {
 				require.NoError(t, err)
 
@@ -223,6 +221,7 @@ func TestGetAnalysisTemplate(t *testing.T) {
 								mustNewObject[corev1.Namespace]("testdata/namespace.yaml"),
 								mustNewObject[rollouts.AnalysisTemplate]("testdata/analysistemplate.yaml"),
 							).
+							WithInterceptorFuncs(testCase.interceptor).
 							Build(), nil
 					},
 				},
@@ -233,7 +232,6 @@ func TestGetAnalysisTemplate(t *testing.T) {
 				client:                    client,
 				cfg:                       cfg,
 				externalValidateProjectFn: validation.ValidateProject,
-				getAnalysisTemplateFn:     testCase.getAnalysisTemplateFn,
 			}
 			res, err := (svr).GetAnalysisTemplate(ctx, connect.NewRequest(testCase.req))
 			testCase.assertions(t, res, err)
