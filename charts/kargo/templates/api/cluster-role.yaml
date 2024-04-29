@@ -82,6 +82,15 @@ rules:
     verbs:
       - patch
       - update
+  - apiGroups:
+      - rbac.authorization.k8s.io
+    resources:
+      - rolebindings
+      - roles
+    verbs:
+      - get
+      - list
+      - watch
 {{- if .Values.api.rollouts.integrationEnabled }}
   - apiGroups:
       - argoproj.io
@@ -94,7 +103,7 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: kargo-secret-manager
+  name: kargo-project-admin
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
     {{- include "kargo.api.labels" . | nindent 4 }}
@@ -103,6 +112,14 @@ rules:
     - ""
   resources:
     - secrets
+    - serviceaccounts
+  verbs:
+    - "*"
+- apiGroups:
+    - rbac.authorization.k8s.io
+  resources:
+    - rolebindings
+    - roles
   verbs:
     - "*"
 {{- if .Values.api.rollouts.integrationEnabled }}

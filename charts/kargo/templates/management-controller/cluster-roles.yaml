@@ -22,14 +22,16 @@ rules:
   - ""
   resources:
   - secrets
+  - serviceaccounts
   verbs:
   - "*"
 - apiGroups:
   - rbac.authorization.k8s.io
   resources:
   - rolebindings
+  - roles
   verbs:
-  - create
+  - "*"
 - apiGroups:
   - kargo.akuity.io
   resources:
