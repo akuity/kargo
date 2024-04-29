@@ -5,6 +5,9 @@
 
 ## @section Global Parameters
 global:
+  ## @param global.additionalLabels Additional labels to add to all resources.
+  additionalLabels: {}
+    # my-label: my-value
   ## @param global.env Environment variables to add to all Kargo pods.
   env: []
   #  - name: ENV_NAME
@@ -15,6 +18,16 @@ global:
   #      name: config-map-name
   #  - secretRef:
   #      name: secret-name
+  ## @param global.nodeSelector Default node selector for all Kargo pods.
+  nodeSelector: {}
+  ## @param global.annotations Default annotations for all Kargo pods.
+  annotations: {}
+  ## @param global.tolerations Default tolerations for all Kargo pods.
+  tolerations: []
+  ## @param global.affinity Default affinity for all Kargo pods.
+  affinity: {}
+  ## @param global.securityContext Default security context for all Kargo pods.
+  securityContext: {}
 
 ## @section Image Parameters
 image:
@@ -68,8 +81,7 @@ kubeconfigSecrets: {}
   ## @param kubeconfigSecrets.argocd [nullable] Kubernetes `Secret` name containing kubeconfig for a remote Kubernetes cluster hosting Argo CD resources. Used by Kargo controller(s) only.
   # argocd: ""
 
-## @section Labels
-## @param additionalLabels Additional labels to add to all resources.
+## @skip additionalLabels Deprecated, use `global.additionalLabels` instead.
 additionalLabels: {}
   # my-label: my-value
 
@@ -91,15 +103,15 @@ api:
     # requests:
     #   cpu: 100m
     #   memory: 128Mi
-  ## @param api.nodeSelector Node selector for api pods.
+  ## @param api.nodeSelector Node selector for api pods. Defaults to `global.nodeSelector`.
   nodeSelector: {}
-  ## @param api.tolerations Tolerations for api pods.
+  ## @param api.tolerations Tolerations for api pods. Defaults to `global.tolerations`.
   tolerations: []
-  ## @param api.affinity Specifies pod affinity for api pods.
+  ## @param api.affinity Specifies pod affinity for api pods. Defaults to `global.affinity`.
   affinity: {}
-  ## @param  api.annotations Annotations to add to the api pods.
+  ## @param  api.annotations Annotations to add to the api pods. Merges with `global.annotations`, allowing you to override or add to the global annotations.
   annotations: {}
-  ## @param api.securityContext Security context for api pods.
+  ## @param api.securityContext Security context for api pods. Defaults to `global.securityContext`.
   securityContext: {}
   ## @param api.env Environment variables to add to API server pods.
   env: []
@@ -146,7 +158,7 @@ api:
     type: ClusterIP
     ## @param api.service.nodePort [nullable] Host port the `Service` will be mapped to when `type` is either `NodePort` or `LoadBalancer`. If not specified, Kubernetes chooses.
     # nodePort:
-    ## @param api.service.annotations Annotations to add to the API server's service. 
+    ## @param api.service.annotations Annotations to add to the API server's service. Merges with `global.annotations`, allowing you to override or add to the global annotations.
     annotations: {}
 
   secret:
@@ -279,15 +291,15 @@ api:
         # requests:
         #   cpu: 100m
         #   memory: 128Mi
-      ## @param api.oidc.dex.nodeSelector Node selector for Dex server pods.
+      ## @param api.oidc.dex.nodeSelector Node selector for Dex server pods. Defaults to `global.nodeSelector`.
       nodeSelector: {}
-      ## @param api.oidc.dex.tolerations Tolerations for Dex server pods.
+      ## @param api.oidc.dex.tolerations Tolerations for Dex server pods. Defaults to `global.tolerations`.
       tolerations: []
-      ## @param api.oidc.dex.affinity Specifies pod affinity for the Dex server pods.
+      ## @param api.oidc.dex.affinity Specifies pod affinity for the Dex server pods. Defaults to `global.affinity`.
       affinity: {}
-      ## @param api.oidc.dex.annotations Annotations to add to the Dex server pods.
+      ## @param api.oidc.dex.annotations Annotations to add to the Dex server pods. Merges with `global.annotations`, allowing you to override or add to the global annotations.
       annotations: {}
-      ## @param api.oidc.dex.securityContext Security context for Dex server pods.
+      ## @param api.oidc.dex.securityContext Security context for Dex server pods. Defaults to `global.securityContext`.
       securityContext: {}
 
   argocd:
@@ -319,12 +331,12 @@ controller:
     email: "kargo-render@akuity.io"
 
     signingKeySecret:
-      ## @param controller.gitClient.signingKeySecret.name Specifies the name of an existing `Secret` which contains the Git users's signing key. The value should be accessible under `.data.signingKey` in the same namespace as Kargo. When the signing key is a GPG key, the GPG key's name and email address identity must match the values defined for `controller.gitClient.name` and `controller.gitClient.email`.
+      ## @param controller.gitClient.signingKeySecret.name Specifies the name of an existing `Secret` which contains the Git user's signing key. The value should be accessible under `.data.signingKey` in the same namespace as Kargo. When the signing key is a GPG key, the GPG key's name and email address identity must match the values defined for `controller.gitClient.name` and `controller.gitClient.email`.
       name: ""
       ## @param controller.gitClient.signingKeySecret.type Specifies the type of the signing key. The currently supported and default option is `gpg`.
       type: ""
 
-  ## @param controller.securityContext Security context for controller pods.
+  ## @param controller.securityContext Security context for controller pods. Defaults to `global.securityContext`.
   securityContext: {}
 
   ## @param controller.shardName [nullable] Set a shard name only if you are running multiple controllers backed by a single underlying control plane. Setting a shard name will cause this controller to operate **only** on resources with a matching shard name. Leaving the shard name undefined will designate this controller as the default controller that is responsible exclusively for resources that are **not** assigned to a specific shard. Leaving this undefined is the correct choice when you are not using sharding at all. It is also the correct setting if you are using sharding and want to designate a controller as the default for handling resources not assigned to a specific shard. In most cases, this setting should simply be left alone.
@@ -359,13 +371,13 @@ controller:
     # requests:
     #   cpu: 100m
     #   memory: 128Mi
-  ## @param controller.nodeSelector Node selector for controller pods.
+  ## @param controller.nodeSelector Node selector for controller pods. Defaults to `global.nodeSelector`.
   nodeSelector: {}
-  ## @param controller.tolerations Tolerations for controller pods.
+  ## @param controller.tolerations Tolerations for controller pods. Defaults to `global.tolerations`.
   tolerations: []
-  ## @param controller.affinity Specifies pod affinity for controller pods.
+  ## @param controller.affinity Specifies pod affinity for controller pods. Defaults to `global.affinity`.
   affinity: {}
-  ## @param controller.annotations Annotations to add to the controller pods.
+  ## @param controller.annotations Annotations to add to the controller pods. Merges with `global.annotations`, allowing you to override or add to the global annotations.
   annotations: {}
   ## @param controller.env Environment variables to add to controller pods.
   env: []
@@ -387,7 +399,7 @@ managementController:
   ## @param managementController.logLevel The log level for the management controller.
   logLevel: INFO
 
-  ## @param managementController.securityContext Security context for management controller pods.
+  ## @param managementController.securityContext Security context for management controller pods. Defaults to `global.securityContext`.
   securityContext: {}
 
   ## @param managementController.resources Resources limits and requests for the management controller containers.
@@ -398,13 +410,13 @@ managementController:
     # requests:
     #   cpu: 100m
     #   memory: 128Mi
-  ## @param managementController.nodeSelector Node selector for management controller pods.
+  ## @param managementController.nodeSelector Node selector for management controller pods. Defaults to `global.nodeSelector`.
   nodeSelector: {}
-  ## @param managementController.tolerations Tolerations for management controller pods.
+  ## @param managementController.tolerations Tolerations for management controller pods. Defaults to `global.tolerations`.
   tolerations: []
-  ## @param managementController.affinity Specifies pod affinity for management controller pods.
+  ## @param managementController.affinity Specifies pod affinity for management controller pods. Defaults to `global.affinity`.
   affinity: {}
-  ## @param managementController.annotations Annotations to add to the management controller pods.
+  ## @param managementController.annotations Annotations to add to the management controller pods. Merges with `global.annotations`, allowing you to override or add to the global annotations.
   annotations: {}
   ## @param managementController.env Environment variables to add to management controller pods.
   env: []
@@ -444,15 +456,15 @@ webhooksServer:
     # requests:
     #   cpu: 100m
     #   memory: 128Mi
-  ## @param webhooksServer.nodeSelector Node selector for the webhooks server pods.
+  ## @param webhooksServer.nodeSelector Node selector for the webhooks server pods. Defaults to `global.nodeSelector`.
   nodeSelector: {}
-  ## @param webhooksServer.tolerations Tolerations for the webhooks server pods.
+  ## @param webhooksServer.tolerations Tolerations for the webhooks server pods. Defaults to `global.tolerations`.
   tolerations: []
-  ## @param webhooksServer.affinity Specifies pod affinity for the webhooks server pods.
+  ## @param webhooksServer.affinity Specifies pod affinity for the webhooks server pods. Defaults to `global.affinity`.
   affinity: {}
-  ## @param webhooksServer.annotations Annotations to add to the webhooks server pods.
+  ## @param webhooksServer.annotations Annotations to add to the webhooks server pods. Merges with `global.annotations`, allowing you to override or add to the global annotations.
   annotations: {}
-  ## @param webhooksServer.securityContext Security context for webhooks server pods.
+  ## @param webhooksServer.securityContext Security context for webhooks server pods. Defaults to `global.securityContext`.
   securityContext: {}
   ## @param webhooksServer.env Environment variables to add to webhook server pods.
   env: []
@@ -491,15 +503,15 @@ garbageCollector:
     # requests:
     #   cpu: 100m
     #   memory: 128Mi
-  ## @param garbageCollector.nodeSelector Node selector for the garbage collector pods.
+  ## @param garbageCollector.nodeSelector Node selector for the garbage collector pods. Defaults to `global.nodeSelector`.
   nodeSelector: {}
-  ## @param garbageCollector.tolerations Tolerations for the garbage collector pods.
+  ## @param garbageCollector.tolerations Tolerations for the garbage collector pods. Defaults to `global.tolerations`.
   tolerations: []
-  ## @param garbageCollector.affinity Specifies pod affinity for the garbage collector pods.
+  ## @param garbageCollector.affinity Specifies pod affinity for the garbage collector pods. Defaults to `global.affinity`.
   affinity: {}
-  ## @param garbageCollector.annotations Annotations to add to the garbage collector pods.
+  ## @param garbageCollector.annotations Annotations to add to the garbage collector pods. Merges with `global.annotations`, allowing you to override or add to the global annotations.
   annotations: {}
-  ## @param garbageCollector.securityContext Security context for garbage collector pods.
+  ## @param garbageCollector.securityContext Security context for garbage collector pods. Defaults to `global.securityContext`.
   securityContext: {}
   ## @param garbageCollector.env Environment variables to add to garbage collector pods.
   env: []

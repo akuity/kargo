@@ -7,9 +7,11 @@ metadata:
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
     {{- include "kargo.api.labels" . | nindent 4 }}
-  {{- with .Values.api.service.annotations }}
+  {{- with (mergeOverwrite (deepCopy .Values.global.annotations) .Values.api.service.annotations) }}
   annotations:
-    {{- toYaml . | nindent 4 }}
+    {{- range $key, $value := . }}
+    {{ $key }}: {{ $value | quote }}
+    {{- end }}
   {{- end }}
 spec:
   type: {{ .Values.api.service.type }}

@@ -7,9 +7,11 @@ metadata:
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
     {{- include "kargo.api.labels" . | nindent 4 }}
-  {{- with .Values.api.ingress.annotations }}
+  {{- with (mergeOverwrite (deepCopy .Values.global.annotations) .Values.api.ingress.annotations) }}
   annotations:
-    {{- toYaml . | nindent 4 }}
+    {{- range $key, $value := . }}
+    {{ $key }}: {{ $value | quote }}
+    {{- end }}
   {{- end }}
 spec:
   {{- if .Values.api.ingress.ingressClassName }}

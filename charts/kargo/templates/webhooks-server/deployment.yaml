@@ -7,9 +7,11 @@ metadata:
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
     {{- include "kargo.webhooksServer.labels" . | nindent 4 }}
-  {{- with .Values.webhooksServer.annotations }}
+  {{- with (mergeOverwrite (deepCopy .Values.global.annotations) .Values.webhooksServer.annotations) }}
   annotations:
-    {{- toYaml . | nindent 4 }}
+    {{- range $key, $value := . }}
+    {{ $key }}: {{ $value | quote }}
+    {{- end }}
   {{- end }}
 spec:
   replicas: {{ .Values.webhooksServer.replicas | default 1 }}
@@ -28,7 +30,7 @@ spec:
         configmap/checksum: {{ pick ( include (print $.Template.BasePath "/webhooks-server/configmap.yaml") . | fromYaml ) "data" | toYaml | sha256sum }}
     spec:
       serviceAccount: kargo-webhooks-server
-      {{- with .Values.webhooksServer.affinity }}
+      {{- with .Values.webhooksServer.affinity | default .Values.global.affinity }}
       affinity:
         {{- toYaml . | nindent 8 }}
       {{- end }}
@@ -64,8 +66,10 @@ spec:
           name: kubeconfigs
           readOnly: true
         {{- end }}
+        {{- with .Values.webhooksServer.securityContext | default .Values.global.securityContext }}
         securityContext:
-          {{- toYaml .Values.webhooksServer.securityContext | nindent 10 }}
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
         resources:
           {{- toYaml .Values.webhooksServer.resources | nindent 10 }}
       volumes:
@@ -79,11 +83,11 @@ spec:
           defaultMode: 0644
           secretName: {{ .Values.kubeconfigSecrets.kargo }}
       {{- end }}
-      {{- with .Values.webhooksServer.nodeSelector }}
+      {{- with .Values.webhooksServer.nodeSelector | default .Values.global.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- with .Values.webhooksServer.tolerations }}
+      {{- with .Values.webhooksServer.tolerations | default .Values.global.tolerations }}
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
