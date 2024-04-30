@@ -27,7 +27,7 @@ export const CredentialsList = () => {
   const { show: showCreate } = useModal();
   const confirm = useConfirmModal();
 
-  const { data, refetch } = useQuery(listCredentials, { project: name });
+  const { data, isLoading, refetch } = useQuery(listCredentials, { project: name });
   const { mutate } = useMutation(deleteCredentials, {
     onSuccess: () => {
       refetch();
@@ -40,6 +40,7 @@ export const CredentialsList = () => {
         key={data?.credentials?.length}
         dataSource={data?.credentials || []}
         rowKey={(record) => record?.metadata?.name || ''}
+        loading={isLoading}
         columns={[
           {
             title: 'Name',
