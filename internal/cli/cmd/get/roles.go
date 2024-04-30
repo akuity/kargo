@@ -214,6 +214,7 @@ func newRoleTable(list *metav1.List) *metav1.Table {
 		rows[i] = metav1.TableRow{
 			Cells: []any{
 				role.ObjectMeta.Name,
+				role.KargoManaged,
 				duration.HumanDuration(time.Since(role.ObjectMeta.CreationTimestamp.Time)),
 			},
 			Object: list.Items[i],
@@ -222,6 +223,7 @@ func newRoleTable(list *metav1.List) *metav1.Table {
 	return &metav1.Table{
 		ColumnDefinitions: []metav1.TableColumnDefinition{
 			{Name: "Name", Type: "string"},
+			{Name: "Kargo Managed", Type: "bool"},
 			{Name: "Age", Type: "string"},
 		},
 		Rows: rows,

@@ -696,10 +696,11 @@ message Role {
   string project = 1;
   string name = 2;
   google.protobuf.Timestamp creation_timestamp = 3;
-  repeated string subs = 4;
-  repeated string emails = 5;
-  repeated string groups = 6;
-  repeated k8s.io.api.rbac.v1.PolicyRule rules = 7;
+  bool kargo_managed =4;
+  repeated string subs = 5;
+  repeated string emails = 6;
+  repeated string groups = 7;
+  repeated k8s.io.api.rbac.v1.PolicyRule rules = 8;
 }
 
 message RoleResources {

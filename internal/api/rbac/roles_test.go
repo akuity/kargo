@@ -203,7 +203,7 @@ func TestGet(t *testing.T) {
 		require.Nil(t, kargoRole)
 	})
 
-	t.Run("success", func(t *testing.T) {
+	t.Run("success with non-kargo-managed role", func(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
 			plainServiceAccount(map[string]string{
 				kargoapi.AnnotationKeyOIDCSubjects: "foo-sub,bar-sub",
@@ -225,11 +225,57 @@ func TestGet(t *testing.T) {
 		require.Equal(
 			t,
 			&svcv1alpha1.Role{
-				Project: testProject,
-				Name:    testKargoRoleName,
-				Subs:    []string{"bar-sub", "foo-sub"},
-				Emails:  []string{"bar-email", "foo-email"},
-				Groups:  []string{"bar-group", "foo-group"},
+				Project:      testProject,
+				Name:         testKargoRoleName,
+				KargoManaged: false,
+				Subs:         []string{"bar-sub", "foo-sub"},
+				Emails:       []string{"bar-email", "foo-email"},
+				Groups:       []string{"bar-group", "foo-group"},
+				Rules: []*rbacv1.PolicyRule{
+					{
+						APIGroups: []string{kargoapi.GroupVersion.Group},
+						Resources: []string{"promotions"},
+						Verbs:     []string{"get", "list"},
+					},
+					{
+						APIGroups: []string{kargoapi.GroupVersion.Group},
+						Resources: []string{"stages"},
+						Verbs:     []string{"get", "list"},
+					},
+				},
+			},
+			kargoRole,
+		)
+	})
+
+	t.Run("success with non-kargo-managed role", func(t *testing.T) {
+		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+			managedServiceAccount(map[string]string{
+				kargoapi.AnnotationKeyOIDCSubjects: "foo-sub,bar-sub",
+				kargoapi.AnnotationKeyOIDCEmails:   "foo-email,bar-email",
+				kargoapi.AnnotationKeyOIDCGroups:   "foo-group,bar-group",
+			}),
+			managedRole([]rbacv1.PolicyRule{{
+				APIGroups: []string{kargoapi.GroupVersion.Group},
+				Resources: []string{"stages", "promotions"},
+				Verbs:     []string{"list", "get"},
+			}}),
+			managedRoleBinding(),
+		).Build()
+		db := NewKubernetesRolesDatabase(c)
+		kargoRole, err := db.Get(context.Background(), testProject, testKargoRoleName)
+		require.NoError(t, err)
+		// Do not factor creation timestamp into the comparison
+		kargoRole.CreationTimestamp = nil
+		require.Equal(
+			t,
+			&svcv1alpha1.Role{
+				Project:      testProject,
+				Name:         testKargoRoleName,
+				KargoManaged: true,
+				Subs:         []string{"bar-sub", "foo-sub"},
+				Emails:       []string{"bar-email", "foo-email"},
+				Groups:       []string{"bar-group", "foo-group"},
 				Rules: []*rbacv1.PolicyRule{
 					{
 						APIGroups: []string{kargoapi.GroupVersion.Group},
@@ -525,11 +571,12 @@ func TestList(t *testing.T) {
 	require.Equal(
 		t,
 		[]*svcv1alpha1.Role{{
-			Project: testProject,
-			Name:    testKargoRoleName,
-			Subs:    []string{"bar-sub", "foo-sub"},
-			Emails:  []string{"bar-email", "foo-email"},
-			Groups:  []string{"bar-group", "foo-group"},
+			Project:      testProject,
+			Name:         testKargoRoleName,
+			KargoManaged: true,
+			Subs:         []string{"bar-sub", "foo-sub"},
+			Emails:       []string{"bar-email", "foo-email"},
+			Groups:       []string{"bar-group", "foo-group"},
 			Rules: []*rbacv1.PolicyRule{
 				{
 					APIGroups: []string{kargoapi.GroupVersion.Group},

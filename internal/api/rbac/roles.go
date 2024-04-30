@@ -246,7 +246,7 @@ func (r *rolesDatabase) Get(
 	project string,
 	name string,
 ) (*svcv1alpha1.Role, error) {
-	sa, roles, _, err := r.GetAsResources(ctx, project, name)
+	sa, roles, rbs, err := r.GetAsResources(ctx, project, name)
 	if err != nil {
 		return nil, err
 	}
@@ -255,7 +255,7 @@ func (r *rolesDatabase) Get(
 	// can still return a Kargo Role that summarizes them.
 
 	// Note: The Kargo Role will come back with normalized rules
-	return ResourcesToRole(sa, roles)
+	return ResourcesToRole(sa, roles, rbs)
 }
 
 // GetAsResources implements the RolesDatabase interface.
@@ -371,7 +371,7 @@ func (r *rolesDatabase) GrantPermissionsToRole(
 		}
 	}
 
-	return ResourcesToRole(sa, []rbacv1.Role{*newRole})
+	return ResourcesToRole(sa, []rbacv1.Role{*newRole}, []rbacv1.RoleBinding{*rb})
 }
 
 // GrantRoleToUsers implements the RolesDatabase interface.
@@ -399,9 +399,9 @@ func (r *rolesDatabase) GrantRoleToUsers(
 	}
 
 	if role == nil {
-		return ResourcesToRole(sa, nil)
+		return ResourcesToRole(sa, nil, rbs)
 	}
-	return ResourcesToRole(sa, []rbacv1.Role{*role})
+	return ResourcesToRole(sa, []rbacv1.Role{*role}, rbs)
 }
 
 // List implements the RolesDatabase interface.
@@ -420,7 +420,7 @@ func (r *rolesDatabase) List(
 
 	kargoRoles := make([]*svcv1alpha1.Role, 0, len(saList.Items))
 	for i := range saList.Items {
-		sa, roles, _, err := r.GetAsResources(ctx, project, saList.Items[i].Name)
+		sa, roles, rbs, err := r.GetAsResources(ctx, project, saList.Items[i].Name)
 		if err != nil {
 			return nil, fmt.Errorf(
 				"error getting underlying resources for Kargo Role %q from namespace %q: %w",
@@ -429,7 +429,7 @@ func (r *rolesDatabase) List(
 		}
 		// Note: The underlying resources we found may not be manageable, but we
 		// can still return a Kargo Role that summarizes them.
-		kargoRole, err := ResourcesToRole(sa, roles)
+		kargoRole, err := ResourcesToRole(sa, roles, rbs)
 		if err != nil {
 			return nil, fmt.Errorf("error converting underlying resources to Kargo Role %q: %w", sa.Name, err)
 		}
@@ -478,7 +478,7 @@ func (r *rolesDatabase) RevokePermissionsFromRole(
 		return nil, err
 	}
 	if role == nil { // Nothing to do
-		return ResourcesToRole(sa, nil)
+		return ResourcesToRole(sa, nil, rbs)
 	}
 
 	// Normalize the rules before attempting to modify them
@@ -504,7 +504,7 @@ func (r *rolesDatabase) RevokePermissionsFromRole(
 		return nil, fmt.Errorf("error updating Role %q in namespace %q: %w", name, project, err)
 	}
 
-	return ResourcesToRole(sa, []rbacv1.Role{*role})
+	return ResourcesToRole(sa, []rbacv1.Role{*role}, rbs)
 }
 
 // RevokeRoleFromUsers implements the RolesDatabase interface.
@@ -515,13 +515,13 @@ func (r *rolesDatabase) RevokeRoleFromUsers(
 	userClaims *svcv1alpha1.UserClaims,
 ) (*svcv1alpha1.Role, error) {
 	// Make sure at least part of the ServiceAccount/Role/RoleBinding trio exists
-	sa, roles, rb, err := r.GetAsResources(ctx, project, name)
+	sa, roles, rbs, err := r.GetAsResources(ctx, project, name)
 	if err != nil {
 		return nil, err
 	}
 	// This will return an error if these resources are not manageable for any
 	// reason.
-	role, _, err := manageableResources(*sa, roles, rb)
+	role, _, err := manageableResources(*sa, roles, rbs)
 	if err != nil {
 		return nil, err
 	}
@@ -533,9 +533,9 @@ func (r *rolesDatabase) RevokeRoleFromUsers(
 	}
 
 	if role == nil {
-		return ResourcesToRole(sa, nil)
+		return ResourcesToRole(sa, nil, rbs)
 	}
-	return ResourcesToRole(sa, []rbacv1.Role{*role})
+	return ResourcesToRole(sa, []rbacv1.Role{*role}, rbs)
 }
 
 // Update implements the RolesDatabase interface.
@@ -591,15 +591,16 @@ func (r *rolesDatabase) Update(
 		}
 	}
 
-	return ResourcesToRole(sa, []rbacv1.Role{*newRole})
+	return ResourcesToRole(sa, []rbacv1.Role{*newRole}, rbs)
 }
 
 // ResourcesToRole converts the provided ServiceAccount, Role, and RoleBinding
-// into a Kargo Role with normalized policy rules. If all three are nil, nil is
-// returned.
+// into a Kargo Role with normalized policy rules. If the ServiceAccount is nil,
+// the Kargo Role will be nil.
 func ResourcesToRole(
 	sa *corev1.ServiceAccount,
 	roles []rbacv1.Role,
+	rbs []rbacv1.RoleBinding,
 ) (*svcv1alpha1.Role, error) {
 	if sa == nil {
 		return nil, nil
@@ -635,6 +636,12 @@ func ResourcesToRole(
 	kargoRole.Rules = make([]*rbacv1.PolicyRule, len(rules))
 	for i, rule := range rules {
 		kargoRole.Rules[i] = rule.DeepCopy()
+	}
+
+	if isKargoManaged(sa) &&
+		(len(roles) == 0 || (len(roles) == 1 && isKargoManaged(&roles[0]))) &&
+		(len(rbs) == 0 || (len(rbs) == 1 && isKargoManaged(&rbs[0]))) {
+		kargoRole.KargoManaged = true
 	}
 
 	return kargoRole, nil

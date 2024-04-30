@@ -4940,22 +4940,27 @@ export class Role extends Message<Role> {
   creationTimestamp?: Timestamp;
 
   /**
-   * @generated from field: repeated string subs = 4;
+   * @generated from field: bool kargo_managed = 4;
+   */
+  kargoManaged = false;
+
+  /**
+   * @generated from field: repeated string subs = 5;
    */
   subs: string[] = [];
 
   /**
-   * @generated from field: repeated string emails = 5;
+   * @generated from field: repeated string emails = 6;
    */
   emails: string[] = [];
 
   /**
-   * @generated from field: repeated string groups = 6;
+   * @generated from field: repeated string groups = 7;
    */
   groups: string[] = [];
 
   /**
-   * @generated from field: repeated k8s.io.api.rbac.v1.PolicyRule rules = 7;
+   * @generated from field: repeated k8s.io.api.rbac.v1.PolicyRule rules = 8;
    */
   rules: PolicyRule[] = [];
 
@@ -4970,10 +4975,11 @@ export class Role extends Message<Role> {
     { no: 1, name: "project", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "creation_timestamp", kind: "message", T: Timestamp },
-    { no: 4, name: "subs", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 5, name: "emails", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 6, name: "groups", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 7, name: "rules", kind: "message", T: PolicyRule, repeated: true },
+    { no: 4, name: "kargo_managed", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 5, name: "subs", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 6, name: "emails", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 7, name: "groups", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 8, name: "rules", kind: "message", T: PolicyRule, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Role {

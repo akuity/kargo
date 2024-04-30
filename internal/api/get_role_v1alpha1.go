@@ -62,7 +62,7 @@ func (s *server) GetRole(
 		}), nil
 	}
 
-	kargoRole, err := rbac.ResourcesToRole(sa, roles)
+	kargoRole, err := rbac.ResourcesToRole(sa, roles, rbs)
 	if err != nil {
 		return nil, err
 	}
