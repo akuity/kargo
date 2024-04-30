@@ -357,7 +357,7 @@ func TestEnsureNamespace(t *testing.T) {
 	}
 }
 
-func TestEnsureSecretPermissions(t *testing.T) {
+func TestEnsureProjectAdminPermissions(t *testing.T) {
 	testCases := []struct {
 		name       string
 		webhook    *webhook
