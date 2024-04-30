@@ -2,6 +2,7 @@ package rbac
 
 import (
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
 
@@ -136,7 +137,7 @@ func buildRule(
 		verbs = append(verbs, verb)
 	}
 	// Sort them
-	sort.Strings(verbs)
+	slices.Sort(verbs)
 	// Build the rule
 	rule := rbacv1.PolicyRule{
 		APIGroups: []string{strings.TrimSpace(group)},

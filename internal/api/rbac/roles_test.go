@@ -170,7 +170,7 @@ func TestDelete(t *testing.T) {
 		).Build()
 		db := NewKubernetesRolesDatabase(c)
 		err := db.Delete(context.Background(), testProject, testKargoRoleName)
-		require.True(t, kubeerr.IsConflict(err))
+		require.True(t, kubeerr.IsBadRequest(err))
 	})
 
 	t.Run("success", func(t *testing.T) {
@@ -371,7 +371,7 @@ func TestGrantPermissionToRole(t *testing.T) {
 				Verbs:         []string{"get", "list"},
 			},
 		)
-		require.True(t, kubeerr.IsConflict(err))
+		require.True(t, kubeerr.IsBadRequest(err))
 	})
 
 	t.Run("success with Role and RoleBinding creation", func(t *testing.T) {
@@ -501,7 +501,7 @@ func TestGrantRoleToUsers(t *testing.T) {
 				Subs: []string{"fake-sub"},
 			},
 		)
-		require.True(t, kubeerr.IsConflict(err))
+		require.True(t, kubeerr.IsBadRequest(err))
 	})
 
 	t.Run("success", func(t *testing.T) {
@@ -626,7 +626,7 @@ func TestRevokePermissionsFromRole(t *testing.T) {
 				Verbs:         []string{"get", "list"},
 			},
 		)
-		require.True(t, kubeerr.IsConflict(err))
+		require.True(t, kubeerr.IsBadRequest(err))
 	})
 
 	t.Run("success with no action required", func(t *testing.T) {
@@ -714,7 +714,7 @@ func TestRevokeRoleFromUsers(t *testing.T) {
 				Subs: []string{"fake-sub"},
 			},
 		)
-		require.True(t, kubeerr.IsConflict(err))
+		require.True(t, kubeerr.IsBadRequest(err))
 	})
 
 	t.Run("success", func(t *testing.T) {
@@ -782,7 +782,7 @@ func TestUpdate(t *testing.T) {
 				Name:    testKargoRoleName,
 			},
 		)
-		require.True(t, kubeerr.IsConflict(err))
+		require.True(t, kubeerr.IsBadRequest(err))
 	})
 
 	t.Run("success with Role and RoleBinding creation", func(t *testing.T) {
@@ -927,32 +927,6 @@ func TestUpdate(t *testing.T) {
 	})
 }
 
-func TestDedupeStringSlice(t *testing.T) {
-	t.Run("empty slice", func(t *testing.T) {
-		require.Equal(
-			t,
-			[]string{},
-			dedupeStringSlice([]string{}),
-		)
-	})
-
-	t.Run("no duplicates", func(t *testing.T) {
-		require.Equal(
-			t,
-			[]string{"foo", "bar"},
-			dedupeStringSlice([]string{"foo", "bar"}),
-		)
-	})
-
-	t.Run("with duplicates", func(t *testing.T) {
-		require.Equal(
-			t,
-			[]string{"foo", "bar"},
-			dedupeStringSlice([]string{"foo", "bar", "foo", "bar"}),
-		)
-	})
-}
-
 func TestRemoveFromStringSlice(t *testing.T) {
 	t.Run("nil slice", func(t *testing.T) {
 		require.Equal(
@@ -994,7 +968,7 @@ func TestManageableResources(t *testing.T) {
 			nil,
 			nil,
 		)
-		require.True(t, kubeerr.IsConflict(err))
+		require.True(t, kubeerr.IsBadRequest(err))
 	})
 
 	t.Run("multiple Roles", func(t *testing.T) {
@@ -1003,7 +977,7 @@ func TestManageableResources(t *testing.T) {
 			[]rbacv1.Role{{}, {}},
 			nil,
 		)
-		require.True(t, kubeerr.IsConflict(err))
+		require.True(t, kubeerr.IsBadRequest(err))
 	})
 
 	t.Run("single Role not annotated correctly", func(t *testing.T) {
@@ -1012,7 +986,7 @@ func TestManageableResources(t *testing.T) {
 			[]rbacv1.Role{*plainRole(nil)},
 			nil,
 		)
-		require.True(t, kubeerr.IsConflict(err))
+		require.True(t, kubeerr.IsBadRequest(err))
 	})
 
 	t.Run("multiple RoleBindings", func(t *testing.T) {
@@ -1021,7 +995,7 @@ func TestManageableResources(t *testing.T) {
 			[]rbacv1.Role{*managedRole(nil)},
 			[]rbacv1.RoleBinding{{}, {}},
 		)
-		require.True(t, kubeerr.IsConflict(err))
+		require.True(t, kubeerr.IsBadRequest(err))
 	})
 
 	t.Run("single RoleBinding is not annotated correctly", func(t *testing.T) {
@@ -1030,7 +1004,7 @@ func TestManageableResources(t *testing.T) {
 			[]rbacv1.Role{*managedRole(nil)},
 			[]rbacv1.RoleBinding{*plainRoleBinding()},
 		)
-		require.True(t, kubeerr.IsConflict(err))
+		require.True(t, kubeerr.IsBadRequest(err))
 	})
 
 	t.Run("success", func(t *testing.T) {

@@ -3,6 +3,7 @@ package rbac
 import (
 	"context"
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
 
@@ -456,7 +457,7 @@ func (r *rolesDatabase) ListNames(ctx context.Context, project string) ([]string
 	for i := range saList.Items {
 		names = append(names, saList.Items[i].Name)
 	}
-	sort.Strings(names)
+	slices.Sort(names)
 	return names, nil
 }
 
@@ -613,15 +614,15 @@ func ResourcesToRole(
 	}
 	if sa.Annotations[kargoapi.AnnotationKeyOIDCSubjects] != "" {
 		kargoRole.Subs = strings.Split(sa.Annotations[kargoapi.AnnotationKeyOIDCSubjects], ",")
-		sort.Strings(kargoRole.Subs)
+		slices.Sort(kargoRole.Subs)
 	}
 	if sa.Annotations[kargoapi.AnnotationKeyOIDCEmails] != "" {
 		kargoRole.Emails = strings.Split(sa.Annotations[kargoapi.AnnotationKeyOIDCEmails], ",")
-		sort.Strings(kargoRole.Emails)
+		slices.Sort(kargoRole.Emails)
 	}
 	if sa.Annotations[kargoapi.AnnotationKeyOIDCGroups] != "" {
 		kargoRole.Groups = strings.Split(sa.Annotations[kargoapi.AnnotationKeyOIDCGroups], ",")
-		sort.Strings(kargoRole.Groups)
+		slices.Sort(kargoRole.Groups)
 	}
 
 	rules := []rbacv1.PolicyRule{}
@@ -677,11 +678,8 @@ func amendClaimAnnotation(sa *corev1.ServiceAccount, key string, values []string
 	if existing != "" {
 		values = append(strings.Split(existing, ","), values...)
 	}
-	values = dedupeStringSlice(values)
-	if len(values) == 0 {
-		return
-	}
-	sort.Strings(values)
+	slices.Sort(values)
+	values = slices.Compact(values)
 	if sa.Annotations == nil {
 		sa.Annotations = map[string]string{}
 	}
@@ -689,16 +687,14 @@ func amendClaimAnnotation(sa *corev1.ServiceAccount, key string, values []string
 }
 
 func dropFromClaimAnnotation(sa *corev1.ServiceAccount, key string, values []string) {
-	values = dedupeStringSlice(values)
-	if len(values) == 0 {
-		return
-	}
+	slices.Sort(values)
+	values = slices.Compact(values)
 	values = removeFromStringSlice(strings.Split(sa.Annotations[key], ","), values)
 	if len(values) == 0 {
 		delete(sa.Annotations, key)
 		return
 	}
-	sort.Strings(values)
+	slices.Sort(values)
 	if sa.Annotations == nil {
 		sa.Annotations = map[string]string{}
 	}
@@ -753,18 +749,6 @@ func buildNewRoleBinding(namespace, name string) *rbacv1.RoleBinding {
 	}
 }
 
-func dedupeStringSlice(s []string) []string {
-	seen := make(map[string]struct{}, len(s))
-	deduped := make([]string, 0, len(s))
-	for _, item := range s {
-		if _, ok := seen[item]; !ok {
-			seen[item] = struct{}{}
-			deduped = append(deduped, item)
-		}
-	}
-	return deduped
-}
-
 func removeFromStringSlice(s, items []string) []string {
 	if len(items) == 0 {
 		return s
@@ -791,50 +775,51 @@ func manageableResources(
 	roles []rbacv1.Role,
 	rbs []rbacv1.RoleBinding,
 ) (*rbacv1.Role, *rbacv1.RoleBinding, error) {
-	gr := schema.GroupResource{
-		Group:    sa.GetObjectKind().GroupVersionKind().Group,
-		Resource: strings.ToLower(sa.GetObjectKind().GroupVersionKind().Kind),
-	}
 	if !isKargoManaged(&sa) {
-		return nil, nil, kubeerr.NewConflict(
-			gr, sa.Name, fmt.Errorf("ServiceAccount is not Kargo-managed"),
+		return nil, nil, kubeerr.NewBadRequest(
+			fmt.Sprintf(
+				"ServiceAccount %q in namespace %q is not annotated as Kargo-managed",
+				sa.Name, sa.Namespace,
+			),
 		)
 	}
 	if len(roles) > 1 {
-		return nil, nil, kubeerr.NewConflict(
-			gr, sa.Name, fmt.Errorf("multiple Roles associated with ServiceAccount"),
+		return nil, nil, kubeerr.NewBadRequest(
+			fmt.Sprintf(
+				"multiple Roles associated with ServiceAccount %q in namespace %q",
+				sa.Name, sa.Namespace,
+			),
 		)
 	}
 	var role *rbacv1.Role
 	if len(roles) == 1 {
 		role = &roles[0]
 		if !isKargoManaged(role) {
-			return nil, nil, kubeerr.NewConflict(
-				schema.GroupResource{
-					Group:    role.GetObjectKind().GroupVersionKind().Group,
-					Resource: strings.ToLower(role.GetObjectKind().GroupVersionKind().Kind),
-				},
-				role.Name,
-				fmt.Errorf("Role is not Kargo-managed"),
+			return nil, nil, kubeerr.NewBadRequest(
+				fmt.Sprintf(
+					"Role %q in namespace %q is not annotated as Kargo-managed",
+					role.Name, role.Namespace,
+				),
 			)
 		}
 	}
 	if len(rbs) > 1 {
-		return nil, nil, kubeerr.NewConflict(
-			gr, sa.Name, fmt.Errorf("multiple RoleBindings associated with ServiceAccount"),
+		return nil, nil, kubeerr.NewBadRequest(
+			fmt.Sprintf(
+				"multiple RoleBindings associated with ServiceAccount %q in namespace %q",
+				sa.Name, sa.Namespace,
+			),
 		)
 	}
 	var rb *rbacv1.RoleBinding
 	if len(rbs) == 1 {
 		rb = &rbs[0]
 		if !isKargoManaged(rb) {
-			return nil, nil, kubeerr.NewConflict(
-				schema.GroupResource{
-					Group:    rb.GetObjectKind().GroupVersionKind().Group,
-					Resource: strings.ToLower(rb.GetObjectKind().GroupVersionKind().Kind),
-				},
-				rb.Name,
-				fmt.Errorf("RoleBinding is not Kargo-managed"),
+			return nil, nil, kubeerr.NewBadRequest(
+				fmt.Sprintf(
+					"RoleBinding %q in namespace %q is not annotated as Kargo-managed",
+					rb.Name, rb.Namespace,
+				),
 			)
 		}
 	}
