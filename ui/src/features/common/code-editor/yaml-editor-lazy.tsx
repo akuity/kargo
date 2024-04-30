@@ -40,10 +40,42 @@ const YamlEditor: FC<YamlEditorProps> = (props) => {
     label
   } = props;
   const [hideManagedFields, setHideManagedFields] = React.useState(!!isHideManagedFieldsDisplayed);
+  const [managedFieldsValue, setManagedFieldsValue] = React.useState<object | null>(null);
 
   const handleOnChange = (newValue: string | undefined) => {
     onChange?.(newValue);
   };
+
+  React.useEffect(() => {
+    try {
+      const data = yaml.parse(value);
+
+      // Hide managedFields
+      if (hideManagedFields && data?.metadata?.managedFields) {
+        setManagedFieldsValue(data?.metadata?.managedFields);
+        delete data.metadata.managedFields;
+
+        onChange?.(yaml.stringify(data));
+      }
+
+      // Restore managedFields
+      if (!hideManagedFields && managedFieldsValue) {
+        onChange?.(
+          yaml.stringify({
+            ...data,
+            metadata: {
+              ...(typeof data.metadata === 'object' ? data.metadata : {}),
+              managedFields: managedFieldsValue
+            }
+          })
+        );
+
+        setManagedFieldsValue(null);
+      }
+    } catch (err) {
+      // ignore
+    }
+  }, [hideManagedFields, value]);
 
   useEffect(() => {
     configureMonacoYaml(monaco, {
@@ -66,21 +98,6 @@ const YamlEditor: FC<YamlEditorProps> = (props) => {
   const handleEditorDidMount = (editor: monaco.editor.IStandaloneCodeEditor) => {
     editorRef.current = editor;
   };
-
-  const filteredValue = React.useMemo(() => {
-    if (!hideManagedFields) {
-      return value;
-    }
-
-    try {
-      const data = yaml.parse(value);
-      delete data.metadata.managedFields;
-
-      return yaml.stringify(data);
-    } catch (err) {
-      return value;
-    }
-  }, [value, hideManagedFields]);
 
   if (isLoading) {
     return (
@@ -125,7 +142,7 @@ const YamlEditor: FC<YamlEditorProps> = (props) => {
           width={width}
           height={height}
           language='yaml'
-          value={filteredValue}
+          value={value}
           onChange={handleOnChange}
           onMount={handleEditorDidMount}
         />
@@ -137,7 +154,7 @@ const YamlEditor: FC<YamlEditorProps> = (props) => {
               editorRef.current?.focus?.();
             }}
           >
-            {!filteredValue &&
+            {!value &&
               placeholder
                 ?.trim()
                 ?.split('\n')
