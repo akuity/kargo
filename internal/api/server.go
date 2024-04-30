@@ -28,6 +28,7 @@ import (
 	"github.com/akuity/kargo/internal/api/dex"
 	"github.com/akuity/kargo/internal/api/kubernetes"
 	"github.com/akuity/kargo/internal/api/option"
+	"github.com/akuity/kargo/internal/api/rbac"
 	"github.com/akuity/kargo/internal/api/validation"
 	rollouts "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
 	httputil "github.com/akuity/kargo/internal/http"
@@ -46,6 +47,7 @@ type server struct {
 	cfg            config.ServerConfig
 	client         kubernetes.Client
 	internalClient client.Client
+	rolesDB        rbac.RolesDatabase
 	recorder       record.EventRecorder
 
 	// The following behaviors are overridable for testing purposes:
@@ -159,12 +161,14 @@ func NewServer(
 	cfg config.ServerConfig,
 	kubeClient kubernetes.Client,
 	internalClient client.Client,
+	rolesDB rbac.RolesDatabase,
 	recorder record.EventRecorder,
 ) Server {
 	s := &server{
 		cfg:            cfg,
 		client:         kubeClient,
 		internalClient: internalClient,
+		rolesDB:        rolesDB,
 		recorder:       recorder,
 	}
 

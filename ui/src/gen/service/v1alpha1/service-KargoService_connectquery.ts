@@ -4,7 +4,7 @@
 // @ts-nocheck
 
 import { MethodKind } from "@bufbuild/protobuf";
-import { AbortVerificationRequest, AbortVerificationResponse, AdminLoginRequest, AdminLoginResponse, ApproveFreightRequest, ApproveFreightResponse, CreateCredentialsRequest, CreateCredentialsResponse, CreateOrUpdateResourceRequest, CreateOrUpdateResourceResponse, CreateResourceRequest, CreateResourceResponse, DeleteAnalysisTemplateRequest, DeleteAnalysisTemplateResponse, DeleteCredentialsRequest, DeleteCredentialsResponse, DeleteFreightRequest, DeleteFreightResponse, DeleteProjectRequest, DeleteProjectResponse, DeleteResourceRequest, DeleteResourceResponse, DeleteStageRequest, DeleteStageResponse, DeleteWarehouseRequest, DeleteWarehouseResponse, GetAnalysisRunRequest, GetAnalysisRunResponse, GetAnalysisTemplateRequest, GetAnalysisTemplateResponse, GetConfigRequest, GetConfigResponse, GetCredentialsRequest, GetCredentialsResponse, GetFreightRequest, GetFreightResponse, GetProjectRequest, GetProjectResponse, GetPromotionRequest, GetPromotionResponse, GetPublicConfigRequest, GetPublicConfigResponse, GetStageRequest, GetStageResponse, GetVersionInfoRequest, GetVersionInfoResponse, GetWarehouseRequest, GetWarehouseResponse, ListAnalysisTemplatesRequest, ListAnalysisTemplatesResponse, ListCredentialsRequest, ListCredentialsResponse, ListProjectEventsRequest, ListProjectEventsResponse, ListProjectsRequest, ListProjectsResponse, ListPromotionsRequest, ListPromotionsResponse, ListStagesRequest, ListStagesResponse, ListWarehousesRequest, ListWarehousesResponse, PromoteToStageRequest, PromoteToStageResponse, PromoteToStageSubscribersRequest, PromoteToStageSubscribersResponse, QueryFreightRequest, QueryFreightResponse, RefreshStageRequest, RefreshStageResponse, RefreshWarehouseRequest, RefreshWarehouseResponse, ReverifyRequest, ReverifyResponse, UpdateCredentialsRequest, UpdateCredentialsResponse, UpdateFreightAliasRequest, UpdateFreightAliasResponse, UpdateResourceRequest, UpdateResourceResponse } from "./service_pb.js";
+import { AbortVerificationRequest, AbortVerificationResponse, AdminLoginRequest, AdminLoginResponse, ApproveFreightRequest, ApproveFreightResponse, CreateCredentialsRequest, CreateCredentialsResponse, CreateOrUpdateResourceRequest, CreateOrUpdateResourceResponse, CreateResourceRequest, CreateResourceResponse, CreateRoleRequest, CreateRoleResponse, DeleteAnalysisTemplateRequest, DeleteAnalysisTemplateResponse, DeleteCredentialsRequest, DeleteCredentialsResponse, DeleteFreightRequest, DeleteFreightResponse, DeleteProjectRequest, DeleteProjectResponse, DeleteResourceRequest, DeleteResourceResponse, DeleteRoleRequest, DeleteRoleResponse, DeleteStageRequest, DeleteStageResponse, DeleteWarehouseRequest, DeleteWarehouseResponse, GetAnalysisRunRequest, GetAnalysisRunResponse, GetAnalysisTemplateRequest, GetAnalysisTemplateResponse, GetConfigRequest, GetConfigResponse, GetCredentialsRequest, GetCredentialsResponse, GetFreightRequest, GetFreightResponse, GetProjectRequest, GetProjectResponse, GetPromotionRequest, GetPromotionResponse, GetPublicConfigRequest, GetPublicConfigResponse, GetRoleRequest, GetRoleResponse, GetStageRequest, GetStageResponse, GetVersionInfoRequest, GetVersionInfoResponse, GetWarehouseRequest, GetWarehouseResponse, GrantRequest, GrantResponse, ListAnalysisTemplatesRequest, ListAnalysisTemplatesResponse, ListCredentialsRequest, ListCredentialsResponse, ListProjectEventsRequest, ListProjectEventsResponse, ListProjectsRequest, ListProjectsResponse, ListPromotionsRequest, ListPromotionsResponse, ListRolesRequest, ListRolesResponse, ListStagesRequest, ListStagesResponse, ListWarehousesRequest, ListWarehousesResponse, PromoteToStageRequest, PromoteToStageResponse, PromoteToStageSubscribersRequest, PromoteToStageSubscribersResponse, QueryFreightRequest, QueryFreightResponse, RefreshStageRequest, RefreshStageResponse, RefreshWarehouseRequest, RefreshWarehouseResponse, ReverifyRequest, ReverifyResponse, RevokeRequest, RevokeResponse, UpdateCredentialsRequest, UpdateCredentialsResponse, UpdateFreightAliasRequest, UpdateFreightAliasResponse, UpdateResourceRequest, UpdateResourceResponse, UpdateRoleRequest, UpdateRoleResponse } from "./service_pb.js";
 
 /**
  * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.GetVersionInfo
@@ -564,6 +564,104 @@ export const listProjectEvents = {
   kind: MethodKind.Unary,
   I: ListProjectEventsRequest,
   O: ListProjectEventsResponse,
+  service: {
+    typeName: "akuity.io.kargo.service.v1alpha1.KargoService"
+  }
+} as const;
+
+/**
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.CreateRole
+ */
+export const createRole = {
+  localName: "createRole",
+  name: "CreateRole",
+  kind: MethodKind.Unary,
+  I: CreateRoleRequest,
+  O: CreateRoleResponse,
+  service: {
+    typeName: "akuity.io.kargo.service.v1alpha1.KargoService"
+  }
+} as const;
+
+/**
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.DeleteRole
+ */
+export const deleteRole = {
+  localName: "deleteRole",
+  name: "DeleteRole",
+  kind: MethodKind.Unary,
+  I: DeleteRoleRequest,
+  O: DeleteRoleResponse,
+  service: {
+    typeName: "akuity.io.kargo.service.v1alpha1.KargoService"
+  }
+} as const;
+
+/**
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.GetRole
+ */
+export const getRole = {
+  localName: "getRole",
+  name: "GetRole",
+  kind: MethodKind.Unary,
+  I: GetRoleRequest,
+  O: GetRoleResponse,
+  service: {
+    typeName: "akuity.io.kargo.service.v1alpha1.KargoService"
+  }
+} as const;
+
+/**
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.Grant
+ */
+export const grant = {
+  localName: "grant",
+  name: "Grant",
+  kind: MethodKind.Unary,
+  I: GrantRequest,
+  O: GrantResponse,
+  service: {
+    typeName: "akuity.io.kargo.service.v1alpha1.KargoService"
+  }
+} as const;
+
+/**
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.ListRoles
+ */
+export const listRoles = {
+  localName: "listRoles",
+  name: "ListRoles",
+  kind: MethodKind.Unary,
+  I: ListRolesRequest,
+  O: ListRolesResponse,
+  service: {
+    typeName: "akuity.io.kargo.service.v1alpha1.KargoService"
+  }
+} as const;
+
+/**
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.Revoke
+ */
+export const revoke = {
+  localName: "revoke",
+  name: "Revoke",
+  kind: MethodKind.Unary,
+  I: RevokeRequest,
+  O: RevokeResponse,
+  service: {
+    typeName: "akuity.io.kargo.service.v1alpha1.KargoService"
+  }
+} as const;
+
+/**
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.UpdateRole
+ */
+export const updateRole = {
+  localName: "updateRole",
+  name: "UpdateRole",
+  kind: MethodKind.Unary,
+  I: UpdateRoleRequest,
+  O: UpdateRoleResponse,
   service: {
     typeName: "akuity.io.kargo.service.v1alpha1.KargoService"
   }

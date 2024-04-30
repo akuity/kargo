@@ -68,6 +68,7 @@ kargo create project my-project
 	// Register subcommands.
 	cmd.AddCommand(newCredentialsCommand(cfg, streams))
 	cmd.AddCommand(newProjectCommand(cfg, streams))
+	cmd.AddCommand(newRoleCommand(cfg, streams))
 
 	return cmd
 }

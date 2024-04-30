@@ -158,6 +158,20 @@ const (
 	// KargoServiceListProjectEventsProcedure is the fully-qualified name of the KargoService's
 	// ListProjectEvents RPC.
 	KargoServiceListProjectEventsProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/ListProjectEvents"
+	// KargoServiceCreateRoleProcedure is the fully-qualified name of the KargoService's CreateRole RPC.
+	KargoServiceCreateRoleProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/CreateRole"
+	// KargoServiceDeleteRoleProcedure is the fully-qualified name of the KargoService's DeleteRole RPC.
+	KargoServiceDeleteRoleProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/DeleteRole"
+	// KargoServiceGetRoleProcedure is the fully-qualified name of the KargoService's GetRole RPC.
+	KargoServiceGetRoleProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/GetRole"
+	// KargoServiceGrantProcedure is the fully-qualified name of the KargoService's Grant RPC.
+	KargoServiceGrantProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/Grant"
+	// KargoServiceListRolesProcedure is the fully-qualified name of the KargoService's ListRoles RPC.
+	KargoServiceListRolesProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/ListRoles"
+	// KargoServiceRevokeProcedure is the fully-qualified name of the KargoService's Revoke RPC.
+	KargoServiceRevokeProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/Revoke"
+	// KargoServiceUpdateRoleProcedure is the fully-qualified name of the KargoService's UpdateRole RPC.
+	KargoServiceUpdateRoleProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/UpdateRole"
 )
 
 // These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
@@ -207,6 +221,13 @@ var (
 	kargoServiceDeleteAnalysisTemplateMethodDescriptor    = kargoServiceServiceDescriptor.Methods().ByName("DeleteAnalysisTemplate")
 	kargoServiceGetAnalysisRunMethodDescriptor            = kargoServiceServiceDescriptor.Methods().ByName("GetAnalysisRun")
 	kargoServiceListProjectEventsMethodDescriptor         = kargoServiceServiceDescriptor.Methods().ByName("ListProjectEvents")
+	kargoServiceCreateRoleMethodDescriptor                = kargoServiceServiceDescriptor.Methods().ByName("CreateRole")
+	kargoServiceDeleteRoleMethodDescriptor                = kargoServiceServiceDescriptor.Methods().ByName("DeleteRole")
+	kargoServiceGetRoleMethodDescriptor                   = kargoServiceServiceDescriptor.Methods().ByName("GetRole")
+	kargoServiceGrantMethodDescriptor                     = kargoServiceServiceDescriptor.Methods().ByName("Grant")
+	kargoServiceListRolesMethodDescriptor                 = kargoServiceServiceDescriptor.Methods().ByName("ListRoles")
+	kargoServiceRevokeMethodDescriptor                    = kargoServiceServiceDescriptor.Methods().ByName("Revoke")
+	kargoServiceUpdateRoleMethodDescriptor                = kargoServiceServiceDescriptor.Methods().ByName("UpdateRole")
 )
 
 // KargoServiceClient is a client for the akuity.io.kargo.service.v1alpha1.KargoService service.
@@ -257,6 +278,13 @@ type KargoServiceClient interface {
 	DeleteAnalysisTemplate(context.Context, *connect.Request[v1alpha1.DeleteAnalysisTemplateRequest]) (*connect.Response[v1alpha1.DeleteAnalysisTemplateResponse], error)
 	GetAnalysisRun(context.Context, *connect.Request[v1alpha1.GetAnalysisRunRequest]) (*connect.Response[v1alpha1.GetAnalysisRunResponse], error)
 	ListProjectEvents(context.Context, *connect.Request[v1alpha1.ListProjectEventsRequest]) (*connect.Response[v1alpha1.ListProjectEventsResponse], error)
+	CreateRole(context.Context, *connect.Request[v1alpha1.CreateRoleRequest]) (*connect.Response[v1alpha1.CreateRoleResponse], error)
+	DeleteRole(context.Context, *connect.Request[v1alpha1.DeleteRoleRequest]) (*connect.Response[v1alpha1.DeleteRoleResponse], error)
+	GetRole(context.Context, *connect.Request[v1alpha1.GetRoleRequest]) (*connect.Response[v1alpha1.GetRoleResponse], error)
+	Grant(context.Context, *connect.Request[v1alpha1.GrantRequest]) (*connect.Response[v1alpha1.GrantResponse], error)
+	ListRoles(context.Context, *connect.Request[v1alpha1.ListRolesRequest]) (*connect.Response[v1alpha1.ListRolesResponse], error)
+	Revoke(context.Context, *connect.Request[v1alpha1.RevokeRequest]) (*connect.Response[v1alpha1.RevokeResponse], error)
+	UpdateRole(context.Context, *connect.Request[v1alpha1.UpdateRoleRequest]) (*connect.Response[v1alpha1.UpdateRoleResponse], error)
 }
 
 // NewKargoServiceClient constructs a client for the akuity.io.kargo.service.v1alpha1.KargoService
@@ -533,6 +561,48 @@ func NewKargoServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(kargoServiceListProjectEventsMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
+		createRole: connect.NewClient[v1alpha1.CreateRoleRequest, v1alpha1.CreateRoleResponse](
+			httpClient,
+			baseURL+KargoServiceCreateRoleProcedure,
+			connect.WithSchema(kargoServiceCreateRoleMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		deleteRole: connect.NewClient[v1alpha1.DeleteRoleRequest, v1alpha1.DeleteRoleResponse](
+			httpClient,
+			baseURL+KargoServiceDeleteRoleProcedure,
+			connect.WithSchema(kargoServiceDeleteRoleMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		getRole: connect.NewClient[v1alpha1.GetRoleRequest, v1alpha1.GetRoleResponse](
+			httpClient,
+			baseURL+KargoServiceGetRoleProcedure,
+			connect.WithSchema(kargoServiceGetRoleMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		grant: connect.NewClient[v1alpha1.GrantRequest, v1alpha1.GrantResponse](
+			httpClient,
+			baseURL+KargoServiceGrantProcedure,
+			connect.WithSchema(kargoServiceGrantMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		listRoles: connect.NewClient[v1alpha1.ListRolesRequest, v1alpha1.ListRolesResponse](
+			httpClient,
+			baseURL+KargoServiceListRolesProcedure,
+			connect.WithSchema(kargoServiceListRolesMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		revoke: connect.NewClient[v1alpha1.RevokeRequest, v1alpha1.RevokeResponse](
+			httpClient,
+			baseURL+KargoServiceRevokeProcedure,
+			connect.WithSchema(kargoServiceRevokeMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		updateRole: connect.NewClient[v1alpha1.UpdateRoleRequest, v1alpha1.UpdateRoleResponse](
+			httpClient,
+			baseURL+KargoServiceUpdateRoleProcedure,
+			connect.WithSchema(kargoServiceUpdateRoleMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -582,6 +652,13 @@ type kargoServiceClient struct {
 	deleteAnalysisTemplate    *connect.Client[v1alpha1.DeleteAnalysisTemplateRequest, v1alpha1.DeleteAnalysisTemplateResponse]
 	getAnalysisRun            *connect.Client[v1alpha1.GetAnalysisRunRequest, v1alpha1.GetAnalysisRunResponse]
 	listProjectEvents         *connect.Client[v1alpha1.ListProjectEventsRequest, v1alpha1.ListProjectEventsResponse]
+	createRole                *connect.Client[v1alpha1.CreateRoleRequest, v1alpha1.CreateRoleResponse]
+	deleteRole                *connect.Client[v1alpha1.DeleteRoleRequest, v1alpha1.DeleteRoleResponse]
+	getRole                   *connect.Client[v1alpha1.GetRoleRequest, v1alpha1.GetRoleResponse]
+	grant                     *connect.Client[v1alpha1.GrantRequest, v1alpha1.GrantResponse]
+	listRoles                 *connect.Client[v1alpha1.ListRolesRequest, v1alpha1.ListRolesResponse]
+	revoke                    *connect.Client[v1alpha1.RevokeRequest, v1alpha1.RevokeResponse]
+	updateRole                *connect.Client[v1alpha1.UpdateRoleRequest, v1alpha1.UpdateRoleResponse]
 }
 
 // GetVersionInfo calls akuity.io.kargo.service.v1alpha1.KargoService.GetVersionInfo.
@@ -807,6 +884,41 @@ func (c *kargoServiceClient) ListProjectEvents(ctx context.Context, req *connect
 	return c.listProjectEvents.CallUnary(ctx, req)
 }
 
+// CreateRole calls akuity.io.kargo.service.v1alpha1.KargoService.CreateRole.
+func (c *kargoServiceClient) CreateRole(ctx context.Context, req *connect.Request[v1alpha1.CreateRoleRequest]) (*connect.Response[v1alpha1.CreateRoleResponse], error) {
+	return c.createRole.CallUnary(ctx, req)
+}
+
+// DeleteRole calls akuity.io.kargo.service.v1alpha1.KargoService.DeleteRole.
+func (c *kargoServiceClient) DeleteRole(ctx context.Context, req *connect.Request[v1alpha1.DeleteRoleRequest]) (*connect.Response[v1alpha1.DeleteRoleResponse], error) {
+	return c.deleteRole.CallUnary(ctx, req)
+}
+
+// GetRole calls akuity.io.kargo.service.v1alpha1.KargoService.GetRole.
+func (c *kargoServiceClient) GetRole(ctx context.Context, req *connect.Request[v1alpha1.GetRoleRequest]) (*connect.Response[v1alpha1.GetRoleResponse], error) {
+	return c.getRole.CallUnary(ctx, req)
+}
+
+// Grant calls akuity.io.kargo.service.v1alpha1.KargoService.Grant.
+func (c *kargoServiceClient) Grant(ctx context.Context, req *connect.Request[v1alpha1.GrantRequest]) (*connect.Response[v1alpha1.GrantResponse], error) {
+	return c.grant.CallUnary(ctx, req)
+}
+
+// ListRoles calls akuity.io.kargo.service.v1alpha1.KargoService.ListRoles.
+func (c *kargoServiceClient) ListRoles(ctx context.Context, req *connect.Request[v1alpha1.ListRolesRequest]) (*connect.Response[v1alpha1.ListRolesResponse], error) {
+	return c.listRoles.CallUnary(ctx, req)
+}
+
+// Revoke calls akuity.io.kargo.service.v1alpha1.KargoService.Revoke.
+func (c *kargoServiceClient) Revoke(ctx context.Context, req *connect.Request[v1alpha1.RevokeRequest]) (*connect.Response[v1alpha1.RevokeResponse], error) {
+	return c.revoke.CallUnary(ctx, req)
+}
+
+// UpdateRole calls akuity.io.kargo.service.v1alpha1.KargoService.UpdateRole.
+func (c *kargoServiceClient) UpdateRole(ctx context.Context, req *connect.Request[v1alpha1.UpdateRoleRequest]) (*connect.Response[v1alpha1.UpdateRoleResponse], error) {
+	return c.updateRole.CallUnary(ctx, req)
+}
+
 // KargoServiceHandler is an implementation of the akuity.io.kargo.service.v1alpha1.KargoService
 // service.
 type KargoServiceHandler interface {
@@ -856,6 +968,13 @@ type KargoServiceHandler interface {
 	DeleteAnalysisTemplate(context.Context, *connect.Request[v1alpha1.DeleteAnalysisTemplateRequest]) (*connect.Response[v1alpha1.DeleteAnalysisTemplateResponse], error)
 	GetAnalysisRun(context.Context, *connect.Request[v1alpha1.GetAnalysisRunRequest]) (*connect.Response[v1alpha1.GetAnalysisRunResponse], error)
 	ListProjectEvents(context.Context, *connect.Request[v1alpha1.ListProjectEventsRequest]) (*connect.Response[v1alpha1.ListProjectEventsResponse], error)
+	CreateRole(context.Context, *connect.Request[v1alpha1.CreateRoleRequest]) (*connect.Response[v1alpha1.CreateRoleResponse], error)
+	DeleteRole(context.Context, *connect.Request[v1alpha1.DeleteRoleRequest]) (*connect.Response[v1alpha1.DeleteRoleResponse], error)
+	GetRole(context.Context, *connect.Request[v1alpha1.GetRoleRequest]) (*connect.Response[v1alpha1.GetRoleResponse], error)
+	Grant(context.Context, *connect.Request[v1alpha1.GrantRequest]) (*connect.Response[v1alpha1.GrantResponse], error)
+	ListRoles(context.Context, *connect.Request[v1alpha1.ListRolesRequest]) (*connect.Response[v1alpha1.ListRolesResponse], error)
+	Revoke(context.Context, *connect.Request[v1alpha1.RevokeRequest]) (*connect.Response[v1alpha1.RevokeResponse], error)
+	UpdateRole(context.Context, *connect.Request[v1alpha1.UpdateRoleRequest]) (*connect.Response[v1alpha1.UpdateRoleResponse], error)
 }
 
 // NewKargoServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -1128,6 +1247,48 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(kargoServiceListProjectEventsMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
+	kargoServiceCreateRoleHandler := connect.NewUnaryHandler(
+		KargoServiceCreateRoleProcedure,
+		svc.CreateRole,
+		connect.WithSchema(kargoServiceCreateRoleMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	kargoServiceDeleteRoleHandler := connect.NewUnaryHandler(
+		KargoServiceDeleteRoleProcedure,
+		svc.DeleteRole,
+		connect.WithSchema(kargoServiceDeleteRoleMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	kargoServiceGetRoleHandler := connect.NewUnaryHandler(
+		KargoServiceGetRoleProcedure,
+		svc.GetRole,
+		connect.WithSchema(kargoServiceGetRoleMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	kargoServiceGrantHandler := connect.NewUnaryHandler(
+		KargoServiceGrantProcedure,
+		svc.Grant,
+		connect.WithSchema(kargoServiceGrantMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	kargoServiceListRolesHandler := connect.NewUnaryHandler(
+		KargoServiceListRolesProcedure,
+		svc.ListRoles,
+		connect.WithSchema(kargoServiceListRolesMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	kargoServiceRevokeHandler := connect.NewUnaryHandler(
+		KargoServiceRevokeProcedure,
+		svc.Revoke,
+		connect.WithSchema(kargoServiceRevokeMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	kargoServiceUpdateRoleHandler := connect.NewUnaryHandler(
+		KargoServiceUpdateRoleProcedure,
+		svc.UpdateRole,
+		connect.WithSchema(kargoServiceUpdateRoleMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/akuity.io.kargo.service.v1alpha1.KargoService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case KargoServiceGetVersionInfoProcedure:
@@ -1218,6 +1379,20 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 			kargoServiceGetAnalysisRunHandler.ServeHTTP(w, r)
 		case KargoServiceListProjectEventsProcedure:
 			kargoServiceListProjectEventsHandler.ServeHTTP(w, r)
+		case KargoServiceCreateRoleProcedure:
+			kargoServiceCreateRoleHandler.ServeHTTP(w, r)
+		case KargoServiceDeleteRoleProcedure:
+			kargoServiceDeleteRoleHandler.ServeHTTP(w, r)
+		case KargoServiceGetRoleProcedure:
+			kargoServiceGetRoleHandler.ServeHTTP(w, r)
+		case KargoServiceGrantProcedure:
+			kargoServiceGrantHandler.ServeHTTP(w, r)
+		case KargoServiceListRolesProcedure:
+			kargoServiceListRolesHandler.ServeHTTP(w, r)
+		case KargoServiceRevokeProcedure:
+			kargoServiceRevokeHandler.ServeHTTP(w, r)
+		case KargoServiceUpdateRoleProcedure:
+			kargoServiceUpdateRoleHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -1401,4 +1576,32 @@ func (UnimplementedKargoServiceHandler) GetAnalysisRun(context.Context, *connect
 
 func (UnimplementedKargoServiceHandler) ListProjectEvents(context.Context, *connect.Request[v1alpha1.ListProjectEventsRequest]) (*connect.Response[v1alpha1.ListProjectEventsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.ListProjectEvents is not implemented"))
+}
+
+func (UnimplementedKargoServiceHandler) CreateRole(context.Context, *connect.Request[v1alpha1.CreateRoleRequest]) (*connect.Response[v1alpha1.CreateRoleResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.CreateRole is not implemented"))
+}
+
+func (UnimplementedKargoServiceHandler) DeleteRole(context.Context, *connect.Request[v1alpha1.DeleteRoleRequest]) (*connect.Response[v1alpha1.DeleteRoleResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.DeleteRole is not implemented"))
+}
+
+func (UnimplementedKargoServiceHandler) GetRole(context.Context, *connect.Request[v1alpha1.GetRoleRequest]) (*connect.Response[v1alpha1.GetRoleResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.GetRole is not implemented"))
+}
+
+func (UnimplementedKargoServiceHandler) Grant(context.Context, *connect.Request[v1alpha1.GrantRequest]) (*connect.Response[v1alpha1.GrantResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.Grant is not implemented"))
+}
+
+func (UnimplementedKargoServiceHandler) ListRoles(context.Context, *connect.Request[v1alpha1.ListRolesRequest]) (*connect.Response[v1alpha1.ListRolesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.ListRoles is not implemented"))
+}
+
+func (UnimplementedKargoServiceHandler) Revoke(context.Context, *connect.Request[v1alpha1.RevokeRequest]) (*connect.Response[v1alpha1.RevokeResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.Revoke is not implemented"))
+}
+
+func (UnimplementedKargoServiceHandler) UpdateRole(context.Context, *connect.Request[v1alpha1.UpdateRoleRequest]) (*connect.Response[v1alpha1.UpdateRoleResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.UpdateRole is not implemented"))
 }

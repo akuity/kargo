@@ -277,7 +277,7 @@ func (w *webhook) ensureSecretPermissions(
 	ctx context.Context,
 	project *kargoapi.Project,
 ) error {
-	const roleBindingName = "kargo-api-server-manage-project-secrets"
+	const roleBindingName = "kargo-api-server-project-admin"
 
 	logger := logging.LoggerFromContext(ctx).WithFields(log.Fields{
 		"project":     project.Name,
@@ -294,7 +294,7 @@ func (w *webhook) ensureSecretPermissions(
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: rbacv1.GroupName,
 			Kind:     "ClusterRole",
-			Name:     "kargo-secret-manager",
+			Name:     "kargo-project-admin",
 		},
 		Subjects: []rbacv1.Subject{
 			{

@@ -12,6 +12,7 @@ import (
 
 	"github.com/akuity/kargo/internal/api/config"
 	"github.com/akuity/kargo/internal/api/kubernetes"
+	"github.com/akuity/kargo/internal/api/rbac"
 	fakeevent "github.com/akuity/kargo/internal/kubernetes/event/fake"
 )
 
@@ -36,13 +37,16 @@ func TestNewServer(t *testing.T) {
 	s, ok := NewServer(
 		testServerConfig,
 		testClient,
-		fake.NewClientBuilder().Build(),
+		testClient,
+		rbac.NewKubernetesRolesDatabase(testClient),
 		testRecorder,
 	).(*server)
 
 	require.True(t, ok)
 	require.NotNil(t, s)
 	require.Same(t, testClient, s.client)
+	require.Same(t, testClient, s.internalClient)
+	require.NotNil(t, testClient, s.rolesDB)
 	require.Same(t, testRecorder, s.recorder)
 	require.Equal(t, testServerConfig, s.cfg)
 	require.NotNil(t, s.validateProjectExistsFn)

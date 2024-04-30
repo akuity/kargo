@@ -8,6 +8,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	kubescheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
@@ -20,6 +21,7 @@ import (
 	"github.com/akuity/kargo/internal/api"
 	"github.com/akuity/kargo/internal/api/config"
 	"github.com/akuity/kargo/internal/api/kubernetes"
+	"github.com/akuity/kargo/internal/api/rbac"
 	rollouts "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
 	"github.com/akuity/kargo/internal/kubeclient"
 	libEvent "github.com/akuity/kargo/internal/kubernetes/event"
@@ -105,7 +107,13 @@ func (o *apiOptions) run(ctx context.Context) error {
 		}).Info("SSO via OpenID Connect is enabled")
 	}
 
-	srv := api.NewServer(cfg, kubeClient, internalClient, recorder)
+	srv := api.NewServer(
+		cfg,
+		kubeClient,
+		internalClient,
+		rbac.NewKubernetesRolesDatabase(kubeClient),
+		recorder,
+	)
 	l, err := net.Listen("tcp", fmt.Sprintf("%s:%s", o.Host, o.Port))
 	if err != nil {
 		return fmt.Errorf("error creating listener: %w", err)
@@ -127,6 +135,13 @@ func (o *apiOptions) setupAPIClient(ctx context.Context) (*rest.Config, client.C
 	scheme := runtime.NewScheme()
 	if err = kubescheme.AddToScheme(scheme); err != nil {
 		return nil, nil, nil, fmt.Errorf("error adding Kubernetes API to Kargo API manager scheme: %w", err)
+	}
+
+	if err = rbacv1.AddToScheme(scheme); err != nil {
+		return nil, nil, nil, fmt.Errorf(
+			"error adding Kubernetes RBAC API to Kargo controller manager scheme: %w",
+			err,
+		)
 	}
 
 	if err = rollouts.AddToScheme(scheme); err != nil {
