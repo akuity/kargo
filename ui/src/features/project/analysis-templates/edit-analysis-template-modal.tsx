@@ -12,6 +12,7 @@ import {
   updateResource
 } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 import { RawFormat } from '@ui/gen/service/v1alpha1/service_pb';
+import { decodeRawData } from '@ui/utils/decode-raw-data';
 
 import { getAnalysisTemplateYAMLExample } from './utils/analysis-template-example';
 
@@ -33,15 +34,9 @@ export const EditAnalysisTemplateModal = ({ visible, hide, templateName, project
     format: RawFormat.YAML
   });
 
-  const manifest = new TextDecoder().decode(
-    templateResponse?.result.case === 'raw'
-      ? templateResponse?.result?.value ?? new Uint8Array()
-      : new Uint8Array()
-  );
-
   const { control, handleSubmit } = useForm({
     values: {
-      value: manifest
+      value: decodeRawData(templateResponse)
     }
   });
 

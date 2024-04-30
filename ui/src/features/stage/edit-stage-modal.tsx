@@ -14,6 +14,7 @@ import {
   updateResource
 } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 import { RawFormat } from '@ui/gen/service/v1alpha1/service_pb';
+import { decodeRawData } from '@ui/utils/decode-raw-data';
 import { zodValidators } from '@ui/utils/validators';
 
 import { getStageYAMLExample } from '../project/pipelines/utils/stage-yaml-example';
@@ -34,17 +35,13 @@ export const EditStageModal = ({ visible, hide, projectName, stageName }: Props)
     format: RawFormat.YAML
   });
 
-  const manifest = new TextDecoder().decode(
-    data?.result.case === 'raw' ? data?.result?.value ?? new Uint8Array() : new Uint8Array()
-  );
-
   const { mutateAsync, isPending } = useMutation(updateResource, {
     onSuccess: () => hide()
   });
 
   const { control, handleSubmit } = useForm({
     values: {
-      value: manifest
+      value: decodeRawData(data)
     },
     resolver: zodResolver(formSchema)
   });

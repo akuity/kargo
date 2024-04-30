@@ -6,6 +6,7 @@ import YamlEditor from '@ui/features/common/code-editor/yaml-editor-lazy';
 import { ModalProps } from '@ui/features/common/modal/use-modal';
 import { getAnalysisRun } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 import { RawFormat } from '@ui/gen/service/v1alpha1/service_pb';
+import { decodeRawData } from '@ui/utils/decode-raw-data';
 
 type Props = ModalProps & {
   name: string;
@@ -18,9 +19,6 @@ export const AnalysisRunModal = ({ visible, hide, name }: Props) => {
     name,
     format: RawFormat.YAML
   });
-  const manifest = new TextDecoder().decode(
-    data?.result?.case === 'raw' ? data?.result?.value ?? new Uint8Array() : new Uint8Array()
-  );
 
   return (
     <Modal
@@ -35,7 +33,7 @@ export const AnalysisRunModal = ({ visible, hide, name }: Props) => {
       width={700}
     >
       <YamlEditor
-        value={manifest}
+        value={decodeRawData(data)}
         height='500px'
         isLoading={isLoading}
         disabled
