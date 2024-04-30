@@ -215,7 +215,7 @@ func TestSyncProject(t *testing.T) {
 			},
 		},
 		{
-			name: "error ensuring secret permissions",
+			name: "error ensuring project admin permissions",
 			reconciler: &reconciler{
 				ensureNamespaceFn: func(
 					_ context.Context,
@@ -506,7 +506,7 @@ func TestEnsureNamespace(t *testing.T) {
 	}
 }
 
-func TestEnsureSecretPermissions(t *testing.T) {
+func TestEnsureProjectAdminPermissions(t *testing.T) {
 	testCases := []struct {
 		name       string
 		reconciler *reconciler
