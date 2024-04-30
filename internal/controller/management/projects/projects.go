@@ -200,7 +200,7 @@ func (r *reconciler) syncProject(
 	}
 
 	if err = r.ensureProjectAdminPermissionsFn(ctx, project); err != nil {
-		return status, fmt.Errorf("error ensuring secret permissions: %w", err)
+		return status, fmt.Errorf("error ensuring project admin permissions: %w", err)
 	}
 
 	status.Phase = kargoapi.ProjectPhaseReady
@@ -336,7 +336,7 @@ func (r *reconciler) ensureProjectAdminPermissions(
 			err,
 		)
 	}
-	logger.Debug("granted API server access to manage project secrets")
+	logger.Debug("granted API server and kargo-admin project admin permissions")
 
 	return nil
 }
