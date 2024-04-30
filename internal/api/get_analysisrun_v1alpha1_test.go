@@ -10,10 +10,10 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	"github.com/akuity/kargo/internal/api/config"
 	"github.com/akuity/kargo/internal/api/kubernetes"
@@ -26,7 +26,7 @@ func TestGetAnalysisRun(t *testing.T) {
 	testCases := map[string]struct {
 		req              *svcv1alpha1.GetAnalysisRunRequest
 		rolloutsDisabled bool
-		getAnalysisRunFn func(context.Context, client.Client, types.NamespacedName) (*rollouts.AnalysisRun, error)
+		interceptor      interceptor.Funcs
 		assertions       func(*testing.T, *connect.Response[svcv1alpha1.GetAnalysisRunResponse], error)
 	}{
 		"empty namespace": {
@@ -34,7 +34,6 @@ func TestGetAnalysisRun(t *testing.T) {
 				Namespace: "",
 				Name:      "",
 			},
-			getAnalysisRunFn: rollouts.GetAnalysisRun,
 			assertions: func(t *testing.T, c *connect.Response[svcv1alpha1.GetAnalysisRunResponse], err error) {
 				require.Error(t, err)
 				require.Equal(t, connect.CodeInvalidArgument, connect.CodeOf(err))
@@ -46,7 +45,6 @@ func TestGetAnalysisRun(t *testing.T) {
 				Namespace: "kargo-demo",
 				Name:      "",
 			},
-			getAnalysisRunFn: rollouts.GetAnalysisRun,
 			assertions: func(t *testing.T, c *connect.Response[svcv1alpha1.GetAnalysisRunResponse], err error) {
 				require.Error(t, err)
 				require.Equal(t, connect.CodeInvalidArgument, connect.CodeOf(err))
@@ -58,7 +56,6 @@ func TestGetAnalysisRun(t *testing.T) {
 				Namespace: "kargo-demo",
 				Name:      "test",
 			},
-			getAnalysisRunFn: rollouts.GetAnalysisRun,
 			assertions: func(t *testing.T, c *connect.Response[svcv1alpha1.GetAnalysisRunResponse], err error) {
 				require.NoError(t, err)
 
@@ -75,7 +72,6 @@ func TestGetAnalysisRun(t *testing.T) {
 				Namespace: "kargo-x",
 				Name:      "test",
 			},
-			getAnalysisRunFn: rollouts.GetAnalysisRun,
 			assertions: func(t *testing.T, c *connect.Response[svcv1alpha1.GetAnalysisRunResponse], err error) {
 				require.Error(t, err)
 				require.Equal(t, connect.CodeNotFound, connect.CodeOf(err))
@@ -87,7 +83,6 @@ func TestGetAnalysisRun(t *testing.T) {
 				Namespace: "kargo-demo",
 				Name:      "non-existing",
 			},
-			getAnalysisRunFn: rollouts.GetAnalysisRun,
 			assertions: func(t *testing.T, c *connect.Response[svcv1alpha1.GetAnalysisRunResponse], err error) {
 				require.Error(t, err)
 				require.Equal(t, connect.CodeNotFound, connect.CodeOf(err))
@@ -99,8 +94,18 @@ func TestGetAnalysisRun(t *testing.T) {
 				Namespace: "kargo-demo",
 				Name:      "test",
 			},
-			getAnalysisRunFn: func(context.Context, client.Client, types.NamespacedName) (*rollouts.AnalysisRun, error) {
-				return nil, apierrors.NewServiceUnavailable("test")
+			interceptor: interceptor.Funcs{
+				// This interceptor will be called when the client.Get method is called.
+				// It will return an error to simulate a failure in the client.Get method.
+				Get: func(
+					_ context.Context,
+					_ client.WithWatch,
+					_ client.ObjectKey,
+					_ client.Object,
+					_ ...client.GetOption,
+				) error {
+					return apierrors.NewServiceUnavailable("test")
+				},
 			},
 			assertions: func(t *testing.T, c *connect.Response[svcv1alpha1.GetAnalysisRunResponse], err error) {
 				require.Error(t, err)
@@ -126,7 +131,6 @@ func TestGetAnalysisRun(t *testing.T) {
 				Name:      "test",
 				Format:    svcv1alpha1.RawFormat_RAW_FORMAT_JSON,
 			},
-			getAnalysisRunFn: rollouts.GetAnalysisRun,
 			assertions: func(t *testing.T, c *connect.Response[svcv1alpha1.GetAnalysisRunResponse], err error) {
 				require.NoError(t, err)
 
@@ -155,7 +159,6 @@ func TestGetAnalysisRun(t *testing.T) {
 				Name:      "test",
 				Format:    svcv1alpha1.RawFormat_RAW_FORMAT_YAML,
 			},
-			getAnalysisRunFn: rollouts.GetAnalysisRun,
 			assertions: func(t *testing.T, c *connect.Response[svcv1alpha1.GetAnalysisRunResponse], err error) {
 				require.NoError(t, err)
 
@@ -217,6 +220,7 @@ func TestGetAnalysisRun(t *testing.T) {
 								mustNewObject[corev1.Namespace]("testdata/namespace.yaml"),
 								mustNewObject[rollouts.AnalysisRun]("testdata/analysisrun.yaml"),
 							).
+							WithInterceptorFuncs(testCase.interceptor).
 							Build(), nil
 					},
 				},
@@ -224,9 +228,8 @@ func TestGetAnalysisRun(t *testing.T) {
 			require.NoError(t, err)
 
 			svr := &server{
-				cfg:              cfg,
-				client:           c,
-				getAnalysisRunFn: testCase.getAnalysisRunFn,
+				cfg:    cfg,
+				client: c,
 			}
 			res, err := (svr).GetAnalysisRun(ctx, connect.NewRequest(testCase.req))
 			testCase.assertions(t, res, err)

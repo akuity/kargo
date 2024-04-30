@@ -5,6 +5,8 @@ import (
 	"fmt"
 
 	"connectrpc.com/connect"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -29,28 +31,50 @@ func (s *server) GetPromotion(
 		return nil, err
 	}
 
-	var promotion kargoapi.Promotion
+	// Get the Promotion from the Kubernetes API as an unstructured object.
+	// Using an unstructured object allows us to return the object _as presented
+	// by the API_ if a raw format is requested.
+	u := unstructured.Unstructured{
+		Object: map[string]any{
+			"apiVersion": kargoapi.GroupVersion.String(),
+			"kind":       "Promotion",
+		},
+	}
 	if err := s.client.Get(ctx, client.ObjectKey{
-		Namespace: project,
 		Name:      name,
-	}, &promotion); err != nil {
-		return nil, fmt.Errorf("get promotion: %w", err)
+		Namespace: project,
+	}, &u); err != nil {
+		if client.IgnoreNotFound(err) == nil {
+			err = fmt.Errorf("Promotion %q not found in project %q", name, project)
+			return nil, connect.NewError(connect.CodeNotFound, err)
+		}
+		return nil, err
 	}
 
-	obj, raw, err := objectOrRaw(&promotion, req.Msg.GetFormat())
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
-	}
-	if raw != nil {
+	switch req.Msg.GetFormat() {
+	case svcv1alpha1.RawFormat_RAW_FORMAT_JSON, svcv1alpha1.RawFormat_RAW_FORMAT_YAML:
+		_, raw, err := objectOrRaw(&u, req.Msg.GetFormat())
+		if err != nil {
+			return nil, connect.NewError(connect.CodeInternal, err)
+		}
 		return connect.NewResponse(&svcv1alpha1.GetPromotionResponse{
 			Result: &svcv1alpha1.GetPromotionResponse_Raw{
 				Raw: raw,
 			},
 		}), nil
+	default:
+		promotion := kargoapi.Promotion{}
+		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(u.Object, &promotion); err != nil {
+			return nil, connect.NewError(connect.CodeInternal, err)
+		}
+		obj, _, err := objectOrRaw(&promotion, req.Msg.GetFormat())
+		if err != nil {
+			return nil, connect.NewError(connect.CodeInternal, err)
+		}
+		return connect.NewResponse(&svcv1alpha1.GetPromotionResponse{
+			Result: &svcv1alpha1.GetPromotionResponse_Promotion{
+				Promotion: obj,
+			},
+		}), nil
 	}
-	return connect.NewResponse(&svcv1alpha1.GetPromotionResponse{
-		Result: &svcv1alpha1.GetPromotionResponse_Promotion{
-			Promotion: obj,
-		},
-	}), nil
 }

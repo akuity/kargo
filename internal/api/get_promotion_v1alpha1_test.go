@@ -7,12 +7,14 @@ import (
 	"connectrpc.com/connect"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api/kubernetes"
@@ -23,9 +25,10 @@ import (
 
 func TestGetPromotion(t *testing.T) {
 	testCases := map[string]struct {
-		req        *svcv1alpha1.GetPromotionRequest
-		objects    []client.Object
-		assertions func(*testing.T, *connect.Response[svcv1alpha1.GetPromotionResponse], error)
+		req         *svcv1alpha1.GetPromotionRequest
+		objects     []client.Object
+		interceptor interceptor.Funcs
+		assertions  func(*testing.T, *connect.Response[svcv1alpha1.GetPromotionResponse], error)
 	}{
 		"empty project": {
 			req: &svcv1alpha1.GetPromotionRequest{
@@ -76,6 +79,33 @@ func TestGetPromotion(t *testing.T) {
 			},
 			objects: []client.Object{
 				mustNewObject[corev1.Namespace]("testdata/namespace.yaml"),
+			},
+			assertions: func(t *testing.T, c *connect.Response[svcv1alpha1.GetPromotionResponse], err error) {
+				require.Error(t, err)
+				require.Equal(t, connect.CodeNotFound, connect.CodeOf(err))
+				require.Nil(t, c)
+			},
+		},
+		"error getting Promotion": {
+			req: &svcv1alpha1.GetPromotionRequest{
+				Project: "kargo-demo",
+				Name:    "test",
+			},
+			objects: []client.Object{
+				mustNewObject[corev1.Namespace]("testdata/namespace.yaml"),
+			},
+			interceptor: interceptor.Funcs{
+				// This interceptor will be called when the client.Get method is called.
+				// It will return an error to simulate a failure in the client.Get method.
+				Get: func(
+					_ context.Context,
+					_ client.WithWatch,
+					_ client.ObjectKey,
+					_ client.Object,
+					_ ...client.GetOption,
+				) error {
+					return apierrors.NewServiceUnavailable("test")
+				},
 			},
 			assertions: func(t *testing.T, c *connect.Response[svcv1alpha1.GetPromotionResponse], err error) {
 				require.Error(t, err)
@@ -214,7 +244,7 @@ func TestGetPromotion(t *testing.T) {
 						_ *rest.Config,
 						scheme *runtime.Scheme,
 					) (client.Client, error) {
-						c := fake.NewClientBuilder().WithScheme(scheme)
+						c := fake.NewClientBuilder().WithScheme(scheme).WithInterceptorFuncs(testCase.interceptor)
 						if len(testCase.objects) > 0 {
 							c.WithObjects(testCase.objects...)
 						}
