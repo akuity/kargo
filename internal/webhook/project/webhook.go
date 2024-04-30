@@ -127,11 +127,12 @@ func (w *webhook) ValidateCreate(
 		return nil, err
 	}
 
-	// Ensure the Kargo API server receives permissions to manage secrets in the
-	// Project namespace just in time. This prevents us from having to give the
-	// Kargo API server carte blanche access to all secrets in the cluster. We do
-	// this synchronously because Secrets are likely to follow the Project in a
-	// manifest.
+	// Ensure the Kargo API server and kargo-admin ServiceAccount receive
+	// permissions to manage ServiceAccounts, Roles, RoleBindings, and Secrets in
+	// the Project namespace just in time. This prevents us from having to give
+	// the Kargo API server carte blanche access these resources throughout the
+	// cluster. We do this synchronously because resources of these types are are
+	// likely to follow the Project in a manifest.
 	return nil, w.ensureProjectAdminPermissionsFn(ctx, project)
 }
 
@@ -323,7 +324,7 @@ func (w *webhook) ensureProjectAdminPermissions(
 			),
 		)
 	}
-	logger.Debug("granted API server access to manage project secrets")
+	logger.Debug("granted API server and kargo-admin project admin permissions")
 
 	return nil
 }
