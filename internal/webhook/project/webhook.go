@@ -53,7 +53,7 @@ type webhook struct {
 
 	ensureNamespaceFn func(context.Context, *kargoapi.Project) error
 
-	ensureSecretPermissionsFn func(
+	ensureProjectAdminPermissionsFn func(
 		context.Context,
 		*kargoapi.Project,
 	) error
@@ -92,7 +92,7 @@ func newWebhook(kubeClient client.Client, cfg WebhookConfig) *webhook {
 	}
 	w.validateSpecFn = w.validateSpec
 	w.ensureNamespaceFn = w.ensureNamespace
-	w.ensureSecretPermissionsFn = w.ensureSecretPermissions
+	w.ensureProjectAdminPermissionsFn = w.ensureProjectAdminPermissions
 	w.getNamespaceFn = kubeClient.Get
 	w.createNamespaceFn = kubeClient.Create
 	w.createRoleBindingFn = kubeClient.Create
@@ -132,7 +132,7 @@ func (w *webhook) ValidateCreate(
 	// Kargo API server carte blanche access to all secrets in the cluster. We do
 	// this synchronously because Secrets are likely to follow the Project in a
 	// manifest.
-	return nil, w.ensureSecretPermissionsFn(ctx, project)
+	return nil, w.ensureProjectAdminPermissionsFn(ctx, project)
 }
 
 func (w *webhook) ValidateUpdate(
@@ -273,11 +273,11 @@ func (w *webhook) ensureNamespace(
 	return nil
 }
 
-func (w *webhook) ensureSecretPermissions(
+func (w *webhook) ensureProjectAdminPermissions(
 	ctx context.Context,
 	project *kargoapi.Project,
 ) error {
-	const roleBindingName = "kargo-api-server-project-admin"
+	const roleBindingName = "kargo-project-admin"
 
 	logger := logging.LoggerFromContext(ctx).WithFields(log.Fields{
 		"project":     project.Name,

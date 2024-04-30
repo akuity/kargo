@@ -83,7 +83,7 @@ type reconciler struct {
 		...client.UpdateOption,
 	) error
 
-	ensureSecretPermissionsFn func(context.Context, *kargoapi.Project) error
+	ensureProjectAdminPermissionsFn func(context.Context, *kargoapi.Project) error
 
 	createRoleBindingFn func(
 		context.Context,
@@ -124,7 +124,7 @@ func newReconciler(kubeClient client.Client, cfg ReconcilerConfig) *reconciler {
 	r.getNamespaceFn = r.client.Get
 	r.createNamespaceFn = r.client.Create
 	r.updateNamespaceFn = r.client.Update
-	r.ensureSecretPermissionsFn = r.ensureSecretPermissions
+	r.ensureProjectAdminPermissionsFn = r.ensureProjectAdminPermissions
 	r.createRoleBindingFn = r.client.Create
 	return r
 }
@@ -199,7 +199,7 @@ func (r *reconciler) syncProject(
 		return status, fmt.Errorf("error ensuring namespace: %w", err)
 	}
 
-	if err = r.ensureSecretPermissionsFn(ctx, project); err != nil {
+	if err = r.ensureProjectAdminPermissionsFn(ctx, project); err != nil {
 		return status, fmt.Errorf("error ensuring secret permissions: %w", err)
 	}
 
@@ -288,11 +288,11 @@ func (r *reconciler) ensureNamespace(
 	return status, nil
 }
 
-func (r *reconciler) ensureSecretPermissions(
+func (r *reconciler) ensureProjectAdminPermissions(
 	ctx context.Context,
 	project *kargoapi.Project,
 ) error {
-	const roleBindingName = "kargo-api-server-project-admin"
+	const roleBindingName = "kargo-project-admin"
 
 	logger := logging.LoggerFromContext(ctx).WithFields(log.Fields{
 		"project":     project.Name,
