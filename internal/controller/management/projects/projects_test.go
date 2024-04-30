@@ -30,7 +30,7 @@ func TestNewReconciler(t *testing.T) {
 	require.NotNil(t, r.getNamespaceFn)
 	require.NotNil(t, r.createNamespaceFn)
 	require.NotNil(t, r.updateNamespaceFn)
-	require.NotNil(t, r.ensureSecretPermissionsFn)
+	require.NotNil(t, r.ensureProjectAdminPermissionsFn)
 	require.NotNil(t, r.createRoleBindingFn)
 }
 
@@ -223,7 +223,7 @@ func TestSyncProject(t *testing.T) {
 				) (kargoapi.ProjectStatus, error) {
 					return *project.Status.DeepCopy(), nil
 				},
-				ensureSecretPermissionsFn: func(
+				ensureProjectAdminPermissionsFn: func(
 					context.Context,
 					*kargoapi.Project,
 				) error {
@@ -245,7 +245,7 @@ func TestSyncProject(t *testing.T) {
 				) (kargoapi.ProjectStatus, error) {
 					return *project.Status.DeepCopy(), nil
 				},
-				ensureSecretPermissionsFn: func(
+				ensureProjectAdminPermissionsFn: func(
 					context.Context,
 					*kargoapi.Project,
 				) error {
@@ -563,7 +563,7 @@ func TestEnsureSecretPermissions(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
 				t,
-				testCase.reconciler.ensureSecretPermissions(
+				testCase.reconciler.ensureProjectAdminPermissions(
 					context.Background(),
 					&kargoapi.Project{},
 				),

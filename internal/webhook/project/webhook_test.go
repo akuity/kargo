@@ -31,7 +31,7 @@ func TestNewWebhook(t *testing.T) {
 	require.Equal(t, testCfg, w.cfg)
 	require.NotNil(t, w.validateSpecFn)
 	require.NotNil(t, w.ensureNamespaceFn)
-	require.NotNil(t, w.ensureSecretPermissionsFn)
+	require.NotNil(t, w.ensureProjectAdminPermissionsFn)
 	require.NotNil(t, w.getNamespaceFn)
 	require.NotNil(t, w.createNamespaceFn)
 	require.NotNil(t, w.createRoleBindingFn)
@@ -428,7 +428,7 @@ func TestEnsureSecretPermissions(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
 				t,
-				testCase.webhook.ensureSecretPermissions(
+				testCase.webhook.ensureProjectAdminPermissions(
 					ctx,
 					&kargoapi.Project{
 						ObjectMeta: metav1.ObjectMeta{
