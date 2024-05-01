@@ -622,7 +622,7 @@ message DeleteRoleResponse {
 message GetRoleRequest {
   string project = 1;
   string name = 2;
-  bool as_resources = 3;
+  bool as_resources = 3 [json_name = "asResources"];
   RawFormat format = 4;
 }
 
@@ -638,8 +638,8 @@ message GrantRequest {
   string project = 1;
   string role = 2;
   oneof request {
-    UserClaims user_claims = 3;
-    ResourceDetails resource_details = 4;
+    UserClaims user_claims = 3 [json_name = "userClaims"];
+    ResourceDetails resource_details = 4 [json_name = "resourceDetails"];
   }
 }
 
@@ -650,9 +650,9 @@ message UserClaims {
 }
 
 message ResourceDetails {
-  string resource_group = 1;
-  string resource_type = 2;
-  string resource_name = 3;
+  string resource_group = 1 [json_name = "resourceGroup"];
+  string resource_type = 2 [json_name = "resourceType"];
+  string resource_name = 3 [json_name = "resourceName"];
   repeated string verbs = 4;
 }
 
@@ -662,7 +662,7 @@ message GrantResponse {
 
 message ListRolesRequest {
   string project = 1;
-  bool as_resources = 2;
+  bool as_resources = 2 [json_name = "asResources"];
 }
 
 message ListRolesResponse {
@@ -675,8 +675,8 @@ message RevokeRequest {
   string project = 1;
   string role = 2;
   oneof request {
-    UserClaims user_claims = 3;
-    ResourceDetails resource_details = 4;
+    UserClaims user_claims = 3 [json_name = "userClaims"]; 
+    ResourceDetails resource_details = 4 [json_name = "resourceDetails"];
   }
 }
 
@@ -695,8 +695,8 @@ message UpdateRoleResponse {
 message Role {
   string project = 1;
   string name = 2;
-  google.protobuf.Timestamp creation_timestamp = 3;
-  bool kargo_managed =4;
+  google.protobuf.Timestamp creation_timestamp = 3 [json_name = "creationTimestamp"];
+  bool kargo_managed =4 [json_name = "kargoManaged"];
   repeated string subs = 5;
   repeated string emails = 6;
   repeated string groups = 7;
@@ -704,7 +704,7 @@ message Role {
 }
 
 message RoleResources {
-  k8s.io.api.core.v1.ServiceAccount service_account = 1;
+  k8s.io.api.core.v1.ServiceAccount service_account = 1 [json_name = "serviceAccount"];
   repeated k8s.io.api.rbac.v1.Role roles = 2;
-  repeated k8s.io.api.rbac.v1.RoleBinding role_bindings = 3;
+  repeated k8s.io.api.rbac.v1.RoleBinding role_bindings = 3 [json_name = "roleBindings"];
 }
