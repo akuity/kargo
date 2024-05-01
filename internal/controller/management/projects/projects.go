@@ -90,6 +90,18 @@ type reconciler struct {
 		client.Object,
 		...client.CreateOption,
 	) error
+
+	deleteRoleBindingFn func(
+		context.Context,
+		client.Object,
+		...client.DeleteOption,
+	) error
+
+	ensureV06CompatibilityLabelFn func(
+		context.Context,
+		client.Client,
+		client.Object,
+	) error
 }
 
 // SetupReconcilerWithManager initializes a reconciler for Project resources and
@@ -126,6 +138,8 @@ func newReconciler(kubeClient client.Client, cfg ReconcilerConfig) *reconciler {
 	r.updateNamespaceFn = r.client.Update
 	r.ensureProjectAdminPermissionsFn = r.ensureProjectAdminPermissions
 	r.createRoleBindingFn = r.client.Create
+	r.deleteRoleBindingFn = r.client.Delete
+	r.ensureV06CompatibilityLabelFn = kargoapi.EnsureV06CompatibilityLabel
 	return r
 }
 
@@ -157,8 +171,8 @@ func (r *reconciler) Reconcile(
 		return ctrl.Result{}, nil
 	}
 
-	if project.Status.Phase.IsTerminal() {
-		logger.Debugf("Project is %s; nothing to do", project.Status.Phase)
+	if project.Status.Phase.IsTerminal() && kargoapi.IsV06Compatible(project) {
+		logger.Debugf("Project is %s and v0.6 compatible; nothing to do", project.Status.Phase)
 		return ctrl.Result{}, nil
 	}
 
@@ -324,19 +338,47 @@ func (r *reconciler) ensureProjectAdminPermissions(
 			},
 		},
 	}
-	if err := r.createRoleBindingFn(ctx, roleBinding); err != nil {
-		if apierrors.IsAlreadyExists(err) {
-			logger.Debug("role binding already exists in project namespace")
-			return nil
-		}
+	if err := r.createRoleBindingFn(ctx, roleBinding); apierrors.IsAlreadyExists(err) {
+		logger.Debug("role binding already exists in project namespace")
+	} else if err != nil {
 		return fmt.Errorf(
 			"error creating role binding %q in project namespace %q: %w",
 			roleBinding.Name,
 			project.Name,
 			err,
 		)
+	} else {
+		logger.Debug("granted API server and kargo-admin project admin permissions")
 	}
-	logger.Debug("granted API server and kargo-admin project admin permissions")
+
+	// Delete legacy role binding if it exists
+	const legacyRoleBindingName = "kargo-api-server-manage-project-secrets"
+	if err := r.deleteRoleBindingFn(
+		ctx,
+		&rbacv1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: project.Name,
+				Name:      legacyRoleBindingName,
+			},
+		},
+	); apierrors.IsNotFound(err) {
+		logger.Debug("legacy project admin role binding does not exist")
+	} else if err != nil {
+		return fmt.Errorf(
+			"error deleting legacy role binding %q from Project namespace %q: %w",
+			legacyRoleBindingName, project.Name, err,
+		)
+	} else {
+		logger.Debug("deleted legacy project admin role binding")
+	}
+
+	// Mark the Project as v0.6 compatible
+	if err := r.ensureV06CompatibilityLabelFn(ctx, r.client, project); err != nil {
+		return fmt.Errorf(
+			"error ensuring v0.6 compatibility label on Project %q: %w",
+			project.Name, err,
+		)
+	}
 
 	return nil
 }

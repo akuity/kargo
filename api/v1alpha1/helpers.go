@@ -80,3 +80,25 @@ func patchAnnotations(
 	}
 	return nil
 }
+
+func IsV06Compatible(obj client.Object) bool {
+	return obj.GetLabels()[V06CompatibilityLabelKey] == LabelTrueValue
+}
+
+func EnsureV06CompatibilityLabel(
+	ctx context.Context,
+	c client.Client,
+	obj client.Object,
+) error {
+	if IsV06Compatible(obj) {
+		return nil
+	}
+	patchBytes := []byte(
+		fmt.Sprintf(
+			`{"metadata":{"labels":{"%s":"true"}}}`,
+			V06CompatibilityLabelKey,
+		),
+	)
+	patch := client.RawPatch(types.MergePatchType, patchBytes)
+	return c.Patch(ctx, obj, patch)
+}

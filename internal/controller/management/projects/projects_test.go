@@ -32,6 +32,8 @@ func TestNewReconciler(t *testing.T) {
 	require.NotNil(t, r.updateNamespaceFn)
 	require.NotNil(t, r.ensureProjectAdminPermissionsFn)
 	require.NotNil(t, r.createRoleBindingFn)
+	require.NotNil(t, r.deleteRoleBindingFn)
+	require.NotNil(t, r.ensureV06CompatibilityLabelFn)
 }
 
 func TestReconcile(t *testing.T) {
@@ -538,6 +540,20 @@ func TestEnsureProjectAdminPermissions(t *testing.T) {
 				) error {
 					return apierrors.NewAlreadyExists(schema.GroupResource{}, "")
 				},
+				deleteRoleBindingFn: func(
+					context.Context,
+					client.Object,
+					...client.DeleteOption,
+				) error {
+					return nil
+				},
+				ensureV06CompatibilityLabelFn: func(
+					context.Context,
+					client.Client,
+					client.Object,
+				) error {
+					return nil
+				},
 			},
 			assertions: func(t *testing.T, err error) {
 				require.NoError(t, err)
@@ -550,6 +566,20 @@ func TestEnsureProjectAdminPermissions(t *testing.T) {
 					context.Context,
 					client.Object,
 					...client.CreateOption,
+				) error {
+					return nil
+				},
+				deleteRoleBindingFn: func(
+					context.Context,
+					client.Object,
+					...client.DeleteOption,
+				) error {
+					return nil
+				},
+				ensureV06CompatibilityLabelFn: func(
+					context.Context,
+					client.Client,
+					client.Object,
 				) error {
 					return nil
 				},
