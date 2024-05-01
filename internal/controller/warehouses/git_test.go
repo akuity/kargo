@@ -877,3 +877,44 @@ func TestMatchesPathsFilters(t *testing.T) {
 		})
 	}
 }
+
+func TestVerifyPathFiltersDoSelectCommitOtherwiseReturnError(t *testing.T) {
+	testCases := []struct {
+		name       string
+		reconciler *reconciler
+		sub        kargoapi.GitSubscription
+		commit     string
+		baseCommit string
+		assertions func(*testing.T, error)
+	}{
+		{
+			name: "success when checking commit that already created freight",
+			reconciler: &reconciler{
+				getDiffPathsSinceCommitIDFn: func(git.Repo, string) ([]string, error) {
+					return []string{"some_path_to_a/file"}, nil
+				},
+			},
+			sub: kargoapi.GitSubscription{
+				CommitSelectionStrategy: kargoapi.CommitSelectionStrategyNewestFromBranch,
+				IncludePaths:            []string{"test"},
+				ExcludePaths:            []string{"test"},
+			},
+			commit:     "commitThatAlreadyProducedAFreight",
+			baseCommit: "commitThatAlreadyProducedAFreight",
+			assertions: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			err := testCase.reconciler.verifyPathFiltersDoSelectCommitOtherwiseReturnError(
+				nil,
+				testCase.sub,
+				testCase.commit,
+				testCase.baseCommit,
+			)
+			testCase.assertions(t, err)
+		})
+	}
+}
