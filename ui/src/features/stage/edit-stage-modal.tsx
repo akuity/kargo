@@ -10,14 +10,14 @@ import { FieldContainer } from '@ui/features/common/form/field-container';
 import { ModalComponentProps } from '@ui/features/common/modal/modal-context';
 import schema from '@ui/gen/schema/stages.kargo.akuity.io_v1alpha1.json';
 import {
-  listStages,
+  getStage,
   updateResource
 } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
+import { RawFormat } from '@ui/gen/service/v1alpha1/service_pb';
+import { decodeRawData } from '@ui/utils/decode-raw-data';
 import { zodValidators } from '@ui/utils/validators';
 
 import { getStageYAMLExample } from '../project/pipelines/utils/stage-yaml-example';
-
-import { prepareStageToEdit, prepareStageToSave } from './utils/edit-stage-utils';
 
 type Props = ModalComponentProps & {
   projectName: string;
@@ -29,8 +29,11 @@ const formSchema = z.object({
 });
 
 export const EditStageModal = ({ visible, hide, projectName, stageName }: Props) => {
-  const { data } = useQuery(listStages, { project: projectName });
-  const stage = data?.stages.find((item) => item.metadata?.name === stageName);
+  const { data, isLoading } = useQuery(getStage, {
+    project: projectName,
+    name: stageName,
+    format: RawFormat.YAML
+  });
 
   const { mutateAsync, isPending } = useMutation(updateResource, {
     onSuccess: () => hide()
@@ -38,7 +41,7 @@ export const EditStageModal = ({ visible, hide, projectName, stageName }: Props)
 
   const { control, handleSubmit } = useForm({
     values: {
-      value: prepareStageToEdit(stage)
+      value: decodeRawData(data)
     },
     resolver: zodResolver(formSchema)
   });
@@ -46,7 +49,7 @@ export const EditStageModal = ({ visible, hide, projectName, stageName }: Props)
   const onSubmit = handleSubmit(async (data) => {
     const textEncoder = new TextEncoder();
     await mutateAsync({
-      manifest: textEncoder.encode(prepareStageToSave(stage, data.value))
+      manifest: textEncoder.encode(data.value)
     });
   });
 
@@ -74,7 +77,7 @@ export const EditStageModal = ({ visible, hide, projectName, stageName }: Props)
         </div>
       }
     >
-      <FieldContainer label='YAML' name='value' control={control}>
+      <FieldContainer name='value' control={control}>
         {({ field: { value, onChange } }) => (
           <YamlEditor
             value={value}
@@ -82,6 +85,9 @@ export const EditStageModal = ({ visible, hide, projectName, stageName }: Props)
             height='500px'
             schema={schema as JSONSchema4}
             placeholder={getStageYAMLExample(projectName)}
+            isLoading={isLoading}
+            isHideManagedFieldsDisplayed
+            label='YAML'
           />
         )}
       </FieldContainer>
