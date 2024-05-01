@@ -5,8 +5,8 @@ package akuity.io.kargo.service.v1alpha1;
 import "google/protobuf/timestamp.proto";
 import "v1alpha1/generated.proto";
 import "k8s.io/api/core/v1/generated.proto";
-import "k8s.io/api/rbac/v1/generated.proto";
 import "rollouts/api/v1alpha1/generated.proto";
+import "rbac/v1alpha1/generated.proto";
 
 option go_package = "github.com/akuity/kargo/pkg/api/service/v1alpha1;svcv1alpha1";
 
@@ -603,11 +603,11 @@ message ListProjectEventsResponse {
 }
 
 message CreateRoleRequest {
-  Role role = 1;
+  github.com.akuity.kargo.api.rbac.v1alpha1.Role role = 1;
 }
 
 message CreateRoleResponse {
-  Role role = 1;
+  github.com.akuity.kargo.api.rbac.v1alpha1.Role role = 1;
 }
 
 message DeleteRoleRequest {
@@ -622,14 +622,14 @@ message DeleteRoleResponse {
 message GetRoleRequest {
   string project = 1;
   string name = 2;
-  bool as_resources = 3 [json_name = "asResources"];
+  bool as_resources = 3;
   RawFormat format = 4;
 }
 
 message GetRoleResponse {
   oneof result {
-    Role role = 1;
-    RoleResources resources = 2;
+    github.com.akuity.kargo.api.rbac.v1alpha1.Role role = 1;
+    github.com.akuity.kargo.api.rbac.v1alpha1.RoleResources resources = 2;
     bytes raw = 3;
   }
 }
@@ -638,73 +638,43 @@ message GrantRequest {
   string project = 1;
   string role = 2;
   oneof request {
-    UserClaims user_claims = 3 [json_name = "userClaims"];
-    ResourceDetails resource_details = 4 [json_name = "resourceDetails"];
+    github.com.akuity.kargo.api.rbac.v1alpha1.UserClaims user_claims = 3;
+    github.com.akuity.kargo.api.rbac.v1alpha1.ResourceDetails resource_details = 4;
   }
 }
 
-message UserClaims {
-  repeated string subs = 1;
-  repeated string emails = 2;
-  repeated string groups = 3;
-}
-
-message ResourceDetails {
-  string resource_group = 1 [json_name = "resourceGroup"];
-  string resource_type = 2 [json_name = "resourceType"];
-  string resource_name = 3 [json_name = "resourceName"];
-  repeated string verbs = 4;
-}
-
 message GrantResponse {
-  Role role = 1;
+  github.com.akuity.kargo.api.rbac.v1alpha1.Role role = 1;
 }
 
 message ListRolesRequest {
   string project = 1;
-  bool as_resources = 2 [json_name = "asResources"];
+  bool as_resources = 2;
 }
 
 message ListRolesResponse {
   // Note: oneof and repeated do not work together
-  repeated Role roles = 1;
-  repeated RoleResources resources = 2;
+  repeated github.com.akuity.kargo.api.rbac.v1alpha1.Role roles = 1;
+  repeated github.com.akuity.kargo.api.rbac.v1alpha1.RoleResources resources = 2;
 }
 
 message RevokeRequest {
   string project = 1;
   string role = 2;
   oneof request {
-    UserClaims user_claims = 3 [json_name = "userClaims"]; 
-    ResourceDetails resource_details = 4 [json_name = "resourceDetails"];
+    github.com.akuity.kargo.api.rbac.v1alpha1.UserClaims user_claims = 3;
+    github.com.akuity.kargo.api.rbac.v1alpha1.ResourceDetails resource_details = 4;
   }
 }
 
 message RevokeResponse {
-  Role role = 1;
+  github.com.akuity.kargo.api.rbac.v1alpha1.Role role = 1;
 }
 
 message UpdateRoleRequest {
-  Role role = 1;
+  github.com.akuity.kargo.api.rbac.v1alpha1.Role role = 1;
 }
 
 message UpdateRoleResponse {
-  Role role = 1;
-}
-
-message Role {
-  string project = 1;
-  string name = 2;
-  google.protobuf.Timestamp creation_timestamp = 3 [json_name = "creationTimestamp"];
-  bool kargo_managed =4 [json_name = "kargoManaged"];
-  repeated string subs = 5;
-  repeated string emails = 6;
-  repeated string groups = 7;
-  repeated k8s.io.api.rbac.v1.PolicyRule rules = 8;
-}
-
-message RoleResources {
-  k8s.io.api.core.v1.ServiceAccount service_account = 1 [json_name = "serviceAccount"];
-  repeated k8s.io.api.rbac.v1.Role roles = 2;
-  repeated k8s.io.api.rbac.v1.RoleBinding role_bindings = 3 [json_name = "roleBindings"];
+  github.com.akuity.kargo.api.rbac.v1alpha1.Role role = 1;
 }

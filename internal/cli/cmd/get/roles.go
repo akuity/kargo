@@ -15,12 +15,12 @@ import (
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 
+	rbacapi "github.com/akuity/kargo/api/rbac/v1alpha1"
 	"github.com/akuity/kargo/internal/cli/client"
 	"github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/io"
 	"github.com/akuity/kargo/internal/cli/kubernetes"
 	"github.com/akuity/kargo/internal/cli/option"
-	"github.com/akuity/kargo/internal/cli/rbac"
 	"github.com/akuity/kargo/internal/cli/templates"
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
@@ -132,8 +132,8 @@ func (o *getRolesOptions) run(ctx context.Context) error {
 		return fmt.Errorf("get client from config: %w", err)
 	}
 
-	var kargoRoleRes []*rbac.Role
-	var resourcesRes []*rbac.RoleResources
+	var kargoRoleRes []*rbacapi.Role
+	var resourcesRes []*rbacapi.RoleResources
 	var errs []error
 
 	if len(o.Names) == 0 {
@@ -148,22 +148,19 @@ func (o *getRolesOptions) run(ctx context.Context) error {
 			return fmt.Errorf("list roles: %w", err)
 		}
 		if o.AsKubernetesResources {
-			resourcesRes = make([]*rbac.RoleResources, len(resp.Msg.GetResources()))
+			resourcesRes = make([]*rbacapi.RoleResources, len(resp.Msg.GetResources()))
 			for i, roleResources := range resp.Msg.GetResources() {
-				resourcesRes[i] = &rbac.RoleResources{RoleResources: roleResources}
+				resourcesRes[i] = roleResources
 			}
 		} else {
-			kargoRoleRes = make([]*rbac.Role, len(resp.Msg.GetRoles()))
-			for i, role := range resp.Msg.GetRoles() {
-				kargoRoleRes[i] = rbac.NewRole(role)
-			}
+			kargoRoleRes = resp.Msg.GetRoles()
 		}
 	} else {
 		errs = make([]error, 0, len(o.Names))
 		if o.AsKubernetesResources {
-			resourcesRes = make([]*rbac.RoleResources, 0, len(o.Names))
+			resourcesRes = make([]*rbacapi.RoleResources, 0, len(o.Names))
 		} else {
-			kargoRoleRes = make([]*rbac.Role, 0, len(o.Names))
+			kargoRoleRes = make([]*rbacapi.Role, 0, len(o.Names))
 		}
 		for _, name := range o.Names {
 			var resp *connect.Response[v1alpha1.GetRoleResponse]
@@ -181,15 +178,9 @@ func (o *getRolesOptions) run(ctx context.Context) error {
 				continue
 			}
 			if o.AsKubernetesResources {
-				resourcesRes = append(
-					resourcesRes,
-					&rbac.RoleResources{RoleResources: resp.Msg.GetResources()},
-				)
+				resourcesRes = append(resourcesRes, resp.Msg.GetResources())
 			} else {
-				kargoRoleRes = append(
-					kargoRoleRes,
-					rbac.NewRole(resp.Msg.GetRole()),
-				)
+				kargoRoleRes = append(kargoRoleRes, resp.Msg.GetRole())
 			}
 		}
 	}
@@ -210,7 +201,7 @@ func (o *getRolesOptions) run(ctx context.Context) error {
 func newRoleTable(list *metav1.List) *metav1.Table {
 	rows := make([]metav1.TableRow, len(list.Items))
 	for i, item := range list.Items {
-		role := item.Object.(*rbac.Role) // nolint: forcetypeassert
+		role := item.Object.(*rbacapi.Role) // nolint: forcetypeassert
 		rows[i] = metav1.TableRow{
 			Cells: []any{
 				role.ObjectMeta.Name,
@@ -233,13 +224,13 @@ func newRoleTable(list *metav1.List) *metav1.Table {
 func newRoleResourcesTable(list *metav1.List) *metav1.Table {
 	rows := make([]metav1.TableRow, len(list.Items))
 	for i, item := range list.Items {
-		roleResources := item.Object.(*rbac.RoleResources) // nolint: forcetypeassert
-		rbs := make([]string, len(roleResources.RoleResources.RoleBindings))
-		for i, rb := range roleResources.RoleResources.RoleBindings {
+		roleResources := item.Object.(*rbacapi.RoleResources) // nolint: forcetypeassert
+		rbs := make([]string, len(roleResources.RoleBindings))
+		for i, rb := range roleResources.RoleBindings {
 			rbs[i] = rb.Name
 		}
-		roles := make([]string, len(roleResources.RoleResources.Roles))
-		for i, role := range roleResources.RoleResources.Roles {
+		roles := make([]string, len(roleResources.Roles))
+		for i, role := range roleResources.Roles {
 			roles[i] = role.Name
 		}
 		rows[i] = metav1.TableRow{

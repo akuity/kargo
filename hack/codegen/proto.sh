@@ -4,6 +4,7 @@ set -euxo pipefail
 
 readonly API_PKGS=(
   "github.com/akuity/kargo/api/v1alpha1"
+  "github.com/akuity/kargo/api/rbac/v1alpha1"
   "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
 )
 
@@ -13,7 +14,7 @@ readonly APIMACHINERY_PKGS=(
   "+k8s.io/apimachinery/pkg/runtime/schema"
   "+k8s.io/apimachinery/pkg/runtime"
   "k8s.io/apimachinery/pkg/apis/meta/v1"
-  "k8s.io/api/core/v1,k8s.io/api/batch/v1"
+  "k8s.io/api/core/v1,k8s.io/api/batch/v1,k8s.io/api/rbac/v1"
 )
 
 work_dir=$(dirname "${0}")
@@ -24,6 +25,7 @@ cd "${work_dir}"
 function clean() {
   echo "Clean up intermediate resources..."
   rm -r "${work_dir}/pkg/api/v1alpha1" || true
+  rm -r "${work_dir}/pkg/api/rbac" || true
   rm -r "${work_dir}/vendor" || true
 }
 

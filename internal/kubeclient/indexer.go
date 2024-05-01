@@ -10,6 +10,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	rbacapi "github.com/akuity/kargo/api/rbac/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	libargocd "github.com/akuity/kargo/internal/argocd"
 	"github.com/akuity/kargo/internal/logging"
@@ -416,7 +417,7 @@ func IndexServiceAccountsByOIDCEmail(ctx context.Context, mgr ctrl.Manager) erro
 
 func indexServiceAccountsOIDCEmail(obj client.Object) []string {
 	sa := obj.(*corev1.ServiceAccount) // nolint: forcetypeassert
-	rawEmails := strings.TrimSpace(sa.GetAnnotations()[kargoapi.AnnotationKeyOIDCEmails])
+	rawEmails := strings.TrimSpace(sa.GetAnnotations()[rbacapi.AnnotationKeyOIDCEmails])
 	if rawEmails == "" {
 		return nil
 	}
@@ -441,7 +442,7 @@ func IndexServiceAccountsByOIDCGroups(ctx context.Context, mgr ctrl.Manager) err
 
 func indexServiceAccountsByOIDCGroups(obj client.Object) []string {
 	sa := obj.(*corev1.ServiceAccount) // nolint: forcetypeassert
-	rawGroups := strings.TrimSpace(sa.GetAnnotations()[kargoapi.AnnotationKeyOIDCGroups])
+	rawGroups := strings.TrimSpace(sa.GetAnnotations()[rbacapi.AnnotationKeyOIDCGroups])
 	if rawGroups == "" {
 		return nil
 	}
@@ -466,7 +467,7 @@ func IndexServiceAccountsByOIDCSubjects(ctx context.Context, mgr ctrl.Manager) e
 
 func indexServiceAccountsByOIDCSubjects(obj client.Object) []string {
 	sa := obj.(*corev1.ServiceAccount) // nolint: forcetypeassert
-	rawSubjects := strings.TrimSpace(sa.GetAnnotations()[kargoapi.AnnotationKeyOIDCSubjects])
+	rawSubjects := strings.TrimSpace(sa.GetAnnotations()[rbacapi.AnnotationKeyOIDCSubjects])
 	if rawSubjects == "" {
 		return nil
 	}
