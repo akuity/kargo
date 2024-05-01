@@ -2051,6 +2051,8 @@ func TestReconciler_syncPromotions(t *testing.T) {
 				},
 			},
 			initialStatus: kargoapi.StageStatus{
+				// Should not be updated.
+				Phase: kargoapi.StagePhaseVerifying,
 				LastPromotion: &kargoapi.PromotionInfo{
 					Name:              "fake-promotion-2",
 					CreationTimestamp: metav1.NewTime(oneHourAgo),
@@ -2062,7 +2064,7 @@ func TestReconciler_syncPromotions(t *testing.T) {
 			assertions: func(t *testing.T, status kargoapi.StageStatus, err error) {
 				require.NoError(t, err)
 
-				require.Equal(t, kargoapi.StagePhaseSteady, status.Phase)
+				require.Equal(t, kargoapi.StagePhaseVerifying, status.Phase)
 				require.Nil(t, status.CurrentPromotion)
 				require.Equal(t, &kargoapi.PromotionInfo{
 					Name:              "fake-promotion-2",
