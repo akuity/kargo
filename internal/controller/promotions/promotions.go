@@ -454,10 +454,11 @@ func (r *reconciler) promote(
 
 	logger.Debug("promotion", "phase", newStatus.Phase)
 
-	if newStatus.Phase.IsTerminal() {
+	if newStatus.Phase == kargoapi.PromotionPhaseSucceeded {
 		// Trigger re-verification of the Stage if the promotion succeeded and
 		// this is a re-promotion of the same Freight.
-		if stage.Status.CurrentFreight != nil && stage.Status.CurrentFreight.Name == targetFreight.Name {
+		curFreight := stage.Status.CurrentFreight
+		if curFreight != nil && curFreight.Name == targetFreight.Name && curFreight.VerificationInfo != nil {
 			if err = kargoapi.ReverifyStageFreight(
 				ctx,
 				r.kargoClient,
