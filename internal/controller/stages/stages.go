@@ -728,19 +728,19 @@ func (r *reconciler) syncNormalStage(
 			status.History.UpdateOrPush(*status.CurrentFreight)
 		}()
 
-		// Check health
+		// Always check the health of the Argo CD Applications associated with the
+		// Stage. This is regardless of the phase of the Stage, as the health of the
+		// Argo CD Applications is always relevant.
 		if status.Health = r.appHealth.EvaluateHealth(
 			ctx,
 			*status.CurrentFreight,
 			stage.Spec.PromotionMechanisms.ArgoCDAppUpdates,
 		); status.Health != nil {
-			freightLogger.WithValues("health", status.Health.Status).
-				Debug("Stage health assessed")
+			freightLogger.WithValues("health", status.Health.Status).Debug("Stage health assessed")
 		} else {
 			freightLogger.Debug("Stage health deemed not applicable")
 		}
 
-		// Initiate or follow-up on verification if required
 		if stage.Spec.Verification != nil {
 			// Update the verification history with the current verification info.
 			// NOTE: We do this regardless of the phase of the verification process
@@ -751,17 +751,23 @@ func (r *reconciler) syncNormalStage(
 				status.CurrentFreight.VerificationHistory.UpdateOrPush(*status.CurrentFreight.VerificationInfo)
 			}
 
-			// Confirm if a reverification is requested. If so, clear the
-			// verification info to start the verification process again.
-			info := status.CurrentFreight.VerificationInfo
-			if info != nil && info.Phase.IsTerminal() {
-				if req, _ := kargoapi.ReverifyAnnotationValue(stage.GetAnnotations()); req.ForID(info.ID) {
-					logger.Debug("rerunning verification")
+			// If the Stage is in a steady state, we should check if we need to
+			// start or rerun verification.
+			if status.Phase == kargoapi.StagePhaseSteady {
+				info := status.CurrentFreight.VerificationInfo
+				switch {
+				case info == nil && status.CurrentPromotion == nil:
 					status.Phase = kargoapi.StagePhaseVerifying
-					status.CurrentFreight.VerificationInfo = nil
+				case info.Phase.IsTerminal():
+					if req, _ := kargoapi.ReverifyAnnotationValue(stage.GetAnnotations()); req.ForID(info.ID) {
+						logger.Debug("rerunning verification")
+						status.Phase = kargoapi.StagePhaseVerifying
+						status.CurrentFreight.VerificationInfo = nil
+					}
 				}
 			}
 
+			// Initiate or follow-up on verification if required.
 			if status.Phase == kargoapi.StagePhaseVerifying {
 				if !status.CurrentFreight.VerificationInfo.HasAnalysisRun() {
 					if status.Health == nil || status.Health.Status == kargoapi.HealthStateHealthy {
@@ -818,6 +824,11 @@ func (r *reconciler) syncNormalStage(
 					status.CurrentFreight.VerificationHistory.UpdateOrPush(*status.CurrentFreight.VerificationInfo)
 				}
 			}
+		} else {
+			// If verification is not applicable, mark the Stage as steady.
+			// This ensures that if the Stage had verification enabled previously,
+			// it will not be stuck in a verification phase.
+			status.Phase = kargoapi.StagePhaseSteady
 		}
 
 		// If health is not applicable or healthy

@@ -1037,6 +1037,7 @@ func TestSyncNormalStage(t *testing.T) {
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
 				},
 				Status: kargoapi.StageStatus{
+					Phase:          kargoapi.StagePhaseSteady,
 					CurrentFreight: &kargoapi.FreightReference{},
 				},
 			},
@@ -1104,6 +1105,7 @@ func TestSyncNormalStage(t *testing.T) {
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
 				},
 				Status: kargoapi.StageStatus{
+					Phase:          kargoapi.StagePhaseSteady,
 					CurrentFreight: &kargoapi.FreightReference{},
 				},
 			},
@@ -1170,6 +1172,7 @@ func TestSyncNormalStage(t *testing.T) {
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
 				},
 				Status: kargoapi.StageStatus{
+					Phase:          kargoapi.StagePhaseSteady,
 					CurrentFreight: &kargoapi.FreightReference{},
 				},
 			},
@@ -1244,6 +1247,7 @@ func TestSyncNormalStage(t *testing.T) {
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
 				},
 				Status: kargoapi.StageStatus{
+					Phase:          kargoapi.StagePhaseSteady,
 					CurrentFreight: &kargoapi.FreightReference{},
 				},
 			},
@@ -1307,6 +1311,7 @@ func TestSyncNormalStage(t *testing.T) {
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
 				},
 				Status: kargoapi.StageStatus{
+					Phase: kargoapi.StagePhaseSteady,
 					CurrentFreight: &kargoapi.FreightReference{
 						Name: "fake-freight-id",
 					},
@@ -1373,6 +1378,7 @@ func TestSyncNormalStage(t *testing.T) {
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
 				},
 				Status: kargoapi.StageStatus{
+					Phase:          kargoapi.StagePhaseSteady,
 					CurrentFreight: &kargoapi.FreightReference{},
 				},
 			},
@@ -1451,6 +1457,7 @@ func TestSyncNormalStage(t *testing.T) {
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
 				},
 				Status: kargoapi.StageStatus{
+					Phase:          kargoapi.StagePhaseSteady,
 					CurrentFreight: &kargoapi.FreightReference{},
 				},
 			},
@@ -1687,7 +1694,7 @@ func TestSyncNormalStage(t *testing.T) {
 					Verification:        &kargoapi.Verification{},
 				},
 				Status: kargoapi.StageStatus{
-					Phase: kargoapi.StagePhaseSteady,
+					Phase: kargoapi.StagePhaseVerifying,
 					CurrentFreight: &kargoapi.FreightReference{
 						VerificationInfo: &kargoapi.VerificationInfo{
 							Phase: kargoapi.VerificationPhasePending,
