@@ -8,6 +8,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Tooltip } from 'antd';
+import classNames from 'classnames';
 
 import { urlForImage } from '@ui/utils/url';
 
@@ -18,6 +19,7 @@ import * as styles from './repo-node.module.less';
 type Props = {
   nodeData: NodesRepoType;
   children?: React.ReactNode;
+  onClick?: () => void;
 };
 
 const ico = {
@@ -27,7 +29,7 @@ const ico = {
   [NodeType.REPO_CHART]: faAnchor
 };
 
-export const RepoNode = ({ nodeData, children }: Props) => {
+export const RepoNode = ({ nodeData, children, onClick }: Props) => {
   const type = nodeData.type;
   const value =
     type === NodeType.REPO_CHART
@@ -36,7 +38,16 @@ export const RepoNode = ({ nodeData, children }: Props) => {
         ? nodeData?.data?.metadata?.name || ''
         : nodeData?.data?.repoURL || '';
   return (
-    <div className={styles.node}>
+    <div
+      className={classNames([
+        styles.node,
+        {
+          'cursor-pointer hover:text-white transition-all border-sky-300 hover:bg-gray-300':
+            !!onClick
+        }
+      ])}
+      onClick={() => onClick?.()}
+    >
       <h3 className='flex justify-between gap-2'>
         <div className='text-ellipsis whitespace-nowrap overflow-x-hidden py-1'>
           {nodeData.type === NodeType.WAREHOUSE ? nodeData.data?.metadata?.name : 'Subscription'}

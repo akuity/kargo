@@ -6,6 +6,7 @@ export const paths = {
   projectAnalysisTemplates: '/project/:name/analysis-templates',
   projectEvents: '/project/:name/events',
   stage: '/project/:name/stage/:stageName',
+  warehouse: '/project/:name/warehouse/:warehouseName',
   freight: '/project/:name/freight/:freightName',
 
   login: '/login',

@@ -70,6 +70,7 @@ import {
   NodesRepoType
 } from './types';
 import { UpdateFreightAliasModal } from './update-freight-alias-modal';
+import { WarehouseDetails } from './warehouse/warehouse-details';
 
 const lineThickness = 2;
 const nodeWidth = 150;
@@ -81,7 +82,7 @@ const warehouseNodeHeight = 110;
 const getSeconds = (ts?: Time): number => Number(ts?.seconds) || 0;
 
 export const Pipelines = () => {
-  const { name, stageName, freightName } = useParams();
+  const { name, stageName, freightName, warehouseName } = useParams();
   const { data, isLoading } = useQuery(listStages, { project: name });
   const {
     data: freightData,
@@ -552,6 +553,9 @@ export const Pipelines = () => {
   const freight =
     freightName &&
     (freightData?.groups['']?.freight || []).find((item) => item.metadata?.name === freightName);
+  const warehouse =
+    warehouseName &&
+    (warehouseData?.warehouses || []).find((item) => item.metadata?.name === warehouseName);
 
   const isFaded = (stage: Stage): boolean => {
     if (!promotingStage || !confirmingPromotion) {
@@ -864,16 +868,30 @@ export const Pipelines = () => {
                         />
                       </>
                     ) : (
-                      <RepoNode nodeData={node}>
+                      <RepoNode
+                        nodeData={node}
+                        onClick={
+                          node.type === NodeType.WAREHOUSE
+                            ? () =>
+                                navigate(
+                                  generatePath(paths.warehouse, {
+                                    name,
+                                    warehouseName: node.warehouseName
+                                  })
+                                )
+                            : undefined
+                        }
+                      >
                         {node.type === NodeType.WAREHOUSE && (
                           <div className='flex w-full h-full'>
                             <Button
-                              onClick={() =>
+                              onClick={(e) => {
+                                e.stopPropagation();
                                 refreshWarehouseAction({
                                   name: node.warehouseName,
                                   project: name
-                                })
-                              }
+                                });
+                              }}
                               icon={<FontAwesomeIcon icon={faRefresh} />}
                               size='small'
                               className='m-auto'
@@ -931,6 +949,7 @@ export const Pipelines = () => {
         </div>
         {stage && <StageDetails stage={stage} />}
         {freight && <FreightDetails freight={freight} />}
+        {warehouse && <WarehouseDetails warehouse={warehouse} />}
       </ColorContext.Provider>
     </div>
   );
