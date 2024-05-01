@@ -190,7 +190,7 @@ func TestSelectCommitID(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, _, _ string, err error) {
-				require.ErrorContains(t, err, "error determining commit ID")
+				require.ErrorContains(t, err, "error determining commit ID at head of branch")
 				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
@@ -368,7 +368,7 @@ func TestSelectCommitID(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, _, _ string, err error) {
-				require.ErrorContains(t, err, "error determining commit ID")
+				require.ErrorContains(t, err, "error determining commit ID of tag")
 				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
@@ -414,33 +414,6 @@ func TestSelectCommitID(t *testing.T) {
 				require.Equal(t, "abc", tag)
 				require.NoError(t, err)
 				require.Equal(t, "fake-commit", commit)
-			},
-		},
-		{
-			name: "newest tag error due to path filters configuration",
-			sub: kargoapi.GitSubscription{
-				CommitSelectionStrategy: kargoapi.CommitSelectionStrategyNewestTag,
-				IncludePaths:            []string{regexpPrefix + "^.*third_path_to_a/file$"},
-			},
-			reconciler: &reconciler{
-				listTagsFn: func(git.Repo) ([]string, error) {
-					return []string{"abc", "xyz"}, nil
-				},
-				checkoutTagFn: func(git.Repo, string) error {
-					return nil
-				},
-				getLastCommitIDFn: func(git.Repo) (string, error) {
-					return "fake-commit", nil
-				},
-				getDiffPathsSinceCommitIDFn: func(git.Repo, string) ([]string, error) {
-					return []string{"first_path_to_a/file", "second_path_to_a/file"}, nil
-				},
-			},
-			assertions: func(t *testing.T, tag, commit string, err error) {
-				require.Equal(t, "", tag)
-				require.ErrorContains(t, err, "commit not applicable due to path filters error: commit \"fake-commit\"")
-				require.ErrorContains(t, err, " not applicable due to includePaths/excludePaths configuration for repo")
-				require.Equal(t, "", commit)
 			},
 		},
 		{

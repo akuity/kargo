@@ -169,23 +169,88 @@ func (r *reconciler) selectTagAndCommitID(
 	baseCommit string,
 ) (string, string, error) {
 
-	continueWithoutTag := false
-	var filteredTags []string
-	var err error
-	// get filtered list of repo tags only if strategy differs from NewestFromBranch
-	if sub.CommitSelectionStrategy != kargoapi.CommitSelectionStrategyNewestFromBranch {
-		filteredTags, err = r.getFilteredTags(repo, sub)
+	if sub.CommitSelectionStrategy == kargoapi.CommitSelectionStrategyNewestFromBranch {
+		// In this case, there is nothing to do except return the commit ID at the
+		// head of the branch unless there are includePaths/excludePaths configured to
+		// handle.
+		commit, err := r.getLastCommitIDFn(repo)
 		if err != nil {
-			return "", "", fmt.Errorf("error getting applicable tags: %w", err)
+			return "", "",
+				fmt.Errorf("error determining commit ID at head of branch %q in git repo %q: %w",
+					sub.Branch,
+					sub.RepoURL,
+					err,
+				)
 		}
+		// In case includePaths/excludePaths filters are configured in a git subscription
+		// below if clause deals with it. There is a special case - Warehouse has not
+		// produced any Freight yet, this is sorted by creating Freight based on last
+		// commit without applying filters.
+		if (sub.IncludePaths != nil || sub.ExcludePaths != nil) && baseCommit != "" {
+
+			// this shortcircuits to just return the last commit in case it is same as
+			// baseCommit so we do not spam logs with errors of a valid not getting diffs
+			// between baseCommit and HEAD (pointing to baseCommit in this case)
+			if baseCommit == commit {
+				return "", commit, nil
+			}
+
+			// getting actual diffPaths since baseCommit
+			diffs, err := r.getDiffPathsSinceCommitIDFn(repo, baseCommit)
+			if err != nil {
+				return "", "",
+					fmt.Errorf("error getting diffs since commit %q in git repo %q: %w",
+						baseCommit,
+						sub.RepoURL,
+						err,
+					)
+			}
+
+			matchesPathsFilters, err := matchesPathsFilters(sub.IncludePaths, sub.ExcludePaths, diffs)
+			if err != nil {
+				return "", "",
+					fmt.Errorf("error checking includePaths/excludePaths match for commit %q for git repo %q: %w",
+						commit,
+						sub.RepoURL,
+						err,
+					)
+			}
+
+			if !matchesPathsFilters {
+				return "", "",
+					fmt.Errorf("commit %q not applicable due to includePaths/excludePaths configuration for repo %q",
+						commit,
+						sub.RepoURL,
+					)
+			}
+		}
+
+		return "", commit, nil
+
+	}
+
+	tags, err := r.listTagsFn(repo) // These are ordered newest to oldest
+	if err != nil {
+		return "", "", fmt.Errorf("error listing tags from git repo %q: %w", sub.RepoURL, err)
+	}
+
+	// Narrow down the list of tags to those that are allowed and not ignored
+	allowRegex, err := regexp.Compile(sub.AllowTags)
+	if err != nil {
+		return "", "", fmt.Errorf("error compiling regular expression %q: %w", sub.AllowTags, err)
+	}
+	filteredTags := make([]string, 0, len(tags))
+	for _, tagName := range tags {
+		if allows(tagName, allowRegex) && !ignores(tagName, sub.IgnoreTags) {
+			filteredTags = append(filteredTags, tagName)
+		}
+	}
+	if len(filteredTags) == 0 {
+		return "", "", fmt.Errorf("found no applicable tags in repo %q", sub.RepoURL)
 	}
 
 	var selectedTag string
 	switch sub.CommitSelectionStrategy {
-	case kargoapi.CommitSelectionStrategyNewestFromBranch:
-		// set flag for further processing to continue with empty selectedTag, that
-		// is a special case with NewestFromBranch strategy
-		continueWithoutTag = true
 	case kargoapi.CommitSelectionStrategyLexical:
 		selectedTag = selectLexicallyLastTag(filteredTags)
 	case kargoapi.CommitSelectionStrategyNewestTag:
@@ -198,117 +263,30 @@ func (r *reconciler) selectTagAndCommitID(
 	default:
 		return "", "", fmt.Errorf("unknown commit selection strategy %q", sub.CommitSelectionStrategy)
 	}
-
-	if selectedTag != "" {
-		// Checkout the tag only if we actually have selected a valid one
-		if err = r.checkoutTagFn(repo, selectedTag); err != nil {
-			return "", "", fmt.Errorf(
-				"error checking out tag %q from git repo %q: %w",
-				selectedTag,
-				sub.RepoURL,
-				err,
-			)
-		}
-	} else if !continueWithoutTag {
-		// we only get here when one of tag handling strategies is used and
-		// selection process did not find a valid tag
+	if selectedTag == "" {
 		return "", "", fmt.Errorf("found no applicable tags in repo %q", sub.RepoURL)
 	}
 
-	// this now is common commit determining functionality for
-	// both cases - one of tag handling strategies and NewestFromBranch strategy
+	// Checkout the selected tag and return the commit ID
+	if err = r.checkoutTagFn(repo, selectedTag); err != nil {
+		return "", "", fmt.Errorf(
+			"error checking out tag %q from git repo %q: %w",
+			selectedTag,
+			sub.RepoURL,
+			err,
+		)
+	}
 	commit, err := r.getLastCommitIDFn(repo)
 	if err != nil {
 		return "", "", fmt.Errorf(
-			"error determining commit ID in git repo %q: %w",
+			"error determining commit ID of tag %q in git repo %q: %w",
+			selectedTag,
 			sub.RepoURL,
 			err,
 		)
 
 	}
-
-	if err := r.verifyPathFiltersDoSelectCommitOtherwiseReturnError(repo, sub, commit, baseCommit); err != nil {
-		return "", "", fmt.Errorf("commit not applicable due to path filters error: %w", err)
-	}
-
 	return selectedTag, commit, nil
-
-}
-
-// getFilteredTags gets and narrows down the list of repository tags according
-// to the tag filtering configuration in Git subscription
-func (r *reconciler) getFilteredTags(repo git.Repo, sub kargoapi.GitSubscription) ([]string, error) {
-	tags, err := r.listTagsFn(repo) // These are ordered newest to oldest
-	if err != nil {
-		return nil, fmt.Errorf("error listing tags from git repo %q: %w", sub.RepoURL, err)
-	}
-
-	// Narrow down the list of tags to those that are allowed and not ignored
-	allowRegex, err := regexp.Compile(sub.AllowTags)
-	if err != nil {
-		return nil, fmt.Errorf("error compiling regular expression %q: %w", sub.AllowTags, err)
-	}
-	filteredTags := make([]string, 0, len(tags))
-	for _, tagName := range tags {
-		if allows(tagName, allowRegex) && !ignores(tagName, sub.IgnoreTags) {
-			filteredTags = append(filteredTags, tagName)
-		}
-	}
-	if len(filteredTags) == 0 {
-		return nil, fmt.Errorf("found no applicable tags in repo %q", sub.RepoURL)
-	}
-	return filteredTags, nil
-}
-
-// verifyPathFiltersDoSelectCommitOtherwiseReturnError applies path filters
-// configuration matching if applicable and returns nil if it succeeded to
-// select the commit, otherwise it returns the downstream error
-func (r *reconciler) verifyPathFiltersDoSelectCommitOtherwiseReturnError(
-	repo git.Repo,
-	sub kargoapi.GitSubscription,
-	commit string,
-	baseCommit string,
-) error {
-	// In case includePaths/excludePaths filters are configured in a git subscription
-	// below if clause deals with it. There is a special case - Warehouse has not
-	// produced any Freight yet, this is sorted by creating Freight based on last
-	// commit without applying filters.
-	if (sub.IncludePaths != nil || sub.ExcludePaths != nil) && baseCommit != "" {
-
-		// this shortcircuits to just return the last commit in case it is same as
-		// baseCommit so we do not spam logs with errors of a valid not getting diffs
-		// between baseCommit and HEAD (pointing to baseCommit in this case)
-		if baseCommit == commit {
-			return nil
-		}
-
-		// getting actual diffPaths since baseCommit
-		diffs, err := r.getDiffPathsSinceCommitIDFn(repo, baseCommit)
-		if err != nil {
-			return fmt.Errorf("error getting diffs since commit %q in git repo %q: %w",
-				baseCommit,
-				sub.RepoURL,
-				err,
-			)
-		}
-
-		matchesPathsFilters, err := matchesPathsFilters(sub.IncludePaths, sub.ExcludePaths, diffs)
-		if err != nil {
-			return fmt.Errorf("error checking includePaths/excludePaths match for commit %q for git repo %q: %w",
-				commit,
-				sub.RepoURL,
-				err,
-			)
-		}
-
-		if !matchesPathsFilters {
-			return fmt.Errorf("commit %q not applicable due to includePaths/excludePaths configuration for repo %q",
-				commit,
-				sub.RepoURL,
-			)
-		}
-	}
-	return nil
 }
 
 // allows returns true if the given tag name matches the given regular
