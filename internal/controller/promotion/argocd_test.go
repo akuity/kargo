@@ -9,6 +9,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -873,6 +874,7 @@ func TestArgoCDDoSingleUpdate(t *testing.T) {
 				) error {
 					return nil
 				},
+				logAppEventFn: func(context.Context, *argocd.Application, string, string, string) {},
 			},
 			stageMeta: metav1.ObjectMeta{
 				Name:      "fake-name",
@@ -894,6 +896,93 @@ func TestArgoCDDoSingleUpdate(t *testing.T) {
 					kargoapi.FreightReference{},
 				),
 			)
+		})
+	}
+}
+
+func TestLogAppEvent(t *testing.T) {
+	testCases := []struct {
+		name         string
+		app          *argocd.Application
+		user         string
+		eventReason  string
+		eventMessage string
+		assertions   func(*testing.T, client.Client, *argocd.Application)
+	}{
+		{
+			name: "success",
+			app: &argocd.Application{
+				TypeMeta: metav1.TypeMeta{
+					Kind: "Application",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:            "fake-name",
+					Namespace:       "fake-namespace",
+					UID:             "fake-uid",
+					ResourceVersion: "fake-resource-version",
+				},
+			},
+			user:         "fake-user",
+			eventReason:  "fake-reason",
+			eventMessage: "fake-message",
+			assertions: func(t *testing.T, c client.Client, app *argocd.Application) {
+				events := &corev1.EventList{}
+				require.NoError(t, c.List(context.TODO(), events))
+				require.Len(t, events.Items, 1)
+
+				event := events.Items[0]
+				require.Equal(t, corev1.ObjectReference{
+					APIVersion:      argocd.GroupVersion.String(),
+					Kind:            app.TypeMeta.Kind,
+					Name:            app.ObjectMeta.Name,
+					Namespace:       app.ObjectMeta.Namespace,
+					UID:             app.ObjectMeta.UID,
+					ResourceVersion: app.ObjectMeta.ResourceVersion,
+				}, event.InvolvedObject)
+				require.NotNil(t, event.FirstTimestamp)
+				require.NotNil(t, event.LastTimestamp)
+				require.Equal(t, 1, int(event.Count))
+				require.Equal(t, corev1.EventTypeNormal, event.Type)
+				require.Equal(t, "fake-reason", event.Reason)
+				require.Equal(t, "fake-user fake-message", event.Message)
+			},
+		},
+		{
+			name: "unknown user",
+			app: &argocd.Application{
+				TypeMeta: metav1.TypeMeta{
+					Kind: "Application",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:            "fake-name",
+					Namespace:       "fake-namespace",
+					UID:             "fake-uid",
+					ResourceVersion: "fake-resource-version",
+				},
+			},
+			eventReason:  "fake-reason",
+			eventMessage: "fake-message",
+			assertions: func(t *testing.T, c client.Client, _ *argocd.Application) {
+				events := &corev1.EventList{}
+				require.NoError(t, c.List(context.TODO(), events))
+				require.Len(t, events.Items, 1)
+
+				event := events.Items[0]
+				require.Equal(t, "Unknown user fake-message", event.Message)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			c := fake.NewClientBuilder().Build()
+			(&argoCDMechanism{argocdClient: c}).logAppEvent(
+				context.Background(),
+				testCase.app,
+				testCase.user,
+				testCase.eventReason,
+				testCase.eventMessage,
+			)
+			testCase.assertions(t, c, testCase.app)
 		})
 	}
 }

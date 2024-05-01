@@ -7,8 +7,10 @@ import (
 	"path"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/gobwas/glob"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -57,6 +59,7 @@ type argoCDMechanism struct {
 		patch client.Patch,
 		opts ...client.PatchOption,
 	) error
+	logAppEventFn func(ctx context.Context, app *argocd.Application, user, reason, message string)
 }
 
 // newArgoCDMechanism returns an implementation of the Mechanism interface that
@@ -71,6 +74,7 @@ func newArgoCDMechanism(argocdClient client.Client) Mechanism {
 	a.applyArgoCDSourceUpdateFn = applyArgoCDSourceUpdate
 	if argocdClient != nil {
 		a.argoCDAppPatchFn = argocdClient.Patch
+		a.logAppEventFn = a.logAppEvent
 	}
 	return a
 }
@@ -304,8 +308,7 @@ func (a *argoCDMechanism) doSingleUpdate(
 			app.Spec.Sources[i] = source
 		}
 	}
-	app.ObjectMeta.Annotations[argocd.AnnotationKeyRefresh] =
-		string(argocd.RefreshTypeHard)
+	app.ObjectMeta.Annotations[argocd.AnnotationKeyRefresh] = string(argocd.RefreshTypeHard)
 	app.Operation = &argocd.Operation{
 		InitiatedBy: argocd.OperationInitiator{
 			Username:  applicationOperationInitiator,
@@ -333,8 +336,7 @@ func (a *argoCDMechanism) doSingleUpdate(
 		app.Operation.Sync.Revisions = []string{app.Spec.Source.TargetRevision}
 	}
 	for _, source := range app.Spec.Sources {
-		app.Operation.Sync.Revisions =
-			append(app.Operation.Sync.Revisions, source.TargetRevision)
+		app.Operation.Sync.Revisions = append(app.Operation.Sync.Revisions, source.TargetRevision)
 	}
 	if err = a.argoCDAppPatchFn(
 		ctx,
@@ -343,9 +345,69 @@ func (a *argoCDMechanism) doSingleUpdate(
 	); err != nil {
 		return fmt.Errorf("error patching Argo CD Application %q: %w", app.Name, err)
 	}
-	logging.LoggerFromContext(ctx).WithField("app", app.Name).
-		Debug("patched Argo CD Application")
+	logging.LoggerFromContext(ctx).WithField("app", app.Name).Debug("patched Argo CD Application")
+
+	// NB: This attempts to mimic the behavior of the Argo CD API server,
+	// which logs an event when a sync is initiated. However, we do not
+	// have access to the same enriched event data the Argo CD API server
+	// has, so we are limited to logging an event with the best
+	// information we have at hand.
+	// xref: https://github.com/argoproj/argo-cd/blob/44894e9e438bca5adccf58d2f904adc63365805c/server/application/application.go#L1887-L1895
+	// nolint:lll
+	//
+	// TODO(hidde): It is not clear what we should do if we have a list of
+	// sources.
+	message := "initiated sync"
+	if app.Spec.Source != nil {
+		message += " to " + app.Spec.Source.TargetRevision
+	}
+	a.logAppEventFn(ctx, app, "kargo-controller", argocd.EventReasonOperationStarted, message)
+
 	return nil
+}
+
+func (a *argoCDMechanism) logAppEvent(ctx context.Context, app *argocd.Application, user, reason, message string) {
+	logger := logging.LoggerFromContext(ctx).WithField("app", app.Name)
+
+	// xref: https://github.com/argoproj/argo-cd/blob/44894e9e438bca5adccf58d2f904adc63365805c/server/application/application.go#L2145-L2147
+	// nolint:lll
+	if user == "" {
+		user = "Unknown user"
+	}
+
+	t := metav1.Time{Time: time.Now()}
+	event := corev1.Event{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: fmt.Sprintf("%v.%x", app.Name, t.UnixNano()),
+			// xref: https://github.com/argoproj/argo-cd/blob/44894e9e438bca5adccf58d2f904adc63365805c/util/argo/audit_logger.go#L118-L124
+			// nolint:lll
+			Annotations: map[string]string{
+				"user": user,
+			},
+		},
+		Source: corev1.EventSource{
+			Component: user,
+		},
+		InvolvedObject: corev1.ObjectReference{
+			APIVersion:      argocd.GroupVersion.String(),
+			Kind:            app.TypeMeta.Kind,
+			Namespace:       app.ObjectMeta.Namespace,
+			Name:            app.ObjectMeta.Name,
+			UID:             app.ObjectMeta.UID,
+			ResourceVersion: app.ObjectMeta.ResourceVersion,
+		},
+		FirstTimestamp: t,
+		LastTimestamp:  t,
+		Count:          1,
+		// xref: https://github.com/argoproj/argo-cd/blob/44894e9e438bca5adccf58d2f904adc63365805c/server/application/application.go#L2148
+		// nolint:lll
+		Message: user + " " + message,
+		Type:    corev1.EventTypeNormal,
+		Reason:  reason,
+	}
+	if err := a.argocdClient.Create(context.Background(), &event); err != nil {
+		logger.Errorf("unable to create %q event for Argo CD Application: %v", reason, err)
+	}
 }
 
 func getApplicationFn(
