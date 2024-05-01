@@ -6,9 +6,10 @@ import (
 	"fmt"
 
 	"connectrpc.com/connect"
-	rbacv1 "k8s.io/api/rbac/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	sigyaml "sigs.k8s.io/yaml"
 
+	rbacapi "github.com/akuity/kargo/api/rbac/v1alpha1"
 	"github.com/akuity/kargo/internal/api/rbac"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
@@ -44,16 +45,14 @@ func (s *server) GetRole(
 	}
 
 	if req.Msg.AsResources {
-		resources := &svcv1alpha1.RoleResources{
-			ServiceAccount: sa,
-			Roles:          make([]*rbacv1.Role, len(roles)),
-			RoleBindings:   make([]*rbacv1.RoleBinding, len(rbs)),
-		}
-		for i, role := range roles {
-			resources.Roles[i] = role.DeepCopy()
-		}
-		for i, rb := range rbs {
-			resources.RoleBindings[i] = rb.DeepCopy()
+		resources := &rbacapi.RoleResources{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: project,
+				Name:      name,
+			},
+			ServiceAccount: *sa,
+			Roles:          roles,
+			RoleBindings:   rbs,
 		}
 		return connect.NewResponse(&svcv1alpha1.GetRoleResponse{
 			Result: &svcv1alpha1.GetRoleResponse_Resources{

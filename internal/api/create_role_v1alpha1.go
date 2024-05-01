@@ -13,7 +13,7 @@ func (s *server) CreateRole(
 	ctx context.Context,
 	req *connect.Request[svcv1alpha1.CreateRoleRequest],
 ) (*connect.Response[svcv1alpha1.CreateRoleResponse], error) {
-	project := req.Msg.Role.Project
+	project := req.Msg.Role.Namespace
 	if err := validateFieldNotEmpty("project", project); err != nil {
 		return nil, err
 	}
@@ -29,7 +29,7 @@ func (s *server) CreateRole(
 	role, err := s.rolesDB.Create(ctx, req.Msg.Role)
 	if err != nil {
 		return nil, fmt.Errorf(
-			"error creating Kargo Role %q in project %q: %w", req.Msg.Role.Name, req.Msg.Role.Project, err,
+			"error creating Kargo Role %q in project %q: %w", req.Msg.Role.Name, req.Msg.Role.Namespace, err,
 		)
 	}
 

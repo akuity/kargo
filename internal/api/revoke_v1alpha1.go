@@ -7,6 +7,7 @@ import (
 
 	"connectrpc.com/connect"
 
+	rbacapi "github.com/akuity/kargo/api/rbac/v1alpha1"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
@@ -23,7 +24,7 @@ func (s *server) Revoke(
 		return nil, err
 	}
 
-	var role *svcv1alpha1.Role
+	var role *rbacapi.Role
 	var err error
 	if users := req.Msg.GetUserClaims(); users != nil {
 		if role, err = s.rolesDB.RevokeRoleFromUsers(
