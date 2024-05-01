@@ -3,7 +3,9 @@ package stages
 import (
 	"context"
 	"fmt"
+	"slices"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
@@ -66,15 +68,21 @@ type reconciler struct {
 
 	// The following behaviors are overridable for testing purposes:
 
-	// Loop guard:
+	// Promotion-related:
 
 	nowFn func() time.Time
 
-	hasNonTerminalPromotionsFn func(
-		ctx context.Context,
-		stageNamespace string,
-		stageName string,
-	) (bool, error)
+	syncPromotionsFn func(
+		context.Context,
+		*kargoapi.Stage,
+		kargoapi.StageStatus,
+	) (kargoapi.StageStatus, error)
+
+	getPromotionsForStageFn func(
+		context.Context,
+		string,
+		string,
+	) ([]kargoapi.Promotion, error)
 
 	listPromosFn func(
 		context.Context,
@@ -236,8 +244,8 @@ func SetupReconcilerWithManager(
 	argocdMgr manager.Manager,
 	cfg ReconcilerConfig,
 ) error {
-	// Index Promotions in non-terminal states by Stage
-	if err := kubeclient.IndexNonTerminalPromotionsByStage(ctx, kargoMgr); err != nil {
+	// Index Promotions by Stage
+	if err := kubeclient.IndexPromotionsByStage(ctx, kargoMgr); err != nil {
 		return fmt.Errorf("index non-terminal Promotions by Stage: %w", err)
 	}
 
@@ -451,10 +459,11 @@ func newReconciler(
 		shardRequirement: shardRequirement,
 	}
 	// The following default behaviors are overridable for testing purposes:
-	// Loop guard:
+	// Promotion-related:
 	r.nowFn = time.Now
-	r.hasNonTerminalPromotionsFn = r.hasNonTerminalPromotions
+	r.syncPromotionsFn = r.syncPromotions
 	r.listPromosFn = r.kargoClient.List
+	r.getPromotionsForStageFn = r.getPromotionsForStage
 	// Freight verification:
 	r.startVerificationFn = r.startVerification
 	r.abortVerificationFn = r.abortVerification
@@ -688,27 +697,21 @@ func (r *reconciler) syncNormalStage(
 
 	logger := logging.LoggerFromContext(ctx)
 
-	// Skip the entire reconciliation loop if there are Promotions associate with
-	// this Stage in a non-terminal state. The promotion process and this
-	// reconciliation loop BOTH update Stage status, so this check helps us
-	// to avoid race conditions that may otherwise arise.
-	if hasNonTerminalPromos, err := r.hasNonTerminalPromotionsFn(
-		ctx,
-		stage.Namespace,
-		stage.Name,
-	); err != nil {
+	// Sync Promotions and update the Stage status.
+	var syncErr error
+	if status, syncErr = r.syncPromotionsFn(ctx, stage, status); syncErr != nil {
+		return status, syncErr
+	}
+	if err := kubeclient.PatchStatus(ctx, r.kargoClient, stage, func(s *kargoapi.StageStatus) {
+		*s = status
+	}); err != nil {
 		return status, err
-	} else if hasNonTerminalPromos {
-		logger.Debug(
-			"Stage has one or more Promotions in a non-terminal phase; skipping " +
-				"this reconciliation loop",
-		)
-		return status, nil
 	}
 
+	// Take note of the current Generation of the Stage as being observed,
+	// and reset the health status.
 	status.ObservedGeneration = stage.Generation
-	status.Health = nil // Reset health
-	status.CurrentPromotion = nil
+	status.Health = nil
 
 	if status.CurrentFreight == nil {
 		status.Phase = kargoapi.StagePhaseNotApplicable
@@ -1021,6 +1024,106 @@ func (r *reconciler) syncNormalStage(
 	return status, nil
 }
 
+// syncPromotions determines the current state of the Stage and its Freight by
+// examining the Promotions that have been created for the Stage. It returns the
+// updated Stage status.
+//
+// The Stage is considered to be promoting if the latest Promotion is in a
+// running phase. In this case, the Stage is marked as promoting, and the
+// current Promotion is recorded in the Stage status. If the latest Promotion
+// is not in a running phase, the Stage is considered to be steady.
+//
+// New Promotions that have terminated since the last reconciliation are
+// discovered by comparing a list of terminated Promotions to the last known
+// Promotion. Any newer Promotions found are recorded in the Stage status, and
+// the Freight that was successfully promoted is recorded in the Freight
+// history.
+func (r *reconciler) syncPromotions(
+	ctx context.Context,
+	stage *kargoapi.Stage,
+	status kargoapi.StageStatus,
+) (kargoapi.StageStatus, error) {
+	logger := logging.LoggerFromContext(ctx)
+
+	promotions, err := r.getPromotionsForStageFn(ctx, stage.Namespace, stage.Name)
+	if err != nil || len(promotions) == 0 {
+		return status, err
+	}
+
+	// Sort the Promotions by phase and creation time so that we can determine the
+	// current state of the Stage.
+	slices.SortFunc(promotions, comparePromotionByPhaseAndCreationTime)
+
+	// If the latest Promotion is in a running phase, the Stage is promoting.
+	if latestPromo := promotions[0]; latestPromo.Status.Phase == kargoapi.PromotionPhaseRunning {
+		logger.WithValues("promotion", latestPromo.Name).Debug("Stage has a running Promotion")
+		status.Phase = kargoapi.StagePhasePromoting
+		status.CurrentPromotion = &kargoapi.PromotionInfo{
+			Name:              latestPromo.Name,
+			CreationTimestamp: latestPromo.CreationTimestamp,
+		}
+		if latestPromo.Status.Freight != nil {
+			status.CurrentPromotion.Freight = *latestPromo.Status.Freight
+		}
+	} else {
+		status.CurrentPromotion = nil
+	}
+
+	// Determine if there are any new Promotions that have been completed since
+	// the last reconciliation.
+	logger.Debug("checking for new terminated Promotions")
+	var newPromotions []kargoapi.PromotionInfo
+	for _, promo := range promotions {
+		if status.LastPromotion != nil {
+			// We can break here since we know that all subsequent Promotions
+			// will be older than the last Promotion we saw.
+			if status.LastPromotion.Name == promo.Name ||
+				promo.CreationTimestamp.Before(&status.LastPromotion.CreationTimestamp) {
+				break
+			}
+		}
+
+		if promo.Status.Phase == kargoapi.PromotionPhasePending || promo.Status.Phase == "" {
+			// We can break here since we know that all subsequent Promotions
+			// will be in a pending phase.
+			break
+		}
+
+		if promo.Status.Phase.IsTerminal() {
+			logger.WithValues("promotion", promo.Name).Debug("found new terminated Promotion")
+			info := kargoapi.PromotionInfo{
+				Name:              promo.Name,
+				CreationTimestamp: promo.CreationTimestamp,
+				Status:            promo.Status.DeepCopy(),
+			}
+			if promo.Status.Freight != nil {
+				info.Freight = *promo.Status.Freight
+			}
+			newPromotions = append(newPromotions, info)
+		}
+	}
+
+	// As we will be appending to the Freight history, we need to ensure that
+	// we order the Promotions from oldest to newest. This is because the
+	// Freight history is garbage collected based on the number of entries,
+	// and we want to ensure that the oldest entries are removed first.
+	slices.SortFunc(newPromotions, func(a, b kargoapi.PromotionInfo) int {
+		return a.CreationTimestamp.Compare(b.CreationTimestamp.Time)
+	})
+
+	// Update the Stage status with the information about the newly terminated
+	// Promotions, and any new Freight that was successfully promoted.
+	for _, p := range newPromotions {
+		promo := p
+		status.LastPromotion = &promo
+		if promo.Status.Phase == kargoapi.PromotionPhaseSucceeded {
+			status.CurrentFreight = &status.LastPromotion.Freight
+			status.History.UpdateOrPush(status.LastPromotion.Freight)
+		}
+	}
+	return status, nil
+}
+
 func (r *reconciler) syncStageDelete(
 	ctx context.Context,
 	stage *kargoapi.Stage,
@@ -1166,32 +1269,6 @@ func (r *reconciler) clearAnalysisRuns(
 	return nil
 }
 
-func (r *reconciler) hasNonTerminalPromotions(
-	ctx context.Context,
-	stageNamespace string,
-	stageName string,
-) (bool, error) {
-	promos := kargoapi.PromotionList{}
-	if err := r.listPromosFn(
-		ctx,
-		&promos,
-		&client.ListOptions{
-			Namespace: stageNamespace,
-			FieldSelector: fields.Set(map[string]string{
-				kubeclient.NonTerminalPromotionsByStageIndexField: stageName,
-			}).AsSelector(),
-		},
-	); err != nil {
-		return false, fmt.Errorf(
-			"error listing Promotions in non-terminal phases for Stage %q in namespace %q: %w",
-			stageNamespace,
-			stageName,
-			err,
-		)
-	}
-	return len(promos.Items) > 0, nil
-}
-
 // verifyFreightInStage marks the given Freight as verified in the given Stage.
 // It returns true if succeeded to mark Freight as verified in the Stage,
 // or false if it was already marked as verified in the Stage.
@@ -1298,6 +1375,33 @@ func (r *reconciler) isAutoPromotionPermitted(
 		}
 	}
 	return false, nil
+}
+
+func (r *reconciler) getPromotionsForStage(
+	ctx context.Context,
+	stageNamespace string,
+	stageName string,
+) ([]kargoapi.Promotion, error) {
+	var promos kargoapi.PromotionList
+	if err := r.listPromosFn(
+		ctx,
+		&promos,
+		&client.ListOptions{
+			Namespace: stageNamespace,
+			FieldSelector: fields.OneTermEqualSelector(
+				kubeclient.PromotionsByStageIndexField,
+				stageName,
+			),
+		},
+	); err != nil {
+		return nil, fmt.Errorf(
+			"error listing Promotions for Stage %q in namespace %q: %w",
+			stageName,
+			stageNamespace,
+			err,
+		)
+	}
+	return promos.Items, nil
 }
 
 func (r *reconciler) getLatestAvailableFreight(
@@ -1570,4 +1674,59 @@ func (r *reconciler) recordFreightVerificationEvent(
 	}
 
 	r.recorder.AnnotatedEventf(fr, annotations, corev1.EventTypeNormal, reason, message)
+}
+
+// comparePromotionByPhaseAndCreationTime compares two Promotions by their
+// phase and creation timestamp. It returns a negative value if Promotion `a`
+// should come before Promotion `b`, a positive value if Promotion `a` should
+// come after Promotion `b`, or zero if they are considered equal for sorting
+// purposes.
+//
+// The order of Promotions is as follows:
+//  1. Running
+//  2. Terminated
+//  3. Creation timestamp, descending
+//  4. Name
+func comparePromotionByPhaseAndCreationTime(a, b kargoapi.Promotion) int {
+	// Compare the phases of the Promotions first.
+	if phaseCompare := comparePromotionPhase(a.Status.Phase, b.Status.Phase); phaseCompare != 0 {
+		return phaseCompare
+	}
+
+	// If both promotions have the same phase, sort by creation timestamp, descending.
+	if timeCompare := b.CreationTimestamp.Time.Compare(a.CreationTimestamp.Time); timeCompare != 0 {
+		return timeCompare
+	}
+
+	// If creation timestamps are also the same, sort by name.
+	return strings.Compare(a.Name, b.Name)
+}
+
+// comparePromotionPhase compares two Promotion phases. It returns a negative
+// value if phase `a` should come before phase `b`, a positive value if phase
+// `a` should come after phase `b`, or zero if they are considered equal for
+// sorting purposes.
+//
+// The order of Promotion phases is as follows:
+//  1. Running
+//  2. Terminated
+//  3. <all other phases>
+func comparePromotionPhase(a, b kargoapi.PromotionPhase) int {
+	aRunning, bRunning := a == kargoapi.PromotionPhaseRunning, b == kargoapi.PromotionPhaseRunning
+	aTerminal, bTerminal := a.IsTerminal(), b.IsTerminal()
+
+	// NB: The order of the cases here is important, as "Running" is a special
+	// case that should always come before any other phase.
+	switch {
+	case aRunning && !bRunning:
+		return -1
+	case !aRunning && bRunning:
+		return 1
+	case aTerminal && !bTerminal:
+		return -1
+	case !aTerminal && bTerminal:
+		return 1
+	default:
+		return 0
+	}
 }

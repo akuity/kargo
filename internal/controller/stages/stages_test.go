@@ -46,8 +46,9 @@ func TestNewReconciler(t *testing.T) {
 	// Assert that all overridable behaviors were initialized to a default:
 	// Loop guard:
 	require.NotNil(t, r.nowFn)
-	require.NotNil(t, r.hasNonTerminalPromotionsFn)
+	require.NotNil(t, r.getPromotionsForStageFn)
 	require.NotNil(t, r.listPromosFn)
+	require.NotNil(t, r.syncPromotionsFn)
 	// Freight verification:
 	require.NotNil(t, r.startVerificationFn)
 	require.NotNil(t, r.getVerificationInfoFn)
@@ -287,14 +288,6 @@ func TestSyncControlFlowStage(t *testing.T) {
 }
 
 func TestSyncNormalStage(t *testing.T) {
-	noNonTerminalPromotionsFn := func(
-		context.Context,
-		string,
-		string,
-	) (bool, error) {
-		return false, nil
-	}
-
 	testCases := []struct {
 		name       string
 		stage      *kargoapi.Stage
@@ -308,15 +301,15 @@ func TestSyncNormalStage(t *testing.T) {
 		)
 	}{
 		{
-			name:  "error checking for non-terminal promotions",
+			name:  "error syncing Promotions",
 			stage: &kargoapi.Stage{},
 			reconciler: &reconciler{
-				hasNonTerminalPromotionsFn: func(
-					context.Context,
-					string,
-					string,
-				) (bool, error) {
-					return false, errors.New("something went wrong")
+				syncPromotionsFn: func(
+					_ context.Context,
+					_ *kargoapi.Stage,
+					status kargoapi.StageStatus,
+				) (kargoapi.StageStatus, error) {
+					return status, errors.New("something went wrong")
 				},
 			},
 			assertions: func(
@@ -328,34 +321,6 @@ func TestSyncNormalStage(t *testing.T) {
 			) {
 				require.Error(t, err)
 				require.Equal(t, "something went wrong", err.Error())
-				// Status should be returned unchanged
-				require.Equal(t, initialStatus, newStatus)
-
-				// No events should be recorded
-				require.Empty(t, recorder.Events)
-			},
-		},
-
-		{
-			name:  "non-terminal promotions found",
-			stage: &kargoapi.Stage{},
-			reconciler: &reconciler{
-				hasNonTerminalPromotionsFn: func(
-					context.Context,
-					string,
-					string,
-				) (bool, error) {
-					return true, nil
-				},
-			},
-			assertions: func(
-				t *testing.T,
-				recorder *fakeevent.EventRecorder,
-				initialStatus kargoapi.StageStatus,
-				newStatus kargoapi.StageStatus,
-				err error,
-			) {
-				require.NoError(t, err)
 				// Status should be returned unchanged
 				require.Equal(t, initialStatus, newStatus)
 
@@ -390,8 +355,14 @@ func TestSyncNormalStage(t *testing.T) {
 				},
 			},
 			reconciler: &reconciler{
-				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
-				appHealth:                  &mockAppHealthEvaluator{},
+				syncPromotionsFn: func(
+					_ context.Context,
+					_ *kargoapi.Stage,
+					status kargoapi.StageStatus,
+				) (kargoapi.StageStatus, error) {
+					return status, nil
+				},
+				appHealth: &mockAppHealthEvaluator{},
 				startVerificationFn: func(
 					context.Context,
 					*kargoapi.Stage,
@@ -467,8 +438,14 @@ func TestSyncNormalStage(t *testing.T) {
 				},
 			},
 			reconciler: &reconciler{
-				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
-				appHealth:                  &mockAppHealthEvaluator{},
+				syncPromotionsFn: func(
+					_ context.Context,
+					_ *kargoapi.Stage,
+					status kargoapi.StageStatus,
+				) (kargoapi.StageStatus, error) {
+					return status, nil
+				},
+				appHealth: &mockAppHealthEvaluator{},
 				getFreightFn: func(
 					context.Context,
 					client.Client,
@@ -505,8 +482,14 @@ func TestSyncNormalStage(t *testing.T) {
 				},
 			},
 			reconciler: &reconciler{
-				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
-				appHealth:                  &mockAppHealthEvaluator{},
+				syncPromotionsFn: func(
+					_ context.Context,
+					_ *kargoapi.Stage,
+					status kargoapi.StageStatus,
+				) (kargoapi.StageStatus, error) {
+					return status, nil
+				},
+				appHealth: &mockAppHealthEvaluator{},
 				startVerificationFn: func(
 					_ context.Context,
 					_ *kargoapi.Stage,
@@ -587,8 +570,14 @@ func TestSyncNormalStage(t *testing.T) {
 				},
 			},
 			reconciler: &reconciler{
-				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
-				appHealth:                  &mockAppHealthEvaluator{},
+				syncPromotionsFn: func(
+					_ context.Context,
+					_ *kargoapi.Stage,
+					status kargoapi.StageStatus,
+				) (kargoapi.StageStatus, error) {
+					return status, nil
+				},
+				appHealth: &mockAppHealthEvaluator{},
 				startVerificationFn: func(
 					context.Context,
 					*kargoapi.Stage,
@@ -655,8 +644,14 @@ func TestSyncNormalStage(t *testing.T) {
 				},
 			},
 			reconciler: &reconciler{
-				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
-				appHealth:                  &mockAppHealthEvaluator{},
+				syncPromotionsFn: func(
+					_ context.Context,
+					_ *kargoapi.Stage,
+					status kargoapi.StageStatus,
+				) (kargoapi.StageStatus, error) {
+					return status, nil
+				},
+				appHealth: &mockAppHealthEvaluator{},
 				getFreightFn: func(
 					context.Context,
 					client.Client,
@@ -734,8 +729,14 @@ func TestSyncNormalStage(t *testing.T) {
 				},
 			},
 			reconciler: &reconciler{
-				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
-				appHealth:                  &mockAppHealthEvaluator{},
+				syncPromotionsFn: func(
+					_ context.Context,
+					_ *kargoapi.Stage,
+					status kargoapi.StageStatus,
+				) (kargoapi.StageStatus, error) {
+					return status, nil
+				},
+				appHealth: &mockAppHealthEvaluator{},
 				getVerificationInfoFn: func(_ context.Context, _ *kargoapi.Stage) (*kargoapi.VerificationInfo, error) {
 					return &kargoapi.VerificationInfo{
 						Phase:   kargoapi.VerificationPhaseError,
@@ -805,8 +806,14 @@ func TestSyncNormalStage(t *testing.T) {
 				},
 			},
 			reconciler: &reconciler{
-				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
-				appHealth:                  &mockAppHealthEvaluator{},
+				syncPromotionsFn: func(
+					_ context.Context,
+					_ *kargoapi.Stage,
+					status kargoapi.StageStatus,
+				) (kargoapi.StageStatus, error) {
+					return status, nil
+				},
+				appHealth: &mockAppHealthEvaluator{},
 				getAnalysisRunFn: func(
 					context.Context,
 					client.Client,
@@ -903,8 +910,14 @@ func TestSyncNormalStage(t *testing.T) {
 				},
 			},
 			reconciler: &reconciler{
-				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
-				appHealth:                  &mockAppHealthEvaluator{},
+				syncPromotionsFn: func(
+					_ context.Context,
+					_ *kargoapi.Stage,
+					status kargoapi.StageStatus,
+				) (kargoapi.StageStatus, error) {
+					return status, nil
+				},
+				appHealth: &mockAppHealthEvaluator{},
 				getAnalysisRunFn: func(
 					context.Context,
 					client.Client,
@@ -981,8 +994,14 @@ func TestSyncNormalStage(t *testing.T) {
 				},
 			},
 			reconciler: &reconciler{
-				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
-				appHealth:                  &mockAppHealthEvaluator{},
+				syncPromotionsFn: func(
+					_ context.Context,
+					_ *kargoapi.Stage,
+					status kargoapi.StageStatus,
+				) (kargoapi.StageStatus, error) {
+					return status, nil
+				},
+				appHealth: &mockAppHealthEvaluator{},
 				verifyFreightInStageFn: func(context.Context, string, string, string) (bool, error) {
 					return false, errors.New("something went wrong")
 				},
@@ -1022,8 +1041,14 @@ func TestSyncNormalStage(t *testing.T) {
 				},
 			},
 			reconciler: &reconciler{
-				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
-				appHealth:                  &mockAppHealthEvaluator{},
+				syncPromotionsFn: func(
+					_ context.Context,
+					_ *kargoapi.Stage,
+					status kargoapi.StageStatus,
+				) (kargoapi.StageStatus, error) {
+					return status, nil
+				},
+				appHealth: &mockAppHealthEvaluator{},
 				verifyFreightInStageFn: func(context.Context, string, string, string) (bool, error) {
 					return true, nil
 				},
@@ -1083,8 +1108,14 @@ func TestSyncNormalStage(t *testing.T) {
 				},
 			},
 			reconciler: &reconciler{
-				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
-				appHealth:                  &mockAppHealthEvaluator{},
+				syncPromotionsFn: func(
+					_ context.Context,
+					_ *kargoapi.Stage,
+					status kargoapi.StageStatus,
+				) (kargoapi.StageStatus, error) {
+					return status, nil
+				},
+				appHealth: &mockAppHealthEvaluator{},
 				verifyFreightInStageFn: func(context.Context, string, string, string) (bool, error) {
 					return true, nil
 				},
@@ -1143,8 +1174,14 @@ func TestSyncNormalStage(t *testing.T) {
 				},
 			},
 			reconciler: &reconciler{
-				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
-				appHealth:                  &mockAppHealthEvaluator{},
+				syncPromotionsFn: func(
+					_ context.Context,
+					_ *kargoapi.Stage,
+					status kargoapi.StageStatus,
+				) (kargoapi.StageStatus, error) {
+					return status, nil
+				},
+				appHealth: &mockAppHealthEvaluator{},
 				verifyFreightInStageFn: func(context.Context, string, string, string) (bool, error) {
 					return true, nil
 				},
@@ -1211,8 +1248,14 @@ func TestSyncNormalStage(t *testing.T) {
 				},
 			},
 			reconciler: &reconciler{
-				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
-				appHealth:                  &mockAppHealthEvaluator{},
+				syncPromotionsFn: func(
+					_ context.Context,
+					_ *kargoapi.Stage,
+					status kargoapi.StageStatus,
+				) (kargoapi.StageStatus, error) {
+					return status, nil
+				},
+				appHealth: &mockAppHealthEvaluator{},
 				getFreightFn: func(
 					context.Context,
 					client.Client,
@@ -1270,8 +1313,14 @@ func TestSyncNormalStage(t *testing.T) {
 				},
 			},
 			reconciler: &reconciler{
-				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
-				appHealth:                  &mockAppHealthEvaluator{},
+				syncPromotionsFn: func(
+					_ context.Context,
+					_ *kargoapi.Stage,
+					status kargoapi.StageStatus,
+				) (kargoapi.StageStatus, error) {
+					return status, nil
+				},
+				appHealth: &mockAppHealthEvaluator{},
 				verifyFreightInStageFn: func(context.Context, string, string, string) (bool, error) {
 					return true, nil
 				},
@@ -1328,8 +1377,14 @@ func TestSyncNormalStage(t *testing.T) {
 				},
 			},
 			reconciler: &reconciler{
-				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
-				appHealth:                  &mockAppHealthEvaluator{},
+				syncPromotionsFn: func(
+					_ context.Context,
+					_ *kargoapi.Stage,
+					status kargoapi.StageStatus,
+				) (kargoapi.StageStatus, error) {
+					return status, nil
+				},
+				appHealth: &mockAppHealthEvaluator{},
 				verifyFreightInStageFn: func(context.Context, string, string, string) (bool, error) {
 					return true, nil
 				},
@@ -1400,8 +1455,14 @@ func TestSyncNormalStage(t *testing.T) {
 				},
 			},
 			reconciler: &reconciler{
-				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
-				appHealth:                  &mockAppHealthEvaluator{},
+				syncPromotionsFn: func(
+					_ context.Context,
+					_ *kargoapi.Stage,
+					status kargoapi.StageStatus,
+				) (kargoapi.StageStatus, error) {
+					return status, nil
+				},
+				appHealth: &mockAppHealthEvaluator{},
 				verifyFreightInStageFn: func(context.Context, string, string, string) (bool, error) {
 					return true, nil
 				},
@@ -1491,8 +1552,7 @@ func TestSyncNormalStage(t *testing.T) {
 					Verification:        &kargoapi.Verification{},
 				},
 				Status: kargoapi.StageStatus{
-					Phase:            kargoapi.StagePhaseSteady,
-					CurrentPromotion: &kargoapi.PromotionInfo{},
+					Phase: kargoapi.StagePhaseSteady,
 					CurrentFreight: &kargoapi.FreightReference{
 						VerificationInfo: &kargoapi.VerificationInfo{
 							Phase: kargoapi.VerificationPhaseSuccessful,
@@ -1506,7 +1566,13 @@ func TestSyncNormalStage(t *testing.T) {
 				},
 			},
 			reconciler: &reconciler{
-				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
+				syncPromotionsFn: func(
+					_ context.Context,
+					_ *kargoapi.Stage,
+					status kargoapi.StageStatus,
+				) (kargoapi.StageStatus, error) {
+					return status, nil
+				},
 				appHealth: &mockAppHealthEvaluator{
 					Health: &kargoapi.Health{
 						Status: kargoapi.HealthStateHealthy,
@@ -1588,9 +1654,7 @@ func TestSyncNormalStage(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, int64(42), newStatus.ObservedGeneration) // Set
 				require.Equal(t, kargoapi.StagePhaseSteady, newStatus.Phase)
-				require.NotNil(t, newStatus.Health)        // Set
-				require.Nil(t, newStatus.CurrentPromotion) // Cleared
-				require.Equal(t, kargoapi.StagePhaseSteady, newStatus.Phase)
+				require.NotNil(t, newStatus.Health) // Set
 				require.Equal(
 					t,
 					&kargoapi.VerificationInfo{
@@ -1623,8 +1687,7 @@ func TestSyncNormalStage(t *testing.T) {
 					Verification:        &kargoapi.Verification{},
 				},
 				Status: kargoapi.StageStatus{
-					Phase:            kargoapi.StagePhaseVerifying,
-					CurrentPromotion: &kargoapi.PromotionInfo{},
+					Phase: kargoapi.StagePhaseSteady,
 					CurrentFreight: &kargoapi.FreightReference{
 						VerificationInfo: &kargoapi.VerificationInfo{
 							Phase: kargoapi.VerificationPhasePending,
@@ -1637,7 +1700,13 @@ func TestSyncNormalStage(t *testing.T) {
 				},
 			},
 			reconciler: &reconciler{
-				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
+				syncPromotionsFn: func(
+					_ context.Context,
+					_ *kargoapi.Stage,
+					status kargoapi.StageStatus,
+				) (kargoapi.StageStatus, error) {
+					return status, nil
+				},
 				appHealth: &mockAppHealthEvaluator{
 					Health: &kargoapi.Health{
 						Status: kargoapi.HealthStateHealthy,
@@ -1727,9 +1796,7 @@ func TestSyncNormalStage(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, int64(42), newStatus.ObservedGeneration) // Set
 				require.Equal(t, kargoapi.StagePhaseSteady, newStatus.Phase)
-				require.NotNil(t, newStatus.Health)        // Set
-				require.Nil(t, newStatus.CurrentPromotion) // Cleared
-				require.Equal(t, kargoapi.StagePhaseSteady, newStatus.Phase)
+				require.NotNil(t, newStatus.Health) // Set
 				require.Equal(
 					t,
 					&kargoapi.VerificationInfo{
@@ -1773,6 +1840,249 @@ func TestSyncNormalStage(t *testing.T) {
 				testCase.stage,
 			)
 			testCase.assertions(t, recorder, testCase.stage.Status, newStatus, err)
+		})
+	}
+}
+
+func TestReconciler_syncPromotions(t *testing.T) {
+	now := fakeNow()
+	oneMinuteAgo := now.Add(-time.Minute)
+	oneHourAgo := now.Add(-time.Hour)
+	oneDayAgo := now.Add(-24 * time.Hour)
+
+	testCases := []struct {
+		name          string
+		reconciler    *reconciler
+		initialStatus kargoapi.StageStatus
+		assertions    func(*testing.T, kargoapi.StageStatus, error)
+	}{
+		{
+			name: "error listing Promotions",
+			reconciler: &reconciler{
+				getPromotionsForStageFn: func(context.Context, string, string) ([]kargoapi.Promotion, error) {
+					return nil, errors.New("something went wrong")
+				},
+			},
+			assertions: func(t *testing.T, _ kargoapi.StageStatus, err error) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "something went wrong")
+			},
+		},
+		{
+			name: "no Promotions found",
+			reconciler: &reconciler{
+				getPromotionsForStageFn: func(context.Context, string, string) ([]kargoapi.Promotion, error) {
+					return nil, nil
+				},
+			},
+			assertions: func(t *testing.T, _ kargoapi.StageStatus, err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "latest Promotion is Running",
+			reconciler: &reconciler{
+				getPromotionsForStageFn: func(context.Context, string, string) ([]kargoapi.Promotion, error) {
+					return []kargoapi.Promotion{
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:              "fake-promotion",
+								CreationTimestamp: metav1.NewTime(now),
+							},
+							Status: kargoapi.PromotionStatus{
+								Phase: kargoapi.PromotionPhaseRunning,
+								Freight: &kargoapi.FreightReference{
+									Name: "fake-freight",
+								},
+							},
+						},
+					}, nil
+				},
+			},
+			assertions: func(t *testing.T, status kargoapi.StageStatus, err error) {
+				require.NoError(t, err)
+				require.Equal(t, kargoapi.StagePhasePromoting, status.Phase)
+				require.Equal(t, &kargoapi.PromotionInfo{
+					Name:              "fake-promotion",
+					CreationTimestamp: metav1.NewTime(now),
+					Freight: kargoapi.FreightReference{
+						Name: "fake-freight",
+					},
+				}, status.CurrentPromotion)
+			},
+		},
+		{
+			name: "latest Promotion is not Running anymore",
+			reconciler: &reconciler{
+				getPromotionsForStageFn: func(context.Context, string, string) ([]kargoapi.Promotion, error) {
+					return []kargoapi.Promotion{
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:              "fake-promotion",
+								CreationTimestamp: metav1.NewTime(now),
+							},
+							Status: kargoapi.PromotionStatus{
+								Phase: kargoapi.PromotionPhaseSucceeded,
+								Freight: &kargoapi.FreightReference{
+									Name: "fake-freight",
+								},
+							},
+						},
+					}, nil
+				},
+			},
+			initialStatus: kargoapi.StageStatus{
+				Phase: kargoapi.StagePhasePromoting,
+				CurrentPromotion: &kargoapi.PromotionInfo{
+					Name: "fake-promotion",
+				},
+			},
+			assertions: func(t *testing.T, status kargoapi.StageStatus, err error) {
+				require.NoError(t, err)
+				require.Equal(t, kargoapi.StagePhaseSteady, status.Phase)
+				require.Nil(t, status.CurrentPromotion)
+			},
+		},
+		{
+			name: "new Terminated Promotions",
+			reconciler: &reconciler{
+				getPromotionsForStageFn: func(context.Context, string, string) ([]kargoapi.Promotion, error) {
+					return []kargoapi.Promotion{
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:              "fake-promotion-1",
+								CreationTimestamp: metav1.NewTime(oneDayAgo),
+							},
+							Status: kargoapi.PromotionStatus{
+								Phase: kargoapi.PromotionPhaseSucceeded,
+								Freight: &kargoapi.FreightReference{
+									Name: "fake-freight-1",
+								},
+							},
+						},
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:              "fake-promotion-3",
+								CreationTimestamp: metav1.NewTime(oneMinuteAgo),
+							},
+							Status: kargoapi.PromotionStatus{
+								Phase: kargoapi.PromotionPhaseErrored,
+								Freight: &kargoapi.FreightReference{
+									Name: "fake-freight-3",
+								},
+							},
+						},
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:              "fake-promotion-2",
+								CreationTimestamp: metav1.NewTime(oneHourAgo),
+							},
+							Status: kargoapi.PromotionStatus{
+								Phase: kargoapi.PromotionPhaseFailed,
+								Freight: &kargoapi.FreightReference{
+									Name: "fake-freight-2",
+								},
+							},
+						},
+					}, nil
+				},
+			},
+			assertions: func(t *testing.T, status kargoapi.StageStatus, err error) {
+				require.NoError(t, err)
+
+				require.Equal(t, kargoapi.StagePhaseSteady, status.Phase)
+				require.Nil(t, status.CurrentPromotion)
+
+				// Last Promotion should be the latest Terminated Promotion
+				require.Equal(t, &kargoapi.PromotionInfo{
+					Name:              "fake-promotion-3",
+					CreationTimestamp: metav1.NewTime(oneMinuteAgo),
+					Status: &kargoapi.PromotionStatus{
+						Phase: kargoapi.PromotionPhaseErrored,
+						Freight: &kargoapi.FreightReference{
+							Name: "fake-freight-3",
+						},
+					},
+					Freight: kargoapi.FreightReference{
+						Name: "fake-freight-3",
+					},
+				}, status.LastPromotion)
+
+				// Current Freight should be the Freight of the last Succeeded Promotion
+				require.Equal(t, &kargoapi.FreightReference{
+					Name: "fake-freight-1",
+				}, status.CurrentFreight)
+				require.Equal(t, kargoapi.FreightReferenceStack{
+					{Name: "fake-freight-1"},
+				}, status.History)
+			},
+		},
+		{
+			name: "no new Terminated Promotions",
+			reconciler: &reconciler{
+				getPromotionsForStageFn: func(context.Context, string, string) ([]kargoapi.Promotion, error) {
+					return []kargoapi.Promotion{
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:              "fake-promotion-1",
+								CreationTimestamp: metav1.NewTime(oneDayAgo),
+							},
+							Status: kargoapi.PromotionStatus{
+								Phase: kargoapi.PromotionPhaseSucceeded,
+								Freight: &kargoapi.FreightReference{
+									Name: "fake-freight-1",
+								},
+							},
+						},
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:              "fake-promotion-2",
+								CreationTimestamp: metav1.NewTime(oneHourAgo),
+							},
+							Status: kargoapi.PromotionStatus{
+								// Phase update should be ignored
+								Phase: kargoapi.PromotionPhaseSucceeded,
+								Freight: &kargoapi.FreightReference{
+									Name: "fake-freight-2",
+								},
+							},
+						},
+					}, nil
+				},
+			},
+			initialStatus: kargoapi.StageStatus{
+				LastPromotion: &kargoapi.PromotionInfo{
+					Name:              "fake-promotion-2",
+					CreationTimestamp: metav1.NewTime(oneHourAgo),
+					Status: &kargoapi.PromotionStatus{
+						Phase: kargoapi.PromotionPhaseFailed,
+					},
+				},
+			},
+			assertions: func(t *testing.T, status kargoapi.StageStatus, err error) {
+				require.NoError(t, err)
+
+				require.Equal(t, kargoapi.StagePhaseSteady, status.Phase)
+				require.Nil(t, status.CurrentPromotion)
+				require.Equal(t, &kargoapi.PromotionInfo{
+					Name:              "fake-promotion-2",
+					CreationTimestamp: metav1.NewTime(oneHourAgo),
+					Status: &kargoapi.PromotionStatus{
+						Phase: kargoapi.PromotionPhaseFailed,
+					},
+				}, status.LastPromotion)
+				require.Len(t, status.History, 0)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			status, err := testCase.reconciler.syncPromotions(
+				context.Background(),
+				&kargoapi.Stage{},
+				testCase.initialStatus,
+			)
+			testCase.assertions(t, status, err)
 		})
 	}
 }
@@ -2056,78 +2366,6 @@ func TestClearApprovals(t *testing.T) {
 	}
 }
 
-func TestHasNonTerminalPromotions(t *testing.T) {
-	testCases := []struct {
-		name       string
-		reconciler *reconciler
-		assertions func(*testing.T, bool, error)
-	}{
-		{
-			name: "error listing Promotions",
-			reconciler: &reconciler{
-				listPromosFn: func(
-					context.Context,
-					client.ObjectList,
-					...client.ListOption,
-				) error {
-					return errors.New("something went wrong")
-				},
-			},
-			assertions: func(t *testing.T, _ bool, err error) {
-				require.ErrorContains(t, err, "something went wrong")
-			},
-		},
-		{
-			name: "has non-terminal Promotions",
-			reconciler: &reconciler{
-				listPromosFn: func(
-					_ context.Context,
-					objList client.ObjectList,
-					_ ...client.ListOption,
-				) error {
-					promos, ok := objList.(*kargoapi.PromotionList)
-					require.True(t, ok)
-					promos.Items = []kargoapi.Promotion{{}}
-					return nil
-				},
-			},
-			assertions: func(t *testing.T, result bool, err error) {
-				require.NoError(t, err)
-				require.True(t, result)
-			},
-		},
-		{
-			name: "does not have non-terminal Promotions",
-			reconciler: &reconciler{
-				listPromosFn: func(
-					_ context.Context,
-					objList client.ObjectList,
-					_ ...client.ListOption,
-				) error {
-					promos, ok := objList.(*kargoapi.PromotionList)
-					require.True(t, ok)
-					promos.Items = []kargoapi.Promotion{}
-					return nil
-				},
-			},
-			assertions: func(t *testing.T, result bool, err error) {
-				require.NoError(t, err)
-				require.False(t, result)
-			},
-		},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			result, err := testCase.reconciler.hasNonTerminalPromotions(
-				context.Background(),
-				"fake-namespace",
-				"fake-stage",
-			)
-			testCase.assertions(t, result, err)
-		})
-	}
-}
-
 func TestVerifyFreightInStage(t *testing.T) {
 	testCases := []struct {
 		name       string
@@ -2352,6 +2590,58 @@ func TestIsAutoPromotionPermitted(t *testing.T) {
 				"fake-stage",
 			)
 			testCase.assertions(t, res, err)
+		})
+	}
+}
+
+func TestGetPromotionsForStage(t *testing.T) {
+	testCases := []struct {
+		name       string
+		reconciler *reconciler
+		assertions func(*testing.T, []kargoapi.Promotion, error)
+	}{
+		{
+			name: "error listing Promotions",
+			reconciler: &reconciler{
+				listPromosFn: func(
+					context.Context,
+					client.ObjectList,
+					...client.ListOption,
+				) error {
+					return errors.New("something went wrong")
+				},
+			},
+			assertions: func(t *testing.T, _ []kargoapi.Promotion, err error) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "something went wrong")
+				require.Contains(t, err.Error(), "error listing Promotions")
+			},
+		},
+		{
+			name: "success",
+			reconciler: &reconciler{
+				listPromosFn: func(
+					context.Context,
+					client.ObjectList,
+					...client.ListOption,
+				) error {
+					return nil
+				},
+			},
+			assertions: func(t *testing.T, promos []kargoapi.Promotion, err error) {
+				require.NoError(t, err)
+				require.Empty(t, promos)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			promos, err := testCase.reconciler.getPromotionsForStage(
+				context.Background(),
+				"fake-namespace",
+				"fake-stage",
+			)
+			testCase.assertions(t, promos, err)
 		})
 	}
 }
@@ -2903,6 +3193,248 @@ func TestGetLatestVerifiedFreight(t *testing.T) {
 				[]kargoapi.StageSubscription{},
 			)
 			testCase.assertions(t, freight, err)
+		})
+	}
+}
+
+func Test_comparePromotionByPhaseAndCreationTime(t *testing.T) {
+	now := fakeNow()
+	earlierTime := now.Add(-time.Hour)
+	laterTime := now.Add(time.Hour)
+
+	tests := []struct {
+		name     string
+		a        kargoapi.Promotion
+		b        kargoapi.Promotion
+		expected int
+	}{
+		{
+			name: "Running before Terminated",
+			a: kargoapi.Promotion{
+				Status: kargoapi.PromotionStatus{
+					Phase: kargoapi.PromotionPhaseRunning,
+				},
+			},
+			b: kargoapi.Promotion{
+				Status: kargoapi.PromotionStatus{
+					Phase: kargoapi.PromotionPhaseSucceeded,
+				},
+			},
+			expected: -1,
+		},
+		{
+			name: "Terminated after Running",
+			a: kargoapi.Promotion{
+				Status: kargoapi.PromotionStatus{
+					Phase: kargoapi.PromotionPhaseFailed,
+				},
+			},
+			b: kargoapi.Promotion{
+				Status: kargoapi.PromotionStatus{
+					Phase: kargoapi.PromotionPhaseRunning,
+				},
+			},
+			expected: 1,
+		},
+		{
+			name: "Later creation timestamp first",
+			a: kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					CreationTimestamp: metav1.Time{Time: earlierTime},
+				},
+				Status: kargoapi.PromotionStatus{
+					Phase: kargoapi.PromotionPhaseRunning,
+				},
+			},
+			b: kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					CreationTimestamp: metav1.Time{Time: laterTime},
+				},
+				Status: kargoapi.PromotionStatus{
+					Phase: kargoapi.PromotionPhaseRunning,
+				},
+			},
+			expected: 1,
+		},
+		{
+			name: "Earlier creation timestamp first",
+			a: kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					CreationTimestamp: metav1.Time{Time: laterTime},
+				},
+				Status: kargoapi.PromotionStatus{
+					Phase: kargoapi.PromotionPhaseErrored,
+				},
+			},
+			b: kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					CreationTimestamp: metav1.Time{Time: earlierTime},
+				},
+				Status: kargoapi.PromotionStatus{
+					Phase: kargoapi.PromotionPhaseSucceeded,
+				},
+			},
+			expected: -1,
+		},
+		{
+			name: "Sorted by name",
+			a: kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:              "promotion-b",
+					CreationTimestamp: metav1.Time{Time: now},
+				},
+				Status: kargoapi.PromotionStatus{
+					Phase: kargoapi.PromotionPhasePending,
+				},
+			},
+			b: kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:              "promotion-a",
+					CreationTimestamp: metav1.Time{Time: now},
+				},
+				Status: kargoapi.PromotionStatus{
+					Phase: kargoapi.PromotionPhasePending,
+				},
+			},
+			expected: 1,
+		},
+		{
+			name: "Equal promotions",
+			a: kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:              "promotion-a",
+					CreationTimestamp: metav1.Time{Time: now},
+				},
+				Status: kargoapi.PromotionStatus{
+					Phase: kargoapi.PromotionPhasePending,
+				},
+			},
+			b: kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:              "promotion-a",
+					CreationTimestamp: metav1.Time{Time: now},
+				},
+				Status: kargoapi.PromotionStatus{
+					Phase: kargoapi.PromotionPhasePending,
+				},
+			},
+			expected: 0,
+		},
+		{
+			name: "Other phase after Terminated",
+			a: kargoapi.Promotion{
+				Status: kargoapi.PromotionStatus{
+					Phase: "",
+				},
+			},
+			b: kargoapi.Promotion{
+				Status: kargoapi.PromotionStatus{
+					Phase: kargoapi.PromotionPhaseSucceeded,
+				},
+			},
+			expected: 1,
+		},
+		{
+			name: "Other phase before Running",
+			a: kargoapi.Promotion{
+				Status: kargoapi.PromotionStatus{
+					Phase: kargoapi.PromotionPhasePending,
+				},
+			},
+			b: kargoapi.Promotion{
+				Status: kargoapi.PromotionStatus{
+					Phase: kargoapi.PromotionPhaseRunning,
+				},
+			},
+			expected: 1,
+		},
+		{
+			name: "Nil creation timestamps",
+			a: kargoapi.Promotion{
+				Status: kargoapi.PromotionStatus{
+					Phase: kargoapi.PromotionPhasePending,
+				},
+			},
+			b: kargoapi.Promotion{
+				Status: kargoapi.PromotionStatus{
+					Phase: kargoapi.PromotionPhasePending,
+				},
+			},
+			expected: 0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := comparePromotionByPhaseAndCreationTime(tt.a, tt.b)
+			require.Equal(t, tt.expected, result)
+		})
+	}
+}
+func Test_comparePromotionPhase(t *testing.T) {
+	tests := []struct {
+		name     string
+		a        kargoapi.PromotionPhase
+		b        kargoapi.PromotionPhase
+		expected int
+	}{
+		{
+			name:     "Running before Terminated",
+			a:        kargoapi.PromotionPhaseRunning,
+			b:        kargoapi.PromotionPhaseSucceeded,
+			expected: -1,
+		},
+		{
+			name:     "Terminated after Running",
+			a:        kargoapi.PromotionPhaseFailed,
+			b:        kargoapi.PromotionPhaseRunning,
+			expected: 1,
+		},
+		{
+			name:     "Running before other phase",
+			a:        kargoapi.PromotionPhaseRunning,
+			b:        kargoapi.PromotionPhasePending,
+			expected: -1,
+		},
+		{
+			name:     "Other phase after Running",
+			a:        "",
+			b:        kargoapi.PromotionPhaseRunning,
+			expected: 1,
+		},
+		{
+			name:     "Terminated before other phase",
+			a:        kargoapi.PromotionPhaseErrored,
+			b:        kargoapi.PromotionPhasePending,
+			expected: -1,
+		},
+		{
+			name:     "Other phase after Terminated",
+			a:        "",
+			b:        kargoapi.PromotionPhaseSucceeded,
+			expected: 1,
+		},
+		{
+			name:     "Equal Running phases",
+			a:        kargoapi.PromotionPhaseRunning,
+			b:        kargoapi.PromotionPhaseRunning,
+			expected: 0,
+		},
+		{
+			name: "Equal Terminated phases",
+			a:    kargoapi.PromotionPhaseSucceeded,
+			b:    kargoapi.PromotionPhaseFailed,
+		},
+		{
+			name:     "Equal other phases",
+			a:        kargoapi.PromotionPhasePending,
+			b:        kargoapi.PromotionPhasePending,
+			expected: 0,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.expected, comparePromotionPhase(tt.a, tt.b))
 		})
 	}
 }
