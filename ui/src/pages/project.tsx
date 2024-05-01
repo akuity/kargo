@@ -13,6 +13,7 @@ import { AnalysisTemplatesList } from '@ui/features/project/analysis-templates/a
 import { CredentialsList } from '@ui/features/project/credentials/credentials-list';
 import { Events } from '@ui/features/project/events/events';
 import { Pipelines } from '@ui/features/project/pipelines/pipelines';
+import { ProjectSettings } from '@ui/features/project/settings/project-settings';
 
 const tabs = {
   pipelines: {
@@ -67,6 +68,7 @@ export const Project = ({ tab = 'pipelines' }: { tab?: ProjectTab }) => {
             <div className='font-semibold mb-1 text-xs text-gray-600'>PROJECT</div>
             <div className='text-2xl font-semibold'>{name}</div>
           </div>
+          <ProjectSettings />
         </div>
       </div>
       <Tabs

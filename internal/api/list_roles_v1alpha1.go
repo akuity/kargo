@@ -5,8 +5,9 @@ import (
 	"fmt"
 
 	"connectrpc.com/connect"
-	rbacv1 "k8s.io/api/rbac/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	rbacapi "github.com/akuity/kargo/api/rbac/v1alpha1"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
@@ -31,7 +32,7 @@ func (s *server) ListRoles(
 	}
 
 	if req.Msg.AsResources {
-		resources := make([]*svcv1alpha1.RoleResources, len(kargoRoleNames))
+		resources := make([]*rbacapi.RoleResources, len(kargoRoleNames))
 		for i, kargoRoleName := range kargoRoleNames {
 			sa, roles, rbs, err := s.rolesDB.GetAsResources(ctx, project, kargoRoleName)
 			if err != nil {
@@ -40,16 +41,14 @@ func (s *server) ListRoles(
 					kargoRoleName, project, err,
 				)
 			}
-			resources[i] = &svcv1alpha1.RoleResources{
-				ServiceAccount: sa,
-				Roles:          make([]*rbacv1.Role, len(roles)),
-				RoleBindings:   make([]*rbacv1.RoleBinding, len(rbs)),
-			}
-			for j, role := range roles {
-				resources[i].Roles[j] = role.DeepCopy()
-			}
-			for j, rb := range rbs {
-				resources[i].RoleBindings[j] = rb.DeepCopy()
+			resources[i] = &rbacapi.RoleResources{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: project,
+					Name:      kargoRoleName,
+				},
+				ServiceAccount: *sa,
+				Roles:          roles,
+				RoleBindings:   rbs,
 			}
 		}
 		return connect.NewResponse(
@@ -59,7 +58,7 @@ func (s *server) ListRoles(
 		), nil
 	}
 
-	kargoRoles := make([]*svcv1alpha1.Role, len(kargoRoleNames))
+	kargoRoles := make([]*rbacapi.Role, len(kargoRoleNames))
 	for i, kargoRoleName := range kargoRoleNames {
 		kargoRole, err := s.rolesDB.Get(ctx, project, kargoRoleName)
 		if err != nil {

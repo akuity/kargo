@@ -7,7 +7,6 @@ import (
 	"sort"
 	"strings"
 
-	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	kubeerr "k8s.io/apimachinery/pkg/api/errors"
@@ -15,8 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
+	rbacapi "github.com/akuity/kargo/api/rbac/v1alpha1"
 )
 
 // RolesDatabase is an interface for the Kargo Roles store.
@@ -24,7 +22,7 @@ type RolesDatabase interface {
 	// Create creates the ServiceAccount, Role, and RoleBinding underlying a new
 	// Kargo Role. It will return an error if any of those resources already
 	// exist.
-	Create(context.Context, *svcv1alpha1.Role) (*svcv1alpha1.Role, error)
+	Create(context.Context, *rbacapi.Role) (*rbacapi.Role, error)
 	// Delete deletes a Kargo Role's underlying ServiceAccount, Role, and
 	// RoleBinding. It will return an error if no underlying resources exist or if
 	// any underlying resources are not Kargo-manageable.
@@ -32,7 +30,7 @@ type RolesDatabase interface {
 	// Get returns a Kargo Role representation of an underlying ServiceAccount
 	// and any Roles it is associated with. It will return an error if no
 	// underlying ServiceAccount exists.
-	Get(ctx context.Context, project, name string) (*svcv1alpha1.Role, error)
+	Get(ctx context.Context, project, name string) (*rbacapi.Role, error)
 	// GetAsResources returns the ServiceAccount and any Roles and RoleBindings
 	// underlying a Kargo Role. It will return an error if no underlying
 	// ServiceAccount exists. It is valid for the Roles and/or RoleBindings to be
@@ -50,8 +48,8 @@ type RolesDatabase interface {
 		ctx context.Context,
 		project string,
 		name string,
-		resourceDetails *svcv1alpha1.ResourceDetails,
-	) (*svcv1alpha1.Role, error)
+		resourceDetails *rbacapi.ResourceDetails,
+	) (*rbacapi.Role, error)
 	// GrantRoleToUsers amends claim annotations of the ServiceAccount underlying
 	// a Kargo Role. It will return an error if no underlying ServiceAccount
 	// exists or any underlying resources are not Kargo-manageable.
@@ -59,11 +57,11 @@ type RolesDatabase interface {
 		ctx context.Context,
 		project string,
 		name string,
-		userClaims *svcv1alpha1.UserClaims,
-	) (*svcv1alpha1.Role, error)
+		userClaims *rbacapi.UserClaims,
+	) (*rbacapi.Role, error)
 	// List returns Kargo Role representations of underlying ServiceAccounts and
 	// andy Roles and RoleBindings associated with them.
-	List(ctx context.Context, project string) ([]*svcv1alpha1.Role, error)
+	List(ctx context.Context, project string) ([]*rbacapi.Role, error)
 	// ListNames returns names of Kargo Roles..
 	ListNames(ctx context.Context, project string) ([]string, error)
 	// RevokePermissionFromRole removes select rules from the Role underlying a
@@ -73,8 +71,8 @@ type RolesDatabase interface {
 		ctx context.Context,
 		project string,
 		name string,
-		resourceDetails *svcv1alpha1.ResourceDetails,
-	) (*svcv1alpha1.Role, error)
+		resourceDetails *rbacapi.ResourceDetails,
+	) (*rbacapi.Role, error)
 	// RevokeRoleFromUsers removes select claims from claim annotations of the
 	// ServiceAccount underlying a Kargo Role. It will return an error if no
 	// underlying ServiceAccount exists or any underlying resources are not
@@ -83,13 +81,13 @@ type RolesDatabase interface {
 		ctx context.Context,
 		project string,
 		name string,
-		userClaims *svcv1alpha1.UserClaims,
-	) (*svcv1alpha1.Role, error)
+		userClaims *rbacapi.UserClaims,
+	) (*rbacapi.Role, error)
 	// Update updates the underlying ServiceAccount and Role resources underlying
 	// a Kargo Role. It will return an error if no underlying ServiceAccount
 	// exists or any underlying resources are not Kargo-manageable. It will create
 	// underlying Role and RoleBinding resources if they do not exist.
-	Update(context.Context, *svcv1alpha1.Role) (*svcv1alpha1.Role, error)
+	Update(context.Context, *rbacapi.Role) (*rbacapi.Role, error)
 }
 
 // rolesDatabase is an implementation of the RolesDatabase interface
@@ -111,10 +109,10 @@ func NewKubernetesRolesDatabase(c client.Client) RolesDatabase {
 // CreateRole implements the RolesDatabase interface.
 func (r *rolesDatabase) Create(
 	ctx context.Context,
-	kargoRole *svcv1alpha1.Role,
-) (*svcv1alpha1.Role, error) {
+	kargoRole *rbacapi.Role,
+) (*rbacapi.Role, error) {
 	objKey := client.ObjectKey{
-		Namespace: kargoRole.Project,
+		Namespace: kargoRole.Namespace,
 		Name:      kargoRole.Name,
 	}
 
@@ -122,7 +120,7 @@ func (r *rolesDatabase) Create(
 	sa := &corev1.ServiceAccount{}
 	if err := r.client.Get(ctx, objKey, sa); client.IgnoreNotFound(err) != nil {
 		return nil, fmt.Errorf(
-			"error getting ServiceAccount %q in namespace %q: %w", kargoRole.Name, kargoRole.Project, err,
+			"error getting ServiceAccount %q in namespace %q: %w", kargoRole.Name, kargoRole.Namespace, err,
 		)
 	} else if err == nil {
 		return nil, kubeerr.NewAlreadyExists(
@@ -138,7 +136,7 @@ func (r *rolesDatabase) Create(
 	role := &rbacv1.Role{}
 	if err := r.client.Get(ctx, objKey, role); client.IgnoreNotFound(err) != nil {
 		return nil, fmt.Errorf(
-			"error getting Role %q in namespace %q: %w", kargoRole.Name, kargoRole.Project, err,
+			"error getting Role %q in namespace %q: %w", kargoRole.Name, kargoRole.Namespace, err,
 		)
 	} else if err == nil {
 		return nil, kubeerr.NewAlreadyExists(
@@ -154,7 +152,7 @@ func (r *rolesDatabase) Create(
 	rb := &rbacv1.RoleBinding{}
 	if err := r.client.Get(ctx, objKey, rb); client.IgnoreNotFound(err) != nil {
 		return nil, fmt.Errorf(
-			"error getting RoleBinding %q in namespace %q: %w", kargoRole.Name, kargoRole.Project, err,
+			"error getting RoleBinding %q in namespace %q: %w", kargoRole.Name, kargoRole.Namespace, err,
 		)
 	} else if err == nil {
 		return nil, kubeerr.NewAlreadyExists(
@@ -176,20 +174,20 @@ func (r *rolesDatabase) Create(
 
 	if err = r.client.Create(ctx, sa); err != nil {
 		return nil, fmt.Errorf(
-			"error creating ServiceAccount %q in namespace %q: %w", kargoRole.Name, kargoRole.Project, err,
+			"error creating ServiceAccount %q in namespace %q: %w", kargoRole.Name, kargoRole.Namespace, err,
 		)
 	}
 
 	if err := r.client.Create(ctx, rb); err != nil {
 		return nil, fmt.Errorf(
-			"error creating RoleBinding %q in namespace %q: %w", kargoRole.Name, kargoRole.Project, err,
+			"error creating RoleBinding %q in namespace %q: %w", kargoRole.Name, kargoRole.Namespace, err,
 		)
 	}
 
 	// Note: The Role's rules are already normalized
 	if err := r.client.Create(ctx, role); err != nil {
 		return nil, fmt.Errorf(
-			"error creating Role %q in namespace %q: %w", kargoRole.Name, kargoRole.Project, err,
+			"error creating Role %q in namespace %q: %w", kargoRole.Name, kargoRole.Namespace, err,
 		)
 	}
 
@@ -246,7 +244,7 @@ func (r *rolesDatabase) Get(
 	ctx context.Context,
 	project string,
 	name string,
-) (*svcv1alpha1.Role, error) {
+) (*rbacapi.Role, error) {
 	sa, roles, rbs, err := r.GetAsResources(ctx, project, name)
 	if err != nil {
 		return nil, err
@@ -328,8 +326,8 @@ func (r *rolesDatabase) GrantPermissionsToRole(
 	ctx context.Context,
 	project string,
 	name string,
-	resourceDetails *svcv1alpha1.ResourceDetails,
-) (*svcv1alpha1.Role, error) {
+	resourceDetails *rbacapi.ResourceDetails,
+) (*rbacapi.Role, error) {
 	sa, roles, rbs, err := r.GetAsResources(ctx, project, name)
 	if err != nil {
 		return nil, err
@@ -380,8 +378,8 @@ func (r *rolesDatabase) GrantRoleToUsers(
 	ctx context.Context,
 	project string,
 	name string,
-	userClaims *svcv1alpha1.UserClaims,
-) (*svcv1alpha1.Role, error) {
+	userClaims *rbacapi.UserClaims,
+) (*rbacapi.Role, error) {
 	sa, roles, rbs, err := r.GetAsResources(ctx, project, name)
 	if err != nil {
 		return nil, err
@@ -392,9 +390,9 @@ func (r *rolesDatabase) GrantRoleToUsers(
 	if err != nil {
 		return nil, err
 	}
-	amendClaimAnnotation(sa, kargoapi.AnnotationKeyOIDCSubjects, userClaims.Subs)
-	amendClaimAnnotation(sa, kargoapi.AnnotationKeyOIDCEmails, userClaims.Emails)
-	amendClaimAnnotation(sa, kargoapi.AnnotationKeyOIDCGroups, userClaims.Groups)
+	amendClaimAnnotation(sa, rbacapi.AnnotationKeyOIDCSubjects, userClaims.Subs)
+	amendClaimAnnotation(sa, rbacapi.AnnotationKeyOIDCEmails, userClaims.Emails)
+	amendClaimAnnotation(sa, rbacapi.AnnotationKeyOIDCGroups, userClaims.Groups)
 	if err = r.client.Update(ctx, sa); err != nil {
 		return nil, fmt.Errorf("error updating ServiceAccount %q in namespace %q: %w", name, project, err)
 	}
@@ -409,7 +407,7 @@ func (r *rolesDatabase) GrantRoleToUsers(
 func (r *rolesDatabase) List(
 	ctx context.Context,
 	project string,
-) ([]*svcv1alpha1.Role, error) {
+) ([]*rbacapi.Role, error) {
 	saList := &corev1.ServiceAccountList{}
 	if err := r.client.List(
 		ctx,
@@ -419,7 +417,7 @@ func (r *rolesDatabase) List(
 		return nil, fmt.Errorf("error listing ServiceAccounts in namespace %q: %w", project, err)
 	}
 
-	kargoRoles := make([]*svcv1alpha1.Role, 0, len(saList.Items))
+	kargoRoles := make([]*rbacapi.Role, 0, len(saList.Items))
 	for i := range saList.Items {
 		sa, roles, rbs, err := r.GetAsResources(ctx, project, saList.Items[i].Name)
 		if err != nil {
@@ -466,8 +464,8 @@ func (r *rolesDatabase) RevokePermissionsFromRole(
 	ctx context.Context,
 	project string,
 	name string,
-	resourceDetails *svcv1alpha1.ResourceDetails,
-) (*svcv1alpha1.Role, error) {
+	resourceDetails *rbacapi.ResourceDetails,
+) (*rbacapi.Role, error) {
 	sa, roles, rbs, err := r.GetAsResources(ctx, project, name)
 	if err != nil {
 		return nil, err
@@ -486,6 +484,18 @@ func (r *rolesDatabase) RevokePermissionsFromRole(
 	if role.Rules, err = NormalizePolicyRules(role.Rules); err != nil {
 		return nil, fmt.Errorf("error normalizing RBAC policy rules: %w", err)
 	}
+
+	// Deal with wildcard verb
+	for _, verb := range resourceDetails.Verbs {
+		if strings.TrimSpace(verb) == "*" {
+			resourceDetails.Verbs = append(resourceDetails.Verbs, allVerbs...)
+			break
+		}
+	}
+	// Compact the list of verbs we want to remove
+	slices.Sort(resourceDetails.Verbs)
+	resourceDetails.Verbs = slices.Compact(resourceDetails.Verbs)
+
 	filteredRules := make([]rbacv1.PolicyRule, 0, len(role.Rules))
 	for _, rule := range role.Rules {
 		if rule.APIGroups[0] != resourceDetails.ResourceGroup ||
@@ -513,8 +523,8 @@ func (r *rolesDatabase) RevokeRoleFromUsers(
 	ctx context.Context,
 	project string,
 	name string,
-	userClaims *svcv1alpha1.UserClaims,
-) (*svcv1alpha1.Role, error) {
+	userClaims *rbacapi.UserClaims,
+) (*rbacapi.Role, error) {
 	// Make sure at least part of the ServiceAccount/Role/RoleBinding trio exists
 	sa, roles, rbs, err := r.GetAsResources(ctx, project, name)
 	if err != nil {
@@ -526,9 +536,9 @@ func (r *rolesDatabase) RevokeRoleFromUsers(
 	if err != nil {
 		return nil, err
 	}
-	dropFromClaimAnnotation(sa, kargoapi.AnnotationKeyOIDCSubjects, userClaims.Subs)
-	dropFromClaimAnnotation(sa, kargoapi.AnnotationKeyOIDCEmails, userClaims.Emails)
-	dropFromClaimAnnotation(sa, kargoapi.AnnotationKeyOIDCGroups, userClaims.Groups)
+	dropFromClaimAnnotation(sa, rbacapi.AnnotationKeyOIDCSubjects, userClaims.Subs)
+	dropFromClaimAnnotation(sa, rbacapi.AnnotationKeyOIDCEmails, userClaims.Emails)
+	dropFromClaimAnnotation(sa, rbacapi.AnnotationKeyOIDCGroups, userClaims.Groups)
 	if err = r.client.Update(ctx, sa); err != nil {
 		return nil, fmt.Errorf("error updating ServiceAccount %q in namespace %q: %w", name, project, err)
 	}
@@ -542,9 +552,9 @@ func (r *rolesDatabase) RevokeRoleFromUsers(
 // Update implements the RolesDatabase interface.
 func (r *rolesDatabase) Update(
 	ctx context.Context,
-	kargoRole *svcv1alpha1.Role,
-) (*svcv1alpha1.Role, error) {
-	sa, roles, rbs, err := r.GetAsResources(ctx, kargoRole.Project, kargoRole.Name)
+	kargoRole *rbacapi.Role,
+) (*rbacapi.Role, error) {
+	sa, roles, rbs, err := r.GetAsResources(ctx, kargoRole.Namespace, kargoRole.Name)
 	if err != nil {
 		return nil, err
 	}
@@ -555,39 +565,35 @@ func (r *rolesDatabase) Update(
 		return nil, err
 	}
 
-	amendClaimAnnotation(sa, kargoapi.AnnotationKeyOIDCSubjects, kargoRole.Subs)
-	amendClaimAnnotation(sa, kargoapi.AnnotationKeyOIDCEmails, kargoRole.Emails)
-	amendClaimAnnotation(sa, kargoapi.AnnotationKeyOIDCGroups, kargoRole.Groups)
+	amendClaimAnnotation(sa, rbacapi.AnnotationKeyOIDCSubjects, kargoRole.Subs)
+	amendClaimAnnotation(sa, rbacapi.AnnotationKeyOIDCEmails, kargoRole.Emails)
+	amendClaimAnnotation(sa, rbacapi.AnnotationKeyOIDCGroups, kargoRole.Groups)
 	if err = r.client.Update(ctx, sa); err != nil {
 		return nil, fmt.Errorf(
-			"error updating ServiceAccount %q in namespace %q: %w", kargoRole.Name, kargoRole.Project, err,
+			"error updating ServiceAccount %q in namespace %q: %w", kargoRole.Name, kargoRole.Namespace, err,
 		)
 	}
 
 	newRole := role
 	if newRole == nil {
-		newRole = buildNewRole(kargoRole.Project, kargoRole.Name)
+		newRole = buildNewRole(kargoRole.Namespace, kargoRole.Name)
 	}
-	rules := make([]rbacv1.PolicyRule, len(kargoRole.Rules))
-	for i, rule := range kargoRole.Rules {
-		rules[i] = *rule
-	}
-	if newRole.Rules, err = NormalizePolicyRules(rules); err != nil {
+	if newRole.Rules, err = NormalizePolicyRules(kargoRole.Rules); err != nil {
 		return nil, fmt.Errorf("error normalizing RBAC policy rules: %w", err)
 	}
 	if role == nil {
 		if err := r.client.Create(ctx, newRole); err != nil {
-			return nil, fmt.Errorf("error creating Role %q in namespace %q: %w", kargoRole.Name, kargoRole.Project, err)
+			return nil, fmt.Errorf("error creating Role %q in namespace %q: %w", kargoRole.Name, kargoRole.Namespace, err)
 		}
 	} else if err := r.client.Update(ctx, newRole); err != nil {
-		return nil, fmt.Errorf("error updating Role %q in namespace %q: %w", kargoRole.Name, kargoRole.Project, err)
+		return nil, fmt.Errorf("error updating Role %q in namespace %q: %w", kargoRole.Name, kargoRole.Namespace, err)
 	}
 
 	if rb == nil {
-		rb = buildNewRoleBinding(kargoRole.Project, kargoRole.Name)
+		rb = buildNewRoleBinding(kargoRole.Namespace, kargoRole.Name)
 		if err := r.client.Create(ctx, rb); err != nil {
 			return nil, fmt.Errorf(
-				"error creating RoleBinding %q in namespace %q: %w", kargoRole.Name, kargoRole.Project, err,
+				"error creating RoleBinding %q in namespace %q: %w", kargoRole.Name, kargoRole.Namespace, err,
 			)
 		}
 	}
@@ -602,26 +608,28 @@ func ResourcesToRole(
 	sa *corev1.ServiceAccount,
 	roles []rbacv1.Role,
 	rbs []rbacv1.RoleBinding,
-) (*svcv1alpha1.Role, error) {
+) (*rbacapi.Role, error) {
 	if sa == nil {
 		return nil, nil
 	}
 
-	kargoRole := &svcv1alpha1.Role{
-		Project:           sa.Namespace,
-		Name:              sa.Name,
-		CreationTimestamp: timestamppb.New(sa.CreationTimestamp.Time),
+	kargoRole := &rbacapi.Role{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace:         sa.Namespace,
+			Name:              sa.Name,
+			CreationTimestamp: sa.CreationTimestamp,
+		},
 	}
-	if sa.Annotations[kargoapi.AnnotationKeyOIDCSubjects] != "" {
-		kargoRole.Subs = strings.Split(sa.Annotations[kargoapi.AnnotationKeyOIDCSubjects], ",")
+	if sa.Annotations[rbacapi.AnnotationKeyOIDCSubjects] != "" {
+		kargoRole.Subs = strings.Split(sa.Annotations[rbacapi.AnnotationKeyOIDCSubjects], ",")
 		slices.Sort(kargoRole.Subs)
 	}
-	if sa.Annotations[kargoapi.AnnotationKeyOIDCEmails] != "" {
-		kargoRole.Emails = strings.Split(sa.Annotations[kargoapi.AnnotationKeyOIDCEmails], ",")
+	if sa.Annotations[rbacapi.AnnotationKeyOIDCEmails] != "" {
+		kargoRole.Emails = strings.Split(sa.Annotations[rbacapi.AnnotationKeyOIDCEmails], ",")
 		slices.Sort(kargoRole.Emails)
 	}
-	if sa.Annotations[kargoapi.AnnotationKeyOIDCGroups] != "" {
-		kargoRole.Groups = strings.Split(sa.Annotations[kargoapi.AnnotationKeyOIDCGroups], ",")
+	if sa.Annotations[rbacapi.AnnotationKeyOIDCGroups] != "" {
+		kargoRole.Groups = strings.Split(sa.Annotations[rbacapi.AnnotationKeyOIDCGroups], ",")
 		slices.Sort(kargoRole.Groups)
 	}
 
@@ -630,13 +638,9 @@ func ResourcesToRole(
 		rules = append(rules, role.Rules...)
 	}
 
-	rules, err := NormalizePolicyRules(rules)
-	if err != nil {
+	var err error
+	if kargoRole.Rules, err = NormalizePolicyRules(rules); err != nil {
 		return nil, fmt.Errorf("error normalizing RBAC policy rules: %w", err)
-	}
-	kargoRole.Rules = make([]*rbacv1.PolicyRule, len(rules))
-	for i, rule := range rules {
-		kargoRole.Rules[i] = rule.DeepCopy()
 	}
 
 	if isKargoManaged(sa) &&
@@ -651,24 +655,20 @@ func ResourcesToRole(
 // RoleToResources converts the provided Kargo Role into a
 // ServiceAccount/Role/RoleBinding trio.
 func RoleToResources(
-	kargoRole *svcv1alpha1.Role,
+	kargoRole *rbacapi.Role,
 ) (*corev1.ServiceAccount, *rbacv1.Role, *rbacv1.RoleBinding, error) {
-	sa := buildNewServiceAccount(kargoRole.Project, kargoRole.Name)
-	amendClaimAnnotation(sa, kargoapi.AnnotationKeyOIDCSubjects, kargoRole.Subs)
-	amendClaimAnnotation(sa, kargoapi.AnnotationKeyOIDCEmails, kargoRole.Emails)
-	amendClaimAnnotation(sa, kargoapi.AnnotationKeyOIDCGroups, kargoRole.Groups)
+	sa := buildNewServiceAccount(kargoRole.Namespace, kargoRole.Name)
+	amendClaimAnnotation(sa, rbacapi.AnnotationKeyOIDCSubjects, kargoRole.Subs)
+	amendClaimAnnotation(sa, rbacapi.AnnotationKeyOIDCEmails, kargoRole.Emails)
+	amendClaimAnnotation(sa, rbacapi.AnnotationKeyOIDCGroups, kargoRole.Groups)
 
-	role := buildNewRole(kargoRole.Project, kargoRole.Name)
-	rules := make([]rbacv1.PolicyRule, len(kargoRole.Rules))
-	for i, rule := range kargoRole.Rules {
-		rules[i] = *rule
-	}
+	role := buildNewRole(kargoRole.Namespace, kargoRole.Name)
 	var err error
-	if role.Rules, err = NormalizePolicyRules(rules); err != nil {
+	if role.Rules, err = NormalizePolicyRules(kargoRole.Rules); err != nil {
 		return nil, nil, nil, fmt.Errorf("error normalizing RBAC policy rules: %w", err)
 	}
 
-	rb := buildNewRoleBinding(kargoRole.Project, kargoRole.Name)
+	rb := buildNewRoleBinding(kargoRole.Namespace, kargoRole.Name)
 
 	return sa, role, rb, nil
 }
@@ -707,7 +707,7 @@ func buildNewServiceAccount(namespace, name string) *corev1.ServiceAccount {
 			Namespace: namespace,
 			Name:      name,
 			Annotations: map[string]string{
-				kargoapi.AnnotationKeyManaged: kargoapi.AnnotationValueTrue,
+				rbacapi.AnnotationKeyManaged: rbacapi.AnnotationValueTrue,
 			},
 		},
 	}
@@ -719,7 +719,7 @@ func buildNewRole(namespace, name string) *rbacv1.Role {
 			Namespace: namespace,
 			Name:      name,
 			Annotations: map[string]string{
-				kargoapi.AnnotationKeyManaged: kargoapi.AnnotationValueTrue,
+				rbacapi.AnnotationKeyManaged: rbacapi.AnnotationValueTrue,
 			},
 		},
 	}
@@ -731,7 +731,7 @@ func buildNewRoleBinding(namespace, name string) *rbacv1.RoleBinding {
 			Namespace: namespace,
 			Name:      name,
 			Annotations: map[string]string{
-				kargoapi.AnnotationKeyManaged: kargoapi.AnnotationValueTrue,
+				rbacapi.AnnotationKeyManaged: rbacapi.AnnotationValueTrue,
 			},
 		},
 		Subjects: []rbacv1.Subject{
@@ -767,7 +767,7 @@ func removeFromStringSlice(s, items []string) []string {
 }
 
 func isKargoManaged(obj metav1.Object) bool {
-	return obj.GetAnnotations()[kargoapi.AnnotationKeyManaged] == kargoapi.LabelTrueValue
+	return obj.GetAnnotations()[rbacapi.AnnotationKeyManaged] == rbacapi.AnnotationValueTrue
 }
 
 func manageableResources(

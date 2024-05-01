@@ -6,9 +6,9 @@
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto3, Timestamp } from "@bufbuild/protobuf";
 import { Freight, Project, Promotion, Stage, Warehouse } from "../../v1alpha1/generated_pb.js";
-import { Event, Secret, ServiceAccount } from "../../k8s.io/api/core/v1/generated_pb.js";
+import { Event, Secret } from "../../k8s.io/api/core/v1/generated_pb.js";
 import { AnalysisRun, AnalysisTemplate } from "../../rollouts/api/v1alpha1/generated_pb.js";
-import { PolicyRule, Role as Role$1, RoleBinding } from "../../k8s.io/api/rbac/v1/generated_pb.js";
+import { ResourceDetails, Role, RoleResources, UserClaims } from "../../rbac/v1alpha1/generated_pb.js";
 
 /**
  * @generated from enum akuity.io.kargo.service.v1alpha1.RawFormat
@@ -4199,7 +4199,7 @@ export class ListProjectEventsResponse extends Message<ListProjectEventsResponse
  */
 export class CreateRoleRequest extends Message<CreateRoleRequest> {
   /**
-   * @generated from field: akuity.io.kargo.service.v1alpha1.Role role = 1;
+   * @generated from field: github.com.akuity.kargo.api.rbac.v1alpha1.Role role = 1;
    */
   role?: Role;
 
@@ -4236,7 +4236,7 @@ export class CreateRoleRequest extends Message<CreateRoleRequest> {
  */
 export class CreateRoleResponse extends Message<CreateRoleResponse> {
   /**
-   * @generated from field: akuity.io.kargo.service.v1alpha1.Role role = 1;
+   * @generated from field: github.com.akuity.kargo.api.rbac.v1alpha1.Role role = 1;
    */
   role?: Role;
 
@@ -4408,13 +4408,13 @@ export class GetRoleResponse extends Message<GetRoleResponse> {
    */
   result: {
     /**
-     * @generated from field: akuity.io.kargo.service.v1alpha1.Role role = 1;
+     * @generated from field: github.com.akuity.kargo.api.rbac.v1alpha1.Role role = 1;
      */
     value: Role;
     case: "role";
   } | {
     /**
-     * @generated from field: akuity.io.kargo.service.v1alpha1.RoleResources resources = 2;
+     * @generated from field: github.com.akuity.kargo.api.rbac.v1alpha1.RoleResources resources = 2;
      */
     value: RoleResources;
     case: "resources";
@@ -4475,13 +4475,13 @@ export class GrantRequest extends Message<GrantRequest> {
    */
   request: {
     /**
-     * @generated from field: akuity.io.kargo.service.v1alpha1.UserClaims user_claims = 3;
+     * @generated from field: github.com.akuity.kargo.api.rbac.v1alpha1.UserClaims user_claims = 3;
      */
     value: UserClaims;
     case: "userClaims";
   } | {
     /**
-     * @generated from field: akuity.io.kargo.service.v1alpha1.ResourceDetails resource_details = 4;
+     * @generated from field: github.com.akuity.kargo.api.rbac.v1alpha1.ResourceDetails resource_details = 4;
      */
     value: ResourceDetails;
     case: "resourceDetails";
@@ -4519,115 +4519,11 @@ export class GrantRequest extends Message<GrantRequest> {
 }
 
 /**
- * @generated from message akuity.io.kargo.service.v1alpha1.UserClaims
- */
-export class UserClaims extends Message<UserClaims> {
-  /**
-   * @generated from field: repeated string subs = 1;
-   */
-  subs: string[] = [];
-
-  /**
-   * @generated from field: repeated string emails = 2;
-   */
-  emails: string[] = [];
-
-  /**
-   * @generated from field: repeated string groups = 3;
-   */
-  groups: string[] = [];
-
-  constructor(data?: PartialMessage<UserClaims>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "akuity.io.kargo.service.v1alpha1.UserClaims";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "subs", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 2, name: "emails", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 3, name: "groups", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UserClaims {
-    return new UserClaims().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UserClaims {
-    return new UserClaims().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UserClaims {
-    return new UserClaims().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: UserClaims | PlainMessage<UserClaims> | undefined, b: UserClaims | PlainMessage<UserClaims> | undefined): boolean {
-    return proto3.util.equals(UserClaims, a, b);
-  }
-}
-
-/**
- * @generated from message akuity.io.kargo.service.v1alpha1.ResourceDetails
- */
-export class ResourceDetails extends Message<ResourceDetails> {
-  /**
-   * @generated from field: string resource_group = 1;
-   */
-  resourceGroup = "";
-
-  /**
-   * @generated from field: string resource_type = 2;
-   */
-  resourceType = "";
-
-  /**
-   * @generated from field: string resource_name = 3;
-   */
-  resourceName = "";
-
-  /**
-   * @generated from field: repeated string verbs = 4;
-   */
-  verbs: string[] = [];
-
-  constructor(data?: PartialMessage<ResourceDetails>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "akuity.io.kargo.service.v1alpha1.ResourceDetails";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "resource_group", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "resource_type", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "resource_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 4, name: "verbs", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ResourceDetails {
-    return new ResourceDetails().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ResourceDetails {
-    return new ResourceDetails().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ResourceDetails {
-    return new ResourceDetails().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: ResourceDetails | PlainMessage<ResourceDetails> | undefined, b: ResourceDetails | PlainMessage<ResourceDetails> | undefined): boolean {
-    return proto3.util.equals(ResourceDetails, a, b);
-  }
-}
-
-/**
  * @generated from message akuity.io.kargo.service.v1alpha1.GrantResponse
  */
 export class GrantResponse extends Message<GrantResponse> {
   /**
-   * @generated from field: akuity.io.kargo.service.v1alpha1.Role role = 1;
+   * @generated from field: github.com.akuity.kargo.api.rbac.v1alpha1.Role role = 1;
    */
   role?: Role;
 
@@ -4709,12 +4605,12 @@ export class ListRolesResponse extends Message<ListRolesResponse> {
   /**
    * Note: oneof and repeated do not work together
    *
-   * @generated from field: repeated akuity.io.kargo.service.v1alpha1.Role roles = 1;
+   * @generated from field: repeated github.com.akuity.kargo.api.rbac.v1alpha1.Role roles = 1;
    */
   roles: Role[] = [];
 
   /**
-   * @generated from field: repeated akuity.io.kargo.service.v1alpha1.RoleResources resources = 2;
+   * @generated from field: repeated github.com.akuity.kargo.api.rbac.v1alpha1.RoleResources resources = 2;
    */
   resources: RoleResources[] = [];
 
@@ -4766,13 +4662,13 @@ export class RevokeRequest extends Message<RevokeRequest> {
    */
   request: {
     /**
-     * @generated from field: akuity.io.kargo.service.v1alpha1.UserClaims user_claims = 3;
+     * @generated from field: github.com.akuity.kargo.api.rbac.v1alpha1.UserClaims user_claims = 3;
      */
     value: UserClaims;
     case: "userClaims";
   } | {
     /**
-     * @generated from field: akuity.io.kargo.service.v1alpha1.ResourceDetails resource_details = 4;
+     * @generated from field: github.com.akuity.kargo.api.rbac.v1alpha1.ResourceDetails resource_details = 4;
      */
     value: ResourceDetails;
     case: "resourceDetails";
@@ -4814,7 +4710,7 @@ export class RevokeRequest extends Message<RevokeRequest> {
  */
 export class RevokeResponse extends Message<RevokeResponse> {
   /**
-   * @generated from field: akuity.io.kargo.service.v1alpha1.Role role = 1;
+   * @generated from field: github.com.akuity.kargo.api.rbac.v1alpha1.Role role = 1;
    */
   role?: Role;
 
@@ -4851,7 +4747,7 @@ export class RevokeResponse extends Message<RevokeResponse> {
  */
 export class UpdateRoleRequest extends Message<UpdateRoleRequest> {
   /**
-   * @generated from field: akuity.io.kargo.service.v1alpha1.Role role = 1;
+   * @generated from field: github.com.akuity.kargo.api.rbac.v1alpha1.Role role = 1;
    */
   role?: Role;
 
@@ -4888,7 +4784,7 @@ export class UpdateRoleRequest extends Message<UpdateRoleRequest> {
  */
 export class UpdateRoleResponse extends Message<UpdateRoleResponse> {
   /**
-   * @generated from field: akuity.io.kargo.service.v1alpha1.Role role = 1;
+   * @generated from field: github.com.akuity.kargo.api.rbac.v1alpha1.Role role = 1;
    */
   role?: Role;
 
@@ -4917,134 +4813,6 @@ export class UpdateRoleResponse extends Message<UpdateRoleResponse> {
 
   static equals(a: UpdateRoleResponse | PlainMessage<UpdateRoleResponse> | undefined, b: UpdateRoleResponse | PlainMessage<UpdateRoleResponse> | undefined): boolean {
     return proto3.util.equals(UpdateRoleResponse, a, b);
-  }
-}
-
-/**
- * @generated from message akuity.io.kargo.service.v1alpha1.Role
- */
-export class Role extends Message<Role> {
-  /**
-   * @generated from field: string project = 1;
-   */
-  project = "";
-
-  /**
-   * @generated from field: string name = 2;
-   */
-  name = "";
-
-  /**
-   * @generated from field: google.protobuf.Timestamp creation_timestamp = 3;
-   */
-  creationTimestamp?: Timestamp;
-
-  /**
-   * @generated from field: bool kargo_managed = 4;
-   */
-  kargoManaged = false;
-
-  /**
-   * @generated from field: repeated string subs = 5;
-   */
-  subs: string[] = [];
-
-  /**
-   * @generated from field: repeated string emails = 6;
-   */
-  emails: string[] = [];
-
-  /**
-   * @generated from field: repeated string groups = 7;
-   */
-  groups: string[] = [];
-
-  /**
-   * @generated from field: repeated k8s.io.api.rbac.v1.PolicyRule rules = 8;
-   */
-  rules: PolicyRule[] = [];
-
-  constructor(data?: PartialMessage<Role>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "akuity.io.kargo.service.v1alpha1.Role";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "project", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "creation_timestamp", kind: "message", T: Timestamp },
-    { no: 4, name: "kargo_managed", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 5, name: "subs", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 6, name: "emails", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 7, name: "groups", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 8, name: "rules", kind: "message", T: PolicyRule, repeated: true },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Role {
-    return new Role().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): Role {
-    return new Role().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Role {
-    return new Role().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: Role | PlainMessage<Role> | undefined, b: Role | PlainMessage<Role> | undefined): boolean {
-    return proto3.util.equals(Role, a, b);
-  }
-}
-
-/**
- * @generated from message akuity.io.kargo.service.v1alpha1.RoleResources
- */
-export class RoleResources extends Message<RoleResources> {
-  /**
-   * @generated from field: k8s.io.api.core.v1.ServiceAccount service_account = 1;
-   */
-  serviceAccount?: ServiceAccount;
-
-  /**
-   * @generated from field: repeated k8s.io.api.rbac.v1.Role roles = 2;
-   */
-  roles: Role$1[] = [];
-
-  /**
-   * @generated from field: repeated k8s.io.api.rbac.v1.RoleBinding role_bindings = 3;
-   */
-  roleBindings: RoleBinding[] = [];
-
-  constructor(data?: PartialMessage<RoleResources>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "akuity.io.kargo.service.v1alpha1.RoleResources";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "service_account", kind: "message", T: ServiceAccount },
-    { no: 2, name: "roles", kind: "message", T: Role$1, repeated: true },
-    { no: 3, name: "role_bindings", kind: "message", T: RoleBinding, repeated: true },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RoleResources {
-    return new RoleResources().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RoleResources {
-    return new RoleResources().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RoleResources {
-    return new RoleResources().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: RoleResources | PlainMessage<RoleResources> | undefined, b: RoleResources | PlainMessage<RoleResources> | undefined): boolean {
-    return proto3.util.equals(RoleResources, a, b);
   }
 }
 

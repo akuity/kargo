@@ -8,15 +8,16 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/spf13/cobra"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 
+	rbacapi "github.com/akuity/kargo/api/rbac/v1alpha1"
 	"github.com/akuity/kargo/internal/cli/client"
 	"github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/io"
 	"github.com/akuity/kargo/internal/cli/kubernetes"
 	"github.com/akuity/kargo/internal/cli/option"
-	"github.com/akuity/kargo/internal/cli/rbac"
 	"github.com/akuity/kargo/internal/cli/templates"
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
@@ -128,12 +129,12 @@ func (o *deleteRoleOptions) run(ctx context.Context) error {
 			continue
 		}
 		_ = printer.PrintObj(
-			rbac.NewRole(
-				&v1alpha1.Role{
-					Project: o.Project,
-					Name:    name,
+			&rbacapi.Role{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: o.Project,
+					Name:      name,
 				},
-			),
+			},
 			o.IOStreams.Out,
 		)
 	}
