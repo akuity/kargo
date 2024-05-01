@@ -484,6 +484,18 @@ func (r *rolesDatabase) RevokePermissionsFromRole(
 	if role.Rules, err = NormalizePolicyRules(role.Rules); err != nil {
 		return nil, fmt.Errorf("error normalizing RBAC policy rules: %w", err)
 	}
+
+	// Deal with wildcard verb
+	for _, verb := range resourceDetails.Verbs {
+		if strings.TrimSpace(verb) == "*" {
+			resourceDetails.Verbs = append(resourceDetails.Verbs, allVerbs...)
+			break
+		}
+	}
+	// Compact the list of verbs we want to remove
+	slices.Sort(resourceDetails.Verbs)
+	resourceDetails.Verbs = slices.Compact(resourceDetails.Verbs)
+
 	filteredRules := make([]rbacv1.PolicyRule, 0, len(role.Rules))
 	for _, rule := range role.Rules {
 		if rule.APIGroups[0] != resourceDetails.ResourceGroup ||

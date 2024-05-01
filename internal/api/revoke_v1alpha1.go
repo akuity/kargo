@@ -33,7 +33,7 @@ func (s *server) Revoke(
 			return nil, fmt.Errorf("error revoking Kargo Role from users: %w", err)
 		}
 	} else if resources := req.Msg.GetResourceDetails(); resources != nil {
-		if role, err = s.rolesDB.GrantPermissionsToRole(
+		if role, err = s.rolesDB.RevokePermissionsFromRole(
 			ctx, project, req.Msg.Role, resources,
 		); err != nil {
 			return nil, fmt.Errorf("error revoking permissions from Kargo Role: %w", err)
