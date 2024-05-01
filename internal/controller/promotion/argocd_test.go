@@ -518,11 +518,12 @@ func TestArgoCDMustPerformUpdate(t *testing.T) {
 							Username: applicationOperationInitiator,
 						},
 					},
+					SyncResult: &argocd.SyncOperationResult{},
 				}
 			},
 			assertions: func(t *testing.T, phase argocd.OperationPhase, mustUpdate bool, err error) {
-				require.ErrorContains(t, err, "unable to determine desired revision")
-				require.Empty(t, phase)
+				require.NoError(t, err)
+				require.Equal(t, argocd.OperationSucceeded, phase)
 				require.False(t, mustUpdate)
 			},
 		},

@@ -216,17 +216,12 @@ func (a *argoCDMechanism) mustPerformUpdate(
 
 	// The operation has completed. Check if the desired revision was applied.
 	desiredRevision := libargocd.GetDesiredRevision(app, newFreight)
-	if desiredRevision == "" {
-		// We cannot determine the desired revision. Performing an update in this
-		// case wouldn't change anything. Instead, we should error out.
-		return "", false, errors.New("unable to determine desired revision")
-	}
 	if status.SyncResult == nil {
 		// We do not have a sync result, so we cannot determine if the operation
 		// was successful. The best recourse is to retry the operation.
 		return "", true, errors.New("operation completed without a sync result")
 	}
-	if status.SyncResult.Revision != desiredRevision {
+	if desiredRevision != "" && status.SyncResult.Revision != desiredRevision {
 		// The operation did not result in the desired revision being applied.
 		// We should attempt to retry the operation.
 		return "", true, fmt.Errorf(
