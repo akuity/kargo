@@ -3120,21 +3120,28 @@ export class Promotion extends Message<Promotion> {
  */
 export class PromotionInfo extends Message<PromotionInfo> {
   /**
-   * Name is the name of the Promotion
+   * Name is the name of the Promotion.
    *
    * @generated from field: optional string name = 1;
    */
   name?: string;
 
   /**
-   * Freight is the freight being promoted
+   * CreationTimestamp is the time at which the Promotion was created.
+   *
+   * @generated from field: optional k8s.io.apimachinery.pkg.apis.meta.v1.Time creationTimestamp = 4;
+   */
+  creationTimestamp?: Time;
+
+  /**
+   * Freight is the freight being promoted.
    *
    * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.FreightReference freight = 2;
    */
   freight?: FreightReference;
 
   /**
-   * Status is the (optional) status of the promotion
+   * Status is the (optional) status of the promotion.
    *
    * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.PromotionStatus status = 3;
    */
@@ -3149,6 +3156,7 @@ export class PromotionInfo extends Message<PromotionInfo> {
   static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.PromotionInfo";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 4, name: "creationTimestamp", kind: "message", T: Time, opt: true },
     { no: 2, name: "freight", kind: "message", T: FreightReference, opt: true },
     { no: 3, name: "status", kind: "message", T: PromotionStatus, opt: true },
   ]);

@@ -676,11 +676,13 @@ type StageList struct {
 }
 
 type PromotionInfo struct {
-	// Name is the name of the Promotion
+	// Name is the name of the Promotion.
 	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
-	// Freight is the freight being promoted
+	// CreationTimestamp is the time at which the Promotion was created.
+	CreationTimestamp metav1.Time `json:"creationTimestamp,omitempty" protobuf:"bytes,4,opt,name=creationTimestamp"`
+	// Freight is the freight being promoted.
 	Freight FreightReference `json:"freight" protobuf:"bytes,2,opt,name=freight"`
-	// Status is the (optional) status of the promotion
+	// Status is the (optional) status of the promotion.
 	Status *PromotionStatus `json:"status,omitempty" protobuf:"bytes,3,opt,name=status"`
 }
 

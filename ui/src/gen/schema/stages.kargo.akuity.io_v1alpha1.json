@@ -673,8 +673,13 @@
         "currentPromotion": {
           "description": "CurrentPromotion is a reference to the currently Running promotion.",
           "properties": {
+            "creationTimestamp": {
+              "description": "CreationTimestamp is the time at which the Promotion was created.",
+              "format": "date-time",
+              "type": "string"
+            },
             "freight": {
-              "description": "Freight is the freight being promoted",
+              "description": "Freight is the freight being promoted.",
               "properties": {
                 "charts": {
                   "description": "Charts describes specific versions of specific Helm charts.",
@@ -892,11 +897,11 @@
               "type": "object"
             },
             "name": {
-              "description": "Name is the name of the Promotion",
+              "description": "Name is the name of the Promotion.",
               "type": "string"
             },
             "status": {
-              "description": "Status is the (optional) status of the promotion",
+              "description": "Status is the (optional) status of the promotion.",
               "properties": {
                 "freight": {
                   "description": "Freight is the detail of the piece of freight that was referenced by this promotion.",
@@ -1449,8 +1454,13 @@
         "lastPromotion": {
           "description": "LastPromotion is a reference to the last completed promotion.",
           "properties": {
+            "creationTimestamp": {
+              "description": "CreationTimestamp is the time at which the Promotion was created.",
+              "format": "date-time",
+              "type": "string"
+            },
             "freight": {
-              "description": "Freight is the freight being promoted",
+              "description": "Freight is the freight being promoted.",
               "properties": {
                 "charts": {
                   "description": "Charts describes specific versions of specific Helm charts.",
@@ -1668,11 +1678,11 @@
               "type": "object"
             },
             "name": {
-              "description": "Name is the name of the Promotion",
+              "description": "Name is the name of the Promotion.",
               "type": "string"
             },
             "status": {
-              "description": "Status is the (optional) status of the promotion",
+              "description": "Status is the (optional) status of the promotion.",
               "properties": {
                 "freight": {
                   "description": "Freight is the detail of the piece of freight that was referenced by this promotion.",
