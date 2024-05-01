@@ -10,12 +10,12 @@ import (
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 
+	rbacapi "github.com/akuity/kargo/api/rbac/v1alpha1"
 	"github.com/akuity/kargo/internal/cli/client"
 	"github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/io"
 	"github.com/akuity/kargo/internal/cli/kubernetes"
 	"github.com/akuity/kargo/internal/cli/option"
-	"github.com/akuity/kargo/internal/cli/rbac"
 	"github.com/akuity/kargo/internal/cli/templates"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
@@ -160,7 +160,7 @@ func (o *grantOptions) run(ctx context.Context) error {
 	// value.
 	if o.ResourceType != "" {
 		req.Request = &svcv1alpha1.GrantRequest_ResourceDetails{
-			ResourceDetails: &svcv1alpha1.ResourceDetails{
+			ResourceDetails: &rbacapi.ResourceDetails{
 				ResourceGroup: o.ResourceGroup,
 				ResourceType:  o.ResourceType,
 				ResourceName:  o.ResourceName,
@@ -169,7 +169,7 @@ func (o *grantOptions) run(ctx context.Context) error {
 		}
 	} else {
 		req.Request = &svcv1alpha1.GrantRequest_UserClaims{
-			UserClaims: &svcv1alpha1.UserClaims{
+			UserClaims: &rbacapi.UserClaims{
 				Subs:   o.Subs,
 				Emails: o.Emails,
 				Groups: o.Groups,
@@ -187,5 +187,5 @@ func (o *grantOptions) run(ctx context.Context) error {
 		return fmt.Errorf("new printer: %w", err)
 	}
 
-	return printer.PrintObj(rbac.NewRole(resp.Msg.Role), o.IOStreams.Out)
+	return printer.PrintObj(resp.Msg.Role, o.IOStreams.Out)
 }

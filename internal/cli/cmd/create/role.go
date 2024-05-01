@@ -8,15 +8,16 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/spf13/cobra"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 
+	rbacapi "github.com/akuity/kargo/api/rbac/v1alpha1"
 	"github.com/akuity/kargo/internal/cli/client"
 	"github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/io"
 	"github.com/akuity/kargo/internal/cli/kubernetes"
 	"github.com/akuity/kargo/internal/cli/option"
-	"github.com/akuity/kargo/internal/cli/rbac"
 	"github.com/akuity/kargo/internal/cli/templates"
 	kargosvcapi "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
@@ -148,12 +149,14 @@ func (o *createRoleOptions) run(ctx context.Context) error {
 		ctx,
 		connect.NewRequest(
 			&kargosvcapi.CreateRoleRequest{
-				Role: &kargosvcapi.Role{
-					Project: o.Project,
-					Name:    o.Name,
-					Subs:    o.Subs,
-					Emails:  o.Emails,
-					Groups:  o.Groups,
+				Role: &rbacapi.Role{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: o.Project,
+						Name:      o.Name,
+					},
+					Subs:   o.Subs,
+					Emails: o.Emails,
+					Groups: o.Groups,
 				},
 			},
 		),
@@ -167,5 +170,5 @@ func (o *createRoleOptions) run(ctx context.Context) error {
 		return fmt.Errorf("new printer: %w", err)
 	}
 
-	return printer.PrintObj(rbac.NewRole(resp.Msg.Role), o.IOStreams.Out)
+	return printer.PrintObj(resp.Msg.Role, o.IOStreams.Out)
 }
