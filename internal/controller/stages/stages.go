@@ -1120,7 +1120,7 @@ func (r *reconciler) syncPromotions(
 		status.LastPromotion = &promo
 		if promo.Status.Phase == kargoapi.PromotionPhaseSucceeded {
 			status.CurrentFreight = status.LastPromotion.Freight.DeepCopy()
-			status.History.UpdateOrPush(status.LastPromotion.Freight)
+			status.History.Push(status.LastPromotion.Freight)
 			if status.CurrentPromotion == nil {
 				status.Phase = kargoapi.StagePhaseSteady
 			}
