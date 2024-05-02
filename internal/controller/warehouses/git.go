@@ -169,11 +169,10 @@ func (r *reconciler) selectTagAndCommitID(
 	baseCommit string,
 ) (string, string, error) {
 
+	var selectedTag, selectedCommit string
+	var err error
 	if sub.CommitSelectionStrategy == kargoapi.CommitSelectionStrategyNewestFromBranch {
-		// In this case, there is nothing to do except return the commit ID at the
-		// head of the branch unless there are includePaths/excludePaths configured to
-		// handle.
-		commit, err := r.getLastCommitIDFn(repo)
+		selectedCommit, err = r.getLastCommitIDFn(repo)
 		if err != nil {
 			return "", "",
 				fmt.Errorf("error determining commit ID at head of branch %q in git repo %q: %w",
@@ -182,111 +181,110 @@ func (r *reconciler) selectTagAndCommitID(
 					err,
 				)
 		}
-		// In case includePaths/excludePaths filters are configured in a git subscription
-		// below if clause deals with it. There is a special case - Warehouse has not
-		// produced any Freight yet, this is sorted by creating Freight based on last
-		// commit without applying filters.
-		if (sub.IncludePaths != nil || sub.ExcludePaths != nil) && baseCommit != "" {
 
-			// this shortcircuits to just return the last commit in case it is same as
-			// baseCommit so we do not spam logs with errors of a valid not getting diffs
-			// between baseCommit and HEAD (pointing to baseCommit in this case)
-			if baseCommit == commit {
-				return "", commit, nil
-			}
-
-			// getting actual diffPaths since baseCommit
-			diffs, err := r.getDiffPathsSinceCommitIDFn(repo, baseCommit)
-			if err != nil {
-				return "", "",
-					fmt.Errorf("error getting diffs since commit %q in git repo %q: %w",
-						baseCommit,
-						sub.RepoURL,
-						err,
-					)
-			}
-
-			matchesPathsFilters, err := matchesPathsFilters(sub.IncludePaths, sub.ExcludePaths, diffs)
-			if err != nil {
-				return "", "",
-					fmt.Errorf("error checking includePaths/excludePaths match for commit %q for git repo %q: %w",
-						commit,
-						sub.RepoURL,
-						err,
-					)
-			}
-
-			if !matchesPathsFilters {
-				return "", "",
-					fmt.Errorf("commit %q not applicable due to includePaths/excludePaths configuration for repo %q",
-						commit,
-						sub.RepoURL,
-					)
-			}
+	} else {
+		tags, err := r.listTagsFn(repo) // These are ordered newest to oldest
+		if err != nil {
+			return "", "", fmt.Errorf("error listing tags from git repo %q: %w", sub.RepoURL, err)
 		}
 
-		return "", commit, nil
+		// Narrow down the list of tags to those that are allowed and not ignored
+		allowRegex, err := regexp.Compile(sub.AllowTags)
+		if err != nil {
+			return "", "", fmt.Errorf("error compiling regular expression %q: %w", sub.AllowTags, err)
+		}
+		filteredTags := make([]string, 0, len(tags))
+		for _, tagName := range tags {
+			if allows(tagName, allowRegex) && !ignores(tagName, sub.IgnoreTags) {
+				filteredTags = append(filteredTags, tagName)
+			}
+		}
+		if len(filteredTags) == 0 {
+			return "", "", fmt.Errorf("found no applicable tags in repo %q", sub.RepoURL)
+		}
 
-	}
+		switch sub.CommitSelectionStrategy {
+		case kargoapi.CommitSelectionStrategyLexical:
+			selectedTag = selectLexicallyLastTag(filteredTags)
+		case kargoapi.CommitSelectionStrategyNewestTag:
+			selectedTag = filteredTags[0] // These are already ordered newest to oldest
+		case kargoapi.CommitSelectionStrategySemVer:
+			if selectedTag, err =
+				selectSemverTag(filteredTags, sub.SemverConstraint); err != nil {
+				return "", "", err
+			}
+		default:
+			return "", "", fmt.Errorf("unknown commit selection strategy %q", sub.CommitSelectionStrategy)
+		}
+		if selectedTag == "" {
+			return "", "", fmt.Errorf("found no applicable tags in repo %q", sub.RepoURL)
+		}
 
-	tags, err := r.listTagsFn(repo) // These are ordered newest to oldest
-	if err != nil {
-		return "", "", fmt.Errorf("error listing tags from git repo %q: %w", sub.RepoURL, err)
-	}
+		// Checkout the selected tag and return the commit ID
+		if err = r.checkoutTagFn(repo, selectedTag); err != nil {
+			return "", "", fmt.Errorf(
+				"error checking out tag %q from git repo %q: %w",
+				selectedTag,
+				sub.RepoURL,
+				err,
+			)
+		}
+		selectedCommit, err = r.getLastCommitIDFn(repo)
+		if err != nil {
+			return selectedTag, "", fmt.Errorf(
+				"error determining commit ID of tag %q in git repo %q: %w",
+				selectedTag,
+				sub.RepoURL,
+				err,
+			)
 
-	// Narrow down the list of tags to those that are allowed and not ignored
-	allowRegex, err := regexp.Compile(sub.AllowTags)
-	if err != nil {
-		return "", "", fmt.Errorf("error compiling regular expression %q: %w", sub.AllowTags, err)
-	}
-	filteredTags := make([]string, 0, len(tags))
-	for _, tagName := range tags {
-		if allows(tagName, allowRegex) && !ignores(tagName, sub.IgnoreTags) {
-			filteredTags = append(filteredTags, tagName)
 		}
 	}
-	if len(filteredTags) == 0 {
-		return "", "", fmt.Errorf("found no applicable tags in repo %q", sub.RepoURL)
+
+	// this shortcircuits to just return the last commit in case it is same as
+	// baseCommit so we do not spam logs with errors of a valid not getting diffs
+	// between baseCommit and HEAD (pointing to baseCommit in this case)
+	if baseCommit == selectedCommit {
+		return selectedTag, selectedCommit, nil
 	}
 
-	var selectedTag string
-	switch sub.CommitSelectionStrategy {
-	case kargoapi.CommitSelectionStrategyLexical:
-		selectedTag = selectLexicallyLastTag(filteredTags)
-	case kargoapi.CommitSelectionStrategyNewestTag:
-		selectedTag = filteredTags[0] // These are already ordered newest to oldest
-	case kargoapi.CommitSelectionStrategySemVer:
-		if selectedTag, err =
-			selectSemverTag(filteredTags, sub.SemverConstraint); err != nil {
-			return "", "", err
+	// In case includePaths/excludePaths filters are configured in a git subscription
+	// below if clause deals with it. There is a special case - Warehouse has not
+	// produced any Freight yet, this is sorted by creating Freight based on last
+	// commit without applying filters.
+	if (sub.IncludePaths != nil || sub.ExcludePaths != nil) && baseCommit != "" {
+
+		// getting actual diffPaths since baseCommit
+		diffs, err := r.getDiffPathsSinceCommitIDFn(repo, baseCommit)
+		if err != nil {
+			return selectedTag, "",
+				fmt.Errorf("error getting diffs since commit %q in git repo %q: %w",
+					baseCommit,
+					sub.RepoURL,
+					err,
+				)
 		}
-	default:
-		return "", "", fmt.Errorf("unknown commit selection strategy %q", sub.CommitSelectionStrategy)
-	}
-	if selectedTag == "" {
-		return "", "", fmt.Errorf("found no applicable tags in repo %q", sub.RepoURL)
+
+		matchesPathsFilters, err := matchesPathsFilters(sub.IncludePaths, sub.ExcludePaths, diffs)
+		if err != nil {
+			return selectedTag, "",
+				fmt.Errorf("error checking includePaths/excludePaths match for commit %q for git repo %q: %w",
+					selectedCommit,
+					sub.RepoURL,
+					err,
+				)
+		}
+
+		if !matchesPathsFilters {
+			return selectedTag, "",
+				fmt.Errorf("commit %q not applicable due to includePaths/excludePaths configuration for repo %q",
+					selectedCommit,
+					sub.RepoURL,
+				)
+		}
 	}
 
-	// Checkout the selected tag and return the commit ID
-	if err = r.checkoutTagFn(repo, selectedTag); err != nil {
-		return "", "", fmt.Errorf(
-			"error checking out tag %q from git repo %q: %w",
-			selectedTag,
-			sub.RepoURL,
-			err,
-		)
-	}
-	commit, err := r.getLastCommitIDFn(repo)
-	if err != nil {
-		return "", "", fmt.Errorf(
-			"error determining commit ID of tag %q in git repo %q: %w",
-			selectedTag,
-			sub.RepoURL,
-			err,
-		)
-
-	}
-	return selectedTag, commit, nil
+	return selectedTag, selectedCommit, nil
 }
 
 // allows returns true if the given tag name matches the given regular
