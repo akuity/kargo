@@ -15,5 +15,5 @@ export const ManifestPreview = ({ object }: { object: Stage | Freight }) => {
     return v;
   });
 
-  return <YamlEditor value={encodedObject} height='100%' disabled />;
+  return <YamlEditor value={encodedObject} height='100%' disabled isHideManagedFieldsDisplayed />;
 };

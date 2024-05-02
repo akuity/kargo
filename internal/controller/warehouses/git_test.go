@@ -177,6 +177,7 @@ func TestSelectCommitID(t *testing.T) {
 		name       string
 		sub        kargoapi.GitSubscription
 		reconciler *reconciler
+		baseCommit string
 		assertions func(t *testing.T, tag string, commit string, err error)
 	}{
 		{
@@ -226,7 +227,7 @@ func TestSelectCommitID(t *testing.T) {
 			},
 			assertions: func(t *testing.T, _, _ string, err error) {
 				require.ErrorContains(
-					t, err, `error getting diffs since commit "sha" in git repo "":`,
+					t, err, `error getting diffs since commit "dummyBase" in git repo "":`,
 				)
 				require.ErrorContains(t, err, "something went wrong")
 			},
@@ -417,6 +418,33 @@ func TestSelectCommitID(t *testing.T) {
 			},
 		},
 		{
+			name: "newest tag error due to path filters configuration",
+			sub: kargoapi.GitSubscription{
+				CommitSelectionStrategy: kargoapi.CommitSelectionStrategyNewestTag,
+				IncludePaths:            []string{regexpPrefix + "^.*third_path_to_a/file$"},
+			},
+			reconciler: &reconciler{
+				listTagsFn: func(git.Repo) ([]string, error) {
+					return []string{"abc", "xyz"}, nil
+				},
+				checkoutTagFn: func(git.Repo, string) error {
+					return nil
+				},
+				getLastCommitIDFn: func(git.Repo) (string, error) {
+					return "fake-commit", nil
+				},
+				getDiffPathsSinceCommitIDFn: func(git.Repo, string) ([]string, error) {
+					return []string{"first_path_to_a/file", "second_path_to_a/file"}, nil
+				},
+			},
+			assertions: func(t *testing.T, tag, commit string, err error) {
+				require.Equal(t, "abc", tag)
+				require.ErrorContains(t, err, "commit \"fake-commit\" not applicable due to ")
+				require.ErrorContains(t, err, "includePaths/excludePaths configuration for repo")
+				require.Equal(t, "", commit)
+			},
+		},
+		{
 			name: "semver error selecting tag",
 			sub: kargoapi.GitSubscription{
 				CommitSelectionStrategy: kargoapi.CommitSelectionStrategySemVer,
@@ -459,7 +487,7 @@ func TestSelectCommitID(t *testing.T) {
 			tag, commit, err := testCase.reconciler.selectTagAndCommitID(
 				nil,
 				testCase.sub,
-				"sha",
+				"dummyBase",
 			)
 			testCase.assertions(t, tag, commit, err)
 		})

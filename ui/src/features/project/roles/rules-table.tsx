@@ -6,7 +6,7 @@ import { PolicyRule } from '@ui/gen/k8s.io/api/rbac/v1/generated_pb';
 const renderColumn = (title: string, key: keyof PolicyRule): ColumnType<PolicyRule> => ({
   title,
   key,
-  render: (v: PolicyRule) => <>{(v[key] as string[]).join(',')}</>,
+  render: (v: PolicyRule) => <>{((v[key] || []) as string[]).join(',')}</>,
   onCell: () => ({
     style: {
       padding: '5px'
@@ -40,7 +40,6 @@ export const RulesTable = ({
         renderColumn('API Groups', 'apiGroups'),
         renderColumn('Resources', 'resources'),
         renderColumn('Resource Names', 'resourceNames'),
-        renderColumn('Non-Resource URLs', 'nonResourceURLs'),
         {
           key: 'actions',
           render: (rule) =>

@@ -15,6 +15,7 @@ import { CredentialsList } from '@ui/features/project/credentials/credentials-li
 import { Events } from '@ui/features/project/events/events';
 import { Pipelines } from '@ui/features/project/pipelines/pipelines';
 import { Roles } from '@ui/features/project/roles/roles';
+import { ProjectSettings } from '@ui/features/project/settings/project-settings';
 
 const tabs = {
   pipelines: {
@@ -76,6 +77,7 @@ export const Project = ({ tab = 'pipelines' }: { tab?: ProjectTab }) => {
             <div className='font-semibold mb-1 text-xs text-gray-600'>PROJECT</div>
             <div className='text-2xl font-semibold'>{name}</div>
           </div>
+          <ProjectSettings />
         </div>
       </div>
       <Tabs

@@ -1,4 +1,4 @@
-import { useQuery } from '@connectrpc/connect-query';
+import { useMutation, useQuery } from '@connectrpc/connect-query';
 import {
   faInfoCircle,
   faPencil,
@@ -12,9 +12,10 @@ import classNames from 'classnames';
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 
+import { ConfirmModal } from '@ui/features/common/confirm-modal/confirm-modal';
 import { useModal } from '@ui/features/common/modal/use-modal';
-import { listRoles } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
-import { Role } from '@ui/gen/service/v1alpha1/service_pb';
+import { Role } from '@ui/gen/rbac/generated_pb';
+import { deleteRole, listRoles } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 
 import { CreateRole } from './create-role';
 import { RulesModal } from './rules-modal';
@@ -44,7 +45,14 @@ export const Roles = () => {
   const [showCreateRole, setShowCreateRole] = useState(false);
   const [editingRole, setEditingRole] = useState<Role | undefined>();
 
-  const { show } = useModal();
+  const { show, hide } = useModal();
+
+  const { mutate: deleteRoleAction } = useMutation(deleteRole, {
+    onSuccess: () => {
+      hide();
+      refetch();
+    }
+  });
 
   return (
     <div className='p-4'>
@@ -61,12 +69,12 @@ export const Roles = () => {
       )}
       <Table
         dataSource={data?.roles || []}
-        rowKey={(record) => record?.name || ''}
+        rowKey={(record) => record?.metadata?.name || ''}
         columns={[
           {
             title: 'Name',
             key: 'name',
-            dataIndex: 'name'
+            render: (record: Role) => <>{record.metadata?.name}</>
           },
           renderColumn('emails'),
           renderColumn('subs'),
@@ -122,7 +130,29 @@ export const Roles = () => {
                       >
                         Edit
                       </Button>
-                      <Button type='primary' icon={<FontAwesomeIcon icon={faTrash} />} danger>
+                      <Button
+                        type='primary'
+                        icon={<FontAwesomeIcon icon={faTrash} />}
+                        danger
+                        onClick={() => {
+                          show((p) => (
+                            <ConfirmModal
+                              title='Delete Role'
+                              content='Are you sure you want to delete this role?'
+                              okButtonProps={{ danger: true }}
+                              okText='Yes, Delete'
+                              onOk={() => {
+                                deleteRoleAction({
+                                  name: record.metadata?.name || '',
+                                  project: name
+                                });
+                                refetch();
+                              }}
+                              {...p}
+                            />
+                          ));
+                        }}
+                      >
                         Delete
                       </Button>
                     </>

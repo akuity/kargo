@@ -14,8 +14,7 @@ const ruleFormSchema = () =>
     verbs: z.string().array(),
     apiGroups: z.string().array(),
     resources: z.string().array(),
-    resourceNames: z.string().array(),
-    nonResourceURLs: z.string().array()
+    resourceNames: z.string().array().optional()
   });
 
 export const RuleEditor = ({ onSuccess }: { onSuccess: (rule: PolicyRule) => void }) => {
@@ -28,15 +27,13 @@ export const RuleEditor = ({ onSuccess }: { onSuccess: (rule: PolicyRule) => voi
       verbs: values.verbs,
       apiGroups: values.apiGroups,
       resources: values.resources,
-      resourceNames: values.resourceNames,
-      nonResourceURLs: values.nonResourceURLs
+      resourceNames: values.resourceNames
     } as PolicyRule);
     reset({
       verbs: [] as string[],
       apiGroups: [] as string[],
       resources: [] as string[],
-      resourceNames: [] as string[],
-      nonResourceURLs: [] as string[]
+      resourceNames: [] as string[]
     } as PolicyRule);
   });
 
@@ -67,7 +64,9 @@ export const RuleEditor = ({ onSuccess }: { onSuccess: (rule: PolicyRule) => voi
               />
             )}
           </FieldContainer>
+        </div>
 
+        <div className='flex gap-4'>
           <FieldContainer control={control} name='resources' className='w-full'>
             {({ field }) => (
               <MultiStringEditor
@@ -78,9 +77,7 @@ export const RuleEditor = ({ onSuccess }: { onSuccess: (rule: PolicyRule) => voi
               />
             )}
           </FieldContainer>
-        </div>
 
-        <div className='flex gap-4'>
           <FieldContainer control={control} name='resourceNames' className='w-full'>
             {({ field }) => (
               <MultiStringEditor
@@ -91,23 +88,11 @@ export const RuleEditor = ({ onSuccess }: { onSuccess: (rule: PolicyRule) => voi
               />
             )}
           </FieldContainer>
-
-          <FieldContainer control={control} name='nonResourceURLs' className='w-full'>
-            {({ field }) => (
-              <MultiStringEditor
-                value={field.value}
-                onChange={field.onChange}
-                placeholder='https://example.com'
-                label='Non-Resource URLs'
-              />
-            )}
-          </FieldContainer>
-
-          <div className='flex items-end w-full'>
-            <Button onClick={onSubmit} icon={<FontAwesomeIcon icon={faPlus} />} className='ml-auto'>
-              Add Rule
-            </Button>
-          </div>
+        </div>
+        <div className='flex items-end w-full'>
+          <Button onClick={onSubmit} icon={<FontAwesomeIcon icon={faPlus} />} className='ml-auto'>
+            Add Rule
+          </Button>
         </div>
       </div>
     </div>

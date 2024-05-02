@@ -13,7 +13,7 @@ func (s *server) UpdateRole(
 	ctx context.Context,
 	req *connect.Request[svcv1alpha1.UpdateRoleRequest],
 ) (*connect.Response[svcv1alpha1.UpdateRoleResponse], error) {
-	project := req.Msg.Role.Project
+	project := req.Msg.Role.Namespace
 	if err := validateFieldNotEmpty("project", project); err != nil {
 		return nil, err
 	}

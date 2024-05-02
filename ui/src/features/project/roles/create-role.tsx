@@ -11,8 +11,8 @@ import { FieldContainer } from '@ui/features/common/form/field-container';
 import { MultiStringEditor } from '@ui/features/common/form/multi-string-editor';
 import { dnsRegex } from '@ui/features/common/utils';
 import { PolicyRule } from '@ui/gen/k8s.io/api/rbac/v1/generated_pb';
+import { Role } from '@ui/gen/rbac/generated_pb';
 import { createRole, updateRole } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
-import { Role } from '@ui/gen/service/v1alpha1/service_pb';
 import { zodValidators } from '@ui/utils/validators';
 
 import { RuleEditor } from './rule-editor';
@@ -47,7 +47,7 @@ export const CreateRole = ({ editing, onSuccess, project, hide }: Props) => {
   const { control, handleSubmit } = useForm({
     resolver: zodResolver(formSchema),
     values: {
-      name: editing?.name || '',
+      name: editing?.metadata?.name || '',
       emails: editing?.emails || [],
       subs: editing?.subs || [],
       groups: editing?.groups || []
@@ -70,10 +70,11 @@ export const CreateRole = ({ editing, onSuccess, project, hide }: Props) => {
 
   const onSubmit = handleSubmit((values) => {
     if (editing) {
-      console.log(values, rules, project);
-      return update({ role: { ...values, rules, project, name: editing?.name } });
+      return update({
+        role: { ...values, rules, metadata: { namespace: project, name: editing?.metadata?.name } }
+      });
     } else {
-      mutate({ role: { ...values, rules, project } });
+      mutate({ role: { ...values, rules, metadata: { name: values.name, namespace: project } } });
     }
   });
 

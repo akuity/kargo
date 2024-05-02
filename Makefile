@@ -134,7 +134,7 @@ codegen-controller:
 		rbac:roleName=manager-role \
 		crd \
 		webhook \
-		paths=./api/... \
+		paths=./api/v1alpha1/... \
 		output:crd:artifacts:config=charts/kargo/resources/crds
 	controller-gen \
 		object:headerFile=hack/boilerplate.go.txt \
