@@ -1854,9 +1854,9 @@ func TestSyncNormalStage(t *testing.T) {
 
 func TestReconciler_syncPromotions(t *testing.T) {
 	now := fakeNow()
-	oneMinuteAgo := now.Add(-time.Minute)
-	oneHourAgo := now.Add(-time.Hour)
-	oneDayAgo := now.Add(-24 * time.Hour)
+	ulidOneMinuteAgo := ulid.MustNew(ulid.Timestamp(now.Add(-time.Minute)), nil)
+	ulidOneHourAgo := ulid.MustNew(ulid.Timestamp(now.Add(-time.Hour)), nil)
+	ulidOneDayAgo := ulid.MustNew(ulid.Timestamp(now.Add(-24*time.Hour)), nil)
 
 	testCases := []struct {
 		name          string
@@ -1911,8 +1911,7 @@ func TestReconciler_syncPromotions(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, kargoapi.StagePhasePromoting, status.Phase)
 				require.Equal(t, &kargoapi.PromotionInfo{
-					Name:              "fake-promotion",
-					CreationTimestamp: metav1.NewTime(now),
+					Name: "fake-promotion",
 					Freight: kargoapi.FreightReference{
 						Name: "fake-freight",
 					},
@@ -1958,8 +1957,7 @@ func TestReconciler_syncPromotions(t *testing.T) {
 					return []kargoapi.Promotion{
 						{
 							ObjectMeta: metav1.ObjectMeta{
-								Name:              "fake-promotion-1",
-								CreationTimestamp: metav1.NewTime(oneDayAgo),
+								Name: "fake-promotion." + ulidOneDayAgo.String(),
 							},
 							Status: kargoapi.PromotionStatus{
 								Phase: kargoapi.PromotionPhaseSucceeded,
@@ -1970,8 +1968,7 @@ func TestReconciler_syncPromotions(t *testing.T) {
 						},
 						{
 							ObjectMeta: metav1.ObjectMeta{
-								Name:              "fake-promotion-3",
-								CreationTimestamp: metav1.NewTime(oneMinuteAgo),
+								Name: "fake-promotion." + ulidOneMinuteAgo.String(),
 							},
 							Status: kargoapi.PromotionStatus{
 								Phase: kargoapi.PromotionPhaseErrored,
@@ -1982,8 +1979,7 @@ func TestReconciler_syncPromotions(t *testing.T) {
 						},
 						{
 							ObjectMeta: metav1.ObjectMeta{
-								Name:              "fake-promotion-2",
-								CreationTimestamp: metav1.NewTime(oneHourAgo),
+								Name: "fake-promotion." + ulidOneHourAgo.String(),
 							},
 							Status: kargoapi.PromotionStatus{
 								Phase: kargoapi.PromotionPhaseFailed,
@@ -2003,8 +1999,7 @@ func TestReconciler_syncPromotions(t *testing.T) {
 
 				// Last Promotion should be the latest Terminated Promotion
 				require.Equal(t, &kargoapi.PromotionInfo{
-					Name:              "fake-promotion-3",
-					CreationTimestamp: metav1.NewTime(oneMinuteAgo),
+					Name: "fake-promotion." + ulidOneMinuteAgo.String(),
 					Status: &kargoapi.PromotionStatus{
 						Phase: kargoapi.PromotionPhaseErrored,
 						Freight: &kargoapi.FreightReference{
@@ -2032,8 +2027,7 @@ func TestReconciler_syncPromotions(t *testing.T) {
 					return []kargoapi.Promotion{
 						{
 							ObjectMeta: metav1.ObjectMeta{
-								Name:              "fake-promotion-1",
-								CreationTimestamp: metav1.NewTime(oneDayAgo),
+								Name: "fake-promotion." + ulidOneDayAgo.String(),
 							},
 							Status: kargoapi.PromotionStatus{
 								Phase: kargoapi.PromotionPhaseSucceeded,
@@ -2044,8 +2038,7 @@ func TestReconciler_syncPromotions(t *testing.T) {
 						},
 						{
 							ObjectMeta: metav1.ObjectMeta{
-								Name:              "fake-promotion-2",
-								CreationTimestamp: metav1.NewTime(oneHourAgo),
+								Name: "fake-promotion." + ulidOneHourAgo.String(),
 							},
 							Status: kargoapi.PromotionStatus{
 								// Phase update should be ignored
@@ -2062,8 +2055,7 @@ func TestReconciler_syncPromotions(t *testing.T) {
 				// Should not be updated.
 				Phase: kargoapi.StagePhaseVerifying,
 				LastPromotion: &kargoapi.PromotionInfo{
-					Name:              "fake-promotion-2",
-					CreationTimestamp: metav1.NewTime(oneHourAgo),
+					Name: "fake-promotion." + ulidOneHourAgo.String(),
 					Status: &kargoapi.PromotionStatus{
 						Phase: kargoapi.PromotionPhaseFailed,
 					},
@@ -2075,8 +2067,7 @@ func TestReconciler_syncPromotions(t *testing.T) {
 				require.Equal(t, kargoapi.StagePhaseVerifying, status.Phase)
 				require.Nil(t, status.CurrentPromotion)
 				require.Equal(t, &kargoapi.PromotionInfo{
-					Name:              "fake-promotion-2",
-					CreationTimestamp: metav1.NewTime(oneHourAgo),
+					Name: "fake-promotion." + ulidOneHourAgo.String(),
 					Status: &kargoapi.PromotionStatus{
 						Phase: kargoapi.PromotionPhaseFailed,
 					},
@@ -3209,8 +3200,8 @@ func TestGetLatestVerifiedFreight(t *testing.T) {
 
 func Test_comparePromotionByPhaseAndCreationTime(t *testing.T) {
 	now := fakeNow()
-	earlierTime := now.Add(-time.Hour)
-	laterTime := now.Add(time.Hour)
+	ulidEarlier := ulid.MustNew(ulid.Timestamp(now.Add(-time.Hour)), nil)
+	ulidLater := ulid.MustNew(ulid.Timestamp(now.Add(time.Hour)), nil)
 
 	tests := []struct {
 		name     string
@@ -3247,10 +3238,10 @@ func Test_comparePromotionByPhaseAndCreationTime(t *testing.T) {
 			expected: 1,
 		},
 		{
-			name: "Later creation timestamp first",
+			name: "Later ULID first",
 			a: kargoapi.Promotion{
 				ObjectMeta: metav1.ObjectMeta{
-					CreationTimestamp: metav1.Time{Time: earlierTime},
+					Name: "promotion." + ulidEarlier.String(),
 				},
 				Status: kargoapi.PromotionStatus{
 					Phase: kargoapi.PromotionPhaseRunning,
@@ -3258,7 +3249,7 @@ func Test_comparePromotionByPhaseAndCreationTime(t *testing.T) {
 			},
 			b: kargoapi.Promotion{
 				ObjectMeta: metav1.ObjectMeta{
-					CreationTimestamp: metav1.Time{Time: laterTime},
+					Name: "promotion." + ulidLater.String(),
 				},
 				Status: kargoapi.PromotionStatus{
 					Phase: kargoapi.PromotionPhaseRunning,
@@ -3267,10 +3258,10 @@ func Test_comparePromotionByPhaseAndCreationTime(t *testing.T) {
 			expected: 1,
 		},
 		{
-			name: "Earlier creation timestamp first",
+			name: "Earlier ULID first",
 			a: kargoapi.Promotion{
 				ObjectMeta: metav1.ObjectMeta{
-					CreationTimestamp: metav1.Time{Time: laterTime},
+					Name: "promotion." + ulidLater.String(),
 				},
 				Status: kargoapi.PromotionStatus{
 					Phase: kargoapi.PromotionPhaseErrored,
@@ -3278,35 +3269,13 @@ func Test_comparePromotionByPhaseAndCreationTime(t *testing.T) {
 			},
 			b: kargoapi.Promotion{
 				ObjectMeta: metav1.ObjectMeta{
-					CreationTimestamp: metav1.Time{Time: earlierTime},
+					Name: "promotion." + ulidEarlier.String(),
 				},
 				Status: kargoapi.PromotionStatus{
 					Phase: kargoapi.PromotionPhaseSucceeded,
 				},
 			},
 			expected: -1,
-		},
-		{
-			name: "Sorted by name",
-			a: kargoapi.Promotion{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:              "promotion." + ulid.Make().String(),
-					CreationTimestamp: metav1.Time{Time: now},
-				},
-				Status: kargoapi.PromotionStatus{
-					Phase: kargoapi.PromotionPhasePending,
-				},
-			},
-			b: kargoapi.Promotion{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:              "promotion." + ulid.Make().String(),
-					CreationTimestamp: metav1.Time{Time: now},
-				},
-				Status: kargoapi.PromotionStatus{
-					Phase: kargoapi.PromotionPhasePending,
-				},
-			},
-			expected: 1,
 		},
 		{
 			name: "Equal promotions",

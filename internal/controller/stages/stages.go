@@ -1059,8 +1059,7 @@ func (r *reconciler) syncPromotions(
 		logger.WithValues("promotion", latestPromo.Name).Debug("Stage has a running Promotion")
 		status.Phase = kargoapi.StagePhasePromoting
 		status.CurrentPromotion = &kargoapi.PromotionInfo{
-			Name:              latestPromo.Name,
-			CreationTimestamp: latestPromo.CreationTimestamp,
+			Name: latestPromo.Name,
 		}
 		if latestPromo.Status.Freight != nil {
 			status.CurrentPromotion.Freight = *latestPromo.Status.Freight.DeepCopy()
@@ -1094,9 +1093,8 @@ func (r *reconciler) syncPromotions(
 		if promo.Status.Phase.IsTerminal() {
 			logger.WithValues("promotion", promo.Name).Debug("found new terminated Promotion")
 			info := kargoapi.PromotionInfo{
-				Name:              promo.Name,
-				CreationTimestamp: promo.CreationTimestamp,
-				Status:            promo.Status.DeepCopy(),
+				Name:   promo.Name,
+				Status: promo.Status.DeepCopy(),
 			}
 			if promo.Status.Freight != nil {
 				info.Freight = *promo.Status.Freight.DeepCopy()
@@ -1110,7 +1108,7 @@ func (r *reconciler) syncPromotions(
 	// Freight history is garbage collected based on the number of entries,
 	// and we want to ensure that the oldest entries are removed first.
 	slices.SortFunc(newPromotions, func(a, b kargoapi.PromotionInfo) int {
-		return a.CreationTimestamp.Compare(b.CreationTimestamp.Time)
+		return strings.Compare(a.Name, b.Name)
 	})
 
 	// Update the Stage status with the information about the newly terminated
@@ -1691,20 +1689,14 @@ func (r *reconciler) recordFreightVerificationEvent(
 // The order of Promotions is as follows:
 //  1. Running
 //  2. Terminated
-//  3. Creation timestamp, descending
-//  4. Name
+//  3. Name, which is expected to contain a lexicographically sortable
+//     timestamp component (i.e. ULID).
 func comparePromotionByPhaseAndCreationTime(a, b kargoapi.Promotion) int {
 	// Compare the phases of the Promotions first.
 	if phaseCompare := comparePromotionPhase(a.Status.Phase, b.Status.Phase); phaseCompare != 0 {
 		return phaseCompare
 	}
 
-	// If both promotions have the same phase, sort by creation timestamp, descending.
-	if timeCompare := b.CreationTimestamp.Time.Compare(a.CreationTimestamp.Time); timeCompare != 0 {
-		return timeCompare
-	}
-
-	// If creation timestamps are also the same, sort by name.
 	// NB: This makes use of the fact that Promotion names are generated,
 	// and contain a timestamp component which will ensure that they can
 	// be sorted in a consistent order.

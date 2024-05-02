@@ -1011,16 +1011,13 @@ message Promotion {
 }
 
 message PromotionInfo {
-  // Name is the name of the Promotion.
+  // Name is the name of the Promotion
   optional string name = 1;
 
-  // CreationTimestamp is the time at which the Promotion was created.
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time creationTimestamp = 4;
-
-  // Freight is the freight being promoted.
+  // Freight is the freight being promoted
   optional FreightReference freight = 2;
 
-  // Status is the (optional) status of the promotion.
+  // Status is the (optional) status of the promotion
   optional PromotionStatus status = 3;
 }
 
