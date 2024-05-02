@@ -565,9 +565,9 @@ func (r *rolesDatabase) Update(
 		return nil, err
 	}
 
-	amendClaimAnnotation(sa, rbacapi.AnnotationKeyOIDCSubjects, kargoRole.Subs)
-	amendClaimAnnotation(sa, rbacapi.AnnotationKeyOIDCEmails, kargoRole.Emails)
-	amendClaimAnnotation(sa, rbacapi.AnnotationKeyOIDCGroups, kargoRole.Groups)
+	replaceClaimAnnotation(sa, rbacapi.AnnotationKeyOIDCSubjects, kargoRole.Subs)
+	replaceClaimAnnotation(sa, rbacapi.AnnotationKeyOIDCEmails, kargoRole.Emails)
+	replaceClaimAnnotation(sa, rbacapi.AnnotationKeyOIDCGroups, kargoRole.Groups)
 	if err = r.client.Update(ctx, sa); err != nil {
 		return nil, fmt.Errorf(
 			"error updating ServiceAccount %q in namespace %q: %w", kargoRole.Name, kargoRole.Namespace, err,
@@ -671,6 +671,15 @@ func RoleToResources(
 	rb := buildNewRoleBinding(kargoRole.Namespace, kargoRole.Name)
 
 	return sa, role, rb, nil
+}
+
+func replaceClaimAnnotation(sa *corev1.ServiceAccount, key string, values []string) {
+	slices.Sort(values)
+	values = slices.Compact(values)
+	if sa.Annotations == nil {
+		sa.Annotations = map[string]string{}
+	}
+	sa.Annotations[key] = strings.Join(values, ",")
 }
 
 func amendClaimAnnotation(sa *corev1.ServiceAccount, key string, values []string) {

@@ -893,7 +893,11 @@ func TestUpdate(t *testing.T) {
 
 	t.Run("success with updated ServiceAccount and Role", func(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
-			managedServiceAccount(nil),
+			managedServiceAccount(map[string]string{
+				rbacapi.AnnotationKeyOIDCSubjects: "foo-sub,bar-sub",
+				rbacapi.AnnotationKeyOIDCEmails:   "foo-email,bar-email",
+				rbacapi.AnnotationKeyOIDCGroups:   "foo-group,bar-group",
+			}),
 			managedRole([]rbacv1.PolicyRule{{
 				APIGroups: []string{kargoapi.GroupVersion.Group},
 				Resources: []string{"promotions"},
@@ -909,9 +913,9 @@ func TestUpdate(t *testing.T) {
 					Namespace: testProject,
 					Name:      testKargoRoleName,
 				},
-				Subs:   []string{"foo-sub", "bar-sub"},
-				Emails: []string{"foo-email", "bar-email"},
-				Groups: []string{"foo-group", "bar-group"},
+				Subs:   []string{"foo-sub"},
+				Emails: []string{"foo-email"},
+				Groups: []string{"foo-group"},
 				Rules: []rbacv1.PolicyRule{{
 					APIGroups: []string{kargoapi.GroupVersion.Group},
 					Resources: []string{"stages", "promotions"},
@@ -928,9 +932,9 @@ func TestUpdate(t *testing.T) {
 			t,
 			map[string]string{
 				rbacapi.AnnotationKeyManaged:      rbacapi.AnnotationValueTrue,
-				rbacapi.AnnotationKeyOIDCSubjects: "bar-sub,foo-sub",
-				rbacapi.AnnotationKeyOIDCEmails:   "bar-email,foo-email",
-				rbacapi.AnnotationKeyOIDCGroups:   "bar-group,foo-group",
+				rbacapi.AnnotationKeyOIDCSubjects: "foo-sub",
+				rbacapi.AnnotationKeyOIDCEmails:   "foo-email",
+				rbacapi.AnnotationKeyOIDCGroups:   "foo-group",
 			},
 			sa.Annotations,
 		)
