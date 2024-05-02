@@ -68,7 +68,13 @@ export const Roles = () => {
         />
       )}
       <Table
-        dataSource={data?.roles || []}
+        dataSource={(data?.roles || []).sort((a, b) => {
+          if (a.metadata?.name && b.metadata?.name) {
+            return a.metadata?.name.localeCompare(b.metadata?.name);
+          } else {
+            return 0;
+          }
+        })}
         rowKey={(record) => record?.metadata?.name || ''}
         columns={[
           {
@@ -92,7 +98,9 @@ export const Roles = () => {
                   })}
                   onClick={() => {
                     if (record?.rules?.length === 0) return;
-                    show((p) => <RulesModal rules={record.rules} {...p} />);
+                    show((p) => (
+                      <RulesModal rules={record.rules} name={record?.metadata?.name} {...p} />
+                    ));
                   }}
                 />
               );
