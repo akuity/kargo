@@ -172,9 +172,6 @@ func (r *reconciler) selectTagAndCommitID(
 	var selectedTag, selectedCommit string
 	var err error
 	if sub.CommitSelectionStrategy == kargoapi.CommitSelectionStrategyNewestFromBranch {
-		// In this case, there is nothing to do except return the commit ID at the
-		// head of the branch unless there are includePaths/excludePaths configured to
-		// handle.
 		selectedCommit, err = r.getLastCommitIDFn(repo)
 		if err != nil {
 			return "", "",
