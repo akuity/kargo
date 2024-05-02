@@ -23,7 +23,7 @@ export const Login = () => {
     <div className={styles.container}>
       <div className={styles.logo}>
         <img src='/kargo-icon.png' alt='Kargo Icon' />
-        Kargo
+        kargo
       </div>
       <div className={styles.box}>
         {isLoading && <LoadingState />}

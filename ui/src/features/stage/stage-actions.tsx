@@ -130,7 +130,12 @@ export const StageActions = ({ stage }: { stage: Stage }) => {
         type='default'
         icon={<FontAwesomeIcon icon={faRefresh} size='1x' />}
         onClick={onRefresh}
-        loading={isRefreshLoading || (!!stage?.metadata?.annotations['kargo.akuity.io/refresh'] && stage?.metadata?.annotations?.['kargo.akuity.io/refresh'] !== stage?.status?.lastHandledRefresh)}
+        loading={
+          isRefreshLoading ||
+          (!!stage?.metadata?.annotations['kargo.akuity.io/refresh'] &&
+            stage?.metadata?.annotations?.['kargo.akuity.io/refresh'] !==
+              stage?.status?.lastHandledRefresh)
+        }
       >
         Refresh
       </Button>
