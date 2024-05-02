@@ -35,7 +35,9 @@ WORKDIR /kargo/bin
 ####################################################################################################
 FROM --platform=$BUILDPLATFORM docker.io/library/node:20.12.0 AS ui-builder
 
-RUN npm install --global pnpm
+ARG PNPM_VERSION=9.0.3
+RUN npm install --global pnpm@${PNPM_VERSION}
+
 WORKDIR /ui
 COPY ["ui/package.json", "ui/pnpm-lock.yaml", "./"]
 ARG VERSION
@@ -89,7 +91,9 @@ CMD ["/usr/local/bin/kargo"]
 ####################################################################################################
 FROM --platform=$BUILDPLATFORM docker.io/library/node:20.12.0 AS ui-dev
 
-RUN npm install --global pnpm
+ARG PNPM_VERSION=9.0.3
+RUN npm install --global pnpm@${PNPM_VERSION}
+
 WORKDIR /ui
 COPY ["ui/package.json", "ui/pnpm-lock.yaml", "./"]
 
