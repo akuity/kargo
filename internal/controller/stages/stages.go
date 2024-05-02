@@ -1063,7 +1063,7 @@ func (r *reconciler) syncPromotions(
 			CreationTimestamp: latestPromo.CreationTimestamp,
 		}
 		if latestPromo.Status.Freight != nil {
-			status.CurrentPromotion.Freight = *latestPromo.Status.Freight
+			status.CurrentPromotion.Freight = *latestPromo.Status.Freight.DeepCopy()
 		}
 	} else {
 		status.CurrentPromotion = nil
@@ -1097,7 +1097,7 @@ func (r *reconciler) syncPromotions(
 				Status:            promo.Status.DeepCopy(),
 			}
 			if promo.Status.Freight != nil {
-				info.Freight = *promo.Status.Freight
+				info.Freight = *promo.Status.Freight.DeepCopy()
 			}
 			newPromotions = append(newPromotions, info)
 		}
@@ -1117,7 +1117,7 @@ func (r *reconciler) syncPromotions(
 		promo := p
 		status.LastPromotion = &promo
 		if promo.Status.Phase == kargoapi.PromotionPhaseSucceeded {
-			status.CurrentFreight = &status.LastPromotion.Freight
+			status.CurrentFreight = status.LastPromotion.Freight.DeepCopy()
 			status.History.UpdateOrPush(status.LastPromotion.Freight)
 			if status.CurrentPromotion == nil {
 				status.Phase = kargoapi.StagePhaseSteady
