@@ -1077,8 +1077,10 @@ func (r *reconciler) syncPromotions(
 		if status.LastPromotion != nil {
 			// We can break here since we know that all subsequent Promotions
 			// will be older than the last Promotion we saw.
-			if status.LastPromotion.Name == promo.Name ||
-				promo.CreationTimestamp.Before(&status.LastPromotion.CreationTimestamp) {
+			// NB: This makes use of the fact that Promotion names are
+			// generated, and contain a timestamp component which will ensure
+			// that they can be sorted in a consistent order.
+			if strings.Compare(promo.Name, status.LastPromotion.Name) <= 0 {
 				break
 			}
 		}
@@ -1703,7 +1705,10 @@ func comparePromotionByPhaseAndCreationTime(a, b kargoapi.Promotion) int {
 	}
 
 	// If creation timestamps are also the same, sort by name.
-	return strings.Compare(a.Name, b.Name)
+	// NB: This makes use of the fact that Promotion names are generated,
+	// and contain a timestamp component which will ensure that they can
+	// be sorted in a consistent order.
+	return strings.Compare(b.Name, a.Name)
 }
 
 // comparePromotionPhase compares two Promotion phases. It returns a negative

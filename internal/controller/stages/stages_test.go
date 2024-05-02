@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/oklog/ulid/v2"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -3289,7 +3290,7 @@ func Test_comparePromotionByPhaseAndCreationTime(t *testing.T) {
 			name: "Sorted by name",
 			a: kargoapi.Promotion{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:              "promotion-b",
+					Name:              "promotion." + ulid.Make().String(),
 					CreationTimestamp: metav1.Time{Time: now},
 				},
 				Status: kargoapi.PromotionStatus{
@@ -3298,7 +3299,7 @@ func Test_comparePromotionByPhaseAndCreationTime(t *testing.T) {
 			},
 			b: kargoapi.Promotion{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:              "promotion-a",
+					Name:              "promotion." + ulid.Make().String(),
 					CreationTimestamp: metav1.Time{Time: now},
 				},
 				Status: kargoapi.PromotionStatus{
