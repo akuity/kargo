@@ -683,6 +683,7 @@ func amendClaimAnnotation(sa *corev1.ServiceAccount, key string, values []string
 	if sa.Annotations == nil {
 		sa.Annotations = map[string]string{}
 	}
+	fmt.Println(values)
 	sa.Annotations[key] = strings.Join(values, ",")
 }
 

@@ -2,7 +2,8 @@ import {
   faChartBar,
   faClockRotateLeft,
   faDiagramProject,
-  faIdBadge
+  faIdBadge,
+  faPeopleGroup
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Tabs } from 'antd';
@@ -13,6 +14,7 @@ import { AnalysisTemplatesList } from '@ui/features/project/analysis-templates/a
 import { CredentialsList } from '@ui/features/project/credentials/credentials-list';
 import { Events } from '@ui/features/project/events/events';
 import { Pipelines } from '@ui/features/project/pipelines/pipelines';
+import { Roles } from '@ui/features/project/roles/roles';
 
 const tabs = {
   pipelines: {
@@ -34,6 +36,11 @@ const tabs = {
     path: paths.projectEvents,
     label: 'Events',
     icon: faClockRotateLeft
+  },
+  roles: {
+    path: paths.projectRoles,
+    label: 'Roles',
+    icon: faPeopleGroup
   }
 };
 
@@ -54,6 +61,8 @@ export const Project = ({ tab = 'pipelines' }: { tab?: ProjectTab }) => {
         return <AnalysisTemplatesList />;
       case 'events':
         return <Events />;
+      case 'roles':
+        return <Roles />;
       default:
         return <Pipelines />;
     }

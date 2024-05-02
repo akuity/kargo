@@ -9,6 +9,7 @@ import { z } from 'zod';
 import { FieldContainer } from '@ui/features/common/form/field-container';
 import { ModalComponentProps } from '@ui/features/common/modal/modal-context';
 import { SegmentLabel } from '@ui/features/common/segment-label';
+import { dnsRegex } from '@ui/features/common/utils';
 import {
   createCredentials,
   updateCredentials
@@ -18,13 +19,11 @@ import { zodValidators } from '@ui/utils/validators';
 
 import { constructDefaults, labelForKey, typeLabel } from './utils';
 
-const credentialsNameRegex = /^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/;
-
 const createFormSchema = (editing?: boolean) =>
   z
     .object({
       name: zodValidators.requiredString.regex(
-        credentialsNameRegex,
+        dnsRegex,
         'Credentials name must be a valid DNS subdomain.'
       ),
       description: z.string().optional(),
