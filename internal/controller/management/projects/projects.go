@@ -563,6 +563,9 @@ func (r *reconciler) ensureDefaultProjectRoles(
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      rbName,
 					Namespace: project.Name,
+					Annotations: map[string]string{
+						rbacapi.AnnotationKeyManaged: rbacapi.AnnotationValueTrue,
+					},
 				},
 				RoleRef: rbacv1.RoleRef{
 					APIGroup: rbacv1.GroupName,
