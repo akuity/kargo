@@ -6,12 +6,10 @@ import { Promotion, PromotionStatus } from '@ui/gen/v1alpha1/generated_pb';
 
 import { sortPromotions } from './utils/sort';
 
-const newTestPromotion = (phase: string, seconds: number): Promotion => {
+const newTestPromotion = (phase: string, name: string): Promotion => {
   return {
     metadata: {
-      creationTimestamp: new Timestamp({
-        seconds: BigInt(seconds)
-      })
+      name
     } as ObjectMeta,
     status: {
       phase
@@ -19,20 +17,20 @@ const newTestPromotion = (phase: string, seconds: number): Promotion => {
   } as Promotion;
 };
 
-const running1 = newTestPromotion('Running', 1);
-const pending2 = newTestPromotion('Pending', 2);
-const running3 = newTestPromotion('Running', 3);
-const pending4 = newTestPromotion('Pending', 4);
-const succeeded5 = newTestPromotion('Succeeded', 5);
-const failed6 = newTestPromotion('Failed', 6);
-const unknown7 = newTestPromotion('Unknown', 7);
-const running8 = newTestPromotion('Running', 8);
-const pending9 = newTestPromotion('Pending', 9);
-const running10 = newTestPromotion('Running', 10);
-const pending11 = newTestPromotion('Pending', 11);
-const succeeded12 = newTestPromotion('Succeeded', 12);
-const errored13 = newTestPromotion('Errored', 13);
-const unknown14 = newTestPromotion('Unknown', 14);
+const running1 = newTestPromotion('Running', 'test-a');
+const pending2 = newTestPromotion('Pending', 'test-b');
+const running3 = newTestPromotion('Running', 'test-c');
+const pending4 = newTestPromotion('Pending', 'test-d');
+const succeeded5 = newTestPromotion('Succeeded', 'test-e');
+const failed6 = newTestPromotion('Failed', 'test-f');
+const unknown7 = newTestPromotion('Unknown', 'test-g');
+const running8 = newTestPromotion('Running', 'test-h');
+const pending9 = newTestPromotion('Pending', 'test-i');
+const running10 = newTestPromotion('Running', 'test-j');
+const pending11 = newTestPromotion('Pending', 'test-k');
+const succeeded12 = newTestPromotion('Succeeded', 'test-l');
+const errored13 = newTestPromotion('Errored', 'test-m');
+const unknown14 = newTestPromotion('Unknown', 'test-n');
 
 const testPromotions = [
   running1,

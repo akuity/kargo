@@ -1,9 +1,7 @@
 import { Promotion } from '@ui/gen/v1alpha1/generated_pb';
 
 export const sortPromotions = (a: Promotion, b: Promotion) => {
-  const timestampDiff =
-    Number(b.metadata?.creationTimestamp?.seconds || 0) -
-    Number(a.metadata?.creationTimestamp?.seconds || 0);
+  const nameDiff = (b.metadata?.name || '').localeCompare(a.metadata?.name || '');
 
   const aIsRunning = a.status?.phase === 'Running';
   const bIsRunning = b.status?.phase === 'Running';
@@ -12,17 +10,17 @@ export const sortPromotions = (a: Promotion, b: Promotion) => {
 
   if (aIsRunning || bIsRunning) {
     if (aIsRunning && bIsRunning) {
-      return timestampDiff;
+      return nameDiff;
     }
     return aIsRunning ? -1 : 1;
   }
 
   if (aIsPending || bIsPending) {
     if (aIsPending && bIsPending) {
-      return timestampDiff;
+      return nameDiff;
     }
     return aIsPending ? -1 : 1;
   }
 
-  return timestampDiff;
+  return nameDiff;
 };
