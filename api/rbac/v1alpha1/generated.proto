@@ -15,13 +15,11 @@ import "k8s.io/apimachinery/pkg/runtime/schema/generated.proto";
 option go_package = "github.com/akuity/kargo/api/rbac/v1alpha1";
 
 message ResourceDetails {
-  optional string resourceGroup = 1;
+  optional string resourceType = 1;
 
-  optional string resourceType = 2;
+  optional string resourceName = 2;
 
-  optional string resourceName = 3;
-
-  repeated string verbs = 4;
+  repeated string verbs = 3;
 }
 
 // +kubebuilder:object:root=true
