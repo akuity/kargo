@@ -69,7 +69,7 @@ __Status:__ Completed
 ## v0.7.0
 
 __Status:__ In Progress
-__Expected:__ 2021-06-07
+__Expected:__ 2024-06-07
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
