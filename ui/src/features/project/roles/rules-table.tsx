@@ -1,3 +1,5 @@
+import { faTrash } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Table } from 'antd';
 import { ColumnType } from 'antd/es/table'; // Add missing import
 
@@ -50,7 +52,7 @@ export const RulesTable = ({
                   setRules(rules.filter((r) => r !== rule));
                 }}
               >
-                REMOVE
+                <FontAwesomeIcon icon={faTrash} />
               </div>
             )
         }

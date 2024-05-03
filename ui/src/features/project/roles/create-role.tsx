@@ -37,9 +37,9 @@ const formSchema = z.object({
   groups: nonZeroArray('group')
 });
 
-const multiFields: { name: AllowedFields; placeholder: string }[] = [
+const multiFields: { name: AllowedFields; label?: string; placeholder: string }[] = [
   { name: 'emails', placeholder: 'email@corp.com' },
-  { name: 'subs', placeholder: 'mysub' },
+  { name: 'subs', label: 'Subjects', placeholder: 'mysubject' },
   { name: 'groups', placeholder: 'mygroup' }
 ];
 
@@ -81,7 +81,7 @@ export const CreateRole = ({ editing, onSuccess, project, hide }: Props) => {
   const [rules, setRules] = useState<PolicyRule[]>(editing?.rules || []);
 
   return (
-    <Drawer open={true} onClose={() => hide()} width={'80%'} closable={false}>
+    <Drawer open={true} onClose={() => hide()} width={'85%'} closable={false}>
       <Typography.Title
         level={2}
         style={{ margin: 0, marginBottom: '0.5em' }}
@@ -104,8 +104,9 @@ export const CreateRole = ({ editing, onSuccess, project, hide }: Props) => {
             <Input {...field} type='text' placeholder='my-role' disabled={!!editing} />
           )}
         </FieldContainer>
+        <div className='text-lg font-semibold mb-4'>OIDC Bindings</div>
         <div className='flex items-start gap-4'>
-          {multiFields.map(({ name, placeholder }) => (
+          {multiFields.map(({ name, placeholder, label }) => (
             <FieldContainer
               name={name}
               control={control}
@@ -118,7 +119,7 @@ export const CreateRole = ({ editing, onSuccess, project, hide }: Props) => {
                   value={field.value as string[]}
                   onChange={field.onChange}
                   placeholder={placeholder}
-                  label={name.charAt(0).toUpperCase() + name.slice(1)}
+                  label={label ? label : name}
                 />
               )}
             </FieldContainer>
@@ -127,8 +128,10 @@ export const CreateRole = ({ editing, onSuccess, project, hide }: Props) => {
       </div>
       <div>
         <div className='text-lg font-semibold mb-4'>Rules</div>
-        <RulesTable rules={rules} setRules={setRules} />
-        <RuleEditor onSuccess={(rule) => setRules([...rules, rule])} />
+        <div className='flex gap-4'>
+          <RulesTable rules={rules} setRules={setRules} />
+          <RuleEditor onSuccess={(rule) => setRules([...rules, rule])} style={{ width: '600px' }} />
+        </div>
       </div>
     </Drawer>
   );
