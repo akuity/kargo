@@ -339,12 +339,11 @@ func (r *rolesDatabase) GrantPermissionsToRole(
 		return nil, err
 	}
 
-	resourceType, err := normalizeResourceTypeName(resourceDetails.ResourceType)
-	if err != nil {
+	if err = validateResourceTypeName(resourceDetails.ResourceType); err != nil {
 		return nil, err
 	}
 
-	group := getGroupName(resourceType)
+	group := getGroupName(resourceDetails.ResourceType)
 
 	newRole := role
 	if newRole == nil {
@@ -352,7 +351,7 @@ func (r *rolesDatabase) GrantPermissionsToRole(
 	}
 	newRule := rbacv1.PolicyRule{
 		APIGroups: []string{group},
-		Resources: []string{resourceType},
+		Resources: []string{resourceDetails.ResourceType},
 		Verbs:     resourceDetails.Verbs,
 	}
 	if resourceDetails.ResourceName != "" {
@@ -503,16 +502,15 @@ func (r *rolesDatabase) RevokePermissionsFromRole(
 	slices.Sort(resourceDetails.Verbs)
 	resourceDetails.Verbs = slices.Compact(resourceDetails.Verbs)
 
-	resourceType, err := normalizeResourceTypeName(resourceDetails.ResourceType)
-	if err != nil {
+	if err = validateResourceTypeName(resourceDetails.ResourceType); err != nil {
 		return nil, err
 	}
 
-	group := getGroupName(resourceType)
+	group := getGroupName(resourceDetails.ResourceType)
 
 	filteredRules := make([]rbacv1.PolicyRule, 0, len(role.Rules))
 	for _, rule := range role.Rules {
-		if rule.APIGroups[0] != group || rule.Resources[0] != resourceType ||
+		if rule.APIGroups[0] != group || rule.Resources[0] != resourceDetails.ResourceType ||
 			(resourceDetails.ResourceName != "" && rule.ResourceNames[0] != resourceDetails.ResourceName) {
 			filteredRules = append(filteredRules, rule)
 			continue

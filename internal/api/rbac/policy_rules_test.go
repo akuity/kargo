@@ -18,7 +18,19 @@ func TestNormalizePolicyRules(t *testing.T) {
 				Verbs:     []string{"get"},
 			},
 		})
-		require.ErrorContains(t, err, "unknown resource type")
+		require.ErrorContains(t, err, "unrecognized resource type")
+	})
+
+	t.Run("singular resource type", func(t *testing.T) {
+		_, err := NormalizePolicyRules([]rbacv1.PolicyRule{
+			{
+				APIGroups: []string{""},
+				Resources: []string{"stage"},
+				Verbs:     []string{"get"},
+			},
+		})
+		require.ErrorContains(t, err, `unrecognized resource type "stage"`)
+		require.ErrorContains(t, err, `did you mean "stages"`)
 	})
 
 	t.Run("multiple resources expand", func(t *testing.T) {
@@ -170,7 +182,7 @@ func TestNormalizePolicyRules(t *testing.T) {
 		rules, err := NormalizePolicyRules([]rbacv1.PolicyRule{
 			{ // Never mind that this doesn't make sense. It should all get fixed
 				APIGroups: []string{""},
-				Resources: []string{"sErViCeAcCoUnTs", "stage"},
+				Resources: []string{"serviceaccounts", "stages"},
 				Verbs:     []string{"*"},
 			},
 			{ // These should get de-duped

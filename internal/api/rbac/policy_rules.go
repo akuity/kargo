@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	rbacv1 "k8s.io/api/rbac/v1"
+	kubeerr "k8s.io/apimachinery/pkg/api/errors"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	rolloutsapi "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
@@ -53,9 +54,7 @@ func BuildNormalizedPolicyRulesMap(
 	rulesMap := make(map[string]rbacv1.PolicyRule)
 	for _, rule := range rules {
 		for _, resource := range rule.Resources {
-			var err error
-			resource, err = normalizeResourceTypeName(resource)
-			if err != nil {
+			if err := validateResourceTypeName(resource); err != nil {
 				return nil, err
 			}
 			// We ignore the group in the rule and use what we know to be the correct
@@ -153,45 +152,28 @@ func buildRule(
 }
 
 // nolint: goconst
-func normalizeResourceTypeName(resource string) (string, error) {
-	resource = strings.ToLower(strings.TrimSpace(resource))
+func validateResourceTypeName(resource string) error {
 	switch resource {
-	// Core
-	case "event", "events":
-		return "events", nil
-	case "secret", "secrets":
-		return "secrets", nil
-	case "serviceaccount", "serviceaccounts":
-		return "serviceaccounts", nil
-	// RBAC
-	case "role", "roles":
-		return "roles", nil
-	case "rolebinding", "rolebindings":
-		return "rolebindings", nil
-	// Kargo
-	case "freight", "freights":
-		return "freights", nil
-	case "freight/status", "freights/status":
-		return "freights/status", nil
-	case "promotion", "promotions":
-		return "promotions", nil
-	case "stage", "stages":
-		return "stages", nil
-	case "warehouse", "warehouses":
-		return "warehouses", nil
-	// Rollouts
-	case "analysisrun", "analysisruns":
-		return "analysisruns", nil
-	case "analysistemplate", "analysistemplates":
-		return "analysistemplates", nil
+	case "analysisruns", "analysistemplates", "events", "freights", "freights/status", "roles",
+		"rolebindings", "promotions", "secrets", "serviceaccounts", "stages", "warehouses":
+		return nil
+	case "analysisrun", "analysistemplate", "event", "freight", "role",
+		"rolebinding", "promotion", "secret", "serviceaccount", "stage", "warehouse":
+		return kubeerr.NewBadRequest(
+			fmt.Sprintf(`unrecognized resource type %q; did you mean "%ss"?`, resource, resource),
+		)
+	case "freight/status":
+		return kubeerr.NewBadRequest(
+			`unrecognized resource type "freight/status"; did you mean "freights/status"?`,
+		)
 	default:
-		return "", fmt.Errorf("unknown resource type %q", resource)
+		return kubeerr.NewBadRequest(fmt.Sprintf(`unrecognized resource type %q`, resource))
 	}
 }
 
 // nolint: goconst
 func getGroupName(resourceType string) string {
-	// resourceType must already be normalized
+	// resourceType must already be validated
 	switch resourceType {
 	case "events", "secrets", "serviceaccounts":
 		return ""
@@ -202,6 +184,6 @@ func getGroupName(resourceType string) string {
 	case "analysisruns", "analysistemplates":
 		return rolloutsapi.GroupVersion.Group
 	default:
-		return "" // If the resourceType was normalized, this will never happen
+		return "" // If the resourceType was validated, this will never happen
 	}
 }
