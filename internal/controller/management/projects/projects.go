@@ -408,7 +408,7 @@ func (r *reconciler) ensureDefaultProjectRoles(
 	roles := []*rbacv1.Role{
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "admin",
+				Name:      adminRoleName,
 				Namespace: project.Name,
 				Annotations: map[string]string{
 					rbacapi.AnnotationKeyManaged: rbacapi.AnnotationValueTrue,
@@ -465,7 +465,7 @@ func (r *reconciler) ensureDefaultProjectRoles(
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "viewer",
+				Name:      viewerRoleName,
 				Namespace: project.Name,
 				Annotations: map[string]string{
 					rbacapi.AnnotationKeyManaged: rbacapi.AnnotationValueTrue,
