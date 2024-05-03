@@ -14,7 +14,7 @@ import { useParams } from 'react-router-dom';
 
 import { ConfirmModal } from '@ui/features/common/confirm-modal/confirm-modal';
 import { useModal } from '@ui/features/common/modal/use-modal';
-import { Role } from '@ui/gen/rbac/generated_pb';
+import { Role } from '@ui/gen/rbac/v1alpha1/generated_pb';
 import { deleteRole, listRoles } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 
 import { CreateRole } from './create-role';
