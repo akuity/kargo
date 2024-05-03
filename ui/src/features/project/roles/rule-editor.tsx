@@ -22,12 +22,12 @@ const availableResources = [
   'stages',
   'promotions',
   'warehouses',
-  'secret',
   // argoproj.io
   'analysisruns',
   'analysistemplates'
 ];
-const availableVerbs = ['create', 'update', 'delete', 'patch', 'list', 'promote'];
+
+const availableVerbs = ['get', 'create', 'update', 'delete', 'patch', 'list', '*'];
 
 const ruleFormSchema = () =>
   z.object({
@@ -43,7 +43,7 @@ export const RuleEditor = ({
   onSuccess: (rule: PolicyRule) => void;
   style?: React.CSSProperties;
 }) => {
-  const { control, handleSubmit, reset } = useForm({
+  const { control, handleSubmit, reset, watch } = useForm({
     resolver: zodResolver(ruleFormSchema())
   });
 
@@ -59,6 +59,8 @@ export const RuleEditor = ({
       resourceNames: [] as string[]
     } as PolicyRule);
   });
+
+  const resources = watch('resources');
 
   const _Select = (props: SelectProps & { label: string }) => (
     <div>
@@ -77,7 +79,10 @@ export const RuleEditor = ({
             {({ field }) => (
               <_Select
                 label='VERBS'
-                options={availableVerbs.map((v) => ({ value: v, label: v }))}
+                options={((resources || []).includes('stages')
+                  ? availableVerbs.concat(['promote'])
+                  : availableVerbs
+                ).map((v) => ({ value: v, label: v }))}
                 placeholder='create'
                 value={field.value}
                 onChange={field.onChange}
@@ -90,7 +95,7 @@ export const RuleEditor = ({
                 label='RESOURCES'
                 value={field.value}
                 onChange={(value) => field.onChange(value)}
-                placeholder='stage'
+                placeholder='stages'
                 className='w-full'
                 options={availableResources.map((r) => ({ value: r, label: r }))}
               />
