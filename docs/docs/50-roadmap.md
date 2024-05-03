@@ -5,10 +5,14 @@ Description: See what's on the roadmap of Kargo and find out more about the late
 
 # Kargo Roadmap
 
-Over a series of releases, Kargo's maintainers intend to establish and settle into a predictable, but yet to be determined release cadence.
+Over a series of releases, Kargo's maintainers have settled into a cadence of a
+minor release roughly every five weeks, with two or three major features
+completed per release.
 
 :::caution
-This roadmap is subject to change at any time, for the most up to date information, please see the [GitHub Project](https://github.com/akuity/kargo/milestones)
+This roadmap tracks only _major_ features and is subject to change at any time,
+for the most up to date information, please see the [GitHub
+Project](https://github.com/akuity/kargo/milestones)
 :::
 
 ## v0.2.0
@@ -54,17 +58,27 @@ __Status:__ Completed
 
 ## v0.6.0
 
+__Status:__ Completed
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| Project Management | feature | Added user / role / permission management capabilities to the CLI and UI. |
+| Events | feature | Kargo emits noteworthy events as Kubernetes events. Events are also viewable in the UI. |
+| Production Readiness | chore | Prioritized stability of existing features. **This does not mean v0.6.0 is production-ready. It means it is several steps closer to it.** |
+
+## v0.7.0
+
 __Status:__ In Progress
+__Expected:__ 2024-06-07
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | Multiple `Warehouse`s | feature | Improve UI support for multiple Freightlines rooted in different `Warehouse`s. |
 | Manual `Freight` Creation | feature | Add CLI and UI support for manual `Freight` creation. This will give users the flexibility to create novel combinations of artifacts that `Warehouse`s will not -- for instance, pairing the most recent version of a container image with an _older_ version of application manifests. |
-| Project Management | feature | <ul><li>Add sensible `ServiceAccount`s, `Role`s, and `RoleBinding`s to boilerplate project setup.</li><li>Add user / role / permission management capabilities to the CLI and UI.</li></ul> |
-| Production Readiness | chore | <ul><li>Prioritize stability of existing features.</li><li>Pay down technical debt.</li><li>**This is not a guarantee that v0.6.0 will be production-ready. It is a commitment to a large step in that direction.**</li></ul> |
-| [Patch Promotions](https://github.com/akuity/kargo/issues/1250) | poc | Support a generalized option to promote arbitrary configuration (e.g. strings, files, and directories) to other paths of the Git repository. |
+| [Patch Promotions](https://github.com/akuity/kargo/issues/1250) | poc | Support a generalized option to promote arbitrary configuration (e.g. strings, files, and directories) to other paths of a GitOps repository. |
+| Production Readiness | chore | <ul><li>Prioritize stability of existing features.</li><li>Pay down technical debt.</li><li>**This is not a guarantee that v0.7.0 will be production-ready. It is a commitment to large steps in that direction.**</li></ul> |
 
-## v0.7.0 .. v0.n.0
+## v0.8.0 .. v0.n.0
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
@@ -74,7 +88,7 @@ __Status:__ In Progress
 | `kargo init` | feature | Addition of an `init` sub-command to the Kargo CLI for streamlining project / pipeline creation. |
 | Standalone Image Writeback | feature | Write back image changes without having to subscribe to an image repository. |
 
-## Criteria for 1.0.0 Release
+## Criteria for a Production-Ready 1.0.0 Release
 
 Maintainers will consider cutting a stable v1.0.0 release once:
 
