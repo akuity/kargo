@@ -27,15 +27,14 @@ type revokeOptions struct {
 	Config        config.CLIConfig
 	ClientOptions client.Options
 
-	Project       string
-	Role          string
-	Subs          []string
-	Emails        []string
-	Groups        []string
-	ResourceGroup string
-	ResourceType  string
-	ResourceName  string
-	Verbs         []string
+	Project      string
+	Role         string
+	Subs         []string
+	Emails       []string
+	Groups       []string
+	ResourceType string
+	ResourceName string
+	Verbs        []string
 }
 
 func NewCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams) *cobra.Command {
@@ -99,7 +98,6 @@ func (o *revokeOptions) addFlags(cmd *cobra.Command) {
 	option.Subs(cmd.Flags(), &o.Subs, "The sub claim of a user to have the role revoked.")
 	option.Emails(cmd.Flags(), &o.Emails, "The email address of a user to have the role revoked.")
 	option.Groups(cmd.Flags(), &o.Groups, "A group to have the role revoked.")
-	option.ResourceGroup(cmd.Flags(), &o.ResourceGroup, "The group of resources to revoke permissions for.")
 	option.ResourceType(cmd.Flags(), &o.ResourceType, "A type of resource to revoke permissions for.")
 	option.ResourceName(cmd.Flags(), &o.ResourceName, "The name of a resource to revoke permissions for.")
 	option.Verbs(cmd.Flags(), &o.Verbs, "A verb to revoke on the resource.")
@@ -113,20 +111,16 @@ func (o *revokeOptions) addFlags(cmd *cobra.Command) {
 		option.SubFlag,
 		option.EmailFlag,
 		option.GroupFlag,
-		option.ResourceGroupFlag,
+		option.ResourceTypeFlag,
 	)
 
 	// You can't revoke a role from users and revoke permissions from a role at
 	// the same time.
-	cmd.MarkFlagsMutuallyExclusive(option.SubFlag, option.ResourceGroupFlag)
-	cmd.MarkFlagsMutuallyExclusive(option.EmailFlag, option.ResourceGroupFlag)
-	cmd.MarkFlagsMutuallyExclusive(option.GroupFlag, option.ResourceGroupFlag)
+	cmd.MarkFlagsMutuallyExclusive(option.SubFlag, option.ResourceTypeFlag)
+	cmd.MarkFlagsMutuallyExclusive(option.EmailFlag, option.ResourceTypeFlag)
+	cmd.MarkFlagsMutuallyExclusive(option.GroupFlag, option.ResourceTypeFlag)
 
-	cmd.MarkFlagsRequiredTogether(
-		option.ResourceGroupFlag,
-		option.ResourceTypeFlag,
-		option.VerbFlag,
-	)
+	cmd.MarkFlagsRequiredTogether(option.ResourceTypeFlag, option.VerbFlag)
 }
 
 // validate performs validation of the options. If the options are invalid, an
@@ -155,15 +149,12 @@ func (o *revokeOptions) run(ctx context.Context) error {
 		Project: o.Project,
 		Role:    o.Role,
 	}
-	// Note: Don't test if ResourceGroup is empty, because "" is a legitimate
-	// value.
 	if o.ResourceType != "" {
 		req.Request = &svcv1alpha1.RevokeRequest_ResourceDetails{
 			ResourceDetails: &rbacapi.ResourceDetails{
-				ResourceGroup: o.ResourceGroup,
-				ResourceType:  o.ResourceType,
-				ResourceName:  o.ResourceName,
-				Verbs:         o.Verbs,
+				ResourceType: o.ResourceType,
+				ResourceName: o.ResourceName,
+				Verbs:        o.Verbs,
 			},
 		}
 	} else {
