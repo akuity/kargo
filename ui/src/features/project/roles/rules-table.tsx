@@ -39,7 +39,6 @@ export const RulesTable = ({
       className='h-full w-full mb-10'
       columns={[
         renderColumn('Verbs', 'verbs'),
-        renderColumn('API Groups', 'apiGroups'),
         renderColumn('Resources', 'resources'),
         renderColumn('Resource Names', 'resourceNames'),
         {

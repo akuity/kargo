@@ -9,8 +9,24 @@ import { FieldContainer } from '@ui/features/common/form/field-container';
 import { MultiStringEditor } from '@ui/features/common/form/multi-string-editor';
 import { PolicyRule } from '@ui/gen/k8s.io/api/rbac/v1/generated_pb';
 
-const apiGroup = 'kargo.akuity.io/v1alpha1';
-const availableResources = ['stage', 'promotion', 'warehouse', 'secret', 'analysisTemplate'];
+const availableResources = [
+  // core
+  'events',
+  'secrets',
+  'serviceaccounts',
+  // rbac.authorization.k8s.io
+  'rolebindings',
+  'roles',
+  // kargo.akuity.io
+  'freights',
+  'stages',
+  'promotions',
+  'warehouses',
+  'secret',
+  // argoproj.io
+  'analysisruns',
+  'analysistemplates'
+];
 const availableVerbs = ['create', 'update', 'delete', 'patch', 'list', 'promote'];
 
 const ruleFormSchema = () =>
@@ -34,13 +50,11 @@ export const RuleEditor = ({
   const onSubmit = handleSubmit((values) => {
     onSuccess({
       verbs: values.verbs,
-      apiGroups: [apiGroup],
       resources: values.resources,
       resourceNames: values.resourceNames
     } as PolicyRule);
     reset({
       verbs: [] as string[],
-      apiGroups: [] as string[],
       resources: [] as string[],
       resourceNames: [] as string[]
     } as PolicyRule);
@@ -85,7 +99,7 @@ export const RuleEditor = ({
               <MultiStringEditor
                 value={field.value}
                 onChange={field.onChange}
-                placeholder='my-pod'
+                placeholder='my-stage'
                 label='Resource Names'
               />
             )}
