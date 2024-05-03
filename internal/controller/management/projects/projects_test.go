@@ -30,7 +30,10 @@ func TestNewReconciler(t *testing.T) {
 	require.NotNil(t, r.getNamespaceFn)
 	require.NotNil(t, r.createNamespaceFn)
 	require.NotNil(t, r.updateNamespaceFn)
-	require.NotNil(t, r.ensureProjectAdminPermissionsFn)
+	require.NotNil(t, r.ensureAPIAdminPermissionsFn)
+	require.NotNil(t, r.ensureDefaultProjectRolesFn)
+	require.NotNil(t, r.createServiceAccountFn)
+	require.NotNil(t, r.createRoleFn)
 	require.NotNil(t, r.createRoleBindingFn)
 }
 
@@ -223,7 +226,35 @@ func TestSyncProject(t *testing.T) {
 				) (kargoapi.ProjectStatus, error) {
 					return *project.Status.DeepCopy(), nil
 				},
-				ensureProjectAdminPermissionsFn: func(
+				ensureAPIAdminPermissionsFn: func(
+					context.Context,
+					*kargoapi.Project,
+				) error {
+					return errors.New("something went wrong")
+				},
+			},
+			assertions: func(t *testing.T, status kargoapi.ProjectStatus, err error) {
+				require.ErrorContains(t, err, "something went wrong")
+				// Still initializing because retry could succeed
+				require.Equal(t, kargoapi.ProjectPhaseInitializing, status.Phase)
+			},
+		},
+		{
+			name: "error ensuring default project roles",
+			reconciler: &reconciler{
+				ensureNamespaceFn: func(
+					_ context.Context,
+					project *kargoapi.Project,
+				) (kargoapi.ProjectStatus, error) {
+					return *project.Status.DeepCopy(), nil
+				},
+				ensureAPIAdminPermissionsFn: func(
+					context.Context,
+					*kargoapi.Project,
+				) error {
+					return nil
+				},
+				ensureDefaultProjectRolesFn: func(
 					context.Context,
 					*kargoapi.Project,
 				) error {
@@ -245,7 +276,13 @@ func TestSyncProject(t *testing.T) {
 				) (kargoapi.ProjectStatus, error) {
 					return *project.Status.DeepCopy(), nil
 				},
-				ensureProjectAdminPermissionsFn: func(
+				ensureAPIAdminPermissionsFn: func(
+					context.Context,
+					*kargoapi.Project,
+				) error {
+					return nil
+				},
+				ensureDefaultProjectRolesFn: func(
 					context.Context,
 					*kargoapi.Project,
 				) error {
@@ -506,7 +543,7 @@ func TestEnsureNamespace(t *testing.T) {
 	}
 }
 
-func TestEnsureProjectAdminPermissions(t *testing.T) {
+func TestEnsureAPIAdminPermissions(t *testing.T) {
 	testCases := []struct {
 		name       string
 		reconciler *reconciler
@@ -524,7 +561,7 @@ func TestEnsureProjectAdminPermissions(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, err error) {
-				require.ErrorContains(t, err, "error creating role binding")
+				require.ErrorContains(t, err, "error creating RoleBinding")
 				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
@@ -563,7 +600,125 @@ func TestEnsureProjectAdminPermissions(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
 				t,
-				testCase.reconciler.ensureProjectAdminPermissions(
+				testCase.reconciler.ensureAPIAdminPermissions(
+					context.Background(),
+					&kargoapi.Project{},
+				),
+			)
+		})
+	}
+}
+
+func TestEnsureDefaultProjectRoles(t *testing.T) {
+	testCases := []struct {
+		name       string
+		reconciler *reconciler
+		assertions func(*testing.T, error)
+	}{
+		{
+			name: "error creating ServiceAccount",
+			reconciler: &reconciler{
+				createServiceAccountFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return errors.New("something went wrong")
+				},
+			},
+			assertions: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "error creating ServiceAccount")
+				require.ErrorContains(t, err, "something went wrong")
+			},
+		},
+		{
+			name: "error creating Role",
+			reconciler: &reconciler{
+				createServiceAccountFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return apierrors.NewAlreadyExists(schema.GroupResource{}, "")
+				},
+				createRoleFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return errors.New("something went wrong")
+				},
+			},
+			assertions: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "error creating Role")
+				require.ErrorContains(t, err, "something went wrong")
+			},
+		},
+		{
+			name: "error creating RoleBinding",
+			reconciler: &reconciler{
+				createServiceAccountFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return apierrors.NewAlreadyExists(schema.GroupResource{}, "")
+				},
+				createRoleFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return apierrors.NewAlreadyExists(schema.GroupResource{}, "")
+				},
+				createRoleBindingFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return errors.New("something went wrong")
+				},
+			},
+			assertions: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "error creating RoleBinding")
+				require.ErrorContains(t, err, "something went wrong")
+			},
+		},
+		{
+			name: "success",
+			reconciler: &reconciler{
+				createServiceAccountFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return nil
+				},
+				createRoleFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return nil
+				},
+				createRoleBindingFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return nil
+				},
+			},
+			assertions: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			testCase.assertions(
+				t,
+				testCase.reconciler.ensureDefaultProjectRoles(
 					context.Background(),
 					&kargoapi.Project{},
 				),
