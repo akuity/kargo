@@ -374,8 +374,8 @@ func (r *reconciler) ensureDefaultProjectRoles(
 		"namespace": project.Name,
 	})
 
-	const adminRoleName = "admin"
-	const viewerRoleName = "viewer"
+	const adminRoleName = "kargo-admin"
+	const viewerRoleName = "kargo-viewer"
 	allRoles := []string{adminRoleName, viewerRoleName}
 
 	for _, saName := range allRoles {
