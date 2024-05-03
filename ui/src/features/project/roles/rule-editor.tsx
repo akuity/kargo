@@ -60,9 +60,9 @@ export const RuleEditor = ({
     } as PolicyRule);
   });
 
-  const _Select = (props: SelectProps) => (
+  const _Select = (props: SelectProps & { label: string }) => (
     <div>
-      <div className='font-semibold text-xs text-gray-500 mb-2 mt-2'>RESOURCES</div>
+      <div className='font-semibold text-xs text-gray-500 mb-2 mt-2'>{props.label}</div>
       <Select {...props} className='w-full' mode='tags' />
     </div>
   );
@@ -76,6 +76,7 @@ export const RuleEditor = ({
           <FieldContainer control={control} name='verbs' className='w-full'>
             {({ field }) => (
               <_Select
+                label='VERBS'
                 options={availableVerbs.map((v) => ({ value: v, label: v }))}
                 placeholder='create'
                 value={field.value}
@@ -86,6 +87,7 @@ export const RuleEditor = ({
           <FieldContainer control={control} name='resources' className='w-full'>
             {({ field }) => (
               <_Select
+                label='RESOURCES'
                 value={field.value}
                 onChange={(value) => field.onChange(value)}
                 placeholder='stage'
