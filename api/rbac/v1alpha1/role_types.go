@@ -27,10 +27,9 @@ type RoleResources struct {
 }
 
 type ResourceDetails struct {
-	ResourceGroup string   `json:"resourceGroup,omitempty"`
-	ResourceType  string   `json:"resourceType,omitempty"`
-	ResourceName  string   `json:"resourceName,omitempty"`
-	Verbs         []string `json:"verbs,omitempty"`
+	ResourceType string   `json:"resourceType,omitempty"`
+	ResourceName string   `json:"resourceName,omitempty"`
+	Verbs        []string `json:"verbs,omitempty"`
 }
 
 type UserClaims struct {

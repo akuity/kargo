@@ -201,7 +201,7 @@ Role:
 
 ```shell
 kargo grant --role developer \
-  --resource-group kargo.akuity.io --resource-type stages --verb '*' \
+  --resource-type stages --verb '*' \
   --project kargo-demo
 ```
 
