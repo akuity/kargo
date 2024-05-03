@@ -16,22 +16,17 @@ import { ServiceAccount } from "../../k8s.io/api/core/v1/generated_pb.js";
  */
 export class ResourceDetails extends Message<ResourceDetails> {
   /**
-   * @generated from field: optional string resourceGroup = 1;
-   */
-  resourceGroup?: string;
-
-  /**
-   * @generated from field: optional string resourceType = 2;
+   * @generated from field: optional string resourceType = 1;
    */
   resourceType?: string;
 
   /**
-   * @generated from field: optional string resourceName = 3;
+   * @generated from field: optional string resourceName = 2;
    */
   resourceName?: string;
 
   /**
-   * @generated from field: repeated string verbs = 4;
+   * @generated from field: repeated string verbs = 3;
    */
   verbs: string[] = [];
 
@@ -43,10 +38,9 @@ export class ResourceDetails extends Message<ResourceDetails> {
   static readonly runtime: typeof proto2 = proto2;
   static readonly typeName = "github.com.akuity.kargo.api.rbac.v1alpha1.ResourceDetails";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
-    { no: 1, name: "resourceGroup", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 2, name: "resourceType", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 3, name: "resourceName", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 4, name: "verbs", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 1, name: "resourceType", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 2, name: "resourceName", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 3, name: "verbs", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ResourceDetails {
