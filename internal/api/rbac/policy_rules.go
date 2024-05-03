@@ -7,6 +7,9 @@ import (
 	"strings"
 
 	rbacv1 "k8s.io/api/rbac/v1"
+
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	rolloutsapi "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
 )
 
 var allVerbs = []string{
@@ -49,27 +52,25 @@ func BuildNormalizedPolicyRulesMap(
 ) (map[string]rbacv1.PolicyRule, error) {
 	rulesMap := make(map[string]rbacv1.PolicyRule)
 	for _, rule := range rules {
-		for _, group := range rule.APIGroups {
-			group = strings.TrimSpace(group)
-			if group == "*" {
-				return nil, fmt.Errorf("wildcard APIGroup is not allowed")
+		for _, resource := range rule.Resources {
+			var err error
+			resource, err = normalizeResourceTypeName(resource)
+			if err != nil {
+				return nil, err
 			}
-			for _, resource := range rule.Resources {
-				resource = strings.TrimSpace(resource)
-				if resource == "*" {
-					return nil, fmt.Errorf("wildcard Resource is not allowed")
+			// We ignore the group in the rule and use what we know to be the correct
+			// group for the resource type.
+			group := getGroupName(resource)
+			if len(rule.ResourceNames) == 0 {
+				rule.ResourceNames = append(rule.ResourceNames, "")
+			}
+			for _, resourceName := range rule.ResourceNames {
+				verbs := rule.Verbs
+				key := RuleKey(group, resource, resourceName)
+				if existingRule, ok := rulesMap[key]; ok {
+					verbs = append(existingRule.Verbs, verbs...)
 				}
-				if len(rule.ResourceNames) == 0 {
-					rule.ResourceNames = append(rule.ResourceNames, "")
-				}
-				for _, resourceName := range rule.ResourceNames {
-					verbs := rule.Verbs
-					key := RuleKey(group, resource, resourceName)
-					if existingRule, ok := rulesMap[key]; ok {
-						verbs = append(existingRule.Verbs, verbs...)
-					}
-					rulesMap[key] = buildRule(group, resource, resourceName, verbs)
-				}
+				rulesMap[key] = buildRule(group, resource, resourceName, verbs)
 			}
 		}
 	}
@@ -149,4 +150,58 @@ func buildRule(
 		rule.ResourceNames = []string{resourceName}
 	}
 	return rule
+}
+
+// nolint: goconst
+func normalizeResourceTypeName(resource string) (string, error) {
+	resource = strings.ToLower(strings.TrimSpace(resource))
+	switch resource {
+	// Core
+	case "event", "events":
+		return "events", nil
+	case "secret", "secrets":
+		return "secrets", nil
+	case "serviceaccount", "serviceaccounts":
+		return "serviceaccounts", nil
+	// RBAC
+	case "role", "roles":
+		return "roles", nil
+	case "rolebinding", "rolebindings":
+		return "rolebindings", nil
+	// Kargo
+	case "freight", "freights":
+		return "freights", nil
+	case "freight/status", "freights/status":
+		return "freights/status", nil
+	case "promotion", "promotions":
+		return "promotions", nil
+	case "stage", "stages":
+		return "stages", nil
+	case "warehouse", "warehouses":
+		return "warehouses", nil
+	// Rollouts
+	case "analysisrun", "analysisruns":
+		return "analysisruns", nil
+	case "analysistemplate", "analysistemplates":
+		return "analysistemplates", nil
+	default:
+		return "", fmt.Errorf("unknown resource type %q", resource)
+	}
+}
+
+// nolint: goconst
+func getGroupName(resourceType string) string {
+	// resourceType must already be normalized
+	switch resourceType {
+	case "events", "secrets", "serviceaccounts":
+		return ""
+	case "rolebindings", "roles":
+		return rbacv1.SchemeGroupVersion.Group
+	case "freights", "freights/status", "promotions", "stages", "warehouses":
+		return kargoapi.GroupVersion.Group
+	case "analysisruns", "analysistemplates":
+		return rolloutsapi.GroupVersion.Group
+	default:
+		return "" // If the resourceType was normalized, this will never happen
+	}
 }

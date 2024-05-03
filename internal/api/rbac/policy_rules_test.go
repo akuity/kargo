@@ -10,61 +10,22 @@ import (
 )
 
 func TestNormalizePolicyRules(t *testing.T) {
-
-	t.Run("wildcard group not allowed", func(t *testing.T) {
-		_, err := NormalizePolicyRules([]rbacv1.PolicyRule{
-			{
-				APIGroups: []string{"*"},
-				Resources: []string{"pods"},
-				Verbs:     []string{"get"},
-			},
-		})
-		require.ErrorContains(t, err, "wildcard APIGroup is not allowed")
-	})
-
-	t.Run("wildcard resource not allowed", func(t *testing.T) {
+	t.Run("invalid resource type", func(t *testing.T) {
 		_, err := NormalizePolicyRules([]rbacv1.PolicyRule{
 			{
 				APIGroups: []string{""},
-				Resources: []string{"*"},
+				Resources: []string{"fake-resource"},
 				Verbs:     []string{"get"},
 			},
 		})
-		require.ErrorContains(t, err, "wildcard Resource is not allowed")
-	})
-
-	t.Run("multiple groups expand", func(t *testing.T) {
-		rules, err := NormalizePolicyRules([]rbacv1.PolicyRule{
-			{ // Never mind that this doesn't make sense
-				APIGroups: []string{"", rbacv1.GroupName},
-				Resources: []string{"pods"},
-				Verbs:     []string{"get"},
-			},
-		})
-		require.NoError(t, err)
-		require.Equal(
-			t,
-			[]rbacv1.PolicyRule{
-				{
-					APIGroups: []string{""},
-					Resources: []string{"pods"},
-					Verbs:     []string{"get"},
-				},
-				{
-					APIGroups: []string{rbacv1.GroupName},
-					Resources: []string{"pods"},
-					Verbs:     []string{"get"},
-				},
-			},
-			rules,
-		)
+		require.ErrorContains(t, err, "unknown resource type")
 	})
 
 	t.Run("multiple resources expand", func(t *testing.T) {
 		rules, err := NormalizePolicyRules([]rbacv1.PolicyRule{
 			{
 				APIGroups: []string{""},
-				Resources: []string{"pods", "services"},
+				Resources: []string{"secrets", "serviceaccounts"},
 				Verbs:     []string{"get"},
 			},
 		})
@@ -74,12 +35,12 @@ func TestNormalizePolicyRules(t *testing.T) {
 			[]rbacv1.PolicyRule{
 				{
 					APIGroups: []string{""},
-					Resources: []string{"pods"},
+					Resources: []string{"secrets"},
 					Verbs:     []string{"get"},
 				},
 				{
 					APIGroups: []string{""},
-					Resources: []string{"services"},
+					Resources: []string{"serviceaccounts"},
 					Verbs:     []string{"get"},
 				},
 			},
@@ -91,7 +52,7 @@ func TestNormalizePolicyRules(t *testing.T) {
 		rules, err := NormalizePolicyRules([]rbacv1.PolicyRule{
 			{
 				APIGroups:     []string{""},
-				Resources:     []string{"pods"},
+				Resources:     []string{"serviceaccounts"},
 				ResourceNames: []string{"foo", "bar"},
 				Verbs:         []string{"get"},
 			},
@@ -102,13 +63,13 @@ func TestNormalizePolicyRules(t *testing.T) {
 			[]rbacv1.PolicyRule{
 				{
 					APIGroups:     []string{""},
-					Resources:     []string{"pods"},
+					Resources:     []string{"serviceaccounts"},
 					ResourceNames: []string{"bar"},
 					Verbs:         []string{"get"},
 				},
 				{
 					APIGroups:     []string{""},
-					Resources:     []string{"pods"},
+					Resources:     []string{"serviceaccounts"},
 					ResourceNames: []string{"foo"},
 					Verbs:         []string{"get"},
 				},
@@ -121,7 +82,7 @@ func TestNormalizePolicyRules(t *testing.T) {
 		rules, err := NormalizePolicyRules([]rbacv1.PolicyRule{
 			{
 				APIGroups: []string{""},
-				Resources: []string{"pods"},
+				Resources: []string{"serviceaccounts"},
 				Verbs:     []string{"list", "get"},
 			},
 		})
@@ -131,7 +92,7 @@ func TestNormalizePolicyRules(t *testing.T) {
 			[]rbacv1.PolicyRule{
 				{
 					APIGroups: []string{""},
-					Resources: []string{"pods"},
+					Resources: []string{"serviceaccounts"},
 					Verbs:     []string{"get", "list"},
 				},
 			},
@@ -143,7 +104,7 @@ func TestNormalizePolicyRules(t *testing.T) {
 		rules, err := NormalizePolicyRules([]rbacv1.PolicyRule{
 			{
 				APIGroups: []string{""},
-				Resources: []string{"pods"},
+				Resources: []string{"serviceaccounts"},
 				Verbs:     []string{"get", "get"},
 			},
 		})
@@ -153,7 +114,7 @@ func TestNormalizePolicyRules(t *testing.T) {
 			[]rbacv1.PolicyRule{
 				{
 					APIGroups: []string{""},
-					Resources: []string{"pods"},
+					Resources: []string{"serviceaccounts"},
 					Verbs:     []string{"get"},
 				},
 			},
@@ -165,7 +126,7 @@ func TestNormalizePolicyRules(t *testing.T) {
 		rules, err := NormalizePolicyRules([]rbacv1.PolicyRule{
 			{
 				APIGroups: []string{""},
-				Resources: []string{"pods"},
+				Resources: []string{"serviceaccounts"},
 				Verbs:     []string{"*"},
 			},
 		})
@@ -175,8 +136,30 @@ func TestNormalizePolicyRules(t *testing.T) {
 			[]rbacv1.PolicyRule{
 				{
 					APIGroups: []string{""},
-					Resources: []string{"pods"},
+					Resources: []string{"serviceaccounts"},
 					Verbs:     allVerbs,
+				},
+			},
+			rules,
+		)
+	})
+
+	t.Run("correct groups are determined automatically", func(t *testing.T) {
+		rules, err := NormalizePolicyRules([]rbacv1.PolicyRule{
+			{
+				APIGroups: []string{"", "foo", "bar"},
+				Resources: []string{"stages"},
+				Verbs:     []string{"get"},
+			},
+		})
+		require.NoError(t, err)
+		require.Equal(
+			t,
+			[]rbacv1.PolicyRule{
+				{
+					APIGroups: []string{kargoapi.GroupVersion.Group},
+					Resources: []string{"stages"},
+					Verbs:     []string{"get"},
 				},
 			},
 			rules,
@@ -185,19 +168,19 @@ func TestNormalizePolicyRules(t *testing.T) {
 
 	t.Run("kitchen sink", func(t *testing.T) {
 		rules, err := NormalizePolicyRules([]rbacv1.PolicyRule{
-			{ // Never mind that this doesn't make sense
-				APIGroups: []string{"", rbacv1.GroupName},
-				Resources: []string{"pods", "services"},
+			{ // Never mind that this doesn't make sense. It should all get fixed
+				APIGroups: []string{""},
+				Resources: []string{"sErViCeAcCoUnTs", "stage"},
 				Verbs:     []string{"*"},
 			},
 			{ // These should get de-duped
-				APIGroups: []string{""},
-				Resources: []string{"pods"},
+				APIGroups: []string{kargoapi.GroupVersion.Group},
+				Resources: []string{"stages"},
 				Verbs:     []string{"*"},
 			},
 			{
 				APIGroups:     []string{kargoapi.GroupVersion.Group},
-				Resources:     []string{"stages"},
+				Resources:     []string{"warehouses"},
 				ResourceNames: []string{"foo", "bar"},
 				Verbs:         []string{"get", "list"},
 			},
@@ -208,35 +191,25 @@ func TestNormalizePolicyRules(t *testing.T) {
 			[]rbacv1.PolicyRule{
 				{
 					APIGroups: []string{""},
-					Resources: []string{"pods"},
+					Resources: []string{"serviceaccounts"},
 					Verbs:     allVerbs,
 				},
 				{
-					APIGroups: []string{""},
-					Resources: []string{"services"},
+					APIGroups: []string{kargoapi.GroupVersion.Group},
+					Resources: []string{"stages"},
 					Verbs:     allVerbs,
 				},
 				{
 					APIGroups:     []string{kargoapi.GroupVersion.Group},
-					Resources:     []string{"stages"},
+					Resources:     []string{"warehouses"},
 					ResourceNames: []string{"bar"},
 					Verbs:         []string{"get", "list"},
 				},
 				{
 					APIGroups:     []string{kargoapi.GroupVersion.Group},
-					Resources:     []string{"stages"},
+					Resources:     []string{"warehouses"},
 					ResourceNames: []string{"foo"},
 					Verbs:         []string{"get", "list"},
-				},
-				{
-					APIGroups: []string{rbacv1.GroupName},
-					Resources: []string{"pods"},
-					Verbs:     allVerbs,
-				},
-				{
-					APIGroups: []string{rbacv1.GroupName},
-					Resources: []string{"services"},
-					Verbs:     allVerbs,
 				},
 			},
 			rules,

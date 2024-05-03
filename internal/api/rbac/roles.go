@@ -339,13 +339,20 @@ func (r *rolesDatabase) GrantPermissionsToRole(
 		return nil, err
 	}
 
+	resourceType, err := normalizeResourceTypeName(resourceDetails.ResourceType)
+	if err != nil {
+		return nil, err
+	}
+
+	group := getGroupName(resourceType)
+
 	newRole := role
 	if newRole == nil {
 		newRole = buildNewRole(project, name)
 	}
 	newRule := rbacv1.PolicyRule{
-		APIGroups: []string{resourceDetails.ResourceGroup},
-		Resources: []string{resourceDetails.ResourceType},
+		APIGroups: []string{group},
+		Resources: []string{resourceType},
 		Verbs:     resourceDetails.Verbs,
 	}
 	if resourceDetails.ResourceName != "" {
@@ -496,10 +503,16 @@ func (r *rolesDatabase) RevokePermissionsFromRole(
 	slices.Sort(resourceDetails.Verbs)
 	resourceDetails.Verbs = slices.Compact(resourceDetails.Verbs)
 
+	resourceType, err := normalizeResourceTypeName(resourceDetails.ResourceType)
+	if err != nil {
+		return nil, err
+	}
+
+	group := getGroupName(resourceType)
+
 	filteredRules := make([]rbacv1.PolicyRule, 0, len(role.Rules))
 	for _, rule := range role.Rules {
-		if rule.APIGroups[0] != resourceDetails.ResourceGroup ||
-			rule.Resources[0] != resourceDetails.ResourceType ||
+		if rule.APIGroups[0] != group || rule.Resources[0] != resourceType ||
 			(resourceDetails.ResourceName != "" && rule.ResourceNames[0] != resourceDetails.ResourceName) {
 			filteredRules = append(filteredRules, rule)
 			continue
@@ -620,6 +633,13 @@ func ResourcesToRole(
 			CreationTimestamp: sa.CreationTimestamp,
 		},
 	}
+
+	if isKargoManaged(sa) &&
+		(len(roles) == 0 || (len(roles) == 1 && isKargoManaged(&roles[0]))) &&
+		(len(rbs) == 0 || (len(rbs) == 1 && isKargoManaged(&rbs[0]))) {
+		kargoRole.KargoManaged = true
+	}
+
 	if sa.Annotations[rbacapi.AnnotationKeyOIDCSubjects] != "" {
 		kargoRole.Subs = strings.Split(sa.Annotations[rbacapi.AnnotationKeyOIDCSubjects], ",")
 		slices.Sort(kargoRole.Subs)
@@ -633,20 +653,20 @@ func ResourcesToRole(
 		slices.Sort(kargoRole.Groups)
 	}
 
-	rules := []rbacv1.PolicyRule{}
+	kargoRole.Rules = []rbacv1.PolicyRule{}
 	for _, role := range roles {
-		rules = append(rules, role.Rules...)
+		kargoRole.Rules = append(kargoRole.Rules, role.Rules...)
 	}
 
-	var err error
-	if kargoRole.Rules, err = NormalizePolicyRules(rules); err != nil {
-		return nil, fmt.Errorf("error normalizing RBAC policy rules: %w", err)
-	}
-
-	if isKargoManaged(sa) &&
-		(len(roles) == 0 || (len(roles) == 1 && isKargoManaged(&roles[0]))) &&
-		(len(rbs) == 0 || (len(rbs) == 1 && isKargoManaged(&rbs[0]))) {
-		kargoRole.KargoManaged = true
+	// Since we cannot make any assumptions that they only contain resource types
+	// we recognize, or that they don't do something really unusual like using a
+	// wildcard resource type, never attempt to normalize rules if any of the
+	// underlying resources are not Kargo-managed.
+	if kargoRole.KargoManaged {
+		var err error
+		if kargoRole.Rules, err = NormalizePolicyRules(kargoRole.Rules); err != nil {
+			return nil, fmt.Errorf("error normalizing RBAC policy rules: %w", err)
+		}
 	}
 
 	return kargoRole, nil
