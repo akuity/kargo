@@ -10,22 +10,18 @@ rules:
   - ""
   resources:
   - events
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - ""
-  resources:
   - namespaces
+  # secrets permissions are granted dynamically at the project-level
+  - serviceaccounts # writes on serviceaccounts are granted dynamically at the project-level
   verbs:
   - get
   - list
   - watch
 - apiGroups:
-  - ""
+  - rbac.authorization.k8s.io
   resources:
-  - serviceaccounts
+  - rolebindings # writes on rolebindings are granted dynamically at the project-level
+  - roles # writes on roles are granted dynamically at the project-level
   verbs:
   - get
   - list
@@ -34,52 +30,49 @@ rules:
   - kargo.akuity.io
   resources:
   - freights
+  - projects
+  - stages
+  - warehouses
   verbs:
+  - "*" # full access to all mutable Kargo resource types
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - stages
+  verbs:
+  - promote # promotion permission for all stages
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - promotions
+  verbs: # nearly full access to all promotions, but they are immutable
+  - create
   - delete
   - get
   - list
-  - patch
   - watch
 - apiGroups:
   - kargo.akuity.io
   resources:
   - freights/status
   verbs:
-  - patch
-  - update
+  - patch # for manual approvals
+{{- if .Values.api.rollouts.integrationEnabled }}
 - apiGroups:
-  - kargo.akuity.io
+  - argoproj.io
   resources:
-  - projects
-  - stages
-  - warehouses
-  verbs:
-  - "*"
-- apiGroups:
-  - kargo.akuity.io
-  resources:
-  - promotions
-  verbs:
-  - create
+  - analysisruns
+  verbs: # view and delete analysisruns
+  - delete
   - get
   - list
-  - patch
   - watch
-{{- if .Values.api.rollouts.integrationEnabled }}
 - apiGroups:
   - argoproj.io
   resources:
   - analysistemplates
   verbs:
-  - "*"
-- apiGroups:
-  - argoproj.io
-  resources:
-  - analysisruns
-  verbs:
-  - get
-  - list
-  - watch
+  - "*" # full access to analysistemplates
 {{- end }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -93,22 +86,17 @@ rules:
   - ""
   resources:
   - events
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - ""
-  resources:
   - namespaces
+  - serviceaccounts
   verbs:
   - get
   - list
   - watch
 - apiGroups:
-  - ""
+  - rbac.authorization.k8s.io
   resources:
-  - serviceaccounts
+  - rolebindings
+  - roles
   verbs:
   - get
   - list
@@ -129,15 +117,8 @@ rules:
 - apiGroups:
   - argoproj.io
   resources:
-  - analysistemplates
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - argoproj.io
-  resources:
   - analysisruns
+  - analysistemplates
   verbs:
   - get
   - list
