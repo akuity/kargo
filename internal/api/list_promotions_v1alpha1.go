@@ -40,7 +40,7 @@ func (s *server) ListPromotions(
 	}
 
 	sort.Slice(list.Items, func(i, j int) bool {
-		return list.Items[i].CreationTimestamp.After(list.Items[j].CreationTimestamp.Time)
+		return list.Items[i].Name > list.Items[j].Name
 	})
 
 	promotions := make([]*kargoapi.Promotion, len(list.Items))
