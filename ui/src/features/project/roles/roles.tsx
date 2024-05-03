@@ -50,7 +50,7 @@ export const Roles = () => {
   const { mutate: deleteRoleAction } = useMutation(deleteRole, {
     onSuccess: () => {
       hide();
-      refetch();
+      setTimeout(() => refetch(), 500);
     }
   });
 
