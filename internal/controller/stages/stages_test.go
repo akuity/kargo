@@ -3224,6 +3224,34 @@ func Test_comparePromotionByPhaseAndCreationTime(t *testing.T) {
 			expected: -1,
 		},
 		{
+			name: "Pending before Terminated",
+			a: kargoapi.Promotion{
+				Status: kargoapi.PromotionStatus{
+					Phase: kargoapi.PromotionPhasePending,
+				},
+			},
+			b: kargoapi.Promotion{
+				Status: kargoapi.PromotionStatus{
+					Phase: kargoapi.PromotionPhaseSucceeded,
+				},
+			},
+			expected: -1,
+		},
+		{
+			name: "Pending after Running",
+			a: kargoapi.Promotion{
+				Status: kargoapi.PromotionStatus{
+					Phase: kargoapi.PromotionPhasePending,
+				},
+			},
+			b: kargoapi.Promotion{
+				Status: kargoapi.PromotionStatus{
+					Phase: kargoapi.PromotionPhaseRunning,
+				},
+			},
+			expected: 1,
+		},
+		{
 			name: "Terminated after Running",
 			a: kargoapi.Promotion{
 				Status: kargoapi.PromotionStatus{
@@ -3238,7 +3266,7 @@ func Test_comparePromotionByPhaseAndCreationTime(t *testing.T) {
 			expected: 1,
 		},
 		{
-			name: "Later ULID first",
+			name: "Earlier ULID first if both Running",
 			a: kargoapi.Promotion{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "promotion." + ulidEarlier.String(),
@@ -3255,10 +3283,10 @@ func Test_comparePromotionByPhaseAndCreationTime(t *testing.T) {
 					Phase: kargoapi.PromotionPhaseRunning,
 				},
 			},
-			expected: 1,
+			expected: -1,
 		},
 		{
-			name: "Earlier ULID first",
+			name: "Later ULID first if both Terminated",
 			a: kargoapi.Promotion{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "promotion." + ulidLater.String(),
@@ -3298,34 +3326,6 @@ func Test_comparePromotionByPhaseAndCreationTime(t *testing.T) {
 				},
 			},
 			expected: 0,
-		},
-		{
-			name: "Other phase after Terminated",
-			a: kargoapi.Promotion{
-				Status: kargoapi.PromotionStatus{
-					Phase: "",
-				},
-			},
-			b: kargoapi.Promotion{
-				Status: kargoapi.PromotionStatus{
-					Phase: kargoapi.PromotionPhaseSucceeded,
-				},
-			},
-			expected: 1,
-		},
-		{
-			name: "Other phase before Running",
-			a: kargoapi.Promotion{
-				Status: kargoapi.PromotionStatus{
-					Phase: kargoapi.PromotionPhasePending,
-				},
-			},
-			b: kargoapi.Promotion{
-				Status: kargoapi.PromotionStatus{
-					Phase: kargoapi.PromotionPhaseRunning,
-				},
-			},
-			expected: 1,
 		},
 		{
 			name: "Nil creation timestamps",
@@ -3382,15 +3382,15 @@ func Test_comparePromotionPhase(t *testing.T) {
 			expected: 1,
 		},
 		{
-			name:     "Terminated before other phase",
-			a:        kargoapi.PromotionPhaseErrored,
-			b:        kargoapi.PromotionPhasePending,
+			name:     "Pending before Terminated",
+			a:        kargoapi.PromotionPhasePending,
+			b:        kargoapi.PromotionPhaseErrored,
 			expected: -1,
 		},
 		{
-			name:     "Other phase after Terminated",
-			a:        "",
-			b:        kargoapi.PromotionPhaseSucceeded,
+			name:     "Pending after Running",
+			a:        kargoapi.PromotionPhasePending,
+			b:        kargoapi.PromotionPhaseRunning,
 			expected: 1,
 		},
 		{

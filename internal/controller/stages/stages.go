@@ -1055,7 +1055,7 @@ func (r *reconciler) syncPromotions(
 	slices.SortFunc(promotions, comparePromotionByPhaseAndCreationTime)
 
 	// If the latest Promotion is in a running phase, the Stage is promoting.
-	if latestPromo := promotions[0]; latestPromo.Status.Phase == kargoapi.PromotionPhaseRunning {
+	if latestPromo := promotions[0]; !latestPromo.Status.Phase.IsTerminal() {
 		logger.WithValues("promotion", latestPromo.Name).Debug("Stage has a running Promotion")
 		status.Phase = kargoapi.StagePhasePromoting
 		status.CurrentPromotion = &kargoapi.PromotionInfo{
@@ -1082,12 +1082,6 @@ func (r *reconciler) syncPromotions(
 			if strings.Compare(promo.Name, status.LastPromotion.Name) <= 0 {
 				break
 			}
-		}
-
-		if promo.Status.Phase == kargoapi.PromotionPhasePending || promo.Status.Phase == "" {
-			// We can break here since we know that all subsequent Promotions
-			// will be in a pending phase.
-			break
 		}
 
 		if promo.Status.Phase.IsTerminal() {
@@ -1687,20 +1681,28 @@ func (r *reconciler) recordFreightVerificationEvent(
 // purposes.
 //
 // The order of Promotions is as follows:
-//  1. Running
-//  2. Terminated
-//  3. Name, which is expected to contain a lexicographically sortable
-//     timestamp component (i.e. ULID).
+//  1. Running, ordered by ULID in ascending order.
+//  2. Terminated, ordered by ULID in ascending order.
+//  3. Non-terminal, ordered by ULID in descending order.
 func comparePromotionByPhaseAndCreationTime(a, b kargoapi.Promotion) int {
 	// Compare the phases of the Promotions first.
 	if phaseCompare := comparePromotionPhase(a.Status.Phase, b.Status.Phase); phaseCompare != 0 {
 		return phaseCompare
 	}
 
-	// NB: This makes use of the fact that Promotion names are generated,
-	// and contain a timestamp component which will ensure that they can
-	// be sorted in a consistent order.
-	return strings.Compare(b.Name, a.Name)
+	switch {
+	case !a.Status.Phase.IsTerminal():
+		// Non-terminal Promotions are ordered in ascending order based on the
+		// ULID in the Promotion name. This ensures that the Promotion which
+		// was (or will be) enqueued first is at the top.
+		return strings.Compare(a.Name, b.Name)
+	default:
+		// Terminal Promotions are ordered in descending order based on the
+		// ULID in the Promotion name. This ensures that the most recent
+		// Promotion is at the top, limiting the number of Promotions which
+		// have to be further inspected to collect the "new" Promotions.
+		return strings.Compare(b.Name, a.Name)
+	}
 }
 
 // comparePromotionPhase compares two Promotion phases. It returns a negative
@@ -1710,8 +1712,8 @@ func comparePromotionByPhaseAndCreationTime(a, b kargoapi.Promotion) int {
 //
 // The order of Promotion phases is as follows:
 //  1. Running
-//  2. Terminated
-//  3. <all other phases>
+//  2. Non-terminal phases
+//  3. Terminal phases
 func comparePromotionPhase(a, b kargoapi.PromotionPhase) int {
 	aRunning, bRunning := a == kargoapi.PromotionPhaseRunning, b == kargoapi.PromotionPhaseRunning
 	aTerminal, bTerminal := a.IsTerminal(), b.IsTerminal()
@@ -1723,9 +1725,9 @@ func comparePromotionPhase(a, b kargoapi.PromotionPhase) int {
 		return -1
 	case !aRunning && bRunning:
 		return 1
-	case aTerminal && !bTerminal:
-		return -1
 	case !aTerminal && bTerminal:
+		return -1
+	case aTerminal && !bTerminal:
 		return 1
 	default:
 		return 0
