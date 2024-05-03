@@ -740,6 +740,7 @@ export const Pipelines = () => {
                               ...currentData
                             });
                           }
+                          setFreightAction(undefined);
                         }}
                       />
                     )}

@@ -219,11 +219,20 @@ func TestGet(t *testing.T) {
 				rbacapi.AnnotationKeyOIDCEmails:   "foo-email,bar-email",
 				rbacapi.AnnotationKeyOIDCGroups:   "foo-group,bar-group",
 			}),
-			plainRole([]rbacv1.PolicyRule{{
-				APIGroups: []string{kargoapi.GroupVersion.Group},
-				Resources: []string{"stages", "promotions"},
-				Verbs:     []string{"list", "get"},
-			}}),
+			plainRole([]rbacv1.PolicyRule{
+				{ // This rule has groups and types that we don't recognize. Let's
+					// make sure we don't choke on them. This could happen with roles
+					// that aren't Kargo-managed.
+					APIGroups: []string{"fake-group-1", "fake-group-2"},
+					Resources: []string{"fake-type-1", "fake-type-2"},
+					Verbs:     []string{"get", "list"},
+				},
+				{
+					APIGroups: []string{kargoapi.GroupVersion.Group},
+					Resources: []string{"stages", "promotions"},
+					Verbs:     []string{"list", "get"},
+				},
+			}),
 			plainRoleBinding(),
 		).Build()
 		db := NewKubernetesRolesDatabase(c)
@@ -244,16 +253,17 @@ func TestGet(t *testing.T) {
 				Subs:         []string{"bar-sub", "foo-sub"},
 				Emails:       []string{"bar-email", "foo-email"},
 				Groups:       []string{"bar-group", "foo-group"},
+				// There should have been no attempt to normalize these rules
 				Rules: []rbacv1.PolicyRule{
 					{
-						APIGroups: []string{kargoapi.GroupVersion.Group},
-						Resources: []string{"promotions"},
+						APIGroups: []string{"fake-group-1", "fake-group-2"},
+						Resources: []string{"fake-type-1", "fake-type-2"},
 						Verbs:     []string{"get", "list"},
 					},
 					{
 						APIGroups: []string{kargoapi.GroupVersion.Group},
-						Resources: []string{"stages"},
-						Verbs:     []string{"get", "list"},
+						Resources: []string{"stages", "promotions"},
+						Verbs:     []string{"list", "get"},
 					},
 				},
 			},
@@ -365,9 +375,8 @@ func TestGrantPermissionToRole(t *testing.T) {
 			testProject,
 			testKargoRoleName,
 			&rbacapi.ResourceDetails{
-				ResourceGroup: "fake-group",
-				ResourceType:  "fake-resource-type",
-				Verbs:         []string{"get", "list"},
+				ResourceType: "fake-resource-type",
+				Verbs:        []string{"get", "list"},
 			},
 		)
 		require.True(t, kubeerr.IsNotFound(err))
@@ -383,9 +392,8 @@ func TestGrantPermissionToRole(t *testing.T) {
 			testProject,
 			testKargoRoleName,
 			&rbacapi.ResourceDetails{
-				ResourceGroup: "fake-group",
-				ResourceType:  "fake-resource-type",
-				Verbs:         []string{"get", "list"},
+				ResourceType: "fake-resource-type",
+				Verbs:        []string{"get", "list"},
 			},
 		)
 		require.True(t, kubeerr.IsBadRequest(err))
@@ -401,9 +409,8 @@ func TestGrantPermissionToRole(t *testing.T) {
 			testProject,
 			testKargoRoleName,
 			&rbacapi.ResourceDetails{
-				ResourceGroup: kargoapi.GroupVersion.Group,
-				ResourceType:  "stages",
-				Verbs:         []string{"get", "list"},
+				ResourceType: "stages",
+				Verbs:        []string{"get", "list"},
 			},
 		)
 		require.NoError(t, err)
@@ -461,9 +468,8 @@ func TestGrantPermissionToRole(t *testing.T) {
 			testProject,
 			testKargoRoleName,
 			&rbacapi.ResourceDetails{
-				ResourceGroup: kargoapi.GroupVersion.Group,
-				ResourceType:  "stages",
-				Verbs:         []string{"get", "list"},
+				ResourceType: "stages",
+				Verbs:        []string{"get", "list"},
 			},
 		)
 		require.NoError(t, err)
@@ -563,56 +569,119 @@ func TestGrantRoleToUsers(t *testing.T) {
 }
 
 func TestList(t *testing.T) {
-	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
-		managedServiceAccount(map[string]string{
-			rbacapi.AnnotationKeyOIDCSubjects: "foo-sub,bar-sub",
-			rbacapi.AnnotationKeyOIDCEmails:   "foo-email,bar-email",
-			rbacapi.AnnotationKeyOIDCGroups:   "foo-group,bar-group",
-		}),
-		managedRole([]rbacv1.PolicyRule{
-			{
-				APIGroups: []string{kargoapi.GroupVersion.Group},
-				Resources: []string{"stages", "promotions"},
-				Verbs:     []string{"list", "get"},
-			},
-		}),
-		managedRoleBinding(),
-	).Build()
-	db := NewKubernetesRolesDatabase(c)
-	kargoRoles, err := db.List(context.Background(), testProject)
-	require.NoError(t, err)
-	// Do not factor creation timestamp into the comparison
-	now := metav1.NewTime(time.Now())
-	for _, kargoRole := range kargoRoles {
-		kargoRole.CreationTimestamp = now
-	}
-	require.Equal(
-		t,
-		[]*rbacapi.Role{{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace:         testProject,
-				Name:              testKargoRoleName,
-				CreationTimestamp: now,
-			},
-			KargoManaged: true,
-			Subs:         []string{"bar-sub", "foo-sub"},
-			Emails:       []string{"bar-email", "foo-email"},
-			Groups:       []string{"bar-group", "foo-group"},
-			Rules: []rbacv1.PolicyRule{
+	t.Run("with only kargo-managed roles", func(t *testing.T) {
+		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+			managedServiceAccount(map[string]string{
+				rbacapi.AnnotationKeyOIDCSubjects: "foo-sub,bar-sub",
+				rbacapi.AnnotationKeyOIDCEmails:   "foo-email,bar-email",
+				rbacapi.AnnotationKeyOIDCGroups:   "foo-group,bar-group",
+			}),
+			managedRole([]rbacv1.PolicyRule{
 				{
 					APIGroups: []string{kargoapi.GroupVersion.Group},
-					Resources: []string{"promotions"},
+					Resources: []string{"stages", "promotions"},
+					Verbs:     []string{"list", "get"},
+				},
+			}),
+			managedRoleBinding(),
+		).Build()
+		db := NewKubernetesRolesDatabase(c)
+		kargoRoles, err := db.List(context.Background(), testProject)
+		require.NoError(t, err)
+		// Do not factor creation timestamp into the comparison
+		now := metav1.NewTime(time.Now())
+		for _, kargoRole := range kargoRoles {
+			kargoRole.CreationTimestamp = now
+		}
+		require.Equal(
+			t,
+			[]*rbacapi.Role{{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace:         testProject,
+					Name:              testKargoRoleName,
+					CreationTimestamp: now,
+				},
+				KargoManaged: true,
+				Subs:         []string{"bar-sub", "foo-sub"},
+				Emails:       []string{"bar-email", "foo-email"},
+				Groups:       []string{"bar-group", "foo-group"},
+				Rules: []rbacv1.PolicyRule{
+					{
+						APIGroups: []string{kargoapi.GroupVersion.Group},
+						Resources: []string{"promotions"},
+						Verbs:     []string{"get", "list"},
+					},
+					{
+						APIGroups: []string{kargoapi.GroupVersion.Group},
+						Resources: []string{"stages"},
+						Verbs:     []string{"get", "list"},
+					},
+				},
+			}},
+			kargoRoles,
+		)
+	})
+
+	t.Run("with a non-kargo-managed role", func(t *testing.T) {
+		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+			plainServiceAccount(map[string]string{
+				rbacapi.AnnotationKeyOIDCSubjects: "foo-sub,bar-sub",
+				rbacapi.AnnotationKeyOIDCEmails:   "foo-email,bar-email",
+				rbacapi.AnnotationKeyOIDCGroups:   "foo-group,bar-group",
+			}),
+			plainRole([]rbacv1.PolicyRule{
+				{ // This rule has groups and types that we don't recognize. Let's
+					// make sure we don't choke on them. This could happen with roles
+					// that aren't Kargo-managed.
+					APIGroups: []string{"fake-group-1", "fake-group-2"},
+					Resources: []string{"fake-type-1", "fake-type-2"},
 					Verbs:     []string{"get", "list"},
 				},
 				{
 					APIGroups: []string{kargoapi.GroupVersion.Group},
-					Resources: []string{"stages"},
-					Verbs:     []string{"get", "list"},
+					Resources: []string{"stages", "promotions"},
+					Verbs:     []string{"list", "get"},
 				},
-			},
-		}},
-		kargoRoles,
-	)
+			}),
+			plainRoleBinding(),
+		).Build()
+		db := NewKubernetesRolesDatabase(c)
+		kargoRoles, err := db.List(context.Background(), testProject)
+		require.NoError(t, err)
+		// Do not factor creation timestamp into the comparison
+		now := metav1.NewTime(time.Now())
+		for _, kargoRole := range kargoRoles {
+			kargoRole.CreationTimestamp = now
+		}
+		require.Equal(
+			t,
+			[]*rbacapi.Role{{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace:         testProject,
+					Name:              testKargoRoleName,
+					CreationTimestamp: now,
+				},
+				KargoManaged: false,
+				Subs:         []string{"bar-sub", "foo-sub"},
+				Emails:       []string{"bar-email", "foo-email"},
+				Groups:       []string{"bar-group", "foo-group"},
+				// There should have been no attempt to normalize these rules
+				Rules: []rbacv1.PolicyRule{
+					{
+						APIGroups: []string{"fake-group-1", "fake-group-2"},
+						Resources: []string{"fake-type-1", "fake-type-2"},
+						Verbs:     []string{"get", "list"},
+					},
+					{
+						APIGroups: []string{kargoapi.GroupVersion.Group},
+						Resources: []string{"stages", "promotions"},
+						Verbs:     []string{"list", "get"},
+					},
+				},
+			}},
+			kargoRoles,
+		)
+	})
 }
 
 func TestRevokePermissionsFromRole(t *testing.T) {
@@ -624,9 +693,8 @@ func TestRevokePermissionsFromRole(t *testing.T) {
 			testProject,
 			testKargoRoleName,
 			&rbacapi.ResourceDetails{
-				ResourceGroup: "fake-group",
-				ResourceType:  "fake-resource-type",
-				Verbs:         []string{"get", "list"},
+				ResourceType: "fake-resource-type",
+				Verbs:        []string{"get", "list"},
 			},
 		)
 		require.True(t, kubeerr.IsNotFound(err))
@@ -642,9 +710,8 @@ func TestRevokePermissionsFromRole(t *testing.T) {
 			testProject,
 			testKargoRoleName,
 			&rbacapi.ResourceDetails{
-				ResourceGroup: "fake-group",
-				ResourceType:  "fake-resource-type",
-				Verbs:         []string{"get", "list"},
+				ResourceType: "fake-resource-type",
+				Verbs:        []string{"get", "list"},
 			},
 		)
 		require.True(t, kubeerr.IsBadRequest(err))
@@ -660,9 +727,8 @@ func TestRevokePermissionsFromRole(t *testing.T) {
 			testProject,
 			testKargoRoleName,
 			&rbacapi.ResourceDetails{
-				ResourceGroup: "fake-group",
-				ResourceType:  "fake-resource-type",
-				Verbs:         []string{"get", "list"},
+				ResourceType: "fake-resource-type",
+				Verbs:        []string{"get", "list"},
 			},
 		)
 		require.NoError(t, err)
@@ -685,9 +751,8 @@ func TestRevokePermissionsFromRole(t *testing.T) {
 			testProject,
 			testKargoRoleName,
 			&rbacapi.ResourceDetails{
-				ResourceGroup: kargoapi.GroupVersion.Group,
-				ResourceType:  "stages",
-				Verbs:         []string{"get", "list"},
+				ResourceType: "stages",
+				Verbs:        []string{"get", "list"},
 			},
 		)
 		require.NoError(t, err)
@@ -893,7 +958,11 @@ func TestUpdate(t *testing.T) {
 
 	t.Run("success with updated ServiceAccount and Role", func(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
-			managedServiceAccount(nil),
+			managedServiceAccount(map[string]string{
+				rbacapi.AnnotationKeyOIDCSubjects: "foo-sub,bar-sub",
+				rbacapi.AnnotationKeyOIDCEmails:   "foo-email,bar-email",
+				rbacapi.AnnotationKeyOIDCGroups:   "foo-group,bar-group",
+			}),
 			managedRole([]rbacv1.PolicyRule{{
 				APIGroups: []string{kargoapi.GroupVersion.Group},
 				Resources: []string{"promotions"},
@@ -909,9 +978,9 @@ func TestUpdate(t *testing.T) {
 					Namespace: testProject,
 					Name:      testKargoRoleName,
 				},
-				Subs:   []string{"foo-sub", "bar-sub"},
-				Emails: []string{"foo-email", "bar-email"},
-				Groups: []string{"foo-group", "bar-group"},
+				Subs:   []string{"foo-sub"},
+				Emails: []string{"foo-email"},
+				Groups: []string{"foo-group"},
 				Rules: []rbacv1.PolicyRule{{
 					APIGroups: []string{kargoapi.GroupVersion.Group},
 					Resources: []string{"stages", "promotions"},
@@ -928,9 +997,9 @@ func TestUpdate(t *testing.T) {
 			t,
 			map[string]string{
 				rbacapi.AnnotationKeyManaged:      rbacapi.AnnotationValueTrue,
-				rbacapi.AnnotationKeyOIDCSubjects: "bar-sub,foo-sub",
-				rbacapi.AnnotationKeyOIDCEmails:   "bar-email,foo-email",
-				rbacapi.AnnotationKeyOIDCGroups:   "bar-group,foo-group",
+				rbacapi.AnnotationKeyOIDCSubjects: "foo-sub",
+				rbacapi.AnnotationKeyOIDCEmails:   "foo-email",
+				rbacapi.AnnotationKeyOIDCGroups:   "foo-group",
 			},
 			sa.Annotations,
 		)
