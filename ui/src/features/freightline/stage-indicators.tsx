@@ -32,7 +32,7 @@ export const StageIndicators = (props: { stages: Stage[]; faded?: boolean }) => 
   return (props.stages || []).length > 0 ? (
     <div
       className={`flex flex-col align-center h-full justify-center flex-shrink mr-2`}
-      style={{ width: '80px' }}
+      style={{ width: '20px' }}
     >
       {(props.stages || []).map((s) => (
         <StageIndicator
