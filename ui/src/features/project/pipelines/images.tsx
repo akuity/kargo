@@ -180,7 +180,7 @@ const Select = ({
   options: { label?: string; value: string }[];
 }) => (
   <select
-    className='block border-none w-full text-gray appearance-none p-2 bg-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-400'
+    className='block border-none w-full text-gray appearance-none p-2 bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-blue-400'
     value={value}
     onChange={(e) => onChange(e.target.value)}
   >

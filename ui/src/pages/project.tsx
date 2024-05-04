@@ -74,7 +74,7 @@ export const Project = ({ tab = 'pipelines' }: { tab?: ProjectTab }) => {
       <div className='p-6'>
         <div className='flex items-center'>
           <div className='mr-auto'>
-            <div className='font-semibold mb-1 text-xs text-gray-600'>PROJECT</div>
+            <div className='font-semibold mb-1 text-xs text-zinc-500'>PROJECT</div>
             <div className='text-2xl font-semibold'>{name}</div>
           </div>
           <ProjectSettings />

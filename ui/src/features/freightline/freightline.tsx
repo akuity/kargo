@@ -10,7 +10,10 @@ export const Freightline = ({
   children: React.ReactNode;
 }) => {
   return (
-    <div className='w-full py-3 flex flex-col overflow-hidden' style={{ backgroundColor: '#222' }}>
+    <div
+      className='w-full py-3 flex flex-col overflow-hidden'
+      style={{ backgroundColor: '#1c1c1c' }}
+    >
       <div className='flex h-44 w-full items-center px-1'>
         <div
           className='text-gray-500 text-sm font-semibold mb-2 w-min h-min'

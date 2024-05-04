@@ -123,7 +123,7 @@ const YamlEditor: FC<YamlEditorProps> = (props) => {
         )}
       </Flex>
       <div
-        style={{ border: '1px solid #d9d9d9', height, overflow: 'hidden' }}
+        style={{ border: '1px solid #424242', height, overflow: 'hidden' }}
         className={className}
       >
         <Editor
@@ -145,6 +145,7 @@ const YamlEditor: FC<YamlEditorProps> = (props) => {
           value={value}
           onChange={handleOnChange}
           onMount={handleEditorDidMount}
+          theme='vs-dark'
         />
 
         {placeholder && (

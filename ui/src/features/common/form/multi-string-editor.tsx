@@ -44,11 +44,11 @@ export const MultiStringEditor = ({
   return (
     <div className={className}>
       <div className='flex items-center h-8'>
-        {label && <div className='text-xs uppercase font-semibold text-gray-500'>{label}</div>}
+        {label && <div className='text-xs uppercase font-semibold text-neutral-600'>{label}</div>}
         <div className='ml-auto flex items-center'>
           {values?.length > 1 && (
             <div
-              className='text-xs text-gray-400 cursor-pointer mr-2'
+              className='text-xs text-neutral-400 cursor-pointer mr-2'
               onClick={() => setValues([])}
             >
               Clear All
@@ -56,7 +56,7 @@ export const MultiStringEditor = ({
           )}
         </div>
       </div>
-      <div className='rounded bg-gray-100 p-2'>
+      <div className='rounded bg-neutral-800 p-2'>
         <div className='flex items-center mb-2 min-h-8 flex-wrap gap-2'>
           {(values || []).map((v, i) => (
             <_Tag
@@ -72,7 +72,7 @@ export const MultiStringEditor = ({
           ))}
 
           {(values || []).length === 0 && (
-            <div className='text-gray-400 text-sm mx-auto'>Type below to add values</div>
+            <div className='text-neutral-600 text-sm mx-auto'>Type below to add values</div>
           )}
         </div>
 

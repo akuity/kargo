@@ -1,19 +1,21 @@
+import { theme } from 'antd';
 import { ThemeConfig } from 'antd/es/config-provider';
 import { MapToken } from 'antd/es/theme/interface';
 
 export const token: Partial<MapToken> = {
-  colorPrimary: '#30476c',
+  colorPrimary: '#4c9bff',
   fontSizeHeading1: 28,
   fontSizeHeading2: 24,
   fontSizeHeading3: 20,
   fontSizeHeading4: 18,
   fontSizeHeading5: 14,
-  colorText: '#454545',
+  colorText: '#fff',
   borderRadius: 8,
   fontFamily: 'Poppins, sans-serif'
 };
 
 export const themeConfig: ThemeConfig = {
   // ...token,
-  token
+  token,
+  algorithm: theme.darkAlgorithm
 };

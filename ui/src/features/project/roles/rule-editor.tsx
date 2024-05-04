@@ -64,16 +64,18 @@ export const RuleEditor = ({
 
   const _Select = (props: SelectProps & { label: string }) => (
     <div>
-      <div className='font-semibold text-xs text-gray-500 mb-2 mt-2'>{props.label}</div>
+      <div className='font-semibold text-xs text-neutral-500 mb-2 mt-2'>{props.label}</div>
       <Select {...props} className='w-full' mode='tags' />
     </div>
   );
 
   return (
     <div style={style} className='-mt-7'>
-      <div className='mx-auto font-semibold mb-2 text-gray-500 text-center text-sm'>NEW RULE</div>
+      <div className='mx-auto font-semibold mb-2 text-neutral-600 text-center text-sm'>
+        NEW RULE
+      </div>
 
-      <div className='rounded-md p-3 border-2 border-gray-100 border-solid'>
+      <div className='rounded-md p-3 border-2 border-neutral-700 border-solid'>
         <div className='w-full'>
           <FieldContainer control={control} name='verbs' className='w-full'>
             {({ field }) => (

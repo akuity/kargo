@@ -104,7 +104,7 @@ export const CreateRole = ({ editing, onSuccess, project, hide }: Props) => {
             <Input {...field} type='text' placeholder='my-role' disabled={!!editing} />
           )}
         </FieldContainer>
-        <div className='text-lg font-semibold mb-4'>OIDC Bindings</div>
+        <div className='text-lg font-semibold mb-4 text-white'>OIDC Bindings</div>
         <div className='flex items-start gap-4'>
           {multiFields.map(({ name, placeholder, label }) => (
             <FieldContainer
@@ -127,7 +127,7 @@ export const CreateRole = ({ editing, onSuccess, project, hide }: Props) => {
         </div>
       </div>
       <div>
-        <div className='text-lg font-semibold mb-4'>Rules</div>
+        <div className='text-lg font-semibold mb-4 text-white'>Rules</div>
         <div className='flex gap-4'>
           <RulesTable rules={rules} setRules={setRules} />
           <RuleEditor onSuccess={(rule) => setRules([...rules, rule])} style={{ width: '600px' }} />

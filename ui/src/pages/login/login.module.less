@@ -1,39 +1,34 @@
 .container {
-    min-height: 100vh;
-    background: linear-gradient(
-      177deg,
-      rgb(29, 50, 82) 0%,
-      rgb(29, 52, 81) 50%,
-      rgb(19, 36, 64) 77%,
-      rgb(10, 23, 49) 100%
-    );
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: ~'@{sizeMD}px';
-    gap: 40px;
+  min-height: 100vh;
+  background: black;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: ~'@{sizeMD}px';
+  gap: 40px;
 }
 
 .box {
-    max-width: 100%;
-    width: 360px;
-    background-color: @colorBgBase;;
-    padding: ~'@{sizeLG}px';
-    border-radius: ~'@{borderRadiusLG}px';
+  max-width: 100%;
+  width: 360px;
+  background-color: black;
+  border: 2px solid #333;
+  padding: ~'@{sizeLG}px';
+  border-radius: ~'@{borderRadiusLG}px';
 }
 
 .logo {
-    display: flex;
-    flex-direction: column;
-    color: @colorWhite;
-    align-items: center;
-    gap: 15px;
-    font-size: 24px;
-    font-weight: 600;
-    margin-top: -100px;
+  display: flex;
+  flex-direction: column;
+  color: white;
+  align-items: center;
+  gap: 15px;
+  font-size: 24px;
+  font-weight: 600;
+  margin-top: -100px;
 
-    img {
-        width: 70px;
-    }
+  img {
+    width: 70px;
+  }
 }

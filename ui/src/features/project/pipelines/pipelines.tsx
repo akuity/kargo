@@ -919,7 +919,7 @@ export const Pipelines = () => {
             className='text-gray-300 text-sm'
             style={{
               width: '400px',
-              backgroundColor: '#222'
+              backgroundColor: '#1c1c1c'
             }}
           >
             <h3 className='bg-black px-6 pb-3 pt-4 flex items-center'>
