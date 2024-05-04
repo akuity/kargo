@@ -16,7 +16,7 @@ export const FreightContents = (props: { freight?: Freight; highlighted: boolean
     } & React.PropsWithChildren
   ) => (
     <Tooltip
-      className={`flex items-center my-1 flex-col bg-neutral-300 rounded w-full p-1 max-w-20 overflow-x-hidden`}
+      className={`flex items-center my-1 flex-col bg-neutral-800 rounded p-1 w-full overflow-x-hidden`}
       overlay={props.overlay}
       title={props.title}
     >
