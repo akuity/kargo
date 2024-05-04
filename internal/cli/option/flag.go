@@ -85,9 +85,6 @@ const (
 	// RepoURLFlag is the flag name for the repo-url flag.
 	RepoURLFlag = "repo-url"
 
-	// ResourceGroupFlag is the flag name for the resource-group flag.
-	ResourceGroupFlag = "resource-group"
-
 	// ResourceNameFlag is the flag name for the resource-name flag.
 	ResourceNameFlag = "resource-name"
 
@@ -253,11 +250,6 @@ func RepoURL(fs *pflag.FlagSet, repoURL *string, usage string) {
 // Regex adds the RegexFlag to the provided flag set.
 func Regex(fs *pflag.FlagSet, regex *bool, usage string) {
 	fs.BoolVar(regex, RegexFlag, false, usage)
-}
-
-// ResourceGroup adds the ResourceGroupFlag to the provided flag set.
-func ResourceGroup(fs *pflag.FlagSet, resourceGroup *string, usage string) {
-	fs.StringVar(resourceGroup, ResourceGroupFlag, "", usage)
 }
 
 // ResourceName adds the ResourceNameFlag to the provided flag set.

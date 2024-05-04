@@ -8,7 +8,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	kubeerr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
@@ -19,8 +19,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
+	rbacapi "github.com/akuity/kargo/api/rbac/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller"
+	rolloutsapi "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
 	"github.com/akuity/kargo/internal/kubeclient"
 	"github.com/akuity/kargo/internal/logging"
 )
@@ -83,7 +85,21 @@ type reconciler struct {
 		...client.UpdateOption,
 	) error
 
-	ensureProjectAdminPermissionsFn func(context.Context, *kargoapi.Project) error
+	ensureAPIAdminPermissionsFn func(context.Context, *kargoapi.Project) error
+
+	ensureDefaultProjectRolesFn func(context.Context, *kargoapi.Project) error
+
+	createServiceAccountFn func(
+		context.Context,
+		client.Object,
+		...client.CreateOption,
+	) error
+
+	createRoleFn func(
+		context.Context,
+		client.Object,
+		...client.CreateOption,
+	) error
 
 	createRoleBindingFn func(
 		context.Context,
@@ -136,7 +152,10 @@ func newReconciler(kubeClient client.Client, cfg ReconcilerConfig) *reconciler {
 	r.getNamespaceFn = r.client.Get
 	r.createNamespaceFn = r.client.Create
 	r.updateNamespaceFn = r.client.Update
-	r.ensureProjectAdminPermissionsFn = r.ensureProjectAdminPermissions
+	r.ensureAPIAdminPermissionsFn = r.ensureAPIAdminPermissions
+	r.ensureDefaultProjectRolesFn = r.ensureDefaultProjectRoles
+	r.createServiceAccountFn = r.client.Create
+	r.createRoleFn = r.client.Create
 	r.createRoleBindingFn = r.client.Create
 	r.deleteRoleBindingFn = r.client.Delete
 	r.ensureV06CompatibilityLabelFn = kargoapi.EnsureV06CompatibilityLabel
@@ -213,8 +232,12 @@ func (r *reconciler) syncProject(
 		return status, fmt.Errorf("error ensuring namespace: %w", err)
 	}
 
-	if err = r.ensureProjectAdminPermissionsFn(ctx, project); err != nil {
+	if err = r.ensureAPIAdminPermissionsFn(ctx, project); err != nil {
 		return status, fmt.Errorf("error ensuring project admin permissions: %w", err)
+	}
+
+	if err = r.ensureDefaultProjectRolesFn(ctx, project); err != nil {
+		return status, fmt.Errorf("error ensuring default project roles: %w", err)
 	}
 
 	status.Phase = kargoapi.ProjectPhaseReady
@@ -273,7 +296,7 @@ func (r *reconciler) ensureNamespace(
 			project.Name,
 		)
 	}
-	if !apierrors.IsNotFound(err) {
+	if !kubeerr.IsNotFound(err) {
 		return status, fmt.Errorf("error getting namespace %q: %w", project.Name, err)
 	}
 
@@ -302,7 +325,7 @@ func (r *reconciler) ensureNamespace(
 	return status, nil
 }
 
-func (r *reconciler) ensureProjectAdminPermissions(
+func (r *reconciler) ensureAPIAdminPermissions(
 	ctx context.Context,
 	project *kargoapi.Project,
 ) error {
@@ -338,18 +361,19 @@ func (r *reconciler) ensureProjectAdminPermissions(
 			},
 		},
 	}
-	if err := r.createRoleBindingFn(ctx, roleBinding); apierrors.IsAlreadyExists(err) {
-		logger.Debug("role binding already exists in project namespace")
-	} else if err != nil {
+	if err := r.createRoleBindingFn(ctx, roleBinding); err != nil {
+		if kubeerr.IsAlreadyExists(err) {
+			logger.Debug("RoleBinding already exists in project namespace")
+			return nil
+		}
 		return fmt.Errorf(
-			"error creating role binding %q in project namespace %q: %w",
+			"error creating RoleBinding %q in project namespace %q: %w",
 			roleBinding.Name,
 			project.Name,
 			err,
 		)
-	} else {
-		logger.Debug("granted API server and kargo-admin project admin permissions")
 	}
+	logger.Debug("granted API server and kargo-admin project admin permissions")
 
 	// Delete legacy role binding if it exists
 	const legacyRoleBindingName = "kargo-api-server-manage-project-secrets"
@@ -361,7 +385,7 @@ func (r *reconciler) ensureProjectAdminPermissions(
 				Name:      legacyRoleBindingName,
 			},
 		},
-	); apierrors.IsNotFound(err) {
+	); kubeerr.IsNotFound(err) {
 		logger.Debug("legacy project admin role binding does not exist")
 	} else if err != nil {
 		return fmt.Errorf(
@@ -377,6 +401,197 @@ func (r *reconciler) ensureProjectAdminPermissions(
 		return fmt.Errorf(
 			"error ensuring v0.6 compatibility label on Project %q: %w",
 			project.Name, err,
+		)
+	}
+
+	return nil
+}
+
+func (r *reconciler) ensureDefaultProjectRoles(
+	ctx context.Context,
+	project *kargoapi.Project,
+) error {
+	logger := logging.LoggerFromContext(ctx).WithFields(log.Fields{
+		"project":   project.Name,
+		"name":      project.Name,
+		"namespace": project.Name,
+	})
+
+	const adminRoleName = "kargo-admin"
+	const viewerRoleName = "kargo-viewer"
+	allRoles := []string{adminRoleName, viewerRoleName}
+
+	for _, saName := range allRoles {
+		saLogger := logger.WithField("serviceAccount", saName)
+		if err := r.createServiceAccountFn(
+			ctx,
+			&corev1.ServiceAccount{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      saName,
+					Namespace: project.Name,
+					Annotations: map[string]string{
+						rbacapi.AnnotationKeyManaged: rbacapi.AnnotationValueTrue,
+					},
+				},
+			},
+		); err != nil {
+			if kubeerr.IsAlreadyExists(err) {
+				saLogger.Debug("ServiceAccount already exists in project namespace")
+				continue
+			}
+			return fmt.Errorf(
+				"error creating ServiceAccount %q in project namespace %q: %w",
+				saName,
+				project.Name,
+				err,
+			)
+		}
+	}
+
+	roles := []*rbacv1.Role{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      adminRoleName,
+				Namespace: project.Name,
+				Annotations: map[string]string{
+					rbacapi.AnnotationKeyManaged: rbacapi.AnnotationValueTrue,
+				},
+			},
+			Rules: []rbacv1.PolicyRule{
+				{ // For viewing events; no need to create, edit, or delete them
+					APIGroups: []string{""},
+					Resources: []string{"events"},
+					Verbs:     []string{"get", "list", "watch"},
+				},
+				{ // For managing project-level access and credentials
+					APIGroups: []string{""},
+					Resources: []string{"secrets", "serviceaccounts"},
+					Verbs:     []string{"*"},
+				},
+				{ // For managing project-level access
+					APIGroups: []string{rbacv1.SchemeGroupVersion.Group},
+					Resources: []string{"rolebindings", "roles"},
+					Verbs:     []string{"*"},
+				},
+				{ // Full access to all mutable Kargo resource types
+					APIGroups: []string{kargoapi.GroupVersion.Group},
+					Resources: []string{"freights", "stages", "warehouses"},
+					Verbs:     []string{"*"},
+				},
+				{ // Promote permission on all stages
+					APIGroups: []string{kargoapi.GroupVersion.Group},
+					Resources: []string{"stages"},
+					Verbs:     []string{"promote"},
+				},
+				{ // Nearly full access to all Promotions, but they are immutable
+					APIGroups: []string{kargoapi.GroupVersion.Group},
+					Resources: []string{"promotions"},
+					Verbs:     []string{"create", "delete", "get", "list", "watch"},
+				},
+				{ // Manual approvals involve patching Freight status
+					APIGroups: []string{kargoapi.GroupVersion.Group},
+					Resources: []string{"freights/status"},
+					Verbs:     []string{"patch"},
+				},
+				{
+					// View and delete AnalysisRuns
+					APIGroups: []string{rolloutsapi.GroupVersion.Group},
+					Resources: []string{"analysisruns"},
+					Verbs:     []string{"delete", "get", "list", "watch"},
+				},
+				{ // Full access to AnalysisTemplates
+					APIGroups: []string{rolloutsapi.GroupVersion.Group},
+					Resources: []string{"analysistemplates"},
+					Verbs:     []string{"*"},
+				},
+			},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      viewerRoleName,
+				Namespace: project.Name,
+				Annotations: map[string]string{
+					rbacapi.AnnotationKeyManaged: rbacapi.AnnotationValueTrue,
+				},
+			},
+			Rules: []rbacv1.PolicyRule{
+				{
+					APIGroups: []string{""},
+					Resources: []string{"events", "serviceaccounts"},
+					Verbs:     []string{"get", "list", "watch"},
+				},
+				{
+					APIGroups: []string{rbacv1.SchemeGroupVersion.Group},
+					Resources: []string{"rolebindings", "roles"},
+					Verbs:     []string{"get", "list", "watch"},
+				},
+				{
+					APIGroups: []string{kargoapi.GroupVersion.Group},
+					Resources: []string{"freights", "promotions", "stages", "warehouses"},
+					Verbs:     []string{"get", "list", "watch"},
+				},
+				{
+					APIGroups: []string{rolloutsapi.GroupVersion.Group},
+					Resources: []string{"analysisruns", "analysistemplates"},
+					Verbs:     []string{"get", "list", "watch"},
+				},
+			},
+		},
+	}
+	for _, role := range roles {
+		roleLogger := logger.WithField("role", role.Name)
+		if err := r.createRoleFn(ctx, role); err != nil {
+			if kubeerr.IsAlreadyExists(err) {
+				roleLogger.Debug("Role already exists in project namespace")
+				continue
+			}
+			return fmt.Errorf(
+				"error creating Role %q in project namespace %q: %w",
+				role.Name, project.Name, err,
+			)
+		}
+		roleLogger.Debugf(
+			"created Role %q in project namespace %q", role.Name, project.Name,
+		)
+	}
+
+	for _, rbName := range allRoles {
+		rbLogger := logger.WithField("roleBinding", rbName)
+		if err := r.createRoleBindingFn(
+			ctx,
+			&rbacv1.RoleBinding{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      rbName,
+					Namespace: project.Name,
+					Annotations: map[string]string{
+						rbacapi.AnnotationKeyManaged: rbacapi.AnnotationValueTrue,
+					},
+				},
+				RoleRef: rbacv1.RoleRef{
+					APIGroup: rbacv1.GroupName,
+					Kind:     "Role",
+					Name:     rbName,
+				},
+				Subjects: []rbacv1.Subject{
+					{
+						Kind:      "ServiceAccount",
+						Name:      rbName,
+						Namespace: project.Name,
+					},
+				},
+			},
+		); err != nil {
+			if kubeerr.IsAlreadyExists(err) {
+				rbLogger.Debug("RoleBinding already exists in project namespace")
+				continue
+			}
+			return fmt.Errorf(
+				"error creating RoleBinding %q in project namespace %q: %w",
+				rbName, project.Name, err,
+			)
+		}
+		rbLogger.Debugf(
+			"created RoleBinding %q in project namespace %q", rbName, project.Name,
 		)
 	}
 

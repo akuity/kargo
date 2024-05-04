@@ -100,6 +100,10 @@ rules:
       - "*"
 {{- end }}
 ---
+# This role is bound to the API server ServiceAccount and the kargo-admin
+# ServiceAccount in project namespaces as they are created. This dynamically
+# extends the API server's and any (global) admin's most sensitive permissions
+# on a per-namespace basis instead of granting them cluster-wide.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
