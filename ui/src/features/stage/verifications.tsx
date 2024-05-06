@@ -98,6 +98,14 @@ export const Verifications = ({ stage }: Props) => {
         }}
       />
       <Table.Column<(typeof verifications)[number]>
+        title='Message'
+        render={(_, verification) => (
+          <div className='max-w-56 max-h-16 text-wrap overflow-scroll'>
+            {verification?.message || 'N/A'}
+          </div>
+        )}
+      />
+      <Table.Column<(typeof verifications)[number]>
         title='Date'
         render={(_, verification) => {
           const date = verification.startTime?.toDate();
