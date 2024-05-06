@@ -50,7 +50,7 @@ const ImageTagRow = ({
         return (
           <Tooltip key={stage.metadata?.name} title={stage.metadata?.name}>
             <div
-              className={classNames('mr-2 bg-zinc-600 ', {
+              className={classNames('mr-2 bg-neutral-300 ', {
                 'cursor-pointer': !!curStyles
               })}
               style={{
@@ -180,7 +180,7 @@ const Select = ({
   options: { label?: string; value: string }[];
 }) => (
   <select
-    className='block border-none w-full text-gray appearance-none p-2 bg-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-400'
+    className='block border-none w-full text-neutral-600 appearance-none p-2 bg-neutral-200 focus:outline-none focus:ring-2 focus:ring-blue-400'
     value={value}
     onChange={(e) => onChange(e.target.value)}
   >

@@ -5,9 +5,9 @@
   margin-right: 0.5rem;
   border-radius: 0.5rem;
   border: 2px solid #fff;
-  color: white;
+  color: black;
   @apply w-20;
-  @apply border-gray-700 hover:border-gray-500;
+  @apply border-gray-200 hover:border-gray-300;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -15,17 +15,16 @@
 }
 
 .promotable {
-  @apply border-gray-300 hover:border-sky-400 bg-zinc-800 hover:bg-sky-700;
+  @apply border-gray-300 hover:border-sky-400 bg-neutral-100 hover:bg-sky-100;
   color: white;
 }
 
 .disabled {
-  @apply border-zinc-800  hover:border-gray-800 text-zinc-500 cursor-default;
-  background-color: #222;
+  @apply border-neutral-200  hover:border-neutral-300 text-neutral-600 cursor-default bg-neutral-200;
 }
 
 .confirming {
-  @apply w-52 bg-sky-700 border-sky-400 hover:border-sky-400;
+  @apply w-52 bg-sky-100 border-sky-400 hover:border-sky-400;
 }
 
 .selected {
@@ -34,4 +33,8 @@
 
 .highlighted {
   border: 2px solid #1db6f9 !important;
+}
+
+.notEmpty {
+  @apply border-gray-400;
 }
