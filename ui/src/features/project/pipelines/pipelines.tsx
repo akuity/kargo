@@ -833,7 +833,7 @@ export const Pipelines = () => {
                             fullFreightById[node.data?.status?.currentFreight?.name || '']
                           }
                           hasNoSubscribers={
-                            (subscribersByStage[node?.data?.metadata?.name || ''] || []).length <= 0
+                            (subscribersByStage[node?.data?.metadata?.name || ''] || []).length <= 1
                           }
                           onPromoteClick={(type: FreightlineAction) => {
                             if (promotingStage?.metadata?.name === node.data?.metadata?.name) {
