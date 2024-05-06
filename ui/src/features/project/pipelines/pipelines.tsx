@@ -347,7 +347,7 @@ export const Pipelines = () => {
       }
     });
 
-    layout(g, { labelpos: 'c' });
+    layout(g, { lablepos: 'c' });
 
     const nodes = myNodes.map((node, index) => {
       const gNode = g.node(String(index));
@@ -448,7 +448,7 @@ export const Pipelines = () => {
       message.error(err?.toString());
     },
     onSuccess: () => {
-      message.success(`Freight ${confirmingPromotion} has been manually approved.`);
+      message.success(`Freight ${manuallyApproving} has been manually approved.`);
       setManuallyApproving(undefined);
       setFreightAction(undefined);
     }
@@ -640,8 +640,8 @@ export const Pipelines = () => {
                             key: '1',
                             label: (
                               <>
-                                <FontAwesomeIcon icon={faCircleCheck} className='mr-2' /> Manually
-                                Approve
+                                <FontAwesomeIcon icon={faCircleCheck} className='mr-2' />
+                                Manually Approve
                               </>
                             ),
                             onClick: () => {
