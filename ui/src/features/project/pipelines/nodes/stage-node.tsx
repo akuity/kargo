@@ -143,7 +143,7 @@ export const Nodule = (props: {
   const noduleHeight = 30;
   const top = props.nodeHeight / 2 - noduleHeight / 2;
   return (
-    <Tooltip title={props.begin ? 'Promote into Stage' : 'Promote to Downstream Subscribers'}>
+    <Tooltip title={props.begin ? 'Promote into Stage' : 'Promote to downstream Subscribers'}>
       <div
         onClick={(e) => {
           e.stopPropagation();
