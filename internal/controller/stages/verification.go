@@ -282,6 +282,7 @@ func (r *reconciler) getVerificationInfo(
 		StartTime:  ptr.To(analysisRun.CreationTimestamp),
 		FinishTime: analysisRun.Status.CompletedAt(),
 		Phase:      kargoapi.VerificationPhase(analysisRun.Status.Phase),
+		Message:    analysisRun.Status.Message,
 		AnalysisRun: &kargoapi.AnalysisRunReference{
 			Name:      analysisRun.Name,
 			Namespace: analysisRun.Namespace,
