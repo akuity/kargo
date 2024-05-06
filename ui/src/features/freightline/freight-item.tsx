@@ -28,7 +28,7 @@ export const FreightItem = ({
     <div
       className={classNames('relative h-full cursor-pointer', styles.freightItem, {
         ['w-32']: !empty && mode !== FreightMode.Confirming,
-        ['border-gray-500']: mode === FreightMode.Default && !empty,
+        [styles.notEmpty]: mode === FreightMode.Default && !empty,
         [styles.promotable]: mode === FreightMode.Promotable,
         [styles.disabled]: mode === FreightMode.Disabled,
         [styles.confirming]: mode === FreightMode.Confirming,
@@ -45,7 +45,7 @@ export const FreightItem = ({
       <div className='mt-auto w-full'>
         <div
           className={`w-full text-center font-mono text-xs truncate ${
-            mode === FreightMode.Confirming ? 'text-white' : 'text-gray-400'
+            mode === FreightMode.Confirming ? 'text-black' : 'text-gray-400'
           }`}
         >
           <FreightLabel freight={freight} />

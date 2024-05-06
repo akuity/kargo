@@ -717,7 +717,6 @@ export const Pipelines = () => {
                         (!!promotingStage && promotionEligible[id]) ||
                         false
                       }
-                      promoting={!!promotingStage}
                       freight={f}
                     />
                     {promotingStage && confirmingPromotion === id && (
@@ -916,13 +915,12 @@ export const Pipelines = () => {
             </div>
           </div>
           <div
-            className='text-gray-300 text-sm'
+            className='text-neutral-600 text-sm bg-neutral-100'
             style={{
-              width: '400px',
-              backgroundColor: '#222'
+              width: '400px'
             }}
           >
-            <h3 className='bg-black px-6 pb-3 pt-4 flex items-center'>
+            <h3 className='bg-neutral-200 px-4 py-2 flex items-center text-sm text-neutral-500'>
               <FontAwesomeIcon icon={faDocker} className='mr-2' /> IMAGES
             </h3>
             <div className='p-4'>
