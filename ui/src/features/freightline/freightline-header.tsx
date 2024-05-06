@@ -17,11 +17,13 @@ import { FreightlineAction } from '../project/pipelines/types';
 export const FreightlineHeader = ({
   promotingStage,
   action,
-  cancel
+  cancel,
+  downstreamSubs
 }: {
   promotingStage?: Stage;
   action?: FreightlineAction;
   cancel: () => void;
+  downstreamSubs?: string[];
 }) => {
   const stageColorMap = useContext(ColorContext);
 
@@ -46,7 +48,11 @@ export const FreightlineHeader = ({
             <FontAwesomeIcon icon={getIcon(action)} className='mr-2' />
             {promotingStage && action != 'manualApproval' ? (
               <>
-                PROMOTING {action === 'promoteSubscribers' ? 'SUBSCRIBERS OF' : ''} STAGE:{' '}
+                PROMOTING{' '}
+                {action === 'promoteSubscribers'
+                  ? `TO ${(downstreamSubs || []).length} DOWNSTREAM SUBSCRIBERS (${downstreamSubs?.join(', ')}) OF`
+                  : ''}{' '}
+                STAGE :{' '}
                 <div
                   className='px-2 py-1 rounded text-white ml-2 font-semibold'
                   style={{

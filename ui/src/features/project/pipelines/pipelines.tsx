@@ -347,7 +347,7 @@ export const Pipelines = () => {
       }
     });
 
-    layout(g, { labelpos: 'c' });
+    layout(g, { lablepos: 'c' });
 
     const nodes = myNodes.map((node, index) => {
       const gNode = g.node(String(index));
@@ -526,6 +526,7 @@ export const Pipelines = () => {
 
   React.useEffect(() => {
     const stagesPerFreight: { [key: string]: Stage[] } = {};
+    const subscribersByStage = {} as { [key: string]: Stage[] };
     (data?.stages || []).forEach((stage) => {
       const items = stagesPerFreight[stage.status?.currentFreight?.name || ''] || [];
       stagesPerFreight[stage.status?.currentFreight?.name || ''] = [...items, stage];
@@ -596,6 +597,9 @@ export const Pipelines = () => {
             setManuallyApproving(undefined);
             setConfirmingPromotion(undefined);
           }}
+          downstreamSubs={(subscribersByStage[promotingStage?.metadata?.name || ''] || []).map(
+            (s) => s.metadata?.name || ''
+          )}
         />
         <Freightline promotingStage={promotingStage} setPromotingStage={setPromotingStage}>
           <>
@@ -830,8 +834,7 @@ export const Pipelines = () => {
                             fullFreightById[node.data?.status?.currentFreight?.name || '']
                           }
                           hasNoSubscribers={
-                            (subscribersByStage[node?.data?.metadata?.name || ''] || []).length ===
-                            0
+                            (subscribersByStage[node?.data?.metadata?.name || ''] || []).length <= 0
                           }
                           onPromoteClick={(type: FreightlineAction) => {
                             if (promotingStage?.metadata?.name === node.data?.metadata?.name) {
@@ -840,6 +843,9 @@ export const Pipelines = () => {
                             } else {
                               setPromotingStage(node.data);
                               setFreightAction(type);
+                              if (type === 'promoteSubscribers') {
+                                setConfirmingPromotion(node.data?.status?.currentFreight?.name);
+                              }
                             }
                             setConfirmingPromotion(undefined);
                           }}
