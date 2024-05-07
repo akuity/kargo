@@ -1,5 +1,4 @@
-import { createPromiseClient } from '@connectrpc/connect';
-import { createConnectQueryKey, useMutation, useQuery } from '@connectrpc/connect-query';
+import { useMutation, useQuery } from '@connectrpc/connect-query';
 import { faDocker } from '@fortawesome/free-brands-svg-icons';
 import {
   faChevronDown,
@@ -24,7 +23,6 @@ import React from 'react';
 import { generatePath, useNavigate, useParams } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
-import { transportWithAuth } from '@ui/config/transport';
 import { ColorContext } from '@ui/context/colors';
 import { LoadingState } from '@ui/features/common';
 import { useModal } from '@ui/features/common/modal/use-modal';
@@ -42,7 +40,6 @@ import { clearColors } from '@ui/features/stage/utils';
 import { Time } from '@ui/gen/k8s.io/apimachinery/pkg/apis/meta/v1/generated_pb';
 import {
   approveFreight,
-  getStage,
   listStages,
   listWarehouses,
   promoteToStage,
@@ -50,7 +47,6 @@ import {
   queryFreight,
   refreshWarehouse
 } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
-import { KargoService } from '@ui/gen/service/v1alpha1/service_connect';
 import { Freight, Stage, Warehouse } from '@ui/gen/v1alpha1/generated_pb';
 import { useDocumentEvent } from '@ui/utils/document';
 import { useLocalStorage } from '@ui/utils/use-local-storage';
@@ -70,6 +66,7 @@ import {
   NodesRepoType
 } from './types';
 import { UpdateFreightAliasModal } from './update-freight-alias-modal';
+import { Watcher } from './watcher';
 
 const lineThickness = 2;
 const nodeWidth = 150;
@@ -94,8 +91,6 @@ export const Pipelines = () => {
   });
 
   const navigate = useNavigate();
-
-  const client = useQueryClient();
 
   const { show: showCreateStage } = useModal(
     name ? (p) => <CreateStageModal {...p} project={name} /> : undefined
@@ -127,98 +122,18 @@ export const Pipelines = () => {
   );
 
   const { show } = useModal();
+  const client = useQueryClient();
 
   React.useEffect(() => {
-    if (!data || !isVisible || !warehouseData) {
+    if (!data || !isVisible || !warehouseData || !name) {
       return;
     }
 
-    const cancel = new AbortController();
+    const watcher = new Watcher(name, client);
+    watcher.watchStages(data.stages.slice());
+    watcher.watchWarehouses(warehouseData?.warehouses || [], refetchAvailableFreight);
 
-    const watchStages = async () => {
-      const promiseClient = createPromiseClient(KargoService, transportWithAuth);
-      const stream = promiseClient.watchStages({ project: name }, { signal: cancel.signal });
-      let stages = data.stages.slice();
-      for await (const e of stream) {
-        const index = stages.findIndex((item) => item.metadata?.name === e.stage?.metadata?.name);
-        if (e.type === 'DELETED') {
-          if (index !== -1) {
-            stages = [...stages.slice(0, index), ...stages.slice(index + 1)];
-          }
-        } else {
-          if (index === -1) {
-            stages = [...stages, e.stage as Stage];
-          } else {
-            stages = [...stages.slice(0, index), e.stage as Stage, ...stages.slice(index + 1)];
-          }
-        }
-
-        // Update Stages list
-        const listStagesQueryKey = createConnectQueryKey(listStages, { project: name });
-        client.setQueryData(listStagesQueryKey, { stages });
-
-        // Update Stage details
-        const getStageQueryKey = createConnectQueryKey(getStage, {
-          project: name,
-          name: e.stage?.metadata?.name
-        });
-        client.setQueryData(getStageQueryKey, { stage: e.stage });
-      }
-    };
-    watchStages();
-
-    const watchWarehouses = async () => {
-      const promiseClient = createPromiseClient(KargoService, transportWithAuth);
-      const stream = promiseClient.watchWarehouses({ project: name }, { signal: cancel.signal });
-      let warehouses = warehouseData?.warehouses || [];
-      const refresh = {} as { [key: string]: boolean };
-
-      for await (const e of stream) {
-        const index = warehouses.findIndex(
-          (item) => item.metadata?.name === e.warehouse?.metadata?.name
-        );
-        if (e.type === 'DELETED') {
-          if (index !== -1) {
-            warehouses = [
-              ...warehouses.slice(0, index),
-              ...warehouses.slice(index + 1)
-            ] as Warehouse[];
-          }
-        } else {
-          if (index === -1) {
-            warehouses = [...warehouses, e.warehouse as Warehouse] as Warehouse[];
-          } else {
-            warehouses = [
-              ...warehouses.slice(0, index),
-              e.warehouse as Warehouse,
-              ...warehouses.slice(index + 1)
-            ] as Warehouse[];
-          }
-        }
-
-        const refreshRequest = e.warehouse?.metadata?.annotations['kargo.akuity.io/refresh'];
-        const refreshStatus = e.warehouse?.status?.lastHandledRefresh;
-        const refreshing = refreshRequest !== undefined && refreshRequest !== refreshStatus;
-        if (refreshing) {
-          refresh[e.warehouse?.metadata?.name || ''] = true;
-        } else if (refresh[e.warehouse?.metadata?.name || '']) {
-          delete refresh[e.warehouse?.metadata?.name || ''];
-          refetchAvailableFreight();
-        }
-
-        const listWarehousesQueryKey = createConnectQueryKey(listWarehouses, { project: name });
-        client.setQueryData(listWarehousesQueryKey, { warehouses });
-
-        const getWarehouseQueryKey = createConnectQueryKey(getStage, {
-          project: name,
-          name: e.warehouse?.metadata?.name
-        });
-        client.setQueryData(getWarehouseQueryKey, { warehouse: e.warehouse });
-      }
-    };
-    watchWarehouses();
-
-    return () => cancel.abort();
+    return () => watcher.cancelWatch();
   }, [isLoading, isVisible, name]);
 
   const [warehouseMap] = React.useMemo(() => {
