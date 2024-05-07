@@ -61,7 +61,11 @@ export const NewWarehouseNode = (warehouse: Warehouse, stageNames?: string[]): R
   };
 };
 
-export type FreightlineAction = 'promote' | 'promoteSubscribers' | 'manualApproval';
+export enum FreightlineAction {
+  Promote = 'promote', // Promoting a stage. Freight has not been selected yet
+  PromoteSubscribers = 'promoteSubscribers', // Promoting subscribers of a stage. Freight has not been selected yet
+  ManualApproval = 'manualApproval' // Manually approving a freight
+}
 
 export enum FreightMode {
   Default = 'default', // not promoting, has stages

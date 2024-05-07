@@ -10,7 +10,6 @@ import { Tooltip } from 'antd';
 import { useContext } from 'react';
 
 import { ColorContext } from '@ui/context/colors';
-import { Stage } from '@ui/gen/v1alpha1/generated_pb';
 
 import { FreightlineAction } from '../project/pipelines/types';
 
@@ -20,7 +19,7 @@ export const FreightlineHeader = ({
   cancel,
   downstreamSubs
 }: {
-  promotingStage?: Stage;
+  promotingStage?: string;
   action?: FreightlineAction;
   cancel: () => void;
   downstreamSubs?: string[];
@@ -56,10 +55,10 @@ export const FreightlineHeader = ({
                 <div
                   className='px-2 py-1 rounded text-white ml-2 font-semibold'
                   style={{
-                    backgroundColor: stageColorMap[promotingStage?.metadata?.name || '']
+                    backgroundColor: stageColorMap[promotingStage]
                   }}
                 >
-                  {promotingStage?.metadata?.name?.toUpperCase()}
+                  {promotingStage.toUpperCase()}
                 </div>
                 <Tooltip
                   title={

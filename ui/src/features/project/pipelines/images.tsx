@@ -1,3 +1,5 @@
+import { faDocker } from '@fortawesome/free-brands-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Switch, Tooltip } from 'antd';
 import classNames from 'classnames';
 import { useContext, useEffect, useMemo, useState } from 'react';
@@ -76,7 +78,25 @@ const ImageTagRow = ({
   );
 };
 
-export const Images = ({ projectName, stages }: { projectName: string; stages: Stage[] }) => {
+export const Images = (props: { project: string; stages: Stage[] }) => {
+  return (
+    <div
+      className='text-neutral-600 text-sm bg-neutral-100'
+      style={{
+        width: '400px'
+      }}
+    >
+      <h3 className='bg-neutral-200 px-4 py-2 flex items-center text-sm text-neutral-500'>
+        <FontAwesomeIcon icon={faDocker} className='mr-2' /> IMAGES
+      </h3>
+      <div className='p-4'>
+        <ImagesTable {...props} />
+      </div>
+    </div>
+  );
+};
+
+export const ImagesTable = ({ project, stages }: { project: string; stages: Stage[] }) => {
   const colors = useContext(ColorContext);
   const images = useMemo(() => {
     const images = new Map<string, Map<string, StageStyleMap>>();
@@ -122,7 +142,7 @@ export const Images = ({ projectName, stages }: { projectName: string; stages: S
   }, [stages]);
 
   const [imageURL, setImageURL] = useState(images.keys().next().value as string);
-  const [showHistory, setShowHistory] = useLocalStorage(`${projectName}-show-history`, false);
+  const [showHistory, setShowHistory] = useLocalStorage(`${project}-show-history`, false);
 
   useEffect(() => {
     setImageURL(images.keys().next().value as string);
@@ -155,7 +175,7 @@ export const Images = ({ projectName, stages }: { projectName: string; stages: S
             .map(([tag, tagStages]) => (
               <ImageTagRow
                 key={tag}
-                projectName={projectName}
+                projectName={project}
                 tag={tag}
                 stages={stages}
                 stylesByStage={tagStages}

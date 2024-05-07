@@ -11,9 +11,10 @@ import {
   NewWarehouseNode,
   NodeType,
   RepoNodeType
-} from './types';
-import { getConnectors, initNodeArray, newSubscriptionNode, nodeStubFor } from './utils/graph';
-import { IndexCache } from './utils/index-cache';
+} from '../types';
+
+import { getConnectors, initNodeArray, newSubscriptionNode, nodeStubFor } from './graph';
+import { IndexCache } from './index-cache';
 
 const initializeNodes = (warehouses: Warehouse[], stages: Stage[], hideSubscriptions: boolean) => {
   const warehouseMap = {} as { [key: string]: Warehouse };
