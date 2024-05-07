@@ -11,8 +11,9 @@ import { Button, Table } from 'antd';
 import { useParams } from 'react-router-dom';
 
 import { useConfirmModal } from '@ui/features/common/confirm-modal/use-confirm-modal';
+import { descriptionExpandable } from '@ui/features/common/description-expandable';
 import { useModal } from '@ui/features/common/modal/use-modal';
-import { DESCRIPTION_ANNOTATION_KEY } from '@ui/features/common/utils';
+import { Secret } from '@ui/gen/k8s.io/api/core/v1/generated_pb';
 import {
   deleteCredentials,
   listCredentials
@@ -39,7 +40,7 @@ export const CredentialsList = () => {
       <Table
         key={data?.credentials?.length}
         dataSource={data?.credentials || []}
-        rowKey={(record) => record?.metadata?.name || ''}
+        rowKey={(record: Secret) => record?.metadata?.name || ''}
         loading={isLoading}
         columns={[
           {
@@ -142,7 +143,8 @@ export const CredentialsList = () => {
                       ),
                       onOk: () => {
                         mutate({ project: name || '', name: record?.metadata?.name || '' });
-                      }
+                      },
+                      hide: () => {}
                     });
                   }}
                 >
@@ -152,18 +154,7 @@ export const CredentialsList = () => {
             )
           }
         ]}
-        expandable={{
-          defaultExpandAllRows: true,
-          expandIcon: () => null,
-          rowExpandable: (record) => {
-            return !!record?.metadata?.annotations?.[DESCRIPTION_ANNOTATION_KEY];
-          },
-          expandedRowRender: (record) => {
-            const description = record?.metadata?.annotations?.[DESCRIPTION_ANNOTATION_KEY];
-
-            return <div className='font-light text-xs text-gray-500'>{description}</div>;
-          }
-        }}
+        expandable={descriptionExpandable()}
       />
     </div>
   );

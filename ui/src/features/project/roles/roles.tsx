@@ -13,6 +13,7 @@ import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 
 import { ConfirmModal } from '@ui/features/common/confirm-modal/confirm-modal';
+import { descriptionExpandable } from '@ui/features/common/description-expandable';
 import { useModal } from '@ui/features/common/modal/use-modal';
 import { Role } from '@ui/gen/rbac/v1alpha1/generated_pb';
 import { deleteRole, listRoles } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
@@ -68,6 +69,7 @@ export const Roles = () => {
         />
       )}
       <Table
+        key={data?.roles?.length}
         dataSource={(data?.roles || []).sort((a, b) => {
           if (a.metadata?.name && b.metadata?.name) {
             return a.metadata?.name.localeCompare(b.metadata?.name);
@@ -75,7 +77,7 @@ export const Roles = () => {
             return 0;
           }
         })}
-        rowKey={(record) => record?.metadata?.name || ''}
+        rowKey={(record: Role) => record?.metadata?.name || ''}
         columns={[
           {
             title: 'Name',
@@ -170,6 +172,7 @@ export const Roles = () => {
             }
           }
         ]}
+        expandable={descriptionExpandable()}
       />
     </div>
   );

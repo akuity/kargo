@@ -8,6 +8,7 @@ import { generatePath, useNavigate, useParams } from 'react-router-dom';
 import { paths } from '@ui/config/paths';
 import { Freight } from '@ui/gen/v1alpha1/generated_pb';
 
+import { Description } from '../common/description';
 import { ManifestPreview } from '../common/manifest-preview';
 import { getAlias } from '../common/utils';
 
@@ -44,6 +45,7 @@ export const FreightDetails = ({ freight }: { freight?: Freight }) => {
               {alias && freight?.metadata?.name && (
                 <CopyValue label='NAME:' value={freight.metadata?.name} />
               )}
+              <Description item={freight} loading={false} className='mt-2' />
             </div>
 
             {freight?.metadata?.uid && <CopyValue label='UID:' value={freight?.metadata?.uid} />}

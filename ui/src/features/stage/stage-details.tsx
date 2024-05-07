@@ -6,6 +6,7 @@ import { HealthStatusIcon } from '@ui/features/common/health-status/health-statu
 import { Subscriptions } from '@ui/features/stage/subscriptions';
 import { Stage } from '@ui/gen/v1alpha1/generated_pb';
 
+import { Description } from '../common/description';
 import { ManifestPreview } from '../common/manifest-preview';
 
 import { Promotions } from './promotions';
@@ -33,6 +34,7 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
                   {stage.metadata?.name}
                 </Typography.Title>
                 <Typography.Text type='secondary'>{projectName}</Typography.Text>
+                <Description item={stage} loading={false} className='mt-2' />
               </div>
             </div>
             <StageActions stage={stage} />

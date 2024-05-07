@@ -15,7 +15,7 @@ export const RulesModal = ({
     <Modal
       {...props}
       title={name ? `Rules: ${name}` : 'Rules'}
-      width={700}
+      width={800}
       onCancel={() => {
         hide();
       }}
