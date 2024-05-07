@@ -11,12 +11,12 @@ import { Tooltip } from 'antd';
 
 import { urlForImage } from '@ui/utils/url';
 
-import { NodeType, NodesRepoType } from '../types';
+import { NodeType, RepoNodeType } from '../types';
 
 import * as styles from './repo-node.module.less';
 
 type Props = {
-  nodeData: NodesRepoType;
+  nodeData: RepoNodeType;
   children?: React.ReactNode;
 };
 
