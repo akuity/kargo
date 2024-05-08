@@ -267,6 +267,32 @@ message ChartSubscription {
   optional string semverConstraint = 3;
 }
 
+// DiscoveredArtifacts holds the artifacts discovered by the Warehouse.
+message DiscoveredArtifacts {
+  // Images holds the images discovered by the Warehouse, keyed by the
+  // repository URL from the ImageSubscription.
+  repeated ImageDiscoveryResult images = 1;
+}
+
+// DiscoveredImage represents an image discovered by a Warehouse for an
+// ImageSubscription.
+message DiscoveredImage {
+  // Tag is the tag of the image.
+  // +kubebuilder:validation:MinLength=1
+  // +kubebuilder:validation:MaxLength=128
+  // +kubebuilder:validation:Pattern=`^[\w.\-\_]+$`
+  optional string tag = 1;
+
+  // Digest is the digest of the image.
+  // +kubebuilder:validation:MinLength=1
+  // +kubebuilder:validation:Pattern=`^[a-z0-9]+:[a-f0-9]+$`
+  optional string digest = 2;
+
+  // CreatedAt is the time the image was created. This field is optional, and
+  // not populated for every ImageSelectionStrategy.
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time createdAt = 3;
+}
+
 // Freight represents a collection of versioned artifacts.
 message Freight {
   optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
@@ -641,6 +667,21 @@ message Image {
   // Digest identifies a specific version of the image in the repository
   // specified by RepoURL. This is a more precise identifier than Tag.
   optional string digest = 4;
+}
+
+// ImageDiscoveryResult represents the result of an image discovery operation
+// for an ImageSubscription.
+message ImageDiscoveryResult {
+  // RepoURL is the repository URL of the image, as specified in the
+  // ImageSubscription.
+  // +kubebuilder:validation:MinLength=1
+  optional string repoURL = 1;
+
+  // Images is a list of images discovered by the Warehouse for the
+  // ImageSubscription. An empty list indicates that the discovery operation
+  // was successful, but no images matching the ImageSubscription criteria were
+  // found.
+  repeated DiscoveredImage images = 2;
 }
 
 // ImageSubscription defines a subscription to an image repository.
@@ -1168,5 +1209,8 @@ message WarehouseStatus {
 
   // LastFreight refers to the last Freight produced by this Warehouse
   optional FreightReference lastFreight = 5;
+
+  // DiscoveredArtifacts holds the artifacts discovered by the Warehouse.
+  optional DiscoveredArtifacts discoveredArtifacts = 7;
 }
 

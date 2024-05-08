@@ -192,6 +192,63 @@
     "status": {
       "description": "Status describes the Warehouse's most recently observed state.",
       "properties": {
+        "discoveredArtifacts": {
+          "description": "DiscoveredArtifacts holds the artifacts discovered by the Warehouse.",
+          "properties": {
+            "images": {
+              "description": "Images holds the images discovered by the Warehouse, keyed by the\nrepository URL from the ImageSubscription.",
+              "items": {
+                "description": "ImageDiscoveryResult represents the result of an image discovery operation\nfor an ImageSubscription.",
+                "properties": {
+                  "images": {
+                    "description": "Images is a list of images discovered by the Warehouse for the\nImageSubscription. An empty list indicates that the discovery operation\nwas successful, but no images matching the ImageSubscription criteria were\nfound.",
+                    "items": {
+                      "description": "DiscoveredImage represents an image discovered by a Warehouse for an\nImageSubscription.",
+                      "properties": {
+                        "createdAt": {
+                          "description": "CreatedAt is the time the image was created. This field is optional, and\nnot populated for every ImageSelectionStrategy.",
+                          "format": "date-time",
+                          "type": "string"
+                        },
+                        "digest": {
+                          "description": "Digest is the digest of the image.",
+                          "minLength": 1,
+                          "pattern": "^[a-z0-9]+:[a-f0-9]+$",
+                          "type": "string"
+                        },
+                        "tag": {
+                          "description": "Tag is the tag of the image.",
+                          "maxLength": 128,
+                          "minLength": 1,
+                          "pattern": "^[\\w.\\-\\_]+$",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "digest",
+                        "tag"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "repoURL": {
+                    "description": "RepoURL is the repository URL of the image, as specified in the\nImageSubscription.",
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "images",
+                  "repoURL"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            }
+          },
+          "type": "object"
+        },
         "lastFreight": {
           "description": "LastFreight refers to the last Freight produced by this Warehouse",
           "properties": {

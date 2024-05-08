@@ -929,6 +929,112 @@ export class ChartSubscription extends Message<ChartSubscription> {
 }
 
 /**
+ * DiscoveredArtifacts holds the artifacts discovered by the Warehouse.
+ *
+ * @generated from message github.com.akuity.kargo.api.v1alpha1.DiscoveredArtifacts
+ */
+export class DiscoveredArtifacts extends Message<DiscoveredArtifacts> {
+  /**
+   * Images holds the images discovered by the Warehouse, keyed by the
+   * repository URL from the ImageSubscription.
+   *
+   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.ImageDiscoveryResult images = 1;
+   */
+  images: ImageDiscoveryResult[] = [];
+
+  constructor(data?: PartialMessage<DiscoveredArtifacts>) {
+    super();
+    proto2.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto2 = proto2;
+  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.DiscoveredArtifacts";
+  static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 1, name: "images", kind: "message", T: ImageDiscoveryResult, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DiscoveredArtifacts {
+    return new DiscoveredArtifacts().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DiscoveredArtifacts {
+    return new DiscoveredArtifacts().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DiscoveredArtifacts {
+    return new DiscoveredArtifacts().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DiscoveredArtifacts | PlainMessage<DiscoveredArtifacts> | undefined, b: DiscoveredArtifacts | PlainMessage<DiscoveredArtifacts> | undefined): boolean {
+    return proto2.util.equals(DiscoveredArtifacts, a, b);
+  }
+}
+
+/**
+ * DiscoveredImage represents an image discovered by a Warehouse for an
+ * ImageSubscription.
+ *
+ * @generated from message github.com.akuity.kargo.api.v1alpha1.DiscoveredImage
+ */
+export class DiscoveredImage extends Message<DiscoveredImage> {
+  /**
+   * Tag is the tag of the image.
+   * +kubebuilder:validation:MinLength=1
+   * +kubebuilder:validation:MaxLength=128
+   * +kubebuilder:validation:Pattern=`^[\w.\-\_]+$`
+   *
+   * @generated from field: optional string tag = 1;
+   */
+  tag?: string;
+
+  /**
+   * Digest is the digest of the image.
+   * +kubebuilder:validation:MinLength=1
+   * +kubebuilder:validation:Pattern=`^[a-z0-9]+:[a-f0-9]+$`
+   *
+   * @generated from field: optional string digest = 2;
+   */
+  digest?: string;
+
+  /**
+   * CreatedAt is the time the image was created. This field is optional, and
+   * not populated for every ImageSelectionStrategy.
+   *
+   * @generated from field: optional k8s.io.apimachinery.pkg.apis.meta.v1.Time createdAt = 3;
+   */
+  createdAt?: Time;
+
+  constructor(data?: PartialMessage<DiscoveredImage>) {
+    super();
+    proto2.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto2 = proto2;
+  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.DiscoveredImage";
+  static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 1, name: "tag", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 2, name: "digest", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 3, name: "createdAt", kind: "message", T: Time, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DiscoveredImage {
+    return new DiscoveredImage().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DiscoveredImage {
+    return new DiscoveredImage().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DiscoveredImage {
+    return new DiscoveredImage().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DiscoveredImage | PlainMessage<DiscoveredImage> | undefined, b: DiscoveredImage | PlainMessage<DiscoveredImage> | undefined): boolean {
+    return proto2.util.equals(DiscoveredImage, a, b);
+  }
+}
+
+/**
  * Freight represents a collection of versioned artifacts.
  *
  * @generated from message github.com.akuity.kargo.api.v1alpha1.Freight
@@ -2004,6 +2110,61 @@ export class Image extends Message<Image> {
 
   static equals(a: Image | PlainMessage<Image> | undefined, b: Image | PlainMessage<Image> | undefined): boolean {
     return proto2.util.equals(Image, a, b);
+  }
+}
+
+/**
+ * ImageDiscoveryResult represents the result of an image discovery operation
+ * for an ImageSubscription.
+ *
+ * @generated from message github.com.akuity.kargo.api.v1alpha1.ImageDiscoveryResult
+ */
+export class ImageDiscoveryResult extends Message<ImageDiscoveryResult> {
+  /**
+   * RepoURL is the repository URL of the image, as specified in the
+   * ImageSubscription.
+   * +kubebuilder:validation:MinLength=1
+   *
+   * @generated from field: optional string repoURL = 1;
+   */
+  repoURL?: string;
+
+  /**
+   * Images is a list of images discovered by the Warehouse for the
+   * ImageSubscription. An empty list indicates that the discovery operation
+   * was successful, but no images matching the ImageSubscription criteria were
+   * found.
+   *
+   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.DiscoveredImage images = 2;
+   */
+  images: DiscoveredImage[] = [];
+
+  constructor(data?: PartialMessage<ImageDiscoveryResult>) {
+    super();
+    proto2.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto2 = proto2;
+  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.ImageDiscoveryResult";
+  static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 1, name: "repoURL", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 2, name: "images", kind: "message", T: DiscoveredImage, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ImageDiscoveryResult {
+    return new ImageDiscoveryResult().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ImageDiscoveryResult {
+    return new ImageDiscoveryResult().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ImageDiscoveryResult {
+    return new ImageDiscoveryResult().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ImageDiscoveryResult | PlainMessage<ImageDiscoveryResult> | undefined, b: ImageDiscoveryResult | PlainMessage<ImageDiscoveryResult> | undefined): boolean {
+    return proto2.util.equals(ImageDiscoveryResult, a, b);
   }
 }
 
@@ -3869,6 +4030,13 @@ export class WarehouseStatus extends Message<WarehouseStatus> {
    */
   lastFreight?: FreightReference;
 
+  /**
+   * DiscoveredArtifacts holds the artifacts discovered by the Warehouse.
+   *
+   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.DiscoveredArtifacts discoveredArtifacts = 7;
+   */
+  discoveredArtifacts?: DiscoveredArtifacts;
+
   constructor(data?: PartialMessage<WarehouseStatus>) {
     super();
     proto2.util.initPartial(data, this);
@@ -3881,6 +4049,7 @@ export class WarehouseStatus extends Message<WarehouseStatus> {
     { no: 3, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 4, name: "observedGeneration", kind: "scalar", T: 3 /* ScalarType.INT64 */, opt: true },
     { no: 5, name: "lastFreight", kind: "message", T: FreightReference, opt: true },
+    { no: 7, name: "discoveredArtifacts", kind: "message", T: DiscoveredArtifacts, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): WarehouseStatus {
