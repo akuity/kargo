@@ -134,10 +134,8 @@ func (r *rolesDatabase) Create(
 	}
 
 	// Append the description annotation to the Role if it exists
-	if annotations := kargoRole.GetAnnotations(); annotations != nil {
-		if description, ok := annotations[kargoapi.AnnotationKeyDescription]; ok {
-			sa.Annotations[kargoapi.AnnotationKeyDescription] = description
-		}
+	if description, ok := kargoRole.Annotations[kargoapi.AnnotationKeyDescription]; ok {
+		sa.Annotations[kargoapi.AnnotationKeyDescription] = description
 	}
 
 	// Check if the Role we would create already exists
@@ -587,13 +585,12 @@ func (r *rolesDatabase) Update(
 	replaceClaimAnnotation(sa, rbacapi.AnnotationKeyOIDCSubjects, kargoRole.Subs)
 	replaceClaimAnnotation(sa, rbacapi.AnnotationKeyOIDCEmails, kargoRole.Emails)
 	replaceClaimAnnotation(sa, rbacapi.AnnotationKeyOIDCGroups, kargoRole.Groups)
-	if annotations := kargoRole.GetAnnotations(); annotations != nil {
-		if description, ok := annotations[kargoapi.AnnotationKeyDescription]; ok {
-			sa.Annotations[kargoapi.AnnotationKeyDescription] = description
-		} else {
-			delete(sa.Annotations, kargoapi.AnnotationKeyDescription)
-		}
+	if description, ok := kargoRole.Annotations[kargoapi.AnnotationKeyDescription]; ok {
+		sa.Annotations[kargoapi.AnnotationKeyDescription] = description
+	} else {
+		delete(sa.Annotations, kargoapi.AnnotationKeyDescription)
 	}
+
 	if err = r.client.Update(ctx, sa); err != nil {
 		return nil, fmt.Errorf(
 			"error updating ServiceAccount %q in namespace %q: %w", kargoRole.Name, kargoRole.Namespace, err,
@@ -647,10 +644,8 @@ func ResourcesToRole(
 		},
 	}
 
-	if annotations := sa.GetAnnotations(); annotations != nil {
-		if description, ok := annotations[kargoapi.AnnotationKeyDescription]; ok {
-			kargoRole.Annotations = map[string]string{kargoapi.AnnotationKeyDescription: description}
-		}
+	if description, ok := sa.Annotations[kargoapi.AnnotationKeyDescription]; ok {
+		kargoRole.Annotations = map[string]string{kargoapi.AnnotationKeyDescription: description}
 	}
 
 	if isKargoManaged(sa) &&
