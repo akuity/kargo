@@ -7,7 +7,7 @@ import {
   faTruckArrowRight
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Tooltip } from 'antd';
+import { Button, Tooltip } from 'antd';
 import { generatePath, useNavigate } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
@@ -101,8 +101,7 @@ export const StageNode = ({
         <div className={styles.body}>
           {approving ? (
             <div className='h-full flex items-center justify-center font-bold cursor-pointer text-blue-500 hover:text-blue-400'>
-              <FontAwesomeIcon icon={faCircleCheck} className='mr-2' />
-              APPROVE
+              <Button icon={<FontAwesomeIcon icon={faCircleCheck} />}>APPROVE</Button>
             </div>
           ) : (
             <div className='text-sm h-full flex flex-col items-center justify-center -mt-1'>
@@ -116,14 +115,14 @@ export const StageNode = ({
             <Nodule
               begin={true}
               nodeHeight={height}
-              onClick={() => onPromoteClick('promote')}
-              selected={action === 'promote'}
+              onClick={() => onPromoteClick(FreightlineAction.Promote)}
+              selected={action === FreightlineAction.Promote}
             />
             {!hasNoSubscribers && (
               <Nodule
                 nodeHeight={height}
-                onClick={() => onPromoteClick('promoteSubscribers')}
-                selected={action === 'promoteSubscribers'}
+                onClick={() => onPromoteClick(FreightlineAction.PromoteSubscribers)}
+                selected={action === FreightlineAction.PromoteSubscribers}
               />
             )}
           </>
