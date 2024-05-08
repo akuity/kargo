@@ -38,6 +38,7 @@ const defaultRandStringCharSet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRST
 var assets embed.FS
 
 type loginOptions struct {
+	Config        libConfig.CLIConfig
 	InsecureTLS   bool
 	UseAdmin      bool
 	UseKubeconfig bool
@@ -47,16 +48,23 @@ type loginOptions struct {
 	ServerAddress string
 }
 
-func NewCommand() *cobra.Command {
-	cmdOpts := &loginOptions{}
+func NewCommand(
+	cfg libConfig.CLIConfig,
+) *cobra.Command {
+	cmdOpts := &loginOptions{
+		Config: cfg,
+	}
 
 	cmd := &cobra.Command{
-		Use:   "login SERVER_ADDRESS (--admin | --kubeconfig | --sso)",
-		Args:  option.ExactArgs(1),
+		Use:   "login [SERVER_ADDRESS] (--admin | --kubeconfig | --sso)",
+		Args:  option.MaximumNArgs(1),
 		Short: "Log in to a Kargo API server",
 		Example: templates.Example(`
 # Log in using SSO
 kargo login https://kargo.example.com --sso
+
+# Log in (again) using the last used server address
+kargo login --sso
 
 # Log in using the admin user
 kargo login https://kargo.example.com --admin
@@ -108,7 +116,11 @@ func (o *loginOptions) addFlags(cmd *cobra.Command) {
 
 // complete sets the options from the command arguments.
 func (o *loginOptions) complete(args []string) {
-	o.ServerAddress = strings.TrimSpace(args[0])
+	// Use the API address in config as a default address
+	o.ServerAddress = o.Config.APIAddress
+	if len(args) == 1 {
+		o.ServerAddress = strings.TrimSpace(args[0])
+	}
 }
 
 // validate performs validation of the options. If the options are invalid, an
