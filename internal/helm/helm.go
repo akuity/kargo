@@ -248,7 +248,7 @@ func Login(homePath, repository string, credentials Credentials) error {
 	if credentials.Password != "" {
 		in, err := cmd.StdinPipe()
 		if err != nil {
-			return fmt.Errorf("error creating stdin pipe for password: %w", err)
+			return fmt.Errorf("stdin pipe for password: %w", err)
 		}
 		go func() {
 			defer in.Close()
@@ -271,7 +271,7 @@ func UpdateChartDependencies(homePath, chartPath string) error {
 	cmd.Env = append(cmd.Env, os.Environ()...)
 	cmd.Env = append(cmd.Env, helmEnv(homePath)...)
 	if _, err := libExec.Exec(cmd); err != nil {
-		return fmt.Errorf("error running `helm dependency update` for chart at %q: %w", chartPath, err)
+		return err
 	}
 	return nil
 }

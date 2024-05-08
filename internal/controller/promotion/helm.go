@@ -82,7 +82,7 @@ func (h *helmer) apply(
 			filepath.Join(workingDir, file),
 			changes,
 		); err != nil {
-			return nil, fmt.Errorf("error updating values in file %q: %w", file, err)
+			return nil, fmt.Errorf("updating values in file %q: %w", file, err)
 		}
 	}
 
@@ -94,19 +94,19 @@ func (h *helmer) apply(
 			update.Helm.Charts,
 		)
 	if err != nil {
-		return nil, fmt.Errorf("error preparing changes to affected Chart.yaml files: %w", err)
+		return nil, fmt.Errorf("preparing changes to affected Chart.yaml files: %w", err)
 	}
 	for chart, changes := range changesByChart {
 		chartPath := filepath.Join(workingDir, chart)
 		chartYAMLPath := filepath.Join(chartPath, "Chart.yaml")
 		if err = h.setStringsInYAMLFileFn(chartYAMLPath, changes); err != nil {
-			return nil, fmt.Errorf("error updating dependencies for chart %q: %w", chart, err)
+			return nil, fmt.Errorf("setting dependency versions for chart %q: %w", chart, err)
 		}
 		if err = h.prepareDependencyCredentialsFn(context.TODO(), homeDir, chartYAMLPath, namespace); err != nil {
-			return nil, fmt.Errorf("error resolving credentials for chart %q: :%w", chart, err)
+			return nil, fmt.Errorf("preparing credentials for chart dependencies %q: :%w", chart, err)
 		}
 		if err = h.updateChartDependenciesFn(homeDir, chartPath); err != nil {
-			return nil, fmt.Errorf("error updating dependencies for chart %q: :%w", chart, err)
+			return nil, fmt.Errorf("updating dependencies for chart %q: %w", chart, err)
 		}
 	}
 
@@ -208,7 +208,7 @@ func buildChartDependencyChanges(
 		absChartYAMLPath := filepath.Join(repoDir, chartPath, "Chart.yaml")
 		chartDependencies, err := loadChartDependencies(absChartYAMLPath)
 		if err != nil {
-			return nil, nil, fmt.Errorf("error loading dependencies for chart: %w", err)
+			return nil, nil, fmt.Errorf("loading dependencies for chart: %w", err)
 		}
 		for i, dependency := range chartDependencies {
 			chartKey := path.Join(dependency.Repository, dependency.Name)
@@ -246,7 +246,7 @@ func prepareDependencyCredentialsFn(
 	return func(ctx context.Context, homePath, chartPath, namespace string) error {
 		dependencies, err := loadChartDependencies(chartPath)
 		if err != nil {
-			return fmt.Errorf("error loading dependencies to resolve credentials for: %w", err)
+			return fmt.Errorf("loading dependencies to resolve credentials for: %w", err)
 		}
 
 		for _, dependency := range dependencies {
@@ -259,7 +259,7 @@ func prepareDependencyCredentialsFn(
 				repository = dependency.Repository
 				if creds, ok, err = db.Get(ctx, namespace, credentials.TypeHelm, repository); err != nil {
 					return fmt.Errorf(
-						"error obtaining credentials for chart repository %q: %w",
+						"obtaining credentials for chart repository %q: %w",
 						dependency.Repository,
 						err,
 					)
@@ -275,7 +275,7 @@ func prepareDependencyCredentialsFn(
 					"oci://"+path.Join(helm.NormalizeChartRepositoryURL(repository), dependency.Name),
 				); err != nil {
 					return fmt.Errorf(
-						"error obtaining credentials for chart repository %q: %w",
+						"obtaining credentials for chart repository %q: %w",
 						repository,
 						err,
 					)
@@ -290,7 +290,7 @@ func prepareDependencyCredentialsFn(
 				Username: creds.Username,
 				Password: creds.Password,
 			}); err != nil {
-				return fmt.Errorf("error logging in to chart repository %q: %w", repository, err)
+				return fmt.Errorf("login to chart repository %q: %w", repository, err)
 			}
 		}
 
@@ -310,14 +310,14 @@ type chartDependency struct {
 func loadChartDependencies(chartPath string) ([]chartDependency, error) {
 	b, err := os.ReadFile(chartPath)
 	if err != nil {
-		return nil, fmt.Errorf("error reading file %q: %w", chartPath, err)
+		return nil, fmt.Errorf("reading file %q: %w", chartPath, err)
 	}
 
 	chartObj := &struct {
 		Dependencies []chartDependency `json:"dependencies,omitempty"`
 	}{}
 	if err := yaml.Unmarshal(b, chartObj); err != nil {
-		return nil, fmt.Errorf("error unmarshaling %q: %w", chartPath, err)
+		return nil, fmt.Errorf("unmarshaling %q: %w", chartPath, err)
 	}
 
 	return chartObj.Dependencies, nil
