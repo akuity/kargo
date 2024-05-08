@@ -13,8 +13,9 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button, Dropdown, Space, Tooltip, message } from 'antd';
 import React, { useMemo } from 'react';
-import { useParams } from 'react-router-dom';
+import { generatePath, useNavigate, useParams } from 'react-router-dom';
 
+import { paths } from '@ui/config/paths';
 import { ColorContext } from '@ui/context/colors';
 import { LoadingState } from '@ui/features/common';
 import { useModal } from '@ui/features/common/modal/use-modal';
@@ -45,10 +46,12 @@ import { isPromoting, usePipelineState } from './utils/state';
 import { usePipelineGraph } from './utils/use-pipeline-graph';
 import { onError } from './utils/util';
 import { Watcher } from './utils/watcher';
+import { WarehouseDetails } from './warehouse/warehouse-details';
 
 export const Pipelines = () => {
-  const { name, stageName, freightName } = useParams();
+  const { name, stageName, freightName, warehouseName } = useParams();
   const { data, isLoading } = useQuery(listStages, { project: name });
+  const navigate = useNavigate();
   const {
     data: freightData,
     isLoading: isLoadingFreight,
@@ -147,6 +150,9 @@ export const Pipelines = () => {
   const freight =
     freightName &&
     (freightData?.groups['']?.freight || []).find((item) => item.metadata?.name === freightName);
+  const warehouse =
+    warehouseName &&
+    (warehouseData?.warehouses || []).find((item) => item.metadata?.name === warehouseName);
 
   const isFaded = (stage: Stage): boolean => {
     if (!isPromoting(state)) {
@@ -313,16 +319,30 @@ export const Pipelines = () => {
                         />
                       </>
                     ) : (
-                      <RepoNode nodeData={node}>
+                      <RepoNode
+                        nodeData={node}
+                        onClick={
+                          node.type === NodeType.WAREHOUSE
+                            ? () =>
+                                navigate(
+                                  generatePath(paths.warehouse, {
+                                    name,
+                                    warehouseName: node.warehouseName
+                                  })
+                                )
+                            : undefined
+                        }
+                      >
                         {node.type === NodeType.WAREHOUSE && (
                           <div className='flex w-full h-full'>
                             <Button
-                              onClick={() =>
+                              onClick={(e) => {
+                                e.stopPropagation();
                                 refreshWarehouseAction({
                                   name: node.warehouseName,
                                   project: name
-                                })
-                              }
+                                });
+                              }}
                               icon={<FontAwesomeIcon icon={faRefresh} />}
                               size='small'
                               className='m-auto'
@@ -368,6 +388,7 @@ export const Pipelines = () => {
         </div>
         {stage && <StageDetails stage={stage} />}
         {freight && <FreightDetails freight={freight} />}
+        {warehouse && <WarehouseDetails warehouse={warehouse} />}
       </ColorContext.Provider>
     </div>
   );

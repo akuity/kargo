@@ -2,7 +2,7 @@ type Data = {
   result:
     | {
         value: unknown;
-        case: 'stage' | 'project' | 'analysisRun' | 'analysisTemplate';
+        case: 'stage' | 'project' | 'analysisRun' | 'analysisTemplate' | 'warehouse';
       }
     | {
         value: Uint8Array;
