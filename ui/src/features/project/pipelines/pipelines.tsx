@@ -348,7 +348,7 @@ export const Pipelines = () => {
       }
     });
 
-    layout(g, { labelpos: 'c' });
+    layout(g, { lablepos: 'c' });
 
     const nodes = myNodes.map((node, index) => {
       const gNode = g.node(String(index));
@@ -449,7 +449,7 @@ export const Pipelines = () => {
       message.error(err?.toString());
     },
     onSuccess: () => {
-      message.success(`Freight ${confirmingPromotion} has been manually approved.`);
+      message.success(`Freight ${manuallyApproving} has been manually approved.`);
       setManuallyApproving(undefined);
       setFreightAction(undefined);
     }
@@ -527,6 +527,7 @@ export const Pipelines = () => {
 
   React.useEffect(() => {
     const stagesPerFreight: { [key: string]: Stage[] } = {};
+    const subscribersByStage = {} as { [key: string]: Stage[] };
     (data?.stages || []).forEach((stage) => {
       const items = stagesPerFreight[stage.status?.currentFreight?.name || ''] || [];
       stagesPerFreight[stage.status?.currentFreight?.name || ''] = [...items, stage];
@@ -600,6 +601,9 @@ export const Pipelines = () => {
             setManuallyApproving(undefined);
             setConfirmingPromotion(undefined);
           }}
+          downstreamSubs={(subscribersByStage[promotingStage?.metadata?.name || ''] || []).map(
+            (s) => s.metadata?.name || ''
+          )}
         />
         <Freightline promotingStage={promotingStage} setPromotingStage={setPromotingStage}>
           <>
@@ -644,8 +648,8 @@ export const Pipelines = () => {
                             key: '1',
                             label: (
                               <>
-                                <FontAwesomeIcon icon={faCircleCheck} className='mr-2' /> Manually
-                                Approve
+                                <FontAwesomeIcon icon={faCircleCheck} className='mr-2' />
+                                Manually Approve
                               </>
                             ),
                             onClick: () => {
@@ -721,7 +725,6 @@ export const Pipelines = () => {
                         (!!promotingStage && promotionEligible[id]) ||
                         false
                       }
-                      promoting={!!promotingStage}
                       freight={f}
                     />
                     {promotingStage && confirmingPromotion === id && (
@@ -744,6 +747,7 @@ export const Pipelines = () => {
                               ...currentData
                             });
                           }
+                          setFreightAction(undefined);
                         }}
                       />
                     )}
@@ -833,8 +837,7 @@ export const Pipelines = () => {
                             fullFreightById[node.data?.status?.currentFreight?.name || '']
                           }
                           hasNoSubscribers={
-                            (subscribersByStage[node?.data?.metadata?.name || ''] || []).length ===
-                            0
+                            (subscribersByStage[node?.data?.metadata?.name || ''] || []).length <= 1
                           }
                           onPromoteClick={(type: FreightlineAction) => {
                             if (promotingStage?.metadata?.name === node.data?.metadata?.name) {
@@ -843,6 +846,9 @@ export const Pipelines = () => {
                             } else {
                               setPromotingStage(node.data);
                               setFreightAction(type);
+                              if (type === 'promoteSubscribers') {
+                                setConfirmingPromotion(node.data?.status?.currentFreight?.name);
+                              }
                             }
                             setConfirmingPromotion(undefined);
                           }}
@@ -933,13 +939,12 @@ export const Pipelines = () => {
             </div>
           </div>
           <div
-            className='text-gray-300 text-sm'
+            className='text-neutral-600 text-sm bg-neutral-100'
             style={{
-              width: '400px',
-              backgroundColor: '#222'
+              width: '400px'
             }}
           >
-            <h3 className='bg-black px-6 pb-3 pt-4 flex items-center'>
+            <h3 className='bg-neutral-200 px-4 py-2 flex items-center text-sm text-neutral-500'>
               <FontAwesomeIcon icon={faDocker} className='mr-2' /> IMAGES
             </h3>
             <div className='p-4'>

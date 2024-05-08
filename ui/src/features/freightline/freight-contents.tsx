@@ -5,12 +5,8 @@ import { Tooltip } from 'antd';
 
 import { Freight, GitCommit } from '@ui/gen/v1alpha1/generated_pb';
 
-export const FreightContents = (props: {
-  freight?: Freight;
-  highlighted: boolean;
-  promoting: boolean;
-}) => {
-  const { freight, highlighted, promoting } = props;
+export const FreightContents = (props: { freight?: Freight; highlighted: boolean }) => {
+  const { freight, highlighted } = props;
 
   const FreightContentItem = (
     props: {
@@ -20,9 +16,7 @@ export const FreightContents = (props: {
     } & React.PropsWithChildren
   ) => (
     <Tooltip
-      className={`flex items-center my-1 flex-col bg-neutral-800 rounded p-1 w-20 max-w-20 overflow-x-hidden ${
-        promoting && highlighted ? 'bg-transparent' : ''
-      }`}
+      className={`flex items-center my-1 flex-col bg-neutral-300 rounded p-1 w-full overflow-x-hidden`}
       overlay={props.overlay}
       title={props.title}
     >
@@ -33,8 +27,8 @@ export const FreightContents = (props: {
 
   return (
     <div
-      className={`hover:text-white flex flex-col justify-start items-center font-mono text-xs flex-shrink min-w-min w-20 overflow-y-auto max-h-full ${
-        highlighted ? 'text-white' : 'text-gray-500'
+      className={`flex flex-col justify-start items-center font-mono text-xs flex-shrink min-w-min w-20 overflow-y-auto max-h-full ${
+        highlighted ? 'text-gray-700 hover:text-gray-800' : 'text-gray-400 hover:text-gray-500'
       }`}
     >
       {(freight?.commits || []).map((c) => (
