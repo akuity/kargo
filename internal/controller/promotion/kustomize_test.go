@@ -169,6 +169,7 @@ func TestKustomizerApply(t *testing.T) {
 				"",
 				"",
 				"",
+				"",
 				git.RepoCredentials{},
 			)
 			testCase.assertions(t, changes, err)

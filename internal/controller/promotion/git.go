@@ -58,6 +58,7 @@ type gitMechanism struct {
 	gitCommitFn func(
 		update kargoapi.GitRepoUpdate,
 		newFreight kargoapi.FreightReference,
+		namespace string,
 		readRef string,
 		writeBranch string,
 		repo git.Repo,
@@ -66,6 +67,7 @@ type gitMechanism struct {
 	applyConfigManagementFn func(
 		update kargoapi.GitRepoUpdate,
 		newFreight kargoapi.FreightReference,
+		namespace string,
 		sourceCommit string,
 		homeDir string,
 		workingDir string,
@@ -84,6 +86,7 @@ func newGitMechanism(
 	applyConfigManagementFn func(
 		update kargoapi.GitRepoUpdate,
 		newFreight kargoapi.FreightReference,
+		namespace string,
 		sourceCommit string,
 		homeDir string,
 		workingDir string,
@@ -212,6 +215,7 @@ func (g *gitMechanism) doSingleUpdate(
 	commitID, err := g.gitCommitFn(
 		update,
 		newFreight,
+		promo.Namespace,
 		readRef,
 		commitBranch,
 		repo,
@@ -349,6 +353,7 @@ func (g *gitMechanism) getAuthor() (*git.User, error) {
 func (g *gitMechanism) gitCommit(
 	update kargoapi.GitRepoUpdate,
 	newFreight kargoapi.FreightReference,
+	namespace string,
 	readRef string,
 	writeBranch string,
 	repo git.Repo,
@@ -373,6 +378,7 @@ func (g *gitMechanism) gitCommit(
 		if changes, err = g.applyConfigManagementFn(
 			update,
 			newFreight,
+			namespace,
 			sourceCommitID,
 			repo.HomeDir(),
 			repo.WorkingDir(),

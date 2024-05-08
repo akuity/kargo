@@ -216,6 +216,7 @@ func TestKargoRenderApply(t *testing.T) {
 			changes, err := testCase.renderer.apply(
 				testCase.update,
 				testCase.newFreight,
+				"",
 				testSourceCommitID,
 				"", // Home directory is not used by this implementation
 				testWorkDir,

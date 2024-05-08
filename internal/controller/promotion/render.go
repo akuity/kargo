@@ -50,6 +50,7 @@ type renderer struct {
 func (r *renderer) apply(
 	update kargoapi.GitRepoUpdate,
 	newFreight kargoapi.FreightReference,
+	_ string,
 	sourceCommit string,
 	_ string,
 	workingDir string,

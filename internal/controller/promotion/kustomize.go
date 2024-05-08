@@ -48,6 +48,7 @@ type kustomizer struct {
 func (k *kustomizer) apply(
 	update kargoapi.GitRepoUpdate,
 	newFreight kargoapi.FreightReference,
+	_ string,
 	_ string, // TODO: sourceCommit would be a nice addition to the commit message
 	_ string,
 	workingDir string,

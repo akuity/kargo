@@ -1,6 +1,7 @@
 package promotion
 
 import (
+	"context"
 	"errors"
 	"os"
 	"path/filepath"
@@ -170,6 +171,9 @@ func TestHelmerApply(t *testing.T) {
 				) (map[string]map[string]string, []string) {
 					return nil, nil
 				},
+				prepareDependencyCredentialsFn: func(context.Context, string, string, string) error {
+					return nil
+				},
 				buildChartDependencyChangesFn: func(
 					string,
 					[]kargoapi.Chart,
@@ -220,6 +224,9 @@ func TestHelmerApply(t *testing.T) {
 				setStringsInYAMLFileFn: func(string, map[string]string) error {
 					return nil
 				},
+				prepareDependencyCredentialsFn: func(context.Context, string, string, string) error {
+					return nil
+				},
 				updateChartDependenciesFn: func(string, string) error {
 					return nil
 				},
@@ -237,6 +244,7 @@ func TestHelmerApply(t *testing.T) {
 					Helm: &kargoapi.HelmPromotionMechanism{},
 				},
 				kargoapi.FreightReference{}, // The way the tests are structured, this value doesn't matter
+				"",
 				"",
 				"",
 				"",
