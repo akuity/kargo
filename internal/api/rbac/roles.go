@@ -766,6 +766,9 @@ func buildNewRole(namespace, name string) *rbacv1.Role {
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
 			Name:      name,
+			Annotations: map[string]string{
+				rbacapi.AnnotationKeyManaged: rbacapi.AnnotationValueTrue,
+			},
 		},
 	}
 }
