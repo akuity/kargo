@@ -55,12 +55,29 @@ type WarehouseSpec struct {
 	// empty, the defaulting webhook will set the value of this field to the value
 	// of the shard label.
 	Shard string `json:"shard,omitempty" protobuf:"bytes,2,opt,name=shard"`
+	// FreightCreation describes how Freight is created by this Warehouse.
+	// This field is optional. When left unspecified, the field is implicitly
+	// treated as if its value were "Automatic".
+	//
+	// +kubebuilder:default=Automatic
+	FreightCreation FreightCreation `json:"freightCreation" protobuf:"bytes,3,opt,name=freightCreation"`
 	// Subscriptions describes sources of artifacts to be included in Freight
 	// produced by this Warehouse.
 	//
 	// +kubebuilder:validation:MinItems=1
 	Subscriptions []RepoSubscription `json:"subscriptions" protobuf:"bytes,1,rep,name=subscriptions"`
 }
+
+// FreightCreation describes how Freight is created by a Warehouse.
+// +kubebuilder:validation:Enum={Automatic,Manual}
+type FreightCreation string
+
+const (
+	// FreightCreationAutomatic indicates that Freight is created automatically.
+	FreightCreationAutomatic FreightCreation = "Automatic"
+	// FreightCreationManual indicates that Freight is created manually.
+	FreightCreationManual FreightCreation = "Manual"
+)
 
 // RepoSubscription describes a subscription to ONE OF a Git repository, a
 // container image repository, or a Helm chart repository.
