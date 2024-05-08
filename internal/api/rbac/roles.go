@@ -133,11 +133,6 @@ func (r *rolesDatabase) Create(
 		)
 	}
 
-	// Append the description annotation to the Role if it exists
-	if description, ok := kargoRole.Annotations[kargoapi.AnnotationKeyDescription]; ok {
-		sa.Annotations[kargoapi.AnnotationKeyDescription] = description
-	}
-
 	// Check if the Role we would create already exists
 	role := &rbacv1.Role{}
 	if err := r.client.Get(ctx, objKey, role); client.IgnoreNotFound(err) != nil {
@@ -176,6 +171,14 @@ func (r *rolesDatabase) Create(
 	sa, role, rb, err := RoleToResources(kargoRole)
 	if err != nil {
 		return nil, fmt.Errorf("error converting Kargo Role to resources: %w", err)
+	}
+
+	// Append the description annotation to the Role if it exists
+	if description, ok := kargoRole.Annotations[kargoapi.AnnotationKeyDescription]; ok {
+		if sa.Annotations == nil {
+			sa.Annotations = map[string]string{}
+		}
+		sa.Annotations[kargoapi.AnnotationKeyDescription] = description
 	}
 
 	if err = r.client.Create(ctx, sa); err != nil {
@@ -586,6 +589,9 @@ func (r *rolesDatabase) Update(
 	replaceClaimAnnotation(sa, rbacapi.AnnotationKeyOIDCEmails, kargoRole.Emails)
 	replaceClaimAnnotation(sa, rbacapi.AnnotationKeyOIDCGroups, kargoRole.Groups)
 	if description, ok := kargoRole.Annotations[kargoapi.AnnotationKeyDescription]; ok {
+		if sa.Annotations == nil {
+			sa.Annotations = map[string]string{}
+		}
 		sa.Annotations[kargoapi.AnnotationKeyDescription] = description
 	} else {
 		delete(sa.Annotations, kargoapi.AnnotationKeyDescription)
