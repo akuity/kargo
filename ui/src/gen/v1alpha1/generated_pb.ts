@@ -3780,6 +3780,17 @@ export class WarehouseSpec extends Message<WarehouseSpec> {
   shard?: string;
 
   /**
+   * FreightCreation describes how Freight is created by this Warehouse.
+   * This field is optional. When left unspecified, the field is implicitly
+   * treated as if its value were "Automatic".
+   *
+   * +kubebuilder:default=Automatic
+   *
+   * @generated from field: optional string freightCreation = 3;
+   */
+  freightCreation?: string;
+
+  /**
    * Subscriptions describes sources of artifacts to be included in Freight
    * produced by this Warehouse.
    *
@@ -3798,6 +3809,7 @@ export class WarehouseSpec extends Message<WarehouseSpec> {
   static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.WarehouseSpec";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 2, name: "shard", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 3, name: "freightCreation", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 1, name: "subscriptions", kind: "message", T: RepoSubscription, repeated: true },
   ]);
 

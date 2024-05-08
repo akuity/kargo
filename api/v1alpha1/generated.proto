@@ -1136,6 +1136,13 @@ message WarehouseSpec {
   // of the shard label.
   optional string shard = 2;
 
+  // FreightCreation describes how Freight is created by this Warehouse.
+  // This field is optional. When left unspecified, the field is implicitly
+  // treated as if its value were "Automatic".
+  //
+  // +kubebuilder:default=Automatic
+  optional string freightCreation = 3;
+
   // Subscriptions describes sources of artifacts to be included in Freight
   // produced by this Warehouse.
   //

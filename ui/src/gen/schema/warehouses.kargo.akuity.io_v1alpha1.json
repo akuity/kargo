@@ -16,6 +16,15 @@
     "spec": {
       "description": "Spec describes sources of artifacts.",
       "properties": {
+        "freightCreation": {
+          "default": "Automatic",
+          "description": "FreightCreation describes how Freight is created by this Warehouse.\nThis field is optional. When left unspecified, the field is implicitly\ntreated as if its value were \"Automatic\".",
+          "enum": [
+            "Automatic",
+            "Manual"
+          ],
+          "type": "string"
+        },
         "shard": {
           "description": "Shard is the name of the shard that this Warehouse belongs to. This is an\noptional field. If not specified, the Warehouse will belong to the default\nshard. A defaulting webhook will sync this field with the value of the\nkargo.akuity.io/shard label. When the shard label is not present or differs\nfrom the value of this field, the defaulting webhook will set the label to\nthe value of this field. If the shard label is present and this field is\nempty, the defaulting webhook will set the value of this field to the value\nof the shard label.",
           "type": "string"
@@ -175,6 +184,7 @@
         }
       },
       "required": [
+        "freightCreation",
         "subscriptions"
       ],
       "type": "object"

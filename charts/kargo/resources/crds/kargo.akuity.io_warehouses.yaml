@@ -46,6 +46,16 @@ spec:
           spec:
             description: Spec describes sources of artifacts.
             properties:
+              freightCreation:
+                default: Automatic
+                description: |-
+                  FreightCreation describes how Freight is created by this Warehouse.
+                  This field is optional. When left unspecified, the field is implicitly
+                  treated as if its value were "Automatic".
+                enum:
+                - Automatic
+                - Manual
+                type: string
               shard:
                 description: |-
                   Shard is the name of the shard that this Warehouse belongs to. This is an
@@ -289,6 +299,7 @@ spec:
                 minItems: 1
                 type: array
             required:
+            - freightCreation
             - subscriptions
             type: object
           status:
