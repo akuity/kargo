@@ -15,6 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	rbacapi "github.com/akuity/kargo/api/rbac/v1alpha1"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
 // RolesDatabase is an interface for the Kargo Roles store.
@@ -130,6 +131,13 @@ func (r *rolesDatabase) Create(
 			},
 			sa.Name,
 		)
+	}
+
+	// Append the description annotation to the Role if it exists
+	if annotations := kargoRole.GetAnnotations(); annotations != nil {
+		if description, ok := annotations[kargoapi.AnnotationKeyDescription]; ok {
+			sa.Annotations[kargoapi.AnnotationKeyDescription] = description
+		}
 	}
 
 	// Check if the Role we would create already exists
@@ -579,6 +587,13 @@ func (r *rolesDatabase) Update(
 	replaceClaimAnnotation(sa, rbacapi.AnnotationKeyOIDCSubjects, kargoRole.Subs)
 	replaceClaimAnnotation(sa, rbacapi.AnnotationKeyOIDCEmails, kargoRole.Emails)
 	replaceClaimAnnotation(sa, rbacapi.AnnotationKeyOIDCGroups, kargoRole.Groups)
+	if annotations := kargoRole.GetAnnotations(); annotations != nil {
+		if description, ok := annotations[kargoapi.AnnotationKeyDescription]; ok {
+			sa.Annotations[kargoapi.AnnotationKeyDescription] = description
+		} else {
+			delete(sa.Annotations, kargoapi.AnnotationKeyDescription)
+		}
+	}
 	if err = r.client.Update(ctx, sa); err != nil {
 		return nil, fmt.Errorf(
 			"error updating ServiceAccount %q in namespace %q: %w", kargoRole.Name, kargoRole.Namespace, err,
@@ -630,6 +645,12 @@ func ResourcesToRole(
 			Name:              sa.Name,
 			CreationTimestamp: sa.CreationTimestamp,
 		},
+	}
+
+	if annotations := sa.GetAnnotations(); annotations != nil {
+		if description, ok := annotations[kargoapi.AnnotationKeyDescription]; ok {
+			kargoRole.Annotations = map[string]string{kargoapi.AnnotationKeyDescription: description}
+		}
 	}
 
 	if isKargoManaged(sa) &&
@@ -745,9 +766,6 @@ func buildNewRole(namespace, name string) *rbacv1.Role {
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
 			Name:      name,
-			Annotations: map[string]string{
-				rbacapi.AnnotationKeyManaged: rbacapi.AnnotationValueTrue,
-			},
 		},
 	}
 }
