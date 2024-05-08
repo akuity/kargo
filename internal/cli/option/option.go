@@ -18,6 +18,18 @@ func ExactArgs(n int) cobra.PositionalArgs {
 	}
 }
 
+// MaximumNArgs is a wrapper around cobra.MaximumNArgs to additionally print usage string
+func MaximumNArgs(n int) cobra.PositionalArgs {
+	maxNArgs := cobra.MaximumNArgs(n)
+	return func(cmd *cobra.Command, args []string) error {
+		if err := maxNArgs(cmd, args); err != nil {
+			_, _ = fmt.Fprintf(cmd.OutOrStderr(), "%s\n", cmd.UsageString())
+			return err
+		}
+		return nil
+	}
+}
+
 // MinimumNArgs is a wrapper around cobra.MinimumNArgs to additionally print usage string
 func MinimumNArgs(n int) cobra.PositionalArgs {
 	minNArgs := cobra.MinimumNArgs(n)
