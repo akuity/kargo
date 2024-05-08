@@ -9,7 +9,7 @@ import { z } from 'zod';
 
 import { FieldContainer } from '@ui/features/common/form/field-container';
 import { MultiStringEditor } from '@ui/features/common/form/multi-string-editor';
-import { dnsRegex } from '@ui/features/common/utils';
+import { DESCRIPTION_ANNOTATION_KEY, dnsRegex } from '@ui/features/common/utils';
 import { PolicyRule } from '@ui/gen/k8s.io/api/rbac/v1/generated_pb';
 import { Role } from '@ui/gen/rbac/v1alpha1/generated_pb';
 import { createRole, updateRole } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
@@ -27,11 +27,16 @@ type Props = {
 
 type AllowedFields = 'name' | 'emails' | 'subs' | 'groups';
 
+const annotationsWithDescription = (description: string): { [key: string]: string } => {
+  return description ? { [DESCRIPTION_ANNOTATION_KEY]: description } : {};
+};
+
 const nonZeroArray = (name: string) =>
   z.array(z.string()).min(0, `At least one ${name} is required`);
 
 const formSchema = z.object({
   name: zodValidators.requiredString.regex(dnsRegex, 'Role name must be a valid DNS subdomain.'),
+  description: z.string().optional(),
   emails: nonZeroArray('email'),
   subs: nonZeroArray('sub'),
   groups: nonZeroArray('group')
@@ -48,6 +53,7 @@ export const CreateRole = ({ editing, onSuccess, project, hide }: Props) => {
     resolver: zodResolver(formSchema),
     values: {
       name: editing?.metadata?.name || '',
+      description: editing?.metadata?.annotations[DESCRIPTION_ANNOTATION_KEY] || '',
       emails: editing?.emails || [],
       subs: editing?.subs || [],
       groups: editing?.groups || []
@@ -69,12 +75,19 @@ export const CreateRole = ({ editing, onSuccess, project, hide }: Props) => {
   });
 
   const onSubmit = handleSubmit((values) => {
+    const annotations = annotationsWithDescription(values.description);
     if (editing) {
       return update({
-        role: { ...values, rules, metadata: { namespace: project, name: editing?.metadata?.name } }
+        role: {
+          ...values,
+          rules,
+          metadata: { namespace: project, name: editing?.metadata?.name, annotations }
+        }
       });
     } else {
-      mutate({ role: { ...values, rules, metadata: { name: values.name, namespace: project } } });
+      mutate({
+        role: { ...values, rules, metadata: { name: values.name, namespace: project, annotations } }
+      });
     }
   });
 
@@ -102,6 +115,16 @@ export const CreateRole = ({ editing, onSuccess, project, hide }: Props) => {
         >
           {({ field }) => (
             <Input {...field} type='text' placeholder='my-role' disabled={!!editing} />
+          )}
+        </FieldContainer>
+        <FieldContainer
+          label='Description'
+          name='description'
+          control={control}
+          formItemOptions={{ className: 'mb-4' }}
+        >
+          {({ field }) => (
+            <Input {...field} type='text' placeholder='An optional description of this role' />
           )}
         </FieldContainer>
         <div className='text-lg font-semibold mb-4'>OIDC Bindings</div>

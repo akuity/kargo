@@ -8,7 +8,7 @@ import { PolicyRule } from '@ui/gen/k8s.io/api/rbac/v1/generated_pb';
 const renderColumn = (title: string, key: keyof PolicyRule): ColumnType<PolicyRule> => ({
   title,
   key,
-  render: (v: PolicyRule) => <div key={key}>{((v[key] || []) as string[]).join(',')}</div>,
+  render: (v: PolicyRule) => <div key={key}>{((v[key] || []) as string[]).join(', ')}</div>,
   onCell: () => ({
     style: {
       padding: '5px'
@@ -37,7 +37,7 @@ export const RulesTable = ({
       dataSource={rules}
       rowKey={(rule) => JSON.stringify(rule)}
       pagination={false}
-      className='h-full w-full mb-10'
+      className='h-full w-full mb-10 max-w-full'
       columns={[
         renderColumn('Verbs', 'verbs'),
         renderColumn('Resources', 'resources'),

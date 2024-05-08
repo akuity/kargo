@@ -8,3 +8,15 @@ export const getAlias = (freight?: Freight): string | undefined => {
 };
 
 export const dnsRegex = /^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/;
+
+export interface HasDescriptionAnnotation {
+  metadata?: {
+    annotations?: {
+      [DESCRIPTION_ANNOTATION_KEY]?: string;
+    };
+  };
+}
+
+export function getDescription<T extends HasDescriptionAnnotation>(item: T) {
+  return item?.metadata?.annotations?.[DESCRIPTION_ANNOTATION_KEY];
+}

@@ -1,3 +1,4 @@
+import { useQuery } from '@connectrpc/connect-query';
 import {
   faChartBar,
   faClockRotateLeft,
@@ -10,12 +11,15 @@ import { Tabs } from 'antd';
 import { generatePath, useNavigate, useParams } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
+import { Description } from '@ui/features/common/description';
 import { AnalysisTemplatesList } from '@ui/features/project/analysis-templates/analysis-templates-list';
 import { CredentialsList } from '@ui/features/project/credentials/credentials-list';
 import { Events } from '@ui/features/project/events/events';
 import { Pipelines } from '@ui/features/project/pipelines/pipelines';
 import { Roles } from '@ui/features/project/roles/roles';
 import { ProjectSettings } from '@ui/features/project/settings/project-settings';
+import { getProject } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
+import { Project as _Project } from '@ui/gen/v1alpha1/generated_pb';
 
 const tabs = {
   pipelines: {
@@ -51,6 +55,8 @@ export const Project = ({ tab = 'pipelines' }: { tab?: ProjectTab }) => {
   const { name } = useParams();
   const navigate = useNavigate();
 
+  const { data, isLoading } = useQuery(getProject, { name });
+
   // we must render the tab contents outside of the Antd tabs component to prevent layout issues in the ProjectDetails component
   const renderTab = (key: ProjectTab) => {
     switch (key) {
@@ -76,6 +82,11 @@ export const Project = ({ tab = 'pipelines' }: { tab?: ProjectTab }) => {
           <div className='mr-auto'>
             <div className='font-semibold mb-1 text-xs text-gray-600'>PROJECT</div>
             <div className='text-2xl font-semibold'>{name}</div>
+            <Description
+              loading={isLoading}
+              item={data?.result?.value as _Project}
+              className='mt-1'
+            />
           </div>
           <ProjectSettings />
         </div>
