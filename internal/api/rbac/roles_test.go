@@ -94,6 +94,9 @@ func TestCreate(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: testProject,
 				Name:      testKargoRoleName,
+				Annotations: map[string]string{
+					kargoapi.AnnotationKeyDescription: "fake-description",
+				},
 			},
 			Subs:   []string{"foo-sub", "bar-sub"},
 			Emails: []string{"foo-email", "bar-email"},
@@ -126,6 +129,7 @@ func TestCreate(t *testing.T) {
 				rbacapi.AnnotationKeyOIDCSubjects: "bar-sub,foo-sub",
 				rbacapi.AnnotationKeyOIDCEmails:   "bar-email,foo-email",
 				rbacapi.AnnotationKeyOIDCGroups:   "bar-group,foo-group",
+				kargoapi.AnnotationKeyDescription: "fake-description",
 			},
 			sa.Annotations,
 		)
@@ -977,6 +981,9 @@ func TestUpdate(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: testProject,
 					Name:      testKargoRoleName,
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyDescription: "foo-description",
+					},
 				},
 				Subs:   []string{"foo-sub"},
 				Emails: []string{"foo-email"},
@@ -1000,6 +1007,7 @@ func TestUpdate(t *testing.T) {
 				rbacapi.AnnotationKeyOIDCSubjects: "foo-sub",
 				rbacapi.AnnotationKeyOIDCEmails:   "foo-email",
 				rbacapi.AnnotationKeyOIDCGroups:   "foo-group",
+				kargoapi.AnnotationKeyDescription: "foo-description",
 			},
 			sa.Annotations,
 		)

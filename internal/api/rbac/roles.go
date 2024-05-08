@@ -15,6 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	rbacapi "github.com/akuity/kargo/api/rbac/v1alpha1"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
 // RolesDatabase is an interface for the Kargo Roles store.
@@ -170,6 +171,14 @@ func (r *rolesDatabase) Create(
 	sa, role, rb, err := RoleToResources(kargoRole)
 	if err != nil {
 		return nil, fmt.Errorf("error converting Kargo Role to resources: %w", err)
+	}
+
+	// Append the description annotation to the Role if it exists
+	if description, ok := kargoRole.Annotations[kargoapi.AnnotationKeyDescription]; ok {
+		if sa.Annotations == nil {
+			sa.Annotations = map[string]string{}
+		}
+		sa.Annotations[kargoapi.AnnotationKeyDescription] = description
 	}
 
 	if err = r.client.Create(ctx, sa); err != nil {
@@ -579,6 +588,15 @@ func (r *rolesDatabase) Update(
 	replaceClaimAnnotation(sa, rbacapi.AnnotationKeyOIDCSubjects, kargoRole.Subs)
 	replaceClaimAnnotation(sa, rbacapi.AnnotationKeyOIDCEmails, kargoRole.Emails)
 	replaceClaimAnnotation(sa, rbacapi.AnnotationKeyOIDCGroups, kargoRole.Groups)
+	if description, ok := kargoRole.Annotations[kargoapi.AnnotationKeyDescription]; ok {
+		if sa.Annotations == nil {
+			sa.Annotations = map[string]string{}
+		}
+		sa.Annotations[kargoapi.AnnotationKeyDescription] = description
+	} else {
+		delete(sa.Annotations, kargoapi.AnnotationKeyDescription)
+	}
+
 	if err = r.client.Update(ctx, sa); err != nil {
 		return nil, fmt.Errorf(
 			"error updating ServiceAccount %q in namespace %q: %w", kargoRole.Name, kargoRole.Namespace, err,
@@ -630,6 +648,10 @@ func ResourcesToRole(
 			Name:              sa.Name,
 			CreationTimestamp: sa.CreationTimestamp,
 		},
+	}
+
+	if description, ok := sa.Annotations[kargoapi.AnnotationKeyDescription]; ok {
+		kargoRole.Annotations = map[string]string{kargoapi.AnnotationKeyDescription: description}
 	}
 
 	if isKargoManaged(sa) &&
