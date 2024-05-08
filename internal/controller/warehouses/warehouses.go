@@ -245,32 +245,34 @@ func (r *reconciler) syncWarehouse(
 	}
 	logger.Debug("got latest Freight from repositories")
 
-	if err = r.createFreightFn(ctx, freight); err != nil {
-		if apierrors.IsAlreadyExists(err) {
-			logger.Debugf(
-				"Freight %q in namespace %q already exists",
+	if warehouse.Spec.FreightCreation == "" || warehouse.Spec.FreightCreation == kargoapi.FreightCreationAutomatic {
+		if err = r.createFreightFn(ctx, freight); err != nil {
+			if apierrors.IsAlreadyExists(err) {
+				logger.Debugf(
+					"Freight %q in namespace %q already exists",
+					freight.Name,
+					freight.Namespace,
+				)
+				return status, nil
+			}
+			return status, fmt.Errorf(
+				"error creating Freight %q in namespace %q: %w",
 				freight.Name,
 				freight.Namespace,
+				err,
 			)
-			return status, nil
 		}
-		return status, fmt.Errorf(
-			"error creating Freight %q in namespace %q: %w",
+		log.Debugf(
+			"created Freight %q in namespace %q",
 			freight.Name,
 			freight.Namespace,
-			err,
 		)
-	}
-	log.Debugf(
-		"created Freight %q in namespace %q",
-		freight.Name,
-		freight.Namespace,
-	)
-	status.LastFreight = &kargoapi.FreightReference{
-		Name:    freight.Name,
-		Commits: freight.Commits,
-		Images:  freight.Images,
-		Charts:  freight.Charts,
+		status.LastFreight = &kargoapi.FreightReference{
+			Name:    freight.Name,
+			Commits: freight.Commits,
+			Images:  freight.Images,
+			Charts:  freight.Charts,
+		}
 	}
 
 	return status, nil
