@@ -31,7 +31,7 @@ export const RepoSubscriptions = ({ subscriptions }: Props) => {
               </Descriptions.Item>
             )}
             {subscription.git && (
-              <Descriptions.Item label='GIT'>
+              <Descriptions.Item label='Git'>
                 <Typography.Link href={subscription.git?.repoURL} target='_blank' rel='noreferrer'>
                   {subscription.git?.repoURL}
                 </Typography.Link>
