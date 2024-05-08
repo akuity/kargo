@@ -158,10 +158,8 @@ func (k *kubernetesDatabase) getCredentialsSecret(
 	credType Type,
 	repoURL string,
 ) (*corev1.Secret, error) {
-	repoURL = helm.NormalizeChartRepositoryURL( // This should be safe even on non-chart repo URLs
-		git.NormalizeURL(repoURL), // This should be safe even on non-Git URLs
-	)
-
+	// List all secrets in the namespace that are labeled with the credential
+	// type.
 	secrets := corev1.SecretList{}
 	if err := k.kargoClient.List(
 		ctx,
@@ -176,62 +174,51 @@ func (k *kubernetesDatabase) getCredentialsSecret(
 		return nil, err
 	}
 
-	// Sort the secrets so they're considered in the same order every time this
-	// function is called.
+	// Sort the secrets for consistent ordering every time this function is
+	// called.
 	sort.Slice(secrets.Items, func(i, j int) bool {
 		return secrets.Items[i].Name < secrets.Items[j].Name
 	})
 
-	// Scan for an exact match
+	// Normalize the repository URL. These normalizations should be safe even
+	// if not applicable to the URL type.
+	repoURL = helm.NormalizeChartRepositoryURL(git.NormalizeURL(repoURL))
+
+	logger := logging.LoggerFromContext(ctx)
+
+	// Search for a matching Secret.
+	var matchingSecret *corev1.Secret
 	for _, secret := range secrets.Items {
+		secret := secret
+
 		if secret.Data == nil {
 			continue
 		}
-		if isRegexBytes := secret.Data[FieldRepoURLIsRegex]; string(isRegexBytes) == "true" {
-			continue
-		}
+
+		isRegex := string(secret.Data[FieldRepoURLIsRegex]) == "true"
 		urlBytes, ok := secret.Data[FieldRepoURL]
 		if !ok {
 			continue
 		}
-		url := helm.NormalizeChartRepositoryURL( // This should be safe even on non-chart repo URLs
-			git.NormalizeURL( // This should be safe even on non-Git URLs
-				string(urlBytes),
-			),
-		)
-		if url == repoURL {
+
+		if isRegex {
+			regex, err := regexp.Compile(string(urlBytes))
+			if err != nil {
+				logger.WithFields(log.Fields{
+					"namespace": namespace,
+					"secret":    secret.Name,
+				}).Warn("failed to compile regex for credential secret")
+				continue
+			}
+			if regex.MatchString(repoURL) {
+				matchingSecret = &secret
+				break
+			}
+		} else if repoURL == helm.NormalizeChartRepositoryURL(git.NormalizeURL(string(urlBytes))) {
 			return &secret, nil
 		}
 	}
-
-	logger := logging.LoggerFromContext(ctx)
-
-	// Scan for a pattern match
-	for _, secret := range secrets.Items {
-		if secret.Data == nil {
-			continue
-		}
-		if isRegexBytes := secret.Data[FieldRepoURLIsRegex]; string(isRegexBytes) != "true" {
-			continue
-		}
-		patternBytes, ok := secret.Data[FieldRepoURL]
-		if !ok {
-			continue
-		}
-		regex, err := regexp.Compile(string(patternBytes))
-		if err != nil {
-			logger.WithFields(log.Fields{
-				"namespace": namespace,
-				"secret":    secret.Name,
-			}).Warn("failed to compile regex for credential secret")
-			continue
-		}
-		if regex.MatchString(repoURL) {
-			return &secret, nil
-		}
-	}
-
-	return nil, nil
+	return matchingSecret, nil
 }
 
 func secretToCreds(secret *corev1.Secret) Credentials {
