@@ -284,6 +284,47 @@ type WarehouseStatus struct {
 	ObservedGeneration int64 `json:"observedGeneration,omitempty" protobuf:"varint,4,opt,name=observedGeneration"`
 	// LastFreight refers to the last Freight produced by this Warehouse
 	LastFreight *FreightReference `json:"lastFreight,omitempty" protobuf:"bytes,5,opt,name=lastFreight"`
+	// DiscoveredArtifacts holds the artifacts discovered by the Warehouse.
+	DiscoveredArtifacts *DiscoveredArtifacts `json:"discoveredArtifacts,omitempty" protobuf:"bytes,7,opt,name=discoveredArtifacts"`
+}
+
+// DiscoveredArtifacts holds the artifacts discovered by the Warehouse.
+type DiscoveredArtifacts struct {
+	// Images holds the images discovered by the Warehouse, keyed by the
+	// repository URL from the ImageSubscription.
+	Images []ImageDiscoveryResult `json:"images,omitempty" protobuf:"bytes,1,rep,name=images"`
+}
+
+// ImageDiscoveryResult represents the result of an image discovery operation
+// for an ImageSubscription.
+type ImageDiscoveryResult struct {
+	// RepoURL is the repository URL of the image, as specified in the
+	// ImageSubscription.
+	// +kubebuilder:validation:MinLength=1
+	RepoURL string `json:"repoURL" protobuf:"bytes,1,opt,name=repoURL"`
+
+	// Images is a list of images discovered by the Warehouse for the
+	// ImageSubscription. An empty list indicates that the discovery operation
+	// was successful, but no images matching the ImageSubscription criteria were
+	// found.
+	Images []DiscoveredImage `json:"images" protobuf:"bytes,2,rep,name=images"`
+}
+
+// DiscoveredImage represents an image discovered by a Warehouse for an
+// ImageSubscription.
+type DiscoveredImage struct {
+	// Tag is the tag of the image.
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=128
+	// +kubebuilder:validation:Pattern=`^[\w.\-\_]+$`
+	Tag string `json:"tag" protobuf:"bytes,1,opt,name=tag"`
+	// Digest is the digest of the image.
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Pattern=`^[a-z0-9]+:[a-f0-9]+$`
+	Digest string `json:"digest" protobuf:"bytes,2,opt,name=digest"`
+	// CreatedAt is the time the image was created. This field is optional, and
+	// not populated for every ImageSelectionStrategy.
+	CreatedAt *metav1.Time `json:"createdAt,omitempty" protobuf:"bytes,3,opt,name=createdAt"`
 }
 
 // +kubebuilder:object:root=true
