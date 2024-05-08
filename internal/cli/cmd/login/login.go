@@ -63,7 +63,7 @@ func NewCommand(
 # Log in using SSO
 kargo login https://kargo.example.com --sso
 
-# Last logged in address will be used if the server address is not provided
+# Log in (again) using the last used server address
 kargo login --sso
 
 # Log in using the admin user
