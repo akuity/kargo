@@ -345,7 +345,13 @@ func (r *reconciler) discoverArtifacts(
 		return nil, fmt.Errorf("error discovering images: %w", err)
 	}
 
+	charts, err := r.discoverCharts(ctx, warehouse.Namespace, warehouse.Spec.Subscriptions)
+	if err != nil {
+		return nil, fmt.Errorf("error discovering charts: %w", err)
+	}
+
 	return &kargoapi.DiscoveredArtifacts{
 		Images: imgs,
+		Charts: charts,
 	}, nil
 }
