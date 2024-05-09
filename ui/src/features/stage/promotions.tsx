@@ -8,17 +8,21 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useQueryClient } from '@tanstack/react-query';
-import { Popover, Table, Tooltip, theme } from 'antd';
+import { Popover, Spin, Table, Tooltip, theme } from 'antd';
 import { ColumnsType } from 'antd/es/table';
 import { format } from 'date-fns';
-import React, { useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { Link, generatePath, useParams } from 'react-router-dom';
 
+import { paths } from '@ui/config/paths';
 import { transportWithAuth } from '@ui/config/transport';
-import { listPromotions } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
+import {
+  getFreight,
+  listPromotions
+} from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 import { KargoService } from '@ui/gen/service/v1alpha1/service_connect';
 import { ListPromotionsResponse } from '@ui/gen/service/v1alpha1/service_pb';
-import { Promotion } from '@ui/gen/v1alpha1/generated_pb';
+import { Freight, Promotion } from '@ui/gen/v1alpha1/generated_pb';
 
 import { sortPromotions } from './utils/sort';
 
@@ -29,6 +33,16 @@ export const Promotions = () => {
     listPromotions,
     { project: projectName, stage: stageName },
     { enabled: !!stageName }
+  );
+
+  const [curFreight, setCurFreight] = useState<string | undefined>();
+
+  const { data: freightData, isLoading: isLoadingFreight } = useQuery(
+    getFreight,
+    { project: projectName, name: curFreight },
+    {
+      enabled: !!curFreight
+    }
   );
 
   useEffect(() => {
@@ -148,7 +162,29 @@ export const Promotions = () => {
     },
     {
       title: 'Freight',
-      render: (_, promotion) => promotion.spec?.freight?.substring(0, 7)
+      render: (_, promotion) => (
+        <Tooltip
+          overlay={
+            <Spin spinning={isLoadingFreight}>
+              <div className='w-40 text-center truncate'>
+                {(freightData?.result?.value as Freight)?.alias}
+              </div>
+            </Spin>
+          }
+          onOpenChange={() => {
+            setCurFreight(promotion.spec?.freight);
+          }}
+        >
+          <Link
+            to={generatePath(paths.freight, {
+              name: projectName,
+              freightName: promotion.spec?.freight
+            })}
+          >
+            {promotion.spec?.freight?.substring(0, 7)}
+          </Link>
+        </Tooltip>
+      )
     }
   ];
 

@@ -2,11 +2,17 @@ import { faDocker, faGit } from '@fortawesome/free-brands-svg-icons';
 import { IconDefinition, faAnchor } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Tooltip } from 'antd';
+import classNames from 'classnames';
 
 import { Freight, GitCommit } from '@ui/gen/v1alpha1/generated_pb';
+import { urlForImage } from '@ui/utils/url';
 
-export const FreightContents = (props: { freight?: Freight; highlighted: boolean }) => {
-  const { freight, highlighted } = props;
+export const FreightContents = (props: {
+  freight?: Freight;
+  highlighted: boolean;
+  horizontal?: boolean;
+}) => {
+  const { freight, highlighted, horizontal } = props;
 
   const FreightContentItem = (
     props: {
@@ -16,27 +22,46 @@ export const FreightContents = (props: { freight?: Freight; highlighted: boolean
     } & React.PropsWithChildren
   ) => (
     <Tooltip
-      className={`flex items-center my-1 flex-col bg-neutral-300 rounded p-1 w-full overflow-x-hidden`}
+      className={classNames(
+        'min-w-0 flex items-center justify-center my-1 bg-neutral-300 rounded',
+        {
+          'flex-col p-1 w-full': !horizontal,
+          'mr-2 p-2 max-w-60 flex-shrink': horizontal
+        }
+      )}
       overlay={props.overlay}
       title={props.title}
     >
-      <FontAwesomeIcon icon={props.icon} className={`px-1 text-lg mb-2`} />
+      <FontAwesomeIcon
+        icon={props.icon}
+        className={classNames('px-1 text-lg', {
+          'mb-2': !horizontal,
+          'mr-2': horizontal
+        })}
+      />
       {props.children}
     </Tooltip>
   );
 
+  const linkClass = `${highlighted ? 'text-blue-600' : 'text-gray-400'} hover:text-blue-500 underline hover:underline max-w-full truncate`;
+
   return (
     <div
-      className={`flex flex-col justify-start items-center font-mono text-xs flex-shrink min-w-min w-20 overflow-y-auto max-h-full ${
-        highlighted ? 'text-gray-700 hover:text-gray-800' : 'text-gray-400 hover:text-gray-500'
-      }`}
+      className={classNames(
+        'flex justify-start items-center font-mono text-xs flex-shrink max-h-full max-w-full',
+        {
+          'text-gray-700 hover:text-gray-800': highlighted,
+          'text-gray-400 hover:text-gray-500': !highlighted,
+          'flex-col w-20 overflow-y-auto': !horizontal
+        }
+      )}
     >
       {(freight?.commits || []).map((c) => (
         <FreightContentItem key={c.id} overlay={<CommitInfo commit={c} />} icon={faGit}>
           <a
             href={`${c.repoURL?.replace('.git', '')}/commit/${c.id}`}
             target='_blank'
-            className={`${highlighted ? 'text-blue-200' : 'text-gray-500'} hover:text-blue-300`}
+            className={linkClass}
           >
             {c.tag && c.tag.length > 12
               ? c.tag.substring(0, 12) + '...'
@@ -50,7 +75,10 @@ export const FreightContents = (props: { freight?: Freight; highlighted: boolean
           title={`${i.repoURL}:${i.tag}`}
           icon={faDocker}
         >
-          <div>{i.tag}</div>
+          <a href={urlForImage(i.repoURL || '')} target='_blank' className={linkClass}>
+            {props.horizontal && i.repoURL + ':'}
+            {i.tag}
+          </a>
         </FreightContentItem>
       ))}
       {(freight?.charts || []).map((c) => (
