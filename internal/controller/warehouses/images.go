@@ -74,6 +74,76 @@ func (r *reconciler) selectImages(
 	return imgs, nil
 }
 
+func (r *reconciler) discoverImages(
+	ctx context.Context,
+	namespace string,
+	subs []kargoapi.RepoSubscription,
+) ([]kargoapi.ImageDiscoveryResult, error) {
+	results := make([]kargoapi.ImageDiscoveryResult, 0, len(subs))
+
+	for _, s := range subs {
+		if s.Image == nil {
+			continue
+		}
+		sub := s.Image
+
+		logger := logging.LoggerFromContext(ctx).WithField("repo", sub.RepoURL)
+
+		creds, ok, err := r.credentialsDB.Get(ctx, namespace, credentials.TypeImage, sub.RepoURL)
+		if err != nil {
+			return nil, fmt.Errorf(
+				"error obtaining credentials for image repo %q: %w",
+				sub.RepoURL,
+				err,
+			)
+		}
+		var regCreds *image.Credentials
+		if ok {
+			regCreds = &image.Credentials{
+				Username: creds.Username,
+				Password: creds.Password,
+			}
+			logger.Debug("obtained credentials for image repo")
+		} else {
+			logger.Debug("found no credentials for image repo")
+		}
+
+		images, err := discoverImageRefs(ctx, *sub, regCreds)
+		if err != nil {
+			return nil, fmt.Errorf(
+				"error discovering latest suitable images %q: %w",
+				sub.RepoURL,
+				err,
+			)
+		}
+		if len(images) == 0 {
+			logger.Debug("discovered no suitable images")
+			results = append(results, kargoapi.ImageDiscoveryResult{
+				RepoURL: sub.RepoURL,
+			})
+			continue
+		}
+
+		logger.Debugf("discovered %d suitable images", len(images))
+		imgs := make([]kargoapi.DiscoveredImage, 0, len(images))
+		for _, img := range images {
+			imgs = append(
+				imgs,
+				kargoapi.DiscoveredImage{
+					Tag:    img.Tag,
+					Digest: img.Digest.String(),
+				},
+			)
+		}
+		results = append(results, kargoapi.ImageDiscoveryResult{
+			RepoURL: sub.RepoURL,
+			Images:  imgs,
+		})
+	}
+
+	return results, nil
+}
+
 const (
 	githubURLPrefix = "https://github.com"
 )
@@ -96,18 +166,7 @@ func getImageRefs(
 	sub kargoapi.ImageSubscription,
 	creds *image.Credentials,
 ) (string, string, error) {
-	imageSelector, err := image.NewSelector(
-		sub.RepoURL,
-		image.SelectionStrategy(sub.ImageSelectionStrategy),
-		&image.SelectorOptions{
-			Constraint:            sub.SemverConstraint,
-			AllowRegex:            sub.AllowTags,
-			Ignore:                sub.IgnoreTags,
-			Platform:              sub.Platform,
-			Creds:                 creds,
-			InsecureSkipTLSVerify: sub.InsecureSkipTLSVerify,
-		},
-	)
+	imageSelector, err := imageSelectorForSubscription(sub, creds)
 	if err != nil {
 		return "", "", fmt.Errorf(
 			"error creating image selector for image %q: %w",
@@ -127,4 +186,48 @@ func getImageRefs(
 		return "", "", fmt.Errorf("found no applicable image %q", sub.RepoURL)
 	}
 	return img.Tag, img.Digest.String(), nil
+}
+
+func discoverImageRefs(
+	ctx context.Context,
+	sub kargoapi.ImageSubscription,
+	creds *image.Credentials,
+) ([]image.Image, error) {
+	imageSelector, err := imageSelectorForSubscription(sub, creds)
+	if err != nil {
+		return nil, fmt.Errorf(
+			"error creating image selector for image %q: %w",
+			sub.RepoURL,
+			err,
+		)
+	}
+
+	images, err := imageSelector.Discover(ctx)
+	if err != nil {
+		return nil, fmt.Errorf(
+			"error discovering newest applicable images %q: %w",
+			sub.RepoURL,
+			err,
+		)
+	}
+	return images, nil
+}
+
+func imageSelectorForSubscription(
+	sub kargoapi.ImageSubscription,
+	creds *image.Credentials,
+) (image.Selector, error) {
+	return image.NewSelector(
+		sub.RepoURL,
+		image.SelectionStrategy(sub.ImageSelectionStrategy),
+		&image.SelectorOptions{
+			Constraint:            sub.SemverConstraint,
+			AllowRegex:            sub.AllowTags,
+			Ignore:                sub.IgnoreTags,
+			Platform:              sub.Platform,
+			Creds:                 creds,
+			InsecureSkipTLSVerify: sub.InsecureSkipTLSVerify,
+			DiscoveryLimit:        20,
+		},
+	)
 }

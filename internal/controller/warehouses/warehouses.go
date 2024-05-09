@@ -235,17 +235,18 @@ func (r *reconciler) syncWarehouse(
 
 	logger := logging.LoggerFromContext(ctx)
 
-	freight, err := r.getLatestFreightFromReposFn(ctx, warehouse)
-	if err != nil {
-		return status, fmt.Errorf("error getting latest Freight from repositories: %w", err)
-	}
-	if freight == nil {
-		logger.Debug("found no Freight from repositories")
-		return status, nil
-	}
-	logger.Debug("got latest Freight from repositories")
+	switch warehouse.Spec.FreightCreation {
+	case kargoapi.FreightCreationAutomatic, "":
+		freight, err := r.getLatestFreightFromReposFn(ctx, warehouse)
+		if err != nil {
+			return status, fmt.Errorf("error getting latest Freight from repositories: %w", err)
+		}
+		if freight == nil {
+			logger.Debug("found no Freight from repositories")
+			return status, nil
+		}
+		logger.Debug("got latest Freight from repositories")
 
-	if warehouse.Spec.FreightCreation == "" || warehouse.Spec.FreightCreation == kargoapi.FreightCreationAutomatic {
 		if err = r.createFreightFn(ctx, freight); err != nil {
 			if apierrors.IsAlreadyExists(err) {
 				logger.Debugf(
@@ -273,6 +274,13 @@ func (r *reconciler) syncWarehouse(
 			Images:  freight.Images,
 			Charts:  freight.Charts,
 		}
+	case kargoapi.FreightCreationManual:
+		discoveredArtifacts, err := r.discoverArtifacts(ctx, warehouse)
+		if err != nil {
+			return status, fmt.Errorf("error discovering artifacts: %w", err)
+		}
+		logger.Debug("discovered latest artifacts")
+		status.DiscoveredArtifacts = discoveredArtifacts
 	}
 
 	return status, nil
@@ -326,4 +334,18 @@ func (r *reconciler) getLatestFreightFromRepos(
 	}
 	freight.Name = freight.GenerateID()
 	return freight, nil
+}
+
+func (r *reconciler) discoverArtifacts(
+	ctx context.Context,
+	warehouse *kargoapi.Warehouse,
+) (*kargoapi.DiscoveredArtifacts, error) {
+	imgs, err := r.discoverImages(ctx, warehouse.Namespace, warehouse.Spec.Subscriptions)
+	if err != nil {
+		return nil, fmt.Errorf("error discovering images: %w", err)
+	}
+
+	return &kargoapi.DiscoveredArtifacts{
+		Images: imgs,
+	}, nil
 }
