@@ -14,6 +14,7 @@ func TestNewSemVerSelector(t *testing.T) {
 		os:   "linux",
 		arch: "amd64",
 	}
+	testDiscoveryLimit := 10
 	testCases := []struct {
 		name       string
 		constraint string
@@ -37,6 +38,7 @@ func TestNewSemVerSelector(t *testing.T) {
 				require.Equal(t, testIgnore, selector.ignore)
 				require.Nil(t, selector.constraint)
 				require.Equal(t, testPlatform, selector.platform)
+				require.Equal(t, testDiscoveryLimit, selector.discoveryLimit)
 			},
 		},
 		{
@@ -50,6 +52,7 @@ func TestNewSemVerSelector(t *testing.T) {
 				require.Equal(t, testIgnore, selector.ignore)
 				require.NotNil(t, selector.constraint)
 				require.Equal(t, testPlatform, selector.platform)
+				require.Equal(t, testDiscoveryLimit, selector.discoveryLimit)
 			},
 		},
 	}
@@ -61,6 +64,7 @@ func TestNewSemVerSelector(t *testing.T) {
 				testIgnore,
 				testCase.constraint,
 				testPlatform,
+				testDiscoveryLimit,
 			)
 			testCase.assertions(t, s, err)
 		})

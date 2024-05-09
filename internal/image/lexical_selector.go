@@ -14,10 +14,11 @@ import (
 // lexicalSelector implements the Selector interface for
 // SelectionStrategyLexical.
 type lexicalSelector struct {
-	repoClient *repositoryClient
-	allowRegex *regexp.Regexp
-	ignore     []string
-	platform   *platformConstraint
+	repoClient     *repositoryClient
+	allowRegex     *regexp.Regexp
+	ignore         []string
+	platform       *platformConstraint
+	discoveryLimit int
 }
 
 // newLexicalSelector returns an implementation of the Selector interface for
@@ -27,12 +28,14 @@ func newLexicalSelector(
 	allowRegex *regexp.Regexp,
 	ignore []string,
 	platform *platformConstraint,
+	discoveryLimit int,
 ) Selector {
 	return &lexicalSelector{
-		repoClient: repoClient,
-		allowRegex: allowRegex,
-		ignore:     ignore,
-		platform:   platform,
+		repoClient:     repoClient,
+		allowRegex:     allowRegex,
+		ignore:         ignore,
+		platform:       platform,
+		discoveryLimit: discoveryLimit,
 	}
 }
 
@@ -47,6 +50,94 @@ func (l *lexicalSelector) Select(ctx context.Context) (*Image, error) {
 	logger.Trace("selecting image")
 
 	ctx = logging.ContextWithLogger(ctx, logger)
+
+	tags, err := l.selectTags(ctx)
+	if err != nil || len(tags) == 0 {
+		return nil, err
+	}
+
+	tag := tags[0]
+	image, err := l.repoClient.getImageByTag(ctx, tag, l.platform)
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving image with tag %q: %w", tag, err)
+	}
+	if image == nil {
+		logger.Tracef(
+			"image with tag %q was found, but did not match platform constraint",
+			tag,
+		)
+		return nil, nil
+	}
+
+	logger.WithFields(log.Fields{
+		"tag":    image.Tag,
+		"digest": image.Digest.String(),
+	}).Trace("found image")
+	return image, nil
+}
+
+// Discover implements the Selector interface.
+func (l *lexicalSelector) Discover(ctx context.Context) ([]Image, error) {
+	logger := logging.LoggerFromContext(ctx).WithFields(log.Fields{
+		"registry":            l.repoClient.registry.name,
+		"image":               l.repoClient.image,
+		"selectionStrategy":   SelectionStrategyLexical,
+		"platformConstrained": l.platform != nil,
+		"discoveryLimit":      l.discoveryLimit,
+	})
+	logger.Trace("discovering images")
+
+	ctx = logging.ContextWithLogger(ctx, logger)
+
+	tags, err := l.selectTags(ctx)
+	if err != nil || len(tags) == 0 {
+		return nil, err
+	}
+
+	limit := l.discoveryLimit
+	if limit == 0 || limit > len(tags) {
+		limit = len(tags)
+	}
+	images := make([]Image, 0, limit)
+
+	for _, tag := range tags {
+		if len(images) >= limit {
+			break
+		}
+
+		image, err := l.repoClient.getImageByTag(ctx, tag, l.platform)
+		if err != nil {
+			return nil, fmt.Errorf("error retrieving image with tag %q: %w", tag, err)
+		}
+		if image == nil {
+			logger.Tracef(
+				"image with tag %q was found, but did not match platform constraint",
+				tag,
+			)
+			continue
+		}
+
+		logger.WithFields(log.Fields{
+			"tag":    image.Tag,
+			"digest": image.Digest.String(),
+		}).Trace("discovered image")
+		images = append(images, *image)
+	}
+
+	if len(images) == 0 {
+		logger.Trace("no images matched criteria")
+		return nil, nil
+	}
+
+	logger.Tracef("discovered %d images", len(images))
+	return images, nil
+}
+
+// selectTags retrieves all tags from the repository and filters them based on
+// the allowRegex and ignore fields of the lexicalSelector. If no tags match
+// the criteria, nil is returned.
+func (l *lexicalSelector) selectTags(ctx context.Context) ([]string, error) {
+	logger := logging.LoggerFromContext(ctx)
 
 	tags, err := l.repoClient.getTags(ctx)
 	if err != nil {
@@ -75,25 +166,7 @@ func (l *lexicalSelector) Select(ctx context.Context) (*Image, error) {
 
 	logger.Trace("sorting tags lexically")
 	sortTagsLexically(tags)
-
-	tag := tags[0]
-	image, err := l.repoClient.getImageByTag(ctx, tag, l.platform)
-	if err != nil {
-		return nil, fmt.Errorf("error retrieving image with tag %q: %w", tag, err)
-	}
-	if image == nil {
-		logger.Tracef(
-			"image with tag %q was found, but did not match platform constraint",
-			tag,
-		)
-		return nil, nil
-	}
-
-	logger.WithFields(log.Fields{
-		"tag":    image.Tag,
-		"digest": image.Digest.String(),
-	}).Trace("found image")
-	return image, nil
+	return tags, nil
 }
 
 // sortTagsLexically sorts the provided tags in place, in lexically descending

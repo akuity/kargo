@@ -14,12 +14,14 @@ func TestNewLexicalSelector(t *testing.T) {
 		os:   "linux",
 		arch: "amd64",
 	}
-	s := newLexicalSelector(nil, testAllowRegex, testIgnore, testPlatform)
+	testDiscoveryLimit := 10
+	s := newLexicalSelector(nil, testAllowRegex, testIgnore, testPlatform, testDiscoveryLimit)
 	selector, ok := s.(*lexicalSelector)
 	require.True(t, ok)
 	require.Equal(t, testAllowRegex, selector.allowRegex)
 	require.Equal(t, testIgnore, selector.ignore)
 	require.Equal(t, testPlatform, selector.platform)
+	require.Equal(t, testDiscoveryLimit, selector.discoveryLimit)
 }
 
 func TestSortTagsLexically(t *testing.T) {
