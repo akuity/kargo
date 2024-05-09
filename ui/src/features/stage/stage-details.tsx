@@ -22,22 +22,21 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
   const onClose = () => navigate(generatePath(paths.project, { name: projectName }));
   const [isVerificationRunning, setIsVerificationRunning] = useState(false);
 
-  const verifications = useMemo(
-    () =>
-      (stage.status?.history || [])
-        .flatMap((freight) =>
-          freight.verificationHistory.map((verification) => {
-            if (verification.phase === 'Running' || verification.phase === 'Pending') {
-              setIsVerificationRunning(true);
-            }
-            return {
-              ...verification
-            } as VerificationInfo;
-          })
-        )
-        .sort((a, b) => moment(b.startTime?.toDate()).diff(moment(a.startTime?.toDate()))),
-    [stage]
-  );
+  const verifications = useMemo(() => {
+    setIsVerificationRunning(false);
+    return (stage.status?.history || [])
+      .flatMap((freight) =>
+        freight.verificationHistory.map((verification) => {
+          if (verification.phase === 'Running' || verification.phase === 'Pending') {
+            setIsVerificationRunning(true);
+          }
+          return {
+            ...verification
+          } as VerificationInfo;
+        })
+      )
+      .sort((a, b) => moment(b.startTime?.toDate()).diff(moment(a.startTime?.toDate())));
+  }, [stage]);
 
   return (
     <Drawer open={!!stageName} onClose={onClose} width={'80%'} closable={false}>
