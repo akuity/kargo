@@ -7,7 +7,7 @@ import { paths } from './paths';
 
 const logout = () => {
   localStorage.removeItem(authTokenKey);
-  window.location.replace(paths.login);
+  window.location.replace(`${paths.login}?${redirectToQueryParam}=${window.location.pathname}`);
 };
 
 const renewToken = () => {
