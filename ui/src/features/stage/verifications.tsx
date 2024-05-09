@@ -1,39 +1,20 @@
-import {
-  faCircleCheck,
-  faCircleExclamation,
-  faCircleNotch,
-  faCircleQuestion,
-  faHourglassStart
-} from '@fortawesome/free-solid-svg-icons';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Popover, Table, Tooltip, theme } from 'antd';
+import { Table, Tooltip } from 'antd';
 import Link from 'antd/es/typography/Link';
 import { format } from 'date-fns';
-import React from 'react';
 
-import { Stage } from '@ui/gen/v1alpha1/generated_pb';
+import { VerificationInfo } from '@ui/gen/v1alpha1/generated_pb';
 
 import { useModal } from '../common/modal/use-modal';
 
 import { AnalysisRunModal } from './analysis-run-modal';
+import { VerificationIcon } from './verification-icon';
 
 type Props = {
-  stage: Stage;
+  verifications: VerificationInfo[];
 };
 
-export const Verifications = ({ stage }: Props) => {
+export const Verifications = ({ verifications }: Props) => {
   const { show } = useModal();
-
-  const verifications = React.useMemo(
-    () =>
-      (stage.status?.history || []).flatMap((freight) =>
-        freight.verificationHistory.map((verification) => ({
-          freight: freight.name,
-          ...verification
-        }))
-      ),
-    [stage]
-  );
 
   return (
     <Table<(typeof verifications)[number]>
@@ -44,65 +25,20 @@ export const Verifications = ({ stage }: Props) => {
     >
       <Table.Column<(typeof verifications)[number]>
         width={28}
-        render={(_, verification) => {
-          switch (verification.phase) {
-            case 'Successful':
-              return (
-                <Popover title={verification.phase} placement='right'>
-                  <FontAwesomeIcon
-                    color={theme.defaultSeed.colorSuccess}
-                    icon={faCircleCheck}
-                    size='lg'
-                  />
-                </Popover>
-              );
-            case 'Failed':
-            case 'Error':
-            case 'Aborted':
-              return (
-                <Popover
-                  content={verification.message}
-                  title={verification.phase}
-                  placement='right'
-                >
-                  <FontAwesomeIcon
-                    color={theme.defaultSeed.colorError}
-                    icon={faCircleExclamation}
-                    size='lg'
-                  />
-                </Popover>
-              );
-            case 'Running':
-              return (
-                <Tooltip title={verification.phase} placement='right'>
-                  <FontAwesomeIcon icon={faCircleNotch} spin size='lg' />
-                </Tooltip>
-              );
-            case 'Pending':
-              return (
-                <Tooltip title={verification.phase} placement='right'>
-                  <FontAwesomeIcon color='#aaa' icon={faHourglassStart} size='lg' />
-                </Tooltip>
-              );
-            default:
-              return (
-                <Popover
-                  title={verification.phase}
-                  content={verification.message}
-                  placement='right'
-                >
-                  <FontAwesomeIcon color='#aaa' icon={faCircleQuestion} size='lg' />
-                </Popover>
-              );
-          }
-        }}
-      />
-      <Table.Column<(typeof verifications)[number]>
-        title='Message'
         render={(_, verification) => (
-          <div className='max-w-56 max-h-16 text-wrap overflow-scroll'>
-            {verification?.message || 'N/A'}
-          </div>
+          <Tooltip
+            placement='right'
+            overlay={() => (
+              <div className='p-1'>
+                <div className='font-semibold'>{verification.phase}</div>
+                {verification.message && <div className='mt-1'>{verification.message}</div>}
+              </div>
+            )}
+          >
+            <div>
+              <VerificationIcon phase={verification.phase || ''} />
+            </div>
+          </Tooltip>
         )}
       />
       <Table.Column<(typeof verifications)[number]>

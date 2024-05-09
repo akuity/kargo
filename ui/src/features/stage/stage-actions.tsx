@@ -3,6 +3,7 @@ import {
   faChevronDown,
   faExternalLinkAlt,
   faPen,
+  faRedo,
   faRefresh,
   faTrash
 } from '@fortawesome/free-solid-svg-icons';
@@ -17,7 +18,8 @@ import {
   deleteStage,
   getConfig,
   queryFreight,
-  refreshStage
+  refreshStage,
+  reverify
 } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 import { Stage } from '@ui/gen/v1alpha1/generated_pb';
 
@@ -26,7 +28,13 @@ import { useModal } from '../common/modal/use-modal';
 
 import { EditStageModal } from './edit-stage-modal';
 
-export const StageActions = ({ stage }: { stage: Stage }) => {
+export const StageActions = ({
+  stage,
+  disableReverify
+}: {
+  stage: Stage;
+  disableReverify?: boolean;
+}) => {
   const { name: projectName, stageName } = useParams();
   const navigate = useNavigate();
   const confirm = useConfirmModal();
@@ -44,7 +52,8 @@ export const StageActions = ({ stage }: { stage: Stage }) => {
         mutate({ name: stage.metadata?.name, project: projectName });
         onClose();
       },
-      title: 'Are you sure you want to delete Stage?'
+      title: 'Are you sure you want to delete Stage?',
+      hide: () => {}
     });
   };
 
@@ -85,6 +94,8 @@ export const StageActions = ({ stage }: { stage: Stage }) => {
     }));
   }, [config, stage]);
 
+  const { mutate: reverifyStage, isPending } = useMutation(reverify);
+
   return (
     <Space size={16}>
       {argoCDAppsLinks.length === 1 && (
@@ -119,6 +130,16 @@ export const StageActions = ({ stage }: { stage: Stage }) => {
           </Button>
         </Dropdown>
       )}
+      <Button
+        icon={<FontAwesomeIcon icon={faRedo} spin={isPending} />}
+        disabled={isPending || disableReverify}
+        onClick={() => {
+          reverifyStage({ project: projectName, stage: stageName });
+        }}
+      >
+        Reverify
+      </Button>
+
       <Button
         type='default'
         icon={<FontAwesomeIcon icon={faPen} size='1x' />}
