@@ -290,9 +290,11 @@ type WarehouseStatus struct {
 
 // DiscoveredArtifacts holds the artifacts discovered by the Warehouse.
 type DiscoveredArtifacts struct {
-	// Images holds the images discovered by the Warehouse, keyed by the
-	// repository URL from the ImageSubscription.
+	// Images holds the images discovered by the Warehouse.
 	Images []ImageDiscoveryResult `json:"images,omitempty" protobuf:"bytes,1,rep,name=images"`
+
+	// Charts holds the charts discovered by the Warehouse.
+	Charts []ChartDiscoveryResult `json:"charts,omitempty" protobuf:"bytes,2,rep,name=charts"`
 }
 
 // ImageDiscoveryResult represents the result of an image discovery operation
@@ -322,9 +324,24 @@ type DiscoveredImage struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:Pattern=`^[a-z0-9]+:[a-f0-9]+$`
 	Digest string `json:"digest" protobuf:"bytes,2,opt,name=digest"`
-	// CreatedAt is the time the image was created. This field is optional, and
+	// CreatedAt is the time the image was created. ThiCs field is optional, and
 	// not populated for every ImageSelectionStrategy.
 	CreatedAt *metav1.Time `json:"createdAt,omitempty" protobuf:"bytes,3,opt,name=createdAt"`
+}
+
+// ChartDiscoveryResult represents the result of a chart discovery operation for
+// a ChartSubscription.
+type ChartDiscoveryResult struct {
+	// RepoURL is the repository URL of the Helm chart, as specified in the
+	// ChartSubscription.
+	RepoURL string `json:"repoURL" protobuf:"bytes,1,opt,name=repoURL"`
+	// Name is the name of the Helm chart, as specified in the ChartSubscription.
+	Name string `json:"name" protobuf:"bytes,2,opt,name=name"`
+	// Versions is a list of versions discovered by the Warehouse for the
+	// ChartSubscription. An empty list indicates that the discovery operation was
+	// successful, but no versions matching the ChartSubscription criteria were
+	// found.
+	Versions []string `json:"versions" protobuf:"bytes,3,rep,name=versions"`
 }
 
 // +kubebuilder:object:root=true
