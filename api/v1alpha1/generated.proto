@@ -235,6 +235,23 @@ message Chart {
   optional string version = 3;
 }
 
+// ChartDiscoveryResult represents the result of a chart discovery operation for
+// a ChartSubscription.
+message ChartDiscoveryResult {
+  // RepoURL is the repository URL of the Helm chart, as specified in the
+  // ChartSubscription.
+  optional string repoURL = 1;
+
+  // Name is the name of the Helm chart, as specified in the ChartSubscription.
+  optional string name = 2;
+
+  // Versions is a list of versions discovered by the Warehouse for the
+  // ChartSubscription. An empty list indicates that the discovery operation was
+  // successful, but no versions matching the ChartSubscription criteria were
+  // found.
+  repeated string versions = 3;
+}
+
 // ChartSubscription defines a subscription to a Helm chart repository.
 message ChartSubscription {
   // RepoURL specifies the URL of a Helm chart repository. It may be a classic
@@ -269,9 +286,11 @@ message ChartSubscription {
 
 // DiscoveredArtifacts holds the artifacts discovered by the Warehouse.
 message DiscoveredArtifacts {
-  // Images holds the images discovered by the Warehouse, keyed by the
-  // repository URL from the ImageSubscription.
+  // Images holds the images discovered by the Warehouse.
   repeated ImageDiscoveryResult images = 1;
+
+  // Charts holds the charts discovered by the Warehouse.
+  repeated ChartDiscoveryResult charts = 2;
 }
 
 // DiscoveredImage represents an image discovered by a Warehouse for an
@@ -288,7 +307,7 @@ message DiscoveredImage {
   // +kubebuilder:validation:Pattern=`^[a-z0-9]+:[a-f0-9]+$`
   optional string digest = 2;
 
-  // CreatedAt is the time the image was created. This field is optional, and
+  // CreatedAt is the time the image was created. ThiCs field is optional, and
   // not populated for every ImageSelectionStrategy.
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Time createdAt = 3;
 }

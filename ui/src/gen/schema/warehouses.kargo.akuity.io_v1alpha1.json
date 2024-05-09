@@ -195,8 +195,38 @@
         "discoveredArtifacts": {
           "description": "DiscoveredArtifacts holds the artifacts discovered by the Warehouse.",
           "properties": {
+            "charts": {
+              "description": "Charts holds the charts discovered by the Warehouse.",
+              "items": {
+                "description": "ChartDiscoveryResult represents the result of a chart discovery operation for\na ChartSubscription.",
+                "properties": {
+                  "name": {
+                    "description": "Name is the name of the Helm chart, as specified in the ChartSubscription.",
+                    "type": "string"
+                  },
+                  "repoURL": {
+                    "description": "RepoURL is the repository URL of the Helm chart, as specified in the\nChartSubscription.",
+                    "type": "string"
+                  },
+                  "versions": {
+                    "description": "Versions is a list of versions discovered by the Warehouse for the\nChartSubscription. An empty list indicates that the discovery operation was\nsuccessful, but no versions matching the ChartSubscription criteria were\nfound.",
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  }
+                },
+                "required": [
+                  "name",
+                  "repoURL",
+                  "versions"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            },
             "images": {
-              "description": "Images holds the images discovered by the Warehouse, keyed by the\nrepository URL from the ImageSubscription.",
+              "description": "Images holds the images discovered by the Warehouse.",
               "items": {
                 "description": "ImageDiscoveryResult represents the result of an image discovery operation\nfor an ImageSubscription.",
                 "properties": {
@@ -206,7 +236,7 @@
                       "description": "DiscoveredImage represents an image discovered by a Warehouse for an\nImageSubscription.",
                       "properties": {
                         "createdAt": {
-                          "description": "CreatedAt is the time the image was created. This field is optional, and\nnot populated for every ImageSelectionStrategy.",
+                          "description": "CreatedAt is the time the image was created. ThiCs field is optional, and\nnot populated for every ImageSelectionStrategy.",
                           "format": "date-time",
                           "type": "string"
                         },

@@ -852,6 +852,68 @@ export class Chart extends Message<Chart> {
 }
 
 /**
+ * ChartDiscoveryResult represents the result of a chart discovery operation for
+ * a ChartSubscription.
+ *
+ * @generated from message github.com.akuity.kargo.api.v1alpha1.ChartDiscoveryResult
+ */
+export class ChartDiscoveryResult extends Message<ChartDiscoveryResult> {
+  /**
+   * RepoURL is the repository URL of the Helm chart, as specified in the
+   * ChartSubscription.
+   *
+   * @generated from field: optional string repoURL = 1;
+   */
+  repoURL?: string;
+
+  /**
+   * Name is the name of the Helm chart, as specified in the ChartSubscription.
+   *
+   * @generated from field: optional string name = 2;
+   */
+  name?: string;
+
+  /**
+   * Versions is a list of versions discovered by the Warehouse for the
+   * ChartSubscription. An empty list indicates that the discovery operation was
+   * successful, but no versions matching the ChartSubscription criteria were
+   * found.
+   *
+   * @generated from field: repeated string versions = 3;
+   */
+  versions: string[] = [];
+
+  constructor(data?: PartialMessage<ChartDiscoveryResult>) {
+    super();
+    proto2.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto2 = proto2;
+  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.ChartDiscoveryResult";
+  static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 1, name: "repoURL", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 3, name: "versions", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ChartDiscoveryResult {
+    return new ChartDiscoveryResult().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ChartDiscoveryResult {
+    return new ChartDiscoveryResult().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ChartDiscoveryResult {
+    return new ChartDiscoveryResult().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ChartDiscoveryResult | PlainMessage<ChartDiscoveryResult> | undefined, b: ChartDiscoveryResult | PlainMessage<ChartDiscoveryResult> | undefined): boolean {
+    return proto2.util.equals(ChartDiscoveryResult, a, b);
+  }
+}
+
+/**
  * ChartSubscription defines a subscription to a Helm chart repository.
  *
  * @generated from message github.com.akuity.kargo.api.v1alpha1.ChartSubscription
@@ -935,12 +997,18 @@ export class ChartSubscription extends Message<ChartSubscription> {
  */
 export class DiscoveredArtifacts extends Message<DiscoveredArtifacts> {
   /**
-   * Images holds the images discovered by the Warehouse, keyed by the
-   * repository URL from the ImageSubscription.
+   * Images holds the images discovered by the Warehouse.
    *
    * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.ImageDiscoveryResult images = 1;
    */
   images: ImageDiscoveryResult[] = [];
+
+  /**
+   * Charts holds the charts discovered by the Warehouse.
+   *
+   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.ChartDiscoveryResult charts = 2;
+   */
+  charts: ChartDiscoveryResult[] = [];
 
   constructor(data?: PartialMessage<DiscoveredArtifacts>) {
     super();
@@ -951,6 +1019,7 @@ export class DiscoveredArtifacts extends Message<DiscoveredArtifacts> {
   static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.DiscoveredArtifacts";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 1, name: "images", kind: "message", T: ImageDiscoveryResult, repeated: true },
+    { no: 2, name: "charts", kind: "message", T: ChartDiscoveryResult, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DiscoveredArtifacts {
@@ -997,7 +1066,7 @@ export class DiscoveredImage extends Message<DiscoveredImage> {
   digest?: string;
 
   /**
-   * CreatedAt is the time the image was created. This field is optional, and
+   * CreatedAt is the time the image was created. ThiCs field is optional, and
    * not populated for every ImageSelectionStrategy.
    *
    * @generated from field: optional k8s.io.apimachinery.pkg.apis.meta.v1.Time createdAt = 3;
