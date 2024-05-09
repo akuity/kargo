@@ -48,7 +48,7 @@ export const FreightItem = ({
             mode === FreightMode.Confirming ? 'text-black' : 'text-gray-400'
           }`}
         >
-          <FreightLabel freight={freight} />
+          <FreightLabel freight={freight} breakOnHyphen={true} />
         </div>
       </div>
     </div>

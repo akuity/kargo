@@ -106,7 +106,7 @@ export const StageNode = ({
           ) : (
             <div className='text-sm h-full flex flex-col items-center justify-center -mt-1'>
               <div className={styles.freightLabel}>CURRENT FREIGHT</div>
-              <FreightLabel freight={currentFreight} />
+              <FreightLabel freight={currentFreight} showTimestamp={true} />
             </div>
           )}
         </div>
