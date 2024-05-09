@@ -19,20 +19,22 @@ import (
 	libExec "github.com/akuity/kargo/internal/exec"
 )
 
-// SelectChartVersion connects to the Helm chart repository specified by
-// repoURL and retrieves all available versions of the chart found therein. The
-// repository can be either a classic chart repository (using HTTP/S) or a
+// SelectChartVersion connects to the specified Helm chart repository and
+// determines the latest version of the specified chart, optionally filtering
+// by a SemVer constraint. It then returns the version.
+//
+// The repository can be either a classic chart repository (using HTTP/S) or a
 // repository within an OCI registry. Classic chart repositories can contain
 // differently named charts. When repoURL points to such a repository, the name
 // argument must specify the name of the chart within the repository. In the
 // case of a repository within an OCI registry, the URL implicitly points to a
-// specific chart and the name argument must be empty. If no semverConstraint is
-// provided (empty string is passed), then the version that is semantically
-// greatest will be returned. If a semverConstraint is specified, then the
-// semantically greatest version satisfying that constraint will be returned. If
-// no version satisfies the constraint, the empty string is returned. Provided
-// credentials may be nil for public repositories, but must be non-nil for
-// private repositories.
+// specific chart and the name argument must be empty.
+//
+// The credentials argument may be nil for public repositories, but must be
+// non-nil for private repositories.
+//
+// If no versions of the chart are found in the repository, an error is
+// returned.
 func SelectChartVersion(
 	ctx context.Context,
 	repoURL string,
@@ -40,36 +42,84 @@ func SelectChartVersion(
 	semverConstraint string,
 	creds *Credentials,
 ) (string, error) {
+	versions, err := DiscoverChartVersions(ctx, repoURL, chart, semverConstraint, creds)
+	if err != nil {
+		return "", err
+	}
+	if len(versions) == 0 {
+		err := fmt.Errorf("no versions of chart %q found in repository %q", chart, repoURL)
+		if semverConstraint != "" {
+			err = fmt.Errorf("%s that satisfy constraint %q", err, semverConstraint)
+		}
+		return "", err
+	}
+	return versions[0], nil
+}
+
+// DiscoverChartVersions connects to the specified Helm chart repository and
+// retrieves all available versions of the specified chart, optionally filtering
+// by a SemVer constraint. It then returns the versions in descending order.
+//
+// The repository can be either a classic chart repository (using HTTP/S) or a
+// repository within an OCI registry. Classic chart repositories can contain
+// differently named charts. When repoURL points to such a repository, the name
+// argument must specify the name of the chart within the repository. In the
+// case of a repository within an OCI registry, the URL implicitly points to a
+// specific chart and the name argument must be empty.
+//
+// The credentials argument may be nil for public repositories, but must be
+// non-nil for private repositories.
+//
+// It returns an error if the repository cannot be reached or if the versions
+// cannot be retrieved, but it does not return an error if no versions of the
+// chart are found in the repository.
+func DiscoverChartVersions(
+	ctx context.Context,
+	repoURL string,
+	chart string,
+	semverConstraint string,
+	creds *Credentials,
+) ([]string, error) {
 	var versions []string
 	var err error
-	if strings.HasPrefix(repoURL, "http://") ||
-		strings.HasPrefix(repoURL, "https://") {
-		versions, err =
-			getChartVersionsFromClassicRepo(repoURL, chart, creds)
-	} else if strings.HasPrefix(repoURL, "oci://") {
-		versions, err =
-			getChartVersionsFromOCIRepo(ctx, repoURL, creds)
-	} else {
-		return "", fmt.Errorf("repository URL %q is invalid", repoURL)
+	switch {
+	case strings.HasPrefix(repoURL, "http://"), strings.HasPrefix(repoURL, "https://"):
+		versions, err = getChartVersionsFromClassicRepo(repoURL, chart, creds)
+	case strings.HasPrefix(repoURL, "oci://"):
+		versions, err = getChartVersionsFromOCIRepo(ctx, repoURL, creds)
+	default:
+		return nil, fmt.Errorf("repository URL %q is invalid", repoURL)
 	}
 	if err != nil {
-		return "", fmt.Errorf(
+		return nil, fmt.Errorf(
 			"error retrieving versions of chart %q from repository %q: %w",
 			chart,
 			repoURL,
 			err,
 		)
 	}
-	latestVersion, err := getLatestVersion(versions, semverConstraint)
-	if err != nil {
-		return "", fmt.Errorf(
-			"error determining latest version of chart %q from repository %q: %w",
-			chart,
-			repoURL,
-			err,
-		)
+
+	semvers := versionsToSemVerCollection(versions)
+	if len(semvers) == 0 {
+		return nil, nil
 	}
-	return latestVersion, nil
+
+	if semverConstraint != "" {
+		if semvers, err = filterSemVers(semvers, semverConstraint); err != nil {
+			return nil, fmt.Errorf(
+				"error filtering versions of chart %q from repository %q: %w",
+				chart,
+				repoURL,
+				err,
+			)
+		}
+	}
+
+	// NB: semver.Collection sorts in ascending order by default. We want to
+	// return the versions in descending order.
+	sort.Sort(sort.Reverse(semvers))
+
+	return semVerCollectionToVersions(semvers), nil
 }
 
 // getChartVersionsFromClassicRepo connects to the classic (HTTP/S) chart
@@ -116,11 +166,7 @@ func getChartVersionsFromClassicRepo(
 	}
 	entries, ok := index.Entries[chart]
 	if !ok {
-		return nil, fmt.Errorf(
-			"no versions of chart %q found in repository index from %q",
-			chart,
-			indexURL,
-		)
+		return nil, nil
 	}
 	versions := make([]string, len(entries))
 	for i, entry := range entries {
@@ -167,35 +213,44 @@ func getChartVersionsFromOCIRepo(
 	return versions, nil
 }
 
-// getLatestVersion returns the semantically greatest version from the versions
-// provided which satisfies the provided constraints. If no constraints are
-// specified (the empty string is passed), the absolute semantically greatest
-// version will be returned. The empty string will be returned when the provided
-// list of versions is nil or empty.
-func getLatestVersion(versions []string, constraintStr string) (string, error) {
-	semvers := make([]*semver.Version, 0, len(versions))
+// versionsToSemVerCollection converts a slice of versions to a semver.Collection.
+// Any versions that cannot be parsed as SemVer are ignored.
+func versionsToSemVerCollection(versions []string) semver.Collection {
+	semvers := make(semver.Collection, 0, len(versions))
 	for _, version := range versions {
-		if semverVersion, err := semver.NewVersion(version); err == nil {
+		semverVersion, err := semver.NewVersion(version)
+		if err == nil {
 			semvers = append(semvers, semverVersion)
 		}
 	}
-	if len(semvers) == 0 {
-		return "", nil
+	return semvers
+}
+
+// semVerCollectionToVersions converts a semver.Collection to a slice of
+// version strings.
+func semVerCollectionToVersions(semvers semver.Collection) []string {
+	versions := make([]string, len(semvers))
+	for i, semverVersion := range semvers {
+		versions[i] = semverVersion.Original()
 	}
-	sort.Sort(semver.Collection(semvers))
-	if constraintStr == "" {
-		return semvers[len(semvers)-1].String(), nil
-	}
-	constraint, err := semver.NewConstraint(constraintStr)
+	return versions
+}
+
+// filterSemVers filters the provided SemVers by the provided semver
+// constraint.
+func filterSemVers(semvers semver.Collection, semverConstraint string) (semver.Collection, error) {
+	constraint, err := semver.NewConstraint(semverConstraint)
 	if err != nil {
-		return "", fmt.Errorf("error parsing constraint %q: %w", constraintStr, err)
+		return nil, fmt.Errorf("error parsing constraint %q: %w", semverConstraint, err)
 	}
-	for i := len(semvers) - 1; i >= 0; i-- {
-		if constraint.Check(semvers[i]) {
-			return semvers[i].String(), nil
+
+	var filtered = make(semver.Collection, 0, len(semvers))
+	for _, version := range semvers {
+		if constraint.Check(version) {
+			filtered = append(filtered, version)
 		}
 	}
-	return "", nil
+	return filtered, nil
 }
 
 func UpdateChartDependencies(homePath, chartPath string) error {
