@@ -32,7 +32,7 @@ export const FreightLabel = ({
   const aliasLabel =
     Number(alias?.length || 0) > 9 // 9 chars is the max length which will fit on one line
       ? alias?.split('-').map((s, i) => (
-          <div className='truncate'>
+          <div className='truncate' key={i}>
             {s}
             {i === 0 && '-'}
           </div>

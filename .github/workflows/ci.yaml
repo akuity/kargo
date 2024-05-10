@@ -33,6 +33,36 @@ jobs:
       uses: codecov/codecov-action@v4
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
+  
+  lint-ui:
+    runs-on: ubuntu-latest
+    container:
+      image: node:20.12.2
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    - uses: actions/cache@v4
+      with:
+        path: ~/.pnpm-store
+        key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+        restore-keys: |
+          ${{ runner.os }}-pnpm-
+    - uses: pnpm/action-setup@v3
+      with:
+        version: 8
+        run_install: false
+    - name: Install nodejs
+      uses: actions/setup-node@v4
+      with:
+        node-version: "20.12.2"
+        cache: "pnpm"
+        cache-dependency-path: "**/pnpm-lock.yaml"
+    - name: Install nodejs dependencies
+      run: pnpm install --dev
+      working-directory: ./ui
+    - name: Run linter
+      run: pnpm run lint
+      working-directory: ./ui
 
   lint-go:
     runs-on: ubuntu-latest
