@@ -1,13 +1,13 @@
 import { faBoxOpen, faCheck, faClipboard } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Tooltip } from 'antd';
+import classNames from 'classnames';
 import { format, formatDistance } from 'date-fns';
 import { useEffect, useState } from 'react';
 
 import { Freight } from '@ui/gen/v1alpha1/generated_pb';
 
 import { getAlias } from './utils';
-import classNames from 'classnames';
 
 export const FreightLabel = ({
   freight,
@@ -32,7 +32,7 @@ export const FreightLabel = ({
   const aliasLabel =
     Number(alias?.length || 0) > 9 // 9 chars is the max length which will fit on one line
       ? alias?.split('-').map((s, i) => (
-          <div className='truncate'>
+          <div className='truncate' key={i}>
             {s}
             {i === 0 && '-'}
           </div>
