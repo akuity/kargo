@@ -64,7 +64,7 @@ export const FreightDetails = ({ freight }: { freight?: Freight }) => {
                   children: (
                     <>
                       <div className='mb-4'>
-                        <div className='font-semibold mb-2 text-xs'>CONTENTS</div>
+                        <div className='font-semibold mb-2 text-xs'>ARTIFACTS</div>
                         <FreightContents freight={freight} highlighted={true} horizontal={true} />
                       </div>
                       <FreightStatusList freight={freight} />
