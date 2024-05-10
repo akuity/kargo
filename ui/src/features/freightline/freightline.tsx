@@ -23,15 +23,15 @@ import { FreightContents } from './freight-contents';
 import { FreightItem } from './freight-item';
 import { StageIndicators } from './stage-indicators';
 
-const x = Freight.fromJsonString(
-  `{"metadata":{"name":"c760855def6ac71133eefa2ec21bd3e53561e323","generateName":"","namespace":"kargo-demo","selfLink":"","uid":"ee293ccb-28c9-464d-9f81-37af8ab638c2","resourceVersion":"5471978","generation":"1","creationTimestamp":"2024-05-08T23:42:33Z","labels":{"kargo.akuity.io/alias":"erstwhile-gorilla"},"annotations":{},"ownerReferences":[],"finalizers":[],"managedFields":[{"manager":"kargo","operation":"Update","apiVersion":"kargo.akuity.io/v1alpha1","time":"2024-05-08T23:42:33Z","fieldsType":"FieldsV1","fieldsV1":{"Raw":"eyJmOmNvbW1pdHMiOnt9LCJmOmltYWdlcyI6e30sImY6d2FyZWhvdXNlIjp7fX0="},"subresource":""}]},"commits":[{"repoURL":"https://github.com/jessesuen/kargo-advanced","id":"32be5f08c2f16adb2fbcb874b6e2d9d3537c8717","branch":"","tag":"","healthCheckCommit":"","message":"TEST=test","author":""}],"images":[{"repoURL":"nginx","gitRepoURL":"","tag":"1.26.0","digest":"sha256:9f0d283eccddedf25816104877faf1cb584a8236ec4d7985a4965501d080d84f"}],"charts":[],"status":{"verifiedIn":{},"approvedFor":{}},"alias":"erstwhile-gorilla","warehouse":"kargo-demo"}`
-);
+// const x = Freight.fromJsonString(
+//   `{"metadata":{"name":"c760855def6ac71133eefa2ec21bd3e53561e323","generateName":"","namespace":"kargo-demo","selfLink":"","uid":"ee293ccb-28c9-464d-9f81-37af8ab638c2","resourceVersion":"5471978","generation":"1","creationTimestamp":"2024-05-08T23:42:33Z","labels":{"kargo.akuity.io/alias":"erstwhile-gorilla"},"annotations":{},"ownerReferences":[],"finalizers":[],"managedFields":[{"manager":"kargo","operation":"Update","apiVersion":"kargo.akuity.io/v1alpha1","time":"2024-05-08T23:42:33Z","fieldsType":"FieldsV1","fieldsV1":{"Raw":"eyJmOmNvbW1pdHMiOnt9LCJmOmltYWdlcyI6e30sImY6d2FyZWhvdXNlIjp7fX0="},"subresource":""}]},"commits":[{"repoURL":"https://github.com/jessesuen/kargo-advanced","id":"32be5f08c2f16adb2fbcb874b6e2d9d3537c8717","branch":"","tag":"","healthCheckCommit":"","message":"TEST=test","author":""}],"images":[{"repoURL":"nginx","gitRepoURL":"","tag":"1.26.0","digest":"sha256:9f0d283eccddedf25816104877faf1cb584a8236ec4d7985a4965501d080d84f"}],"charts":[],"status":{"verifiedIn":{},"approvedFor":{}},"alias":"erstwhile-gorilla","warehouse":"kargo-demo"}`
+// );
 
-const y = Array(100).fill(x as Freight) as Freight[];
-const freight = y;
+// const y = Array(100).fill(x as Freight) as Freight[];
+// const freight = y;
 
 export const Freightline = ({
-  // freight,
+  freight,
   state,
   stagesPerFreight,
   highlightedStages,
@@ -100,7 +100,7 @@ export const Freightline = ({
       <InfiniteScroll
         pageStart={0}
         loadMore={loadFunc}
-        className='w-full flex'
+        className='w-full flex h-full'
         hasMore={freight.length > currentFreight.length}
       >
         {(currentFreight || [])

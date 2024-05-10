@@ -26,7 +26,13 @@ export const MainLayout = () => {
         <div className={styles.wrapper}>
           <aside className={styles.sidebar}>
             <div className={styles.logo}>
-              <img src='/kargo-icon.png' alt='Kargo Icon' className={styles.icon} />
+              <img
+                src='/kargo-icon.png'
+                alt='Kargo Icon'
+                className={styles.icon}
+                width={50}
+                height={31.5}
+              />
               kargo
             </div>
             <Tooltip className={styles.version} title={__UI_VERSION__} placement='right'>
