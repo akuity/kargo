@@ -290,11 +290,52 @@ type WarehouseStatus struct {
 
 // DiscoveredArtifacts holds the artifacts discovered by the Warehouse.
 type DiscoveredArtifacts struct {
+	// Commits holds the Git commits discovered by the Warehouse.
+	Commits []GitDiscoveryResult `json:"commits,omitempty" protobuf:"bytes,3,rep,name=commits"`
+
 	// Images holds the images discovered by the Warehouse.
 	Images []ImageDiscoveryResult `json:"images,omitempty" protobuf:"bytes,1,rep,name=images"`
 
 	// Charts holds the charts discovered by the Warehouse.
 	Charts []ChartDiscoveryResult `json:"charts,omitempty" protobuf:"bytes,2,rep,name=charts"`
+}
+
+// GitDiscoveryResult represents the result of a Git discovery operation for a
+// GitSubscription.
+type GitDiscoveryResult struct {
+	// RepoURL is the repository URL of the GitSubscription.
+	//
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Pattern=`^https?://(\w+([\.-]\w+)*@)?\w+([\.-]\w+)*(:[\d]+)?(/.*)?$`
+	RepoURL string `json:"repoURL" protobuf:"bytes,1,opt,name=repoURL"`
+
+	// Commits is a list of commits discovered by the Warehouse for the
+	// GitSubscription. An empty list indicates that the discovery operation was
+	// successful, but no commits matching the GitSubscription criteria were found.
+	Commits []DiscoveredCommit `json:"commits" protobuf:"bytes,2,rep,name=commits"`
+}
+
+// DiscoveredCommit represents a commit discovered by a Warehouse for a
+// GitSubscription.
+type DiscoveredCommit struct {
+	// ID is the identifier of the commit. This typically is a SHA-1 hash.
+	ID string `json:"id,omitempty" protobuf:"bytes,1,opt,name=id"`
+
+	// Branch is the branch in which the commit was found. This field is
+	// optional, and populated based on the CommitSelectionStrategy of the
+	// GitSubscription.
+	Branch string `json:"branch,omitempty" protobuf:"bytes,2,opt,name=branch"`
+
+	// Tag is the tag that resolved to this commit. This field is optional, and
+	// populated based on the CommitSelectionStrategy of the GitSubscription.
+	Tag string `json:"tag,omitempty" protobuf:"bytes,3,opt,name=tag"`
+
+	// Subject is the subject of the commit (i.e. the first line of the commit
+	// message).
+	Subject string `json:"subject,omitempty" protobuf:"bytes,4,opt,name=subject"`
+
+	// CreatedAt is the time at which the commit or annotated tag was created.
+	CreatedAt metav1.Time `json:"createdAt,omitempty" protobuf:"bytes,5,opt,name=createdAt"`
 }
 
 // ImageDiscoveryResult represents the result of an image discovery operation
