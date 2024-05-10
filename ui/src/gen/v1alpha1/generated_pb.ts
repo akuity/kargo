@@ -997,6 +997,13 @@ export class ChartSubscription extends Message<ChartSubscription> {
  */
 export class DiscoveredArtifacts extends Message<DiscoveredArtifacts> {
   /**
+   * Commits holds the Git commits discovered by the Warehouse.
+   *
+   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.GitDiscoveryResult commits = 3;
+   */
+  commits: GitDiscoveryResult[] = [];
+
+  /**
    * Images holds the images discovered by the Warehouse.
    *
    * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.ImageDiscoveryResult images = 1;
@@ -1018,6 +1025,7 @@ export class DiscoveredArtifacts extends Message<DiscoveredArtifacts> {
   static readonly runtime: typeof proto2 = proto2;
   static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.DiscoveredArtifacts";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 3, name: "commits", kind: "message", T: GitDiscoveryResult, repeated: true },
     { no: 1, name: "images", kind: "message", T: ImageDiscoveryResult, repeated: true },
     { no: 2, name: "charts", kind: "message", T: ChartDiscoveryResult, repeated: true },
   ]);
@@ -1036,6 +1044,84 @@ export class DiscoveredArtifacts extends Message<DiscoveredArtifacts> {
 
   static equals(a: DiscoveredArtifacts | PlainMessage<DiscoveredArtifacts> | undefined, b: DiscoveredArtifacts | PlainMessage<DiscoveredArtifacts> | undefined): boolean {
     return proto2.util.equals(DiscoveredArtifacts, a, b);
+  }
+}
+
+/**
+ * DiscoveredCommit represents a commit discovered by a Warehouse for a
+ * GitSubscription.
+ *
+ * @generated from message github.com.akuity.kargo.api.v1alpha1.DiscoveredCommit
+ */
+export class DiscoveredCommit extends Message<DiscoveredCommit> {
+  /**
+   * ID is the identifier of the commit. This typically is a SHA-1 hash.
+   *
+   * @generated from field: optional string id = 1;
+   */
+  id?: string;
+
+  /**
+   * Branch is the branch in which the commit was found. This field is
+   * optional, and populated based on the CommitSelectionStrategy of the
+   * GitSubscription.
+   *
+   * @generated from field: optional string branch = 2;
+   */
+  branch?: string;
+
+  /**
+   * Tag is the tag that resolved to this commit. This field is optional, and
+   * populated based on the CommitSelectionStrategy of the GitSubscription.
+   *
+   * @generated from field: optional string tag = 3;
+   */
+  tag?: string;
+
+  /**
+   * Subject is the subject of the commit (i.e. the first line of the commit
+   * message).
+   *
+   * @generated from field: optional string subject = 4;
+   */
+  subject?: string;
+
+  /**
+   * CreatedAt is the time at which the commit or annotated tag was created.
+   *
+   * @generated from field: optional k8s.io.apimachinery.pkg.apis.meta.v1.Time createdAt = 5;
+   */
+  createdAt?: Time;
+
+  constructor(data?: PartialMessage<DiscoveredCommit>) {
+    super();
+    proto2.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto2 = proto2;
+  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.DiscoveredCommit";
+  static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 2, name: "branch", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 3, name: "tag", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 4, name: "subject", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 5, name: "createdAt", kind: "message", T: Time, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DiscoveredCommit {
+    return new DiscoveredCommit().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DiscoveredCommit {
+    return new DiscoveredCommit().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DiscoveredCommit {
+    return new DiscoveredCommit().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DiscoveredCommit | PlainMessage<DiscoveredCommit> | undefined, b: DiscoveredCommit | PlainMessage<DiscoveredCommit> | undefined): boolean {
+    return proto2.util.equals(DiscoveredCommit, a, b);
   }
 }
 
@@ -1488,6 +1574,61 @@ export class GitCommit extends Message<GitCommit> {
 
   static equals(a: GitCommit | PlainMessage<GitCommit> | undefined, b: GitCommit | PlainMessage<GitCommit> | undefined): boolean {
     return proto2.util.equals(GitCommit, a, b);
+  }
+}
+
+/**
+ * GitDiscoveryResult represents the result of a Git discovery operation for a
+ * GitSubscription.
+ *
+ * @generated from message github.com.akuity.kargo.api.v1alpha1.GitDiscoveryResult
+ */
+export class GitDiscoveryResult extends Message<GitDiscoveryResult> {
+  /**
+   * RepoURL is the repository URL of the GitSubscription.
+   *
+   * +kubebuilder:validation:MinLength=1
+   * +kubebuilder:validation:Pattern=`^https?://(\w+([\.-]\w+)*@)?\w+([\.-]\w+)*(:[\d]+)?(/.*)?$`
+   *
+   * @generated from field: optional string repoURL = 1;
+   */
+  repoURL?: string;
+
+  /**
+   * Commits is a list of commits discovered by the Warehouse for the
+   * GitSubscription. An empty list indicates that the discovery operation was
+   * successful, but no commits matching the GitSubscription criteria were found.
+   *
+   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.DiscoveredCommit commits = 2;
+   */
+  commits: DiscoveredCommit[] = [];
+
+  constructor(data?: PartialMessage<GitDiscoveryResult>) {
+    super();
+    proto2.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto2 = proto2;
+  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.GitDiscoveryResult";
+  static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 1, name: "repoURL", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 2, name: "commits", kind: "message", T: DiscoveredCommit, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GitDiscoveryResult {
+    return new GitDiscoveryResult().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GitDiscoveryResult {
+    return new GitDiscoveryResult().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GitDiscoveryResult {
+    return new GitDiscoveryResult().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GitDiscoveryResult | PlainMessage<GitDiscoveryResult> | undefined, b: GitDiscoveryResult | PlainMessage<GitDiscoveryResult> | undefined): boolean {
+    return proto2.util.equals(GitDiscoveryResult, a, b);
   }
 }
 

@@ -225,6 +225,57 @@
               },
               "type": "array"
             },
+            "commits": {
+              "description": "Commits holds the Git commits discovered by the Warehouse.",
+              "items": {
+                "description": "GitDiscoveryResult represents the result of a Git discovery operation for a\nGitSubscription.",
+                "properties": {
+                  "commits": {
+                    "description": "Commits is a list of commits discovered by the Warehouse for the\nGitSubscription. An empty list indicates that the discovery operation was\nsuccessful, but no commits matching the GitSubscription criteria were found.",
+                    "items": {
+                      "description": "DiscoveredCommit represents a commit discovered by a Warehouse for a\nGitSubscription.",
+                      "properties": {
+                        "branch": {
+                          "description": "Branch is the branch in which the commit was found. This field is\noptional, and populated based on the CommitSelectionStrategy of the\nGitSubscription.",
+                          "type": "string"
+                        },
+                        "createdAt": {
+                          "description": "CreatedAt is the time at which the commit or annotated tag was created.",
+                          "format": "date-time",
+                          "type": "string"
+                        },
+                        "id": {
+                          "description": "ID is the identifier of the commit. This typically is a SHA-1 hash.",
+                          "type": "string"
+                        },
+                        "subject": {
+                          "description": "Subject is the subject of the commit (i.e. the first line of the commit\nmessage).",
+                          "type": "string"
+                        },
+                        "tag": {
+                          "description": "Tag is the tag that resolved to this commit. This field is optional, and\npopulated based on the CommitSelectionStrategy of the GitSubscription.",
+                          "type": "string"
+                        }
+                      },
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "repoURL": {
+                    "description": "RepoURL is the repository URL of the GitSubscription.",
+                    "minLength": 1,
+                    "pattern": "^https?://(\\w+([\\.-]\\w+)*@)?\\w+([\\.-]\\w+)*(:[\\d]+)?(/.*)?$",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "commits",
+                  "repoURL"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            },
             "images": {
               "description": "Images holds the images discovered by the Warehouse.",
               "items": {

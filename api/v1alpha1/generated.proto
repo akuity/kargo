@@ -286,11 +286,37 @@ message ChartSubscription {
 
 // DiscoveredArtifacts holds the artifacts discovered by the Warehouse.
 message DiscoveredArtifacts {
+  // Commits holds the Git commits discovered by the Warehouse.
+  repeated GitDiscoveryResult commits = 3;
+
   // Images holds the images discovered by the Warehouse.
   repeated ImageDiscoveryResult images = 1;
 
   // Charts holds the charts discovered by the Warehouse.
   repeated ChartDiscoveryResult charts = 2;
+}
+
+// DiscoveredCommit represents a commit discovered by a Warehouse for a
+// GitSubscription.
+message DiscoveredCommit {
+  // ID is the identifier of the commit. This typically is a SHA-1 hash.
+  optional string id = 1;
+
+  // Branch is the branch in which the commit was found. This field is
+  // optional, and populated based on the CommitSelectionStrategy of the
+  // GitSubscription.
+  optional string branch = 2;
+
+  // Tag is the tag that resolved to this commit. This field is optional, and
+  // populated based on the CommitSelectionStrategy of the GitSubscription.
+  optional string tag = 3;
+
+  // Subject is the subject of the commit (i.e. the first line of the commit
+  // message).
+  optional string subject = 4;
+
+  // CreatedAt is the time at which the commit or annotated tag was created.
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time createdAt = 5;
 }
 
 // DiscoveredImage represents an image discovered by a Warehouse for an
@@ -426,6 +452,21 @@ message GitCommit {
 
   // Author is the git commit author
   optional string author = 7;
+}
+
+// GitDiscoveryResult represents the result of a Git discovery operation for a
+// GitSubscription.
+message GitDiscoveryResult {
+  // RepoURL is the repository URL of the GitSubscription.
+  //
+  // +kubebuilder:validation:MinLength=1
+  // +kubebuilder:validation:Pattern=`^https?://(\w+([\.-]\w+)*@)?\w+([\.-]\w+)*(:[\d]+)?(/.*)?$`
+  optional string repoURL = 1;
+
+  // Commits is a list of commits discovered by the Warehouse for the
+  // GitSubscription. An empty list indicates that the discovery operation was
+  // successful, but no commits matching the GitSubscription criteria were found.
+  repeated DiscoveredCommit commits = 2;
 }
 
 message GitHubPullRequest {
