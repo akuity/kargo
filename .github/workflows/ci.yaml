@@ -61,7 +61,8 @@ jobs:
       run: pnpm install --dev
       working-directory: ./ui
     - name: Run linter
-      run: pnpm run lint --dir ./ui
+      run: pnpm run lint
+      working-directory: ./ui
 
   lint-go:
     runs-on: ubuntu-latest
