@@ -130,6 +130,7 @@ export const Freightline = ({
                       state.select(FreightlineAction.ManualApproval, undefined, id);
                     }}
                     refetchFreight={refetchFreight}
+                    hide={!!state.action}
                   />
                   <StageIndicators
                     stages={stagesPerFreight[id] || []}
