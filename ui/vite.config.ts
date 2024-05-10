@@ -3,6 +3,7 @@
 import react from '@vitejs/plugin-react';
 import { theme } from 'antd';
 import { defineConfig } from 'vite';
+import viteCompression from 'vite-plugin-compression';
 import monacoEditorPlugin from 'vite-plugin-monaco-editor';
 import tsConfigPaths from 'vite-tsconfig-paths';
 
@@ -34,6 +35,7 @@ export default defineConfig({
   },
   plugins: [
     tsConfigPaths(),
+    viteCompression(),
     react(),
     monacoEditorPlugin({
       customWorkers: [

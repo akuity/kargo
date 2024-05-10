@@ -38,3 +38,5 @@ export const WarehouseDetails = ({ warehouse }: { warehouse: Warehouse }) => {
     </Drawer>
   );
 };
+
+export default WarehouseDetails;

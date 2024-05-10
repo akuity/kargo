@@ -72,3 +72,5 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
     </Drawer>
   );
 };
+
+export default StageDetails;

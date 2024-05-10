@@ -1,13 +1,13 @@
 import { faBoxOpen, faCheck, faClipboard } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Tooltip } from 'antd';
+import classNames from 'classnames';
 import { format, formatDistance } from 'date-fns';
 import { useEffect, useState } from 'react';
 
 import { Freight } from '@ui/gen/v1alpha1/generated_pb';
 
 import { getAlias } from './utils';
-import classNames from 'classnames';
 
 export const FreightLabel = ({
   freight,

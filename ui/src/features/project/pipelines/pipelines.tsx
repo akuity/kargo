@@ -11,17 +11,20 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useQueryClient } from '@tanstack/react-query';
-import { Button, Dropdown, Space, Tooltip, message } from 'antd';
-import React, { useMemo } from 'react';
+import { Button, Dropdown, Space, Spin, Tooltip, message } from 'antd';
+import React, { Suspense, lazy, useMemo } from 'react';
 import { generatePath, useNavigate, useParams } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
 import { ColorContext } from '@ui/context/colors';
 import { LoadingState } from '@ui/features/common';
 import { useModal } from '@ui/features/common/modal/use-modal';
-import { FreightDetails } from '@ui/features/freight/freight-details';
-import { Freightline } from '@ui/features/freightline/freightline';
-import { StageDetails } from '@ui/features/stage/stage-details';
+const FreightDetails = lazy(() => import('@ui/features/freight/freight-details'));
+const Freightline = lazy(() => import('@ui/features/freightline/freightline'));
+const StageDetails = lazy(() => import('@ui/features/stage/stage-details'));
+import { SuspenseSpin } from '@ui/features/common/suspense-spin';
+import { FreightlineHeader } from '@ui/features/freightline/freightline-header';
+import { FreightlineWrapper } from '@ui/features/freightline/freightline-wrapper';
 import { clearColors } from '@ui/features/stage/utils';
 import {
   approveFreight,
@@ -34,8 +37,8 @@ import { Freight, Stage } from '@ui/gen/v1alpha1/generated_pb';
 import { useDocumentEvent } from '@ui/utils/document';
 import { useLocalStorage } from '@ui/utils/use-local-storage';
 
-import { CreateStageModal } from './create-stage-modal';
-import { CreateWarehouseModal } from './create-warehouse-modal';
+const CreateStageModal = lazy(() => import('./create-stage-modal'));
+const CreateWarehouseModal = lazy(() => import('./create-warehouse-modal'));
 import { Images } from './images';
 import { RepoNode } from './nodes/repo-node';
 import { Nodule, StageNode } from './nodes/stage-node';
@@ -46,7 +49,8 @@ import { isPromoting, usePipelineState } from './utils/state';
 import { usePipelineGraph } from './utils/use-pipeline-graph';
 import { onError } from './utils/util';
 import { Watcher } from './utils/watcher';
-import { WarehouseDetails } from './warehouse/warehouse-details';
+
+const WarehouseDetails = lazy(() => import('./warehouse/warehouse-details'));
 
 export const Pipelines = () => {
   const { name, stageName, freightName, warehouseName } = useParams();
@@ -188,18 +192,35 @@ export const Pipelines = () => {
   return (
     <div className='flex flex-col flex-grow'>
       <ColorContext.Provider value={stageColorMap}>
-        <Freightline
-          highlightedStages={
-            state.action === FreightlineAction.ManualApproval ? {} : highlightedStages
-          }
-          refetchFreight={refetchFreightData}
-          onHover={onHover}
-          freight={freightData?.groups['']?.freight || []}
-          state={state}
-          promotionEligible={{}}
-          subscribersByStage={subscribersByStage}
-          stagesPerFreight={stagesPerFreight}
+        <FreightlineHeader
+          promotingStage={state.stage}
+          action={state.action}
+          cancel={state.clear}
+          downstreamSubs={(subscribersByStage[state.stage || ''] || []).map(
+            (s) => s.metadata?.name || ''
+          )}
         />
+        <FreightlineWrapper>
+          <Suspense
+            fallback={
+              <div className='h-full w-full flex items-center justify-center'>
+                <Spin />
+              </div>
+            }
+          >
+            <Freightline
+              highlightedStages={
+                state.action === FreightlineAction.ManualApproval ? {} : highlightedStages
+              }
+              refetchFreight={refetchFreightData}
+              onHover={onHover}
+              freight={freightData?.groups['']?.freight || []}
+              state={state}
+              promotionEligible={{}}
+              stagesPerFreight={stagesPerFreight}
+            />
+          </Suspense>
+        </FreightlineWrapper>
         <div className='flex flex-grow w-full'>
           <div className={`overflow-hidden flex-grow w-full h-full ${styles.dag}`}>
             <div className='flex justify-end items-center p-4 mb-4'>
@@ -386,9 +407,11 @@ export const Pipelines = () => {
 
           <Images project={name as string} stages={sortedStages || []} />
         </div>
-        {stage && <StageDetails stage={stage} />}
-        {freight && <FreightDetails freight={freight} />}
-        {warehouse && <WarehouseDetails warehouse={warehouse} />}
+        <SuspenseSpin>
+          {stage && <StageDetails stage={stage} />}
+          {freight && <FreightDetails freight={freight} />}
+          {warehouse && <WarehouseDetails warehouse={warehouse} />}
+        </SuspenseSpin>
       </ColorContext.Provider>
     </div>
   );

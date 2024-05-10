@@ -9,6 +9,7 @@ require (
 	connectrpc.com/grpchealth v1.3.0
 	github.com/AlecAivazis/survey/v2 v2.3.7
 	github.com/Masterminds/semver/v3 v3.2.1
+	github.com/NYTimes/gziphandler v1.1.1
 	github.com/adrg/xdg v0.4.0
 	github.com/bacongobbler/browser v1.1.0
 	github.com/bombsimon/logrusr/v4 v4.1.0
@@ -54,8 +55,6 @@ require (
 	sigs.k8s.io/controller-tools v0.14.0
 	sigs.k8s.io/yaml v1.4.0
 )
-
-require github.com/go-jose/go-jose/v4 v4.0.1 // indirect
 
 require (
 	github.com/AdaLogics/go-fuzz-headers v0.0.0-20230811130428-ced1acdcaa24 // indirect
@@ -153,3 +152,5 @@ require (
 	sigs.k8s.io/kustomize/kyaml v0.16.0 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.1 // indirect
 )
+
+require github.com/go-jose/go-jose/v4 v4.0.1 // indirect

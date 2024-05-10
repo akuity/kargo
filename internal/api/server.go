@@ -23,6 +23,7 @@ import (
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/NYTimes/gziphandler"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api/config"
 	"github.com/akuity/kargo/internal/api/dex"
@@ -274,7 +275,7 @@ func newDashboardRequestHandler() (http.HandlerFunc, error) {
 	}
 
 	handler := http.FileServer(http.FS(uiFS))
-	return func(w http.ResponseWriter, req *http.Request) {
+	withoutGzip := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		if req.Method != http.MethodGet {
 			http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
 			return
@@ -318,5 +319,8 @@ func newDashboardRequestHandler() (http.HandlerFunc, error) {
 
 		// Path is a file
 		handler.ServeHTTP(w, req)
-	}, nil
+	})
+
+	withGz := gziphandler.GzipHandler(withoutGzip)
+	return http.HandlerFunc(withGz.ServeHTTP), nil
 }

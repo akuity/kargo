@@ -1,6 +1,7 @@
 @font-face {
   font-family: Poppins;
-  src: url(Poppins-Medium.ttf) format('truetype');;
+  src: url(Poppins-Medium.ttf) format('truetype');
+  font-display: swap;
 }
 html {
   height: 100%;

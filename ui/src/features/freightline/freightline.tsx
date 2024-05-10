@@ -1,6 +1,7 @@
 import { useMutation, useQuery } from '@connectrpc/connect-query';
 import { message } from 'antd';
-import React, { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import InfiniteScroll from 'react-infinite-scroller';
 import { generatePath, useNavigate, useParams } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
@@ -20,13 +21,18 @@ import { getSeconds, onError } from '../project/pipelines/utils/util';
 import { ConfirmPromotionDialogue } from './confirm-promotion-dialogue';
 import { FreightContents } from './freight-contents';
 import { FreightItem } from './freight-item';
-import { FreightlineHeader } from './freightline-header';
 import { StageIndicators } from './stage-indicators';
 
+const x = Freight.fromJsonString(
+  `{"metadata":{"name":"c760855def6ac71133eefa2ec21bd3e53561e323","generateName":"","namespace":"kargo-demo","selfLink":"","uid":"ee293ccb-28c9-464d-9f81-37af8ab638c2","resourceVersion":"5471978","generation":"1","creationTimestamp":"2024-05-08T23:42:33Z","labels":{"kargo.akuity.io/alias":"erstwhile-gorilla"},"annotations":{},"ownerReferences":[],"finalizers":[],"managedFields":[{"manager":"kargo","operation":"Update","apiVersion":"kargo.akuity.io/v1alpha1","time":"2024-05-08T23:42:33Z","fieldsType":"FieldsV1","fieldsV1":{"Raw":"eyJmOmNvbW1pdHMiOnt9LCJmOmltYWdlcyI6e30sImY6d2FyZWhvdXNlIjp7fX0="},"subresource":""}]},"commits":[{"repoURL":"https://github.com/jessesuen/kargo-advanced","id":"32be5f08c2f16adb2fbcb874b6e2d9d3537c8717","branch":"","tag":"","healthCheckCommit":"","message":"TEST=test","author":""}],"images":[{"repoURL":"nginx","gitRepoURL":"","tag":"1.26.0","digest":"sha256:9f0d283eccddedf25816104877faf1cb584a8236ec4d7985a4965501d080d84f"}],"charts":[],"status":{"verifiedIn":{},"approvedFor":{}},"alias":"erstwhile-gorilla","warehouse":"kargo-demo"}`
+);
+
+const y = Array(100).fill(x as Freight) as Freight[];
+const freight = y;
+
 export const Freightline = ({
-  freight,
+  // freight,
   state,
-  subscribersByStage,
   stagesPerFreight,
   highlightedStages,
   refetchFreight,
@@ -35,7 +41,6 @@ export const Freightline = ({
   freight: Freight[];
   state: PipelineStateHook;
   promotionEligible: { [key: string]: boolean };
-  subscribersByStage: { [key: string]: Stage[] };
   stagesPerFreight: { [key: string]: Stage[] };
   highlightedStages: { [key: string]: boolean };
   refetchFreight: () => void;
@@ -83,113 +88,99 @@ export const Freightline = ({
     refetchAvailableFreight();
   }, [state.action, state.stage, freight]);
 
+  const [loadedItems, setLoadedItems] = useState(20);
+  const loadFunc = (loadedLength: number) => {
+    setLoadedItems((length) => length + loadedLength);
+  };
+
+  const currentFreight = freight.slice(0, loadedItems);
+
   return (
     <>
-      <FreightlineHeader
-        promotingStage={state.stage}
-        action={state.action}
-        cancel={state.clear}
-        downstreamSubs={(subscribersByStage[state.stage || ''] || []).map(
-          (s) => s.metadata?.name || ''
-        )}
-      />
-      <FreightlineWrapper>
-        <>
-          {(freight || [])
-            .sort(
-              (a, b) =>
-                getSeconds(b.metadata?.creationTimestamp) -
-                getSeconds(a.metadata?.creationTimestamp)
-            )
-            .map((f, i) => {
-              const id = f?.metadata?.name || `${i}`;
-              return (
-                <FreightItem
-                  freight={f || undefined}
-                  key={id}
-                  onClick={() => {
-                    if (state.stage && promotionEligible[id]) {
-                      state.select(undefined, undefined, id);
-                    } else {
-                      navigate(generatePath(paths.freight, { name: project, freightName: id }));
-                    }
+      <InfiniteScroll
+        pageStart={0}
+        loadMore={loadFunc}
+        className='w-full flex'
+        hasMore={freight.length > currentFreight.length}
+      >
+        {(currentFreight || [])
+          .sort(
+            (a, b) =>
+              getSeconds(b.metadata?.creationTimestamp) - getSeconds(a.metadata?.creationTimestamp)
+          )
+          .map((f, i) => {
+            const id = f?.metadata?.name || `${i}`;
+            return (
+              <FreightItem
+                freight={f || undefined}
+                key={i}
+                onClick={() => {
+                  if (state.stage && promotionEligible[id]) {
+                    state.select(undefined, undefined, id);
+                  } else {
+                    navigate(generatePath(paths.freight, { name: project, freightName: id }));
+                  }
+                }}
+                mode={getFreightMode(state, id, promotionEligible[id])}
+                empty={(stagesPerFreight[id] || []).length === 0}
+                onHover={(h) => onHover(h, id)}
+                highlighted={(stagesPerFreight[id] || []).reduce((h, cur) => {
+                  if (h) {
+                    return true;
+                  }
+                  return highlightedStages[cur.metadata?.name || ''];
+                }, false)}
+              >
+                <FreightActionMenu
+                  freight={f}
+                  approveAction={() => {
+                    state.select(FreightlineAction.ManualApproval, undefined, id);
                   }}
-                  mode={getFreightMode(state, id, promotionEligible[id])}
-                  empty={(stagesPerFreight[id] || []).length === 0}
-                  onHover={(h) => onHover(h, id)}
-                  highlighted={(stagesPerFreight[id] || []).reduce((h, cur) => {
-                    if (h) {
-                      return true;
-                    }
-                    return highlightedStages[cur.metadata?.name || ''];
-                  }, false)}
-                >
-                  <FreightActionMenu
-                    freight={f}
-                    approveAction={() => {
-                      state.select(FreightlineAction.ManualApproval, undefined, id);
+                  refetchFreight={refetchFreight}
+                />
+                <StageIndicators
+                  stages={stagesPerFreight[id] || []}
+                  faded={state.action === FreightlineAction.ManualApproval}
+                />
+                <FreightContents
+                  highlighted={
+                    // contains stages, not in promotion mode
+                    ((stagesPerFreight[id] || []).length > 0 && !isPromoting(state)) ||
+                    // in promotion mode, is eligible
+                    (isPromoting(state) && promotionEligible[id]) ||
+                    false
+                  }
+                  freight={f}
+                />
+                {isPromoting(state) && state.freight === id && (
+                  <ConfirmPromotionDialogue
+                    stageName={state.stage || ''}
+                    promotionType={state.action || 'default'}
+                    onClick={() => {
+                      const currentData = {
+                        project,
+                        freight: f?.metadata?.name
+                      };
+                      if (state.action === FreightlineAction.Promote) {
+                        promoteAction({
+                          stage: state.stage || '',
+                          ...currentData
+                        });
+                      } else {
+                        promoteToStageSubscribersAction({
+                          stage: state.stage || '',
+                          ...currentData
+                        });
+                      }
                     }}
-                    refetchFreight={refetchFreight}
                   />
-                  <StageIndicators
-                    stages={stagesPerFreight[id] || []}
-                    faded={state.action === FreightlineAction.ManualApproval}
-                  />
-                  <FreightContents
-                    highlighted={
-                      // contains stages, not in promotion mode
-                      ((stagesPerFreight[id] || []).length > 0 && !isPromoting(state)) ||
-                      // in promotion mode, is eligible
-                      (isPromoting(state) && promotionEligible[id]) ||
-                      false
-                    }
-                    freight={f}
-                  />
-                  {isPromoting(state) && state.freight === id && (
-                    <ConfirmPromotionDialogue
-                      stageName={state.stage || ''}
-                      promotionType={state.action || 'default'}
-                      onClick={() => {
-                        const currentData = {
-                          project,
-                          freight: f?.metadata?.name
-                        };
-                        if (state.action === FreightlineAction.Promote) {
-                          promoteAction({
-                            stage: state.stage || '',
-                            ...currentData
-                          });
-                        } else {
-                          promoteToStageSubscribersAction({
-                            stage: state.stage || '',
-                            ...currentData
-                          });
-                        }
-                      }}
-                    />
-                  )}
-                </FreightItem>
-              );
-            })}
-        </>
-      </FreightlineWrapper>
+                )}
+              </FreightItem>
+            );
+          })}
+      </InfiniteScroll>
     </>
   );
 };
 
-const FreightlineWrapper = ({ children }: { children: React.ReactNode }) => {
-  return (
-    <div className='w-full py-3 flex flex-col overflow-hidden' style={{ backgroundColor: '#eee' }}>
-      <div className='flex h-48 w-full items-center px-1'>
-        <div
-          className='text-gray-500 text-sm font-semibold mb-2 w-min h-min'
-          style={{ transform: 'rotate(-0.25turn)' }}
-        >
-          NEW
-        </div>
-        <div className='flex items-center h-full overflow-x-auto'>{children}</div>
-        <div className='rotate-90 text-gray-500 text-sm font-semibold ml-auto'>OLD</div>
-      </div>
-    </div>
-  );
-};
+export default Freightline;
