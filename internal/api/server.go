@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"connectrpc.com/grpchealth"
+	"github.com/NYTimes/gziphandler"
 	"github.com/rs/cors"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/net/http2"
@@ -23,7 +24,6 @@ import (
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/NYTimes/gziphandler"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api/config"
 	"github.com/akuity/kargo/internal/api/dex"
