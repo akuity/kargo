@@ -17,13 +17,19 @@ import { UpdateFreightAliasModal } from './update-freight-alias-modal';
 export const FreightActionMenu = ({
   freight,
   approveAction,
-  refetchFreight
+  refetchFreight,
+  hide
 }: {
   freight: Freight;
   approveAction: () => void;
   refetchFreight: () => void;
+  hide?: boolean;
 }) => {
   const { show } = useModal();
+
+  if (hide) {
+    return <></>;
+  }
 
   return (
     <Dropdown

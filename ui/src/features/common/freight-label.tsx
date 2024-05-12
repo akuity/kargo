@@ -1,16 +1,23 @@
 import { faBoxOpen, faCheck, faClipboard } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Tooltip } from 'antd';
-import { formatDistance } from 'date-fns';
+import classNames from 'classnames';
+import { format, formatDistance } from 'date-fns';
 import { useEffect, useState } from 'react';
 
 import { Freight } from '@ui/gen/v1alpha1/generated_pb';
 
 import { getAlias } from './utils';
 
-export const FreightLabel = ({ freight }: { freight?: Freight }) => {
-  const [id, setId] = useState<string | undefined>();
-  const [alias, setAlias] = useState<string | undefined>();
+export const FreightLabel = ({
+  freight,
+  showTimestamp,
+  breakOnHyphen
+}: {
+  freight?: Freight;
+  showTimestamp?: boolean;
+  breakOnHyphen?: boolean;
+}) => {
   const [copied, setCopied] = useState<boolean>(false);
 
   useEffect(() => {
@@ -20,14 +27,29 @@ export const FreightLabel = ({ freight }: { freight?: Freight }) => {
     }
   }, [copied]);
 
-  useEffect(() => {
-    setAlias(getAlias(freight));
-    setId(freight?.metadata?.name?.substring(0, 7));
-  }, [freight]);
+  const id = freight?.metadata?.name?.substring(0, 7);
+  const alias = getAlias(freight);
+  const aliasLabel =
+    Number(alias?.length || 0) > 9 // 9 chars is the max length which will fit on one line
+      ? alias?.split('-').map((s, i) => (
+          <div className='truncate' key={i}>
+            {s}
+            {i === 0 && '-'}
+          </div>
+        ))
+      : alias;
+
+  const humanReadable = formatDistance(
+    freight?.metadata?.creationTimestamp?.toDate() || 0,
+    new Date(),
+    {
+      addSuffix: true
+    }
+  );
 
   return (
     <div
-      className='truncate cursor-pointer font-mono font-semibold'
+      className='cursor-pointer font-mono font-semibold min-w-0 w-full'
       onClick={() => {
         if (alias || id) {
           navigator.clipboard.writeText(alias || id || '');
@@ -51,16 +73,23 @@ export const FreightLabel = ({ freight }: { freight?: Freight }) => {
               {freight?.metadata?.creationTimestamp && (
                 <Info title='Created'>
                   <div className='text-right'>
-                    {formatDistance(freight?.metadata?.creationTimestamp?.toDate(), new Date(), {
-                      addSuffix: true
-                    })}
+                    {format(freight?.metadata?.creationTimestamp.toDate(), 'MMM do yyyy HH:mm:ss')}
+                    <br />({humanReadable})
                   </div>
                 </Info>
               )}
             </>
           }
         >
-          <div className='hover:text-gray-600'>{alias || id}</div>
+          <div
+            className={classNames('hover:text-gray-600 w-full', {
+              'h-8 flex justify-center items-end': breakOnHyphen
+            })}
+            style={{ padding: '0 3px' }}
+          >
+            <div className='truncate'>{(breakOnHyphen ? aliasLabel : alias) || id}</div>
+            {showTimestamp && <div className='text-xs text-gray-400 mt-1'>{humanReadable}</div>}
+          </div>
         </Tooltip>
       ) : (
         <div className='flex items-center'>
