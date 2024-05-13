@@ -75,6 +75,7 @@ __Expected:__ 2024-06-07
 | ---- | ---- | ----------- |
 | Multiple `Warehouse`s | feature | Improve UI support for multiple Freightlines rooted in different `Warehouse`s. |
 | Manual `Freight` Creation | feature | Add CLI and UI support for manual `Freight` creation. This will give users the flexibility to create novel combinations of artifacts that `Warehouse`s will not -- for instance, pairing the most recent version of a container image with an _older_ version of application manifests. |
+| ECR/GitHub Auth | feature | Native authentication support for ECR registries and using GitHub applications | 
 | [Patch Promotions](https://github.com/akuity/kargo/issues/1250) | poc | Support a generalized option to promote arbitrary configuration (e.g. strings, files, and directories) to other paths of a GitOps repository. |
 | Production Readiness | chore | <ul><li>Prioritize stability of existing features.</li><li>Pay down technical debt.</li><li>**This is not a guarantee that v0.7.0 will be production-ready. It is a commitment to large steps in that direction.**</li></ul> |
 
