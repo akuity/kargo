@@ -1,10 +1,12 @@
 import { Divider, Drawer, Tabs, Typography } from 'antd';
+import moment from 'moment';
+import { useMemo, useState } from 'react';
 import { generatePath, useNavigate, useParams } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
 import { HealthStatusIcon } from '@ui/features/common/health-status/health-status-icon';
 import { Subscriptions } from '@ui/features/stage/subscriptions';
-import { Stage } from '@ui/gen/v1alpha1/generated_pb';
+import { Stage, VerificationInfo } from '@ui/gen/v1alpha1/generated_pb';
 
 import { Description } from '../common/description';
 import { ManifestPreview } from '../common/manifest-preview';
@@ -18,6 +20,23 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
   const navigate = useNavigate();
 
   const onClose = () => navigate(generatePath(paths.project, { name: projectName }));
+  const [isVerificationRunning, setIsVerificationRunning] = useState(false);
+
+  const verifications = useMemo(() => {
+    setIsVerificationRunning(false);
+    return (stage.status?.history || [])
+      .flatMap((freight) =>
+        freight.verificationHistory.map((verification) => {
+          if (verification.phase === 'Running' || verification.phase === 'Pending') {
+            setIsVerificationRunning(true);
+          }
+          return {
+            ...verification
+          } as VerificationInfo;
+        })
+      )
+      .sort((a, b) => moment(b.startTime?.toDate()).diff(moment(a.startTime?.toDate())));
+  }, [stage]);
 
   return (
     <Drawer open={!!stageName} onClose={onClose} width={'80%'} closable={false}>
@@ -37,7 +56,14 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
                 <Description item={stage} loading={false} className='mt-2' />
               </div>
             </div>
-            <StageActions stage={stage} />
+            <StageActions
+              stage={stage}
+              disableReverify={
+                isVerificationRunning ||
+                !stage?.spec?.verification ||
+                (stage?.status?.currentPromotion?.freight?.verificationHistory || []).length === 0
+              }
+            />
           </div>
           <Divider style={{ marginTop: '1em' }} />
 
@@ -56,7 +82,7 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
                 {
                   key: '2',
                   label: 'Verifications',
-                  children: <Verifications stage={stage} />
+                  children: <Verifications verifications={verifications} />
                 },
                 {
                   key: '3',
