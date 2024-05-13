@@ -58,7 +58,7 @@ endif
 ################################################################################
 
 .PHONY: lint
-lint: lint-go lint-proto lint-charts
+lint: lint-go lint-proto lint-charts lint-ui
 
 .PHONY: lint-go
 lint-go:
@@ -75,6 +75,11 @@ lint-charts:
 	cd charts/kargo && \
 	helm dep up && \
 	helm lint .
+
+.PHONY: lint-ui
+lint-ui:
+	pnpm --dir=ui install --dev
+	pnpm --dir=ui run lint
 
 .PHONY: test-unit
 test-unit:
@@ -200,6 +205,10 @@ hack-lint-proto: hack-build-dev-tools
 .PHONY: hack-lint-charts
 hack-lint-charts: hack-build-dev-tools
 	$(DOCKER_CMD) make lint-charts
+
+.PHONY: hack-lint-ui
+hack-lint-ui: hack-build-dev-tools
+	$(DOCKER_CMD) make lint-ui
 
 .PHONY: hack-test-unit
 hack-test-unit: hack-build-dev-tools
