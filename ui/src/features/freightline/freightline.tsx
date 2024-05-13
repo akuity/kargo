@@ -1,25 +1,27 @@
-import { Freight, Stage } from '@ui/gen/v1alpha1/generated_pb';
-import { PipelineStateHook, getFreightMode, isPromoting } from '../project/pipelines/utils/state';
+import { useMutation, useQuery } from '@connectrpc/connect-query';
+import { message } from 'antd';
+import { useEffect, useState } from 'react';
+import InfiniteScroll from 'react-infinite-scroller';
 import { generatePath, useNavigate, useParams } from 'react-router-dom';
-import { getSeconds, onError } from '../project/pipelines/utils/util';
+
+import { paths } from '@ui/config/paths';
 import {
   promoteToStage,
   promoteToStageSubscribers,
   queryFreight
 } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
-import { useEffect, useState } from 'react';
-import { useMutation, useQuery } from '@connectrpc/connect-query';
+import { Freight, Stage } from '@ui/gen/v1alpha1/generated_pb';
+
+import { FreightActionMenu } from '../project/pipelines/freight-action-menu';
+import { FreightlineAction } from '../project/pipelines/types';
+import { PipelineStateHook, getFreightMode, isPromoting } from '../project/pipelines/utils/state';
+import { usePromotionEligibleFreight } from '../project/pipelines/utils/use-promotion-eligible-freight';
+import { getSeconds, onError } from '../project/pipelines/utils/util';
 
 import { ConfirmPromotionDialogue } from './confirm-promotion-dialogue';
-import { FreightActionMenu } from '../project/pipelines/freight-action-menu';
 import { FreightContents } from './freight-contents';
 import { FreightItem } from './freight-item';
-import { FreightlineAction } from '../project/pipelines/types';
-import InfiniteScroll from 'react-infinite-scroller';
 import { StageIndicators } from './stage-indicators';
-import { message } from 'antd';
-import { paths } from '@ui/config/paths';
-import { usePromotionEligibleFreight } from '../project/pipelines/utils/use-promotion-eligible-freight';
 
 export const Freightline = ({
   freight,
