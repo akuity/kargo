@@ -11,6 +11,7 @@ import { Freight } from '@ui/gen/v1alpha1/generated_pb';
 import { Description } from '../common/description';
 import { ManifestPreview } from '../common/manifest-preview';
 import { getAlias } from '../common/utils';
+import { FreightContents } from '../freightline/freight-contents';
 
 import { FreightStatusList } from './freight-status-list';
 
@@ -60,7 +61,15 @@ export const FreightDetails = ({ freight }: { freight?: Freight }) => {
                   key: '1',
                   label: 'Details',
                   icon: <FontAwesomeIcon icon={faInfoCircle} />,
-                  children: <FreightStatusList freight={freight} />
+                  children: (
+                    <>
+                      <div className='mb-4'>
+                        <div className='font-semibold mb-2 text-xs'>ARTIFACTS</div>
+                        <FreightContents freight={freight} highlighted={true} horizontal={true} />
+                      </div>
+                      <FreightStatusList freight={freight} />
+                    </>
+                  )
                 },
                 {
                   key: '2',
