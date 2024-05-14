@@ -47,11 +47,17 @@ type reconciler struct {
 
 	getLastCommitIDFn func(repo git.Repo) (string, error)
 
+	listCommitsWithMetadataFn func(repo git.Repo) ([]git.CommitMetadata, error)
+
+	listTagsWithMetadataFn func(repo git.Repo) ([]git.TagMetadata, error)
+
+	discoverBranchHistoryFn func(repo git.Repo, sub kargoapi.GitSubscription) ([]git.CommitMetadata, error)
+
+	discoverTagsFn func(repo git.Repo, sub kargoapi.GitSubscription) ([]git.TagMetadata, error)
+
 	getDiffPathsSinceCommitIDFn func(repo git.Repo, commitId string) ([]string, error)
 
-	listTagsFn func(repo git.Repo) ([]string, error)
-
-	checkoutTagFn func(repo git.Repo, tag string) error
+	getDiffPathsForCommitIDFn func(repo git.Repo, commitID string) ([]string, error)
 
 	selectImagesFn func(
 		ctx context.Context,
@@ -144,9 +150,12 @@ func newReconciler(
 	r.getLatestFreightFromReposFn = r.getLatestFreightFromRepos
 	r.selectCommitsFn = r.selectCommits
 	r.getLastCommitIDFn = r.getLastCommitID
+	r.listCommitsWithMetadataFn = r.listCommitsWithMetadata
+	r.listTagsWithMetadataFn = r.listTagsWithMetadata
+	r.discoverBranchHistoryFn = r.discoverBranchHistory
 	r.getDiffPathsSinceCommitIDFn = r.getDiffPathsSinceCommitID
-	r.listTagsFn = r.listTags
-	r.checkoutTagFn = r.checkoutTag
+	r.getDiffPathsForCommitIDFn = r.getDiffPathsForCommitID
+	r.discoverTagsFn = r.discoverTags
 	r.selectImagesFn = r.selectImages
 	r.getImageRefsFn = getImageRefs
 	r.selectChartsFn = r.selectCharts
@@ -340,7 +349,12 @@ func (r *reconciler) discoverArtifacts(
 	ctx context.Context,
 	warehouse *kargoapi.Warehouse,
 ) (*kargoapi.DiscoveredArtifacts, error) {
-	imgs, err := r.discoverImages(ctx, warehouse.Namespace, warehouse.Spec.Subscriptions)
+	commits, err := r.discoverCommits(ctx, warehouse.Namespace, warehouse.Spec.Subscriptions)
+	if err != nil {
+		return nil, fmt.Errorf("error discovering commits: %w", err)
+	}
+
+	images, err := r.discoverImages(ctx, warehouse.Namespace, warehouse.Spec.Subscriptions)
 	if err != nil {
 		return nil, fmt.Errorf("error discovering images: %w", err)
 	}
@@ -351,7 +365,8 @@ func (r *reconciler) discoverArtifacts(
 	}
 
 	return &kargoapi.DiscoveredArtifacts{
-		Images: imgs,
-		Charts: charts,
+		Commits: commits,
+		Images:  images,
+		Charts:  charts,
 	}, nil
 }

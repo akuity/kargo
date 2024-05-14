@@ -281,39 +281,23 @@ func TestSelectCommitID(t *testing.T) {
 				CommitSelectionStrategy: kargoapi.CommitSelectionStrategyLexical,
 			},
 			reconciler: &reconciler{
-				listTagsFn: func(git.Repo) ([]string, error) {
+				discoverTagsFn: func(git.Repo, kargoapi.GitSubscription) ([]git.TagMetadata, error) {
 					return nil, errors.New("something went wrong")
 				},
 			},
 			assertions: func(t *testing.T, _, _ string, err error) {
-				require.ErrorContains(t, err, "error listing tags from git repo")
+				require.ErrorContains(t, err, "error discovering tags")
 				require.ErrorContains(t, err, "something went wrong")
-			},
-		},
-		{
-			name: "error compiling allow regex",
-			sub: kargoapi.GitSubscription{
-				CommitSelectionStrategy: kargoapi.CommitSelectionStrategyLexical,
-				AllowTags:               "[", // This should force a failure
-			},
-			reconciler: &reconciler{
-				listTagsFn: func(git.Repo) ([]string, error) {
-					return []string{"abc"}, nil
-				},
-			},
-			assertions: func(t *testing.T, _, _ string, err error) {
-				require.ErrorContains(t, err, "error compiling regular expression")
 			},
 		},
 		{
 			name: "all tags get filtered out",
 			sub: kargoapi.GitSubscription{
 				CommitSelectionStrategy: kargoapi.CommitSelectionStrategyLexical,
-				IgnoreTags:              []string{"abc"},
 			},
 			reconciler: &reconciler{
-				listTagsFn: func(git.Repo) ([]string, error) {
-					return []string{"abc"}, nil
+				discoverTagsFn: func(git.Repo, kargoapi.GitSubscription) ([]git.TagMetadata, error) {
+					return nil, nil
 				},
 			},
 			assertions: func(t *testing.T, _, _ string, err error) {
@@ -325,96 +309,9 @@ func TestSelectCommitID(t *testing.T) {
 			sub: kargoapi.GitSubscription{
 				CommitSelectionStrategy: kargoapi.CommitSelectionStrategy("invalid"),
 			},
-			reconciler: &reconciler{
-				listTagsFn: func(git.Repo) ([]string, error) {
-					return []string{"abc"}, nil
-				},
-			},
+			reconciler: &reconciler{},
 			assertions: func(t *testing.T, _, _ string, err error) {
 				require.ErrorContains(t, err, "unknown commit selection strategy")
-			},
-		},
-		{
-			name: "error checking out tag",
-			sub: kargoapi.GitSubscription{
-				CommitSelectionStrategy: kargoapi.CommitSelectionStrategyLexical,
-			},
-			reconciler: &reconciler{
-				listTagsFn: func(git.Repo) ([]string, error) {
-					return []string{"abc"}, nil
-				},
-				checkoutTagFn: func(git.Repo, string) error {
-					return errors.New("something went wrong")
-				},
-			},
-			assertions: func(t *testing.T, _, _ string, err error) {
-				require.ErrorContains(t, err, "error checking out tag")
-				require.ErrorContains(t, err, "something went wrong")
-			},
-		},
-		{
-			name: "error getting commit ID",
-			sub: kargoapi.GitSubscription{
-				CommitSelectionStrategy: kargoapi.CommitSelectionStrategyLexical,
-			},
-			reconciler: &reconciler{
-				listTagsFn: func(git.Repo) ([]string, error) {
-					return []string{"abc"}, nil
-				},
-				checkoutTagFn: func(git.Repo, string) error {
-					return nil
-				},
-				getLastCommitIDFn: func(git.Repo) (string, error) {
-					return "", errors.New("something went wrong")
-				},
-			},
-			assertions: func(t *testing.T, _, _ string, err error) {
-				require.ErrorContains(t, err, "error determining commit ID of tag")
-				require.ErrorContains(t, err, "something went wrong")
-			},
-		},
-		{
-			name: "lexical success",
-			sub: kargoapi.GitSubscription{
-				CommitSelectionStrategy: kargoapi.CommitSelectionStrategyLexical,
-			},
-			reconciler: &reconciler{
-				listTagsFn: func(git.Repo) ([]string, error) {
-					return []string{"abc", "xyz"}, nil
-				},
-				checkoutTagFn: func(git.Repo, string) error {
-					return nil
-				},
-				getLastCommitIDFn: func(git.Repo) (string, error) {
-					return "fake-commit", nil
-				},
-			},
-			assertions: func(t *testing.T, tag, commit string, err error) {
-				require.NoError(t, err)
-				require.Equal(t, "xyz", tag)
-				require.Equal(t, "fake-commit", commit)
-			},
-		},
-		{
-			name: "newest tag success",
-			sub: kargoapi.GitSubscription{
-				CommitSelectionStrategy: kargoapi.CommitSelectionStrategyNewestTag,
-			},
-			reconciler: &reconciler{
-				listTagsFn: func(git.Repo) ([]string, error) {
-					return []string{"abc", "xyz"}, nil
-				},
-				checkoutTagFn: func(git.Repo, string) error {
-					return nil
-				},
-				getLastCommitIDFn: func(git.Repo) (string, error) {
-					return "fake-commit", nil
-				},
-			},
-			assertions: func(t *testing.T, tag, commit string, err error) {
-				require.Equal(t, "abc", tag)
-				require.NoError(t, err)
-				require.Equal(t, "fake-commit", commit)
 			},
 		},
 		{
@@ -424,14 +321,11 @@ func TestSelectCommitID(t *testing.T) {
 				IncludePaths:            []string{regexpPrefix + "^.*third_path_to_a/file$"},
 			},
 			reconciler: &reconciler{
-				listTagsFn: func(git.Repo) ([]string, error) {
-					return []string{"abc", "xyz"}, nil
-				},
-				checkoutTagFn: func(git.Repo, string) error {
-					return nil
-				},
-				getLastCommitIDFn: func(git.Repo) (string, error) {
-					return "fake-commit", nil
+				discoverTagsFn: func(git.Repo, kargoapi.GitSubscription) ([]git.TagMetadata, error) {
+					return []git.TagMetadata{
+						{Tag: "abc", CommitID: "fake-commit"},
+						{Tag: "xyz", CommitID: "bad-commit"},
+					}, nil
 				},
 				getDiffPathsSinceCommitIDFn: func(git.Repo, string) ([]string, error) {
 					return []string{"first_path_to_a/file", "second_path_to_a/file"}, nil
@@ -444,43 +338,6 @@ func TestSelectCommitID(t *testing.T) {
 				require.Equal(t, "", commit)
 			},
 		},
-		{
-			name: "semver error selecting tag",
-			sub: kargoapi.GitSubscription{
-				CommitSelectionStrategy: kargoapi.CommitSelectionStrategySemVer,
-				SemverConstraint:        "invalid", // This should force a failure
-			},
-			reconciler: &reconciler{
-				listTagsFn: func(git.Repo) ([]string, error) {
-					return []string{"1.0.0", "2.0.0"}, nil
-				},
-			},
-			assertions: func(t *testing.T, _, _ string, err error) {
-				require.ErrorContains(t, err, "error parsing semver constraint")
-			},
-		},
-		{
-			name: "semver success",
-			sub: kargoapi.GitSubscription{
-				CommitSelectionStrategy: kargoapi.CommitSelectionStrategySemVer,
-			},
-			reconciler: &reconciler{
-				listTagsFn: func(git.Repo) ([]string, error) {
-					return []string{"1.0.0", "2.0.0"}, nil
-				},
-				checkoutTagFn: func(git.Repo, string) error {
-					return nil
-				},
-				getLastCommitIDFn: func(git.Repo) (string, error) {
-					return "fake-commit", nil
-				},
-			},
-			assertions: func(t *testing.T, tag, commit string, err error) {
-				require.NoError(t, err)
-				require.Equal(t, "2.0.0", tag)
-				require.Equal(t, "fake-commit", commit)
-			},
-		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -490,6 +347,369 @@ func TestSelectCommitID(t *testing.T) {
 				"dummyBase",
 			)
 			testCase.assertions(t, tag, commit, err)
+		})
+	}
+}
+
+func TestDiscoverBranchHistory(t *testing.T) {
+	testCases := []struct {
+		name       string
+		sub        kargoapi.GitSubscription
+		reconciler *reconciler
+		assertions func(*testing.T, []git.CommitMetadata, error)
+	}{
+		{
+			name: "error listing commits",
+			reconciler: &reconciler{
+				listCommitsWithMetadataFn: func(git.Repo) ([]git.CommitMetadata, error) {
+					return nil, errors.New("something went wrong")
+				},
+			},
+			assertions: func(t *testing.T, _ []git.CommitMetadata, err error) {
+				require.ErrorContains(t, err, "error listing commits")
+				require.ErrorContains(t, err, "something went wrong")
+			},
+		},
+		{
+			name: "without path filters",
+			reconciler: &reconciler{
+				listCommitsWithMetadataFn: func(git.Repo) ([]git.CommitMetadata, error) {
+					return []git.CommitMetadata{
+						{ID: "abc"},
+						{ID: "xyz"},
+					}, nil
+				},
+			},
+			assertions: func(t *testing.T, commits []git.CommitMetadata, err error) {
+				require.NoError(t, err)
+				require.Equal(t, []git.CommitMetadata{
+					{ID: "abc"},
+					{ID: "xyz"},
+				}, commits)
+			},
+		},
+		{
+			name: "error getting diff path",
+			sub: kargoapi.GitSubscription{
+				IncludePaths: []string{regexpPrefix + "^.*third_path_to_a/file$"},
+			},
+			reconciler: &reconciler{
+				listCommitsWithMetadataFn: func(git.Repo) ([]git.CommitMetadata, error) {
+					return []git.CommitMetadata{
+						{ID: "abc"},
+						{ID: "xyz"},
+					}, nil
+				},
+				getDiffPathsForCommitIDFn: func(_ git.Repo, _ string) ([]string, error) {
+					return nil, errors.New("something went wrong")
+				},
+			},
+			assertions: func(t *testing.T, _ []git.CommitMetadata, err error) {
+				require.ErrorContains(t, err, "error getting diff paths for commit")
+				require.ErrorContains(t, err, "something went wrong")
+			},
+		},
+		{
+			name: "with path filters",
+			sub: kargoapi.GitSubscription{
+				IncludePaths: []string{regexpPrefix + "^.*third_path_to_a/file$"},
+			},
+			reconciler: &reconciler{
+				listCommitsWithMetadataFn: func(git.Repo) ([]git.CommitMetadata, error) {
+					return []git.CommitMetadata{
+						{ID: "abc"},
+						{ID: "xyz"},
+					}, nil
+				},
+				getDiffPathsForCommitIDFn: func(_ git.Repo, id string) ([]string, error) {
+					if id == "abc" {
+						return []string{"third_path_to_a/file"}, nil
+					}
+					return []string{"first_path_to_a/file", "second_path_to_a/file"}, nil
+				},
+			},
+			assertions: func(t *testing.T, commits []git.CommitMetadata, err error) {
+				require.NoError(t, err)
+				require.Equal(t, []git.CommitMetadata{
+					{ID: "abc"},
+				}, commits)
+			},
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			tags, err := testCase.reconciler.discoverBranchHistory(nil, testCase.sub)
+			testCase.assertions(t, tags, err)
+		})
+	}
+}
+
+func TestDiscoverTags(t *testing.T) {
+	testCases := []struct {
+		name       string
+		sub        kargoapi.GitSubscription
+		reconciler *reconciler
+		assertions func(*testing.T, []git.TagMetadata, error)
+	}{
+		{
+			name: "error listing tags",
+			reconciler: &reconciler{
+				listTagsWithMetadataFn: func(git.Repo) ([]git.TagMetadata, error) {
+					return nil, errors.New("something went wrong")
+				},
+			},
+			assertions: func(t *testing.T, _ []git.TagMetadata, err error) {
+				require.ErrorContains(t, err, "error listing tags")
+				require.ErrorContains(t, err, "something went wrong")
+			},
+		},
+		{
+			name: "ignore tags",
+			sub: kargoapi.GitSubscription{
+				IgnoreTags:              []string{"abc"},
+				CommitSelectionStrategy: kargoapi.CommitSelectionStrategyNewestTag,
+			},
+			reconciler: &reconciler{
+				listTagsWithMetadataFn: func(git.Repo) ([]git.TagMetadata, error) {
+					return []git.TagMetadata{
+						{Tag: "abc"},
+						{Tag: "xyz"},
+					}, nil
+				},
+			},
+			assertions: func(t *testing.T, tags []git.TagMetadata, err error) {
+				require.NoError(t, err)
+				require.Equal(t, []git.TagMetadata{{Tag: "xyz"}}, tags)
+			},
+		},
+		{
+			name: "allow tags compile error",
+			sub: kargoapi.GitSubscription{
+				AllowTags: "[",
+			},
+			reconciler: &reconciler{
+				listTagsWithMetadataFn: func(git.Repo) ([]git.TagMetadata, error) {
+					return nil, nil
+				},
+			},
+			assertions: func(t *testing.T, _ []git.TagMetadata, err error) {
+				require.ErrorContains(t, err, "failed to filter tags")
+				require.ErrorContains(t, err, "error compiling regular expression")
+			},
+		},
+		{
+			name: "SemVer commit selection strategy",
+			sub: kargoapi.GitSubscription{
+				CommitSelectionStrategy: kargoapi.CommitSelectionStrategySemVer,
+			},
+			reconciler: &reconciler{
+				listTagsWithMetadataFn: func(git.Repo) ([]git.TagMetadata, error) {
+					return []git.TagMetadata{
+						{Tag: "v1.0.0"},
+						{Tag: "abc"},
+						{Tag: "v2.0.0"},
+						{Tag: "xyz"},
+						{Tag: "v1.2.3"},
+					}, nil
+				},
+			},
+			assertions: func(t *testing.T, tags []git.TagMetadata, err error) {
+				require.NoError(t, err)
+				require.Equal(t, []git.TagMetadata{
+					{Tag: "v2.0.0"},
+					{Tag: "v1.2.3"},
+					{Tag: "v1.0.0"},
+				}, tags)
+			},
+		},
+		{
+			name: "SemVer commit selection strategy with constraint",
+			sub: kargoapi.GitSubscription{
+				CommitSelectionStrategy: kargoapi.CommitSelectionStrategySemVer,
+				SemverConstraint:        ">=2.0.0",
+			},
+			reconciler: &reconciler{
+				listTagsWithMetadataFn: func(git.Repo) ([]git.TagMetadata, error) {
+					return []git.TagMetadata{
+						{Tag: "v1.0.0"},
+						{Tag: "v2.0.0"},
+						{Tag: "v1.2.3"},
+					}, nil
+				},
+			},
+			assertions: func(t *testing.T, tags []git.TagMetadata, err error) {
+				require.NoError(t, err)
+				require.Equal(t, []git.TagMetadata{
+					{Tag: "v2.0.0"},
+				}, tags)
+			},
+		},
+		{
+			name: "SemVer commit selection strategy with invalid constraint",
+			sub: kargoapi.GitSubscription{
+				CommitSelectionStrategy: kargoapi.CommitSelectionStrategySemVer,
+				SemverConstraint:        "invalid",
+			},
+			reconciler: &reconciler{
+				listTagsWithMetadataFn: func(git.Repo) ([]git.TagMetadata, error) {
+					return nil, nil
+				},
+			},
+			assertions: func(t *testing.T, _ []git.TagMetadata, err error) {
+				require.ErrorContains(t, err, "failed to select semver tags")
+				require.ErrorContains(t, err, "error parsing semver constraint")
+			},
+		},
+		{
+			name: "lexicographical commit selection strategy",
+			sub: kargoapi.GitSubscription{
+				CommitSelectionStrategy: kargoapi.CommitSelectionStrategyLexical,
+			},
+			reconciler: &reconciler{
+				listTagsWithMetadataFn: func(git.Repo) ([]git.TagMetadata, error) {
+					return []git.TagMetadata{
+						{Tag: "123"},
+						{Tag: "abc"},
+						{Tag: "xyz"},
+					}, nil
+				},
+			},
+			assertions: func(t *testing.T, tags []git.TagMetadata, err error) {
+				require.NoError(t, err)
+				require.Equal(t, []git.TagMetadata{
+					{Tag: "xyz"},
+					{Tag: "abc"},
+					{Tag: "123"},
+				}, tags)
+			},
+		},
+		{
+			name: "more tags than limit",
+			sub: kargoapi.GitSubscription{
+				CommitSelectionStrategy: kargoapi.CommitSelectionStrategyNewestTag,
+			},
+			reconciler: &reconciler{
+				listTagsWithMetadataFn: func(git.Repo) ([]git.TagMetadata, error) {
+					return []git.TagMetadata{
+						{Tag: "a"}, {Tag: "b"}, {Tag: "c"}, {Tag: "d"}, {Tag: "e"},
+						{Tag: "f"}, {Tag: "g"}, {Tag: "h"}, {Tag: "i"}, {Tag: "j"},
+						{Tag: "k"}, {Tag: "l"}, {Tag: "m"}, {Tag: "n"}, {Tag: "o"},
+						{Tag: "p"}, {Tag: "q"}, {Tag: "r"}, {Tag: "s"}, {Tag: "t"},
+						{Tag: "u"}, {Tag: "v"}, {Tag: "w"}, {Tag: "x"}, {Tag: "y"},
+						{Tag: "z"},
+					}, nil
+				},
+			},
+			assertions: func(t *testing.T, tags []git.TagMetadata, err error) {
+				require.NoError(t, err)
+				require.Len(t, tags, 20)
+			},
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			tags, err := testCase.reconciler.discoverTags(
+				nil,
+				testCase.sub,
+			)
+			testCase.assertions(t, tags, err)
+		})
+	}
+}
+
+func TestFilterTags(t *testing.T) {
+	testCases := []struct {
+		name       string
+		tags       []git.TagMetadata
+		ignoreTags []string
+		allow      string
+		assertions func(*testing.T, []git.TagMetadata, error)
+	}{
+		{
+			name: "no tags",
+			tags: nil,
+			assertions: func(t *testing.T, tags []git.TagMetadata, err error) {
+				require.NoError(t, err)
+				require.Empty(t, tags)
+			},
+		},
+		{
+			name:  "invalid regular expression",
+			allow: "[",
+			assertions: func(t *testing.T, _ []git.TagMetadata, err error) {
+				require.ErrorContains(t, err, "error compiling regular expression")
+			},
+		},
+		{
+			name: "without ignore tags or allow regex",
+			tags: []git.TagMetadata{
+				{Tag: "v1.0.0"},
+				{Tag: "xyz"},
+				{Tag: "foo"},
+			},
+			assertions: func(t *testing.T, tags []git.TagMetadata, err error) {
+				require.NoError(t, err)
+				require.Equal(t, []git.TagMetadata{
+					{Tag: "v1.0.0"},
+					{Tag: "xyz"},
+					{Tag: "foo"},
+				}, tags)
+			},
+		},
+		{
+			name: "with ignore tags",
+			tags: []git.TagMetadata{
+				{Tag: "v1.0.0"},
+				{Tag: "xyz"},
+				{Tag: "foo"},
+			},
+			ignoreTags: []string{"v1.0.0", "foo"},
+			assertions: func(t *testing.T, tags []git.TagMetadata, err error) {
+				require.NoError(t, err)
+				require.Equal(t, []git.TagMetadata{
+					{Tag: "xyz"},
+				}, tags)
+			},
+		},
+		{
+			name: "with allow regex",
+			tags: []git.TagMetadata{
+				{Tag: "v1.0.0"},
+				{Tag: "xyz"},
+				{Tag: "foo"},
+			},
+			allow: "v.*",
+			assertions: func(t *testing.T, tags []git.TagMetadata, err error) {
+				require.NoError(t, err)
+				require.Equal(t, []git.TagMetadata{
+					{Tag: "v1.0.0"},
+				}, tags)
+			},
+		},
+		{
+			name: "with ignore tags and allow regex",
+			tags: []git.TagMetadata{
+				{Tag: "v1.0.0"},
+				{Tag: "xyz"},
+				{Tag: "foo"},
+				{Tag: "v2.0.0"},
+			},
+			ignoreTags: []string{"v1.0.0"},
+			allow:      "v.*",
+			assertions: func(t *testing.T, tags []git.TagMetadata, err error) {
+				require.NoError(t, err)
+				require.Equal(t, []git.TagMetadata{
+					{Tag: "v2.0.0"},
+				}, tags)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			tags, err := filterTags(testCase.tags, testCase.ignoreTags, testCase.allow)
+			testCase.assertions(t, tags, err)
 		})
 	}
 }
@@ -561,96 +781,105 @@ func TestIgnores(t *testing.T) {
 	}
 }
 
-func TestSelectLexicallyLastTag(t *testing.T) {
-	testCases := []struct {
-		name     string
-		tags     []string
-		expected string
-	}{
-		{
-			name:     "empty/nil tag list",
-			tags:     nil,
-			expected: "",
-		},
-		{
-			name:     "non-empty tag list",
-			tags:     []string{"abc", "xyz", "foo", "bar"},
-			expected: "xyz",
-		},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			require.Equal(
-				t,
-				testCase.expected,
-				selectLexicallyLastTag(testCase.tags),
-			)
-		})
-	}
-}
-
-func TestSelectSemverTag(t *testing.T) {
+func TestSelectSemVerTags(t *testing.T) {
 	testCases := []struct {
 		name       string
 		constraint string
-		tags       []string
-		assertions func(*testing.T, string, error)
+		tags       []git.TagMetadata
+		assertions func(*testing.T, []git.TagMetadata, error)
 	}{
 		{
 			name:       "error parsing constraint",
 			constraint: "invalid",
 			tags:       nil,
-			assertions: func(t *testing.T, _ string, err error) {
+			assertions: func(t *testing.T, _ []git.TagMetadata, err error) {
 				require.ErrorContains(t, err, "error parsing semver constraint")
 			},
 		},
 		{
 			name: "empty/nil tag list",
 			tags: nil,
-			assertions: func(t *testing.T, tag string, err error) {
+			assertions: func(t *testing.T, tags []git.TagMetadata, err error) {
 				require.NoError(t, err)
-				require.Empty(t, tag)
+				require.Empty(t, tags)
 			},
 		},
 		{
 			name: "no semantic tags in tag list",
-			tags: []string{"abc", "xyz", "foo", "bar"},
-			assertions: func(t *testing.T, tag string, err error) {
+			tags: []git.TagMetadata{
+				{Tag: "abc"},
+				{Tag: "xyz"},
+				{Tag: "foo"},
+				{Tag: "bar"},
+			},
+			assertions: func(t *testing.T, tags []git.TagMetadata, err error) {
 				require.NoError(t, err)
-				require.Empty(t, tag)
+				require.Empty(t, tags)
 			},
 		},
 		{
 			name:       "no constraint matches",
 			constraint: ">=2.0.0",
-			tags:       []string{"v1.0.0", "v1.2.3"},
-			assertions: func(t *testing.T, tag string, err error) {
+			tags: []git.TagMetadata{
+				{Tag: "v1.0.0"},
+				{Tag: "v1.2.3"},
+			},
+			assertions: func(t *testing.T, tags []git.TagMetadata, err error) {
 				require.NoError(t, err)
-				require.Empty(t, tag)
+				require.Empty(t, tags)
 			},
 		},
 		{
 			name: "success with no constraint",
-			tags: []string{"v1.0.0", "v1.2.3"},
-			assertions: func(t *testing.T, tag string, err error) {
+			tags: []git.TagMetadata{
+				{Tag: "v1.0.0"},
+				{Tag: "v2.1.3"},
+				{Tag: "v1.2.3"},
+			},
+			assertions: func(t *testing.T, tags []git.TagMetadata, err error) {
 				require.NoError(t, err)
-				require.Equal(t, "v1.2.3", tag)
+				require.Equal(t, []git.TagMetadata{
+					{Tag: "v2.1.3"},
+					{Tag: "v1.2.3"},
+					{Tag: "v1.0.0"},
+				}, tags)
 			},
 		},
 		{
 			name:       "success with constraint",
 			constraint: "<2.0.0",
-			tags:       []string{"v1.0.0", "v2.2.3"},
-			assertions: func(t *testing.T, tag string, err error) {
+			tags: []git.TagMetadata{
+				{Tag: "v1.0.0"},
+				{Tag: "v2.1.3"},
+				{Tag: "v1.2.3"},
+			},
+			assertions: func(t *testing.T, tags []git.TagMetadata, err error) {
 				require.NoError(t, err)
-				require.Equal(t, "v1.0.0", tag)
+				require.Equal(t, []git.TagMetadata{
+					{Tag: "v1.2.3"},
+					{Tag: "v1.0.0"},
+				}, tags)
+			},
+		},
+		{
+			name: "success with equivalent versions",
+			tags: []git.TagMetadata{
+				{Tag: "1.0"},
+				{Tag: "1.0.0"},
+			},
+			assertions: func(t *testing.T, tags []git.TagMetadata, err error) {
+				require.NoError(t, err)
+				require.Equal(t, []git.TagMetadata{
+					{Tag: "1.0.0"},
+					{Tag: "1.0"},
+				}, tags)
 			},
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			tag, err := selectSemverTag(testCase.tags, testCase.constraint)
-			testCase.assertions(t, tag, err)
+			tags, err := selectSemVerTags(testCase.tags, testCase.constraint)
+			testCase.assertions(t, tags, err)
 		})
 	}
 }

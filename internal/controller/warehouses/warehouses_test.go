@@ -31,15 +31,17 @@ func TestNewReconciler(t *testing.T) {
 	require.NotNil(t, e.getLatestFreightFromReposFn)
 	require.NotNil(t, e.selectCommitsFn)
 	require.NotNil(t, e.getLastCommitIDFn)
-	require.NotNil(t, e.listTagsFn)
-	require.NotNil(t, e.checkoutTagFn)
+	require.NotNil(t, e.getDiffPathsSinceCommitIDFn)
+	require.NotNil(t, e.listCommitsWithMetadataFn)
+	require.NotNil(t, e.listTagsWithMetadataFn)
+	require.NotNil(t, e.discoverBranchHistoryFn)
+	require.NotNil(t, e.discoverTagsFn)
 	require.NotNil(t, e.selectImagesFn)
 	require.NotNil(t, e.getImageRefsFn)
 	require.NotNil(t, e.selectChartsFn)
 	require.NotNil(t, e.selectChartVersionFn)
 	require.NotNil(t, e.selectCommitMetaFn)
 	require.NotNil(t, e.createFreightFn)
-	require.NotNil(t, e.getDiffPathsSinceCommitIDFn)
 }
 
 func TestSyncWarehouse(t *testing.T) {

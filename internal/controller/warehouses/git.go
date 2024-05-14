@@ -5,10 +5,11 @@ import (
 	"fmt"
 	"path/filepath"
 	"regexp"
-	"sort"
+	"slices"
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/git"
@@ -116,27 +117,25 @@ func (r *reconciler) selectCommitMeta(
 	if sub.CommitSelectionStrategy == "" {
 		sub.CommitSelectionStrategy = kargoapi.CommitSelectionStrategyNewestFromBranch
 	}
-	// when includePaths and/or excludePaths filters are used we can't use shallow clone
-	// as we need diffs between HEAD and a baseCommit which depth in git history is unknown
-	var shallowClone = true
-	if (len(sub.IncludePaths) != 0 || len(sub.ExcludePaths) != 0) && baseCommit != "" {
-		shallowClone = false
+
+	cloneOpts := &git.CloneOptions{
+		Branch:                sub.Branch,
+		SingleBranch:          true,
+		Bare:                  true,
+		Depth:                 1,
+		InsecureSkipTLSVerify: sub.InsecureSkipTLSVerify,
 	}
-	repo, err := git.Clone(
-		sub.RepoURL,
-		&git.ClientOptions{
-			Credentials: creds,
-		},
-		&git.CloneOptions{
-			Branch:                sub.Branch,
-			SingleBranch:          true,
-			Shallow:               shallowClone,
-			InsecureSkipTLSVerify: sub.InsecureSkipTLSVerify,
-		},
-	)
+	// When include and/or exclude path filters are defined. We need to clone
+	// the entire repository to be able to get the diff between the base commit
+	// and the HEAD.
+	if (len(sub.IncludePaths) != 0 || len(sub.ExcludePaths) != 0) && baseCommit != "" {
+		cloneOpts.Depth = 0
+	}
+	repo, err := git.Clone(sub.RepoURL, &git.ClientOptions{Credentials: creds}, cloneOpts)
 	if err != nil {
 		return nil, fmt.Errorf("error cloning git repo %q: %w", sub.RepoURL, err)
 	}
+
 	selectedTag, selectedCommit, err := r.selectTagAndCommitID(repo, sub, baseCommit)
 	if err != nil {
 		return nil, fmt.Errorf(
@@ -171,7 +170,8 @@ func (r *reconciler) selectTagAndCommitID(
 
 	var selectedTag, selectedCommit string
 	var err error
-	if sub.CommitSelectionStrategy == kargoapi.CommitSelectionStrategyNewestFromBranch {
+	switch sub.CommitSelectionStrategy {
+	case kargoapi.CommitSelectionStrategyNewestFromBranch:
 		selectedCommit, err = r.getLastCommitIDFn(repo)
 		if err != nil {
 			return "", "",
@@ -181,64 +181,20 @@ func (r *reconciler) selectTagAndCommitID(
 					err,
 				)
 		}
-
-	} else {
-		tags, err := r.listTagsFn(repo) // These are ordered newest to oldest
+	case kargoapi.CommitSelectionStrategyLexical,
+		kargoapi.CommitSelectionStrategyNewestTag,
+		kargoapi.CommitSelectionStrategySemVer:
+		selectedTags, err := r.discoverTagsFn(repo, sub)
 		if err != nil {
-			return "", "", fmt.Errorf("error listing tags from git repo %q: %w", sub.RepoURL, err)
+			return "", "", fmt.Errorf("error discovering tags: %w", err)
 		}
-
-		// Narrow down the list of tags to those that are allowed and not ignored
-		allowRegex, err := regexp.Compile(sub.AllowTags)
-		if err != nil {
-			return "", "", fmt.Errorf("error compiling regular expression %q: %w", sub.AllowTags, err)
-		}
-		filteredTags := make([]string, 0, len(tags))
-		for _, tagName := range tags {
-			if allows(tagName, allowRegex) && !ignores(tagName, sub.IgnoreTags) {
-				filteredTags = append(filteredTags, tagName)
-			}
-		}
-		if len(filteredTags) == 0 {
+		if len(selectedTags) == 0 {
 			return "", "", fmt.Errorf("found no applicable tags in repo %q", sub.RepoURL)
 		}
-
-		switch sub.CommitSelectionStrategy {
-		case kargoapi.CommitSelectionStrategyLexical:
-			selectedTag = selectLexicallyLastTag(filteredTags)
-		case kargoapi.CommitSelectionStrategyNewestTag:
-			selectedTag = filteredTags[0] // These are already ordered newest to oldest
-		case kargoapi.CommitSelectionStrategySemVer:
-			if selectedTag, err =
-				selectSemverTag(filteredTags, sub.SemverConstraint); err != nil {
-				return "", "", err
-			}
-		default:
-			return "", "", fmt.Errorf("unknown commit selection strategy %q", sub.CommitSelectionStrategy)
-		}
-		if selectedTag == "" {
-			return "", "", fmt.Errorf("found no applicable tags in repo %q", sub.RepoURL)
-		}
-
-		// Checkout the selected tag and return the commit ID
-		if err = r.checkoutTagFn(repo, selectedTag); err != nil {
-			return "", "", fmt.Errorf(
-				"error checking out tag %q from git repo %q: %w",
-				selectedTag,
-				sub.RepoURL,
-				err,
-			)
-		}
-		selectedCommit, err = r.getLastCommitIDFn(repo)
-		if err != nil {
-			return selectedTag, "", fmt.Errorf(
-				"error determining commit ID of tag %q in git repo %q: %w",
-				selectedTag,
-				sub.RepoURL,
-				err,
-			)
-
-		}
+		selectedTag = selectedTags[0].Tag
+		selectedCommit = selectedTags[0].CommitID
+	default:
+		return "", "", fmt.Errorf("unknown commit selection strategy %q", sub.CommitSelectionStrategy)
 	}
 
 	// this shortcircuits to just return the last commit in case it is same as
@@ -285,6 +241,206 @@ func (r *reconciler) selectTagAndCommitID(
 	}
 
 	return selectedTag, selectedCommit, nil
+}
+
+func (r *reconciler) discoverCommits(
+	ctx context.Context,
+	namespace string,
+	subs []kargoapi.RepoSubscription,
+) ([]kargoapi.GitDiscoveryResult, error) {
+	results := make([]kargoapi.GitDiscoveryResult, 0, len(subs))
+
+	for _, s := range subs {
+		if s.Git == nil {
+			continue
+		}
+
+		sub := *s.Git
+
+		logger := logging.LoggerFromContext(ctx).WithField("repo", sub.RepoURL)
+
+		creds, ok, err := r.credentialsDB.Get(ctx, namespace, credentials.TypeGit, sub.RepoURL)
+		if err != nil {
+			return nil, fmt.Errorf(
+				"error obtaining credentials for git repo %q: %w",
+				sub.RepoURL,
+				err,
+			)
+		}
+		var repoCreds *git.RepoCredentials
+		if ok {
+			repoCreds = &git.RepoCredentials{
+				Username:      creds.Username,
+				Password:      creds.Password,
+				SSHPrivateKey: creds.SSHPrivateKey,
+			}
+			logger.Debug("obtained credentials for git repo")
+		} else {
+			logger.Debug("found no credentials for git repo")
+		}
+
+		cloneOpts := &git.CloneOptions{
+			Branch:                sub.Branch,
+			SingleBranch:          true,
+			Bare:                  true,
+			InsecureSkipTLSVerify: sub.InsecureSkipTLSVerify,
+		}
+		switch sub.CommitSelectionStrategy {
+		case kargoapi.CommitSelectionStrategyNewestFromBranch, "":
+			cloneOpts.Depth = 20
+		default:
+			cloneOpts.Depth = 1
+		}
+
+		repo, err := git.Clone(
+			sub.RepoURL,
+			&git.ClientOptions{
+				Credentials: repoCreds,
+			},
+			cloneOpts,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("error cloning git repo %q: %w", sub.RepoURL, err)
+		}
+
+		var discovered []kargoapi.DiscoveredCommit
+		switch sub.CommitSelectionStrategy {
+		case kargoapi.CommitSelectionStrategyLexical,
+			kargoapi.CommitSelectionStrategyNewestTag,
+			kargoapi.CommitSelectionStrategySemVer:
+			tags, err := r.discoverTagsFn(repo, sub)
+			if err != nil {
+				return nil, fmt.Errorf("error listing tags from git repo %q: %w", sub.RepoURL, err)
+			}
+
+			for _, meta := range tags {
+				discovered = append(discovered, kargoapi.DiscoveredCommit{
+					ID:        meta.CommitID,
+					Tag:       meta.Tag,
+					Subject:   meta.Subject,
+					CreatedAt: metav1.Time{Time: meta.CreatorDate},
+				})
+			}
+		default:
+			commits, err := r.discoverBranchHistoryFn(repo, sub)
+			if err != nil {
+				return nil, fmt.Errorf("error listing commits from git repo %q: %w", sub.RepoURL, err)
+			}
+
+			for _, meta := range commits {
+				discovered = append(discovered, kargoapi.DiscoveredCommit{
+					ID:        meta.ID,
+					Branch:    sub.Branch,
+					Subject:   meta.Subject,
+					CreatedAt: metav1.Time{Time: meta.CommitDate},
+				})
+			}
+		}
+
+		results = append(results, kargoapi.GitDiscoveryResult{
+			RepoURL: sub.RepoURL,
+			Commits: discovered,
+		})
+	}
+
+	return results, nil
+}
+
+func (r *reconciler) discoverBranchHistory(repo git.Repo, sub kargoapi.GitSubscription) ([]git.CommitMetadata, error) {
+	commits, err := r.listCommitsWithMetadataFn(repo)
+	if err != nil {
+		return nil, fmt.Errorf("error listing commits from git repo %q: %w", sub.RepoURL, err)
+	}
+
+	if sub.IncludePaths == nil && sub.ExcludePaths == nil {
+		return commits, nil
+	}
+
+	var filteredCommits []git.CommitMetadata
+	for _, meta := range commits {
+		diffPaths, err := r.getDiffPathsForCommitIDFn(repo, meta.ID)
+		if err != nil {
+			return nil, fmt.Errorf(
+				"error getting diff paths for commit %q in git repo %q: %w",
+				meta.ID,
+				sub.RepoURL,
+				err,
+			)
+		}
+		matchesPathsFilters, err := matchesPathsFilters(sub.IncludePaths, sub.ExcludePaths, diffPaths)
+		if err != nil {
+			return nil, fmt.Errorf(
+				"error checking includePaths/excludePaths match for commit %q for git repo %q: %w",
+				meta.ID,
+				sub.RepoURL,
+				err,
+			)
+		}
+		if matchesPathsFilters {
+			filteredCommits = append(filteredCommits, meta)
+		}
+
+		// TODO(hidde): we should potentially continue to deepen the history
+		// until we have enough commits or we reach the beginning of the
+		// history.
+	}
+
+	if len(filteredCommits) == 0 {
+		return nil, nil
+	}
+	return filteredCommits, nil
+}
+
+// discoverTags returns a list of tags from the given Git repository that match
+// the given subscription's tag selection criteria. It returns the list of tags
+// that match the criteria, sorted in descending order. If the list contains
+// more than 20 tags, it is clipped to the 20 most recent tags.
+func (r *reconciler) discoverTags(repo git.Repo, sub kargoapi.GitSubscription) ([]git.TagMetadata, error) {
+	tags, err := r.listTagsWithMetadataFn(repo)
+	if err != nil {
+		return nil, fmt.Errorf("error listing tags from git repo %q: %w", sub.RepoURL, err)
+	}
+
+	if tags, err = filterTags(tags, sub.IgnoreTags, sub.AllowTags); err != nil {
+		return nil, fmt.Errorf("failed to filter tags: %w", err)
+	}
+
+	switch sub.CommitSelectionStrategy {
+	case kargoapi.CommitSelectionStrategySemVer:
+		if tags, err = selectSemVerTags(tags, sub.SemverConstraint); err != nil {
+			return nil, fmt.Errorf("failed to select semver tags: %w", err)
+		}
+	case kargoapi.CommitSelectionStrategyLexical:
+		slices.SortFunc(tags, func(i, j git.TagMetadata) int {
+			// Sort in reverse lexicographic order
+			return strings.Compare(j.Tag, i.Tag)
+		})
+	default:
+		// No additional filtering or sorting required, as the tags are already
+		// ordered by creation date.
+	}
+
+	if l := len(tags); l < 20 {
+		return tags, nil
+	}
+	return tags[:20], nil
+}
+
+// filterTags filters the given list of tag names based on the given allow and
+// ignore criteria. It returns the filtered list of tag names.
+func filterTags(tags []git.TagMetadata, ignoreTags []string, allow string) ([]git.TagMetadata, error) {
+	allowRegex, err := regexp.Compile(allow)
+	if err != nil {
+		return nil, fmt.Errorf("error compiling regular expression %q: %w", allow, err)
+	}
+	filteredTags := make([]git.TagMetadata, 0, len(tags))
+	for _, tag := range tags {
+		if ignores(tag.Tag, ignoreTags) || !allows(tag.Tag, allowRegex) {
+			continue
+		}
+		filteredTags = append(filteredTags, tag)
+	}
+	return slices.Clip(filteredTags), nil
 }
 
 // allows returns true if the given tag name matches the given regular
@@ -392,74 +548,67 @@ pathLoop:
 	return false, nil
 }
 
-// selectLexicallyLastTag sorts the provided tag name in reverse lexicographic
-// order and returns the first tag name in the sorted list. If the list is
-// empty, it returns an empty string.
-func selectLexicallyLastTag(tagNames []string) string {
-	if len(tagNames) == 0 {
-		return ""
-	}
-	sort.Slice(tagNames, func(i, j int) bool {
-		return tagNames[i] > tagNames[j]
-	})
-	return tagNames[0]
-}
-
-// selectSemverTag narrows the provided list of tag names to those that are
-// valid semantic versions. If constraintStr is non-empty, it further narrows
-// the list to those that satisfy the constraint. If the narrowed list is
-// non-empty, it sorts the list in reverse semver order and returns the first
-// tag name in the sorted list. If the narrowed list is empty, it returns an
-// empty string.
-func selectSemverTag(tagNames []string, constraintStr string) (string, error) {
-	var constraint *semver.Constraints
-	if constraintStr != "" {
+func selectSemVerTags(tags []git.TagMetadata, constraint string) ([]git.TagMetadata, error) {
+	var svConstraint *semver.Constraints
+	if constraint != "" {
 		var err error
-		if constraint, err = semver.NewConstraint(constraintStr); err != nil {
-			return "", fmt.Errorf(
-				"error parsing semver constraint %q: %w",
-				constraintStr,
-				err,
-			)
+		if svConstraint, err = semver.NewConstraint(constraint); err != nil {
+			return nil, fmt.Errorf("error parsing semver constraint %q: %w", constraint, err)
 		}
 	}
-	semvers := make([]*semver.Version, 0, len(tagNames))
-	for _, tagName := range tagNames {
-		sv, err := semver.NewVersion(tagName)
+
+	type semVerTag struct {
+		git.TagMetadata
+		*semver.Version
+	}
+
+	var svs []semVerTag
+	for _, meta := range tags {
+		sv, err := semver.NewVersion(meta.Tag)
 		if err != nil {
-			continue // tagName wasn't a semantic version
+			continue
 		}
-		if constraint == nil || constraint.Check(sv) {
-			semvers = append(semvers, sv)
+		if svConstraint == nil || svConstraint.Check(sv) {
+			svs = append(svs, semVerTag{
+				TagMetadata: meta,
+				Version:     sv,
+			})
 		}
 	}
-	if len(semvers) == 0 {
-		return "", nil
-	}
-	sort.Slice(semvers, func(i, j int) bool {
-		if comp := semvers[i].Compare(semvers[j]); comp != 0 {
-			return comp > 0
+
+	slices.SortFunc(svs, func(i, j semVerTag) int {
+		if comp := j.Compare(i.Version); comp != 0 {
+			return comp
 		}
 		// If the semvers tie, break the tie lexically using the original strings
 		// used to construct the semvers. This ensures a deterministic comparison
 		// of equivalent semvers, e.g., 1.0 and 1.0.0.
-		return semvers[i].Original() > semvers[j].Original()
+		return strings.Compare(j.Original(), i.Original())
 	})
-	return semvers[0].Original(), nil
+
+	var semverTags []git.TagMetadata
+	for _, sv := range svs {
+		semverTags = append(semverTags, sv.TagMetadata)
+	}
+	return semverTags, nil
 }
 
 func (r *reconciler) getLastCommitID(repo git.Repo) (string, error) {
 	return repo.LastCommitID()
 }
 
-func (r *reconciler) listTags(repo git.Repo) ([]string, error) {
-	return repo.ListTags()
+func (r *reconciler) listCommitsWithMetadata(repo git.Repo) ([]git.CommitMetadata, error) {
+	return repo.ListCommitsWithMetadata()
 }
 
-func (r *reconciler) checkoutTag(repo git.Repo, tag string) error {
-	return repo.Checkout(tag)
+func (r *reconciler) listTagsWithMetadata(repo git.Repo) ([]git.TagMetadata, error) {
+	return repo.ListTagsWithMetadata()
 }
 
 func (r *reconciler) getDiffPathsSinceCommitID(repo git.Repo, commitId string) ([]string, error) {
 	return repo.GetDiffPathsSinceCommitID(commitId)
+}
+
+func (r *reconciler) getDiffPathsForCommitID(repo git.Repo, commitID string) ([]string, error) {
+	return repo.GetDiffPathsForCommitID(commitID)
 }

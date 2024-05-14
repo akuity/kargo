@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 
 	libExec "github.com/akuity/kargo/internal/exec"
 )
@@ -55,6 +56,29 @@ type CommitOptions struct {
 	AllowEmpty bool
 }
 
+// TagMetadata represents metadata associated with a Git tag.
+type TagMetadata struct {
+	// Tag is the name of the tag.
+	Tag string
+	// CommitID is the ID (sha) of the commit associated with the tag.
+	CommitID string
+	// CreatorDate is the creation date of an annotated tag, or the commit date
+	// of a lightweight tag.
+	CreatorDate time.Time
+	// Subject is the subject (first line) of the commit message associated
+	// with the tag.
+	Subject string
+}
+
+type CommitMetadata struct {
+	// CommitID is the ID (sha) of the commit.
+	ID string
+	// CommitDate is the date of the commit.
+	CommitDate time.Time
+	// Subject is the subject (first line) of the commit message.
+	Subject string
+}
+
 // Repo is an interface for interacting with a git repository.
 type Repo interface {
 	// AddAll stages pending changes for commit.
@@ -89,8 +113,13 @@ type Repo interface {
 	// GetDiffPaths returns a string slice indicating the paths, relative to the
 	// root of the repository, of any new or modified files.
 	GetDiffPaths() ([]string, error)
-	// GetDiffPathsForCommitID returns a string slice indicating the paths, relative to the
-	// root of the repository, of any files that are new or modified since the given commit ID.
+	// GetDiffPathsForCommitID returns a string slice indicating the paths,
+	// relative to the root of the repository, of any files that are new or
+	// modified in the commit with the given ID.
+	GetDiffPathsForCommitID(commitID string) ([]string, error)
+	// GetDiffPathsSinceCommitID returns a string slice indicating the paths,
+	// relative to the root of the repository, of any files that are new or
+	// modified since the given commit ID.
 	GetDiffPathsSinceCommitID(commitId string) ([]string, error)
 	// IsAncestor returns true if parent branch is an ancestor of child
 	IsAncestor(parent string, child string) (bool, error)
@@ -99,6 +128,12 @@ type Repo interface {
 	LastCommitID() (string, error)
 	// ListTags returns a slice of tags in the repository.
 	ListTags() ([]string, error)
+	// ListTagsWithMetadata returns a slice of tags in the repository with metadata
+	// such as commit ID, creator date, and subject.
+	ListTagsWithMetadata() ([]TagMetadata, error)
+	// ListCommitsWithMetadata returns a slice of commits in the current branch
+	// with metadata such as commit ID, commit date, and subject.
+	ListCommitsWithMetadata() ([]CommitMetadata, error)
 	// CommitMessage returns the text of the most recent commit message associated
 	// with the specified commit ID.
 	CommitMessage(id string) (string, error)
@@ -152,10 +187,14 @@ type CloneOptions struct {
 	Branch string
 	// SingleBranch indicates whether the clone should be a single-branch clone.
 	SingleBranch bool
-	// Shallow indicates whether the clone should be with a depth of 1. This is
-	// useful for speeding up the cloning process when all we care about is the
-	// latest commit from a single branch.
-	Shallow bool
+	// Bare indicates whether the clone should be a bare clone. A bare clone
+	// does not have a working directory and can be used to efficiently explore
+	// the history and other metadata of the repository without checking out
+	// the files.
+	Bare bool
+	// Depth is the number of commits to fetch from the remote repository. If
+	// zero, all commits will be fetched.
+	Depth uint
 	// InsecureSkipTLSVerify specifies whether certificate verification errors
 	// should be ignored when cloning the repository. The setting will be
 	// remembered for subsequent interactions with the remote repository.
@@ -221,8 +260,11 @@ func (r *repo) clone(opts *CloneOptions) error {
 	if opts.SingleBranch {
 		args = append(args, "--single-branch")
 	}
-	if opts.Shallow {
-		args = append(args, "--depth=1")
+	if opts.Bare {
+		args = append(args, "--bare")
+	}
+	if opts.Depth > 0 {
+		args = append(args, "--depth", fmt.Sprint(opts.Depth))
 	}
 	args = append(args, r.url, r.dir)
 	cmd := r.buildGitCommand(args...)
@@ -364,6 +406,23 @@ func (r *repo) GetDiffPaths() ([]string, error) {
 	return paths, nil
 }
 
+func (r *repo) GetDiffPathsForCommitID(commitID string) ([]string, error) {
+	resBytes, err := libExec.Exec(r.buildGitCommand("diff", "--name-only", commitID))
+	if err != nil {
+		return nil, fmt.Errorf("error getting diffs for commit %q: %w", commitID, err)
+	}
+	var paths []string
+	scanner := bufio.NewScanner(bytes.NewReader(resBytes))
+	scanner.Split(bufio.ScanLines)
+	for scanner.Scan() {
+		paths = append(
+			paths,
+			scanner.Text(),
+		)
+	}
+	return paths, nil
+}
+
 func (r *repo) GetDiffPathsSinceCommitID(commitId string) ([]string, error) {
 	resBytes, err := libExec.Exec(r.buildGitCommand("diff", "--name-only", commitId+"..HEAD"))
 	if err != nil {
@@ -420,6 +479,90 @@ func (r *repo) ListTags() ([]string, error) {
 		tags = append(tags, strings.TrimSpace(scanner.Text()))
 	}
 	return tags, nil
+}
+
+func (r *repo) ListTagsWithMetadata() ([]TagMetadata, error) {
+	if _, err := libExec.Exec(r.buildGitCommand("fetch", "origin", "--tags")); err != nil {
+		return nil, fmt.Errorf("error fetching tags from repo %q: %w", r.url, err)
+	}
+
+	tagsBytes, err := libExec.Exec(r.buildGitCommand(
+		"for-each-ref",
+		"--sort=-creatordate",
+		// This translates to: tag|*|commitID|*|subject|*|creatorDate
+		//
+		// The `if`/`then`/`else` logic is used to ensure that we get the
+		// commit ID and subject of the tag, regardless of whether it's an
+		// annotated or lightweight tag.
+		`--format="%(refname:short)|*|%(if)%(*objectname)%(then)%(*objectname)|*|%(*contents:subject)%(else)%(objectname)|*|%(contents:subject)%(end)|*|%(creatordate:iso8601)"`, // nolint: lll
+		"refs/tags",
+	))
+	if err != nil {
+		return nil, fmt.Errorf("error listing tags for repo %q: %w", r.url, err)
+	}
+
+	var tags []TagMetadata
+	scanner := bufio.NewScanner(bytes.NewReader(tagsBytes))
+	for scanner.Scan() {
+		line := scanner.Bytes()
+		parts := bytes.Split(scanner.Bytes(), []byte("|*|"))
+		if len(parts) != 4 {
+			return nil, fmt.Errorf("unexpected number of fields: %q", line)
+		}
+
+		tag := string(parts[0])
+		commitID := string(parts[1])
+		subject := string(parts[2])
+		creatorDate, err := time.Parse("2006-01-02 15:04:05 -0700", string(parts[3]))
+		if err != nil {
+			return nil, fmt.Errorf("error parsing creator date %q: %w", parts[3], err)
+		}
+
+		tags = append(tags, TagMetadata{
+			Tag:         tag,
+			CommitID:    commitID,
+			CreatorDate: creatorDate,
+			Subject:     subject,
+		})
+	}
+
+	return tags, nil
+}
+
+func (r *repo) ListCommitsWithMetadata() ([]CommitMetadata, error) {
+	commitsBytes, err := libExec.Exec(r.buildGitCommand(
+		"log",
+		// This translates to: commitID<tab>commitDate<tab>subject
+		"--pretty=format:%H%x09%ci%x09%s",
+	))
+	if err != nil {
+		return nil, fmt.Errorf("error listing commits for repo %q: %w", r.url, err)
+	}
+
+	var commits []CommitMetadata
+	scanner := bufio.NewScanner(bytes.NewReader(commitsBytes))
+	for scanner.Scan() {
+		line := scanner.Bytes()
+		parts := bytes.Split(scanner.Bytes(), []byte("\t"))
+		if len(parts) != 3 {
+			return nil, fmt.Errorf("unexpected number of fields: %q", line)
+		}
+
+		commitID := string(parts[0])
+		commitDate, err := time.Parse("2006-01-02 15:04:05 -0700", string(parts[1]))
+		if err != nil {
+			return nil, fmt.Errorf("error parsing commit date %q: %w", parts[1], err)
+		}
+		subject := string(parts[2])
+
+		commits = append(commits, CommitMetadata{
+			ID:         commitID,
+			CommitDate: commitDate,
+			Subject:    subject,
+		})
+	}
+
+	return commits, nil
 }
 
 func (r *repo) CommitMessage(id string) (string, error) {
