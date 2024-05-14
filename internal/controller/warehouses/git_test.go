@@ -361,7 +361,7 @@ func TestDiscoverBranchHistory(t *testing.T) {
 		{
 			name: "error listing commits",
 			reconciler: &reconciler{
-				listCommitsWithMetadataFn: func(git.Repo) ([]git.CommitMetadata, error) {
+				listCommitsWithMetadataFn: func(git.Repo, uint, uint) ([]git.CommitMetadata, error) {
 					return nil, errors.New("something went wrong")
 				},
 			},
@@ -373,7 +373,7 @@ func TestDiscoverBranchHistory(t *testing.T) {
 		{
 			name: "without path filters",
 			reconciler: &reconciler{
-				listCommitsWithMetadataFn: func(git.Repo) ([]git.CommitMetadata, error) {
+				listCommitsWithMetadataFn: func(git.Repo, uint, uint) ([]git.CommitMetadata, error) {
 					return []git.CommitMetadata{
 						{ID: "abc"},
 						{ID: "xyz"},
@@ -394,7 +394,7 @@ func TestDiscoverBranchHistory(t *testing.T) {
 				IncludePaths: []string{regexpPrefix + "^.*third_path_to_a/file$"},
 			},
 			reconciler: &reconciler{
-				listCommitsWithMetadataFn: func(git.Repo) ([]git.CommitMetadata, error) {
+				listCommitsWithMetadataFn: func(git.Repo, uint, uint) ([]git.CommitMetadata, error) {
 					return []git.CommitMetadata{
 						{ID: "abc"},
 						{ID: "xyz"},
@@ -415,7 +415,10 @@ func TestDiscoverBranchHistory(t *testing.T) {
 				IncludePaths: []string{regexpPrefix + "^.*third_path_to_a/file$"},
 			},
 			reconciler: &reconciler{
-				listCommitsWithMetadataFn: func(git.Repo) ([]git.CommitMetadata, error) {
+				listCommitsWithMetadataFn: func(_ git.Repo, _ uint, skip uint) ([]git.CommitMetadata, error) {
+					if skip > 0 {
+						return nil, nil
+					}
 					return []git.CommitMetadata{
 						{ID: "abc"},
 						{ID: "xyz"},

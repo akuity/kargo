@@ -121,15 +121,8 @@ func (r *reconciler) selectCommitMeta(
 	cloneOpts := &git.CloneOptions{
 		Branch:                sub.Branch,
 		SingleBranch:          true,
-		Bare:                  true,
-		Depth:                 1,
+		Filter:                git.FilterBlobless,
 		InsecureSkipTLSVerify: sub.InsecureSkipTLSVerify,
-	}
-	// When include and/or exclude path filters are defined. We need to clone
-	// the entire repository to be able to get the diff between the base commit
-	// and the HEAD.
-	if (len(sub.IncludePaths) != 0 || len(sub.ExcludePaths) != 0) && baseCommit != "" {
-		cloneOpts.Depth = 0
 	}
 	repo, err := git.Clone(sub.RepoURL, &git.ClientOptions{Credentials: creds}, cloneOpts)
 	if err != nil {
@@ -282,14 +275,8 @@ func (r *reconciler) discoverCommits(
 		cloneOpts := &git.CloneOptions{
 			Branch:                sub.Branch,
 			SingleBranch:          true,
-			Bare:                  true,
+			Filter:                git.FilterBlobless,
 			InsecureSkipTLSVerify: sub.InsecureSkipTLSVerify,
-		}
-		switch sub.CommitSelectionStrategy {
-		case kargoapi.CommitSelectionStrategyNewestFromBranch, "":
-			cloneOpts.Depth = 20
-		default:
-			cloneOpts.Depth = 1
 		}
 
 		repo, err := git.Clone(
@@ -347,48 +334,61 @@ func (r *reconciler) discoverCommits(
 }
 
 func (r *reconciler) discoverBranchHistory(repo git.Repo, sub kargoapi.GitSubscription) ([]git.CommitMetadata, error) {
-	commits, err := r.listCommitsWithMetadataFn(repo)
-	if err != nil {
-		return nil, fmt.Errorf("error listing commits from git repo %q: %w", sub.RepoURL, err)
-	}
-
-	if sub.IncludePaths == nil && sub.ExcludePaths == nil {
-		return commits, nil
-	}
+	const limit = 20
 
 	var filteredCommits []git.CommitMetadata
-	for _, meta := range commits {
-		diffPaths, err := r.getDiffPathsForCommitIDFn(repo, meta.ID)
+	for skip := uint(0); ; skip += limit {
+		commits, err := r.listCommitsWithMetadataFn(repo, limit, skip)
 		if err != nil {
-			return nil, fmt.Errorf(
-				"error getting diff paths for commit %q in git repo %q: %w",
-				meta.ID,
-				sub.RepoURL,
-				err,
-			)
-		}
-		matchesPathsFilters, err := matchesPathsFilters(sub.IncludePaths, sub.ExcludePaths, diffPaths)
-		if err != nil {
-			return nil, fmt.Errorf(
-				"error checking includePaths/excludePaths match for commit %q for git repo %q: %w",
-				meta.ID,
-				sub.RepoURL,
-				err,
-			)
-		}
-		if matchesPathsFilters {
-			filteredCommits = append(filteredCommits, meta)
+			return nil, fmt.Errorf("error listing commits from git repo %q: %w", sub.RepoURL, err)
 		}
 
-		// TODO(hidde): we should potentially continue to deepen the history
-		// until we have enough commits or we reach the beginning of the
-		// history.
+		// If no include or exclude paths are specified, return the first commits
+		// up to the limit.
+		if sub.IncludePaths == nil && sub.ExcludePaths == nil {
+			return commits, nil
+		}
+
+		if filteredCommits == nil {
+			filteredCommits = make([]git.CommitMetadata, 0, limit)
+		}
+
+		// Filter commits based on include and exclude paths.
+		for _, meta := range commits {
+			diffPaths, err := r.getDiffPathsForCommitIDFn(repo, meta.ID)
+			if err != nil {
+				return nil, fmt.Errorf(
+					"error getting diff paths for commit %q in git repo %q: %w",
+					meta.ID,
+					sub.RepoURL,
+					err,
+				)
+			}
+			matchesPathsFilters, err := matchesPathsFilters(sub.IncludePaths, sub.ExcludePaths, diffPaths)
+			if err != nil {
+				return nil, fmt.Errorf(
+					"error checking includePaths/excludePaths match for commit %q for git repo %q: %w",
+					meta.ID,
+					sub.RepoURL,
+					err,
+				)
+			}
+			if matchesPathsFilters {
+				filteredCommits = append(filteredCommits, meta)
+			}
+
+			if len(filteredCommits) >= limit {
+				return filteredCommits, nil
+			}
+		}
+
+		// If there are no more commits to list, break the loop.
+		if len(commits) == 0 {
+			break
+		}
 	}
 
-	if len(filteredCommits) == 0 {
-		return nil, nil
-	}
-	return filteredCommits, nil
+	return slices.Clip(filteredCommits), nil
 }
 
 // discoverTags returns a list of tags from the given Git repository that match
@@ -597,8 +597,8 @@ func (r *reconciler) getLastCommitID(repo git.Repo) (string, error) {
 	return repo.LastCommitID()
 }
 
-func (r *reconciler) listCommitsWithMetadata(repo git.Repo) ([]git.CommitMetadata, error) {
-	return repo.ListCommitsWithMetadata()
+func (r *reconciler) listCommitsWithMetadata(repo git.Repo, limit, skip uint) ([]git.CommitMetadata, error) {
+	return repo.ListCommitsWithMetadata(limit, skip)
 }
 
 func (r *reconciler) listTagsWithMetadata(repo git.Repo) ([]git.TagMetadata, error) {

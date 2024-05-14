@@ -133,7 +133,7 @@ type Repo interface {
 	ListTagsWithMetadata() ([]TagMetadata, error)
 	// ListCommitsWithMetadata returns a slice of commits in the current branch
 	// with metadata such as commit ID, commit date, and subject.
-	ListCommitsWithMetadata() ([]CommitMetadata, error)
+	ListCommitsWithMetadata(limit, skip uint) ([]CommitMetadata, error)
 	// CommitMessage returns the text of the most recent commit message associated
 	// with the specified commit ID.
 	CommitMessage(id string) (string, error)
@@ -180,6 +180,24 @@ type ClientOptions struct {
 	Credentials *RepoCredentials
 }
 
+const (
+	// FilterBlobless is a filter that excludes blobs from the clone.
+	// When using this filter, the initial Git clone will download all
+	// reachable commits and trees, and only download the blobs for commits
+	// when you do a Git checkout (including the first checkout during the
+	// clone).
+	//
+	// When using a blobless clone, you can still explore the commits of the
+	// repository without downloading additional data. This means that you can
+	// perform commands like `git log`, or even `git log -- <path>` with the
+	// same performance as a full clone.
+	//
+	// Commands like `git diff` or `git blame <path>` require the contents of
+	// the paths to compute diffs, so these will trigger blob downloads the
+	// first time they are run.
+	FilterBlobless = "blob:none"
+)
+
 // CloneOptions represents options for cloning a git repository.
 type CloneOptions struct {
 	// Branch is the name of the branch to clone. If not specified, the default
@@ -187,14 +205,19 @@ type CloneOptions struct {
 	Branch string
 	// SingleBranch indicates whether the clone should be a single-branch clone.
 	SingleBranch bool
-	// Bare indicates whether the clone should be a bare clone. A bare clone
-	// does not have a working directory and can be used to efficiently explore
-	// the history and other metadata of the repository without checking out
-	// the files.
-	Bare bool
 	// Depth is the number of commits to fetch from the remote repository. If
 	// zero, all commits will be fetched.
 	Depth uint
+	// Filter allows for partially cloning the repository by specifying a
+	// filter. When a filter is specified, the server will only send a
+	// subset of reachable objects according to a given object filter.
+	//
+	// For more information, see:
+	// - https://git-scm.com/docs/git-clone#Documentation/git-clone.txt-code--filtercodeemltfilter-specgtem
+	// - https://git-scm.com/docs/git-rev-list#Documentation/git-rev-list.txt---filterltfilter-specgt
+	// - https://github.blog/2020-12-21-get-up-to-speed-with-partial-clone-and-shallow-clone/
+	// - https://docs.gitlab.com/ee/topics/git/partial_clone.html
+	Filter string
 	// InsecureSkipTLSVerify specifies whether certificate verification errors
 	// should be ignored when cloning the repository. The setting will be
 	// remembered for subsequent interactions with the remote repository.
@@ -259,9 +282,6 @@ func (r *repo) clone(opts *CloneOptions) error {
 	}
 	if opts.SingleBranch {
 		args = append(args, "--single-branch")
-	}
-	if opts.Bare {
-		args = append(args, "--bare")
 	}
 	if opts.Depth > 0 {
 		args = append(args, "--depth", fmt.Sprint(opts.Depth))
@@ -494,7 +514,7 @@ func (r *repo) ListTagsWithMetadata() ([]TagMetadata, error) {
 		// The `if`/`then`/`else` logic is used to ensure that we get the
 		// commit ID and subject of the tag, regardless of whether it's an
 		// annotated or lightweight tag.
-		`--format="%(refname:short)|*|%(if)%(*objectname)%(then)%(*objectname)|*|%(*contents:subject)%(else)%(objectname)|*|%(contents:subject)%(end)|*|%(creatordate:iso8601)"`, // nolint: lll
+		`--format=%(refname:short)|*|%(if)%(*objectname)%(then)%(*objectname)|*|%(*contents:subject)%(else)%(objectname)|*|%(contents:subject)%(end)|*|%(creatordate:iso8601)`, // nolint: lll
 		"refs/tags",
 	))
 	if err != nil {
@@ -529,12 +549,20 @@ func (r *repo) ListTagsWithMetadata() ([]TagMetadata, error) {
 	return tags, nil
 }
 
-func (r *repo) ListCommitsWithMetadata() ([]CommitMetadata, error) {
-	commitsBytes, err := libExec.Exec(r.buildGitCommand(
+func (r *repo) ListCommitsWithMetadata(limit, skip uint) ([]CommitMetadata, error) {
+	args := []string{
 		"log",
 		// This translates to: commitID<tab>commitDate<tab>subject
 		"--pretty=format:%H%x09%ci%x09%s",
-	))
+	}
+	if limit > 0 {
+		args = append(args, fmt.Sprintf("--max-count=%d", limit))
+	}
+	if skip > 0 {
+		args = append(args, fmt.Sprintf("--skip=%d", skip))
+	}
+
+	commitsBytes, err := libExec.Exec(r.buildGitCommand(args...))
 	if err != nil {
 		return nil, fmt.Errorf("error listing commits for repo %q: %w", r.url, err)
 	}

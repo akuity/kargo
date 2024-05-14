@@ -47,7 +47,7 @@ type reconciler struct {
 
 	getLastCommitIDFn func(repo git.Repo) (string, error)
 
-	listCommitsWithMetadataFn func(repo git.Repo) ([]git.CommitMetadata, error)
+	listCommitsWithMetadataFn func(repo git.Repo, limit, skip uint) ([]git.CommitMetadata, error)
 
 	listTagsWithMetadataFn func(repo git.Repo) ([]git.TagMetadata, error)
 
