@@ -312,7 +312,8 @@ type GitDiscoveryResult struct {
 	// Commits is a list of commits discovered by the Warehouse for the
 	// GitSubscription. An empty list indicates that the discovery operation was
 	// successful, but no commits matching the GitSubscription criteria were found.
-	Commits []DiscoveredCommit `json:"commits" protobuf:"bytes,2,rep,name=commits"`
+	// +optional
+	Commits []DiscoveredCommit `json:"commits,omitempy" protobuf:"bytes,2,rep,name=commits"`
 }
 
 // DiscoveredCommit represents a commit discovered by a Warehouse for a
@@ -350,6 +351,7 @@ type ImageDiscoveryResult struct {
 	// ImageSubscription. An empty list indicates that the discovery operation
 	// was successful, but no images matching the ImageSubscription criteria were
 	// found.
+	// +optional
 	Images []DiscoveredImage `json:"images" protobuf:"bytes,2,rep,name=images"`
 }
 
@@ -382,6 +384,7 @@ type ChartDiscoveryResult struct {
 	// ChartSubscription. An empty list indicates that the discovery operation was
 	// successful, but no versions matching the ChartSubscription criteria were
 	// found.
+	// +optional
 	Versions []string `json:"versions" protobuf:"bytes,3,rep,name=versions"`
 }
 
