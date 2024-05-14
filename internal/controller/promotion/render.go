@@ -1,6 +1,7 @@
 package promotion
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -48,6 +49,7 @@ type renderer struct {
 // apply uses Kargo Render to carry out the provided update in the specified
 // working directory.
 func (r *renderer) apply(
+	_ context.Context,
 	update kargoapi.GitRepoUpdate,
 	newFreight kargoapi.FreightReference,
 	_ string,

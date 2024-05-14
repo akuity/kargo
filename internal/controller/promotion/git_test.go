@@ -25,6 +25,7 @@ func TestNewGitMechanism(t *testing.T) {
 			return nil
 		},
 		func(
+			context.Context,
 			kargoapi.GitRepoUpdate,
 			kargoapi.FreightReference,
 			string, string, string, string,
@@ -272,6 +273,7 @@ func TestGitDoSingleUpdate(t *testing.T) {
 					return nil, nil
 				},
 				gitCommitFn: func(
+					context.Context,
 					kargoapi.GitRepoUpdate,
 					kargoapi.FreightReference,
 					string,
@@ -315,6 +317,7 @@ func TestGitDoSingleUpdate(t *testing.T) {
 					return nil, nil
 				},
 				gitCommitFn: func(
+					context.Context,
 					kargoapi.GitRepoUpdate,
 					kargoapi.FreightReference,
 					string,

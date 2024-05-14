@@ -1,6 +1,7 @@
 package promotion
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -156,6 +157,7 @@ func TestKustomizerApply(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			changes, err := testCase.kustomizer.apply(
+				context.TODO(),
 				testCase.update,
 				kargoapi.FreightReference{
 					Images: []kargoapi.Image{

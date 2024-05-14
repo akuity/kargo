@@ -273,6 +273,7 @@ func TestHelmerApply(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			changes, err := testCase.helmer.apply(
+				context.TODO(),
 				kargoapi.GitRepoUpdate{
 					Helm: &kargoapi.HelmPromotionMechanism{},
 				},

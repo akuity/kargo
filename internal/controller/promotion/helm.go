@@ -67,6 +67,7 @@ type helmer struct {
 // apply uses Helm to carry out the provided update in the specified working
 // directory.
 func (h *helmer) apply(
+	ctx context.Context,
 	update kargoapi.GitRepoUpdate,
 	newFreight kargoapi.FreightReference,
 	namespace string,
@@ -102,7 +103,7 @@ func (h *helmer) apply(
 		if err = h.setStringsInYAMLFileFn(chartYAMLPath, changes); err != nil {
 			return nil, fmt.Errorf("setting dependency versions for chart %q: %w", chart, err)
 		}
-		if err = h.prepareDependencyCredentialsFn(context.TODO(), homeDir, chartYAMLPath, namespace); err != nil {
+		if err = h.prepareDependencyCredentialsFn(ctx, homeDir, chartYAMLPath, namespace); err != nil {
 			return nil, fmt.Errorf("preparing credentials for chart dependencies %q: :%w", chart, err)
 		}
 		if err = h.updateChartDependenciesFn(homeDir, chartPath); err != nil {
