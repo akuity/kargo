@@ -2,7 +2,7 @@ module github.com/akuity/kargo
 
 go 1.22
 
-toolchain go1.22.2
+toolchain go1.22.3
 
 require (
 	connectrpc.com/connect v1.16.1

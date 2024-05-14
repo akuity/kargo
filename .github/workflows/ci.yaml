@@ -13,7 +13,7 @@ jobs:
   test-unit:
     runs-on: ubuntu-latest
     container:
-      image: golang:1.22.2-bookworm
+      image: golang:1.22.3-bookworm
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -47,27 +47,23 @@ jobs:
         key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
         restore-keys: |
           ${{ runner.os }}-pnpm-
-    - uses: pnpm/action-setup@v3
+    - name: Install pnpm
+      uses: pnpm/action-setup@v4
       with:
-        version: 8
-        run_install: false
+        package_json_file: ui/package.json
     - name: Install nodejs
       uses: actions/setup-node@v4
       with:
         node-version: "20.12.2"
         cache: "pnpm"
         cache-dependency-path: "**/pnpm-lock.yaml"
-    - name: Install nodejs dependencies
-      run: pnpm install --dev
-      working-directory: ./ui
     - name: Run linter
-      run: pnpm run lint
-      working-directory: ./ui
+      run: make lint-ui
 
   lint-go:
     runs-on: ubuntu-latest
     container:
-      image: golang:1.22.2-bookworm
+      image: golang:1.22.3-bookworm
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -88,7 +84,7 @@ jobs:
   lint-charts:
     runs-on: ubuntu-latest
     container:
-      image: golang:1.22.2-bookworm
+      image: golang:1.22.3-bookworm
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -103,7 +99,7 @@ jobs:
   lint-proto:
     runs-on: ubuntu-latest
     container:
-      image: golang:1.22.2-bookworm
+      image: golang:1.22.3-bookworm
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -119,16 +115,16 @@ jobs:
   check-codegen:
     runs-on: ubuntu-latest
     container:
-      image: golang:1.22.2-bookworm
+      image: golang:1.22.3-bookworm
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
     - name: Install tools
       run: apt update && apt install unzip
-    - uses: pnpm/action-setup@v3
+    - name: Install pnpm
+      uses: pnpm/action-setup@v4
       with:
-        version: 8
-        run_install: false
+        package_json_file: ui/package.json
     - name: Install nodejs
       uses: actions/setup-node@v4
       with:
@@ -162,7 +158,7 @@ jobs:
       run: git diff --exit-code -- .
 
   build-image:
-    needs: [test-unit, lint-go, lint-charts, lint-proto, check-codegen]
+    needs: [test-unit, lint-go, lint-charts, lint-proto, lint-ui, check-codegen]
     runs-on: ubuntu-latest
     steps:
     - name: Set up QEMU
@@ -178,10 +174,10 @@ jobs:
         cache-to: type=gha,mode=max
 
   build-cli:
-    needs: [test-unit, lint-go, lint-charts, lint-proto, check-codegen]
+    needs: [test-unit, lint-go, lint-charts, lint-proto, lint-ui, check-codegen]
     runs-on: ubuntu-latest
     container:
-      image: golang:1.22.2-bookworm
+      image: golang:1.22.3-bookworm
     steps:
     - name: Checkout code
       uses: actions/checkout@v4

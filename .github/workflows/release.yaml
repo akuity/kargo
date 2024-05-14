@@ -160,7 +160,7 @@ jobs:
     if: github.event_name == 'release'
     runs-on: ubuntu-latest
     container:
-      image: golang:1.22.2-bookworm
+      image: golang:1.22.3-bookworm
     strategy:
       matrix:
         os: [linux, darwin, windows]
@@ -182,10 +182,9 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-go-
     - name: Install pnpm
-      uses: pnpm/action-setup@v3
+      uses: pnpm/action-setup@v4
       with:
-        version: 8
-        run_install: false
+        package_json_file: ui/package.json
     - name: Install nodejs
       uses: actions/setup-node@v4
       with:
@@ -229,7 +228,7 @@ jobs:
     if: github.event_name != 'release'
     runs-on: ubuntu-latest
     container:
-      image: golang:1.22.2-bookworm
+      image: golang:1.22.3-bookworm
     strategy:
       matrix:
         os: [linux, darwin, windows]
@@ -244,10 +243,9 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-go-
     - name: Install pnpm
-      uses: pnpm/action-setup@v3
+      uses: pnpm/action-setup@v4
       with:
-        version: 8
-        run_install: false
+        package_json_file: ui/package.json
     - name: Install nodejs
       uses: actions/setup-node@v4
       with:

@@ -1,6 +1,7 @@
 package promotion
 
 import (
+	"context"
 	"fmt"
 	"path/filepath"
 
@@ -46,8 +47,10 @@ type kustomizer struct {
 // apply uses Kustomize to carry out the provided update in the specified
 // working directory.
 func (k *kustomizer) apply(
+	_ context.Context,
 	update kargoapi.GitRepoUpdate,
 	newFreight kargoapi.FreightReference,
+	_ string,
 	_ string, // TODO: sourceCommit would be a nice addition to the commit message
 	_ string,
 	workingDir string,

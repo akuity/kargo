@@ -1,10 +1,12 @@
 package promotion
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 
@@ -25,10 +27,11 @@ func newHelmMechanism(
 		credentialsDB,
 		selectHelmUpdates,
 		(&helmer{
-			buildValuesFilesChangesFn:     buildValuesFilesChanges,
-			buildChartDependencyChangesFn: buildChartDependencyChanges,
-			setStringsInYAMLFileFn:        libYAML.SetStringsInFile,
-			updateChartDependenciesFn:     helm.UpdateChartDependencies,
+			buildValuesFilesChangesFn:      buildValuesFilesChanges,
+			buildChartDependencyChangesFn:  buildChartDependencyChanges,
+			setStringsInYAMLFileFn:         libYAML.SetStringsInFile,
+			prepareDependencyCredentialsFn: prepareDependencyCredentialsFn(credentialsDB),
+			updateChartDependenciesFn:      helm.UpdateChartDependencies,
 		}).apply,
 	)
 }
@@ -56,29 +59,31 @@ type helmer struct {
 		[]kargoapi.Chart,
 		[]kargoapi.HelmChartDependencyUpdate,
 	) (map[string]map[string]string, []string, error)
-	setStringsInYAMLFileFn    func(file string, changes map[string]string) error
-	updateChartDependenciesFn func(homeDir, chartPath string) error
+	setStringsInYAMLFileFn         func(file string, changes map[string]string) error
+	prepareDependencyCredentialsFn func(ctx context.Context, homePath, chartPath, namespace string) error
+	updateChartDependenciesFn      func(homeDir, chartPath string) error
 }
 
 // apply uses Helm to carry out the provided update in the specified working
 // directory.
 func (h *helmer) apply(
+	ctx context.Context,
 	update kargoapi.GitRepoUpdate,
 	newFreight kargoapi.FreightReference,
+	namespace string,
 	_ string, // TODO: sourceCommit would be a nice addition to the commit message
 	homeDir string,
 	workingDir string,
 	_ git.RepoCredentials,
 ) ([]string, error) {
 	// Image updates
-	changesByFile, imageChangeSummary :=
-		h.buildValuesFilesChangesFn(newFreight.Images, update.Helm.Images)
+	changesByFile, imageChangeSummary := h.buildValuesFilesChangesFn(newFreight.Images, update.Helm.Images)
 	for file, changes := range changesByFile {
 		if err := h.setStringsInYAMLFileFn(
 			filepath.Join(workingDir, file),
 			changes,
 		); err != nil {
-			return nil, fmt.Errorf("error updating values in file %q: %w", file, err)
+			return nil, fmt.Errorf("updating values in file %q: %w", file, err)
 		}
 	}
 
@@ -90,16 +95,19 @@ func (h *helmer) apply(
 			update.Helm.Charts,
 		)
 	if err != nil {
-		return nil, fmt.Errorf("error preparing changes to affected Chart.yaml files: %w", err)
+		return nil, fmt.Errorf("preparing changes to affected Chart.yaml files: %w", err)
 	}
 	for chart, changes := range changesByChart {
 		chartPath := filepath.Join(workingDir, chart)
 		chartYAMLPath := filepath.Join(chartPath, "Chart.yaml")
 		if err = h.setStringsInYAMLFileFn(chartYAMLPath, changes); err != nil {
-			return nil, fmt.Errorf("error updating dependencies for chart %q: %w", chart, err)
+			return nil, fmt.Errorf("setting dependency versions for chart %q: %w", chart, err)
+		}
+		if err = h.prepareDependencyCredentialsFn(ctx, homeDir, chartYAMLPath, namespace); err != nil {
+			return nil, fmt.Errorf("preparing credentials for chart dependencies %q: :%w", chart, err)
 		}
 		if err = h.updateChartDependenciesFn(homeDir, chartPath); err != nil {
-			return nil, fmt.Errorf("error updating dependencies for chart %q: :%w", chart, err)
+			return nil, fmt.Errorf("updating dependencies for chart %q: %w", chart, err)
 		}
 	}
 
@@ -199,20 +207,11 @@ func buildChartDependencyChanges(
 	changeSummary := make([]string, 0)
 	for chartPath := range chartPaths {
 		absChartYAMLPath := filepath.Join(repoDir, chartPath, "Chart.yaml")
-		chartYAMLBytes, err := os.ReadFile(absChartYAMLPath)
+		chartDependencies, err := loadChartDependencies(absChartYAMLPath)
 		if err != nil {
-			return nil, nil, fmt.Errorf("error reading file %q: %w", absChartYAMLPath, err)
+			return nil, nil, fmt.Errorf("loading dependencies for chart: %w", err)
 		}
-		chartYAMLObj := &struct {
-			Dependencies []struct {
-				Repository string `json:"repository,omitempty"`
-				Name       string `json:"name,omitempty"`
-			} `json:"dependencies,omitempty"`
-		}{}
-		if err := yaml.Unmarshal(chartYAMLBytes, chartYAMLObj); err != nil {
-			return nil, nil, fmt.Errorf("error unmarshaling %q: %w", absChartYAMLPath, err)
-		}
-		for i, dependency := range chartYAMLObj.Dependencies {
+		for i, dependency := range chartDependencies {
 			chartKey := path.Join(dependency.Repository, dependency.Name)
 			version, found := versionsByChart[chartKey]
 			if !found {
@@ -236,6 +235,91 @@ func buildChartDependencyChanges(
 			)
 		}
 	}
-
 	return changesByFile, changeSummary, nil
+}
+
+// prepareDependencyCredentialsFn returns a function that prepares the necessary
+// credentials for the dependencies of a Helm chart. The returned function is
+// intended to be called once per chart.
+func prepareDependencyCredentialsFn(
+	db credentials.Database,
+) func(ctx context.Context, homePath, chartPath, namespace string) error {
+	return func(ctx context.Context, homePath, chartPath, namespace string) error {
+		dependencies, err := loadChartDependencies(chartPath)
+		if err != nil {
+			return fmt.Errorf("loading dependencies to resolve credentials for: %w", err)
+		}
+
+		for _, dependency := range dependencies {
+			var creds credentials.Credentials
+			var ok bool
+			var repository string
+
+			switch {
+			case strings.HasPrefix(dependency.Repository, "https://"):
+				repository = dependency.Repository
+				if creds, ok, err = db.Get(ctx, namespace, credentials.TypeHelm, repository); err != nil {
+					return fmt.Errorf(
+						"obtaining credentials for chart repository %q: %w",
+						dependency.Repository,
+						err,
+					)
+				}
+			case strings.HasPrefix(dependency.Repository, "oci://"):
+				// NB: We log in to the OCI registry using the repository URL,
+				// and not the full chart reference.
+				repository = dependency.Repository
+				if creds, ok, err = db.Get(
+					ctx,
+					namespace,
+					credentials.TypeHelm,
+					"oci://"+path.Join(helm.NormalizeChartRepositoryURL(repository), dependency.Name),
+				); err != nil {
+					return fmt.Errorf(
+						"obtaining credentials for chart repository %q: %w",
+						repository,
+						err,
+					)
+				}
+			}
+
+			if !ok {
+				continue
+			}
+
+			if err := helm.Login(homePath, repository, helm.Credentials{
+				Username: creds.Username,
+				Password: creds.Password,
+			}); err != nil {
+				return fmt.Errorf("login to chart repository %q: %w", repository, err)
+			}
+		}
+
+		return nil
+	}
+}
+
+// chartDependency is a struct that represents a dependency listed in a
+// Chart.yaml. It only includes the fields that are relevant to this package.
+type chartDependency struct {
+	Repository string `json:"repository,omitempty"`
+	Name       string `json:"name,omitempty"`
+}
+
+// loadChartDependencies reads the Chart.yaml file at the given path and returns
+// the dependencies listed in it.
+func loadChartDependencies(chartPath string) ([]chartDependency, error) {
+	b, err := os.ReadFile(chartPath)
+	if err != nil {
+		return nil, fmt.Errorf("reading file %q: %w", chartPath, err)
+	}
+
+	chartObj := &struct {
+		Dependencies []chartDependency `json:"dependencies,omitempty"`
+	}{}
+	if err := yaml.Unmarshal(b, chartObj); err != nil {
+		return nil, fmt.Errorf("unmarshaling %q: %w", chartPath, err)
+	}
+
+	return chartObj.Dependencies, nil
 }

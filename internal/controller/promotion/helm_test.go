@@ -1,7 +1,9 @@
 package promotion
 
 import (
+	"context"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -100,7 +102,7 @@ func TestHelmerApply(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, _ []string, err error) {
-				require.ErrorContains(t, err, "error updating values in file")
+				require.ErrorContains(t, err, "updating values in file")
 				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
@@ -125,7 +127,7 @@ func TestHelmerApply(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, _ []string, err error) {
-				require.ErrorContains(t, err, "error preparing changes to affected Chart.yaml files")
+				require.ErrorContains(t, err, "preparing changes to affected Chart.yaml files")
 				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
@@ -157,7 +159,39 @@ func TestHelmerApply(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, _ []string, err error) {
-				require.ErrorContains(t, err, "error updating dependencies for chart")
+				require.ErrorContains(t, err, "setting dependency versions for chart")
+				require.ErrorContains(t, err, "something went wrong")
+			},
+		},
+		{
+			name: "error preparing dependency credentials",
+			helmer: &helmer{
+				buildValuesFilesChangesFn: func(
+					[]kargoapi.Image,
+					[]kargoapi.HelmImageUpdate,
+				) (map[string]map[string]string, []string) {
+					return nil, nil
+				},
+				prepareDependencyCredentialsFn: func(context.Context, string, string, string) error {
+					return fmt.Errorf("something went wrong")
+				},
+				buildChartDependencyChangesFn: func(
+					string,
+					[]kargoapi.Chart,
+					[]kargoapi.HelmChartDependencyUpdate,
+				) (map[string]map[string]string, []string, error) {
+					return map[string]map[string]string{
+						testChartFile: {
+							testKey: testValue,
+						},
+					}, nil, nil
+				},
+				setStringsInYAMLFileFn: func(string, map[string]string) error {
+					return nil
+				},
+			},
+			assertions: func(t *testing.T, _ []string, err error) {
+				require.ErrorContains(t, err, "preparing credentials for chart dependencies")
 				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
@@ -169,6 +203,9 @@ func TestHelmerApply(t *testing.T) {
 					[]kargoapi.HelmImageUpdate,
 				) (map[string]map[string]string, []string) {
 					return nil, nil
+				},
+				prepareDependencyCredentialsFn: func(context.Context, string, string, string) error {
+					return nil
 				},
 				buildChartDependencyChangesFn: func(
 					string,
@@ -189,7 +226,7 @@ func TestHelmerApply(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, _ []string, err error) {
-				require.ErrorContains(t, err, "error updating dependencies for chart")
+				require.ErrorContains(t, err, "updating dependencies for chart")
 				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
@@ -220,6 +257,9 @@ func TestHelmerApply(t *testing.T) {
 				setStringsInYAMLFileFn: func(string, map[string]string) error {
 					return nil
 				},
+				prepareDependencyCredentialsFn: func(context.Context, string, string, string) error {
+					return nil
+				},
 				updateChartDependenciesFn: func(string, string) error {
 					return nil
 				},
@@ -233,10 +273,12 @@ func TestHelmerApply(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			changes, err := testCase.helmer.apply(
+				context.TODO(),
 				kargoapi.GitRepoUpdate{
 					Helm: &kargoapi.HelmPromotionMechanism{},
 				},
 				kargoapi.FreightReference{}, // The way the tests are structured, this value doesn't matter
+				"",
 				"",
 				"",
 				"",
