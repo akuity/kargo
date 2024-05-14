@@ -337,7 +337,6 @@ spec:
                       required:
                       - name
                       - repoURL
-                      - versions
                       type: object
                     type: array
                   commits:
@@ -390,7 +389,6 @@ spec:
                           pattern: ^https?://(\w+([\.-]\w+)*@)?\w+([\.-]\w+)*(:[\d]+)?(/.*)?$
                           type: string
                       required:
-                      - commits
                       - repoURL
                       type: object
                     type: array
@@ -441,7 +439,6 @@ spec:
                           minLength: 1
                           type: string
                       required:
-                      - images
                       - repoURL
                       type: object
                     type: array

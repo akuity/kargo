@@ -878,6 +878,7 @@ export class ChartDiscoveryResult extends Message<ChartDiscoveryResult> {
    * ChartSubscription. An empty list indicates that the discovery operation was
    * successful, but no versions matching the ChartSubscription criteria were
    * found.
+   * +optional
    *
    * @generated from field: repeated string versions = 3;
    */
@@ -1598,6 +1599,7 @@ export class GitDiscoveryResult extends Message<GitDiscoveryResult> {
    * Commits is a list of commits discovered by the Warehouse for the
    * GitSubscription. An empty list indicates that the discovery operation was
    * successful, but no commits matching the GitSubscription criteria were found.
+   * +optional
    *
    * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.DiscoveredCommit commits = 2;
    */
@@ -2344,6 +2346,7 @@ export class ImageDiscoveryResult extends Message<ImageDiscoveryResult> {
    * ImageSubscription. An empty list indicates that the discovery operation
    * was successful, but no images matching the ImageSubscription criteria were
    * found.
+   * +optional
    *
    * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.DiscoveredImage images = 2;
    */

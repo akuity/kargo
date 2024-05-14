@@ -249,6 +249,7 @@ message ChartDiscoveryResult {
   // ChartSubscription. An empty list indicates that the discovery operation was
   // successful, but no versions matching the ChartSubscription criteria were
   // found.
+  // +optional
   repeated string versions = 3;
 }
 
@@ -466,6 +467,7 @@ message GitDiscoveryResult {
   // Commits is a list of commits discovered by the Warehouse for the
   // GitSubscription. An empty list indicates that the discovery operation was
   // successful, but no commits matching the GitSubscription criteria were found.
+  // +optional
   repeated DiscoveredCommit commits = 2;
 }
 
@@ -741,6 +743,7 @@ message ImageDiscoveryResult {
   // ImageSubscription. An empty list indicates that the discovery operation
   // was successful, but no images matching the ImageSubscription criteria were
   // found.
+  // +optional
   repeated DiscoveredImage images = 2;
 }
 
