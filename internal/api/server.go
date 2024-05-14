@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"connectrpc.com/grpchealth"
-	"github.com/NYTimes/gziphandler"
+	"github.com/klauspost/compress/gzhttp"
 	"github.com/rs/cors"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/net/http2"
@@ -321,6 +321,6 @@ func newDashboardRequestHandler() (http.HandlerFunc, error) {
 		handler.ServeHTTP(w, req)
 	})
 
-	withGz := gziphandler.GzipHandler(withoutGzip)
+	withGz := gzhttp.GzipHandler(withoutGzip)
 	return http.HandlerFunc(withGz.ServeHTTP), nil
 }
