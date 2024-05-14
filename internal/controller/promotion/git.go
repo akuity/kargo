@@ -56,16 +56,20 @@ type gitMechanism struct {
 		repoURL string,
 	) (*git.RepoCredentials, error)
 	gitCommitFn func(
+		ctx context.Context,
 		update kargoapi.GitRepoUpdate,
 		newFreight kargoapi.FreightReference,
+		namespace string,
 		readRef string,
 		writeBranch string,
 		repo git.Repo,
 		repoCreds git.RepoCredentials,
 	) (string, error)
 	applyConfigManagementFn func(
+		ctx context.Context,
 		update kargoapi.GitRepoUpdate,
 		newFreight kargoapi.FreightReference,
+		namespace string,
 		sourceCommit string,
 		homeDir string,
 		workingDir string,
@@ -82,8 +86,10 @@ func newGitMechanism(
 	credentialsDB credentials.Database,
 	selectUpdatesFn func([]kargoapi.GitRepoUpdate) []kargoapi.GitRepoUpdate,
 	applyConfigManagementFn func(
+		ctx context.Context,
 		update kargoapi.GitRepoUpdate,
 		newFreight kargoapi.FreightReference,
+		namespace string,
 		sourceCommit string,
 		homeDir string,
 		workingDir string,
@@ -210,8 +216,10 @@ func (g *gitMechanism) doSingleUpdate(
 	}
 
 	commitID, err := g.gitCommitFn(
+		ctx,
 		update,
 		newFreight,
+		promo.Namespace,
 		readRef,
 		commitBranch,
 		repo,
@@ -347,8 +355,10 @@ func (g *gitMechanism) getAuthor() (*git.User, error) {
 // commit ID of the last commit made to the repository, or an error if any of
 // the above fails.
 func (g *gitMechanism) gitCommit(
+	ctx context.Context,
 	update kargoapi.GitRepoUpdate,
 	newFreight kargoapi.FreightReference,
+	namespace string,
 	readRef string,
 	writeBranch string,
 	repo git.Repo,
@@ -371,8 +381,10 @@ func (g *gitMechanism) gitCommit(
 	var changes []string
 	if g.applyConfigManagementFn != nil {
 		if changes, err = g.applyConfigManagementFn(
+			ctx,
 			update,
 			newFreight,
+			namespace,
 			sourceCommitID,
 			repo.HomeDir(),
 			repo.WorkingDir(),

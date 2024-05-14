@@ -1,6 +1,7 @@
 package promotion
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -214,8 +215,10 @@ func TestKargoRenderApply(t *testing.T) {
 		testWorkDir := t.TempDir()
 		t.Run(testCase.name, func(t *testing.T) {
 			changes, err := testCase.renderer.apply(
+				context.TODO(),
 				testCase.update,
 				testCase.newFreight,
+				"",
 				testSourceCommitID,
 				"", // Home directory is not used by this implementation
 				testWorkDir,
