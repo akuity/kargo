@@ -86,3 +86,5 @@ export const FreightDetails = ({ freight }: { freight?: Freight }) => {
     </Drawer>
   );
 };
+
+export default FreightDetails;

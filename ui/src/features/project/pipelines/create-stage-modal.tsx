@@ -78,3 +78,5 @@ export const CreateStageModal = ({ visible, hide, project }: Props) => {
     </Modal>
   );
 };
+
+export default CreateStageModal;

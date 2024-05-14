@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"connectrpc.com/grpchealth"
+	"github.com/klauspost/compress/gzhttp"
 	"github.com/rs/cors"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/net/http2"
@@ -274,7 +275,7 @@ func newDashboardRequestHandler() (http.HandlerFunc, error) {
 	}
 
 	handler := http.FileServer(http.FS(uiFS))
-	return func(w http.ResponseWriter, req *http.Request) {
+	withoutGzip := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		if req.Method != http.MethodGet {
 			http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
 			return
@@ -318,5 +319,8 @@ func newDashboardRequestHandler() (http.HandlerFunc, error) {
 
 		// Path is a file
 		handler.ServeHTTP(w, req)
-	}, nil
+	})
+
+	withGz := gzhttp.GzipHandler(withoutGzip)
+	return http.HandlerFunc(withGz.ServeHTTP), nil
 }

@@ -78,3 +78,5 @@ export const CreateWarehouseModal = ({ visible, hide, project }: Props) => {
     </Modal>
   );
 };
+
+export default CreateWarehouseModal;
