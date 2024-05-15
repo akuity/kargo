@@ -43,7 +43,7 @@ func newLexicalSelector(
 func (l *lexicalSelector) Select(ctx context.Context) ([]Image, error) {
 	logger := logging.LoggerFromContext(ctx).WithFields(log.Fields{
 		"registry":            l.repoClient.registry.name,
-		"image":               l.repoClient.image,
+		"image":               l.repoClient.repoURL,
 		"selectionStrategy":   SelectionStrategyLexical,
 		"platformConstrained": l.platform != nil,
 		"discoveryLimit":      l.discoveryLimit,
@@ -82,7 +82,7 @@ func (l *lexicalSelector) Select(ctx context.Context) ([]Image, error) {
 
 		logger.WithFields(log.Fields{
 			"tag":    image.Tag,
-			"digest": image.Digest.String(),
+			"digest": image.Digest,
 		}).Trace("discovered image")
 		images = append(images, *image)
 	}

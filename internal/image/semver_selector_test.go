@@ -73,27 +73,27 @@ func TestNewSemVerSelector(t *testing.T) {
 
 func TestSortImagesBySemver(t *testing.T) {
 	images := []Image{
-		newImage("5.0.0", nil, ""),
-		newImage("0.0.1", nil, ""),
-		newImage("0.2.1", nil, ""),
-		newImage("0.1.1", nil, ""),
-		newImage("1.1.1", nil, ""),
-		newImage("7.0.6", nil, ""),
-		newImage("1.0.0", nil, ""),
-		newImage("1.0.2", nil, ""),
+		newImage("5.0.0", "", nil),
+		newImage("0.0.1", "", nil),
+		newImage("0.2.1", "", nil),
+		newImage("0.1.1", "", nil),
+		newImage("1.1.1", "", nil),
+		newImage("7.0.6", "", nil),
+		newImage("1.0.0", "", nil),
+		newImage("1.0.2", "", nil),
 	}
 	sortImagesBySemVer(images)
 	require.Equal(
 		t,
 		[]Image{
-			newImage("7.0.6", nil, ""),
-			newImage("5.0.0", nil, ""),
-			newImage("1.1.1", nil, ""),
-			newImage("1.0.2", nil, ""),
-			newImage("1.0.0", nil, ""),
-			newImage("0.2.1", nil, ""),
-			newImage("0.1.1", nil, ""),
-			newImage("0.0.1", nil, ""),
+			newImage("7.0.6", "", nil),
+			newImage("5.0.0", "", nil),
+			newImage("1.1.1", "", nil),
+			newImage("1.0.2", "", nil),
+			newImage("1.0.0", "", nil),
+			newImage("0.2.1", "", nil),
+			newImage("0.1.1", "", nil),
+			newImage("0.0.1", "", nil),
 		},
 		images,
 	)

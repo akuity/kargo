@@ -1,23 +1,18 @@
 package image
 
 import (
-	"fmt"
-	"strings"
 	"sync"
 	"time"
 
+	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/patrickmn/go-cache"
 	"go.uber.org/ratelimit"
 )
 
-// dockerRegistry is registry configuration for Docker Hub, whose API endpoint
-// cannot be inferred from an image prefix because its API endpoint is at
-// https://registry-1.docker.io despite Docker Hub images either lacking a
-// prefix entirely or beginning with docker.io
+// dockerRegistry is registry configuration for Docker Hub.
 var dockerRegistry = &registry{
 	name:             "Docker Hub",
-	imagePrefix:      "docker.io",
-	apiAddress:       "https://registry-1.docker.io",
+	imagePrefix:      name.DefaultRegistry,
 	defaultNamespace: "library",
 	imageCache: cache.New(
 		30*time.Minute, // Default ttl for each entry
@@ -43,7 +38,6 @@ var (
 type registry struct {
 	name             string
 	imagePrefix      string
-	apiAddress       string
 	defaultNamespace string
 	imageCache       *cache.Cache
 	rateLimiter      ratelimit.Limiter
@@ -54,7 +48,6 @@ func newRegistry(imagePrefix string) *registry {
 	return &registry{
 		name:        imagePrefix,
 		imagePrefix: imagePrefix,
-		apiAddress:  fmt.Sprintf("https://%s", imagePrefix),
 		imageCache: cache.New(
 			30*time.Minute, // Default ttl for each entry
 			time.Hour,      // Cleanup interval
@@ -76,15 +69,4 @@ func getRegistry(imagePrefix string) *registry {
 	registry := newRegistry(imagePrefix)
 	registries[registry.imagePrefix] = registry
 	return registry
-}
-
-// normalizeImageName returns a normalized image name that accounts for the fact
-// that some registries have a default namespace that is used when the image
-// name doesn't specify one. For example on Docker Hub, "debian" officially
-// equates to "library/debian".
-func (r *registry) normalizeImageName(image string) string {
-	if len(strings.Split(image, "/")) == 1 && r.defaultNamespace != "" {
-		return fmt.Sprintf("%s/%s", r.defaultNamespace, image)
-	}
-	return image
 }

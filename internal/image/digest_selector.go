@@ -38,7 +38,7 @@ func newDigestSelector(
 func (d *digestSelector) Select(ctx context.Context) ([]Image, error) {
 	logger := logging.LoggerFromContext(ctx).WithFields(log.Fields{
 		"registry":            d.repoClient.registry.name,
-		"image":               d.repoClient.image,
+		"image":               d.repoClient.repoURL,
 		"selectionStrategy":   SelectionStrategyDigest,
 		"platformConstrained": d.platform != nil,
 	})
@@ -77,7 +77,7 @@ func (d *digestSelector) Select(ctx context.Context) ([]Image, error) {
 		}
 		logger.WithFields(log.Fields{
 			"tag":    image.Tag,
-			"digest": image.Digest.String(),
+			"digest": image.Digest,
 		}).Trace("found image")
 		return []Image{*image}, nil
 	}

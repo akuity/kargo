@@ -4,12 +4,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/opencontainers/go-digest"
 	"github.com/stretchr/testify/require"
 )
 
 func TestNewImage(t *testing.T) {
-	testDigest := digest.Digest("fake-digest")
+	const testDigest = "fake-digest"
 	testDate := time.Now().UTC()
 	testCases := []struct {
 		name       string
@@ -42,7 +41,7 @@ func TestNewImage(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(t, newImage(testCase.tag, &testDate, testDigest))
+			testCase.assertions(t, newImage(testCase.tag, testDigest, &testDate))
 		})
 	}
 }

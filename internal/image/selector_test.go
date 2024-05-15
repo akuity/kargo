@@ -1,26 +1,13 @@
 package image
 
 import (
-	"net/http"
 	"regexp"
 	"testing"
 
-	"github.com/distribution/distribution/v3/registry/client/auth/challenge"
 	"github.com/stretchr/testify/require"
 )
 
 func TestNewSelector(t *testing.T) {
-	getChallengeManagerBackup := getChallengeManager
-	getChallengeManager = func(
-		string,
-		http.RoundTripper,
-	) (challenge.Manager, error) {
-		return challenge.NewSimpleManager(), nil
-	}
-	defer func() {
-		getChallengeManager = getChallengeManagerBackup
-	}()
-
 	testCases := []struct {
 		name       string
 		repoURL    string

@@ -57,7 +57,7 @@ func newSemVerSelector(
 func (s *semVerSelector) Select(ctx context.Context) ([]Image, error) {
 	logger := logging.LoggerFromContext(ctx).WithFields(log.Fields{
 		"registry":            s.repoClient.registry.name,
-		"image":               s.repoClient.image,
+		"image":               s.repoClient.repoURL,
 		"selectionStrategy":   SelectionStrategySemVer,
 		"platformConstrained": s.platform != nil,
 		"discoveryLimit":      s.discoveryLimit,
@@ -96,7 +96,7 @@ func (s *semVerSelector) Select(ctx context.Context) ([]Image, error) {
 
 		logger.WithFields(log.Fields{
 			"tag":    image.Tag,
-			"digest": image.Digest.String(),
+			"digest": image.Digest,
 		}).Trace("discovered image")
 		discoveredImages = append(discoveredImages, *image)
 	}
