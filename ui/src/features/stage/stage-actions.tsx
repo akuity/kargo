@@ -32,12 +32,10 @@ import { EditStageModal } from './edit-stage-modal';
 
 export const StageActions = ({
   stage,
-  verificationEnabled,
   verificationRunning
 }: {
   stage: Stage;
   verificationRunning?: boolean;
-  verificationEnabled?: boolean;
 }) => {
   const { name: projectName, stageName } = useParams();
   const navigate = useNavigate();
@@ -101,6 +99,11 @@ export const StageActions = ({
   const { mutate: reverifyStage, isPending } = useMutation(reverify);
   const { mutate: abortVerificationAction } = useMutation(abortVerification);
 
+  const verificationEnabled = stage?.spec?.verification;
+
+  const currentPromoHasVerification =
+    (stage?.status?.currentPromotion?.freight?.verificationHistory || []).length > 0;
+
   return (
     <Space size={16}>
       {argoCDAppsLinks.length === 1 && (
@@ -135,18 +138,19 @@ export const StageActions = ({
           </Button>
         </Dropdown>
       )}
-      {verificationEnabled && (
+      {currentPromoHasVerification && (
         <>
-          <Button
-            icon={<FontAwesomeIcon icon={faRedo} spin={isPending} />}
-            disabled={isPending || verificationRunning}
-            onClick={() => {
-              reverifyStage({ project: projectName, stage: stageName });
-            }}
-          >
-            Reverify
-          </Button>
-
+          {verificationEnabled && (
+            <Button
+              icon={<FontAwesomeIcon icon={faRedo} spin={isPending} />}
+              disabled={isPending || verificationRunning}
+              onClick={() => {
+                reverifyStage({ project: projectName, stage: stageName });
+              }}
+            >
+              Reverify
+            </Button>
+          )}
           <Button
             type='default'
             disabled={!verificationRunning}
