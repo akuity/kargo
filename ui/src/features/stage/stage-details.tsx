@@ -56,14 +56,7 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
                 <Description item={stage} loading={false} className='mt-2' />
               </div>
             </div>
-            <StageActions
-              stage={stage}
-              disableReverify={
-                isVerificationRunning ||
-                !stage?.spec?.verification ||
-                (stage?.status?.currentPromotion?.freight?.verificationHistory || []).length === 0
-              }
-            />
+            <StageActions stage={stage} verificationRunning={isVerificationRunning} />
           </div>
           <Divider style={{ marginTop: '1em' }} />
 
