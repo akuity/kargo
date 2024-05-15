@@ -486,6 +486,35 @@ func TestDiscoverTags(t *testing.T) {
 				require.Len(t, tags, 20)
 			},
 		},
+		{
+			name: "with path filters",
+			sub: kargoapi.GitSubscription{
+				IncludePaths: []string{regexpPrefix + "^.*third_path_to_a/file$"},
+			},
+			reconciler: &reconciler{
+				listTagsWithMetadataFn: func(git.Repo) ([]git.TagMetadata, error) {
+					return []git.TagMetadata{
+						{Tag: "v1.0.0"},
+						{Tag: "abc", CommitID: "fake-commit-id"},
+						{Tag: "v2.0.0"},
+						{Tag: "xyz"},
+						{Tag: "v1.2.3"},
+					}, nil
+				},
+				getDiffPathsForCommitIDFn: func(_ git.Repo, id string) ([]string, error) {
+					if id == "fake-commit-id" {
+						return []string{"third_path_to_a/file"}, nil
+					}
+					return []string{"first_path_to_a/file", "second_path_to_a/file"}, nil
+				},
+			},
+			assertions: func(t *testing.T, tags []git.TagMetadata, err error) {
+				require.NoError(t, err)
+				require.Equal(t, []git.TagMetadata{
+					{Tag: "abc", CommitID: "fake-commit-id"},
+				}, tags)
+			},
+		},
 	}
 
 	for _, testCase := range testCases {

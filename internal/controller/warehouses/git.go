@@ -125,8 +125,7 @@ func (r *reconciler) discoverCommits(
 
 func (r *reconciler) discoverBranchHistory(repo git.Repo, sub kargoapi.GitSubscription) ([]git.CommitMetadata, error) {
 	const limit = 20
-
-	var filteredCommits []git.CommitMetadata
+	var filteredCommits = make([]git.CommitMetadata, 0, limit)
 	for skip := uint(0); ; skip += limit {
 		commits, err := r.listCommitsWithMetadataFn(repo, limit, skip)
 		if err != nil {
@@ -178,7 +177,7 @@ func (r *reconciler) discoverBranchHistory(repo git.Repo, sub kargoapi.GitSubscr
 			}
 
 			if len(filteredCommits) >= limit {
-				return filteredCommits, nil
+				return trimSlice(filteredCommits, limit), nil
 			}
 		}
 
@@ -188,7 +187,7 @@ func (r *reconciler) discoverBranchHistory(repo git.Repo, sub kargoapi.GitSubscr
 		}
 	}
 
-	return slices.Clip(filteredCommits), nil
+	return trimSlice(filteredCommits, limit), nil
 }
 
 // discoverTags returns a list of tags from the given Git repository that match
@@ -220,10 +219,53 @@ func (r *reconciler) discoverTags(repo git.Repo, sub kargoapi.GitSubscription) (
 		// ordered by creation date.
 	}
 
-	if l := len(tags); l < 20 {
-		return tags, nil
+	// If no include or exclude paths are specified, return the first tags up to
+	// the limit.
+	const limit = 20
+	if len(tags) == 0 || (sub.IncludePaths == nil && sub.ExcludePaths == nil) {
+		return trimSlice(tags, limit), nil
 	}
-	return tags[:20], nil
+
+	// Compile include and exclude path selectors.
+	includeSelectors, err := getPathSelectors(sub.IncludePaths)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing include selector: %w", err)
+	}
+	excludeSelectors, err := getPathSelectors(sub.ExcludePaths)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing exclude selector: %w", err)
+	}
+
+	// Filter tags based on include and exclude paths.
+	var filteredTags = make([]git.TagMetadata, 0, limit)
+	for _, meta := range tags {
+		diffPaths, err := r.getDiffPathsForCommitIDFn(repo, meta.CommitID)
+		if err != nil {
+			return nil, fmt.Errorf(
+				"error getting diff paths for tag %q in git repo %q: %w",
+				meta.Tag,
+				sub.RepoURL,
+				err,
+			)
+		}
+		match, err := matchesPathsFilters(includeSelectors, excludeSelectors, diffPaths)
+		if err != nil {
+			return nil, fmt.Errorf(
+				"error checking includePaths/excludePaths match for tag %q for git repo %q: %w",
+				meta.Tag,
+				sub.RepoURL,
+				err,
+			)
+		}
+		if match {
+			filteredTags = append(filteredTags, meta)
+		}
+
+		if len(filteredTags) >= limit {
+			break
+		}
+	}
+	return trimSlice(filteredTags, limit), nil
 }
 
 // filterTags filters the given list of tag names based on the given allow and

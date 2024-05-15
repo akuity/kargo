@@ -78,17 +78,17 @@ func (r *reconciler) discoverCharts(
 		results = append(results, kargoapi.ChartDiscoveryResult{
 			RepoURL:  sub.RepoURL,
 			Name:     sub.Name,
-			Versions: trimStringSlice(versions, 20),
+			Versions: trimSlice(versions, 20),
 		})
 	}
 
 	return results, nil
 }
 
-// trimStringSlice returns a slice of strings with a maximum length of limit.
+// trimSlice returns a slice of any type with a maximum length of limit.
 // If the input slice is shorter than limit or limit is less than or equal to
 // zero, the input slice is returned unmodified.
-func trimStringSlice(slice []string, limit int) []string {
+func trimSlice[T any](slice []T, limit int) []T {
 	if limit <= 0 || len(slice) <= limit {
 		return slice
 	}
