@@ -94,7 +94,7 @@ func (r *reconciler) discoverCommits(
 					ID:        meta.CommitID,
 					Tag:       meta.Tag,
 					Subject:   meta.Subject,
-					CreatedAt: metav1.Time{Time: meta.CreatorDate},
+					CreatedAt: &metav1.Time{Time: meta.CreatorDate},
 				})
 			}
 		default:
@@ -108,7 +108,7 @@ func (r *reconciler) discoverCommits(
 					ID:        meta.ID,
 					Branch:    sub.Branch,
 					Subject:   meta.Subject,
-					CreatedAt: metav1.Time{Time: meta.CommitDate},
+					CreatedAt: &metav1.Time{Time: meta.CommitDate},
 				})
 			}
 		}

@@ -68,8 +68,9 @@ func (r *reconciler) discoverImages(
 			imgs = append(
 				imgs,
 				kargoapi.DiscoveredImage{
-					Tag:    img.Tag,
-					Digest: img.Digest.String(),
+					Tag:        img.Tag,
+					Digest:     img.Digest.String(),
+					GitRepoURL: r.getImageSourceURL(sub.GitRepoURL, img.Tag),
 				},
 			)
 		}
