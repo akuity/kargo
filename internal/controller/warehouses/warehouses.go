@@ -40,6 +40,8 @@ type reconciler struct {
 
 	buildFreightFromLatestArtifactsFn func(string, *kargoapi.DiscoveredArtifacts) (*kargoapi.Freight, error)
 
+	gitCloneFn func(string, *git.ClientOptions, *git.CloneOptions) (git.Repo, error)
+
 	listCommitsWithMetadataFn func(repo git.Repo, limit, skip uint) ([]git.CommitMetadata, error)
 
 	listTagsWithMetadataFn func(repo git.Repo) ([]git.TagMetadata, error)
@@ -97,6 +99,7 @@ func newReconciler(
 	r := &reconciler{
 		client:        kubeClient,
 		credentialsDB: credentialsDB,
+		gitCloneFn:    git.Clone,
 		imageSourceURLFnsByBaseURL: map[string]func(string, string) string{
 			githubURLPrefix: getGithubImageSourceURL,
 		},

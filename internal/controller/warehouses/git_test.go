@@ -1,15 +1,232 @@
 package warehouses
 
 import (
+	"context"
 	"errors"
 	"regexp"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/git"
+	"github.com/akuity/kargo/internal/credentials"
 )
+
+func TestDiscoverCommits(t *testing.T) {
+	testCases := []struct {
+		name string
+		reconciler *reconciler
+		subs []kargoapi.RepoSubscription
+		assertions func(*testing.T, []kargoapi.GitDiscoveryResult, error)
+	}{
+		{
+			name: "error cloning repository",
+			reconciler: &reconciler{
+				credentialsDB: &credentials.FakeDB{},
+				gitCloneFn: func(string, *git.ClientOptions, *git.CloneOptions) (git.Repo, error) {
+					return nil, errors.New("something went wrong")
+				},
+			},
+			subs: []kargoapi.RepoSubscription{
+				{Git: &kargoapi.GitSubscription{}},
+			},
+			assertions: func(t *testing.T, _ []kargoapi.GitDiscoveryResult, err error) {
+				require.ErrorContains(t, err, "failed to clone git repo")
+				require.ErrorContains(t, err, "something went wrong")
+			},
+		},
+		{
+			name: "error obtaining credentials",
+			reconciler: &reconciler{
+				credentialsDB: &credentials.FakeDB{
+					GetFn: func(
+						context.Context,
+						string,
+						credentials.Type,
+						string,
+					) (credentials.Credentials, bool, error) {
+						return credentials.Credentials{}, false, errors.New("something went wrong")
+					},
+				},
+			},
+			subs: []kargoapi.RepoSubscription{
+				{Git: &kargoapi.GitSubscription{}},
+			},
+			assertions: func(t *testing.T, _ []kargoapi.GitDiscoveryResult, err error) {
+				require.ErrorContains(t, err, "error obtaining credentials for git repo")
+				require.ErrorContains(t, err, "something went wrong")
+			},
+		},
+		{
+			name: "discovers tags",
+			reconciler: &reconciler{
+				credentialsDB: &credentials.FakeDB{},
+				gitCloneFn: func(string, *git.ClientOptions, *git.CloneOptions) (git.Repo, error) {
+					return nil, nil
+				},
+				discoverTagsFn: func(git.Repo, kargoapi.GitSubscription) ([]git.TagMetadata, error) {
+					return []git.TagMetadata{
+						{Tag: "v2.0.0",},
+						{Tag: "v1.0.0"},
+					}, nil
+				},
+			},
+			subs: []kargoapi.RepoSubscription{
+				{Git: &kargoapi.GitSubscription{
+					RepoURL: "fake-repo",
+					CommitSelectionStrategy: kargoapi.CommitSelectionStrategySemVer,
+				}},
+			},
+			assertions: func(t *testing.T, results []kargoapi.GitDiscoveryResult, err error) {
+				require.NoError(t, err)
+				require.Equal(t, []kargoapi.GitDiscoveryResult{
+					{
+						RepoURL: "fake-repo",
+						Commits: []kargoapi.DiscoveredCommit{
+							{Tag: "v2.0.0", CreatedAt: &metav1.Time{}},
+							{Tag: "v1.0.0", CreatedAt: &metav1.Time{}},
+						},
+					},
+				}, results)
+			},
+		},
+		{
+			name: "error discovering tags",
+			reconciler: &reconciler{
+				credentialsDB: &credentials.FakeDB{},
+				gitCloneFn: func(string, *git.ClientOptions, *git.CloneOptions) (git.Repo, error) {
+					return nil, nil
+				},
+				discoverTagsFn: func(git.Repo, kargoapi.GitSubscription) ([]git.TagMetadata, error) {
+					return nil, errors.New("something went wrong")
+				},
+			},
+			subs: []kargoapi.RepoSubscription{
+				{Git: &kargoapi.GitSubscription{
+					CommitSelectionStrategy: kargoapi.CommitSelectionStrategySemVer,
+				}},
+			},
+			assertions: func(t *testing.T, _ []kargoapi.GitDiscoveryResult, err error) {
+				require.ErrorContains(t, err, "error listing tags from git repo")
+				require.ErrorContains(t, err, "something went wrong")
+			},
+		},
+		{
+			name: "discovers branch history",
+			reconciler: &reconciler{
+				credentialsDB: &credentials.FakeDB{},
+				gitCloneFn: func(string, *git.ClientOptions, *git.CloneOptions) (git.Repo, error) {
+					return nil, nil
+				},
+				discoverBranchHistoryFn: func(git.Repo, kargoapi.GitSubscription) ([]git.CommitMetadata, error) {
+					return []git.CommitMetadata{
+						{ID: "abc"},
+						{ID: "xyz"},
+					}, nil
+				},
+			},
+			subs: []kargoapi.RepoSubscription{
+				{Git: &kargoapi.GitSubscription{
+					RepoURL:                 "fake-repo",
+					CommitSelectionStrategy: kargoapi.CommitSelectionStrategyNewestFromBranch,
+				}},
+			},
+			assertions: func(t *testing.T, results []kargoapi.GitDiscoveryResult, err error) {
+				require.NoError(t, err)
+				require.Equal(t, []kargoapi.GitDiscoveryResult{
+					{
+						RepoURL: "fake-repo",
+						Commits: []kargoapi.DiscoveredCommit{
+							{ID: "abc", CreatedAt: &metav1.Time{}},
+							{ID: "xyz", CreatedAt: &metav1.Time{}},
+						},
+					},
+				}, results)
+			},
+		},
+		{
+			name: "error discovering branch history",
+			reconciler: &reconciler{
+				credentialsDB: &credentials.FakeDB{},
+				gitCloneFn: func(string, *git.ClientOptions, *git.CloneOptions) (git.Repo, error) {
+					return nil, nil
+				},
+				discoverBranchHistoryFn: func(git.Repo, kargoapi.GitSubscription) ([]git.CommitMetadata, error) {
+					return nil, errors.New("something went wrong")
+				},
+			},
+			subs: []kargoapi.RepoSubscription{
+				{Git: &kargoapi.GitSubscription{
+					CommitSelectionStrategy: kargoapi.CommitSelectionStrategyNewestFromBranch,
+				}},
+			},
+			assertions: func(t *testing.T, _ []kargoapi.GitDiscoveryResult, err error) {
+				require.ErrorContains(t, err, "error listing commits from git repo")
+				require.ErrorContains(t, err, "something went wrong")
+			},
+		},
+		{
+			name: "discovers for multiple subscriptions",
+			reconciler: &reconciler{
+				credentialsDB: &credentials.FakeDB{},
+				gitCloneFn: func(string, *git.ClientOptions, *git.CloneOptions) (git.Repo, error) {
+					return nil, nil
+				},
+				discoverTagsFn: func(git.Repo, kargoapi.GitSubscription) ([]git.TagMetadata, error) {
+					return []git.TagMetadata{
+						{Tag: "v2.0.0"},
+						{Tag: "v1.0.0"},
+					}, nil
+				},
+				discoverBranchHistoryFn: func(git.Repo, kargoapi.GitSubscription) ([]git.CommitMetadata, error) {
+					return []git.CommitMetadata{
+						{ID: "abc"},
+						{ID: "xyz"},
+					}, nil
+				},
+			},
+			subs: []kargoapi.RepoSubscription{
+				{Git: &kargoapi.GitSubscription{
+					RepoURL:                 "fake-repo-1",
+					CommitSelectionStrategy: kargoapi.CommitSelectionStrategyNewestTag,
+				}},
+				{Image: &kargoapi.ImageSubscription{}}, // Should be ignored
+				{Git: &kargoapi.GitSubscription{
+					RepoURL:                 "fake-repo-2",
+					CommitSelectionStrategy: kargoapi.CommitSelectionStrategyNewestFromBranch,
+				}},
+			},
+			assertions: func(t *testing.T, results []kargoapi.GitDiscoveryResult, err error) {
+				require.NoError(t, err)
+				require.Equal(t, []kargoapi.GitDiscoveryResult{
+					{
+						RepoURL: "fake-repo-1",
+						Commits: []kargoapi.DiscoveredCommit{
+							{Tag: "v2.0.0", CreatedAt: &metav1.Time{}},
+							{Tag: "v1.0.0", CreatedAt: &metav1.Time{}},
+						},
+					},
+					{
+						RepoURL: "fake-repo-2",
+						Commits: []kargoapi.DiscoveredCommit{
+							{ID: "abc", CreatedAt: &metav1.Time{}},
+							{ID: "xyz", CreatedAt: &metav1.Time{}},
+						},
+					},
+				}, results)
+			},
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			results, err := testCase.reconciler.discoverCommits(context.TODO(), "fake-ns", testCase.subs)
+			testCase.assertions(t, results, err)
+		})
+	}
+}
 
 func TestDiscoverBranchHistory(t *testing.T) {
 	testCases := []struct {

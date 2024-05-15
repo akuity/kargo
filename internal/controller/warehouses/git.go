@@ -67,8 +67,7 @@ func (r *reconciler) discoverCommits(
 			Filter:                git.FilterBlobless,
 			InsecureSkipTLSVerify: sub.InsecureSkipTLSVerify,
 		}
-
-		repo, err := git.Clone(
+		repo, err := r.gitCloneFn(
 			sub.RepoURL,
 			&git.ClientOptions{
 				Credentials: repoCreds,
@@ -76,7 +75,7 @@ func (r *reconciler) discoverCommits(
 			cloneOpts,
 		)
 		if err != nil {
-			return nil, fmt.Errorf("error cloning git repo %q: %w", sub.RepoURL, err)
+			return nil, fmt.Errorf("failed to clone git repo %q: %w", sub.RepoURL, err)
 		}
 
 		var discovered []kargoapi.DiscoveredCommit
