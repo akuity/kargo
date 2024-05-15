@@ -17,6 +17,7 @@ import (
 	"github.com/akuity/kargo/internal/controller"
 	"github.com/akuity/kargo/internal/controller/git"
 	"github.com/akuity/kargo/internal/credentials"
+	"github.com/akuity/kargo/internal/helm"
 	"github.com/akuity/kargo/internal/image"
 	"github.com/akuity/kargo/internal/kargo"
 	"github.com/akuity/kargo/internal/kubeclient"
@@ -40,6 +41,8 @@ type reconciler struct {
 	discoverImageRefsFn func(context.Context, kargoapi.ImageSubscription, *image.Credentials) ([]image.Image, error)
 
 	discoverChartsFn func(context.Context, string, []kargoapi.RepoSubscription) ([]kargoapi.ChartDiscoveryResult, error)
+
+	discoverChartVersionsFn func(context.Context, string, string, string, *helm.Credentials) ([]string, error)
 
 	buildFreightFromLatestArtifactsFn func(string, *kargoapi.DiscoveredArtifacts) (*kargoapi.Freight, error)
 
@@ -100,12 +103,14 @@ func newReconciler(
 	credentialsDB credentials.Database,
 ) *reconciler {
 	r := &reconciler{
-		client:        kubeClient,
-		credentialsDB: credentialsDB,
-		gitCloneFn:    git.Clone,
+		client:                  kubeClient,
+		credentialsDB:           credentialsDB,
+		gitCloneFn:              git.Clone,
+		discoverChartVersionsFn: helm.DiscoverChartVersions,
 		imageSourceURLFnsByBaseURL: map[string]func(string, string) string{
 			githubURLPrefix: getGithubImageSourceURL,
 		},
+		createFreightFn: kubeClient.Create,
 	}
 
 	r.discoverArtifactsFn = r.discoverArtifacts
@@ -119,7 +124,6 @@ func newReconciler(
 	r.discoverBranchHistoryFn = r.discoverBranchHistory
 	r.discoverTagsFn = r.discoverTags
 	r.getDiffPathsForCommitIDFn = r.getDiffPathsForCommitID
-	r.createFreightFn = kubeClient.Create
 	return r
 }
 

@@ -136,7 +136,7 @@ func TestDiscoverImages(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			results, err := testCase.reconciler.discoverImages(
-				context.Background(),
+				context.TODO(),
 				"fake-namespace",
 				testCase.subs,
 			)

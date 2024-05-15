@@ -48,7 +48,7 @@ func (r *reconciler) discoverCharts(
 			logger.Debug("found no credentials for chart repo")
 		}
 
-		versions, err := helm.DiscoverChartVersions(ctx, sub.RepoURL, sub.Name, sub.SemverConstraint, helmCreds)
+		versions, err := r.discoverChartVersionsFn(ctx, sub.RepoURL, sub.Name, sub.SemverConstraint, helmCreds)
 		if err != nil {
 			if sub.Name == "" {
 				return nil, fmt.Errorf(
