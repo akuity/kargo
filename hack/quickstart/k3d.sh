@@ -2,6 +2,10 @@
 
 set -x
 
+argo_cd_chart_version=6.9.2
+argo_rollouts_chart_version=2.35.0
+cert_manager_chart_version=1.14.5
+
 k3d cluster create kargo-quickstart \
   --no-lb \
   --k3s-arg '--disable=traefik@server:0' \
@@ -11,7 +15,7 @@ k3d cluster create kargo-quickstart \
 
 helm install cert-manager cert-manager \
   --repo https://charts.jetstack.io \
-  --version 1.11.5 \
+  --version $cert_manager_chart_version \
   --namespace cert-manager \
   --create-namespace \
   --set installCRDs=true \
@@ -20,7 +24,7 @@ helm install cert-manager cert-manager \
 helm install argocd argo-cd \
   --repo https://argoproj.github.io/argo-helm \
   --version 5.51.6 \
-  --namespace argocd \
+  --namespace $argo_cd_chart_version \
   --create-namespace \
   --set 'configs.secret.argocdServerAdminPassword=$2a$10$5vm8wXaSdbuff0m9l21JdevzXBzJFPCi8sy6OOnpZMAG.fOXL7jvO' \
   --set dex.enabled=false \
@@ -34,7 +38,7 @@ helm install argocd argo-cd \
 
 helm install argo-rollouts argo-rollouts \
   --repo https://argoproj.github.io/argo-helm \
-  --version 2.33.0 \
+  --version $argo_rollouts_chart_version \
   --create-namespace \
   --namespace argo-rollouts \
   --wait
