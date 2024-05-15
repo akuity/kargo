@@ -46,7 +46,7 @@ func (r *reconciler) discoverImages(
 			logger.Debug("found no credentials for image repo")
 		}
 
-		images, err := discoverImageRefs(ctx, *sub, regCreds)
+		images, err := r.discoverImageRefsFn(ctx, *sub, regCreds)
 		if err != nil {
 			return nil, fmt.Errorf(
 				"error discovering latest suitable images %q: %w",
@@ -83,20 +83,7 @@ func (r *reconciler) discoverImages(
 	return results, nil
 }
 
-const (
-	githubURLPrefix = "https://github.com"
-)
-
-func (r *reconciler) getImageSourceURL(gitRepoURL, tag string) string {
-	for baseUrl, fn := range r.imageSourceURLFnsByBaseURL {
-		if strings.HasPrefix(gitRepoURL, baseUrl) {
-			return fn(gitRepoURL, tag)
-		}
-	}
-	return ""
-}
-
-func discoverImageRefs(
+func (r *reconciler) discoverImageRefs(
 	ctx context.Context,
 	sub kargoapi.ImageSubscription,
 	creds *image.Credentials,
@@ -119,6 +106,19 @@ func discoverImageRefs(
 		)
 	}
 	return images, nil
+}
+
+const (
+	githubURLPrefix = "https://github.com"
+)
+
+func (r *reconciler) getImageSourceURL(gitRepoURL, tag string) string {
+	for baseUrl, fn := range r.imageSourceURLFnsByBaseURL {
+		if strings.HasPrefix(gitRepoURL, baseUrl) {
+			return fn(gitRepoURL, tag)
+		}
+	}
+	return ""
 }
 
 func imageSelectorForSubscription(

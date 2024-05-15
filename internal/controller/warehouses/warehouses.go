@@ -17,6 +17,7 @@ import (
 	"github.com/akuity/kargo/internal/controller"
 	"github.com/akuity/kargo/internal/controller/git"
 	"github.com/akuity/kargo/internal/credentials"
+	"github.com/akuity/kargo/internal/image"
 	"github.com/akuity/kargo/internal/kargo"
 	"github.com/akuity/kargo/internal/kubeclient"
 	"github.com/akuity/kargo/internal/logging"
@@ -35,6 +36,8 @@ type reconciler struct {
 	discoverCommitsFn func(context.Context, string, []kargoapi.RepoSubscription) ([]kargoapi.GitDiscoveryResult, error)
 
 	discoverImagesFn func(context.Context, string, []kargoapi.RepoSubscription) ([]kargoapi.ImageDiscoveryResult, error)
+
+	discoverImageRefsFn func(context.Context, kargoapi.ImageSubscription, *image.Credentials) ([]image.Image, error)
 
 	discoverChartsFn func(context.Context, string, []kargoapi.RepoSubscription) ([]kargoapi.ChartDiscoveryResult, error)
 
@@ -108,6 +111,7 @@ func newReconciler(
 	r.discoverArtifactsFn = r.discoverArtifacts
 	r.discoverCommitsFn = r.discoverCommits
 	r.discoverImagesFn = r.discoverImages
+	r.discoverImageRefsFn = r.discoverImageRefs
 	r.discoverChartsFn = r.discoverCharts
 	r.buildFreightFromLatestArtifactsFn = r.buildFreightFromLatestArtifacts
 	r.listCommitsWithMetadataFn = r.listCommitsWithMetadata

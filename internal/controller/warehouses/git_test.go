@@ -16,9 +16,9 @@ import (
 
 func TestDiscoverCommits(t *testing.T) {
 	testCases := []struct {
-		name string
+		name       string
 		reconciler *reconciler
-		subs []kargoapi.RepoSubscription
+		subs       []kargoapi.RepoSubscription
 		assertions func(*testing.T, []kargoapi.GitDiscoveryResult, error)
 	}{
 		{
@@ -68,14 +68,14 @@ func TestDiscoverCommits(t *testing.T) {
 				},
 				discoverTagsFn: func(git.Repo, kargoapi.GitSubscription) ([]git.TagMetadata, error) {
 					return []git.TagMetadata{
-						{Tag: "v2.0.0",},
+						{Tag: "v2.0.0"},
 						{Tag: "v1.0.0"},
 					}, nil
 				},
 			},
 			subs: []kargoapi.RepoSubscription{
 				{Git: &kargoapi.GitSubscription{
-					RepoURL: "fake-repo",
+					RepoURL:                 "fake-repo",
 					CommitSelectionStrategy: kargoapi.CommitSelectionStrategySemVer,
 				}},
 			},
