@@ -291,13 +291,13 @@ type WarehouseStatus struct {
 // DiscoveredArtifacts holds the artifacts discovered by the Warehouse.
 type DiscoveredArtifacts struct {
 	// Commits holds the Git commits discovered by the Warehouse.
-	Commits []GitDiscoveryResult `json:"commits,omitempty" protobuf:"bytes,3,rep,name=commits"`
+	Commits []GitDiscoveryResult `json:"commits,omitempty" protobuf:"bytes,1,rep,name=commits"`
 
 	// Images holds the images discovered by the Warehouse.
-	Images []ImageDiscoveryResult `json:"images,omitempty" protobuf:"bytes,1,rep,name=images"`
+	Images []ImageDiscoveryResult `json:"images,omitempty" protobuf:"bytes,2,rep,name=images"`
 
 	// Charts holds the charts discovered by the Warehouse.
-	Charts []ChartDiscoveryResult `json:"charts,omitempty" protobuf:"bytes,2,rep,name=charts"`
+	Charts []ChartDiscoveryResult `json:"charts,omitempty" protobuf:"bytes,3,rep,name=charts"`
 }
 
 // GitDiscoveryResult represents the result of a Git discovery operation for a
@@ -339,9 +339,13 @@ type DiscoveredCommit struct {
 	// +optional
 	Subject string `json:"subject,omitempty" protobuf:"bytes,4,opt,name=subject"`
 
+	// Author is the author of the commit.
+	// +optional
+	Author string `json:"author,omitempty" protobuf:"bytes,5,opt,name=author"`
+
 	// CreatedAt is the time at which the commit or annotated tag was created.
 	// +optional
-	CreatedAt *metav1.Time `json:"createdAt,omitempty" protobuf:"bytes,5,opt,name=createdAt"`
+	CreatedAt *metav1.Time `json:"createdAt,omitempty" protobuf:"bytes,6,opt,name=createdAt"`
 }
 
 // ImageDiscoveryResult represents the result of an image discovery operation
@@ -376,11 +380,11 @@ type DiscoveredImage struct {
 	// code for this image. This field is optional, and only populated if the
 	// ImageSubscription specifies a GitRepoURL.
 	// +optional
-	GitRepoURL string `json:"gitRepoURL,omitempty" protobuf:"bytes,4,opt,name=gitRepoURL"`
+	GitRepoURL string `json:"gitRepoURL,omitempty" protobuf:"bytes,3,opt,name=gitRepoURL"`
 	// CreatedAt is the time the image was created. This field is optional, and
 	// not populated for every ImageSelectionStrategy.
 	// +optional
-	CreatedAt *metav1.Time `json:"createdAt,omitempty" protobuf:"bytes,3,opt,name=createdAt"`
+	CreatedAt *metav1.Time `json:"createdAt,omitempty" protobuf:"bytes,4,opt,name=createdAt"`
 }
 
 // ChartDiscoveryResult represents the result of a chart discovery operation for
