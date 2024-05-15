@@ -367,6 +367,11 @@ type DiscoveredImage struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:Pattern=`^[a-z0-9]+:[a-f0-9]+$`
 	Digest string `json:"digest" protobuf:"bytes,2,opt,name=digest"`
+	// GitRepoURL is the URL of the Git repository that contains the source
+	// code for this image. This field is optional, and only populated if the
+	// ImageSubscription specifies a GitRepoURL.
+	// +optional
+	GitRepoURL string `json:"gitRepoURL,omitempty" protobuf:"bytes,4,opt,name=gitRepoURL"`
 	// CreatedAt is the time the image was created. ThiCs field is optional, and
 	// not populated for every ImageSelectionStrategy.
 	CreatedAt *metav1.Time `json:"createdAt,omitempty" protobuf:"bytes,3,opt,name=createdAt"`
