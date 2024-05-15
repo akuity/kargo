@@ -143,6 +143,16 @@ func (r *reconciler) discoverBranchHistory(repo git.Repo, sub kargoapi.GitSubscr
 			filteredCommits = make([]git.CommitMetadata, 0, limit)
 		}
 
+		// Compile include and exclude path selectors.
+		includeSelectors, err := getPathSelectors(sub.IncludePaths)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing include selector: %w", err)
+		}
+		excludeSelectors, err := getPathSelectors(sub.ExcludePaths)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing exclude selector: %w", err)
+		}
+
 		// Filter commits based on include and exclude paths.
 		for _, meta := range commits {
 			diffPaths, err := r.getDiffPathsForCommitIDFn(repo, meta.ID)
@@ -154,7 +164,7 @@ func (r *reconciler) discoverBranchHistory(repo git.Repo, sub kargoapi.GitSubscr
 					err,
 				)
 			}
-			matchesPathsFilters, err := matchesPathsFilters(sub.IncludePaths, sub.ExcludePaths, diffPaths)
+			match, err := matchesPathsFilters(includeSelectors, excludeSelectors, diffPaths)
 			if err != nil {
 				return nil, fmt.Errorf(
 					"error checking includePaths/excludePaths match for commit %q for git repo %q: %w",
@@ -163,7 +173,7 @@ func (r *reconciler) discoverBranchHistory(repo git.Repo, sub kargoapi.GitSubscr
 					err,
 				)
 			}
-			if matchesPathsFilters {
+			if match {
 				filteredCommits = append(filteredCommits, meta)
 			}
 
@@ -292,19 +302,12 @@ func getPathSelectors(selectorStrs []string) ([]pathSelector, error) {
 	return selectors, nil
 }
 
-func matchesPathsFilters(includePaths []string, excludePaths []string, diffs []string) (bool, error) {
-	includeSelectors, err := getPathSelectors(includePaths)
-	if err != nil {
-		return false, err
-	}
-	excludeSelectors, err := getPathSelectors(excludePaths)
-	if err != nil {
-		return false, err
-	}
+func matchesPathsFilters(includeSelectors, excludeSelectors []pathSelector, diffs []string) (bool, error) {
 pathLoop:
 	for _, path := range diffs {
 		if len(includeSelectors) > 0 {
 			var selected bool
+			var err error
 			for _, selector := range includeSelectors {
 				if selected, err = selector(path); err != nil {
 					return false, err

@@ -842,15 +842,6 @@ func TestMatchesPathsFilters(t *testing.T) {
 			},
 		},
 		{
-			name:         "error with invalid regexp in excludePaths configuration",
-			includePaths: []string{regexPrefix + "values\\.ya?ml$"},
-			excludePaths: []string{regexpPrefix + "nonexistent", regexpPrefix + ".*val.*", regexPrefix + "["},
-			diffs:        []string{"path1/values.yaml", "path2/_helpers.tpl"},
-			assertions: func(t *testing.T, _ bool, err error) {
-				require.ErrorContains(t, err, "error parsing regexp: missing closing ]: `[`")
-			},
-		},
-		{
 			name:         "error with invalid glob syntax",
 			includePaths: []string{"glob:path2/*.tpl["},
 			diffs:        []string{"path1/values.yaml", "path2/_helpers.tpl"},
@@ -982,7 +973,12 @@ func TestMatchesPathsFilters(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			matchFound, err := matchesPathsFilters(testCase.includePaths, testCase.excludePaths, testCase.diffs)
+			includeSelectors, err := getPathSelectors(testCase.includePaths)
+			require.NoError(t, err)
+			excludeSelectors, err := getPathSelectors(testCase.excludePaths)
+			require.NoError(t, err)
+
+			matchFound, err := matchesPathsFilters(includeSelectors, excludeSelectors, testCase.diffs)
 			testCase.assertions(t, matchFound, err)
 		})
 	}
