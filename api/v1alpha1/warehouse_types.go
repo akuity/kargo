@@ -376,15 +376,19 @@ type DiscoveredImage struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:Pattern=`^[a-z0-9]+:[a-f0-9]+$`
 	Digest string `json:"digest" protobuf:"bytes,2,opt,name=digest"`
+	// Platform is the target platform of the image. This field is optional, and
+	// only populated if the ImageSubscription specifies a Platform.
+	// +optional
+	Platform string `json:"platform,omitempty" protobuf:"bytes,3,opt,name=platform"`
 	// GitRepoURL is the URL of the Git repository that contains the source
 	// code for this image. This field is optional, and only populated if the
 	// ImageSubscription specifies a GitRepoURL.
 	// +optional
-	GitRepoURL string `json:"gitRepoURL,omitempty" protobuf:"bytes,3,opt,name=gitRepoURL"`
+	GitRepoURL string `json:"gitRepoURL,omitempty" protobuf:"bytes,4,opt,name=gitRepoURL"`
 	// CreatedAt is the time the image was created. This field is optional, and
 	// not populated for every ImageSelectionStrategy.
 	// +optional
-	CreatedAt *metav1.Time `json:"createdAt,omitempty" protobuf:"bytes,4,opt,name=createdAt"`
+	CreatedAt *metav1.Time `json:"createdAt,omitempty" protobuf:"bytes,5,opt,name=createdAt"`
 }
 
 // ChartDiscoveryResult represents the result of a chart discovery operation for
