@@ -320,23 +320,28 @@ type GitDiscoveryResult struct {
 // GitSubscription.
 type DiscoveredCommit struct {
 	// ID is the identifier of the commit. This typically is a SHA-1 hash.
+	// +kubebuilder:validation:MinLength=1
 	ID string `json:"id,omitempty" protobuf:"bytes,1,opt,name=id"`
 
 	// Branch is the branch in which the commit was found. This field is
 	// optional, and populated based on the CommitSelectionStrategy of the
 	// GitSubscription.
+	// +optional
 	Branch string `json:"branch,omitempty" protobuf:"bytes,2,opt,name=branch"`
 
 	// Tag is the tag that resolved to this commit. This field is optional, and
 	// populated based on the CommitSelectionStrategy of the GitSubscription.
+	// +optional
 	Tag string `json:"tag,omitempty" protobuf:"bytes,3,opt,name=tag"`
 
 	// Subject is the subject of the commit (i.e. the first line of the commit
 	// message).
+	// +optional
 	Subject string `json:"subject,omitempty" protobuf:"bytes,4,opt,name=subject"`
 
 	// CreatedAt is the time at which the commit or annotated tag was created.
-	CreatedAt metav1.Time `json:"createdAt,omitempty" protobuf:"bytes,5,opt,name=createdAt"`
+	// +optional
+	CreatedAt *metav1.Time `json:"createdAt,omitempty" protobuf:"bytes,5,opt,name=createdAt"`
 }
 
 // ImageDiscoveryResult represents the result of an image discovery operation
@@ -372,8 +377,9 @@ type DiscoveredImage struct {
 	// ImageSubscription specifies a GitRepoURL.
 	// +optional
 	GitRepoURL string `json:"gitRepoURL,omitempty" protobuf:"bytes,4,opt,name=gitRepoURL"`
-	// CreatedAt is the time the image was created. ThiCs field is optional, and
+	// CreatedAt is the time the image was created. This field is optional, and
 	// not populated for every ImageSelectionStrategy.
+	// +optional
 	CreatedAt *metav1.Time `json:"createdAt,omitempty" protobuf:"bytes,3,opt,name=createdAt"`
 }
 
