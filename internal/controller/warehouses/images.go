@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/git"
@@ -63,20 +65,22 @@ func (r *reconciler) discoverImages(
 		}
 
 		logger.Debugf("discovered %d suitable images", len(images))
-		imgs := make([]kargoapi.DiscoveredImage, 0, len(images))
+		discoveredImages := make([]kargoapi.DiscoveredImage, 0, len(images))
 		for _, img := range images {
-			imgs = append(
-				imgs,
-				kargoapi.DiscoveredImage{
-					Tag:        img.Tag,
-					Digest:     img.Digest.String(),
-					GitRepoURL: r.getImageSourceURL(sub.GitRepoURL, img.Tag),
-				},
-			)
+			discovery := kargoapi.DiscoveredImage{
+				Tag:        img.Tag,
+				Digest:     img.Digest.String(),
+				Platform:   sub.Platform,
+				GitRepoURL: r.getImageSourceURL(sub.GitRepoURL, img.Tag),
+			}
+			if img.CreatedAt != nil {
+				discovery.CreatedAt = &metav1.Time{Time: *img.CreatedAt}
+			}
+			discoveredImages = append(discoveredImages, discovery)
 		}
 		results = append(results, kargoapi.ImageDiscoveryResult{
 			RepoURL: sub.RepoURL,
-			Images:  imgs,
+			Images:  discoveredImages,
 		})
 	}
 
