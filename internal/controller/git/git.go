@@ -65,6 +65,9 @@ type TagMetadata struct {
 	// CreatorDate is the creation date of an annotated tag, or the commit date
 	// of a lightweight tag.
 	CreatorDate time.Time
+	// Author is the author of the commit message associated with the tag, in
+	// the format "Name <email>".
+	Author string
 	// Subject is the subject (first line) of the commit message associated
 	// with the tag.
 	Subject string
@@ -75,6 +78,8 @@ type CommitMetadata struct {
 	ID string
 	// CommitDate is the date of the commit.
 	CommitDate time.Time
+	// Author is the author of the commit message, in the format "Name <email>".
+	Author string
 	// Subject is the subject (first line) of the commit message.
 	Subject string
 }
@@ -509,12 +514,12 @@ func (r *repo) ListTagsWithMetadata() ([]TagMetadata, error) {
 	tagsBytes, err := libExec.Exec(r.buildGitCommand(
 		"for-each-ref",
 		"--sort=-creatordate",
-		// This translates to: tag|*|commitID|*|subject|*|creatorDate
+		// This translates to: tag|*|commitID|*|subject|*|authorName authorEmail|*|creatorDate
 		//
 		// The `if`/`then`/`else` logic is used to ensure that we get the
 		// commit ID and subject of the tag, regardless of whether it's an
 		// annotated or lightweight tag.
-		`--format=%(refname:short)|*|%(if)%(*objectname)%(then)%(*objectname)|*|%(*contents:subject)%(else)%(objectname)|*|%(contents:subject)%(end)|*|%(creatordate:iso8601)`, // nolint: lll
+		`--format=%(refname:short)|*|%(if)%(*objectname)%(then)%(*objectname)|*|%(*contents:subject)|*|%(*authorname) %(*authoremail)%(else)%(objectname)|*|%(contents:subject)|*|%(authorname) %(authoremail)%(end)|*|%(creatordate:iso8601)`, // nolint: lll
 		"refs/tags",
 	))
 	if err != nil {
@@ -526,14 +531,15 @@ func (r *repo) ListTagsWithMetadata() ([]TagMetadata, error) {
 	for scanner.Scan() {
 		line := scanner.Bytes()
 		parts := bytes.Split(scanner.Bytes(), []byte("|*|"))
-		if len(parts) != 4 {
+		if len(parts) != 5 {
 			return nil, fmt.Errorf("unexpected number of fields: %q", line)
 		}
 
 		tag := string(parts[0])
 		commitID := string(parts[1])
 		subject := string(parts[2])
-		creatorDate, err := time.Parse("2006-01-02 15:04:05 -0700", string(parts[3]))
+		author := string(parts[3])
+		creatorDate, err := time.Parse("2006-01-02 15:04:05 -0700", string(parts[4]))
 		if err != nil {
 			return nil, fmt.Errorf("error parsing creator date %q: %w", parts[3], err)
 		}
@@ -541,8 +547,9 @@ func (r *repo) ListTagsWithMetadata() ([]TagMetadata, error) {
 		tags = append(tags, TagMetadata{
 			Tag:         tag,
 			CommitID:    commitID,
-			CreatorDate: creatorDate,
 			Subject:     subject,
+			Author:      author,
+			CreatorDate: creatorDate,
 		})
 	}
 
@@ -552,8 +559,8 @@ func (r *repo) ListTagsWithMetadata() ([]TagMetadata, error) {
 func (r *repo) ListCommitsWithMetadata(limit, skip uint) ([]CommitMetadata, error) {
 	args := []string{
 		"log",
-		// This translates to: commitID<tab>commitDate<tab>subject
-		"--pretty=format:%H%x09%ci%x09%s",
+		// This translates to: commitID<tab>commitDate<tab>authorName authorEmail<tab>subject
+		"--pretty=format:%H%x09%ci%x09%an <%ae>%x09%s",
 	}
 	if limit > 0 {
 		args = append(args, fmt.Sprintf("--max-count=%d", limit))
@@ -572,7 +579,7 @@ func (r *repo) ListCommitsWithMetadata(limit, skip uint) ([]CommitMetadata, erro
 	for scanner.Scan() {
 		line := scanner.Bytes()
 		parts := bytes.Split(scanner.Bytes(), []byte("\t"))
-		if len(parts) != 3 {
+		if len(parts) != 4 {
 			return nil, fmt.Errorf("unexpected number of fields: %q", line)
 		}
 
@@ -581,11 +588,13 @@ func (r *repo) ListCommitsWithMetadata(limit, skip uint) ([]CommitMetadata, erro
 		if err != nil {
 			return nil, fmt.Errorf("error parsing commit date %q: %w", parts[1], err)
 		}
-		subject := string(parts[2])
+		author := string(parts[2])
+		subject := string(parts[3])
 
 		commits = append(commits, CommitMetadata{
 			ID:         commitID,
 			CommitDate: commitDate,
+			Author:     author,
 			Subject:    subject,
 		})
 	}

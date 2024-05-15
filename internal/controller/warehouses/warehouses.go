@@ -283,6 +283,7 @@ func (r *reconciler) buildFreightFromLatestArtifacts(
 			Branch:  latestCommit.Branch,
 			Tag:     latestCommit.Tag,
 			Message: latestCommit.Subject,
+			Author:  latestCommit.Author,
 		})
 	}
 

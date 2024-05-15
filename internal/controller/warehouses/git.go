@@ -94,6 +94,7 @@ func (r *reconciler) discoverCommits(
 					ID:        meta.CommitID,
 					Tag:       meta.Tag,
 					Subject:   meta.Subject,
+					Author:    meta.Author,
 					CreatedAt: &metav1.Time{Time: meta.CreatorDate},
 				})
 			}
@@ -108,6 +109,7 @@ func (r *reconciler) discoverCommits(
 					ID:        meta.ID,
 					Branch:    sub.Branch,
 					Subject:   meta.Subject,
+					Author:    meta.Author,
 					CreatedAt: &metav1.Time{Time: meta.CommitDate},
 				})
 			}
