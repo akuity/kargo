@@ -62,7 +62,7 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
                 !stage?.spec?.verification ||
                 (stage?.status?.currentPromotion?.freight?.verificationHistory || []).length === 0
               }
-              disableReverify={isVerificationRunning}
+              verificationRunning={isVerificationRunning}
             />
           </div>
           <Divider style={{ marginTop: '1em' }} />
