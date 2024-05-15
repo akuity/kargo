@@ -59,8 +59,8 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
             <StageActions
               stage={stage}
               verificationEnabled={
-                !stage?.spec?.verification ||
-                (stage?.status?.currentPromotion?.freight?.verificationHistory || []).length === 0
+                stage?.spec?.verification &&
+                (stage?.status?.currentPromotion?.freight?.verificationHistory || []).length > 0
               }
               verificationRunning={isVerificationRunning}
             />
