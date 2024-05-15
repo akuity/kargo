@@ -1167,12 +1167,21 @@ export class DiscoveredImage extends Message<DiscoveredImage> {
   digest?: string;
 
   /**
+   * Platform is the target platform of the image. This field is optional, and
+   * only populated if the ImageSubscription specifies a Platform.
+   * +optional
+   *
+   * @generated from field: optional string platform = 3;
+   */
+  platform?: string;
+
+  /**
    * GitRepoURL is the URL of the Git repository that contains the source
    * code for this image. This field is optional, and only populated if the
    * ImageSubscription specifies a GitRepoURL.
    * +optional
    *
-   * @generated from field: optional string gitRepoURL = 3;
+   * @generated from field: optional string gitRepoURL = 4;
    */
   gitRepoURL?: string;
 
@@ -1181,7 +1190,7 @@ export class DiscoveredImage extends Message<DiscoveredImage> {
    * not populated for every ImageSelectionStrategy.
    * +optional
    *
-   * @generated from field: optional k8s.io.apimachinery.pkg.apis.meta.v1.Time createdAt = 4;
+   * @generated from field: optional k8s.io.apimachinery.pkg.apis.meta.v1.Time createdAt = 5;
    */
   createdAt?: Time;
 
@@ -1195,8 +1204,9 @@ export class DiscoveredImage extends Message<DiscoveredImage> {
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 1, name: "tag", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 2, name: "digest", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 3, name: "gitRepoURL", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 4, name: "createdAt", kind: "message", T: Time, opt: true },
+    { no: 3, name: "platform", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 4, name: "gitRepoURL", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 5, name: "createdAt", kind: "message", T: Time, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DiscoveredImage {

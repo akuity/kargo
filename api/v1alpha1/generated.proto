@@ -343,16 +343,21 @@ message DiscoveredImage {
   // +kubebuilder:validation:Pattern=`^[a-z0-9]+:[a-f0-9]+$`
   optional string digest = 2;
 
+  // Platform is the target platform of the image. This field is optional, and
+  // only populated if the ImageSubscription specifies a Platform.
+  // +optional
+  optional string platform = 3;
+
   // GitRepoURL is the URL of the Git repository that contains the source
   // code for this image. This field is optional, and only populated if the
   // ImageSubscription specifies a GitRepoURL.
   // +optional
-  optional string gitRepoURL = 3;
+  optional string gitRepoURL = 4;
 
   // CreatedAt is the time the image was created. This field is optional, and
   // not populated for every ImageSelectionStrategy.
   // +optional
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time createdAt = 4;
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time createdAt = 5;
 }
 
 // Freight represents a collection of versioned artifacts.

@@ -431,6 +431,11 @@ spec:
                                   code for this image. This field is optional, and only populated if the
                                   ImageSubscription specifies a GitRepoURL.
                                 type: string
+                              platform:
+                                description: |-
+                                  Platform is the target platform of the image. This field is optional, and
+                                  only populated if the ImageSubscription specifies a Platform.
+                                type: string
                               tag:
                                 description: Tag is the tag of the image.
                                 maxLength: 128
