@@ -1,6 +1,7 @@
 import { createConnectQueryKey, useMutation, useQuery } from '@connectrpc/connect-query';
 import {
   faChevronDown,
+  faExclamationCircle,
   faExternalLinkAlt,
   faPen,
   faRedo,
@@ -15,6 +16,7 @@ import { generatePath, useNavigate, useParams } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
 import {
+  abortVerification,
   deleteStage,
   getConfig,
   queryFreight,
@@ -30,10 +32,12 @@ import { EditStageModal } from './edit-stage-modal';
 
 export const StageActions = ({
   stage,
-  disableReverify
+  verificationEnabled,
+  verificationRunning
 }: {
   stage: Stage;
-  disableReverify?: boolean;
+  verificationRunning?: boolean;
+  verificationEnabled?: boolean;
 }) => {
   const { name: projectName, stageName } = useParams();
   const navigate = useNavigate();
@@ -95,6 +99,7 @@ export const StageActions = ({
   }, [config, stage]);
 
   const { mutate: reverifyStage, isPending } = useMutation(reverify);
+  const { mutate: abortVerificationAction } = useMutation(abortVerification);
 
   return (
     <Space size={16}>
@@ -130,15 +135,28 @@ export const StageActions = ({
           </Button>
         </Dropdown>
       )}
-      <Button
-        icon={<FontAwesomeIcon icon={faRedo} spin={isPending} />}
-        disabled={isPending || disableReverify}
-        onClick={() => {
-          reverifyStage({ project: projectName, stage: stageName });
-        }}
-      >
-        Reverify
-      </Button>
+      {verificationEnabled && (
+        <>
+          <Button
+            icon={<FontAwesomeIcon icon={faRedo} spin={isPending} />}
+            disabled={isPending || verificationRunning}
+            onClick={() => {
+              reverifyStage({ project: projectName, stage: stageName });
+            }}
+          >
+            Reverify
+          </Button>
+
+          <Button
+            type='default'
+            disabled={!verificationRunning}
+            icon={<FontAwesomeIcon icon={faExclamationCircle} size='1x' />}
+            onClick={() => abortVerificationAction({ project: projectName, stage: stageName })}
+          >
+            Abort Verification
+          </Button>
+        </>
+      )}
 
       <Button
         type='default'
