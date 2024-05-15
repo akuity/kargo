@@ -1000,21 +1000,21 @@ export class DiscoveredArtifacts extends Message<DiscoveredArtifacts> {
   /**
    * Commits holds the Git commits discovered by the Warehouse.
    *
-   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.GitDiscoveryResult commits = 3;
+   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.GitDiscoveryResult commits = 1;
    */
   commits: GitDiscoveryResult[] = [];
 
   /**
    * Images holds the images discovered by the Warehouse.
    *
-   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.ImageDiscoveryResult images = 1;
+   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.ImageDiscoveryResult images = 2;
    */
   images: ImageDiscoveryResult[] = [];
 
   /**
    * Charts holds the charts discovered by the Warehouse.
    *
-   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.ChartDiscoveryResult charts = 2;
+   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.ChartDiscoveryResult charts = 3;
    */
   charts: ChartDiscoveryResult[] = [];
 
@@ -1026,9 +1026,9 @@ export class DiscoveredArtifacts extends Message<DiscoveredArtifacts> {
   static readonly runtime: typeof proto2 = proto2;
   static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.DiscoveredArtifacts";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
-    { no: 3, name: "commits", kind: "message", T: GitDiscoveryResult, repeated: true },
-    { no: 1, name: "images", kind: "message", T: ImageDiscoveryResult, repeated: true },
-    { no: 2, name: "charts", kind: "message", T: ChartDiscoveryResult, repeated: true },
+    { no: 1, name: "commits", kind: "message", T: GitDiscoveryResult, repeated: true },
+    { no: 2, name: "images", kind: "message", T: ImageDiscoveryResult, repeated: true },
+    { no: 3, name: "charts", kind: "message", T: ChartDiscoveryResult, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DiscoveredArtifacts {
@@ -1057,6 +1057,7 @@ export class DiscoveredArtifacts extends Message<DiscoveredArtifacts> {
 export class DiscoveredCommit extends Message<DiscoveredCommit> {
   /**
    * ID is the identifier of the commit. This typically is a SHA-1 hash.
+   * +kubebuilder:validation:MinLength=1
    *
    * @generated from field: optional string id = 1;
    */
@@ -1066,6 +1067,7 @@ export class DiscoveredCommit extends Message<DiscoveredCommit> {
    * Branch is the branch in which the commit was found. This field is
    * optional, and populated based on the CommitSelectionStrategy of the
    * GitSubscription.
+   * +optional
    *
    * @generated from field: optional string branch = 2;
    */
@@ -1074,6 +1076,7 @@ export class DiscoveredCommit extends Message<DiscoveredCommit> {
   /**
    * Tag is the tag that resolved to this commit. This field is optional, and
    * populated based on the CommitSelectionStrategy of the GitSubscription.
+   * +optional
    *
    * @generated from field: optional string tag = 3;
    */
@@ -1082,15 +1085,25 @@ export class DiscoveredCommit extends Message<DiscoveredCommit> {
   /**
    * Subject is the subject of the commit (i.e. the first line of the commit
    * message).
+   * +optional
    *
    * @generated from field: optional string subject = 4;
    */
   subject?: string;
 
   /**
-   * CreatedAt is the time at which the commit or annotated tag was created.
+   * Author is the author of the commit.
+   * +optional
    *
-   * @generated from field: optional k8s.io.apimachinery.pkg.apis.meta.v1.Time createdAt = 5;
+   * @generated from field: optional string author = 5;
+   */
+  author?: string;
+
+  /**
+   * CreatedAt is the time at which the commit or annotated tag was created.
+   * +optional
+   *
+   * @generated from field: optional k8s.io.apimachinery.pkg.apis.meta.v1.Time createdAt = 6;
    */
   createdAt?: Time;
 
@@ -1106,7 +1119,8 @@ export class DiscoveredCommit extends Message<DiscoveredCommit> {
     { no: 2, name: "branch", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 3, name: "tag", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 4, name: "subject", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 5, name: "createdAt", kind: "message", T: Time, opt: true },
+    { no: 5, name: "author", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 6, name: "createdAt", kind: "message", T: Time, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DiscoveredCommit {
@@ -1153,10 +1167,21 @@ export class DiscoveredImage extends Message<DiscoveredImage> {
   digest?: string;
 
   /**
-   * CreatedAt is the time the image was created. ThiCs field is optional, and
-   * not populated for every ImageSelectionStrategy.
+   * GitRepoURL is the URL of the Git repository that contains the source
+   * code for this image. This field is optional, and only populated if the
+   * ImageSubscription specifies a GitRepoURL.
+   * +optional
    *
-   * @generated from field: optional k8s.io.apimachinery.pkg.apis.meta.v1.Time createdAt = 3;
+   * @generated from field: optional string gitRepoURL = 3;
+   */
+  gitRepoURL?: string;
+
+  /**
+   * CreatedAt is the time the image was created. This field is optional, and
+   * not populated for every ImageSelectionStrategy.
+   * +optional
+   *
+   * @generated from field: optional k8s.io.apimachinery.pkg.apis.meta.v1.Time createdAt = 4;
    */
   createdAt?: Time;
 
@@ -1170,7 +1195,8 @@ export class DiscoveredImage extends Message<DiscoveredImage> {
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 1, name: "tag", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 2, name: "digest", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 3, name: "createdAt", kind: "message", T: Time, opt: true },
+    { no: 3, name: "gitRepoURL", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 4, name: "createdAt", kind: "message", T: Time, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DiscoveredImage {

@@ -356,6 +356,9 @@ spec:
                               DiscoveredCommit represents a commit discovered by a Warehouse for a
                               GitSubscription.
                             properties:
+                              author:
+                                description: Author is the author of the commit.
+                                type: string
                               branch:
                                 description: |-
                                   Branch is the branch in which the commit was found. This field is
@@ -370,6 +373,7 @@ spec:
                               id:
                                 description: ID is the identifier of the commit. This
                                   typically is a SHA-1 hash.
+                                minLength: 1
                                 type: string
                               subject:
                                 description: |-
@@ -412,7 +416,7 @@ spec:
                             properties:
                               createdAt:
                                 description: |-
-                                  CreatedAt is the time the image was created. ThiCs field is optional, and
+                                  CreatedAt is the time the image was created. This field is optional, and
                                   not populated for every ImageSelectionStrategy.
                                 format: date-time
                                 type: string
@@ -420,6 +424,12 @@ spec:
                                 description: Digest is the digest of the image.
                                 minLength: 1
                                 pattern: ^[a-z0-9]+:[a-f0-9]+$
+                                type: string
+                              gitRepoURL:
+                                description: |-
+                                  GitRepoURL is the URL of the Git repository that contains the source
+                                  code for this image. This field is optional, and only populated if the
+                                  ImageSubscription specifies a GitRepoURL.
                                 type: string
                               tag:
                                 description: Tag is the tag of the image.

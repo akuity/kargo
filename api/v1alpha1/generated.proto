@@ -288,36 +288,45 @@ message ChartSubscription {
 // DiscoveredArtifacts holds the artifacts discovered by the Warehouse.
 message DiscoveredArtifacts {
   // Commits holds the Git commits discovered by the Warehouse.
-  repeated GitDiscoveryResult commits = 3;
+  repeated GitDiscoveryResult commits = 1;
 
   // Images holds the images discovered by the Warehouse.
-  repeated ImageDiscoveryResult images = 1;
+  repeated ImageDiscoveryResult images = 2;
 
   // Charts holds the charts discovered by the Warehouse.
-  repeated ChartDiscoveryResult charts = 2;
+  repeated ChartDiscoveryResult charts = 3;
 }
 
 // DiscoveredCommit represents a commit discovered by a Warehouse for a
 // GitSubscription.
 message DiscoveredCommit {
   // ID is the identifier of the commit. This typically is a SHA-1 hash.
+  // +kubebuilder:validation:MinLength=1
   optional string id = 1;
 
   // Branch is the branch in which the commit was found. This field is
   // optional, and populated based on the CommitSelectionStrategy of the
   // GitSubscription.
+  // +optional
   optional string branch = 2;
 
   // Tag is the tag that resolved to this commit. This field is optional, and
   // populated based on the CommitSelectionStrategy of the GitSubscription.
+  // +optional
   optional string tag = 3;
 
   // Subject is the subject of the commit (i.e. the first line of the commit
   // message).
+  // +optional
   optional string subject = 4;
 
+  // Author is the author of the commit.
+  // +optional
+  optional string author = 5;
+
   // CreatedAt is the time at which the commit or annotated tag was created.
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time createdAt = 5;
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time createdAt = 6;
 }
 
 // DiscoveredImage represents an image discovered by a Warehouse for an
@@ -334,9 +343,16 @@ message DiscoveredImage {
   // +kubebuilder:validation:Pattern=`^[a-z0-9]+:[a-f0-9]+$`
   optional string digest = 2;
 
-  // CreatedAt is the time the image was created. ThiCs field is optional, and
+  // GitRepoURL is the URL of the Git repository that contains the source
+  // code for this image. This field is optional, and only populated if the
+  // ImageSubscription specifies a GitRepoURL.
+  // +optional
+  optional string gitRepoURL = 3;
+
+  // CreatedAt is the time the image was created. This field is optional, and
   // not populated for every ImageSelectionStrategy.
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time createdAt = 3;
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time createdAt = 4;
 }
 
 // Freight represents a collection of versioned artifacts.

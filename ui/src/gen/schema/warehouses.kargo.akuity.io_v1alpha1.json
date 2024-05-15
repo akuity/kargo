@@ -234,6 +234,10 @@
                     "items": {
                       "description": "DiscoveredCommit represents a commit discovered by a Warehouse for a\nGitSubscription.",
                       "properties": {
+                        "author": {
+                          "description": "Author is the author of the commit.",
+                          "type": "string"
+                        },
                         "branch": {
                           "description": "Branch is the branch in which the commit was found. This field is\noptional, and populated based on the CommitSelectionStrategy of the\nGitSubscription.",
                           "type": "string"
@@ -245,6 +249,7 @@
                         },
                         "id": {
                           "description": "ID is the identifier of the commit. This typically is a SHA-1 hash.",
+                          "minLength": 1,
                           "type": "string"
                         },
                         "subject": {
@@ -285,7 +290,7 @@
                       "description": "DiscoveredImage represents an image discovered by a Warehouse for an\nImageSubscription.",
                       "properties": {
                         "createdAt": {
-                          "description": "CreatedAt is the time the image was created. ThiCs field is optional, and\nnot populated for every ImageSelectionStrategy.",
+                          "description": "CreatedAt is the time the image was created. This field is optional, and\nnot populated for every ImageSelectionStrategy.",
                           "format": "date-time",
                           "type": "string"
                         },
@@ -293,6 +298,10 @@
                           "description": "Digest is the digest of the image.",
                           "minLength": 1,
                           "pattern": "^[a-z0-9]+:[a-f0-9]+$",
+                          "type": "string"
+                        },
+                        "gitRepoURL": {
+                          "description": "GitRepoURL is the URL of the Git repository that contains the source\ncode for this image. This field is optional, and only populated if the\nImageSubscription specifies a GitRepoURL.",
                           "type": "string"
                         },
                         "tag": {
