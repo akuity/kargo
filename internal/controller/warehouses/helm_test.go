@@ -2,7 +2,7 @@ package warehouses
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -12,145 +12,165 @@ import (
 	"github.com/akuity/kargo/internal/helm"
 )
 
-func TestSelectCharts(t *testing.T) {
+func TestDiscoverCharts(t *testing.T) {
 	testCases := []struct {
-		name                 string
-		credentialsDB        credentials.Database
-		selectChartVersionFn func(
-			context.Context,
-			string,
-			string,
-			string,
-			*helm.Credentials,
-		) (string, error)
-		assertions func(*testing.T, []kargoapi.Chart, error)
+		name       string
+		reconciler *reconciler
+		subs       []kargoapi.RepoSubscription
+		assertions func(*testing.T, []kargoapi.ChartDiscoveryResult, error)
 	}{
 		{
-			name: "error getting repository credentials",
-			credentialsDB: &credentials.FakeDB{
-				GetFn: func(
-					context.Context,
-					string,
-					credentials.Type,
-					string,
-				) (credentials.Credentials, bool, error) {
-					return credentials.Credentials{}, false,
-						errors.New("something went wrong")
-				},
+			name:       "no chart subscription",
+			reconciler: &reconciler{},
+			subs: []kargoapi.RepoSubscription{
+				{Git: &kargoapi.GitSubscription{}},
 			},
-			assertions: func(t *testing.T, _ []kargoapi.Chart, err error) {
-				require.ErrorContains(t, err, "error obtaining credentials for chart")
-				require.ErrorContains(t, err, "something went wrong")
-			},
-		},
-
-		{
-			name: "error getting latest chart version",
-			credentialsDB: &credentials.FakeDB{
-				GetFn: func(
-					context.Context,
-					string,
-					credentials.Type,
-					string,
-				) (credentials.Credentials, bool, error) {
-					return credentials.Credentials{}, false, nil
-				},
-			},
-			selectChartVersionFn: func(
-				context.Context,
-				string,
-				string,
-				string,
-				*helm.Credentials,
-			) (string, error) {
-				return "", errors.New("something went wrong")
-			},
-			assertions: func(t *testing.T, _ []kargoapi.Chart, err error) {
-				require.ErrorContains(t, err, "error searching for latest version of chart")
-				require.ErrorContains(t, err, "something went wrong")
-			},
-		},
-
-		{
-			name: "no chart found",
-			credentialsDB: &credentials.FakeDB{
-				GetFn: func(
-					context.Context,
-					string,
-					credentials.Type,
-					string,
-				) (credentials.Credentials, bool, error) {
-					return credentials.Credentials{}, false, nil
-				},
-			},
-			selectChartVersionFn: func(
-				context.Context,
-				string,
-				string,
-				string,
-				*helm.Credentials,
-			) (string, error) {
-				return "", nil
-			},
-			assertions: func(t *testing.T, _ []kargoapi.Chart, err error) {
-				require.ErrorContains(t, err, "found no suitable version of chart")
-			},
-		},
-
-		{
-			name: "success",
-			credentialsDB: &credentials.FakeDB{
-				GetFn: func(
-					context.Context,
-					string,
-					credentials.Type,
-					string,
-				) (credentials.Credentials, bool, error) {
-					return credentials.Credentials{}, false, nil
-				},
-			},
-			selectChartVersionFn: func(
-				context.Context,
-				string,
-				string,
-				string,
-				*helm.Credentials,
-			) (string, error) {
-				return "1.0.0", nil
-			},
-			assertions: func(t *testing.T, charts []kargoapi.Chart, err error) {
+			assertions: func(t *testing.T, results []kargoapi.ChartDiscoveryResult, err error) {
 				require.NoError(t, err)
-				require.Len(t, charts, 1)
-				require.Equal(
-					t,
-					kargoapi.Chart{
-						RepoURL: "fake-url",
-						Name:    "fake-chart",
-						Version: "1.0.0",
+				require.Empty(t, results)
+			},
+		},
+		{
+			name: "error obtaining credentials",
+			reconciler: &reconciler{
+				credentialsDB: &credentials.FakeDB{
+					GetFn: func(
+						context.Context,
+						string,
+						credentials.Type,
+						string,
+					) (credentials.Credentials, bool, error) {
+						return credentials.Credentials{}, false, fmt.Errorf("something went wrong")
 					},
-					charts[0],
-				)
+				},
+			},
+			subs: []kargoapi.RepoSubscription{
+				{Chart: &kargoapi.ChartSubscription{}},
+			},
+			assertions: func(t *testing.T, results []kargoapi.ChartDiscoveryResult, err error) {
+				require.Error(t, err)
+				require.Empty(t, results)
+			},
+		},
+		{
+			name: "discovers chart versions",
+			reconciler: &reconciler{
+				credentialsDB: &credentials.FakeDB{},
+				discoverChartVersionsFn: func(
+					context.Context,
+					string,
+					string,
+					string,
+					*helm.Credentials,
+				) ([]string, error) {
+					return []string{"1.1.0", "1.0.0"}, nil
+				},
+			},
+			subs: []kargoapi.RepoSubscription{
+				{Chart: &kargoapi.ChartSubscription{
+					RepoURL: "https://example.com",
+					Name:    "fake-chart",
+				}},
+			},
+			assertions: func(t *testing.T, results []kargoapi.ChartDiscoveryResult, err error) {
+				require.NoError(t, err)
+				require.Equal(t, []kargoapi.ChartDiscoveryResult{
+					{
+						RepoURL:  "https://example.com",
+						Name:     "fake-chart",
+						Versions: []string{"1.1.0", "1.0.0"},
+					},
+				}, results)
+			},
+		},
+		{
+			name: "no chart versions discovered",
+			reconciler: &reconciler{
+				credentialsDB: &credentials.FakeDB{},
+				discoverChartVersionsFn: func(
+					context.Context,
+					string,
+					string,
+					string,
+					*helm.Credentials,
+				) ([]string, error) {
+					return nil, nil
+				},
+			},
+			subs: []kargoapi.RepoSubscription{
+				{Chart: &kargoapi.ChartSubscription{
+					RepoURL: "https://example.com",
+					Name:    "fake-chart",
+				}},
+			},
+			assertions: func(t *testing.T, results []kargoapi.ChartDiscoveryResult, err error) {
+				require.NoError(t, err)
+				require.Equal(t, []kargoapi.ChartDiscoveryResult{
+					{
+						RepoURL: "https://example.com",
+						Name:    "fake-chart",
+					},
+				}, results)
+			},
+		},
+		{
+			name: "error discovering chart versions",
+			reconciler: &reconciler{
+				credentialsDB: &credentials.FakeDB{},
+				discoverChartVersionsFn: func(
+					context.Context,
+					string,
+					string,
+					string,
+					*helm.Credentials,
+				) ([]string, error) {
+					return nil, fmt.Errorf("something went wrong")
+				},
+			},
+			subs: []kargoapi.RepoSubscription{
+				{Chart: &kargoapi.ChartSubscription{}},
+			},
+			assertions: func(t *testing.T, results []kargoapi.ChartDiscoveryResult, err error) {
+				require.ErrorContains(t, err, "error discovering latest suitable chart versions")
+				require.ErrorContains(t, err, "something went wrong")
+				require.Empty(t, results)
+			},
+		},
+		{
+			name: "error discovering chart versions with chart name",
+			reconciler: &reconciler{
+				credentialsDB: &credentials.FakeDB{},
+				discoverChartVersionsFn: func(
+					context.Context,
+					string,
+					string,
+					string,
+					*helm.Credentials,
+				) ([]string, error) {
+					return nil, fmt.Errorf("something went wrong")
+				},
+			},
+			subs: []kargoapi.RepoSubscription{
+				{Chart: &kargoapi.ChartSubscription{
+					Name: "fake-chart",
+				}},
+			},
+			assertions: func(t *testing.T, results []kargoapi.ChartDiscoveryResult, err error) {
+				require.ErrorContains(t, err, "error discovering latest suitable chart versions for chart")
+				require.ErrorContains(t, err, "something went wrong")
+				require.Empty(t, results)
 			},
 		},
 	}
+
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			charts, err := (&reconciler{
-				credentialsDB:        testCase.credentialsDB,
-				selectChartVersionFn: testCase.selectChartVersionFn,
-			}).selectCharts(
-				context.Background(),
+			results, err := testCase.reconciler.discoverCharts(
+				context.TODO(),
 				"fake-namespace",
-				[]kargoapi.RepoSubscription{
-					{
-						Chart: &kargoapi.ChartSubscription{
-							RepoURL: "fake-url",
-							Name:    "fake-chart",
-						},
-					},
-				},
+				testCase.subs,
 			)
-			testCase.assertions(t, charts, err)
+			testCase.assertions(t, results, err)
 		})
 	}
 }

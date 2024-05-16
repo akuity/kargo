@@ -7,6 +7,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/Masterminds/semver/v3"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -65,8 +67,7 @@ func TestGetChartVersionsFromClassicRepo(t *testing.T) {
 			repoURL: fmt.Sprintf("%s/fake-repo", testServer.URL),
 			chart:   "non-existent-chart",
 			assertions: func(t *testing.T, _ []string, err error) {
-				require.ErrorContains(t, err, "no versions of chart")
-				require.ErrorContains(t, err, "found in repository index")
+				require.NoError(t, err)
 			},
 		},
 		{
@@ -103,60 +104,246 @@ func TestGetChartVersionsFromOCIRepo(t *testing.T) {
 	require.NotEmpty(t, versions)
 }
 
-func TestGetLatestVersion(t *testing.T) {
+func TestVersionsToSemVerCollection(t *testing.T) {
 	testCases := []struct {
-		name       string
-		unsorted   []string
-		constraint string
-		assertions func(t *testing.T, latest string, err error)
+		name     string
+		input    []string
+		expected semver.Collection
 	}{
 		{
-			name:     "success with invalid version ignored",
-			unsorted: []string{"not-semantic", "1.0.0"},
-			assertions: func(t *testing.T, latest string, err error) {
-				require.NoError(t, err)
-				require.Equal(t, "1.0.0", latest)
+			name:     "empty input",
+			input:    []string{},
+			expected: semver.Collection{},
+		},
+		{
+			name:  "valid semvers",
+			input: []string{"1.2.3", "4.5.6", "7.8.9"},
+			expected: semver.Collection{
+				semver.MustParse("1.2.3"),
+				semver.MustParse("4.5.6"),
+				semver.MustParse("7.8.9"),
 			},
 		},
 		{
-			name:       "error parsing constraint",
-			unsorted:   []string{"1.0.0"},
-			constraint: "invalid",
-			assertions: func(t *testing.T, _ string, err error) {
-				require.ErrorContains(t, err, "error parsing constraint")
+			name:  "mixed valid and invalid semvers",
+			input: []string{"1.2.3", "invalid", "4.5.6", "also-invalid", "7.8.9"},
+			expected: semver.Collection{
+				semver.MustParse("1.2.3"),
+				semver.MustParse("4.5.6"),
+				semver.MustParse("7.8.9"),
 			},
 		},
 		{
-			name:       "success with constraint",
-			unsorted:   []string{"2.0.0", "1.0.0", "1.1.0"},
-			constraint: "^1.0.0",
-			assertions: func(t *testing.T, latest string, err error) {
-				require.NoError(t, err)
-				require.Equal(t, "1.1.0", latest)
+			name:  "prerelease versions",
+			input: []string{"1.2.3-alpha.1", "4.5.6-beta.2", "7.8.9-rc.3"},
+			expected: semver.Collection{
+				semver.MustParse("1.2.3-alpha.1"),
+				semver.MustParse("4.5.6-beta.2"),
+				semver.MustParse("7.8.9-rc.3"),
 			},
 		},
 		{
-			name:     "success with no constraint",
-			unsorted: []string{"2.0.0", "1.0.0", "1.1.0"},
-			assertions: func(t *testing.T, latest string, err error) {
-				require.NoError(t, err)
-				require.Equal(t, "2.0.0", latest)
-			},
-		},
-		{
-			name:       "success with no constraint",
-			unsorted:   []string{"2.0.0", "1.0.0", "1.1.0"},
-			constraint: "^3.0.0",
-			assertions: func(t *testing.T, latest string, err error) {
-				require.NoError(t, err)
-				require.Equal(t, "", latest)
+			name:  "metadata versions",
+			input: []string{"1.2.3+build.1", "4.5.6+build.2", "7.8.9+build.3"},
+			expected: semver.Collection{
+				semver.MustParse("1.2.3+build.1"),
+				semver.MustParse("4.5.6+build.2"),
+				semver.MustParse("7.8.9+build.3"),
 			},
 		},
 	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			latest, err := getLatestVersion(testCase.unsorted, testCase.constraint)
-			testCase.assertions(t, latest, err)
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			actual := versionsToSemVerCollection(tc.input)
+			assert.Equal(t, tc.expected, actual)
+		})
+	}
+}
+
+func TestSemVerCollectionToVersions(t *testing.T) {
+	testCases := []struct {
+		name     string
+		input    semver.Collection
+		expected []string
+	}{
+		{
+			name:     "empty collection",
+			input:    semver.Collection{},
+			expected: []string{},
+		},
+		{
+			name: "valid semvers",
+			input: semver.Collection{
+				semver.MustParse("1.2.3"),
+				semver.MustParse("4.5.6"),
+				semver.MustParse("7.8.9"),
+			},
+			expected: []string{"1.2.3", "4.5.6", "7.8.9"},
+		},
+		{
+			name: "prerelease versions",
+			input: semver.Collection{
+				semver.MustParse("1.2.3-alpha.1"),
+				semver.MustParse("4.5.6-beta.2"),
+				semver.MustParse("7.8.9-rc.3"),
+			},
+			expected: []string{"1.2.3-alpha.1", "4.5.6-beta.2", "7.8.9-rc.3"},
+		},
+		{
+			name: "metadata versions",
+			input: semver.Collection{
+				semver.MustParse("1.2.3+build.1"),
+				semver.MustParse("4.5.6+build.2"),
+				semver.MustParse("7.8.9+build.3"),
+			},
+			expected: []string{"1.2.3+build.1", "4.5.6+build.2", "7.8.9+build.3"},
+		},
+		{
+			name: "loose versions",
+			input: semver.Collection{
+				semver.MustParse("v1.2.3"),
+				semver.MustParse("v4.5.6"),
+				semver.MustParse("v7.8.9"),
+			},
+			expected: []string{"v1.2.3", "v4.5.6", "v7.8.9"},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			actual := semVerCollectionToVersions(tc.input)
+			assert.Equal(t, tc.expected, actual)
+		})
+	}
+}
+
+func TestFilterSemVers(t *testing.T) {
+	testCases := []struct {
+		name             string
+		input            semver.Collection
+		constraint       string
+		expectedFiltered semver.Collection
+		expectedError    error
+	}{
+		{
+			name:             "empty collection",
+			input:            semver.Collection{},
+			constraint:       "^1.2.3",
+			expectedFiltered: semver.Collection{},
+		},
+		{
+			name: "exact version constraint",
+			input: semver.Collection{
+				semver.MustParse("1.2.3"),
+				semver.MustParse("4.5.6"),
+				semver.MustParse("7.8.9"),
+			},
+			constraint: "=4.5.6",
+			expectedFiltered: semver.Collection{
+				semver.MustParse("4.5.6"),
+			},
+		},
+		{
+			name: "range constraint",
+			input: semver.Collection{
+				semver.MustParse("1.2.3"),
+				semver.MustParse("4.5.6"),
+				semver.MustParse("7.8.9"),
+			},
+			constraint: ">=4.5.6 <7.8.9",
+			expectedFiltered: semver.Collection{
+				semver.MustParse("4.5.6"),
+			},
+		},
+		{
+			name: "prerelease constraint",
+			input: semver.Collection{
+				semver.MustParse("1.2.3-alpha.1"),
+				semver.MustParse("1.2.3-beta.2"),
+				semver.MustParse("1.3.0"),
+			},
+			constraint: "1.2.x-0",
+			expectedFiltered: semver.Collection{
+				semver.MustParse("1.2.3-alpha.1"),
+				semver.MustParse("1.2.3-beta.2"),
+			},
+		},
+		{
+			name: "multiple matches",
+			input: semver.Collection{
+				semver.MustParse("1.2.3"),
+				semver.MustParse("1.2.4"),
+				semver.MustParse("1.3.0"),
+			},
+			constraint: "1.2.x",
+			expectedFiltered: semver.Collection{
+				semver.MustParse("1.2.3"),
+				semver.MustParse("1.2.4"),
+			},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			filtered, err := filterSemVers(tc.input, tc.constraint)
+			assert.NoError(t, err)
+			assert.Equal(t, tc.expectedFiltered, filtered)
+		})
+	}
+
+	t.Run("invalid constraint", func(t *testing.T) {
+		_, err := filterSemVers(semver.Collection{}, "invalid")
+		assert.ErrorContains(t, err, "error parsing constraint")
+	})
+}
+
+func TestNormalizeChartRepositoryURL(t *testing.T) {
+	testCases := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "empty string",
+			input:    "",
+			expected: "",
+		},
+		{
+			name:     "single word",
+			input:    "repo",
+			expected: "repo",
+		},
+		{
+			name:     "leading and trailing whitespace",
+			input:    "  repo  ",
+			expected: "repo",
+		},
+		{
+			name:     "mixed case",
+			input:    "REpo",
+			expected: "repo",
+		},
+		{
+			name:     "oci prefix",
+			input:    "oci://repo",
+			expected: "repo",
+		},
+		{
+			name:     "oci prefix with whitespace",
+			input:    "  oci://repo  ",
+			expected: "repo",
+		},
+		{
+			name:     "oci prefix with mixed case",
+			input:    "OCI://Repo",
+			expected: "repo",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			actual := NormalizeChartRepositoryURL(tc.input)
+			assert.Equal(t, tc.expected, actual)
 		})
 	}
 }

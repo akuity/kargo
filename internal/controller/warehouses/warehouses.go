@@ -6,7 +6,6 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -33,64 +32,33 @@ type reconciler struct {
 
 	// The following behaviors are overridable for testing purposes:
 
-	getLatestFreightFromReposFn func(
-		context.Context,
-		*kargoapi.Warehouse,
-	) (*kargoapi.Freight, error)
+	discoverArtifactsFn func(context.Context, *kargoapi.Warehouse) (*kargoapi.DiscoveredArtifacts, error)
 
-	selectCommitsFn func(
-		ctx context.Context,
-		namespace string,
-		subs []kargoapi.RepoSubscription,
-		LastFreight *kargoapi.FreightReference,
-	) ([]kargoapi.GitCommit, error)
+	discoverCommitsFn func(context.Context, string, []kargoapi.RepoSubscription) ([]kargoapi.GitDiscoveryResult, error)
 
-	getLastCommitIDFn func(repo git.Repo) (string, error)
+	discoverImagesFn func(context.Context, string, []kargoapi.RepoSubscription) ([]kargoapi.ImageDiscoveryResult, error)
 
-	getDiffPathsSinceCommitIDFn func(repo git.Repo, commitId string) ([]string, error)
+	discoverImageRefsFn func(context.Context, kargoapi.ImageSubscription, *image.Credentials) ([]image.Image, error)
 
-	listTagsFn func(repo git.Repo) ([]string, error)
+	discoverChartsFn func(context.Context, string, []kargoapi.RepoSubscription) ([]kargoapi.ChartDiscoveryResult, error)
 
-	checkoutTagFn func(repo git.Repo, tag string) error
+	discoverChartVersionsFn func(context.Context, string, string, string, *helm.Credentials) ([]string, error)
 
-	selectImagesFn func(
-		ctx context.Context,
-		namespace string,
-		subs []kargoapi.RepoSubscription,
-	) ([]kargoapi.Image, error)
+	buildFreightFromLatestArtifactsFn func(string, *kargoapi.DiscoveredArtifacts) (*kargoapi.Freight, error)
 
-	getImageRefsFn func(
-		context.Context,
-		kargoapi.ImageSubscription,
-		*image.Credentials,
-	) (string, string, error)
+	gitCloneFn func(string, *git.ClientOptions, *git.CloneOptions) (git.Repo, error)
 
-	selectChartsFn func(
-		ctx context.Context,
-		namespace string,
-		subs []kargoapi.RepoSubscription,
-	) ([]kargoapi.Chart, error)
+	listCommitsFn func(repo git.Repo, limit, skip uint) ([]git.CommitMetadata, error)
 
-	selectChartVersionFn func(
-		ctx context.Context,
-		repoURL string,
-		chart string,
-		semverConstraint string,
-		creds *helm.Credentials,
-	) (string, error)
+	listTagsFn func(repo git.Repo) ([]git.TagMetadata, error)
 
-	selectCommitMetaFn func(
-		context.Context,
-		kargoapi.GitSubscription,
-		*git.RepoCredentials,
-		string,
-	) (*gitMeta, error)
+	discoverBranchHistoryFn func(repo git.Repo, sub kargoapi.GitSubscription) ([]git.CommitMetadata, error)
 
-	createFreightFn func(
-		context.Context,
-		client.Object,
-		...client.CreateOption,
-	) error
+	discoverTagsFn func(repo git.Repo, sub kargoapi.GitSubscription) ([]git.TagMetadata, error)
+
+	getDiffPathsForCommitIDFn func(repo git.Repo, commitID string) ([]string, error)
+
+	createFreightFn func(context.Context, client.Object, ...client.CreateOption) error
 }
 
 // SetupReconcilerWithManager initializes a reconciler for Warehouse resources
@@ -135,24 +103,27 @@ func newReconciler(
 	credentialsDB credentials.Database,
 ) *reconciler {
 	r := &reconciler{
-		client:        kubeClient,
-		credentialsDB: credentialsDB,
+		client:                  kubeClient,
+		credentialsDB:           credentialsDB,
+		gitCloneFn:              git.Clone,
+		discoverChartVersionsFn: helm.DiscoverChartVersions,
 		imageSourceURLFnsByBaseURL: map[string]func(string, string) string{
 			githubURLPrefix: getGithubImageSourceURL,
 		},
+		createFreightFn: kubeClient.Create,
 	}
-	r.getLatestFreightFromReposFn = r.getLatestFreightFromRepos
-	r.selectCommitsFn = r.selectCommits
-	r.getLastCommitIDFn = r.getLastCommitID
-	r.getDiffPathsSinceCommitIDFn = r.getDiffPathsSinceCommitID
+
+	r.discoverArtifactsFn = r.discoverArtifacts
+	r.discoverCommitsFn = r.discoverCommits
+	r.discoverImagesFn = r.discoverImages
+	r.discoverImageRefsFn = r.discoverImageRefs
+	r.discoverChartsFn = r.discoverCharts
+	r.buildFreightFromLatestArtifactsFn = r.buildFreightFromLatestArtifacts
+	r.listCommitsFn = r.listCommits
 	r.listTagsFn = r.listTags
-	r.checkoutTagFn = r.checkoutTag
-	r.selectImagesFn = r.selectImages
-	r.getImageRefsFn = getImageRefs
-	r.selectChartsFn = r.selectCharts
-	r.selectChartVersionFn = helm.SelectChartVersion
-	r.selectCommitMetaFn = r.selectCommitMeta
-	r.createFreightFn = kubeClient.Create
+	r.discoverBranchHistoryFn = r.discoverBranchHistory
+	r.discoverTagsFn = r.discoverTags
+	r.getDiffPathsForCommitIDFn = r.getDiffPathsForCommitID
 	return r
 }
 
@@ -235,93 +206,130 @@ func (r *reconciler) syncWarehouse(
 
 	logger := logging.LoggerFromContext(ctx)
 
-	freight, err := r.getLatestFreightFromReposFn(ctx, warehouse)
+	// Discover the latest artifacts.
+	discoveredArtifacts, err := r.discoverArtifactsFn(ctx, warehouse)
 	if err != nil {
-		return status, fmt.Errorf("error getting latest Freight from repositories: %w", err)
+		return status, fmt.Errorf("error discovering artifacts: %w", err)
 	}
-	if freight == nil {
-		logger.Debug("found no Freight from repositories")
-		return status, nil
-	}
-	logger.Debug("got latest Freight from repositories")
+	logger.Debug("discovered latest artifacts")
+	status.DiscoveredArtifacts = discoveredArtifacts
 
-	if err = r.createFreightFn(ctx, freight); err != nil {
-		if apierrors.IsAlreadyExists(err) {
-			logger.Debugf(
-				"Freight %q in namespace %q already exists",
+	// Automatically create a Freight from the latest discovered artifacts
+	// if the Warehouse is configured to do so.
+	if pol := warehouse.Spec.FreightCreationPolicy; pol == kargoapi.FreightCreationPolicyAutomatic || pol == "" {
+		freight, err := r.buildFreightFromLatestArtifactsFn(warehouse.Namespace, discoveredArtifacts)
+		if err != nil {
+			return status, fmt.Errorf("failed to build Freight from latest artifacts: %w", err)
+		}
+
+		if err = r.createFreightFn(ctx, freight); client.IgnoreAlreadyExists(err) != nil {
+			return status, fmt.Errorf(
+				"error creating Freight %q in namespace %q: %w",
 				freight.Name,
 				freight.Namespace,
+				err,
 			)
-			return status, nil
+		} else if err == nil {
+			log.Debugf("created Freight %q in namespace %q", freight.Name, freight.Namespace)
 		}
-		return status, fmt.Errorf(
-			"error creating Freight %q in namespace %q: %w",
-			freight.Name,
-			freight.Namespace,
-			err,
-		)
-	}
-	log.Debugf(
-		"created Freight %q in namespace %q",
-		freight.Name,
-		freight.Namespace,
-	)
-	status.LastFreight = &kargoapi.FreightReference{
-		Name:    freight.Name,
-		Commits: freight.Commits,
-		Images:  freight.Images,
-		Charts:  freight.Charts,
-	}
 
+		status.LastFreight = &kargoapi.FreightReference{
+			Name:    freight.Name,
+			Commits: freight.Commits,
+			Images:  freight.Images,
+			Charts:  freight.Charts,
+		}
+	}
 	return status, nil
 }
 
-func (r *reconciler) getLatestFreightFromRepos(
+func (r *reconciler) discoverArtifacts(
 	ctx context.Context,
 	warehouse *kargoapi.Warehouse,
+) (*kargoapi.DiscoveredArtifacts, error) {
+	commits, err := r.discoverCommitsFn(ctx, warehouse.Namespace, warehouse.Spec.Subscriptions)
+	if err != nil {
+		return nil, fmt.Errorf("error discovering commits: %w", err)
+	}
+
+	images, err := r.discoverImagesFn(ctx, warehouse.Namespace, warehouse.Spec.Subscriptions)
+	if err != nil {
+		return nil, fmt.Errorf("error discovering images: %w", err)
+	}
+
+	charts, err := r.discoverChartsFn(ctx, warehouse.Namespace, warehouse.Spec.Subscriptions)
+	if err != nil {
+		return nil, fmt.Errorf("error discovering charts: %w", err)
+	}
+
+	return &kargoapi.DiscoveredArtifacts{
+		Git:    commits,
+		Images: images,
+		Charts: charts,
+	}, nil
+}
+
+func (r *reconciler) buildFreightFromLatestArtifacts(
+	namespace string,
+	artifacts *kargoapi.DiscoveredArtifacts,
 ) (*kargoapi.Freight, error) {
-	logger := logging.LoggerFromContext(ctx)
-
-	selectedCommits, err := r.selectCommitsFn(
-		ctx,
-		warehouse.Namespace,
-		warehouse.Spec.Subscriptions,
-		warehouse.Status.LastFreight,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("error syncing git repo subscriptions: %w", err)
+	if artifacts == nil {
+		return nil, fmt.Errorf("no artifacts discovered")
 	}
-	logger.Debug("synced git repo subscriptions")
-
-	selectedImages, err := r.selectImagesFn(
-		ctx,
-		warehouse.Namespace,
-		warehouse.Spec.Subscriptions,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("error syncing image repo subscriptions: %w", err)
-	}
-	logger.Debug("synced image repo subscriptions")
-
-	selectedCharts, err := r.selectChartsFn(
-		ctx,
-		warehouse.Namespace,
-		warehouse.Spec.Subscriptions,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("error syncing chart repo subscriptions: %w", err)
-	}
-	logger.Debug("synced chart repo subscriptions")
 
 	freight := &kargoapi.Freight{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: warehouse.Namespace,
+			Namespace: namespace,
 		},
-		Warehouse: warehouse.Name,
-		Commits:   selectedCommits,
-		Images:    selectedImages,
-		Charts:    selectedCharts,
 	}
+
+	for _, result := range artifacts.Git {
+		if len(result.Commits) == 0 {
+			return nil, fmt.Errorf("no commits discovered for repository %q", result.RepoURL)
+		}
+		latestCommit := result.Commits[0]
+		freight.Commits = append(freight.Commits, kargoapi.GitCommit{
+			RepoURL:   result.RepoURL,
+			ID:        latestCommit.ID,
+			Branch:    latestCommit.Branch,
+			Tag:       latestCommit.Tag,
+			Message:   latestCommit.Subject,
+			Author:    latestCommit.Author,
+			Committer: latestCommit.Committer,
+		})
+	}
+
+	for _, result := range artifacts.Images {
+		if len(result.References) == 0 {
+			return nil, fmt.Errorf("no images discovered for repository %q", result.RepoURL)
+		}
+		latestImage := result.References[0]
+		freight.Images = append(freight.Images, kargoapi.Image{
+			RepoURL:    result.RepoURL,
+			GitRepoURL: latestImage.GitRepoURL,
+			Tag:        latestImage.Tag,
+			Digest:     latestImage.Digest,
+		})
+	}
+
+	for _, result := range artifacts.Charts {
+		if len(result.Versions) == 0 {
+			return nil, fmt.Errorf(
+				"no versions discovered for chart %q from repository %q",
+				result.RepoURL,
+				result.Name,
+			)
+		}
+		latestChart := result.Versions[0]
+		freight.Charts = append(freight.Charts, kargoapi.Chart{
+			RepoURL: result.RepoURL,
+			Name:    result.Name,
+			Version: latestChart,
+		})
+	}
+
+	// Generate a unique ID for the Freight based on its contents.
 	freight.Name = freight.GenerateID()
+
 	return freight, nil
 }

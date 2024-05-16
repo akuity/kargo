@@ -46,6 +46,16 @@ spec:
           spec:
             description: Spec describes sources of artifacts.
             properties:
+              freightCreationPolicy:
+                default: Automatic
+                description: |-
+                  FreightCreationPolicy describes how Freight is created by this Warehouse.
+                  This field is optional. When left unspecified, the field is implicitly
+                  treated as if its value were "Automatic".
+                enum:
+                - Automatic
+                - Manual
+                type: string
               shard:
                 description: |-
                   Shard is the name of the shard that this Warehouse belongs to. This is an
@@ -289,11 +299,183 @@ spec:
                 minItems: 1
                 type: array
             required:
+            - freightCreationPolicy
             - subscriptions
             type: object
           status:
             description: Status describes the Warehouse's most recently observed state.
             properties:
+              discoveredArtifacts:
+                description: DiscoveredArtifacts holds the artifacts discovered by
+                  the Warehouse.
+                properties:
+                  charts:
+                    description: |-
+                      Charts holds the charts discovered by the Warehouse for the chart
+                      subscriptions.
+                    items:
+                      description: |-
+                        ChartDiscoveryResult represents the result of a chart discovery operation for
+                        a ChartSubscription.
+                      properties:
+                        name:
+                          description: Name is the name of the Helm chart, as specified
+                            in the ChartSubscription.
+                          type: string
+                        repoURL:
+                          description: |-
+                            RepoURL is the repository URL of the Helm chart, as specified in the
+                            ChartSubscription.
+                          minLength: 1
+                          type: string
+                        semverConstraint:
+                          description: |-
+                            SemverConstraint is the constraint for which versions were discovered.
+                            This field is optional, and only populated if the ChartSubscription
+                            specifies a SemverConstraint.
+                          type: string
+                        versions:
+                          description: |-
+                            Versions is a list of versions discovered by the Warehouse for the
+                            ChartSubscription. An empty list indicates that the discovery operation was
+                            successful, but no versions matching the ChartSubscription criteria were
+                            found.
+                          items:
+                            type: string
+                          type: array
+                      required:
+                      - repoURL
+                      type: object
+                    type: array
+                  git:
+                    description: |-
+                      Git holds the commits discovered by the Warehouse for the Git
+                      subscriptions.
+                    items:
+                      description: |-
+                        GitDiscoveryResult represents the result of a Git discovery operation for a
+                        GitSubscription.
+                      properties:
+                        commits:
+                          description: |-
+                            Commits is a list of commits discovered by the Warehouse for the
+                            GitSubscription. An empty list indicates that the discovery operation was
+                            successful, but no commits matching the GitSubscription criteria were found.
+                          items:
+                            description: |-
+                              DiscoveredCommit represents a commit discovered by a Warehouse for a
+                              GitSubscription.
+                            properties:
+                              author:
+                                description: Author is the author of the commit.
+                                type: string
+                              branch:
+                                description: |-
+                                  Branch is the branch in which the commit was found. This field is
+                                  optional, and populated based on the CommitSelectionStrategy of the
+                                  GitSubscription.
+                                type: string
+                              committer:
+                                description: Committer is the person who committed
+                                  the commit.
+                                type: string
+                              creatorDate:
+                                description: |-
+                                  CreatorDate is the commit creation date as specified by the commit, or
+                                  the tagger date if the commit belongs to an annotated tag.
+                                format: date-time
+                                type: string
+                              id:
+                                description: ID is the identifier of the commit. This
+                                  typically is a SHA-1 hash.
+                                minLength: 1
+                                type: string
+                              subject:
+                                description: |-
+                                  Subject is the subject of the commit (i.e. the first line of the commit
+                                  message).
+                                type: string
+                              tag:
+                                description: |-
+                                  Tag is the tag that resolved to this commit. This field is optional, and
+                                  populated based on the CommitSelectionStrategy of the GitSubscription.
+                                type: string
+                            type: object
+                          type: array
+                        repoURL:
+                          description: RepoURL is the repository URL of the GitSubscription.
+                          minLength: 1
+                          pattern: ^https?://(\w+([\.-]\w+)*@)?\w+([\.-]\w+)*(:[\d]+)?(/.*)?$
+                          type: string
+                      required:
+                      - repoURL
+                      type: object
+                    type: array
+                  images:
+                    description: |-
+                      Images holds the image references discovered by the Warehouse for the
+                      image subscriptions.
+                    items:
+                      description: |-
+                        ImageDiscoveryResult represents the result of an image discovery operation
+                        for an ImageSubscription.
+                      properties:
+                        platform:
+                          description: |-
+                            Platform is the target platform constraint of the ImageSubscription
+                            for which references were discovered. This field is optional, and
+                            only populated if the ImageSubscription specifies a Platform.
+                          type: string
+                        references:
+                          description: |-
+                            References is a list of image references discovered by the Warehouse for
+                            the ImageSubscription. An empty list indicates that the discovery
+                            operation was successful, but no images matching the ImageSubscription
+                            criteria were found.
+                          items:
+                            description: |-
+                              DiscoveredImageReference represents an image reference discovered by a
+                              Warehouse for an ImageSubscription.
+                            properties:
+                              createdAt:
+                                description: |-
+                                  CreatedAt is the time the image was created. This field is optional, and
+                                  not populated for every ImageSelectionStrategy.
+                                format: date-time
+                                type: string
+                              digest:
+                                description: Digest is the digest of the image.
+                                minLength: 1
+                                pattern: ^[a-z0-9]+:[a-f0-9]+$
+                                type: string
+                              gitRepoURL:
+                                description: |-
+                                  GitRepoURL is the URL of the Git repository that contains the source
+                                  code for this image. This field is optional, and only populated if the
+                                  ImageSubscription specifies a GitRepoURL.
+                                type: string
+                              tag:
+                                description: Tag is the tag of the image.
+                                maxLength: 128
+                                minLength: 1
+                                pattern: ^[\w.\-\_]+$
+                                type: string
+                            required:
+                            - digest
+                            - tag
+                            type: object
+                          type: array
+                        repoURL:
+                          description: |-
+                            RepoURL is the repository URL of the image, as specified in the
+                            ImageSubscription.
+                          minLength: 1
+                          type: string
+                      required:
+                      - repoURL
+                      type: object
+                    type: array
+                type: object
               lastFreight:
                 description: LastFreight refers to the last Freight produced by this
                   Warehouse
@@ -329,11 +511,14 @@ spec:
                         Git repository.
                       properties:
                         author:
-                          description: Author is the git commit author
+                          description: Author is the author of the commit.
                           type: string
                         branch:
                           description: Branch denotes the branch of the repository
                             where this commit was found.
+                          type: string
+                        committer:
+                          description: Committer is the person who committed the commit.
                           type: string
                         healthCheckCommit:
                           description: |-
@@ -351,7 +536,9 @@ spec:
                             RepoURL.
                           type: string
                         message:
-                          description: Message is the git commit message
+                          description: |-
+                            Message is the message associated with the commit. At present, this only
+                            contains the first line (subject) of the commit message.
                           type: string
                         repoURL:
                           description: RepoURL is the URL of a Git repository.

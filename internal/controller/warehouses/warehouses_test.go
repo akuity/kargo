@@ -8,7 +8,6 @@ import (
 	"github.com/stretchr/testify/require"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -28,68 +27,90 @@ func TestNewReconciler(t *testing.T) {
 	require.NotEmpty(t, e.imageSourceURLFnsByBaseURL)
 
 	// Assert that all overridable behaviors were initialized to a default:
-	require.NotNil(t, e.getLatestFreightFromReposFn)
-	require.NotNil(t, e.selectCommitsFn)
-	require.NotNil(t, e.getLastCommitIDFn)
+	require.NotNil(t, e.discoverArtifactsFn)
+	require.NotNil(t, e.discoverCommitsFn)
+	require.NotNil(t, e.discoverImagesFn)
+	require.NotNil(t, e.discoverChartsFn)
+	require.NotNil(t, e.buildFreightFromLatestArtifactsFn)
+	require.NotNil(t, e.listCommitsFn)
 	require.NotNil(t, e.listTagsFn)
-	require.NotNil(t, e.checkoutTagFn)
-	require.NotNil(t, e.selectImagesFn)
-	require.NotNil(t, e.getImageRefsFn)
-	require.NotNil(t, e.selectChartsFn)
-	require.NotNil(t, e.selectChartVersionFn)
-	require.NotNil(t, e.selectCommitMetaFn)
+	require.NotNil(t, e.discoverBranchHistoryFn)
+	require.NotNil(t, e.discoverTagsFn)
+	require.NotNil(t, e.getDiffPathsForCommitIDFn)
 	require.NotNil(t, e.createFreightFn)
-	require.NotNil(t, e.getDiffPathsSinceCommitIDFn)
 }
 
 func TestSyncWarehouse(t *testing.T) {
-	scheme := k8sruntime.NewScheme()
-	require.NoError(t, kargoapi.SchemeBuilder.AddToScheme(scheme))
-	testWarehouse := &kargoapi.Warehouse{}
 	testCases := []struct {
 		name       string
 		reconciler *reconciler
-		assertions func(*testing.T, error)
+		warehouse  *kargoapi.Warehouse
+		assertions func(*testing.T, kargoapi.WarehouseStatus, error)
 	}{
 		{
-			name: "error getting latest Freight from repos",
+			name: "error discovering latest artifacts",
 			reconciler: &reconciler{
-				getLatestFreightFromReposFn: func(
+				discoverArtifactsFn: func(context.Context, *kargoapi.Warehouse) (*kargoapi.DiscoveredArtifacts, error) {
+					return nil, errors.New("something went wrong")
+				},
+			},
+			warehouse: &kargoapi.Warehouse{
+				Status: kargoapi.WarehouseStatus{
+					DiscoveredArtifacts: &kargoapi.DiscoveredArtifacts{},
+				},
+			},
+			assertions: func(t *testing.T, status kargoapi.WarehouseStatus, err error) {
+				require.ErrorContains(t, err, "something went wrong")
+				require.ErrorContains(t, err, "error discovering artifacts")
+
+				// Ensure previous discovered artifacts are preserved.
+				require.NotNil(t, status.DiscoveredArtifacts)
+			},
+		},
+
+		{
+			name: "Freight build error",
+			reconciler: &reconciler{
+				discoverArtifactsFn: func(
 					context.Context,
 					*kargoapi.Warehouse,
+				) (*kargoapi.DiscoveredArtifacts, error) {
+					return &kargoapi.DiscoveredArtifacts{}, nil
+				},
+				buildFreightFromLatestArtifactsFn: func(
+					string,
+					*kargoapi.DiscoveredArtifacts,
 				) (*kargoapi.Freight, error) {
 					return nil, errors.New("something went wrong")
 				},
 			},
-			assertions: func(t *testing.T, err error) {
+			warehouse: &kargoapi.Warehouse{},
+			assertions: func(t *testing.T, status kargoapi.WarehouseStatus, err error) {
 				require.ErrorContains(t, err, "something went wrong")
-				require.ErrorContains(t, err, "error getting latest Freight from repos")
+				require.ErrorContains(t, err, "failed to build Freight from latest artifacts")
+				require.NotNil(t, status.DiscoveredArtifacts)
 			},
 		},
 
 		{
-			name: "no latest Freight from repos",
+			name: "Freight for latest artifacts already exists",
 			reconciler: &reconciler{
-				getLatestFreightFromReposFn: func(
+				discoverArtifactsFn: func(
 					context.Context,
 					*kargoapi.Warehouse,
-				) (*kargoapi.Freight, error) {
-					return nil, nil
+				) (*kargoapi.DiscoveredArtifacts, error) {
+					return &kargoapi.DiscoveredArtifacts{}, nil
 				},
-			},
-			assertions: func(t *testing.T, err error) {
-				require.NoError(t, err)
-			},
-		},
-
-		{
-			name: "latest Freight from repos isn't new",
-			reconciler: &reconciler{
-				getLatestFreightFromReposFn: func(
-					context.Context,
-					*kargoapi.Warehouse,
+				buildFreightFromLatestArtifactsFn: func(
+					string,
+					*kargoapi.DiscoveredArtifacts,
 				) (*kargoapi.Freight, error) {
-					return &kargoapi.Freight{}, nil
+					return &kargoapi.Freight{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "fake-freight",
+							Namespace: "fake-namespace",
+						},
+					}, nil
 				},
 				createFreightFn: func(
 					context.Context,
@@ -101,21 +122,36 @@ func TestSyncWarehouse(t *testing.T) {
 							Group:    kargoapi.GroupVersion.Group,
 							Resource: "Warehouse",
 						},
-						"",
+						"fake-freight",
 					)
 				},
 			},
-			assertions: func(t *testing.T, err error) {
+			warehouse: &kargoapi.Warehouse{
+				Spec: kargoapi.WarehouseSpec{
+					FreightCreationPolicy: kargoapi.FreightCreationPolicyAutomatic,
+				},
+			},
+			assertions: func(t *testing.T, status kargoapi.WarehouseStatus, err error) {
 				require.NoError(t, err)
+				require.NotNil(t, status.DiscoveredArtifacts)
+				// Ensure that even if the Freight already exists, the status
+				// is still updated with the latest Freight.
+				require.NotNil(t, status.LastFreight)
 			},
 		},
 
 		{
 			name: "error creating Freight",
 			reconciler: &reconciler{
-				getLatestFreightFromReposFn: func(
+				discoverArtifactsFn: func(
 					context.Context,
 					*kargoapi.Warehouse,
+				) (*kargoapi.DiscoveredArtifacts, error) {
+					return &kargoapi.DiscoveredArtifacts{}, nil
+				},
+				buildFreightFromLatestArtifactsFn: func(
+					string,
+					*kargoapi.DiscoveredArtifacts,
 				) (*kargoapi.Freight, error) {
 					return &kargoapi.Freight{}, nil
 				},
@@ -127,18 +163,28 @@ func TestSyncWarehouse(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(t *testing.T, err error) {
+			warehouse: &kargoapi.Warehouse{
+				Spec: kargoapi.WarehouseSpec{
+					FreightCreationPolicy: kargoapi.FreightCreationPolicyAutomatic,
+				},
+			},
+			assertions: func(t *testing.T, status kargoapi.WarehouseStatus, err error) {
 				require.ErrorContains(t, err, "something went wrong")
 				require.ErrorContains(t, err, "error creating Freight")
+				require.NotNil(t, status.DiscoveredArtifacts)
+				require.Nil(t, status.LastFreight)
 			},
 		},
 
 		{
-			name: "success creating Freight",
+			name: "automatic Freight creation",
 			reconciler: &reconciler{
-				getLatestFreightFromReposFn: func(
-					context.Context,
-					*kargoapi.Warehouse,
+				discoverArtifactsFn: func(context.Context, *kargoapi.Warehouse) (*kargoapi.DiscoveredArtifacts, error) {
+					return &kargoapi.DiscoveredArtifacts{}, nil
+				},
+				buildFreightFromLatestArtifactsFn: func(
+					string,
+					*kargoapi.DiscoveredArtifacts,
 				) (*kargoapi.Freight, error) {
 					return &kargoapi.Freight{
 						ObjectMeta: metav1.ObjectMeta{
@@ -155,193 +201,333 @@ func TestSyncWarehouse(t *testing.T) {
 					return nil
 				},
 			},
-			assertions: func(t *testing.T, err error) {
+			warehouse: &kargoapi.Warehouse{
+				Spec: kargoapi.WarehouseSpec{
+					FreightCreationPolicy: kargoapi.FreightCreationPolicyAutomatic,
+				},
+			},
+			assertions: func(t *testing.T, status kargoapi.WarehouseStatus, err error) {
 				require.NoError(t, err)
+				require.NotNil(t, status.DiscoveredArtifacts)
+				require.NotNil(t, status.LastFreight)
+			},
+		},
+
+		{
+			name: "manual Freight creation",
+			reconciler: &reconciler{
+				discoverArtifactsFn: func(context.Context, *kargoapi.Warehouse) (*kargoapi.DiscoveredArtifacts, error) {
+					return &kargoapi.DiscoveredArtifacts{}, nil
+				},
+			},
+			warehouse: &kargoapi.Warehouse{
+				Spec: kargoapi.WarehouseSpec{
+					FreightCreationPolicy: kargoapi.FreightCreationPolicyManual,
+				},
+			},
+			assertions: func(t *testing.T, status kargoapi.WarehouseStatus, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, status.DiscoveredArtifacts)
+				require.Nil(t, status.LastFreight)
+			},
+		},
+
+		{
+			name: "updates refresh request status value",
+			reconciler: &reconciler{
+				discoverArtifactsFn: func(context.Context, *kargoapi.Warehouse) (*kargoapi.DiscoveredArtifacts, error) {
+					return &kargoapi.DiscoveredArtifacts{}, nil
+				},
+			},
+			warehouse: &kargoapi.Warehouse{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyRefresh: "new",
+					},
+				},
+				Spec: kargoapi.WarehouseSpec{
+					FreightCreationPolicy: kargoapi.FreightCreationPolicyManual,
+				},
+				Status: kargoapi.WarehouseStatus{
+					LastHandledRefresh: "old",
+				},
+			},
+			assertions: func(t *testing.T, status kargoapi.WarehouseStatus, err error) {
+				require.NoError(t, err)
+				require.Equal(t, "new", status.LastHandledRefresh)
+			},
+		},
+
+		{
+			name: "updates observed generation",
+			reconciler: &reconciler{
+				discoverArtifactsFn: func(context.Context, *kargoapi.Warehouse) (*kargoapi.DiscoveredArtifacts, error) {
+					return &kargoapi.DiscoveredArtifacts{}, nil
+				},
+			},
+			warehouse: &kargoapi.Warehouse{
+				ObjectMeta: metav1.ObjectMeta{
+					Generation: 2,
+				},
+				Spec: kargoapi.WarehouseSpec{
+					FreightCreationPolicy: kargoapi.FreightCreationPolicyManual,
+				},
+				Status: kargoapi.WarehouseStatus{
+					ObservedGeneration: 1,
+				},
+			},
+			assertions: func(t *testing.T, status kargoapi.WarehouseStatus, err error) {
+				require.NoError(t, err)
+				require.Equal(t, int64(2), status.ObservedGeneration)
+			},
+		},
+
+		{
+			name: "clears previous error message",
+			reconciler: &reconciler{
+				discoverArtifactsFn: func(context.Context, *kargoapi.Warehouse) (*kargoapi.DiscoveredArtifacts, error) {
+					return &kargoapi.DiscoveredArtifacts{}, nil
+				},
+			},
+			warehouse: &kargoapi.Warehouse{
+				Spec: kargoapi.WarehouseSpec{
+					FreightCreationPolicy: kargoapi.FreightCreationPolicyManual,
+				},
+				Status: kargoapi.WarehouseStatus{
+					Message: "previous error",
+				},
+			},
+			assertions: func(t *testing.T, status kargoapi.WarehouseStatus, err error) {
+				require.NoError(t, err)
+				require.Empty(t, status.Message)
 			},
 		},
 	}
+
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			_, err := testCase.reconciler.syncWarehouse(context.Background(), testWarehouse)
-			testCase.assertions(t, err)
+			status, err := testCase.reconciler.syncWarehouse(context.TODO(), testCase.warehouse)
+			testCase.assertions(t, status, err)
 		})
 	}
 }
 
-func TestGetLatestFreightFromRepos(t *testing.T) {
-	const testWarehouseName = "fake-warehouse"
-
+func TestDiscoverArtifacts(t *testing.T) {
 	testCases := []struct {
 		name       string
 		reconciler *reconciler
-		assertions func(*testing.T, *kargoapi.Freight, error)
+		assertions func(*testing.T, *kargoapi.DiscoveredArtifacts, error)
 	}{
 		{
-			name: "error getting latest git commits",
+			name: "error discovering commits",
 			reconciler: &reconciler{
-				selectCommitsFn: func(
-					context.Context,
-					string,
+				discoverCommitsFn: func(
+					context.Context, string,
 					[]kargoapi.RepoSubscription,
-					*kargoapi.FreightReference,
-				) ([]kargoapi.GitCommit, error) {
+				) ([]kargoapi.GitDiscoveryResult, error) {
 					return nil, errors.New("something went wrong")
 				},
 			},
-			assertions: func(t *testing.T, _ *kargoapi.Freight, err error) {
-				require.ErrorContains(t, err, "error syncing git repo subscription")
+			assertions: func(t *testing.T, discoveredArtifacts *kargoapi.DiscoveredArtifacts, err error) {
 				require.ErrorContains(t, err, "something went wrong")
+				require.ErrorContains(t, err, "error discovering commits")
+				require.Nil(t, discoveredArtifacts)
 			},
 		},
-
 		{
-			name: "error getting latest images",
+			name: "error discovering images",
 			reconciler: &reconciler{
-				selectCommitsFn: func(
-					context.Context,
-					string,
+				discoverCommitsFn: func(
+					context.Context, string,
 					[]kargoapi.RepoSubscription,
-					*kargoapi.FreightReference,
-				) ([]kargoapi.GitCommit, error) {
-					return nil, nil
+				) ([]kargoapi.GitDiscoveryResult, error) {
+					return []kargoapi.GitDiscoveryResult{}, nil
 				},
-				selectImagesFn: func(
-					context.Context,
-					string,
+				discoverImagesFn: func(
+					context.Context, string,
 					[]kargoapi.RepoSubscription,
-				) ([]kargoapi.Image, error) {
+				) ([]kargoapi.ImageDiscoveryResult, error) {
 					return nil, errors.New("something went wrong")
 				},
 			},
-			assertions: func(t *testing.T, _ *kargoapi.Freight, err error) {
-				require.ErrorContains(t, err, "error syncing image repo subscriptions")
+			assertions: func(t *testing.T, discoveredArtifacts *kargoapi.DiscoveredArtifacts, err error) {
 				require.ErrorContains(t, err, "something went wrong")
+				require.ErrorContains(t, err, "error discovering images")
+				require.Nil(t, discoveredArtifacts)
 			},
 		},
-
 		{
-			name: "error getting latest charts",
+			name: "error discovering charts",
 			reconciler: &reconciler{
-				selectCommitsFn: func(
-					context.Context,
-					string,
+				discoverCommitsFn: func(
+					context.Context, string,
 					[]kargoapi.RepoSubscription,
-					*kargoapi.FreightReference,
-				) ([]kargoapi.GitCommit, error) {
-					return nil, nil
+				) ([]kargoapi.GitDiscoveryResult, error) {
+					return []kargoapi.GitDiscoveryResult{}, nil
 				},
-				selectImagesFn: func(
-					context.Context,
-					string,
+				discoverImagesFn: func(
+					context.Context, string,
 					[]kargoapi.RepoSubscription,
-				) ([]kargoapi.Image, error) {
-					return nil, nil
+				) ([]kargoapi.ImageDiscoveryResult, error) {
+					return []kargoapi.ImageDiscoveryResult{}, nil
 				},
-				selectChartsFn: func(
-					context.Context,
-					string,
+				discoverChartsFn: func(
+					context.Context, string,
 					[]kargoapi.RepoSubscription,
-				) ([]kargoapi.Chart, error) {
+				) ([]kargoapi.ChartDiscoveryResult, error) {
 					return nil, errors.New("something went wrong")
 				},
 			},
-			assertions: func(t *testing.T, _ *kargoapi.Freight, err error) {
-				require.ErrorContains(t, err, "error syncing chart repo subscriptions")
+			assertions: func(t *testing.T, discoveredArtifacts *kargoapi.DiscoveredArtifacts, err error) {
 				require.ErrorContains(t, err, "something went wrong")
+				require.ErrorContains(t, err, "error discovering charts")
+				require.Nil(t, discoveredArtifacts)
 			},
 		},
-
 		{
 			name: "success",
 			reconciler: &reconciler{
-				selectCommitsFn: func(
-					context.Context,
-					string,
+				discoverCommitsFn: func(
+					context.Context, string,
 					[]kargoapi.RepoSubscription,
-					*kargoapi.FreightReference,
-				) ([]kargoapi.GitCommit, error) {
-					return []kargoapi.GitCommit{
-						{
-							RepoURL: "fake-url",
-							ID:      "fake-commit",
-						},
+				) ([]kargoapi.GitDiscoveryResult, error) {
+					return []kargoapi.GitDiscoveryResult{
+						{RepoURL: "fake-repo", Commits: []kargoapi.DiscoveredCommit{
+							{ID: "fake-commit"},
+						}},
 					}, nil
 				},
-				selectImagesFn: func(
-					context.Context,
-					string,
+				discoverImagesFn: func(
+					context.Context, string,
 					[]kargoapi.RepoSubscription,
-				) ([]kargoapi.Image, error) {
-					return []kargoapi.Image{
-						{
-							RepoURL: "fake-url",
-							Tag:     "fake-tag",
-						},
+				) ([]kargoapi.ImageDiscoveryResult, error) {
+					return []kargoapi.ImageDiscoveryResult{
+						{RepoURL: "fake-repo", References: []kargoapi.DiscoveredImageReference{
+							{Tag: "fake-tag"},
+						}},
 					}, nil
 				},
-				selectChartsFn: func(
-					context.Context,
-					string,
+				discoverChartsFn: func(
+					context.Context, string,
 					[]kargoapi.RepoSubscription,
-				) ([]kargoapi.Chart, error) {
-					return []kargoapi.Chart{
-						{
-							RepoURL: "fake-repo",
-							Name:    "fake-chart",
-							Version: "fake-version",
-						},
+				) ([]kargoapi.ChartDiscoveryResult, error) {
+					return []kargoapi.ChartDiscoveryResult{
+						{RepoURL: "fake-repo", Versions: []string{
+							"fake-version",
+						}},
 					}, nil
+				},
+			},
+			assertions: func(t *testing.T, discoveredArtifacts *kargoapi.DiscoveredArtifacts, err error) {
+				require.NoError(t, err)
+				require.Len(t, discoveredArtifacts.Git, 1)
+				require.Len(t, discoveredArtifacts.Images, 1)
+				require.Len(t, discoveredArtifacts.Charts, 1)
+			},
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			discoveredArtifacts, err := testCase.reconciler.discoverArtifacts(
+				context.TODO(),
+				&kargoapi.Warehouse{},
+			)
+			testCase.assertions(t, discoveredArtifacts, err)
+		})
+	}
+}
+
+func TestBuildFreightFromLatestArtifacts(t *testing.T) {
+	testCases := []struct {
+		name       string
+		artifacts  *kargoapi.DiscoveredArtifacts
+		assertions func(*testing.T, *kargoapi.Freight, error)
+	}{
+		{
+			name:      "no artifacts discovered",
+			artifacts: nil,
+			assertions: func(t *testing.T, freight *kargoapi.Freight, err error) {
+				require.ErrorContains(t, err, "no artifacts discovered")
+				require.Nil(t, freight)
+			},
+		},
+		{
+			name: "no commits discovered",
+			artifacts: &kargoapi.DiscoveredArtifacts{
+				Git: []kargoapi.GitDiscoveryResult{
+					{RepoURL: "fake-repo", Commits: []kargoapi.DiscoveredCommit{}},
+				},
+			},
+			assertions: func(t *testing.T, freight *kargoapi.Freight, err error) {
+				require.ErrorContains(t, err, "no commits discovered for repository")
+				require.Nil(t, freight)
+			},
+		},
+		{
+			name: "no images discovered",
+			artifacts: &kargoapi.DiscoveredArtifacts{
+				Git: []kargoapi.GitDiscoveryResult{
+					{RepoURL: "fake-repo", Commits: []kargoapi.DiscoveredCommit{{ID: "fake-commit"}}},
+				},
+				Images: []kargoapi.ImageDiscoveryResult{
+					{RepoURL: "fake-repo", References: []kargoapi.DiscoveredImageReference{}},
+				},
+			},
+			assertions: func(t *testing.T, freight *kargoapi.Freight, err error) {
+				require.ErrorContains(t, err, "no images discovered for repository")
+				require.Nil(t, freight)
+			},
+		},
+		{
+			name: "no charts discovered",
+			artifacts: &kargoapi.DiscoveredArtifacts{
+				Git: []kargoapi.GitDiscoveryResult{
+					{RepoURL: "fake-repo", Commits: []kargoapi.DiscoveredCommit{{ID: "fake-commit"}}},
+				},
+				Images: []kargoapi.ImageDiscoveryResult{
+					{RepoURL: "fake-repo", References: []kargoapi.DiscoveredImageReference{{Tag: "fake-tag"}}},
+				},
+				Charts: []kargoapi.ChartDiscoveryResult{
+					{RepoURL: "fake-repo", Versions: []string{}},
+				},
+			},
+			assertions: func(t *testing.T, freight *kargoapi.Freight, err error) {
+				require.ErrorContains(t, err, "no versions discovered for chart")
+				require.Nil(t, freight)
+			},
+		},
+		{
+			name: "success",
+			artifacts: &kargoapi.DiscoveredArtifacts{
+				Git: []kargoapi.GitDiscoveryResult{
+					{RepoURL: "fake-repo", Commits: []kargoapi.DiscoveredCommit{{ID: "fake-commit"}}},
+					{RepoURL: "fake-repo", Commits: []kargoapi.DiscoveredCommit{{ID: "fake-commit"}}},
+				},
+				Images: []kargoapi.ImageDiscoveryResult{
+					{RepoURL: "fake-repo", References: []kargoapi.DiscoveredImageReference{{Tag: "fake-tag"}}},
+					{RepoURL: "fake-repo", References: []kargoapi.DiscoveredImageReference{{Tag: "fake-tag"}}},
+				},
+				Charts: []kargoapi.ChartDiscoveryResult{
+					{RepoURL: "fake-repo", Versions: []string{"fake-version"}},
+					{RepoURL: "fake-repo", Versions: []string{"fake-version"}},
 				},
 			},
 			assertions: func(t *testing.T, freight *kargoapi.Freight, err error) {
 				require.NoError(t, err)
 				require.NotNil(t, freight)
-				require.NotEmpty(t, freight.Name)
-				// All other fields should have a predictable value
-				freight.Name = ""
-				freight.OwnerReferences = nil
-				require.Equal(
-					t,
-					&kargoapi.Freight{
-						ObjectMeta: metav1.ObjectMeta{
-							Namespace: "fake-namespace",
-						},
-						Warehouse: testWarehouseName,
-						Commits: []kargoapi.GitCommit{
-							{
-								RepoURL: "fake-url",
-								ID:      "fake-commit",
-							},
-						},
-						Images: []kargoapi.Image{
-							{
-								RepoURL: "fake-url",
-								Tag:     "fake-tag",
-							},
-						},
-						Charts: []kargoapi.Chart{
-							{
-								RepoURL: "fake-repo",
-								Name:    "fake-chart",
-								Version: "fake-version",
-							},
-						},
-					},
-					freight,
-				)
+				require.Len(t, freight.Commits, 2)
+				require.Len(t, freight.Images, 2)
+				require.Len(t, freight.Charts, 2)
 			},
 		},
 	}
+
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			freight, err := testCase.reconciler.getLatestFreightFromRepos(
-				context.Background(),
-				&kargoapi.Warehouse{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "fake-namespace",
-						Name:      testWarehouseName,
-					},
-				},
+			freight, err := (&reconciler{}).buildFreightFromLatestArtifacts(
+				"fake-namespace",
+				testCase.artifacts,
 			)
 			testCase.assertions(t, freight, err)
 		})

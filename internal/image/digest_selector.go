@@ -35,7 +35,7 @@ func newDigestSelector(
 }
 
 // Select implements the Selector interface.
-func (d *digestSelector) Select(ctx context.Context) (*Image, error) {
+func (d *digestSelector) Select(ctx context.Context) ([]Image, error) {
 	logger := logging.LoggerFromContext(ctx).WithFields(log.Fields{
 		"registry":            d.repoClient.registry.name,
 		"image":               d.repoClient.image,
@@ -46,6 +46,10 @@ func (d *digestSelector) Select(ctx context.Context) (*Image, error) {
 
 	ctx = logging.ContextWithLogger(ctx, logger)
 
+	// TODO(hidde): it would be much more efficient to directly attempt
+	// to retrieve the image for the tag, while gracefully handling the
+	// case where it does not exist. This would avoid the need to list
+	// all tags and then iterate over them.
 	tags, err := d.repoClient.getTags(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("error listing tags: %w", err)
@@ -75,7 +79,7 @@ func (d *digestSelector) Select(ctx context.Context) (*Image, error) {
 			"tag":    image.Tag,
 			"digest": image.Digest.String(),
 		}).Trace("found image")
-		return image, nil
+		return []Image{*image}, nil
 	}
 
 	logger.Trace("no images matched criteria")

@@ -10,12 +10,12 @@ import (
 	"github.com/akuity/kargo/internal/logging"
 )
 
-func (r *reconciler) selectCharts(
+func (r *reconciler) discoverCharts(
 	ctx context.Context,
 	namespace string,
 	subs []kargoapi.RepoSubscription,
-) ([]kargoapi.Chart, error) {
-	charts := make([]kargoapi.Chart, 0, len(subs))
+) ([]kargoapi.ChartDiscoveryResult, error) {
+	results := make([]kargoapi.ChartDiscoveryResult, 0, len(subs))
 
 	for _, s := range subs {
 		if s.Chart == nil {
@@ -29,8 +29,7 @@ func (r *reconciler) selectCharts(
 			logger = logger.WithField("chart", sub.Name)
 		}
 
-		creds, ok, err :=
-			r.credentialsDB.Get(ctx, namespace, credentials.TypeHelm, sub.RepoURL)
+		creds, ok, err := r.credentialsDB.Get(ctx, namespace, credentials.TypeHelm, sub.RepoURL)
 		if err != nil {
 			return nil, fmt.Errorf(
 				"error obtaining credentials for chart repository %q: %w",
@@ -38,7 +37,6 @@ func (r *reconciler) selectCharts(
 				err,
 			)
 		}
-
 		var helmCreds *helm.Credentials
 		if ok {
 			helmCreds = &helm.Credentials{
@@ -50,55 +48,51 @@ func (r *reconciler) selectCharts(
 			logger.Debug("found no credentials for chart repo")
 		}
 
-		vers, err := r.selectChartVersionFn(
-			ctx,
-			sub.RepoURL,
-			sub.Name,
-			sub.SemverConstraint,
-			helmCreds,
-		)
+		versions, err := r.discoverChartVersionsFn(ctx, sub.RepoURL, sub.Name, sub.SemverConstraint, helmCreds)
 		if err != nil {
 			if sub.Name == "" {
 				return nil, fmt.Errorf(
-					"error searching for latest version of chart in repository %q: %w",
+					"error discovering latest suitable chart versions in repository %q: %w",
 					sub.RepoURL,
 					err,
 				)
 			}
 			return nil, fmt.Errorf(
-				"error searching for latest version of chart %q in repository %q: %w",
+				"error discovering latest suitable chart versions for chart %q in repository %q: %w",
 				sub.Name,
 				sub.RepoURL,
 				err,
 			)
 		}
 
-		if vers == "" {
-			logger.Error("found no suitable chart version")
-			if sub.Name == "" {
-				return nil, fmt.Errorf(
-					"found no suitable version of chart in repository %q",
-					sub.RepoURL,
-				)
-			}
-			return nil, fmt.Errorf(
-				"found no suitable version of chart %q in repository %q",
-				sub.Name,
-				sub.RepoURL,
-			)
+		if len(versions) == 0 {
+			logger.Debug("discovered no suitable chart versions")
+			results = append(results, kargoapi.ChartDiscoveryResult{
+				RepoURL:          sub.RepoURL,
+				Name:             sub.Name,
+				SemverConstraint: sub.SemverConstraint,
+			})
+			continue
 		}
-		logger.WithField("version", vers).
-			Debug("found latest suitable chart version")
 
-		charts = append(
-			charts,
-			kargoapi.Chart{
-				RepoURL: sub.RepoURL,
-				Name:    sub.Name,
-				Version: vers,
-			},
-		)
+		logger.Debugf("discovered %d suitable chart versions", len(versions))
+		results = append(results, kargoapi.ChartDiscoveryResult{
+			RepoURL:          sub.RepoURL,
+			Name:             sub.Name,
+			SemverConstraint: sub.SemverConstraint,
+			Versions:         trimSlice(versions, 20),
+		})
 	}
 
-	return charts, nil
+	return results, nil
+}
+
+// trimSlice returns a slice of any type with a maximum length of limit.
+// If the input slice is shorter than limit or limit is less than or equal to
+// zero, the input slice is returned unmodified.
+func trimSlice[T any](slice []T, limit int) []T {
+	if limit <= 0 || len(slice) <= limit {
+		return slice
+	}
+	return slice[:limit]
 }

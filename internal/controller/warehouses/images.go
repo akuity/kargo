@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	log "github.com/sirupsen/logrus"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/credentials"
@@ -14,23 +14,22 @@ import (
 	"github.com/akuity/kargo/internal/logging"
 )
 
-func (r *reconciler) selectImages(
+func (r *reconciler) discoverImages(
 	ctx context.Context,
 	namespace string,
 	subs []kargoapi.RepoSubscription,
-) ([]kargoapi.Image, error) {
-	imgs := make([]kargoapi.Image, 0, len(subs))
+) ([]kargoapi.ImageDiscoveryResult, error) {
+	results := make([]kargoapi.ImageDiscoveryResult, 0, len(subs))
+
 	for _, s := range subs {
 		if s.Image == nil {
 			continue
 		}
-
 		sub := s.Image
 
 		logger := logging.LoggerFromContext(ctx).WithField("repo", sub.RepoURL)
 
-		creds, ok, err :=
-			r.credentialsDB.Get(ctx, namespace, credentials.TypeImage, sub.RepoURL)
+		creds, ok, err := r.credentialsDB.Get(ctx, namespace, credentials.TypeImage, sub.RepoURL)
 		if err != nil {
 			return nil, fmt.Errorf(
 				"error obtaining credentials for image repo %q: %w",
@@ -49,29 +48,69 @@ func (r *reconciler) selectImages(
 			logger.Debug("found no credentials for image repo")
 		}
 
-		tag, digest, err := r.getImageRefsFn(ctx, *sub, regCreds)
+		images, err := r.discoverImageRefsFn(ctx, *sub, regCreds)
 		if err != nil {
 			return nil, fmt.Errorf(
-				"error getting latest suitable image %q: %w",
+				"error discovering latest suitable images %q: %w",
 				sub.RepoURL,
 				err,
 			)
 		}
-		imgs = append(
-			imgs,
-			kargoapi.Image{
-				RepoURL:    sub.RepoURL,
-				GitRepoURL: r.getImageSourceURL(sub.GitRepoURL, tag),
-				Tag:        tag,
-				Digest:     digest,
-			},
-		)
-		logger.WithFields(log.Fields{
-			"tag":    tag,
-			"digest": digest,
-		}).Debug("found latest suitable image")
+		if len(images) == 0 {
+			logger.Debug("discovered no suitable images")
+			results = append(results, kargoapi.ImageDiscoveryResult{
+				RepoURL:  sub.RepoURL,
+				Platform: sub.Platform,
+			})
+			continue
+		}
+
+		logger.Debugf("discovered %d suitable images", len(images))
+		discoveredImages := make([]kargoapi.DiscoveredImageReference, 0, len(images))
+		for _, img := range images {
+			discovery := kargoapi.DiscoveredImageReference{
+				Tag:        img.Tag,
+				Digest:     img.Digest.String(),
+				GitRepoURL: r.getImageSourceURL(sub.GitRepoURL, img.Tag),
+			}
+			if img.CreatedAt != nil {
+				discovery.CreatedAt = &metav1.Time{Time: *img.CreatedAt}
+			}
+			discoveredImages = append(discoveredImages, discovery)
+		}
+		results = append(results, kargoapi.ImageDiscoveryResult{
+			RepoURL:    sub.RepoURL,
+			Platform:   sub.Platform,
+			References: discoveredImages,
+		})
 	}
-	return imgs, nil
+
+	return results, nil
+}
+
+func (r *reconciler) discoverImageRefs(
+	ctx context.Context,
+	sub kargoapi.ImageSubscription,
+	creds *image.Credentials,
+) ([]image.Image, error) {
+	imageSelector, err := imageSelectorForSubscription(sub, creds)
+	if err != nil {
+		return nil, fmt.Errorf(
+			"error creating image selector for image %q: %w",
+			sub.RepoURL,
+			err,
+		)
+	}
+
+	images, err := imageSelector.Select(ctx)
+	if err != nil {
+		return nil, fmt.Errorf(
+			"error discovering newest applicable images %q: %w",
+			sub.RepoURL,
+			err,
+		)
+	}
+	return images, nil
 }
 
 const (
@@ -87,16 +126,11 @@ func (r *reconciler) getImageSourceURL(gitRepoURL, tag string) string {
 	return ""
 }
 
-func getGithubImageSourceURL(gitRepoURL, tag string) string {
-	return fmt.Sprintf("%s/tree/%s", git.NormalizeURL(gitRepoURL), tag)
-}
-
-func getImageRefs(
-	ctx context.Context,
+func imageSelectorForSubscription(
 	sub kargoapi.ImageSubscription,
 	creds *image.Credentials,
-) (string, string, error) {
-	imageSelector, err := image.NewSelector(
+) (image.Selector, error) {
+	return image.NewSelector(
 		sub.RepoURL,
 		image.SelectionStrategy(sub.ImageSelectionStrategy),
 		&image.SelectorOptions{
@@ -106,25 +140,11 @@ func getImageRefs(
 			Platform:              sub.Platform,
 			Creds:                 creds,
 			InsecureSkipTLSVerify: sub.InsecureSkipTLSVerify,
+			DiscoveryLimit:        20,
 		},
 	)
-	if err != nil {
-		return "", "", fmt.Errorf(
-			"error creating image selector for image %q: %w",
-			sub.RepoURL,
-			err,
-		)
-	}
-	img, err := imageSelector.Select(ctx)
-	if err != nil {
-		return "", "", fmt.Errorf(
-			"error fetching newest applicable image %q: %w",
-			sub.RepoURL,
-			err,
-		)
-	}
-	if img == nil {
-		return "", "", fmt.Errorf("found no applicable image %q", sub.RepoURL)
-	}
-	return img.Tag, img.Digest.String(), nil
+}
+
+func getGithubImageSourceURL(gitRepoURL, tag string) string {
+	return fmt.Sprintf("%s/tree/%s", git.NormalizeURL(gitRepoURL), tag)
 }

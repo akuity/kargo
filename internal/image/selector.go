@@ -38,11 +38,11 @@ const (
 	SelectionStrategySemVer SelectionStrategy = "SemVer"
 )
 
-// Selector is an interface for selecting a single image from a container image
+// Selector is an interface for selecting images from a container image
 // repository.
 type Selector interface {
 	// Select selects a single image from a container image repository.
-	Select(context.Context) (*Image, error)
+	Select(context.Context) ([]Image, error)
 }
 
 // SelectorOptions represents options for creating a Selector.
@@ -58,7 +58,7 @@ type SelectorOptions struct {
 	Ignore []string
 	// Platform is an optional platform constraint. If specified, the selected
 	// image must match the platform constraint or Selector implementations will
-	// return nil a image.
+	// return nil.
 	Platform string
 	// Creds holds optional credentials for authenticating to the image
 	// repository.
@@ -66,6 +66,11 @@ type SelectorOptions struct {
 	// InsecureSkipTLSVerify is an optional flag, that if set to true, will
 	// disable verification of the image repository's TLS certificate.
 	InsecureSkipTLSVerify bool
+	// DiscoveryLimit is an optional limit on the number of images that can be
+	// discovered by the Selector. The limit is applied after filtering images
+	// based on the AllowRegex and Ignore fields. If the limit is zero, all
+	// discovered images will be returned.
+	DiscoveryLimit int
 }
 
 // NewSelector returns some implementation of the Selector interface that
@@ -119,6 +124,7 @@ func NewSelector(
 			allowRegex,
 			opts.Ignore,
 			platform,
+			opts.DiscoveryLimit,
 		), nil
 	case SelectionStrategyNewestBuild:
 		return newNewestBuildSelector(
@@ -126,6 +132,7 @@ func NewSelector(
 			allowRegex,
 			opts.Ignore,
 			platform,
+			opts.DiscoveryLimit,
 		), nil
 	case SelectionStrategySemVer, "":
 		return newSemVerSelector(
@@ -134,6 +141,7 @@ func NewSelector(
 			opts.Ignore,
 			opts.Constraint,
 			platform,
+			opts.DiscoveryLimit,
 		)
 	default:
 		return nil, fmt.Errorf("invalid image selection strategy %q", strategy)

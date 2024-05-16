@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 
 	libExec "github.com/akuity/kargo/internal/exec"
 )
@@ -55,6 +56,40 @@ type CommitOptions struct {
 	AllowEmpty bool
 }
 
+// TagMetadata represents metadata associated with a Git tag.
+type TagMetadata struct {
+	// Tag is the name of the tag.
+	Tag string
+	// CommitID is the ID (sha) of the commit associated with the tag.
+	CommitID string
+	// CreatorDate is the creation date of an annotated tag, or the commit date
+	// of a lightweight tag.
+	CreatorDate time.Time
+	// Author is the author of the commit message associated with the tag, in
+	// the format "Name <email>".
+	Author string
+	// Committer is the person who committed the commit associated with the tag,
+	// in the format "Name <email>".
+	Committer string
+	// Subject is the subject (first line) of the commit message associated
+	// with the tag.
+	Subject string
+}
+
+type CommitMetadata struct {
+	// CommitID is the ID (sha) of the commit.
+	ID string
+	// CommitDate is the date of the commit.
+	CommitDate time.Time
+	// Author is the author of the commit, in the format "Name <email>".
+	Author string
+	// Committer is the person who committed the commit, in the format
+	// "Name <email>".
+	Committer string
+	// Subject is the subject (first line) of the commit message.
+	Subject string
+}
+
 // Repo is an interface for interacting with a git repository.
 type Repo interface {
 	// AddAll stages pending changes for commit.
@@ -86,25 +121,24 @@ type Repo interface {
 	// contains any differences from what's already at the head of the current
 	// branch.
 	HasDiffs() (bool, error)
-	// GetDiffPaths returns a string slice indicating the paths, relative to the
-	// root of the repository, of any new or modified files.
-	GetDiffPaths() ([]string, error)
-	// GetDiffPathsForCommitID returns a string slice indicating the paths, relative to the
-	// root of the repository, of any files that are new or modified since the given commit ID.
-	GetDiffPathsSinceCommitID(commitId string) ([]string, error)
+	// GetDiffPathsForCommitID returns a string slice indicating the paths,
+	// relative to the root of the repository, of any files that are new or
+	// modified in the commit with the given ID.
+	GetDiffPathsForCommitID(commitID string) ([]string, error)
 	// IsAncestor returns true if parent branch is an ancestor of child
 	IsAncestor(parent string, child string) (bool, error)
 	// LastCommitID returns the ID (sha) of the most recent commit to the current
 	// branch.
 	LastCommitID() (string, error)
-	// ListTags returns a slice of tags in the repository.
-	ListTags() ([]string, error)
+	// ListTags returns a slice of tags in the repository with metadata such as
+	// commit ID, creator date, and subject.
+	ListTags() ([]TagMetadata, error)
+	// ListCommits returns a slice of commits in the current branch with
+	// metadata such as commit ID, commit date, and subject.
+	ListCommits(limit, skip uint) ([]CommitMetadata, error)
 	// CommitMessage returns the text of the most recent commit message associated
 	// with the specified commit ID.
 	CommitMessage(id string) (string, error)
-	// CommitMessages returns a slice of commit messages starting with id1 and
-	// ending with id2. The results exclude id1, but include id2.
-	CommitMessages(id1, id2 string) ([]string, error)
 	// Push pushes from the current branch to a remote branch by the same name.
 	Push(force bool) error
 	// RefsHaveDiffs returns whether there is a diff between two commits/branches
@@ -138,12 +172,30 @@ type repo struct {
 // repository.
 type ClientOptions struct {
 	// User represents the actor that performs operations against the git
-	// repository. Th1s has no effect on authentication, see Credentials for
+	// repository. This has no effect on authentication, see Credentials for
 	// specifying authentication configuration.
 	User *User
 	// Credentials represents the authentication information.
 	Credentials *RepoCredentials
 }
+
+const (
+	// FilterBlobless is a filter that excludes blobs from the clone.
+	// When using this filter, the initial Git clone will download all
+	// reachable commits and trees, and only download the blobs for commits
+	// when you do a Git checkout (including the first checkout during the
+	// clone).
+	//
+	// When using a blobless clone, you can still explore the commits of the
+	// repository without downloading additional data. This means that you can
+	// perform commands like `git log`, or even `git log -- <path>` with the
+	// same performance as a full clone.
+	//
+	// Commands like `git diff` or `git blame <path>` require the contents of
+	// the paths to compute diffs, so these will trigger blob downloads the
+	// first time they are run.
+	FilterBlobless = "blob:none"
+)
 
 // CloneOptions represents options for cloning a git repository.
 type CloneOptions struct {
@@ -152,10 +204,19 @@ type CloneOptions struct {
 	Branch string
 	// SingleBranch indicates whether the clone should be a single-branch clone.
 	SingleBranch bool
-	// Shallow indicates whether the clone should be with a depth of 1. This is
-	// useful for speeding up the cloning process when all we care about is the
-	// latest commit from a single branch.
-	Shallow bool
+	// Depth is the number of commits to fetch from the remote repository. If
+	// zero, all commits will be fetched.
+	Depth uint
+	// Filter allows for partially cloning the repository by specifying a
+	// filter. When a filter is specified, the server will only send a
+	// subset of reachable objects according to a given object filter.
+	//
+	// For more information, see:
+	// - https://git-scm.com/docs/git-clone#Documentation/git-clone.txt-code--filtercodeemltfilter-specgtem
+	// - https://git-scm.com/docs/git-rev-list#Documentation/git-rev-list.txt---filterltfilter-specgt
+	// - https://github.blog/2020-12-21-get-up-to-speed-with-partial-clone-and-shallow-clone/
+	// - https://docs.gitlab.com/ee/topics/git/partial_clone.html
+	Filter string
 	// InsecureSkipTLSVerify specifies whether certificate verification errors
 	// should be ignored when cloning the repository. The setting will be
 	// remembered for subsequent interactions with the remote repository.
@@ -221,8 +282,8 @@ func (r *repo) clone(opts *CloneOptions) error {
 	if opts.SingleBranch {
 		args = append(args, "--single-branch")
 	}
-	if opts.Shallow {
-		args = append(args, "--depth=1")
+	if opts.Depth > 0 {
+		args = append(args, "--depth", fmt.Sprint(opts.Depth))
 	}
 	args = append(args, r.url, r.dir)
 	cmd := r.buildGitCommand(args...)
@@ -347,28 +408,10 @@ func (r *repo) HasDiffs() (bool, error) {
 	return len(resBytes) > 0, nil
 }
 
-func (r *repo) GetDiffPaths() ([]string, error) {
-	resBytes, err := libExec.Exec(r.buildGitCommand("status", "-s"))
+func (r *repo) GetDiffPathsForCommitID(commitID string) ([]string, error) {
+	resBytes, err := libExec.Exec(r.buildGitCommand("diff", "--name-only", commitID+"^", commitID))
 	if err != nil {
-		return nil, fmt.Errorf("error checking status of branch %q: %w", r.currentBranch, err)
-	}
-	var paths []string
-	scanner := bufio.NewScanner(bytes.NewReader(resBytes))
-	scanner.Split(bufio.ScanLines)
-	for scanner.Scan() {
-		paths = append(
-			paths,
-			strings.SplitN(strings.TrimSpace(scanner.Text()), " ", 2)[1],
-		)
-	}
-	return paths, nil
-}
-
-func (r *repo) GetDiffPathsSinceCommitID(commitId string) ([]string, error) {
-	resBytes, err := libExec.Exec(r.buildGitCommand("diff", "--name-only", commitId+"..HEAD"))
-	if err != nil {
-		return nil,
-			fmt.Errorf("error getting diffs since commit %q %w", commitId, err)
+		return nil, fmt.Errorf("error getting diffs for commit %q: %w", commitID, err)
 	}
 	var paths []string
 	scanner := bufio.NewScanner(bytes.NewReader(resBytes))
@@ -404,22 +447,119 @@ func (r *repo) LastCommitID() (string, error) {
 	return strings.TrimSpace(string(shaBytes)), nil
 }
 
-func (r *repo) ListTags() ([]string, error) {
-	if _, err :=
-		libExec.Exec(r.buildGitCommand("fetch", "origin", "--tags")); err != nil {
+func (r *repo) ListTags() ([]TagMetadata, error) {
+	if _, err := libExec.Exec(r.buildGitCommand("fetch", "origin", "--tags")); err != nil {
 		return nil, fmt.Errorf("error fetching tags from repo %q: %w", r.url, err)
 	}
-	tagsBytes, err := libExec.Exec(r.buildGitCommand("tag", "--list", "--sort", "-creatordate"))
+
+	// These formats are quite complex, so we break them down into smaller
+	// pieces for readability.
+	//
+	// They are designed to output the following fields, separated by `|*|`:
+	// - tag name
+	// - commit ID
+	// - subject
+	// - author name and email
+	// - committer name and email
+	// - creator date
+	//
+	// The `if`/`then`/`else` logic is used to ensure that we get the commit ID
+	// and subject of the tag, regardless of whether it's an annotated or
+	// lightweight tag.
+	//
+	// nolint: lll
+	const (
+		formatAnnotatedTag   = `%(refname:short)|*|%(*objectname)|*|%(*contents:subject)|*|%(*authorname) %(*authoremail)|*|%(*committername) %(*committeremail)|*|%(*creatordate:iso8601)`
+		formatLightweightTag = `%(refname:short)|*|%(objectname)|*|%(contents:subject)|*|%(authorname) %(authoremail)|*|%(committername) %(committeremail)|*|%(creatordate:iso8601)`
+		tagFormat            = `%(if)%(*objectname)%(then)` + formatAnnotatedTag + `%(else)` + formatLightweightTag + `%(end)`
+	)
+
+	tagsBytes, err := libExec.Exec(r.buildGitCommand(
+		"for-each-ref",
+		"--sort=-creatordate",
+		"--format="+tagFormat,
+		"refs/tags",
+	))
 	if err != nil {
 		return nil, fmt.Errorf("error listing tags for repo %q: %w", r.url, err)
 	}
-	var tags []string
+
+	var tags []TagMetadata
 	scanner := bufio.NewScanner(bytes.NewReader(tagsBytes))
-	scanner.Split(bufio.ScanLines)
 	for scanner.Scan() {
-		tags = append(tags, strings.TrimSpace(scanner.Text()))
+		line := scanner.Bytes()
+		parts := bytes.SplitN(scanner.Bytes(), []byte("|*|"), 6)
+		if len(parts) != 6 {
+			return nil, fmt.Errorf("unexpected number of fields: %q", line)
+		}
+
+		creatorDate, err := time.Parse("2006-01-02 15:04:05 -0700", string(parts[5]))
+		if err != nil {
+			return nil, fmt.Errorf("error parsing creator date %q: %w", parts[5], err)
+		}
+
+		tags = append(tags, TagMetadata{
+			Tag:         string(parts[0]),
+			CommitID:    string(parts[1]),
+			Subject:     string(parts[2]),
+			Author:      string(parts[3]),
+			Committer:   string(parts[4]),
+			CreatorDate: creatorDate,
+		})
 	}
+
 	return tags, nil
+}
+
+func (r *repo) ListCommits(limit, skip uint) ([]CommitMetadata, error) {
+	args := []string{
+		"log",
+		// This format is designed to output the following fields, separated by
+		// tabs (%x09):
+		//
+		// - commit ID
+		// - commit date
+		// - author name and email
+		// - committer name and email
+		// - subject
+		"--pretty=format:%H%x09%ci%x09%an <%ae>%x09%cn <%ce>%x09%s",
+	}
+	if limit > 0 {
+		args = append(args, fmt.Sprintf("--max-count=%d", limit))
+	}
+	if skip > 0 {
+		args = append(args, fmt.Sprintf("--skip=%d", skip))
+	}
+
+	commitsBytes, err := libExec.Exec(r.buildGitCommand(args...))
+	if err != nil {
+		return nil, fmt.Errorf("error listing commits for repo %q: %w", r.url, err)
+	}
+
+	var commits []CommitMetadata
+	scanner := bufio.NewScanner(bytes.NewReader(commitsBytes))
+	for scanner.Scan() {
+		line := scanner.Bytes()
+		parts := bytes.SplitN(scanner.Bytes(), []byte("\t"), 5)
+		if len(parts) != 5 {
+			return nil, fmt.Errorf("unexpected number of fields: %q", line)
+		}
+
+		commitDate, err := time.Parse("2006-01-02 15:04:05 -0700", string(parts[1]))
+		if err != nil {
+			return nil, fmt.Errorf("error parsing commit date %q: %w", parts[1], err)
+		}
+
+		commits = append(commits, CommitMetadata{
+			ID:         string(parts[0]),
+			CommitDate: commitDate,
+			Author:     string(parts[2]),
+			Committer:  string(parts[3]),
+			Subject:    string(parts[4]),
+		})
+	}
+
+	return commits, nil
 }
 
 func (r *repo) CommitMessage(id string) (string, error) {
@@ -430,31 +570,6 @@ func (r *repo) CommitMessage(id string) (string, error) {
 		return "", fmt.Errorf("error obtaining commit message for commit %q: %w", id, err)
 	}
 	return string(msgBytes), nil
-}
-
-func (r *repo) CommitMessages(id1, id2 string) ([]string, error) {
-	allMsgBytes, err := libExec.Exec(r.buildGitCommand(
-		"log",
-		"--pretty=oneline",
-		"--decorate-refs=",
-		"--decorate-refs-exclude=",
-		fmt.Sprintf("%s..%s", id1, id2),
-	))
-	if err != nil {
-		return nil, fmt.Errorf("error obtaining commit messages between commits %q and %q: %w", id1, id2, err)
-	}
-	msgsBytes := bytes.Split(allMsgBytes, []byte("\n"))
-	var msgs []string
-	for _, msgBytes := range msgsBytes {
-		msgStr := string(msgBytes)
-		// There's usually a trailing newline in the result. We could just discard
-		// the last line, but this feels more resilient against the admittedly
-		// remote possibility that that could change one day.
-		if strings.TrimSpace(msgStr) != "" {
-			msgs = append(msgs, string(msgBytes))
-		}
-	}
-	return msgs, nil
 }
 
 func (r *repo) Push(force bool) error {

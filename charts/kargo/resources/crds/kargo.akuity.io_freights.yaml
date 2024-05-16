@@ -74,11 +74,14 @@ spec:
                 repository.
               properties:
                 author:
-                  description: Author is the git commit author
+                  description: Author is the author of the commit.
                   type: string
                 branch:
                   description: Branch denotes the branch of the repository where this
                     commit was found.
+                  type: string
+                committer:
+                  description: Committer is the person who committed the commit.
                   type: string
                 healthCheckCommit:
                   description: |-
@@ -96,7 +99,9 @@ spec:
                     RepoURL.
                   type: string
                 message:
-                  description: Message is the git commit message
+                  description: |-
+                    Message is the message associated with the commit. At present, this only
+                    contains the first line (subject) of the commit message.
                   type: string
                 repoURL:
                   description: RepoURL is the URL of a Git repository.

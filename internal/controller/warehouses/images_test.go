@@ -2,7 +2,6 @@ package warehouses
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"testing"
 
@@ -13,41 +12,26 @@ import (
 	"github.com/akuity/kargo/internal/image"
 )
 
-func TestSelectImages(t *testing.T) {
+func TestDiscoverImages(t *testing.T) {
 	testCases := []struct {
 		name       string
 		reconciler *reconciler
-		assertions func(*testing.T, []kargoapi.Image, error)
+		subs       []kargoapi.RepoSubscription
+		assertions func(*testing.T, []kargoapi.ImageDiscoveryResult, error)
 	}{
 		{
-			name: "error getting latest version of an image",
-			reconciler: &reconciler{
-				credentialsDB: &credentials.FakeDB{
-					GetFn: func(
-						context.Context,
-						string,
-						credentials.Type,
-						string,
-					) (credentials.Credentials, bool, error) {
-						return credentials.Credentials{}, false, nil
-					},
-				},
-				getImageRefsFn: func(
-					context.Context,
-					kargoapi.ImageSubscription,
-					*image.Credentials,
-				) (string, string, error) {
-					return "", "", errors.New("something went wrong")
-				},
+			name:       "no image subscription",
+			reconciler: &reconciler{},
+			subs: []kargoapi.RepoSubscription{
+				{Git: &kargoapi.GitSubscription{}},
 			},
-			assertions: func(t *testing.T, _ []kargoapi.Image, err error) {
-				require.ErrorContains(t, err, "error getting latest suitable image")
-				require.ErrorContains(t, err, "something went wrong")
+			assertions: func(t *testing.T, results []kargoapi.ImageDiscoveryResult, err error) {
+				require.NoError(t, err)
+				require.Empty(t, results)
 			},
 		},
-
 		{
-			name: "success",
+			name: "error obtaining credentials",
 			reconciler: &reconciler{
 				credentialsDB: &credentials.FakeDB{
 					GetFn: func(
@@ -56,46 +40,107 @@ func TestSelectImages(t *testing.T) {
 						credentials.Type,
 						string,
 					) (credentials.Credentials, bool, error) {
-						return credentials.Credentials{}, false, nil
+						return credentials.Credentials{}, false, fmt.Errorf("something went wrong")
 					},
 				},
-				getImageRefsFn: func(
+			},
+			subs: []kargoapi.RepoSubscription{
+				{Image: &kargoapi.ImageSubscription{}},
+			},
+			assertions: func(t *testing.T, results []kargoapi.ImageDiscoveryResult, err error) {
+				require.Error(t, err)
+				require.Empty(t, results)
+			},
+		},
+		{
+			name: "discovers image references",
+			reconciler: &reconciler{
+				credentialsDB: &credentials.FakeDB{},
+				discoverImageRefsFn: func(
 					context.Context,
 					kargoapi.ImageSubscription,
 					*image.Credentials,
-				) (string, string, error) {
-					return "fake-tag", "fake-digest", nil
+				) ([]image.Image, error) {
+					return []image.Image{
+						{Tag: "xyz"},
+						{Tag: "abc"},
+					}, nil
 				},
 			},
-			assertions: func(t *testing.T, images []kargoapi.Image, err error) {
+			subs: []kargoapi.RepoSubscription{
+				{Image: &kargoapi.ImageSubscription{
+					RepoURL: "fake-repo",
+				}},
+			},
+			assertions: func(t *testing.T, results []kargoapi.ImageDiscoveryResult, err error) {
 				require.NoError(t, err)
-				require.Len(t, images, 1)
-				require.Equal(
-					t,
-					kargoapi.Image{
-						RepoURL: "fake-url",
-						Tag:     "fake-tag",
-						Digest:  "fake-digest",
+				require.Equal(t, []kargoapi.ImageDiscoveryResult{
+					{
+						RepoURL: "fake-repo",
+						References: []kargoapi.DiscoveredImageReference{
+							{Tag: "xyz"},
+							{Tag: "abc"},
+						},
 					},
-					images[0],
-				)
+				}, results)
+			},
+		},
+		{
+			name: "error discovering image references",
+			reconciler: &reconciler{
+				credentialsDB: &credentials.FakeDB{},
+				discoverImageRefsFn: func(
+					context.Context,
+					kargoapi.ImageSubscription,
+					*image.Credentials,
+				) ([]image.Image, error) {
+					return nil, fmt.Errorf("something went wrong")
+				},
+			},
+			subs: []kargoapi.RepoSubscription{
+				{Image: &kargoapi.ImageSubscription{}},
+			},
+			assertions: func(t *testing.T, results []kargoapi.ImageDiscoveryResult, err error) {
+				require.Error(t, err)
+				require.Empty(t, results)
+			},
+		},
+		{
+			name: "no suitable images discovered",
+			reconciler: &reconciler{
+				credentialsDB: &credentials.FakeDB{},
+				discoverImageRefsFn: func(
+					context.Context,
+					kargoapi.ImageSubscription,
+					*image.Credentials,
+				) ([]image.Image, error) {
+					return nil, nil
+				},
+			},
+			subs: []kargoapi.RepoSubscription{
+				{Image: &kargoapi.ImageSubscription{
+					RepoURL: "fake-repo",
+				}},
+			},
+			assertions: func(t *testing.T, results []kargoapi.ImageDiscoveryResult, err error) {
+				require.NoError(t, err)
+				require.Equal(t, []kargoapi.ImageDiscoveryResult{
+					{
+						RepoURL: "fake-repo",
+					},
+				}, results)
 			},
 		},
 	}
+
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			images, err := testCase.reconciler.selectImages(
-				context.Background(),
+			results, err := testCase.reconciler.discoverImages(
+				context.TODO(),
 				"fake-namespace",
-				[]kargoapi.RepoSubscription{
-					{
-						Image: &kargoapi.ImageSubscription{
-							RepoURL: "fake-url",
-						},
-					},
-				},
+				testCase.subs,
 			)
-			testCase.assertions(t, images, err)
+			testCase.assertions(t, results, err)
 		})
 	}
 }
