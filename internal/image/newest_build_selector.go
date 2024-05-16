@@ -74,9 +74,10 @@ func (n *newestBuildSelector) Select(ctx context.Context) ([]Image, error) {
 		return images[:limit], nil
 	}
 
-	// TODO(hidde): this is unnecessarily inefficient, as we're fetching the
-	// image _again_ to check if it matches the platform constraint. We should
-	// refactor this to avoid fetching the image twice.
+	// TODO(hidde): this could be more efficient, as we are fetching the image
+	// _again_ to check if it matches the platform constraint (although we do
+	// cache it indefinitely). We should consider refactoring this to avoid
+	// fetching the image twice.
 	discoveredImages := make([]Image, 0, limit)
 	for _, image := range images {
 		if len(discoveredImages) >= limit {
