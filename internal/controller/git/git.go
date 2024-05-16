@@ -130,12 +130,12 @@ type Repo interface {
 	// LastCommitID returns the ID (sha) of the most recent commit to the current
 	// branch.
 	LastCommitID() (string, error)
-	// ListTagsWithMetadata returns a slice of tags in the repository with metadata
-	// such as commit ID, creator date, and subject.
-	ListTagsWithMetadata() ([]TagMetadata, error)
-	// ListCommitsWithMetadata returns a slice of commits in the current branch
-	// with metadata such as commit ID, commit date, and subject.
-	ListCommitsWithMetadata(limit, skip uint) ([]CommitMetadata, error)
+	// ListTags returns a slice of tags in the repository with metadata such as
+	// commit ID, creator date, and subject.
+	ListTags() ([]TagMetadata, error)
+	// ListCommits returns a slice of commits in the current branch with
+	// metadata such as commit ID, commit date, and subject.
+	ListCommits(limit, skip uint) ([]CommitMetadata, error)
 	// CommitMessage returns the text of the most recent commit message associated
 	// with the specified commit ID.
 	CommitMessage(id string) (string, error)
@@ -447,7 +447,7 @@ func (r *repo) LastCommitID() (string, error) {
 	return strings.TrimSpace(string(shaBytes)), nil
 }
 
-func (r *repo) ListTagsWithMetadata() ([]TagMetadata, error) {
+func (r *repo) ListTags() ([]TagMetadata, error) {
 	if _, err := libExec.Exec(r.buildGitCommand("fetch", "origin", "--tags")); err != nil {
 		return nil, fmt.Errorf("error fetching tags from repo %q: %w", r.url, err)
 	}
@@ -511,7 +511,7 @@ func (r *repo) ListTagsWithMetadata() ([]TagMetadata, error) {
 	return tags, nil
 }
 
-func (r *repo) ListCommitsWithMetadata(limit, skip uint) ([]CommitMetadata, error) {
+func (r *repo) ListCommits(limit, skip uint) ([]CommitMetadata, error) {
 	args := []string{
 		"log",
 		// This format is designed to output the following fields, separated by

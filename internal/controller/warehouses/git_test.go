@@ -238,7 +238,7 @@ func TestDiscoverBranchHistory(t *testing.T) {
 		{
 			name: "error listing commits",
 			reconciler: &reconciler{
-				listCommitsWithMetadataFn: func(git.Repo, uint, uint) ([]git.CommitMetadata, error) {
+				listCommitsFn: func(git.Repo, uint, uint) ([]git.CommitMetadata, error) {
 					return nil, errors.New("something went wrong")
 				},
 			},
@@ -250,7 +250,7 @@ func TestDiscoverBranchHistory(t *testing.T) {
 		{
 			name: "without path filters",
 			reconciler: &reconciler{
-				listCommitsWithMetadataFn: func(git.Repo, uint, uint) ([]git.CommitMetadata, error) {
+				listCommitsFn: func(git.Repo, uint, uint) ([]git.CommitMetadata, error) {
 					return []git.CommitMetadata{
 						{ID: "abc"},
 						{ID: "xyz"},
@@ -271,7 +271,7 @@ func TestDiscoverBranchHistory(t *testing.T) {
 				IncludePaths: []string{regexpPrefix + "^.*third_path_to_a/file$"},
 			},
 			reconciler: &reconciler{
-				listCommitsWithMetadataFn: func(git.Repo, uint, uint) ([]git.CommitMetadata, error) {
+				listCommitsFn: func(git.Repo, uint, uint) ([]git.CommitMetadata, error) {
 					return []git.CommitMetadata{
 						{ID: "abc"},
 						{ID: "xyz"},
@@ -292,7 +292,7 @@ func TestDiscoverBranchHistory(t *testing.T) {
 				IncludePaths: []string{regexpPrefix + "^.*third_path_to_a/file$"},
 			},
 			reconciler: &reconciler{
-				listCommitsWithMetadataFn: func(_ git.Repo, _ uint, skip uint) ([]git.CommitMetadata, error) {
+				listCommitsFn: func(_ git.Repo, _ uint, skip uint) ([]git.CommitMetadata, error) {
 					if skip > 0 {
 						return nil, nil
 					}
@@ -335,7 +335,7 @@ func TestDiscoverTags(t *testing.T) {
 		{
 			name: "error listing tags",
 			reconciler: &reconciler{
-				listTagsWithMetadataFn: func(git.Repo) ([]git.TagMetadata, error) {
+				listTagsFn: func(git.Repo) ([]git.TagMetadata, error) {
 					return nil, errors.New("something went wrong")
 				},
 			},
@@ -351,7 +351,7 @@ func TestDiscoverTags(t *testing.T) {
 				CommitSelectionStrategy: kargoapi.CommitSelectionStrategyNewestTag,
 			},
 			reconciler: &reconciler{
-				listTagsWithMetadataFn: func(git.Repo) ([]git.TagMetadata, error) {
+				listTagsFn: func(git.Repo) ([]git.TagMetadata, error) {
 					return []git.TagMetadata{
 						{Tag: "abc"},
 						{Tag: "xyz"},
@@ -369,7 +369,7 @@ func TestDiscoverTags(t *testing.T) {
 				AllowTags: "[",
 			},
 			reconciler: &reconciler{
-				listTagsWithMetadataFn: func(git.Repo) ([]git.TagMetadata, error) {
+				listTagsFn: func(git.Repo) ([]git.TagMetadata, error) {
 					return nil, nil
 				},
 			},
@@ -384,7 +384,7 @@ func TestDiscoverTags(t *testing.T) {
 				CommitSelectionStrategy: kargoapi.CommitSelectionStrategySemVer,
 			},
 			reconciler: &reconciler{
-				listTagsWithMetadataFn: func(git.Repo) ([]git.TagMetadata, error) {
+				listTagsFn: func(git.Repo) ([]git.TagMetadata, error) {
 					return []git.TagMetadata{
 						{Tag: "v1.0.0"},
 						{Tag: "abc"},
@@ -410,7 +410,7 @@ func TestDiscoverTags(t *testing.T) {
 				SemverConstraint:        ">=2.0.0",
 			},
 			reconciler: &reconciler{
-				listTagsWithMetadataFn: func(git.Repo) ([]git.TagMetadata, error) {
+				listTagsFn: func(git.Repo) ([]git.TagMetadata, error) {
 					return []git.TagMetadata{
 						{Tag: "v1.0.0"},
 						{Tag: "v2.0.0"},
@@ -432,7 +432,7 @@ func TestDiscoverTags(t *testing.T) {
 				SemverConstraint:        "invalid",
 			},
 			reconciler: &reconciler{
-				listTagsWithMetadataFn: func(git.Repo) ([]git.TagMetadata, error) {
+				listTagsFn: func(git.Repo) ([]git.TagMetadata, error) {
 					return nil, nil
 				},
 			},
@@ -447,7 +447,7 @@ func TestDiscoverTags(t *testing.T) {
 				CommitSelectionStrategy: kargoapi.CommitSelectionStrategyLexical,
 			},
 			reconciler: &reconciler{
-				listTagsWithMetadataFn: func(git.Repo) ([]git.TagMetadata, error) {
+				listTagsFn: func(git.Repo) ([]git.TagMetadata, error) {
 					return []git.TagMetadata{
 						{Tag: "123"},
 						{Tag: "abc"},
@@ -470,7 +470,7 @@ func TestDiscoverTags(t *testing.T) {
 				CommitSelectionStrategy: kargoapi.CommitSelectionStrategyNewestTag,
 			},
 			reconciler: &reconciler{
-				listTagsWithMetadataFn: func(git.Repo) ([]git.TagMetadata, error) {
+				listTagsFn: func(git.Repo) ([]git.TagMetadata, error) {
 					return []git.TagMetadata{
 						{Tag: "a"}, {Tag: "b"}, {Tag: "c"}, {Tag: "d"}, {Tag: "e"},
 						{Tag: "f"}, {Tag: "g"}, {Tag: "h"}, {Tag: "i"}, {Tag: "j"},
@@ -492,7 +492,7 @@ func TestDiscoverTags(t *testing.T) {
 				IncludePaths: []string{regexpPrefix + "^.*third_path_to_a/file$"},
 			},
 			reconciler: &reconciler{
-				listTagsWithMetadataFn: func(git.Repo) ([]git.TagMetadata, error) {
+				listTagsFn: func(git.Repo) ([]git.TagMetadata, error) {
 					return []git.TagMetadata{
 						{Tag: "v1.0.0"},
 						{Tag: "abc", CommitID: "fake-commit-id"},

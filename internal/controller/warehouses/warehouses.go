@@ -48,9 +48,9 @@ type reconciler struct {
 
 	gitCloneFn func(string, *git.ClientOptions, *git.CloneOptions) (git.Repo, error)
 
-	listCommitsWithMetadataFn func(repo git.Repo, limit, skip uint) ([]git.CommitMetadata, error)
+	listCommitsFn func(repo git.Repo, limit, skip uint) ([]git.CommitMetadata, error)
 
-	listTagsWithMetadataFn func(repo git.Repo) ([]git.TagMetadata, error)
+	listTagsFn func(repo git.Repo) ([]git.TagMetadata, error)
 
 	discoverBranchHistoryFn func(repo git.Repo, sub kargoapi.GitSubscription) ([]git.CommitMetadata, error)
 
@@ -119,8 +119,8 @@ func newReconciler(
 	r.discoverImageRefsFn = r.discoverImageRefs
 	r.discoverChartsFn = r.discoverCharts
 	r.buildFreightFromLatestArtifactsFn = r.buildFreightFromLatestArtifacts
-	r.listCommitsWithMetadataFn = r.listCommitsWithMetadata
-	r.listTagsWithMetadataFn = r.listTagsWithMetadata
+	r.listCommitsFn = r.listCommits
+	r.listTagsFn = r.listTags
 	r.discoverBranchHistoryFn = r.discoverBranchHistory
 	r.discoverTagsFn = r.discoverTags
 	r.getDiffPathsForCommitIDFn = r.getDiffPathsForCommitID

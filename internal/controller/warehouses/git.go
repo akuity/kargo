@@ -129,7 +129,7 @@ func (r *reconciler) discoverBranchHistory(repo git.Repo, sub kargoapi.GitSubscr
 	const limit = 20
 	var filteredCommits = make([]git.CommitMetadata, 0, limit)
 	for skip := uint(0); ; skip += limit {
-		commits, err := r.listCommitsWithMetadataFn(repo, limit, skip)
+		commits, err := r.listCommitsFn(repo, limit, skip)
 		if err != nil {
 			return nil, fmt.Errorf("error listing commits from git repo %q: %w", sub.RepoURL, err)
 		}
@@ -197,7 +197,7 @@ func (r *reconciler) discoverBranchHistory(repo git.Repo, sub kargoapi.GitSubscr
 // that match the criteria, sorted in descending order. If the list contains
 // more than 20 tags, it is clipped to the 20 most recent tags.
 func (r *reconciler) discoverTags(repo git.Repo, sub kargoapi.GitSubscription) ([]git.TagMetadata, error) {
-	tags, err := r.listTagsWithMetadataFn(repo)
+	tags, err := r.listTagsFn(repo)
 	if err != nil {
 		return nil, fmt.Errorf("error listing tags from git repo %q: %w", sub.RepoURL, err)
 	}
@@ -430,12 +430,12 @@ func selectSemVerTags(tags []git.TagMetadata, constraint string) ([]git.TagMetad
 	return semverTags, nil
 }
 
-func (r *reconciler) listCommitsWithMetadata(repo git.Repo, limit, skip uint) ([]git.CommitMetadata, error) {
-	return repo.ListCommitsWithMetadata(limit, skip)
+func (r *reconciler) listCommits(repo git.Repo, limit, skip uint) ([]git.CommitMetadata, error) {
+	return repo.ListCommits(limit, skip)
 }
 
-func (r *reconciler) listTagsWithMetadata(repo git.Repo) ([]git.TagMetadata, error) {
-	return repo.ListTagsWithMetadata()
+func (r *reconciler) listTags(repo git.Repo) ([]git.TagMetadata, error) {
+	return repo.ListTags()
 }
 
 func (r *reconciler) getDiffPathsForCommitID(repo git.Repo, commitID string) ([]string, error) {
