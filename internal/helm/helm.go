@@ -19,43 +19,6 @@ import (
 	libExec "github.com/akuity/kargo/internal/exec"
 )
 
-// SelectChartVersion connects to the specified Helm chart repository and
-// determines the latest version of the specified chart, optionally filtering
-// by a SemVer constraint. It then returns the version.
-//
-// The repository can be either a classic chart repository (using HTTP/S) or a
-// repository within an OCI registry. Classic chart repositories can contain
-// differently named charts. When repoURL points to such a repository, the name
-// argument must specify the name of the chart within the repository. In the
-// case of a repository within an OCI registry, the URL implicitly points to a
-// specific chart and the name argument must be empty.
-//
-// The credentials argument may be nil for public repositories, but must be
-// non-nil for private repositories.
-//
-// If no versions of the chart are found in the repository, an error is
-// returned.
-func SelectChartVersion(
-	ctx context.Context,
-	repoURL string,
-	chart string,
-	semverConstraint string,
-	creds *Credentials,
-) (string, error) {
-	versions, err := DiscoverChartVersions(ctx, repoURL, chart, semverConstraint, creds)
-	if err != nil {
-		return "", err
-	}
-	if len(versions) == 0 {
-		err := fmt.Errorf("no versions of chart %q found in repository %q", chart, repoURL)
-		if semverConstraint != "" {
-			err = fmt.Errorf("%s that satisfy constraint %q", err, semverConstraint)
-		}
-		return "", err
-	}
-	return versions[0], nil
-}
-
 // DiscoverChartVersions connects to the specified Helm chart repository and
 // retrieves all available versions of the specified chart, optionally filtering
 // by a SemVer constraint. It then returns the versions in descending order.
