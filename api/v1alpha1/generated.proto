@@ -240,17 +240,25 @@ message Chart {
 message ChartDiscoveryResult {
   // RepoURL is the repository URL of the Helm chart, as specified in the
   // ChartSubscription.
+  //
+  // +kubebuilder:validation:MinLength=1
   optional string repoURL = 1;
 
   // Name is the name of the Helm chart, as specified in the ChartSubscription.
   optional string name = 2;
 
+  // SemverConstraint is the constraint for which versions were discovered.
+  // This field is optional, and only populated if the ChartSubscription
+  // specifies a SemverConstraint.
+  optional string semverConstraint = 3;
+
   // Versions is a list of versions discovered by the Warehouse for the
   // ChartSubscription. An empty list indicates that the discovery operation was
   // successful, but no versions matching the ChartSubscription criteria were
   // found.
+  //
   // +optional
-  repeated string versions = 3;
+  repeated string versions = 4;
 }
 
 // ChartSubscription defines a subscription to a Helm chart repository.
@@ -285,15 +293,25 @@ message ChartSubscription {
   optional string semverConstraint = 3;
 }
 
-// DiscoveredArtifacts holds the artifacts discovered by the Warehouse.
+// DiscoveredArtifacts holds the artifacts discovered by the Warehouse for its
+// subscriptions.
 message DiscoveredArtifacts {
-  // Commits holds the Git commits discovered by the Warehouse.
-  repeated GitDiscoveryResult commits = 1;
+  // Git holds the commits discovered by the Warehouse for the Git
+  // subscriptions.
+  //
+  // +optional
+  repeated GitDiscoveryResult git = 1;
 
-  // Images holds the images discovered by the Warehouse.
+  // Images holds the image references discovered by the Warehouse for the
+  // image subscriptions.
+  //
+  // +optional
   repeated ImageDiscoveryResult images = 2;
 
-  // Charts holds the charts discovered by the Warehouse.
+  // Charts holds the charts discovered by the Warehouse for the chart
+  // subscriptions.
+  //
+  // +optional
   repeated ChartDiscoveryResult charts = 3;
 }
 
@@ -301,63 +319,58 @@ message DiscoveredArtifacts {
 // GitSubscription.
 message DiscoveredCommit {
   // ID is the identifier of the commit. This typically is a SHA-1 hash.
+  //
   // +kubebuilder:validation:MinLength=1
   optional string id = 1;
 
   // Branch is the branch in which the commit was found. This field is
   // optional, and populated based on the CommitSelectionStrategy of the
   // GitSubscription.
-  // +optional
   optional string branch = 2;
 
   // Tag is the tag that resolved to this commit. This field is optional, and
   // populated based on the CommitSelectionStrategy of the GitSubscription.
-  // +optional
   optional string tag = 3;
 
   // Subject is the subject of the commit (i.e. the first line of the commit
   // message).
-  // +optional
   optional string subject = 4;
 
   // Author is the author of the commit.
-  // +optional
   optional string author = 5;
 
-  // CreatedAt is the time at which the commit or annotated tag was created.
-  // +optional
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time createdAt = 6;
+  // Committer is the person who committed the commit.
+  optional string committer = 6;
+
+  // CreatorDate is the commit creation date as specified by the commit, or
+  // the tagger date if the commit belongs to an annotated tag.
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time creatorDate = 7;
 }
 
-// DiscoveredImage represents an image discovered by a Warehouse for an
-// ImageSubscription.
-message DiscoveredImage {
+// DiscoveredImageReference represents an image reference discovered by a
+// Warehouse for an ImageSubscription.
+message DiscoveredImageReference {
   // Tag is the tag of the image.
+  //
   // +kubebuilder:validation:MinLength=1
   // +kubebuilder:validation:MaxLength=128
   // +kubebuilder:validation:Pattern=`^[\w.\-\_]+$`
   optional string tag = 1;
 
   // Digest is the digest of the image.
+  //
   // +kubebuilder:validation:MinLength=1
   // +kubebuilder:validation:Pattern=`^[a-z0-9]+:[a-f0-9]+$`
   optional string digest = 2;
 
-  // Platform is the target platform of the image. This field is optional, and
-  // only populated if the ImageSubscription specifies a Platform.
-  // +optional
-  optional string platform = 3;
-
   // GitRepoURL is the URL of the Git repository that contains the source
   // code for this image. This field is optional, and only populated if the
   // ImageSubscription specifies a GitRepoURL.
-  // +optional
-  optional string gitRepoURL = 4;
+  optional string gitRepoURL = 3;
 
   // CreatedAt is the time the image was created. This field is optional, and
   // not populated for every ImageSelectionStrategy.
-  // +optional
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time createdAt = 5;
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time createdAt = 4;
 }
 
 // Freight represents a collection of versioned artifacts.
@@ -469,11 +482,15 @@ message GitCommit {
   // found in the ID field.
   optional string healthCheckCommit = 5;
 
-  // Message is the git commit message
+  // Message is the message associated with the commit. At present, this only
+  // contains the first line (subject) of the commit message.
   optional string message = 6;
 
-  // Author is the git commit author
+  // Author is the author of the commit.
   optional string author = 7;
+
+  // Committer is the person who committed the commit.
+  optional string committer = 8;
 }
 
 // GitDiscoveryResult represents the result of a Git discovery operation for a
@@ -488,6 +505,7 @@ message GitDiscoveryResult {
   // Commits is a list of commits discovered by the Warehouse for the
   // GitSubscription. An empty list indicates that the discovery operation was
   // successful, but no commits matching the GitSubscription criteria were found.
+  //
   // +optional
   repeated DiscoveredCommit commits = 2;
 }
@@ -757,15 +775,22 @@ message Image {
 message ImageDiscoveryResult {
   // RepoURL is the repository URL of the image, as specified in the
   // ImageSubscription.
+  //
   // +kubebuilder:validation:MinLength=1
   optional string repoURL = 1;
 
-  // Images is a list of images discovered by the Warehouse for the
-  // ImageSubscription. An empty list indicates that the discovery operation
-  // was successful, but no images matching the ImageSubscription criteria were
-  // found.
+  // Platform is the target platform constraint of the ImageSubscription
+  // for which references were discovered. This field is optional, and
+  // only populated if the ImageSubscription specifies a Platform.
+  optional string platform = 2;
+
+  // References is a list of image references discovered by the Warehouse for
+  // the ImageSubscription. An empty list indicates that the discovery
+  // operation was successful, but no images matching the ImageSubscription
+  // criteria were found.
+  //
   // +optional
-  repeated DiscoveredImage images = 2;
+  repeated DiscoveredImageReference references = 3;
 }
 
 // ImageSubscription defines a subscription to an image repository.
@@ -1261,12 +1286,12 @@ message WarehouseSpec {
   // of the shard label.
   optional string shard = 2;
 
-  // FreightCreation describes how Freight is created by this Warehouse.
+  // FreightCreationPolicy describes how Freight is created by this Warehouse.
   // This field is optional. When left unspecified, the field is implicitly
   // treated as if its value were "Automatic".
   //
   // +kubebuilder:default=Automatic
-  optional string freightCreation = 3;
+  optional string freightCreationPolicy = 3;
 
   // Subscriptions describes sources of artifacts to be included in Freight
   // produced by this Warehouse.

@@ -46,10 +46,10 @@ spec:
           spec:
             description: Spec describes sources of artifacts.
             properties:
-              freightCreation:
+              freightCreationPolicy:
                 default: Automatic
                 description: |-
-                  FreightCreation describes how Freight is created by this Warehouse.
+                  FreightCreationPolicy describes how Freight is created by this Warehouse.
                   This field is optional. When left unspecified, the field is implicitly
                   treated as if its value were "Automatic".
                 enum:
@@ -299,7 +299,7 @@ spec:
                 minItems: 1
                 type: array
             required:
-            - freightCreation
+            - freightCreationPolicy
             - subscriptions
             type: object
           status:
@@ -310,7 +310,9 @@ spec:
                   the Warehouse.
                 properties:
                   charts:
-                    description: Charts holds the charts discovered by the Warehouse.
+                    description: |-
+                      Charts holds the charts discovered by the Warehouse for the chart
+                      subscriptions.
                     items:
                       description: |-
                         ChartDiscoveryResult represents the result of a chart discovery operation for
@@ -324,6 +326,13 @@ spec:
                           description: |-
                             RepoURL is the repository URL of the Helm chart, as specified in the
                             ChartSubscription.
+                          minLength: 1
+                          type: string
+                        semverConstraint:
+                          description: |-
+                            SemverConstraint is the constraint for which versions were discovered.
+                            This field is optional, and only populated if the ChartSubscription
+                            specifies a SemverConstraint.
                           type: string
                         versions:
                           description: |-
@@ -335,12 +344,13 @@ spec:
                             type: string
                           type: array
                       required:
-                      - name
                       - repoURL
                       type: object
                     type: array
-                  commits:
-                    description: Commits holds the Git commits discovered by the Warehouse.
+                  git:
+                    description: |-
+                      Git holds the commits discovered by the Warehouse for the Git
+                      subscriptions.
                     items:
                       description: |-
                         GitDiscoveryResult represents the result of a Git discovery operation for a
@@ -365,9 +375,14 @@ spec:
                                   optional, and populated based on the CommitSelectionStrategy of the
                                   GitSubscription.
                                 type: string
-                              createdAt:
-                                description: CreatedAt is the time at which the commit
-                                  or annotated tag was created.
+                              committer:
+                                description: Committer is the person who committed
+                                  the commit.
+                                type: string
+                              creatorDate:
+                                description: |-
+                                  CreatorDate is the commit creation date as specified by the commit, or
+                                  the tagger date if the commit belongs to an annotated tag.
                                 format: date-time
                                 type: string
                               id:
@@ -397,22 +412,30 @@ spec:
                       type: object
                     type: array
                   images:
-                    description: Images holds the images discovered by the Warehouse.
+                    description: |-
+                      Images holds the image references discovered by the Warehouse for the
+                      image subscriptions.
                     items:
                       description: |-
                         ImageDiscoveryResult represents the result of an image discovery operation
                         for an ImageSubscription.
                       properties:
-                        images:
+                        platform:
                           description: |-
-                            Images is a list of images discovered by the Warehouse for the
-                            ImageSubscription. An empty list indicates that the discovery operation
-                            was successful, but no images matching the ImageSubscription criteria were
-                            found.
+                            Platform is the target platform constraint of the ImageSubscription
+                            for which references were discovered. This field is optional, and
+                            only populated if the ImageSubscription specifies a Platform.
+                          type: string
+                        references:
+                          description: |-
+                            References is a list of image references discovered by the Warehouse for
+                            the ImageSubscription. An empty list indicates that the discovery
+                            operation was successful, but no images matching the ImageSubscription
+                            criteria were found.
                           items:
                             description: |-
-                              DiscoveredImage represents an image discovered by a Warehouse for an
-                              ImageSubscription.
+                              DiscoveredImageReference represents an image reference discovered by a
+                              Warehouse for an ImageSubscription.
                             properties:
                               createdAt:
                                 description: |-
@@ -430,11 +453,6 @@ spec:
                                   GitRepoURL is the URL of the Git repository that contains the source
                                   code for this image. This field is optional, and only populated if the
                                   ImageSubscription specifies a GitRepoURL.
-                                type: string
-                              platform:
-                                description: |-
-                                  Platform is the target platform of the image. This field is optional, and
-                                  only populated if the ImageSubscription specifies a Platform.
                                 type: string
                               tag:
                                 description: Tag is the tag of the image.
@@ -493,11 +511,14 @@ spec:
                         Git repository.
                       properties:
                         author:
-                          description: Author is the git commit author
+                          description: Author is the author of the commit.
                           type: string
                         branch:
                           description: Branch denotes the branch of the repository
                             where this commit was found.
+                          type: string
+                        committer:
+                          description: Committer is the person who committed the commit.
                           type: string
                         healthCheckCommit:
                           description: |-
@@ -515,7 +536,9 @@ spec:
                             RepoURL.
                           type: string
                         message:
-                          description: Message is the git commit message
+                          description: |-
+                            Message is the message associated with the commit. At present, this only
+                            contains the first line (subject) of the commit message.
                           type: string
                         repoURL:
                           description: RepoURL is the URL of a Git repository.

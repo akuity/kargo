@@ -862,6 +862,8 @@ export class ChartDiscoveryResult extends Message<ChartDiscoveryResult> {
    * RepoURL is the repository URL of the Helm chart, as specified in the
    * ChartSubscription.
    *
+   * +kubebuilder:validation:MinLength=1
+   *
    * @generated from field: optional string repoURL = 1;
    */
   repoURL?: string;
@@ -874,13 +876,23 @@ export class ChartDiscoveryResult extends Message<ChartDiscoveryResult> {
   name?: string;
 
   /**
+   * SemverConstraint is the constraint for which versions were discovered.
+   * This field is optional, and only populated if the ChartSubscription
+   * specifies a SemverConstraint.
+   *
+   * @generated from field: optional string semverConstraint = 3;
+   */
+  semverConstraint?: string;
+
+  /**
    * Versions is a list of versions discovered by the Warehouse for the
    * ChartSubscription. An empty list indicates that the discovery operation was
    * successful, but no versions matching the ChartSubscription criteria were
    * found.
+   *
    * +optional
    *
-   * @generated from field: repeated string versions = 3;
+   * @generated from field: repeated string versions = 4;
    */
   versions: string[] = [];
 
@@ -894,7 +906,8 @@ export class ChartDiscoveryResult extends Message<ChartDiscoveryResult> {
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 1, name: "repoURL", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 3, name: "versions", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 3, name: "semverConstraint", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 4, name: "versions", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ChartDiscoveryResult {
@@ -992,27 +1005,37 @@ export class ChartSubscription extends Message<ChartSubscription> {
 }
 
 /**
- * DiscoveredArtifacts holds the artifacts discovered by the Warehouse.
+ * DiscoveredArtifacts holds the artifacts discovered by the Warehouse for its
+ * subscriptions.
  *
  * @generated from message github.com.akuity.kargo.api.v1alpha1.DiscoveredArtifacts
  */
 export class DiscoveredArtifacts extends Message<DiscoveredArtifacts> {
   /**
-   * Commits holds the Git commits discovered by the Warehouse.
+   * Git holds the commits discovered by the Warehouse for the Git
+   * subscriptions.
    *
-   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.GitDiscoveryResult commits = 1;
+   * +optional
+   *
+   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.GitDiscoveryResult git = 1;
    */
-  commits: GitDiscoveryResult[] = [];
+  git: GitDiscoveryResult[] = [];
 
   /**
-   * Images holds the images discovered by the Warehouse.
+   * Images holds the image references discovered by the Warehouse for the
+   * image subscriptions.
+   *
+   * +optional
    *
    * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.ImageDiscoveryResult images = 2;
    */
   images: ImageDiscoveryResult[] = [];
 
   /**
-   * Charts holds the charts discovered by the Warehouse.
+   * Charts holds the charts discovered by the Warehouse for the chart
+   * subscriptions.
+   *
+   * +optional
    *
    * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.ChartDiscoveryResult charts = 3;
    */
@@ -1026,7 +1049,7 @@ export class DiscoveredArtifacts extends Message<DiscoveredArtifacts> {
   static readonly runtime: typeof proto2 = proto2;
   static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.DiscoveredArtifacts";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
-    { no: 1, name: "commits", kind: "message", T: GitDiscoveryResult, repeated: true },
+    { no: 1, name: "git", kind: "message", T: GitDiscoveryResult, repeated: true },
     { no: 2, name: "images", kind: "message", T: ImageDiscoveryResult, repeated: true },
     { no: 3, name: "charts", kind: "message", T: ChartDiscoveryResult, repeated: true },
   ]);
@@ -1057,6 +1080,7 @@ export class DiscoveredArtifacts extends Message<DiscoveredArtifacts> {
 export class DiscoveredCommit extends Message<DiscoveredCommit> {
   /**
    * ID is the identifier of the commit. This typically is a SHA-1 hash.
+   *
    * +kubebuilder:validation:MinLength=1
    *
    * @generated from field: optional string id = 1;
@@ -1067,7 +1091,6 @@ export class DiscoveredCommit extends Message<DiscoveredCommit> {
    * Branch is the branch in which the commit was found. This field is
    * optional, and populated based on the CommitSelectionStrategy of the
    * GitSubscription.
-   * +optional
    *
    * @generated from field: optional string branch = 2;
    */
@@ -1076,7 +1099,6 @@ export class DiscoveredCommit extends Message<DiscoveredCommit> {
   /**
    * Tag is the tag that resolved to this commit. This field is optional, and
    * populated based on the CommitSelectionStrategy of the GitSubscription.
-   * +optional
    *
    * @generated from field: optional string tag = 3;
    */
@@ -1085,7 +1107,6 @@ export class DiscoveredCommit extends Message<DiscoveredCommit> {
   /**
    * Subject is the subject of the commit (i.e. the first line of the commit
    * message).
-   * +optional
    *
    * @generated from field: optional string subject = 4;
    */
@@ -1093,19 +1114,25 @@ export class DiscoveredCommit extends Message<DiscoveredCommit> {
 
   /**
    * Author is the author of the commit.
-   * +optional
    *
    * @generated from field: optional string author = 5;
    */
   author?: string;
 
   /**
-   * CreatedAt is the time at which the commit or annotated tag was created.
-   * +optional
+   * Committer is the person who committed the commit.
    *
-   * @generated from field: optional k8s.io.apimachinery.pkg.apis.meta.v1.Time createdAt = 6;
+   * @generated from field: optional string committer = 6;
    */
-  createdAt?: Time;
+  committer?: string;
+
+  /**
+   * CreatorDate is the commit creation date as specified by the commit, or
+   * the tagger date if the commit belongs to an annotated tag.
+   *
+   * @generated from field: optional k8s.io.apimachinery.pkg.apis.meta.v1.Time creatorDate = 7;
+   */
+  creatorDate?: Time;
 
   constructor(data?: PartialMessage<DiscoveredCommit>) {
     super();
@@ -1120,7 +1147,8 @@ export class DiscoveredCommit extends Message<DiscoveredCommit> {
     { no: 3, name: "tag", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 4, name: "subject", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 5, name: "author", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 6, name: "createdAt", kind: "message", T: Time, opt: true },
+    { no: 6, name: "committer", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 7, name: "creatorDate", kind: "message", T: Time, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DiscoveredCommit {
@@ -1141,14 +1169,15 @@ export class DiscoveredCommit extends Message<DiscoveredCommit> {
 }
 
 /**
- * DiscoveredImage represents an image discovered by a Warehouse for an
- * ImageSubscription.
+ * DiscoveredImageReference represents an image reference discovered by a
+ * Warehouse for an ImageSubscription.
  *
- * @generated from message github.com.akuity.kargo.api.v1alpha1.DiscoveredImage
+ * @generated from message github.com.akuity.kargo.api.v1alpha1.DiscoveredImageReference
  */
-export class DiscoveredImage extends Message<DiscoveredImage> {
+export class DiscoveredImageReference extends Message<DiscoveredImageReference> {
   /**
    * Tag is the tag of the image.
+   *
    * +kubebuilder:validation:MinLength=1
    * +kubebuilder:validation:MaxLength=128
    * +kubebuilder:validation:Pattern=`^[\w.\-\_]+$`
@@ -1159,6 +1188,7 @@ export class DiscoveredImage extends Message<DiscoveredImage> {
 
   /**
    * Digest is the digest of the image.
+   *
    * +kubebuilder:validation:MinLength=1
    * +kubebuilder:validation:Pattern=`^[a-z0-9]+:[a-f0-9]+$`
    *
@@ -1167,62 +1197,50 @@ export class DiscoveredImage extends Message<DiscoveredImage> {
   digest?: string;
 
   /**
-   * Platform is the target platform of the image. This field is optional, and
-   * only populated if the ImageSubscription specifies a Platform.
-   * +optional
-   *
-   * @generated from field: optional string platform = 3;
-   */
-  platform?: string;
-
-  /**
    * GitRepoURL is the URL of the Git repository that contains the source
    * code for this image. This field is optional, and only populated if the
    * ImageSubscription specifies a GitRepoURL.
-   * +optional
    *
-   * @generated from field: optional string gitRepoURL = 4;
+   * @generated from field: optional string gitRepoURL = 3;
    */
   gitRepoURL?: string;
 
   /**
    * CreatedAt is the time the image was created. This field is optional, and
    * not populated for every ImageSelectionStrategy.
-   * +optional
    *
-   * @generated from field: optional k8s.io.apimachinery.pkg.apis.meta.v1.Time createdAt = 5;
+   * @generated from field: optional k8s.io.apimachinery.pkg.apis.meta.v1.Time createdAt = 4;
    */
   createdAt?: Time;
 
-  constructor(data?: PartialMessage<DiscoveredImage>) {
+  constructor(data?: PartialMessage<DiscoveredImageReference>) {
     super();
     proto2.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto2 = proto2;
-  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.DiscoveredImage";
+  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.DiscoveredImageReference";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 1, name: "tag", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 2, name: "digest", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 3, name: "platform", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 4, name: "gitRepoURL", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 5, name: "createdAt", kind: "message", T: Time, opt: true },
+    { no: 3, name: "gitRepoURL", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 4, name: "createdAt", kind: "message", T: Time, opt: true },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DiscoveredImage {
-    return new DiscoveredImage().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DiscoveredImageReference {
+    return new DiscoveredImageReference().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DiscoveredImage {
-    return new DiscoveredImage().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DiscoveredImageReference {
+    return new DiscoveredImageReference().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DiscoveredImage {
-    return new DiscoveredImage().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DiscoveredImageReference {
+    return new DiscoveredImageReference().fromJsonString(jsonString, options);
   }
 
-  static equals(a: DiscoveredImage | PlainMessage<DiscoveredImage> | undefined, b: DiscoveredImage | PlainMessage<DiscoveredImage> | undefined): boolean {
-    return proto2.util.equals(DiscoveredImage, a, b);
+  static equals(a: DiscoveredImageReference | PlainMessage<DiscoveredImageReference> | undefined, b: DiscoveredImageReference | PlainMessage<DiscoveredImageReference> | undefined): boolean {
+    return proto2.util.equals(DiscoveredImageReference, a, b);
   }
 }
 
@@ -1567,18 +1585,26 @@ export class GitCommit extends Message<GitCommit> {
   healthCheckCommit?: string;
 
   /**
-   * Message is the git commit message
+   * Message is the message associated with the commit. At present, this only
+   * contains the first line (subject) of the commit message.
    *
    * @generated from field: optional string message = 6;
    */
   message?: string;
 
   /**
-   * Author is the git commit author
+   * Author is the author of the commit.
    *
    * @generated from field: optional string author = 7;
    */
   author?: string;
+
+  /**
+   * Committer is the person who committed the commit.
+   *
+   * @generated from field: optional string committer = 8;
+   */
+  committer?: string;
 
   constructor(data?: PartialMessage<GitCommit>) {
     super();
@@ -1595,6 +1621,7 @@ export class GitCommit extends Message<GitCommit> {
     { no: 5, name: "healthCheckCommit", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 6, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 7, name: "author", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 8, name: "committer", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GitCommit {
@@ -1635,6 +1662,7 @@ export class GitDiscoveryResult extends Message<GitDiscoveryResult> {
    * Commits is a list of commits discovered by the Warehouse for the
    * GitSubscription. An empty list indicates that the discovery operation was
    * successful, but no commits matching the GitSubscription criteria were found.
+   *
    * +optional
    *
    * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.DiscoveredCommit commits = 2;
@@ -2371,6 +2399,7 @@ export class ImageDiscoveryResult extends Message<ImageDiscoveryResult> {
   /**
    * RepoURL is the repository URL of the image, as specified in the
    * ImageSubscription.
+   *
    * +kubebuilder:validation:MinLength=1
    *
    * @generated from field: optional string repoURL = 1;
@@ -2378,15 +2407,25 @@ export class ImageDiscoveryResult extends Message<ImageDiscoveryResult> {
   repoURL?: string;
 
   /**
-   * Images is a list of images discovered by the Warehouse for the
-   * ImageSubscription. An empty list indicates that the discovery operation
-   * was successful, but no images matching the ImageSubscription criteria were
-   * found.
+   * Platform is the target platform constraint of the ImageSubscription
+   * for which references were discovered. This field is optional, and
+   * only populated if the ImageSubscription specifies a Platform.
+   *
+   * @generated from field: optional string platform = 2;
+   */
+  platform?: string;
+
+  /**
+   * References is a list of image references discovered by the Warehouse for
+   * the ImageSubscription. An empty list indicates that the discovery
+   * operation was successful, but no images matching the ImageSubscription
+   * criteria were found.
+   *
    * +optional
    *
-   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.DiscoveredImage images = 2;
+   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.DiscoveredImageReference references = 3;
    */
-  images: DiscoveredImage[] = [];
+  references: DiscoveredImageReference[] = [];
 
   constructor(data?: PartialMessage<ImageDiscoveryResult>) {
     super();
@@ -2397,7 +2436,8 @@ export class ImageDiscoveryResult extends Message<ImageDiscoveryResult> {
   static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.ImageDiscoveryResult";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 1, name: "repoURL", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 2, name: "images", kind: "message", T: DiscoveredImage, repeated: true },
+    { no: 2, name: "platform", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 3, name: "references", kind: "message", T: DiscoveredImageReference, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ImageDiscoveryResult {
@@ -4190,15 +4230,15 @@ export class WarehouseSpec extends Message<WarehouseSpec> {
   shard?: string;
 
   /**
-   * FreightCreation describes how Freight is created by this Warehouse.
+   * FreightCreationPolicy describes how Freight is created by this Warehouse.
    * This field is optional. When left unspecified, the field is implicitly
    * treated as if its value were "Automatic".
    *
    * +kubebuilder:default=Automatic
    *
-   * @generated from field: optional string freightCreation = 3;
+   * @generated from field: optional string freightCreationPolicy = 3;
    */
-  freightCreation?: string;
+  freightCreationPolicy?: string;
 
   /**
    * Subscriptions describes sources of artifacts to be included in Freight
@@ -4219,7 +4259,7 @@ export class WarehouseSpec extends Message<WarehouseSpec> {
   static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.WarehouseSpec";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 2, name: "shard", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 3, name: "freightCreation", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 3, name: "freightCreationPolicy", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 1, name: "subscriptions", kind: "message", T: RepoSubscription, repeated: true },
   ]);
 
