@@ -1,6 +1,6 @@
 import { faChevronDown, faCog, faPencil, faTrash } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Button, Dropdown, Space } from 'antd';
+import { Button, Dropdown } from 'antd';
 
 import { useModal } from '@ui/features/common/modal/use-modal';
 
@@ -40,10 +40,7 @@ export const ProjectSettings = () => {
       trigger={['click']}
     >
       <Button icon={<FontAwesomeIcon icon={faCog} size='1x' />}>
-        <Space>
-          Project Settings
-          <FontAwesomeIcon icon={faChevronDown} size='xs' />
-        </Space>
+        <FontAwesomeIcon icon={faChevronDown} size='xs' />
       </Button>
     </Dropdown>
   );
