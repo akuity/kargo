@@ -124,13 +124,15 @@ export const Freightline = ({
                   return highlightedStages[cur.metadata?.name || ''];
                 }, false)}
               >
-                <FreightActionMenu
-                  freight={f}
-                  approveAction={() => {
-                    state.select(FreightlineAction.ManualApproval, undefined, id);
-                  }}
-                  refetchFreight={refetchFreight}
-                />
+                {!state.action && (
+                  <FreightActionMenu
+                    freight={f}
+                    approveAction={() => {
+                      state.select(FreightlineAction.ManualApproval, undefined, id);
+                    }}
+                    refetchFreight={refetchFreight}
+                  />
+                )}
                 <StageIndicators
                   stages={stagesPerFreight[id] || []}
                   faded={state.action === FreightlineAction.ManualApproval}

@@ -265,9 +265,9 @@ export const Pipelines = () => {
                   placement='bottomRight'
                   trigger={['click']}
                 >
-                  <Button type='primary' icon={<FontAwesomeIcon icon={faWandSparkles} size='1x' />}>
+                  <Button icon={<FontAwesomeIcon icon={faWandSparkles} size='1x' />}>
                     <Space>
-                      Create
+                      New
                       <FontAwesomeIcon icon={faChevronDown} size='xs' />
                     </Space>
                   </Button>
