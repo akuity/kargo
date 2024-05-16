@@ -37,8 +37,8 @@ import { Freight, Stage } from '@ui/gen/v1alpha1/generated_pb';
 import { useDocumentEvent } from '@ui/utils/document';
 import { useLocalStorage } from '@ui/utils/use-local-storage';
 
-const CreateStageModal = lazy(() => import('./create-stage-modal'));
-const CreateWarehouseModal = lazy(() => import('./create-warehouse-modal'));
+import CreateStageModal from './create-stage-modal';
+import CreateWarehouseModal from './create-warehouse-modal';
 import { Images } from './images';
 import { RepoNode } from './nodes/repo-node';
 import { Nodule, StageNode } from './nodes/stage-node';

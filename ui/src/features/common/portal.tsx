@@ -1,3 +1,4 @@
+import ErrorBoundary from 'antd/es/alert/ErrorBoundary';
 import React from 'react';
 import ReactDOM from 'react-dom';
 
@@ -16,5 +17,7 @@ export const Portal = ({
     return children;
   }
 
-  return container ? ReactDOM.createPortal(children, container) : null;
+  return (
+    <ErrorBoundary>{container ? ReactDOM.createPortal(children, container) : null}</ErrorBoundary>
+  );
 };
