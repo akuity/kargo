@@ -68,6 +68,9 @@ type TagMetadata struct {
 	// Author is the author of the commit message associated with the tag, in
 	// the format "Name <email>".
 	Author string
+	// Committer is the person who committed the commit associated with the tag,
+	// in the format "Name <email>".
+	Committer string
 	// Subject is the subject (first line) of the commit message associated
 	// with the tag.
 	Subject string
@@ -78,8 +81,11 @@ type CommitMetadata struct {
 	ID string
 	// CommitDate is the date of the commit.
 	CommitDate time.Time
-	// Author is the author of the commit message, in the format "Name <email>".
+	// Author is the author of the commit, in the format "Name <email>".
 	Author string
+	// Committer is the person who committed the commit, in the format
+	// "Name <email>".
+	Committer string
 	// Subject is the subject (first line) of the commit message.
 	Subject string
 }
@@ -178,7 +184,7 @@ type repo struct {
 // repository.
 type ClientOptions struct {
 	// User represents the actor that performs operations against the git
-	// repository. Th1s has no effect on authentication, see Credentials for
+	// repository. This has no effect on authentication, see Credentials for
 	// specifying authentication configuration.
 	User *User
 	// Credentials represents the authentication information.
@@ -511,15 +517,32 @@ func (r *repo) ListTagsWithMetadata() ([]TagMetadata, error) {
 		return nil, fmt.Errorf("error fetching tags from repo %q: %w", r.url, err)
 	}
 
+	// These formats are quite complex, so we break them down into smaller
+	// pieces for readability.
+	//
+	// They are designed to output the following fields, separated by `|*|`:
+	// - tag name
+	// - commit ID
+	// - subject
+	// - author name and email
+	// - committer name and email
+	// - creator date
+	//
+	// The `if`/`then`/`else` logic is used to ensure that we get the commit ID
+	// and subject of the tag, regardless of whether it's an annotated or
+	// lightweight tag.
+	//
+	// nolint: lll
+	const (
+		formatAnnotatedTag   = `%(refname:short)|*|%(*objectname)|*|%(*contents:subject)|*|%(*authorname) %(*authoremail)|*|%(*committername) %(*committeremail)|*|%(*creatordate:iso8601)`
+		formatLightweightTag = `%(refname:short)|*|%(objectname)|*|%(contents:subject)|*|%(authorname) %(authoremail)|*|%(committername) %(committeremail)|*|%(creatordate:iso8601)`
+		tagFormat            = `%(if)%(*objectname)%(then)` + formatAnnotatedTag + `%(else)` + formatLightweightTag + `%(end)`
+	)
+
 	tagsBytes, err := libExec.Exec(r.buildGitCommand(
 		"for-each-ref",
 		"--sort=-creatordate",
-		// This translates to: tag|*|commitID|*|subject|*|authorName authorEmail|*|creatorDate
-		//
-		// The `if`/`then`/`else` logic is used to ensure that we get the
-		// commit ID and subject of the tag, regardless of whether it's an
-		// annotated or lightweight tag.
-		`--format=%(refname:short)|*|%(if)%(*objectname)%(then)%(*objectname)|*|%(*contents:subject)|*|%(*authorname) %(*authoremail)%(else)%(objectname)|*|%(contents:subject)|*|%(authorname) %(authoremail)%(end)|*|%(creatordate:iso8601)`, // nolint: lll
+		"--format="+tagFormat,
 		"refs/tags",
 	))
 	if err != nil {
@@ -530,25 +553,22 @@ func (r *repo) ListTagsWithMetadata() ([]TagMetadata, error) {
 	scanner := bufio.NewScanner(bytes.NewReader(tagsBytes))
 	for scanner.Scan() {
 		line := scanner.Bytes()
-		parts := bytes.Split(scanner.Bytes(), []byte("|*|"))
-		if len(parts) != 5 {
+		parts := bytes.SplitN(scanner.Bytes(), []byte("|*|"), 6)
+		if len(parts) != 6 {
 			return nil, fmt.Errorf("unexpected number of fields: %q", line)
 		}
 
-		tag := string(parts[0])
-		commitID := string(parts[1])
-		subject := string(parts[2])
-		author := string(parts[3])
-		creatorDate, err := time.Parse("2006-01-02 15:04:05 -0700", string(parts[4]))
+		creatorDate, err := time.Parse("2006-01-02 15:04:05 -0700", string(parts[5]))
 		if err != nil {
-			return nil, fmt.Errorf("error parsing creator date %q: %w", parts[3], err)
+			return nil, fmt.Errorf("error parsing creator date %q: %w", parts[5], err)
 		}
 
 		tags = append(tags, TagMetadata{
-			Tag:         tag,
-			CommitID:    commitID,
-			Subject:     subject,
-			Author:      author,
+			Tag:         string(parts[0]),
+			CommitID:    string(parts[1]),
+			Subject:     string(parts[2]),
+			Author:      string(parts[3]),
+			Committer:   string(parts[4]),
 			CreatorDate: creatorDate,
 		})
 	}
@@ -559,8 +579,15 @@ func (r *repo) ListTagsWithMetadata() ([]TagMetadata, error) {
 func (r *repo) ListCommitsWithMetadata(limit, skip uint) ([]CommitMetadata, error) {
 	args := []string{
 		"log",
-		// This translates to: commitID<tab>commitDate<tab>authorName authorEmail<tab>subject
-		"--pretty=format:%H%x09%ci%x09%an <%ae>%x09%s",
+		// This format is designed to output the following fields, separated by
+		// tabs (%x09):
+		//
+		// - commit ID
+		// - commit date
+		// - author name and email
+		// - committer name and email
+		// - subject
+		"--pretty=format:%H%x09%ci%x09%an <%ae>%x09%cn <%ce>%x09%s",
 	}
 	if limit > 0 {
 		args = append(args, fmt.Sprintf("--max-count=%d", limit))
@@ -578,24 +605,22 @@ func (r *repo) ListCommitsWithMetadata(limit, skip uint) ([]CommitMetadata, erro
 	scanner := bufio.NewScanner(bytes.NewReader(commitsBytes))
 	for scanner.Scan() {
 		line := scanner.Bytes()
-		parts := bytes.Split(scanner.Bytes(), []byte("\t"))
-		if len(parts) != 4 {
+		parts := bytes.SplitN(scanner.Bytes(), []byte("\t"), 5)
+		if len(parts) != 5 {
 			return nil, fmt.Errorf("unexpected number of fields: %q", line)
 		}
 
-		commitID := string(parts[0])
 		commitDate, err := time.Parse("2006-01-02 15:04:05 -0700", string(parts[1]))
 		if err != nil {
 			return nil, fmt.Errorf("error parsing commit date %q: %w", parts[1], err)
 		}
-		author := string(parts[2])
-		subject := string(parts[3])
 
 		commits = append(commits, CommitMetadata{
-			ID:         commitID,
+			ID:         string(parts[0]),
 			CommitDate: commitDate,
-			Author:     author,
-			Subject:    subject,
+			Author:     string(parts[2]),
+			Committer:  string(parts[3]),
+			Subject:    string(parts[4]),
 		})
 	}
 
