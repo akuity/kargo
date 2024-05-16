@@ -70,6 +70,7 @@ export const Freightline = ({
 
   const promotionEligible = usePromotionEligibleFreight(
     availableFreightData?.groups['']?.freight || [],
+    state.action,
     state.stage,
     isLoadingAvailableFreight || !isPromoting(state)
   );
