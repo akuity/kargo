@@ -85,8 +85,8 @@ func TestDiscoverCommits(t *testing.T) {
 					{
 						RepoURL: "fake-repo",
 						Commits: []kargoapi.DiscoveredCommit{
-							{Tag: "v2.0.0", CreatedAt: &metav1.Time{}},
-							{Tag: "v1.0.0", CreatedAt: &metav1.Time{}},
+							{Tag: "v2.0.0", CreatorDate: &metav1.Time{}},
+							{Tag: "v1.0.0", CreatorDate: &metav1.Time{}},
 						},
 					},
 				}, results)
@@ -139,8 +139,8 @@ func TestDiscoverCommits(t *testing.T) {
 					{
 						RepoURL: "fake-repo",
 						Commits: []kargoapi.DiscoveredCommit{
-							{ID: "abc", CreatedAt: &metav1.Time{}},
-							{ID: "xyz", CreatedAt: &metav1.Time{}},
+							{ID: "abc", CreatorDate: &metav1.Time{}},
+							{ID: "xyz", CreatorDate: &metav1.Time{}},
 						},
 					},
 				}, results)
@@ -204,15 +204,15 @@ func TestDiscoverCommits(t *testing.T) {
 					{
 						RepoURL: "fake-repo-1",
 						Commits: []kargoapi.DiscoveredCommit{
-							{Tag: "v2.0.0", CreatedAt: &metav1.Time{}},
-							{Tag: "v1.0.0", CreatedAt: &metav1.Time{}},
+							{Tag: "v2.0.0", CreatorDate: &metav1.Time{}},
+							{Tag: "v1.0.0", CreatorDate: &metav1.Time{}},
 						},
 					},
 					{
 						RepoURL: "fake-repo-2",
 						Commits: []kargoapi.DiscoveredCommit{
-							{ID: "abc", CreatedAt: &metav1.Time{}},
-							{ID: "xyz", CreatedAt: &metav1.Time{}},
+							{ID: "abc", CreatorDate: &metav1.Time{}},
+							{ID: "xyz", CreatorDate: &metav1.Time{}},
 						},
 					},
 				}, results)

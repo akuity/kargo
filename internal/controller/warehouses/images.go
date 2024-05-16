@@ -59,18 +59,18 @@ func (r *reconciler) discoverImages(
 		if len(images) == 0 {
 			logger.Debug("discovered no suitable images")
 			results = append(results, kargoapi.ImageDiscoveryResult{
-				RepoURL: sub.RepoURL,
+				RepoURL:  sub.RepoURL,
+				Platform: sub.Platform,
 			})
 			continue
 		}
 
 		logger.Debugf("discovered %d suitable images", len(images))
-		discoveredImages := make([]kargoapi.DiscoveredImage, 0, len(images))
+		discoveredImages := make([]kargoapi.DiscoveredImageReference, 0, len(images))
 		for _, img := range images {
-			discovery := kargoapi.DiscoveredImage{
+			discovery := kargoapi.DiscoveredImageReference{
 				Tag:        img.Tag,
 				Digest:     img.Digest.String(),
-				Platform:   sub.Platform,
 				GitRepoURL: r.getImageSourceURL(sub.GitRepoURL, img.Tag),
 			}
 			if img.CreatedAt != nil {
@@ -79,8 +79,9 @@ func (r *reconciler) discoverImages(
 			discoveredImages = append(discoveredImages, discovery)
 		}
 		results = append(results, kargoapi.ImageDiscoveryResult{
-			RepoURL: sub.RepoURL,
-			Images:  discoveredImages,
+			RepoURL:    sub.RepoURL,
+			Platform:   sub.Platform,
+			References: discoveredImages,
 		})
 	}
 

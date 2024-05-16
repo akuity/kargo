@@ -128,7 +128,7 @@ func TestSyncWarehouse(t *testing.T) {
 			},
 			warehouse: &kargoapi.Warehouse{
 				Spec: kargoapi.WarehouseSpec{
-					FreightCreation: kargoapi.FreightCreationAutomatic,
+					FreightCreationPolicy: kargoapi.FreightCreationPolicyAutomatic,
 				},
 			},
 			assertions: func(t *testing.T, status kargoapi.WarehouseStatus, err error) {
@@ -165,7 +165,7 @@ func TestSyncWarehouse(t *testing.T) {
 			},
 			warehouse: &kargoapi.Warehouse{
 				Spec: kargoapi.WarehouseSpec{
-					FreightCreation: kargoapi.FreightCreationAutomatic,
+					FreightCreationPolicy: kargoapi.FreightCreationPolicyAutomatic,
 				},
 			},
 			assertions: func(t *testing.T, status kargoapi.WarehouseStatus, err error) {
@@ -203,7 +203,7 @@ func TestSyncWarehouse(t *testing.T) {
 			},
 			warehouse: &kargoapi.Warehouse{
 				Spec: kargoapi.WarehouseSpec{
-					FreightCreation: kargoapi.FreightCreationAutomatic,
+					FreightCreationPolicy: kargoapi.FreightCreationPolicyAutomatic,
 				},
 			},
 			assertions: func(t *testing.T, status kargoapi.WarehouseStatus, err error) {
@@ -222,7 +222,7 @@ func TestSyncWarehouse(t *testing.T) {
 			},
 			warehouse: &kargoapi.Warehouse{
 				Spec: kargoapi.WarehouseSpec{
-					FreightCreation: kargoapi.FreightCreationManual,
+					FreightCreationPolicy: kargoapi.FreightCreationPolicyManual,
 				},
 			},
 			assertions: func(t *testing.T, status kargoapi.WarehouseStatus, err error) {
@@ -246,7 +246,7 @@ func TestSyncWarehouse(t *testing.T) {
 					},
 				},
 				Spec: kargoapi.WarehouseSpec{
-					FreightCreation: kargoapi.FreightCreationManual,
+					FreightCreationPolicy: kargoapi.FreightCreationPolicyManual,
 				},
 				Status: kargoapi.WarehouseStatus{
 					LastHandledRefresh: "old",
@@ -270,7 +270,7 @@ func TestSyncWarehouse(t *testing.T) {
 					Generation: 2,
 				},
 				Spec: kargoapi.WarehouseSpec{
-					FreightCreation: kargoapi.FreightCreationManual,
+					FreightCreationPolicy: kargoapi.FreightCreationPolicyManual,
 				},
 				Status: kargoapi.WarehouseStatus{
 					ObservedGeneration: 1,
@@ -291,7 +291,7 @@ func TestSyncWarehouse(t *testing.T) {
 			},
 			warehouse: &kargoapi.Warehouse{
 				Spec: kargoapi.WarehouseSpec{
-					FreightCreation: kargoapi.FreightCreationManual,
+					FreightCreationPolicy: kargoapi.FreightCreationPolicyManual,
 				},
 				Status: kargoapi.WarehouseStatus{
 					Message: "previous error",
@@ -402,7 +402,7 @@ func TestDiscoverArtifacts(t *testing.T) {
 					[]kargoapi.RepoSubscription,
 				) ([]kargoapi.ImageDiscoveryResult, error) {
 					return []kargoapi.ImageDiscoveryResult{
-						{RepoURL: "fake-repo", Images: []kargoapi.DiscoveredImage{
+						{RepoURL: "fake-repo", References: []kargoapi.DiscoveredImageReference{
 							{Tag: "fake-tag"},
 						}},
 					}, nil
@@ -420,7 +420,7 @@ func TestDiscoverArtifacts(t *testing.T) {
 			},
 			assertions: func(t *testing.T, discoveredArtifacts *kargoapi.DiscoveredArtifacts, err error) {
 				require.NoError(t, err)
-				require.Len(t, discoveredArtifacts.Commits, 1)
+				require.Len(t, discoveredArtifacts.Git, 1)
 				require.Len(t, discoveredArtifacts.Images, 1)
 				require.Len(t, discoveredArtifacts.Charts, 1)
 			},
@@ -455,7 +455,7 @@ func TestBuildFreightFromLatestArtifacts(t *testing.T) {
 		{
 			name: "no commits discovered",
 			artifacts: &kargoapi.DiscoveredArtifacts{
-				Commits: []kargoapi.GitDiscoveryResult{
+				Git: []kargoapi.GitDiscoveryResult{
 					{RepoURL: "fake-repo", Commits: []kargoapi.DiscoveredCommit{}},
 				},
 			},
@@ -467,11 +467,11 @@ func TestBuildFreightFromLatestArtifacts(t *testing.T) {
 		{
 			name: "no images discovered",
 			artifacts: &kargoapi.DiscoveredArtifacts{
-				Commits: []kargoapi.GitDiscoveryResult{
+				Git: []kargoapi.GitDiscoveryResult{
 					{RepoURL: "fake-repo", Commits: []kargoapi.DiscoveredCommit{{ID: "fake-commit"}}},
 				},
 				Images: []kargoapi.ImageDiscoveryResult{
-					{RepoURL: "fake-repo", Images: []kargoapi.DiscoveredImage{}},
+					{RepoURL: "fake-repo", References: []kargoapi.DiscoveredImageReference{}},
 				},
 			},
 			assertions: func(t *testing.T, freight *kargoapi.Freight, err error) {
@@ -482,11 +482,11 @@ func TestBuildFreightFromLatestArtifacts(t *testing.T) {
 		{
 			name: "no charts discovered",
 			artifacts: &kargoapi.DiscoveredArtifacts{
-				Commits: []kargoapi.GitDiscoveryResult{
+				Git: []kargoapi.GitDiscoveryResult{
 					{RepoURL: "fake-repo", Commits: []kargoapi.DiscoveredCommit{{ID: "fake-commit"}}},
 				},
 				Images: []kargoapi.ImageDiscoveryResult{
-					{RepoURL: "fake-repo", Images: []kargoapi.DiscoveredImage{{Tag: "fake-tag"}}},
+					{RepoURL: "fake-repo", References: []kargoapi.DiscoveredImageReference{{Tag: "fake-tag"}}},
 				},
 				Charts: []kargoapi.ChartDiscoveryResult{
 					{RepoURL: "fake-repo", Versions: []string{}},
@@ -500,13 +500,13 @@ func TestBuildFreightFromLatestArtifacts(t *testing.T) {
 		{
 			name: "success",
 			artifacts: &kargoapi.DiscoveredArtifacts{
-				Commits: []kargoapi.GitDiscoveryResult{
+				Git: []kargoapi.GitDiscoveryResult{
 					{RepoURL: "fake-repo", Commits: []kargoapi.DiscoveredCommit{{ID: "fake-commit"}}},
 					{RepoURL: "fake-repo", Commits: []kargoapi.DiscoveredCommit{{ID: "fake-commit"}}},
 				},
 				Images: []kargoapi.ImageDiscoveryResult{
-					{RepoURL: "fake-repo", Images: []kargoapi.DiscoveredImage{{Tag: "fake-tag"}}},
-					{RepoURL: "fake-repo", Images: []kargoapi.DiscoveredImage{{Tag: "fake-tag"}}},
+					{RepoURL: "fake-repo", References: []kargoapi.DiscoveredImageReference{{Tag: "fake-tag"}}},
+					{RepoURL: "fake-repo", References: []kargoapi.DiscoveredImageReference{{Tag: "fake-tag"}}},
 				},
 				Charts: []kargoapi.ChartDiscoveryResult{
 					{RepoURL: "fake-repo", Versions: []string{"fake-version"}},

@@ -77,7 +77,7 @@ func TestDiscoverImages(t *testing.T) {
 				require.Equal(t, []kargoapi.ImageDiscoveryResult{
 					{
 						RepoURL: "fake-repo",
-						Images: []kargoapi.DiscoveredImage{
+						References: []kargoapi.DiscoveredImageReference{
 							{Tag: "xyz"},
 							{Tag: "abc"},
 						},

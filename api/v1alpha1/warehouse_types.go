@@ -55,12 +55,12 @@ type WarehouseSpec struct {
 	// empty, the defaulting webhook will set the value of this field to the value
 	// of the shard label.
 	Shard string `json:"shard,omitempty" protobuf:"bytes,2,opt,name=shard"`
-	// FreightCreation describes how Freight is created by this Warehouse.
+	// FreightCreationPolicy describes how Freight is created by this Warehouse.
 	// This field is optional. When left unspecified, the field is implicitly
 	// treated as if its value were "Automatic".
 	//
 	// +kubebuilder:default=Automatic
-	FreightCreation FreightCreation `json:"freightCreation" protobuf:"bytes,3,opt,name=freightCreation"`
+	FreightCreationPolicy FreightCreationPolicy `json:"freightCreationPolicy" protobuf:"bytes,3,opt,name=freightCreationPolicy"`
 	// Subscriptions describes sources of artifacts to be included in Freight
 	// produced by this Warehouse.
 	//
@@ -68,15 +68,15 @@ type WarehouseSpec struct {
 	Subscriptions []RepoSubscription `json:"subscriptions" protobuf:"bytes,1,rep,name=subscriptions"`
 }
 
-// FreightCreation describes how Freight is created by a Warehouse.
+// FreightCreationPolicy defines how Freight is created by a Warehouse.
 // +kubebuilder:validation:Enum={Automatic,Manual}
-type FreightCreation string
+type FreightCreationPolicy string
 
 const (
-	// FreightCreationAutomatic indicates that Freight is created automatically.
-	FreightCreationAutomatic FreightCreation = "Automatic"
-	// FreightCreationManual indicates that Freight is created manually.
-	FreightCreationManual FreightCreation = "Manual"
+	// FreightCreationPolicyAutomatic indicates that Freight is created automatically.
+	FreightCreationPolicyAutomatic FreightCreationPolicy = "Automatic"
+	// FreightCreationPolicyManual indicates that Freight is created manually.
+	FreightCreationPolicyManual FreightCreationPolicy = "Manual"
 )
 
 // RepoSubscription describes a subscription to ONE OF a Git repository, a
@@ -288,15 +288,23 @@ type WarehouseStatus struct {
 	DiscoveredArtifacts *DiscoveredArtifacts `json:"discoveredArtifacts,omitempty" protobuf:"bytes,7,opt,name=discoveredArtifacts"`
 }
 
-// DiscoveredArtifacts holds the artifacts discovered by the Warehouse.
+// DiscoveredArtifacts holds the artifacts discovered by the Warehouse for its
+// subscriptions.
 type DiscoveredArtifacts struct {
-	// Commits holds the Git commits discovered by the Warehouse.
-	Commits []GitDiscoveryResult `json:"commits,omitempty" protobuf:"bytes,1,rep,name=commits"`
-
-	// Images holds the images discovered by the Warehouse.
+	// Git holds the commits discovered by the Warehouse for the Git
+	// subscriptions.
+	//
+	// +optional
+	Git []GitDiscoveryResult `json:"git,omitempty" protobuf:"bytes,1,rep,name=git"`
+	// Images holds the image references discovered by the Warehouse for the
+	// image subscriptions.
+	//
+	// +optional
 	Images []ImageDiscoveryResult `json:"images,omitempty" protobuf:"bytes,2,rep,name=images"`
-
-	// Charts holds the charts discovered by the Warehouse.
+	// Charts holds the charts discovered by the Warehouse for the chart
+	// subscriptions.
+	//
+	// +optional
 	Charts []ChartDiscoveryResult `json:"charts,omitempty" protobuf:"bytes,3,rep,name=charts"`
 }
 
@@ -308,44 +316,38 @@ type GitDiscoveryResult struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:Pattern=`^https?://(\w+([\.-]\w+)*@)?\w+([\.-]\w+)*(:[\d]+)?(/.*)?$`
 	RepoURL string `json:"repoURL" protobuf:"bytes,1,opt,name=repoURL"`
-
 	// Commits is a list of commits discovered by the Warehouse for the
 	// GitSubscription. An empty list indicates that the discovery operation was
 	// successful, but no commits matching the GitSubscription criteria were found.
+	//
 	// +optional
-	Commits []DiscoveredCommit `json:"commits,omitempy" protobuf:"bytes,2,rep,name=commits"`
+	Commits []DiscoveredCommit `json:"commits" protobuf:"bytes,2,rep,name=commits"`
 }
 
 // DiscoveredCommit represents a commit discovered by a Warehouse for a
 // GitSubscription.
 type DiscoveredCommit struct {
 	// ID is the identifier of the commit. This typically is a SHA-1 hash.
+	//
 	// +kubebuilder:validation:MinLength=1
 	ID string `json:"id,omitempty" protobuf:"bytes,1,opt,name=id"`
-
 	// Branch is the branch in which the commit was found. This field is
 	// optional, and populated based on the CommitSelectionStrategy of the
 	// GitSubscription.
-	// +optional
 	Branch string `json:"branch,omitempty" protobuf:"bytes,2,opt,name=branch"`
-
 	// Tag is the tag that resolved to this commit. This field is optional, and
 	// populated based on the CommitSelectionStrategy of the GitSubscription.
-	// +optional
 	Tag string `json:"tag,omitempty" protobuf:"bytes,3,opt,name=tag"`
-
 	// Subject is the subject of the commit (i.e. the first line of the commit
 	// message).
-	// +optional
 	Subject string `json:"subject,omitempty" protobuf:"bytes,4,opt,name=subject"`
-
 	// Author is the author of the commit.
-	// +optional
 	Author string `json:"author,omitempty" protobuf:"bytes,5,opt,name=author"`
-
-	// CreatedAt is the time at which the commit or annotated tag was created.
-	// +optional
-	CreatedAt *metav1.Time `json:"createdAt,omitempty" protobuf:"bytes,6,opt,name=createdAt"`
+	// Committer is the person who committed the commit.
+	Committer string `json:"committer,omitempty" protobuf:"bytes,6,opt,name=committer"`
+	// CreatorDate is the commit creation date as specified by the commit, or
+	// the tagger date if the commit belongs to an annotated tag.
+	CreatorDate *metav1.Time `json:"creatorDate,omitempty" protobuf:"bytes,7,opt,name=creatorDate"`
 }
 
 // ImageDiscoveryResult represents the result of an image discovery operation
@@ -353,42 +355,43 @@ type DiscoveredCommit struct {
 type ImageDiscoveryResult struct {
 	// RepoURL is the repository URL of the image, as specified in the
 	// ImageSubscription.
+	//
 	// +kubebuilder:validation:MinLength=1
 	RepoURL string `json:"repoURL" protobuf:"bytes,1,opt,name=repoURL"`
-
-	// Images is a list of images discovered by the Warehouse for the
-	// ImageSubscription. An empty list indicates that the discovery operation
-	// was successful, but no images matching the ImageSubscription criteria were
-	// found.
+	// Platform is the target platform constraint of the ImageSubscription
+	// for which references were discovered. This field is optional, and
+	// only populated if the ImageSubscription specifies a Platform.
+	Platform string `json:"platform,omitempty" protobuf:"bytes,2,opt,name=platform"`
+	// References is a list of image references discovered by the Warehouse for
+	// the ImageSubscription. An empty list indicates that the discovery
+	// operation was successful, but no images matching the ImageSubscription
+	// criteria were found.
+	//
 	// +optional
-	Images []DiscoveredImage `json:"images" protobuf:"bytes,2,rep,name=images"`
+	References []DiscoveredImageReference `json:"references" protobuf:"bytes,3,rep,name=references"`
 }
 
-// DiscoveredImage represents an image discovered by a Warehouse for an
-// ImageSubscription.
-type DiscoveredImage struct {
+// DiscoveredImageReference represents an image reference discovered by a
+// Warehouse for an ImageSubscription.
+type DiscoveredImageReference struct {
 	// Tag is the tag of the image.
+	//
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=128
 	// +kubebuilder:validation:Pattern=`^[\w.\-\_]+$`
 	Tag string `json:"tag" protobuf:"bytes,1,opt,name=tag"`
 	// Digest is the digest of the image.
+	//
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:Pattern=`^[a-z0-9]+:[a-f0-9]+$`
 	Digest string `json:"digest" protobuf:"bytes,2,opt,name=digest"`
-	// Platform is the target platform of the image. This field is optional, and
-	// only populated if the ImageSubscription specifies a Platform.
-	// +optional
-	Platform string `json:"platform,omitempty" protobuf:"bytes,3,opt,name=platform"`
 	// GitRepoURL is the URL of the Git repository that contains the source
 	// code for this image. This field is optional, and only populated if the
 	// ImageSubscription specifies a GitRepoURL.
-	// +optional
-	GitRepoURL string `json:"gitRepoURL,omitempty" protobuf:"bytes,4,opt,name=gitRepoURL"`
+	GitRepoURL string `json:"gitRepoURL,omitempty" protobuf:"bytes,3,opt,name=gitRepoURL"`
 	// CreatedAt is the time the image was created. This field is optional, and
 	// not populated for every ImageSelectionStrategy.
-	// +optional
-	CreatedAt *metav1.Time `json:"createdAt,omitempty" protobuf:"bytes,5,opt,name=createdAt"`
+	CreatedAt *metav1.Time `json:"createdAt,omitempty" protobuf:"bytes,4,opt,name=createdAt"`
 }
 
 // ChartDiscoveryResult represents the result of a chart discovery operation for
@@ -396,15 +399,22 @@ type DiscoveredImage struct {
 type ChartDiscoveryResult struct {
 	// RepoURL is the repository URL of the Helm chart, as specified in the
 	// ChartSubscription.
+	//
+	// +kubebuilder:validation:MinLength=1
 	RepoURL string `json:"repoURL" protobuf:"bytes,1,opt,name=repoURL"`
 	// Name is the name of the Helm chart, as specified in the ChartSubscription.
-	Name string `json:"name" protobuf:"bytes,2,opt,name=name"`
+	Name string `json:"name,omitempty" protobuf:"bytes,2,opt,name=name"`
+	// SemverConstraint is the constraint for which versions were discovered.
+	// This field is optional, and only populated if the ChartSubscription
+	// specifies a SemverConstraint.
+	SemverConstraint string `json:"semverConstraint,omitempty" protobuf:"bytes,3,opt,name=semverConstraint"`
 	// Versions is a list of versions discovered by the Warehouse for the
 	// ChartSubscription. An empty list indicates that the discovery operation was
 	// successful, but no versions matching the ChartSubscription criteria were
 	// found.
+	//
 	// +optional
-	Versions []string `json:"versions" protobuf:"bytes,3,rep,name=versions"`
+	Versions []string `json:"versions" protobuf:"bytes,4,rep,name=versions"`
 }
 
 // +kubebuilder:object:root=true

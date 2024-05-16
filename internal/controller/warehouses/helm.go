@@ -68,17 +68,19 @@ func (r *reconciler) discoverCharts(
 		if len(versions) == 0 {
 			logger.Debug("discovered no suitable chart versions")
 			results = append(results, kargoapi.ChartDiscoveryResult{
-				RepoURL: sub.RepoURL,
-				Name:    sub.Name,
+				RepoURL:          sub.RepoURL,
+				Name:             sub.Name,
+				SemverConstraint: sub.SemverConstraint,
 			})
 			continue
 		}
 
 		logger.Debugf("discovered %d suitable chart versions", len(versions))
 		results = append(results, kargoapi.ChartDiscoveryResult{
-			RepoURL:  sub.RepoURL,
-			Name:     sub.Name,
-			Versions: trimSlice(versions, 20),
+			RepoURL:          sub.RepoURL,
+			Name:             sub.Name,
+			SemverConstraint: sub.SemverConstraint,
+			Versions:         trimSlice(versions, 20),
 		})
 	}
 

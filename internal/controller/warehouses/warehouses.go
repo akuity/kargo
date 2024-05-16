@@ -216,7 +216,7 @@ func (r *reconciler) syncWarehouse(
 
 	// Automatically create a Freight from the latest discovered artifacts
 	// if the Warehouse is configured to do so.
-	if warehouse.Spec.FreightCreation == kargoapi.FreightCreationAutomatic || warehouse.Spec.FreightCreation == "" {
+	if pol := warehouse.Spec.FreightCreationPolicy; pol == kargoapi.FreightCreationPolicyAutomatic || pol == "" {
 		freight, err := r.buildFreightFromLatestArtifactsFn(warehouse.Namespace, discoveredArtifacts)
 		if err != nil {
 			return status, fmt.Errorf("failed to build Freight from latest artifacts: %w", err)
@@ -263,9 +263,9 @@ func (r *reconciler) discoverArtifacts(
 	}
 
 	return &kargoapi.DiscoveredArtifacts{
-		Commits: commits,
-		Images:  images,
-		Charts:  charts,
+		Git:    commits,
+		Images: images,
+		Charts: charts,
 	}, nil
 }
 
@@ -283,26 +283,27 @@ func (r *reconciler) buildFreightFromLatestArtifacts(
 		},
 	}
 
-	for _, result := range artifacts.Commits {
+	for _, result := range artifacts.Git {
 		if len(result.Commits) == 0 {
 			return nil, fmt.Errorf("no commits discovered for repository %q", result.RepoURL)
 		}
 		latestCommit := result.Commits[0]
 		freight.Commits = append(freight.Commits, kargoapi.GitCommit{
-			RepoURL: result.RepoURL,
-			ID:      latestCommit.ID,
-			Branch:  latestCommit.Branch,
-			Tag:     latestCommit.Tag,
-			Message: latestCommit.Subject,
-			Author:  latestCommit.Author,
+			RepoURL:   result.RepoURL,
+			ID:        latestCommit.ID,
+			Branch:    latestCommit.Branch,
+			Tag:       latestCommit.Tag,
+			Message:   latestCommit.Subject,
+			Author:    latestCommit.Author,
+			Committer: latestCommit.Committer,
 		})
 	}
 
 	for _, result := range artifacts.Images {
-		if len(result.Images) == 0 {
+		if len(result.References) == 0 {
 			return nil, fmt.Errorf("no images discovered for repository %q", result.RepoURL)
 		}
-		latestImage := result.Images[0]
+		latestImage := result.References[0]
 		freight.Images = append(freight.Images, kargoapi.Image{
 			RepoURL:    result.RepoURL,
 			GitRepoURL: latestImage.GitRepoURL,

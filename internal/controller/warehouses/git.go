@@ -90,11 +90,11 @@ func (r *reconciler) discoverCommits(
 
 			for _, meta := range tags {
 				discovered = append(discovered, kargoapi.DiscoveredCommit{
-					ID:        meta.CommitID,
-					Tag:       meta.Tag,
-					Subject:   meta.Subject,
-					Author:    meta.Author,
-					CreatedAt: &metav1.Time{Time: meta.CreatorDate},
+					ID:          meta.CommitID,
+					Tag:         meta.Tag,
+					Subject:     meta.Subject,
+					Author:      meta.Author,
+					CreatorDate: &metav1.Time{Time: meta.CreatorDate},
 				})
 			}
 		default:
@@ -105,11 +105,11 @@ func (r *reconciler) discoverCommits(
 
 			for _, meta := range commits {
 				discovered = append(discovered, kargoapi.DiscoveredCommit{
-					ID:        meta.ID,
-					Branch:    sub.Branch,
-					Subject:   meta.Subject,
-					Author:    meta.Author,
-					CreatedAt: &metav1.Time{Time: meta.CommitDate},
+					ID:          meta.ID,
+					Branch:      sub.Branch,
+					Subject:     meta.Subject,
+					Author:      meta.Author,
+					CreatorDate: &metav1.Time{Time: meta.CommitDate},
 				})
 			}
 		}

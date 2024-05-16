@@ -127,10 +127,13 @@ type GitCommit struct {
 	// mechanism) wherein the value of this field may differ from the commit ID
 	// found in the ID field.
 	HealthCheckCommit string `json:"healthCheckCommit,omitempty" protobuf:"bytes,5,opt,name=healthCheckCommit"`
-	// Message is the git commit message
+	// Message is the message associated with the commit. At present, this only
+	// contains the first line (subject) of the commit message.
 	Message string `json:"message,omitempty" protobuf:"bytes,6,opt,name=message"`
-	// Author is the git commit author
+	// Author is the author of the commit.
 	Author string `json:"author,omitempty" protobuf:"bytes,7,opt,name=author"`
+	// Committer is the person who committed the commit.
+	Committer string `json:"committer,omitempty" protobuf:"bytes,8,opt,name=committer"`
 }
 
 // FreightStatus describes a piece of Freight's most recently observed state.
