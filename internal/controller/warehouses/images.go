@@ -70,7 +70,7 @@ func (r *reconciler) discoverImages(
 		for _, img := range images {
 			discovery := kargoapi.DiscoveredImageReference{
 				Tag:        img.Tag,
-				Digest:     img.Digest.String(),
+				Digest:     img.Digest,
 				GitRepoURL: r.getImageSourceURL(sub.GitRepoURL, img.Tag),
 			}
 			if img.CreatedAt != nil {

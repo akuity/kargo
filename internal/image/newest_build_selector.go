@@ -44,7 +44,7 @@ func newNewestBuildSelector(
 func (n *newestBuildSelector) Select(ctx context.Context) ([]Image, error) {
 	logger := logging.LoggerFromContext(ctx).WithFields(log.Fields{
 		"registry":            n.repoClient.registry.name,
-		"image":               n.repoClient.image,
+		"image":               n.repoClient.repoURL,
 		"selectionStrategy":   SelectionStrategyNewestBuild,
 		"platformConstrained": n.platform != nil,
 		"discoveryLimit":      n.discoveryLimit,
@@ -67,7 +67,7 @@ func (n *newestBuildSelector) Select(ctx context.Context) ([]Image, error) {
 		for _, image := range images[:limit] {
 			logger.WithFields(log.Fields{
 				"tag":    image.Tag,
-				"digest": image.Digest.String(),
+				"digest": image.Digest,
 			}).Trace("discovered image")
 		}
 		logger.Tracef("discovered %d images", limit)
@@ -86,20 +86,20 @@ func (n *newestBuildSelector) Select(ctx context.Context) ([]Image, error) {
 
 		discoveredImage, err := n.repoClient.getImageByDigest(ctx, image.Digest, n.platform)
 		if err != nil {
-			return nil, fmt.Errorf("error retrieving image with digest %q: %w", image.Digest.String(), err)
+			return nil, fmt.Errorf("error retrieving image with digest %q: %w", image.Digest, err)
 		}
 
 		if discoveredImage == nil {
 			logger.Tracef(
 				"image with digest %q was found, but did not match platform constraint",
-				image.Digest.String(),
+				image.Digest,
 			)
 			continue
 		}
 
 		logger.WithFields(log.Fields{
 			"tag":    image.Tag,
-			"digest": image.Digest.String(),
+			"digest": image.Digest,
 		}).Trace("discovered image")
 
 		discoveredImage.Tag = image.Tag

@@ -32,7 +32,8 @@ func TestSelectImageGHCR(t *testing.T) {
 			kargoRepo,
 			SelectionStrategyDigest,
 			&SelectorOptions{
-				Constraint: constraint,
+				Constraint:     constraint,
+				DiscoveryLimit: 1,
 			},
 		)
 		require.NoError(t, err)
@@ -53,8 +54,9 @@ func TestSelectImageGHCR(t *testing.T) {
 			kargoRepo,
 			SelectionStrategyDigest,
 			&SelectorOptions{
-				Constraint: constraint,
-				Platform:   platform,
+				Constraint:     constraint,
+				Platform:       platform,
+				DiscoveryLimit: 1,
 			},
 		)
 		require.NoError(t, err)
@@ -73,7 +75,9 @@ func TestSelectImageGHCR(t *testing.T) {
 		s, err := NewSelector(
 			kargoRepo,
 			SelectionStrategyLexical,
-			nil,
+			&SelectorOptions{
+				DiscoveryLimit: 1,
+			},
 		)
 		require.NoError(t, err)
 
@@ -91,7 +95,8 @@ func TestSelectImageGHCR(t *testing.T) {
 			kargoRepo,
 			SelectionStrategyLexical,
 			&SelectorOptions{
-				Platform: platform,
+				Platform:       platform,
+				DiscoveryLimit: 1,
 			},
 		)
 		require.NoError(t, err)
@@ -110,7 +115,8 @@ func TestSelectImageGHCR(t *testing.T) {
 			kargoRepo,
 			SelectionStrategyNewestBuild,
 			&SelectorOptions{
-				AllowRegex: `^v0.1.0-rc.2\d$`,
+				AllowRegex:     `^v0.1.0-rc.2\d$`,
+				DiscoveryLimit: 1,
 			},
 		)
 		require.NoError(t, err)
@@ -130,8 +136,9 @@ func TestSelectImageGHCR(t *testing.T) {
 			kargoRepo,
 			SelectionStrategyNewestBuild,
 			&SelectorOptions{
-				AllowRegex: `^v0.1.0-rc.2\d$`,
-				Platform:   platform,
+				AllowRegex:     `^v0.1.0-rc.2\d$`,
+				Platform:       platform,
+				DiscoveryLimit: 1,
 			},
 		)
 		require.NoError(t, err)
@@ -150,7 +157,9 @@ func TestSelectImageGHCR(t *testing.T) {
 		s, err := NewSelector(
 			kargoRepo,
 			SelectionStrategySemVer,
-			nil,
+			&SelectorOptions{
+				DiscoveryLimit: 1,
+			},
 		)
 		require.NoError(t, err)
 
@@ -173,7 +182,8 @@ func TestSelectImageGHCR(t *testing.T) {
 			kargoRepo,
 			SelectionStrategySemVer,
 			&SelectorOptions{
-				Platform: platform,
+				Platform:       platform,
+				DiscoveryLimit: 1,
 			},
 		)
 		require.NoError(t, err)
@@ -201,7 +211,8 @@ func TestSelectImageGHCR(t *testing.T) {
 			"ghcr.io/akuity/kargo-test",
 			SelectionStrategyDigest,
 			&SelectorOptions{
-				Constraint: tag,
+				Constraint:     tag,
+				DiscoveryLimit: 1,
 			},
 		)
 		require.NoError(t, err)
@@ -223,7 +234,8 @@ func TestSelectImageGHCR(t *testing.T) {
 			&SelectorOptions{
 				Constraint: "v0.1.0",
 				// Nothing will match this
-				Platform: "linux/made-up-arch",
+				Platform:       "linux/made-up-arch",
+				DiscoveryLimit: 1,
 			},
 		)
 		require.NoError(t, err)

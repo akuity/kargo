@@ -20,7 +20,7 @@ import (
 //
 // To use your Docker credentials, set env vars:
 // - DOCKER_HUB_USERNAME
-// - DOCKER_HUB_USERNAME (personal access token)
+// - DOCKER_HUB_PASSWORD (personal access token)
 
 func TestSelectImageDockerHub(t *testing.T) {
 	const debianRepo = "debian"
@@ -36,8 +36,9 @@ func TestSelectImageDockerHub(t *testing.T) {
 			debianRepo,
 			SelectionStrategyDigest,
 			&SelectorOptions{
-				Constraint: "fake-constraint",
-				Creds:      getDockerHubCreds(),
+				Constraint:     "fake-constraint",
+				Creds:          getDockerHubCreds(),
+				DiscoveryLimit: 1,
 			},
 		)
 		require.NoError(t, err)
@@ -52,8 +53,9 @@ func TestSelectImageDockerHub(t *testing.T) {
 			debianRepo,
 			SelectionStrategyDigest,
 			&SelectorOptions{
-				Constraint: "bookworm",
-				Creds:      getDockerHubCreds(),
+				Constraint:     "bookworm",
+				Creds:          getDockerHubCreds(),
+				DiscoveryLimit: 1,
 			},
 		)
 		require.NoError(t, err)
@@ -74,9 +76,10 @@ func TestSelectImageDockerHub(t *testing.T) {
 			debianRepo,
 			SelectionStrategyDigest,
 			&SelectorOptions{
-				Constraint: "bookworm",
-				Platform:   "linux/made-up-arch",
-				Creds:      getDockerHubCreds(),
+				Constraint:     "bookworm",
+				Platform:       "linux/made-up-arch",
+				Creds:          getDockerHubCreds(),
+				DiscoveryLimit: 1,
 			},
 		)
 		require.NoError(t, err)
@@ -91,9 +94,10 @@ func TestSelectImageDockerHub(t *testing.T) {
 			debianRepo,
 			SelectionStrategyDigest,
 			&SelectorOptions{
-				Constraint: "bookworm",
-				Platform:   platform,
-				Creds:      getDockerHubCreds(),
+				Constraint:     "bookworm",
+				Platform:       platform,
+				Creds:          getDockerHubCreds(),
+				DiscoveryLimit: 1,
 			},
 		)
 		require.NoError(t, err)
@@ -113,8 +117,9 @@ func TestSelectImageDockerHub(t *testing.T) {
 			debianRepo,
 			SelectionStrategyLexical,
 			&SelectorOptions{
-				AllowRegex: "nothing-matches-this",
-				Creds:      getDockerHubCreds(),
+				AllowRegex:     "nothing-matches-this",
+				Creds:          getDockerHubCreds(),
+				DiscoveryLimit: 1,
 			},
 		)
 		require.NoError(t, err)
@@ -129,7 +134,8 @@ func TestSelectImageDockerHub(t *testing.T) {
 			debianRepo,
 			SelectionStrategyLexical,
 			&SelectorOptions{
-				Creds: getDockerHubCreds(),
+				Creds:          getDockerHubCreds(),
+				DiscoveryLimit: 1,
 			},
 		)
 		require.NoError(t, err)
@@ -154,9 +160,10 @@ func TestSelectImageDockerHub(t *testing.T) {
 				// digest, but jessie is ancient, so for now I am chalking it up to
 				// something having to do with the evolution of the Docker Hub API over
 				// time.
-				AllowRegex: "^jessie",
-				Platform:   "linux/made-up-arch",
-				Creds:      getDockerHubCreds(),
+				AllowRegex:     "^jessie",
+				Platform:       "linux/made-up-arch",
+				Creds:          getDockerHubCreds(),
+				DiscoveryLimit: 1,
 			},
 		)
 		require.NoError(t, err)
@@ -171,9 +178,10 @@ func TestSelectImageDockerHub(t *testing.T) {
 			debianRepo,
 			SelectionStrategyLexical,
 			&SelectorOptions{
-				AllowRegex: "^jessie",
-				Platform:   platform,
-				Creds:      getDockerHubCreds(),
+				AllowRegex:     "^jessie",
+				Platform:       platform,
+				Creds:          getDockerHubCreds(),
+				DiscoveryLimit: 1,
 			},
 		)
 		require.NoError(t, err)
@@ -193,8 +201,9 @@ func TestSelectImageDockerHub(t *testing.T) {
 			debianRepo,
 			SelectionStrategyNewestBuild,
 			&SelectorOptions{
-				AllowRegex: "nothing-matches-this",
-				Creds:      getDockerHubCreds(),
+				AllowRegex:     "nothing-matches-this",
+				Creds:          getDockerHubCreds(),
+				DiscoveryLimit: 1,
 			},
 		)
 		require.NoError(t, err)
@@ -209,8 +218,9 @@ func TestSelectImageDockerHub(t *testing.T) {
 			debianRepo,
 			SelectionStrategyNewestBuild,
 			&SelectorOptions{
-				AllowRegex: `^bookworm-202310\d\d$`,
-				Creds:      getDockerHubCreds(),
+				AllowRegex:     `^bookworm-202310\d\d$`,
+				Creds:          getDockerHubCreds(),
+				DiscoveryLimit: 1,
 			},
 		)
 		require.NoError(t, err)
@@ -230,9 +240,10 @@ func TestSelectImageDockerHub(t *testing.T) {
 			debianRepo,
 			SelectionStrategyNewestBuild,
 			&SelectorOptions{
-				AllowRegex: `^bookworm-202310\d\d$`,
-				Platform:   "linux/made-up-arch",
-				Creds:      getDockerHubCreds(),
+				AllowRegex:     `^bookworm-202310\d\d$`,
+				Platform:       "linux/made-up-arch",
+				Creds:          getDockerHubCreds(),
+				DiscoveryLimit: 1,
 			},
 		)
 		require.NoError(t, err)
@@ -247,9 +258,10 @@ func TestSelectImageDockerHub(t *testing.T) {
 			debianRepo,
 			SelectionStrategyNewestBuild,
 			&SelectorOptions{
-				AllowRegex: `^bookworm-202310\d\d$`,
-				Platform:   platform,
-				Creds:      getDockerHubCreds(),
+				AllowRegex:     `^bookworm-202310\d\d$`,
+				Platform:       platform,
+				Creds:          getDockerHubCreds(),
+				DiscoveryLimit: 1,
 			},
 		)
 		require.NoError(t, err)
@@ -269,8 +281,9 @@ func TestSelectImageDockerHub(t *testing.T) {
 			debianRepo,
 			SelectionStrategySemVer,
 			&SelectorOptions{
-				Constraint: "^99.0",
-				Creds:      getDockerHubCreds(),
+				Constraint:     "^99.0",
+				Creds:          getDockerHubCreds(),
+				DiscoveryLimit: 1,
 			},
 		)
 		require.NoError(t, err)
@@ -285,8 +298,9 @@ func TestSelectImageDockerHub(t *testing.T) {
 			debianRepo,
 			SelectionStrategySemVer,
 			&SelectorOptions{
-				Constraint: "^12.0",
-				Creds:      getDockerHubCreds(),
+				Constraint:     "^12.0",
+				Creds:          getDockerHubCreds(),
+				DiscoveryLimit: 1,
 			},
 		)
 		require.NoError(t, err)
@@ -310,9 +324,10 @@ func TestSelectImageDockerHub(t *testing.T) {
 			debianRepo,
 			SelectionStrategySemVer,
 			&SelectorOptions{
-				Constraint: "^12.0",
-				Platform:   "linux/made-up-arch",
-				Creds:      getDockerHubCreds(),
+				Constraint:     "^12.0",
+				Platform:       "linux/made-up-arch",
+				Creds:          getDockerHubCreds(),
+				DiscoveryLimit: 1,
 			},
 		)
 		require.NoError(t, err)
@@ -327,9 +342,10 @@ func TestSelectImageDockerHub(t *testing.T) {
 			debianRepo,
 			SelectionStrategySemVer,
 			&SelectorOptions{
-				Constraint: "^12.0",
-				Platform:   platform,
-				Creds:      getDockerHubCreds(),
+				Constraint:     "^12.0",
+				Platform:       platform,
+				Creds:          getDockerHubCreds(),
+				DiscoveryLimit: 1,
 			},
 		)
 		require.NoError(t, err)
