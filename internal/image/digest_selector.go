@@ -61,7 +61,7 @@ func (d *digestSelector) Select(ctx context.Context) ([]Image, error) {
 	}
 
 	if image == nil {
-		logger.Trace("image with tag did not match platform constraints", tag)
+		logger.Trace("image with tag did not match platform constraints")
 		return nil, nil
 	}
 
