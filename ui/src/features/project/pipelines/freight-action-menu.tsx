@@ -103,7 +103,7 @@ export const FreightActionMenu = ({
       <FontAwesomeIcon
         onClick={(e) => e.stopPropagation()}
         icon={faEllipsisV}
-        className='cursor-pointer text-gray-500 hover:text-white'
+        className='cursor-pointer text-gray-500 hover:text-gray-800'
       />
     </Dropdown>
   );
