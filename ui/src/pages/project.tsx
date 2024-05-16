@@ -77,10 +77,10 @@ export const Project = ({ tab = 'pipelines' }: { tab?: ProjectTab }) => {
 
   return (
     <div className='h-full flex flex-col'>
-      <div className='p-6'>
+      <div className='px-6 pt-5 pb-3'>
         <div className='flex items-center'>
           <div className='mr-auto'>
-            <div className='font-semibold mb-1 text-xs text-gray-600'>PROJECT</div>
+            <div className='font-medium text-xs text-neutral-500'>PROJECT</div>
             <div className='text-2xl font-semibold'>{name}</div>
             <Description
               loading={isLoading}
@@ -98,7 +98,7 @@ export const Project = ({ tab = 'pipelines' }: { tab?: ProjectTab }) => {
         }}
         tabBarStyle={{
           padding: '0 24px',
-          marginBottom: '0.5rem'
+          marginBottom: '0.25rem'
         }}
         items={Object.entries(tabs).map(([key, value]) => ({
           key,
