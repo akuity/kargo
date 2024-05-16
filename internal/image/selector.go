@@ -42,10 +42,7 @@ const (
 // repository.
 type Selector interface {
 	// Select selects a single image from a container image repository.
-	Select(context.Context) (*Image, error)
-	// Discover returns a list of images that match the selection strategy and
-	// constraints.
-	Discover(context.Context) ([]Image, error)
+	Select(context.Context) ([]Image, error)
 }
 
 // SelectorOptions represents options for creating a Selector.

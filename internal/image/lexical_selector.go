@@ -40,44 +40,7 @@ func newLexicalSelector(
 }
 
 // Select implements the Selector interface.
-func (l *lexicalSelector) Select(ctx context.Context) (*Image, error) {
-	logger := logging.LoggerFromContext(ctx).WithFields(log.Fields{
-		"registry":            l.repoClient.registry.name,
-		"image":               l.repoClient.image,
-		"selectionStrategy":   SelectionStrategyLexical,
-		"platformConstrained": l.platform != nil,
-	})
-	logger.Trace("selecting image")
-
-	ctx = logging.ContextWithLogger(ctx, logger)
-
-	tags, err := l.selectTags(ctx)
-	if err != nil || len(tags) == 0 {
-		return nil, err
-	}
-
-	tag := tags[0]
-	image, err := l.repoClient.getImageByTag(ctx, tag, l.platform)
-	if err != nil {
-		return nil, fmt.Errorf("error retrieving image with tag %q: %w", tag, err)
-	}
-	if image == nil {
-		logger.Tracef(
-			"image with tag %q was found, but did not match platform constraint",
-			tag,
-		)
-		return nil, nil
-	}
-
-	logger.WithFields(log.Fields{
-		"tag":    image.Tag,
-		"digest": image.Digest.String(),
-	}).Trace("found image")
-	return image, nil
-}
-
-// Discover implements the Selector interface.
-func (l *lexicalSelector) Discover(ctx context.Context) ([]Image, error) {
+func (l *lexicalSelector) Select(ctx context.Context) ([]Image, error) {
 	logger := logging.LoggerFromContext(ctx).WithFields(log.Fields{
 		"registry":            l.repoClient.registry.name,
 		"image":               l.repoClient.image,

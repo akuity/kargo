@@ -54,44 +54,7 @@ func newSemVerSelector(
 }
 
 // Select implements the Selector interface.
-func (s *semVerSelector) Select(ctx context.Context) (*Image, error) {
-	logger := logging.LoggerFromContext(ctx).WithFields(log.Fields{
-		"registry":            s.repoClient.registry.name,
-		"image":               s.repoClient.image,
-		"selectionStrategy":   SelectionStrategySemVer,
-		"platformConstrained": s.platform != nil,
-	})
-	logger.Trace("selecting image")
-
-	ctx = logging.ContextWithLogger(ctx, logger)
-
-	images, err := s.selectImages(ctx)
-	if err != nil || len(images) == 0 {
-		return nil, err
-	}
-
-	tag := images[0].Tag
-	image, err := s.repoClient.getImageByTag(ctx, tag, s.platform)
-	if err != nil {
-		return nil, fmt.Errorf("error retrieving image with tag %q: %w", tag, err)
-	}
-	if image == nil {
-		logger.Tracef(
-			"image with tag %q was found, but did not match platform constraint",
-			tag,
-		)
-		return nil, nil
-	}
-
-	logger.WithFields(log.Fields{
-		"tag":    image.Tag,
-		"digest": image.Digest.String(),
-	}).Trace("found image")
-	return image, nil
-}
-
-// Discover implements the Selector interface.
-func (s *semVerSelector) Discover(ctx context.Context) ([]Image, error) {
+func (s *semVerSelector) Select(ctx context.Context) ([]Image, error) {
 	logger := logging.LoggerFromContext(ctx).WithFields(log.Fields{
 		"registry":            s.repoClient.registry.name,
 		"image":               s.repoClient.image,
@@ -114,19 +77,19 @@ func (s *semVerSelector) Discover(ctx context.Context) ([]Image, error) {
 	}
 	discoveredImages := make([]Image, 0, limit)
 
-	for _, image := range images {
+	for _, svImage := range images {
 		if len(discoveredImages) >= limit {
 			break
 		}
 
-		image, err := s.repoClient.getImageByTag(ctx, image.Tag, s.platform)
+		image, err := s.repoClient.getImageByTag(ctx, svImage.Tag, s.platform)
 		if err != nil {
-			return nil, fmt.Errorf("error retrieving image with tag %q: %w", image.Tag, err)
+			return nil, fmt.Errorf("error retrieving image with tag %q: %w", svImage.Tag, err)
 		}
 		if image == nil {
 			logger.Tracef(
 				"image with tag %q was found, but did not match platform constraint",
-				image.Tag,
+				svImage.Tag,
 			)
 			continue
 		}

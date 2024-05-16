@@ -102,7 +102,7 @@ func (r *reconciler) discoverImageRefs(
 		)
 	}
 
-	images, err := imageSelector.Discover(ctx)
+	images, err := imageSelector.Select(ctx)
 	if err != nil {
 		return nil, fmt.Errorf(
 			"error discovering newest applicable images %q: %w",

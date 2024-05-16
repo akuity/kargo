@@ -37,10 +37,11 @@ func TestSelectImageGHCR(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		image, err := s.Select(ctx)
+		images, err := s.Select(ctx)
 		require.NoError(t, err)
+		require.NotEmpty(t, images)
 
-		require.NotNil(t, image)
+		image := images[0]
 		require.Equal(t, constraint, image.Tag)
 		require.NotEmpty(t, image.Digest)
 		require.NotNil(t, image.CreatedAt)
@@ -58,10 +59,11 @@ func TestSelectImageGHCR(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		image, err := s.Select(ctx)
+		images, err := s.Select(ctx)
 		require.NoError(t, err)
+		require.NotEmpty(t, images)
 
-		require.NotNil(t, image)
+		image := images[0]
 		require.Equal(t, constraint, image.Tag)
 		require.NotEmpty(t, image.Digest)
 		require.NotNil(t, image.CreatedAt)
@@ -75,10 +77,11 @@ func TestSelectImageGHCR(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		image, err := s.Select(ctx)
+		images, err := s.Select(ctx)
 		require.NoError(t, err)
+		require.NotEmpty(t, images)
 
-		require.NotNil(t, image)
+		image := images[0]
 		require.NotEmpty(t, image.Digest)
 		require.NotNil(t, image.CreatedAt)
 	})
@@ -93,10 +96,11 @@ func TestSelectImageGHCR(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		image, err := s.Select(ctx)
+		images, err := s.Select(ctx)
 		require.NoError(t, err)
+		require.NotEmpty(t, images)
 
-		require.NotNil(t, image)
+		image := images[0]
 		require.NotEmpty(t, image.Digest)
 		require.NotNil(t, image.CreatedAt)
 	})
@@ -111,10 +115,11 @@ func TestSelectImageGHCR(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		image, err := s.Select(ctx)
+		images, err := s.Select(ctx)
 		require.NoError(t, err)
+		require.NotEmpty(t, images)
 
-		require.NotNil(t, image)
+		image := images[0]
 		require.Equal(t, "v0.1.0-rc.24", image.Tag)
 		require.NotEmpty(t, image.Digest)
 		require.NotNil(t, image.CreatedAt)
@@ -131,10 +136,11 @@ func TestSelectImageGHCR(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		image, err := s.Select(ctx)
+		images, err := s.Select(ctx)
 		require.NoError(t, err)
+		require.NotEmpty(t, images)
 
-		require.NotNil(t, image)
+		image := images[0]
 		require.Equal(t, "v0.1.0-rc.24", image.Tag)
 		require.NotEmpty(t, image.Digest)
 		require.NotNil(t, image.CreatedAt)
@@ -148,10 +154,11 @@ func TestSelectImageGHCR(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		image, err := s.Select(ctx)
+		images, err := s.Select(ctx)
 		require.NoError(t, err)
+		require.NotEmpty(t, images)
 
-		require.NotNil(t, image)
+		image := images[0]
 		semVer, err := semver.NewVersion(image.Tag)
 		require.NoError(t, err)
 		min := semver.MustParse("0.1.0")
@@ -171,10 +178,11 @@ func TestSelectImageGHCR(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		image, err := s.Select(ctx)
+		images, err := s.Select(ctx)
 		require.NoError(t, err)
+		require.NotEmpty(t, images)
 
-		require.NotNil(t, image)
+		image := images[0]
 		semVer, err := semver.NewVersion(image.Tag)
 		require.NoError(t, err)
 		min := semver.MustParse("0.1.0")
@@ -198,10 +206,11 @@ func TestSelectImageGHCR(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		image, err := s.Select(ctx)
+		images, err := s.Select(ctx)
 		require.NoError(t, err)
+		require.NotEmpty(t, images)
 
-		require.NotNil(t, image)
+		image := images[0]
 		require.Equal(t, tag, image.Tag)
 		require.NotEmpty(t, image.Digest)
 		require.NotNil(t, image.CreatedAt)
@@ -219,8 +228,8 @@ func TestSelectImageGHCR(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		image, err := s.Select(ctx)
+		images, err := s.Select(ctx)
 		require.NoError(t, err)
-		require.Nil(t, image)
+		require.Empty(t, images)
 	})
 }

@@ -41,54 +41,7 @@ func newNewestBuildSelector(
 }
 
 // Select implements the Selector interface.
-func (n *newestBuildSelector) Select(ctx context.Context) (*Image, error) {
-	logger := logging.LoggerFromContext(ctx).WithFields(log.Fields{
-		"registry":            n.repoClient.registry.name,
-		"image":               n.repoClient.image,
-		"selectionStrategy":   SelectionStrategyNewestBuild,
-		"platformConstrained": n.platform != nil,
-	})
-	logger.Trace("selecting image")
-
-	ctx = logging.ContextWithLogger(ctx, logger)
-
-	images, err := n.selectImages(ctx)
-	if err != nil || len(images) == 0 {
-		return nil, err
-	}
-
-	if n.platform == nil {
-		image := images[0]
-		logger.WithFields(log.Fields{
-			"tag":    image.Tag,
-			"digest": image.Digest.String(),
-		}).Trace("found image")
-		return &image, nil
-	}
-
-	tag := images[0].Tag
-	digest := images[0].Digest
-	image, err := n.repoClient.getImageByDigest(ctx, digest, n.platform)
-	if err != nil {
-		return nil, fmt.Errorf("error retrieving image with digest %q: %w", digest.String(), err)
-	}
-	if image == nil {
-		logger.Tracef(
-			"image with digest %q was found, but did not match platform constraint",
-			digest.String(),
-		)
-		return nil, nil
-	}
-	image.Tag = tag
-
-	logger.WithFields(log.Fields{
-		"tag":    image.Tag,
-		"digest": image.Digest.String(),
-	}).Trace("found image")
-	return image, nil
-}
-
-func (n *newestBuildSelector) Discover(ctx context.Context) ([]Image, error) {
+func (n *newestBuildSelector) Select(ctx context.Context) ([]Image, error) {
 	logger := logging.LoggerFromContext(ctx).WithFields(log.Fields{
 		"registry":            n.repoClient.registry.name,
 		"image":               n.repoClient.image,

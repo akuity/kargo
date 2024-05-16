@@ -44,8 +44,7 @@ func TestSelectImageDockerHub(t *testing.T) {
 
 		image, err := s.Select(ctx)
 		require.NoError(t, err)
-		require.Nil(t, image)
-
+		require.Empty(t, image)
 	})
 
 	t.Run("digest strategy success", func(t *testing.T) {
@@ -59,10 +58,12 @@ func TestSelectImageDockerHub(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		image, err := s.Select(ctx)
+		images, err := s.Select(ctx)
 		require.NoError(t, err)
+		require.NotEmpty(t, images)
+		require.Len(t, images, 1)
 
-		require.NotNil(t, image)
+		image := images[0]
 		require.Equal(t, "bookworm", image.Tag)
 		require.NotEmpty(t, image.Digest)
 		require.NotNil(t, image.CreatedAt)
@@ -80,9 +81,9 @@ func TestSelectImageDockerHub(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		image, err := s.Select(ctx)
+		images, err := s.Select(ctx)
 		require.NoError(t, err)
-		require.Nil(t, image)
+		require.Empty(t, images)
 	})
 
 	t.Run("digest strategy success with platform constraint", func(t *testing.T) {
@@ -97,10 +98,11 @@ func TestSelectImageDockerHub(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		image, err := s.Select(ctx)
+		images, err := s.Select(ctx)
 		require.NoError(t, err)
+		require.NotEmpty(t, images)
 
-		require.NotNil(t, image)
+		image := images[0]
 		require.Equal(t, "bookworm", image.Tag)
 		require.NotEmpty(t, image.Digest)
 		require.NotNil(t, image.CreatedAt)
@@ -117,9 +119,9 @@ func TestSelectImageDockerHub(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		image, err := s.Select(ctx)
+		images, err := s.Select(ctx)
 		require.NoError(t, err)
-		require.Nil(t, image)
+		require.Empty(t, images)
 	})
 
 	t.Run("lexical strategy success", func(t *testing.T) {
@@ -132,10 +134,11 @@ func TestSelectImageDockerHub(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		image, err := s.Select(ctx)
+		images, err := s.Select(ctx)
 		require.NoError(t, err)
+		require.NotEmpty(t, images)
 
-		require.NotNil(t, image)
+		image := images[0]
 		// So far, this is lexically the last Debian release
 		require.Contains(t, image.Tag, "wheezy")
 		require.NotEmpty(t, image.Digest)
@@ -158,9 +161,9 @@ func TestSelectImageDockerHub(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		image, err := s.Select(ctx)
+		images, err := s.Select(ctx)
 		require.NoError(t, err)
-		require.Nil(t, image)
+		require.Empty(t, images)
 	})
 
 	t.Run("lexical strategy success with platform constraint", func(t *testing.T) {
@@ -175,10 +178,11 @@ func TestSelectImageDockerHub(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		image, err := s.Select(ctx)
+		images, err := s.Select(ctx)
 		require.NoError(t, err)
+		require.NotEmpty(t, images)
 
-		require.NotNil(t, image)
+		image := images[0]
 		require.Contains(t, image.Tag, "jessie")
 		require.NotEmpty(t, image.Digest)
 		require.NotNil(t, image.CreatedAt)
@@ -195,9 +199,9 @@ func TestSelectImageDockerHub(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		image, err := s.Select(ctx)
+		images, err := s.Select(ctx)
 		require.NoError(t, err)
-		require.Nil(t, image)
+		require.Empty(t, images)
 	})
 
 	t.Run("newest build strategy success", func(t *testing.T) {
@@ -211,10 +215,11 @@ func TestSelectImageDockerHub(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		image, err := s.Select(ctx)
+		images, err := s.Select(ctx)
 		require.NoError(t, err)
+		require.NotEmpty(t, images)
 
-		require.NotNil(t, image)
+		image := images[0]
 		require.Contains(t, image.Tag, "bookworm-202310")
 		require.NotEmpty(t, image.Digest)
 		require.NotNil(t, image.CreatedAt)
@@ -232,9 +237,9 @@ func TestSelectImageDockerHub(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		image, err := s.Select(ctx)
+		images, err := s.Select(ctx)
 		require.NoError(t, err)
-		require.Nil(t, image)
+		require.Nil(t, images)
 	})
 
 	t.Run("newest build strategy success with platform constraint", func(t *testing.T) {
@@ -249,10 +254,11 @@ func TestSelectImageDockerHub(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		image, err := s.Select(ctx)
+		images, err := s.Select(ctx)
 		require.NoError(t, err)
+		require.NotEmpty(t, images)
 
-		require.NotNil(t, image)
+		image := images[0]
 		require.Contains(t, image.Tag, "bookworm-202310")
 		require.NotEmpty(t, image.Digest)
 		require.NotNil(t, image.CreatedAt)
@@ -269,9 +275,9 @@ func TestSelectImageDockerHub(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		image, err := s.Select(ctx)
+		images, err := s.Select(ctx)
 		require.NoError(t, err)
-		require.Nil(t, image)
+		require.Empty(t, images)
 	})
 
 	t.Run("semver strategy success", func(t *testing.T) {
@@ -285,10 +291,11 @@ func TestSelectImageDockerHub(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		image, err := s.Select(ctx)
+		images, err := s.Select(ctx)
 		require.NoError(t, err)
+		require.NotEmpty(t, images)
 
-		require.NotNil(t, image)
+		image := images[0]
 		semVer, err := semver.NewVersion(image.Tag)
 		require.NoError(t, err)
 		min := semver.MustParse("12.0.0")
@@ -310,9 +317,9 @@ func TestSelectImageDockerHub(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		image, err := s.Select(ctx)
+		images, err := s.Select(ctx)
 		require.NoError(t, err)
-		require.Nil(t, image)
+		require.Empty(t, images)
 	})
 
 	t.Run("semver strategy success with platform constraint", func(t *testing.T) {
@@ -327,10 +334,11 @@ func TestSelectImageDockerHub(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		image, err := s.Select(ctx)
+		images, err := s.Select(ctx)
 		require.NoError(t, err)
+		require.NotEmpty(t, images)
 
-		require.NotNil(t, image)
+		image := images[0]
 		semVer, err := semver.NewVersion(image.Tag)
 		require.NoError(t, err)
 		min := semver.MustParse("12.0.0")

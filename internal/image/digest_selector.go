@@ -35,7 +35,7 @@ func newDigestSelector(
 }
 
 // Select implements the Selector interface.
-func (d *digestSelector) Select(ctx context.Context) (*Image, error) {
+func (d *digestSelector) Select(ctx context.Context) ([]Image, error) {
 	logger := logging.LoggerFromContext(ctx).WithFields(log.Fields{
 		"registry":            d.repoClient.registry.name,
 		"image":               d.repoClient.image,
@@ -79,24 +79,9 @@ func (d *digestSelector) Select(ctx context.Context) (*Image, error) {
 			"tag":    image.Tag,
 			"digest": image.Digest.String(),
 		}).Trace("found image")
-		return image, nil
+		return []Image{*image}, nil
 	}
 
 	logger.Trace("no images matched criteria")
 	return nil, nil
-}
-
-// Discover implements the Selector interface.
-//
-// As the digest selection strategy is designed to select a single image, this
-// method will always return either a single image or nil.
-func (d *digestSelector) Discover(ctx context.Context) ([]Image, error) {
-	image, err := d.Select(ctx)
-	if err != nil {
-		return nil, err
-	}
-	if image == nil {
-		return nil, nil
-	}
-	return []Image{*image}, nil
 }
