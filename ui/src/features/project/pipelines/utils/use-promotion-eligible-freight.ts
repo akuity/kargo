@@ -2,19 +2,23 @@ import { useMemo } from 'react';
 
 import { Freight } from '@ui/gen/v1alpha1/generated_pb';
 
+import { FreightlineAction } from '../types';
+
 export const usePromotionEligibleFreight = (
   freight: Freight[],
+  action?: FreightlineAction,
   stage?: string,
   disabled?: boolean
 ) => {
   return useMemo(() => {
-    if (disabled) {
+    if (disabled || !action) {
       return {};
     }
-    const availableFreight = !stage
-      ? freight
-      : // if promoting subscribers, only include freight that has been verified in the promoting stage
-        freight.filter((f) => !!f?.status?.verifiedIn[stage]);
+    const availableFreight =
+      action === FreightlineAction.Promote || !stage
+        ? freight
+        : // if promoting subscribers, only include freight that has been verified in the promoting stage
+          freight.filter((f) => !!f?.status?.verifiedIn[stage]);
 
     const pe: { [key: string]: boolean } = {};
     ((availableFreight as Freight[]) || []).forEach((f: Freight) => {
