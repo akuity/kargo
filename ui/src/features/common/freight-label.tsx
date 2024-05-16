@@ -92,7 +92,7 @@ export const FreightLabel = ({
           </div>
         </Tooltip>
       ) : (
-        <div className='flex items-center'>
+        <div className='flex items-center justify-center'>
           <FontAwesomeIcon icon={faBoxOpen} className='mr-2' />
           EMPTY
         </div>
