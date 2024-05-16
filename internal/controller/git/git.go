@@ -121,24 +121,15 @@ type Repo interface {
 	// contains any differences from what's already at the head of the current
 	// branch.
 	HasDiffs() (bool, error)
-	// GetDiffPaths returns a string slice indicating the paths, relative to the
-	// root of the repository, of any new or modified files.
-	GetDiffPaths() ([]string, error)
 	// GetDiffPathsForCommitID returns a string slice indicating the paths,
 	// relative to the root of the repository, of any files that are new or
 	// modified in the commit with the given ID.
 	GetDiffPathsForCommitID(commitID string) ([]string, error)
-	// GetDiffPathsSinceCommitID returns a string slice indicating the paths,
-	// relative to the root of the repository, of any files that are new or
-	// modified since the given commit ID.
-	GetDiffPathsSinceCommitID(commitId string) ([]string, error)
 	// IsAncestor returns true if parent branch is an ancestor of child
 	IsAncestor(parent string, child string) (bool, error)
 	// LastCommitID returns the ID (sha) of the most recent commit to the current
 	// branch.
 	LastCommitID() (string, error)
-	// ListTags returns a slice of tags in the repository.
-	ListTags() ([]string, error)
 	// ListTagsWithMetadata returns a slice of tags in the repository with metadata
 	// such as commit ID, creator date, and subject.
 	ListTagsWithMetadata() ([]TagMetadata, error)
@@ -148,9 +139,6 @@ type Repo interface {
 	// CommitMessage returns the text of the most recent commit message associated
 	// with the specified commit ID.
 	CommitMessage(id string) (string, error)
-	// CommitMessages returns a slice of commit messages starting with id1 and
-	// ending with id2. The results exclude id1, but include id2.
-	CommitMessages(id1, id2 string) ([]string, error)
 	// Push pushes from the current branch to a remote branch by the same name.
 	Push(force bool) error
 	// RefsHaveDiffs returns whether there is a diff between two commits/branches
@@ -420,45 +408,10 @@ func (r *repo) HasDiffs() (bool, error) {
 	return len(resBytes) > 0, nil
 }
 
-func (r *repo) GetDiffPaths() ([]string, error) {
-	resBytes, err := libExec.Exec(r.buildGitCommand("status", "-s"))
-	if err != nil {
-		return nil, fmt.Errorf("error checking status of branch %q: %w", r.currentBranch, err)
-	}
-	var paths []string
-	scanner := bufio.NewScanner(bytes.NewReader(resBytes))
-	scanner.Split(bufio.ScanLines)
-	for scanner.Scan() {
-		paths = append(
-			paths,
-			strings.SplitN(strings.TrimSpace(scanner.Text()), " ", 2)[1],
-		)
-	}
-	return paths, nil
-}
-
 func (r *repo) GetDiffPathsForCommitID(commitID string) ([]string, error) {
 	resBytes, err := libExec.Exec(r.buildGitCommand("diff", "--name-only", commitID+"^", commitID))
 	if err != nil {
 		return nil, fmt.Errorf("error getting diffs for commit %q: %w", commitID, err)
-	}
-	var paths []string
-	scanner := bufio.NewScanner(bytes.NewReader(resBytes))
-	scanner.Split(bufio.ScanLines)
-	for scanner.Scan() {
-		paths = append(
-			paths,
-			scanner.Text(),
-		)
-	}
-	return paths, nil
-}
-
-func (r *repo) GetDiffPathsSinceCommitID(commitId string) ([]string, error) {
-	resBytes, err := libExec.Exec(r.buildGitCommand("diff", "--name-only", commitId+"..HEAD"))
-	if err != nil {
-		return nil,
-			fmt.Errorf("error getting diffs since commit %q %w", commitId, err)
 	}
 	var paths []string
 	scanner := bufio.NewScanner(bytes.NewReader(resBytes))
@@ -492,24 +445,6 @@ func (r *repo) LastCommitID() (string, error) {
 		return "", fmt.Errorf("error obtaining ID of last commit: %w", err)
 	}
 	return strings.TrimSpace(string(shaBytes)), nil
-}
-
-func (r *repo) ListTags() ([]string, error) {
-	if _, err :=
-		libExec.Exec(r.buildGitCommand("fetch", "origin", "--tags")); err != nil {
-		return nil, fmt.Errorf("error fetching tags from repo %q: %w", r.url, err)
-	}
-	tagsBytes, err := libExec.Exec(r.buildGitCommand("tag", "--list", "--sort", "-creatordate"))
-	if err != nil {
-		return nil, fmt.Errorf("error listing tags for repo %q: %w", r.url, err)
-	}
-	var tags []string
-	scanner := bufio.NewScanner(bytes.NewReader(tagsBytes))
-	scanner.Split(bufio.ScanLines)
-	for scanner.Scan() {
-		tags = append(tags, strings.TrimSpace(scanner.Text()))
-	}
-	return tags, nil
 }
 
 func (r *repo) ListTagsWithMetadata() ([]TagMetadata, error) {
@@ -635,31 +570,6 @@ func (r *repo) CommitMessage(id string) (string, error) {
 		return "", fmt.Errorf("error obtaining commit message for commit %q: %w", id, err)
 	}
 	return string(msgBytes), nil
-}
-
-func (r *repo) CommitMessages(id1, id2 string) ([]string, error) {
-	allMsgBytes, err := libExec.Exec(r.buildGitCommand(
-		"log",
-		"--pretty=oneline",
-		"--decorate-refs=",
-		"--decorate-refs-exclude=",
-		fmt.Sprintf("%s..%s", id1, id2),
-	))
-	if err != nil {
-		return nil, fmt.Errorf("error obtaining commit messages between commits %q and %q: %w", id1, id2, err)
-	}
-	msgsBytes := bytes.Split(allMsgBytes, []byte("\n"))
-	var msgs []string
-	for _, msgBytes := range msgsBytes {
-		msgStr := string(msgBytes)
-		// There's usually a trailing newline in the result. We could just discard
-		// the last line, but this feels more resilient against the admittedly
-		// remote possibility that that could change one day.
-		if strings.TrimSpace(msgStr) != "" {
-			msgs = append(msgs, string(msgBytes))
-		}
-	}
-	return msgs, nil
 }
 
 func (r *repo) Push(force bool) error {
