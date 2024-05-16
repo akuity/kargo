@@ -438,7 +438,7 @@ func (r *repo) GetDiffPaths() ([]string, error) {
 }
 
 func (r *repo) GetDiffPathsForCommitID(commitID string) ([]string, error) {
-	resBytes, err := libExec.Exec(r.buildGitCommand("diff", "--name-only", commitID))
+	resBytes, err := libExec.Exec(r.buildGitCommand("diff", "--name-only", commitID+"^", commitID))
 	if err != nil {
 		return nil, fmt.Errorf("error getting diffs for commit %q: %w", commitID, err)
 	}
