@@ -1286,6 +1286,15 @@ message WarehouseSpec {
   // of the shard label.
   optional string shard = 2;
 
+  // Interval is the interval at which the Warehouse should discover new
+  // artifacts. This field is optional. When left unspecified, the field is
+  // implicitly treated as if its value were "5m0s".
+  //
+  // +kubebuilder:validation:Type=string
+  // +kubebuilder:validation:Pattern="^([0-9]+(\\.[0-9]+)?(s|m|h))+$"
+  // +kubebuilder:default="5m0s"
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration interval = 4;
+
   // FreightCreationPolicy describes how Freight is created by this Warehouse.
   // This field is optional. When left unspecified, the field is implicitly
   // treated as if its value were "Automatic".

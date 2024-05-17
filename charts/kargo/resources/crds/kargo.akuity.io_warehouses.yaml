@@ -56,6 +56,14 @@ spec:
                 - Automatic
                 - Manual
                 type: string
+              interval:
+                default: 5m0s
+                description: |-
+                  Interval is the interval at which the Warehouse should discover new
+                  artifacts. This field is optional. When left unspecified, the field is
+                  implicitly treated as if its value were "5m0s".
+                pattern: ^([0-9]+(\.[0-9]+)?(s|m|h))+$
+                type: string
               shard:
                 description: |-
                   Shard is the name of the shard that this Warehouse belongs to. This is an
@@ -300,6 +308,7 @@ spec:
                 type: array
             required:
             - freightCreationPolicy
+            - interval
             - subscriptions
             type: object
           status:

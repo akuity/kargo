@@ -7,7 +7,7 @@
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto2 } from "@bufbuild/protobuf";
-import { ListMeta, ObjectMeta, Time } from "../k8s.io/apimachinery/pkg/apis/meta/v1/generated_pb.js";
+import { Duration, ListMeta, ObjectMeta, Time } from "../k8s.io/apimachinery/pkg/apis/meta/v1/generated_pb.js";
 
 /**
  * AnalysisRunArgument represents an argument to be added to an AnalysisRun.
@@ -4230,6 +4230,19 @@ export class WarehouseSpec extends Message<WarehouseSpec> {
   shard?: string;
 
   /**
+   * Interval is the interval at which the Warehouse should discover new
+   * artifacts. This field is optional. When left unspecified, the field is
+   * implicitly treated as if its value were "5m0s".
+   *
+   * +kubebuilder:validation:Type=string
+   * +kubebuilder:validation:Pattern="^([0-9]+(\\.[0-9]+)?(s|m|h))+$"
+   * +kubebuilder:default="5m0s"
+   *
+   * @generated from field: optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration interval = 4;
+   */
+  interval?: Duration;
+
+  /**
    * FreightCreationPolicy describes how Freight is created by this Warehouse.
    * This field is optional. When left unspecified, the field is implicitly
    * treated as if its value were "Automatic".
@@ -4259,6 +4272,7 @@ export class WarehouseSpec extends Message<WarehouseSpec> {
   static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.WarehouseSpec";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 2, name: "shard", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 4, name: "interval", kind: "message", T: Duration, opt: true },
     { no: 3, name: "freightCreationPolicy", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 1, name: "subscriptions", kind: "message", T: RepoSubscription, repeated: true },
   ]);
