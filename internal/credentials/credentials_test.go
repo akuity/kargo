@@ -231,7 +231,9 @@ func TestSecretToCreds(t *testing.T) {
 			"sshPrivateKey": []byte("fake-ssh-private-key"),
 		},
 	}
-	creds := secretToCreds(secret)
+	db := &kubernetesDatabase{}
+	creds, err := db.secretToCreds(TypeGit, secret)
+	require.NoError(t, err)
 	require.Equal(t, string(secret.Data["username"]), creds.Username)
 	require.Equal(t, string(secret.Data["password"]), creds.Password)
 	require.Equal(t, string(secret.Data["sshPrivateKey"]), creds.SSHPrivateKey)

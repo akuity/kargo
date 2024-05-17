@@ -13,6 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/credentials/ecr"
 	"github.com/akuity/kargo/internal/git"
 	"github.com/akuity/kargo/internal/helm"
 	"github.com/akuity/kargo/internal/logging"
@@ -70,6 +71,7 @@ type Database interface {
 // stored in Kubernetes Secrets.
 type kubernetesDatabase struct {
 	kargoClient client.Client
+	ecrHelper   ecr.CredentialHelper
 	cfg         KubernetesDatabaseConfig
 }
 
@@ -95,6 +97,7 @@ func NewKubernetesDatabase(
 ) Database {
 	return &kubernetesDatabase{
 		kargoClient: kargoClient,
+		ecrHelper:   ecr.NewCredentialHelper(),
 		cfg:         cfg,
 	}
 }
@@ -149,7 +152,11 @@ func (k *kubernetesDatabase) Get(
 		return creds, false, nil
 	}
 
-	return secretToCreds(secret), true, nil
+	if creds, err = k.secretToCreds(credType, secret); err != nil {
+		return creds, false, err
+	}
+
+	return creds, true, nil
 }
 
 func (k *kubernetesDatabase) getCredentialsSecret(
@@ -221,10 +228,30 @@ func (k *kubernetesDatabase) getCredentialsSecret(
 	return matchingSecret, nil
 }
 
-func secretToCreds(secret *corev1.Secret) Credentials {
+func (k *kubernetesDatabase) secretToCreds(
+	credType Type, secret *corev1.Secret,
+) (Credentials, error) {
+	if credType == TypeImage {
+		// If the cred type is image, we'll try to derive username and password
+		// from an AWS access key id and secret.
+		username, password, err := k.ecrHelper.GetUsernameAndPassword(secret)
+		if err != nil {
+			return Credentials{}, err
+		}
+		if username != "" && password != "" {
+			// We have successfully derived the username and password from an AWS
+			// access key id and secret.
+			return Credentials{
+				Username: username,
+				Password: password,
+			}, nil
+		}
+	}
+	// If we get to here, we'll just return the username and password as they
+	// are stored in the secret.
 	return Credentials{
 		Username:      string(secret.Data["username"]),
 		Password:      string(secret.Data["password"]),
 		SSHPrivateKey: string(secret.Data["sshPrivateKey"]),
-	}
+	}, nil
 }
