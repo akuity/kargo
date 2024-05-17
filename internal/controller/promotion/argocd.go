@@ -373,7 +373,8 @@ func (a *argoCDMechanism) logAppEvent(ctx context.Context, app *argocd.Applicati
 	t := metav1.Time{Time: time.Now()}
 	event := corev1.Event{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: fmt.Sprintf("%v.%x", app.Name, t.UnixNano()),
+			Name:      fmt.Sprintf("%v.%x", app.Name, t.UnixNano()),
+			Namespace: app.Namespace,
 			// xref: https://github.com/argoproj/argo-cd/blob/44894e9e438bca5adccf58d2f904adc63365805c/util/argo/audit_logger.go#L118-L124
 			// nolint:lll
 			Annotations: map[string]string{
