@@ -180,6 +180,16 @@ type GitSubscription struct {
 	// subset of them.
 	// +kubebuilder:validation:Optional
 	ExcludePaths []string `json:"excludePaths,omitempty" protobuf:"bytes,9,rep,name=excludePaths"`
+	// DiscoveryLimit is an optional limit on the number of commits that can be
+	// discovered for this subscription. The limit is applied after filtering
+	// commits based on the AllowTags and IgnoreTags fields.
+	// When left unspecified, the field is implicitly treated as if its value
+	// were "20". The upper limit for this field is 100.
+	//
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=100
+	// +kubebuilder:default=20
+	DiscoveryLimit int32 `json:"discoveryLimit,omitempty" protobuf:"varint,10,opt,name=discoveryLimit"`
 }
 
 // ImageSubscription defines a subscription to an image repository.
@@ -245,6 +255,16 @@ type ImageSubscription struct {
 	// should be ignored when connecting to the repository. This should be enabled
 	// only with great caution.
 	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty" protobuf:"varint,8,opt,name=insecureSkipTLSVerify"`
+	// DiscoveryLimit is an optional limit on the number of image references
+	// that can be discovered for this subscription. The limit is applied after
+	// filtering images based on the AllowTags and IgnoreTags fields.
+	// When left unspecified, the field is implicitly treated as if its value
+	// were "20". The upper limit for this field is 100.
+	//
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=100
+	// +kubebuilder:default=20
+	DiscoveryLimit int32 `json:"discoveryLimit,omitempty" protobuf:"varint,9,opt,name=discoveryLimit"`
 }
 
 // ChartSubscription defines a subscription to a Helm chart repository.
@@ -275,6 +295,16 @@ type ChartSubscription struct {
 	//
 	// +kubebuilder:validation:Optional
 	SemverConstraint string `json:"semverConstraint,omitempty" protobuf:"bytes,3,opt,name=semverConstraint"`
+	// DiscoveryLimit is an optional limit on the number of chart versions that
+	// can be discovered for this subscription. The limit is applied after
+	// filtering charts based on the SemverConstraint field.
+	// When left unspecified, the field is implicitly treated as if its value
+	// were "20". The upper limit for this field is 100.
+	//
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=100
+	// +kubebuilder:default=20
+	DiscoveryLimit int32 `json:"discoveryLimit,omitempty" protobuf:"varint,4,opt,name=discoveryLimit"`
 }
 
 // WarehouseStatus describes a Warehouse's most recently observed state.
