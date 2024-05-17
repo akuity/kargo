@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -14,6 +15,9 @@ import (
 	"github.com/akuity/kargo/internal/logging"
 )
 
+// discoverImages discovers the latest suitable images for the given image
+// subscriptions. It returns a list of image discovery results, one for each
+// subscription.
 func (r *reconciler) discoverImages(
 	ctx context.Context,
 	namespace string,
@@ -25,10 +29,11 @@ func (r *reconciler) discoverImages(
 		if s.Image == nil {
 			continue
 		}
-		sub := s.Image
+		sub := *s.Image
 
 		logger := logging.LoggerFromContext(ctx).WithField("repo", sub.RepoURL)
 
+		// Obtain credentials for the image repository.
 		creds, ok, err := r.credentialsDB.Get(ctx, namespace, credentials.TypeImage, sub.RepoURL)
 		if err != nil {
 			return nil, fmt.Errorf(
@@ -48,24 +53,27 @@ func (r *reconciler) discoverImages(
 			logger.Debug("found no credentials for image repo")
 		}
 
-		images, err := r.discoverImageRefsFn(ctx, *sub, regCreds)
+		// Enrich the logger with additional fields for this subscription.
+		logger = logger.WithFields(imageDiscoveryLogFields(sub))
+
+		// Discover the latest suitable images.
+		images, err := r.discoverImageRefsFn(ctx, sub, regCreds)
 		if err != nil {
 			return nil, fmt.Errorf(
-				"error discovering latest suitable images %q: %w",
+				"error discovering latest images %q: %w",
 				sub.RepoURL,
 				err,
 			)
 		}
 		if len(images) == 0 {
-			logger.Debug("discovered no suitable images")
 			results = append(results, kargoapi.ImageDiscoveryResult{
 				RepoURL:  sub.RepoURL,
 				Platform: sub.Platform,
 			})
+			logger.Debug("discovered no images")
 			continue
 		}
 
-		logger.Debugf("discovered %d suitable images", len(images))
 		discoveredImages := make([]kargoapi.DiscoveredImageReference, 0, len(images))
 		for _, img := range images {
 			discovery := kargoapi.DiscoveredImageReference{
@@ -78,11 +86,13 @@ func (r *reconciler) discoverImages(
 			}
 			discoveredImages = append(discoveredImages, discovery)
 		}
+
 		results = append(results, kargoapi.ImageDiscoveryResult{
 			RepoURL:    sub.RepoURL,
 			Platform:   sub.Platform,
 			References: discoveredImages,
 		})
+		logger.Debugf("discovered %d images", len(images))
 	}
 
 	return results, nil
@@ -124,6 +134,20 @@ func (r *reconciler) getImageSourceURL(gitRepoURL, tag string) string {
 		}
 	}
 	return ""
+}
+
+func imageDiscoveryLogFields(sub kargoapi.ImageSubscription) log.Fields {
+	f := log.Fields{
+		"imageSelectionStrategy": sub.ImageSelectionStrategy,
+		"platformConstrained":    sub.Platform != "",
+	}
+	switch sub.ImageSelectionStrategy {
+	case kargoapi.ImageSelectionStrategySemVer, kargoapi.ImageSelectionStrategyDigest:
+		f["semverConstraint"] = sub.SemverConstraint
+	case kargoapi.ImageSelectionStrategyLexical, kargoapi.ImageSelectionStrategyNewestBuild:
+		f["tagConstrained"] = sub.AllowTags != "" || len(sub.IgnoreTags) > 0
+	}
+	return f
 }
 
 func imageSelectorForSubscription(
