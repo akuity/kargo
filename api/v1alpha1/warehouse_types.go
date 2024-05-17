@@ -282,8 +282,9 @@ type WarehouseStatus struct {
 	// ObservedGeneration represents the .metadata.generation that this Warehouse
 	// was reconciled against.
 	ObservedGeneration int64 `json:"observedGeneration,omitempty" protobuf:"varint,4,opt,name=observedGeneration"`
-	// LastFreight refers to the last Freight produced by this Warehouse
-	LastFreight *FreightReference `json:"lastFreight,omitempty" protobuf:"bytes,5,opt,name=lastFreight"`
+	// LastFreightID is a reference to the system-assigned identifier (name) of
+	// the most recent Freight produced by the Warehouse.
+	LastFreightID string `json:"lastFreightID,omitempty" protobuf:"bytes,8,opt,name=lastFreightID"`
 	// DiscoveredArtifacts holds the artifacts discovered by the Warehouse.
 	DiscoveredArtifacts *DiscoveredArtifacts `json:"discoveredArtifacts,omitempty" protobuf:"bytes,7,opt,name=discoveredArtifacts"`
 }

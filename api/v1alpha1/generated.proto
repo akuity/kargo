@@ -1316,8 +1316,9 @@ message WarehouseStatus {
   // was reconciled against.
   optional int64 observedGeneration = 4;
 
-  // LastFreight refers to the last Freight produced by this Warehouse
-  optional FreightReference lastFreight = 5;
+  // LastFreightID is a reference to the system-assigned identifier (name) of
+  // the most recent Freight produced by the Warehouse.
+  optional string lastFreightID = 8;
 
   // DiscoveredArtifacts holds the artifacts discovered by the Warehouse.
   optional DiscoveredArtifacts discoveredArtifacts = 7;

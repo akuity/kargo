@@ -234,12 +234,7 @@ func (r *reconciler) syncWarehouse(
 			log.Debugf("created Freight %q in namespace %q", freight.Name, freight.Namespace)
 		}
 
-		status.LastFreight = &kargoapi.FreightReference{
-			Name:    freight.Name,
-			Commits: freight.Commits,
-			Images:  freight.Images,
-			Charts:  freight.Charts,
-		}
+		status.LastFreightID = freight.Name
 	}
 	return status, nil
 }
