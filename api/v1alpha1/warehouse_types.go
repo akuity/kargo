@@ -55,6 +55,14 @@ type WarehouseSpec struct {
 	// empty, the defaulting webhook will set the value of this field to the value
 	// of the shard label.
 	Shard string `json:"shard,omitempty" protobuf:"bytes,2,opt,name=shard"`
+	// Interval is the interval at which the Warehouse should discover new
+	// artifacts. This field is optional. When left unspecified, the field is
+	// implicitly treated as if its value were "5m0s".
+	//
+	// +kubebuilder:validation:Type=string
+	// +kubebuilder:validation:Pattern="^([0-9]+(\\.[0-9]+)?(s|m|h))+$"
+	// +kubebuilder:default="5m0s"
+	Interval metav1.Duration `json:"interval" protobuf:"bytes,4,opt,name=interval"`
 	// FreightCreationPolicy describes how Freight is created by this Warehouse.
 	// This field is optional. When left unspecified, the field is implicitly
 	// treated as if its value were "Automatic".
