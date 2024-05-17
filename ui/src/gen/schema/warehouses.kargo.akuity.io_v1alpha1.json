@@ -43,6 +43,14 @@
               "chart": {
                 "description": "Chart describes a subscription to a Helm chart repository.",
                 "properties": {
+                  "discoveryLimit": {
+                    "default": 20,
+                    "description": "DiscoveryLimit is an optional limit on the number of chart versions that\ncan be discovered for this subscription. The limit is applied after\nfiltering charts based on the SemverConstraint field.\nWhen left unspecified, the field is implicitly treated as if its value\nwere \"20\". The upper limit for this field is 100.",
+                    "format": "int32",
+                    "maximum": 100,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
                   "name": {
                     "description": "Name specifies the name of a Helm chart to subscribe to within a classic\nchart repository specified by the RepoURL field. This field is required\nwhen the RepoURL field points to a classic chart repository and MUST\notherwise be empty.",
                     "type": "string"
@@ -86,6 +94,14 @@
                       "SemVer"
                     ],
                     "type": "string"
+                  },
+                  "discoveryLimit": {
+                    "default": 20,
+                    "description": "DiscoveryLimit is an optional limit on the number of commits that can be\ndiscovered for this subscription. The limit is applied after filtering\ncommits based on the AllowTags and IgnoreTags fields.\nWhen left unspecified, the field is implicitly treated as if its value\nwere \"20\". The upper limit for this field is 100.",
+                    "format": "int32",
+                    "maximum": 100,
+                    "minimum": 1,
+                    "type": "integer"
                   },
                   "excludePaths": {
                     "description": "ExcludePaths is a list of selectors that designate paths in the repository\nthat should NOT trigger the production of new Freight when changes are\ndetected therein. When specified, changes in the identified paths will not\ntrigger Freight production. When not specified, paths that should trigger\nFreight production will be defined solely by IncludePaths. Selectors may be\ndefined using:\n  1. Exact paths to files or directories (ex. \"charts/foo\")\n  2. Glob patterns (prefix the pattern with \"glob:\"; ex. \"glob:*.yaml\")\n  3. Regular expressions (prefix the pattern with \"regex:\" or \"regexp:\";\n     ex. \"regexp:^.*\\.yaml$\")\nPaths selected by IncludePaths may be unselected by ExcludePaths. This\nis a useful method for including a broad set of paths and then excluding a\nsubset of them.",
@@ -134,6 +150,14 @@
                   "allowTags": {
                     "description": "AllowTags is a regular expression that can optionally be used to limit the\nimage tags that are considered in determining the newest version of an\nimage. This field is optional.",
                     "type": "string"
+                  },
+                  "discoveryLimit": {
+                    "default": 20,
+                    "description": "DiscoveryLimit is an optional limit on the number of image references\nthat can be discovered for this subscription. The limit is applied after\nfiltering images based on the AllowTags and IgnoreTags fields.\nWhen left unspecified, the field is implicitly treated as if its value\nwere \"20\". The upper limit for this field is 100.",
+                    "format": "int32",
+                    "maximum": 100,
+                    "minimum": 1,
+                    "type": "integer"
                   },
                   "gitRepoURL": {
                     "description": "GitRepoURL optionally specifies the URL of a Git repository that contains\nthe source code for the image repository referenced by the RepoURL field.\nWhen this is specified, Kargo MAY be able to infer and link to the exact\nrevision of that source code that was used to build the image.",

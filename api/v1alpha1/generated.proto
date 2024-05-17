@@ -291,6 +291,17 @@ message ChartSubscription {
   //
   // +kubebuilder:validation:Optional
   optional string semverConstraint = 3;
+
+  // DiscoveryLimit is an optional limit on the number of chart versions that
+  // can be discovered for this subscription. The limit is applied after
+  // filtering charts based on the SemverConstraint field.
+  // When left unspecified, the field is implicitly treated as if its value
+  // were "20". The upper limit for this field is 100.
+  //
+  // +kubebuilder:validation:Minimum=1
+  // +kubebuilder:validation:Maximum=100
+  // +kubebuilder:default=20
+  optional int32 discoveryLimit = 4;
 }
 
 // DiscoveredArtifacts holds the artifacts discovered by the Warehouse for its
@@ -657,6 +668,17 @@ message GitSubscription {
   // subset of them.
   // +kubebuilder:validation:Optional
   repeated string excludePaths = 9;
+
+  // DiscoveryLimit is an optional limit on the number of commits that can be
+  // discovered for this subscription. The limit is applied after filtering
+  // commits based on the AllowTags and IgnoreTags fields.
+  // When left unspecified, the field is implicitly treated as if its value
+  // were "20". The upper limit for this field is 100.
+  //
+  // +kubebuilder:validation:Minimum=1
+  // +kubebuilder:validation:Maximum=100
+  // +kubebuilder:default=20
+  optional int32 discoveryLimit = 10;
 }
 
 // Health describes the health of a Stage.
@@ -863,6 +885,17 @@ message ImageSubscription {
   // should be ignored when connecting to the repository. This should be enabled
   // only with great caution.
   optional bool insecureSkipTLSVerify = 8;
+
+  // DiscoveryLimit is an optional limit on the number of image references
+  // that can be discovered for this subscription. The limit is applied after
+  // filtering images based on the AllowTags and IgnoreTags fields.
+  // When left unspecified, the field is implicitly treated as if its value
+  // were "20". The upper limit for this field is 100.
+  //
+  // +kubebuilder:validation:Minimum=1
+  // +kubebuilder:validation:Maximum=100
+  // +kubebuilder:default=20
+  optional int32 discoveryLimit = 9;
 }
 
 // KargoRenderImageUpdate describes how an image can be incorporated into a
