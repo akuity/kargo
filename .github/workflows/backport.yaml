@@ -25,8 +25,9 @@ jobs:
           github_token: ${{ secrets.AKUITYBOT_PAT }}
           # Match labels with pattern `backport/<target-branch>`
           label_pattern: '^backport\/([^ ]+)$'
-          # A bit shorter pull-request title than the default
-          pull_title: '[${target_branch}] ${pull_title}'
+          # A title which matches the linter constraints for semantic PR titles,
+          # while still being descriptive about the target branch
+          pull_title: 'chore(backport ${target_branch}): ${pull_title}'
           # Simpler PR description than default
           pull_description: |-
             Automated backport to `${target_branch}`, triggered by a label in #${pull_number}.
