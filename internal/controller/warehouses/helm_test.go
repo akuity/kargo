@@ -131,7 +131,7 @@ func TestDiscoverCharts(t *testing.T) {
 				{Chart: &kargoapi.ChartSubscription{}},
 			},
 			assertions: func(t *testing.T, results []kargoapi.ChartDiscoveryResult, err error) {
-				require.ErrorContains(t, err, "error discovering latest suitable chart versions")
+				require.ErrorContains(t, err, "error discovering latest chart versions")
 				require.ErrorContains(t, err, "something went wrong")
 				require.Empty(t, results)
 			},
@@ -156,7 +156,7 @@ func TestDiscoverCharts(t *testing.T) {
 				}},
 			},
 			assertions: func(t *testing.T, results []kargoapi.ChartDiscoveryResult, err error) {
-				require.ErrorContains(t, err, "error discovering latest suitable chart versions for chart")
+				require.ErrorContains(t, err, "error discovering latest chart versions for chart")
 				require.ErrorContains(t, err, "something went wrong")
 				require.Empty(t, results)
 			},
