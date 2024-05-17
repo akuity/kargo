@@ -126,10 +126,10 @@ func (r *reconciler) discoverCommits(
 }
 
 func (r *reconciler) discoverBranchHistory(repo git.Repo, sub kargoapi.GitSubscription) ([]git.CommitMetadata, error) {
-	const limit = 20
+	limit := int(sub.DiscoveryLimit)
 	var filteredCommits = make([]git.CommitMetadata, 0, limit)
-	for skip := uint(0); ; skip += limit {
-		commits, err := r.listCommitsFn(repo, limit, skip)
+	for skip := uint(0); ; skip += uint(limit) {
+		commits, err := r.listCommitsFn(repo, uint(limit), skip)
 		if err != nil {
 			return nil, fmt.Errorf("error listing commits from git repo %q: %w", sub.RepoURL, err)
 		}
@@ -223,7 +223,7 @@ func (r *reconciler) discoverTags(repo git.Repo, sub kargoapi.GitSubscription) (
 
 	// If no include or exclude paths are specified, return the first tags up to
 	// the limit.
-	const limit = 20
+	limit := int(sub.DiscoveryLimit)
 	if len(tags) == 0 || (sub.IncludePaths == nil && sub.ExcludePaths == nil) {
 		return trimSlice(tags, limit), nil
 	}

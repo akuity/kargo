@@ -468,28 +468,25 @@ func TestDiscoverTags(t *testing.T) {
 			name: "more tags than limit",
 			sub: kargoapi.GitSubscription{
 				CommitSelectionStrategy: kargoapi.CommitSelectionStrategyNewestTag,
+				DiscoveryLimit:          3,
 			},
 			reconciler: &reconciler{
 				listTagsFn: func(git.Repo) ([]git.TagMetadata, error) {
 					return []git.TagMetadata{
 						{Tag: "a"}, {Tag: "b"}, {Tag: "c"}, {Tag: "d"}, {Tag: "e"},
-						{Tag: "f"}, {Tag: "g"}, {Tag: "h"}, {Tag: "i"}, {Tag: "j"},
-						{Tag: "k"}, {Tag: "l"}, {Tag: "m"}, {Tag: "n"}, {Tag: "o"},
-						{Tag: "p"}, {Tag: "q"}, {Tag: "r"}, {Tag: "s"}, {Tag: "t"},
-						{Tag: "u"}, {Tag: "v"}, {Tag: "w"}, {Tag: "x"}, {Tag: "y"},
-						{Tag: "z"},
 					}, nil
 				},
 			},
 			assertions: func(t *testing.T, tags []git.TagMetadata, err error) {
 				require.NoError(t, err)
-				require.Len(t, tags, 20)
+				require.Len(t, tags, 3)
 			},
 		},
 		{
 			name: "with path filters",
 			sub: kargoapi.GitSubscription{
-				IncludePaths: []string{regexpPrefix + "^.*third_path_to_a/file$"},
+				IncludePaths:   []string{regexpPrefix + "^.*third_path_to_a/file$"},
+				DiscoveryLimit: 20,
 			},
 			reconciler: &reconciler{
 				listTagsFn: func(git.Repo) ([]git.TagMetadata, error) {
