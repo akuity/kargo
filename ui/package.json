@@ -59,7 +59,7 @@
     "@monaco-editor/react": "^4.6.0",
     "@tanstack/react-query": "^5.17.10",
     "@types/dagre": "^0.7.52",
-    "antd": "^5.13.0",
+    "antd": "^5.17.2",
     "classnames": "^2.5.1",
     "dagre": "^0.8.5",
     "date-fns": "^2.30.0",

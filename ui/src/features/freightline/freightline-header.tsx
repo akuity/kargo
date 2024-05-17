@@ -6,7 +6,7 @@ import {
   faTruckArrowRight
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Tooltip } from 'antd';
+import { Select, Tooltip } from 'antd';
 import { useContext } from 'react';
 
 import { ColorContext } from '@ui/context/colors';
@@ -17,12 +17,18 @@ export const FreightlineHeader = ({
   promotingStage,
   action,
   cancel,
-  downstreamSubs
+  downstreamSubs,
+  selectedWarehouse,
+  setSelectedWarehouse,
+  warehouses
 }: {
   promotingStage?: string;
   action?: FreightlineAction;
   cancel: () => void;
   downstreamSubs?: string[];
+  selectedWarehouse: string;
+  setSelectedWarehouse: (warehouse: string) => void;
+  warehouses: string[];
 }) => {
   const stageColorMap = useContext(ColorContext);
 
@@ -89,10 +95,34 @@ export const FreightlineHeader = ({
             </div>
           </>
         ) : (
-          <div className='flex items-center text-neutral-500 text-xs'>
-            <FontAwesomeIcon icon={faTimeline} className='mr-2' />
-            FREIGHTLINE
-          </div>
+          <>
+            <div className='flex items-center text-neutral-500 text-xs'>
+              <FontAwesomeIcon icon={faTimeline} className='mr-2' />
+              FREIGHTLINE
+            </div>
+            {(warehouses || []).length > 1 && (
+              <div className='ml-auto mr-4 -mb-1'>
+                <Select
+                  className='w-48'
+                  value={selectedWarehouse}
+                  onChange={(value) => setSelectedWarehouse(value)}
+                  labelRender={({ label }) => <div className='text-xs font-semibold'>{label}</div>}
+                  optionRender={(opt) => (
+                    <div className='text-xs font-normal w-full h-full flex items-center'>
+                      <div>{opt.label}</div>
+                    </div>
+                  )}
+                  options={[
+                    ...(warehouses || []).map((w) => ({ value: w, label: w })),
+                    {
+                      value: '',
+                      label: 'All Warehouses'
+                    }
+                  ]}
+                />
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
