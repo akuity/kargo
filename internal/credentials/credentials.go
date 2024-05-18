@@ -14,6 +14,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/credentials/ecr"
+	"github.com/akuity/kargo/internal/credentials/gcp"
 	"github.com/akuity/kargo/internal/git"
 	"github.com/akuity/kargo/internal/helm"
 	"github.com/akuity/kargo/internal/logging"
@@ -72,6 +73,7 @@ type Database interface {
 type kubernetesDatabase struct {
 	kargoClient client.Client
 	ecrHelper   ecr.CredentialHelper
+	gcpHelper   gcp.CredentialHelper
 	cfg         KubernetesDatabaseConfig
 }
 
@@ -98,6 +100,7 @@ func NewKubernetesDatabase(
 	return &kubernetesDatabase{
 		kargoClient: kargoClient,
 		ecrHelper:   ecr.NewCredentialHelper(),
+		gcpHelper:   gcp.NewCredentialHelper(),
 		cfg:         cfg,
 	}
 }
@@ -152,7 +155,7 @@ func (k *kubernetesDatabase) Get(
 		return creds, false, nil
 	}
 
-	if creds, err = k.secretToCreds(credType, secret); err != nil {
+	if creds, err = k.secretToCreds(ctx, credType, secret); err != nil {
 		return creds, false, err
 	}
 
@@ -229,18 +232,28 @@ func (k *kubernetesDatabase) getCredentialsSecret(
 }
 
 func (k *kubernetesDatabase) secretToCreds(
-	credType Type, secret *corev1.Secret,
+	ctx context.Context, credType Type, secret *corev1.Secret,
 ) (Credentials, error) {
 	if credType == TypeImage {
 		// If the cred type is image, we'll try to derive username and password
-		// from an AWS access key id and secret.
-		username, password, err := k.ecrHelper.GetUsernameAndPassword(secret)
-		if err != nil {
+		// from:
+		//   1. AWS access key id and secret access key
+		//   2. Base64 encoded GCP service account key
+		var username, password string
+		var err error
+		// Try AWS
+		if username, password, err = k.ecrHelper.GetUsernameAndPassword(secret); err != nil {
 			return Credentials{}, err
 		}
-		if username != "" && password != "" {
-			// We have successfully derived the username and password from an AWS
-			// access key id and secret.
+		if username == "" { // Try GCP
+			if username, password, err = k.gcpHelper.GetUsernameAndPassword(
+				ctx, secret,
+			); err != nil {
+				return Credentials{}, err
+			}
+		}
+		if username != "" {
+			// We have successfully derived the username and password
 			return Credentials{
 				Username: username,
 				Password: password,

@@ -232,7 +232,7 @@ func TestSecretToCreds(t *testing.T) {
 		},
 	}
 	db := &kubernetesDatabase{}
-	creds, err := db.secretToCreds(TypeGit, secret)
+	creds, err := db.secretToCreds(context.Background(), TypeGit, secret)
 	require.NoError(t, err)
 	require.Equal(t, string(secret.Data["username"]), creds.Username)
 	require.Equal(t, string(secret.Data["password"]), creds.Password)
