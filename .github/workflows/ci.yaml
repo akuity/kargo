@@ -54,7 +54,7 @@ jobs:
     - name: Install nodejs
       uses: actions/setup-node@v4
       with:
-        node-version: "22.1.0"
+        node-version: "22.2.0"
         cache: "pnpm"
         cache-dependency-path: "**/pnpm-lock.yaml"
     - name: Run linter
@@ -128,7 +128,7 @@ jobs:
     - name: Install nodejs
       uses: actions/setup-node@v4
       with:
-        node-version: "22.1.0"
+        node-version: "22.2.0"
         cache: "pnpm"
         cache-dependency-path: "**/pnpm-lock.yaml"
     - name: Install nodejs dependencies
