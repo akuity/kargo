@@ -4313,11 +4313,12 @@ export class WarehouseStatus extends Message<WarehouseStatus> {
   observedGeneration?: bigint;
 
   /**
-   * LastFreight refers to the last Freight produced by this Warehouse
+   * LastFreightID is a reference to the system-assigned identifier (name) of
+   * the most recent Freight produced by the Warehouse.
    *
-   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.FreightReference lastFreight = 5;
+   * @generated from field: optional string lastFreightID = 8;
    */
-  lastFreight?: FreightReference;
+  lastFreightID?: string;
 
   /**
    * DiscoveredArtifacts holds the artifacts discovered by the Warehouse.
@@ -4337,7 +4338,7 @@ export class WarehouseStatus extends Message<WarehouseStatus> {
     { no: 6, name: "lastHandledRefresh", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 3, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 4, name: "observedGeneration", kind: "scalar", T: 3 /* ScalarType.INT64 */, opt: true },
-    { no: 5, name: "lastFreight", kind: "message", T: FreightReference, opt: true },
+    { no: 8, name: "lastFreightID", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 7, name: "discoveredArtifacts", kind: "message", T: DiscoveredArtifacts, opt: true },
   ]);
 

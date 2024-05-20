@@ -3,6 +3,7 @@ import {
   faChevronDown,
   faEye,
   faEyeSlash,
+  faFilter,
   faMasksTheater,
   faPalette,
   faRefresh,
@@ -94,6 +95,23 @@ export const Pipelines = () => {
     `${name}-hideSubscriptions`,
     false
   );
+
+  const [selectedWarehouse, setSelectedWarehouse] = React.useState('');
+
+  const [filteredFreight, availableWarehouses] = useMemo(() => {
+    const allFreight = freightData?.groups['']?.freight || [];
+    const filteredFreight = [] as Freight[];
+    const warehouses = new Set<string>();
+    allFreight.forEach((f) => {
+      if (f.warehouse) {
+        warehouses.add(f.warehouse);
+      }
+      if (!selectedWarehouse || f.warehouse === selectedWarehouse) {
+        filteredFreight.push(f);
+      }
+    });
+    return [filteredFreight, Array.from(warehouses)];
+  }, [freightData, selectedWarehouse]);
 
   const client = useQueryClient();
 
@@ -195,10 +213,16 @@ export const Pipelines = () => {
         <FreightlineHeader
           promotingStage={state.stage}
           action={state.action}
-          cancel={state.clear}
+          cancel={() => {
+            state.clear();
+            setSelectedWarehouse('');
+          }}
           downstreamSubs={(subscribersByStage[state.stage || ''] || []).map(
             (s) => s.metadata?.name || ''
           )}
+          selectedWarehouse={selectedWarehouse || ''}
+          setSelectedWarehouse={setSelectedWarehouse}
+          warehouses={availableWarehouses}
         />
         <FreightlineWrapper>
           <Suspense
@@ -214,7 +238,7 @@ export const Pipelines = () => {
               }
               refetchFreight={refetchFreightData}
               onHover={onHover}
-              freight={freightData?.groups['']?.freight || []}
+              freight={filteredFreight}
               state={state}
               promotionEligible={{}}
               stagesPerFreight={stagesPerFreight}
@@ -303,9 +327,15 @@ export const Pipelines = () => {
                             (subscribersByStage[node?.data?.metadata?.name || ''] || []).length <= 1
                           }
                           onPromoteClick={(type: FreightlineAction) => {
+                            const currentWarehouse =
+                              node.data?.status?.currentFreight?.warehouse ||
+                              node.data?.spec?.subscriptions?.warehouse ||
+                              '';
+                            setSelectedWarehouse(currentWarehouse);
                             if (state.stage === node.data?.metadata?.name) {
                               // deselect
                               state.clear();
+                              setSelectedWarehouse('');
                             } else {
                               const stageName = node.data?.metadata?.name || '';
                               // default to current freight when promoting subscribers
@@ -355,7 +385,24 @@ export const Pipelines = () => {
                         }
                       >
                         {node.type === NodeType.WAREHOUSE && (
-                          <div className='flex w-full h-full'>
+                          <div className='flex w-full h-full gap-2 justify-center items-center'>
+                            {(availableWarehouses || []).length > 1 && (
+                              <Button
+                                icon={<FontAwesomeIcon icon={faFilter} />}
+                                size='small'
+                                type={
+                                  selectedWarehouse === node.warehouseName ? 'primary' : 'default'
+                                }
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedWarehouse(
+                                    selectedWarehouse === node.warehouseName
+                                      ? ''
+                                      : node.warehouseName
+                                  );
+                                }}
+                              />
+                            )}
                             <Button
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -366,7 +413,6 @@ export const Pipelines = () => {
                               }}
                               icon={<FontAwesomeIcon icon={faRefresh} />}
                               size='small'
-                              className='m-auto'
                             >
                               Refresh
                             </Button>

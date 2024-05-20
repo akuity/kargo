@@ -5,7 +5,7 @@ go 1.22
 toolchain go1.22.3
 
 require (
-	connectrpc.com/connect v1.16.1
+	connectrpc.com/connect v1.16.2
 	connectrpc.com/grpchealth v1.3.0
 	github.com/AlecAivazis/survey/v2 v2.3.7
 	github.com/Masterminds/semver/v3 v3.2.1

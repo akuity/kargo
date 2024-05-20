@@ -136,7 +136,7 @@ func TestSyncWarehouse(t *testing.T) {
 				require.NotNil(t, status.DiscoveredArtifacts)
 				// Ensure that even if the Freight already exists, the status
 				// is still updated with the latest Freight.
-				require.NotNil(t, status.LastFreight)
+				require.NotEmpty(t, status.LastFreightID)
 			},
 		},
 
@@ -172,7 +172,7 @@ func TestSyncWarehouse(t *testing.T) {
 				require.ErrorContains(t, err, "something went wrong")
 				require.ErrorContains(t, err, "error creating Freight")
 				require.NotNil(t, status.DiscoveredArtifacts)
-				require.Nil(t, status.LastFreight)
+				require.Empty(t, status.LastFreightID)
 			},
 		},
 
@@ -209,7 +209,7 @@ func TestSyncWarehouse(t *testing.T) {
 			assertions: func(t *testing.T, status kargoapi.WarehouseStatus, err error) {
 				require.NoError(t, err)
 				require.NotNil(t, status.DiscoveredArtifacts)
-				require.NotNil(t, status.LastFreight)
+				require.NotEmpty(t, status.LastFreightID)
 			},
 		},
 
@@ -228,7 +228,7 @@ func TestSyncWarehouse(t *testing.T) {
 			assertions: func(t *testing.T, status kargoapi.WarehouseStatus, err error) {
 				require.NoError(t, err)
 				require.NotNil(t, status.DiscoveredArtifacts)
-				require.Nil(t, status.LastFreight)
+				require.Empty(t, status.LastFreightID)
 			},
 		},
 
