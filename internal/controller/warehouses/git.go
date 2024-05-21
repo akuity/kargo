@@ -7,8 +7,10 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/Masterminds/semver/v3"
+	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -25,6 +27,9 @@ const (
 
 type pathSelector func(path string) (bool, error)
 
+// discoverCommits discovers commits from the given Git repositories based on the
+// given subscriptions. It returns a list of GitDiscoveryResult objects, each
+// containing the discovered commits for the corresponding subscription.
 func (r *reconciler) discoverCommits(
 	ctx context.Context,
 	namespace string,
@@ -41,6 +46,7 @@ func (r *reconciler) discoverCommits(
 
 		logger := logging.LoggerFromContext(ctx).WithField("repo", sub.RepoURL)
 
+		// Obtain credentials for the Git repository.
 		creds, ok, err := r.credentialsDB.Get(ctx, namespace, credentials.TypeGit, sub.RepoURL)
 		if err != nil {
 			return nil, fmt.Errorf(
@@ -61,6 +67,7 @@ func (r *reconciler) discoverCommits(
 			logger.Debug("found no credentials for git repo")
 		}
 
+		// Clone the Git repository.
 		cloneOpts := &git.CloneOptions{
 			Branch:                sub.Branch,
 			SingleBranch:          true,
@@ -78,6 +85,10 @@ func (r *reconciler) discoverCommits(
 			return nil, fmt.Errorf("failed to clone git repo %q: %w", sub.RepoURL, err)
 		}
 
+		// Enrich the logger with additional fields for this subscription.
+		logger = logger.WithFields(gitDiscoveryLogFields(sub))
+
+		// Discover commits based on the subscription's commit selection strategy.
 		var discovered []kargoapi.DiscoveredCommit
 		switch sub.CommitSelectionStrategy {
 		case kargoapi.CommitSelectionStrategyLexical,
@@ -101,6 +112,11 @@ func (r *reconciler) discoverCommits(
 					Committer:   meta.Committer,
 					CreatorDate: &metav1.Time{Time: meta.CreatorDate},
 				})
+				logger.WithFields(log.Fields{
+					"tag":         meta.Tag,
+					"commit":      meta.CommitID,
+					"creatorDate": meta.CreatorDate.Format(time.RFC3339),
+				}).Trace("discovered commit from tag")
 			}
 		default:
 			commits, err := r.discoverBranchHistoryFn(repo, sub)
@@ -121,18 +137,36 @@ func (r *reconciler) discoverCommits(
 					Committer:   meta.Committer,
 					CreatorDate: &metav1.Time{Time: meta.CommitDate},
 				})
+				logger.WithFields(log.Fields{
+					"commit":      meta.ID,
+					"creatorDate": meta.CommitDate.Format(time.RFC3339),
+				}).Trace("discovered commit from branch")
 			}
+		}
+
+		if len(discovered) == 0 {
+			results = append(results, kargoapi.GitDiscoveryResult{
+				RepoURL: sub.RepoURL,
+			})
+			logger.Debug("discovered no commits")
+			continue
 		}
 
 		results = append(results, kargoapi.GitDiscoveryResult{
 			RepoURL: sub.RepoURL,
 			Commits: discovered,
 		})
+		logger.Debugf("discovered %d commits", len(discovered))
 	}
 
 	return results, nil
 }
 
+// discoverBranchHistory returns a list of commits from the given Git repository
+// that match the given subscription's branch selection criteria. It returns the
+// list of commits that match the criteria, sorted in descending order. If the
+// list contains more than 20 commits, it is clipped to the 20 most recent
+// commits.
 func (r *reconciler) discoverBranchHistory(repo git.Repo, sub kargoapi.GitSubscription) ([]git.CommitMetadata, error) {
 	limit := int(sub.DiscoveryLimit)
 	var filteredCommits = make([]git.CommitMetadata, 0, limit)
@@ -448,6 +482,26 @@ func (r *reconciler) listTags(repo git.Repo) ([]git.TagMetadata, error) {
 
 func (r *reconciler) getDiffPathsForCommitID(repo git.Repo, commitID string) ([]string, error) {
 	return repo.GetDiffPathsForCommitID(commitID)
+}
+
+// gitDiscoveryLogFields returns a set of log fields for a Git subscription
+// based on the subscription's configuration.
+func gitDiscoveryLogFields(sub kargoapi.GitSubscription) log.Fields {
+	f := log.Fields{
+		"selectionStrategy": sub.CommitSelectionStrategy,
+		"pathConstrained":   sub.IncludePaths != nil || sub.ExcludePaths != nil,
+	}
+	if sub.Branch != "" {
+		f["branch"] = sub.Branch
+	}
+	switch sub.CommitSelectionStrategy {
+	case kargoapi.CommitSelectionStrategySemVer:
+		f["semverConstraint"] = sub.SemverConstraint
+		f["tagConstrained"] = sub.AllowTags != "" || len(sub.IgnoreTags) > 0
+	case kargoapi.CommitSelectionStrategyLexical, kargoapi.CommitSelectionStrategyNewestTag:
+		f["tagConstrained"] = sub.AllowTags != "" || len(sub.IgnoreTags) > 0
+	}
+	return f
 }
 
 // shortenString truncates the given string to the given length, appending an

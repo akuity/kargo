@@ -48,17 +48,23 @@ func (r *reconciler) discoverCharts(
 			logger.Debug("found no credentials for chart repo")
 		}
 
+		// Enrich the logger with additional fields for this subscription.
+		if sub.SemverConstraint != "" {
+			logger = logger.WithField("semverConstraint", sub.SemverConstraint)
+		}
+
+		// Discover versions of the chart based on the semver constraint.
 		versions, err := r.discoverChartVersionsFn(ctx, sub.RepoURL, sub.Name, sub.SemverConstraint, helmCreds)
 		if err != nil {
 			if sub.Name == "" {
 				return nil, fmt.Errorf(
-					"error discovering latest suitable chart versions in repository %q: %w",
+					"error discovering latest chart versions in repository %q: %w",
 					sub.RepoURL,
 					err,
 				)
 			}
 			return nil, fmt.Errorf(
-				"error discovering latest suitable chart versions for chart %q in repository %q: %w",
+				"error discovering latest chart versions for chart %q in repository %q: %w",
 				sub.Name,
 				sub.RepoURL,
 				err,
@@ -66,22 +72,22 @@ func (r *reconciler) discoverCharts(
 		}
 
 		if len(versions) == 0 {
-			logger.Debug("discovered no suitable chart versions")
 			results = append(results, kargoapi.ChartDiscoveryResult{
 				RepoURL:          sub.RepoURL,
 				Name:             sub.Name,
 				SemverConstraint: sub.SemverConstraint,
 			})
+			logger.Debug("discovered no chart versions")
 			continue
 		}
 
-		logger.Debugf("discovered %d suitable chart versions", len(versions))
 		results = append(results, kargoapi.ChartDiscoveryResult{
 			RepoURL:          sub.RepoURL,
 			Name:             sub.Name,
 			SemverConstraint: sub.SemverConstraint,
 			Versions:         trimSlice(versions, int(sub.DiscoveryLimit)),
 		})
+		logger.Debugf("discovered %d chart versions", len(versions))
 	}
 
 	return results, nil

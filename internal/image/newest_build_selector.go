@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"sort"
 	"sync"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 
@@ -97,13 +98,14 @@ func (n *newestBuildSelector) Select(ctx context.Context) ([]Image, error) {
 			continue
 		}
 
-		logger.WithFields(log.Fields{
-			"tag":    image.Tag,
-			"digest": image.Digest,
-		}).Trace("discovered image")
-
 		discoveredImage.Tag = image.Tag
 		discoveredImages = append(discoveredImages, *discoveredImage)
+
+		logger.WithFields(log.Fields{
+			"tag":       discoveredImage.Tag,
+			"digest":    discoveredImage.Digest,
+			"createdAt": discoveredImage.CreatedAt.Format(time.RFC3339),
+		}).Trace("discovered image")
 	}
 
 	if len(discoveredImages) == 0 {
