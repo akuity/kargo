@@ -62,8 +62,8 @@ func NewPromotion(
 	return promotion
 }
 
-func NewPromoWentTerminalPredicate(logger *log.Entry) PromoWentTerminal {
-	return PromoWentTerminal{
+func NewPromoWentTerminalPredicate(logger *log.Entry) PromoWentTerminal[*kargoapi.Promotion] {
+	return PromoWentTerminal[*kargoapi.Promotion]{
 		logger: logger,
 	}
 }
@@ -71,46 +71,39 @@ func NewPromoWentTerminalPredicate(logger *log.Entry) PromoWentTerminal {
 // PromoWentTerminal is a predicate that returns true if a promotion went terminal.
 // Used by stage reconciler to enqueue a stage when it's associated promo is complete.
 // Also used by promo reconciler to enqueue the next highest priority promotion.
-type PromoWentTerminal struct {
+type PromoWentTerminal[T any] struct {
 	predicate.Funcs
 	logger *log.Entry
 }
 
-func (p PromoWentTerminal) Create(_ event.CreateEvent) bool {
+func (p PromoWentTerminal[T]) Create(event.TypedCreateEvent[T]) bool {
 	return false
 }
 
-func (p PromoWentTerminal) Delete(e event.DeleteEvent) bool {
-	promo, ok := e.Object.(*kargoapi.Promotion)
+func (p PromoWentTerminal[T]) Delete(e event.TypedDeleteEvent[T]) bool {
+	promo := any(e.Object).(*kargoapi.Promotion) // nolint: forcetypeassert
 	// if promo is deleted but was non-terminal, we want to enqueue the
 	// Stage so it can reset status.currentPromotion, as well as the
 	// enqueue the next priority Promo for reconciliation
-	return ok && !promo.Status.Phase.IsTerminal()
+	return !promo.Status.Phase.IsTerminal()
 }
 
-func (p PromoWentTerminal) Generic(_ event.GenericEvent) bool {
+func (p PromoWentTerminal[T]) Generic(event.TypedGenericEvent[T]) bool {
 	// we should never get here
 	return true
 }
 
-// Update implements default UpdateEvent filter for checking if a promotion went terminal
-func (p PromoWentTerminal) Update(e event.UpdateEvent) bool {
-	if e.ObjectOld == nil {
+// Update implements default TypedUpdateEvent filter for checking if a promotion
+// went terminal
+func (p PromoWentTerminal[T]) Update(e event.TypedUpdateEvent[T]) bool {
+	oldPromo := any(e.ObjectOld).(*kargoapi.Promotion) // nolint: forcetypeassert
+	if oldPromo == nil {
 		p.logger.Errorf("Update event has no old object to update: %v", e)
 		return false
 	}
-	if e.ObjectNew == nil {
+	newPromo := any(e.ObjectNew).(*kargoapi.Promotion) // nolint: forcetypeassert
+	if newPromo == nil {
 		p.logger.Errorf("Update event has no new object for update: %v", e)
-		return false
-	}
-	newPromo, ok := e.ObjectNew.(*kargoapi.Promotion)
-	if !ok {
-		p.logger.Errorf("Failed to convert new promo: %v", e.ObjectNew)
-		return false
-	}
-	oldPromo, ok := e.ObjectOld.(*kargoapi.Promotion)
-	if !ok {
-		p.logger.Errorf("Failed to convert old promo: %v", e.ObjectOld)
 		return false
 	}
 	if newPromo.Status.Phase.IsTerminal() && !oldPromo.Status.Phase.IsTerminal() {

@@ -6,6 +6,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 
 	"github.com/akuity/kargo/internal/logging"
+
+	_ "github.com/gogo/protobuf/gogoproto"
 )
 
 func main() {

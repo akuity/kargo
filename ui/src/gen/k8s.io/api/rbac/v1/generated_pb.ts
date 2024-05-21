@@ -19,6 +19,7 @@ export class AggregationRule extends Message<AggregationRule> {
    * ClusterRoleSelectors holds a list of selectors which will be used to find ClusterRoles and create the rules.
    * If any of the selectors match, then the ClusterRole's permissions will be added
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector clusterRoleSelectors = 1;
    */
@@ -69,6 +70,7 @@ export class ClusterRole extends Message<ClusterRole> {
   /**
    * Rules holds all the PolicyRules for this ClusterRole
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated k8s.io.api.rbac.v1.PolicyRule rules = 2;
    */
@@ -132,6 +134,7 @@ export class ClusterRoleBinding extends Message<ClusterRoleBinding> {
   /**
    * Subjects holds references to the objects the role applies to.
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated k8s.io.api.rbac.v1.Subject subjects = 2;
    */
@@ -285,6 +288,7 @@ export class ClusterRoleList extends Message<ClusterRoleList> {
 export class PolicyRule extends Message<PolicyRule> {
   /**
    * Verbs is a list of Verbs that apply to ALL the ResourceKinds contained in this rule. '*' represents all verbs.
+   * +listType=atomic
    *
    * @generated from field: repeated string verbs = 1;
    */
@@ -294,6 +298,7 @@ export class PolicyRule extends Message<PolicyRule> {
    * APIGroups is the name of the APIGroup that contains the resources.  If multiple API groups are specified, any action requested against one of
    * the enumerated resources in any API group will be allowed. "" represents the core API group and "*" represents all API groups.
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated string apiGroups = 2;
    */
@@ -302,6 +307,7 @@ export class PolicyRule extends Message<PolicyRule> {
   /**
    * Resources is a list of resources this rule applies to. '*' represents all resources.
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated string resources = 3;
    */
@@ -310,6 +316,7 @@ export class PolicyRule extends Message<PolicyRule> {
   /**
    * ResourceNames is an optional white list of names that the rule applies to.  An empty set means that everything is allowed.
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated string resourceNames = 4;
    */
@@ -320,6 +327,7 @@ export class PolicyRule extends Message<PolicyRule> {
    * Since non-resource URLs are not namespaced, this field is only applicable for ClusterRoles referenced from a ClusterRoleBinding.
    * Rules can either apply to API resources (such as "pods" or "secrets") or non-resource URL paths (such as "/api"),  but not both.
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated string nonResourceURLs = 5;
    */
@@ -374,6 +382,7 @@ export class Role extends Message<Role> {
   /**
    * Rules holds all the PolicyRules for this Role
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated k8s.io.api.rbac.v1.PolicyRule rules = 2;
    */
@@ -427,6 +436,7 @@ export class RoleBinding extends Message<RoleBinding> {
   /**
    * Subjects holds references to the objects the role applies to.
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated k8s.io.api.rbac.v1.Subject subjects = 2;
    */

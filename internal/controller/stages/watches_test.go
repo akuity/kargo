@@ -5,30 +5,32 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/event"
+
+	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
+	rollouts "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
 )
 
 func TestAppHealthOrSyncStatusChanged(t *testing.T) {
 	testCases := []struct {
 		name    string
-		old     map[string]any
-		new     map[string]any
+		old     *argocd.Application
+		new     *argocd.Application
 		updated bool
 	}{
 		{
 			name: "health changed",
-			old: map[string]any{
-				"status": map[string]any{
-					"health": map[string]any{
-						"status": "Healthy",
+			old: &argocd.Application{
+				Status: argocd.ApplicationStatus{
+					Health: argocd.HealthStatus{
+						Status: "Healthy",
 					},
 				},
 			},
-			new: map[string]any{
-				"status": map[string]any{
-					"health": map[string]any{
-						"status": "Degraded",
+			new: &argocd.Application{
+				Status: argocd.ApplicationStatus{
+					Health: argocd.HealthStatus{
+						Status: "Degraded",
 					},
 				},
 			},
@@ -36,17 +38,17 @@ func TestAppHealthOrSyncStatusChanged(t *testing.T) {
 		},
 		{
 			name: "health did not change",
-			old: map[string]any{
-				"status": map[string]any{
-					"health": map[string]any{
-						"status": "Healthy",
+			old: &argocd.Application{
+				Status: argocd.ApplicationStatus{
+					Health: argocd.HealthStatus{
+						Status: "Healthy",
 					},
 				},
 			},
-			new: map[string]any{
-				"status": map[string]any{
-					"health": map[string]any{
-						"status": "Healthy",
+			new: &argocd.Application{
+				Status: argocd.ApplicationStatus{
+					Health: argocd.HealthStatus{
+						Status: "Healthy",
 					},
 				},
 			},
@@ -54,17 +56,17 @@ func TestAppHealthOrSyncStatusChanged(t *testing.T) {
 		},
 		{
 			name: "sync status changed",
-			old: map[string]any{
-				"status": map[string]any{
-					"health": map[string]any{
-						"status": "Healthy",
+			old: &argocd.Application{
+				Status: argocd.ApplicationStatus{
+					Sync: argocd.SyncStatus{
+						Status: "",
 					},
 				},
 			},
-			new: map[string]any{
-				"status": map[string]any{
-					"health": map[string]any{
-						"status": "Degraded",
+			new: &argocd.Application{
+				Status: argocd.ApplicationStatus{
+					Sync: argocd.SyncStatus{
+						Status: "Synced",
 					},
 				},
 			},
@@ -72,17 +74,17 @@ func TestAppHealthOrSyncStatusChanged(t *testing.T) {
 		},
 		{
 			name: "sync status did not change",
-			old: map[string]any{
-				"status": map[string]any{
-					"sync": map[string]any{
-						"status": "Healthy",
+			old: &argocd.Application{
+				Status: argocd.ApplicationStatus{
+					Sync: argocd.SyncStatus{
+						Status: "Synced",
 					},
 				},
 			},
-			new: map[string]any{
-				"status": map[string]any{
-					"sync": map[string]any{
-						"status": "Healthy",
+			new: &argocd.Application{
+				Status: argocd.ApplicationStatus{
+					Sync: argocd.SyncStatus{
+						Status: "Synced",
 					},
 				},
 			},
@@ -90,17 +92,17 @@ func TestAppHealthOrSyncStatusChanged(t *testing.T) {
 		},
 		{
 			name: "revision changed",
-			old: map[string]any{
-				"status": map[string]any{
-					"sync": map[string]any{
-						"revision": "fake-revision",
+			old: &argocd.Application{
+				Status: argocd.ApplicationStatus{
+					Sync: argocd.SyncStatus{
+						Revision: "fake-revision",
 					},
 				},
 			},
-			new: map[string]any{
-				"status": map[string]any{
-					"sync": map[string]any{
-						"revision": "different-fake-revision",
+			new: &argocd.Application{
+				Status: argocd.ApplicationStatus{
+					Sync: argocd.SyncStatus{
+						Revision: "different-fake-revision",
 					},
 				},
 			},
@@ -108,17 +110,17 @@ func TestAppHealthOrSyncStatusChanged(t *testing.T) {
 		},
 		{
 			name: "revision did not change",
-			old: map[string]any{
-				"status": map[string]any{
-					"sync": map[string]any{
-						"revision": "fake-revision",
+			old: &argocd.Application{
+				Status: argocd.ApplicationStatus{
+					Sync: argocd.SyncStatus{
+						Revision: "fake-revision",
 					},
 				},
 			},
-			new: map[string]any{
-				"status": map[string]any{
-					"sync": map[string]any{
-						"revision": "fake-revision",
+			new: &argocd.Application{
+				Status: argocd.ApplicationStatus{
+					Sync: argocd.SyncStatus{
+						Revision: "fake-revision",
 					},
 				},
 			},
@@ -128,8 +130,8 @@ func TestAppHealthOrSyncStatusChanged(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			e := event.UpdateEvent{
-				ObjectOld: &unstructured.Unstructured{Object: testCase.old},
-				ObjectNew: &unstructured.Unstructured{Object: testCase.new},
+				ObjectOld: testCase.old,
+				ObjectNew: testCase.new,
 			}
 			require.Equal(
 				t,
@@ -143,34 +145,34 @@ func TestAppHealthOrSyncStatusChanged(t *testing.T) {
 func TestAnalysisRunPhaseChanged(t *testing.T) {
 	testCases := []struct {
 		name    string
-		old     map[string]any
-		new     map[string]any
+		old     *rollouts.AnalysisRun
+		new     *rollouts.AnalysisRun
 		updated bool
 	}{
 		{
 			name: "phase changed",
-			old: map[string]any{
-				"status": map[string]any{
-					"phase": "old-phase",
+			old: &rollouts.AnalysisRun{
+				Status: rollouts.AnalysisRunStatus{
+					Phase: "old-phase",
 				},
 			},
-			new: map[string]any{
-				"status": map[string]any{
-					"phase": "new-phase",
+			new: &rollouts.AnalysisRun{
+				Status: rollouts.AnalysisRunStatus{
+					Phase: "new-phase",
 				},
 			},
 			updated: true,
 		},
 		{
 			name: "phase did not change",
-			old: map[string]any{
-				"status": map[string]any{
-					"phase": "old-phase",
+			old: &rollouts.AnalysisRun{
+				Status: rollouts.AnalysisRunStatus{
+					Phase: "old-phase",
 				},
 			},
-			new: map[string]any{
-				"status": map[string]any{
-					"phase": "old-phase",
+			new: &rollouts.AnalysisRun{
+				Status: rollouts.AnalysisRunStatus{
+					Phase: "old-phase",
 				},
 			},
 			updated: false,
@@ -179,8 +181,8 @@ func TestAnalysisRunPhaseChanged(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			e := event.UpdateEvent{
-				ObjectOld: &unstructured.Unstructured{Object: testCase.old},
-				ObjectNew: &unstructured.Unstructured{Object: testCase.new},
+				ObjectOld: testCase.old,
+				ObjectNew: testCase.new,
 			}
 			require.Equal(
 				t,

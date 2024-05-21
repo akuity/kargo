@@ -16,6 +16,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
+	rollouts "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
 	"github.com/akuity/kargo/internal/kubeclient"
 	"github.com/akuity/kargo/internal/logging"
 )
@@ -23,59 +25,52 @@ import (
 // verifiedFreightEventHandler is an event handler that enqueues downstream
 // Stages when Freight is marked as verified in a Stage, so that those Stages
 // can reconcile and possibly create a Promotion if auto-promotion is enabled.
-type verifiedFreightEventHandler struct {
+type verifiedFreightEventHandler[T any] struct {
 	kargoClient   client.Client
 	shardSelector labels.Selector
 }
 
-// Create implements EventHandler.
-func (v *verifiedFreightEventHandler) Create(
+// Create implements TypedEventHandler.
+func (v *verifiedFreightEventHandler[T]) Create(
 	context.Context,
-	event.CreateEvent,
+	event.TypedCreateEvent[T],
 	workqueue.RateLimitingInterface,
 ) {
 	// No-op
 }
 
-// Delete implements EventHandler.
-func (v *verifiedFreightEventHandler) Delete(
+// Delete implements TypedEventHandler.
+func (v *verifiedFreightEventHandler[T]) Delete(
 	context.Context,
-	event.DeleteEvent,
+	event.TypedDeleteEvent[T],
 	workqueue.RateLimitingInterface,
 ) {
 	// No-op
 }
 
-// Generic implements EventHandler.
-func (v *verifiedFreightEventHandler) Generic(
+// Generic implements TypedEventHandler.
+func (v *verifiedFreightEventHandler[T]) Generic(
 	context.Context,
-	event.GenericEvent,
+	event.TypedGenericEvent[T],
 	workqueue.RateLimitingInterface,
 ) {
 	// No-op
 }
 
-// Update implements EventHandler.
-func (v *verifiedFreightEventHandler) Update(
+// Update implements TypedEventHandler.
+func (v *verifiedFreightEventHandler[T]) Update(
 	ctx context.Context,
-	evt event.UpdateEvent,
+	evt event.TypedUpdateEvent[T],
 	wq workqueue.RateLimitingInterface,
 ) {
 	logger := logging.LoggerFromContext(ctx)
-	if evt.ObjectOld == nil || evt.ObjectNew == nil {
+	oldFreight := any(evt.ObjectOld).(*kargoapi.Freight) // nolint: forcetypeassert
+	newFreight := any(evt.ObjectNew).(*kargoapi.Freight) // nolint: forcetypeassert
+	if oldFreight == nil || newFreight == nil {
 		logger.Errorf("Update event has no old or new object to update: %v", evt)
 		return
 	}
-	oldFreight, ok := evt.ObjectOld.(*kargoapi.Freight)
-	if !ok {
-		logger.Errorf("Failed to convert old Freight: %v", evt.ObjectOld)
-		return
-	}
-	newFreight, ok := evt.ObjectNew.(*kargoapi.Freight)
-	if !ok {
-		logger.Errorf("Failed to convert new Freight: %v", evt.ObjectNew)
-		return
-	}
+
 	newlyVerifiedStages := getNewlyVerifiedStages(oldFreight, newFreight)
 	downstreamStages := map[string]struct{}{}
 	for _, newlyVerifiedStage := range newlyVerifiedStages {
@@ -132,56 +127,48 @@ func getNewlyVerifiedStages(old, new *kargoapi.Freight) []string {
 // approvedFreightEventHandler is an event handler that enqueues Stages when
 // Freight is marked as approved for them, so that those Stages can reconcile
 // and possibly create a Promotion if auto-promotion is enabled.
-type approvedFreightEventHandler struct {
+type approvedFreightEventHandler[T any] struct {
 	kargoClient client.Client
 }
 
-// Create implements EventHandler.
-func (a *approvedFreightEventHandler) Create(
+// Create implements TypedEventHandler.
+func (a *approvedFreightEventHandler[T]) Create(
 	context.Context,
-	event.CreateEvent,
+	event.TypedCreateEvent[T],
 	workqueue.RateLimitingInterface,
 ) {
 	// No-op
 }
 
-// Delete implements EventHandler.
-func (a *approvedFreightEventHandler) Delete(
+// Delete implements TypedEventHandler.
+func (a *approvedFreightEventHandler[T]) Delete(
 	context.Context,
-	event.DeleteEvent,
+	event.TypedDeleteEvent[T],
 	workqueue.RateLimitingInterface,
 ) {
 	// No-op
 }
 
-// Generic implements EventHandler.
-func (a *approvedFreightEventHandler) Generic(
+// Generic implements TypedEventHandler.
+func (a *approvedFreightEventHandler[T]) Generic(
 	context.Context,
-	event.GenericEvent,
+	event.TypedGenericEvent[T],
 	workqueue.RateLimitingInterface,
 ) {
 	// No-op
 }
 
-// Update implements EventHandler.
-func (a *approvedFreightEventHandler) Update(
+// Update implements TypedEventHandler.
+func (a *approvedFreightEventHandler[T]) Update(
 	ctx context.Context,
-	evt event.UpdateEvent,
+	evt event.TypedUpdateEvent[T],
 	wq workqueue.RateLimitingInterface,
 ) {
 	logger := logging.LoggerFromContext(ctx)
-	if evt.ObjectOld == nil || evt.ObjectNew == nil {
+	oldFreight := any(evt.ObjectOld).(*kargoapi.Freight) // nolint: forcetypeassert
+	newFreight := any(evt.ObjectNew).(*kargoapi.Freight) // nolint: forcetypeassert
+	if oldFreight == nil || newFreight == nil {
 		logger.Errorf("Update event has no old or new object to update: %v", evt)
-		return
-	}
-	oldFreight, ok := evt.ObjectOld.(*kargoapi.Freight)
-	if !ok {
-		logger.Errorf("Failed to convert old Freight: %v", evt.ObjectOld)
-		return
-	}
-	newFreight, ok := evt.ObjectNew.(*kargoapi.Freight)
-	if !ok {
-		logger.Errorf("Failed to convert new Freight: %v", evt.ObjectNew)
 		return
 	}
 	newlyApprovedStages := getNewlyApprovedStages(oldFreight, newFreight)
@@ -215,19 +202,19 @@ func getNewlyApprovedStages(old, new *kargoapi.Freight) []string {
 // subscribed to a Freight's Warehouse whenever new Freight is created, so that
 // those Stages can reconcile and possibly create a Promotion if auto-promotion
 // is enabled.
-type createdFreightEventHandler struct {
+type createdFreightEventHandler[T any] struct {
 	kargoClient   client.Client
 	shardSelector labels.Selector
 }
 
-// Create implements EventHandler.
-func (c *createdFreightEventHandler) Create(
+// Create implements TypedEventHandler.
+func (c *createdFreightEventHandler[T]) Create(
 	ctx context.Context,
-	evt event.CreateEvent,
+	evt event.TypedCreateEvent[T],
 	wq workqueue.RateLimitingInterface,
 ) {
 	logger := logging.LoggerFromContext(ctx)
-	freight := evt.Object.(*kargoapi.Freight) // nolint: forcetypeassert
+	freight := any(evt.Object).(*kargoapi.Freight) // nolint: forcetypeassert
 	stages := kargoapi.StageList{}
 	if err := c.kargoClient.List(
 		ctx,
@@ -264,28 +251,28 @@ func (c *createdFreightEventHandler) Create(
 	}
 }
 
-// Delete implements EventHandler.
-func (c *createdFreightEventHandler) Delete(
+// Delete implements TypedEventHandler.
+func (c *createdFreightEventHandler[T]) Delete(
 	context.Context,
-	event.DeleteEvent,
+	event.TypedDeleteEvent[T],
 	workqueue.RateLimitingInterface,
 ) {
 	// No-op
 }
 
-// Generic implements EventHandler.
-func (c *createdFreightEventHandler) Generic(
+// Generic implements TypedEventHandler.
+func (c *createdFreightEventHandler[T]) Generic(
 	context.Context,
-	event.GenericEvent,
+	event.TypedGenericEvent[T],
 	workqueue.RateLimitingInterface,
 ) {
 	// No-op
 }
 
 // Update implements EventHandler.
-func (c *createdFreightEventHandler) Update(
+func (c *createdFreightEventHandler[T]) Update(
 	context.Context,
-	event.UpdateEvent,
+	event.TypedUpdateEvent[T],
 	workqueue.RateLimitingInterface,
 ) {
 	// No-op
@@ -294,45 +281,46 @@ func (c *createdFreightEventHandler) Update(
 // updatedArgoCDAppHandler is an event handler that enqueues Stages associated
 // with an Argo CD Application whenever that Application's health or sync status
 // changes, so that those Stages can reconcile.
-type updatedArgoCDAppHandler struct {
+type updatedArgoCDAppHandler[T any] struct {
 	kargoClient   client.Client
 	shardSelector labels.Selector
 }
 
-// Create implements EventHandler.
-func (u *updatedArgoCDAppHandler) Create(
+// Create implements TypedEventHandler.
+func (u *updatedArgoCDAppHandler[T]) Create(
 	context.Context,
-	event.CreateEvent,
+	event.TypedCreateEvent[T],
 	workqueue.RateLimitingInterface,
 ) {
 	// No-op
 }
 
-// Delete implements EventHandler.
-func (u *updatedArgoCDAppHandler) Delete(
+// Delete implements TypedEventHandler.
+func (u *updatedArgoCDAppHandler[T]) Delete(
 	context.Context,
-	event.DeleteEvent,
+	event.TypedDeleteEvent[T],
 	workqueue.RateLimitingInterface,
 ) {
 	// No-op
 }
 
-// Generic implements EventHandler.
-func (u *updatedArgoCDAppHandler) Generic(
+// Generic implements TypedEventHandler.
+func (u *updatedArgoCDAppHandler[T]) Generic(
 	context.Context,
-	event.GenericEvent,
+	event.TypedGenericEvent[T],
 	workqueue.RateLimitingInterface,
 ) {
 	// No-op
 }
 
-// Update implements EventHandler.
-func (u *updatedArgoCDAppHandler) Update(
+// Update implements TypedEventHandler.
+func (u *updatedArgoCDAppHandler[T]) Update(
 	ctx context.Context,
-	e event.UpdateEvent,
+	e event.TypedUpdateEvent[T],
 	wq workqueue.RateLimitingInterface,
 ) {
 	if appHealthOrSyncStatusChanged(ctx, e) {
+		newApp := any(e.ObjectNew).(*argocd.Application) // nolint: forcetypeassert
 		logger := logging.LoggerFromContext(ctx)
 		stages := &kargoapi.StageList{}
 		if err := u.kargoClient.List(
@@ -341,20 +329,14 @@ func (u *updatedArgoCDAppHandler) Update(
 			&client.ListOptions{
 				FieldSelector: fields.OneTermEqualSelector(
 					kubeclient.StagesByArgoCDApplicationsIndexField,
-					fmt.Sprintf(
-						"%s:%s",
-						e.ObjectNew.GetNamespace(),
-						e.ObjectNew.GetName(),
-					),
+					fmt.Sprintf("%s:%s", newApp.Namespace, newApp.Name),
 				),
 				LabelSelector: u.shardSelector,
 			},
 		); err != nil {
 			logger.Errorf(
 				"error listing Stages for Application %q in namespace %q: %s",
-				e.ObjectNew.GetNamespace(),
-				e.ObjectNew.GetName(),
-				err,
+				newApp.Name, newApp.Namespace, err,
 			)
 		}
 		for _, stage := range stages.Items {
@@ -369,27 +351,29 @@ func (u *updatedArgoCDAppHandler) Update(
 			logger.WithFields(log.Fields{
 				"namespace": stage.Namespace,
 				"stage":     stage.Name,
-				"app":       e.ObjectNew.GetName(),
+				"app":       newApp.Name,
 			}).Debug("enqueued Stage for reconciliation")
 		}
 	}
 }
 
-func appHealthOrSyncStatusChanged(ctx context.Context, e event.UpdateEvent) bool {
+func appHealthOrSyncStatusChanged[T any](ctx context.Context, e event.TypedUpdateEvent[T]) bool {
 	logger := logging.LoggerFromContext(ctx)
-	if e.ObjectOld == nil {
+	oldApp := any(e.ObjectOld).(*argocd.Application) // nolint: forcetypeassert
+	if oldApp == nil {
 		logger.Errorf("Update event has no old object to update: %v", e)
 	}
-	if e.ObjectNew == nil {
+	newApp := any(e.ObjectNew).(*argocd.Application) // nolint: forcetypeassert
+	if newApp == nil {
 		logger.Errorf("Update event has no new object for update: %v", e)
 	}
-	newUn, err := runtime.DefaultUnstructuredConverter.ToUnstructured(e.ObjectNew)
+	newUn, err := runtime.DefaultUnstructuredConverter.ToUnstructured(newApp)
 	if err != nil {
-		logger.Errorf("Failed to convert new app: %v", e.ObjectNew)
+		logger.Errorf("Failed to convert new app: %v", newApp)
 	}
-	oldUn, err := runtime.DefaultUnstructuredConverter.ToUnstructured(e.ObjectOld)
+	oldUn, err := runtime.DefaultUnstructuredConverter.ToUnstructured(oldApp)
 	if err != nil {
-		logger.Errorf("Failed to convert old app: %v", e.ObjectOld)
+		logger.Errorf("Failed to convert old app: %v", oldApp)
 	}
 	oldHealth, _, _ := unstructured.NestedString(oldUn, "status", "health", "status")
 	newHealth, _, _ := unstructured.NestedString(newUn, "status", "health", "status")
@@ -406,45 +390,46 @@ func appHealthOrSyncStatusChanged(ctx context.Context, e event.UpdateEvent) bool
 // phaseChangedAnalysisRunHandler is an event handler that enqueues Stages
 // associated with an Argo Rollouts AnalysisRun whenever that AnalysisRun's
 // phase changes.
-type phaseChangedAnalysisRunHandler struct {
+type phaseChangedAnalysisRunHandler[T any] struct {
 	kargoClient   client.Client
 	shardSelector labels.Selector
 }
 
-// Create implements EventHandler.
-func (p *phaseChangedAnalysisRunHandler) Create(
+// Create implements TypedEventHandler.
+func (p *phaseChangedAnalysisRunHandler[T]) Create(
 	context.Context,
-	event.CreateEvent,
+	event.TypedCreateEvent[T],
 	workqueue.RateLimitingInterface,
 ) {
 	// No-op
 }
 
-// Delete implements EventHandler.
-func (p *phaseChangedAnalysisRunHandler) Delete(
+// Delete implements TypedEventHandler.
+func (p *phaseChangedAnalysisRunHandler[T]) Delete(
 	context.Context,
-	event.DeleteEvent,
+	event.TypedDeleteEvent[T],
 	workqueue.RateLimitingInterface,
 ) {
 	// No-op
 }
 
-// Generic implements EventHandler.
-func (p *phaseChangedAnalysisRunHandler) Generic(
+// Generic implements TypedEventHandler.
+func (p *phaseChangedAnalysisRunHandler[T]) Generic(
 	context.Context,
-	event.GenericEvent,
+	event.TypedGenericEvent[T],
 	workqueue.RateLimitingInterface,
 ) {
 	// No-op
 }
 
-// Update implements EventHandler.
-func (p *phaseChangedAnalysisRunHandler) Update(
+// Update implements TypedEventHandler.
+func (p *phaseChangedAnalysisRunHandler[T]) Update(
 	ctx context.Context,
-	e event.UpdateEvent,
+	e event.TypedUpdateEvent[T],
 	wq workqueue.RateLimitingInterface,
 ) {
 	if analysisRunPhaseChanged(ctx, e) {
+		analysisRun := any(e.ObjectNew).(*rollouts.AnalysisRun) // nolint: forcetypeassert
 		logger := logging.LoggerFromContext(ctx)
 		// Find the Stage associated with this AnalysisRun
 		stages := &kargoapi.StageList{}
@@ -454,20 +439,14 @@ func (p *phaseChangedAnalysisRunHandler) Update(
 			&client.ListOptions{
 				FieldSelector: fields.OneTermEqualSelector(
 					kubeclient.StagesByAnalysisRunIndexField,
-					fmt.Sprintf(
-						"%s:%s",
-						e.ObjectNew.GetNamespace(),
-						e.ObjectNew.GetName(),
-					),
+					fmt.Sprintf("%s:%s", analysisRun.Namespace, analysisRun.Name),
 				),
 				LabelSelector: p.shardSelector,
 			},
 		); err != nil {
 			logger.Errorf(
 				"error listing Stages for AnalysisRun %q in namespace %q: %s",
-				e.ObjectNew.GetNamespace(),
-				e.ObjectNew.GetName(),
-				err,
+				analysisRun.Name, analysisRun.Namespace, err,
 			)
 		}
 		for _, stage := range stages.Items {
@@ -482,18 +461,20 @@ func (p *phaseChangedAnalysisRunHandler) Update(
 			logger.WithFields(log.Fields{
 				"namespace":   stage.Namespace,
 				"stage":       stage.Name,
-				"analysisRun": e.ObjectNew.GetName(),
+				"analysisRun": analysisRun.Name,
 			}).Debug("enqueued Stage for reconciliation")
 		}
 	}
 }
 
-func analysisRunPhaseChanged(ctx context.Context, e event.UpdateEvent) bool {
+func analysisRunPhaseChanged[T any](ctx context.Context, e event.TypedUpdateEvent[T]) bool {
 	logger := logging.LoggerFromContext(ctx)
-	if e.ObjectOld == nil {
+	oldApp := any(e.ObjectOld).(*rollouts.AnalysisRun) // nolint: forcetypeassert
+	if oldApp == nil {
 		logger.Errorf("Update event has no old object to update: %v", e)
 	}
-	if e.ObjectNew == nil {
+	newApp := any(e.ObjectNew).(*rollouts.AnalysisRun) // nolint: forcetypeassert
+	if newApp == nil {
 		logger.Errorf("Update event has no new object for update: %v", e)
 	}
 	newUn, err := runtime.DefaultUnstructuredConverter.ToUnstructured(e.ObjectNew)

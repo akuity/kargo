@@ -3,7 +3,9 @@ FROM golang:1.22.3-bookworm
 ARG TARGETARCH
 
 ARG BUF_VERSION=v1.26.1
-ARG CONTROLLER_GEN_VERSION=v0.14.0
+ARG CODE_GENERATOR_VERSION=v0.29.3
+ARG CONTROLLER_GEN_VERSION=v0.15.0
+ARG GOIMPORTS_VERSION=v0.21.0
 ARG GOLANGCI_LINT_VERSION=1.57.2
 ARG HELM_VERSION=v3.12.3
 ARG NODE_MAJOR=20
@@ -17,6 +19,9 @@ RUN apt update && apt install -y ca-certificates curl gnupg unzip \
     && mv protoc /usr/local \
     && ln -s /usr/local/protoc/bin/protoc /usr/local/bin \
     && rm ${PROTOC_REL} \
+    && go install k8s.io/code-generator/cmd/go-to-protobuf@${CODE_GENERATOR_VERSION} \
+    && go install k8s.io/code-generator/cmd/go-to-protobuf/protoc-gen-gogo@${CODE_GENERATOR_VERSION} \
+    && go install golang.org/x/tools/cmd/goimports@${GOIMPORTS_VERSION} \
     && go install github.com/bufbuild/buf/cmd/buf@${BUF_VERSION} \
     && go install sigs.k8s.io/controller-tools/cmd/controller-gen@${CONTROLLER_GEN_VERSION} \
     && cd /usr/local/bin \

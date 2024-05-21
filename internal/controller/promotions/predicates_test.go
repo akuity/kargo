@@ -6,7 +6,6 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 
 	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
@@ -15,42 +14,26 @@ import (
 func TestArgoCDAppOperationCompleted_Update(t *testing.T) {
 	testCases := []struct {
 		name string
-		e    event.UpdateEvent
+		e    event.TypedUpdateEvent[*argocd.Application]
 		want bool
 	}{
 		{
 			name: "ObjectOld is nil",
-			e: event.UpdateEvent{
+			e: event.TypedUpdateEvent[*argocd.Application]{
 				ObjectNew: &argocd.Application{},
 			},
 			want: false,
 		},
 		{
 			name: "ObjectNew is nil",
-			e: event.UpdateEvent{
+			e: event.TypedUpdateEvent[*argocd.Application]{
 				ObjectOld: &argocd.Application{},
-			},
-			want: false,
-		},
-		{
-			name: "Failed to convert ObjectNew",
-			e: event.UpdateEvent{
-				ObjectOld: &argocd.Application{},
-				ObjectNew: &unstructured.Unstructured{},
-			},
-			want: false,
-		},
-		{
-			name: "Failed to convert ObjectOld",
-			e: event.UpdateEvent{
-				ObjectOld: &unstructured.Unstructured{},
-				ObjectNew: &argocd.Application{},
 			},
 			want: false,
 		},
 		{
 			name: "No operation state",
-			e: event.UpdateEvent{
+			e: event.TypedUpdateEvent[*argocd.Application]{
 				ObjectOld: &argocd.Application{},
 				ObjectNew: &argocd.Application{},
 			},
@@ -58,7 +41,7 @@ func TestArgoCDAppOperationCompleted_Update(t *testing.T) {
 		},
 		{
 			name: "Operation completed",
-			e: event.UpdateEvent{
+			e: event.TypedUpdateEvent[*argocd.Application]{
 				ObjectOld: &argocd.Application{},
 				ObjectNew: &argocd.Application{
 					Status: argocd.ApplicationStatus{
@@ -72,7 +55,7 @@ func TestArgoCDAppOperationCompleted_Update(t *testing.T) {
 		},
 		{
 			name: "Completed operation unchanged",
-			e: event.UpdateEvent{
+			e: event.TypedUpdateEvent[*argocd.Application]{
 				ObjectOld: &argocd.Application{
 					Status: argocd.ApplicationStatus{
 						OperationState: &argocd.OperationState{
@@ -92,7 +75,7 @@ func TestArgoCDAppOperationCompleted_Update(t *testing.T) {
 		},
 		{
 			name: "Operation running",
-			e: event.UpdateEvent{
+			e: event.TypedUpdateEvent[*argocd.Application]{
 				ObjectOld: &argocd.Application{},
 				ObjectNew: &argocd.Application{
 					Status: argocd.ApplicationStatus{
@@ -110,7 +93,7 @@ func TestArgoCDAppOperationCompleted_Update(t *testing.T) {
 			logger := logrus.New()
 			logger.Out = io.Discard
 
-			p := ArgoCDAppOperationCompleted{
+			p := ArgoCDAppOperationCompleted[*argocd.Application]{
 				logger: logger,
 			}
 

@@ -565,6 +565,21 @@ export class JobSpec extends Message<JobSpec> {
   podFailurePolicy?: PodFailurePolicy;
 
   /**
+   * successPolicy specifies the policy when the Job can be declared as succeeded.
+   * If empty, the default behavior applies - the Job is declared as succeeded
+   * only when the number of succeeded pods equals to the completions.
+   * When the field is specified, it must be immutable and works only for the Indexed Jobs.
+   * Once the Job meets the SuccessPolicy, the lingering pods are terminated.
+   *
+   * This field  is alpha-level. To use this field, you must enable the
+   * `JobSuccessPolicy` feature gate (disabled by default).
+   * +optional
+   *
+   * @generated from field: optional k8s.io.api.batch.v1.SuccessPolicy successPolicy = 16;
+   */
+  successPolicy?: SuccessPolicy;
+
+  /**
    * Specifies the number of retries before marking this job failed.
    * Defaults to 6
    * +optional
@@ -717,6 +732,24 @@ export class JobSpec extends Message<JobSpec> {
    */
   podReplacementPolicy?: string;
 
+  /**
+   * ManagedBy field indicates the controller that manages a Job. The k8s Job
+   * controller reconciles jobs which don't have this field at all or the field
+   * value is the reserved string `kubernetes.io/job-controller`, but skips
+   * reconciling Jobs with a custom value for this field.
+   * The value must be a valid domain-prefixed path (e.g. acme.io/foo) -
+   * all characters before the first "/" must be a valid subdomain as defined
+   * by RFC 1123. All characters trailing the first "/" must be valid HTTP Path
+   * characters as defined by RFC 3986. The value cannot exceed 64 characters.
+   *
+   * This field is alpha-level. The job controller accepts setting the field
+   * when the feature gate JobManagedBy is enabled (disabled by default).
+   * +optional
+   *
+   * @generated from field: optional string managedBy = 15;
+   */
+  managedBy?: string;
+
   constructor(data?: PartialMessage<JobSpec>) {
     super();
     proto2.util.initPartial(data, this);
@@ -729,6 +762,7 @@ export class JobSpec extends Message<JobSpec> {
     { no: 2, name: "completions", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
     { no: 3, name: "activeDeadlineSeconds", kind: "scalar", T: 3 /* ScalarType.INT64 */, opt: true },
     { no: 11, name: "podFailurePolicy", kind: "message", T: PodFailurePolicy, opt: true },
+    { no: 16, name: "successPolicy", kind: "message", T: SuccessPolicy, opt: true },
     { no: 7, name: "backoffLimit", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
     { no: 12, name: "backoffLimitPerIndex", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
     { no: 13, name: "maxFailedIndexes", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
@@ -739,6 +773,7 @@ export class JobSpec extends Message<JobSpec> {
     { no: 9, name: "completionMode", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 10, name: "suspend", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
     { no: 14, name: "podReplacementPolicy", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 15, name: "managedBy", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): JobSpec {
@@ -771,6 +806,12 @@ export class JobStatus extends Message<JobStatus> {
    * status true; when the Job is resumed, the status of this condition will
    * become false. When a Job is completed, one of the conditions will have
    * type "Complete" and status true.
+   *
+   * A job is considered finished when it is in a terminal condition, either
+   * "Complete" or "Failed". A Job cannot have both the "Complete" and "Failed" conditions.
+   * Additionally, it cannot be in the "Complete" and "FailureTarget" conditions.
+   * The "Complete", "Failed" and "FailureTarget" conditions cannot be disabled.
+   *
    * More info: https://kubernetes.io/docs/concepts/workloads/controllers/jobs-run-to-completion/
    * +optional
    * +patchMergeKey=type
@@ -786,6 +827,10 @@ export class JobStatus extends Message<JobStatus> {
    * Job is created in the suspended state, this field is not set until the
    * first time it is resumed. This field is reset every time a Job is resumed
    * from suspension. It is represented in RFC3339 form and is in UTC.
+   *
+   * Once set, the field can only be removed when the job is suspended.
+   * The field cannot be modified while the job is unsuspended or finished.
+   *
    * +optional
    *
    * @generated from field: optional k8s.io.apimachinery.pkg.apis.meta.v1.Time startTime = 2;
@@ -796,7 +841,9 @@ export class JobStatus extends Message<JobStatus> {
    * Represents time when the job was completed. It is not guaranteed to
    * be set in happens-before order across separate operations.
    * It is represented in RFC3339 form and is in UTC.
-   * The completion time is only set when the job finishes successfully.
+   * The completion time is set when the job finishes successfully, and only then.
+   * The value cannot be updated or removed. The value indicates the same or
+   * later point in time as the startTime field.
    * +optional
    *
    * @generated from field: optional k8s.io.apimachinery.pkg.apis.meta.v1.Time completionTime = 3;
@@ -804,7 +851,9 @@ export class JobStatus extends Message<JobStatus> {
   completionTime?: Time;
 
   /**
-   * The number of pending and running pods.
+   * The number of pending and running pods which are not terminating (without
+   * a deletionTimestamp).
+   * The value is zero for finished jobs.
    * +optional
    *
    * @generated from field: optional int32 active = 4;
@@ -813,6 +862,8 @@ export class JobStatus extends Message<JobStatus> {
 
   /**
    * The number of pods which reached phase Succeeded.
+   * The value increases monotonically for a given spec. However, it may
+   * decrease in reaction to scale down of elastic indexed jobs.
    * +optional
    *
    * @generated from field: optional int32 succeeded = 5;
@@ -821,6 +872,7 @@ export class JobStatus extends Message<JobStatus> {
 
   /**
    * The number of pods which reached phase Failed.
+   * The value increases monotonically.
    * +optional
    *
    * @generated from field: optional int32 failed = 6;
@@ -854,7 +906,7 @@ export class JobStatus extends Message<JobStatus> {
   completedIndexes?: string;
 
   /**
-   * FailedIndexes holds the failed indexes when backoffLimitPerIndex=true.
+   * FailedIndexes holds the failed indexes when spec.backoffLimitPerIndex is set.
    * The indexes are represented in the text format analogous as for the
    * `completedIndexes` field, ie. they are kept as decimal integers
    * separated by commas. The numbers are listed in increasing order. Three or
@@ -862,6 +914,8 @@ export class JobStatus extends Message<JobStatus> {
    * last element of the series, separated by a hyphen.
    * For example, if the failed indexes are 1, 3, 4, 5 and 7, they are
    * represented as "1,3-5,7".
+   * The set of failed indexes cannot overlap with the set of completed indexes.
+   *
    * This field is beta-level. It can be used when the `JobBackoffLimitPerIndex`
    * feature gate is enabled (enabled by default).
    * +optional
@@ -885,6 +939,7 @@ export class JobStatus extends Message<JobStatus> {
    *
    * Old jobs might not be tracked using this field, in which case the field
    * remains null.
+   * The structure is empty for finished jobs.
    * +optional
    *
    * @generated from field: optional k8s.io.api.batch.v1.UncountedTerminatedPods uncountedTerminatedPods = 8;
@@ -1245,6 +1300,126 @@ export class PodFailurePolicyRule extends Message<PodFailurePolicyRule> {
 
   static equals(a: PodFailurePolicyRule | PlainMessage<PodFailurePolicyRule> | undefined, b: PodFailurePolicyRule | PlainMessage<PodFailurePolicyRule> | undefined): boolean {
     return proto2.util.equals(PodFailurePolicyRule, a, b);
+  }
+}
+
+/**
+ * SuccessPolicy describes when a Job can be declared as succeeded based on the success of some indexes.
+ *
+ * @generated from message k8s.io.api.batch.v1.SuccessPolicy
+ */
+export class SuccessPolicy extends Message<SuccessPolicy> {
+  /**
+   * rules represents the list of alternative rules for the declaring the Jobs
+   * as successful before `.status.succeeded >= .spec.completions`. Once any of the rules are met,
+   * the "SucceededCriteriaMet" condition is added, and the lingering pods are removed.
+   * The terminal state for such a Job has the "Complete" condition.
+   * Additionally, these rules are evaluated in order; Once the Job meets one of the rules,
+   * other rules are ignored. At most 20 elements are allowed.
+   * +listType=atomic
+   *
+   * @generated from field: repeated k8s.io.api.batch.v1.SuccessPolicyRule rules = 1;
+   */
+  rules: SuccessPolicyRule[] = [];
+
+  constructor(data?: PartialMessage<SuccessPolicy>) {
+    super();
+    proto2.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto2 = proto2;
+  static readonly typeName = "k8s.io.api.batch.v1.SuccessPolicy";
+  static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 1, name: "rules", kind: "message", T: SuccessPolicyRule, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SuccessPolicy {
+    return new SuccessPolicy().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SuccessPolicy {
+    return new SuccessPolicy().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SuccessPolicy {
+    return new SuccessPolicy().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: SuccessPolicy | PlainMessage<SuccessPolicy> | undefined, b: SuccessPolicy | PlainMessage<SuccessPolicy> | undefined): boolean {
+    return proto2.util.equals(SuccessPolicy, a, b);
+  }
+}
+
+/**
+ * SuccessPolicyRule describes rule for declaring a Job as succeeded.
+ * Each rule must have at least one of the "succeededIndexes" or "succeededCount" specified.
+ *
+ * @generated from message k8s.io.api.batch.v1.SuccessPolicyRule
+ */
+export class SuccessPolicyRule extends Message<SuccessPolicyRule> {
+  /**
+   * succeededIndexes specifies the set of indexes
+   * which need to be contained in the actual set of the succeeded indexes for the Job.
+   * The list of indexes must be within 0 to ".spec.completions-1" and
+   * must not contain duplicates. At least one element is required.
+   * The indexes are represented as intervals separated by commas.
+   * The intervals can be a decimal integer or a pair of decimal integers separated by a hyphen.
+   * The number are listed in represented by the first and last element of the series,
+   * separated by a hyphen.
+   * For example, if the completed indexes are 1, 3, 4, 5 and 7, they are
+   * represented as "1,3-5,7".
+   * When this field is null, this field doesn't default to any value
+   * and is never evaluated at any time.
+   *
+   * +optional
+   *
+   * @generated from field: optional string succeededIndexes = 1;
+   */
+  succeededIndexes?: string;
+
+  /**
+   * succeededCount specifies the minimal required size of the actual set of the succeeded indexes
+   * for the Job. When succeededCount is used along with succeededIndexes, the check is
+   * constrained only to the set of indexes specified by succeededIndexes.
+   * For example, given that succeededIndexes is "1-4", succeededCount is "3",
+   * and completed indexes are "1", "3", and "5", the Job isn't declared as succeeded
+   * because only "1" and "3" indexes are considered in that rules.
+   * When this field is null, this doesn't default to any value and
+   * is never evaluated at any time.
+   * When specified it needs to be a positive integer.
+   *
+   * +optional
+   *
+   * @generated from field: optional int32 succeededCount = 2;
+   */
+  succeededCount?: number;
+
+  constructor(data?: PartialMessage<SuccessPolicyRule>) {
+    super();
+    proto2.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto2 = proto2;
+  static readonly typeName = "k8s.io.api.batch.v1.SuccessPolicyRule";
+  static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 1, name: "succeededIndexes", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 2, name: "succeededCount", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SuccessPolicyRule {
+    return new SuccessPolicyRule().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SuccessPolicyRule {
+    return new SuccessPolicyRule().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SuccessPolicyRule {
+    return new SuccessPolicyRule().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: SuccessPolicyRule | PlainMessage<SuccessPolicyRule> | undefined, b: SuccessPolicyRule | PlainMessage<SuccessPolicyRule> | undefined): boolean {
+    return proto2.util.equals(SuccessPolicyRule, a, b);
   }
 }
 

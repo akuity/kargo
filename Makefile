@@ -92,13 +92,6 @@ test-unit:
 		./...
 
 ################################################################################
-# Dependency management                                                        #
-################################################################################
-.PHONY: deps-tools
-deps-tools:
-	./hack/install-tools.sh
-
-################################################################################
 # Builds                                                                       #
 #                                                                              #
 # These targets are used by our continuous integration and release processes.  #
@@ -131,7 +124,7 @@ build-nightly-cli:
 ################################################################################
 
 .PHONY: codegen
-codegen: deps-tools codegen-proto codegen-controller codegen-ui codegen-docs
+codegen: codegen-proto codegen-controller codegen-ui codegen-docs
 
 .PHONY: codegen-controller
 codegen-controller:

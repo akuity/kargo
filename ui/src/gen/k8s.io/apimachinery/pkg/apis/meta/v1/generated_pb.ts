@@ -25,6 +25,7 @@ export class APIGroup extends Message<APIGroup> {
 
   /**
    * versions are the versions supported in this group.
+   * +listType=atomic
    *
    * @generated from field: repeated k8s.io.apimachinery.pkg.apis.meta.v1.GroupVersionForDiscovery versions = 2;
    */
@@ -48,6 +49,7 @@ export class APIGroup extends Message<APIGroup> {
    * For example: the master will return an internal IP CIDR only, if the client reaches the server using an internal IP.
    * Server looks at X-Forwarded-For header or X-Real-Ip header or request.RemoteAddr (in that order) to get the client IP.
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated k8s.io.apimachinery.pkg.apis.meta.v1.ServerAddressByClientCIDR serverAddressByClientCIDRs = 4;
    */
@@ -93,6 +95,7 @@ export class APIGroup extends Message<APIGroup> {
 export class APIGroupList extends Message<APIGroupList> {
   /**
    * groups is a list of APIGroup.
+   * +listType=atomic
    *
    * @generated from field: repeated k8s.io.apimachinery.pkg.apis.meta.v1.APIGroup groups = 1;
    */
@@ -188,6 +191,7 @@ export class APIResource extends Message<APIResource> {
 
   /**
    * shortNames is a list of suggested short names of the resource.
+   * +listType=atomic
    *
    * @generated from field: repeated string shortNames = 5;
    */
@@ -195,6 +199,7 @@ export class APIResource extends Message<APIResource> {
 
   /**
    * categories is a list of the grouped resources this resource belongs to (e.g. 'all')
+   * +listType=atomic
    *
    * @generated from field: repeated string categories = 7;
    */
@@ -268,6 +273,7 @@ export class APIResourceList extends Message<APIResourceList> {
 
   /**
    * resources contains the name of the resources and if they are namespaced.
+   * +listType=atomic
    *
    * @generated from field: repeated k8s.io.apimachinery.pkg.apis.meta.v1.APIResource resources = 2;
    */
@@ -314,6 +320,7 @@ export class APIResourceList extends Message<APIResourceList> {
 export class APIVersions extends Message<APIVersions> {
   /**
    * versions are the api versions that are available.
+   * +listType=atomic
    *
    * @generated from field: repeated string versions = 1;
    */
@@ -327,6 +334,7 @@ export class APIVersions extends Message<APIVersions> {
    * The server returns only those CIDRs that it thinks that the client can match.
    * For example: the master will return an internal IP CIDR only, if the client reaches the server using an internal IP.
    * Server looks at X-Forwarded-For header or X-Real-Ip header or request.RemoteAddr (in that order) to get the client IP.
+   * +listType=atomic
    *
    * @generated from field: repeated k8s.io.apimachinery.pkg.apis.meta.v1.ServerAddressByClientCIDR serverAddressByClientCIDRs = 2;
    */
@@ -377,6 +385,7 @@ export class ApplyOptions extends Message<ApplyOptions> {
    * request. Valid values are:
    * - All: all dry run stages will be processed
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated string dryRun = 1;
    */
@@ -572,6 +581,7 @@ export class CreateOptions extends Message<CreateOptions> {
    * request. Valid values are:
    * - All: all dry run stages will be processed
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated string dryRun = 1;
    */
@@ -701,6 +711,7 @@ export class DeleteOptions extends Message<DeleteOptions> {
    * request. Valid values are:
    * - All: all dry run stages will be processed
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated string dryRun = 5;
    */
@@ -1201,6 +1212,7 @@ export class LabelSelector extends Message<LabelSelector> {
   /**
    * matchExpressions is a list of label selector requirements. The requirements are ANDed.
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelectorRequirement matchExpressions = 2;
    */
@@ -1263,6 +1275,7 @@ export class LabelSelectorRequirement extends Message<LabelSelectorRequirement> 
    * the values array must be empty. This array is replaced during a strategic
    * merge patch.
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated string values = 3;
    */
@@ -1975,6 +1988,8 @@ export class ObjectMeta extends Message<ObjectMeta> {
    * +optional
    * +patchMergeKey=uid
    * +patchStrategy=merge
+   * +listType=map
+   * +listMapKey=uid
    *
    * @generated from field: repeated k8s.io.apimachinery.pkg.apis.meta.v1.OwnerReference ownerReferences = 13;
    */
@@ -1996,6 +2011,7 @@ export class ObjectMeta extends Message<ObjectMeta> {
    * are not vulnerable to ordering changes in the list.
    * +optional
    * +patchStrategy=merge
+   * +listType=set
    *
    * @generated from field: repeated string finalizers = 14;
    */
@@ -2011,6 +2027,7 @@ export class ObjectMeta extends Message<ObjectMeta> {
    * workflow used when modifying the object.
    *
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated k8s.io.apimachinery.pkg.apis.meta.v1.ManagedFieldsEntry managedFields = 17;
    */
@@ -2298,6 +2315,7 @@ export class PatchOptions extends Message<PatchOptions> {
    * request. Valid values are:
    * - All: all dry run stages will be processed
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated string dryRun = 1;
    */
@@ -2441,6 +2459,7 @@ export class Preconditions extends Message<Preconditions> {
 export class RootPaths extends Message<RootPaths> {
   /**
    * paths are the paths available at root.
+   * +listType=atomic
    *
    * @generated from field: repeated string paths = 1;
    */
@@ -2574,6 +2593,7 @@ export class Status extends Message<Status> {
    * is not guaranteed to conform to any schema except that defined by
    * the reason type.
    * +optional
+   * +listType=atomic
    *
    * @generated from field: optional k8s.io.apimachinery.pkg.apis.meta.v1.StatusDetails details = 5;
    */
@@ -2743,6 +2763,7 @@ export class StatusDetails extends Message<StatusDetails> {
    * The Causes array includes more details associated with the StatusReason
    * failure. Not all StatusReasons may provide detailed causes.
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated k8s.io.apimachinery.pkg.apis.meta.v1.StatusCause causes = 4;
    */
@@ -3095,6 +3116,7 @@ export class UpdateOptions extends Message<UpdateOptions> {
    * request. Valid values are:
    * - All: all dry run stages will be processed
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated string dryRun = 1;
    */
