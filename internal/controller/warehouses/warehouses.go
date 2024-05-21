@@ -3,7 +3,6 @@ package warehouses
 import (
 	"context"
 	"fmt"
-	"time"
 
 	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -186,9 +185,7 @@ func (r *reconciler) Reconcile(
 	}
 
 	// Everything succeeded, look for new changes on the defined interval.
-	//
-	// TODO: Make this configurable
-	return ctrl.Result{RequeueAfter: 5 * time.Minute}, nil
+	return ctrl.Result{RequeueAfter: warehouse.Spec.Interval.Duration}, nil
 }
 
 func (r *reconciler) syncWarehouse(

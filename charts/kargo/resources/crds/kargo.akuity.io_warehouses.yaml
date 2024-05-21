@@ -56,6 +56,15 @@ spec:
                 - Automatic
                 - Manual
                 type: string
+              interval:
+                default: 5m0s
+                description: |-
+                  Interval is the reconciliation interval for this Warehouse. On each
+                  reconciliation, the Warehouse will discover new artifacts and optionally
+                  produce new Freight. This field is optional. When left unspecified, the
+                  field is implicitly treated as if its value were "5m0s".
+                pattern: ^([0-9]+(\.[0-9]+)?(s|m|h))+$
+                type: string
               shard:
                 description: |-
                   Shard is the name of the shard that this Warehouse belongs to. This is an
@@ -80,6 +89,18 @@ spec:
                       description: Chart describes a subscription to a Helm chart
                         repository.
                       properties:
+                        discoveryLimit:
+                          default: 20
+                          description: |-
+                            DiscoveryLimit is an optional limit on the number of chart versions that
+                            can be discovered for this subscription. The limit is applied after
+                            filtering charts based on the SemverConstraint field.
+                            When left unspecified, the field is implicitly treated as if its value
+                            were "20". The upper limit for this field is 100.
+                          format: int32
+                          maximum: 100
+                          minimum: 1
+                          type: integer
                         name:
                           description: |-
                             Name specifies the name of a Helm chart to subscribe to within a classic
@@ -146,6 +167,18 @@ spec:
                           - NewestTag
                           - SemVer
                           type: string
+                        discoveryLimit:
+                          default: 20
+                          description: |-
+                            DiscoveryLimit is an optional limit on the number of commits that can be
+                            discovered for this subscription. The limit is applied after filtering
+                            commits based on the AllowTags and IgnoreTags fields.
+                            When left unspecified, the field is implicitly treated as if its value
+                            were "20". The upper limit for this field is 100.
+                          format: int32
+                          maximum: 100
+                          minimum: 1
+                          type: integer
                         excludePaths:
                           description: |-
                             ExcludePaths is a list of selectors that designate paths in the repository
@@ -226,6 +259,18 @@ spec:
                             image tags that are considered in determining the newest version of an
                             image. This field is optional.
                           type: string
+                        discoveryLimit:
+                          default: 20
+                          description: |-
+                            DiscoveryLimit is an optional limit on the number of image references
+                            that can be discovered for this subscription. The limit is applied after
+                            filtering images based on the AllowTags and IgnoreTags fields.
+                            When left unspecified, the field is implicitly treated as if its value
+                            were "20". The upper limit for this field is 100.
+                          format: int32
+                          maximum: 100
+                          minimum: 1
+                          type: integer
                         gitRepoURL:
                           description: |-
                             GitRepoURL optionally specifies the URL of a Git repository that contains
@@ -300,6 +345,7 @@ spec:
                 type: array
             required:
             - freightCreationPolicy
+            - interval
             - subscriptions
             type: object
           status:

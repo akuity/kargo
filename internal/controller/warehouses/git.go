@@ -90,9 +90,13 @@ func (r *reconciler) discoverCommits(
 
 			for _, meta := range tags {
 				discovered = append(discovered, kargoapi.DiscoveredCommit{
-					ID:          meta.CommitID,
-					Tag:         meta.Tag,
-					Subject:     meta.Subject,
+					ID:  meta.CommitID,
+					Tag: meta.Tag,
+					// A decent subject length for a commit message is 50 characters
+					// (based on the 50/72 rule). We are nice people, and allow a
+					// bit more. But not an excessive amount, to minimize the risk of
+					// exceeding the maximum size of the object in the API server.
+					Subject:     shortenString(meta.Subject, 80),
 					Author:      meta.Author,
 					Committer:   meta.Committer,
 					CreatorDate: &metav1.Time{Time: meta.CreatorDate},
@@ -106,9 +110,13 @@ func (r *reconciler) discoverCommits(
 
 			for _, meta := range commits {
 				discovered = append(discovered, kargoapi.DiscoveredCommit{
-					ID:          meta.ID,
-					Branch:      sub.Branch,
-					Subject:     meta.Subject,
+					ID:     meta.ID,
+					Branch: sub.Branch,
+					// A decent subject length for a commit message is 50 characters
+					// (based on the 50/72 rule). We are nice people, and allow a
+					// bit more. But not an excessive amount, to minimize the risk of
+					// exceeding the maximum size of the object in the API server.
+					Subject:     shortenString(meta.Subject, 80),
 					Author:      meta.Author,
 					Committer:   meta.Committer,
 					CreatorDate: &metav1.Time{Time: meta.CommitDate},
@@ -126,10 +134,10 @@ func (r *reconciler) discoverCommits(
 }
 
 func (r *reconciler) discoverBranchHistory(repo git.Repo, sub kargoapi.GitSubscription) ([]git.CommitMetadata, error) {
-	const limit = 20
+	limit := int(sub.DiscoveryLimit)
 	var filteredCommits = make([]git.CommitMetadata, 0, limit)
-	for skip := uint(0); ; skip += limit {
-		commits, err := r.listCommitsFn(repo, limit, skip)
+	for skip := uint(0); ; skip += uint(limit) {
+		commits, err := r.listCommitsFn(repo, uint(limit), skip)
 		if err != nil {
 			return nil, fmt.Errorf("error listing commits from git repo %q: %w", sub.RepoURL, err)
 		}
@@ -223,7 +231,7 @@ func (r *reconciler) discoverTags(repo git.Repo, sub kargoapi.GitSubscription) (
 
 	// If no include or exclude paths are specified, return the first tags up to
 	// the limit.
-	const limit = 20
+	limit := int(sub.DiscoveryLimit)
 	if len(tags) == 0 || (sub.IncludePaths == nil && sub.ExcludePaths == nil) {
 		return trimSlice(tags, limit), nil
 	}
@@ -440,4 +448,13 @@ func (r *reconciler) listTags(repo git.Repo) ([]git.TagMetadata, error) {
 
 func (r *reconciler) getDiffPathsForCommitID(repo git.Repo, commitID string) ([]string, error) {
 	return repo.GetDiffPathsForCommitID(commitID)
+}
+
+// shortenString truncates the given string to the given length, appending an
+// ellipsis if the string is longer than the length.
+func shortenString(str string, length int) string {
+	if length >= 0 && len(str) > length {
+		return str[:length] + "..."
+	}
+	return str
 }

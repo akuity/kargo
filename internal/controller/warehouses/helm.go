@@ -80,7 +80,7 @@ func (r *reconciler) discoverCharts(
 			RepoURL:          sub.RepoURL,
 			Name:             sub.Name,
 			SemverConstraint: sub.SemverConstraint,
-			Versions:         trimSlice(versions, 20),
+			Versions:         trimSlice(versions, int(sub.DiscoveryLimit)),
 		})
 	}
 

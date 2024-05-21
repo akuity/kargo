@@ -7,7 +7,7 @@
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto2 } from "@bufbuild/protobuf";
-import { ListMeta, ObjectMeta, Time } from "../k8s.io/apimachinery/pkg/apis/meta/v1/generated_pb.js";
+import { Duration, ListMeta, ObjectMeta, Time } from "../k8s.io/apimachinery/pkg/apis/meta/v1/generated_pb.js";
 
 /**
  * AnalysisRunArgument represents an argument to be added to an AnalysisRun.
@@ -974,6 +974,21 @@ export class ChartSubscription extends Message<ChartSubscription> {
    */
   semverConstraint?: string;
 
+  /**
+   * DiscoveryLimit is an optional limit on the number of chart versions that
+   * can be discovered for this subscription. The limit is applied after
+   * filtering charts based on the SemverConstraint field.
+   * When left unspecified, the field is implicitly treated as if its value
+   * were "20". The upper limit for this field is 100.
+   *
+   * +kubebuilder:validation:Minimum=1
+   * +kubebuilder:validation:Maximum=100
+   * +kubebuilder:default=20
+   *
+   * @generated from field: optional int32 discoveryLimit = 4;
+   */
+  discoveryLimit?: number;
+
   constructor(data?: PartialMessage<ChartSubscription>) {
     super();
     proto2.util.initPartial(data, this);
@@ -985,6 +1000,7 @@ export class ChartSubscription extends Message<ChartSubscription> {
     { no: 1, name: "repoURL", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 3, name: "semverConstraint", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 4, name: "discoveryLimit", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ChartSubscription {
@@ -2012,6 +2028,21 @@ export class GitSubscription extends Message<GitSubscription> {
    */
   excludePaths: string[] = [];
 
+  /**
+   * DiscoveryLimit is an optional limit on the number of commits that can be
+   * discovered for this subscription. The limit is applied after filtering
+   * commits based on the AllowTags and IgnoreTags fields.
+   * When left unspecified, the field is implicitly treated as if its value
+   * were "20". The upper limit for this field is 100.
+   *
+   * +kubebuilder:validation:Minimum=1
+   * +kubebuilder:validation:Maximum=100
+   * +kubebuilder:default=20
+   *
+   * @generated from field: optional int32 discoveryLimit = 10;
+   */
+  discoveryLimit?: number;
+
   constructor(data?: PartialMessage<GitSubscription>) {
     super();
     proto2.util.initPartial(data, this);
@@ -2029,6 +2060,7 @@ export class GitSubscription extends Message<GitSubscription> {
     { no: 7, name: "insecureSkipTLSVerify", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
     { no: 8, name: "includePaths", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 9, name: "excludePaths", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 10, name: "discoveryLimit", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GitSubscription {
@@ -2564,6 +2596,21 @@ export class ImageSubscription extends Message<ImageSubscription> {
    */
   insecureSkipTLSVerify?: boolean;
 
+  /**
+   * DiscoveryLimit is an optional limit on the number of image references
+   * that can be discovered for this subscription. The limit is applied after
+   * filtering images based on the AllowTags and IgnoreTags fields.
+   * When left unspecified, the field is implicitly treated as if its value
+   * were "20". The upper limit for this field is 100.
+   *
+   * +kubebuilder:validation:Minimum=1
+   * +kubebuilder:validation:Maximum=100
+   * +kubebuilder:default=20
+   *
+   * @generated from field: optional int32 discoveryLimit = 9;
+   */
+  discoveryLimit?: number;
+
   constructor(data?: PartialMessage<ImageSubscription>) {
     super();
     proto2.util.initPartial(data, this);
@@ -2580,6 +2627,7 @@ export class ImageSubscription extends Message<ImageSubscription> {
     { no: 6, name: "ignoreTags", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 7, name: "platform", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 8, name: "insecureSkipTLSVerify", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+    { no: 9, name: "discoveryLimit", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ImageSubscription {
@@ -4230,6 +4278,20 @@ export class WarehouseSpec extends Message<WarehouseSpec> {
   shard?: string;
 
   /**
+   * Interval is the reconciliation interval for this Warehouse. On each
+   * reconciliation, the Warehouse will discover new artifacts and optionally
+   * produce new Freight. This field is optional. When left unspecified, the
+   * field is implicitly treated as if its value were "5m0s".
+   *
+   * +kubebuilder:validation:Type=string
+   * +kubebuilder:validation:Pattern="^([0-9]+(\\.[0-9]+)?(s|m|h))+$"
+   * +kubebuilder:default="5m0s"
+   *
+   * @generated from field: optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration interval = 4;
+   */
+  interval?: Duration;
+
+  /**
    * FreightCreationPolicy describes how Freight is created by this Warehouse.
    * This field is optional. When left unspecified, the field is implicitly
    * treated as if its value were "Automatic".
@@ -4259,6 +4321,7 @@ export class WarehouseSpec extends Message<WarehouseSpec> {
   static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.WarehouseSpec";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 2, name: "shard", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 4, name: "interval", kind: "message", T: Duration, opt: true },
     { no: 3, name: "freightCreationPolicy", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 1, name: "subscriptions", kind: "message", T: RepoSubscription, repeated: true },
   ]);

@@ -140,7 +140,7 @@ func imageSelectorForSubscription(
 			Platform:              sub.Platform,
 			Creds:                 creds,
 			InsecureSkipTLSVerify: sub.InsecureSkipTLSVerify,
-			DiscoveryLimit:        20,
+			DiscoveryLimit:        int(sub.DiscoveryLimit),
 		},
 	)
 }
