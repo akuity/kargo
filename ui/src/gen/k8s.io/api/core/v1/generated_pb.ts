@@ -155,6 +155,65 @@ export class Affinity extends Message<Affinity> {
 }
 
 /**
+ * AppArmorProfile defines a pod or container's AppArmor settings.
+ * +union
+ *
+ * @generated from message k8s.io.api.core.v1.AppArmorProfile
+ */
+export class AppArmorProfile extends Message<AppArmorProfile> {
+  /**
+   * type indicates which kind of AppArmor profile will be applied.
+   * Valid options are:
+   *   Localhost - a profile pre-loaded on the node.
+   *   RuntimeDefault - the container runtime's default profile.
+   *   Unconfined - no AppArmor enforcement.
+   * +unionDiscriminator
+   *
+   * @generated from field: optional string type = 1;
+   */
+  type?: string;
+
+  /**
+   * localhostProfile indicates a profile loaded on the node that should be used.
+   * The profile must be preconfigured on the node to work.
+   * Must match the loaded name of the profile.
+   * Must be set if and only if type is "Localhost".
+   * +optional
+   *
+   * @generated from field: optional string localhostProfile = 2;
+   */
+  localhostProfile?: string;
+
+  constructor(data?: PartialMessage<AppArmorProfile>) {
+    super();
+    proto2.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto2 = proto2;
+  static readonly typeName = "k8s.io.api.core.v1.AppArmorProfile";
+  static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 1, name: "type", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 2, name: "localhostProfile", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AppArmorProfile {
+    return new AppArmorProfile().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): AppArmorProfile {
+    return new AppArmorProfile().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): AppArmorProfile {
+    return new AppArmorProfile().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: AppArmorProfile | PlainMessage<AppArmorProfile> | undefined, b: AppArmorProfile | PlainMessage<AppArmorProfile> | undefined): boolean {
+    return proto2.util.equals(AppArmorProfile, a, b);
+  }
+}
+
+/**
  * AttachedVolume describes a volume attached to a node
  *
  * @generated from message k8s.io.api.core.v1.AttachedVolume
@@ -215,6 +274,7 @@ export class AvoidPods extends Message<AvoidPods> {
    * Bounded-sized list of signatures of pods that should avoid this node, sorted
    * in timestamp order from oldest to newest. Size of the slice is unspecified.
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated k8s.io.api.core.v1.PreferAvoidPodsEntry preferAvoidPods = 1;
    */
@@ -756,6 +816,7 @@ export class Capabilities extends Message<Capabilities> {
   /**
    * Added capabilities
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated string add = 1;
    */
@@ -764,6 +825,7 @@ export class Capabilities extends Message<Capabilities> {
   /**
    * Removed capabilities
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated string drop = 2;
    */
@@ -808,6 +870,7 @@ export class CephFSPersistentVolumeSource extends Message<CephFSPersistentVolume
   /**
    * monitors is Required: Monitors is a collection of Ceph monitors
    * More info: https://examples.k8s.io/volumes/cephfs/README.md#how-to-use-it
+   * +listType=atomic
    *
    * @generated from field: repeated string monitors = 1;
    */
@@ -901,6 +964,7 @@ export class CephFSVolumeSource extends Message<CephFSVolumeSource> {
   /**
    * monitors is Required: Monitors is a collection of Ceph monitors
    * More info: https://examples.k8s.io/volumes/cephfs/README.md#how-to-use-it
+   * +listType=atomic
    *
    * @generated from field: repeated string monitors = 1;
    */
@@ -1429,6 +1493,8 @@ export class ComponentStatus extends Message<ComponentStatus> {
    * +optional
    * +patchMergeKey=type
    * +patchStrategy=merge
+   * +listType=map
+   * +listMapKey=type
    *
    * @generated from field: repeated k8s.io.api.core.v1.ComponentCondition conditions = 2;
    */
@@ -1868,6 +1934,7 @@ export class ConfigMapProjection extends Message<ConfigMapProjection> {
    * the volume setup will error unless it is marked optional. Paths must be
    * relative and may not contain the '..' path or start with '..'.
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated k8s.io.api.core.v1.KeyToPath items = 2;
    */
@@ -1936,6 +2003,7 @@ export class ConfigMapVolumeSource extends Message<ConfigMapVolumeSource> {
    * the volume setup will error unless it is marked optional. Paths must be
    * relative and may not contain the '..' path or start with '..'.
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated k8s.io.api.core.v1.KeyToPath items = 2;
    */
@@ -2030,6 +2098,7 @@ export class Container extends Message<Container> {
    * of whether the variable exists or not. Cannot be updated.
    * More info: https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#running-a-command-in-a-shell
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated string command = 3;
    */
@@ -2045,6 +2114,7 @@ export class Container extends Message<Container> {
    * of whether the variable exists or not. Cannot be updated.
    * More info: https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#running-a-command-in-a-shell
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated string args = 4;
    */
@@ -2088,6 +2158,7 @@ export class Container extends Message<Container> {
    * Values defined by an Env with a duplicate key will take precedence.
    * Cannot be updated.
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated k8s.io.api.core.v1.EnvFromSource envFrom = 19;
    */
@@ -2099,6 +2170,8 @@ export class Container extends Message<Container> {
    * +optional
    * +patchMergeKey=name
    * +patchStrategy=merge
+   * +listType=map
+   * +listMapKey=name
    *
    * @generated from field: repeated k8s.io.api.core.v1.EnvVar env = 7;
    */
@@ -2153,6 +2226,8 @@ export class Container extends Message<Container> {
    * +optional
    * +patchMergeKey=mountPath
    * +patchStrategy=merge
+   * +listType=map
+   * +listMapKey=mountPath
    *
    * @generated from field: repeated k8s.io.api.core.v1.VolumeMount volumeMounts = 9;
    */
@@ -2162,6 +2237,8 @@ export class Container extends Message<Container> {
    * volumeDevices is the list of block devices to be used by the container.
    * +patchMergeKey=devicePath
    * +patchStrategy=merge
+   * +listType=map
+   * +listMapKey=devicePath
    * +optional
    *
    * @generated from field: repeated k8s.io.api.core.v1.VolumeDevice volumeDevices = 21;
@@ -2357,6 +2434,7 @@ export class ContainerImage extends Message<ContainerImage> {
    * Names by which this image is known.
    * e.g. ["kubernetes.example/hyperkube:v1.0.7", "cloud-vendor.registry.example/cloud-vendor/hyperkube:v1.0.7"]
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated string names = 1;
    */
@@ -2906,6 +2984,19 @@ export class ContainerStatus extends Message<ContainerStatus> {
    */
   resources?: ResourceRequirements;
 
+  /**
+   * Status of volume mounts.
+   * +optional
+   * +patchMergeKey=mountPath
+   * +patchStrategy=merge
+   * +listType=map
+   * +listMapKey=mountPath
+   * +featureGate=RecursiveReadOnlyMounts
+   *
+   * @generated from field: repeated k8s.io.api.core.v1.VolumeMountStatus volumeMounts = 12;
+   */
+  volumeMounts: VolumeMountStatus[] = [];
+
   constructor(data?: PartialMessage<ContainerStatus>) {
     super();
     proto2.util.initPartial(data, this);
@@ -2925,6 +3016,7 @@ export class ContainerStatus extends Message<ContainerStatus> {
     { no: 9, name: "started", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
     { no: 10, name: "allocatedResources", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "message", T: Quantity} },
     { no: 11, name: "resources", kind: "message", T: ResourceRequirements, opt: true },
+    { no: 12, name: "volumeMounts", kind: "message", T: VolumeMountStatus, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ContainerStatus {
@@ -2996,6 +3088,7 @@ export class DownwardAPIProjection extends Message<DownwardAPIProjection> {
   /**
    * Items is a list of DownwardAPIVolume file
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated k8s.io.api.core.v1.DownwardAPIVolumeFile items = 1;
    */
@@ -3043,7 +3136,7 @@ export class DownwardAPIVolumeFile extends Message<DownwardAPIVolumeFile> {
   path?: string;
 
   /**
-   * Required: Selects a field of the pod: only annotations, labels, name and namespace are supported.
+   * Required: Selects a field of the pod: only annotations, labels, name, namespace and uid are supported.
    * +optional
    *
    * @generated from field: optional k8s.io.api.core.v1.ObjectFieldSelector fieldRef = 2;
@@ -3113,6 +3206,7 @@ export class DownwardAPIVolumeSource extends Message<DownwardAPIVolumeSource> {
   /**
    * Items is a list of downward API volume file
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated k8s.io.api.core.v1.DownwardAPIVolumeFile items = 1;
    */
@@ -3403,6 +3497,7 @@ export class EndpointSubset extends Message<EndpointSubset> {
    * IP addresses which offer the related ports that are marked as ready. These endpoints
    * should be considered safe for load balancers and clients to utilize.
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated k8s.io.api.core.v1.EndpointAddress addresses = 1;
    */
@@ -3413,6 +3508,7 @@ export class EndpointSubset extends Message<EndpointSubset> {
    * because they have not yet finished starting, have recently failed a readiness check,
    * or have recently failed a liveness check.
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated k8s.io.api.core.v1.EndpointAddress notReadyAddresses = 2;
    */
@@ -3421,6 +3517,7 @@ export class EndpointSubset extends Message<EndpointSubset> {
   /**
    * Port numbers available on the related IP addresses.
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated k8s.io.api.core.v1.EndpointPort ports = 3;
    */
@@ -3492,6 +3589,7 @@ export class Endpoints extends Message<Endpoints> {
    * NotReadyAddresses in the same subset.
    * Sets of addresses and ports that comprise a service.
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated k8s.io.api.core.v1.EndpointSubset subsets = 2;
    */
@@ -3875,6 +3973,7 @@ export class EphemeralContainerCommon extends Message<EphemeralContainerCommon> 
    * of whether the variable exists or not. Cannot be updated.
    * More info: https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#running-a-command-in-a-shell
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated string command = 3;
    */
@@ -3890,6 +3989,7 @@ export class EphemeralContainerCommon extends Message<EphemeralContainerCommon> 
    * of whether the variable exists or not. Cannot be updated.
    * More info: https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#running-a-command-in-a-shell
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated string args = 4;
    */
@@ -3927,6 +4027,7 @@ export class EphemeralContainerCommon extends Message<EphemeralContainerCommon> 
    * Values defined by an Env with a duplicate key will take precedence.
    * Cannot be updated.
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated k8s.io.api.core.v1.EnvFromSource envFrom = 19;
    */
@@ -3938,6 +4039,8 @@ export class EphemeralContainerCommon extends Message<EphemeralContainerCommon> 
    * +optional
    * +patchMergeKey=name
    * +patchStrategy=merge
+   * +listType=map
+   * +listMapKey=name
    *
    * @generated from field: repeated k8s.io.api.core.v1.EnvVar env = 7;
    */
@@ -3980,6 +4083,8 @@ export class EphemeralContainerCommon extends Message<EphemeralContainerCommon> 
    * +optional
    * +patchMergeKey=mountPath
    * +patchStrategy=merge
+   * +listType=map
+   * +listMapKey=mountPath
    *
    * @generated from field: repeated k8s.io.api.core.v1.VolumeMount volumeMounts = 9;
    */
@@ -3989,6 +4094,8 @@ export class EphemeralContainerCommon extends Message<EphemeralContainerCommon> 
    * volumeDevices is the list of block devices to be used by the container.
    * +patchMergeKey=devicePath
    * +patchStrategy=merge
+   * +listType=map
+   * +listMapKey=devicePath
    * +optional
    *
    * @generated from field: repeated k8s.io.api.core.v1.VolumeDevice volumeDevices = 21;
@@ -4561,6 +4668,7 @@ export class ExecAction extends Message<ExecAction> {
    * a shell, you need to explicitly call out to that shell.
    * Exit status of 0 is treated as live/healthy and non-zero is unhealthy.
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated string command = 1;
    */
@@ -4605,6 +4713,7 @@ export class FCVolumeSource extends Message<FCVolumeSource> {
   /**
    * targetWWNs is Optional: FC target worldwide names (WWNs)
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated string targetWWNs = 1;
    */
@@ -4642,6 +4751,7 @@ export class FCVolumeSource extends Message<FCVolumeSource> {
    * wwids Optional: FC volume world wide identifiers (wwids)
    * Either wwids or combination of targetWWNs and lun must be set, but not both simultaneously.
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated string wwids = 5;
    */
@@ -5288,6 +5398,7 @@ export class HTTPGetAction extends Message<HTTPGetAction> {
   /**
    * Custom headers to set in the request. HTTP allows repeated headers.
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated k8s.io.api.core.v1.HTTPHeader httpHeaders = 5;
    */
@@ -5384,6 +5495,7 @@ export class HTTPHeader extends Message<HTTPHeader> {
 export class HostAlias extends Message<HostAlias> {
   /**
    * IP address of the host file entry.
+   * +required
    *
    * @generated from field: optional string ip = 1;
    */
@@ -5391,6 +5503,7 @@ export class HostAlias extends Message<HostAlias> {
 
   /**
    * Hostnames for the above IP address.
+   * +listType=atomic
    *
    * @generated from field: repeated string hostnames = 2;
    */
@@ -5585,6 +5698,7 @@ export class ISCSIPersistentVolumeSource extends Message<ISCSIPersistentVolumeSo
    * portals is the iSCSI Target Portal List. The Portal is either an IP or ip_addr:port if the port
    * is other than default (typically TCP ports 860 and 3260).
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated string portals = 7;
    */
@@ -5726,6 +5840,7 @@ export class ISCSIVolumeSource extends Message<ISCSIVolumeSource> {
    * portals is the iSCSI Target Portal List. The portal is either an IP or ip_addr:port if the port
    * is other than default (typically TCP ports 860 and 3260).
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated string portals = 7;
    */
@@ -6205,6 +6320,7 @@ export class LimitRangeList extends Message<LimitRangeList> {
 export class LimitRangeSpec extends Message<LimitRangeSpec> {
   /**
    * Limits is the list of LimitRangeItem objects that are enforced.
+   * +listType=atomic
    *
    * @generated from field: repeated k8s.io.api.core.v1.LimitRangeItem limits = 1;
    */
@@ -6378,6 +6494,7 @@ export class LoadBalancerStatus extends Message<LoadBalancerStatus> {
    * Ingress is a list containing ingress points for the load-balancer.
    * Traffic intended for the service should be sent to these ingress points.
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated k8s.io.api.core.v1.LoadBalancerIngress ingress = 1;
    */
@@ -6421,9 +6538,15 @@ export class LoadBalancerStatus extends Message<LoadBalancerStatus> {
 export class LocalObjectReference extends Message<LocalObjectReference> {
   /**
    * Name of the referent.
-   * More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+   * This field is effectively required, but due to backwards compatibility is
+   * allowed to be empty. Instances of this type with an empty value here are
+   * almost certainly wrong.
    * TODO: Add other useful fields. apiVersion, kind, uid?
+   * More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
    * +optional
+   * +default=""
+   * +kubebuilder:default=""
+   * TODO: Drop `kubebuilder:default` when controller-gen doesn't need it https://github.com/kubernetes-sigs/kubebuilder/issues/3896.
    *
    * @generated from field: optional string name = 1;
    */
@@ -6831,6 +6954,7 @@ export class NamespaceSpec extends Message<NamespaceSpec> {
    * Finalizers is an opaque list of values that must be empty to permanently remove object from storage.
    * More info: https://kubernetes.io/docs/tasks/administer-cluster/namespaces/
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated string finalizers = 1;
    */
@@ -6884,6 +7008,8 @@ export class NamespaceStatus extends Message<NamespaceStatus> {
    * +optional
    * +patchMergeKey=type
    * +patchStrategy=merge
+   * +listType=map
+   * +listMapKey=type
    *
    * @generated from field: repeated k8s.io.api.core.v1.NamespaceCondition conditions = 2;
    */
@@ -7062,6 +7188,7 @@ export class NodeAffinity extends Message<NodeAffinity> {
    * "weight" to the sum if the node matches the corresponding matchExpressions; the
    * node(s) with the highest sum are the most preferred.
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated k8s.io.api.core.v1.PreferredSchedulingTerm preferredDuringSchedulingIgnoredDuringExecution = 2;
    */
@@ -7459,44 +7586,97 @@ export class NodeProxyOptions extends Message<NodeProxyOptions> {
 }
 
 /**
- * NodeResources is an object for conveying resource information about a node.
- * see https://kubernetes.io/docs/concepts/architecture/nodes/#capacity for more details.
+ * NodeRuntimeHandler is a set of runtime handler information.
  *
- * @generated from message k8s.io.api.core.v1.NodeResources
+ * @generated from message k8s.io.api.core.v1.NodeRuntimeHandler
  */
-export class NodeResources extends Message<NodeResources> {
+export class NodeRuntimeHandler extends Message<NodeRuntimeHandler> {
   /**
-   * Capacity represents the available resources of a node
+   * Runtime handler name.
+   * Empty for the default runtime handler.
+   * +optional
    *
-   * @generated from field: map<string, k8s.io.apimachinery.pkg.api.resource.Quantity> capacity = 1;
+   * @generated from field: optional string name = 1;
    */
-  capacity: { [key: string]: Quantity } = {};
+  name?: string;
 
-  constructor(data?: PartialMessage<NodeResources>) {
+  /**
+   * Supported features.
+   * +optional
+   *
+   * @generated from field: optional k8s.io.api.core.v1.NodeRuntimeHandlerFeatures features = 2;
+   */
+  features?: NodeRuntimeHandlerFeatures;
+
+  constructor(data?: PartialMessage<NodeRuntimeHandler>) {
     super();
     proto2.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto2 = proto2;
-  static readonly typeName = "k8s.io.api.core.v1.NodeResources";
+  static readonly typeName = "k8s.io.api.core.v1.NodeRuntimeHandler";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
-    { no: 1, name: "capacity", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "message", T: Quantity} },
+    { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 2, name: "features", kind: "message", T: NodeRuntimeHandlerFeatures, opt: true },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): NodeResources {
-    return new NodeResources().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): NodeRuntimeHandler {
+    return new NodeRuntimeHandler().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): NodeResources {
-    return new NodeResources().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): NodeRuntimeHandler {
+    return new NodeRuntimeHandler().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): NodeResources {
-    return new NodeResources().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): NodeRuntimeHandler {
+    return new NodeRuntimeHandler().fromJsonString(jsonString, options);
   }
 
-  static equals(a: NodeResources | PlainMessage<NodeResources> | undefined, b: NodeResources | PlainMessage<NodeResources> | undefined): boolean {
-    return proto2.util.equals(NodeResources, a, b);
+  static equals(a: NodeRuntimeHandler | PlainMessage<NodeRuntimeHandler> | undefined, b: NodeRuntimeHandler | PlainMessage<NodeRuntimeHandler> | undefined): boolean {
+    return proto2.util.equals(NodeRuntimeHandler, a, b);
+  }
+}
+
+/**
+ * NodeRuntimeHandlerFeatures is a set of runtime features.
+ *
+ * @generated from message k8s.io.api.core.v1.NodeRuntimeHandlerFeatures
+ */
+export class NodeRuntimeHandlerFeatures extends Message<NodeRuntimeHandlerFeatures> {
+  /**
+   * RecursiveReadOnlyMounts is set to true if the runtime handler supports RecursiveReadOnlyMounts.
+   * +featureGate=RecursiveReadOnlyMounts
+   * +optional
+   *
+   * @generated from field: optional bool recursiveReadOnlyMounts = 1;
+   */
+  recursiveReadOnlyMounts?: boolean;
+
+  constructor(data?: PartialMessage<NodeRuntimeHandlerFeatures>) {
+    super();
+    proto2.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto2 = proto2;
+  static readonly typeName = "k8s.io.api.core.v1.NodeRuntimeHandlerFeatures";
+  static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 1, name: "recursiveReadOnlyMounts", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): NodeRuntimeHandlerFeatures {
+    return new NodeRuntimeHandlerFeatures().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): NodeRuntimeHandlerFeatures {
+    return new NodeRuntimeHandlerFeatures().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): NodeRuntimeHandlerFeatures {
+    return new NodeRuntimeHandlerFeatures().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: NodeRuntimeHandlerFeatures | PlainMessage<NodeRuntimeHandlerFeatures> | undefined, b: NodeRuntimeHandlerFeatures | PlainMessage<NodeRuntimeHandlerFeatures> | undefined): boolean {
+    return proto2.util.equals(NodeRuntimeHandlerFeatures, a, b);
   }
 }
 
@@ -7511,6 +7691,7 @@ export class NodeResources extends Message<NodeResources> {
 export class NodeSelector extends Message<NodeSelector> {
   /**
    * Required. A list of node selector terms. The terms are ORed.
+   * +listType=atomic
    *
    * @generated from field: repeated k8s.io.api.core.v1.NodeSelectorTerm nodeSelectorTerms = 1;
    */
@@ -7573,6 +7754,7 @@ export class NodeSelectorRequirement extends Message<NodeSelectorRequirement> {
    * array must have a single element, which will be interpreted as an integer.
    * This array is replaced during a strategic merge patch.
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated string values = 3;
    */
@@ -7620,6 +7802,7 @@ export class NodeSelectorTerm extends Message<NodeSelectorTerm> {
   /**
    * A list of node selector requirements by node's labels.
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated k8s.io.api.core.v1.NodeSelectorRequirement matchExpressions = 1;
    */
@@ -7628,6 +7811,7 @@ export class NodeSelectorTerm extends Message<NodeSelectorTerm> {
   /**
    * A list of node selector requirements by node's fields.
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated k8s.io.api.core.v1.NodeSelectorRequirement matchFields = 2;
    */
@@ -7682,6 +7866,7 @@ export class NodeSpec extends Message<NodeSpec> {
    * each of IPv4 and IPv6.
    * +optional
    * +patchStrategy=merge
+   * +listType=set
    *
    * @generated from field: repeated string podCIDRs = 7;
    */
@@ -7707,6 +7892,7 @@ export class NodeSpec extends Message<NodeSpec> {
   /**
    * If specified, the node's taints.
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated k8s.io.api.core.v1.Taint taints = 5;
    */
@@ -7803,6 +7989,8 @@ export class NodeStatus extends Message<NodeStatus> {
    * +optional
    * +patchMergeKey=type
    * +patchStrategy=merge
+   * +listType=map
+   * +listMapKey=type
    *
    * @generated from field: repeated k8s.io.api.core.v1.NodeCondition conditions = 4;
    */
@@ -7822,6 +8010,8 @@ export class NodeStatus extends Message<NodeStatus> {
    * +optional
    * +patchMergeKey=type
    * +patchStrategy=merge
+   * +listType=map
+   * +listMapKey=type
    *
    * @generated from field: repeated k8s.io.api.core.v1.NodeAddress addresses = 5;
    */
@@ -7847,6 +8037,7 @@ export class NodeStatus extends Message<NodeStatus> {
   /**
    * List of container images on this node
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated k8s.io.api.core.v1.ContainerImage images = 8;
    */
@@ -7855,6 +8046,7 @@ export class NodeStatus extends Message<NodeStatus> {
   /**
    * List of attachable volumes in use (mounted) by the node.
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated string volumesInUse = 9;
    */
@@ -7863,6 +8055,7 @@ export class NodeStatus extends Message<NodeStatus> {
   /**
    * List of volumes that are attached to the node.
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated k8s.io.api.core.v1.AttachedVolume volumesAttached = 10;
    */
@@ -7875,6 +8068,16 @@ export class NodeStatus extends Message<NodeStatus> {
    * @generated from field: optional k8s.io.api.core.v1.NodeConfigStatus config = 11;
    */
   config?: NodeConfigStatus;
+
+  /**
+   * The available runtime handlers.
+   * +featureGate=RecursiveReadOnlyMounts
+   * +optional
+   * +listType=atomic
+   *
+   * @generated from field: repeated k8s.io.api.core.v1.NodeRuntimeHandler runtimeHandlers = 12;
+   */
+  runtimeHandlers: NodeRuntimeHandler[] = [];
 
   constructor(data?: PartialMessage<NodeStatus>) {
     super();
@@ -7895,6 +8098,7 @@ export class NodeStatus extends Message<NodeStatus> {
     { no: 9, name: "volumesInUse", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 10, name: "volumesAttached", kind: "message", T: AttachedVolume, repeated: true },
     { no: 11, name: "config", kind: "message", T: NodeConfigStatus, opt: true },
+    { no: 12, name: "runtimeHandlers", kind: "message", T: NodeRuntimeHandler, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): NodeStatus {
@@ -8373,7 +8577,7 @@ export class PersistentVolumeClaimCondition extends Message<PersistentVolumeClai
 
   /**
    * reason is a unique, this should be a short, machine understandable string that gives the reason
-   * for condition's last transition. If it reports "ResizeStarted" that means the underlying
+   * for condition's last transition. If it reports "Resizing" that means the underlying
    * persistent volume is being resized.
    * +optional
    *
@@ -8485,6 +8689,7 @@ export class PersistentVolumeClaimSpec extends Message<PersistentVolumeClaimSpec
    * accessModes contains the desired access modes the volume should have.
    * More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#access-modes-1
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated string accessModes = 1;
    */
@@ -8592,7 +8797,7 @@ export class PersistentVolumeClaimSpec extends Message<PersistentVolumeClaimSpec
    * If the resource referred to by volumeAttributesClass does not exist, this PersistentVolumeClaim will be
    * set to a Pending state, as reflected by the modifyVolumeStatus field, until such as a resource
    * exists.
-   * More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#volumeattributesclass
+   * More info: https://kubernetes.io/docs/concepts/storage/volume-attributes-classes/
    * (Alpha) Using this field requires the VolumeAttributesClass feature gate to be enabled.
    * +featureGate=VolumeAttributesClass
    * +optional
@@ -8655,6 +8860,7 @@ export class PersistentVolumeClaimStatus extends Message<PersistentVolumeClaimSt
    * accessModes contains the actual access modes the volume backing the PVC has.
    * More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#access-modes-1
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated string accessModes = 2;
    */
@@ -8670,10 +8876,12 @@ export class PersistentVolumeClaimStatus extends Message<PersistentVolumeClaimSt
 
   /**
    * conditions is the current Condition of persistent volume claim. If underlying persistent volume is being
-   * resized then the Condition will be set to 'ResizeStarted'.
+   * resized then the Condition will be set to 'Resizing'.
    * +optional
    * +patchMergeKey=type
    * +patchStrategy=merge
+   * +listType=map
+   * +listMapKey=type
    *
    * @generated from field: repeated k8s.io.api.core.v1.PersistentVolumeClaimCondition conditions = 4;
    */
@@ -9247,6 +9455,7 @@ export class PersistentVolumeSpec extends Message<PersistentVolumeSpec> {
    * accessModes contains all ways the volume can be mounted.
    * More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#access-modes
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated string accessModes = 3;
    */
@@ -9290,6 +9499,7 @@ export class PersistentVolumeSpec extends Message<PersistentVolumeSpec> {
    * simply fail if one is invalid.
    * More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes/#mount-options
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated string mountOptions = 7;
    */
@@ -9572,6 +9782,7 @@ export class PodAffinity extends Message<PodAffinity> {
    * When there are multiple elements, the lists of nodes corresponding to each
    * podAffinityTerm are intersected, i.e. all terms must be satisfied.
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated k8s.io.api.core.v1.PodAffinityTerm requiredDuringSchedulingIgnoredDuringExecution = 1;
    */
@@ -9588,6 +9799,7 @@ export class PodAffinity extends Message<PodAffinity> {
    * "weight" to the sum if the node has pods which matches the corresponding podAffinityTerm; the
    * node(s) with the highest sum are the most preferred.
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated k8s.io.api.core.v1.WeightedPodAffinityTerm preferredDuringSchedulingIgnoredDuringExecution = 2;
    */
@@ -9648,6 +9860,7 @@ export class PodAffinityTerm extends Message<PodAffinityTerm> {
    * and the ones selected by namespaceSelector.
    * null or empty namespaces list and null namespaceSelector means "this pod's namespace".
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated string namespaces = 2;
    */
@@ -9679,12 +9892,12 @@ export class PodAffinityTerm extends Message<PodAffinityTerm> {
   /**
    * MatchLabelKeys is a set of pod label keys to select which pods will
    * be taken into consideration. The keys are used to lookup values from the
-   * incoming pod labels, those key-value labels are merged with `LabelSelector` as `key in (value)`
+   * incoming pod labels, those key-value labels are merged with `labelSelector` as `key in (value)`
    * to select the group of existing pods which pods will be taken into consideration
    * for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
    * pod labels will be ignored. The default value is empty.
-   * The same key is forbidden to exist in both MatchLabelKeys and LabelSelector.
-   * Also, MatchLabelKeys cannot be set when LabelSelector isn't set.
+   * The same key is forbidden to exist in both matchLabelKeys and labelSelector.
+   * Also, matchLabelKeys cannot be set when labelSelector isn't set.
    * This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.
    * +listType=atomic
    * +optional
@@ -9696,12 +9909,12 @@ export class PodAffinityTerm extends Message<PodAffinityTerm> {
   /**
    * MismatchLabelKeys is a set of pod label keys to select which pods will
    * be taken into consideration. The keys are used to lookup values from the
-   * incoming pod labels, those key-value labels are merged with `LabelSelector` as `key notin (value)`
+   * incoming pod labels, those key-value labels are merged with `labelSelector` as `key notin (value)`
    * to select the group of existing pods which pods will be taken into consideration
    * for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
    * pod labels will be ignored. The default value is empty.
-   * The same key is forbidden to exist in both MismatchLabelKeys and LabelSelector.
-   * Also, MismatchLabelKeys cannot be set when LabelSelector isn't set.
+   * The same key is forbidden to exist in both mismatchLabelKeys and labelSelector.
+   * Also, mismatchLabelKeys cannot be set when labelSelector isn't set.
    * This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.
    * +listType=atomic
    * +optional
@@ -9758,6 +9971,7 @@ export class PodAntiAffinity extends Message<PodAntiAffinity> {
    * When there are multiple elements, the lists of nodes corresponding to each
    * podAffinityTerm are intersected, i.e. all terms must be satisfied.
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated k8s.io.api.core.v1.PodAffinityTerm requiredDuringSchedulingIgnoredDuringExecution = 1;
    */
@@ -9774,6 +9988,7 @@ export class PodAntiAffinity extends Message<PodAntiAffinity> {
    * "weight" to the sum if the node has pods which matches the corresponding podAffinityTerm; the
    * node(s) with the highest sum are the most preferred.
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated k8s.io.api.core.v1.WeightedPodAffinityTerm preferredDuringSchedulingIgnoredDuringExecution = 2;
    */
@@ -9996,6 +10211,7 @@ export class PodDNSConfig extends Message<PodDNSConfig> {
    * This will be appended to the base nameservers generated from DNSPolicy.
    * Duplicated nameservers will be removed.
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated string nameservers = 1;
    */
@@ -10006,6 +10222,7 @@ export class PodDNSConfig extends Message<PodDNSConfig> {
    * This will be appended to the base search paths generated from DNSPolicy.
    * Duplicated search paths will be removed.
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated string searches = 2;
    */
@@ -10017,6 +10234,7 @@ export class PodDNSConfig extends Message<PodDNSConfig> {
    * Duplicated entries will be removed. Resolution options given in Options
    * will override those that appear in the base DNSPolicy.
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated k8s.io.api.core.v1.PodDNSConfigOption options = 3;
    */
@@ -10155,6 +10373,7 @@ export class PodExecOptions extends Message<PodExecOptions> {
 
   /**
    * Command is the remote command to execute. argv array. Not executed within a shell.
+   * +listType=atomic
    *
    * @generated from field: repeated string command = 6;
    */
@@ -10474,6 +10693,7 @@ export class PodPortForwardOptions extends Message<PodPortForwardOptions> {
    * List of ports to forward
    * Required when using WebSockets
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated int32 ports = 1;
    */
@@ -10822,6 +11042,7 @@ export class PodSecurityContext extends Message<PodSecurityContext> {
    * even if they are not included in this list.
    * Note that this field cannot be set when spec.os.name is windows.
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated int64 supplementalGroups = 4;
    */
@@ -10849,6 +11070,7 @@ export class PodSecurityContext extends Message<PodSecurityContext> {
    * sysctls (by the container runtime) might fail to launch.
    * Note that this field cannot be set when spec.os.name is windows.
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated k8s.io.api.core.v1.Sysctl sysctls = 7;
    */
@@ -10877,6 +11099,15 @@ export class PodSecurityContext extends Message<PodSecurityContext> {
    */
   seccompProfile?: SeccompProfile;
 
+  /**
+   * appArmorProfile is the AppArmor options to use by the containers in this pod.
+   * Note that this field cannot be set when spec.os.name is windows.
+   * +optional
+   *
+   * @generated from field: optional k8s.io.api.core.v1.AppArmorProfile appArmorProfile = 11;
+   */
+  appArmorProfile?: AppArmorProfile;
+
   constructor(data?: PartialMessage<PodSecurityContext>) {
     super();
     proto2.util.initPartial(data, this);
@@ -10895,6 +11126,7 @@ export class PodSecurityContext extends Message<PodSecurityContext> {
     { no: 7, name: "sysctls", kind: "message", T: Sysctl, repeated: true },
     { no: 9, name: "fsGroupChangePolicy", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 10, name: "seccompProfile", kind: "message", T: SeccompProfile, opt: true },
+    { no: 11, name: "appArmorProfile", kind: "message", T: AppArmorProfile, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PodSecurityContext {
@@ -10969,6 +11201,8 @@ export class PodSpec extends Message<PodSpec> {
    * +optional
    * +patchMergeKey=name
    * +patchStrategy=merge,retainKeys
+   * +listType=map
+   * +listMapKey=name
    *
    * @generated from field: repeated k8s.io.api.core.v1.Volume volumes = 1;
    */
@@ -10990,6 +11224,8 @@ export class PodSpec extends Message<PodSpec> {
    * More info: https://kubernetes.io/docs/concepts/workloads/pods/init-containers/
    * +patchMergeKey=name
    * +patchStrategy=merge
+   * +listType=map
+   * +listMapKey=name
    *
    * @generated from field: repeated k8s.io.api.core.v1.Container initContainers = 20;
    */
@@ -11002,6 +11238,8 @@ export class PodSpec extends Message<PodSpec> {
    * Cannot be updated.
    * +patchMergeKey=name
    * +patchStrategy=merge
+   * +listType=map
+   * +listMapKey=name
    *
    * @generated from field: repeated k8s.io.api.core.v1.Container containers = 2;
    */
@@ -11015,6 +11253,8 @@ export class PodSpec extends Message<PodSpec> {
    * +optional
    * +patchMergeKey=name
    * +patchStrategy=merge
+   * +listType=map
+   * +listMapKey=name
    *
    * @generated from field: repeated k8s.io.api.core.v1.EphemeralContainer ephemeralContainers = 34;
    */
@@ -11090,7 +11330,7 @@ export class PodSpec extends Message<PodSpec> {
   serviceAccountName?: string;
 
   /**
-   * DeprecatedServiceAccount is a depreciated alias for ServiceAccountName.
+   * DeprecatedServiceAccount is a deprecated alias for ServiceAccountName.
    * Deprecated: Use serviceAccountName instead.
    * +k8s:conversion-gen=false
    * +optional
@@ -11177,6 +11417,8 @@ export class PodSpec extends Message<PodSpec> {
    * +optional
    * +patchMergeKey=name
    * +patchStrategy=merge
+   * +listType=map
+   * +listMapKey=name
    *
    * @generated from field: repeated k8s.io.api.core.v1.LocalObjectReference imagePullSecrets = 15;
    */
@@ -11220,6 +11462,7 @@ export class PodSpec extends Message<PodSpec> {
   /**
    * If specified, the pod's tolerations.
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated k8s.io.api.core.v1.Toleration tolerations = 22;
    */
@@ -11227,10 +11470,12 @@ export class PodSpec extends Message<PodSpec> {
 
   /**
    * HostAliases is an optional list of hosts and IPs that will be injected into the pod's hosts
-   * file if specified. This is only valid for non-hostNetwork pods.
+   * file if specified.
    * +optional
    * +patchMergeKey=ip
    * +patchStrategy=merge
+   * +listType=map
+   * +listMapKey=ip
    *
    * @generated from field: repeated k8s.io.api.core.v1.HostAlias hostAliases = 23;
    */
@@ -11277,6 +11522,7 @@ export class PodSpec extends Message<PodSpec> {
    * all conditions specified in the readiness gates have status equal to "True"
    * More info: https://git.k8s.io/enhancements/keps/sig-network/580-pod-readiness-gates
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated k8s.io.api.core.v1.PodReadinessGate readinessGates = 28;
    */
@@ -11366,6 +11612,7 @@ export class PodSpec extends Message<PodSpec> {
    * - spec.hostPID
    * - spec.hostIPC
    * - spec.hostUsers
+   * - spec.securityContext.appArmorProfile
    * - spec.securityContext.seLinuxOptions
    * - spec.securityContext.seccompProfile
    * - spec.securityContext.fsGroup
@@ -11375,6 +11622,7 @@ export class PodSpec extends Message<PodSpec> {
    * - spec.securityContext.runAsUser
    * - spec.securityContext.runAsGroup
    * - spec.securityContext.supplementalGroups
+   * - spec.containers[*].securityContext.appArmorProfile
    * - spec.containers[*].securityContext.seLinuxOptions
    * - spec.containers[*].securityContext.seccompProfile
    * - spec.containers[*].securityContext.capabilities
@@ -11414,13 +11662,10 @@ export class PodSpec extends Message<PodSpec> {
    *
    * SchedulingGates can only be set at pod creation time, and be removed only afterwards.
    *
-   * This is a beta feature enabled by the PodSchedulingReadiness feature gate.
-   *
    * +patchMergeKey=name
    * +patchStrategy=merge
    * +listType=map
    * +listMapKey=name
-   * +featureGate=PodSchedulingReadiness
    * +optional
    *
    * @generated from field: repeated k8s.io.api.core.v1.PodSchedulingGate schedulingGates = 38;
@@ -11554,6 +11799,8 @@ export class PodStatus extends Message<PodStatus> {
    * +optional
    * +patchMergeKey=type
    * +patchStrategy=merge
+   * +listType=map
+   * +listMapKey=type
    *
    * @generated from field: repeated k8s.io.api.core.v1.PodCondition conditions = 2;
    */
@@ -11630,6 +11877,8 @@ export class PodStatus extends Message<PodStatus> {
    * +optional
    * +patchStrategy=merge
    * +patchMergeKey=ip
+   * +listType=map
+   * +listMapKey=ip
    *
    * @generated from field: repeated k8s.io.api.core.v1.PodIP podIPs = 12;
    */
@@ -11649,6 +11898,7 @@ export class PodStatus extends Message<PodStatus> {
    * init container will have ready = true, the most recently started container will have
    * startTime set.
    * More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#pod-and-container-status
+   * +listType=atomic
    *
    * @generated from field: repeated k8s.io.api.core.v1.ContainerStatus initContainerStatuses = 10;
    */
@@ -11658,6 +11908,7 @@ export class PodStatus extends Message<PodStatus> {
    * The list has one entry per container in the manifest.
    * More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#pod-and-container-status
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated k8s.io.api.core.v1.ContainerStatus containerStatuses = 8;
    */
@@ -11676,6 +11927,7 @@ export class PodStatus extends Message<PodStatus> {
   /**
    * Status for any ephemeral containers that have run in this pod.
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated k8s.io.api.core.v1.ContainerStatus ephemeralContainerStatuses = 13;
    */
@@ -12440,6 +12692,7 @@ export class ProjectedVolumeSource extends Message<ProjectedVolumeSource> {
   /**
    * sources is the list of volume projections
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated k8s.io.api.core.v1.VolumeProjection sources = 1;
    */
@@ -12589,6 +12842,7 @@ export class RBDPersistentVolumeSource extends Message<RBDPersistentVolumeSource
   /**
    * monitors is a collection of Ceph monitors.
    * More info: https://examples.k8s.io/volumes/rbd/README.md#how-to-use-it
+   * +listType=atomic
    *
    * @generated from field: repeated string monitors = 1;
    */
@@ -12710,6 +12964,7 @@ export class RBDVolumeSource extends Message<RBDVolumeSource> {
   /**
    * monitors is a collection of Ceph monitors.
    * More info: https://examples.k8s.io/volumes/rbd/README.md#how-to-use-it
+   * +listType=atomic
    *
    * @generated from field: repeated string monitors = 1;
    */
@@ -13209,6 +13464,8 @@ export class ReplicationControllerStatus extends Message<ReplicationControllerSt
    * +optional
    * +patchMergeKey=type
    * +patchStrategy=merge
+   * +listType=map
+   * +listMapKey=type
    *
    * @generated from field: repeated k8s.io.api.core.v1.ReplicationControllerCondition conditions = 6;
    */
@@ -13484,6 +13741,7 @@ export class ResourceQuotaSpec extends Message<ResourceQuotaSpec> {
    * A collection of filters that must match each object tracked by a quota.
    * If not specified, the quota matches all objects.
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated string scopes = 2;
    */
@@ -13987,6 +14245,7 @@ export class ScopeSelector extends Message<ScopeSelector> {
   /**
    * A list of scope selector requirements by scope of the resources.
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated k8s.io.api.core.v1.ScopedResourceSelectorRequirement matchExpressions = 1;
    */
@@ -14048,6 +14307,7 @@ export class ScopedResourceSelectorRequirement extends Message<ScopedResourceSel
    * the values array must be empty.
    * This array is replaced during a strategic merge patch.
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated string values = 3;
    */
@@ -14425,6 +14685,7 @@ export class SecretProjection extends Message<SecretProjection> {
    * the volume setup will error unless it is marked optional. Paths must be
    * relative and may not contain the '..' path or start with '..'.
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated k8s.io.api.core.v1.KeyToPath items = 2;
    */
@@ -14549,6 +14810,7 @@ export class SecretVolumeSource extends Message<SecretVolumeSource> {
    * the volume setup will error unless it is marked optional. Paths must be
    * relative and may not contain the '..' path or start with '..'.
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated k8s.io.api.core.v1.KeyToPath items = 2;
    */
@@ -14743,6 +15005,16 @@ export class SecurityContext extends Message<SecurityContext> {
    */
   seccompProfile?: SeccompProfile;
 
+  /**
+   * appArmorProfile is the AppArmor options to use by this container. If set, this profile
+   * overrides the pod's appArmorProfile.
+   * Note that this field cannot be set when spec.os.name is windows.
+   * +optional
+   *
+   * @generated from field: optional k8s.io.api.core.v1.AppArmorProfile appArmorProfile = 12;
+   */
+  appArmorProfile?: AppArmorProfile;
+
   constructor(data?: PartialMessage<SecurityContext>) {
     super();
     proto2.util.initPartial(data, this);
@@ -14762,6 +15034,7 @@ export class SecurityContext extends Message<SecurityContext> {
     { no: 7, name: "allowPrivilegeEscalation", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
     { no: 9, name: "procMount", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 11, name: "seccompProfile", kind: "message", T: SeccompProfile, opt: true },
+    { no: 12, name: "appArmorProfile", kind: "message", T: AppArmorProfile, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SecurityContext {
@@ -14917,6 +15190,8 @@ export class ServiceAccount extends Message<ServiceAccount> {
    * +optional
    * +patchMergeKey=name
    * +patchStrategy=merge
+   * +listType=map
+   * +listMapKey=name
    *
    * @generated from field: repeated k8s.io.api.core.v1.ObjectReference secrets = 2;
    */
@@ -14928,6 +15203,7 @@ export class ServiceAccount extends Message<ServiceAccount> {
    * can be mounted in the pod, but ImagePullSecrets are only accessed by the kubelet.
    * More info: https://kubernetes.io/docs/concepts/containers/images/#specifying-imagepullsecrets-on-a-pod
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated k8s.io.api.core.v1.LocalObjectReference imagePullSecrets = 3;
    */
@@ -15430,6 +15706,7 @@ export class ServiceSpec extends Message<ServiceSpec> {
    * at a node with this IP.  A common example is external load-balancers
    * that are not part of the Kubernetes system.
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated string externalIPs = 5;
    */
@@ -15467,6 +15744,7 @@ export class ServiceSpec extends Message<ServiceSpec> {
    * cloud-provider does not support the feature."
    * More info: https://kubernetes.io/docs/tasks/access-application-cluster/create-external-load-balancer/
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated string loadBalancerSourceRanges = 9;
    */
@@ -15626,6 +15904,21 @@ export class ServiceSpec extends Message<ServiceSpec> {
    */
   internalTrafficPolicy?: string;
 
+  /**
+   * TrafficDistribution offers a way to express preferences for how traffic is
+   * distributed to Service endpoints. Implementations can use this field as a
+   * hint, but are not required to guarantee strict adherence. If the field is
+   * not set, the implementation will apply its default routing strategy. If set
+   * to "PreferClose", implementations should prioritize endpoints that are
+   * topologically close (e.g., same zone).
+   * This is an alpha field and requires enabling ServiceTrafficDistribution feature.
+   * +featureGate=ServiceTrafficDistribution
+   * +optional
+   *
+   * @generated from field: optional string trafficDistribution = 23;
+   */
+  trafficDistribution?: string;
+
   constructor(data?: PartialMessage<ServiceSpec>) {
     super();
     proto2.util.initPartial(data, this);
@@ -15653,6 +15946,7 @@ export class ServiceSpec extends Message<ServiceSpec> {
     { no: 20, name: "allocateLoadBalancerNodePorts", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
     { no: 21, name: "loadBalancerClass", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 22, name: "internalTrafficPolicy", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 23, name: "trafficDistribution", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ServiceSpec {
@@ -16262,6 +16556,7 @@ export class TopologySelectorLabelRequirement extends Message<TopologySelectorLa
   /**
    * An array of string values. One value must match the label to be selected.
    * Each entry in Values is ORed.
+   * +listType=atomic
    *
    * @generated from field: repeated string values = 2;
    */
@@ -16310,6 +16605,7 @@ export class TopologySelectorTerm extends Message<TopologySelectorTerm> {
   /**
    * A list of topology selector requirements by labels.
    * +optional
+   * +listType=atomic
    *
    * @generated from field: repeated k8s.io.api.core.v1.TopologySelectorLabelRequirement matchLabelExpressions = 1;
    */
@@ -16451,8 +16747,6 @@ export class TopologySpreadConstraint extends Message<TopologySpreadConstraint> 
    * In this situation, new pod with the same labelSelector cannot be scheduled,
    * because computed skew will be 3(3 - 0) if new Pod is scheduled to any of the three zones,
    * it will violate MaxSkew.
-   *
-   * This is a beta field and requires the MinDomainsInPodTopologySpread feature gate to be enabled (enabled by default).
    * +optional
    *
    * @generated from field: optional int32 minDomains = 5;
@@ -16798,6 +17092,31 @@ export class VolumeMount extends Message<VolumeMount> {
   readOnly?: boolean;
 
   /**
+   * RecursiveReadOnly specifies whether read-only mounts should be handled
+   * recursively.
+   *
+   * If ReadOnly is false, this field has no meaning and must be unspecified.
+   *
+   * If ReadOnly is true, and this field is set to Disabled, the mount is not made
+   * recursively read-only.  If this field is set to IfPossible, the mount is made
+   * recursively read-only, if it is supported by the container runtime.  If this
+   * field is set to Enabled, the mount is made recursively read-only if it is
+   * supported by the container runtime, otherwise the pod will not be started and
+   * an error will be generated to indicate the reason.
+   *
+   * If this field is set to IfPossible or Enabled, MountPropagation must be set to
+   * None (or be unspecified, which defaults to None).
+   *
+   * If this field is not specified, it is treated as an equivalent of Disabled.
+   *
+   * +featureGate=RecursiveReadOnlyMounts
+   * +optional
+   *
+   * @generated from field: optional string recursiveReadOnly = 7;
+   */
+  recursiveReadOnly?: string;
+
+  /**
    * Path within the container at which the volume should be mounted.  Must
    * not contain ':'.
    *
@@ -16819,6 +17138,8 @@ export class VolumeMount extends Message<VolumeMount> {
    * to container and the other way around.
    * When not set, MountPropagationNone is used.
    * This field is beta in 1.10.
+   * When RecursiveReadOnly is set to IfPossible or to Enabled, MountPropagation must be None or unspecified
+   * (which defaults to None).
    * +optional
    *
    * @generated from field: optional string mountPropagation = 5;
@@ -16846,6 +17167,7 @@ export class VolumeMount extends Message<VolumeMount> {
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 2, name: "readOnly", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+    { no: 7, name: "recursiveReadOnly", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 3, name: "mountPath", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 4, name: "subPath", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 5, name: "mountPropagation", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
@@ -16866,6 +17188,76 @@ export class VolumeMount extends Message<VolumeMount> {
 
   static equals(a: VolumeMount | PlainMessage<VolumeMount> | undefined, b: VolumeMount | PlainMessage<VolumeMount> | undefined): boolean {
     return proto2.util.equals(VolumeMount, a, b);
+  }
+}
+
+/**
+ * VolumeMountStatus shows status of volume mounts.
+ *
+ * @generated from message k8s.io.api.core.v1.VolumeMountStatus
+ */
+export class VolumeMountStatus extends Message<VolumeMountStatus> {
+  /**
+   * Name corresponds to the name of the original VolumeMount.
+   *
+   * @generated from field: optional string name = 1;
+   */
+  name?: string;
+
+  /**
+   * MountPath corresponds to the original VolumeMount.
+   *
+   * @generated from field: optional string mountPath = 2;
+   */
+  mountPath?: string;
+
+  /**
+   * ReadOnly corresponds to the original VolumeMount.
+   * +optional
+   *
+   * @generated from field: optional bool readOnly = 3;
+   */
+  readOnly?: boolean;
+
+  /**
+   * RecursiveReadOnly must be set to Disabled, Enabled, or unspecified (for non-readonly mounts).
+   * An IfPossible value in the original VolumeMount must be translated to Disabled or Enabled,
+   * depending on the mount result.
+   * +featureGate=RecursiveReadOnlyMounts
+   * +optional
+   *
+   * @generated from field: optional string recursiveReadOnly = 4;
+   */
+  recursiveReadOnly?: string;
+
+  constructor(data?: PartialMessage<VolumeMountStatus>) {
+    super();
+    proto2.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto2 = proto2;
+  static readonly typeName = "k8s.io.api.core.v1.VolumeMountStatus";
+  static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 2, name: "mountPath", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 3, name: "readOnly", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+    { no: 4, name: "recursiveReadOnly", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): VolumeMountStatus {
+    return new VolumeMountStatus().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): VolumeMountStatus {
+    return new VolumeMountStatus().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): VolumeMountStatus {
+    return new VolumeMountStatus().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: VolumeMountStatus | PlainMessage<VolumeMountStatus> | undefined, b: VolumeMountStatus | PlainMessage<VolumeMountStatus> | undefined): boolean {
+    return proto2.util.equals(VolumeMountStatus, a, b);
   }
 }
 
