@@ -11,50 +11,41 @@ import (
 // Update events where the operation has completed. This is useful for triggering
 // a reconciliation of a Promotion only when an ArgoCD Application operation has
 // finished.
-type ArgoCDAppOperationCompleted struct {
+type ArgoCDAppOperationCompleted[T any] struct {
 	logger log.FieldLogger
 }
 
-func (p ArgoCDAppOperationCompleted) Create(event.CreateEvent) bool {
+func (p ArgoCDAppOperationCompleted[T]) Create(event.TypedCreateEvent[T]) bool {
 	return false
 }
 
-func (p ArgoCDAppOperationCompleted) Update(e event.UpdateEvent) bool {
-	if e.ObjectOld == nil {
+func (p ArgoCDAppOperationCompleted[T]) Update(e event.TypedUpdateEvent[T]) bool {
+	oldApp := any(e.ObjectOld).(*argocd.Application) // nolint: forcetypeassert
+	if oldApp == nil {
 		p.logger.Errorf("Update event has no old object to update: %v", e)
 		return false
 	}
-	if e.ObjectNew == nil {
+	newApp := any(e.ObjectNew).(*argocd.Application) // nolint: forcetypeassert
+	if newApp == nil {
 		p.logger.Errorf("Update event has no new object for update: %v", e)
 		return false
 	}
 
-	newPromo, ok := e.ObjectNew.(*argocd.Application)
-	if !ok {
-		p.logger.Errorf("Failed to convert new Application: %v", e.ObjectNew)
-		return false
-	}
-	oldPromo, ok := e.ObjectOld.(*argocd.Application)
-	if !ok {
-		p.logger.Errorf("Failed to convert old Application: %v", e.ObjectOld)
-		return false
-	}
-
-	if newPromo.Status.OperationState == nil {
+	if newApp.Status.OperationState == nil {
 		// No operation state to compare against.
 		return false
 	}
 
-	newOperationCompleted := newPromo.Status.OperationState.Phase.Completed()
-	oldOperationCompleted := oldPromo.Status.OperationState != nil && oldPromo.Status.OperationState.Phase.Completed()
+	newOperationCompleted := newApp.Status.OperationState.Phase.Completed()
+	oldOperationCompleted := oldApp.Status.OperationState != nil && oldApp.Status.OperationState.Phase.Completed()
 
 	return newOperationCompleted && !oldOperationCompleted
 }
 
-func (p ArgoCDAppOperationCompleted) Delete(event.DeleteEvent) bool {
+func (p ArgoCDAppOperationCompleted[T]) Delete(event.TypedDeleteEvent[T]) bool {
 	return false
 }
 
-func (p ArgoCDAppOperationCompleted) Generic(event.GenericEvent) bool {
+func (p ArgoCDAppOperationCompleted[T]) Generic(event.TypedGenericEvent[T]) bool {
 	return false
 }

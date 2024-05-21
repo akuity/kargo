@@ -31,12 +31,12 @@ func TestUpdatedArgoCDAppHandler_Update(t *testing.T) {
 		indexer       client.IndexerFunc
 		interceptor   interceptor.Funcs
 		shardSelector labels.Selector
-		e             event.UpdateEvent
+		e             event.TypedUpdateEvent[*argocd.Application]
 		assertions    func(*testing.T, workqueue.RateLimitingInterface)
 	}{
 		{
 			name: "Event without new object",
-			e: event.UpdateEvent{
+			e: event.TypedUpdateEvent[*argocd.Application]{
 				ObjectOld: &argocd.Application{},
 			},
 			assertions: func(t *testing.T, wq workqueue.RateLimitingInterface) {
@@ -45,7 +45,7 @@ func TestUpdatedArgoCDAppHandler_Update(t *testing.T) {
 		},
 		{
 			name: "Event without old object",
-			e: event.UpdateEvent{
+			e: event.TypedUpdateEvent[*argocd.Application]{
 				ObjectNew: &argocd.Application{},
 			},
 			assertions: func(t *testing.T, wq workqueue.RateLimitingInterface) {
@@ -74,7 +74,7 @@ func TestUpdatedArgoCDAppHandler_Update(t *testing.T) {
 				}
 				return nil
 			},
-			e: event.UpdateEvent{
+			e: event.TypedUpdateEvent[*argocd.Application]{
 				ObjectOld: &argocd.Application{},
 				ObjectNew: &argocd.Application{
 					ObjectMeta: metav1.ObjectMeta{
@@ -123,7 +123,7 @@ func TestUpdatedArgoCDAppHandler_Update(t *testing.T) {
 				}
 				return nil
 			},
-			e: event.UpdateEvent{
+			e: event.TypedUpdateEvent[*argocd.Application]{
 				ObjectOld: &argocd.Application{},
 				ObjectNew: &argocd.Application{
 					ObjectMeta: metav1.ObjectMeta{
@@ -198,7 +198,7 @@ func TestUpdatedArgoCDAppHandler_Update(t *testing.T) {
 			shardSelector: labels.SelectorFromSet(labels.Set{
 				"shard-label": "shard-value",
 			}),
-			e: event.UpdateEvent{
+			e: event.TypedUpdateEvent[*argocd.Application]{
 				ObjectOld: &argocd.Application{},
 				ObjectNew: &argocd.Application{
 					ObjectMeta: metav1.ObjectMeta{
@@ -232,7 +232,7 @@ func TestUpdatedArgoCDAppHandler_Update(t *testing.T) {
 			indexer: func(client.Object) []string {
 				return nil
 			},
-			e: event.UpdateEvent{
+			e: event.TypedUpdateEvent[*argocd.Application]{
 				ObjectOld: &argocd.Application{},
 				ObjectNew: &argocd.Application{
 					ObjectMeta: metav1.ObjectMeta{
@@ -263,7 +263,7 @@ func TestUpdatedArgoCDAppHandler_Update(t *testing.T) {
 					return apierrors.NewInternalError(errors.New("something went wrong"))
 				},
 			},
-			e: event.UpdateEvent{
+			e: event.TypedUpdateEvent[*argocd.Application]{
 				ObjectOld: &argocd.Application{},
 				ObjectNew: &argocd.Application{
 					ObjectMeta: metav1.ObjectMeta{
@@ -292,7 +292,7 @@ func TestUpdatedArgoCDAppHandler_Update(t *testing.T) {
 				).
 				WithInterceptorFuncs(tt.interceptor)
 
-			u := &UpdatedArgoCDAppHandler{
+			u := &UpdatedArgoCDAppHandler[*argocd.Application]{
 				kargoClient:   c.Build(),
 				shardSelector: tt.shardSelector,
 			}

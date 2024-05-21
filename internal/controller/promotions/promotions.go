@@ -132,21 +132,21 @@ func SetupReconcilerWithManager(
 			source.Kind(
 				argocdMgr.GetCache(),
 				&argocd.Application{},
+				&UpdatedArgoCDAppHandler[*argocd.Application]{
+					kargoClient:   kargoMgr.GetClient(),
+					shardSelector: shardSelector,
+				},
+				ArgoCDAppOperationCompleted[*argocd.Application]{
+					logger: logger,
+				},
 			),
-			&UpdatedArgoCDAppHandler{
-				kargoClient:   kargoMgr.GetClient(),
-				shardSelector: shardSelector,
-			},
-			ArgoCDAppOperationCompleted{
-				logger: logger,
-			},
 		); err != nil {
 			return fmt.Errorf("unable to watch Applications: %w", err)
 		}
 	}
 
 	// Watch Promotions that complete and enqueue the next highest promotion key
-	priorityQueueHandler := &EnqueueHighestPriorityPromotionHandler{
+	priorityQueueHandler := &EnqueueHighestPriorityPromotionHandler[*kargoapi.Promotion]{
 		ctx:         ctx,
 		logger:      logger,
 		kargoClient: reconciler.kargoClient,
@@ -154,11 +154,12 @@ func SetupReconcilerWithManager(
 	}
 	promoWentTerminal := kargo.NewPromoWentTerminalPredicate(logger)
 	if err := c.Watch(
-		source.Kind(kargoMgr.GetCache(),
+		source.Kind(
+			kargoMgr.GetCache(),
 			&kargoapi.Promotion{},
+			priorityQueueHandler,
+			promoWentTerminal,
 		),
-		priorityQueueHandler,
-		promoWentTerminal,
 	); err != nil {
 		return fmt.Errorf("unable to watch Promotions: %w", err)
 	}

@@ -26,7 +26,7 @@ var (
 
 type webhook struct {
 	client  client.Client
-	decoder *admission.Decoder
+	decoder admission.Decoder
 
 	// The following behaviors are overridable for testing purposes:
 
@@ -65,7 +65,7 @@ func SetupWebhookWithManager(
 func newWebhook(
 	cfg libWebhook.Config,
 	kubeClient client.Client,
-	decoder *admission.Decoder,
+	decoder admission.Decoder,
 ) *webhook {
 	w := &webhook{
 		client:  kubeClient,

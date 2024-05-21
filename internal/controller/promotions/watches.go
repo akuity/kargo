@@ -14,36 +14,37 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
 	"github.com/akuity/kargo/internal/kubeclient"
 	"github.com/akuity/kargo/internal/logging"
 )
 
 // EnqueueHighestPriorityPromotionHandler is an event handler that enqueues the next
 // highest priority Promotion for reconciliation when an active Promotion becomes terminal
-type EnqueueHighestPriorityPromotionHandler struct {
+type EnqueueHighestPriorityPromotionHandler[T any] struct {
 	logger      *log.Entry
 	ctx         context.Context
 	pqs         *promoQueues
 	kargoClient client.Client
 }
 
-// Create implements EventHandler.
-func (e *EnqueueHighestPriorityPromotionHandler) Create(
+// Create implements TypedEventHandler.
+func (e *EnqueueHighestPriorityPromotionHandler[T]) Create(
 	context.Context,
-	event.CreateEvent,
+	event.TypedCreateEvent[T],
 	workqueue.RateLimitingInterface,
 ) {
 	// No-op
 }
 
-// Delete implements EventHandler. In case a Running promotion
+// Delete implements TypedEventHandler. In case a Running promotion
 // becomes deleted, we should enqueue the next one
-func (e *EnqueueHighestPriorityPromotionHandler) Delete(
+func (e *EnqueueHighestPriorityPromotionHandler[T]) Delete(
 	_ context.Context,
-	evt event.DeleteEvent,
+	evt event.TypedDeleteEvent[T],
 	wq workqueue.RateLimitingInterface,
 ) {
-	if promo, ok := evt.Object.(*kargoapi.Promotion); ok {
+	if promo, ok := any(evt.Object).(*kargoapi.Promotion); ok {
 		stageKey := types.NamespacedName{
 			Namespace: promo.Namespace,
 			Name:      promo.Spec.Stage,
@@ -53,29 +54,25 @@ func (e *EnqueueHighestPriorityPromotionHandler) Delete(
 	}
 }
 
-// Generic implements EventHandler.
-func (e *EnqueueHighestPriorityPromotionHandler) Generic(
+// Generic implements TypedEventHandler.
+func (e *EnqueueHighestPriorityPromotionHandler[T]) Generic(
 	context.Context,
-	event.GenericEvent,
+	event.TypedGenericEvent[T],
 	workqueue.RateLimitingInterface,
 ) {
 	// No-op
 }
 
-// Update implements EventHandler. This should only be called with
+// Update implements TypedEventHandler. This should only be called with
 // a promo that transitioned from non-terminal to terminal.
-func (e *EnqueueHighestPriorityPromotionHandler) Update(
+func (e *EnqueueHighestPriorityPromotionHandler[T]) Update(
 	_ context.Context,
-	evt event.UpdateEvent,
+	evt event.TypedUpdateEvent[T],
 	wq workqueue.RateLimitingInterface,
 ) {
-	if evt.ObjectNew == nil {
+	promo := any(evt.ObjectNew).(*kargoapi.Promotion) // nolint: forcetypeassert
+	if promo == nil {
 		e.logger.Errorf("Update event has no new object to update: %v", evt)
-		return
-	}
-	promo, ok := evt.ObjectNew.(*kargoapi.Promotion)
-	if !ok {
-		e.logger.Errorf("Failed to convert new Promotion: %v", evt.ObjectNew)
 		return
 	}
 	if promo.Status.Phase.IsTerminal() {
@@ -92,7 +89,7 @@ func (e *EnqueueHighestPriorityPromotionHandler) Update(
 
 // enqueueNext enqueues the next highest priority promotion for reconciliation to the workqueue.
 // Also discards pending promotions in the queue that no longer exist
-func (e *EnqueueHighestPriorityPromotionHandler) enqueueNext(
+func (e *EnqueueHighestPriorityPromotionHandler[T]) enqueueNext(
 	stageKey types.NamespacedName,
 	wq workqueue.RateLimitingInterface,
 ) {
@@ -149,47 +146,49 @@ func (e *EnqueueHighestPriorityPromotionHandler) enqueueNext(
 
 // UpdatedArgoCDAppHandler is an event handler that enqueues Promotions for
 // reconciliation when an associated ArgoCD Application is updated.
-type UpdatedArgoCDAppHandler struct {
+type UpdatedArgoCDAppHandler[T any] struct {
 	kargoClient   client.Client
 	shardSelector labels.Selector
 }
 
-// Create implements EventHandler.
-func (u *UpdatedArgoCDAppHandler) Create(
+// Create implements TypedEventHandler.
+func (u *UpdatedArgoCDAppHandler[T]) Create(
 	context.Context,
-	event.CreateEvent,
+	event.TypedCreateEvent[T],
 	workqueue.RateLimitingInterface,
 ) {
 	// No-op
 }
 
-// Delete implements EventHandler.
-func (u *UpdatedArgoCDAppHandler) Delete(
+// Delete implements TypedEventHandler.
+func (u *UpdatedArgoCDAppHandler[T]) Delete(
 	context.Context,
-	event.DeleteEvent,
+	event.TypedDeleteEvent[T],
 	workqueue.RateLimitingInterface,
 ) {
 	// No-op
 }
 
-// Generic implements EventHandler.
-func (u *UpdatedArgoCDAppHandler) Generic(
+// Generic implements TypedEventHandler.
+func (u *UpdatedArgoCDAppHandler[T]) Generic(
 	context.Context,
-	event.GenericEvent,
+	event.TypedGenericEvent[T],
 	workqueue.RateLimitingInterface,
 ) {
 	// No-op
 }
 
-// Update implements EventHandler.
-func (u *UpdatedArgoCDAppHandler) Update(
+// Update implements TypedEventHandler.
+func (u *UpdatedArgoCDAppHandler[T]) Update(
 	ctx context.Context,
-	e event.UpdateEvent,
+	e event.TypedUpdateEvent[T],
 	wq workqueue.RateLimitingInterface,
 ) {
 	logger := logging.LoggerFromContext(ctx)
 
-	if e.ObjectNew == nil || e.ObjectOld == nil {
+	oldApp := any(e.ObjectOld).(*argocd.Application) // nolint: forcetypeassert
+	newApp := any(e.ObjectNew).(*argocd.Application) // nolint: forcetypeassert
+	if newApp == nil || oldApp == nil {
 		logger.Errorf("Update event has no new or old object to update: %v", e)
 		return
 	}
@@ -201,20 +200,14 @@ func (u *UpdatedArgoCDAppHandler) Update(
 		&client.ListOptions{
 			FieldSelector: fields.OneTermEqualSelector(
 				kubeclient.RunningPromotionsByArgoCDApplicationsIndexField,
-				fmt.Sprintf(
-					"%s:%s",
-					e.ObjectNew.GetNamespace(),
-					e.ObjectNew.GetName(),
-				),
+				fmt.Sprintf("%s:%s", newApp.Namespace, newApp.Name),
 			),
 			LabelSelector: u.shardSelector,
 		},
 	); err != nil {
 		logger.Errorf(
 			"error listing Promotions for Application %q in namespace %q: %s",
-			e.ObjectNew.GetName(),
-			e.ObjectNew.GetNamespace(),
-			err,
+			newApp.Name, newApp.Namespace, err,
 		)
 		return
 	}
@@ -231,7 +224,7 @@ func (u *UpdatedArgoCDAppHandler) Update(
 		logger.WithFields(log.Fields{
 			"namespace": promotion.Namespace,
 			"promotion": promotion.Name,
-			"app":       e.ObjectNew.GetName(),
+			"app":       newApp.Name,
 		}).Debug("enqueued Promotion for reconciliation")
 	}
 }

@@ -337,7 +337,7 @@ func SetupReconcilerWithManager(
 
 	logger := logging.LoggerFromContext(ctx)
 	// Watch Promotions that completed and enqueue owning Stage key
-	promoOwnerHandler := handler.EnqueueRequestForOwner(
+	promoOwnerHandler := handler.TypedEnqueueRequestForOwner[*kargoapi.Promotion](
 		kargoMgr.GetScheme(),
 		kargoMgr.GetRESTMapper(),
 		&kargoapi.Stage{},
@@ -348,16 +348,16 @@ func SetupReconcilerWithManager(
 		source.Kind(
 			kargoMgr.GetCache(),
 			&kargoapi.Promotion{},
+			promoOwnerHandler,
+			promoWentTerminal,
 		),
-		promoOwnerHandler,
-		promoWentTerminal,
 	); err != nil {
 		return fmt.Errorf("unable to watch Promotions: %w", err)
 	}
 
 	// Watch Freight that has been marked as verified in a Stage and enqueue
 	// downstream Stages
-	verifiedFreightHandler := &verifiedFreightEventHandler{
+	verifiedFreightHandler := &verifiedFreightEventHandler[*kargoapi.Freight]{
 		kargoClient:   kargoMgr.GetClient(),
 		shardSelector: shardSelector,
 	}
@@ -365,26 +365,26 @@ func SetupReconcilerWithManager(
 		source.Kind(
 			kargoMgr.GetCache(),
 			&kargoapi.Freight{},
+			verifiedFreightHandler,
 		),
-		verifiedFreightHandler,
 	); err != nil {
 		return fmt.Errorf("unable to watch Freight: %w", err)
 	}
 
-	approveFreightHandler := &approvedFreightEventHandler{
+	approveFreightHandler := &approvedFreightEventHandler[*kargoapi.Freight]{
 		kargoClient: kargoMgr.GetClient(),
 	}
 	if err := c.Watch(
 		source.Kind(
 			kargoMgr.GetCache(),
 			&kargoapi.Freight{},
+			approveFreightHandler,
 		),
-		approveFreightHandler,
 	); err != nil {
 		return fmt.Errorf("unable to watch Freight: %w", err)
 	}
 
-	createdFreightEventHandler := &createdFreightEventHandler{
+	createdFreightEventHandler := &createdFreightEventHandler[*kargoapi.Freight]{
 		kargoClient:   kargoMgr.GetClient(),
 		shardSelector: shardSelector,
 	}
@@ -392,8 +392,8 @@ func SetupReconcilerWithManager(
 		source.Kind(
 			kargoMgr.GetCache(),
 			&kargoapi.Freight{},
+			createdFreightEventHandler,
 		),
-		createdFreightEventHandler,
 	); err != nil {
 		return fmt.Errorf("unable to watch Freight: %w", err)
 	}
@@ -401,7 +401,7 @@ func SetupReconcilerWithManager(
 	// If Argo CD integration is disabled, this manager will be nil and we won't
 	// care about this watch anyway.
 	if argocdMgr != nil {
-		updatedArgoCDAppHandler := &updatedArgoCDAppHandler{
+		updatedArgoCDAppHandler := &updatedArgoCDAppHandler[*argocd.Application]{
 			kargoClient:   kargoMgr.GetClient(),
 			shardSelector: shardSelector,
 		}
@@ -409,8 +409,8 @@ func SetupReconcilerWithManager(
 			source.Kind(
 				argocdMgr.GetCache(),
 				&argocd.Application{},
+				updatedArgoCDAppHandler,
 			),
-			updatedArgoCDAppHandler,
 		); err != nil {
 			return fmt.Errorf("unable to watch Applications: %w", err)
 		}
@@ -418,7 +418,7 @@ func SetupReconcilerWithManager(
 
 	// We only care about this if Rollouts integration is enabled.
 	if cfg.RolloutsIntegrationEnabled {
-		phaseChangedAnalysisRunHandler := &phaseChangedAnalysisRunHandler{
+		phaseChangedAnalysisRunHandler := &phaseChangedAnalysisRunHandler[*rollouts.AnalysisRun]{
 			kargoClient:   kargoMgr.GetClient(),
 			shardSelector: shardSelector,
 		}
@@ -426,8 +426,8 @@ func SetupReconcilerWithManager(
 			source.Kind(
 				kargoMgr.GetCache(),
 				&rollouts.AnalysisRun{},
+				phaseChangedAnalysisRunHandler,
 			),
-			phaseChangedAnalysisRunHandler,
 		); err != nil {
 			return fmt.Errorf("unable to watch AnalysisRuns: %w", err)
 		}

@@ -37,7 +37,7 @@ var (
 
 type webhook struct {
 	client  client.Client
-	decoder *admission.Decoder
+	decoder admission.Decoder
 
 	recorder record.EventRecorder
 
@@ -100,7 +100,7 @@ func SetupWebhookWithManager(
 func newWebhook(
 	cfg libWebhook.Config,
 	kubeClient client.Client,
-	decoder *admission.Decoder,
+	decoder admission.Decoder,
 	recorder record.EventRecorder,
 ) *webhook {
 	w := &webhook{
