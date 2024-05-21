@@ -7,9 +7,11 @@ metadata:
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
     {{- include "kargo.api.labels" . | nindent 4 }}
-  {{- with .Values.api.annotations }}
+  {{- with (mergeOverwrite (deepCopy .Values.global.annotations) .Values.api.annotations) }}
   annotations:
-    {{- toYaml . | nindent 4 }}
+    {{- range $key, $value := . }}
+    {{ $key }}: {{ $value | quote }}
+    {{- end }}
   {{- end }}
 spec:
   replicas: {{ .Values.api.replicas | default 1 }}
@@ -29,7 +31,7 @@ spec:
         secret/checksum: {{ pick ( include (print $.Template.BasePath "/api/secret.yaml") . | fromYaml ) "stringData" | toYaml | sha256sum }}
     spec:
       serviceAccount: kargo-api
-      {{- with .Values.api.affinity }}
+      {{- with .Values.api.affinity | default .Values.global.affinity }}
       affinity:
         {{- toYaml . | nindent 8 }}
       {{- end }}
@@ -86,8 +88,10 @@ spec:
               name: config
               readOnly: true
 {{- end }}
+{{- with .Values.api.securityContext | default .Values.global.securityContext }}
           securityContext:
-            {{- toYaml .Values.api.securityContext | nindent 12 }}
+            {{- toYaml . | nindent 12 }}
+{{- end }}
           resources:
             {{- toYaml .Values.api.resources | nindent 12 }}
 {{- if or .Values.kubeconfigSecrets.kargo (and .Values.api.oidc.enabled .Values.api.oidc.dex.enabled) .Values.api.tls.enabled }}
@@ -120,11 +124,11 @@ spec:
                       path: idp-ca.crt
 {{- end }}
 {{- end }}
-      {{- with .Values.api.nodeSelector }}
+      {{- with .Values.api.nodeSelector | default .Values.global.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- with .Values.api.tolerations }}
+      {{- with .Values.api.tolerations | default .Values.global.tolerations }}
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}

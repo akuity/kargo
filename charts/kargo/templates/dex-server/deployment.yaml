@@ -7,9 +7,11 @@ metadata:
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
     {{- include "kargo.dexServer.labels" . | nindent 4 }}
-  {{- with .Values.api.oidc.dex.annotations }}
+  {{- with (mergeOverwrite (deepCopy .Values.global.annotations) .Values.api.oidc.dex.annotations) }}
   annotations:
-    {{- toYaml . | nindent 4 }}
+    {{- range $key, $value := . }}
+    {{ $key }}: {{ $value | quote }}
+    {{- end }}
   {{- end }}
 spec:
   replicas: 1
@@ -26,7 +28,7 @@ spec:
         secret/checksum: {{ pick ( include (print $.Template.BasePath "/dex-server/secret.yaml") . | fromYaml ) "stringData" | toYaml | sha256sum }}
     spec:
       serviceAccount: kargo-dex-server
-      {{- with .Values.api.oidc.dex.affinity }}
+      {{- with .Values.api.oidc.dex.affinity | default .Values.global.affinity }}
       affinity:
         {{- toYaml . | nindent 8 }}
       {{- end }}
@@ -55,8 +57,10 @@ spec:
         {{- if .Values.api.oidc.dex.volumeMounts }}
           {{- toYaml .Values.api.oidc.dex.volumeMounts | nindent 8 }}
         {{- end }}
+        {{- with .Values.api.oidc.dex.securityContext | default .Values.global.securityContext }}
         securityContext:
-          {{- toYaml .Values.api.oidc.dex.securityContext | nindent 10 }}
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
         resources:
           {{- toYaml .Values.api.oidc.dex.resources | nindent 10 }}
         {{- if .Values.api.oidc.dex.probes.enabled }}
@@ -98,11 +102,11 @@ spec:
       {{- if .Values.api.oidc.dex.volumes }}
         {{- toYaml .Values.api.oidc.dex.volumes | nindent 8 }}
       {{- end }}
-      {{- with .Values.api.oidc.dex.nodeSelector }}
+      {{- with .Values.api.oidc.dex.nodeSelector | default .Values.global.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- with .Values.api.oidc.dex.tolerations }}
+      {{- with .Values.api.oidc.dex.tolerations | default .Values.global.tolerations }}
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}

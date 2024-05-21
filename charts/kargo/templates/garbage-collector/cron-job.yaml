@@ -7,9 +7,11 @@ metadata:
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
     {{- include "kargo.garbageCollector.labels" . | nindent 4 }}
-  {{- with .Values.garbageCollector.annotations }}
+  {{- with (mergeOverwrite (deepCopy .Values.global.annotations) .Values.garbageCollector.annotations) }}
   annotations:
-    {{- toYaml . | nindent 4 }}
+    {{- range $key, $value := . }}
+    {{ $key }}: {{ $value | quote }}
+    {{- end }}
   {{- end }}
 spec:
   schedule: {{ quote .Values.garbageCollector.schedule }}
@@ -25,7 +27,7 @@ spec:
       template:
         spec:
           serviceAccountName: kargo-garbage-collector
-          {{- with .Values.garbageCollector.affinity }}
+          {{- with .Values.garbageCollector.affinity | default .Values.global.affinity }}
           affinity:
             {{- toYaml . | nindent 12 }}
           {{- end }}
@@ -44,16 +46,18 @@ spec:
             {{- with (concat .Values.global.envFrom .Values.garbageCollector.envFrom) }}
               {{- toYaml . | nindent 12 }}
             {{- end }}
+            {{- with .Values.garbageCollector.securityContext | default .Values.global.securityContext }}
             securityContext:
-              {{- toYaml .Values.garbageCollector.securityContext | nindent 14 }}
+              {{- toYaml . | nindent 14 }}
+            {{- end }}
             resources:
               {{- toYaml .Values.garbageCollector.resources | nindent 14 }}
           restartPolicy: Never
-          {{- with .Values.garbageCollector.nodeSelector }}
+          {{- with .Values.garbageCollector.nodeSelector | default .Values.global.nodeSelector }}
           nodeSelector:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-          {{- with .Values.garbageCollector.tolerations }}
+          {{- with .Values.garbageCollector.tolerations | default .Values.global.tolerations }}
           tolerations:
             {{- toYaml . | nindent 12 }}
           {{- end }}
