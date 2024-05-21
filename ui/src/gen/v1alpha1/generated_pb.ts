@@ -4278,9 +4278,10 @@ export class WarehouseSpec extends Message<WarehouseSpec> {
   shard?: string;
 
   /**
-   * Interval is the interval at which the Warehouse should discover new
-   * artifacts. This field is optional. When left unspecified, the field is
-   * implicitly treated as if its value were "5m0s".
+   * Interval is the reconciliation interval for this Warehouse. On each
+   * reconciliation, the Warehouse will discover new artifacts and optionally
+   * produce new Freight. This field is optional. When left unspecified, the
+   * field is implicitly treated as if its value were "5m0s".
    *
    * +kubebuilder:validation:Type=string
    * +kubebuilder:validation:Pattern="^([0-9]+(\\.[0-9]+)?(s|m|h))+$"

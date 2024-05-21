@@ -59,9 +59,10 @@ spec:
               interval:
                 default: 5m0s
                 description: |-
-                  Interval is the interval at which the Warehouse should discover new
-                  artifacts. This field is optional. When left unspecified, the field is
-                  implicitly treated as if its value were "5m0s".
+                  Interval is the reconciliation interval for this Warehouse. On each
+                  reconciliation, the Warehouse will discover new artifacts and optionally
+                  produce new Freight. This field is optional. When left unspecified, the
+                  field is implicitly treated as if its value were "5m0s".
                 pattern: ^([0-9]+(\.[0-9]+)?(s|m|h))+$
                 type: string
               shard:
