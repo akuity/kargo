@@ -120,7 +120,7 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
     - name: Install tools
-      run: apt update && apt install unzip
+      run: apt update && apt install -y unzip rsync
     - name: Install pnpm
       uses: pnpm/action-setup@v4
       with:
