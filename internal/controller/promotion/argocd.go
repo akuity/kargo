@@ -184,10 +184,9 @@ func (a *argoCDMechanism) mustPerformUpdate(
 	}
 	if app == nil {
 		return "", false, fmt.Errorf(
-			"unable to find Argo CD Application %q in namespace %q: %w",
+			"unable to find Argo CD Application %q in namespace %q",
 			update.AppName,
 			namespace,
-			err,
 		)
 	}
 
