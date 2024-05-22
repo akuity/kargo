@@ -275,6 +275,26 @@
                     ],
                     "type": "object"
                   },
+                  "patches": {
+                    "description": "Patches is a list of patch operations to apply to the repository. The operations\nare applied in the order they are listed, and before any other updates (e.g.\nKustomize, Helm, etc.). This field is optional.",
+                    "items": {
+                      "description": "PatchOperation describes a patch operation to apply to a Git repository.\nAt present, only the copying of a Source to a Destination is supported.",
+                      "properties": {
+                        "destination": {
+                          "description": "Destination is the path to the file that will be created or updated\nby the patch operation. This is a required field, but provisionally marked\nas optional to allow for future expansion.",
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "source": {
+                          "description": "Source is the path to the directory or file to which the patch operation\nwill be applied. This is a required field, but provisionally marked as\noptional to allow for future expansion.",
+                          "minLength": 1,
+                          "type": "string"
+                        }
+                      },
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
                   "pullRequest": {
                     "description": "PullRequest will generate a pull request instead of making the commit directly",
                     "properties": {

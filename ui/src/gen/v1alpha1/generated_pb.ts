@@ -1832,6 +1832,17 @@ export class GitRepoUpdate extends Message<GitRepoUpdate> {
   writeBranch?: string;
 
   /**
+   * Patches is a list of patch operations to apply to the repository. The operations
+   * are applied in the order they are listed, and before any other updates (e.g.
+   * Kustomize, Helm, etc.). This field is optional.
+   *
+   * +kubebuilder:validation:Optional
+   *
+   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.PatchOperation patches = 9;
+   */
+  patches: PatchOperation[] = [];
+
+  /**
    * PullRequest will generate a pull request instead of making the commit directly
    *
    * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.PullRequestPromotionMechanism pullRequest = 5;
@@ -1874,6 +1885,7 @@ export class GitRepoUpdate extends Message<GitRepoUpdate> {
     { no: 2, name: "insecureSkipTLSVerify", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
     { no: 3, name: "readBranch", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 4, name: "writeBranch", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 9, name: "patches", kind: "message", T: PatchOperation, repeated: true },
     { no: 5, name: "pullRequest", kind: "message", T: PullRequestPromotionMechanism, opt: true },
     { no: 6, name: "render", kind: "message", T: KargoRenderPromotionMechanism, opt: true },
     { no: 7, name: "kustomize", kind: "message", T: KustomizePromotionMechanism, opt: true },
@@ -2858,6 +2870,66 @@ export class KustomizePromotionMechanism extends Message<KustomizePromotionMecha
 
   static equals(a: KustomizePromotionMechanism | PlainMessage<KustomizePromotionMechanism> | undefined, b: KustomizePromotionMechanism | PlainMessage<KustomizePromotionMechanism> | undefined): boolean {
     return proto2.util.equals(KustomizePromotionMechanism, a, b);
+  }
+}
+
+/**
+ * PatchOperation describes a patch operation to apply to a Git repository.
+ * At present, only the copying of a Source to a Destination is supported.
+ *
+ * @generated from message github.com.akuity.kargo.api.v1alpha1.PatchOperation
+ */
+export class PatchOperation extends Message<PatchOperation> {
+  /**
+   * Source is the path to the directory or file to which the patch operation
+   * will be applied. This is a required field, but provisionally marked as
+   * optional to allow for future expansion.
+   *
+   * +kubebuilder:validation:Optional
+   * +kubebuilder:validation:MinLength=1
+   *
+   * @generated from field: optional string source = 1;
+   */
+  source?: string;
+
+  /**
+   * Destination is the path to the file that will be created or updated
+   * by the patch operation. This is a required field, but provisionally marked
+   * as optional to allow for future expansion.
+   *
+   * +kubebuilder:validation:Optional
+   * +kubebuilder:validation:MinLength=1
+   *
+   * @generated from field: optional string destination = 2;
+   */
+  destination?: string;
+
+  constructor(data?: PartialMessage<PatchOperation>) {
+    super();
+    proto2.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto2 = proto2;
+  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.PatchOperation";
+  static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 1, name: "source", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 2, name: "destination", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PatchOperation {
+    return new PatchOperation().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): PatchOperation {
+    return new PatchOperation().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): PatchOperation {
+    return new PatchOperation().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: PatchOperation | PlainMessage<PatchOperation> | undefined, b: PatchOperation | PlainMessage<PatchOperation> | undefined): boolean {
+    return proto2.util.equals(PatchOperation, a, b);
   }
 }
 
