@@ -134,12 +134,11 @@ export const Pipelines = () => {
     hideSubscriptions
   );
 
-  const [fullFreightById, setFullFreightById] = React.useState<{ [key: string]: Freight }>({});
-
   const { mutate: manualApproveAction } = useMutation(approveFreight, {
     onError,
     onSuccess: () => {
       message.success(`Freight ${state.freight} has been manually approved.`);
+      refetchFreightData();
       state.clear();
     }
   });
@@ -158,12 +157,12 @@ export const Pipelines = () => {
     return [stagesPerFreight, subscribersByStage];
   }, [data, freightData]);
 
-  React.useEffect(() => {
-    const fullFreightById: { [key: string]: Freight } = {};
+  const fullFreightById: { [key: string]: Freight } = useMemo(() => {
+    const freightMap: { [key: string]: Freight } = {};
     (freightData?.groups['']?.freight || []).forEach((freight) => {
-      fullFreightById[freight?.metadata?.name || ''] = freight;
+      freightMap[freight?.metadata?.name || ''] = freight;
     });
-    setFullFreightById(fullFreightById);
+    return freightMap;
   }, [freightData]);
 
   if (isLoading || isLoadingFreight) return <LoadingState />;
