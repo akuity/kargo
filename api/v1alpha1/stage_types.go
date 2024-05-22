@@ -227,6 +227,12 @@ type GitRepoUpdate struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:Pattern=`^\w+([-/]\w+)*$`
 	WriteBranch string `json:"writeBranch" protobuf:"bytes,4,opt,name=writeBranch"`
+	// Patches is a list of patch operations to apply to the repository. The operations
+	// are applied in the order they are listed, and before any other updates (e.g.
+	// Kustomize, Helm, etc.). This field is optional.
+	//
+	// +kubebuilder:validation:Optional
+	Patches []PatchOperation `json:"patches,omitempty" protobuf:"bytes,9,rep,name=patches"`
 	// PullRequest will generate a pull request instead of making the commit directly
 	PullRequest *PullRequestPromotionMechanism `json:"pullRequest,omitempty" protobuf:"bytes,5,opt,name=pullRequest"`
 	// Render describes how to use Kargo Render to incorporate Freight into the
@@ -238,6 +244,25 @@ type GitRepoUpdate struct {
 	// Helm describes how to use Helm to incorporate Freight into the Stage. This
 	// is mutually exclusive with the Render and Kustomize fields.
 	Helm *HelmPromotionMechanism `json:"helm,omitempty" protobuf:"bytes,8,opt,name=helm"`
+}
+
+// PatchOperation describes a patch operation to apply to a Git repository.
+// At present, only the copying of a Source to a Destination is supported.
+type PatchOperation struct {
+	// Source is the path to the directory or file to which the patch operation
+	// will be applied. This is a required field, but provisionally marked as
+	// optional to allow for future expansion.
+	//
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MinLength=1
+	Source string `json:"source,omitempty" protobuf:"bytes,1,opt,name=source"`
+	// Destination is the path to the file that will be created or updated
+	// by the patch operation. This is a required field, but provisionally marked
+	// as optional to allow for future expansion.
+	//
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MinLength=1
+	Destination string `json:"destination" protobuf:"bytes,2,opt,name=destination"`
 }
 
 // PullRequestPromotionMechanism describes how to generate a pull request against the write branch during promotion
