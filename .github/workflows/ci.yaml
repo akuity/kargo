@@ -33,7 +33,7 @@ jobs:
       uses: codecov/codecov-action@v4
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
-  
+
   lint-ui:
     runs-on: ubuntu-latest
     container:
@@ -148,12 +148,6 @@ jobs:
       uses: arduino/setup-protoc@v3
       with:
         version: "25.3"
-    - name: Install codegen tools
-      run: |
-        go install k8s.io/code-generator/cmd/go-to-protobuf@v0.29.3
-        go install k8s.io/code-generator/cmd/go-to-protobuf/protoc-gen-gogo@v0.29.3
-        go install golang.org/x/tools/cmd/goimports@v0.21.0
-        go install sigs.k8s.io/controller-tools/cmd/controller-gen@v0.15.0
     - name: Git stuff
       # As of go 1.20, this seems to be necessary for invoking git commands
       # within the container

@@ -92,6 +92,13 @@ test-unit:
 		./...
 
 ################################################################################
+# Dependency management                                                        #
+################################################################################
+.PHONY: deps-tools
+deps-tools:
+	./hack/install-tools.sh
+
+################################################################################
 # Builds                                                                       #
 #                                                                              #
 # These targets are used by our continuous integration and release processes.  #
@@ -124,7 +131,7 @@ build-nightly-cli:
 ################################################################################
 
 .PHONY: codegen
-codegen: codegen-proto codegen-controller codegen-ui codegen-docs
+codegen: deps-tools codegen-proto codegen-controller codegen-ui codegen-docs
 
 .PHONY: codegen-controller
 codegen-controller:
@@ -159,7 +166,7 @@ codegen-ui:
 # that is pre-loaded with required tools.                                      #
 ################################################################################
 
-# Prevents issues with vcs stamping within docker containers. 
+# Prevents issues with vcs stamping within docker containers.
 GOFLAGS="-buildvcs=false"
 
 DOCKER_CMD := $(CONTAINER_RUNTIME) run \
