@@ -7,11 +7,13 @@ import (
 	"path/filepath"
 	"strings"
 
+	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/kelseyhightower/envconfig"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/git"
 	"github.com/akuity/kargo/internal/credentials"
+	"github.com/akuity/kargo/internal/fs"
 	libGit "github.com/akuity/kargo/internal/git"
 	"github.com/akuity/kargo/internal/logging"
 )
@@ -378,6 +380,12 @@ func (g *gitMechanism) gitCommit(
 		return "", err // TODO: Wrap this
 	}
 
+	for _, patch := range update.Patches {
+		if err = gitPatchOperation(repo.WorkingDir(), patch); err != nil {
+			return "", fmt.Errorf("error performing patch operation: %w", err)
+		}
+	}
+
 	var changes []string
 	if g.applyConfigManagementFn != nil {
 		if changes, err = g.applyConfigManagementFn(
@@ -507,6 +515,46 @@ func deleteRepoContents(dir string) error {
 		}
 	}
 	return nil
+}
+
+func gitPatchOperation(workingDir string, patch kargoapi.PatchOperation) error {
+	// Ensure the source path is within the repository working directory
+	srcPath := filepath.Join(workingDir, patch.Source)
+	if !fs.WithinBasePath(workingDir, srcPath) {
+		return fmt.Errorf("source path %q is not within the repository working directory", patch.Source)
+	}
+
+	// Ensure the destination path is within the repository working directory.
+	dstPath, err := securejoin.SecureJoin(workingDir, patch.Destination)
+	if err != nil {
+		return fmt.Errorf("error resolving destination path %q: %w", patch.Destination, err)
+	}
+
+	srcInfo, err := os.Lstat(srcPath)
+	if err != nil {
+		return fmt.Errorf("error getting info for source path %q: %w", patch.Source, err)
+	}
+
+	switch {
+	case srcInfo.Mode().IsRegular():
+		if err = os.MkdirAll(filepath.Dir(dstPath), 0o755); err != nil {
+			return fmt.Errorf("error creating destination directory: %w", err)
+		}
+		if err = fs.CopyFile(srcPath, dstPath); err != nil {
+			return fmt.Errorf("error copying file %q to %q: %w", patch.Source, patch.Destination, err)
+		}
+		return nil
+	case srcInfo.IsDir():
+		if err = os.MkdirAll(dstPath, 0o755); err != nil {
+			return fmt.Errorf("error creating destination directory: %w", err)
+		}
+		if err = fs.CopyDir(srcPath, dstPath); err != nil {
+			return fmt.Errorf("error copying directory %q to %q: %w", patch.Source, patch.Destination, err)
+		}
+		return nil
+	default:
+		return fmt.Errorf("unsupported file type for source path %q", patch.Source)
+	}
 }
 
 // buildCommitMessage constructs a commit message from the provided change

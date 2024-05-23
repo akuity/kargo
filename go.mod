@@ -14,6 +14,7 @@ require (
 	github.com/bacongobbler/browser v1.1.0
 	github.com/bombsimon/logrusr/v4 v4.1.0
 	github.com/coreos/go-oidc/v3 v3.10.0
+	github.com/cyphar/filepath-securejoin v0.2.5
 	github.com/evanphx/json-patch/v5 v5.9.0
 	github.com/fatih/structtag v1.2.0
 	github.com/gobwas/glob v0.2.3
