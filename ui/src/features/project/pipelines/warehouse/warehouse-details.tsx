@@ -1,14 +1,17 @@
-import { Divider, Drawer, Typography } from 'antd';
+import { faArrowDownShortWide, faTools } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { Drawer, Tabs, Typography } from 'antd';
 import { generatePath, useNavigate, useParams } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
+import { CreateFreight } from '@ui/features/create-freight/create-freight';
 import { Warehouse } from '@ui/gen/v1alpha1/generated_pb';
 
 import { RepoSubscriptions } from './repo-subscriptions';
 import { WarehouseActions } from './warehouse-actions';
 
 export const WarehouseDetails = ({ warehouse }: { warehouse: Warehouse }) => {
-  const { name: projectName } = useParams();
+  const { name: projectName, tab } = useParams();
   const navigate = useNavigate();
 
   const onClose = () => navigate(generatePath(paths.project, { name: projectName }));
@@ -17,7 +20,7 @@ export const WarehouseDetails = ({ warehouse }: { warehouse: Warehouse }) => {
     <Drawer open={!!warehouse} onClose={onClose} width={'80%'} closable={false}>
       {warehouse && (
         <div className='flex flex-col h-full'>
-          <div className='flex items-center justify-between'>
+          <div className='flex items-center justify-between mb-2'>
             <div className='flex gap-1 items-start'>
               <div>
                 <Typography.Title level={1} style={{ margin: 0 }}>
@@ -28,11 +31,37 @@ export const WarehouseDetails = ({ warehouse }: { warehouse: Warehouse }) => {
             </div>
             <WarehouseActions warehouse={warehouse} />
           </div>
-          <Divider style={{ marginTop: '1em' }} />
 
-          <div className='flex flex-col gap-8 flex-1'>
-            <RepoSubscriptions subscriptions={warehouse.spec?.subscriptions} />
-          </div>
+          <Tabs
+            defaultActiveKey='1'
+            activeKey={tab}
+            onChange={(tab) => {
+              navigate(
+                generatePath(paths.warehouse, {
+                  name: projectName,
+                  warehouseName: warehouse?.metadata?.name,
+                  tab
+                })
+              );
+            }}
+          >
+            <Tabs.TabPane
+              key='subscriptions'
+              tab='Subscriptions'
+              icon={<FontAwesomeIcon icon={faArrowDownShortWide} />}
+            >
+              <div className='flex flex-col gap-8 flex-1'>
+                <RepoSubscriptions subscriptions={warehouse.spec?.subscriptions} />
+              </div>
+            </Tabs.TabPane>
+            <Tabs.TabPane
+              key='create-freight'
+              tab='Create Freight'
+              icon={<FontAwesomeIcon icon={faTools} />}
+            >
+              <CreateFreight warehouse={warehouse} />
+            </Tabs.TabPane>
+          </Tabs>
         </div>
       )}
     </Drawer>

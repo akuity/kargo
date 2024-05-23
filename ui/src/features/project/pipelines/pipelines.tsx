@@ -34,7 +34,7 @@ import {
   queryFreight,
   refreshWarehouse
 } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
-import { Freight, Stage } from '@ui/gen/v1alpha1/generated_pb';
+import { Freight, Stage, Warehouse } from '@ui/gen/v1alpha1/generated_pb';
 import { useDocumentEvent } from '@ui/utils/document';
 import { useLocalStorage } from '@ui/utils/use-local-storage';
 
@@ -98,19 +98,23 @@ export const Pipelines = () => {
 
   const [selectedWarehouse, setSelectedWarehouse] = React.useState('');
 
-  const [filteredFreight, availableWarehouses] = useMemo(() => {
+  const warehouseMap = useMemo(() => {
+    const map = {} as { [key: string]: Warehouse };
+    (warehouseData?.warehouses || []).forEach((warehouse) => {
+      map[warehouse.metadata?.name || ''] = warehouse;
+    });
+    return map;
+  }, [warehouseData]);
+
+  const filteredFreight = useMemo(() => {
     const allFreight = freightData?.groups['']?.freight || [];
     const filteredFreight = [] as Freight[];
-    const warehouses = new Set<string>();
     allFreight.forEach((f) => {
-      if (f.warehouse) {
-        warehouses.add(f.warehouse);
-      }
       if (!selectedWarehouse || f.warehouse === selectedWarehouse) {
         filteredFreight.push(f);
       }
     });
-    return [filteredFreight, Array.from(warehouses)];
+    return filteredFreight;
   }, [freightData, selectedWarehouse]);
 
   const client = useQueryClient();
@@ -169,12 +173,8 @@ export const Pipelines = () => {
   if (isLoading || isLoadingFreight) return <LoadingState />;
 
   const stage = stageName && (data?.stages || []).find((item) => item.metadata?.name === stageName);
-  const freight =
-    freightName &&
-    (freightData?.groups['']?.freight || []).find((item) => item.metadata?.name === freightName);
-  const warehouse =
-    warehouseName &&
-    (warehouseData?.warehouses || []).find((item) => item.metadata?.name === warehouseName);
+  const freight = freightName && fullFreightById[freightName];
+  const warehouse = warehouseName && warehouseMap[warehouseName];
 
   const isFaded = (stage: Stage): boolean => {
     if (!isPromoting(state)) {
@@ -222,7 +222,7 @@ export const Pipelines = () => {
           )}
           selectedWarehouse={selectedWarehouse || ''}
           setSelectedWarehouse={setSelectedWarehouse}
-          warehouses={availableWarehouses}
+          warehouses={warehouseMap}
         />
         <FreightlineWrapper>
           <Suspense
@@ -386,7 +386,7 @@ export const Pipelines = () => {
                       >
                         {node.type === NodeType.WAREHOUSE && (
                           <div className='flex w-full h-full gap-2 justify-center items-center'>
-                            {(availableWarehouses || []).length > 1 && (
+                            {(Object.keys(warehouseMap) || []).length > 1 && (
                               <Button
                                 icon={<FontAwesomeIcon icon={faFilter} />}
                                 size='small'

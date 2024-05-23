@@ -14,8 +14,6 @@ export const RepoSubscriptions = ({ subscriptions }: Props) => {
 
   return (
     <div>
-      <Typography.Title level={3}>Subscriptions</Typography.Title>
-
       <Descriptions bordered size='small' column={1} style={{ width: '50%', minWidth: 500 }}>
         {subscriptions.map((subscription) => (
           <>
