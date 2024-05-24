@@ -242,7 +242,7 @@ func (k *kubernetesDatabase) secretToCreds(
 		var username, password string
 		var err error
 		// Try AWS
-		if username, password, err = k.ecrHelper.GetUsernameAndPassword(secret); err != nil {
+		if username, password, err = k.ecrHelper.GetUsernameAndPassword(ctx, secret); err != nil {
 			return Credentials{}, err
 		}
 		if username == "" { // Try GCP

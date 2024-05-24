@@ -1,16 +1,16 @@
 package ecr
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
 	"strings"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/ecr"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/service/ecr"
 	"github.com/patrickmn/go-cache"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -31,7 +31,7 @@ type CredentialHelper interface {
 	// fields, this function will return empty strings and a nil error. If the
 	// Secret contains some but not all of these fields, this function will return
 	// an error. Implementations may cache the token for efficiency.
-	GetUsernameAndPassword(*corev1.Secret) (string, string, error)
+	GetUsernameAndPassword(context.Context, *corev1.Secret) (string, string, error)
 }
 
 type credentialHelper struct {
@@ -39,7 +39,12 @@ type credentialHelper struct {
 
 	// The following behaviors are overridable for testing purposes:
 
-	getAuthTokenFn func(string, string, string) (string, error)
+	getAuthTokenFn func(
+		ctx context.Context,
+		region string,
+		accessKeyID string,
+		secretAccessKey string,
+	) (string, error)
 }
 
 // NewCredentialHelper returns an implementation of the CredentialHelper
@@ -57,7 +62,7 @@ func NewCredentialHelper() CredentialHelper {
 
 // GetUsernameAndPassword implements the CredentialHelper interface.
 func (c *credentialHelper) GetUsernameAndPassword(
-	secret *corev1.Secret,
+	ctx context.Context, secret *corev1.Secret,
 ) (string, string, error) {
 	region := string(secret.Data[regionKey])
 	accessKeyID := string(secret.Data[idKey])
@@ -74,11 +79,11 @@ func (c *credentialHelper) GetUsernameAndPassword(
 			regionKey, idKey, secretKey,
 		)
 	}
-	return c.getUsernameAndPassword(region, accessKeyID, secretAccessKey)
+	return c.getUsernameAndPassword(ctx, region, accessKeyID, secretAccessKey)
 }
 
 func (c *credentialHelper) getUsernameAndPassword(
-	region, accessKeyID, secretAccessKey string,
+	ctx context.Context, region, accessKeyID, secretAccessKey string,
 ) (string, string, error) {
 	cacheKey := tokenCacheKey(region, accessKeyID, secretAccessKey)
 
@@ -86,7 +91,7 @@ func (c *credentialHelper) getUsernameAndPassword(
 		return decodeAuthToken(entry.(string)) // nolint: forcetypeassert
 	}
 
-	encodedToken, err := c.getAuthTokenFn(region, accessKeyID, secretAccessKey)
+	encodedToken, err := c.getAuthTokenFn(ctx, region, accessKeyID, secretAccessKey)
 	if err != nil {
 		return "", "", fmt.Errorf("error getting ECR auth token: %w", err)
 	}
@@ -112,17 +117,13 @@ func tokenCacheKey(region, accessKeyID, secretAccessKey string) string {
 // getAuthToken returns an ECR authorization token by calling out to AWS with
 // the provided credentials.
 func getAuthToken(
-	region, accessKeyID, secretAccessKey string,
+	ctx context.Context, region, accessKeyID, secretAccessKey string,
 ) (string, error) {
-	sess, err := session.NewSession(&aws.Config{
-		Region:      aws.String(region),
-		Credentials: credentials.NewStaticCredentials(accessKeyID, secretAccessKey, ""),
+	svc := ecr.NewFromConfig(aws.Config{
+		Region:      region,
+		Credentials: credentials.NewStaticCredentialsProvider(accessKeyID, secretAccessKey, ""),
 	})
-	if err != nil {
-		return "", fmt.Errorf("error creating AWS session: %w", err)
-	}
-	svc := ecr.New(sess)
-	output, err := svc.GetAuthorizationToken(&ecr.GetAuthorizationTokenInput{})
+	output, err := svc.GetAuthorizationToken(ctx, &ecr.GetAuthorizationTokenInput{})
 	if err != nil {
 		return "", fmt.Errorf("error getting ECR authorization token: %w", err)
 	}

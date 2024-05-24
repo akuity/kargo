@@ -1,6 +1,7 @@
 package ecr
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 	"testing"
@@ -112,7 +113,7 @@ func TestGetUsernameAndPassword(t *testing.T) {
 			},
 			helper: &credentialHelper{
 				tokenCache: cache.New(0, 0),
-				getAuthTokenFn: func(string, string, string) (string, error) {
+				getAuthTokenFn: func(context.Context, string, string, string) (string, error) {
 					return "", fmt.Errorf("something went wrong")
 				},
 			},
@@ -132,7 +133,7 @@ func TestGetUsernameAndPassword(t *testing.T) {
 			},
 			helper: &credentialHelper{
 				tokenCache: cache.New(0, 0),
-				getAuthTokenFn: func(string, string, string) (string, error) {
+				getAuthTokenFn: func(context.Context, string, string, string) (string, error) {
 					return testEncodedToken, nil
 				},
 			},
@@ -146,7 +147,7 @@ func TestGetUsernameAndPassword(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			username, password, err :=
-				testCase.helper.GetUsernameAndPassword(testCase.secret)
+				testCase.helper.GetUsernameAndPassword(context.Background(), testCase.secret)
 			testCase.assertions(t, username, password, err)
 		})
 	}
