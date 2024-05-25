@@ -21,10 +21,10 @@ const (
 	secretKey = "awsSecretAccessKey"
 )
 
-// CredentialHelper is an interface for components that can extract a username
-// and password from a Secret containing an AWS region, access key id, and
-// secret access key.
-type CredentialHelper interface {
+// AccessKeyCredentialHelper is an interface for components that can extract a
+// username and password from a Secret containing an AWS region, access key id,
+// and secret access key.
+type AccessKeyCredentialHelper interface {
 	// GetUsernameAndPassword extracts username and password (a token that lives
 	// for 12 hours) from a Secret IF the Secret contains an AWS region, access
 	// key id, and secret access key. If the Secret does not contain ANY of these
@@ -34,7 +34,7 @@ type CredentialHelper interface {
 	GetUsernameAndPassword(context.Context, *corev1.Secret) (string, string, error)
 }
 
-type credentialHelper struct {
+type accessKeyCredentialHelper struct {
 	tokenCache *cache.Cache
 
 	// The following behaviors are overridable for testing purposes:
@@ -47,21 +47,23 @@ type credentialHelper struct {
 	) (string, error)
 }
 
-// NewCredentialHelper returns an implementation of the CredentialHelper
-// interface that utilizes a cache to avoid unnecessary calls to AWS.
-func NewCredentialHelper() CredentialHelper {
-	return &credentialHelper{
+// NewAccessKeyCredentialHelper returns an implementation of the
+// AccessKeyCredentialHelper interface that utilizes a cache to avoid
+// unnecessary calls to AWS.
+func NewAccessKeyCredentialHelper() AccessKeyCredentialHelper {
+	a := &accessKeyCredentialHelper{
 		tokenCache: cache.New(
 			// Tokens live for 12 hours. We'll hang on to them for 10.
 			10*time.Hour, // Default ttl for each entry
 			time.Hour,    // Cleanup interval
 		),
-		getAuthTokenFn: getAuthToken,
 	}
+	a.getAuthTokenFn = a.getAuthToken
+	return a
 }
 
-// GetUsernameAndPassword implements the CredentialHelper interface.
-func (c *credentialHelper) GetUsernameAndPassword(
+// GetUsernameAndPassword implements the AccessKeyCredentialHelper interface.
+func (a *accessKeyCredentialHelper) GetUsernameAndPassword(
 	ctx context.Context, secret *corev1.Secret,
 ) (string, string, error) {
 	region := string(secret.Data[regionKey])
@@ -79,25 +81,25 @@ func (c *credentialHelper) GetUsernameAndPassword(
 			regionKey, idKey, secretKey,
 		)
 	}
-	return c.getUsernameAndPassword(ctx, region, accessKeyID, secretAccessKey)
+	return a.getUsernameAndPassword(ctx, region, accessKeyID, secretAccessKey)
 }
 
-func (c *credentialHelper) getUsernameAndPassword(
+func (a *accessKeyCredentialHelper) getUsernameAndPassword(
 	ctx context.Context, region, accessKeyID, secretAccessKey string,
 ) (string, string, error) {
-	cacheKey := tokenCacheKey(region, accessKeyID, secretAccessKey)
+	cacheKey := a.tokenCacheKey(region, accessKeyID, secretAccessKey)
 
-	if entry, exists := c.tokenCache.Get(cacheKey); exists {
+	if entry, exists := a.tokenCache.Get(cacheKey); exists {
 		return decodeAuthToken(entry.(string)) // nolint: forcetypeassert
 	}
 
-	encodedToken, err := c.getAuthTokenFn(ctx, region, accessKeyID, secretAccessKey)
+	encodedToken, err := a.getAuthTokenFn(ctx, region, accessKeyID, secretAccessKey)
 	if err != nil {
 		return "", "", fmt.Errorf("error getting ECR auth token: %w", err)
 	}
 
 	// Cache the encoded token
-	c.tokenCache.Set(cacheKey, encodedToken, cache.DefaultExpiration)
+	a.tokenCache.Set(cacheKey, encodedToken, cache.DefaultExpiration)
 
 	return decodeAuthToken(encodedToken)
 }
@@ -105,7 +107,7 @@ func (c *credentialHelper) getUsernameAndPassword(
 // tokenCacheKey returns a cache key for an ECR authorization token. The key is
 // a hash of the region, access key ID, and secret access key. Using a hash
 // ensures that the secret access key is not stored in plaintext in the cache.
-func tokenCacheKey(region, accessKeyID, secretAccessKey string) string {
+func (a *accessKeyCredentialHelper) tokenCacheKey(region, accessKeyID, secretAccessKey string) string {
 	return fmt.Sprintf(
 		"%x",
 		sha256.Sum256([]byte(
@@ -116,7 +118,7 @@ func tokenCacheKey(region, accessKeyID, secretAccessKey string) string {
 
 // getAuthToken returns an ECR authorization token by calling out to AWS with
 // the provided credentials.
-func getAuthToken(
+func (a *accessKeyCredentialHelper) getAuthToken(
 	ctx context.Context, region, accessKeyID, secretAccessKey string,
 ) (string, error) {
 	svc := ecr.NewFromConfig(aws.Config{

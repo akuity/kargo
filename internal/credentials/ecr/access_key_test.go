@@ -11,7 +11,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-func TestGetUsernameAndPassword(t *testing.T) {
+func TestAccessKeyCredentialHelper(t *testing.T) {
 	const (
 		testRegion          = "fake-region"
 		testAccessKeyID     = "fake-id"
@@ -24,7 +24,7 @@ func TestGetUsernameAndPassword(t *testing.T) {
 
 	warmTokenCache := cache.New(0, 0)
 	warmTokenCache.Set(
-		tokenCacheKey(testRegion, testAccessKeyID, testSecretAccessKey),
+		(&accessKeyCredentialHelper{}).tokenCacheKey(testRegion, testAccessKeyID, testSecretAccessKey),
 		testEncodedToken,
 		cache.DefaultExpiration,
 	)
@@ -32,13 +32,13 @@ func TestGetUsernameAndPassword(t *testing.T) {
 	testCases := []struct {
 		name       string
 		secret     *corev1.Secret
-		helper     CredentialHelper
+		helper     AccessKeyCredentialHelper
 		assertions func(t *testing.T, username, password string, err error)
 	}{
 		{
 			name:   "no aws details provided",
 			secret: &corev1.Secret{},
-			helper: NewCredentialHelper(),
+			helper: NewAccessKeyCredentialHelper(),
 			assertions: func(t *testing.T, username, password string, err error) {
 				require.NoError(t, err)
 				require.Empty(t, username)
@@ -53,7 +53,7 @@ func TestGetUsernameAndPassword(t *testing.T) {
 					secretKey: []byte(testSecretAccessKey),
 				},
 			},
-			helper: NewCredentialHelper(),
+			helper: NewAccessKeyCredentialHelper(),
 			assertions: func(t *testing.T, _, _ string, err error) {
 				require.ErrorContains(t, err, "must all be set or all be unset")
 			},
@@ -66,7 +66,7 @@ func TestGetUsernameAndPassword(t *testing.T) {
 					secretKey: []byte(testSecretAccessKey),
 				},
 			},
-			helper: NewCredentialHelper(),
+			helper: NewAccessKeyCredentialHelper(),
 			assertions: func(t *testing.T, _, _ string, err error) {
 				require.ErrorContains(t, err, "must all be set or all be unset")
 			},
@@ -79,7 +79,7 @@ func TestGetUsernameAndPassword(t *testing.T) {
 					idKey:     []byte(testAccessKeyID),
 				},
 			},
-			helper: NewCredentialHelper(),
+			helper: NewAccessKeyCredentialHelper(),
 			assertions: func(t *testing.T, _, _ string, err error) {
 				require.ErrorContains(t, err, "must all be set or all be unset")
 			},
@@ -93,7 +93,7 @@ func TestGetUsernameAndPassword(t *testing.T) {
 					secretKey: []byte(testSecretAccessKey),
 				},
 			},
-			helper: &credentialHelper{
+			helper: &accessKeyCredentialHelper{
 				tokenCache: warmTokenCache,
 			},
 			assertions: func(t *testing.T, username, password string, err error) {
@@ -111,7 +111,7 @@ func TestGetUsernameAndPassword(t *testing.T) {
 					secretKey: []byte(testSecretAccessKey),
 				},
 			},
-			helper: &credentialHelper{
+			helper: &accessKeyCredentialHelper{
 				tokenCache: cache.New(0, 0),
 				getAuthTokenFn: func(context.Context, string, string, string) (string, error) {
 					return "", fmt.Errorf("something went wrong")
@@ -131,7 +131,7 @@ func TestGetUsernameAndPassword(t *testing.T) {
 					secretKey: []byte(testSecretAccessKey),
 				},
 			},
-			helper: &credentialHelper{
+			helper: &accessKeyCredentialHelper{
 				tokenCache: cache.New(0, 0),
 				getAuthTokenFn: func(context.Context, string, string, string) (string, error) {
 					return testEncodedToken, nil
