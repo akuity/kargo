@@ -71,10 +71,11 @@ type Database interface {
 // utilizes a Kubernetes controller runtime client to retrieve credentials
 // stored in Kubernetes Secrets.
 type kubernetesDatabase struct {
-	kargoClient client.Client
-	ecrHelper   ecr.CredentialHelper
-	gcpHelper   gcp.CredentialHelper
-	cfg         KubernetesDatabaseConfig
+	kargoClient          client.Client
+	ecrAccessKeyHelper   ecr.AccessKeyCredentialHelper
+	ecrPodIdentityHelper ecr.PodIdentityCredentialHelper
+	gcpHelper            gcp.CredentialHelper
+	cfg                  KubernetesDatabaseConfig
 }
 
 // KubernetesDatabaseConfig represents configuration for a Kubernetes based
@@ -98,10 +99,11 @@ func NewKubernetesDatabase(
 	cfg KubernetesDatabaseConfig,
 ) Database {
 	return &kubernetesDatabase{
-		kargoClient: kargoClient,
-		ecrHelper:   ecr.NewCredentialHelper(),
-		gcpHelper:   gcp.NewCredentialHelper(),
-		cfg:         cfg,
+		kargoClient:          kargoClient,
+		ecrAccessKeyHelper:   ecr.NewAccessKeyCredentialHelper(),
+		ecrPodIdentityHelper: ecr.NewPodIdentityCredentialHelper(),
+		gcpHelper:            gcp.NewCredentialHelper(),
+		cfg:                  cfg,
 	}
 }
 
@@ -151,11 +153,24 @@ func (k *kubernetesDatabase) Get(
 		}
 	}
 
-	if secret == nil {
+	if secret != nil {
+		if creds, err = k.secretToCreds(ctx, credType, secret); err != nil {
+			return creds, false, err
+		}
+		return creds, true, nil
+	}
+
+	if credType != TypeImage {
+		// If we are not not looking for image repository credentials, there's
+		// nothing left to try.
 		return creds, false, nil
 	}
 
-	if creds, err = k.secretToCreds(ctx, credType, secret); err != nil {
+	// If we get to here, we have not found any secret that we can pick apart
+	// in any way, but we can still try to resolve a username and password via
+	// workload identity.
+	if creds.Username, creds.Password, err =
+		k.ecrPodIdentityHelper.GetUsernameAndPassword(ctx, repoURL, namespace); err != nil {
 		return creds, false, err
 	}
 
@@ -242,7 +257,7 @@ func (k *kubernetesDatabase) secretToCreds(
 		var username, password string
 		var err error
 		// Try AWS
-		if username, password, err = k.ecrHelper.GetUsernameAndPassword(secret); err != nil {
+		if username, password, err = k.ecrAccessKeyHelper.GetUsernameAndPassword(ctx, secret); err != nil {
 			return Credentials{}, err
 		}
 		if username == "" { // Try GCP
