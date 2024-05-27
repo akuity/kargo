@@ -249,20 +249,33 @@ type GitRepoUpdate struct {
 // PatchOperation describes a patch operation to apply to a Git repository.
 // At present, only the copying of a Source to a Destination is supported.
 type PatchOperation struct {
+	// Copy describes a copy operation to apply to the repository.
+	Copy *CopyPatchOperation `json:"copy,omitempty" protobuf:"bytes,1,opt,name=copy"`
+}
+
+type CopyPatchOperation struct {
+	// RepoURL is the URL of the repository to copy from. It has to be
+	// a repository that is subscribed to by the Warehouse of the Stage, for
+	// which Freight is produced.
+	// If the RepoURL is not specified, the copy operation will be performed
+	// within the repository of the GitRepoUpdate.
+	//
+	// +kubebuilder:validation:Optional
+	RepoURL string `json:"repoURL" protobuf:"bytes,1,opt,name=repoURL"`
 	// Source is the path to the directory or file to which the patch operation
 	// will be applied. This is a required field, but provisionally marked as
 	// optional to allow for future expansion.
 	//
-	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:MinLength=1
-	Source string `json:"source,omitempty" protobuf:"bytes,1,opt,name=source"`
+	Source string `json:"source,omitempty" protobuf:"bytes,2,opt,name=source"`
 	// Destination is the path to the file that will be created or updated
 	// by the patch operation. This is a required field, but provisionally marked
 	// as optional to allow for future expansion.
 	//
-	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:MinLength=1
-	Destination string `json:"destination" protobuf:"bytes,2,opt,name=destination"`
+	Destination string `json:"destination" protobuf:"bytes,3,opt,name=destination"`
 }
 
 // PullRequestPromotionMechanism describes how to generate a pull request against the write branch during promotion
