@@ -18,7 +18,7 @@ func TestNewKubernetesDatabase(t *testing.T) {
 	testCfg := KubernetesDatabaseConfig{
 		GlobalCredentialsNamespaces: []string{"fake-namespace"},
 	}
-	d := NewKubernetesDatabase(testClient, testCfg)
+	d := NewKubernetesDatabase(context.Background(), testClient, testCfg)
 	require.NotNil(t, d)
 	k, ok := d.(*kubernetesDatabase)
 	require.True(t, ok)
@@ -195,6 +195,7 @@ func TestGet(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			creds, found, err := NewKubernetesDatabase(
+				context.Background(),
 				fake.NewClientBuilder().WithObjects(testCase.secrets...).Build(),
 				KubernetesDatabaseConfig{
 					GlobalCredentialsNamespaces: []string{testGlobalNamespace},
