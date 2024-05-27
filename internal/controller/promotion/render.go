@@ -13,7 +13,7 @@ import (
 	render "github.com/akuity/kargo/internal/kargo-render"
 )
 
-// newKargoRenderMechanism returns a gitMechanism that only only selects and
+// newKargoRenderMechanism returns a gitMechanism that only selects and
 // performs updates that involve Kargo Render.
 func newKargoRenderMechanism(
 	credentialsDB credentials.Database,

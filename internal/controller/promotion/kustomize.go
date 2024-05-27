@@ -11,8 +11,8 @@ import (
 	"github.com/akuity/kargo/internal/kustomize"
 )
 
-// newKustomizeMechanism returns a gitMechanism that only only selects and
-// performs updates that involve Kustomize.
+// newKustomizeMechanism returns a gitMechanism that only selects and performs
+// updates that involve Kustomize.
 func newKustomizeMechanism(
 	credentialsDB credentials.Database,
 ) Mechanism {

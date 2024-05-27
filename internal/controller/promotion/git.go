@@ -2,6 +2,7 @@ package promotion
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -33,6 +34,30 @@ func GitConfigFromEnv() GitConfig {
 	return cfg
 }
 
+// gitRepositories is a map of Git repositories keyed by their URL.
+type gitRepositories map[string]git.Repo
+
+// Close closes all the Git repositories in the map and returns any errors that
+// occurred while closing them.
+func (g gitRepositories) Close() error {
+	var err []error
+	for _, repo := range g {
+		if cErr := repo.Close(); cErr != nil {
+			err = append(err, cErr)
+		}
+	}
+	return errors.Join(err...)
+}
+
+// WorkingDirs returns a map of Git repository URLs to their working directories.
+func (g gitRepositories) WorkingDirs() map[string]string {
+	workingDirs := make(map[string]string, len(g))
+	for url, repo := range g {
+		workingDirs[url] = repo.WorkingDir()
+	}
+	return workingDirs
+}
+
 // gitMechanism is an implementation of the Mechanism interface that uses Git to
 // update configuration in a repository. It is easily configured to support
 // different types of configuration management tools.
@@ -40,12 +65,18 @@ type gitMechanism struct {
 	name string
 	cfg  GitConfig
 	// Overridable behaviors:
-	selectUpdatesFn  func([]kargoapi.GitRepoUpdate) []kargoapi.GitRepoUpdate
+	selectUpdatesFn       func([]kargoapi.GitRepoUpdate) []kargoapi.GitRepoUpdate
+	cloneFreightCommitsFn func(
+		ctx context.Context,
+		namespace string,
+		commits []kargoapi.GitCommit,
+	) (gitRepositories, error)
 	doSingleUpdateFn func(
 		ctx context.Context,
 		promo *kargoapi.Promotion,
 		update kargoapi.GitRepoUpdate,
 		newFreight kargoapi.FreightReference,
+		freightGitRepos gitRepositories,
 	) (*kargoapi.PromotionStatus, kargoapi.FreightReference, error)
 	getReadRefFn func(
 		update kargoapi.GitRepoUpdate,
@@ -66,7 +97,13 @@ type gitMechanism struct {
 		writeBranch string,
 		repo git.Repo,
 		repoCreds git.RepoCredentials,
+		freightGitRepos gitRepositories,
 	) (string, error)
+	applyCopyPatchesFn func(
+		workingDir string,
+		freightRepos map[string]string,
+		update kargoapi.GitRepoUpdate,
+	) ([]string, error)
 	applyConfigManagementFn func(
 		ctx context.Context,
 		update kargoapi.GitRepoUpdate,
@@ -103,11 +140,13 @@ func newGitMechanism(
 	}
 	g.cfg = GitConfigFromEnv()
 	g.selectUpdatesFn = selectUpdatesFn
+	g.cloneFreightCommitsFn = g.cloneFreightCommits
 	g.doSingleUpdateFn = g.doSingleUpdate
 	g.getReadRefFn = getReadRef
 	g.getCredentialsFn = getRepoCredentialsFn(credentialsDB)
 	g.getAuthorFn = g.getAuthor
 	g.gitCommitFn = g.gitCommit
+	g.applyCopyPatchesFn = applyCopyPatches
 	g.applyConfigManagementFn = applyConfigManagementFn
 	return g
 }
@@ -136,6 +175,18 @@ func (g *gitMechanism) Promote(
 	logger := logging.LoggerFromContext(ctx)
 	logger.Debugf("executing %s", g.name)
 
+	// Clone the Git repositories associated with the commits from the Freight
+	// that are referenced by the Copy patches in the updates, if any.
+	var freightGitRepos gitRepositories
+	defer freightGitRepos.Close()
+	if commits := findCommitsForCopyPatches(newFreight, updates...); len(commits) > 0 {
+		var err error
+		if freightGitRepos, err = g.cloneFreightCommitsFn(ctx, promo.Namespace, commits); err != nil {
+			return nil, newFreight, err
+		}
+	}
+
+	// Perform the updates
 	for _, update := range updates {
 		var err error
 		var otherStatus *kargoapi.PromotionStatus
@@ -144,6 +195,7 @@ func (g *gitMechanism) Promote(
 			promo,
 			update,
 			newFreight,
+			freightGitRepos,
 		); err != nil {
 			return nil, newFreight, err
 		}
@@ -155,6 +207,50 @@ func (g *gitMechanism) Promote(
 	return newStatus, newFreight, nil
 }
 
+// cloneFreightCommits clones the Git repositories associated with the provided
+// GitCommits and returns a map of the cloned repositories keyed by their URL.
+// In case of an error, the function returns a map of the repositories that were
+// successfully cloned before the error occurred. The caller is responsible for
+// closing the repositories in the map.
+func (g *gitMechanism) cloneFreightCommits(
+	ctx context.Context,
+	namespace string,
+	commits []kargoapi.GitCommit,
+) (gitRepositories, error) {
+	gitRepos := make(gitRepositories, len(commits))
+	for _, commit := range commits {
+		creds, err := g.getCredentialsFn(ctx, namespace, commit.RepoURL)
+		if err != nil {
+			return gitRepos, err
+		}
+
+		repo, err := git.Clone(
+			commit.RepoURL,
+			&git.ClientOptions{
+				User:        &git.User{},
+				Credentials: creds,
+			},
+			&git.CloneOptions{
+				Branch:       commit.Branch,
+				SingleBranch: true,
+				Filter:       git.FilterBlobless,
+				// TODO: figure out how to get this
+				//InsecureSkipTLSVerify: commit.InsecureSkipTLSVerify,
+			},
+		)
+		if err != nil {
+			return gitRepos, fmt.Errorf("cloning git repo %q: %w", commit.RepoURL, err)
+		}
+
+		if err = repo.Checkout(commit.ID); err != nil {
+			return gitRepos, fmt.Errorf("checking out commit %q in git repo %q: %w", commit.ID, commit.RepoURL, err)
+		}
+
+		gitRepos[libGit.NormalizeURL(commit.RepoURL)] = repo
+	}
+	return gitRepos, nil
+}
+
 // doSingleUpdate updates configuration in a single Git repository by
 // making a git commit with the changes. If performing a pull request
 // promotion, will create a with PR for the git commit instead of
@@ -164,6 +260,7 @@ func (g *gitMechanism) doSingleUpdate(
 	promo *kargoapi.Promotion,
 	update kargoapi.GitRepoUpdate,
 	newFreight kargoapi.FreightReference,
+	freightGitRepos gitRepositories,
 ) (*kargoapi.PromotionStatus, kargoapi.FreightReference, error) {
 	readRef, commitIndex, err := g.getReadRefFn(update, newFreight.Commits)
 	if err != nil {
@@ -226,6 +323,7 @@ func (g *gitMechanism) doSingleUpdate(
 		commitBranch,
 		repo,
 		*creds,
+		freightGitRepos,
 	)
 	if err != nil {
 		return nil, newFreight, err
@@ -365,6 +463,7 @@ func (g *gitMechanism) gitCommit(
 	writeBranch string,
 	repo git.Repo,
 	repoCreds git.RepoCredentials,
+	freightRepos gitRepositories,
 ) (string, error) {
 	var err error
 	// If readRef is non-empty, check out the specified commit or branch,
@@ -380,15 +479,16 @@ func (g *gitMechanism) gitCommit(
 		return "", err // TODO: Wrap this
 	}
 
-	for _, patch := range update.Patches {
-		if err = gitPatchOperation(repo.WorkingDir(), patch); err != nil {
-			return "", fmt.Errorf("error performing patch operation: %w", err)
-		}
-	}
-
 	var changes []string
+	copyChanges, err := g.applyCopyPatchesFn(repo.WorkingDir(), freightRepos.WorkingDirs(), update)
+	if err != nil {
+		return "", err
+	}
+	changes = append(changes, copyChanges...)
+
 	if g.applyConfigManagementFn != nil {
-		if changes, err = g.applyConfigManagementFn(
+		var applyErr error
+		configChanges, applyErr := g.applyConfigManagementFn(
 			ctx,
 			update,
 			newFreight,
@@ -397,9 +497,11 @@ func (g *gitMechanism) gitCommit(
 			repo.HomeDir(),
 			repo.WorkingDir(),
 			repoCreds,
-		); err != nil {
-			return "", err
+		)
+		if applyErr != nil {
+			return "", applyErr
 		}
+		changes = append(changes, configChanges...)
 	}
 	commitMsg := buildCommitMessage(changes)
 
@@ -517,15 +619,61 @@ func deleteRepoContents(dir string) error {
 	return nil
 }
 
-func gitPatchOperation(workingDir string, patch kargoapi.PatchOperation) error {
+// applyCopyPatches applies the copy patches from the updates to the given Git
+// repository. The source directory for the copy operation is determined based
+// on whether the patch specifies a RepoURL. If a RepoURL is specified, the
+// source directory is the working directory of the corresponding repository in
+// the map of Freight repositories. If no RepoURL is specified, the source
+// directory is the working directory of the given repository. The function
+// returns a slice of strings describing the changes made, or an error if any
+// of the copy operations fail.
+func applyCopyPatches(
+	workingDir string,
+	freightRepos map[string]string,
+	update kargoapi.GitRepoUpdate,
+) ([]string, error) {
+	changes := make([]string, 0, len(update.Patches))
+	for _, patch := range update.Patches {
+		if patch.Copy == nil {
+			continue
+		}
+
+		sourceDir := workingDir
+		if patch.Copy.RepoURL != "" {
+			var ok bool
+			if sourceDir, ok = freightRepos[libGit.NormalizeURL(patch.Copy.RepoURL)]; !ok {
+				return nil, fmt.Errorf("no Freight repository found for URL %q", patch.Copy.RepoURL)
+			}
+		}
+		if err := applyCopyPatch(sourceDir, workingDir, *patch.Copy); err != nil {
+			return nil, fmt.Errorf("error performing copy operation: %w", err)
+		}
+
+		if patch.Copy.RepoURL != "" {
+			changes = append(changes, fmt.Sprintf(
+				"copied %s from %s to %s",
+				patch.Copy.Source, patch.Copy.RepoURL, patch.Copy.Destination),
+			)
+		} else {
+			changes = append(changes, fmt.Sprintf("copied %s to %s", patch.Copy.Source, patch.Copy.Destination))
+		}
+	}
+	return changes, nil
+}
+
+// applyCopyPatch applies a single CopyPatchOperation to the target directory.
+// If the source path is a file, it is copied to the destination path. If the
+// source path is a directory, it is copied recursively to the destination path.
+// The function returns an error if the operation fails.
+func applyCopyPatch(sourceDir, targetDir string, patch kargoapi.CopyPatchOperation) error {
 	// Ensure the source path is within the repository working directory
-	srcPath := filepath.Join(workingDir, patch.Source)
-	if !fs.WithinBasePath(workingDir, srcPath) {
-		return fmt.Errorf("source path %q is not within the repository working directory", patch.Source)
+	srcPath := filepath.Join(sourceDir, patch.Source)
+	if !fs.WithinBasePath(sourceDir, srcPath) {
+		return fmt.Errorf("source path %q is not within the repository root", patch.Source)
 	}
 
 	// Ensure the destination path is within the repository working directory.
-	dstPath, err := securejoin.SecureJoin(workingDir, patch.Destination)
+	dstPath, err := securejoin.SecureJoin(targetDir, patch.Destination)
 	if err != nil {
 		return fmt.Errorf("error resolving destination path %q: %w", patch.Destination, err)
 	}
@@ -555,6 +703,38 @@ func gitPatchOperation(workingDir string, patch kargoapi.PatchOperation) error {
 	default:
 		return fmt.Errorf("unsupported file type for source path %q", patch.Source)
 	}
+}
+
+// findCommitsForCopyPatches returns a slice of GitCommits that are associated
+// with the provided FreightReference and have a RepoURL that matches the RepoURL
+// of at least one of the Copy patches in the provided GitRepoUpdates.
+func findCommitsForCopyPatches(
+	freight kargoapi.FreightReference,
+	updates ...kargoapi.GitRepoUpdate,
+) []kargoapi.GitCommit {
+	// Create a map to store the RepoURLs that have copy patches
+	repoURLs := make(map[string]struct{})
+
+	// Populate the map with RepoURLs from the updates
+	for _, update := range updates {
+		for _, patch := range update.Patches {
+			if patch.Copy != nil && patch.Copy.RepoURL != "" {
+				repoURLs[libGit.NormalizeURL(patch.Copy.RepoURL)] = struct{}{}
+			}
+		}
+	}
+
+	// Create a slice to store the commits to be returned
+	commits := make([]kargoapi.GitCommit, 0, len(repoURLs))
+
+	// Check if the commit's RepoURL is in the map
+	for _, commit := range freight.Commits {
+		if _, ok := repoURLs[libGit.NormalizeURL(commit.RepoURL)]; ok {
+			commits = append(commits, commit)
+		}
+	}
+
+	return commits
 }
 
 // buildCommitMessage constructs a commit message from the provided change
