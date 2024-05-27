@@ -1021,6 +1021,77 @@ export class ChartSubscription extends Message<ChartSubscription> {
 }
 
 /**
+ * @generated from message github.com.akuity.kargo.api.v1alpha1.CopyPatchOperation
+ */
+export class CopyPatchOperation extends Message<CopyPatchOperation> {
+  /**
+   * RepoURL is the URL of the repository to copy from. It has to be
+   * a repository that is subscribed to by the Warehouse of the Stage, for
+   * which Freight is produced.
+   * If the RepoURL is not specified, the copy operation will be performed
+   * within the repository of the GitRepoUpdate.
+   *
+   * +kubebuilder:validation:Optional
+   *
+   * @generated from field: optional string repoURL = 1;
+   */
+  repoURL?: string;
+
+  /**
+   * Source is the path to the directory or file to which the patch operation
+   * will be applied. This is a required field, but provisionally marked as
+   * optional to allow for future expansion.
+   *
+   * +kubebuilder:validation:Required
+   * +kubebuilder:validation:MinLength=1
+   *
+   * @generated from field: optional string source = 2;
+   */
+  source?: string;
+
+  /**
+   * Destination is the path to the file that will be created or updated
+   * by the patch operation. This is a required field, but provisionally marked
+   * as optional to allow for future expansion.
+   *
+   * +kubebuilder:validation:Required
+   * +kubebuilder:validation:MinLength=1
+   *
+   * @generated from field: optional string destination = 3;
+   */
+  destination?: string;
+
+  constructor(data?: PartialMessage<CopyPatchOperation>) {
+    super();
+    proto2.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto2 = proto2;
+  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.CopyPatchOperation";
+  static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 1, name: "repoURL", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 2, name: "source", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 3, name: "destination", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CopyPatchOperation {
+    return new CopyPatchOperation().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CopyPatchOperation {
+    return new CopyPatchOperation().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CopyPatchOperation {
+    return new CopyPatchOperation().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: CopyPatchOperation | PlainMessage<CopyPatchOperation> | undefined, b: CopyPatchOperation | PlainMessage<CopyPatchOperation> | undefined): boolean {
+    return proto2.util.equals(CopyPatchOperation, a, b);
+  }
+}
+
+/**
  * DiscoveredArtifacts holds the artifacts discovered by the Warehouse for its
  * subscriptions.
  *
@@ -2881,28 +2952,11 @@ export class KustomizePromotionMechanism extends Message<KustomizePromotionMecha
  */
 export class PatchOperation extends Message<PatchOperation> {
   /**
-   * Source is the path to the directory or file to which the patch operation
-   * will be applied. This is a required field, but provisionally marked as
-   * optional to allow for future expansion.
+   * Copy describes a copy operation to apply to the repository.
    *
-   * +kubebuilder:validation:Optional
-   * +kubebuilder:validation:MinLength=1
-   *
-   * @generated from field: optional string source = 1;
+   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.CopyPatchOperation copy = 1;
    */
-  source?: string;
-
-  /**
-   * Destination is the path to the file that will be created or updated
-   * by the patch operation. This is a required field, but provisionally marked
-   * as optional to allow for future expansion.
-   *
-   * +kubebuilder:validation:Optional
-   * +kubebuilder:validation:MinLength=1
-   *
-   * @generated from field: optional string destination = 2;
-   */
-  destination?: string;
+  copy?: CopyPatchOperation;
 
   constructor(data?: PartialMessage<PatchOperation>) {
     super();
@@ -2912,8 +2966,7 @@ export class PatchOperation extends Message<PatchOperation> {
   static readonly runtime: typeof proto2 = proto2;
   static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.PatchOperation";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
-    { no: 1, name: "source", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 2, name: "destination", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 1, name: "copy", kind: "message", T: CopyPatchOperation, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PatchOperation {

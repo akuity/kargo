@@ -304,6 +304,33 @@ message ChartSubscription {
   optional int32 discoveryLimit = 4;
 }
 
+message CopyPatchOperation {
+  // RepoURL is the URL of the repository to copy from. It has to be
+  // a repository that is subscribed to by the Warehouse of the Stage, for
+  // which Freight is produced.
+  // If the RepoURL is not specified, the copy operation will be performed
+  // within the repository of the GitRepoUpdate.
+  //
+  // +kubebuilder:validation:Optional
+  optional string repoURL = 1;
+
+  // Source is the path to the directory or file to which the patch operation
+  // will be applied. This is a required field, but provisionally marked as
+  // optional to allow for future expansion.
+  //
+  // +kubebuilder:validation:Required
+  // +kubebuilder:validation:MinLength=1
+  optional string source = 2;
+
+  // Destination is the path to the file that will be created or updated
+  // by the patch operation. This is a required field, but provisionally marked
+  // as optional to allow for future expansion.
+  //
+  // +kubebuilder:validation:Required
+  // +kubebuilder:validation:MinLength=1
+  optional string destination = 3;
+}
+
 // DiscoveredArtifacts holds the artifacts discovered by the Warehouse for its
 // subscriptions.
 message DiscoveredArtifacts {
@@ -967,21 +994,8 @@ message KustomizePromotionMechanism {
 // PatchOperation describes a patch operation to apply to a Git repository.
 // At present, only the copying of a Source to a Destination is supported.
 message PatchOperation {
-  // Source is the path to the directory or file to which the patch operation
-  // will be applied. This is a required field, but provisionally marked as
-  // optional to allow for future expansion.
-  //
-  // +kubebuilder:validation:Optional
-  // +kubebuilder:validation:MinLength=1
-  optional string source = 1;
-
-  // Destination is the path to the file that will be created or updated
-  // by the patch operation. This is a required field, but provisionally marked
-  // as optional to allow for future expansion.
-  //
-  // +kubebuilder:validation:Optional
-  // +kubebuilder:validation:MinLength=1
-  optional string destination = 2;
+  // Copy describes a copy operation to apply to the repository.
+  optional CopyPatchOperation copy = 1;
 }
 
 // Project is a resource type that reconciles to a specially labeled namespace

@@ -397,20 +397,35 @@ spec:
                               PatchOperation describes a patch operation to apply to a Git repository.
                               At present, only the copying of a Source to a Destination is supported.
                             properties:
-                              destination:
-                                description: |-
-                                  Destination is the path to the file that will be created or updated
-                                  by the patch operation. This is a required field, but provisionally marked
-                                  as optional to allow for future expansion.
-                                minLength: 1
-                                type: string
-                              source:
-                                description: |-
-                                  Source is the path to the directory or file to which the patch operation
-                                  will be applied. This is a required field, but provisionally marked as
-                                  optional to allow for future expansion.
-                                minLength: 1
-                                type: string
+                              copy:
+                                description: Copy describes a copy operation to apply
+                                  to the repository.
+                                properties:
+                                  destination:
+                                    description: |-
+                                      Destination is the path to the file that will be created or updated
+                                      by the patch operation. This is a required field, but provisionally marked
+                                      as optional to allow for future expansion.
+                                    minLength: 1
+                                    type: string
+                                  repoURL:
+                                    description: |-
+                                      RepoURL is the URL of the repository to copy from. It has to be
+                                      a repository that is subscribed to by the Warehouse of the Stage, for
+                                      which Freight is produced.
+                                      If the RepoURL is not specified, the copy operation will be performed
+                                      within the repository of the GitRepoUpdate.
+                                    type: string
+                                  source:
+                                    description: |-
+                                      Source is the path to the directory or file to which the patch operation
+                                      will be applied. This is a required field, but provisionally marked as
+                                      optional to allow for future expansion.
+                                    minLength: 1
+                                    type: string
+                                required:
+                                - destination
+                                type: object
                             type: object
                           type: array
                         pullRequest:
