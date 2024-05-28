@@ -121,7 +121,7 @@ func (p *podIdentityCredentialHelper) GetUsernameAndPassword(
 	}
 
 	// Cache the encoded token
-	p.tokenCache.Set(project, encodedToken, cache.DefaultExpiration)
+	p.tokenCache.Set(cacheKey, encodedToken, cache.DefaultExpiration)
 
 	return decodeAuthToken(encodedToken)
 }
