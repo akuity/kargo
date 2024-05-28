@@ -8,13 +8,11 @@ import (
 	"path/filepath"
 	"strings"
 
-	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/kelseyhightower/envconfig"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/git"
 	"github.com/akuity/kargo/internal/credentials"
-	"github.com/akuity/kargo/internal/fs"
 	libGit "github.com/akuity/kargo/internal/git"
 	"github.com/akuity/kargo/internal/logging"
 )
@@ -96,14 +94,9 @@ type gitMechanism struct {
 		readRef string,
 		writeBranch string,
 		repo git.Repo,
-		repoCreds git.RepoCredentials,
 		freightGitRepos gitRepositories,
+		repoCreds git.RepoCredentials,
 	) (string, error)
-	applyCopyPatchesFn func(
-		workingDir string,
-		freightRepos map[string]string,
-		update kargoapi.GitRepoUpdate,
-	) ([]string, error)
 	applyConfigManagementFn func(
 		ctx context.Context,
 		update kargoapi.GitRepoUpdate,
@@ -112,6 +105,7 @@ type gitMechanism struct {
 		sourceCommit string,
 		homeDir string,
 		workingDir string,
+		freightRepos map[string]string,
 		repoCreds git.RepoCredentials,
 	) ([]string, error)
 }
@@ -132,6 +126,7 @@ func newGitMechanism(
 		sourceCommit string,
 		homeDir string,
 		workingDir string,
+		freightRepos map[string]string,
 		repoCreds git.RepoCredentials,
 	) ([]string, error),
 ) Mechanism {
@@ -146,7 +141,6 @@ func newGitMechanism(
 	g.getCredentialsFn = getRepoCredentialsFn(credentialsDB)
 	g.getAuthorFn = g.getAuthor
 	g.gitCommitFn = g.gitCommit
-	g.applyCopyPatchesFn = applyCopyPatches
 	g.applyConfigManagementFn = applyConfigManagementFn
 	return g
 }
@@ -177,6 +171,8 @@ func (g *gitMechanism) Promote(
 
 	// Clone the Git repositories associated with the commits from the Freight
 	// that are referenced by the Copy patches in the updates, if any.
+	// TODO(hidde): This should be factored out, but is the most efficient way
+	// of not cloning the repositories at all times without a lot of refactoring.
 	var freightGitRepos gitRepositories
 	defer freightGitRepos.Close()
 	if commits := findCommitsForCopyPatches(newFreight, updates...); len(commits) > 0 {
@@ -322,8 +318,8 @@ func (g *gitMechanism) doSingleUpdate(
 		readRef,
 		commitBranch,
 		repo,
-		*creds,
 		freightGitRepos,
+		*creds,
 	)
 	if err != nil {
 		return nil, newFreight, err
@@ -462,8 +458,8 @@ func (g *gitMechanism) gitCommit(
 	readRef string,
 	writeBranch string,
 	repo git.Repo,
-	repoCreds git.RepoCredentials,
 	freightRepos gitRepositories,
+	repoCreds git.RepoCredentials,
 ) (string, error) {
 	var err error
 	// If readRef is non-empty, check out the specified commit or branch,
@@ -480,15 +476,8 @@ func (g *gitMechanism) gitCommit(
 	}
 
 	var changes []string
-	copyChanges, err := g.applyCopyPatchesFn(repo.WorkingDir(), freightRepos.WorkingDirs(), update)
-	if err != nil {
-		return "", err
-	}
-	changes = append(changes, copyChanges...)
-
 	if g.applyConfigManagementFn != nil {
-		var applyErr error
-		configChanges, applyErr := g.applyConfigManagementFn(
+		if changes, err = g.applyConfigManagementFn(
 			ctx,
 			update,
 			newFreight,
@@ -496,12 +485,11 @@ func (g *gitMechanism) gitCommit(
 			sourceCommitID,
 			repo.HomeDir(),
 			repo.WorkingDir(),
+			freightRepos.WorkingDirs(),
 			repoCreds,
-		)
-		if applyErr != nil {
-			return "", applyErr
+		); err != nil {
+			return "", err
 		}
-		changes = append(changes, configChanges...)
 	}
 	commitMsg := buildCommitMessage(changes)
 
@@ -617,92 +605,6 @@ func deleteRepoContents(dir string) error {
 		}
 	}
 	return nil
-}
-
-// applyCopyPatches applies the copy patches from the updates to the given Git
-// repository. The source directory for the copy operation is determined based
-// on whether the patch specifies a RepoURL. If a RepoURL is specified, the
-// source directory is the working directory of the corresponding repository in
-// the map of Freight repositories. If no RepoURL is specified, the source
-// directory is the working directory of the given repository. The function
-// returns a slice of strings describing the changes made, or an error if any
-// of the copy operations fail.
-func applyCopyPatches(
-	workingDir string,
-	freightRepos map[string]string,
-	update kargoapi.GitRepoUpdate,
-) ([]string, error) {
-	changes := make([]string, 0, len(update.Patches))
-	for _, patch := range update.Patches {
-		if patch.Copy == nil {
-			continue
-		}
-
-		sourceDir := workingDir
-		if patch.Copy.RepoURL != "" {
-			var ok bool
-			if sourceDir, ok = freightRepos[libGit.NormalizeURL(patch.Copy.RepoURL)]; !ok {
-				return nil, fmt.Errorf("no Freight repository found for URL %q", patch.Copy.RepoURL)
-			}
-		}
-		if err := applyCopyPatch(sourceDir, workingDir, *patch.Copy); err != nil {
-			return nil, fmt.Errorf("error performing copy operation: %w", err)
-		}
-
-		if patch.Copy.RepoURL != "" {
-			changes = append(changes, fmt.Sprintf(
-				"copied %s from %s to %s",
-				patch.Copy.Source, patch.Copy.RepoURL, patch.Copy.Destination),
-			)
-		} else {
-			changes = append(changes, fmt.Sprintf("copied %s to %s", patch.Copy.Source, patch.Copy.Destination))
-		}
-	}
-	return changes, nil
-}
-
-// applyCopyPatch applies a single CopyPatchOperation to the target directory.
-// If the source path is a file, it is copied to the destination path. If the
-// source path is a directory, it is copied recursively to the destination path.
-// The function returns an error if the operation fails.
-func applyCopyPatch(sourceDir, targetDir string, patch kargoapi.CopyPatchOperation) error {
-	// Ensure the source path is within the repository working directory
-	srcPath := filepath.Join(sourceDir, patch.Source)
-	if !fs.WithinBasePath(sourceDir, srcPath) {
-		return fmt.Errorf("source path %q is not within the repository root", patch.Source)
-	}
-
-	// Ensure the destination path is within the repository working directory.
-	dstPath, err := securejoin.SecureJoin(targetDir, patch.Destination)
-	if err != nil {
-		return fmt.Errorf("error resolving destination path %q: %w", patch.Destination, err)
-	}
-
-	srcInfo, err := os.Lstat(srcPath)
-	if err != nil {
-		return fmt.Errorf("error getting info for source path %q: %w", patch.Source, err)
-	}
-
-	switch {
-	case srcInfo.Mode().IsRegular():
-		if err = os.MkdirAll(filepath.Dir(dstPath), 0o755); err != nil {
-			return fmt.Errorf("error creating destination directory: %w", err)
-		}
-		if err = fs.CopyFile(srcPath, dstPath); err != nil {
-			return fmt.Errorf("error copying file %q to %q: %w", patch.Source, patch.Destination, err)
-		}
-		return nil
-	case srcInfo.IsDir():
-		if err = os.MkdirAll(dstPath, 0o755); err != nil {
-			return fmt.Errorf("error creating destination directory: %w", err)
-		}
-		if err = fs.CopyDir(srcPath, dstPath); err != nil {
-			return fmt.Errorf("error copying directory %q to %q: %w", patch.Source, patch.Destination, err)
-		}
-		return nil
-	default:
-		return fmt.Errorf("unsupported file type for source path %q", patch.Source)
-	}
 }
 
 // findCommitsForCopyPatches returns a slice of GitCommits that are associated

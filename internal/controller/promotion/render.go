@@ -56,6 +56,7 @@ func (r *renderer) apply(
 	sourceCommit string,
 	_ string,
 	workingDir string,
+	_ map[string]string,
 	repoCreds git.RepoCredentials,
 ) ([]string, error) {
 	images := make([]string, 0, len(newFreight.Images))

@@ -74,6 +74,7 @@ func (h *helmer) apply(
 	_ string, // TODO: sourceCommit would be a nice addition to the commit message
 	homeDir string,
 	workingDir string,
+	_ map[string]string,
 	_ git.RepoCredentials,
 ) ([]string, error) {
 	// Image updates
