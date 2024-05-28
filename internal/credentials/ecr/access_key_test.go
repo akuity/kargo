@@ -33,13 +33,13 @@ func TestAccessKeyCredentialHelper(t *testing.T) {
 		name       string
 		secret     *corev1.Secret
 		helper     AccessKeyCredentialHelper
-		assertions func(t *testing.T, username, password string, err error)
+		assertions func(t *testing.T, username, password string, c *cache.Cache, err error)
 	}{
 		{
 			name:   "no aws details provided",
 			secret: &corev1.Secret{},
 			helper: NewAccessKeyCredentialHelper(),
-			assertions: func(t *testing.T, username, password string, err error) {
+			assertions: func(t *testing.T, username, password string, _ *cache.Cache, err error) {
 				require.NoError(t, err)
 				require.Empty(t, username)
 				require.Empty(t, password)
@@ -54,7 +54,7 @@ func TestAccessKeyCredentialHelper(t *testing.T) {
 				},
 			},
 			helper: NewAccessKeyCredentialHelper(),
-			assertions: func(t *testing.T, _, _ string, err error) {
+			assertions: func(t *testing.T, _, _ string, _ *cache.Cache, err error) {
 				require.ErrorContains(t, err, "must all be set or all be unset")
 			},
 		},
@@ -67,7 +67,7 @@ func TestAccessKeyCredentialHelper(t *testing.T) {
 				},
 			},
 			helper: NewAccessKeyCredentialHelper(),
-			assertions: func(t *testing.T, _, _ string, err error) {
+			assertions: func(t *testing.T, _, _ string, _ *cache.Cache, err error) {
 				require.ErrorContains(t, err, "must all be set or all be unset")
 			},
 		},
@@ -80,7 +80,7 @@ func TestAccessKeyCredentialHelper(t *testing.T) {
 				},
 			},
 			helper: NewAccessKeyCredentialHelper(),
-			assertions: func(t *testing.T, _, _ string, err error) {
+			assertions: func(t *testing.T, _, _ string, _ *cache.Cache, err error) {
 				require.ErrorContains(t, err, "must all be set or all be unset")
 			},
 		},
@@ -96,7 +96,7 @@ func TestAccessKeyCredentialHelper(t *testing.T) {
 			helper: &accessKeyCredentialHelper{
 				tokenCache: warmTokenCache,
 			},
-			assertions: func(t *testing.T, username, password string, err error) {
+			assertions: func(t *testing.T, username, password string, _ *cache.Cache, err error) {
 				require.NoError(t, err)
 				require.Equal(t, testUsername, username)
 				require.Equal(t, testPassword, password)
@@ -117,7 +117,7 @@ func TestAccessKeyCredentialHelper(t *testing.T) {
 					return "", fmt.Errorf("something went wrong")
 				},
 			},
-			assertions: func(t *testing.T, _, _ string, err error) {
+			assertions: func(t *testing.T, _, _ string, _ *cache.Cache, err error) {
 				require.ErrorContains(t, err, "error getting ECR auth token")
 				require.ErrorContains(t, err, "something went wrong")
 			},
@@ -137,10 +137,14 @@ func TestAccessKeyCredentialHelper(t *testing.T) {
 					return testEncodedToken, nil
 				},
 			},
-			assertions: func(t *testing.T, username, password string, err error) {
+			assertions: func(t *testing.T, username, password string, c *cache.Cache, err error) {
 				require.NoError(t, err)
 				require.Equal(t, testUsername, username)
 				require.Equal(t, testPassword, password)
+				_, found := c.Get(
+					(&accessKeyCredentialHelper{}).tokenCacheKey(testRegion, testAccessKeyID, testSecretAccessKey),
+				)
+				require.True(t, found)
 			},
 		},
 	}
@@ -148,7 +152,8 @@ func TestAccessKeyCredentialHelper(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			username, password, err :=
 				testCase.helper.GetUsernameAndPassword(context.Background(), testCase.secret)
-			testCase.assertions(t, username, password, err)
+			cache := testCase.helper.(*accessKeyCredentialHelper).tokenCache // nolint: forcetypeassert
+			testCase.assertions(t, username, password, cache, err)
 		})
 	}
 }

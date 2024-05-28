@@ -98,6 +98,7 @@ func (o *controllerOptions) run(ctx context.Context) error {
 	}
 
 	credentialsDB := credentials.NewKubernetesDatabase(
+		ctx,
 		kargoMgr.GetClient(),
 		credentials.KubernetesDatabaseConfigFromEnv(),
 	)

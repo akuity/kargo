@@ -95,13 +95,14 @@ func KubernetesDatabaseConfigFromEnv() KubernetesDatabaseConfig {
 // Database interface that utilizes a Kubernetes controller runtime client to
 // retrieve Credentials stored in Kubernetes Secrets.
 func NewKubernetesDatabase(
+	ctx context.Context,
 	kargoClient client.Client,
 	cfg KubernetesDatabaseConfig,
 ) Database {
 	return &kubernetesDatabase{
 		kargoClient:          kargoClient,
 		ecrAccessKeyHelper:   ecr.NewAccessKeyCredentialHelper(),
-		ecrPodIdentityHelper: ecr.NewPodIdentityCredentialHelper(),
+		ecrPodIdentityHelper: ecr.NewPodIdentityCredentialHelper(ctx),
 		gcpHelper:            gcp.NewCredentialHelper(),
 		cfg:                  cfg,
 	}

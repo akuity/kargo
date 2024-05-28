@@ -18,7 +18,7 @@ import (
 	"github.com/akuity/kargo/internal/logging"
 )
 
-var ecrURLRegex = regexp.MustCompile(`^([0-9]{12})\.dkr\.ecr\.(.+)\.amazonaws\.com`)
+var ecrURLRegex = regexp.MustCompile(`^[0-9]{12}\.dkr\.ecr\.(.+)\.amazonaws\.com`)
 
 // PodIdentityCredentialHelper is an interface for components that can obtain a
 // username and password for ECR using EKS Pod Identity.
@@ -31,13 +31,14 @@ type PodIdentityCredentialHelper interface {
 }
 
 type podIdentityCredentialHelper struct {
+	awsAccountID string
+
 	tokenCache *cache.Cache
 
 	// The following behaviors are overridable for testing purposes:
 
 	getAuthTokenFn func(
 		ctx context.Context,
-		accountID string,
 		region string,
 		project string,
 	) (string, error)
@@ -46,9 +47,35 @@ type podIdentityCredentialHelper struct {
 // NewPodIdentityCredentialHelper returns an implementation of the
 // PodIdentityCredentialHelper interface that utilizes a cache to avoid
 // unnecessary calls to AWS.
-func NewPodIdentityCredentialHelper() PodIdentityCredentialHelper {
-
+func NewPodIdentityCredentialHelper(ctx context.Context) PodIdentityCredentialHelper {
+	logger := logging.LoggerFromContext(ctx)
+	var awsAccountID string
+	if os.Getenv("AWS_CONTAINER_CREDENTIALS_FULL_URI") == "" {
+		logger.Info("AWS_CONTAINER_CREDENTIALS_FULL_URI not set; assuming EKS Pod Identity is not in use")
+	} else {
+		logger.Info("EKS Pod Identity appears to be in use")
+		cfg, err := config.LoadDefaultConfig(ctx)
+		if err != nil {
+			logger.Error(
+				"error loading AWS config; EKS Pod Identity integration will be disabled: %w",
+				err,
+			)
+		} else {
+			stsSvc := sts.NewFromConfig(cfg)
+			res, err := stsSvc.GetCallerIdentity(ctx, &sts.GetCallerIdentityInput{})
+			if err != nil {
+				logger.Error(
+					"error getting caller identity; EKS Pod Identity integration will be disabled: %w",
+					err,
+				)
+			} else {
+				logger.WithField("account", *res.Account).Debug("got AWS account ID")
+				awsAccountID = *res.Account
+			}
+		}
+	}
 	p := &podIdentityCredentialHelper{
+		awsAccountID: awsAccountID,
 		tokenCache: cache.New(
 			// Tokens live for 12 hours. We'll hang on to them for 10.
 			10*time.Hour, // Default ttl for each entry
@@ -65,24 +92,17 @@ func (p *podIdentityCredentialHelper) GetUsernameAndPassword(
 	repoURL string,
 	project string,
 ) (string, string, error) {
-	if os.Getenv("AWS_CONTAINER_CREDENTIALS_FULL_URI") == "" {
+	if p.awsAccountID == "" {
 		// Don't even try if it looks like EKS Pod Identity isn't set up for this
 		// controller.
 		return "", "", nil
 	}
 
 	matches := ecrURLRegex.FindStringSubmatch(repoURL)
-	if len(matches) != 3 { // This doesn't look like an ECR URL
+	if len(matches) != 2 { // This doesn't look like an ECR URL
 		return "", "", nil
 	}
-	// TODO: We actually might not want to get the account ID from the repoURL
-	// because the account ID in the repoURL may be for a different account from
-	// the one containing the Kargo controller's IAM role and the Project-specific
-	// IAM roles it assumes. (Access across accounts IS possible. It is just not
-	// clear to me yet where else I can get the correct account ID from without
-	// requiring it to be explicitly configured at install-time.)
-	accountID := matches[1]
-	region := matches[2]
+	region := matches[1]
 
 	cacheKey := p.tokenCacheKey(region, project)
 
@@ -90,7 +110,7 @@ func (p *podIdentityCredentialHelper) GetUsernameAndPassword(
 		return decodeAuthToken(entry.(string)) // nolint: forcetypeassert
 	}
 
-	encodedToken, err := p.getAuthTokenFn(ctx, accountID, region, project)
+	encodedToken, err := p.getAuthTokenFn(ctx, region, project)
 	if err != nil {
 		// This might mean the controller's IAM role isn't authorized to assume the
 		// project-specific IAM role, or that the project-specific IAM role doesn't
@@ -101,7 +121,7 @@ func (p *podIdentityCredentialHelper) GetUsernameAndPassword(
 	}
 
 	// Cache the encoded token
-	p.tokenCache.Set(project, encodedToken, cache.DefaultExpiration)
+	p.tokenCache.Set(cacheKey, encodedToken, cache.DefaultExpiration)
 
 	return decodeAuthToken(encodedToken)
 }
@@ -120,7 +140,6 @@ func (p *podIdentityCredentialHelper) tokenCacheKey(region, project string) stri
 // token.
 func (p *podIdentityCredentialHelper) getAuthToken(
 	ctx context.Context,
-	accountID string,
 	region string,
 	project string,
 ) (string, error) {
@@ -134,7 +153,7 @@ func (p *podIdentityCredentialHelper) getAuthToken(
 		Region: region,
 		Credentials: stscreds.NewAssumeRoleProvider(
 			sts.NewFromConfig(cfg),
-			fmt.Sprintf("arn:aws:iam::%s:role/kargo-project-%s", accountID, project),
+			fmt.Sprintf("arn:aws:iam::%s:role/kargo-project-%s", p.awsAccountID, project),
 		),
 	})
 	output, err := ecrSvc.GetAuthorizationToken(ctx, &ecr.GetAuthorizationTokenInput{})
