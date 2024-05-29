@@ -14,7 +14,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/credentials/ecr"
-	"github.com/akuity/kargo/internal/credentials/gcp"
+	"github.com/akuity/kargo/internal/credentials/gar"
 	"github.com/akuity/kargo/internal/git"
 	"github.com/akuity/kargo/internal/helm"
 	"github.com/akuity/kargo/internal/logging"
@@ -71,11 +71,12 @@ type Database interface {
 // utilizes a Kubernetes controller runtime client to retrieve credentials
 // stored in Kubernetes Secrets.
 type kubernetesDatabase struct {
-	kargoClient          client.Client
-	ecrAccessKeyHelper   ecr.AccessKeyCredentialHelper
-	ecrPodIdentityHelper ecr.PodIdentityCredentialHelper
-	gcpHelper            gcp.CredentialHelper
-	cfg                  KubernetesDatabaseConfig
+	kargoClient  client.Client
+	ecrAKHelper  ecr.AccessKeyCredentialHelper
+	ecrPIHelper  ecr.PodIdentityCredentialHelper
+	gcpSAKHelper gar.ServiceAccountKeyCredentialHelper
+	gcpWIFHelper gar.WorkloadIdentityFederationCredentialHelper
+	cfg          KubernetesDatabaseConfig
 }
 
 // KubernetesDatabaseConfig represents configuration for a Kubernetes based
@@ -100,11 +101,12 @@ func NewKubernetesDatabase(
 	cfg KubernetesDatabaseConfig,
 ) Database {
 	return &kubernetesDatabase{
-		kargoClient:          kargoClient,
-		ecrAccessKeyHelper:   ecr.NewAccessKeyCredentialHelper(),
-		ecrPodIdentityHelper: ecr.NewPodIdentityCredentialHelper(ctx),
-		gcpHelper:            gcp.NewCredentialHelper(),
-		cfg:                  cfg,
+		kargoClient:  kargoClient,
+		ecrAKHelper:  ecr.NewAccessKeyCredentialHelper(),
+		ecrPIHelper:  ecr.NewPodIdentityCredentialHelper(ctx),
+		gcpSAKHelper: gar.NewServiceAccountKeyCredentialHelper(),
+		gcpWIFHelper: gar.NewWorkloadIdentityFederationCredentialHelper(ctx),
+		cfg:          cfg,
 	}
 }
 
@@ -170,9 +172,19 @@ func (k *kubernetesDatabase) Get(
 	// If we get to here, we have not found any secret that we can pick apart
 	// in any way, but we can still try to resolve a username and password via
 	// workload identity.
+
+	// Try EKS Pod Identity
 	if creds.Username, creds.Password, err =
-		k.ecrPodIdentityHelper.GetUsernameAndPassword(ctx, repoURL, namespace); err != nil {
+		k.ecrPIHelper.GetUsernameAndPassword(ctx, repoURL, namespace); err != nil {
 		return creds, false, err
+	}
+
+	// Try GCP Workload Identity Federation
+	if creds.Username == "" {
+		if creds.Username, creds.Password, err =
+			k.gcpWIFHelper.GetUsernameAndPassword(ctx, repoURL, namespace); err != nil {
+			return creds, false, err
+		}
 	}
 
 	return creds, true, nil
@@ -258,11 +270,11 @@ func (k *kubernetesDatabase) secretToCreds(
 		var username, password string
 		var err error
 		// Try AWS
-		if username, password, err = k.ecrAccessKeyHelper.GetUsernameAndPassword(ctx, secret); err != nil {
+		if username, password, err = k.ecrAKHelper.GetUsernameAndPassword(ctx, secret); err != nil {
 			return Credentials{}, err
 		}
 		if username == "" { // Try GCP
-			if username, password, err = k.gcpHelper.GetUsernameAndPassword(
+			if username, password, err = k.gcpSAKHelper.GetUsernameAndPassword(
 				ctx, secret,
 			); err != nil {
 				return Credentials{}, err
