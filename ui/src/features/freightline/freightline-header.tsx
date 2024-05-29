@@ -121,7 +121,7 @@ export const FreightlineHeader = ({
                 );
               }}
             >
-              Create Freight
+              Assemble Freight
             </Button>
             {(Object.keys(warehouses) || []).length > 1 && (
               <div className='ml-2 mr-4 -mb-1'>

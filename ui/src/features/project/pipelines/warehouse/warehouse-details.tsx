@@ -56,7 +56,7 @@ export const WarehouseDetails = ({ warehouse }: { warehouse: Warehouse }) => {
             </Tabs.TabPane>
             <Tabs.TabPane
               key='create-freight'
-              tab='Create Freight'
+              tab='Freight Assembly'
               icon={<FontAwesomeIcon icon={faTools} />}
             >
               <CreateFreight warehouse={warehouse} />
