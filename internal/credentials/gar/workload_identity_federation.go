@@ -13,7 +13,10 @@ import (
 	"github.com/akuity/kargo/internal/logging"
 )
 
-var garURLRegex = regexp.MustCompile(`^.+\.pkg\.dev/`)
+var (
+	gcrURLRegex = regexp.MustCompile(`^(?:.+\.)?gcr\.io/`) // Legacy
+	garURLRegex = regexp.MustCompile(`^.+-docker\.pkg\.dev/`)
+)
 
 // WorkloadIdentityFederationCredentialHelper is an interface for components
 // that can obtain a username and password for Google Artifact Registry using
@@ -75,7 +78,7 @@ func (w *workloadIdentityFederationCredentialHelper) GetUsernameAndPassword(
 		return "", "", nil
 	}
 
-	if !garURLRegex.MatchString(repoURL) {
+	if !garURLRegex.MatchString(repoURL) && !gcrURLRegex.MatchString(repoURL) {
 		// This doesn't look like a Google Artifact Registry URL
 		return "", "", nil
 	}

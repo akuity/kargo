@@ -28,7 +28,7 @@ func TestWorkloadIdentityFederationCredentialHelper(t *testing.T) {
 		testKargoProject = "fake-project"
 		testToken        = "fake-token"
 	)
-	testRepoURL := fmt.Sprintf("%s.pkg.dev/%s/debian/debian", testRegion, testGCPProjectID)
+	testRepoURL := fmt.Sprintf("%s-docker.pkg.dev/%s/debian/debian", testRegion, testGCPProjectID)
 
 	warmTokenCache := cache.New(0, 0)
 	warmTokenCache.Set(testKargoProject, testToken, cache.DefaultExpiration)
@@ -90,8 +90,26 @@ func TestWorkloadIdentityFederationCredentialHelper(t *testing.T) {
 			},
 		},
 		{
-			name:    "cache miss; success",
+			name:    "cache miss; success (artifact registry)",
 			repoURL: testRepoURL,
+			helper: &workloadIdentityFederationCredentialHelper{
+				gcpProjectID: testGCPProjectID,
+				tokenCache:   cache.New(0, 0),
+				getAccessTokenFn: func(context.Context, string) (string, error) {
+					return testToken, nil
+				},
+			},
+			assertions: func(t *testing.T, username, password string, c *cache.Cache, err error) {
+				require.NoError(t, err)
+				require.Equal(t, accessTokenUsername, username)
+				require.Equal(t, testToken, password)
+				_, found := c.Get(testKargoProject)
+				require.True(t, found)
+			},
+		},
+		{
+			name:    "cache miss; success (container registry; legacy)",
+			repoURL: "us.gcr.io/fake-project/fake-image:fake-tag",
 			helper: &workloadIdentityFederationCredentialHelper{
 				gcpProjectID: testGCPProjectID,
 				tokenCache:   cache.New(0, 0),
