@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"sync"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -26,6 +25,7 @@ import (
 	"github.com/akuity/kargo/internal/controller/stages"
 	"github.com/akuity/kargo/internal/controller/warehouses"
 	"github.com/akuity/kargo/internal/credentials"
+	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/internal/os"
 	"github.com/akuity/kargo/internal/types"
 	versionpkg "github.com/akuity/kargo/internal/version"
@@ -41,12 +41,14 @@ type controllerOptions struct {
 	ArgoCDKubeConfig    string
 	ArgoCDNamespaceOnly bool
 
-	Logger *log.Logger
+	Logger *logging.Logger
 }
 
 func newControllerCommand() *cobra.Command {
 	cmdOpts := &controllerOptions{
-		Logger: log.StandardLogger(),
+		// During startup, we enforce use of an info-level logger to ensure that
+		// no important startup messages are missed.
+		Logger: logging.NewLogger(logging.InfoLevel),
 	}
 
 	cmd := &cobra.Command{
@@ -75,14 +77,14 @@ func (o *controllerOptions) complete() {
 func (o *controllerOptions) run(ctx context.Context) error {
 	version := versionpkg.GetVersion()
 
-	startupLogEntry := o.Logger.WithFields(log.Fields{
-		"version": version.Version,
-		"commit":  version.GitCommit,
-	})
+	startupLogger := o.Logger.WithValues(
+		"version", version.Version,
+		"commit", version.GitCommit,
+	)
 	if o.ShardName != "" {
-		startupLogEntry = startupLogEntry.WithField("shard", o.ShardName)
+		startupLogger = startupLogger.WithValues("shard", o.ShardName)
 	}
-	startupLogEntry.Info("Starting Kargo Controller")
+	startupLogger.Info("Starting Kargo Controller")
 
 	promotionsReconcilerCfg := promotions.ReconcilerConfigFromEnv()
 	stagesReconcilerCfg := stages.ReconcilerConfigFromEnv()
@@ -151,7 +153,7 @@ func (o *controllerOptions) setupKargoManager(
 	}
 	if stagesReconcilerCfg.RolloutsIntegrationEnabled {
 		if argoRolloutsExists(ctx, restCfg) {
-			log.Info("Argo Rollouts integration is enabled")
+			o.Logger.Info("Argo Rollouts integration is enabled")
 			if err = rollouts.AddToScheme(scheme); err != nil {
 				return nil, stagesReconcilerCfg, fmt.Errorf(
 					"error adding Argo Rollouts API to Kargo controller manager scheme: %w",
@@ -161,7 +163,7 @@ func (o *controllerOptions) setupKargoManager(
 		} else {
 			// Disable Argo Rollouts integration if the CRDs are not found.
 			stagesReconcilerCfg.RolloutsIntegrationEnabled = false
-			log.Warn(
+			o.Logger.Info(
 				"Argo Rollouts integration was enabled, but no Argo Rollouts " +
 					"CRDs were found. Proceeding without Argo Rollouts integration.",
 			)
@@ -222,7 +224,7 @@ func (o *controllerOptions) setupArgoCDManager(ctx context.Context) (manager.Man
 	// Application resources in a single namespace, so we will use that
 	// namespace when attempting to determine if Argo CD CRDs are installed.
 	if !argoCDExists(ctx, restCfg, argocdNamespace) {
-		o.Logger.Warn(
+		o.Logger.Info(
 			"Argo CD integration was enabled, but no Argo CD CRDs were found. " +
 				"Proceeding without Argo CD integration.",
 		)

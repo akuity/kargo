@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
@@ -22,7 +21,7 @@ import (
 // EnqueueHighestPriorityPromotionHandler is an event handler that enqueues the next
 // highest priority Promotion for reconciliation when an active Promotion becomes terminal
 type EnqueueHighestPriorityPromotionHandler[T any] struct {
-	logger      *log.Entry
+	logger      *logging.Logger
 	ctx         context.Context
 	pqs         *promoQueues
 	kargoClient client.Client
@@ -72,7 +71,10 @@ func (e *EnqueueHighestPriorityPromotionHandler[T]) Update(
 ) {
 	promo := any(evt.ObjectNew).(*kargoapi.Promotion) // nolint: forcetypeassert
 	if promo == nil {
-		e.logger.Errorf("Update event has no new object to update: %v", evt)
+		e.logger.Error(
+			nil, "Update event has no new object to update",
+			"event", evt,
+		)
 		return
 	}
 	if promo.Status.Phase.IsTerminal() {
@@ -118,7 +120,10 @@ func (e *EnqueueHighestPriorityPromotionHandler[T]) enqueueNext(
 		firstKey := types.NamespacedName{Namespace: first.GetNamespace(), Name: first.GetName()}
 		promo, err := kargoapi.GetPromotion(e.ctx, e.kargoClient, firstKey)
 		if err != nil {
-			e.logger.Errorf("Failed to get next highest priority Promotion (%s) for enqueue: %v", firstKey, err)
+			e.logger.Error(
+				err, "Failed to get next highest priority Promotion for enqueue",
+				"firstKey", firstKey,
+			)
 			return
 		}
 		if promo == nil || promo.Status.Phase.IsTerminal() {
@@ -135,11 +140,12 @@ func (e *EnqueueHighestPriorityPromotionHandler[T]) enqueueNext(
 				},
 			},
 		)
-		e.logger.WithFields(log.Fields{
-			"promotion": promo.Name,
-			"namespace": promo.Namespace,
-			"stage":     promo.Spec.Stage,
-		}).Debug("enqueued promo")
+		e.logger.Debug(
+			"enqueued promo",
+			"promotion", promo.Name,
+			"namespace", promo.Namespace,
+			"stage", promo.Spec.Stage,
+		)
 		return
 	}
 }
@@ -189,7 +195,10 @@ func (u *UpdatedArgoCDAppHandler[T]) Update(
 	oldApp := any(e.ObjectOld).(*argocd.Application) // nolint: forcetypeassert
 	newApp := any(e.ObjectNew).(*argocd.Application) // nolint: forcetypeassert
 	if newApp == nil || oldApp == nil {
-		logger.Errorf("Update event has no new or old object to update: %v", e)
+		logger.Error(
+			nil, "Update event has no new or old object to update",
+			"event", e,
+		)
 		return
 	}
 
@@ -205,9 +214,10 @@ func (u *UpdatedArgoCDAppHandler[T]) Update(
 			LabelSelector: u.shardSelector,
 		},
 	); err != nil {
-		logger.Errorf(
-			"error listing Promotions for Application %q in namespace %q: %s",
-			newApp.Name, newApp.Namespace, err,
+		logger.Error(
+			err, "error listing Promotions for Application",
+			"app", newApp.Name,
+			"namespace", newApp.Namespace,
 		)
 		return
 	}
@@ -221,10 +231,11 @@ func (u *UpdatedArgoCDAppHandler[T]) Update(
 				},
 			},
 		)
-		logger.WithFields(log.Fields{
-			"namespace": promotion.Namespace,
-			"promotion": promotion.Name,
-			"app":       newApp.Name,
-		}).Debug("enqueued Promotion for reconciliation")
+		logger.Debug(
+			"enqueued Promotion for reconciliation",
+			"namespace", promotion.Namespace,
+			"promotion", promotion.Name,
+			"app", newApp.Name,
+		)
 	}
 }

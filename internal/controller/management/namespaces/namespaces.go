@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -81,9 +80,9 @@ func (r *reconciler) Reconcile(
 	ctx context.Context,
 	req ctrl.Request,
 ) (ctrl.Result, error) {
-	logger := logging.LoggerFromContext(ctx).WithFields(log.Fields{
-		"project": req.NamespacedName.Name,
-	})
+	logger := logging.LoggerFromContext(ctx).WithValues(
+		"project", req.NamespacedName.Name,
+	)
 	ctx = logging.ContextWithLogger(ctx, logger)
 	logger.Debug("reconciling Namespace")
 

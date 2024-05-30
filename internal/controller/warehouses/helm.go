@@ -24,9 +24,9 @@ func (r *reconciler) discoverCharts(
 
 		sub := s.Chart
 
-		logger := logging.LoggerFromContext(ctx).WithField("repoURL", sub.RepoURL)
+		logger := logging.LoggerFromContext(ctx).WithValues("repoURL", sub.RepoURL)
 		if sub.Name != "" {
-			logger = logger.WithField("chart", sub.Name)
+			logger = logger.WithValues("chart", sub.Name)
 		}
 
 		creds, ok, err := r.credentialsDB.Get(ctx, namespace, credentials.TypeHelm, sub.RepoURL)
@@ -50,7 +50,7 @@ func (r *reconciler) discoverCharts(
 
 		// Enrich the logger with additional fields for this subscription.
 		if sub.SemverConstraint != "" {
-			logger = logger.WithField("semverConstraint", sub.SemverConstraint)
+			logger = logger.WithValues("semverConstraint", sub.SemverConstraint)
 		}
 
 		// Discover versions of the chart based on the semver constraint.
@@ -87,7 +87,10 @@ func (r *reconciler) discoverCharts(
 			SemverConstraint: sub.SemverConstraint,
 			Versions:         trimSlice(versions, int(sub.DiscoveryLimit)),
 		})
-		logger.Debugf("discovered %d chart versions", len(versions))
+		logger.Debug(
+			"discovered chart versions",
+			"count", len(versions),
+		)
 	}
 
 	return results, nil

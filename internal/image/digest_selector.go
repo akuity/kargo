@@ -7,7 +7,6 @@ import (
 	"net/http"
 
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
-	log "github.com/sirupsen/logrus"
 
 	"github.com/akuity/kargo/internal/logging"
 )
@@ -39,13 +38,13 @@ func newDigestSelector(
 // Select implements the Selector interface.
 func (d *digestSelector) Select(ctx context.Context) ([]Image, error) {
 	tag := d.constraint
-	logger := logging.LoggerFromContext(ctx).WithFields(log.Fields{
-		"registry":            d.repoClient.registry.name,
-		"image":               d.repoClient.repoURL,
-		"selectionStrategy":   SelectionStrategyDigest,
-		"tag":                 tag,
-		"platformConstrained": d.platform != nil,
-	})
+	logger := logging.LoggerFromContext(ctx).WithValues(
+		"registry", d.repoClient.registry.name,
+		"image", d.repoClient.repoURL,
+		"selectionStrategy", SelectionStrategyDigest,
+		"tag", tag,
+		"platformConstrained", d.platform != nil,
+	)
 	logger.Trace("selecting image")
 
 	ctx = logging.ContextWithLogger(ctx, logger)

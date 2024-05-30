@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
-	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
@@ -493,10 +492,10 @@ func (r *reconciler) Reconcile(
 	ctx context.Context,
 	req ctrl.Request,
 ) (ctrl.Result, error) {
-	logger := logging.LoggerFromContext(ctx).WithFields(log.Fields{
-		"namespace": req.NamespacedName.Namespace,
-		"stage":     req.NamespacedName.Name,
-	})
+	logger := logging.LoggerFromContext(ctx).WithValues(
+		"namespace", req.NamespacedName.Namespace,
+		"stage", req.NamespacedName.Name,
+	)
 	ctx = logging.ContextWithLogger(ctx, logger)
 	logger.Debug("reconciling Stage")
 
@@ -539,7 +538,7 @@ func (r *reconciler) Reconcile(
 	}
 	if err != nil {
 		newStatus.Message = err.Error()
-		logger.Errorf("error syncing Stage: %s", stage.Status.Message)
+		logger.Error(err, "error syncing Stage")
 	} else {
 		// Be sure to blank this out in case there's an error in this field from
 		// the previous reconciliation
@@ -555,7 +554,7 @@ func (r *reconciler) Reconcile(
 		*status = newStatus
 	})
 	if updateErr != nil {
-		logger.Errorf("error updating Stage status: %s", updateErr)
+		logger.Error(updateErr, "error updating Stage status")
 	}
 
 	// If we had no error, but couldn't update, then we DO have an error. But we
@@ -717,7 +716,7 @@ func (r *reconciler) syncNormalStage(
 			"Stage has no current Freight; no health checks or verification to perform",
 		)
 	} else {
-		freightLogger := logger.WithField("freight", status.CurrentFreight.Name)
+		freightLogger := logger.WithValues("freight", status.CurrentFreight.Name)
 		shouldRecordFreightVerificationEvent := false
 
 		// Push the latest state of the current Freight to the history at the
@@ -732,7 +731,7 @@ func (r *reconciler) syncNormalStage(
 			*status.CurrentFreight,
 			stage.Spec.PromotionMechanisms.ArgoCDAppUpdates,
 		); status.Health != nil {
-			freightLogger.WithField("health", status.Health.Status).
+			freightLogger.WithValues("health", status.Health.Status).
 				Debug("Stage health assessed")
 		} else {
 			freightLogger.Debug("Stage health deemed not applicable")
@@ -774,7 +773,7 @@ func (r *reconciler) syncNormalStage(
 			if status.Phase == kargoapi.StagePhaseVerifying || status.Phase == kargoapi.StagePhaseNotApplicable {
 				if !status.CurrentFreight.VerificationInfo.HasAnalysisRun() {
 					if status.Health == nil || status.Health.Status == kargoapi.HealthStateHealthy {
-						log.Debug("starting verification")
+						logger.Debug("starting verification")
 						var err error
 						if status.CurrentFreight.VerificationInfo, err = r.startVerificationFn(
 							ctx,
@@ -787,7 +786,7 @@ func (r *reconciler) syncNormalStage(
 						}
 					}
 				} else {
-					log.Debug("checking verification results")
+					logger.Debug("checking verification results")
 					var err error
 					if status.CurrentFreight.VerificationInfo, err = r.getVerificationInfoFn(
 						ctx,
@@ -804,15 +803,15 @@ func (r *reconciler) syncNormalStage(
 					newInfo := status.CurrentFreight.VerificationInfo
 					if !newInfo.Phase.IsTerminal() {
 						if req, _ := kargoapi.AbortAnnotationValue(stage.GetAnnotations()); req.ForID(newInfo.ID) {
-							log.Debug("aborting verification")
+							logger.Debug("aborting verification")
 							status.CurrentFreight.VerificationInfo = r.abortVerificationFn(ctx, stage)
 						}
 					}
 				}
 
 				if status.CurrentFreight.VerificationInfo != nil {
-					log.Debugf(
-						"verification phase is %s",
+					logger.Debug(
+						"verification", "phase",
 						status.CurrentFreight.VerificationInfo.Phase,
 					)
 
@@ -820,7 +819,7 @@ func (r *reconciler) syncNormalStage(
 						// Verification is complete
 						shouldRecordFreightVerificationEvent = true
 						status.Phase = kargoapi.StagePhaseSteady
-						log.Debug("verification is complete")
+						logger.Debug("verification is complete")
 					}
 
 					// Add latest verification info to history.
@@ -908,7 +907,7 @@ func (r *reconciler) syncNormalStage(
 
 	// Stop here if we have no chance of finding any Freight to promote.
 	if stage.Spec.Subscriptions.Warehouse == "" && len(stage.Spec.Subscriptions.UpstreamStages) == 0 {
-		logger.Warn(
+		logger.Info(
 			"Stage has no subscriptions. This may indicate an issue with resource" +
 				"validation logic.",
 		)
@@ -948,7 +947,7 @@ func (r *reconciler) syncNormalStage(
 		return status, nil
 	}
 
-	logger = logger.WithField("freight", latestFreight.Name)
+	logger = logger.WithValues("freight", latestFreight.Name)
 
 	// Only proceed if nextFreight isn't the one we already have
 	if stage.Status.CurrentFreight != nil &&
@@ -1014,7 +1013,10 @@ func (r *reconciler) syncNormalStage(
 		promo.Spec.Stage,
 	)
 
-	logger.WithField("promotion", promo.Name).Debug("created Promotion resource")
+	logger.Debug(
+		"created Promotion resource",
+		"promotion", promo.Name,
+	)
 
 	return status, nil
 }
@@ -1199,7 +1201,7 @@ func (r *reconciler) verifyFreightInStage(
 	freightName string,
 	stageName string,
 ) (bool, error) {
-	logger := logging.LoggerFromContext(ctx).WithField("freight", freightName)
+	logger := logging.LoggerFromContext(ctx).WithValues("freight", freightName)
 
 	// Find the Freight
 	freight, err := r.getFreightFn(
@@ -1288,8 +1290,10 @@ func (r *reconciler) isAutoPromotionPermitted(
 	}
 	for _, policy := range project.Spec.PromotionPolicies {
 		if policy.Stage == stageName {
-			logger.WithField("autoPromotionEnabled", policy.AutoPromotionEnabled).
-				Debug("found PromotionPolicy associated with the Stage")
+			logger.Debug(
+				"found PromotionPolicy associated with the Stage",
+				"autoPromotionEnabled", policy.AutoPromotionEnabled,
+			)
 			return policy.AutoPromotionEnabled, nil
 		}
 	}
@@ -1318,8 +1322,10 @@ func (r *reconciler) getLatestAvailableFreight(
 			)
 		}
 		if latestFreight == nil {
-			logger.WithField("warehouse", stage.Spec.Subscriptions.Warehouse).
-				Debug("no Freight found from Warehouse")
+			logger.Debug(
+				"no Freight found from Warehouse",
+				"warehouse", stage.Spec.Subscriptions.Warehouse,
+			)
 		}
 		return latestFreight, nil
 	}

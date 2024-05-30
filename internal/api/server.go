@@ -16,7 +16,6 @@ import (
 	"connectrpc.com/grpchealth"
 	"github.com/klauspost/compress/gzhttp"
 	"github.com/rs/cors"
-	"github.com/sirupsen/logrus"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -194,7 +193,7 @@ func NewServer(
 }
 
 func (s *server) Serve(ctx context.Context, l net.Listener) error {
-	log := logging.LoggerFromContext(ctx)
+	logger := logging.LoggerFromContext(ctx)
 	mux := http.NewServeMux()
 
 	opts, err := option.NewHandlerOption(ctx, s.cfg, s.internalClient)
@@ -248,13 +247,15 @@ func (s *server) Serve(ctx context.Context, l net.Listener) error {
 		}
 	}()
 
-	log.WithFields(logrus.Fields{
-		"tls": s.cfg.TLSConfig != nil,
-	}).Infof("Server is listening on %q", l.Addr().String())
+	logger.Info(
+		"Server is listening",
+		"tls", s.cfg.TLSConfig != nil,
+		"address", l.Addr().String(),
+	)
 
 	select {
 	case <-ctx.Done():
-		log.Info("Gracefully stopping server...")
+		logger.Info("Gracefully stopping server...")
 		time.Sleep(s.cfg.GracefulShutdownTimeout)
 		return srv.Shutdown(context.Background())
 	case err := <-errCh:

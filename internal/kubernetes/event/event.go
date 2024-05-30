@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 
-	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -20,7 +19,7 @@ import (
 type recorder struct {
 	backoff wait.Backoff
 	sink    record.EventSink
-	logger  *log.Entry
+	logger  *logging.Logger
 
 	newEventHandlerFn func(event *corev1.Event) func() error
 }
@@ -53,7 +52,7 @@ func NewRecorder(
 func newRecorder(
 	ctx context.Context,
 	client libClient.Client,
-	logger *log.Entry,
+	logger *logging.Logger,
 ) *recorder {
 	r := &recorder{
 		backoff: retry.DefaultRetry, // TODO: Make it configurable
@@ -70,7 +69,10 @@ func (r *recorder) handleEvent(event *corev1.Event) {
 		r.newRetryDecider(event),
 		r.newEventHandlerFn(event),
 	); err != nil {
-		r.logger.WithError(err).Error("Unable to handle event", "event", event)
+		r.logger.Error(
+			err, "Unable to handle event",
+			"event", event,
+		)
 	}
 }
 
@@ -86,20 +88,21 @@ func (r *recorder) createEvent(event *corev1.Event) func() error {
 // to re-record event or not on given error.
 func (r *recorder) newRetryDecider(event *corev1.Event) func(error) bool {
 	return func(err error) bool {
-		logger := r.logger.
-			WithField("event", event).
-			WithError(err)
+		logger := r.logger.WithValues("event", event)
 
 		var statusErr *apierrors.StatusError
 		if errors.As(err, &statusErr) {
 			if apierrors.IsAlreadyExists(err) ||
 				apierrors.HasStatusCause(err, corev1.NamespaceTerminatingCause) {
-				logger.Info("Server rejected event (will not retry!)")
+				logger.Info(
+					"Server rejected event (will not retry!)",
+					"error", err,
+				)
 				return false
 			}
 			// Retry on other status errors
 		}
-		logger.Error("Unable to write event (may retry after backoff)")
+		logger.Error(err, "Unable to write event (may retry after backoff)")
 		return true
 	}
 }

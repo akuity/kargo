@@ -6,7 +6,6 @@ import (
 	"net/http"
 
 	"connectrpc.com/connect"
-	log "github.com/sirupsen/logrus"
 	libClient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/akuity/kargo/internal/api/config"
@@ -33,7 +32,7 @@ func NewHandlerOption(
 		connect.WithInterceptors(interceptors...),
 		connect.WithRecover(
 			func(ctx context.Context, _ connect.Spec, _ http.Header, r any) error {
-				logging.LoggerFromContext(ctx).Log(log.ErrorLevel, takeStacktrace(defaultStackLength, 3))
+				logging.LoggerFromContext(ctx).Error(nil, takeStacktrace(defaultStackLength, 3))
 				return connect.NewError(
 					connect.CodeInternal, fmt.Errorf("panic: %v", r))
 			}),

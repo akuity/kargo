@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/kelseyhightower/envconfig"
-	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -200,10 +199,10 @@ func (w *webhook) ensureNamespace(
 	ctx context.Context,
 	project *kargoapi.Project,
 ) error {
-	logger := logging.LoggerFromContext(ctx).WithFields(log.Fields{
-		"project": project.Name,
-		"name":    project.Name,
-	})
+	logger := logging.LoggerFromContext(ctx).WithValues(
+		"project", project.Name,
+		"name", project.Name,
+	)
 
 	ns := &corev1.Namespace{}
 	err := w.getNamespaceFn(
@@ -280,12 +279,12 @@ func (w *webhook) ensureProjectAdminPermissions(
 ) error {
 	const roleBindingName = "kargo-project-admin"
 
-	logger := logging.LoggerFromContext(ctx).WithFields(log.Fields{
-		"project":     project.Name,
-		"name":        project.Name,
-		"namespace":   project.Name,
-		"roleBinding": roleBindingName,
-	})
+	logger := logging.LoggerFromContext(ctx).WithValues(
+		"project", project.Name,
+		"name", project.Name,
+		"namespace", project.Name,
+		"roleBinding", roleBindingName,
+	)
 
 	roleBinding := &rbacv1.RoleBinding{
 		ObjectMeta: metav1.ObjectMeta{

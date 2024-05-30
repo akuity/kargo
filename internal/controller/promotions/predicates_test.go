@@ -1,14 +1,14 @@
 package promotions
 
 import (
-	"io"
 	"testing"
 
-	"github.com/sirupsen/logrus"
+	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/require"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 
 	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
+	"github.com/akuity/kargo/internal/logging"
 )
 
 func TestArgoCDAppOperationCompleted_Update(t *testing.T) {
@@ -90,11 +90,8 @@ func TestArgoCDAppOperationCompleted_Update(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			logger := logrus.New()
-			logger.Out = io.Discard
-
 			p := ArgoCDAppOperationCompleted[*argocd.Application]{
-				logger: logger,
+				logger: logging.Wrap(logr.Discard()),
 			}
 
 			require.Equal(t, testCase.want, p.Update(testCase.e))

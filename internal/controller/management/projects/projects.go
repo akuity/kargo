@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/kelseyhightower/envconfig"
-	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	kubeerr "k8s.io/apimachinery/pkg/api/errors"
@@ -154,9 +153,9 @@ func (r *reconciler) Reconcile(
 	ctx context.Context,
 	req ctrl.Request,
 ) (ctrl.Result, error) {
-	logger := logging.LoggerFromContext(ctx).WithFields(log.Fields{
-		"project": req.NamespacedName.Name,
-	})
+	logger := logging.LoggerFromContext(ctx).WithValues(
+		"project", req.NamespacedName.Name,
+	)
 	ctx = logging.ContextWithLogger(ctx, logger)
 	logger.Debug("reconciling Project")
 
@@ -177,14 +176,17 @@ func (r *reconciler) Reconcile(
 	}
 
 	if project.Status.Phase.IsTerminal() {
-		logger.Debugf("Project is %s; nothing to do", project.Status.Phase)
+		logger.Debug(
+			"nothing to do",
+			"projectStatus", project.Status.Phase,
+		)
 		return ctrl.Result{}, nil
 	}
 
 	newStatus, err := r.syncProjectFn(ctx, project)
 	if err != nil {
 		newStatus.Message = err.Error()
-		logger.Errorf("error syncing Project: %s", err)
+		logger.Error(err, "error syncing Project")
 	} else {
 		// Be sure to blank this out in case there's an error in this field from
 		// the previous reconciliation
@@ -193,7 +195,7 @@ func (r *reconciler) Reconcile(
 
 	patchErr := r.patchProjectStatusFn(ctx, project, newStatus)
 	if patchErr != nil {
-		logger.Errorf("error updating Project status: %s", patchErr)
+		logger.Error(patchErr, "error updating Project status")
 	}
 
 	// If we had no error, but couldn't patch, then we DO have an error. But we
@@ -236,9 +238,9 @@ func (r *reconciler) ensureNamespace(
 ) (kargoapi.ProjectStatus, error) {
 	status := *project.Status.DeepCopy()
 
-	logger := logging.LoggerFromContext(ctx).WithFields(log.Fields{
-		"project": project.Name,
-	})
+	logger := logging.LoggerFromContext(ctx).WithValues(
+		"project", project.Name,
+	)
 
 	ownerRef := metav1.NewControllerRef(
 		project,
@@ -317,12 +319,12 @@ func (r *reconciler) ensureAPIAdminPermissions(
 ) error {
 	const roleBindingName = "kargo-project-admin"
 
-	logger := logging.LoggerFromContext(ctx).WithFields(log.Fields{
-		"project":     project.Name,
-		"name":        project.Name,
-		"namespace":   project.Name,
-		"roleBinding": roleBindingName,
-	})
+	logger := logging.LoggerFromContext(ctx).WithValues(
+		"project", project.Name,
+		"name", project.Name,
+		"namespace", project.Name,
+		"roleBinding", roleBindingName,
+	)
 
 	roleBinding := &rbacv1.RoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
@@ -368,18 +370,18 @@ func (r *reconciler) ensureDefaultProjectRoles(
 	ctx context.Context,
 	project *kargoapi.Project,
 ) error {
-	logger := logging.LoggerFromContext(ctx).WithFields(log.Fields{
-		"project":   project.Name,
-		"name":      project.Name,
-		"namespace": project.Name,
-	})
+	logger := logging.LoggerFromContext(ctx).WithValues(
+		"project", project.Name,
+		"name", project.Name,
+		"namespace", project.Name,
+	)
 
 	const adminRoleName = "kargo-admin"
 	const viewerRoleName = "kargo-viewer"
 	allRoles := []string{adminRoleName, viewerRoleName}
 
 	for _, saName := range allRoles {
-		saLogger := logger.WithField("serviceAccount", saName)
+		saLogger := logger.WithValues("serviceAccount", saName)
 		if err := r.createServiceAccountFn(
 			ctx,
 			&corev1.ServiceAccount{
@@ -496,7 +498,10 @@ func (r *reconciler) ensureDefaultProjectRoles(
 		},
 	}
 	for _, role := range roles {
-		roleLogger := logger.WithField("role", role.Name)
+		roleLogger := logger.WithValues(
+			"role", role.Name,
+			"namespace", project.Name,
+		)
 		if err := r.createRoleFn(ctx, role); err != nil {
 			if kubeerr.IsAlreadyExists(err) {
 				roleLogger.Debug("Role already exists in project namespace")
@@ -507,13 +512,14 @@ func (r *reconciler) ensureDefaultProjectRoles(
 				role.Name, project.Name, err,
 			)
 		}
-		roleLogger.Debugf(
-			"created Role %q in project namespace %q", role.Name, project.Name,
-		)
+		roleLogger.Debug("created Role in project namespace")
 	}
 
 	for _, rbName := range allRoles {
-		rbLogger := logger.WithField("roleBinding", rbName)
+		rbLogger := logger.WithValues(
+			"roleBinding", rbName,
+			"namespace", project.Name,
+		)
 		if err := r.createRoleBindingFn(
 			ctx,
 			&rbacv1.RoleBinding{
@@ -547,9 +553,7 @@ func (r *reconciler) ensureDefaultProjectRoles(
 				rbName, project.Name, err,
 			)
 		}
-		rbLogger.Debugf(
-			"created RoleBinding %q in project namespace %q", rbName, project.Name,
-		)
+		rbLogger.Debug("created RoleBinding in project namespace")
 	}
 
 	return nil

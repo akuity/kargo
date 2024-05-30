@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -17,6 +16,7 @@ import (
 	"github.com/akuity/kargo/internal/api/kubernetes"
 	"github.com/akuity/kargo/internal/controller/management/namespaces"
 	"github.com/akuity/kargo/internal/controller/management/projects"
+	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/internal/os"
 	versionpkg "github.com/akuity/kargo/internal/version"
 )
@@ -24,12 +24,14 @@ import (
 type managementControllerOptions struct {
 	KubeConfig string
 
-	Logger *log.Logger
+	Logger *logging.Logger
 }
 
 func newManagementControllerCommand() *cobra.Command {
 	cmdOpts := &managementControllerOptions{
-		Logger: log.StandardLogger(),
+		// During startup, we enforce use of an info-level logger to ensure that
+		// no important startup messages are missed.
+		Logger: logging.NewLogger(logging.InfoLevel),
 	}
 
 	cmd := &cobra.Command{
@@ -54,10 +56,11 @@ func (o *managementControllerOptions) complete() {
 func (o *managementControllerOptions) run(ctx context.Context) error {
 	version := versionpkg.GetVersion()
 
-	o.Logger.WithFields(log.Fields{
-		"version": version.Version,
-		"commit":  version.GitCommit,
-	}).Info("Starting Kargo Management Controller")
+	o.Logger.Info(
+		"Starting Kargo Management Controller",
+		"version", version.Version,
+		"commit", version.GitCommit,
+	)
 
 	kargoMgr, err := o.setupManager(ctx)
 	if err != nil {

@@ -1,10 +1,10 @@
 package promotions
 
 import (
-	log "github.com/sirupsen/logrus"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 
 	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
+	"github.com/akuity/kargo/internal/logging"
 )
 
 // ArgoCDAppOperationCompleted is a predicate that filters out ArgoCD Application
@@ -12,7 +12,7 @@ import (
 // a reconciliation of a Promotion only when an ArgoCD Application operation has
 // finished.
 type ArgoCDAppOperationCompleted[T any] struct {
-	logger log.FieldLogger
+	logger *logging.Logger
 }
 
 func (p ArgoCDAppOperationCompleted[T]) Create(event.TypedCreateEvent[T]) bool {
@@ -22,12 +22,18 @@ func (p ArgoCDAppOperationCompleted[T]) Create(event.TypedCreateEvent[T]) bool {
 func (p ArgoCDAppOperationCompleted[T]) Update(e event.TypedUpdateEvent[T]) bool {
 	oldApp := any(e.ObjectOld).(*argocd.Application) // nolint: forcetypeassert
 	if oldApp == nil {
-		p.logger.Errorf("Update event has no old object to update: %v", e)
+		p.logger.Error(
+			nil, "Update event has no old object to update",
+			"event", e,
+		)
 		return false
 	}
 	newApp := any(e.ObjectNew).(*argocd.Application) // nolint: forcetypeassert
 	if newApp == nil {
-		p.logger.Errorf("Update event has no new object for update: %v", e)
+		p.logger.Error(
+			nil, "Update event has no new object for update",
+			"event", e,
+		)
 		return false
 	}
 
