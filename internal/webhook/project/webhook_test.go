@@ -195,7 +195,7 @@ func TestEnsureNamespace(t *testing.T) {
 		},
 
 		{
-			name: "namespace exists, has no owner, but isn't labeled as a project",
+			name: "namespace exists, but isn't labeled as a project",
 			webhook: &webhook{
 				validateSpecFn: func(*field.Path, *kargoapi.ProjectSpec) field.ErrorList {
 					return nil
@@ -218,7 +218,7 @@ func TestEnsureNamespace(t *testing.T) {
 		},
 
 		{
-			name: "namespace exists and has one owner that isn't the Project",
+			name: "namespace exists and is labeled as a Project",
 			webhook: &webhook{
 				validateSpecFn: func(*field.Path, *kargoapi.ProjectSpec) field.ErrorList {
 					return nil
@@ -230,44 +230,14 @@ func TestEnsureNamespace(t *testing.T) {
 					_ ...client.GetOption,
 				) error {
 					ns := obj.(*corev1.Namespace) // nolint: forcetypeassert
-					ns.OwnerReferences = []metav1.OwnerReference{
-						{
-							UID: types.UID("wrong-fake-uid"),
-						},
+					ns.Labels = map[string]string{
+						kargoapi.ProjectLabelKey: kargoapi.LabelTrueValue,
 					}
 					return nil
 				},
 			},
 			assertions: func(t *testing.T, err error) {
-				require.Error(t, err)
-				var statusErr *apierrors.StatusError
-				require.True(t, errors.As(err, &statusErr))
-				require.Equal(t, int32(http.StatusConflict), statusErr.ErrStatus.Code)
-			},
-		},
-
-		{
-			name: "namespace has multiple owners",
-			webhook: &webhook{
-				validateSpecFn: func(*field.Path, *kargoapi.ProjectSpec) field.ErrorList {
-					return nil
-				},
-				getNamespaceFn: func(
-					_ context.Context,
-					_ types.NamespacedName,
-					obj client.Object,
-					_ ...client.GetOption,
-				) error {
-					ns := obj.(*corev1.Namespace) // nolint: forcetypeassert
-					ns.OwnerReferences = []metav1.OwnerReference{{}, {}}
-					return nil
-				},
-			},
-			assertions: func(t *testing.T, err error) {
-				require.Error(t, err)
-				var statusErr *apierrors.StatusError
-				require.True(t, errors.As(err, &statusErr))
-				require.Equal(t, int32(http.StatusConflict), statusErr.ErrStatus.Code)
+				require.NoError(t, err)
 			},
 		},
 

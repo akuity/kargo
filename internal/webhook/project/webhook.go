@@ -199,33 +199,27 @@ func (w *webhook) ensureNamespace(
 	ctx context.Context,
 	project *kargoapi.Project,
 ) error {
-	logger := logging.LoggerFromContext(ctx).WithValues(
-		"project", project.Name,
-		"name", project.Name,
-	)
+	logger := logging.LoggerFromContext(ctx).WithValues("project", project.Name)
 
 	ns := &corev1.Namespace{}
-	err := w.getNamespaceFn(
+	if err := w.getNamespaceFn(
 		ctx,
 		types.NamespacedName{Name: project.Name},
 		ns,
-	)
-	if err == nil {
-		// We found an existing namespace with the same name as the Project. Check
-		// for possible conflicts before proceeding.
-		//
-		// No owner, but not a Project namespace:
-		if (len(ns.OwnerReferences) == 0 &&
-			(ns.Labels == nil || ns.Labels[kargoapi.ProjectLabelKey] != kargoapi.LabelTrueValue)) ||
-			// Not owned by this Project:
-			(len(ns.OwnerReferences) == 1 && ns.OwnerReferences[0].UID != project.UID) ||
-			// Multiple owners:
-			len(ns.OwnerReferences) > 1 {
+	); err != nil && !apierrors.IsNotFound(err) {
+		return apierrors.NewInternalError(
+			fmt.Errorf("error getting namespace %q: %w", project.Name, err),
+		)
+	} else if err == nil {
+		// We found an existing namespace with the same name as the Project. It's
+		// only a problem if it is not labeled as a Project namespace.
+		if ns.Labels[kargoapi.ProjectLabelKey] != kargoapi.LabelTrueValue {
 			return apierrors.NewConflict(
 				projectGroupResource,
 				project.Name,
 				fmt.Errorf(
-					"failed to initialize Project %q because namespace %q already exists",
+					"failed to initialize Project %q because namespace %q already "+
+						"exists and is not labeled as a Project namespace",
 					project.Name,
 					project.Name,
 				),
@@ -234,11 +228,9 @@ func (w *webhook) ensureNamespace(
 		logger.Debug("namespace exists but no conflict was found")
 		return nil
 	}
-	if !apierrors.IsNotFound(err) {
-		return apierrors.NewInternalError(
-			fmt.Errorf("error getting namespace %q: %w", project.Name, err),
-		)
-	}
+
+	// If we get to here, we had a not found error and we can proceed with
+	// creating the namespace.
 
 	logger.Debug("namespace does not exist; creating it")
 
