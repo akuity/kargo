@@ -5,6 +5,7 @@ bin/
 charts/kargo/*.tgz
 coverage.txt
 pkg/api/v1alpha1/
+pkg/api/rbac/v1alpha1/
 vendor/
 internal/api/ui/
 .DS_Store

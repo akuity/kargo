@@ -27,13 +27,13 @@ type RoleResources struct {
 }
 
 type ResourceDetails struct {
-	ResourceType string   `json:"resourceType,omitempty"`
-	ResourceName string   `json:"resourceName,omitempty"`
-	Verbs        []string `json:"verbs,omitempty"`
+	ResourceType string   `json:"resourceType,omitempty" protobuf:"bytes,1,opt,name=resourceType"`
+	ResourceName string   `json:"resourceName,omitempty" protobuf:"bytes,2,opt,name=resourceName"`
+	Verbs        []string `json:"verbs,omitempty" protobuf:"bytes,3,rep,name=verbs"`
 }
 
 type UserClaims struct {
-	Subs   []string `json:"subs,omitempty"`
-	Emails []string `json:"emails,omitempty"`
-	Groups []string `json:"groups,omitempty"`
+	Subs   []string `json:"subs,omitempty" protobuf:"bytes,1,rep,name=subs"`
+	Emails []string `json:"emails,omitempty" protobuf:"bytes,2,rep,name=emails"`
+	Groups []string `json:"groups,omitempty" protobuf:"bytes,3,rep,name=groups"`
 }
