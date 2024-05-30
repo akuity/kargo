@@ -30,7 +30,7 @@ func TestPodIdentityCredentialHelper(t *testing.T) {
 		testUsername     = "fake-username"
 		testPassword     = "fake-password"
 	)
-	testRepoURL := fmt.Sprintf("%s.dkr.ecr.%s.amazonaws.com", testAWSAccountID, testRegion)
+	testRepoURL := fmt.Sprintf("%s.dkr.ecr.%s.amazonaws.com/fake/repo/", testAWSAccountID, testRegion)
 	testToken := fmt.Sprintf("%s:%s", testUsername, testPassword)
 	testEncodedToken := base64.StdEncoding.EncodeToString([]byte(testToken))
 

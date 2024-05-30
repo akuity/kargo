@@ -1,4 +1,4 @@
-package gcp
+package gar
 
 import (
 	"context"
@@ -11,7 +11,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-func TestGetUsernameAndPassword(t *testing.T) {
+func TestServiceAccountKeyCredentialHelper(t *testing.T) {
 	const (
 		testServiceAccountKey = "fake-key"
 		testAccessToken       = "fake-token"
@@ -20,7 +20,7 @@ func TestGetUsernameAndPassword(t *testing.T) {
 
 	warmTokenCache := cache.New(0, 0)
 	warmTokenCache.Set(
-		tokenCacheKey(testEncodedServiceAccountKey),
+		(&serviceAccountKeyCredentialHelper{}).tokenCacheKey(testEncodedServiceAccountKey),
 		testAccessToken,
 		cache.DefaultExpiration,
 	)
@@ -28,13 +28,13 @@ func TestGetUsernameAndPassword(t *testing.T) {
 	testCases := []struct {
 		name       string
 		secret     *corev1.Secret
-		helper     CredentialHelper
+		helper     ServiceAccountKeyCredentialHelper
 		assertions func(t *testing.T, username, password string, err error)
 	}{
 		{
 			name:   "no service account token provided",
 			secret: &corev1.Secret{},
-			helper: NewCredentialHelper(),
+			helper: NewServiceAccountKeyCredentialHelper(),
 			assertions: func(t *testing.T, username, password string, err error) {
 				require.NoError(t, err)
 				require.Empty(t, username)
@@ -48,7 +48,7 @@ func TestGetUsernameAndPassword(t *testing.T) {
 					serviceAccountKeyKey: []byte(testEncodedServiceAccountKey),
 				},
 			},
-			helper: &credentialHelper{
+			helper: &serviceAccountKeyCredentialHelper{
 				tokenCache: warmTokenCache,
 			},
 			assertions: func(t *testing.T, username, password string, err error) {
@@ -64,7 +64,7 @@ func TestGetUsernameAndPassword(t *testing.T) {
 					serviceAccountKeyKey: []byte(testEncodedServiceAccountKey),
 				},
 			},
-			helper: &credentialHelper{
+			helper: &serviceAccountKeyCredentialHelper{
 				tokenCache: cache.New(0, 0),
 				getAccessTokenFn: func(context.Context, string) (string, error) {
 					return "", fmt.Errorf("something went wrong")
@@ -82,7 +82,7 @@ func TestGetUsernameAndPassword(t *testing.T) {
 					serviceAccountKeyKey: []byte(testEncodedServiceAccountKey),
 				},
 			},
-			helper: &credentialHelper{
+			helper: &serviceAccountKeyCredentialHelper{
 				tokenCache: cache.New(0, 0),
 				getAccessTokenFn: func(context.Context, string) (string, error) {
 					return testAccessToken, nil

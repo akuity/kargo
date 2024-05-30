@@ -18,7 +18,7 @@ import (
 	"github.com/akuity/kargo/internal/logging"
 )
 
-var ecrURLRegex = regexp.MustCompile(`^[0-9]{12}\.dkr\.ecr\.(.+)\.amazonaws\.com`)
+var ecrURLRegex = regexp.MustCompile(`^[0-9]{12}\.dkr\.ecr\.(.+)\.amazonaws\.com/`)
 
 // PodIdentityCredentialHelper is an interface for components that can obtain a
 // username and password for ECR using EKS Pod Identity.
@@ -56,16 +56,16 @@ func NewPodIdentityCredentialHelper(ctx context.Context) PodIdentityCredentialHe
 		logger.Info("EKS Pod Identity appears to be in use")
 		cfg, err := config.LoadDefaultConfig(ctx)
 		if err != nil {
-			logger.Error(
-				"error loading AWS config; EKS Pod Identity integration will be disabled: %w",
+			logger.Errorf(
+				"error loading AWS config; EKS Pod Identity integration will be disabled: %s",
 				err,
 			)
 		} else {
 			stsSvc := sts.NewFromConfig(cfg)
 			res, err := stsSvc.GetCallerIdentity(ctx, &sts.GetCallerIdentityInput{})
 			if err != nil {
-				logger.Error(
-					"error getting caller identity; EKS Pod Identity integration will be disabled: %w",
+				logger.Errorf(
+					"error getting caller identity; EKS Pod Identity integration will be disabled: %s",
 					err,
 				)
 			} else {
@@ -120,6 +120,10 @@ func (p *podIdentityCredentialHelper) GetUsernameAndPassword(
 		return "", "", fmt.Errorf("error getting ECR auth token: %w", err)
 	}
 
+	if encodedToken == "" {
+		return "", "", nil
+	}
+
 	// Cache the encoded token
 	p.tokenCache.Set(cacheKey, encodedToken, cache.DefaultExpiration)
 
@@ -146,7 +150,7 @@ func (p *podIdentityCredentialHelper) getAuthToken(
 	logger := logging.LoggerFromContext(ctx)
 	cfg, err := config.LoadDefaultConfig(ctx)
 	if err != nil {
-		logger.Error("error loading AWS config: %w", err)
+		logger.Errorf("error loading AWS config: %s", err)
 		return "", nil
 	}
 	ecrSvc := ecr.NewFromConfig(aws.Config{
@@ -156,10 +160,16 @@ func (p *podIdentityCredentialHelper) getAuthToken(
 			fmt.Sprintf("arn:aws:iam::%s:role/kargo-project-%s", p.awsAccountID, project),
 		),
 	})
+	logger = logger.WithFields(map[string]any{
+		"awsAccountID": p.awsAccountID,
+		"awsRegion":    region,
+		"project":      project,
+	})
 	output, err := ecrSvc.GetAuthorizationToken(ctx, &ecr.GetAuthorizationTokenInput{})
 	if err != nil {
-		logger.Error("error getting ECR authorization token: %w", err)
+		logger.Errorf("error getting ECR authorization token: %s", err)
 		return "", nil
 	}
+	logger.Debug("got ECR authorization token")
 	return *output.AuthorizationData[0].AuthorizationToken, nil
 }

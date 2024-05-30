@@ -98,6 +98,10 @@ func (a *accessKeyCredentialHelper) getUsernameAndPassword(
 		return "", "", fmt.Errorf("error getting ECR auth token: %w", err)
 	}
 
+	if encodedToken == "" {
+		return "", "", nil
+	}
+
 	// Cache the encoded token
 	a.tokenCache.Set(cacheKey, encodedToken, cache.DefaultExpiration)
 
