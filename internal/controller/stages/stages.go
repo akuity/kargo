@@ -465,7 +465,7 @@ func newReconciler(
 	r.buildAnalysisRunFn = r.buildAnalysisRun
 	r.createAnalysisRunFn = r.kargoClient.Create
 	r.patchAnalysisRunFn = r.kargoClient.Patch
-	r.getAnalysisRunFn = rollouts.GetAnalysisRun
+	r.getAnalysisRunFn = r.getAnalysisRun
 	r.getFreightFn = kargoapi.GetFreight
 	r.verifyFreightInStageFn = r.verifyFreightInStage
 	r.patchFreightStatusFn = r.patchFreightStatus
@@ -1162,6 +1162,17 @@ func (r *reconciler) clearAnalysisRuns(
 		)
 	}
 	return nil
+}
+
+func (r *reconciler) getAnalysisRun(
+	ctx context.Context,
+	c client.Client,
+	namespacedName types.NamespacedName,
+) (*rollouts.AnalysisRun, error) {
+	if !r.cfg.RolloutsIntegrationEnabled {
+		return nil, nil
+	}
+	return rollouts.GetAnalysisRun(ctx, c, namespacedName)
 }
 
 func (r *reconciler) hasNonTerminalPromotions(
