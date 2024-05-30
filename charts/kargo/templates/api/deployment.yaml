@@ -26,9 +26,15 @@ spec:
       labels:
         {{- include "kargo.labels" . | nindent 8 }}
         {{- include "kargo.api.labels" . | nindent 8 }}
+        {{- include "kargo.api.podLabels" . | nindent 8 }}
       annotations:
         configmap/checksum: {{ pick ( include (print $.Template.BasePath "/api/configmap.yaml") . | fromYaml ) "data" | toYaml | sha256sum }}
         secret/checksum: {{ pick ( include (print $.Template.BasePath "/api/secret.yaml") . | fromYaml ) "stringData" | toYaml | sha256sum }}
+        {{- with (mergeOverwrite (deepCopy .Values.global.annotations) .Values.api.annotations) }}
+        {{- range $key, $value := . }}
+        {{ $key }}: {{ $value | quote }}
+        {{- end }}
+        {{- end }}
     spec:
       serviceAccount: kargo-api
       {{- with .Values.api.affinity | default .Values.global.affinity }}

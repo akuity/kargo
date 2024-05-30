@@ -8,6 +8,7 @@ global:
   ## @param global.additionalLabels Additional labels to add to all resources.
   additionalLabels: {}
     # my-label: my-value
+
   ## @param global.env Environment variables to add to all Kargo pods.
   env: []
   #  - name: ENV_NAME
@@ -95,6 +96,10 @@ api:
   host: localhost
   ## @param api.logLevel The log level for the API server.
   logLevel: INFO
+
+  ## @param api.podLabels Optional additional labels to apply to pods.
+  podLabels: {}
+
   ## @param api.resources Resources limits and requests for the api containers.
   resources: {}
     # limits:
@@ -399,6 +404,9 @@ managementController:
   ## @param managementController.logLevel The log level for the management controller.
   logLevel: INFO
 
+  ## @param managementController.podLabels Optional additional labels to apply to pods.
+  podLabels: {}
+
   ## @param managementController.securityContext Security context for management controller pods. Defaults to `global.securityContext`.
   securityContext: {}
 
@@ -495,6 +503,10 @@ garbageCollector:
   minFreightDeletionAge: 336h # Two weeks
   ## @param garbageCollector.logLevel The log level for the garbage collector.
   logLevel: INFO
+
+  ## @param garbageCollector.podLabels Optional additional labels to apply to pods.
+  podLabels: {}
+
   ## @param garbageCollector.resources Resources limits and requests for the garbage collector containers.
   resources: {}
     # limits:
