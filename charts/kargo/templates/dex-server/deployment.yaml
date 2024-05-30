@@ -100,7 +100,7 @@ spec:
               - key: config.yaml
                 path: config.yaml
       {{- if .Values.api.oidc.dex.volumes }}
-        {{- toYaml .Values.api.oidc.dex.volumes | nindent 8 }}
+        {{- toYaml .Values.api.oidc.dex.volumes | nindent 6 }}
       {{- end }}
       {{- with .Values.api.oidc.dex.nodeSelector | default .Values.global.nodeSelector }}
       nodeSelector:
