@@ -10,7 +10,13 @@ import { Warehouse } from '@ui/gen/v1alpha1/generated_pb';
 import { RepoSubscriptions } from './repo-subscriptions';
 import { WarehouseActions } from './warehouse-actions';
 
-export const WarehouseDetails = ({ warehouse }: { warehouse: Warehouse }) => {
+export const WarehouseDetails = ({
+  warehouse,
+  refetchFreight
+}: {
+  warehouse: Warehouse;
+  refetchFreight: () => void;
+}) => {
   const { name: projectName, tab } = useParams();
   const navigate = useNavigate();
 
@@ -59,7 +65,13 @@ export const WarehouseDetails = ({ warehouse }: { warehouse: Warehouse }) => {
               tab='Freight Assembly'
               icon={<FontAwesomeIcon icon={faTools} />}
             >
-              <CreateFreight warehouse={warehouse} />
+              <CreateFreight
+                warehouse={warehouse}
+                onSuccess={() => {
+                  onClose();
+                  refetchFreight();
+                }}
+              />
             </Tabs.TabPane>
           </Tabs>
         </div>

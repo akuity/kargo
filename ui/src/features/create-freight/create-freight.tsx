@@ -80,7 +80,13 @@ const constructFreight = (
   return freight;
 };
 
-export const CreateFreight = ({ warehouse }: { warehouse?: Warehouse }) => {
+export const CreateFreight = ({
+  warehouse,
+  onSuccess
+}: {
+  warehouse?: Warehouse;
+  onSuccess: () => void;
+}) => {
   const { name: project } = useParams();
   const [selected, setSelected] = useState<DiscoveryResult>();
   const [chosenItems, setChosenItems] = useState<{
@@ -93,6 +99,7 @@ export const CreateFreight = ({ warehouse }: { warehouse?: Warehouse }) => {
   const { mutate } = useMutation(createResource, {
     onSuccess: () => {
       message.success('Freight created successfully.');
+      onSuccess();
     },
     onError: () => {
       message.error('Failed to create freight.');

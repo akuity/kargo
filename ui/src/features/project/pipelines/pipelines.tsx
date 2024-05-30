@@ -456,7 +456,9 @@ export const Pipelines = () => {
         <SuspenseSpin>
           {stage && <StageDetails stage={stage} />}
           {freight && <FreightDetails freight={freight} />}
-          {warehouse && <WarehouseDetails warehouse={warehouse} />}
+          {warehouse && (
+            <WarehouseDetails warehouse={warehouse} refetchFreight={() => refetchFreightData()} />
+          )}
         </SuspenseSpin>
       </ColorContext.Provider>
     </div>
