@@ -87,7 +87,7 @@ func (o *controllerOptions) run(ctx context.Context) error {
 	promotionsReconcilerCfg := promotions.ReconcilerConfigFromEnv()
 	stagesReconcilerCfg := stages.ReconcilerConfigFromEnv()
 
-	kargoMgr, err := o.setupKargoManager(ctx, stagesReconcilerCfg)
+	kargoMgr, stagesReconcilerCfg, err := o.setupKargoManager(ctx, stagesReconcilerCfg)
 	if err != nil {
 		return fmt.Errorf("error initializing Kargo controller manager: %w", err)
 	}
@@ -120,7 +120,7 @@ func (o *controllerOptions) run(ctx context.Context) error {
 func (o *controllerOptions) setupKargoManager(
 	ctx context.Context,
 	stagesReconcilerCfg stages.ReconcilerConfig,
-) (manager.Manager, error) {
+) (manager.Manager, stages.ReconcilerConfig, error) {
 	// If the env var is undefined, this will resolve to kubeconfig for the
 	// cluster the controller is running in.
 	//
@@ -131,19 +131,20 @@ func (o *controllerOptions) setupKargoManager(
 	// cluster.
 	restCfg, err := kubernetes.GetRestConfig(ctx, o.KubeConfig)
 	if err != nil {
-		return nil, fmt.Errorf("error loading REST config for Kargo controller manager: %w", err)
+		return nil, stagesReconcilerCfg,
+			fmt.Errorf("error loading REST config for Kargo controller manager: %w", err)
 	}
 	restCfg.ContentType = runtime.ContentTypeJSON
 
 	scheme := runtime.NewScheme()
 	if err = corev1.AddToScheme(scheme); err != nil {
-		return nil, fmt.Errorf(
+		return nil, stagesReconcilerCfg, fmt.Errorf(
 			"error adding Kubernetes core API to Kargo controller manager scheme: %w",
 			err,
 		)
 	}
 	if err = kargoapi.AddToScheme(scheme); err != nil {
-		return nil, fmt.Errorf(
+		return nil, stagesReconcilerCfg, fmt.Errorf(
 			"error adding Kargo API to Kargo controller manager scheme: %w",
 			err,
 		)
@@ -152,12 +153,14 @@ func (o *controllerOptions) setupKargoManager(
 		if argoRolloutsExists(ctx, restCfg) {
 			log.Info("Argo Rollouts integration is enabled")
 			if err = rollouts.AddToScheme(scheme); err != nil {
-				return nil, fmt.Errorf(
+				return nil, stagesReconcilerCfg, fmt.Errorf(
 					"error adding Argo Rollouts API to Kargo controller manager scheme: %w",
 					err,
 				)
 			}
 		} else {
+			// Disable Argo Rollouts integration if the CRDs are not found.
+			stagesReconcilerCfg.RolloutsIntegrationEnabled = false
 			log.Warn(
 				"Argo Rollouts integration was enabled, but no Argo Rollouts " +
 					"CRDs were found. Proceeding without Argo Rollouts integration.",
@@ -167,7 +170,7 @@ func (o *controllerOptions) setupKargoManager(
 
 	secretReq, err := controller.GetCredentialsRequirement()
 	if err != nil {
-		return nil, fmt.Errorf("error getting label requirement for credentials Secrets: %w", err)
+		return nil, stagesReconcilerCfg, fmt.Errorf("error getting label requirement for credentials Secrets: %w", err)
 	}
 
 	cacheOpts := cache.Options{
@@ -180,7 +183,7 @@ func (o *controllerOptions) setupKargoManager(
 		},
 	}
 
-	return ctrl.NewManager(
+	mgr, err := ctrl.NewManager(
 		restCfg,
 		ctrl.Options{
 			Scheme: scheme,
@@ -190,6 +193,7 @@ func (o *controllerOptions) setupKargoManager(
 			Cache: cacheOpts,
 		},
 	)
+	return mgr, stagesReconcilerCfg, err
 }
 
 func (o *controllerOptions) setupArgoCDManager(ctx context.Context) (manager.Manager, error) {
