@@ -226,6 +226,9 @@ on applicable platforms.
 
 ### Amazon Elastic Container Registry (ECR)
 
+The authentication options described in this section are applicable only to
+container image repositories whose URLs indicate they are hosted in ECR.
+
 #### Long-Lived Credentials
 
 Elastic Container Registries do not _directly_ support long-lived credentials,
@@ -267,10 +270,11 @@ instead.
 
 #### EKS Pod Identity
 
-If Kargo is deployed within an EKS cluster, it is possible to use
+If Kargo locates no `Secret` resources matching a repository URL, and if Kargo
+is deployed within an EKS cluster, it will attempt to use
 [EKS Pod Identity](https://docs.aws.amazon.com/eks/latest/userguide/pod-identities.html)
-to authenticate to ECR repositories. This option eliminates the need to store
-credentials in a `Secret` resource.
+to authenticate, but this relies upon some external setup. Leveraging this
+option eliminates the need to store credentials in a `Secret` resource.
 
 First, follow
 [this overview](https://docs.aws.amazon.com/eks/latest/userguide/pod-identities.html#pod-id-setup-overview)
@@ -306,6 +310,10 @@ only to read-only access to the applicable ECR repositories.
 :::
 
 ### Google Artifact Registry
+
+The authentication options described in this section are applicable only to
+container image repositories whose URLs indicate they are hosted in Google
+Artifact Registry.
 
 :::note
 Google Container Registry (GCR) has been deprecated in favor of Google Artifact
@@ -367,10 +375,11 @@ Federation instead.
 
 #### Workload Identity Federation
 
-If Kargo is deployed within a GKE cluster, it is possible to use
+If Kargo locates no `Secret` resources matching a repository URL, and if Kargo
+is deployed within a GKE cluster, it will attempt to use
 [Workload Identity Federation](https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity)
-to authenticate to Google Artifact Registry repositories. This option eliminates
-the need to store credentials in a `Secret` resource.
+to authenticate, but this relies upon some external setup. Leveraging this
+option eliminates the need to store credentials in a `Secret` resource.
 
 First, follow
 [these directions](https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity#enable_on_cluster)
