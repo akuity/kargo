@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/kelseyhightower/envconfig"
-	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -121,8 +120,10 @@ func (k *kubernetesDatabase) Get(
 	// If we are dealing with an insecure HTTP endpoint (of any type),
 	// refuse to return any credentials
 	if strings.HasPrefix(repoURL, "http://") {
-		logger := logging.LoggerFromContext(ctx).WithField("repoURL", repoURL)
-		logger.Warnf("refused to get credentials for insecure HTTP endpoint")
+		logging.LoggerFromContext(ctx).Info(
+			"refused to get credentials for insecure HTTP endpoint",
+			"repoURL", repoURL,
+		)
 		return creds, false, nil
 	}
 
@@ -242,10 +243,11 @@ func (k *kubernetesDatabase) getCredentialsSecret(
 		if isRegex {
 			regex, err := regexp.Compile(string(urlBytes))
 			if err != nil {
-				logger.WithFields(log.Fields{
-					"namespace": namespace,
-					"secret":    secret.Name,
-				}).Warn("failed to compile regex for credential secret")
+				logger.Error(
+					err, "failed to compile regex for credential secret",
+					"namespace", namespace,
+					"secret", secret.Name,
+				)
 				continue
 			}
 			if regex.MatchString(repoURL) {

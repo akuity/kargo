@@ -49,9 +49,12 @@ func NewWorkloadIdentityFederationCredentialHelper(
 		logger.Info("controller appears to be running within GCE")
 		var err error
 		if gcpProjectID, err = metadata.ProjectID(); err != nil {
-			logger.Errorf("error getting GCP project ID: %s", err)
+			logger.Error(err, "error getting GCP project ID")
 		} else {
-			logger.WithField("project", gcpProjectID).Debug("got GCP project ID")
+			logger.Debug(
+				"got GCP project ID",
+				"project", gcpProjectID,
+			)
 		}
 	}
 	w := &workloadIdentityFederationCredentialHelper{
@@ -111,13 +114,13 @@ func (w *workloadIdentityFederationCredentialHelper) getAccessToken(
 	logger := logging.LoggerFromContext(ctx)
 	iamSvc, err := iamcredentials.NewService(ctx)
 	if err != nil {
-		logger.Errorf("error creating IAM Credentials service client: %s", err)
+		logger.Error(err, "error creating IAM Credentials service client")
 		return "", nil
 	}
-	logger = logger.WithFields(map[string]any{
-		"gcpProjectID": w.gcpProjectID,
-		"kargoProject": kargoProject,
-	})
+	logger = logger.WithValues(
+		"gcpProjectID", w.gcpProjectID,
+		"kargoProject", kargoProject,
+	)
 	resp, err := iamSvc.Projects.ServiceAccounts.GenerateAccessToken(
 		fmt.Sprintf(
 			"projects/-/serviceAccounts/kargo-project-%s@%s.iam.gserviceaccount.com",
@@ -130,7 +133,7 @@ func (w *workloadIdentityFederationCredentialHelper) getAccessToken(
 		},
 	).Do()
 	if err != nil {
-		logger.Errorf("error generating access token: %s", err)
+		logger.Error(err, "error generating access token")
 		return "", nil
 	}
 	logger.Debug("generated Artifact Registry access token")

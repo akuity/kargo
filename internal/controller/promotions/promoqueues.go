@@ -4,7 +4,6 @@ import (
 	"context"
 	"sync"
 
-	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -68,21 +67,21 @@ func (pqs *promoQueues) initializeQueues(ctx context.Context, promos kargoapi.Pr
 			continue
 		}
 		pq.Push(&promo)
-		logger.WithFields(log.Fields{
-			"promotion": promo.Name,
-			"namespace": promo.Namespace,
-			"stage":     promo.Spec.Stage,
-			"phase":     promo.Status.Phase,
-		}).Debug("pushed Promotion onto Stage-specific Promotion queue")
+		logger.Debug(
+			"pushed Promotion onto Stage-specific Promotion queue",
+			"promotion", promo.Name,
+			"namespace", promo.Namespace,
+			"stage", promo.Spec.Stage,
+			"phase", promo.Status.Phase,
+		)
 	}
-	if logger.Logger.IsLevelEnabled(log.DebugLevel) {
-		for stage, pq := range pqs.pendingPromoQueuesByStage {
-			logger.WithFields(log.Fields{
-				"stage":     stage.Name,
-				"namespace": stage.Namespace,
-				"depth":     pq.Depth(),
-			}).Debug("Stage-specific Promotion queue initialized")
-		}
+	for stage, pq := range pqs.pendingPromoQueuesByStage {
+		logger.Debug(
+			"Stage-specific Promotion queue initialized",
+			"stage", stage.Name,
+			"namespace", stage.Namespace,
+			"depth", pq.Depth(),
+		)
 	}
 }
 
@@ -142,11 +141,11 @@ func (pqs *promoQueues) conclude(ctx context.Context, stageKey types.NamespacedN
 	pqs.promoQueuesByStageMu.RLock()
 	defer pqs.promoQueuesByStageMu.RUnlock()
 	if pqs.activePromoByStage[stageKey] == promoName {
-		logger := logging.LoggerFromContext(ctx).WithFields(log.Fields{
-			"namespace": stageKey.Namespace,
-			"promotion": promoName,
-		})
 		delete(pqs.activePromoByStage, stageKey)
-		logger.Debug("conclude promo")
+		logging.LoggerFromContext(ctx).Debug(
+			"concluded promo",
+			"namespace", stageKey.Namespace,
+			"promotion", promoName,
+		)
 	}
 }

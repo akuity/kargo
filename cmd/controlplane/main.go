@@ -13,7 +13,7 @@ import (
 func main() {
 	ctx := signals.SetupSignalHandler()
 	if err := Execute(ctx); err != nil {
-		logging.LoggerFromContext(ctx).Error(err)
+		logging.LoggerFromContext(ctx).Error(err, "")
 		os.Exit(1)
 	}
 }

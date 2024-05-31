@@ -7,7 +7,6 @@ import (
 	"sort"
 
 	"github.com/Masterminds/semver/v3"
-	log "github.com/sirupsen/logrus"
 
 	"github.com/akuity/kargo/internal/logging"
 )
@@ -55,13 +54,13 @@ func newSemVerSelector(
 
 // Select implements the Selector interface.
 func (s *semVerSelector) Select(ctx context.Context) ([]Image, error) {
-	logger := logging.LoggerFromContext(ctx).WithFields(log.Fields{
-		"registry":            s.repoClient.registry.name,
-		"image":               s.repoClient.repoURL,
-		"selectionStrategy":   SelectionStrategySemVer,
-		"platformConstrained": s.platform != nil,
-		"discoveryLimit":      s.discoveryLimit,
-	})
+	logger := logging.LoggerFromContext(ctx).WithValues(
+		"registry", s.repoClient.registry.name,
+		"image", s.repoClient.repoURL,
+		"selectionStrategy", SelectionStrategySemVer,
+		"platformConstrained", s.platform != nil,
+		"discoveryLimit", s.discoveryLimit,
+	)
 	logger.Trace("discovering images")
 
 	ctx = logging.ContextWithLogger(ctx, logger)
@@ -87,17 +86,18 @@ func (s *semVerSelector) Select(ctx context.Context) ([]Image, error) {
 			return nil, fmt.Errorf("error retrieving image with tag %q: %w", svImage.Tag, err)
 		}
 		if image == nil {
-			logger.Tracef(
-				"image with tag %q was found, but did not match platform constraint",
-				svImage.Tag,
+			logger.Trace(
+				"image was found, but did not match platform constraint",
+				"tag", svImage.Tag,
 			)
 			continue
 		}
 
-		logger.WithFields(log.Fields{
-			"tag":    image.Tag,
-			"digest": image.Digest,
-		}).Trace("discovered image")
+		logger.Trace(
+			"discovered image",
+			"tag", image.Tag,
+			"digest", image.Digest,
+		)
 		discoveredImages = append(discoveredImages, *image)
 	}
 
@@ -106,7 +106,10 @@ func (s *semVerSelector) Select(ctx context.Context) ([]Image, error) {
 		return nil, nil
 	}
 
-	logger.Tracef("discovered %d images", len(discoveredImages))
+	logger.Trace(
+		"discovered images",
+		"count", len(discoveredImages),
+	)
 	return discoveredImages, nil
 }
 
@@ -146,7 +149,10 @@ func (s *semVerSelector) selectImages(ctx context.Context) ([]Image, error) {
 		logger.Trace("no tags matched criteria")
 		return nil, nil
 	}
-	logger.Tracef("%d tags matched criteria", len(images))
+	logger.Trace(
+		"tags matched criteria",
+		"count", len(images),
+	)
 
 	logger.Trace("sorting images by semantic version")
 	sortImagesBySemVer(images)

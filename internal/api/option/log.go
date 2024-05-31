@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
-	log "github.com/sirupsen/logrus"
 
 	"github.com/akuity/kargo/internal/logging"
 )
@@ -23,12 +22,12 @@ var (
 )
 
 type logInterceptor struct {
-	logger           *log.Entry
+	logger           *logging.Logger
 	ignorableMethods map[string]bool
 }
 
 func newLogInterceptor(
-	logger *log.Entry,
+	logger *logging.Logger,
 	ignorableMethods map[string]bool,
 ) connect.Interceptor {
 	return &logInterceptor{
@@ -49,18 +48,19 @@ func (i *logInterceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 		}
 
 		res, err := next(ctx, req)
-		fields := log.Fields{
-			"connect.duration": time.Since(start).String(),
-		}
-		level := log.InfoLevel
+		fields := []any{"connect.duration", time.Since(start).String()}
 		if err != nil {
-			level = log.ErrorLevel
-			fields["connect.code"] = connect.CodeOf(err).String()
+			fields = append(
+				fields,
+				"connect.code", connect.CodeOf(err).String(),
+			)
+			logging.LoggerFromContext(ctx).Error(
+				err, "finished unary call",
+				fields...,
+			)
+		} else {
+			logging.LoggerFromContext(ctx).Info("finished unary call", fields...)
 		}
-		logging.
-			LoggerFromContext(ctx).
-			WithFields(fields).
-			Log(level, "finished unary call")
 		return res, err
 	}
 }
@@ -81,18 +81,19 @@ func (i *logInterceptor) WrapStreamingHandler(
 		}
 
 		err := next(ctx, conn)
-		fields := log.Fields{
-			"connect.duration": time.Since(start),
-		}
-		level := log.InfoLevel
+		fields := []any{"connect.duration", time.Since(start).String()}
 		if err != nil {
-			level = log.ErrorLevel
-			fields["connect.code"] = connect.CodeOf(err).String()
+			fields = append(
+				fields,
+				"connect.code", connect.CodeOf(err).String(),
+			)
+			logging.LoggerFromContext(ctx).Error(
+				err, "finished streaming call",
+				fields...,
+			)
+		} else {
+			logging.LoggerFromContext(ctx).Info("finished streaming call", fields...)
 		}
-		logging.
-			LoggerFromContext(ctx).
-			WithFields(fields).
-			Log(level, "finished streaming call")
 		return err
 	}
 }
@@ -101,11 +102,11 @@ func (i *logInterceptor) newLogger(
 	ctx context.Context, procedure string, start time.Time) context.Context {
 	service := path.Dir(procedure)[1:]
 	method := path.Base(procedure)
-	logger := i.logger.WithFields(log.Fields{
-		"connect.service":    service,
-		"connect.method":     method,
-		"connect.start_time": start.Format(time.RFC3339),
-	})
+	logger := i.logger.WithValues(
+		"connect.service", service,
+		"connect.method", method,
+		"connect.start_time", start.Format(time.RFC3339),
+	)
 	return logging.ContextWithLogger(ctx, logger)
 }
 

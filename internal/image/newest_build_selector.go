@@ -8,8 +8,6 @@ import (
 	"sync"
 	"time"
 
-	log "github.com/sirupsen/logrus"
-
 	"github.com/akuity/kargo/internal/logging"
 )
 
@@ -43,13 +41,13 @@ func newNewestBuildSelector(
 
 // Select implements the Selector interface.
 func (n *newestBuildSelector) Select(ctx context.Context) ([]Image, error) {
-	logger := logging.LoggerFromContext(ctx).WithFields(log.Fields{
-		"registry":            n.repoClient.registry.name,
-		"image":               n.repoClient.repoURL,
-		"selectionStrategy":   SelectionStrategyNewestBuild,
-		"platformConstrained": n.platform != nil,
-		"discoveryLimit":      n.discoveryLimit,
-	})
+	logger := logging.LoggerFromContext(ctx).WithValues(
+		"registry", n.repoClient.registry.name,
+		"image", n.repoClient.repoURL,
+		"selectionStrategy", SelectionStrategyNewestBuild,
+		"platformConstrained", n.platform != nil,
+		"discoveryLimit", n.discoveryLimit,
+	)
 	logger.Trace("discovering images")
 
 	ctx = logging.ContextWithLogger(ctx, logger)
@@ -66,12 +64,16 @@ func (n *newestBuildSelector) Select(ctx context.Context) ([]Image, error) {
 
 	if n.platform == nil {
 		for _, image := range images[:limit] {
-			logger.WithFields(log.Fields{
-				"tag":    image.Tag,
-				"digest": image.Digest,
-			}).Trace("discovered image")
+			logger.Trace(
+				"discovered image",
+				"tag", image.Tag,
+				"digest", image.Digest,
+			)
 		}
-		logger.Tracef("discovered %d images", limit)
+		logger.Trace(
+			"discovered images",
+			"count", limit,
+		)
 		return images[:limit], nil
 	}
 
@@ -91,9 +93,9 @@ func (n *newestBuildSelector) Select(ctx context.Context) ([]Image, error) {
 		}
 
 		if discoveredImage == nil {
-			logger.Tracef(
-				"image with digest %q was found, but did not match platform constraint",
-				image.Digest,
+			logger.Trace(
+				"image was found, but did not match platform constraint",
+				"digest", image.Digest,
 			)
 			continue
 		}
@@ -101,11 +103,12 @@ func (n *newestBuildSelector) Select(ctx context.Context) ([]Image, error) {
 		discoveredImage.Tag = image.Tag
 		discoveredImages = append(discoveredImages, *discoveredImage)
 
-		logger.WithFields(log.Fields{
-			"tag":       discoveredImage.Tag,
-			"digest":    discoveredImage.Digest,
-			"createdAt": discoveredImage.CreatedAt.Format(time.RFC3339),
-		}).Trace("discovered image")
+		logger.Trace(
+			"discovered image",
+			"tag", discoveredImage.Tag,
+			"digest", discoveredImage.Digest,
+			"createdAt", discoveredImage.CreatedAt.Format(time.RFC3339),
+		)
 	}
 
 	if len(discoveredImages) == 0 {
@@ -113,7 +116,10 @@ func (n *newestBuildSelector) Select(ctx context.Context) ([]Image, error) {
 		return nil, nil
 	}
 
-	logger.Tracef("discovered %d images", len(discoveredImages))
+	logger.Trace(
+		"discovered images",
+		"count", len(discoveredImages),
+	)
 	return discoveredImages, nil
 }
 
@@ -143,7 +149,10 @@ func (n *newestBuildSelector) selectImages(ctx context.Context) ([]Image, error)
 		}
 		tags = matchedTags
 	}
-	logger.Tracef("%d tags matched criteria", len(tags))
+	logger.Trace(
+		"tags matched criteria",
+		"count", len(tags),
+	)
 
 	logger.Trace("retrieving images for all tags that matched criteria")
 	images, err := n.getImagesByTags(ctx, tags)

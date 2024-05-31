@@ -131,8 +131,8 @@ func (g *gitMechanism) Promote(
 	var newStatus *kargoapi.PromotionStatus
 	newFreight = *newFreight.DeepCopy()
 
-	logger := logging.LoggerFromContext(ctx)
-	logger.Debugf("executing %s", g.name)
+	logger := logging.LoggerFromContext(ctx).WithValues("name", g.name)
+	logger.Debug("executing promotion mechanism")
 
 	for _, update := range updates {
 		var err error
@@ -148,7 +148,7 @@ func (g *gitMechanism) Promote(
 		newStatus = aggregateGitPromoStatus(newStatus, *otherStatus)
 	}
 
-	logger.Debugf("done executing %s", g.name)
+	logger.Debug("done executing promotion mechanism")
 
 	return newStatus, newFreight, nil
 }
@@ -305,7 +305,7 @@ func getRepoCredentialsFn(
 		if err != nil {
 			return nil, fmt.Errorf("error obtaining credentials for git repo %q: %w", repoURL, err)
 		}
-		logger := logging.LoggerFromContext(ctx).WithField("repo", repoURL)
+		logger := logging.LoggerFromContext(ctx).WithValues("repo", repoURL)
 		if !ok {
 			logger.Debug("found no credentials for git repo")
 			return nil, nil

@@ -4,10 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"testing"
 
-	"github.com/sirupsen/logrus"
+	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -399,11 +398,11 @@ func TestArgoCDPromote(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			logger := logrus.New()
-			logger.Out = io.Discard
-
 			newStatus, newFreightOut, err := testCase.promoMech.Promote(
-				logging.ContextWithLogger(context.TODO(), logger.WithFields(nil)),
+				logging.ContextWithLogger(
+					context.Background(),
+					logging.Wrap(logr.Discard()),
+				),
 				testCase.stage,
 				&kargoapi.Promotion{},
 				testCase.newFreight,

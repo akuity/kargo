@@ -56,20 +56,21 @@ func NewPodIdentityCredentialHelper(ctx context.Context) PodIdentityCredentialHe
 		logger.Info("EKS Pod Identity appears to be in use")
 		cfg, err := config.LoadDefaultConfig(ctx)
 		if err != nil {
-			logger.Errorf(
-				"error loading AWS config; EKS Pod Identity integration will be disabled: %s",
-				err,
+			logger.Error(
+				err, "error loading AWS config; EKS Pod Identity integration will be disabled",
 			)
 		} else {
 			stsSvc := sts.NewFromConfig(cfg)
 			res, err := stsSvc.GetCallerIdentity(ctx, &sts.GetCallerIdentityInput{})
 			if err != nil {
-				logger.Errorf(
-					"error getting caller identity; EKS Pod Identity integration will be disabled: %s",
-					err,
+				logger.Error(
+					err, "error getting caller identity; EKS Pod Identity integration will be disabled",
 				)
 			} else {
-				logger.WithField("account", *res.Account).Debug("got AWS account ID")
+				logger.Debug(
+					"got AWS account ID",
+					"account", *res.Account,
+				)
 				awsAccountID = *res.Account
 			}
 		}
@@ -150,7 +151,7 @@ func (p *podIdentityCredentialHelper) getAuthToken(
 	logger := logging.LoggerFromContext(ctx)
 	cfg, err := config.LoadDefaultConfig(ctx)
 	if err != nil {
-		logger.Errorf("error loading AWS config: %s", err)
+		logger.Error(err, "error loading AWS config")
 		return "", nil
 	}
 	ecrSvc := ecr.NewFromConfig(aws.Config{
@@ -160,14 +161,14 @@ func (p *podIdentityCredentialHelper) getAuthToken(
 			fmt.Sprintf("arn:aws:iam::%s:role/kargo-project-%s", p.awsAccountID, project),
 		),
 	})
-	logger = logger.WithFields(map[string]any{
-		"awsAccountID": p.awsAccountID,
-		"awsRegion":    region,
-		"project":      project,
-	})
+	logger = logger.WithValues(
+		"awsAccountID", p.awsAccountID,
+		"awsRegion", region,
+		"project", project,
+	)
 	output, err := ecrSvc.GetAuthorizationToken(ctx, &ecr.GetAuthorizationTokenInput{})
 	if err != nil {
-		logger.Errorf("error getting ECR authorization token: %s", err)
+		logger.Error(err, "error getting ECR authorization token")
 		return "", nil
 	}
 	logger.Debug("got ECR authorization token")

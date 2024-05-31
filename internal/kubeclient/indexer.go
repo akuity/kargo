@@ -236,9 +236,12 @@ func indexRunningPromotionsByArgoCDApplications(
 			},
 			&stage,
 		); err != nil {
-			err = fmt.Errorf("can not get Stage for running Promotion %q in namespace %q: %w",
-				promo.Name, promo.Namespace, err)
-			logger.Errorf("failed to index running Promotion by Argo CD Applications: %v", err)
+			logger.Error(
+				err, "failed to index running Promotion by Argo CD Applications; "+
+					"can not get Stage for running Promotion",
+				"promo", promo.Name,
+				"namespace", promo.Namespace,
+			)
 			return nil
 		}
 

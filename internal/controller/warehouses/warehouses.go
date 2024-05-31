@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -134,10 +133,10 @@ func (r *reconciler) Reconcile(
 ) (ctrl.Result, error) {
 	logger := logging.LoggerFromContext(ctx)
 
-	logger = logger.WithFields(log.Fields{
-		"namespace": req.NamespacedName.Namespace,
-		"warehouse": req.NamespacedName.Name,
-	})
+	logger = logger.WithValues(
+		"namespace", req.NamespacedName.Namespace,
+		"warehouse", req.NamespacedName.Name,
+	)
 	ctx = logging.ContextWithLogger(ctx, logger)
 	logger.Debug("reconciling Warehouse")
 
@@ -155,7 +154,7 @@ func (r *reconciler) Reconcile(
 	newStatus, err := r.syncWarehouse(ctx, warehouse)
 	if err != nil {
 		newStatus.Message = err.Error()
-		logger.Errorf("error syncing Warehouse: %s", err)
+		logger.Error(err, "error syncing Warehouse")
 	}
 
 	updateErr := kubeclient.PatchStatus(
@@ -167,7 +166,7 @@ func (r *reconciler) Reconcile(
 		},
 	)
 	if updateErr != nil {
-		logger.Errorf("error updating Warehouse status: %s", updateErr)
+		logger.Error(updateErr, "error updating Warehouse status")
 	}
 
 	// If we had no error, but couldn't update, then we DO have an error. But we
@@ -228,7 +227,11 @@ func (r *reconciler) syncWarehouse(
 				err,
 			)
 		} else if err == nil {
-			log.Debugf("created Freight %q in namespace %q", freight.Name, freight.Namespace)
+			logger.Debug(
+				"created Freight",
+				"freight", freight.Name,
+				"namespace", freight.Namespace,
+			)
 		}
 
 		status.LastFreightID = freight.Name

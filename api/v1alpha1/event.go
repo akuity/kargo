@@ -102,7 +102,7 @@ func NewPromotionEventAnnotations(
 	p *Promotion,
 	f *Freight,
 ) map[string]string {
-	log := logging.LoggerFromContext(ctx)
+	logger := logging.LoggerFromContext(ctx)
 
 	annotations := map[string]string{
 		AnnotationKeyEventProject:             p.GetNamespace(),
@@ -127,7 +127,7 @@ func NewPromotionEventAnnotations(
 		if len(f.Commits) > 0 {
 			data, err := json.Marshal(f.Commits)
 			if err != nil {
-				log.WithError(err).Error("marshal freight commits in JSON")
+				logger.Error(err, "marshal freight commits in JSON")
 			} else {
 				annotations[AnnotationKeyEventFreightCommits] = string(data)
 			}
@@ -135,7 +135,7 @@ func NewPromotionEventAnnotations(
 		if len(f.Images) > 0 {
 			data, err := json.Marshal(f.Images)
 			if err != nil {
-				log.WithError(err).Error("marshal freight images in JSON")
+				logger.Error(err, "marshal freight images in JSON")
 			} else {
 				annotations[AnnotationKeyEventFreightImages] = string(data)
 			}
@@ -143,7 +143,7 @@ func NewPromotionEventAnnotations(
 		if len(f.Charts) > 0 {
 			data, err := json.Marshal(f.Charts)
 			if err != nil {
-				log.WithError(err).Error("marshal freight charts in JSON")
+				logger.Error(err, "marshal freight charts in JSON")
 			} else {
 				annotations[AnnotationKeyEventFreightCharts] = string(data)
 			}

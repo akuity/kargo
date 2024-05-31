@@ -586,7 +586,10 @@ func GetRestConfig(ctx context.Context, path string) (*rest.Config, error) {
 		return cfg, nil
 	}
 
-	logger.WithField("path", path).Debug("loading REST config from path")
+	logger.Debug(
+		"loading REST config from path",
+		"path", path,
+	)
 	cfg, err := clientcmd.BuildConfigFromFlags("", path)
 	if err != nil {
 		return cfg, fmt.Errorf("error loading REST config from %q: %w", path, err)

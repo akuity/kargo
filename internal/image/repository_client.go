@@ -179,14 +179,20 @@ func (r *repositoryClient) getImageByDigest(
 	platform *platformConstraint,
 ) (*Image, error) {
 	logger := logging.LoggerFromContext(ctx)
-	logger.Tracef("retrieving image with digest %s", digest)
+	logger.Trace(
+		"retrieving image",
+		"digest", digest,
+	)
 
 	if entry, exists := r.registry.imageCache.Get(digest); exists {
 		image := entry.(Image) // nolint: forcetypeassert
 		return &image, nil
 	}
 
-	logger.Tracef("image with digest %s NOT found in cache", digest)
+	logger.Trace(
+		"image NOT found in cache",
+		"digest", digest,
+	)
 
 	repoRef := r.repoRef.Context().Digest(digest)
 	opts := append(r.remoteOptions, remote.WithContext(ctx))
@@ -209,7 +215,10 @@ func (r *repositoryClient) getImageByDigest(
 	if img != nil {
 		// Cache the image
 		r.registry.imageCache.Set(digest, *img, cache.DefaultExpiration)
-		logger.Tracef("cached image for digest %s", digest)
+		logger.Trace(
+			"cached image",
+			"digest", digest,
+		)
 	}
 
 	return img, nil

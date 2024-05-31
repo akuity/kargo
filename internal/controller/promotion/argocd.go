@@ -128,7 +128,7 @@ func (a *argoCDMechanism) Promote(
 					return nil, newFreight, err
 				}
 				// Log the error as a warning, but continue to the next update.
-				logger.Warn(err)
+				logger.Info(err.Error())
 			}
 			if phase.Failed() {
 				// If the update failed, we can short-circuit. This is
@@ -339,7 +339,10 @@ func (a *argoCDMechanism) doSingleUpdate(
 	); err != nil {
 		return fmt.Errorf("error patching Argo CD Application %q: %w", app.Name, err)
 	}
-	logging.LoggerFromContext(ctx).WithField("app", app.Name).Debug("patched Argo CD Application")
+	logging.LoggerFromContext(ctx).Debug(
+		"patched Argo CD Application",
+		"app", app.Name,
+	)
 
 	// NB: This attempts to mimic the behavior of the Argo CD API server,
 	// which logs an event when a sync is initiated. However, we do not
@@ -361,7 +364,7 @@ func (a *argoCDMechanism) doSingleUpdate(
 }
 
 func (a *argoCDMechanism) logAppEvent(ctx context.Context, app *argocd.Application, user, reason, message string) {
-	logger := logging.LoggerFromContext(ctx).WithField("app", app.Name)
+	logger := logging.LoggerFromContext(ctx).WithValues("app", app.Name)
 
 	// xref: https://github.com/argoproj/argo-cd/blob/44894e9e438bca5adccf58d2f904adc63365805c/server/application/application.go#L2145-L2147
 	// nolint:lll
@@ -401,7 +404,10 @@ func (a *argoCDMechanism) logAppEvent(ctx context.Context, app *argocd.Applicati
 		Reason:  reason,
 	}
 	if err := a.argocdClient.Create(context.Background(), &event); err != nil {
-		logger.Errorf("unable to create %q event for Argo CD Application: %v", reason, err)
+		logger.Error(
+			err, "unable to create event for Argo CD Application",
+			"reason", reason,
+		)
 	}
 }
 

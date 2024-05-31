@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strings"
 
-	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -31,7 +30,7 @@ func (r *reconciler) discoverImages(
 		}
 		sub := *s.Image
 
-		logger := logging.LoggerFromContext(ctx).WithField("repo", sub.RepoURL)
+		logger := logging.LoggerFromContext(ctx).WithValues("repo", sub.RepoURL)
 
 		// Obtain credentials for the image repository.
 		creds, ok, err := r.credentialsDB.Get(ctx, namespace, credentials.TypeImage, sub.RepoURL)
@@ -54,7 +53,7 @@ func (r *reconciler) discoverImages(
 		}
 
 		// Enrich the logger with additional fields for this subscription.
-		logger = logger.WithFields(imageDiscoveryLogFields(sub))
+		logger = logger.WithValues(imageDiscoveryLogFields(sub))
 
 		// Discover the latest suitable images.
 		images, err := r.discoverImageRefsFn(ctx, sub, regCreds)
@@ -92,7 +91,10 @@ func (r *reconciler) discoverImages(
 			Platform:   sub.Platform,
 			References: discoveredImages,
 		})
-		logger.Debugf("discovered %d images", len(images))
+		logger.Debug(
+			"discovered images",
+			"count", len(images),
+		)
 	}
 
 	return results, nil
@@ -136,16 +138,22 @@ func (r *reconciler) getImageSourceURL(gitRepoURL, tag string) string {
 	return ""
 }
 
-func imageDiscoveryLogFields(sub kargoapi.ImageSubscription) log.Fields {
-	f := log.Fields{
-		"imageSelectionStrategy": sub.ImageSelectionStrategy,
-		"platformConstrained":    sub.Platform != "",
+func imageDiscoveryLogFields(sub kargoapi.ImageSubscription) []any {
+	f := []any{
+		"imageSelectionStrategy", sub.ImageSelectionStrategy,
+		"platformConstrained", sub.Platform != "",
 	}
 	switch sub.ImageSelectionStrategy {
 	case kargoapi.ImageSelectionStrategySemVer, kargoapi.ImageSelectionStrategyDigest:
-		f["semverConstraint"] = sub.SemverConstraint
+		f = append(
+			f,
+			"semverConstraint", sub.SemverConstraint,
+		)
 	case kargoapi.ImageSelectionStrategyLexical, kargoapi.ImageSelectionStrategyNewestBuild:
-		f["tagConstrained"] = sub.AllowTags != "" || len(sub.IgnoreTags) > 0
+		f = append(
+			f,
+			"tagConstrained", sub.AllowTags != "" || len(sub.IgnoreTags) > 0,
+		)
 	}
 	return f
 }

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	authzv1 "k8s.io/api/authorization/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -17,6 +16,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api/kubernetes"
 	"github.com/akuity/kargo/internal/kubeclient"
+	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/internal/os"
 	versionpkg "github.com/akuity/kargo/internal/version"
 	libWebhook "github.com/akuity/kargo/internal/webhook"
@@ -30,12 +30,14 @@ import (
 type webhooksServerOptions struct {
 	KubeConfig string
 
-	Logger *log.Logger
+	Logger *logging.Logger
 }
 
 func newWebhooksServerCommand() *cobra.Command {
 	cmdOpts := &webhooksServerOptions{
-		Logger: log.StandardLogger(),
+		// During startup, we enforce use of an info-level logger to ensure that
+		// no important startup messages are missed.
+		Logger: logging.NewLogger(logging.InfoLevel),
 	}
 
 	cmd := &cobra.Command{
@@ -59,10 +61,11 @@ func (o *webhooksServerOptions) complete() {
 
 func (o *webhooksServerOptions) run(ctx context.Context) error {
 	version := versionpkg.GetVersion()
-	o.Logger.WithFields(log.Fields{
-		"version": version.Version,
-		"commit":  version.GitCommit,
-	}).Info("Starting Kargo Webhooks Server")
+	o.Logger.Info(
+		"Starting Kargo Webhooks Server",
+		"version", version.Version,
+		"commit", version.GitCommit,
+	)
 
 	webhookCfg := libWebhook.ConfigFromEnv()
 

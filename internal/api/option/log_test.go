@@ -8,9 +8,12 @@ import (
 
 	"connectrpc.com/connect"
 	grpchealth "connectrpc.com/grpchealth"
+	"github.com/bombsimon/logrusr/v4"
 	testlog "github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/health/grpc_health_v1"
+
+	"github.com/akuity/kargo/internal/logging"
 )
 
 func TestUnaryServerLogging(t *testing.T) {
@@ -30,10 +33,14 @@ func TestUnaryServerLogging(t *testing.T) {
 	}
 	for name, testSet := range testSets {
 		t.Run(name, func(t *testing.T) {
-			logger, hook := testlog.NewNullLogger()
+			// TODO: This is an odd spot where we're using logrus directly until we
+			// figure out how to do the equivalent thing (assert that a message WAS
+			// logged) with logr.
+			logrusLogger, hook := testlog.NewNullLogger()
+			logger := logging.Wrap(logrusr.New(logrusLogger))
 
 			opt := connect.WithInterceptors(
-				newLogInterceptor(logger.WithFields(nil), testSet.ignorableMethods))
+				newLogInterceptor(logger, testSet.ignorableMethods))
 			mux := http.NewServeMux()
 			mux.Handle(grpchealth.NewHandler(grpchealth.NewStaticChecker(), opt))
 			srv := httptest.NewServer(mux)
