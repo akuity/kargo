@@ -102,7 +102,7 @@ func (s *serviceAccountKeyCredentialHelper) getAccessToken(
 	if err != nil {
 		return "", fmt.Errorf("error decoding service account key: %w", err)
 	}
-	config, err := google.JWTConfigFromJSON(decodedKey, "https://www.googleapis.com/auth/devstorage.read_write")
+	config, err := google.JWTConfigFromJSON(decodedKey, "https://www.googleapis.com/auth/devstorage.read_only")
 	if err != nil {
 		return "", fmt.Errorf("error parsing service account key: %w", err)
 	}
