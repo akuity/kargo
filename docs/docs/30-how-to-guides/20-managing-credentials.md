@@ -217,8 +217,8 @@ project `Namespace`s.
 ## Registry-Specific Authentication Options
 
 While many container image registries support authentication using long-lived
-credentials, such as a username plus a password or personal access token, some
-do not.
+credentials, such as a username and password (or personal access token), some
+either require or offer more secure options.
 
 This section provides registry-specific guidance on credential management and
 also covers options for gaining image repository access using workload identity
@@ -315,9 +315,18 @@ options outlined here may be applied.
 
 #### Long-Lived Credentials
 
-Google Artifact Registry does not _directly_ support long-lived credentials,
-however, a Google service account key
-[can be exchanged for a token](https://cloud.google.com/artifact-registry/docs/docker/authentication#token)
+:::caution
+Google Artifact Registry does _directly_ support long-lived credentials
+[as described here](https://cloud.google.com/artifact-registry/docs/docker/authentication#json-key).
+The username `_json_key_base64` and the base64-encoded service account key
+may be stored in the `username` and `password` fields of a `Secret` resource as
+described [in the first section](#credentials-as-kubernetes-secret-resources) of
+this document. Google's own documentation strongly recommends against this
+method however.
+:::
+
+Google documentation recommends
+[exchanging a service account key for an access token](https://cloud.google.com/artifact-registry/docs/docker/authentication#token)
 that is valid for 60 minutes. Kargo can seamlessly make this exchange and will
 cache the resulting token for a period of 40 minutes.
 
@@ -410,9 +419,7 @@ Google Artifact Registry repositories.
 
 ### Azure Container Registry (ACR)
 
-Azure Container Registry is not strictly subject to the same limitations as ECR
-and Google Artifact Registry in terms of an inability to support long-lived
-credentials.
+Azure Container Registry directly supports long-lived credentials.
 
 It is possible to
 [create tokens with repository-scoped permissions](https://learn.microsoft.com/en-us/azure/container-registry/container-registry-repository-scoped-permissions),
@@ -423,6 +430,6 @@ document.
 
 :::info
 Support for authentication to ACR repositories using workload identity, on par
-with Kargo's support for ECR and Google Artifact Registry is likely to be
+with Kargo's support for ECR and Google Artifact Registry, is likely to be
 included in a future release of Kargo.
 :::
