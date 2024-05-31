@@ -7,7 +7,7 @@ export const paths = {
   projectEvents: '/project/:name/events',
   projectRoles: '/project/:name/roles',
   stage: '/project/:name/stage/:stageName',
-  warehouse: '/project/:name/warehouse/:warehouseName',
+  warehouse: '/project/:name/warehouse/:warehouseName/:tab?',
   freight: '/project/:name/freight/:freightName',
 
   login: '/login',

@@ -3,13 +3,17 @@ import {
   faCircleCheck,
   faQuestionCircle,
   faTimeline,
+  faTools,
   faTruckArrowRight
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Select, Tooltip } from 'antd';
+import { Button, Select, Tooltip } from 'antd';
 import { useContext } from 'react';
+import { generatePath, useNavigate, useParams } from 'react-router-dom';
 
+import { paths } from '@ui/config/paths';
 import { ColorContext } from '@ui/context/colors';
+import { Warehouse } from '@ui/gen/v1alpha1/generated_pb';
 
 import { FreightlineAction } from '../project/pipelines/types';
 
@@ -28,9 +32,10 @@ export const FreightlineHeader = ({
   downstreamSubs?: string[];
   selectedWarehouse: string;
   setSelectedWarehouse: (warehouse: string) => void;
-  warehouses: string[];
+  warehouses: { [key: string]: Warehouse };
 }) => {
   const stageColorMap = useContext(ColorContext);
+  const { name: projectName } = useParams();
 
   const getIcon = (action: FreightlineAction) => {
     switch (action) {
@@ -44,6 +49,8 @@ export const FreightlineHeader = ({
         return faQuestionCircle;
     }
   };
+
+  const navigate = useNavigate();
 
   return (
     <div className='w-full pl-6 h-8 mb-3 flex flex-col justify-end font-semibold text-sm'>
@@ -96,12 +103,28 @@ export const FreightlineHeader = ({
           </>
         ) : (
           <>
-            <div className='flex items-center text-neutral-500 text-xs'>
+            <div className='flex items-center text-neutral-500 text-xs mr-auto'>
               <FontAwesomeIcon icon={faTimeline} className='mr-2' />
               FREIGHTLINE
             </div>
-            {(warehouses || []).length > 1 && (
-              <div className='ml-auto mr-4 -mb-1'>
+            <Button
+              icon={<FontAwesomeIcon icon={faTools} />}
+              className='-mb-1'
+              onClick={() => {
+                navigate(
+                  generatePath(paths.warehouse, {
+                    name: projectName,
+                    warehouseName:
+                      selectedWarehouse || warehouses[Object.keys(warehouses)[0]]?.metadata?.name,
+                    tab: 'create-freight'
+                  })
+                );
+              }}
+            >
+              Assemble Freight
+            </Button>
+            {(Object.keys(warehouses) || []).length > 1 && (
+              <div className='ml-2 mr-4 -mb-1'>
                 <Select
                   className='w-48'
                   value={selectedWarehouse}
@@ -113,7 +136,7 @@ export const FreightlineHeader = ({
                     </div>
                   )}
                   options={[
-                    ...(warehouses || []).map((w) => ({ value: w, label: w })),
+                    ...(Object.keys(warehouses) || []).map((w) => ({ value: w, label: w })),
                     {
                       value: '',
                       label: 'All Warehouses'
