@@ -233,9 +233,9 @@ container image repositories whose URLs indicate they are hosted in ECR.
 
 Elastic Container Registries do not _directly_ support long-lived credentials,
 however, an AWS access key ID and secret access key
-[can be exchanged for a token](https://docs.aws.amazon.com/AmazonECR/latest/userguide/registry_auth.html#registry-auth-token)
-that is valid for 12 hours. Kargo can seamlessly make this exchange and will
-cache the resulting token for a period of 10 hours.
+[can be used to obtain an authorization token](https://docs.aws.amazon.com/AmazonECR/latest/userguide/registry_auth.html#registry-auth-token)
+that is valid for 12 hours. Kargo can seamlessly obtain such a token and will
+cache it for a period of 10 hours.
 
 To use this option, your `Secret` should take the following form:
 
@@ -329,14 +329,16 @@ Google Artifact Registry does _directly_ support long-lived credentials
 The username `_json_key_base64` and the base64-encoded service account key
 may be stored in the `username` and `password` fields of a `Secret` resource as
 described [in the first section](#credentials-as-kubernetes-secret-resources) of
-this document. Google's own documentation strongly recommends against this
-method however.
+this document. Kargo and Google both strongly discourage this method of
+authentication however.
 :::
 
 Google documentation recommends
-[exchanging a service account key for an access token](https://cloud.google.com/artifact-registry/docs/docker/authentication#token)
-that is valid for 60 minutes. Kargo can seamlessly make this exchange and will
-cache the resulting token for a period of 40 minutes.
+[using a service account key to obtain an access token](https://cloud.google.com/artifact-registry/docs/docker/authentication#token)
+that is valid for 60 minutes. Compared to the discouraged method of using the
+service account key to authenticate to the registry directly, this process does
+_not_ transmit the service account key over the wire. Kargo can seamlessly carry
+out this process and will cache the access token for a period of 40 minutes.
 
 To use this option, your `Secret` should take the following form:
 
