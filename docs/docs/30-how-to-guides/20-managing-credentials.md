@@ -122,3 +122,325 @@ It is important to understand the security implications of this feature. Any
 credentials stored in a global credentials `Namespace` will be available to
 _all_ Kargo projects.
 :::
+
+## Managing Credentials with the CLI
+
+The Kargo CLI can be used to manage credentials in a project's `Namespace.`
+
+The following example creates credentials for a Git repository:
+
+```shell
+kargo create credentials --project kargo-demo my-credentials \
+  --git --repo-url https://github.com/example/kargo-demo.git \
+  --username my-username --password my-my-personal-access-token
+```
+
+```shell
+secret/my-credentials created
+```
+
+:::caution
+If you do not wish for your password or personal access token to be stored
+in your shell history, you may wish to omit the `--password` flag, in which
+case the CLI will prompt you to enter the password interactively.
+:::
+
+Credentials can be listed or viewed with `kargo get credentials`:
+
+```shell
+kargo get credentials --project kargo-demo my-credentials
+```
+
+```shell
+NAME             TYPE   REGEX   REPO                                        AGE
+my-credentials   git    false   https://github.com/example/kargo-demo.git   8m25s
+```
+
+If requesting output as YAML or JSON, passwords and other potentially sensitive
+information will be redacted.
+
+```shell
+kargo get credentials --project kargo-demo my-credentials -o yaml
+```
+
+```shell
+apiVersion: v1
+kind: Secret
+metadata:
+  creationTimestamp: "2024-05-30T20:02:46Z"
+  labels:
+    kargo.akuity.io/cred-type: git
+  name: my-credentials
+  namespace: kargo-demo
+  resourceVersion: "17614"
+  uid: ca2660e4-867d-4709-b1a7-57fbb93fc6dc
+stringData:
+  password: '*** REDACTED ***'
+  repoURL: https://github.com/example/kargo-demo.git
+  username: my-username
+type: Opaque
+```
+
+Credentials can be updated using the `kargo update credentials` command and
+the flags corresponding to attributes of the credential that you wish to modify.
+Other attributes of the credentials will remain unchanged.
+
+The following example updates `my-credentials` with a regular expression for the
+repository URL:
+
+```shell
+kargo update credentials --project kargo-demo my-credentials \
+  --repo-url '^http://github.com/' --regex
+```
+
+```shell
+secret/my-credentials updated
+```
+
+And credentials can, of course, be deleted with `kargo delete credentials`:
+
+```shell
+kargo delete credentials --project kargo-demo my-credentials
+```
+
+```shell
+secret/my-credentials deleted
+```
+
+:::note
+While the CLI may be a fine way of managing project-level credentials whilst
+getting to know Kargo, it is unquestionably more secure to use other means to
+ensure the existence of these specially-formatted `Secret`s in the appropriate
+project `Namespace`s.
+:::
+
+## Registry-Specific Authentication Options
+
+While many container image registries support authentication using long-lived
+credentials, such as a username and password (or personal access token), some
+either require or offer more secure options.
+
+This section provides registry-specific guidance on credential management and
+also covers options for gaining image repository access using workload identity
+on applicable platforms.
+
+### Amazon Elastic Container Registry (ECR)
+
+The authentication options described in this section are applicable only to
+container image repositories whose URLs indicate they are hosted in ECR.
+
+#### Long-Lived Credentials
+
+Elastic Container Registries do not _directly_ support long-lived credentials,
+however, an AWS access key ID and secret access key
+[can be used to obtain an authorization token](https://docs.aws.amazon.com/AmazonECR/latest/userguide/registry_auth.html#registry-auth-token)
+that is valid for 12 hours. Kargo can seamlessly obtain such a token and will
+cache it for a period of 10 hours.
+
+To use this option, your `Secret` should take the following form:
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: <name>
+  namespace: <project namespace>
+  labels:
+    kargo.akuity.io/cred-type: <cred type>
+stringData:
+  awsAccessKeyID: <access key id>
+  awsSecretAccessKey: <secret access key>
+  repoURL: <ecr url>
+```
+
+:::caution
+Following the principle of least privilege, the IAM user associated with the
+access key ID and secret access key should be limited only to read-only access
+to the required ECR repositories.
+:::
+
+:::caution
+This method of authentication is a "lowest common denominator" approach that
+will work regardless of where Kargo is deployed. i.e. If running Kargo outside
+of EKS, this method will still work.
+
+If running Kargo within EKS, you may wish to consider using EKS Pod Identity
+instead.
+:::
+
+#### EKS Pod Identity
+
+If Kargo locates no `Secret` resources matching a repository URL, and if Kargo
+is deployed within an EKS cluster, it will attempt to use
+[EKS Pod Identity](https://docs.aws.amazon.com/eks/latest/userguide/pod-identities.html)
+to authenticate, but this relies upon some external setup. Leveraging this
+option eliminates the need to store credentials in a `Secret` resource.
+
+First, follow
+[this overview](https://docs.aws.amazon.com/eks/latest/userguide/pod-identities.html#pod-id-setup-overview)
+to set up EKS Pod Identity in your EKS cluster and assign an IAM role to the
+`kargo-controller` `ServiceAccount` within the `Namespace` to which Kargo is (or
+will be) installed.
+
+At this point, an IAM role will be associated with the Kargo _controller_,
+however, that controller acts on behalf of multiple Kargo projects, each of
+which may require access to _different_ ECR repositories. To account for this,
+when Kargo attempts to access an ECR repository on behalf of a specific project,
+it will first attempt to
+[assume an IAM role](https://docs.aws.amazon.com/STS/latest/APIReference/API_AssumeRole.html)
+specific to that project. The name of the role it attempts to assume will _always_
+be of the form `kargo-project-<project name>`. It is this role that should be
+granted read-only access to applicable ECR repositories.
+
+:::info
+The name of the IAM role associated with each Kargo project is deliberately
+not configurable to prevent project admins from attempting to coerce Kargo into
+assuming arbitrary IAM roles.
+:::
+
+Once Kargo is able to assume the appropriate IAM role for a given project, it
+will follow a process similar to that described in the previous section to
+obtain a token that is valid for 12 hours and cached for 10.
+
+:::caution
+Following the principle of least privilege, the IAM role associated with the
+`kargo-controller` `ServiceAccount` should be limited only to the ability to
+assume project-specific IAM roles. Project-specific IAM roles should be limited
+only to read-only access to the applicable ECR repositories.
+:::
+
+### Google Artifact Registry
+
+The authentication options described in this section are applicable only to
+container image repositories whose URLs indicate they are hosted in Google
+Artifact Registry.
+
+:::note
+Google Container Registry (GCR) has been deprecated in favor of Google Artifact
+Registry. For authentication to repositories with legacy GCR URLs, the same
+options outlined here may be applied.
+:::
+
+#### Long-Lived Credentials
+
+:::caution
+Google Artifact Registry does _directly_ support long-lived credentials
+[as described here](https://cloud.google.com/artifact-registry/docs/docker/authentication#json-key).
+The username `_json_key_base64` and the base64-encoded service account key
+may be stored in the `username` and `password` fields of a `Secret` resource as
+described [in the first section](#credentials-as-kubernetes-secret-resources) of
+this document. Kargo and Google both strongly discourage this method of
+authentication however.
+:::
+
+Google documentation recommends
+[using a service account key to obtain an access token](https://cloud.google.com/artifact-registry/docs/docker/authentication#token)
+that is valid for 60 minutes. Compared to the discouraged method of using the
+service account key to authenticate to the registry directly, this process does
+_not_ transmit the service account key over the wire. Kargo can seamlessly carry
+out this process and will cache the access token for a period of 40 minutes.
+
+To use this option, your `Secret` should take the following form:
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: <name>
+  namespace: <project namespace>
+  labels:
+    kargo.akuity.io/cred-type: <cred type>
+stringData:
+  gcpServiceAccountKey: <base64-encoded service account key>
+  repoURL: <ecr url>
+```
+
+:::note
+Service account keys contain structured data, so it is important that the
+key be base64-encoded.
+:::
+
+:::caution
+Following the principle of least privilege, the service account associated with
+the service account key should be limited only to read-only access to the
+required Google Artifact Registry repositories.
+:::
+
+:::caution
+This method of authentication is a "lowest common denominator" approach that
+will work regardless of where Kargo is deployed. i.e. If running Kargo outside
+of GKE, this method will still work.
+
+If running Kargo within GKE, you may wish to consider using Workload Identity
+Federation instead.
+:::
+
+#### Workload Identity Federation
+
+If Kargo locates no `Secret` resources matching a repository URL, and if Kargo
+is deployed within a GKE cluster, it will attempt to use
+[Workload Identity Federation](https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity)
+to authenticate, but this relies upon some external setup. Leveraging this
+option eliminates the need to store credentials in a `Secret` resource.
+
+First, follow
+[these directions](https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity#enable_on_cluster)
+to provision a new GKE cluster with Workload Identity Federation enabled or
+[these directions](https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity#enable-existing-cluster)
+to enable Workload Identity Federation on an existing GKE cluster.
+
+At this point, the `kargo-controller` `ServiceAccount` within the `Namespace` to
+which Kargo is (or will be) installed will be associated with an _IAM principal
+identifier_, which takes the following form:
+
+```plaintext
+principal://iam.googleapis.com/projects/<gcp project number>/locations/global/workloadIdentityPools/<gcp project name>.svc.id.goog/subject/ns/<kargo namespace>/sa/kargo-controller
+```
+
+Although associated with this _one_ principal, the Kargo controller acts on
+behalf of multiple Kargo projects, each of which may require access to
+_different_ Google Artifact Registry repositories. To account for this, when
+Kargo attempts to access a Google Artifact Registry repository on behalf of a
+specific project, it will first attempt to
+[impersonate a Google service account](https://cloud.google.com/iam/docs/service-account-impersonation) 
+specific to that project. The name of the service account it attempts to
+impersonate will _always_ be of the form
+`kargo-project-<kargo project name>@<gcp project name>.iam.gserviceaccount.com`.
+It is this service account that should be granted read-only access to applicable
+Google Artifact Registry repositories.
+
+:::info
+The name of the Google service account associated with each Kargo project is
+deliberately not configurable to prevent Kargo project admins from attempting to
+coerce Kargo into impersonating arbitrary Google service accounts.
+:::
+
+Once Kargo is able to impersonate the appropriate Google service account for a
+given project, it will follow a process similar to that described in the
+previous section to obtain a token that is valid for 60 minutes and cached for
+40.
+
+:::caution
+Following the principle of least privilege, the IAM principal associated with
+the `kargo-controller` `ServiceAccount` should be limited only to the ability to
+impersonate project-specific Google service accounts. Project-specific Google
+service accounts should be limited only to read-only access to the applicable
+Google Artifact Registry repositories.
+:::
+
+### Azure Container Registry (ACR)
+
+Azure Container Registry directly supports long-lived credentials.
+
+It is possible to
+[create tokens with repository-scoped permissions](https://learn.microsoft.com/en-us/azure/container-registry/container-registry-repository-scoped-permissions),
+with or without an expiration date. These tokens can be be stored in the
+`username` and `password` fields of a `Secret` resource as described
+[in the first section](#credentials-as-kubernetes-secret-resources) of this
+document.
+
+:::info
+Support for authentication to ACR repositories using workload identity, on par
+with Kargo's support for ECR and Google Artifact Registry, is likely to be
+included in a future release of Kargo.
+:::
