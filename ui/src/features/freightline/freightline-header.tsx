@@ -109,7 +109,7 @@ export const FreightlineHeader = ({
             </div>
             <Button
               icon={<FontAwesomeIcon icon={faTools} />}
-              className='-mb-1'
+              className='-mb-1 mr-2'
               onClick={() => {
                 navigate(
                   generatePath(paths.warehouse, {
@@ -124,7 +124,7 @@ export const FreightlineHeader = ({
               Assemble Freight
             </Button>
             {(Object.keys(warehouses) || []).length > 1 && (
-              <div className='ml-2 mr-4 -mb-1'>
+              <div className='mr-4 -mb-1'>
                 <Select
                   className='w-48'
                   value={selectedWarehouse}
