@@ -319,6 +319,7 @@ func newDashboardRequestHandler() (http.HandlerFunc, error) {
 		}
 
 		// Path is a file
+		httputil.SetCacheHeaders(w, 30*24*time.Hour, 7*24*time.Hour)
 		handler.ServeHTTP(w, req)
 	})
 
