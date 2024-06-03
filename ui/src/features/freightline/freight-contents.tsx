@@ -82,8 +82,7 @@ export const FreightContents = (props: {
           icon={faDocker}
           href={urlForImage(i.repoURL || '')}
         >
-          {/* {`${props.horizontal ? i.repoURL + ':' : ''}${i.tag}`} */}
-          0.6.1-snapshot-rc1
+          {`${props.horizontal ? i.repoURL + ':' : ''}${i.tag}`}
         </FreightContentItem>
       ))}
       {(freight?.charts || []).map((c) => (
