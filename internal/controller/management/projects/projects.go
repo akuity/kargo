@@ -249,44 +249,51 @@ func (r *reconciler) ensureNamespace(
 	ownerRef.BlockOwnerDeletion = ptr.To(false)
 
 	ns := &corev1.Namespace{}
-	err := r.getNamespaceFn(
+	if err := r.getNamespaceFn(
 		ctx,
 		types.NamespacedName{Name: project.Name},
 		ns,
-	)
-	if err == nil {
-		// We found an existing namespace with the same name as the Project.
+	); err != nil && !kubeerr.IsNotFound(err) {
+		return status, fmt.Errorf("error getting namespace %q: %w", project.Name, err)
+	} else if err == nil {
+		// We found an existing namespace with the same name as the Project. It's
+		// only a problem if it is not labeled as a Project namespace.
+		if ns.Labels[kargoapi.ProjectLabelKey] != kargoapi.LabelTrueValue {
+			status.Phase = kargoapi.ProjectPhaseInitializationFailed
+			return status, fmt.Errorf(
+				"failed to initialize Project %q because namespace %q already exists"+
+					" and is not labeled as a Project namespace",
+				project.Name,
+				project.Name,
+			)
+		}
 		for _, ownerRef := range ns.OwnerReferences {
 			if ownerRef.UID == project.UID {
-				logger.Debug("namespace exists and is owned by this Project")
+				logger.Debug("namespace exists and is already owned by this Project")
 				return status, nil
 			}
 		}
-		if ns.Labels != nil &&
-			ns.Labels[kargoapi.ProjectLabelKey] == kargoapi.LabelTrueValue &&
-			len(ns.OwnerReferences) == 0 {
-			logger.Debug(
-				"namespace exists, but is not owned by this Project, but has the " +
-					"project label; Project will adopt it",
-			)
-			ns.OwnerReferences = []metav1.OwnerReference{*ownerRef}
-			controllerutil.AddFinalizer(ns, kargoapi.FinalizerName)
-			if err = r.updateNamespaceFn(ctx, ns); err != nil {
-				return status, fmt.Errorf("error updating namespace %q: %w", project.Name, err)
-			}
-			logger.Debug("updated namespace with Project as owner")
-			return status, nil
-		}
-		status.Phase = kargoapi.ProjectPhaseInitializationFailed
-		return status, fmt.Errorf(
-			"failed to initialize Project %q because namespace %q already exists",
-			project.Name,
-			project.Name,
+		// If we get to here, the Project is not already an owner of the existing
+		// namespace.
+		logger.Debug(
+			"namespace exists, is not owned by this Project, but has the " +
+				"project label; Project will adopt it",
 		)
+		// Note: We allow multiple owners of a namespace due to the not entirely
+		// uncommon scenario where an organization has its own controller that
+		// creates and initializes namespaces to ensure compliance with
+		// internal policies. Such a controller might already own the namespace.
+		ns.OwnerReferences = append(ns.OwnerReferences, *ownerRef)
+		controllerutil.AddFinalizer(ns, kargoapi.FinalizerName)
+		if err = r.updateNamespaceFn(ctx, ns); err != nil {
+			return status, fmt.Errorf("error updating namespace %q: %w", project.Name, err)
+		}
+		logger.Debug("updated namespace with Project as owner")
+		return status, nil
 	}
-	if !kubeerr.IsNotFound(err) {
-		return status, fmt.Errorf("error getting namespace %q: %w", project.Name, err)
-	}
+
+	// If we get to here, we had a not found error and we can proceed with
+	// creating the namespace.
 
 	logger.Debug("namespace does not exist yet; creating namespace")
 
