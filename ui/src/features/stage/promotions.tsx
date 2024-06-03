@@ -161,6 +161,14 @@ export const Promotions = () => {
       dataIndex: ['metadata', 'name']
     },
     {
+      title: 'Approved by',
+      render: (_, promotion) => {
+        const annotation = promotion.metadata?.annotations['kargo.akuity.io/create-actor'];
+        const email = annotation ? annotation.split(':')[1] : 'N/A';
+        return email;
+      }
+    },
+    {
       title: 'Freight',
       render: (_, promotion) => (
         <Tooltip
