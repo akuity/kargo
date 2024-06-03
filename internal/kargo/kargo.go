@@ -118,6 +118,58 @@ func (p PromoWentTerminal[T]) Update(e event.TypedUpdateEvent[T]) bool {
 	return false
 }
 
+func NewPromoPhaseChangedPredicate(logger *logging.Logger) PromoPhaseChanged[*kargoapi.Promotion] {
+	return PromoPhaseChanged[*kargoapi.Promotion]{
+		logger: logger,
+	}
+}
+
+// PromoPhaseChanged is a predicate that returns true if the phase of a promotion
+// has changed. It can be used to trigger the reconciliation of an associated
+// object when the phase of a Promotion changes. A concrete example is to trigger
+// the reconciliation of a Stage when the phase of a Promotion for that Stage
+// changes, so that the Stage can update the last Promotion reference in its
+// status.
+type PromoPhaseChanged[T any] struct {
+	predicate.Funcs
+	logger *logging.Logger
+}
+
+func (p PromoPhaseChanged[T]) Create(event.TypedCreateEvent[T]) bool {
+	return false
+}
+
+func (p PromoPhaseChanged[T]) Delete(e event.TypedDeleteEvent[T]) bool {
+	promo := any(e.Object).(*kargoapi.Promotion) // nolint: forcetypeassert
+	// If a Promotion is deleted while it is non-terminal, we want to enqueue
+	// the associated Stage so that it can reset its status.currentPromotion.
+	return !promo.Status.Phase.IsTerminal()
+}
+
+func (p PromoPhaseChanged[T]) Generic(event.TypedGenericEvent[T]) bool {
+	return false
+}
+
+func (p PromoPhaseChanged[T]) Update(e event.TypedUpdateEvent[T]) bool {
+	oldPromo := any(e.ObjectOld).(*kargoapi.Promotion) // nolint: forcetypeassert
+	if oldPromo == nil {
+		p.logger.Error(
+			nil, "Update event has no old object for update",
+			"event", e,
+		)
+		return false
+	}
+	newPromo := any(e.ObjectNew).(*kargoapi.Promotion) // nolint: forcetypeassert
+	if newPromo == nil {
+		p.logger.Error(
+			nil, "Update event has no new object for update",
+			"event", e,
+		)
+		return false
+	}
+	return newPromo.Status.Phase != oldPromo.Status.Phase
+}
+
 // RefreshRequested is a predicate that returns true if the refresh annotation
 // has been set on a resource, or the value of the annotation has changed
 // compared to the previous state.

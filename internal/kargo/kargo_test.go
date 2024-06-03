@@ -11,6 +11,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/logging"
 )
 
 func TestNewPromotion(t *testing.T) {
@@ -71,6 +72,72 @@ func TestNewPromotion(t *testing.T) {
 			require.Equal(t, tc.freight, promo.Spec.Freight)
 			require.LessOrEqual(t, len(promo.Name), 253)
 			tc.assertions(t, tc.stage, promo)
+		})
+	}
+}
+
+func TestPromoPhaseChanged_Update(t *testing.T) {
+	tests := []struct {
+		name      string
+		oldObject *kargoapi.Promotion
+		newObject *kargoapi.Promotion
+		want      bool
+	}{
+		{
+			name:      "no old or new object",
+			oldObject: nil,
+			newObject: nil,
+			want:      false,
+		},
+		{
+			name:      "no old object",
+			oldObject: nil,
+			newObject: &kargoapi.Promotion{},
+			want:      false,
+		},
+		{
+			name:      "no new object",
+			oldObject: &kargoapi.Promotion{},
+			newObject: nil,
+			want:      false,
+		},
+		{
+			name: "no phase change",
+			oldObject: &kargoapi.Promotion{
+				Status: kargoapi.PromotionStatus{
+					Phase: kargoapi.PromotionPhasePending,
+				},
+			},
+			newObject: &kargoapi.Promotion{
+				Status: kargoapi.PromotionStatus{
+					Phase: kargoapi.PromotionPhasePending,
+				},
+			},
+			want: false,
+		},
+		{
+			name: "phase changed",
+			oldObject: &kargoapi.Promotion{
+				Status: kargoapi.PromotionStatus{
+					Phase: kargoapi.PromotionPhasePending,
+				},
+			},
+			newObject: &kargoapi.Promotion{
+				Status: kargoapi.PromotionStatus{
+					Phase: kargoapi.PromotionPhaseErrored,
+				},
+			},
+			want: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := NewPromoPhaseChangedPredicate(logging.NewLogger(logging.InfoLevel))
+			require.Equal(t, tt.want, p.Update(event.TypedUpdateEvent[*kargoapi.Promotion]{
+				ObjectOld: tt.oldObject,
+				ObjectNew: tt.newObject,
+			}))
 		})
 	}
 }

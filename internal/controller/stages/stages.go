@@ -343,20 +343,20 @@ func SetupReconcilerWithManager(
 	}
 
 	logger := logging.LoggerFromContext(ctx)
-	// Watch Promotions that completed and enqueue owning Stage key
+	// Watch Promotions for which the phase changed and enqueue owning Stage key
 	promoOwnerHandler := handler.TypedEnqueueRequestForOwner[*kargoapi.Promotion](
 		kargoMgr.GetScheme(),
 		kargoMgr.GetRESTMapper(),
 		&kargoapi.Stage{},
 		handler.OnlyControllerOwner(),
 	)
-	promoWentTerminal := kargo.NewPromoWentTerminalPredicate(logger)
-	if err := c.Watch(
+	promoPhaseChanged := kargo.NewPromoPhaseChangedPredicate(logger)
+	if err = c.Watch(
 		source.Kind(
 			kargoMgr.GetCache(),
 			&kargoapi.Promotion{},
 			promoOwnerHandler,
-			promoWentTerminal,
+			promoPhaseChanged,
 		),
 	); err != nil {
 		return fmt.Errorf("unable to watch Promotions: %w", err)
