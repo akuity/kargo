@@ -141,7 +141,7 @@ api:
     ## @param api.ingress.enabled Whether to enable ingress. By default, this is disabled. Enabling ingress is advanced usage.
     enabled: false
     ## @param api.ingress.annotations Annotations specified by your ingress controller to customize the behavior of the ingress resource.
-    annotations:
+    annotations: {}
       # kubernetes.io/ingress.class: nginx
     ## @param api.ingress.ingressClassName From Kubernetes 1.18+, this field is supported if implemented by your ingress controller. When set, you do not need to add the ingress class as annotation.
     ingressClassName:
