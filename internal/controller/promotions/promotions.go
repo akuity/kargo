@@ -445,16 +445,6 @@ func (r *reconciler) promote(
 		Charts:    targetFreight.Charts,
 		Warehouse: targetFreight.Warehouse,
 	}
-	err = kubeclient.PatchStatus(ctx, r.kargoClient, stage, func(status *kargoapi.StageStatus) {
-		status.Phase = kargoapi.StagePhasePromoting
-		status.CurrentPromotion = &kargoapi.PromotionInfo{
-			Name:    promo.Name,
-			Freight: targetFreightRef,
-		}
-	})
-	if err != nil {
-		return nil, err
-	}
 
 	newStatus, nextFreight, err := r.promoMechanisms.Promote(ctx, stage, &promo, targetFreightRef)
 	if err != nil {
@@ -464,46 +454,23 @@ func (r *reconciler) promote(
 
 	logger.Debug("promotion", "phase", newStatus.Phase)
 
-	if newStatus.Phase.IsTerminal() {
-		// The assumption is that controller does not process multiple promotions in one stage
-		// so we are safe from race conditions and can just update the status
-		// TODO: remove all patching of Stage status out of promo reconciler
-		if err = kubeclient.PatchStatus(ctx, r.kargoClient, stage, func(status *kargoapi.StageStatus) {
-			status.LastPromotion = status.CurrentPromotion
-			status.LastPromotion.Status = newStatus
-			if newStatus.Phase == kargoapi.PromotionPhaseSucceeded {
-				// Handle specific things that need to happen on success.
-				// 1. Trigger re-verification for re-promotions.
-				// 2. Otherwise, update the current freight and history.
-				// 3. Update the phase to Verifying and clear the current promotion.
-				if status.CurrentFreight != nil &&
-					status.CurrentFreight.Name == targetFreight.Name {
-					if err = kargoapi.ReverifyStageFreight(
-						ctx,
-						r.kargoClient,
-						types.NamespacedName{
-							Namespace: stageNamespace,
-							Name:      stageName,
-						},
-					); err != nil {
-						// Log the error, but don't let failure to initiate re-verification
-						// prevent the promotion from succeeding.
-						logger.Error(err, "error triggering re-verification")
-					}
-				} else if stage.Spec.PromotionMechanisms != nil {
-					status.CurrentFreight = &nextFreight
-					status.History.UpdateOrPush(nextFreight)
-				}
-				status.Phase = kargoapi.StagePhaseVerifying
-				status.CurrentPromotion = nil
+	if newStatus.Phase == kargoapi.PromotionPhaseSucceeded {
+		// Trigger re-verification of the Stage if the promotion succeeded and
+		// this is a re-promotion of the same Freight.
+		curFreight := stage.Status.CurrentFreight
+		if curFreight != nil && curFreight.Name == targetFreight.Name && curFreight.VerificationInfo != nil {
+			if err = kargoapi.ReverifyStageFreight(
+				ctx,
+				r.kargoClient,
+				types.NamespacedName{
+					Namespace: stageNamespace,
+					Name:      stageName,
+				},
+			); err != nil {
+				// Log the error, but don't let failure to initiate re-verification
+				// prevent the promotion from succeeding.
+				logger.Error(err, "error triggering re-verification")
 			}
-		}); err != nil {
-			return nil, fmt.Errorf(
-				"error updating status of Stage %q in namespace %q: %w",
-				stageName,
-				stageNamespace,
-				err,
-			)
 		}
 	}
 

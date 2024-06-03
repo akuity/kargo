@@ -556,9 +556,16 @@ type FreightReference struct {
 
 type FreightReferenceStack []FreightReference
 
-// UpdateOrPush updates the FreightReference with the same name as the provided
-// FreightReference or appends the provided FreightReference to the stack if no
-// such FreightReference is found.
+// Push appends the provided FreightReference to the top of the stack. If the
+// stack grows beyond 10 items, the bottom items are removed.
+func (f *FreightReferenceStack) Push(freight ...FreightReference) {
+	*f = append(freight, *f...)
+	f.truncate()
+}
+
+// UpdateOrPush updates the first FreightReference with the same name as the
+// provided FreightReference or appends the provided FreightReference to the
+// stack if no such FreightReference is found.
 //
 // The order of existing items in the stack is preserved, and new items without
 // a matching name are appended to the top of the stack. If the stack grows
@@ -580,7 +587,10 @@ func (f *FreightReferenceStack) UpdateOrPush(freight ...FreightReference) {
 	}
 
 	*f = append(newStack, *f...)
+	f.truncate()
+}
 
+func (f *FreightReferenceStack) truncate() {
 	const maxSize = 10
 	if len(*f) > maxSize {
 		*f = (*f)[:maxSize]
