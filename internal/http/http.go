@@ -20,3 +20,11 @@ func SetNoCacheHeaders(w http.ResponseWriter) {
 		w.Header().Set(k, v)
 	}
 }
+
+func SetCacheHeaders(w http.ResponseWriter, maxAge time.Duration, timeUntilExpiry time.Duration) {
+	if w == nil {
+		return
+	}
+	w.Header().Set("Cache-Control", "public, max-age="+maxAge.String())
+	w.Header().Set("Expires", time.Now().Add(timeUntilExpiry).Format(time.RFC1123))
+}
