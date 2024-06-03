@@ -151,11 +151,17 @@ export const CreateFreight = ({
           info: item
         }
       });
-    } else {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { [selected.repoURL as string]: _, ...rest } = chosenItems;
-      setChosenItems(rest);
     }
+  }
+
+  for (const image of images) {
+    select(image.references[0]);
+  }
+  for (const chart of charts) {
+    select(chart.versions[0]);
+  }
+  for (const repo of git) {
+    select(repo.commits[0]);
   }
 
   const DiscoveryTable = () => {

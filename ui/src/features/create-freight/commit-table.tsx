@@ -1,4 +1,4 @@
-import { Checkbox, Table } from 'antd';
+import { Radio, Table } from 'antd';
 
 import { DiscoveredCommit } from '@ui/gen/v1alpha1/generated_pb';
 
@@ -20,7 +20,7 @@ export const CommitTable = ({
         columns={[
           {
             render: (record: DiscoveredCommit) => (
-              <Checkbox
+              <Radio
                 checked={selected === record}
                 onClick={() => select(selected === record ? undefined : record)}
               />

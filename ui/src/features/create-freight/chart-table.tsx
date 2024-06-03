@@ -1,4 +1,4 @@
-import { Checkbox, Table } from 'antd';
+import { Radio, Table } from 'antd';
 
 export const ChartTable = ({
   versions,
@@ -16,7 +16,7 @@ export const ChartTable = ({
         {
           width: '50px',
           render: (record: { version: string }) => (
-            <Checkbox
+            <Radio
               checked={selected === record.version}
               onClick={() => select(selected === record.version ? undefined : record.version)}
             />
