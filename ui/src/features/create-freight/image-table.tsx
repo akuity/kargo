@@ -1,6 +1,6 @@
 import { faQuestionCircle } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Checkbox, Table } from 'antd';
+import { Radio, Table } from 'antd';
 
 import { DiscoveredImageReference } from '@ui/gen/v1alpha1/generated_pb';
 
@@ -21,7 +21,7 @@ export const ImageTable = ({
       columns={[
         {
           render: (record: DiscoveredImageReference) => (
-            <Checkbox
+            <Radio
               checked={selected?.tag === record?.tag}
               onClick={() => select(selected === record ? undefined : record)}
             />

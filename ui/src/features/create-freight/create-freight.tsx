@@ -89,12 +89,6 @@ export const CreateFreight = ({
 }) => {
   const { name: project } = useParams();
   const [selected, setSelected] = useState<DiscoveryResult>();
-  const [chosenItems, setChosenItems] = useState<{
-    [key: string]: {
-      artifact: DiscoveryResult;
-      info: FreightInfo;
-    };
-  }>({});
 
   const { mutate } = useMutation(createResource, {
     onSuccess: () => {
@@ -108,10 +102,11 @@ export const CreateFreight = ({
 
   // a map of artifact identifiers to freight info
   // contains freight info for all artifacts selected to be included in the new freight
-  const [images, charts, git] = useMemo(() => {
+  const [images, charts, git, init] = useMemo(() => {
     let images: ImageDiscoveryResult[] = [];
     let charts: ChartDiscoveryResult[] = [];
     let git: GitDiscoveryResult[] = [];
+    const init = {} as { [key: string]: { artifact: DiscoveryResult; info: FreightInfo } };
 
     if (!warehouse) {
       return [images, charts, git];
@@ -136,8 +131,36 @@ export const CreateFreight = ({
       }
     }
 
-    return [images, charts, git];
+    for (const image of images) {
+      init[image.repoURL as string] = {
+        artifact: image,
+        info: image.references[0]
+      };
+    }
+
+    for (const chart of charts) {
+      init[chart.repoURL as string] = {
+        artifact: chart,
+        info: chart.versions[0]
+      };
+    }
+
+    for (const commit of git) {
+      init[commit.repoURL as string] = {
+        artifact: commit,
+        info: commit.commits[0]
+      };
+    }
+
+    return [images, charts, git, init];
   }, [warehouse]);
+
+  const [chosenItems, setChosenItems] = useState<{
+    [key: string]: {
+      artifact: DiscoveryResult;
+      info: FreightInfo;
+    };
+  }>(init || {});
 
   function select<T extends FreightInfo>(item?: T) {
     if (!selected) {
@@ -151,10 +174,6 @@ export const CreateFreight = ({
           info: item
         }
       });
-    } else {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { [selected.repoURL as string]: _, ...rest } = chosenItems;
-      setChosenItems(rest);
     }
   }
 
