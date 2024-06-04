@@ -74,7 +74,7 @@ func TestListPromotions(t *testing.T) {
 				require.Nil(t, r)
 			},
 		},
-		"order by ULID": {
+		"orders by ULID and phase": {
 			req: &svcv1alpha1.ListPromotionsRequest{
 				Project: "kargo-demo",
 			},
@@ -85,11 +85,17 @@ func TestListPromotions(t *testing.T) {
 						Name:      oldestPromotionName,
 						Namespace: "kargo-demo",
 					},
+					Status: kargoapi.PromotionStatus{
+						Phase: kargoapi.PromotionPhaseRunning,
+					},
 				},
 				&kargoapi.Promotion{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      newPromotionName,
 						Namespace: "kargo-demo",
+					},
+					Status: kargoapi.PromotionStatus{
+						Phase: kargoapi.PromotionPhaseSucceeded,
 					},
 				},
 				&kargoapi.Promotion{
@@ -97,11 +103,17 @@ func TestListPromotions(t *testing.T) {
 						Name:      olderPromotionName,
 						Namespace: "kargo-demo",
 					},
+					Status: kargoapi.PromotionStatus{
+						Phase: kargoapi.PromotionPhaseFailed,
+					},
 				},
 				&kargoapi.Promotion{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      oldPromotionName,
 						Namespace: "kargo-demo",
+					},
+					Status: kargoapi.PromotionStatus{
+						Phase: kargoapi.PromotionPhasePending,
 					},
 				},
 			},
@@ -110,11 +122,11 @@ func TestListPromotions(t *testing.T) {
 				require.NotNil(t, r)
 				require.Len(t, r.Msg.GetPromotions(), 4)
 
-				// Check that the analysis templates are ordered by time.
-				require.Equal(t, newPromotionName, r.Msg.GetPromotions()[0].GetName())
+				// Check that the analysis templates are ordered by ULID and phase.
+				require.Equal(t, oldestPromotionName, r.Msg.GetPromotions()[0].GetName())
 				require.Equal(t, oldPromotionName, r.Msg.GetPromotions()[1].GetName())
-				require.Equal(t, olderPromotionName, r.Msg.GetPromotions()[2].GetName())
-				require.Equal(t, oldestPromotionName, r.Msg.GetPromotions()[3].GetName())
+				require.Equal(t, newPromotionName, r.Msg.GetPromotions()[2].GetName())
+				require.Equal(t, olderPromotionName, r.Msg.GetPromotions()[3].GetName())
 			},
 		},
 	}
