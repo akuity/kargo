@@ -54,7 +54,7 @@ helm.sh/chart: {{ include "kargo.chart" . }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
-{{- with (mergeOverwrite .Values.additionalLabels .Values.global.additionalLabels) }}
+{{- with .Values.global.labels }}
 {{ toYaml . }}
 {{- end }}
 {{- end -}}

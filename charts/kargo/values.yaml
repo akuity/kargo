@@ -86,10 +86,6 @@ kubeconfigSecrets: {}
   ## @param kubeconfigSecrets.argocd [nullable] Kubernetes `Secret` name containing kubeconfig for a remote Kubernetes cluster hosting Argo CD resources. Used by Kargo controller(s) only.
   # argocd: ""
 
-## @skip additionalLabels Deprecated, use `global.additionalLabels` instead.
-additionalLabels: {}
-  # my-label: my-value
-
 ## @section API
 api:
   ## @param api.enabled Whether the API server is enabled.
