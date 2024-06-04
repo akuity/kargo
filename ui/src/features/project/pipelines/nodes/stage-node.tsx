@@ -13,6 +13,7 @@ import { generatePath, useNavigate } from 'react-router-dom';
 import { paths } from '@ui/config/paths';
 import { FreightLabel } from '@ui/features/common/freight-label';
 import { HealthStatusIcon } from '@ui/features/common/health-status/health-status-icon';
+import { PromotionStatusIcon } from '@ui/features/common/promotion-status/promotion-status-icon';
 import { Freight, Stage } from '@ui/gen/v1alpha1/generated_pb';
 
 import { FreightlineAction } from '../types';
@@ -74,8 +75,18 @@ export const StageNode = ({
           position: 'relative'
         }}
       >
-        <h3 className='flex items-center text-white justify-between'>
-          <div className='truncate pb-1'>{stage.metadata?.name}</div>
+        <h3 className='flex items-center text-white'>
+          <div className='truncate pb-1 mr-auto'>{stage.metadata?.name}</div>
+          {!stage?.status?.currentPromotion && stage.status?.lastPromotion && (
+            <div className='pb-1 mr-2'>
+              <PromotionStatusIcon
+                placement='top'
+                status={stage.status?.lastPromotion.status}
+                color='white'
+                size='1x'
+              />
+            </div>
+          )}
           <div className='pb-1'>
             {stage.status?.currentPromotion ? (
               <Tooltip
