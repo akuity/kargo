@@ -2,8 +2,8 @@ apiVersion: v2
 name: kargo
 description: Kargo
 type: application
-version: 0.1.1
-appVersion: v0.6.0
+version: 0.1.0
+appVersion: v0.1.0
 sources:
 - https://github.com/akuity/kargo
 maintainers:
