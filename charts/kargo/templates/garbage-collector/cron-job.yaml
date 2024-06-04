@@ -21,7 +21,9 @@ spec:
       labels:
         {{- include "kargo.labels" . | nindent 8 }}
         {{- include "kargo.garbageCollector.labels" . | nindent 8 }}
-        {{- include "kargo.garbageCollector.podLabels" . | nindent 8 }}
+        {{- with .Values.garbageCollector.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
       annotations:
         configmap/checksum: {{ pick ( include (print $.Template.BasePath "/garbage-collector/configmap.yaml") . | fromYaml ) "data" | toYaml | sha256sum }}
     spec:

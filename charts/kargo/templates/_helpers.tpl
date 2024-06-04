@@ -71,12 +71,6 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 app.kubernetes.io/component: api
 {{- end -}}
 
-{{- define "kargo.api.podLabels" -}}
-{{- with .Values.api.podLabels }}
-{{- toYaml . }}
-{{- end }}
-{{- end -}}
-
 {{- define "kargo.controller.labels" -}}
 app.kubernetes.io/component: controller
 {{- end -}}
@@ -89,20 +83,8 @@ app.kubernetes.io/component: dex-server
 app.kubernetes.io/component: garbage-collector
 {{- end -}}
 
-{{- define "kargo.garbageCollector.podLabels" -}}
-{{- with .Values.garbageCollector.podLabels }}
-{{- toYaml . }}
-{{- end }}
-{{- end -}}
-
 {{- define "kargo.managementController.labels" -}}
 app.kubernetes.io/component: management-controller
-{{- end -}}
-
-{{- define "kargo.managementController.podLabels" -}}
-{{- with .Values.managementController.podLabels }}
-{{- toYaml . }}
-{{- end }}
 {{- end -}}
 
 {{- define "kargo.webhooksServer.labels" -}}

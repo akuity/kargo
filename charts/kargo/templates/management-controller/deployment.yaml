@@ -26,7 +26,9 @@ spec:
       labels:
         {{- include "kargo.selectorLabels" . | nindent 8 }}
         {{- include "kargo.managementController.labels" . | nindent 8 }}
-        {{- include "kargo.managementController.podLabels" . | nindent 8 }}
+        {{- with .Values.managementController.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
       annotations:
         configmap/checksum: {{ pick ( include (print $.Template.BasePath "/management-controller/configmap.yaml") . | fromYaml ) "data" | toYaml | sha256sum }}
     spec:
