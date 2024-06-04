@@ -24,8 +24,6 @@ import { KargoService } from '@ui/gen/service/v1alpha1/service_connect';
 import { ListPromotionsResponse } from '@ui/gen/service/v1alpha1/service_pb';
 import { Freight, Promotion } from '@ui/gen/v1alpha1/generated_pb';
 
-import { sortPromotions } from './utils/sort';
-
 export const Promotions = () => {
   const client = useQueryClient();
   const { name: projectName, stageName } = useParams();
@@ -95,7 +93,7 @@ export const Promotions = () => {
 
   const promotions = React.useMemo(() => {
     // Immutable sorting
-    return [...(promotionsResponse?.promotions || [])].sort(sortPromotions);
+    return [...(promotionsResponse?.promotions || [])];
   }, [promotionsResponse]);
 
   const columns: ColumnsType<Promotion> = [
