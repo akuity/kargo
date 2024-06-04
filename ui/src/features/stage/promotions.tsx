@@ -1,14 +1,7 @@
 import { createPromiseClient } from '@connectrpc/connect';
 import { createConnectQueryKey, useQuery } from '@connectrpc/connect-query';
-import {
-  faCircleCheck,
-  faCircleExclamation,
-  faCircleNotch,
-  faHourglassStart
-} from '@fortawesome/free-solid-svg-icons';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useQueryClient } from '@tanstack/react-query';
-import { Popover, Spin, Table, Tooltip, theme } from 'antd';
+import { Spin, Table, Tooltip } from 'antd';
 import { ColumnsType } from 'antd/es/table';
 import { format } from 'date-fns';
 import React, { useEffect, useState } from 'react';
@@ -23,6 +16,8 @@ import {
 import { KargoService } from '@ui/gen/service/v1alpha1/service_connect';
 import { ListPromotionsResponse } from '@ui/gen/service/v1alpha1/service_pb';
 import { Freight, Promotion } from '@ui/gen/v1alpha1/generated_pb';
+
+import { PromotionStatusIcon } from '../common/promotion-status/promotion-status-icon';
 
 export const Promotions = () => {
   const client = useQueryClient();
@@ -100,52 +95,7 @@ export const Promotions = () => {
     {
       title: '',
       width: 24,
-      render: (_, promotion) => {
-        switch (promotion.status?.phase) {
-          case 'Succeeded':
-            return (
-              <Popover
-                content={promotion.status?.message}
-                title={promotion.status?.phase}
-                placement='right'
-              >
-                <FontAwesomeIcon
-                  color={theme.defaultSeed.colorSuccess}
-                  icon={faCircleCheck}
-                  size='lg'
-                />
-              </Popover>
-            );
-          case 'Failed':
-          case 'Errored':
-            return (
-              <Popover
-                content={promotion.status?.message}
-                title={promotion.status?.phase}
-                placement='right'
-              >
-                <FontAwesomeIcon
-                  color={theme.defaultSeed.colorError}
-                  icon={faCircleExclamation}
-                  size='lg'
-                />
-              </Popover>
-            );
-          case 'Running':
-            return (
-              <Tooltip title={promotion.status?.phase} placement='right'>
-                <FontAwesomeIcon icon={faCircleNotch} spin size='lg' />
-              </Tooltip>
-            );
-          case 'Pending':
-          default:
-            return (
-              <Tooltip title='Pending' placement='right'>
-                <FontAwesomeIcon color='#aaa' icon={faHourglassStart} size='lg' />
-              </Tooltip>
-            );
-        }
-      }
+      render: (_, promotion) => <PromotionStatusIcon status={promotion?.status} />
     },
     {
       title: 'Date',
