@@ -36,7 +36,6 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.9.0
 	github.com/technosophos/moniker v0.0.0-20210218184952-3ea787d3943b
-	github.com/withfig/autocomplete-tools/integrations/cobra v1.2.1
 	go.uber.org/ratelimit v0.3.1
 	golang.org/x/crypto v0.23.0
 	golang.org/x/net v0.25.0
