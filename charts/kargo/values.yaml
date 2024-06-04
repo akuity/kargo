@@ -17,10 +17,16 @@ global:
   #      name: secret-name
   ## @param global.nodeSelector Default node selector for all Kargo pods.
   nodeSelector: {}
+
   ## @param global.labels Labels to add to all resources.
   labels: {}
   ## @param global.annotations Annotations to add to all resources.
   annotations: {}
+  ## @param global.podLabels Labels to add to all pods.
+  podLabels: {}
+  ## @param global.podAnnotations Annotations to add to pods.
+  podAnnotations: {}
+
   ## @param global.tolerations Default tolerations for all Kargo pods.
   tolerations: []
   ## @param global.affinity Default affinity for all Kargo pods.
@@ -101,7 +107,7 @@ api:
   annotations: {}
   ## @param api.podLabels Optional labels to add to pods. Merges with `global.podLabels`, allowing you to override or add to the global labels.
   podLabels: {}
-  ## @param api.Annotations Optional annotations to add to pods. Merges with `global.podAnnotations`, allowing you to override or add to the global annotations.
+  ## @param api.podAnnotations Optional annotations to add to pods. Merges with `global.podAnnotations`, allowing you to override or add to the global annotations.
   podAnnotations: {}
 
   ## @param api.resources Resources limits and requests for the api containers.
@@ -332,7 +338,7 @@ controller:
   annotations: {}
   ## @param controller.podLabels Optional labels to add to pods. Merges with `global.podLabels`, allowing you to override or add to the global labels.
   podLabels: {}
-  ## @param controller.Annotations Optional annotations to add to pods. Merges with `global.podAnnotations`, allowing you to override or add to the global annotations.
+  ## @param controller.podAnnotations Optional annotations to add to pods. Merges with `global.podAnnotations`, allowing you to override or add to the global annotations.
   podAnnotations: {}
 
   ## All settings relating to shared credentials (used across multiple kargo projects)
@@ -419,7 +425,7 @@ managementController:
   annotations: {}
   ## @param managementController.podLabels Optional labels to add to pods. Merges with `global.podLabels`, allowing you to override or add to the global labels.
   podLabels: {}
-  ## @param managementController.Annotations Optional annotations to add to pods. Merges with `global.podAnnotations`, allowing you to override or add to the global annotations.
+  ## @param managementController.podAnnotations Optional annotations to add to pods. Merges with `global.podAnnotations`, allowing you to override or add to the global annotations.
   podAnnotations: {}
 
   ## @param managementController.securityContext Security context for management controller pods. Defaults to `global.securityContext`.
@@ -472,7 +478,7 @@ webhooksServer:
   annotations: {}
   ## @param webhooksServer.podLabels Optional labels to add to pods. Merges with `global.podLabels`, allowing you to override or add to the global labels.
   podLabels: {}
-  ## @param webhooksServer.Annotations Optional annotations to add to pods. Merges with `global.podAnnotations`, allowing you to override or add to the global annotations.
+  ## @param webhooksServer.podAnnotations Optional annotations to add to pods. Merges with `global.podAnnotations`, allowing you to override or add to the global annotations.
   podAnnotations: {}
 
   tls:
@@ -530,7 +536,7 @@ garbageCollector:
   annotations: {}
   ## @param garbageCollector.podLabels Optional labels to add to pods. Merges with `global.podLabels`, allowing you to override or add to the global labels.
   podLabels: {}
-  ## @param garbageCollector.Annotations Optional annotations to add to pods. Merges with `global.podAnnotations`, allowing you to override or add to the global annotations.
+  ## @param garbageCollector.podAnnotations Optional annotations to add to pods. Merges with `global.podAnnotations`, allowing you to override or add to the global annotations.
   podAnnotations: {}
 
   ## @param garbageCollector.resources Resources limits and requests for the garbage collector containers.
