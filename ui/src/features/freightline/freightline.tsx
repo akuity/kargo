@@ -132,6 +132,7 @@ export const Freightline = ({
                       state.select(FreightlineAction.ManualApproval, undefined, id);
                     }}
                     refetchFreight={refetchFreight}
+                    inUse={stagesPerFreight[id]?.length > 0}
                   />
                 )}
                 <StageIndicators
