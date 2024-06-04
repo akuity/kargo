@@ -3,7 +3,9 @@ package v1alpha1
 import (
 	"context"
 	"testing"
+	"time"
 
+	"github.com/oklog/ulid/v2"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
@@ -59,6 +61,227 @@ func TestGetPromotion(t *testing.T) {
 				},
 			)
 			testCase.assertions(t, promo, err)
+		})
+	}
+}
+
+func Test_ComparePromotionByPhaseAndCreationTime(t *testing.T) {
+	now := time.Date(2024, time.April, 10, 0, 0, 0, 0, time.UTC)
+	ulidEarlier := ulid.MustNew(ulid.Timestamp(now.Add(-time.Hour)), nil)
+	ulidLater := ulid.MustNew(ulid.Timestamp(now.Add(time.Hour)), nil)
+
+	tests := []struct {
+		name     string
+		a        Promotion
+		b        Promotion
+		expected int
+	}{
+		{
+			name: "Running before Terminated",
+			a: Promotion{
+				Status: PromotionStatus{
+					Phase: PromotionPhaseRunning,
+				},
+			},
+			b: Promotion{
+				Status: PromotionStatus{
+					Phase: PromotionPhaseSucceeded,
+				},
+			},
+			expected: -1,
+		},
+		{
+			name: "Pending before Terminated",
+			a: Promotion{
+				Status: PromotionStatus{
+					Phase: PromotionPhasePending,
+				},
+			},
+			b: Promotion{
+				Status: PromotionStatus{
+					Phase: PromotionPhaseSucceeded,
+				},
+			},
+			expected: -1,
+		},
+		{
+			name: "Pending after Running",
+			a: Promotion{
+				Status: PromotionStatus{
+					Phase: PromotionPhasePending,
+				},
+			},
+			b: Promotion{
+				Status: PromotionStatus{
+					Phase: PromotionPhaseRunning,
+				},
+			},
+			expected: 1,
+		},
+		{
+			name: "Terminated after Running",
+			a: Promotion{
+				Status: PromotionStatus{
+					Phase: PromotionPhaseFailed,
+				},
+			},
+			b: Promotion{
+				Status: PromotionStatus{
+					Phase: PromotionPhaseRunning,
+				},
+			},
+			expected: 1,
+		},
+		{
+			name: "Earlier ULID first if both Running",
+			a: Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "promotion." + ulidEarlier.String(),
+				},
+				Status: PromotionStatus{
+					Phase: PromotionPhaseRunning,
+				},
+			},
+			b: Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "promotion." + ulidLater.String(),
+				},
+				Status: PromotionStatus{
+					Phase: PromotionPhaseRunning,
+				},
+			},
+			expected: -1,
+		},
+		{
+			name: "Later ULID first if both Terminated",
+			a: Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "promotion." + ulidLater.String(),
+				},
+				Status: PromotionStatus{
+					Phase: PromotionPhaseErrored,
+				},
+			},
+			b: Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "promotion." + ulidEarlier.String(),
+				},
+				Status: PromotionStatus{
+					Phase: PromotionPhaseSucceeded,
+				},
+			},
+			expected: -1,
+		},
+		{
+			name: "Equal promotions",
+			a: Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:              "promotion-a",
+					CreationTimestamp: metav1.Time{Time: now},
+				},
+				Status: PromotionStatus{
+					Phase: PromotionPhasePending,
+				},
+			},
+			b: Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:              "promotion-a",
+					CreationTimestamp: metav1.Time{Time: now},
+				},
+				Status: PromotionStatus{
+					Phase: PromotionPhasePending,
+				},
+			},
+			expected: 0,
+		},
+		{
+			name: "Nil creation timestamps",
+			a: Promotion{
+				Status: PromotionStatus{
+					Phase: PromotionPhasePending,
+				},
+			},
+			b: Promotion{
+				Status: PromotionStatus{
+					Phase: PromotionPhasePending,
+				},
+			},
+			expected: 0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := ComparePromotionByPhaseAndCreationTime(tt.a, tt.b)
+			require.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestComparePromotionPhase(t *testing.T) {
+	tests := []struct {
+		name     string
+		a        PromotionPhase
+		b        PromotionPhase
+		expected int
+	}{
+		{
+			name:     "Running before Terminated",
+			a:        PromotionPhaseRunning,
+			b:        PromotionPhaseSucceeded,
+			expected: -1,
+		},
+		{
+			name:     "Terminated after Running",
+			a:        PromotionPhaseFailed,
+			b:        PromotionPhaseRunning,
+			expected: 1,
+		},
+		{
+			name:     "Running before other phase",
+			a:        PromotionPhaseRunning,
+			b:        PromotionPhasePending,
+			expected: -1,
+		},
+		{
+			name:     "Other phase after Running",
+			a:        "",
+			b:        PromotionPhaseRunning,
+			expected: 1,
+		},
+		{
+			name:     "Pending before Terminated",
+			a:        PromotionPhasePending,
+			b:        PromotionPhaseErrored,
+			expected: -1,
+		},
+		{
+			name:     "Pending after Running",
+			a:        PromotionPhasePending,
+			b:        PromotionPhaseRunning,
+			expected: 1,
+		},
+		{
+			name:     "Equal Running phases",
+			a:        PromotionPhaseRunning,
+			b:        PromotionPhaseRunning,
+			expected: 0,
+		},
+		{
+			name: "Equal Terminated phases",
+			a:    PromotionPhaseSucceeded,
+			b:    PromotionPhaseFailed,
+		},
+		{
+			name:     "Equal other phases",
+			a:        PromotionPhasePending,
+			b:        PromotionPhasePending,
+			expected: 0,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.expected, ComparePromotionPhase(tt.a, tt.b))
 		})
 	}
 }
