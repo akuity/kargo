@@ -5,16 +5,18 @@
 
 ### Global Parameters
 
-| Name                      | Description                                                                | Value |
-| ------------------------- | -------------------------------------------------------------------------- | ----- |
-| `global.additionalLabels` | Additional labels to add to all resources.                                 | `{}`  |
-| `global.env`              | Environment variables to add to all Kargo pods.                            | `[]`  |
-| `global.envFrom`          | Environment variables to add to all Kargo pods from ConfigMaps or Secrets. | `[]`  |
-| `global.nodeSelector`     | Default node selector for all Kargo pods.                                  | `{}`  |
-| `global.annotations`      | Default annotations for all Kargo pods.                                    | `{}`  |
-| `global.tolerations`      | Default tolerations for all Kargo pods.                                    | `[]`  |
-| `global.affinity`         | Default affinity for all Kargo pods.                                       | `{}`  |
-| `global.securityContext`  | Default security context for all Kargo pods.                               | `{}`  |
+| Name                     | Description                                                                | Value |
+| ------------------------ | -------------------------------------------------------------------------- | ----- |
+| `global.env`             | Environment variables to add to all Kargo pods.                            | `[]`  |
+| `global.envFrom`         | Environment variables to add to all Kargo pods from ConfigMaps or Secrets. | `[]`  |
+| `global.nodeSelector`    | Default node selector for all Kargo pods.                                  | `{}`  |
+| `global.labels`          | Labels to add to all resources.                                            | `{}`  |
+| `global.annotations`     | Annotations to add to all resources.                                       | `{}`  |
+| `global.podLabels`       | Labels to add to all pods.                                                 | `{}`  |
+| `global.podAnnotations`  | Annotations to add to all pods.                                            | `{}`  |
+| `global.tolerations`     | Default tolerations for all Kargo pods.                                    | `[]`  |
+| `global.affinity`        | Default affinity for all Kargo pods.                                       | `{}`  |
+| `global.securityContext` | Default security context for all Kargo pods.                               | `{}`  |
 
 ### Image Parameters
 
@@ -215,4 +217,3 @@ the Kargo controller is running.
 | `garbageCollector.securityContext`         | Security context for garbage collector pods. Defaults to `global.securityContext`.                                                                                                                                                                                                                                        | `{}`        |
 | `garbageCollector.env`                     | Environment variables to add to garbage collector pods.                                                                                                                                                                                                                                                                   | `[]`        |
 | `garbageCollector.envFrom`                 | Environment variables to add to garbage collector pods from ConfigMaps or Secrets.                                                                                                                                                                                                                                        | `[]`        |
-

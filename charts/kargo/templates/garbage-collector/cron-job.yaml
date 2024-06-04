@@ -7,6 +7,11 @@ metadata:
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
     {{- include "kargo.garbageCollector.labels" . | nindent 4 }}
+  {{- with (mergeOverwrite (deepCopy .Values.global.labels) .Values.garbageCollector.labels) }}
+    {{- range $key, $value := . }}
+    {{ $key }}: {{ $value | quote }}
+    {{- end }}
+  {{- end }}
   {{- with (mergeOverwrite (deepCopy .Values.global.annotations) .Values.garbageCollector.annotations) }}
   annotations:
     {{- range $key, $value := . }}
@@ -21,11 +26,18 @@ spec:
       labels:
         {{- include "kargo.labels" . | nindent 8 }}
         {{- include "kargo.garbageCollector.labels" . | nindent 8 }}
-        {{- with .Values.garbageCollector.podLabels }}
-        {{- toYaml . | nindent 8 }}
+      {{- with (mergeOverwrite (deepCopy .Values.global.podLabels) .Values.garbageCollector.podLabels) }}
+        {{- range $key, $value := . }}
+        {{ $key }}: {{ $value | quote }}
         {{- end }}
+      {{- end }}
       annotations:
         configmap/checksum: {{ pick ( include (print $.Template.BasePath "/garbage-collector/configmap.yaml") . | fromYaml ) "data" | toYaml | sha256sum }}
+      {{- with (mergeOverwrite (deepCopy .Values.global.podAnnotations) .Values.garbageCollector.podAnnotations) }}
+        {{- range $key, $value := . }}
+        {{ $key }}: {{ $value | quote }}
+        {{- end }}
+      {{- end }}
     spec:
       template:
         spec:
