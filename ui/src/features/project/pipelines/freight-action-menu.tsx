@@ -3,7 +3,8 @@ import {
   faClipboard,
   faCopy,
   faEllipsisV,
-  faPencil
+  faPencil,
+  faTrashAlt
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Dropdown, message } from 'antd';
@@ -12,18 +13,21 @@ import { useModal } from '@ui/features/common/modal/use-modal';
 import { getAlias } from '@ui/features/common/utils';
 import { Freight } from '@ui/gen/v1alpha1/generated_pb';
 
+import { DeleteFreightModal } from './delete-freight-modal';
 import { UpdateFreightAliasModal } from './update-freight-alias-modal';
 
 export const FreightActionMenu = ({
   freight,
   approveAction,
   refetchFreight,
-  hide
+  hide,
+  inUse
 }: {
   freight: Freight;
   approveAction: () => void;
   refetchFreight: () => void;
   hide?: boolean;
+  inUse?: boolean;
 }) => {
   const { show } = useModal();
 
@@ -90,6 +94,27 @@ export const FreightActionMenu = ({
                   freight={freight || undefined}
                   project={freight?.metadata?.namespace || ''}
                   onSubmit={() => {
+                    refetchFreight();
+                    p.hide();
+                  }}
+                />
+              ));
+            }
+          },
+          {
+            key: '5',
+            disabled: inUse,
+            label: (
+              <>
+                <FontAwesomeIcon icon={faTrashAlt} className='mr-2' /> Delete
+              </>
+            ),
+            onClick: () => {
+              show((p) => (
+                <DeleteFreightModal
+                  {...p}
+                  freight={freight}
+                  onDelete={() => {
                     refetchFreight();
                     p.hide();
                   }}
