@@ -4,7 +4,6 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
-	cobracompletefig "github.com/withfig/autocomplete-tools/integrations/cobra"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 
 	"github.com/akuity/kargo/internal/cli/cmd/apply"
@@ -60,13 +59,6 @@ func NewRootCommand(cfg clicfg.CLIConfig) *cobra.Command {
 	cmd.AddCommand(verify.NewCommand(cfg))
 	cmd.AddCommand(version.NewCommand(cfg, streams))
 	cmd.AddCommand(server.NewCommand())
-	cmd.AddCommand(
-		cobracompletefig.CreateCompletionSpecCommand(
-			cobracompletefig.Opts{
-				Use: "fig",
-			},
-		),
-	)
 
 	return cmd
 }
