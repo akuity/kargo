@@ -294,24 +294,6 @@ jobs:
           --distribution-id="${CF_DISTRIBUTION_ID}" \
           --paths "/kargo-cli/unstable.txt"
 
-  push-fig-autocomplete-spec:
-    needs: [publish-cli]
-    if: github.event_name == 'release'
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/setup-node@v4
-    - name: Generate the spec
-      run: |
-        curl -L https://github.com/akuity/kargo/releases/download/${{ github.ref_name }}/kargo-linux-amd64 -o kargo
-        chmod 755 kargo
-        ./kargo fig > kargo-fig-spec.ts
-    - name: Create Autocomplete PR
-      uses: withfig/push-to-fig-autocomplete-action@v2
-      with:
-        autocomplete-spec-name: kargo
-        spec-path: kargo-fig-spec.ts
-        integration: cobra
-
   combine_hashes:
     needs: [publish-cli]
     if: github.event_name == 'release'
