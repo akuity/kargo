@@ -31,11 +31,11 @@ spec:
       labels:
         {{- include "kargo.labels" . | nindent 8 }}
         {{- include "kargo.controller.labels" . | nindent 8 }}
-        {{- with (mergeOverwrite (deepCopy .Values.global.podLabels) .Values.controller.podLabels) }}
-          {{- range $key, $value := . }}
-          {{ $key }}: {{ $value | quote }}
-          {{- end }}
+      {{- with (mergeOverwrite (deepCopy .Values.global.podLabels) .Values.controller.podLabels) }}
+        {{- range $key, $value := . }}
+        {{ $key }}: {{ $value | quote }}
         {{- end }}
+      {{- end }}
       annotations:
         configmap/checksum: {{ pick ( include (print $.Template.BasePath "/controller/configmap.yaml") . | fromYaml ) "data" | toYaml | sha256sum }}
       {{- with (mergeOverwrite (deepCopy .Values.global.podAnnotations) .Values.controller.podAnnotations) }}
