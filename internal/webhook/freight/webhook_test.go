@@ -3,6 +3,7 @@ package freight
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"regexp"
 	"testing"
@@ -14,6 +15,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apiserver/pkg/authentication/serviceaccount"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -38,6 +40,8 @@ func TestNewWebhook(t *testing.T) {
 	require.NotNil(t, w.validateProjectFn)
 	require.NotNil(t, w.listFreightFn)
 	require.NotNil(t, w.listStagesFn)
+	require.NotNil(t, w.getWarehouseFn)
+	require.NotNil(t, w.validateFreightArtifactsFn)
 	require.NotNil(t, w.isRequestFromKargoControlplaneFn)
 }
 
@@ -261,6 +265,111 @@ func TestValidateCreate(t *testing.T) {
 			},
 		},
 		{
+			name: "error getting warehouse",
+			webhook: &webhook{
+				validateProjectFn: func(
+					context.Context,
+					client.Client,
+					schema.GroupKind,
+					client.Object,
+				) error {
+					return nil
+				},
+				listFreightFn: func(
+					context.Context,
+					client.ObjectList,
+					...client.ListOption,
+				) error {
+					return nil
+				},
+				getWarehouseFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Warehouse, error) {
+					return nil, fmt.Errorf("something went wrong")
+				},
+			},
+			freight: kargoapi.Freight{
+				Commits: []kargoapi.GitCommit{{}},
+			},
+			assertions: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "something went wrong")
+			},
+		},
+		{
+			name: "warehouse does not exist",
+			webhook: &webhook{
+				validateProjectFn: func(
+					context.Context,
+					client.Client,
+					schema.GroupKind,
+					client.Object,
+				) error {
+					return nil
+				},
+				listFreightFn: func(
+					context.Context,
+					client.ObjectList,
+					...client.ListOption,
+				) error {
+					return nil
+				},
+				getWarehouseFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Warehouse, error) {
+					return nil, nil
+				},
+			},
+			freight: kargoapi.Freight{
+				Commits: []kargoapi.GitCommit{{}},
+			},
+			assertions: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "warehouse does not exist")
+			},
+		},
+		{
+			name: "artifact validation error",
+			webhook: &webhook{
+				validateProjectFn: func(
+					context.Context,
+					client.Client,
+					schema.GroupKind,
+					client.Object,
+				) error {
+					return nil
+				},
+				listFreightFn: func(
+					context.Context,
+					client.ObjectList,
+					...client.ListOption,
+				) error {
+					return nil
+				},
+				getWarehouseFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Warehouse, error) {
+					return &kargoapi.Warehouse{}, nil
+				},
+				validateFreightArtifactsFn: func(
+					*kargoapi.Freight,
+					*kargoapi.Warehouse,
+				) error {
+					return errors.New("something went wrong")
+				},
+			},
+			freight: kargoapi.Freight{
+				Commits: []kargoapi.GitCommit{{}},
+			},
+			assertions: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "something went wrong")
+			},
+		},
+		{
 			name: "success",
 			webhook: &webhook{
 				validateProjectFn: func(
@@ -275,6 +384,19 @@ func TestValidateCreate(t *testing.T) {
 					context.Context,
 					client.ObjectList,
 					...client.ListOption,
+				) error {
+					return nil
+				},
+				getWarehouseFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Warehouse, error) {
+					return &kargoapi.Warehouse{}, nil
+				},
+				validateFreightArtifactsFn: func(
+					*kargoapi.Freight,
+					*kargoapi.Warehouse,
 				) error {
 					return nil
 				},
@@ -666,6 +788,249 @@ func TestValidateDelete(t *testing.T) {
 				return
 			}
 			require.NoError(t, err)
+		})
+	}
+}
+
+func TestValidateFreightArtifacts(t *testing.T) {
+	testCases := []struct {
+		name       string
+		freight    *kargoapi.Freight
+		warehouse  *kargoapi.Warehouse
+		assertions func(*testing.T, error)
+	}{
+		{
+			name: "Freight missing artifact",
+			freight: &kargoapi.Freight{
+				Commits: []kargoapi.GitCommit{},
+			},
+			warehouse: &kargoapi.Warehouse{
+				Spec: kargoapi.WarehouseSpec{
+					Subscriptions: []kargoapi.RepoSubscription{
+						{
+							Git: &kargoapi.GitSubscription{
+								RepoURL: "fake-repo-url",
+							},
+						},
+					},
+				},
+			},
+			assertions: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "no artifact found for subscription")
+			},
+		},
+		{
+			name: "Freight with duplicate Git artifact for Warehouse subscription",
+			freight: &kargoapi.Freight{
+				Commits: []kargoapi.GitCommit{
+					{
+						RepoURL: "fake-repo-url",
+					},
+					{
+						RepoURL: "fake-repo-url",
+					},
+				},
+			},
+			warehouse: &kargoapi.Warehouse{
+				Spec: kargoapi.WarehouseSpec{
+					Subscriptions: []kargoapi.RepoSubscription{
+						{
+							Git: &kargoapi.GitSubscription{
+								RepoURL: "fake-repo-url",
+							},
+						},
+					},
+				},
+			},
+			assertions: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "multiple artifacts found for subscription")
+			},
+		},
+		{
+			name: "Freight with duplicate image artifact for Warehouse subscription",
+			freight: &kargoapi.Freight{
+				Images: []kargoapi.Image{
+					{
+						RepoURL: "fake-repo-url",
+					},
+					{
+						RepoURL: "fake-repo-url",
+					},
+				},
+			},
+			warehouse: &kargoapi.Warehouse{
+				Spec: kargoapi.WarehouseSpec{
+					Subscriptions: []kargoapi.RepoSubscription{
+						{
+							Image: &kargoapi.ImageSubscription{
+								RepoURL: "fake-repo-url",
+							},
+						},
+					},
+				},
+			},
+			assertions: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "multiple artifacts found for subscription")
+			},
+		},
+		{
+			name: "Freight with multiple chart artifacts for Warehouse subscription",
+			freight: &kargoapi.Freight{
+				Charts: []kargoapi.Chart{
+					{
+						RepoURL: "fake-repo-url",
+						Name:    "fake-name",
+					},
+					{
+						RepoURL: "fake-repo-url",
+						Name:    "fake-name",
+					},
+				},
+			},
+			warehouse: &kargoapi.Warehouse{
+				Spec: kargoapi.WarehouseSpec{
+					Subscriptions: []kargoapi.RepoSubscription{
+						{
+							Chart: &kargoapi.ChartSubscription{
+								RepoURL: "fake-repo-url",
+								Name:    "fake-name",
+							},
+						},
+					},
+				},
+			},
+			assertions: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "multiple artifacts found for subscription")
+			},
+		},
+		{
+			name: "Freight with Git commit not matching Warehouse subscription",
+			freight: &kargoapi.Freight{
+				Commits: []kargoapi.GitCommit{
+					{
+						RepoURL: "fake-repo-url",
+					},
+				},
+			},
+			warehouse: &kargoapi.Warehouse{},
+			assertions: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "no subscription found for Git repository in Warehouse")
+			},
+		},
+		{
+			name: "Freight with image repository not matching Warehouse subscription",
+			freight: &kargoapi.Freight{
+				Images: []kargoapi.Image{
+					{
+						RepoURL: "fake-repo-url",
+					},
+				},
+			},
+			warehouse: &kargoapi.Warehouse{},
+			assertions: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "no subscription found for image repository in Warehouse")
+			},
+		},
+		{
+			name: "Freight with Helm chart not matching Warehouse subscription",
+			freight: &kargoapi.Freight{
+				Charts: []kargoapi.Chart{
+					{
+						RepoURL: "fake-repo-url",
+						Name:    "fake-name",
+					},
+				},
+			},
+			warehouse: &kargoapi.Warehouse{},
+			assertions: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "no subscription found for Helm chart in Warehouse")
+			},
+		},
+		{
+			name: "success",
+			freight: &kargoapi.Freight{
+				Commits: []kargoapi.GitCommit{
+					{
+						RepoURL: "fake-git-repo-url",
+					},
+					{
+						RepoURL: "fake-another-git-repo-url",
+					},
+				},
+				Images: []kargoapi.Image{
+					{
+						RepoURL: "fake-image-repo-url",
+					},
+					{
+						RepoURL: "fake-another-image-repo-url",
+					},
+				},
+				Charts: []kargoapi.Chart{
+					{
+						RepoURL: "fake-chart-repo-url",
+						Name:    "fake-chart-name",
+					},
+					{
+						RepoURL: "fake-chart-repo-url",
+						Name:    "fake-another-chart-name",
+					},
+					{
+						RepoURL: "fake-another-chart-repo-url",
+					},
+				},
+			},
+			warehouse: &kargoapi.Warehouse{
+				Spec: kargoapi.WarehouseSpec{
+					Subscriptions: []kargoapi.RepoSubscription{
+						{
+							Git: &kargoapi.GitSubscription{
+								RepoURL: "fake-git-repo-url",
+							},
+						},
+						{
+							Git: &kargoapi.GitSubscription{
+								RepoURL: "fake-another-git-repo-url",
+							},
+						},
+						{
+							Image: &kargoapi.ImageSubscription{
+								RepoURL: "fake-image-repo-url",
+							},
+						},
+						{
+							Image: &kargoapi.ImageSubscription{
+								RepoURL: "fake-another-image-repo-url",
+							},
+						},
+						{
+							Chart: &kargoapi.ChartSubscription{
+								RepoURL: "fake-chart-repo-url",
+								Name:    "fake-chart-name",
+							},
+						},
+						{
+							Chart: &kargoapi.ChartSubscription{
+								RepoURL: "fake-chart-repo-url",
+								Name:    "fake-another-chart-name",
+							},
+						},
+						{
+							Chart: &kargoapi.ChartSubscription{
+								RepoURL: "fake-another-chart-repo-url",
+							},
+						},
+					},
+				},
+			},
+			assertions: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			err := validateFreightArtifacts(testCase.freight, testCase.warehouse)
+			testCase.assertions(t, err)
 		})
 	}
 }
