@@ -23,6 +23,7 @@ __Expected:__ 2024-07-12
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
+| Auth via [GitHub Apps](https://docs.github.com/en/apps) | feature | Support GitHub Apps as an authentication option for GitHub and ghcr.io repositories. |
 | Multiple `Freight` per `Stage` | feature | The overarching theme of the release: Permit `Stage`s to host multiple pieces of `Freight` from different `Warehouse`s. This will permit different artifacts, or sets of artifacts, to be promoted through a pipeline with different/independent cadence. |
 | Production Readiness | chore | <ul><li>Prioritize stability of existing features.</li><li>Pay down technical debt.</li><li>**This is not a guarantee that v0.8.0 will be production-ready. It is a commitment to large steps in that direction.**</li></ul> |
 
@@ -32,7 +33,6 @@ __Expected:__ 2024-07-12
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| Auth via [GitHub Apps](https://docs.github.com/en/apps) | feature | Support GitHub Apps as an authentication option for GitHub and ghcr.io repositories. | 
 | [Patch Promotions](https://github.com/akuity/kargo/issues/1250) | poc | Support a generalized option to promote arbitrary configuration (e.g. strings, files, and directories) to other paths of a GitOps repository. Dependent on changes scheduled for v0.8.0. |
 | Production Readiness | chore | <ul><li>Prioritize stability of existing features.</li><li>Pay down technical debt.</li><li>**This is not a guarantee that v0.9.0 will be production-ready. It is a commitment to large steps in that direction.**</li></ul> |
 
