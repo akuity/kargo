@@ -17,20 +17,26 @@ Project](https://github.com/akuity/kargo/milestones)
 
 ## In Progress
 
-### v0.7.0
+### v0.8.0
 
-__Status:__ In Progress
-__Expected:__ 2024-06-07
+__Expected:__ 2024-07-12
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| Multiple `Warehouse`s | feature | Improve UI support for multiple Freightlines rooted in different `Warehouse`s. |
-| Manual `Freight` Creation | feature | Add CLI and UI support for manual `Freight` creation. This will give users the flexibility to create novel combinations of artifacts that `Warehouse`s will not -- for instance, pairing the most recent version of a container image with an _older_ version of application manifests. |
-| ECR/GitHub Auth | feature | Native authentication support for ECR registries and using GitHub applications | 
-| [Patch Promotions](https://github.com/akuity/kargo/issues/1250) | poc | Support a generalized option to promote arbitrary configuration (e.g. strings, files, and directories) to other paths of a GitOps repository. |
-| Production Readiness | chore | <ul><li>Prioritize stability of existing features.</li><li>Pay down technical debt.</li><li>**This is not a guarantee that v0.7.0 will be production-ready. It is a commitment to large steps in that direction.**</li></ul> |
+| Auth via [GitHub Apps](https://docs.github.com/en/apps) | feature | Support GitHub Apps as an authentication option for GitHub and ghcr.io repositories. |
+| Multiple `Freight` per `Stage` | feature | The overarching theme of the release: Permit `Stage`s to host multiple pieces of `Freight` from different `Warehouse`s. This will permit different artifacts, or sets of artifacts, to be promoted through a pipeline with different/independent cadence. |
+| Production Readiness | chore | <ul><li>Prioritize stability of existing features.</li><li>Pay down technical debt.</li><li>**This is not a guarantee that v0.8.0 will be production-ready. It is a commitment to large steps in that direction.**</li></ul> |
 
-### v0.8.0 .. v0.n.0
+## Upcoming
+
+### v0.9.0
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [Patch Promotions](https://github.com/akuity/kargo/issues/1250) | poc | Support a generalized option to promote arbitrary configuration (e.g. strings, files, and directories) to other paths of a GitOps repository. Dependent on changes scheduled for v0.8.0. |
+| Production Readiness | chore | <ul><li>Prioritize stability of existing features.</li><li>Pay down technical debt.</li><li>**This is not a guarantee that v0.9.0 will be production-ready. It is a commitment to large steps in that direction.**</li></ul> |
+
+### v0.10.0 .. v0.n.0
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
@@ -42,9 +48,17 @@ __Expected:__ 2024-06-07
 
 ## Completed
 
-### v0.6.0
+### v0.7.0
 
-__Status:__ Completed
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| Multiple `Warehouse`s | feature | Improved UI support for displaying Freight from multiple `Warehouse`s. |
+| Manual `Freight` Creation | feature | Added UI feature for manual `Freight` creation. |
+| ECR/GAR Support | feature | Added multiple options for authenticating to image repositories in ECR and Google Artifact Registry, including support for EKS Pod Identity and GKE Workload Identity Federation. | 
+| [Patch Promotions](https://github.com/akuity/kargo/issues/1250) | poc | Support a generalized option to promote arbitrary configuration (e.g. strings, files, and directories) to other paths of a GitOps repository. |
+| Production Readiness | chore | Prioritized stability of existing features. **This does not mean v0.7.0 is production-ready. It means it is several steps closer to it.** |
+
+### v0.6.0
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
@@ -53,8 +67,6 @@ __Status:__ Completed
 | Production Readiness | chore | Prioritized stability of existing features. **This does not mean v0.6.0 is production-ready. It means it is several steps closer to it.** |
 
 ### v0.5.0
-
-__Status:__ Completed
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
@@ -66,16 +78,12 @@ __Status:__ Completed
 
 ### v0.4.0
 
-__Status:__ Completed
-
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | `Warehouse` Rules/Filters | feature | Introduced optional tag-based constraints on Git repository subscriptions. |
 | Project Management | feature | <ul><li>Introduced `Project` CRD to simplify project initialization.</li><li>Removed `PromotionPolicy` CRD and folded its functionality directly into the `Project` CRD.</li></ul> |
 
 ### v0.3.0
-
-__Status:__ Completed
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
@@ -84,8 +92,6 @@ __Status:__ Completed
 | Improved RBAC | feature | SSO user identities can now be mapped to Kubernetes `ServiceAccount` resources using annotations. |
 
 ### v0.2.0
-
-__Status:__ Completed
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
