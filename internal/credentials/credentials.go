@@ -14,6 +14,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/credentials/ecr"
 	"github.com/akuity/kargo/internal/credentials/gar"
+	"github.com/akuity/kargo/internal/credentials/github"
 	"github.com/akuity/kargo/internal/git"
 	"github.com/akuity/kargo/internal/helm"
 	"github.com/akuity/kargo/internal/logging"
@@ -70,12 +71,13 @@ type Database interface {
 // utilizes a Kubernetes controller runtime client to retrieve credentials
 // stored in Kubernetes Secrets.
 type kubernetesDatabase struct {
-	kargoClient  client.Client
-	ecrAKHelper  ecr.AccessKeyCredentialHelper
-	ecrPIHelper  ecr.PodIdentityCredentialHelper
-	gcpSAKHelper gar.ServiceAccountKeyCredentialHelper
-	gcpWIFHelper gar.WorkloadIdentityFederationCredentialHelper
-	cfg          KubernetesDatabaseConfig
+	kargoClient    client.Client
+	ecrAKHelperFn  func(context.Context, *corev1.Secret) (string, string, error)
+	ecrPIHelperFn  func(context.Context, string, string) (string, string, error)
+	gcpSAKHelperFn func(context.Context, *corev1.Secret) (string, string, error)
+	gcpWIFHelperFn func(context.Context, string, string) (string, string, error)
+	ghAppHelperFn  func(*corev1.Secret) (string, string, error)
+	cfg            KubernetesDatabaseConfig
 }
 
 // KubernetesDatabaseConfig represents configuration for a Kubernetes based
@@ -100,12 +102,13 @@ func NewKubernetesDatabase(
 	cfg KubernetesDatabaseConfig,
 ) Database {
 	return &kubernetesDatabase{
-		kargoClient:  kargoClient,
-		ecrAKHelper:  ecr.NewAccessKeyCredentialHelper(),
-		ecrPIHelper:  ecr.NewPodIdentityCredentialHelper(ctx),
-		gcpSAKHelper: gar.NewServiceAccountKeyCredentialHelper(),
-		gcpWIFHelper: gar.NewWorkloadIdentityFederationCredentialHelper(ctx),
-		cfg:          cfg,
+		kargoClient:    kargoClient,
+		ecrAKHelperFn:  ecr.NewAccessKeyCredentialHelper().GetUsernameAndPassword,
+		ecrPIHelperFn:  ecr.NewPodIdentityCredentialHelper(ctx).GetUsernameAndPassword,
+		gcpSAKHelperFn: gar.NewServiceAccountKeyCredentialHelper().GetUsernameAndPassword,
+		gcpWIFHelperFn: gar.NewWorkloadIdentityFederationCredentialHelper(ctx).GetUsernameAndPassword,
+		ghAppHelperFn:  github.NewAppCredentialHelper().GetUsernameAndPassword,
+		cfg:            cfg,
 	}
 }
 
@@ -176,14 +179,14 @@ func (k *kubernetesDatabase) Get(
 
 	// Try EKS Pod Identity
 	if creds.Username, creds.Password, err =
-		k.ecrPIHelper.GetUsernameAndPassword(ctx, repoURL, namespace); err != nil {
+		k.ecrPIHelperFn(ctx, repoURL, namespace); err != nil {
 		return creds, false, err
 	}
 
 	// Try GCP Workload Identity Federation
 	if creds.Username == "" {
 		if creds.Username, creds.Password, err =
-			k.gcpWIFHelper.GetUsernameAndPassword(ctx, repoURL, namespace); err != nil {
+			k.gcpWIFHelperFn(ctx, repoURL, namespace); err != nil {
 			return creds, false, err
 		}
 	}
@@ -264,21 +267,33 @@ func (k *kubernetesDatabase) getCredentialsSecret(
 func (k *kubernetesDatabase) secretToCreds(
 	ctx context.Context, credType Type, secret *corev1.Secret,
 ) (Credentials, error) {
-	if credType == TypeImage {
-		// If the cred type is image, we'll try to derive username and password
-		// from:
+	switch credType {
+	case TypeGit:
+		// Try to derive username and password from GitHub App ID, installation ID,
+		// and private key
+		username, password, err := k.ghAppHelperFn(secret)
+		if err != nil {
+			return Credentials{}, err
+		}
+		if username != "" {
+			// We have successfully derived the username and password
+			return Credentials{
+				Username: username,
+				Password: password,
+			}, nil
+		}
+	case TypeImage:
+		// Try to derive username and password from:
 		//   1. AWS access key id and secret access key
 		//   2. Base64 encoded GCP service account key
 		var username, password string
 		var err error
 		// Try AWS
-		if username, password, err = k.ecrAKHelper.GetUsernameAndPassword(ctx, secret); err != nil {
+		if username, password, err = k.ecrAKHelperFn(ctx, secret); err != nil {
 			return Credentials{}, err
 		}
 		if username == "" { // Try GCP
-			if username, password, err = k.gcpSAKHelper.GetUsernameAndPassword(
-				ctx, secret,
-			); err != nil {
+			if username, password, err = k.gcpSAKHelperFn(ctx, secret); err != nil {
 				return Credentials{}, err
 			}
 		}
