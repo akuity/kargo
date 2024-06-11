@@ -4,16 +4,17 @@ import { format } from 'date-fns';
 
 import { VerificationInfo } from '@ui/gen/v1alpha1/generated_pb';
 
+import { AnalysisModal } from '../common/analysis-modal/analysis-modal';
 import { useModal } from '../common/modal/use-modal';
 
-import { AnalysisRunModal } from './analysis-run-modal';
 import { VerificationIcon } from './verification-icon';
 
 type Props = {
   verifications: VerificationInfo[];
+  images: string[];
 };
 
-export const Verifications = ({ verifications }: Props) => {
+export const Verifications = ({ verifications, images }: Props) => {
   const { show } = useModal();
 
   return (
@@ -54,9 +55,11 @@ export const Verifications = ({ verifications }: Props) => {
         dataIndex=''
         render={(val, verification) => (
           <Link
-            onClick={() =>
-              show((p) => <AnalysisRunModal {...p} name={verification.analysisRun?.name || ''} />)
-            }
+            onClick={() => {
+              show((p) => (
+                <AnalysisModal {...p} analysisName={val.analysisRun?.name || ''} images={images} />
+              ));
+            }}
           >
             {verification.analysisRun?.name}
           </Link>
