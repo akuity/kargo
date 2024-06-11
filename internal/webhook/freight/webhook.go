@@ -3,6 +3,7 @@ package freight
 import (
 	"context"
 	"fmt"
+	"path"
 	"strings"
 
 	"github.com/technosophos/moniker"
@@ -11,6 +12,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -18,6 +20,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/git"
+	"github.com/akuity/kargo/internal/helm"
 	"github.com/akuity/kargo/internal/kubeclient"
 	libEvent "github.com/akuity/kargo/internal/kubernetes/event"
 	libWebhook "github.com/akuity/kargo/internal/webhook"
@@ -65,6 +69,10 @@ type webhook struct {
 		...client.ListOption,
 	) error
 
+	getWarehouseFn func(context.Context, client.Client, types.NamespacedName) (*kargoapi.Warehouse, error)
+
+	validateFreightArtifactsFn func(*kargoapi.Freight, *kargoapi.Warehouse) error
+
 	isRequestFromKargoControlplaneFn libWebhook.IsRequestFromKargoControlplaneFn
 }
 
@@ -100,8 +108,9 @@ func newWebhook(
 	w.validateProjectFn = libWebhook.ValidateProject
 	w.listFreightFn = kubeClient.List
 	w.listStagesFn = kubeClient.List
-	w.isRequestFromKargoControlplaneFn =
-		libWebhook.IsRequestFromKargoControlplane(cfg.ControlplaneUserRegex)
+	w.getWarehouseFn = kargoapi.GetWarehouse
+	w.validateFreightArtifactsFn = validateFreightArtifacts
+	w.isRequestFromKargoControlplaneFn = libWebhook.IsRequestFromKargoControlplane(cfg.ControlplaneUserRegex)
 	return w
 }
 
@@ -146,8 +155,7 @@ func (w *webhook) ValidateCreate(
 	obj runtime.Object,
 ) (admission.Warnings, error) {
 	freight := obj.(*kargoapi.Freight) // nolint: forcetypeassert
-	if err :=
-		w.validateProjectFn(ctx, w.client, freightGroupKind, freight); err != nil {
+	if err := w.validateProjectFn(ctx, w.client, freightGroupKind, freight); err != nil {
 		return nil, err
 	}
 
@@ -172,9 +180,7 @@ func (w *webhook) ValidateCreate(
 		)
 	}
 
-	if len(freight.Commits) == 0 &&
-		len(freight.Images) == 0 &&
-		len(freight.Charts) == 0 {
+	if len(freight.Commits) == 0 && len(freight.Images) == 0 && len(freight.Charts) == 0 {
 		return nil, apierrors.NewInvalid(
 			freightGroupKind,
 			freight.Name,
@@ -187,6 +193,32 @@ func (w *webhook) ValidateCreate(
 			},
 		)
 	}
+
+	warehouse, err := w.getWarehouseFn(ctx, w.client, types.NamespacedName{
+		Namespace: freight.Namespace,
+		Name:      freight.Warehouse,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if warehouse == nil {
+		return nil, apierrors.NewInvalid(
+			freightGroupKind,
+			freight.Name,
+			field.ErrorList{
+				field.Invalid(
+					field.NewPath("warehouse"),
+					freight.Warehouse,
+					"warehouse does not exist",
+				),
+			},
+		)
+	}
+
+	if err := w.validateFreightArtifactsFn(freight, warehouse); err != nil {
+		return nil, err
+	}
+
 	return nil, nil
 }
 
@@ -299,4 +331,173 @@ func (w *webhook) recordFreightApprovedEvent(
 		stageName,
 		actor,
 	)
+}
+
+type artifactType string
+
+func (a artifactType) FreightPath() string {
+	switch a {
+	case artifactTypeGit:
+		return "commits"
+	case artifactTypeImage:
+		return "images"
+	case artifactTypeChart:
+		return "charts"
+	default:
+		return ""
+	}
+}
+
+const (
+	artifactTypeGit   artifactType = "git"
+	artifactTypeImage artifactType = "image"
+	artifactTypeChart artifactType = "chart"
+)
+
+type artifactSubscription struct {
+	URL  string
+	Type artifactType
+}
+
+// validateFreightArtifacts checks that the artifacts in the Freight are all
+// subscribed to by the Warehouse. It returns an error if:
+//
+//   - An artifact in the Freight is not subscribed to by the Warehouse.
+//   - An artifact for a subscription of the Warehouse is not found in the Freight.
+//   - Multiple artifacts in the Freight correspond to the same subscription.
+func validateFreightArtifacts(
+	freight *kargoapi.Freight,
+	warehouse *kargoapi.Warehouse,
+) error {
+	var subscriptions = make(map[artifactSubscription]bool, len(warehouse.Spec.Subscriptions))
+	var counts = make(map[artifactSubscription]int)
+
+	// Collect all the subscriptions from the Warehouse.
+	for _, repo := range warehouse.Spec.Subscriptions {
+		if repo.Git != nil {
+			subscriptions[artifactSubscription{
+				URL:  git.NormalizeURL(repo.Git.RepoURL),
+				Type: artifactTypeGit,
+			}] = false
+		}
+		if repo.Image != nil {
+			subscriptions[artifactSubscription{
+				URL:  repo.Image.RepoURL,
+				Type: artifactTypeImage,
+			}] = false
+		}
+		if repo.Chart != nil {
+			subscriptions[artifactSubscription{
+				URL:  path.Join(helm.NormalizeChartRepositoryURL(repo.Chart.RepoURL), repo.Chart.Name),
+				Type: artifactTypeChart,
+			}] = false
+		}
+	}
+
+	// Mark the subscription as found for each artifact in the Freight, and count
+	// the number of times each subscription is found.
+	for _, commit := range freight.Commits {
+		sub := artifactSubscription{
+			URL:  git.NormalizeURL(commit.RepoURL),
+			Type: artifactTypeGit,
+		}
+		if _, ok := subscriptions[sub]; ok {
+			subscriptions[sub] = true
+			counts[sub]++
+			continue
+		}
+		return apierrors.NewInvalid(
+			freightGroupKind,
+			freight.Name,
+			field.ErrorList{
+				field.Invalid(
+					field.NewPath("commits"),
+					commit,
+					fmt.Sprintf("no subscription found for Git repository in Warehouse %q", warehouse.Name),
+				),
+			},
+		)
+	}
+	for _, image := range freight.Images {
+		sub := artifactSubscription{
+			URL:  image.RepoURL,
+			Type: artifactTypeImage,
+		}
+		if _, ok := subscriptions[sub]; ok {
+			subscriptions[sub] = true
+			counts[sub]++
+			continue
+		}
+		return apierrors.NewInvalid(
+			freightGroupKind,
+			freight.Name,
+			field.ErrorList{
+				field.Invalid(
+					field.NewPath("images"),
+					image,
+					fmt.Sprintf("no subscription found for image repository in Warehouse %q", warehouse.Name),
+				),
+			},
+		)
+	}
+	for _, chart := range freight.Charts {
+		sub := artifactSubscription{
+			URL:  path.Join(helm.NormalizeChartRepositoryURL(chart.RepoURL), chart.Name),
+			Type: artifactTypeChart,
+		}
+		if _, ok := subscriptions[sub]; ok {
+			subscriptions[sub] = true
+			counts[sub]++
+			continue
+		}
+		return apierrors.NewInvalid(
+			freightGroupKind,
+			freight.Name,
+			field.ErrorList{
+				field.Invalid(
+					field.NewPath("charts"),
+					chart,
+					fmt.Sprintf("no subscription found for Helm chart in Warehouse %q", warehouse.Name),
+				),
+			},
+		)
+	}
+
+	// Check that each subscription is found exactly once.
+	for sub, found := range subscriptions {
+		if !found {
+			return apierrors.NewInvalid(
+				freightGroupKind,
+				freight.Name,
+				field.ErrorList{
+					field.Invalid(
+						field.NewPath(sub.Type.FreightPath()),
+						nil,
+						fmt.Sprintf(
+							"no artifact found for subscription %q of Warehouse %q",
+							sub.URL, warehouse.Name,
+						),
+					),
+				},
+			)
+		}
+		if counts[sub] > 1 {
+			return apierrors.NewInvalid(
+				freightGroupKind,
+				freight.Name,
+				field.ErrorList{
+					field.Invalid(
+						field.NewPath(sub.Type.FreightPath()),
+						nil,
+						fmt.Sprintf(
+							"multiple artifacts found for subscription %q of Warehouse %q",
+							sub.URL, warehouse.Name,
+						),
+					),
+				},
+			)
+		}
+	}
+
+	return nil
 }
