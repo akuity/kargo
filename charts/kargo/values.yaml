@@ -97,7 +97,7 @@ api:
   ## @param api.logLevel The log level for the API server.
   logLevel: INFO
 
-  ## api.labels Labels to add to the api resources. Merges with `global.labels`, allowing you to override or add to the global labels.
+  ## @param api.labels Labels to add to the api resources. Merges with `global.labels`, allowing you to override or add to the global labels.
   labels: {}
   ## @param api.annotations Annotations to add to the api resources. Merges with `global.annotations`, allowing you to override or add to the global annotations.
   annotations: {}
@@ -328,7 +328,7 @@ controller:
   ## @param controller.enabled Whether the controller is enabled.
   enabled: true
 
-  ## controller.labels Labels to add to the api resources. Merges with `global.labels`, allowing you to override or add to the global labels.
+  ## @param controller.labels Labels to add to the api resources. Merges with `global.labels`, allowing you to override or add to the global labels.
   labels: {}
   ## @param controller.annotations Annotations to add to the api resources. Merges with `global.annotations`, allowing you to override or add to the global annotations.
   annotations: {}
@@ -415,7 +415,7 @@ managementController:
   ## @param managementController.logLevel The log level for the management controller.
   logLevel: INFO
 
-  ## managementController.labels Labels to add to the api resources. Merges with `global.labels`, allowing you to override or add to the global labels.
+  ## @param managementController.labels Labels to add to the api resources. Merges with `global.labels`, allowing you to override or add to the global labels.
   labels: {}
   ## @param managementController.annotations Annotations to add to the api resources. Merges with `global.annotations`, allowing you to override or add to the global annotations.
   annotations: {}
@@ -468,7 +468,7 @@ webhooksServer:
   ## @param webhooksServer.controlplaneUserRegex Regular expression for matching controlplane users.
   controlplaneUserRegex: "" # ^system:serviceaccount:kargo:[a-z0-9]([-a-z0-9]*[a-z0-9])?$
 
-  ## webhooksServer.labels Labels to add to the api resources. Merges with `global.labels`, allowing you to override or add to the global labels.
+  ## @param webhooksServer.labels Labels to add to the api resources. Merges with `global.labels`, allowing you to override or add to the global labels.
   labels: {}
   ## @param webhooksServer.annotations Annotations to add to the api resources. Merges with `global.annotations`, allowing you to override or add to the global annotations.
   annotations: {}
@@ -526,7 +526,7 @@ garbageCollector:
   ## @param garbageCollector.logLevel The log level for the garbage collector.
   logLevel: INFO
 
-  ## garbageCollector.labels Labels to add to the api resources. Merges with `global.labels`, allowing you to override or add to the global labels.
+  ## @param garbageCollector.labels Labels to add to the api resources. Merges with `global.labels`, allowing you to override or add to the global labels.
   labels: {}
   ## @param garbageCollector.annotations Annotations to add to the api resources. Merges with `global.annotations`, allowing you to override or add to the global annotations.
   annotations: {}
