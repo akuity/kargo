@@ -154,7 +154,7 @@ func parseGitHubURL(repoURL string) (string, string, error) {
 	path = strings.TrimSuffix(path, ".git")
 	parts := strings.Split(path, "/")
 	if len(parts) != 2 {
-		return "", "", fmt.Errorf("could not parse github repository URL %q", u)
+		return "", "", fmt.Errorf("could not extract repository owner and name from URL %q", u)
 	}
 	return parts[0], parts[1], nil
 }
