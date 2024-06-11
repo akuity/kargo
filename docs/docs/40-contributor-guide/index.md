@@ -11,6 +11,6 @@ Kargo project.
 
 This guide is decomposed into the following, high-level topics:
 
-* [Hacking on Kargo](./10-hacking-on-kargo.mdx)
+* [Hacking on Kargo](./10-hacking-on-kargo.md)
 * [Signing commits](./20-signing-commits.md)
 * [Code of conduct](./30-code-of-conduct.md)

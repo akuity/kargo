@@ -3,9 +3,6 @@ description: Learn about Kargo by progressing a change through multiple stages i
 sidebar_label: Quickstart
 ---
 
-import Tabs from '@theme/Tabs';
-import TabItem from '@theme/TabItem';
-
 # Kargo Quickstart
 
 This guide presents a basic introduction to Kargo. Together, we will:
