@@ -409,9 +409,9 @@ func (r *repo) HasDiffs() (bool, error) {
 }
 
 func (r *repo) GetDiffPathsForCommitID(commitID string) ([]string, error) {
-	resBytes, err := libExec.Exec(r.buildGitCommand("diff", "--name-only", commitID+"^", commitID))
+	resBytes, err := libExec.Exec(r.buildGitCommand("show", "--pretty=", "--name-only", commitID))
 	if err != nil {
-		return nil, fmt.Errorf("error getting diffs for commit %q: %w", commitID, err)
+		return nil, fmt.Errorf("error getting diff paths for commit %q: %w", commitID, err)
 	}
 	var paths []string
 	scanner := bufio.NewScanner(bytes.NewReader(resBytes))
