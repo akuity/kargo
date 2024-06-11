@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/url"
-	"regexp"
 	"strings"
 
 	"github.com/google/go-github/v56/github"
@@ -146,13 +145,18 @@ func convertGithubPR(ghPR *github.PullRequest) *gitprovider.PullRequest {
 	}
 }
 
-func parseGitHubURL(u string) (string, string, error) {
-	regex := regexp.MustCompile(`^https\://github\.com/([\w-]+)/([\w-]+).*`)
-	parts := regex.FindStringSubmatch(u)
-	if len(parts) != 3 {
-		return "", "", fmt.Errorf("error parsing github repository URL %q", u)
+func parseGitHubURL(repoURL string) (string, string, error) {
+	u, err := url.Parse(repoURL)
+	if err != nil {
+		return "", "", fmt.Errorf("error parsing github repository URL %q: %w", u, err)
 	}
-	return parts[1], parts[2], nil
+	path := strings.TrimPrefix(u.Path, "/")
+	path = strings.TrimSuffix(path, ".git")
+	parts := strings.Split(path, "/")
+	if len(parts) != 2 {
+		return "", "", fmt.Errorf("could not parse github repository URL %q", u)
+	}
+	return parts[0], parts[1], nil
 }
 
 func (g *GitHubProvider) IsPullRequestMerged(ctx context.Context, repoURL string, id int64) (bool, error) {
