@@ -336,15 +336,16 @@ func (w *webhook) recordFreightApprovedEvent(
 type artifactType string
 
 func (a artifactType) FreightPath() string {
-	switch {
-	case a == artifactTypeGit:
+	switch a {
+	case artifactTypeGit:
 		return "commits"
-	case a == artifactTypeImage:
+	case artifactTypeImage:
 		return "images"
-	case a == artifactTypeChart:
+	case artifactTypeChart:
 		return "charts"
+	default:
+		return ""
 	}
-	return ""
 }
 
 const (
