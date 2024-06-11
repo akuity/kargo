@@ -7,6 +7,11 @@ metadata:
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
     {{- include "kargo.garbageCollector.labels" . | nindent 4 }}
+  {{- with (mergeOverwrite (deepCopy .Values.global.labels) .Values.garbageCollector.labels) }}
+    {{- range $key, $value := . }}
+    {{ $key }}: {{ $value | quote }}
+    {{- end }}
+  {{- end }}
   {{- with (mergeOverwrite (deepCopy .Values.global.annotations) .Values.garbageCollector.annotations) }}
   annotations:
     {{- range $key, $value := . }}
@@ -25,6 +30,22 @@ spec:
         configmap/checksum: {{ pick ( include (print $.Template.BasePath "/garbage-collector/configmap.yaml") . | fromYaml ) "data" | toYaml | sha256sum }}
     spec:
       template:
+        metadata:
+          labels:
+            {{- include "kargo.labels" . | nindent 12 }}
+            {{- include "kargo.garbageCollector.labels" . | nindent 12 }}
+          {{- with (mergeOverwrite (deepCopy .Values.global.podLabels) .Values.garbageCollector.podLabels) }}
+            {{- range $key, $value := . }}
+            {{ $key }}: {{ $value | quote }}
+            {{- end }}
+          {{- end }}
+          annotations:
+            configmap/checksum: {{ pick ( include (print $.Template.BasePath "/garbage-collector/configmap.yaml") . | fromYaml ) "data" | toYaml | sha256sum }}
+          {{- with (mergeOverwrite (deepCopy .Values.global.podAnnotations) .Values.garbageCollector.podAnnotations) }}
+            {{- range $key, $value := . }}
+            {{ $key }}: {{ $value | quote }}
+            {{- end }}
+          {{- end }}
         spec:
           serviceAccountName: kargo-garbage-collector
           {{- with .Values.garbageCollector.affinity | default .Values.global.affinity }}
