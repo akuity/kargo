@@ -455,6 +455,28 @@ message FreightReference {
   repeated VerificationInfo verificationHistory = 7;
 }
 
+// FreightSources describes the sources (e.g. Warehouses or upstream Stages)
+// from which to obtain the various types of Freight a Stage requires.
+message FreightSources {
+  // Type specifies the type of Freight to obtain (i.e. specifies what Warehouse
+  // the Freight must have originated from). This field is required.
+  //
+  // +kubebuilder:validation:Required
+  optional string type = 3;
+
+  // WarehouseDirect indicates whether Freight of the desired type may be
+  // obtained directly from its Warehouse of origin. If this field's value is
+  // false, then the value of the UpstreamStages field must be non-empty.
+  // i.e. Between the two fields, at least on source must be specified.
+  optional bool warehouseDirect = 1;
+
+  // UpstreamStages identifies other Stages as potential sources of Freight for
+  // this Stage. If this field's value is non-empty, then the value of the
+  // WarehouseDirect field must be true. i.e. Between the two fields, at least
+  // on source must be specified.
+  repeated string upstreamStages = 2;
+}
+
 // FreightStatus describes a piece of Freight's most recently observed state.
 message FreightStatus {
   // VerifiedIn describes the Stages in which this Freight has been verified
@@ -1158,11 +1180,12 @@ message StageSpec {
   // is empty, the webhook will ensure that label is absent.
   optional string shard = 4;
 
-  // Subscriptions describes the Stage's sources of Freight. This is a required
-  // field.
+  // FreightSources specifies the sources (e.g. Warehouses or upstream Stages)
+  // from which to obtain the various types of Freight the Stage requires. This
+  // list must be non-empty.
   //
-  // +kubebuilder:validation:Required
-  optional Subscriptions subscriptions = 1;
+  // +kubebuilder:validation:MinItems=1
+  repeated FreightSources freightSources = 1;
 
   // PromotionMechanisms describes how to incorporate Freight into the Stage.
   // This is an optional field as it is sometimes useful to aggregates available
@@ -1213,26 +1236,6 @@ message StageStatus {
 
   // LastPromotion is a reference to the last completed promotion.
   optional PromotionInfo lastPromotion = 10;
-}
-
-// StageSubscription defines a subscription to Freight from another Stage.
-message StageSubscription {
-  // Name specifies the name of a Stage.
-  //
-  // +kubebuilder:validation:MinLength=1
-  // +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
-  optional string name = 1;
-}
-
-// Subscriptions describes a Stage's sources of Freight.
-message Subscriptions {
-  // Warehouse is a subscription to a Warehouse. This field is mutually
-  // exclusive with the UpstreamStages field.
-  optional string warehouse = 1;
-
-  // UpstreamStages identifies other Stages as potential sources of Freight
-  // for this Stage. This field is mutually exclusive with the Repos field.
-  repeated StageSubscription upstreamStages = 2;
 }
 
 // Verification describes how to verify that a Promotion has been successful

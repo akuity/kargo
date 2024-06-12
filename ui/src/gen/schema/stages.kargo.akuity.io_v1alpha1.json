@@ -16,6 +16,35 @@
     "spec": {
       "description": "Spec describes sources of Freight used by the Stage and how to incorporate\nFreight into the Stage.",
       "properties": {
+        "freightSources": {
+          "description": "FreightSources specifies the sources (e.g. Warehouses or upstream Stages)\nfrom which to obtain the various types of Freight the Stage requires. This\nlist must be non-empty.",
+          "items": {
+            "description": "FreightSources describes the sources (e.g. Warehouses or upstream Stages)\nfrom which to obtain the various types of Freight a Stage requires.",
+            "properties": {
+              "type": {
+                "description": "Type specifies the type of Freight to obtain (i.e. specifies what Warehouse\nthe Freight must have originated from). This field is required.",
+                "type": "string"
+              },
+              "upstreamStages": {
+                "description": "UpstreamStages identifies other Stages as potential sources of Freight for\nthis Stage. If this field's value is non-empty, then the value of the\nWarehouseDirect field must be true. i.e. Between the two fields, at least\non source must be specified.",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "warehouseDirect": {
+                "description": "WarehouseDirect indicates whether Freight of the desired type may be\nobtained directly from its Warehouse of origin. If this field's value is\nfalse, then the value of the UpstreamStages field must be non-empty.\ni.e. Between the two fields, at least on source must be specified.",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "type"
+            ],
+            "type": "object"
+          },
+          "minItems": 1,
+          "type": "array"
+        },
         "promotionMechanisms": {
           "description": "PromotionMechanisms describes how to incorporate Freight into the Stage.\nThis is an optional field as it is sometimes useful to aggregates available\nFreight from multiple upstream Stages without performing any actions. The\nutility of this is to allow multiple downstream Stages to subscribe to a\nsingle upstream Stage where they may otherwise have subscribed to multiple\nupstream Stages.",
           "properties": {
@@ -350,35 +379,6 @@
           "description": "Shard is the name of the shard that this Stage belongs to. This is an\noptional field. If not specified, the Stage will belong to the default\nshard. A defaulting webhook will sync the value of the\nkargo.akuity.io/shard label with the value of this field. When this field\nis empty, the webhook will ensure that label is absent.",
           "type": "string"
         },
-        "subscriptions": {
-          "description": "Subscriptions describes the Stage's sources of Freight. This is a required\nfield.",
-          "properties": {
-            "upstreamStages": {
-              "description": "UpstreamStages identifies other Stages as potential sources of Freight\nfor this Stage. This field is mutually exclusive with the Repos field.",
-              "items": {
-                "description": "StageSubscription defines a subscription to Freight from another Stage.",
-                "properties": {
-                  "name": {
-                    "description": "Name specifies the name of a Stage.",
-                    "minLength": 1,
-                    "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$",
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "name"
-                ],
-                "type": "object"
-              },
-              "type": "array"
-            },
-            "warehouse": {
-              "description": "Warehouse is a subscription to a Warehouse. This field is mutually\nexclusive with the UpstreamStages field.",
-              "type": "string"
-            }
-          },
-          "type": "object"
-        },
         "verification": {
           "description": "Verification describes how to verify a Stage's current Freight is fit for\npromotion downstream.",
           "properties": {
@@ -445,7 +445,7 @@
         }
       },
       "required": [
-        "subscriptions"
+        "freightSources"
       ],
       "type": "object"
     },
