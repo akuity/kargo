@@ -3,8 +3,6 @@ description: Find out how to manage repository credentials for use by Kargo
 sidebar_label: Managing credentials
 ---
 
-import Hlt from '@site/src/components/Highlight';
-
 # Managing Credentials
 
 To manage the progression of freight from stage to stage, Kargo will often

@@ -3,9 +3,6 @@ description: Learn how to set up a development environment to begin contributing
 sidebar_label: Hacking on Kargo
 ---
 
-import Tabs from '@theme/Tabs';
-import TabItem from '@theme/TabItem';
-
 # Hacking on Kargo
 
 Kargo is implemented in Go. For maximum productivity in your text editor or IDE,
