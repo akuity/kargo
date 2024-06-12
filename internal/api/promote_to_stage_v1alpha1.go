@@ -86,9 +86,12 @@ func (s *server) PromoteToStage(
 		return nil, connect.NewError(connect.CodeNotFound, err)
 	}
 
-	upstreamStages := make([]string, len(stage.Spec.Subscriptions.UpstreamStages))
-	for i, upstreamStage := range stage.Spec.Subscriptions.UpstreamStages {
-		upstreamStages[i] = upstreamStage.Name
+	var upstreamStages []string
+	for _, freightSources := range stage.Spec.FreightSources {
+		if freightSources.Type == freight.Warehouse {
+			upstreamStages = freightSources.UpstreamStages
+			break
+		}
 	}
 	if !s.isFreightAvailableFn(freight, stage.Name, upstreamStages) {
 		return nil, connect.NewError(

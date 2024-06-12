@@ -166,7 +166,7 @@ func TestQueryFreight(t *testing.T) {
 					context.Context,
 					string,
 					string,
-					kargoapi.Subscriptions,
+					[]kargoapi.FreightSources,
 				) ([]kargoapi.Freight, error) {
 					return nil, errors.New("something went wrong")
 				},
@@ -363,99 +363,62 @@ func TestQueryFreight(t *testing.T) {
 func TestGetAvailableFreightForStage(t *testing.T) {
 	testCases := []struct {
 		name       string
-		subs       kargoapi.Subscriptions
+		sources    []kargoapi.FreightSources
 		server     *server
 		assertions func(*testing.T, []kargoapi.Freight, error)
 	}{
 		{
 			name: "error getting Freight from Warehouse",
-			subs: kargoapi.Subscriptions{
-				Warehouse: "fake-warehouse",
+			sources: []kargoapi.FreightSources{
+				{
+					Type:            "fake-freight-type",
+					WarehouseDirect: true,
+				},
 			},
 			server: &server{
-				getFreightFromWarehouseFn: func(
-					context.Context,
-					string,
-					string,
-				) ([]kargoapi.Freight, error) {
+				getFreightFromWarehousesFn: func(context.Context, string, []string) ([]kargoapi.Freight, error) {
 					return nil, errors.New("something went wrong")
 				},
 			},
 			assertions: func(t *testing.T, _ []kargoapi.Freight, err error) {
-				require.Error(t, err)
-				require.Equal(t, "something went wrong", err.Error())
-			},
-		},
-		{
-			name: "success getting Freight from Warehouse",
-			subs: kargoapi.Subscriptions{
-				Warehouse: "fake-warehouse",
-			},
-			server: &server{
-				getFreightFromWarehouseFn: func(
-					context.Context,
-					string,
-					string,
-				) ([]kargoapi.Freight, error) {
-					return []kargoapi.Freight{
-						{
-							ObjectMeta: metav1.ObjectMeta{
-								Name: "fake-freight",
-							},
-						},
-						{
-							ObjectMeta: metav1.ObjectMeta{
-								Name: "another fake-freight",
-							},
-						},
-					}, nil
-				},
-			},
-			assertions: func(t *testing.T, freight []kargoapi.Freight, err error) {
-				require.NoError(t, err)
-				require.Len(t, freight, 2)
+				require.ErrorContains(t, err, "get freight from warehouses")
+				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
 		{
 			name: "error getting Freight verified in upstream Stages",
-			subs: kargoapi.Subscriptions{
-				UpstreamStages: []kargoapi.StageSubscription{
-					{
-						Name: "fake-stage",
-					},
+			sources: []kargoapi.FreightSources{
+				{
+					Type:           "fake-freight-type",
+					UpstreamStages: []string{"fake-stage"},
 				},
 			},
 			server: &server{
-				getVerifiedFreightFn: func(
-					context.Context,
-					string,
-					[]kargoapi.StageSubscription,
-				) ([]kargoapi.Freight, error) {
+				getFreightFromWarehousesFn: func(context.Context, string, []string) ([]kargoapi.Freight, error) {
+					return nil, nil
+				},
+				getVerifiedFreightFn: func(context.Context, string, []string) ([]kargoapi.Freight, error) {
 					return nil, errors.New("something went wrong")
 				},
 			},
 			assertions: func(t *testing.T, _ []kargoapi.Freight, err error) {
-				require.ErrorContains(
-					t, err, "error listing Freight verified in Stages upstream from Stage",
-				)
+				require.ErrorContains(t, err, "get verified freight")
 				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
 		{
 			name: "error getting Freight approved for Stage",
-			subs: kargoapi.Subscriptions{
-				UpstreamStages: []kargoapi.StageSubscription{
-					{
-						Name: "fake-stage",
-					},
+			sources: []kargoapi.FreightSources{
+				{
+					Type:           "fake-freight-type",
+					UpstreamStages: []string{"fake-stage"},
 				},
 			},
 			server: &server{
-				getVerifiedFreightFn: func(
-					context.Context,
-					string,
-					[]kargoapi.StageSubscription,
-				) ([]kargoapi.Freight, error) {
+				getFreightFromWarehousesFn: func(context.Context, string, []string) ([]kargoapi.Freight, error) {
+					return nil, nil
+				},
+				getVerifiedFreightFn: func(context.Context, string, []string) ([]kargoapi.Freight, error) {
 					return nil, nil
 				},
 				listFreightFn: func(
@@ -473,23 +436,27 @@ func TestGetAvailableFreightForStage(t *testing.T) {
 		},
 		{
 			name: "success getting available Freight",
-			subs: kargoapi.Subscriptions{
-				UpstreamStages: []kargoapi.StageSubscription{
-					{
-						Name: "fake-stage",
-					},
+			sources: []kargoapi.FreightSources{
+				{
+					Type:           "fake-freight-type",
+					UpstreamStages: []string{"fake-stage"},
 				},
 			},
 			server: &server{
-				getVerifiedFreightFn: func(
-					context.Context,
-					string,
-					[]kargoapi.StageSubscription,
-				) ([]kargoapi.Freight, error) {
+				getFreightFromWarehousesFn: func(context.Context, string, []string) ([]kargoapi.Freight, error) {
 					return []kargoapi.Freight{
 						{
 							ObjectMeta: metav1.ObjectMeta{
-								Name: "fake-freight",
+								Name: "fake-freight-from-warehouse",
+							},
+						},
+					}, nil
+				},
+				getVerifiedFreightFn: func(context.Context, string, []string) ([]kargoapi.Freight, error) {
+					return []kargoapi.Freight{
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Name: "fake-verified-freight",
 							},
 						},
 					}, nil
@@ -504,7 +471,7 @@ func TestGetAvailableFreightForStage(t *testing.T) {
 					freight.Items = []kargoapi.Freight{
 						{
 							ObjectMeta: metav1.ObjectMeta{
-								Name: "another fake-freight",
+								Name: "fake-approved-freight",
 							},
 						},
 					}
@@ -513,7 +480,7 @@ func TestGetAvailableFreightForStage(t *testing.T) {
 			},
 			assertions: func(t *testing.T, freight []kargoapi.Freight, err error) {
 				require.NoError(t, err)
-				require.Len(t, freight, 2)
+				require.Len(t, freight, 3)
 			},
 		},
 	}
@@ -523,7 +490,7 @@ func TestGetAvailableFreightForStage(t *testing.T) {
 				context.Background(),
 				"fake-project",
 				"fake-stage",
-				testCase.subs,
+				testCase.sources,
 			)
 			testCase.assertions(t, freight, err)
 		})
@@ -570,7 +537,7 @@ func TestGetFreightFromWarehouse(t *testing.T) {
 						},
 						{
 							ObjectMeta: metav1.ObjectMeta{
-								Name: "another fake-freight",
+								Name: "another-fake-freight",
 							},
 						},
 					}
@@ -585,10 +552,10 @@ func TestGetFreightFromWarehouse(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			freight, err := testCase.server.getFreightFromWarehouse(
+			freight, err := testCase.server.getFreightFromWarehouses(
 				context.Background(),
 				"fake-project",
-				"fake-warehouse",
+				[]string{"fake-warehouse"},
 			)
 			testCase.assertions(t, freight, err)
 		})
@@ -635,7 +602,7 @@ func TestGetVerifiedFreight(t *testing.T) {
 						},
 						{
 							ObjectMeta: metav1.ObjectMeta{
-								Name: "another fake-freight",
+								Name: "another-fake-freight",
 							},
 						},
 					}
@@ -654,13 +621,9 @@ func TestGetVerifiedFreight(t *testing.T) {
 			freight, err := testCase.server.getVerifiedFreight(
 				context.Background(),
 				"fake-project",
-				[]kargoapi.StageSubscription{
-					{
-						Name: "fake-stage",
-					},
-					{
-						Name: "another-fake-stage",
-					},
+				[]string{
+					"fake-stage",
+					"another-fake-stage",
 				},
 			)
 			testCase.assertions(t, freight, err)

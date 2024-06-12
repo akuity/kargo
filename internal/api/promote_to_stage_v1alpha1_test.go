@@ -147,11 +147,10 @@ func TestPromoteToStage(t *testing.T) {
 				) (*kargoapi.Stage, error) {
 					return &kargoapi.Stage{
 						Spec: kargoapi.StageSpec{
-							Subscriptions: kargoapi.Subscriptions{
-								UpstreamStages: []kargoapi.StageSubscription{
-									{
-										Name: "fake-upstream-stage",
-									},
+							FreightSources: []kargoapi.FreightSources{
+								{
+									Type:           "fake-freight-type",
+									UpstreamStages: []string{"fake-upstream-stage"},
 								},
 							},
 						},
@@ -193,11 +192,10 @@ func TestPromoteToStage(t *testing.T) {
 				) (*kargoapi.Stage, error) {
 					return &kargoapi.Stage{
 						Spec: kargoapi.StageSpec{
-							Subscriptions: kargoapi.Subscriptions{
-								UpstreamStages: []kargoapi.StageSubscription{
-									{
-										Name: "fake-upstream-stage",
-									},
+							FreightSources: []kargoapi.FreightSources{
+								{
+									Type:           "fake-freight-type",
+									UpstreamStages: []string{"fake-upstream-stage"},
 								},
 							},
 						},
@@ -243,11 +241,10 @@ func TestPromoteToStage(t *testing.T) {
 				) (*kargoapi.Stage, error) {
 					return &kargoapi.Stage{
 						Spec: kargoapi.StageSpec{
-							Subscriptions: kargoapi.Subscriptions{
-								UpstreamStages: []kargoapi.StageSubscription{
-									{
-										Name: "fake-upstream-stage",
-									},
+							FreightSources: []kargoapi.FreightSources{
+								{
+									Type:           "fake-freight-type",
+									UpstreamStages: []string{"fake-upstream-stage"},
 								},
 							},
 						},
@@ -296,11 +293,10 @@ func TestPromoteToStage(t *testing.T) {
 				) (*kargoapi.Stage, error) {
 					return &kargoapi.Stage{
 						Spec: kargoapi.StageSpec{
-							Subscriptions: kargoapi.Subscriptions{
-								UpstreamStages: []kargoapi.StageSubscription{
-									{
-										Name: "fake-upstream-stage",
-									},
+							FreightSources: []kargoapi.FreightSources{
+								{
+									Type:           "fake-freight-type",
+									UpstreamStages: []string{"fake-upstream-stage"},
 								},
 							},
 						},
@@ -356,11 +352,10 @@ func TestPromoteToStage(t *testing.T) {
 				) (*kargoapi.Stage, error) {
 					return &kargoapi.Stage{
 						Spec: kargoapi.StageSpec{
-							Subscriptions: kargoapi.Subscriptions{
-								UpstreamStages: []kargoapi.StageSubscription{
-									{
-										Name: "fake-upstream-stage",
-									},
+							FreightSources: []kargoapi.FreightSources{
+								{
+									Type:           "fake-freight-type",
+									UpstreamStages: []string{"fake-upstream-stage"},
 								},
 							},
 						},
@@ -421,11 +416,10 @@ func TestPromoteToStage(t *testing.T) {
 				) (*kargoapi.Stage, error) {
 					return &kargoapi.Stage{
 						Spec: kargoapi.StageSpec{
-							Subscriptions: kargoapi.Subscriptions{
-								UpstreamStages: []kargoapi.StageSubscription{
-									{
-										Name: "fake-upstream-stage",
-									},
+							FreightSources: []kargoapi.FreightSources{
+								{
+									Type:           "fake-freight-type",
+									UpstreamStages: []string{"fake-upstream-stage"},
 								},
 							},
 						},
