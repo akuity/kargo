@@ -194,7 +194,7 @@ func (w *webhook) validateSpec(
 	if spec == nil { // nil spec is caught by declarative validations
 		return nil
 	}
-	errs := w.validateSubs(f.Child("subscriptions"), &spec.Subscriptions)
+	errs := w.validateFreightSources(f.Child("freightSources"), spec.FreightSources)
 	return append(
 		errs,
 		w.validatePromotionMechanisms(
@@ -204,27 +204,27 @@ func (w *webhook) validateSpec(
 	)
 }
 
-func (w *webhook) validateSubs(
+func (w *webhook) validateFreightSources(
 	f *field.Path,
-	subs *kargoapi.Subscriptions,
+	freightSources []kargoapi.FreightSources,
 ) field.ErrorList {
-	if subs == nil { // nil subs is caught by declarative validations
-		return nil
-	}
-	// Can subscribe to Warehouse XOR upstream Stages
-	if (subs.Warehouse == "" && len(subs.UpstreamStages) == 0) ||
-		(subs.Warehouse != "" && len(subs.UpstreamStages) > 0) {
-		return field.ErrorList{
-			field.Invalid(
-				f,
-				subs,
-				fmt.Sprintf(
-					"exactly one of %s.warehouse or %s.upstreamStages must be defined",
-					f.String(),
-					f.String(),
+	// Make sure we don't see more than one source for the same Freight type
+	seenTypes := make(map[string]struct{}, len(freightSources))
+	for _, sources := range freightSources {
+		if _, seen := seenTypes[sources.Type]; seen {
+			return field.ErrorList{
+				field.Invalid(
+					f,
+					freightSources,
+					fmt.Sprintf(
+						"freight type %q found multiple times in %s",
+						sources.Type,
+						f.String(),
+					),
 				),
-			),
+			}
 		}
+		seenTypes[sources.Type] = struct{}{}
 	}
 	return nil
 }
