@@ -521,7 +521,12 @@ func TestIndexStagesByUpstreamStages(t *testing.T) {
 			name: "Stage has no upstream Stages",
 			stage: &kargoapi.Stage{
 				Spec: kargoapi.StageSpec{
-					Subscriptions: kargoapi.Subscriptions{},
+					FreightSources: []kargoapi.FreightSources{
+						{
+							Type:            "fake-freight-type",
+							WarehouseDirect: true,
+						},
+					},
 				},
 			},
 			expected: nil,
@@ -530,30 +535,27 @@ func TestIndexStagesByUpstreamStages(t *testing.T) {
 			name: "Stage has upstream stages",
 			stage: &kargoapi.Stage{
 				Spec: kargoapi.StageSpec{
-					Subscriptions: kargoapi.Subscriptions{
-						UpstreamStages: []kargoapi.StageSubscription{
-							{
-								Name: "fake-stage",
-							},
-							{
-								Name: "another-fake-stage",
+					FreightSources: []kargoapi.FreightSources{
+						{
+							Type: "fake-freight-type",
+							UpstreamStages: []string{
+								"fake-stage",
+								"another-fake-stage",
 							},
 						},
 					},
 				},
 			},
-			expected: []string{"fake-stage", "another-fake-stage"},
+			expected: []string{"another-fake-stage", "fake-stage"},
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			t.Run(testCase.name, func(t *testing.T) {
-				require.Equal(
-					t,
-					testCase.expected,
-					indexStagesByUpstreamStages(testCase.stage),
-				)
-			})
+			require.Equal(
+				t,
+				testCase.expected,
+				indexStagesByUpstreamStages(testCase.stage),
+			)
 		})
 	}
 }
