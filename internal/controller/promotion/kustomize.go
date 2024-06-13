@@ -76,7 +76,7 @@ func (k *kustomizer) apply(
 	changeSummary := make([]string, 0, len(update.Kustomize.Images))
 	for i := range update.Kustomize.Images {
 		imgUpdate := &update.Kustomize.Images[i]
-		desiredOrigin := freight.GetDesiredOrigin(stage, imgUpdate)
+		desiredOrigin := freight.GetDesiredOrigin(ctx, stage, imgUpdate)
 		image, err := k.findImageFn(ctx, k.client, stage, desiredOrigin, newFreight, imgUpdate.Image)
 		if err != nil {
 			return nil,

@@ -273,7 +273,7 @@ func getReadRef(
 	update *kargoapi.GitRepoUpdate,
 	newFreight []kargoapi.FreightReference,
 ) (string, *kargoapi.GitCommit, error) {
-	desiredOrigin := freight.GetDesiredOrigin(stage, update)
+	desiredOrigin := freight.GetDesiredOrigin(ctx, stage, update)
 	commit, err := freight.FindCommit(ctx, cli, stage, desiredOrigin, newFreight, update.RepoURL)
 	if err != nil {
 		return "", nil,

@@ -2,6 +2,7 @@ package argocd
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -10,68 +11,163 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/freight"
+	"github.com/akuity/kargo/internal/logging"
 )
 
 // GetDesiredRevision returns the desired revision for the given
 // v1alpha1.Application. If that cannot be determined, an empty string is
 // returned.
-func GetDesiredRevision(
+func GetDesiredRevisions(
 	ctx context.Context,
 	cl client.Client,
 	stage *kargoapi.Stage,
 	update *kargoapi.ArgoCDAppUpdate,
 	app *argocd.Application,
 	frght []kargoapi.FreightReference,
-) (string, error) {
+) ([]string, error) {
+
+	logger := logging.LoggerFromContext(ctx)
+	if app == nil {
+		err := errors.New("Application is nil")
+		logger.Error(err, "Cannot determine desired revision for application, bailing.")
+		return nil, nil
+	}
+
+	appLogger := logger.WithValues("application", app.Name, "namespace", app.Namespace)
+	appLogger.Debug("Getting desired revision for application", "app", app, "spec", app.Spec)
+
 	// Note that frght was provided as an argument instead of being plucked
 	// directly from stage.Status, because this gives us the flexibility to use
 	// this function for finding the revision to sync to either in the context of
 	// a health check (current freight) or in the context of a promotion (new
 	// freight).
-	switch {
-	case app == nil || app.Spec.Source == nil:
-		// Without an Application, we can't determine the desired revision.
-		return "", nil
-	case app.Spec.Source.Chart != "":
-		// This source points to a Helm chart.
-		// NB: This has to go first, as the repository URL can also point to
-		//     a Helm repository.
+
+	// An application may have one or more sources.
+	if !app.IsMultisource() {
+		s := app.Spec.Source
+		if s == nil {
+			err := errors.New("Single-source application source is nil")
+			appLogger.Error(err, "Cannot determine desired revision for application, bailing.")
+			return nil, nil
+		}
+
+		appLogger.Debug("Application source is not nil, checking.", "source", s)
 
 		// If there is a source update that targets app.Spec.Source, it might
 		// have its own ideas about the desired revision.
-		var targetPromoMechanism any
-		for i := range update.SourceUpdates {
-			sourceUpdate := &update.SourceUpdates[i]
-			if sourceUpdate.RepoURL == app.Spec.Source.RepoURL && sourceUpdate.Chart == app.Spec.Source.Chart {
-				targetPromoMechanism = sourceUpdate
-				break
-			}
+		targetUpdate := getTargetUpdate(ctx, update, s)
+		desiredOrigin := freight.GetDesiredOrigin(ctx, stage, targetUpdate)
+		if desiredOrigin == nil {
+			appLogger.WithValues("source", s,
+				"revision", app.Status.Sync.Revision).Debug("Could not determine desired origin " +
+				"for application source, using existing revision.")
+			return []string{app.Status.Sync.Revision}, nil
 		}
-		if targetPromoMechanism == nil {
-			targetPromoMechanism = update
+
+		desiredRevision, err := getRevisionFromSource(ctx, cl, stage, s, desiredOrigin, frght)
+
+		if err != nil {
+			return nil, err
 		}
-		desiredOrigin := freight.GetDesiredOrigin(stage, targetPromoMechanism)
-		repoURL := app.Spec.Source.RepoURL
-		chartName := app.Spec.Source.Chart
-		if !strings.Contains(repoURL, "://") {
-			// In Argo CD ApplicationSource, if a repo URL specifies no protocol and a
-			// chart name is set (already confirmed at this point), we can assume that
-			// the repo URL is an OCI registry URL. Kargo Warehouses and Freight,
-			// however, do use oci:// at the beginning of such URLs.
-			//
-			// Additionally, where OCI is concerned, an ApplicationSource's repoURL is
-			// really a registry URL, and the chart name is a repository within that
-			// registry. Warehouses and Freight, however, handle things more correctly
-			// where a repoURL points directly to a repository and chart name is
-			// irrelevant / blank. We need to account for this when we search our
-			// Freight for the chart.
-			repoURL = fmt.Sprintf(
-				"oci://%s/%s",
-				strings.TrimSuffix(repoURL, "/"),
-				chartName,
-			)
-			chartName = ""
+
+		if desiredRevision != "" {
+			appLogger.WithValues("source", s,
+				"revision", desiredRevision).Debug("Found desired revision for application source.")
+			return []string{desiredRevision}, nil
 		}
+
+		appLogger.WithValues("source", s).Debug("Could not determine desired revision for application from this source.")
+		return nil, nil
+	}
+
+	// An application may have more than one source that points to the same Git repository,
+	// eg. a Helm and a vanilla manifest source.
+	// In that situation it doesn't matter which source's target revision is returned as ArgoCD does not support
+	// different target revisions for sources targeting the same repository.
+	var revisions = make([]string, len(app.Spec.Sources))
+	isSynced := app.Status.Sync.Revisions != nil
+
+	// ArgoCD uses a shadow-array to store the corresponding revisions preserving the order of app.spec.sources.
+	// We match that logic here and return the desired revision for each source,
+	// or empty string if one is not found.
+	for i, src := range app.Spec.Sources {
+		s := src
+
+		syncedRevisionOfSource := ""
+		if isSynced && i < len(app.Status.Sync.Revisions) {
+			syncedRevisionOfSource = app.Status.Sync.Revisions[i]
+		}
+
+		// If there is a source update that targets app.Spec.Source, it might
+		// have its own ideas about the desired revision.
+		targetUpdate := getTargetUpdate(ctx, update, &s)
+		desiredOrigin := freight.GetDesiredOrigin(ctx, stage, targetUpdate)
+		if desiredOrigin == nil {
+			appLogger.WithValues("source", s,
+				"revision", syncedRevisionOfSource).Debug("Could not determine desired origin" +
+				" for application source, using existing revision.")
+			revisions[i] = syncedRevisionOfSource
+			continue
+		}
+
+		logger.Debug("Resolved origin for application source", "origin", desiredOrigin)
+		desiredRevision, err := getRevisionFromSource(ctx, cl, stage, &s, desiredOrigin, frght)
+
+		if err != nil {
+			return nil, err
+		}
+
+		if desiredRevision != "" {
+			appLogger.Trace("Found desired revision for application source.", "revision", desiredRevision, "source", &s)
+		}
+		revisions[i] = desiredRevision
+	}
+
+	appLogger.Debug("Found desired revisions for multi-source application.", "revisions", revisions)
+	return revisions, nil
+}
+
+func getRevisionFromSource(
+	ctx context.Context,
+	cl client.Client,
+	stage *kargoapi.Stage,
+	s *argocd.ApplicationSource,
+	desiredOrigin *kargoapi.FreightOrigin,
+	frght []kargoapi.FreightReference) (string, error) {
+
+	logger := logging.LoggerFromContext(ctx)
+	sourceLogger := logger.WithValues("source", s)
+	sourceLogger.Debug("Getting desired revision for application source", "source", s)
+
+	repoURL := s.RepoURL
+	chartName := s.Chart
+	if !strings.Contains(repoURL, "://") {
+		// In Argo CD ApplicationSource, if a repo URL specifies no protocol and a
+		// chart name is set (already confirmed at this point), we can assume that
+		// the repo URL is an OCI registry URL. Kargo Warehouses and Freight,
+		// however, do use oci:// at the beginning of such URLs.
+		//
+		// Additionally, where OCI is concerned, an ApplicationSource's repoURL is
+		// really a registry URL, and the chart name is a repository within that
+		// registry. Warehouses and Freight, however, handle things more correctly
+		// where a repoURL points directly to a repository and chart name is
+		// irrelevant / blank. We need to account for this when we search our
+		// Freight for the chart.
+		repoURL = fmt.Sprintf(
+			"oci://%s/%s",
+			strings.TrimSuffix(repoURL, "/"),
+			chartName,
+		)
+		chartName = ""
+	}
+
+	switch {
+	case chartName != "":
+		// This source points to a Helm chart.
+		// NB: This has to go first, as the repository URL can also point to
+		//     a Helm repository.
+		sourceLogger.Debug("Application source is a Helm chart")
+
 		chart, err := freight.FindChart(
 			ctx,
 			cl,
@@ -82,42 +178,33 @@ func GetDesiredRevision(
 			chartName,
 		)
 		if err != nil {
-			return "", fmt.Errorf("error chart from repo %q: %w", app.Spec.Source.RepoURL, err)
+			sourceLogger.Error(err, "Error finding chart from repo")
+			return "", fmt.Errorf("error chart from repo %q: %w", repoURL, err)
 		}
 		if chart == nil {
+			sourceLogger.Debug("Chart not found")
 			return "", nil
 		}
 		return chart.Version, nil
-	case app.Spec.Source.RepoURL != "":
-		// This source points to a Git repository.
 
-		// If there is a source update that targets app.Spec.Source, it might
-		// have its own ideas about the desired revision.
-		var targetPromoMechanism any
-		for i := range update.SourceUpdates {
-			sourceUpdate := &update.SourceUpdates[i]
-			if sourceUpdate.RepoURL == app.Spec.Source.RepoURL {
-				targetPromoMechanism = sourceUpdate
-				break
-			}
-		}
-		if targetPromoMechanism == nil {
-			targetPromoMechanism = update
-		}
-		desiredOrigin := freight.GetDesiredOrigin(stage, targetPromoMechanism)
+	case repoURL != "":
+		// This source points to a Git repository.
+		sourceLogger.Debug("Application source is a Git repository")
 		commit, err := freight.FindCommit(
 			ctx,
 			cl,
 			stage,
 			desiredOrigin,
 			frght,
-			app.Spec.Source.RepoURL,
+			repoURL,
 		)
 		if err != nil {
+			sourceLogger.Error(err, "Error finding commit from repo")
 			return "",
-				fmt.Errorf("error finding commit from repo %q: %w", app.Spec.Source.RepoURL, err)
+				fmt.Errorf("error finding commit from repo %q: %w", repoURL, err)
 		}
 		if commit == nil {
+			sourceLogger.Debug("Commit not found")
 			return "", nil
 		}
 		if commit.HealthCheckCommit != "" {
@@ -125,6 +212,32 @@ func GetDesiredRevision(
 		}
 		return commit.ID, nil
 	}
-	// If we end up here, no desired revision was found.
+
+	sourceLogger.Debug("Could not determine desired revision for application from this source.")
 	return "", nil
+}
+
+func getTargetUpdate(
+	ctx context.Context,
+	update *kargoapi.ArgoCDAppUpdate,
+	s *argocd.ApplicationSource,
+) any {
+	sourceLogger := logging.LoggerFromContext(ctx).WithValues("source", s)
+	sourceLogger.Debug("Resolving origin for application source")
+
+	// If there is a source update that targets app.Spec.Source, it might
+	// have its own ideas about the desired revision.
+	// Default to the ArgoCDAppUpdate if no source update targets app.Spec.Source.
+	for i := range update.SourceUpdates {
+		sourceUpdate := &update.SourceUpdates[i]
+		sourceLogger.Trace("Checking source update", "sourceUpdate", sourceUpdate)
+
+		if sourceUpdate.RepoURL == s.RepoURL && (sourceUpdate.Chart == "" || sourceUpdate.Chart == s.Chart) {
+			sourceLogger.Debug("Source update matching application source found", "sourceUpdate", sourceUpdate)
+			return sourceUpdate
+		}
+	}
+
+	sourceLogger.Debug("No source update matching application source found, using ArgoCDAppUpdate.")
+	return update
 }

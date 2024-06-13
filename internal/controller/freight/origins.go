@@ -1,9 +1,11 @@
 package freight
 
 import (
+	"context"
 	"reflect"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/logging"
 )
 
 // GetDesiredOrigin recursively walks a graph of promotion mechanisms, taking
@@ -13,15 +15,21 @@ import (
 // promotion mechanisms to inherit or override origins specified by their
 // ancestors despites the fact that child promotion mechanisms never have any
 // back-reference to their parent.
-func GetDesiredOrigin(mechanism any, targetMechanism any) *kargoapi.FreightOrigin {
-	return getDesiredOriginInternal(mechanism, targetMechanism, nil)
+func GetDesiredOrigin(ctx context.Context, mechanism any, targetMechanism any) *kargoapi.FreightOrigin {
+	return getDesiredOriginInternal(ctx, mechanism, targetMechanism, nil)
 }
 
 func getDesiredOriginInternal(
+	ctx context.Context,
 	mechanism any,
 	targetMechanism any,
 	defaultOrigin *kargoapi.FreightOrigin,
 ) *kargoapi.FreightOrigin {
+	logger := logging.LoggerFromContext(ctx)
+	logger.Debug("Finding desired origin",
+		"mechanism", mechanism,
+		"targetMechanism", targetMechanism,
+		"defaultOrigin", defaultOrigin)
 	// As a small sanity check, verify that mechanism and targetMechanism are both
 	// pointers.
 	if reflect.ValueOf(mechanism).Kind() != reflect.Ptr {
@@ -130,7 +138,7 @@ func getDesiredOriginInternal(
 		if reflect.ValueOf(ts).IsNil() {
 			continue
 		}
-		result := getDesiredOriginInternal(ts, targetMechanism, origin)
+		result := getDesiredOriginInternal(ctx, ts, targetMechanism, origin)
 		if result != nil {
 			return result
 		}
