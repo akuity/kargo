@@ -217,13 +217,14 @@ func (a *argoCDMechanism) mustPerformUpdate(
 		return status.Phase, false, nil
 	}
 
-	// The operation has completed. Check if the desired revision was applied.
-	desiredRevision := libargocd.GetDesiredRevision(app, newFreight)
 	if status.SyncResult == nil {
 		// We do not have a sync result, so we cannot determine if the operation
 		// was successful. The best recourse is to retry the operation.
 		return "", true, errors.New("operation completed without a sync result")
 	}
+
+	// Check if the desired revision was applied.
+	desiredRevision := libargocd.GetDesiredRevision(app, newFreight)
 	if desiredRevision != "" && status.SyncResult.Revision != desiredRevision {
 		// The operation did not result in the desired revision being applied.
 		// We should attempt to retry the operation.
@@ -231,6 +232,54 @@ func (a *argoCDMechanism) mustPerformUpdate(
 			"operation result revision %q does not match desired revision %q",
 			status.SyncResult.Revision, desiredRevision,
 		)
+	}
+
+	// Check if the desired source(s) were applied.
+	if len(update.SourceUpdates) > 0 {
+		desiredSource := app.Spec.Source.DeepCopy()
+		desiredSources := app.Spec.Sources.DeepCopy()
+
+		for _, srcUpdate := range update.SourceUpdates {
+			if desiredSource != nil {
+				var source argocd.ApplicationSource
+				if source, err = a.applyArgoCDSourceUpdateFn(
+					*app.Spec.Source,
+					newFreight,
+					srcUpdate,
+				); err != nil {
+					return "", false, fmt.Errorf(
+						"error determining desired source of Argo CD Application %q in namespace %q: %w",
+						update.AppName,
+						namespace,
+						err,
+					)
+				}
+				desiredSource = &source
+			}
+			for i, source := range desiredSources {
+				if source, err = a.applyArgoCDSourceUpdateFn(
+					source,
+					newFreight,
+					srcUpdate,
+				); err != nil {
+					return "", false, fmt.Errorf(
+						"error determining desired source(s) of Argo CD Application %q in namespace %q: %w",
+						update.AppName,
+						namespace,
+						err,
+					)
+				}
+				desiredSources[i] = source
+			}
+		}
+
+		if !desiredSource.Equals(&status.SyncResult.Source) || !desiredSources.Equals(status.SyncResult.Sources) {
+			// The operation did not result in the desired source(s) being applied.
+			// We should attempt to retry the operation.
+			return "", true, fmt.Errorf(
+				"operation result source(s) do not match desired source(s)",
+			)
+		}
 	}
 
 	// The operation has completed.
