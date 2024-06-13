@@ -189,6 +189,7 @@ func TestArgoCDPromote(t *testing.T) {
 					return nil, nil, nil
 				},
 				mustPerformUpdateFn: func(
+					context.Context,
 					*argocd.Application,
 					kargoapi.ArgoCDAppUpdate,
 					kargoapi.FreightReference,
@@ -238,6 +239,7 @@ func TestArgoCDPromote(t *testing.T) {
 					return nil, nil, nil
 				},
 				mustPerformUpdateFn: func(
+					context.Context,
 					*argocd.Application,
 					kargoapi.ArgoCDAppUpdate,
 					kargoapi.FreightReference,
@@ -295,6 +297,7 @@ func TestArgoCDPromote(t *testing.T) {
 					return nil, nil, nil
 				},
 				mustPerformUpdateFn: func(
+					context.Context,
 					*argocd.Application,
 					kargoapi.ArgoCDAppUpdate,
 					kargoapi.FreightReference,
@@ -345,6 +348,7 @@ func TestArgoCDPromote(t *testing.T) {
 					return nil, nil, nil
 				},
 				mustPerformUpdateFn: func(
+					context.Context,
 					*argocd.Application,
 					kargoapi.ArgoCDAppUpdate,
 					kargoapi.FreightReference,
@@ -395,6 +399,7 @@ func TestArgoCDPromote(t *testing.T) {
 					return nil, nil, nil
 				},
 				mustPerformUpdateFn: func(
+					context.Context,
 					*argocd.Application,
 					kargoapi.ArgoCDAppUpdate,
 					kargoapi.FreightReference,
@@ -457,6 +462,7 @@ func TestArgoCDPromote(t *testing.T) {
 					return nil, nil, nil
 				},
 				mustPerformUpdateFn: func() func(
+					context.Context,
 					*argocd.Application,
 					kargoapi.ArgoCDAppUpdate,
 					kargoapi.FreightReference,
@@ -465,6 +471,7 @@ func TestArgoCDPromote(t *testing.T) {
 				) (argocd.OperationPhase, bool, error) {
 					var count uint
 					return func(
+						context.Context,
 						*argocd.Application,
 						kargoapi.ArgoCDAppUpdate,
 						kargoapi.FreightReference,
@@ -529,6 +536,7 @@ func TestArgoCDPromote(t *testing.T) {
 					return nil, nil, nil
 				},
 				mustPerformUpdateFn: func(
+					context.Context,
 					*argocd.Application,
 					kargoapi.ArgoCDAppUpdate,
 					kargoapi.FreightReference,
@@ -578,6 +586,7 @@ func TestArgoCDPromote(t *testing.T) {
 					return nil, nil, nil
 				},
 				mustPerformUpdateFn: func(
+					context.Context,
 					*argocd.Application,
 					kargoapi.ArgoCDAppUpdate,
 					kargoapi.FreightReference,
@@ -1078,6 +1087,7 @@ func TestArgoCDMustPerformUpdate(t *testing.T) {
 		},
 	}
 
+	ctx := context.Background()
 	for _, testCase := range testCases {
 		scheme := runtime.NewScheme()
 		require.NoError(t, argocd.AddToScheme(scheme))
@@ -1098,6 +1108,7 @@ func TestArgoCDMustPerformUpdate(t *testing.T) {
 			require.True(t, ok)
 
 			phase, mustUpdate, err := argocdMech.mustPerformUpdate(
+				ctx,
 				app,
 				testCase.update,
 				testCase.newFreight,

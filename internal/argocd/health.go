@@ -11,6 +11,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
+	"github.com/akuity/kargo/internal/logging"
 )
 
 // healthErrorConditions are the v1alpha1.ApplicationConditionType conditions
@@ -49,7 +50,11 @@ func (h *applicationHealth) EvaluateHealth(
 	freight kargoapi.FreightReference,
 	updates []kargoapi.ArgoCDAppUpdate,
 ) *kargoapi.Health {
+
+	logger := logging.LoggerFromContext(ctx)
+	logger.Debug("About to evaluate ArgoCD application health.")
 	if len(updates) == 0 {
+		logger.Debug("No updates to process, skipping.")
 		return nil
 	}
 
@@ -79,6 +84,7 @@ func (h *applicationHealth) EvaluateHealth(
 			Name:      update.AppName,
 		}
 
+		logger.Debug("About to get health of application.", "appName", update.AppName)
 		state, healthStatus, syncStatus, err := h.GetApplicationHealth(ctx, types.NamespacedName{
 			Namespace: health.ArgoCDApps[i].Namespace,
 			Name:      health.ArgoCDApps[i].Name,
@@ -87,6 +93,9 @@ func (h *applicationHealth) EvaluateHealth(
 		health.Status = health.Status.Merge(state)
 		health.ArgoCDApps[i].HealthStatus = healthStatus
 		health.ArgoCDApps[i].SyncStatus = syncStatus
+
+		logger.Debug("Got application health status.", "appName", update.AppName,
+			"healthStatus", healthStatus.Status, "syncStatus", syncStatus.Status)
 
 		if err != nil {
 			if cErr, ok := err.(compositeError); ok {
@@ -121,6 +130,9 @@ func (h *applicationHealth) GetApplicationHealth(
 		}
 	)
 
+	logger := logging.LoggerFromContext(ctx)
+	logger.Debug("About to get application health.")
+
 	app := &argocd.Application{}
 	if err := h.Client.Get(ctx, key, app); err != nil {
 		err = fmt.Errorf("error finding Argo CD Application %q in namespace %q: %w", key.Name, key.Namespace, err)
@@ -129,6 +141,8 @@ func (h *applicationHealth) GetApplicationHealth(
 		}
 		return kargoapi.HealthStateUnknown, healthStatus, syncStatus, err
 	}
+
+	logger.Debug("Successfully received application health from ArgoCD.", "key", key.Name, "namespace", key.Namespace)
 
 	// Mirror the health and sync status of the Argo CD Application.
 	if app.Status.Health.Status != "" {
@@ -179,7 +193,7 @@ func (h *applicationHealth) GetApplicationHealth(
 	// is syncing to it. We do not further care about the cluster being in sync
 	// with the desired revision, as some applications may be out of sync by
 	// default.
-	if desiredRevision := GetDesiredRevision(app, freight); desiredRevision != "" {
+	if desiredRevision := GetDesiredRevision(ctx, app, freight); desiredRevision != "" {
 		if healthState, err := stageHealthForAppSync(app, desiredRevision); err != nil {
 			return healthState, healthStatus, syncStatus, err
 		}

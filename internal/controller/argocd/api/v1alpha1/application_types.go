@@ -29,6 +29,7 @@ type ApplicationSource struct {
 	Helm           *ApplicationSourceHelm      `json:"helm,omitempty"`
 	Kustomize      *ApplicationSourceKustomize `json:"kustomize,omitempty"`
 	Chart          string                      `json:"chart,omitempty"`
+	Path           string                      `json:"path,omitempty"`
 }
 
 // Equals compares two instances of ApplicationSource and returns true if
@@ -66,7 +67,10 @@ const (
 )
 
 type ApplicationSourceHelm struct {
-	Parameters []HelmParameter `json:"parameters,omitempty"`
+	ReleaseName  string          `json:"releaseName,omitempty"`
+	ValueFiles   []string        `json:"valueFiles,omitempty"`
+	ValuesObject any             `json:"valuesObject,omitempty"`
+	Parameters   []HelmParameter `json:"parameters,omitempty"`
 }
 
 type HelmParameter struct {
@@ -175,7 +179,8 @@ type OperationState struct {
 }
 
 type SyncOperationResult struct {
-	Revision string `json:"revision,omitempty"`
-	Source ApplicationSource `json:"source,omitempty"`
-	Sources ApplicationSources `json:"sources,omitempty"`
+	Revision  string             `json:"revision,omitempty"`
+	Revisions []string           `json:"revisions,omitempty"`
+	Source    ApplicationSource  `json:"source,omitempty"`
+	Sources   ApplicationSources `json:"sources,omitempty"`
 }
