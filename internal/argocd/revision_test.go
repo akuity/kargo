@@ -91,6 +91,60 @@ func TestGetDesiredRevision(t *testing.T) {
 			want: "fake-revision",
 		},
 		{
+			name: "git multisource",
+			app: &argocdapi.Application{
+				Spec: argocdapi.ApplicationSpec{
+					Sources: []argocdapi.ApplicationSource{
+						{
+							RepoURL: "https://example.com",
+							Chart:   "fake-chart",
+						},
+						{
+							RepoURL:        "https://github.com/universe/42",
+							TargetRevision: "fake-revision",
+						},
+					},
+				},
+			},
+			freight: kargoapi.FreightReference{
+				Origin: testOrigin,
+				Commits: []kargoapi.GitCommit{
+					{
+						RepoURL: "https://github.com/universe/42",
+						ID:      "fake-revision",
+					},
+				},
+			},
+			want: "fake-revision",
+		},
+		{
+			name: "git multisource with same repo",
+			app: &argocdapi.Application{
+				Spec: argocdapi.ApplicationSpec{
+					Sources: []argocdapi.ApplicationSource{
+						{
+							RepoURL:        "https://github.com/universe/42",
+							TargetRevision: "fake-revision",
+						},
+						{
+							RepoURL:        "https://github.com/universe/42",
+							TargetRevision: "another-revision",
+						},
+					},
+				},
+			},
+			freight: kargoapi.FreightReference{
+				Origin: testOrigin,
+				Commits: []kargoapi.GitCommit{
+					{
+						RepoURL: "https://github.com/universe/42",
+						ID:      "fake-revision",
+					},
+				},
+			},
+			want: "fake-revision",
+		},
+		{
 			name: "git source with health check commit",
 			app: &argocdapi.Application{
 				Spec: argocdapi.ApplicationSpec{

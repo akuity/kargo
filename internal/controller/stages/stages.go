@@ -650,12 +650,15 @@ func (r *reconciler) syncNormalStage(
 	status := *stage.Status.DeepCopy()
 
 	logger := logging.LoggerFromContext(ctx)
+	logger.Debug("About to perform normal stage sync")
 
 	// Sync Promotions and update the Stage status.
 	var syncErr error
 	if status, syncErr = r.syncPromotionsFn(ctx, stage, status); syncErr != nil {
 		return status, syncErr
 	}
+
+	logger.Debug("Patching stage status")
 	if err := kubeclient.PatchStatus(ctx, r.kargoClient, stage, func(s *kargoapi.StageStatus) {
 		*s = status
 	}); err != nil {
@@ -676,6 +679,9 @@ func (r *reconciler) syncNormalStage(
 			"Stage has no current Freight; no health checks or verification to perform",
 		)
 	} else {
+		freightLogger := logger.WithValues("freight", status.FreightHistory.Current())
+		freightLogger.Debug("Stage has a current Freight; assessing health and performing verification")
+
 		// Always check the health of the Argo CD Applications associated with the
 		// Stage. This is regardless of the phase of the Stage, as the health of the
 		// Argo CD Applications is always relevant.
@@ -693,12 +699,15 @@ func (r *reconciler) syncNormalStage(
 
 		if stage.Spec.Verification != nil {
 			currentVI = currentFC.VerificationHistory.Current()
+			freightLogger.Debug("Stage has verification configured, about to perform verification")
 
 			// If the Stage is in a steady state, we should check if we need to
 			// start or rerun verification.
 			if status.Phase == kargoapi.StagePhaseSteady {
+				logger.Debug("Stage is in a steady state; checking if verification is required")
 				switch {
 				case currentVI == nil && status.CurrentPromotion == nil:
+					logger.Debug("Verification is necessary")
 					status.Phase = kargoapi.StagePhaseVerifying
 				case currentVI.Phase.IsTerminal():
 					if req, _ := kargoapi.ReverifyAnnotationValue(stage.GetAnnotations()); req.ForID(currentVI.ID) {
@@ -711,7 +720,9 @@ func (r *reconciler) syncNormalStage(
 
 			// Initiate or follow-up on verification if required.
 			if status.Phase == kargoapi.StagePhaseVerifying {
+				logger.Debug("Checking if stage has AnalysisRun")
 				if !currentVI.HasAnalysisRun() {
+					logger.Debug("Stage does not have AnalysisRun")
 					if status.Health == nil || status.Health.Status == kargoapi.HealthStateHealthy {
 						logger.Debug("starting verification")
 						var err error
@@ -772,7 +783,7 @@ func (r *reconciler) syncNormalStage(
 				FinishTime: ptr.To(metav1.NewTime(r.nowFn())),
 				Phase:      kargoapi.VerificationPhaseSuccessful,
 			}
-			// Mark the Stage as steady.
+			logger.Debug("Stage has no verification configured, marking as steady")
 			// This ensures that if the Stage had verification enabled previously,
 			// it will not be stuck in a verification phase.
 			status.Phase = kargoapi.StagePhaseSteady
@@ -813,6 +824,7 @@ func (r *reconciler) syncNormalStage(
 			}
 		}
 
+		logger.Debug("Stage verification completed")
 		if verificationJustCompleted {
 			for _, f := range currentFC.Freight {
 				freightNeedingEvents[f.Name] = struct{}{}
@@ -1004,6 +1016,8 @@ func (r *reconciler) syncPromotions(
 ) (kargoapi.StageStatus, error) {
 	logger := logging.LoggerFromContext(ctx)
 
+	logger.Debug("About to sync Promotions")
+
 	promotions, err := r.getPromotionsForStageFn(ctx, stage.Namespace, stage.Name)
 	if err != nil || len(promotions) == 0 {
 		return status, err
@@ -1078,6 +1092,7 @@ func (r *reconciler) syncPromotions(
 		}
 	}
 
+	logger.Debug("Done syncing Promotions")
 	return status, nil
 }
 

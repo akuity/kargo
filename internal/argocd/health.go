@@ -12,6 +12,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
+	"github.com/akuity/kargo/internal/logging"
 )
 
 // healthErrorConditions are the v1alpha1.ApplicationConditionType conditions
@@ -56,8 +57,12 @@ func (h *applicationHealth) EvaluateHealth(
 	ctx context.Context,
 	stage *kargoapi.Stage,
 ) *kargoapi.Health {
+	logger := logging.LoggerFromContext(ctx)
+	logger.Debug("About to evaluate ArgoCD application health.")
+
 	if stage.Spec.PromotionMechanisms == nil ||
 		len(stage.Spec.PromotionMechanisms.ArgoCDAppUpdates) == 0 {
+		logger.Debug("No updates to process, skipping.")
 		return nil
 	}
 
@@ -76,6 +81,8 @@ func (h *applicationHealth) EvaluateHealth(
 		Issues:     make([]string, 0),
 	}
 
+	logger.Debug("About to evaluate health of applications.", "count",
+		len(stage.Spec.PromotionMechanisms.ArgoCDAppUpdates))
 	for i := range stage.Spec.PromotionMechanisms.ArgoCDAppUpdates {
 		update := &stage.Spec.PromotionMechanisms.ArgoCDAppUpdates[i]
 		namespace := update.AppNamespace
@@ -88,6 +95,7 @@ func (h *applicationHealth) EvaluateHealth(
 			Name:      update.AppName,
 		}
 
+		logger.Debug("About to get health of application.", "appName", update.AppName)
 		state, healthStatus, syncStatus, err := h.GetApplicationHealth(
 			ctx,
 			stage,
@@ -97,6 +105,9 @@ func (h *applicationHealth) EvaluateHealth(
 				Name:      health.ArgoCDApps[i].Name,
 			},
 		)
+
+		logger.Debug("Got application health status.", "appName", update.AppName,
+			"healthStatus", healthStatus.Status, "syncStatus", syncStatus.Status, "state", state)
 
 		health.Status = health.Status.Merge(state)
 		health.ArgoCDApps[i].HealthStatus = healthStatus
@@ -136,6 +147,9 @@ func (h *applicationHealth) GetApplicationHealth(
 		}
 	)
 
+	logger := logging.LoggerFromContext(ctx)
+	logger.Debug("About to get application health.")
+
 	app := &argocd.Application{}
 	if err := h.argoClient.Get(ctx, key, app); err != nil {
 		err = fmt.Errorf("error finding Argo CD Application %q in namespace %q: %w", key.Name, key.Namespace, err)
@@ -144,6 +158,8 @@ func (h *applicationHealth) GetApplicationHealth(
 		}
 		return kargoapi.HealthStateUnknown, healthStatus, syncStatus, err
 	}
+
+	logger.Debug("Successfully received application health from ArgoCD.", "key", key.Name, "namespace", key.Namespace)
 
 	// Mirror the health and sync status of the Argo CD Application.
 	if app.Status.Health.Status != "" {
@@ -160,22 +176,10 @@ func (h *applicationHealth) GetApplicationHealth(
 		}
 	}
 
-	// TODO: We should re-evaluate this soon. It may have been fixed in recent
-	//       versions.
-	// TODO(hidde): Do we have an upstream reference for this?
-	if len(app.Spec.Sources) > 0 {
-		err := fmt.Errorf(
-			"bugs in Argo CD currently prevent a comprehensive assessment of "+
-				"the health of multi-source Application %q in namespace %q",
-			key.Name,
-			key.Namespace,
-		)
-		return kargoapi.HealthStateUnknown, healthStatus, syncStatus, err
-	}
-
 	// Check for any error conditions. If these are found, the application is
 	// considered unhealthy as they may indicate a problem which can result in
 	// e.g. the health status result to become unreliable.
+	logger.Debug("About to check for app conditions")
 	if errConditions := filterAppConditions(app, healthErrorConditions...); len(errConditions) > 0 {
 		issues := make([]error, len(errConditions))
 		for _, condition := range errConditions {
@@ -187,6 +191,7 @@ func (h *applicationHealth) GetApplicationHealth(
 				condition.Message,
 			))
 		}
+		logger.Error(errors.Join(issues...), "Application has conditions, considering Unhealthy.")
 		return kargoapi.HealthStateUnhealthy, healthStatus, syncStatus, errors.Join(issues...)
 	}
 
@@ -204,7 +209,7 @@ func (h *applicationHealth) GetApplicationHealth(
 	); err != nil {
 		return kargoapi.HealthStateUnknown, healthStatus, syncStatus, err
 	} else if desiredRevision != "" {
-		if healthState, err := stageHealthForAppSync(app, desiredRevision); err != nil {
+		if healthState, err := stageHealthForAppSync(ctx, app, desiredRevision); err != nil {
 			return healthState, healthStatus, syncStatus, err
 		}
 
@@ -234,41 +239,75 @@ func (h *applicationHealth) GetApplicationHealth(
 
 	// With all the above checks passed, we can now assume the Argo CD
 	// Application's health state is reliable.
-	healthState, err := stageHealthForAppHealth(app)
+	healthState, err := stageHealthForAppHealth(ctx, app)
 	return healthState, healthStatus, syncStatus, err
 }
 
 // stageHealthForAppSync returns the v1alpha1.HealthState for an Argo CD
 // Application based on its sync status.
-func stageHealthForAppSync(app *argocd.Application, revision string) (kargoapi.HealthState, error) {
+func stageHealthForAppSync(
+	ctx context.Context,
+	app *argocd.Application,
+	revision string) (kargoapi.HealthState, error) {
+	logger := logging.LoggerFromContext(ctx).WithValues("appName", app.GetName(), "revision", revision)
+	logger.Debug("About to determine stage health based on app sync status.")
 	switch {
-	case revision == "":
+	case revision == "" && len(app.Status.Sync.Revisions) == 0:
+		logger.Debug("Revision not set, assuming healthy.")
 		return kargoapi.HealthStateHealthy, nil
 	case app.Operation != nil && app.Operation.Sync != nil,
 		app.Status.OperationState == nil || app.Status.OperationState.FinishedAt.IsZero():
+		logger.Debug("Application in sync operation, assuming unknown.")
 		err := fmt.Errorf(
 			"Argo CD Application %q in namespace %q is being synced",
 			app.GetName(),
 			app.GetNamespace(),
 		)
 		return kargoapi.HealthStateUnknown, err
-	case app.Status.Sync.Revision != revision:
-		err := fmt.Errorf(
-			"Argo CD Application %q in namespace %q is out of sync",
+
+	default:
+		// Apps may have multiple revisions in the list of revisions, so we need to check in both places.
+
+		// Trivial case where app has only a single source and revision is set.
+		if app.Status.Sync.Revision == revision {
+			return kargoapi.HealthStateHealthy, nil
+		}
+
+		if len(app.Status.Sync.Revisions) > 0 {
+			// App has multiple sources, so we need to check the list of revisions.
+			// Apps with multiple sources pointed at the same Git repository can only have the same revision
+			// for all sources because ArgoCD does not support the alternative, so we only need to check
+			// the first revision match.
+			for _, r := range app.Status.Sync.Revisions {
+				if r == revision {
+					logger.Debug("Found desired revision in list of revisions of multi-source application, app is healthy.",
+						"desiredRevision", revision, "currentRevisions", app.Status.Sync.Revisions)
+					return kargoapi.HealthStateHealthy, nil
+				}
+			}
+		}
+
+		msg := fmt.Sprintf(
+			"No revisions of Application %q in namespace %q match the desired revision %v"+
+				", assuming unhealthy. Current revisions: %v, current revision: %v",
 			app.GetName(),
 			app.GetNamespace(),
+			revision,
+			app.Status.Sync.Revisions,
+			app.Status.Sync.Revision,
 		)
-		return kargoapi.HealthStateUnhealthy, err
-	default:
-		return kargoapi.HealthStateHealthy, nil
+		logger.Debug(msg)
+		return kargoapi.HealthStateUnhealthy, errors.New(msg)
 	}
 }
 
 // stageHealthForAppHealth returns the v1alpha1.HealthState for an Argo CD
 // Application based on its health status.
-func stageHealthForAppHealth(app *argocd.Application) (kargoapi.HealthState, error) {
+func stageHealthForAppHealth(ctx context.Context, app *argocd.Application) (kargoapi.HealthState, error) {
+	logger := logging.LoggerFromContext(ctx).WithValues("appName", app.GetName())
 	switch app.Status.Health.Status {
 	case argocd.HealthStatusProgressing, "":
+		logger.Debug("Application in progress or health status not set, assuming progressing.")
 		err := fmt.Errorf(
 			"Argo CD Application %q in namespace %q is progressing",
 			app.GetName(),
@@ -286,8 +325,10 @@ func stageHealthForAppHealth(app *argocd.Application) (kargoapi.HealthState, err
 		// xref: https://github.com/akuity/kargo/issues/2216
 		return kargoapi.HealthStateProgressing, err
 	case argocd.HealthStatusHealthy:
+		logger.Debug("Application is healthy.")
 		return kargoapi.HealthStateHealthy, nil
 	default:
+		logger.Debug("Application is unhealthy.", "healthStatus", app.Status.Health.Status)
 		err := fmt.Errorf(
 			"Argo CD Application %q in namespace %q has health state %q",
 			app.GetName(),
