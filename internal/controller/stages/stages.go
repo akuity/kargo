@@ -884,15 +884,10 @@ func (r *reconciler) syncNormalStage(
 		return status, nil
 	}
 
-	// Find the latest Freight
+	// Find the latest Freight by sorting the available Freight by creation time
+	// in descending order.
 	slices.SortFunc(availableFreight, func(lhs, rhs kargoapi.Freight) int {
-		if lhs.CreationTimestamp.Time.Before(rhs.CreationTimestamp.Time) {
-			return 1
-		}
-		if lhs.CreationTimestamp.Time.After(rhs.CreationTimestamp.Time) {
-			return -1
-		}
-		return 0
+		return rhs.CreationTimestamp.Time.Compare(lhs.CreationTimestamp.Time)
 	})
 	latestFreight := availableFreight[0]
 
