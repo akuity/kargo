@@ -12,7 +12,7 @@ type ProviderRegistration struct {
 	// for the provider to handle (e.g. github.com is the domain name)
 	Predicate func(repoURL string) bool
 	// NewService instantiates the git provider
-	NewService func() (GitProviderService, error)
+	NewService func(repoURL string) (GitProviderService, error)
 }
 
 var (
@@ -21,9 +21,9 @@ var (
 )
 
 // NewGitProviderServiceFromName returns a git provider service by it's registered name
-func NewGitProviderServiceFromName(name string) (GitProviderService, error) {
+func NewGitProviderServiceFromName(name string, repoURL string) (GitProviderService, error) {
 	if reg, ok := registeredProviders[name]; ok {
-		return reg.NewService()
+		return reg.NewService(repoURL)
 	}
 	return nil, fmt.Errorf("No registered providers with name %q", name)
 }
@@ -34,7 +34,7 @@ func NewGitProviderServiceFromName(name string) (GitProviderService, error) {
 func NewGitProviderServiceFromURL(repoURL string) (GitProviderService, error) {
 	for _, reg := range registeredProviders {
 		if reg.Predicate(repoURL) {
-			return reg.NewService()
+			return reg.NewService(repoURL)
 		}
 	}
 	return nil, fmt.Errorf("No registered providers for %s", repoURL)

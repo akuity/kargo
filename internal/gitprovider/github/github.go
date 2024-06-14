@@ -30,7 +30,7 @@ var (
 			// e.g. 'git.mycompany.com'
 			return strings.Contains(u.Host, GitProviderServiceName)
 		},
-		NewService: func() (gitprovider.GitProviderService, error) {
+		NewService: func(repoURL string) (gitprovider.GitProviderService, error) {
 			return NewGitHubProvider()
 		},
 	}

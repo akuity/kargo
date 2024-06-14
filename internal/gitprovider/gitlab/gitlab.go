@@ -27,8 +27,19 @@ var (
 			// e.g. 'git.mycompany.com'
 			return strings.Contains(u.Host, GitProviderServiceName)
 		},
-		NewService: func() (gitprovider.GitProviderService, error) {
-			return NewGitLabProvider()
+		NewService: func(repoURL string) (gitprovider.GitProviderService, error) {
+			if repoURL != "" {
+				u, err := url.Parse(repoURL)
+				if err != nil {
+					return nil, err
+				}
+				u.Path = ""
+				u.RawQuery = ""
+				u.Fragment = ""
+				return NewGitLabProvider(u.String() + "/api/v4")
+			} else {
+				return NewGitLabProvider("")
+			}
 		},
 	}
 )
@@ -37,51 +48,37 @@ func init() {
 	gitprovider.RegisterProvider(GitProviderServiceName, registration)
 }
 
-type MergeRequestClient interface {
-	CreateMergeRequest(
-		pid any,
-		opt *gitlab.CreateMergeRequestOptions,
-		options ...gitlab.RequestOptionFunc,
-	) (*gitlab.MergeRequest, *gitlab.Response, error)
-
-	ListProjectMergeRequests(
-		pid any,
-		opt *gitlab.ListProjectMergeRequestsOptions,
-		options ...gitlab.RequestOptionFunc,
-	) ([]*gitlab.MergeRequest, *gitlab.Response, error)
-
-	GetMergeRequest(
-		pid any,
-		mergeRequest int,
-		opt *gitlab.GetMergeRequestsOptions,
-		options ...gitlab.RequestOptionFunc,
-	) (*gitlab.MergeRequest, *gitlab.Response, error)
-}
-
-type GitLabClient struct { // nolint: revive
-	MergeRequests MergeRequestClient
-}
-
 type GitLabProvider struct { // nolint: revive
-	client *GitLabClient
+	client *gitlab.Client
 }
 
-func NewGitLabProvider() (gitprovider.GitProviderService, error) {
-	client, err := gitlab.NewClient("")
-	if err != nil {
-		return nil, err
+func NewGitLabProvider(baseURL string) (gitprovider.GitProviderService, error) {
+	var client *gitlab.Client
+	var err error
+
+	if baseURL == "" {
+		client, err = gitlab.NewClient("")
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		client, err = gitlab.NewClient("", gitlab.WithBaseURL(baseURL))
+		if err != nil {
+			return nil, err
+		}
 	}
 	return &GitLabProvider{
-		client: &GitLabClient{MergeRequests: client.MergeRequests},
+		client: client,
 	}, nil
 }
 
 func (g *GitLabProvider) WithAuthToken(token string) (gitprovider.GitProviderService, error) {
-	client, err := gitlab.NewClient(token)
+	baseURL := g.client.BaseURL().String()
+	client, err := gitlab.NewClient(token, gitlab.WithBaseURL(baseURL))
 	if err != nil {
 		return nil, err
 	}
-	g.client = &GitLabClient{MergeRequests: client.MergeRequests}
+	g.client = client
 	return g, nil
 }
 
