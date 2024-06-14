@@ -88,7 +88,7 @@ func TestGetPullRequest(t *testing.T) {
 			WebURL:         "url",
 		},
 	}
-	g := GitLabProvider{client: mockClient}}
+	g := GitLabProvider{client: mockClient}
 
 	pr, err := g.GetPullRequest(context.Background(), "https://gitlab.com/group/project.git", 1)
 
@@ -109,7 +109,7 @@ func TestListPullRequests(t *testing.T) {
 			WebURL:         "url",
 		},
 	}
-	g := GitLabProvider{client: mockClient}}
+	g := GitLabProvider{client: mockClient}
 
 	opts := gitprovider.ListPullRequestOpts{
 		Head: "head",
@@ -144,7 +144,7 @@ func isPullRequestMerged(state string) bool {
 			WebURL:         "url",
 		},
 	}
-	g := GitLabProvider{client: mockClient}}
+	g := GitLabProvider{client: mockClient}
 	res, _ := g.IsPullRequestMerged(context.Background(), "https://gitlab.com/group/project.git", 1)
 	return res
 }
