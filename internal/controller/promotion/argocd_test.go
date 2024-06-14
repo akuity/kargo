@@ -16,6 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	libargocd "github.com/akuity/kargo/internal/argocd"
 	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
 	"github.com/akuity/kargo/internal/logging"
 )
@@ -26,9 +27,10 @@ func TestNewArgoCDMechanism(t *testing.T) {
 	)
 	apm, ok := pm.(*argoCDMechanism)
 	require.True(t, ok)
+	require.NotNil(t, apm.buildDesiredSourcesFn)
 	require.NotNil(t, apm.mustPerformUpdateFn)
-	require.NotNil(t, apm.doSingleUpdateFn)
-	require.NotNil(t, apm.getArgoCDAppFn)
+	require.NotNil(t, apm.updateApplicationSourcesFn)
+	require.NotNil(t, apm.getAuthorizedApplicationFn)
 	require.NotNil(t, apm.applyArgoCDSourceUpdateFn)
 	require.NotNil(t, apm.argoCDAppPatchFn)
 }
@@ -95,13 +97,103 @@ func TestArgoCDPromote(t *testing.T) {
 			},
 		},
 		{
+			name: "error retrieving authorized application",
+			promoMech: &argoCDMechanism{
+				argocdClient: fake.NewClientBuilder().Build(),
+				getAuthorizedApplicationFn: func(
+					context.Context,
+					string,
+					string,
+					metav1.ObjectMeta,
+				) (*argocd.Application, error) {
+					return nil, errors.New("something went wrong")
+				},
+			},
+			stage: &kargoapi.Stage{
+				Spec: kargoapi.StageSpec{
+					PromotionMechanisms: &kargoapi.PromotionMechanisms{
+						ArgoCDAppUpdates: []kargoapi.ArgoCDAppUpdate{
+							{},
+						},
+					},
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				_ *kargoapi.PromotionStatus,
+				newFreightIn kargoapi.FreightReference,
+				newFreightOut kargoapi.FreightReference,
+				err error,
+			) {
+				require.ErrorContains(t, err, "something went wrong")
+				require.Equal(t, newFreightIn, newFreightOut)
+			},
+		},
+		{
+			name: "error building desired sources",
+			promoMech: &argoCDMechanism{
+				argocdClient: fake.NewClientBuilder().Build(),
+				getAuthorizedApplicationFn: func(
+					context.Context,
+					string,
+					string,
+					metav1.ObjectMeta,
+				) (*argocd.Application, error) {
+					return &argocd.Application{}, nil
+				},
+				buildDesiredSourcesFn: func(
+					*argocd.Application,
+					kargoapi.ArgoCDAppUpdate,
+					kargoapi.FreightReference,
+				) (*argocd.ApplicationSource, argocd.ApplicationSources, error) {
+					return nil, nil, errors.New("something went wrong")
+				},
+			},
+			stage: &kargoapi.Stage{
+				Spec: kargoapi.StageSpec{
+					PromotionMechanisms: &kargoapi.PromotionMechanisms{
+						ArgoCDAppUpdates: []kargoapi.ArgoCDAppUpdate{
+							{},
+						},
+					},
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				_ *kargoapi.PromotionStatus,
+				newFreightIn kargoapi.FreightReference,
+				newFreightOut kargoapi.FreightReference,
+				err error,
+			) {
+				require.ErrorContains(t, err, "something went wrong")
+				require.Equal(t, newFreightIn, newFreightOut)
+			},
+		},
+		{
 			name: "error determining if update is necessary",
 			promoMech: &argoCDMechanism{
 				argocdClient: fake.NewClientBuilder().Build(),
-				mustPerformUpdateFn: func(
+				getAuthorizedApplicationFn: func(
 					context.Context,
+					string,
+					string,
+					metav1.ObjectMeta,
+				) (*argocd.Application, error) {
+					return &argocd.Application{}, nil
+				},
+				buildDesiredSourcesFn: func(
+					*argocd.Application,
 					kargoapi.ArgoCDAppUpdate,
 					kargoapi.FreightReference,
+				) (*argocd.ApplicationSource, argocd.ApplicationSources, error) {
+					return nil, nil, nil
+				},
+				mustPerformUpdateFn: func(
+					*argocd.Application,
+					kargoapi.ArgoCDAppUpdate,
+					kargoapi.FreightReference,
+					*argocd.ApplicationSource,
+					argocd.ApplicationSources,
 				) (argocd.OperationPhase, bool, error) {
 					return "", false, errors.New("something went wrong")
 				},
@@ -130,18 +222,35 @@ func TestArgoCDPromote(t *testing.T) {
 			name: "determination error can be solved by applying update",
 			promoMech: &argoCDMechanism{
 				argocdClient: fake.NewClientBuilder().Build(),
-				mustPerformUpdateFn: func(
+				getAuthorizedApplicationFn: func(
 					context.Context,
+					string,
+					string,
+					metav1.ObjectMeta,
+				) (*argocd.Application, error) {
+					return &argocd.Application{}, nil
+				},
+				buildDesiredSourcesFn: func(
+					*argocd.Application,
 					kargoapi.ArgoCDAppUpdate,
 					kargoapi.FreightReference,
+				) (*argocd.ApplicationSource, argocd.ApplicationSources, error) {
+					return nil, nil, nil
+				},
+				mustPerformUpdateFn: func(
+					*argocd.Application,
+					kargoapi.ArgoCDAppUpdate,
+					kargoapi.FreightReference,
+					*argocd.ApplicationSource,
+					argocd.ApplicationSources,
 				) (argocd.OperationPhase, bool, error) {
 					return "", true, fmt.Errorf("something went wrong")
 				},
-				doSingleUpdateFn: func(
+				updateApplicationSourcesFn: func(
 					context.Context,
-					metav1.ObjectMeta,
-					kargoapi.ArgoCDAppUpdate,
-					kargoapi.FreightReference,
+					*argocd.Application,
+					*argocd.ApplicationSource,
+					argocd.ApplicationSources,
 				) error {
 					return nil
 				},
@@ -170,10 +279,27 @@ func TestArgoCDPromote(t *testing.T) {
 			name: "must wait for update to complete",
 			promoMech: &argoCDMechanism{
 				argocdClient: fake.NewClientBuilder().Build(),
-				mustPerformUpdateFn: func(
+				getAuthorizedApplicationFn: func(
 					context.Context,
+					string,
+					string,
+					metav1.ObjectMeta,
+				) (*argocd.Application, error) {
+					return &argocd.Application{}, nil
+				},
+				buildDesiredSourcesFn: func(
+					*argocd.Application,
 					kargoapi.ArgoCDAppUpdate,
 					kargoapi.FreightReference,
+				) (*argocd.ApplicationSource, argocd.ApplicationSources, error) {
+					return nil, nil, nil
+				},
+				mustPerformUpdateFn: func(
+					*argocd.Application,
+					kargoapi.ArgoCDAppUpdate,
+					kargoapi.FreightReference,
+					*argocd.ApplicationSource,
+					argocd.ApplicationSources,
 				) (argocd.OperationPhase, bool, error) {
 					return argocd.OperationRunning, false, nil
 				},
@@ -203,10 +329,27 @@ func TestArgoCDPromote(t *testing.T) {
 			name: "must wait for operation from different user to complete",
 			promoMech: &argoCDMechanism{
 				argocdClient: fake.NewClientBuilder().Build(),
-				mustPerformUpdateFn: func(
+				getAuthorizedApplicationFn: func(
 					context.Context,
+					string,
+					string,
+					metav1.ObjectMeta,
+				) (*argocd.Application, error) {
+					return &argocd.Application{}, nil
+				},
+				buildDesiredSourcesFn: func(
+					*argocd.Application,
 					kargoapi.ArgoCDAppUpdate,
 					kargoapi.FreightReference,
+				) (*argocd.ApplicationSource, argocd.ApplicationSources, error) {
+					return nil, nil, nil
+				},
+				mustPerformUpdateFn: func(
+					*argocd.Application,
+					kargoapi.ArgoCDAppUpdate,
+					kargoapi.FreightReference,
+					*argocd.ApplicationSource,
+					argocd.ApplicationSources,
 				) (argocd.OperationPhase, bool, error) {
 					return argocd.OperationRunning, false, fmt.Errorf("waiting for operation to complete")
 				},
@@ -236,18 +379,35 @@ func TestArgoCDPromote(t *testing.T) {
 			name: "error applying update",
 			promoMech: &argoCDMechanism{
 				argocdClient: fake.NewClientBuilder().Build(),
-				mustPerformUpdateFn: func(
+				getAuthorizedApplicationFn: func(
 					context.Context,
+					string,
+					string,
+					metav1.ObjectMeta,
+				) (*argocd.Application, error) {
+					return &argocd.Application{}, nil
+				},
+				buildDesiredSourcesFn: func(
+					*argocd.Application,
 					kargoapi.ArgoCDAppUpdate,
 					kargoapi.FreightReference,
+				) (*argocd.ApplicationSource, argocd.ApplicationSources, error) {
+					return nil, nil, nil
+				},
+				mustPerformUpdateFn: func(
+					*argocd.Application,
+					kargoapi.ArgoCDAppUpdate,
+					kargoapi.FreightReference,
+					*argocd.ApplicationSource,
+					argocd.ApplicationSources,
 				) (argocd.OperationPhase, bool, error) {
 					return "", true, nil
 				},
-				doSingleUpdateFn: func(
+				updateApplicationSourcesFn: func(
 					context.Context,
-					metav1.ObjectMeta,
-					kargoapi.ArgoCDAppUpdate,
-					kargoapi.FreightReference,
+					*argocd.Application,
+					*argocd.ApplicationSource,
+					argocd.ApplicationSources,
 				) error {
 					return errors.New("something went wrong")
 				},
@@ -281,16 +441,35 @@ func TestArgoCDPromote(t *testing.T) {
 			name: "failed and pending update",
 			promoMech: &argoCDMechanism{
 				argocdClient: fake.NewClientBuilder().Build(),
-				mustPerformUpdateFn: func() func(
+				getAuthorizedApplicationFn: func(
 					context.Context,
+					string,
+					string,
+					metav1.ObjectMeta,
+				) (*argocd.Application, error) {
+					return &argocd.Application{}, nil
+				},
+				buildDesiredSourcesFn: func(
+					*argocd.Application,
 					kargoapi.ArgoCDAppUpdate,
 					kargoapi.FreightReference,
+				) (*argocd.ApplicationSource, argocd.ApplicationSources, error) {
+					return nil, nil, nil
+				},
+				mustPerformUpdateFn: func() func(
+					*argocd.Application,
+					kargoapi.ArgoCDAppUpdate,
+					kargoapi.FreightReference,
+					*argocd.ApplicationSource,
+					argocd.ApplicationSources,
 				) (argocd.OperationPhase, bool, error) {
 					var count uint
 					return func(
-						context.Context,
+						*argocd.Application,
 						kargoapi.ArgoCDAppUpdate,
 						kargoapi.FreightReference,
+						*argocd.ApplicationSource,
+						argocd.ApplicationSources,
 					) (argocd.OperationPhase, bool, error) {
 						count++
 						if count > 1 {
@@ -299,11 +478,11 @@ func TestArgoCDPromote(t *testing.T) {
 						return "", true, nil
 					}
 				}(),
-				doSingleUpdateFn: func(
+				updateApplicationSourcesFn: func(
 					context.Context,
-					metav1.ObjectMeta,
-					kargoapi.ArgoCDAppUpdate,
-					kargoapi.FreightReference,
+					*argocd.Application,
+					*argocd.ApplicationSource,
+					argocd.ApplicationSources,
 				) error {
 					return nil
 				},
@@ -334,10 +513,27 @@ func TestArgoCDPromote(t *testing.T) {
 			name: "operation phase aggregation error",
 			promoMech: &argoCDMechanism{
 				argocdClient: fake.NewClientBuilder().Build(),
-				mustPerformUpdateFn: func(
+				getAuthorizedApplicationFn: func(
 					context.Context,
+					string,
+					string,
+					metav1.ObjectMeta,
+				) (*argocd.Application, error) {
+					return &argocd.Application{}, nil
+				},
+				buildDesiredSourcesFn: func(
+					*argocd.Application,
 					kargoapi.ArgoCDAppUpdate,
 					kargoapi.FreightReference,
+				) (*argocd.ApplicationSource, argocd.ApplicationSources, error) {
+					return nil, nil, nil
+				},
+				mustPerformUpdateFn: func(
+					*argocd.Application,
+					kargoapi.ArgoCDAppUpdate,
+					kargoapi.FreightReference,
+					*argocd.ApplicationSource,
+					argocd.ApplicationSources,
 				) (argocd.OperationPhase, bool, error) {
 					return "Unknown", false, nil
 				},
@@ -366,10 +562,27 @@ func TestArgoCDPromote(t *testing.T) {
 			name: "completed",
 			promoMech: &argoCDMechanism{
 				argocdClient: fake.NewClientBuilder().Build(),
-				mustPerformUpdateFn: func(
+				getAuthorizedApplicationFn: func(
 					context.Context,
+					string,
+					string,
+					metav1.ObjectMeta,
+				) (*argocd.Application, error) {
+					return &argocd.Application{}, nil
+				},
+				buildDesiredSourcesFn: func(
+					*argocd.Application,
 					kargoapi.ArgoCDAppUpdate,
 					kargoapi.FreightReference,
+				) (*argocd.ApplicationSource, argocd.ApplicationSources, error) {
+					return nil, nil, nil
+				},
+				mustPerformUpdateFn: func(
+					*argocd.Application,
+					kargoapi.ArgoCDAppUpdate,
+					kargoapi.FreightReference,
+					*argocd.ApplicationSource,
+					argocd.ApplicationSources,
 				) (argocd.OperationPhase, bool, error) {
 					return argocd.OperationSucceeded, false, nil
 				},
@@ -412,39 +625,205 @@ func TestArgoCDPromote(t *testing.T) {
 	}
 }
 
+func TestArgoCDBuildDesiredSources(t *testing.T) {
+	testCases := []struct {
+		name              string
+		reconciler        *argoCDMechanism
+		modifyApplication func(*argocd.Application)
+		update            kargoapi.ArgoCDAppUpdate
+		assertions        func(
+			t *testing.T,
+			oldSource, newSource *argocd.ApplicationSource,
+			oldSources, newSources argocd.ApplicationSources,
+			err error,
+		)
+	}{
+		{
+			name: "applies updates to source",
+			reconciler: &argoCDMechanism{
+				applyArgoCDSourceUpdateFn: func(
+					src argocd.ApplicationSource,
+					_ kargoapi.FreightReference,
+					_ kargoapi.ArgoCDSourceUpdate,
+				) (argocd.ApplicationSource, error) {
+					if src.RepoURL == "updated-url" {
+						src.TargetRevision = "updated-revision"
+						return src, nil
+					}
+					if src.RepoURL == "" {
+						src.RepoURL = "updated-url"
+					}
+					return src, nil
+				},
+			},
+			modifyApplication: func(app *argocd.Application) {
+				app.Spec.Source = &argocd.ApplicationSource{}
+			},
+			update: kargoapi.ArgoCDAppUpdate{
+				SourceUpdates: []kargoapi.ArgoCDSourceUpdate{
+					{}, {},
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				oldSource, newSource *argocd.ApplicationSource,
+				oldSources, newSources argocd.ApplicationSources,
+				err error,
+			) {
+				require.NoError(t, err)
+				require.True(t, oldSources.Equals(newSources))
+
+				require.False(t, oldSource.Equals(newSource))
+				require.Equal(t, "updated-url", newSource.RepoURL)
+				require.Equal(t, "updated-revision", newSource.TargetRevision)
+			},
+		},
+		{
+			name: "error applying update to source",
+			reconciler: &argoCDMechanism{
+				applyArgoCDSourceUpdateFn: func(
+					argocd.ApplicationSource,
+					kargoapi.FreightReference,
+					kargoapi.ArgoCDSourceUpdate,
+				) (argocd.ApplicationSource, error) {
+					return argocd.ApplicationSource{}, errors.New("something went wrong")
+				},
+			},
+			modifyApplication: func(app *argocd.Application) {
+				app.Spec.Source = &argocd.ApplicationSource{}
+			},
+			update: kargoapi.ArgoCDAppUpdate{
+				SourceUpdates: []kargoapi.ArgoCDSourceUpdate{
+					{},
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				_, newSource *argocd.ApplicationSource,
+				_, newSources argocd.ApplicationSources,
+				err error,
+			) {
+				require.ErrorContains(t, err, "something went wrong")
+				require.Nil(t, newSource)
+				require.Nil(t, newSources)
+			},
+		},
+		{
+			name: "applies updates to sources",
+			reconciler: &argoCDMechanism{
+				applyArgoCDSourceUpdateFn: func(
+					src argocd.ApplicationSource,
+					_ kargoapi.FreightReference,
+					_ kargoapi.ArgoCDSourceUpdate,
+				) (argocd.ApplicationSource, error) {
+					if src.RepoURL == "url-1" {
+						src.TargetRevision = "updated-revision-1"
+						return src, nil
+					}
+					if src.RepoURL == "url-2" {
+						src.TargetRevision = "updated-revision-2"
+						return src, nil
+					}
+					return src, nil
+				},
+			},
+			modifyApplication: func(app *argocd.Application) {
+				app.Spec.Sources = argocd.ApplicationSources{
+					{
+						RepoURL: "url-1",
+					},
+					{
+						RepoURL: "url-2",
+					},
+				}
+			},
+			update: kargoapi.ArgoCDAppUpdate{
+				SourceUpdates: []kargoapi.ArgoCDSourceUpdate{
+					{},
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				oldSource, newSource *argocd.ApplicationSource,
+				oldSources, newSources argocd.ApplicationSources,
+				err error,
+			) {
+				require.NoError(t, err)
+				require.True(t, oldSource.Equals(newSource))
+				require.False(t, oldSources.Equals(newSources))
+
+				require.Equal(t, 2, len(newSources))
+				require.Equal(t, "updated-revision-1", newSources[0].TargetRevision)
+				require.Equal(t, "updated-revision-2", newSources[1].TargetRevision)
+			},
+		},
+		{
+			name: "error applying update to sources",
+			reconciler: &argoCDMechanism{
+				applyArgoCDSourceUpdateFn: func(
+					argocd.ApplicationSource,
+					kargoapi.FreightReference,
+					kargoapi.ArgoCDSourceUpdate,
+				) (argocd.ApplicationSource, error) {
+					return argocd.ApplicationSource{}, errors.New("something went wrong")
+				},
+			},
+			modifyApplication: func(app *argocd.Application) {
+				app.Spec.Sources = argocd.ApplicationSources{
+					{},
+				}
+			},
+			update: kargoapi.ArgoCDAppUpdate{
+				SourceUpdates: []kargoapi.ArgoCDSourceUpdate{
+					{},
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				_, newSource *argocd.ApplicationSource,
+				_, newSources argocd.ApplicationSources,
+				err error,
+			) {
+				require.ErrorContains(t, err, "something went wrong")
+				require.Nil(t, newSource)
+				require.Nil(t, newSources)
+			},
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			app := &argocd.Application{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "fake-app",
+					Namespace: "fake-namespace",
+				},
+			}
+			if testCase.modifyApplication != nil {
+				testCase.modifyApplication(app)
+			}
+
+			oldSource, oldSources := app.Spec.Source.DeepCopy(), app.Spec.Sources.DeepCopy()
+			newSource, newSources, err := testCase.reconciler.buildDesiredSources(
+				app,
+				testCase.update,
+				kargoapi.FreightReference{},
+			)
+			testCase.assertions(t, oldSource, newSource, oldSources, newSources, err)
+		})
+	}
+}
+
 func TestArgoCDMustPerformUpdate(t *testing.T) {
 	testCases := []struct {
 		name              string
 		modifyApplication func(*argocd.Application)
+		update            kargoapi.ArgoCDAppUpdate
 		newFreight        kargoapi.FreightReference
-		interceptor       interceptor.Funcs
+		desiredSource     *argocd.ApplicationSource
+		desiredSources    argocd.ApplicationSources
 		assertions        func(t *testing.T, phase argocd.OperationPhase, mustUpdate bool, err error)
 	}{
-		{
-			name: "error getting Argo CD App",
-			interceptor: interceptor.Funcs{
-				Get: func(context.Context, client.WithWatch, client.ObjectKey, client.Object, ...client.GetOption) error {
-					return errors.New("something went wrong")
-				},
-			},
-			assertions: func(t *testing.T, phase argocd.OperationPhase, mustUpdate bool, err error) {
-				require.ErrorContains(t, err, "error finding Argo CD Application")
-				require.ErrorContains(t, err, "something went wrong")
-				require.Empty(t, phase)
-				require.False(t, mustUpdate)
-			},
-		},
-		{
-			name: "Argo CD App not found",
-			modifyApplication: func(app *argocd.Application) {
-				app.ObjectMeta = metav1.ObjectMeta{}
-			},
-			assertions: func(t *testing.T, phase argocd.OperationPhase, mustUpdate bool, err error) {
-				require.ErrorContains(t, err, "unable to find Argo CD Application")
-				require.Empty(t, phase)
-				require.False(t, mustUpdate)
-			},
-		},
 		{
 			name: "no operation state",
 			assertions: func(t *testing.T, phase argocd.OperationPhase, mustUpdate bool, err error) {
@@ -589,6 +968,83 @@ func TestArgoCDMustPerformUpdate(t *testing.T) {
 			},
 		},
 		{
+			name: "desired source does not match operation state",
+			modifyApplication: func(app *argocd.Application) {
+				app.Spec.Source = &argocd.ApplicationSource{
+					RepoURL: "https://github.com/universe/42",
+				}
+				app.Status.OperationState = &argocd.OperationState{
+					Phase: argocd.OperationSucceeded,
+					Operation: argocd.Operation{
+						InitiatedBy: argocd.OperationInitiator{
+							Username: applicationOperationInitiator,
+						},
+					},
+					SyncResult: &argocd.SyncOperationResult{
+						Revision: "fake-revision",
+						Source: argocd.ApplicationSource{
+							RepoURL: "https://github.com/different/universe",
+						},
+					},
+				}
+			},
+			update: kargoapi.ArgoCDAppUpdate{
+				SourceUpdates: []kargoapi.ArgoCDSourceUpdate{
+					{},
+				},
+			},
+			desiredSource: &argocd.ApplicationSource{
+				RepoURL: "http://github.com/universe/42",
+			},
+			assertions: func(t *testing.T, phase argocd.OperationPhase, mustUpdate bool, err error) {
+				require.ErrorContains(t, err, "does not match desired source")
+				require.Empty(t, phase)
+				require.True(t, mustUpdate)
+			},
+		},
+		{
+			name: "desired sources do not match operation state",
+			modifyApplication: func(app *argocd.Application) {
+				app.Spec.Sources = argocd.ApplicationSources{
+					{
+						RepoURL: "https://github.com/universe/42",
+					},
+				}
+				app.Status.OperationState = &argocd.OperationState{
+					Phase: argocd.OperationSucceeded,
+					Operation: argocd.Operation{
+						InitiatedBy: argocd.OperationInitiator{
+							Username: applicationOperationInitiator,
+						},
+					},
+					SyncResult: &argocd.SyncOperationResult{
+						Revision: "fake-revision",
+						Sources: argocd.ApplicationSources{
+							{
+								RepoURL: "https://github.com/different/universe",
+							},
+						},
+					},
+				}
+			},
+			update: kargoapi.ArgoCDAppUpdate{
+				SourceUpdates: []kargoapi.ArgoCDSourceUpdate{
+					{},
+				},
+			},
+			desiredSource: &argocd.ApplicationSource{},
+			desiredSources: argocd.ApplicationSources{
+				{
+					RepoURL: "https://github.com/universe/42",
+				},
+			},
+			assertions: func(t *testing.T, phase argocd.OperationPhase, mustUpdate bool, err error) {
+				require.ErrorContains(t, err, "does not match desired source")
+				require.Empty(t, phase)
+				require.True(t, mustUpdate)
+			},
+		},
+		{
 			name: "operation completed",
 			modifyApplication: func(app *argocd.Application) {
 				app.Spec.Source = &argocd.ApplicationSource{
@@ -637,199 +1093,34 @@ func TestArgoCDMustPerformUpdate(t *testing.T) {
 				testCase.modifyApplication(app)
 			}
 
-			c := fake.NewClientBuilder().
-				WithScheme(scheme).
-				WithObjects(app).
-				WithInterceptorFuncs(testCase.interceptor).
-				Build()
-
-			mechanism := newArgoCDMechanism(c)
+			mechanism := newArgoCDMechanism(fake.NewClientBuilder().WithScheme(scheme).Build())
 			argocdMech, ok := mechanism.(*argoCDMechanism)
 			require.True(t, ok)
 
 			phase, mustUpdate, err := argocdMech.mustPerformUpdate(
-				context.Background(),
-				kargoapi.ArgoCDAppUpdate{
-					AppName:      "fake-name",
-					AppNamespace: "fake-namespace",
-				},
+				app,
+				testCase.update,
 				testCase.newFreight,
+				testCase.desiredSource,
+				testCase.desiredSources,
 			)
 			testCase.assertions(t, phase, mustUpdate, err)
 		})
 	}
 }
 
-func TestArgoCDDoSingleUpdate(t *testing.T) {
+func TestArgoCDUpdateApplicationSources(t *testing.T) {
 	testCases := []struct {
-		name       string
-		promoMech  *argoCDMechanism
-		stageMeta  metav1.ObjectMeta
-		update     kargoapi.ArgoCDAppUpdate
-		assertions func(*testing.T, error)
+		name           string
+		promoMech      *argoCDMechanism
+		app            *argocd.Application
+		desiredSource  *argocd.ApplicationSource
+		desiredSources argocd.ApplicationSources
+		assertions     func(*testing.T, error)
 	}{
-		{
-			name: "error getting Argo CD App",
-			promoMech: &argoCDMechanism{
-				getArgoCDAppFn: func(
-					context.Context,
-					string,
-					string,
-				) (*argocd.Application, error) {
-					return nil, errors.New("something went wrong")
-				},
-			},
-			assertions: func(t *testing.T, err error) {
-				require.ErrorContains(t, err, "error finding Argo CD Application")
-				require.ErrorContains(t, err, "something went wrong")
-			},
-		},
-		{
-			name: "Argo CD App not found",
-			promoMech: &argoCDMechanism{
-				getArgoCDAppFn: func(
-					context.Context,
-					string,
-					string,
-				) (*argocd.Application, error) {
-					return nil, nil
-				},
-			},
-			assertions: func(t *testing.T, err error) {
-				require.ErrorContains(t, err, "unable to find Argo CD Application")
-			},
-		},
-		{
-			name: "update not authorized",
-			promoMech: &argoCDMechanism{
-				getArgoCDAppFn: func(
-					context.Context,
-					string,
-					string,
-				) (*argocd.Application, error) {
-					return &argocd.Application{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "fake-name",
-							Namespace: "fake-namespace",
-							// The annotations that would permit this are missing
-						},
-					}, nil
-				},
-			},
-			stageMeta: metav1.ObjectMeta{
-				Name:      "fake-name",
-				Namespace: "fake-namespace",
-			},
-			assertions: func(t *testing.T, err error) {
-				require.ErrorContains(t, err, "does not permit mutation by")
-			},
-		},
-		{
-			name: "error updating app.Spec.Source",
-			promoMech: &argoCDMechanism{
-				getArgoCDAppFn: func(
-					context.Context,
-					string,
-					string,
-				) (*argocd.Application, error) {
-					return &argocd.Application{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "fake-name",
-							Namespace: "fake-namespace",
-							Annotations: map[string]string{
-								authorizedStageAnnotationKey: "fake-namespace:fake-name",
-							},
-						},
-						Spec: argocd.ApplicationSpec{
-							Source: &argocd.ApplicationSource{},
-						},
-					}, nil
-				},
-				applyArgoCDSourceUpdateFn: func(
-					argocd.ApplicationSource,
-					kargoapi.FreightReference,
-					kargoapi.ArgoCDSourceUpdate,
-				) (argocd.ApplicationSource, error) {
-					return argocd.ApplicationSource{}, errors.New("something went wrong")
-				},
-			},
-			stageMeta: metav1.ObjectMeta{
-				Name:      "fake-name",
-				Namespace: "fake-namespace",
-			},
-			update: kargoapi.ArgoCDAppUpdate{
-				SourceUpdates: []kargoapi.ArgoCDSourceUpdate{
-					{},
-				},
-			},
-			assertions: func(t *testing.T, err error) {
-				require.ErrorContains(t, err, "error updating source of Argo CD Application")
-				require.ErrorContains(t, err, "something went wrong")
-			},
-		},
-		{
-			name: "error updating app.Spec.Sources",
-			promoMech: &argoCDMechanism{
-				getArgoCDAppFn: func(
-					context.Context,
-					string,
-					string,
-				) (*argocd.Application, error) {
-					return &argocd.Application{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "fake-name",
-							Namespace: "fake-namespace",
-							Annotations: map[string]string{
-								authorizedStageAnnotationKey: "fake-namespace:fake-name",
-							},
-						},
-						Spec: argocd.ApplicationSpec{
-							Sources: []argocd.ApplicationSource{
-								{},
-							},
-						},
-					}, nil
-				},
-				applyArgoCDSourceUpdateFn: func(
-					argocd.ApplicationSource,
-					kargoapi.FreightReference,
-					kargoapi.ArgoCDSourceUpdate,
-				) (argocd.ApplicationSource, error) {
-					return argocd.ApplicationSource{}, errors.New("something went wrong")
-				},
-			},
-			stageMeta: metav1.ObjectMeta{
-				Name:      "fake-name",
-				Namespace: "fake-namespace",
-			},
-			update: kargoapi.ArgoCDAppUpdate{
-				SourceUpdates: []kargoapi.ArgoCDSourceUpdate{
-					{},
-				},
-			},
-			assertions: func(t *testing.T, err error) {
-				require.ErrorContains(t, err, "error updating source(s) of Argo CD Application")
-				require.ErrorContains(t, err, "something went wrong")
-			},
-		},
 		{
 			name: "error patching Application",
 			promoMech: &argoCDMechanism{
-				getArgoCDAppFn: func(
-					context.Context,
-					string,
-					string,
-				) (*argocd.Application, error) {
-					return &argocd.Application{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "fake-name",
-							Namespace: "fake-namespace",
-							Annotations: map[string]string{
-								authorizedStageAnnotationKey: "fake-namespace:fake-name",
-							},
-						},
-					}, nil
-				},
 				argoCDAppPatchFn: func(
 					context.Context,
 					client.Object,
@@ -839,9 +1130,14 @@ func TestArgoCDDoSingleUpdate(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			stageMeta: metav1.ObjectMeta{
-				Name:      "fake-name",
-				Namespace: "fake-namespace",
+			app: &argocd.Application{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "fake-name",
+					Namespace: "fake-namespace",
+					Annotations: map[string]string{
+						authorizedStageAnnotationKey: "fake-namespace:fake-name",
+					},
+				},
 			},
 			assertions: func(t *testing.T, err error) {
 				require.ErrorContains(t, err, "error patching Argo CD Application")
@@ -851,21 +1147,6 @@ func TestArgoCDDoSingleUpdate(t *testing.T) {
 		{
 			name: "success",
 			promoMech: &argoCDMechanism{
-				getArgoCDAppFn: func(
-					context.Context,
-					string,
-					string,
-				) (*argocd.Application, error) {
-					return &argocd.Application{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "fake-name",
-							Namespace: "fake-namespace",
-							Annotations: map[string]string{
-								authorizedStageAnnotationKey: "fake-namespace:fake-name",
-							},
-						},
-					}, nil
-				},
 				argoCDAppPatchFn: func(
 					context.Context,
 					client.Object,
@@ -876,9 +1157,14 @@ func TestArgoCDDoSingleUpdate(t *testing.T) {
 				},
 				logAppEventFn: func(context.Context, *argocd.Application, string, string, string) {},
 			},
-			stageMeta: metav1.ObjectMeta{
-				Name:      "fake-name",
-				Namespace: "fake-namespace",
+			app: &argocd.Application{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "fake-name",
+					Namespace: "fake-namespace",
+					Annotations: map[string]string{
+						authorizedStageAnnotationKey: "fake-namespace:fake-name",
+					},
+				},
 			},
 			assertions: func(t *testing.T, err error) {
 				require.NoError(t, err)
@@ -889,11 +1175,11 @@ func TestArgoCDDoSingleUpdate(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
 				t,
-				testCase.promoMech.doSingleUpdate(
+				testCase.promoMech.updateApplicationSources(
 					context.Background(),
-					testCase.stageMeta,
-					testCase.update,
-					kargoapi.FreightReference{},
+					testCase.app,
+					testCase.desiredSource,
+					testCase.desiredSources,
 				),
 			)
 		})
@@ -983,6 +1269,130 @@ func TestLogAppEvent(t *testing.T) {
 				testCase.eventMessage,
 			)
 			testCase.assertions(t, c, testCase.app)
+		})
+	}
+}
+
+func TestArgoCDGetAuthorizedApplication(t *testing.T) {
+	scheme := runtime.NewScheme()
+	require.NoError(t, argocd.AddToScheme(scheme))
+
+	testCases := []struct {
+		name         string
+		obj          *argocd.Application
+		appName      string
+		appNamespace string
+		interceptor  interceptor.Funcs
+		stageMeta    metav1.ObjectMeta
+		assertions   func(*testing.T, *argocd.Application, error)
+	}{
+		{
+			name:         "error getting Application",
+			appNamespace: "fake-namespace",
+			appName:      "fake-name",
+			interceptor: interceptor.Funcs{
+				Get: func(
+					context.Context,
+					client.WithWatch,
+					client.ObjectKey,
+					client.Object,
+					...client.GetOption,
+				) error {
+					return errors.New("something went wrong")
+				},
+			},
+			assertions: func(t *testing.T, app *argocd.Application, err error) {
+				require.ErrorContains(t, err, "error finding Argo CD Application")
+				require.ErrorContains(t, err, "something went wrong")
+				require.Nil(t, app)
+			},
+		},
+		{
+			name:         "Application not found",
+			appNamespace: "fake-namespace",
+			appName:      "fake-name",
+			assertions: func(t *testing.T, app *argocd.Application, err error) {
+				require.ErrorContains(t, err, "unable to find Argo CD Application")
+				require.Nil(t, app)
+			},
+		},
+		{
+			name:         "Application not authorized for Stage",
+			appNamespace: "fake-namespace",
+			appName:      "fake-name",
+			obj: &argocd.Application{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "fake-name",
+					Namespace: "fake-namespace",
+				},
+			},
+			assertions: func(t *testing.T, app *argocd.Application, err error) {
+				require.ErrorContains(t, err, "does not permit mutation by Kargo Stage")
+				require.Nil(t, app)
+			},
+		},
+		{
+			name:         "success",
+			appNamespace: "fake-namespace",
+			appName:      "fake-name",
+			obj: &argocd.Application{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "fake-name",
+					Namespace: "fake-namespace",
+					Annotations: map[string]string{
+						authorizedStageAnnotationKey: "fake-namespace:fake-stage",
+					},
+				},
+			},
+			stageMeta: metav1.ObjectMeta{
+				Name:      "fake-stage",
+				Namespace: "fake-namespace",
+			},
+			assertions: func(t *testing.T, app *argocd.Application, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, app)
+			},
+		},
+		{
+			name:    "success with default namespace",
+			appName: "fake-name",
+			obj: &argocd.Application{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "fake-name",
+					Namespace: libargocd.Namespace(),
+					Annotations: map[string]string{
+						authorizedStageAnnotationKey: "*:fake-stage",
+					},
+				},
+			},
+			stageMeta: metav1.ObjectMeta{
+				Name:      "fake-stage",
+				Namespace: "fake-namespace",
+			},
+			assertions: func(t *testing.T, app *argocd.Application, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, app)
+			},
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			c := fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithInterceptorFuncs(testCase.interceptor)
+
+			if testCase.obj != nil {
+				c.WithObjects(testCase.obj)
+			}
+
+			app, err := (&argoCDMechanism{argocdClient: c.Build()}).getAuthorizedApplication(
+				context.Background(),
+				testCase.appNamespace,
+				testCase.appName,
+				testCase.stageMeta,
+			)
+			testCase.assertions(t, app, err)
 		})
 	}
 }
