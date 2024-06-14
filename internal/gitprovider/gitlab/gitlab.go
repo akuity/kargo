@@ -2,11 +2,13 @@ package gitlab
 
 import (
 	"context"
+	"fmt"
 	"net/url"
 	"strings"
 
 	"github.com/xanzy/go-gitlab"
 
+	"github.com/akuity/kargo/internal/git"
 	"github.com/akuity/kargo/internal/gitprovider"
 )
 
@@ -27,19 +29,8 @@ var (
 			// e.g. 'git.mycompany.com'
 			return strings.Contains(u.Host, GitProviderServiceName)
 		},
-		NewService: func(repoURL string) (gitprovider.GitProviderService, error) {
-			if repoURL != "" {
-				u, err := url.Parse(repoURL)
-				if err != nil {
-					return nil, err
-				}
-				u.Path = ""
-				u.RawQuery = ""
-				u.Fragment = ""
-				return NewGitLabProvider(u.String() + "/api/v4")
-			} else {
-				return NewGitLabProvider("")
-			}
+		NewService: func(repoURL, token string) (gitprovider.GitProviderService, error) {
+			return NewGitLabProvider(repoURL, token)
 		},
 	}
 )
@@ -48,51 +39,66 @@ func init() {
 	gitprovider.RegisterProvider(GitProviderServiceName, registration)
 }
 
-type GitLabProvider struct { // nolint: revive
-	client *gitlab.Client
+type mergeRequestClient interface {
+	CreateMergeRequest(
+		pid any,
+		opt *gitlab.CreateMergeRequestOptions,
+		options ...gitlab.RequestOptionFunc,
+	) (*gitlab.MergeRequest, *gitlab.Response, error)
+
+	ListProjectMergeRequests(
+		pid any,
+		opt *gitlab.ListProjectMergeRequestsOptions,
+		options ...gitlab.RequestOptionFunc,
+	) ([]*gitlab.MergeRequest, *gitlab.Response, error)
+
+	GetMergeRequest(
+		pid any,
+		mergeRequest int,
+		opt *gitlab.GetMergeRequestsOptions,
+		options ...gitlab.RequestOptionFunc,
+	) (*gitlab.MergeRequest, *gitlab.Response, error)
 }
 
-func NewGitLabProvider(baseURL string) (gitprovider.GitProviderService, error) {
-	var client *gitlab.Client
-	var err error
+type gitLabClient struct { // nolint: revive
+	mergeRequests mergeRequestClient
+}
 
-	if baseURL == "" {
-		client, err = gitlab.NewClient("")
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		client, err = gitlab.NewClient("", gitlab.WithBaseURL(baseURL))
-		if err != nil {
-			return nil, err
-		}
+type gitLabProvider struct { // nolint: revive
+	projectName string
+	client      *gitLabClient
+}
+
+func NewGitLabProvider(repoURL, token string) (gitprovider.GitProviderService, error) {
+	host, projectName, err := parseGitLabURL(repoURL)
+	if err != nil {
+		return nil, err
 	}
-	return &GitLabProvider{
-		client: client,
+	var client *gitlab.Client
+	if host == "gitlab.com" {
+		client, err = gitlab.NewClient(token)
+	} else {
+		client, err = gitlab.NewClient(
+			token,
+			gitlab.WithBaseURL(
+				fmt.Sprintf("https://%s/api/v4", host),
+			),
+		)
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &gitLabProvider{
+		projectName: projectName,
+		client:      &gitLabClient{mergeRequests: client.MergeRequests},
 	}, nil
 }
 
-func (g *GitLabProvider) WithAuthToken(token string) (gitprovider.GitProviderService, error) {
-	baseURL := g.client.BaseURL().String()
-	client, err := gitlab.NewClient(token, gitlab.WithBaseURL(baseURL))
-	if err != nil {
-		return nil, err
-	}
-	g.client = client
-	return g, nil
-}
-
-func (g *GitLabProvider) CreatePullRequest(
+func (g *gitLabProvider) CreatePullRequest(
 	_ context.Context,
-	repoURL string,
 	opts gitprovider.CreatePullRequestOpts,
 ) (*gitprovider.PullRequest, error) {
-	projectName, err := getProjectNameFromUrl(repoURL)
-	if err != nil {
-		return nil, err
-	}
-
-	glMR, _, err := g.client.MergeRequests.CreateMergeRequest(projectName, &gitlab.CreateMergeRequestOptions{
+	glMR, _, err := g.client.mergeRequests.CreateMergeRequest(g.projectName, &gitlab.CreateMergeRequestOptions{
 		Title:              &opts.Title,
 		Description:        &opts.Description,
 		SourceBranch:       &opts.Head,
@@ -105,32 +111,26 @@ func (g *GitLabProvider) CreatePullRequest(
 	return convertGitlabMR(glMR), nil
 }
 
-func (g *GitLabProvider) GetPullRequest(
+func (g *gitLabProvider) GetPullRequest(
 	_ context.Context,
-	repoURL string,
 	id int64,
 ) (*gitprovider.PullRequest, error) {
-	glMR, err := g.getMergeRequest(repoURL, id)
+	glMR, err := g.getMergeRequest(id)
 	if err != nil {
 		return nil, err
 	}
 	return convertGitlabMR(glMR), nil
 }
 
-func (g *GitLabProvider) ListPullRequests(
+func (g *gitLabProvider) ListPullRequests(
 	_ context.Context,
-	repoURL string,
 	opts gitprovider.ListPullRequestOpts,
 ) ([]*gitprovider.PullRequest, error) {
-	projectName, err := getProjectNameFromUrl(repoURL)
-	if err != nil {
-		return nil, err
-	}
 	listOpts := &gitlab.ListProjectMergeRequestsOptions{
 		SourceBranch: &opts.Head,
 		TargetBranch: &opts.Base,
 	}
-	glMRs, _, err := g.client.MergeRequests.ListProjectMergeRequests(projectName, listOpts)
+	glMRs, _, err := g.client.mergeRequests.ListProjectMergeRequests(g.projectName, listOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -143,8 +143,8 @@ func (g *GitLabProvider) ListPullRequests(
 	return prs, nil
 }
 
-func (g *GitLabProvider) IsPullRequestMerged(_ context.Context, repoURL string, id int64) (bool, error) {
-	glMR, err := g.getMergeRequest(repoURL, id)
+func (g *gitLabProvider) IsPullRequestMerged(_ context.Context, id int64) (bool, error) {
+	glMR, err := g.getMergeRequest(id)
 	if err != nil {
 		return false, err
 	}
@@ -171,19 +171,15 @@ func isMROpen(glMR *gitlab.MergeRequest) bool {
 	return glMR.State == "opened" || glMR.State == "locked"
 }
 
-func getProjectNameFromUrl(u string) (string, error) {
-	gitlabUrl, err := url.Parse(u)
-	if err != nil {
-		return "", err
-	}
-	return strings.TrimSuffix(strings.TrimPrefix(gitlabUrl.Path, "/"), ".git"), nil
+func (g *gitLabProvider) getMergeRequest(id int64) (*gitlab.MergeRequest, error) {
+	glMR, _, err := g.client.mergeRequests.GetMergeRequest(g.projectName, int(id), nil)
+	return glMR, err
 }
 
-func (g *GitLabProvider) getMergeRequest(repoURL string, id int64) (*gitlab.MergeRequest, error) {
-	projectName, err := getProjectNameFromUrl(repoURL)
+func parseGitLabURL(repoURL string) (string, string, error) {
+	u, err := url.Parse(git.NormalizeURL(repoURL))
 	if err != nil {
-		return nil, err
+		return "", "", fmt.Errorf("error parsing gitlab repository URL %q: %w", u, err)
 	}
-	glMR, _, err := g.client.MergeRequests.GetMergeRequest(projectName, int(id), nil)
-	return glMR, err
+	return u.Host, strings.TrimPrefix(u.Path, "/"), nil
 }

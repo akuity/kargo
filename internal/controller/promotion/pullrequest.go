@@ -94,22 +94,20 @@ func newGitProvider(
 	creds *git.RepoCredentials,
 ) (gitprovider.GitProviderService, error) {
 	var gpClient gitprovider.GitProviderService
+	var token string
+	if creds != nil {
+		token = creds.Password
+	}
 	var err error
 	switch {
 	case pullRequest.GitHub != nil:
-		gpClient, err = gitprovider.NewGitProviderServiceFromName(github.GitProviderServiceName, url)
+		gpClient, err = gitprovider.NewGitProviderServiceFromName(github.GitProviderServiceName, url, token)
 	case pullRequest.GitLab != nil:
-		gpClient, err = gitprovider.NewGitProviderServiceFromName(gitlab.GitProviderServiceName, url)
+		gpClient, err = gitprovider.NewGitProviderServiceFromName(gitlab.GitProviderServiceName, url, token)
 	default:
-		gpClient, err = gitprovider.NewGitProviderServiceFromURL(url)
+		gpClient, err = gitprovider.NewGitProviderServiceFromURL(url, token)
 	}
-	if err == nil && creds != nil {
-		gpClient, err = gpClient.WithAuthToken(creds.Password)
-	}
-	if err != nil {
-		return nil, err
-	}
-	return gpClient, nil
+	return gpClient, err
 }
 
 // reconcilePullRequest creates and monitors a pull request for the promotion,
@@ -142,11 +140,11 @@ func reconcilePullRequest(
 				Base:  writeBranch,
 				Title: title,
 			}
-			pr, err := gpClient.CreatePullRequest(ctx, repo.URL(), createOpts)
+			pr, err := gpClient.CreatePullRequest(ctx, createOpts)
 			if err != nil {
 				// Error might be "A pull request already exists" for same branches.
 				// Check if that is the case, and reuse the existing PR if it is
-				prs, listErr := gpClient.ListPullRequests(ctx, repo.URL(), gitprovider.ListPullRequestOpts{
+				prs, listErr := gpClient.ListPullRequests(ctx, gitprovider.ListPullRequestOpts{
 					Head: prBranch,
 					Base: writeBranch,
 				})
@@ -165,12 +163,12 @@ func reconcilePullRequest(
 	} else {
 		// check if existing PR is closed/merged and update promo status to either
 		// Succeeded or Failed depending if PR was merged
-		pr, err := gpClient.GetPullRequest(ctx, repo.URL(), prNumber)
+		pr, err := gpClient.GetPullRequest(ctx, prNumber)
 		if err != nil {
 			return "", nil, err
 		}
 		if !pr.IsOpen() {
-			merged, err := gpClient.IsPullRequestMerged(ctx, repo.URL(), prNumber)
+			merged, err := gpClient.IsPullRequestMerged(ctx, prNumber)
 			if err != nil {
 				return "", nil, err
 			}
