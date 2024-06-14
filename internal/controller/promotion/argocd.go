@@ -32,21 +32,29 @@ const (
 type argoCDMechanism struct {
 	argocdClient client.Client
 	// These behaviors are overridable for testing purposes:
+	buildDesiredSourcesFn func(
+		app *argocd.Application,
+		update kargoapi.ArgoCDAppUpdate,
+		newFreight kargoapi.FreightReference,
+	) (*argocd.ApplicationSource, argocd.ApplicationSources, error)
 	mustPerformUpdateFn func(
-		ctx context.Context,
+		app *argocd.Application,
 		update kargoapi.ArgoCDAppUpdate,
 		newFreight kargoapi.FreightReference,
+		desiredSource *argocd.ApplicationSource,
+		desiredSources argocd.ApplicationSources,
 	) (argocd.OperationPhase, bool, error)
-	doSingleUpdateFn func(
+	updateApplicationSourcesFn func(
 		ctx context.Context,
-		stageMeta metav1.ObjectMeta,
-		update kargoapi.ArgoCDAppUpdate,
-		newFreight kargoapi.FreightReference,
+		app *argocd.Application,
+		desiredSource *argocd.ApplicationSource,
+		desiredSources argocd.ApplicationSources,
 	) error
-	getArgoCDAppFn func(
+	getAuthorizedApplicationFn func(
 		ctx context.Context,
 		namespace string,
 		name string,
+		stageMeta metav1.ObjectMeta,
 	) (*argocd.Application, error)
 	applyArgoCDSourceUpdateFn func(
 		argocd.ApplicationSource,
@@ -68,9 +76,10 @@ func newArgoCDMechanism(argocdClient client.Client) Mechanism {
 	a := &argoCDMechanism{
 		argocdClient: argocdClient,
 	}
+	a.buildDesiredSourcesFn = a.buildDesiredSources
 	a.mustPerformUpdateFn = a.mustPerformUpdate
-	a.doSingleUpdateFn = a.doSingleUpdate
-	a.getArgoCDAppFn = getApplicationFn(argocdClient)
+	a.updateApplicationSourcesFn = a.updateApplicationSources
+	a.getAuthorizedApplicationFn = a.getAuthorizedApplication
 	a.applyArgoCDSourceUpdateFn = applyArgoCDSourceUpdate
 	if argocdClient != nil {
 		a.argoCDAppPatchFn = argocdClient.Patch
@@ -110,8 +119,24 @@ func (a *argoCDMechanism) Promote(
 
 	var updateResults = make([]argocd.OperationPhase, 0, len(updates))
 	for _, update := range updates {
+		// Retrieve the Argo CD Application.
+		app, err := a.getAuthorizedApplicationFn(ctx, update.AppNamespace, update.AppName, stage.ObjectMeta)
+		if err != nil {
+			return nil, newFreight, err
+		}
+
+		// Build the desired source(s) for the Argo CD Application.
+		desiredSource, desiredSources, err := a.buildDesiredSourcesFn(
+			app,
+			update,
+			newFreight,
+		)
+		if err != nil {
+			return nil, newFreight, err
+		}
+
 		// Check if the update needs to be performed and retrieve its phase.
-		phase, mustUpdate, err := a.mustPerformUpdateFn(ctx, update, newFreight)
+		phase, mustUpdate, err := a.mustPerformUpdateFn(app, update, newFreight, desiredSource, desiredSources)
 
 		// If we have a phase, append it to the results.
 		if phase != "" {
@@ -140,12 +165,7 @@ func (a *argoCDMechanism) Promote(
 		}
 
 		// Perform the update.
-		if err := a.doSingleUpdateFn(
-			ctx,
-			stage.ObjectMeta,
-			update,
-			newFreight,
-		); err != nil {
+		if err := a.updateApplicationSourcesFn(ctx, app, desiredSource, desiredSources); err != nil {
 			return nil, newFreight, err
 		}
 		// As we have initiated an update, we should wait for it to complete.
@@ -164,32 +184,53 @@ func (a *argoCDMechanism) Promote(
 	return promo.Status.WithPhase(aggregatedPhase), newFreight, nil
 }
 
-func (a *argoCDMechanism) mustPerformUpdate(
-	ctx context.Context,
+// buildDesiredSources returns the desired source(s) for an Argo CD Application,
+// by updating the current source(s) with the given source updates.
+func (a *argoCDMechanism) buildDesiredSources(
+	app *argocd.Application,
 	update kargoapi.ArgoCDAppUpdate,
 	newFreight kargoapi.FreightReference,
-) (phase argocd.OperationPhase, mustUpdate bool, err error) {
-	namespace := update.AppNamespace
-	if namespace == "" {
-		namespace = libargocd.Namespace()
-	}
-	app, err := a.getArgoCDAppFn(ctx, namespace, update.AppName)
-	if err != nil {
-		return "", false, fmt.Errorf(
-			"error finding Argo CD Application %q in namespace %q: %w",
-			update.AppName,
-			namespace,
-			err,
-		)
-	}
-	if app == nil {
-		return "", false, fmt.Errorf(
-			"unable to find Argo CD Application %q in namespace %q",
-			update.AppName,
-			namespace,
-		)
+) (*argocd.ApplicationSource, argocd.ApplicationSources, error) {
+	desiredSource, desiredSources := app.Spec.Source.DeepCopy(), app.Spec.Sources.DeepCopy()
+
+	for _, srcUpdate := range update.SourceUpdates {
+		if desiredSource != nil {
+			newSrc, err := a.applyArgoCDSourceUpdateFn(*desiredSource, newFreight, srcUpdate)
+			if err != nil {
+				return nil, nil, fmt.Errorf(
+					"error applying source update to Argo CD Application %q in namespace %q: %w",
+					update.AppName,
+					app.Namespace,
+					err,
+				)
+			}
+			desiredSource = &newSrc
+		}
+
+		for i, curSrc := range desiredSources {
+			newSrc, err := a.applyArgoCDSourceUpdateFn(curSrc, newFreight, srcUpdate)
+			if err != nil {
+				return nil, nil, fmt.Errorf(
+					"error applying source update to Argo CD Application %q in namespace %q: %w",
+					update.AppName,
+					app.Namespace,
+					err,
+				)
+			}
+			desiredSources[i] = newSrc
+		}
 	}
 
+	return desiredSource, desiredSources, nil
+}
+
+func (a *argoCDMechanism) mustPerformUpdate(
+	app *argocd.Application,
+	update kargoapi.ArgoCDAppUpdate,
+	newFreight kargoapi.FreightReference,
+	desiredSource *argocd.ApplicationSource,
+	desiredSources argocd.ApplicationSources,
+) (phase argocd.OperationPhase, mustUpdate bool, err error) {
 	status := app.Status.OperationState
 	if status == nil {
 		// The application has no operation.
@@ -236,48 +277,11 @@ func (a *argoCDMechanism) mustPerformUpdate(
 
 	// Check if the desired source(s) were applied.
 	if len(update.SourceUpdates) > 0 {
-		desiredSource := app.Spec.Source.DeepCopy()
-		desiredSources := app.Spec.Sources.DeepCopy()
-
-		for _, srcUpdate := range update.SourceUpdates {
-			if desiredSource != nil {
-				var source argocd.ApplicationSource
-				if source, err = a.applyArgoCDSourceUpdateFn(
-					*app.Spec.Source,
-					newFreight,
-					srcUpdate,
-				); err != nil {
-					return "", false, fmt.Errorf(
-						"error determining desired source of Argo CD Application %q in namespace %q: %w",
-						update.AppName,
-						namespace,
-						err,
-					)
-				}
-				desiredSource = &source
-			}
-			for i, source := range desiredSources {
-				if source, err = a.applyArgoCDSourceUpdateFn(
-					source,
-					newFreight,
-					srcUpdate,
-				); err != nil {
-					return "", false, fmt.Errorf(
-						"error determining desired source(s) of Argo CD Application %q in namespace %q: %w",
-						update.AppName,
-						namespace,
-						err,
-					)
-				}
-				desiredSources[i] = source
-			}
-		}
-
 		if !desiredSource.Equals(&status.SyncResult.Source) || !desiredSources.Equals(status.SyncResult.Sources) {
 			// The operation did not result in the desired source(s) being applied.
 			// We should attempt to retry the operation.
 			return "", true, fmt.Errorf(
-				"operation result source(s) do not match desired source(s)",
+				"operation result source does not match desired source",
 			)
 		}
 	}
@@ -286,72 +290,23 @@ func (a *argoCDMechanism) mustPerformUpdate(
 	return status.Phase, false, nil
 }
 
-func (a *argoCDMechanism) doSingleUpdate(
+func (a *argoCDMechanism) updateApplicationSources(
 	ctx context.Context,
-	stageMeta metav1.ObjectMeta,
-	update kargoapi.ArgoCDAppUpdate,
-	newFreight kargoapi.FreightReference,
+	app *argocd.Application,
+	desiredSource *argocd.ApplicationSource,
+	desiredSources argocd.ApplicationSources,
 ) error {
-	namespace := update.AppNamespace
-	if namespace == "" {
-		namespace = libargocd.Namespace()
-	}
-	app, err := a.getArgoCDAppFn(ctx, namespace, update.AppName)
-	if err != nil {
-		return fmt.Errorf(
-			"error finding Argo CD Application %q in namespace %q: %w",
-			update.AppName,
-			namespace,
-			err,
-		)
-	}
-	if app == nil {
-		return fmt.Errorf(
-			"unable to find Argo CD Application %q in namespace %q: %w",
-			update.AppName,
-			namespace,
-			err,
-		)
-	}
-	// Make sure this is allowed!
-	if err = authorizeArgoCDAppUpdate(stageMeta, app.ObjectMeta); err != nil {
-		return err
-	}
+	// Create a patch for the Application.
 	patch := client.MergeFrom(app.DeepCopy())
-	for _, srcUpdate := range update.SourceUpdates {
-		if app.Spec.Source != nil {
-			var source argocd.ApplicationSource
-			if source, err = a.applyArgoCDSourceUpdateFn(
-				*app.Spec.Source,
-				newFreight,
-				srcUpdate,
-			); err != nil {
-				return fmt.Errorf(
-					"error updating source of Argo CD Application %q in namespace %q: %w",
-					update.AppName,
-					namespace,
-					err,
-				)
-			}
-			app.Spec.Source = &source
-		}
-		for i, source := range app.Spec.Sources {
-			if source, err = a.applyArgoCDSourceUpdateFn(
-				source,
-				newFreight,
-				srcUpdate,
-			); err != nil {
-				return fmt.Errorf(
-					"error updating source(s) of Argo CD Application %q in namespace %q: %w",
-					update.AppName,
-					namespace,
-					err,
-				)
-			}
-			app.Spec.Sources[i] = source
-		}
-	}
+
+	// Initiate a "hard" refresh.
 	app.ObjectMeta.Annotations[argocd.AnnotationKeyRefresh] = string(argocd.RefreshTypeHard)
+
+	// Update the desired source(s) in the Argo CD Application.
+	app.Spec.Source = desiredSource.DeepCopy()
+	app.Spec.Sources = desiredSources.DeepCopy()
+
+	// Initiate a new operation.
 	app.Operation = &argocd.Operation{
 		InitiatedBy: argocd.OperationInitiator{
 			Username:  applicationOperationInitiator,
@@ -381,7 +336,9 @@ func (a *argoCDMechanism) doSingleUpdate(
 	for _, source := range app.Spec.Sources {
 		app.Operation.Sync.Revisions = append(app.Operation.Sync.Revisions, source.TargetRevision)
 	}
-	if err = a.argoCDAppPatchFn(
+
+	// Patch the Application with the changes from above.
+	if err := a.argoCDAppPatchFn(
 		ctx,
 		app,
 		patch,
@@ -460,20 +417,32 @@ func (a *argoCDMechanism) logAppEvent(ctx context.Context, app *argocd.Applicati
 	}
 }
 
-func getApplicationFn(
-	argocdClient client.Client,
-) func(
+// getAuthorizedApplication returns an Argo CD Application in the given namespace
+// with the given name, if it is authorized for mutation by the Kargo Stage
+// represented by stageMeta.
+func (a *argoCDMechanism) getAuthorizedApplication(
 	ctx context.Context,
 	namespace string,
 	name string,
+	stageMeta metav1.ObjectMeta,
 ) (*argocd.Application, error) {
-	return func(
-		ctx context.Context,
-		namespace string,
-		name string,
-	) (*argocd.Application, error) {
-		return argocd.GetApplication(ctx, argocdClient, namespace, name)
+	if namespace == "" {
+		namespace = libargocd.Namespace()
 	}
+
+	app, err := argocd.GetApplication(ctx, a.argocdClient, namespace, name)
+	if err != nil {
+		return nil, fmt.Errorf("error finding Argo CD Application %q in namespace %q: %w", name, namespace, err)
+	}
+	if app == nil {
+		return nil, fmt.Errorf("unable to find Argo CD Application %q in namespace %q" ,name, namespace)
+	}
+
+	if err = authorizeArgoCDAppUpdate(stageMeta, app.ObjectMeta); err != nil {
+		return nil, err
+	}
+
+	return app, nil
 }
 
 // authorizeArgoCDAppUpdate returns an error if the Argo CD Application
