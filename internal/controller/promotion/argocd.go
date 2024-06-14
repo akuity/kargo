@@ -277,7 +277,8 @@ func (a *argoCDMechanism) mustPerformUpdate(
 
 	// Check if the desired source(s) were applied.
 	if len(update.SourceUpdates) > 0 {
-		if !desiredSource.Equals(&status.SyncResult.Source) || !desiredSources.Equals(status.SyncResult.Sources) {
+		if (desiredSource != nil && !desiredSource.Equals(&status.SyncResult.Source)) ||
+			!desiredSources.Equals(status.SyncResult.Sources) {
 			// The operation did not result in the desired source(s) being applied.
 			// We should attempt to retry the operation.
 			return "", true, fmt.Errorf(
@@ -435,7 +436,7 @@ func (a *argoCDMechanism) getAuthorizedApplication(
 		return nil, fmt.Errorf("error finding Argo CD Application %q in namespace %q: %w", name, namespace, err)
 	}
 	if app == nil {
-		return nil, fmt.Errorf("unable to find Argo CD Application %q in namespace %q" ,name, namespace)
+		return nil, fmt.Errorf("unable to find Argo CD Application %q in namespace %q", name, namespace)
 	}
 
 	if err = authorizeArgoCDAppUpdate(stageMeta, app.ObjectMeta); err != nil {
