@@ -3,27 +3,16 @@ package gar
 import (
 	"context"
 	"fmt"
-	"regexp"
 	"time"
 
 	"cloud.google.com/go/compute/metadata"
 	"github.com/patrickmn/go-cache"
 	"google.golang.org/api/iamcredentials/v1"
+	corev1 "k8s.io/api/core/v1"
 
+	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/logging"
 )
-
-var (
-	gcrURLRegex = regexp.MustCompile(`^(?:.+\.)?gcr\.io/`) // Legacy
-	garURLRegex = regexp.MustCompile(`^.+-docker\.pkg\.dev/`)
-)
-
-// WorkloadIdentityFederationCredentialHelper is an interface for components
-// that can obtain a username and password for Google Artifact Registry using
-// GCP Workload Identity Federation.
-type WorkloadIdentityFederationCredentialHelper interface {
-	GetUsernameAndPassword(ctx context.Context, repoURL, kargoProject string) (string, string, error)
-}
 
 type workloadIdentityFederationCredentialHelper struct {
 	gcpProjectID string
@@ -36,11 +25,10 @@ type workloadIdentityFederationCredentialHelper struct {
 }
 
 // NewWorkloadIdentityFederationCredentialHelper returns an implementation of
-// the WorkloadIdentityFederationCredentialHelper interface that utilizes a
-// cache to avoid unnecessary calls to GCP.
+// credentials.Helper that utilizes a cache to avoid unnecessary calls to GCP.
 func NewWorkloadIdentityFederationCredentialHelper(
 	ctx context.Context,
-) WorkloadIdentityFederationCredentialHelper {
+) credentials.Helper {
 	logger := logging.LoggerFromContext(ctx)
 	var gcpProjectID string
 	if !metadata.OnGCE() {
@@ -66,43 +54,50 @@ func NewWorkloadIdentityFederationCredentialHelper(
 		),
 	}
 	w.getAccessTokenFn = w.getAccessToken
-	return w
+	return w.getCredentials
 }
 
-// GetUsernameAndPassword implements the
-// WorkloadIdentityFederationCredentialHelper interface.
-func (w *workloadIdentityFederationCredentialHelper) GetUsernameAndPassword(
+func (w *workloadIdentityFederationCredentialHelper) getCredentials(
 	ctx context.Context,
-	repoURL string,
 	kargoProject string,
-) (string, string, error) {
-	if w.gcpProjectID == "" {
-		// Don't even try if it looks like the controller isn't running within GCE
-		return "", "", nil
+	credType credentials.Type,
+	repoURL string,
+	_ *corev1.Secret,
+) (*credentials.Credentials, error) {
+	if credType != credentials.TypeImage ||
+		w.gcpProjectID == "" { // Controller isn't running within GCE
+		// This helper can't handle this
+		return nil, nil
 	}
 
 	if !garURLRegex.MatchString(repoURL) && !gcrURLRegex.MatchString(repoURL) {
 		// This doesn't look like a Google Artifact Registry URL
-		return "", "", nil
+		return nil, nil
 	}
 
 	if entry, exists := w.tokenCache.Get(kargoProject); exists {
-		return accessTokenUsername, entry.(string), nil // nolint: forcetypeassert
+		return &credentials.Credentials{
+			Username: accessTokenUsername,
+			Password: entry.(string), // nolint: forcetypeassert
+		}, nil
 	}
 
 	accessToken, err := w.getAccessTokenFn(ctx, kargoProject)
 	if err != nil {
-		return "", "", fmt.Errorf("error getting GCP access token: %w", err)
+		return nil, fmt.Errorf("error getting GCP access token: %w", err)
 	}
 
 	if accessToken == "" {
-		return "", "", nil
+		return nil, nil
 	}
 
 	// Cache the access token
 	w.tokenCache.Set(kargoProject, accessToken, cache.DefaultExpiration)
 
-	return accessTokenUsername, accessToken, nil
+	return &credentials.Credentials{
+		Username: accessTokenUsername,
+		Password: accessToken,
+	}, nil
 }
 
 // getAccessToken returns a GCP access token retrieved using the provided base64

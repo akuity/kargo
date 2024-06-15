@@ -8,19 +8,9 @@ import (
 
 	"github.com/patrickmn/go-cache"
 	"github.com/stretchr/testify/require"
-)
 
-func TestNewPodIdentityCredentialHelper(t *testing.T) {
-	// Without env var AWS_CONTAINER_CREDENTIALS_FULL_URI set, we expect not to
-	// be making any calls out to AWS.
-	h := NewPodIdentityCredentialHelper(context.Background())
-	require.NotNil(t, h)
-	p, ok := h.(*podIdentityCredentialHelper)
-	require.True(t, ok)
-	require.Empty(t, p.awsAccountID)
-	require.NotNil(t, p.tokenCache)
-	require.NotNil(t, p.getAuthTokenFn)
-}
+	"github.com/akuity/kargo/internal/credentials"
+)
 
 func TestPodIdentityCredentialHelper(t *testing.T) {
 	const (
@@ -43,48 +33,63 @@ func TestPodIdentityCredentialHelper(t *testing.T) {
 
 	testCases := []struct {
 		name       string
+		credType   credentials.Type
 		repoURL    string
-		helper     PodIdentityCredentialHelper
-		assertions func(t *testing.T, username, password string, c *cache.Cache, err error)
+		helper     *podIdentityCredentialHelper
+		assertions func(*testing.T, *credentials.Credentials, *cache.Cache, error)
 	}{
 		{
-			name:    "EKS Pod Identity not in use",
-			repoURL: testRepoURL,
-			helper:  &podIdentityCredentialHelper{},
-			assertions: func(t *testing.T, username, password string, _ *cache.Cache, err error) {
-				require.NoError(t, err)
-				require.Empty(t, username)
-				require.Empty(t, password)
-			},
-		},
-		{
-			name:    "repo URL does not match ECR URL regex",
-			repoURL: "ghcr.io/fake-org/fake-repo",
+			name:     "cred type is not image",
+			credType: credentials.TypeGit,
 			helper: &podIdentityCredentialHelper{
 				awsAccountID: testAWSAccountID,
 			},
-			assertions: func(t *testing.T, username, password string, _ *cache.Cache, err error) {
+			assertions: func(t *testing.T, creds *credentials.Credentials, _ *cache.Cache, err error) {
 				require.NoError(t, err)
-				require.Empty(t, username)
-				require.Empty(t, password)
+				require.Nil(t, creds)
 			},
 		},
 		{
-			name:    "cache hit",
-			repoURL: testRepoURL,
+			name:     "EKS Pod Identity not in use",
+			credType: credentials.TypeImage,
+			repoURL:  testRepoURL,
+			helper:   &podIdentityCredentialHelper{},
+			assertions: func(t *testing.T, creds *credentials.Credentials, _ *cache.Cache, err error) {
+				require.NoError(t, err)
+				require.Nil(t, creds)
+			},
+		},
+		{
+			name:     "repo URL does not match ECR URL regex",
+			credType: credentials.TypeImage,
+			repoURL:  "ghcr.io/fake-org/fake-repo",
+			helper: &podIdentityCredentialHelper{
+				awsAccountID: testAWSAccountID,
+			},
+			assertions: func(t *testing.T, creds *credentials.Credentials, _ *cache.Cache, err error) {
+				require.NoError(t, err)
+				require.Nil(t, creds)
+			},
+		},
+		{
+			name:     "cache hit",
+			credType: credentials.TypeImage,
+			repoURL:  testRepoURL,
 			helper: &podIdentityCredentialHelper{
 				awsAccountID: testAWSAccountID,
 				tokenCache:   warmTokenCache,
 			},
-			assertions: func(t *testing.T, username, password string, _ *cache.Cache, err error) {
+			assertions: func(t *testing.T, creds *credentials.Credentials, _ *cache.Cache, err error) {
 				require.NoError(t, err)
-				require.Equal(t, testUsername, username)
-				require.Equal(t, testPassword, password)
+				require.NotNil(t, creds)
+				require.Equal(t, testUsername, creds.Username)
+				require.Equal(t, testPassword, creds.Password)
 			},
 		},
 		{
-			name:    "cache miss; error getting auth token",
-			repoURL: testRepoURL,
+			name:     "cache miss; error getting auth token",
+			credType: credentials.TypeImage,
+			repoURL:  testRepoURL,
 			helper: &podIdentityCredentialHelper{
 				awsAccountID: testAWSAccountID,
 				tokenCache:   cache.New(0, 0),
@@ -92,14 +97,15 @@ func TestPodIdentityCredentialHelper(t *testing.T) {
 					return "", fmt.Errorf("something went wrong")
 				},
 			},
-			assertions: func(t *testing.T, _, _ string, _ *cache.Cache, err error) {
+			assertions: func(t *testing.T, _ *credentials.Credentials, _ *cache.Cache, err error) {
 				require.ErrorContains(t, err, "error getting ECR auth token")
 				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
 		{
-			name:    "cache miss; success",
-			repoURL: testRepoURL,
+			name:     "cache miss; success",
+			credType: credentials.TypeImage,
+			repoURL:  testRepoURL,
 			helper: &podIdentityCredentialHelper{
 				awsAccountID: testAWSAccountID,
 				tokenCache:   cache.New(0, 0),
@@ -107,10 +113,11 @@ func TestPodIdentityCredentialHelper(t *testing.T) {
 					return testEncodedToken, nil
 				},
 			},
-			assertions: func(t *testing.T, username, password string, c *cache.Cache, err error) {
+			assertions: func(t *testing.T, creds *credentials.Credentials, c *cache.Cache, err error) {
 				require.NoError(t, err)
-				require.Equal(t, testUsername, username)
-				require.Equal(t, testPassword, password)
+				require.NotNil(t, creds)
+				require.Equal(t, testUsername, creds.Username)
+				require.Equal(t, testPassword, creds.Password)
 				_, found := c.Get(
 					(&podIdentityCredentialHelper{}).tokenCacheKey(testRegion, testProject),
 				)
@@ -120,13 +127,14 @@ func TestPodIdentityCredentialHelper(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			username, password, err := testCase.helper.GetUsernameAndPassword(
+			creds, err := testCase.helper.getCredentials(
 				context.Background(),
-				testCase.repoURL,
 				testProject,
+				testCase.credType,
+				testCase.repoURL,
+				nil, // Secret not used by this helper
 			)
-			cache := testCase.helper.(*podIdentityCredentialHelper).tokenCache // nolint: forcetypeassert
-			testCase.assertions(t, username, password, cache, err)
+			testCase.assertions(t, creds, testCase.helper.tokenCache, err)
 		})
 	}
 }

@@ -2,6 +2,16 @@ package credentials
 
 import "context"
 
+// Database is an interface for a Credentials store.
+type Database interface {
+	Get(
+		ctx context.Context,
+		namespace string,
+		credType Type,
+		repo string,
+	) (Credentials, bool, error)
+}
+
 // FakeDB is a mock implementation of the Database interface that is used to
 // facilitate unit testing.
 type FakeDB struct {

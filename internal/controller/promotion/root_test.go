@@ -14,11 +14,7 @@ import (
 func TestNewMechanisms(t *testing.T) {
 	promoMechs := NewMechanisms(
 		fake.NewClientBuilder().Build(),
-		credentials.NewKubernetesDatabase(
-			context.Background(),
-			nil,
-			credentials.KubernetesDatabaseConfig{},
-		),
+		&credentials.FakeDB{},
 	)
 	require.IsType(t, &compositeMechanism{}, promoMechs)
 }

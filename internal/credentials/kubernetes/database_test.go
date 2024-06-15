@@ -1,8 +1,7 @@
-package credentials
+package kubernetes
 
 import (
 	"context"
-	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -12,16 +11,17 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/credentials"
 )
 
 func TestNewKubernetesDatabase(t *testing.T) {
 	testClient := fake.NewClientBuilder().Build()
-	testCfg := KubernetesDatabaseConfig{
+	testCfg := DatabaseConfig{
 		GlobalCredentialsNamespaces: []string{"fake-namespace"},
 	}
-	d := NewKubernetesDatabase(context.Background(), testClient, testCfg)
+	d := NewDatabase(context.Background(), testClient, testCfg)
 	require.NotNil(t, d)
-	k, ok := d.(*kubernetesDatabase)
+	k, ok := d.(*database)
 	require.True(t, ok)
 	require.Same(t, testClient, k.kargoClient)
 	require.Equal(t, testCfg, k.cfg)
@@ -34,7 +34,7 @@ func TestGet(t *testing.T) {
 		testProjectNamespace = "fake-namespace"
 		testGlobalNamespace  = "another-fake-namespace"
 
-		testCredType = TypeGit
+		testCredType = credentials.TypeGit
 
 		// This deliberately omits the trailing .git to test normalization
 		testRepoURL     = "https://github.com/akuity/kargo"
@@ -52,9 +52,9 @@ func TestGet(t *testing.T) {
 			Labels:    testLabels,
 		},
 		Data: map[string][]byte{
-			FieldRepoURL:  []byte(testRepoURL),
-			FieldUsername: []byte("project-exact"),
-			FieldPassword: []byte("fake-password"),
+			credentials.FieldRepoURL:  []byte(testRepoURL),
+			credentials.FieldUsername: []byte("project-exact"),
+			credentials.FieldPassword: []byte("fake-password"),
 		},
 	}
 
@@ -65,10 +65,10 @@ func TestGet(t *testing.T) {
 			Labels:    testLabels,
 		},
 		Data: map[string][]byte{
-			FieldRepoURL:        []byte(testRepoURL),
-			FieldRepoURLIsRegex: []byte("true"),
-			FieldUsername:       []byte("project-pattern"),
-			FieldPassword:       []byte("fake-password"),
+			credentials.FieldRepoURL:        []byte(testRepoURL),
+			credentials.FieldRepoURLIsRegex: []byte("true"),
+			credentials.FieldUsername:       []byte("project-pattern"),
+			credentials.FieldPassword:       []byte("fake-password"),
 		},
 	}
 
@@ -83,9 +83,9 @@ func TestGet(t *testing.T) {
 			Labels:    testLabels,
 		},
 		Data: map[string][]byte{
-			FieldRepoURL:  []byte(insecureTestURL),
-			FieldUsername: []byte("project-insecure"),
-			FieldPassword: []byte("fake-password"),
+			credentials.FieldRepoURL:  []byte(insecureTestURL),
+			credentials.FieldUsername: []byte("project-insecure"),
+			credentials.FieldPassword: []byte("fake-password"),
 		},
 	}
 
@@ -96,9 +96,9 @@ func TestGet(t *testing.T) {
 			Labels:    testLabels,
 		},
 		Data: map[string][]byte{
-			FieldRepoURL:  []byte(testRepoURL),
-			FieldUsername: []byte("global-exact"),
-			FieldPassword: []byte("fake-password"),
+			credentials.FieldRepoURL:  []byte(testRepoURL),
+			credentials.FieldUsername: []byte("global-exact"),
+			credentials.FieldPassword: []byte("fake-password"),
 		},
 	}
 
@@ -109,10 +109,10 @@ func TestGet(t *testing.T) {
 			Labels:    testLabels,
 		},
 		Data: map[string][]byte{
-			FieldRepoURL:        []byte(testRepoURL),
-			FieldRepoURLIsRegex: []byte("true"),
-			FieldUsername:       []byte("global-pattern"),
-			FieldPassword:       []byte("fake-password"),
+			credentials.FieldRepoURL:        []byte(testRepoURL),
+			credentials.FieldRepoURLIsRegex: []byte("true"),
+			credentials.FieldUsername:       []byte("global-pattern"),
+			credentials.FieldPassword:       []byte("fake-password"),
 		},
 	}
 
@@ -195,10 +195,10 @@ func TestGet(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			creds, found, err := NewKubernetesDatabase(
+			creds, found, err := NewDatabase(
 				context.Background(),
 				fake.NewClientBuilder().WithObjects(testCase.secrets...).Build(),
-				KubernetesDatabaseConfig{
+				DatabaseConfig{
 					GlobalCredentialsNamespaces: []string{testGlobalNamespace},
 				},
 			).Get(
@@ -221,145 +221,6 @@ func TestGet(t *testing.T) {
 				string(testCase.expected.Data["username"]),
 				creds.Username,
 			)
-		})
-	}
-}
-
-func TestSecretToCreds(t *testing.T) {
-	const (
-		testUsername = "fake-username"
-		testPassword = "fake-password"
-	)
-	testFoundCreds := Credentials{
-		Username: testUsername,
-		Password: testPassword,
-	}
-	testCases := []struct {
-		name       string
-		db         *kubernetesDatabase
-		credType   Type
-		assertions func(t *testing.T, creds Credentials, err error)
-	}{
-		{
-			name:     "error from github app helper",
-			credType: TypeGit,
-			db: &kubernetesDatabase{
-				ghAppHelperFn: func(*corev1.Secret) (string, string, error) {
-					return "", "", errors.New("something went wrong")
-				},
-			},
-			assertions: func(t *testing.T, creds Credentials, err error) {
-				require.ErrorContains(t, err, "something went wrong")
-				require.Empty(t, creds)
-			},
-		},
-		{
-			name:     "github app helper finds credentials",
-			credType: TypeGit,
-			db: &kubernetesDatabase{
-				ghAppHelperFn: func(*corev1.Secret) (string, string, error) {
-					return testUsername, testPassword, nil
-				},
-			},
-			assertions: func(t *testing.T, creds Credentials, err error) {
-				require.NoError(t, err)
-				require.Equal(t, testFoundCreds, creds)
-			},
-		},
-		{
-			name:     "github app helper finds no credentials",
-			credType: TypeGit,
-			db: &kubernetesDatabase{
-				ghAppHelperFn: func(*corev1.Secret) (string, string, error) {
-					return "", "", nil
-				},
-			},
-			assertions: func(t *testing.T, creds Credentials, err error) {
-				require.NoError(t, err)
-				require.Empty(t, creds)
-			},
-		},
-		{
-			name:     "error from ecr access key helper",
-			credType: TypeImage,
-			db: &kubernetesDatabase{
-				ecrAKHelperFn: func(context.Context, *corev1.Secret) (string, string, error) {
-					return "", "", errors.New("something went wrong")
-				},
-			},
-			assertions: func(t *testing.T, creds Credentials, err error) {
-				require.ErrorContains(t, err, "something went wrong")
-				require.Empty(t, creds)
-			},
-		},
-		{
-			name:     "ecr access key helper finds credentials",
-			credType: TypeImage,
-			db: &kubernetesDatabase{
-				ecrAKHelperFn: func(context.Context, *corev1.Secret) (string, string, error) {
-					return testUsername, testPassword, nil
-				},
-			},
-			assertions: func(t *testing.T, creds Credentials, err error) {
-				require.NoError(t, err)
-				require.Equal(t, testFoundCreds, creds)
-			},
-		},
-		{
-			name:     "error from gcp service account key helper",
-			credType: TypeImage,
-			db: &kubernetesDatabase{
-				ecrAKHelperFn: func(context.Context, *corev1.Secret) (string, string, error) {
-					return "", "", nil
-				},
-				gcpSAKHelperFn: func(context.Context, *corev1.Secret) (string, string, error) {
-					return "", "", errors.New("something went wrong")
-				},
-			},
-			assertions: func(t *testing.T, creds Credentials, err error) {
-				require.ErrorContains(t, err, "something went wrong")
-				require.Empty(t, creds)
-			},
-		},
-		{
-			name:     "gcp service account key helper finds credentials",
-			credType: TypeImage,
-			db: &kubernetesDatabase{
-				ecrAKHelperFn: func(context.Context, *corev1.Secret) (string, string, error) {
-					return "", "", nil
-				},
-				gcpSAKHelperFn: func(context.Context, *corev1.Secret) (string, string, error) {
-					return testUsername, testPassword, nil
-				},
-			},
-			assertions: func(t *testing.T, creds Credentials, err error) {
-				require.NoError(t, err)
-				require.Equal(t, testFoundCreds, creds)
-			},
-		},
-		{
-			name:     "no image credential helpers find credentials",
-			credType: TypeImage,
-			db: &kubernetesDatabase{
-				ecrAKHelperFn: func(context.Context, *corev1.Secret) (string, string, error) {
-					return "", "", nil
-				},
-				gcpSAKHelperFn: func(context.Context, *corev1.Secret) (string, string, error) {
-					return "", "", nil
-				},
-			},
-			assertions: func(t *testing.T, creds Credentials, err error) {
-				require.NoError(t, err)
-				require.Empty(t, creds)
-			},
-		},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			creds, err := testCase.db.secretToCreds(
-				context.Background(), testCase.credType, &corev1.Secret{},
-			)
-			testCase.assertions(t, creds, err)
 		})
 	}
 }

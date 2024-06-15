@@ -1,6 +1,7 @@
 package github
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
@@ -10,6 +11,8 @@ import (
 	"github.com/jferrl/go-githubauth"
 	"github.com/patrickmn/go-cache"
 	corev1 "k8s.io/api/core/v1"
+
+	"github.com/akuity/kargo/internal/credentials"
 )
 
 const (
@@ -19,18 +22,6 @@ const (
 
 	accessTokenUsername = "kargo"
 )
-
-// AppCredentialHelper is an interface for components that can extract a
-// username and password for accessing Git repositories in GitHub from a base64
-// encoded private key issued to a registered GitHub App.
-type AppCredentialHelper interface {
-	// GetUsernameAndPassword extracts username and password (an access token)
-	// from a Secret IF the Secret contains a base64 encoded private key issued to
-	// a registered GitHub App. If the Secret does not contain such a key, this
-	// function will return empty strings and a nil error. Implementations may
-	// cache the access token for efficiency.
-	GetUsernameAndPassword(*corev1.Secret) (string, string, error)
-}
 
 type appCredentialHelper struct {
 	tokenCache *cache.Cache
@@ -44,9 +35,9 @@ type appCredentialHelper struct {
 	) (string, error)
 }
 
-// NewAppCredentialHelper returns an implementation of the AppCredentialHelper
-// interface that utilizes a cache to avoid unnecessary calls to GitHub.
-func NewAppCredentialHelper() AppCredentialHelper {
+// NewAppCredentialHelper returns an implementation of credentials.Helper that
+// utilizes a cache to avoid unnecessary calls to GitHub.
+func NewAppCredentialHelper() credentials.Helper {
 	a := &appCredentialHelper{
 		tokenCache: cache.New(
 			// Access tokens live for one hour. We'll hang on to them for 40 minutes.
@@ -55,35 +46,43 @@ func NewAppCredentialHelper() AppCredentialHelper {
 		),
 	}
 	a.getAccessTokenFn = a.getAccessToken
-	return a
+	return a.getCredentials
 }
 
-// GetUsernameAndPassword implements the AppCredentialHelper interface.
-func (a *appCredentialHelper) GetUsernameAndPassword(
+func (a *appCredentialHelper) getCredentials(
+	_ context.Context,
+	_ string,
+	credType credentials.Type,
+	_ string,
 	secret *corev1.Secret,
-) (string, string, error) {
+) (*credentials.Credentials, error) {
+	if credType != credentials.TypeGit || secret == nil {
+		// This helper can't handle this
+		return nil, nil
+	}
+
 	appIDStr := string(secret.Data[appIDKey])
 	installationIDStr := string(secret.Data[installationIDKey])
 	encodedPrivateKey := string(secret.Data[privateKeyKey])
 	if appIDStr == "" && installationIDStr == "" && encodedPrivateKey == "" {
 		// None of these fields are set, so there's nothing to do here.
-		return "", "", nil
+		return nil, nil
 	}
 	// If we get to here, at least one of the fields is set. Now if they aren't
 	// all set, we should return an error.
 	if appIDStr == "" || installationIDStr == "" || encodedPrivateKey == "" {
-		return "", "", fmt.Errorf(
+		return nil, fmt.Errorf(
 			"%s, %s, and %s must all be set or all be unset",
 			appIDKey, installationIDKey, privateKeyKey,
 		)
 	}
 	appID, err := strconv.ParseInt(appIDStr, 10, 64)
 	if err != nil {
-		return "", "", fmt.Errorf("error parsing app ID: %w", err)
+		return nil, fmt.Errorf("error parsing app ID: %w", err)
 	}
 	installationID, err := strconv.ParseInt(installationIDStr, 10, 64)
 	if err != nil {
-		return "", "", fmt.Errorf("error parsing installation ID: %w", err)
+		return nil, fmt.Errorf("error parsing installation ID: %w", err)
 	}
 	return a.getUsernameAndPassword(appID, installationID, encodedPrivateKey)
 }
@@ -92,22 +91,28 @@ func (a *appCredentialHelper) getUsernameAndPassword(
 	appID int64,
 	installationID int64,
 	encodedPrivateKey string,
-) (string, string, error) {
+) (*credentials.Credentials, error) {
 	cacheKey := a.tokenCacheKey(appID, installationID, encodedPrivateKey)
 
 	if entry, exists := a.tokenCache.Get(cacheKey); exists {
-		return accessTokenUsername, entry.(string), nil // nolint: forcetypeassert
+		return &credentials.Credentials{
+			Username: accessTokenUsername,
+			Password: entry.(string), // nolint: forcetypeassert
+		}, nil
 	}
 
 	accessToken, err := a.getAccessTokenFn(appID, installationID, encodedPrivateKey)
 	if err != nil {
-		return "", "", fmt.Errorf("error getting installation access token: %w", err)
+		return nil, fmt.Errorf("error getting installation access token: %w", err)
 	}
 
 	// Cache the access token
 	a.tokenCache.Set(cacheKey, accessToken, cache.DefaultExpiration)
 
-	return accessTokenUsername, accessToken, nil
+	return &credentials.Credentials{
+		Username: accessTokenUsername,
+		Password: accessToken,
+	}, nil
 }
 
 // tokenCacheKey returns a cache key for an installation access token. The key is
