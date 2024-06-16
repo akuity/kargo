@@ -6,13 +6,13 @@ import (
 	"strings"
 
 	"github.com/oklog/ulid/v2"
-	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api/user"
+	"github.com/akuity/kargo/internal/logging"
 )
 
 const (
@@ -62,7 +62,7 @@ func NewPromotion(
 	return promotion
 }
 
-func NewPromoWentTerminalPredicate(logger *log.Entry) PromoWentTerminal[*kargoapi.Promotion] {
+func NewPromoWentTerminalPredicate(logger *logging.Logger) PromoWentTerminal[*kargoapi.Promotion] {
 	return PromoWentTerminal[*kargoapi.Promotion]{
 		logger: logger,
 	}
@@ -73,7 +73,7 @@ func NewPromoWentTerminalPredicate(logger *log.Entry) PromoWentTerminal[*kargoap
 // Also used by promo reconciler to enqueue the next highest priority promotion.
 type PromoWentTerminal[T any] struct {
 	predicate.Funcs
-	logger *log.Entry
+	logger *logging.Logger
 }
 
 func (p PromoWentTerminal[T]) Create(event.TypedCreateEvent[T]) bool {
@@ -98,18 +98,76 @@ func (p PromoWentTerminal[T]) Generic(event.TypedGenericEvent[T]) bool {
 func (p PromoWentTerminal[T]) Update(e event.TypedUpdateEvent[T]) bool {
 	oldPromo := any(e.ObjectOld).(*kargoapi.Promotion) // nolint: forcetypeassert
 	if oldPromo == nil {
-		p.logger.Errorf("Update event has no old object to update: %v", e)
+		p.logger.Error(
+			nil, "Update event has no old object to update",
+			"event", e,
+		)
 		return false
 	}
 	newPromo := any(e.ObjectNew).(*kargoapi.Promotion) // nolint: forcetypeassert
 	if newPromo == nil {
-		p.logger.Errorf("Update event has no new object for update: %v", e)
+		p.logger.Error(
+			nil, "Update event has no new object for update",
+			"event", e,
+		)
 		return false
 	}
 	if newPromo.Status.Phase.IsTerminal() && !oldPromo.Status.Phase.IsTerminal() {
 		return true
 	}
 	return false
+}
+
+func NewPromoPhaseChangedPredicate(logger *logging.Logger) PromoPhaseChanged[*kargoapi.Promotion] {
+	return PromoPhaseChanged[*kargoapi.Promotion]{
+		logger: logger,
+	}
+}
+
+// PromoPhaseChanged is a predicate that returns true if the phase of a promotion
+// has changed. It can be used to trigger the reconciliation of an associated
+// object when the phase of a Promotion changes. A concrete example is to trigger
+// the reconciliation of a Stage when the phase of a Promotion for that Stage
+// changes, so that the Stage can update the last Promotion reference in its
+// status.
+type PromoPhaseChanged[T any] struct {
+	predicate.Funcs
+	logger *logging.Logger
+}
+
+func (p PromoPhaseChanged[T]) Create(event.TypedCreateEvent[T]) bool {
+	return false
+}
+
+func (p PromoPhaseChanged[T]) Delete(e event.TypedDeleteEvent[T]) bool {
+	promo := any(e.Object).(*kargoapi.Promotion) // nolint: forcetypeassert
+	// If a Promotion is deleted while it is non-terminal, we want to enqueue
+	// the associated Stage so that it can reset its status.currentPromotion.
+	return !promo.Status.Phase.IsTerminal()
+}
+
+func (p PromoPhaseChanged[T]) Generic(event.TypedGenericEvent[T]) bool {
+	return false
+}
+
+func (p PromoPhaseChanged[T]) Update(e event.TypedUpdateEvent[T]) bool {
+	oldPromo := any(e.ObjectOld).(*kargoapi.Promotion) // nolint: forcetypeassert
+	if oldPromo == nil {
+		p.logger.Error(
+			nil, "Update event has no old object for update",
+			"event", e,
+		)
+		return false
+	}
+	newPromo := any(e.ObjectNew).(*kargoapi.Promotion) // nolint: forcetypeassert
+	if newPromo == nil {
+		p.logger.Error(
+			nil, "Update event has no new object for update",
+			"event", e,
+		)
+		return false
+	}
+	return newPromo.Status.Phase != oldPromo.Status.Phase
 }
 
 // RefreshRequested is a predicate that returns true if the refresh annotation

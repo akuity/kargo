@@ -343,8 +343,66 @@ func TestEnsureNamespace(t *testing.T) {
 			},
 		},
 		{
-			name: "namespace exists, is not owned by project, but is labeled " +
-				"as a project; error updating namespace",
+			name: "namespace exists and is not labeled as a project namespace",
+			project: &kargoapi.Project{
+				Status: kargoapi.ProjectStatus{
+					Phase: kargoapi.ProjectPhaseInitializing,
+				},
+			},
+			reconciler: &reconciler{
+				getNamespaceFn: func(
+					context.Context,
+					types.NamespacedName,
+					client.Object,
+					...client.GetOption,
+				) error {
+					return nil
+				},
+			},
+			assertions: func(t *testing.T, status kargoapi.ProjectStatus, err error) {
+				require.ErrorContains(t, err, "failed to initialize Project")
+				require.ErrorContains(t, err, "not labeled as a Project namespace")
+				require.Equal(t, kargoapi.ProjectPhaseInitializationFailed, status.Phase)
+			},
+		},
+		{
+			name: "namespace exists, is labeled as a project namespace, and is " +
+				"already owned by the project",
+			project: &kargoapi.Project{
+				ObjectMeta: metav1.ObjectMeta{
+					UID: types.UID("fake-uid"),
+				},
+				Status: kargoapi.ProjectStatus{
+					Phase: kargoapi.ProjectPhaseInitializing,
+				},
+			},
+			reconciler: &reconciler{
+				getNamespaceFn: func(
+					_ context.Context,
+					_ types.NamespacedName,
+					obj client.Object,
+					_ ...client.GetOption,
+				) error {
+					ns, ok := obj.(*corev1.Namespace)
+					require.True(t, ok)
+					ns.Labels = map[string]string{
+						kargoapi.ProjectLabelKey: kargoapi.LabelTrueValue,
+					}
+					ns.OwnerReferences = []metav1.OwnerReference{{
+						UID: types.UID("fake-uid"),
+					}}
+					return nil
+				},
+			},
+			assertions: func(t *testing.T, status kargoapi.ProjectStatus, err error) {
+				require.NoError(t, err)
+				// Phase wasn't changed
+				require.Equal(t, kargoapi.ProjectPhaseInitializing, status.Phase)
+			},
+		},
+		{
+			name: "namespace exists, is labeled as a project namespace, and is " +
+				"NOT already owned by the project; error updating it",
 			project: &kargoapi.Project{
 				Status: kargoapi.ProjectStatus{
 					Phase: kargoapi.ProjectPhaseInitializing,
@@ -380,8 +438,8 @@ func TestEnsureNamespace(t *testing.T) {
 			},
 		},
 		{
-			name: "namespace exists, is not owned by project, but is labeled " +
-				"as a project; success updating namespace",
+			name: "namespace exists, is labeled as a project namespace, and is " +
+				"NOT already owned by the project; success updating it",
 			project: &kargoapi.Project{
 				Status: kargoapi.ProjectStatus{
 					Phase: kargoapi.ProjectPhaseInitializing,
@@ -406,61 +464,6 @@ func TestEnsureNamespace(t *testing.T) {
 					client.Object,
 					...client.UpdateOption,
 				) error {
-					return nil
-				},
-			},
-			assertions: func(t *testing.T, status kargoapi.ProjectStatus, err error) {
-				require.NoError(t, err)
-				// Phase wasn't changed
-				require.Equal(t, kargoapi.ProjectPhaseInitializing, status.Phase)
-			},
-		},
-		{
-			name: "namespace exists, is not owned by project, and is not labeled as a project",
-			project: &kargoapi.Project{
-				Status: kargoapi.ProjectStatus{
-					Phase: kargoapi.ProjectPhaseInitializing,
-				},
-			},
-			reconciler: &reconciler{
-				getNamespaceFn: func(
-					context.Context,
-					types.NamespacedName,
-					client.Object,
-					...client.GetOption,
-				) error {
-					return nil
-				},
-			},
-			assertions: func(t *testing.T, status kargoapi.ProjectStatus, err error) {
-				require.ErrorContains(t, err, "failed to initialize Project")
-				// Phase reflects the unrecoverable failure
-				require.Equal(t, status.Phase, kargoapi.ProjectPhaseInitializationFailed)
-			},
-		},
-		{
-			name: "namespace exists and is owned by project",
-			project: &kargoapi.Project{
-				ObjectMeta: metav1.ObjectMeta{
-					UID: types.UID("fake-uid"),
-				},
-				Status: kargoapi.ProjectStatus{
-					Phase: kargoapi.ProjectPhaseInitializing,
-				},
-			},
-			reconciler: &reconciler{
-				getNamespaceFn: func(
-					_ context.Context,
-					_ types.NamespacedName,
-					obj client.Object,
-					_ ...client.GetOption,
-				) error {
-					ns := obj.(*corev1.Namespace) // nolint: forcetypeassert
-					ns.OwnerReferences = []metav1.OwnerReference{
-						{
-							UID: types.UID("fake-uid"),
-						},
-					}
 					return nil
 				},
 			},

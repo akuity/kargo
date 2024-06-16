@@ -5,9 +5,6 @@
 
 ## @section Global Parameters
 global:
-  ## @param global.additionalLabels Additional labels to add to all resources.
-  additionalLabels: {}
-    # my-label: my-value
   ## @param global.env Environment variables to add to all Kargo pods.
   env: []
   #  - name: ENV_NAME
@@ -20,8 +17,16 @@ global:
   #      name: secret-name
   ## @param global.nodeSelector Default node selector for all Kargo pods.
   nodeSelector: {}
-  ## @param global.annotations Default annotations for all Kargo pods.
+
+  ## @param global.labels Labels to add to all resources.
+  labels: {}
+  ## @param global.annotations Annotations to add to all resources.
   annotations: {}
+  ## @param global.podLabels Labels to add to all pods.
+  podLabels: {}
+  ## @param global.podAnnotations Annotations to add to pods.
+  podAnnotations: {}
+
   ## @param global.tolerations Default tolerations for all Kargo pods.
   tolerations: []
   ## @param global.affinity Default affinity for all Kargo pods.
@@ -81,10 +86,6 @@ kubeconfigSecrets: {}
   ## @param kubeconfigSecrets.argocd [nullable] Kubernetes `Secret` name containing kubeconfig for a remote Kubernetes cluster hosting Argo CD resources. Used by Kargo controller(s) only.
   # argocd: ""
 
-## @skip additionalLabels Deprecated, use `global.additionalLabels` instead.
-additionalLabels: {}
-  # my-label: my-value
-
 ## @section API
 api:
   ## @param api.enabled Whether the API server is enabled.
@@ -95,6 +96,16 @@ api:
   host: localhost
   ## @param api.logLevel The log level for the API server.
   logLevel: INFO
+
+  ## @param api.labels Labels to add to the api resources. Merges with `global.labels`, allowing you to override or add to the global labels.
+  labels: {}
+  ## @param api.annotations Annotations to add to the api resources. Merges with `global.annotations`, allowing you to override or add to the global annotations.
+  annotations: {}
+  ## @param api.podLabels Optional labels to add to pods. Merges with `global.podLabels`, allowing you to override or add to the global labels.
+  podLabels: {}
+  ## @param api.podAnnotations Optional annotations to add to pods. Merges with `global.podAnnotations`, allowing you to override or add to the global annotations.
+  podAnnotations: {}
+
   ## @param api.resources Resources limits and requests for the api containers.
   resources: {}
     # limits:
@@ -109,8 +120,6 @@ api:
   tolerations: []
   ## @param api.affinity Specifies pod affinity for api pods. Defaults to `global.affinity`.
   affinity: {}
-  ## @param  api.annotations Annotations to add to the api pods. Merges with `global.annotations`, allowing you to override or add to the global annotations.
-  annotations: {}
   ## @param api.securityContext Security context for api pods. Defaults to `global.securityContext`.
   securityContext: {}
   ## @param api.env Environment variables to add to API server pods.
@@ -141,7 +150,7 @@ api:
     ## @param api.ingress.enabled Whether to enable ingress. By default, this is disabled. Enabling ingress is advanced usage.
     enabled: false
     ## @param api.ingress.annotations Annotations specified by your ingress controller to customize the behavior of the ingress resource.
-    annotations:
+    annotations: {}
       # kubernetes.io/ingress.class: nginx
     ## @param api.ingress.ingressClassName From Kubernetes 1.18+, this field is supported if implemented by your ingress controller. When set, you do not need to add the ingress class as annotation.
     ingressClassName:
@@ -319,6 +328,15 @@ controller:
   ## @param controller.enabled Whether the controller is enabled.
   enabled: true
 
+  ## @param controller.labels Labels to add to the api resources. Merges with `global.labels`, allowing you to override or add to the global labels.
+  labels: {}
+  ## @param controller.annotations Annotations to add to the api resources. Merges with `global.annotations`, allowing you to override or add to the global annotations.
+  annotations: {}
+  ## @param controller.podLabels Optional labels to add to pods. Merges with `global.podLabels`, allowing you to override or add to the global labels.
+  podLabels: {}
+  ## @param controller.podAnnotations Optional annotations to add to pods. Merges with `global.podAnnotations`, allowing you to override or add to the global annotations.
+  podAnnotations: {}
+
   ## All settings relating to shared credentials (used across multiple kargo projects)
   globalCredentials:
     ## @param controller.globalCredentials.namespaces List of namespaces to look for shared credentials.
@@ -377,8 +395,6 @@ controller:
   tolerations: []
   ## @param controller.affinity Specifies pod affinity for controller pods. Defaults to `global.affinity`.
   affinity: {}
-  ## @param controller.annotations Annotations to add to the controller pods. Merges with `global.annotations`, allowing you to override or add to the global annotations.
-  annotations: {}
   ## @param controller.env Environment variables to add to controller pods.
   env: []
   #  - name: ENV_NAME
@@ -399,6 +415,15 @@ managementController:
   ## @param managementController.logLevel The log level for the management controller.
   logLevel: INFO
 
+  ## @param managementController.labels Labels to add to the api resources. Merges with `global.labels`, allowing you to override or add to the global labels.
+  labels: {}
+  ## @param managementController.annotations Annotations to add to the api resources. Merges with `global.annotations`, allowing you to override or add to the global annotations.
+  annotations: {}
+  ## @param managementController.podLabels Optional labels to add to pods. Merges with `global.podLabels`, allowing you to override or add to the global labels.
+  podLabels: {}
+  ## @param managementController.podAnnotations Optional annotations to add to pods. Merges with `global.podAnnotations`, allowing you to override or add to the global annotations.
+  podAnnotations: {}
+
   ## @param managementController.securityContext Security context for management controller pods. Defaults to `global.securityContext`.
   securityContext: {}
 
@@ -416,8 +441,6 @@ managementController:
   tolerations: []
   ## @param managementController.affinity Specifies pod affinity for management controller pods. Defaults to `global.affinity`.
   affinity: {}
-  ## @param managementController.annotations Annotations to add to the management controller pods. Merges with `global.annotations`, allowing you to override or add to the global annotations.
-  annotations: {}
   ## @param managementController.env Environment variables to add to management controller pods.
   env: []
   #  - name: ENV_NAME
@@ -445,6 +468,15 @@ webhooksServer:
   ## @param webhooksServer.controlplaneUserRegex Regular expression for matching controlplane users.
   controlplaneUserRegex: "" # ^system:serviceaccount:kargo:[a-z0-9]([-a-z0-9]*[a-z0-9])?$
 
+  ## @param webhooksServer.labels Labels to add to the api resources. Merges with `global.labels`, allowing you to override or add to the global labels.
+  labels: {}
+  ## @param webhooksServer.annotations Annotations to add to the api resources. Merges with `global.annotations`, allowing you to override or add to the global annotations.
+  annotations: {}
+  ## @param webhooksServer.podLabels Optional labels to add to pods. Merges with `global.podLabels`, allowing you to override or add to the global labels.
+  podLabels: {}
+  ## @param webhooksServer.podAnnotations Optional annotations to add to pods. Merges with `global.podAnnotations`, allowing you to override or add to the global annotations.
+  podAnnotations: {}
+
   tls:
     ## @param webhooksServer.tls.selfSignedCert  Whether to generate a self-signed certificate for the controller's built-in webhook server. If `true`, `cert-manager` CRDs **must** be present in the cluster. Kargo will create and use its own namespaced issuer. If `false`, a cert secret named `kargo-webhooks-server-cert` **must** be provided in the same namespace as Kargo. There is no provision for webhooks without TLS.
     selfSignedCert: true
@@ -462,8 +494,6 @@ webhooksServer:
   tolerations: []
   ## @param webhooksServer.affinity Specifies pod affinity for the webhooks server pods. Defaults to `global.affinity`.
   affinity: {}
-  ## @param webhooksServer.annotations Annotations to add to the webhooks server pods. Merges with `global.annotations`, allowing you to override or add to the global annotations.
-  annotations: {}
   ## @param webhooksServer.securityContext Security context for webhooks server pods. Defaults to `global.securityContext`.
   securityContext: {}
   ## @param webhooksServer.env Environment variables to add to webhook server pods.
@@ -495,6 +525,16 @@ garbageCollector:
   minFreightDeletionAge: 336h # Two weeks
   ## @param garbageCollector.logLevel The log level for the garbage collector.
   logLevel: INFO
+
+  ## @param garbageCollector.labels Labels to add to the api resources. Merges with `global.labels`, allowing you to override or add to the global labels.
+  labels: {}
+  ## @param garbageCollector.annotations Annotations to add to the api resources. Merges with `global.annotations`, allowing you to override or add to the global annotations.
+  annotations: {}
+  ## @param garbageCollector.podLabels Optional labels to add to pods. Merges with `global.podLabels`, allowing you to override or add to the global labels.
+  podLabels: {}
+  ## @param garbageCollector.podAnnotations Optional annotations to add to pods. Merges with `global.podAnnotations`, allowing you to override or add to the global annotations.
+  podAnnotations: {}
+
   ## @param garbageCollector.resources Resources limits and requests for the garbage collector containers.
   resources: {}
     # limits:
@@ -509,8 +549,6 @@ garbageCollector:
   tolerations: []
   ## @param garbageCollector.affinity Specifies pod affinity for the garbage collector pods. Defaults to `global.affinity`.
   affinity: {}
-  ## @param garbageCollector.annotations Annotations to add to the garbage collector pods. Merges with `global.annotations`, allowing you to override or add to the global annotations.
-  annotations: {}
   ## @param garbageCollector.securityContext Security context for garbage collector pods. Defaults to `global.securityContext`.
   securityContext: {}
   ## @param garbageCollector.env Environment variables to add to garbage collector pods.

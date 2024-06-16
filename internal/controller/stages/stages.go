@@ -3,11 +3,12 @@ package stages
 import (
 	"context"
 	"fmt"
+	"slices"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
-	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
@@ -67,15 +68,21 @@ type reconciler struct {
 
 	// The following behaviors are overridable for testing purposes:
 
-	// Loop guard:
+	// Promotion-related:
 
 	nowFn func() time.Time
 
-	hasNonTerminalPromotionsFn func(
-		ctx context.Context,
-		stageNamespace string,
-		stageName string,
-	) (bool, error)
+	syncPromotionsFn func(
+		context.Context,
+		*kargoapi.Stage,
+		kargoapi.StageStatus,
+	) (kargoapi.StageStatus, error)
+
+	getPromotionsForStageFn func(
+		context.Context,
+		string,
+		string,
+	) ([]kargoapi.Promotion, error)
 
 	listPromosFn func(
 		context.Context,
@@ -237,8 +244,8 @@ func SetupReconcilerWithManager(
 	argocdMgr manager.Manager,
 	cfg ReconcilerConfig,
 ) error {
-	// Index Promotions in non-terminal states by Stage
-	if err := kubeclient.IndexNonTerminalPromotionsByStage(ctx, kargoMgr); err != nil {
+	// Index Promotions by Stage
+	if err := kubeclient.IndexPromotionsByStage(ctx, kargoMgr); err != nil {
 		return fmt.Errorf("index non-terminal Promotions by Stage: %w", err)
 	}
 
@@ -336,20 +343,20 @@ func SetupReconcilerWithManager(
 	}
 
 	logger := logging.LoggerFromContext(ctx)
-	// Watch Promotions that completed and enqueue owning Stage key
+	// Watch Promotions for which the phase changed and enqueue owning Stage key
 	promoOwnerHandler := handler.TypedEnqueueRequestForOwner[*kargoapi.Promotion](
 		kargoMgr.GetScheme(),
 		kargoMgr.GetRESTMapper(),
 		&kargoapi.Stage{},
 		handler.OnlyControllerOwner(),
 	)
-	promoWentTerminal := kargo.NewPromoWentTerminalPredicate(logger)
-	if err := c.Watch(
+	promoPhaseChanged := kargo.NewPromoPhaseChangedPredicate(logger)
+	if err = c.Watch(
 		source.Kind(
 			kargoMgr.GetCache(),
 			&kargoapi.Promotion{},
 			promoOwnerHandler,
-			promoWentTerminal,
+			promoPhaseChanged,
 		),
 	); err != nil {
 		return fmt.Errorf("unable to watch Promotions: %w", err)
@@ -452,10 +459,11 @@ func newReconciler(
 		shardRequirement: shardRequirement,
 	}
 	// The following default behaviors are overridable for testing purposes:
-	// Loop guard:
+	// Promotion-related:
 	r.nowFn = time.Now
-	r.hasNonTerminalPromotionsFn = r.hasNonTerminalPromotions
+	r.syncPromotionsFn = r.syncPromotions
 	r.listPromosFn = r.kargoClient.List
+	r.getPromotionsForStageFn = r.getPromotionsForStage
 	// Freight verification:
 	r.startVerificationFn = r.startVerification
 	r.abortVerificationFn = r.abortVerification
@@ -493,10 +501,10 @@ func (r *reconciler) Reconcile(
 	ctx context.Context,
 	req ctrl.Request,
 ) (ctrl.Result, error) {
-	logger := logging.LoggerFromContext(ctx).WithFields(log.Fields{
-		"namespace": req.NamespacedName.Namespace,
-		"stage":     req.NamespacedName.Name,
-	})
+	logger := logging.LoggerFromContext(ctx).WithValues(
+		"namespace", req.NamespacedName.Namespace,
+		"stage", req.NamespacedName.Name,
+	)
 	ctx = logging.ContextWithLogger(ctx, logger)
 	logger.Debug("reconciling Stage")
 
@@ -539,7 +547,7 @@ func (r *reconciler) Reconcile(
 	}
 	if err != nil {
 		newStatus.Message = err.Error()
-		logger.Errorf("error syncing Stage: %s", stage.Status.Message)
+		logger.Error(err, "error syncing Stage")
 	} else {
 		// Be sure to blank this out in case there's an error in this field from
 		// the previous reconciliation
@@ -555,7 +563,7 @@ func (r *reconciler) Reconcile(
 		*status = newStatus
 	})
 	if updateErr != nil {
-		logger.Errorf("error updating Stage status: %s", updateErr)
+		logger.Error(updateErr, "error updating Stage status")
 	}
 
 	// If we had no error, but couldn't update, then we DO have an error. But we
@@ -689,27 +697,21 @@ func (r *reconciler) syncNormalStage(
 
 	logger := logging.LoggerFromContext(ctx)
 
-	// Skip the entire reconciliation loop if there are Promotions associate with
-	// this Stage in a non-terminal state. The promotion process and this
-	// reconciliation loop BOTH update Stage status, so this check helps us
-	// to avoid race conditions that may otherwise arise.
-	if hasNonTerminalPromos, err := r.hasNonTerminalPromotionsFn(
-		ctx,
-		stage.Namespace,
-		stage.Name,
-	); err != nil {
+	// Sync Promotions and update the Stage status.
+	var syncErr error
+	if status, syncErr = r.syncPromotionsFn(ctx, stage, status); syncErr != nil {
+		return status, syncErr
+	}
+	if err := kubeclient.PatchStatus(ctx, r.kargoClient, stage, func(s *kargoapi.StageStatus) {
+		*s = status
+	}); err != nil {
 		return status, err
-	} else if hasNonTerminalPromos {
-		logger.Debug(
-			"Stage has one or more Promotions in a non-terminal phase; skipping " +
-				"this reconciliation loop",
-		)
-		return status, nil
 	}
 
+	// Take note of the current Generation of the Stage as being observed,
+	// and reset the health status.
 	status.ObservedGeneration = stage.Generation
-	status.Health = nil // Reset health
-	status.CurrentPromotion = nil
+	status.Health = nil
 
 	if status.CurrentFreight == nil {
 		status.Phase = kargoapi.StagePhaseNotApplicable
@@ -717,7 +719,7 @@ func (r *reconciler) syncNormalStage(
 			"Stage has no current Freight; no health checks or verification to perform",
 		)
 	} else {
-		freightLogger := logger.WithField("freight", status.CurrentFreight.Name)
+		freightLogger := logger.WithValues("freight", status.CurrentFreight.Name)
 		shouldRecordFreightVerificationEvent := false
 
 		// Push the latest state of the current Freight to the history at the
@@ -726,26 +728,19 @@ func (r *reconciler) syncNormalStage(
 			status.History.UpdateOrPush(*status.CurrentFreight)
 		}()
 
-		// Check health
+		// Always check the health of the Argo CD Applications associated with the
+		// Stage. This is regardless of the phase of the Stage, as the health of the
+		// Argo CD Applications is always relevant.
 		if status.Health = r.appHealth.EvaluateHealth(
 			ctx,
 			*status.CurrentFreight,
 			stage.Spec.PromotionMechanisms.ArgoCDAppUpdates,
 		); status.Health != nil {
-			freightLogger.WithField("health", status.Health.Status).
-				Debug("Stage health assessed")
+			freightLogger.WithValues("health", status.Health.Status).Debug("Stage health assessed")
 		} else {
 			freightLogger.Debug("Stage health deemed not applicable")
 		}
 
-		// If the Stage is healthy and no verification process is defined, then the
-		// Stage should transition to the Steady phase.
-		if (status.Health == nil || status.Health.Status == kargoapi.HealthStateHealthy) &&
-			stage.Spec.Verification == nil && status.Phase == kargoapi.StagePhaseVerifying {
-			status.Phase = kargoapi.StagePhaseSteady
-		}
-
-		// Initiate or follow-up on verification if required
 		if stage.Spec.Verification != nil {
 			// Update the verification history with the current verification info.
 			// NOTE: We do this regardless of the phase of the verification process
@@ -756,25 +751,27 @@ func (r *reconciler) syncNormalStage(
 				status.CurrentFreight.VerificationHistory.UpdateOrPush(*status.CurrentFreight.VerificationInfo)
 			}
 
-			// Confirm if a reverification is requested. If so, clear the
-			// verification info to start the verification process again.
-			info := status.CurrentFreight.VerificationInfo
-			if info != nil && info.Phase.IsTerminal() {
-				if req, _ := kargoapi.ReverifyAnnotationValue(stage.GetAnnotations()); req.ForID(info.ID) {
-					logger.Debug("rerunning verification")
+			// If the Stage is in a steady state, we should check if we need to
+			// start or rerun verification.
+			if status.Phase == kargoapi.StagePhaseSteady {
+				info := status.CurrentFreight.VerificationInfo
+				switch {
+				case info == nil && status.CurrentPromotion == nil:
 					status.Phase = kargoapi.StagePhaseVerifying
-					status.CurrentFreight.VerificationInfo = nil
+				case info.Phase.IsTerminal():
+					if req, _ := kargoapi.ReverifyAnnotationValue(stage.GetAnnotations()); req.ForID(info.ID) {
+						logger.Debug("rerunning verification")
+						status.Phase = kargoapi.StagePhaseVerifying
+						status.CurrentFreight.VerificationInfo = nil
+					}
 				}
 			}
 
-			// NOTE: If stage cache is stale, phase can be StagePhaseNotApplicable
-			//       even though current freight is not empty in that case
-			//       check if verification step is necessary and if yes execute
-			//       step irrespective of phase
-			if status.Phase == kargoapi.StagePhaseVerifying || status.Phase == kargoapi.StagePhaseNotApplicable {
+			// Initiate or follow-up on verification if required.
+			if status.Phase == kargoapi.StagePhaseVerifying {
 				if !status.CurrentFreight.VerificationInfo.HasAnalysisRun() {
 					if status.Health == nil || status.Health.Status == kargoapi.HealthStateHealthy {
-						log.Debug("starting verification")
+						logger.Debug("starting verification")
 						var err error
 						if status.CurrentFreight.VerificationInfo, err = r.startVerificationFn(
 							ctx,
@@ -787,7 +784,7 @@ func (r *reconciler) syncNormalStage(
 						}
 					}
 				} else {
-					log.Debug("checking verification results")
+					logger.Debug("checking verification results")
 					var err error
 					if status.CurrentFreight.VerificationInfo, err = r.getVerificationInfoFn(
 						ctx,
@@ -804,15 +801,15 @@ func (r *reconciler) syncNormalStage(
 					newInfo := status.CurrentFreight.VerificationInfo
 					if !newInfo.Phase.IsTerminal() {
 						if req, _ := kargoapi.AbortAnnotationValue(stage.GetAnnotations()); req.ForID(newInfo.ID) {
-							log.Debug("aborting verification")
+							logger.Debug("aborting verification")
 							status.CurrentFreight.VerificationInfo = r.abortVerificationFn(ctx, stage)
 						}
 					}
 				}
 
 				if status.CurrentFreight.VerificationInfo != nil {
-					log.Debugf(
-						"verification phase is %s",
+					logger.Debug(
+						"verification", "phase",
 						status.CurrentFreight.VerificationInfo.Phase,
 					)
 
@@ -820,13 +817,18 @@ func (r *reconciler) syncNormalStage(
 						// Verification is complete
 						shouldRecordFreightVerificationEvent = true
 						status.Phase = kargoapi.StagePhaseSteady
-						log.Debug("verification is complete")
+						logger.Debug("verification is complete")
 					}
 
 					// Add latest verification info to history.
 					status.CurrentFreight.VerificationHistory.UpdateOrPush(*status.CurrentFreight.VerificationInfo)
 				}
 			}
+		} else {
+			// If verification is not applicable, mark the Stage as steady.
+			// This ensures that if the Stage had verification enabled previously,
+			// it will not be stuck in a verification phase.
+			status.Phase = kargoapi.StagePhaseSteady
 		}
 
 		// If health is not applicable or healthy
@@ -908,7 +910,7 @@ func (r *reconciler) syncNormalStage(
 
 	// Stop here if we have no chance of finding any Freight to promote.
 	if stage.Spec.Subscriptions.Warehouse == "" && len(stage.Spec.Subscriptions.UpstreamStages) == 0 {
-		logger.Warn(
+		logger.Info(
 			"Stage has no subscriptions. This may indicate an issue with resource" +
 				"validation logic.",
 		)
@@ -948,7 +950,7 @@ func (r *reconciler) syncNormalStage(
 		return status, nil
 	}
 
-	logger = logger.WithField("freight", latestFreight.Name)
+	logger = logger.WithValues("freight", latestFreight.Name)
 
 	// Only proceed if nextFreight isn't the one we already have
 	if stage.Status.CurrentFreight != nil &&
@@ -1014,7 +1016,108 @@ func (r *reconciler) syncNormalStage(
 		promo.Spec.Stage,
 	)
 
-	logger.WithField("promotion", promo.Name).Debug("created Promotion resource")
+	logger.Debug(
+		"created Promotion resource",
+		"promotion", promo.Name,
+	)
+
+	return status, nil
+}
+
+// syncPromotions determines the current state of the Stage and its Freight by
+// examining the Promotions that have been created for the Stage. It returns the
+// updated Stage status.
+//
+// The Stage is considered to be promoting if the latest Promotion is in a
+// running phase. In this case, the Stage is marked as promoting, and the
+// current Promotion is recorded in the Stage status. If the latest Promotion
+// is not in a running phase, the Stage is considered to be steady.
+//
+// New Promotions that have terminated since the last reconciliation are
+// discovered by comparing a list of terminated Promotions to the last known
+// Promotion. Any newer Promotions found are recorded in the Stage status, and
+// the Freight that was successfully promoted is recorded in the Freight
+// history.
+func (r *reconciler) syncPromotions(
+	ctx context.Context,
+	stage *kargoapi.Stage,
+	status kargoapi.StageStatus,
+) (kargoapi.StageStatus, error) {
+	logger := logging.LoggerFromContext(ctx)
+
+	promotions, err := r.getPromotionsForStageFn(ctx, stage.Namespace, stage.Name)
+	if err != nil || len(promotions) == 0 {
+		return status, err
+	}
+
+	// Sort the Promotions by phase and creation time so that we can determine the
+	// current state of the Stage.
+	slices.SortFunc(promotions, kargoapi.ComparePromotionByPhaseAndCreationTime)
+
+	// If the latest Promotion is in a running phase, the Stage is promoting.
+	if latestPromo := promotions[0]; !latestPromo.Status.Phase.IsTerminal() {
+		logger.WithValues("promotion", latestPromo.Name).Debug("Stage has a running Promotion")
+		status.Phase = kargoapi.StagePhasePromoting
+		status.CurrentPromotion = &kargoapi.PromotionInfo{
+			Name: latestPromo.Name,
+		}
+		if latestPromo.Status.Freight != nil {
+			status.CurrentPromotion.Freight = *latestPromo.Status.Freight.DeepCopy()
+		}
+	} else {
+		status.CurrentPromotion = nil
+	}
+
+	// Determine if there are any new Promotions that have been completed since
+	// the last reconciliation.
+	logger.Debug("checking for new terminated Promotions")
+	var newPromotions []kargoapi.PromotionInfo
+	for _, promo := range promotions {
+		if status.LastPromotion != nil {
+			// We can break here since we know that all subsequent Promotions
+			// will be older than the last Promotion we saw.
+			// NB: This makes use of the fact that Promotion names are
+			// generated, and contain a timestamp component which will ensure
+			// that they can be sorted in a consistent order.
+			if strings.Compare(promo.Name, status.LastPromotion.Name) <= 0 {
+				break
+			}
+		}
+
+		if promo.Status.Phase.IsTerminal() {
+			logger.WithValues("promotion", promo.Name).Debug("found new terminated Promotion")
+			info := kargoapi.PromotionInfo{
+				Name:   promo.Name,
+				Status: promo.Status.DeepCopy(),
+			}
+			if promo.Status.Freight != nil {
+				info.Freight = *promo.Status.Freight.DeepCopy()
+			}
+			newPromotions = append(newPromotions, info)
+		}
+	}
+
+	// As we will be appending to the Freight history, we need to ensure that
+	// we order the Promotions from oldest to newest. This is because the
+	// Freight history is garbage collected based on the number of entries,
+	// and we want to ensure that the oldest entries are removed first.
+	slices.SortFunc(newPromotions, func(a, b kargoapi.PromotionInfo) int {
+		return strings.Compare(a.Name, b.Name)
+	})
+
+	// Update the Stage status with the information about the newly terminated
+	// Promotions, and any new Freight that was successfully promoted.
+	for _, p := range newPromotions {
+		promo := p
+		status.LastPromotion = &promo
+		if promo.Status.Phase == kargoapi.PromotionPhaseSucceeded {
+			status.CurrentFreight = status.LastPromotion.Freight.DeepCopy()
+			status.History.Push(status.LastPromotion.Freight)
+			if status.CurrentPromotion == nil {
+				status.Phase = kargoapi.StagePhaseSteady
+			}
+		}
+	}
 
 	return status, nil
 }
@@ -1164,32 +1267,6 @@ func (r *reconciler) clearAnalysisRuns(
 	return nil
 }
 
-func (r *reconciler) hasNonTerminalPromotions(
-	ctx context.Context,
-	stageNamespace string,
-	stageName string,
-) (bool, error) {
-	promos := kargoapi.PromotionList{}
-	if err := r.listPromosFn(
-		ctx,
-		&promos,
-		&client.ListOptions{
-			Namespace: stageNamespace,
-			FieldSelector: fields.Set(map[string]string{
-				kubeclient.NonTerminalPromotionsByStageIndexField: stageName,
-			}).AsSelector(),
-		},
-	); err != nil {
-		return false, fmt.Errorf(
-			"error listing Promotions in non-terminal phases for Stage %q in namespace %q: %w",
-			stageNamespace,
-			stageName,
-			err,
-		)
-	}
-	return len(promos.Items) > 0, nil
-}
-
 // verifyFreightInStage marks the given Freight as verified in the given Stage.
 // It returns true if succeeded to mark Freight as verified in the Stage,
 // or false if it was already marked as verified in the Stage.
@@ -1199,7 +1276,7 @@ func (r *reconciler) verifyFreightInStage(
 	freightName string,
 	stageName string,
 ) (bool, error) {
-	logger := logging.LoggerFromContext(ctx).WithField("freight", freightName)
+	logger := logging.LoggerFromContext(ctx).WithValues("freight", freightName)
 
 	// Find the Freight
 	freight, err := r.getFreightFn(
@@ -1288,12 +1365,41 @@ func (r *reconciler) isAutoPromotionPermitted(
 	}
 	for _, policy := range project.Spec.PromotionPolicies {
 		if policy.Stage == stageName {
-			logger.WithField("autoPromotionEnabled", policy.AutoPromotionEnabled).
-				Debug("found PromotionPolicy associated with the Stage")
+			logger.Debug(
+				"found PromotionPolicy associated with the Stage",
+				"autoPromotionEnabled", policy.AutoPromotionEnabled,
+			)
 			return policy.AutoPromotionEnabled, nil
 		}
 	}
 	return false, nil
+}
+
+func (r *reconciler) getPromotionsForStage(
+	ctx context.Context,
+	stageNamespace string,
+	stageName string,
+) ([]kargoapi.Promotion, error) {
+	var promos kargoapi.PromotionList
+	if err := r.listPromosFn(
+		ctx,
+		&promos,
+		&client.ListOptions{
+			Namespace: stageNamespace,
+			FieldSelector: fields.OneTermEqualSelector(
+				kubeclient.PromotionsByStageIndexField,
+				stageName,
+			),
+		},
+	); err != nil {
+		return nil, fmt.Errorf(
+			"error listing Promotions for Stage %q in namespace %q: %w",
+			stageName,
+			stageNamespace,
+			err,
+		)
+	}
+	return promos.Items, nil
 }
 
 func (r *reconciler) getLatestAvailableFreight(
@@ -1318,8 +1424,10 @@ func (r *reconciler) getLatestAvailableFreight(
 			)
 		}
 		if latestFreight == nil {
-			logger.WithField("warehouse", stage.Spec.Subscriptions.Warehouse).
-				Debug("no Freight found from Warehouse")
+			logger.Debug(
+				"no Freight found from Warehouse",
+				"warehouse", stage.Spec.Subscriptions.Warehouse,
+			)
 		}
 		return latestFreight, nil
 	}

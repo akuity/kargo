@@ -6,8 +6,6 @@ import (
 	"regexp"
 	"sort"
 
-	log "github.com/sirupsen/logrus"
-
 	"github.com/akuity/kargo/internal/logging"
 )
 
@@ -41,13 +39,13 @@ func newLexicalSelector(
 
 // Select implements the Selector interface.
 func (l *lexicalSelector) Select(ctx context.Context) ([]Image, error) {
-	logger := logging.LoggerFromContext(ctx).WithFields(log.Fields{
-		"registry":            l.repoClient.registry.name,
-		"image":               l.repoClient.repoURL,
-		"selectionStrategy":   SelectionStrategyLexical,
-		"platformConstrained": l.platform != nil,
-		"discoveryLimit":      l.discoveryLimit,
-	})
+	logger := logging.LoggerFromContext(ctx).WithValues(
+		"registry", l.repoClient.registry.name,
+		"image", l.repoClient.repoURL,
+		"selectionStrategy", SelectionStrategyLexical,
+		"platformConstrained", l.platform != nil,
+		"discoveryLimit", l.discoveryLimit,
+	)
 	logger.Trace("discovering images")
 
 	ctx = logging.ContextWithLogger(ctx, logger)
@@ -73,17 +71,18 @@ func (l *lexicalSelector) Select(ctx context.Context) ([]Image, error) {
 			return nil, fmt.Errorf("error retrieving image with tag %q: %w", tag, err)
 		}
 		if image == nil {
-			logger.Tracef(
-				"image with tag %q was found, but did not match platform constraint",
-				tag,
+			logger.Trace(
+				"image was found, but did not match platform constraint",
+				"tag", tag,
 			)
 			continue
 		}
 
-		logger.WithFields(log.Fields{
-			"tag":    image.Tag,
-			"digest": image.Digest,
-		}).Trace("discovered image")
+		logger.Trace(
+			"discovered image",
+			"tag", image.Tag,
+			"digest", image.Digest,
+		)
 		images = append(images, *image)
 	}
 
@@ -92,7 +91,10 @@ func (l *lexicalSelector) Select(ctx context.Context) ([]Image, error) {
 		return nil, nil
 	}
 
-	logger.Tracef("discovered %d images", len(images))
+	logger.Trace(
+		"discovered images",
+		"count", len(images),
+	)
 	return images, nil
 }
 
@@ -125,7 +127,10 @@ func (l *lexicalSelector) selectTags(ctx context.Context) ([]string, error) {
 		}
 		tags = matchedTags
 	}
-	logger.Tracef("%d tags matched criteria", len(tags))
+	logger.Trace(
+		"tags matched criteria",
+		"count", len(tags),
+	)
 
 	logger.Trace("sorting tags lexically")
 	sortTagsLexically(tags)

@@ -6,7 +6,6 @@ import (
 	"sort"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -20,7 +19,7 @@ import (
 //     Promotion (from the same Stage) in a non-terminal phase.
 //   - Older than some configurable minimum age.
 func (c *collector) cleanProjectPromotions(ctx context.Context, project string) error {
-	logger := logging.LoggerFromContext(ctx).WithField("project", project)
+	logger := logging.LoggerFromContext(ctx).WithValues("project", project)
 
 	stages := &kargoapi.StageList{}
 	if err := c.listStagesFn(
@@ -33,9 +32,9 @@ func (c *collector) cleanProjectPromotions(ctx context.Context, project string) 
 
 	var cleanErrCount int
 	for _, stage := range stages.Items {
-		stageLogger := logger.WithField("stage", stage.Name)
+		stageLogger := logger.WithValues("stage", stage.Name)
 		if err := c.cleanStagePromotionsFn(ctx, project, stage.Name); err != nil {
-			stageLogger.Error("error cleaning Promotions to Stage")
+			stageLogger.Error(err, "error cleaning Promotions to Stage")
 			cleanErrCount++
 			continue
 		}
@@ -57,10 +56,10 @@ func (c *collector) cleanStagePromotions(
 	project string,
 	stage string,
 ) error {
-	logger := logging.LoggerFromContext(ctx).WithFields(logrus.Fields{
-		"project": project,
-		"stage":   stage,
-	})
+	logger := logging.LoggerFromContext(ctx).WithValues(
+		"project", project,
+		"stage", stage,
+	)
 
 	promos := kargoapi.PromotionList{}
 	if err := c.listPromotionsFn(
@@ -105,9 +104,9 @@ func (c *collector) cleanStagePromotions(
 		if time.Since(promo.CreationTimestamp.Time) < c.cfg.MinPromotionDeletionAge {
 			continue // Not old enough
 		}
-		promoLogger := logger.WithField("promotion", promo.Name)
+		promoLogger := logger.WithValues("promotion", promo.Name)
 		if err := c.deletePromotionFn(ctx, &promo); err != nil {
-			promoLogger.Errorf("error deleting Promotion: %s", err)
+			promoLogger.Error(err, "error deleting Promotion")
 			deleteErrCount++
 		} else {
 			promoLogger.Debug("deleted Promotion")

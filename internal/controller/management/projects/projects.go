@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/kelseyhightower/envconfig"
-	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	kubeerr "k8s.io/apimachinery/pkg/api/errors"
@@ -154,9 +153,9 @@ func (r *reconciler) Reconcile(
 	ctx context.Context,
 	req ctrl.Request,
 ) (ctrl.Result, error) {
-	logger := logging.LoggerFromContext(ctx).WithFields(log.Fields{
-		"project": req.NamespacedName.Name,
-	})
+	logger := logging.LoggerFromContext(ctx).WithValues(
+		"project", req.NamespacedName.Name,
+	)
 	ctx = logging.ContextWithLogger(ctx, logger)
 	logger.Debug("reconciling Project")
 
@@ -177,14 +176,17 @@ func (r *reconciler) Reconcile(
 	}
 
 	if project.Status.Phase.IsTerminal() {
-		logger.Debugf("Project is %s; nothing to do", project.Status.Phase)
+		logger.Debug(
+			"nothing to do",
+			"projectStatus", project.Status.Phase,
+		)
 		return ctrl.Result{}, nil
 	}
 
 	newStatus, err := r.syncProjectFn(ctx, project)
 	if err != nil {
 		newStatus.Message = err.Error()
-		logger.Errorf("error syncing Project: %s", err)
+		logger.Error(err, "error syncing Project")
 	} else {
 		// Be sure to blank this out in case there's an error in this field from
 		// the previous reconciliation
@@ -193,7 +195,7 @@ func (r *reconciler) Reconcile(
 
 	patchErr := r.patchProjectStatusFn(ctx, project, newStatus)
 	if patchErr != nil {
-		logger.Errorf("error updating Project status: %s", patchErr)
+		logger.Error(patchErr, "error updating Project status")
 	}
 
 	// If we had no error, but couldn't patch, then we DO have an error. But we
@@ -236,9 +238,9 @@ func (r *reconciler) ensureNamespace(
 ) (kargoapi.ProjectStatus, error) {
 	status := *project.Status.DeepCopy()
 
-	logger := logging.LoggerFromContext(ctx).WithFields(log.Fields{
-		"project": project.Name,
-	})
+	logger := logging.LoggerFromContext(ctx).WithValues(
+		"project", project.Name,
+	)
 
 	ownerRef := metav1.NewControllerRef(
 		project,
@@ -247,44 +249,51 @@ func (r *reconciler) ensureNamespace(
 	ownerRef.BlockOwnerDeletion = ptr.To(false)
 
 	ns := &corev1.Namespace{}
-	err := r.getNamespaceFn(
+	if err := r.getNamespaceFn(
 		ctx,
 		types.NamespacedName{Name: project.Name},
 		ns,
-	)
-	if err == nil {
-		// We found an existing namespace with the same name as the Project.
+	); err != nil && !kubeerr.IsNotFound(err) {
+		return status, fmt.Errorf("error getting namespace %q: %w", project.Name, err)
+	} else if err == nil {
+		// We found an existing namespace with the same name as the Project. It's
+		// only a problem if it is not labeled as a Project namespace.
+		if ns.Labels[kargoapi.ProjectLabelKey] != kargoapi.LabelTrueValue {
+			status.Phase = kargoapi.ProjectPhaseInitializationFailed
+			return status, fmt.Errorf(
+				"failed to initialize Project %q because namespace %q already exists"+
+					" and is not labeled as a Project namespace",
+				project.Name,
+				project.Name,
+			)
+		}
 		for _, ownerRef := range ns.OwnerReferences {
 			if ownerRef.UID == project.UID {
-				logger.Debug("namespace exists and is owned by this Project")
+				logger.Debug("namespace exists and is already owned by this Project")
 				return status, nil
 			}
 		}
-		if ns.Labels != nil &&
-			ns.Labels[kargoapi.ProjectLabelKey] == kargoapi.LabelTrueValue &&
-			len(ns.OwnerReferences) == 0 {
-			logger.Debug(
-				"namespace exists, but is not owned by this Project, but has the " +
-					"project label; Project will adopt it",
-			)
-			ns.OwnerReferences = []metav1.OwnerReference{*ownerRef}
-			controllerutil.AddFinalizer(ns, kargoapi.FinalizerName)
-			if err = r.updateNamespaceFn(ctx, ns); err != nil {
-				return status, fmt.Errorf("error updating namespace %q: %w", project.Name, err)
-			}
-			logger.Debug("updated namespace with Project as owner")
-			return status, nil
-		}
-		status.Phase = kargoapi.ProjectPhaseInitializationFailed
-		return status, fmt.Errorf(
-			"failed to initialize Project %q because namespace %q already exists",
-			project.Name,
-			project.Name,
+		// If we get to here, the Project is not already an owner of the existing
+		// namespace.
+		logger.Debug(
+			"namespace exists, is not owned by this Project, but has the " +
+				"project label; Project will adopt it",
 		)
+		// Note: We allow multiple owners of a namespace due to the not entirely
+		// uncommon scenario where an organization has its own controller that
+		// creates and initializes namespaces to ensure compliance with
+		// internal policies. Such a controller might already own the namespace.
+		ns.OwnerReferences = append(ns.OwnerReferences, *ownerRef)
+		controllerutil.AddFinalizer(ns, kargoapi.FinalizerName)
+		if err = r.updateNamespaceFn(ctx, ns); err != nil {
+			return status, fmt.Errorf("error updating namespace %q: %w", project.Name, err)
+		}
+		logger.Debug("updated namespace with Project as owner")
+		return status, nil
 	}
-	if !kubeerr.IsNotFound(err) {
-		return status, fmt.Errorf("error getting namespace %q: %w", project.Name, err)
-	}
+
+	// If we get to here, we had a not found error and we can proceed with
+	// creating the namespace.
 
 	logger.Debug("namespace does not exist yet; creating namespace")
 
@@ -317,12 +326,12 @@ func (r *reconciler) ensureAPIAdminPermissions(
 ) error {
 	const roleBindingName = "kargo-project-admin"
 
-	logger := logging.LoggerFromContext(ctx).WithFields(log.Fields{
-		"project":     project.Name,
-		"name":        project.Name,
-		"namespace":   project.Name,
-		"roleBinding": roleBindingName,
-	})
+	logger := logging.LoggerFromContext(ctx).WithValues(
+		"project", project.Name,
+		"name", project.Name,
+		"namespace", project.Name,
+		"roleBinding", roleBindingName,
+	)
 
 	roleBinding := &rbacv1.RoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
@@ -368,18 +377,18 @@ func (r *reconciler) ensureDefaultProjectRoles(
 	ctx context.Context,
 	project *kargoapi.Project,
 ) error {
-	logger := logging.LoggerFromContext(ctx).WithFields(log.Fields{
-		"project":   project.Name,
-		"name":      project.Name,
-		"namespace": project.Name,
-	})
+	logger := logging.LoggerFromContext(ctx).WithValues(
+		"project", project.Name,
+		"name", project.Name,
+		"namespace", project.Name,
+	)
 
 	const adminRoleName = "kargo-admin"
 	const viewerRoleName = "kargo-viewer"
 	allRoles := []string{adminRoleName, viewerRoleName}
 
 	for _, saName := range allRoles {
-		saLogger := logger.WithField("serviceAccount", saName)
+		saLogger := logger.WithValues("serviceAccount", saName)
 		if err := r.createServiceAccountFn(
 			ctx,
 			&corev1.ServiceAccount{
@@ -496,7 +505,10 @@ func (r *reconciler) ensureDefaultProjectRoles(
 		},
 	}
 	for _, role := range roles {
-		roleLogger := logger.WithField("role", role.Name)
+		roleLogger := logger.WithValues(
+			"role", role.Name,
+			"namespace", project.Name,
+		)
 		if err := r.createRoleFn(ctx, role); err != nil {
 			if kubeerr.IsAlreadyExists(err) {
 				roleLogger.Debug("Role already exists in project namespace")
@@ -507,13 +519,14 @@ func (r *reconciler) ensureDefaultProjectRoles(
 				role.Name, project.Name, err,
 			)
 		}
-		roleLogger.Debugf(
-			"created Role %q in project namespace %q", role.Name, project.Name,
-		)
+		roleLogger.Debug("created Role in project namespace")
 	}
 
 	for _, rbName := range allRoles {
-		rbLogger := logger.WithField("roleBinding", rbName)
+		rbLogger := logger.WithValues(
+			"roleBinding", rbName,
+			"namespace", project.Name,
+		)
 		if err := r.createRoleBindingFn(
 			ctx,
 			&rbacv1.RoleBinding{
@@ -547,9 +560,7 @@ func (r *reconciler) ensureDefaultProjectRoles(
 				rbName, project.Name, err,
 			)
 		}
-		rbLogger.Debugf(
-			"created RoleBinding %q in project namespace %q", rbName, project.Name,
-		)
+		rbLogger.Debug("created RoleBinding in project namespace")
 	}
 
 	return nil

@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/Masterminds/semver/v3"
-	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 
 	"github.com/akuity/kargo/internal/logging"
@@ -26,10 +25,10 @@ func TestSelectImageDockerHub(t *testing.T) {
 	const debianRepo = "debian"
 	const platform = "linux/amd64"
 
-	ctx := context.Background()
-	logger := logging.LoggerFromContext(ctx)
-	logger.Logger.SetLevel(log.TraceLevel)
-	ctx = logging.ContextWithLogger(ctx, logger)
+	ctx := logging.ContextWithLogger(
+		context.Background(),
+		logging.NewLogger(logging.TraceLevel),
+	)
 
 	t.Run("digest strategy miss", func(t *testing.T) {
 		s, err := NewSelector(

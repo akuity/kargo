@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
-	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
@@ -199,11 +198,10 @@ func (r *reconciler) Reconcile(
 	ctx context.Context,
 	req ctrl.Request,
 ) (ctrl.Result, error) {
-	logger := logging.LoggerFromContext(ctx).
-		WithFields(log.Fields{
-			"namespace": req.NamespacedName.Namespace,
-			"promotion": req.NamespacedName.Name,
-		})
+	logger := logging.LoggerFromContext(ctx).WithValues(
+		"namespace", req.NamespacedName.Namespace,
+		"promotion", req.NamespacedName.Name,
+	)
 	ctx = logging.ContextWithLogger(ctx, logger)
 	logger.Debug("reconciling Promotion")
 
@@ -250,12 +248,12 @@ func (r *reconciler) Reconcile(
 		)
 	}
 
-	logger = logger.WithFields(log.Fields{
-		"namespace": req.NamespacedName.Namespace,
-		"promotion": req.NamespacedName.Name,
-		"stage":     promo.Spec.Stage,
-		"freight":   promo.Spec.Freight,
-	})
+	logger = logger.WithValues(
+		"namespace", req.NamespacedName.Namespace,
+		"promotion", req.NamespacedName.Name,
+		"stage", promo.Spec.Stage,
+		"freight", promo.Spec.Freight,
+	)
 
 	if promo.Status.Phase == kargoapi.PromotionPhaseRunning {
 		// anything we've already marked Running, we allow it to continue to reconcile
@@ -295,7 +293,11 @@ func (r *reconciler) Reconcile(
 	func() {
 		defer func() {
 			if err := recover(); err != nil {
-				logger.Errorf("Promotion panic: %v", err)
+				if theErr, ok := err.(error); ok {
+					logger.Error(theErr, "Promotion panic")
+				} else {
+					logger.Error(nil, "Promotion panic")
+				}
 				newStatus.Phase = kargoapi.PromotionPhaseErrored
 				newStatus.Message = fmt.Sprintf("%v", err)
 			}
@@ -308,14 +310,14 @@ func (r *reconciler) Reconcile(
 		if promoteErr != nil {
 			newStatus.Phase = kargoapi.PromotionPhaseErrored
 			newStatus.Message = promoteErr.Error()
-			logger.Errorf("error executing Promotion: %s", promoteErr)
+			logger.Error(promoteErr, "error executing Promotion")
 		} else {
 			newStatus = otherStatus
 		}
 	}()
 
 	if newStatus.Phase.IsTerminal() {
-		logger.Infof("promotion %s", newStatus.Phase)
+		logger.Info("promotion", "phase", newStatus.Phase)
 	}
 
 	// Record the current refresh token as having been handled.
@@ -327,7 +329,7 @@ func (r *reconciler) Reconcile(
 		*status = *newStatus
 	})
 	if err != nil {
-		logger.Errorf("error updating Promotion status: %s", err)
+		logger.Error(err, "error updating Promotion status")
 	}
 
 	// Record event after patching status if new phase is terminal
@@ -434,7 +436,7 @@ func (r *reconciler) promote(
 		)
 	}
 
-	logger = logger.WithField("targetFreight", targetFreight.Name)
+	logger = logger.WithValues("targetFreight", targetFreight.Name)
 
 	targetFreightRef := kargoapi.FreightReference{
 		Name:      targetFreight.Name,
@@ -443,16 +445,6 @@ func (r *reconciler) promote(
 		Charts:    targetFreight.Charts,
 		Warehouse: targetFreight.Warehouse,
 	}
-	err = kubeclient.PatchStatus(ctx, r.kargoClient, stage, func(status *kargoapi.StageStatus) {
-		status.Phase = kargoapi.StagePhasePromoting
-		status.CurrentPromotion = &kargoapi.PromotionInfo{
-			Name:    promo.Name,
-			Freight: targetFreightRef,
-		}
-	})
-	if err != nil {
-		return nil, err
-	}
 
 	newStatus, nextFreight, err := r.promoMechanisms.Promote(ctx, stage, &promo, targetFreightRef)
 	if err != nil {
@@ -460,48 +452,25 @@ func (r *reconciler) promote(
 	}
 	newStatus.Freight = &nextFreight
 
-	logger.Debugf("promotion %s", newStatus.Phase)
+	logger.Debug("promotion", "phase", newStatus.Phase)
 
-	if newStatus.Phase.IsTerminal() {
-		// The assumption is that controller does not process multiple promotions in one stage
-		// so we are safe from race conditions and can just update the status
-		// TODO: remove all patching of Stage status out of promo reconciler
-		if err = kubeclient.PatchStatus(ctx, r.kargoClient, stage, func(status *kargoapi.StageStatus) {
-			status.LastPromotion = status.CurrentPromotion
-			status.LastPromotion.Status = newStatus
-			if newStatus.Phase == kargoapi.PromotionPhaseSucceeded {
-				// Handle specific things that need to happen on success.
-				// 1. Trigger re-verification for re-promotions.
-				// 2. Otherwise, update the current freight and history.
-				// 3. Update the phase to Verifying and clear the current promotion.
-				if status.CurrentFreight != nil &&
-					status.CurrentFreight.Name == targetFreight.Name {
-					if err = kargoapi.ReverifyStageFreight(
-						ctx,
-						r.kargoClient,
-						types.NamespacedName{
-							Namespace: stageNamespace,
-							Name:      stageName,
-						},
-					); err != nil {
-						// Log the error, but don't let failure to initiate re-verification
-						// prevent the promotion from succeeding.
-						logger.Errorf("error triggering re-verification: %s", err)
-					}
-				} else if stage.Spec.PromotionMechanisms != nil {
-					status.CurrentFreight = &nextFreight
-					status.History.UpdateOrPush(nextFreight)
-				}
-				status.Phase = kargoapi.StagePhaseVerifying
-				status.CurrentPromotion = nil
+	if newStatus.Phase == kargoapi.PromotionPhaseSucceeded {
+		// Trigger re-verification of the Stage if the promotion succeeded and
+		// this is a re-promotion of the same Freight.
+		curFreight := stage.Status.CurrentFreight
+		if curFreight != nil && curFreight.Name == targetFreight.Name && curFreight.VerificationInfo != nil {
+			if err = kargoapi.ReverifyStageFreight(
+				ctx,
+				r.kargoClient,
+				types.NamespacedName{
+					Namespace: stageNamespace,
+					Name:      stageName,
+				},
+			); err != nil {
+				// Log the error, but don't let failure to initiate re-verification
+				// prevent the promotion from succeeding.
+				logger.Error(err, "error triggering re-verification")
 			}
-		}); err != nil {
-			return nil, fmt.Errorf(
-				"error updating status of Stage %q in namespace %q: %w",
-				stageName,
-				stageNamespace,
-				err,
-			)
 		}
 	}
 

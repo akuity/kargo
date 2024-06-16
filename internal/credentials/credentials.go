@@ -7,14 +7,14 @@ import (
 	"strings"
 
 	"github.com/kelseyhightower/envconfig"
-	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/credentials/ecr"
-	"github.com/akuity/kargo/internal/credentials/gcp"
+	"github.com/akuity/kargo/internal/credentials/gar"
+	"github.com/akuity/kargo/internal/credentials/github"
 	"github.com/akuity/kargo/internal/git"
 	"github.com/akuity/kargo/internal/helm"
 	"github.com/akuity/kargo/internal/logging"
@@ -71,10 +71,13 @@ type Database interface {
 // utilizes a Kubernetes controller runtime client to retrieve credentials
 // stored in Kubernetes Secrets.
 type kubernetesDatabase struct {
-	kargoClient client.Client
-	ecrHelper   ecr.CredentialHelper
-	gcpHelper   gcp.CredentialHelper
-	cfg         KubernetesDatabaseConfig
+	kargoClient    client.Client
+	ecrAKHelperFn  func(context.Context, *corev1.Secret) (string, string, error)
+	ecrPIHelperFn  func(context.Context, string, string) (string, string, error)
+	gcpSAKHelperFn func(context.Context, *corev1.Secret) (string, string, error)
+	gcpWIFHelperFn func(context.Context, string, string) (string, string, error)
+	ghAppHelperFn  func(*corev1.Secret) (string, string, error)
+	cfg            KubernetesDatabaseConfig
 }
 
 // KubernetesDatabaseConfig represents configuration for a Kubernetes based
@@ -94,14 +97,18 @@ func KubernetesDatabaseConfigFromEnv() KubernetesDatabaseConfig {
 // Database interface that utilizes a Kubernetes controller runtime client to
 // retrieve Credentials stored in Kubernetes Secrets.
 func NewKubernetesDatabase(
+	ctx context.Context,
 	kargoClient client.Client,
 	cfg KubernetesDatabaseConfig,
 ) Database {
 	return &kubernetesDatabase{
-		kargoClient: kargoClient,
-		ecrHelper:   ecr.NewCredentialHelper(),
-		gcpHelper:   gcp.NewCredentialHelper(),
-		cfg:         cfg,
+		kargoClient:    kargoClient,
+		ecrAKHelperFn:  ecr.NewAccessKeyCredentialHelper().GetUsernameAndPassword,
+		ecrPIHelperFn:  ecr.NewPodIdentityCredentialHelper(ctx).GetUsernameAndPassword,
+		gcpSAKHelperFn: gar.NewServiceAccountKeyCredentialHelper().GetUsernameAndPassword,
+		gcpWIFHelperFn: gar.NewWorkloadIdentityFederationCredentialHelper(ctx).GetUsernameAndPassword,
+		ghAppHelperFn:  github.NewAppCredentialHelper().GetUsernameAndPassword,
+		cfg:            cfg,
 	}
 }
 
@@ -116,8 +123,10 @@ func (k *kubernetesDatabase) Get(
 	// If we are dealing with an insecure HTTP endpoint (of any type),
 	// refuse to return any credentials
 	if strings.HasPrefix(repoURL, "http://") {
-		logger := logging.LoggerFromContext(ctx).WithField("repoURL", repoURL)
-		logger.Warnf("refused to get credentials for insecure HTTP endpoint")
+		logging.LoggerFromContext(ctx).Info(
+			"refused to get credentials for insecure HTTP endpoint",
+			"repoURL", repoURL,
+		)
 		return creds, false, nil
 	}
 
@@ -151,12 +160,35 @@ func (k *kubernetesDatabase) Get(
 		}
 	}
 
-	if secret == nil {
+	if secret != nil {
+		if creds, err = k.secretToCreds(ctx, credType, secret); err != nil {
+			return creds, false, err
+		}
+		return creds, true, nil
+	}
+
+	if credType != TypeImage {
+		// If we are not not looking for image repository credentials, there's
+		// nothing left to try.
 		return creds, false, nil
 	}
 
-	if creds, err = k.secretToCreds(ctx, credType, secret); err != nil {
+	// If we get to here, we have not found any secret that we can pick apart
+	// in any way, but we can still try to resolve a username and password via
+	// workload identity.
+
+	// Try EKS Pod Identity
+	if creds.Username, creds.Password, err =
+		k.ecrPIHelperFn(ctx, repoURL, namespace); err != nil {
 		return creds, false, err
+	}
+
+	// Try GCP Workload Identity Federation
+	if creds.Username == "" {
+		if creds.Username, creds.Password, err =
+			k.gcpWIFHelperFn(ctx, repoURL, namespace); err != nil {
+			return creds, false, err
+		}
 	}
 
 	return creds, true, nil
@@ -214,10 +246,11 @@ func (k *kubernetesDatabase) getCredentialsSecret(
 		if isRegex {
 			regex, err := regexp.Compile(string(urlBytes))
 			if err != nil {
-				logger.WithFields(log.Fields{
-					"namespace": namespace,
-					"secret":    secret.Name,
-				}).Warn("failed to compile regex for credential secret")
+				logger.Error(
+					err, "failed to compile regex for credential secret",
+					"namespace", namespace,
+					"secret", secret.Name,
+				)
 				continue
 			}
 			if regex.MatchString(repoURL) {
@@ -234,21 +267,33 @@ func (k *kubernetesDatabase) getCredentialsSecret(
 func (k *kubernetesDatabase) secretToCreds(
 	ctx context.Context, credType Type, secret *corev1.Secret,
 ) (Credentials, error) {
-	if credType == TypeImage {
-		// If the cred type is image, we'll try to derive username and password
-		// from:
+	switch credType {
+	case TypeGit:
+		// Try to derive username and password from GitHub App ID, installation ID,
+		// and private key
+		username, password, err := k.ghAppHelperFn(secret)
+		if err != nil {
+			return Credentials{}, err
+		}
+		if username != "" {
+			// We have successfully derived the username and password
+			return Credentials{
+				Username: username,
+				Password: password,
+			}, nil
+		}
+	case TypeImage:
+		// Try to derive username and password from:
 		//   1. AWS access key id and secret access key
 		//   2. Base64 encoded GCP service account key
 		var username, password string
 		var err error
 		// Try AWS
-		if username, password, err = k.ecrHelper.GetUsernameAndPassword(secret); err != nil {
+		if username, password, err = k.ecrAKHelperFn(ctx, secret); err != nil {
 			return Credentials{}, err
 		}
 		if username == "" { // Try GCP
-			if username, password, err = k.gcpHelper.GetUsernameAndPassword(
-				ctx, secret,
-			); err != nil {
+			if username, password, err = k.gcpSAKHelperFn(ctx, secret); err != nil {
 				return Credentials{}, err
 			}
 		}

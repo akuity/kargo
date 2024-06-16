@@ -35,9 +35,11 @@ func (s *server) RefreshStage(
 	if err != nil {
 		return nil, err
 	}
-	// If there is a current promotion then refresh it too.
+	// If there is a current promotion then refresh it too. Do this with the API
+	// server's own internal client so that individual users are not required to
+	// have this permission, which they really do not otherwise need.
 	if stage.Status.CurrentPromotion != nil {
-		if _, err := kargoapi.RefreshPromotion(ctx, s.client, client.ObjectKey{
+		if _, err := kargoapi.RefreshPromotion(ctx, s.internalClient, client.ObjectKey{
 			Namespace: project,
 			Name:      stage.Status.CurrentPromotion.Name,
 		}); err != nil {

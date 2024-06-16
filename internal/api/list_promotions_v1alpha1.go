@@ -3,7 +3,7 @@ package api
 import (
 	"context"
 	"fmt"
-	"sort"
+	"slices"
 
 	"connectrpc.com/connect"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -39,9 +39,7 @@ func (s *server) ListPromotions(
 		return nil, fmt.Errorf("list promotions: %w", err)
 	}
 
-	sort.Slice(list.Items, func(i, j int) bool {
-		return list.Items[i].CreationTimestamp.After(list.Items[j].CreationTimestamp.Time)
-	})
+	slices.SortFunc(list.Items, kargoapi.ComparePromotionByPhaseAndCreationTime)
 
 	promotions := make([]*kargoapi.Promotion, len(list.Items))
 	for idx := range list.Items {

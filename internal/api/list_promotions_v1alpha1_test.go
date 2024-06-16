@@ -2,10 +2,11 @@ package api
 
 import (
 	"context"
+	"fmt"
 	"testing"
-	"time"
 
 	"connectrpc.com/connect"
+	"github.com/oklog/ulid/v2"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -23,6 +24,12 @@ import (
 )
 
 func TestListPromotions(t *testing.T) {
+	// We need some promotion names with ULIDs to test the sorting.
+	oldestPromotionName := fmt.Sprintf("some-stage.%s.oldest", ulid.Make())
+	olderPromotionName := fmt.Sprintf("some-stage.%s.older", ulid.Make())
+	oldPromotionName := fmt.Sprintf("some-stage.%s.old", ulid.Make())
+	newPromotionName := fmt.Sprintf("some-stage.%s.new", ulid.Make())
+
 	testCases := map[string]struct {
 		req        *svcv1alpha1.ListPromotionsRequest
 		objects    []client.Object
@@ -67,7 +74,7 @@ func TestListPromotions(t *testing.T) {
 				require.Nil(t, r)
 			},
 		},
-		"orders by creation time": {
+		"orders by ULID and phase": {
 			req: &svcv1alpha1.ListPromotionsRequest{
 				Project: "kargo-demo",
 			},
@@ -75,30 +82,38 @@ func TestListPromotions(t *testing.T) {
 				mustNewObject[corev1.Namespace]("testdata/namespace.yaml"),
 				&kargoapi.Promotion{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:              "oldest-promotion",
-						Namespace:         "kargo-demo",
-						CreationTimestamp: metav1.NewTime(metav1.Now().Add(-24 * time.Hour)),
+						Name:      oldestPromotionName,
+						Namespace: "kargo-demo",
+					},
+					Status: kargoapi.PromotionStatus{
+						Phase: kargoapi.PromotionPhaseRunning,
 					},
 				},
 				&kargoapi.Promotion{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:              "new-promotion",
-						Namespace:         "kargo-demo",
-						CreationTimestamp: metav1.Now(),
+						Name:      newPromotionName,
+						Namespace: "kargo-demo",
+					},
+					Status: kargoapi.PromotionStatus{
+						Phase: kargoapi.PromotionPhaseSucceeded,
 					},
 				},
 				&kargoapi.Promotion{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:              "older-promotion",
-						Namespace:         "kargo-demo",
-						CreationTimestamp: metav1.NewTime(metav1.Now().Add(-2 * time.Hour)),
+						Name:      olderPromotionName,
+						Namespace: "kargo-demo",
+					},
+					Status: kargoapi.PromotionStatus{
+						Phase: kargoapi.PromotionPhaseFailed,
 					},
 				},
 				&kargoapi.Promotion{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:              "old-promotion",
-						Namespace:         "kargo-demo",
-						CreationTimestamp: metav1.NewTime(metav1.Now().Add(-1 * time.Hour)),
+						Name:      oldPromotionName,
+						Namespace: "kargo-demo",
+					},
+					Status: kargoapi.PromotionStatus{
+						Phase: kargoapi.PromotionPhasePending,
 					},
 				},
 			},
@@ -107,11 +122,11 @@ func TestListPromotions(t *testing.T) {
 				require.NotNil(t, r)
 				require.Len(t, r.Msg.GetPromotions(), 4)
 
-				// Check that the analysis templates are ordered by time.
-				require.Equal(t, "new-promotion", r.Msg.GetPromotions()[0].GetName())
-				require.Equal(t, "old-promotion", r.Msg.GetPromotions()[1].GetName())
-				require.Equal(t, "older-promotion", r.Msg.GetPromotions()[2].GetName())
-				require.Equal(t, "oldest-promotion", r.Msg.GetPromotions()[3].GetName())
+				// Check that the analysis templates are ordered by ULID and phase.
+				require.Equal(t, oldestPromotionName, r.Msg.GetPromotions()[0].GetName())
+				require.Equal(t, oldPromotionName, r.Msg.GetPromotions()[1].GetName())
+				require.Equal(t, newPromotionName, r.Msg.GetPromotions()[2].GetName())
+				require.Equal(t, olderPromotionName, r.Msg.GetPromotions()[3].GetName())
 			},
 		},
 	}

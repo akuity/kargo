@@ -2,6 +2,7 @@ package credentials
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -18,7 +19,7 @@ func TestNewKubernetesDatabase(t *testing.T) {
 	testCfg := KubernetesDatabaseConfig{
 		GlobalCredentialsNamespaces: []string{"fake-namespace"},
 	}
-	d := NewKubernetesDatabase(testClient, testCfg)
+	d := NewKubernetesDatabase(context.Background(), testClient, testCfg)
 	require.NotNil(t, d)
 	k, ok := d.(*kubernetesDatabase)
 	require.True(t, ok)
@@ -195,6 +196,7 @@ func TestGet(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			creds, found, err := NewKubernetesDatabase(
+				context.Background(),
 				fake.NewClientBuilder().WithObjects(testCase.secrets...).Build(),
 				KubernetesDatabaseConfig{
 					GlobalCredentialsNamespaces: []string{testGlobalNamespace},
@@ -224,17 +226,140 @@ func TestGet(t *testing.T) {
 }
 
 func TestSecretToCreds(t *testing.T) {
-	secret := &corev1.Secret{
-		Data: map[string][]byte{
-			"username":      []byte("fake-username"),
-			"password":      []byte("fake-password"),
-			"sshPrivateKey": []byte("fake-ssh-private-key"),
+	const (
+		testUsername = "fake-username"
+		testPassword = "fake-password"
+	)
+	testFoundCreds := Credentials{
+		Username: testUsername,
+		Password: testPassword,
+	}
+	testCases := []struct {
+		name       string
+		db         *kubernetesDatabase
+		credType   Type
+		assertions func(t *testing.T, creds Credentials, err error)
+	}{
+		{
+			name:     "error from github app helper",
+			credType: TypeGit,
+			db: &kubernetesDatabase{
+				ghAppHelperFn: func(*corev1.Secret) (string, string, error) {
+					return "", "", errors.New("something went wrong")
+				},
+			},
+			assertions: func(t *testing.T, creds Credentials, err error) {
+				require.ErrorContains(t, err, "something went wrong")
+				require.Empty(t, creds)
+			},
+		},
+		{
+			name:     "github app helper finds credentials",
+			credType: TypeGit,
+			db: &kubernetesDatabase{
+				ghAppHelperFn: func(*corev1.Secret) (string, string, error) {
+					return testUsername, testPassword, nil
+				},
+			},
+			assertions: func(t *testing.T, creds Credentials, err error) {
+				require.NoError(t, err)
+				require.Equal(t, testFoundCreds, creds)
+			},
+		},
+		{
+			name:     "github app helper finds no credentials",
+			credType: TypeGit,
+			db: &kubernetesDatabase{
+				ghAppHelperFn: func(*corev1.Secret) (string, string, error) {
+					return "", "", nil
+				},
+			},
+			assertions: func(t *testing.T, creds Credentials, err error) {
+				require.NoError(t, err)
+				require.Empty(t, creds)
+			},
+		},
+		{
+			name:     "error from ecr access key helper",
+			credType: TypeImage,
+			db: &kubernetesDatabase{
+				ecrAKHelperFn: func(context.Context, *corev1.Secret) (string, string, error) {
+					return "", "", errors.New("something went wrong")
+				},
+			},
+			assertions: func(t *testing.T, creds Credentials, err error) {
+				require.ErrorContains(t, err, "something went wrong")
+				require.Empty(t, creds)
+			},
+		},
+		{
+			name:     "ecr access key helper finds credentials",
+			credType: TypeImage,
+			db: &kubernetesDatabase{
+				ecrAKHelperFn: func(context.Context, *corev1.Secret) (string, string, error) {
+					return testUsername, testPassword, nil
+				},
+			},
+			assertions: func(t *testing.T, creds Credentials, err error) {
+				require.NoError(t, err)
+				require.Equal(t, testFoundCreds, creds)
+			},
+		},
+		{
+			name:     "error from gcp service account key helper",
+			credType: TypeImage,
+			db: &kubernetesDatabase{
+				ecrAKHelperFn: func(context.Context, *corev1.Secret) (string, string, error) {
+					return "", "", nil
+				},
+				gcpSAKHelperFn: func(context.Context, *corev1.Secret) (string, string, error) {
+					return "", "", errors.New("something went wrong")
+				},
+			},
+			assertions: func(t *testing.T, creds Credentials, err error) {
+				require.ErrorContains(t, err, "something went wrong")
+				require.Empty(t, creds)
+			},
+		},
+		{
+			name:     "gcp service account key helper finds credentials",
+			credType: TypeImage,
+			db: &kubernetesDatabase{
+				ecrAKHelperFn: func(context.Context, *corev1.Secret) (string, string, error) {
+					return "", "", nil
+				},
+				gcpSAKHelperFn: func(context.Context, *corev1.Secret) (string, string, error) {
+					return testUsername, testPassword, nil
+				},
+			},
+			assertions: func(t *testing.T, creds Credentials, err error) {
+				require.NoError(t, err)
+				require.Equal(t, testFoundCreds, creds)
+			},
+		},
+		{
+			name:     "no image credential helpers find credentials",
+			credType: TypeImage,
+			db: &kubernetesDatabase{
+				ecrAKHelperFn: func(context.Context, *corev1.Secret) (string, string, error) {
+					return "", "", nil
+				},
+				gcpSAKHelperFn: func(context.Context, *corev1.Secret) (string, string, error) {
+					return "", "", nil
+				},
+			},
+			assertions: func(t *testing.T, creds Credentials, err error) {
+				require.NoError(t, err)
+				require.Empty(t, creds)
+			},
 		},
 	}
-	db := &kubernetesDatabase{}
-	creds, err := db.secretToCreds(context.Background(), TypeGit, secret)
-	require.NoError(t, err)
-	require.Equal(t, string(secret.Data["username"]), creds.Username)
-	require.Equal(t, string(secret.Data["password"]), creds.Password)
-	require.Equal(t, string(secret.Data["sshPrivateKey"]), creds.SSHPrivateKey)
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			creds, err := testCase.db.secretToCreds(
+				context.Background(), testCase.credType, &corev1.Secret{},
+			)
+			testCase.assertions(t, creds, err)
+		})
+	}
 }

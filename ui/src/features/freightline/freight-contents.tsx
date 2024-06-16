@@ -7,20 +7,23 @@ import classNames from 'classnames';
 import { Freight, GitCommit } from '@ui/gen/v1alpha1/generated_pb';
 import { urlForImage } from '@ui/utils/url';
 
+import { TruncateMiddle } from '../common/truncate-middle';
+
 export const FreightContents = (props: {
   freight?: Freight;
   highlighted: boolean;
   horizontal?: boolean;
 }) => {
   const { freight, highlighted, horizontal } = props;
+  const linkClass = `${highlighted ? 'text-blue-600' : 'text-gray-400'} hover:text-blue-500 underline hover:underline max-w-full`;
 
-  const FreightContentItem = (
-    props: {
-      icon: IconDefinition;
-      overlay?: React.ReactNode;
-      title?: string;
-    } & React.PropsWithChildren
-  ) => (
+  const FreightContentItem = (props: {
+    icon: IconDefinition;
+    overlay?: React.ReactNode;
+    title?: string;
+    href?: string;
+    children?: string;
+  }) => (
     <Tooltip
       className={classNames(
         'min-w-0 flex items-center justify-center my-1 bg-neutral-300 rounded',
@@ -39,11 +42,15 @@ export const FreightContents = (props: {
           'mr-2': horizontal
         })}
       />
-      {props.children}
+      {props.href ? (
+        <a target='_blank' className={linkClass}>
+          <TruncateMiddle>{props.children || ''}</TruncateMiddle>
+        </a>
+      ) : (
+        <TruncateMiddle>{props.children || ''}</TruncateMiddle>
+      )}
     </Tooltip>
   );
-
-  const linkClass = `${highlighted ? 'text-blue-600' : 'text-gray-400'} hover:text-blue-500 underline hover:underline max-w-full truncate`;
 
   return (
     <div
@@ -57,16 +64,15 @@ export const FreightContents = (props: {
       )}
     >
       {(freight?.commits || []).map((c) => (
-        <FreightContentItem key={c.id} overlay={<CommitInfo commit={c} />} icon={faGit}>
-          <a
-            href={`${c.repoURL?.replace('.git', '')}/commit/${c.id}`}
-            target='_blank'
-            className={linkClass}
-          >
-            {c.tag && c.tag.length > 12
-              ? c.tag.substring(0, 12) + '...'
-              : c.tag || c.id?.substring(0, 6)}
-          </a>
+        <FreightContentItem
+          key={c.id}
+          overlay={<CommitInfo commit={c} />}
+          icon={faGit}
+          href={`${c.repoURL?.replace('.git', '')}/commit/${c.id}`}
+        >
+          {c.tag && c.tag.length > 12
+            ? c.tag.substring(0, 12) + '...'
+            : c.tag || c.id?.substring(0, 6)}
         </FreightContentItem>
       ))}
       {(freight?.images || []).map((i) => (
@@ -74,11 +80,9 @@ export const FreightContents = (props: {
           key={`${i.repoURL}:${i.tag}`}
           title={`${i.repoURL}:${i.tag}`}
           icon={faDocker}
+          href={urlForImage(i.repoURL || '')}
         >
-          <a href={urlForImage(i.repoURL || '')} target='_blank' className={linkClass}>
-            {props.horizontal && i.repoURL + ':'}
-            {i.tag}
-          </a>
+          {`${props.horizontal ? i.repoURL + ':' : ''}${i.tag}`}
         </FreightContentItem>
       ))}
       {(freight?.charts || []).map((c) => (
@@ -87,7 +91,7 @@ export const FreightContents = (props: {
           title={`${c.repoURL}:${c.version}`}
           icon={faAnchor}
         >
-          <div>{c.version}</div>
+          {c.version}
         </FreightContentItem>
       ))}
     </div>

@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -17,6 +16,7 @@ import (
 	"github.com/akuity/kargo/internal/api/kubernetes"
 	"github.com/akuity/kargo/internal/garbage"
 	"github.com/akuity/kargo/internal/kubeclient"
+	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/internal/os"
 	versionpkg "github.com/akuity/kargo/internal/version"
 )
@@ -24,12 +24,14 @@ import (
 type garbageCollectorOptions struct {
 	KubeConfig string
 
-	Logger *log.Logger
+	Logger *logging.Logger
 }
 
 func newGarbageCollectorCommand() *cobra.Command {
 	cmdOpts := &garbageCollectorOptions{
-		Logger: log.StandardLogger(),
+		// During startup, we enforce use of an info-level logger to ensure that
+		// no important startup messages are missed.
+		Logger: logging.NewLogger(logging.InfoLevel),
 	}
 
 	cmd := &cobra.Command{
@@ -54,10 +56,11 @@ func (o *garbageCollectorOptions) complete() {
 func (o *garbageCollectorOptions) run(ctx context.Context) error {
 	version := versionpkg.GetVersion()
 
-	o.Logger.WithFields(log.Fields{
-		"version": version.Version,
-		"commit":  version.GitCommit,
-	}).Info("Starting Kargo Garbage Collector")
+	o.Logger.Info(
+		"Starting Kargo Garbage Collector",
+		"version", version.Version,
+		"commit", version.GitCommit,
+	)
 
 	mgr, err := o.setupManager(ctx)
 	if err != nil {

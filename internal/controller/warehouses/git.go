@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
-	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -44,7 +43,7 @@ func (r *reconciler) discoverCommits(
 
 		sub := *s.Git
 
-		logger := logging.LoggerFromContext(ctx).WithField("repo", sub.RepoURL)
+		logger := logging.LoggerFromContext(ctx).WithValues("repo", sub.RepoURL)
 
 		// Obtain credentials for the Git repository.
 		creds, ok, err := r.credentialsDB.Get(ctx, namespace, credentials.TypeGit, sub.RepoURL)
@@ -86,7 +85,7 @@ func (r *reconciler) discoverCommits(
 		}
 
 		// Enrich the logger with additional fields for this subscription.
-		logger = logger.WithFields(gitDiscoveryLogFields(sub))
+		logger = logger.WithValues(gitDiscoveryLogFields(sub))
 
 		// Discover commits based on the subscription's commit selection strategy.
 		var discovered []kargoapi.DiscoveredCommit
@@ -112,11 +111,12 @@ func (r *reconciler) discoverCommits(
 					Committer:   meta.Committer,
 					CreatorDate: &metav1.Time{Time: meta.CreatorDate},
 				})
-				logger.WithFields(log.Fields{
-					"tag":         meta.Tag,
-					"commit":      meta.CommitID,
-					"creatorDate": meta.CreatorDate.Format(time.RFC3339),
-				}).Trace("discovered commit from tag")
+				logger.Trace(
+					"discovered commit from tag",
+					"tag", meta.Tag,
+					"commit", meta.CommitID,
+					"creatorDate", meta.CreatorDate.Format(time.RFC3339),
+				)
 			}
 		default:
 			commits, err := r.discoverBranchHistoryFn(repo, sub)
@@ -137,10 +137,11 @@ func (r *reconciler) discoverCommits(
 					Committer:   meta.Committer,
 					CreatorDate: &metav1.Time{Time: meta.CommitDate},
 				})
-				logger.WithFields(log.Fields{
-					"commit":      meta.ID,
-					"creatorDate": meta.CommitDate.Format(time.RFC3339),
-				}).Trace("discovered commit from branch")
+				logger.Trace(
+					"discovered commit from branch",
+					"commit", meta.ID,
+					"creatorDate", meta.CommitDate.Format(time.RFC3339),
+				)
 			}
 		}
 
@@ -156,7 +157,10 @@ func (r *reconciler) discoverCommits(
 			RepoURL: sub.RepoURL,
 			Commits: discovered,
 		})
-		logger.Debugf("discovered %d commits", len(discovered))
+		logger.Debug(
+			"discovered commits",
+			"count", len(discovered),
+		)
 	}
 
 	return results, nil
@@ -486,20 +490,23 @@ func (r *reconciler) getDiffPathsForCommitID(repo git.Repo, commitID string) ([]
 
 // gitDiscoveryLogFields returns a set of log fields for a Git subscription
 // based on the subscription's configuration.
-func gitDiscoveryLogFields(sub kargoapi.GitSubscription) log.Fields {
-	f := log.Fields{
-		"selectionStrategy": sub.CommitSelectionStrategy,
-		"pathConstrained":   sub.IncludePaths != nil || sub.ExcludePaths != nil,
+func gitDiscoveryLogFields(sub kargoapi.GitSubscription) []any {
+	f := []any{
+		"selectionStrategy", sub.CommitSelectionStrategy,
+		"pathConstrained", sub.IncludePaths != nil || sub.ExcludePaths != nil,
 	}
 	if sub.Branch != "" {
-		f["branch"] = sub.Branch
+		f = append(f, "branch", sub.Branch)
 	}
 	switch sub.CommitSelectionStrategy {
 	case kargoapi.CommitSelectionStrategySemVer:
-		f["semverConstraint"] = sub.SemverConstraint
-		f["tagConstrained"] = sub.AllowTags != "" || len(sub.IgnoreTags) > 0
+		f = append(
+			f,
+			"semverConstraint", sub.SemverConstraint,
+			"tagConstrained", sub.AllowTags != "" || len(sub.IgnoreTags) > 0,
+		)
 	case kargoapi.CommitSelectionStrategyLexical, kargoapi.CommitSelectionStrategyNewestTag:
-		f["tagConstrained"] = sub.AllowTags != "" || len(sub.IgnoreTags) > 0
+		f = append(f, "tagConstrained", sub.AllowTags != "" || len(sub.IgnoreTags) > 0)
 	}
 	return f
 }

@@ -586,7 +586,10 @@ func GetRestConfig(ctx context.Context, path string) (*rest.Config, error) {
 		return cfg, nil
 	}
 
-	logger.WithField("path", path).Debug("loading REST config from path")
+	logger.Debug(
+		"loading REST config from path",
+		"path", path,
+	)
 	cfg, err := clientcmd.BuildConfigFromFlags("", path)
 	if err != nil {
 		return cfg, fmt.Errorf("error loading REST config from %q: %w", path, err)
@@ -664,16 +667,18 @@ func getAuthorizedClient(globalServiceAccountNamespaces []string) func(
 		if userInfo.Subject != "" {
 			var namespacesToCheck []string
 			if key.Namespace != "" {
-				namespacesToCheck = make([]string, 0, len(globalServiceAccountNamespaces)+1)
+				// This is written the way it is to keep key.Namespace as the first
+				// element in the slice, so it is checked first, because this is where
+				// there is the highest likelihood of finding a ServiceAccount with
+				// the required permissions.
+				namespacesToCheck = make([]string, 0, 1+len(globalServiceAccountNamespaces))
 				namespacesToCheck = append(namespacesToCheck, key.Namespace)
 				namespacesToCheck = append(namespacesToCheck, globalServiceAccountNamespaces...)
 			} else {
-				namespacesToCheck = make([]string, len(userInfo.ServiceAccountsByNamespace))
-				var i int
-				for ns := range userInfo.ServiceAccountsByNamespace {
-					namespacesToCheck[i] = ns
-					i++
-				}
+				// Check ONLY globalServiceAccountNamespaces. i.e. We will NOT check
+				// project namespaces to find suitable ServiceAccounts for dealing with
+				// cluster-scoped resources.
+				namespacesToCheck = globalServiceAccountNamespaces
 			}
 			for _, namespaceToCheck := range namespacesToCheck {
 				serviceAccountsToCheck := userInfo.ServiceAccountsByNamespace[namespaceToCheck]

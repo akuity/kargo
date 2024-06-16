@@ -329,8 +329,6 @@ API.
 In these cases, please make use of _tabs_ to prevent mutually exclusive options
 from taking up space and becoming a "wall of text."
 
-> ⚠️&nbsp;**To use tabs, your file extension must be `.mdx` instead of `.md`.**
-
 Here is an example of using tabs correctly:
 
 ```markdown
@@ -383,7 +381,7 @@ The following tree illustrates the approach:
 │   ├── 10-create-argo-cd-instance.md
 │   ├── 20-connect-kubernetes-cluster.md
 │   ├── 30-configure-admin-user.md
-│   ├── 40-access-argo-cd-instance.mdx
+│   ├── 40-access-argo-cd-instance.md
 │   └── _category_.json
 ├── 30-how-to-guides
 │   ├── 10-changing-contexts.md
@@ -394,7 +392,7 @@ The following tree illustrates the approach:
 │   ├── 60-managing-system-accounts.md
 │   └── _category_.json
 ├── 40-changelog.md
-└── 50-faq.mdx
+└── 50-faq.md
 ```
 
 🟢 Also avoid using consecutive numbers as weights. The doc tree was initially

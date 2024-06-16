@@ -278,7 +278,7 @@ func (w *webhook) authorize(
 
 	req, err := w.admissionRequestFromContextFn(ctx)
 	if err != nil {
-		logger.Error(err)
+		logger.Error(err, "")
 		return apierrors.NewForbidden(
 			promotionGroupResource,
 			promo.Name,
@@ -304,7 +304,7 @@ func (w *webhook) authorize(
 		},
 	}
 	if err := w.createSubjectAccessReviewFn(ctx, accessReview); err != nil {
-		logger.Error(err)
+		logger.Error(err, "")
 		return apierrors.NewForbidden(
 			promotionGroupResource,
 			promo.Name,
