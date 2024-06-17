@@ -101,8 +101,8 @@ export const StageActions = ({
 
   const verificationEnabled = stage?.spec?.verification;
 
-  const currentPromoHasVerification =
-    (stage?.status?.currentPromotion?.freight?.verificationHistory || []).length > 0;
+  const currentFreightHasVerification =
+    (stage?.status?.currentFreight?.verificationHistory || []).length > 0;
 
   return (
     <Space size={16}>
@@ -138,7 +138,7 @@ export const StageActions = ({
           </Button>
         </Dropdown>
       )}
-      {currentPromoHasVerification && (
+      {currentFreightHasVerification && (
         <>
           {verificationEnabled && (
             <Button
