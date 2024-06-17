@@ -1,4 +1,4 @@
-import { faArrowDownShortWide, faTools } from '@fortawesome/free-solid-svg-icons';
+import { faArrowDownShortWide, faFileLines, faTools } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Drawer, Tabs, Typography } from 'antd';
 import { generatePath, useNavigate, useParams } from 'react-router-dom';
@@ -7,6 +7,7 @@ import { paths } from '@ui/config/paths';
 import { CreateFreight } from '@ui/features/create-freight/create-freight';
 import { Warehouse } from '@ui/gen/v1alpha1/generated_pb';
 
+import { EditWarehouse } from './edit-warehouse';
 import { RepoSubscriptions } from './repo-subscriptions';
 import { WarehouseActions } from './warehouse-actions';
 
@@ -72,6 +73,13 @@ export const WarehouseDetails = ({
                   refetchFreight();
                 }}
               />
+            </Tabs.TabPane>
+            <Tabs.TabPane
+              key='live-manifest'
+              tab='Live Manifest'
+              icon={<FontAwesomeIcon icon={faFileLines} />}
+            >
+              <EditWarehouse projectName={projectName} warehouseName={warehouse.metadata?.name} />
             </Tabs.TabPane>
           </Tabs>
         </div>
