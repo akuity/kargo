@@ -9,6 +9,7 @@ import (
 func TestParseGitHubURL(t *testing.T) {
 	testCases := []struct {
 		url           string
+		expectedHost  string
 		expectedOwner string
 		expectedRepo  string
 		errExpected   bool
@@ -23,11 +24,13 @@ func TestParseGitHubURL(t *testing.T) {
 		},
 		{
 			url:           "https://github.com/akuity/kargo",
+			expectedHost:  "github.com",
 			expectedOwner: "akuity",
 			expectedRepo:  "kargo",
 		},
 		{
 			url:           "https://github.com/akuity/kargo.git",
+			expectedHost:  "github.com",
 			expectedOwner: "akuity",
 			expectedRepo:  "kargo",
 		},
@@ -35,17 +38,19 @@ func TestParseGitHubURL(t *testing.T) {
 			// This isn't a real URL. It's just to validate that the function can
 			// handle GitHub Enterprise URLs.
 			url:           "https://github.akuity.io/akuity/kargo.git",
+			expectedHost:  "github.akuity.io",
 			expectedOwner: "akuity",
 			expectedRepo:  "kargo",
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.url, func(t *testing.T) {
-			owner, repo, err := parseGitHubURL(testCase.url)
+			host, owner, repo, err := parseGitHubURL(testCase.url)
 			if testCase.errExpected {
 				require.Error(t, err)
 			} else {
 				require.NoError(t, err)
+				require.Equal(t, testCase.expectedHost, host)
 				require.Equal(t, testCase.expectedOwner, owner)
 				require.Equal(t, testCase.expectedRepo, repo)
 			}

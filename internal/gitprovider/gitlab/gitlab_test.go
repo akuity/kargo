@@ -10,14 +10,16 @@ import (
 	"github.com/akuity/kargo/internal/gitprovider"
 )
 
-type MockGitLabClient struct {
+const testProjectName = "group/project"
+
+type mockGitLabClient struct {
 	mr         *gitlab.MergeRequest
 	createOpts *gitlab.CreateMergeRequestOptions
 	listOpts   *gitlab.ListProjectMergeRequestsOptions
 	pid        any
 }
 
-func (m *MockGitLabClient) CreateMergeRequest(
+func (m *mockGitLabClient) CreateMergeRequest(
 	pid any,
 	opt *gitlab.CreateMergeRequestOptions,
 	_ ...gitlab.RequestOptionFunc,
@@ -27,7 +29,7 @@ func (m *MockGitLabClient) CreateMergeRequest(
 	return m.mr, nil, nil
 }
 
-func (m *MockGitLabClient) ListProjectMergeRequests(
+func (m *mockGitLabClient) ListProjectMergeRequests(
 	pid any,
 	opt *gitlab.ListProjectMergeRequestsOptions,
 	_ ...gitlab.RequestOptionFunc,
@@ -37,7 +39,7 @@ func (m *MockGitLabClient) ListProjectMergeRequests(
 	return []*gitlab.MergeRequest{m.mr}, nil, nil
 }
 
-func (m *MockGitLabClient) GetMergeRequest(
+func (m *mockGitLabClient) GetMergeRequest(
 	pid any,
 	_ int,
 	_ *gitlab.GetMergeRequestsOptions,
@@ -48,7 +50,7 @@ func (m *MockGitLabClient) GetMergeRequest(
 }
 
 func TestCreatePullRequest(t *testing.T) {
-	mockClient := &MockGitLabClient{
+	mockClient := &mockGitLabClient{
 		mr: &gitlab.MergeRequest{
 			IID:            1,
 			MergeCommitSHA: "sha",
@@ -56,7 +58,12 @@ func TestCreatePullRequest(t *testing.T) {
 			WebURL:         "url",
 		},
 	}
-	g := GitLabProvider{client: &GitLabClient{MergeRequests: mockClient}}
+	g := gitLabProvider{
+		projectName: testProjectName,
+		client: &gitLabClient{
+			mergeRequests: mockClient,
+		},
+	}
 
 	opts := gitprovider.CreatePullRequestOpts{
 		Head:        "",
@@ -64,10 +71,10 @@ func TestCreatePullRequest(t *testing.T) {
 		Title:       "title",
 		Description: "desc",
 	}
-	pr, err := g.CreatePullRequest(context.Background(), "https://gitlab.com/group/project.git", opts)
+	pr, err := g.CreatePullRequest(context.Background(), opts)
 
 	require.NoError(t, err)
-	require.Equal(t, "group/project", mockClient.pid)
+	require.Equal(t, testProjectName, mockClient.pid)
 	require.Equal(t, opts.Head, *mockClient.createOpts.SourceBranch)
 	require.Equal(t, opts.Base, *mockClient.createOpts.TargetBranch)
 	require.Equal(t, opts.Title, *mockClient.createOpts.Title)
@@ -80,7 +87,7 @@ func TestCreatePullRequest(t *testing.T) {
 }
 
 func TestGetPullRequest(t *testing.T) {
-	mockClient := &MockGitLabClient{
+	mockClient := &mockGitLabClient{
 		mr: &gitlab.MergeRequest{
 			IID:            1,
 			MergeCommitSHA: "sha",
@@ -88,12 +95,17 @@ func TestGetPullRequest(t *testing.T) {
 			WebURL:         "url",
 		},
 	}
-	g := GitLabProvider{client: &GitLabClient{MergeRequests: mockClient}}
+	g := gitLabProvider{
+		projectName: testProjectName,
+		client: &gitLabClient{
+			mergeRequests: mockClient,
+		},
+	}
 
-	pr, err := g.GetPullRequest(context.Background(), "https://gitlab.com/group/project.git", 1)
+	pr, err := g.GetPullRequest(context.Background(), 1)
 
 	require.NoError(t, err)
-	require.Equal(t, "group/project", mockClient.pid)
+	require.Equal(t, testProjectName, mockClient.pid)
 	require.Equal(t, int64(mockClient.mr.IID), pr.Number)
 	require.Equal(t, mockClient.mr.MergeCommitSHA, pr.MergeCommitSHA)
 	require.Equal(t, mockClient.mr.WebURL, pr.URL)
@@ -101,7 +113,7 @@ func TestGetPullRequest(t *testing.T) {
 }
 
 func TestListPullRequests(t *testing.T) {
-	mockClient := &MockGitLabClient{
+	mockClient := &mockGitLabClient{
 		mr: &gitlab.MergeRequest{
 			IID:            1,
 			MergeCommitSHA: "sha",
@@ -109,16 +121,21 @@ func TestListPullRequests(t *testing.T) {
 			WebURL:         "url",
 		},
 	}
-	g := GitLabProvider{client: &GitLabClient{MergeRequests: mockClient}}
+	g := gitLabProvider{
+		projectName: testProjectName,
+		client: &gitLabClient{
+			mergeRequests: mockClient,
+		},
+	}
 
 	opts := gitprovider.ListPullRequestOpts{
 		Head: "head",
 		Base: "base",
 	}
-	prs, err := g.ListPullRequests(context.Background(), "https://gitlab.com/group/project.git", opts)
+	prs, err := g.ListPullRequests(context.Background(), opts)
 
 	require.NoError(t, err)
-	require.Equal(t, "group/project", mockClient.pid)
+	require.Equal(t, testProjectName, mockClient.pid)
 	require.Equal(t, opts.Head, *mockClient.listOpts.SourceBranch)
 	require.Equal(t, opts.Base, *mockClient.listOpts.TargetBranch)
 
@@ -136,7 +153,7 @@ func TestIsPullRequestMerged(t *testing.T) {
 }
 
 func isPullRequestMerged(state string) bool {
-	mockClient := &MockGitLabClient{
+	mockClient := &mockGitLabClient{
 		mr: &gitlab.MergeRequest{
 			IID:            1,
 			MergeCommitSHA: "sha",
@@ -144,7 +161,38 @@ func isPullRequestMerged(state string) bool {
 			WebURL:         "url",
 		},
 	}
-	g := GitLabProvider{client: &GitLabClient{MergeRequests: mockClient}}
-	res, _ := g.IsPullRequestMerged(context.Background(), "https://gitlab.com/group/project.git", 1)
+	g := gitLabProvider{client: &gitLabClient{mergeRequests: mockClient}}
+	res, _ := g.IsPullRequestMerged(context.Background(), 1)
 	return res
+}
+
+func TestParseGitLabURL(t *testing.T) {
+	const expectedProjectName = "akuity/kargo"
+	testCases := []struct {
+		url          string
+		expectedHost string
+	}{
+		{
+			url:          "https://gitlab.com/akuity/kargo",
+			expectedHost: "gitlab.com",
+		},
+		{
+			url:          "https://gitlab.com/akuity/kargo.git",
+			expectedHost: "gitlab.com",
+		},
+		{
+			// This isn't a real URL. It's just to validate that the function can
+			// handle GitHub Enterprise URLs.
+			url:          "https://gitlab.akuity.io/akuity/kargo.git",
+			expectedHost: "gitlab.akuity.io",
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.url, func(t *testing.T) {
+			host, projectName, err := parseGitLabURL(testCase.url)
+			require.NoError(t, err)
+			require.Equal(t, testCase.expectedHost, host)
+			require.Equal(t, expectedProjectName, projectName)
+		})
+	}
 }
