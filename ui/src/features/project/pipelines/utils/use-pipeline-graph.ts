@@ -46,17 +46,19 @@ const initializeNodes = (warehouses: Warehouse[], stages: Stage[], hideSubscript
           stageNames
         };
       }
-
-      if (!hideSubscriptions) {
-        // create subscription nodes
-        cur?.spec?.subscriptions?.forEach((sub) => {
-          n.push(newSubscriptionNode(sub, stage));
-        });
-      }
     }
 
     return n;
   });
+
+  if (!hideSubscriptions) {
+    warehouses.forEach((w) => {
+      // create subscription nodes
+      w?.spec?.subscriptions?.forEach((sub) => {
+        nodes.push(newSubscriptionNode(sub, w.metadata?.name || ''));
+      });
+    });
+  }
 
   nodes.push(...Object.values(warehouseNodeMap));
   return nodes;
@@ -98,7 +100,7 @@ export const usePipelineGraph = (
         });
       } else if (item.type === NodeType.WAREHOUSE) {
         // this is a warehouse node
-        for (const stageName of item.stageNames) {
+        for (const stageName of item.stageNames || []) {
           // draw edge between warehouse and stage(s)
           g.setEdge(String(index), String(subscriberIndexCache.get(stageName, myNodes)));
         }
