@@ -5,7 +5,6 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"os"
-	"regexp"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -14,21 +13,11 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ecr"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
 	"github.com/patrickmn/go-cache"
+	corev1 "k8s.io/api/core/v1"
 
+	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/logging"
 )
-
-var ecrURLRegex = regexp.MustCompile(`^[0-9]{12}\.dkr\.ecr\.(.+)\.amazonaws\.com/`)
-
-// PodIdentityCredentialHelper is an interface for components that can obtain a
-// username and password for ECR using EKS Pod Identity.
-type PodIdentityCredentialHelper interface {
-	GetUsernameAndPassword(
-		ctx context.Context,
-		repoURL string,
-		project string,
-	) (string, string, error)
-}
 
 type podIdentityCredentialHelper struct {
 	awsAccountID string
@@ -44,35 +33,34 @@ type podIdentityCredentialHelper struct {
 	) (string, error)
 }
 
-// NewPodIdentityCredentialHelper returns an implementation of the
-// PodIdentityCredentialHelper interface that utilizes a cache to avoid
-// unnecessary calls to AWS.
-func NewPodIdentityCredentialHelper(ctx context.Context) PodIdentityCredentialHelper {
+// NewPodIdentityCredentialHelper returns an implementation of
+// credentials.Helper that utilizes a cache to avoid unnecessary calls to AWS.
+func NewPodIdentityCredentialHelper(ctx context.Context) credentials.Helper {
 	logger := logging.LoggerFromContext(ctx)
 	var awsAccountID string
 	if os.Getenv("AWS_CONTAINER_CREDENTIALS_FULL_URI") == "" {
 		logger.Info("AWS_CONTAINER_CREDENTIALS_FULL_URI not set; assuming EKS Pod Identity is not in use")
+		return nil
+	}
+	logger.Info("EKS Pod Identity appears to be in use")
+	cfg, err := config.LoadDefaultConfig(ctx)
+	if err != nil {
+		logger.Error(
+			err, "error loading AWS config; EKS Pod Identity integration will be disabled",
+		)
 	} else {
-		logger.Info("EKS Pod Identity appears to be in use")
-		cfg, err := config.LoadDefaultConfig(ctx)
+		stsSvc := sts.NewFromConfig(cfg)
+		res, err := stsSvc.GetCallerIdentity(ctx, &sts.GetCallerIdentityInput{})
 		if err != nil {
 			logger.Error(
-				err, "error loading AWS config; EKS Pod Identity integration will be disabled",
+				err, "error getting caller identity; EKS Pod Identity integration will be disabled",
 			)
 		} else {
-			stsSvc := sts.NewFromConfig(cfg)
-			res, err := stsSvc.GetCallerIdentity(ctx, &sts.GetCallerIdentityInput{})
-			if err != nil {
-				logger.Error(
-					err, "error getting caller identity; EKS Pod Identity integration will be disabled",
-				)
-			} else {
-				logger.Debug(
-					"got AWS account ID",
-					"account", *res.Account,
-				)
-				awsAccountID = *res.Account
-			}
+			logger.Debug(
+				"got AWS account ID",
+				"account", *res.Account,
+			)
+			awsAccountID = *res.Account
 		}
 	}
 	p := &podIdentityCredentialHelper{
@@ -84,24 +72,25 @@ func NewPodIdentityCredentialHelper(ctx context.Context) PodIdentityCredentialHe
 		),
 	}
 	p.getAuthTokenFn = p.getAuthToken
-	return p
+	return p.getCredentials
 }
 
-// GetUsernameAndPassword implements the PodIdentityCredentialHelper interface.
-func (p *podIdentityCredentialHelper) GetUsernameAndPassword(
+func (p *podIdentityCredentialHelper) getCredentials(
 	ctx context.Context,
-	repoURL string,
 	project string,
-) (string, string, error) {
-	if p.awsAccountID == "" {
-		// Don't even try if it looks like EKS Pod Identity isn't set up for this
-		// controller.
-		return "", "", nil
+	credType credentials.Type,
+	repoURL string,
+	_ *corev1.Secret,
+) (*credentials.Credentials, error) {
+	if credType != credentials.TypeImage ||
+		p.awsAccountID == "" { // Pod Identity isn't set up for this controller
+		// This helper can't handle this
+		return nil, nil
 	}
 
 	matches := ecrURLRegex.FindStringSubmatch(repoURL)
 	if len(matches) != 2 { // This doesn't look like an ECR URL
-		return "", "", nil
+		return nil, nil
 	}
 	region := matches[1]
 
@@ -118,11 +107,11 @@ func (p *podIdentityCredentialHelper) GetUsernameAndPassword(
 		// have the necessary permissions to get an ECR auth token. We're making
 		// a choice to consider this the will of the AWS admins and not a controller
 		// error. We'll just log it and move on as if we found no credentials.
-		return "", "", fmt.Errorf("error getting ECR auth token: %w", err)
+		return nil, fmt.Errorf("error getting ECR auth token: %w", err)
 	}
 
 	if encodedToken == "" {
-		return "", "", nil
+		return nil, nil
 	}
 
 	// Cache the encoded token

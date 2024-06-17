@@ -25,6 +25,7 @@ import (
 	"github.com/akuity/kargo/internal/controller/stages"
 	"github.com/akuity/kargo/internal/controller/warehouses"
 	"github.com/akuity/kargo/internal/credentials"
+	credsdb "github.com/akuity/kargo/internal/credentials/kubernetes"
 	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/internal/os"
 	"github.com/akuity/kargo/internal/types"
@@ -99,10 +100,10 @@ func (o *controllerOptions) run(ctx context.Context) error {
 		return fmt.Errorf("error initializing Argo CD Application controller manager: %w", err)
 	}
 
-	credentialsDB := credentials.NewKubernetesDatabase(
+	credentialsDB := credsdb.NewDatabase(
 		ctx,
 		kargoMgr.GetClient(),
-		credentials.KubernetesDatabaseConfigFromEnv(),
+		credsdb.DatabaseConfigFromEnv(),
 	)
 
 	if err := o.setupReconcilers(

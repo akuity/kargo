@@ -10,21 +10,11 @@ import (
 	"github.com/patrickmn/go-cache"
 	"golang.org/x/oauth2/google"
 	corev1 "k8s.io/api/core/v1"
+
+	"github.com/akuity/kargo/internal/credentials"
 )
 
 const serviceAccountKeyKey = "gcpServiceAccountKey"
-
-// ServiceAccountKeyCredentialHelper is an interface for components that can
-// extract a username and password for accessing Google Artifact Registry from a
-// Secret containing a base64 encoded GCP service account key.
-type ServiceAccountKeyCredentialHelper interface {
-	// GetUsernameAndPassword extracts username and password (an access token that
-	// lives for one hour) from a Secret IF the Secret contains a base64 encoded
-	// GCP service account key. If the Secret does not contain such a key, this
-	// function will return empty strings and a nil error. Implementations may
-	// cache the access token for efficiency.
-	GetUsernameAndPassword(context.Context, *corev1.Secret) (string, string, error)
-}
 
 type serviceAccountKeyCredentialHelper struct {
 	tokenCache *cache.Cache
@@ -34,10 +24,9 @@ type serviceAccountKeyCredentialHelper struct {
 	getAccessTokenFn func(context.Context, string) (string, error)
 }
 
-// NewServiceAccountKeyCredentialHelper returns an implementation of the
-// ServiceAccountKeyCredentialHelper interface that utilizes a cache to avoid
-// unnecessary calls to GCP.
-func NewServiceAccountKeyCredentialHelper() ServiceAccountKeyCredentialHelper {
+// NewServiceAccountKeyCredentialHelper returns an implementation
+// credentials.Helper that utilizes a cache to avoid unnecessary calls to GCP.
+func NewServiceAccountKeyCredentialHelper() credentials.Helper {
 	s := &serviceAccountKeyCredentialHelper{
 		tokenCache: cache.New(
 			// Access tokens live for one hour. We'll hang on to them for 40 minutes.
@@ -46,40 +35,57 @@ func NewServiceAccountKeyCredentialHelper() ServiceAccountKeyCredentialHelper {
 		),
 	}
 	s.getAccessTokenFn = s.getAccessToken
-	return s
+	return s.getCredentials
 }
 
-// GetUsernameAndPassword implements the ServiceAccountKeyCredentialHelper
-// interface.
-func (s *serviceAccountKeyCredentialHelper) GetUsernameAndPassword(
+func (s *serviceAccountKeyCredentialHelper) getCredentials(
 	ctx context.Context,
+	_ string,
+	credType credentials.Type,
+	repoURL string,
 	secret *corev1.Secret,
-) (string, string, error) {
+) (*credentials.Credentials, error) {
+	if credType != credentials.TypeImage || secret == nil {
+		// This helper can't handle this
+		return nil, nil
+	}
+
+	if !garURLRegex.MatchString(repoURL) && !gcrURLRegex.MatchString(repoURL) {
+		// This doesn't look like a Google Artifact Registry URL
+		return nil, nil
+	}
+
 	// This should be base64 encoded
 	encodedServiceAccountKey := string(secret.Data[serviceAccountKeyKey])
 	if encodedServiceAccountKey == "" {
-		return "", "", nil
+		return nil, nil
 	}
 
 	cacheKey := s.tokenCacheKey(encodedServiceAccountKey)
 
 	if entry, exists := s.tokenCache.Get(cacheKey); exists {
-		return accessTokenUsername, entry.(string), nil // nolint: forcetypeassert
+		return &credentials.Credentials{
+			Username: accessTokenUsername,
+			Password: entry.(string), // nolint: forcetypeassert
+		}, nil
 	}
 
 	accessToken, err := s.getAccessTokenFn(ctx, encodedServiceAccountKey)
 	if err != nil {
-		return "", "", fmt.Errorf("error getting GCP access token: %w", err)
+		return nil, fmt.Errorf("error getting GCP access token: %w", err)
 	}
 
 	if accessToken == "" {
-		return "", "", nil
+		return nil, nil
 	}
 
 	// Cache the access token
 	s.tokenCache.Set(cacheKey, accessToken, cache.DefaultExpiration)
 
-	return accessTokenUsername, accessToken, nil
+	return &credentials.Credentials{
+		Username: accessTokenUsername,
+		Password: accessToken,
+	}, nil
 }
 
 // tokenCacheKey returns a cache key for a GCP access token. The key is a hash
