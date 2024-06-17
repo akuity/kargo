@@ -40,27 +40,27 @@ func NewPodIdentityCredentialHelper(ctx context.Context) credentials.Helper {
 	var awsAccountID string
 	if os.Getenv("AWS_CONTAINER_CREDENTIALS_FULL_URI") == "" {
 		logger.Info("AWS_CONTAINER_CREDENTIALS_FULL_URI not set; assuming EKS Pod Identity is not in use")
+		return nil
+	}
+	logger.Info("EKS Pod Identity appears to be in use")
+	cfg, err := config.LoadDefaultConfig(ctx)
+	if err != nil {
+		logger.Error(
+			err, "error loading AWS config; EKS Pod Identity integration will be disabled",
+		)
 	} else {
-		logger.Info("EKS Pod Identity appears to be in use")
-		cfg, err := config.LoadDefaultConfig(ctx)
+		stsSvc := sts.NewFromConfig(cfg)
+		res, err := stsSvc.GetCallerIdentity(ctx, &sts.GetCallerIdentityInput{})
 		if err != nil {
 			logger.Error(
-				err, "error loading AWS config; EKS Pod Identity integration will be disabled",
+				err, "error getting caller identity; EKS Pod Identity integration will be disabled",
 			)
 		} else {
-			stsSvc := sts.NewFromConfig(cfg)
-			res, err := stsSvc.GetCallerIdentity(ctx, &sts.GetCallerIdentityInput{})
-			if err != nil {
-				logger.Error(
-					err, "error getting caller identity; EKS Pod Identity integration will be disabled",
-				)
-			} else {
-				logger.Debug(
-					"got AWS account ID",
-					"account", *res.Account,
-				)
-				awsAccountID = *res.Account
-			}
+			logger.Debug(
+				"got AWS account ID",
+				"account", *res.Account,
+			)
+			awsAccountID = *res.Account
 		}
 	}
 	p := &podIdentityCredentialHelper{

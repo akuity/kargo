@@ -52,17 +52,24 @@ func NewDatabase(
 	kargoClient client.Client,
 	cfg DatabaseConfig,
 ) credentials.Database {
+	credentialHelpers := []credentials.Helper{
+		basic.SecretToCreds,
+		ecr.NewAccessKeyCredentialHelper(),
+		ecr.NewPodIdentityCredentialHelper(ctx),
+		gar.NewServiceAccountKeyCredentialHelper(),
+		gar.NewWorkloadIdentityFederationCredentialHelper(ctx),
+		github.NewAppCredentialHelper(),
+	}
+	finalCredentialHelpers := make([]credentials.Helper, 0, len(credentialHelpers))
+	for _, helper := range credentialHelpers {
+		if helper != nil {
+			finalCredentialHelpers = append(finalCredentialHelpers, helper)
+		}
+	}
 	return &database{
-		kargoClient: kargoClient,
-		credentialHelpers: []credentials.Helper{
-			basic.SecretToCreds,
-			ecr.NewAccessKeyCredentialHelper(),
-			ecr.NewPodIdentityCredentialHelper(ctx),
-			gar.NewServiceAccountKeyCredentialHelper(),
-			gar.NewWorkloadIdentityFederationCredentialHelper(ctx),
-			github.NewAppCredentialHelper(),
-		},
-		cfg: cfg,
+		kargoClient:       kargoClient,
+		credentialHelpers: finalCredentialHelpers,
+		cfg:               cfg,
 	}
 }
 

@@ -33,17 +33,17 @@ func NewWorkloadIdentityFederationCredentialHelper(
 	var gcpProjectID string
 	if !metadata.OnGCE() {
 		logger.Info("not running within GCE; assuming GCP Workload Identity Federation is not in use")
+		return nil
+	}
+	logger.Info("controller appears to be running within GCE")
+	var err error
+	if gcpProjectID, err = metadata.ProjectID(); err != nil {
+		logger.Error(err, "error getting GCP project ID")
 	} else {
-		logger.Info("controller appears to be running within GCE")
-		var err error
-		if gcpProjectID, err = metadata.ProjectID(); err != nil {
-			logger.Error(err, "error getting GCP project ID")
-		} else {
-			logger.Debug(
-				"got GCP project ID",
-				"project", gcpProjectID,
-			)
-		}
+		logger.Debug(
+			"got GCP project ID",
+			"project", gcpProjectID,
+		)
 	}
 	w := &workloadIdentityFederationCredentialHelper{
 		gcpProjectID: gcpProjectID,
