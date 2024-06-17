@@ -231,7 +231,7 @@ func (g *gitMechanism) doSingleUpdate(
 
 	newStatus := promo.Status.DeepCopy()
 	if update.PullRequest != nil {
-		gpClient, err := newGitProvider(update.RepoURL, update.PullRequest, creds)
+		gpClient, err := newGitProvider(update, creds)
 		if err != nil {
 			return nil, newFreight, err
 		}

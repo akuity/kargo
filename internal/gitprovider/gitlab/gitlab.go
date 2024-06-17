@@ -2,7 +2,9 @@ package gitlab
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
+	"net/http"
 	"net/url"
 	"strings"
 
@@ -29,8 +31,11 @@ var (
 			// e.g. 'git.mycompany.com'
 			return strings.Contains(u.Host, GitProviderServiceName)
 		},
-		NewService: func(repoURL, token string) (gitprovider.GitProviderService, error) {
-			return NewGitLabProvider(repoURL, token)
+		NewService: func(
+			repoURL string,
+			opts *gitprovider.GitProviderOptions,
+		) (gitprovider.GitProviderService, error) {
+			return NewGitLabProvider(repoURL, opts)
 		},
 	}
 )
@@ -69,22 +74,37 @@ type gitLabProvider struct { // nolint: revive
 	client      *gitLabClient
 }
 
-func NewGitLabProvider(repoURL, token string) (gitprovider.GitProviderService, error) {
+func NewGitLabProvider(
+	repoURL string,
+	opts *gitprovider.GitProviderOptions,
+) (gitprovider.GitProviderService, error) {
+	if opts == nil {
+		opts = &gitprovider.GitProviderOptions{}
+	}
 	host, projectName, err := parseGitLabURL(repoURL)
 	if err != nil {
 		return nil, err
 	}
-	var client *gitlab.Client
-	if host == "gitlab.com" {
-		client, err = gitlab.NewClient(token)
-	} else {
-		client, err = gitlab.NewClient(
-			token,
-			gitlab.WithBaseURL(
-				fmt.Sprintf("https://%s/api/v4", host),
-			),
+	clientOpts := make([]gitlab.ClientOptionFunc, 0, 2)
+	if host != "gitlab.com" {
+		clientOpts = append(
+			clientOpts,
+			gitlab.WithBaseURL(fmt.Sprintf("https://%s/api/v4", host)),
 		)
 	}
+	if opts.InsecureSkipTLSVerify {
+		clientOpts = append(
+			clientOpts,
+			gitlab.WithHTTPClient(&http.Client{
+				Transport: &http.Transport{
+					TLSClientConfig: &tls.Config{
+						InsecureSkipVerify: true, // nolint: gosec
+					},
+				},
+			}),
+		)
+	}
+	client, err := gitlab.NewClient(opts.Token, clientOpts...)
 	if err != nil {
 		return nil, err
 	}
