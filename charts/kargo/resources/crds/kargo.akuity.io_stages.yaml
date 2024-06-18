@@ -445,7 +445,7 @@ spec:
                           description: RepoURL is the URL of the repository to update.
                             This is a required field.
                           minLength: 1
-                          pattern: ^https?://(\w+([\.-]\w+)*@)?\w+([\.-]\w+)*(:[\d]+)?(/.*)?$
+                          pattern: (?:^(https?)://(?:([\w-]+):(.+)@)?([\w-]+(?:\.[\w-]+)*)(?::(\d{1,5}))?(/.*)$)|(?:^([\w-]+)@([\w+]+(?:\.[\w-]+)*):(/?.*))
                           type: string
                         writeBranch:
                           description: |-
