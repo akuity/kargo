@@ -24,11 +24,14 @@ export const initNodeArray = (s: Stage) =>
 export const getNodeType = (sub: RepoSubscription) =>
   sub.chart ? NodeType.REPO_CHART : sub.image ? NodeType.REPO_IMAGE : NodeType.REPO_GIT;
 
-export const newSubscriptionNode = (sub: RepoSubscription, stage: Stage): RepoNodeType => ({
+export const newSubscriptionNode = (
+  sub: RepoSubscription,
+  warehouseName: string
+): RepoNodeType => ({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   data: sub.chart || sub.image || sub.git || ({} as any),
-  stageNames: [stage?.metadata?.name || ''],
-  warehouseName: stage?.spec?.subscriptions?.warehouse || '',
+  // stageNames: [stage?.metadata?.name || ''],
+  warehouseName,
   type: getNodeType(sub)
 });
 

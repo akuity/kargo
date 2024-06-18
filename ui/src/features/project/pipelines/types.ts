@@ -15,7 +15,7 @@ export enum NodeType {
 }
 
 type NodeBase = {
-  stageNames: string[];
+  stageNames?: string[];
   warehouseName: string;
   refreshing?: boolean;
 };
