@@ -2,7 +2,9 @@ package github
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
+	"net/http"
 	"net/url"
 	"strings"
 
@@ -30,8 +32,11 @@ var (
 			// e.g. 'git.mycompany.com'
 			return strings.Contains(u.Host, GitProviderServiceName)
 		},
-		NewService: func(repoURL, token string) (gitprovider.GitProviderService, error) {
-			return NewGitHubProvider(repoURL, token)
+		NewService: func(
+			repoURL string,
+			opts *gitprovider.GitProviderOptions,
+		) (gitprovider.GitProviderService, error) {
+			return NewGitHubProvider(repoURL, opts)
 		},
 	}
 )
@@ -46,12 +51,24 @@ type GitHubProvider struct { // nolint: revive
 	client *github.Client
 }
 
-func NewGitHubProvider(repoURL, token string) (gitprovider.GitProviderService, error) {
+func NewGitHubProvider(
+	repoURL string,
+	opts *gitprovider.GitProviderOptions,
+) (gitprovider.GitProviderService, error) {
+	if opts == nil {
+		opts = &gitprovider.GitProviderOptions{}
+	}
 	host, owner, repo, err := parseGitHubURL(repoURL)
 	if err != nil {
 		return nil, err
 	}
-	client := github.NewClient(nil)
+	client := github.NewClient(&http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: opts.InsecureSkipTLSVerify, // nolint: gosec
+			},
+		},
+	})
 	if host != "github.com" {
 		baseURL := fmt.Sprintf("https://%s", host)
 		// This function call will automatically add correct paths to the base URL
@@ -60,8 +77,8 @@ func NewGitHubProvider(repoURL, token string) (gitprovider.GitProviderService, e
 			return nil, err
 		}
 	}
-	if token != "" {
-		client = client.WithAuthToken(token)
+	if opts.Token != "" {
+		client = client.WithAuthToken(opts.Token)
 	}
 	return &GitHubProvider{
 		owner:  owner,

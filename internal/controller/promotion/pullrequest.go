@@ -89,25 +89,22 @@ func preparePullRequestBranch(repo git.Repo, prBranch string, base string) error
 // newGitProvider returns the appropriate git provider either if it was explicitly specified,
 // or if we can infer it from the repo URL.
 func newGitProvider(
-	url string,
-	pullRequest *kargoapi.PullRequestPromotionMechanism,
+	update kargoapi.GitRepoUpdate,
 	creds *git.RepoCredentials,
 ) (gitprovider.GitProviderService, error) {
-	var gpClient gitprovider.GitProviderService
-	var token string
+	gpOpts := &gitprovider.GitProviderOptions{
+		InsecureSkipTLSVerify: update.InsecureSkipTLSVerify,
+	}
 	if creds != nil {
-		token = creds.Password
+		gpOpts.Token = creds.Password
 	}
-	var err error
 	switch {
-	case pullRequest.GitHub != nil:
-		gpClient, err = gitprovider.NewGitProviderServiceFromName(github.GitProviderServiceName, url, token)
-	case pullRequest.GitLab != nil:
-		gpClient, err = gitprovider.NewGitProviderServiceFromName(gitlab.GitProviderServiceName, url, token)
-	default:
-		gpClient, err = gitprovider.NewGitProviderServiceFromURL(url, token)
+	case update.PullRequest.GitHub != nil:
+		gpOpts.Name = github.GitProviderServiceName
+	case update.PullRequest.GitLab != nil:
+		gpOpts.Name = gitlab.GitProviderServiceName
 	}
-	return gpClient, err
+	return gitprovider.NewGitProviderService(update.RepoURL, gpOpts)
 }
 
 // reconcilePullRequest creates and monitors a pull request for the promotion,
