@@ -22,6 +22,7 @@ export interface YamlEditorProps {
   isLoading?: boolean;
   isHideManagedFieldsDisplayed?: boolean;
   label?: string;
+  toolbar?: React.ReactNode;
 }
 
 const YamlEditor: FC<YamlEditorProps> = (props) => {
@@ -37,7 +38,8 @@ const YamlEditor: FC<YamlEditorProps> = (props) => {
     placeholder,
     isLoading,
     isHideManagedFieldsDisplayed,
-    label
+    label,
+    toolbar
   } = props;
   const [hideManagedFields, setHideManagedFields] = React.useState(!!isHideManagedFieldsDisplayed);
   const [managedFieldsValue, setManagedFieldsValue] = React.useState<object | null>(null);
@@ -109,7 +111,11 @@ const YamlEditor: FC<YamlEditorProps> = (props) => {
 
   return (
     <>
-      <Flex justify='space-between' className={isHideManagedFieldsDisplayed || label ? 'my-1' : ''}>
+      <Flex
+        justify='end'
+        align='center'
+        className={isHideManagedFieldsDisplayed || label ? 'mb-2 mt-1' : ''}
+      >
         <div>{label}</div>
         {isHideManagedFieldsDisplayed && (
           <label>
@@ -121,6 +127,7 @@ const YamlEditor: FC<YamlEditorProps> = (props) => {
             Hide Managed Fields
           </label>
         )}
+        {toolbar && <div className='ml-4'>{toolbar}</div>}
       </Flex>
       <div
         style={{ border: '1px solid #d9d9d9', height, overflow: 'hidden' }}
