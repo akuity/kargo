@@ -697,7 +697,7 @@ func (r *repo) setupAuth(creds RepoCredentials) error {
 			return fmt.Errorf("error creating SSH directory %q: %w", sshPath, err)
 		}
 		sshConfigPath := filepath.Join(sshPath, "config")
-		rsaKeyPath := filepath.Join(sshPath, "id_rsa") // nolint: lll
+		rsaKeyPath := filepath.Join(sshPath, "id_rsa")
 		// nolint: lll
 		sshConfig := fmt.Sprintf("Host *\n  StrictHostKeyChecking no\n  UserKnownHostsFile=/dev/null\n  IdentityFile %q\n", rsaKeyPath)
 		if err :=
