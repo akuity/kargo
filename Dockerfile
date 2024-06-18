@@ -41,9 +41,9 @@ ARG GIT_COMMIT
 ARG GIT_TREE_STATE
 
 RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build \
-    -ldflags "-w -X ${VERSION_PACKAGE}.version=${VERSION} -X ${VERSION_PACKAGE}.buildDate=$(date -u +'%Y-%m-%dT%H:%M:%SZ') -X ${VERSION_PACKAGE}.gitCommit=${GIT_COMMIT} -X ${VERSION_PACKAGE}.gitTreeState=${GIT_TREE_STATE}" \
-    -o bin/kargo \
-    ./cmd/controlplane \
+      -ldflags "-w -X ${VERSION_PACKAGE}.version=${VERSION} -X ${VERSION_PACKAGE}.buildDate=$(date -u +'%Y-%m-%dT%H:%M:%SZ') -X ${VERSION_PACKAGE}.gitCommit=${GIT_COMMIT} -X ${VERSION_PACKAGE}.gitTreeState=${GIT_TREE_STATE}" \
+      -o bin/kargo \
+      ./cmd/controlplane \
     && bin/kargo version
 
 WORKDIR /kargo/bin
@@ -94,6 +94,7 @@ USER root
 
 COPY bin/controlplane/kargo /usr/local/bin/kargo
 
+RUN adduser -D -H -u 1000 kargo
 USER 1000:0
 
 CMD ["/usr/local/bin/kargo"]
@@ -130,7 +131,7 @@ USER root
 COPY --from=back-end-builder /kargo/bin/ /usr/local/bin/
 COPY --from=tools /tools/ /usr/local/bin/
 
-RUN adduser -D kargo -u 1000
-USER kargo:0
+RUN adduser -D -H -u 1000 kargo
+USER 1000:0
 
 CMD ["/usr/local/bin/kargo"]

@@ -165,7 +165,6 @@ type repo struct {
 	dir                   string
 	currentBranch         string
 	insecureSkipTLSVerify bool
-	useSSH                bool
 }
 
 // ClientOptions represents options for the git client. Commonly, the
@@ -243,7 +242,6 @@ func Clone(
 		homeDir:               homeDir,
 		dir:                   filepath.Join(homeDir, "repo"),
 		insecureSkipTLSVerify: cloneOpts.InsecureSkipTLSVerify,
-		useSSH:                clientOpts.Credentials.SSHPrivateKey != "",
 	}
 	if err = r.setupClient(clientOpts); err != nil {
 		return nil, err
@@ -694,15 +692,16 @@ func (r *repo) setupAuthor(author User) error {
 func (r *repo) setupAuth(creds RepoCredentials) error {
 	// If an SSH key was provided, use that.
 	if creds.SSHPrivateKey != "" {
-		sshConfigPath := filepath.Join(r.homeDir, ".ssh", "config")
-		err := os.MkdirAll(filepath.Dir(sshConfigPath), 0700)
-		if err != nil {
-			return fmt.Errorf("error creating SSH config directory %q: %w", sshConfigPath, err)
+		sshPath := filepath.Join(r.homeDir, ".ssh")
+		if err := os.Mkdir(sshPath, 0700); err != nil {
+			return fmt.Errorf("error creating SSH directory %q: %w", sshPath, err)
 		}
-		rsaKeyPath := filepath.Join(r.homeDir, ".ssh", "id_rsa")
+		sshConfigPath := filepath.Join(sshPath, "config")
+		rsaKeyPath := filepath.Join(sshPath, "id_rsa") // nolint: lll
 		// nolint: lll
 		sshConfig := fmt.Sprintf("Host *\n  StrictHostKeyChecking no\n  UserKnownHostsFile=/dev/null\n  IdentityFile %q\n", rsaKeyPath)
-		if err := os.WriteFile(sshConfigPath, []byte(sshConfig), 0600); err != nil {
+		if err :=
+			os.WriteFile(sshConfigPath, []byte(sshConfig), 0600); err != nil {
 			return fmt.Errorf("error writing SSH config to %q: %w", sshConfigPath, err)
 		}
 
@@ -763,9 +762,7 @@ func (r *repo) buildCommand(command string, arg ...string) *exec.Cmd {
 
 func (r *repo) buildGitCommand(arg ...string) *exec.Cmd {
 	cmd := r.buildCommand("git", arg...)
-	if r.useSSH {
-		cmd.Env = append(cmd.Env, fmt.Sprintf("GIT_SSH_COMMAND=ssh -F %s/.ssh/config", r.homeDir))
-	}
+	cmd.Env = append(cmd.Env, fmt.Sprintf("GIT_SSH_COMMAND=ssh -F %s/.ssh/config", r.homeDir))
 	if r.insecureSkipTLSVerify {
 		cmd.Env = append(cmd.Env, "GIT_SSL_NO_VERIFY=true")
 	}
