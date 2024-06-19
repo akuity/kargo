@@ -146,12 +146,17 @@ type StageSpec struct {
 	// kargo.akuity.io/shard label with the value of this field. When this field
 	// is empty, the webhook will ensure that label is absent.
 	Shard string `json:"shard,omitempty" protobuf:"bytes,4,opt,name=shard"`
-	// FreightSources specifies the sources (e.g. Warehouses or upstream Stages)
-	// from which to obtain the various types of Freight the Stage requires. This
-	// list must be non-empty.
+	// RequestedFreight expresses the Stage's need for certain pieces of Freight,
+	// each having originated from a particular Warehouse. This list must be
+	// non-empty. In the common case, a Stage will request Freight having
+	// originated from just one specific Warehouse. In advanced cases, requesting
+	// Freight from multiple Warehouses provides a method of advancing new
+	// artifacts of different types through parallel pipelines at different
+	// speeds. This can be useful, for instance, if a Stage is home to multiple
+	// microservices that are independently versioned.
 	//
 	// +kubebuilder:validation:MinItems=1
-	FreightSources []FreightSources `json:"freightSources" protobuf:"bytes,1,rep,name=freightSources"`
+	RequestedFreight []FreightRequest `json:"requestedFreight" protobuf:"bytes,1,rep,name=requestedFreight"`
 	// PromotionMechanisms describes how to incorporate Freight into the Stage.
 	// This is an optional field as it is sometimes useful to aggregates available
 	// Freight from multiple upstream Stages without performing any actions. The
@@ -164,24 +169,30 @@ type StageSpec struct {
 	Verification *Verification `json:"verification,omitempty" protobuf:"bytes,3,opt,name=verification"`
 }
 
-// FreightSources describes the sources (e.g. Warehouses or upstream Stages)
-// from which to obtain the various types of Freight a Stage requires.
-type FreightSources struct {
-	// Type specifies the type of Freight to obtain (i.e. specifies what Warehouse
-	// the Freight must have originated from). This field is required.
+// FreightRequest expresses a Stage's need for Freight having originated from a
+// particular Warehouse.
+type FreightRequest struct {
+	// Origin specifies what Warehouse the requested Freight must have originated
+	// from. This is a required field.
 	//
 	// +kubebuilder:validation:Required
-	Type string `json:"type" protobuf:"bytes,3,opt,name=type"`
-	// WarehouseDirect indicates whether Freight of the desired type may be
-	// obtained directly from its Warehouse of origin. If this field's value is
-	// false, then the value of the UpstreamStages field must be non-empty.
-	// i.e. Between the two fields, at least on source must be specified.
-	WarehouseDirect bool `json:"warehouseDirect,omitempty" protobuf:"varint,1,opt,name=warehouseDirect"`
-	// UpstreamStages identifies other Stages as potential sources of Freight for
-	// this Stage. If this field's value is non-empty, then the value of the
-	// WarehouseDirect field must be true. i.e. Between the two fields, at least
-	// on source must be specified.
-	UpstreamStages []string `json:"upstreamStages,omitempty" protobuf:"bytes,2,rep,name=upstreamStages"`
+	Origin string `json:"origin" protobuf:"bytes,1,opt,name=origin"`
+	// Sources describes where the requested Freight may be obtained from. This is
+	// a required field.
+	Sources FreightSources `json:"sources" protobuf:"bytes,2,opt,name=sources"`
+}
+
+type FreightSources struct {
+	// Direct indicates the requested Freight may be obtained directly from the
+	// Warehouse from which it originated. If this field's value is false, then
+	// the value of the Stages field must be non-empty. i.e. Between the two
+	// fields, at least one source must be specified.
+	Direct bool `json:"direct,omitempty" protobuf:"varint,1,opt,name=direct"`
+	// Stages identifies other "upstream" Stages as potential sources of the
+	// requested Freight. If this field's value is empty, then the value of the
+	// Direct field must be true. i.e. Between the two fields, at least on source
+	// must be specified.
+	Stages []string `json:"stages,omitempty" protobuf:"bytes,2,rep,name=stages"`
 }
 
 // PromotionMechanisms describes how to incorporate Freight into a Stage.
