@@ -166,7 +166,7 @@ func TestQueryFreight(t *testing.T) {
 					context.Context,
 					string,
 					string,
-					[]kargoapi.FreightSources,
+					[]kargoapi.FreightRequest,
 				) ([]kargoapi.Freight, error) {
 					return nil, errors.New("something went wrong")
 				},
@@ -363,16 +363,18 @@ func TestQueryFreight(t *testing.T) {
 func TestGetAvailableFreightForStage(t *testing.T) {
 	testCases := []struct {
 		name       string
-		sources    []kargoapi.FreightSources
+		reqs       []kargoapi.FreightRequest
 		server     *server
 		assertions func(*testing.T, []kargoapi.Freight, error)
 	}{
 		{
 			name: "error getting Freight from Warehouse",
-			sources: []kargoapi.FreightSources{
+			reqs: []kargoapi.FreightRequest{
 				{
-					Type:            "fake-freight-type",
-					WarehouseDirect: true,
+					Origin: "fake-warehouse",
+					Sources: kargoapi.FreightSources{
+						Direct: true,
+					},
 				},
 			},
 			server: &server{
@@ -387,10 +389,12 @@ func TestGetAvailableFreightForStage(t *testing.T) {
 		},
 		{
 			name: "error getting Freight verified in upstream Stages",
-			sources: []kargoapi.FreightSources{
+			reqs: []kargoapi.FreightRequest{
 				{
-					Type:           "fake-freight-type",
-					UpstreamStages: []string{"fake-stage"},
+					Origin: "fake-warehouse",
+					Sources: kargoapi.FreightSources{
+						Stages: []string{"fake-stage"},
+					},
 				},
 			},
 			server: &server{
@@ -408,10 +412,12 @@ func TestGetAvailableFreightForStage(t *testing.T) {
 		},
 		{
 			name: "error getting Freight approved for Stage",
-			sources: []kargoapi.FreightSources{
+			reqs: []kargoapi.FreightRequest{
 				{
-					Type:           "fake-freight-type",
-					UpstreamStages: []string{"fake-stage"},
+					Origin: "fake-warehouse",
+					Sources: kargoapi.FreightSources{
+						Stages: []string{"fake-stage"},
+					},
 				},
 			},
 			server: &server{
@@ -436,10 +442,12 @@ func TestGetAvailableFreightForStage(t *testing.T) {
 		},
 		{
 			name: "success getting available Freight",
-			sources: []kargoapi.FreightSources{
+			reqs: []kargoapi.FreightRequest{
 				{
-					Type:           "fake-freight-type",
-					UpstreamStages: []string{"fake-stage"},
+					Origin: "fake-warehouse",
+					Sources: kargoapi.FreightSources{
+						Stages: []string{"fake-stage"},
+					},
 				},
 			},
 			server: &server{
@@ -490,7 +498,7 @@ func TestGetAvailableFreightForStage(t *testing.T) {
 				context.Background(),
 				"fake-project",
 				"fake-stage",
-				testCase.sources,
+				testCase.reqs,
 			)
 			testCase.assertions(t, freight, err)
 		})

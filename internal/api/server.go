@@ -103,7 +103,7 @@ type server struct {
 		ctx context.Context,
 		project string,
 		stage string,
-		sources []kargoapi.FreightSources,
+		requestedFreight []kargoapi.FreightRequest,
 	) ([]kargoapi.Freight, error)
 	getFreightFromWarehousesFn func(
 		ctx context.Context,

@@ -168,8 +168,8 @@ func (s *server) findDownstreamStages(ctx context.Context, stage *kargoapi.Stage
 	}
 	var downstreams []kargoapi.Stage
 	for _, s := range allStages.Items {
-		for _, freightSources := range s.Spec.FreightSources {
-			for _, upstream := range freightSources.UpstreamStages {
+		for _, req := range s.Spec.RequestedFreight {
+			for _, upstream := range req.Sources.Stages {
 				if upstream == stage.Name {
 					downstreams = append(downstreams, s)
 				}

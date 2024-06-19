@@ -87,9 +87,9 @@ func (s *server) PromoteToStage(
 	}
 
 	var upstreamStages []string
-	for _, freightSources := range stage.Spec.FreightSources {
-		if freightSources.Type == freight.Warehouse {
-			upstreamStages = freightSources.UpstreamStages
+	for _, req := range stage.Spec.RequestedFreight {
+		if req.Origin == freight.Warehouse {
+			upstreamStages = req.Sources.Stages
 			break
 		}
 	}

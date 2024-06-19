@@ -82,7 +82,7 @@ func (s *server) QueryFreight(
 			ctx,
 			project,
 			stageName,
-			stage.Spec.FreightSources,
+			stage.Spec.RequestedFreight,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("get available freight for stage: %w", err)
@@ -130,16 +130,16 @@ func (s *server) getAvailableFreightForStage(
 	ctx context.Context,
 	project string,
 	stage string,
-	freightSources []kargoapi.FreightSources,
+	freightReqs []kargoapi.FreightRequest,
 ) ([]kargoapi.Freight, error) {
 	// Find all Warehouses and upstream Stages we need to consider
 	var warehouses []string
 	var upstreams []string
-	for _, sources := range freightSources {
-		if sources.WarehouseDirect {
-			warehouses = append(warehouses, sources.Type)
+	for _, req := range freightReqs {
+		if req.Sources.Direct {
+			warehouses = append(warehouses, req.Origin)
 		}
-		upstreams = append(upstreams, sources.UpstreamStages...)
+		upstreams = append(upstreams, req.Sources.Stages...)
 	}
 	// De-dupe the upstreams
 	slices.Sort(upstreams)
