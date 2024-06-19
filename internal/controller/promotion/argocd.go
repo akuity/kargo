@@ -118,6 +118,7 @@ func (a *argoCDMechanism) Promote(
 	logger.Debug("executing Argo CD-based promotion mechanisms")
 
 	var updateResults = make([]argocd.OperationPhase, 0, len(updates))
+	var newStatus = promo.Status.DeepCopy()
 	for _, update := range updates {
 		// Retrieve the Argo CD Application.
 		app, err := a.getAuthorizedApplicationFn(ctx, update.AppNamespace, update.AppName, stage.ObjectMeta)
@@ -156,6 +157,16 @@ func (a *argoCDMechanism) Promote(
 				logger.Info(err.Error())
 			}
 			if phase.Failed() {
+				// Record the reason for the failure if available.
+				if app.Status.OperationState != nil {
+					newStatus.Message = fmt.Sprintf(
+						"Argo CD Application %q in namespace %q failed with: %s",
+						app.Name,
+						app.Namespace,
+						app.Status.OperationState.Message,
+					)
+				}
+
 				// If the update failed, we can short-circuit. This is
 				// effectively "fail fast" behavior.
 				break
@@ -181,7 +192,8 @@ func (a *argoCDMechanism) Promote(
 	}
 
 	logger.Debug("done executing Argo CD-based promotion mechanisms")
-	return promo.Status.WithPhase(aggregatedPhase), newFreight, nil
+	newStatus.Phase = aggregatedPhase
+	return newStatus, newFreight, nil
 }
 
 // buildDesiredSources returns the desired source(s) for an Argo CD Application,
