@@ -57,42 +57,6 @@ spec:
               Spec describes sources of Freight used by the Stage and how to incorporate
               Freight into the Stage.
             properties:
-              freightSources:
-                description: |-
-                  FreightSources specifies the sources (e.g. Warehouses or upstream Stages)
-                  from which to obtain the various types of Freight the Stage requires. This
-                  list must be non-empty.
-                items:
-                  description: |-
-                    FreightSources describes the sources (e.g. Warehouses or upstream Stages)
-                    from which to obtain the various types of Freight a Stage requires.
-                  properties:
-                    type:
-                      description: |-
-                        Type specifies the type of Freight to obtain (i.e. specifies what Warehouse
-                        the Freight must have originated from). This field is required.
-                      type: string
-                    upstreamStages:
-                      description: |-
-                        UpstreamStages identifies other Stages as potential sources of Freight for
-                        this Stage. If this field's value is non-empty, then the value of the
-                        WarehouseDirect field must be true. i.e. Between the two fields, at least
-                        on source must be specified.
-                      items:
-                        type: string
-                      type: array
-                    warehouseDirect:
-                      description: |-
-                        WarehouseDirect indicates whether Freight of the desired type may be
-                        obtained directly from its Warehouse of origin. If this field's value is
-                        false, then the value of the UpstreamStages field must be non-empty.
-                        i.e. Between the two fields, at least on source must be specified.
-                      type: boolean
-                  required:
-                  - type
-                  type: object
-                minItems: 1
-                type: array
               promotionMechanisms:
                 description: |-
                   PromotionMechanisms describes how to incorporate Freight into the Stage.
@@ -496,6 +460,54 @@ spec:
                       type: object
                     type: array
                 type: object
+              requestedFreight:
+                description: |-
+                  RequestedFreight expresses the Stage's need for certain pieces of Freight,
+                  each having originated from a particular Warehouse. This list must be
+                  non-empty. In the common case, a Stage will request Freight having
+                  originated from just one specific Warehouse. In advanced cases, requesting
+                  Freight from multiple Warehouses provides a method of advancing new
+                  artifacts of different types through parallel pipelines at different
+                  speeds. This can be useful, for instance, if a Stage is home to multiple
+                  microservices that are independently versioned.
+                items:
+                  description: |-
+                    FreightRequest expresses a Stage's need for Freight having originated from a
+                    particular Warehouse.
+                  properties:
+                    origin:
+                      description: |-
+                        Origin specifies what Warehouse the requested Freight must have originated
+                        from. This is a required field.
+                      type: string
+                    sources:
+                      description: |-
+                        Sources describes where the requested Freight may be obtained from. This is
+                        a required field.
+                      properties:
+                        direct:
+                          description: |-
+                            Direct indicates the requested Freight may be obtained directly from the
+                            Warehouse from which it originated. If this field's value is false, then
+                            the value of the Stages field must be non-empty. i.e. Between the two
+                            fields, at least one source must be specified.
+                          type: boolean
+                        stages:
+                          description: |-
+                            Stages identifies other "upstream" Stages as potential sources of the
+                            requested Freight. If this field's value is empty, then the value of the
+                            Direct field must be true. i.e. Between the two fields, at least on source
+                            must be specified.
+                          items:
+                            type: string
+                          type: array
+                      type: object
+                  required:
+                  - origin
+                  - sources
+                  type: object
+                minItems: 1
+                type: array
               shard:
                 description: |-
                   Shard is the name of the shard that this Stage belongs to. This is an
@@ -562,7 +574,7 @@ spec:
                     type: array
                 type: object
             required:
-            - freightSources
+            - requestedFreight
             type: object
           status:
             description: Status describes the Stage's current and recent Freight,

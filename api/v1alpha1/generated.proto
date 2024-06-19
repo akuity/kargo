@@ -455,26 +455,32 @@ message FreightReference {
   repeated VerificationInfo verificationHistory = 7;
 }
 
-// FreightSources describes the sources (e.g. Warehouses or upstream Stages)
-// from which to obtain the various types of Freight a Stage requires.
-message FreightSources {
-  // Type specifies the type of Freight to obtain (i.e. specifies what Warehouse
-  // the Freight must have originated from). This field is required.
+// FreightRequest expresses a Stage's need for Freight having originated from a
+// particular Warehouse.
+message FreightRequest {
+  // Origin specifies what Warehouse the requested Freight must have originated
+  // from. This is a required field.
   //
   // +kubebuilder:validation:Required
-  optional string type = 3;
+  optional string origin = 1;
 
-  // WarehouseDirect indicates whether Freight of the desired type may be
-  // obtained directly from its Warehouse of origin. If this field's value is
-  // false, then the value of the UpstreamStages field must be non-empty.
-  // i.e. Between the two fields, at least on source must be specified.
-  optional bool warehouseDirect = 1;
+  // Sources describes where the requested Freight may be obtained from. This is
+  // a required field.
+  optional FreightSources sources = 2;
+}
 
-  // UpstreamStages identifies other Stages as potential sources of Freight for
-  // this Stage. If this field's value is non-empty, then the value of the
-  // WarehouseDirect field must be true. i.e. Between the two fields, at least
-  // on source must be specified.
-  repeated string upstreamStages = 2;
+message FreightSources {
+  // Direct indicates the requested Freight may be obtained directly from the
+  // Warehouse from which it originated. If this field's value is false, then
+  // the value of the Stages field must be non-empty. i.e. Between the two
+  // fields, at least one source must be specified.
+  optional bool direct = 1;
+
+  // Stages identifies other "upstream" Stages as potential sources of the
+  // requested Freight. If this field's value is empty, then the value of the
+  // Direct field must be true. i.e. Between the two fields, at least on source
+  // must be specified.
+  repeated string stages = 2;
 }
 
 // FreightStatus describes a piece of Freight's most recently observed state.
@@ -1180,12 +1186,17 @@ message StageSpec {
   // is empty, the webhook will ensure that label is absent.
   optional string shard = 4;
 
-  // FreightSources specifies the sources (e.g. Warehouses or upstream Stages)
-  // from which to obtain the various types of Freight the Stage requires. This
-  // list must be non-empty.
+  // RequestedFreight expresses the Stage's need for certain pieces of Freight,
+  // each having originated from a particular Warehouse. This list must be
+  // non-empty. In the common case, a Stage will request Freight having
+  // originated from just one specific Warehouse. In advanced cases, requesting
+  // Freight from multiple Warehouses provides a method of advancing new
+  // artifacts of different types through parallel pipelines at different
+  // speeds. This can be useful, for instance, if a Stage is home to multiple
+  // microservices that are independently versioned.
   //
   // +kubebuilder:validation:MinItems=1
-  repeated FreightSources freightSources = 1;
+  repeated FreightRequest requestedFreight = 1;
 
   // PromotionMechanisms describes how to incorporate Freight into the Stage.
   // This is an optional field as it is sometimes useful to aggregates available

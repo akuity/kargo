@@ -1499,41 +1499,82 @@ export class FreightReference extends Message<FreightReference> {
 }
 
 /**
- * FreightSources describes the sources (e.g. Warehouses or upstream Stages)
- * from which to obtain the various types of Freight a Stage requires.
+ * FreightRequest expresses a Stage's need for Freight having originated from a
+ * particular Warehouse.
  *
+ * @generated from message github.com.akuity.kargo.api.v1alpha1.FreightRequest
+ */
+export class FreightRequest extends Message<FreightRequest> {
+  /**
+   * Origin specifies what Warehouse the requested Freight must have originated
+   * from. This is a required field.
+   *
+   * +kubebuilder:validation:Required
+   *
+   * @generated from field: optional string origin = 1;
+   */
+  origin?: string;
+
+  /**
+   * Sources describes where the requested Freight may be obtained from. This is
+   * a required field.
+   *
+   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.FreightSources sources = 2;
+   */
+  sources?: FreightSources;
+
+  constructor(data?: PartialMessage<FreightRequest>) {
+    super();
+    proto2.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto2 = proto2;
+  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.FreightRequest";
+  static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 1, name: "origin", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 2, name: "sources", kind: "message", T: FreightSources, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FreightRequest {
+    return new FreightRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): FreightRequest {
+    return new FreightRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): FreightRequest {
+    return new FreightRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: FreightRequest | PlainMessage<FreightRequest> | undefined, b: FreightRequest | PlainMessage<FreightRequest> | undefined): boolean {
+    return proto2.util.equals(FreightRequest, a, b);
+  }
+}
+
+/**
  * @generated from message github.com.akuity.kargo.api.v1alpha1.FreightSources
  */
 export class FreightSources extends Message<FreightSources> {
   /**
-   * Type specifies the type of Freight to obtain (i.e. specifies what Warehouse
-   * the Freight must have originated from). This field is required.
+   * Direct indicates the requested Freight may be obtained directly from the
+   * Warehouse from which it originated. If this field's value is false, then
+   * the value of the Stages field must be non-empty. i.e. Between the two
+   * fields, at least one source must be specified.
    *
-   * +kubebuilder:validation:Required
-   *
-   * @generated from field: optional string type = 3;
+   * @generated from field: optional bool direct = 1;
    */
-  type?: string;
+  direct?: boolean;
 
   /**
-   * WarehouseDirect indicates whether Freight of the desired type may be
-   * obtained directly from its Warehouse of origin. If this field's value is
-   * false, then the value of the UpstreamStages field must be non-empty.
-   * i.e. Between the two fields, at least on source must be specified.
+   * Stages identifies other "upstream" Stages as potential sources of the
+   * requested Freight. If this field's value is empty, then the value of the
+   * Direct field must be true. i.e. Between the two fields, at least on source
+   * must be specified.
    *
-   * @generated from field: optional bool warehouseDirect = 1;
+   * @generated from field: repeated string stages = 2;
    */
-  warehouseDirect?: boolean;
-
-  /**
-   * UpstreamStages identifies other Stages as potential sources of Freight for
-   * this Stage. If this field's value is non-empty, then the value of the
-   * WarehouseDirect field must be true. i.e. Between the two fields, at least
-   * on source must be specified.
-   *
-   * @generated from field: repeated string upstreamStages = 2;
-   */
-  upstreamStages: string[] = [];
+  stages: string[] = [];
 
   constructor(data?: PartialMessage<FreightSources>) {
     super();
@@ -1543,9 +1584,8 @@ export class FreightSources extends Message<FreightSources> {
   static readonly runtime: typeof proto2 = proto2;
   static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.FreightSources";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
-    { no: 3, name: "type", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 1, name: "warehouseDirect", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
-    { no: 2, name: "upstreamStages", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 1, name: "direct", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+    { no: 2, name: "stages", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FreightSources {
@@ -3763,15 +3803,20 @@ export class StageSpec extends Message<StageSpec> {
   shard?: string;
 
   /**
-   * FreightSources specifies the sources (e.g. Warehouses or upstream Stages)
-   * from which to obtain the various types of Freight the Stage requires. This
-   * list must be non-empty.
+   * RequestedFreight expresses the Stage's need for certain pieces of Freight,
+   * each having originated from a particular Warehouse. This list must be
+   * non-empty. In the common case, a Stage will request Freight having
+   * originated from just one specific Warehouse. In advanced cases, requesting
+   * Freight from multiple Warehouses provides a method of advancing new
+   * artifacts of different types through parallel pipelines at different
+   * speeds. This can be useful, for instance, if a Stage is home to multiple
+   * microservices that are independently versioned.
    *
    * +kubebuilder:validation:MinItems=1
    *
-   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.FreightSources freightSources = 1;
+   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.FreightRequest requestedFreight = 1;
    */
-  freightSources: FreightSources[] = [];
+  requestedFreight: FreightRequest[] = [];
 
   /**
    * PromotionMechanisms describes how to incorporate Freight into the Stage.
@@ -3802,7 +3847,7 @@ export class StageSpec extends Message<StageSpec> {
   static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.StageSpec";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 4, name: "shard", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 1, name: "freightSources", kind: "message", T: FreightSources, repeated: true },
+    { no: 1, name: "requestedFreight", kind: "message", T: FreightRequest, repeated: true },
     { no: 2, name: "promotionMechanisms", kind: "message", T: PromotionMechanisms, opt: true },
     { no: 3, name: "verification", kind: "message", T: Verification, opt: true },
   ]);

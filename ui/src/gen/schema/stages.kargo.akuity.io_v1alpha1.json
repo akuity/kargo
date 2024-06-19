@@ -16,35 +16,6 @@
     "spec": {
       "description": "Spec describes sources of Freight used by the Stage and how to incorporate\nFreight into the Stage.",
       "properties": {
-        "freightSources": {
-          "description": "FreightSources specifies the sources (e.g. Warehouses or upstream Stages)\nfrom which to obtain the various types of Freight the Stage requires. This\nlist must be non-empty.",
-          "items": {
-            "description": "FreightSources describes the sources (e.g. Warehouses or upstream Stages)\nfrom which to obtain the various types of Freight a Stage requires.",
-            "properties": {
-              "type": {
-                "description": "Type specifies the type of Freight to obtain (i.e. specifies what Warehouse\nthe Freight must have originated from). This field is required.",
-                "type": "string"
-              },
-              "upstreamStages": {
-                "description": "UpstreamStages identifies other Stages as potential sources of Freight for\nthis Stage. If this field's value is non-empty, then the value of the\nWarehouseDirect field must be true. i.e. Between the two fields, at least\non source must be specified.",
-                "items": {
-                  "type": "string"
-                },
-                "type": "array"
-              },
-              "warehouseDirect": {
-                "description": "WarehouseDirect indicates whether Freight of the desired type may be\nobtained directly from its Warehouse of origin. If this field's value is\nfalse, then the value of the UpstreamStages field must be non-empty.\ni.e. Between the two fields, at least on source must be specified.",
-                "type": "boolean"
-              }
-            },
-            "required": [
-              "type"
-            ],
-            "type": "object"
-          },
-          "minItems": 1,
-          "type": "array"
-        },
         "promotionMechanisms": {
           "description": "PromotionMechanisms describes how to incorporate Freight into the Stage.\nThis is an optional field as it is sometimes useful to aggregates available\nFreight from multiple upstream Stages without performing any actions. The\nutility of this is to allow multiple downstream Stages to subscribe to a\nsingle upstream Stage where they may otherwise have subscribed to multiple\nupstream Stages.",
           "properties": {
@@ -375,6 +346,42 @@
           },
           "type": "object"
         },
+        "requestedFreight": {
+          "description": "RequestedFreight expresses the Stage's need for certain pieces of Freight,\neach having originated from a particular Warehouse. This list must be\nnon-empty. In the common case, a Stage will request Freight having\noriginated from just one specific Warehouse. In advanced cases, requesting\nFreight from multiple Warehouses provides a method of advancing new\nartifacts of different types through parallel pipelines at different\nspeeds. This can be useful, for instance, if a Stage is home to multiple\nmicroservices that are independently versioned.",
+          "items": {
+            "description": "FreightRequest expresses a Stage's need for Freight having originated from a\nparticular Warehouse.",
+            "properties": {
+              "origin": {
+                "description": "Origin specifies what Warehouse the requested Freight must have originated\nfrom. This is a required field.",
+                "type": "string"
+              },
+              "sources": {
+                "description": "Sources describes where the requested Freight may be obtained from. This is\na required field.",
+                "properties": {
+                  "direct": {
+                    "description": "Direct indicates the requested Freight may be obtained directly from the\nWarehouse from which it originated. If this field's value is false, then\nthe value of the Stages field must be non-empty. i.e. Between the two\nfields, at least one source must be specified.",
+                    "type": "boolean"
+                  },
+                  "stages": {
+                    "description": "Stages identifies other \"upstream\" Stages as potential sources of the\nrequested Freight. If this field's value is empty, then the value of the\nDirect field must be true. i.e. Between the two fields, at least on source\nmust be specified.",
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  }
+                },
+                "type": "object"
+              }
+            },
+            "required": [
+              "origin",
+              "sources"
+            ],
+            "type": "object"
+          },
+          "minItems": 1,
+          "type": "array"
+        },
         "shard": {
           "description": "Shard is the name of the shard that this Stage belongs to. This is an\noptional field. If not specified, the Stage will belong to the default\nshard. A defaulting webhook will sync the value of the\nkargo.akuity.io/shard label with the value of this field. When this field\nis empty, the webhook will ensure that label is absent.",
           "type": "string"
@@ -445,7 +452,7 @@
         }
       },
       "required": [
-        "freightSources"
+        "requestedFreight"
       ],
       "type": "object"
     },
