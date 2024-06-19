@@ -425,8 +425,8 @@ func (r *reconciler) promote(
 		return nil, fmt.Errorf("Freight %q not found in namespace %q", promo.Spec.Freight, promo.Namespace)
 	}
 	var upstreams []string
-	for _, freightSources := range stage.Spec.FreightSources {
-		upstreams = append(upstreams, freightSources.UpstreamStages...)
+	for _, req := range stage.Spec.RequestedFreight {
+		upstreams = append(upstreams, req.Sources.Stages...)
 	}
 	// De-dupe upstreams
 	slices.Sort(upstreams)

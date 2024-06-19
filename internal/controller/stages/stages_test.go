@@ -959,7 +959,7 @@ func TestSyncNormalStage(t *testing.T) {
 			name: "error checking if auto-promotion is permitted",
 			stage: &kargoapi.Stage{
 				Spec: kargoapi.StageSpec{
-					FreightSources:      []kargoapi.FreightSources{{}},
+					RequestedFreight:    []kargoapi.FreightRequest{{}},
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
 				},
 				Status: kargoapi.StageStatus{
@@ -1025,7 +1025,7 @@ func TestSyncNormalStage(t *testing.T) {
 			name: "auto-promotion is not permitted",
 			stage: &kargoapi.Stage{
 				Spec: kargoapi.StageSpec{
-					FreightSources:      []kargoapi.FreightSources{{}},
+					RequestedFreight:    []kargoapi.FreightRequest{{}},
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
 				},
 				Status: kargoapi.StageStatus{
@@ -1090,7 +1090,7 @@ func TestSyncNormalStage(t *testing.T) {
 			name: "error getting available Freight",
 			stage: &kargoapi.Stage{
 				Spec: kargoapi.StageSpec{
-					FreightSources:      []kargoapi.FreightSources{{}},
+					RequestedFreight:    []kargoapi.FreightRequest{{}},
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
 				},
 				Status: kargoapi.StageStatus{
@@ -1161,7 +1161,7 @@ func TestSyncNormalStage(t *testing.T) {
 			name: "no Freight found",
 			stage: &kargoapi.Stage{
 				Spec: kargoapi.StageSpec{
-					FreightSources:      []kargoapi.FreightSources{{}},
+					RequestedFreight:    []kargoapi.FreightRequest{{}},
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
 				},
 				Status: kargoapi.StageStatus{
@@ -1221,7 +1221,7 @@ func TestSyncNormalStage(t *testing.T) {
 			name: "Stage already has latest Freight",
 			stage: &kargoapi.Stage{
 				Spec: kargoapi.StageSpec{
-					FreightSources:      []kargoapi.FreightSources{{}},
+					RequestedFreight:    []kargoapi.FreightRequest{{}},
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
 				},
 				Status: kargoapi.StageStatus{
@@ -1284,7 +1284,7 @@ func TestSyncNormalStage(t *testing.T) {
 			name: "Promotion already exists",
 			stage: &kargoapi.Stage{
 				Spec: kargoapi.StageSpec{
-					FreightSources:      []kargoapi.FreightSources{{}},
+					RequestedFreight:    []kargoapi.FreightRequest{{}},
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
 				},
 				Status: kargoapi.StageStatus{
@@ -1359,7 +1359,7 @@ func TestSyncNormalStage(t *testing.T) {
 			name: "error creating Promotion",
 			stage: &kargoapi.Stage{
 				Spec: kargoapi.StageSpec{
-					FreightSources:      []kargoapi.FreightSources{{}},
+					RequestedFreight:    []kargoapi.FreightRequest{{}},
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
 				},
 				Status: kargoapi.StageStatus{
@@ -1586,7 +1586,7 @@ func TestSyncNormalStage(t *testing.T) {
 					Generation: 42,
 				},
 				Spec: kargoapi.StageSpec{
-					FreightSources:      []kargoapi.FreightSources{{}},
+					RequestedFreight:    []kargoapi.FreightRequest{{}},
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
 					Verification:        &kargoapi.Verification{},
 				},
@@ -2544,16 +2544,18 @@ func TestGetPromotionsForStage(t *testing.T) {
 func TestGetAvailableFreight(t *testing.T) {
 	testCases := []struct {
 		name       string
-		sources    []kargoapi.FreightSources
+		reqs       []kargoapi.FreightRequest
 		reconciler *reconciler
 		assertions func(*testing.T, []kargoapi.Freight, error)
 	}{
 		{
 			name: "error getting getting Freight from Warehouse",
-			sources: []kargoapi.FreightSources{
+			reqs: []kargoapi.FreightRequest{
 				{
-					Type:            "fake-freight-type",
-					WarehouseDirect: true,
+					Origin: "fake-warehouse",
+					Sources: kargoapi.FreightSources{
+						Direct: true,
+					},
 				},
 			},
 			reconciler: &reconciler{
@@ -2568,10 +2570,12 @@ func TestGetAvailableFreight(t *testing.T) {
 		},
 		{
 			name: "error getting Freight verified in upstream Stages",
-			sources: []kargoapi.FreightSources{
+			reqs: []kargoapi.FreightRequest{
 				{
-					Type:           "fake-freight-type",
-					UpstreamStages: []string{"fake-stage"},
+					Origin: "fake-warehouse",
+					Sources: kargoapi.FreightSources{
+						Stages: []string{"fake-stage"},
+					},
 				},
 			},
 			reconciler: &reconciler{
@@ -2610,11 +2614,13 @@ func TestGetAvailableFreight(t *testing.T) {
 		},
 		{
 			name: "success",
-			sources: []kargoapi.FreightSources{
+			reqs: []kargoapi.FreightRequest{
 				{
-					Type:            "fake-freight-type",
-					WarehouseDirect: true,
-					UpstreamStages:  []string{"fake-upstream-stage"},
+					Origin: "fake-warehouse",
+					Sources: kargoapi.FreightSources{
+						Direct: true,
+						Stages: []string{"fake-upstream-stage"},
+					},
 				},
 			},
 			reconciler: &reconciler{
@@ -2643,7 +2649,7 @@ func TestGetAvailableFreight(t *testing.T) {
 						Name:      "fake-stage",
 					},
 					Spec: kargoapi.StageSpec{
-						FreightSources: testCase.sources,
+						RequestedFreight: testCase.reqs,
 					},
 				},
 				true,

@@ -843,9 +843,9 @@ func (r *reconciler) syncNormalStage(
 	}
 
 	// Stop here if we have no chance of finding any Freight to promote.
-	if len(stage.Spec.FreightSources) == 0 {
+	if len(stage.Spec.RequestedFreight) == 0 {
 		logger.Info(
-			"Stage has no Freight sources. This may indicate an issue with resource" +
+			"Stage requests no Freight. This may indicate an issue with resource" +
 				"validation logic.",
 		)
 		return status, nil
@@ -1349,9 +1349,9 @@ func (r *reconciler) getAvailableFreight(
 	includeApproved bool,
 ) ([]kargoapi.Freight, error) {
 	var availableFreight []kargoapi.Freight
-	for _, freightSources := range stage.Spec.FreightSources {
+	for _, req := range stage.Spec.RequestedFreight {
 		// Get Freight direct from Warehouses if allowed
-		if freightSources.WarehouseDirect {
+		if req.Sources.Direct {
 			var freight kargoapi.FreightList
 			if err := r.listFreightFn(
 				ctx,
@@ -1360,13 +1360,13 @@ func (r *reconciler) getAvailableFreight(
 					Namespace: stage.Namespace,
 					FieldSelector: fields.OneTermEqualSelector(
 						kubeclient.FreightByWarehouseIndexField,
-						freightSources.Type,
+						req.Origin,
 					),
 				},
 			); err != nil {
 				return nil, fmt.Errorf(
 					"error listing Freight from Warehouse %q in namespace %q: %w",
-					freightSources.Type,
+					req.Origin,
 					stage.Namespace,
 					err,
 				)
@@ -1374,7 +1374,7 @@ func (r *reconciler) getAvailableFreight(
 			availableFreight = append(availableFreight, freight.Items...)
 		}
 		// Get Freight verified in upstream Stages
-		for _, upstream := range freightSources.UpstreamStages {
+		for _, upstream := range req.Sources.Stages {
 			var verifiedFreight kargoapi.FreightList
 			if err := r.listFreightFn(
 				ctx,
