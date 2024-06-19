@@ -23,8 +23,8 @@ helm install cert-manager cert-manager \
 
 helm install argocd argo-cd \
   --repo https://argoproj.github.io/argo-helm \
-  --version 5.51.6 \
-  --namespace $argo_cd_chart_version \
+  --version $argo_cd_chart_version \
+  --namespace argocd \
   --create-namespace \
   --set 'configs.secret.argocdServerAdminPassword=$2a$10$5vm8wXaSdbuff0m9l21JdevzXBzJFPCi8sy6OOnpZMAG.fOXL7jvO' \
   --set dex.enabled=false \
