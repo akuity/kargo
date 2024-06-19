@@ -384,8 +384,8 @@ func IndexStagesByUpstreamStages(ctx context.Context, mgr ctrl.Manager) error {
 func indexStagesByUpstreamStages(obj client.Object) []string {
 	stage := obj.(*kargoapi.Stage) // nolint: forcetypeassert
 	var upstreams []string
-	for _, sources := range stage.Spec.FreightSources {
-		upstreams = append(upstreams, sources.UpstreamStages...)
+	for _, req := range stage.Spec.RequestedFreight {
+		upstreams = append(upstreams, req.Sources.Stages...)
 	}
 	slices.Sort(upstreams)
 	return slices.Compact(upstreams)
@@ -403,9 +403,9 @@ func IndexStagesByWarehouse(ctx context.Context, mgr ctrl.Manager) error {
 func indexStagesByWarehouse(obj client.Object) []string {
 	stage := obj.(*kargoapi.Stage) // nolint: forcetypeassert
 	var warehouses []string
-	for _, sources := range stage.Spec.FreightSources {
-		if sources.WarehouseDirect {
-			warehouses = append(warehouses, sources.Type)
+	for _, req := range stage.Spec.RequestedFreight {
+		if req.Sources.Direct {
+			warehouses = append(warehouses, req.Origin)
 		}
 	}
 	return warehouses

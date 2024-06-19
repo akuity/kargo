@@ -521,10 +521,12 @@ func TestIndexStagesByUpstreamStages(t *testing.T) {
 			name: "Stage has no upstream Stages",
 			stage: &kargoapi.Stage{
 				Spec: kargoapi.StageSpec{
-					FreightSources: []kargoapi.FreightSources{
+					RequestedFreight: []kargoapi.FreightRequest{
 						{
-							Type:            "fake-freight-type",
-							WarehouseDirect: true,
+							Origin: "fake-warehouse",
+							Sources: kargoapi.FreightSources{
+								Direct: true,
+							},
 						},
 					},
 				},
@@ -535,12 +537,14 @@ func TestIndexStagesByUpstreamStages(t *testing.T) {
 			name: "Stage has upstream stages",
 			stage: &kargoapi.Stage{
 				Spec: kargoapi.StageSpec{
-					FreightSources: []kargoapi.FreightSources{
+					RequestedFreight: []kargoapi.FreightRequest{
 						{
-							Type: "fake-freight-type",
-							UpstreamStages: []string{
-								"fake-stage",
-								"another-fake-stage",
+							Origin: "fake-warehouse",
+							Sources: kargoapi.FreightSources{
+								Stages: []string{
+									"fake-stage",
+									"another-fake-stage",
+								},
 							},
 						},
 					},
