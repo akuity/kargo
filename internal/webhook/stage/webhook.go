@@ -194,7 +194,7 @@ func (w *webhook) validateSpec(
 	if spec == nil { // nil spec is caught by declarative validations
 		return nil
 	}
-	errs := w.validateFreightSources(f.Child("freightSources"), spec.FreightSources)
+	errs := w.validateRequestedFreight(f.Child("requestedFreight"), spec.RequestedFreight)
 	return append(
 		errs,
 		w.validatePromotionMechanisms(
@@ -204,27 +204,27 @@ func (w *webhook) validateSpec(
 	)
 }
 
-func (w *webhook) validateFreightSources(
+func (w *webhook) validateRequestedFreight(
 	f *field.Path,
-	freightSources []kargoapi.FreightSources,
+	reqs []kargoapi.FreightRequest,
 ) field.ErrorList {
-	// Make sure we don't see more than one source for the same Freight type
-	seenTypes := make(map[string]struct{}, len(freightSources))
-	for _, sources := range freightSources {
-		if _, seen := seenTypes[sources.Type]; seen {
+	// Make sure the same origin is not requested multiple times
+	seenOrigins := make(map[string]struct{}, len(reqs))
+	for _, req := range reqs {
+		if _, seen := seenOrigins[req.Origin]; seen {
 			return field.ErrorList{
 				field.Invalid(
 					f,
-					freightSources,
+					reqs,
 					fmt.Sprintf(
-						"freight type %q found multiple times in %s",
-						sources.Type,
+						"freight with origin %q requested multiple times in %s",
+						req.Origin,
 						f.String(),
 					),
 				),
 			}
 		}
-		seenTypes[sources.Type] = struct{}{}
+		seenOrigins[req.Origin] = struct{}{}
 	}
 	return nil
 }

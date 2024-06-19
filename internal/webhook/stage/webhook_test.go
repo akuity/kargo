@@ -1023,10 +1023,10 @@ func TestValidateSpec(t *testing.T) {
 		{
 			name: "invalid",
 			spec: &kargoapi.StageSpec{
-				// Has multiple sources for one Freight type...
-				FreightSources: []kargoapi.FreightSources{
-					{Type: "test-freight-type"},
-					{Type: "test-freight-type"},
+				// Has multiple sources for one Freight origin...
+				RequestedFreight: []kargoapi.FreightRequest{
+					{Origin: "test-warehouse"},
+					{Origin: "test-warehouse"},
 				},
 				// Doesn't actually define any mechanisms...
 				PromotionMechanisms: &kargoapi.PromotionMechanisms{},
@@ -1039,10 +1039,10 @@ func TestValidateSpec(t *testing.T) {
 					field.ErrorList{
 						{
 							Type:     field.ErrorTypeInvalid,
-							Field:    "spec.freightSources",
-							BadValue: spec.FreightSources,
-							Detail: `freight type "test-freight-type" found multiple ` +
-								"times in spec.freightSources",
+							Field:    "spec.requestedFreight",
+							BadValue: spec.RequestedFreight,
+							Detail: `freight with origin "test-warehouse" requested multiple ` +
+								"times in spec.requestedFreight",
 						},
 						{
 							Type:     field.ErrorTypeInvalid,
@@ -1061,8 +1061,8 @@ func TestValidateSpec(t *testing.T) {
 		{
 			name: "valid",
 			spec: &kargoapi.StageSpec{
-				FreightSources: []kargoapi.FreightSources{
-					{Type: "test-freight-type"},
+				RequestedFreight: []kargoapi.FreightRequest{
+					{Origin: "test-warehouse"},
 				},
 			},
 			assertions: func(t *testing.T, _ *kargoapi.StageSpec, errs field.ErrorList) {
@@ -1085,28 +1085,28 @@ func TestValidateSpec(t *testing.T) {
 	}
 }
 
-func TestValidateFreightSources(t *testing.T) {
+func TestValidateRequestedFreight(t *testing.T) {
 	testCases := []struct {
 		name       string
-		sources    []kargoapi.FreightSources
-		assertions func(*testing.T, []kargoapi.FreightSources, field.ErrorList)
+		reqs       []kargoapi.FreightRequest
+		assertions func(*testing.T, []kargoapi.FreightRequest, field.ErrorList)
 	}{
 		{
-			name: "Freight type found multiple times",
-			sources: []kargoapi.FreightSources{
-				{Type: "test-freight-type"},
-				{Type: "test-freight-type"},
+			name: "Freight origin found multiple times",
+			reqs: []kargoapi.FreightRequest{
+				{Origin: "test-warehouse"},
+				{Origin: "test-warehouse"},
 			},
-			assertions: func(t *testing.T, sources []kargoapi.FreightSources, errs field.ErrorList) {
+			assertions: func(t *testing.T, reqs []kargoapi.FreightRequest, errs field.ErrorList) {
 				require.Equal(
 					t,
 					field.ErrorList{
 						{
 							Type:     field.ErrorTypeInvalid,
-							Field:    "freightSources",
-							BadValue: sources,
-							Detail: `freight type "test-freight-type" found multiple times ` +
-								"in freightSources",
+							Field:    "requestedFreight",
+							BadValue: reqs,
+							Detail: `freight with origin "test-warehouse" requested ` +
+								"multiple times in requestedFreight",
 						},
 					},
 					errs,
@@ -1116,10 +1116,10 @@ func TestValidateFreightSources(t *testing.T) {
 
 		{
 			name: "success",
-			sources: []kargoapi.FreightSources{
-				{Type: "test-freight-type"},
+			reqs: []kargoapi.FreightRequest{
+				{Origin: "test-warehouse"},
 			},
-			assertions: func(t *testing.T, _ []kargoapi.FreightSources, errs field.ErrorList) {
+			assertions: func(t *testing.T, _ []kargoapi.FreightRequest, errs field.ErrorList) {
 				require.Nil(t, errs)
 			},
 		},
@@ -1129,10 +1129,10 @@ func TestValidateFreightSources(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
 				t,
-				testCase.sources,
-				w.validateFreightSources(
-					field.NewPath("freightSources"),
-					testCase.sources,
+				testCase.reqs,
+				w.validateRequestedFreight(
+					field.NewPath("requestedFreight"),
+					testCase.reqs,
 				),
 			)
 		})
