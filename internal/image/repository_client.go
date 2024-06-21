@@ -119,6 +119,7 @@ func newRepositoryClient(
 				internalRoundTripper: httpTransport,
 			}),
 			remote.WithAuth(auth),
+			remote.WithPageSize(reg.tagPageSize),
 		},
 	}
 
