@@ -9,7 +9,11 @@ import (
 	"go.uber.org/ratelimit"
 )
 
-const defaultTagPageSize = 1000
+const (
+	defaultCacheEntryTTL        = 30 * time.Minute
+	defaultCacheCleanupInterval = time.Hour
+	defaultTagPageSize          = 1000
+)
 
 // dockerRegistry is registry configuration for Docker Hub.
 var dockerRegistry = &registry{
@@ -19,8 +23,8 @@ var dockerRegistry = &registry{
 	// registry-specified configuration for Docker Hub.
 	defaultNamespace: "library",
 	imageCache: cache.New(
-		30*time.Minute, // Default ttl for each entry
-		time.Hour,      // Cleanup interval
+		defaultCacheEntryTTL,        // Default ttl for each entry
+		defaultCacheCleanupInterval, // Cleanup interval
 	),
 	rateLimiter: ratelimit.New(10),
 	tagPageSize: defaultTagPageSize,
@@ -32,8 +36,8 @@ var quayRegistry = &registry{
 	imagePrefix:      "quay.io",
 	defaultNamespace: "",
 	imageCache: cache.New(
-		30*time.Minute, // Default ttl for each entry
-		time.Hour,      // Cleanup interval
+		defaultCacheEntryTTL,        // Default ttl for each entry
+		defaultCacheCleanupInterval, // Cleanup interval
 	),
 	rateLimiter: ratelimit.New(20),
 	// Quay does not like when you ask for more than 100 tags at a time
@@ -70,8 +74,8 @@ func newRegistry(imagePrefix string) *registry {
 		name:        imagePrefix,
 		imagePrefix: imagePrefix,
 		imageCache: cache.New(
-			30*time.Minute, // Default ttl for each entry
-			time.Hour,      // Cleanup interval
+			defaultCacheEntryTTL,        // Default ttl for each entry
+			defaultCacheCleanupInterval, // Cleanup interval
 		),
 		// TODO: Make this configurable.
 		rateLimiter: ratelimit.New(20),

@@ -396,5 +396,6 @@ func (r *rateLimitedRoundTripper) RoundTrip(
 	req *http.Request,
 ) (*http.Response, error) {
 	r.limiter.Take()
+	fmt.Println(req.URL.Path)
 	return r.internalRoundTripper.RoundTrip(req)
 }
