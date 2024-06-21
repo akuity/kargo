@@ -692,15 +692,19 @@ func (r *repo) setupAuthor(author User) error {
 func (r *repo) setupAuth(creds RepoCredentials) error {
 	// If an SSH key was provided, use that.
 	if creds.SSHPrivateKey != "" {
-		sshConfigPath := filepath.Join(r.homeDir, ".ssh", "config")
+		sshPath := filepath.Join(r.homeDir, ".ssh")
+		if err := os.Mkdir(sshPath, 0700); err != nil {
+			return fmt.Errorf("error creating SSH directory %q: %w", sshPath, err)
+		}
+		sshConfigPath := filepath.Join(sshPath, "config")
+		rsaKeyPath := filepath.Join(sshPath, "id_rsa")
 		// nolint: lll
-		const sshConfig = "Host *\n  StrictHostKeyChecking no\n  UserKnownHostsFile=/dev/null"
+		sshConfig := fmt.Sprintf("Host *\n  StrictHostKeyChecking no\n  UserKnownHostsFile=/dev/null\n  IdentityFile %q\n", rsaKeyPath)
 		if err :=
 			os.WriteFile(sshConfigPath, []byte(sshConfig), 0600); err != nil {
 			return fmt.Errorf("error writing SSH config to %q: %w", sshConfigPath, err)
 		}
 
-		rsaKeyPath := filepath.Join(r.homeDir, ".ssh", "id_rsa")
 		if err := os.WriteFile(
 			rsaKeyPath,
 			[]byte(creds.SSHPrivateKey),
@@ -758,6 +762,7 @@ func (r *repo) buildCommand(command string, arg ...string) *exec.Cmd {
 
 func (r *repo) buildGitCommand(arg ...string) *exec.Cmd {
 	cmd := r.buildCommand("git", arg...)
+	cmd.Env = append(cmd.Env, fmt.Sprintf("GIT_SSH_COMMAND=ssh -F %s/.ssh/config", r.homeDir))
 	if r.insecureSkipTLSVerify {
 		cmd.Env = append(cmd.Env, "GIT_SSL_NO_VERIFY=true")
 	}
