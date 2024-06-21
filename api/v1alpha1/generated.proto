@@ -534,7 +534,7 @@ message GitRepoUpdate {
   // RepoURL is the URL of the repository to update. This is a required field.
   //
   // +kubebuilder:validation:MinLength=1
-  // +kubebuilder:validation:Pattern=`(?:^(https?)://(?:([\w-]+):(.+)@)?([\w-]+(?:\.[\w-]+)*)(?::(\d{1,5}))?(/.*)$)|(?:^([\w-]+)@([\w+]+(?:\.[\w-]+)*):(/?.*))`
+  // +kubebuilder:validation:Pattern=`^https?://(\w+([\.-]\w+)*@)?\w+([\.-]\w+)*(:[\d]+)?(/.*)?$`
   optional string repoURL = 1;
 
   // InsecureSkipTLSVerify specifies whether certificate verification errors

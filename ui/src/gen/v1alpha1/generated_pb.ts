@@ -1788,7 +1788,7 @@ export class GitRepoUpdate extends Message<GitRepoUpdate> {
    * RepoURL is the URL of the repository to update. This is a required field.
    *
    * +kubebuilder:validation:MinLength=1
-   * +kubebuilder:validation:Pattern=`(?:^(https?)://(?:([\w-]+):(.+)@)?([\w-]+(?:\.[\w-]+)*)(?::(\d{1,5}))?(/.*)$)|(?:^([\w-]+)@([\w+]+(?:\.[\w-]+)*):(/?.*))`
+   * +kubebuilder:validation:Pattern=`^https?://(\w+([\.-]\w+)*@)?\w+([\.-]\w+)*(:[\d]+)?(/.*)?$`
    *
    * @generated from field: optional string repoURL = 1;
    */
