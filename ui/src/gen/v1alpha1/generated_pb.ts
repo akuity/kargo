@@ -1499,6 +1499,113 @@ export class FreightReference extends Message<FreightReference> {
 }
 
 /**
+ * FreightRequest expresses a Stage's need for Freight having originated from a
+ * particular Warehouse.
+ *
+ * @generated from message github.com.akuity.kargo.api.v1alpha1.FreightRequest
+ */
+export class FreightRequest extends Message<FreightRequest> {
+  /**
+   * Origin specifies what Warehouse the requested Freight must have originated
+   * from. This is a required field.
+   *
+   * +kubebuilder:validation:Required
+   *
+   * @generated from field: optional string origin = 1;
+   */
+  origin?: string;
+
+  /**
+   * Sources describes where the requested Freight may be obtained from. This is
+   * a required field.
+   *
+   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.FreightSources sources = 2;
+   */
+  sources?: FreightSources;
+
+  constructor(data?: PartialMessage<FreightRequest>) {
+    super();
+    proto2.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto2 = proto2;
+  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.FreightRequest";
+  static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 1, name: "origin", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 2, name: "sources", kind: "message", T: FreightSources, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FreightRequest {
+    return new FreightRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): FreightRequest {
+    return new FreightRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): FreightRequest {
+    return new FreightRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: FreightRequest | PlainMessage<FreightRequest> | undefined, b: FreightRequest | PlainMessage<FreightRequest> | undefined): boolean {
+    return proto2.util.equals(FreightRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message github.com.akuity.kargo.api.v1alpha1.FreightSources
+ */
+export class FreightSources extends Message<FreightSources> {
+  /**
+   * Direct indicates the requested Freight may be obtained directly from the
+   * Warehouse from which it originated. If this field's value is false, then
+   * the value of the Stages field must be non-empty. i.e. Between the two
+   * fields, at least one source must be specified.
+   *
+   * @generated from field: optional bool direct = 1;
+   */
+  direct?: boolean;
+
+  /**
+   * Stages identifies other "upstream" Stages as potential sources of the
+   * requested Freight. If this field's value is empty, then the value of the
+   * Direct field must be true. i.e. Between the two fields, at least on source
+   * must be specified.
+   *
+   * @generated from field: repeated string stages = 2;
+   */
+  stages: string[] = [];
+
+  constructor(data?: PartialMessage<FreightSources>) {
+    super();
+    proto2.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto2 = proto2;
+  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.FreightSources";
+  static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 1, name: "direct", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+    { no: 2, name: "stages", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FreightSources {
+    return new FreightSources().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): FreightSources {
+    return new FreightSources().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): FreightSources {
+    return new FreightSources().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: FreightSources | PlainMessage<FreightSources> | undefined, b: FreightSources | PlainMessage<FreightSources> | undefined): boolean {
+    return proto2.util.equals(FreightSources, a, b);
+  }
+}
+
+/**
  * FreightStatus describes a piece of Freight's most recently observed state.
  *
  * @generated from message github.com.akuity.kargo.api.v1alpha1.FreightStatus
@@ -3696,14 +3803,20 @@ export class StageSpec extends Message<StageSpec> {
   shard?: string;
 
   /**
-   * Subscriptions describes the Stage's sources of Freight. This is a required
-   * field.
+   * RequestedFreight expresses the Stage's need for certain pieces of Freight,
+   * each having originated from a particular Warehouse. This list must be
+   * non-empty. In the common case, a Stage will request Freight having
+   * originated from just one specific Warehouse. In advanced cases, requesting
+   * Freight from multiple Warehouses provides a method of advancing new
+   * artifacts of different types through parallel pipelines at different
+   * speeds. This can be useful, for instance, if a Stage is home to multiple
+   * microservices that are independently versioned.
    *
-   * +kubebuilder:validation:Required
+   * +kubebuilder:validation:MinItems=1
    *
-   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.Subscriptions subscriptions = 1;
+   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.FreightRequest requestedFreight = 1;
    */
-  subscriptions?: Subscriptions;
+  requestedFreight: FreightRequest[] = [];
 
   /**
    * PromotionMechanisms describes how to incorporate Freight into the Stage.
@@ -3734,7 +3847,7 @@ export class StageSpec extends Message<StageSpec> {
   static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.StageSpec";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 4, name: "shard", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 1, name: "subscriptions", kind: "message", T: Subscriptions, opt: true },
+    { no: 1, name: "requestedFreight", kind: "message", T: FreightRequest, repeated: true },
     { no: 2, name: "promotionMechanisms", kind: "message", T: PromotionMechanisms, opt: true },
     { no: 3, name: "verification", kind: "message", T: Verification, opt: true },
   ]);
@@ -3866,101 +3979,6 @@ export class StageStatus extends Message<StageStatus> {
 
   static equals(a: StageStatus | PlainMessage<StageStatus> | undefined, b: StageStatus | PlainMessage<StageStatus> | undefined): boolean {
     return proto2.util.equals(StageStatus, a, b);
-  }
-}
-
-/**
- * StageSubscription defines a subscription to Freight from another Stage.
- *
- * @generated from message github.com.akuity.kargo.api.v1alpha1.StageSubscription
- */
-export class StageSubscription extends Message<StageSubscription> {
-  /**
-   * Name specifies the name of a Stage.
-   *
-   * +kubebuilder:validation:MinLength=1
-   * +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
-   *
-   * @generated from field: optional string name = 1;
-   */
-  name?: string;
-
-  constructor(data?: PartialMessage<StageSubscription>) {
-    super();
-    proto2.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto2 = proto2;
-  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.StageSubscription";
-  static readonly fields: FieldList = proto2.util.newFieldList(() => [
-    { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StageSubscription {
-    return new StageSubscription().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): StageSubscription {
-    return new StageSubscription().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): StageSubscription {
-    return new StageSubscription().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: StageSubscription | PlainMessage<StageSubscription> | undefined, b: StageSubscription | PlainMessage<StageSubscription> | undefined): boolean {
-    return proto2.util.equals(StageSubscription, a, b);
-  }
-}
-
-/**
- * Subscriptions describes a Stage's sources of Freight.
- *
- * @generated from message github.com.akuity.kargo.api.v1alpha1.Subscriptions
- */
-export class Subscriptions extends Message<Subscriptions> {
-  /**
-   * Warehouse is a subscription to a Warehouse. This field is mutually
-   * exclusive with the UpstreamStages field.
-   *
-   * @generated from field: optional string warehouse = 1;
-   */
-  warehouse?: string;
-
-  /**
-   * UpstreamStages identifies other Stages as potential sources of Freight
-   * for this Stage. This field is mutually exclusive with the Repos field.
-   *
-   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.StageSubscription upstreamStages = 2;
-   */
-  upstreamStages: StageSubscription[] = [];
-
-  constructor(data?: PartialMessage<Subscriptions>) {
-    super();
-    proto2.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto2 = proto2;
-  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.Subscriptions";
-  static readonly fields: FieldList = proto2.util.newFieldList(() => [
-    { no: 1, name: "warehouse", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 2, name: "upstreamStages", kind: "message", T: StageSubscription, repeated: true },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Subscriptions {
-    return new Subscriptions().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): Subscriptions {
-    return new Subscriptions().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Subscriptions {
-    return new Subscriptions().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: Subscriptions | PlainMessage<Subscriptions> | undefined, b: Subscriptions | PlainMessage<Subscriptions> | undefined): boolean {
-    return proto2.util.equals(Subscriptions, a, b);
   }
 }
 

@@ -17,15 +17,15 @@ import (
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
-func TestPromoteToStageSubscribers(t *testing.T) {
+func TestPromoteDownstream(t *testing.T) {
 	testCases := []struct {
 		name       string
-		req        *svcv1alpha1.PromoteToStageSubscribersRequest
+		req        *svcv1alpha1.PromoteDownstreamRequest
 		server     *server
 		assertions func(
 			*testing.T,
 			*fakeevent.EventRecorder,
-			*connect.Response[svcv1alpha1.PromoteToStageSubscribersResponse],
+			*connect.Response[svcv1alpha1.PromoteDownstreamResponse],
 			error,
 		)
 	}{
@@ -35,7 +35,7 @@ func TestPromoteToStageSubscribers(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				_ *fakeevent.EventRecorder,
-				_ *connect.Response[svcv1alpha1.PromoteToStageSubscribersResponse],
+				_ *connect.Response[svcv1alpha1.PromoteDownstreamResponse],
 				err error,
 			) {
 				require.Error(t, err)
@@ -46,7 +46,7 @@ func TestPromoteToStageSubscribers(t *testing.T) {
 		},
 		{
 			name: "error validating project",
-			req: &svcv1alpha1.PromoteToStageSubscribersRequest{
+			req: &svcv1alpha1.PromoteDownstreamRequest{
 				Project: "fake-project",
 				Stage:   "fake-stage",
 				Freight: "fake-freight",
@@ -59,7 +59,7 @@ func TestPromoteToStageSubscribers(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				_ *fakeevent.EventRecorder,
-				_ *connect.Response[svcv1alpha1.PromoteToStageSubscribersResponse],
+				_ *connect.Response[svcv1alpha1.PromoteDownstreamResponse],
 				err error,
 			) {
 				require.Error(t, err)
@@ -68,7 +68,7 @@ func TestPromoteToStageSubscribers(t *testing.T) {
 		},
 		{
 			name: "error getting Stage",
-			req: &svcv1alpha1.PromoteToStageSubscribersRequest{
+			req: &svcv1alpha1.PromoteDownstreamRequest{
 				Project: "fake-project",
 				Stage:   "fake-stage",
 				Freight: "fake-freight",
@@ -88,7 +88,7 @@ func TestPromoteToStageSubscribers(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				_ *fakeevent.EventRecorder,
-				_ *connect.Response[svcv1alpha1.PromoteToStageSubscribersResponse],
+				_ *connect.Response[svcv1alpha1.PromoteDownstreamResponse],
 				err error,
 			) {
 				require.Error(t, err)
@@ -97,7 +97,7 @@ func TestPromoteToStageSubscribers(t *testing.T) {
 		},
 		{
 			name: "Stage not found",
-			req: &svcv1alpha1.PromoteToStageSubscribersRequest{
+			req: &svcv1alpha1.PromoteDownstreamRequest{
 				Project: "fake-project",
 				Stage:   "fake-stage",
 				Freight: "fake-freight",
@@ -117,7 +117,7 @@ func TestPromoteToStageSubscribers(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				_ *fakeevent.EventRecorder,
-				_ *connect.Response[svcv1alpha1.PromoteToStageSubscribersResponse],
+				_ *connect.Response[svcv1alpha1.PromoteDownstreamResponse],
 				err error,
 			) {
 				require.Error(t, err)
@@ -130,7 +130,7 @@ func TestPromoteToStageSubscribers(t *testing.T) {
 		},
 		{
 			name: "error getting Freight",
-			req: &svcv1alpha1.PromoteToStageSubscribersRequest{
+			req: &svcv1alpha1.PromoteDownstreamRequest{
 				Project: "fake-project",
 				Stage:   "fake-stage",
 				Freight: "fake-freight",
@@ -146,13 +146,12 @@ func TestPromoteToStageSubscribers(t *testing.T) {
 				) (*kargoapi.Stage, error) {
 					return &kargoapi.Stage{
 						Spec: kargoapi.StageSpec{
-							Subscriptions: kargoapi.Subscriptions{
-								UpstreamStages: []kargoapi.StageSubscription{
-									{
-										Name: "fake-upstream-stage",
-									},
+							RequestedFreight: []kargoapi.FreightRequest{{
+								Origin: "fake-warehouse",
+								Sources: kargoapi.FreightSources{
+									Stages: []string{"fake-upstream-stage"},
 								},
-							},
+							}},
 						},
 					}, nil
 				},
@@ -167,7 +166,7 @@ func TestPromoteToStageSubscribers(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				_ *fakeevent.EventRecorder,
-				_ *connect.Response[svcv1alpha1.PromoteToStageSubscribersResponse],
+				_ *connect.Response[svcv1alpha1.PromoteDownstreamResponse],
 				err error,
 			) {
 				require.Error(t, err)
@@ -176,7 +175,7 @@ func TestPromoteToStageSubscribers(t *testing.T) {
 		},
 		{
 			name: "Freight not found",
-			req: &svcv1alpha1.PromoteToStageSubscribersRequest{
+			req: &svcv1alpha1.PromoteDownstreamRequest{
 				Project: "fake-project",
 				Stage:   "fake-stage",
 				Freight: "fake-freight",
@@ -192,13 +191,12 @@ func TestPromoteToStageSubscribers(t *testing.T) {
 				) (*kargoapi.Stage, error) {
 					return &kargoapi.Stage{
 						Spec: kargoapi.StageSpec{
-							Subscriptions: kargoapi.Subscriptions{
-								UpstreamStages: []kargoapi.StageSubscription{
-									{
-										Name: "fake-upstream-stage",
-									},
+							RequestedFreight: []kargoapi.FreightRequest{{
+								Origin: "fake-warehouse",
+								Sources: kargoapi.FreightSources{
+									Stages: []string{"fake-upstream-stage"},
 								},
-							},
+							}},
 						},
 					}, nil
 				},
@@ -213,7 +211,7 @@ func TestPromoteToStageSubscribers(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				_ *fakeevent.EventRecorder,
-				_ *connect.Response[svcv1alpha1.PromoteToStageSubscribersResponse],
+				_ *connect.Response[svcv1alpha1.PromoteDownstreamResponse],
 				err error,
 			) {
 				require.Error(t, err)
@@ -226,7 +224,7 @@ func TestPromoteToStageSubscribers(t *testing.T) {
 		},
 		{
 			name: "Freight not available",
-			req: &svcv1alpha1.PromoteToStageSubscribersRequest{
+			req: &svcv1alpha1.PromoteDownstreamRequest{
 				Project: "fake-project",
 				Stage:   "fake-stage",
 				Freight: "fake-freight",
@@ -242,13 +240,12 @@ func TestPromoteToStageSubscribers(t *testing.T) {
 				) (*kargoapi.Stage, error) {
 					return &kargoapi.Stage{
 						Spec: kargoapi.StageSpec{
-							Subscriptions: kargoapi.Subscriptions{
-								UpstreamStages: []kargoapi.StageSubscription{
-									{
-										Name: "fake-upstream-stage",
-									},
+							RequestedFreight: []kargoapi.FreightRequest{{
+								Origin: "fake-warehouse",
+								Sources: kargoapi.FreightSources{
+									Stages: []string{"fake-upstream-stage"},
 								},
-							},
+							}},
 						},
 					}, nil
 				},
@@ -266,7 +263,7 @@ func TestPromoteToStageSubscribers(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				_ *fakeevent.EventRecorder,
-				_ *connect.Response[svcv1alpha1.PromoteToStageSubscribersResponse],
+				_ *connect.Response[svcv1alpha1.PromoteDownstreamResponse],
 				err error,
 			) {
 				require.Error(t, err)
@@ -278,8 +275,8 @@ func TestPromoteToStageSubscribers(t *testing.T) {
 			},
 		},
 		{
-			name: "error finding Stage subscribers",
-			req: &svcv1alpha1.PromoteToStageSubscribersRequest{
+			name: "error finding downstream Stages",
+			req: &svcv1alpha1.PromoteDownstreamRequest{
 				Project: "fake-project",
 				Stage:   "fake-stage",
 				Freight: "fake-freight",
@@ -295,13 +292,12 @@ func TestPromoteToStageSubscribers(t *testing.T) {
 				) (*kargoapi.Stage, error) {
 					return &kargoapi.Stage{
 						Spec: kargoapi.StageSpec{
-							Subscriptions: kargoapi.Subscriptions{
-								UpstreamStages: []kargoapi.StageSubscription{
-									{
-										Name: "fake-upstream-stage",
-									},
+							RequestedFreight: []kargoapi.FreightRequest{{
+								Origin: "fake-warehouse",
+								Sources: kargoapi.FreightSources{
+									Stages: []string{"fake-upstream-stage"},
 								},
-							},
+							}},
 						},
 					}, nil
 				},
@@ -315,26 +311,23 @@ func TestPromoteToStageSubscribers(t *testing.T) {
 				isFreightAvailableFn: func(*kargoapi.Freight, string, []string) bool {
 					return true
 				},
-				findStageSubscribersFn: func(
-					context.Context,
-					*kargoapi.Stage,
-				) ([]kargoapi.Stage, error) {
+				findDownstreamStagesFn: func(context.Context, *kargoapi.Stage) ([]kargoapi.Stage, error) {
 					return nil, errors.New("something went wrong")
 				},
 			},
 			assertions: func(
 				t *testing.T,
 				_ *fakeevent.EventRecorder,
-				_ *connect.Response[svcv1alpha1.PromoteToStageSubscribersResponse],
+				_ *connect.Response[svcv1alpha1.PromoteDownstreamResponse],
 				err error,
 			) {
 				require.Error(t, err)
-				require.Equal(t, "find stage subscribers: something went wrong", err.Error())
+				require.Equal(t, "find downstream stages: something went wrong", err.Error())
 			},
 		},
 		{
-			name: "no Stage subscribers found",
-			req: &svcv1alpha1.PromoteToStageSubscribersRequest{
+			name: "no downstream Stages found",
+			req: &svcv1alpha1.PromoteDownstreamRequest{
 				Project: "fake-project",
 				Stage:   "fake-stage",
 				Freight: "fake-freight",
@@ -350,13 +343,12 @@ func TestPromoteToStageSubscribers(t *testing.T) {
 				) (*kargoapi.Stage, error) {
 					return &kargoapi.Stage{
 						Spec: kargoapi.StageSpec{
-							Subscriptions: kargoapi.Subscriptions{
-								UpstreamStages: []kargoapi.StageSubscription{
-									{
-										Name: "fake-upstream-stage",
-									},
+							RequestedFreight: []kargoapi.FreightRequest{{
+								Origin: "fake-warehouse",
+								Sources: kargoapi.FreightSources{
+									Stages: []string{"fake-upstream-stage"},
 								},
-							},
+							}},
 						},
 					}, nil
 				},
@@ -370,17 +362,14 @@ func TestPromoteToStageSubscribers(t *testing.T) {
 				isFreightAvailableFn: func(*kargoapi.Freight, string, []string) bool {
 					return true
 				},
-				findStageSubscribersFn: func(
-					context.Context,
-					*kargoapi.Stage,
-				) ([]kargoapi.Stage, error) {
+				findDownstreamStagesFn: func(context.Context, *kargoapi.Stage) ([]kargoapi.Stage, error) {
 					return nil, nil
 				},
 			},
 			assertions: func(
 				t *testing.T,
 				_ *fakeevent.EventRecorder,
-				_ *connect.Response[svcv1alpha1.PromoteToStageSubscribersResponse],
+				_ *connect.Response[svcv1alpha1.PromoteDownstreamResponse],
 				err error,
 			) {
 				require.Error(t, err)
@@ -388,12 +377,12 @@ func TestPromoteToStageSubscribers(t *testing.T) {
 				require.True(t, errors.As(err, &connErr))
 				require.Equal(t, connect.CodeNotFound, connErr.Code())
 				require.Contains(t, connErr.Message(), "stage")
-				require.Contains(t, connErr.Message(), "has no subscribers")
+				require.Contains(t, connErr.Message(), "has no downstream stages")
 			},
 		},
 		{
 			name: "promoting not authorized",
-			req: &svcv1alpha1.PromoteToStageSubscribersRequest{
+			req: &svcv1alpha1.PromoteDownstreamRequest{
 				Project: "fake-project",
 				Stage:   "fake-stage",
 				Freight: "fake-freight",
@@ -409,13 +398,12 @@ func TestPromoteToStageSubscribers(t *testing.T) {
 				) (*kargoapi.Stage, error) {
 					return &kargoapi.Stage{
 						Spec: kargoapi.StageSpec{
-							Subscriptions: kargoapi.Subscriptions{
-								UpstreamStages: []kargoapi.StageSubscription{
-									{
-										Name: "fake-upstream-stage",
-									},
+							RequestedFreight: []kargoapi.FreightRequest{{
+								Origin: "fake-warehouse",
+								Sources: kargoapi.FreightSources{
+									Stages: []string{"fake-upstream-stage"},
 								},
-							},
+							}},
 						},
 					}, nil
 				},
@@ -431,10 +419,7 @@ func TestPromoteToStageSubscribers(t *testing.T) {
 				isFreightAvailableFn: func(*kargoapi.Freight, string, []string) bool {
 					return true
 				},
-				findStageSubscribersFn: func(
-					context.Context,
-					*kargoapi.Stage,
-				) ([]kargoapi.Stage, error) {
+				findDownstreamStagesFn: func(context.Context, *kargoapi.Stage) ([]kargoapi.Stage, error) {
 					return []kargoapi.Stage{{}}, nil
 				},
 				authorizeFn: func(
@@ -450,7 +435,7 @@ func TestPromoteToStageSubscribers(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				_ *fakeevent.EventRecorder,
-				_ *connect.Response[svcv1alpha1.PromoteToStageSubscribersResponse],
+				_ *connect.Response[svcv1alpha1.PromoteDownstreamResponse],
 				err error,
 			) {
 				require.Error(t, err)
@@ -459,7 +444,7 @@ func TestPromoteToStageSubscribers(t *testing.T) {
 		},
 		{
 			name: "error creating Promotion",
-			req: &svcv1alpha1.PromoteToStageSubscribersRequest{
+			req: &svcv1alpha1.PromoteDownstreamRequest{
 				Project: "fake-project",
 				Stage:   "fake-stage",
 				Freight: "fake-freight",
@@ -475,13 +460,12 @@ func TestPromoteToStageSubscribers(t *testing.T) {
 				) (*kargoapi.Stage, error) {
 					return &kargoapi.Stage{
 						Spec: kargoapi.StageSpec{
-							Subscriptions: kargoapi.Subscriptions{
-								UpstreamStages: []kargoapi.StageSubscription{
-									{
-										Name: "fake-upstream-stage",
-									},
+							RequestedFreight: []kargoapi.FreightRequest{{
+								Origin: "fake-warehouse",
+								Sources: kargoapi.FreightSources{
+									Stages: []string{"fake-upstream-stage"},
 								},
-							},
+							}},
 						},
 					}, nil
 				},
@@ -495,10 +479,7 @@ func TestPromoteToStageSubscribers(t *testing.T) {
 				isFreightAvailableFn: func(*kargoapi.Freight, string, []string) bool {
 					return true
 				},
-				findStageSubscribersFn: func(
-					context.Context,
-					*kargoapi.Stage,
-				) ([]kargoapi.Stage, error) {
+				findDownstreamStagesFn: func(context.Context, *kargoapi.Stage) ([]kargoapi.Stage, error) {
 					return []kargoapi.Stage{
 						{
 							Spec: kargoapi.StageSpec{
@@ -527,7 +508,7 @@ func TestPromoteToStageSubscribers(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				_ *fakeevent.EventRecorder,
-				_ *connect.Response[svcv1alpha1.PromoteToStageSubscribersResponse],
+				_ *connect.Response[svcv1alpha1.PromoteDownstreamResponse],
 				err error,
 			) {
 				require.Error(t, err)
@@ -539,7 +520,7 @@ func TestPromoteToStageSubscribers(t *testing.T) {
 		},
 		{
 			name: "success",
-			req: &svcv1alpha1.PromoteToStageSubscribersRequest{
+			req: &svcv1alpha1.PromoteDownstreamRequest{
 				Project: "fake-project",
 				Stage:   "fake-stage",
 				Freight: "fake-freight",
@@ -555,13 +536,12 @@ func TestPromoteToStageSubscribers(t *testing.T) {
 				) (*kargoapi.Stage, error) {
 					return &kargoapi.Stage{
 						Spec: kargoapi.StageSpec{
-							Subscriptions: kargoapi.Subscriptions{
-								UpstreamStages: []kargoapi.StageSubscription{
-									{
-										Name: "fake-upstream-stage",
-									},
+							RequestedFreight: []kargoapi.FreightRequest{{
+								Origin: "fake-warehouse",
+								Sources: kargoapi.FreightSources{
+									Stages: []string{"fake-upstream-stage"},
 								},
-							},
+							}},
 						},
 					}, nil
 				},
@@ -575,10 +555,7 @@ func TestPromoteToStageSubscribers(t *testing.T) {
 				isFreightAvailableFn: func(*kargoapi.Freight, string, []string) bool {
 					return true
 				},
-				findStageSubscribersFn: func(
-					context.Context,
-					*kargoapi.Stage,
-				) ([]kargoapi.Stage, error) {
+				findDownstreamStagesFn: func(context.Context, *kargoapi.Stage) ([]kargoapi.Stage, error) {
 					return []kargoapi.Stage{
 						{
 							Spec: kargoapi.StageSpec{
@@ -607,7 +584,7 @@ func TestPromoteToStageSubscribers(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				recorder *fakeevent.EventRecorder,
-				res *connect.Response[svcv1alpha1.PromoteToStageSubscribersResponse],
+				res *connect.Response[svcv1alpha1.PromoteDownstreamResponse],
 				err error,
 			) {
 				require.NoError(t, err)
@@ -624,7 +601,7 @@ func TestPromoteToStageSubscribers(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			recorder := fakeevent.NewEventRecorder(1)
 			testCase.server.recorder = recorder
-			resp, err := testCase.server.PromoteToStageSubscribers(
+			resp, err := testCase.server.PromoteDownstream(
 				context.Background(),
 				connect.NewRequest(testCase.req),
 			)

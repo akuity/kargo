@@ -100,8 +100,8 @@ const (
 	// SubFlag is the flag name for the sub flag.
 	SubFlag = "sub"
 
-	// SubscribersOfFlag is the flag name for the subscribers-of flag.
-	SubscribersOfFlag = "subscribers-of"
+	// DownstreamFromFlag is the flag name for the downstream-from flag.
+	DownstreamFromFlag = "downstream-from"
 
 	// TypeFlag is the flag name for the type flag.
 	TypeFlag = "type"
@@ -277,9 +277,9 @@ func Subs(fs *pflag.FlagSet, subs *[]string, usage string) {
 	fs.StringSliceVar(subs, SubFlag, nil, usage)
 }
 
-// SubscribersOf adds the SubscribersOfFlag to the provided flag set.
-func SubscribersOf(fs *pflag.FlagSet, subscribersOf *string, usage string) {
-	fs.StringVar(subscribersOf, SubscribersOfFlag, "", usage)
+// DownstreamFrom adds the DownstreamFromFlag to the provided flag set.
+func DownstreamFrom(fs *pflag.FlagSet, downstreamFrom *string, usage string) {
+	fs.StringVar(downstreamFrom, DownstreamFromFlag, "", usage)
 }
 
 // Type adds the TypeFlag to the provided flag set.

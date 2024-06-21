@@ -146,11 +146,17 @@ type StageSpec struct {
 	// kargo.akuity.io/shard label with the value of this field. When this field
 	// is empty, the webhook will ensure that label is absent.
 	Shard string `json:"shard,omitempty" protobuf:"bytes,4,opt,name=shard"`
-	// Subscriptions describes the Stage's sources of Freight. This is a required
-	// field.
+	// RequestedFreight expresses the Stage's need for certain pieces of Freight,
+	// each having originated from a particular Warehouse. This list must be
+	// non-empty. In the common case, a Stage will request Freight having
+	// originated from just one specific Warehouse. In advanced cases, requesting
+	// Freight from multiple Warehouses provides a method of advancing new
+	// artifacts of different types through parallel pipelines at different
+	// speeds. This can be useful, for instance, if a Stage is home to multiple
+	// microservices that are independently versioned.
 	//
-	// +kubebuilder:validation:Required
-	Subscriptions Subscriptions `json:"subscriptions" protobuf:"bytes,1,opt,name=subscriptions"`
+	// +kubebuilder:validation:MinItems=1
+	RequestedFreight []FreightRequest `json:"requestedFreight" protobuf:"bytes,1,rep,name=requestedFreight"`
 	// PromotionMechanisms describes how to incorporate Freight into the Stage.
 	// This is an optional field as it is sometimes useful to aggregates available
 	// Freight from multiple upstream Stages without performing any actions. The
@@ -163,23 +169,30 @@ type StageSpec struct {
 	Verification *Verification `json:"verification,omitempty" protobuf:"bytes,3,opt,name=verification"`
 }
 
-// Subscriptions describes a Stage's sources of Freight.
-type Subscriptions struct {
-	// Warehouse is a subscription to a Warehouse. This field is mutually
-	// exclusive with the UpstreamStages field.
-	Warehouse string `json:"warehouse,omitempty" protobuf:"bytes,1,opt,name=warehouse"`
-	// UpstreamStages identifies other Stages as potential sources of Freight
-	// for this Stage. This field is mutually exclusive with the Repos field.
-	UpstreamStages []StageSubscription `json:"upstreamStages,omitempty" protobuf:"bytes,2,rep,name=upstreamStages"`
+// FreightRequest expresses a Stage's need for Freight having originated from a
+// particular Warehouse.
+type FreightRequest struct {
+	// Origin specifies what Warehouse the requested Freight must have originated
+	// from. This is a required field.
+	//
+	// +kubebuilder:validation:Required
+	Origin string `json:"origin" protobuf:"bytes,1,opt,name=origin"`
+	// Sources describes where the requested Freight may be obtained from. This is
+	// a required field.
+	Sources FreightSources `json:"sources" protobuf:"bytes,2,opt,name=sources"`
 }
 
-// StageSubscription defines a subscription to Freight from another Stage.
-type StageSubscription struct {
-	// Name specifies the name of a Stage.
-	//
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
-	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
+type FreightSources struct {
+	// Direct indicates the requested Freight may be obtained directly from the
+	// Warehouse from which it originated. If this field's value is false, then
+	// the value of the Stages field must be non-empty. i.e. Between the two
+	// fields, at least one source must be specified.
+	Direct bool `json:"direct,omitempty" protobuf:"varint,1,opt,name=direct"`
+	// Stages identifies other "upstream" Stages as potential sources of the
+	// requested Freight. If this field's value is empty, then the value of the
+	// Direct field must be true. i.e. Between the two fields, at least on source
+	// must be specified.
+	Stages []string `json:"stages,omitempty" protobuf:"bytes,2,rep,name=stages"`
 }
 
 // PromotionMechanisms describes how to incorporate Freight into a Stage.

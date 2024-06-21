@@ -3,6 +3,7 @@ package kubeclient
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
@@ -382,14 +383,12 @@ func IndexStagesByUpstreamStages(ctx context.Context, mgr ctrl.Manager) error {
 
 func indexStagesByUpstreamStages(obj client.Object) []string {
 	stage := obj.(*kargoapi.Stage) // nolint: forcetypeassert
-	if stage.Spec.Subscriptions.UpstreamStages == nil {
-		return nil
+	var upstreams []string
+	for _, req := range stage.Spec.RequestedFreight {
+		upstreams = append(upstreams, req.Sources.Stages...)
 	}
-	upstreamStages := make([]string, len(stage.Spec.Subscriptions.UpstreamStages))
-	for i, upstreamStage := range stage.Spec.Subscriptions.UpstreamStages {
-		upstreamStages[i] = upstreamStage.Name
-	}
-	return upstreamStages
+	slices.Sort(upstreams)
+	return slices.Compact(upstreams)
 }
 
 func IndexStagesByWarehouse(ctx context.Context, mgr ctrl.Manager) error {
@@ -403,10 +402,13 @@ func IndexStagesByWarehouse(ctx context.Context, mgr ctrl.Manager) error {
 
 func indexStagesByWarehouse(obj client.Object) []string {
 	stage := obj.(*kargoapi.Stage) // nolint: forcetypeassert
-	if stage.Spec.Subscriptions.Warehouse != "" {
-		return []string{stage.Spec.Subscriptions.Warehouse}
+	var warehouses []string
+	for _, req := range stage.Spec.RequestedFreight {
+		if req.Sources.Direct {
+			warehouses = append(warehouses, req.Origin)
+		}
 	}
-	return nil
+	return warehouses
 }
 
 func IndexServiceAccountsByOIDCEmail(ctx context.Context, mgr ctrl.Manager) error {
