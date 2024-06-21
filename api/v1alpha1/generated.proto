@@ -1223,12 +1223,22 @@ message StageStatus {
   // Phase describes where the Stage currently is in its lifecycle.
   optional string phase = 1;
 
+  // FreightHistory is a list of recent Freight selections that were deployed
+  // to the Stage. By default, the last ten Freight selections are stored.
+  // The first item in the list is the most recent Freight selection and
+  // currently deployed to the Stage, subsequent items are older selections.
+  map<string, FreightReference> freightHistory = 4;
+
   // CurrentFreight is a simplified representation of the Stage's current
   // Freight describing what is currently deployed to the Stage.
+  //
+  // Deprecated: Use the top item in the FreightHistory stack instead.
   optional FreightReference currentFreight = 2;
 
   // History is a stack of recent Freight. By default, the last ten Freight are
   // stored.
+  //
+  // Deprecated: Use the FreightHistory stack instead.
   repeated FreightReference history = 3;
 
   // Health is the Stage's last observed health.

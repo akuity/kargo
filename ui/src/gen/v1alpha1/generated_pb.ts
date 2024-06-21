@@ -3894,8 +3894,20 @@ export class StageStatus extends Message<StageStatus> {
   phase?: string;
 
   /**
+   * FreightHistory is a list of recent Freight selections that were deployed
+   * to the Stage. By default, the last ten Freight selections are stored.
+   * The first item in the list is the most recent Freight selection and
+   * currently deployed to the Stage, subsequent items are older selections.
+   *
+   * @generated from field: map<string, github.com.akuity.kargo.api.v1alpha1.FreightReference> freightHistory = 4;
+   */
+  freightHistory: { [key: string]: FreightReference } = {};
+
+  /**
    * CurrentFreight is a simplified representation of the Stage's current
    * Freight describing what is currently deployed to the Stage.
+   *
+   * Deprecated: Use the top item in the FreightHistory stack instead.
    *
    * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.FreightReference currentFreight = 2;
    */
@@ -3904,6 +3916,8 @@ export class StageStatus extends Message<StageStatus> {
   /**
    * History is a stack of recent Freight. By default, the last ten Freight are
    * stored.
+   *
+   * Deprecated: Use the FreightHistory stack instead.
    *
    * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.FreightReference history = 3;
    */
@@ -3956,6 +3970,7 @@ export class StageStatus extends Message<StageStatus> {
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 11, name: "lastHandledRefresh", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 1, name: "phase", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 4, name: "freightHistory", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "message", T: FreightReference} },
     { no: 2, name: "currentFreight", kind: "message", T: FreightReference, opt: true },
     { no: 3, name: "history", kind: "message", T: FreightReference, repeated: true },
     { no: 8, name: "health", kind: "message", T: Health, opt: true },
