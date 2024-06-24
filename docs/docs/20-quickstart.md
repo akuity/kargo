@@ -335,8 +335,9 @@ the previous section.
     spec:
       subscriptions:
       - image:
-          repoURL: nginx
-          semverConstraint: ^1.24.0
+          repoURL: public.ecr.aws/nginx/nginx
+          semverConstraint: ^1.26.0
+          discoveryLimit: 5
     ---
     apiVersion: kargo.akuity.io/v1alpha1
     kind: Stage
@@ -352,7 +353,7 @@ the previous section.
           writeBranch: stage/test
           kustomize:
             images:
-            - image: nginx
+            - image: public.ecr.aws/nginx/nginx
               path: stages/test
         argoCDAppUpdates:
         - appName: kargo-demo-test
@@ -373,7 +374,7 @@ the previous section.
           writeBranch: stage/uat
           kustomize:
             images:
-            - image: nginx
+            - image: public.ecr.aws/nginx/nginx
               path: stages/uat
         argoCDAppUpdates:
         - appName: kargo-demo-uat
@@ -394,7 +395,7 @@ the previous section.
           writeBranch: stage/prod
           kustomize:
             images:
-            - image: nginx
+            - image: public.ecr.aws/nginx/nginx
               path: stages/prod
         argoCDAppUpdates:
         - appName: kargo-demo-prod
@@ -434,8 +435,9 @@ the previous section.
     uat                                       NotApplicable   20s
     ```
 
-1. Our `Warehouse`, which subscribes to the `nginx` image repository, also
-   should have already produced `Freight`:
+1. After a few seconds, our `Warehouse`, which subscribes to the
+   `public.ecr.aws/nginx/nginx` container image, also should have already
+   produced `Freight`:
 
     ```shell
     kargo get freight --project kargo-demo
@@ -458,7 +460,7 @@ the previous section.
       * Helm charts (from chart repositories)
 
     This introductory example has `Freight` that references only a specific
-    version of the `nginx` container image.
+    version of the `public.ecr.aws/nginx/nginx` container image.
     :::
 
 1. We'll use it later, so save the ID of the `Freight` to an environment
@@ -534,9 +536,9 @@ the previous section.
             "id": "f5f87aa23c9e97f43eb83dd63768ee41f5ba3766",
             "images": [
                 {
-                    "digest": "sha256:2bdc49f2f8ae8d8dc50ed00f2ee56d00385c6f8bc8a8b320d0a294d9e3b49026",
-                    "repoURL": "nginx",
-                    "tag": "1.25.3"
+                    "digest": "sha256:b2487a28589657b318e0d63110056e11564e73b9fd3ec4c4afba5542f9d07d46",
+                    "repoURL": "public.ecr.aws/nginx/nginx",
+                    "tag": "1.27.0"
                 }
             ],
         },
@@ -546,9 +548,9 @@ the previous section.
                 "id": "f5f87aa23c9e97f43eb83dd63768ee41f5ba3766",
                 "images": [
                     {
-                        "digest": "sha256:2bdc49f2f8ae8d8dc50ed00f2ee56d00385c6f8bc8a8b320d0a294d9e3b49026",
-                        "repoURL": "nginx",
-                        "tag": "1.25.3"
+                        "digest": "sha256:b2487a28589657b318e0d63110056e11564e73b9fd3ec4c4afba5542f9d07d46",
+                        "repoURL": "public.ecr.aws/nginx/nginx",
+                        "tag": "1.27.0"
                     }
                 ],
             }
