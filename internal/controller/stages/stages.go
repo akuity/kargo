@@ -659,7 +659,7 @@ func (r *reconciler) syncNormalStage(
 		)
 	} else {
 		for _, freight := range currentFreight.Freight {
-			freightLogger := logger.WithValues("freight", status.FreightHistory.Current())
+			freightLogger := logger.WithValues("freight", freight.Name)
 			shouldRecordFreightVerificationEvent := false
 
 			// Always check the health of the Argo CD Applications associated with the
