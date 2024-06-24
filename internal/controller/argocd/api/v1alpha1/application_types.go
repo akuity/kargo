@@ -1,6 +1,7 @@
 package v1alpha1
 
 import (
+	"encoding/json"
 	"reflect"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -67,9 +68,12 @@ const (
 )
 
 type ApplicationSourceHelm struct {
-	ReleaseName  string          `json:"releaseName,omitempty"`
-	ValueFiles   []string        `json:"valueFiles,omitempty"`
-	ValuesObject any             `json:"valuesObject,omitempty"`
+	ReleaseName string   `json:"releaseName,omitempty"`
+	ValueFiles  []string `json:"valueFiles,omitempty"`
+	// +kubebuilder:validation:Schemaless
+	// +kubebuilder:pruning:PreserveUnknownFields
+	// +kubebuilder:validation:Type=object
+	ValuesObject json.RawMessage `json:"valuesObject,omitempty"`
 	Parameters   []HelmParameter `json:"parameters,omitempty"`
 }
 
