@@ -419,6 +419,15 @@ message Freight {
   optional FreightStatus status = 6;
 }
 
+// FreightHistoryEntry is a collection of FreightReferences, each of which
+// represents a piece of Freight that has been selected for deployment to a
+// Stage.
+message FreightHistoryEntry {
+  // Freight is a map of FreightReference objects, indexed by their Warehouse
+  // origin.
+  map<string, FreightReference> items = 1;
+}
+
 // FreightList is a list of Freight resources.
 message FreightList {
   optional k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
@@ -467,15 +476,6 @@ message FreightRequest {
   // Sources describes where the requested Freight may be obtained from. This is
   // a required field.
   optional FreightSources sources = 2;
-}
-
-// FreightSelection is a collection of FreightReferences, each of which
-// represents a piece of Freight that has been selected for deployment to a
-// Stage.
-message FreightSelection {
-  // Items is a map of FreightReference objects, indexed by their Warehouse
-  // origin.
-  map<string, FreightReference> items = 1;
 }
 
 message FreightSources {
@@ -1236,7 +1236,7 @@ message StageStatus {
   // to the Stage. By default, the last ten Freight selections are stored.
   // The first item in the list is the most recent Freight selection and
   // currently deployed to the Stage, subsequent items are older selections.
-  repeated FreightSelection freightHistory = 4;
+  repeated FreightHistoryEntry freightHistory = 4;
 
   // CurrentFreight is a simplified representation of the Stage's current
   // Freight describing what is currently deployed to the Stage.

@@ -1334,7 +1334,7 @@ spec:
                   currently deployed to the Stage, subsequent items are older selections.
                 items:
                   description: |-
-                    FreightSelection is a collection of FreightReferences, each of which
+                    FreightHistoryEntry is a collection of FreightReferences, each of which
                     represents a piece of Freight that has been selected for deployment to a
                     Stage.
                   properties:
@@ -1579,7 +1579,7 @@ spec:
                             type: string
                         type: object
                       description: |-
-                        Items is a map of FreightReference objects, indexed by their Warehouse
+                        Freight is a map of FreightReference objects, indexed by their Warehouse
                         origin.
                       type: object
                   type: object

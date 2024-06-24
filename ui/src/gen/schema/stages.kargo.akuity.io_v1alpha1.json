@@ -1155,7 +1155,7 @@
         "freightHistory": {
           "description": "FreightHistory is a list of recent Freight selections that were deployed\nto the Stage. By default, the last ten Freight selections are stored.\nThe first item in the list is the most recent Freight selection and\ncurrently deployed to the Stage, subsequent items are older selections.",
           "items": {
-            "description": "FreightSelection is a collection of FreightReferences, each of which\nrepresents a piece of Freight that has been selected for deployment to a\nStage.",
+            "description": "FreightHistoryEntry is a collection of FreightReferences, each of which\nrepresents a piece of Freight that has been selected for deployment to a\nStage.",
             "properties": {
               "items": {
                 "additionalProperties": {
@@ -1376,7 +1376,7 @@
                   },
                   "type": "object"
                 },
-                "description": "Items is a map of FreightReference objects, indexed by their Warehouse\norigin.",
+                "description": "Freight is a map of FreightReference objects, indexed by their Warehouse\norigin.",
                 "type": "object"
               }
             },
