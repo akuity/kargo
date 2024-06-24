@@ -93,3 +93,11 @@ export type DagreNode = AnyNodeType & {
   width: number;
   height: number;
 };
+
+export interface StagePixelStyle {
+  opacity: number;
+  backgroundColor: string;
+  border?: string;
+}
+
+export type StageStyleMap = { [key: string]: StagePixelStyle };

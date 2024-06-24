@@ -1,0 +1,50 @@
+.metric-chart svg {
+  overflow: visible;
+}
+
+.metric-chart-tooltip {
+  background: white;
+  max-width: 350px;
+  padding: 8px;
+}
+
+.metric-chart-tooltip-status {
+  display: flex;
+
+  > :first-child {
+    margin: 4px 4px 0 0;
+  }
+}
+
+.chart-axis text,
+.chart-label > tspan {
+  @apply stroke-neutral-800;
+  font-size: 11px;
+  font-weight: 100;
+}
+
+.chart-line > path {
+  @apply stroke-neutral-800;
+}
+
+.reference-line {
+  &.is-ERROR > line {
+    @apply stroke-red-500;
+  }
+  &.is-SUCCESS > line {
+    @apply stroke-green-500;
+  }
+}
+
+.reference-area {
+  > path {
+    opacity: 0.3;
+  }
+
+  &.is-ERROR > path {
+    @apply fill-red-500;
+  }
+  &.is-SUCCESS > path {
+    @apply fill-green-500;
+  }
+}

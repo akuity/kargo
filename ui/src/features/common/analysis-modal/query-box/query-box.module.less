@@ -1,0 +1,49 @@
+.query-box {
+  position: relative;
+  @apply p-2;
+  padding-right: 48px;
+  @apply bg-neutral-200;
+  @apply border border-solid border-neutral-400;
+  max-height: 70px;
+  overflow: hidden;
+  transition: max-height 0.3s ease-in-out;
+
+  &.can-expand {
+    cursor: pointer;
+  }
+
+  .query {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    overflow: auto hidden;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    text-overflow: ellipsis;
+    line-clamp: 3;
+    -webkit-line-clamp: 3;
+    @apply font-mono;
+    font-size: 12px;
+    margin-bottom: 0;
+  }
+
+  &.is-expanded {
+    max-height: 500px;
+
+    .query {
+      line-clamp: initial;
+      -webkit-line-clamp: initial;
+    }
+  }
+}
+
+.query-copy-button {
+  position: absolute;
+  font-size: 18px;
+  line-height: 1;
+  top: 8px;
+  right: 6px;
+
+  svg {
+    @apply text-blue-500;
+  }
+}
