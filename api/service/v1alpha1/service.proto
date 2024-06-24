@@ -51,6 +51,7 @@ service KargoService {
   rpc DeleteProject(DeleteProjectRequest) returns (DeleteProjectResponse);
   rpc GetProject(GetProjectRequest) returns (GetProjectResponse);
   rpc ListProjects(ListProjectsRequest) returns (ListProjectsResponse);
+  rpc ListDetailedProjects(ListDetailedProjectsRequest) returns (ListDetailedProjectsResponse);
 
   /* Freight APIs */
 
@@ -337,6 +338,19 @@ message ListProjectsRequest {
 
 message ListProjectsResponse {
   repeated github.com.akuity.kargo.api.v1alpha1.Project projects = 1;
+}
+
+message DetailedProject {
+  github.com.akuity.kargo.api.v1alpha1.Project project = 1;
+  repeated github.com.akuity.kargo.api.v1alpha1.Stage stages = 2;
+}
+
+message ListDetailedProjectsRequest {
+  /* explicitly empty */
+}
+
+message ListDetailedProjectsResponse {
+  repeated DetailedProject detailed_projects = 1;
 }
 
 message ApproveFreightRequest {
