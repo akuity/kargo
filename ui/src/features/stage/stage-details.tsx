@@ -10,6 +10,7 @@ import { Stage, VerificationInfo } from '@ui/gen/v1alpha1/generated_pb';
 
 import { Description } from '../common/description';
 import { ManifestPreview } from '../common/manifest-preview';
+import { useImages } from '../project/pipelines/utils/useImages';
 
 import { Promotions } from './promotions';
 import { StageActions } from './stage-actions';
@@ -18,6 +19,8 @@ import { Verifications } from './verifications';
 export const StageDetails = ({ stage }: { stage: Stage }) => {
   const { name: projectName, stageName } = useParams();
   const navigate = useNavigate();
+
+  const images = useImages([stage]);
 
   const onClose = () => navigate(generatePath(paths.project, { name: projectName }));
   const [isVerificationRunning, setIsVerificationRunning] = useState(false);
@@ -75,7 +78,12 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
                 {
                   key: '2',
                   label: 'Verifications',
-                  children: <Verifications verifications={verifications} />
+                  children: (
+                    <Verifications
+                      verifications={verifications}
+                      images={Array.from(images.keys())}
+                    />
+                  )
                 },
                 {
                   key: '3',

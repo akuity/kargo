@@ -454,7 +454,7 @@ export const Pipelines = () => {
         </div>
         <SuspenseSpin>
           {stage && <StageDetails stage={stage} />}
-          {freight && <FreightDetails freight={freight} />}
+          {freight && <FreightDetails freight={freight} refetchFreight={refetchFreightData} />}
           {warehouse && (
             <WarehouseDetails warehouse={warehouse} refetchFreight={() => refetchFreightData()} />
           )}

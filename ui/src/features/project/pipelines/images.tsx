@@ -2,21 +2,15 @@ import { faDocker } from '@fortawesome/free-brands-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Switch, Tooltip } from 'antd';
 import classNames from 'classnames';
-import { useContext, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { generatePath, useNavigate } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
-import { ColorContext } from '@ui/context/colors';
 import { Stage } from '@ui/gen/v1alpha1/generated_pb';
 import { useLocalStorage } from '@ui/utils/use-local-storage';
 
-interface StagePixelStyle {
-  opacity: number;
-  backgroundColor: string;
-  border?: string;
-}
-
-type StageStyleMap = { [key: string]: StagePixelStyle };
+import { StagePixelStyle, StageStyleMap } from './types';
+import { useImages } from './utils/useImages';
 
 const ImageTagRow = ({
   tag,
@@ -97,49 +91,7 @@ export const Images = (props: { project: string; stages: Stage[] }) => {
 };
 
 export const ImagesTable = ({ project, stages }: { project: string; stages: Stage[] }) => {
-  const colors = useContext(ColorContext);
-  const images = useMemo(() => {
-    const images = new Map<string, Map<string, StageStyleMap>>();
-    stages.forEach((stage) => {
-      const len = stage.status?.history?.length || 0;
-      stage.status?.history?.forEach((freight, i) => {
-        freight.images?.forEach((image) => {
-          let repo = image.repoURL ? images.get(image.repoURL) : undefined;
-          if (!repo) {
-            repo = new Map<string, StageStyleMap>();
-            images.set(image.repoURL!, repo);
-          }
-          let curStages = image.tag ? repo.get(image.tag) : undefined;
-          if (!curStages) {
-            curStages = {} as StageStyleMap;
-          }
-          curStages[stage.metadata?.name as string] = {
-            opacity: 1 - i / len,
-            backgroundColor: colors[stage.metadata?.name as string]
-          };
-          repo.set(image.tag!, curStages);
-        });
-      });
-
-      stage.status?.currentFreight?.images?.forEach((image) => {
-        let repo = image.repoURL ? images.get(image.repoURL) : undefined;
-        if (!repo) {
-          repo = new Map<string, StageStyleMap>();
-          images.set(image.repoURL!, repo);
-        }
-        let curStages = image.tag ? repo.get(image.tag) : undefined;
-        if (!curStages) {
-          curStages = {} as StageStyleMap;
-        }
-        curStages[stage.metadata?.name as string] = {
-          opacity: 1,
-          backgroundColor: colors[stage.metadata?.name as string]
-        };
-        repo.set(image.tag!, curStages);
-      });
-    });
-    return images;
-  }, [stages]);
+  const images = useImages(stages);
 
   const [imageURL, setImageURL] = useState(images.keys().next().value as string);
   const [showHistory, setShowHistory] = useLocalStorage(`${project}-show-history`, false);

@@ -1,0 +1,27 @@
+.metric-table {
+  @apply border border-solid border-neutral-400;
+  @apply mb-4;
+}
+
+.condition {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  @apply mt-2;
+  font-size: 12px;
+
+  &::before {
+    content: '';
+    display: block;
+    height: 2px;
+    width: 12px;
+    @apply mr-2;
+  }
+
+  &.is-ERROR::before {
+    @apply bg-red-500;
+  }
+  &.is-SUCCESS::before {
+    @apply bg-green-500;
+  }
+}
