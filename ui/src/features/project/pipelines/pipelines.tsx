@@ -97,6 +97,7 @@ export const Pipelines = () => {
   );
 
   const [selectedWarehouse, setSelectedWarehouse] = React.useState('');
+  const [freightlineCollapsed, setFreightlineCollapsed] = React.useState(false);
 
   const warehouseMap = useMemo(() => {
     const map = {} as { [key: string]: Warehouse };
@@ -222,6 +223,8 @@ export const Pipelines = () => {
           selectedWarehouse={selectedWarehouse || ''}
           setSelectedWarehouse={setSelectedWarehouse}
           warehouses={warehouseMap}
+          collapsed={freightlineCollapsed}
+          setCollapsed={setFreightlineCollapsed}
         />
         <FreightlineWrapper>
           <Suspense
@@ -241,6 +244,8 @@ export const Pipelines = () => {
               state={state}
               promotionEligible={{}}
               stagesPerFreight={stagesPerFreight}
+              collapsed={freightlineCollapsed}
+              setCollapsed={setFreightlineCollapsed}
             />
           </Suspense>
         </FreightlineWrapper>
