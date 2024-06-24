@@ -576,16 +576,34 @@ type FreightReference struct {
 	VerificationHistory VerificationInfoStack `json:"verificationHistory,omitempty" protobuf:"bytes,7,rep,name=verificationHistory"`
 }
 
-// FreightSelection is a map of origin names to Freight references.
-type FreightSelection map[string]*FreightReference
+// FreightSelection is a collection of FreightReferences, each of which
+// represents a piece of Freight that has been selected for deployment to a
+// Stage.
+type FreightSelection struct {
+	// Items is a map of FreightReference objects, indexed by their Warehouse
+	// origin.
+	Items map[string]FreightReference `json:"items,omitempty" protobuf:"bytes,1,rep,name=items" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+}
+
+// UpdateOrPush updates the entry in the FreightSelection based on the Warehouse
+// name of the provided FreightReference. If no such entry exists, the provided
+// FreightReference is appended to the FreightSelection.
+func (f *FreightSelection) UpdateOrPush(freight ...FreightReference) {
+	if f.Items == nil {
+		f.Items = make(map[string]FreightReference)
+	}
+	for _, i := range freight {
+		f.Items[i.Warehouse] = i
+	}
+}
 
 // FreightHistory is a linear list of FreightSelection items. The list is
 // ordered by the time at which the FreightSelection was recorded, with the
 // most recent (current) FreightSelection at the top of the list.
-type FreightHistory []FreightSelection
+type FreightHistory []*FreightSelection
 
 // Current returns the most recent (current) FreightSelection from the history.
-func (f *FreightHistory) Current() FreightSelection {
+func (f *FreightHistory) Current() *FreightSelection {
 	if f == nil || len(*f) == 0 {
 		return nil
 	}
@@ -596,7 +614,7 @@ func (f *FreightHistory) Current() FreightSelection {
 // FreightSelection in the history. I.e. The provided FreightSelection becomes
 // the first item in the list. If the list grows beyond ten items, the bottom
 // items are removed.
-func (f *FreightHistory) Record(freight ...FreightSelection) {
+func (f *FreightHistory) Record(freight ...*FreightSelection) {
 	*f = append(freight, *f...)
 	f.truncate()
 }
