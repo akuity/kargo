@@ -469,6 +469,15 @@ message FreightRequest {
   optional FreightSources sources = 2;
 }
 
+// FreightSelection is a collection of FreightReferences, each of which
+// represents a piece of Freight that has been selected for deployment to a
+// Stage.
+message FreightSelection {
+  // Items is a map of FreightReference objects, indexed by their Warehouse
+  // origin.
+  map<string, FreightReference> items = 1;
+}
+
 message FreightSources {
   // Direct indicates the requested Freight may be obtained directly from the
   // Warehouse from which it originated. If this field's value is false, then
@@ -1227,7 +1236,7 @@ message StageStatus {
   // to the Stage. By default, the last ten Freight selections are stored.
   // The first item in the list is the most recent Freight selection and
   // currently deployed to the Stage, subsequent items are older selections.
-  map<string, FreightReference> freightHistory = 4;
+  repeated FreightSelection freightHistory = 4;
 
   // CurrentFreight is a simplified representation of the Stage's current
   // Freight describing what is currently deployed to the Stage.
