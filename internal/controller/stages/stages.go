@@ -648,13 +648,13 @@ func (r *reconciler) syncNormalStage(
 	status.ObservedGeneration = stage.Generation
 	status.Health = nil
 
-	if status.FreightHistory.Current() == nil {
+	if currentFreight := status.FreightHistory.Current(); currentFreight == nil || len(currentFreight.Items) == 0 {
 		status.Phase = kargoapi.StagePhaseNotApplicable
 		logger.Debug(
 			"Stage has no current Freight; no health checks or verification to perform",
 		)
 	} else {
-		for _, freight := range status.FreightHistory.Current() {
+		for _, freight := range currentFreight.Items {
 			freightLogger := logger.WithValues("freight", status.FreightHistory.Current())
 			shouldRecordFreightVerificationEvent := false
 
@@ -663,7 +663,7 @@ func (r *reconciler) syncNormalStage(
 			// Argo CD Applications is always relevant.
 			if status.Health = r.appHealth.EvaluateHealth(
 				ctx,
-				*freight,
+				freight,
 				stage.Spec.PromotionMechanisms.ArgoCDAppUpdates,
 			); status.Health != nil {
 				freightLogger.WithValues("health", status.Health.Status).Debug("Stage health assessed")
@@ -708,6 +708,7 @@ func (r *reconciler) syncNormalStage(
 								stage,
 							); err != nil && !freight.VerificationInfo.HasAnalysisRun() {
 								freight.VerificationHistory.UpdateOrPush(*freight.VerificationInfo)
+								currentFreight.UpdateOrPush(freight)
 								return status, fmt.Errorf("error starting verification: %w", err)
 							}
 						}
@@ -719,6 +720,7 @@ func (r *reconciler) syncNormalStage(
 							stage,
 						); err != nil && freight.VerificationInfo.HasAnalysisRun() {
 							freight.VerificationHistory.UpdateOrPush(*freight.VerificationInfo)
+							currentFreight.UpdateOrPush(freight)
 							return status, fmt.Errorf("error getting verification info: %w", err)
 						}
 
@@ -813,6 +815,7 @@ func (r *reconciler) syncNormalStage(
 						},
 					)
 					if err != nil {
+						currentFreight.UpdateOrPush(freight)
 						return status, fmt.Errorf("get analysisRun: %w", err)
 					}
 				}
@@ -826,12 +829,15 @@ func (r *reconciler) syncNormalStage(
 					},
 				)
 				if err != nil {
+					currentFreight.UpdateOrPush(freight)
 					return status, fmt.Errorf("get freight: %w", err)
 				}
 				if fr != nil {
 					r.recordFreightVerificationEvent(stage, fr, vi, ar)
 				}
 			}
+
+			currentFreight.UpdateOrPush(freight)
 		}
 	}
 
@@ -896,10 +902,10 @@ func (r *reconciler) syncNormalStage(
 	// Only proceed if latest Freight isn't the one we already have
 	// TODO(hidde): This is a naive check, and should be replaced with proper
 	// logic that works with multiple Freight.
-	if current := status.FreightHistory.Current(); current != nil {
+	if currentFreight := status.FreightHistory.Current(); currentFreight != nil && len(currentFreight.Items) > 0 {
 		for _, requested := range stage.Spec.RequestedFreight {
-			if _, ok := current[requested.Origin]; ok {
-				if current[requested.Origin].Name == latestFreight.Name {
+			if _, ok := currentFreight.Items[requested.Origin]; ok {
+				if currentFreight.Items[requested.Origin].Name == latestFreight.Name {
 					logger.Debug("Stage already has latest available Freight")
 					return status, nil
 				}
@@ -1061,8 +1067,10 @@ func (r *reconciler) syncPromotions(
 		if promo.Status.Phase == kargoapi.PromotionPhaseSucceeded {
 			// TODO(hidde): This should ensure that it properly handles
 			// multiple Freight when implemented on the Promotion side.
-			status.FreightHistory.Record(kargoapi.FreightSelection{
-				status.LastPromotion.Freight.Warehouse: status.LastPromotion.Freight.DeepCopy(),
+			status.FreightHistory.Record(&kargoapi.FreightSelection{
+				Items: map[string]kargoapi.FreightReference{
+					status.LastPromotion.Freight.Warehouse: *status.LastPromotion.Freight.DeepCopy(),
+				},
 			})
 			if status.CurrentPromotion == nil {
 				status.Phase = kargoapi.StagePhaseSteady
