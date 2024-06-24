@@ -652,13 +652,13 @@ func (r *reconciler) syncNormalStage(
 	status.ObservedGeneration = stage.Generation
 	status.Health = nil
 
-	if currentFreight := status.FreightHistory.Current(); currentFreight == nil || len(currentFreight.Items) == 0 {
+	if currentFreight := status.FreightHistory.Current(); currentFreight == nil || len(currentFreight.Freight) == 0 {
 		status.Phase = kargoapi.StagePhaseNotApplicable
 		logger.Debug(
 			"Stage has no current Freight; no health checks or verification to perform",
 		)
 	} else {
-		for _, freight := range currentFreight.Items {
+		for _, freight := range currentFreight.Freight {
 			freightLogger := logger.WithValues("freight", status.FreightHistory.Current())
 			shouldRecordFreightVerificationEvent := false
 
@@ -906,10 +906,10 @@ func (r *reconciler) syncNormalStage(
 	// Only proceed if latest Freight isn't the one we already have
 	// TODO(hidde): This is a naive check, and should be replaced with proper
 	// logic that works with multiple Freight.
-	if currentFreight := status.FreightHistory.Current(); currentFreight != nil && len(currentFreight.Items) > 0 {
+	if currentFreight := status.FreightHistory.Current(); currentFreight != nil && len(currentFreight.Freight) > 0 {
 		for _, requested := range stage.Spec.RequestedFreight {
-			if _, ok := currentFreight.Items[requested.Origin]; ok {
-				if currentFreight.Items[requested.Origin].Name == latestFreight.Name {
+			if _, ok := currentFreight.Freight[requested.Origin]; ok {
+				if currentFreight.Freight[requested.Origin].Name == latestFreight.Name {
 					logger.Debug("Stage already has latest available Freight")
 					return status, nil
 				}
@@ -1071,8 +1071,8 @@ func (r *reconciler) syncPromotions(
 		if promo.Status.Phase == kargoapi.PromotionPhaseSucceeded {
 			// TODO(hidde): This should ensure that it properly handles
 			// multiple Freight when implemented on the Promotion side.
-			status.FreightHistory.Record(&kargoapi.FreightSelection{
-				Items: map[string]kargoapi.FreightReference{
+			status.FreightHistory.Record(&kargoapi.FreightHistoryEntry{
+				Freight: map[string]kargoapi.FreightReference{
 					status.LastPromotion.Freight.Warehouse: *status.LastPromotion.Freight.DeepCopy(),
 				},
 			})

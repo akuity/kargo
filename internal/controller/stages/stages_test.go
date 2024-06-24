@@ -281,7 +281,7 @@ func TestSyncNormalStage(t *testing.T) {
 					Phase: kargoapi.StagePhaseSteady,
 					FreightHistory: kargoapi.FreightHistory{
 						{
-							Items: map[string]kargoapi.FreightReference{
+							Freight: map[string]kargoapi.FreightReference{
 								"fake-warehouse": {
 									Warehouse: "fake-warehouse",
 									VerificationInfo: &kargoapi.VerificationInfo{
@@ -333,7 +333,7 @@ func TestSyncNormalStage(t *testing.T) {
 				newHistory := newStatus.FreightHistory.Current()
 				require.NotNil(t, newHistory)
 
-				newFreight, ok := newHistory.Items["fake-warehouse"]
+				newFreight, ok := newHistory.Freight["fake-warehouse"]
 				require.True(t, ok)
 
 				require.Equal(
@@ -370,7 +370,7 @@ func TestSyncNormalStage(t *testing.T) {
 					Phase: kargoapi.StagePhaseSteady,
 					FreightHistory: kargoapi.FreightHistory{
 						{
-							Items: map[string]kargoapi.FreightReference{
+							Freight: map[string]kargoapi.FreightReference{
 								"fake-warehouse": {
 									Warehouse: "fake-warehouse",
 									VerificationInfo: &kargoapi.VerificationInfo{
@@ -436,7 +436,7 @@ func TestSyncNormalStage(t *testing.T) {
 					Phase: kargoapi.StagePhaseVerifying,
 					FreightHistory: kargoapi.FreightHistory{
 						{
-							Items: map[string]kargoapi.FreightReference{
+							Freight: map[string]kargoapi.FreightReference{
 								"fake-warehouse": {
 									Warehouse: "fake-warehouse",
 								},
@@ -485,7 +485,7 @@ func TestSyncNormalStage(t *testing.T) {
 
 				current := newStatus.FreightHistory.Current()
 				require.NotNil(t, current)
-				newFreight, ok := current.Items["fake-warehouse"]
+				newFreight, ok := current.Freight["fake-warehouse"]
 				require.True(t, ok)
 
 				expectInfo := kargoapi.VerificationInfo{
@@ -510,7 +510,7 @@ func TestSyncNormalStage(t *testing.T) {
 				// Everything else should be returned unchanged
 				newFreight.VerificationInfo = nil
 				newFreight.VerificationHistory = nil
-				newStatus.FreightHistory.Current().Items["fake-warehouse"] = newFreight
+				newStatus.FreightHistory.Current().Freight["fake-warehouse"] = newFreight
 
 				newStatus.Phase = initialStatus.Phase
 				require.Equal(t, initialStatus, newStatus)
@@ -540,7 +540,7 @@ func TestSyncNormalStage(t *testing.T) {
 					Phase: kargoapi.StagePhaseVerifying,
 					FreightHistory: kargoapi.FreightHistory{
 						{
-							Items: map[string]kargoapi.FreightReference{
+							Freight: map[string]kargoapi.FreightReference{
 								"fake-warehouse": {
 									Warehouse: "fake-warehouse",
 								},
@@ -580,7 +580,7 @@ func TestSyncNormalStage(t *testing.T) {
 
 				current := newStatus.FreightHistory.Current()
 				require.NotNil(t, current)
-				newFreight, ok := current.Items["fake-warehouse"]
+				newFreight, ok := current.Freight["fake-warehouse"]
 				require.True(t, ok)
 
 				expectInfo := kargoapi.VerificationInfo{
@@ -619,7 +619,7 @@ func TestSyncNormalStage(t *testing.T) {
 					Phase: kargoapi.StagePhaseVerifying,
 					FreightHistory: kargoapi.FreightHistory{
 						{
-							Items: map[string]kargoapi.FreightReference{
+							Freight: map[string]kargoapi.FreightReference{
 								"fake-warehouse": {
 									Warehouse: "fake-warehouse",
 									VerificationInfo: &kargoapi.VerificationInfo{
@@ -672,7 +672,7 @@ func TestSyncNormalStage(t *testing.T) {
 				current := newStatus.FreightHistory.Current()
 				require.NotNil(t, current)
 
-				newFreight, ok := current.Items["fake-warehouse"]
+				newFreight, ok := current.Freight["fake-warehouse"]
 				require.True(t, ok)
 
 				require.Equal(
@@ -692,7 +692,7 @@ func TestSyncNormalStage(t *testing.T) {
 				// Everything else should be unchanged
 				newStatus.Phase = initialStatus.Phase
 				newStatus.FreightHistory.Current().UpdateOrPush(
-					initialStatus.FreightHistory.Current().Items["fake-warehouse"],
+					initialStatus.FreightHistory.Current().Freight["fake-warehouse"],
 				)
 				require.Equal(t, initialStatus, newStatus)
 
@@ -721,7 +721,7 @@ func TestSyncNormalStage(t *testing.T) {
 					Phase: kargoapi.StagePhaseVerifying,
 					FreightHistory: kargoapi.FreightHistory{
 						{
-							Items: map[string]kargoapi.FreightReference{
+							Freight: map[string]kargoapi.FreightReference{
 								"fake-warehouse": {
 									Warehouse: "fake-warehouse",
 									VerificationInfo: &kargoapi.VerificationInfo{
@@ -769,7 +769,7 @@ func TestSyncNormalStage(t *testing.T) {
 				current := newStatus.FreightHistory.Current()
 				require.NotNil(t, current)
 
-				newFreight, ok := current.Items["fake-warehouse"]
+				newFreight, ok := current.Freight["fake-warehouse"]
 				require.True(t, ok)
 
 				require.Equal(
@@ -791,7 +791,7 @@ func TestSyncNormalStage(t *testing.T) {
 				// Everything else should be unchanged
 				newStatus.Phase = initialStatus.Phase
 				newStatus.FreightHistory.Current().UpdateOrPush(
-					initialStatus.FreightHistory.Current().Items["fake-warehouse"],
+					initialStatus.FreightHistory.Current().Freight["fake-warehouse"],
 				)
 				require.Equal(t, initialStatus, newStatus)
 			},
@@ -813,7 +813,7 @@ func TestSyncNormalStage(t *testing.T) {
 					Phase: kargoapi.StagePhaseVerifying,
 					FreightHistory: kargoapi.FreightHistory{
 						{
-							Items: map[string]kargoapi.FreightReference{
+							Freight: map[string]kargoapi.FreightReference{
 								"fake-warehouse": {
 									Warehouse: "fake-warehouse",
 									VerificationInfo: &kargoapi.VerificationInfo{
@@ -856,7 +856,7 @@ func TestSyncNormalStage(t *testing.T) {
 					_ context.Context,
 					s *kargoapi.Stage,
 				) (*kargoapi.VerificationInfo, error) {
-					return s.Status.FreightHistory.Current().Items["fake-warehouse"].VerificationInfo, nil
+					return s.Status.FreightHistory.Current().Freight["fake-warehouse"].VerificationInfo, nil
 				},
 				abortVerificationFn: func(
 					_ context.Context,
@@ -882,7 +882,7 @@ func TestSyncNormalStage(t *testing.T) {
 				current := newStatus.FreightHistory.Current()
 				require.NotNil(t, current)
 
-				newFreight, ok := current.Items["fake-warehouse"]
+				newFreight, ok := current.Freight["fake-warehouse"]
 				require.True(t, ok)
 
 				require.Equal(
@@ -929,7 +929,7 @@ func TestSyncNormalStage(t *testing.T) {
 					Phase: kargoapi.StagePhaseVerifying,
 					FreightHistory: kargoapi.FreightHistory{
 						{
-							Items: map[string]kargoapi.FreightReference{
+							Freight: map[string]kargoapi.FreightReference{
 								"fake-warehouse": {
 									Warehouse: "fake-warehouse",
 									VerificationInfo: &kargoapi.VerificationInfo{
@@ -977,7 +977,7 @@ func TestSyncNormalStage(t *testing.T) {
 					_ context.Context,
 					s *kargoapi.Stage,
 				) (*kargoapi.VerificationInfo, error) {
-					i := s.Status.FreightHistory.Current().Items["fake-warehouse"].VerificationInfo.DeepCopy()
+					i := s.Status.FreightHistory.Current().Freight["fake-warehouse"].VerificationInfo.DeepCopy()
 					i.FinishTime = ptr.To(metav1.NewTime(fakeTime))
 					i.Phase = kargoapi.VerificationPhaseError
 					return i, nil
@@ -1006,7 +1006,7 @@ func TestSyncNormalStage(t *testing.T) {
 				current := newStatus.FreightHistory.Current()
 				require.NotNil(t, current)
 
-				newFreight, ok := current.Items["fake-warehouse"]
+				newFreight, ok := current.Freight["fake-warehouse"]
 				require.True(t, ok)
 
 				require.Equal(t, kargoapi.VerificationPhaseError, newFreight.VerificationInfo.Phase)
@@ -1035,7 +1035,7 @@ func TestSyncNormalStage(t *testing.T) {
 					Phase: kargoapi.StagePhaseVerifying,
 					FreightHistory: kargoapi.FreightHistory{
 						{
-							Items: map[string]kargoapi.FreightReference{
+							Freight: map[string]kargoapi.FreightReference{
 								"fake-warehouse": {
 									Warehouse: "fake-warehouse",
 								},
@@ -1089,7 +1089,7 @@ func TestSyncNormalStage(t *testing.T) {
 					Phase: kargoapi.StagePhaseSteady,
 					FreightHistory: kargoapi.FreightHistory{
 						{
-							Items: map[string]kargoapi.FreightReference{
+							Freight: map[string]kargoapi.FreightReference{
 								"fake-warehouse": {
 									Warehouse: "fake-warehouse",
 								},
@@ -1163,7 +1163,7 @@ func TestSyncNormalStage(t *testing.T) {
 					Phase: kargoapi.StagePhaseSteady,
 					FreightHistory: kargoapi.FreightHistory{
 						{
-							Items: map[string]kargoapi.FreightReference{
+							Freight: map[string]kargoapi.FreightReference{
 								"fake-warehouse": {
 									Warehouse: "fake-warehouse",
 								},
@@ -1236,7 +1236,7 @@ func TestSyncNormalStage(t *testing.T) {
 					Phase: kargoapi.StagePhaseSteady,
 					FreightHistory: kargoapi.FreightHistory{
 						{
-							Items: map[string]kargoapi.FreightReference{
+							Freight: map[string]kargoapi.FreightReference{
 								"fake-warehouse": {
 									Warehouse: "fake-warehouse",
 								},
@@ -1315,7 +1315,7 @@ func TestSyncNormalStage(t *testing.T) {
 					Phase: kargoapi.StagePhaseSteady,
 					FreightHistory: kargoapi.FreightHistory{
 						{
-							Items: map[string]kargoapi.FreightReference{
+							Freight: map[string]kargoapi.FreightReference{
 								"fake-warehouse": {
 									Warehouse: "fake-warehouse",
 								},
@@ -1387,7 +1387,7 @@ func TestSyncNormalStage(t *testing.T) {
 					Phase: kargoapi.StagePhaseSteady,
 					FreightHistory: kargoapi.FreightHistory{
 						{
-							Items: map[string]kargoapi.FreightReference{
+							Freight: map[string]kargoapi.FreightReference{
 								"fake-warehouse": {
 									Name:      "fake-freight-id",
 									Warehouse: "fake-warehouse",
@@ -1457,7 +1457,7 @@ func TestSyncNormalStage(t *testing.T) {
 					Phase: kargoapi.StagePhaseSteady,
 					FreightHistory: kargoapi.FreightHistory{
 						{
-							Items: map[string]kargoapi.FreightReference{
+							Freight: map[string]kargoapi.FreightReference{
 								"fake-warehouse": {
 									Warehouse: "fake-warehouse",
 								},
@@ -1540,7 +1540,7 @@ func TestSyncNormalStage(t *testing.T) {
 					Phase: kargoapi.StagePhaseSteady,
 					FreightHistory: kargoapi.FreightHistory{
 						{
-							Items: map[string]kargoapi.FreightReference{
+							Freight: map[string]kargoapi.FreightReference{
 								"fake-warehouse": {
 									Warehouse: "fake-warehouse",
 								},
@@ -1645,7 +1645,7 @@ func TestSyncNormalStage(t *testing.T) {
 					Phase: kargoapi.StagePhaseSteady,
 					FreightHistory: kargoapi.FreightHistory{
 						{
-							Items: map[string]kargoapi.FreightReference{
+							Freight: map[string]kargoapi.FreightReference{
 								"fake-warehouse": {
 									Warehouse: "fake-warehouse",
 									VerificationInfo: &kargoapi.VerificationInfo{
@@ -1754,7 +1754,7 @@ func TestSyncNormalStage(t *testing.T) {
 				current := newStatus.FreightHistory.Current()
 				require.NotNil(t, current)
 
-				newFreight, ok := current.Items["fake-warehouse"]
+				newFreight, ok := current.Freight["fake-warehouse"]
 				require.True(t, ok)
 
 				require.Equal(
@@ -1790,7 +1790,7 @@ func TestSyncNormalStage(t *testing.T) {
 					Phase: kargoapi.StagePhaseVerifying,
 					FreightHistory: kargoapi.FreightHistory{
 						{
-							Items: map[string]kargoapi.FreightReference{
+							Freight: map[string]kargoapi.FreightReference{
 								"fake-warehouse": {
 									Warehouse: "fake-warehouse",
 									VerificationInfo: &kargoapi.VerificationInfo{
@@ -1907,7 +1907,7 @@ func TestSyncNormalStage(t *testing.T) {
 				current := newStatus.FreightHistory.Current()
 				require.NotNil(t, current)
 
-				newFreight, ok := current.Items["fake-warehouse"]
+				newFreight, ok := current.Freight["fake-warehouse"]
 				require.True(t, ok)
 
 				require.Equal(
@@ -2124,7 +2124,7 @@ func TestReconciler_syncPromotions(t *testing.T) {
 				current := status.FreightHistory.Current()
 				require.NotNil(t, current)
 
-				newFreight, ok := current.Items["fake-warehouse"]
+				newFreight, ok := current.Freight["fake-warehouse"]
 				require.True(t, ok)
 
 				// Current Freight should be the Freight of the last Succeeded Promotion
