@@ -225,6 +225,12 @@ export const Pipelines = () => {
           warehouses={warehouseMap}
           collapsed={freightlineCollapsed}
           setCollapsed={setFreightlineCollapsed}
+          collapsable={
+            Object.keys(stagesPerFreight).reduce(
+              (acc, cur) => (cur?.length > 0 ? acc + stagesPerFreight[cur].length : acc),
+              0
+            ) > 0
+          }
         />
         <FreightlineWrapper>
           <Suspense
