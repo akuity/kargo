@@ -23,7 +23,13 @@ const CopyValue = (props: { value: string; label: string; className?: string }) 
     <Typography.Text copyable>{props.value}</Typography.Text>
   </div>
 );
-export const FreightDetails = ({ freight }: { freight?: Freight }) => {
+export const FreightDetails = ({
+  freight,
+  refetchFreight
+}: {
+  freight?: Freight;
+  refetchFreight: () => void;
+}) => {
   const navigate = useNavigate();
   const { name: projectName } = useParams();
   const [alias, setAlias] = useState<string | undefined>();
@@ -62,6 +68,7 @@ export const FreightDetails = ({ freight }: { freight?: Freight }) => {
                             project={freight?.metadata?.namespace || ''}
                             onSubmit={(newAlias) => {
                               setAlias(newAlias);
+                              refetchFreight();
                               p.hide();
                             }}
                           />
