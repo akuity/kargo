@@ -576,6 +576,10 @@ func (r *reconciler) syncControlFlowStage(
 	status.CurrentPromotion = nil
 	status.LastPromotion = nil
 
+	// TODO: Remove this once we remove the fields from the API.
+	status.History = nil
+	status.CurrentFreight = nil
+
 	// Find all Freight available to this Stage, except for those that
 	// are available on account of manual approval.
 	availableFreight, err := r.getAvailableFreightFn(ctx, stage, false)
