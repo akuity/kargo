@@ -14,7 +14,7 @@ spec:
       writeBranch: main
       kustomize:
         images:
-        - image: nginx
+        - image: public.ecr.aws/nginx/nginx
           path: stages/prod
     argoCDAppUpdates:
     - appName: kargo-demo-prod

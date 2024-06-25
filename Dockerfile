@@ -94,6 +94,7 @@ USER root
 
 COPY bin/controlplane/kargo /usr/local/bin/kargo
 
+RUN adduser -D -H -u 1000 kargo
 USER 1000:0
 
 CMD ["/usr/local/bin/kargo"]
@@ -130,6 +131,7 @@ USER root
 COPY --from=back-end-builder /kargo/bin/ /usr/local/bin/
 COPY --from=tools /tools/ /usr/local/bin/
 
+RUN adduser -D -H -u 1000 kargo
 USER 1000:0
 
 CMD ["/usr/local/bin/kargo"]

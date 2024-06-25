@@ -1819,7 +1819,7 @@ export class GitDiscoveryResult extends Message<GitDiscoveryResult> {
    * RepoURL is the repository URL of the GitSubscription.
    *
    * +kubebuilder:validation:MinLength=1
-   * +kubebuilder:validation:Pattern=`^https?://(\w+([\.-]\w+)*@)?\w+([\.-]\w+)*(:[\d]+)?(/.*)?$`
+   * +kubebuilder:validation:Pattern=`(?:^(https?)://(?:([\w-]+):(.+)@)?([\w-]+(?:\.[\w-]+)*)(?::(\d{1,5}))?(/.*)$)|(?:^([\w-]+)@([\w+]+(?:\.[\w-]+)*):(/?.*))`
    *
    * @generated from field: optional string repoURL = 1;
    */
@@ -2058,7 +2058,7 @@ export class GitSubscription extends Message<GitSubscription> {
    * URL is the repository's URL. This is a required field.
    *
    * +kubebuilder:validation:MinLength=1
-   * +kubebuilder:validation:Pattern=`^https?://(\w+([\.-]\w+)*@)?\w+([\.-]\w+)*(:[\d]+)?(/.*)?$`
+   * +kubebuilder:validation:Pattern=`(?:^(https?)://(?:([\w-]+):(.+)@)?([\w-]+(?:\.[\w-]+)*)(?::(\d{1,5}))?(/.*)$)|(?:^([\w-]+)@([\w+]+(?:\.[\w-]+)*):(/?.*))`
    *
    * @generated from field: optional string repoURL = 1;
    */
