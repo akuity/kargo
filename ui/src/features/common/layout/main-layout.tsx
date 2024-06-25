@@ -1,4 +1,9 @@
-import { faArrowRightFromBracket, faBook, faBoxes } from '@fortawesome/free-solid-svg-icons';
+import {
+  faArrowRightFromBracket,
+  faBook,
+  faBoxes,
+  faTerminal
+} from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Spin, Tooltip } from 'antd';
 import ErrorBoundary from 'antd/es/alert/ErrorBoundary';
@@ -44,6 +49,9 @@ export const MainLayout = () => {
               </NavItem>
               <NavItem icon={faBook} path='https://kargo.akuity.io' target='_blank'>
                 Docs
+              </NavItem>
+              <NavItem icon={faTerminal} path={paths.downloads}>
+                CLI
               </NavItem>
             </nav>
 

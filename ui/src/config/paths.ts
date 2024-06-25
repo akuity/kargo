@@ -10,6 +10,7 @@ export const paths = {
   warehouse: '/project/:name/warehouse/:warehouseName/:tab?',
   freight: '/project/:name/freight/:freightName',
 
+  downloads: '/downloads',
   login: '/login',
   tokenRenew: '/token-renew'
 };
