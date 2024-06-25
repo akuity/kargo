@@ -598,9 +598,13 @@ type FreightReference struct {
 	Charts []Chart `json:"charts,omitempty" protobuf:"bytes,4,rep,name=charts"`
 	// VerificationInfo is information about any verification process that was
 	// associated with this Freight for this Stage.
+	//
+	// Deprecated: Use FreightHistoryEntry.VerificationHistory instead.
 	VerificationInfo *VerificationInfo `json:"verificationInfo,omitempty" protobuf:"bytes,5,opt,name=verificationInfo"`
 	// VerificationHistory is a stack of recent VerificationInfo. By default,
 	// the last ten VerificationInfo are stored.
+	//
+	// Deprecated: Use FreightHistoryEntry.VerificationHistory instead.
 	VerificationHistory VerificationInfoStack `json:"verificationHistory,omitempty" protobuf:"bytes,7,rep,name=verificationHistory"`
 }
 
@@ -611,6 +615,9 @@ type FreightHistoryEntry struct {
 	// Freight is a map of FreightReference objects, indexed by their Warehouse
 	// origin.
 	Freight map[string]FreightReference `json:"items,omitempty" protobuf:"bytes,1,rep,name=items" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	// VerificationHistory is a stack of recent VerificationInfo. By default,
+	// the last ten VerificationInfo are stored.
+	VerificationHistory VerificationInfoStack `json:"verificationHistory,omitempty" protobuf:"bytes,2,rep,name=verificationHistory"`
 }
 
 // UpdateOrPush updates the entry in the FreightHistoryEntry based on the Warehouse
@@ -842,8 +849,8 @@ type AnalysisRunArgument struct {
 	Value string `json:"value,omitempty" protobuf:"bytes,2,opt,name=value"`
 }
 
-// VerificationInfo contains information about the currently running
-// Verification process.
+// VerificationInfo contains the details of an instance of a Verification
+// process.
 type VerificationInfo struct {
 	// ID is the identifier of the Verification process.
 	ID string `json:"id,omitempty" protobuf:"bytes,4,opt,name=id"`
