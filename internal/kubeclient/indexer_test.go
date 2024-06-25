@@ -48,11 +48,17 @@ func TestIndexStagesByAnalysisRun(t *testing.T) {
 					},
 				},
 				Status: kargoapi.StageStatus{
-					CurrentFreight: &kargoapi.FreightReference{
-						VerificationInfo: &kargoapi.VerificationInfo{
-							AnalysisRun: &kargoapi.AnalysisRunReference{
-								Namespace: "fake-namespace",
-								Name:      "fake-analysis-run",
+					FreightHistory: kargoapi.FreightHistory{
+						{
+							Freight: map[string]kargoapi.FreightReference{
+								"fake-warehouse": {
+									VerificationInfo: &kargoapi.VerificationInfo{
+										AnalysisRun: &kargoapi.AnalysisRunReference{
+											Namespace: "fake-namespace",
+											Name:      "fake-analysis-run",
+										},
+									},
+								},
 							},
 						},
 					},
@@ -81,11 +87,17 @@ func TestIndexStagesByAnalysisRun(t *testing.T) {
 			controllerShardName: "",
 			stage: &kargoapi.Stage{
 				Status: kargoapi.StageStatus{
-					CurrentFreight: &kargoapi.FreightReference{
-						VerificationInfo: &kargoapi.VerificationInfo{
-							AnalysisRun: &kargoapi.AnalysisRunReference{
-								Namespace: "fake-namespace",
-								Name:      "fake-analysis-run",
+					FreightHistory: kargoapi.FreightHistory{
+						{
+							Freight: map[string]kargoapi.FreightReference{
+								"fake-warehouse": {
+									VerificationInfo: &kargoapi.VerificationInfo{
+										AnalysisRun: &kargoapi.AnalysisRunReference{
+											Namespace: "fake-namespace",
+											Name:      "fake-analysis-run",
+										},
+									},
+								},
 							},
 						},
 					},
