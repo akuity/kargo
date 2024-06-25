@@ -98,16 +98,19 @@ type reconciler struct {
 	startVerificationFn func(
 		context.Context,
 		*kargoapi.Stage,
+		kargoapi.FreightReference,
 	) (*kargoapi.VerificationInfo, error)
 
 	abortVerificationFn func(
 		context.Context,
 		*kargoapi.Stage,
+		kargoapi.FreightReference,
 	) *kargoapi.VerificationInfo
 
 	getVerificationInfoFn func(
 		context.Context,
 		*kargoapi.Stage,
+		kargoapi.FreightReference,
 	) (*kargoapi.VerificationInfo, error)
 
 	getAnalysisTemplateFn func(
@@ -124,6 +127,7 @@ type reconciler struct {
 
 	buildAnalysisRunFn func(
 		stage *kargoapi.Stage,
+		verificationInfo *kargoapi.VerificationInfo,
 		freight *kargoapi.Freight,
 		templates []*rollouts.AnalysisTemplate,
 	) (*rollouts.AnalysisRun, error)
@@ -702,6 +706,8 @@ func (r *reconciler) syncNormalStage(
 				}
 
 				// Initiate or follow-up on verification if required.
+				// TODO: This bit needs further inspection to see if we can make
+				// it work better with the "multi-pipeline" support.
 				if status.Phase == kargoapi.StagePhaseVerifying {
 					if !freight.VerificationInfo.HasAnalysisRun() {
 						if status.Health == nil || status.Health.Status == kargoapi.HealthStateHealthy {
@@ -710,6 +716,7 @@ func (r *reconciler) syncNormalStage(
 							if freight.VerificationInfo, err = r.startVerificationFn(
 								ctx,
 								stage,
+								freight,
 							); err != nil && !freight.VerificationInfo.HasAnalysisRun() {
 								freight.VerificationHistory.UpdateOrPush(*freight.VerificationInfo)
 								currentFreight.UpdateOrPush(freight)
@@ -722,6 +729,7 @@ func (r *reconciler) syncNormalStage(
 						if freight.VerificationInfo, err = r.getVerificationInfoFn(
 							ctx,
 							stage,
+							freight,
 						); err != nil && freight.VerificationInfo.HasAnalysisRun() {
 							freight.VerificationHistory.UpdateOrPush(*freight.VerificationInfo)
 							currentFreight.UpdateOrPush(freight)
@@ -734,7 +742,7 @@ func (r *reconciler) syncNormalStage(
 						if !newInfo.Phase.IsTerminal() {
 							if req, _ := kargoapi.AbortAnnotationValue(stage.GetAnnotations()); req.ForID(newInfo.ID) {
 								logger.Debug("aborting verification")
-								freight.VerificationInfo = r.abortVerificationFn(ctx, stage)
+								freight.VerificationInfo = r.abortVerificationFn(ctx, stage, freight)
 							}
 						}
 					}

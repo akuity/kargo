@@ -309,6 +309,7 @@ func TestSyncNormalStage(t *testing.T) {
 				startVerificationFn: func(
 					context.Context,
 					*kargoapi.Stage,
+					kargoapi.FreightReference,
 				) (*kargoapi.VerificationInfo, error) {
 					return &kargoapi.VerificationInfo{
 						ID:      "new-fake-id",
@@ -455,8 +456,9 @@ func TestSyncNormalStage(t *testing.T) {
 				},
 				appHealth: &mockAppHealthEvaluator{},
 				startVerificationFn: func(
-					_ context.Context,
-					_ *kargoapi.Stage,
+					context.Context,
+					*kargoapi.Stage,
+					kargoapi.FreightReference,
 				) (*kargoapi.VerificationInfo, error) {
 					return &kargoapi.VerificationInfo{
 						Phase:      kargoapi.VerificationPhaseError,
@@ -561,6 +563,7 @@ func TestSyncNormalStage(t *testing.T) {
 				startVerificationFn: func(
 					context.Context,
 					*kargoapi.Stage,
+					kargoapi.FreightReference,
 				) (*kargoapi.VerificationInfo, error) {
 					return &kargoapi.VerificationInfo{
 						Phase:   kargoapi.VerificationPhaseError,
@@ -651,7 +654,11 @@ func TestSyncNormalStage(t *testing.T) {
 				) (*kargoapi.Freight, error) {
 					return &kargoapi.Freight{}, nil
 				},
-				getVerificationInfoFn: func(_ context.Context, _ *kargoapi.Stage) (*kargoapi.VerificationInfo, error) {
+				getVerificationInfoFn: func(
+					context.Context,
+					*kargoapi.Stage,
+					kargoapi.FreightReference,
+				) (*kargoapi.VerificationInfo, error) {
 					return &kargoapi.VerificationInfo{
 						StartTime:  ptr.To(metav1.NewTime(fakeTime)),
 						FinishTime: ptr.To(metav1.NewTime(fakeTime)),
@@ -746,7 +753,11 @@ func TestSyncNormalStage(t *testing.T) {
 					return status, nil
 				},
 				appHealth: &mockAppHealthEvaluator{},
-				getVerificationInfoFn: func(_ context.Context, _ *kargoapi.Stage) (*kargoapi.VerificationInfo, error) {
+				getVerificationInfoFn: func(
+					context.Context,
+					*kargoapi.Stage,
+					kargoapi.FreightReference,
+				) (*kargoapi.VerificationInfo, error) {
 					return &kargoapi.VerificationInfo{
 						Phase:   kargoapi.VerificationPhaseError,
 						Message: "something went wrong",
@@ -855,12 +866,14 @@ func TestSyncNormalStage(t *testing.T) {
 				getVerificationInfoFn: func(
 					_ context.Context,
 					s *kargoapi.Stage,
+					_ kargoapi.FreightReference,
 				) (*kargoapi.VerificationInfo, error) {
 					return s.Status.FreightHistory.Current().Freight["fake-warehouse"].VerificationInfo, nil
 				},
 				abortVerificationFn: func(
 					_ context.Context,
 					_ *kargoapi.Stage,
+					_ kargoapi.FreightReference,
 				) *kargoapi.VerificationInfo {
 					return &kargoapi.VerificationInfo{
 						StartTime:  ptr.To(metav1.NewTime(fakeTime)),
@@ -976,6 +989,7 @@ func TestSyncNormalStage(t *testing.T) {
 				getVerificationInfoFn: func(
 					_ context.Context,
 					s *kargoapi.Stage,
+					_ kargoapi.FreightReference,
 				) (*kargoapi.VerificationInfo, error) {
 					i := s.Status.FreightHistory.Current().Freight["fake-warehouse"].VerificationInfo.DeepCopy()
 					i.FinishTime = ptr.To(metav1.NewTime(fakeTime))
@@ -985,6 +999,7 @@ func TestSyncNormalStage(t *testing.T) {
 				abortVerificationFn: func(
 					context.Context,
 					*kargoapi.Stage,
+					kargoapi.FreightReference,
 				) *kargoapi.VerificationInfo {
 					// Should not be called
 					return &kargoapi.VerificationInfo{
@@ -1678,6 +1693,7 @@ func TestSyncNormalStage(t *testing.T) {
 				getVerificationInfoFn: func(
 					context.Context,
 					*kargoapi.Stage,
+					kargoapi.FreightReference,
 				) (*kargoapi.VerificationInfo, error) {
 					return &kargoapi.VerificationInfo{
 						Phase: kargoapi.VerificationPhaseSuccessful,
@@ -1834,6 +1850,7 @@ func TestSyncNormalStage(t *testing.T) {
 				getVerificationInfoFn: func(
 					context.Context,
 					*kargoapi.Stage,
+					kargoapi.FreightReference,
 				) (*kargoapi.VerificationInfo, error) {
 					return &kargoapi.VerificationInfo{
 						StartTime:  ptr.To(metav1.NewTime(fakeTime)),
