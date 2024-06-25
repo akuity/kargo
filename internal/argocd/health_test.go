@@ -4,11 +4,13 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
@@ -55,6 +57,9 @@ func TestApplicationHealth_EvaluateHealth(t *testing.T) {
 						Sync: argocd.SyncStatus{
 							Status:   argocd.SyncStatusCodeSynced,
 							Revision: "v1.2.3",
+						},
+						OperationState: &argocd.OperationState{
+							FinishedAt: &metav1.Time{Time: metav1.Now().Add(-10 * time.Second)},
 						},
 					},
 				},
@@ -443,6 +448,9 @@ func TestApplicationHealth_GetApplicationHealth(t *testing.T) {
 						Status:   argocd.SyncStatusCodeSynced,
 						Revision: "fake-revision",
 					},
+					OperationState: &argocd.OperationState{
+						FinishedAt: ptr.To(metav1.Now()),
+					},
 				},
 			},
 			freight: kargoapi.FreightReference{
@@ -535,6 +543,9 @@ func TestApplicationHealth_GetApplicationHealth(t *testing.T) {
 						Status:   argocd.SyncStatusCodeSynced,
 						Revision: "fake-revision",
 					},
+					OperationState: &argocd.OperationState{
+						FinishedAt: &metav1.Time{Time: metav1.Now().Add(-10 * time.Second)},
+					},
 				},
 			},
 			freight: kargoapi.FreightReference{
@@ -620,6 +631,9 @@ func Test_stageHealthForAppSync(t *testing.T) {
 					Sync: argocd.SyncStatus{
 						Revision: "other-fake-revision",
 					},
+					OperationState: &argocd.OperationState{
+						FinishedAt: ptr.To(metav1.Now()),
+					},
 				},
 			},
 			assertions: func(t *testing.T, state kargoapi.HealthState, err error) {
@@ -635,6 +649,9 @@ func Test_stageHealthForAppSync(t *testing.T) {
 					Sync: argocd.SyncStatus{
 						Revision: "fake-revision",
 					},
+					OperationState: &argocd.OperationState{
+						FinishedAt: &metav1.Time{Time: metav1.Now().Add(-10 * time.Second)},
+					},
 				},
 			},
 			assertions: func(t *testing.T, state kargoapi.HealthState, err error) {
@@ -649,6 +666,33 @@ func Test_stageHealthForAppSync(t *testing.T) {
 			tt.assertions(t, got, err)
 		})
 	}
+
+	t.Run("waits for cooldown", func(t *testing.T) {
+		app := &argocd.Application{
+			Status: argocd.ApplicationStatus{
+				Sync: argocd.SyncStatus{
+					Revision: "fake-revision",
+				},
+				OperationState: &argocd.OperationState{
+					FinishedAt: ptr.To(metav1.Now()),
+				},
+			},
+		}
+
+		start := time.Now()
+		got, err := stageHealthForAppSync(app, app.Status.Sync.Revision)
+		elapsed := time.Since(start)
+
+		require.NoError(t, err)
+		require.Equal(t, kargoapi.HealthStateHealthy, got)
+
+		// We wait for 10 seconds after the sync operation has finished.
+		// As such, the elapsed time should be greater than 8 seconds,
+		// but less than 12 seconds. To ensure we do not introduce
+		// flakes in the tests.
+		require.Greater(t, elapsed, 8*time.Second)
+		require.Less(t, elapsed, 12*time.Second)
+	})
 }
 
 func Test_stageHealthForAppHealth(t *testing.T) {
