@@ -581,8 +581,8 @@ func (r *reconciler) syncControlFlowStage(
 	status.LastPromotion = nil
 
 	// TODO: Remove this once we remove the fields from the API.
-	status.History = nil
-	status.CurrentFreight = nil
+	status.History = nil        // nolint: staticcheck
+	status.CurrentFreight = nil // nolint: staticcheck
 
 	// Find all Freight available to this Stage, except for those that
 	// are available on account of manual approval.
