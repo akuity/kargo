@@ -1195,6 +1195,12 @@ message StageSpec {
   // is empty, the webhook will ensure that label is absent.
   optional string shard = 4;
 
+  // Subscriptions describes the Stage's sources of Freight. This is a required
+  // field.
+  //
+  // Deprecated: Use RequestedFreight instead.
+  optional Subscriptions subscriptions = 1;
+
   // RequestedFreight expresses the Stage's need for certain pieces of Freight,
   // each having originated from a particular Warehouse. This list must be
   // non-empty. In the common case, a Stage will request Freight having
@@ -1205,7 +1211,7 @@ message StageSpec {
   // microservices that are independently versioned.
   //
   // +kubebuilder:validation:MinItems=1
-  repeated FreightRequest requestedFreight = 1;
+  repeated FreightRequest requestedFreight = 5;
 
   // PromotionMechanisms describes how to incorporate Freight into the Stage.
   // This is an optional field as it is sometimes useful to aggregates available
@@ -1266,6 +1272,30 @@ message StageStatus {
 
   // LastPromotion is a reference to the last completed promotion.
   optional PromotionInfo lastPromotion = 10;
+}
+
+// StageSubscription defines a subscription to Freight from another Stage.
+//
+// Deprecated: Use FreightRequest instead.
+message StageSubscription {
+  // Name specifies the name of a Stage.
+  //
+  // +kubebuilder:validation:MinLength=1
+  // +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+  optional string name = 1;
+}
+
+// Subscriptions describes a Stage's sources of Freight.
+//
+// Deprecated: Use FreightRequest instead.
+message Subscriptions {
+  // Warehouse is a subscription to a Warehouse. This field is mutually
+  // exclusive with the UpstreamStages field.
+  optional string warehouse = 1;
+
+  // UpstreamStages identifies other Stages as potential sources of Freight
+  // for this Stage. This field is mutually exclusive with the Repos field.
+  repeated StageSubscription upstreamStages = 2;
 }
 
 // Verification describes how to verify that a Promotion has been successful
