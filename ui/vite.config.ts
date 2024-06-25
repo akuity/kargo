@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 import react from '@vitejs/plugin-react';
 import { theme } from 'antd';
 import { defineConfig } from 'vite';
