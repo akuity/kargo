@@ -146,6 +146,11 @@ type StageSpec struct {
 	// kargo.akuity.io/shard label with the value of this field. When this field
 	// is empty, the webhook will ensure that label is absent.
 	Shard string `json:"shard,omitempty" protobuf:"bytes,4,opt,name=shard"`
+	// Subscriptions describes the Stage's sources of Freight. This is a required
+	// field.
+	//
+	// Deprecated: Use RequestedFreight instead.
+	Subscriptions Subscriptions `json:"subscriptions" protobuf:"bytes,1,opt,name=subscriptions"`
 	// RequestedFreight expresses the Stage's need for certain pieces of Freight,
 	// each having originated from a particular Warehouse. This list must be
 	// non-empty. In the common case, a Stage will request Freight having
@@ -156,7 +161,7 @@ type StageSpec struct {
 	// microservices that are independently versioned.
 	//
 	// +kubebuilder:validation:MinItems=1
-	RequestedFreight []FreightRequest `json:"requestedFreight" protobuf:"bytes,1,rep,name=requestedFreight"`
+	RequestedFreight []FreightRequest `json:"requestedFreight" protobuf:"bytes,5,rep,name=requestedFreight"`
 	// PromotionMechanisms describes how to incorporate Freight into the Stage.
 	// This is an optional field as it is sometimes useful to aggregates available
 	// Freight from multiple upstream Stages without performing any actions. The
@@ -167,6 +172,29 @@ type StageSpec struct {
 	// Verification describes how to verify a Stage's current Freight is fit for
 	// promotion downstream.
 	Verification *Verification `json:"verification,omitempty" protobuf:"bytes,3,opt,name=verification"`
+}
+
+// Subscriptions describes a Stage's sources of Freight.
+//
+// Deprecated: Use FreightRequest instead.
+type Subscriptions struct {
+	// Warehouse is a subscription to a Warehouse. This field is mutually
+	// exclusive with the UpstreamStages field.
+	Warehouse string `json:"warehouse,omitempty" protobuf:"bytes,1,opt,name=warehouse"`
+	// UpstreamStages identifies other Stages as potential sources of Freight
+	// for this Stage. This field is mutually exclusive with the Repos field.
+	UpstreamStages []StageSubscription `json:"upstreamStages,omitempty" protobuf:"bytes,2,rep,name=upstreamStages"`
+}
+
+// StageSubscription defines a subscription to Freight from another Stage.
+//
+// Deprecated: Use FreightRequest instead.
+type StageSubscription struct {
+	// Name specifies the name of a Stage.
+	//
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
 }
 
 // FreightRequest expresses a Stage's need for Freight having originated from a
