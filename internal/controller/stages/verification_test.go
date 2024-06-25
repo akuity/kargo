@@ -23,6 +23,7 @@ func TestStartVerification(t *testing.T) {
 	testCases := []struct {
 		name       string
 		stage      *kargoapi.Stage
+		freightRef kargoapi.FreightReference
 		reconciler *reconciler
 		assertions func(*testing.T, *kargoapi.VerificationInfo, error)
 	}{
@@ -31,11 +32,7 @@ func TestStartVerification(t *testing.T) {
 			reconciler: &reconciler{
 				nowFn: fakeNow,
 			},
-			stage: &kargoapi.Stage{
-				Status: kargoapi.StageStatus{
-					CurrentFreight: &kargoapi.FreightReference{},
-				},
-			},
+			freightRef: kargoapi.FreightReference{},
 			assertions: func(t *testing.T, vi *kargoapi.VerificationInfo, err error) {
 				require.NoError(t, err)
 				require.Contains(
@@ -46,13 +43,10 @@ func TestStartVerification(t *testing.T) {
 			},
 		},
 		{
-			name: "error listing AnalysisRuns",
-			stage: &kargoapi.Stage{
-				Status: kargoapi.StageStatus{
-					CurrentFreight: &kargoapi.FreightReference{
-						Name: "fake-id",
-					},
-				},
+			name:  "error listing AnalysisRuns",
+			stage: &kargoapi.Stage{},
+			freightRef: kargoapi.FreightReference{
+				Name: "fake-id",
 			},
 			reconciler: &reconciler{
 				cfg: ReconcilerConfig{
@@ -75,13 +69,10 @@ func TestStartVerification(t *testing.T) {
 			},
 		},
 		{
-			name: "AnalysisRun already exists",
-			stage: &kargoapi.Stage{
-				Status: kargoapi.StageStatus{
-					CurrentFreight: &kargoapi.FreightReference{
-						Name: "fake-id",
-					},
-				},
+			name:  "AnalysisRun already exists",
+			stage: &kargoapi.Stage{},
+			freightRef: kargoapi.FreightReference{
+				Name: "fake-id",
 			},
 			reconciler: &reconciler{
 				cfg: ReconcilerConfig{
@@ -119,14 +110,12 @@ func TestStartVerification(t *testing.T) {
 						AnalysisTemplates: []kargoapi.AnalysisTemplateReference{{}},
 					},
 				},
-				Status: kargoapi.StageStatus{
-					CurrentFreight: &kargoapi.FreightReference{
-						Name: "fake-id",
-						VerificationHistory: []kargoapi.VerificationInfo{{
-							ID: "fake-id",
-						}},
-					},
-				},
+			},
+			freightRef: kargoapi.FreightReference{
+				Name: "fake-id",
+				VerificationHistory: []kargoapi.VerificationInfo{{
+					ID: "fake-id",
+				}},
 			},
 			reconciler: &reconciler{
 				cfg: ReconcilerConfig{
@@ -160,6 +149,7 @@ func TestStartVerification(t *testing.T) {
 				},
 				buildAnalysisRunFn: func(
 					*kargoapi.Stage,
+					*kargoapi.VerificationInfo,
 					*kargoapi.Freight,
 					[]*rollouts.AnalysisTemplate,
 				) (*rollouts.AnalysisRun, error) {
@@ -197,11 +187,9 @@ func TestStartVerification(t *testing.T) {
 						AnalysisTemplates: []kargoapi.AnalysisTemplateReference{{}},
 					},
 				},
-				Status: kargoapi.StageStatus{
-					CurrentFreight: &kargoapi.FreightReference{
-						Name: "fake-id",
-					},
-				},
+			},
+			freightRef: kargoapi.FreightReference{
+				Name: "fake-id",
 			},
 			reconciler: &reconciler{
 				cfg: ReconcilerConfig{
@@ -239,11 +227,10 @@ func TestStartVerification(t *testing.T) {
 						AnalysisTemplates: []kargoapi.AnalysisTemplateReference{{}},
 					},
 				},
-				Status: kargoapi.StageStatus{
-					CurrentFreight: &kargoapi.FreightReference{
-						Name: "fake-id",
-					},
-				},
+				Status: kargoapi.StageStatus{},
+			},
+			freightRef: kargoapi.FreightReference{
+				Name: "fake-id",
 			},
 			reconciler: &reconciler{
 				cfg: ReconcilerConfig{
@@ -281,11 +268,9 @@ func TestStartVerification(t *testing.T) {
 						AnalysisTemplates: []kargoapi.AnalysisTemplateReference{{}},
 					},
 				},
-				Status: kargoapi.StageStatus{
-					CurrentFreight: &kargoapi.FreightReference{
-						Name: "fake-id",
-					},
-				},
+			},
+			freightRef: kargoapi.FreightReference{
+				Name: "fake-id",
 			},
 			reconciler: &reconciler{
 				cfg: ReconcilerConfig{
@@ -330,11 +315,9 @@ func TestStartVerification(t *testing.T) {
 						AnalysisTemplates: []kargoapi.AnalysisTemplateReference{{}},
 					},
 				},
-				Status: kargoapi.StageStatus{
-					CurrentFreight: &kargoapi.FreightReference{
-						Name: "fake-id",
-					},
-				},
+			},
+			freightRef: kargoapi.FreightReference{
+				Name: "fake-id",
 			},
 			reconciler: &reconciler{
 				cfg: ReconcilerConfig{
@@ -379,11 +362,9 @@ func TestStartVerification(t *testing.T) {
 						AnalysisTemplates: []kargoapi.AnalysisTemplateReference{{}},
 					},
 				},
-				Status: kargoapi.StageStatus{
-					CurrentFreight: &kargoapi.FreightReference{
-						Name: "fake-id",
-					},
-				},
+			},
+			freightRef: kargoapi.FreightReference{
+				Name: "fake-id",
 			},
 			reconciler: &reconciler{
 				cfg: ReconcilerConfig{
@@ -413,6 +394,7 @@ func TestStartVerification(t *testing.T) {
 				},
 				buildAnalysisRunFn: func(
 					*kargoapi.Stage,
+					*kargoapi.VerificationInfo,
 					*kargoapi.Freight,
 					[]*rollouts.AnalysisTemplate,
 				) (*rollouts.AnalysisRun, error) {
@@ -434,11 +416,9 @@ func TestStartVerification(t *testing.T) {
 						AnalysisTemplates: []kargoapi.AnalysisTemplateReference{{}},
 					},
 				},
-				Status: kargoapi.StageStatus{
-					CurrentFreight: &kargoapi.FreightReference{
-						Name: "fake-id",
-					},
-				},
+			},
+			freightRef: kargoapi.FreightReference{
+				Name: "fake-id",
 			},
 			reconciler: &reconciler{
 				cfg: ReconcilerConfig{
@@ -469,6 +449,7 @@ func TestStartVerification(t *testing.T) {
 				},
 				buildAnalysisRunFn: func(
 					*kargoapi.Stage,
+					*kargoapi.VerificationInfo,
 					*kargoapi.Freight,
 					[]*rollouts.AnalysisTemplate,
 				) (*rollouts.AnalysisRun, error) {
@@ -497,11 +478,9 @@ func TestStartVerification(t *testing.T) {
 						AnalysisTemplates: []kargoapi.AnalysisTemplateReference{{}},
 					},
 				},
-				Status: kargoapi.StageStatus{
-					CurrentFreight: &kargoapi.FreightReference{
-						Name: "fake-id",
-					},
-				},
+			},
+			freightRef: kargoapi.FreightReference{
+				Name: "fake-id",
 			},
 			reconciler: &reconciler{
 				cfg: ReconcilerConfig{
@@ -531,6 +510,7 @@ func TestStartVerification(t *testing.T) {
 				},
 				buildAnalysisRunFn: func(
 					*kargoapi.Stage,
+					*kargoapi.VerificationInfo,
 					*kargoapi.Freight,
 					[]*rollouts.AnalysisTemplate,
 				) (*rollouts.AnalysisRun, error) {
@@ -561,11 +541,9 @@ func TestStartVerification(t *testing.T) {
 						AnalysisTemplates: []kargoapi.AnalysisTemplateReference{{}},
 					},
 				},
-				Status: kargoapi.StageStatus{
-					CurrentFreight: &kargoapi.FreightReference{
-						Name: "fake-id",
-					},
-				},
+			},
+			freightRef: kargoapi.FreightReference{
+				Name: "fake-id",
 			},
 			reconciler: &reconciler{
 				cfg: ReconcilerConfig{
@@ -596,6 +574,7 @@ func TestStartVerification(t *testing.T) {
 				},
 				buildAnalysisRunFn: func(
 					*kargoapi.Stage,
+					*kargoapi.VerificationInfo,
 					*kargoapi.Freight,
 					[]*rollouts.AnalysisTemplate,
 				) (*rollouts.AnalysisRun, error) {
@@ -631,6 +610,7 @@ func TestStartVerification(t *testing.T) {
 			info, err := testCase.reconciler.startVerification(
 				context.Background(),
 				testCase.stage,
+				testCase.freightRef,
 			)
 			testCase.assertions(
 				t,
@@ -645,18 +625,16 @@ func TestGetVerificationInfo(t *testing.T) {
 	testCases := []struct {
 		name       string
 		stage      *kargoapi.Stage
+		freightRef kargoapi.FreightReference
 		reconciler *reconciler
 		assertions func(*testing.T, *kargoapi.VerificationInfo, error)
 	}{
 		{
 			name:       "rollouts integration not enabled",
 			reconciler: &reconciler{},
-			stage: &kargoapi.Stage{
-				Status: kargoapi.StageStatus{
-					CurrentFreight: &kargoapi.FreightReference{
-						VerificationInfo: &kargoapi.VerificationInfo{},
-					},
-				},
+			stage:      &kargoapi.Stage{},
+			freightRef: kargoapi.FreightReference{
+				VerificationInfo: &kargoapi.VerificationInfo{},
 			},
 			assertions: func(t *testing.T, vi *kargoapi.VerificationInfo, err error) {
 				require.NoError(t, err)
@@ -671,14 +649,13 @@ func TestGetVerificationInfo(t *testing.T) {
 		{
 			name: "error getting AnalysisRun",
 			stage: &kargoapi.Stage{
-				Status: kargoapi.StageStatus{
-					CurrentFreight: &kargoapi.FreightReference{
-						VerificationInfo: &kargoapi.VerificationInfo{
-							AnalysisRun: &kargoapi.AnalysisRunReference{
-								Name:      "fake-run",
-								Namespace: "fake-namespace",
-							},
-						},
+				Status: kargoapi.StageStatus{},
+			},
+			freightRef: kargoapi.FreightReference{
+				VerificationInfo: &kargoapi.VerificationInfo{
+					AnalysisRun: &kargoapi.AnalysisRunReference{
+						Name:      "fake-run",
+						Namespace: "fake-namespace",
 					},
 				},
 			},
@@ -705,14 +682,13 @@ func TestGetVerificationInfo(t *testing.T) {
 		{
 			name: "AnalysisRun not found",
 			stage: &kargoapi.Stage{
-				Status: kargoapi.StageStatus{
-					CurrentFreight: &kargoapi.FreightReference{
-						VerificationInfo: &kargoapi.VerificationInfo{
-							AnalysisRun: &kargoapi.AnalysisRunReference{
-								Name:      "fake-run",
-								Namespace: "fake-namespace",
-							},
-						},
+				Status: kargoapi.StageStatus{},
+			},
+			freightRef: kargoapi.FreightReference{
+				VerificationInfo: &kargoapi.VerificationInfo{
+					AnalysisRun: &kargoapi.AnalysisRunReference{
+						Name:      "fake-run",
+						Namespace: "fake-namespace",
 					},
 				},
 			},
@@ -737,16 +713,13 @@ func TestGetVerificationInfo(t *testing.T) {
 			},
 		},
 		{
-			name: "success",
-			stage: &kargoapi.Stage{
-				Status: kargoapi.StageStatus{
-					CurrentFreight: &kargoapi.FreightReference{
-						VerificationInfo: &kargoapi.VerificationInfo{
-							AnalysisRun: &kargoapi.AnalysisRunReference{
-								Name:      "fake-run",
-								Namespace: "fake-namespace",
-							},
-						},
+			name:  "success",
+			stage: &kargoapi.Stage{},
+			freightRef: kargoapi.FreightReference{
+				VerificationInfo: &kargoapi.VerificationInfo{
+					AnalysisRun: &kargoapi.AnalysisRunReference{
+						Name:      "fake-run",
+						Namespace: "fake-namespace",
 					},
 				},
 			},
@@ -794,6 +767,7 @@ func TestGetVerificationInfo(t *testing.T) {
 			info, err := testCase.reconciler.getVerificationInfo(
 				context.Background(),
 				testCase.stage,
+				testCase.freightRef,
 			)
 			testCase.assertions(
 				t,
@@ -808,6 +782,7 @@ func TestAbortVerification(t *testing.T) {
 	testCases := []struct {
 		name       string
 		stage      *kargoapi.Stage
+		freightRef kargoapi.FreightReference
 		reconciler *reconciler
 		assertions func(*testing.T, *kargoapi.VerificationInfo)
 	}{
@@ -825,12 +800,10 @@ func TestAbortVerification(t *testing.T) {
 						}).String(),
 					},
 				},
-				Status: kargoapi.StageStatus{
-					CurrentFreight: &kargoapi.FreightReference{
-						VerificationInfo: &kargoapi.VerificationInfo{
-							ID: "fake-id",
-						},
-					},
+			},
+			freightRef: kargoapi.FreightReference{
+				VerificationInfo: &kargoapi.VerificationInfo{
+					ID: "fake-id",
 				},
 			},
 			assertions: func(t *testing.T, vi *kargoapi.VerificationInfo) {
@@ -845,17 +818,14 @@ func TestAbortVerification(t *testing.T) {
 			},
 		},
 		{
-			name: "error patching AnalysisRun",
-			stage: &kargoapi.Stage{
-				Status: kargoapi.StageStatus{
-					CurrentFreight: &kargoapi.FreightReference{
-						VerificationInfo: &kargoapi.VerificationInfo{
-							ID: "fake-id",
-							AnalysisRun: &kargoapi.AnalysisRunReference{
-								Name:      "fake-run",
-								Namespace: "fake-namespace",
-							},
-						},
+			name:  "error patching AnalysisRun",
+			stage: &kargoapi.Stage{},
+			freightRef: kargoapi.FreightReference{
+				VerificationInfo: &kargoapi.VerificationInfo{
+					ID: "fake-id",
+					AnalysisRun: &kargoapi.AnalysisRunReference{
+						Name:      "fake-run",
+						Namespace: "fake-namespace",
 					},
 				},
 			},
@@ -892,15 +862,14 @@ func TestAbortVerification(t *testing.T) {
 						}).String(),
 					},
 				},
-				Status: kargoapi.StageStatus{
-					CurrentFreight: &kargoapi.FreightReference{
-						VerificationInfo: &kargoapi.VerificationInfo{
-							ID: "fake-id",
-							AnalysisRun: &kargoapi.AnalysisRunReference{
-								Name:      "fake-run",
-								Namespace: "fake-namespace",
-							},
-						},
+				Status: kargoapi.StageStatus{},
+			},
+			freightRef: kargoapi.FreightReference{
+				VerificationInfo: &kargoapi.VerificationInfo{
+					ID: "fake-id",
+					AnalysisRun: &kargoapi.AnalysisRunReference{
+						Name:      "fake-run",
+						Namespace: "fake-namespace",
 					},
 				},
 			},
@@ -939,6 +908,7 @@ func TestAbortVerification(t *testing.T) {
 				testCase.reconciler.abortVerification(
 					context.Background(),
 					testCase.stage,
+					testCase.freightRef,
 				),
 			)
 		})
@@ -949,18 +919,19 @@ func TestBuildAnalysisRun(t *testing.T) {
 	freight := &kargoapi.Freight{
 		ObjectMeta: metav1.ObjectMeta{
 			UID:       "fake-uid",
-			Name:      "fake-freight",
+			Name:      "fake-id",
 			Namespace: "fake-namespace",
 		},
 	}
 
 	testCases := []struct {
-		name       string
-		reconciler *reconciler
-		stage      *kargoapi.Stage
-		freight    *kargoapi.Freight
-		templates  []*rollouts.AnalysisTemplate
-		assertions func(*testing.T, *kargoapi.Stage, []*rollouts.AnalysisTemplate, *rollouts.AnalysisRun, error)
+		name             string
+		reconciler       *reconciler
+		stage            *kargoapi.Stage
+		freight          *kargoapi.Freight
+		verificationInfo *kargoapi.VerificationInfo
+		templates        []*rollouts.AnalysisTemplate
+		assertions       func(*testing.T, *kargoapi.Stage, []*rollouts.AnalysisTemplate, *rollouts.AnalysisRun, error)
 	}{
 		{
 			name:       "Builds AnalysisRun successfully",
@@ -985,9 +956,6 @@ func TestBuildAnalysisRun(t *testing.T) {
 					},
 				},
 				Status: kargoapi.StageStatus{
-					CurrentFreight: &kargoapi.FreightReference{
-						Name: "fake-id",
-					},
 					LastPromotion: &kargoapi.PromotionInfo{
 						Name: "fake-id",
 						Status: &kargoapi.PromotionStatus{
@@ -1041,7 +1009,7 @@ func TestBuildAnalysisRun(t *testing.T) {
 
 				require.Equal(t, map[string]string{
 					kargoapi.StageLabelKey:     stage.Name,
-					kargoapi.FreightLabelKey:   stage.Status.CurrentFreight.Name,
+					kargoapi.FreightLabelKey:   freight.Name,
 					kargoapi.PromotionLabelKey: stage.Status.LastPromotion.Name,
 					"custom":                   "label",
 					"another":                  "label",
@@ -1065,9 +1033,6 @@ func TestBuildAnalysisRun(t *testing.T) {
 				Spec: kargoapi.StageSpec{
 					Verification: &kargoapi.Verification{},
 				},
-				Status: kargoapi.StageStatus{
-					CurrentFreight: &kargoapi.FreightReference{Name: "fake-id"},
-				},
 			},
 			freight: freight,
 			assertions: func(
@@ -1089,9 +1054,6 @@ func TestBuildAnalysisRun(t *testing.T) {
 			stage: &kargoapi.Stage{
 				Spec: kargoapi.StageSpec{
 					Verification: &kargoapi.Verification{},
-				},
-				Status: kargoapi.StageStatus{
-					CurrentFreight: &kargoapi.FreightReference{Name: "fake-id"},
 				},
 			},
 			freight: freight,
@@ -1161,9 +1123,6 @@ func TestBuildAnalysisRun(t *testing.T) {
 						},
 					},
 				},
-				Status: kargoapi.StageStatus{
-					CurrentFreight: &kargoapi.FreightReference{Name: "fake-id"},
-				},
 			},
 			freight: freight,
 			templates: []*rollouts.AnalysisTemplate{
@@ -1202,9 +1161,6 @@ func TestBuildAnalysisRun(t *testing.T) {
 			stage: &kargoapi.Stage{
 				Spec: kargoapi.StageSpec{
 					Verification: &kargoapi.Verification{},
-				},
-				Status: kargoapi.StageStatus{
-					CurrentFreight: &kargoapi.FreightReference{Name: "fake-id"},
 				},
 			},
 			freight: freight,
@@ -1246,14 +1202,6 @@ func TestBuildAnalysisRun(t *testing.T) {
 					Verification: &kargoapi.Verification{},
 				},
 				Status: kargoapi.StageStatus{
-					CurrentFreight: &kargoapi.FreightReference{
-						Name: "fake-id",
-						VerificationHistory: []kargoapi.VerificationInfo{
-							{
-								ID: "fake-id",
-							},
-						},
-					},
 					LastPromotion: &kargoapi.PromotionInfo{
 						Name: "fake-id",
 						Status: &kargoapi.PromotionStatus{
@@ -1263,6 +1211,9 @@ func TestBuildAnalysisRun(t *testing.T) {
 				},
 			},
 			freight: freight,
+			verificationInfo: &kargoapi.VerificationInfo{
+				ID: "fake-id",
+			},
 			assertions: func(
 				t *testing.T,
 				_ *kargoapi.Stage,
@@ -1291,14 +1242,6 @@ func TestBuildAnalysisRun(t *testing.T) {
 					Verification: &kargoapi.Verification{},
 				},
 				Status: kargoapi.StageStatus{
-					CurrentFreight: &kargoapi.FreightReference{
-						Name: "fake-id",
-						VerificationHistory: []kargoapi.VerificationInfo{
-							{
-								ID: "fake-id",
-							},
-						},
-					},
 					LastPromotion: &kargoapi.PromotionInfo{
 						Name: "fake-id",
 						Status: &kargoapi.PromotionStatus{
@@ -1308,6 +1251,9 @@ func TestBuildAnalysisRun(t *testing.T) {
 				},
 			},
 			freight: freight,
+			verificationInfo: &kargoapi.VerificationInfo{
+				ID: "fake-id",
+			},
 			assertions: func(
 				t *testing.T,
 				_ *kargoapi.Stage,
@@ -1323,7 +1269,12 @@ func TestBuildAnalysisRun(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			ar, err := testCase.reconciler.buildAnalysisRun(testCase.stage, testCase.freight, testCase.templates)
+			ar, err := testCase.reconciler.buildAnalysisRun(
+				testCase.stage,
+				testCase.verificationInfo,
+				testCase.freight,
+				testCase.templates,
+			)
 			testCase.assertions(t, testCase.stage, testCase.templates, ar, err)
 		})
 	}

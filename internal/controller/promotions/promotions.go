@@ -462,19 +462,26 @@ func (r *reconciler) promote(
 	if newStatus.Phase == kargoapi.PromotionPhaseSucceeded {
 		// Trigger re-verification of the Stage if the promotion succeeded and
 		// this is a re-promotion of the same Freight.
-		curFreight := stage.Status.CurrentFreight
-		if curFreight != nil && curFreight.Name == targetFreight.Name && curFreight.VerificationInfo != nil {
-			if err = kargoapi.ReverifyStageFreight(
-				ctx,
-				r.kargoClient,
-				types.NamespacedName{
-					Namespace: stageNamespace,
-					Name:      stageName,
-				},
-			); err != nil {
-				// Log the error, but don't let failure to initiate re-verification
-				// prevent the promotion from succeeding.
-				logger.Error(err, "error triggering re-verification")
+		current := stage.Status.FreightHistory.Current()
+		if current != nil {
+			// TODO: This may require adjustment once we properly support
+			// multiple Freight re-verification in the backend API.
+			for _, f := range current.Freight {
+				if f.Name == targetFreight.Name && f.VerificationInfo != nil {
+					if err = kargoapi.ReverifyStageFreight(
+						ctx,
+						r.kargoClient,
+						types.NamespacedName{
+							Namespace: stageNamespace,
+							Name:      stageName,
+						},
+					); err != nil {
+						// Log the error, but don't let failure to initiate re-verification
+						// prevent the promotion from succeeding.
+						logger.Error(err, "error triggering re-verification")
+					}
+					break
+				}
 			}
 		}
 	}

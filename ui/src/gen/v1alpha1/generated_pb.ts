@@ -1360,6 +1360,50 @@ export class Freight extends Message<Freight> {
 }
 
 /**
+ * FreightHistoryEntry is a collection of FreightReferences, each of which
+ * represents a piece of Freight that has been selected for deployment to a
+ * Stage.
+ *
+ * @generated from message github.com.akuity.kargo.api.v1alpha1.FreightHistoryEntry
+ */
+export class FreightHistoryEntry extends Message<FreightHistoryEntry> {
+  /**
+   * Freight is a map of FreightReference objects, indexed by their Warehouse
+   * origin.
+   *
+   * @generated from field: map<string, github.com.akuity.kargo.api.v1alpha1.FreightReference> items = 1;
+   */
+  items: { [key: string]: FreightReference } = {};
+
+  constructor(data?: PartialMessage<FreightHistoryEntry>) {
+    super();
+    proto2.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto2 = proto2;
+  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.FreightHistoryEntry";
+  static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 1, name: "items", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "message", T: FreightReference} },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FreightHistoryEntry {
+    return new FreightHistoryEntry().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): FreightHistoryEntry {
+    return new FreightHistoryEntry().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): FreightHistoryEntry {
+    return new FreightHistoryEntry().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: FreightHistoryEntry | PlainMessage<FreightHistoryEntry> | undefined, b: FreightHistoryEntry | PlainMessage<FreightHistoryEntry> | undefined): boolean {
+    return proto2.util.equals(FreightHistoryEntry, a, b);
+  }
+}
+
+/**
  * FreightList is a list of Freight resources.
  *
  * @generated from message github.com.akuity.kargo.api.v1alpha1.FreightList
@@ -3894,8 +3938,20 @@ export class StageStatus extends Message<StageStatus> {
   phase?: string;
 
   /**
+   * FreightHistory is a list of recent Freight selections that were deployed
+   * to the Stage. By default, the last ten Freight selections are stored.
+   * The first item in the list is the most recent Freight selection and
+   * currently deployed to the Stage, subsequent items are older selections.
+   *
+   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.FreightHistoryEntry freightHistory = 4;
+   */
+  freightHistory: FreightHistoryEntry[] = [];
+
+  /**
    * CurrentFreight is a simplified representation of the Stage's current
    * Freight describing what is currently deployed to the Stage.
+   *
+   * Deprecated: Use the top item in the FreightHistory stack instead.
    *
    * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.FreightReference currentFreight = 2;
    */
@@ -3904,6 +3960,8 @@ export class StageStatus extends Message<StageStatus> {
   /**
    * History is a stack of recent Freight. By default, the last ten Freight are
    * stored.
+   *
+   * Deprecated: Use the FreightHistory stack instead.
    *
    * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.FreightReference history = 3;
    */
@@ -3956,6 +4014,7 @@ export class StageStatus extends Message<StageStatus> {
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 11, name: "lastHandledRefresh", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 1, name: "phase", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 4, name: "freightHistory", kind: "message", T: FreightHistoryEntry, repeated: true },
     { no: 2, name: "currentFreight", kind: "message", T: FreightReference, opt: true },
     { no: 3, name: "history", kind: "message", T: FreightReference, repeated: true },
     { no: 8, name: "health", kind: "message", T: Health, opt: true },

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strings"
 	"time"
 
 	"connectrpc.com/connect"
@@ -167,10 +168,18 @@ func newStageTable(list *metav1.List) *metav1.Table {
 	rows := make([]metav1.TableRow, len(list.Items))
 	for i, item := range list.Items {
 		stage := item.Object.(*kargoapi.Stage) // nolint: forcetypeassert
-		var currentFreightID string
-		if stage.Status.CurrentFreight != nil {
-			currentFreightID = stage.Status.CurrentFreight.Name
+
+		var currentFreightIDs string
+		// TODO: Figure out the best way to display the (collection) of Freight
+		// IDs for "multi-pipeline" Stages.
+		if current := stage.Status.FreightHistory.Current(); current != nil {
+			var freightIDs []string
+			for _, f := range current.Freight {
+				freightIDs = append(freightIDs, f.Name)
+			}
+			currentFreightIDs = strings.Join(freightIDs, ", ")
 		}
+
 		var health string
 		if stage.Status.Health != nil {
 			health = string(stage.Status.Health.Status)
@@ -179,7 +188,7 @@ func newStageTable(list *metav1.List) *metav1.Table {
 			Cells: []any{
 				stage.Name,
 				stage.Spec.Shard,
-				currentFreightID,
+				currentFreightIDs,
 				health,
 				stage.Status.Phase,
 				duration.HumanDuration(time.Since(stage.CreationTimestamp.Time)),

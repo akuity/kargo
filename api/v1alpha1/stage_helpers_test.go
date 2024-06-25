@@ -232,7 +232,13 @@ func TestReverifyStageFreight(t *testing.T) {
 					Namespace: "fake-namespace",
 				},
 				Status: StageStatus{
-					CurrentFreight: &FreightReference{},
+					FreightHistory: FreightHistory{
+						{
+							Freight: map[string]FreightReference{
+								"fake-warehouse": {},
+							},
+						},
+					},
 				},
 			},
 		).Build()
@@ -252,8 +258,14 @@ func TestReverifyStageFreight(t *testing.T) {
 					Namespace: "fake-namespace",
 				},
 				Status: StageStatus{
-					CurrentFreight: &FreightReference{
-						VerificationInfo: &VerificationInfo{},
+					FreightHistory: FreightHistory{
+						{
+							Freight: map[string]FreightReference{
+								"fake-warehouse": {
+									VerificationInfo: &VerificationInfo{},
+								},
+							},
+						},
 					},
 				},
 			},
@@ -274,9 +286,15 @@ func TestReverifyStageFreight(t *testing.T) {
 					Namespace: "fake-namespace",
 				},
 				Status: StageStatus{
-					CurrentFreight: &FreightReference{
-						VerificationInfo: &VerificationInfo{
-							ID: "fake-id",
+					FreightHistory: FreightHistory{
+						{
+							Freight: map[string]FreightReference{
+								"fake-warehouse": {
+									VerificationInfo: &VerificationInfo{
+										ID: "fake-id",
+									},
+								},
+							},
 						},
 					},
 				},
@@ -339,7 +357,13 @@ func TestAbortStageFreightVerification(t *testing.T) {
 					Namespace: "fake-namespace",
 				},
 				Status: StageStatus{
-					CurrentFreight: &FreightReference{},
+					FreightHistory: FreightHistory{
+						{
+							Freight: map[string]FreightReference{
+								"fake-warehouse": {},
+							},
+						},
+					},
 				},
 			},
 		).Build()
@@ -359,8 +383,14 @@ func TestAbortStageFreightVerification(t *testing.T) {
 					Namespace: "fake-namespace",
 				},
 				Status: StageStatus{
-					CurrentFreight: &FreightReference{
-						VerificationInfo: &VerificationInfo{},
+					FreightHistory: FreightHistory{
+						{
+							Freight: map[string]FreightReference{
+								"fake-warehouse": {
+									VerificationInfo: &VerificationInfo{},
+								},
+							},
+						},
 					},
 				},
 			},
@@ -381,10 +411,16 @@ func TestAbortStageFreightVerification(t *testing.T) {
 					Namespace: "fake-namespace",
 				},
 				Status: StageStatus{
-					CurrentFreight: &FreightReference{
-						VerificationInfo: &VerificationInfo{
-							ID:    "fake-id",
-							Phase: VerificationPhaseError,
+					FreightHistory: FreightHistory{
+						{
+							Freight: map[string]FreightReference{
+								"fake-warehouse": {
+									VerificationInfo: &VerificationInfo{
+										ID:    "fake-id",
+										Phase: VerificationPhaseError,
+									},
+								},
+							},
 						},
 					},
 				},
@@ -414,9 +450,15 @@ func TestAbortStageFreightVerification(t *testing.T) {
 					Namespace: "fake-namespace",
 				},
 				Status: StageStatus{
-					CurrentFreight: &FreightReference{
-						VerificationInfo: &VerificationInfo{
-							ID: "fake-id",
+					FreightHistory: FreightHistory{
+						{
+							Freight: map[string]FreightReference{
+								"fake-warehouse": {
+									VerificationInfo: &VerificationInfo{
+										ID: "fake-id",
+									},
+								},
+							},
 						},
 					},
 				},

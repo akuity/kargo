@@ -524,11 +524,20 @@ type StageStatus struct {
 	LastHandledRefresh string `json:"lastHandledRefresh,omitempty" protobuf:"bytes,11,opt,name=lastHandledRefresh"`
 	// Phase describes where the Stage currently is in its lifecycle.
 	Phase StagePhase `json:"phase,omitempty" protobuf:"bytes,1,opt,name=phase"`
+	// FreightHistory is a list of recent Freight selections that were deployed
+	// to the Stage. By default, the last ten Freight selections are stored.
+	// The first item in the list is the most recent Freight selection and
+	// currently deployed to the Stage, subsequent items are older selections.
+	FreightHistory FreightHistory `json:"freightHistory,omitempty" protobuf:"bytes,4,rep,name=freightHistory" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	// CurrentFreight is a simplified representation of the Stage's current
 	// Freight describing what is currently deployed to the Stage.
+	//
+	// Deprecated: Use the top item in the FreightHistory stack instead.
 	CurrentFreight *FreightReference `json:"currentFreight,omitempty" protobuf:"bytes,2,opt,name=currentFreight"`
 	// History is a stack of recent Freight. By default, the last ten Freight are
 	// stored.
+	//
+	// Deprecated: Use the FreightHistory stack instead.
 	History FreightReferenceStack `json:"history,omitempty" protobuf:"bytes,3,rep,name=history"`
 	// Health is the Stage's last observed health.
 	Health *Health `json:"health,omitempty" protobuf:"bytes,8,opt,name=health"`
@@ -567,6 +576,60 @@ type FreightReference struct {
 	VerificationHistory VerificationInfoStack `json:"verificationHistory,omitempty" protobuf:"bytes,7,rep,name=verificationHistory"`
 }
 
+// FreightHistoryEntry is a collection of FreightReferences, each of which
+// represents a piece of Freight that has been selected for deployment to a
+// Stage.
+type FreightHistoryEntry struct {
+	// Freight is a map of FreightReference objects, indexed by their Warehouse
+	// origin.
+	Freight map[string]FreightReference `json:"items,omitempty" protobuf:"bytes,1,rep,name=items" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+}
+
+// UpdateOrPush updates the entry in the FreightHistoryEntry based on the Warehouse
+// name of the provided FreightReference. If no such entry exists, the provided
+// FreightReference is appended to the FreightHistoryEntry.
+func (f *FreightHistoryEntry) UpdateOrPush(freight ...FreightReference) {
+	if f.Freight == nil {
+		f.Freight = make(map[string]FreightReference)
+	}
+	for _, i := range freight {
+		f.Freight[i.Warehouse] = i
+	}
+}
+
+// FreightHistory is a linear list of FreightHistoryEntry items. The list is
+// ordered by the time at which the FreightHistoryEntry was recorded, with the
+// most recent (current) FreightHistoryEntry at the top of the list.
+type FreightHistory []*FreightHistoryEntry
+
+// Current returns the most recent (current) FreightHistoryEntry from the history.
+func (f *FreightHistory) Current() *FreightHistoryEntry {
+	if f == nil || len(*f) == 0 {
+		return nil
+	}
+	return (*f)[0]
+}
+
+// Record appends the provided FreightHistoryEntry as the most recent (current)
+// FreightHistoryEntry in the history. I.e. The provided FreightHistoryEntry becomes
+// the first item in the list. If the list grows beyond ten items, the bottom
+// items are removed.
+func (f *FreightHistory) Record(freight ...*FreightHistoryEntry) {
+	*f = append(freight, *f...)
+	f.truncate()
+}
+
+// truncate ensures the history does not grow beyond 10 items.
+func (f *FreightHistory) truncate() {
+	const maxSize = 10
+	if f != nil && len(*f) > maxSize {
+		*f = (*f)[:maxSize]
+	}
+}
+
+// FreightReferenceStack is a linear stack of FreightReferences.
+//
+// Deprecated: Use FreightHistory instead.
 type FreightReferenceStack []FreightReference
 
 // Push appends the provided FreightReference to the top of the stack. If the

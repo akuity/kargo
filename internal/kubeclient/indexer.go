@@ -87,18 +87,27 @@ func indexStagesByAnalysisRun(shardName string) client.IndexerFunc {
 		}
 
 		stage := obj.(*kargoapi.Stage) // nolint: forcetypeassert
-		if stage.Status.CurrentFreight == nil ||
-			stage.Status.CurrentFreight.VerificationInfo == nil ||
-			stage.Status.CurrentFreight.VerificationInfo.AnalysisRun == nil {
+
+		current := stage.Status.FreightHistory.Current()
+		if current == nil || len(current.Freight) == 0 {
 			return nil
 		}
-		return []string{
-			fmt.Sprintf(
-				"%s:%s",
-				stage.Status.CurrentFreight.VerificationInfo.AnalysisRun.Namespace,
-				stage.Status.CurrentFreight.VerificationInfo.AnalysisRun.Name,
-			),
+
+		var analysisRuns []string
+		for _, freight := range current.Freight {
+			if freight.VerificationInfo == nil || freight.VerificationInfo.AnalysisRun == nil {
+				continue
+			}
+			analysisRuns = append(
+				analysisRuns,
+				fmt.Sprintf(
+					"%s:%s",
+					freight.VerificationInfo.AnalysisRun.Namespace,
+					freight.VerificationInfo.AnalysisRun.Name,
+				),
+			)
 		}
+		return analysisRuns
 	}
 }
 
@@ -364,12 +373,17 @@ func IndexStagesByFreight(ctx context.Context, mgr ctrl.Manager) error {
 
 func indexStagesByFreight(obj client.Object) []string {
 	stage := obj.(*kargoapi.Stage) // nolint: forcetypeassert
-	if stage.Status.CurrentFreight != nil {
-		if id := stage.Status.CurrentFreight.Name; id != "" {
-			return []string{id}
-		}
+
+	current := stage.Status.FreightHistory.Current()
+	if current == nil || len(current.Freight) == 0 {
+		return nil
 	}
-	return nil
+
+	var freightIDs []string
+	for _, freight := range current.Freight {
+		freightIDs = append(freightIDs, freight.Name)
+	}
+	return freightIDs
 }
 
 func IndexStagesByUpstreamStages(ctx context.Context, mgr ctrl.Manager) error {
