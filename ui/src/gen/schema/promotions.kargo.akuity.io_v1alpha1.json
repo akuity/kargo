@@ -135,9 +135,9 @@
               "type": "string"
             },
             "verificationHistory": {
-              "description": "VerificationHistory is a stack of recent VerificationInfo. By default,\nthe last ten VerificationInfo are stored.",
+              "description": "VerificationHistory is a stack of recent VerificationInfo. By default,\nthe last ten VerificationInfo are stored.\n\n\nDeprecated: Use FreightHistoryEntry.VerificationHistory instead.",
               "items": {
-                "description": "VerificationInfo contains information about the currently running\nVerification process.",
+                "description": "VerificationInfo contains the details of an instance of a Verification\nprocess.",
                 "properties": {
                   "actor": {
                     "description": "Actor is the name of the entity that initiated or aborted the\nVerification process.",
@@ -194,7 +194,7 @@
               "type": "array"
             },
             "verificationInfo": {
-              "description": "VerificationInfo is information about any verification process that was\nassociated with this Freight for this Stage.",
+              "description": "VerificationInfo is information about any verification process that was\nassociated with this Freight for this Stage.\n\n\nDeprecated: Use FreightHistoryEntry.VerificationHistory instead.",
               "properties": {
                 "actor": {
                   "description": "Actor is the name of the entity that initiated or aborted the\nVerification process.",

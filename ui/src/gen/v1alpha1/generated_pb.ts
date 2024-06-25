@@ -1375,6 +1375,14 @@ export class FreightHistoryEntry extends Message<FreightHistoryEntry> {
    */
   items: { [key: string]: FreightReference } = {};
 
+  /**
+   * VerificationHistory is a stack of recent VerificationInfo. By default,
+   * the last ten VerificationInfo are stored.
+   *
+   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.VerificationInfo verificationHistory = 2;
+   */
+  verificationHistory: VerificationInfo[] = [];
+
   constructor(data?: PartialMessage<FreightHistoryEntry>) {
     super();
     proto2.util.initPartial(data, this);
@@ -1384,6 +1392,7 @@ export class FreightHistoryEntry extends Message<FreightHistoryEntry> {
   static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.FreightHistoryEntry";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 1, name: "items", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "message", T: FreightReference} },
+    { no: 2, name: "verificationHistory", kind: "message", T: VerificationInfo, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FreightHistoryEntry {
@@ -1496,6 +1505,8 @@ export class FreightReference extends Message<FreightReference> {
    * VerificationInfo is information about any verification process that was
    * associated with this Freight for this Stage.
    *
+   * Deprecated: Use FreightHistoryEntry.VerificationHistory instead.
+   *
    * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.VerificationInfo verificationInfo = 5;
    */
   verificationInfo?: VerificationInfo;
@@ -1503,6 +1514,8 @@ export class FreightReference extends Message<FreightReference> {
   /**
    * VerificationHistory is a stack of recent VerificationInfo. By default,
    * the last ten VerificationInfo are stored.
+   *
+   * Deprecated: Use FreightHistoryEntry.VerificationHistory instead.
    *
    * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.VerificationInfo verificationHistory = 7;
    */
@@ -4213,8 +4226,8 @@ export class Verification extends Message<Verification> {
 }
 
 /**
- * VerificationInfo contains information about the currently running
- * Verification process.
+ * VerificationInfo contains the details of an instance of a Verification
+ * process.
  *
  * @generated from message github.com.akuity.kargo.api.v1alpha1.VerificationInfo
  */

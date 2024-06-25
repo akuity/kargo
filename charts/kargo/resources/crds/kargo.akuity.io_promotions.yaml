@@ -198,10 +198,13 @@ spec:
                     description: |-
                       VerificationHistory is a stack of recent VerificationInfo. By default,
                       the last ten VerificationInfo are stored.
+
+
+                      Deprecated: Use FreightHistoryEntry.VerificationHistory instead.
                     items:
                       description: |-
-                        VerificationInfo contains information about the currently running
-                        Verification process.
+                        VerificationInfo contains the details of an instance of a Verification
+                        process.
                       properties:
                         actor:
                           description: |-
@@ -259,6 +262,9 @@ spec:
                     description: |-
                       VerificationInfo is information about any verification process that was
                       associated with this Freight for this Stage.
+
+
+                      Deprecated: Use FreightHistoryEntry.VerificationHistory instead.
                     properties:
                       actor:
                         description: |-

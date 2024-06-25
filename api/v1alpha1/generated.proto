@@ -426,6 +426,10 @@ message FreightHistoryEntry {
   // Freight is a map of FreightReference objects, indexed by their Warehouse
   // origin.
   map<string, FreightReference> items = 1;
+
+  // VerificationHistory is a stack of recent VerificationInfo. By default,
+  // the last ten VerificationInfo are stored.
+  repeated VerificationInfo verificationHistory = 2;
 }
 
 // FreightList is a list of Freight resources.
@@ -457,10 +461,14 @@ message FreightReference {
 
   // VerificationInfo is information about any verification process that was
   // associated with this Freight for this Stage.
+  //
+  // Deprecated: Use FreightHistoryEntry.VerificationHistory instead.
   optional VerificationInfo verificationInfo = 5;
 
   // VerificationHistory is a stack of recent VerificationInfo. By default,
   // the last ten VerificationInfo are stored.
+  //
+  // Deprecated: Use FreightHistoryEntry.VerificationHistory instead.
   repeated VerificationInfo verificationHistory = 7;
 }
 
@@ -1314,8 +1322,8 @@ message Verification {
   repeated AnalysisRunArgument args = 3;
 }
 
-// VerificationInfo contains information about the currently running
-// Verification process.
+// VerificationInfo contains the details of an instance of a Verification
+// process.
 message VerificationInfo {
   // ID is the identifier of the Verification process.
   optional string id = 4;
