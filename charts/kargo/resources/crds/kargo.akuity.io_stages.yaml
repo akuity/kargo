@@ -516,6 +516,40 @@ spec:
                   kargo.akuity.io/shard label with the value of this field. When this field
                   is empty, the webhook will ensure that label is absent.
                 type: string
+              subscriptions:
+                description: |-
+                  Subscriptions describes the Stage's sources of Freight. This is a required
+                  field.
+
+
+                  Deprecated: Use RequestedFreight instead.
+                properties:
+                  upstreamStages:
+                    description: |-
+                      UpstreamStages identifies other Stages as potential sources of Freight
+                      for this Stage. This field is mutually exclusive with the Repos field.
+                    items:
+                      description: |-
+                        StageSubscription defines a subscription to Freight from another Stage.
+
+
+                        Deprecated: Use FreightRequest instead.
+                      properties:
+                        name:
+                          description: Name specifies the name of a Stage.
+                          minLength: 1
+                          pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                          type: string
+                      required:
+                      - name
+                      type: object
+                    type: array
+                  warehouse:
+                    description: |-
+                      Warehouse is a subscription to a Warehouse. This field is mutually
+                      exclusive with the UpstreamStages field.
+                    type: string
+                type: object
               verification:
                 description: |-
                   Verification describes how to verify a Stage's current Freight is fit for
@@ -575,6 +609,7 @@ spec:
                 type: object
             required:
             - requestedFreight
+            - subscriptions
             type: object
           status:
             description: Status describes the Stage's current and recent Freight,

@@ -166,7 +166,7 @@ func TestSyncControlFlowStage(t *testing.T) {
 					FreightHistory:   make(kargoapi.FreightHistory, 0),
 					Health:           &kargoapi.Health{},
 					CurrentFreight:   &kargoapi.FreightReference{},
-					History:          make(kargoapi.FreightReferenceStack, 0),
+					History:          make(kargoapi.FreightReferenceStack, 0), // nolint: staticcheck
 				},
 			},
 			reconciler: &reconciler{
@@ -196,8 +196,8 @@ func TestSyncControlFlowStage(t *testing.T) {
 				require.Nil(t, newStatus.CurrentPromotion)                // Cleared
 				require.Nil(t, newStatus.LastPromotion)                   // Cleared
 				require.Nil(t, newStatus.Health)                          // Cleared
-				require.Nil(t, newStatus.CurrentFreight)                  // Cleared
-				require.Nil(t, newStatus.History)                         // Cleared
+				require.Nil(t, newStatus.CurrentFreight)                  // nolint: staticcheck
+				require.Nil(t, newStatus.History)                         // nolint: staticcheck
 
 				require.Len(t, recorder.Events, 1)
 				event := <-recorder.Events
