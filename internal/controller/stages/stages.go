@@ -1058,7 +1058,7 @@ func (r *reconciler) syncPromotions(
 	if latestPromo := promotions[0]; !latestPromo.Status.Phase.IsTerminal() {
 		logger.WithValues("promotion", latestPromo.Name).Debug("Stage has a running Promotion")
 		status.Phase = kargoapi.StagePhasePromoting
-		status.CurrentPromotion = &kargoapi.PromotionInfo{
+		status.CurrentPromotion = &kargoapi.PromotionReference{
 			Name: latestPromo.Name,
 		}
 		if latestPromo.Status.Freight != nil {
@@ -1071,7 +1071,7 @@ func (r *reconciler) syncPromotions(
 	// Determine if there are any new Promotions that have been completed since
 	// the last reconciliation.
 	logger.Debug("checking for new terminated Promotions")
-	var newPromotions []kargoapi.PromotionInfo
+	var newPromotions []kargoapi.PromotionReference
 	for _, promo := range promotions {
 		if status.LastPromotion != nil {
 			// We can break here since we know that all subsequent Promotions
@@ -1086,7 +1086,7 @@ func (r *reconciler) syncPromotions(
 
 		if promo.Status.Phase.IsTerminal() {
 			logger.WithValues("promotion", promo.Name).Debug("found new terminated Promotion")
-			info := kargoapi.PromotionInfo{
+			info := kargoapi.PromotionReference{
 				Name:   promo.Name,
 				Status: promo.Status.DeepCopy(),
 			}
@@ -1101,7 +1101,7 @@ func (r *reconciler) syncPromotions(
 	// we order the Promotions from oldest to newest. This is because the
 	// Freight history is garbage collected based on the number of entries,
 	// and we want to ensure that the oldest entries are removed first.
-	slices.SortFunc(newPromotions, func(a, b kargoapi.PromotionInfo) int {
+	slices.SortFunc(newPromotions, func(a, b kargoapi.PromotionReference) int {
 		return strings.Compare(a.Name, b.Name)
 	})
 
@@ -1109,6 +1109,7 @@ func (r *reconciler) syncPromotions(
 	// Promotions, and any new Freight that was successfully promoted.
 	for _, p := range newPromotions {
 		promo := p
+		promo.CompletionTime = &metav1.Time{Time: r.nowFn()}
 		status.LastPromotion = &promo
 		if promo.Status.Phase == kargoapi.PromotionPhaseSucceeded {
 			status.CurrentFreight = status.LastPromotion.Freight.DeepCopy()

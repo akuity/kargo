@@ -796,6 +796,11 @@ spec:
                 description: CurrentPromotion is a reference to the currently Running
                   promotion.
                 properties:
+                  completionTime:
+                    description: CompletionTime is the time at which the Promotion
+                      was completed.
+                    format: date-time
+                    type: string
                   freight:
                     description: Freight is the freight being promoted
                     properties:
@@ -1609,6 +1614,11 @@ spec:
               lastPromotion:
                 description: LastPromotion is a reference to the last completed promotion.
                 properties:
+                  completionTime:
+                    description: CompletionTime is the time at which the Promotion
+                      was completed.
+                    format: date-time
+                    type: string
                   freight:
                     description: Freight is the freight being promoted
                     properties:

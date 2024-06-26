@@ -3116,61 +3116,6 @@ export class Promotion extends Message<Promotion> {
 }
 
 /**
- * @generated from message github.com.akuity.kargo.api.v1alpha1.PromotionInfo
- */
-export class PromotionInfo extends Message<PromotionInfo> {
-  /**
-   * Name is the name of the Promotion
-   *
-   * @generated from field: optional string name = 1;
-   */
-  name?: string;
-
-  /**
-   * Freight is the freight being promoted
-   *
-   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.FreightReference freight = 2;
-   */
-  freight?: FreightReference;
-
-  /**
-   * Status is the (optional) status of the promotion
-   *
-   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.PromotionStatus status = 3;
-   */
-  status?: PromotionStatus;
-
-  constructor(data?: PartialMessage<PromotionInfo>) {
-    super();
-    proto2.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto2 = proto2;
-  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.PromotionInfo";
-  static readonly fields: FieldList = proto2.util.newFieldList(() => [
-    { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 2, name: "freight", kind: "message", T: FreightReference, opt: true },
-    { no: 3, name: "status", kind: "message", T: PromotionStatus, opt: true },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PromotionInfo {
-    return new PromotionInfo().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): PromotionInfo {
-    return new PromotionInfo().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): PromotionInfo {
-    return new PromotionInfo().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: PromotionInfo | PlainMessage<PromotionInfo> | undefined, b: PromotionInfo | PlainMessage<PromotionInfo> | undefined): boolean {
-    return proto2.util.equals(PromotionInfo, a, b);
-  }
-}
-
-/**
  * PromotionList contains a list of Promotion
  *
  * @generated from message github.com.akuity.kargo.api.v1alpha1.PromotionList
@@ -3324,6 +3269,69 @@ export class PromotionPolicy extends Message<PromotionPolicy> {
 
   static equals(a: PromotionPolicy | PlainMessage<PromotionPolicy> | undefined, b: PromotionPolicy | PlainMessage<PromotionPolicy> | undefined): boolean {
     return proto2.util.equals(PromotionPolicy, a, b);
+  }
+}
+
+/**
+ * @generated from message github.com.akuity.kargo.api.v1alpha1.PromotionReference
+ */
+export class PromotionReference extends Message<PromotionReference> {
+  /**
+   * Name is the name of the Promotion
+   *
+   * @generated from field: optional string name = 1;
+   */
+  name?: string;
+
+  /**
+   * Freight is the freight being promoted
+   *
+   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.FreightReference freight = 2;
+   */
+  freight?: FreightReference;
+
+  /**
+   * Status is the (optional) status of the promotion
+   *
+   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.PromotionStatus status = 3;
+   */
+  status?: PromotionStatus;
+
+  /**
+   * CompletionTime is the time at which the Promotion was completed.
+   *
+   * @generated from field: optional k8s.io.apimachinery.pkg.apis.meta.v1.Time completionTime = 4;
+   */
+  completionTime?: Time;
+
+  constructor(data?: PartialMessage<PromotionReference>) {
+    super();
+    proto2.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto2 = proto2;
+  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.PromotionReference";
+  static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 2, name: "freight", kind: "message", T: FreightReference, opt: true },
+    { no: 3, name: "status", kind: "message", T: PromotionStatus, opt: true },
+    { no: 4, name: "completionTime", kind: "message", T: Time, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PromotionReference {
+    return new PromotionReference().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): PromotionReference {
+    return new PromotionReference().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): PromotionReference {
+    return new PromotionReference().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: PromotionReference | PlainMessage<PromotionReference> | undefined, b: PromotionReference | PlainMessage<PromotionReference> | undefined): boolean {
+    return proto2.util.equals(PromotionReference, a, b);
   }
 }
 
@@ -3822,16 +3830,16 @@ export class StageStatus extends Message<StageStatus> {
   /**
    * CurrentPromotion is a reference to the currently Running promotion.
    *
-   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.PromotionInfo currentPromotion = 7;
+   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.PromotionReference currentPromotion = 7;
    */
-  currentPromotion?: PromotionInfo;
+  currentPromotion?: PromotionReference;
 
   /**
    * LastPromotion is a reference to the last completed promotion.
    *
-   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.PromotionInfo lastPromotion = 10;
+   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.PromotionReference lastPromotion = 10;
    */
-  lastPromotion?: PromotionInfo;
+  lastPromotion?: PromotionReference;
 
   constructor(data?: PartialMessage<StageStatus>) {
     super();
@@ -3848,8 +3856,8 @@ export class StageStatus extends Message<StageStatus> {
     { no: 8, name: "health", kind: "message", T: Health, opt: true },
     { no: 9, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 6, name: "observedGeneration", kind: "scalar", T: 3 /* ScalarType.INT64 */, opt: true },
-    { no: 7, name: "currentPromotion", kind: "message", T: PromotionInfo, opt: true },
-    { no: 10, name: "lastPromotion", kind: "message", T: PromotionInfo, opt: true },
+    { no: 7, name: "currentPromotion", kind: "message", T: PromotionReference, opt: true },
+    { no: 10, name: "lastPromotion", kind: "message", T: PromotionReference, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StageStatus {
