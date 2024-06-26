@@ -3,7 +3,8 @@ package api
 import (
 	"context"
 	"fmt"
-	"sort"
+	"slices"
+	"strings"
 
 	"connectrpc.com/connect"
 
@@ -20,8 +21,8 @@ func (s *server) ListDetailedProjects(
 		return nil, fmt.Errorf("error listing Projects: %w", err)
 	}
 
-	sort.Slice(list.Items, func(i, j int) bool {
-		return list.Items[i].Name < list.Items[j].Name
+	slices.SortFunc(list.Items, func(i, j kargoapi.Project) int {
+		return strings.Compare(i.Name, j.Name)
 	})
 
 	projects := make([]*svcv1alpha1.DetailedProject, len(list.Items))
