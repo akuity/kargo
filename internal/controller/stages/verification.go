@@ -32,7 +32,7 @@ import (
 func (r *reconciler) startVerification(
 	ctx context.Context,
 	stage *kargoapi.Stage,
-	freightRef kargoapi.FreightReference,
+	freightCombo *kargoapi.FreightHistoryEntry,
 ) (*kargoapi.VerificationInfo, error) {
 	startTime := r.nowFn()
 
@@ -45,7 +45,7 @@ func (r *reconciler) startVerification(
 	// and extract the actor who requested the re-verification to be used in the
 	// new verification info.
 	var isReverify bool
-	curVer := freightRef.VerificationHistory.Current()
+	curVer := freightCombo.VerificationHistory.Current()
 	if curVer != nil {
 		if req, _ := kargoapi.ReverifyAnnotationValue(stage.GetAnnotations()); req.ForID(curVer.ID) {
 			isReverify = true
@@ -75,7 +75,7 @@ func (r *reconciler) startVerification(
 				LabelSelector: labels.SelectorFromSet(
 					map[string]string{
 						kargoapi.StageLabelKey:   stage.Name,
-						kargoapi.FreightLabelKey: freightRef.Name,
+						kargoapi.FreightLabelKey: freightCombo.FreightNames(),
 					},
 				),
 			},
@@ -85,7 +85,7 @@ func (r *reconciler) startVerification(
 			newInfo.Message = fmt.Errorf(
 				"error listing AnalysisRuns for Stage %q and Freight %q in namespace %q: %w",
 				stage.Name,
-				freightRef.Name,
+				freightCombo.FreightNames(),
 				stage.Namespace,
 				err,
 			).Error()
@@ -148,44 +148,14 @@ func (r *reconciler) startVerification(
 		templates[i] = template
 	}
 
-	freight, err := r.getFreightFn(
-		ctx,
-		r.kargoClient,
-		types.NamespacedName{
-			Namespace: stage.Namespace,
-			Name:      freightRef.Name,
-		},
-	)
-	if err != nil {
-		newInfo.FinishTime = ptr.To(metav1.NewTime(r.nowFn()))
-		newInfo.Phase = kargoapi.VerificationPhaseError
-		newInfo.Message = fmt.Errorf(
-			"error getting Freight %q in namespace %q: %w",
-			freightRef.Name,
-			stage.Namespace,
-			err,
-		).Error()
-		return newInfo, err
-	}
-	if freight == nil {
-		newInfo.FinishTime = ptr.To(metav1.NewTime(r.nowFn()))
-		newInfo.Phase = kargoapi.VerificationPhaseError
-		newInfo.Message = fmt.Errorf(
-			"Freight %q in namespace %q not found",
-			freightRef.Name,
-			stage.Namespace,
-		).Error()
-		return newInfo, nil
-	}
-
-	run, err := r.buildAnalysisRunFn(stage, curVer, freight, templates)
+	run, err := r.buildAnalysisRunFn(ctx, stage, curVer, freightCombo, templates)
 	if err != nil {
 		newInfo.FinishTime = ptr.To(metav1.NewTime(r.nowFn()))
 		newInfo.Phase = kargoapi.VerificationPhaseError
 		newInfo.Message = fmt.Errorf(
 			"error building AnalysisRun for Stage %q and Freight %q in namespace %q: %w",
 			stage.Name,
-			freightRef.Name,
+			freightCombo.FreightNames(),
 			stage.Namespace,
 			err,
 		).Error()
@@ -225,21 +195,21 @@ func (r *reconciler) startVerification(
 func (r *reconciler) getVerificationInfo(
 	ctx context.Context,
 	stage *kargoapi.Stage,
-	freightRef kargoapi.FreightReference,
+	verificationInfo *kargoapi.VerificationInfo,
 ) (*kargoapi.VerificationInfo, error) {
 	if !r.cfg.RolloutsIntegrationEnabled {
 		return &kargoapi.VerificationInfo{
-			ID:         freightRef.VerificationInfo.ID,
-			Actor:      freightRef.VerificationInfo.Actor,
-			StartTime:  freightRef.VerificationInfo.StartTime,
-			FinishTime: freightRef.VerificationInfo.FinishTime,
+			ID:         verificationInfo.ID,
+			Actor:      verificationInfo.Actor,
+			StartTime:  verificationInfo.StartTime,
+			FinishTime: verificationInfo.FinishTime,
 			Phase:      kargoapi.VerificationPhaseError,
 			Message: "Rollouts integration is disabled on this controller; cannot " +
 				"get verification info",
 		}, nil
 	}
 
-	analysisRunName := freightRef.VerificationInfo.AnalysisRun.Name
+	analysisRunName := verificationInfo.AnalysisRun.Name
 	analysisRun, err := r.getAnalysisRunFn(
 		ctx,
 		r.kargoClient,
@@ -250,10 +220,10 @@ func (r *reconciler) getVerificationInfo(
 	)
 	if err != nil {
 		return &kargoapi.VerificationInfo{
-			ID:         freightRef.VerificationInfo.ID,
-			Actor:      freightRef.VerificationInfo.Actor,
-			StartTime:  freightRef.VerificationInfo.StartTime,
-			FinishTime: freightRef.VerificationInfo.FinishTime,
+			ID:         verificationInfo.ID,
+			Actor:      verificationInfo.Actor,
+			StartTime:  verificationInfo.StartTime,
+			FinishTime: verificationInfo.FinishTime,
 			Phase:      kargoapi.VerificationPhaseError,
 			Message: fmt.Errorf(
 				"error getting AnalysisRun %q in namespace %q: %w",
@@ -261,15 +231,15 @@ func (r *reconciler) getVerificationInfo(
 				stage.Namespace,
 				err,
 			).Error(),
-			AnalysisRun: freightRef.VerificationInfo.AnalysisRun.DeepCopy(),
+			AnalysisRun: verificationInfo.AnalysisRun.DeepCopy(),
 		}, err
 	}
 	if analysisRun == nil {
 		return &kargoapi.VerificationInfo{
-			ID:         freightRef.VerificationInfo.ID,
-			Actor:      freightRef.VerificationInfo.Actor,
-			StartTime:  freightRef.VerificationInfo.StartTime,
-			FinishTime: freightRef.VerificationInfo.FinishTime,
+			ID:         verificationInfo.ID,
+			Actor:      verificationInfo.Actor,
+			StartTime:  verificationInfo.StartTime,
+			FinishTime: verificationInfo.FinishTime,
 			Phase:      kargoapi.VerificationPhaseError,
 			Message: fmt.Errorf(
 				"AnalysisRun %q in namespace %q not found",
@@ -280,8 +250,8 @@ func (r *reconciler) getVerificationInfo(
 	}
 
 	return &kargoapi.VerificationInfo{
-		ID:         freightRef.VerificationInfo.ID,
-		Actor:      freightRef.VerificationInfo.Actor,
+		ID:         verificationInfo.ID,
+		Actor:      verificationInfo.Actor,
 		StartTime:  ptr.To(analysisRun.CreationTimestamp),
 		FinishTime: analysisRun.Status.CompletedAt(),
 		Phase:      kargoapi.VerificationPhase(analysisRun.Status.Phase),
@@ -297,31 +267,30 @@ func (r *reconciler) getVerificationInfo(
 func (r *reconciler) abortVerification(
 	ctx context.Context,
 	stage *kargoapi.Stage,
-	freightRef kargoapi.FreightReference,
+	currentVI *kargoapi.VerificationInfo,
 ) *kargoapi.VerificationInfo {
-	currentInfo := freightRef.VerificationInfo
-	newInfo := &kargoapi.VerificationInfo{
-		ID:        currentInfo.ID,
-		StartTime: currentInfo.StartTime,
+	newVI := &kargoapi.VerificationInfo{
+		ID:        currentVI.ID,
+		StartTime: currentVI.StartTime,
 	}
 
 	// Extract the actor who requested the abort to be used in the new
 	// verification info.
-	if req, _ := kargoapi.AbortAnnotationValue(stage.GetAnnotations()); req.ForID(currentInfo.ID) {
-		newInfo.Actor = req.Actor
+	if req, _ := kargoapi.AbortAnnotationValue(stage.GetAnnotations()); req.ForID(currentVI.ID) {
+		newVI.Actor = req.Actor
 	}
 
 	if !r.cfg.RolloutsIntegrationEnabled {
-		newInfo.FinishTime = ptr.To(metav1.NewTime(r.nowFn()))
-		newInfo.Phase = kargoapi.VerificationPhaseError
-		newInfo.Message = "Rollouts integration is disabled on this controller; cannot abort verification"
-		return newInfo
+		newVI.FinishTime = ptr.To(metav1.NewTime(r.nowFn()))
+		newVI.Phase = kargoapi.VerificationPhaseError
+		newVI.Message = "Rollouts integration is disabled on this controller; cannot abort verification"
+		return newVI
 	}
 
 	ar := &rollouts.AnalysisRun{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      freightRef.VerificationInfo.AnalysisRun.Name,
-			Namespace: freightRef.VerificationInfo.AnalysisRun.Namespace,
+			Name:      currentVI.AnalysisRun.Name,
+			Namespace: currentVI.AnalysisRun.Namespace,
 		},
 	}
 	if err := r.patchAnalysisRunFn(
@@ -329,16 +298,16 @@ func (r *reconciler) abortVerification(
 		ar,
 		client.RawPatch(types.MergePatchType, []byte(`{"spec":{"terminate":true}}`)),
 	); err != nil {
-		newInfo.FinishTime = ptr.To(metav1.NewTime(r.nowFn()))
-		newInfo.Phase = kargoapi.VerificationPhaseError
-		newInfo.Message = fmt.Errorf(
+		newVI.FinishTime = ptr.To(metav1.NewTime(r.nowFn()))
+		newVI.Phase = kargoapi.VerificationPhaseError
+		newVI.Message = fmt.Errorf(
 			"error terminating AnalysisRun %q in namespace %q: %w",
 			ar.Name,
 			ar.Namespace,
 			err,
 		).Error()
-		newInfo.AnalysisRun = currentInfo.AnalysisRun.DeepCopy()
-		return newInfo
+		newVI.AnalysisRun = currentVI.AnalysisRun.DeepCopy()
+		return newVI
 	}
 
 	// Return a new VerificationInfo with the same ID and a message indicating
@@ -346,18 +315,19 @@ func (r *reconciler) abortVerification(
 	// the verification was not successful.
 	// We do not use the further information from the AnalysisRun, as this
 	// will indicate a "Succeeded" phase due to Argo Rollouts behavior.
-	newInfo.StartTime = ptr.To(ar.CreationTimestamp)
-	newInfo.FinishTime = ptr.To(metav1.NewTime(r.nowFn()))
-	newInfo.Phase = kargoapi.VerificationPhaseAborted
-	newInfo.Message = "Verification aborted by user"
-	newInfo.AnalysisRun = currentInfo.AnalysisRun.DeepCopy()
-	return newInfo
+	newVI.StartTime = ptr.To(ar.CreationTimestamp)
+	newVI.FinishTime = ptr.To(metav1.NewTime(r.nowFn()))
+	newVI.Phase = kargoapi.VerificationPhaseAborted
+	newVI.Message = "Verification aborted by user"
+	newVI.AnalysisRun = currentVI.AnalysisRun.DeepCopy()
+	return newVI
 }
 
 func (r *reconciler) buildAnalysisRun(
+	ctx context.Context,
 	stage *kargoapi.Stage,
 	verificationInfo *kargoapi.VerificationInfo,
-	freight *kargoapi.Freight,
+	freightCombo *kargoapi.FreightHistoryEntry,
 	templates []*rollouts.AnalysisTemplate,
 ) (*rollouts.AnalysisRun, error) {
 	// maximum length of the stage name used in the promotion name prefix before it exceeds
@@ -366,7 +336,7 @@ func (r *reconciler) buildAnalysisRun(
 	const maxStageNamePrefixLength = 218
 
 	// Build the name of the AnalysisRun
-	shortHash := freight.Name
+	shortHash := freightCombo.FreightNames()
 	if len(shortHash) > 7 {
 		shortHash = shortHash[0:7]
 	}
@@ -395,7 +365,7 @@ func (r *reconciler) buildAnalysisRun(
 		}
 	}
 	lbls[kargoapi.StageLabelKey] = stage.Name
-	lbls[kargoapi.FreightLabelKey] = freight.Name
+	lbls[kargoapi.FreightLabelKey] = freightCombo.FreightNames()
 
 	// Add Promotion name if the AnalysisRun is triggered by Promotion.
 	// This is the case when there is no existing verification information,
@@ -448,12 +418,39 @@ func (r *reconciler) buildAnalysisRun(
 		},
 	}
 
-	// Mark the Freight as the owner of the AnalysisRun
-	ownerRef := metav1.NewControllerRef(
-		freight,
-		kargoapi.GroupVersion.WithKind("Freight"),
-	)
-	ar.OwnerReferences = append(ar.OwnerReferences, *ownerRef)
+	for _, freightRef := range freightCombo.Freight {
+		f, err := r.getFreightFn(
+			ctx,
+			r.kargoClient,
+			types.NamespacedName{
+				Namespace: stage.Namespace,
+				Name:      freightRef.Name,
+			},
+		)
+		if err != nil {
+			return nil, fmt.Errorf(
+				"error getting Freight %q in namespace %q: %w",
+				freightRef.Name,
+				stage.Namespace,
+				err,
+			)
+		}
+		if f == nil {
+			return nil, fmt.Errorf(
+				"Freight %q in namespace %q not found",
+				freightRef.Name,
+				stage.Namespace,
+			)
+		}
+		// Mark the Freight as an owner of the AnalysisRun
+		ar.OwnerReferences = append(
+			ar.OwnerReferences,
+			*metav1.NewControllerRef(
+				f,
+				kargoapi.GroupVersion.WithKind("Freight"),
+			),
+		)
+	}
 
 	return ar, nil
 }

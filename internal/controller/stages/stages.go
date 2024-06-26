@@ -98,19 +98,19 @@ type reconciler struct {
 	startVerificationFn func(
 		context.Context,
 		*kargoapi.Stage,
-		kargoapi.FreightReference,
+		*kargoapi.FreightHistoryEntry,
 	) (*kargoapi.VerificationInfo, error)
 
 	abortVerificationFn func(
 		context.Context,
 		*kargoapi.Stage,
-		kargoapi.FreightReference,
+		*kargoapi.VerificationInfo,
 	) *kargoapi.VerificationInfo
 
 	getVerificationInfoFn func(
 		context.Context,
 		*kargoapi.Stage,
-		kargoapi.FreightReference,
+		*kargoapi.VerificationInfo,
 	) (*kargoapi.VerificationInfo, error)
 
 	getAnalysisTemplateFn func(
@@ -126,10 +126,11 @@ type reconciler struct {
 	) error
 
 	buildAnalysisRunFn func(
-		stage *kargoapi.Stage,
-		verificationInfo *kargoapi.VerificationInfo,
-		freight *kargoapi.Freight,
-		templates []*rollouts.AnalysisTemplate,
+		context.Context,
+		*kargoapi.Stage,
+		*kargoapi.VerificationInfo,
+		*kargoapi.FreightHistoryEntry,
+		[]*rollouts.AnalysisTemplate,
 	) (*rollouts.AnalysisRun, error)
 
 	createAnalysisRunFn func(
@@ -656,16 +657,20 @@ func (r *reconciler) syncNormalStage(
 	status.ObservedGeneration = stage.Generation
 	status.Health = nil
 
-	if currentFreight := status.FreightHistory.Current(); currentFreight == nil || len(currentFreight.Freight) == 0 {
+	verificationJustCompleted := false
+
+	// currentFC is current Freight combination from the top of the history stack
+	if currentFC := status.FreightHistory.Current(); currentFC == nil || len(currentFC.Freight) == 0 {
 		status.Phase = kargoapi.StagePhaseNotApplicable
 		logger.Debug(
 			"Stage has no current Freight; no health checks or verification to perform",
 		)
 	} else {
-		for _, freight := range currentFreight.Freight {
+		// TODO: This loop for checking health is currently incorrect. The health of
+		// the last piece of Freight assessed "wins," so this only functions
+		// correctly for Stages that have one pipeline.
+		for _, freight := range currentFC.Freight {
 			freightLogger := logger.WithValues("freight", freight.Name)
-			shouldRecordFreightVerificationEvent := false
-
 			// Always check the health of the Argo CD Applications associated with the
 			// Stage. This is regardless of the phase of the Stage, as the health of the
 			// Argo CD Applications is always relevant.
@@ -678,108 +683,107 @@ func (r *reconciler) syncNormalStage(
 			} else {
 				freightLogger.Debug("Stage health deemed not applicable")
 			}
+		}
 
-			if stage.Spec.Verification != nil {
-				// Update the verification history with the current verification info.
-				// NOTE: We do this regardless of the phase of the verification process
-				// and before potentially creating a new AnalysisRun to ensure we add
-				// any previous verification attempt which may have been recorded
-				// before we started tracking history.
-				if freight.VerificationInfo != nil {
-					freight.VerificationHistory.UpdateOrPush(*freight.VerificationInfo)
-				}
+		// currentVI is VerificationInfo of the currentFC
+		var currentVI *kargoapi.VerificationInfo
 
-				// If the Stage is in a steady state, we should check if we need to
-				// start or rerun verification.
-				if status.Phase == kargoapi.StagePhaseSteady {
-					info := freight.VerificationInfo
-					switch {
-					case freight.VerificationInfo == nil && status.CurrentPromotion == nil:
+		if stage.Spec.Verification != nil {
+			currentVI = currentFC.VerificationHistory.Current()
+
+			// If the Stage is in a steady state, we should check if we need to
+			// start or rerun verification.
+			if status.Phase == kargoapi.StagePhaseSteady {
+				switch {
+				case currentVI == nil && status.CurrentPromotion == nil:
+					status.Phase = kargoapi.StagePhaseVerifying
+				case currentVI.Phase.IsTerminal():
+					if req, _ := kargoapi.ReverifyAnnotationValue(stage.GetAnnotations()); req.ForID(currentVI.ID) {
+						logger.Debug("rerunning verification")
 						status.Phase = kargoapi.StagePhaseVerifying
-					case info.Phase.IsTerminal():
-						if req, _ := kargoapi.ReverifyAnnotationValue(stage.GetAnnotations()); req.ForID(info.ID) {
-							logger.Debug("rerunning verification")
-							status.Phase = kargoapi.StagePhaseVerifying
-							freight.VerificationInfo = nil
-						}
 					}
 				}
-
-				// Initiate or follow-up on verification if required.
-				// TODO: This bit needs further inspection to see if we can make
-				// it work better with the "multi-pipeline" support.
-				if status.Phase == kargoapi.StagePhaseVerifying {
-					if !freight.VerificationInfo.HasAnalysisRun() {
-						if status.Health == nil || status.Health.Status == kargoapi.HealthStateHealthy {
-							logger.Debug("starting verification")
-							var err error
-							if freight.VerificationInfo, err = r.startVerificationFn(
-								ctx,
-								stage,
-								freight,
-							); err != nil && !freight.VerificationInfo.HasAnalysisRun() {
-								freight.VerificationHistory.UpdateOrPush(*freight.VerificationInfo)
-								currentFreight.UpdateOrPush(freight)
-								return status, fmt.Errorf("error starting verification: %w", err)
-							}
-						}
-					} else {
-						logger.Debug("checking verification results")
-						var err error
-						if freight.VerificationInfo, err = r.getVerificationInfoFn(
-							ctx,
-							stage,
-							freight,
-						); err != nil && freight.VerificationInfo.HasAnalysisRun() {
-							freight.VerificationHistory.UpdateOrPush(*freight.VerificationInfo)
-							currentFreight.UpdateOrPush(freight)
-							return status, fmt.Errorf("error getting verification info: %w", err)
-						}
-
-						// Abort the verification if it's still running and the Stage has
-						// been marked to do so.
-						newInfo := freight.VerificationInfo
-						if !newInfo.Phase.IsTerminal() {
-							if req, _ := kargoapi.AbortAnnotationValue(stage.GetAnnotations()); req.ForID(newInfo.ID) {
-								logger.Debug("aborting verification")
-								freight.VerificationInfo = r.abortVerificationFn(ctx, stage, freight)
-							}
-						}
-					}
-
-					if freight.VerificationInfo != nil {
-						logger.Debug(
-							"verification", "phase",
-							freight.VerificationInfo.Phase,
-						)
-
-						if freight.VerificationInfo.Phase.IsTerminal() {
-							// Verification is complete
-							shouldRecordFreightVerificationEvent = true
-							status.Phase = kargoapi.StagePhaseSteady
-							logger.Debug("verification is complete")
-						}
-
-						// Add latest verification info to history.
-						freight.VerificationHistory.UpdateOrPush(*freight.VerificationInfo)
-					}
-				}
-			} else {
-				// If verification is not applicable, mark the Stage as steady.
-				// This ensures that if the Stage had verification enabled previously,
-				// it will not be stuck in a verification phase.
-				status.Phase = kargoapi.StagePhaseSteady
 			}
 
-			// If health is not applicable or healthy
-			// AND
-			// Verification is not applicable or successful
-			// THEN
-			// Mark the Freight as verified in this Stage
-			if (status.Health == nil || status.Health.Status == kargoapi.HealthStateHealthy) &&
-				(stage.Spec.Verification == nil ||
-					(freight.VerificationInfo != nil &&
-						freight.VerificationInfo.Phase == kargoapi.VerificationPhaseSuccessful)) {
+			// Initiate or follow-up on verification if required.
+			if status.Phase == kargoapi.StagePhaseVerifying {
+				if !currentVI.HasAnalysisRun() {
+					if status.Health == nil || status.Health.Status == kargoapi.HealthStateHealthy {
+						logger.Debug("starting verification")
+						var err error
+						if currentVI, err = r.startVerificationFn(
+							ctx,
+							stage,
+							currentFC,
+						); err != nil {
+							currentFC.VerificationHistory.UpdateOrPush(*currentVI)
+							return status, fmt.Errorf("error starting verification: %w", err)
+						}
+					}
+				} else {
+					logger.Debug("checking verification results")
+					var err error
+					if currentVI, err = r.getVerificationInfoFn(
+						ctx,
+						stage,
+						currentVI,
+					); err != nil {
+						currentFC.VerificationHistory.UpdateOrPush(*currentVI)
+						return status, fmt.Errorf("error getting verification info: %w", err)
+					}
+
+					// Abort the verification if it's still running and the Stage has
+					// been marked to do so.
+					if req, _ := kargoapi.AbortAnnotationValue(
+						stage.GetAnnotations(),
+					); !currentVI.Phase.IsTerminal() && req.ForID(currentVI.ID) {
+						logger.Debug("aborting verification")
+						currentVI = r.abortVerificationFn(ctx, stage, currentVI)
+						currentFC.VerificationHistory.UpdateOrPush(*currentVI)
+					}
+				}
+
+				if currentVI != nil {
+					logger.Debug(
+						"verification", "phase",
+						currentVI.Phase,
+					)
+
+					if currentVI.Phase.IsTerminal() {
+						// Verification was in-progress a moment ago, but is now completed.
+						verificationJustCompleted = true
+						status.Phase = kargoapi.StagePhaseSteady
+						logger.Debug("verification is complete")
+					}
+
+					// Add latest verification info to history.
+					currentFC.VerificationHistory.UpdateOrPush(*currentVI)
+				}
+			}
+		} else {
+			// If the Stage doesn't define any verification procedures, then it has
+			// de-facto passed verification.
+			currentVI = &kargoapi.VerificationInfo{
+				StartTime:  ptr.To(metav1.NewTime(startTime)),
+				FinishTime: ptr.To(metav1.NewTime(r.nowFn())),
+				Phase:      kargoapi.VerificationPhaseSuccessful,
+			}
+			// Mark the Stage as steady.
+			// This ensures that if the Stage had verification enabled previously,
+			// it will not be stuck in a verification phase.
+			status.Phase = kargoapi.StagePhaseSteady
+		}
+
+		freightNeedingEvents := map[string]struct{}{}
+
+		// If health is not applicable or healthy
+		// AND
+		// Verification was successful
+		// THEN
+		// Mark the Freight as verified in this Stage
+		if (status.Health == nil || status.Health.Status == kargoapi.HealthStateHealthy) &&
+			currentVI.Phase == kargoapi.VerificationPhaseSuccessful {
+			for _, freight := range currentFC.Freight {
 				updated, err := r.verifyFreightInStageFn(
 					ctx,
 					stage.Namespace,
@@ -795,61 +799,54 @@ func (r *reconciler) syncNormalStage(
 						err,
 					)
 				}
-
-				// Always record verification event when the Freight is marked as verified
 				if updated {
-					shouldRecordFreightVerificationEvent = true
+					// Any Freight that has just now been marked as verified for the
+					// first time requires an event to be recorded, event if verification
+					// was not JUST NOW completed, as we might be recovering from a
+					// failed previous attempt.
+					freightNeedingEvents[freight.Name] = struct{}{}
 				}
 			}
+		}
 
-			finishTime := r.nowFn()
+		if verificationJustCompleted {
+			for _, f := range currentFC.Freight {
+				freightNeedingEvents[f.Name] = struct{}{}
+			}
+		}
 
-			// Record freight verification event only if the freight is newly verified
-			if shouldRecordFreightVerificationEvent {
-				vi := freight.VerificationInfo
-				if stage.Spec.Verification == nil {
-					vi = &kargoapi.VerificationInfo{
-						StartTime:  ptr.To(metav1.NewTime(startTime)),
-						FinishTime: ptr.To(metav1.NewTime(finishTime)),
-						Phase:      kargoapi.VerificationPhaseSuccessful,
-					}
+		if len(freightNeedingEvents) > 0 {
+			var ar *rollouts.AnalysisRun
+			if currentVI.HasAnalysisRun() {
+				var err error
+				ar, err = r.getAnalysisRunFn(
+					ctx,
+					r.kargoClient,
+					types.NamespacedName{
+						Namespace: currentVI.AnalysisRun.Namespace,
+						Name:      currentVI.AnalysisRun.Name,
+					},
+				)
+				if err != nil {
+					return status, fmt.Errorf("get analysisRun: %w", err)
 				}
-
-				var ar *rollouts.AnalysisRun
-				if vi.HasAnalysisRun() {
-					var err error
-					ar, err = r.getAnalysisRunFn(
-						ctx,
-						r.kargoClient,
-						types.NamespacedName{
-							Namespace: vi.AnalysisRun.Namespace,
-							Name:      vi.AnalysisRun.Name,
-						},
-					)
-					if err != nil {
-						currentFreight.UpdateOrPush(freight)
-						return status, fmt.Errorf("get analysisRun: %w", err)
-					}
-				}
-
+			}
+			for freightName := range freightNeedingEvents {
 				fr, err := r.getFreightFn(
 					ctx,
 					r.kargoClient,
 					types.NamespacedName{
 						Namespace: stage.Namespace,
-						Name:      freight.Name,
+						Name:      freightName,
 					},
 				)
 				if err != nil {
-					currentFreight.UpdateOrPush(freight)
 					return status, fmt.Errorf("get freight: %w", err)
 				}
 				if fr != nil {
-					r.recordFreightVerificationEvent(stage, fr, vi, ar)
+					r.recordFreightVerificationEvent(stage, fr, currentVI, ar)
 				}
 			}
-
-			currentFreight.UpdateOrPush(freight)
 		}
 	}
 
