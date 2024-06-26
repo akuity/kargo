@@ -88,26 +88,20 @@ func indexStagesByAnalysisRun(shardName string) client.IndexerFunc {
 
 		stage := obj.(*kargoapi.Stage) // nolint: forcetypeassert
 
-		current := stage.Status.FreightHistory.Current()
-		if current == nil || len(current.Freight) == 0 {
+		currentFC := stage.Status.FreightHistory.Current()
+		if currentFC == nil {
+			return nil
+		}
+		currentVI := currentFC.VerificationHistory.Current()
+		if currentVI == nil || currentVI.AnalysisRun == nil {
 			return nil
 		}
 
-		var analysisRuns []string
-		for _, freight := range current.Freight {
-			if freight.VerificationInfo == nil || freight.VerificationInfo.AnalysisRun == nil {
-				continue
-			}
-			analysisRuns = append(
-				analysisRuns,
-				fmt.Sprintf(
-					"%s:%s",
-					freight.VerificationInfo.AnalysisRun.Namespace,
-					freight.VerificationInfo.AnalysisRun.Name,
-				),
-			)
-		}
-		return analysisRuns
+		return []string{fmt.Sprintf(
+			"%s:%s",
+			currentVI.AnalysisRun.Namespace,
+			currentVI.AnalysisRun.Name,
+		)}
 	}
 }
 
