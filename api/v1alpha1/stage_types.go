@@ -1,6 +1,9 @@
 package v1alpha1
 
 import (
+	"slices"
+	"strings"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -618,6 +621,21 @@ type FreightHistoryEntry struct {
 	// VerificationHistory is a stack of recent VerificationInfo. By default,
 	// the last ten VerificationInfo are stored.
 	VerificationHistory VerificationInfoStack `json:"verificationHistory,omitempty" protobuf:"bytes,2,rep,name=verificationHistory"`
+}
+
+// FreightNames returns a sorted and comma-delimited list of the names of the
+// Freight in the FreightHistoryEntry. This is useful for when an identifier is
+// needed to represent a precise combination of Freight.
+func (f *FreightHistoryEntry) FreightNames() string {
+	if f == nil || len(f.Freight) == 0 {
+		return ""
+	}
+	freightNames := make([]string, 0, len(f.Freight))
+	for _, freight := range f.Freight {
+		freightNames = append(freightNames, freight.Name)
+	}
+	slices.Sort(freightNames)
+	return strings.Join(freightNames, ",")
 }
 
 // UpdateOrPush updates the entry in the FreightHistoryEntry based on the Warehouse
