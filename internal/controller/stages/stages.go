@@ -1109,7 +1109,7 @@ func (r *reconciler) syncPromotions(
 	// Promotions, and any new Freight that was successfully promoted.
 	for _, p := range newPromotions {
 		promo := p
-		promo.CompletionTime = &metav1.Time{Time: r.nowFn()}
+		promo.CompletionTime = &metav1.Time{Time: time.Now()}
 		status.LastPromotion = &promo
 		if promo.Status.Phase == kargoapi.PromotionPhaseSucceeded {
 			status.CurrentFreight = status.LastPromotion.Freight.DeepCopy()

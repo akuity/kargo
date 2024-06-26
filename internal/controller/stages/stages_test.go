@@ -1997,6 +1997,8 @@ func TestReconciler_syncPromotions(t *testing.T) {
 				require.Equal(t, kargoapi.StagePhaseSteady, status.Phase)
 				require.Nil(t, status.CurrentPromotion)
 
+				status.LastPromotion.CompletionTime = nil
+
 				// Last Promotion should be the latest Terminated Promotion
 				require.Equal(t, &kargoapi.PromotionReference{
 					Name: "fake-promotion." + ulidOneMinuteAgo.String(),
