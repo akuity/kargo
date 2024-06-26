@@ -16,7 +16,7 @@ import { zodValidators } from '@ui/utils/validators';
 type Props = ModalComponentProps & {
   freight: Freight;
   project: string;
-  onSubmit: () => void;
+  onSubmit: (newAlias: string) => void;
 };
 
 const formSchema = z.object({
@@ -57,7 +57,7 @@ export const UpdateFreightAliasModal = ({ freight, project, onSubmit, hide, ...p
           name: freight?.metadata?.name || '',
           newAlias: data.value || ''
         });
-        onSubmit();
+        onSubmit(data.value || '');
       })}
     >
       <div className='mb-4'>

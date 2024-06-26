@@ -288,7 +288,7 @@ spec:
       writeBranch: stages/test
       kustomize:
         images:
-        - image: nginx
+        - image: public.ecr.aws/nginx/nginx
           path: stages/test
     argoCDAppUpdates:
     - appName: kargo-demo-test
@@ -415,8 +415,9 @@ status:
   phase: Steady
   currentFreight:
     images:
-    - repoURL: nginx
-      tag: 1.25.3
+    - digest: sha256:b2487a28589657b318e0d63110056e11564e73b9fd3ec4c4afba5542f9d07d46
+      repoURL: public.ecr.aws/nginx/nginx
+      tag: 1.27.0
     commits:
     - repoURL: https://github.com/example/kargo-demo.git
       id: 1234abc
@@ -450,8 +451,9 @@ status:
     - repoURL: https://github.com/example/kargo-demo.git
       id: 1234abc
     images:
-      - repoURL: nginx
-        tag: 1.25.3
+      - digest: sha256:b2487a28589657b318e0d63110056e11564e73b9fd3ec4c4afba5542f9d07d46
+        repoURL: public.ecr.aws/nginx/nginx
+        tag: 1.27.0
     name: 47b33c0c92b54439e5eb7fb80ecc83f8626fe390
     warehouse: my-warehouse
     verificationInfo:
@@ -509,8 +511,9 @@ metadata:
     kargo.akuity.io/alias: fruitful-ferret
 alias: fruitful-ferret
 images:
-- repoURL: nginx
-  tag: 1.25.3
+- digest: sha256:b2487a28589657b318e0d63110056e11564e73b9fd3ec4c4afba5542f9d07d46
+  repoURL: public.ecr.aws/nginx/nginx
+  tag: 1.27.0
 commits:
 - repoURL: https://github.com/example/kargo-demo.git
   id: 1234abc
@@ -548,8 +551,8 @@ metadata:
 spec:
   subscriptions:
   - image:
-      repoURL: nginx
-      semverConstraint: ^1.24.0
+      repoURL: public.ecr.aws/nginx/nginx
+      semverConstraint: ^1.26.0
   - git:
       repoURL: https://github.com/example/kargo-demo.git
 ```
