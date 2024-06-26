@@ -20,7 +20,6 @@ function overrideFromJson(classDecl, bodyText) {
     .setBodyText(bodyText);
 }
 
-
 function overrideToJson(classDecl, bodyText) {
   classDecl.getInstanceMethod('toJson')?.remove();
   classDecl
@@ -42,13 +41,14 @@ function overrideToJson(classDecl, bodyText) {
  */
 function extendTime(src) {
   // Update import
-  const protobufImport = src.getImportDeclarations()
-    .filter(i => !i.isTypeOnly())
-    .find(i => i.getModuleSpecifierValue() === '@bufbuild/protobuf')
+  const protobufImport = src
+    .getImportDeclarations()
+    .filter((i) => !i.isTypeOnly())
+    .find((i) => i.getModuleSpecifierValue() === '@bufbuild/protobuf');
   if (!protobufImport) {
-    throw new Error(`Cannot find import declaration for '@bufbuild/protobuf'`)
+    throw new Error(`Cannot find import declaration for '@bufbuild/protobuf'`);
   }
-  const namedImports = protobufImport.getNamedImports().map(i => i.getName());
+  const namedImports = protobufImport.getNamedImports().map((i) => i.getName());
   protobufImport
     .removeNamedImports()
     .addNamedImports([...new Set([...namedImports, 'protoInt64'])].sort());
@@ -59,17 +59,13 @@ function extendTime(src) {
   // Set default value as zero for scalar fields.
   // From https://protobuf.dev/programming-guides/proto2/#optional:
   // For numeric types, the default value is zero.
-  time
-    .getPropertyOrThrow('seconds')
-    .setType('bigint')
-    .setInitializer('protoInt64.zero')
-  time
-    .getPropertyOrThrow('nanos')
-    .setType('number')
-    .setInitializer('0');
+  time.getPropertyOrThrow('seconds').setType('bigint').setInitializer('protoInt64.zero');
+  time.getPropertyOrThrow('nanos').setType('number').setInitializer('0');
 
   // Override fromJson()
-  overrideFromJson(time, `if (typeof json !== "string") {
+  overrideFromJson(
+    time,
+    `if (typeof json !== "string") {
     throw new Error(\`cannot decode google.protobuf.Timestamp from JSON: \${proto.json.debug(json)}\`);
   }
   const matches = json.match(/^([0-9]{4})-([0-9]{2})-([0-9]{2})T([0-9]{2}):([0-9]{2}):([0-9]{2})(?:Z|\\.([0-9]{3,9})Z|([+-][0-9][0-9]:[0-9][0-9]))$/);
@@ -89,10 +85,13 @@ function extendTime(src) {
     this.nanos = (parseInt("1" + matches[7] + "0".repeat(9 - matches[7].length)) - 1000000000);
   }
   return this;
-`);
+`
+  );
 
   // Override toJson()
-  overrideToJson(time, `// Return null if the value of both \`seconds\` and \`nanos\` 
+  overrideToJson(
+    time,
+    `// Return null if the value of both \`seconds\` and \`nanos\` 
   // are zero to behave identically with metav1.Time implementation in Go.
   if ((!this.seconds || this.seconds === 0) && (!this.nanos || this.nanos === 0)) {
     return null;
@@ -116,7 +115,8 @@ function extendTime(src) {
     }
   }
   return new Date(ms).toISOString().replace(".000Z", z);
-`);
+`
+  );
 
   // Add helper methods
   // toDate()
@@ -130,14 +130,12 @@ function extendTime(src) {
 
   // fromDate()
   time.getStaticMethod('fromDate')?.remove();
-  time
-    .addMethod({
-      isStatic: true,
-      name: 'fromDate',
-      parameters: [{ name: 'date', type: 'Date' }],
-      returnType: 'Time'
-    })
-    .setBodyText(`const ms = date.getTime();
+  time.addMethod({
+    isStatic: true,
+    name: 'fromDate',
+    parameters: [{ name: 'date', type: 'Date' }],
+    returnType: 'Time'
+  }).setBodyText(`const ms = date.getTime();
   return new Time({
     seconds: protoInt64.parse(Math.floor(ms / 1000)),
     nanos: (ms % 1000) * 1000000,
@@ -189,16 +187,17 @@ function extendIntOrString(src) {
       isStatic: true,
       isReadonly: true,
       initializer: '-2147483648'
-    },
+    }
   ];
-  classConstants
-    .forEach((c) => {
-      intOrString.getStaticProperty(c.name)?.remove();
-      intOrString.addProperty(c);
-    });
+  classConstants.forEach((c) => {
+    intOrString.getStaticProperty(c.name)?.remove();
+    intOrString.addProperty(c);
+  });
 
   // Override fromJson()
-  overrideFromJson(intOrString, `if (json === null) {
+  overrideFromJson(
+    intOrString,
+    `if (json === null) {
   return this;
 }
 switch (typeof json) {
@@ -215,10 +214,13 @@ switch (typeof json) {
     return this;
   default:
     throw new Error(\`cannot decode \${IntOrString.typeName} from JSON: \${proto.json.debug(json)}\`);
-}`);
+}`
+  );
 
   // Override toJson()
-  overrideToJson(intOrString, `if (this.type === IntOrString.TYPE_STRING) {
+  overrideToJson(
+    intOrString,
+    `if (this.type === IntOrString.TYPE_STRING) {
   return this.strVal;
 }
 if (this.type === IntOrString.TYPE_INT) {
@@ -229,18 +231,17 @@ if (this.type === IntOrString.TYPE_INT) {
   }
   return this.intVal;
 }
-return null;`);
+return null;`
+  );
 
   // Add helper methods
   // isInt32()
   intOrString.getInstanceMethod('isInt32')?.remove();
-  intOrString
-    .addMethod({
-      name: 'isInt32',
-      parameters: [{ name: 'value', type: 'number' }],
-      returnType: 'boolean'
-    })
-    .setBodyText(`return Number.isInteger(value) &&
+  intOrString.addMethod({
+    name: 'isInt32',
+    parameters: [{ name: 'value', type: 'number' }],
+    returnType: 'boolean'
+  }).setBodyText(`return Number.isInteger(value) &&
   IntOrString.MIN_INT32 <= value &&
   value <= IntOrString.MAX_INT32;`);
 }
@@ -258,9 +259,9 @@ async function main() {
 
   const intstr = project.getSourceFileOrThrow(
     './src/gen/k8s.io/apimachinery/pkg/util/intstr/generated_pb.ts'
-  )
+  );
   extendIntOrString(intstr);
-  intstr.formatText(formatCodeSettings)
+  intstr.formatText(formatCodeSettings);
 
   await project.save();
 }
