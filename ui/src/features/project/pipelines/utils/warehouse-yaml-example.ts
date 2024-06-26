@@ -7,5 +7,5 @@ metadata:
 spec:
   subscriptions:
   - image:
-      repoURL: nginx
+      repoURL: public.ecr.aws/nginx/nginx
       semverConstraint: ^1.24.0`;
