@@ -23,6 +23,7 @@ export interface YamlEditorProps {
   isHideManagedFieldsDisplayed?: boolean;
   label?: string;
   toolbar?: React.ReactNode;
+  resourceType?: string;
 }
 
 const YamlEditor: FC<YamlEditorProps> = (props) => {
@@ -39,7 +40,8 @@ const YamlEditor: FC<YamlEditorProps> = (props) => {
     isLoading,
     isHideManagedFieldsDisplayed,
     label,
-    toolbar
+    toolbar,
+    resourceType
   } = props;
   const [hideManagedFields, setHideManagedFields] = React.useState(!!isHideManagedFieldsDisplayed);
   const [managedFieldsValue, setManagedFieldsValue] = React.useState<object | null>(null);
@@ -89,7 +91,7 @@ const YamlEditor: FC<YamlEditorProps> = (props) => {
       format: true,
       schemas: schema && [
         {
-          uri: `https://raw.githubusercontent.com/akuity/kargo/${__UI_VERSION__ && __UI_VERSION__ !== 'development' ? __UI_VERSION__ : 'main'}/ui/src/gen/schema/stages.kargo.akuity.io_v1alpha1.json`,
+          uri: `https://raw.githubusercontent.com/akuity/kargo/${__UI_VERSION__ && __UI_VERSION__ !== 'development' ? __UI_VERSION__ : 'main'}/ui/src/gen/schema/${resourceType || 'stages'}.kargo.akuity.io_v1alpha1.json`,
           fileMatch: ['*'],
           schema
         }
