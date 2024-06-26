@@ -54,10 +54,10 @@ export const Downloads = () => (
       href='https://github.com/akuity/kargo/releases'
       target='_blank'
       rel='noreferrer'
-      className='mb-6 flex text-xs items-center text-blue-500'
+      className='mb-6 flex text-xs items-center text-blue-500 uppercase'
     >
       <FontAwesomeIcon icon={faExternalLink} className='mr-2' />
-      VIEW ALL RELEASES
+      View all releases
     </a>
     <div className='flex items-center gap-4 flex-wrap'>
       <DownloadItem
