@@ -162,15 +162,16 @@ func (h *applicationHealth) GetApplicationHealth(
 	// TODO: We should re-evaluate this soon. It may have been fixed in recent
 	//       versions.
 	// TODO(hidde): Do we have an upstream reference for this?
-	if len(app.Spec.Sources) > 0 {
-		err := fmt.Errorf(
-			"bugs in Argo CD currently prevent a comprehensive assessment of "+
-				"the health of multi-source Application %q in namespace %q",
-			key.Name,
-			key.Namespace,
-		)
-		return kargoapi.HealthStateUnknown, healthStatus, syncStatus, err
-	}
+	// if len(app.Spec.Sources) > 0 {
+	// 	err := fmt.Errorf(
+	// 		"bugs in Argo CD currently prevent a comprehensive assessment of "+
+	// 			"the health of multi-source Application %q in namespace %q",
+	// 		key.Name,
+	// 		key.Namespace,
+	// 	)
+	// 	logger.Error(err, "Application health status cannot be reliably determined.")
+	// 	return kargoapi.HealthStateUnknown, healthStatus, syncStatus, err
+	// }
 
 	// Check for any error conditions. If these are found, the application is
 	// considered unhealthy as they may indicate a problem which can result in
