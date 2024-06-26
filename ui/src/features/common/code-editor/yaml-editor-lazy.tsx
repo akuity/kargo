@@ -89,7 +89,7 @@ const YamlEditor: FC<YamlEditorProps> = (props) => {
       format: true,
       schemas: schema && [
         {
-          uri: 'http://myserver/foo-schema.json',
+          uri: `https://raw.githubusercontent.com/akuity/kargo/${__UI_VERSION__ && __UI_VERSION__ !== 'development' ? __UI_VERSION__ : 'main'}/ui/src/gen/schema/stages.kargo.akuity.io_v1alpha1.json`,
           fileMatch: ['*'],
           schema
         }
