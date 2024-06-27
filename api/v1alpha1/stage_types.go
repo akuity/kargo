@@ -625,7 +625,7 @@ type FreightCollection struct {
 // provided FreightReference is appended to the FreightCollection.
 func (f *FreightCollection) UpdateOrPush(freight ...FreightReference) {
 	if f.Freight == nil {
-		f.Freight = make(map[string]FreightReference)
+		f.Freight = make(map[string]FreightReference, len(freight))
 	}
 	for _, i := range freight {
 		f.Freight[i.Warehouse] = i

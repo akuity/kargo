@@ -37,6 +37,223 @@ func TestVerificationInfo_HasAnalysisRun(t *testing.T) {
 	}
 }
 
+func TestFreightCollectionUpdateOrPush(t *testing.T) {
+	testCases := []struct {
+		name            string
+		freight         map[string]FreightReference
+		newFreight      []FreightReference
+		expectedFreight map[string]FreightReference
+	}{
+		{
+			name:    "initial list is nil",
+			freight: nil,
+			newFreight: []FreightReference{
+				{Warehouse: "foo"},
+				{Warehouse: "baz"},
+			},
+			expectedFreight: map[string]FreightReference{
+				"foo": {Warehouse: "foo"},
+				"baz": {Warehouse: "baz"},
+			},
+		},
+		{
+			name: "update existing FreightReference from same Warehouse",
+			freight: map[string]FreightReference{
+				"foo": {Warehouse: "foo"},
+				"bar": {Warehouse: "bar"},
+			},
+			newFreight: []FreightReference{
+				{Warehouse: "foo"},
+				{Warehouse: "bar", Name: "update"},
+			},
+			expectedFreight: map[string]FreightReference{
+				"foo": {Warehouse: "foo"},
+				"bar": {Warehouse: "bar", Name: "update"},
+			},
+		},
+		{
+			name: "append new FreightReference",
+			freight: map[string]FreightReference{
+				"foo": {Warehouse: "foo"},
+			},
+			newFreight: []FreightReference{
+				{Warehouse: "bar"},
+				{Warehouse: "baz"},
+			},
+			expectedFreight: map[string]FreightReference{
+				"foo": {Warehouse: "foo"},
+				"bar": {Warehouse: "bar"},
+				"baz": {Warehouse: "baz"},
+			},
+		},
+		{
+			name: "update existing FreightReference and append new FreightReference",
+			freight: map[string]FreightReference{
+				"foo": {Warehouse: "foo"},
+				"bar": {Warehouse: "bar"},
+			},
+			newFreight: []FreightReference{
+				{Warehouse: "foo", Name: "update"},
+				{Warehouse: "baz"},
+			},
+			expectedFreight: map[string]FreightReference{
+				"foo": {Warehouse: "foo", Name: "update"},
+				"bar": {Warehouse: "bar"},
+				"baz": {Warehouse: "baz"},
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			entry := &FreightCollection{Freight: testCase.freight}
+			entry.UpdateOrPush(testCase.newFreight...)
+			require.Equal(t, testCase.expectedFreight, entry.Freight)
+		})
+	}
+}
+
+func TestFreightHistoryCurrent(t *testing.T) {
+	testCases := []struct {
+		name           string
+		history        FreightHistory
+		expectedResult *FreightCollection
+	}{
+		{
+			name:           "history is nil",
+			history:        nil,
+			expectedResult: nil,
+		},
+		{
+			name:           "history is empty",
+			history:        FreightHistory{},
+			expectedResult: nil,
+		},
+		{
+			name: "history has one element",
+			history: FreightHistory{
+				{
+					Freight: map[string]FreightReference{
+						"foo": {Warehouse: "foo"},
+					},
+				},
+			},
+			expectedResult: &FreightCollection{
+				Freight: map[string]FreightReference{
+					"foo": {Warehouse: "foo"},
+				},
+			},
+		},
+		{
+			name: "history has multiple elements",
+			history: FreightHistory{
+				{
+					Freight: map[string]FreightReference{
+						"baz": {Warehouse: "baz"},
+					},
+				},
+				{
+					Freight: map[string]FreightReference{
+						"bar": {Warehouse: "bar"},
+					},
+				},
+				{
+					Freight: map[string]FreightReference{
+						"foo": {Warehouse: "foo"},
+					},
+				},
+			},
+			expectedResult: &FreightCollection{
+				Freight: map[string]FreightReference{
+					"baz": {Warehouse: "baz"},
+				},
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			require.Equal(t, testCase.expectedResult, testCase.history.Current())
+		})
+	}
+}
+
+func TestFreightHistoryRecord(t *testing.T) {
+	testCases := []struct {
+		name            string
+		history         FreightHistory
+		newEntry        FreightCollection
+		expectedHistory FreightHistory
+	}{
+		{
+			name:    "initial history is nil",
+			history: nil,
+			newEntry: FreightCollection{
+				Freight: map[string]FreightReference{
+					"foo": {Warehouse: "foo"},
+				},
+			},
+			expectedHistory: FreightHistory{
+				{
+					Freight: map[string]FreightReference{
+						"foo": {Warehouse: "foo"},
+					},
+				},
+			},
+		},
+		{
+			name: "initial history is not nil",
+			history: FreightHistory{
+				{
+					Freight: map[string]FreightReference{
+						"foo": {Warehouse: "foo"},
+					},
+				},
+			},
+			newEntry: FreightCollection{
+				Freight: map[string]FreightReference{
+					"bar": {Warehouse: "bar"},
+				},
+			},
+			expectedHistory: FreightHistory{
+				{
+					Freight: map[string]FreightReference{
+						"bar": {Warehouse: "bar"},
+					},
+				},
+				{
+					Freight: map[string]FreightReference{
+						"foo": {Warehouse: "foo"},
+					},
+				},
+			},
+		},
+		{
+			name: "initial history is full",
+			history: FreightHistory{
+				{}, {}, {}, {}, {}, {}, {}, {}, {}, {},
+			},
+			newEntry: FreightCollection{
+				Freight: map[string]FreightReference{
+					"foo": {Warehouse: "foo"},
+				},
+			},
+			expectedHistory: FreightHistory{
+				{
+					Freight: map[string]FreightReference{
+						"foo": {Warehouse: "foo"},
+					},
+				},
+				{}, {}, {}, {}, {}, {}, {}, {}, {},
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			testCase.history.Record(testCase.newEntry.DeepCopy())
+			require.Equal(t, testCase.expectedHistory, testCase.history)
+		})
+	}
+}
+
 func TestFreightReferenceStackPush(t *testing.T) {
 	testCases := []struct {
 		name          string
