@@ -16,7 +16,11 @@ import {
 import { getConnectors, initNodeArray, newSubscriptionNode, nodeStubFor } from './graph';
 import { IndexCache } from './index-cache';
 
-const initializeNodes = (warehouses: Warehouse[], stages: Stage[], hideSubscriptions: boolean) => {
+const initializeNodes = (
+  warehouses: Warehouse[],
+  stages: Stage[],
+  hideSubscriptions: { [key: string]: boolean }
+) => {
   const warehouseMap = {} as { [key: string]: Warehouse };
   const warehouseNodeMap = {} as { [key: string]: RepoNodeType };
 
@@ -51,14 +55,14 @@ const initializeNodes = (warehouses: Warehouse[], stages: Stage[], hideSubscript
     return n;
   });
 
-  if (!hideSubscriptions) {
-    warehouses.forEach((w) => {
-      // create subscription nodes
+  warehouses.forEach((w) => {
+    // create subscription nodes
+    if (w.metadata?.name && !hideSubscriptions[w.metadata?.name]) {
       w?.spec?.subscriptions?.forEach((sub) => {
         nodes.push(newSubscriptionNode(sub, w.metadata?.name || ''));
       });
-    });
-  }
+    }
+  });
 
   nodes.push(...Object.values(warehouseNodeMap));
   return nodes;
@@ -68,7 +72,7 @@ export const usePipelineGraph = (
   project: string | undefined,
   stages: Stage[],
   warehouses: Warehouse[],
-  hideSubscriptions: boolean
+  hideSubscriptions: { [key: string]: boolean }
 ): [DagreNode[], ConnectorsType[][], BoxType, Stage[], { [key: string]: string }] => {
   return useMemo(() => {
     if (!stages || !warehouses || !project) {

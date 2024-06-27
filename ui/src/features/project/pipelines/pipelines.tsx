@@ -93,7 +93,7 @@ export const Pipelines = () => {
   const [highlightedStages, setHighlightedStages] = React.useState<{ [key: string]: boolean }>({});
   const [hideSubscriptions, setHideSubscriptions] = useLocalStorage(
     `${name}-hideSubscriptions`,
-    false
+    {}
   );
 
   const [selectedWarehouse, setSelectedWarehouse] = React.useState('');
@@ -420,8 +420,19 @@ export const Pipelines = () => {
                         {node.type === NodeType.WAREHOUSE && (
                           <Nodule
                             nodeHeight={WAREHOUSE_NODE_HEIGHT}
-                            onClick={() => setHideSubscriptions(!hideSubscriptions)}
-                            icon={hideSubscriptions ? faEye : faEyeSlash}
+                            onClick={() => {
+                              if (hideSubscriptions[node.warehouseName]) {
+                                const newHideSubscriptions = { ...hideSubscriptions };
+                                delete newHideSubscriptions[node.warehouseName];
+                                setHideSubscriptions(newHideSubscriptions);
+                              } else {
+                                setHideSubscriptions({
+                                  ...hideSubscriptions,
+                                  [node.warehouseName]: true
+                                });
+                              }
+                            }}
+                            icon={hideSubscriptions[node.warehouseName] ? faEye : faEyeSlash}
                             begin={true}
                           />
                         )}
