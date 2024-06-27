@@ -734,7 +734,7 @@ spec:
                       the last ten VerificationInfo are stored.
 
 
-                      Deprecated: Use FreightHistoryEntry.VerificationHistory instead.
+                      Deprecated: Use FreightCollection.VerificationHistory instead.
                     items:
                       description: |-
                         VerificationInfo contains the details of an instance of a Verification
@@ -798,7 +798,7 @@ spec:
                       associated with this Freight for this Stage.
 
 
-                      Deprecated: Use FreightHistoryEntry.VerificationHistory instead.
+                      Deprecated: Use FreightCollection.VerificationHistory instead.
                     properties:
                       actor:
                         description: |-
@@ -976,7 +976,7 @@ spec:
                           the last ten VerificationInfo are stored.
 
 
-                          Deprecated: Use FreightHistoryEntry.VerificationHistory instead.
+                          Deprecated: Use FreightCollection.VerificationHistory instead.
                         items:
                           description: |-
                             VerificationInfo contains the details of an instance of a Verification
@@ -1041,7 +1041,7 @@ spec:
                           associated with this Freight for this Stage.
 
 
-                          Deprecated: Use FreightHistoryEntry.VerificationHistory instead.
+                          Deprecated: Use FreightCollection.VerificationHistory instead.
                         properties:
                           actor:
                             description: |-
@@ -1224,7 +1224,7 @@ spec:
                               the last ten VerificationInfo are stored.
 
 
-                              Deprecated: Use FreightHistoryEntry.VerificationHistory instead.
+                              Deprecated: Use FreightCollection.VerificationHistory instead.
                             items:
                               description: |-
                                 VerificationInfo contains the details of an instance of a Verification
@@ -1290,7 +1290,7 @@ spec:
                               associated with this Freight for this Stage.
 
 
-                              Deprecated: Use FreightHistoryEntry.VerificationHistory instead.
+                              Deprecated: Use FreightCollection.VerificationHistory instead.
                             properties:
                               actor:
                                 description: |-
@@ -1387,7 +1387,7 @@ spec:
                   currently deployed to the Stage, subsequent items are older selections.
                 items:
                   description: |-
-                    FreightHistoryEntry is a collection of FreightReferences, each of which
+                    FreightCollection is a collection of FreightReferences, each of which
                     represents a piece of Freight that has been selected for deployment to a
                     Stage.
                   properties:
@@ -1511,7 +1511,7 @@ spec:
                               the last ten VerificationInfo are stored.
 
 
-                              Deprecated: Use FreightHistoryEntry.VerificationHistory instead.
+                              Deprecated: Use FreightCollection.VerificationHistory instead.
                             items:
                               description: |-
                                 VerificationInfo contains the details of an instance of a Verification
@@ -1577,7 +1577,7 @@ spec:
                               associated with this Freight for this Stage.
 
 
-                              Deprecated: Use FreightHistoryEntry.VerificationHistory instead.
+                              Deprecated: Use FreightCollection.VerificationHistory instead.
                             properties:
                               actor:
                                 description: |-
@@ -1887,7 +1887,7 @@ spec:
                         the last ten VerificationInfo are stored.
 
 
-                        Deprecated: Use FreightHistoryEntry.VerificationHistory instead.
+                        Deprecated: Use FreightCollection.VerificationHistory instead.
                       items:
                         description: |-
                           VerificationInfo contains the details of an instance of a Verification
@@ -1952,7 +1952,7 @@ spec:
                         associated with this Freight for this Stage.
 
 
-                        Deprecated: Use FreightHistoryEntry.VerificationHistory instead.
+                        Deprecated: Use FreightCollection.VerificationHistory instead.
                       properties:
                         actor:
                           description: |-
@@ -2136,7 +2136,7 @@ spec:
                           the last ten VerificationInfo are stored.
 
 
-                          Deprecated: Use FreightHistoryEntry.VerificationHistory instead.
+                          Deprecated: Use FreightCollection.VerificationHistory instead.
                         items:
                           description: |-
                             VerificationInfo contains the details of an instance of a Verification
@@ -2201,7 +2201,7 @@ spec:
                           associated with this Freight for this Stage.
 
 
-                          Deprecated: Use FreightHistoryEntry.VerificationHistory instead.
+                          Deprecated: Use FreightCollection.VerificationHistory instead.
                         properties:
                           actor:
                             description: |-
@@ -2384,7 +2384,7 @@ spec:
                               the last ten VerificationInfo are stored.
 
 
-                              Deprecated: Use FreightHistoryEntry.VerificationHistory instead.
+                              Deprecated: Use FreightCollection.VerificationHistory instead.
                             items:
                               description: |-
                                 VerificationInfo contains the details of an instance of a Verification
@@ -2450,7 +2450,7 @@ spec:
                               associated with this Freight for this Stage.
 
 
-                              Deprecated: Use FreightHistoryEntry.VerificationHistory instead.
+                              Deprecated: Use FreightCollection.VerificationHistory instead.
                             properties:
                               actor:
                                 description: |-
