@@ -463,11 +463,9 @@ func (r *reconciler) promote(
 		// Trigger re-verification of the Stage if the promotion succeeded and
 		// this is a re-promotion of the same Freight.
 		current := stage.Status.FreightHistory.Current()
-		if current != nil {
-			// TODO: This may require adjustment once we properly support
-			// multiple Freight re-verification in the backend API.
+		if current != nil && current.VerificationHistory.Current() != nil {
 			for _, f := range current.Freight {
-				if f.Name == targetFreight.Name && f.VerificationInfo != nil {
+				if f.Name == targetFreight.Name {
 					if err = kargoapi.ReverifyStageFreight(
 						ctx,
 						r.kargoClient,

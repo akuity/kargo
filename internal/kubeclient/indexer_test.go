@@ -51,12 +51,13 @@ func TestIndexStagesByAnalysisRun(t *testing.T) {
 					FreightHistory: kargoapi.FreightHistory{
 						{
 							Freight: map[string]kargoapi.FreightReference{
-								"fake-warehouse": {
-									VerificationInfo: &kargoapi.VerificationInfo{
-										AnalysisRun: &kargoapi.AnalysisRunReference{
-											Namespace: "fake-namespace",
-											Name:      "fake-analysis-run",
-										},
+								"fake-warehouse": {},
+							},
+							VerificationHistory: kargoapi.VerificationInfoStack{
+								{
+									AnalysisRun: &kargoapi.AnalysisRunReference{
+										Namespace: "fake-namespace",
+										Name:      "fake-analysis-run",
 									},
 								},
 							},
@@ -90,12 +91,13 @@ func TestIndexStagesByAnalysisRun(t *testing.T) {
 					FreightHistory: kargoapi.FreightHistory{
 						{
 							Freight: map[string]kargoapi.FreightReference{
-								"fake-warehouse": {
-									VerificationInfo: &kargoapi.VerificationInfo{
-										AnalysisRun: &kargoapi.AnalysisRunReference{
-											Namespace: "fake-namespace",
-											Name:      "fake-analysis-run",
-										},
+								"fake-warehouse": {},
+							},
+							VerificationHistory: kargoapi.VerificationInfoStack{
+								{
+									AnalysisRun: &kargoapi.AnalysisRunReference{
+										Namespace: "fake-namespace",
+										Name:      "fake-analysis-run",
 									},
 								},
 							},

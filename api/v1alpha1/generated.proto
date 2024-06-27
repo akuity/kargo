@@ -419,13 +419,17 @@ message Freight {
   optional FreightStatus status = 6;
 }
 
-// FreightHistoryEntry is a collection of FreightReferences, each of which
+// FreightCollection is a collection of FreightReferences, each of which
 // represents a piece of Freight that has been selected for deployment to a
 // Stage.
-message FreightHistoryEntry {
+message FreightCollection {
   // Freight is a map of FreightReference objects, indexed by their Warehouse
   // origin.
   map<string, FreightReference> items = 1;
+
+  // VerificationHistory is a stack of recent VerificationInfo. By default,
+  // the last ten VerificationInfo are stored.
+  repeated VerificationInfo verificationHistory = 2;
 }
 
 // FreightList is a list of Freight resources.
@@ -457,10 +461,14 @@ message FreightReference {
 
   // VerificationInfo is information about any verification process that was
   // associated with this Freight for this Stage.
+  //
+  // Deprecated: Use FreightCollection.VerificationHistory instead.
   optional VerificationInfo verificationInfo = 5;
 
   // VerificationHistory is a stack of recent VerificationInfo. By default,
   // the last ten VerificationInfo are stored.
+  //
+  // Deprecated: Use FreightCollection.VerificationHistory instead.
   repeated VerificationInfo verificationHistory = 7;
 }
 
@@ -1242,7 +1250,7 @@ message StageStatus {
   // to the Stage. By default, the last ten Freight selections are stored.
   // The first item in the list is the most recent Freight selection and
   // currently deployed to the Stage, subsequent items are older selections.
-  repeated FreightHistoryEntry freightHistory = 4;
+  repeated FreightCollection freightHistory = 4;
 
   // CurrentFreight is a simplified representation of the Stage's current
   // Freight describing what is currently deployed to the Stage.
@@ -1314,8 +1322,8 @@ message Verification {
   repeated AnalysisRunArgument args = 3;
 }
 
-// VerificationInfo contains information about the currently running
-// Verification process.
+// VerificationInfo contains the details of an instance of a Verification
+// process.
 message VerificationInfo {
   // ID is the identifier of the Verification process.
   optional string id = 4;

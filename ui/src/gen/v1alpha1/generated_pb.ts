@@ -1360,13 +1360,13 @@ export class Freight extends Message<Freight> {
 }
 
 /**
- * FreightHistoryEntry is a collection of FreightReferences, each of which
+ * FreightCollection is a collection of FreightReferences, each of which
  * represents a piece of Freight that has been selected for deployment to a
  * Stage.
  *
- * @generated from message github.com.akuity.kargo.api.v1alpha1.FreightHistoryEntry
+ * @generated from message github.com.akuity.kargo.api.v1alpha1.FreightCollection
  */
-export class FreightHistoryEntry extends Message<FreightHistoryEntry> {
+export class FreightCollection extends Message<FreightCollection> {
   /**
    * Freight is a map of FreightReference objects, indexed by their Warehouse
    * origin.
@@ -1375,31 +1375,40 @@ export class FreightHistoryEntry extends Message<FreightHistoryEntry> {
    */
   items: { [key: string]: FreightReference } = {};
 
-  constructor(data?: PartialMessage<FreightHistoryEntry>) {
+  /**
+   * VerificationHistory is a stack of recent VerificationInfo. By default,
+   * the last ten VerificationInfo are stored.
+   *
+   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.VerificationInfo verificationHistory = 2;
+   */
+  verificationHistory: VerificationInfo[] = [];
+
+  constructor(data?: PartialMessage<FreightCollection>) {
     super();
     proto2.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto2 = proto2;
-  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.FreightHistoryEntry";
+  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.FreightCollection";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 1, name: "items", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "message", T: FreightReference} },
+    { no: 2, name: "verificationHistory", kind: "message", T: VerificationInfo, repeated: true },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FreightHistoryEntry {
-    return new FreightHistoryEntry().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FreightCollection {
+    return new FreightCollection().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): FreightHistoryEntry {
-    return new FreightHistoryEntry().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): FreightCollection {
+    return new FreightCollection().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): FreightHistoryEntry {
-    return new FreightHistoryEntry().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): FreightCollection {
+    return new FreightCollection().fromJsonString(jsonString, options);
   }
 
-  static equals(a: FreightHistoryEntry | PlainMessage<FreightHistoryEntry> | undefined, b: FreightHistoryEntry | PlainMessage<FreightHistoryEntry> | undefined): boolean {
-    return proto2.util.equals(FreightHistoryEntry, a, b);
+  static equals(a: FreightCollection | PlainMessage<FreightCollection> | undefined, b: FreightCollection | PlainMessage<FreightCollection> | undefined): boolean {
+    return proto2.util.equals(FreightCollection, a, b);
   }
 }
 
@@ -1496,6 +1505,8 @@ export class FreightReference extends Message<FreightReference> {
    * VerificationInfo is information about any verification process that was
    * associated with this Freight for this Stage.
    *
+   * Deprecated: Use FreightCollection.VerificationHistory instead.
+   *
    * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.VerificationInfo verificationInfo = 5;
    */
   verificationInfo?: VerificationInfo;
@@ -1503,6 +1514,8 @@ export class FreightReference extends Message<FreightReference> {
   /**
    * VerificationHistory is a stack of recent VerificationInfo. By default,
    * the last ten VerificationInfo are stored.
+   *
+   * Deprecated: Use FreightCollection.VerificationHistory instead.
    *
    * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.VerificationInfo verificationHistory = 7;
    */
@@ -3954,9 +3967,9 @@ export class StageStatus extends Message<StageStatus> {
    * The first item in the list is the most recent Freight selection and
    * currently deployed to the Stage, subsequent items are older selections.
    *
-   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.FreightHistoryEntry freightHistory = 4;
+   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.FreightCollection freightHistory = 4;
    */
-  freightHistory: FreightHistoryEntry[] = [];
+  freightHistory: FreightCollection[] = [];
 
   /**
    * CurrentFreight is a simplified representation of the Stage's current
@@ -4025,7 +4038,7 @@ export class StageStatus extends Message<StageStatus> {
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 11, name: "lastHandledRefresh", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 1, name: "phase", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 4, name: "freightHistory", kind: "message", T: FreightHistoryEntry, repeated: true },
+    { no: 4, name: "freightHistory", kind: "message", T: FreightCollection, repeated: true },
     { no: 2, name: "currentFreight", kind: "message", T: FreightReference, opt: true },
     { no: 3, name: "history", kind: "message", T: FreightReference, repeated: true },
     { no: 8, name: "health", kind: "message", T: Health, opt: true },
@@ -4213,8 +4226,8 @@ export class Verification extends Message<Verification> {
 }
 
 /**
- * VerificationInfo contains information about the currently running
- * Verification process.
+ * VerificationInfo contains the details of an instance of a Verification
+ * process.
  *
  * @generated from message github.com.akuity.kargo.api.v1alpha1.VerificationInfo
  */
