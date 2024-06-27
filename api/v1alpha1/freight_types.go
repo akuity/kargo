@@ -36,8 +36,12 @@ type Freight struct {
 	// required field. TODO: It is not clear yet how this field should be set in
 	// the case of user-defined Freight.
 	//
-	// +kubebuilder:validation:Required
+	// Deprecated: Use Origin instead.
 	Warehouse string `json:"warehouse,omitempty" protobuf:"bytes,8,opt,name=warehouse"`
+	// Origin describes a kind of Freight in terms of its origin.
+	//
+	// +kubebuilder:validation:Required
+	Origin FreightOrigin `json:"origin,omitempty" protobuf:"bytes,9,opt,name=origin"`
 	// Commits describes specific Git repository commits.
 	Commits []GitCommit `json:"commits,omitempty" protobuf:"bytes,3,rep,name=commits"`
 	// Images describes specific versions of specific container images.
