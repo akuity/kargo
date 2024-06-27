@@ -34,7 +34,7 @@ import (
 func (r *reconciler) startVerification(
 	ctx context.Context,
 	stage *kargoapi.Stage,
-	freightCombo *kargoapi.FreightHistoryEntry,
+	freightCol *kargoapi.FreightCollection,
 ) (*kargoapi.VerificationInfo, error) {
 	startTime := r.nowFn()
 
@@ -47,7 +47,7 @@ func (r *reconciler) startVerification(
 	// and extract the actor who requested the re-verification to be used in the
 	// new verification info.
 	var isReverify bool
-	curVer := freightCombo.VerificationHistory.Current()
+	curVer := freightCol.VerificationHistory.Current()
 	if curVer != nil {
 		if req, _ := kargoapi.ReverifyAnnotationValue(stage.GetAnnotations()); req.ForID(curVer.ID) {
 			isReverify = true
@@ -64,7 +64,7 @@ func (r *reconciler) startVerification(
 
 	logger := logging.LoggerFromContext(ctx)
 
-	freightNames := freightNames(freightCombo)
+	freightNames := freightNames(freightCol)
 
 	// If this is not a re-verification request, check if there is an existing
 	// AnalysisRun for the Stage and Freight. If there is, return the status of
@@ -152,7 +152,7 @@ func (r *reconciler) startVerification(
 		templates[i] = template
 	}
 
-	run, err := r.buildAnalysisRunFn(ctx, stage, curVer, freightCombo, templates)
+	run, err := r.buildAnalysisRunFn(ctx, stage, curVer, freightCol, templates)
 	if err != nil {
 		newInfo.FinishTime = ptr.To(metav1.NewTime(r.nowFn()))
 		newInfo.Phase = kargoapi.VerificationPhaseError
@@ -331,7 +331,7 @@ func (r *reconciler) buildAnalysisRun(
 	ctx context.Context,
 	stage *kargoapi.Stage,
 	verificationInfo *kargoapi.VerificationInfo,
-	freightCombo *kargoapi.FreightHistoryEntry,
+	freightCol *kargoapi.FreightCollection,
 	templates []*rollouts.AnalysisTemplate,
 ) (*rollouts.AnalysisRun, error) {
 	// maximum length of the stage name used in the promotion name prefix before it exceeds
@@ -349,7 +349,7 @@ func (r *reconciler) buildAnalysisRun(
 			"%s.%s.%s",
 			shortStageName,
 			ulid.Make(),
-			fmt.Sprintf("%x", sha1.Sum([]byte(freightNames(freightCombo))))[0:7], // nolint: gosec
+			fmt.Sprintf("%x", sha1.Sum([]byte(freightNames(freightCol))))[0:7], // nolint: gosec
 		),
 	)
 
@@ -372,7 +372,7 @@ func (r *reconciler) buildAnalysisRun(
 		}
 	}
 	lbls[kargoapi.StageLabelKey] = stage.Name
-	lbls[kargoapi.FreightLabelKey] = freightNames(freightCombo)
+	lbls[kargoapi.FreightLabelKey] = freightNames(freightCol)
 
 	// Add Promotion name if the AnalysisRun is triggered by Promotion.
 	// This is the case when there is no existing verification information,
@@ -425,7 +425,7 @@ func (r *reconciler) buildAnalysisRun(
 		},
 	}
 
-	for _, freightRef := range freightCombo.Freight {
+	for _, freightRef := range freightCol.Freight {
 		f, err := r.getFreightFn(
 			ctx,
 			r.kargoClient,
@@ -652,9 +652,9 @@ func resolveArgs(args []rollouts.Argument) error {
 }
 
 // freightNames returns a sorted and comma-delimited list of the names of the
-// Freight in the FreightHistoryEntry. This is useful for when an identifier is
+// Freight in the FreightCollection. This is useful for when an identifier is
 // needed to represent a precise combination of Freight.
-func freightNames(f *kargoapi.FreightHistoryEntry) string {
+func freightNames(f *kargoapi.FreightCollection) string {
 	if f == nil || len(f.Freight) == 0 {
 		return ""
 	}

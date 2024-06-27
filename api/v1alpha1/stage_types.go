@@ -599,19 +599,19 @@ type FreightReference struct {
 	// VerificationInfo is information about any verification process that was
 	// associated with this Freight for this Stage.
 	//
-	// Deprecated: Use FreightHistoryEntry.VerificationHistory instead.
+	// Deprecated: Use FreightCollection.VerificationHistory instead.
 	VerificationInfo *VerificationInfo `json:"verificationInfo,omitempty" protobuf:"bytes,5,opt,name=verificationInfo"`
 	// VerificationHistory is a stack of recent VerificationInfo. By default,
 	// the last ten VerificationInfo are stored.
 	//
-	// Deprecated: Use FreightHistoryEntry.VerificationHistory instead.
+	// Deprecated: Use FreightCollection.VerificationHistory instead.
 	VerificationHistory VerificationInfoStack `json:"verificationHistory,omitempty" protobuf:"bytes,7,rep,name=verificationHistory"`
 }
 
-// FreightHistoryEntry is a collection of FreightReferences, each of which
+// FreightCollection is a collection of FreightReferences, each of which
 // represents a piece of Freight that has been selected for deployment to a
 // Stage.
-type FreightHistoryEntry struct {
+type FreightCollection struct {
 	// Freight is a map of FreightReference objects, indexed by their Warehouse
 	// origin.
 	Freight map[string]FreightReference `json:"items,omitempty" protobuf:"bytes,1,rep,name=items" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
@@ -620,10 +620,10 @@ type FreightHistoryEntry struct {
 	VerificationHistory VerificationInfoStack `json:"verificationHistory,omitempty" protobuf:"bytes,2,rep,name=verificationHistory"`
 }
 
-// UpdateOrPush updates the entry in the FreightHistoryEntry based on the Warehouse
-// name of the provided FreightReference. If no such entry exists, the provided
-// FreightReference is appended to the FreightHistoryEntry.
-func (f *FreightHistoryEntry) UpdateOrPush(freight ...FreightReference) {
+// UpdateOrPush updates the entry in the FreightCollection based on the
+// Warehouse name of the provided FreightReference. If no such entry exists, the
+// provided FreightReference is appended to the FreightCollection.
+func (f *FreightCollection) UpdateOrPush(freight ...FreightReference) {
 	if f.Freight == nil {
 		f.Freight = make(map[string]FreightReference)
 	}
@@ -632,24 +632,24 @@ func (f *FreightHistoryEntry) UpdateOrPush(freight ...FreightReference) {
 	}
 }
 
-// FreightHistory is a linear list of FreightHistoryEntry items. The list is
-// ordered by the time at which the FreightHistoryEntry was recorded, with the
-// most recent (current) FreightHistoryEntry at the top of the list.
-type FreightHistory []*FreightHistoryEntry
+// FreightHistory is a linear list of FreightCollection items. The list is
+// ordered by the time at which the FreightCollection was recorded, with the
+// most recent (current) FreightCollection at the top of the list.
+type FreightHistory []*FreightCollection
 
-// Current returns the most recent (current) FreightHistoryEntry from the history.
-func (f *FreightHistory) Current() *FreightHistoryEntry {
+// Current returns the most recent (current) FreightCollection from the history.
+func (f *FreightHistory) Current() *FreightCollection {
 	if f == nil || len(*f) == 0 {
 		return nil
 	}
 	return (*f)[0]
 }
 
-// Record appends the provided FreightHistoryEntry as the most recent (current)
-// FreightHistoryEntry in the history. I.e. The provided FreightHistoryEntry becomes
+// Record appends the provided FreightCollection as the most recent (current)
+// FreightCollection in the history. I.e. The provided FreightCollection becomes
 // the first item in the list. If the list grows beyond ten items, the bottom
 // items are removed.
-func (f *FreightHistory) Record(freight ...*FreightHistoryEntry) {
+func (f *FreightHistory) Record(freight ...*FreightCollection) {
 	*f = append(freight, *f...)
 	f.truncate()
 }

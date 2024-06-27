@@ -309,7 +309,7 @@ func TestSyncNormalStage(t *testing.T) {
 				startVerificationFn: func(
 					context.Context,
 					*kargoapi.Stage,
-					*kargoapi.FreightHistoryEntry,
+					*kargoapi.FreightCollection,
 				) (*kargoapi.VerificationInfo, error) {
 					return &kargoapi.VerificationInfo{
 						ID:      "new-fake-id",
@@ -460,7 +460,7 @@ func TestSyncNormalStage(t *testing.T) {
 				startVerificationFn: func(
 					context.Context,
 					*kargoapi.Stage,
-					*kargoapi.FreightHistoryEntry,
+					*kargoapi.FreightCollection,
 				) (*kargoapi.VerificationInfo, error) {
 					return &kargoapi.VerificationInfo{
 						Phase:      kargoapi.VerificationPhaseError,
@@ -551,7 +551,7 @@ func TestSyncNormalStage(t *testing.T) {
 				startVerificationFn: func(
 					context.Context,
 					*kargoapi.Stage,
-					*kargoapi.FreightHistoryEntry,
+					*kargoapi.FreightCollection,
 				) (*kargoapi.VerificationInfo, error) {
 					return &kargoapi.VerificationInfo{
 						Phase:   kargoapi.VerificationPhaseError,

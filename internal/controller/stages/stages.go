@@ -98,7 +98,7 @@ type reconciler struct {
 	startVerificationFn func(
 		context.Context,
 		*kargoapi.Stage,
-		*kargoapi.FreightHistoryEntry,
+		*kargoapi.FreightCollection,
 	) (*kargoapi.VerificationInfo, error)
 
 	abortVerificationFn func(
@@ -129,7 +129,7 @@ type reconciler struct {
 		context.Context,
 		*kargoapi.Stage,
 		*kargoapi.VerificationInfo,
-		*kargoapi.FreightHistoryEntry,
+		*kargoapi.FreightCollection,
 		[]*rollouts.AnalysisTemplate,
 	) (*rollouts.AnalysisRun, error)
 
@@ -1076,7 +1076,7 @@ func (r *reconciler) syncPromotions(
 		if promo.Status.Phase == kargoapi.PromotionPhaseSucceeded {
 			// TODO(hidde): This should ensure that it properly handles
 			// multiple Freight when implemented on the Promotion side.
-			status.FreightHistory.Record(&kargoapi.FreightHistoryEntry{
+			status.FreightHistory.Record(&kargoapi.FreightCollection{
 				Freight: map[string]kargoapi.FreightReference{
 					status.LastPromotion.Freight.Warehouse: *status.LastPromotion.Freight.DeepCopy(),
 				},
