@@ -11,8 +11,8 @@ import (
 	"github.com/akuity/kargo/internal/kustomize"
 )
 
-// newKustomizeMechanism returns a gitMechanism that only only selects and
-// performs updates that involve Kustomize.
+// newKustomizeMechanism returns a gitMechanism that only selects and performs
+// updates that involve Kustomize.
 func newKustomizeMechanism(
 	credentialsDB credentials.Database,
 ) Mechanism {
@@ -54,6 +54,7 @@ func (k *kustomizer) apply(
 	_ string, // TODO: sourceCommit would be a nice addition to the commit message
 	_ string,
 	workingDir string,
+	_ map[string]string,
 	_ git.RepoCredentials,
 ) ([]string, error) {
 	changeSummary := make([]string, 0, len(update.Kustomize.Images))

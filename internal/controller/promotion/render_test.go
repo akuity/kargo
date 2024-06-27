@@ -222,6 +222,7 @@ func TestKargoRenderApply(t *testing.T) {
 				testSourceCommitID,
 				"", // Home directory is not used by this implementation
 				testWorkDir,
+				nil,
 				git.RepoCredentials{},
 			)
 			testCase.assertions(t, changes, testWorkDir, err)

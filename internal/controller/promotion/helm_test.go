@@ -282,6 +282,7 @@ func TestHelmerApply(t *testing.T) {
 				"",
 				"",
 				"",
+				nil,
 				git.RepoCredentials{},
 			)
 			testCase.assertions(t, changes, err)

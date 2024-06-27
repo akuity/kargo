@@ -17,8 +17,8 @@ import (
 	libYAML "github.com/akuity/kargo/internal/yaml"
 )
 
-// newGenericGitMechanism returns a gitMechanism that only only selects and
-// performs updates that involve Helm.
+// newHelmMechanism returns a gitMechanism that only selects and performs
+// updates that involve Helm.
 func newHelmMechanism(
 	credentialsDB credentials.Database,
 ) Mechanism {
@@ -74,6 +74,7 @@ func (h *helmer) apply(
 	_ string, // TODO: sourceCommit would be a nice addition to the commit message
 	homeDir string,
 	workingDir string,
+	_ map[string]string,
 	_ git.RepoCredentials,
 ) ([]string, error) {
 	// Image updates

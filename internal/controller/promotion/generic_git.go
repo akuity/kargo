@@ -5,7 +5,7 @@ import (
 	"github.com/akuity/kargo/internal/credentials"
 )
 
-// newGenericGitMechanism returns a gitMechanism that only only selects and
+// newGenericGitMechanism returns a gitMechanism that only selects and
 // performs updates that do not involve any configuration management tools.
 func newGenericGitMechanism(
 	credentialsDB credentials.Database,

@@ -34,6 +34,7 @@ func NewMechanisms(
 		"promotion mechanisms",
 		newCompositeMechanism(
 			"Git-based promotion mechanisms",
+			newCopyMechanism(credentialsDB),
 			newGenericGitMechanism(credentialsDB),
 			newKargoRenderMechanism(credentialsDB),
 			newKustomizeMechanism(credentialsDB),
