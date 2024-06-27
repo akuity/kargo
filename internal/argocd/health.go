@@ -216,7 +216,7 @@ func stageHealthForAppSync(ctx context.Context, app *argocd.Application, revisio
 	logger := logging.LoggerFromContext(ctx).WithValues("appName", app.GetName(), "revision", revision)
 	logger.Debug("About to determine stage health based on app sync status.")
 	switch {
-	case revision == "":
+	case revision == "" && len(app.Status.Sync.Revisions) == 0:
 		logger.Debug("Revision not set, assuming healthy.")
 		return kargoapi.HealthStateHealthy, nil
 	case app.Operation != nil && app.Operation.Sync != nil:
@@ -227,17 +227,38 @@ func stageHealthForAppSync(ctx context.Context, app *argocd.Application, revisio
 			app.GetNamespace(),
 		)
 		return kargoapi.HealthStateUnknown, err
-	case app.Status.Sync.Revision != revision:
-		logger.Debug("Application out of sync, assuming unhealthy.")
-		err := fmt.Errorf(
-			"Argo CD Application %q in namespace %q is out of sync",
+
+	default:
+		// Apps may have multiple revisions in the list of revisions, so we need to check in both places.
+
+		// Trivial case where app has only a single source and revision is set.
+		if app.Status.Sync.Revision == revision {
+			return kargoapi.HealthStateHealthy, nil
+		}
+
+		if len(app.Status.Sync.Revisions) > 0 {
+			// App has multiple sources, so we need to check the list of revisions.
+			// Note: Apps with multiple sources pointed at the same Git repository can only have the same revision
+			// 		 	 for all sources because ArgoCD does not support the alternative, so we only need to check
+			//				the first revision match.
+			for _, r := range app.Status.Sync.Revisions {
+				if r == revision {
+					logger.Debug("Found desired revision in list of revisions of multi-source application, app is healthy.", "desiredRevision", revision, "currentRevisions", app.Status.Sync.Revisions)
+					return kargoapi.HealthStateHealthy, nil
+				}
+			}
+		}
+
+		msg := fmt.Sprintf(
+			"No revisions of Application %q in namespace %q match the desired revision %v, assuming unhealthy. Current revisions: %v, current revision: %v",
 			app.GetName(),
 			app.GetNamespace(),
+			revision,
+			app.Status.Sync.Revisions,
+			app.Status.Sync.Revision,
 		)
-
-		return kargoapi.HealthStateUnhealthy, err
-	default:
-		return kargoapi.HealthStateHealthy, nil
+		logger.Debug(msg)
+		return kargoapi.HealthStateUnhealthy, errors.New(msg)
 	}
 }
 
