@@ -13,8 +13,9 @@ export const FreightContents = (props: {
   freight?: Freight;
   highlighted: boolean;
   horizontal?: boolean;
+  dark?: boolean;
 }) => {
-  const { freight, highlighted, horizontal } = props;
+  const { freight, highlighted, horizontal, dark } = props;
   const linkClass = `${highlighted ? 'text-blue-600' : 'text-gray-400'} hover:text-blue-500 underline hover:underline max-w-full`;
 
   const FreightContentItem = (props: {
@@ -29,7 +30,8 @@ export const FreightContents = (props: {
         'min-w-0 flex items-center justify-center my-1 bg-neutral-300 rounded',
         {
           'flex-col p-1 w-full': !horizontal,
-          'mr-2 p-2 max-w-60 flex-shrink': horizontal
+          'mr-2 p-2 max-w-60 flex-shrink': horizontal,
+          'bg-black text-white': dark
         }
       )}
       overlay={props.overlay}
@@ -55,7 +57,7 @@ export const FreightContents = (props: {
   return (
     <div
       className={classNames(
-        'flex justify-start items-center font-mono text-xs flex-shrink max-h-full max-w-full',
+        'flex justify-start items-center font-mono text-xs flex-shrink max-h-full max-w-full flex-wrap',
         {
           'text-gray-700 hover:text-gray-800': highlighted,
           'text-gray-400 hover:text-gray-500': !highlighted,
@@ -76,14 +78,24 @@ export const FreightContents = (props: {
         </FreightContentItem>
       ))}
       {(freight?.images || []).map((i) => (
-        <FreightContentItem
-          key={`${i.repoURL}:${i.tag}`}
-          title={`${i.repoURL}:${i.tag}`}
-          icon={faDocker}
-          href={urlForImage(i.repoURL || '')}
-        >
-          {`${props.horizontal ? i.repoURL + ':' : ''}${i.tag}`}
-        </FreightContentItem>
+        <>
+          <FreightContentItem
+            key={`${i.repoURL}:${i.tag}`}
+            title={`${i.repoURL}:${i.tag}`}
+            icon={faDocker}
+            href={urlForImage(i.repoURL || '')}
+          >
+            {`${props.horizontal ? i.repoURL + ':' : ''}${i.tag}`}
+          </FreightContentItem>
+          <FreightContentItem
+            key={`${i.repoURL}:${i.tag}`}
+            title={`${i.repoURL}:${i.tag}`}
+            icon={faDocker}
+            href={urlForImage(i.repoURL || '')}
+          >
+            {`${props.horizontal ? i.repoURL + ':' : ''}${i.tag}`}
+          </FreightContentItem>
+        </>
       ))}
       {(freight?.charts || []).map((c) => (
         <FreightContentItem
