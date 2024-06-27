@@ -477,9 +477,25 @@ spec:
                   properties:
                     origin:
                       description: |-
-                        Origin specifies what Warehouse the requested Freight must have originated
-                        from. This is a required field.
-                      type: string
+                        Origin specifies from where the requested Freight must have originated.
+                        This is a required field.
+                      properties:
+                        kind:
+                          description: |-
+                            Kind is the kind of resource from which Freight may have originated. At
+                            present, this can only be "Warehouse".
+                          enum:
+                          - Warehouse
+                          type: string
+                        name:
+                          description: |-
+                            Name is the name of the resource of the kind indicated by the Kind field
+                            from which Freight may originated.
+                          type: string
+                      required:
+                      - kind
+                      - name
+                      type: object
                     sources:
                       description: |-
                         Sources describes where the requested Freight may be obtained from. This is
@@ -728,6 +744,26 @@ spec:
                       the contents of the Freight. i.e. Two pieces of Freight can be compared for
                       equality by comparing their Names.
                     type: string
+                  origin:
+                    description: Origin describes a kind of Freight in terms of its
+                      origin.
+                    properties:
+                      kind:
+                        description: |-
+                          Kind is the kind of resource from which Freight may have originated. At
+                          present, this can only be "Warehouse".
+                        enum:
+                        - Warehouse
+                        type: string
+                      name:
+                        description: |-
+                          Name is the name of the resource of the kind indicated by the Kind field
+                          from which Freight may originated.
+                        type: string
+                    required:
+                    - kind
+                    - name
+                    type: object
                   verificationHistory:
                     description: |-
                       VerificationHistory is a stack of recent VerificationInfo. By default,
@@ -852,8 +888,11 @@ spec:
                         type: string
                     type: object
                   warehouse:
-                    description: Warehouse is the name of the Warehouse that created
-                      this Freight.
+                    description: |-
+                      Warehouse is the name of the Warehouse that created this Freight.
+
+
+                      Deprecated: Use the Origin instead.
                     type: string
                 type: object
               currentPromotion:
@@ -970,6 +1009,26 @@ spec:
                           the contents of the Freight. i.e. Two pieces of Freight can be compared for
                           equality by comparing their Names.
                         type: string
+                      origin:
+                        description: Origin describes a kind of Freight in terms of
+                          its origin.
+                        properties:
+                          kind:
+                            description: |-
+                              Kind is the kind of resource from which Freight may have originated. At
+                              present, this can only be "Warehouse".
+                            enum:
+                            - Warehouse
+                            type: string
+                          name:
+                            description: |-
+                              Name is the name of the resource of the kind indicated by the Kind field
+                              from which Freight may originated.
+                            type: string
+                        required:
+                        - kind
+                        - name
+                        type: object
                       verificationHistory:
                         description: |-
                           VerificationHistory is a stack of recent VerificationInfo. By default,
@@ -1096,8 +1155,11 @@ spec:
                             type: string
                         type: object
                       warehouse:
-                        description: Warehouse is the name of the Warehouse that created
-                          this Freight.
+                        description: |-
+                          Warehouse is the name of the Warehouse that created this Freight.
+
+
+                          Deprecated: Use the Origin instead.
                         type: string
                     type: object
                   name:
@@ -1218,6 +1280,26 @@ spec:
                               the contents of the Freight. i.e. Two pieces of Freight can be compared for
                               equality by comparing their Names.
                             type: string
+                          origin:
+                            description: Origin describes a kind of Freight in terms
+                              of its origin.
+                            properties:
+                              kind:
+                                description: |-
+                                  Kind is the kind of resource from which Freight may have originated. At
+                                  present, this can only be "Warehouse".
+                                enum:
+                                - Warehouse
+                                type: string
+                              name:
+                                description: |-
+                                  Name is the name of the resource of the kind indicated by the Kind field
+                                  from which Freight may originated.
+                                type: string
+                            required:
+                            - kind
+                            - name
+                            type: object
                           verificationHistory:
                             description: |-
                               VerificationHistory is a stack of recent VerificationInfo. By default,
@@ -1346,8 +1428,11 @@ spec:
                                 type: string
                             type: object
                           warehouse:
-                            description: Warehouse is the name of the Warehouse that
-                              created this Freight.
+                            description: |-
+                              Warehouse is the name of the Warehouse that created this Freight.
+
+
+                              Deprecated: Use the Origin instead.
                             type: string
                         type: object
                       lastHandledRefresh:
@@ -1505,6 +1590,26 @@ spec:
                               the contents of the Freight. i.e. Two pieces of Freight can be compared for
                               equality by comparing their Names.
                             type: string
+                          origin:
+                            description: Origin describes a kind of Freight in terms
+                              of its origin.
+                            properties:
+                              kind:
+                                description: |-
+                                  Kind is the kind of resource from which Freight may have originated. At
+                                  present, this can only be "Warehouse".
+                                enum:
+                                - Warehouse
+                                type: string
+                              name:
+                                description: |-
+                                  Name is the name of the resource of the kind indicated by the Kind field
+                                  from which Freight may originated.
+                                type: string
+                            required:
+                            - kind
+                            - name
+                            type: object
                           verificationHistory:
                             description: |-
                               VerificationHistory is a stack of recent VerificationInfo. By default,
@@ -1633,8 +1738,11 @@ spec:
                                 type: string
                             type: object
                           warehouse:
-                            description: Warehouse is the name of the Warehouse that
-                              created this Freight.
+                            description: |-
+                              Warehouse is the name of the Warehouse that created this Freight.
+
+
+                              Deprecated: Use the Origin instead.
                             type: string
                         type: object
                       description: |-
@@ -1881,6 +1989,26 @@ spec:
                         the contents of the Freight. i.e. Two pieces of Freight can be compared for
                         equality by comparing their Names.
                       type: string
+                    origin:
+                      description: Origin describes a kind of Freight in terms of
+                        its origin.
+                      properties:
+                        kind:
+                          description: |-
+                            Kind is the kind of resource from which Freight may have originated. At
+                            present, this can only be "Warehouse".
+                          enum:
+                          - Warehouse
+                          type: string
+                        name:
+                          description: |-
+                            Name is the name of the resource of the kind indicated by the Kind field
+                            from which Freight may originated.
+                          type: string
+                      required:
+                      - kind
+                      - name
+                      type: object
                     verificationHistory:
                       description: |-
                         VerificationHistory is a stack of recent VerificationInfo. By default,
@@ -2006,8 +2134,11 @@ spec:
                           type: string
                       type: object
                     warehouse:
-                      description: Warehouse is the name of the Warehouse that created
-                        this Freight.
+                      description: |-
+                        Warehouse is the name of the Warehouse that created this Freight.
+
+
+                        Deprecated: Use the Origin instead.
                       type: string
                   type: object
                 type: array
@@ -2130,6 +2261,26 @@ spec:
                           the contents of the Freight. i.e. Two pieces of Freight can be compared for
                           equality by comparing their Names.
                         type: string
+                      origin:
+                        description: Origin describes a kind of Freight in terms of
+                          its origin.
+                        properties:
+                          kind:
+                            description: |-
+                              Kind is the kind of resource from which Freight may have originated. At
+                              present, this can only be "Warehouse".
+                            enum:
+                            - Warehouse
+                            type: string
+                          name:
+                            description: |-
+                              Name is the name of the resource of the kind indicated by the Kind field
+                              from which Freight may originated.
+                            type: string
+                        required:
+                        - kind
+                        - name
+                        type: object
                       verificationHistory:
                         description: |-
                           VerificationHistory is a stack of recent VerificationInfo. By default,
@@ -2256,8 +2407,11 @@ spec:
                             type: string
                         type: object
                       warehouse:
-                        description: Warehouse is the name of the Warehouse that created
-                          this Freight.
+                        description: |-
+                          Warehouse is the name of the Warehouse that created this Freight.
+
+
+                          Deprecated: Use the Origin instead.
                         type: string
                     type: object
                   name:
@@ -2378,6 +2532,26 @@ spec:
                               the contents of the Freight. i.e. Two pieces of Freight can be compared for
                               equality by comparing their Names.
                             type: string
+                          origin:
+                            description: Origin describes a kind of Freight in terms
+                              of its origin.
+                            properties:
+                              kind:
+                                description: |-
+                                  Kind is the kind of resource from which Freight may have originated. At
+                                  present, this can only be "Warehouse".
+                                enum:
+                                - Warehouse
+                                type: string
+                              name:
+                                description: |-
+                                  Name is the name of the resource of the kind indicated by the Kind field
+                                  from which Freight may originated.
+                                type: string
+                            required:
+                            - kind
+                            - name
+                            type: object
                           verificationHistory:
                             description: |-
                               VerificationHistory is a stack of recent VerificationInfo. By default,
@@ -2506,8 +2680,11 @@ spec:
                                 type: string
                             type: object
                           warehouse:
-                            description: Warehouse is the name of the Warehouse that
-                              created this Freight.
+                            description: |-
+                              Warehouse is the name of the Warehouse that created this Freight.
+
+
+                              Deprecated: Use the Origin instead.
                             type: string
                         type: object
                       lastHandledRefresh:

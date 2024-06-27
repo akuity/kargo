@@ -1291,11 +1291,20 @@ export class Freight extends Message<Freight> {
    * required field. TODO: It is not clear yet how this field should be set in
    * the case of user-defined Freight.
    *
-   * +kubebuilder:validation:Required
+   * Deprecated: Use Origin instead.
    *
    * @generated from field: optional string warehouse = 8;
    */
   warehouse?: string;
+
+  /**
+   * Origin describes a kind of Freight in terms of its origin.
+   *
+   * +kubebuilder:validation:Required
+   *
+   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.FreightOrigin origin = 9;
+   */
+  origin?: FreightOrigin;
 
   /**
    * Commits describes specific Git repository commits.
@@ -1336,6 +1345,7 @@ export class Freight extends Message<Freight> {
     { no: 1, name: "metadata", kind: "message", T: ObjectMeta, opt: true },
     { no: 7, name: "alias", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 8, name: "warehouse", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 9, name: "origin", kind: "message", T: FreightOrigin, opt: true },
     { no: 3, name: "commits", kind: "message", T: GitCommit, repeated: true },
     { no: 4, name: "images", kind: "message", T: Image, repeated: true },
     { no: 5, name: "charts", kind: "message", T: Chart, repeated: true },
@@ -1458,6 +1468,64 @@ export class FreightList extends Message<FreightList> {
 }
 
 /**
+ * FreightOrigin describes a kind of Freight in terms of where it may have
+ * originated.
+ *
+ * +protobuf.options.(gogoproto.goproto_stringer)=false
+ *
+ * @generated from message github.com.akuity.kargo.api.v1alpha1.FreightOrigin
+ */
+export class FreightOrigin extends Message<FreightOrigin> {
+  /**
+   * Kind is the kind of resource from which Freight may have originated. At
+   * present, this can only be "Warehouse".
+   *
+   * +kubebuilder:validation:Required
+   *
+   * @generated from field: optional string kind = 1;
+   */
+  kind?: string;
+
+  /**
+   * Name is the name of the resource of the kind indicated by the Kind field
+   * from which Freight may originated.
+   *
+   * +kubebuilder:validation:Required
+   *
+   * @generated from field: optional string name = 2;
+   */
+  name?: string;
+
+  constructor(data?: PartialMessage<FreightOrigin>) {
+    super();
+    proto2.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto2 = proto2;
+  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.FreightOrigin";
+  static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 1, name: "kind", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FreightOrigin {
+    return new FreightOrigin().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): FreightOrigin {
+    return new FreightOrigin().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): FreightOrigin {
+    return new FreightOrigin().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: FreightOrigin | PlainMessage<FreightOrigin> | undefined, b: FreightOrigin | PlainMessage<FreightOrigin> | undefined): boolean {
+    return proto2.util.equals(FreightOrigin, a, b);
+  }
+}
+
+/**
  * FreightReference is a simplified representation of a piece of Freight -- not
  * a root resource type.
  *
@@ -1476,9 +1544,18 @@ export class FreightReference extends Message<FreightReference> {
   /**
    * Warehouse is the name of the Warehouse that created this Freight.
    *
+   * Deprecated: Use the Origin instead.
+   *
    * @generated from field: optional string warehouse = 6;
    */
   warehouse?: string;
+
+  /**
+   * Origin describes a kind of Freight in terms of its origin.
+   *
+   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.FreightOrigin origin = 8;
+   */
+  origin?: FreightOrigin;
 
   /**
    * Commits describes specific Git repository commits.
@@ -1531,6 +1608,7 @@ export class FreightReference extends Message<FreightReference> {
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 6, name: "warehouse", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 8, name: "origin", kind: "message", T: FreightOrigin, opt: true },
     { no: 2, name: "commits", kind: "message", T: GitCommit, repeated: true },
     { no: 3, name: "images", kind: "message", T: Image, repeated: true },
     { no: 4, name: "charts", kind: "message", T: Chart, repeated: true },
@@ -1563,14 +1641,14 @@ export class FreightReference extends Message<FreightReference> {
  */
 export class FreightRequest extends Message<FreightRequest> {
   /**
-   * Origin specifies what Warehouse the requested Freight must have originated
-   * from. This is a required field.
+   * Origin specifies from where the requested Freight must have originated.
+   * This is a required field.
    *
    * +kubebuilder:validation:Required
    *
-   * @generated from field: optional string origin = 1;
+   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.FreightOrigin origin = 1;
    */
-  origin?: string;
+  origin?: FreightOrigin;
 
   /**
    * Sources describes where the requested Freight may be obtained from. This is
@@ -1588,7 +1666,7 @@ export class FreightRequest extends Message<FreightRequest> {
   static readonly runtime: typeof proto2 = proto2;
   static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.FreightRequest";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
-    { no: 1, name: "origin", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 1, name: "origin", kind: "message", T: FreightOrigin, opt: true },
     { no: 2, name: "sources", kind: "message", T: FreightSources, opt: true },
   ]);
 

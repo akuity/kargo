@@ -403,8 +403,13 @@ message Freight {
   // required field. TODO: It is not clear yet how this field should be set in
   // the case of user-defined Freight.
   //
-  // +kubebuilder:validation:Required
+  // Deprecated: Use Origin instead.
   optional string warehouse = 8;
+
+  // Origin describes a kind of Freight in terms of its origin.
+  //
+  // +kubebuilder:validation:Required
+  optional FreightOrigin origin = 9;
 
   // Commits describes specific Git repository commits.
   repeated GitCommit commits = 3;
@@ -439,6 +444,24 @@ message FreightList {
   repeated Freight items = 2;
 }
 
+// FreightOrigin describes a kind of Freight in terms of where it may have
+// originated.
+//
+// +protobuf.options.(gogoproto.goproto_stringer)=false
+message FreightOrigin {
+  // Kind is the kind of resource from which Freight may have originated. At
+  // present, this can only be "Warehouse".
+  //
+  // +kubebuilder:validation:Required
+  optional string kind = 1;
+
+  // Name is the name of the resource of the kind indicated by the Kind field
+  // from which Freight may originated.
+  //
+  // +kubebuilder:validation:Required
+  optional string name = 2;
+}
+
 // FreightReference is a simplified representation of a piece of Freight -- not
 // a root resource type.
 message FreightReference {
@@ -448,7 +471,12 @@ message FreightReference {
   optional string name = 1;
 
   // Warehouse is the name of the Warehouse that created this Freight.
+  //
+  // Deprecated: Use the Origin instead.
   optional string warehouse = 6;
+
+  // Origin describes a kind of Freight in terms of its origin.
+  optional FreightOrigin origin = 8;
 
   // Commits describes specific Git repository commits.
   repeated GitCommit commits = 2;
@@ -475,11 +503,11 @@ message FreightReference {
 // FreightRequest expresses a Stage's need for Freight having originated from a
 // particular Warehouse.
 message FreightRequest {
-  // Origin specifies what Warehouse the requested Freight must have originated
-  // from. This is a required field.
+  // Origin specifies from where the requested Freight must have originated.
+  // This is a required field.
   //
   // +kubebuilder:validation:Required
-  optional string origin = 1;
+  optional FreightOrigin origin = 1;
 
   // Sources describes where the requested Freight may be obtained from. This is
   // a required field.
