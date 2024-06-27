@@ -2,7 +2,9 @@ package stages
 
 import (
 	"context"
+	"crypto/sha1" // nolint: gosec
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
 
@@ -62,6 +64,8 @@ func (r *reconciler) startVerification(
 
 	logger := logging.LoggerFromContext(ctx)
 
+	freightNames := freightNames(freightCombo)
+
 	// If this is not a re-verification request, check if there is an existing
 	// AnalysisRun for the Stage and Freight. If there is, return the status of
 	// this AnalysisRun.
@@ -75,7 +79,7 @@ func (r *reconciler) startVerification(
 				LabelSelector: labels.SelectorFromSet(
 					map[string]string{
 						kargoapi.StageLabelKey:   stage.Name,
-						kargoapi.FreightLabelKey: freightCombo.FreightNames(),
+						kargoapi.FreightLabelKey: freightNames,
 					},
 				),
 			},
@@ -85,7 +89,7 @@ func (r *reconciler) startVerification(
 			newInfo.Message = fmt.Errorf(
 				"error listing AnalysisRuns for Stage %q and Freight %q in namespace %q: %w",
 				stage.Name,
-				freightCombo.FreightNames(),
+				freightNames,
 				stage.Namespace,
 				err,
 			).Error()
@@ -155,7 +159,7 @@ func (r *reconciler) startVerification(
 		newInfo.Message = fmt.Errorf(
 			"error building AnalysisRun for Stage %q and Freight %q in namespace %q: %w",
 			stage.Name,
-			freightCombo.FreightNames(),
+			freightNames,
 			stage.Namespace,
 			err,
 		).Error()
@@ -336,15 +340,18 @@ func (r *reconciler) buildAnalysisRun(
 	const maxStageNamePrefixLength = 218
 
 	// Build the name of the AnalysisRun
-	shortHash := freightCombo.FreightNames()
-	if len(shortHash) > 7 {
-		shortHash = shortHash[0:7]
-	}
 	shortStageName := stage.Name
 	if len(stage.Name) > maxStageNamePrefixLength {
 		shortStageName = shortStageName[0:maxStageNamePrefixLength]
 	}
-	analysisRunName := strings.ToLower(fmt.Sprintf("%s.%s.%s", shortStageName, ulid.Make(), shortHash))
+	analysisRunName := strings.ToLower(
+		fmt.Sprintf(
+			"%s.%s.%s",
+			shortStageName,
+			ulid.Make(),
+			fmt.Sprintf("%x", sha1.Sum([]byte(freightNames(freightCombo))))[0:7], // nolint: gosec
+		),
+	)
 
 	// Build the labels and annotations for the AnalysisRun
 	var numLabels int
@@ -365,7 +372,7 @@ func (r *reconciler) buildAnalysisRun(
 		}
 	}
 	lbls[kargoapi.StageLabelKey] = stage.Name
-	lbls[kargoapi.FreightLabelKey] = freightCombo.FreightNames()
+	lbls[kargoapi.FreightLabelKey] = freightNames(freightCombo)
 
 	// Add Promotion name if the AnalysisRun is triggered by Promotion.
 	// This is the case when there is no existing verification information,
@@ -642,4 +649,19 @@ func resolveArgs(args []rollouts.Argument) error {
 		}
 	}
 	return nil
+}
+
+// freightNames returns a sorted and comma-delimited list of the names of the
+// Freight in the FreightHistoryEntry. This is useful for when an identifier is
+// needed to represent a precise combination of Freight.
+func freightNames(f *kargoapi.FreightHistoryEntry) string {
+	if f == nil || len(f.Freight) == 0 {
+		return ""
+	}
+	freightNames := make([]string, 0, len(f.Freight))
+	for _, freight := range f.Freight {
+		freightNames = append(freightNames, freight.Name)
+	}
+	slices.Sort(freightNames)
+	return strings.Join(freightNames, ",")
 }
