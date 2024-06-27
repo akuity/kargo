@@ -18,6 +18,17 @@ import (
 )
 
 func TestPromoteDownstream(t *testing.T) {
+	testStageSpec := kargoapi.StageSpec{
+		RequestedFreight: []kargoapi.FreightRequest{{
+			Origin: kargoapi.FreightOrigin{
+				Kind: kargoapi.FreightOriginKindWarehouse,
+				Name: "fake-warehouse",
+			},
+			Sources: kargoapi.FreightSources{
+				Stages: []string{"fake-upstream-stage"},
+			},
+		}},
+	}
 	testCases := []struct {
 		name       string
 		req        *svcv1alpha1.PromoteDownstreamRequest
@@ -145,14 +156,7 @@ func TestPromoteDownstream(t *testing.T) {
 					types.NamespacedName,
 				) (*kargoapi.Stage, error) {
 					return &kargoapi.Stage{
-						Spec: kargoapi.StageSpec{
-							RequestedFreight: []kargoapi.FreightRequest{{
-								Origin: "fake-warehouse",
-								Sources: kargoapi.FreightSources{
-									Stages: []string{"fake-upstream-stage"},
-								},
-							}},
-						},
+						Spec: testStageSpec,
 					}, nil
 				},
 				getFreightByNameOrAliasFn: func(
@@ -190,14 +194,7 @@ func TestPromoteDownstream(t *testing.T) {
 					types.NamespacedName,
 				) (*kargoapi.Stage, error) {
 					return &kargoapi.Stage{
-						Spec: kargoapi.StageSpec{
-							RequestedFreight: []kargoapi.FreightRequest{{
-								Origin: "fake-warehouse",
-								Sources: kargoapi.FreightSources{
-									Stages: []string{"fake-upstream-stage"},
-								},
-							}},
-						},
+						Spec: testStageSpec,
 					}, nil
 				},
 				getFreightByNameOrAliasFn: func(
@@ -239,14 +236,7 @@ func TestPromoteDownstream(t *testing.T) {
 					types.NamespacedName,
 				) (*kargoapi.Stage, error) {
 					return &kargoapi.Stage{
-						Spec: kargoapi.StageSpec{
-							RequestedFreight: []kargoapi.FreightRequest{{
-								Origin: "fake-warehouse",
-								Sources: kargoapi.FreightSources{
-									Stages: []string{"fake-upstream-stage"},
-								},
-							}},
-						},
+						Spec: testStageSpec,
 					}, nil
 				},
 				getFreightByNameOrAliasFn: func(
@@ -291,14 +281,7 @@ func TestPromoteDownstream(t *testing.T) {
 					types.NamespacedName,
 				) (*kargoapi.Stage, error) {
 					return &kargoapi.Stage{
-						Spec: kargoapi.StageSpec{
-							RequestedFreight: []kargoapi.FreightRequest{{
-								Origin: "fake-warehouse",
-								Sources: kargoapi.FreightSources{
-									Stages: []string{"fake-upstream-stage"},
-								},
-							}},
-						},
+						Spec: testStageSpec,
 					}, nil
 				},
 				getFreightByNameOrAliasFn: func(
@@ -342,14 +325,7 @@ func TestPromoteDownstream(t *testing.T) {
 					types.NamespacedName,
 				) (*kargoapi.Stage, error) {
 					return &kargoapi.Stage{
-						Spec: kargoapi.StageSpec{
-							RequestedFreight: []kargoapi.FreightRequest{{
-								Origin: "fake-warehouse",
-								Sources: kargoapi.FreightSources{
-									Stages: []string{"fake-upstream-stage"},
-								},
-							}},
-						},
+						Spec: testStageSpec,
 					}, nil
 				},
 				getFreightByNameOrAliasFn: func(
@@ -397,14 +373,7 @@ func TestPromoteDownstream(t *testing.T) {
 					types.NamespacedName,
 				) (*kargoapi.Stage, error) {
 					return &kargoapi.Stage{
-						Spec: kargoapi.StageSpec{
-							RequestedFreight: []kargoapi.FreightRequest{{
-								Origin: "fake-warehouse",
-								Sources: kargoapi.FreightSources{
-									Stages: []string{"fake-upstream-stage"},
-								},
-							}},
-						},
+						Spec: testStageSpec,
 					}, nil
 				},
 				getFreightByNameOrAliasFn: func(
@@ -459,14 +428,7 @@ func TestPromoteDownstream(t *testing.T) {
 					types.NamespacedName,
 				) (*kargoapi.Stage, error) {
 					return &kargoapi.Stage{
-						Spec: kargoapi.StageSpec{
-							RequestedFreight: []kargoapi.FreightRequest{{
-								Origin: "fake-warehouse",
-								Sources: kargoapi.FreightSources{
-									Stages: []string{"fake-upstream-stage"},
-								},
-							}},
-						},
+						Spec: testStageSpec,
 					}, nil
 				},
 				getFreightByNameOrAliasFn: func(
@@ -535,14 +497,7 @@ func TestPromoteDownstream(t *testing.T) {
 					types.NamespacedName,
 				) (*kargoapi.Stage, error) {
 					return &kargoapi.Stage{
-						Spec: kargoapi.StageSpec{
-							RequestedFreight: []kargoapi.FreightRequest{{
-								Origin: "fake-warehouse",
-								Sources: kargoapi.FreightSources{
-									Stages: []string{"fake-upstream-stage"},
-								},
-							}},
-						},
+						Spec: testStageSpec,
 					}, nil
 				},
 				getFreightByNameOrAliasFn: func(

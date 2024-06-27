@@ -913,11 +913,10 @@ func (r *reconciler) syncNormalStage(
 	// logic that works with multiple Freight.
 	if currentFreight := status.FreightHistory.Current(); currentFreight != nil && len(currentFreight.Freight) > 0 {
 		for _, requested := range stage.Spec.RequestedFreight {
-			if _, ok := currentFreight.Freight[requested.Origin]; ok {
-				if currentFreight.Freight[requested.Origin].Name == latestFreight.Name {
-					logger.Debug("Stage already has latest available Freight")
-					return status, nil
-				}
+			if freightRef, ok := currentFreight.Freight[requested.Origin.String()]; ok &&
+				freightRef.Name == latestFreight.Name {
+				logger.Debug("Stage already has latest available Freight")
+				return status, nil
 			}
 		}
 	}
@@ -1078,7 +1077,7 @@ func (r *reconciler) syncPromotions(
 			// multiple Freight when implemented on the Promotion side.
 			status.FreightHistory.Record(&kargoapi.FreightCollection{
 				Freight: map[string]kargoapi.FreightReference{
-					status.LastPromotion.Freight.Warehouse: *status.LastPromotion.Freight.DeepCopy(),
+					status.LastPromotion.Freight.Origin.String(): *status.LastPromotion.Freight.DeepCopy(),
 				},
 			})
 			if status.CurrentPromotion == nil {
@@ -1378,7 +1377,7 @@ func (r *reconciler) getAvailableFreight(
 	var availableFreight []kargoapi.Freight
 	for _, req := range stage.Spec.RequestedFreight {
 		// Get Freight direct from Warehouses if allowed
-		if req.Sources.Direct {
+		if req.Origin.Kind == kargoapi.FreightOriginKindWarehouse && req.Sources.Direct {
 			var freight kargoapi.FreightList
 			if err := r.listFreightFn(
 				ctx,
@@ -1387,13 +1386,13 @@ func (r *reconciler) getAvailableFreight(
 					Namespace: stage.Namespace,
 					FieldSelector: fields.OneTermEqualSelector(
 						kubeclient.FreightByWarehouseIndexField,
-						req.Origin,
+						req.Origin.Name,
 					),
 				},
 			); err != nil {
 				return nil, fmt.Errorf(
-					"error listing Freight from Warehouse %q in namespace %q: %w",
-					req.Origin,
+					"error listing Freight from %s in namespace %q: %w",
+					req.Origin.String(),
 					stage.Namespace,
 					err,
 				)

@@ -224,6 +224,10 @@ func TestSyncControlFlowStage(t *testing.T) {
 }
 
 func TestSyncNormalStage(t *testing.T) {
+	testOrigin := kargoapi.FreightOrigin{
+		Kind: kargoapi.FreightOriginKindWarehouse,
+		Name: "fake-warehouse",
+	}
 	testCases := []struct {
 		name       string
 		stage      *kargoapi.Stage
@@ -282,8 +286,8 @@ func TestSyncNormalStage(t *testing.T) {
 					FreightHistory: kargoapi.FreightHistory{
 						{
 							Freight: map[string]kargoapi.FreightReference{
-								"fake-warehouse": {
-									Warehouse: "fake-warehouse",
+								testOrigin.String(): {
+									Origin: testOrigin,
 									VerificationInfo: &kargoapi.VerificationInfo{
 										ID:    "fake-id",
 										Phase: kargoapi.VerificationPhaseFailed,
@@ -372,8 +376,8 @@ func TestSyncNormalStage(t *testing.T) {
 					FreightHistory: kargoapi.FreightHistory{
 						{
 							Freight: map[string]kargoapi.FreightReference{
-								"fake-warehouse": {
-									Warehouse: "fake-warehouse",
+								testOrigin.String(): {
+									Origin: testOrigin,
 									VerificationInfo: &kargoapi.VerificationInfo{
 										Phase: kargoapi.VerificationPhaseFailed,
 										AnalysisRun: &kargoapi.AnalysisRunReference{
@@ -440,8 +444,8 @@ func TestSyncNormalStage(t *testing.T) {
 					FreightHistory: kargoapi.FreightHistory{
 						{
 							Freight: map[string]kargoapi.FreightReference{
-								"fake-warehouse": {
-									Warehouse: "fake-warehouse",
+								testOrigin.String(): {
+									Origin: testOrigin,
 								},
 							},
 						},
@@ -531,8 +535,8 @@ func TestSyncNormalStage(t *testing.T) {
 					FreightHistory: kargoapi.FreightHistory{
 						{
 							Freight: map[string]kargoapi.FreightReference{
-								"fake-warehouse": {
-									Warehouse: "fake-warehouse",
+								testOrigin.String(): {
+									Origin: testOrigin,
 								},
 							},
 						},
@@ -599,8 +603,8 @@ func TestSyncNormalStage(t *testing.T) {
 					FreightHistory: kargoapi.FreightHistory{
 						{
 							Freight: map[string]kargoapi.FreightReference{
-								"fake-warehouse": {
-									Warehouse: "fake-warehouse",
+								testOrigin.String(): {
+									Origin: testOrigin,
 								},
 							},
 							VerificationHistory: []kargoapi.VerificationInfo{
@@ -699,8 +703,8 @@ func TestSyncNormalStage(t *testing.T) {
 					FreightHistory: kargoapi.FreightHistory{
 						{
 							Freight: map[string]kargoapi.FreightReference{
-								"fake-warehouse": {
-									Warehouse: "fake-warehouse",
+								testOrigin.String(): {
+									Origin: testOrigin,
 								},
 							},
 							VerificationHistory: []kargoapi.VerificationInfo{
@@ -789,8 +793,8 @@ func TestSyncNormalStage(t *testing.T) {
 					FreightHistory: kargoapi.FreightHistory{
 						{
 							Freight: map[string]kargoapi.FreightReference{
-								"fake-warehouse": {
-									Warehouse: "fake-warehouse",
+								testOrigin.String(): {
+									Origin: testOrigin,
 								},
 							},
 							VerificationHistory: []kargoapi.VerificationInfo{
@@ -907,8 +911,8 @@ func TestSyncNormalStage(t *testing.T) {
 					FreightHistory: kargoapi.FreightHistory{
 						{
 							Freight: map[string]kargoapi.FreightReference{
-								"fake-warehouse": {
-									Warehouse: "fake-warehouse",
+								testOrigin.String(): {
+									Origin: testOrigin,
 								},
 							},
 							VerificationHistory: []kargoapi.VerificationInfo{
@@ -1023,8 +1027,8 @@ func TestSyncNormalStage(t *testing.T) {
 					FreightHistory: kargoapi.FreightHistory{
 						{
 							Freight: map[string]kargoapi.FreightReference{
-								"fake-warehouse": {
-									Warehouse: "fake-warehouse",
+								testOrigin.String(): {
+									Origin: testOrigin,
 								},
 							},
 						},
@@ -1078,8 +1082,8 @@ func TestSyncNormalStage(t *testing.T) {
 					FreightHistory: kargoapi.FreightHistory{
 						{
 							Freight: map[string]kargoapi.FreightReference{
-								"fake-warehouse": {
-									Warehouse: "fake-warehouse",
+								testOrigin.String(): {
+									Origin: testOrigin,
 								},
 							},
 						},
@@ -1143,8 +1147,8 @@ func TestSyncNormalStage(t *testing.T) {
 					FreightHistory: kargoapi.FreightHistory{
 						{
 							Freight: map[string]kargoapi.FreightReference{
-								"fake-warehouse": {
-									Warehouse: "fake-warehouse",
+								testOrigin.String(): {
+									Origin: testOrigin,
 								},
 							},
 						},
@@ -1207,8 +1211,8 @@ func TestSyncNormalStage(t *testing.T) {
 					FreightHistory: kargoapi.FreightHistory{
 						{
 							Freight: map[string]kargoapi.FreightReference{
-								"fake-warehouse": {
-									Warehouse: "fake-warehouse",
+								testOrigin.String(): {
+									Origin: testOrigin,
 								},
 							},
 						},
@@ -1277,8 +1281,8 @@ func TestSyncNormalStage(t *testing.T) {
 					FreightHistory: kargoapi.FreightHistory{
 						{
 							Freight: map[string]kargoapi.FreightReference{
-								"fake-warehouse": {
-									Warehouse: "fake-warehouse",
+								testOrigin.String(): {
+									Origin: testOrigin,
 								},
 							},
 							VerificationHistory: []kargoapi.VerificationInfo{
@@ -1345,7 +1349,10 @@ func TestSyncNormalStage(t *testing.T) {
 				Spec: kargoapi.StageSpec{
 					RequestedFreight: []kargoapi.FreightRequest{
 						{
-							Origin: "fake-warehouse",
+							Origin: kargoapi.FreightOrigin{
+								Kind: kargoapi.FreightOriginKindWarehouse,
+								Name: testOrigin.Name,
+							},
 						},
 					},
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
@@ -1355,9 +1362,9 @@ func TestSyncNormalStage(t *testing.T) {
 					FreightHistory: kargoapi.FreightHistory{
 						{
 							Freight: map[string]kargoapi.FreightReference{
-								"fake-warehouse": {
-									Name:      "fake-freight-id",
-									Warehouse: "fake-warehouse",
+								testOrigin.String(): {
+									Name:   "fake-freight-id",
+									Origin: testOrigin,
 								},
 							},
 						},
@@ -1429,8 +1436,8 @@ func TestSyncNormalStage(t *testing.T) {
 					FreightHistory: kargoapi.FreightHistory{
 						{
 							Freight: map[string]kargoapi.FreightReference{
-								"fake-warehouse": {
-									Warehouse: "fake-warehouse",
+								testOrigin.String(): {
+									Origin: testOrigin,
 								},
 							},
 						},
@@ -1516,8 +1523,8 @@ func TestSyncNormalStage(t *testing.T) {
 					FreightHistory: kargoapi.FreightHistory{
 						{
 							Freight: map[string]kargoapi.FreightReference{
-								"fake-warehouse": {
-									Warehouse: "fake-warehouse",
+								testOrigin.String(): {
+									Origin: testOrigin,
 								},
 							},
 						},
@@ -1612,8 +1619,8 @@ func TestSyncNormalStage(t *testing.T) {
 					FreightHistory: kargoapi.FreightHistory{
 						{
 							Freight: map[string]kargoapi.FreightReference{
-								"fake-warehouse": {
-									Warehouse: "fake-warehouse",
+								testOrigin.String(): {
+									Origin: testOrigin,
 								},
 							},
 							VerificationHistory: []kargoapi.VerificationInfo{
@@ -1738,8 +1745,8 @@ func TestSyncNormalStage(t *testing.T) {
 					FreightHistory: kargoapi.FreightHistory{
 						{
 							Freight: map[string]kargoapi.FreightReference{
-								"fake-warehouse": {
-									Warehouse: "fake-warehouse",
+								testOrigin.String(): {
+									Origin: testOrigin,
 								},
 							},
 							VerificationHistory: []kargoapi.VerificationInfo{
@@ -1910,6 +1917,11 @@ func TestReconciler_syncPromotions(t *testing.T) {
 	ulidOneHourAgo := ulid.MustNew(ulid.Timestamp(now.Add(-time.Hour)), nil)
 	ulidOneDayAgo := ulid.MustNew(ulid.Timestamp(now.Add(-24*time.Hour)), nil)
 
+	testOrigin := kargoapi.FreightOrigin{
+		Kind: kargoapi.FreightOriginKindWarehouse,
+		Name: "fake-warehouse",
+	}
+
 	testCases := []struct {
 		name          string
 		reconciler    *reconciler
@@ -2014,8 +2026,8 @@ func TestReconciler_syncPromotions(t *testing.T) {
 							Status: kargoapi.PromotionStatus{
 								Phase: kargoapi.PromotionPhaseSucceeded,
 								Freight: &kargoapi.FreightReference{
-									Name:      "fake-freight-1",
-									Warehouse: "fake-warehouse",
+									Name:   "fake-freight-1",
+									Origin: testOrigin,
 								},
 							},
 						},
@@ -2026,8 +2038,8 @@ func TestReconciler_syncPromotions(t *testing.T) {
 							Status: kargoapi.PromotionStatus{
 								Phase: kargoapi.PromotionPhaseErrored,
 								Freight: &kargoapi.FreightReference{
-									Name:      "fake-freight-3",
-									Warehouse: "fake-warehouse",
+									Name:   "fake-freight-3",
+									Origin: testOrigin,
 								},
 							},
 						},
@@ -2038,8 +2050,8 @@ func TestReconciler_syncPromotions(t *testing.T) {
 							Status: kargoapi.PromotionStatus{
 								Phase: kargoapi.PromotionPhaseFailed,
 								Freight: &kargoapi.FreightReference{
-									Name:      "fake-freight-2",
-									Warehouse: "fake-warehouse",
+									Name:   "fake-freight-2",
+									Origin: testOrigin,
 								},
 							},
 						},
@@ -2058,28 +2070,28 @@ func TestReconciler_syncPromotions(t *testing.T) {
 					Status: &kargoapi.PromotionStatus{
 						Phase: kargoapi.PromotionPhaseErrored,
 						Freight: &kargoapi.FreightReference{
-							Name:      "fake-freight-3",
-							Warehouse: "fake-warehouse",
+							Name:   "fake-freight-3",
+							Origin: testOrigin,
 						},
 					},
 					Freight: kargoapi.FreightReference{
-						Name:      "fake-freight-3",
-						Warehouse: "fake-warehouse",
+						Name:   "fake-freight-3",
+						Origin: testOrigin,
 					},
 				}, status.LastPromotion)
 
 				current := status.FreightHistory.Current()
 				require.NotNil(t, current)
-				require.Contains(t, current.Freight, "fake-warehouse")
+				require.Contains(t, current.Freight, testOrigin.String())
 
 				// Current Freight should be the Freight of the last Succeeded Promotion
 				require.Equal(
 					t,
 					kargoapi.FreightReference{
-						Name:      "fake-freight-1",
-						Warehouse: "fake-warehouse",
+						Name:   "fake-freight-1",
+						Origin: testOrigin,
 					},
-					current.Freight["fake-warehouse"],
+					current.Freight[testOrigin.String()],
 				)
 			},
 		},
@@ -2712,6 +2724,10 @@ func TestGetPromotionsForStage(t *testing.T) {
 }
 
 func TestGetAvailableFreight(t *testing.T) {
+	testOrigin := kargoapi.FreightOrigin{
+		Kind: kargoapi.FreightOriginKindWarehouse,
+		Name: "fake-warehouse",
+	}
 	testCases := []struct {
 		name       string
 		reqs       []kargoapi.FreightRequest
@@ -2722,7 +2738,7 @@ func TestGetAvailableFreight(t *testing.T) {
 			name: "error getting getting Freight from Warehouse",
 			reqs: []kargoapi.FreightRequest{
 				{
-					Origin: "fake-warehouse",
+					Origin: testOrigin,
 					Sources: kargoapi.FreightSources{
 						Direct: true,
 					},
@@ -2742,7 +2758,7 @@ func TestGetAvailableFreight(t *testing.T) {
 			name: "error getting Freight verified in upstream Stages",
 			reqs: []kargoapi.FreightRequest{
 				{
-					Origin: "fake-warehouse",
+					Origin: testOrigin,
 					Sources: kargoapi.FreightSources{
 						Stages: []string{"fake-stage"},
 					},
@@ -2786,7 +2802,7 @@ func TestGetAvailableFreight(t *testing.T) {
 			name: "success",
 			reqs: []kargoapi.FreightRequest{
 				{
-					Origin: "fake-warehouse",
+					Origin: testOrigin,
 					Sources: kargoapi.FreightSources{
 						Direct: true,
 						Stages: []string{"fake-upstream-stage"},

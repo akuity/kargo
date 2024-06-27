@@ -196,7 +196,7 @@ func (w *webhook) ValidateCreate(
 
 	warehouse, err := w.getWarehouseFn(ctx, w.client, types.NamespacedName{
 		Namespace: freight.Namespace,
-		Name:      freight.Warehouse,
+		Name:      freight.Origin.Name,
 	})
 	if err != nil {
 		return nil, err
@@ -208,7 +208,7 @@ func (w *webhook) ValidateCreate(
 			field.ErrorList{
 				field.Invalid(
 					field.NewPath("warehouse"),
-					freight.Warehouse,
+					freight.Origin.Name,
 					"warehouse does not exist",
 				),
 			},
@@ -255,7 +255,7 @@ func (w *webhook) ValidateUpdate(
 	// Freight is meant to be immutable. We only need to compare the Name to a
 	// newly generated ID because these are both fingerprints that are
 	// deterministically derived from the artifacts referenced by the Freight.
-	if newFreight.Name != newFreight.GenerateID() || oldFreight.Warehouse != newFreight.Warehouse {
+	if newFreight.Name != newFreight.GenerateID() || !oldFreight.Origin.Equals(&newFreight.Origin) {
 		return nil, apierrors.NewInvalid(
 			freightGroupKind,
 			oldFreight.Name,

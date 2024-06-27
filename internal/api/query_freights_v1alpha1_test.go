@@ -361,6 +361,10 @@ func TestQueryFreight(t *testing.T) {
 }
 
 func TestGetAvailableFreightForStage(t *testing.T) {
+	testOrigin := kargoapi.FreightOrigin{
+		Kind: kargoapi.FreightOriginKindWarehouse,
+		Name: "fake-warehouse",
+	}
 	testCases := []struct {
 		name       string
 		reqs       []kargoapi.FreightRequest
@@ -371,7 +375,7 @@ func TestGetAvailableFreightForStage(t *testing.T) {
 			name: "error getting Freight from Warehouse",
 			reqs: []kargoapi.FreightRequest{
 				{
-					Origin: "fake-warehouse",
+					Origin: testOrigin,
 					Sources: kargoapi.FreightSources{
 						Direct: true,
 					},
@@ -391,7 +395,7 @@ func TestGetAvailableFreightForStage(t *testing.T) {
 			name: "error getting Freight verified in upstream Stages",
 			reqs: []kargoapi.FreightRequest{
 				{
-					Origin: "fake-warehouse",
+					Origin: testOrigin,
 					Sources: kargoapi.FreightSources{
 						Stages: []string{"fake-stage"},
 					},
@@ -414,7 +418,7 @@ func TestGetAvailableFreightForStage(t *testing.T) {
 			name: "error getting Freight approved for Stage",
 			reqs: []kargoapi.FreightRequest{
 				{
-					Origin: "fake-warehouse",
+					Origin: testOrigin,
 					Sources: kargoapi.FreightSources{
 						Stages: []string{"fake-stage"},
 					},
@@ -444,7 +448,7 @@ func TestGetAvailableFreightForStage(t *testing.T) {
 			name: "success getting available Freight",
 			reqs: []kargoapi.FreightRequest{
 				{
-					Origin: "fake-warehouse",
+					Origin: testOrigin,
 					Sources: kargoapi.FreightSources{
 						Stages: []string{"fake-stage"},
 					},

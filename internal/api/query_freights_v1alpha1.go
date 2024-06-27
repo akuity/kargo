@@ -137,7 +137,7 @@ func (s *server) getAvailableFreightForStage(
 	var upstreams []string
 	for _, req := range freightReqs {
 		if req.Sources.Direct {
-			warehouses = append(warehouses, req.Origin)
+			warehouses = append(warehouses, req.Origin.Name)
 		}
 		upstreams = append(upstreams, req.Sources.Stages...)
 	}

@@ -526,6 +526,10 @@ func TestIndexFreightByApprovedStages(t *testing.T) {
 }
 
 func TestIndexStagesByUpstreamStages(t *testing.T) {
+	testOrigin := kargoapi.FreightOrigin{
+		Kind: kargoapi.FreightOriginKindWarehouse,
+		Name: "fake-warehouse",
+	}
 	testCases := []struct {
 		name     string
 		stage    *kargoapi.Stage
@@ -537,7 +541,7 @@ func TestIndexStagesByUpstreamStages(t *testing.T) {
 				Spec: kargoapi.StageSpec{
 					RequestedFreight: []kargoapi.FreightRequest{
 						{
-							Origin: "fake-warehouse",
+							Origin: testOrigin,
 							Sources: kargoapi.FreightSources{
 								Direct: true,
 							},
@@ -553,7 +557,7 @@ func TestIndexStagesByUpstreamStages(t *testing.T) {
 				Spec: kargoapi.StageSpec{
 					RequestedFreight: []kargoapi.FreightRequest{
 						{
-							Origin: "fake-warehouse",
+							Origin: testOrigin,
 							Sources: kargoapi.FreightSources{
 								Stages: []string{
 									"fake-stage",
