@@ -3442,6 +3442,13 @@ export class PromotionStatus extends Message<PromotionStatus> {
    */
   freight?: FreightReference;
 
+  /**
+   * CompletionTime is the time when the promotion was completed.
+   *
+   * @generated from field: optional k8s.io.apimachinery.pkg.apis.meta.v1.Time completionTime = 6;
+   */
+  completionTime?: Time;
+
   constructor(data?: PartialMessage<PromotionStatus>) {
     super();
     proto2.util.initPartial(data, this);
@@ -3455,6 +3462,7 @@ export class PromotionStatus extends Message<PromotionStatus> {
     { no: 2, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 3, name: "metadata", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 9 /* ScalarType.STRING */} },
     { no: 5, name: "freight", kind: "message", T: FreightReference, opt: true },
+    { no: 6, name: "completionTime", kind: "message", T: Time, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PromotionStatus {

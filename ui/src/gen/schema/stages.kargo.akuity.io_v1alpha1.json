@@ -903,6 +903,11 @@
             "status": {
               "description": "Status is the (optional) status of the promotion",
               "properties": {
+                "completionTime": {
+                  "description": "CompletionTime is the time when the promotion was completed.",
+                  "format": "date-time",
+                  "type": "string"
+                },
                 "freight": {
                   "description": "Freight is the detail of the piece of freight that was referenced by this promotion.",
                   "properties": {
@@ -1684,6 +1689,11 @@
             "status": {
               "description": "Status is the (optional) status of the promotion",
               "properties": {
+                "completionTime": {
+                  "description": "CompletionTime is the time when the promotion was completed.",
+                  "format": "date-time",
+                  "type": "string"
+                },
                 "freight": {
                   "description": "Freight is the detail of the piece of freight that was referenced by this promotion.",
                   "properties": {

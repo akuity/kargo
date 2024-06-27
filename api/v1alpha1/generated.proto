@@ -1105,6 +1105,9 @@ message PromotionStatus {
 
   // Freight is the detail of the piece of freight that was referenced by this promotion.
   optional FreightReference freight = 5;
+
+  // CompletionTime is the time when the promotion was completed.
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time completionTime = 6;
 }
 
 // PullRequestPromotionMechanism describes how to generate a pull request against the write branch during promotion
