@@ -161,20 +161,6 @@ func (h *applicationHealth) GetApplicationHealth(
 		}
 	}
 
-	// TODO: We should re-evaluate this soon. It may have been fixed in recent
-	//       versions.
-	// TODO(hidde): Do we have an upstream reference for this?
-	// if len(app.Spec.Sources) > 0 {
-	// 	err := fmt.Errorf(
-	// 		"bugs in Argo CD currently prevent a comprehensive assessment of "+
-	// 			"the health of multi-source Application %q in namespace %q",
-	// 		key.Name,
-	// 		key.Namespace,
-	// 	)
-	// 	logger.Error(err, "Application health status cannot be reliably determined.")
-	// 	return kargoapi.HealthStateUnknown, healthStatus, syncStatus, err
-	// }
-
 	// Check for any error conditions. If these are found, the application is
 	// considered unhealthy as they may indicate a problem which can result in
 	// e.g. the health status result to become unreliable.
@@ -212,7 +198,10 @@ func (h *applicationHealth) GetApplicationHealth(
 
 // stageHealthForAppSync returns the v1alpha1.HealthState for an Argo CD
 // Application based on its sync status.
-func stageHealthForAppSync(ctx context.Context, app *argocd.Application, revision string) (kargoapi.HealthState, error) {
+func stageHealthForAppSync(
+	ctx context.Context,
+	app *argocd.Application,
+	revision string) (kargoapi.HealthState, error) {
 	logger := logging.LoggerFromContext(ctx).WithValues("appName", app.GetName(), "revision", revision)
 	logger.Debug("About to determine stage health based on app sync status.")
 	switch {
@@ -243,14 +232,16 @@ func stageHealthForAppSync(ctx context.Context, app *argocd.Application, revisio
 			//				the first revision match.
 			for _, r := range app.Status.Sync.Revisions {
 				if r == revision {
-					logger.Debug("Found desired revision in list of revisions of multi-source application, app is healthy.", "desiredRevision", revision, "currentRevisions", app.Status.Sync.Revisions)
+					logger.Debug("Found desired revision in list of revisions of multi-source application, app is healthy.",
+						"desiredRevision", revision, "currentRevisions", app.Status.Sync.Revisions)
 					return kargoapi.HealthStateHealthy, nil
 				}
 			}
 		}
 
 		msg := fmt.Sprintf(
-			"No revisions of Application %q in namespace %q match the desired revision %v, assuming unhealthy. Current revisions: %v, current revision: %v",
+			"No revisions of Application %q in namespace %q match the desired revision %v"+
+				", assuming unhealthy. Current revisions: %v, current revision: %v",
 			app.GetName(),
 			app.GetNamespace(),
 			revision,
