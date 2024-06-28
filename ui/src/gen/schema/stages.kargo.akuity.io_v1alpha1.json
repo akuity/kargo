@@ -352,8 +352,25 @@
             "description": "FreightRequest expresses a Stage's need for Freight having originated from a\nparticular Warehouse.",
             "properties": {
               "origin": {
-                "description": "Origin specifies what Warehouse the requested Freight must have originated\nfrom. This is a required field.",
-                "type": "string"
+                "description": "Origin specifies from where the requested Freight must have originated.\nThis is a required field.",
+                "properties": {
+                  "kind": {
+                    "description": "Kind is the kind of resource from which Freight may have originated. At\npresent, this can only be \"Warehouse\".",
+                    "enum": [
+                      "Warehouse"
+                    ],
+                    "type": "string"
+                  },
+                  "name": {
+                    "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originated.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "name"
+                ],
+                "type": "object"
               },
               "sources": {
                 "description": "Sources describes where the requested Freight may be obtained from. This is\na required field.",
@@ -586,6 +603,27 @@
               "description": "Name is system-assigned identifier that is derived deterministically from\nthe contents of the Freight. i.e. Two pieces of Freight can be compared for\nequality by comparing their Names.",
               "type": "string"
             },
+            "origin": {
+              "description": "Origin describes a kind of Freight in terms of its origin.",
+              "properties": {
+                "kind": {
+                  "description": "Kind is the kind of resource from which Freight may have originated. At\npresent, this can only be \"Warehouse\".",
+                  "enum": [
+                    "Warehouse"
+                  ],
+                  "type": "string"
+                },
+                "name": {
+                  "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originated.",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind",
+                "name"
+              ],
+              "type": "object"
+            },
             "verificationHistory": {
               "description": "VerificationHistory is a stack of recent VerificationInfo. By default,\nthe last ten VerificationInfo are stored.\n\n\nDeprecated: Use FreightCollection.VerificationHistory instead.",
               "items": {
@@ -701,7 +739,7 @@
               "type": "object"
             },
             "warehouse": {
-              "description": "Warehouse is the name of the Warehouse that created this Freight.",
+              "description": "Warehouse is the name of the Warehouse that created this Freight.\n\n\nDeprecated: Use the Origin instead.",
               "type": "string"
             }
           },
@@ -806,6 +844,27 @@
                 "name": {
                   "description": "Name is system-assigned identifier that is derived deterministically from\nthe contents of the Freight. i.e. Two pieces of Freight can be compared for\nequality by comparing their Names.",
                   "type": "string"
+                },
+                "origin": {
+                  "description": "Origin describes a kind of Freight in terms of its origin.",
+                  "properties": {
+                    "kind": {
+                      "description": "Kind is the kind of resource from which Freight may have originated. At\npresent, this can only be \"Warehouse\".",
+                      "enum": [
+                        "Warehouse"
+                      ],
+                      "type": "string"
+                    },
+                    "name": {
+                      "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originated.",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "name"
+                  ],
+                  "type": "object"
                 },
                 "verificationHistory": {
                   "description": "VerificationHistory is a stack of recent VerificationInfo. By default,\nthe last ten VerificationInfo are stored.\n\n\nDeprecated: Use FreightCollection.VerificationHistory instead.",
@@ -922,7 +981,7 @@
                   "type": "object"
                 },
                 "warehouse": {
-                  "description": "Warehouse is the name of the Warehouse that created this Freight.",
+                  "description": "Warehouse is the name of the Warehouse that created this Freight.\n\n\nDeprecated: Use the Origin instead.",
                   "type": "string"
                 }
               },
@@ -1031,6 +1090,27 @@
                     "name": {
                       "description": "Name is system-assigned identifier that is derived deterministically from\nthe contents of the Freight. i.e. Two pieces of Freight can be compared for\nequality by comparing their Names.",
                       "type": "string"
+                    },
+                    "origin": {
+                      "description": "Origin describes a kind of Freight in terms of its origin.",
+                      "properties": {
+                        "kind": {
+                          "description": "Kind is the kind of resource from which Freight may have originated. At\npresent, this can only be \"Warehouse\".",
+                          "enum": [
+                            "Warehouse"
+                          ],
+                          "type": "string"
+                        },
+                        "name": {
+                          "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originated.",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "name"
+                      ],
+                      "type": "object"
                     },
                     "verificationHistory": {
                       "description": "VerificationHistory is a stack of recent VerificationInfo. By default,\nthe last ten VerificationInfo are stored.\n\n\nDeprecated: Use FreightCollection.VerificationHistory instead.",
@@ -1147,7 +1227,7 @@
                       "type": "object"
                     },
                     "warehouse": {
-                      "description": "Warehouse is the name of the Warehouse that created this Freight.",
+                      "description": "Warehouse is the name of the Warehouse that created this Freight.\n\n\nDeprecated: Use the Origin instead.",
                       "type": "string"
                     }
                   },
@@ -1285,6 +1365,27 @@
                       "description": "Name is system-assigned identifier that is derived deterministically from\nthe contents of the Freight. i.e. Two pieces of Freight can be compared for\nequality by comparing their Names.",
                       "type": "string"
                     },
+                    "origin": {
+                      "description": "Origin describes a kind of Freight in terms of its origin.",
+                      "properties": {
+                        "kind": {
+                          "description": "Kind is the kind of resource from which Freight may have originated. At\npresent, this can only be \"Warehouse\".",
+                          "enum": [
+                            "Warehouse"
+                          ],
+                          "type": "string"
+                        },
+                        "name": {
+                          "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originated.",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "name"
+                      ],
+                      "type": "object"
+                    },
                     "verificationHistory": {
                       "description": "VerificationHistory is a stack of recent VerificationInfo. By default,\nthe last ten VerificationInfo are stored.\n\n\nDeprecated: Use FreightCollection.VerificationHistory instead.",
                       "items": {
@@ -1400,7 +1501,7 @@
                       "type": "object"
                     },
                     "warehouse": {
-                      "description": "Warehouse is the name of the Warehouse that created this Freight.",
+                      "description": "Warehouse is the name of the Warehouse that created this Freight.\n\n\nDeprecated: Use the Origin instead.",
                       "type": "string"
                     }
                   },
@@ -1647,6 +1748,27 @@
                 "description": "Name is system-assigned identifier that is derived deterministically from\nthe contents of the Freight. i.e. Two pieces of Freight can be compared for\nequality by comparing their Names.",
                 "type": "string"
               },
+              "origin": {
+                "description": "Origin describes a kind of Freight in terms of its origin.",
+                "properties": {
+                  "kind": {
+                    "description": "Kind is the kind of resource from which Freight may have originated. At\npresent, this can only be \"Warehouse\".",
+                    "enum": [
+                      "Warehouse"
+                    ],
+                    "type": "string"
+                  },
+                  "name": {
+                    "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originated.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "name"
+                ],
+                "type": "object"
+              },
               "verificationHistory": {
                 "description": "VerificationHistory is a stack of recent VerificationInfo. By default,\nthe last ten VerificationInfo are stored.\n\n\nDeprecated: Use FreightCollection.VerificationHistory instead.",
                 "items": {
@@ -1762,7 +1884,7 @@
                 "type": "object"
               },
               "warehouse": {
-                "description": "Warehouse is the name of the Warehouse that created this Freight.",
+                "description": "Warehouse is the name of the Warehouse that created this Freight.\n\n\nDeprecated: Use the Origin instead.",
                 "type": "string"
               }
             },
@@ -1873,6 +1995,27 @@
                 "name": {
                   "description": "Name is system-assigned identifier that is derived deterministically from\nthe contents of the Freight. i.e. Two pieces of Freight can be compared for\nequality by comparing their Names.",
                   "type": "string"
+                },
+                "origin": {
+                  "description": "Origin describes a kind of Freight in terms of its origin.",
+                  "properties": {
+                    "kind": {
+                      "description": "Kind is the kind of resource from which Freight may have originated. At\npresent, this can only be \"Warehouse\".",
+                      "enum": [
+                        "Warehouse"
+                      ],
+                      "type": "string"
+                    },
+                    "name": {
+                      "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originated.",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "name"
+                  ],
+                  "type": "object"
                 },
                 "verificationHistory": {
                   "description": "VerificationHistory is a stack of recent VerificationInfo. By default,\nthe last ten VerificationInfo are stored.\n\n\nDeprecated: Use FreightCollection.VerificationHistory instead.",
@@ -1989,7 +2132,7 @@
                   "type": "object"
                 },
                 "warehouse": {
-                  "description": "Warehouse is the name of the Warehouse that created this Freight.",
+                  "description": "Warehouse is the name of the Warehouse that created this Freight.\n\n\nDeprecated: Use the Origin instead.",
                   "type": "string"
                 }
               },
@@ -2098,6 +2241,27 @@
                     "name": {
                       "description": "Name is system-assigned identifier that is derived deterministically from\nthe contents of the Freight. i.e. Two pieces of Freight can be compared for\nequality by comparing their Names.",
                       "type": "string"
+                    },
+                    "origin": {
+                      "description": "Origin describes a kind of Freight in terms of its origin.",
+                      "properties": {
+                        "kind": {
+                          "description": "Kind is the kind of resource from which Freight may have originated. At\npresent, this can only be \"Warehouse\".",
+                          "enum": [
+                            "Warehouse"
+                          ],
+                          "type": "string"
+                        },
+                        "name": {
+                          "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originated.",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "name"
+                      ],
+                      "type": "object"
                     },
                     "verificationHistory": {
                       "description": "VerificationHistory is a stack of recent VerificationInfo. By default,\nthe last ten VerificationInfo are stored.\n\n\nDeprecated: Use FreightCollection.VerificationHistory instead.",
@@ -2214,7 +2378,7 @@
                       "type": "object"
                     },
                     "warehouse": {
-                      "description": "Warehouse is the name of the Warehouse that created this Freight.",
+                      "description": "Warehouse is the name of the Warehouse that created this Freight.\n\n\nDeprecated: Use the Origin instead.",
                       "type": "string"
                     }
                   },

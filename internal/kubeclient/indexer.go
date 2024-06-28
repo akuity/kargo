@@ -303,7 +303,10 @@ func IndexFreightByWarehouse(ctx context.Context, mgr ctrl.Manager) error {
 
 func indexFreightByWarehouse(obj client.Object) []string {
 	freight := obj.(*kargoapi.Freight) // nolint: forcetypeassert
-	return []string{freight.Warehouse}
+	if freight.Origin.Kind == kargoapi.FreightOriginKindWarehouse {
+		return []string{freight.Origin.Name}
+	}
+	return nil
 }
 
 // IndexFreightByVerifiedStages indexes Freight by the Stages in which it has
@@ -412,8 +415,8 @@ func indexStagesByWarehouse(obj client.Object) []string {
 	stage := obj.(*kargoapi.Stage) // nolint: forcetypeassert
 	var warehouses []string
 	for _, req := range stage.Spec.RequestedFreight {
-		if req.Sources.Direct {
-			warehouses = append(warehouses, req.Origin)
+		if req.Origin.Kind == kargoapi.FreightOriginKindWarehouse && req.Sources.Direct {
+			warehouses = append(warehouses, req.Origin.Name)
 		}
 	}
 	return warehouses

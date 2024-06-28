@@ -1,6 +1,8 @@
 package v1alpha1
 
 import (
+	"fmt"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -112,6 +114,11 @@ const (
 	ArgoCDAppSyncStateOutOfSync ArgoCDAppSyncState = "OutOfSync"
 )
 
+// +kubebuilder:validation:Enum={Warehouse}
+type FreightOriginKind string
+
+const FreightOriginKindWarehouse FreightOriginKind = "Warehouse"
+
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name=Shard,type=string,JSONPath=`.spec.shard`
@@ -200,14 +207,48 @@ type StageSubscription struct {
 // FreightRequest expresses a Stage's need for Freight having originated from a
 // particular Warehouse.
 type FreightRequest struct {
-	// Origin specifies what Warehouse the requested Freight must have originated
-	// from. This is a required field.
+	// Origin specifies from where the requested Freight must have originated.
+	// This is a required field.
 	//
 	// +kubebuilder:validation:Required
-	Origin string `json:"origin" protobuf:"bytes,1,opt,name=origin"`
+	Origin FreightOrigin `json:"origin" protobuf:"bytes,1,opt,name=origin"`
 	// Sources describes where the requested Freight may be obtained from. This is
 	// a required field.
 	Sources FreightSources `json:"sources" protobuf:"bytes,2,opt,name=sources"`
+}
+
+// FreightOrigin describes a kind of Freight in terms of where it may have
+// originated.
+//
+// +protobuf.options.(gogoproto.goproto_stringer)=false
+type FreightOrigin struct {
+	// Kind is the kind of resource from which Freight may have originated. At
+	// present, this can only be "Warehouse".
+	//
+	// +kubebuilder:validation:Required
+	Kind FreightOriginKind `json:"kind" protobuf:"bytes,1,opt,name=kind"`
+	// Name is the name of the resource of the kind indicated by the Kind field
+	// from which Freight may originated.
+	//
+	// +kubebuilder:validation:Required
+	Name string `json:"name" protobuf:"bytes,2,opt,name=name"`
+}
+
+func (f *FreightOrigin) String() string {
+	if f == nil {
+		return ""
+	}
+	return fmt.Sprintf("%s/%s", f.Kind, f.Name)
+}
+
+func (f *FreightOrigin) Equals(other *FreightOrigin) bool {
+	if f == nil && other == nil {
+		return true
+	}
+	if f == nil || other == nil {
+		return false
+	}
+	return f.Kind == other.Kind && f.Name == other.Name
 }
 
 type FreightSources struct {
@@ -589,7 +630,11 @@ type FreightReference struct {
 	// equality by comparing their Names.
 	Name string `json:"name,omitempty" protobuf:"bytes,1,opt,name=name"`
 	// Warehouse is the name of the Warehouse that created this Freight.
+	//
+	// Deprecated: Use the Origin instead.
 	Warehouse string `json:"warehouse,omitempty" protobuf:"bytes,6,opt,name=warehouse"`
+	// Origin describes a kind of Freight in terms of its origin.
+	Origin FreightOrigin `json:"origin,omitempty" protobuf:"bytes,8,opt,name=origin"`
 	// Commits describes specific Git repository commits.
 	Commits []GitCommit `json:"commits,omitempty" protobuf:"bytes,2,rep,name=commits"`
 	// Images describes specific versions of specific container images.
@@ -628,7 +673,7 @@ func (f *FreightCollection) UpdateOrPush(freight ...FreightReference) {
 		f.Freight = make(map[string]FreightReference, len(freight))
 	}
 	for _, i := range freight {
-		f.Freight[i.Warehouse] = i
+		f.Freight[i.Origin.String()] = i
 	}
 }
 

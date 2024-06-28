@@ -211,20 +211,20 @@ func (w *webhook) validateRequestedFreight(
 	// Make sure the same origin is not requested multiple times
 	seenOrigins := make(map[string]struct{}, len(reqs))
 	for _, req := range reqs {
-		if _, seen := seenOrigins[req.Origin]; seen {
+		if _, seen := seenOrigins[req.Origin.String()]; seen {
 			return field.ErrorList{
 				field.Invalid(
 					f,
 					reqs,
 					fmt.Sprintf(
-						"freight with origin %q requested multiple times in %s",
-						req.Origin,
+						"freight with origin %s requested multiple times in %s",
+						req.Origin.String(),
 						f.String(),
 					),
 				),
 			}
 		}
-		seenOrigins[req.Origin] = struct{}{}
+		seenOrigins[req.Origin.String()] = struct{}{}
 	}
 	return nil
 }

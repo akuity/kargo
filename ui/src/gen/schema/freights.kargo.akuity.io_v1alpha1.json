@@ -107,6 +107,27 @@
     "metadata": {
       "type": "object"
     },
+    "origin": {
+      "description": "Origin describes a kind of Freight in terms of its origin.",
+      "properties": {
+        "kind": {
+          "description": "Kind is the kind of resource from which Freight may have originated. At\npresent, this can only be \"Warehouse\".",
+          "enum": [
+            "Warehouse"
+          ],
+          "type": "string"
+        },
+        "name": {
+          "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originated.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "name"
+      ],
+      "type": "object"
+    },
     "status": {
       "description": "Status describes the current status of this Freight.",
       "properties": {
@@ -130,7 +151,7 @@
       "type": "object"
     },
     "warehouse": {
-      "description": "Warehouse is the name of the Warehouse that created this Freight. This is a\nrequired field. TODO: It is not clear yet how this field should be set in\nthe case of user-defined Freight.",
+      "description": "Warehouse is the name of the Warehouse that created this Freight. This is a\nrequired field. TODO: It is not clear yet how this field should be set in\nthe case of user-defined Freight.\n\n\nDeprecated: Use Origin instead.",
       "type": "string"
     }
   },

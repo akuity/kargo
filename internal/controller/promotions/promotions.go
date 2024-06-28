@@ -444,11 +444,11 @@ func (r *reconciler) promote(
 	logger = logger.WithValues("targetFreight", targetFreight.Name)
 
 	targetFreightRef := kargoapi.FreightReference{
-		Name:      targetFreight.Name,
-		Commits:   targetFreight.Commits,
-		Images:    targetFreight.Images,
-		Charts:    targetFreight.Charts,
-		Warehouse: targetFreight.Warehouse,
+		Name:    targetFreight.Name,
+		Commits: targetFreight.Commits,
+		Images:  targetFreight.Images,
+		Charts:  targetFreight.Charts,
+		Origin:  targetFreight.Origin,
 	}
 
 	newStatus, nextFreight, err := r.promoMechanisms.Promote(ctx, stage, &promo, targetFreightRef)

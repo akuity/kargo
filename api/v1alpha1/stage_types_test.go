@@ -38,6 +38,18 @@ func TestVerificationInfo_HasAnalysisRun(t *testing.T) {
 }
 
 func TestFreightCollectionUpdateOrPush(t *testing.T) {
+	fooOrigin := FreightOrigin{
+		Kind: FreightOriginKindWarehouse,
+		Name: "foo",
+	}
+	barOrigin := FreightOrigin{
+		Kind: FreightOriginKindWarehouse,
+		Name: "bar",
+	}
+	bazOrigin := FreightOrigin{
+		Kind: FreightOriginKindWarehouse,
+		Name: "baz",
+	}
 	testCases := []struct {
 		name            string
 		freight         map[string]FreightReference
@@ -48,58 +60,58 @@ func TestFreightCollectionUpdateOrPush(t *testing.T) {
 			name:    "initial list is nil",
 			freight: nil,
 			newFreight: []FreightReference{
-				{Warehouse: "foo"},
-				{Warehouse: "baz"},
+				{Origin: fooOrigin},
+				{Origin: bazOrigin},
 			},
 			expectedFreight: map[string]FreightReference{
-				"foo": {Warehouse: "foo"},
-				"baz": {Warehouse: "baz"},
+				fooOrigin.String(): {Origin: fooOrigin},
+				bazOrigin.String(): {Origin: bazOrigin},
 			},
 		},
 		{
 			name: "update existing FreightReference from same Warehouse",
 			freight: map[string]FreightReference{
-				"foo": {Warehouse: "foo"},
-				"bar": {Warehouse: "bar"},
+				fooOrigin.String(): {Origin: fooOrigin},
+				barOrigin.String(): {Origin: barOrigin},
 			},
 			newFreight: []FreightReference{
-				{Warehouse: "foo"},
-				{Warehouse: "bar", Name: "update"},
+				{Origin: fooOrigin},
+				{Origin: barOrigin, Name: "update"},
 			},
 			expectedFreight: map[string]FreightReference{
-				"foo": {Warehouse: "foo"},
-				"bar": {Warehouse: "bar", Name: "update"},
+				fooOrigin.String(): {Origin: fooOrigin},
+				barOrigin.String(): {Origin: barOrigin, Name: "update"},
 			},
 		},
 		{
 			name: "append new FreightReference",
 			freight: map[string]FreightReference{
-				"foo": {Warehouse: "foo"},
+				fooOrigin.String(): {Origin: fooOrigin},
 			},
 			newFreight: []FreightReference{
-				{Warehouse: "bar"},
-				{Warehouse: "baz"},
+				{Origin: barOrigin},
+				{Origin: bazOrigin},
 			},
 			expectedFreight: map[string]FreightReference{
-				"foo": {Warehouse: "foo"},
-				"bar": {Warehouse: "bar"},
-				"baz": {Warehouse: "baz"},
+				fooOrigin.String(): {Origin: fooOrigin},
+				barOrigin.String(): {Origin: barOrigin},
+				bazOrigin.String(): {Origin: bazOrigin},
 			},
 		},
 		{
 			name: "update existing FreightReference and append new FreightReference",
 			freight: map[string]FreightReference{
-				"foo": {Warehouse: "foo"},
-				"bar": {Warehouse: "bar"},
+				fooOrigin.String(): {Origin: fooOrigin},
+				barOrigin.String(): {Origin: barOrigin},
 			},
 			newFreight: []FreightReference{
-				{Warehouse: "foo", Name: "update"},
-				{Warehouse: "baz"},
+				{Origin: fooOrigin, Name: "update"},
+				{Origin: bazOrigin},
 			},
 			expectedFreight: map[string]FreightReference{
-				"foo": {Warehouse: "foo", Name: "update"},
-				"bar": {Warehouse: "bar"},
-				"baz": {Warehouse: "baz"},
+				fooOrigin.String(): {Origin: fooOrigin, Name: "update"},
+				barOrigin.String(): {Origin: barOrigin},
+				bazOrigin.String(): {Origin: bazOrigin},
 			},
 		},
 	}
@@ -305,6 +317,10 @@ func TestFreightReferenceStackPush(t *testing.T) {
 }
 
 func TestFreightReferenceStackUpdateOrPush(t *testing.T) {
+	testOrigin := FreightOrigin{
+		Kind: FreightOriginKindWarehouse,
+		Name: "fake-warehouse",
+	}
 	testCases := []struct {
 		name          string
 		stack         FreightReferenceStack
@@ -326,12 +342,12 @@ func TestFreightReferenceStackUpdateOrPush(t *testing.T) {
 		{
 			name:       "initial stack has matching names",
 			stack:      FreightReferenceStack{{Name: "foo"}, {Name: "bar"}},
-			newFreight: []FreightReference{{Name: "bar", Warehouse: "update"}, {Name: "baz"}, {Name: "zab"}},
+			newFreight: []FreightReference{{Name: "bar", Origin: testOrigin}, {Name: "baz"}, {Name: "zab"}},
 			expectedStack: FreightReferenceStack{
 				{Name: "baz"},
 				{Name: "zab"},
 				{Name: "foo"},
-				{Name: "bar", Warehouse: "update"},
+				{Name: "bar", Origin: testOrigin},
 			},
 		},
 		{
