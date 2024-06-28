@@ -26,15 +26,12 @@ export const FreightContents = (props: {
     children?: string;
   }) => (
     <Tooltip
-      className={classNames(
-        'min-w-0 flex items-center justify-center my-1 rounded',
-        {
-          'flex-col p-1 w-full': !horizontal,
-          'mr-2 p-2 max-w-60 flex-shrink': horizontal,
-          'bg-black text-white': dark,
-          'bg-neutral-300': !dark
-        }
-      )}
+      className={classNames('min-w-0 flex items-center justify-center my-1 rounded', {
+        'flex-col p-1 w-full': !horizontal,
+        'mr-2 p-2 max-w-60 flex-shrink': horizontal,
+        'bg-black text-white': dark,
+        'bg-neutral-300': !dark
+      })}
       overlay={props.overlay}
       title={props.title}
     >

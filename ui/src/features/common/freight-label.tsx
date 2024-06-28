@@ -54,8 +54,10 @@ export const FreightLabel = ({
   return (
     <div
       className='cursor-pointer font-mono font-semibold min-w-0 w-full'
-      onClick={() => {
+      onClick={(e) => {
         if (alias || id) {
+          e.preventDefault();
+          e.stopPropagation();
           navigator.clipboard.writeText(alias || id || '');
           setCopied(true);
         }
