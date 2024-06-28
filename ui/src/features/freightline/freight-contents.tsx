@@ -78,24 +78,14 @@ export const FreightContents = (props: {
         </FreightContentItem>
       ))}
       {(freight?.images || []).map((i) => (
-        <>
-          <FreightContentItem
-            key={`${i.repoURL}:${i.tag}`}
-            title={`${i.repoURL}:${i.tag}`}
-            icon={faDocker}
-            href={urlForImage(i.repoURL || '')}
-          >
-            {`${props.horizontal ? i.repoURL + ':' : ''}${i.tag}`}
-          </FreightContentItem>
-          <FreightContentItem
-            key={`${i.repoURL}:${i.tag}`}
-            title={`${i.repoURL}:${i.tag}`}
-            icon={faDocker}
-            href={urlForImage(i.repoURL || '')}
-          >
-            {`${props.horizontal ? i.repoURL + ':' : ''}${i.tag}`}
-          </FreightContentItem>
-        </>
+        <FreightContentItem
+          key={`${i.repoURL}:${i.tag}`}
+          title={`${i.repoURL}:${i.tag}`}
+          icon={faDocker}
+          href={urlForImage(i.repoURL || '')}
+        >
+          {`${props.horizontal ? i.repoURL + ':' : ''}${i.tag}`}
+        </FreightContentItem>
       ))}
       {(freight?.charts || []).map((c) => (
         <FreightContentItem
