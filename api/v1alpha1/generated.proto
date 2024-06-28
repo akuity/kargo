@@ -1433,6 +1433,7 @@ message WarehouseSpec {
   // treated as if its value were "Automatic".
   //
   // +kubebuilder:default=Automatic
+  // +kubebuilder:validation:Optional
   optional string freightCreationPolicy = 3;
 
   // Subscriptions describes sources of artifacts to be included in Freight

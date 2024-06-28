@@ -2,7 +2,9 @@
 name: Feature Request
 about: Propose an enhancement for consideration by the maintainers
 title: ''
-labels: 'kind/feature-request'
+labels:
+- 'kind/proposal'
+- 'kind/enhancement'
 assignees: ''
 ---
 

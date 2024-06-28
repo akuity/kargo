@@ -68,6 +68,7 @@ export const EditProjectModal = ({ visible, hide }: ModalComponentProps) => {
             schema={schema as JSONSchema4}
             placeholder={yaml.stringify(projectYAMLExample)}
             isLoading={isLoading}
+            resourceType='projects'
             isHideManagedFieldsDisplayed
           />
         )}
