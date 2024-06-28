@@ -696,12 +696,15 @@ func (r *reconciler) syncNormalStage(
 	status := *stage.Status.DeepCopy()
 
 	logger := logging.LoggerFromContext(ctx)
+	logger.Debug("About to perform normal stage sync")
 
 	// Sync Promotions and update the Stage status.
 	var syncErr error
 	if status, syncErr = r.syncPromotionsFn(ctx, stage, status); syncErr != nil {
 		return status, syncErr
 	}
+
+	logger.Debug("Patching stage status")
 	if err := kubeclient.PatchStatus(ctx, r.kargoClient, stage, func(s *kargoapi.StageStatus) {
 		*s = status
 	}); err != nil {
@@ -721,6 +724,8 @@ func (r *reconciler) syncNormalStage(
 	} else {
 		freightLogger := logger.WithValues("freight", status.CurrentFreight.Name)
 		shouldRecordFreightVerificationEvent := false
+
+		freightLogger.Debug("Stage has a current Freight; assessing health and performing verification")
 
 		// Push the latest state of the current Freight to the history at the
 		// end of each reconciliation loop.
@@ -742,6 +747,8 @@ func (r *reconciler) syncNormalStage(
 		}
 
 		if stage.Spec.Verification != nil {
+			freightLogger.Debug("Stage has verification configured, about to perform verification")
+
 			// Update the verification history with the current verification info.
 			// NOTE: We do this regardless of the phase of the verification process
 			// and before potentially creating a new AnalysisRun to ensure we add
@@ -754,9 +761,11 @@ func (r *reconciler) syncNormalStage(
 			// If the Stage is in a steady state, we should check if we need to
 			// start or rerun verification.
 			if status.Phase == kargoapi.StagePhaseSteady {
+				logger.Debug("Stage is in a steady state; checking if verification is required")
 				info := status.CurrentFreight.VerificationInfo
 				switch {
 				case info == nil && status.CurrentPromotion == nil:
+					logger.Debug("Verification is necessary")
 					status.Phase = kargoapi.StagePhaseVerifying
 				case info.Phase.IsTerminal():
 					if req, _ := kargoapi.ReverifyAnnotationValue(stage.GetAnnotations()); req.ForID(info.ID) {
@@ -769,7 +778,9 @@ func (r *reconciler) syncNormalStage(
 
 			// Initiate or follow-up on verification if required.
 			if status.Phase == kargoapi.StagePhaseVerifying {
+				logger.Debug("Checking if stage has AnalysisRun")
 				if !status.CurrentFreight.VerificationInfo.HasAnalysisRun() {
+					logger.Debug("Stage does not have AnalysisRun")
 					if status.Health == nil || status.Health.Status == kargoapi.HealthStateHealthy {
 						logger.Debug("starting verification")
 						var err error
@@ -825,6 +836,7 @@ func (r *reconciler) syncNormalStage(
 				}
 			}
 		} else {
+			logger.Debug("Stage has no verification configured, marking as steady")
 			// If verification is not applicable, mark the Stage as steady.
 			// This ensures that if the Stage had verification enabled previously,
 			// it will not be stuck in a verification phase.
@@ -861,6 +873,8 @@ func (r *reconciler) syncNormalStage(
 				shouldRecordFreightVerificationEvent = true
 			}
 		}
+
+		logger.Debug("Stage verification completed")
 
 		finishTime := r.nowFn()
 
@@ -1045,6 +1059,8 @@ func (r *reconciler) syncPromotions(
 ) (kargoapi.StageStatus, error) {
 	logger := logging.LoggerFromContext(ctx)
 
+	logger.Debug("About to sync Promotions")
+
 	promotions, err := r.getPromotionsForStageFn(ctx, stage.Namespace, stage.Name)
 	if err != nil || len(promotions) == 0 {
 		return status, err
@@ -1119,6 +1135,7 @@ func (r *reconciler) syncPromotions(
 		}
 	}
 
+	logger.Debug("Done syncing Promotions")
 	return status, nil
 }
 

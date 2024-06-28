@@ -35,6 +35,9 @@ func (r *reconciler) startVerification(
 ) (*kargoapi.VerificationInfo, error) {
 	startTime := r.nowFn()
 
+	logger := logging.LoggerFromContext(ctx)
+	logger.Debug("About to start verification")
+
 	newInfo := &kargoapi.VerificationInfo{
 		ID:        uuid.NewString(),
 		StartTime: ptr.To(metav1.NewTime(startTime)),
@@ -58,12 +61,11 @@ func (r *reconciler) startVerification(
 		return newInfo, nil
 	}
 
-	logger := logging.LoggerFromContext(ctx)
-
 	// If this is not a re-verification request, check if there is an existing
 	// AnalysisRun for the Stage and Freight. If there is, return the status of
 	// this AnalysisRun.
 	if !isReverify {
+		logger.Debug("Checking for existing AnalysisRun for Freight")
 		analysisRuns := rollouts.AnalysisRunList{}
 		if err := r.listAnalysisRunsFn(
 			ctx,
@@ -78,6 +80,7 @@ func (r *reconciler) startVerification(
 				),
 			},
 		); err != nil {
+
 			newInfo.FinishTime = ptr.To(metav1.NewTime(r.nowFn()))
 			newInfo.Phase = kargoapi.VerificationPhaseError
 			newInfo.Message = fmt.Errorf(
@@ -87,6 +90,7 @@ func (r *reconciler) startVerification(
 				stage.Namespace,
 				err,
 			).Error()
+			logger.Error(err, newInfo.Message)
 			return newInfo, err
 		}
 		if len(analysisRuns.Items) > 0 {
