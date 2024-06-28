@@ -1047,7 +1047,7 @@ func TestValidateSpec(t *testing.T) {
 							Type:     field.ErrorTypeInvalid,
 							Field:    "spec.requestedFreight",
 							BadValue: spec.RequestedFreight,
-							Detail: `freight with origin Warehouse[test-warehouse] requested multiple ` +
+							Detail: `freight with origin Warehouse/test-warehouse requested multiple ` +
 								"times in spec.requestedFreight",
 						},
 						{
@@ -1117,7 +1117,7 @@ func TestValidateRequestedFreight(t *testing.T) {
 							Type:     field.ErrorTypeInvalid,
 							Field:    "requestedFreight",
 							BadValue: reqs,
-							Detail: `freight with origin Warehouse[test-warehouse] requested ` +
+							Detail: `freight with origin Warehouse/test-warehouse requested ` +
 								"multiple times in requestedFreight",
 						},
 					},
