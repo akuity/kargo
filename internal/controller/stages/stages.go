@@ -666,23 +666,17 @@ func (r *reconciler) syncNormalStage(
 			"Stage has no current Freight; no health checks or verification to perform",
 		)
 	} else {
-		// TODO: This loop for checking health is currently incorrect. The health of
-		// the last piece of Freight assessed "wins," so this only functions
-		// correctly for Stages that have one pipeline.
-		for _, freight := range currentFC.Freight {
-			freightLogger := logger.WithValues("freight", freight.Name)
-			// Always check the health of the Argo CD Applications associated with the
-			// Stage. This is regardless of the phase of the Stage, as the health of the
-			// Argo CD Applications is always relevant.
-			if status.Health = r.appHealth.EvaluateHealth(
-				ctx,
-				freight,
-				stage.Spec.PromotionMechanisms.ArgoCDAppUpdates,
-			); status.Health != nil {
-				freightLogger.WithValues("health", status.Health.Status).Debug("Stage health assessed")
-			} else {
-				freightLogger.Debug("Stage health deemed not applicable")
-			}
+		// Always check the health of the Argo CD Applications associated with the
+		// Stage. This is regardless of the phase of the Stage, as the health of the
+		// Argo CD Applications is always relevant.
+		if status.Health = r.appHealth.EvaluateHealth(
+			ctx,
+			currentFC.References(),
+			stage.Spec.PromotionMechanisms.ArgoCDAppUpdates,
+		); status.Health != nil {
+			logger.WithValues("health", status.Health.Status).Debug("Stage health assessed")
+		} else {
+			logger.Debug("Stage health deemed not applicable")
 		}
 
 		// currentVI is VerificationInfo of the currentFC

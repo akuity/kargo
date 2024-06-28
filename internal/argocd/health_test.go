@@ -24,7 +24,7 @@ func TestApplicationHealth_EvaluateHealth(t *testing.T) {
 	testCases := []struct {
 		name         string
 		applications []client.Object
-		freight      kargoapi.FreightReference
+		freight      []kargoapi.FreightReference
 		updates      []kargoapi.ArgoCDAppUpdate
 		assertions   func(*testing.T, *kargoapi.Health)
 	}{
@@ -59,12 +59,14 @@ func TestApplicationHealth_EvaluateHealth(t *testing.T) {
 					},
 				},
 			},
-			freight: kargoapi.FreightReference{
-				Charts: []kargoapi.Chart{
-					{
-						RepoURL: "https://example.com",
-						Name:    "fake-chart",
-						Version: "v1.2.3",
+			freight: []kargoapi.FreightReference{
+				{
+					Charts: []kargoapi.Chart{
+						{
+							RepoURL: "https://example.com",
+							Name:    "fake-chart",
+							Version: "v1.2.3",
+						},
 					},
 				},
 			},
@@ -250,7 +252,7 @@ func TestApplicationHealth_EvaluateHealth(t *testing.T) {
 
 	t.Run("Argo CD integration disabled", func(t *testing.T) {
 		h := &applicationHealth{}
-		health := h.EvaluateHealth(context.TODO(), kargoapi.FreightReference{}, []kargoapi.ArgoCDAppUpdate{{}})
+		health := h.EvaluateHealth(context.TODO(), nil, []kargoapi.ArgoCDAppUpdate{{}})
 		require.NotNil(t, health)
 		require.Equal(t, kargoapi.HealthStateUnknown, health.Status)
 		require.Len(t, health.Issues, 1)
@@ -267,7 +269,7 @@ func TestApplicationHealth_GetApplicationHealth(t *testing.T) {
 		application *argocd.Application
 		interceptor interceptor.Funcs
 		key         types.NamespacedName
-		freight     kargoapi.FreightReference
+		freight     []kargoapi.FreightReference
 		assertions  func(
 			*testing.T,
 			kargoapi.HealthState,
@@ -445,11 +447,13 @@ func TestApplicationHealth_GetApplicationHealth(t *testing.T) {
 					},
 				},
 			},
-			freight: kargoapi.FreightReference{
-				Commits: []kargoapi.GitCommit{
-					{
-						RepoURL: "https://example.com/universe/42",
-						ID:      "other-fake-revision",
+			freight: []kargoapi.FreightReference{
+				{
+					Commits: []kargoapi.GitCommit{
+						{
+							RepoURL: "https://example.com/universe/42",
+							ID:      "other-fake-revision",
+						},
 					},
 				},
 			},
@@ -537,11 +541,13 @@ func TestApplicationHealth_GetApplicationHealth(t *testing.T) {
 					},
 				},
 			},
-			freight: kargoapi.FreightReference{
-				Commits: []kargoapi.GitCommit{
-					{
-						RepoURL: "https://example.com/universe/42",
-						ID:      "fake-revision",
+			freight: []kargoapi.FreightReference{
+				{
+					Commits: []kargoapi.GitCommit{
+						{
+							RepoURL: "https://example.com/universe/42",
+							ID:      "fake-revision",
+						},
 					},
 				},
 			},

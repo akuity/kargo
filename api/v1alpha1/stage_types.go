@@ -2,6 +2,7 @@ package v1alpha1
 
 import (
 	"fmt"
+	"slices"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -675,6 +676,27 @@ func (f *FreightCollection) UpdateOrPush(freight ...FreightReference) {
 	for _, i := range freight {
 		f.Freight[i.Origin.String()] = i
 	}
+}
+
+// References returns a slice of FreightReference objects from the
+// FreightCollection. The slice is ordered by the origin of the
+// FreightReference objects.
+func (f *FreightCollection) References() []FreightReference {
+	if f == nil || len(f.Freight) == 0 {
+		return nil
+	}
+
+	var origins []string
+	for o, _ := range f.Freight {
+		origins = append(origins, o)
+	}
+	slices.Sort(origins)
+
+	var refs []FreightReference
+	for _, o := range origins {
+		refs = append(refs, f.Freight[o])
+	}
+	return refs
 }
 
 // FreightHistory is a linear list of FreightCollection items. The list is
