@@ -344,7 +344,6 @@ spec:
                 minItems: 1
                 type: array
             required:
-            - freightCreationPolicy
             - interval
             - subscriptions
             type: object
