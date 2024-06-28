@@ -238,7 +238,7 @@ func (f *FreightOrigin) String() string {
 	if f == nil {
 		return ""
 	}
-	return fmt.Sprintf("%s[%s]", f.Kind, f.Name)
+	return fmt.Sprintf("%s/%s", f.Kind, f.Name)
 }
 
 func (f *FreightOrigin) Equals(other *FreightOrigin) bool {
