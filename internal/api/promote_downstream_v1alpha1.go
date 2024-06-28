@@ -14,13 +14,13 @@ import (
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
-// PromoteToStageSubscribers creates a Promotion resources to transition all
-// Stages immediately downstream from the specified Stage into the state
-// represented by the specified Freight.
-func (s *server) PromoteToStageSubscribers(
+// PromoteDownstream creates Promotion resources to transition all Stages
+// immediately downstream from the specified Stage into the state represented by
+// the specified Freight.
+func (s *server) PromoteDownstream(
 	ctx context.Context,
-	req *connect.Request[svcv1alpha1.PromoteToStageSubscribersRequest],
-) (*connect.Response[svcv1alpha1.PromoteToStageSubscribersResponse], error) {
+	req *connect.Request[svcv1alpha1.PromoteDownstreamRequest],
+) (*connect.Response[svcv1alpha1.PromoteDownstreamResponse], error) {
 	project := req.Msg.GetProject()
 	if err := validateFieldNotEmpty("project", project); err != nil {
 		return nil, err
@@ -107,35 +107,35 @@ func (s *server) PromoteToStageSubscribers(
 		)
 	}
 
-	subscribers, err := s.findStageSubscribersFn(ctx, stage)
+	downstreams, err := s.findDownstreamStagesFn(ctx, stage)
 	if err != nil {
-		return nil, fmt.Errorf("find stage subscribers: %w", err)
+		return nil, fmt.Errorf("find downstream stages: %w", err)
 	}
-	if len(subscribers) == 0 {
-		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("stage %q has no subscribers", stageName))
+	if len(downstreams) == 0 {
+		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("stage %q has no downstream stages", stageName))
 	}
 
-	for _, subscriber := range subscribers {
+	for _, downstream := range downstreams {
 		if err := s.authorizeFn(
 			ctx,
 			"promote",
 			kargoapi.GroupVersion.WithResource("stages"),
 			"",
 			types.NamespacedName{
-				Namespace: subscriber.Namespace,
-				Name:      subscriber.Name,
+				Namespace: downstream.Namespace,
+				Name:      downstream.Name,
 			},
 		); err != nil {
 			return nil, err
 		}
 	}
 
-	promoteErrs := make([]error, 0, len(subscribers))
-	createdPromos := make([]*kargoapi.Promotion, 0, len(subscribers))
-	for _, subscriber := range subscribers {
-		newPromo := kargo.NewPromotion(ctx, subscriber, freight.Name)
-		if subscriber.Spec.PromotionMechanisms == nil {
-			// Avoid creating a Promotion if the subscriber has no
+	promoteErrs := make([]error, 0, len(downstreams))
+	createdPromos := make([]*kargoapi.Promotion, 0, len(downstreams))
+	for _, downstream := range downstreams {
+		newPromo := kargo.NewPromotion(ctx, downstream, freight.Name)
+		if downstream.Spec.PromotionMechanisms == nil {
+			// Avoid creating a Promotion if the downstream Stage has no
 			// PromotionMechanisms, and is a "control flow" Stage.
 			continue
 		}
@@ -147,7 +147,7 @@ func (s *server) PromoteToStageSubscribers(
 		createdPromos = append(createdPromos, &newPromo)
 	}
 
-	res := connect.NewResponse(&svcv1alpha1.PromoteToStageSubscribersResponse{
+	res := connect.NewResponse(&svcv1alpha1.PromoteDownstreamResponse{
 		Promotions: createdPromos,
 	})
 
@@ -158,22 +158,23 @@ func (s *server) PromoteToStageSubscribers(
 	return res, nil
 }
 
-// findStageSubscribers returns a list of Stages that are subscribed to the given Stage
+// findDownstreamStages returns a list of Stages that are immediately downstream
+// from the given Stage.
 // TODO: this could be powered by an index.
-func (s *server) findStageSubscribers(ctx context.Context, stage *kargoapi.Stage) ([]kargoapi.Stage, error) {
+func (s *server) findDownstreamStages(ctx context.Context, stage *kargoapi.Stage) ([]kargoapi.Stage, error) {
 	var allStages kargoapi.StageList
 	if err := s.client.List(ctx, &allStages, client.InNamespace(stage.Namespace)); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
-	var subscribers []kargoapi.Stage
+	var downstreams []kargoapi.Stage
 	for _, s := range allStages.Items {
-		s := s
-		for _, upstream := range s.Spec.Subscriptions.UpstreamStages {
-			if upstream.Name != stage.Name {
-				continue
+		for _, req := range s.Spec.RequestedFreight {
+			for _, upstream := range req.Sources.Stages {
+				if upstream == stage.Name {
+					downstreams = append(downstreams, s)
+				}
 			}
-			subscribers = append(subscribers, s)
 		}
 	}
-	return subscribers, nil
+	return downstreams, nil
 }

@@ -194,14 +194,37 @@ spec:
                       the contents of the Freight. i.e. Two pieces of Freight can be compared for
                       equality by comparing their Names.
                     type: string
+                  origin:
+                    description: Origin describes a kind of Freight in terms of its
+                      origin.
+                    properties:
+                      kind:
+                        description: |-
+                          Kind is the kind of resource from which Freight may have originated. At
+                          present, this can only be "Warehouse".
+                        enum:
+                        - Warehouse
+                        type: string
+                      name:
+                        description: |-
+                          Name is the name of the resource of the kind indicated by the Kind field
+                          from which Freight may originated.
+                        type: string
+                    required:
+                    - kind
+                    - name
+                    type: object
                   verificationHistory:
                     description: |-
                       VerificationHistory is a stack of recent VerificationInfo. By default,
                       the last ten VerificationInfo are stored.
+
+
+                      Deprecated: Use FreightCollection.VerificationHistory instead.
                     items:
                       description: |-
-                        VerificationInfo contains information about the currently running
-                        Verification process.
+                        VerificationInfo contains the details of an instance of a Verification
+                        process.
                       properties:
                         actor:
                           description: |-
@@ -259,6 +282,9 @@ spec:
                     description: |-
                       VerificationInfo is information about any verification process that was
                       associated with this Freight for this Stage.
+
+
+                      Deprecated: Use FreightCollection.VerificationHistory instead.
                     properties:
                       actor:
                         description: |-
@@ -312,8 +338,11 @@ spec:
                         type: string
                     type: object
                   warehouse:
-                    description: Warehouse is the name of the Warehouse that created
-                      this Freight.
+                    description: |-
+                      Warehouse is the name of the Warehouse that created this Freight.
+
+
+                      Deprecated: Use the Origin instead.
                     type: string
                 type: object
               lastHandledRefresh:

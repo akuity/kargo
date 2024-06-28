@@ -90,8 +90,8 @@ type server struct {
 		...client.CreateOption,
 	) error
 
-	// Promote subscribers:
-	findStageSubscribersFn func(ctx context.Context, stage *kargoapi.Stage) ([]kargoapi.Stage, error)
+	// Promote downstream:
+	findDownstreamStagesFn func(ctx context.Context, stage *kargoapi.Stage) ([]kargoapi.Stage, error)
 
 	// QueryFreight API:
 	listFreightFn func(
@@ -103,17 +103,17 @@ type server struct {
 		ctx context.Context,
 		project string,
 		stage string,
-		subs kargoapi.Subscriptions,
+		requestedFreight []kargoapi.FreightRequest,
 	) ([]kargoapi.Freight, error)
-	getFreightFromWarehouseFn func(
+	getFreightFromWarehousesFn func(
 		ctx context.Context,
 		project string,
-		warehouse string,
+		warehouses []string,
 	) ([]kargoapi.Freight, error)
 	getVerifiedFreightFn func(
 		ctx context.Context,
 		project string,
-		stageSubs []kargoapi.StageSubscription,
+		upstreams []string,
 	) ([]kargoapi.Freight, error)
 
 	// Freight aliasing:
@@ -178,10 +178,10 @@ func NewServer(
 	s.getFreightByNameOrAliasFn = kargoapi.GetFreightByNameOrAlias
 	s.isFreightAvailableFn = kargoapi.IsFreightAvailable
 	s.createPromotionFn = kubeClient.Create
-	s.findStageSubscribersFn = s.findStageSubscribers
+	s.findDownstreamStagesFn = s.findDownstreamStages
 	s.listFreightFn = kubeClient.List
 	s.getAvailableFreightForStageFn = s.getAvailableFreightForStage
-	s.getFreightFromWarehouseFn = s.getFreightFromWarehouse
+	s.getFreightFromWarehousesFn = s.getFreightFromWarehouses
 	s.getVerifiedFreightFn = s.getVerifiedFreight
 	s.patchFreightAliasFn = s.patchFreightAlias
 	s.patchFreightStatusFn = s.patchFreightStatus

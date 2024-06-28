@@ -1291,11 +1291,20 @@ export class Freight extends Message<Freight> {
    * required field. TODO: It is not clear yet how this field should be set in
    * the case of user-defined Freight.
    *
-   * +kubebuilder:validation:Required
+   * Deprecated: Use Origin instead.
    *
    * @generated from field: optional string warehouse = 8;
    */
   warehouse?: string;
+
+  /**
+   * Origin describes a kind of Freight in terms of its origin.
+   *
+   * +kubebuilder:validation:Required
+   *
+   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.FreightOrigin origin = 9;
+   */
+  origin?: FreightOrigin;
 
   /**
    * Commits describes specific Git repository commits.
@@ -1336,6 +1345,7 @@ export class Freight extends Message<Freight> {
     { no: 1, name: "metadata", kind: "message", T: ObjectMeta, opt: true },
     { no: 7, name: "alias", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 8, name: "warehouse", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 9, name: "origin", kind: "message", T: FreightOrigin, opt: true },
     { no: 3, name: "commits", kind: "message", T: GitCommit, repeated: true },
     { no: 4, name: "images", kind: "message", T: Image, repeated: true },
     { no: 5, name: "charts", kind: "message", T: Chart, repeated: true },
@@ -1356,6 +1366,59 @@ export class Freight extends Message<Freight> {
 
   static equals(a: Freight | PlainMessage<Freight> | undefined, b: Freight | PlainMessage<Freight> | undefined): boolean {
     return proto2.util.equals(Freight, a, b);
+  }
+}
+
+/**
+ * FreightCollection is a collection of FreightReferences, each of which
+ * represents a piece of Freight that has been selected for deployment to a
+ * Stage.
+ *
+ * @generated from message github.com.akuity.kargo.api.v1alpha1.FreightCollection
+ */
+export class FreightCollection extends Message<FreightCollection> {
+  /**
+   * Freight is a map of FreightReference objects, indexed by their Warehouse
+   * origin.
+   *
+   * @generated from field: map<string, github.com.akuity.kargo.api.v1alpha1.FreightReference> items = 1;
+   */
+  items: { [key: string]: FreightReference } = {};
+
+  /**
+   * VerificationHistory is a stack of recent VerificationInfo. By default,
+   * the last ten VerificationInfo are stored.
+   *
+   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.VerificationInfo verificationHistory = 2;
+   */
+  verificationHistory: VerificationInfo[] = [];
+
+  constructor(data?: PartialMessage<FreightCollection>) {
+    super();
+    proto2.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto2 = proto2;
+  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.FreightCollection";
+  static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 1, name: "items", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "message", T: FreightReference} },
+    { no: 2, name: "verificationHistory", kind: "message", T: VerificationInfo, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FreightCollection {
+    return new FreightCollection().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): FreightCollection {
+    return new FreightCollection().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): FreightCollection {
+    return new FreightCollection().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: FreightCollection | PlainMessage<FreightCollection> | undefined, b: FreightCollection | PlainMessage<FreightCollection> | undefined): boolean {
+    return proto2.util.equals(FreightCollection, a, b);
   }
 }
 
@@ -1405,6 +1468,64 @@ export class FreightList extends Message<FreightList> {
 }
 
 /**
+ * FreightOrigin describes a kind of Freight in terms of where it may have
+ * originated.
+ *
+ * +protobuf.options.(gogoproto.goproto_stringer)=false
+ *
+ * @generated from message github.com.akuity.kargo.api.v1alpha1.FreightOrigin
+ */
+export class FreightOrigin extends Message<FreightOrigin> {
+  /**
+   * Kind is the kind of resource from which Freight may have originated. At
+   * present, this can only be "Warehouse".
+   *
+   * +kubebuilder:validation:Required
+   *
+   * @generated from field: optional string kind = 1;
+   */
+  kind?: string;
+
+  /**
+   * Name is the name of the resource of the kind indicated by the Kind field
+   * from which Freight may originated.
+   *
+   * +kubebuilder:validation:Required
+   *
+   * @generated from field: optional string name = 2;
+   */
+  name?: string;
+
+  constructor(data?: PartialMessage<FreightOrigin>) {
+    super();
+    proto2.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto2 = proto2;
+  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.FreightOrigin";
+  static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 1, name: "kind", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FreightOrigin {
+    return new FreightOrigin().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): FreightOrigin {
+    return new FreightOrigin().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): FreightOrigin {
+    return new FreightOrigin().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: FreightOrigin | PlainMessage<FreightOrigin> | undefined, b: FreightOrigin | PlainMessage<FreightOrigin> | undefined): boolean {
+    return proto2.util.equals(FreightOrigin, a, b);
+  }
+}
+
+/**
  * FreightReference is a simplified representation of a piece of Freight -- not
  * a root resource type.
  *
@@ -1423,9 +1544,18 @@ export class FreightReference extends Message<FreightReference> {
   /**
    * Warehouse is the name of the Warehouse that created this Freight.
    *
+   * Deprecated: Use the Origin instead.
+   *
    * @generated from field: optional string warehouse = 6;
    */
   warehouse?: string;
+
+  /**
+   * Origin describes a kind of Freight in terms of its origin.
+   *
+   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.FreightOrigin origin = 8;
+   */
+  origin?: FreightOrigin;
 
   /**
    * Commits describes specific Git repository commits.
@@ -1452,6 +1582,8 @@ export class FreightReference extends Message<FreightReference> {
    * VerificationInfo is information about any verification process that was
    * associated with this Freight for this Stage.
    *
+   * Deprecated: Use FreightCollection.VerificationHistory instead.
+   *
    * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.VerificationInfo verificationInfo = 5;
    */
   verificationInfo?: VerificationInfo;
@@ -1459,6 +1591,8 @@ export class FreightReference extends Message<FreightReference> {
   /**
    * VerificationHistory is a stack of recent VerificationInfo. By default,
    * the last ten VerificationInfo are stored.
+   *
+   * Deprecated: Use FreightCollection.VerificationHistory instead.
    *
    * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.VerificationInfo verificationHistory = 7;
    */
@@ -1474,6 +1608,7 @@ export class FreightReference extends Message<FreightReference> {
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 6, name: "warehouse", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 8, name: "origin", kind: "message", T: FreightOrigin, opt: true },
     { no: 2, name: "commits", kind: "message", T: GitCommit, repeated: true },
     { no: 3, name: "images", kind: "message", T: Image, repeated: true },
     { no: 4, name: "charts", kind: "message", T: Chart, repeated: true },
@@ -1495,6 +1630,113 @@ export class FreightReference extends Message<FreightReference> {
 
   static equals(a: FreightReference | PlainMessage<FreightReference> | undefined, b: FreightReference | PlainMessage<FreightReference> | undefined): boolean {
     return proto2.util.equals(FreightReference, a, b);
+  }
+}
+
+/**
+ * FreightRequest expresses a Stage's need for Freight having originated from a
+ * particular Warehouse.
+ *
+ * @generated from message github.com.akuity.kargo.api.v1alpha1.FreightRequest
+ */
+export class FreightRequest extends Message<FreightRequest> {
+  /**
+   * Origin specifies from where the requested Freight must have originated.
+   * This is a required field.
+   *
+   * +kubebuilder:validation:Required
+   *
+   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.FreightOrigin origin = 1;
+   */
+  origin?: FreightOrigin;
+
+  /**
+   * Sources describes where the requested Freight may be obtained from. This is
+   * a required field.
+   *
+   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.FreightSources sources = 2;
+   */
+  sources?: FreightSources;
+
+  constructor(data?: PartialMessage<FreightRequest>) {
+    super();
+    proto2.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto2 = proto2;
+  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.FreightRequest";
+  static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 1, name: "origin", kind: "message", T: FreightOrigin, opt: true },
+    { no: 2, name: "sources", kind: "message", T: FreightSources, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FreightRequest {
+    return new FreightRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): FreightRequest {
+    return new FreightRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): FreightRequest {
+    return new FreightRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: FreightRequest | PlainMessage<FreightRequest> | undefined, b: FreightRequest | PlainMessage<FreightRequest> | undefined): boolean {
+    return proto2.util.equals(FreightRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message github.com.akuity.kargo.api.v1alpha1.FreightSources
+ */
+export class FreightSources extends Message<FreightSources> {
+  /**
+   * Direct indicates the requested Freight may be obtained directly from the
+   * Warehouse from which it originated. If this field's value is false, then
+   * the value of the Stages field must be non-empty. i.e. Between the two
+   * fields, at least one source must be specified.
+   *
+   * @generated from field: optional bool direct = 1;
+   */
+  direct?: boolean;
+
+  /**
+   * Stages identifies other "upstream" Stages as potential sources of the
+   * requested Freight. If this field's value is empty, then the value of the
+   * Direct field must be true. i.e. Between the two fields, at least on source
+   * must be specified.
+   *
+   * @generated from field: repeated string stages = 2;
+   */
+  stages: string[] = [];
+
+  constructor(data?: PartialMessage<FreightSources>) {
+    super();
+    proto2.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto2 = proto2;
+  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.FreightSources";
+  static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 1, name: "direct", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+    { no: 2, name: "stages", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FreightSources {
+    return new FreightSources().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): FreightSources {
+    return new FreightSources().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): FreightSources {
+    return new FreightSources().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: FreightSources | PlainMessage<FreightSources> | undefined, b: FreightSources | PlainMessage<FreightSources> | undefined): boolean {
+    return proto2.util.equals(FreightSources, a, b);
   }
 }
 
@@ -3699,11 +3941,27 @@ export class StageSpec extends Message<StageSpec> {
    * Subscriptions describes the Stage's sources of Freight. This is a required
    * field.
    *
-   * +kubebuilder:validation:Required
+   * Deprecated: Use RequestedFreight instead.
    *
    * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.Subscriptions subscriptions = 1;
    */
   subscriptions?: Subscriptions;
+
+  /**
+   * RequestedFreight expresses the Stage's need for certain pieces of Freight,
+   * each having originated from a particular Warehouse. This list must be
+   * non-empty. In the common case, a Stage will request Freight having
+   * originated from just one specific Warehouse. In advanced cases, requesting
+   * Freight from multiple Warehouses provides a method of advancing new
+   * artifacts of different types through parallel pipelines at different
+   * speeds. This can be useful, for instance, if a Stage is home to multiple
+   * microservices that are independently versioned.
+   *
+   * +kubebuilder:validation:MinItems=1
+   *
+   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.FreightRequest requestedFreight = 5;
+   */
+  requestedFreight: FreightRequest[] = [];
 
   /**
    * PromotionMechanisms describes how to incorporate Freight into the Stage.
@@ -3735,6 +3993,7 @@ export class StageSpec extends Message<StageSpec> {
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 4, name: "shard", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 1, name: "subscriptions", kind: "message", T: Subscriptions, opt: true },
+    { no: 5, name: "requestedFreight", kind: "message", T: FreightRequest, repeated: true },
     { no: 2, name: "promotionMechanisms", kind: "message", T: PromotionMechanisms, opt: true },
     { no: 3, name: "verification", kind: "message", T: Verification, opt: true },
   ]);
@@ -3781,8 +4040,20 @@ export class StageStatus extends Message<StageStatus> {
   phase?: string;
 
   /**
+   * FreightHistory is a list of recent Freight selections that were deployed
+   * to the Stage. By default, the last ten Freight selections are stored.
+   * The first item in the list is the most recent Freight selection and
+   * currently deployed to the Stage, subsequent items are older selections.
+   *
+   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.FreightCollection freightHistory = 4;
+   */
+  freightHistory: FreightCollection[] = [];
+
+  /**
    * CurrentFreight is a simplified representation of the Stage's current
    * Freight describing what is currently deployed to the Stage.
+   *
+   * Deprecated: Use the top item in the FreightHistory stack instead.
    *
    * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.FreightReference currentFreight = 2;
    */
@@ -3791,6 +4062,8 @@ export class StageStatus extends Message<StageStatus> {
   /**
    * History is a stack of recent Freight. By default, the last ten Freight are
    * stored.
+   *
+   * Deprecated: Use the FreightHistory stack instead.
    *
    * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.FreightReference history = 3;
    */
@@ -3843,6 +4116,7 @@ export class StageStatus extends Message<StageStatus> {
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 11, name: "lastHandledRefresh", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 1, name: "phase", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 4, name: "freightHistory", kind: "message", T: FreightCollection, repeated: true },
     { no: 2, name: "currentFreight", kind: "message", T: FreightReference, opt: true },
     { no: 3, name: "history", kind: "message", T: FreightReference, repeated: true },
     { no: 8, name: "health", kind: "message", T: Health, opt: true },
@@ -3871,6 +4145,8 @@ export class StageStatus extends Message<StageStatus> {
 
 /**
  * StageSubscription defines a subscription to Freight from another Stage.
+ *
+ * Deprecated: Use FreightRequest instead.
  *
  * @generated from message github.com.akuity.kargo.api.v1alpha1.StageSubscription
  */
@@ -3915,6 +4191,8 @@ export class StageSubscription extends Message<StageSubscription> {
 
 /**
  * Subscriptions describes a Stage's sources of Freight.
+ *
+ * Deprecated: Use FreightRequest instead.
  *
  * @generated from message github.com.akuity.kargo.api.v1alpha1.Subscriptions
  */
@@ -4026,8 +4304,8 @@ export class Verification extends Message<Verification> {
 }
 
 /**
- * VerificationInfo contains information about the currently running
- * Verification process.
+ * VerificationInfo contains the details of an instance of a Verification
+ * process.
  *
  * @generated from message github.com.akuity.kargo.api.v1alpha1.VerificationInfo
  */

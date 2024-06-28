@@ -30,7 +30,7 @@ type compositeError interface {
 // ApplicationHealthEvaluator is an interface for evaluating the health of
 // Argo CD Applications.
 type ApplicationHealthEvaluator interface {
-	EvaluateHealth(context.Context, kargoapi.FreightReference, []kargoapi.ArgoCDAppUpdate) *kargoapi.Health
+	EvaluateHealth(context.Context, []kargoapi.FreightReference, []kargoapi.ArgoCDAppUpdate) *kargoapi.Health
 }
 
 // applicationHealth is an ApplicationHealthEvaluator implementation.
@@ -46,7 +46,7 @@ func NewApplicationHealthEvaluator(c client.Client) ApplicationHealthEvaluator {
 // EvaluateHealth assesses the health of a set of Argo CD Applications.
 func (h *applicationHealth) EvaluateHealth(
 	ctx context.Context,
-	freight kargoapi.FreightReference,
+	freight []kargoapi.FreightReference,
 	updates []kargoapi.ArgoCDAppUpdate,
 ) *kargoapi.Health {
 	if len(updates) == 0 {
@@ -110,7 +110,7 @@ func (h *applicationHealth) EvaluateHealth(
 func (h *applicationHealth) GetApplicationHealth(
 	ctx context.Context,
 	key types.NamespacedName,
-	freight kargoapi.FreightReference,
+	freight []kargoapi.FreightReference,
 ) (kargoapi.HealthState, kargoapi.ArgoCDAppHealthStatus, kargoapi.ArgoCDAppSyncStatus, error) {
 	var (
 		healthStatus = kargoapi.ArgoCDAppHealthStatus{
@@ -175,13 +175,18 @@ func (h *applicationHealth) GetApplicationHealth(
 		return kargoapi.HealthStateUnhealthy, healthStatus, syncStatus, errors.Join(issues...)
 	}
 
-	// If we have a desired revision, we should confirm the Argo CD Application
-	// is syncing to it. We do not further care about the cluster being in sync
-	// with the desired revision, as some applications may be out of sync by
-	// default.
-	if desiredRevision := GetDesiredRevision(app, freight); desiredRevision != "" {
-		if healthState, err := stageHealthForAppSync(app, desiredRevision); err != nil {
-			return healthState, healthStatus, syncStatus, err
+	// For each piece of Freight, check if the Argo CD Application is syncing
+	// to it. If it is, we should further assess the health of the Argo CD
+	// Application.
+	for _, f := range freight {
+		// If we have a desired revision, we should confirm the Argo CD Application
+		// is syncing to it. We do not further care about the cluster being in sync
+		// with the desired revision, as some applications may be out of sync by
+		// default.
+		if desiredRevision := GetDesiredRevision(app, f); desiredRevision != "" {
+			if healthState, err := stageHealthForAppSync(app, desiredRevision); err != nil {
+				return healthState, healthStatus, syncStatus, err
+			}
 		}
 	}
 

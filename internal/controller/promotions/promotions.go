@@ -3,6 +3,7 @@ package promotions
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strconv"
 	"sync"
 	"time"
@@ -423,11 +424,15 @@ func (r *reconciler) promote(
 	if targetFreight == nil {
 		return nil, fmt.Errorf("Freight %q not found in namespace %q", promo.Spec.Freight, promo.Namespace)
 	}
-	upstreamStages := make([]string, len(stage.Spec.Subscriptions.UpstreamStages))
-	for i, upstreamStage := range stage.Spec.Subscriptions.UpstreamStages {
-		upstreamStages[i] = upstreamStage.Name
+	var upstreams []string
+	for _, req := range stage.Spec.RequestedFreight {
+		upstreams = append(upstreams, req.Sources.Stages...)
 	}
-	if !kargoapi.IsFreightAvailable(targetFreight, stageName, upstreamStages) {
+	// De-dupe upstreams
+	slices.Sort(upstreams)
+	upstreams = slices.Compact(upstreams)
+
+	if !kargoapi.IsFreightAvailable(targetFreight, stageName, upstreams) {
 		return nil, fmt.Errorf(
 			"Freight %q is not available to Stage %q in namespace %q",
 			promo.Spec.Freight,
@@ -439,11 +444,11 @@ func (r *reconciler) promote(
 	logger = logger.WithValues("targetFreight", targetFreight.Name)
 
 	targetFreightRef := kargoapi.FreightReference{
-		Name:      targetFreight.Name,
-		Commits:   targetFreight.Commits,
-		Images:    targetFreight.Images,
-		Charts:    targetFreight.Charts,
-		Warehouse: targetFreight.Warehouse,
+		Name:    targetFreight.Name,
+		Commits: targetFreight.Commits,
+		Images:  targetFreight.Images,
+		Charts:  targetFreight.Charts,
+		Origin:  targetFreight.Origin,
 	}
 
 	newStatus, nextFreight, err := r.promoMechanisms.Promote(ctx, stage, &promo, targetFreightRef)
@@ -457,19 +462,24 @@ func (r *reconciler) promote(
 	if newStatus.Phase == kargoapi.PromotionPhaseSucceeded {
 		// Trigger re-verification of the Stage if the promotion succeeded and
 		// this is a re-promotion of the same Freight.
-		curFreight := stage.Status.CurrentFreight
-		if curFreight != nil && curFreight.Name == targetFreight.Name && curFreight.VerificationInfo != nil {
-			if err = kargoapi.ReverifyStageFreight(
-				ctx,
-				r.kargoClient,
-				types.NamespacedName{
-					Namespace: stageNamespace,
-					Name:      stageName,
-				},
-			); err != nil {
-				// Log the error, but don't let failure to initiate re-verification
-				// prevent the promotion from succeeding.
-				logger.Error(err, "error triggering re-verification")
+		current := stage.Status.FreightHistory.Current()
+		if current != nil && current.VerificationHistory.Current() != nil {
+			for _, f := range current.Freight {
+				if f.Name == targetFreight.Name {
+					if err = kargoapi.ReverifyStageFreight(
+						ctx,
+						r.kargoClient,
+						types.NamespacedName{
+							Namespace: stageNamespace,
+							Name:      stageName,
+						},
+					); err != nil {
+						// Log the error, but don't let failure to initiate re-verification
+						// prevent the promotion from succeeding.
+						logger.Error(err, "error triggering re-verification")
+					}
+					break
+				}
 			}
 		}
 	}

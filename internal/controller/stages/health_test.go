@@ -12,7 +12,7 @@ type mockAppHealthEvaluator struct {
 
 func (m *mockAppHealthEvaluator) EvaluateHealth(
 	context.Context,
-	kargoapi.FreightReference,
+	[]kargoapi.FreightReference,
 	[]kargoapi.ArgoCDAppUpdate,
 ) *kargoapi.Health {
 	return m.Health

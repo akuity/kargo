@@ -65,12 +65,8 @@ func TestNewReconciler(t *testing.T) {
 	require.NotNil(t, r.isAutoPromotionPermittedFn)
 	require.NotNil(t, r.getProjectFn)
 	require.NotNil(t, r.createPromotionFn)
-	// Discovering latest Freight:
-	require.NotNil(t, r.getLatestAvailableFreightFn)
-	require.NotNil(t, r.getLatestFreightFromWarehouseFn)
-	require.NotNil(t, r.getAllVerifiedFreightFn)
-	require.NotNil(t, r.getLatestVerifiedFreightFn)
-	require.NotNil(t, r.getLatestApprovedFreightFn)
+	// Discovering Freight:
+	require.NotNil(t, r.getAvailableFreightFn)
 	require.NotNil(t, r.listFreightFn)
 	// Stage deletion:
 	require.NotNil(t, r.clearVerificationsFn)
@@ -92,61 +88,15 @@ func TestSyncControlFlowStage(t *testing.T) {
 		)
 	}{
 		{
-			name: "error listing Freight from Warehouse",
+			name: "error getting available Freight",
 			stage: &kargoapi.Stage{
-				Spec: kargoapi.StageSpec{
-					Subscriptions: kargoapi.Subscriptions{
-						Warehouse: "fake-warehouse",
-					},
-				},
 				Status: kargoapi.StageStatus{
 					Phase: kargoapi.StagePhaseNotApplicable,
 				},
 			},
 			reconciler: &reconciler{
-				listFreightFn: func(
-					context.Context,
-					client.ObjectList,
-					...client.ListOption,
-				) error {
-					return errors.New("something went wrong")
-				},
-			},
-			assertions: func(
-				t *testing.T,
-				recorder *fakeevent.EventRecorder,
-				initialStatus kargoapi.StageStatus,
-				newStatus kargoapi.StageStatus,
-				err error,
-			) {
-				require.ErrorContains(t, err, "error listing Freight from Warehouse")
-				require.ErrorContains(t, err, "something went wrong")
-				// Status should be returned unchanged
-				require.Equal(t, initialStatus, newStatus)
-
-				// No events should be recorded
-				require.Empty(t, recorder.Events)
-			},
-		},
-		{
-			name: "error listing Freight verified in upstream Stages",
-			stage: &kargoapi.Stage{
-				Spec: kargoapi.StageSpec{
-					Subscriptions: kargoapi.Subscriptions{
-						UpstreamStages: []kargoapi.StageSubscription{
-							{Name: "fake-stage"},
-						},
-					},
-				},
-				Status: kargoapi.StageStatus{
-					Phase: kargoapi.StagePhaseNotApplicable,
-				},
-			},
-			reconciler: &reconciler{
-				getAllVerifiedFreightFn: func(
-					context.Context,
-					string,
-					[]kargoapi.StageSubscription,
+				getAvailableFreightFn: func(
+					context.Context, *kargoapi.Stage, bool,
 				) ([]kargoapi.Freight, error) {
 					return nil, errors.New("something went wrong")
 				},
@@ -158,13 +108,10 @@ func TestSyncControlFlowStage(t *testing.T) {
 				newStatus kargoapi.StageStatus,
 				err error,
 			) {
-				require.ErrorContains(
-					t, err, "error getting all Freight verified in Stages upstream from Stage",
-				)
+				require.ErrorContains(t, err, "error getting available Freight for control flow Stage")
 				require.ErrorContains(t, err, "something went wrong")
 				// Status should be returned unchanged
 				require.Equal(t, initialStatus, newStatus)
-
 				// No events should be recorded
 				require.Empty(t, recorder.Events)
 			},
@@ -172,25 +119,15 @@ func TestSyncControlFlowStage(t *testing.T) {
 		{
 			name: "error marking Freight as verified in Stage",
 			stage: &kargoapi.Stage{
-				Spec: kargoapi.StageSpec{
-					Subscriptions: kargoapi.Subscriptions{
-						Warehouse: "fake-warehouse",
-					},
-				},
 				Status: kargoapi.StageStatus{
 					Phase: kargoapi.StagePhaseNotApplicable,
 				},
 			},
 			reconciler: &reconciler{
-				listFreightFn: func(
-					_ context.Context,
-					objList client.ObjectList,
-					_ ...client.ListOption,
-				) error {
-					freight, ok := objList.(*kargoapi.FreightList)
-					require.True(t, ok)
-					freight.Items = []kargoapi.Freight{{}}
-					return nil
+				getAvailableFreightFn: func(
+					context.Context, *kargoapi.Stage, bool,
+				) ([]kargoapi.Freight, error) {
+					return []kargoapi.Freight{{}}, nil
 				},
 				patchFreightStatusFn: func(
 					context.Context,
@@ -222,27 +159,21 @@ func TestSyncControlFlowStage(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Generation: 42,
 				},
-				Spec: kargoapi.StageSpec{
-					Subscriptions: kargoapi.Subscriptions{
-						Warehouse: "fake-warehouse",
-					},
-				},
 				Status: kargoapi.StageStatus{
-					Phase:          kargoapi.StagePhaseNotApplicable,
-					CurrentFreight: &kargoapi.FreightReference{},
-					Health:         &kargoapi.Health{},
+					Phase:            kargoapi.StagePhaseNotApplicable,
+					CurrentPromotion: &kargoapi.PromotionInfo{},
+					LastPromotion:    &kargoapi.PromotionInfo{},
+					FreightHistory:   make(kargoapi.FreightHistory, 0),
+					Health:           &kargoapi.Health{},
+					CurrentFreight:   &kargoapi.FreightReference{},
+					History:          make(kargoapi.FreightReferenceStack, 0), // nolint: staticcheck
 				},
 			},
 			reconciler: &reconciler{
-				listFreightFn: func(
-					_ context.Context,
-					objList client.ObjectList,
-					_ ...client.ListOption,
-				) error {
-					freight, ok := objList.(*kargoapi.FreightList)
-					require.True(t, ok)
-					freight.Items = []kargoapi.Freight{{}}
-					return nil
+				getAvailableFreightFn: func(
+					context.Context, *kargoapi.Stage, bool,
+				) ([]kargoapi.Freight, error) {
+					return []kargoapi.Freight{{}}, nil
 				},
 				patchFreightStatusFn: func(
 					context.Context,
@@ -261,8 +192,12 @@ func TestSyncControlFlowStage(t *testing.T) {
 			) {
 				require.NoError(t, err)
 				require.Equal(t, int64(42), newStatus.ObservedGeneration) // Set
-				require.Nil(t, newStatus.CurrentFreight)                  // Cleared
+				require.Nil(t, newStatus.FreightHistory)                  // Cleared
+				require.Nil(t, newStatus.CurrentPromotion)                // Cleared
+				require.Nil(t, newStatus.LastPromotion)                   // Cleared
 				require.Nil(t, newStatus.Health)                          // Cleared
+				require.Nil(t, newStatus.CurrentFreight)                  // nolint: staticcheck
+				require.Nil(t, newStatus.History)                         // nolint: staticcheck
 
 				require.Len(t, recorder.Events, 1)
 				event := <-recorder.Events
@@ -289,6 +224,10 @@ func TestSyncControlFlowStage(t *testing.T) {
 }
 
 func TestSyncNormalStage(t *testing.T) {
+	testOrigin := kargoapi.FreightOrigin{
+		Kind: kargoapi.FreightOriginKindWarehouse,
+		Name: "fake-warehouse",
+	}
 	testCases := []struct {
 		name       string
 		stage      *kargoapi.Stage
@@ -320,12 +259,12 @@ func TestSyncNormalStage(t *testing.T) {
 				newStatus kargoapi.StageStatus,
 				err error,
 			) {
-				require.Error(t, err)
-				require.Equal(t, "something went wrong", err.Error())
+				require.ErrorContains(t, err, "something went wrong")
+
 				// Status should be returned unchanged
 				require.Equal(t, initialStatus, newStatus)
 
-				// No events should be recorded
+				// No events should have been recorded
 				require.Empty(t, recorder.Events)
 			},
 		},
@@ -344,12 +283,19 @@ func TestSyncNormalStage(t *testing.T) {
 				},
 				Status: kargoapi.StageStatus{
 					Phase: kargoapi.StagePhaseSteady,
-					CurrentFreight: &kargoapi.FreightReference{
-						VerificationInfo: &kargoapi.VerificationInfo{
-							ID:    "fake-id",
-							Phase: kargoapi.VerificationPhaseFailed,
-							AnalysisRun: &kargoapi.AnalysisRunReference{
-								Name: "fake-analysis-run",
+					FreightHistory: kargoapi.FreightHistory{
+						{
+							Freight: map[string]kargoapi.FreightReference{
+								testOrigin.String(): {
+									Origin: testOrigin,
+									VerificationInfo: &kargoapi.VerificationInfo{
+										ID:    "fake-id",
+										Phase: kargoapi.VerificationPhaseFailed,
+										AnalysisRun: &kargoapi.AnalysisRunReference{
+											Name: "fake-analysis-run",
+										},
+									},
+								},
 							},
 						},
 					},
@@ -367,6 +313,7 @@ func TestSyncNormalStage(t *testing.T) {
 				startVerificationFn: func(
 					context.Context,
 					*kargoapi.Stage,
+					*kargoapi.FreightCollection,
 				) (*kargoapi.VerificationInfo, error) {
 					return &kargoapi.VerificationInfo{
 						ID:      "new-fake-id",
@@ -381,13 +328,13 @@ func TestSyncNormalStage(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				recorder *fakeevent.EventRecorder,
-				_ kargoapi.StageStatus,
+				initialStatus kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
 				err error,
 			) {
 				require.NoError(t, err)
-				require.NotNil(t, newStatus.CurrentFreight)
 				require.Equal(t, kargoapi.StagePhaseVerifying, newStatus.Phase)
+
 				require.Equal(
 					t,
 					&kargoapi.VerificationInfo{
@@ -398,10 +345,16 @@ func TestSyncNormalStage(t *testing.T) {
 							Name: "new-fake-analysis-run",
 						},
 					},
-					newStatus.CurrentFreight.VerificationInfo,
+					newStatus.FreightHistory.Current().VerificationHistory.Current(),
 				)
 
-				// No events should be recorded
+				// Status should be otherwise unchanged
+				newStatus.Phase = initialStatus.Phase
+				newStatus.FreightHistory.Current().VerificationHistory =
+					initialStatus.FreightHistory.Current().VerificationHistory
+				require.Equal(t, initialStatus, newStatus)
+
+				// No events should have been recorded
 				require.Empty(t, recorder.Events)
 			},
 		},
@@ -420,18 +373,25 @@ func TestSyncNormalStage(t *testing.T) {
 				},
 				Status: kargoapi.StageStatus{
 					Phase: kargoapi.StagePhaseSteady,
-					CurrentFreight: &kargoapi.FreightReference{
-						VerificationInfo: &kargoapi.VerificationInfo{
-							Phase: kargoapi.VerificationPhaseFailed,
-							AnalysisRun: &kargoapi.AnalysisRunReference{
-								Name: "fake-analysis-run",
+					FreightHistory: kargoapi.FreightHistory{
+						{
+							Freight: map[string]kargoapi.FreightReference{
+								testOrigin.String(): {
+									Origin: testOrigin,
+									VerificationInfo: &kargoapi.VerificationInfo{
+										Phase: kargoapi.VerificationPhaseFailed,
+										AnalysisRun: &kargoapi.AnalysisRunReference{
+											Name: "fake-analysis-run",
+										},
+									},
+								},
 							},
-						},
-						VerificationHistory: []kargoapi.VerificationInfo{
-							{
-								Phase: kargoapi.VerificationPhaseFailed,
-								AnalysisRun: &kargoapi.AnalysisRunReference{
-									Name: "fake-analysis-run",
+							VerificationHistory: []kargoapi.VerificationInfo{
+								{
+									Phase: kargoapi.VerificationPhaseFailed,
+									AnalysisRun: &kargoapi.AnalysisRunReference{
+										Name: "fake-analysis-run",
+									},
 								},
 							},
 						},
@@ -463,9 +423,11 @@ func TestSyncNormalStage(t *testing.T) {
 				err error,
 			) {
 				require.NoError(t, err)
-				require.NotNil(t, newStatus.CurrentFreight)
+
+				// Status should be returned unchanged
 				require.Equal(t, initialStatus, newStatus)
 
+				// No events should have been recorded
 				require.Empty(t, recorder.Events)
 			},
 		},
@@ -478,8 +440,16 @@ func TestSyncNormalStage(t *testing.T) {
 					Verification:        &kargoapi.Verification{},
 				},
 				Status: kargoapi.StageStatus{
-					Phase:          kargoapi.StagePhaseVerifying,
-					CurrentFreight: &kargoapi.FreightReference{},
+					Phase: kargoapi.StagePhaseVerifying,
+					FreightHistory: kargoapi.FreightHistory{
+						{
+							Freight: map[string]kargoapi.FreightReference{
+								testOrigin.String(): {
+									Origin: testOrigin,
+								},
+							},
+						},
+					},
 				},
 			},
 			reconciler: &reconciler{
@@ -492,8 +462,9 @@ func TestSyncNormalStage(t *testing.T) {
 				},
 				appHealth: &mockAppHealthEvaluator{},
 				startVerificationFn: func(
-					_ context.Context,
-					_ *kargoapi.Stage,
+					context.Context,
+					*kargoapi.Stage,
+					*kargoapi.FreightCollection,
 				) (*kargoapi.VerificationInfo, error) {
 					return &kargoapi.VerificationInfo{
 						Phase:      kargoapi.VerificationPhaseError,
@@ -518,32 +489,26 @@ func TestSyncNormalStage(t *testing.T) {
 				err error,
 			) {
 				require.NoError(t, err)
-				require.NotNil(t, newStatus.CurrentFreight)
 				require.Equal(t, kargoapi.StagePhaseSteady, newStatus.Phase)
 
-				expectInfo := kargoapi.VerificationInfo{
-					StartTime:  ptr.To(metav1.NewTime(fakeTime)),
-					FinishTime: ptr.To(metav1.NewTime(fakeTime)),
-					Phase:      kargoapi.VerificationPhaseError,
-					Message:    "something went wrong",
-				}
+				require.Equal(
+					t,
+					&kargoapi.VerificationInfo{
+						StartTime:  ptr.To(metav1.NewTime(fakeTime)),
+						FinishTime: ptr.To(metav1.NewTime(fakeTime)),
+						Phase:      kargoapi.VerificationPhaseError,
+						Message:    "something went wrong",
+					},
+					newStatus.FreightHistory.Current().VerificationHistory.Current(),
+				)
 
-				require.Equal(
-					t,
-					&expectInfo,
-					newStatus.CurrentFreight.VerificationInfo,
-				)
-				require.Equal(
-					t,
-					kargoapi.VerificationInfoStack{expectInfo},
-					newStatus.CurrentFreight.VerificationHistory,
-				)
-				// Everything else should be returned unchanged
-				newStatus.CurrentFreight.VerificationInfo = nil
-				newStatus.CurrentFreight.VerificationHistory = nil
+				// Status should be otherwise unchanged
 				newStatus.Phase = initialStatus.Phase
+				newStatus.FreightHistory.Current().VerificationHistory =
+					initialStatus.FreightHistory.Current().VerificationHistory
 				require.Equal(t, initialStatus, newStatus)
 
+				// The unrecoverable error should have been recorded as an event
 				require.Len(t, recorder.Events, 1)
 				event := <-recorder.Events
 				require.Equal(t, kargoapi.EventReasonFreightVerificationErrored, event.Reason)
@@ -566,8 +531,16 @@ func TestSyncNormalStage(t *testing.T) {
 					Verification:        &kargoapi.Verification{},
 				},
 				Status: kargoapi.StageStatus{
-					Phase:          kargoapi.StagePhaseVerifying,
-					CurrentFreight: &kargoapi.FreightReference{},
+					Phase: kargoapi.StagePhaseVerifying,
+					FreightHistory: kargoapi.FreightHistory{
+						{
+							Freight: map[string]kargoapi.FreightReference{
+								testOrigin.String(): {
+									Origin: testOrigin,
+								},
+							},
+						},
+					},
 				},
 			},
 			reconciler: &reconciler{
@@ -582,6 +555,7 @@ func TestSyncNormalStage(t *testing.T) {
 				startVerificationFn: func(
 					context.Context,
 					*kargoapi.Stage,
+					*kargoapi.FreightCollection,
 				) (*kargoapi.VerificationInfo, error) {
 					return &kargoapi.VerificationInfo{
 						Phase:   kargoapi.VerificationPhaseError,
@@ -591,36 +565,29 @@ func TestSyncNormalStage(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *fakeevent.EventRecorder,
+				recorder *fakeevent.EventRecorder,
 				initialStatus kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
 				err error,
 			) {
 				require.ErrorContains(t, err, "retryable error")
-				require.NotNil(t, newStatus.CurrentFreight)
-				require.Equal(t, kargoapi.StagePhaseVerifying, newStatus.Phase)
-
-				expectInfo := kargoapi.VerificationInfo{
-					Phase:   kargoapi.VerificationPhaseError,
-					Message: "something went wrong",
-				}
 
 				require.Equal(
 					t,
-					&expectInfo,
-					newStatus.CurrentFreight.VerificationInfo,
-				)
-				require.Equal(
-					t,
-					kargoapi.VerificationInfoStack{expectInfo},
-					newStatus.CurrentFreight.VerificationHistory,
+					&kargoapi.VerificationInfo{
+						Phase:   kargoapi.VerificationPhaseError,
+						Message: "something went wrong",
+					},
+					newStatus.FreightHistory.Current().VerificationHistory.Current(),
 				)
 
-				// Everything else should be returned unchanged
-				newStatus.CurrentFreight.VerificationInfo = nil
-				newStatus.CurrentFreight.VerificationHistory = nil
-				newStatus.Phase = initialStatus.Phase
+				// Status should be otherwise unchanged
+				newStatus.FreightHistory.Current().VerificationHistory =
+					initialStatus.FreightHistory.Current().VerificationHistory
 				require.Equal(t, initialStatus, newStatus)
+
+				// No events should have been recorded
+				require.Empty(t, recorder.Events)
 			},
 		},
 
@@ -633,12 +600,21 @@ func TestSyncNormalStage(t *testing.T) {
 				},
 				Status: kargoapi.StageStatus{
 					Phase: kargoapi.StagePhaseVerifying,
-					CurrentFreight: &kargoapi.FreightReference{
-						VerificationInfo: &kargoapi.VerificationInfo{
-							Phase: kargoapi.VerificationPhasePending,
-							AnalysisRun: &kargoapi.AnalysisRunReference{
-								Name:      "fake-analysis-run",
-								Namespace: "fake-namespace",
+					FreightHistory: kargoapi.FreightHistory{
+						{
+							Freight: map[string]kargoapi.FreightReference{
+								testOrigin.String(): {
+									Origin: testOrigin,
+								},
+							},
+							VerificationHistory: []kargoapi.VerificationInfo{
+								{
+									Phase: kargoapi.VerificationPhasePending,
+									AnalysisRun: &kargoapi.AnalysisRunReference{
+										Name:      "fake-analysis-run",
+										Namespace: "fake-namespace",
+									},
+								},
 							},
 						},
 					},
@@ -660,7 +636,11 @@ func TestSyncNormalStage(t *testing.T) {
 				) (*kargoapi.Freight, error) {
 					return &kargoapi.Freight{}, nil
 				},
-				getVerificationInfoFn: func(_ context.Context, _ *kargoapi.Stage) (*kargoapi.VerificationInfo, error) {
+				getVerificationInfoFn: func(
+					context.Context,
+					*kargoapi.Stage,
+					*kargoapi.VerificationInfo,
+				) (*kargoapi.VerificationInfo, error) {
 					return &kargoapi.VerificationInfo{
 						StartTime:  ptr.To(metav1.NewTime(fakeTime)),
 						FinishTime: ptr.To(metav1.NewTime(fakeTime)),
@@ -677,7 +657,8 @@ func TestSyncNormalStage(t *testing.T) {
 				err error,
 			) {
 				require.NoError(t, err)
-				require.NotNil(t, newStatus.CurrentFreight)
+				require.Equal(t, kargoapi.StagePhaseSteady, newStatus.Phase)
+
 				require.Equal(
 					t,
 					&kargoapi.VerificationInfo{
@@ -686,15 +667,16 @@ func TestSyncNormalStage(t *testing.T) {
 						Phase:      kargoapi.VerificationPhaseError,
 						Message:    "something went wrong",
 					},
-					newStatus.CurrentFreight.VerificationInfo,
+					newStatus.FreightHistory.Current().VerificationHistory.Current(),
 				)
-				// Phase should be changed to Steady
-				require.Equal(t, kargoapi.StagePhaseSteady, newStatus.Phase)
-				// Everything else should be unchanged
+
+				// Status should be otherwise unchanged
 				newStatus.Phase = initialStatus.Phase
-				newStatus.CurrentFreight = initialStatus.CurrentFreight
+				newStatus.FreightHistory.Current().VerificationHistory =
+					initialStatus.FreightHistory.Current().VerificationHistory
 				require.Equal(t, initialStatus, newStatus)
 
+				// The unrecoverable error should have been recorded as an event
 				require.Len(t, recorder.Events, 1)
 				event := <-recorder.Events
 				require.Equal(t, kargoapi.EventReasonFreightVerificationErrored, event.Reason)
@@ -718,12 +700,21 @@ func TestSyncNormalStage(t *testing.T) {
 				},
 				Status: kargoapi.StageStatus{
 					Phase: kargoapi.StagePhaseVerifying,
-					CurrentFreight: &kargoapi.FreightReference{
-						VerificationInfo: &kargoapi.VerificationInfo{
-							Phase: kargoapi.VerificationPhasePending,
-							AnalysisRun: &kargoapi.AnalysisRunReference{
-								Name:      "fake-analysis-run",
-								Namespace: "fake-namespace",
+					FreightHistory: kargoapi.FreightHistory{
+						{
+							Freight: map[string]kargoapi.FreightReference{
+								testOrigin.String(): {
+									Origin: testOrigin,
+								},
+							},
+							VerificationHistory: []kargoapi.VerificationInfo{
+								{
+									Phase: kargoapi.VerificationPhasePending,
+									AnalysisRun: &kargoapi.AnalysisRunReference{
+										Name:      "fake-analysis-run",
+										Namespace: "fake-namespace",
+									},
+								},
 							},
 						},
 					},
@@ -738,7 +729,11 @@ func TestSyncNormalStage(t *testing.T) {
 					return status, nil
 				},
 				appHealth: &mockAppHealthEvaluator{},
-				getVerificationInfoFn: func(_ context.Context, _ *kargoapi.Stage) (*kargoapi.VerificationInfo, error) {
+				getVerificationInfoFn: func(
+					context.Context,
+					*kargoapi.Stage,
+					*kargoapi.VerificationInfo,
+				) (*kargoapi.VerificationInfo, error) {
 					return &kargoapi.VerificationInfo{
 						Phase:   kargoapi.VerificationPhaseError,
 						Message: "something went wrong",
@@ -751,13 +746,13 @@ func TestSyncNormalStage(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *fakeevent.EventRecorder,
+				recorder *fakeevent.EventRecorder,
 				initialStatus kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
 				err error,
 			) {
 				require.ErrorContains(t, err, "retryable error")
-				require.NotNil(t, newStatus.CurrentFreight)
+
 				require.Equal(
 					t,
 					&kargoapi.VerificationInfo{
@@ -768,16 +763,16 @@ func TestSyncNormalStage(t *testing.T) {
 							Namespace: "fake-namespace",
 						},
 					},
-					newStatus.CurrentFreight.VerificationInfo,
+					newStatus.FreightHistory.Current().VerificationHistory.Current(),
 				)
-				require.Len(t, newStatus.CurrentFreight.VerificationHistory, 1)
 
-				// Phase should not be changed to Steady
-				require.Equal(t, kargoapi.StagePhaseVerifying, newStatus.Phase)
-				// Everything else should be unchanged
-				newStatus.Phase = initialStatus.Phase
-				newStatus.CurrentFreight = initialStatus.CurrentFreight
+				// Status should be otherwise unchanged
+				newStatus.FreightHistory.Current().VerificationHistory =
+					initialStatus.FreightHistory.Current().VerificationHistory
 				require.Equal(t, initialStatus, newStatus)
+
+				// No events should have been recorded
+				require.Empty(t, recorder.Events)
 			},
 		},
 
@@ -795,12 +790,21 @@ func TestSyncNormalStage(t *testing.T) {
 				},
 				Status: kargoapi.StageStatus{
 					Phase: kargoapi.StagePhaseVerifying,
-					CurrentFreight: &kargoapi.FreightReference{
-						VerificationInfo: &kargoapi.VerificationInfo{
-							ID:    "fake-id",
-							Phase: kargoapi.VerificationPhasePending,
-							AnalysisRun: &kargoapi.AnalysisRunReference{
-								Name: "fake-analysis-run",
+					FreightHistory: kargoapi.FreightHistory{
+						{
+							Freight: map[string]kargoapi.FreightReference{
+								testOrigin.String(): {
+									Origin: testOrigin,
+								},
+							},
+							VerificationHistory: []kargoapi.VerificationInfo{
+								{
+									ID:    "fake-id",
+									Phase: kargoapi.VerificationPhasePending,
+									AnalysisRun: &kargoapi.AnalysisRunReference{
+										Name: "fake-analysis-run",
+									},
+								},
 							},
 						},
 					},
@@ -832,12 +836,14 @@ func TestSyncNormalStage(t *testing.T) {
 				getVerificationInfoFn: func(
 					_ context.Context,
 					s *kargoapi.Stage,
+					_ *kargoapi.VerificationInfo,
 				) (*kargoapi.VerificationInfo, error) {
-					return s.Status.CurrentFreight.VerificationInfo, nil
+					return s.Status.FreightHistory.Current().VerificationHistory.Current(), nil
 				},
 				abortVerificationFn: func(
 					_ context.Context,
 					_ *kargoapi.Stage,
+					_ *kargoapi.VerificationInfo,
 				) *kargoapi.VerificationInfo {
 					return &kargoapi.VerificationInfo{
 						StartTime:  ptr.To(metav1.NewTime(fakeTime)),
@@ -850,12 +856,13 @@ func TestSyncNormalStage(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				recorder *fakeevent.EventRecorder,
-				_ kargoapi.StageStatus,
+				initialStatus kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
 				err error,
 			) {
 				require.NoError(t, err)
-				require.NotNil(t, newStatus.CurrentFreight)
+				require.Equal(t, kargoapi.StagePhaseSteady, newStatus.Phase)
+
 				require.Equal(
 					t,
 					&kargoapi.VerificationInfo{
@@ -864,12 +871,15 @@ func TestSyncNormalStage(t *testing.T) {
 						Phase:      kargoapi.VerificationPhaseAborted,
 						Message:    "aborted",
 					},
-					newStatus.CurrentFreight.VerificationInfo,
+					newStatus.FreightHistory.Current().VerificationHistory.Current(),
 				)
 
-				// Phase should be changed to Steady
-				require.Equal(t, kargoapi.StagePhaseSteady, newStatus.Phase)
+				// Status should be otherwise unchanged
+				newStatus.Phase = kargoapi.StagePhaseVerifying
+				newStatus.FreightHistory.Current().VerificationHistory =
+					initialStatus.FreightHistory.Current().VerificationHistory
 
+				// The aborted verification should have been recorded as an event
 				require.Len(t, recorder.Events, 1)
 				event := <-recorder.Events
 				require.Equal(t, kargoapi.EventReasonFreightVerificationAborted, event.Reason)
@@ -898,13 +908,22 @@ func TestSyncNormalStage(t *testing.T) {
 				},
 				Status: kargoapi.StageStatus{
 					Phase: kargoapi.StagePhaseVerifying,
-					CurrentFreight: &kargoapi.FreightReference{
-						VerificationInfo: &kargoapi.VerificationInfo{
-							ID:        "fake-id",
-							StartTime: ptr.To(metav1.NewTime(fakeTime)),
-							Phase:     kargoapi.VerificationPhasePending,
-							AnalysisRun: &kargoapi.AnalysisRunReference{
-								Name: "fake-analysis-run",
+					FreightHistory: kargoapi.FreightHistory{
+						{
+							Freight: map[string]kargoapi.FreightReference{
+								testOrigin.String(): {
+									Origin: testOrigin,
+								},
+							},
+							VerificationHistory: []kargoapi.VerificationInfo{
+								{
+									ID:        "fake-id",
+									StartTime: ptr.To(metav1.NewTime(fakeTime)),
+									Phase:     kargoapi.VerificationPhasePending,
+									AnalysisRun: &kargoapi.AnalysisRunReference{
+										Name: "fake-analysis-run",
+									},
+								},
 							},
 						},
 					},
@@ -940,8 +959,9 @@ func TestSyncNormalStage(t *testing.T) {
 				getVerificationInfoFn: func(
 					_ context.Context,
 					s *kargoapi.Stage,
+					_ *kargoapi.VerificationInfo,
 				) (*kargoapi.VerificationInfo, error) {
-					i := s.Status.CurrentFreight.VerificationInfo.DeepCopy()
+					i := s.Status.FreightHistory.Current().VerificationHistory.Current().DeepCopy()
 					i.FinishTime = ptr.To(metav1.NewTime(fakeTime))
 					i.Phase = kargoapi.VerificationPhaseError
 					return i, nil
@@ -949,6 +969,7 @@ func TestSyncNormalStage(t *testing.T) {
 				abortVerificationFn: func(
 					context.Context,
 					*kargoapi.Stage,
+					*kargoapi.VerificationInfo,
 				) *kargoapi.VerificationInfo {
 					// Should not be called
 					return &kargoapi.VerificationInfo{
@@ -961,14 +982,26 @@ func TestSyncNormalStage(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				recorder *fakeevent.EventRecorder,
-				_ kargoapi.StageStatus,
+				initialStatus kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
 				err error,
 			) {
 				require.NoError(t, err)
-				require.NotNil(t, newStatus.CurrentFreight)
-				require.Equal(t, kargoapi.VerificationPhaseError, newStatus.CurrentFreight.VerificationInfo.Phase)
+				require.Equal(t, kargoapi.StagePhaseSteady, newStatus.Phase)
 
+				require.Equal(
+					t,
+					kargoapi.VerificationPhaseError,
+					newStatus.FreightHistory.Current().VerificationHistory.Current().Phase,
+				)
+
+				// Status should be otherwise unchanged
+				newStatus.Phase = kargoapi.StagePhaseVerifying
+				newStatus.FreightHistory.Current().VerificationHistory =
+					initialStatus.FreightHistory.Current().VerificationHistory
+				require.Equal(t, initialStatus, newStatus)
+
+				// The verification error should have been recorded as an event
 				require.Len(t, recorder.Events, 1)
 				event := <-recorder.Events
 				require.Equal(t, kargoapi.EventReasonFreightVerificationErrored, event.Reason)
@@ -990,8 +1023,16 @@ func TestSyncNormalStage(t *testing.T) {
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
 				},
 				Status: kargoapi.StageStatus{
-					Phase:          kargoapi.StagePhaseVerifying,
-					CurrentFreight: &kargoapi.FreightReference{},
+					Phase: kargoapi.StagePhaseVerifying,
+					FreightHistory: kargoapi.FreightHistory{
+						{
+							Freight: map[string]kargoapi.FreightReference{
+								testOrigin.String(): {
+									Origin: testOrigin,
+								},
+							},
+						},
+					},
 				},
 			},
 			reconciler: &reconciler{
@@ -1019,11 +1060,12 @@ func TestSyncNormalStage(t *testing.T) {
 				// Since no verification process was defined and the Stage is healthy,
 				// the Stage should have transitioned to a Steady phase.
 				require.Equal(t, kargoapi.StagePhaseSteady, newStatus.Phase)
+
 				// Status should be otherwise unchanged
 				newStatus.Phase = initialStatus.Phase
 				require.Equal(t, initialStatus, newStatus)
 
-				// No events should be recorded
+				// No events should have been recorded
 				require.Empty(t, recorder.Events)
 			},
 		},
@@ -1032,14 +1074,20 @@ func TestSyncNormalStage(t *testing.T) {
 			name: "error checking if auto-promotion is permitted",
 			stage: &kargoapi.Stage{
 				Spec: kargoapi.StageSpec{
-					Subscriptions: kargoapi.Subscriptions{
-						Warehouse: "fake-warehouse",
-					},
+					RequestedFreight:    []kargoapi.FreightRequest{{}},
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
 				},
 				Status: kargoapi.StageStatus{
-					Phase:          kargoapi.StagePhaseSteady,
-					CurrentFreight: &kargoapi.FreightReference{},
+					Phase: kargoapi.StagePhaseSteady,
+					FreightHistory: kargoapi.FreightHistory{
+						{
+							Freight: map[string]kargoapi.FreightReference{
+								testOrigin.String(): {
+									Origin: testOrigin,
+								},
+							},
+						},
+					},
 				},
 			},
 			reconciler: &reconciler{
@@ -1052,7 +1100,7 @@ func TestSyncNormalStage(t *testing.T) {
 				},
 				appHealth: &mockAppHealthEvaluator{},
 				verifyFreightInStageFn: func(context.Context, string, string, string) (bool, error) {
-					return true, nil
+					return false, nil
 				},
 				isAutoPromotionPermittedFn: func(
 					context.Context,
@@ -1076,23 +1124,14 @@ func TestSyncNormalStage(t *testing.T) {
 				newStatus kargoapi.StageStatus,
 				err error,
 			) {
-				// Verification should be done before auto-promotion
-				require.Len(t, recorder.Events, 1)
-				event := <-recorder.Events
-				require.Equal(t, kargoapi.EventReasonFreightVerificationSucceeded, event.Reason)
-				require.Equal(t,
-					fakeTime.Format(time.RFC3339),
-					event.Annotations[kargoapi.AnnotationKeyEventVerificationStartTime],
-				)
-				require.Equal(t,
-					fakeTime.Format(time.RFC3339),
-					event.Annotations[kargoapi.AnnotationKeyEventVerificationFinishTime],
-				)
-
 				require.ErrorContains(t, err, "something went wrong")
 				require.ErrorContains(t, err, "error checking if auto-promotion is permitted")
+
 				// Status should be returned unchanged
 				require.Equal(t, initialStatus, newStatus)
+
+				// No events should have been recorded
+				require.Empty(t, recorder.Events)
 			},
 		},
 
@@ -1100,14 +1139,20 @@ func TestSyncNormalStage(t *testing.T) {
 			name: "auto-promotion is not permitted",
 			stage: &kargoapi.Stage{
 				Spec: kargoapi.StageSpec{
-					Subscriptions: kargoapi.Subscriptions{
-						Warehouse: "fake-warehouse",
-					},
+					RequestedFreight:    []kargoapi.FreightRequest{{}},
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
 				},
 				Status: kargoapi.StageStatus{
-					Phase:          kargoapi.StagePhaseSteady,
-					CurrentFreight: &kargoapi.FreightReference{},
+					Phase: kargoapi.StagePhaseSteady,
+					FreightHistory: kargoapi.FreightHistory{
+						{
+							Freight: map[string]kargoapi.FreightReference{
+								testOrigin.String(): {
+									Origin: testOrigin,
+								},
+							},
+						},
+					},
 				},
 			},
 			reconciler: &reconciler{
@@ -1120,7 +1165,7 @@ func TestSyncNormalStage(t *testing.T) {
 				},
 				appHealth: &mockAppHealthEvaluator{},
 				verifyFreightInStageFn: func(context.Context, string, string, string) (bool, error) {
-					return true, nil
+					return false, nil
 				},
 				isAutoPromotionPermittedFn: func(
 					context.Context,
@@ -1144,37 +1189,34 @@ func TestSyncNormalStage(t *testing.T) {
 				newStatus kargoapi.StageStatus,
 				err error,
 			) {
-				// Verification should be done before auto-promotion
-				require.Len(t, recorder.Events, 1)
-				event := <-recorder.Events
-				require.Equal(t, kargoapi.EventReasonFreightVerificationSucceeded, event.Reason)
-				require.Equal(t,
-					fakeTime.Format(time.RFC3339),
-					event.Annotations[kargoapi.AnnotationKeyEventVerificationStartTime],
-				)
-				require.Equal(t,
-					fakeTime.Format(time.RFC3339),
-					event.Annotations[kargoapi.AnnotationKeyEventVerificationFinishTime],
-				)
-
 				require.NoError(t, err)
+
 				// Status should be returned unchanged
 				require.Equal(t, initialStatus, newStatus)
+
+				// No events should have been recorded
+				require.Empty(t, recorder.Events)
 			},
 		},
 
 		{
-			name: "error getting latest Freight",
+			name: "error getting available Freight",
 			stage: &kargoapi.Stage{
 				Spec: kargoapi.StageSpec{
-					Subscriptions: kargoapi.Subscriptions{
-						Warehouse: "fake-warehouse",
-					},
+					RequestedFreight:    []kargoapi.FreightRequest{{}},
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
 				},
 				Status: kargoapi.StageStatus{
-					Phase:          kargoapi.StagePhaseSteady,
-					CurrentFreight: &kargoapi.FreightReference{},
+					Phase: kargoapi.StagePhaseSteady,
+					FreightHistory: kargoapi.FreightHistory{
+						{
+							Freight: map[string]kargoapi.FreightReference{
+								testOrigin.String(): {
+									Origin: testOrigin,
+								},
+							},
+						},
+					},
 				},
 			},
 			reconciler: &reconciler{
@@ -1187,7 +1229,7 @@ func TestSyncNormalStage(t *testing.T) {
 				},
 				appHealth: &mockAppHealthEvaluator{},
 				verifyFreightInStageFn: func(context.Context, string, string, string) (bool, error) {
-					return true, nil
+					return false, nil
 				},
 				isAutoPromotionPermittedFn: func(
 					context.Context,
@@ -1203,11 +1245,9 @@ func TestSyncNormalStage(t *testing.T) {
 				) (*kargoapi.Freight, error) {
 					return &kargoapi.Freight{}, nil
 				},
-				getLatestAvailableFreightFn: func(
-					context.Context,
-					string,
-					*kargoapi.Stage,
-				) (*kargoapi.Freight, error) {
+				getAvailableFreightFn: func(
+					context.Context, *kargoapi.Stage, bool,
+				) ([]kargoapi.Freight, error) {
 					return nil, errors.New("something went wrong")
 				},
 			},
@@ -1218,23 +1258,14 @@ func TestSyncNormalStage(t *testing.T) {
 				newStatus kargoapi.StageStatus,
 				err error,
 			) {
-				// Verification should be done before auto-promotion
-				require.Len(t, recorder.Events, 1)
-				event := <-recorder.Events
-				require.Equal(t, kargoapi.EventReasonFreightVerificationSucceeded, event.Reason)
-				require.Equal(t,
-					fakeTime.Format(time.RFC3339),
-					event.Annotations[kargoapi.AnnotationKeyEventVerificationStartTime],
-				)
-				require.Equal(t,
-					fakeTime.Format(time.RFC3339),
-					event.Annotations[kargoapi.AnnotationKeyEventVerificationFinishTime],
-				)
-
 				require.ErrorContains(t, err, "something went wrong")
 				require.ErrorContains(t, err, "error finding latest Freight for Stage")
+
 				// Status should be returned unchanged
 				require.Equal(t, initialStatus, newStatus)
+
+				// No events should have been recorded
+				require.Empty(t, recorder.Events)
 			},
 		},
 
@@ -1242,14 +1273,25 @@ func TestSyncNormalStage(t *testing.T) {
 			name: "no Freight found",
 			stage: &kargoapi.Stage{
 				Spec: kargoapi.StageSpec{
-					Subscriptions: kargoapi.Subscriptions{
-						Warehouse: "fake-warehouse",
-					},
+					RequestedFreight:    []kargoapi.FreightRequest{{}},
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
 				},
 				Status: kargoapi.StageStatus{
-					Phase:          kargoapi.StagePhaseSteady,
-					CurrentFreight: &kargoapi.FreightReference{},
+					Phase: kargoapi.StagePhaseSteady,
+					FreightHistory: kargoapi.FreightHistory{
+						{
+							Freight: map[string]kargoapi.FreightReference{
+								testOrigin.String(): {
+									Origin: testOrigin,
+								},
+							},
+							VerificationHistory: []kargoapi.VerificationInfo{
+								{
+									Phase: kargoapi.VerificationPhaseSuccessful,
+								},
+							},
+						},
+					},
 				},
 			},
 			reconciler: &reconciler{
@@ -1278,11 +1320,9 @@ func TestSyncNormalStage(t *testing.T) {
 				) (bool, error) {
 					return true, nil
 				},
-				getLatestAvailableFreightFn: func(
-					context.Context,
-					string,
-					*kargoapi.Stage,
-				) (*kargoapi.Freight, error) {
+				getAvailableFreightFn: func(
+					context.Context, *kargoapi.Stage, bool,
+				) ([]kargoapi.Freight, error) {
 					return nil, nil
 				},
 			},
@@ -1294,10 +1334,11 @@ func TestSyncNormalStage(t *testing.T) {
 				err error,
 			) {
 				require.NoError(t, err)
+
 				// Status should be returned unchanged
 				require.Equal(t, initialStatus, newStatus)
 
-				// No events should be recorded
+				// No events should have been recorded
 				require.Empty(t, recorder.Events)
 			},
 		},
@@ -1306,15 +1347,27 @@ func TestSyncNormalStage(t *testing.T) {
 			name: "Stage already has latest Freight",
 			stage: &kargoapi.Stage{
 				Spec: kargoapi.StageSpec{
-					Subscriptions: kargoapi.Subscriptions{
-						Warehouse: "fake-warehouse",
+					RequestedFreight: []kargoapi.FreightRequest{
+						{
+							Origin: kargoapi.FreightOrigin{
+								Kind: kargoapi.FreightOriginKindWarehouse,
+								Name: testOrigin.Name,
+							},
+						},
 					},
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
 				},
 				Status: kargoapi.StageStatus{
 					Phase: kargoapi.StagePhaseSteady,
-					CurrentFreight: &kargoapi.FreightReference{
-						Name: "fake-freight-id",
+					FreightHistory: kargoapi.FreightHistory{
+						{
+							Freight: map[string]kargoapi.FreightReference{
+								testOrigin.String(): {
+									Name:   "fake-freight-id",
+									Origin: testOrigin,
+								},
+							},
+						},
 					},
 				},
 			},
@@ -1328,7 +1381,7 @@ func TestSyncNormalStage(t *testing.T) {
 				},
 				appHealth: &mockAppHealthEvaluator{},
 				verifyFreightInStageFn: func(context.Context, string, string, string) (bool, error) {
-					return true, nil
+					return false, nil
 				},
 				isAutoPromotionPermittedFn: func(
 					context.Context,
@@ -1344,28 +1397,30 @@ func TestSyncNormalStage(t *testing.T) {
 				) (*kargoapi.Freight, error) {
 					return &kargoapi.Freight{}, nil
 				},
-				getLatestAvailableFreightFn: func(
-					context.Context,
-					string,
-					*kargoapi.Stage,
-				) (*kargoapi.Freight, error) {
-					return &kargoapi.Freight{
+				getAvailableFreightFn: func(
+					context.Context, *kargoapi.Stage, bool,
+				) ([]kargoapi.Freight, error) {
+					return []kargoapi.Freight{{
 						ObjectMeta: metav1.ObjectMeta{
 							Name: "fake-freight-id",
 						},
-					}, nil
+					}}, nil
 				},
 			},
 			assertions: func(
 				t *testing.T,
-				_ *fakeevent.EventRecorder,
+				recorder *fakeevent.EventRecorder,
 				initialStatus kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
 				err error,
 			) {
 				require.NoError(t, err)
+
 				// Status should be returned unchanged
 				require.Equal(t, initialStatus, newStatus)
+
+				// No events should have been recorded
+				require.Empty(t, recorder.Events)
 			},
 		},
 
@@ -1373,14 +1428,20 @@ func TestSyncNormalStage(t *testing.T) {
 			name: "Promotion already exists",
 			stage: &kargoapi.Stage{
 				Spec: kargoapi.StageSpec{
-					Subscriptions: kargoapi.Subscriptions{
-						Warehouse: "fake-warehouse",
-					},
+					RequestedFreight:    []kargoapi.FreightRequest{{}},
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
 				},
 				Status: kargoapi.StageStatus{
-					Phase:          kargoapi.StagePhaseSteady,
-					CurrentFreight: &kargoapi.FreightReference{},
+					Phase: kargoapi.StagePhaseSteady,
+					FreightHistory: kargoapi.FreightHistory{
+						{
+							Freight: map[string]kargoapi.FreightReference{
+								testOrigin.String(): {
+									Origin: testOrigin,
+								},
+							},
+						},
+					},
 				},
 			},
 			reconciler: &reconciler{
@@ -1393,7 +1454,7 @@ func TestSyncNormalStage(t *testing.T) {
 				},
 				appHealth: &mockAppHealthEvaluator{},
 				verifyFreightInStageFn: func(context.Context, string, string, string) (bool, error) {
-					return true, nil
+					return false, nil
 				},
 				isAutoPromotionPermittedFn: func(
 					context.Context,
@@ -1413,16 +1474,14 @@ func TestSyncNormalStage(t *testing.T) {
 						},
 					}, nil
 				},
-				getLatestAvailableFreightFn: func(
-					context.Context,
-					string,
-					*kargoapi.Stage,
-				) (*kargoapi.Freight, error) {
-					return &kargoapi.Freight{
+				getAvailableFreightFn: func(
+					context.Context, *kargoapi.Stage, bool,
+				) ([]kargoapi.Freight, error) {
+					return []kargoapi.Freight{{
 						ObjectMeta: metav1.ObjectMeta{
 							Name: "fake-freight-id",
 						},
-					}, nil
+					}}, nil
 				},
 				listPromosFn: func(
 					_ context.Context,
@@ -1437,14 +1496,18 @@ func TestSyncNormalStage(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *fakeevent.EventRecorder,
+				recorder *fakeevent.EventRecorder,
 				initialStatus kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
 				err error,
 			) {
 				require.NoError(t, err)
+
 				// Status should be returned unchanged
 				require.Equal(t, initialStatus, newStatus)
+
+				// No events should have been recorded
+				require.Empty(t, recorder.Events)
 			},
 		},
 
@@ -1452,14 +1515,20 @@ func TestSyncNormalStage(t *testing.T) {
 			name: "error creating Promotion",
 			stage: &kargoapi.Stage{
 				Spec: kargoapi.StageSpec{
-					Subscriptions: kargoapi.Subscriptions{
-						Warehouse: "fake-warehouse",
-					},
+					RequestedFreight:    []kargoapi.FreightRequest{{}},
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
 				},
 				Status: kargoapi.StageStatus{
-					Phase:          kargoapi.StagePhaseSteady,
-					CurrentFreight: &kargoapi.FreightReference{},
+					Phase: kargoapi.StagePhaseSteady,
+					FreightHistory: kargoapi.FreightHistory{
+						{
+							Freight: map[string]kargoapi.FreightReference{
+								testOrigin.String(): {
+									Origin: testOrigin,
+								},
+							},
+						},
+					},
 				},
 			},
 			reconciler: &reconciler{
@@ -1472,7 +1541,7 @@ func TestSyncNormalStage(t *testing.T) {
 				},
 				appHealth: &mockAppHealthEvaluator{},
 				verifyFreightInStageFn: func(context.Context, string, string, string) (bool, error) {
-					return true, nil
+					return false, nil
 				},
 				isAutoPromotionPermittedFn: func(
 					context.Context,
@@ -1492,16 +1561,14 @@ func TestSyncNormalStage(t *testing.T) {
 						},
 					}, nil
 				},
-				getLatestAvailableFreightFn: func(
-					context.Context,
-					string,
-					*kargoapi.Stage,
-				) (*kargoapi.Freight, error) {
-					return &kargoapi.Freight{
+				getAvailableFreightFn: func(
+					context.Context, *kargoapi.Stage, bool,
+				) ([]kargoapi.Freight, error) {
+					return []kargoapi.Freight{{
 						ObjectMeta: metav1.ObjectMeta{
 							Name: "fake-freight-id",
 						},
-					}, nil
+					}}, nil
 				},
 				listPromosFn: func(
 					context.Context,
@@ -1525,23 +1592,14 @@ func TestSyncNormalStage(t *testing.T) {
 				newStatus kargoapi.StageStatus,
 				err error,
 			) {
-				// Verification should be done before promotion
-				require.Len(t, recorder.Events, 1)
-				event := <-recorder.Events
-				require.Equal(t, kargoapi.EventReasonFreightVerificationSucceeded, event.Reason)
-				require.Equal(t,
-					fakeTime.Format(time.RFC3339),
-					event.Annotations[kargoapi.AnnotationKeyEventVerificationStartTime],
-				)
-				require.Equal(t,
-					fakeTime.Format(time.RFC3339),
-					event.Annotations[kargoapi.AnnotationKeyEventVerificationFinishTime],
-				)
-
 				require.ErrorContains(t, err, "something went wrong")
 				require.ErrorContains(t, err, "error creating Promotion of Stage")
+
 				// Status should be returned unchanged
 				require.Equal(t, initialStatus, newStatus)
+
+				// No events should have been recorded
+				require.Empty(t, recorder.Events)
 			},
 		},
 
@@ -1553,21 +1611,22 @@ func TestSyncNormalStage(t *testing.T) {
 					Name:       "fake-stage",
 				},
 				Spec: kargoapi.StageSpec{
-					Subscriptions: kargoapi.Subscriptions{
-						Warehouse: "fake-warehouse",
-					},
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
 					Verification:        &kargoapi.Verification{},
 				},
 				Status: kargoapi.StageStatus{
 					Phase: kargoapi.StagePhaseSteady,
-					CurrentFreight: &kargoapi.FreightReference{
-						VerificationInfo: &kargoapi.VerificationInfo{
-							Phase: kargoapi.VerificationPhaseSuccessful,
-							AnalysisRun: &kargoapi.AnalysisRunReference{
-								Name:      "fake-analysis-run",
-								Namespace: "fake-namespace",
-								Phase:     string(rollouts.AnalysisPhaseSuccessful),
+					FreightHistory: kargoapi.FreightHistory{
+						{
+							Freight: map[string]kargoapi.FreightReference{
+								testOrigin.String(): {
+									Origin: testOrigin,
+								},
+							},
+							VerificationHistory: []kargoapi.VerificationInfo{
+								{
+									Phase: kargoapi.VerificationPhaseSuccessful,
+								},
 							},
 						},
 					},
@@ -1589,6 +1648,7 @@ func TestSyncNormalStage(t *testing.T) {
 				getVerificationInfoFn: func(
 					context.Context,
 					*kargoapi.Stage,
+					*kargoapi.VerificationInfo,
 				) (*kargoapi.VerificationInfo, error) {
 					return &kargoapi.VerificationInfo{
 						Phase: kargoapi.VerificationPhaseSuccessful,
@@ -1626,16 +1686,14 @@ func TestSyncNormalStage(t *testing.T) {
 						},
 					}, nil
 				},
-				getLatestAvailableFreightFn: func(
-					context.Context,
-					string,
-					*kargoapi.Stage,
-				) (*kargoapi.Freight, error) {
-					return &kargoapi.Freight{
+				getAvailableFreightFn: func(
+					context.Context, *kargoapi.Stage, bool,
+				) ([]kargoapi.Freight, error) {
+					return []kargoapi.Freight{{
 						ObjectMeta: metav1.ObjectMeta{
 							Name: "fake-freight-id",
 						},
-					}, nil
+					}}, nil
 				},
 				listPromosFn: func(
 					context.Context,
@@ -1660,21 +1718,11 @@ func TestSyncNormalStage(t *testing.T) {
 				err error,
 			) {
 				require.NoError(t, err)
-				require.Equal(t, int64(42), newStatus.ObservedGeneration) // Set
+
+				// Status should be returned unchanged
 				require.Equal(t, kargoapi.StagePhaseSteady, newStatus.Phase)
-				require.NotNil(t, newStatus.Health) // Set
-				require.Equal(
-					t,
-					&kargoapi.VerificationInfo{
-						Phase: kargoapi.VerificationPhaseSuccessful,
-						AnalysisRun: &kargoapi.AnalysisRunReference{
-							Name:      "fake-analysis-run",
-							Namespace: "fake-namespace",
-							Phase:     string(rollouts.AnalysisPhaseSuccessful),
-						},
-					},
-					newStatus.CurrentFreight.VerificationInfo,
-				)
+
+				// No events should have been recorded
 				require.Empty(t, recorder.Events)
 			},
 		},
@@ -1688,20 +1736,27 @@ func TestSyncNormalStage(t *testing.T) {
 					Generation: 42,
 				},
 				Spec: kargoapi.StageSpec{
-					Subscriptions: kargoapi.Subscriptions{
-						Warehouse: "fake-warehouse",
-					},
+					RequestedFreight:    []kargoapi.FreightRequest{{}},
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
 					Verification:        &kargoapi.Verification{},
 				},
 				Status: kargoapi.StageStatus{
 					Phase: kargoapi.StagePhaseVerifying,
-					CurrentFreight: &kargoapi.FreightReference{
-						VerificationInfo: &kargoapi.VerificationInfo{
-							Phase: kargoapi.VerificationPhasePending,
-							AnalysisRun: &kargoapi.AnalysisRunReference{
-								Name:      "fake-analysis-run",
-								Namespace: "fake-namespace",
+					FreightHistory: kargoapi.FreightHistory{
+						{
+							Freight: map[string]kargoapi.FreightReference{
+								testOrigin.String(): {
+									Origin: testOrigin,
+								},
+							},
+							VerificationHistory: []kargoapi.VerificationInfo{
+								{
+									Phase: kargoapi.VerificationPhasePending,
+									AnalysisRun: &kargoapi.AnalysisRunReference{
+										Name:      "fake-analysis-run",
+										Namespace: "fake-namespace",
+									},
+								},
 							},
 						},
 					},
@@ -1735,6 +1790,7 @@ func TestSyncNormalStage(t *testing.T) {
 				getVerificationInfoFn: func(
 					context.Context,
 					*kargoapi.Stage,
+					*kargoapi.VerificationInfo,
 				) (*kargoapi.VerificationInfo, error) {
 					return &kargoapi.VerificationInfo{
 						StartTime:  ptr.To(metav1.NewTime(fakeTime)),
@@ -1768,16 +1824,14 @@ func TestSyncNormalStage(t *testing.T) {
 						},
 					}, nil
 				},
-				getLatestAvailableFreightFn: func(
-					context.Context,
-					string,
-					*kargoapi.Stage,
-				) (*kargoapi.Freight, error) {
-					return &kargoapi.Freight{
+				getAvailableFreightFn: func(
+					context.Context, *kargoapi.Stage, bool,
+				) ([]kargoapi.Freight, error) {
+					return []kargoapi.Freight{{
 						ObjectMeta: metav1.ObjectMeta{
 							Name: "fake-freight-id",
 						},
-					}, nil
+					}}, nil
 				},
 				listPromosFn: func(
 					context.Context,
@@ -1802,9 +1856,11 @@ func TestSyncNormalStage(t *testing.T) {
 				err error,
 			) {
 				require.NoError(t, err)
+
 				require.Equal(t, int64(42), newStatus.ObservedGeneration) // Set
 				require.Equal(t, kargoapi.StagePhaseSteady, newStatus.Phase)
 				require.NotNil(t, newStatus.Health) // Set
+
 				require.Equal(
 					t,
 					&kargoapi.VerificationInfo{
@@ -1817,10 +1873,13 @@ func TestSyncNormalStage(t *testing.T) {
 							Phase:     string(rollouts.AnalysisPhaseSuccessful),
 						},
 					},
-					newStatus.CurrentFreight.VerificationInfo,
+					newStatus.FreightHistory.Current().VerificationHistory.Current(),
 				)
 
+				// Two events should have been recorded:
 				require.Len(t, recorder.Events, 2)
+
+				// Successful verification should have been recorded as an event
 				event := <-recorder.Events
 				require.Equal(t, kargoapi.EventReasonFreightVerificationSucceeded, event.Reason)
 				require.Equal(t,
@@ -1832,7 +1891,7 @@ func TestSyncNormalStage(t *testing.T) {
 					event.Annotations[kargoapi.AnnotationKeyEventVerificationFinishTime],
 				)
 
-				// The second event should be the promotion creation event (auto-promotion)
+				// Auto-promotion should have been recorded as an event
 				event = <-recorder.Events
 				require.Equal(t, kargoapi.EventReasonPromotionCreated, event.Reason)
 			},
@@ -1840,7 +1899,7 @@ func TestSyncNormalStage(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			recorder := fakeevent.NewEventRecorder(2)
+			recorder := fakeevent.NewEventRecorder(10)
 			testCase.reconciler.nowFn = fakeNow
 			testCase.reconciler.recorder = recorder
 			newStatus, err := testCase.reconciler.syncNormalStage(
@@ -1857,6 +1916,11 @@ func TestReconciler_syncPromotions(t *testing.T) {
 	ulidOneMinuteAgo := ulid.MustNew(ulid.Timestamp(now.Add(-time.Minute)), nil)
 	ulidOneHourAgo := ulid.MustNew(ulid.Timestamp(now.Add(-time.Hour)), nil)
 	ulidOneDayAgo := ulid.MustNew(ulid.Timestamp(now.Add(-24*time.Hour)), nil)
+
+	testOrigin := kargoapi.FreightOrigin{
+		Kind: kargoapi.FreightOriginKindWarehouse,
+		Name: "fake-warehouse",
+	}
 
 	testCases := []struct {
 		name          string
@@ -1962,7 +2026,8 @@ func TestReconciler_syncPromotions(t *testing.T) {
 							Status: kargoapi.PromotionStatus{
 								Phase: kargoapi.PromotionPhaseSucceeded,
 								Freight: &kargoapi.FreightReference{
-									Name: "fake-freight-1",
+									Name:   "fake-freight-1",
+									Origin: testOrigin,
 								},
 							},
 						},
@@ -1973,7 +2038,8 @@ func TestReconciler_syncPromotions(t *testing.T) {
 							Status: kargoapi.PromotionStatus{
 								Phase: kargoapi.PromotionPhaseErrored,
 								Freight: &kargoapi.FreightReference{
-									Name: "fake-freight-3",
+									Name:   "fake-freight-3",
+									Origin: testOrigin,
 								},
 							},
 						},
@@ -1984,7 +2050,8 @@ func TestReconciler_syncPromotions(t *testing.T) {
 							Status: kargoapi.PromotionStatus{
 								Phase: kargoapi.PromotionPhaseFailed,
 								Freight: &kargoapi.FreightReference{
-									Name: "fake-freight-2",
+									Name:   "fake-freight-2",
+									Origin: testOrigin,
 								},
 							},
 						},
@@ -2003,21 +2070,29 @@ func TestReconciler_syncPromotions(t *testing.T) {
 					Status: &kargoapi.PromotionStatus{
 						Phase: kargoapi.PromotionPhaseErrored,
 						Freight: &kargoapi.FreightReference{
-							Name: "fake-freight-3",
+							Name:   "fake-freight-3",
+							Origin: testOrigin,
 						},
 					},
 					Freight: kargoapi.FreightReference{
-						Name: "fake-freight-3",
+						Name:   "fake-freight-3",
+						Origin: testOrigin,
 					},
 				}, status.LastPromotion)
 
+				current := status.FreightHistory.Current()
+				require.NotNil(t, current)
+				require.Contains(t, current.Freight, testOrigin.String())
+
 				// Current Freight should be the Freight of the last Succeeded Promotion
-				require.Equal(t, &kargoapi.FreightReference{
-					Name: "fake-freight-1",
-				}, status.CurrentFreight)
-				require.Equal(t, kargoapi.FreightReferenceStack{
-					{Name: "fake-freight-1"},
-				}, status.History)
+				require.Equal(
+					t,
+					kargoapi.FreightReference{
+						Name:   "fake-freight-1",
+						Origin: testOrigin,
+					},
+					current.Freight[testOrigin.String()],
+				)
 			},
 		},
 		{
@@ -2072,7 +2147,8 @@ func TestReconciler_syncPromotions(t *testing.T) {
 						Phase: kargoapi.PromotionPhaseFailed,
 					},
 				}, status.LastPromotion)
-				require.Len(t, status.History, 0)
+
+				require.Len(t, status.FreightHistory, 0)
 			},
 		},
 	}
@@ -2647,397 +2723,49 @@ func TestGetPromotionsForStage(t *testing.T) {
 	}
 }
 
-func TestGetLatestAvailableFreight(t *testing.T) {
-	now := time.Now().UTC()
+func TestGetAvailableFreight(t *testing.T) {
+	testOrigin := kargoapi.FreightOrigin{
+		Kind: kargoapi.FreightOriginKindWarehouse,
+		Name: "fake-warehouse",
+	}
 	testCases := []struct {
 		name       string
-		subs       kargoapi.Subscriptions
-		reconciler *reconciler
-		assertions func(*testing.T, *kargoapi.Freight, error)
-	}{
-		{
-			name: "error getting latest Freight from Warehouse",
-			subs: kargoapi.Subscriptions{
-				Warehouse: "fake-warehouse",
-			},
-			reconciler: &reconciler{
-				getLatestFreightFromWarehouseFn: func(
-					context.Context,
-					string,
-					string,
-				) (*kargoapi.Freight, error) {
-					return nil, errors.New("something went wrong")
-				},
-			},
-			assertions: func(t *testing.T, _ *kargoapi.Freight, err error) {
-				require.ErrorContains(t, err, "something went wrong")
-				require.ErrorContains(t, err, "error checking Warehouse")
-			},
-		},
-		{
-			name: "found no Freight from Warehouse",
-			subs: kargoapi.Subscriptions{
-				Warehouse: "fake-warehouse",
-			},
-			reconciler: &reconciler{
-				getLatestFreightFromWarehouseFn: func(
-					context.Context,
-					string,
-					string,
-				) (*kargoapi.Freight, error) {
-					return nil, nil
-				},
-			},
-			assertions: func(t *testing.T, freight *kargoapi.Freight, err error) {
-				require.NoError(t, err)
-				require.Nil(t, freight)
-			},
-		},
-		{
-			name: "success getting latest Freight from Warehouse",
-			subs: kargoapi.Subscriptions{
-				Warehouse: "fake-warehouse",
-			},
-			reconciler: &reconciler{
-				getLatestFreightFromWarehouseFn: func(
-					context.Context,
-					string,
-					string,
-				) (*kargoapi.Freight, error) {
-					return &kargoapi.Freight{}, nil
-				},
-			},
-			assertions: func(t *testing.T, freight *kargoapi.Freight, err error) {
-				require.NoError(t, err)
-				require.NotNil(t, freight)
-			},
-		},
-		{
-			name: "error getting latest Freight verified in upstream Stages",
-			subs: kargoapi.Subscriptions{
-				UpstreamStages: []kargoapi.StageSubscription{{}},
-			},
-			reconciler: &reconciler{
-				getLatestVerifiedFreightFn: func(
-					context.Context,
-					string,
-					[]kargoapi.StageSubscription,
-				) (*kargoapi.Freight, error) {
-					return nil, errors.New("something went wrong")
-				},
-			},
-			assertions: func(t *testing.T, _ *kargoapi.Freight, err error) {
-				require.ErrorContains(t, err, "something went wrong")
-				require.ErrorContains(
-					t, err, "error finding latest Freight verified in Stages upstream from Stage",
-				)
-			},
-		},
-		{
-			name: "error getting latest Freight approved for Stage",
-			subs: kargoapi.Subscriptions{
-				UpstreamStages: []kargoapi.StageSubscription{{}},
-			},
-			reconciler: &reconciler{
-				getLatestVerifiedFreightFn: func(
-					context.Context,
-					string,
-					[]kargoapi.StageSubscription,
-				) (*kargoapi.Freight, error) {
-					return nil, nil
-				},
-				getLatestApprovedFreightFn: func(
-					context.Context,
-					string,
-					string,
-				) (*kargoapi.Freight, error) {
-					return nil, errors.New("something went wrong")
-				},
-			},
-			assertions: func(t *testing.T, _ *kargoapi.Freight, err error) {
-				require.ErrorContains(t, err, "something went wrong")
-				require.ErrorContains(t, err, "error finding latest Freight approved for Stage")
-			},
-		},
-		{
-			name: "found no suitable Freight",
-			subs: kargoapi.Subscriptions{
-				UpstreamStages: []kargoapi.StageSubscription{{}},
-			},
-			reconciler: &reconciler{
-				getLatestVerifiedFreightFn: func(
-					context.Context,
-					string,
-					[]kargoapi.StageSubscription,
-				) (*kargoapi.Freight, error) {
-					return nil, nil
-				},
-				getLatestApprovedFreightFn: func(
-					context.Context,
-					string,
-					string,
-				) (*kargoapi.Freight, error) {
-					return nil, nil
-				},
-			},
-			assertions: func(t *testing.T, freight *kargoapi.Freight, err error) {
-				require.NoError(t, err)
-				require.Nil(t, freight)
-			},
-		},
-		{
-			name: "only found latest Freight verified in upstream Stages",
-			subs: kargoapi.Subscriptions{
-				UpstreamStages: []kargoapi.StageSubscription{{}},
-			},
-			reconciler: &reconciler{
-				getLatestVerifiedFreightFn: func(
-					context.Context,
-					string,
-					[]kargoapi.StageSubscription,
-				) (*kargoapi.Freight, error) {
-					return &kargoapi.Freight{}, nil
-				},
-				getLatestApprovedFreightFn: func(
-					context.Context,
-					string,
-					string,
-				) (*kargoapi.Freight, error) {
-					return nil, nil
-				},
-			},
-			assertions: func(t *testing.T, freight *kargoapi.Freight, err error) {
-				require.NoError(t, err)
-				require.NotNil(t, freight)
-			},
-		},
-		{
-			name: "only found latest Freight approved for Stage",
-			subs: kargoapi.Subscriptions{
-				UpstreamStages: []kargoapi.StageSubscription{{}},
-			},
-			reconciler: &reconciler{
-				getLatestVerifiedFreightFn: func(
-					context.Context,
-					string,
-					[]kargoapi.StageSubscription,
-				) (*kargoapi.Freight, error) {
-					return nil, nil
-				},
-				getLatestApprovedFreightFn: func(
-					context.Context,
-					string,
-					string,
-				) (*kargoapi.Freight, error) {
-					return &kargoapi.Freight{}, nil
-				},
-			},
-			assertions: func(t *testing.T, freight *kargoapi.Freight, err error) {
-				require.NoError(t, err)
-				require.NotNil(t, freight)
-			},
-		},
-		{
-			name: "latest verified Freight is newer than latest approved Freight",
-			subs: kargoapi.Subscriptions{
-				UpstreamStages: []kargoapi.StageSubscription{{}},
-			},
-			reconciler: &reconciler{
-				getLatestVerifiedFreightFn: func(
-					context.Context,
-					string,
-					[]kargoapi.StageSubscription,
-				) (*kargoapi.Freight, error) {
-					return &kargoapi.Freight{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: "newer-freight",
-							CreationTimestamp: metav1.Time{
-								Time: now,
-							},
-						},
-					}, nil
-				},
-				getLatestApprovedFreightFn: func(
-					context.Context,
-					string,
-					string,
-				) (*kargoapi.Freight, error) {
-					return &kargoapi.Freight{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: "older-freight",
-							CreationTimestamp: metav1.Time{
-								Time: now.Add(-time.Hour),
-							},
-						},
-					}, nil
-				},
-			},
-			assertions: func(t *testing.T, freight *kargoapi.Freight, err error) {
-				require.NoError(t, err)
-				require.NotNil(t, freight)
-				require.Equal(t, "newer-freight", freight.Name)
-			},
-		},
-		{
-			name: "latest approved Freight is newer than latest verified Freight",
-			subs: kargoapi.Subscriptions{
-				UpstreamStages: []kargoapi.StageSubscription{{}},
-			},
-			reconciler: &reconciler{
-				getLatestVerifiedFreightFn: func(
-					context.Context,
-					string,
-					[]kargoapi.StageSubscription,
-				) (*kargoapi.Freight, error) {
-					return &kargoapi.Freight{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: "older-freight",
-							CreationTimestamp: metav1.Time{
-								Time: now.Add(-time.Hour),
-							},
-						},
-					}, nil
-				},
-				getLatestApprovedFreightFn: func(
-					context.Context,
-					string,
-					string,
-				) (*kargoapi.Freight, error) {
-					return &kargoapi.Freight{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: "newer-freight",
-							CreationTimestamp: metav1.Time{
-								Time: now,
-							},
-						},
-					}, nil
-				},
-			},
-			assertions: func(t *testing.T, freight *kargoapi.Freight, err error) {
-				require.NoError(t, err)
-				require.NotNil(t, freight)
-				require.Equal(t, "newer-freight", freight.Name)
-			},
-		},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			freight, err := testCase.reconciler.getLatestAvailableFreight(
-				context.Background(),
-				"fake-namespace",
-				&kargoapi.Stage{
-					Spec: kargoapi.StageSpec{
-						Subscriptions: testCase.subs,
-					},
-				},
-			)
-			testCase.assertions(t, freight, err)
-		})
-	}
-}
-
-func TestGetLatestFreightFromWarehouse(t *testing.T) {
-	testCases := []struct {
-		name       string
-		reconciler *reconciler
-		assertions func(*testing.T, *kargoapi.Freight, error)
-	}{
-		{
-			name: "error listing Freight from Warehouse",
-			reconciler: &reconciler{
-				listFreightFn: func(
-					context.Context,
-					client.ObjectList,
-					...client.ListOption,
-				) error {
-					return errors.New("something went wrong")
-				},
-			},
-			assertions: func(t *testing.T, _ *kargoapi.Freight, err error) {
-				require.ErrorContains(t, err, "something went wrong")
-			},
-		},
-		{
-			name: "no Freight found from Warehouse",
-			reconciler: &reconciler{
-				listFreightFn: func(
-					context.Context,
-					client.ObjectList,
-					...client.ListOption,
-				) error {
-					return nil
-				},
-			},
-			assertions: func(t *testing.T, freight *kargoapi.Freight, err error) {
-				require.NoError(t, err)
-				require.Nil(t, freight)
-			},
-		},
-		{
-			name: "success",
-			reconciler: &reconciler{
-				listFreightFn: func(
-					_ context.Context,
-					objList client.ObjectList,
-					_ ...client.ListOption,
-				) error {
-					freight, ok := objList.(*kargoapi.FreightList)
-					require.True(t, ok)
-					freight.Items = []kargoapi.Freight{
-						{
-							ObjectMeta: metav1.ObjectMeta{
-								Name: "newer-freight",
-								CreationTimestamp: metav1.Time{
-									Time: time.Now(),
-								},
-							},
-						},
-						{
-							ObjectMeta: metav1.ObjectMeta{
-								Name: "older-freight",
-								CreationTimestamp: metav1.Time{
-									Time: time.Now().Add(-time.Hour),
-								},
-							},
-						},
-					}
-					return nil
-				},
-			},
-			assertions: func(t *testing.T, freight *kargoapi.Freight, err error) {
-				require.NoError(t, err)
-				require.NotNil(t, freight)
-				// Be sure we got the latest
-				require.Equal(t, "newer-freight", freight.Name)
-			},
-		},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			freight, err := testCase.reconciler.getLatestFreightFromWarehouse(
-				context.Background(),
-				"fake-namespace",
-				"fake-warehouse",
-			)
-			testCase.assertions(t, freight, err)
-		})
-	}
-}
-
-func TestGetAllVerifiedFreight(t *testing.T) {
-	testCases := []struct {
-		name       string
+		reqs       []kargoapi.FreightRequest
 		reconciler *reconciler
 		assertions func(*testing.T, []kargoapi.Freight, error)
 	}{
 		{
-			name: "error listing Freight",
+			name: "error getting getting Freight from Warehouse",
+			reqs: []kargoapi.FreightRequest{
+				{
+					Origin: testOrigin,
+					Sources: kargoapi.FreightSources{
+						Direct: true,
+					},
+				},
+			},
 			reconciler: &reconciler{
-				listFreightFn: func(
-					context.Context,
-					client.ObjectList,
-					...client.ListOption,
-				) error {
+				listFreightFn: func(context.Context, client.ObjectList, ...client.ListOption) error {
+					return errors.New("something went wrong")
+				},
+			},
+			assertions: func(t *testing.T, _ []kargoapi.Freight, err error) {
+				require.ErrorContains(t, err, "something went wrong")
+				require.ErrorContains(t, err, "error listing Freight from Warehouse")
+			},
+		},
+		{
+			name: "error getting Freight verified in upstream Stages",
+			reqs: []kargoapi.FreightRequest{
+				{
+					Origin: testOrigin,
+					Sources: kargoapi.FreightSources{
+						Stages: []string{"fake-stage"},
+					},
+				},
+			},
+			reconciler: &reconciler{
+				listFreightFn: func(context.Context, client.ObjectList, ...client.ListOption) error {
 					return errors.New("something went wrong")
 				},
 			},
@@ -3047,13 +2775,21 @@ func TestGetAllVerifiedFreight(t *testing.T) {
 			},
 		},
 		{
-			name: "no Freight found",
+			name: "error getting Freight approved for Stage",
 			reconciler: &reconciler{
-				listFreightFn: func(
-					context.Context,
-					client.ObjectList,
-					...client.ListOption,
-				) error {
+				listFreightFn: func(context.Context, client.ObjectList, ...client.ListOption) error {
+					return errors.New("something went wrong")
+				},
+			},
+			assertions: func(t *testing.T, _ []kargoapi.Freight, err error) {
+				require.ErrorContains(t, err, "something went wrong")
+				require.ErrorContains(t, err, "error listing Freight approved for Stage")
+			},
+		},
+		{
+			name: "no available Freight found",
+			reconciler: &reconciler{
+				listFreightFn: func(context.Context, client.ObjectList, ...client.ListOption) error {
 					return nil
 				},
 			},
@@ -3064,134 +2800,45 @@ func TestGetAllVerifiedFreight(t *testing.T) {
 		},
 		{
 			name: "success",
-			reconciler: &reconciler{
-				listFreightFn: func(
-					_ context.Context,
-					objList client.ObjectList,
-					_ ...client.ListOption,
-				) error {
-					freight, ok := objList.(*kargoapi.FreightList)
-					require.True(t, ok)
-					freight.Items = []kargoapi.Freight{
-						{
-							ObjectMeta: metav1.ObjectMeta{
-								Name: "fake-freight",
-							},
-						},
-						{
-							ObjectMeta: metav1.ObjectMeta{
-								Name: "another-fake-freight",
-								CreationTimestamp: metav1.Time{
-									Time: time.Now(),
-								},
-							},
-						},
-					}
-					return nil
-				},
-			},
-			assertions: func(t *testing.T, freight []kargoapi.Freight, err error) {
-				require.NoError(t, err)
-				require.NotNil(t, freight)
-				require.Len(t, freight, 2)
-			},
-		},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			freight, err := testCase.reconciler.getAllVerifiedFreight(
-				context.Background(),
-				"fake-namespace",
-				[]kargoapi.StageSubscription{
-					{
-						Name: "fake-stage",
+			reqs: []kargoapi.FreightRequest{
+				{
+					Origin: testOrigin,
+					Sources: kargoapi.FreightSources{
+						Direct: true,
+						Stages: []string{"fake-upstream-stage"},
 					},
 				},
-			)
-			testCase.assertions(t, freight, err)
-		})
-	}
-}
-
-func TestGetLatestVerifiedFreight(t *testing.T) {
-	testCases := []struct {
-		name       string
-		reconciler *reconciler
-		assertions func(*testing.T, *kargoapi.Freight, error)
-	}{
-		{
-			name: "error getting all Freight verified in upstream Stages",
+			},
 			reconciler: &reconciler{
-				getAllVerifiedFreightFn: func(
-					context.Context,
-					string,
-					[]kargoapi.StageSubscription,
-				) ([]kargoapi.Freight, error) {
-					return nil, errors.New("something went wrong")
+				// This should end up called multiple times, but we expect the results
+				// to be de-duped
+				listFreightFn: func(_ context.Context, objList client.ObjectList, _ ...client.ListOption) error {
+					freight, ok := objList.(*kargoapi.FreightList)
+					require.True(t, ok)
+					freight.Items = []kargoapi.Freight{{}}
+					return nil
 				},
 			},
-			assertions: func(t *testing.T, _ *kargoapi.Freight, err error) {
-				require.ErrorContains(t, err, "something went wrong")
-			},
-		},
-		{
-			name: "no Freight verified in upstream Stages",
-			reconciler: &reconciler{
-				getAllVerifiedFreightFn: func(
-					context.Context,
-					string,
-					[]kargoapi.StageSubscription,
-				) ([]kargoapi.Freight, error) {
-					return nil, nil
-				},
-			},
-			assertions: func(t *testing.T, freight *kargoapi.Freight, err error) {
+			assertions: func(t *testing.T, freight []kargoapi.Freight, err error) {
 				require.NoError(t, err)
-				require.Nil(t, freight)
-			},
-		},
-		{
-			name: "success",
-			reconciler: &reconciler{
-				getAllVerifiedFreightFn: func(
-					context.Context,
-					string,
-					[]kargoapi.StageSubscription,
-				) ([]kargoapi.Freight, error) {
-					return []kargoapi.Freight{
-						{
-							ObjectMeta: metav1.ObjectMeta{
-								Name: "newer-freight",
-								CreationTimestamp: metav1.Time{
-									Time: time.Now(),
-								},
-							},
-						},
-						{
-							ObjectMeta: metav1.ObjectMeta{
-								Name: "older-freight",
-								CreationTimestamp: metav1.Time{
-									Time: time.Now().Add(-time.Hour),
-								},
-							},
-						},
-					}, nil
-				},
-			},
-			assertions: func(t *testing.T, freight *kargoapi.Freight, err error) {
-				require.NoError(t, err)
-				require.NotNil(t, freight)
-				// Be sure we got the latest
-				require.Equal(t, "newer-freight", freight.Name)
+				require.Len(t, freight, 1)
 			},
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			freight, err := testCase.reconciler.getLatestVerifiedFreight(
+			freight, err := testCase.reconciler.getAvailableFreight(
 				context.Background(),
-				"fake-namespace",
-				[]kargoapi.StageSubscription{},
+				&kargoapi.Stage{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "fake-namespace",
+						Name:      "fake-stage",
+					},
+					Spec: kargoapi.StageSpec{
+						RequestedFreight: testCase.reqs,
+					},
+				},
+				true,
 			)
 			testCase.assertions(t, freight, err)
 		})

@@ -134,10 +134,31 @@
               "description": "Name is system-assigned identifier that is derived deterministically from\nthe contents of the Freight. i.e. Two pieces of Freight can be compared for\nequality by comparing their Names.",
               "type": "string"
             },
+            "origin": {
+              "description": "Origin describes a kind of Freight in terms of its origin.",
+              "properties": {
+                "kind": {
+                  "description": "Kind is the kind of resource from which Freight may have originated. At\npresent, this can only be \"Warehouse\".",
+                  "enum": [
+                    "Warehouse"
+                  ],
+                  "type": "string"
+                },
+                "name": {
+                  "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originated.",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind",
+                "name"
+              ],
+              "type": "object"
+            },
             "verificationHistory": {
-              "description": "VerificationHistory is a stack of recent VerificationInfo. By default,\nthe last ten VerificationInfo are stored.",
+              "description": "VerificationHistory is a stack of recent VerificationInfo. By default,\nthe last ten VerificationInfo are stored.\n\n\nDeprecated: Use FreightCollection.VerificationHistory instead.",
               "items": {
-                "description": "VerificationInfo contains information about the currently running\nVerification process.",
+                "description": "VerificationInfo contains the details of an instance of a Verification\nprocess.",
                 "properties": {
                   "actor": {
                     "description": "Actor is the name of the entity that initiated or aborted the\nVerification process.",
@@ -194,7 +215,7 @@
               "type": "array"
             },
             "verificationInfo": {
-              "description": "VerificationInfo is information about any verification process that was\nassociated with this Freight for this Stage.",
+              "description": "VerificationInfo is information about any verification process that was\nassociated with this Freight for this Stage.\n\n\nDeprecated: Use FreightCollection.VerificationHistory instead.",
               "properties": {
                 "actor": {
                   "description": "Actor is the name of the entity that initiated or aborted the\nVerification process.",
@@ -249,7 +270,7 @@
               "type": "object"
             },
             "warehouse": {
-              "description": "Warehouse is the name of the Warehouse that created this Freight.",
+              "description": "Warehouse is the name of the Warehouse that created this Freight.\n\n\nDeprecated: Use the Origin instead.",
               "type": "string"
             }
           },

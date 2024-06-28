@@ -537,17 +537,23 @@ func TestValidateUpdate(t *testing.T) {
 		},
 
 		{
-			name: "attempt to mutate warehouse field",
+			name: "attempt to mutate origin field",
 			setup: func() (*kargoapi.Freight, *kargoapi.Freight) {
 				oldFreight := &kargoapi.Freight{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "fake-namespace",
 					},
-					Warehouse: "fake-warehouse",
+					Origin: kargoapi.FreightOrigin{
+						Kind: kargoapi.FreightOriginKindWarehouse,
+						Name: "fake-warehouse",
+					},
 				}
 				oldFreight.Name = oldFreight.GenerateID()
 				newFreight := oldFreight.DeepCopy()
-				newFreight.Warehouse = "another-fake-warehouse"
+				newFreight.Origin = kargoapi.FreightOrigin{
+					Kind: kargoapi.FreightOriginKindWarehouse,
+					Name: "another-fake-warehouse",
+				}
 				return oldFreight, newFreight
 			},
 			webhook: &webhook{

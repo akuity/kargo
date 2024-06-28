@@ -3,6 +3,7 @@ package kubeclient
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
@@ -86,18 +87,21 @@ func indexStagesByAnalysisRun(shardName string) client.IndexerFunc {
 		}
 
 		stage := obj.(*kargoapi.Stage) // nolint: forcetypeassert
-		if stage.Status.CurrentFreight == nil ||
-			stage.Status.CurrentFreight.VerificationInfo == nil ||
-			stage.Status.CurrentFreight.VerificationInfo.AnalysisRun == nil {
+
+		currentFC := stage.Status.FreightHistory.Current()
+		if currentFC == nil {
 			return nil
 		}
-		return []string{
-			fmt.Sprintf(
-				"%s:%s",
-				stage.Status.CurrentFreight.VerificationInfo.AnalysisRun.Namespace,
-				stage.Status.CurrentFreight.VerificationInfo.AnalysisRun.Name,
-			),
+		currentVI := currentFC.VerificationHistory.Current()
+		if currentVI == nil || currentVI.AnalysisRun == nil {
+			return nil
 		}
+
+		return []string{fmt.Sprintf(
+			"%s:%s",
+			currentVI.AnalysisRun.Namespace,
+			currentVI.AnalysisRun.Name,
+		)}
 	}
 }
 
@@ -299,7 +303,10 @@ func IndexFreightByWarehouse(ctx context.Context, mgr ctrl.Manager) error {
 
 func indexFreightByWarehouse(obj client.Object) []string {
 	freight := obj.(*kargoapi.Freight) // nolint: forcetypeassert
-	return []string{freight.Warehouse}
+	if freight.Origin.Kind == kargoapi.FreightOriginKindWarehouse {
+		return []string{freight.Origin.Name}
+	}
+	return nil
 }
 
 // IndexFreightByVerifiedStages indexes Freight by the Stages in which it has
@@ -363,12 +370,17 @@ func IndexStagesByFreight(ctx context.Context, mgr ctrl.Manager) error {
 
 func indexStagesByFreight(obj client.Object) []string {
 	stage := obj.(*kargoapi.Stage) // nolint: forcetypeassert
-	if stage.Status.CurrentFreight != nil {
-		if id := stage.Status.CurrentFreight.Name; id != "" {
-			return []string{id}
-		}
+
+	current := stage.Status.FreightHistory.Current()
+	if current == nil || len(current.Freight) == 0 {
+		return nil
 	}
-	return nil
+
+	var freightIDs []string
+	for _, freight := range current.Freight {
+		freightIDs = append(freightIDs, freight.Name)
+	}
+	return freightIDs
 }
 
 func IndexStagesByUpstreamStages(ctx context.Context, mgr ctrl.Manager) error {
@@ -382,14 +394,12 @@ func IndexStagesByUpstreamStages(ctx context.Context, mgr ctrl.Manager) error {
 
 func indexStagesByUpstreamStages(obj client.Object) []string {
 	stage := obj.(*kargoapi.Stage) // nolint: forcetypeassert
-	if stage.Spec.Subscriptions.UpstreamStages == nil {
-		return nil
+	var upstreams []string
+	for _, req := range stage.Spec.RequestedFreight {
+		upstreams = append(upstreams, req.Sources.Stages...)
 	}
-	upstreamStages := make([]string, len(stage.Spec.Subscriptions.UpstreamStages))
-	for i, upstreamStage := range stage.Spec.Subscriptions.UpstreamStages {
-		upstreamStages[i] = upstreamStage.Name
-	}
-	return upstreamStages
+	slices.Sort(upstreams)
+	return slices.Compact(upstreams)
 }
 
 func IndexStagesByWarehouse(ctx context.Context, mgr ctrl.Manager) error {
@@ -403,10 +413,13 @@ func IndexStagesByWarehouse(ctx context.Context, mgr ctrl.Manager) error {
 
 func indexStagesByWarehouse(obj client.Object) []string {
 	stage := obj.(*kargoapi.Stage) // nolint: forcetypeassert
-	if stage.Spec.Subscriptions.Warehouse != "" {
-		return []string{stage.Spec.Subscriptions.Warehouse}
+	var warehouses []string
+	for _, req := range stage.Spec.RequestedFreight {
+		if req.Origin.Kind == kargoapi.FreightOriginKindWarehouse && req.Sources.Direct {
+			warehouses = append(warehouses, req.Origin.Name)
+		}
 	}
-	return nil
+	return warehouses
 }
 
 func IndexServiceAccountsByOIDCEmail(ctx context.Context, mgr ctrl.Manager) error {

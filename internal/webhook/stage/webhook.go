@@ -194,7 +194,7 @@ func (w *webhook) validateSpec(
 	if spec == nil { // nil spec is caught by declarative validations
 		return nil
 	}
-	errs := w.validateSubs(f.Child("subscriptions"), &spec.Subscriptions)
+	errs := w.validateRequestedFreight(f.Child("requestedFreight"), spec.RequestedFreight)
 	return append(
 		errs,
 		w.validatePromotionMechanisms(
@@ -204,27 +204,27 @@ func (w *webhook) validateSpec(
 	)
 }
 
-func (w *webhook) validateSubs(
+func (w *webhook) validateRequestedFreight(
 	f *field.Path,
-	subs *kargoapi.Subscriptions,
+	reqs []kargoapi.FreightRequest,
 ) field.ErrorList {
-	if subs == nil { // nil subs is caught by declarative validations
-		return nil
-	}
-	// Can subscribe to Warehouse XOR upstream Stages
-	if (subs.Warehouse == "" && len(subs.UpstreamStages) == 0) ||
-		(subs.Warehouse != "" && len(subs.UpstreamStages) > 0) {
-		return field.ErrorList{
-			field.Invalid(
-				f,
-				subs,
-				fmt.Sprintf(
-					"exactly one of %s.warehouse or %s.upstreamStages must be defined",
-					f.String(),
-					f.String(),
+	// Make sure the same origin is not requested multiple times
+	seenOrigins := make(map[string]struct{}, len(reqs))
+	for _, req := range reqs {
+		if _, seen := seenOrigins[req.Origin.String()]; seen {
+			return field.ErrorList{
+				field.Invalid(
+					f,
+					reqs,
+					fmt.Sprintf(
+						"freight with origin %s requested multiple times in %s",
+						req.Origin.String(),
+						f.String(),
+					),
 				),
-			),
+			}
 		}
+		seenOrigins[req.Origin.String()] = struct{}{}
 	}
 	return nil
 }
