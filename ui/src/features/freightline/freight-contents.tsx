@@ -16,7 +16,7 @@ export const FreightContents = (props: {
   dark?: boolean;
 }) => {
   const { freight, highlighted, horizontal, dark } = props;
-  const linkClass = `${highlighted ? 'text-blue-600' : 'text-gray-400'} hover:text-blue-500 underline hover:underline max-w-full`;
+  const linkClass = `${highlighted ? 'text-blue-600' : 'text-gray-400'} hover:text-blue-500 underline hover:underline max-w-full min-w-0 flex-shrink`;
 
   const FreightContentItem = (props: {
     icon: IconDefinition;
