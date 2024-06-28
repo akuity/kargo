@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"time"
 
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -183,6 +184,29 @@ func (h *applicationHealth) GetApplicationHealth(
 		if healthState, err := stageHealthForAppSync(app, desiredRevision); err != nil {
 			return healthState, healthStatus, syncStatus, err
 		}
+
+		// If we care about revisions, and recently finished an operation, we
+		// should wait for a cooldown period before assessing the health of the
+		// application. This is to ensure the health check has a chance to run
+		// after the sync operation has finished.
+		//
+		// xref: https://github.com/akuity/kargo/issues/2196
+		//
+		// TODO: revisit this when https://github.com/argoproj/argo-cd/pull/18660
+		// 	 is merged and released.
+		cooldown := app.Status.OperationState.FinishedAt.Time.Add(10 * time.Second)
+		if duration := time.Until(cooldown); duration > 0 {
+			time.Sleep(duration)
+
+			// Re-fetch the application to get the latest state.
+			if err := h.Client.Get(ctx, key, app); err != nil {
+				err = fmt.Errorf("error finding Argo CD Application %q in namespace %q: %w", key.Name, key.Namespace, err)
+				if client.IgnoreNotFound(err) == nil {
+					err = fmt.Errorf("unable to find Argo CD Application %q in namespace %q", key.Name, key.Namespace)
+				}
+				return kargoapi.HealthStateUnknown, healthStatus, syncStatus, err
+			}
+		}
 	}
 
 	// With all the above checks passed, we can now assume the Argo CD
@@ -197,7 +221,8 @@ func stageHealthForAppSync(app *argocd.Application, revision string) (kargoapi.H
 	switch {
 	case revision == "":
 		return kargoapi.HealthStateHealthy, nil
-	case app.Operation != nil && app.Operation.Sync != nil:
+	case app.Operation != nil && app.Operation.Sync != nil,
+		app.Status.OperationState == nil || app.Status.OperationState.FinishedAt.IsZero():
 		err := fmt.Errorf(
 			"Argo CD Application %q in namespace %q is being synced",
 			app.GetName(),
