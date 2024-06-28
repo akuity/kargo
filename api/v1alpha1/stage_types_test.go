@@ -124,6 +124,73 @@ func TestFreightCollectionUpdateOrPush(t *testing.T) {
 	}
 }
 
+func TestFreightCollectionReferences(t *testing.T) {
+	fooOrigin := FreightOrigin{
+		Kind: FreightOriginKindWarehouse,
+		Name: "foo",
+	}
+	barOrigin := FreightOrigin{
+		Kind: FreightOriginKindWarehouse,
+		Name: "bar",
+	}
+	bazOrigin := FreightOrigin{
+		Kind: FreightOriginKindWarehouse,
+		Name: "baz",
+	}
+
+	testCases := []struct {
+		name           string
+		freight        FreightCollection
+		expectedResult []FreightReference
+	}{
+		{
+			name: "freight is nil",
+			freight: FreightCollection{
+				Freight: nil,
+			},
+			expectedResult: nil,
+		},
+		{
+			name: "freight is empty",
+			freight: FreightCollection{
+				Freight: map[string]FreightReference{},
+			},
+		},
+		{
+			name: "freight has one element",
+			freight: FreightCollection{
+				Freight: map[string]FreightReference{
+					fooOrigin.String(): {Origin: fooOrigin},
+				},
+			},
+			expectedResult: []FreightReference{{Origin: fooOrigin}},
+		},
+		{
+			name: "freight has multiple elements",
+			freight: FreightCollection{
+				Freight: map[string]FreightReference{
+					fooOrigin.String(): {Origin: fooOrigin},
+					barOrigin.String(): {Origin: barOrigin},
+					bazOrigin.String(): {Origin: bazOrigin},
+				},
+			},
+			expectedResult: []FreightReference{
+				{Origin: barOrigin},
+				{Origin: bazOrigin},
+				{Origin: fooOrigin},
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			// Run the test multiple times to ensure the result is consistent.
+			for i := 0; i < 100; i++ {
+				require.Equal(t, testCase.expectedResult, testCase.freight.References())
+			}
+		})
+	}
+}
+
 func TestFreightHistoryCurrent(t *testing.T) {
 	testCases := []struct {
 		name           string
