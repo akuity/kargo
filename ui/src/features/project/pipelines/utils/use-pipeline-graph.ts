@@ -21,6 +21,9 @@ const initializeNodes = (
   stages: Stage[],
   hideSubscriptions: { [key: string]: boolean }
 ) => {
+  warehouses = (warehouses || []).sort((a, b) =>
+    (a.metadata?.name || '').localeCompare(b.metadata?.name || '')
+  );
   const warehouseMap = {} as { [key: string]: Warehouse };
   const warehouseNodeMap = {} as { [key: string]: RepoNodeType };
 
