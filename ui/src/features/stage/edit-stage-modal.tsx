@@ -88,6 +88,7 @@ export const EditStageModal = ({ visible, hide, projectName, stageName }: Props)
             isLoading={isLoading}
             isHideManagedFieldsDisplayed
             label='YAML'
+            resourceType='stages'
           />
         )}
       </FieldContainer>

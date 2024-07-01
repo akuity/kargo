@@ -113,6 +113,7 @@ export const CreateProjectModal = ({ visible, hide }: ModalComponentProps) => {
                     height='500px'
                     schema={schema as JSONSchema4}
                     placeholder={yaml.stringify(projectYAMLExample)}
+                    resourceType='projects'
                   />
                 )}
               </FieldContainer>

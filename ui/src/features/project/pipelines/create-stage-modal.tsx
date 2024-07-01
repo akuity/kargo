@@ -72,6 +72,7 @@ export const CreateStageModal = ({ visible, hide, project }: Props) => {
             height='500px'
             schema={schema as JSONSchema4}
             placeholder={getStageYAMLExample(project)}
+            resourceType='stages'
           />
         )}
       </FieldContainer>
