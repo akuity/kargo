@@ -50,7 +50,6 @@ rules:
   - list
   - patch
   - promote
-  - update
   - watch
 - apiGroups:
   - kargo.akuity.io
