@@ -318,7 +318,7 @@ func (r *reconciler) Reconcile(
 	}()
 
 	if newStatus.Phase.IsTerminal() {
-		newStatus.CompletionTime = &metav1.Time{Time: time.Now()}
+		newStatus.FinishedAt = &metav1.Time{Time: time.Now()}
 		logger.Info("promotion", "phase", newStatus.Phase)
 	}
 

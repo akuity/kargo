@@ -68,9 +68,8 @@ export const StageNode = ({
       onMouseLeave={() => onHover(false)}
     >
       <div
-        className={`${styles.node} ${faded ? styles.faded : ''} ${
-          highlighted ? styles.highlighted : ''
-        }`}
+        className={`${styles.node} ${faded ? styles.faded : ''} ${highlighted ? styles.highlighted : ''
+          }`}
         style={{
           backgroundColor: color,
           position: 'relative'
@@ -119,7 +118,7 @@ export const StageNode = ({
             <div className='text-sm h-full flex flex-col items-center justify-center -mt-1'>
               <div className={styles.freightLabel}>Current Freight</div>
               <FreightLabel freight={currentFreight} />
-              {stage?.status?.lastPromotion?.completionTime && (
+              {stage?.status?.lastPromotion?.finishedAt && (
                 <>
                   <div
                     className='uppercase font-medium mt-1 text-gray-400'
@@ -129,7 +128,7 @@ export const StageNode = ({
                   </div>
                   <div className='text-xs text-gray-600 font-mono font-semibold'>
                     {formatDistance(
-                      stage?.status?.lastPromotion?.completionTime?.toDate(),
+                      stage?.status?.lastPromotion?.finishedAt?.toDate(),
                       new Date(),
                       { addSuffix: true }
                     )}

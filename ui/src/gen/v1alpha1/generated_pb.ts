@@ -3298,11 +3298,11 @@ export class PromotionReference extends Message<PromotionReference> {
   status?: PromotionStatus;
 
   /**
-   * CompletionTime is the time at which the Promotion was completed.
+   * FinishedAt is the time at which the Promotion was completed.
    *
-   * @generated from field: optional k8s.io.apimachinery.pkg.apis.meta.v1.Time completionTime = 4;
+   * @generated from field: optional k8s.io.apimachinery.pkg.apis.meta.v1.Time finishedAt = 4;
    */
-  completionTime?: Time;
+  finishedAt?: Time;
 
   constructor(data?: PartialMessage<PromotionReference>) {
     super();
@@ -3315,7 +3315,7 @@ export class PromotionReference extends Message<PromotionReference> {
     { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 2, name: "freight", kind: "message", T: FreightReference, opt: true },
     { no: 3, name: "status", kind: "message", T: PromotionStatus, opt: true },
-    { no: 4, name: "completionTime", kind: "message", T: Time, opt: true },
+    { no: 4, name: "finishedAt", kind: "message", T: Time, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PromotionReference {
@@ -3443,11 +3443,11 @@ export class PromotionStatus extends Message<PromotionStatus> {
   freight?: FreightReference;
 
   /**
-   * CompletionTime is the time when the promotion was completed.
+   * FinishedAt is the time when the promotion was completed.
    *
-   * @generated from field: optional k8s.io.apimachinery.pkg.apis.meta.v1.Time completionTime = 6;
+   * @generated from field: optional k8s.io.apimachinery.pkg.apis.meta.v1.Time finishedAt = 6;
    */
-  completionTime?: Time;
+  finishedAt?: Time;
 
   constructor(data?: PartialMessage<PromotionStatus>) {
     super();
@@ -3462,7 +3462,7 @@ export class PromotionStatus extends Message<PromotionStatus> {
     { no: 2, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 3, name: "metadata", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 9 /* ScalarType.STRING */} },
     { no: 5, name: "freight", kind: "message", T: FreightReference, opt: true },
-    { no: 6, name: "completionTime", kind: "message", T: Time, opt: true },
+    { no: 6, name: "finishedAt", kind: "message", T: Time, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PromotionStatus {

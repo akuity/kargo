@@ -1106,8 +1106,8 @@ func (in *PromotionReference) DeepCopyInto(out *PromotionReference) {
 		*out = new(PromotionStatus)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.CompletionTime != nil {
-		in, out := &in.CompletionTime, &out.CompletionTime
+	if in.FinishedAt != nil {
+		in, out := &in.FinishedAt, &out.FinishedAt
 		*out = (*in).DeepCopy()
 	}
 }
@@ -1152,8 +1152,8 @@ func (in *PromotionStatus) DeepCopyInto(out *PromotionStatus) {
 		*out = new(FreightReference)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.CompletionTime != nil {
-		in, out := &in.CompletionTime, &out.CompletionTime
+	if in.FinishedAt != nil {
+		in, out := &in.FinishedAt, &out.FinishedAt
 		*out = (*in).DeepCopy()
 	}
 }

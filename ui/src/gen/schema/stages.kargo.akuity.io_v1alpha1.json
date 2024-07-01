@@ -673,8 +673,8 @@
         "currentPromotion": {
           "description": "CurrentPromotion is a reference to the currently Running promotion.",
           "properties": {
-            "completionTime": {
-              "description": "CompletionTime is the time at which the Promotion was completed.",
+            "finishedAt": {
+              "description": "FinishedAt is the time at which the Promotion was completed.",
               "format": "date-time",
               "type": "string"
             },
@@ -903,8 +903,8 @@
             "status": {
               "description": "Status is the (optional) status of the promotion",
               "properties": {
-                "completionTime": {
-                  "description": "CompletionTime is the time when the promotion was completed.",
+                "finishedAt": {
+                  "description": "FinishedAt is the time when the promotion was completed.",
                   "format": "date-time",
                   "type": "string"
                 },
@@ -1459,8 +1459,8 @@
         "lastPromotion": {
           "description": "LastPromotion is a reference to the last completed promotion.",
           "properties": {
-            "completionTime": {
-              "description": "CompletionTime is the time at which the Promotion was completed.",
+            "finishedAt": {
+              "description": "FinishedAt is the time at which the Promotion was completed.",
               "format": "date-time",
               "type": "string"
             },
@@ -1689,8 +1689,8 @@
             "status": {
               "description": "Status is the (optional) status of the promotion",
               "properties": {
-                "completionTime": {
-                  "description": "CompletionTime is the time when the promotion was completed.",
+                "finishedAt": {
+                  "description": "FinishedAt is the time when the promotion was completed.",
                   "format": "date-time",
                   "type": "string"
                 },

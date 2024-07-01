@@ -692,8 +692,8 @@ type PromotionReference struct {
 	Freight FreightReference `json:"freight" protobuf:"bytes,2,opt,name=freight"`
 	// Status is the (optional) status of the promotion
 	Status *PromotionStatus `json:"status,omitempty" protobuf:"bytes,3,opt,name=status"`
-	// CompletionTime is the time at which the Promotion was completed.
-	CompletionTime *metav1.Time `json:"completionTime,omitempty" protobuf:"bytes,4,opt,name=completionTime"`
+	// FinishedAt is the time at which the Promotion was completed.
+	FinishedAt *metav1.Time `json:"finishedAt,omitempty" protobuf:"bytes,4,opt,name=finishedAt"`
 }
 
 // Verification describes how to verify that a Promotion has been successful

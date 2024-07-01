@@ -1087,9 +1087,9 @@ func (r *reconciler) syncPromotions(
 		if promo.Status.Phase.IsTerminal() {
 			logger.WithValues("promotion", promo.Name).Debug("found new terminated Promotion")
 			info := kargoapi.PromotionReference{
-				Name:           promo.Name,
-				Status:         promo.Status.DeepCopy(),
-				CompletionTime: promo.Status.CompletionTime,
+				Name:       promo.Name,
+				Status:     promo.Status.DeepCopy(),
+				FinishedAt: promo.Status.FinishedAt,
 			}
 			if promo.Status.Freight != nil {
 				info.Freight = *promo.Status.Freight.DeepCopy()

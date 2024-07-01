@@ -37,8 +37,8 @@
     "status": {
       "description": "Status describes the current state of the transition represented by this\nPromotion.",
       "properties": {
-        "completionTime": {
-          "description": "CompletionTime is the time when the promotion was completed.",
+        "finishedAt": {
+          "description": "FinishedAt is the time when the promotion was completed.",
           "format": "date-time",
           "type": "string"
         },

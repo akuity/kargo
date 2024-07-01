@@ -1059,8 +1059,8 @@ message PromotionReference {
   // Status is the (optional) status of the promotion
   optional PromotionStatus status = 3;
 
-  // CompletionTime is the time at which the Promotion was completed.
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time completionTime = 4;
+  // FinishedAt is the time at which the Promotion was completed.
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time finishedAt = 4;
 }
 
 // PromotionSpec describes the desired transition of a specific Stage into a
@@ -1106,8 +1106,8 @@ message PromotionStatus {
   // Freight is the detail of the piece of freight that was referenced by this promotion.
   optional FreightReference freight = 5;
 
-  // CompletionTime is the time when the promotion was completed.
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time completionTime = 6;
+  // FinishedAt is the time when the promotion was completed.
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time finishedAt = 6;
 }
 
 // PullRequestPromotionMechanism describes how to generate a pull request against the write branch during promotion
