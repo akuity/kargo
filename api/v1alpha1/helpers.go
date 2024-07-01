@@ -33,14 +33,6 @@ func AddFinalizer(ctx context.Context, c client.Client, obj client.Object) error
 	return nil
 }
 
-func ClearAnnotations(ctx context.Context, c client.Client, obj client.Object, keys ...string) error {
-	kvs := make(map[string]*string, len(keys))
-	for _, k := range keys {
-		kvs[k] = nil
-	}
-	return patchAnnotations(ctx, c, obj, kvs)
-}
-
 func patchAnnotation(ctx context.Context, c client.Client, obj client.Object, key, value string) error {
 	return patchAnnotations(ctx, c, obj, map[string]*string{
 		key: ptr.To(value),
