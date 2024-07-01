@@ -5,30 +5,73 @@ import (
 	"encoding/json"
 	"fmt"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
-func AddFinalizer(ctx context.Context, c client.Client, obj client.Object) error {
+func EnsureFinalizer(ctx context.Context, c client.Client, obj client.Object) (bool, error) {
 	if controllerutil.AddFinalizer(obj, FinalizerName) {
-		patchBytes := []byte(`{"metadata":{"finalizers":[`)
-		for i, finalizer := range obj.GetFinalizers() {
-			if i > 0 {
-				patchBytes = append(patchBytes, ',')
-			}
-			patchBytes = append(patchBytes, fmt.Sprintf("%q", finalizer)...)
-		}
-		patchBytes = append(patchBytes, "]}}"...)
-		if err := c.Patch(
-			ctx,
-			obj,
-			client.RawPatch(types.MergePatchType, patchBytes),
-		); err != nil {
-			return fmt.Errorf("patch annotation: %w", err)
-		}
-		return nil
+		return true, patchFinalizers(ctx, c, obj)
+	}
+	return false, nil
+}
+
+func RemoveFinalizer(ctx context.Context, c client.Client, obj client.Object) error {
+	if controllerutil.RemoveFinalizer(obj, FinalizerName) {
+		return patchFinalizers(ctx, c, obj)
+	}
+	return nil
+}
+
+func patchFinalizers(ctx context.Context, c client.Client, obj client.Object) error {
+	type objectMeta struct {
+		Finalizers []string `json:"finalizers"`
+	}
+	type patch struct {
+		ObjectMeta objectMeta `json:"metadata"`
+	}
+	data, err := json.Marshal(patch{
+		ObjectMeta: objectMeta{
+			Finalizers: obj.GetFinalizers(),
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("marshal patch data: %w", err)
+	}
+	if err := c.Patch(
+		ctx,
+		obj,
+		client.RawPatch(types.MergePatchType, data),
+	); err != nil {
+		return fmt.Errorf("patch finalizers: %w", err)
+	}
+	return nil
+}
+
+func PatchOwnerReferences(ctx context.Context, c client.Client, obj client.Object) error {
+	type objectMeta struct {
+		OwnerReferences []metav1.OwnerReference `json:"ownerReferences"`
+	}
+	type patch struct {
+		ObjectMeta objectMeta `json:"metadata"`
+	}
+	data, err := json.Marshal(patch{
+		ObjectMeta: objectMeta{
+			OwnerReferences: obj.GetOwnerReferences(),
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("marshal patch data: %w", err)
+	}
+	if err := c.Patch(
+		ctx,
+		obj,
+		client.RawPatch(types.MergePatchType, data),
+	); err != nil {
+		return fmt.Errorf("patch owner references: %w", err)
 	}
 	return nil
 }

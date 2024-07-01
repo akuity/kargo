@@ -528,14 +528,13 @@ func (r *reconciler) Reconcile(
 	var newStatus kargoapi.StageStatus
 	if stage.DeletionTimestamp != nil {
 		newStatus, err = r.syncStageDelete(ctx, stage)
-		if err == nil && controllerutil.RemoveFinalizer(stage, kargoapi.FinalizerName) {
-			if err = r.kargoClient.Update(ctx, stage); err != nil {
+		if err == nil {
+			if err = kargoapi.RemoveFinalizer(ctx, r.kargoClient, stage); err != nil {
 				err = fmt.Errorf("error removing finalizer: %w", err)
 			}
 		}
 	} else {
-		err = kargoapi.AddFinalizer(ctx, r.kargoClient, stage)
-		if err != nil {
+		if _, err = kargoapi.EnsureFinalizer(ctx, r.kargoClient, stage); err != nil {
 			newStatus = stage.Status
 		} else {
 			if stage.Spec.PromotionMechanisms == nil {
