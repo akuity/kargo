@@ -72,6 +72,7 @@ export const CreateWarehouseModal = ({ visible, hide, project }: Props) => {
             height='500px'
             schema={schema as JSONSchema4}
             placeholder={getWarehouseYAMLExample(project)}
+            resourceType='warehouses'
           />
         )}
       </FieldContainer>

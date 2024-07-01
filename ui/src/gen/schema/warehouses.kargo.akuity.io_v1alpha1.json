@@ -214,7 +214,6 @@
         }
       },
       "required": [
-        "freightCreationPolicy",
         "interval",
         "subscriptions"
       ],

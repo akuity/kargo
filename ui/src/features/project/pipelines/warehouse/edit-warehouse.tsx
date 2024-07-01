@@ -69,6 +69,7 @@ export const EditWarehouse = ({ projectName, warehouseName }: Props) => {
             isLoading={isLoading}
             isHideManagedFieldsDisplayed
             disabled={!editing}
+            resourceType='warehouses'
             toolbar={
               <>
                 {editing && (

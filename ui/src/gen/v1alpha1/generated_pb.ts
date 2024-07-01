@@ -4313,6 +4313,7 @@ export class WarehouseSpec extends Message<WarehouseSpec> {
    * treated as if its value were "Automatic".
    *
    * +kubebuilder:default=Automatic
+   * +kubebuilder:validation:Optional
    *
    * @generated from field: optional string freightCreationPolicy = 3;
    */

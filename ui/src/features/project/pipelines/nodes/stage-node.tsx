@@ -117,7 +117,7 @@ export const StageNode = ({
           ) : (
             <div className='text-sm h-full flex flex-col items-center justify-center -mt-1'>
               <div className={styles.freightLabel}>Current Freight</div>
-              <FreightLabel freight={currentFreight} />
+              <FreightLabel freight={currentFreight} showContents={true} />
               {stage?.status?.lastPromotion?.finishedAt && (
                 <>
                   <div

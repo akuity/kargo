@@ -69,6 +69,7 @@ type WarehouseSpec struct {
 	// treated as if its value were "Automatic".
 	//
 	// +kubebuilder:default=Automatic
+	// +kubebuilder:validation:Optional
 	FreightCreationPolicy FreightCreationPolicy `json:"freightCreationPolicy" protobuf:"bytes,3,opt,name=freightCreationPolicy"`
 	// Subscriptions describes sources of artifacts to be included in Freight
 	// produced by this Warehouse.
