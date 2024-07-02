@@ -311,6 +311,13 @@ type ChartSubscription struct {
 
 // WarehouseStatus describes a Warehouse's most recently observed state.
 type WarehouseStatus struct {
+	// Conditions contains the last observations of the Warehouse's current
+	// state.
+	// +patchMergeKey=type
+	// +patchStrategy=merge
+	// +listType=map
+	// +listMapKey=type
+	Conditions []metav1.Condition `json:"conditions,omitempty" patchMergeKey:"type" patchStrategy:"merge" protobuf:"bytes,9,rep,name=conditions"`
 	// LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh
 	// annotation that was handled by the controller. This field can be used to
 	// determine whether the request to refresh the resource has been handled.
