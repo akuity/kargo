@@ -51,19 +51,21 @@ type renderer struct {
 func (r *renderer) apply(
 	_ context.Context,
 	update kargoapi.GitRepoUpdate,
-	newFreight kargoapi.FreightReference,
+	newFreight []kargoapi.FreightReference,
 	_ string,
 	sourceCommit string,
 	_ string,
 	workingDir string,
 	repoCreds git.RepoCredentials,
 ) ([]string, error) {
-	images := make([]string, 0, len(newFreight.Images))
+	images := []string{}
 	if len(update.Render.Images) == 0 {
 		// When no explicit image updates are specified, we will pass all images
 		// from the Freight in <ulr>:<tag> format.
-		for _, image := range newFreight.Images {
-			images = append(images, fmt.Sprintf("%s:%s", image.RepoURL, image.Tag))
+		for _, f := range newFreight {
+			for _, image := range f.Images {
+				images = append(images, fmt.Sprintf("%s:%s", image.RepoURL, image.Tag))
+			}
 		}
 	} else {
 		// When explicit image updates are specified, we will only pass images with
@@ -77,12 +79,14 @@ func (r *renderer) apply(
 		for _, imageUpdate := range update.Render.Images {
 			imageUpdatesByImage[imageUpdate.Image] = imageUpdate
 		}
-		for _, image := range newFreight.Images {
-			if imageUpdate, ok := imageUpdatesByImage[image.RepoURL]; ok {
-				if imageUpdate.UseDigest {
-					images = append(images, fmt.Sprintf("%s@%s", image.RepoURL, image.Digest))
-				} else {
-					images = append(images, fmt.Sprintf("%s:%s", image.RepoURL, image.Tag))
+		for _, f := range newFreight {
+			for _, image := range f.Images {
+				if imageUpdate, ok := imageUpdatesByImage[image.RepoURL]; ok {
+					if imageUpdate.UseDigest {
+						images = append(images, fmt.Sprintf("%s@%s", image.RepoURL, image.Digest))
+					} else {
+						images = append(images, fmt.Sprintf("%s:%s", image.RepoURL, image.Tag))
+					}
 				}
 			}
 		}

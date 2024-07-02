@@ -51,12 +51,12 @@ func selectHelmUpdates(updates []kargoapi.GitRepoUpdate) []kargoapi.GitRepoUpdat
 // functions that are used in the implementation of the apply() function.
 type helmer struct {
 	buildValuesFilesChangesFn func(
-		[]kargoapi.Image,
+		[]kargoapi.FreightReference,
 		[]kargoapi.HelmImageUpdate,
 	) (map[string]map[string]string, []string)
 	buildChartDependencyChangesFn func(
 		string,
-		[]kargoapi.Chart,
+		[]kargoapi.FreightReference,
 		[]kargoapi.HelmChartDependencyUpdate,
 	) (map[string]map[string]string, []string, error)
 	setStringsInYAMLFileFn         func(file string, changes map[string]string) error
@@ -69,7 +69,7 @@ type helmer struct {
 func (h *helmer) apply(
 	ctx context.Context,
 	update kargoapi.GitRepoUpdate,
-	newFreight kargoapi.FreightReference,
+	newFreight []kargoapi.FreightReference,
 	namespace string,
 	_ string, // TODO: sourceCommit would be a nice addition to the commit message
 	homeDir string,
@@ -77,7 +77,7 @@ func (h *helmer) apply(
 	_ git.RepoCredentials,
 ) ([]string, error) {
 	// Image updates
-	changesByFile, imageChangeSummary := h.buildValuesFilesChangesFn(newFreight.Images, update.Helm.Images)
+	changesByFile, imageChangeSummary := h.buildValuesFilesChangesFn(newFreight, update.Helm.Images)
 	for file, changes := range changesByFile {
 		if err := h.setStringsInYAMLFileFn(
 			filepath.Join(workingDir, file),
@@ -91,7 +91,7 @@ func (h *helmer) apply(
 	changesByChart, subchartChangeSummary, err :=
 		h.buildChartDependencyChangesFn(
 			workingDir,
-			newFreight.Charts,
+			newFreight,
 			update.Helm.Charts,
 		)
 	if err != nil {
@@ -119,14 +119,16 @@ func (h *helmer) apply(
 // into a map of maps that indexes new values for each YAML file by file name
 // and key.
 func buildValuesFilesChanges(
-	images []kargoapi.Image,
+	freight []kargoapi.FreightReference,
 	imageUpdates []kargoapi.HelmImageUpdate,
 ) (map[string]map[string]string, []string) {
 	tagsByImage := map[string]string{}
-	digestsByImage := make(map[string]string, len(images))
-	for _, image := range images {
-		tagsByImage[image.RepoURL] = image.Tag
-		digestsByImage[image.RepoURL] = image.Digest
+	digestsByImage := map[string]string{}
+	for _, f := range freight {
+		for _, image := range f.Images {
+			tagsByImage[image.RepoURL] = image.Tag
+			digestsByImage[image.RepoURL] = image.Digest
+		}
 	}
 	changesByFile := make(map[string]map[string]string, len(imageUpdates))
 	changeSummary := make([]string, 0, len(imageUpdates))
@@ -185,15 +187,17 @@ func buildValuesFilesChanges(
 // file name and key.
 func buildChartDependencyChanges(
 	repoDir string,
-	charts []kargoapi.Chart,
+	freight []kargoapi.FreightReference,
 	chartUpdates []kargoapi.HelmChartDependencyUpdate,
 ) (map[string]map[string]string, []string, error) {
 	// Build a table of charts --> versions
-	versionsByChart := make(map[string]string, len(charts))
-	for _, chart := range charts {
-		// path.Join accounts for the possibility that chart.Name is empty
-		key := path.Join(chart.RepoURL, chart.Name)
-		versionsByChart[key] = chart.Version
+	versionsByChart := map[string]string{}
+	for _, f := range freight {
+		for _, chart := range f.Charts {
+			// path.Join accounts for the possibility that chart.Name is empty
+			key := path.Join(chart.RepoURL, chart.Name)
+			versionsByChart[key] = chart.Version
+		}
 	}
 
 	// Build a de-duped set of paths to affected Charts files

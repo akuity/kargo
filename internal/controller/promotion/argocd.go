@@ -35,12 +35,12 @@ type argoCDMechanism struct {
 	buildDesiredSourcesFn func(
 		app *argocd.Application,
 		update kargoapi.ArgoCDAppUpdate,
-		newFreight kargoapi.FreightReference,
+		newFreight []kargoapi.FreightReference,
 	) (*argocd.ApplicationSource, argocd.ApplicationSources, error)
 	mustPerformUpdateFn func(
 		app *argocd.Application,
 		update kargoapi.ArgoCDAppUpdate,
-		newFreight kargoapi.FreightReference,
+		newFreight []kargoapi.FreightReference,
 		desiredSource *argocd.ApplicationSource,
 		desiredSources argocd.ApplicationSources,
 	) (argocd.OperationPhase, bool, error)
@@ -58,7 +58,7 @@ type argoCDMechanism struct {
 	) (*argocd.Application, error)
 	applyArgoCDSourceUpdateFn func(
 		argocd.ApplicationSource,
-		kargoapi.FreightReference,
+		[]kargoapi.FreightReference,
 		kargoapi.ArgoCDSourceUpdate,
 	) (argocd.ApplicationSource, error)
 	argoCDAppPatchFn func(
@@ -98,8 +98,8 @@ func (a *argoCDMechanism) Promote(
 	ctx context.Context,
 	stage *kargoapi.Stage,
 	promo *kargoapi.Promotion,
-	newFreight kargoapi.FreightReference,
-) (*kargoapi.PromotionStatus, kargoapi.FreightReference, error) {
+	newFreight []kargoapi.FreightReference,
+) (*kargoapi.PromotionStatus, []kargoapi.FreightReference, error) {
 	updates := stage.Spec.PromotionMechanisms.ArgoCDAppUpdates
 
 	if len(updates) == 0 {
@@ -201,7 +201,7 @@ func (a *argoCDMechanism) Promote(
 func (a *argoCDMechanism) buildDesiredSources(
 	app *argocd.Application,
 	update kargoapi.ArgoCDAppUpdate,
-	newFreight kargoapi.FreightReference,
+	newFreight []kargoapi.FreightReference,
 ) (*argocd.ApplicationSource, argocd.ApplicationSources, error) {
 	desiredSource, desiredSources := app.Spec.Source.DeepCopy(), app.Spec.Sources.DeepCopy()
 
@@ -239,7 +239,7 @@ func (a *argoCDMechanism) buildDesiredSources(
 func (a *argoCDMechanism) mustPerformUpdate(
 	app *argocd.Application,
 	update kargoapi.ArgoCDAppUpdate,
-	newFreight kargoapi.FreightReference,
+	newFreight []kargoapi.FreightReference,
 	desiredSource *argocd.ApplicationSource,
 	desiredSources argocd.ApplicationSources,
 ) (phase argocd.OperationPhase, mustUpdate bool, err error) {
@@ -277,14 +277,16 @@ func (a *argoCDMechanism) mustPerformUpdate(
 	}
 
 	// Check if the desired revision was applied.
-	desiredRevision := libargocd.GetDesiredRevision(app, newFreight)
-	if desiredRevision != "" && status.SyncResult.Revision != desiredRevision {
-		// The operation did not result in the desired revision being applied.
-		// We should attempt to retry the operation.
-		return "", true, fmt.Errorf(
-			"operation result revision %q does not match desired revision %q",
-			status.SyncResult.Revision, desiredRevision,
-		)
+	for _, f := range newFreight {
+		desiredRevision := libargocd.GetDesiredRevision(app, f)
+		if desiredRevision != "" && status.SyncResult.Revision != desiredRevision {
+			// The operation did not result in the desired revision being applied.
+			// We should attempt to retry the operation.
+			return "", true, fmt.Errorf(
+				"operation result revision %q does not match desired revision %q",
+				status.SyncResult.Revision, desiredRevision,
+			)
+		}
 	}
 
 	// Check if the desired source(s) were applied.
@@ -519,7 +521,7 @@ func authorizeArgoCDAppUpdate(
 // applyArgoCDSourceUpdate updates a single Argo CD ApplicationSource.
 func applyArgoCDSourceUpdate(
 	source argocd.ApplicationSource,
-	newFreight kargoapi.FreightReference,
+	newFreight []kargoapi.FreightReference,
 	update kargoapi.ArgoCDSourceUpdate,
 ) (argocd.ApplicationSource, error) {
 	if source.Chart != "" || update.Chart != "" {
@@ -535,13 +537,16 @@ func applyArgoCDSourceUpdate(
 		//
 		// Now find the chart in the new freight that corresponds to this
 		// source.
-		for _, chart := range newFreight.Charts {
-			// path.Join accounts for the possibility that chart.Name is empty
-			//
-			// Kargo uses the "oci://" prefix, but Argo CD does not.
-			if path.Join(strings.TrimPrefix(chart.RepoURL, "oci://"), chart.Name) == path.Join(source.RepoURL, source.Chart) {
-				source.TargetRevision = chart.Version
-				break
+	freightChartLoop:
+		for _, f := range newFreight {
+			for _, chart := range f.Charts {
+				// path.Join accounts for the possibility that chart.Name is empty
+				//
+				// Kargo uses the "oci://" prefix, but Argo CD does not.
+				if path.Join(strings.TrimPrefix(chart.RepoURL, "oci://"), chart.Name) == path.Join(source.RepoURL, source.Chart) { // nolint: lll
+					source.TargetRevision = chart.Version
+					break freightChartLoop
+				}
 			}
 		}
 	} else {
@@ -555,14 +560,17 @@ func applyArgoCDSourceUpdate(
 		// this source.
 		//
 		// Now find the commit in the new freight that corresponds to this source.
-		for _, commit := range newFreight.Commits {
-			if git.NormalizeURL(commit.RepoURL) == sourceRepoURL {
-				if commit.Tag != "" {
-					source.TargetRevision = commit.Tag
-				} else {
-					source.TargetRevision = commit.ID
+	freightCommitLoop:
+		for _, f := range newFreight {
+			for _, commit := range f.Commits {
+				if git.NormalizeURL(commit.RepoURL) == sourceRepoURL {
+					if commit.Tag != "" {
+						source.TargetRevision = commit.Tag
+					} else {
+						source.TargetRevision = commit.ID
+					}
+					break freightCommitLoop
 				}
-				break
 			}
 		}
 	}
@@ -572,7 +580,7 @@ func applyArgoCDSourceUpdate(
 			source.Kustomize = &argocd.ApplicationSourceKustomize{}
 		}
 		source.Kustomize.Images = buildKustomizeImagesForArgoCDAppSource(
-			newFreight.Images,
+			newFreight,
 			update.Kustomize.Images,
 		)
 	}
@@ -585,7 +593,7 @@ func applyArgoCDSourceUpdate(
 			source.Helm.Parameters = []argocd.HelmParameter{}
 		}
 		changes := buildHelmParamChangesForArgoCDAppSource(
-			newFreight.Images,
+			newFreight,
 			update.Helm.Images,
 		)
 	imageUpdateLoop:
@@ -608,14 +616,16 @@ func applyArgoCDSourceUpdate(
 }
 
 func buildKustomizeImagesForArgoCDAppSource(
-	images []kargoapi.Image,
+	freight []kargoapi.FreightReference,
 	imageUpdates []kargoapi.ArgoCDKustomizeImageUpdate,
 ) argocd.KustomizeImages {
-	tagsByImage := make(map[string]string, len(images))
-	digestsByImage := make(map[string]string, len(images))
-	for _, image := range images {
-		tagsByImage[image.RepoURL] = image.Tag
-		digestsByImage[image.RepoURL] = image.Digest
+	tagsByImage := map[string]string{}
+	digestsByImage := map[string]string{}
+	for _, f := range freight {
+		for _, image := range f.Images {
+			tagsByImage[image.RepoURL] = image.Tag
+			digestsByImage[image.RepoURL] = image.Digest
+		}
 	}
 	kustomizeImages := make(argocd.KustomizeImages, 0, len(imageUpdates))
 	for _, imageUpdate := range imageUpdates {
@@ -645,14 +655,16 @@ func buildKustomizeImagesForArgoCDAppSource(
 // instructions about changes that should be made to various Helm parameters and
 // distills them into a map of new values indexed by parameter name.
 func buildHelmParamChangesForArgoCDAppSource(
-	images []kargoapi.Image,
+	freight []kargoapi.FreightReference,
 	imageUpdates []kargoapi.ArgoCDHelmImageUpdate,
 ) map[string]string {
-	tagsByImage := make(map[string]string, len(images))
-	digestsByImage := make(map[string]string, len(images))
-	for _, image := range images {
-		tagsByImage[image.RepoURL] = image.Tag
-		digestsByImage[image.RepoURL] = image.Digest
+	tagsByImage := map[string]string{}
+	digestsByImage := map[string]string{}
+	for _, f := range freight {
+		for _, image := range f.Images {
+			tagsByImage[image.RepoURL] = image.Tag
+			digestsByImage[image.RepoURL] = image.Digest
+		}
 	}
 	changes := map[string]string{}
 	for _, imageUpdate := range imageUpdates {
