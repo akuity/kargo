@@ -1,6 +1,8 @@
 import { useMutation, useQuery } from '@connectrpc/connect-query';
+import { faArrowsLeftRightToLine } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { message } from 'antd';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import InfiniteScroll from 'react-infinite-scroller';
 import { generatePath, useNavigate, useParams } from 'react-router-dom';
 
@@ -13,7 +15,7 @@ import {
 import { Freight, Stage } from '@ui/gen/v1alpha1/generated_pb';
 
 import { FreightActionMenu } from '../project/pipelines/freight-action-menu';
-import { FreightlineAction } from '../project/pipelines/types';
+import { FreightMode, FreightlineAction } from '../project/pipelines/types';
 import { PipelineStateHook, getFreightMode, isPromoting } from '../project/pipelines/utils/state';
 import { usePromotionEligibleFreight } from '../project/pipelines/utils/use-promotion-eligible-freight';
 import { getSeconds, onError } from '../project/pipelines/utils/util';
@@ -29,7 +31,9 @@ export const Freightline = ({
   stagesPerFreight,
   highlightedStages,
   refetchFreight,
-  onHover
+  onHover,
+  collapsed,
+  setCollapsed
 }: {
   freight: Freight[];
   state: PipelineStateHook;
@@ -38,6 +42,8 @@ export const Freightline = ({
   highlightedStages: { [key: string]: boolean };
   refetchFreight: () => void;
   onHover: (hovering: boolean, freightName: string) => void;
+  collapsed: boolean;
+  setCollapsed: (collapsed: boolean) => void;
 }) => {
   const navigate = useNavigate();
   const { name: project } = useParams();
@@ -89,6 +95,15 @@ export const Freightline = ({
 
   const currentFreight = freight.slice(0, loadedItems);
 
+  let seenStages = 0;
+  let displayedCollapsed = false;
+  const numStages = useMemo(() => {
+    return Object.keys(stagesPerFreight).reduce(
+      (acc, cur) => (cur?.length > 0 ? acc + stagesPerFreight[cur].length : acc),
+      0
+    );
+  }, [stagesPerFreight]);
+
   return (
     <>
       <InfiniteScroll
@@ -104,6 +119,31 @@ export const Freightline = ({
           )
           .map((f, i) => {
             const id = f?.metadata?.name || `${i}`;
+            const curNumStages = (stagesPerFreight[id] || []).length;
+            if (curNumStages > 0) {
+              seenStages += curNumStages;
+            }
+            if (seenStages >= numStages && curNumStages === 0 && collapsed) {
+              const tmp = displayedCollapsed;
+              displayedCollapsed = true;
+              return tmp ? null : (
+                <FreightItem
+                  onClick={() => setCollapsed(false)}
+                  empty={true}
+                  highlighted={false}
+                  key='collapsed'
+                  mode={FreightMode.Default}
+                  onHover={() => null}
+                  hideLabel={true}
+                >
+                  <FontAwesomeIcon
+                    icon={faArrowsLeftRightToLine}
+                    className='text-neutral-300'
+                    size='2x'
+                  />
+                </FreightItem>
+              );
+            }
             return (
               <FreightItem
                 freight={f || undefined}
@@ -116,7 +156,7 @@ export const Freightline = ({
                   }
                 }}
                 mode={getFreightMode(state, id, promotionEligible[id])}
-                empty={(stagesPerFreight[id] || []).length === 0}
+                empty={curNumStages === 0}
                 onHover={(h) => onHover(h, id)}
                 highlighted={(stagesPerFreight[id] || []).reduce((h, cur) => {
                   if (h) {

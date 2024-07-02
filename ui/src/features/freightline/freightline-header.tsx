@@ -1,6 +1,8 @@
 import {
   faBullseye,
   faCircleCheck,
+  faCompress,
+  faExpand,
   faQuestionCircle,
   faTimeline,
   faTools,
@@ -24,7 +26,10 @@ export const FreightlineHeader = ({
   downstreamSubs,
   selectedWarehouse,
   setSelectedWarehouse,
-  warehouses
+  warehouses,
+  collapsed,
+  setCollapsed,
+  collapsable
 }: {
   promotingStage?: string;
   action?: FreightlineAction;
@@ -33,6 +38,9 @@ export const FreightlineHeader = ({
   selectedWarehouse: string;
   setSelectedWarehouse: (warehouse: string) => void;
   warehouses: { [key: string]: Warehouse };
+  collapsed: boolean;
+  setCollapsed: (collapsed: boolean) => void;
+  collapsable?: boolean;
 }) => {
   const stageColorMap = useContext(ColorContext);
   const { name: projectName } = useParams();
@@ -107,6 +115,15 @@ export const FreightlineHeader = ({
               <FontAwesomeIcon icon={faTimeline} className='mr-2' />
               FREIGHTLINE
             </div>
+            {collapsable && (
+              <Tooltip title={`${collapsed ? 'Expand' : 'Collapse'} old freight`}>
+                <Button
+                  icon={<FontAwesomeIcon icon={collapsed ? faExpand : faCompress} />}
+                  className='-mb-1 mr-2'
+                  onClick={() => setCollapsed(!collapsed)}
+                />
+              </Tooltip>
+            )}
             <Button
               icon={<FontAwesomeIcon icon={faTools} />}
               className='-mb-1 mr-2'

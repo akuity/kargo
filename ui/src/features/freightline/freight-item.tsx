@@ -14,7 +14,8 @@ export const FreightItem = ({
   mode,
   empty,
   highlighted,
-  onHover
+  onHover,
+  hideLabel
 }: {
   freight?: Freight;
   children: React.ReactNode;
@@ -23,6 +24,7 @@ export const FreightItem = ({
   empty: boolean;
   highlighted?: boolean;
   onHover: (hovering: boolean) => void;
+  hideLabel?: boolean;
 }) => {
   return (
     <div
@@ -49,7 +51,7 @@ export const FreightItem = ({
             mode === FreightMode.Confirming ? 'text-black' : 'text-gray-400'
           }`}
         >
-          <FreightLabel freight={freight} breakOnHyphen={true} />
+          {!hideLabel && <FreightLabel freight={freight} breakOnHyphen={true} />}
         </div>
       </div>
     </div>
