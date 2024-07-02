@@ -3,7 +3,7 @@ package api
 import (
 	"context"
 	"fmt"
-	"sort"
+	"slices"
 	"strings"
 
 	"connectrpc.com/connect"
@@ -21,8 +21,8 @@ func (s *server) ListProjects(
 		return nil, fmt.Errorf("error listing Projects: %w", err)
 	}
 
-	sort.Slice(list.Items, func(i, j int) bool {
-		return list.Items[i].Name < list.Items[j].Name
+	slices.SortFunc(list.Items, func(a, b kargoapi.Project) int {
+		return strings.Compare(a.Name, b.Name)
 	})
 
 	var filtered []kargoapi.Project
