@@ -68,8 +68,9 @@ export const StageNode = ({
       onMouseLeave={() => onHover(false)}
     >
       <div
-        className={`${styles.node} ${faded ? styles.faded : ''} ${highlighted ? styles.highlighted : ''
-          }`}
+        className={`${styles.node} ${faded ? styles.faded : ''} ${
+          highlighted ? styles.highlighted : ''
+        }`}
         style={{
           backgroundColor: color,
           position: 'relative'
