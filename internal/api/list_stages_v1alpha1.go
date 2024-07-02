@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"fmt"
+	"sort"
 
 	"connectrpc.com/connect"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -28,6 +29,10 @@ func (s *server) ListStages(
 	if err := s.client.List(ctx, &list, client.InNamespace(project)); err != nil {
 		return nil, fmt.Errorf("list stages: %w", err)
 	}
+
+	sort.Slice(list.Items, func(i, j int) bool {
+		return list.Items[i].Name < list.Items[j].Name
+	})
 
 	stages := make([]*kargoapi.Stage, len(list.Items))
 	for idx := range list.Items {
