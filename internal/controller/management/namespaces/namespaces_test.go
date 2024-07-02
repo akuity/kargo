@@ -23,7 +23,7 @@ func TestNewReconciler(t *testing.T) {
 	require.NotNil(t, r.client)
 	require.NotNil(t, r.getNamespaceFn)
 	require.NotNil(t, r.deleteProjectFn)
-	require.NotNil(t, r.updateNamespaceFn)
+	require.NotNil(t, r.removeFinalizerFn)
 }
 
 func TestReconcile(t *testing.T) {
@@ -142,10 +142,10 @@ func TestReconcile(t *testing.T) {
 				) error {
 					return apierrors.NewNotFound(schema.GroupResource{}, "")
 				},
-				updateNamespaceFn: func(
+				removeFinalizerFn: func(
 					context.Context,
+					client.Client,
 					client.Object,
-					...client.UpdateOption,
 				) error {
 					return nil
 				},
@@ -209,10 +209,10 @@ func TestReconcile(t *testing.T) {
 				) error {
 					return nil
 				},
-				updateNamespaceFn: func(
+				removeFinalizerFn: func(
 					context.Context,
+					client.Client,
 					client.Object,
-					...client.UpdateOption,
 				) error {
 					return errors.New("something went wrong")
 				},
@@ -243,10 +243,10 @@ func TestReconcile(t *testing.T) {
 				) error {
 					return nil
 				},
-				updateNamespaceFn: func(
+				removeFinalizerFn: func(
 					context.Context,
+					client.Client,
 					client.Object,
-					...client.UpdateOption,
 				) error {
 					return nil
 				},

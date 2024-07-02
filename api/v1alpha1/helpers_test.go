@@ -5,15 +5,17 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
-func TestAddFinalizer(t *testing.T) {
+func TestEnsureFinalizer(t *testing.T) {
 	const testNamespace = "fake-namespace"
 	const testStageName = "fake-stage"
 
@@ -31,8 +33,9 @@ func TestAddFinalizer(t *testing.T) {
 	require.NoError(t, err)
 	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(stage).Build()
 
-	err = AddFinalizer(ctx, c, stage)
+	updated, err := EnsureFinalizer(ctx, c, stage)
 	require.NoError(t, err)
+	require.True(t, updated)
 
 	patchedStage := &Stage{}
 	err = c.Get(
@@ -48,126 +51,96 @@ func TestAddFinalizer(t *testing.T) {
 	require.True(t, controllerutil.ContainsFinalizer(patchedStage, FinalizerName))
 }
 
-func TestClearAnnotations(t *testing.T) {
+func TestRemoveFinalizer(t *testing.T) {
+	const testNamespace = "fake-namespace"
+	const testStageName = "fake-stage"
+
+	ctx := context.Background()
+
+	stage := &Stage{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace:  testNamespace,
+			Name:       testStageName,
+			Finalizers: []string{FinalizerName},
+		},
+	}
+
 	scheme := k8sruntime.NewScheme()
-	require.NoError(t, SchemeBuilder.AddToScheme(scheme))
+	err := AddToScheme(scheme)
+	require.NoError(t, err)
+	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(stage).Build()
 
-	newFakeClient := func(obj ...client.Object) client.Client {
-		return fake.NewClientBuilder().
-			WithScheme(scheme).
-			WithObjects(obj...).
-			Build()
-	}
+	err = RemoveFinalizer(ctx, c, stage)
+	require.NoError(t, err)
 
-	testCases := []struct {
-		name       string
-		client     client.Client
-		obj        client.Object
-		keys       []string
-		assertions func(*testing.T, client.Object, error)
-	}{
-		{
-			name:   "no keys",
-			client: newFakeClient(),
-			obj:    nil,
-			keys:   nil,
-			assertions: func(t *testing.T, _ client.Object, err error) {
-				require.NoError(t, err)
-			},
+	patchedStage := &Stage{}
+	err = c.Get(
+		ctx,
+		types.NamespacedName{
+			Namespace: testNamespace,
+			Name:      testStageName,
 		},
-		{
-			name: "no annotations",
-			client: newFakeClient(&Stage{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "test",
-					Name:      "stage",
-				},
-			}),
-			obj: &Stage{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "test",
-					Name:      "stage",
-				},
-			},
-			keys: []string{"key"},
-			assertions: func(t *testing.T, _ client.Object, err error) {
-				require.NoError(t, err)
-			},
-		},
-		{
-			name:   "not found",
-			client: newFakeClient(),
-			obj: &Stage{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "test",
-					Name:      "stage",
-				},
-			},
-			keys: []string{"key"},
-			assertions: func(t *testing.T, _ client.Object, err error) {
-				require.ErrorContains(t, err, "patch annotation")
-			},
-		},
-		{
-			name: "clear one",
-			client: newFakeClient(&Stage{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "test",
-					Name:      "stage",
-					Annotations: map[string]string{
-						"key1": "value1",
-						"key2": "value2",
-					},
-				},
-			}),
-			obj: &Stage{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "test",
-					Name:      "stage",
-				},
-			},
-			keys: []string{"key1"},
-			assertions: func(t *testing.T, obj client.Object, err error) {
-				require.NoError(t, err)
-				require.Contains(t, obj.GetAnnotations(), "key2")
-				require.NotContains(t, obj.GetAnnotations(), "key1")
-			},
-		},
-		{
-			name: "clear two",
-			client: newFakeClient(&Stage{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "test",
-					Name:      "stage",
-					Annotations: map[string]string{
-						"key1": "value1",
-						"key2": "value2",
-					},
-				},
-			}),
-			obj: &Stage{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "test",
-					Name:      "stage",
-				},
-			},
-			keys: []string{"key1", "key2"},
-			assertions: func(t *testing.T, obj client.Object, err error) {
-				require.NoError(t, err)
-				require.NotContains(t, obj.GetAnnotations(), "key2")
-				require.NotContains(t, obj.GetAnnotations(), "key1")
-			},
+		patchedStage,
+	)
+	require.NoError(t, err)
+
+	require.False(t, controllerutil.ContainsFinalizer(patchedStage, FinalizerName))
+}
+
+func TestPatchOwnerReferences(t *testing.T) {
+	const testNamespace = "fake-namespace"
+	const testProjectName = "fake-project"
+
+	ctx := context.Background()
+
+	initialNS := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: testNamespace,
 		},
 	}
 
-	for _, tc := range testCases {
-		tc := tc
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-			err := ClearAnnotations(context.TODO(), tc.client, tc.obj, tc.keys...)
-			tc.assertions(t, tc.obj, err)
-		})
+	testProject := &Project{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: testProjectName,
+		},
 	}
+
+	scheme := k8sruntime.NewScheme()
+	err := corev1.AddToScheme(scheme)
+	require.NoError(t, err)
+	err = AddToScheme(scheme)
+	require.NoError(t, err)
+	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+		initialNS,
+		testProject,
+	).Build()
+
+	newNS := initialNS.DeepCopy()
+
+	ownerRef := metav1.NewControllerRef(
+		testProject,
+		GroupVersion.WithKind("Project"),
+	)
+	ownerRef.BlockOwnerDeletion = ptr.To(false)
+
+	newNS.OwnerReferences = []metav1.OwnerReference{
+		*ownerRef,
+	}
+
+	err = PatchOwnerReferences(ctx, c, newNS)
+	require.NoError(t, err)
+
+	patchedNS := &corev1.Namespace{}
+	err = c.Get(
+		ctx,
+		types.NamespacedName{
+			Name: testNamespace,
+		},
+		patchedNS,
+	)
+	require.NoError(t, err)
+
+	require.Equal(t, newNS.OwnerReferences, patchedNS.OwnerReferences)
 }
 
 func Test_patchAnnotation(t *testing.T) {

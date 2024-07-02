@@ -16,7 +16,6 @@ rules:
   - get
   - list
   - patch
-  - update
   - watch
 - apiGroups:
   - ""
@@ -47,5 +46,4 @@ rules:
   - projects/status
   verbs:
   - patch
-  - update
 {{- end }}  
