@@ -3676,6 +3676,15 @@ export class PromotionStatus extends Message<PromotionStatus> {
    */
   freight?: FreightReference;
 
+  /**
+   * FreightCollection contains the details of the piece of Freight referenced
+   * by this Promotion as well as any additional Freight that is carried over
+   * from the target Stage's current state.
+   *
+   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.FreightCollection freightCollection = 6;
+   */
+  freightCollection?: FreightCollection;
+
   constructor(data?: PartialMessage<PromotionStatus>) {
     super();
     proto2.util.initPartial(data, this);
@@ -3689,6 +3698,7 @@ export class PromotionStatus extends Message<PromotionStatus> {
     { no: 2, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 3, name: "metadata", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 9 /* ScalarType.STRING */} },
     { no: 5, name: "freight", kind: "message", T: FreightReference, opt: true },
+    { no: 6, name: "freightCollection", kind: "message", T: FreightCollection, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PromotionStatus {

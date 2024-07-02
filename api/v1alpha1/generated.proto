@@ -1175,6 +1175,11 @@ message PromotionStatus {
 
   // Freight is the detail of the piece of freight that was referenced by this promotion.
   optional FreightReference freight = 5;
+
+  // FreightCollection contains the details of the piece of Freight referenced
+  // by this Promotion as well as any additional Freight that is carried over
+  // from the target Stage's current state.
+  optional FreightCollection freightCollection = 6;
 }
 
 // PullRequestPromotionMechanism describes how to generate a pull request against the write branch during promotion
