@@ -67,7 +67,6 @@ rules:
   - warehouses/finalizers
   - warehouses/status
   verbs:
-  - update
   - patch
 - apiGroups:
   - argoproj.io
