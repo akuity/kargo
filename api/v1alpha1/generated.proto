@@ -1631,6 +1631,14 @@ message WarehouseSpec {
 
 // WarehouseStatus describes a Warehouse's most recently observed state.
 message WarehouseStatus {
+  // Conditions contains the last observations of the Warehouse's current
+  // state.
+  // +patchMergeKey=type
+  // +patchStrategy=merge
+  // +listType=map
+  // +listMapKey=type
+  repeated k8s.io.apimachinery.pkg.apis.meta.v1.Condition conditions = 9;
+
   // LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh
   // annotation that was handled by the controller. This field can be used to
   // determine whether the request to refresh the resource has been handled.

@@ -7,7 +7,7 @@
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto2 } from "@bufbuild/protobuf";
-import { Duration, ListMeta, ObjectMeta, Time } from "../k8s.io/apimachinery/pkg/apis/meta/v1/generated_pb.js";
+import { Condition, Duration, ListMeta, ObjectMeta, Time } from "../k8s.io/apimachinery/pkg/apis/meta/v1/generated_pb.js";
 
 /**
  * AnalysisRunArgument represents an argument to be added to an AnalysisRun.
@@ -4915,6 +4915,18 @@ export class WarehouseSpec extends Message<WarehouseSpec> {
  */
 export class WarehouseStatus extends Message<WarehouseStatus> {
   /**
+   * Conditions contains the last observations of the Warehouse's current
+   * state.
+   * +patchMergeKey=type
+   * +patchStrategy=merge
+   * +listType=map
+   * +listMapKey=type
+   *
+   * @generated from field: repeated k8s.io.apimachinery.pkg.apis.meta.v1.Condition conditions = 9;
+   */
+  conditions: Condition[] = [];
+
+  /**
    * LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh
    * annotation that was handled by the controller. This field can be used to
    * determine whether the request to refresh the resource has been handled.
@@ -4963,6 +4975,7 @@ export class WarehouseStatus extends Message<WarehouseStatus> {
   static readonly runtime: typeof proto2 = proto2;
   static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.WarehouseStatus";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 9, name: "conditions", kind: "message", T: Condition, repeated: true },
     { no: 6, name: "lastHandledRefresh", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 3, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 4, name: "observedGeneration", kind: "scalar", T: 3 /* ScalarType.INT64 */, opt: true },
