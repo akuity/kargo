@@ -85,6 +85,10 @@ spec:
               Status describes the current state of the transition represented by this
               Promotion.
             properties:
+              finishedAt:
+                description: FinishedAt is the time when the promotion was completed.
+                format: date-time
+                type: string
               freight:
                 description: Freight is the detail of the piece of freight that was
                   referenced by this promotion.
