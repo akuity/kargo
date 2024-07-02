@@ -1967,11 +1967,24 @@ export class GetProjectResponse extends Message<GetProjectResponse> {
 }
 
 /**
- * explicitly empty 
- *
  * @generated from message akuity.io.kargo.service.v1alpha1.ListProjectsRequest
  */
 export class ListProjectsRequest extends Message<ListProjectsRequest> {
+  /**
+   * @generated from field: optional int32 pageSize = 1;
+   */
+  pageSize?: number;
+
+  /**
+   * @generated from field: optional int32 page = 2;
+   */
+  page?: number;
+
+  /**
+   * @generated from field: optional string filter = 3;
+   */
+  filter?: string;
+
   constructor(data?: PartialMessage<ListProjectsRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1980,6 +1993,9 @@ export class ListProjectsRequest extends Message<ListProjectsRequest> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "akuity.io.kargo.service.v1alpha1.ListProjectsRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "pageSize", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
+    { no: 2, name: "page", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
+    { no: 3, name: "filter", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListProjectsRequest {
@@ -2008,6 +2024,11 @@ export class ListProjectsResponse extends Message<ListProjectsResponse> {
    */
   projects: Project[] = [];
 
+  /**
+   * @generated from field: int32 total = 2;
+   */
+  total = 0;
+
   constructor(data?: PartialMessage<ListProjectsResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -2017,6 +2038,7 @@ export class ListProjectsResponse extends Message<ListProjectsResponse> {
   static readonly typeName = "akuity.io.kargo.service.v1alpha1.ListProjectsResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "projects", kind: "message", T: Project, repeated: true },
+    { no: 2, name: "total", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListProjectsResponse {
@@ -2033,119 +2055,6 @@ export class ListProjectsResponse extends Message<ListProjectsResponse> {
 
   static equals(a: ListProjectsResponse | PlainMessage<ListProjectsResponse> | undefined, b: ListProjectsResponse | PlainMessage<ListProjectsResponse> | undefined): boolean {
     return proto3.util.equals(ListProjectsResponse, a, b);
-  }
-}
-
-/**
- * @generated from message akuity.io.kargo.service.v1alpha1.DetailedProject
- */
-export class DetailedProject extends Message<DetailedProject> {
-  /**
-   * @generated from field: github.com.akuity.kargo.api.v1alpha1.Project project = 1;
-   */
-  project?: Project;
-
-  /**
-   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.Stage stages = 2;
-   */
-  stages: Stage[] = [];
-
-  constructor(data?: PartialMessage<DetailedProject>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "akuity.io.kargo.service.v1alpha1.DetailedProject";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "project", kind: "message", T: Project },
-    { no: 2, name: "stages", kind: "message", T: Stage, repeated: true },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DetailedProject {
-    return new DetailedProject().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DetailedProject {
-    return new DetailedProject().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DetailedProject {
-    return new DetailedProject().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: DetailedProject | PlainMessage<DetailedProject> | undefined, b: DetailedProject | PlainMessage<DetailedProject> | undefined): boolean {
-    return proto3.util.equals(DetailedProject, a, b);
-  }
-}
-
-/**
- * explicitly empty 
- *
- * @generated from message akuity.io.kargo.service.v1alpha1.ListDetailedProjectsRequest
- */
-export class ListDetailedProjectsRequest extends Message<ListDetailedProjectsRequest> {
-  constructor(data?: PartialMessage<ListDetailedProjectsRequest>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "akuity.io.kargo.service.v1alpha1.ListDetailedProjectsRequest";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListDetailedProjectsRequest {
-    return new ListDetailedProjectsRequest().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListDetailedProjectsRequest {
-    return new ListDetailedProjectsRequest().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListDetailedProjectsRequest {
-    return new ListDetailedProjectsRequest().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: ListDetailedProjectsRequest | PlainMessage<ListDetailedProjectsRequest> | undefined, b: ListDetailedProjectsRequest | PlainMessage<ListDetailedProjectsRequest> | undefined): boolean {
-    return proto3.util.equals(ListDetailedProjectsRequest, a, b);
-  }
-}
-
-/**
- * @generated from message akuity.io.kargo.service.v1alpha1.ListDetailedProjectsResponse
- */
-export class ListDetailedProjectsResponse extends Message<ListDetailedProjectsResponse> {
-  /**
-   * @generated from field: repeated akuity.io.kargo.service.v1alpha1.DetailedProject detailed_projects = 1;
-   */
-  detailedProjects: DetailedProject[] = [];
-
-  constructor(data?: PartialMessage<ListDetailedProjectsResponse>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "akuity.io.kargo.service.v1alpha1.ListDetailedProjectsResponse";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "detailed_projects", kind: "message", T: DetailedProject, repeated: true },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListDetailedProjectsResponse {
-    return new ListDetailedProjectsResponse().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListDetailedProjectsResponse {
-    return new ListDetailedProjectsResponse().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListDetailedProjectsResponse {
-    return new ListDetailedProjectsResponse().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: ListDetailedProjectsResponse | PlainMessage<ListDetailedProjectsResponse> | undefined, b: ListDetailedProjectsResponse | PlainMessage<ListDetailedProjectsResponse> | undefined): boolean {
-    return proto3.util.equals(ListDetailedProjectsResponse, a, b);
   }
 }
 
