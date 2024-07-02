@@ -46,5 +46,4 @@ rules:
   - projects/status
   verbs:
   - patch
-  - update
 {{- end }}  
