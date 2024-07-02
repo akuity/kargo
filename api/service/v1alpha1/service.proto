@@ -332,11 +332,14 @@ message GetProjectResponse {
 }
 
 message ListProjectsRequest {
-  /* explicitly empty */
+  optional int32 page_size = 1;
+  optional int32 page = 2;
+  optional string filter = 3;
 }
 
 message ListProjectsResponse {
   repeated github.com.akuity.kargo.api.v1alpha1.Project projects = 1;
+  int32 total = 2;
 }
 
 message ApproveFreightRequest {
