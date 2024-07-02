@@ -332,7 +332,7 @@ message GetProjectResponse {
 }
 
 message ListProjectsRequest {
-  optional int32 pageSize = 1;
+  optional int32 page_size = 1;
   optional int32 page = 2;
   optional string filter = 3;
 }

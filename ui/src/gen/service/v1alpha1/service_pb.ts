@@ -1971,7 +1971,7 @@ export class GetProjectResponse extends Message<GetProjectResponse> {
  */
 export class ListProjectsRequest extends Message<ListProjectsRequest> {
   /**
-   * @generated from field: optional int32 pageSize = 1;
+   * @generated from field: optional int32 page_size = 1;
    */
   pageSize?: number;
 
@@ -1993,7 +1993,7 @@ export class ListProjectsRequest extends Message<ListProjectsRequest> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "akuity.io.kargo.service.v1alpha1.ListProjectsRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "pageSize", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
+    { no: 1, name: "page_size", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
     { no: 2, name: "page", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
     { no: 3, name: "filter", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
