@@ -6,8 +6,8 @@ import { AnyNodeType, ConnectorsType, NodeType, RepoNodeType } from '../types';
 
 export const LINE_THICKNESS = 2;
 
-export const NODE_WIDTH = 170;
-export const NODE_HEIGHT = 130;
+export const NODE_WIDTH = 180;
+export const NODE_HEIGHT = 140;
 
 export const WAREHOUSE_NODE_WIDTH = 185;
 export const WAREHOUSE_NODE_HEIGHT = 110;

@@ -7,16 +7,20 @@ import { useEffect, useState } from 'react';
 
 import { Freight } from '@ui/gen/v1alpha1/generated_pb';
 
+import { FreightContents } from '../freightline/freight-contents';
+
 import { getAlias } from './utils';
 
 export const FreightLabel = ({
   freight,
   showTimestamp,
-  breakOnHyphen
+  breakOnHyphen,
+  showContents
 }: {
   freight?: Freight;
   showTimestamp?: boolean;
   breakOnHyphen?: boolean;
+  showContents?: boolean;
 }) => {
   const [copied, setCopied] = useState<boolean>(false);
 
@@ -50,8 +54,10 @@ export const FreightLabel = ({
   return (
     <div
       className='cursor-pointer font-mono font-semibold min-w-0 w-full'
-      onClick={() => {
+      onClick={(e) => {
         if (alias || id) {
+          e.preventDefault();
+          e.stopPropagation();
           navigator.clipboard.writeText(alias || id || '');
           setCopied(true);
         }
@@ -59,6 +65,7 @@ export const FreightLabel = ({
     >
       {alias || id ? (
         <Tooltip
+          overlayStyle={{ maxWidth: '320px' }}
           placement='right'
           title={
             <>
@@ -77,6 +84,16 @@ export const FreightLabel = ({
                     <br />({humanReadable})
                   </div>
                 </Info>
+              )}
+              {showContents && (
+                <div className='mt-2'>
+                  <FreightContents
+                    freight={freight}
+                    horizontal={true}
+                    highlighted={false}
+                    dark={true}
+                  />
+                </div>
               )}
             </>
           }

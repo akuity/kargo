@@ -618,9 +618,9 @@ type StageStatus struct {
 	// status was reconciled against.
 	ObservedGeneration int64 `json:"observedGeneration,omitempty" protobuf:"varint,6,opt,name=observedGeneration"`
 	// CurrentPromotion is a reference to the currently Running promotion.
-	CurrentPromotion *PromotionInfo `json:"currentPromotion,omitempty" protobuf:"bytes,7,opt,name=currentPromotion"`
+	CurrentPromotion *PromotionReference `json:"currentPromotion,omitempty" protobuf:"bytes,7,opt,name=currentPromotion"`
 	// LastPromotion is a reference to the last completed promotion.
-	LastPromotion *PromotionInfo `json:"lastPromotion,omitempty" protobuf:"bytes,10,opt,name=lastPromotion"`
+	LastPromotion *PromotionReference `json:"lastPromotion,omitempty" protobuf:"bytes,10,opt,name=lastPromotion"`
 }
 
 // FreightReference is a simplified representation of a piece of Freight -- not
@@ -863,13 +863,15 @@ type StageList struct {
 	Items           []Stage `json:"items" protobuf:"bytes,2,rep,name=items"`
 }
 
-type PromotionInfo struct {
+type PromotionReference struct {
 	// Name is the name of the Promotion
 	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
 	// Freight is the freight being promoted
 	Freight FreightReference `json:"freight" protobuf:"bytes,2,opt,name=freight"`
 	// Status is the (optional) status of the promotion
 	Status *PromotionStatus `json:"status,omitempty" protobuf:"bytes,3,opt,name=status"`
+	// FinishedAt is the time at which the Promotion was completed.
+	FinishedAt *metav1.Time `json:"finishedAt,omitempty" protobuf:"bytes,4,opt,name=finishedAt"`
 }
 
 // Verification describes how to verify that a Promotion has been successful

@@ -38,10 +38,10 @@ type reconciler struct {
 		...client.DeleteOption,
 	) error
 
-	updateNamespaceFn func(
+	removeFinalizerFn func(
 		context.Context,
+		client.Client,
 		client.Object,
-		...client.UpdateOption,
 	) error
 }
 
@@ -70,7 +70,7 @@ func newReconciler(kubeClient client.Client) *reconciler {
 	}
 	r.getNamespaceFn = r.client.Get
 	r.deleteProjectFn = r.client.Delete
-	r.updateNamespaceFn = r.client.Update
+	r.removeFinalizerFn = kargoapi.RemoveFinalizer
 	return r
 }
 
@@ -118,10 +118,8 @@ func (r *reconciler) Reconcile(
 	); err != nil {
 		return ctrl.Result{}, fmt.Errorf("error deleting Project %q: %w", ns.Name, err)
 	}
-	if controllerutil.RemoveFinalizer(ns, kargoapi.FinalizerName) {
-		if err := r.updateNamespaceFn(ctx, ns); err != nil {
-			return ctrl.Result{}, fmt.Errorf("error removing finalizer: %w", err)
-		}
+	if err := r.removeFinalizerFn(ctx, r.client, ns); err != nil {
+		return ctrl.Result{}, fmt.Errorf("error removing finalizer: %w", err)
 	}
 	logger.Debug("done reconciling Namespace")
 	return ctrl.Result{}, nil

@@ -106,7 +106,9 @@ type PromotionStatus struct {
 	// FreightCollection contains the details of the piece of Freight referenced
 	// by this Promotion as well as any additional Freight that is carried over
 	// from the target Stage's current state.
-	FreightCollection *FreightCollection `json:"freightCollection,omitempty" protobuf:"bytes,6,opt,name=freightCollection"`
+	FreightCollection *FreightCollection `json:"freightCollection,omitempty" protobuf:"bytes,7,opt,name=freightCollection"`
+	// FinishedAt is the time when the promotion was completed.
+	FinishedAt *metav1.Time `json:"finishedAt,omitempty" protobuf:"bytes,6,opt,name=finishedAt"`
 }
 
 // WithPhase returns a copy of PromotionStatus with the given phase

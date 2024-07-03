@@ -102,7 +102,9 @@ func TestListProjects(t *testing.T) {
 			svr := &server{
 				client: client,
 			}
-			res, err := (svr).ListProjects(ctx, nil)
+			res, err := (svr).ListProjects(ctx, &connect.Request[svcv1alpha1.ListProjectsRequest]{
+				Msg: &svcv1alpha1.ListProjectsRequest{},
+			})
 			testCase.assertions(t, res, err)
 		})
 	}

@@ -78,11 +78,17 @@ type reconciler struct {
 		...client.CreateOption,
 	) error
 
-	updateNamespaceFn func(
+	patchOwnerReferencesFn func(
 		context.Context,
+		client.Client,
 		client.Object,
-		...client.UpdateOption,
 	) error
+
+	ensureFinalizerFn func(
+		context.Context,
+		client.Client,
+		client.Object,
+	) (bool, error)
 
 	ensureAPIAdminPermissionsFn func(context.Context, *kargoapi.Project) error
 
@@ -138,7 +144,8 @@ func newReconciler(kubeClient client.Client, cfg ReconcilerConfig) *reconciler {
 	r.patchProjectStatusFn = r.patchProjectStatus
 	r.getNamespaceFn = r.client.Get
 	r.createNamespaceFn = r.client.Create
-	r.updateNamespaceFn = r.client.Update
+	r.patchOwnerReferencesFn = kargoapi.PatchOwnerReferences
+	r.ensureFinalizerFn = kargoapi.EnsureFinalizer
 	r.ensureAPIAdminPermissionsFn = r.ensureAPIAdminPermissions
 	r.ensureDefaultProjectRolesFn = r.ensureDefaultProjectRoles
 	r.createServiceAccountFn = r.client.Create
@@ -283,12 +290,24 @@ func (r *reconciler) ensureNamespace(
 		// uncommon scenario where an organization has its own controller that
 		// creates and initializes namespaces to ensure compliance with
 		// internal policies. Such a controller might already own the namespace.
-		ns.OwnerReferences = append(ns.OwnerReferences, *ownerRef)
-		controllerutil.AddFinalizer(ns, kargoapi.FinalizerName)
-		if err = r.updateNamespaceFn(ctx, ns); err != nil {
-			return status, fmt.Errorf("error updating namespace %q: %w", project.Name, err)
+		updated, err := r.ensureFinalizerFn(ctx, r.client, ns)
+		if err != nil {
+			return status, fmt.Errorf("error ensuring finalizer on namespace %q: %w", project.Name, err)
 		}
-		logger.Debug("updated namespace with Project as owner")
+		if updated {
+			logger.Debug("added finalizer to namespace")
+		}
+		ns.OwnerReferences = append(ns.OwnerReferences, *ownerRef)
+		if err = r.patchOwnerReferencesFn(ctx, r.client, ns); err != nil {
+			return status, fmt.Errorf(
+				"error patching namespace %q with project %q as owner: %w",
+				project.Name,
+				project.Name,
+				err,
+			)
+		}
+		logger.Debug("patched namespace with Project as owner")
+
 		return status, nil
 	}
 

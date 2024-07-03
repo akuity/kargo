@@ -1083,17 +1083,6 @@ message Promotion {
   optional PromotionStatus status = 3;
 }
 
-message PromotionInfo {
-  // Name is the name of the Promotion
-  optional string name = 1;
-
-  // Freight is the freight being promoted
-  optional FreightReference freight = 2;
-
-  // Status is the (optional) status of the promotion
-  optional PromotionStatus status = 3;
-}
-
 // PromotionList contains a list of Promotion
 message PromotionList {
   optional k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
@@ -1131,6 +1120,20 @@ message PromotionPolicy {
   // users to define Stages that are automatically updated as soon as new
   // artifacts are detected.
   optional bool autoPromotionEnabled = 2;
+}
+
+message PromotionReference {
+  // Name is the name of the Promotion
+  optional string name = 1;
+
+  // Freight is the freight being promoted
+  optional FreightReference freight = 2;
+
+  // Status is the (optional) status of the promotion
+  optional PromotionStatus status = 3;
+
+  // FinishedAt is the time at which the Promotion was completed.
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time finishedAt = 4;
 }
 
 // PromotionSpec describes the desired transition of a specific Stage into a
@@ -1179,7 +1182,10 @@ message PromotionStatus {
   // FreightCollection contains the details of the piece of Freight referenced
   // by this Promotion as well as any additional Freight that is carried over
   // from the target Stage's current state.
-  optional FreightCollection freightCollection = 6;
+  optional FreightCollection freightCollection = 7;
+
+  // FinishedAt is the time when the promotion was completed.
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time finishedAt = 6;
 }
 
 // PullRequestPromotionMechanism describes how to generate a pull request against the write branch during promotion
@@ -1309,10 +1315,10 @@ message StageStatus {
   optional int64 observedGeneration = 6;
 
   // CurrentPromotion is a reference to the currently Running promotion.
-  optional PromotionInfo currentPromotion = 7;
+  optional PromotionReference currentPromotion = 7;
 
   // LastPromotion is a reference to the last completed promotion.
-  optional PromotionInfo lastPromotion = 10;
+  optional PromotionReference lastPromotion = 10;
 }
 
 // StageSubscription defines a subscription to Freight from another Stage.

@@ -8,6 +8,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Tooltip } from 'antd';
+import { formatDistance } from 'date-fns';
 import { generatePath, useNavigate } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
@@ -115,8 +116,25 @@ export const StageNode = ({
             </div>
           ) : (
             <div className='text-sm h-full flex flex-col items-center justify-center -mt-1'>
-              <div className={styles.freightLabel}>CURRENT FREIGHT</div>
-              <FreightLabel freight={currentFreight} showTimestamp={true} />
+              <div className={styles.freightLabel}>Current Freight</div>
+              <FreightLabel freight={currentFreight} showContents={true} />
+              {stage?.status?.lastPromotion?.finishedAt && (
+                <>
+                  <div
+                    className='uppercase font-medium mt-1 text-gray-400'
+                    style={{ fontSize: '9px' }}
+                  >
+                    Last Promoted
+                  </div>
+                  <div className='text-xs text-gray-600 font-mono font-semibold'>
+                    {formatDistance(
+                      stage?.status?.lastPromotion?.finishedAt?.toDate(),
+                      new Date(),
+                      { addSuffix: true }
+                    )}
+                  </div>
+                </>
+              )}
             </div>
           )}
         </div>

@@ -29,7 +29,8 @@ func TestNewReconciler(t *testing.T) {
 	require.NotNil(t, r.patchProjectStatusFn)
 	require.NotNil(t, r.getNamespaceFn)
 	require.NotNil(t, r.createNamespaceFn)
-	require.NotNil(t, r.updateNamespaceFn)
+	require.NotNil(t, r.patchOwnerReferencesFn)
+	require.NotNil(t, r.ensureFinalizerFn)
 	require.NotNil(t, r.ensureAPIAdminPermissionsFn)
 	require.NotNil(t, r.ensureDefaultProjectRolesFn)
 	require.NotNil(t, r.createServiceAccountFn)
@@ -402,7 +403,7 @@ func TestEnsureNamespace(t *testing.T) {
 		},
 		{
 			name: "namespace exists, is labeled as a project namespace, and is " +
-				"NOT already owned by the project; error updating it",
+				"NOT already owned by the project; error ensuring finalizer",
 			project: &kargoapi.Project{
 				Status: kargoapi.ProjectStatus{
 					Phase: kargoapi.ProjectPhaseInitializing,
@@ -422,16 +423,16 @@ func TestEnsureNamespace(t *testing.T) {
 					}
 					return nil
 				},
-				updateNamespaceFn: func(
+				ensureFinalizerFn: func(
 					context.Context,
+					client.Client,
 					client.Object,
-					...client.UpdateOption,
-				) error {
-					return errors.New("something went wrong")
+				) (bool, error) {
+					return false, errors.New("something went wrong")
 				},
 			},
 			assertions: func(t *testing.T, status kargoapi.ProjectStatus, err error) {
-				require.ErrorContains(t, err, "error updating namespace")
+				require.ErrorContains(t, err, "error ensuring finalizer on namespace")
 				require.ErrorContains(t, err, "something went wrong")
 				// Phase wasn't changed
 				require.Equal(t, kargoapi.ProjectPhaseInitializing, status.Phase)
@@ -439,7 +440,7 @@ func TestEnsureNamespace(t *testing.T) {
 		},
 		{
 			name: "namespace exists, is labeled as a project namespace, and is " +
-				"NOT already owned by the project; success updating it",
+				"NOT already owned by the project; error patching it",
 			project: &kargoapi.Project{
 				Status: kargoapi.ProjectStatus{
 					Phase: kargoapi.ProjectPhaseInitializing,
@@ -459,10 +460,61 @@ func TestEnsureNamespace(t *testing.T) {
 					}
 					return nil
 				},
-				updateNamespaceFn: func(
+				ensureFinalizerFn: func(
 					context.Context,
+					client.Client,
 					client.Object,
-					...client.UpdateOption,
+				) (bool, error) {
+					return false, nil
+				},
+				patchOwnerReferencesFn: func(
+					context.Context,
+					client.Client,
+					client.Object,
+				) error {
+					return errors.New("something went wrong")
+				},
+			},
+			assertions: func(t *testing.T, status kargoapi.ProjectStatus, err error) {
+				require.ErrorContains(t, err, "error patching namespace")
+				require.ErrorContains(t, err, "something went wrong")
+				// Phase wasn't changed
+				require.Equal(t, kargoapi.ProjectPhaseInitializing, status.Phase)
+			},
+		},
+		{
+			name: "namespace exists, is labeled as a project namespace, and is " +
+				"NOT already owned by the project; success",
+			project: &kargoapi.Project{
+				Status: kargoapi.ProjectStatus{
+					Phase: kargoapi.ProjectPhaseInitializing,
+				},
+			},
+			reconciler: &reconciler{
+				getNamespaceFn: func(
+					_ context.Context,
+					_ types.NamespacedName,
+					obj client.Object,
+					_ ...client.GetOption,
+				) error {
+					ns, ok := obj.(*corev1.Namespace)
+					require.True(t, ok)
+					ns.Labels = map[string]string{
+						kargoapi.ProjectLabelKey: kargoapi.LabelTrueValue,
+					}
+					return nil
+				},
+				ensureFinalizerFn: func(
+					context.Context,
+					client.Client,
+					client.Object,
+				) (bool, error) {
+					return false, nil
+				},
+				patchOwnerReferencesFn: func(
+					context.Context,
+					client.Client,
+					client.Object,
 				) error {
 					return nil
 				},
