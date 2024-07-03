@@ -159,7 +159,7 @@ func TestKustomizerApply(t *testing.T) {
 			changes, err := testCase.kustomizer.apply(
 				context.TODO(),
 				testCase.update,
-				kargoapi.FreightReference{
+				[]kargoapi.FreightReference{{
 					Images: []kargoapi.Image{
 						{
 							RepoURL: "fake-image",
@@ -167,7 +167,7 @@ func TestKustomizerApply(t *testing.T) {
 							Digest:  "fake-digest",
 						},
 					},
-				},
+				}},
 				"",
 				"",
 				"",

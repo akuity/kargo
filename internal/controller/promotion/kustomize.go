@@ -49,7 +49,7 @@ type kustomizer struct {
 func (k *kustomizer) apply(
 	_ context.Context,
 	update kargoapi.GitRepoUpdate,
-	newFreight kargoapi.FreightReference,
+	newFreight []kargoapi.FreightReference,
 	_ string,
 	_ string, // TODO: sourceCommit would be a nice addition to the commit message
 	_ string,
@@ -59,14 +59,16 @@ func (k *kustomizer) apply(
 	changeSummary := make([]string, 0, len(update.Kustomize.Images))
 	for _, imgUpdate := range update.Kustomize.Images {
 		var fqImageRef string // Fully-qualified image reference
-		for _, img := range newFreight.Images {
-			if img.RepoURL == imgUpdate.Image {
-				if imgUpdate.UseDigest {
-					fqImageRef = fmt.Sprintf("%s@%s", img.RepoURL, img.Digest)
-				} else {
-					fqImageRef = fmt.Sprintf("%s:%s", img.RepoURL, img.Tag)
+		for _, f := range newFreight {
+			for _, img := range f.Images {
+				if img.RepoURL == imgUpdate.Image {
+					if imgUpdate.UseDigest {
+						fqImageRef = fmt.Sprintf("%s@%s", img.RepoURL, img.Digest)
+					} else {
+						fqImageRef = fmt.Sprintf("%s:%s", img.RepoURL, img.Tag)
+					}
+					break
 				}
-				break
 			}
 		}
 		if fqImageRef == "" {
