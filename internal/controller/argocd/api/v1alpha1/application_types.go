@@ -172,6 +172,7 @@ type OperationState struct {
 	Phase      OperationPhase       `json:"phase,omitempty"`
 	Message    string               `json:"message,omitempty"`
 	SyncResult *SyncOperationResult `json:"syncResult,omitempty"`
+	FinishedAt *metav1.Time         `json:"finishedAt,omitempty"`
 }
 
 type SyncOperationResult struct {

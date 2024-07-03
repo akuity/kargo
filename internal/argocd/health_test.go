@@ -4,11 +4,13 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
@@ -55,6 +57,9 @@ func TestApplicationHealth_EvaluateHealth(t *testing.T) {
 						Sync: argocd.SyncStatus{
 							Status:   argocd.SyncStatusCodeSynced,
 							Revision: "v1.2.3",
+						},
+						OperationState: &argocd.OperationState{
+							FinishedAt: &metav1.Time{Time: metav1.Now().Add(-10 * time.Second)},
 						},
 					},
 				},
@@ -445,6 +450,9 @@ func TestApplicationHealth_GetApplicationHealth(t *testing.T) {
 						Status:   argocd.SyncStatusCodeSynced,
 						Revision: "fake-revision",
 					},
+					OperationState: &argocd.OperationState{
+						FinishedAt: ptr.To(metav1.Now()),
+					},
 				},
 			},
 			freight: []kargoapi.FreightReference{
@@ -539,6 +547,9 @@ func TestApplicationHealth_GetApplicationHealth(t *testing.T) {
 						Status:   argocd.SyncStatusCodeSynced,
 						Revision: "fake-revision",
 					},
+					OperationState: &argocd.OperationState{
+						FinishedAt: &metav1.Time{Time: metav1.Now().Add(-10 * time.Second)},
+					},
 				},
 			},
 			freight: []kargoapi.FreightReference{
@@ -589,6 +600,80 @@ func TestApplicationHealth_GetApplicationHealth(t *testing.T) {
 			testCase.assertions(t, state, healthStatus, syncStatus, err)
 		})
 	}
+
+	t.Run("waits for operation cooldown", func(t *testing.T) {
+		app := &argocd.Application{
+			Spec: argocd.ApplicationSpec{
+				Source: &argocd.ApplicationSource{
+					RepoURL: "https://example.com/universe/42",
+				},
+			},
+			Status: argocd.ApplicationStatus{
+				Health: argocd.HealthStatus{
+					Status: argocd.HealthStatusProgressing,
+				},
+				Sync: argocd.SyncStatus{
+					Status:   argocd.SyncStatusCodeSynced,
+					Revision: "fake-revision",
+				},
+				OperationState: &argocd.OperationState{
+					FinishedAt: ptr.To(metav1.Now()),
+				},
+			},
+		}
+		freight := []kargoapi.FreightReference{{
+			Commits: []kargoapi.GitCommit{
+				{
+					RepoURL: "https://example.com/universe/42",
+					ID:      "fake-revision",
+				},
+			},
+		}}
+
+		var count int
+		c := fake.NewClientBuilder().WithInterceptorFuncs(interceptor.Funcs{
+			Get: func(
+				_ context.Context,
+				_ client.WithWatch,
+				_ client.ObjectKey,
+				obj client.Object,
+				_ ...client.GetOption,
+			) error {
+				count++
+
+				appCopy := app.DeepCopy()
+				if count > 1 {
+					appCopy.Status.Health.Status = argocd.HealthStatusHealthy
+				}
+
+				*obj.(*argocd.Application) = *appCopy // nolint: forcetypeassert
+				return nil
+			},
+		})
+		h := &applicationHealth{
+			Client: c.Build(),
+		}
+
+		_, _, _, err := h.GetApplicationHealth(
+			context.TODO(),
+			types.NamespacedName{
+				Namespace: "fake-namespace",
+				Name:      "fake-name",
+			},
+			freight,
+		)
+		elapsed := time.Since(app.Status.OperationState.FinishedAt.Time)
+
+		require.NoError(t, err)
+
+		// We wait for 10 seconds after the sync operation has finished.
+		// As such, the elapsed time should be greater than 8 seconds,
+		// but less than 12 seconds. To ensure we do not introduce
+		// flakes in the tests.
+		require.Greater(t, elapsed, 8*time.Second)
+		require.Less(t, elapsed, 12*time.Second)
+		require.Equal(t, 2, count)
+	})
 }
 
 func Test_stageHealthForAppSync(t *testing.T) {
@@ -619,12 +704,46 @@ func Test_stageHealthForAppSync(t *testing.T) {
 			},
 		},
 		{
+			name:     "no operation state",
+			revision: "fake-revision",
+			app: &argocd.Application{
+				Status: argocd.ApplicationStatus{
+					Sync: argocd.SyncStatus{
+						Revision: "fake-revision",
+					},
+				},
+			},
+			assertions: func(t *testing.T, state kargoapi.HealthState, err error) {
+				require.ErrorContains(t, err, "is being synced")
+				require.Equal(t, kargoapi.HealthStateUnknown, state)
+			},
+		},
+		{
+			name:     "operation state without finished time",
+			revision: "fake-revision",
+			app: &argocd.Application{
+				Status: argocd.ApplicationStatus{
+					Sync: argocd.SyncStatus{
+						Revision: "fake-revision",
+					},
+					OperationState: &argocd.OperationState{},
+				},
+			},
+			assertions: func(t *testing.T, state kargoapi.HealthState, err error) {
+				require.ErrorContains(t, err, "is being synced")
+				require.Equal(t, kargoapi.HealthStateUnknown, state)
+			},
+		},
+		{
 			name:     "sync revision mismatch",
 			revision: "fake-revision",
 			app: &argocd.Application{
 				Status: argocd.ApplicationStatus{
 					Sync: argocd.SyncStatus{
 						Revision: "other-fake-revision",
+					},
+					OperationState: &argocd.OperationState{
+						FinishedAt: ptr.To(metav1.Now()),
 					},
 				},
 			},
@@ -640,6 +759,9 @@ func Test_stageHealthForAppSync(t *testing.T) {
 				Status: argocd.ApplicationStatus{
 					Sync: argocd.SyncStatus{
 						Revision: "fake-revision",
+					},
+					OperationState: &argocd.OperationState{
+						FinishedAt: &metav1.Time{Time: metav1.Now().Add(-10 * time.Second)},
 					},
 				},
 			},

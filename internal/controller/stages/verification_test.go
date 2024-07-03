@@ -868,7 +868,7 @@ func TestBuildAnalysisRun(t *testing.T) {
 					},
 				},
 				Status: kargoapi.StageStatus{
-					LastPromotion: &kargoapi.PromotionInfo{
+					LastPromotion: &kargoapi.PromotionReference{
 						Name: "fake-id",
 						Status: &kargoapi.PromotionStatus{
 							Phase: kargoapi.PromotionPhaseSucceeded,
@@ -1148,7 +1148,7 @@ func TestBuildAnalysisRun(t *testing.T) {
 					Verification: &kargoapi.Verification{},
 				},
 				Status: kargoapi.StageStatus{
-					LastPromotion: &kargoapi.PromotionInfo{
+					LastPromotion: &kargoapi.PromotionReference{
 						Name: "fake-id",
 						Status: &kargoapi.PromotionStatus{
 							Phase: kargoapi.PromotionPhaseSucceeded,
@@ -1195,7 +1195,7 @@ func TestBuildAnalysisRun(t *testing.T) {
 					Verification: &kargoapi.Verification{},
 				},
 				Status: kargoapi.StageStatus{
-					LastPromotion: &kargoapi.PromotionInfo{
+					LastPromotion: &kargoapi.PromotionReference{
 						Name: "fake-id",
 						Status: &kargoapi.PromotionStatus{
 							Phase: kargoapi.PromotionPhaseSucceeded,

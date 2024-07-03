@@ -161,8 +161,8 @@ func TestSyncControlFlowStage(t *testing.T) {
 				},
 				Status: kargoapi.StageStatus{
 					Phase:            kargoapi.StagePhaseNotApplicable,
-					CurrentPromotion: &kargoapi.PromotionInfo{},
-					LastPromotion:    &kargoapi.PromotionInfo{},
+					CurrentPromotion: &kargoapi.PromotionReference{},
+					LastPromotion:    &kargoapi.PromotionReference{},
 					FreightHistory:   make(kargoapi.FreightHistory, 0),
 					Health:           &kargoapi.Health{},
 					CurrentFreight:   &kargoapi.FreightReference{},
@@ -1974,7 +1974,7 @@ func TestReconciler_syncPromotions(t *testing.T) {
 			assertions: func(t *testing.T, status kargoapi.StageStatus, err error) {
 				require.NoError(t, err)
 				require.Equal(t, kargoapi.StagePhasePromoting, status.Phase)
-				require.Equal(t, &kargoapi.PromotionInfo{
+				require.Equal(t, &kargoapi.PromotionReference{
 					Name: "fake-promotion",
 					Freight: kargoapi.FreightReference{
 						Name: "fake-freight",
@@ -2004,7 +2004,7 @@ func TestReconciler_syncPromotions(t *testing.T) {
 			},
 			initialStatus: kargoapi.StageStatus{
 				Phase: kargoapi.StagePhasePromoting,
-				CurrentPromotion: &kargoapi.PromotionInfo{
+				CurrentPromotion: &kargoapi.PromotionReference{
 					Name: "fake-promotion",
 				},
 			},
@@ -2088,8 +2088,10 @@ func TestReconciler_syncPromotions(t *testing.T) {
 				require.Equal(t, kargoapi.StagePhaseSteady, status.Phase)
 				require.Nil(t, status.CurrentPromotion)
 
+				status.LastPromotion.FinishedAt = nil
+
 				// Last Promotion should be the latest Terminated Promotion
-				require.Equal(t, &kargoapi.PromotionInfo{
+				require.Equal(t, &kargoapi.PromotionReference{
 					Name: "fake-promotion." + ulidOneMinuteAgo.String(),
 					Status: &kargoapi.PromotionStatus{
 						Phase: kargoapi.PromotionPhaseErrored,
@@ -2161,7 +2163,7 @@ func TestReconciler_syncPromotions(t *testing.T) {
 			initialStatus: kargoapi.StageStatus{
 				// Should not be updated.
 				Phase: kargoapi.StagePhaseVerifying,
-				LastPromotion: &kargoapi.PromotionInfo{
+				LastPromotion: &kargoapi.PromotionReference{
 					Name: "fake-promotion." + ulidOneHourAgo.String(),
 					Status: &kargoapi.PromotionStatus{
 						Phase: kargoapi.PromotionPhaseFailed,
@@ -2173,7 +2175,7 @@ func TestReconciler_syncPromotions(t *testing.T) {
 
 				require.Equal(t, kargoapi.StagePhaseVerifying, status.Phase)
 				require.Nil(t, status.CurrentPromotion)
-				require.Equal(t, &kargoapi.PromotionInfo{
+				require.Equal(t, &kargoapi.PromotionReference{
 					Name: "fake-promotion." + ulidOneHourAgo.String(),
 					Status: &kargoapi.PromotionStatus{
 						Phase: kargoapi.PromotionPhaseFailed,
