@@ -131,7 +131,7 @@ export const Pipelines = () => {
     return () => watcher.cancelWatch();
   }, [isLoading, isVisible, name]);
 
-  const [nodes, connectors, box, sortedStages, stageColorMap] = usePipelineGraph(
+  const [nodes, connectors, box, sortedStages, stageColorMap, warehouseColorMap] = usePipelineGraph(
     name,
     data?.stages || [],
     warehouseData?.warehouses || [],
@@ -208,7 +208,7 @@ export const Pipelines = () => {
 
   return (
     <div className='flex flex-col flex-grow'>
-      <ColorContext.Provider value={stageColorMap}>
+      <ColorContext.Provider value={{ stageColorMap, warehouseColorMap }}>
         <FreightlineHeader
           promotingStage={state.stage}
           action={state.action}
@@ -254,6 +254,7 @@ export const Pipelines = () => {
                     className='mr-2'
                     onClick={() => {
                       clearColors(name || '');
+                      clearColors(name || '', 'warehouses');
                       window.location.reload();
                     }}
                   >
@@ -432,7 +433,7 @@ export const Pipelines = () => {
                 {connectors?.map((connector) =>
                   connector.map((line, i) => (
                     <div
-                      className='absolute bg-gray-400'
+                      className='absolute bg-gray-300 rounded'
                       style={{
                         padding: 0,
                         margin: 0,
@@ -440,7 +441,8 @@ export const Pipelines = () => {
                         width: line.width,
                         left: line.x,
                         top: line.y,
-                        transform: `rotate(${line.angle}deg)`
+                        transform: `rotate(${line.angle}deg)`,
+                        backgroundColor: line.color
                       }}
                       key={i}
                     />

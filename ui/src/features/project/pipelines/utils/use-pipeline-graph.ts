@@ -1,10 +1,11 @@
 import { graphlib, layout } from 'dagre';
 import { useMemo } from 'react';
 
-import { getStageColors } from '@ui/features/stage/utils';
-import { Stage, Warehouse } from '@ui/gen/v1alpha1/generated_pb';
+import { ColorMap, getColors } from '@ui/features/stage/utils';
+import { FreightRequest, Stage, Warehouse } from '@ui/gen/v1alpha1/generated_pb';
 
 import {
+  AnyNodeType,
   BoxType,
   ConnectorsType,
   DagreNode,
@@ -16,7 +17,12 @@ import {
 import { getConnectors, initNodeArray, newSubscriptionNode, nodeStubFor } from './graph';
 import { IndexCache } from './index-cache';
 
-const initializeNodes = (warehouses: Warehouse[], stages: Stage[], hideSubscriptions: boolean) => {
+const initializeNodes = (
+  warehouses: Warehouse[],
+  stages: Stage[],
+  hideSubscriptions: boolean,
+  project?: string
+): [AnyNodeType[], ColorMap] => {
   const warehouseMap = {} as { [key: string]: Warehouse };
   const warehouseNodeMap = {} as { [key: string]: RepoNodeType };
 
@@ -28,25 +34,45 @@ const initializeNodes = (warehouses: Warehouse[], stages: Stage[], hideSubscript
   const nodes = stages.slice().flatMap((stage) => {
     const n = initNodeArray(stage);
 
-    const warehouseName = stage.spec?.subscriptions?.warehouse;
-    // create warehouse nodes
-    if (warehouseName) {
-      const cur = warehouseMap[warehouseName];
-      if (!warehouseNodeMap[warehouseName] && cur) {
-        // if warehouse node does not yet exist, create it and add this stage as its first child
-        warehouseNodeMap[warehouseName] = NewWarehouseNode(cur, [stage.metadata?.name || '']);
-      } else {
-        // the warehouse node already exists, so add this stage to its children
-        const stageNames = [
-          ...(warehouseNodeMap[warehouseName]?.stageNames || []),
-          stage.metadata?.name || ''
-        ];
-        warehouseNodeMap[warehouseName] = {
-          ...warehouseNodeMap[warehouseName],
-          stageNames
-        };
-      }
+    let requestedFreight = stage.spec?.requestedFreight;
+    const legacySubscription = stage.spec?.subscriptions?.warehouse;
+    if (!requestedFreight || (stage.spec?.requestedFreight?.length === 0 && legacySubscription)) {
+      requestedFreight = [
+        {
+          origin: {
+            kind: 'Warehouse',
+            name: legacySubscription
+          },
+          sources: {
+            direct: true
+          }
+        }
+      ] as FreightRequest[];
     }
+
+    (requestedFreight || []).forEach((f) => {
+      if (f?.origin?.kind === 'Warehouse' && f?.sources?.direct) {
+        const warehouseName = f.origin?.name;
+        // create warehouse nodes
+        if (warehouseName) {
+          const cur = warehouseMap[warehouseName];
+          if (!warehouseNodeMap[warehouseName] && cur) {
+            // if warehouse node does not yet exist, create it and add this stage as its first child
+            warehouseNodeMap[warehouseName] = NewWarehouseNode(cur, [stage.metadata?.name || '']);
+          } else {
+            // the warehouse node already exists, so add this stage to its children
+            const stageNames = [
+              ...(warehouseNodeMap[warehouseName]?.stageNames || []),
+              stage.metadata?.name || ''
+            ];
+            warehouseNodeMap[warehouseName] = {
+              ...warehouseNodeMap[warehouseName],
+              stageNames
+            };
+          }
+        }
+      }
+    });
 
     return n;
   });
@@ -60,8 +86,10 @@ const initializeNodes = (warehouses: Warehouse[], stages: Stage[], hideSubscript
     });
   }
 
+  const warehouseColorMap = getColors(project || '', warehouses, 'warehouses');
+
   nodes.push(...Object.values(warehouseNodeMap));
-  return nodes;
+  return [nodes, warehouseColorMap];
 };
 
 export const usePipelineGraph = (
@@ -69,17 +97,22 @@ export const usePipelineGraph = (
   stages: Stage[],
   warehouses: Warehouse[],
   hideSubscriptions: boolean
-): [DagreNode[], ConnectorsType[][], BoxType, Stage[], { [key: string]: string }] => {
+): [DagreNode[], ConnectorsType[][], BoxType, Stage[], ColorMap, ColorMap] => {
   return useMemo(() => {
     if (!stages || !warehouses || !project) {
-      return [[], [] as ConnectorsType[][], {} as BoxType, [] as Stage[], {}];
+      return [[], [] as ConnectorsType[][], {} as BoxType, [] as Stage[], {}, {}];
     }
 
     const g = new graphlib.Graph();
     g.setGraph({ rankdir: 'LR' });
     g.setDefaultEdgeLabel(() => ({}));
 
-    const myNodes = initializeNodes(warehouses, stages, hideSubscriptions);
+    const [myNodes, warehouseColorMap] = initializeNodes(
+      warehouses,
+      stages,
+      hideSubscriptions,
+      project
+    );
     const parentIndexCache = new IndexCache((node, warehouseName) => {
       return node.type === NodeType.WAREHOUSE && node.warehouseName === warehouseName;
     });
@@ -92,7 +125,17 @@ export const usePipelineGraph = (
       g.setNode(String(index), nodeStubFor(item.type));
 
       if (item.type === NodeType.STAGE) {
-        item.data?.spec?.subscriptions?.upstreamStages.forEach((upstreamStage) => {
+        (item.data?.spec?.requestedFreight || []).forEach((req) => {
+          if (req.origin?.kind === 'Warehouse') {
+            req.sources?.stages?.forEach((upstreamStage) => {
+              g.setEdge(String(subscriberIndexCache.get(upstreamStage, myNodes)), String(index), {
+                color: warehouseColorMap[req?.origin?.name || '']
+              });
+            });
+          }
+        });
+
+        (item.data?.spec?.subscriptions?.upstreamStages || []).forEach((upstreamStage) => {
           g.setEdge(
             String(subscriberIndexCache.get(upstreamStage.name || '', myNodes)),
             String(index)
@@ -102,12 +145,16 @@ export const usePipelineGraph = (
         // this is a warehouse node
         for (const stageName of item.stageNames || []) {
           // draw edge between warehouse and stage(s)
-          g.setEdge(String(index), String(subscriberIndexCache.get(stageName, myNodes)));
+          g.setEdge(String(index), String(subscriberIndexCache.get(stageName, myNodes)), {
+            color: warehouseColorMap[item.warehouseName]
+          });
         }
       } else {
         // this is a subscription node
         // draw edge between subscription and warehouse
-        g.setEdge(String(index), String(parentIndexCache.get(item.warehouseName, myNodes)));
+        g.setEdge(String(index), String(parentIndexCache.get(item.warehouseName, myNodes)), {
+          color: warehouseColorMap[item.warehouseName]
+        });
       }
     });
 
@@ -144,7 +191,7 @@ export const usePipelineGraph = (
       .map((item) => item.data) as Stage[];
 
     // color nodes based on stage
-    const stageColorMap = getStageColors(project || '', sortedStages);
+    const stageColorMap = getColors(project || '', sortedStages);
     nodes.forEach((node) => {
       if (node.type === NodeType.STAGE) {
         const color = stageColorMap[node.data?.metadata?.name || ''];
@@ -154,6 +201,6 @@ export const usePipelineGraph = (
       }
     });
 
-    return [nodes, connectors, box, sortedStages, stageColorMap];
+    return [nodes, connectors, box, sortedStages, stageColorMap, warehouseColorMap];
   }, [stages, warehouses, hideSubscriptions, project]);
 };

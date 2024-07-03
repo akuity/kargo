@@ -6,8 +6,8 @@ import { generatePath, useNavigate, useParams } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
 import {
+  promoteDownstream,
   promoteToStage,
-  promoteToStageSubscribers,
   queryFreight
 } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 import { Freight, Stage } from '@ui/gen/v1alpha1/generated_pb';
@@ -42,7 +42,7 @@ export const Freightline = ({
   const navigate = useNavigate();
   const { name: project } = useParams();
 
-  const { mutate: promoteToStageSubscribersAction } = useMutation(promoteToStageSubscribers, {
+  const { mutate: promoteDownstreamAction } = useMutation(promoteDownstream, {
     onError,
     onSuccess: () => {
       message.success(
@@ -164,7 +164,7 @@ export const Freightline = ({
                           ...currentData
                         });
                       } else {
-                        promoteToStageSubscribersAction({
+                        promoteDownstreamAction({
                           stage: state.stage || '',
                           ...currentData
                         });

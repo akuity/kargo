@@ -34,7 +34,7 @@ export const FreightlineHeader = ({
   setSelectedWarehouse: (warehouse: string) => void;
   warehouses: { [key: string]: Warehouse };
 }) => {
-  const stageColorMap = useContext(ColorContext);
+  const { stageColorMap } = useContext(ColorContext);
   const { name: projectName } = useParams();
 
   const getIcon = (action: FreightlineAction) => {

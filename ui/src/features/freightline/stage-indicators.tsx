@@ -28,7 +28,7 @@ const StageIndicator = ({
 };
 
 export const StageIndicators = (props: { stages: Stage[]; faded?: boolean }) => {
-  const stageColorMap = useContext(ColorContext);
+  const { stageColorMap } = useContext(ColorContext);
   return (props.stages || []).length > 0 ? (
     <div
       className={`flex flex-col align-center h-full justify-center flex-shrink mr-2`}

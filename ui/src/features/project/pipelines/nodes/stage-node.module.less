@@ -2,26 +2,28 @@
   height: 100%;
   border-radius: 10px;
   transition: all 0.2s ease-in-out;
+  display: flex;
+  flex-direction: column;
+  border-width: 2px;
+  border-style: solid;
+  overflow: hidden;
 
   h3 {
     padding: 0.75em;
     color: white;
     font-weight: 600;
     font-size: 15px;
+    display: flex;
+    align-items: center;
+    margin-bottom: 0;
   }
 
   .body {
-    position: absolute;
-    top: 2.5em;
-    left: 2px;
-    right: 2px;
-    bottom: 2px;
     background-color: white;
-    border-bottom-left-radius: 10px;
-    border-bottom-right-radius: 10px;
     text-align: center;
     display: flex;
     flex-direction: column;
+    flex: 1;
   }
 
   .freightLabel {
@@ -47,6 +49,6 @@
 }
 
 .highlighted {
-  background-color: #1db6f9 !important;
+  border-color: #1db6f9 !important;
   box-shadow: 0 0 0 2px #1db6f9;
 }

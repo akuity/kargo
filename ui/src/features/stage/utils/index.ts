@@ -1,9 +1,13 @@
-import { Stage } from '@ui/gen/v1alpha1/generated_pb';
+import { ObjectMeta } from '@ui/gen/k8s.io/apimachinery/pkg/apis/meta/v1/generated_pb';
 
 const COLOR_ANNOTATION = 'kargo.akuity.io/color';
 
-export const parseColorAnnotation = (stage: Stage): string | null => {
-  const annotations = stage?.metadata?.annotations;
+interface HasMetadata {
+  metadata?: ObjectMeta;
+}
+
+export function parseColorAnnotation<T extends HasMetadata>(object: T): string | null {
+  const annotations = object?.metadata?.annotations;
   if (!annotations) {
     return null;
   }
@@ -12,7 +16,7 @@ export const parseColorAnnotation = (stage: Stage): string | null => {
     return null;
   }
   return color;
-};
+}
 
 export type ColorMap = { [key: string]: string };
 
@@ -40,21 +44,32 @@ export const ColorMapHex: { [key: string]: string } = {
   gray: '#6a7382'
 };
 
-export const getBackgroundKey = (n: number) => {
-  if (n < 0 || n >= Object.keys(ColorMapHex).length) {
-    return 'gray';
-  }
-  return Object.keys(ColorMapHex)[n];
+export const WarehouseColorMapHex: { [key: string]: string } = {
+  red: '#D70015',
+  orange: '#C93500',
+  yellow: '#B24F01',
+  green: '#248A3D',
+  mint: '#0E817C',
+  teal: '#028299',
+  cyan: '#0471A4',
+  blue: '#013fDC',
+  indigo: '#3634A3',
+  purple: '#8944AA',
+  pink: '#D21043',
+  brown: '#7F6545'
 };
 
-export const getStageColors = (project: string, stages: Stage[]): ColorMap => {
+export function getColors<T extends HasMetadata>(
+  project: string,
+  objects: T[],
+  key?: string
+): ColorMap {
   // check local storage
-  const colors = localStorage.getItem(`${project}/colors`);
-  const count = parseInt(localStorage.getItem(`${project}/stageCount`) || '0');
+  const colors = localStorage.getItem(`${project}/colors${key ? `/${key}` : ''}`);
   if (colors) {
     const m = JSON.parse(colors);
-    if (count === stages.length) {
-      for (const stage of stages) {
+    if (Object.keys(m).length === objects.length) {
+      for (const stage of objects) {
         const color = parseColorAnnotation(stage);
         if (color) {
           m[stage?.metadata?.name || ''] = ColorMapHex[color];
@@ -62,37 +77,40 @@ export const getStageColors = (project: string, stages: Stage[]): ColorMap => {
       }
       return m;
     } else {
-      return setStageColors(project, stages, m);
+      return setColors(project, objects, m, key);
     }
   } else {
-    return setStageColors(project, stages);
+    return setColors(project, objects, undefined, key);
   }
-};
+}
 
-export const setStageColors = (project: string, stages: Stage[], prevMap?: ColorMap): ColorMap => {
+export function setColors<T extends HasMetadata>(
+  project: string,
+  stages: T[],
+  prevMap?: ColorMap,
+  key?: string
+): ColorMap {
   const colors = generateStageColors(stages, prevMap);
-  localStorage.setItem(`${project}/colors`, JSON.stringify(colors));
-  localStorage.setItem(`${project}/stageCount`, `${stages.length}`);
+  localStorage.setItem(`${project}/colors${key ? `/${key}` : ''}`, JSON.stringify(colors));
   return colors;
+}
+
+export const clearColors = (project: string, key?: string) => {
+  localStorage.removeItem(`${project}/colors${key ? `/${key}` : ''}`);
 };
 
-export const clearColors = (project: string) => {
-  localStorage.removeItem(`${project}/colors`);
-  localStorage.removeItem(`${project}/stageCount`);
-};
-
-export const generateStageColors = (sortedStages: Stage[], prevMap?: ColorMap) => {
+export function generateStageColors<T extends HasMetadata>(sortedObjects: T[], prevMap?: ColorMap) {
   const curColors = { ...ColorMapHex };
   let finalMap: { [key: string]: string } = {};
 
-  if (prevMap) {
+  if (prevMap && Object.keys(prevMap).length > 0) {
     for (const color of Object.values(prevMap)) {
       delete curColors[color];
     }
     finalMap = { ...prevMap };
   }
 
-  for (const stage of sortedStages) {
+  for (const stage of sortedObjects) {
     const color = parseColorAnnotation(stage);
     if (color) {
       delete curColors[color];
@@ -100,13 +118,13 @@ export const generateStageColors = (sortedStages: Stage[], prevMap?: ColorMap) =
     }
   }
   const colors = Object.values(curColors);
-  let step = Math.floor(colors.length / sortedStages.length);
+  let step = Math.floor(colors.length / sortedObjects.length);
   if (step < 1) {
     step = 1;
   }
   let i = 0;
-  for (const stage of sortedStages) {
-    const id = stage?.metadata?.name;
+  for (const object of sortedObjects) {
+    const id = object?.metadata?.name;
     if (!id || finalMap[id]) {
       continue;
     }
@@ -114,4 +132,4 @@ export const generateStageColors = (sortedStages: Stage[], prevMap?: ColorMap) =
     i = i + step;
   }
   return finalMap;
-};
+}
