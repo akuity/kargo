@@ -42,20 +42,32 @@ type podIdentityCredentialHelper struct {
 func NewPodIdentityCredentialHelper(ctx context.Context) credentials.Helper {
 	logger := logging.LoggerFromContext(ctx)
 	var awsAccountID string
-	if os.Getenv("AWS_CONTAINER_CREDENTIALS_FULL_URI") == "" {
-		logger.Info("AWS_CONTAINER_CREDENTIALS_FULL_URI not set; assuming EKS Pod Identity is not in use")
+	usesIRSA := os.Getenv("AWS_ROLE_ARN") != "" && os.Getenv("AWS_WEB_IDENTITY_TOKEN_FILE") != ""
+	if os.Getenv("AWS_CONTAINER_CREDENTIALS_FULL_URI") != "" {
+		logger.Info("EKS Pod Identity appears to be in use")
+	} else if usesIRSA {
+		logger.Info("AWS_WEB_IDENTITY_TOKEN_FILE and AWS_ROLE_ARN set; assuming IRSA is being used")
+	} else {
+		logger.Info("Neither AWS_CONTAINER_CREDENTIALS_FULL_URI nor AWS_WEB_IDENTITY_TOKEN_FILE and AWS_ROLE_ARN are set; assuming neither EKS Pod Identity nor IRSA are in use")
 		return nil
 	}
-	logger.Info("EKS Pod Identity appears to be in use")
 	cfg, err := config.LoadDefaultConfig(ctx)
-	if err != nil {
+	if err != nil && usesIRSA {
+		logger.Error(
+			err, "error loading AWS config; IRSA integration will be disabled",
+		)
+	} else if err != nil {
 		logger.Error(
 			err, "error loading AWS config; EKS Pod Identity integration will be disabled",
 		)
 	} else {
 		stsSvc := sts.NewFromConfig(cfg)
 		res, err := stsSvc.GetCallerIdentity(ctx, &sts.GetCallerIdentityInput{})
-		if err != nil {
+		if err != nil && usesIRSA {
+			logger.Error(
+				err, "error getting caller identity; IRSA integration will be disabled",
+			)
+		} else if err != nil {
 			logger.Error(
 				err, "error getting caller identity; EKS Pod Identity integration will be disabled",
 			)
