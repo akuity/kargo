@@ -450,12 +450,18 @@ func (r *reconciler) promote(
 		Charts:  targetFreight.Charts,
 		Origin:  targetFreight.Origin,
 	}
+	targetFreightCol := r.buildTargetFreightCollection(targetFreightRef, stage)
 
-	newStatus, nextFreight, err := r.promoMechanisms.Promote(ctx, stage, &promo, targetFreightRef)
+	newStatus, nextFreight, err :=
+		r.promoMechanisms.Promote(ctx, stage, &promo, targetFreightCol.References())
 	if err != nil {
 		return nil, err
 	}
-	newStatus.Freight = &nextFreight
+	newStatus.Freight = &targetFreightRef
+	newStatus.FreightCollection = &kargoapi.FreightCollection{}
+	for _, freightRef := range nextFreight {
+		newStatus.FreightCollection.UpdateOrPush(freightRef)
+	}
 
 	logger.Debug("promotion", "phase", newStatus.Phase)
 
@@ -485,4 +491,28 @@ func (r *reconciler) promote(
 	}
 
 	return newStatus, nil
+}
+
+// buildTargetFreightCollection constructs a FreightCollection that contains all
+// FreightReferences from the previous Promotion (excepting those that are no
+// longer requested), plus a FreightReference for the provided targetFreight.
+func (r *reconciler) buildTargetFreightCollection(
+	targetFreight kargoapi.FreightReference,
+	stage *kargoapi.Stage,
+) *kargoapi.FreightCollection {
+	freightCol := &kargoapi.FreightCollection{}
+
+	// We don't simply copy the current FreightCollection because we want to
+	// account for the possibility that some freight contained therein are no
+	// longer requested by the Stage.
+	lastPromo := stage.Status.LastPromotion
+	if lastPromo != nil {
+		for _, req := range stage.Spec.RequestedFreight {
+			if freight, ok := lastPromo.Status.FreightCollection.Freight[req.Origin.String()]; ok {
+				freightCol.UpdateOrPush(freight)
+			}
+		}
+	}
+	freightCol.UpdateOrPush(targetFreight)
+	return freightCol
 }

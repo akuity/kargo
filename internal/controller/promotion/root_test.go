@@ -26,8 +26,8 @@ type FakeMechanism struct {
 	PromoteFn func(
 		context.Context,
 		*kargoapi.Stage,
-		kargoapi.FreightReference,
-	) (*kargoapi.PromotionStatus, kargoapi.FreightReference, error)
+		[]kargoapi.FreightReference,
+	) (*kargoapi.PromotionStatus, []kargoapi.FreightReference, error)
 }
 
 // GetName implements the Mechanism interface.
@@ -40,7 +40,7 @@ func (f *FakeMechanism) Promote(
 	ctx context.Context,
 	stage *kargoapi.Stage,
 	_ *kargoapi.Promotion,
-	freight kargoapi.FreightReference,
-) (*kargoapi.PromotionStatus, kargoapi.FreightReference, error) {
+	freight []kargoapi.FreightReference,
+) (*kargoapi.PromotionStatus, []kargoapi.FreightReference, error) {
 	return f.PromoteFn(ctx, stage, freight)
 }

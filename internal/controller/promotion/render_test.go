@@ -81,7 +81,7 @@ func TestKargoRenderApply(t *testing.T) {
 	testCases := []struct {
 		name       string
 		update     kargoapi.GitRepoUpdate
-		newFreight kargoapi.FreightReference
+		newFreight []kargoapi.FreightReference
 		renderer   *renderer
 		assertions func(t *testing.T, changes []string, workDir string, err error)
 	}{
@@ -105,7 +105,7 @@ func TestKargoRenderApply(t *testing.T) {
 			update: kargoapi.GitRepoUpdate{
 				Render: &kargoapi.KargoRenderPromotionMechanism{},
 			},
-			newFreight: kargoapi.FreightReference{
+			newFreight: []kargoapi.FreightReference{{
 				Images: []kargoapi.Image{
 					{
 						RepoURL: "fake-url",
@@ -113,7 +113,7 @@ func TestKargoRenderApply(t *testing.T) {
 						Digest:  "fake-digest",
 					},
 				},
-			},
+			}},
 			renderer: &renderer{
 				renderManifestsFn: func(req render.Request) error {
 					if err := os.MkdirAll(req.LocalOutPath, 0755); err != nil {
@@ -162,7 +162,7 @@ func TestKargoRenderApply(t *testing.T) {
 					},
 				},
 			},
-			newFreight: kargoapi.FreightReference{
+			newFreight: []kargoapi.FreightReference{{
 				Images: []kargoapi.Image{
 					{
 						RepoURL: "fake-url",
@@ -175,7 +175,7 @@ func TestKargoRenderApply(t *testing.T) {
 						Digest:  "another-fake-digest",
 					},
 				},
-			},
+			}},
 			renderer: &renderer{
 				renderManifestsFn: func(req render.Request) error {
 					if err := os.MkdirAll(req.LocalOutPath, 0755); err != nil {

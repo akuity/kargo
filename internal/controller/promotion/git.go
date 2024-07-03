@@ -43,12 +43,12 @@ type gitMechanism struct {
 		ctx context.Context,
 		promo *kargoapi.Promotion,
 		update kargoapi.GitRepoUpdate,
-		newFreight kargoapi.FreightReference,
-	) (*kargoapi.PromotionStatus, kargoapi.FreightReference, error)
+		newFreight []kargoapi.FreightReference,
+	) (*kargoapi.PromotionStatus, []kargoapi.FreightReference, error)
 	getReadRefFn func(
 		update kargoapi.GitRepoUpdate,
-		commits []kargoapi.GitCommit,
-	) (string, int, error)
+		newFreight []kargoapi.FreightReference,
+	) (string, *kargoapi.FreightReference, int, error)
 	getAuthorFn      func() (*git.User, error)
 	getCredentialsFn func(
 		ctx context.Context,
@@ -58,7 +58,7 @@ type gitMechanism struct {
 	gitCommitFn func(
 		ctx context.Context,
 		update kargoapi.GitRepoUpdate,
-		newFreight kargoapi.FreightReference,
+		newFreight []kargoapi.FreightReference,
 		namespace string,
 		readRef string,
 		writeBranch string,
@@ -68,7 +68,7 @@ type gitMechanism struct {
 	applyConfigManagementFn func(
 		ctx context.Context,
 		update kargoapi.GitRepoUpdate,
-		newFreight kargoapi.FreightReference,
+		newFreight []kargoapi.FreightReference,
 		namespace string,
 		sourceCommit string,
 		homeDir string,
@@ -88,7 +88,7 @@ func newGitMechanism(
 	applyConfigManagementFn func(
 		ctx context.Context,
 		update kargoapi.GitRepoUpdate,
-		newFreight kargoapi.FreightReference,
+		newFreight []kargoapi.FreightReference,
 		namespace string,
 		sourceCommit string,
 		homeDir string,
@@ -120,8 +120,8 @@ func (g *gitMechanism) Promote(
 	ctx context.Context,
 	stage *kargoapi.Stage,
 	promo *kargoapi.Promotion,
-	newFreight kargoapi.FreightReference,
-) (*kargoapi.PromotionStatus, kargoapi.FreightReference, error) {
+	newFreight []kargoapi.FreightReference,
+) (*kargoapi.PromotionStatus, []kargoapi.FreightReference, error) {
 	updates := g.selectUpdatesFn(stage.Spec.PromotionMechanisms.GitRepoUpdates)
 
 	if len(updates) == 0 {
@@ -129,7 +129,6 @@ func (g *gitMechanism) Promote(
 	}
 
 	var newStatus *kargoapi.PromotionStatus
-	newFreight = *newFreight.DeepCopy()
 
 	logger := logging.LoggerFromContext(ctx).WithValues("name", g.name)
 	logger.Debug("executing promotion mechanism")
@@ -161,16 +160,16 @@ func (g *gitMechanism) doSingleUpdate(
 	ctx context.Context,
 	promo *kargoapi.Promotion,
 	update kargoapi.GitRepoUpdate,
-	newFreight kargoapi.FreightReference,
-) (*kargoapi.PromotionStatus, kargoapi.FreightReference, error) {
-	readRef, commitIndex, err := g.getReadRefFn(update, newFreight.Commits)
+	freightCol []kargoapi.FreightReference,
+) (*kargoapi.PromotionStatus, []kargoapi.FreightReference, error) {
+	readRef, freightToUpdate, commitIndex, err := g.getReadRefFn(update, freightCol)
 	if err != nil {
-		return nil, newFreight, err
+		return nil, freightCol, err
 	}
 
 	author, err := g.getAuthorFn()
 	if err != nil {
-		return nil, newFreight, err
+		return nil, freightCol, err
 	}
 	if author == nil {
 		author = &git.User{}
@@ -181,7 +180,7 @@ func (g *gitMechanism) doSingleUpdate(
 		update.RepoURL,
 	)
 	if err != nil {
-		return nil, newFreight, err
+		return nil, freightCol, err
 	}
 	if creds == nil {
 		creds = &git.RepoCredentials{}
@@ -197,7 +196,7 @@ func (g *gitMechanism) doSingleUpdate(
 		},
 	)
 	if err != nil {
-		return nil, newFreight, fmt.Errorf("error cloning git repo %q: %w", update.RepoURL, err)
+		return nil, freightCol, fmt.Errorf("error cloning git repo %q: %w", update.RepoURL, err)
 	}
 	defer repo.Close()
 
@@ -210,7 +209,7 @@ func (g *gitMechanism) doSingleUpdate(
 		if getPullRequestNumberFromMetadata(promo.Status.Metadata, update.RepoURL) == -1 {
 			// PR was never created. Prepare the branch for the commit
 			if err = preparePullRequestBranch(repo, commitBranch, update.WriteBranch); err != nil {
-				return nil, newFreight, fmt.Errorf("error preparing PR branch %q: %w", update.RepoURL, err)
+				return nil, freightCol, fmt.Errorf("error preparing PR branch %q: %w", update.RepoURL, err)
 			}
 		}
 	}
@@ -218,7 +217,7 @@ func (g *gitMechanism) doSingleUpdate(
 	commitID, err := g.gitCommitFn(
 		ctx,
 		update,
-		newFreight,
+		freightCol,
 		promo.Namespace,
 		readRef,
 		commitBranch,
@@ -226,57 +225,62 @@ func (g *gitMechanism) doSingleUpdate(
 		*creds,
 	)
 	if err != nil {
-		return nil, newFreight, err
+		return nil, freightCol, err
 	}
 
 	newStatus := promo.Status.DeepCopy()
 	if update.PullRequest != nil {
 		gpClient, err := newGitProvider(update, creds)
 		if err != nil {
-			return nil, newFreight, err
+			return nil, freightCol, err
 		}
 		commitID, newStatus, err = reconcilePullRequest(ctx, promo.Status, repo, gpClient, commitBranch, update.WriteBranch)
 		if err != nil {
-			return nil, newFreight, err
+			return nil, freightCol, err
 		}
 	} else {
 		// For git commit promotions, promotion is successful as soon as the commit is pushed.
 		newStatus.Phase = kargoapi.PromotionPhaseSucceeded
 	}
 
-	if commitIndex > -1 && newStatus.Phase == kargoapi.PromotionPhaseSucceeded {
-		newFreight.Commits[commitIndex].HealthCheckCommit = commitID
+	if freightToUpdate != nil && commitIndex > -1 && newStatus.Phase == kargoapi.PromotionPhaseSucceeded {
+		freightToUpdate.Commits[commitIndex].HealthCheckCommit = commitID
 	}
 
-	return newStatus, newFreight, nil
+	return newStatus, freightCol, nil
 }
 
-// getReadRef steps through the provided slice of commits to determine if any of
-// them are from the same repository referenced by the provided update. If so,
-// it returns the commit ID and index of the commit in the slice. If not, it
-// returns the read branch specified in the update and an pseudo-index of -1.
-// The function also returns an error if the update indicates that the write
-// branch is the same as the read branch, which would create a subscription
-// loop, and is therefore something we wish to avoid.
+// getReadRef steps through commits referenced by the provided
+// FreightReferences, to find one from the same repository as is referenced by
+// the provided update. If such one it found, it returns the commit ID, a
+// pointer to the applicable FreightReference, and the index of the commit
+// within the FreightReference's collection of commits. If none are found, it
+// returns the read branch specified in the update, a nil FreightReference
+// pointer, and an pseudo-index of -1. The function also returns an error if the
+// update indicates that the write branch is the same as the read branch, which
+// would create a subscription loop, and is therefore something we wish to
+// avoid.
 func getReadRef(
 	update kargoapi.GitRepoUpdate,
-	commits []kargoapi.GitCommit,
-) (string, int, error) {
+	freight []kargoapi.FreightReference,
+) (string, *kargoapi.FreightReference, int, error) {
 	updateRepoURL := libGit.NormalizeURL(update.RepoURL)
-	for i, commit := range commits {
-		if libGit.NormalizeURL(commit.RepoURL) == updateRepoURL {
-			if update.WriteBranch == commit.Branch && update.PullRequest == nil {
-				return "", -1, fmt.Errorf(
-					"invalid update specified; cannot write to branch %q of repo %q "+
-						"because it will form a subscription loop",
-					updateRepoURL,
-					update.WriteBranch,
-				)
+	for _, f := range freight {
+		for i, commit := range f.Commits {
+			if libGit.NormalizeURL(commit.RepoURL) == updateRepoURL {
+				if update.WriteBranch == commit.Branch && update.PullRequest == nil {
+					return "", nil, -1, fmt.Errorf(
+						"invalid update specified; cannot write to branch %q of repo %q "+
+							"because it will form a subscription loop",
+						updateRepoURL,
+						update.WriteBranch,
+					)
+				}
+				return commit.ID, &f, i, nil
 			}
-			return commit.ID, i, nil
 		}
 	}
-	return update.ReadBranch, -1, nil
+	return update.ReadBranch, nil, -1, nil
 }
 
 // getRepoCredentialsFn returns a function that closes over the provided
@@ -357,7 +361,7 @@ func (g *gitMechanism) getAuthor() (*git.User, error) {
 func (g *gitMechanism) gitCommit(
 	ctx context.Context,
 	update kargoapi.GitRepoUpdate,
-	newFreight kargoapi.FreightReference,
+	newFreight []kargoapi.FreightReference,
 	namespace string,
 	readRef string,
 	writeBranch string,

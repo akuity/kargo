@@ -1067,13 +1067,7 @@ func (r *reconciler) syncPromotions(
 		promo := p
 		status.LastPromotion = &promo
 		if promo.Status.Phase == kargoapi.PromotionPhaseSucceeded {
-			// TODO(hidde): This should ensure that it properly handles
-			// multiple Freight when implemented on the Promotion side.
-			status.FreightHistory.Record(&kargoapi.FreightCollection{
-				Freight: map[string]kargoapi.FreightReference{
-					status.LastPromotion.Freight.Origin.String(): *status.LastPromotion.Freight.DeepCopy(),
-				},
-			})
+			status.FreightHistory.Record(status.LastPromotion.Status.FreightCollection)
 			if status.CurrentPromotion == nil {
 				status.Phase = kargoapi.StagePhaseSteady
 			}
