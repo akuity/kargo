@@ -2029,6 +2029,14 @@ func TestReconciler_syncPromotions(t *testing.T) {
 									Name:   "fake-freight-1",
 									Origin: testOrigin,
 								},
+								FreightCollection: &kargoapi.FreightCollection{
+									Freight: map[string]kargoapi.FreightReference{
+										testOrigin.String(): {
+											Name:   "fake-freight-1",
+											Origin: testOrigin,
+										},
+									},
+								},
 							},
 						},
 						{
@@ -2041,6 +2049,14 @@ func TestReconciler_syncPromotions(t *testing.T) {
 									Name:   "fake-freight-3",
 									Origin: testOrigin,
 								},
+								FreightCollection: &kargoapi.FreightCollection{
+									Freight: map[string]kargoapi.FreightReference{
+										testOrigin.String(): {
+											Name:   "fake-freight-3",
+											Origin: testOrigin,
+										},
+									},
+								},
 							},
 						},
 						{
@@ -2052,6 +2068,14 @@ func TestReconciler_syncPromotions(t *testing.T) {
 								Freight: &kargoapi.FreightReference{
 									Name:   "fake-freight-2",
 									Origin: testOrigin,
+								},
+								FreightCollection: &kargoapi.FreightCollection{
+									Freight: map[string]kargoapi.FreightReference{
+										testOrigin.String(): {
+											Name:   "fake-freight-2",
+											Origin: testOrigin,
+										},
+									},
 								},
 							},
 						},
@@ -2072,6 +2096,14 @@ func TestReconciler_syncPromotions(t *testing.T) {
 						Freight: &kargoapi.FreightReference{
 							Name:   "fake-freight-3",
 							Origin: testOrigin,
+						},
+						FreightCollection: &kargoapi.FreightCollection{
+							Freight: map[string]kargoapi.FreightReference{
+								testOrigin.String(): {
+									Name:   "fake-freight-3",
+									Origin: testOrigin,
+								},
+							},
 						},
 					},
 					Freight: kargoapi.FreightReference{
