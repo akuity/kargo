@@ -10,6 +10,7 @@ import (
 
 	"github.com/kelseyhightower/envconfig"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
@@ -318,6 +319,7 @@ func (r *reconciler) Reconcile(
 	}()
 
 	if newStatus.Phase.IsTerminal() {
+		newStatus.FinishedAt = &metav1.Time{Time: time.Now()}
 		logger.Info("promotion", "phase", newStatus.Phase)
 	}
 

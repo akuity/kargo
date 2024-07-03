@@ -504,14 +504,13 @@ func (r *reconciler) Reconcile(
 	var newStatus kargoapi.StageStatus
 	if stage.DeletionTimestamp != nil {
 		newStatus, err = r.syncStageDelete(ctx, stage)
-		if err == nil && controllerutil.RemoveFinalizer(stage, kargoapi.FinalizerName) {
-			if err = r.kargoClient.Update(ctx, stage); err != nil {
+		if err == nil {
+			if err = kargoapi.RemoveFinalizer(ctx, r.kargoClient, stage); err != nil {
 				err = fmt.Errorf("error removing finalizer: %w", err)
 			}
 		}
 	} else {
-		err = kargoapi.AddFinalizer(ctx, r.kargoClient, stage)
-		if err != nil {
+		if _, err = kargoapi.EnsureFinalizer(ctx, r.kargoClient, stage); err != nil {
 			newStatus = stage.Status
 		} else {
 			if stage.Spec.PromotionMechanisms == nil {
@@ -1014,7 +1013,7 @@ func (r *reconciler) syncPromotions(
 	if latestPromo := promotions[0]; !latestPromo.Status.Phase.IsTerminal() {
 		logger.WithValues("promotion", latestPromo.Name).Debug("Stage has a running Promotion")
 		status.Phase = kargoapi.StagePhasePromoting
-		status.CurrentPromotion = &kargoapi.PromotionInfo{
+		status.CurrentPromotion = &kargoapi.PromotionReference{
 			Name: latestPromo.Name,
 		}
 		if latestPromo.Status.Freight != nil {
@@ -1027,7 +1026,7 @@ func (r *reconciler) syncPromotions(
 	// Determine if there are any new Promotions that have been completed since
 	// the last reconciliation.
 	logger.Debug("checking for new terminated Promotions")
-	var newPromotions []kargoapi.PromotionInfo
+	var newPromotions []kargoapi.PromotionReference
 	for _, promo := range promotions {
 		if status.LastPromotion != nil {
 			// We can break here since we know that all subsequent Promotions
@@ -1042,9 +1041,10 @@ func (r *reconciler) syncPromotions(
 
 		if promo.Status.Phase.IsTerminal() {
 			logger.WithValues("promotion", promo.Name).Debug("found new terminated Promotion")
-			info := kargoapi.PromotionInfo{
-				Name:   promo.Name,
-				Status: promo.Status.DeepCopy(),
+			info := kargoapi.PromotionReference{
+				Name:       promo.Name,
+				Status:     promo.Status.DeepCopy(),
+				FinishedAt: promo.Status.FinishedAt,
 			}
 			if promo.Status.Freight != nil {
 				info.Freight = *promo.Status.Freight.DeepCopy()
@@ -1057,7 +1057,7 @@ func (r *reconciler) syncPromotions(
 	// we order the Promotions from oldest to newest. This is because the
 	// Freight history is garbage collected based on the number of entries,
 	// and we want to ensure that the oldest entries are removed first.
-	slices.SortFunc(newPromotions, func(a, b kargoapi.PromotionInfo) int {
+	slices.SortFunc(newPromotions, func(a, b kargoapi.PromotionReference) int {
 		return strings.Compare(a.Name, b.Name)
 	})
 
