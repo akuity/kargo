@@ -1,10 +1,8 @@
 package stages
 
 import (
-	"context"
-	"crypto/sha1" // nolint: gosec
+	"context" // nolint: gosec
 	"fmt"
-	"slices"
 	"sort"
 	"strings"
 
@@ -64,8 +62,6 @@ func (r *reconciler) startVerification(
 
 	logger := logging.LoggerFromContext(ctx)
 
-	freightNames := freightNames(freightCol)
-
 	// If this is not a re-verification request, check if there is an existing
 	// AnalysisRun for the Stage and Freight. If there is, return the status of
 	// this AnalysisRun.
@@ -78,8 +74,8 @@ func (r *reconciler) startVerification(
 				Namespace: stage.Namespace,
 				LabelSelector: labels.SelectorFromSet(
 					map[string]string{
-						kargoapi.StageLabelKey:   stage.Name,
-						kargoapi.FreightLabelKey: freightNames,
+						kargoapi.StageLabelKey:             stage.Name,
+						kargoapi.FreightCollectionLabelKey: freightCol.ID,
 					},
 				),
 			},
@@ -87,9 +83,9 @@ func (r *reconciler) startVerification(
 			newInfo.FinishTime = ptr.To(metav1.NewTime(r.nowFn()))
 			newInfo.Phase = kargoapi.VerificationPhaseError
 			newInfo.Message = fmt.Errorf(
-				"error listing AnalysisRuns for Stage %q and Freight %q in namespace %q: %w",
+				"error listing AnalysisRuns for Stage %q and FreightCollection %q in namespace %q: %w",
 				stage.Name,
-				freightNames,
+				freightCol.ID,
 				stage.Namespace,
 				err,
 			).Error()
@@ -159,7 +155,7 @@ func (r *reconciler) startVerification(
 		newInfo.Message = fmt.Errorf(
 			"error building AnalysisRun for Stage %q and Freight %q in namespace %q: %w",
 			stage.Name,
-			freightNames,
+			freightCol.ID,
 			stage.Namespace,
 			err,
 		).Error()
@@ -349,7 +345,7 @@ func (r *reconciler) buildAnalysisRun(
 			"%s.%s.%s",
 			shortStageName,
 			ulid.Make(),
-			fmt.Sprintf("%x", sha1.Sum([]byte(freightNames(freightCol))))[0:7], // nolint: gosec
+			freightCol.ID[0:7], // nolint: gosec
 		),
 	)
 
@@ -372,7 +368,7 @@ func (r *reconciler) buildAnalysisRun(
 		}
 	}
 	lbls[kargoapi.StageLabelKey] = stage.Name
-	lbls[kargoapi.FreightLabelKey] = freightNames(freightCol)
+	lbls[kargoapi.FreightCollectionLabelKey] = freightCol.ID
 
 	// Add Promotion name if the AnalysisRun is triggered by Promotion.
 	// This is the case when there is no existing verification information,
@@ -649,19 +645,4 @@ func resolveArgs(args []rollouts.Argument) error {
 		}
 	}
 	return nil
-}
-
-// freightNames returns a sorted and comma-delimited list of the names of the
-// Freight in the FreightCollection. This is useful for when an identifier is
-// needed to represent a precise combination of Freight.
-func freightNames(f *kargoapi.FreightCollection) string {
-	if f == nil || len(f.Freight) == 0 {
-		return ""
-	}
-	freightNames := make([]string, 0, len(f.Freight))
-	for _, freight := range f.Freight {
-		freightNames = append(freightNames, freight.Name)
-	}
-	slices.Sort(freightNames)
-	return strings.Join(freightNames, ",")
 }

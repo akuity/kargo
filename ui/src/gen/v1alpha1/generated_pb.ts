@@ -1378,6 +1378,14 @@ export class Freight extends Message<Freight> {
  */
 export class FreightCollection extends Message<FreightCollection> {
   /**
+   * ID is a unique and deterministically calculated identifier for the
+   * FreightCollection. It is updated on each use of the UpdateOrPush method.
+   *
+   * @generated from field: optional string id = 3;
+   */
+  id?: string;
+
+  /**
    * Freight is a map of FreightReference objects, indexed by their Warehouse
    * origin.
    *
@@ -1401,6 +1409,7 @@ export class FreightCollection extends Message<FreightCollection> {
   static readonly runtime: typeof proto2 = proto2;
   static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.FreightCollection";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 3, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 1, name: "items", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "message", T: FreightReference} },
     { no: 2, name: "verificationHistory", kind: "message", T: VerificationInfo, repeated: true },
   ]);

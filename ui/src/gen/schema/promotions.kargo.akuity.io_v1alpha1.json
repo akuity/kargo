@@ -284,6 +284,10 @@
         "freightCollection": {
           "description": "FreightCollection contains the details of the piece of Freight referenced\nby this Promotion as well as any additional Freight that is carried over\nfrom the target Stage's current state.",
           "properties": {
+            "id": {
+              "description": "ID is a unique and deterministically calculated identifier for the\nFreightCollection. It is updated on each use of the UpdateOrPush method.",
+              "type": "string"
+            },
             "items": {
               "additionalProperties": {
                 "description": "FreightReference is a simplified representation of a piece of Freight -- not\na root resource type.",
@@ -587,6 +591,9 @@
               "type": "array"
             }
           },
+          "required": [
+            "id"
+          ],
           "type": "object"
         },
         "lastHandledRefresh": {

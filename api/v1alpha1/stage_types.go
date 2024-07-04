@@ -1,8 +1,10 @@
 package v1alpha1
 
 import (
+	"crypto/sha1"
 	"fmt"
 	"slices"
+	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -658,6 +660,9 @@ type FreightReference struct {
 // represents a piece of Freight that has been selected for deployment to a
 // Stage.
 type FreightCollection struct {
+	// ID is a unique and deterministically calculated identifier for the
+	// FreightCollection. It is updated on each use of the UpdateOrPush method.
+	ID string `json:"id" protobuf:"bytes,3,opt,name=id"`
 	// Freight is a map of FreightReference objects, indexed by their Warehouse
 	// origin.
 	Freight map[string]FreightReference `json:"items,omitempty" protobuf:"bytes,1,rep,name=items" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
@@ -668,7 +673,8 @@ type FreightCollection struct {
 
 // UpdateOrPush updates the entry in the FreightCollection based on the
 // Warehouse name of the provided FreightReference. If no such entry exists, the
-// provided FreightReference is appended to the FreightCollection.
+// provided FreightReference is appended to the FreightCollection. This function
+// is not concurrency-safe.
 func (f *FreightCollection) UpdateOrPush(freight ...FreightReference) {
 	if f.Freight == nil {
 		f.Freight = make(map[string]FreightReference, len(freight))
@@ -676,6 +682,12 @@ func (f *FreightCollection) UpdateOrPush(freight ...FreightReference) {
 	for _, i := range freight {
 		f.Freight[i.Origin.String()] = i
 	}
+	freightNames := make([]string, 0, len(f.Freight))
+	for _, freight := range f.Freight {
+		freightNames = append(freightNames, freight.Name)
+	}
+	slices.Sort(freightNames)
+	f.ID = fmt.Sprintf("%x", sha1.Sum([]byte(strings.Join(freightNames, ","))))
 }
 
 // References returns a slice of FreightReference objects from the
