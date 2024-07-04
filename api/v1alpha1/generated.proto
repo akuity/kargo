@@ -428,6 +428,10 @@ message Freight {
 // represents a piece of Freight that has been selected for deployment to a
 // Stage.
 message FreightCollection {
+  // ID is a unique and deterministically calculated identifier for the
+  // FreightCollection. It is updated on each use of the UpdateOrPush method.
+  optional string id = 3;
+
   // Freight is a map of FreightReference objects, indexed by their Warehouse
   // origin.
   map<string, FreightReference> items = 1;
