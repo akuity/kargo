@@ -1,5 +1,9 @@
 package v1alpha1
 
+// For more information on the use of conditions in Kubernetes, see:
+// https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#typical-status-properties
+// nolint:lll
+
 const (
 	// ConditionTypeReady denotes that the resource is ready, i.e. it is
 	// fully operational.
@@ -14,9 +18,6 @@ const (
 	// of "True" indicates that the resource is ready, and the status of
 	// the condition may change over time as the resource transitions between
 	// ready and not ready states.
-	//
-	// For more information on the use of conditions in Kubernetes, see:
-	// https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#typical-status-properties
 	ConditionTypeReady = "Ready"
 
 	// ConditionTypeReconciling denotes that the resource is currently being
@@ -33,9 +34,6 @@ const (
 	// that the resource is being reconciled, and the absence of the condition
 	// or a status of "False" indicates that the resource is not being
 	// reconciled.
-	//
-	// For more information on the use of conditions in Kubernetes, see:
-	// https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#typical-status-properties
 	ConditionTypeReconciling = "Reconciling"
 
 	// ConditionTypeHealthy denotes that the resource is healthy.
@@ -48,8 +46,5 @@ const (
 	// This is a "normal-true" or "positive polarity" condition, meaning that
 	// the presence of the condition with a status of "True" indicates that
 	// the resource is operating as expected.
-	//
-	// For more information on the use of conditions in Kubernetes, see:
-	// https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#typical-status-properties
 	ConditionTypeHealthy = "Healthy"
 )
