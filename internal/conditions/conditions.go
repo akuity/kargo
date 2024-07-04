@@ -62,7 +62,7 @@ func Set(on Setter, conditions ...*metav1.Condition) {
 		}
 
 		// Set ObservedGeneration if applicable
-		if objGeneration != 0 {
+		if objGeneration != 0 && condition.ObservedGeneration == 0 {
 			condition.ObservedGeneration = objGeneration
 		}
 

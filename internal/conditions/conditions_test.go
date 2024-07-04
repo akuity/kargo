@@ -128,7 +128,7 @@ func TestSet(t *testing.T) {
 	tests := []struct {
 		name       string
 		on         Setter
-		conditions  []*metav1.Condition
+		conditions []*metav1.Condition
 		assertions func(t *testing.T, old, new Setter)
 	}{
 		{
@@ -136,13 +136,14 @@ func TestSet(t *testing.T) {
 			on:   &mockSetter{},
 			conditions: []*metav1.Condition{
 				{
-					Type:    mockType,
-					Status:  metav1.ConditionTrue,
-					Reason:  mockReason,
-					Message: "MockMessage",
+					Type:               mockType,
+					Status:             metav1.ConditionTrue,
+					Reason:             mockReason,
+					Message:            "MockMessage",
+					ObservedGeneration: 12,
 				},
 			},
-			assertions: func(t *testing.T, old, new Setter) {
+			assertions: func(t *testing.T, _, new Setter) {
 				require.NotNil(t, new)
 
 				conditions := new.GetConditions()
@@ -153,7 +154,7 @@ func TestSet(t *testing.T) {
 				require.Equal(t, mockReason, conditions[0].Reason)
 				require.Equal(t, "MockMessage", conditions[0].Message)
 				require.NotNil(t, conditions[0].LastTransitionTime)
-				require.Zero(t, conditions[0].ObservedGeneration)
+				require.Equal(t, int64(12), conditions[0].ObservedGeneration)
 			},
 		},
 		{
@@ -259,8 +260,8 @@ func TestSet(t *testing.T) {
 			name: "sets condition on Object with generation",
 			on: &mockObject{
 				Unstructured: &unstructured.Unstructured{
-					Object: map[string]interface{}{
-						"metadata": map[string]interface{}{
+					Object: map[string]any{
+						"metadata": map[string]any{
 							"generation": int64(42),
 						},
 					},
@@ -274,16 +275,27 @@ func TestSet(t *testing.T) {
 					Reason:  mockReason,
 					Message: "MockMessage",
 				},
+				{
+					Type:               "OtherType",
+					Status:             metav1.ConditionFalse,
+					Reason:             "OtherReason",
+					Message:            "MockMessage2",
+					ObservedGeneration: 41, // Should not be overwritten
+				},
 			},
 			assertions: func(t *testing.T, _, new Setter) {
 				require.NotNil(t, new)
 
 				conditions := new.GetConditions()
-				require.Len(t, conditions, 1)
+				require.Len(t, conditions, 2)
 
 				condition := Get(new, mockType)
 				require.NotNil(t, condition)
 				require.Equal(t, int64(42), condition.ObservedGeneration)
+
+				otherCondition := Get(new, "OtherType")
+				require.NotNil(t, otherCondition)
+				require.Equal(t, int64(41), otherCondition.ObservedGeneration)
 			},
 		},
 		{
@@ -493,15 +505,15 @@ func TestDelete(t *testing.T) {
 	)
 
 	tests := []struct {
-		name          string
-		setter        *mockSetter
-		conditionType string
+		name           string
+		setter         *mockSetter
+		conditionType  string
 		wantConditions []metav1.Condition
 	}{
 		{
-			name:          "nil setter",
-			setter:        nil,
-			conditionType: mockType1,
+			name:           "nil setter",
+			setter:         nil,
+			conditionType:  mockType1,
 			wantConditions: nil,
 		},
 		{
@@ -521,7 +533,7 @@ func TestDelete(t *testing.T) {
 			setter: &mockSetter{
 				conditions: []metav1.Condition{},
 			},
-			conditionType: mockType1,
+			conditionType:  mockType1,
 			wantConditions: []metav1.Condition{},
 		},
 		{
@@ -531,7 +543,7 @@ func TestDelete(t *testing.T) {
 					{Type: mockType1, Status: metav1.ConditionTrue},
 				},
 			},
-			conditionType: mockType1,
+			conditionType:  mockType1,
 			wantConditions: []metav1.Condition{},
 		},
 		{

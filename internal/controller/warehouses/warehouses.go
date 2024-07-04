@@ -12,6 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/conditions"
 	"github.com/akuity/kargo/internal/controller"
 	"github.com/akuity/kargo/internal/controller/git"
 	"github.com/akuity/kargo/internal/credentials"
@@ -57,6 +58,8 @@ type reconciler struct {
 	getDiffPathsForCommitIDFn func(repo git.Repo, commitID string) ([]string, error)
 
 	createFreightFn func(context.Context, client.Object, ...client.CreateOption) error
+
+	patchStatusFn func(context.Context, *kargoapi.Warehouse, func(*kargoapi.WarehouseStatus)) error
 }
 
 // SetupReconcilerWithManager initializes a reconciler for Warehouse resources
@@ -122,6 +125,7 @@ func newReconciler(
 	r.discoverBranchHistoryFn = r.discoverBranchHistory
 	r.discoverTagsFn = r.discoverTags
 	r.getDiffPathsForCommitIDFn = r.getDiffPathsForCommitID
+	r.patchStatusFn = r.patchStatus
 	return r
 }
 
@@ -153,13 +157,11 @@ func (r *reconciler) Reconcile(
 
 	newStatus, err := r.syncWarehouse(ctx, warehouse)
 	if err != nil {
-		newStatus.Message = err.Error()
 		logger.Error(err, "error syncing Warehouse")
 	}
 
-	updateErr := kubeclient.PatchStatus(
+	updateErr := r.patchStatusFn(
 		ctx,
-		r.client,
 		warehouse,
 		func(status *kargoapi.WarehouseStatus) {
 			*status = newStatus
@@ -191,30 +193,146 @@ func (r *reconciler) syncWarehouse(
 	ctx context.Context,
 	warehouse *kargoapi.Warehouse,
 ) (kargoapi.WarehouseStatus, error) {
+	logger := logging.LoggerFromContext(ctx)
+
 	status := *warehouse.Status.DeepCopy()
-	status.ObservedGeneration = warehouse.Generation
-	status.Message = "" // Clear any previous error
 
 	// Record the current refresh token as having been handled.
 	if token, ok := kargoapi.RefreshAnnotationValue(warehouse.GetAnnotations()); ok {
 		status.LastHandledRefresh = token
 	}
 
-	logger := logging.LoggerFromContext(ctx)
+	// Clear previous error message.
+	// TODO(hidde): Remove this once we have removed the deprecated field.
+	status.Message = ""
 
 	// Discover the latest artifacts.
-	discoveredArtifacts, err := r.discoverArtifactsFn(ctx, warehouse)
-	if err != nil {
-		return status, fmt.Errorf("error discovering artifacts: %w", err)
+	if shouldDiscoverArtifacts(warehouse, status.LastHandledRefresh) {
+		// As this is a long-running operation, we need to update the status
+		// conditions to reflect that we are currently reconciling.
+		conditions.Set(
+			&status,
+			&metav1.Condition{
+				Type:   kargoapi.ConditionTypeReconciling,
+				Status: metav1.ConditionTrue,
+				Reason: "ScheduledDiscovery",
+				Message: fmt.Sprintf(
+					"Discovering artifacts for %d subscriptions",
+					len(warehouse.Spec.Subscriptions),
+				),
+				ObservedGeneration: warehouse.GetGeneration(),
+			},
+			&metav1.Condition{
+				Type:               kargoapi.ConditionTypeReady,
+				Status:             metav1.ConditionFalse,
+				Reason:             "AwaitingDiscovery",
+				Message:            "Waiting for discovery to complete",
+				ObservedGeneration: warehouse.GetGeneration(),
+			},
+			&metav1.Condition{
+				Type:               kargoapi.ConditionTypeHealthy,
+				Status:             metav1.ConditionUnknown,
+				Reason:             "Pending",
+				Message:            "Health status cannot be determined until artifact discovery is finished",
+				ObservedGeneration: warehouse.GetGeneration(),
+			},
+		)
+		if err := r.patchStatusFn(ctx, warehouse, func(s *kargoapi.WarehouseStatus) {
+			s.SetConditions(status.GetConditions())
+		}); err != nil {
+			logger.Error(err, "error updating Warehouse status")
+		}
+
+		// Discover the latest artifacts.
+		discoveredArtifacts, err := r.discoverArtifactsFn(ctx, warehouse)
+		if err != nil {
+			// Mark the Warehouse as unhealthy and not ready if we failed to
+			// discover artifacts.
+			conditions.Set(
+				&status,
+				&metav1.Condition{
+					Type:               kargoapi.ConditionTypeHealthy,
+					Status:             metav1.ConditionFalse,
+					Reason:             "DiscoveryFailed",
+					Message:            fmt.Sprintf("Unable to discover artifacts: %s", err.Error()),
+					ObservedGeneration: warehouse.GetGeneration(),
+				},
+				&metav1.Condition{
+					Type:               kargoapi.ConditionTypeReady,
+					Status:             metav1.ConditionFalse,
+					Reason:             "DiscoveryFailure",
+					Message:            fmt.Sprintf("Artifact discovery failed: %s", err.Error()),
+					ObservedGeneration: warehouse.GetGeneration(),
+				},
+			)
+			return status, fmt.Errorf("error discovering artifacts: %w", err)
+		}
+		logger.Debug("discovered latest artifacts")
+
+		// Update the status with the discovered artifacts, and mark the
+		// Warehouse as healthy.
+		status.DiscoveredArtifacts = discoveredArtifacts
+		conditions.Set(
+			&status,
+			&metav1.Condition{
+				Type:   kargoapi.ConditionTypeHealthy,
+				Status: metav1.ConditionTrue,
+				Reason: "DiscoverySucceeded",
+				Message: fmt.Sprintf(
+					"Successfully discovered artifacts for %d subscriptions", len(warehouse.Spec.Subscriptions),
+				),
+				ObservedGeneration: warehouse.GetGeneration(),
+			},
+		)
 	}
-	logger.Debug("discovered latest artifacts")
-	status.DiscoveredArtifacts = discoveredArtifacts
+
+	// At this point, we have successfully discovered the latest artifacts
+	// for the Warehouse using the current subscriptions.
+	status.ObservedGeneration = warehouse.GetGeneration()
 
 	// Automatically create a Freight from the latest discovered artifacts
 	// if the Warehouse is configured to do so.
 	if pol := warehouse.Spec.FreightCreationPolicy; pol == kargoapi.FreightCreationPolicyAutomatic || pol == "" {
-		freight, err := r.buildFreightFromLatestArtifactsFn(warehouse.Namespace, discoveredArtifacts)
+		// Mark the Warehouse as reconciling while we create the Freight.
+		//
+		// As this should be a quick operation, we do not issue an immediate
+		// patch to the Warehouse status. However, we do update the status
+		// to reflect that we are currently reconciling to ensure it
+		// becomes visible when we run into an error.
+		conditions.Set(
+			&status,
+			&metav1.Condition{
+				Type:    kargoapi.ConditionTypeReconciling,
+				Status:  metav1.ConditionTrue,
+				Reason:  "FreightCreationInProgress",
+				Message: "Creating Freight from latest artifacts",
+			},
+			&metav1.Condition{
+				Type:    kargoapi.ConditionTypeReady,
+				Status:  metav1.ConditionFalse,
+				Reason:  "AwaitingFreightCreation",
+				Message: "Freight creation from latest artifacts is in progress",
+			},
+		)
+
+		// Build a Freight from the latest discovered artifacts.
+		freight, err := r.buildFreightFromLatestArtifactsFn(warehouse.Namespace, status.DiscoveredArtifacts)
 		if err != nil {
+			// Make the error visible in the status and mark the Warehouse as
+			// not ready.
+			conditions.Set(
+				&status,
+				&metav1.Condition{
+					Type:   kargoapi.ConditionTypeReady,
+					Status: metav1.ConditionFalse,
+					Reason: "FreightBuildFailure",
+					Message: fmt.Sprintf(
+						"Error building Freight from latest artifacts: %s",
+						err.Error(),
+					),
+				},
+			)
+
 			return status, fmt.Errorf("failed to build Freight from latest artifacts: %w", err)
 		}
 		freight.Origin = kargoapi.FreightOrigin{
@@ -222,7 +340,25 @@ func (r *reconciler) syncWarehouse(
 			Name: warehouse.Name,
 		}
 
+		// Attempt to create the Freight.
 		if err = r.createFreightFn(ctx, freight); client.IgnoreAlreadyExists(err) != nil {
+			// Make the error visible in the status and mark the Warehouse as
+			// not ready.
+			conditions.Set(
+				&status,
+				&metav1.Condition{
+					Type:   kargoapi.ConditionTypeReady,
+					Status: metav1.ConditionFalse,
+					Reason: "FreightCreationFailure",
+					Message: fmt.Sprintf(
+						"Error creating Freight %q in namespace %q: %s",
+						freight.Name,
+						freight.Namespace,
+						err.Error(),
+					),
+				},
+			)
+
 			return status, fmt.Errorf(
 				"error creating Freight %q in namespace %q: %w",
 				freight.Name,
@@ -239,6 +375,22 @@ func (r *reconciler) syncWarehouse(
 
 		status.LastFreightID = freight.Name
 	}
+
+	// Remove the reconciling condition and mark the Warehouse as ready.
+	conditions.Delete(&status, kargoapi.ConditionTypeReconciling)
+	conditions.Set(
+		&status,
+		&metav1.Condition{
+			Type:   kargoapi.ConditionTypeReady,
+			Status: metav1.ConditionTrue,
+			Reason: "ArtifactsDiscovered",
+			Message: fmt.Sprintf(
+				"Successfully discovered artifacts for %d subscriptions",
+				len(warehouse.Spec.Subscriptions),
+			),
+		},
+	)
+
 	return status, nil
 }
 
@@ -262,9 +414,10 @@ func (r *reconciler) discoverArtifacts(
 	}
 
 	return &kargoapi.DiscoveredArtifacts{
-		Git:    commits,
-		Images: images,
-		Charts: charts,
+		DiscoveredAt: metav1.Now(),
+		Git:          commits,
+		Images:       images,
+		Charts:       charts,
 	}, nil
 }
 
@@ -331,4 +484,49 @@ func (r *reconciler) buildFreightFromLatestArtifacts(
 	freight.Name = freight.GenerateID()
 
 	return freight, nil
+}
+
+func (r *reconciler) patchStatus(
+	ctx context.Context,
+	warehouse *kargoapi.Warehouse,
+	update func(*kargoapi.WarehouseStatus),
+) error {
+	return kubeclient.PatchStatus(ctx, r.client, warehouse, update)
+}
+
+// shouldDiscoverArtifacts returns true if the Warehouse should attempt to
+// discover new artifacts. This is determined by the following conditions:
+//
+//   - The Warehouse has not yet discovered any artifacts.
+//   - The Warehouse has been updated since the last time we discovered artifacts.
+//   - The interval has passed since the last time we discovered artifacts.
+//   - A manual refresh was requested.
+func shouldDiscoverArtifacts(
+	warehouse *kargoapi.Warehouse,
+	refreshToken string,
+) bool {
+	switch {
+	// We have not yet discovered any artifacts.
+	case warehouse.Status.DiscoveredArtifacts == nil:
+		return true
+	// We have discovered artifacts, but before we started tracking the
+	// last time we did so.
+	case warehouse.Status.DiscoveredArtifacts.DiscoveredAt.IsZero():
+		return true
+	// The Warehouse has been updated since the last time we discovered
+	// artifacts.
+	case warehouse.Generation > warehouse.Status.ObservedGeneration:
+		return true
+	// A manual refresh was requested.
+	case warehouse.Status.LastHandledRefresh != refreshToken:
+		return true
+	// We have discovered artifacts, but it's been longer than the interval
+	// since we last did so.
+	case warehouse.Status.DiscoveredArtifacts.DiscoveredAt.Add(
+		warehouse.Spec.Interval.Duration,
+	).Before(metav1.Now().Time):
+		return true
+	default:
+		return false
+	}
 }
