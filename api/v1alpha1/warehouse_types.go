@@ -325,6 +325,8 @@ type WarehouseStatus struct {
 	LastHandledRefresh string `json:"lastHandledRefresh,omitempty" protobuf:"bytes,6,opt,name=lastHandledRefresh"`
 	// Message describes any errors that are preventing the Warehouse controller
 	// from polling repositories to discover new Freight.
+	//
+	// Deprecated: Use Conditions instead.
 	Message string `json:"message,omitempty" protobuf:"bytes,3,opt,name=message"`
 	// ObservedGeneration represents the .metadata.generation that this Warehouse
 	// was reconciled against.
@@ -336,9 +338,21 @@ type WarehouseStatus struct {
 	DiscoveredArtifacts *DiscoveredArtifacts `json:"discoveredArtifacts,omitempty" protobuf:"bytes,7,opt,name=discoveredArtifacts"`
 }
 
+func (w *WarehouseStatus) GetConditions() []metav1.Condition {
+	return w.Conditions
+}
+
+func (w *WarehouseStatus) SetConditions(conditions []metav1.Condition) {
+	w.Conditions = conditions
+}
+
 // DiscoveredArtifacts holds the artifacts discovered by the Warehouse for its
 // subscriptions.
 type DiscoveredArtifacts struct {
+	// DiscoveredAt is the time at which the Warehouse discovered the artifacts.
+	//
+	// +optional
+	DiscoveredAt metav1.Time `json:"discoveredAt" protobuf:"bytes,4,opt,name=discoveredAt"`
 	// Git holds the commits discovered by the Warehouse for the Git
 	// subscriptions.
 	//
