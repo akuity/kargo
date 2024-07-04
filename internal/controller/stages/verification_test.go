@@ -822,21 +822,17 @@ func TestAbortVerification(t *testing.T) {
 }
 
 func TestBuildAnalysisRun(t *testing.T) {
-	testFreightName := "fake-freight"
 	testFreight := &kargoapi.Freight{
 		ObjectMeta: metav1.ObjectMeta{
 			UID:       "fake-uid",
-			Name:      testFreightName,
+			Name:      "fake-freight",
 			Namespace: "fake-namespace",
 		},
 	}
-	testFreightCol := &kargoapi.FreightCollection{
-		Freight: map[string]kargoapi.FreightReference{
-			testFreightName: {
-				Name: testFreightName,
-			},
-		},
-	}
+	testFreightCol := &kargoapi.FreightCollection{}
+	testFreightCol.UpdateOrPush(kargoapi.FreightReference{
+		Name: testFreight.Name,
+	})
 
 	testCases := []struct {
 		name             string
@@ -928,11 +924,11 @@ func TestBuildAnalysisRun(t *testing.T) {
 				require.Equal(t, ar.Namespace, stage.Namespace)
 
 				require.Equal(t, map[string]string{
-					kargoapi.StageLabelKey:     stage.Name,
-					kargoapi.FreightLabelKey:   testFreight.Name,
-					kargoapi.PromotionLabelKey: stage.Status.LastPromotion.Name,
-					"custom":                   "label",
-					"another":                  "label",
+					kargoapi.StageLabelKey:             stage.Name,
+					kargoapi.FreightCollectionLabelKey: testFreightCol.ID,
+					kargoapi.PromotionLabelKey:         stage.Status.LastPromotion.Name,
+					"custom":                           "label",
+					"another":                          "label",
 				}, ar.Labels)
 				require.Equal(t, stage.Spec.Verification.AnalysisRunMetadata.Annotations, ar.Annotations)
 

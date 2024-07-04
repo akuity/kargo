@@ -1451,6 +1451,11 @@ spec:
                           by this Promotion as well as any additional Freight that is carried over
                           from the target Stage's current state.
                         properties:
+                          id:
+                            description: |-
+                              ID is a unique and deterministically calculated identifier for the
+                              FreightCollection. It is updated on each use of the UpdateOrPush method.
+                            type: string
                           items:
                             additionalProperties:
                               description: |-
@@ -1790,6 +1795,8 @@ spec:
                                   type: string
                               type: object
                             type: array
+                        required:
+                        - id
                         type: object
                       lastHandledRefresh:
                         description: |-
@@ -1832,6 +1839,11 @@ spec:
                     represents a piece of Freight that has been selected for deployment to a
                     Stage.
                   properties:
+                    id:
+                      description: |-
+                        ID is a unique and deterministically calculated identifier for the
+                        FreightCollection. It is updated on each use of the UpdateOrPush method.
+                      type: string
                     items:
                       additionalProperties:
                         description: |-
@@ -2167,6 +2179,8 @@ spec:
                             type: string
                         type: object
                       type: array
+                  required:
+                  - id
                   type: object
                 type: array
               health:
@@ -3059,6 +3073,11 @@ spec:
                           by this Promotion as well as any additional Freight that is carried over
                           from the target Stage's current state.
                         properties:
+                          id:
+                            description: |-
+                              ID is a unique and deterministically calculated identifier for the
+                              FreightCollection. It is updated on each use of the UpdateOrPush method.
+                            type: string
                           items:
                             additionalProperties:
                               description: |-
@@ -3398,6 +3417,8 @@ spec:
                                   type: string
                               type: object
                             type: array
+                        required:
+                        - id
                         type: object
                       lastHandledRefresh:
                         description: |-

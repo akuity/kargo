@@ -10,11 +10,11 @@ const (
 	CredentialTypeLabelValueImage = "image"
 
 	// Kargo core API
-	FreightLabelKey   = "kargo.akuity.io/freight"
-	ProjectLabelKey   = "kargo.akuity.io/project"
-	PromotionLabelKey = "kargo.akuity.io/promotion"
-	ShardLabelKey     = "kargo.akuity.io/shard"
-	StageLabelKey     = "kargo.akuity.io/stage"
+	FreightCollectionLabelKey = "kargo.akuity.io/freight-collection"
+	ProjectLabelKey           = "kargo.akuity.io/project"
+	PromotionLabelKey         = "kargo.akuity.io/promotion"
+	ShardLabelKey             = "kargo.akuity.io/shard"
+	StageLabelKey             = "kargo.akuity.io/stage"
 
 	LabelTrueValue = "true"
 
