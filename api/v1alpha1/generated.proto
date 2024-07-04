@@ -370,6 +370,11 @@ message ChartSubscription {
 // DiscoveredArtifacts holds the artifacts discovered by the Warehouse for its
 // subscriptions.
 message DiscoveredArtifacts {
+  // DiscoveredAt is the time at which the Warehouse discovered the artifacts.
+  //
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time discoveredAt = 4;
+
   // Git holds the commits discovered by the Warehouse for the Git
   // subscriptions.
   //
@@ -1647,6 +1652,8 @@ message WarehouseStatus {
 
   // Message describes any errors that are preventing the Warehouse controller
   // from polling repositories to discover new Freight.
+  //
+  // Deprecated: Use Conditions instead.
   optional string message = 3;
 
   // ObservedGeneration represents the .metadata.generation that this Warehouse

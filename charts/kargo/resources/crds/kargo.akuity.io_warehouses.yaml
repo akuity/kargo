@@ -467,6 +467,11 @@ spec:
                       - repoURL
                       type: object
                     type: array
+                  discoveredAt:
+                    description: DiscoveredAt is the time at which the Warehouse discovered
+                      the artifacts.
+                    format: date-time
+                    type: string
                   git:
                     description: |-
                       Git holds the commits discovered by the Warehouse for the Git
@@ -611,6 +616,9 @@ spec:
                 description: |-
                   Message describes any errors that are preventing the Warehouse controller
                   from polling repositories to discover new Freight.
+
+
+                  Deprecated: Use Conditions instead.
                 type: string
               observedGeneration:
                 description: |-

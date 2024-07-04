@@ -1121,6 +1121,15 @@ export class ChartSubscription extends Message<ChartSubscription> {
  */
 export class DiscoveredArtifacts extends Message<DiscoveredArtifacts> {
   /**
+   * DiscoveredAt is the time at which the Warehouse discovered the artifacts.
+   *
+   * +optional
+   *
+   * @generated from field: optional k8s.io.apimachinery.pkg.apis.meta.v1.Time discoveredAt = 4;
+   */
+  discoveredAt?: Time;
+
+  /**
    * Git holds the commits discovered by the Warehouse for the Git
    * subscriptions.
    *
@@ -1158,6 +1167,7 @@ export class DiscoveredArtifacts extends Message<DiscoveredArtifacts> {
   static readonly runtime: typeof proto2 = proto2;
   static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.DiscoveredArtifacts";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 4, name: "discoveredAt", kind: "message", T: Time, opt: true },
     { no: 1, name: "git", kind: "message", T: GitDiscoveryResult, repeated: true },
     { no: 2, name: "images", kind: "message", T: ImageDiscoveryResult, repeated: true },
     { no: 3, name: "charts", kind: "message", T: ChartDiscoveryResult, repeated: true },
@@ -4939,6 +4949,8 @@ export class WarehouseStatus extends Message<WarehouseStatus> {
   /**
    * Message describes any errors that are preventing the Warehouse controller
    * from polling repositories to discover new Freight.
+   *
+   * Deprecated: Use Conditions instead.
    *
    * @generated from field: optional string message = 3;
    */

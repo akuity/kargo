@@ -318,6 +318,11 @@
               },
               "type": "array"
             },
+            "discoveredAt": {
+              "description": "DiscoveredAt is the time at which the Warehouse discovered the artifacts.",
+              "format": "date-time",
+              "type": "string"
+            },
             "git": {
               "description": "Git holds the commits discovered by the Warehouse for the Git\nsubscriptions.",
               "items": {
@@ -447,7 +452,7 @@
           "type": "string"
         },
         "message": {
-          "description": "Message describes any errors that are preventing the Warehouse controller\nfrom polling repositories to discover new Freight.",
+          "description": "Message describes any errors that are preventing the Warehouse controller\nfrom polling repositories to discover new Freight.\n\n\nDeprecated: Use Conditions instead.",
           "type": "string"
         },
         "observedGeneration": {
