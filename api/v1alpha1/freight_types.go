@@ -107,7 +107,9 @@ func (f *Freight) GenerateID() string {
 	sort.Strings(artifacts)
 	return fmt.Sprintf(
 		"%x",
-		sha1.Sum([]byte(strings.Join(artifacts, "|"))),
+		sha1.Sum([]byte(
+			fmt.Sprintf("%s:%s", f.Origin.String(), strings.Join(artifacts, "|")),
+		)),
 	)
 }
 
