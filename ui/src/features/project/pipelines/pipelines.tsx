@@ -350,9 +350,17 @@ export const Pipelines = () => {
                             (subscribersByStage[node?.data?.metadata?.name || ''] || []).length <= 1
                           }
                           onPromoteClick={(type: FreightlineAction) => {
+                            const isWarehouseKind =
+                              node.data?.status?.currentFreight?.origin?.kind === 'Warehouse';
                             const currentWarehouse =
                               node.data?.status?.currentFreight?.warehouse ||
+                              (isWarehouseKind
+                                ? node.data?.status?.currentFreight?.origin?.name
+                                : false) ||
                               node.data?.spec?.subscriptions?.warehouse ||
+                              (isWarehouseKind
+                                ? node.data?.spec?.requestedFreight[0]?.origin?.name
+                                : false) ||
                               '';
                             setSelectedWarehouse(currentWarehouse);
                             if (state.stage === node.data?.metadata?.name) {
