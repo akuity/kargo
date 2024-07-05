@@ -34,7 +34,7 @@ COPY api/ api/
 COPY cmd/ cmd/
 COPY internal/ internal/
 COPY pkg/ pkg/
-# COPY --from=ui-builder /ui/build internal/api/ui/
+COPY --from=ui-builder /ui/build internal/api/ui/
 
 ARG VERSION
 ARG GIT_COMMIT

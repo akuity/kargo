@@ -6,7 +6,7 @@ import { Stage } from '@ui/gen/v1alpha1/generated_pb';
 import { StageStyleMap } from '../types';
 
 export const useImages = (stages: Stage[]) => {
-  const colors = useContext(ColorContext);
+  const { stageColorMap } = useContext(ColorContext);
 
   return useMemo(() => {
     const images = new Map<string, Map<string, StageStyleMap>>();
@@ -25,7 +25,7 @@ export const useImages = (stages: Stage[]) => {
           }
           curStages[stage.metadata?.name as string] = {
             opacity: 1 - i / len,
-            backgroundColor: colors[stage.metadata?.name as string]
+            backgroundColor: stageColorMap[stage.metadata?.name as string]
           };
           repo.set(image.tag!, curStages);
         });
@@ -43,7 +43,7 @@ export const useImages = (stages: Stage[]) => {
         }
         curStages[stage.metadata?.name as string] = {
           opacity: 1,
-          backgroundColor: colors[stage.metadata?.name as string]
+          backgroundColor: stageColorMap[stage.metadata?.name as string]
         };
         repo.set(image.tag!, curStages);
       });

@@ -9,7 +9,9 @@ import {
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Tooltip } from 'antd';
 import classNames from 'classnames';
+import { useContext } from 'react';
 
+import { ColorContext } from '@ui/context/colors';
 import { urlForImage } from '@ui/utils/url';
 
 import { NodeType, RepoNodeType } from '../types';
@@ -30,6 +32,7 @@ const ico = {
 };
 
 export const RepoNode = ({ nodeData, children, onClick }: Props) => {
+  const { warehouseColorMap } = useContext(ColorContext);
   const type = nodeData.type;
   const value =
     type === NodeType.REPO_CHART
@@ -42,10 +45,14 @@ export const RepoNode = ({ nodeData, children, onClick }: Props) => {
       className={classNames([
         styles.node,
         {
-          'cursor-pointer hover:text-white transition-all border-sky-300 hover:bg-gray-300':
-            !!onClick
+          'cursor-pointer hover:text-white transition-all hover:bg-gray-300': !!onClick
         }
       ])}
+      style={
+        type === NodeType.WAREHOUSE
+          ? { borderColor: warehouseColorMap[nodeData?.data?.metadata?.name || ''] }
+          : {}
+      }
       onClick={() => onClick?.()}
     >
       <h3 className='flex justify-between gap-2'>
@@ -76,7 +83,16 @@ export const RepoNode = ({ nodeData, children, onClick }: Props) => {
               <FontAwesomeIcon icon={faExclamationCircle} className='mr-1 text-red-600' />
             </Tooltip>
           )}
-          {type && <FontAwesomeIcon icon={ico[type]} />}
+          {type && (
+            <FontAwesomeIcon
+              icon={ico[type]}
+              style={
+                type === NodeType.WAREHOUSE
+                  ? { color: warehouseColorMap[nodeData.data?.metadata?.name || ''] }
+                  : {}
+              }
+            />
+          )}
         </div>
       </h3>
       <div className={styles.body}>

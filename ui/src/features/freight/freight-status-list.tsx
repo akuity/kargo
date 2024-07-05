@@ -6,7 +6,7 @@ import { ColorContext } from '@ui/context/colors';
 import { Freight } from '@ui/gen/v1alpha1/generated_pb';
 
 const StageIndicator = ({ stageName, icon }: { stageName: string; icon?: IconDefinition }) => {
-  const stageColorMap = useContext(ColorContext);
+  const { stageColorMap } = useContext(ColorContext);
   return (
     <div
       className='rounded-md px-3 py-1 mr-2 text-white font-medium text-base'

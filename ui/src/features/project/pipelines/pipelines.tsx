@@ -111,7 +111,11 @@ export const Pipelines = () => {
     const allFreight = freightData?.groups['']?.freight || [];
     const filteredFreight = [] as Freight[];
     allFreight.forEach((f) => {
-      if (!selectedWarehouse || f.warehouse === selectedWarehouse) {
+      if (
+        !selectedWarehouse ||
+        f.warehouse === selectedWarehouse ||
+        (f?.origin?.kind === 'Warehouse' && f?.origin.name === selectedWarehouse)
+      ) {
         filteredFreight.push(f);
       }
     });
@@ -132,7 +136,7 @@ export const Pipelines = () => {
     return () => watcher.cancelWatch();
   }, [isLoading, isVisible, name]);
 
-  const [nodes, connectors, box, sortedStages, stageColorMap] = usePipelineGraph(
+  const [nodes, connectors, box, sortedStages, stageColorMap, warehouseColorMap] = usePipelineGraph(
     name,
     data?.stages || [],
     warehouseData?.warehouses || [],
@@ -157,6 +161,14 @@ export const Pipelines = () => {
       stage?.spec?.subscriptions?.upstreamStages.forEach((item) => {
         const items = subscribersByStage[item.name || ''] || [];
         subscribersByStage[item.name || ''] = [...items, stage];
+      });
+      stage?.spec?.requestedFreight?.forEach((item) => {
+        if (!item.sources?.direct) {
+          (item?.sources?.stages || []).forEach((name) => {
+            const items = subscribersByStage[name] || [];
+            subscribersByStage[name] = [...items, stage];
+          });
+        }
       });
     });
     return [stagesPerFreight, subscribersByStage];
@@ -209,7 +221,7 @@ export const Pipelines = () => {
 
   return (
     <div className='flex flex-col flex-grow'>
-      <ColorContext.Provider value={stageColorMap}>
+      <ColorContext.Provider value={{ stageColorMap, warehouseColorMap }}>
         <FreightlineHeader
           promotingStage={state.stage}
           action={state.action}
@@ -265,6 +277,7 @@ export const Pipelines = () => {
                     className='mr-2'
                     onClick={() => {
                       clearColors(name || '');
+                      clearColors(name || '', 'warehouses');
                       window.location.reload();
                     }}
                   >
@@ -337,9 +350,17 @@ export const Pipelines = () => {
                             (subscribersByStage[node?.data?.metadata?.name || ''] || []).length <= 1
                           }
                           onPromoteClick={(type: FreightlineAction) => {
+                            const isWarehouseKind =
+                              node.data?.status?.currentFreight?.origin?.kind === 'Warehouse';
                             const currentWarehouse =
                               node.data?.status?.currentFreight?.warehouse ||
+                              (isWarehouseKind
+                                ? node.data?.status?.currentFreight?.origin?.name
+                                : false) ||
                               node.data?.spec?.subscriptions?.warehouse ||
+                              (isWarehouseKind
+                                ? node.data?.spec?.requestedFreight[0]?.origin?.name
+                                : false) ||
                               '';
                             setSelectedWarehouse(currentWarehouse);
                             if (state.stage === node.data?.metadata?.name) {
@@ -443,7 +464,7 @@ export const Pipelines = () => {
                 {connectors?.map((connector) =>
                   connector.map((line, i) => (
                     <div
-                      className='absolute bg-gray-400'
+                      className='absolute bg-gray-300 rounded'
                       style={{
                         padding: 0,
                         margin: 0,
@@ -451,7 +472,8 @@ export const Pipelines = () => {
                         width: line.width,
                         left: line.x,
                         top: line.y,
-                        transform: `rotate(${line.angle}deg)`
+                        transform: `rotate(${line.angle}deg)`,
+                        backgroundColor: line.color
                       }}
                       key={i}
                     />

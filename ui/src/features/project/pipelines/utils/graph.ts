@@ -2,7 +2,7 @@ import { graphlib } from 'dagre';
 
 import { RepoSubscription, Stage } from '@ui/gen/v1alpha1/generated_pb';
 
-import { AnyNodeType, NodeType, RepoNodeType } from '../types';
+import { AnyNodeType, ConnectorsType, NodeType, RepoNodeType } from '../types';
 
 export const LINE_THICKNESS = 2;
 
@@ -65,7 +65,7 @@ export const getConnectors = (g: graphlib.Graph) => {
       }
     }
 
-    const lines = new Array<{ x: number; y: number; width: number; angle: number }>();
+    const lines = new Array<ConnectorsType>();
     for (let i = 0; i < points.length - 1; i++) {
       const start = points[i];
       const end = points[i + 1];
@@ -80,7 +80,7 @@ export const getConnectors = (g: graphlib.Graph) => {
       const cy = (y1 + y2) / 2 - LINE_THICKNESS / 2;
 
       const angle = Math.atan2(y1 - y2, x1 - x2) * (180 / Math.PI);
-      lines.push({ x: cx, y: cy, width, angle });
+      lines.push({ x: cx, y: cy, width, angle, color: edge['color'] });
     }
     return lines;
   });
