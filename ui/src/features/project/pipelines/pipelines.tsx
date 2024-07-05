@@ -111,7 +111,11 @@ export const Pipelines = () => {
     const allFreight = freightData?.groups['']?.freight || [];
     const filteredFreight = [] as Freight[];
     allFreight.forEach((f) => {
-      if (!selectedWarehouse || f.warehouse === selectedWarehouse) {
+      if (
+        !selectedWarehouse ||
+        f.warehouse === selectedWarehouse ||
+        (f?.origin?.kind === 'Warehouse' && f?.origin.name === selectedWarehouse)
+      ) {
         filteredFreight.push(f);
       }
     });
