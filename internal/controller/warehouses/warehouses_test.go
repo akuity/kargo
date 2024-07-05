@@ -96,13 +96,53 @@ func TestSyncWarehouse(t *testing.T) {
 		},
 
 		{
+			name: "validation error discovered artifacts",
+			reconciler: &reconciler{
+				discoverArtifactsFn: func(context.Context, *kargoapi.Warehouse) (*kargoapi.DiscoveredArtifacts, error) {
+					return &kargoapi.DiscoveredArtifacts{
+						Git: []kargoapi.GitDiscoveryResult{
+							{RepoURL: "fake-repo", Commits: nil},
+						},
+					}, nil
+				},
+				patchStatusFn: func(context.Context, *kargoapi.Warehouse, func(*kargoapi.WarehouseStatus)) error {
+					return nil
+				},
+			},
+			warehouse: &kargoapi.Warehouse{},
+			assertions: func(t *testing.T, status kargoapi.WarehouseStatus, err error) {
+				require.NoError(t, err)
+
+				require.Len(t, status.GetConditions(), 2)
+
+				// Ensure that the Ready condition is set to False.
+				readyCondition := conditions.Get(&status, kargoapi.ConditionTypeReady)
+				require.NotNil(t, readyCondition)
+				require.Equal(t, metav1.ConditionFalse, readyCondition.Status)
+				require.Equal(t, "MissingCommits", readyCondition.Reason)
+				require.Contains(t, readyCondition.Message, "No commits discovered")
+
+				// Ensure that the Healthy condition is set to False.
+				healthyCondition := conditions.Get(&status, kargoapi.ConditionTypeHealthy)
+				require.NotNil(t, healthyCondition)
+				require.Equal(t, metav1.ConditionFalse, healthyCondition.Status)
+				require.Equal(t, "NoCommitsDiscovered", healthyCondition.Reason)
+				require.Contains(t, healthyCondition.Message, "No commits discovered")
+			},
+		},
+
+		{
 			name: "Freight build error",
 			reconciler: &reconciler{
 				discoverArtifactsFn: func(
 					context.Context,
 					*kargoapi.Warehouse,
 				) (*kargoapi.DiscoveredArtifacts, error) {
-					return &kargoapi.DiscoveredArtifacts{}, nil
+					return &kargoapi.DiscoveredArtifacts{
+						Git: []kargoapi.GitDiscoveryResult{
+							{RepoURL: "fake-repo", Commits: []kargoapi.DiscoveredCommit{{ID: "fake-commit"}}},
+						},
+					}, nil
 				},
 				buildFreightFromLatestArtifactsFn: func(
 					string,
@@ -144,7 +184,11 @@ func TestSyncWarehouse(t *testing.T) {
 					context.Context,
 					*kargoapi.Warehouse,
 				) (*kargoapi.DiscoveredArtifacts, error) {
-					return &kargoapi.DiscoveredArtifacts{}, nil
+					return &kargoapi.DiscoveredArtifacts{
+						Git: []kargoapi.GitDiscoveryResult{
+							{RepoURL: "fake-repo", Commits: []kargoapi.DiscoveredCommit{{ID: "fake-commit"}}},
+						},
+					}, nil
 				},
 				buildFreightFromLatestArtifactsFn: func(
 					string,
@@ -195,7 +239,11 @@ func TestSyncWarehouse(t *testing.T) {
 					context.Context,
 					*kargoapi.Warehouse,
 				) (*kargoapi.DiscoveredArtifacts, error) {
-					return &kargoapi.DiscoveredArtifacts{}, nil
+					return &kargoapi.DiscoveredArtifacts{
+						Git: []kargoapi.GitDiscoveryResult{
+							{RepoURL: "fake-repo", Commits: []kargoapi.DiscoveredCommit{{ID: "fake-commit"}}},
+						},
+					}, nil
 				},
 				buildFreightFromLatestArtifactsFn: func(
 					string,
@@ -245,7 +293,11 @@ func TestSyncWarehouse(t *testing.T) {
 			name: "automatic Freight creation",
 			reconciler: &reconciler{
 				discoverArtifactsFn: func(context.Context, *kargoapi.Warehouse) (*kargoapi.DiscoveredArtifacts, error) {
-					return &kargoapi.DiscoveredArtifacts{}, nil
+					return &kargoapi.DiscoveredArtifacts{
+						Git: []kargoapi.GitDiscoveryResult{
+							{RepoURL: "fake-repo", Commits: []kargoapi.DiscoveredCommit{{ID: "fake-commit"}}},
+						},
+					}, nil
 				},
 				buildFreightFromLatestArtifactsFn: func(
 					string,
@@ -298,7 +350,11 @@ func TestSyncWarehouse(t *testing.T) {
 			name: "manual Freight creation",
 			reconciler: &reconciler{
 				discoverArtifactsFn: func(context.Context, *kargoapi.Warehouse) (*kargoapi.DiscoveredArtifacts, error) {
-					return &kargoapi.DiscoveredArtifacts{}, nil
+					return &kargoapi.DiscoveredArtifacts{
+						Git: []kargoapi.GitDiscoveryResult{
+							{RepoURL: "fake-repo", Commits: []kargoapi.DiscoveredCommit{{ID: "fake-commit"}}},
+						},
+					}, nil
 				},
 				patchStatusFn: func(context.Context, *kargoapi.Warehouse, func(*kargoapi.WarehouseStatus)) error {
 					return nil
@@ -412,7 +468,11 @@ func TestSyncWarehouse(t *testing.T) {
 			name: "clears previous transient error conditions",
 			reconciler: &reconciler{
 				discoverArtifactsFn: func(context.Context, *kargoapi.Warehouse) (*kargoapi.DiscoveredArtifacts, error) {
-					return &kargoapi.DiscoveredArtifacts{}, nil
+					return &kargoapi.DiscoveredArtifacts{
+						Git: []kargoapi.GitDiscoveryResult{
+							{RepoURL: "fake-repo", Commits: []kargoapi.DiscoveredCommit{{ID: "fake-commit"}}},
+						},
+					}, nil
 				},
 				patchStatusFn: func(context.Context, *kargoapi.Warehouse, func(*kargoapi.WarehouseStatus)) error {
 					return nil
@@ -681,6 +741,189 @@ func TestBuildFreightFromLatestArtifacts(t *testing.T) {
 				testCase.artifacts,
 			)
 			testCase.assertions(t, freight, err)
+		})
+	}
+}
+
+func TestValidateDiscoveredArtifacts(t *testing.T) {
+	testCases := []struct {
+		name       string
+		warehouse  *kargoapi.Warehouse
+		newStatus  *kargoapi.WarehouseStatus
+		assertions func(*testing.T, bool, *kargoapi.WarehouseStatus)
+	}{
+		{
+			name: "no artifacts",
+			warehouse: &kargoapi.Warehouse{
+				ObjectMeta: metav1.ObjectMeta{Generation: 1},
+			},
+			newStatus: &kargoapi.WarehouseStatus{
+				DiscoveredArtifacts: &kargoapi.DiscoveredArtifacts{},
+			},
+			assertions: func(t *testing.T, result bool, status *kargoapi.WarehouseStatus) {
+				require.False(t, result)
+
+				require.Len(t, status.GetConditions(), 2)
+
+				readyCondition := conditions.Get(status, kargoapi.ConditionTypeReady)
+				require.NotNil(t, readyCondition)
+				require.Equal(t, metav1.ConditionFalse, readyCondition.Status)
+				require.Equal(t, "MissingArtifacts", readyCondition.Reason)
+				require.Equal(t, "No artifacts discovered", readyCondition.Message)
+				require.Equal(t, int64(1), readyCondition.ObservedGeneration)
+
+				healthyCondition := conditions.Get(status, kargoapi.ConditionTypeHealthy)
+				require.NotNil(t, healthyCondition)
+				require.Equal(t, metav1.ConditionFalse, healthyCondition.Status)
+				require.Equal(t, "MissingArtifacts", healthyCondition.Reason)
+				require.Equal(t, "No artifacts discovered", healthyCondition.Message)
+				require.Equal(t, int64(1), healthyCondition.ObservedGeneration)
+			},
+		},
+		{
+			name: "Git repository with no commits",
+			warehouse: &kargoapi.Warehouse{
+				ObjectMeta: metav1.ObjectMeta{Generation: 1},
+			},
+			newStatus: &kargoapi.WarehouseStatus{
+				DiscoveredArtifacts: &kargoapi.DiscoveredArtifacts{
+					Git: []kargoapi.GitDiscoveryResult{
+						{RepoURL: "https://github.com/example/repo"},
+					},
+				},
+			},
+			assertions: func(t *testing.T, result bool, status *kargoapi.WarehouseStatus) {
+				require.False(t, result)
+
+				require.Len(t, status.GetConditions(), 2)
+
+				readyCondition := conditions.Get(status, kargoapi.ConditionTypeReady)
+				require.NotNil(t, readyCondition)
+				require.Equal(t, metav1.ConditionFalse, readyCondition.Status)
+				require.Equal(t, "MissingCommits", readyCondition.Reason)
+				require.Contains(t, readyCondition.Message, "No commits discovered for Git repository")
+				require.Equal(t, int64(1), readyCondition.ObservedGeneration)
+
+				healthyCondition := conditions.Get(status, kargoapi.ConditionTypeHealthy)
+				require.NotNil(t, healthyCondition)
+				require.Equal(t, metav1.ConditionFalse, healthyCondition.Status)
+				require.Equal(t, "NoCommitsDiscovered", healthyCondition.Reason)
+				require.Contains(t, healthyCondition.Message, "No commits discovered for Git repository")
+				require.Equal(t, int64(1), healthyCondition.ObservedGeneration)
+			},
+		},
+		{
+			name: "image repository with no references",
+			warehouse: &kargoapi.Warehouse{
+				ObjectMeta: metav1.ObjectMeta{Generation: 1},
+			},
+			newStatus: &kargoapi.WarehouseStatus{
+				DiscoveredArtifacts: &kargoapi.DiscoveredArtifacts{
+					Images: []kargoapi.ImageDiscoveryResult{
+						{RepoURL: "docker.io/example/image"},
+					},
+				},
+			},
+			assertions: func(t *testing.T, result bool, status *kargoapi.WarehouseStatus) {
+				require.False(t, result)
+
+				require.Len(t, status.GetConditions(), 2)
+
+				readyCondition := conditions.Get(status, kargoapi.ConditionTypeReady)
+				require.NotNil(t, readyCondition)
+				require.Equal(t, metav1.ConditionFalse, readyCondition.Status)
+				require.Equal(t, "MissingImageReferences", readyCondition.Reason)
+				require.Contains(t, readyCondition.Message, "No references discovered for image repository")
+				require.Equal(t, int64(1), readyCondition.ObservedGeneration)
+
+				healthyCondition := conditions.Get(status, kargoapi.ConditionTypeHealthy)
+				require.NotNil(t, healthyCondition)
+				require.Equal(t, metav1.ConditionFalse, healthyCondition.Status)
+				require.Equal(t, "NoImageReferencesDiscovered", healthyCondition.Reason)
+				require.Contains(t, healthyCondition.Message, "No references discovered for image repository")
+				require.Equal(t, int64(1), healthyCondition.ObservedGeneration)
+			},
+		},
+		{
+			name: "chart repository with no versions",
+			warehouse: &kargoapi.Warehouse{
+				ObjectMeta: metav1.ObjectMeta{Generation: 1},
+			},
+			newStatus: &kargoapi.WarehouseStatus{
+				DiscoveredArtifacts: &kargoapi.DiscoveredArtifacts{
+					Charts: []kargoapi.ChartDiscoveryResult{
+						{RepoURL: "https://charts.example.com", Name: "mychart"},
+					},
+				},
+			},
+			assertions: func(t *testing.T, result bool, status *kargoapi.WarehouseStatus) {
+				require.False(t, result)
+
+				require.Len(t, status.GetConditions(), 2)
+
+				readyCondition := conditions.Get(status, kargoapi.ConditionTypeReady)
+				require.NotNil(t, readyCondition)
+				require.Equal(t, metav1.ConditionFalse, readyCondition.Status)
+				require.Equal(t, "MissingChartVersions", readyCondition.Reason)
+				require.Contains(t, readyCondition.Message, "No versions discovered for chart")
+				require.Equal(t, int64(1), readyCondition.ObservedGeneration)
+
+				healthyCondition := conditions.Get(status, kargoapi.ConditionTypeHealthy)
+				require.NotNil(t, healthyCondition)
+				require.Equal(t, metav1.ConditionFalse, healthyCondition.Status)
+				require.Equal(t, "NoChartVersionsDiscovered", healthyCondition.Reason)
+				require.Contains(t, healthyCondition.Message, "No versions discovered for chart")
+				require.Equal(t, int64(1), healthyCondition.ObservedGeneration)
+			},
+		},
+		{
+			name: "successful discovery with all artifact types",
+			warehouse: &kargoapi.Warehouse{
+				ObjectMeta: metav1.ObjectMeta{Generation: 1},
+			},
+			newStatus: &kargoapi.WarehouseStatus{
+				DiscoveredArtifacts: &kargoapi.DiscoveredArtifacts{
+					Git: []kargoapi.GitDiscoveryResult{
+						{RepoURL: "https://github.com/example/repo1", Commits: []kargoapi.DiscoveredCommit{
+							{ID: "abc123"},
+						}},
+						{RepoURL: "https://github.com/example/repo2", Commits: []kargoapi.DiscoveredCommit{
+							{ID: "def456"}, {ID: "ghi789"},
+						}},
+					},
+					Images: []kargoapi.ImageDiscoveryResult{
+						{RepoURL: "docker.io/example/image1", References: []kargoapi.DiscoveredImageReference{
+							{Tag: "1.0.0"}, {Tag: "1.1.0"},
+						}},
+					},
+					Charts: []kargoapi.ChartDiscoveryResult{
+						{RepoURL: "https://charts.example.com", Name: "mychart", Versions: []string{"1.0.0", "1.1.0"}},
+					},
+				},
+			},
+			assertions: func(t *testing.T, result bool, status *kargoapi.WarehouseStatus) {
+				require.True(t, result)
+
+				require.Len(t, status.GetConditions(), 1)
+
+				healthyCondition := conditions.Get(status, kargoapi.ConditionTypeHealthy)
+				require.NotNil(t, healthyCondition)
+				require.Equal(t, metav1.ConditionTrue, healthyCondition.Status)
+				require.Equal(t, "ArtifactsDiscovered", healthyCondition.Reason)
+				require.Contains(
+					t,
+					healthyCondition.Message,
+					"Successfully discovered 3 commits, 2 images, and 2 charts from 4 subscriptions",
+				)
+				require.Equal(t, int64(1), healthyCondition.ObservedGeneration)
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := validateDiscoveredArtifacts(tc.warehouse, tc.newStatus)
+			tc.assertions(t, result, tc.newStatus)
 		})
 	}
 }

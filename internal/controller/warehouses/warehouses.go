@@ -3,6 +3,7 @@ package warehouses
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -272,23 +273,20 @@ func (r *reconciler) syncWarehouse(
 		// Update the status with the discovered artifacts, and mark the
 		// Warehouse as healthy.
 		status.DiscoveredArtifacts = discoveredArtifacts
-		conditions.Set(
-			&status,
-			&metav1.Condition{
-				Type:   kargoapi.ConditionTypeHealthy,
-				Status: metav1.ConditionTrue,
-				Reason: "DiscoverySucceeded",
-				Message: fmt.Sprintf(
-					"Successfully discovered artifacts for %d subscriptions", len(warehouse.Spec.Subscriptions),
-				),
-				ObservedGeneration: warehouse.GetGeneration(),
-			},
-		)
 	}
 
 	// At this point, we have successfully discovered the latest artifacts
 	// for the Warehouse using the current subscriptions.
 	status.ObservedGeneration = warehouse.GetGeneration()
+
+	// Validate the discovered artifacts.
+	if !validateDiscoveredArtifacts(warehouse, &status) {
+		// Remove the reconciling condition and return early if the validation
+		// failed. We do not return an error here, to prevent a requeue loop
+		// which would cause unnecessary pressure on the upstream sources.
+		conditions.Delete(&status, kargoapi.ConditionTypeReconciling)
+		return status, nil
+	}
 
 	// Automatically create a Freight from the latest discovered artifacts
 	// if the Warehouse is configured to do so.
@@ -381,13 +379,10 @@ func (r *reconciler) syncWarehouse(
 	conditions.Set(
 		&status,
 		&metav1.Condition{
-			Type:   kargoapi.ConditionTypeReady,
-			Status: metav1.ConditionTrue,
-			Reason: "ArtifactsDiscovered",
-			Message: fmt.Sprintf(
-				"Successfully discovered artifacts for %d subscriptions",
-				len(warehouse.Spec.Subscriptions),
-			),
+			Type:    kargoapi.ConditionTypeReady,
+			Status:  metav1.ConditionTrue,
+			Reason:  "ArtifactsDiscovered",
+			Message: conditions.Get(&status, kargoapi.ConditionTypeHealthy).Message,
 		},
 	)
 
@@ -492,6 +487,170 @@ func (r *reconciler) patchStatus(
 	update func(*kargoapi.WarehouseStatus),
 ) error {
 	return kubeclient.PatchStatus(ctx, r.client, warehouse, update)
+}
+
+// validateDiscoveredArtifacts validates the discovered artifacts and updates
+// the Warehouse status with the results. Returns true if the artifacts are
+// valid, false otherwise.
+func validateDiscoveredArtifacts(
+	warehouse *kargoapi.Warehouse,
+	newStatus *kargoapi.WarehouseStatus,
+) bool {
+	artifacts := newStatus.DiscoveredArtifacts
+
+	if artifacts == nil || len(artifacts.Git)+len(artifacts.Images)+len(artifacts.Charts) == 0 {
+		message := "No artifacts discovered"
+		conditions.Set(
+			newStatus,
+			&metav1.Condition{
+				Type:               kargoapi.ConditionTypeHealthy,
+				Status:             metav1.ConditionFalse,
+				Reason:             "MissingArtifacts",
+				Message:            message,
+				ObservedGeneration: warehouse.GetGeneration(),
+			},
+			&metav1.Condition{
+				Type:               kargoapi.ConditionTypeReady,
+				Status:             metav1.ConditionFalse,
+				Reason:             "MissingArtifacts",
+				Message:            message,
+				ObservedGeneration: warehouse.GetGeneration(),
+			},
+		)
+		return false
+	}
+
+	var subscriptions int
+	var commits int
+	for _, artifact := range artifacts.Git {
+		count := len(artifact.Commits)
+
+		if count == 0 {
+			message := fmt.Sprintf("No commits discovered for Git repository %q", artifact.RepoURL)
+			conditions.Set(
+				newStatus,
+				&metav1.Condition{
+					Type:               kargoapi.ConditionTypeHealthy,
+					Status:             metav1.ConditionFalse,
+					Reason:             "NoCommitsDiscovered",
+					Message:            message,
+					ObservedGeneration: warehouse.GetGeneration(),
+				},
+				&metav1.Condition{
+					Type:               kargoapi.ConditionTypeReady,
+					Status:             metav1.ConditionFalse,
+					Reason:             "MissingCommits",
+					Message:            message,
+					ObservedGeneration: warehouse.GetGeneration(),
+				},
+			)
+			return false
+		}
+
+		subscriptions++
+		commits += count
+	}
+
+	var images int
+	for _, artifact := range artifacts.Images {
+		count := len(artifact.References)
+
+		if count == 0 {
+			message := fmt.Sprintf("No references discovered for image repository %q", artifact.RepoURL)
+			conditions.Set(
+				newStatus,
+				&metav1.Condition{
+					Type:               kargoapi.ConditionTypeHealthy,
+					Status:             metav1.ConditionFalse,
+					Reason:             "NoImageReferencesDiscovered",
+					Message:            message,
+					ObservedGeneration: warehouse.GetGeneration(),
+				},
+				&metav1.Condition{
+					Type:               kargoapi.ConditionTypeReady,
+					Status:             metav1.ConditionFalse,
+					Reason:             "MissingImageReferences",
+					Message:            message,
+					ObservedGeneration: warehouse.GetGeneration(),
+				},
+			)
+			return false
+		}
+
+		subscriptions++
+		images += count
+	}
+
+	var charts int
+	for _, artifact := range artifacts.Charts {
+		count := len(artifact.Versions)
+		if count == 0 {
+			var sb strings.Builder
+			_, _ = sb.WriteString("No versions discovered for chart ")
+			if artifact.Name != "" {
+				_, _ = sb.WriteString(fmt.Sprintf("%q", artifact.Name))
+			}
+			_, _ = sb.WriteString(" from repository ")
+			_, _ = sb.WriteString(fmt.Sprintf("%q", artifact.RepoURL))
+
+			conditions.Set(
+				newStatus,
+				&metav1.Condition{
+					Type:               kargoapi.ConditionTypeHealthy,
+					Status:             metav1.ConditionFalse,
+					Reason:             "NoChartVersionsDiscovered",
+					Message:            sb.String(),
+					ObservedGeneration: warehouse.GetGeneration(),
+				},
+				&metav1.Condition{
+					Type:               kargoapi.ConditionTypeReady,
+					Status:             metav1.ConditionFalse,
+					Reason:             "MissingChartVersions",
+					Message:            sb.String(),
+					ObservedGeneration: warehouse.GetGeneration(),
+				},
+			)
+			return false
+		}
+		subscriptions++
+		charts += count
+	}
+
+	var parts []string
+	if commits > 0 {
+		parts = append(parts, fmt.Sprintf("%d commits", commits))
+	}
+	if images > 0 {
+		parts = append(parts, fmt.Sprintf("%d images", images))
+	}
+	if charts > 0 {
+		parts = append(parts, fmt.Sprintf("%d charts", charts))
+	}
+
+	var message string
+	if len(parts) == 1 {
+		message = parts[0]
+	} else if len(parts) == 2 {
+		message = parts[0] + " and " + parts[1]
+	} else if len(parts) > 2 {
+		message = strings.Join(parts[:len(parts)-1], ", ") + ", and " + parts[len(parts)-1]
+	}
+
+	conditions.Set(
+		newStatus,
+		&metav1.Condition{
+			Type:   kargoapi.ConditionTypeHealthy,
+			Status: metav1.ConditionTrue,
+			Reason: "ArtifactsDiscovered",
+			Message: fmt.Sprintf(
+				"Successfully discovered %s from %d subscriptions",
+				message,
+				subscriptions,
+			),
+			ObservedGeneration: warehouse.GetGeneration(),
+		},
+	)
+	return true
 }
 
 // shouldDiscoverArtifacts returns true if the Warehouse should attempt to
