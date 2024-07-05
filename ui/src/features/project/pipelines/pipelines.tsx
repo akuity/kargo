@@ -158,6 +158,14 @@ export const Pipelines = () => {
         const items = subscribersByStage[item.name || ''] || [];
         subscribersByStage[item.name || ''] = [...items, stage];
       });
+      stage?.spec?.requestedFreight?.forEach((item) => {
+        if (!item.sources?.direct) {
+          (item?.sources?.stages || []).forEach((name) => {
+            const items = subscribersByStage[name] || [];
+            subscribersByStage[name] = [...items, stage];
+          });
+        }
+      });
     });
     return [stagesPerFreight, subscribersByStage];
   }, [data, freightData]);

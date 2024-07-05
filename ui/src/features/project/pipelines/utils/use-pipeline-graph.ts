@@ -125,36 +125,53 @@ export const usePipelineGraph = (
       g.setNode(String(index), nodeStubFor(item.type));
 
       if (item.type === NodeType.STAGE) {
-        (item.data?.spec?.requestedFreight || []).forEach((req) => {
+        (item.data?.spec?.requestedFreight || []).forEach((req, i) => {
           if (req.origin?.kind === 'Warehouse') {
             req.sources?.stages?.forEach((upstreamStage) => {
-              g.setEdge(String(subscriberIndexCache.get(upstreamStage, myNodes)), String(index), {
-                color: warehouseColorMap[req?.origin?.name || '']
-              });
+              g.setEdge(
+                String(subscriberIndexCache.get(upstreamStage, myNodes)),
+                String(index),
+                {
+                  color: warehouseColorMap[req?.origin?.name || '']
+                },
+                `${upstreamStage}-${i}`
+              );
             });
           }
         });
 
-        (item.data?.spec?.subscriptions?.upstreamStages || []).forEach((upstreamStage) => {
+        (item.data?.spec?.subscriptions?.upstreamStages || []).forEach((upstreamStage, i) => {
           g.setEdge(
             String(subscriberIndexCache.get(upstreamStage.name || '', myNodes)),
-            String(index)
+            String(index),
+            {},
+            String(i)
           );
         });
       } else if (item.type === NodeType.WAREHOUSE) {
         // this is a warehouse node
         for (const stageName of item.stageNames || []) {
           // draw edge between warehouse and stage(s)
-          g.setEdge(String(index), String(subscriberIndexCache.get(stageName, myNodes)), {
-            color: warehouseColorMap[item.warehouseName]
-          });
+          g.setEdge(
+            String(index),
+            String(subscriberIndexCache.get(stageName, myNodes)),
+            {
+              color: warehouseColorMap[item.warehouseName]
+            },
+            stageName
+          );
         }
       } else {
         // this is a subscription node
         // draw edge between subscription and warehouse
-        g.setEdge(String(index), String(parentIndexCache.get(item.warehouseName, myNodes)), {
-          color: warehouseColorMap[item.warehouseName]
-        });
+        g.setEdge(
+          String(index),
+          String(parentIndexCache.get(item.warehouseName, myNodes)),
+          {
+            color: warehouseColorMap[item.warehouseName]
+          },
+          item.warehouseName
+        );
       }
     });
 
