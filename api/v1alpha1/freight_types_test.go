@@ -77,6 +77,10 @@ func TestGitCommitEquals(t *testing.T) {
 
 func TestFreightGenerateID(t *testing.T) {
 	freight := Freight{
+		Origin: FreightOrigin{
+			Kind: "fake-kind",
+			Name: "fake-name",
+		},
 		Commits: []GitCommit{
 			{
 				RepoURL: "fake-git-repo",
