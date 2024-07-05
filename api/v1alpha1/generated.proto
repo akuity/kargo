@@ -110,6 +110,15 @@ message ArgoCDAppUpdate {
   // +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
   optional string appNamespace = 2;
 
+  // Origin disambiguates the origin from which artifacts used by this promotion
+  // mechanism must have originated. This is especially useful in cases where a
+  // Stage may request Freight from multiples origins (e.g. multiple Warehouses)
+  // and some of those each reference different versions of artifacts from the
+  // same repository. This field is optional, but Promotions will fail if there
+  // is ever ambiguity regarding which piece of Freight from which an artifact
+  // is to be sourced.
+  optional FreightOrigin origin = 4;
+
   // SourceUpdates describes updates to be applied to various sources of the
   // specified Argo CD Application resource.
   repeated ArgoCDSourceUpdate sourceUpdates = 3;
@@ -123,6 +132,17 @@ message ArgoCDHelm {
   //
   // +kubebuilder:validation:MinItems=1
   repeated ArgoCDHelmImageUpdate images = 1;
+
+  // Origin disambiguates the origin from which artifacts used by this promotion
+  // mechanism must have originated. This is especially useful in cases where a
+  // Stage may request Freight from multiples origins (e.g. multiple Warehouses)
+  // and some of those each reference different versions of artifacts from the
+  // same repository. This field is optional. When left unspecified, it will
+  // implicitly inherit the value of the enclosing ArgoCDSourceUpdate's Origin
+  // field. If that, too, is unspecified, Promotions will fail if there is ever
+  // ambiguity regarding from which piece of Freight an artifact is to be
+  // sourced.
+  optional FreightOrigin origin = 2;
 }
 
 // ArgoCDHelmImageUpdate describes how a specific image version can be
@@ -132,6 +152,16 @@ message ArgoCDHelmImageUpdate {
   //
   // +kubebuilder:validation:MinLength=1
   optional string image = 1;
+
+  // Origin disambiguates the origin from which artifacts used by this promotion
+  // mechanism must have originated. This is especially useful in cases where a
+  // Stage may request Freight from multiples origins (e.g. multiple Warehouses)
+  // and some of those each reference different versions of artifacts from the
+  // same repository. This field is optional. When left unspecified, it will
+  // implicitly inherit the value of the enclosing ArgoCDHelm's Origin field. If
+  // that, too, is unspecified, Promotions will fail if there is ever ambiguity
+  // regarding from which piece of Freight an artifact is to be sourced.
+  optional FreightOrigin origin = 4;
 
   // Key specifies a key within an Argo CD Application's Helm parameters that is
   // to be updated. This is a required field.
@@ -162,6 +192,17 @@ message ArgoCDKustomize {
   //
   // +kubebuilder:validation:MinItems=1
   repeated ArgoCDKustomizeImageUpdate images = 1;
+
+  // Origin disambiguates the origin from which artifacts used by this promotion
+  // mechanism must have originated. This is especially useful in cases where a
+  // Stage may request Freight from multiples origins (e.g. multiple Warehouses)
+  // and some of those each reference different versions of artifacts from the
+  // same repository. This field is optional. When left unspecified, it will
+  // implicitly inherit the value of the enclosing ArgoCDSourceUpdate's Origin
+  // field. If that, too, is unspecified, Promotions will fail if there is ever
+  // ambiguity regarding from which piece of Freight an artifact is to be
+  // sourced.
+  optional FreightOrigin origin = 2;
 }
 
 // ArgoCDKustomizeImageUpdate describes how a specific image version can be
@@ -171,6 +212,17 @@ message ArgoCDKustomizeImageUpdate {
   //
   // +kubebuilder:validation:MinLength=1
   optional string image = 1;
+
+  // Origin disambiguates the origin from which artifacts used by this promotion
+  // mechanism must have originated. This is especially useful in cases where a
+  // Stage may request Freight from multiples origins (e.g. multiple Warehouses)
+  // and some of those each reference different versions of artifacts from the
+  // same repository. This field is optional. When left unspecified, it will
+  // implicitly inherit the value of the enclosing ArgoCDKustomize's Origin
+  // field. If that, too, is unspecified, Promotions will fail if there is ever
+  // ambiguity regarding from which piece of Freight an artifact is to be
+  // sourced.
+  optional FreightOrigin origin = 3;
 
   // UseDigest specifies whether the image's digest should be used instead of
   // its tag.
@@ -204,6 +256,17 @@ message ArgoCDSourceUpdate {
   //
   // +kubebuilder:validation:Optional
   optional string chart = 2;
+
+  // Origin disambiguates the origin from which artifacts used by this promotion
+  // mechanism must have originated. This is especially useful in cases where a
+  // Stage may request Freight from multiples origins (e.g. multiple Warehouses)
+  // and some of those each reference different versions of artifacts from the
+  // same repository. This field is optional. When left unspecified, it will
+  // implicitly inherit the value of the enclosing ArgoCDAppUpdate's Origin
+  // field. If that, too, is unspecified, Promotions will fail if there is ever
+  // ambiguity regarding from which piece of Freight an artifact is to be
+  // sourced.
+  optional FreightOrigin origin = 6;
 
   // UpdateTargetRevision is a bool indicating whether the source should be
   // updated such that its TargetRevision field points at the most recently git
@@ -614,6 +677,17 @@ message GitRepoUpdate {
   // +kubebuilder:validation:Pattern=`^https?://(\w+([\.-]\w+)*@)?\w+([\.-]\w+)*(:[\d]+)?(/.*)?$`
   optional string repoURL = 1;
 
+  // Origin disambiguates the origin from which artifacts used by this promotion
+  // mechanism must have originated. This is especially useful in cases where a
+  // Stage may request Freight from multiples origins (e.g. multiple Warehouses)
+  // and some of those each reference different versions of artifacts from the
+  // same repository. This field is optional. When left unspecified, the branch
+  // checked out by this promotion mechanism will be the one specified by the
+  // ReadBranch field. If that, too, is unspecified, the default branch of the
+  // repository will be checked out. Always provide a value for this field if
+  // wishing to check out a specific commit indicated by a piece of Freight.
+  optional FreightOrigin origin = 9;
+
   // InsecureSkipTLSVerify specifies whether certificate verification errors
   // should be ignored when connecting to the repository. This should be enabled
   // only with great caution.
@@ -795,6 +869,17 @@ message HelmChartDependencyUpdate {
   // +kubebuilder:validation:MinLength=1
   optional string name = 2;
 
+  // Origin disambiguates the origin from which artifacts used by this promotion
+  // mechanism must have originated. This is especially useful in cases where a
+  // Stage may request Freight from multiples origins (e.g. multiple Warehouses)
+  // and some of those each reference different versions of artifacts from the
+  // same repository. This field is optional. When left unspecified, it will
+  // implicitly inherit the value of the enclosing HelmPromotionMechanism's
+  // Origin field. If that, too, is unspecified, Promotions will fail if there
+  // is ever ambiguity regarding from which piece of Freight an artifact is to
+  // be sourced.
+  optional FreightOrigin origin = 4;
+
   // ChartPath is the path to an umbrella chart.
   //
   // +kubebuilder:validation:MinLength=1
@@ -810,6 +895,17 @@ message HelmImageUpdate {
   // +kubebuilder:validation:MinLength=1
   // +kubebuilder:validation:Pattern=`^(\w+([\.-]\w+)*(:[\d]+)?/)?(\w+([\.-]\w+)*)(/\w+([\.-]\w+)*)*$`
   optional string image = 1;
+
+  // Origin disambiguates the origin from which artifacts used by this promotion
+  // mechanism must have originated. This is especially useful in cases where a
+  // Stage may request Freight from multiples origins (e.g. multiple Warehouses)
+  // and some of those each reference different versions of artifacts from the
+  // same repository. This field is optional. When left unspecified, it will
+  // implicitly inherit the value of the enclosing HelmPromotionMechanism's
+  // Origin field. If that, too, is unspecified, Promotions will fail if there
+  // is ever ambiguity regarding from which piece of Freight an artifact is to
+  // be sourced.
+  optional FreightOrigin origin = 5;
 
   // ValuesFilePath specifies a path to the Helm values file that is to be
   // updated. This is a required field.
@@ -848,6 +944,17 @@ message HelmPromotionMechanism {
   // Charts describes how specific chart versions can be incorporated into an
   // umbrella chart.
   repeated HelmChartDependencyUpdate charts = 2;
+
+  // Origin disambiguates the origin from which artifacts used by this promotion
+  // mechanism must have originated. This is especially useful in cases where a
+  // Stage may request Freight from multiples origins (e.g. multiple Warehouses)
+  // and some of those each reference different versions of artifacts from the
+  // same repository. This field is optional. When left unspecified, it will
+  // implicitly inherit the value of the enclosing GitRepoUpdate's Origin field.
+  // If that, too, is unspecified, Promotions will fail if there is ever
+  // ambiguity regarding from which piece of Freight an artifact is to be
+  // sourced.
+  optional FreightOrigin origin = 3;
 }
 
 // Image describes a specific version of a container image.
@@ -983,6 +1090,17 @@ message KargoRenderImageUpdate {
   // +kubebuilder:validation:MinLength=1
   optional string image = 1;
 
+  // Origin disambiguates the origin from which artifacts used by this promotion
+  // mechanism must have originated. This is especially useful in cases where a
+  // Stage may request Freight from multiples origins (e.g. multiple Warehouses)
+  // and some of those each reference different versions of artifacts from the
+  // same repository. This field is optional. When left unspecified, it will
+  // implicitly inherit the value of the enclosing
+  // KargoRenderPromotionMechanism's Origin field. If that, too, is unspecified,
+  // Promotions will fail if there is ever ambiguity regarding from which piece
+  // of Freight an artifact is to be sourced.
+  optional FreightOrigin origin = 3;
+
   // UseDigest specifies whether the image's digest should be used instead of
   // its tag.
   //
@@ -1000,6 +1118,17 @@ message KargoRenderPromotionMechanism {
   //
   // +kubebuilder:validation:Optional
   repeated KargoRenderImageUpdate images = 1;
+
+  // Origin disambiguates the origin from which artifacts used by this promotion
+  // mechanism must have originated. This is especially useful in cases where a
+  // Stage may request Freight from multiples origins (e.g. multiple Warehouses)
+  // and some of those each reference different versions of artifacts from the
+  // same repository. This field is optional. When left unspecified, it will
+  // implicitly inherit the value of the enclosing GitRepoUpdate's Origin field.
+  // If that, too, is unspecified, Promotions will fail if there is ever
+  // ambiguity regarding from which piece of Freight an artifact is to be
+  // sourced.
+  optional FreightOrigin origin = 2;
 }
 
 // KustomizeImageUpdate describes how to run `kustomize edit set image`
@@ -1009,6 +1138,17 @@ message KustomizeImageUpdate {
   //
   // +kubebuilder:validation:MinLength=1
   optional string image = 1;
+
+  // Origin disambiguates the origin from which artifacts used by this promotion
+  // mechanism must have originated. This is especially useful in cases where a
+  // Stage may request Freight from multiples origins (e.g. multiple Warehouses)
+  // and some of those each reference different versions of artifacts from the
+  // same repository. This field is optional. When left unspecified, it will
+  // implicitly inherit the value of the enclosing KustomizePromotionMechanism's
+  // Origin field. If that, too, is unspecified, Promotions will fail if there
+  // is ever ambiguity regarding from which piece of Freight an artifact is to
+  // be sourced.
+  optional FreightOrigin origin = 4;
 
   // Path specifies a path in which the `kustomize edit set image` command
   // should be executed. This is a required field.
@@ -1032,6 +1172,17 @@ message KustomizePromotionMechanism {
   //
   // +kubebuilder:validation:MinItems=1
   repeated KustomizeImageUpdate images = 1;
+
+  // Origin disambiguates the origin from which artifacts used by this promotion
+  // mechanism must have originated. This is especially useful in cases where a
+  // Stage may request Freight from multiples origins (e.g. multiple Warehouses)
+  // and some of those each reference different versions of artifacts from the
+  // same repository. This field is optional. When left unspecified, it will
+  // implicitly inherit the value of the enclosing GitRepoUpdate's Origin field.
+  // If that, too, is unspecified, Promotions will fail if there is ever
+  // ambiguity regarding from which piece of Freight an artifact is to be
+  // sourced.
+  optional FreightOrigin origin = 2;
 }
 
 // Project is a resource type that reconciles to a specially labeled namespace
@@ -1096,6 +1247,14 @@ message PromotionList {
 
 // PromotionMechanisms describes how to incorporate Freight into a Stage.
 message PromotionMechanisms {
+  // Origin disambiguates the origin from which artifacts used by this promotion
+  // mechanism must have originated. This is especially useful in cases where a
+  // Stage may request Freight from multiples origins (e.g. multiple Warehouses)
+  // and some of those each reference different versions of artifacts from the
+  // same repository. This field is optional. Its value is overridable by
+  // child promotion mechanisms.
+  optional FreightOrigin origin = 3;
+
   // GitRepoUpdates describes updates that should be applied to Git repositories
   // to incorporate Freight into the Stage. This field is optional, as such
   // actions are not required in all cases.

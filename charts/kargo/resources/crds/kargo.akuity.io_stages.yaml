@@ -92,6 +92,32 @@ spec:
                             will use the value of ARGOCD_NAMESPACE or "argocd"
                           pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
                           type: string
+                        origin:
+                          description: |-
+                            Origin disambiguates the origin from which artifacts used by this promotion
+                            mechanism must have originated. This is especially useful in cases where a
+                            Stage may request Freight from multiples origins (e.g. multiple Warehouses)
+                            and some of those each reference different versions of artifacts from the
+                            same repository. This field is optional, but Promotions will fail if there
+                            is ever ambiguity regarding which piece of Freight from which an artifact
+                            is to be sourced.
+                          properties:
+                            kind:
+                              description: |-
+                                Kind is the kind of resource from which Freight may have originated. At
+                                present, this can only be "Warehouse".
+                              enum:
+                              - Warehouse
+                              type: string
+                            name:
+                              description: |-
+                                Name is the name of the resource of the kind indicated by the Kind field
+                                from which Freight may originated.
+                              type: string
+                          required:
+                          - kind
+                          - name
+                          type: object
                         sourceUpdates:
                           description: |-
                             SourceUpdates describes updates to be applied to various sources of the
@@ -136,6 +162,33 @@ spec:
                                             to be updated. This is a required field.
                                           minLength: 1
                                           type: string
+                                        origin:
+                                          description: |-
+                                            Origin disambiguates the origin from which artifacts used by this promotion
+                                            mechanism must have originated. This is especially useful in cases where a
+                                            Stage may request Freight from multiples origins (e.g. multiple Warehouses)
+                                            and some of those each reference different versions of artifacts from the
+                                            same repository. This field is optional. When left unspecified, it will
+                                            implicitly inherit the value of the enclosing ArgoCDHelm's Origin field. If
+                                            that, too, is unspecified, Promotions will fail if there is ever ambiguity
+                                            regarding from which piece of Freight an artifact is to be sourced.
+                                          properties:
+                                            kind:
+                                              description: |-
+                                                Kind is the kind of resource from which Freight may have originated. At
+                                                present, this can only be "Warehouse".
+                                              enum:
+                                              - Warehouse
+                                              type: string
+                                            name:
+                                              description: |-
+                                                Name is the name of the resource of the kind indicated by the Kind field
+                                                from which Freight may originated.
+                                              type: string
+                                          required:
+                                          - kind
+                                          - name
+                                          type: object
                                         value:
                                           description: |-
                                             Value specifies the new value for the specified key in the Argo CD
@@ -164,6 +217,34 @@ spec:
                                       type: object
                                     minItems: 1
                                     type: array
+                                  origin:
+                                    description: |-
+                                      Origin disambiguates the origin from which artifacts used by this promotion
+                                      mechanism must have originated. This is especially useful in cases where a
+                                      Stage may request Freight from multiples origins (e.g. multiple Warehouses)
+                                      and some of those each reference different versions of artifacts from the
+                                      same repository. This field is optional. When left unspecified, it will
+                                      implicitly inherit the value of the enclosing ArgoCDSourceUpdate's Origin
+                                      field. If that, too, is unspecified, Promotions will fail if there is ever
+                                      ambiguity regarding from which piece of Freight an artifact is to be
+                                      sourced.
+                                    properties:
+                                      kind:
+                                        description: |-
+                                          Kind is the kind of resource from which Freight may have originated. At
+                                          present, this can only be "Warehouse".
+                                        enum:
+                                        - Warehouse
+                                        type: string
+                                      name:
+                                        description: |-
+                                          Name is the name of the resource of the kind indicated by the Kind field
+                                          from which Freight may originated.
+                                        type: string
+                                    required:
+                                    - kind
+                                    - name
+                                    type: object
                                 required:
                                 - images
                                 type: object
@@ -186,6 +267,34 @@ spec:
                                             field.
                                           minLength: 1
                                           type: string
+                                        origin:
+                                          description: |-
+                                            Origin disambiguates the origin from which artifacts used by this promotion
+                                            mechanism must have originated. This is especially useful in cases where a
+                                            Stage may request Freight from multiples origins (e.g. multiple Warehouses)
+                                            and some of those each reference different versions of artifacts from the
+                                            same repository. This field is optional. When left unspecified, it will
+                                            implicitly inherit the value of the enclosing ArgoCDKustomize's Origin
+                                            field. If that, too, is unspecified, Promotions will fail if there is ever
+                                            ambiguity regarding from which piece of Freight an artifact is to be
+                                            sourced.
+                                          properties:
+                                            kind:
+                                              description: |-
+                                                Kind is the kind of resource from which Freight may have originated. At
+                                                present, this can only be "Warehouse".
+                                              enum:
+                                              - Warehouse
+                                              type: string
+                                            name:
+                                              description: |-
+                                                Name is the name of the resource of the kind indicated by the Kind field
+                                                from which Freight may originated.
+                                              type: string
+                                          required:
+                                          - kind
+                                          - name
+                                          type: object
                                         useDigest:
                                           description: |-
                                             UseDigest specifies whether the image's digest should be used instead of
@@ -196,8 +305,64 @@ spec:
                                       type: object
                                     minItems: 1
                                     type: array
+                                  origin:
+                                    description: |-
+                                      Origin disambiguates the origin from which artifacts used by this promotion
+                                      mechanism must have originated. This is especially useful in cases where a
+                                      Stage may request Freight from multiples origins (e.g. multiple Warehouses)
+                                      and some of those each reference different versions of artifacts from the
+                                      same repository. This field is optional. When left unspecified, it will
+                                      implicitly inherit the value of the enclosing ArgoCDSourceUpdate's Origin
+                                      field. If that, too, is unspecified, Promotions will fail if there is ever
+                                      ambiguity regarding from which piece of Freight an artifact is to be
+                                      sourced.
+                                    properties:
+                                      kind:
+                                        description: |-
+                                          Kind is the kind of resource from which Freight may have originated. At
+                                          present, this can only be "Warehouse".
+                                        enum:
+                                        - Warehouse
+                                        type: string
+                                      name:
+                                        description: |-
+                                          Name is the name of the resource of the kind indicated by the Kind field
+                                          from which Freight may originated.
+                                        type: string
+                                    required:
+                                    - kind
+                                    - name
+                                    type: object
                                 required:
                                 - images
+                                type: object
+                              origin:
+                                description: |-
+                                  Origin disambiguates the origin from which artifacts used by this promotion
+                                  mechanism must have originated. This is especially useful in cases where a
+                                  Stage may request Freight from multiples origins (e.g. multiple Warehouses)
+                                  and some of those each reference different versions of artifacts from the
+                                  same repository. This field is optional. When left unspecified, it will
+                                  implicitly inherit the value of the enclosing ArgoCDAppUpdate's Origin
+                                  field. If that, too, is unspecified, Promotions will fail if there is ever
+                                  ambiguity regarding from which piece of Freight an artifact is to be
+                                  sourced.
+                                properties:
+                                  kind:
+                                    description: |-
+                                      Kind is the kind of resource from which Freight may have originated. At
+                                      present, this can only be "Warehouse".
+                                    enum:
+                                    - Warehouse
+                                    type: string
+                                  name:
+                                    description: |-
+                                      Name is the name of the resource of the kind indicated by the Kind field
+                                      from which Freight may originated.
+                                    type: string
+                                required:
+                                - kind
+                                - name
                                 type: object
                               repoURL:
                                 description: |-
@@ -267,6 +432,34 @@ spec:
                                       Chart.yaml. This is a required field.
                                     minLength: 1
                                     type: string
+                                  origin:
+                                    description: |-
+                                      Origin disambiguates the origin from which artifacts used by this promotion
+                                      mechanism must have originated. This is especially useful in cases where a
+                                      Stage may request Freight from multiples origins (e.g. multiple Warehouses)
+                                      and some of those each reference different versions of artifacts from the
+                                      same repository. This field is optional. When left unspecified, it will
+                                      implicitly inherit the value of the enclosing HelmPromotionMechanism's
+                                      Origin field. If that, too, is unspecified, Promotions will fail if there
+                                      is ever ambiguity regarding from which piece of Freight an artifact is to
+                                      be sourced.
+                                    properties:
+                                      kind:
+                                        description: |-
+                                          Kind is the kind of resource from which Freight may have originated. At
+                                          present, this can only be "Warehouse".
+                                        enum:
+                                        - Warehouse
+                                        type: string
+                                      name:
+                                        description: |-
+                                          Name is the name of the resource of the kind indicated by the Kind field
+                                          from which Freight may originated.
+                                        type: string
+                                    required:
+                                    - kind
+                                    - name
+                                    type: object
                                   repository:
                                     description: |-
                                       Repository along with Name identifies a subchart of the umbrella chart at
@@ -305,6 +498,34 @@ spec:
                                       is a required field.
                                     minLength: 1
                                     type: string
+                                  origin:
+                                    description: |-
+                                      Origin disambiguates the origin from which artifacts used by this promotion
+                                      mechanism must have originated. This is especially useful in cases where a
+                                      Stage may request Freight from multiples origins (e.g. multiple Warehouses)
+                                      and some of those each reference different versions of artifacts from the
+                                      same repository. This field is optional. When left unspecified, it will
+                                      implicitly inherit the value of the enclosing HelmPromotionMechanism's
+                                      Origin field. If that, too, is unspecified, Promotions will fail if there
+                                      is ever ambiguity regarding from which piece of Freight an artifact is to
+                                      be sourced.
+                                    properties:
+                                      kind:
+                                        description: |-
+                                          Kind is the kind of resource from which Freight may have originated. At
+                                          present, this can only be "Warehouse".
+                                        enum:
+                                        - Warehouse
+                                        type: string
+                                      name:
+                                        description: |-
+                                          Name is the name of the resource of the kind indicated by the Kind field
+                                          from which Freight may originated.
+                                        type: string
+                                    required:
+                                    - kind
+                                    - name
+                                    type: object
                                   value:
                                     description: |-
                                       Value specifies the new value for the specified key in the specified Helm
@@ -340,6 +561,34 @@ spec:
                                 - valuesFilePath
                                 type: object
                               type: array
+                            origin:
+                              description: |-
+                                Origin disambiguates the origin from which artifacts used by this promotion
+                                mechanism must have originated. This is especially useful in cases where a
+                                Stage may request Freight from multiples origins (e.g. multiple Warehouses)
+                                and some of those each reference different versions of artifacts from the
+                                same repository. This field is optional. When left unspecified, it will
+                                implicitly inherit the value of the enclosing GitRepoUpdate's Origin field.
+                                If that, too, is unspecified, Promotions will fail if there is ever
+                                ambiguity regarding from which piece of Freight an artifact is to be
+                                sourced.
+                              properties:
+                                kind:
+                                  description: |-
+                                    Kind is the kind of resource from which Freight may have originated. At
+                                    present, this can only be "Warehouse".
+                                  enum:
+                                  - Warehouse
+                                  type: string
+                                name:
+                                  description: |-
+                                    Name is the name of the resource of the kind indicated by the Kind field
+                                    from which Freight may originated.
+                                  type: string
+                              required:
+                              - kind
+                              - name
+                              type: object
                           type: object
                         insecureSkipTLSVerify:
                           description: |-
@@ -366,6 +615,34 @@ spec:
                                       (without tag). This is a required field.
                                     minLength: 1
                                     type: string
+                                  origin:
+                                    description: |-
+                                      Origin disambiguates the origin from which artifacts used by this promotion
+                                      mechanism must have originated. This is especially useful in cases where a
+                                      Stage may request Freight from multiples origins (e.g. multiple Warehouses)
+                                      and some of those each reference different versions of artifacts from the
+                                      same repository. This field is optional. When left unspecified, it will
+                                      implicitly inherit the value of the enclosing KustomizePromotionMechanism's
+                                      Origin field. If that, too, is unspecified, Promotions will fail if there
+                                      is ever ambiguity regarding from which piece of Freight an artifact is to
+                                      be sourced.
+                                    properties:
+                                      kind:
+                                        description: |-
+                                          Kind is the kind of resource from which Freight may have originated. At
+                                          present, this can only be "Warehouse".
+                                        enum:
+                                        - Warehouse
+                                        type: string
+                                      name:
+                                        description: |-
+                                          Name is the name of the resource of the kind indicated by the Kind field
+                                          from which Freight may originated.
+                                        type: string
+                                    required:
+                                    - kind
+                                    - name
+                                    type: object
                                   path:
                                     description: |-
                                       Path specifies a path in which the `kustomize edit set image` command
@@ -384,8 +661,64 @@ spec:
                                 type: object
                               minItems: 1
                               type: array
+                            origin:
+                              description: |-
+                                Origin disambiguates the origin from which artifacts used by this promotion
+                                mechanism must have originated. This is especially useful in cases where a
+                                Stage may request Freight from multiples origins (e.g. multiple Warehouses)
+                                and some of those each reference different versions of artifacts from the
+                                same repository. This field is optional. When left unspecified, it will
+                                implicitly inherit the value of the enclosing GitRepoUpdate's Origin field.
+                                If that, too, is unspecified, Promotions will fail if there is ever
+                                ambiguity regarding from which piece of Freight an artifact is to be
+                                sourced.
+                              properties:
+                                kind:
+                                  description: |-
+                                    Kind is the kind of resource from which Freight may have originated. At
+                                    present, this can only be "Warehouse".
+                                  enum:
+                                  - Warehouse
+                                  type: string
+                                name:
+                                  description: |-
+                                    Name is the name of the resource of the kind indicated by the Kind field
+                                    from which Freight may originated.
+                                  type: string
+                              required:
+                              - kind
+                              - name
+                              type: object
                           required:
                           - images
+                          type: object
+                        origin:
+                          description: |-
+                            Origin disambiguates the origin from which artifacts used by this promotion
+                            mechanism must have originated. This is especially useful in cases where a
+                            Stage may request Freight from multiples origins (e.g. multiple Warehouses)
+                            and some of those each reference different versions of artifacts from the
+                            same repository. This field is optional. When left unspecified, the branch
+                            checked out by this promotion mechanism will be the one specified by the
+                            ReadBranch field. If that, too, is unspecified, the default branch of the
+                            repository will be checked out. Always provide a value for this field if
+                            wishing to check out a specific commit indicated by a piece of Freight.
+                          properties:
+                            kind:
+                              description: |-
+                                Kind is the kind of resource from which Freight may have originated. At
+                                present, this can only be "Warehouse".
+                              enum:
+                              - Warehouse
+                              type: string
+                            name:
+                              description: |-
+                                Name is the name of the resource of the kind indicated by the Kind field
+                                from which Freight may originated.
+                              type: string
+                          required:
+                          - kind
+                          - name
                           type: object
                         pullRequest:
                           description: PullRequest will generate a pull request instead
@@ -431,6 +764,34 @@ spec:
                                       (without tag). This is a required field.
                                     minLength: 1
                                     type: string
+                                  origin:
+                                    description: |-
+                                      Origin disambiguates the origin from which artifacts used by this promotion
+                                      mechanism must have originated. This is especially useful in cases where a
+                                      Stage may request Freight from multiples origins (e.g. multiple Warehouses)
+                                      and some of those each reference different versions of artifacts from the
+                                      same repository. This field is optional. When left unspecified, it will
+                                      implicitly inherit the value of the enclosing
+                                      KargoRenderPromotionMechanism's Origin field. If that, too, is unspecified,
+                                      Promotions will fail if there is ever ambiguity regarding from which piece
+                                      of Freight an artifact is to be sourced.
+                                    properties:
+                                      kind:
+                                        description: |-
+                                          Kind is the kind of resource from which Freight may have originated. At
+                                          present, this can only be "Warehouse".
+                                        enum:
+                                        - Warehouse
+                                        type: string
+                                      name:
+                                        description: |-
+                                          Name is the name of the resource of the kind indicated by the Kind field
+                                          from which Freight may originated.
+                                        type: string
+                                    required:
+                                    - kind
+                                    - name
+                                    type: object
                                   useDigest:
                                     description: |-
                                       UseDigest specifies whether the image's digest should be used instead of
@@ -440,6 +801,34 @@ spec:
                                 - image
                                 type: object
                               type: array
+                            origin:
+                              description: |-
+                                Origin disambiguates the origin from which artifacts used by this promotion
+                                mechanism must have originated. This is especially useful in cases where a
+                                Stage may request Freight from multiples origins (e.g. multiple Warehouses)
+                                and some of those each reference different versions of artifacts from the
+                                same repository. This field is optional. When left unspecified, it will
+                                implicitly inherit the value of the enclosing GitRepoUpdate's Origin field.
+                                If that, too, is unspecified, Promotions will fail if there is ever
+                                ambiguity regarding from which piece of Freight an artifact is to be
+                                sourced.
+                              properties:
+                                kind:
+                                  description: |-
+                                    Kind is the kind of resource from which Freight may have originated. At
+                                    present, this can only be "Warehouse".
+                                  enum:
+                                  - Warehouse
+                                  type: string
+                                name:
+                                  description: |-
+                                    Name is the name of the resource of the kind indicated by the Kind field
+                                    from which Freight may originated.
+                                  type: string
+                              required:
+                              - kind
+                              - name
+                              type: object
                           type: object
                         repoURL:
                           description: RepoURL is the URL of the repository to update.
@@ -459,6 +848,31 @@ spec:
                       - writeBranch
                       type: object
                     type: array
+                  origin:
+                    description: |-
+                      Origin disambiguates the origin from which artifacts used by this promotion
+                      mechanism must have originated. This is especially useful in cases where a
+                      Stage may request Freight from multiples origins (e.g. multiple Warehouses)
+                      and some of those each reference different versions of artifacts from the
+                      same repository. This field is optional. Its value is overridable by
+                      child promotion mechanisms.
+                    properties:
+                      kind:
+                        description: |-
+                          Kind is the kind of resource from which Freight may have originated. At
+                          present, this can only be "Warehouse".
+                        enum:
+                        - Warehouse
+                        type: string
+                      name:
+                        description: |-
+                          Name is the name of the resource of the kind indicated by the Kind field
+                          from which Freight may originated.
+                        type: string
+                    required:
+                    - kind
+                    - name
+                    type: object
                 type: object
               requestedFreight:
                 description: |-

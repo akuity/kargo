@@ -648,7 +648,7 @@ type ArgoCDKustomize struct {
 	// field. If that, too, is unspecified, Promotions will fail if there is ever
 	// ambiguity regarding from which piece of Freight an artifact is to be
 	// sourced.
-	Origin *FreightOrigin `json:"origin,omitempty"`
+	Origin *FreightOrigin `json:"origin,omitempty" protobuf:"bytes,2,opt,name=origin"`
 }
 
 // ArgoCDHelm describes updates to an Argo CD Application source's Helm-specific
@@ -668,7 +668,7 @@ type ArgoCDHelm struct {
 	// field. If that, too, is unspecified, Promotions will fail if there is ever
 	// ambiguity regarding from which piece of Freight an artifact is to be
 	// sourced.
-	Origin *FreightOrigin `json:"origin,omitempty"`
+	Origin *FreightOrigin `json:"origin,omitempty" protobuf:"bytes,2,opt,name=origin"`
 }
 
 // ArgoCDKustomizeImageUpdate describes how a specific image version can be
