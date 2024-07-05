@@ -174,7 +174,8 @@ func (s *server) getAvailableFreightForStage(
 			err,
 		)
 	}
-	if len(verifiedFreight) == 0 &&
+	if len(freightFromWarehouses) == 0 &&
+		len(verifiedFreight) == 0 &&
 		len(approvedFreight.Items) == 0 {
 		return nil, nil
 	}
