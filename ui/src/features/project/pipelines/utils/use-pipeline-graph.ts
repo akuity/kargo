@@ -103,7 +103,7 @@ export const usePipelineGraph = (
       return [[], [] as ConnectorsType[][], {} as BoxType, [] as Stage[], {}, {}];
     }
 
-    const g = new graphlib.Graph();
+    const g = new graphlib.Graph({ multigraph: true });
     g.setGraph({ rankdir: 'LR' });
     g.setDefaultEdgeLabel(() => ({}));
 
