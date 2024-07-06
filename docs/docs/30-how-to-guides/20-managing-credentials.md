@@ -384,7 +384,7 @@ If running Kargo within EKS, you may wish to either consider using EKS Pod Ident
 instead.
 :::
 
-##### EKS Pod Identity (default)
+#### EKS Pod Identity or IAM Roles for Service Accounts (IRSA)
 
 If Kargo locates no `Secret` resources matching a repository URL, and if Kargo
 is deployed within an EKS cluster, it will first attempt to use
@@ -392,21 +392,26 @@ is deployed within an EKS cluster, it will first attempt to use
 to authenticate, but this relies upon some external setup. Leveraging this
 option eliminates the need to store credentials in a `Secret` resource.
 
-First, follow
+If you opt to use EKS Pod Identity, follow
 [this overview](https://docs.aws.amazon.com/eks/latest/userguide/pod-identities.html#pod-id-setup-overview)
 to set up EKS Pod Identity in your EKS cluster and assign an IAM role to the
 `kargo-controller` `ServiceAccount` within the `Namespace` to which Kargo is (or
 will be) installed.
 
-##### IRSA
-
-Using IRSA is also possible as a fallback to the default of EKS Pod Identity,  
-
-First, follow
-[this overview](https://docs.aws.amazon.com/eks/latest/userguide/associate-service-account-role.html)
+If you opt to instead use IRSA, follow [this overview](https://docs.aws.amazon.com/eks/latest/userguide/iam-roles-for-service-accounts.html) 
 to set up IRSA in your EKS cluster and assign an IAM role to the
 `kargo-controller` `ServiceAccount` within the `Namespace` to which Kargo is (or
-will be) installed. Ensure that the IAM role is allowed to assume other roles.
+will be) installed.
+
+:::note
+In the case of IRSA you will also need to set the annotation `eks.amazonaws.com/role-arn: <iam-role-arn>` 
+to the Kargo controller service account. You can set this in the Helm chart with 
+`controller.serviceAccount.annotations`. 
+:::
+
+Regardless of the method chosen, the kargo-controller IAM role needs to be allowed to assume `kargo-project-*` roles. An
+example IAM policy doing so can be seen below. This can be scoped down to setting an explicit list of IAM role ARNs if
+required.
 
 ```json
 {
@@ -415,22 +420,22 @@ will be) installed. Ensure that the IAM role is allowed to assume other roles.
         {
             "Effect": "Allow",
             "Action": "sts:AssumeRole",
-            "Resource": "arn:aws:iam::ACCOUNT_ID:role//kargo-project-*"
+            "Resource": "arn:aws:iam::ACCOUNT_ID:role/kargo-project-*"
         }
     ]
 }
 ```
 
-
-At this point, whether you have opted to use EKS Pod Identities or IRSA, an IAM role will be associated with the Kargo 
-_controller_, however, that controller acts on behalf of multiple Kargo projects, each of
+At this point, an IAM role will be associated with the Kargo _controller_,
+however, that controller acts on behalf of multiple Kargo projects, each of
 which may require access to _different_ ECR repositories. To account for this,
 when Kargo attempts to access an ECR repository on behalf of a specific project,
 it will first attempt to
 [assume an IAM role](https://docs.aws.amazon.com/STS/latest/APIReference/API_AssumeRole.html)
 specific to that project. The name of the role it attempts to assume will _always_
 be of the form `kargo-project-<project name>`. It is this role that should be
-granted read-only access to applicable ECR repositories.
+granted read-only access to applicable ECR repositories. This role also needs to have an assume
+role policy which allows for it to be assumed by the Kargo controller role.
 
 :::info
 The name of the IAM role associated with each Kargo project is deliberately
