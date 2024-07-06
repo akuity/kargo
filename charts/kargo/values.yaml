@@ -337,6 +337,11 @@ controller:
   ## @param controller.podAnnotations Optional annotations to add to pods. Merges with `global.podAnnotations`, allowing you to override or add to the global annotations.
   podAnnotations: {}
 
+  ## All settings relating to the service account for the controller
+  serviceAccount:
+    ## @param controller.serviceAccount.annotations Optional annotations to add to the service account.
+    annotations: {}
+
   ## All settings relating to shared credentials (used across multiple kargo projects)
   globalCredentials:
     ## @param controller.globalCredentials.namespaces List of namespaces to look for shared credentials.
