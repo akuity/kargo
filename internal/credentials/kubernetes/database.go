@@ -55,7 +55,7 @@ func NewDatabase(
 	credentialHelpers := []credentials.Helper{
 		basic.SecretToCreds,
 		ecr.NewAccessKeyCredentialHelper(),
-		ecr.NewPodIdentityCredentialHelper(ctx),
+		ecr.NewManagedIAMCredentialHelper(ctx),
 		gar.NewServiceAccountKeyCredentialHelper(),
 		gar.NewWorkloadIdentityFederationCredentialHelper(ctx),
 		github.NewAppCredentialHelper(),
