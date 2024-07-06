@@ -164,7 +164,7 @@ jobs:
     if: github.event_name == 'release'
     runs-on: ubuntu-latest
     container:
-      image: golang:1.22.4-bookworm
+      image: golang:1.22.5-bookworm
     strategy:
       matrix:
         os: [linux, darwin, windows]
@@ -192,7 +192,7 @@ jobs:
     - name: Install nodejs
       uses: actions/setup-node@v4
       with:
-        node-version: "22.3.0"
+        node-version: "22.4.0"
         cache: "pnpm"
         cache-dependency-path: "**/pnpm-lock.yaml"
     - name: Build UI
@@ -232,7 +232,7 @@ jobs:
     if: github.event_name != 'release'
     runs-on: ubuntu-latest
     container:
-      image: golang:1.22.4-bookworm
+      image: golang:1.22.5-bookworm
     strategy:
       matrix:
         os: [linux, darwin, windows]
@@ -253,7 +253,7 @@ jobs:
     - name: Install nodejs
       uses: actions/setup-node@v4
       with:
-        node-version: "22.3.0"
+        node-version: "22.4.0"
         cache: "pnpm"
         cache-dependency-path: "**/pnpm-lock.yaml"
     - name: Build UI

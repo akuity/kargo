@@ -1,7 +1,7 @@
 ####################################################################################################
 # ui-builder
 ####################################################################################################
-FROM --platform=$BUILDPLATFORM docker.io/library/node:22.3.0 AS ui-builder
+FROM --platform=$BUILDPLATFORM docker.io/library/node:22.4.0 AS ui-builder
 
 ARG PNPM_VERSION=9.0.3
 RUN npm install --global pnpm@${PNPM_VERSION}
@@ -18,7 +18,7 @@ RUN NODE_ENV='production' VERSION=${VERSION} pnpm run build
 ####################################################################################################
 # back-end-builder
 ####################################################################################################
-FROM --platform=$BUILDPLATFORM golang:1.22.4-bookworm as back-end-builder
+FROM --platform=$BUILDPLATFORM golang:1.22.5-bookworm as back-end-builder
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -106,7 +106,7 @@ CMD ["/usr/local/bin/kargo"]
 # - supports development
 # - not used for official image builds
 ####################################################################################################
-FROM --platform=$BUILDPLATFORM docker.io/library/node:22.3.0 AS ui-dev
+FROM --platform=$BUILDPLATFORM docker.io/library/node:22.4.0 AS ui-dev
 
 ARG PNPM_VERSION=9.0.3
 RUN npm install --global pnpm@${PNPM_VERSION}

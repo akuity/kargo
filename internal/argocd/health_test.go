@@ -800,6 +800,20 @@ func Test_stageHealthForAppHealth(t *testing.T) {
 			},
 		},
 		{
+			name: "progressing (due to suspension)",
+			app: &argocd.Application{
+				Status: argocd.ApplicationStatus{
+					Health: argocd.HealthStatus{
+						Status: argocd.HealthStatusSuspended,
+					},
+				},
+			},
+			assertions: func(t *testing.T, state kargoapi.HealthState, err error) {
+				require.ErrorContains(t, err, "is suspended")
+				require.Equal(t, kargoapi.HealthStateProgressing, state)
+			},
+		},
+		{
 			name: "empty health status",
 			app: &argocd.Application{
 				Status: argocd.ApplicationStatus{
