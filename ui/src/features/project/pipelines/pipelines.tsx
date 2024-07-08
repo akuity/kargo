@@ -24,6 +24,7 @@ const FreightDetails = lazy(() => import('@ui/features/freight/freight-details')
 const FreightTimeline = lazy(() => import('@ui/features/freight-timeline/freight-timeline'));
 const StageDetails = lazy(() => import('@ui/features/stage/stage-details'));
 import { SuspenseSpin } from '@ui/features/common/suspense-spin';
+import { getCurrentFreight } from '@ui/features/common/utils';
 import { FreightTimelineHeader } from '@ui/features/freight-timeline/freight-timeline-header';
 import { FreightTimelineWrapper } from '@ui/features/freight-timeline/freight-timeline-wrapper';
 import { clearColors } from '@ui/features/stage/utils';
@@ -343,25 +344,26 @@ export const Pipelines = () => {
                           height={node.height}
                           projectName={name}
                           faded={isFaded(node.data)}
-                          currentFreight={
-                            fullFreightById[node.data?.status?.currentFreight?.name || '']
-                          }
+                          currentFreight={getCurrentFreight(node.data).map(
+                            (f) => fullFreightById[f.name || '']
+                          )}
                           hasNoSubscribers={
                             (subscribersByStage[node?.data?.metadata?.name || ''] || []).length <= 1
                           }
                           onPromoteClick={(type: FreightTimelineAction) => {
-                            const isWarehouseKind =
-                              node.data?.status?.currentFreight?.origin?.kind === 'Warehouse';
-                            const currentWarehouse =
-                              node.data?.status?.currentFreight?.warehouse ||
-                              (isWarehouseKind
-                                ? node.data?.status?.currentFreight?.origin?.name
-                                : false) ||
-                              node.data?.spec?.subscriptions?.warehouse ||
-                              (isWarehouseKind
-                                ? node.data?.spec?.requestedFreight[0]?.origin?.name
-                                : false) ||
-                              '';
+                            const currentFreight = getCurrentFreight(node.data);
+                            const isWarehouseKind = currentFreight.reduce(
+                              (acc, cur) => acc || cur?.origin?.kind === 'Warehouse',
+                              false
+                            );
+                            let currentWarehouse = currentFreight[0]?.warehouse || '';
+                            if (currentWarehouse === '' && isWarehouseKind) {
+                              currentWarehouse =
+                                currentFreight[0]?.origin?.name ||
+                                node.data?.spec?.subscriptions?.warehouse ||
+                                node.data?.spec?.requestedFreight[0]?.origin?.name ||
+                                '';
+                            }
                             setSelectedWarehouse(currentWarehouse);
                             if (state.stage === node.data?.metadata?.name) {
                               // deselect
@@ -374,7 +376,7 @@ export const Pipelines = () => {
                                 type,
                                 stageName,
                                 type === FreightTimelineAction.PromoteSubscribers
-                                  ? node.data?.status?.currentFreight?.name || ''
+                                  ? currentFreight[0].name
                                   : undefined
                               );
                             }

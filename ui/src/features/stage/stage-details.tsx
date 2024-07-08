@@ -27,7 +27,11 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
 
   const verifications = useMemo(() => {
     setIsVerificationRunning(false);
-    return (stage.status?.history || [])
+    return (
+      (stage.status?.freightHistory
+        ? stage.status?.freightHistory
+        : (stage.status?.history as { verificationHistory: VerificationInfo[] }[])) || []
+    )
       .flatMap((freight) =>
         freight.verificationHistory.map((verification) => {
           if (verification.phase === 'Running' || verification.phase === 'Pending') {

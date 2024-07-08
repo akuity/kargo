@@ -147,11 +147,12 @@ export const usePipelineGraph = (
             String(subscriberIndexCache.get(upstreamStage.name || '', myNodes)),
             String(index),
             {},
-            String(i)
+            String(`${upstreamStage.name || ''}/${index} ${i}`)
           );
         });
       } else if (item.type === NodeType.WAREHOUSE) {
         // this is a warehouse node
+        let i = 0;
         for (const stageName of item.stageNames || []) {
           // draw edge between warehouse and stage(s)
           g.setEdge(
@@ -160,8 +161,9 @@ export const usePipelineGraph = (
             {
               color: warehouseColorMap[item.warehouseName]
             },
-            stageName
+            `${stageName}/${index} ${i}`
           );
+          i++;
         }
       } else {
         // this is a subscription node
@@ -172,7 +174,7 @@ export const usePipelineGraph = (
           {
             color: warehouseColorMap[item.warehouseName]
           },
-          item.warehouseName
+          `${item.warehouseName}/${index}`
         );
       }
     });

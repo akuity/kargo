@@ -27,6 +27,7 @@ import { Stage } from '@ui/gen/v1alpha1/generated_pb';
 
 import { useConfirmModal } from '../common/confirm-modal/use-confirm-modal';
 import { useModal } from '../common/modal/use-modal';
+import { getCurrentFreight } from '../common/utils';
 
 import { EditStageModal } from './edit-stage-modal';
 
@@ -101,8 +102,9 @@ export const StageActions = ({
 
   const verificationEnabled = stage?.spec?.verification;
 
-  const currentFreightHasVerification =
-    (stage?.status?.currentFreight?.verificationHistory || []).length > 0;
+  const currentFreightHasVerification = getCurrentFreight(stage).some(
+    (freight) => freight?.verificationHistory?.length > 0
+  );
 
   return (
     <Space size={16}>
