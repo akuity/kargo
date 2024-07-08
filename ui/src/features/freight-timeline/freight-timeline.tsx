@@ -15,7 +15,7 @@ import {
 import { Freight, Stage } from '@ui/gen/v1alpha1/generated_pb';
 
 import { FreightActionMenu } from '../project/pipelines/freight-action-menu';
-import { FreightMode, FreightlineAction } from '../project/pipelines/types';
+import { FreightMode, FreightTimelineAction } from '../project/pipelines/types';
 import { PipelineStateHook, getFreightMode, isPromoting } from '../project/pipelines/utils/state';
 import { usePromotionEligibleFreight } from '../project/pipelines/utils/use-promotion-eligible-freight';
 import { getSeconds, onError } from '../project/pipelines/utils/util';
@@ -25,7 +25,7 @@ import { FreightContents } from './freight-contents';
 import { FreightItem } from './freight-item';
 import { StageIndicators } from './stage-indicators';
 
-export const Freightline = ({
+export const FreightTimeline = ({
   freight,
   state,
   stagesPerFreight,
@@ -169,7 +169,7 @@ export const Freightline = ({
                   <FreightActionMenu
                     freight={f}
                     approveAction={() => {
-                      state.select(FreightlineAction.ManualApproval, undefined, id);
+                      state.select(FreightTimelineAction.ManualApproval, undefined, id);
                     }}
                     refetchFreight={refetchFreight}
                     inUse={stagesPerFreight[id]?.length > 0}
@@ -177,7 +177,7 @@ export const Freightline = ({
                 )}
                 <StageIndicators
                   stages={stagesPerFreight[id] || []}
-                  faded={state.action === FreightlineAction.ManualApproval}
+                  faded={state.action === FreightTimelineAction.ManualApproval}
                 />
                 <FreightContents
                   highlighted={
@@ -198,7 +198,7 @@ export const Freightline = ({
                         project,
                         freight: f?.metadata?.name
                       };
-                      if (state.action === FreightlineAction.Promote) {
+                      if (state.action === FreightTimelineAction.Promote) {
                         promoteAction({
                           stage: state.stage || '',
                           ...currentData
@@ -220,4 +220,4 @@ export const Freightline = ({
   );
 };
 
-export default Freightline;
+export default FreightTimeline;

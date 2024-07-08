@@ -2,11 +2,11 @@ import { useMemo } from 'react';
 
 import { Freight } from '@ui/gen/v1alpha1/generated_pb';
 
-import { FreightlineAction } from '../types';
+import { FreightTimelineAction } from '../types';
 
 export const usePromotionEligibleFreight = (
   freight: Freight[],
-  action?: FreightlineAction,
+  action?: FreightTimelineAction,
   stage?: string,
   disabled?: boolean
 ) => {
@@ -15,7 +15,7 @@ export const usePromotionEligibleFreight = (
       return {};
     }
     const availableFreight =
-      action === FreightlineAction.Promote || !stage
+      action === FreightTimelineAction.Promote || !stage
         ? freight
         : // if promoting subscribers, only include freight that has been verified in the promoting stage
           freight.filter((f) => !!f?.status?.verifiedIn[stage]);
