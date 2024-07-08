@@ -21,11 +21,11 @@ import { ColorContext } from '@ui/context/colors';
 import { LoadingState } from '@ui/features/common';
 import { useModal } from '@ui/features/common/modal/use-modal';
 const FreightDetails = lazy(() => import('@ui/features/freight/freight-details'));
-const Freightline = lazy(() => import('@ui/features/freightline/freightline'));
+const FreightTimeline = lazy(() => import('@ui/features/freight-timeline/freight-timeline'));
 const StageDetails = lazy(() => import('@ui/features/stage/stage-details'));
 import { SuspenseSpin } from '@ui/features/common/suspense-spin';
-import { FreightlineHeader } from '@ui/features/freightline/freightline-header';
-import { FreightlineWrapper } from '@ui/features/freightline/freightline-wrapper';
+import { FreightTimelineHeader } from '@ui/features/freight-timeline/freight-timeline-header';
+import { FreightTimelineWrapper } from '@ui/features/freight-timeline/freight-timeline-wrapper';
 import { clearColors } from '@ui/features/stage/utils';
 import {
   approveFreight,
@@ -44,7 +44,7 @@ import { Images } from './images';
 import { RepoNode } from './nodes/repo-node';
 import { Nodule, StageNode } from './nodes/stage-node';
 import styles from './project-details.module.less';
-import { FreightlineAction, NodeType } from './types';
+import { FreightTimelineAction, NodeType } from './types';
 import { LINE_THICKNESS, WAREHOUSE_NODE_HEIGHT } from './utils/graph';
 import { isPromoting, usePipelineState } from './utils/state';
 import { usePipelineGraph } from './utils/use-pipeline-graph';
@@ -97,7 +97,7 @@ export const Pipelines = () => {
   );
 
   const [selectedWarehouse, setSelectedWarehouse] = React.useState('');
-  const [freightlineCollapsed, setFreightlineCollapsed] = React.useState(false);
+  const [freightTimelineCollapsed, setFreightTimelineCollapsed] = React.useState(false);
 
   const warehouseMap = useMemo(() => {
     const map = {} as { [key: string]: Warehouse };
@@ -222,7 +222,7 @@ export const Pipelines = () => {
   return (
     <div className='flex flex-col flex-grow'>
       <ColorContext.Provider value={{ stageColorMap, warehouseColorMap }}>
-        <FreightlineHeader
+        <FreightTimelineHeader
           promotingStage={state.stage}
           action={state.action}
           cancel={() => {
@@ -235,8 +235,8 @@ export const Pipelines = () => {
           selectedWarehouse={selectedWarehouse || ''}
           setSelectedWarehouse={setSelectedWarehouse}
           warehouses={warehouseMap}
-          collapsed={freightlineCollapsed}
-          setCollapsed={setFreightlineCollapsed}
+          collapsed={freightTimelineCollapsed}
+          setCollapsed={setFreightTimelineCollapsed}
           collapsable={
             Object.keys(stagesPerFreight).reduce(
               (acc, cur) => (cur?.length > 0 ? acc + stagesPerFreight[cur].length : acc),
@@ -244,7 +244,7 @@ export const Pipelines = () => {
             ) > 0
           }
         />
-        <FreightlineWrapper>
+        <FreightTimelineWrapper>
           <Suspense
             fallback={
               <div className='h-full w-full flex items-center justify-center'>
@@ -252,9 +252,9 @@ export const Pipelines = () => {
               </div>
             }
           >
-            <Freightline
+            <FreightTimeline
               highlightedStages={
-                state.action === FreightlineAction.ManualApproval ? {} : highlightedStages
+                state.action === FreightTimelineAction.ManualApproval ? {} : highlightedStages
               }
               refetchFreight={refetchFreightData}
               onHover={onHover}
@@ -262,11 +262,11 @@ export const Pipelines = () => {
               state={state}
               promotionEligible={{}}
               stagesPerFreight={stagesPerFreight}
-              collapsed={freightlineCollapsed}
-              setCollapsed={setFreightlineCollapsed}
+              collapsed={freightTimelineCollapsed}
+              setCollapsed={setFreightTimelineCollapsed}
             />
           </Suspense>
-        </FreightlineWrapper>
+        </FreightTimelineWrapper>
         <div className='flex flex-grow w-full'>
           <div className={`overflow-hidden flex-grow w-full h-full ${styles.dag}`}>
             <div className='flex justify-end items-center p-4 mb-4'>
@@ -349,7 +349,7 @@ export const Pipelines = () => {
                           hasNoSubscribers={
                             (subscribersByStage[node?.data?.metadata?.name || ''] || []).length <= 1
                           }
-                          onPromoteClick={(type: FreightlineAction) => {
+                          onPromoteClick={(type: FreightTimelineAction) => {
                             const isWarehouseKind =
                               node.data?.status?.currentFreight?.origin?.kind === 'Warehouse';
                             const currentWarehouse =
@@ -373,7 +373,7 @@ export const Pipelines = () => {
                               state.select(
                                 type,
                                 stageName,
-                                type === FreightlineAction.PromoteSubscribers
+                                type === FreightTimelineAction.PromoteSubscribers
                                   ? node.data?.status?.currentFreight?.name || ''
                                   : undefined
                               );
@@ -385,7 +385,7 @@ export const Pipelines = () => {
                               : undefined
                           }
                           onClick={
-                            state.action === FreightlineAction.ManualApproval
+                            state.action === FreightTimelineAction.ManualApproval
                               ? () => {
                                   manualApproveAction({
                                     stage: node.data?.metadata?.name,
@@ -396,7 +396,7 @@ export const Pipelines = () => {
                               : undefined
                           }
                           onHover={(h) => onHover(h, node.data?.metadata?.name || '', true)}
-                          approving={state.action === FreightlineAction.ManualApproval}
+                          approving={state.action === FreightTimelineAction.ManualApproval}
                           highlighted={highlightedStages[node.data?.metadata?.name || '']}
                         />
                       </>

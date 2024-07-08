@@ -1,17 +1,17 @@
 import { useState } from 'react';
 
-import { FreightMode, FreightlineAction } from '../types';
+import { FreightMode, FreightTimelineAction } from '../types';
 
 export interface PipelineStateHook {
-  action?: FreightlineAction;
+  action?: FreightTimelineAction;
   freight?: string;
   stage?: string;
   clear: () => void;
-  select: (action?: FreightlineAction, stage?: string, freight?: string) => void;
+  select: (action?: FreightTimelineAction, stage?: string, freight?: string) => void;
 }
 
 export const usePipelineState = (): PipelineStateHook => {
-  const [action, setAction] = useState<FreightlineAction | undefined>();
+  const [action, setAction] = useState<FreightTimelineAction | undefined>();
   const [freight, setFreight] = useState<string | undefined>();
   const [stage, setStage] = useState<string | undefined>();
 
@@ -21,7 +21,7 @@ export const usePipelineState = (): PipelineStateHook => {
     setStage(undefined);
   };
 
-  const select = (_action?: FreightlineAction, _stage?: string, _freight?: string) => {
+  const select = (_action?: FreightTimelineAction, _stage?: string, _freight?: string) => {
     if (action === _action) {
       clear();
       return;
@@ -29,12 +29,12 @@ export const usePipelineState = (): PipelineStateHook => {
     if (_action) {
       setAction(_action);
       if (
-        _action === FreightlineAction.Promote ||
-        _action === FreightlineAction.PromoteSubscribers
+        _action === FreightTimelineAction.Promote ||
+        _action === FreightTimelineAction.PromoteSubscribers
       ) {
         setStage(_stage);
         setFreight(undefined);
-      } else if (_action === FreightlineAction.ManualApproval) {
+      } else if (_action === FreightTimelineAction.ManualApproval) {
         setFreight(_freight);
         setStage(undefined);
       }
@@ -60,7 +60,8 @@ export const usePipelineState = (): PipelineStateHook => {
 export const isPromoting = ({ action, stage }: PipelineStateHook) => {
   return (
     stage &&
-    (action === FreightlineAction.PromoteSubscribers || action === FreightlineAction.Promote)
+    (action === FreightTimelineAction.PromoteSubscribers ||
+      action === FreightTimelineAction.Promote)
   );
 };
 
@@ -69,7 +70,7 @@ export const getFreightMode = (
   freightID: string,
   promotionEligible: boolean
 ): FreightMode => {
-  if (state.action === FreightlineAction.ManualApproval) {
+  if (state.action === FreightTimelineAction.ManualApproval) {
     return state.freight === freightID ? FreightMode.Selected : FreightMode.Disabled;
   }
 

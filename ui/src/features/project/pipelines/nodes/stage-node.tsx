@@ -17,7 +17,7 @@ import { HealthStatusIcon } from '@ui/features/common/health-status/health-statu
 import { PromotionStatusIcon } from '@ui/features/common/promotion-status/promotion-status-icon';
 import { Freight, Stage } from '@ui/gen/v1alpha1/generated_pb';
 
-import { FreightlineAction } from '../types';
+import { FreightTimelineAction } from '../types';
 
 import * as styles from './stage-node.module.less';
 
@@ -42,8 +42,8 @@ export const StageNode = ({
   faded: boolean;
   projectName?: string;
   hasNoSubscribers?: boolean;
-  action?: FreightlineAction;
-  onPromoteClick: (type: FreightlineAction) => void;
+  action?: FreightTimelineAction;
+  onPromoteClick: (type: FreightTimelineAction) => void;
   currentFreight: Freight;
   onClick?: () => void;
   approving?: boolean;
@@ -144,14 +144,14 @@ export const StageNode = ({
           <Nodule
             begin={true}
             nodeHeight={height}
-            onClick={() => onPromoteClick(FreightlineAction.Promote)}
-            selected={action === FreightlineAction.Promote}
+            onClick={() => onPromoteClick(FreightTimelineAction.Promote)}
+            selected={action === FreightTimelineAction.Promote}
           />
           {!hasNoSubscribers && (
             <Nodule
               nodeHeight={height}
-              onClick={() => onPromoteClick(FreightlineAction.PromoteSubscribers)}
-              selected={action === FreightlineAction.PromoteSubscribers}
+              onClick={() => onPromoteClick(FreightTimelineAction.PromoteSubscribers)}
+              selected={action === FreightTimelineAction.PromoteSubscribers}
             />
           )}
         </>
