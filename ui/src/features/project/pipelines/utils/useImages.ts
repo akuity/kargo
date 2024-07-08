@@ -1,6 +1,7 @@
 import { useContext, useMemo } from 'react';
 
 import { ColorContext } from '@ui/context/colors';
+import { getCurrentFreight } from '@ui/features/common/utils';
 import { Stage } from '@ui/gen/v1alpha1/generated_pb';
 
 import { StageStyleMap } from '../types';
@@ -31,7 +32,8 @@ export const useImages = (stages: Stage[]) => {
         });
       });
 
-      stage.status?.currentFreight?.images?.forEach((image) => {
+      const existingImages = getCurrentFreight(stage).flatMap((freight) => freight.images || []);
+      (existingImages || []).forEach((image) => {
         let repo = image.repoURL ? images.get(image.repoURL) : undefined;
         if (!repo) {
           repo = new Map<string, StageStyleMap>();

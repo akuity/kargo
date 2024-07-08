@@ -44,7 +44,7 @@ export const StageNode = ({
   hasNoSubscribers?: boolean;
   action?: FreightTimelineAction;
   onPromoteClick: (type: FreightTimelineAction) => void;
-  currentFreight: Freight;
+  currentFreight: Freight[];
   onClick?: () => void;
   approving?: boolean;
   onHover: (hovering: boolean) => void;
@@ -117,7 +117,9 @@ export const StageNode = ({
           ) : (
             <div className='text-sm h-full flex flex-col items-center justify-center -mt-1'>
               <div className={styles.freightLabel}>Current Freight</div>
-              <FreightLabel freight={currentFreight} showContents={true} />
+              {(currentFreight || []).map((freight) => (
+                <FreightLabel freight={freight} showContents={true} key={freight?.metadata?.name} />
+              ))}
               {stage?.status?.lastPromotion?.finishedAt && (
                 <>
                   <div

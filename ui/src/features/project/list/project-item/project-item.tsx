@@ -30,12 +30,7 @@ export const ProjectItem = ({ project, stages }: { project?: Project; stages?: S
               placement='bottom'
               title={
                 stage?.status?.lastPromotion?.name && (
-                  <StagePopover
-                    promotionName={stage?.status?.lastPromotion?.name}
-                    project={project?.metadata?.name}
-                    freightName={stage?.status?.currentFreight?.name}
-                    stageName={stage?.metadata?.name}
-                  />
+                  <StagePopover project={project?.metadata?.name} stage={stage} />
                 )
               }
             >
