@@ -200,6 +200,7 @@ func newFreightTable(list *metav1.List) *metav1.Table {
 			Cells: []any{
 				freight.Name,
 				alias,
+				freight.Origin.String(),
 				duration.HumanDuration(time.Since(freight.CreationTimestamp.Time)),
 			},
 			Object: list.Items[i],
@@ -209,6 +210,7 @@ func newFreightTable(list *metav1.List) *metav1.Table {
 		ColumnDefinitions: []metav1.TableColumnDefinition{
 			{Name: "Name", Type: "string"},
 			{Name: "Alias", Type: "string"},
+			{Name: "Origin", Type: "string"},
 			{Name: "Age", Type: "string"},
 		},
 		Rows: rows,
