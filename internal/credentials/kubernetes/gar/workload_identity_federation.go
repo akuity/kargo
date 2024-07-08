@@ -37,7 +37,7 @@ func NewWorkloadIdentityFederationCredentialHelper(
 	}
 	logger.Info("controller appears to be running within GCE")
 	var err error
-	if gcpProjectID, err = metadata.ProjectID(); err != nil {
+	if gcpProjectID, err = metadata.ProjectIDWithContext(ctx); err != nil {
 		logger.Error(err, "error getting GCP project ID")
 	} else {
 		logger.Debug(
