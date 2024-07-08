@@ -20,7 +20,7 @@ import {
   Warehouse
 } from '@ui/gen/v1alpha1/generated_pb';
 
-import { FreightContents } from '../freightline/freight-contents';
+import { FreightContents } from '../freight-timeline/freight-contents';
 
 import { ArtifactMenuGroup } from './artifact-menu-group';
 import { ChartTable } from './chart-table';

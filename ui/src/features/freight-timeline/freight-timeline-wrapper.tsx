@@ -1,4 +1,4 @@
-export const FreightlineWrapper = ({ children }: { children: React.ReactNode }) => {
+export const FreightTimelineWrapper = ({ children }: { children: React.ReactNode }) => {
   return (
     <div className='w-full py-3 flex flex-col overflow-hidden' style={{ backgroundColor: '#eee' }}>
       <div className='flex h-48 w-full items-center px-1'>

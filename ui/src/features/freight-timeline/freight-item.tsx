@@ -5,7 +5,7 @@ import { Freight } from '@ui/gen/v1alpha1/generated_pb';
 import { FreightLabel } from '../common/freight-label';
 import { FreightMode } from '../project/pipelines/types';
 
-import styles from './freightline.module.less';
+import styles from './freight-timeline.module.less';
 
 export const FreightItem = ({
   freight,
