@@ -128,13 +128,15 @@ export const usePipelineGraph = (
         (item.data?.spec?.requestedFreight || []).forEach((req, i) => {
           if (req.origin?.kind === 'Warehouse') {
             req.sources?.stages?.forEach((upstreamStage) => {
+              const to = String(subscriberIndexCache.get(upstreamStage, myNodes));
+              const from = String(index);
               g.setEdge(
-                String(subscriberIndexCache.get(upstreamStage, myNodes)),
-                String(index),
+                to,
+                from,
                 {
                   color: warehouseColorMap[req?.origin?.name || '']
                 },
-                `${upstreamStage}-${i}`
+                `${upstreamStage}/${to}-${from} ${i}`
               );
             });
           }
