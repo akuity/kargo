@@ -16,6 +16,8 @@ import (
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name=Alias,type=string,JSONPath=`.metadata.labels.kargo\.akuity\.io/alias`
+// +kubebuilder:printcolumn:name=Origin (Kind),type=string,JSONPath=`.origin.kind`
+// +kubebuilder:printcolumn:name=Origin (Name),type=string,JSONPath=`.origin.name`
 // +kubebuilder:printcolumn:name=Age,type=date,JSONPath=`.metadata.creationTimestamp`
 
 // Freight represents a collection of versioned artifacts.
