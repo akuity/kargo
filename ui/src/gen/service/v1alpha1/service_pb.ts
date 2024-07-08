@@ -2551,6 +2551,11 @@ export class QueryFreightRequest extends Message<QueryFreightRequest> {
    */
   reverse = false;
 
+  /**
+   * @generated from field: repeated string origins = 7;
+   */
+  origins: string[] = [];
+
   constructor(data?: PartialMessage<QueryFreightRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -2565,6 +2570,7 @@ export class QueryFreightRequest extends Message<QueryFreightRequest> {
     { no: 4, name: "group", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 5, name: "order_by", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 6, name: "reverse", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 7, name: "origins", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): QueryFreightRequest {
