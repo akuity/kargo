@@ -18,6 +18,12 @@ spec:
     - jsonPath: .metadata.labels.kargo\.akuity\.io/alias
       name: Alias
       type: string
+    - jsonPath: .origin.kind
+      name: Origin (Kind)
+      type: string
+    - jsonPath: .origin.name
+      name: Origin (Name)
+      type: string
     - jsonPath: .metadata.creationTimestamp
       name: Age
       type: date

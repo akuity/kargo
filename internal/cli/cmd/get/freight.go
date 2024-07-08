@@ -35,6 +35,7 @@ type getFreightOptions struct {
 	Project string
 	Names   []string
 	Aliases []string
+	Origins []string
 }
 
 func newGetFreightCommand(
@@ -57,6 +58,9 @@ func newGetFreightCommand(
 		Example: templates.Example(`
 # List all freight in my-project
 kargo get freight --project=my-project
+
+# List all freight in my-project for a specific warehouse
+kargo get freight --project=my-project --origin=warehouse-1
 
 # List all freight in my-project in JSON output format
 kargo get freight --project=my-project -o json
@@ -108,6 +112,11 @@ func (o *getFreightOptions) addFlags(cmd *cobra.Command) {
 	)
 	option.Names(cmd.Flags(), &o.Names, "The name of a piece of freight to get.")
 	option.Aliases(cmd.Flags(), &o.Aliases, "The alias of a piece of freight to get.")
+	option.Origins(cmd.Flags(), &o.Origins, "The origin of the freight to get.")
+
+	// Origin and name/alias are mutually exclusive
+	cmd.MarkFlagsMutuallyExclusive(option.NameFlag, option.OriginFlag)
+	cmd.MarkFlagsMutuallyExclusive(option.AliasFlag, option.OriginFlag)
 }
 
 // validate performs validation of the options. If the options are invalid, an
@@ -135,6 +144,7 @@ func (o *getFreightOptions) run(ctx context.Context) error {
 			connect.NewRequest(
 				&v1alpha1.QueryFreightRequest{
 					Project: o.Project,
+					Origins: o.Origins,
 				},
 			),
 		); err != nil {
@@ -200,6 +210,7 @@ func newFreightTable(list *metav1.List) *metav1.Table {
 			Cells: []any{
 				freight.Name,
 				alias,
+				freight.Origin.String(),
 				duration.HumanDuration(time.Since(freight.CreationTimestamp.Time)),
 			},
 			Object: list.Items[i],
@@ -209,6 +220,7 @@ func newFreightTable(list *metav1.List) *metav1.Table {
 		ColumnDefinitions: []metav1.TableColumnDefinition{
 			{Name: "Name", Type: "string"},
 			{Name: "Alias", Type: "string"},
+			{Name: "Origin", Type: "string"},
 			{Name: "Age", Type: "string"},
 		},
 		Rows: rows,

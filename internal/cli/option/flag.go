@@ -66,6 +66,9 @@ const (
 	// OldAliasFlag is the flag name for the old-alias flag.
 	OldAliasFlag = "old-alias"
 
+	// OriginFlag is the flag name for the origin flag.
+	OriginFlag = "origin"
+
 	// PasswordFlag is the flag name for the password flag.
 	PasswordFlag = "password"
 
@@ -79,7 +82,7 @@ const (
 	// RecursiveShortFlag is the short flag name for the recursive flag.
 	RecursiveShortFlag = "R"
 
-	// Regex is the flag name for the regex flag.
+	// RegexFlag is the flag name for the regex flag.
 	RegexFlag = "regex"
 
 	// RepoURLFlag is the flag name for the repo-url flag.
@@ -221,6 +224,11 @@ func NoHeaders(fs *pflag.FlagSet, noHeaders *bool) {
 // OldAlias adds the OldAliasFlag to the provided flag set.
 func OldAlias(fs *pflag.FlagSet, stage *string, usage string) {
 	fs.StringVar(stage, OldAliasFlag, "", usage)
+}
+
+// Origins adds the OriginsFlag to the provided flag set.
+func Origins(fs *pflag.FlagSet, origin *[]string, usage string) {
+	fs.StringArrayVar(origin, OriginFlag, nil, usage)
 }
 
 // Password adds the PasswordFlag to the provided flag set.
