@@ -257,6 +257,16 @@ func stageHealthForAppHealth(app *argocd.Application) (kargoapi.HealthState, err
 			app.GetNamespace(),
 		)
 		return kargoapi.HealthStateProgressing, err
+	case argocd.HealthStatusSuspended:
+		err := fmt.Errorf(
+			"Argo CD Application %q in namespace %q is suspended",
+			app.GetName(),
+			app.GetNamespace(),
+		)
+		// To Kargo, a suspended Application is considered progressing until
+		// the suspension is lifted.
+		// xref: https://github.com/akuity/kargo/issues/2216
+		return kargoapi.HealthStateProgressing, err
 	case argocd.HealthStatusHealthy:
 		return kargoapi.HealthStateHealthy, nil
 	default:
