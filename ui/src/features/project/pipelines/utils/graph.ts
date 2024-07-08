@@ -44,26 +44,12 @@ export const nodeStubFor = (type: NodeType) => {
 };
 
 export const getConnectors = (g: graphlib.Graph) => {
-  return g.edges().map((item) => {
+  const groups: { [key: string]: ConnectorsType[][] } = {};
+  g.edges().map((item) => {
     const edge = g.edge(item);
     const points = edge.points;
-    if (points.length > 0) {
-      // replace first point with the right side of the upstream node
-      const upstreamNode = g.node(item.v);
-      if (upstreamNode) {
-        points[0] = { x: upstreamNode.x + upstreamNode.width / 2, y: upstreamNode.y };
-      }
-    }
-    if (points.length > 1) {
-      // replace last point with the right side of the downstream node
-      const upstreamNode = g.node(item.w);
-      if (upstreamNode) {
-        points[points.length - 1] = {
-          x: upstreamNode.x - upstreamNode.width / 2,
-          y: upstreamNode.y
-        };
-      }
-    }
+
+    const id = item.name?.split(' ')[0] || item.name || '';
 
     const lines = new Array<ConnectorsType>();
     for (let i = 0; i < points.length - 1; i++) {
@@ -74,7 +60,7 @@ export const getConnectors = (g: graphlib.Graph) => {
       const x2 = end.x;
       const y2 = end.y;
 
-      const width = Math.sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
+      const width = Math.sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1)) + 2;
       // center
       const cx = (x1 + x2) / 2 - width / 2;
       const cy = (y1 + y2) / 2 - LINE_THICKNESS / 2;
@@ -82,6 +68,18 @@ export const getConnectors = (g: graphlib.Graph) => {
       const angle = Math.atan2(y1 - y2, x1 - x2) * (180 / Math.PI);
       lines.push({ x: cx, y: cy, width, angle, color: edge['color'] });
     }
-    return lines;
+
+    groups[id] = [...(groups[id] || []), lines];
   });
+
+  for (const key in groups) {
+    if (groups[key]?.length > 1) {
+      groups[key].forEach((lines) => {
+        lines.forEach((line) => {
+          line.angle = 0;
+        });
+      });
+    }
+  }
+  return Object.values(groups).flatMap((group) => group);
 };

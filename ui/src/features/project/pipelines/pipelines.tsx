@@ -464,7 +464,7 @@ export const Pipelines = () => {
                 {connectors?.map((connector) =>
                   connector.map((line, i) => (
                     <div
-                      className='absolute bg-gray-300 rounded'
+                      className='absolute bg-gray-300 rounded-full'
                       style={{
                         padding: 0,
                         margin: 0,
