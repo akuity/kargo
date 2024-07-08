@@ -406,6 +406,7 @@ message QueryFreightRequest {
   string group = 4;
   string order_by = 5;
   bool reverse = 6;
+  repeated string origins = 7;
 }
 
 message QueryFreightResponse {
