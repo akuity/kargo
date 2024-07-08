@@ -53,10 +53,12 @@ func (s *server) QueryFreight(
 	}
 
 	stageName := req.Msg.GetStage()
+	origins := req.Msg.GetOrigins()
 	reverse := req.Msg.GetReverse()
 
 	var freight []kargoapi.Freight
-	if stageName != "" {
+	switch {
+	case stageName != "":
 		stage, err := s.getStageFn(
 			ctx,
 			s.client,
@@ -87,7 +89,13 @@ func (s *server) QueryFreight(
 		if err != nil {
 			return nil, fmt.Errorf("get available freight for stage: %w", err)
 		}
-	} else {
+	case len(origins) > 0:
+		var err error
+		freight, err = s.getFreightFromWarehousesFn(ctx, project, origins)
+		if err != nil {
+			return nil, fmt.Errorf("get freight from warehouse: %w", err)
+		}
+	default:
 		freightList := &kargoapi.FreightList{}
 		// Get ALL Freight in the project/namespace
 		if err := s.listFreightFn(
