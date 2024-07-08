@@ -17,9 +17,9 @@ import { paths } from '@ui/config/paths';
 import { ColorContext } from '@ui/context/colors';
 import { Warehouse } from '@ui/gen/v1alpha1/generated_pb';
 
-import { FreightlineAction } from '../project/pipelines/types';
+import { FreightTimelineAction } from '../project/pipelines/types';
 
-export const FreightlineHeader = ({
+export const FreightTimelineHeader = ({
   promotingStage,
   action,
   cancel,
@@ -32,7 +32,7 @@ export const FreightlineHeader = ({
   collapsable
 }: {
   promotingStage?: string;
-  action?: FreightlineAction;
+  action?: FreightTimelineAction;
   cancel: () => void;
   downstreamSubs?: string[];
   selectedWarehouse: string;
@@ -45,7 +45,7 @@ export const FreightlineHeader = ({
   const { stageColorMap } = useContext(ColorContext);
   const { name: projectName } = useParams();
 
-  const getIcon = (action: FreightlineAction) => {
+  const getIcon = (action: FreightTimelineAction) => {
     switch (action) {
       case 'promote':
         return faBullseye;
@@ -113,7 +113,7 @@ export const FreightlineHeader = ({
           <>
             <div className='flex items-center text-neutral-500 text-xs mr-auto'>
               <FontAwesomeIcon icon={faTimeline} className='mr-2' />
-              FREIGHTLINE
+              FREIGHT TIMELINE
             </div>
             {collapsable && (
               <Tooltip title={`${collapsed ? 'Expand' : 'Collapse'} old freight`}>

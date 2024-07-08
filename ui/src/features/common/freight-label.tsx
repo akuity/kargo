@@ -7,7 +7,7 @@ import { useEffect, useState } from 'react';
 
 import { Freight } from '@ui/gen/v1alpha1/generated_pb';
 
-import { FreightContents } from '../freightline/freight-contents';
+import { FreightContents } from '../freight-timeline/freight-contents';
 
 import { getAlias } from './utils';
 

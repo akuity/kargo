@@ -12,7 +12,7 @@ import { Description } from '../common/description';
 import { ManifestPreview } from '../common/manifest-preview';
 import { useModal } from '../common/modal/use-modal';
 import { getAlias } from '../common/utils';
-import { FreightContents } from '../freightline/freight-contents';
+import { FreightContents } from '../freight-timeline/freight-contents';
 import { UpdateFreightAliasModal } from '../project/pipelines/update-freight-alias-modal';
 
 import { FreightStatusList } from './freight-status-list';
