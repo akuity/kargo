@@ -59,7 +59,7 @@ export const FreightContents = (props: {
         {
           'text-gray-700 hover:text-gray-800': highlighted,
           'text-gray-400 hover:text-gray-500': !highlighted,
-          'flex-col w-20 overflow-y-auto': !horizontal
+          'flex-col w-20 overflow-y-auto flex-grow-0 flex-nowrap': !horizontal
         }
       )}
     >
