@@ -155,19 +155,23 @@ export const Pipelines = () => {
 
   const [stagesPerFreight, subscribersByStage] = useMemo(() => {
     const stagesPerFreight: { [key: string]: Stage[] } = {};
-    const subscribersByStage = {} as { [key: string]: Stage[] };
+    const subscribersByStage = {} as { [key: string]: Set<string> };
     (data?.stages || []).forEach((stage) => {
       const items = stagesPerFreight[stage.status?.currentFreight?.name || ''] || [];
       stagesPerFreight[stage.status?.currentFreight?.name || ''] = [...items, stage];
       stage?.spec?.subscriptions?.upstreamStages.forEach((item) => {
-        const items = subscribersByStage[item.name || ''] || [];
-        subscribersByStage[item.name || ''] = [...items, stage];
+        if (!subscribersByStage[item.name || '']) {
+          subscribersByStage[item.name || ''] = new Set();
+        }
+        subscribersByStage[item.name || ''].add(stage?.metadata?.name || '');
       });
       stage?.spec?.requestedFreight?.forEach((item) => {
         if (!item.sources?.direct) {
           (item?.sources?.stages || []).forEach((name) => {
-            const items = subscribersByStage[name] || [];
-            subscribersByStage[name] = [...items, stage];
+            if (!subscribersByStage[name]) {
+              subscribersByStage[name] = new Set();
+            }
+            subscribersByStage[name].add(stage?.metadata?.name || '');
           });
         }
       });
@@ -197,8 +201,8 @@ export const Pipelines = () => {
       return state.stage !== stage?.metadata?.name;
     }
     if (state.action === 'promoteSubscribers') {
-      return !subscribersByStage[state.stage || '']?.find(
-        (item) => item.metadata?.name === stage?.metadata?.name
+      return (
+        !stage?.metadata?.name || !subscribersByStage[state.stage || '']?.has(stage.metadata.name)
       );
     }
     return false;
@@ -230,9 +234,7 @@ export const Pipelines = () => {
             state.clear();
             setSelectedWarehouse('');
           }}
-          downstreamSubs={(subscribersByStage[state.stage || ''] || []).map(
-            (s) => s.metadata?.name || ''
-          )}
+          downstreamSubs={Array.from(subscribersByStage[state.stage || ''] || [])}
           selectedWarehouse={selectedWarehouse || ''}
           setSelectedWarehouse={setSelectedWarehouse}
           warehouses={warehouseMap}
@@ -348,7 +350,8 @@ export const Pipelines = () => {
                             (f) => fullFreightById[f.name || '']
                           )}
                           hasNoSubscribers={
-                            (subscribersByStage[node?.data?.metadata?.name || ''] || []).length <= 1
+                            Array.from(subscribersByStage[node?.data?.metadata?.name || ''] || [])
+                              .length <= 1
                           }
                           onPromoteClick={(type: FreightTimelineAction) => {
                             const currentFreight = getCurrentFreight(node.data);
