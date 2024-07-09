@@ -288,15 +288,15 @@ func TestSyncNormalStage(t *testing.T) {
 							Freight: map[string]kargoapi.FreightReference{
 								testOrigin.String(): {
 									Origin: testOrigin,
-									VerificationInfo: &kargoapi.VerificationInfo{
-										ID:    "fake-id",
-										Phase: kargoapi.VerificationPhaseFailed,
-										AnalysisRun: &kargoapi.AnalysisRunReference{
-											Name: "fake-analysis-run",
-										},
-									},
 								},
 							},
+							VerificationHistory: []kargoapi.VerificationInfo{{
+								ID:    "fake-id",
+								Phase: kargoapi.VerificationPhaseFailed,
+								AnalysisRun: &kargoapi.AnalysisRunReference{
+									Name: "fake-analysis-run",
+								},
+							}},
 						},
 					},
 				},
@@ -378,12 +378,6 @@ func TestSyncNormalStage(t *testing.T) {
 							Freight: map[string]kargoapi.FreightReference{
 								testOrigin.String(): {
 									Origin: testOrigin,
-									VerificationInfo: &kargoapi.VerificationInfo{
-										Phase: kargoapi.VerificationPhaseFailed,
-										AnalysisRun: &kargoapi.AnalysisRunReference{
-											Name: "fake-analysis-run",
-										},
-									},
 								},
 							},
 							VerificationHistory: []kargoapi.VerificationInfo{
