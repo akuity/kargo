@@ -136,39 +136,28 @@ func ReverifyStageFreight(
 		return err
 	}
 
-	current := stage.Status.FreightHistory.Current()
-	if current == nil || len(current.Freight) == 0 {
+	currentFC := stage.Status.FreightHistory.Current()
+	if currentFC == nil || len(currentFC.Freight) == 0 {
 		return errors.New("stage has no current freight")
 	}
 
-	if len(current.Freight) > 1 {
-		// TODO: This is a naive implementation which does not handle multiple
-		// Freight objects in the history properly. This must be addressed for
-		// proper "multi-pipeline" support.
-		return errors.New("stage has multiple Freight objects: re-verification not supported at this time")
+	currentVI := currentFC.VerificationHistory.Current()
+	if currentVI == nil {
+		return errors.New("stage has no current verification info")
 	}
 
-	for _, f := range current.Freight {
-		if f.VerificationInfo == nil {
-			return errors.New("stage has no existing verification info")
-		}
-
-		if f.VerificationInfo.ID == "" {
-			return fmt.Errorf("stage verification info has no ID")
-		}
-
-		rr := VerificationRequest{
-			ID: f.VerificationInfo.ID,
-		}
-		// Put actor information to track on the controller side
-		if u, ok := user.InfoFromContext(ctx); ok {
-			rr.Actor = FormatEventUserActor(u)
-		}
-		return patchAnnotation(ctx, c, stage, AnnotationKeyReverify, rr.String())
-
+	if currentVI.ID == "" {
+		return fmt.Errorf("current stage verification info has no ID")
 	}
 
-	return nil
+	rr := VerificationRequest{
+		ID: currentVI.ID,
+	}
+	// Put actor information to track on the controller side
+	if u, ok := user.InfoFromContext(ctx); ok {
+		rr.Actor = FormatEventUserActor(u)
+	}
+	return patchAnnotation(ctx, c, stage, AnnotationKeyReverify, rr.String())
 }
 
 // AbortStageFreightVerification forces aborting the verification of the
@@ -189,41 +178,31 @@ func AbortStageFreightVerification(
 		return err
 	}
 
-	current := stage.Status.FreightHistory.Current()
-	if current == nil || len(current.Freight) == 0 {
+	currentFC := stage.Status.FreightHistory.Current()
+	if currentFC == nil || len(currentFC.Freight) == 0 {
 		return errors.New("stage has no current freight")
 	}
 
-	if len(current.Freight) > 1 {
-		// TODO: This is a naive implementation which does not handle multiple
-		// Freight objects in the history properly. This must be addressed for
-		// proper "multi-pipeline" support.
-		return errors.New("stage has multiple Freight objects: abort not supported at this time")
+	currentVI := currentFC.VerificationHistory.Current()
+	if currentVI == nil {
+		return errors.New("stage has no current verification info")
 	}
 
-	for _, f := range current.Freight {
-		if f.VerificationInfo == nil {
-			return errors.New("stage has no existing verification info")
-		}
-
-		if f.VerificationInfo.Phase.IsTerminal() {
-			// The verification is already in a terminal phase, so we can skip the
-			// abort request.
-			return nil
-		}
-		if f.VerificationInfo.ID == "" {
-			return fmt.Errorf("stage verification info has no ID")
-		}
-
-		ar := VerificationRequest{
-			ID: f.VerificationInfo.ID,
-		}
-		// Put actor information to track on the controller side
-		if u, ok := user.InfoFromContext(ctx); ok {
-			ar.Actor = FormatEventUserActor(u)
-		}
-		return patchAnnotation(ctx, c, stage, AnnotationKeyAbort, ar.String())
+	if currentVI.Phase.IsTerminal() {
+		// The verification is already in a terminal phase, so we can skip the
+		// abort request.
+		return nil
+	}
+	if currentVI.ID == "" {
+		return fmt.Errorf("current stage verification info has no ID")
 	}
 
-	return nil
+	ar := VerificationRequest{
+		ID: currentVI.ID,
+	}
+	// Put actor information to track on the controller side
+	if u, ok := user.InfoFromContext(ctx); ok {
+		ar.Actor = FormatEventUserActor(u)
+	}
+	return patchAnnotation(ctx, c, stage, AnnotationKeyAbort, ar.String())
 }

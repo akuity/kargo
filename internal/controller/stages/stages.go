@@ -694,6 +694,7 @@ func (r *reconciler) syncNormalStage(
 					if req, _ := kargoapi.ReverifyAnnotationValue(stage.GetAnnotations()); req.ForID(currentVI.ID) {
 						logger.Debug("rerunning verification")
 						status.Phase = kargoapi.StagePhaseVerifying
+						currentVI = &kargoapi.VerificationInfo{}
 					}
 				}
 			}

@@ -771,9 +771,9 @@ func TestValidateDelete(t *testing.T) {
 								Name: "fake-stage",
 							},
 							Status: kargoapi.StageStatus{
-								CurrentFreight: &kargoapi.FreightReference{
-									Name: "fake-id",
-								},
+								FreightHistory: kargoapi.FreightHistory{{
+									ID: "fake-id",
+								}},
 							},
 						},
 					}

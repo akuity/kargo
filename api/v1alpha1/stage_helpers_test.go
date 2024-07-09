@@ -247,7 +247,7 @@ func TestReverifyStageFreight(t *testing.T) {
 			Namespace: "fake-namespace",
 			Name:      "fake-stage",
 		})
-		require.ErrorContains(t, err, "stage has no existing verification info")
+		require.ErrorContains(t, err, "stage has no current verification info")
 	})
 
 	t.Run("missing verification info ID", func(t *testing.T) {
@@ -261,10 +261,9 @@ func TestReverifyStageFreight(t *testing.T) {
 					FreightHistory: FreightHistory{
 						{
 							Freight: map[string]FreightReference{
-								"fake-warehouse": {
-									VerificationInfo: &VerificationInfo{},
-								},
+								"fake-warehouse": {},
 							},
+							VerificationHistory: []VerificationInfo{{}},
 						},
 					},
 				},
@@ -289,12 +288,11 @@ func TestReverifyStageFreight(t *testing.T) {
 					FreightHistory: FreightHistory{
 						{
 							Freight: map[string]FreightReference{
-								"fake-warehouse": {
-									VerificationInfo: &VerificationInfo{
-										ID: "fake-id",
-									},
-								},
+								"fake-warehouse": {},
 							},
+							VerificationHistory: []VerificationInfo{{
+								ID: "fake-id",
+							}},
 						},
 					},
 				},
@@ -372,7 +370,7 @@ func TestAbortStageFreightVerification(t *testing.T) {
 			Namespace: "fake-namespace",
 			Name:      "fake-stage",
 		})
-		require.ErrorContains(t, err, "stage has no existing verification info")
+		require.ErrorContains(t, err, "stage has no current verification info")
 	})
 
 	t.Run("missing verification info ID", func(t *testing.T) {
@@ -386,10 +384,9 @@ func TestAbortStageFreightVerification(t *testing.T) {
 					FreightHistory: FreightHistory{
 						{
 							Freight: map[string]FreightReference{
-								"fake-warehouse": {
-									VerificationInfo: &VerificationInfo{},
-								},
+								"fake-warehouse": {},
 							},
+							VerificationHistory: []VerificationInfo{{}},
 						},
 					},
 				},
@@ -414,13 +411,12 @@ func TestAbortStageFreightVerification(t *testing.T) {
 					FreightHistory: FreightHistory{
 						{
 							Freight: map[string]FreightReference{
-								"fake-warehouse": {
-									VerificationInfo: &VerificationInfo{
-										ID:    "fake-id",
-										Phase: VerificationPhaseError,
-									},
-								},
+								"fake-warehouse": {},
 							},
+							VerificationHistory: []VerificationInfo{{
+								ID:    "fake-id",
+								Phase: VerificationPhaseError,
+							}},
 						},
 					},
 				},
@@ -453,12 +449,11 @@ func TestAbortStageFreightVerification(t *testing.T) {
 					FreightHistory: FreightHistory{
 						{
 							Freight: map[string]FreightReference{
-								"fake-warehouse": {
-									VerificationInfo: &VerificationInfo{
-										ID: "fake-id",
-									},
-								},
+								"fake-warehouse": {},
 							},
+							VerificationHistory: []VerificationInfo{{
+								ID: "fake-id",
+							}},
 						},
 					},
 				},
