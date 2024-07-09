@@ -12,6 +12,7 @@ import { Description } from '../common/description';
 import { ManifestPreview } from '../common/manifest-preview';
 import { useImages } from '../project/pipelines/utils/useImages';
 
+import { PrLinks } from './pr-links';
 import { Promotions } from './promotions';
 import { StageActions } from './stage-actions';
 import { Verifications } from './verifications';
@@ -41,6 +42,10 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
       .sort((a, b) => moment(b.startTime?.toDate()).diff(moment(a.startTime?.toDate())));
   }, [stage]);
 
+  const repoUrls = useMemo(() => {
+    return (stage.spec?.promotionMechanisms?.gitRepoUpdates || []).map((g) => g.repoURL || '');
+  }, [stage]);
+
   return (
     <Drawer open={!!stageName} onClose={onClose} width={'80%'} closable={false}>
       {stage && (
@@ -59,6 +64,12 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
                 <Description item={stage} loading={false} className='mt-2' />
               </div>
             </div>
+            <div className='ml-auto mr-4'>
+              <PrLinks
+                repoUrls={repoUrls}
+                metadata={stage.status?.lastPromotion?.status?.metadata}
+              />
+            </div>
             <StageActions stage={stage} verificationRunning={isVerificationRunning} />
           </div>
           <Divider style={{ marginTop: '1em' }} />
@@ -73,13 +84,7 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
                 {
                   key: '1',
                   label: 'Promotions',
-                  children: (
-                    <Promotions
-                      repoUrls={(stage.spec?.promotionMechanisms?.gitRepoUpdates || []).map(
-                        (g) => g.repoURL || ''
-                      )}
-                    />
-                  )
+                  children: <Promotions repoUrls={repoUrls} />
                 },
                 {
                   key: '2',
