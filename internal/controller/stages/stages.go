@@ -199,6 +199,12 @@ type reconciler struct {
 		includeApproved bool,
 	) ([]kargoapi.Freight, error)
 
+	getAvailableFreightByOriginFn func(
+		ctx context.Context,
+		stage *kargoapi.Stage,
+		includeApproved bool,
+	) (map[string][]kargoapi.Freight, error)
+
 	listFreightFn func(
 		context.Context,
 		client.ObjectList,
@@ -466,6 +472,7 @@ func newReconciler(
 	r.createPromotionFn = kargoClient.Create
 	// Discovering Freight:
 	r.getAvailableFreightFn = r.getAvailableFreight
+	r.getAvailableFreightByOriginFn = r.getAvailableFreightByOrigin
 	r.listFreightFn = r.kargoClient.List
 	// Stage deletion:
 	r.clearVerificationsFn = r.clearVerifications
@@ -855,14 +862,6 @@ func (r *reconciler) syncNormalStage(
 		return status, nil
 	}
 
-	// TODO: Remove this when we have added support for multiple Freight below.
-	if len(stage.Spec.RequestedFreight) > 1 {
-		logger.Info(
-			"Stage requests multiple Freight. Auto-promotion support has however not been implemented for this (yet).",
-		)
-		return status, nil
-	}
-
 	logger.Debug("checking if auto-promotion is permitted...")
 	if permitted, err :=
 		r.isAutoPromotionPermittedFn(ctx, stage.Namespace, stage.Name); err != nil {
@@ -879,8 +878,7 @@ func (r *reconciler) syncNormalStage(
 
 	// If we get to here, auto-promotion is permitted. Time to go looking for new
 	// Freight...
-
-	availableFreight, err := r.getAvailableFreightFn(ctx, stage, true)
+	availableFreight, err := r.getAvailableFreightByOriginFn(ctx, stage, true)
 	if err != nil {
 		return status, fmt.Errorf(
 			"error finding latest Freight for Stage %q in namespace %q: %w",
@@ -890,94 +888,97 @@ func (r *reconciler) syncNormalStage(
 		)
 	}
 
-	if len(availableFreight) == 0 {
-		logger.Debug("no available Freight found")
-		return status, nil
-	}
+	// Get the current Freight to run further comparisons against.
+	currentFreight := status.FreightHistory.Current()
 
-	// Find the latest Freight by sorting the available Freight by creation time
-	// in descending order.
-	slices.SortFunc(availableFreight, func(lhs, rhs kargoapi.Freight) int {
-		return rhs.CreationTimestamp.Time.Compare(lhs.CreationTimestamp.Time)
-	})
-	latestFreight := availableFreight[0]
+	// Run through the available Freight for each origin and see if we can find
+	// a new one to promote.
+	for origin, freight := range availableFreight {
+		// No Freight available for this origin, so we can't promote anything.
+		if len(freight) == 0 {
+			logger.Debug("no Freight from origin available for auto-promotion", "origin", origin)
+			continue
+		}
 
-	logger = logger.WithValues("freight", latestFreight.Name)
+		// Find the latest Freight by sorting the available Freight by creation time
+		// in descending order.
+		slices.SortFunc(freight, func(lhs, rhs kargoapi.Freight) int {
+			return rhs.CreationTimestamp.Time.Compare(lhs.CreationTimestamp.Time)
+		})
+		latestFreight := freight[0]
 
-	// Only proceed if latest Freight isn't the one we already have
-	// TODO(hidde): This is a naive check, and should be replaced with proper
-	// logic that works with multiple Freight.
-	if currentFreight := status.FreightHistory.Current(); currentFreight != nil && len(currentFreight.Freight) > 0 {
-		for _, requested := range stage.Spec.RequestedFreight {
-			if freightRef, ok := currentFreight.Freight[requested.Origin.String()]; ok &&
+		// Prepare the logger for this origin and Freight.
+		freightLogger := logger.WithValues("origin", origin, "freight", latestFreight.Name)
+
+		// Only proceed if latest Freight isn't the one we already have
+		if currentFreight != nil && len(currentFreight.Freight) > 0 {
+			if freightRef, ok := currentFreight.Freight[origin]; ok &&
 				freightRef.Name == latestFreight.Name {
-				logger.Debug("Stage already has latest available Freight")
-				return status, nil
+				freightLogger.Debug("Stage already has latest available Freight for origin")
+				continue
 			}
 		}
-	}
 
-	// If a promotion already exists for this Stage + Freight, then we're
-	// disqualified from auto-promotion.
-	promos := kargoapi.PromotionList{}
-	if err := r.listPromosFn(
-		ctx,
-		&promos,
-		&client.ListOptions{
-			Namespace: stage.Namespace,
-			FieldSelector: fields.Set(
-				map[string]string{
-					kubeclient.PromotionsByStageAndFreightIndexField: kubeclient.
-						StageAndFreightKey(stage.Name, latestFreight.Name),
-				},
-			).AsSelector(),
-		},
-	); err != nil {
-		return status, fmt.Errorf(
-			"error listing existing Promotions for Freight %q in namespace %q: %w",
-			latestFreight.Name,
-			stage.Namespace,
-			err,
-		)
-	}
-
-	if len(promos.Items) > 0 {
-		logger.Debug("Promotion already exists for Freight")
-		return status, nil
-	}
-
-	logger.Debug("auto-promotion will proceed")
-
-	promo := kargo.NewPromotion(ctx, *stage, latestFreight.Name)
-	if err :=
-		r.createPromotionFn(ctx, &promo); err != nil {
-		return status, fmt.Errorf(
-			"error creating Promotion of Stage %q in namespace %q to Freight %q: %w",
-			stage.Name,
-			stage.Namespace,
-			latestFreight.Name,
-			err,
-		)
-	}
-
-	r.recorder.AnnotatedEventf(
-		&promo,
-		kargoapi.NewPromotionEventAnnotations(
+		// If a promotion already exists for this Stage + Freight, then we're
+		// disqualified from auto-promotion for this origin.
+		promos := kargoapi.PromotionList{}
+		if err = r.listPromosFn(
 			ctx,
-			kargoapi.FormatEventControllerActor(r.cfg.Name()),
-			&promo,
-			&latestFreight,
-		),
-		corev1.EventTypeNormal,
-		kargoapi.EventReasonPromotionCreated,
-		"Automatically promoted Freight for Stage %q",
-		promo.Spec.Stage,
-	)
+			&promos,
+			&client.ListOptions{
+				Namespace: stage.Namespace,
+				FieldSelector: fields.OneTermEqualSelector(
+					kubeclient.PromotionsByStageAndFreightIndexField,
+					kubeclient.StageAndFreightKey(stage.Name, latestFreight.Name),
+				),
+				Limit: 1,
+			},
+		); err != nil {
+			return status, fmt.Errorf(
+				"error listing existing Promotions for Freight %q in namespace %q: %w",
+				latestFreight.Name,
+				stage.Namespace,
+				err,
+			)
+		}
+		if len(promos.Items) > 0 {
+			logger.Debug("Promotion already exists for Freight")
+			return status, nil
+		}
 
-	logger.Debug(
-		"created Promotion resource",
-		"promotion", promo.Name,
-	)
+		// Auto-promotion of this Freight is permitted.
+		logger.Debug("auto-promoting Freight to Stage")
+		promo := kargo.NewPromotion(ctx, *stage, latestFreight.Name)
+		if err = r.createPromotionFn(ctx, &promo); err != nil {
+			return status, fmt.Errorf(
+				"error creating Promotion of Stage %q in namespace %q to Freight %q: %w",
+				stage.Name,
+				stage.Namespace,
+				latestFreight.Name,
+				err,
+			)
+		}
+
+		r.recorder.AnnotatedEventf(
+			&promo,
+			kargoapi.NewPromotionEventAnnotations(
+				ctx,
+				kargoapi.FormatEventControllerActor(r.cfg.Name()),
+				&promo,
+				&latestFreight,
+			),
+			corev1.EventTypeNormal,
+			kargoapi.EventReasonPromotionCreated,
+			"Automatically promoted Freight from origin %q for Stage %q",
+			origin,
+			promo.Spec.Stage,
+		)
+
+		logger.Debug(
+			"created Promotion resource",
+			"promotion", promo.Name,
+		)
+	}
 
 	return status, nil
 }
@@ -1445,6 +1446,126 @@ func (r *reconciler) getAvailableFreight(
 	availableFreight = slices.CompactFunc(availableFreight, func(lhs, rhs kargoapi.Freight) bool {
 		return lhs.Name == rhs.Name
 	})
+
+	return availableFreight, nil
+}
+
+func (r *reconciler) getAvailableFreightByOrigin(
+	ctx context.Context,
+	stage *kargoapi.Stage,
+	includeApproved bool,
+) (map[string][]kargoapi.Freight, error) {
+	var availableFreight = make(map[string][]kargoapi.Freight, len(stage.Spec.RequestedFreight))
+
+	for _, req := range stage.Spec.RequestedFreight {
+		// Initialize the Freight slice for the origin
+		originID := req.Origin.String()
+		availableFreight[originID] = nil
+
+		// Get Freight direct from Warehouses if allowed
+		if req.Origin.Kind == kargoapi.FreightOriginKindWarehouse && req.Sources.Direct {
+			var freight kargoapi.FreightList
+			if err := r.listFreightFn(
+				ctx,
+				&freight,
+				&client.ListOptions{
+					Namespace: stage.Namespace,
+					FieldSelector: fields.OneTermEqualSelector(
+						kubeclient.FreightByWarehouseIndexField,
+						req.Origin.Name,
+					),
+				},
+			); err != nil {
+				return nil, fmt.Errorf(
+					"error listing Freight from %s in namespace %q: %w",
+					req.Origin.String(),
+					stage.Namespace,
+					err,
+				)
+			}
+
+			availableFreight[req.Origin.String()] = append(availableFreight[req.Origin.String()], freight.Items...)
+
+			// If we allow direct Freight, we do not need to look for Freight
+			// from other sources. Continue to the next requested Freight.
+			continue
+		}
+
+		// Get Freight verified in upstream Stages
+		for _, upstream := range req.Sources.Stages {
+			var verifiedFreight kargoapi.FreightList
+			if err := r.listFreightFn(
+				ctx,
+				&verifiedFreight,
+				&client.ListOptions{
+					Namespace: stage.Namespace,
+					FieldSelector: fields.AndSelectors(
+						// TODO(hidde): once we support more Freight origin
+						// kinds, we need to adjust this.
+						fields.OneTermEqualSelector(
+							kubeclient.FreightByWarehouseIndexField,
+							req.Origin.Name,
+						),
+						fields.OneTermEqualSelector(
+							kubeclient.FreightByVerifiedStagesIndexField,
+							upstream,
+						),
+					),
+				},
+			); err != nil {
+				return nil, fmt.Errorf(
+					"error listing Freight verified in Stage %q in namespace %q: %w",
+					upstream,
+					stage.Namespace,
+					err,
+				)
+			}
+
+			availableFreight[originID] = append(availableFreight[originID], verifiedFreight.Items...)
+		}
+
+		if includeApproved {
+			var approvedFreight kargoapi.FreightList
+			if err := r.listFreightFn(
+				ctx,
+				&approvedFreight,
+				&client.ListOptions{
+					Namespace: stage.Namespace,
+					FieldSelector: fields.AndSelectors(
+						// TODO(hidde): once we support more Freight origin
+						// kinds, we need to adjust this.
+						fields.OneTermEqualSelector(
+							kubeclient.FreightByWarehouseIndexField,
+							req.Origin.Name,
+						),
+						fields.OneTermEqualSelector(
+							kubeclient.FreightApprovedForStagesIndexField,
+							stage.Name,
+						),
+					),
+				},
+			); err != nil {
+				return nil, fmt.Errorf(
+					"error listing Freight approved for Stage %q in namespace %q: %w",
+					stage,
+					stage.Namespace,
+					err,
+				)
+			}
+
+			availableFreight[originID] = append(availableFreight[originID], approvedFreight.Items...)
+		}
+	}
+
+	// Deduplicate the Freight
+	for origin := range availableFreight {
+		slices.SortFunc(availableFreight[origin], func(lhs, rhs kargoapi.Freight) int {
+			return strings.Compare(lhs.Name, rhs.Name)
+		})
+		availableFreight[origin] = slices.CompactFunc(availableFreight[origin], func(lhs, rhs kargoapi.Freight) bool {
+			return lhs.Name == rhs.Name
+		})
+	}
 
 	return availableFreight, nil
 }

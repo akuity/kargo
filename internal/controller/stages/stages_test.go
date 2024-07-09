@@ -1239,9 +1239,9 @@ func TestSyncNormalStage(t *testing.T) {
 				) (*kargoapi.Freight, error) {
 					return &kargoapi.Freight{}, nil
 				},
-				getAvailableFreightFn: func(
+				getAvailableFreightByOriginFn: func(
 					context.Context, *kargoapi.Stage, bool,
-				) ([]kargoapi.Freight, error) {
+				) (map[string][]kargoapi.Freight, error) {
 					return nil, errors.New("something went wrong")
 				},
 			},
@@ -1314,9 +1314,9 @@ func TestSyncNormalStage(t *testing.T) {
 				) (bool, error) {
 					return true, nil
 				},
-				getAvailableFreightFn: func(
+				getAvailableFreightByOriginFn: func(
 					context.Context, *kargoapi.Stage, bool,
-				) ([]kargoapi.Freight, error) {
+				) (map[string][]kargoapi.Freight, error) {
 					return nil, nil
 				},
 			},
@@ -1391,14 +1391,18 @@ func TestSyncNormalStage(t *testing.T) {
 				) (*kargoapi.Freight, error) {
 					return &kargoapi.Freight{}, nil
 				},
-				getAvailableFreightFn: func(
+				getAvailableFreightByOriginFn: func(
 					context.Context, *kargoapi.Stage, bool,
-				) ([]kargoapi.Freight, error) {
-					return []kargoapi.Freight{{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: "fake-freight-id",
+				) (map[string][]kargoapi.Freight, error) {
+					return map[string][]kargoapi.Freight{
+						testOrigin.String(): {
+							{
+								ObjectMeta: metav1.ObjectMeta{
+									Name: "fake-freight-id",
+								},
+							},
 						},
-					}}, nil
+					}, nil
 				},
 			},
 			assertions: func(
@@ -1468,14 +1472,18 @@ func TestSyncNormalStage(t *testing.T) {
 						},
 					}, nil
 				},
-				getAvailableFreightFn: func(
+				getAvailableFreightByOriginFn: func(
 					context.Context, *kargoapi.Stage, bool,
-				) ([]kargoapi.Freight, error) {
-					return []kargoapi.Freight{{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: "fake-freight-id",
+				) (map[string][]kargoapi.Freight, error) {
+					return map[string][]kargoapi.Freight{
+						testOrigin.String(): {
+							{
+								ObjectMeta: metav1.ObjectMeta{
+									Name: "fake-freight-id",
+								},
+							},
 						},
-					}}, nil
+					}, nil
 				},
 				listPromosFn: func(
 					_ context.Context,
@@ -1555,14 +1563,18 @@ func TestSyncNormalStage(t *testing.T) {
 						},
 					}, nil
 				},
-				getAvailableFreightFn: func(
+				getAvailableFreightByOriginFn: func(
 					context.Context, *kargoapi.Stage, bool,
-				) ([]kargoapi.Freight, error) {
-					return []kargoapi.Freight{{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: "fake-freight-id",
+				) (map[string][]kargoapi.Freight, error) {
+					return map[string][]kargoapi.Freight{
+						testOrigin.String(): {
+							{
+								ObjectMeta: metav1.ObjectMeta{
+									Name: "fake-freight-id",
+								},
+							},
 						},
-					}}, nil
+					}, nil
 				},
 				listPromosFn: func(
 					context.Context,
@@ -1818,14 +1830,18 @@ func TestSyncNormalStage(t *testing.T) {
 						},
 					}, nil
 				},
-				getAvailableFreightFn: func(
+				getAvailableFreightByOriginFn: func(
 					context.Context, *kargoapi.Stage, bool,
-				) ([]kargoapi.Freight, error) {
-					return []kargoapi.Freight{{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: "fake-freight-id",
+				) (map[string][]kargoapi.Freight, error) {
+					return map[string][]kargoapi.Freight{
+						testOrigin.String(): {
+							{
+								ObjectMeta: metav1.ObjectMeta{
+									Name: "fake-freight-id",
+								},
+							},
 						},
-					}}, nil
+					}, nil
 				},
 				listPromosFn: func(
 					context.Context,
