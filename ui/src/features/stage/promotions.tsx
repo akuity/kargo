@@ -18,8 +18,10 @@ import { ListPromotionsResponse } from '@ui/gen/service/v1alpha1/service_pb';
 import { Freight, Promotion } from '@ui/gen/v1alpha1/generated_pb';
 
 import { PromotionStatusIcon } from '../common/promotion-status/promotion-status-icon';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faExternalLinkAlt } from '@fortawesome/free-solid-svg-icons';
 
-export const Promotions = () => {
+export const Promotions = ({ repoUrls }: { repoUrls?: string[] }) => {
   const client = useQueryClient();
   const { name: projectName, stageName } = useParams();
   const { data: promotionsResponse, isLoading } = useQuery(
@@ -140,6 +142,22 @@ export const Promotions = () => {
             {promotion.spec?.freight?.substring(0, 7)}
           </Link>
         </Tooltip>
+      )
+    },
+    {
+      render: (_, promotion) => (
+        <div className='flex gap-2 flex-wrap'>
+          {(repoUrls || []).map((repo, i) => {
+            const url = promotion?.status?.metadata[`pr-url:${repo}`];
+            return url ? (
+              <Tooltip title={url} key={i}>
+                <a href={url} className='cursor-pointer' target='_blank'>
+                  <FontAwesomeIcon icon={faExternalLinkAlt} />
+                </a>
+              </Tooltip>
+            ) : null;
+          })}
+        </div>
       )
     }
   ];

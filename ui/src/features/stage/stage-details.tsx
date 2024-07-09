@@ -73,7 +73,13 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
                 {
                   key: '1',
                   label: 'Promotions',
-                  children: <Promotions />
+                  children: (
+                    <Promotions
+                      repoUrls={(stage.spec?.promotionMechanisms?.gitRepoUpdates || []).map(
+                        (g) => g.repoURL || ''
+                      )}
+                    />
+                  )
                 },
                 {
                   key: '2',
