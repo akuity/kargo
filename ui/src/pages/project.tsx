@@ -7,7 +7,8 @@ import {
   faPeopleGroup
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Tabs, Tooltip } from 'antd';
+import { Tooltip } from 'antd';
+import classNames from 'classnames';
 import { generatePath, useNavigate, useParams } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
@@ -20,7 +21,6 @@ import { Roles } from '@ui/features/project/roles/roles';
 import { ProjectSettings } from '@ui/features/project/settings/project-settings';
 import { getProject } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 import { Project as _Project } from '@ui/gen/v1alpha1/generated_pb';
-import classNames from 'classnames';
 
 const tabs = {
   pipelines: {
