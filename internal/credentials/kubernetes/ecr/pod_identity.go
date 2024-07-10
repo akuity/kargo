@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -82,17 +83,22 @@ func (p *podIdentityCredentialHelper) getCredentials(
 	repoURL string,
 	_ *corev1.Secret,
 ) (*credentials.Credentials, error) {
-	if credType != credentials.TypeImage ||
+	if credType == credentials.TypeGit ||
 		p.awsAccountID == "" { // Pod Identity isn't set up for this controller
 		// This helper can't handle this
 		return nil, nil
 	}
 
-	matches := ecrURLRegex.FindStringSubmatch(repoURL)
-	if len(matches) != 2 { // This doesn't look like an ECR URL
+	if credType == credentials.TypeHelm && !strings.HasPrefix(repoURL, "oci://") {
+		// Only OCI Helm repos are supported in ECR
 		return nil, nil
 	}
-	region := matches[1]
+
+	matches := ecrURLRegex.FindStringSubmatch(repoURL)
+	if len(matches) != 3 { // This doesn't look like an ECR URL
+		return nil, nil
+	}
+	region := matches[2]
 
 	cacheKey := p.tokenCacheKey(region, project)
 

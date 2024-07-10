@@ -57,13 +57,18 @@ func (a *accessKeyCredentialHelper) getCredentials(
 	repoURL string,
 	secret *corev1.Secret,
 ) (*credentials.Credentials, error) {
-	if credType != credentials.TypeImage || secret == nil {
+	if credType == credentials.TypeGit || secret == nil {
 		// This helper can't handle this
 		return nil, nil
 	}
 
+	if credType == credentials.TypeHelm && !strings.HasPrefix(repoURL, "oci://") {
+		// Only OCI Helm repos are supported in ECR
+		return nil, nil
+	}
+
 	matches := ecrURLRegex.FindStringSubmatch(repoURL)
-	if len(matches) != 2 { // This doesn't look like an ECR URL
+	if len(matches) != 3 { // This doesn't look like an ECR URL
 		return nil, nil
 	}
 
