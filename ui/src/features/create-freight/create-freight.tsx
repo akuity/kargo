@@ -221,7 +221,7 @@ export const CreateFreight = ({
 
   return (
     <div>
-      <div className='text-xs font-medium text-neutral-500 mb-2'>FREIGHT CONTENTS</div>
+      <div className='text-xs font-medium text-gray-500 mb-2'>FREIGHT CONTENTS</div>
       <div className='mb-4 h-12 flex items-center'>
         {Object.keys(chosenItems)?.length > 0 ? (
           <>
@@ -251,14 +251,14 @@ export const CreateFreight = ({
             </Button>
           </>
         ) : (
-          <div className='text-neutral-400'>
+          <div className='text-gray-400'>
             Freight contents will appear here once you select artifacts below.
           </div>
         )}
       </div>
       {warehouse ? (
-        <div className='flex w-full border border-solid border-neutral-200 rounded-md overflow-hidden'>
-          <div className='bg-neutral-50 p-4' style={{ width: '250px' }}>
+        <div className='flex w-full border border-solid border-gray-200 rounded-md overflow-hidden'>
+          <div className='bg-gray-50 p-4' style={{ width: '250px' }}>
             <ArtifactMenuGroup icon={faDocker} label='Images' items={images} {...commonProps} />
             <ArtifactMenuGroup icon={faAnchor} label='Charts' items={charts} {...commonProps} />
             <ArtifactMenuGroup icon={faGit} label='Git' items={git} {...commonProps} />
@@ -268,7 +268,7 @@ export const CreateFreight = ({
           </div>
         </div>
       ) : (
-        <div className='text-neutral-500 text-sm mt-2'>Please select a warehouse to continue.</div>
+        <div className='text-gray-500 text-sm mt-2'>Please select a warehouse to continue.</div>
       )}
     </div>
   );

@@ -25,8 +25,8 @@ const DownloadItem = ({
   icon: IconDefinition;
   links: { url: string; title?: string }[];
 }) => (
-  <div className='p-4 rounded bg-neutral-100 flex flex-col' style={{ width: '250px' }}>
-    <div className='flex items-center mb-4 text-neutral-800 font-medium text-lg mx-auto'>
+  <div className='p-4 rounded bg-gray-100 flex flex-col' style={{ width: '250px' }}>
+    <div className='flex items-center mb-4 text-gray-800 font-medium text-lg mx-auto'>
       <FontAwesomeIcon icon={icon} className='mr-2' />
       {title}
     </div>

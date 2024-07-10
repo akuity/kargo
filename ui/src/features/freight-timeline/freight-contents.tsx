@@ -30,7 +30,9 @@ export const FreightContents = (props: {
         'flex-col p-1 w-full': !horizontal,
         'mr-2 p-2 max-w-60 flex-shrink': horizontal,
         'bg-black text-white': dark,
-        'bg-neutral-300': !dark
+        'bg-white': !dark && highlighted && !horizontal,
+        'border border-solid border-gray-200': !dark && !highlighted && !horizontal,
+        'bg-gray-200': !dark && horizontal
       })}
       overlay={props.overlay}
       title={props.title}

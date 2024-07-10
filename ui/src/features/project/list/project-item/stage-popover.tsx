@@ -32,7 +32,7 @@ export const StagePopover = ({ project, stage }: { project?: string; stage?: Sta
   });
 
   const _label = ({ children }: { children: string }) => (
-    <div className='text-xs font-semibold text-neutral-300 mb-1'>{children}</div>
+    <div className='text-xs font-semibold text-gray-300 mb-1'>{children}</div>
   );
 
   const navigate = useNavigate();

@@ -39,9 +39,7 @@ export const ProjectSettings = () => {
       placement='bottomRight'
       trigger={['click']}
     >
-      <Button icon={<FontAwesomeIcon icon={faCog} size='1x' />}>
-        <FontAwesomeIcon icon={faChevronDown} size='xs' />
-      </Button>
+      <FontAwesomeIcon icon={faChevronDown} className='cursor-pointer text-sm ml-2 text-gray-400' />
     </Dropdown>
   );
 };

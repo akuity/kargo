@@ -138,7 +138,7 @@ export const FreightTimeline = ({
                 >
                   <FontAwesomeIcon
                     icon={faArrowsLeftRightToLine}
-                    className='text-neutral-300'
+                    className='text-gray-300'
                     size='2x'
                   />
                 </FreightItem>
