@@ -71,7 +71,12 @@ type reconciler struct {
 		types.NamespacedName,
 	) (*kargoapi.Stage, error)
 
-	promoteFn func(context.Context, kargoapi.Promotion, *kargoapi.Freight) (*kargoapi.PromotionStatus, error)
+	promoteFn func(
+		context.Context,
+		kargoapi.Promotion,
+		*kargoapi.Stage,
+		*kargoapi.Freight,
+	) (*kargoapi.PromotionStatus, error)
 }
 
 // SetupReconcilerWithManager initializes a reconciler for Promotion resources
@@ -286,6 +291,48 @@ func (r *reconciler) Reconcile(
 		}
 	}
 
+	// Retrieve the Stage associated with the Promotion.
+	stage, err := r.getStageFn(
+		ctx,
+		r.kargoClient,
+		types.NamespacedName{
+			Namespace: promo.Namespace,
+			Name:      promo.Spec.Stage,
+		},
+	)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf(
+			"error finding Stage %q in namespace %q: %w",
+			promo.Spec.Stage, promo.Namespace, err,
+		)
+	}
+	if stage == nil {
+		return ctrl.Result{}, fmt.Errorf(
+			"could not find Stage %q in namespace %q",
+			promo.Spec.Stage, promo.Namespace,
+		)
+	}
+	logger.Debug("found associated Stage")
+
+	// Confirm that the Stage is awaiting this Promotion.
+	//
+	// This is a temporary measure to ensure that the Promotion is only
+	// allowed to proceed if the Stage is expecting it. This is necessary
+	// to ensure we can derive Freight from the previous Promotion in the
+	// Stage's status to construct the Freight collection for the current
+	// Promotion.
+	//
+	// TODO(hidde): This adds tight coupling between the Promotion and the
+	// Stage (again, but without patching the Stage this time). We should
+	// explore a more loosely-coupled approach, perhaps by making the
+	// Freight self-aware of the Stages it has been promoted to, or even
+	// more radically, by making the Promotion self-aware of the Freight
+	// collection it is promoting.
+	if stage.Status.CurrentPromotion == nil || stage.Status.CurrentPromotion.Name != promo.Name {
+		logger.Debug("Stage is not awaiting Promotion", "stage", stage.Name, "promotion", promo.Name)
+		return ctrl.Result{Requeue: true}, nil
+	}
+
 	promoCtx := logging.ContextWithLogger(ctx, logger)
 
 	newStatus := promo.Status.DeepCopy()
@@ -308,6 +355,7 @@ func (r *reconciler) Reconcile(
 		otherStatus, promoteErr := r.promoteFn(
 			promoCtx,
 			*promo,
+			stage,
 			freight,
 		)
 		if promoteErr != nil {
@@ -402,27 +450,12 @@ func (r *reconciler) Reconcile(
 func (r *reconciler) promote(
 	ctx context.Context,
 	promo kargoapi.Promotion,
+	stage *kargoapi.Stage,
 	targetFreight *kargoapi.Freight,
 ) (*kargoapi.PromotionStatus, error) {
 	logger := logging.LoggerFromContext(ctx)
-	stageName := promo.Spec.Stage
+	stageName := stage.Name
 	stageNamespace := promo.Namespace
-
-	stage, err := r.getStageFn(
-		ctx,
-		r.kargoClient,
-		types.NamespacedName{
-			Namespace: stageNamespace,
-			Name:      stageName,
-		},
-	)
-	if err != nil {
-		return nil, fmt.Errorf("error finding Stage %q in namespace %q: %w", stageName, stageNamespace, err)
-	}
-	if stage == nil {
-		return nil, fmt.Errorf("could not find Stage %q in namespace %q", stageName, stageNamespace)
-	}
-	logger.Debug("found associated Stage")
 
 	if targetFreight == nil {
 		return nil, fmt.Errorf("Freight %q not found in namespace %q", promo.Spec.Freight, promo.Namespace)

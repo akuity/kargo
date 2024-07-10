@@ -1986,7 +1986,7 @@ func TestReconciler_syncPromotions(t *testing.T) {
 				require.Equal(t, kargoapi.StagePhasePromoting, status.Phase)
 				require.Equal(t, &kargoapi.PromotionReference{
 					Name: "fake-promotion",
-					Freight: kargoapi.FreightReference{
+					Freight: &kargoapi.FreightReference{
 						Name: "fake-freight",
 					},
 				}, status.CurrentPromotion)
@@ -2118,7 +2118,7 @@ func TestReconciler_syncPromotions(t *testing.T) {
 							},
 						},
 					},
-					Freight: kargoapi.FreightReference{
+					Freight: &kargoapi.FreightReference{
 						Name:   "fake-freight-3",
 						Origin: testOrigin,
 					},

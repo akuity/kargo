@@ -1021,7 +1021,7 @@ func (r *reconciler) syncPromotions(
 			Name: latestPromo.Name,
 		}
 		if latestPromo.Status.Freight != nil {
-			status.CurrentPromotion.Freight = *latestPromo.Status.Freight.DeepCopy()
+			status.CurrentPromotion.Freight = latestPromo.Status.Freight.DeepCopy()
 		}
 	} else {
 		status.CurrentPromotion = nil
@@ -1051,7 +1051,7 @@ func (r *reconciler) syncPromotions(
 				FinishedAt: promo.Status.FinishedAt,
 			}
 			if promo.Status.Freight != nil {
-				info.Freight = *promo.Status.Freight.DeepCopy()
+				info.Freight = promo.Status.Freight.DeepCopy()
 			}
 			newPromotions = append(newPromotions, info)
 		}
