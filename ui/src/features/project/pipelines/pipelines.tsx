@@ -1,9 +1,12 @@
 import { useMutation, useQuery } from '@connectrpc/connect-query';
 import {
   faChevronDown,
+  faExpand,
   faEye,
   faEyeSlash,
   faFilter,
+  faMagnifyingGlassMinus,
+  faMagnifyingGlassPlus,
   faMasksTheater,
   faPalette,
   faRefresh,
@@ -89,6 +92,8 @@ export const Pipelines = () => {
       refetchFreightData();
     }
   });
+
+  const [zoom, setZoom] = React.useState(100);
 
   const [highlightedStages, setHighlightedStages] = React.useState<{ [key: string]: boolean }>({});
   const [hideSubscriptions, setHideSubscriptions] = useLocalStorage(
@@ -258,11 +263,21 @@ export const Pipelines = () => {
         <div className='flex flex-grow w-full'>
           <div className={`overflow-hidden flex-grow w-full h-full ${styles.dag}`}>
             <div className='flex justify-end items-center p-4 mb-4'>
-              <div>
+              <div className='flex gap-2'>
+                {zoom !== 100 && (
+                  <Button onClick={() => setZoom(100)} icon={<FontAwesomeIcon icon={faExpand} />} />
+                )}
+                <Button
+                  onClick={() => setZoom((prev) => Math.max(10, prev - 10))}
+                  icon={<FontAwesomeIcon icon={faMagnifyingGlassMinus} />}
+                />
+                <Button
+                  onClick={() => setZoom((prev) => Math.min(200, prev + 10))}
+                  icon={<FontAwesomeIcon icon={faMagnifyingGlassPlus} />}
+                />
                 <Tooltip title='Reassign Stage Colors'>
                   <Button
                     type='default'
-                    className='mr-2'
                     onClick={() => {
                       clearColors(name || '');
                       window.location.reload();
@@ -311,7 +326,12 @@ export const Pipelines = () => {
             <div className='overflow-auto p-6 h-full'>
               <div
                 className='relative'
-                style={{ width: box?.width, height: box?.height, margin: '0 auto' }}
+                style={{
+                  width: box?.width,
+                  height: box?.height,
+                  margin: '0 auto',
+                  zoom: `${zoom}%`
+                }}
               >
                 {nodes?.map((node, index) => (
                   <div
