@@ -1,5 +1,5 @@
 import { useMutation } from '@connectrpc/connect-query';
-import { faDocker, faGit } from '@fortawesome/free-brands-svg-icons';
+import { faDocker, faGitAlt } from '@fortawesome/free-brands-svg-icons';
 import { faAnchor } from '@fortawesome/free-solid-svg-icons';
 import { Button, message } from 'antd';
 import { useMemo, useState } from 'react';
@@ -261,7 +261,7 @@ export const CreateFreight = ({
           <div className='bg-gray-50 p-4' style={{ width: '250px' }}>
             <ArtifactMenuGroup icon={faDocker} label='Images' items={images} {...commonProps} />
             <ArtifactMenuGroup icon={faAnchor} label='Charts' items={charts} {...commonProps} />
-            <ArtifactMenuGroup icon={faGit} label='Git' items={git} {...commonProps} />
+            <ArtifactMenuGroup icon={faGitAlt} label='Git' items={git} {...commonProps} />
           </div>
           <div className='w-full p-4 overflow-auto'>
             <DiscoveryTable />

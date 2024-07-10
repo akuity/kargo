@@ -1,4 +1,4 @@
-import { faDocker, faGit } from '@fortawesome/free-brands-svg-icons';
+import { faDocker, faGitAlt } from '@fortawesome/free-brands-svg-icons';
 import { IconDefinition, faAnchor } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Tooltip } from 'antd';
@@ -16,7 +16,7 @@ export const FreightContents = (props: {
   dark?: boolean;
 }) => {
   const { freight, highlighted, horizontal, dark } = props;
-  const linkClass = `${highlighted ? 'text-blue-600' : 'text-gray-400'} hover:text-blue-500 underline hover:underline max-w-full min-w-0 flex-shrink`;
+  const linkClass = `${highlighted ? 'text-blue-500' : 'text-gray-400'} hover:text-blue-400 hover:underline max-w-full min-w-0 flex-shrink`;
 
   const FreightContentItem = (props: {
     icon: IconDefinition;
@@ -39,7 +39,8 @@ export const FreightContents = (props: {
     >
       <FontAwesomeIcon
         icon={props.icon}
-        className={classNames('px-1 text-lg', {
+        style={{ fontSize: '14px' }}
+        className={classNames('px-1', {
           'mb-2': !horizontal,
           'mr-2': horizontal
         })}
@@ -69,7 +70,7 @@ export const FreightContents = (props: {
         <FreightContentItem
           key={c.id}
           overlay={<CommitInfo commit={c} />}
-          icon={faGit}
+          icon={faGitAlt}
           href={`${c.repoURL?.replace('.git', '')}/commit/${c.id}`}
         >
           {c.tag && c.tag.length > 12
