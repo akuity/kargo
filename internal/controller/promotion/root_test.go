@@ -13,7 +13,8 @@ import (
 
 func TestNewMechanisms(t *testing.T) {
 	promoMechs := NewMechanisms(
-		fake.NewClientBuilder().Build(),
+		fake.NewFakeClient(),
+		fake.NewFakeClient(),
 		&credentials.FakeDB{},
 	)
 	require.IsType(t, &compositeMechanism{}, promoMechs)

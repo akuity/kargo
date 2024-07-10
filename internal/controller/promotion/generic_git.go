@@ -1,6 +1,8 @@
 package promotion
 
 import (
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/credentials"
 )
@@ -8,10 +10,12 @@ import (
 // newGenericGitMechanism returns a gitMechanism that only only selects and
 // performs updates that do not involve any configuration management tools.
 func newGenericGitMechanism(
+	cl client.Client,
 	credentialsDB credentials.Database,
 ) Mechanism {
 	return newGitMechanism(
 		"generic Git promotion mechanism",
+		cl,
 		credentialsDB,
 		selectGenericGitUpdates,
 		nil,

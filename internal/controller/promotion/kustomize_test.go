@@ -6,6 +6,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/git"
@@ -13,9 +15,14 @@ import (
 )
 
 func TestNewKustomizeMechanism(t *testing.T) {
-	pm := newKustomizeMechanism(&credentials.FakeDB{})
+	pm := newKustomizeMechanism(
+		fake.NewFakeClient(),
+		&credentials.FakeDB{},
+	)
 	kpm, ok := pm.(*gitMechanism)
 	require.True(t, ok)
+	require.Equal(t, "Kustomize promotion mechanism", kpm.name)
+	require.NotNil(t, kpm.client)
 	require.NotNil(t, kpm.selectUpdatesFn)
 	require.NotNil(t, kpm.applyConfigManagementFn)
 }
@@ -78,6 +85,32 @@ func TestKustomizerApply(t *testing.T) {
 		assertions func(t *testing.T, changes []string, err error)
 	}{
 		{
+			name: "error finding image from Freight",
+			update: kargoapi.GitRepoUpdate{
+				Kustomize: &kargoapi.KustomizePromotionMechanism{
+					Images: []kargoapi.KustomizeImageUpdate{
+						{Image: "fake-image"},
+					},
+				},
+			},
+			kustomizer: &kustomizer{
+				findImageFn: func(
+					context.Context,
+					client.Client,
+					*kargoapi.Stage,
+					*kargoapi.FreightOrigin,
+					[]kargoapi.FreightReference,
+					string,
+				) (*kargoapi.Image, error) {
+					return nil, errors.New("something went wrong")
+				},
+			},
+			assertions: func(t *testing.T, _ []string, err error) {
+				require.ErrorContains(t, err, "error finding image")
+				require.ErrorContains(t, err, "something went wrong")
+			},
+		},
+		{
 			name: "error running kustomize edit set image",
 			update: kargoapi.GitRepoUpdate{
 				Kustomize: &kargoapi.KustomizePromotionMechanism{
@@ -87,6 +120,16 @@ func TestKustomizerApply(t *testing.T) {
 				},
 			},
 			kustomizer: &kustomizer{
+				findImageFn: func(
+					context.Context,
+					client.Client,
+					*kargoapi.Stage,
+					*kargoapi.FreightOrigin,
+					[]kargoapi.FreightReference,
+					string,
+				) (*kargoapi.Image, error) {
+					return &kargoapi.Image{}, nil
+				},
 				setImageFn: func(string, string) error {
 					return errors.New("something went wrong")
 				},
@@ -109,6 +152,19 @@ func TestKustomizerApply(t *testing.T) {
 				},
 			},
 			kustomizer: &kustomizer{
+				findImageFn: func(
+					context.Context,
+					client.Client,
+					*kargoapi.Stage,
+					*kargoapi.FreightOrigin,
+					[]kargoapi.FreightReference,
+					string,
+				) (*kargoapi.Image, error) {
+					return &kargoapi.Image{
+						RepoURL: "fake-image",
+						Tag:     "fake-tag",
+					}, nil
+				},
 				setImageFn: func(string, string) error {
 					return nil
 				},
@@ -138,6 +194,19 @@ func TestKustomizerApply(t *testing.T) {
 				},
 			},
 			kustomizer: &kustomizer{
+				findImageFn: func(
+					context.Context,
+					client.Client,
+					*kargoapi.Stage,
+					*kargoapi.FreightOrigin,
+					[]kargoapi.FreightReference,
+					string,
+				) (*kargoapi.Image, error) {
+					return &kargoapi.Image{
+						RepoURL: "fake-image",
+						Digest:  "fake-digest",
+					}, nil
+				},
 				setImageFn: func(string, string) error {
 					return nil
 				},
@@ -155,10 +224,18 @@ func TestKustomizerApply(t *testing.T) {
 		},
 	}
 	for _, testCase := range testCases {
+		stage := &kargoapi.Stage{
+			Spec: kargoapi.StageSpec{
+				PromotionMechanisms: &kargoapi.PromotionMechanisms{
+					GitRepoUpdates: []kargoapi.GitRepoUpdate{testCase.update},
+				},
+			},
+		}
 		t.Run(testCase.name, func(t *testing.T) {
 			changes, err := testCase.kustomizer.apply(
-				context.TODO(),
-				testCase.update,
+				context.Background(),
+				stage,
+				&stage.Spec.PromotionMechanisms.GitRepoUpdates[0],
 				[]kargoapi.FreightReference{{
 					Images: []kargoapi.Image{
 						{
@@ -168,7 +245,6 @@ func TestKustomizerApply(t *testing.T) {
 						},
 					},
 				}},
-				"",
 				"",
 				"",
 				"",

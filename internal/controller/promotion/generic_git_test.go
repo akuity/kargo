@@ -4,15 +4,21 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/credentials"
 )
 
 func TestNewGenericGitMechanism(t *testing.T) {
-	pm := newGenericGitMechanism(&credentials.FakeDB{})
+	pm := newGenericGitMechanism(
+		fake.NewFakeClient(),
+		&credentials.FakeDB{},
+	)
 	ggpm, ok := pm.(*gitMechanism)
 	require.True(t, ok)
+	require.Equal(t, "generic Git promotion mechanism", ggpm.name)
+	require.NotNil(t, ggpm.client)
 	require.NotNil(t, ggpm.selectUpdatesFn)
 	require.Nil(t, ggpm.applyConfigManagementFn)
 }
