@@ -161,20 +161,19 @@ func (p *podIdentityCredentialHelper) getAuthToken(
 	output, err := ecrSvc.GetAuthorizationToken(ctx, &ecr.GetAuthorizationTokenInput{})
 	if err != nil {
 		var re *awshttp.ResponseError
-		if errors.As(err, &re) {
-			if re.HTTPStatusCode() != http.StatusForbidden {
-				return "", err
-			}
-			logger.Debug(
-				"controller IAM role is not authorized to assume project-specific role. falling back to default config",
-			)
-			ecrSvc = ecr.NewFromConfig(cfg)
-			output, err = ecrSvc.GetAuthorizationToken(ctx, &ecr.GetAuthorizationTokenInput{})
-			if err != nil {
-				logger.Error(err, "error getting ECR authorization token")
-				return "", err
-			}
-		} else {
+		if !errors.As(err, &re) {
+			return "", err
+		}
+		if re.HTTPStatusCode() != http.StatusForbidden {
+			return "", err
+		}
+		logger.Debug(
+			"controller IAM role is not authorized to assume project-specific role. falling back to default config",
+		)
+		ecrSvc = ecr.NewFromConfig(cfg)
+		output, err = ecrSvc.GetAuthorizationToken(ctx, &ecr.GetAuthorizationTokenInput{})
+		if err != nil {
+			logger.Error(err, "error getting ECR authorization token")
 			return "", err
 		}
 	}
