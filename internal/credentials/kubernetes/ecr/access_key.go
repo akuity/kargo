@@ -68,7 +68,7 @@ func (a *accessKeyCredentialHelper) getCredentials(
 	}
 
 	matches := ecrURLRegex.FindStringSubmatch(repoURL)
-	if len(matches) != 3 { // This doesn't look like an ECR URL
+	if len(matches) != 2 { // This doesn't look like an ECR URL
 		return nil, nil
 	}
 
