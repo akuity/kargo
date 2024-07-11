@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"time"
 
@@ -173,6 +174,8 @@ func (p *podIdentityCredentialHelper) getAuthToken(
 				logger.Error(err, "error getting ECR authorization token")
 				return "", err
 			}
+		} else {
+			return "" err
 		}
 	}
 	logger.Debug("got ECR authorization token")
