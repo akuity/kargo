@@ -3,6 +3,7 @@ package ecr
 import (
 	"context"
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"os"
 	"time"
@@ -12,6 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/credentials/stscreds"
 	"github.com/aws/aws-sdk-go-v2/service/ecr"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
+	"github.com/aws/smithy-go"
 	"github.com/patrickmn/go-cache"
 	corev1 "k8s.io/api/core/v1"
 
@@ -158,7 +160,19 @@ func (p *podIdentityCredentialHelper) getAuthToken(
 	output, err := ecrSvc.GetAuthorizationToken(ctx, &ecr.GetAuthorizationTokenInput{})
 	if err != nil {
 		logger.Error(err, "error getting ECR authorization token")
-		return "", nil
+		var ae smithy.APIError
+		if errors.As(err, &ae) {
+			if ae.ErrorCode() == "AccessDenied" {
+				logger.Info("controller IAM role is not authorized to assume project-specific role. falling back to default config")
+				ecrSvc = ecr.NewFromConfig(cfg)
+				output, err = ecrSvc.GetAuthorizationToken(ctx, &ecr.GetAuthorizationTokenInput{})
+				if err != nil {
+					return "", err
+				}
+			} else {
+				return "", err
+			}
+		}
 	}
 	logger.Debug("got ECR authorization token")
 	return *output.AuthorizationData[0].AuthorizationToken, nil
