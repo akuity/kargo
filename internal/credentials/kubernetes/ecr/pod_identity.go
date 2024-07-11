@@ -83,7 +83,7 @@ func (p *podIdentityCredentialHelper) getCredentials(
 	repoURL string,
 	_ *corev1.Secret,
 ) (*credentials.Credentials, error) {
-	if credType == credentials.TypeGit ||
+	if (credType != credentials.TypeImage && credType != credentials.TypeHelm) ||
 		p.awsAccountID == "" { // Pod Identity isn't set up for this controller
 		// This helper can't handle this
 		return nil, nil
