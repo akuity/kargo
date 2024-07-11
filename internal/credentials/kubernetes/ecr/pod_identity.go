@@ -161,10 +161,7 @@ func (p *podIdentityCredentialHelper) getAuthToken(
 	output, err := ecrSvc.GetAuthorizationToken(ctx, &ecr.GetAuthorizationTokenInput{})
 	if err != nil {
 		var re *awshttp.ResponseError
-		if !errors.As(err, &re) {
-			return "", err
-		}
-		if re.HTTPStatusCode() != http.StatusForbidden {
+		if !errors.As(err, &re) || re.HTTPStatusCode() != http.StatusForbidden {
 			return "", err
 		}
 		logger.Debug(
