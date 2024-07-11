@@ -98,7 +98,7 @@ func (p *podIdentityCredentialHelper) getCredentials(
 	if len(matches) != 2 { // This doesn't look like an ECR URL
 		return nil, nil
 	}
-	region := matches[2]
+	region := matches[1]
 
 	cacheKey := p.tokenCacheKey(region, project)
 
