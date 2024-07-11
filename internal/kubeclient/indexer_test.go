@@ -453,7 +453,7 @@ func TestIndexRunningPromotionsByArgoCDApplications(t *testing.T) {
 	}
 }
 
-func TestIndexFreightByVerifiedStages(t *testing.T) {
+func TestFreightByVerifiedStagesIndexer(t *testing.T) {
 	testCases := []struct {
 		name     string
 		freight  *kargoapi.Freight
@@ -482,14 +482,14 @@ func TestIndexFreightByVerifiedStages(t *testing.T) {
 				require.Equal(
 					t,
 					testCase.expected,
-					indexFreightByVerifiedStages(testCase.freight),
+					FreightByVerifiedStagesIndexer(testCase.freight),
 				)
 			})
 		})
 	}
 }
 
-func TestIndexFreightByApprovedStages(t *testing.T) {
+func TestFreightApprovedForStagesIndexer(t *testing.T) {
 	testCases := []struct {
 		name     string
 		freight  *kargoapi.Freight
@@ -518,7 +518,7 @@ func TestIndexFreightByApprovedStages(t *testing.T) {
 				require.Equal(
 					t,
 					testCase.expected,
-					indexFreightByApprovedStages(testCase.freight),
+					FreightApprovedForStagesIndexer(testCase.freight),
 				)
 			})
 		})

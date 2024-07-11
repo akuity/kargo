@@ -863,8 +863,7 @@ func (r *reconciler) syncNormalStage(
 	}
 
 	logger.Debug("checking if auto-promotion is permitted...")
-	if permitted, err :=
-		r.isAutoPromotionPermittedFn(ctx, stage.Namespace, stage.Name); err != nil {
+	if permitted, err := r.isAutoPromotionPermittedFn(ctx, stage.Namespace, stage.Name); err != nil {
 		return status, fmt.Errorf(
 			"error checking if auto-promotion is permitted for Stage %q in namespace %q: %w",
 			stage.Name,
