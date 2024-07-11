@@ -175,7 +175,7 @@ func (p *podIdentityCredentialHelper) getAuthToken(
 				return "", err
 			}
 		} else {
-			return "" err
+			return "", err
 		}
 	}
 	logger.Debug("got ECR authorization token")
