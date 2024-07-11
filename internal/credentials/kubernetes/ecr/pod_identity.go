@@ -9,11 +9,11 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
+	awshttp "github.com/aws/aws-sdk-go-v2/aws/transport/http"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials/stscreds"
 	"github.com/aws/aws-sdk-go-v2/service/ecr"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
-	"github.com/aws/smithy-go"
 	"github.com/patrickmn/go-cache"
 	corev1 "k8s.io/api/core/v1"
 
@@ -160,9 +160,9 @@ func (p *podIdentityCredentialHelper) getAuthToken(
 	output, err := ecrSvc.GetAuthorizationToken(ctx, &ecr.GetAuthorizationTokenInput{})
 	if err != nil {
 		logger.Error(err, "error getting ECR authorization token")
-		var ae smithy.APIError
-		if errors.As(err, &ae) {
-			if ae.ErrorCode() != "AccessDenied" {
+		var re *awshttp.ResponseError
+		if errors.As(err, &re) {
+			if re.HTTPStatusCode() != 403 {
 				return "", err
 			}
 			logger.Info(
