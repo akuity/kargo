@@ -3,12 +3,15 @@ package ecr
 import (
 	"context"
 	"crypto/sha256"
+	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
+	awshttp "github.com/aws/aws-sdk-go-v2/aws/transport/http"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials/stscreds"
 	"github.com/aws/aws-sdk-go-v2/service/ecr"
@@ -163,8 +166,19 @@ func (p *podIdentityCredentialHelper) getAuthToken(
 	)
 	output, err := ecrSvc.GetAuthorizationToken(ctx, &ecr.GetAuthorizationTokenInput{})
 	if err != nil {
-		logger.Error(err, "error getting ECR authorization token")
-		return "", nil
+		var re *awshttp.ResponseError
+		if !errors.As(err, &re) || re.HTTPStatusCode() != http.StatusForbidden {
+			return "", err
+		}
+		logger.Debug(
+			"controller IAM role is not authorized to assume project-specific role. falling back to default config",
+		)
+		ecrSvc = ecr.NewFromConfig(cfg)
+		output, err = ecrSvc.GetAuthorizationToken(ctx, &ecr.GetAuthorizationTokenInput{})
+		if err != nil {
+			logger.Error(err, "error getting ECR authorization token")
+			return "", err
+		}
 	}
 	logger.Debug("got ECR authorization token")
 	return *output.AuthorizationData[0].AuthorizationToken, nil
