@@ -159,7 +159,6 @@ func (p *podIdentityCredentialHelper) getAuthToken(
 	)
 	output, err := ecrSvc.GetAuthorizationToken(ctx, &ecr.GetAuthorizationTokenInput{})
 	if err != nil {
-		logger.Error(err, "error getting ECR authorization token")
 		var re *awshttp.ResponseError
 		if errors.As(err, &re) {
 			if re.HTTPStatusCode() != 403 {
@@ -171,6 +170,7 @@ func (p *podIdentityCredentialHelper) getAuthToken(
 			ecrSvc = ecr.NewFromConfig(cfg)
 			output, err = ecrSvc.GetAuthorizationToken(ctx, &ecr.GetAuthorizationTokenInput{})
 			if err != nil {
+				logger.Error(err, "error getting ECR authorization token")
 				return "", err
 			}
 		}
