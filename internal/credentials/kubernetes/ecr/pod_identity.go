@@ -161,10 +161,10 @@ func (p *podIdentityCredentialHelper) getAuthToken(
 	if err != nil {
 		var re *awshttp.ResponseError
 		if errors.As(err, &re) {
-			if re.HTTPStatusCode() != 403 {
+			if re.HTTPStatusCode() != http.StatusForbidden {
 				return "", err
 			}
-			logger.Info(
+			logger.Debug(
 				"controller IAM role is not authorized to assume project-specific role. falling back to default config",
 			)
 			ecrSvc = ecr.NewFromConfig(cfg)
