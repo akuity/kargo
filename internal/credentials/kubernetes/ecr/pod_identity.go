@@ -162,14 +162,15 @@ func (p *podIdentityCredentialHelper) getAuthToken(
 		logger.Error(err, "error getting ECR authorization token")
 		var ae smithy.APIError
 		if errors.As(err, &ae) {
-			if ae.ErrorCode() == "AccessDenied" {
-				logger.Info("controller IAM role is not authorized to assume project-specific role. falling back to default config")
-				ecrSvc = ecr.NewFromConfig(cfg)
-				output, err = ecrSvc.GetAuthorizationToken(ctx, &ecr.GetAuthorizationTokenInput{})
-				if err != nil {
-					return "", err
-				}
-			} else {
+			if ae.ErrorCode() != "AccessDenied" {
+				return "", err
+			}
+			logger.Info(
+				"controller IAM role is not authorized to assume project-specific role. falling back to default config",
+			)
+			ecrSvc = ecr.NewFromConfig(cfg)
+			output, err = ecrSvc.GetAuthorizationToken(ctx, &ecr.GetAuthorizationTokenInput{})
+			if err != nil {
 				return "", err
 			}
 		}
