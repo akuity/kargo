@@ -120,6 +120,7 @@ export const StageNode = ({
               {(currentFreight || []).map((freight) => (
                 <FreightLabel freight={freight} showContents={true} key={freight?.metadata?.name} />
               ))}
+              {currentFreight?.length === 0 && <FreightLabel />}
               {stage?.status?.lastPromotion?.finishedAt && (
                 <>
                   <div
