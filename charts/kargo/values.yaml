@@ -339,7 +339,7 @@ controller:
 
   ## All settings relating to the service account for the controller
   serviceAccount:
-    ## @param controller.serviceAccount.annotations Optional annotations to add to the service account.
+    ## @param controller.serviceAccount.annotations Optional annotations to add to the service account. This is useful when using IRSA, where adding a role-arn annotation on the serviceaccount is a requirement.
     annotations: {}
 
   ## All settings relating to shared credentials (used across multiple kargo projects)
