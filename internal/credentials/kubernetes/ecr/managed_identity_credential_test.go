@@ -75,7 +75,7 @@ func TestPodIdentityCredentialHelper(t *testing.T) {
 			name:     "helm repo URL does not match ECR URL regex",
 			credType: credentials.TypeHelm,
 			repoURL:  testRepoURL,
-			helper: &podIdentityCredentialHelper{
+			helper: &managedIAMCredentialHelper{
 				awsAccountID: testAWSAccountID,
 			},
 			assertions: func(t *testing.T, creds *credentials.Credentials, _ *cache.Cache, err error) {
@@ -140,7 +140,7 @@ func TestPodIdentityCredentialHelper(t *testing.T) {
 			name:     "cache miss; success (helm)",
 			credType: credentials.TypeHelm,
 			repoURL:  fmt.Sprintf("oci://%s", testRepoURL),
-			helper: &podIdentityCredentialHelper{
+			helper: &managedIAMCredentialHelper{
 				awsAccountID: testAWSAccountID,
 				tokenCache:   cache.New(0, 0),
 				getAuthTokenFn: func(context.Context, string, string) (string, error) {
@@ -153,7 +153,7 @@ func TestPodIdentityCredentialHelper(t *testing.T) {
 				require.Equal(t, testUsername, creds.Username)
 				require.Equal(t, testPassword, creds.Password)
 				_, found := c.Get(
-					(&podIdentityCredentialHelper{}).tokenCacheKey(testRegion, testProject),
+					(&managedIAMCredentialHelper{}).tokenCacheKey(testRegion, testProject),
 				)
 				require.True(t, found)
 			},
