@@ -40,7 +40,7 @@ type gitMechanism struct {
 	client client.Client
 	cfg    GitConfig
 	// Overridable behaviors:
-	selectUpdatesFn  func([]kargoapi.GitRepoUpdate) []kargoapi.GitRepoUpdate
+	selectUpdatesFn  func([]kargoapi.GitRepoUpdate) []*kargoapi.GitRepoUpdate
 	doSingleUpdateFn func(
 		context.Context,
 		*kargoapi.Stage,
@@ -91,7 +91,7 @@ func newGitMechanism(
 	name string,
 	cl client.Client,
 	credentialsDB credentials.Database,
-	selectUpdatesFn func([]kargoapi.GitRepoUpdate) []kargoapi.GitRepoUpdate,
+	selectUpdatesFn func([]kargoapi.GitRepoUpdate) []*kargoapi.GitRepoUpdate,
 	applyConfigManagementFn func(
 		ctx context.Context,
 		stage *kargoapi.Stage,
@@ -141,8 +141,7 @@ func (g *gitMechanism) Promote(
 	logger := logging.LoggerFromContext(ctx).WithValues("name", g.name)
 	logger.Debug("executing promotion mechanism")
 
-	for i := range updates {
-		update := &updates[i]
+	for _, update := range updates {
 		var err error
 		var otherStatus *kargoapi.PromotionStatus
 		if otherStatus, newFreight, err = g.doSingleUpdateFn(

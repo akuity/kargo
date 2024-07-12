@@ -34,11 +34,11 @@ func TestSelectKargoRenderUpdates(t *testing.T) {
 	testCases := []struct {
 		name       string
 		updates    []kargoapi.GitRepoUpdate
-		assertions func(*testing.T, []kargoapi.GitRepoUpdate)
+		assertions func(*testing.T, []*kargoapi.GitRepoUpdate)
 	}{
 		{
 			name: "no updates",
-			assertions: func(t *testing.T, selectedUpdates []kargoapi.GitRepoUpdate) {
+			assertions: func(t *testing.T, selectedUpdates []*kargoapi.GitRepoUpdate) {
 				require.Empty(t, selectedUpdates)
 			},
 		},
@@ -49,7 +49,7 @@ func TestSelectKargoRenderUpdates(t *testing.T) {
 					RepoURL: "fake-url",
 				},
 			},
-			assertions: func(t *testing.T, selectedUpdates []kargoapi.GitRepoUpdate) {
+			assertions: func(t *testing.T, selectedUpdates []*kargoapi.GitRepoUpdate) {
 				require.Empty(t, selectedUpdates)
 			},
 		},
@@ -68,7 +68,7 @@ func TestSelectKargoRenderUpdates(t *testing.T) {
 					RepoURL: "fake-url",
 				},
 			},
-			assertions: func(t *testing.T, selectedUpdates []kargoapi.GitRepoUpdate) {
+			assertions: func(t *testing.T, selectedUpdates []*kargoapi.GitRepoUpdate) {
 				require.Len(t, selectedUpdates, 1)
 			},
 		},

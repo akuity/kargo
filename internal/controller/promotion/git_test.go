@@ -25,7 +25,7 @@ func TestNewGitMechanism(t *testing.T) {
 		testName,
 		fake.NewFakeClient(),
 		&credentials.FakeDB{},
-		func([]kargoapi.GitRepoUpdate) []kargoapi.GitRepoUpdate {
+		func([]kargoapi.GitRepoUpdate) []*kargoapi.GitRepoUpdate {
 			return nil
 		},
 		func(
@@ -73,7 +73,7 @@ func TestGitPromote(t *testing.T) {
 		{
 			name: "no updates",
 			promoMech: &gitMechanism{
-				selectUpdatesFn: func([]kargoapi.GitRepoUpdate) []kargoapi.GitRepoUpdate {
+				selectUpdatesFn: func([]kargoapi.GitRepoUpdate) []*kargoapi.GitRepoUpdate {
 					return nil
 				},
 			},
@@ -91,8 +91,8 @@ func TestGitPromote(t *testing.T) {
 		{
 			name: "error applying single update",
 			promoMech: &gitMechanism{
-				selectUpdatesFn: func([]kargoapi.GitRepoUpdate) []kargoapi.GitRepoUpdate {
-					return []kargoapi.GitRepoUpdate{{}}
+				selectUpdatesFn: func([]kargoapi.GitRepoUpdate) []*kargoapi.GitRepoUpdate {
+					return []*kargoapi.GitRepoUpdate{{}}
 				},
 				doSingleUpdateFn: func(
 					_ context.Context,
@@ -119,8 +119,8 @@ func TestGitPromote(t *testing.T) {
 		{
 			name: "success",
 			promoMech: &gitMechanism{
-				selectUpdatesFn: func([]kargoapi.GitRepoUpdate) []kargoapi.GitRepoUpdate {
-					return []kargoapi.GitRepoUpdate{{}}
+				selectUpdatesFn: func([]kargoapi.GitRepoUpdate) []*kargoapi.GitRepoUpdate {
+					return []*kargoapi.GitRepoUpdate{{}}
 				},
 				doSingleUpdateFn: func(
 					_ context.Context,

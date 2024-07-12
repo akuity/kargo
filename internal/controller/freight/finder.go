@@ -68,11 +68,13 @@ func FindCommit(
 		return nil, nil
 	}
 	// We know exactly what we're after, so this should be easy
-	for _, f := range freight {
+	for i := range freight {
+		f := &freight[i]
 		if f.Origin.Equals(desiredOrigin) {
-			for _, c := range f.Commits {
+			for j := range f.Commits {
+				c := &f.Commits[j]
 				if libGit.NormalizeURL(c.RepoURL) == repoURL {
-					return &c, nil
+					return c, nil
 				}
 			}
 		}

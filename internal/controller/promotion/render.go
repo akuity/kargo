@@ -36,9 +36,10 @@ func newKargoRenderMechanism(
 
 // selectKargoRenderUpdates returns a subset of the given updates that involve
 // Kargo Render.
-func selectKargoRenderUpdates(updates []kargoapi.GitRepoUpdate) []kargoapi.GitRepoUpdate {
-	selectedUpdates := make([]kargoapi.GitRepoUpdate, 0, len(updates))
-	for _, update := range updates {
+func selectKargoRenderUpdates(updates []kargoapi.GitRepoUpdate) []*kargoapi.GitRepoUpdate {
+	selectedUpdates := make([]*kargoapi.GitRepoUpdate, 0, len(updates))
+	for i := range updates {
+		update := &updates[i]
 		if update.Render != nil {
 			selectedUpdates = append(selectedUpdates, update)
 		}
