@@ -23,11 +23,15 @@ func TestApplicationHealth_EvaluateHealth(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, argocd.AddToScheme(scheme))
 
+	testOrigin := kargoapi.FreightOrigin{
+		Kind: kargoapi.FreightOriginKindWarehouse,
+		Name: "fake-warehouse",
+	}
+
 	testCases := []struct {
 		name         string
 		applications []client.Object
-		freight      []kargoapi.FreightReference
-		updates      []kargoapi.ArgoCDAppUpdate
+		stage        *kargoapi.Stage
 		assertions   func(*testing.T, *kargoapi.Health)
 	}{
 		{
@@ -35,6 +39,7 @@ func TestApplicationHealth_EvaluateHealth(t *testing.T) {
 			assertions: func(t *testing.T, health *kargoapi.Health) {
 				require.Nil(t, health)
 			},
+			stage: &kargoapi.Stage{},
 		},
 		{
 			name: "single update",
@@ -64,21 +69,34 @@ func TestApplicationHealth_EvaluateHealth(t *testing.T) {
 					},
 				},
 			},
-			freight: []kargoapi.FreightReference{
-				{
-					Charts: []kargoapi.Chart{
-						{
-							RepoURL: "https://example.com",
-							Name:    "fake-chart",
-							Version: "v1.2.3",
+			stage: &kargoapi.Stage{
+				Spec: kargoapi.StageSpec{
+					PromotionMechanisms: &kargoapi.PromotionMechanisms{
+						ArgoCDAppUpdates: []kargoapi.ArgoCDAppUpdate{
+							{
+								AppNamespace: "fake-namespace",
+								AppName:      "fake-name",
+							},
 						},
 					},
 				},
-			},
-			updates: []kargoapi.ArgoCDAppUpdate{
-				{
-					AppNamespace: "fake-namespace",
-					AppName:      "fake-name",
+				Status: kargoapi.StageStatus{
+					FreightHistory: kargoapi.FreightHistory{
+						&kargoapi.FreightCollection{
+							Freight: map[string]kargoapi.FreightReference{
+								testOrigin.String(): {
+									Origin: testOrigin,
+									Charts: []kargoapi.Chart{
+										{
+											RepoURL: "https://example.com",
+											Name:    "fake-chart",
+											Version: "v1.2.3",
+										},
+									},
+								},
+							},
+						},
+					},
 				},
 			},
 			assertions: func(t *testing.T, health *kargoapi.Health) {
@@ -131,14 +149,20 @@ func TestApplicationHealth_EvaluateHealth(t *testing.T) {
 					},
 				},
 			},
-			updates: []kargoapi.ArgoCDAppUpdate{
-				{
-					AppNamespace: "fake-namespace",
-					AppName:      "fake-name-1",
-				},
-				{
-					AppNamespace: "fake-namespace",
-					AppName:      "fake-name-2",
+			stage: &kargoapi.Stage{
+				Spec: kargoapi.StageSpec{
+					PromotionMechanisms: &kargoapi.PromotionMechanisms{
+						ArgoCDAppUpdates: []kargoapi.ArgoCDAppUpdate{
+							{
+								AppNamespace: "fake-namespace",
+								AppName:      "fake-name-1",
+							},
+							{
+								AppNamespace: "fake-namespace",
+								AppName:      "fake-name-2",
+							},
+						},
+					},
 				},
 			},
 			assertions: func(t *testing.T, health *kargoapi.Health) {
@@ -193,9 +217,13 @@ func TestApplicationHealth_EvaluateHealth(t *testing.T) {
 					},
 				},
 			},
-			updates: []kargoapi.ArgoCDAppUpdate{
-				{
-					AppName: "fake-name",
+			stage: &kargoapi.Stage{
+				Spec: kargoapi.StageSpec{
+					PromotionMechanisms: &kargoapi.PromotionMechanisms{
+						ArgoCDAppUpdates: []kargoapi.ArgoCDAppUpdate{{
+							AppName: "fake-name",
+						}},
+					},
 				},
 			},
 			assertions: func(t *testing.T, health *kargoapi.Health) {
@@ -225,10 +253,14 @@ func TestApplicationHealth_EvaluateHealth(t *testing.T) {
 					},
 				},
 			},
-			updates: []kargoapi.ArgoCDAppUpdate{
-				{
-					AppNamespace: "fake-namespace",
-					AppName:      "fake-name",
+			stage: &kargoapi.Stage{
+				Spec: kargoapi.StageSpec{
+					PromotionMechanisms: &kargoapi.PromotionMechanisms{
+						ArgoCDAppUpdates: []kargoapi.ArgoCDAppUpdate{{
+							AppNamespace: "fake-namespace",
+							AppName:      "fake-name",
+						}},
+					},
 				},
 			},
 			assertions: func(t *testing.T, health *kargoapi.Health) {
@@ -249,15 +281,31 @@ func TestApplicationHealth_EvaluateHealth(t *testing.T) {
 			}
 
 			h := &applicationHealth{
-				Client: c.Build(),
+				argoClient: c.Build(),
 			}
-			testCase.assertions(t, h.EvaluateHealth(context.TODO(), testCase.freight, testCase.updates))
+
+			testCase.assertions(
+				t,
+				h.EvaluateHealth(
+					context.Background(),
+					testCase.stage,
+				),
+			)
 		})
 	}
 
 	t.Run("Argo CD integration disabled", func(t *testing.T) {
 		h := &applicationHealth{}
-		health := h.EvaluateHealth(context.TODO(), nil, []kargoapi.ArgoCDAppUpdate{{}})
+		health := h.EvaluateHealth(
+			context.Background(),
+			&kargoapi.Stage{
+				Spec: kargoapi.StageSpec{
+					PromotionMechanisms: &kargoapi.PromotionMechanisms{
+						ArgoCDAppUpdates: []kargoapi.ArgoCDAppUpdate{{}},
+					},
+				},
+			},
+		)
 		require.NotNil(t, health)
 		require.Equal(t, kargoapi.HealthStateUnknown, health.Status)
 		require.Len(t, health.Issues, 1)
@@ -269,12 +317,27 @@ func TestApplicationHealth_GetApplicationHealth(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, argocd.AddToScheme(scheme))
 
+	testOrigin := kargoapi.FreightOrigin{
+		Kind: kargoapi.FreightOriginKindWarehouse,
+		Name: "fake-warehouse",
+	}
+
+	testStageSpec := kargoapi.StageSpec{
+		PromotionMechanisms: &kargoapi.PromotionMechanisms{
+			ArgoCDAppUpdates: []kargoapi.ArgoCDAppUpdate{{
+				Origin:       &testOrigin,
+				AppNamespace: "fake-namespace",
+				AppName:      "fake-name",
+			}},
+		},
+	}
+
 	testCases := []struct {
 		name        string
 		application *argocd.Application
 		interceptor interceptor.Funcs
 		key         types.NamespacedName
-		freight     []kargoapi.FreightReference
+		stage       *kargoapi.Stage
 		assertions  func(
 			*testing.T,
 			kargoapi.HealthState,
@@ -286,6 +349,9 @@ func TestApplicationHealth_GetApplicationHealth(t *testing.T) {
 		{
 			name: "Application not found",
 			key:  types.NamespacedName{Namespace: "fake-namespace", Name: "fake-name"},
+			stage: &kargoapi.Stage{
+				Spec: testStageSpec,
+			},
 			assertions: func(
 				t *testing.T,
 				state kargoapi.HealthState,
@@ -303,6 +369,9 @@ func TestApplicationHealth_GetApplicationHealth(t *testing.T) {
 		{
 			name: "error getting Application",
 			key:  types.NamespacedName{Namespace: "fake-namespace", Name: "fake-name"},
+			stage: &kargoapi.Stage{
+				Spec: testStageSpec,
+			},
 			interceptor: interceptor.Funcs{
 				Get: func(
 					_ context.Context,
@@ -332,6 +401,9 @@ func TestApplicationHealth_GetApplicationHealth(t *testing.T) {
 		{
 			name: "error on multiple app sources",
 			key:  types.NamespacedName{Namespace: "fake-namespace", Name: "fake-name"},
+			stage: &kargoapi.Stage{
+				Spec: testStageSpec,
+			},
 			application: &argocd.Application{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "fake-namespace",
@@ -379,6 +451,9 @@ func TestApplicationHealth_GetApplicationHealth(t *testing.T) {
 		{
 			name: "Application with error conditions yields Unhealthy state",
 			key:  types.NamespacedName{Namespace: "fake-namespace", Name: "fake-name"},
+			stage: &kargoapi.Stage{
+				Spec: testStageSpec,
+			},
 			application: &argocd.Application{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "fake-namespace",
@@ -455,12 +530,20 @@ func TestApplicationHealth_GetApplicationHealth(t *testing.T) {
 					},
 				},
 			},
-			freight: []kargoapi.FreightReference{
-				{
-					Commits: []kargoapi.GitCommit{
-						{
-							RepoURL: "https://example.com/universe/42",
-							ID:      "other-fake-revision",
+			stage: &kargoapi.Stage{
+				Spec: testStageSpec,
+				Status: kargoapi.StageStatus{
+					FreightHistory: kargoapi.FreightHistory{
+						&kargoapi.FreightCollection{
+							Freight: map[string]kargoapi.FreightReference{
+								testOrigin.String(): {
+									Origin: testOrigin,
+									Commits: []kargoapi.GitCommit{{
+										RepoURL: "https://example.com/universe/42",
+										ID:      "other-fake-revision",
+									}},
+								},
+							},
 						},
 					},
 				},
@@ -487,6 +570,9 @@ func TestApplicationHealth_GetApplicationHealth(t *testing.T) {
 		{
 			name: "Without a desired revision, Application is Healthy",
 			key:  types.NamespacedName{Namespace: "fake-namespace", Name: "fake-name"},
+			stage: &kargoapi.Stage{
+				Spec: testStageSpec,
+			},
 			application: &argocd.Application{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "fake-namespace",
@@ -552,12 +638,20 @@ func TestApplicationHealth_GetApplicationHealth(t *testing.T) {
 					},
 				},
 			},
-			freight: []kargoapi.FreightReference{
-				{
-					Commits: []kargoapi.GitCommit{
-						{
-							RepoURL: "https://example.com/universe/42",
-							ID:      "fake-revision",
+			stage: &kargoapi.Stage{
+				Spec: testStageSpec,
+				Status: kargoapi.StageStatus{
+					FreightHistory: kargoapi.FreightHistory{
+						&kargoapi.FreightCollection{
+							Freight: map[string]kargoapi.FreightReference{
+								testOrigin.String(): {
+									Origin: testOrigin,
+									Commits: []kargoapi.GitCommit{{
+										RepoURL: "https://example.com/universe/42",
+										ID:      "fake-revision",
+									}},
+								},
+							},
 						},
 					},
 				},
@@ -590,12 +684,13 @@ func TestApplicationHealth_GetApplicationHealth(t *testing.T) {
 			}
 
 			h := &applicationHealth{
-				Client: c.Build(),
+				argoClient: c.Build(),
 			}
 			state, healthStatus, syncStatus, err := h.GetApplicationHealth(
-				context.TODO(),
+				context.Background(),
+				testCase.stage,
+				&testCase.stage.Spec.PromotionMechanisms.ArgoCDAppUpdates[0],
 				testCase.key,
-				testCase.freight,
 			)
 			testCase.assertions(t, state, healthStatus, syncStatus, err)
 		})
@@ -603,6 +698,10 @@ func TestApplicationHealth_GetApplicationHealth(t *testing.T) {
 
 	t.Run("waits for operation cooldown", func(t *testing.T) {
 		app := &argocd.Application{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "fake-namespace",
+				Name:      "fake-name",
+			},
 			Spec: argocd.ApplicationSpec{
 				Source: &argocd.ApplicationSource{
 					RepoURL: "https://example.com/universe/42",
@@ -621,14 +720,6 @@ func TestApplicationHealth_GetApplicationHealth(t *testing.T) {
 				},
 			},
 		}
-		freight := []kargoapi.FreightReference{{
-			Commits: []kargoapi.GitCommit{
-				{
-					RepoURL: "https://example.com/universe/42",
-					ID:      "fake-revision",
-				},
-			},
-		}}
 
 		var count int
 		c := fake.NewClientBuilder().WithInterceptorFuncs(interceptor.Funcs{
@@ -651,16 +742,35 @@ func TestApplicationHealth_GetApplicationHealth(t *testing.T) {
 			},
 		})
 		h := &applicationHealth{
-			Client: c.Build(),
+			argoClient: c.Build(),
 		}
 
+		stage := &kargoapi.Stage{
+			Spec: testStageSpec,
+			Status: kargoapi.StageStatus{
+				FreightHistory: kargoapi.FreightHistory{
+					&kargoapi.FreightCollection{
+						Freight: map[string]kargoapi.FreightReference{
+							testOrigin.String(): {
+								Origin: testOrigin,
+								Commits: []kargoapi.GitCommit{{
+									RepoURL: "https://example.com/universe/42",
+									ID:      "fake-revision",
+								}},
+							},
+						},
+					},
+				},
+			},
+		}
 		_, _, _, err := h.GetApplicationHealth(
-			context.TODO(),
+			context.Background(),
+			stage,
+			&stage.Spec.PromotionMechanisms.ArgoCDAppUpdates[0],
 			types.NamespacedName{
 				Namespace: "fake-namespace",
 				Name:      "fake-name",
 			},
-			freight,
 		)
 		elapsed := time.Since(app.Status.OperationState.FinishedAt.Time)
 
