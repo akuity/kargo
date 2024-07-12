@@ -431,11 +431,14 @@ func newReconciler(
 	shardRequirement *labels.Requirement,
 ) *reconciler {
 	r := &reconciler{
-		kargoClient:      kargoClient,
-		argocdClient:     argocdClient,
-		recorder:         recorder,
-		cfg:              cfg,
-		appHealth:        libargocd.NewApplicationHealthEvaluator(argocdClient),
+		kargoClient:  kargoClient,
+		argocdClient: argocdClient,
+		recorder:     recorder,
+		cfg:          cfg,
+		appHealth: libargocd.NewApplicationHealthEvaluator(
+			kargoClient,
+			argocdClient,
+		),
 		shardRequirement: shardRequirement,
 	}
 	// The following default behaviors are overridable for testing purposes:
@@ -670,8 +673,7 @@ func (r *reconciler) syncNormalStage(
 		// Argo CD Applications is always relevant.
 		if status.Health = r.appHealth.EvaluateHealth(
 			ctx,
-			currentFC.References(),
-			stage.Spec.PromotionMechanisms.ArgoCDAppUpdates,
+			stage,
 		); status.Health != nil {
 			logger.WithValues("health", status.Health.Status).Debug("Stage health assessed")
 		} else {
