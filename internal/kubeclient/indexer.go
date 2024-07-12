@@ -25,14 +25,10 @@ const (
 	FreightByWarehouseIndexField          = "warehouse"
 	PromotionsByStageAndFreightIndexField = "stageAndFreight"
 
-	// Note: These two do not conflict with one another, because these two
-	// indices are used by different components.
-	PromotionsByStageIndexField            = "stage"
-	NonTerminalPromotionsByStageIndexField = "stage"
+	PromotionsByStageIndexField = "stage"
 
 	RunningPromotionsByArgoCDApplicationsIndexField = "applications"
 
-	PromotionPoliciesByStageIndexField   = "stage"
 	StagesByAnalysisRunIndexField        = "analysisRun"
 	StagesByArgoCDApplicationsIndexField = "applications"
 	StagesByFreightIndexField            = "freight"
@@ -153,17 +149,6 @@ func IndexPromotionsByStage(ctx context.Context, mgr ctrl.Manager) error {
 		&kargoapi.Promotion{},
 		PromotionsByStageIndexField,
 		indexPromotionsByStage(),
-	)
-}
-
-// IndexNonTerminalPromotionsByStage indexes Promotions in non-terminal states
-// by Stage
-func IndexNonTerminalPromotionsByStage(ctx context.Context, mgr ctrl.Manager) error {
-	return mgr.GetFieldIndexer().IndexField(
-		ctx,
-		&kargoapi.Promotion{},
-		NonTerminalPromotionsByStageIndexField,
-		indexPromotionsByStage(isPromotionPhaseNonTerminal),
 	)
 }
 
