@@ -28,3 +28,14 @@ export function getCurrentFreight(stage: Stage): FreightReference[] {
       ? [stage?.status?.currentFreight]
       : [];
 }
+
+export function currentFreightHasVerification(stage: Stage): boolean {
+  const collection = stage?.status?.freightHistory[0];
+  if (
+    (collection && (collection.verificationHistory || []).length > 0) ||
+    stage?.status?.currentFreight?.verificationHistory
+  ) {
+    return true;
+  }
+  return false;
+}
