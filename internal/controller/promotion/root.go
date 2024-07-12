@@ -28,6 +28,7 @@ type Mechanism interface {
 // NewMechanisms returns the entrypoint to a hierarchical tree of promotion
 // mechanisms.
 func NewMechanisms(
+	kargoClient client.Client,
 	argocdClient client.Client,
 	credentialsDB credentials.Database,
 ) Mechanism {
@@ -35,11 +36,11 @@ func NewMechanisms(
 		"promotion mechanisms",
 		newCompositeMechanism(
 			"Git-based promotion mechanisms",
-			newGenericGitMechanism(credentialsDB),
-			newKargoRenderMechanism(credentialsDB),
-			newKustomizeMechanism(credentialsDB),
-			newHelmMechanism(credentialsDB),
+			newGenericGitMechanism(kargoClient, credentialsDB),
+			newKargoRenderMechanism(kargoClient, credentialsDB),
+			newKustomizeMechanism(kargoClient, credentialsDB),
+			newHelmMechanism(kargoClient, credentialsDB),
 		),
-		newArgoCDMechanism(argocdClient),
+		newArgoCDMechanism(kargoClient, argocdClient),
 	)
 }

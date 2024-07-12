@@ -421,6 +421,7 @@ func (r *reconciler) buildAnalysisRun(
 		},
 	}
 
+	gvk := kargoapi.GroupVersion.WithKind("Freight")
 	for _, freightRef := range freightCol.Freight {
 		f, err := r.getFreightFn(
 			ctx,
@@ -448,10 +449,13 @@ func (r *reconciler) buildAnalysisRun(
 		// Mark the Freight as an owner of the AnalysisRun
 		ar.OwnerReferences = append(
 			ar.OwnerReferences,
-			*metav1.NewControllerRef(
-				f,
-				kargoapi.GroupVersion.WithKind("Freight"),
-			),
+			metav1.OwnerReference{
+				APIVersion:         gvk.GroupVersion().String(),
+				Kind:               gvk.Kind,
+				Name:               f.GetName(),
+				UID:                f.GetUID(),
+				BlockOwnerDeletion: ptr.To(true),
+			},
 		)
 	}
 

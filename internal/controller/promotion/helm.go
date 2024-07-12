@@ -9,8 +9,10 @@ import (
 	"strings"
 
 	"gopkg.in/yaml.v3"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/controller/freight"
 	"github.com/akuity/kargo/internal/controller/git"
 	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/helm"
@@ -20,26 +22,32 @@ import (
 // newGenericGitMechanism returns a gitMechanism that only only selects and
 // performs updates that involve Helm.
 func newHelmMechanism(
+	cl client.Client,
 	credentialsDB credentials.Database,
 ) Mechanism {
+	h := &helmer{
+		client: cl,
+	}
+	h.buildValuesFilesChangesFn = h.buildValuesFilesChanges
+	h.buildChartDependencyChangesFn = h.buildChartDependencyChanges
+	h.setStringsInYAMLFileFn = libYAML.SetStringsInFile
+	h.prepareDependencyCredentialsFn = prepareDependencyCredentialsFn(credentialsDB)
+	h.updateChartDependenciesFn = helm.UpdateChartDependencies
+
 	return newGitMechanism(
 		"Helm promotion mechanism",
+		cl,
 		credentialsDB,
 		selectHelmUpdates,
-		(&helmer{
-			buildValuesFilesChangesFn:      buildValuesFilesChanges,
-			buildChartDependencyChangesFn:  buildChartDependencyChanges,
-			setStringsInYAMLFileFn:         libYAML.SetStringsInFile,
-			prepareDependencyCredentialsFn: prepareDependencyCredentialsFn(credentialsDB),
-			updateChartDependenciesFn:      helm.UpdateChartDependencies,
-		}).apply,
+		h.apply,
 	)
 }
 
 // selectHelmUpdates returns a subset of the given updates that involve Helm.
-func selectHelmUpdates(updates []kargoapi.GitRepoUpdate) []kargoapi.GitRepoUpdate {
-	selectedUpdates := make([]kargoapi.GitRepoUpdate, 0, len(updates))
-	for _, update := range updates {
+func selectHelmUpdates(updates []kargoapi.GitRepoUpdate) []*kargoapi.GitRepoUpdate {
+	selectedUpdates := make([]*kargoapi.GitRepoUpdate, 0, len(updates))
+	for i := range updates {
+		update := &updates[i]
 		if update.Helm != nil {
 			selectedUpdates = append(selectedUpdates, update)
 		}
@@ -50,14 +58,19 @@ func selectHelmUpdates(updates []kargoapi.GitRepoUpdate) []kargoapi.GitRepoUpdat
 // helmer is a helper struct whose sole purpose is to close over several other
 // functions that are used in the implementation of the apply() function.
 type helmer struct {
+	client                    client.Client
 	buildValuesFilesChangesFn func(
+		context.Context,
+		*kargoapi.Stage,
+		*kargoapi.HelmPromotionMechanism,
 		[]kargoapi.FreightReference,
-		[]kargoapi.HelmImageUpdate,
-	) (map[string]map[string]string, []string)
+	) (map[string]map[string]string, []string, error)
 	buildChartDependencyChangesFn func(
-		string,
-		[]kargoapi.FreightReference,
-		[]kargoapi.HelmChartDependencyUpdate,
+		ctx context.Context,
+		stage *kargoapi.Stage,
+		update *kargoapi.HelmPromotionMechanism,
+		freight []kargoapi.FreightReference,
+		workingDir string,
 	) (map[string]map[string]string, []string, error)
 	setStringsInYAMLFileFn         func(file string, changes map[string]string) error
 	prepareDependencyCredentialsFn func(ctx context.Context, homePath, chartPath, namespace string) error
@@ -68,18 +81,26 @@ type helmer struct {
 // directory.
 func (h *helmer) apply(
 	ctx context.Context,
-	update kargoapi.GitRepoUpdate,
+	stage *kargoapi.Stage,
+	update *kargoapi.GitRepoUpdate,
 	newFreight []kargoapi.FreightReference,
-	namespace string,
 	_ string, // TODO: sourceCommit would be a nice addition to the commit message
 	homeDir string,
 	workingDir string,
 	_ git.RepoCredentials,
 ) ([]string, error) {
-	// Image updates
-	changesByFile, imageChangeSummary := h.buildValuesFilesChangesFn(newFreight, update.Helm.Images)
+	changesByFile, imageChangeSummary, err := h.buildValuesFilesChangesFn(
+		ctx,
+		stage,
+		update.Helm,
+		newFreight,
+	)
+	if err != nil {
+		return nil,
+			fmt.Errorf("error preparing changes to affected values files: %w", err)
+	}
 	for file, changes := range changesByFile {
-		if err := h.setStringsInYAMLFileFn(
+		if err = h.setStringsInYAMLFileFn(
 			filepath.Join(workingDir, file),
 			changes,
 		); err != nil {
@@ -90,9 +111,11 @@ func (h *helmer) apply(
 	// Chart dependency updates
 	changesByChart, subchartChangeSummary, err :=
 		h.buildChartDependencyChangesFn(
-			workingDir,
+			ctx,
+			stage,
+			update.Helm,
 			newFreight,
-			update.Helm.Charts,
+			workingDir,
 		)
 	if err != nil {
 		return nil, fmt.Errorf("preparing changes to affected Chart.yaml files: %w", err)
@@ -103,7 +126,9 @@ func (h *helmer) apply(
 		if err = h.setStringsInYAMLFileFn(chartYAMLPath, changes); err != nil {
 			return nil, fmt.Errorf("setting dependency versions for chart %q: %w", chart, err)
 		}
-		if err = h.prepareDependencyCredentialsFn(ctx, homeDir, chartYAMLPath, namespace); err != nil {
+		if err = h.prepareDependencyCredentialsFn(
+			ctx, homeDir, chartYAMLPath, stage.Namespace,
+		); err != nil {
 			return nil, fmt.Errorf("preparing credentials for chart dependencies %q: :%w", chart, err)
 		}
 		if err = h.updateChartDependenciesFn(homeDir, chartPath); err != nil {
@@ -118,21 +143,16 @@ func (h *helmer) apply(
 // about changes that should be made to various YAML files and distills them
 // into a map of maps that indexes new values for each YAML file by file name
 // and key.
-func buildValuesFilesChanges(
-	freight []kargoapi.FreightReference,
-	imageUpdates []kargoapi.HelmImageUpdate,
-) (map[string]map[string]string, []string) {
-	tagsByImage := map[string]string{}
-	digestsByImage := map[string]string{}
-	for _, f := range freight {
-		for _, image := range f.Images {
-			tagsByImage[image.RepoURL] = image.Tag
-			digestsByImage[image.RepoURL] = image.Digest
-		}
-	}
-	changesByFile := make(map[string]map[string]string, len(imageUpdates))
-	changeSummary := make([]string, 0, len(imageUpdates))
-	for _, imageUpdate := range imageUpdates {
+func (h *helmer) buildValuesFilesChanges(
+	ctx context.Context,
+	stage *kargoapi.Stage,
+	update *kargoapi.HelmPromotionMechanism,
+	newFreight []kargoapi.FreightReference,
+) (map[string]map[string]string, []string, error) {
+	changesByFile := make(map[string]map[string]string, len(update.Images))
+	changeSummary := make([]string, 0, len(update.Images))
+	for i := range update.Images {
+		imageUpdate := &update.Images[i]
 		switch imageUpdate.Value {
 		case kargoapi.ImageUpdateValueTypeImageAndTag,
 			kargoapi.ImageUpdateValueTypeTag,
@@ -142,32 +162,37 @@ func buildValuesFilesChanges(
 			// This really shouldn't happen, so we'll ignore it.
 			continue
 		}
-		tag, tagFound := tagsByImage[imageUpdate.Image]
-		digest, digestFound := digestsByImage[imageUpdate.Image]
-		if !tagFound && !digestFound {
+		desiredOrigin := freight.GetDesiredOrigin(stage, imageUpdate)
+		image, err := freight.FindImage(ctx, h.client, stage, desiredOrigin, newFreight, imageUpdate.Image)
+		if err != nil {
+			return nil, nil,
+				fmt.Errorf("error finding image from repo %q: %w", imageUpdate.Image, err)
+		}
+		if image == nil {
 			// There's no change to make in this case.
 			continue
 		}
 		if _, found := changesByFile[imageUpdate.ValuesFilePath]; !found {
 			changesByFile[imageUpdate.ValuesFilePath] = map[string]string{}
 		}
-
 		var fqImageRef string // Fully qualified image reference
 		switch imageUpdate.Value {
 		case kargoapi.ImageUpdateValueTypeImageAndTag:
 			changesByFile[imageUpdate.ValuesFilePath][imageUpdate.Key] =
-				fmt.Sprintf("%s:%s", imageUpdate.Image, tag)
-			fqImageRef = fmt.Sprintf("%s:%s", imageUpdate.Image, tag)
+				fmt.Sprintf("%s:%s", imageUpdate.Image, image.Tag)
+			fqImageRef = fmt.Sprintf("%s:%s", imageUpdate.Image, image.Tag)
 		case kargoapi.ImageUpdateValueTypeTag:
-			changesByFile[imageUpdate.ValuesFilePath][imageUpdate.Key] = "'" + tag + "'"
-			fqImageRef = fmt.Sprintf("%s:%s", imageUpdate.Image, tag)
+			changesByFile[imageUpdate.ValuesFilePath][imageUpdate.Key] =
+				fmt.Sprintf("'%s'", image.Tag)
+			fqImageRef = fmt.Sprintf("%s:%s", imageUpdate.Image, image.Tag)
 		case kargoapi.ImageUpdateValueTypeImageAndDigest:
 			changesByFile[imageUpdate.ValuesFilePath][imageUpdate.Key] =
-				fmt.Sprintf("%s@%s", imageUpdate.Image, digest)
-			fqImageRef = fmt.Sprintf("%s@%s", imageUpdate.Image, digest)
+				fmt.Sprintf("%s@%s", imageUpdate.Image, image.Digest)
+			fqImageRef = fmt.Sprintf("%s@%s", imageUpdate.Image, image.Digest)
 		case kargoapi.ImageUpdateValueTypeDigest:
-			changesByFile[imageUpdate.ValuesFilePath][imageUpdate.Key] = digest
-			fqImageRef = fmt.Sprintf("%s@%s", imageUpdate.Image, digest)
+			changesByFile[imageUpdate.ValuesFilePath][imageUpdate.Key] =
+				fmt.Sprintf("'%s'", image.Digest)
+			fqImageRef = fmt.Sprintf("%s@%s", imageUpdate.Image, image.Digest)
 		}
 		changeSummary = append(
 			changeSummary,
@@ -178,68 +203,84 @@ func buildValuesFilesChanges(
 			),
 		)
 	}
-	return changesByFile, changeSummary
+	return changesByFile, changeSummary, nil
 }
 
 // buildChartDependencyChanges takes a list of charts and a list of instructions
 // about changes that should be made to various Chart.yaml files and distills
 // them into a map of maps that indexes new values for each Chart.yaml file by
 // file name and key.
-func buildChartDependencyChanges(
+func (h *helmer) buildChartDependencyChanges(
+	ctx context.Context,
+	stage *kargoapi.Stage,
+	update *kargoapi.HelmPromotionMechanism,
+	newFreight []kargoapi.FreightReference,
 	repoDir string,
-	freight []kargoapi.FreightReference,
-	chartUpdates []kargoapi.HelmChartDependencyUpdate,
 ) (map[string]map[string]string, []string, error) {
-	// Build a table of charts --> versions
-	versionsByChart := map[string]string{}
-	for _, f := range freight {
-		for _, chart := range f.Charts {
-			// path.Join accounts for the possibility that chart.Name is empty
-			key := path.Join(chart.RepoURL, chart.Name)
-			versionsByChart[key] = chart.Version
+	// Build a map of updates by chart
+	updatesByChartPath := map[string][]*kargoapi.HelmChartDependencyUpdate{}
+	for i := range update.Charts {
+		chartUpdate := &update.Charts[i]
+		if updates, found := updatesByChartPath[chartUpdate.ChartPath]; !found {
+			updates = []*kargoapi.HelmChartDependencyUpdate{chartUpdate}
+			updatesByChartPath[chartUpdate.ChartPath] = updates
+		} else {
+			updatesByChartPath[chartUpdate.ChartPath] = append(updates, chartUpdate)
 		}
 	}
-
-	// Build a de-duped set of paths to affected Charts files
-	chartPaths := make(map[string]struct{}, len(chartUpdates))
-	for _, chartUpdate := range chartUpdates {
-		chartPaths[chartUpdate.ChartPath] = struct{}{}
-	}
-
-	// For each chart, build the appropriate changes
-	changesByFile := make(map[string]map[string]string)
+	changesByChart := make(map[string]map[string]string)
 	changeSummary := make([]string, 0)
-	for chartPath := range chartPaths {
+	for chartPath, updates := range updatesByChartPath {
 		absChartYAMLPath := filepath.Join(repoDir, chartPath, "Chart.yaml")
 		chartDependencies, err := loadChartDependencies(absChartYAMLPath)
 		if err != nil {
 			return nil, nil, fmt.Errorf("loading dependencies for chart: %w", err)
 		}
-		for i, dependency := range chartDependencies {
-			chartKey := path.Join(dependency.Repository, dependency.Name)
-			version, found := versionsByChart[chartKey]
-			if !found {
+		for _, update := range updates {
+			desiredOrigin := freight.GetDesiredOrigin(stage, update)
+			chart, err := freight.FindChart(
+				ctx,
+				h.client,
+				stage,
+				desiredOrigin,
+				newFreight,
+				update.Repository,
+				update.Name,
+			)
+			if err != nil {
+				return nil, nil,
+					fmt.Errorf("error finding chart from repo %q: %w", update.Repository, err)
+			}
+			if chart == nil {
+				// There's no change to make in this case.
 				continue
 			}
-			if found {
-				if _, found = changesByFile[chartPath]; !found {
-					changesByFile[chartPath] = map[string]string{}
+			for i, dependency := range chartDependencies {
+				if update.Repository != dependency.Repository || update.Name != dependency.Name {
+					continue
 				}
+				key := fmt.Sprintf("dependencies.%d.version", i)
+				if _, found := changesByChart[chartPath]; !found {
+					changesByChart[chartPath] = map[string]string{
+						key: chart.Version,
+					}
+				} else {
+					changesByChart[chartPath][key] = chart.Version
+				}
+				changeSummary = append(
+					changeSummary,
+					fmt.Sprintf(
+						"updated %s/Chart.yaml to use subchart %s:%s",
+						chartPath,
+						dependency.Name,
+						chart.Version,
+					),
+				)
 			}
-			versionKey := fmt.Sprintf("dependencies.%d.version", i)
-			changesByFile[chartPath][versionKey] = version
-			changeSummary = append(
-				changeSummary,
-				fmt.Sprintf(
-					"updated %s/Chart.yaml to use subchart %s:%s",
-					chartPath,
-					dependency.Name,
-					version,
-				),
-			)
 		}
+
 	}
-	return changesByFile, changeSummary, nil
+	return changesByChart, changeSummary, nil
 }
 
 // prepareDependencyCredentialsFn returns a function that prepares the necessary

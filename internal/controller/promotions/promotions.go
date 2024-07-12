@@ -185,6 +185,7 @@ func newReconciler(
 		cfg:         cfg,
 		pqs:         &pqs,
 		promoMechanisms: promotion.NewMechanisms(
+			kargoClient,
 			argocdClient,
 			credentialsDB,
 		),

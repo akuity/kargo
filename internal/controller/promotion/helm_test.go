@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/git"
@@ -16,9 +17,14 @@ import (
 )
 
 func TestNewHelmMechanism(t *testing.T) {
-	pm := newHelmMechanism(&credentials.FakeDB{})
+	pm := newHelmMechanism(
+		fake.NewFakeClient(),
+		&credentials.FakeDB{},
+	)
 	hpm, ok := pm.(*gitMechanism)
 	require.True(t, ok)
+	require.Equal(t, "Helm promotion mechanism", hpm.name)
+	require.NotNil(t, hpm.client)
 	require.NotNil(t, hpm.selectUpdatesFn)
 	require.NotNil(t, hpm.applyConfigManagementFn)
 }
@@ -27,11 +33,11 @@ func TestSelectHelmUpdates(t *testing.T) {
 	testCases := []struct {
 		name       string
 		updates    []kargoapi.GitRepoUpdate
-		assertions func(t *testing.T, selectedUpdates []kargoapi.GitRepoUpdate)
+		assertions func(t *testing.T, selectedUpdates []*kargoapi.GitRepoUpdate)
 	}{
 		{
 			name: "no updates",
-			assertions: func(t *testing.T, selectedUpdates []kargoapi.GitRepoUpdate) {
+			assertions: func(t *testing.T, selectedUpdates []*kargoapi.GitRepoUpdate) {
 				require.Empty(t, selectedUpdates)
 			},
 		},
@@ -42,7 +48,7 @@ func TestSelectHelmUpdates(t *testing.T) {
 					RepoURL: "fake-url",
 				},
 			},
-			assertions: func(t *testing.T, selectedUpdates []kargoapi.GitRepoUpdate) {
+			assertions: func(t *testing.T, selectedUpdates []*kargoapi.GitRepoUpdate) {
 				require.Empty(t, selectedUpdates)
 			},
 		},
@@ -61,7 +67,7 @@ func TestSelectHelmUpdates(t *testing.T) {
 					RepoURL: "fake-url",
 				},
 			},
-			assertions: func(t *testing.T, selectedUpdates []kargoapi.GitRepoUpdate) {
+			assertions: func(t *testing.T, selectedUpdates []*kargoapi.GitRepoUpdate) {
 				require.Len(t, selectedUpdates, 1)
 			},
 		},
@@ -88,14 +94,16 @@ func TestHelmerApply(t *testing.T) {
 			name: "error updating values file",
 			helmer: &helmer{
 				buildValuesFilesChangesFn: func(
+					context.Context,
+					*kargoapi.Stage,
+					*kargoapi.HelmPromotionMechanism,
 					[]kargoapi.FreightReference,
-					[]kargoapi.HelmImageUpdate,
-				) (map[string]map[string]string, []string) {
+				) (map[string]map[string]string, []string, error) {
 					return map[string]map[string]string{
 						testValuesFile: {
 							testKey: testValue,
 						},
-					}, nil
+					}, nil, nil
 				},
 				setStringsInYAMLFileFn: func(string, map[string]string) error {
 					return errors.New("something went wrong")
@@ -110,18 +118,22 @@ func TestHelmerApply(t *testing.T) {
 			name: "error building chart dependency changes",
 			helmer: &helmer{
 				buildValuesFilesChangesFn: func(
+					context.Context,
+					*kargoapi.Stage,
+					*kargoapi.HelmPromotionMechanism,
 					[]kargoapi.FreightReference,
-					[]kargoapi.HelmImageUpdate,
-				) (map[string]map[string]string, []string) {
+				) (map[string]map[string]string, []string, error) {
 					// This returns nothing so that the only calls to
 					// setStringsInYAMLFileFn will be for updating subcharts in
 					// Charts.yaml.
-					return nil, nil
+					return nil, nil, nil
 				},
 				buildChartDependencyChangesFn: func(
-					string,
+					context.Context,
+					*kargoapi.Stage,
+					*kargoapi.HelmPromotionMechanism,
 					[]kargoapi.FreightReference,
-					[]kargoapi.HelmChartDependencyUpdate,
+					string,
 				) (map[string]map[string]string, []string, error) {
 					return nil, nil, errors.New("something went wrong")
 				},
@@ -135,18 +147,22 @@ func TestHelmerApply(t *testing.T) {
 			name: "error updating Chart.yaml",
 			helmer: &helmer{
 				buildValuesFilesChangesFn: func(
+					context.Context,
+					*kargoapi.Stage,
+					*kargoapi.HelmPromotionMechanism,
 					[]kargoapi.FreightReference,
-					[]kargoapi.HelmImageUpdate,
-				) (map[string]map[string]string, []string) {
+				) (map[string]map[string]string, []string, error) {
 					// This returns nothing so that the only calls to
 					// setStringsInYAMLFileFn will be for updating subcharts in
 					// Charts.yaml.
-					return nil, nil
+					return nil, nil, nil
 				},
 				buildChartDependencyChangesFn: func(
-					string,
+					context.Context,
+					*kargoapi.Stage,
+					*kargoapi.HelmPromotionMechanism,
 					[]kargoapi.FreightReference,
-					[]kargoapi.HelmChartDependencyUpdate,
+					string,
 				) (map[string]map[string]string, []string, error) {
 					return map[string]map[string]string{
 						testChartFile: {
@@ -167,18 +183,22 @@ func TestHelmerApply(t *testing.T) {
 			name: "error preparing dependency credentials",
 			helmer: &helmer{
 				buildValuesFilesChangesFn: func(
+					context.Context,
+					*kargoapi.Stage,
+					*kargoapi.HelmPromotionMechanism,
 					[]kargoapi.FreightReference,
-					[]kargoapi.HelmImageUpdate,
-				) (map[string]map[string]string, []string) {
-					return nil, nil
+				) (map[string]map[string]string, []string, error) {
+					return nil, nil, nil
 				},
 				prepareDependencyCredentialsFn: func(context.Context, string, string, string) error {
 					return fmt.Errorf("something went wrong")
 				},
 				buildChartDependencyChangesFn: func(
-					string,
+					context.Context,
+					*kargoapi.Stage,
+					*kargoapi.HelmPromotionMechanism,
 					[]kargoapi.FreightReference,
-					[]kargoapi.HelmChartDependencyUpdate,
+					string,
 				) (map[string]map[string]string, []string, error) {
 					return map[string]map[string]string{
 						testChartFile: {
@@ -199,18 +219,22 @@ func TestHelmerApply(t *testing.T) {
 			name: "error running helm chart dep up",
 			helmer: &helmer{
 				buildValuesFilesChangesFn: func(
+					context.Context,
+					*kargoapi.Stage,
+					*kargoapi.HelmPromotionMechanism,
 					[]kargoapi.FreightReference,
-					[]kargoapi.HelmImageUpdate,
-				) (map[string]map[string]string, []string) {
-					return nil, nil
+				) (map[string]map[string]string, []string, error) {
+					return nil, nil, nil
 				},
 				prepareDependencyCredentialsFn: func(context.Context, string, string, string) error {
 					return nil
 				},
 				buildChartDependencyChangesFn: func(
-					string,
+					context.Context,
+					*kargoapi.Stage,
+					*kargoapi.HelmPromotionMechanism,
 					[]kargoapi.FreightReference,
-					[]kargoapi.HelmChartDependencyUpdate,
+					string,
 				) (map[string]map[string]string, []string, error) {
 					return map[string]map[string]string{
 						testChartFile: {
@@ -234,19 +258,23 @@ func TestHelmerApply(t *testing.T) {
 			name: "success",
 			helmer: &helmer{
 				buildValuesFilesChangesFn: func(
+					context.Context,
+					*kargoapi.Stage,
+					*kargoapi.HelmPromotionMechanism,
 					[]kargoapi.FreightReference,
-					[]kargoapi.HelmImageUpdate,
-				) (map[string]map[string]string, []string) {
+				) (map[string]map[string]string, []string, error) {
 					return map[string]map[string]string{
 						testValuesFile: {
 							testKey: testValue,
 						},
-					}, []string{"fake-image-update"}
+					}, []string{"fake-image-update"}, nil
 				},
 				buildChartDependencyChangesFn: func(
-					string,
+					context.Context,
+					*kargoapi.Stage,
+					*kargoapi.HelmPromotionMechanism,
 					[]kargoapi.FreightReference,
-					[]kargoapi.HelmChartDependencyUpdate,
+					string,
 				) (map[string]map[string]string, []string, error) {
 					return map[string]map[string]string{
 						testChartFile: {
@@ -272,13 +300,20 @@ func TestHelmerApply(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			changes, err := testCase.helmer.apply(
-				context.TODO(),
-				kargoapi.GitRepoUpdate{
-					Helm: &kargoapi.HelmPromotionMechanism{},
+			stage := &kargoapi.Stage{
+				Spec: kargoapi.StageSpec{
+					PromotionMechanisms: &kargoapi.PromotionMechanisms{
+						GitRepoUpdates: []kargoapi.GitRepoUpdate{{
+							Helm: &kargoapi.HelmPromotionMechanism{},
+						}},
+					},
 				},
+			}
+			changes, err := testCase.helmer.apply(
+				context.Background(),
+				stage,
+				&stage.Spec.PromotionMechanisms.GitRepoUpdates[0],
 				[]kargoapi.FreightReference{}, // The way the tests are structured, this value doesn't matter
-				"",
 				"",
 				"",
 				"",
@@ -290,63 +325,85 @@ func TestHelmerApply(t *testing.T) {
 }
 
 func TestBuildValuesFilesChanges(t *testing.T) {
-	freight := []kargoapi.FreightReference{{
-		Images: []kargoapi.Image{
-			{
-				RepoURL: "fake-url",
-				Tag:     "fake-tag",
-				Digest:  "fake-digest",
+	testOrigin := kargoapi.FreightOrigin{
+		Kind: kargoapi.FreightOriginKindWarehouse,
+		Name: "fake-warehouse",
+	}
+	stage := &kargoapi.Stage{
+		Spec: kargoapi.StageSpec{
+			PromotionMechanisms: &kargoapi.PromotionMechanisms{
+				GitRepoUpdates: []kargoapi.GitRepoUpdate{{
+					Helm: &kargoapi.HelmPromotionMechanism{
+						Origin: &testOrigin,
+						Images: []kargoapi.HelmImageUpdate{
+							{
+								ValuesFilePath: "fake-values.yaml",
+								Image:          "fake-url",
+								Key:            "fake-key",
+								Value:          kargoapi.ImageUpdateValueTypeImageAndTag,
+							},
+							{
+								ValuesFilePath: "fake-values.yaml",
+								Image:          "second-fake-url",
+								Key:            "second-fake-key",
+								Value:          kargoapi.ImageUpdateValueTypeTag,
+							},
+							{
+								ValuesFilePath: "another-fake-values.yaml",
+								Image:          "third-fake-url",
+								Key:            "third-fake-key",
+								Value:          kargoapi.ImageUpdateValueTypeImageAndDigest,
+							},
+							{
+								ValuesFilePath: "another-fake-values.yaml",
+								Image:          "fourth-fake-url",
+								Key:            "fourth-fake-key",
+								Value:          kargoapi.ImageUpdateValueTypeDigest,
+							},
+							{
+								ValuesFilePath: "yet-another-fake-values.yaml",
+								Image:          "image-that-is-not-in-list",
+								Key:            "fake-key",
+								Value:          "Tag",
+							},
+						},
+					},
+				}},
 			},
-			{
-				RepoURL: "second-fake-url",
-				Tag:     "second-fake-tag",
-				Digest:  "second-fake-digest",
-			},
-			{
-				RepoURL: "third-fake-url",
-				Tag:     "third-fake-tag",
-				Digest:  "third-fake-digest",
-			},
-			{
-				RepoURL: "fourth-fake-url",
-				Tag:     "fourth-fake-tag",
-				Digest:  "fourth-fake-digest",
-			},
-		},
-	}}
-	imageUpdates := []kargoapi.HelmImageUpdate{
-		{
-			ValuesFilePath: "fake-values.yaml",
-			Image:          "fake-url",
-			Key:            "fake-key",
-			Value:          kargoapi.ImageUpdateValueTypeImageAndTag,
-		},
-		{
-			ValuesFilePath: "fake-values.yaml",
-			Image:          "second-fake-url",
-			Key:            "second-fake-key",
-			Value:          kargoapi.ImageUpdateValueTypeTag,
-		},
-		{
-			ValuesFilePath: "another-fake-values.yaml",
-			Image:          "third-fake-url",
-			Key:            "third-fake-key",
-			Value:          kargoapi.ImageUpdateValueTypeImageAndDigest,
-		},
-		{
-			ValuesFilePath: "another-fake-values.yaml",
-			Image:          "fourth-fake-url",
-			Key:            "fourth-fake-key",
-			Value:          kargoapi.ImageUpdateValueTypeDigest,
-		},
-		{
-			ValuesFilePath: "yet-another-fake-values.yaml",
-			Image:          "image-that-is-not-in-list",
-			Key:            "fake-key",
-			Value:          "Tag",
 		},
 	}
-	result, changeSummary := buildValuesFilesChanges(freight, imageUpdates)
+	h := &helmer{}
+	result, changeSummary, err := h.buildValuesFilesChanges(
+		context.Background(),
+		stage,
+		stage.Spec.PromotionMechanisms.GitRepoUpdates[0].Helm,
+		[]kargoapi.FreightReference{{
+			Origin: testOrigin,
+			Images: []kargoapi.Image{
+				{
+					RepoURL: "fake-url",
+					Tag:     "fake-tag",
+					Digest:  "fake-digest",
+				},
+				{
+					RepoURL: "second-fake-url",
+					Tag:     "second-fake-tag",
+					Digest:  "second-fake-digest",
+				},
+				{
+					RepoURL: "third-fake-url",
+					Tag:     "third-fake-tag",
+					Digest:  "third-fake-digest",
+				},
+				{
+					RepoURL: "fourth-fake-url",
+					Tag:     "fourth-fake-tag",
+					Digest:  "fourth-fake-digest",
+				},
+			},
+		}},
+	)
+	require.NoError(t, err)
 	require.Equal(
 		t,
 		map[string]map[string]string{
@@ -356,7 +413,7 @@ func TestBuildValuesFilesChanges(t *testing.T) {
 			},
 			"another-fake-values.yaml": {
 				"third-fake-key":  "third-fake-url@third-fake-digest",
-				"fourth-fake-key": "fourth-fake-digest",
+				"fourth-fake-key": "'fourth-fake-digest'",
 			},
 		},
 		result,
@@ -415,8 +472,14 @@ func TestBuildChartDependencyChanges(t *testing.T) {
 	)
 	require.NoError(t, err)
 
+	testOrigin := kargoapi.FreightOrigin{
+		Kind: kargoapi.FreightOriginKindWarehouse,
+		Name: "fake-warehouse",
+	}
+
 	// New charts
 	freight := []kargoapi.FreightReference{{
+		Origin: testOrigin,
 		Charts: []kargoapi.Chart{
 			{
 				RepoURL: "fake-repo",
@@ -431,24 +494,41 @@ func TestBuildChartDependencyChanges(t *testing.T) {
 		},
 	}}
 
-	// Instructions for how to update Chart.yaml files
-	chartUpdates := []kargoapi.HelmChartDependencyUpdate{
-		{
-			Repository: "fake-repo",
-			Name:       "fake-chart",
-			ChartPath:  "charts/foo",
+	stage := &kargoapi.Stage{
+		Spec: kargoapi.StageSpec{
+			PromotionMechanisms: &kargoapi.PromotionMechanisms{
+				GitRepoUpdates: []kargoapi.GitRepoUpdate{{
+					Helm: &kargoapi.HelmPromotionMechanism{
+						Origin: &testOrigin,
+						// Instructions for how to update Chart.yaml files
+						Charts: []kargoapi.HelmChartDependencyUpdate{
+							{
+								Repository: "fake-repo",
+								Name:       "fake-chart",
+								ChartPath:  "charts/foo",
+							},
+							{
+								Repository: "another-fake-repo",
+								Name:       "another-fake-chart",
+								ChartPath:  "charts/bar",
+							},
+							// Note there is no mention of how to update bar's second dependency, so
+							// we expect it to be left alone.
+						},
+					},
+				}},
+			},
 		},
-		{
-			Repository: "another-fake-repo",
-			Name:       "another-fake-chart",
-			ChartPath:  "charts/bar",
-		},
-		// Note there is no mention of how to update bar's second dependency, so
-		// we expect it to be left alone.
 	}
 
-	result, changeSummary, err :=
-		buildChartDependencyChanges(testDir, freight, chartUpdates)
+	h := &helmer{}
+	result, changeSummary, err := h.buildChartDependencyChanges(
+		context.Background(),
+		stage,
+		stage.Spec.PromotionMechanisms.GitRepoUpdates[0].Helm,
+		freight,
+		testDir,
+	)
 	require.NoError(t, err)
 	require.Equal(
 		t,

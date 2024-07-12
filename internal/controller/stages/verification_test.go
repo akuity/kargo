@@ -1123,7 +1123,6 @@ func TestBuildAnalysisRun(t *testing.T) {
 					Kind:               "Freight",
 					Name:               testFreight.Name,
 					UID:                testFreight.UID,
-					Controller:         ptr.To(true),
 					BlockOwnerDeletion: ptr.To(true),
 				}, ar.OwnerReferences[0])
 			},
