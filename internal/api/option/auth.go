@@ -447,11 +447,7 @@ func (a *authInterceptor) verifyKargoIssuedToken(rawToken string) bool {
 	return err == nil
 }
 
-type claims struct {
-	Subject string   `json:"sub"`
-	Email   string   `json:"email"`
-	Groups  []string `json:"groups"`
-}
+type claims map[string]any
 
 func oidcExtractClaims(token *oidc.IDToken) (claims, error) {
 	c := claims{}
