@@ -23,7 +23,7 @@ import (
 	"github.com/akuity/kargo/internal/logging"
 )
 
-type managedIAMCredentialHelper struct {
+type managedIdentityCredentialHelper struct {
 	awsAccountID string
 
 	tokenCache *cache.Cache
@@ -37,9 +37,9 @@ type managedIAMCredentialHelper struct {
 	) (string, error)
 }
 
-// NewManagedIAMCredentialHelper returns an implementation of
+// NewManagedIdentityCredentialHelper returns an implementation of
 // credentials.Helper that utilizes a cache to avoid unnecessary calls to AWS.
-func NewManagedIAMCredentialHelper(ctx context.Context) credentials.Helper {
+func NewManagedIdentityCredentialHelper(ctx context.Context) credentials.Helper {
 	logger := logging.LoggerFromContext(ctx)
 	var awsAccountID string
 	if os.Getenv("AWS_CONTAINER_CREDENTIALS_FULL_URI") != "" {
@@ -71,7 +71,7 @@ func NewManagedIAMCredentialHelper(ctx context.Context) credentials.Helper {
 			awsAccountID = *res.Account
 		}
 	}
-	p := &managedIAMCredentialHelper{
+	p := &managedIdentityCredentialHelper{
 		awsAccountID: awsAccountID,
 		tokenCache: cache.New(
 			// Tokens live for 12 hours. We'll hang on to them for 10.
@@ -83,7 +83,7 @@ func NewManagedIAMCredentialHelper(ctx context.Context) credentials.Helper {
 	return p.getCredentials
 }
 
-func (p *managedIAMCredentialHelper) getCredentials(
+func (p *managedIdentityCredentialHelper) getCredentials(
 	ctx context.Context,
 	project string,
 	credType credentials.Type,
@@ -133,7 +133,7 @@ func (p *managedIAMCredentialHelper) getCredentials(
 	return decodeAuthToken(encodedToken)
 }
 
-func (p *managedIAMCredentialHelper) tokenCacheKey(region, project string) string {
+func (p *managedIdentityCredentialHelper) tokenCacheKey(region, project string) string {
 	return fmt.Sprintf(
 		"%x",
 		sha256.Sum256([]byte(
@@ -145,7 +145,7 @@ func (p *managedIAMCredentialHelper) tokenCacheKey(region, project string) strin
 // getAuthToken returns an ECR authorization token obtained by assuming a
 // project-specific IAM role and using that to obtain a short-lived ECR access
 // token.
-func (p *managedIAMCredentialHelper) getAuthToken(
+func (p *managedIdentityCredentialHelper) getAuthToken(
 	ctx context.Context,
 	region string,
 	project string,
