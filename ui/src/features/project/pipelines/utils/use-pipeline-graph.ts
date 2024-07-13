@@ -125,7 +125,10 @@ export const usePipelineGraph = (
       g.setNode(String(index), nodeStubFor(item.type));
 
       if (item.type === NodeType.STAGE) {
-        (item.data?.spec?.requestedFreight || []).forEach((req, i) => {
+        const stage = item.data as Stage;
+        const curStageName = stage?.metadata?.name || '';
+
+        (stage?.spec?.requestedFreight || []).forEach((req, i) => {
           if (req.origin?.kind === 'Warehouse') {
             req.sources?.stages?.forEach((upstreamStage) => {
               const to = String(subscriberIndexCache.get(upstreamStage, myNodes));
@@ -136,23 +139,24 @@ export const usePipelineGraph = (
                 {
                   color: warehouseColorMap[req?.origin?.name || '']
                 },
-                `${upstreamStage}/${to}-${from} ${i}`
+                `${upstreamStage} ${curStageName} ${i}`
               );
             });
           }
         });
 
-        (item.data?.spec?.subscriptions?.upstreamStages || []).forEach((upstreamStage, i) => {
+        (stage?.spec?.subscriptions?.upstreamStages || []).forEach((upstreamStage, i) => {
           g.setEdge(
             String(subscriberIndexCache.get(upstreamStage.name || '', myNodes)),
             String(index),
             {},
-            String(`${upstreamStage.name || ''}/${index} ${i}`)
+            String(`${upstreamStage.name || ''} ${curStageName} ${i}`)
           );
         });
       } else if (item.type === NodeType.WAREHOUSE) {
         // this is a warehouse node
         let i = 0;
+        const warehouseName = (item.data as Warehouse).metadata?.name || '';
         for (const stageName of item.stageNames || []) {
           // draw edge between warehouse and stage(s)
           g.setEdge(
@@ -161,7 +165,7 @@ export const usePipelineGraph = (
             {
               color: warehouseColorMap[item.warehouseName]
             },
-            `${stageName}/${index} ${i}`
+            `${warehouseName} ${stageName} ${i}`
           );
           i++;
         }
@@ -174,7 +178,7 @@ export const usePipelineGraph = (
           {
             color: warehouseColorMap[item.warehouseName]
           },
-          `${item.warehouseName}/${index}`
+          `${item.warehouseName} ${index}`
         );
       }
     });

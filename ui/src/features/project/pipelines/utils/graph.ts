@@ -44,12 +44,14 @@ export const nodeStubFor = (type: NodeType) => {
 };
 
 export const getConnectors = (g: graphlib.Graph) => {
-  const groups: { [key: string]: ConnectorsType[][] } = {};
+  const groups: { [key: string]: { [key: string]: ConnectorsType[][] } } = {};
   g.edges().map((item) => {
     const edge = g.edge(item);
     const points = edge.points;
 
-    const id = item.name?.split(' ')[0] || item.name || '';
+    const parts = item.name?.split(' ') || [];
+    const from = parts[0] || '';
+    const to = parts[1] || '';
 
     const lines = new Array<ConnectorsType>();
     for (let i = 0; i < points.length - 1; i++) {
@@ -69,17 +71,22 @@ export const getConnectors = (g: graphlib.Graph) => {
       lines.push({ x: cx, y: cy, width, angle, color: edge['color'] });
     }
 
-    groups[id] = [...(groups[id] || []), lines];
+    const fromGr = groups[from] || {};
+    groups[from] = { ...fromGr, [to]: [...(fromGr[to] || []), lines] };
   });
 
-  for (const key in groups) {
-    if (groups[key]?.length > 1) {
-      groups[key].forEach((lines) => {
-        lines.forEach((line) => {
-          line.angle = 0;
+  for (const fromKey in groups) {
+    if (Object.keys(groups[fromKey] || {}).length === 1) {
+      for (const group of Object.values(groups[fromKey])) {
+        group.forEach((lines) => {
+          lines.forEach((line) => {
+            line.angle = 0;
+          });
         });
-      });
+      }
     }
   }
-  return Object.values(groups).flatMap((group) => group);
+  return Object.values(groups).flatMap((group) =>
+    Object.values(group).flatMap((item) => Object.values(item))
+  );
 };
