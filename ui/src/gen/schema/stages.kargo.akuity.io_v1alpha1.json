@@ -1897,7 +1897,6 @@
             }
           },
           "required": [
-            "freight",
             "name"
           ],
           "type": "object"
@@ -3380,7 +3379,6 @@
             }
           },
           "required": [
-            "freight",
             "name"
           ],
           "type": "object"

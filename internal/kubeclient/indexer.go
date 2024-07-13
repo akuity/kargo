@@ -25,14 +25,10 @@ const (
 	FreightByWarehouseIndexField          = "warehouse"
 	PromotionsByStageAndFreightIndexField = "stageAndFreight"
 
-	// Note: These two do not conflict with one another, because these two
-	// indices are used by different components.
-	PromotionsByStageIndexField            = "stage"
-	NonTerminalPromotionsByStageIndexField = "stage"
+	PromotionsByStageIndexField = "stage"
 
 	RunningPromotionsByArgoCDApplicationsIndexField = "applications"
 
-	PromotionPoliciesByStageIndexField   = "stage"
 	StagesByAnalysisRunIndexField        = "analysisRun"
 	StagesByArgoCDApplicationsIndexField = "applications"
 	StagesByFreightIndexField            = "freight"
@@ -153,17 +149,6 @@ func IndexPromotionsByStage(ctx context.Context, mgr ctrl.Manager) error {
 		&kargoapi.Promotion{},
 		PromotionsByStageIndexField,
 		indexPromotionsByStage(),
-	)
-}
-
-// IndexNonTerminalPromotionsByStage indexes Promotions in non-terminal states
-// by Stage
-func IndexNonTerminalPromotionsByStage(ctx context.Context, mgr ctrl.Manager) error {
-	return mgr.GetFieldIndexer().IndexField(
-		ctx,
-		&kargoapi.Promotion{},
-		NonTerminalPromotionsByStageIndexField,
-		indexPromotionsByStage(isPromotionPhaseNonTerminal),
 	)
 }
 
@@ -297,11 +282,13 @@ func IndexFreightByWarehouse(ctx context.Context, mgr ctrl.Manager) error {
 		ctx,
 		&kargoapi.Freight{},
 		FreightByWarehouseIndexField,
-		indexFreightByWarehouse,
+		FreightByWarehouseIndexer,
 	)
 }
 
-func indexFreightByWarehouse(obj client.Object) []string {
+// FreightByWarehouseIndexer is a client.IndexerFunc that indexes Freight by the
+// Warehouse it is associated with.
+func FreightByWarehouseIndexer(obj client.Object) []string {
 	freight := obj.(*kargoapi.Freight) // nolint: forcetypeassert
 	if freight.Origin.Kind == kargoapi.FreightOriginKindWarehouse {
 		return []string{freight.Origin.Name}
@@ -319,11 +306,13 @@ func IndexFreightByVerifiedStages(
 		ctx,
 		&kargoapi.Freight{},
 		FreightByVerifiedStagesIndexField,
-		indexFreightByVerifiedStages,
+		FreightByVerifiedStagesIndexer,
 	)
 }
 
-func indexFreightByVerifiedStages(obj client.Object) []string {
+// FreightByVerifiedStagesIndexer is a client.IndexerFunc that indexes Freight
+// by the Stages in which it has been verified.
+func FreightByVerifiedStagesIndexer(obj client.Object) []string {
 	freight := obj.(*kargoapi.Freight) // nolint: forcetypeassert
 	verifiedStages := make([]string, len(freight.Status.VerifiedIn))
 	var i int
@@ -344,11 +333,13 @@ func IndexFreightByApprovedStages(
 		ctx,
 		&kargoapi.Freight{},
 		FreightApprovedForStagesIndexField,
-		indexFreightByApprovedStages,
+		FreightApprovedForStagesIndexer,
 	)
 }
 
-func indexFreightByApprovedStages(obj client.Object) []string {
+// FreightApprovedForStagesIndexer is a client.IndexerFunc that indexes Freight
+// by the Stages for which it has been (manually) approved.
+func FreightApprovedForStagesIndexer(obj client.Object) []string {
 	freight := obj.(*kargoapi.Freight) // nolint: forcetypeassert
 	approvedStages := make([]string, len(freight.Status.ApprovedFor))
 	var i int

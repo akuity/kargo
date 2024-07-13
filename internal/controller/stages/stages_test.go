@@ -3,20 +3,26 @@ package stages
 import (
 	"context"
 	"errors"
+	"fmt"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/oklog/ulid/v2"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller"
 	rollouts "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
+	"github.com/akuity/kargo/internal/kubeclient"
 	fakeevent "github.com/akuity/kargo/internal/kubernetes/event/fake"
 )
 
@@ -1239,9 +1245,9 @@ func TestSyncNormalStage(t *testing.T) {
 				) (*kargoapi.Freight, error) {
 					return &kargoapi.Freight{}, nil
 				},
-				getAvailableFreightFn: func(
+				getAvailableFreightByOriginFn: func(
 					context.Context, *kargoapi.Stage, bool,
-				) ([]kargoapi.Freight, error) {
+				) (map[string][]kargoapi.Freight, error) {
 					return nil, errors.New("something went wrong")
 				},
 			},
@@ -1314,9 +1320,9 @@ func TestSyncNormalStage(t *testing.T) {
 				) (bool, error) {
 					return true, nil
 				},
-				getAvailableFreightFn: func(
+				getAvailableFreightByOriginFn: func(
 					context.Context, *kargoapi.Stage, bool,
-				) ([]kargoapi.Freight, error) {
+				) (map[string][]kargoapi.Freight, error) {
 					return nil, nil
 				},
 			},
@@ -1391,14 +1397,18 @@ func TestSyncNormalStage(t *testing.T) {
 				) (*kargoapi.Freight, error) {
 					return &kargoapi.Freight{}, nil
 				},
-				getAvailableFreightFn: func(
+				getAvailableFreightByOriginFn: func(
 					context.Context, *kargoapi.Stage, bool,
-				) ([]kargoapi.Freight, error) {
-					return []kargoapi.Freight{{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: "fake-freight-id",
+				) (map[string][]kargoapi.Freight, error) {
+					return map[string][]kargoapi.Freight{
+						testOrigin.String(): {
+							{
+								ObjectMeta: metav1.ObjectMeta{
+									Name: "fake-freight-id",
+								},
+							},
 						},
-					}}, nil
+					}, nil
 				},
 			},
 			assertions: func(
@@ -1468,14 +1478,18 @@ func TestSyncNormalStage(t *testing.T) {
 						},
 					}, nil
 				},
-				getAvailableFreightFn: func(
+				getAvailableFreightByOriginFn: func(
 					context.Context, *kargoapi.Stage, bool,
-				) ([]kargoapi.Freight, error) {
-					return []kargoapi.Freight{{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: "fake-freight-id",
+				) (map[string][]kargoapi.Freight, error) {
+					return map[string][]kargoapi.Freight{
+						testOrigin.String(): {
+							{
+								ObjectMeta: metav1.ObjectMeta{
+									Name: "fake-freight-id",
+								},
+							},
 						},
-					}}, nil
+					}, nil
 				},
 				listPromosFn: func(
 					_ context.Context,
@@ -1496,6 +1510,94 @@ func TestSyncNormalStage(t *testing.T) {
 				err error,
 			) {
 				require.NoError(t, err)
+
+				// Status should be returned unchanged
+				require.Equal(t, initialStatus, newStatus)
+
+				// No events should have been recorded
+				require.Empty(t, recorder.Events)
+			},
+		},
+
+		{
+			name: "error listing Promotions",
+			stage: &kargoapi.Stage{
+				Spec: kargoapi.StageSpec{
+					RequestedFreight:    []kargoapi.FreightRequest{{}},
+					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
+				},
+				Status: kargoapi.StageStatus{
+					Phase: kargoapi.StagePhaseSteady,
+					FreightHistory: kargoapi.FreightHistory{
+						{
+							Freight: map[string]kargoapi.FreightReference{
+								testOrigin.String(): {
+									Origin: testOrigin,
+								},
+							},
+						},
+					},
+				},
+			},
+			reconciler: &reconciler{
+				syncPromotionsFn: func(
+					_ context.Context,
+					_ *kargoapi.Stage,
+					status kargoapi.StageStatus,
+				) (kargoapi.StageStatus, error) {
+					return status, nil
+				},
+				appHealth: &mockAppHealthEvaluator{},
+				verifyFreightInStageFn: func(context.Context, string, string, string) (bool, error) {
+					return false, nil
+				},
+				isAutoPromotionPermittedFn: func(
+					context.Context,
+					string,
+					string,
+				) (bool, error) {
+					return true, nil
+				},
+				getFreightFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Freight, error) {
+					return &kargoapi.Freight{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "fake-freight-id",
+						},
+					}, nil
+				},
+				getAvailableFreightByOriginFn: func(
+					context.Context, *kargoapi.Stage, bool,
+				) (map[string][]kargoapi.Freight, error) {
+					return map[string][]kargoapi.Freight{
+						testOrigin.String(): {
+							{
+								ObjectMeta: metav1.ObjectMeta{
+									Name: "fake-freight-id",
+								},
+							},
+						},
+					}, nil
+				},
+				listPromosFn: func(
+					context.Context,
+					client.ObjectList,
+					...client.ListOption,
+				) error {
+					return errors.New("something went wrong")
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				recorder *fakeevent.EventRecorder,
+				initialStatus kargoapi.StageStatus,
+				newStatus kargoapi.StageStatus,
+				err error,
+			) {
+				require.ErrorContains(t, err, "something went wrong")
 
 				// Status should be returned unchanged
 				require.Equal(t, initialStatus, newStatus)
@@ -1555,14 +1657,18 @@ func TestSyncNormalStage(t *testing.T) {
 						},
 					}, nil
 				},
-				getAvailableFreightFn: func(
+				getAvailableFreightByOriginFn: func(
 					context.Context, *kargoapi.Stage, bool,
-				) ([]kargoapi.Freight, error) {
-					return []kargoapi.Freight{{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: "fake-freight-id",
+				) (map[string][]kargoapi.Freight, error) {
+					return map[string][]kargoapi.Freight{
+						testOrigin.String(): {
+							{
+								ObjectMeta: metav1.ObjectMeta{
+									Name: "fake-freight-id",
+								},
+							},
 						},
-					}}, nil
+					}, nil
 				},
 				listPromosFn: func(
 					context.Context,
@@ -1818,14 +1924,18 @@ func TestSyncNormalStage(t *testing.T) {
 						},
 					}, nil
 				},
-				getAvailableFreightFn: func(
+				getAvailableFreightByOriginFn: func(
 					context.Context, *kargoapi.Stage, bool,
-				) ([]kargoapi.Freight, error) {
-					return []kargoapi.Freight{{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: "fake-freight-id",
+				) (map[string][]kargoapi.Freight, error) {
+					return map[string][]kargoapi.Freight{
+						testOrigin.String(): {
+							{
+								ObjectMeta: metav1.ObjectMeta{
+									Name: "fake-freight-id",
+								},
+							},
 						},
-					}}, nil
+					}, nil
 				},
 				listPromosFn: func(
 					context.Context,
@@ -1886,6 +1996,124 @@ func TestSyncNormalStage(t *testing.T) {
 				)
 
 				// Auto-promotion should have been recorded as an event
+				event = <-recorder.Events
+				require.Equal(t, kargoapi.EventReasonPromotionCreated, event.Reason)
+			},
+		},
+
+		{
+			name: "success with multiple Freight requests",
+			stage: &kargoapi.Stage{
+				Spec: kargoapi.StageSpec{
+					RequestedFreight:    []kargoapi.FreightRequest{{}, {}},
+					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
+				},
+				Status: kargoapi.StageStatus{
+					Phase: kargoapi.StagePhaseSteady,
+					FreightHistory: kargoapi.FreightHistory{
+						{
+							Freight: map[string]kargoapi.FreightReference{
+								testOrigin.String(): {
+									Origin: testOrigin,
+								},
+							},
+						},
+					},
+				},
+			},
+			reconciler: &reconciler{
+				syncPromotionsFn: func(
+					_ context.Context,
+					_ *kargoapi.Stage,
+					status kargoapi.StageStatus,
+				) (kargoapi.StageStatus, error) {
+					return status, nil
+				},
+				appHealth: &mockAppHealthEvaluator{},
+				verifyFreightInStageFn: func(context.Context, string, string, string) (bool, error) {
+					return false, nil
+				},
+				isAutoPromotionPermittedFn: func(
+					context.Context,
+					string,
+					string,
+				) (bool, error) {
+					return true, nil
+				},
+				getAvailableFreightByOriginFn: func(
+					context.Context, *kargoapi.Stage, bool,
+				) (map[string][]kargoapi.Freight, error) {
+					return map[string][]kargoapi.Freight{
+						testOrigin.String(): {
+							{
+								ObjectMeta: metav1.ObjectMeta{
+									CreationTimestamp: metav1.NewTime(fakeTime),
+									Name:              "fake-freight-1",
+									Namespace:         "fake-namespace",
+								},
+							},
+							{
+								ObjectMeta: metav1.ObjectMeta{
+									CreationTimestamp: metav1.NewTime(fakeTime.Add(time.Hour)),
+									Name:              "fake-freight-2",
+									Namespace:         "fake-namespace",
+								},
+							},
+						},
+						(&kargoapi.FreightOrigin{
+							Kind: kargoapi.FreightOriginKindWarehouse,
+							Name: "fake-warehouse-2",
+						}).String(): {
+							{
+								ObjectMeta: metav1.ObjectMeta{
+									CreationTimestamp: metav1.NewTime(fakeTime.Add(-1 * time.Hour)),
+									Name:              "fake-freight-3",
+									Namespace:         "fake-namespace",
+								},
+							},
+							{
+								ObjectMeta: metav1.ObjectMeta{
+									CreationTimestamp: metav1.NewTime(fakeTime),
+									Name:              "fake-freight-4",
+									Namespace:         "fake-namespace",
+								},
+							},
+						},
+					}, nil
+				},
+				listPromosFn: func(
+					context.Context,
+					client.ObjectList,
+					...client.ListOption,
+				) error {
+					return nil
+				},
+				createPromotionFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return nil
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				recorder *fakeevent.EventRecorder,
+				_ kargoapi.StageStatus,
+				newStatus kargoapi.StageStatus,
+				err error,
+			) {
+				require.NoError(t, err)
+
+				require.Equal(t, kargoapi.StagePhaseSteady, newStatus.Phase)
+
+				// Two events should have been recorded:
+				require.Len(t, recorder.Events, 2)
+
+				// Two auto-promotions should have been recorded as events
+				event := <-recorder.Events
+				require.Equal(t, kargoapi.EventReasonPromotionCreated, event.Reason)
+
 				event = <-recorder.Events
 				require.Equal(t, kargoapi.EventReasonPromotionCreated, event.Reason)
 			},
@@ -1970,7 +2198,7 @@ func TestReconciler_syncPromotions(t *testing.T) {
 				require.Equal(t, kargoapi.StagePhasePromoting, status.Phase)
 				require.Equal(t, &kargoapi.PromotionReference{
 					Name: "fake-promotion",
-					Freight: kargoapi.FreightReference{
+					Freight: &kargoapi.FreightReference{
 						Name: "fake-freight",
 					},
 				}, status.CurrentPromotion)
@@ -2102,7 +2330,7 @@ func TestReconciler_syncPromotions(t *testing.T) {
 							},
 						},
 					},
-					Freight: kargoapi.FreightReference{
+					Freight: &kargoapi.FreightReference{
 						Name:   "fake-freight-3",
 						Origin: testOrigin,
 					},
@@ -2869,6 +3097,592 @@ func TestGetAvailableFreight(t *testing.T) {
 				true,
 			)
 			testCase.assertions(t, freight, err)
+		})
+	}
+}
+
+func TestGetAvailableFreightByOrigin(t *testing.T) {
+	testCases := []struct {
+		name            string
+		stage           *kargoapi.Stage
+		includeApproved bool
+		objects         []client.Object
+		interceptor     interceptor.Funcs
+		assertions      func(*testing.T, map[string][]kargoapi.Freight, error)
+	}{
+		{
+			name: "Freight directly from Warehouse",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "fake-stage",
+					Namespace: "fake-namespace",
+				},
+				Spec: kargoapi.StageSpec{
+					RequestedFreight: []kargoapi.FreightRequest{
+						{
+							Origin: kargoapi.FreightOrigin{
+								Kind: kargoapi.FreightOriginKindWarehouse,
+								Name: "fake-warehouse",
+							},
+							Sources: kargoapi.FreightSources{
+								Direct: true,
+							},
+						},
+					},
+				},
+			},
+			objects: []client.Object{
+				&kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "fake-freight-1",
+						Namespace: "fake-namespace",
+					},
+					Origin: kargoapi.FreightOrigin{
+						Kind: kargoapi.FreightOriginKindWarehouse,
+						Name: "fake-warehouse",
+					},
+				},
+				&kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "fake-freight-2",
+						Namespace: "fake-namespace",
+					},
+					Origin: kargoapi.FreightOrigin{
+						Kind: kargoapi.FreightOriginKindWarehouse,
+						Name: "fake-warehouse",
+					},
+				},
+				// Should not be included: different Warehouse
+				&kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "fake-freight",
+						Namespace: "fake-namespace",
+					},
+					Origin: kargoapi.FreightOrigin{
+						Kind: kargoapi.FreightOriginKindWarehouse,
+						Name: "other-fake-warehouse",
+					},
+				},
+			},
+			assertions: func(t *testing.T, result map[string][]kargoapi.Freight, err error) {
+				require.NoError(t, err)
+				require.Len(t, result, 1)
+
+				const expectOrigin = "Warehouse/fake-warehouse"
+				freight, ok := result[expectOrigin]
+				require.True(t, ok)
+				require.Len(t, freight, 2)
+
+				var found []string
+				for _, f := range freight {
+					found = append(found, f.Name)
+				}
+				require.Contains(t, found, "fake-freight-1")
+				require.Contains(t, found, "fake-freight-2")
+			},
+		},
+		{
+			name: "Freight from upstream Stages",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "fake-stage",
+					Namespace: "fake-namespace",
+				},
+				Spec: kargoapi.StageSpec{
+					RequestedFreight: []kargoapi.FreightRequest{
+						{
+							Origin: kargoapi.FreightOrigin{
+								Kind: kargoapi.FreightOriginKindWarehouse,
+								Name: "fake-warehouse",
+							},
+							Sources: kargoapi.FreightSources{
+								Stages: []string{"fake-upstream-1", "fake-upstream-2"},
+							},
+						},
+					},
+				},
+			},
+			objects: []client.Object{
+				&kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "fake-freight-1",
+						Namespace: "fake-namespace",
+					},
+					Origin: kargoapi.FreightOrigin{
+						Kind: kargoapi.FreightOriginKindWarehouse,
+						Name: "fake-warehouse",
+					},
+					Status: kargoapi.FreightStatus{
+						VerifiedIn: map[string]kargoapi.VerifiedStage{
+							"fake-upstream-1": {},
+						},
+					},
+				},
+				&kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "fake-freight-2",
+						Namespace: "fake-namespace",
+					},
+					Origin: kargoapi.FreightOrigin{
+						Kind: kargoapi.FreightOriginKindWarehouse,
+						Name: "fake-warehouse",
+					},
+					Status: kargoapi.FreightStatus{
+						VerifiedIn: map[string]kargoapi.VerifiedStage{
+							"fake-upstream-2": {},
+						},
+					},
+				},
+				// Should not be included: not verified in any upstream Stages
+				&kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "fake-freight-3",
+						Namespace: "fake-namespace",
+					},
+					Origin: kargoapi.FreightOrigin{
+						Kind: kargoapi.FreightOriginKindWarehouse,
+						Name: "fake-warehouse",
+					},
+				},
+				// Should not be included: different Stage
+				&kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "fake-freight-4",
+						Namespace: "fake-namespace",
+					},
+					Origin: kargoapi.FreightOrigin{
+						Kind: kargoapi.FreightOriginKindWarehouse,
+						Name: "fake-warehouse",
+					},
+					Status: kargoapi.FreightStatus{
+						VerifiedIn: map[string]kargoapi.VerifiedStage{
+							"other-fake-upstream": {},
+						},
+					},
+				},
+			},
+			assertions: func(t *testing.T, result map[string][]kargoapi.Freight, err error) {
+				require.NoError(t, err)
+				require.Len(t, result, 1)
+
+				const expectOrigin = "Warehouse/fake-warehouse"
+				freight, ok := result[expectOrigin]
+				require.True(t, ok)
+				require.Len(t, freight, 2)
+
+				var found []string
+				for _, f := range freight {
+					found = append(found, f.Name)
+				}
+				require.Contains(t, found, "fake-freight-1")
+				require.Contains(t, found, "fake-freight-2")
+			},
+		},
+		{
+			name: "approved Freight",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "fake-stage",
+					Namespace: "fake-namespace",
+				},
+				Spec: kargoapi.StageSpec{
+					RequestedFreight: []kargoapi.FreightRequest{
+						{
+							Origin: kargoapi.FreightOrigin{
+								Kind: kargoapi.FreightOriginKindWarehouse,
+								Name: "fake-warehouse",
+							},
+						},
+					},
+				},
+			},
+			objects: []client.Object{
+				&kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "fake-freight-1",
+						Namespace: "fake-namespace",
+					},
+					Origin: kargoapi.FreightOrigin{
+						Kind: kargoapi.FreightOriginKindWarehouse,
+						Name: "fake-warehouse",
+					},
+					Status: kargoapi.FreightStatus{
+						ApprovedFor: map[string]kargoapi.ApprovedStage{
+							"fake-stage": {},
+						},
+					},
+				},
+				&kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "fake-freight-2",
+						Namespace: "fake-namespace",
+					},
+					Origin: kargoapi.FreightOrigin{
+						Kind: kargoapi.FreightOriginKindWarehouse,
+						Name: "fake-warehouse",
+					},
+					Status: kargoapi.FreightStatus{
+						ApprovedFor: map[string]kargoapi.ApprovedStage{
+							"fake-stage": {},
+						},
+					},
+				},
+				// Should not be included: not approved for this Stage
+				&kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "fake-freight-3",
+						Namespace: "fake-namespace",
+					},
+					Origin: kargoapi.FreightOrigin{
+						Kind: kargoapi.FreightOriginKindWarehouse,
+						Name: "fake-warehouse",
+					},
+					Status: kargoapi.FreightStatus{
+						ApprovedFor: map[string]kargoapi.ApprovedStage{
+							"other-fake-stage": {},
+						},
+					},
+				},
+			},
+			includeApproved: true,
+			assertions: func(t *testing.T, result map[string][]kargoapi.Freight, err error) {
+				require.NoError(t, err)
+				require.Len(t, result, 1)
+
+				const expectOrigin = "Warehouse/fake-warehouse"
+				freight, ok := result[expectOrigin]
+				require.True(t, ok)
+				require.Len(t, freight, 2)
+
+				var found []string
+				for _, f := range freight {
+					found = append(found, f.Name)
+				}
+				require.Contains(t, found, "fake-freight-1")
+			},
+		},
+		{
+			name: "deduplicates Freight",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "fake-stage",
+					Namespace: "fake-namespace",
+				},
+				Spec: kargoapi.StageSpec{
+					RequestedFreight: []kargoapi.FreightRequest{
+						{
+							Origin: kargoapi.FreightOrigin{
+								Kind: kargoapi.FreightOriginKindWarehouse,
+								Name: "fake-warehouse",
+							},
+							Sources: kargoapi.FreightSources{
+								Stages: []string{"fake-stage-1", "fake-stage-2"},
+							},
+						},
+					},
+				},
+			},
+			objects: []client.Object{
+				&kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "fake-freight-1",
+						Namespace: "fake-namespace",
+					},
+					Origin: kargoapi.FreightOrigin{
+						Kind: kargoapi.FreightOriginKindWarehouse,
+						Name: "fake-warehouse",
+					},
+					Status: kargoapi.FreightStatus{
+						VerifiedIn: map[string]kargoapi.VerifiedStage{
+							"fake-stage-1": {},
+							"fake-stage-2": {},
+						},
+						ApprovedFor: map[string]kargoapi.ApprovedStage{
+							"fake-stage": {},
+						},
+					},
+				},
+				&kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "fake-freight-2",
+						Namespace: "fake-namespace",
+					},
+					Origin: kargoapi.FreightOrigin{
+						Kind: kargoapi.FreightOriginKindWarehouse,
+						Name: "fake-warehouse",
+					},
+					Status: kargoapi.FreightStatus{
+						VerifiedIn: map[string]kargoapi.VerifiedStage{
+							"fake-stage-1": {},
+							"fake-stage-2": {},
+						},
+						ApprovedFor: map[string]kargoapi.ApprovedStage{
+							"fake-stage": {},
+						},
+					},
+				},
+				&kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "fake-freight-3",
+						Namespace: "fake-namespace",
+					},
+					Origin: kargoapi.FreightOrigin{
+						Kind: kargoapi.FreightOriginKindWarehouse,
+						Name: "fake-warehouse",
+					},
+					Status: kargoapi.FreightStatus{
+						ApprovedFor: map[string]kargoapi.ApprovedStage{
+							"fake-stage": {},
+						},
+					},
+				},
+			},
+			includeApproved: true,
+			assertions: func(t *testing.T, result map[string][]kargoapi.Freight, err error) {
+				require.NoError(t, err)
+				require.Len(t, result, 1)
+
+				const expectOrigin = "Warehouse/fake-warehouse"
+				freight, ok := result[expectOrigin]
+				require.True(t, ok)
+				require.Len(t, freight, 3)
+
+				var found []string
+				for _, f := range freight {
+					found = append(found, f.Name)
+				}
+				require.Contains(t, found, "fake-freight-1")
+				require.Contains(t, found, "fake-freight-2")
+				require.Contains(t, found, "fake-freight-3")
+			},
+		},
+		{
+			name: "error listing direct Freight",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "fake-stage",
+					Namespace: "fake-namespace",
+				},
+				Spec: kargoapi.StageSpec{
+					RequestedFreight: []kargoapi.FreightRequest{
+						{
+							Origin: kargoapi.FreightOrigin{
+								Kind: kargoapi.FreightOriginKindWarehouse,
+								Name: "fake-warehouse",
+							},
+							Sources: kargoapi.FreightSources{
+								Direct: true,
+							},
+						},
+					},
+				},
+			},
+			interceptor: interceptor.Funcs{
+				List: func(context.Context, client.WithWatch, client.ObjectList, ...client.ListOption) error {
+					return fmt.Errorf("something went wrong")
+				},
+			},
+			assertions: func(t *testing.T, result map[string][]kargoapi.Freight, err error) {
+				require.Error(t, err)
+				require.ErrorContains(t, err, "error listing Freight")
+				require.ErrorContains(t, err, "something went wrong")
+				require.Nil(t, result)
+			},
+		},
+		{
+			name: "error listing Freight verified in upstream Stages",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "fake-stage",
+					Namespace: "fake-namespace",
+				},
+				Spec: kargoapi.StageSpec{
+					RequestedFreight: []kargoapi.FreightRequest{
+						{
+							Origin: kargoapi.FreightOrigin{
+								Kind: kargoapi.FreightOriginKindWarehouse,
+								Name: "fake-warehouse",
+							},
+							Sources: kargoapi.FreightSources{
+								Stages: []string{"fake-upstream-stage"},
+							},
+						},
+					},
+				},
+			},
+			interceptor: interceptor.Funcs{
+				List: func(
+					ctx context.Context,
+					c client.WithWatch,
+					l client.ObjectList,
+					opts ...client.ListOption,
+				) error {
+					lo := &client.ListOptions{}
+					lo.ApplyOptions(opts)
+
+					if strings.Contains(
+						lo.FieldSelector.String(),
+						fmt.Sprintf("%s=%s", kubeclient.FreightByVerifiedStagesIndexField, "fake-upstream-stage"),
+					) {
+						return fmt.Errorf("something went wrong")
+					}
+
+					return c.List(ctx, l, opts...)
+				},
+			},
+			assertions: func(t *testing.T, result map[string][]kargoapi.Freight, err error) {
+				require.Error(t, err)
+				require.ErrorContains(t, err, "error listing Freight verified in Stage \"fake-upstream-stage\"")
+				require.ErrorContains(t, err, "something went wrong")
+				require.Nil(t, result)
+			},
+		},
+		{
+			name: "error listing Freight approved for Stage",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "fake-stage",
+					Namespace: "fake-namespace",
+				},
+				Spec: kargoapi.StageSpec{
+					RequestedFreight: []kargoapi.FreightRequest{
+						{
+							Origin: kargoapi.FreightOrigin{
+								Kind: kargoapi.FreightOriginKindWarehouse,
+								Name: "fake-warehouse",
+							},
+						},
+					},
+				},
+			},
+			includeApproved: true,
+			interceptor: interceptor.Funcs{
+				List: func(
+					ctx context.Context,
+					c client.WithWatch,
+					l client.ObjectList,
+					opts ...client.ListOption,
+				) error {
+					lo := &client.ListOptions{}
+					lo.ApplyOptions(opts)
+
+					if strings.Contains(
+						lo.FieldSelector.String(),
+						fmt.Sprintf("%s=%s", kubeclient.FreightApprovedForStagesIndexField, "fake-stage"),
+					) {
+						return fmt.Errorf("something went wrong")
+					}
+
+					return c.List(ctx, l, opts...)
+				},
+			},
+			assertions: func(t *testing.T, result map[string][]kargoapi.Freight, err error) {
+				require.Error(t, err)
+				require.ErrorContains(t, err, "error listing Freight approved for Stage")
+				require.ErrorContains(t, err, "something went wrong")
+				require.Nil(t, result)
+			},
+		},
+		{
+			name: "listing direct Freight skips other sources",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "fake-stage",
+					Namespace: "fake-namespace",
+				},
+				Spec: kargoapi.StageSpec{
+					RequestedFreight: []kargoapi.FreightRequest{
+						{
+							Origin: kargoapi.FreightOrigin{
+								Kind: kargoapi.FreightOriginKindWarehouse,
+								Name: "fake-warehouse",
+							},
+							Sources: kargoapi.FreightSources{
+								Direct: true,
+								Stages: []string{"fake-upstream-stage"},
+							},
+						},
+					},
+				},
+			},
+			includeApproved: true,
+			interceptor: interceptor.Funcs{
+				List: func(
+					ctx context.Context,
+					c client.WithWatch,
+					l client.ObjectList,
+					opts ...client.ListOption,
+				) error {
+					lo := &client.ListOptions{}
+					lo.ApplyOptions(opts)
+
+					if strings.Contains(lo.FieldSelector.String(), kubeclient.FreightApprovedForStagesIndexField) {
+						return fmt.Errorf("something went wrong")
+					}
+
+					if strings.Contains(lo.FieldSelector.String(), kubeclient.FreightByVerifiedStagesIndexField) {
+						return fmt.Errorf("something went wrong")
+					}
+
+					return c.List(ctx, l, opts...)
+				},
+			},
+			objects: []client.Object{
+				&kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "fake-freight-1",
+						Namespace: "fake-namespace",
+					},
+					Origin: kargoapi.FreightOrigin{
+						Kind: kargoapi.FreightOriginKindWarehouse,
+						Name: "fake-warehouse",
+					},
+				},
+			},
+			assertions: func(t *testing.T, result map[string][]kargoapi.Freight, err error) {
+				require.NoError(t, err)
+				require.Len(t, result, 1)
+
+				const expectOrigin = "Warehouse/fake-warehouse"
+				freight, ok := result[expectOrigin]
+				require.True(t, ok)
+				require.Len(t, freight, 1)
+			},
+		},
+	}
+
+	s := runtime.NewScheme()
+	assert.NoError(t, kargoapi.AddToScheme(s))
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			c := fake.NewClientBuilder().
+				WithScheme(s).
+				WithIndex(
+					&kargoapi.Freight{},
+					kubeclient.FreightByWarehouseIndexField,
+					kubeclient.FreightByWarehouseIndexer,
+				).
+				WithIndex(
+					&kargoapi.Freight{},
+					kubeclient.FreightByVerifiedStagesIndexField,
+					kubeclient.FreightByVerifiedStagesIndexer,
+				).
+				WithIndex(
+					&kargoapi.Freight{},
+					kubeclient.FreightApprovedForStagesIndexField,
+					kubeclient.FreightApprovedForStagesIndexer,
+				).
+				WithInterceptorFuncs(tc.interceptor).
+				WithObjects(tc.objects...).
+				Build()
+
+			r := &reconciler{
+				listFreightFn: c.List,
+			}
+
+			result, err := r.getAvailableFreightByOrigin(context.Background(), tc.stage, tc.includeApproved)
+			tc.assertions(t, result, err)
 		})
 	}
 }

@@ -1023,7 +1023,7 @@ type PromotionReference struct {
 	// Name is the name of the Promotion
 	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
 	// Freight is the freight being promoted
-	Freight FreightReference `json:"freight" protobuf:"bytes,2,opt,name=freight"`
+	Freight *FreightReference `json:"freight,omitempty" protobuf:"bytes,2,opt,name=freight"`
 	// Status is the (optional) status of the promotion
 	Status *PromotionStatus `json:"status,omitempty" protobuf:"bytes,3,opt,name=status"`
 	// FinishedAt is the time at which the Promotion was completed.
