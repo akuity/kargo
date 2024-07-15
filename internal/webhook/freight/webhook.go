@@ -125,7 +125,7 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 	}
 	if req.Operation == admissionv1.Create {
 		// Re-calculate ID in case it wasn't set correctly to begin with -- possible
-		// if/when we allow users to create their own Freight.
+		// when users create their own Freight.
 		freight.Name = freight.GenerateID()
 	}
 
