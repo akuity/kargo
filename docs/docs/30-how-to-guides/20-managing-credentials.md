@@ -386,45 +386,31 @@ instead.
 
 #### EKS Pod Identity or IAM Roles for Service Accounts (IRSA)
 
-If Kargo locates no `Secret` resources matching a repository URL, and if Kargo
-is deployed within an EKS cluster, it will first attempt to use
+If Kargo locates no `Secret` resources matching a repository URL and is deployed
+within an EKS cluster, it will attempt to use
 [EKS Pod Identity](https://docs.aws.amazon.com/eks/latest/userguide/pod-identities.html)
-to authenticate, but this relies upon some external setup. Leveraging this
-option eliminates the need to store credentials in a `Secret` resource.
+or
+[IAM Roles for Service Accounts (IRSA)](https://docs.aws.amazon.com/eks/latest/userguide/iam-roles-for-service-accounts.html)
+to authenticate. Both of these rely upon some external setup. Leveraging either
+eliminates the need to store ECR credentials in a `Secret` resource.
 
-If you opt to use EKS Pod Identity, follow
+Follow
 [this overview](https://docs.aws.amazon.com/eks/latest/userguide/pod-identities.html#pod-id-setup-overview)
-to set up EKS Pod Identity in your EKS cluster and assign an IAM role to the
-`kargo-controller` `ServiceAccount` within the `Namespace` to which Kargo is (or
-will be) installed.
-
-If you opt to instead use IRSA, follow [this overview](https://docs.aws.amazon.com/eks/latest/userguide/iam-roles-for-service-accounts.html) 
-to set up IRSA in your EKS cluster and assign an IAM role to the
+to set up EKS Pod Identity in your EKS cluster or
+[this one](https://docs.aws.amazon.com/eks/latest/userguide/iam-roles-for-service-accounts.html)
+to set up IRSA. For either, you will assign an IAM role to the
 `kargo-controller` `ServiceAccount` within the `Namespace` to which Kargo is (or
 will be) installed.
 
 :::note
-In the case of IRSA you will also need to set the annotation `eks.amazonaws.com/role-arn: <iam-role-arn>` 
-to the Kargo controller service account. You can set this in the Helm chart with 
-`controller.serviceAccount.annotations`. 
+To use IRSA, you will additionally need to specify the
+[ARN](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference-arns.html) of
+the controller's IAM role as the value of the
+`controller.serviceAccount.iamRole` setting in Kargo's Helm chart. Refer to
+[the advanced section of the installation guide](./10-installing-kargo.md#advanced-installation)
+for more details.
 :::
 
-Regardless of the method chosen, the kargo-controller IAM role needs to be allowed to assume `kargo-project-*` roles. An
-example IAM policy doing so can be seen below. This can be scoped down to setting an explicit list of IAM role ARNs if
-required.
-
-```json
-{
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Effect": "Allow",
-            "Action": "sts:AssumeRole",
-            "Resource": "arn:aws:iam::ACCOUNT_ID:role/kargo-project-*"
-        }
-    ]
-}
-```
 
 At this point, an IAM role will be associated with the Kargo _controller_,
 however, that controller acts on behalf of multiple Kargo projects, each of
@@ -432,10 +418,9 @@ which may require access to _different_ ECR repositories. To account for this,
 when Kargo attempts to access an ECR repository on behalf of a specific project,
 it will first attempt to
 [assume an IAM role](https://docs.aws.amazon.com/STS/latest/APIReference/API_AssumeRole.html)
-specific to that project. The name of the role it attempts to assume will _always_
-be of the form `kargo-project-<project name>`. It is this role that should be
-granted read-only access to applicable ECR repositories. This role also needs to have an assume
-role policy which allows for it to be assumed by the Kargo controller role.
+specific to that project. The name of the role it attempts to assume will
+_always_ be of the form `kargo-project-<project name>`. It is this role that
+should be granted read-only access to applicable ECR repositories.
 
 :::info
 The name of the IAM role associated with each Kargo project is deliberately
@@ -443,16 +428,24 @@ not configurable to prevent project admins from attempting to coerce Kargo into
 assuming arbitrary IAM roles.
 :::
 
-Once Kargo is able to assume the appropriate IAM role for a given project, it
-will follow a process similar to that described in the previous section to
-obtain a token that is valid for 12 hours and cached for 10.
-
 :::caution
-Following the principle of least privilege, the IAM role associated with the
-`kargo-controller` `ServiceAccount` should be limited only to the ability to
-assume project-specific IAM roles. Project-specific IAM roles should be limited
-only to read-only access to the applicable ECR repositories.
+For optimal adherence to the principle of least permissions, the IAM role
+associated with the `kargo-controller` `ServiceAccount` should be limited only
+to the ability to assume project-specific IAM roles. Project-specific IAM roles
+should be limited only to read-only access to applicable ECR repositories.
 :::
+
+:::info
+If the Kargo controller is unable to assume a project-specific IAM role, it will
+fall back to using its own IAM role directly. For organizations without strict
+tenancy requirements, this can eliminate the need to manage a large number of
+project-specific IAM roles. While useful, this approach is not strictly
+recommended.
+:::
+
+Once Kargo is able to gain necessary permissions to access an ECR repository,
+it will follow a process similar to that described in the previous section to
+obtain a token that is valid for 12 hours and cached for 10.
 
 ### Google Artifact Registry
 
