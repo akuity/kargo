@@ -48,11 +48,18 @@ func TestIndexStagesByAnalysisRun(t *testing.T) {
 					},
 				},
 				Status: kargoapi.StageStatus{
-					CurrentFreight: &kargoapi.FreightReference{
-						VerificationInfo: &kargoapi.VerificationInfo{
-							AnalysisRun: &kargoapi.AnalysisRunReference{
-								Namespace: "fake-namespace",
-								Name:      "fake-analysis-run",
+					FreightHistory: kargoapi.FreightHistory{
+						{
+							Freight: map[string]kargoapi.FreightReference{
+								"fake-warehouse": {},
+							},
+							VerificationHistory: kargoapi.VerificationInfoStack{
+								{
+									AnalysisRun: &kargoapi.AnalysisRunReference{
+										Namespace: "fake-namespace",
+										Name:      "fake-analysis-run",
+									},
+								},
 							},
 						},
 					},
@@ -81,11 +88,18 @@ func TestIndexStagesByAnalysisRun(t *testing.T) {
 			controllerShardName: "",
 			stage: &kargoapi.Stage{
 				Status: kargoapi.StageStatus{
-					CurrentFreight: &kargoapi.FreightReference{
-						VerificationInfo: &kargoapi.VerificationInfo{
-							AnalysisRun: &kargoapi.AnalysisRunReference{
-								Namespace: "fake-namespace",
-								Name:      "fake-analysis-run",
+					FreightHistory: kargoapi.FreightHistory{
+						{
+							Freight: map[string]kargoapi.FreightReference{
+								"fake-warehouse": {},
+							},
+							VerificationHistory: kargoapi.VerificationInfoStack{
+								{
+									AnalysisRun: &kargoapi.AnalysisRunReference{
+										Namespace: "fake-namespace",
+										Name:      "fake-analysis-run",
+									},
+								},
 							},
 						},
 					},
@@ -439,7 +453,7 @@ func TestIndexRunningPromotionsByArgoCDApplications(t *testing.T) {
 	}
 }
 
-func TestIndexFreightByVerifiedStages(t *testing.T) {
+func TestFreightByVerifiedStagesIndexer(t *testing.T) {
 	testCases := []struct {
 		name     string
 		freight  *kargoapi.Freight
@@ -468,14 +482,14 @@ func TestIndexFreightByVerifiedStages(t *testing.T) {
 				require.Equal(
 					t,
 					testCase.expected,
-					indexFreightByVerifiedStages(testCase.freight),
+					FreightByVerifiedStagesIndexer(testCase.freight),
 				)
 			})
 		})
 	}
 }
 
-func TestIndexFreightByApprovedStages(t *testing.T) {
+func TestFreightApprovedForStagesIndexer(t *testing.T) {
 	testCases := []struct {
 		name     string
 		freight  *kargoapi.Freight
@@ -504,7 +518,7 @@ func TestIndexFreightByApprovedStages(t *testing.T) {
 				require.Equal(
 					t,
 					testCase.expected,
-					indexFreightByApprovedStages(testCase.freight),
+					FreightApprovedForStagesIndexer(testCase.freight),
 				)
 			})
 		})
@@ -512,6 +526,10 @@ func TestIndexFreightByApprovedStages(t *testing.T) {
 }
 
 func TestIndexStagesByUpstreamStages(t *testing.T) {
+	testOrigin := kargoapi.FreightOrigin{
+		Kind: kargoapi.FreightOriginKindWarehouse,
+		Name: "fake-warehouse",
+	}
 	testCases := []struct {
 		name     string
 		stage    *kargoapi.Stage
@@ -521,7 +539,14 @@ func TestIndexStagesByUpstreamStages(t *testing.T) {
 			name: "Stage has no upstream Stages",
 			stage: &kargoapi.Stage{
 				Spec: kargoapi.StageSpec{
-					Subscriptions: kargoapi.Subscriptions{},
+					RequestedFreight: []kargoapi.FreightRequest{
+						{
+							Origin: testOrigin,
+							Sources: kargoapi.FreightSources{
+								Direct: true,
+							},
+						},
+					},
 				},
 			},
 			expected: nil,
@@ -530,30 +555,29 @@ func TestIndexStagesByUpstreamStages(t *testing.T) {
 			name: "Stage has upstream stages",
 			stage: &kargoapi.Stage{
 				Spec: kargoapi.StageSpec{
-					Subscriptions: kargoapi.Subscriptions{
-						UpstreamStages: []kargoapi.StageSubscription{
-							{
-								Name: "fake-stage",
-							},
-							{
-								Name: "another-fake-stage",
+					RequestedFreight: []kargoapi.FreightRequest{
+						{
+							Origin: testOrigin,
+							Sources: kargoapi.FreightSources{
+								Stages: []string{
+									"fake-stage",
+									"another-fake-stage",
+								},
 							},
 						},
 					},
 				},
 			},
-			expected: []string{"fake-stage", "another-fake-stage"},
+			expected: []string{"another-fake-stage", "fake-stage"},
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			t.Run(testCase.name, func(t *testing.T) {
-				require.Equal(
-					t,
-					testCase.expected,
-					indexStagesByUpstreamStages(testCase.stage),
-				)
-			})
+			require.Equal(
+				t,
+				testCase.expected,
+				indexStagesByUpstreamStages(testCase.stage),
+			)
 		})
 	}
 }

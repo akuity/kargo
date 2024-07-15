@@ -52,6 +52,17 @@ func TestAccessKeyCredentialHelper(t *testing.T) {
 			},
 		},
 		{
+			name:     "cred type is not oci helm",
+			credType: credentials.TypeHelm,
+			repoURL:  testRepoURL,
+			secret:   &corev1.Secret{},
+			helper:   &accessKeyCredentialHelper{},
+			assertions: func(t *testing.T, creds *credentials.Credentials, _ *cache.Cache, err error) {
+				require.NoError(t, err)
+				require.Nil(t, creds)
+			},
+		},
+		{
 			name:     "secret is nil",
 			credType: credentials.TypeImage,
 			helper:   &accessKeyCredentialHelper{},
@@ -138,9 +149,9 @@ func TestAccessKeyCredentialHelper(t *testing.T) {
 					secretKey: []byte(testSecretAccessKey),
 				},
 			},
-			helper: (&accessKeyCredentialHelper{
+			helper: &accessKeyCredentialHelper{
 				tokenCache: warmTokenCache,
-			}),
+			},
 			assertions: func(t *testing.T, creds *credentials.Credentials, _ *cache.Cache, err error) {
 				require.NoError(t, err)
 				require.NotNil(t, creds)
@@ -159,12 +170,12 @@ func TestAccessKeyCredentialHelper(t *testing.T) {
 					secretKey: []byte(testSecretAccessKey),
 				},
 			},
-			helper: (&accessKeyCredentialHelper{
+			helper: &accessKeyCredentialHelper{
 				tokenCache: cache.New(0, 0),
 				getAuthTokenFn: func(context.Context, string, string, string) (string, error) {
 					return "", fmt.Errorf("something went wrong")
 				},
-			}),
+			},
 			assertions: func(t *testing.T, _ *credentials.Credentials, _ *cache.Cache, err error) {
 				require.ErrorContains(t, err, "error getting ECR auth token")
 				require.ErrorContains(t, err, "something went wrong")
@@ -181,12 +192,40 @@ func TestAccessKeyCredentialHelper(t *testing.T) {
 					secretKey: []byte(testSecretAccessKey),
 				},
 			},
-			helper: (&accessKeyCredentialHelper{
+			helper: &accessKeyCredentialHelper{
 				tokenCache: cache.New(0, 0),
 				getAuthTokenFn: func(context.Context, string, string, string) (string, error) {
 					return testEncodedToken, nil
 				},
-			}),
+			},
+			assertions: func(t *testing.T, creds *credentials.Credentials, c *cache.Cache, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, creds)
+				require.Equal(t, testUsername, creds.Username)
+				require.Equal(t, testPassword, creds.Password)
+				_, found := c.Get(
+					(&accessKeyCredentialHelper{}).tokenCacheKey(testRegion, testAccessKeyID, testSecretAccessKey),
+				)
+				require.True(t, found)
+			},
+		},
+		{
+			name:     "cache miss; success (helm)",
+			credType: credentials.TypeHelm,
+			repoURL:  fmt.Sprintf("oci://%s", testRepoURL),
+			secret: &corev1.Secret{
+				Data: map[string][]byte{
+					regionKey: []byte(testRegion),
+					idKey:     []byte(testAccessKeyID),
+					secretKey: []byte(testSecretAccessKey),
+				},
+			},
+			helper: &accessKeyCredentialHelper{
+				tokenCache: cache.New(0, 0),
+				getAuthTokenFn: func(context.Context, string, string, string) (string, error) {
+					return testEncodedToken, nil
+				},
+			},
 			assertions: func(t *testing.T, creds *credentials.Credentials, c *cache.Cache, err error) {
 				require.NoError(t, err)
 				require.NotNil(t, creds)

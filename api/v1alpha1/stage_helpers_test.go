@@ -232,7 +232,13 @@ func TestReverifyStageFreight(t *testing.T) {
 					Namespace: "fake-namespace",
 				},
 				Status: StageStatus{
-					CurrentFreight: &FreightReference{},
+					FreightHistory: FreightHistory{
+						{
+							Freight: map[string]FreightReference{
+								"fake-warehouse": {},
+							},
+						},
+					},
 				},
 			},
 		).Build()
@@ -241,7 +247,7 @@ func TestReverifyStageFreight(t *testing.T) {
 			Namespace: "fake-namespace",
 			Name:      "fake-stage",
 		})
-		require.ErrorContains(t, err, "stage has no existing verification info")
+		require.ErrorContains(t, err, "stage has no current verification info")
 	})
 
 	t.Run("missing verification info ID", func(t *testing.T) {
@@ -252,8 +258,13 @@ func TestReverifyStageFreight(t *testing.T) {
 					Namespace: "fake-namespace",
 				},
 				Status: StageStatus{
-					CurrentFreight: &FreightReference{
-						VerificationInfo: &VerificationInfo{},
+					FreightHistory: FreightHistory{
+						{
+							Freight: map[string]FreightReference{
+								"fake-warehouse": {},
+							},
+							VerificationHistory: []VerificationInfo{{}},
+						},
 					},
 				},
 			},
@@ -274,9 +285,14 @@ func TestReverifyStageFreight(t *testing.T) {
 					Namespace: "fake-namespace",
 				},
 				Status: StageStatus{
-					CurrentFreight: &FreightReference{
-						VerificationInfo: &VerificationInfo{
-							ID: "fake-id",
+					FreightHistory: FreightHistory{
+						{
+							Freight: map[string]FreightReference{
+								"fake-warehouse": {},
+							},
+							VerificationHistory: []VerificationInfo{{
+								ID: "fake-id",
+							}},
 						},
 					},
 				},
@@ -339,7 +355,13 @@ func TestAbortStageFreightVerification(t *testing.T) {
 					Namespace: "fake-namespace",
 				},
 				Status: StageStatus{
-					CurrentFreight: &FreightReference{},
+					FreightHistory: FreightHistory{
+						{
+							Freight: map[string]FreightReference{
+								"fake-warehouse": {},
+							},
+						},
+					},
 				},
 			},
 		).Build()
@@ -348,7 +370,7 @@ func TestAbortStageFreightVerification(t *testing.T) {
 			Namespace: "fake-namespace",
 			Name:      "fake-stage",
 		})
-		require.ErrorContains(t, err, "stage has no existing verification info")
+		require.ErrorContains(t, err, "stage has no current verification info")
 	})
 
 	t.Run("missing verification info ID", func(t *testing.T) {
@@ -359,8 +381,13 @@ func TestAbortStageFreightVerification(t *testing.T) {
 					Namespace: "fake-namespace",
 				},
 				Status: StageStatus{
-					CurrentFreight: &FreightReference{
-						VerificationInfo: &VerificationInfo{},
+					FreightHistory: FreightHistory{
+						{
+							Freight: map[string]FreightReference{
+								"fake-warehouse": {},
+							},
+							VerificationHistory: []VerificationInfo{{}},
+						},
 					},
 				},
 			},
@@ -381,10 +408,15 @@ func TestAbortStageFreightVerification(t *testing.T) {
 					Namespace: "fake-namespace",
 				},
 				Status: StageStatus{
-					CurrentFreight: &FreightReference{
-						VerificationInfo: &VerificationInfo{
-							ID:    "fake-id",
-							Phase: VerificationPhaseError,
+					FreightHistory: FreightHistory{
+						{
+							Freight: map[string]FreightReference{
+								"fake-warehouse": {},
+							},
+							VerificationHistory: []VerificationInfo{{
+								ID:    "fake-id",
+								Phase: VerificationPhaseError,
+							}},
 						},
 					},
 				},
@@ -414,9 +446,14 @@ func TestAbortStageFreightVerification(t *testing.T) {
 					Namespace: "fake-namespace",
 				},
 				Status: StageStatus{
-					CurrentFreight: &FreightReference{
-						VerificationInfo: &VerificationInfo{
-							ID: "fake-id",
+					FreightHistory: FreightHistory{
+						{
+							Freight: map[string]FreightReference{
+								"fake-warehouse": {},
+							},
+							VerificationHistory: []VerificationInfo{{
+								ID: "fake-id",
+							}},
 						},
 					},
 				},

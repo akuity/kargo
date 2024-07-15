@@ -1,6 +1,7 @@
 package argocd
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -10,6 +11,10 @@ import (
 )
 
 func TestGetDesiredRevision(t *testing.T) {
+	testOrigin := kargoapi.FreightOrigin{
+		Kind: kargoapi.FreightOriginKindWarehouse,
+		Name: "fake-warehouse",
+	}
 	testCases := []struct {
 		name    string
 		app     *argocdapi.Application
@@ -45,6 +50,7 @@ func TestGetDesiredRevision(t *testing.T) {
 				},
 			},
 			freight: kargoapi.FreightReference{
+				Origin: testOrigin,
 				Charts: []kargoapi.Chart{
 					{
 						RepoURL: "https://example.com",
@@ -70,6 +76,7 @@ func TestGetDesiredRevision(t *testing.T) {
 				},
 			},
 			freight: kargoapi.FreightReference{
+				Origin: testOrigin,
 				Commits: []kargoapi.GitCommit{
 					{
 						RepoURL: "https://github.com/bad/41",
@@ -93,6 +100,7 @@ func TestGetDesiredRevision(t *testing.T) {
 				},
 			},
 			freight: kargoapi.FreightReference{
+				Origin: testOrigin,
 				Commits: []kargoapi.GitCommit{
 					{
 						RepoURL:           "https://github.com/universe/42",
@@ -107,7 +115,32 @@ func TestGetDesiredRevision(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			require.Equal(t, testCase.want, GetDesiredRevision(testCase.app, testCase.freight))
+			stage := &kargoapi.Stage{
+				Spec: kargoapi.StageSpec{
+					PromotionMechanisms: &kargoapi.PromotionMechanisms{
+						ArgoCDAppUpdates: []kargoapi.ArgoCDAppUpdate{{
+							Origin: &testOrigin,
+						}},
+					},
+				},
+				Status: kargoapi.StageStatus{
+					FreightHistory: kargoapi.FreightHistory{{
+						Freight: map[string]kargoapi.FreightReference{
+							testOrigin.String(): testCase.freight,
+						},
+					}},
+				},
+			}
+			revision, err := GetDesiredRevision(
+				context.Background(),
+				nil, // No client is needed as long as we're always explicit about origins
+				stage,
+				&stage.Spec.PromotionMechanisms.ArgoCDAppUpdates[0],
+				testCase.app,
+				stage.Status.FreightHistory.Current().References(),
+			)
+			require.NoError(t, err)
+			require.Equal(t, testCase.want, revision)
 		})
 	}
 }

@@ -35,6 +35,27 @@
                     "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$",
                     "type": "string"
                   },
+                  "origin": {
+                    "description": "Origin disambiguates the origin from which artifacts used by this promotion\nmechanism must have originated. This is especially useful in cases where a\nStage may request Freight from multiples origins (e.g. multiple Warehouses)\nand some of those each reference different versions of artifacts from the\nsame repository. This field is optional, but Promotions will fail if there\nis ever ambiguity regarding which piece of Freight from which an artifact\nis to be sourced.",
+                    "properties": {
+                      "kind": {
+                        "description": "Kind is the kind of resource from which Freight may have originated. At\npresent, this can only be \"Warehouse\".",
+                        "enum": [
+                          "Warehouse"
+                        ],
+                        "type": "string"
+                      },
+                      "name": {
+                        "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originated.",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "name"
+                    ],
+                    "type": "object"
+                  },
                   "sourceUpdates": {
                     "description": "SourceUpdates describes updates to be applied to various sources of the\nspecified Argo CD Application resource.",
                     "items": {
@@ -62,6 +83,27 @@
                                     "minLength": 1,
                                     "type": "string"
                                   },
+                                  "origin": {
+                                    "description": "Origin disambiguates the origin from which artifacts used by this promotion\nmechanism must have originated. This is especially useful in cases where a\nStage may request Freight from multiples origins (e.g. multiple Warehouses)\nand some of those each reference different versions of artifacts from the\nsame repository. This field is optional. When left unspecified, it will\nimplicitly inherit the value of the enclosing ArgoCDHelm's Origin field. If\nthat, too, is unspecified, Promotions will fail if there is ever ambiguity\nregarding from which piece of Freight an artifact is to be sourced.",
+                                    "properties": {
+                                      "kind": {
+                                        "description": "Kind is the kind of resource from which Freight may have originated. At\npresent, this can only be \"Warehouse\".",
+                                        "enum": [
+                                          "Warehouse"
+                                        ],
+                                        "type": "string"
+                                      },
+                                      "name": {
+                                        "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originated.",
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "kind",
+                                      "name"
+                                    ],
+                                    "type": "object"
+                                  },
                                   "value": {
                                     "description": "Value specifies the new value for the specified key in the Argo CD\nApplication's Helm parameters. Valid values are:\n\n\n- ImageAndTag: Replaces the value of the specified key with\n  <image name>:<tag>\n- Tag: Replaces the value of the specified key with just the new tag\n- ImageAndDigest: Replaces the value of the specified key with\n  <image name>@<digest>\n- Digest: Replaces the value of the specified key with just the new digest.\n\n\nThis is a required field.",
                                     "enum": [
@@ -82,6 +124,27 @@
                               },
                               "minItems": 1,
                               "type": "array"
+                            },
+                            "origin": {
+                              "description": "Origin disambiguates the origin from which artifacts used by this promotion\nmechanism must have originated. This is especially useful in cases where a\nStage may request Freight from multiples origins (e.g. multiple Warehouses)\nand some of those each reference different versions of artifacts from the\nsame repository. This field is optional. When left unspecified, it will\nimplicitly inherit the value of the enclosing ArgoCDSourceUpdate's Origin\nfield. If that, too, is unspecified, Promotions will fail if there is ever\nambiguity regarding from which piece of Freight an artifact is to be\nsourced.",
+                              "properties": {
+                                "kind": {
+                                  "description": "Kind is the kind of resource from which Freight may have originated. At\npresent, this can only be \"Warehouse\".",
+                                  "enum": [
+                                    "Warehouse"
+                                  ],
+                                  "type": "string"
+                                },
+                                "name": {
+                                  "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originated.",
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "name"
+                              ],
+                              "type": "object"
                             }
                           },
                           "required": [
@@ -102,6 +165,27 @@
                                     "minLength": 1,
                                     "type": "string"
                                   },
+                                  "origin": {
+                                    "description": "Origin disambiguates the origin from which artifacts used by this promotion\nmechanism must have originated. This is especially useful in cases where a\nStage may request Freight from multiples origins (e.g. multiple Warehouses)\nand some of those each reference different versions of artifacts from the\nsame repository. This field is optional. When left unspecified, it will\nimplicitly inherit the value of the enclosing ArgoCDKustomize's Origin\nfield. If that, too, is unspecified, Promotions will fail if there is ever\nambiguity regarding from which piece of Freight an artifact is to be\nsourced.",
+                                    "properties": {
+                                      "kind": {
+                                        "description": "Kind is the kind of resource from which Freight may have originated. At\npresent, this can only be \"Warehouse\".",
+                                        "enum": [
+                                          "Warehouse"
+                                        ],
+                                        "type": "string"
+                                      },
+                                      "name": {
+                                        "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originated.",
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "kind",
+                                      "name"
+                                    ],
+                                    "type": "object"
+                                  },
                                   "useDigest": {
                                     "description": "UseDigest specifies whether the image's digest should be used instead of\nits tag.",
                                     "type": "boolean"
@@ -114,10 +198,52 @@
                               },
                               "minItems": 1,
                               "type": "array"
+                            },
+                            "origin": {
+                              "description": "Origin disambiguates the origin from which artifacts used by this promotion\nmechanism must have originated. This is especially useful in cases where a\nStage may request Freight from multiples origins (e.g. multiple Warehouses)\nand some of those each reference different versions of artifacts from the\nsame repository. This field is optional. When left unspecified, it will\nimplicitly inherit the value of the enclosing ArgoCDSourceUpdate's Origin\nfield. If that, too, is unspecified, Promotions will fail if there is ever\nambiguity regarding from which piece of Freight an artifact is to be\nsourced.",
+                              "properties": {
+                                "kind": {
+                                  "description": "Kind is the kind of resource from which Freight may have originated. At\npresent, this can only be \"Warehouse\".",
+                                  "enum": [
+                                    "Warehouse"
+                                  ],
+                                  "type": "string"
+                                },
+                                "name": {
+                                  "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originated.",
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "name"
+                              ],
+                              "type": "object"
                             }
                           },
                           "required": [
                             "images"
+                          ],
+                          "type": "object"
+                        },
+                        "origin": {
+                          "description": "Origin disambiguates the origin from which artifacts used by this promotion\nmechanism must have originated. This is especially useful in cases where a\nStage may request Freight from multiples origins (e.g. multiple Warehouses)\nand some of those each reference different versions of artifacts from the\nsame repository. This field is optional. When left unspecified, it will\nimplicitly inherit the value of the enclosing ArgoCDAppUpdate's Origin\nfield. If that, too, is unspecified, Promotions will fail if there is ever\nambiguity regarding from which piece of Freight an artifact is to be\nsourced.",
+                          "properties": {
+                            "kind": {
+                              "description": "Kind is the kind of resource from which Freight may have originated. At\npresent, this can only be \"Warehouse\".",
+                              "enum": [
+                                "Warehouse"
+                              ],
+                              "type": "string"
+                            },
+                            "name": {
+                              "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originated.",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "name"
                           ],
                           "type": "object"
                         },
@@ -170,6 +296,27 @@
                               "minLength": 1,
                               "type": "string"
                             },
+                            "origin": {
+                              "description": "Origin disambiguates the origin from which artifacts used by this promotion\nmechanism must have originated. This is especially useful in cases where a\nStage may request Freight from multiples origins (e.g. multiple Warehouses)\nand some of those each reference different versions of artifacts from the\nsame repository. This field is optional. When left unspecified, it will\nimplicitly inherit the value of the enclosing HelmPromotionMechanism's\nOrigin field. If that, too, is unspecified, Promotions will fail if there\nis ever ambiguity regarding from which piece of Freight an artifact is to\nbe sourced.",
+                              "properties": {
+                                "kind": {
+                                  "description": "Kind is the kind of resource from which Freight may have originated. At\npresent, this can only be \"Warehouse\".",
+                                  "enum": [
+                                    "Warehouse"
+                                  ],
+                                  "type": "string"
+                                },
+                                "name": {
+                                  "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originated.",
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "name"
+                              ],
+                              "type": "object"
+                            },
                             "repository": {
                               "description": "Repository along with Name identifies a subchart of the umbrella chart at\nChartPath whose version should be updated. The values of both fields should\nexactly match the values of the fields of the same names in a dependency\nexpressed in the Chart.yaml of the umbrella chart at ChartPath. i.e. Do not\nmatch the values of these two fields to your Warehouse; match them to the\nChart.yaml. This is a required field.",
                               "minLength": 1,
@@ -202,6 +349,27 @@
                               "minLength": 1,
                               "type": "string"
                             },
+                            "origin": {
+                              "description": "Origin disambiguates the origin from which artifacts used by this promotion\nmechanism must have originated. This is especially useful in cases where a\nStage may request Freight from multiples origins (e.g. multiple Warehouses)\nand some of those each reference different versions of artifacts from the\nsame repository. This field is optional. When left unspecified, it will\nimplicitly inherit the value of the enclosing HelmPromotionMechanism's\nOrigin field. If that, too, is unspecified, Promotions will fail if there\nis ever ambiguity regarding from which piece of Freight an artifact is to\nbe sourced.",
+                              "properties": {
+                                "kind": {
+                                  "description": "Kind is the kind of resource from which Freight may have originated. At\npresent, this can only be \"Warehouse\".",
+                                  "enum": [
+                                    "Warehouse"
+                                  ],
+                                  "type": "string"
+                                },
+                                "name": {
+                                  "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originated.",
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "name"
+                              ],
+                              "type": "object"
+                            },
                             "value": {
                               "description": "Value specifies the new value for the specified key in the specified Helm\nvalues file. Valid values are:\n\n\n- ImageAndTag: Replaces the value of the specified key with\n  <image name>:<tag>\n- Tag: Replaces the value of the specified key with just the new tag\n- ImageAndDigest: Replaces the value of the specified key with\n  <image name>@<digest>\n- Digest: Replaces the value of the specified key with just the new digest.\n\n\nThis is a required field.",
                               "enum": [
@@ -228,6 +396,27 @@
                           "type": "object"
                         },
                         "type": "array"
+                      },
+                      "origin": {
+                        "description": "Origin disambiguates the origin from which artifacts used by this promotion\nmechanism must have originated. This is especially useful in cases where a\nStage may request Freight from multiples origins (e.g. multiple Warehouses)\nand some of those each reference different versions of artifacts from the\nsame repository. This field is optional. When left unspecified, it will\nimplicitly inherit the value of the enclosing GitRepoUpdate's Origin field.\nIf that, too, is unspecified, Promotions will fail if there is ever\nambiguity regarding from which piece of Freight an artifact is to be\nsourced.",
+                        "properties": {
+                          "kind": {
+                            "description": "Kind is the kind of resource from which Freight may have originated. At\npresent, this can only be \"Warehouse\".",
+                            "enum": [
+                              "Warehouse"
+                            ],
+                            "type": "string"
+                          },
+                          "name": {
+                            "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originated.",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "name"
+                        ],
+                        "type": "object"
                       }
                     },
                     "type": "object"
@@ -249,6 +438,27 @@
                               "minLength": 1,
                               "type": "string"
                             },
+                            "origin": {
+                              "description": "Origin disambiguates the origin from which artifacts used by this promotion\nmechanism must have originated. This is especially useful in cases where a\nStage may request Freight from multiples origins (e.g. multiple Warehouses)\nand some of those each reference different versions of artifacts from the\nsame repository. This field is optional. When left unspecified, it will\nimplicitly inherit the value of the enclosing KustomizePromotionMechanism's\nOrigin field. If that, too, is unspecified, Promotions will fail if there\nis ever ambiguity regarding from which piece of Freight an artifact is to\nbe sourced.",
+                              "properties": {
+                                "kind": {
+                                  "description": "Kind is the kind of resource from which Freight may have originated. At\npresent, this can only be \"Warehouse\".",
+                                  "enum": [
+                                    "Warehouse"
+                                  ],
+                                  "type": "string"
+                                },
+                                "name": {
+                                  "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originated.",
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "name"
+                              ],
+                              "type": "object"
+                            },
                             "path": {
                               "description": "Path specifies a path in which the `kustomize edit set image` command\nshould be executed. This is a required field.",
                               "minLength": 1,
@@ -268,10 +478,52 @@
                         },
                         "minItems": 1,
                         "type": "array"
+                      },
+                      "origin": {
+                        "description": "Origin disambiguates the origin from which artifacts used by this promotion\nmechanism must have originated. This is especially useful in cases where a\nStage may request Freight from multiples origins (e.g. multiple Warehouses)\nand some of those each reference different versions of artifacts from the\nsame repository. This field is optional. When left unspecified, it will\nimplicitly inherit the value of the enclosing GitRepoUpdate's Origin field.\nIf that, too, is unspecified, Promotions will fail if there is ever\nambiguity regarding from which piece of Freight an artifact is to be\nsourced.",
+                        "properties": {
+                          "kind": {
+                            "description": "Kind is the kind of resource from which Freight may have originated. At\npresent, this can only be \"Warehouse\".",
+                            "enum": [
+                              "Warehouse"
+                            ],
+                            "type": "string"
+                          },
+                          "name": {
+                            "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originated.",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "name"
+                        ],
+                        "type": "object"
                       }
                     },
                     "required": [
                       "images"
+                    ],
+                    "type": "object"
+                  },
+                  "origin": {
+                    "description": "Origin disambiguates the origin from which artifacts used by this promotion\nmechanism must have originated. This is especially useful in cases where a\nStage may request Freight from multiples origins (e.g. multiple Warehouses)\nand some of those each reference different versions of artifacts from the\nsame repository. This field is optional. When left unspecified, the branch\nchecked out by this promotion mechanism will be the one specified by the\nReadBranch field. If that, too, is unspecified, the default branch of the\nrepository will be checked out. Always provide a value for this field if\nwishing to check out a specific commit indicated by a piece of Freight.",
+                    "properties": {
+                      "kind": {
+                        "description": "Kind is the kind of resource from which Freight may have originated. At\npresent, this can only be \"Warehouse\".",
+                        "enum": [
+                          "Warehouse"
+                        ],
+                        "type": "string"
+                      },
+                      "name": {
+                        "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originated.",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "name"
                     ],
                     "type": "object"
                   },
@@ -307,6 +559,27 @@
                               "minLength": 1,
                               "type": "string"
                             },
+                            "origin": {
+                              "description": "Origin disambiguates the origin from which artifacts used by this promotion\nmechanism must have originated. This is especially useful in cases where a\nStage may request Freight from multiples origins (e.g. multiple Warehouses)\nand some of those each reference different versions of artifacts from the\nsame repository. This field is optional. When left unspecified, it will\nimplicitly inherit the value of the enclosing\nKargoRenderPromotionMechanism's Origin field. If that, too, is unspecified,\nPromotions will fail if there is ever ambiguity regarding from which piece\nof Freight an artifact is to be sourced.",
+                              "properties": {
+                                "kind": {
+                                  "description": "Kind is the kind of resource from which Freight may have originated. At\npresent, this can only be \"Warehouse\".",
+                                  "enum": [
+                                    "Warehouse"
+                                  ],
+                                  "type": "string"
+                                },
+                                "name": {
+                                  "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originated.",
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "name"
+                              ],
+                              "type": "object"
+                            },
                             "useDigest": {
                               "description": "UseDigest specifies whether the image's digest should be used instead of\nits tag.",
                               "type": "boolean"
@@ -318,6 +591,27 @@
                           "type": "object"
                         },
                         "type": "array"
+                      },
+                      "origin": {
+                        "description": "Origin disambiguates the origin from which artifacts used by this promotion\nmechanism must have originated. This is especially useful in cases where a\nStage may request Freight from multiples origins (e.g. multiple Warehouses)\nand some of those each reference different versions of artifacts from the\nsame repository. This field is optional. When left unspecified, it will\nimplicitly inherit the value of the enclosing GitRepoUpdate's Origin field.\nIf that, too, is unspecified, Promotions will fail if there is ever\nambiguity regarding from which piece of Freight an artifact is to be\nsourced.",
+                        "properties": {
+                          "kind": {
+                            "description": "Kind is the kind of resource from which Freight may have originated. At\npresent, this can only be \"Warehouse\".",
+                            "enum": [
+                              "Warehouse"
+                            ],
+                            "type": "string"
+                          },
+                          "name": {
+                            "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originated.",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "name"
+                        ],
+                        "type": "object"
                       }
                     },
                     "type": "object"
@@ -342,21 +636,95 @@
                 "type": "object"
               },
               "type": "array"
+            },
+            "origin": {
+              "description": "Origin disambiguates the origin from which artifacts used by this promotion\nmechanism must have originated. This is especially useful in cases where a\nStage may request Freight from multiples origins (e.g. multiple Warehouses)\nand some of those each reference different versions of artifacts from the\nsame repository. This field is optional. Its value is overridable by\nchild promotion mechanisms.",
+              "properties": {
+                "kind": {
+                  "description": "Kind is the kind of resource from which Freight may have originated. At\npresent, this can only be \"Warehouse\".",
+                  "enum": [
+                    "Warehouse"
+                  ],
+                  "type": "string"
+                },
+                "name": {
+                  "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originated.",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind",
+                "name"
+              ],
+              "type": "object"
             }
           },
           "type": "object"
+        },
+        "requestedFreight": {
+          "description": "RequestedFreight expresses the Stage's need for certain pieces of Freight,\neach having originated from a particular Warehouse. This list must be\nnon-empty. In the common case, a Stage will request Freight having\noriginated from just one specific Warehouse. In advanced cases, requesting\nFreight from multiple Warehouses provides a method of advancing new\nartifacts of different types through parallel pipelines at different\nspeeds. This can be useful, for instance, if a Stage is home to multiple\nmicroservices that are independently versioned.",
+          "items": {
+            "description": "FreightRequest expresses a Stage's need for Freight having originated from a\nparticular Warehouse.",
+            "properties": {
+              "origin": {
+                "description": "Origin specifies from where the requested Freight must have originated.\nThis is a required field.",
+                "properties": {
+                  "kind": {
+                    "description": "Kind is the kind of resource from which Freight may have originated. At\npresent, this can only be \"Warehouse\".",
+                    "enum": [
+                      "Warehouse"
+                    ],
+                    "type": "string"
+                  },
+                  "name": {
+                    "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originated.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "name"
+                ],
+                "type": "object"
+              },
+              "sources": {
+                "description": "Sources describes where the requested Freight may be obtained from. This is\na required field.",
+                "properties": {
+                  "direct": {
+                    "description": "Direct indicates the requested Freight may be obtained directly from the\nWarehouse from which it originated. If this field's value is false, then\nthe value of the Stages field must be non-empty. i.e. Between the two\nfields, at least one source must be specified.",
+                    "type": "boolean"
+                  },
+                  "stages": {
+                    "description": "Stages identifies other \"upstream\" Stages as potential sources of the\nrequested Freight. If this field's value is empty, then the value of the\nDirect field must be true. i.e. Between the two fields, at least on source\nmust be specified.",
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  }
+                },
+                "type": "object"
+              }
+            },
+            "required": [
+              "origin",
+              "sources"
+            ],
+            "type": "object"
+          },
+          "minItems": 1,
+          "type": "array"
         },
         "shard": {
           "description": "Shard is the name of the shard that this Stage belongs to. This is an\noptional field. If not specified, the Stage will belong to the default\nshard. A defaulting webhook will sync the value of the\nkargo.akuity.io/shard label with the value of this field. When this field\nis empty, the webhook will ensure that label is absent.",
           "type": "string"
         },
         "subscriptions": {
-          "description": "Subscriptions describes the Stage's sources of Freight. This is a required\nfield.",
+          "description": "Subscriptions describes the Stage's sources of Freight. This is a required\nfield.\n\n\nDeprecated: Use RequestedFreight instead.",
           "properties": {
             "upstreamStages": {
               "description": "UpstreamStages identifies other Stages as potential sources of Freight\nfor this Stage. This field is mutually exclusive with the Repos field.",
               "items": {
-                "description": "StageSubscription defines a subscription to Freight from another Stage.",
+                "description": "StageSubscription defines a subscription to Freight from another Stage.\n\n\nDeprecated: Use FreightRequest instead.",
                 "properties": {
                   "name": {
                     "description": "Name specifies the name of a Stage.",
@@ -445,6 +813,7 @@
         }
       },
       "required": [
+        "requestedFreight",
         "subscriptions"
       ],
       "type": "object"
@@ -453,7 +822,7 @@
       "description": "Status describes the Stage's current and recent Freight, health, and more.",
       "properties": {
         "currentFreight": {
-          "description": "CurrentFreight is a simplified representation of the Stage's current\nFreight describing what is currently deployed to the Stage.",
+          "description": "CurrentFreight is a simplified representation of the Stage's current\nFreight describing what is currently deployed to the Stage.\n\n\nDeprecated: Use the top item in the FreightHistory stack instead.",
           "properties": {
             "charts": {
               "description": "Charts describes specific versions of specific Helm charts.",
@@ -495,7 +864,7 @@
                     "type": "string"
                   },
                   "healthCheckCommit": {
-                    "description": "HealthCheckCommit is the ID of a specific commit. When specified,\nassessments of Stage health will used this value (instead of ID) when\ndetermining if applicable sources of Argo CD Application resources\nassociated with the Stage are or are not synced to this commit. Note that\nthere are cases (as in that of Kargo Render being utilized as a promotion\nmechanism) wherein the value of this field may differ from the commit ID\nfound in the ID field.",
+                    "description": "HealthCheckCommit is the ID of a specific commit. When specified,\nassessments of Stage health will use this value (instead of ID) when\ndetermining if applicable sources of Argo CD Application resources\nassociated with the Stage are or are not synced to this commit. Note that\nthere are cases (as in that of Kargo Render being utilized as a promotion\nmechanism) wherein the value of this field may differ from the commit ID\nfound in the ID field.",
                     "type": "string"
                   },
                   "id": {
@@ -549,10 +918,31 @@
               "description": "Name is system-assigned identifier that is derived deterministically from\nthe contents of the Freight. i.e. Two pieces of Freight can be compared for\nequality by comparing their Names.",
               "type": "string"
             },
+            "origin": {
+              "description": "Origin describes a kind of Freight in terms of its origin.",
+              "properties": {
+                "kind": {
+                  "description": "Kind is the kind of resource from which Freight may have originated. At\npresent, this can only be \"Warehouse\".",
+                  "enum": [
+                    "Warehouse"
+                  ],
+                  "type": "string"
+                },
+                "name": {
+                  "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originated.",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind",
+                "name"
+              ],
+              "type": "object"
+            },
             "verificationHistory": {
-              "description": "VerificationHistory is a stack of recent VerificationInfo. By default,\nthe last ten VerificationInfo are stored.",
+              "description": "VerificationHistory is a stack of recent VerificationInfo. By default,\nthe last ten VerificationInfo are stored.\n\n\nDeprecated: Use FreightCollection.VerificationHistory instead.",
               "items": {
-                "description": "VerificationInfo contains information about the currently running\nVerification process.",
+                "description": "VerificationInfo contains the details of an instance of a Verification\nprocess.",
                 "properties": {
                   "actor": {
                     "description": "Actor is the name of the entity that initiated or aborted the\nVerification process.",
@@ -609,7 +999,7 @@
               "type": "array"
             },
             "verificationInfo": {
-              "description": "VerificationInfo is information about any verification process that was\nassociated with this Freight for this Stage.",
+              "description": "VerificationInfo is information about any verification process that was\nassociated with this Freight for this Stage.\n\n\nDeprecated: Use FreightCollection.VerificationHistory instead.",
               "properties": {
                 "actor": {
                   "description": "Actor is the name of the entity that initiated or aborted the\nVerification process.",
@@ -664,7 +1054,7 @@
               "type": "object"
             },
             "warehouse": {
-              "description": "Warehouse is the name of the Warehouse that created this Freight.",
+              "description": "Warehouse is the name of the Warehouse that created this Freight.\n\n\nDeprecated: Use the Origin instead.",
               "type": "string"
             }
           },
@@ -721,7 +1111,7 @@
                         "type": "string"
                       },
                       "healthCheckCommit": {
-                        "description": "HealthCheckCommit is the ID of a specific commit. When specified,\nassessments of Stage health will used this value (instead of ID) when\ndetermining if applicable sources of Argo CD Application resources\nassociated with the Stage are or are not synced to this commit. Note that\nthere are cases (as in that of Kargo Render being utilized as a promotion\nmechanism) wherein the value of this field may differ from the commit ID\nfound in the ID field.",
+                        "description": "HealthCheckCommit is the ID of a specific commit. When specified,\nassessments of Stage health will use this value (instead of ID) when\ndetermining if applicable sources of Argo CD Application resources\nassociated with the Stage are or are not synced to this commit. Note that\nthere are cases (as in that of Kargo Render being utilized as a promotion\nmechanism) wherein the value of this field may differ from the commit ID\nfound in the ID field.",
                         "type": "string"
                       },
                       "id": {
@@ -775,10 +1165,31 @@
                   "description": "Name is system-assigned identifier that is derived deterministically from\nthe contents of the Freight. i.e. Two pieces of Freight can be compared for\nequality by comparing their Names.",
                   "type": "string"
                 },
+                "origin": {
+                  "description": "Origin describes a kind of Freight in terms of its origin.",
+                  "properties": {
+                    "kind": {
+                      "description": "Kind is the kind of resource from which Freight may have originated. At\npresent, this can only be \"Warehouse\".",
+                      "enum": [
+                        "Warehouse"
+                      ],
+                      "type": "string"
+                    },
+                    "name": {
+                      "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originated.",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "name"
+                  ],
+                  "type": "object"
+                },
                 "verificationHistory": {
-                  "description": "VerificationHistory is a stack of recent VerificationInfo. By default,\nthe last ten VerificationInfo are stored.",
+                  "description": "VerificationHistory is a stack of recent VerificationInfo. By default,\nthe last ten VerificationInfo are stored.\n\n\nDeprecated: Use FreightCollection.VerificationHistory instead.",
                   "items": {
-                    "description": "VerificationInfo contains information about the currently running\nVerification process.",
+                    "description": "VerificationInfo contains the details of an instance of a Verification\nprocess.",
                     "properties": {
                       "actor": {
                         "description": "Actor is the name of the entity that initiated or aborted the\nVerification process.",
@@ -835,7 +1246,7 @@
                   "type": "array"
                 },
                 "verificationInfo": {
-                  "description": "VerificationInfo is information about any verification process that was\nassociated with this Freight for this Stage.",
+                  "description": "VerificationInfo is information about any verification process that was\nassociated with this Freight for this Stage.\n\n\nDeprecated: Use FreightCollection.VerificationHistory instead.",
                   "properties": {
                     "actor": {
                       "description": "Actor is the name of the entity that initiated or aborted the\nVerification process.",
@@ -890,7 +1301,7 @@
                   "type": "object"
                 },
                 "warehouse": {
-                  "description": "Warehouse is the name of the Warehouse that created this Freight.",
+                  "description": "Warehouse is the name of the Warehouse that created this Freight.\n\n\nDeprecated: Use the Origin instead.",
                   "type": "string"
                 }
               },
@@ -951,7 +1362,7 @@
                             "type": "string"
                           },
                           "healthCheckCommit": {
-                            "description": "HealthCheckCommit is the ID of a specific commit. When specified,\nassessments of Stage health will used this value (instead of ID) when\ndetermining if applicable sources of Argo CD Application resources\nassociated with the Stage are or are not synced to this commit. Note that\nthere are cases (as in that of Kargo Render being utilized as a promotion\nmechanism) wherein the value of this field may differ from the commit ID\nfound in the ID field.",
+                            "description": "HealthCheckCommit is the ID of a specific commit. When specified,\nassessments of Stage health will use this value (instead of ID) when\ndetermining if applicable sources of Argo CD Application resources\nassociated with the Stage are or are not synced to this commit. Note that\nthere are cases (as in that of Kargo Render being utilized as a promotion\nmechanism) wherein the value of this field may differ from the commit ID\nfound in the ID field.",
                             "type": "string"
                           },
                           "id": {
@@ -1005,10 +1416,31 @@
                       "description": "Name is system-assigned identifier that is derived deterministically from\nthe contents of the Freight. i.e. Two pieces of Freight can be compared for\nequality by comparing their Names.",
                       "type": "string"
                     },
+                    "origin": {
+                      "description": "Origin describes a kind of Freight in terms of its origin.",
+                      "properties": {
+                        "kind": {
+                          "description": "Kind is the kind of resource from which Freight may have originated. At\npresent, this can only be \"Warehouse\".",
+                          "enum": [
+                            "Warehouse"
+                          ],
+                          "type": "string"
+                        },
+                        "name": {
+                          "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originated.",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "name"
+                      ],
+                      "type": "object"
+                    },
                     "verificationHistory": {
-                      "description": "VerificationHistory is a stack of recent VerificationInfo. By default,\nthe last ten VerificationInfo are stored.",
+                      "description": "VerificationHistory is a stack of recent VerificationInfo. By default,\nthe last ten VerificationInfo are stored.\n\n\nDeprecated: Use FreightCollection.VerificationHistory instead.",
                       "items": {
-                        "description": "VerificationInfo contains information about the currently running\nVerification process.",
+                        "description": "VerificationInfo contains the details of an instance of a Verification\nprocess.",
                         "properties": {
                           "actor": {
                             "description": "Actor is the name of the entity that initiated or aborted the\nVerification process.",
@@ -1065,7 +1497,7 @@
                       "type": "array"
                     },
                     "verificationInfo": {
-                      "description": "VerificationInfo is information about any verification process that was\nassociated with this Freight for this Stage.",
+                      "description": "VerificationInfo is information about any verification process that was\nassociated with this Freight for this Stage.\n\n\nDeprecated: Use FreightCollection.VerificationHistory instead.",
                       "properties": {
                         "actor": {
                           "description": "Actor is the name of the entity that initiated or aborted the\nVerification process.",
@@ -1120,10 +1552,325 @@
                       "type": "object"
                     },
                     "warehouse": {
-                      "description": "Warehouse is the name of the Warehouse that created this Freight.",
+                      "description": "Warehouse is the name of the Warehouse that created this Freight.\n\n\nDeprecated: Use the Origin instead.",
                       "type": "string"
                     }
                   },
+                  "type": "object"
+                },
+                "freightCollection": {
+                  "description": "FreightCollection contains the details of the piece of Freight referenced\nby this Promotion as well as any additional Freight that is carried over\nfrom the target Stage's current state.",
+                  "properties": {
+                    "id": {
+                      "description": "ID is a unique and deterministically calculated identifier for the\nFreightCollection. It is updated on each use of the UpdateOrPush method.",
+                      "type": "string"
+                    },
+                    "items": {
+                      "additionalProperties": {
+                        "description": "FreightReference is a simplified representation of a piece of Freight -- not\na root resource type.",
+                        "properties": {
+                          "charts": {
+                            "description": "Charts describes specific versions of specific Helm charts.",
+                            "items": {
+                              "description": "Chart describes a specific version of a Helm chart.",
+                              "properties": {
+                                "name": {
+                                  "description": "Name specifies the name of the chart.",
+                                  "type": "string"
+                                },
+                                "repoURL": {
+                                  "description": "RepoURL specifies the URL of a Helm chart repository. Classic chart\nrepositories (using HTTP/S) can contain differently named charts. When this\nfield points to such a repository, the Name field will specify the name of\nthe chart within the repository. In the case of a repository within an OCI\nregistry, the URL implicitly points to a specific chart and the Name field\nwill be empty.",
+                                  "type": "string"
+                                },
+                                "version": {
+                                  "description": "Version specifies a particular version of the chart.",
+                                  "type": "string"
+                                }
+                              },
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "commits": {
+                            "description": "Commits describes specific Git repository commits.",
+                            "items": {
+                              "description": "GitCommit describes a specific commit from a specific Git repository.",
+                              "properties": {
+                                "author": {
+                                  "description": "Author is the author of the commit.",
+                                  "type": "string"
+                                },
+                                "branch": {
+                                  "description": "Branch denotes the branch of the repository where this commit was found.",
+                                  "type": "string"
+                                },
+                                "committer": {
+                                  "description": "Committer is the person who committed the commit.",
+                                  "type": "string"
+                                },
+                                "healthCheckCommit": {
+                                  "description": "HealthCheckCommit is the ID of a specific commit. When specified,\nassessments of Stage health will use this value (instead of ID) when\ndetermining if applicable sources of Argo CD Application resources\nassociated with the Stage are or are not synced to this commit. Note that\nthere are cases (as in that of Kargo Render being utilized as a promotion\nmechanism) wherein the value of this field may differ from the commit ID\nfound in the ID field.",
+                                  "type": "string"
+                                },
+                                "id": {
+                                  "description": "ID is the ID of a specific commit in the Git repository specified by\nRepoURL.",
+                                  "type": "string"
+                                },
+                                "message": {
+                                  "description": "Message is the message associated with the commit. At present, this only\ncontains the first line (subject) of the commit message.",
+                                  "type": "string"
+                                },
+                                "repoURL": {
+                                  "description": "RepoURL is the URL of a Git repository.",
+                                  "type": "string"
+                                },
+                                "tag": {
+                                  "description": "Tag denotes a tag in the repository that matched selection criteria and\nresolved to this commit.",
+                                  "type": "string"
+                                }
+                              },
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "images": {
+                            "description": "Images describes specific versions of specific container images.",
+                            "items": {
+                              "description": "Image describes a specific version of a container image.",
+                              "properties": {
+                                "digest": {
+                                  "description": "Digest identifies a specific version of the image in the repository\nspecified by RepoURL. This is a more precise identifier than Tag.",
+                                  "type": "string"
+                                },
+                                "gitRepoURL": {
+                                  "description": "GitRepoURL specifies the URL of a Git repository that contains the source\ncode for the image repository referenced by the RepoURL field if Kargo was\nable to infer it.",
+                                  "type": "string"
+                                },
+                                "repoURL": {
+                                  "description": "RepoURL describes the repository in which the image can be found.",
+                                  "type": "string"
+                                },
+                                "tag": {
+                                  "description": "Tag identifies a specific version of the image in the repository specified\nby RepoURL.",
+                                  "type": "string"
+                                }
+                              },
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "name": {
+                            "description": "Name is system-assigned identifier that is derived deterministically from\nthe contents of the Freight. i.e. Two pieces of Freight can be compared for\nequality by comparing their Names.",
+                            "type": "string"
+                          },
+                          "origin": {
+                            "description": "Origin describes a kind of Freight in terms of its origin.",
+                            "properties": {
+                              "kind": {
+                                "description": "Kind is the kind of resource from which Freight may have originated. At\npresent, this can only be \"Warehouse\".",
+                                "enum": [
+                                  "Warehouse"
+                                ],
+                                "type": "string"
+                              },
+                              "name": {
+                                "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originated.",
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "name"
+                            ],
+                            "type": "object"
+                          },
+                          "verificationHistory": {
+                            "description": "VerificationHistory is a stack of recent VerificationInfo. By default,\nthe last ten VerificationInfo are stored.\n\n\nDeprecated: Use FreightCollection.VerificationHistory instead.",
+                            "items": {
+                              "description": "VerificationInfo contains the details of an instance of a Verification\nprocess.",
+                              "properties": {
+                                "actor": {
+                                  "description": "Actor is the name of the entity that initiated or aborted the\nVerification process.",
+                                  "type": "string"
+                                },
+                                "analysisRun": {
+                                  "description": "AnalysisRun is a reference to the Argo Rollouts AnalysisRun that implements\nthe Verification process.",
+                                  "properties": {
+                                    "name": {
+                                      "description": "Name is the name of the AnalysisRun.",
+                                      "type": "string"
+                                    },
+                                    "namespace": {
+                                      "description": "Namespace is the namespace of the AnalysisRun.",
+                                      "type": "string"
+                                    },
+                                    "phase": {
+                                      "description": "Phase is the last observed phase of the AnalysisRun referenced by Name.",
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "name",
+                                    "namespace",
+                                    "phase"
+                                  ],
+                                  "type": "object"
+                                },
+                                "finishTime": {
+                                  "description": "FinishTime is the time at which the Verification process finished.",
+                                  "format": "date-time",
+                                  "type": "string"
+                                },
+                                "id": {
+                                  "description": "ID is the identifier of the Verification process.",
+                                  "type": "string"
+                                },
+                                "message": {
+                                  "description": "Message may contain additional information about why the verification\nprocess is in its current phase.",
+                                  "type": "string"
+                                },
+                                "phase": {
+                                  "description": "Phase describes the current phase of the Verification process. Generally,\nthis will be a reflection of the underlying AnalysisRun's phase, however,\nthere are exceptions to this, such as in the case where an AnalysisRun\ncannot be launched successfully.",
+                                  "type": "string"
+                                },
+                                "startTime": {
+                                  "description": "StartTime is the time at which the Verification process was started.",
+                                  "format": "date-time",
+                                  "type": "string"
+                                }
+                              },
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "verificationInfo": {
+                            "description": "VerificationInfo is information about any verification process that was\nassociated with this Freight for this Stage.\n\n\nDeprecated: Use FreightCollection.VerificationHistory instead.",
+                            "properties": {
+                              "actor": {
+                                "description": "Actor is the name of the entity that initiated or aborted the\nVerification process.",
+                                "type": "string"
+                              },
+                              "analysisRun": {
+                                "description": "AnalysisRun is a reference to the Argo Rollouts AnalysisRun that implements\nthe Verification process.",
+                                "properties": {
+                                  "name": {
+                                    "description": "Name is the name of the AnalysisRun.",
+                                    "type": "string"
+                                  },
+                                  "namespace": {
+                                    "description": "Namespace is the namespace of the AnalysisRun.",
+                                    "type": "string"
+                                  },
+                                  "phase": {
+                                    "description": "Phase is the last observed phase of the AnalysisRun referenced by Name.",
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "name",
+                                  "namespace",
+                                  "phase"
+                                ],
+                                "type": "object"
+                              },
+                              "finishTime": {
+                                "description": "FinishTime is the time at which the Verification process finished.",
+                                "format": "date-time",
+                                "type": "string"
+                              },
+                              "id": {
+                                "description": "ID is the identifier of the Verification process.",
+                                "type": "string"
+                              },
+                              "message": {
+                                "description": "Message may contain additional information about why the verification\nprocess is in its current phase.",
+                                "type": "string"
+                              },
+                              "phase": {
+                                "description": "Phase describes the current phase of the Verification process. Generally,\nthis will be a reflection of the underlying AnalysisRun's phase, however,\nthere are exceptions to this, such as in the case where an AnalysisRun\ncannot be launched successfully.",
+                                "type": "string"
+                              },
+                              "startTime": {
+                                "description": "StartTime is the time at which the Verification process was started.",
+                                "format": "date-time",
+                                "type": "string"
+                              }
+                            },
+                            "type": "object"
+                          },
+                          "warehouse": {
+                            "description": "Warehouse is the name of the Warehouse that created this Freight.\n\n\nDeprecated: Use the Origin instead.",
+                            "type": "string"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "description": "Freight is a map of FreightReference objects, indexed by their Warehouse\norigin.",
+                      "type": "object"
+                    },
+                    "verificationHistory": {
+                      "description": "VerificationHistory is a stack of recent VerificationInfo. By default,\nthe last ten VerificationInfo are stored.",
+                      "items": {
+                        "description": "VerificationInfo contains the details of an instance of a Verification\nprocess.",
+                        "properties": {
+                          "actor": {
+                            "description": "Actor is the name of the entity that initiated or aborted the\nVerification process.",
+                            "type": "string"
+                          },
+                          "analysisRun": {
+                            "description": "AnalysisRun is a reference to the Argo Rollouts AnalysisRun that implements\nthe Verification process.",
+                            "properties": {
+                              "name": {
+                                "description": "Name is the name of the AnalysisRun.",
+                                "type": "string"
+                              },
+                              "namespace": {
+                                "description": "Namespace is the namespace of the AnalysisRun.",
+                                "type": "string"
+                              },
+                              "phase": {
+                                "description": "Phase is the last observed phase of the AnalysisRun referenced by Name.",
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "name",
+                              "namespace",
+                              "phase"
+                            ],
+                            "type": "object"
+                          },
+                          "finishTime": {
+                            "description": "FinishTime is the time at which the Verification process finished.",
+                            "format": "date-time",
+                            "type": "string"
+                          },
+                          "id": {
+                            "description": "ID is the identifier of the Verification process.",
+                            "type": "string"
+                          },
+                          "message": {
+                            "description": "Message may contain additional information about why the verification\nprocess is in its current phase.",
+                            "type": "string"
+                          },
+                          "phase": {
+                            "description": "Phase describes the current phase of the Verification process. Generally,\nthis will be a reflection of the underlying AnalysisRun's phase, however,\nthere are exceptions to this, such as in the case where an AnalysisRun\ncannot be launched successfully.",
+                            "type": "string"
+                          },
+                          "startTime": {
+                            "description": "StartTime is the time at which the Verification process was started.",
+                            "format": "date-time",
+                            "type": "string"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "required": [
+                    "id"
+                  ],
                   "type": "object"
                 },
                 "lastHandledRefresh": {
@@ -1150,10 +1897,328 @@
             }
           },
           "required": [
-            "freight",
             "name"
           ],
           "type": "object"
+        },
+        "freightHistory": {
+          "description": "FreightHistory is a list of recent Freight selections that were deployed\nto the Stage. By default, the last ten Freight selections are stored.\nThe first item in the list is the most recent Freight selection and\ncurrently deployed to the Stage, subsequent items are older selections.",
+          "items": {
+            "description": "FreightCollection is a collection of FreightReferences, each of which\nrepresents a piece of Freight that has been selected for deployment to a\nStage.",
+            "properties": {
+              "id": {
+                "description": "ID is a unique and deterministically calculated identifier for the\nFreightCollection. It is updated on each use of the UpdateOrPush method.",
+                "type": "string"
+              },
+              "items": {
+                "additionalProperties": {
+                  "description": "FreightReference is a simplified representation of a piece of Freight -- not\na root resource type.",
+                  "properties": {
+                    "charts": {
+                      "description": "Charts describes specific versions of specific Helm charts.",
+                      "items": {
+                        "description": "Chart describes a specific version of a Helm chart.",
+                        "properties": {
+                          "name": {
+                            "description": "Name specifies the name of the chart.",
+                            "type": "string"
+                          },
+                          "repoURL": {
+                            "description": "RepoURL specifies the URL of a Helm chart repository. Classic chart\nrepositories (using HTTP/S) can contain differently named charts. When this\nfield points to such a repository, the Name field will specify the name of\nthe chart within the repository. In the case of a repository within an OCI\nregistry, the URL implicitly points to a specific chart and the Name field\nwill be empty.",
+                            "type": "string"
+                          },
+                          "version": {
+                            "description": "Version specifies a particular version of the chart.",
+                            "type": "string"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "commits": {
+                      "description": "Commits describes specific Git repository commits.",
+                      "items": {
+                        "description": "GitCommit describes a specific commit from a specific Git repository.",
+                        "properties": {
+                          "author": {
+                            "description": "Author is the author of the commit.",
+                            "type": "string"
+                          },
+                          "branch": {
+                            "description": "Branch denotes the branch of the repository where this commit was found.",
+                            "type": "string"
+                          },
+                          "committer": {
+                            "description": "Committer is the person who committed the commit.",
+                            "type": "string"
+                          },
+                          "healthCheckCommit": {
+                            "description": "HealthCheckCommit is the ID of a specific commit. When specified,\nassessments of Stage health will use this value (instead of ID) when\ndetermining if applicable sources of Argo CD Application resources\nassociated with the Stage are or are not synced to this commit. Note that\nthere are cases (as in that of Kargo Render being utilized as a promotion\nmechanism) wherein the value of this field may differ from the commit ID\nfound in the ID field.",
+                            "type": "string"
+                          },
+                          "id": {
+                            "description": "ID is the ID of a specific commit in the Git repository specified by\nRepoURL.",
+                            "type": "string"
+                          },
+                          "message": {
+                            "description": "Message is the message associated with the commit. At present, this only\ncontains the first line (subject) of the commit message.",
+                            "type": "string"
+                          },
+                          "repoURL": {
+                            "description": "RepoURL is the URL of a Git repository.",
+                            "type": "string"
+                          },
+                          "tag": {
+                            "description": "Tag denotes a tag in the repository that matched selection criteria and\nresolved to this commit.",
+                            "type": "string"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "images": {
+                      "description": "Images describes specific versions of specific container images.",
+                      "items": {
+                        "description": "Image describes a specific version of a container image.",
+                        "properties": {
+                          "digest": {
+                            "description": "Digest identifies a specific version of the image in the repository\nspecified by RepoURL. This is a more precise identifier than Tag.",
+                            "type": "string"
+                          },
+                          "gitRepoURL": {
+                            "description": "GitRepoURL specifies the URL of a Git repository that contains the source\ncode for the image repository referenced by the RepoURL field if Kargo was\nable to infer it.",
+                            "type": "string"
+                          },
+                          "repoURL": {
+                            "description": "RepoURL describes the repository in which the image can be found.",
+                            "type": "string"
+                          },
+                          "tag": {
+                            "description": "Tag identifies a specific version of the image in the repository specified\nby RepoURL.",
+                            "type": "string"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "name": {
+                      "description": "Name is system-assigned identifier that is derived deterministically from\nthe contents of the Freight. i.e. Two pieces of Freight can be compared for\nequality by comparing their Names.",
+                      "type": "string"
+                    },
+                    "origin": {
+                      "description": "Origin describes a kind of Freight in terms of its origin.",
+                      "properties": {
+                        "kind": {
+                          "description": "Kind is the kind of resource from which Freight may have originated. At\npresent, this can only be \"Warehouse\".",
+                          "enum": [
+                            "Warehouse"
+                          ],
+                          "type": "string"
+                        },
+                        "name": {
+                          "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originated.",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "name"
+                      ],
+                      "type": "object"
+                    },
+                    "verificationHistory": {
+                      "description": "VerificationHistory is a stack of recent VerificationInfo. By default,\nthe last ten VerificationInfo are stored.\n\n\nDeprecated: Use FreightCollection.VerificationHistory instead.",
+                      "items": {
+                        "description": "VerificationInfo contains the details of an instance of a Verification\nprocess.",
+                        "properties": {
+                          "actor": {
+                            "description": "Actor is the name of the entity that initiated or aborted the\nVerification process.",
+                            "type": "string"
+                          },
+                          "analysisRun": {
+                            "description": "AnalysisRun is a reference to the Argo Rollouts AnalysisRun that implements\nthe Verification process.",
+                            "properties": {
+                              "name": {
+                                "description": "Name is the name of the AnalysisRun.",
+                                "type": "string"
+                              },
+                              "namespace": {
+                                "description": "Namespace is the namespace of the AnalysisRun.",
+                                "type": "string"
+                              },
+                              "phase": {
+                                "description": "Phase is the last observed phase of the AnalysisRun referenced by Name.",
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "name",
+                              "namespace",
+                              "phase"
+                            ],
+                            "type": "object"
+                          },
+                          "finishTime": {
+                            "description": "FinishTime is the time at which the Verification process finished.",
+                            "format": "date-time",
+                            "type": "string"
+                          },
+                          "id": {
+                            "description": "ID is the identifier of the Verification process.",
+                            "type": "string"
+                          },
+                          "message": {
+                            "description": "Message may contain additional information about why the verification\nprocess is in its current phase.",
+                            "type": "string"
+                          },
+                          "phase": {
+                            "description": "Phase describes the current phase of the Verification process. Generally,\nthis will be a reflection of the underlying AnalysisRun's phase, however,\nthere are exceptions to this, such as in the case where an AnalysisRun\ncannot be launched successfully.",
+                            "type": "string"
+                          },
+                          "startTime": {
+                            "description": "StartTime is the time at which the Verification process was started.",
+                            "format": "date-time",
+                            "type": "string"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "verificationInfo": {
+                      "description": "VerificationInfo is information about any verification process that was\nassociated with this Freight for this Stage.\n\n\nDeprecated: Use FreightCollection.VerificationHistory instead.",
+                      "properties": {
+                        "actor": {
+                          "description": "Actor is the name of the entity that initiated or aborted the\nVerification process.",
+                          "type": "string"
+                        },
+                        "analysisRun": {
+                          "description": "AnalysisRun is a reference to the Argo Rollouts AnalysisRun that implements\nthe Verification process.",
+                          "properties": {
+                            "name": {
+                              "description": "Name is the name of the AnalysisRun.",
+                              "type": "string"
+                            },
+                            "namespace": {
+                              "description": "Namespace is the namespace of the AnalysisRun.",
+                              "type": "string"
+                            },
+                            "phase": {
+                              "description": "Phase is the last observed phase of the AnalysisRun referenced by Name.",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "name",
+                            "namespace",
+                            "phase"
+                          ],
+                          "type": "object"
+                        },
+                        "finishTime": {
+                          "description": "FinishTime is the time at which the Verification process finished.",
+                          "format": "date-time",
+                          "type": "string"
+                        },
+                        "id": {
+                          "description": "ID is the identifier of the Verification process.",
+                          "type": "string"
+                        },
+                        "message": {
+                          "description": "Message may contain additional information about why the verification\nprocess is in its current phase.",
+                          "type": "string"
+                        },
+                        "phase": {
+                          "description": "Phase describes the current phase of the Verification process. Generally,\nthis will be a reflection of the underlying AnalysisRun's phase, however,\nthere are exceptions to this, such as in the case where an AnalysisRun\ncannot be launched successfully.",
+                          "type": "string"
+                        },
+                        "startTime": {
+                          "description": "StartTime is the time at which the Verification process was started.",
+                          "format": "date-time",
+                          "type": "string"
+                        }
+                      },
+                      "type": "object"
+                    },
+                    "warehouse": {
+                      "description": "Warehouse is the name of the Warehouse that created this Freight.\n\n\nDeprecated: Use the Origin instead.",
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                },
+                "description": "Freight is a map of FreightReference objects, indexed by their Warehouse\norigin.",
+                "type": "object"
+              },
+              "verificationHistory": {
+                "description": "VerificationHistory is a stack of recent VerificationInfo. By default,\nthe last ten VerificationInfo are stored.",
+                "items": {
+                  "description": "VerificationInfo contains the details of an instance of a Verification\nprocess.",
+                  "properties": {
+                    "actor": {
+                      "description": "Actor is the name of the entity that initiated or aborted the\nVerification process.",
+                      "type": "string"
+                    },
+                    "analysisRun": {
+                      "description": "AnalysisRun is a reference to the Argo Rollouts AnalysisRun that implements\nthe Verification process.",
+                      "properties": {
+                        "name": {
+                          "description": "Name is the name of the AnalysisRun.",
+                          "type": "string"
+                        },
+                        "namespace": {
+                          "description": "Namespace is the namespace of the AnalysisRun.",
+                          "type": "string"
+                        },
+                        "phase": {
+                          "description": "Phase is the last observed phase of the AnalysisRun referenced by Name.",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "name",
+                        "namespace",
+                        "phase"
+                      ],
+                      "type": "object"
+                    },
+                    "finishTime": {
+                      "description": "FinishTime is the time at which the Verification process finished.",
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "id": {
+                      "description": "ID is the identifier of the Verification process.",
+                      "type": "string"
+                    },
+                    "message": {
+                      "description": "Message may contain additional information about why the verification\nprocess is in its current phase.",
+                      "type": "string"
+                    },
+                    "phase": {
+                      "description": "Phase describes the current phase of the Verification process. Generally,\nthis will be a reflection of the underlying AnalysisRun's phase, however,\nthere are exceptions to this, such as in the case where an AnalysisRun\ncannot be launched successfully.",
+                      "type": "string"
+                    },
+                    "startTime": {
+                      "description": "StartTime is the time at which the Verification process was started.",
+                      "format": "date-time",
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                },
+                "type": "array"
+              }
+            },
+            "required": [
+              "id"
+            ],
+            "type": "object"
+          },
+          "type": "array"
         },
         "health": {
           "description": "Health is the Stage's last observed health.",
@@ -1231,7 +2296,7 @@
           "type": "object"
         },
         "history": {
-          "description": "History is a stack of recent Freight. By default, the last ten Freight are\nstored.",
+          "description": "History is a stack of recent Freight. By default, the last ten Freight are\nstored.\n\n\nDeprecated: Use the FreightHistory stack instead.",
           "items": {
             "description": "FreightReference is a simplified representation of a piece of Freight -- not\na root resource type.",
             "properties": {
@@ -1275,7 +2340,7 @@
                       "type": "string"
                     },
                     "healthCheckCommit": {
-                      "description": "HealthCheckCommit is the ID of a specific commit. When specified,\nassessments of Stage health will used this value (instead of ID) when\ndetermining if applicable sources of Argo CD Application resources\nassociated with the Stage are or are not synced to this commit. Note that\nthere are cases (as in that of Kargo Render being utilized as a promotion\nmechanism) wherein the value of this field may differ from the commit ID\nfound in the ID field.",
+                      "description": "HealthCheckCommit is the ID of a specific commit. When specified,\nassessments of Stage health will use this value (instead of ID) when\ndetermining if applicable sources of Argo CD Application resources\nassociated with the Stage are or are not synced to this commit. Note that\nthere are cases (as in that of Kargo Render being utilized as a promotion\nmechanism) wherein the value of this field may differ from the commit ID\nfound in the ID field.",
                       "type": "string"
                     },
                     "id": {
@@ -1329,10 +2394,31 @@
                 "description": "Name is system-assigned identifier that is derived deterministically from\nthe contents of the Freight. i.e. Two pieces of Freight can be compared for\nequality by comparing their Names.",
                 "type": "string"
               },
+              "origin": {
+                "description": "Origin describes a kind of Freight in terms of its origin.",
+                "properties": {
+                  "kind": {
+                    "description": "Kind is the kind of resource from which Freight may have originated. At\npresent, this can only be \"Warehouse\".",
+                    "enum": [
+                      "Warehouse"
+                    ],
+                    "type": "string"
+                  },
+                  "name": {
+                    "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originated.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "name"
+                ],
+                "type": "object"
+              },
               "verificationHistory": {
-                "description": "VerificationHistory is a stack of recent VerificationInfo. By default,\nthe last ten VerificationInfo are stored.",
+                "description": "VerificationHistory is a stack of recent VerificationInfo. By default,\nthe last ten VerificationInfo are stored.\n\n\nDeprecated: Use FreightCollection.VerificationHistory instead.",
                 "items": {
-                  "description": "VerificationInfo contains information about the currently running\nVerification process.",
+                  "description": "VerificationInfo contains the details of an instance of a Verification\nprocess.",
                   "properties": {
                     "actor": {
                       "description": "Actor is the name of the entity that initiated or aborted the\nVerification process.",
@@ -1389,7 +2475,7 @@
                 "type": "array"
               },
               "verificationInfo": {
-                "description": "VerificationInfo is information about any verification process that was\nassociated with this Freight for this Stage.",
+                "description": "VerificationInfo is information about any verification process that was\nassociated with this Freight for this Stage.\n\n\nDeprecated: Use FreightCollection.VerificationHistory instead.",
                 "properties": {
                   "actor": {
                     "description": "Actor is the name of the entity that initiated or aborted the\nVerification process.",
@@ -1444,7 +2530,7 @@
                 "type": "object"
               },
               "warehouse": {
-                "description": "Warehouse is the name of the Warehouse that created this Freight.",
+                "description": "Warehouse is the name of the Warehouse that created this Freight.\n\n\nDeprecated: Use the Origin instead.",
                 "type": "string"
               }
             },
@@ -1507,7 +2593,7 @@
                         "type": "string"
                       },
                       "healthCheckCommit": {
-                        "description": "HealthCheckCommit is the ID of a specific commit. When specified,\nassessments of Stage health will used this value (instead of ID) when\ndetermining if applicable sources of Argo CD Application resources\nassociated with the Stage are or are not synced to this commit. Note that\nthere are cases (as in that of Kargo Render being utilized as a promotion\nmechanism) wherein the value of this field may differ from the commit ID\nfound in the ID field.",
+                        "description": "HealthCheckCommit is the ID of a specific commit. When specified,\nassessments of Stage health will use this value (instead of ID) when\ndetermining if applicable sources of Argo CD Application resources\nassociated with the Stage are or are not synced to this commit. Note that\nthere are cases (as in that of Kargo Render being utilized as a promotion\nmechanism) wherein the value of this field may differ from the commit ID\nfound in the ID field.",
                         "type": "string"
                       },
                       "id": {
@@ -1561,10 +2647,31 @@
                   "description": "Name is system-assigned identifier that is derived deterministically from\nthe contents of the Freight. i.e. Two pieces of Freight can be compared for\nequality by comparing their Names.",
                   "type": "string"
                 },
+                "origin": {
+                  "description": "Origin describes a kind of Freight in terms of its origin.",
+                  "properties": {
+                    "kind": {
+                      "description": "Kind is the kind of resource from which Freight may have originated. At\npresent, this can only be \"Warehouse\".",
+                      "enum": [
+                        "Warehouse"
+                      ],
+                      "type": "string"
+                    },
+                    "name": {
+                      "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originated.",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "name"
+                  ],
+                  "type": "object"
+                },
                 "verificationHistory": {
-                  "description": "VerificationHistory is a stack of recent VerificationInfo. By default,\nthe last ten VerificationInfo are stored.",
+                  "description": "VerificationHistory is a stack of recent VerificationInfo. By default,\nthe last ten VerificationInfo are stored.\n\n\nDeprecated: Use FreightCollection.VerificationHistory instead.",
                   "items": {
-                    "description": "VerificationInfo contains information about the currently running\nVerification process.",
+                    "description": "VerificationInfo contains the details of an instance of a Verification\nprocess.",
                     "properties": {
                       "actor": {
                         "description": "Actor is the name of the entity that initiated or aborted the\nVerification process.",
@@ -1621,7 +2728,7 @@
                   "type": "array"
                 },
                 "verificationInfo": {
-                  "description": "VerificationInfo is information about any verification process that was\nassociated with this Freight for this Stage.",
+                  "description": "VerificationInfo is information about any verification process that was\nassociated with this Freight for this Stage.\n\n\nDeprecated: Use FreightCollection.VerificationHistory instead.",
                   "properties": {
                     "actor": {
                       "description": "Actor is the name of the entity that initiated or aborted the\nVerification process.",
@@ -1676,7 +2783,7 @@
                   "type": "object"
                 },
                 "warehouse": {
-                  "description": "Warehouse is the name of the Warehouse that created this Freight.",
+                  "description": "Warehouse is the name of the Warehouse that created this Freight.\n\n\nDeprecated: Use the Origin instead.",
                   "type": "string"
                 }
               },
@@ -1737,7 +2844,7 @@
                             "type": "string"
                           },
                           "healthCheckCommit": {
-                            "description": "HealthCheckCommit is the ID of a specific commit. When specified,\nassessments of Stage health will used this value (instead of ID) when\ndetermining if applicable sources of Argo CD Application resources\nassociated with the Stage are or are not synced to this commit. Note that\nthere are cases (as in that of Kargo Render being utilized as a promotion\nmechanism) wherein the value of this field may differ from the commit ID\nfound in the ID field.",
+                            "description": "HealthCheckCommit is the ID of a specific commit. When specified,\nassessments of Stage health will use this value (instead of ID) when\ndetermining if applicable sources of Argo CD Application resources\nassociated with the Stage are or are not synced to this commit. Note that\nthere are cases (as in that of Kargo Render being utilized as a promotion\nmechanism) wherein the value of this field may differ from the commit ID\nfound in the ID field.",
                             "type": "string"
                           },
                           "id": {
@@ -1791,10 +2898,31 @@
                       "description": "Name is system-assigned identifier that is derived deterministically from\nthe contents of the Freight. i.e. Two pieces of Freight can be compared for\nequality by comparing their Names.",
                       "type": "string"
                     },
+                    "origin": {
+                      "description": "Origin describes a kind of Freight in terms of its origin.",
+                      "properties": {
+                        "kind": {
+                          "description": "Kind is the kind of resource from which Freight may have originated. At\npresent, this can only be \"Warehouse\".",
+                          "enum": [
+                            "Warehouse"
+                          ],
+                          "type": "string"
+                        },
+                        "name": {
+                          "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originated.",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "name"
+                      ],
+                      "type": "object"
+                    },
                     "verificationHistory": {
-                      "description": "VerificationHistory is a stack of recent VerificationInfo. By default,\nthe last ten VerificationInfo are stored.",
+                      "description": "VerificationHistory is a stack of recent VerificationInfo. By default,\nthe last ten VerificationInfo are stored.\n\n\nDeprecated: Use FreightCollection.VerificationHistory instead.",
                       "items": {
-                        "description": "VerificationInfo contains information about the currently running\nVerification process.",
+                        "description": "VerificationInfo contains the details of an instance of a Verification\nprocess.",
                         "properties": {
                           "actor": {
                             "description": "Actor is the name of the entity that initiated or aborted the\nVerification process.",
@@ -1851,7 +2979,7 @@
                       "type": "array"
                     },
                     "verificationInfo": {
-                      "description": "VerificationInfo is information about any verification process that was\nassociated with this Freight for this Stage.",
+                      "description": "VerificationInfo is information about any verification process that was\nassociated with this Freight for this Stage.\n\n\nDeprecated: Use FreightCollection.VerificationHistory instead.",
                       "properties": {
                         "actor": {
                           "description": "Actor is the name of the entity that initiated or aborted the\nVerification process.",
@@ -1906,10 +3034,325 @@
                       "type": "object"
                     },
                     "warehouse": {
-                      "description": "Warehouse is the name of the Warehouse that created this Freight.",
+                      "description": "Warehouse is the name of the Warehouse that created this Freight.\n\n\nDeprecated: Use the Origin instead.",
                       "type": "string"
                     }
                   },
+                  "type": "object"
+                },
+                "freightCollection": {
+                  "description": "FreightCollection contains the details of the piece of Freight referenced\nby this Promotion as well as any additional Freight that is carried over\nfrom the target Stage's current state.",
+                  "properties": {
+                    "id": {
+                      "description": "ID is a unique and deterministically calculated identifier for the\nFreightCollection. It is updated on each use of the UpdateOrPush method.",
+                      "type": "string"
+                    },
+                    "items": {
+                      "additionalProperties": {
+                        "description": "FreightReference is a simplified representation of a piece of Freight -- not\na root resource type.",
+                        "properties": {
+                          "charts": {
+                            "description": "Charts describes specific versions of specific Helm charts.",
+                            "items": {
+                              "description": "Chart describes a specific version of a Helm chart.",
+                              "properties": {
+                                "name": {
+                                  "description": "Name specifies the name of the chart.",
+                                  "type": "string"
+                                },
+                                "repoURL": {
+                                  "description": "RepoURL specifies the URL of a Helm chart repository. Classic chart\nrepositories (using HTTP/S) can contain differently named charts. When this\nfield points to such a repository, the Name field will specify the name of\nthe chart within the repository. In the case of a repository within an OCI\nregistry, the URL implicitly points to a specific chart and the Name field\nwill be empty.",
+                                  "type": "string"
+                                },
+                                "version": {
+                                  "description": "Version specifies a particular version of the chart.",
+                                  "type": "string"
+                                }
+                              },
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "commits": {
+                            "description": "Commits describes specific Git repository commits.",
+                            "items": {
+                              "description": "GitCommit describes a specific commit from a specific Git repository.",
+                              "properties": {
+                                "author": {
+                                  "description": "Author is the author of the commit.",
+                                  "type": "string"
+                                },
+                                "branch": {
+                                  "description": "Branch denotes the branch of the repository where this commit was found.",
+                                  "type": "string"
+                                },
+                                "committer": {
+                                  "description": "Committer is the person who committed the commit.",
+                                  "type": "string"
+                                },
+                                "healthCheckCommit": {
+                                  "description": "HealthCheckCommit is the ID of a specific commit. When specified,\nassessments of Stage health will use this value (instead of ID) when\ndetermining if applicable sources of Argo CD Application resources\nassociated with the Stage are or are not synced to this commit. Note that\nthere are cases (as in that of Kargo Render being utilized as a promotion\nmechanism) wherein the value of this field may differ from the commit ID\nfound in the ID field.",
+                                  "type": "string"
+                                },
+                                "id": {
+                                  "description": "ID is the ID of a specific commit in the Git repository specified by\nRepoURL.",
+                                  "type": "string"
+                                },
+                                "message": {
+                                  "description": "Message is the message associated with the commit. At present, this only\ncontains the first line (subject) of the commit message.",
+                                  "type": "string"
+                                },
+                                "repoURL": {
+                                  "description": "RepoURL is the URL of a Git repository.",
+                                  "type": "string"
+                                },
+                                "tag": {
+                                  "description": "Tag denotes a tag in the repository that matched selection criteria and\nresolved to this commit.",
+                                  "type": "string"
+                                }
+                              },
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "images": {
+                            "description": "Images describes specific versions of specific container images.",
+                            "items": {
+                              "description": "Image describes a specific version of a container image.",
+                              "properties": {
+                                "digest": {
+                                  "description": "Digest identifies a specific version of the image in the repository\nspecified by RepoURL. This is a more precise identifier than Tag.",
+                                  "type": "string"
+                                },
+                                "gitRepoURL": {
+                                  "description": "GitRepoURL specifies the URL of a Git repository that contains the source\ncode for the image repository referenced by the RepoURL field if Kargo was\nable to infer it.",
+                                  "type": "string"
+                                },
+                                "repoURL": {
+                                  "description": "RepoURL describes the repository in which the image can be found.",
+                                  "type": "string"
+                                },
+                                "tag": {
+                                  "description": "Tag identifies a specific version of the image in the repository specified\nby RepoURL.",
+                                  "type": "string"
+                                }
+                              },
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "name": {
+                            "description": "Name is system-assigned identifier that is derived deterministically from\nthe contents of the Freight. i.e. Two pieces of Freight can be compared for\nequality by comparing their Names.",
+                            "type": "string"
+                          },
+                          "origin": {
+                            "description": "Origin describes a kind of Freight in terms of its origin.",
+                            "properties": {
+                              "kind": {
+                                "description": "Kind is the kind of resource from which Freight may have originated. At\npresent, this can only be \"Warehouse\".",
+                                "enum": [
+                                  "Warehouse"
+                                ],
+                                "type": "string"
+                              },
+                              "name": {
+                                "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originated.",
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "name"
+                            ],
+                            "type": "object"
+                          },
+                          "verificationHistory": {
+                            "description": "VerificationHistory is a stack of recent VerificationInfo. By default,\nthe last ten VerificationInfo are stored.\n\n\nDeprecated: Use FreightCollection.VerificationHistory instead.",
+                            "items": {
+                              "description": "VerificationInfo contains the details of an instance of a Verification\nprocess.",
+                              "properties": {
+                                "actor": {
+                                  "description": "Actor is the name of the entity that initiated or aborted the\nVerification process.",
+                                  "type": "string"
+                                },
+                                "analysisRun": {
+                                  "description": "AnalysisRun is a reference to the Argo Rollouts AnalysisRun that implements\nthe Verification process.",
+                                  "properties": {
+                                    "name": {
+                                      "description": "Name is the name of the AnalysisRun.",
+                                      "type": "string"
+                                    },
+                                    "namespace": {
+                                      "description": "Namespace is the namespace of the AnalysisRun.",
+                                      "type": "string"
+                                    },
+                                    "phase": {
+                                      "description": "Phase is the last observed phase of the AnalysisRun referenced by Name.",
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "name",
+                                    "namespace",
+                                    "phase"
+                                  ],
+                                  "type": "object"
+                                },
+                                "finishTime": {
+                                  "description": "FinishTime is the time at which the Verification process finished.",
+                                  "format": "date-time",
+                                  "type": "string"
+                                },
+                                "id": {
+                                  "description": "ID is the identifier of the Verification process.",
+                                  "type": "string"
+                                },
+                                "message": {
+                                  "description": "Message may contain additional information about why the verification\nprocess is in its current phase.",
+                                  "type": "string"
+                                },
+                                "phase": {
+                                  "description": "Phase describes the current phase of the Verification process. Generally,\nthis will be a reflection of the underlying AnalysisRun's phase, however,\nthere are exceptions to this, such as in the case where an AnalysisRun\ncannot be launched successfully.",
+                                  "type": "string"
+                                },
+                                "startTime": {
+                                  "description": "StartTime is the time at which the Verification process was started.",
+                                  "format": "date-time",
+                                  "type": "string"
+                                }
+                              },
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "verificationInfo": {
+                            "description": "VerificationInfo is information about any verification process that was\nassociated with this Freight for this Stage.\n\n\nDeprecated: Use FreightCollection.VerificationHistory instead.",
+                            "properties": {
+                              "actor": {
+                                "description": "Actor is the name of the entity that initiated or aborted the\nVerification process.",
+                                "type": "string"
+                              },
+                              "analysisRun": {
+                                "description": "AnalysisRun is a reference to the Argo Rollouts AnalysisRun that implements\nthe Verification process.",
+                                "properties": {
+                                  "name": {
+                                    "description": "Name is the name of the AnalysisRun.",
+                                    "type": "string"
+                                  },
+                                  "namespace": {
+                                    "description": "Namespace is the namespace of the AnalysisRun.",
+                                    "type": "string"
+                                  },
+                                  "phase": {
+                                    "description": "Phase is the last observed phase of the AnalysisRun referenced by Name.",
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "name",
+                                  "namespace",
+                                  "phase"
+                                ],
+                                "type": "object"
+                              },
+                              "finishTime": {
+                                "description": "FinishTime is the time at which the Verification process finished.",
+                                "format": "date-time",
+                                "type": "string"
+                              },
+                              "id": {
+                                "description": "ID is the identifier of the Verification process.",
+                                "type": "string"
+                              },
+                              "message": {
+                                "description": "Message may contain additional information about why the verification\nprocess is in its current phase.",
+                                "type": "string"
+                              },
+                              "phase": {
+                                "description": "Phase describes the current phase of the Verification process. Generally,\nthis will be a reflection of the underlying AnalysisRun's phase, however,\nthere are exceptions to this, such as in the case where an AnalysisRun\ncannot be launched successfully.",
+                                "type": "string"
+                              },
+                              "startTime": {
+                                "description": "StartTime is the time at which the Verification process was started.",
+                                "format": "date-time",
+                                "type": "string"
+                              }
+                            },
+                            "type": "object"
+                          },
+                          "warehouse": {
+                            "description": "Warehouse is the name of the Warehouse that created this Freight.\n\n\nDeprecated: Use the Origin instead.",
+                            "type": "string"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "description": "Freight is a map of FreightReference objects, indexed by their Warehouse\norigin.",
+                      "type": "object"
+                    },
+                    "verificationHistory": {
+                      "description": "VerificationHistory is a stack of recent VerificationInfo. By default,\nthe last ten VerificationInfo are stored.",
+                      "items": {
+                        "description": "VerificationInfo contains the details of an instance of a Verification\nprocess.",
+                        "properties": {
+                          "actor": {
+                            "description": "Actor is the name of the entity that initiated or aborted the\nVerification process.",
+                            "type": "string"
+                          },
+                          "analysisRun": {
+                            "description": "AnalysisRun is a reference to the Argo Rollouts AnalysisRun that implements\nthe Verification process.",
+                            "properties": {
+                              "name": {
+                                "description": "Name is the name of the AnalysisRun.",
+                                "type": "string"
+                              },
+                              "namespace": {
+                                "description": "Namespace is the namespace of the AnalysisRun.",
+                                "type": "string"
+                              },
+                              "phase": {
+                                "description": "Phase is the last observed phase of the AnalysisRun referenced by Name.",
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "name",
+                              "namespace",
+                              "phase"
+                            ],
+                            "type": "object"
+                          },
+                          "finishTime": {
+                            "description": "FinishTime is the time at which the Verification process finished.",
+                            "format": "date-time",
+                            "type": "string"
+                          },
+                          "id": {
+                            "description": "ID is the identifier of the Verification process.",
+                            "type": "string"
+                          },
+                          "message": {
+                            "description": "Message may contain additional information about why the verification\nprocess is in its current phase.",
+                            "type": "string"
+                          },
+                          "phase": {
+                            "description": "Phase describes the current phase of the Verification process. Generally,\nthis will be a reflection of the underlying AnalysisRun's phase, however,\nthere are exceptions to this, such as in the case where an AnalysisRun\ncannot be launched successfully.",
+                            "type": "string"
+                          },
+                          "startTime": {
+                            "description": "StartTime is the time at which the Verification process was started.",
+                            "format": "date-time",
+                            "type": "string"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "required": [
+                    "id"
+                  ],
                   "type": "object"
                 },
                 "lastHandledRefresh": {
@@ -1936,7 +3379,6 @@
             }
           },
           "required": [
-            "freight",
             "name"
           ],
           "type": "object"

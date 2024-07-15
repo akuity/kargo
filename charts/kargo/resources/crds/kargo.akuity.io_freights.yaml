@@ -18,6 +18,12 @@ spec:
     - jsonPath: .metadata.labels.kargo\.akuity\.io/alias
       name: Alias
       type: string
+    - jsonPath: .origin.kind
+      name: Origin (Kind)
+      type: string
+    - jsonPath: .origin.name
+      name: Origin (Name)
+      type: string
     - jsonPath: .metadata.creationTimestamp
       name: Age
       type: date
@@ -86,7 +92,7 @@ spec:
                 healthCheckCommit:
                   description: |-
                     HealthCheckCommit is the ID of a specific commit. When specified,
-                    assessments of Stage health will used this value (instead of ID) when
+                    assessments of Stage health will use this value (instead of ID) when
                     determining if applicable sources of Argo CD Application resources
                     associated with the Stage are or are not synced to this commit. Note that
                     there are cases (as in that of Kargo Render being utilized as a promotion
@@ -151,6 +157,25 @@ spec:
             type: string
           metadata:
             type: object
+          origin:
+            description: Origin describes a kind of Freight in terms of its origin.
+            properties:
+              kind:
+                description: |-
+                  Kind is the kind of resource from which Freight may have originated. At
+                  present, this can only be "Warehouse".
+                enum:
+                - Warehouse
+                type: string
+              name:
+                description: |-
+                  Name is the name of the resource of the kind indicated by the Kind field
+                  from which Freight may originated.
+                type: string
+            required:
+            - kind
+            - name
+            type: object
           status:
             description: Status describes the current status of this Freight.
             properties:
@@ -181,6 +206,9 @@ spec:
               Warehouse is the name of the Warehouse that created this Freight. This is a
               required field. TODO: It is not clear yet how this field should be set in
               the case of user-defined Freight.
+
+
+              Deprecated: Use Origin instead.
             type: string
         type: object
     served: true
