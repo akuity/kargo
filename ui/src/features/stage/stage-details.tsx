@@ -5,7 +5,6 @@ import { generatePath, useNavigate, useParams } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
 import { HealthStatusIcon } from '@ui/features/common/health-status/health-status-icon';
-import { Subscriptions } from '@ui/features/stage/subscriptions';
 import { Stage, VerificationInfo } from '@ui/gen/v1alpha1/generated_pb';
 
 import { Description } from '../common/description';
@@ -13,6 +12,7 @@ import { ManifestPreview } from '../common/manifest-preview';
 import { useImages } from '../project/pipelines/utils/useImages';
 
 import { Promotions } from './promotions';
+import { RequestedFreight } from './requested-freight';
 import { StageActions } from './stage-actions';
 import { Verifications } from './verifications';
 
@@ -27,7 +27,11 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
 
   const verifications = useMemo(() => {
     setIsVerificationRunning(false);
-    return (stage.status?.history || [])
+    return (
+      (stage.status?.freightHistory
+        ? stage.status?.freightHistory
+        : (stage.status?.history as { verificationHistory: VerificationInfo[] }[])) || []
+    )
       .flatMap((freight) =>
         freight.verificationHistory.map((verification) => {
           if (verification.phase === 'Running' || verification.phase === 'Pending') {
@@ -64,7 +68,7 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
           <Divider style={{ marginTop: '1em' }} />
 
           <div className='flex flex-col gap-8 flex-1'>
-            <Subscriptions subscriptions={stage.spec?.subscriptions} projectName={projectName} />
+            <RequestedFreight stage={stage} projectName={projectName} />
             <Tabs
               className='flex-1'
               defaultActiveKey='1'

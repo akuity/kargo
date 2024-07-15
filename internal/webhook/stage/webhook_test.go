@@ -244,7 +244,7 @@ func TestDefault(t *testing.T) {
 			},
 		},
 		{
-			name: "overwite reverify actor when it has changed for the same ID",
+			name: "overwrite reverify actor when it has changed for the same ID",
 			webhook: &webhook{
 				admissionRequestFromContextFn: admission.RequestFromContext,
 				isRequestFromKargoControlplaneFn: func(admission.Request) bool {
@@ -586,7 +586,7 @@ func TestDefault(t *testing.T) {
 			},
 		},
 		{
-			name: "overwite abort actor when it has changed for the same ID",
+			name: "overwrite abort actor when it has changed for the same ID",
 			webhook: &webhook{
 				admissionRequestFromContextFn: admission.RequestFromContext,
 				isRequestFromKargoControlplaneFn: func(admission.Request) bool {
@@ -1008,6 +1008,12 @@ func TestValidateCreateOrUpdate(t *testing.T) {
 }
 
 func TestValidateSpec(t *testing.T) {
+	testFreightRequest := kargoapi.FreightRequest{
+		Origin: kargoapi.FreightOrigin{
+			Kind: kargoapi.FreightOriginKindWarehouse,
+			Name: "test-warehouse",
+		},
+	}
 	testCases := []struct {
 		name       string
 		spec       *kargoapi.StageSpec
@@ -1023,12 +1029,10 @@ func TestValidateSpec(t *testing.T) {
 		{
 			name: "invalid",
 			spec: &kargoapi.StageSpec{
-				// Has two conflicting types of subs...
-				Subscriptions: kargoapi.Subscriptions{
-					Warehouse: "test-warehouse",
-					UpstreamStages: []kargoapi.StageSubscription{
-						{},
-					},
+				// Has multiple sources for one Freight origin...
+				RequestedFreight: []kargoapi.FreightRequest{
+					testFreightRequest,
+					testFreightRequest,
 				},
 				// Doesn't actually define any mechanisms...
 				PromotionMechanisms: &kargoapi.PromotionMechanisms{},
@@ -1041,10 +1045,10 @@ func TestValidateSpec(t *testing.T) {
 					field.ErrorList{
 						{
 							Type:     field.ErrorTypeInvalid,
-							Field:    "spec.subscriptions",
-							BadValue: &spec.Subscriptions,
-							Detail: "exactly one of spec.subscriptions.warehouse or " +
-								"spec.subscriptions.upstreamStages must be defined",
+							Field:    "spec.requestedFreight",
+							BadValue: spec.RequestedFreight,
+							Detail: `freight with origin Warehouse/test-warehouse requested multiple ` +
+								"times in spec.requestedFreight",
 						},
 						{
 							Type:     field.ErrorTypeInvalid,
@@ -1063,8 +1067,8 @@ func TestValidateSpec(t *testing.T) {
 		{
 			name: "valid",
 			spec: &kargoapi.StageSpec{
-				Subscriptions: kargoapi.Subscriptions{
-					Warehouse: "test-warehouse",
+				RequestedFreight: []kargoapi.FreightRequest{
+					testFreightRequest,
 				},
 			},
 			assertions: func(t *testing.T, _ *kargoapi.StageSpec, errs field.ErrorList) {
@@ -1087,57 +1091,34 @@ func TestValidateSpec(t *testing.T) {
 	}
 }
 
-func TestValidateSubs(t *testing.T) {
+func TestValidateRequestedFreight(t *testing.T) {
+	testFreightRequest := kargoapi.FreightRequest{
+		Origin: kargoapi.FreightOrigin{
+			Kind: kargoapi.FreightOriginKindWarehouse,
+			Name: "test-warehouse",
+		},
+	}
 	testCases := []struct {
 		name       string
-		subs       *kargoapi.Subscriptions
-		assertions func(*testing.T, *kargoapi.Subscriptions, field.ErrorList)
+		reqs       []kargoapi.FreightRequest
+		assertions func(*testing.T, []kargoapi.FreightRequest, field.ErrorList)
 	}{
 		{
-			name: "nil",
-			assertions: func(t *testing.T, _ *kargoapi.Subscriptions, errs field.ErrorList) {
-				require.Nil(t, errs)
+			name: "Freight origin found multiple times",
+			reqs: []kargoapi.FreightRequest{
+				testFreightRequest,
+				testFreightRequest,
 			},
-		},
-
-		{
-			name: "no subscriptions",
-			subs: &kargoapi.Subscriptions{},
-			assertions: func(t *testing.T, subs *kargoapi.Subscriptions, errs field.ErrorList) {
+			assertions: func(t *testing.T, reqs []kargoapi.FreightRequest, errs field.ErrorList) {
 				require.Equal(
 					t,
 					field.ErrorList{
 						{
 							Type:     field.ErrorTypeInvalid,
-							Field:    "subscriptions",
-							BadValue: subs,
-							Detail: "exactly one of subscriptions.warehouse or " +
-								"subscriptions.upstreamStages must be defined",
-						},
-					},
-					errs,
-				)
-			},
-		},
-
-		{
-			name: "has warehouse sub and Stage subs", // Should be "one of"
-			subs: &kargoapi.Subscriptions{
-				Warehouse: "test-warehouse",
-				UpstreamStages: []kargoapi.StageSubscription{
-					{},
-				},
-			},
-			assertions: func(t *testing.T, subs *kargoapi.Subscriptions, errs field.ErrorList) {
-				require.Equal(
-					t,
-					field.ErrorList{
-						{
-							Type:     field.ErrorTypeInvalid,
-							Field:    "subscriptions",
-							BadValue: subs,
-							Detail: "exactly one of subscriptions.warehouse or " +
-								"subscriptions.upstreamStages must be defined",
+							Field:    "requestedFreight",
+							BadValue: reqs,
+							Detail: `freight with origin Warehouse/test-warehouse requested ` +
+								"multiple times in requestedFreight",
 						},
 					},
 					errs,
@@ -1147,10 +1128,10 @@ func TestValidateSubs(t *testing.T) {
 
 		{
 			name: "success",
-			subs: &kargoapi.Subscriptions{
-				Warehouse: "test-warehouse",
+			reqs: []kargoapi.FreightRequest{
+				testFreightRequest,
 			},
-			assertions: func(t *testing.T, _ *kargoapi.Subscriptions, errs field.ErrorList) {
+			assertions: func(t *testing.T, _ []kargoapi.FreightRequest, errs field.ErrorList) {
 				require.Nil(t, errs)
 			},
 		},
@@ -1160,10 +1141,10 @@ func TestValidateSubs(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
 				t,
-				testCase.subs,
-				w.validateSubs(
-					field.NewPath("subscriptions"),
-					testCase.subs,
+				testCase.reqs,
+				w.validateRequestedFreight(
+					field.NewPath("requestedFreight"),
+					testCase.reqs,
 				),
 			)
 		})

@@ -42,7 +42,7 @@ export const FreightTimelineHeader = ({
   setCollapsed: (collapsed: boolean) => void;
   collapsable?: boolean;
 }) => {
-  const stageColorMap = useContext(ColorContext);
+  const { stageColorMap } = useContext(ColorContext);
   const { name: projectName } = useParams();
 
   const getIcon = (action: FreightTimelineAction) => {

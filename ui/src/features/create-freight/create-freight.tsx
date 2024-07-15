@@ -38,7 +38,10 @@ const constructFreight = (
   warehouse: string
 ): Freight => {
   const freight = {
-    warehouse: warehouse,
+    origin: {
+      kind: 'Warehouse',
+      name: warehouse
+    },
     images: [] as Image[],
     charts: [] as Chart[],
     commits: [] as GitCommit[]

@@ -439,6 +439,19 @@ export class ArgoCDAppUpdate extends Message<ArgoCDAppUpdate> {
   appNamespace?: string;
 
   /**
+   * Origin disambiguates the origin from which artifacts used by this promotion
+   * mechanism must have originated. This is especially useful in cases where a
+   * Stage may request Freight from multiples origins (e.g. multiple Warehouses)
+   * and some of those each reference different versions of artifacts from the
+   * same repository. This field is optional, but Promotions will fail if there
+   * is ever ambiguity regarding which piece of Freight from which an artifact
+   * is to be sourced.
+   *
+   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.FreightOrigin origin = 4;
+   */
+  origin?: FreightOrigin;
+
+  /**
    * SourceUpdates describes updates to be applied to various sources of the
    * specified Argo CD Application resource.
    *
@@ -456,6 +469,7 @@ export class ArgoCDAppUpdate extends Message<ArgoCDAppUpdate> {
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 1, name: "appName", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 2, name: "appNamespace", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 4, name: "origin", kind: "message", T: FreightOrigin, opt: true },
     { no: 3, name: "sourceUpdates", kind: "message", T: ArgoCDSourceUpdate, repeated: true },
   ]);
 
@@ -493,6 +507,21 @@ export class ArgoCDHelm extends Message<ArgoCDHelm> {
    */
   images: ArgoCDHelmImageUpdate[] = [];
 
+  /**
+   * Origin disambiguates the origin from which artifacts used by this promotion
+   * mechanism must have originated. This is especially useful in cases where a
+   * Stage may request Freight from multiples origins (e.g. multiple Warehouses)
+   * and some of those each reference different versions of artifacts from the
+   * same repository. This field is optional. When left unspecified, it will
+   * implicitly inherit the value of the enclosing ArgoCDSourceUpdate's Origin
+   * field. If that, too, is unspecified, Promotions will fail if there is ever
+   * ambiguity regarding from which piece of Freight an artifact is to be
+   * sourced.
+   *
+   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.FreightOrigin origin = 2;
+   */
+  origin?: FreightOrigin;
+
   constructor(data?: PartialMessage<ArgoCDHelm>) {
     super();
     proto2.util.initPartial(data, this);
@@ -502,6 +531,7 @@ export class ArgoCDHelm extends Message<ArgoCDHelm> {
   static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.ArgoCDHelm";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 1, name: "images", kind: "message", T: ArgoCDHelmImageUpdate, repeated: true },
+    { no: 2, name: "origin", kind: "message", T: FreightOrigin, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ArgoCDHelm {
@@ -536,6 +566,20 @@ export class ArgoCDHelmImageUpdate extends Message<ArgoCDHelmImageUpdate> {
    * @generated from field: optional string image = 1;
    */
   image?: string;
+
+  /**
+   * Origin disambiguates the origin from which artifacts used by this promotion
+   * mechanism must have originated. This is especially useful in cases where a
+   * Stage may request Freight from multiples origins (e.g. multiple Warehouses)
+   * and some of those each reference different versions of artifacts from the
+   * same repository. This field is optional. When left unspecified, it will
+   * implicitly inherit the value of the enclosing ArgoCDHelm's Origin field. If
+   * that, too, is unspecified, Promotions will fail if there is ever ambiguity
+   * regarding from which piece of Freight an artifact is to be sourced.
+   *
+   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.FreightOrigin origin = 4;
+   */
+  origin?: FreightOrigin;
 
   /**
    * Key specifies a key within an Argo CD Application's Helm parameters that is
@@ -573,6 +617,7 @@ export class ArgoCDHelmImageUpdate extends Message<ArgoCDHelmImageUpdate> {
   static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.ArgoCDHelmImageUpdate";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 1, name: "image", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 4, name: "origin", kind: "message", T: FreightOrigin, opt: true },
     { no: 2, name: "key", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 3, name: "value", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
@@ -612,6 +657,21 @@ export class ArgoCDKustomize extends Message<ArgoCDKustomize> {
    */
   images: ArgoCDKustomizeImageUpdate[] = [];
 
+  /**
+   * Origin disambiguates the origin from which artifacts used by this promotion
+   * mechanism must have originated. This is especially useful in cases where a
+   * Stage may request Freight from multiples origins (e.g. multiple Warehouses)
+   * and some of those each reference different versions of artifacts from the
+   * same repository. This field is optional. When left unspecified, it will
+   * implicitly inherit the value of the enclosing ArgoCDSourceUpdate's Origin
+   * field. If that, too, is unspecified, Promotions will fail if there is ever
+   * ambiguity regarding from which piece of Freight an artifact is to be
+   * sourced.
+   *
+   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.FreightOrigin origin = 2;
+   */
+  origin?: FreightOrigin;
+
   constructor(data?: PartialMessage<ArgoCDKustomize>) {
     super();
     proto2.util.initPartial(data, this);
@@ -621,6 +681,7 @@ export class ArgoCDKustomize extends Message<ArgoCDKustomize> {
   static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.ArgoCDKustomize";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 1, name: "images", kind: "message", T: ArgoCDKustomizeImageUpdate, repeated: true },
+    { no: 2, name: "origin", kind: "message", T: FreightOrigin, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ArgoCDKustomize {
@@ -657,6 +718,21 @@ export class ArgoCDKustomizeImageUpdate extends Message<ArgoCDKustomizeImageUpda
   image?: string;
 
   /**
+   * Origin disambiguates the origin from which artifacts used by this promotion
+   * mechanism must have originated. This is especially useful in cases where a
+   * Stage may request Freight from multiples origins (e.g. multiple Warehouses)
+   * and some of those each reference different versions of artifacts from the
+   * same repository. This field is optional. When left unspecified, it will
+   * implicitly inherit the value of the enclosing ArgoCDKustomize's Origin
+   * field. If that, too, is unspecified, Promotions will fail if there is ever
+   * ambiguity regarding from which piece of Freight an artifact is to be
+   * sourced.
+   *
+   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.FreightOrigin origin = 3;
+   */
+  origin?: FreightOrigin;
+
+  /**
    * UseDigest specifies whether the image's digest should be used instead of
    * its tag.
    *
@@ -675,6 +751,7 @@ export class ArgoCDKustomizeImageUpdate extends Message<ArgoCDKustomizeImageUpda
   static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.ArgoCDKustomizeImageUpdate";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 1, name: "image", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 3, name: "origin", kind: "message", T: FreightOrigin, opt: true },
     { no: 2, name: "useDigest", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
   ]);
 
@@ -734,6 +811,21 @@ export class ArgoCDSourceUpdate extends Message<ArgoCDSourceUpdate> {
   chart?: string;
 
   /**
+   * Origin disambiguates the origin from which artifacts used by this promotion
+   * mechanism must have originated. This is especially useful in cases where a
+   * Stage may request Freight from multiples origins (e.g. multiple Warehouses)
+   * and some of those each reference different versions of artifacts from the
+   * same repository. This field is optional. When left unspecified, it will
+   * implicitly inherit the value of the enclosing ArgoCDAppUpdate's Origin
+   * field. If that, too, is unspecified, Promotions will fail if there is ever
+   * ambiguity regarding from which piece of Freight an artifact is to be
+   * sourced.
+   *
+   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.FreightOrigin origin = 6;
+   */
+  origin?: FreightOrigin;
+
+  /**
    * UpdateTargetRevision is a bool indicating whether the source should be
    * updated such that its TargetRevision field points at the most recently git
    * commit (if RepoURL references a git repository) or chart version (if
@@ -767,6 +859,7 @@ export class ArgoCDSourceUpdate extends Message<ArgoCDSourceUpdate> {
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 1, name: "repoURL", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 2, name: "chart", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 6, name: "origin", kind: "message", T: FreightOrigin, opt: true },
     { no: 3, name: "updateTargetRevision", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
     { no: 4, name: "kustomize", kind: "message", T: ArgoCDKustomize, opt: true },
     { no: 5, name: "helm", kind: "message", T: ArgoCDHelm, opt: true },
@@ -1291,11 +1384,20 @@ export class Freight extends Message<Freight> {
    * required field. TODO: It is not clear yet how this field should be set in
    * the case of user-defined Freight.
    *
-   * +kubebuilder:validation:Required
+   * Deprecated: Use Origin instead.
    *
    * @generated from field: optional string warehouse = 8;
    */
   warehouse?: string;
+
+  /**
+   * Origin describes a kind of Freight in terms of its origin.
+   *
+   * +kubebuilder:validation:Required
+   *
+   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.FreightOrigin origin = 9;
+   */
+  origin?: FreightOrigin;
 
   /**
    * Commits describes specific Git repository commits.
@@ -1336,6 +1438,7 @@ export class Freight extends Message<Freight> {
     { no: 1, name: "metadata", kind: "message", T: ObjectMeta, opt: true },
     { no: 7, name: "alias", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 8, name: "warehouse", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 9, name: "origin", kind: "message", T: FreightOrigin, opt: true },
     { no: 3, name: "commits", kind: "message", T: GitCommit, repeated: true },
     { no: 4, name: "images", kind: "message", T: Image, repeated: true },
     { no: 5, name: "charts", kind: "message", T: Chart, repeated: true },
@@ -1356,6 +1459,68 @@ export class Freight extends Message<Freight> {
 
   static equals(a: Freight | PlainMessage<Freight> | undefined, b: Freight | PlainMessage<Freight> | undefined): boolean {
     return proto2.util.equals(Freight, a, b);
+  }
+}
+
+/**
+ * FreightCollection is a collection of FreightReferences, each of which
+ * represents a piece of Freight that has been selected for deployment to a
+ * Stage.
+ *
+ * @generated from message github.com.akuity.kargo.api.v1alpha1.FreightCollection
+ */
+export class FreightCollection extends Message<FreightCollection> {
+  /**
+   * ID is a unique and deterministically calculated identifier for the
+   * FreightCollection. It is updated on each use of the UpdateOrPush method.
+   *
+   * @generated from field: optional string id = 3;
+   */
+  id?: string;
+
+  /**
+   * Freight is a map of FreightReference objects, indexed by their Warehouse
+   * origin.
+   *
+   * @generated from field: map<string, github.com.akuity.kargo.api.v1alpha1.FreightReference> items = 1;
+   */
+  items: { [key: string]: FreightReference } = {};
+
+  /**
+   * VerificationHistory is a stack of recent VerificationInfo. By default,
+   * the last ten VerificationInfo are stored.
+   *
+   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.VerificationInfo verificationHistory = 2;
+   */
+  verificationHistory: VerificationInfo[] = [];
+
+  constructor(data?: PartialMessage<FreightCollection>) {
+    super();
+    proto2.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto2 = proto2;
+  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.FreightCollection";
+  static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 3, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 1, name: "items", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "message", T: FreightReference} },
+    { no: 2, name: "verificationHistory", kind: "message", T: VerificationInfo, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FreightCollection {
+    return new FreightCollection().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): FreightCollection {
+    return new FreightCollection().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): FreightCollection {
+    return new FreightCollection().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: FreightCollection | PlainMessage<FreightCollection> | undefined, b: FreightCollection | PlainMessage<FreightCollection> | undefined): boolean {
+    return proto2.util.equals(FreightCollection, a, b);
   }
 }
 
@@ -1405,6 +1570,64 @@ export class FreightList extends Message<FreightList> {
 }
 
 /**
+ * FreightOrigin describes a kind of Freight in terms of where it may have
+ * originated.
+ *
+ * +protobuf.options.(gogoproto.goproto_stringer)=false
+ *
+ * @generated from message github.com.akuity.kargo.api.v1alpha1.FreightOrigin
+ */
+export class FreightOrigin extends Message<FreightOrigin> {
+  /**
+   * Kind is the kind of resource from which Freight may have originated. At
+   * present, this can only be "Warehouse".
+   *
+   * +kubebuilder:validation:Required
+   *
+   * @generated from field: optional string kind = 1;
+   */
+  kind?: string;
+
+  /**
+   * Name is the name of the resource of the kind indicated by the Kind field
+   * from which Freight may originated.
+   *
+   * +kubebuilder:validation:Required
+   *
+   * @generated from field: optional string name = 2;
+   */
+  name?: string;
+
+  constructor(data?: PartialMessage<FreightOrigin>) {
+    super();
+    proto2.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto2 = proto2;
+  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.FreightOrigin";
+  static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 1, name: "kind", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FreightOrigin {
+    return new FreightOrigin().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): FreightOrigin {
+    return new FreightOrigin().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): FreightOrigin {
+    return new FreightOrigin().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: FreightOrigin | PlainMessage<FreightOrigin> | undefined, b: FreightOrigin | PlainMessage<FreightOrigin> | undefined): boolean {
+    return proto2.util.equals(FreightOrigin, a, b);
+  }
+}
+
+/**
  * FreightReference is a simplified representation of a piece of Freight -- not
  * a root resource type.
  *
@@ -1423,9 +1646,18 @@ export class FreightReference extends Message<FreightReference> {
   /**
    * Warehouse is the name of the Warehouse that created this Freight.
    *
+   * Deprecated: Use the Origin instead.
+   *
    * @generated from field: optional string warehouse = 6;
    */
   warehouse?: string;
+
+  /**
+   * Origin describes a kind of Freight in terms of its origin.
+   *
+   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.FreightOrigin origin = 8;
+   */
+  origin?: FreightOrigin;
 
   /**
    * Commits describes specific Git repository commits.
@@ -1452,6 +1684,8 @@ export class FreightReference extends Message<FreightReference> {
    * VerificationInfo is information about any verification process that was
    * associated with this Freight for this Stage.
    *
+   * Deprecated: Use FreightCollection.VerificationHistory instead.
+   *
    * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.VerificationInfo verificationInfo = 5;
    */
   verificationInfo?: VerificationInfo;
@@ -1459,6 +1693,8 @@ export class FreightReference extends Message<FreightReference> {
   /**
    * VerificationHistory is a stack of recent VerificationInfo. By default,
    * the last ten VerificationInfo are stored.
+   *
+   * Deprecated: Use FreightCollection.VerificationHistory instead.
    *
    * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.VerificationInfo verificationHistory = 7;
    */
@@ -1474,6 +1710,7 @@ export class FreightReference extends Message<FreightReference> {
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 6, name: "warehouse", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 8, name: "origin", kind: "message", T: FreightOrigin, opt: true },
     { no: 2, name: "commits", kind: "message", T: GitCommit, repeated: true },
     { no: 3, name: "images", kind: "message", T: Image, repeated: true },
     { no: 4, name: "charts", kind: "message", T: Chart, repeated: true },
@@ -1495,6 +1732,113 @@ export class FreightReference extends Message<FreightReference> {
 
   static equals(a: FreightReference | PlainMessage<FreightReference> | undefined, b: FreightReference | PlainMessage<FreightReference> | undefined): boolean {
     return proto2.util.equals(FreightReference, a, b);
+  }
+}
+
+/**
+ * FreightRequest expresses a Stage's need for Freight having originated from a
+ * particular Warehouse.
+ *
+ * @generated from message github.com.akuity.kargo.api.v1alpha1.FreightRequest
+ */
+export class FreightRequest extends Message<FreightRequest> {
+  /**
+   * Origin specifies from where the requested Freight must have originated.
+   * This is a required field.
+   *
+   * +kubebuilder:validation:Required
+   *
+   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.FreightOrigin origin = 1;
+   */
+  origin?: FreightOrigin;
+
+  /**
+   * Sources describes where the requested Freight may be obtained from. This is
+   * a required field.
+   *
+   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.FreightSources sources = 2;
+   */
+  sources?: FreightSources;
+
+  constructor(data?: PartialMessage<FreightRequest>) {
+    super();
+    proto2.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto2 = proto2;
+  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.FreightRequest";
+  static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 1, name: "origin", kind: "message", T: FreightOrigin, opt: true },
+    { no: 2, name: "sources", kind: "message", T: FreightSources, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FreightRequest {
+    return new FreightRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): FreightRequest {
+    return new FreightRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): FreightRequest {
+    return new FreightRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: FreightRequest | PlainMessage<FreightRequest> | undefined, b: FreightRequest | PlainMessage<FreightRequest> | undefined): boolean {
+    return proto2.util.equals(FreightRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message github.com.akuity.kargo.api.v1alpha1.FreightSources
+ */
+export class FreightSources extends Message<FreightSources> {
+  /**
+   * Direct indicates the requested Freight may be obtained directly from the
+   * Warehouse from which it originated. If this field's value is false, then
+   * the value of the Stages field must be non-empty. i.e. Between the two
+   * fields, at least one source must be specified.
+   *
+   * @generated from field: optional bool direct = 1;
+   */
+  direct?: boolean;
+
+  /**
+   * Stages identifies other "upstream" Stages as potential sources of the
+   * requested Freight. If this field's value is empty, then the value of the
+   * Direct field must be true. i.e. Between the two fields, at least on source
+   * must be specified.
+   *
+   * @generated from field: repeated string stages = 2;
+   */
+  stages: string[] = [];
+
+  constructor(data?: PartialMessage<FreightSources>) {
+    super();
+    proto2.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto2 = proto2;
+  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.FreightSources";
+  static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 1, name: "direct", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+    { no: 2, name: "stages", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FreightSources {
+    return new FreightSources().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): FreightSources {
+    return new FreightSources().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): FreightSources {
+    return new FreightSources().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: FreightSources | PlainMessage<FreightSources> | undefined, b: FreightSources | PlainMessage<FreightSources> | undefined): boolean {
+    return proto2.util.equals(FreightSources, a, b);
   }
 }
 
@@ -1795,6 +2139,21 @@ export class GitRepoUpdate extends Message<GitRepoUpdate> {
   repoURL?: string;
 
   /**
+   * Origin disambiguates the origin from which artifacts used by this promotion
+   * mechanism must have originated. This is especially useful in cases where a
+   * Stage may request Freight from multiples origins (e.g. multiple Warehouses)
+   * and some of those each reference different versions of artifacts from the
+   * same repository. This field is optional. When left unspecified, the branch
+   * checked out by this promotion mechanism will be the one specified by the
+   * ReadBranch field. If that, too, is unspecified, the default branch of the
+   * repository will be checked out. Always provide a value for this field if
+   * wishing to check out a specific commit indicated by a piece of Freight.
+   *
+   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.FreightOrigin origin = 9;
+   */
+  origin?: FreightOrigin;
+
+  /**
    * InsecureSkipTLSVerify specifies whether certificate verification errors
    * should be ignored when connecting to the repository. This should be enabled
    * only with great caution.
@@ -1871,6 +2230,7 @@ export class GitRepoUpdate extends Message<GitRepoUpdate> {
   static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.GitRepoUpdate";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 1, name: "repoURL", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 9, name: "origin", kind: "message", T: FreightOrigin, opt: true },
     { no: 2, name: "insecureSkipTLSVerify", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
     { no: 3, name: "readBranch", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 4, name: "writeBranch", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
@@ -2175,6 +2535,21 @@ export class HelmChartDependencyUpdate extends Message<HelmChartDependencyUpdate
   name?: string;
 
   /**
+   * Origin disambiguates the origin from which artifacts used by this promotion
+   * mechanism must have originated. This is especially useful in cases where a
+   * Stage may request Freight from multiples origins (e.g. multiple Warehouses)
+   * and some of those each reference different versions of artifacts from the
+   * same repository. This field is optional. When left unspecified, it will
+   * implicitly inherit the value of the enclosing HelmPromotionMechanism's
+   * Origin field. If that, too, is unspecified, Promotions will fail if there
+   * is ever ambiguity regarding from which piece of Freight an artifact is to
+   * be sourced.
+   *
+   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.FreightOrigin origin = 4;
+   */
+  origin?: FreightOrigin;
+
+  /**
    * ChartPath is the path to an umbrella chart.
    *
    * +kubebuilder:validation:MinLength=1
@@ -2194,6 +2569,7 @@ export class HelmChartDependencyUpdate extends Message<HelmChartDependencyUpdate
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 1, name: "repository", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 4, name: "origin", kind: "message", T: FreightOrigin, opt: true },
     { no: 3, name: "chartPath", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
@@ -2230,6 +2606,21 @@ export class HelmImageUpdate extends Message<HelmImageUpdate> {
    * @generated from field: optional string image = 1;
    */
   image?: string;
+
+  /**
+   * Origin disambiguates the origin from which artifacts used by this promotion
+   * mechanism must have originated. This is especially useful in cases where a
+   * Stage may request Freight from multiples origins (e.g. multiple Warehouses)
+   * and some of those each reference different versions of artifacts from the
+   * same repository. This field is optional. When left unspecified, it will
+   * implicitly inherit the value of the enclosing HelmPromotionMechanism's
+   * Origin field. If that, too, is unspecified, Promotions will fail if there
+   * is ever ambiguity regarding from which piece of Freight an artifact is to
+   * be sourced.
+   *
+   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.FreightOrigin origin = 5;
+   */
+  origin?: FreightOrigin;
 
   /**
    * ValuesFilePath specifies a path to the Helm values file that is to be
@@ -2278,6 +2669,7 @@ export class HelmImageUpdate extends Message<HelmImageUpdate> {
   static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.HelmImageUpdate";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 1, name: "image", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 5, name: "origin", kind: "message", T: FreightOrigin, opt: true },
     { no: 2, name: "valuesFilePath", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 3, name: "key", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 4, name: "value", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
@@ -2323,6 +2715,21 @@ export class HelmPromotionMechanism extends Message<HelmPromotionMechanism> {
    */
   charts: HelmChartDependencyUpdate[] = [];
 
+  /**
+   * Origin disambiguates the origin from which artifacts used by this promotion
+   * mechanism must have originated. This is especially useful in cases where a
+   * Stage may request Freight from multiples origins (e.g. multiple Warehouses)
+   * and some of those each reference different versions of artifacts from the
+   * same repository. This field is optional. When left unspecified, it will
+   * implicitly inherit the value of the enclosing GitRepoUpdate's Origin field.
+   * If that, too, is unspecified, Promotions will fail if there is ever
+   * ambiguity regarding from which piece of Freight an artifact is to be
+   * sourced.
+   *
+   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.FreightOrigin origin = 3;
+   */
+  origin?: FreightOrigin;
+
   constructor(data?: PartialMessage<HelmPromotionMechanism>) {
     super();
     proto2.util.initPartial(data, this);
@@ -2333,6 +2740,7 @@ export class HelmPromotionMechanism extends Message<HelmPromotionMechanism> {
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 1, name: "images", kind: "message", T: HelmImageUpdate, repeated: true },
     { no: 2, name: "charts", kind: "message", T: HelmChartDependencyUpdate, repeated: true },
+    { no: 3, name: "origin", kind: "message", T: FreightOrigin, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): HelmPromotionMechanism {
@@ -2664,6 +3072,21 @@ export class KargoRenderImageUpdate extends Message<KargoRenderImageUpdate> {
   image?: string;
 
   /**
+   * Origin disambiguates the origin from which artifacts used by this promotion
+   * mechanism must have originated. This is especially useful in cases where a
+   * Stage may request Freight from multiples origins (e.g. multiple Warehouses)
+   * and some of those each reference different versions of artifacts from the
+   * same repository. This field is optional. When left unspecified, it will
+   * implicitly inherit the value of the enclosing
+   * KargoRenderPromotionMechanism's Origin field. If that, too, is unspecified,
+   * Promotions will fail if there is ever ambiguity regarding from which piece
+   * of Freight an artifact is to be sourced.
+   *
+   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.FreightOrigin origin = 3;
+   */
+  origin?: FreightOrigin;
+
+  /**
    * UseDigest specifies whether the image's digest should be used instead of
    * its tag.
    *
@@ -2682,6 +3105,7 @@ export class KargoRenderImageUpdate extends Message<KargoRenderImageUpdate> {
   static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.KargoRenderImageUpdate";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 1, name: "image", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 3, name: "origin", kind: "message", T: FreightOrigin, opt: true },
     { no: 2, name: "useDigest", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
   ]);
 
@@ -2721,6 +3145,21 @@ export class KargoRenderPromotionMechanism extends Message<KargoRenderPromotionM
    */
   images: KargoRenderImageUpdate[] = [];
 
+  /**
+   * Origin disambiguates the origin from which artifacts used by this promotion
+   * mechanism must have originated. This is especially useful in cases where a
+   * Stage may request Freight from multiples origins (e.g. multiple Warehouses)
+   * and some of those each reference different versions of artifacts from the
+   * same repository. This field is optional. When left unspecified, it will
+   * implicitly inherit the value of the enclosing GitRepoUpdate's Origin field.
+   * If that, too, is unspecified, Promotions will fail if there is ever
+   * ambiguity regarding from which piece of Freight an artifact is to be
+   * sourced.
+   *
+   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.FreightOrigin origin = 2;
+   */
+  origin?: FreightOrigin;
+
   constructor(data?: PartialMessage<KargoRenderPromotionMechanism>) {
     super();
     proto2.util.initPartial(data, this);
@@ -2730,6 +3169,7 @@ export class KargoRenderPromotionMechanism extends Message<KargoRenderPromotionM
   static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.KargoRenderPromotionMechanism";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 1, name: "images", kind: "message", T: KargoRenderImageUpdate, repeated: true },
+    { no: 2, name: "origin", kind: "message", T: FreightOrigin, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): KargoRenderPromotionMechanism {
@@ -2766,6 +3206,21 @@ export class KustomizeImageUpdate extends Message<KustomizeImageUpdate> {
   image?: string;
 
   /**
+   * Origin disambiguates the origin from which artifacts used by this promotion
+   * mechanism must have originated. This is especially useful in cases where a
+   * Stage may request Freight from multiples origins (e.g. multiple Warehouses)
+   * and some of those each reference different versions of artifacts from the
+   * same repository. This field is optional. When left unspecified, it will
+   * implicitly inherit the value of the enclosing KustomizePromotionMechanism's
+   * Origin field. If that, too, is unspecified, Promotions will fail if there
+   * is ever ambiguity regarding from which piece of Freight an artifact is to
+   * be sourced.
+   *
+   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.FreightOrigin origin = 4;
+   */
+  origin?: FreightOrigin;
+
+  /**
    * Path specifies a path in which the `kustomize edit set image` command
    * should be executed. This is a required field.
    *
@@ -2795,6 +3250,7 @@ export class KustomizeImageUpdate extends Message<KustomizeImageUpdate> {
   static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.KustomizeImageUpdate";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 1, name: "image", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 4, name: "origin", kind: "message", T: FreightOrigin, opt: true },
     { no: 2, name: "path", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 3, name: "useDigest", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
   ]);
@@ -2833,6 +3289,21 @@ export class KustomizePromotionMechanism extends Message<KustomizePromotionMecha
    */
   images: KustomizeImageUpdate[] = [];
 
+  /**
+   * Origin disambiguates the origin from which artifacts used by this promotion
+   * mechanism must have originated. This is especially useful in cases where a
+   * Stage may request Freight from multiples origins (e.g. multiple Warehouses)
+   * and some of those each reference different versions of artifacts from the
+   * same repository. This field is optional. When left unspecified, it will
+   * implicitly inherit the value of the enclosing GitRepoUpdate's Origin field.
+   * If that, too, is unspecified, Promotions will fail if there is ever
+   * ambiguity regarding from which piece of Freight an artifact is to be
+   * sourced.
+   *
+   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.FreightOrigin origin = 2;
+   */
+  origin?: FreightOrigin;
+
   constructor(data?: PartialMessage<KustomizePromotionMechanism>) {
     super();
     proto2.util.initPartial(data, this);
@@ -2842,6 +3313,7 @@ export class KustomizePromotionMechanism extends Message<KustomizePromotionMecha
   static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.KustomizePromotionMechanism";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 1, name: "images", kind: "message", T: KustomizeImageUpdate, repeated: true },
+    { no: 2, name: "origin", kind: "message", T: FreightOrigin, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): KustomizePromotionMechanism {
@@ -3167,6 +3639,18 @@ export class PromotionList extends Message<PromotionList> {
  */
 export class PromotionMechanisms extends Message<PromotionMechanisms> {
   /**
+   * Origin disambiguates the origin from which artifacts used by this promotion
+   * mechanism must have originated. This is especially useful in cases where a
+   * Stage may request Freight from multiples origins (e.g. multiple Warehouses)
+   * and some of those each reference different versions of artifacts from the
+   * same repository. This field is optional. Its value is overridable by
+   * child promotion mechanisms.
+   *
+   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.FreightOrigin origin = 3;
+   */
+  origin?: FreightOrigin;
+
+  /**
    * GitRepoUpdates describes updates that should be applied to Git repositories
    * to incorporate Freight into the Stage. This field is optional, as such
    * actions are not required in all cases.
@@ -3194,6 +3678,7 @@ export class PromotionMechanisms extends Message<PromotionMechanisms> {
   static readonly runtime: typeof proto2 = proto2;
   static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.PromotionMechanisms";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 3, name: "origin", kind: "message", T: FreightOrigin, opt: true },
     { no: 1, name: "gitRepoUpdates", kind: "message", T: GitRepoUpdate, repeated: true },
     { no: 2, name: "argoCDAppUpdates", kind: "message", T: ArgoCDAppUpdate, repeated: true },
   ]);
@@ -3443,6 +3928,15 @@ export class PromotionStatus extends Message<PromotionStatus> {
   freight?: FreightReference;
 
   /**
+   * FreightCollection contains the details of the piece of Freight referenced
+   * by this Promotion as well as any additional Freight that is carried over
+   * from the target Stage's current state.
+   *
+   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.FreightCollection freightCollection = 7;
+   */
+  freightCollection?: FreightCollection;
+
+  /**
    * FinishedAt is the time when the promotion was completed.
    *
    * @generated from field: optional k8s.io.apimachinery.pkg.apis.meta.v1.Time finishedAt = 6;
@@ -3462,6 +3956,7 @@ export class PromotionStatus extends Message<PromotionStatus> {
     { no: 2, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 3, name: "metadata", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 9 /* ScalarType.STRING */} },
     { no: 5, name: "freight", kind: "message", T: FreightReference, opt: true },
+    { no: 7, name: "freightCollection", kind: "message", T: FreightCollection, opt: true },
     { no: 6, name: "finishedAt", kind: "message", T: Time, opt: true },
   ]);
 
@@ -3715,11 +4210,27 @@ export class StageSpec extends Message<StageSpec> {
    * Subscriptions describes the Stage's sources of Freight. This is a required
    * field.
    *
-   * +kubebuilder:validation:Required
+   * Deprecated: Use RequestedFreight instead.
    *
    * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.Subscriptions subscriptions = 1;
    */
   subscriptions?: Subscriptions;
+
+  /**
+   * RequestedFreight expresses the Stage's need for certain pieces of Freight,
+   * each having originated from a particular Warehouse. This list must be
+   * non-empty. In the common case, a Stage will request Freight having
+   * originated from just one specific Warehouse. In advanced cases, requesting
+   * Freight from multiple Warehouses provides a method of advancing new
+   * artifacts of different types through parallel pipelines at different
+   * speeds. This can be useful, for instance, if a Stage is home to multiple
+   * microservices that are independently versioned.
+   *
+   * +kubebuilder:validation:MinItems=1
+   *
+   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.FreightRequest requestedFreight = 5;
+   */
+  requestedFreight: FreightRequest[] = [];
 
   /**
    * PromotionMechanisms describes how to incorporate Freight into the Stage.
@@ -3751,6 +4262,7 @@ export class StageSpec extends Message<StageSpec> {
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 4, name: "shard", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 1, name: "subscriptions", kind: "message", T: Subscriptions, opt: true },
+    { no: 5, name: "requestedFreight", kind: "message", T: FreightRequest, repeated: true },
     { no: 2, name: "promotionMechanisms", kind: "message", T: PromotionMechanisms, opt: true },
     { no: 3, name: "verification", kind: "message", T: Verification, opt: true },
   ]);
@@ -3797,8 +4309,20 @@ export class StageStatus extends Message<StageStatus> {
   phase?: string;
 
   /**
+   * FreightHistory is a list of recent Freight selections that were deployed
+   * to the Stage. By default, the last ten Freight selections are stored.
+   * The first item in the list is the most recent Freight selection and
+   * currently deployed to the Stage, subsequent items are older selections.
+   *
+   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.FreightCollection freightHistory = 4;
+   */
+  freightHistory: FreightCollection[] = [];
+
+  /**
    * CurrentFreight is a simplified representation of the Stage's current
    * Freight describing what is currently deployed to the Stage.
+   *
+   * Deprecated: Use the top item in the FreightHistory stack instead.
    *
    * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.FreightReference currentFreight = 2;
    */
@@ -3807,6 +4331,8 @@ export class StageStatus extends Message<StageStatus> {
   /**
    * History is a stack of recent Freight. By default, the last ten Freight are
    * stored.
+   *
+   * Deprecated: Use the FreightHistory stack instead.
    *
    * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.FreightReference history = 3;
    */
@@ -3859,6 +4385,7 @@ export class StageStatus extends Message<StageStatus> {
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 11, name: "lastHandledRefresh", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 1, name: "phase", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 4, name: "freightHistory", kind: "message", T: FreightCollection, repeated: true },
     { no: 2, name: "currentFreight", kind: "message", T: FreightReference, opt: true },
     { no: 3, name: "history", kind: "message", T: FreightReference, repeated: true },
     { no: 8, name: "health", kind: "message", T: Health, opt: true },
@@ -3887,6 +4414,8 @@ export class StageStatus extends Message<StageStatus> {
 
 /**
  * StageSubscription defines a subscription to Freight from another Stage.
+ *
+ * Deprecated: Use FreightRequest instead.
  *
  * @generated from message github.com.akuity.kargo.api.v1alpha1.StageSubscription
  */
@@ -3931,6 +4460,8 @@ export class StageSubscription extends Message<StageSubscription> {
 
 /**
  * Subscriptions describes a Stage's sources of Freight.
+ *
+ * Deprecated: Use FreightRequest instead.
  *
  * @generated from message github.com.akuity.kargo.api.v1alpha1.Subscriptions
  */
@@ -4042,8 +4573,8 @@ export class Verification extends Message<Verification> {
 }
 
 /**
- * VerificationInfo contains information about the currently running
- * Verification process.
+ * VerificationInfo contains the details of an instance of a Verification
+ * process.
  *
  * @generated from message github.com.akuity.kargo.api.v1alpha1.VerificationInfo
  */

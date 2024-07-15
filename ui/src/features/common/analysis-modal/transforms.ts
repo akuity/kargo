@@ -245,7 +245,7 @@ export const chartMax = (
  * @returns analysis phase adjusted to render the UI status with a more accurate functional status
  */
 export const getAdjustedMetricPhase = (phase?: AnalysisStatus): AnalysisStatus =>
-  phase === AnalysisStatus.Error ? AnalysisStatus.Failed : phase ?? AnalysisStatus.Unknown;
+  phase === AnalysisStatus.Error ? AnalysisStatus.Failed : (phase ?? AnalysisStatus.Unknown);
 
 /**
  *
@@ -642,7 +642,7 @@ type FormattedMeasurementValue = number | string | null;
  */
 export const formattedValue = (value: number): FormattedMeasurementValue => {
   const isNum = isFiniteNumber(value);
-  return isNum ? roundNumber(Number(value)) : value?.toString() ?? null;
+  return isNum ? roundNumber(Number(value)) : (value?.toString() ?? null);
 };
 
 /**

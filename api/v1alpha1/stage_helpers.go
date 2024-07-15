@@ -136,19 +136,22 @@ func ReverifyStageFreight(
 		return err
 	}
 
-	curFreight := stage.Status.CurrentFreight
-	if curFreight == nil {
+	currentFC := stage.Status.FreightHistory.Current()
+	if currentFC == nil || len(currentFC.Freight) == 0 {
 		return errors.New("stage has no current freight")
 	}
-	if curFreight.VerificationInfo == nil {
-		return errors.New("stage has no existing verification info")
+
+	currentVI := currentFC.VerificationHistory.Current()
+	if currentVI == nil {
+		return errors.New("stage has no current verification info")
 	}
-	if curFreight.VerificationInfo.ID == "" {
-		return fmt.Errorf("stage verification info has no ID")
+
+	if currentVI.ID == "" {
+		return fmt.Errorf("current stage verification info has no ID")
 	}
 
 	rr := VerificationRequest{
-		ID: curFreight.VerificationInfo.ID,
+		ID: currentVI.ID,
 	}
 	// Put actor information to track on the controller side
 	if u, ok := user.InfoFromContext(ctx); ok {
@@ -175,24 +178,27 @@ func AbortStageFreightVerification(
 		return err
 	}
 
-	curFreight := stage.Status.CurrentFreight
-	if curFreight == nil {
+	currentFC := stage.Status.FreightHistory.Current()
+	if currentFC == nil || len(currentFC.Freight) == 0 {
 		return errors.New("stage has no current freight")
 	}
-	if curFreight.VerificationInfo == nil {
-		return errors.New("stage has no existing verification info")
+
+	currentVI := currentFC.VerificationHistory.Current()
+	if currentVI == nil {
+		return errors.New("stage has no current verification info")
 	}
-	if stage.Status.CurrentFreight.VerificationInfo.Phase.IsTerminal() {
+
+	if currentVI.Phase.IsTerminal() {
 		// The verification is already in a terminal phase, so we can skip the
 		// abort request.
 		return nil
 	}
-	if curFreight.VerificationInfo.ID == "" {
-		return fmt.Errorf("stage verification info has no ID")
+	if currentVI.ID == "" {
+		return fmt.Errorf("current stage verification info has no ID")
 	}
 
 	ar := VerificationRequest{
-		ID: curFreight.VerificationInfo.ID,
+		ID: currentVI.ID,
 	}
 	// Put actor information to track on the controller side
 	if u, ok := user.InfoFromContext(ctx); ok {

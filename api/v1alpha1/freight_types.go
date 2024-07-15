@@ -16,6 +16,8 @@ import (
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name=Alias,type=string,JSONPath=`.metadata.labels.kargo\.akuity\.io/alias`
+// +kubebuilder:printcolumn:name=Origin (Kind),type=string,JSONPath=`.origin.kind`
+// +kubebuilder:printcolumn:name=Origin (Name),type=string,JSONPath=`.origin.name`
 // +kubebuilder:printcolumn:name=Age,type=date,JSONPath=`.metadata.creationTimestamp`
 
 // Freight represents a collection of versioned artifacts.
@@ -36,8 +38,12 @@ type Freight struct {
 	// required field. TODO: It is not clear yet how this field should be set in
 	// the case of user-defined Freight.
 	//
-	// +kubebuilder:validation:Required
+	// Deprecated: Use Origin instead.
 	Warehouse string `json:"warehouse,omitempty" protobuf:"bytes,8,opt,name=warehouse"`
+	// Origin describes a kind of Freight in terms of its origin.
+	//
+	// +kubebuilder:validation:Required
+	Origin FreightOrigin `json:"origin,omitempty" protobuf:"bytes,9,opt,name=origin"`
 	// Commits describes specific Git repository commits.
 	Commits []GitCommit `json:"commits,omitempty" protobuf:"bytes,3,rep,name=commits"`
 	// Images describes specific versions of specific container images.
@@ -103,7 +109,9 @@ func (f *Freight) GenerateID() string {
 	sort.Strings(artifacts)
 	return fmt.Sprintf(
 		"%x",
-		sha1.Sum([]byte(strings.Join(artifacts, "|"))),
+		sha1.Sum([]byte(
+			fmt.Sprintf("%s:%s", f.Origin.String(), strings.Join(artifacts, "|")),
+		)),
 	)
 }
 

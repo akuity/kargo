@@ -13,5 +13,5 @@ type Data = {
 
 export const decodeRawData = (data?: Data) =>
   new TextDecoder().decode(
-    data?.result?.case === 'raw' ? data?.result?.value ?? new Uint8Array() : new Uint8Array()
+    data?.result?.case === 'raw' ? (data?.result?.value ?? new Uint8Array()) : new Uint8Array()
   );
