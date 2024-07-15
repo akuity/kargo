@@ -3,6 +3,7 @@ package promotions
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strconv"
 	"sync"
 	"time"
@@ -70,7 +71,12 @@ type reconciler struct {
 		types.NamespacedName,
 	) (*kargoapi.Stage, error)
 
-	promoteFn func(context.Context, kargoapi.Promotion, *kargoapi.Freight) (*kargoapi.PromotionStatus, error)
+	promoteFn func(
+		context.Context,
+		kargoapi.Promotion,
+		*kargoapi.Stage,
+		*kargoapi.Freight,
+	) (*kargoapi.PromotionStatus, error)
 }
 
 // SetupReconcilerWithManager initializes a reconciler for Promotion resources
@@ -184,6 +190,7 @@ func newReconciler(
 		cfg:         cfg,
 		pqs:         &pqs,
 		promoMechanisms: promotion.NewMechanisms(
+			kargoClient,
 			argocdClient,
 			credentialsDB,
 		),
@@ -284,6 +291,48 @@ func (r *reconciler) Reconcile(
 		}
 	}
 
+	// Retrieve the Stage associated with the Promotion.
+	stage, err := r.getStageFn(
+		ctx,
+		r.kargoClient,
+		types.NamespacedName{
+			Namespace: promo.Namespace,
+			Name:      promo.Spec.Stage,
+		},
+	)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf(
+			"error finding Stage %q in namespace %q: %w",
+			promo.Spec.Stage, promo.Namespace, err,
+		)
+	}
+	if stage == nil {
+		return ctrl.Result{}, fmt.Errorf(
+			"could not find Stage %q in namespace %q",
+			promo.Spec.Stage, promo.Namespace,
+		)
+	}
+	logger.Debug("found associated Stage")
+
+	// Confirm that the Stage is awaiting this Promotion.
+	//
+	// This is a temporary measure to ensure that the Promotion is only
+	// allowed to proceed if the Stage is expecting it. This is necessary
+	// to ensure we can derive Freight from the previous Promotion in the
+	// Stage's status to construct the Freight collection for the current
+	// Promotion.
+	//
+	// TODO(hidde): This adds tight coupling between the Promotion and the
+	// Stage (again, but without patching the Stage this time). We should
+	// explore a more loosely-coupled approach, perhaps by making the
+	// Freight self-aware of the Stages it has been promoted to, or even
+	// more radically, by making the Promotion self-aware of the Freight
+	// collection it is promoting.
+	if stage.Status.CurrentPromotion == nil || stage.Status.CurrentPromotion.Name != promo.Name {
+		logger.Debug("Stage is not awaiting Promotion", "stage", stage.Name, "promotion", promo.Name)
+		return ctrl.Result{Requeue: true}, nil
+	}
+
 	promoCtx := logging.ContextWithLogger(ctx, logger)
 
 	newStatus := promo.Status.DeepCopy()
@@ -306,6 +355,7 @@ func (r *reconciler) Reconcile(
 		otherStatus, promoteErr := r.promoteFn(
 			promoCtx,
 			*promo,
+			stage,
 			freight,
 		)
 		if promoteErr != nil {
@@ -400,36 +450,25 @@ func (r *reconciler) Reconcile(
 func (r *reconciler) promote(
 	ctx context.Context,
 	promo kargoapi.Promotion,
+	stage *kargoapi.Stage,
 	targetFreight *kargoapi.Freight,
 ) (*kargoapi.PromotionStatus, error) {
 	logger := logging.LoggerFromContext(ctx)
-	stageName := promo.Spec.Stage
+	stageName := stage.Name
 	stageNamespace := promo.Namespace
-
-	stage, err := r.getStageFn(
-		ctx,
-		r.kargoClient,
-		types.NamespacedName{
-			Namespace: stageNamespace,
-			Name:      stageName,
-		},
-	)
-	if err != nil {
-		return nil, fmt.Errorf("error finding Stage %q in namespace %q: %w", stageName, stageNamespace, err)
-	}
-	if stage == nil {
-		return nil, fmt.Errorf("could not find Stage %q in namespace %q", stageName, stageNamespace)
-	}
-	logger.Debug("found associated Stage")
 
 	if targetFreight == nil {
 		return nil, fmt.Errorf("Freight %q not found in namespace %q", promo.Spec.Freight, promo.Namespace)
 	}
-	upstreamStages := make([]string, len(stage.Spec.Subscriptions.UpstreamStages))
-	for i, upstreamStage := range stage.Spec.Subscriptions.UpstreamStages {
-		upstreamStages[i] = upstreamStage.Name
+	var upstreams []string
+	for _, req := range stage.Spec.RequestedFreight {
+		upstreams = append(upstreams, req.Sources.Stages...)
 	}
-	if !kargoapi.IsFreightAvailable(targetFreight, stageName, upstreamStages) {
+	// De-dupe upstreams
+	slices.Sort(upstreams)
+	upstreams = slices.Compact(upstreams)
+
+	if !kargoapi.IsFreightAvailable(targetFreight, stageName, upstreams) {
 		return nil, fmt.Errorf(
 			"Freight %q is not available to Stage %q in namespace %q",
 			promo.Spec.Freight,
@@ -441,40 +480,75 @@ func (r *reconciler) promote(
 	logger = logger.WithValues("targetFreight", targetFreight.Name)
 
 	targetFreightRef := kargoapi.FreightReference{
-		Name:      targetFreight.Name,
-		Commits:   targetFreight.Commits,
-		Images:    targetFreight.Images,
-		Charts:    targetFreight.Charts,
-		Warehouse: targetFreight.Warehouse,
+		Name:    targetFreight.Name,
+		Commits: targetFreight.Commits,
+		Images:  targetFreight.Images,
+		Charts:  targetFreight.Charts,
+		Origin:  targetFreight.Origin,
 	}
+	targetFreightCol := r.buildTargetFreightCollection(targetFreightRef, stage)
 
-	newStatus, nextFreight, err := r.promoMechanisms.Promote(ctx, stage, &promo, targetFreightRef)
+	newStatus, nextFreight, err :=
+		r.promoMechanisms.Promote(ctx, stage, &promo, targetFreightCol.References())
 	if err != nil {
 		return nil, err
 	}
-	newStatus.Freight = &nextFreight
+	newStatus.Freight = &targetFreightRef
+	newStatus.FreightCollection = &kargoapi.FreightCollection{}
+	for _, freightRef := range nextFreight {
+		newStatus.FreightCollection.UpdateOrPush(freightRef)
+	}
 
 	logger.Debug("promotion", "phase", newStatus.Phase)
 
 	if newStatus.Phase == kargoapi.PromotionPhaseSucceeded {
 		// Trigger re-verification of the Stage if the promotion succeeded and
 		// this is a re-promotion of the same Freight.
-		curFreight := stage.Status.CurrentFreight
-		if curFreight != nil && curFreight.Name == targetFreight.Name && curFreight.VerificationInfo != nil {
-			if err = kargoapi.ReverifyStageFreight(
-				ctx,
-				r.kargoClient,
-				types.NamespacedName{
-					Namespace: stageNamespace,
-					Name:      stageName,
-				},
-			); err != nil {
-				// Log the error, but don't let failure to initiate re-verification
-				// prevent the promotion from succeeding.
-				logger.Error(err, "error triggering re-verification")
+		current := stage.Status.FreightHistory.Current()
+		if current != nil && current.VerificationHistory.Current() != nil {
+			for _, f := range current.Freight {
+				if f.Name == targetFreight.Name {
+					if err = kargoapi.ReverifyStageFreight(
+						ctx,
+						r.kargoClient,
+						types.NamespacedName{
+							Namespace: stageNamespace,
+							Name:      stageName,
+						},
+					); err != nil {
+						// Log the error, but don't let failure to initiate re-verification
+						// prevent the promotion from succeeding.
+						logger.Error(err, "error triggering re-verification")
+					}
+					break
+				}
 			}
 		}
 	}
 
 	return newStatus, nil
+}
+
+// buildTargetFreightCollection constructs a FreightCollection that contains all
+// FreightReferences from the previous Promotion (excepting those that are no
+// longer requested), plus a FreightReference for the provided targetFreight.
+func (r *reconciler) buildTargetFreightCollection(
+	targetFreight kargoapi.FreightReference,
+	stage *kargoapi.Stage,
+) *kargoapi.FreightCollection {
+	freightCol := &kargoapi.FreightCollection{}
+
+	// We don't simply copy the current FreightCollection because we want to
+	// account for the possibility that some freight contained therein are no
+	// longer requested by the Stage.
+	lastPromo := stage.Status.LastPromotion
+	if lastPromo != nil {
+		for _, req := range stage.Spec.RequestedFreight {
+			if freight, ok := lastPromo.Status.FreightCollection.Freight[req.Origin.String()]; ok {
+				freightCol.UpdateOrPush(freight)
+			}
+		}
+	}
+	freightCol.UpdateOrPush(targetFreight)
+	return freightCol
 }

@@ -199,7 +199,7 @@ func (w *webhook) ValidateCreate(
 
 	warehouse, err := w.getWarehouseFn(ctx, w.client, types.NamespacedName{
 		Namespace: freight.Namespace,
-		Name:      freight.Warehouse,
+		Name:      freight.Origin.Name,
 	})
 	if err != nil {
 		return nil, err
@@ -211,7 +211,7 @@ func (w *webhook) ValidateCreate(
 			field.ErrorList{
 				field.Invalid(
 					field.NewPath("warehouse"),
-					freight.Warehouse,
+					freight.Origin.Name,
 					"warehouse does not exist",
 				),
 			},
@@ -507,8 +507,8 @@ func validateFreightArtifacts(
 // that differs between them, the new value, and a boolean indicating whether
 // the two Freight objects are equal.
 func compareFreight(old, new *kargoapi.Freight) (*field.Path, any, bool) {
-	if old.Warehouse != new.Warehouse {
-		return field.NewPath("warehouse"), new.Warehouse, false
+	if !old.Origin.Equals(&new.Origin) {
+		return field.NewPath("origin"), new.Origin, false
 	}
 
 	if len(old.Commits) != len(new.Commits) {

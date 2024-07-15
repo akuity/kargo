@@ -11,6 +11,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/git"
@@ -18,17 +20,20 @@ import (
 )
 
 func TestNewGitMechanism(t *testing.T) {
+	const testName = "fake-name"
 	pm := newGitMechanism(
-		"fake-name",
+		testName,
+		fake.NewFakeClient(),
 		&credentials.FakeDB{},
-		func([]kargoapi.GitRepoUpdate) []kargoapi.GitRepoUpdate {
+		func([]kargoapi.GitRepoUpdate) []*kargoapi.GitRepoUpdate {
 			return nil
 		},
 		func(
 			context.Context,
-			kargoapi.GitRepoUpdate,
-			kargoapi.FreightReference,
-			string, string, string, string,
+			*kargoapi.Stage,
+			*kargoapi.GitRepoUpdate,
+			[]kargoapi.FreightReference,
+			string, string, string,
 			git.RepoCredentials,
 		) ([]string, error) {
 			return nil, nil
@@ -36,7 +41,8 @@ func TestNewGitMechanism(t *testing.T) {
 	)
 	gpm, ok := pm.(*gitMechanism)
 	require.True(t, ok)
-	require.NotEmpty(t, gpm.name)
+	require.Equal(t, testName, gpm.name)
+	require.NotNil(t, gpm.client)
 	require.NotNil(t, gpm.selectUpdatesFn)
 	require.NotNil(t, gpm.doSingleUpdateFn)
 	require.NotNil(t, gpm.getReadRefFn)
@@ -48,7 +54,7 @@ func TestNewGitMechanism(t *testing.T) {
 
 func TestGitGetName(t *testing.T) {
 	const testName = "fake name"
-	pm := newGitMechanism(testName, nil, nil, nil)
+	pm := newGitMechanism(testName, nil, nil, nil, nil)
 	require.Equal(t, testName, pm.GetName())
 }
 
@@ -59,23 +65,23 @@ func TestGitPromote(t *testing.T) {
 		assertions func(
 			t *testing.T,
 			status *kargoapi.PromotionStatus,
-			newFreightIn kargoapi.FreightReference,
-			newFreightOut kargoapi.FreightReference,
+			newFreightIn []kargoapi.FreightReference,
+			newFreightOut []kargoapi.FreightReference,
 			err error,
 		)
 	}{
 		{
 			name: "no updates",
 			promoMech: &gitMechanism{
-				selectUpdatesFn: func([]kargoapi.GitRepoUpdate) []kargoapi.GitRepoUpdate {
+				selectUpdatesFn: func([]kargoapi.GitRepoUpdate) []*kargoapi.GitRepoUpdate {
 					return nil
 				},
 			},
 			assertions: func(
 				t *testing.T,
 				_ *kargoapi.PromotionStatus,
-				newFreightIn kargoapi.FreightReference,
-				newFreightOut kargoapi.FreightReference,
+				newFreightIn []kargoapi.FreightReference,
+				newFreightOut []kargoapi.FreightReference,
 				err error,
 			) {
 				require.NoError(t, err)
@@ -85,23 +91,24 @@ func TestGitPromote(t *testing.T) {
 		{
 			name: "error applying single update",
 			promoMech: &gitMechanism{
-				selectUpdatesFn: func([]kargoapi.GitRepoUpdate) []kargoapi.GitRepoUpdate {
-					return []kargoapi.GitRepoUpdate{{}}
+				selectUpdatesFn: func([]kargoapi.GitRepoUpdate) []*kargoapi.GitRepoUpdate {
+					return []*kargoapi.GitRepoUpdate{{}}
 				},
 				doSingleUpdateFn: func(
 					_ context.Context,
+					_ *kargoapi.Stage,
 					_ *kargoapi.Promotion,
-					_ kargoapi.GitRepoUpdate,
-					newFreight kargoapi.FreightReference,
-				) (*kargoapi.PromotionStatus, kargoapi.FreightReference, error) {
+					_ *kargoapi.GitRepoUpdate,
+					newFreight []kargoapi.FreightReference,
+				) (*kargoapi.PromotionStatus, []kargoapi.FreightReference, error) {
 					return nil, newFreight, errors.New("something went wrong")
 				},
 			},
 			assertions: func(
 				t *testing.T,
 				_ *kargoapi.PromotionStatus,
-				newFreightIn kargoapi.FreightReference,
-				newFreightOut kargoapi.FreightReference,
+				newFreightIn []kargoapi.FreightReference,
+				newFreightOut []kargoapi.FreightReference,
 				err error,
 			) {
 				require.Error(t, err)
@@ -112,23 +119,24 @@ func TestGitPromote(t *testing.T) {
 		{
 			name: "success",
 			promoMech: &gitMechanism{
-				selectUpdatesFn: func([]kargoapi.GitRepoUpdate) []kargoapi.GitRepoUpdate {
-					return []kargoapi.GitRepoUpdate{{}}
+				selectUpdatesFn: func([]kargoapi.GitRepoUpdate) []*kargoapi.GitRepoUpdate {
+					return []*kargoapi.GitRepoUpdate{{}}
 				},
 				doSingleUpdateFn: func(
 					_ context.Context,
+					_ *kargoapi.Stage,
 					_ *kargoapi.Promotion,
-					_ kargoapi.GitRepoUpdate,
-					newFreight kargoapi.FreightReference,
-				) (*kargoapi.PromotionStatus, kargoapi.FreightReference, error) {
+					_ *kargoapi.GitRepoUpdate,
+					newFreight []kargoapi.FreightReference,
+				) (*kargoapi.PromotionStatus, []kargoapi.FreightReference, error) {
 					return &kargoapi.PromotionStatus{Phase: kargoapi.PromotionPhaseSucceeded}, newFreight, nil
 				},
 			},
 			assertions: func(
 				t *testing.T,
 				_ *kargoapi.PromotionStatus,
-				newFreightIn kargoapi.FreightReference,
-				newFreightOut kargoapi.FreightReference,
+				newFreightIn []kargoapi.FreightReference,
+				newFreightOut []kargoapi.FreightReference,
 				err error,
 			) {
 				require.NoError(t, err)
@@ -138,7 +146,7 @@ func TestGitPromote(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			newFreightIn := kargoapi.FreightReference{}
+			newFreightIn := []kargoapi.FreightReference{}
 			status, newFreightOut, err := testCase.promoMech.Promote(
 				context.Background(),
 				&kargoapi.Stage{
@@ -162,8 +170,8 @@ func TestGitDoSingleUpdate(t *testing.T) {
 		assertions func(
 			t *testing.T,
 			status *kargoapi.PromotionStatus,
-			newFreightIn kargoapi.FreightReference,
-			newFreightOut kargoapi.FreightReference,
+			newFreightIn []kargoapi.FreightReference,
+			newFreightOut []kargoapi.FreightReference,
 			err error,
 		)
 	}{
@@ -171,17 +179,20 @@ func TestGitDoSingleUpdate(t *testing.T) {
 			name: "error getting readref",
 			promoMech: &gitMechanism{
 				getReadRefFn: func(
-					kargoapi.GitRepoUpdate,
-					[]kargoapi.GitCommit,
-				) (string, int, error) {
-					return "", 0, errors.New("something went wrong")
+					context.Context,
+					client.Client,
+					*kargoapi.Stage,
+					*kargoapi.GitRepoUpdate,
+					[]kargoapi.FreightReference,
+				) (string, *kargoapi.GitCommit, error) {
+					return "", nil, errors.New("something went wrong")
 				},
 			},
 			assertions: func(
 				t *testing.T,
 				_ *kargoapi.PromotionStatus,
-				newFreightIn kargoapi.FreightReference,
-				newFreightOut kargoapi.FreightReference,
+				newFreightIn []kargoapi.FreightReference,
+				newFreightOut []kargoapi.FreightReference,
 				err error,
 			) {
 				require.Error(t, err)
@@ -193,10 +204,13 @@ func TestGitDoSingleUpdate(t *testing.T) {
 			name: "error getting repo credentials",
 			promoMech: &gitMechanism{
 				getReadRefFn: func(
-					kargoapi.GitRepoUpdate,
-					[]kargoapi.GitCommit,
-				) (string, int, error) {
-					return testRef, 0, nil
+					context.Context,
+					client.Client,
+					*kargoapi.Stage,
+					*kargoapi.GitRepoUpdate,
+					[]kargoapi.FreightReference,
+				) (string, *kargoapi.GitCommit, error) {
+					return testRef, nil, nil
 				},
 				getAuthorFn: func() (*git.User, error) {
 					return nil, nil
@@ -212,8 +226,8 @@ func TestGitDoSingleUpdate(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				_ *kargoapi.PromotionStatus,
-				newFreightIn kargoapi.FreightReference,
-				newFreightOut kargoapi.FreightReference,
+				newFreightIn []kargoapi.FreightReference,
+				newFreightOut []kargoapi.FreightReference,
 				err error,
 			) {
 				require.Error(t, err)
@@ -225,10 +239,13 @@ func TestGitDoSingleUpdate(t *testing.T) {
 			name: "error getting author",
 			promoMech: &gitMechanism{
 				getReadRefFn: func(
-					kargoapi.GitRepoUpdate,
-					[]kargoapi.GitCommit,
-				) (string, int, error) {
-					return testRef, 0, nil
+					context.Context,
+					client.Client,
+					*kargoapi.Stage,
+					*kargoapi.GitRepoUpdate,
+					[]kargoapi.FreightReference,
+				) (string, *kargoapi.GitCommit, error) {
+					return testRef, nil, nil
 				},
 				getAuthorFn: func() (*git.User, error) {
 					return nil, errors.New("something went wrong")
@@ -244,8 +261,8 @@ func TestGitDoSingleUpdate(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				_ *kargoapi.PromotionStatus,
-				newFreightIn kargoapi.FreightReference,
-				newFreightOut kargoapi.FreightReference,
+				newFreightIn []kargoapi.FreightReference,
+				newFreightOut []kargoapi.FreightReference,
 				err error,
 			) {
 				require.Error(t, err)
@@ -257,10 +274,13 @@ func TestGitDoSingleUpdate(t *testing.T) {
 			name: "error committing change to repo",
 			promoMech: &gitMechanism{
 				getReadRefFn: func(
-					kargoapi.GitRepoUpdate,
-					[]kargoapi.GitCommit,
-				) (string, int, error) {
-					return testRef, 0, nil
+					context.Context,
+					client.Client,
+					*kargoapi.Stage,
+					*kargoapi.GitRepoUpdate,
+					[]kargoapi.FreightReference,
+				) (string, *kargoapi.GitCommit, error) {
+					return testRef, nil, nil
 				},
 				getAuthorFn: func() (*git.User, error) {
 					return nil, nil
@@ -274,9 +294,9 @@ func TestGitDoSingleUpdate(t *testing.T) {
 				},
 				gitCommitFn: func(
 					context.Context,
-					kargoapi.GitRepoUpdate,
-					kargoapi.FreightReference,
-					string,
+					*kargoapi.Stage,
+					*kargoapi.GitRepoUpdate,
+					[]kargoapi.FreightReference,
 					string,
 					string,
 					git.Repo,
@@ -288,8 +308,8 @@ func TestGitDoSingleUpdate(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				_ *kargoapi.PromotionStatus,
-				newFreightIn kargoapi.FreightReference,
-				newFreightOut kargoapi.FreightReference,
+				newFreightIn []kargoapi.FreightReference,
+				newFreightOut []kargoapi.FreightReference,
 				err error,
 			) {
 				require.Error(t, err)
@@ -301,10 +321,15 @@ func TestGitDoSingleUpdate(t *testing.T) {
 			name: "success",
 			promoMech: &gitMechanism{
 				getReadRefFn: func(
-					kargoapi.GitRepoUpdate,
-					[]kargoapi.GitCommit,
-				) (string, int, error) {
-					return testRef, 0, nil
+					_ context.Context,
+					_ client.Client,
+					_ *kargoapi.Stage,
+					_ *kargoapi.GitRepoUpdate,
+					freight []kargoapi.FreightReference,
+				) (string, *kargoapi.GitCommit, error) {
+					require.True(t, len(freight) > 0)
+					require.True(t, len(freight[0].Commits) > 0)
+					return testRef, &freight[0].Commits[0], nil
 				},
 				getAuthorFn: func() (*git.User, error) {
 					return nil, nil
@@ -318,9 +343,9 @@ func TestGitDoSingleUpdate(t *testing.T) {
 				},
 				gitCommitFn: func(
 					context.Context,
-					kargoapi.GitRepoUpdate,
-					kargoapi.FreightReference,
-					string,
+					*kargoapi.Stage,
+					*kargoapi.GitRepoUpdate,
+					[]kargoapi.FreightReference,
 					string,
 					string,
 					git.Repo,
@@ -332,33 +357,34 @@ func TestGitDoSingleUpdate(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				_ *kargoapi.PromotionStatus,
-				newFreightIn kargoapi.FreightReference,
-				newFreightOut kargoapi.FreightReference,
+				newFreightIn []kargoapi.FreightReference,
+				newFreightOut []kargoapi.FreightReference,
 				err error,
 			) {
 				require.NoError(t, err)
 				require.Equal(
 					t,
 					"fake-commit-id",
-					newFreightOut.Commits[0].HealthCheckCommit,
+					newFreightOut[0].Commits[0].HealthCheckCommit,
 				)
 				// The newFreight is otherwise unaltered
-				newFreightIn.Commits[0].HealthCheckCommit = ""
+				newFreightIn[0].Commits[0].HealthCheckCommit = ""
 				require.Equal(t, newFreightIn, newFreightOut)
 			},
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			newFreightIn := kargoapi.FreightReference{
+			newFreightIn := []kargoapi.FreightReference{{
 				Commits: []kargoapi.GitCommit{{}},
-			}
+			}}
 			status, newFreightOut, err := testCase.promoMech.doSingleUpdate(
 				context.Background(),
+				&kargoapi.Stage{},
 				&kargoapi.Promotion{
 					ObjectMeta: metav1.ObjectMeta{Namespace: "fake-namespace"},
 				},
-				kargoapi.GitRepoUpdate{RepoURL: "https://github.com/akuity/kargo"},
+				&kargoapi.GitRepoUpdate{RepoURL: "https://github.com/akuity/kargo"},
 				newFreightIn,
 			)
 			testCase.assertions(t, status, newFreightIn, newFreightOut, err)
@@ -368,63 +394,84 @@ func TestGitDoSingleUpdate(t *testing.T) {
 
 func TestGetReadRef(t *testing.T) {
 	const testBranch = "fake-branch"
+	testOrigin := kargoapi.FreightOrigin{
+		Kind: kargoapi.FreightOriginKindWarehouse,
+		Name: "fake-warehouse",
+	}
+	testCommit := kargoapi.GitCommit{
+		RepoURL: "fake-url",
+		ID:      "fake-commit-id",
+	}
 	testCases := []struct {
 		name       string
 		update     kargoapi.GitRepoUpdate
-		commits    []kargoapi.GitCommit
-		assertions func(t *testing.T, readBranch string, commitIndex int, err error)
+		freight    []kargoapi.FreightReference
+		assertions func(
+			t *testing.T,
+			readBranch string,
+			commit *kargoapi.GitCommit,
+			err error,
+		)
 	}{
 		{
 			name: "update's RepoURL does not match any subscription",
 			update: kargoapi.GitRepoUpdate{
+				Origin:     &testOrigin,
 				RepoURL:    "fake-url",
 				ReadBranch: testBranch,
 			},
-			assertions: func(t *testing.T, readBranch string, commitIndex int, err error) {
+			assertions: func(
+				t *testing.T,
+				readBranch string,
+				commit *kargoapi.GitCommit,
+				err error,
+			) {
 				require.NoError(t, err)
 				require.Equal(t, testBranch, readBranch)
-				require.Equal(t, -1, commitIndex)
-			},
-		},
-		{
-			name: "subscription-loop avoided",
-			update: kargoapi.GitRepoUpdate{
-				RepoURL:     "fake-url",
-				WriteBranch: testBranch,
-			},
-			commits: []kargoapi.GitCommit{
-				{
-					RepoURL: "fake-url",
-					Branch:  testBranch,
-				},
-			},
-			assertions: func(t *testing.T, _ string, _ int, err error) {
-				require.ErrorContains(t, err, "because it will form a subscription loop")
+				require.Nil(t, commit)
 			},
 		},
 		{
 			name: "success",
 			update: kargoapi.GitRepoUpdate{
+				Origin:  &testOrigin,
 				RepoURL: "fake-url",
 			},
-			commits: []kargoapi.GitCommit{
-				{
-					RepoURL: "fake-url",
-					ID:      "fake-commit-id",
-					Branch:  testBranch,
-				},
-			},
-			assertions: func(t *testing.T, readBranch string, commitIndex int, err error) {
+			freight: []kargoapi.FreightReference{{
+				Origin:  testOrigin,
+				Commits: []kargoapi.GitCommit{testCommit},
+			}},
+			assertions: func(
+				t *testing.T,
+				_ string,
+				commit *kargoapi.GitCommit,
+				err error,
+			) {
 				require.NoError(t, err)
-				require.Equal(t, "fake-commit-id", readBranch)
-				require.Equal(t, 0, commitIndex)
+				require.NotNil(t, commit)
+				require.Equal(t, testCommit, *commit)
 			},
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			readBranch, commitIndex, err := getReadRef(testCase.update, testCase.commits)
-			testCase.assertions(t, readBranch, commitIndex, err)
+			stage := &kargoapi.Stage{
+				Spec: kargoapi.StageSpec{
+					PromotionMechanisms: &kargoapi.PromotionMechanisms{
+						GitRepoUpdates: []kargoapi.GitRepoUpdate{
+							testCase.update,
+						},
+					},
+				},
+			}
+			readBranch, commit, err := getReadRef(
+				context.Background(),
+				fake.NewFakeClient(),
+				stage,
+				&stage.Spec.PromotionMechanisms.GitRepoUpdates[0],
+				testCase.freight,
+			)
+			testCase.assertions(t, readBranch, commit, err)
 		})
 	}
 }

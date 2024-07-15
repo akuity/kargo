@@ -2,7 +2,7 @@ import { graphlib } from 'dagre';
 
 import { RepoSubscription, Stage } from '@ui/gen/v1alpha1/generated_pb';
 
-import { AnyNodeType, NodeType, RepoNodeType } from '../types';
+import { AnyNodeType, ConnectorsType, NodeType, RepoNodeType } from '../types';
 
 export const LINE_THICKNESS = 2;
 
@@ -44,28 +44,16 @@ export const nodeStubFor = (type: NodeType) => {
 };
 
 export const getConnectors = (g: graphlib.Graph) => {
-  return g.edges().map((item) => {
+  const groups: { [key: string]: { [key: string]: ConnectorsType[][] } } = {};
+  g.edges().map((item) => {
     const edge = g.edge(item);
     const points = edge.points;
-    if (points.length > 0) {
-      // replace first point with the right side of the upstream node
-      const upstreamNode = g.node(item.v);
-      if (upstreamNode) {
-        points[0] = { x: upstreamNode.x + upstreamNode.width / 2, y: upstreamNode.y };
-      }
-    }
-    if (points.length > 1) {
-      // replace last point with the right side of the downstream node
-      const upstreamNode = g.node(item.w);
-      if (upstreamNode) {
-        points[points.length - 1] = {
-          x: upstreamNode.x - upstreamNode.width / 2,
-          y: upstreamNode.y
-        };
-      }
-    }
 
-    const lines = new Array<{ x: number; y: number; width: number; angle: number }>();
+    const parts = item.name?.split(' ') || [];
+    const from = parts[0] || '';
+    const to = parts[1] || '';
+
+    const lines = new Array<ConnectorsType>();
     for (let i = 0; i < points.length - 1; i++) {
       const start = points[i];
       const end = points[i + 1];
@@ -74,14 +62,31 @@ export const getConnectors = (g: graphlib.Graph) => {
       const x2 = end.x;
       const y2 = end.y;
 
-      const width = Math.sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
+      const width = Math.sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1)) + 2;
       // center
       const cx = (x1 + x2) / 2 - width / 2;
       const cy = (y1 + y2) / 2 - LINE_THICKNESS / 2;
 
       const angle = Math.atan2(y1 - y2, x1 - x2) * (180 / Math.PI);
-      lines.push({ x: cx, y: cy, width, angle });
+      lines.push({ x: cx, y: cy, width, angle, color: edge['color'] });
     }
-    return lines;
+
+    const fromGr = groups[from] || {};
+    groups[from] = { ...fromGr, [to]: [...(fromGr[to] || []), lines] };
   });
+
+  for (const fromKey in groups) {
+    if (Object.keys(groups[fromKey] || {}).length === 1) {
+      for (const group of Object.values(groups[fromKey])) {
+        group.forEach((lines) => {
+          lines.forEach((line) => {
+            line.angle = 0;
+          });
+        });
+      }
+    }
+  }
+  return Object.values(groups).flatMap((group) =>
+    Object.values(group).flatMap((item) => Object.values(item))
+  );
 };

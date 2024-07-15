@@ -14,19 +14,21 @@ type Mechanism interface {
 	// GetName returns the name of a promotion mechanism.
 	GetName() string
 	// Promote consults rules in the provided Stage to perform some portion of the
-	// transition into the specified Freight. It returns current promo status
-	// and Freight, which may possibly be updated by the process.
+	// transition to using artifacts from the provided FreightReferences. It
+	// returns updated PromotionStatus and FreightReferences, both of which may
+	// have been updated by the process.
 	Promote(
 		context.Context,
 		*kargoapi.Stage,
 		*kargoapi.Promotion,
-		kargoapi.FreightReference,
-	) (*kargoapi.PromotionStatus, kargoapi.FreightReference, error)
+		[]kargoapi.FreightReference,
+	) (*kargoapi.PromotionStatus, []kargoapi.FreightReference, error)
 }
 
 // NewMechanisms returns the entrypoint to a hierarchical tree of promotion
 // mechanisms.
 func NewMechanisms(
+	kargoClient client.Client,
 	argocdClient client.Client,
 	credentialsDB credentials.Database,
 ) Mechanism {
@@ -34,11 +36,11 @@ func NewMechanisms(
 		"promotion mechanisms",
 		newCompositeMechanism(
 			"Git-based promotion mechanisms",
-			newGenericGitMechanism(credentialsDB),
-			newKargoRenderMechanism(credentialsDB),
-			newKustomizeMechanism(credentialsDB),
-			newHelmMechanism(credentialsDB),
+			newGenericGitMechanism(kargoClient, credentialsDB),
+			newKargoRenderMechanism(kargoClient, credentialsDB),
+			newKustomizeMechanism(kargoClient, credentialsDB),
+			newHelmMechanism(kargoClient, credentialsDB),
 		),
-		newArgoCDMechanism(argocdClient),
+		newArgoCDMechanism(kargoClient, argocdClient),
 	)
 }

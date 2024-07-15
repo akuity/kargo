@@ -549,17 +549,23 @@ func TestValidateUpdate(t *testing.T) {
 		},
 
 		{
-			name: "attempt to mutate warehouse field",
+			name: "attempt to mutate origin field",
 			setup: func() (*kargoapi.Freight, *kargoapi.Freight) {
 				oldFreight := &kargoapi.Freight{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "fake-namespace",
 					},
-					Warehouse: "fake-warehouse",
+					Origin: kargoapi.FreightOrigin{
+						Kind: kargoapi.FreightOriginKindWarehouse,
+						Name: "fake-warehouse",
+					},
 				}
 				oldFreight.Name = oldFreight.GenerateID()
 				newFreight := oldFreight.DeepCopy()
-				newFreight.Warehouse = "another-fake-warehouse"
+				newFreight.Origin = kargoapi.FreightOrigin{
+					Kind: kargoapi.FreightOriginKindWarehouse,
+					Name: "another-fake-warehouse",
+				}
 				return oldFreight, newFreight
 			},
 			webhook: &webhook{
@@ -777,9 +783,9 @@ func TestValidateDelete(t *testing.T) {
 								Name: "fake-stage",
 							},
 							Status: kargoapi.StageStatus{
-								CurrentFreight: &kargoapi.FreightReference{
-									Name: "fake-id",
-								},
+								FreightHistory: kargoapi.FreightHistory{{
+									ID: "fake-id",
+								}},
 							},
 						},
 					}
@@ -1073,12 +1079,22 @@ func TestCompareFreight(t *testing.T) {
 			},
 		},
 		{
-			name: "different Warehouse",
-			old:  &kargoapi.Freight{Warehouse: "warehouse1"},
-			new:  &kargoapi.Freight{Warehouse: "warehouse2"},
+			name: "different origin",
+			old: &kargoapi.Freight{
+				Origin: kargoapi.FreightOrigin{
+					Kind: kargoapi.FreightOriginKindWarehouse,
+					Name: "warehouse1",
+				},
+			},
+			new: &kargoapi.Freight{
+				Origin: kargoapi.FreightOrigin{
+					Kind: kargoapi.FreightOriginKindWarehouse,
+					Name: "warehouse2",
+				},
+			},
 			assertions: func(t *testing.T, freight *kargoapi.Freight, path *field.Path, val any, eq bool) {
-				require.Equal(t, field.NewPath("warehouse"), path)
-				require.Equal(t, freight.Warehouse, val)
+				require.Equal(t, field.NewPath("origin"), path)
+				require.Equal(t, freight.Origin, val)
 				require.False(t, eq)
 			},
 		},

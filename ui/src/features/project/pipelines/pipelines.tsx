@@ -24,6 +24,7 @@ const FreightDetails = lazy(() => import('@ui/features/freight/freight-details')
 const FreightTimeline = lazy(() => import('@ui/features/freight-timeline/freight-timeline'));
 const StageDetails = lazy(() => import('@ui/features/stage/stage-details'));
 import { SuspenseSpin } from '@ui/features/common/suspense-spin';
+import { getCurrentFreight } from '@ui/features/common/utils';
 import { FreightTimelineHeader } from '@ui/features/freight-timeline/freight-timeline-header';
 import { FreightTimelineWrapper } from '@ui/features/freight-timeline/freight-timeline-wrapper';
 import { clearColors } from '@ui/features/stage/utils';
@@ -111,7 +112,11 @@ export const Pipelines = () => {
     const allFreight = freightData?.groups['']?.freight || [];
     const filteredFreight = [] as Freight[];
     allFreight.forEach((f) => {
-      if (!selectedWarehouse || f.warehouse === selectedWarehouse) {
+      if (
+        !selectedWarehouse ||
+        f.warehouse === selectedWarehouse ||
+        (f?.origin?.kind === 'Warehouse' && f?.origin.name === selectedWarehouse)
+      ) {
         filteredFreight.push(f);
       }
     });
@@ -132,7 +137,7 @@ export const Pipelines = () => {
     return () => watcher.cancelWatch();
   }, [isLoading, isVisible, name]);
 
-  const [nodes, connectors, box, sortedStages, stageColorMap] = usePipelineGraph(
+  const [nodes, connectors, box, sortedStages, stageColorMap, warehouseColorMap] = usePipelineGraph(
     name,
     data?.stages || [],
     warehouseData?.warehouses || [],
@@ -150,13 +155,25 @@ export const Pipelines = () => {
 
   const [stagesPerFreight, subscribersByStage] = useMemo(() => {
     const stagesPerFreight: { [key: string]: Stage[] } = {};
-    const subscribersByStage = {} as { [key: string]: Stage[] };
+    const subscribersByStage = {} as { [key: string]: Set<string> };
     (data?.stages || []).forEach((stage) => {
       const items = stagesPerFreight[stage.status?.currentFreight?.name || ''] || [];
       stagesPerFreight[stage.status?.currentFreight?.name || ''] = [...items, stage];
       stage?.spec?.subscriptions?.upstreamStages.forEach((item) => {
-        const items = subscribersByStage[item.name || ''] || [];
-        subscribersByStage[item.name || ''] = [...items, stage];
+        if (!subscribersByStage[item.name || '']) {
+          subscribersByStage[item.name || ''] = new Set();
+        }
+        subscribersByStage[item.name || ''].add(stage?.metadata?.name || '');
+      });
+      stage?.spec?.requestedFreight?.forEach((item) => {
+        if (!item.sources?.direct) {
+          (item?.sources?.stages || []).forEach((name) => {
+            if (!subscribersByStage[name]) {
+              subscribersByStage[name] = new Set();
+            }
+            subscribersByStage[name].add(stage?.metadata?.name || '');
+          });
+        }
       });
     });
     return [stagesPerFreight, subscribersByStage];
@@ -184,8 +201,8 @@ export const Pipelines = () => {
       return state.stage !== stage?.metadata?.name;
     }
     if (state.action === 'promoteSubscribers') {
-      return !subscribersByStage[state.stage || '']?.find(
-        (item) => item.metadata?.name === stage?.metadata?.name
+      return (
+        !stage?.metadata?.name || !subscribersByStage[state.stage || '']?.has(stage.metadata.name)
       );
     }
     return false;
@@ -209,7 +226,7 @@ export const Pipelines = () => {
 
   return (
     <div className='flex flex-col flex-grow'>
-      <ColorContext.Provider value={stageColorMap}>
+      <ColorContext.Provider value={{ stageColorMap, warehouseColorMap }}>
         <FreightTimelineHeader
           promotingStage={state.stage}
           action={state.action}
@@ -217,9 +234,7 @@ export const Pipelines = () => {
             state.clear();
             setSelectedWarehouse('');
           }}
-          downstreamSubs={(subscribersByStage[state.stage || ''] || []).map(
-            (s) => s.metadata?.name || ''
-          )}
+          downstreamSubs={Array.from(subscribersByStage[state.stage || ''] || [])}
           selectedWarehouse={selectedWarehouse || ''}
           setSelectedWarehouse={setSelectedWarehouse}
           warehouses={warehouseMap}
@@ -265,6 +280,7 @@ export const Pipelines = () => {
                     className='mr-2'
                     onClick={() => {
                       clearColors(name || '');
+                      clearColors(name || '', 'warehouses');
                       window.location.reload();
                     }}
                   >
@@ -330,17 +346,27 @@ export const Pipelines = () => {
                           height={node.height}
                           projectName={name}
                           faded={isFaded(node.data)}
-                          currentFreight={
-                            fullFreightById[node.data?.status?.currentFreight?.name || '']
-                          }
+                          currentFreight={getCurrentFreight(node.data).map(
+                            (f) => fullFreightById[f.name || '']
+                          )}
                           hasNoSubscribers={
-                            (subscribersByStage[node?.data?.metadata?.name || ''] || []).length <= 1
+                            Array.from(subscribersByStage[node?.data?.metadata?.name || ''] || [])
+                              .length <= 1
                           }
                           onPromoteClick={(type: FreightTimelineAction) => {
-                            const currentWarehouse =
-                              node.data?.status?.currentFreight?.warehouse ||
-                              node.data?.spec?.subscriptions?.warehouse ||
-                              '';
+                            const currentFreight = getCurrentFreight(node.data);
+                            const isWarehouseKind = currentFreight.reduce(
+                              (acc, cur) => acc || cur?.origin?.kind === 'Warehouse',
+                              false
+                            );
+                            let currentWarehouse = currentFreight[0]?.warehouse || '';
+                            if (currentWarehouse === '' && isWarehouseKind) {
+                              currentWarehouse =
+                                currentFreight[0]?.origin?.name ||
+                                node.data?.spec?.subscriptions?.warehouse ||
+                                node.data?.spec?.requestedFreight[0]?.origin?.name ||
+                                '';
+                            }
                             setSelectedWarehouse(currentWarehouse);
                             if (state.stage === node.data?.metadata?.name) {
                               // deselect
@@ -353,7 +379,7 @@ export const Pipelines = () => {
                                 type,
                                 stageName,
                                 type === FreightTimelineAction.PromoteSubscribers
-                                  ? node.data?.status?.currentFreight?.name || ''
+                                  ? currentFreight[0].name
                                   : undefined
                               );
                             }
@@ -443,7 +469,7 @@ export const Pipelines = () => {
                 {connectors?.map((connector) =>
                   connector.map((line, i) => (
                     <div
-                      className='absolute bg-gray-400'
+                      className='absolute bg-gray-300 rounded-full'
                       style={{
                         padding: 0,
                         margin: 0,
@@ -451,7 +477,8 @@ export const Pipelines = () => {
                         width: line.width,
                         left: line.x,
                         top: line.y,
-                        transform: `rotate(${line.angle}deg)`
+                        transform: `rotate(${line.angle}deg)`,
+                        backgroundColor: line.color
                       }}
                       key={i}
                     />

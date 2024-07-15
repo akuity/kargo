@@ -217,7 +217,10 @@ func (r *reconciler) syncWarehouse(
 		if err != nil {
 			return status, fmt.Errorf("failed to build Freight from latest artifacts: %w", err)
 		}
-		freight.Warehouse = warehouse.Name
+		freight.Origin = kargoapi.FreightOrigin{
+			Kind: kargoapi.FreightOriginKindWarehouse,
+			Name: warehouse.Name,
+		}
 
 		if err = r.createFreightFn(ctx, freight); client.IgnoreAlreadyExists(err) != nil {
 			return status, fmt.Errorf(

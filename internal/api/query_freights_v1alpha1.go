@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"path"
+	"slices"
 	"sort"
+	"strings"
 
 	"connectrpc.com/connect"
 	"github.com/Masterminds/semver/v3"
@@ -51,10 +53,12 @@ func (s *server) QueryFreight(
 	}
 
 	stageName := req.Msg.GetStage()
+	origins := req.Msg.GetOrigins()
 	reverse := req.Msg.GetReverse()
 
 	var freight []kargoapi.Freight
-	if stageName != "" {
+	switch {
+	case stageName != "":
 		stage, err := s.getStageFn(
 			ctx,
 			s.client,
@@ -80,12 +84,18 @@ func (s *server) QueryFreight(
 			ctx,
 			project,
 			stageName,
-			stage.Spec.Subscriptions,
+			stage.Spec.RequestedFreight,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("get available freight for stage: %w", err)
 		}
-	} else {
+	case len(origins) > 0:
+		var err error
+		freight, err = s.getFreightFromWarehousesFn(ctx, project, origins)
+		if err != nil {
+			return nil, fmt.Errorf("get freight from warehouse: %w", err)
+		}
+	default:
 		freightList := &kargoapi.FreightList{}
 		// Get ALL Freight in the project/namespace
 		if err := s.listFreightFn(
@@ -128,24 +138,31 @@ func (s *server) getAvailableFreightForStage(
 	ctx context.Context,
 	project string,
 	stage string,
-	subs kargoapi.Subscriptions,
+	freightReqs []kargoapi.FreightRequest,
 ) ([]kargoapi.Freight, error) {
-	if subs.Warehouse != "" {
-		return s.getFreightFromWarehouseFn(ctx, project, subs.Warehouse)
+	// Find all Warehouses and upstream Stages we need to consider
+	var warehouses []string
+	var upstreams []string
+	for _, req := range freightReqs {
+		if req.Sources.Direct {
+			warehouses = append(warehouses, req.Origin.Name)
+		}
+		upstreams = append(upstreams, req.Sources.Stages...)
 	}
-	verifiedFreight, err := s.getVerifiedFreightFn(
-		ctx,
-		project,
-		subs.UpstreamStages,
-	)
+	// De-dupe the upstreams
+	slices.Sort(upstreams)
+	upstreams = slices.Compact(upstreams)
+
+	freightFromWarehouses, err := s.getFreightFromWarehousesFn(ctx, project, warehouses)
 	if err != nil {
-		return nil, fmt.Errorf(
-			"error listing Freight verified in Stages upstream from Stage %q in namespace %q: %w",
-			stage,
-			project,
-			err,
-		)
+		return nil, fmt.Errorf("get freight from warehouses: %w", err)
 	}
+
+	verifiedFreight, err := s.getVerifiedFreightFn(ctx, project, upstreams)
+	if err != nil {
+		return nil, fmt.Errorf("get verified freight: %w", err)
+	}
+
 	var approvedFreight kargoapi.FreightList
 	if err = s.listFreightFn(
 		ctx,
@@ -165,67 +182,65 @@ func (s *server) getAvailableFreightForStage(
 			err,
 		)
 	}
-	if len(verifiedFreight) == 0 &&
+	if len(freightFromWarehouses) == 0 &&
+		len(verifiedFreight) == 0 &&
 		len(approvedFreight.Items) == 0 {
 		return nil, nil
 	}
-	// De-dupe
-	availableFreightMap := make(
-		map[string]kargoapi.Freight,
-		len(verifiedFreight)+len(approvedFreight.Items),
-	)
-	for _, freight := range verifiedFreight {
-		availableFreightMap[freight.Name] = freight
-	}
-	for _, freight := range approvedFreight.Items {
-		availableFreightMap[freight.Name] = freight
-	}
-	// Turn the map to a list
-	availableFreight := make([]kargoapi.Freight, len(availableFreightMap))
-	var i int
-	for _, freight := range availableFreightMap {
-		availableFreight[i] = freight
-		i++
-	}
+
+	// Concatenate all available Freight
+	availableFreight := append(freightFromWarehouses, verifiedFreight...)
+	availableFreight = append(availableFreight, approvedFreight.Items...)
+
+	// De-dupe the available Freight
+	slices.SortFunc(availableFreight, func(lhs, rhs kargoapi.Freight) int {
+		return strings.Compare(lhs.Name, rhs.Name)
+	})
+	availableFreight = slices.CompactFunc(availableFreight, func(lhs, rhs kargoapi.Freight) bool {
+		return lhs.Name == rhs.Name
+	})
+
 	return availableFreight, nil
 }
 
-func (s *server) getFreightFromWarehouse(
+func (s *server) getFreightFromWarehouses(
 	ctx context.Context,
 	project string,
-	warehouse string,
+	warehouses []string,
 ) ([]kargoapi.Freight, error) {
-	var freight kargoapi.FreightList
-	if err := s.listFreightFn(
-		ctx,
-		&freight,
-		&client.ListOptions{
-			Namespace: project,
-			FieldSelector: fields.OneTermEqualSelector(
-				kubeclient.FreightByWarehouseIndexField,
+	var allFreight []kargoapi.Freight
+	for _, warehouse := range warehouses {
+		var freight kargoapi.FreightList
+		if err := s.listFreightFn(
+			ctx,
+			&freight,
+			&client.ListOptions{
+				Namespace: project,
+				FieldSelector: fields.OneTermEqualSelector(
+					kubeclient.FreightByWarehouseIndexField,
+					warehouse,
+				),
+			},
+		); err != nil {
+			return nil, fmt.Errorf(
+				"error listing Freight for Warehouse %q in namespace %q: %w",
 				warehouse,
-			),
-		},
-	); err != nil {
-		return nil, fmt.Errorf(
-			"error listing Freight for Warehouse %q in namespace %q: %w",
-			warehouse,
-			project,
-			err,
-		)
+				project,
+				err,
+			)
+		}
+		allFreight = append(allFreight, freight.Items...)
 	}
-	return freight.Items, nil
+	return allFreight, nil
 }
 
 func (s *server) getVerifiedFreight(
 	ctx context.Context,
 	project string,
-	stageSubs []kargoapi.StageSubscription,
+	upstreams []string,
 ) ([]kargoapi.Freight, error) {
-	// Start by building a de-duped map of Freight verified in any upstream
-	// Stage(s)
-	verifiedFreight := map[string]kargoapi.Freight{}
-	for _, stageSub := range stageSubs {
+	var verifiedFreight []kargoapi.Freight
+	for _, upstream := range upstreams {
 		var freight kargoapi.FreightList
 		if err := s.listFreightFn(
 			ctx,
@@ -234,32 +249,31 @@ func (s *server) getVerifiedFreight(
 				Namespace: project,
 				FieldSelector: fields.OneTermEqualSelector(
 					kubeclient.FreightByVerifiedStagesIndexField,
-					stageSub.Name,
+					upstream,
 				),
 			},
 		); err != nil {
 			return nil, fmt.Errorf(
 				"error listing Freight verified in Stage %q in namespace %q: %w",
-				stageSub.Name,
+				upstream,
 				project,
 				err,
 			)
 		}
-		for _, freight := range freight.Items {
-			verifiedFreight[freight.Name] = freight
-		}
+		verifiedFreight = append(verifiedFreight, freight.Items...)
 	}
 	if len(verifiedFreight) == 0 {
 		return nil, nil
 	}
-	// Turn the map to a list
-	verifiedFreightList := make([]kargoapi.Freight, len(verifiedFreight))
-	i := 0
-	for _, freight := range verifiedFreight {
-		verifiedFreightList[i] = freight
-		i++
-	}
-	return verifiedFreightList, nil
+	// De-dupe the verified Freight
+	slices.SortFunc(verifiedFreight, func(lhs, rhs kargoapi.Freight) int {
+		return strings.Compare(lhs.Name, rhs.Name)
+	})
+	verifiedFreight = slices.CompactFunc(verifiedFreight, func(lhs, rhs kargoapi.Freight) bool {
+		return lhs.Name == rhs.Name
+	})
+
+	return verifiedFreight, nil
 }
 
 func groupByImageRepo(

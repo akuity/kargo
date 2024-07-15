@@ -41,12 +41,11 @@ func TestCompositePromote(t *testing.T) {
 	testCases := []struct {
 		name       string
 		promoMech  *compositeMechanism
-		newFreight kargoapi.FreightReference
+		freight    []kargoapi.FreightReference
 		assertions func(
 			t *testing.T,
 			promoStatus *kargoapi.PromotionStatus,
-			newFreightIn kargoapi.FreightReference,
-			newFreightOut kargoapi.FreightReference,
+			updatedFreight []kargoapi.FreightReference,
 			err error,
 		)
 	}{
@@ -59,10 +58,10 @@ func TestCompositePromote(t *testing.T) {
 						PromoteFn: func(
 							context.Context,
 							*kargoapi.Stage,
-							kargoapi.FreightReference,
-						) (*kargoapi.PromotionStatus, kargoapi.FreightReference, error) {
+							[]kargoapi.FreightReference,
+						) (*kargoapi.PromotionStatus, []kargoapi.FreightReference, error) {
 							return &kargoapi.PromotionStatus{},
-								kargoapi.FreightReference{},
+								[]kargoapi.FreightReference{},
 								errors.New("something went wrong")
 						},
 					},
@@ -71,8 +70,7 @@ func TestCompositePromote(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				_ *kargoapi.PromotionStatus,
-				_ kargoapi.FreightReference,
-				_ kargoapi.FreightReference,
+				_ []kargoapi.FreightReference,
 				err error,
 			) {
 				require.ErrorContains(t, err, "error executing fake promotion mechanism")
@@ -81,6 +79,9 @@ func TestCompositePromote(t *testing.T) {
 		},
 		{
 			name: "success",
+			freight: []kargoapi.FreightReference{{
+				Name: "fake-id",
+			}},
 			promoMech: &compositeMechanism{
 				childMechanisms: []Mechanism{
 					&FakeMechanism{
@@ -88,13 +89,14 @@ func TestCompositePromote(t *testing.T) {
 						PromoteFn: func(
 							_ context.Context,
 							_ *kargoapi.Stage,
-							newFreight kargoapi.FreightReference,
-						) (*kargoapi.PromotionStatus, kargoapi.FreightReference, error) {
+							newFreight []kargoapi.FreightReference,
+						) (*kargoapi.PromotionStatus, []kargoapi.FreightReference, error) {
+							require.True(t, len(newFreight) > 0)
 							// This is not a realistic change that a child promotion mechanism
 							// would make, but for testing purposes, this is good enough to
 							// help us assert that the function under test does return all
 							// modifications made by its child promotion mechanisms.
-							newFreight.Name = "fake-mutated-id"
+							newFreight[0].Name = "fake-mutated-id"
 							return &kargoapi.PromotionStatus{Phase: kargoapi.PromotionPhaseSucceeded}, newFreight, nil
 						},
 					},
@@ -103,22 +105,24 @@ func TestCompositePromote(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				_ *kargoapi.PromotionStatus,
-				newFreightIn kargoapi.FreightReference,
-				newFreightOut kargoapi.FreightReference,
+				updatedFreight []kargoapi.FreightReference,
 				err error,
 			) {
 				require.NoError(t, err)
 				// Verify that changes made by child promotion mechanism are returned
-				require.Equal(t, "fake-mutated-id", newFreightOut.Name)
-				// Everything else should be unchanged
-				newFreightOut.Name = newFreightIn.Name
-				require.Equal(t, newFreightIn, newFreightOut)
+				require.Equal(
+					t,
+					[]kargoapi.FreightReference{{
+						Name: "fake-mutated-id",
+					}},
+					updatedFreight,
+				)
 			},
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			promoStatus, newFreightOut, err := testCase.promoMech.Promote(
+			promoStatus, updatedFreight, err := testCase.promoMech.Promote(
 				context.Background(),
 				&kargoapi.Stage{
 					Spec: kargoapi.StageSpec{
@@ -126,9 +130,9 @@ func TestCompositePromote(t *testing.T) {
 					},
 				},
 				&kargoapi.Promotion{},
-				testCase.newFreight,
+				testCase.freight,
 			)
-			testCase.assertions(t, promoStatus, testCase.newFreight, newFreightOut, err)
+			testCase.assertions(t, promoStatus, updatedFreight, err)
 		})
 	}
 }

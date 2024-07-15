@@ -1,6 +1,11 @@
 package v1alpha1
 
 import (
+	"crypto/sha1"
+	"fmt"
+	"slices"
+	"strings"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -112,6 +117,11 @@ const (
 	ArgoCDAppSyncStateOutOfSync ArgoCDAppSyncState = "OutOfSync"
 )
 
+// +kubebuilder:validation:Enum={Warehouse}
+type FreightOriginKind string
+
+const FreightOriginKindWarehouse FreightOriginKind = "Warehouse"
+
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name=Shard,type=string,JSONPath=`.spec.shard`
@@ -149,8 +159,19 @@ type StageSpec struct {
 	// Subscriptions describes the Stage's sources of Freight. This is a required
 	// field.
 	//
-	// +kubebuilder:validation:Required
+	// Deprecated: Use RequestedFreight instead.
 	Subscriptions Subscriptions `json:"subscriptions" protobuf:"bytes,1,opt,name=subscriptions"`
+	// RequestedFreight expresses the Stage's need for certain pieces of Freight,
+	// each having originated from a particular Warehouse. This list must be
+	// non-empty. In the common case, a Stage will request Freight having
+	// originated from just one specific Warehouse. In advanced cases, requesting
+	// Freight from multiple Warehouses provides a method of advancing new
+	// artifacts of different types through parallel pipelines at different
+	// speeds. This can be useful, for instance, if a Stage is home to multiple
+	// microservices that are independently versioned.
+	//
+	// +kubebuilder:validation:MinItems=1
+	RequestedFreight []FreightRequest `json:"requestedFreight" protobuf:"bytes,5,rep,name=requestedFreight"`
 	// PromotionMechanisms describes how to incorporate Freight into the Stage.
 	// This is an optional field as it is sometimes useful to aggregates available
 	// Freight from multiple upstream Stages without performing any actions. The
@@ -164,6 +185,8 @@ type StageSpec struct {
 }
 
 // Subscriptions describes a Stage's sources of Freight.
+//
+// Deprecated: Use FreightRequest instead.
 type Subscriptions struct {
 	// Warehouse is a subscription to a Warehouse. This field is mutually
 	// exclusive with the UpstreamStages field.
@@ -174,6 +197,8 @@ type Subscriptions struct {
 }
 
 // StageSubscription defines a subscription to Freight from another Stage.
+//
+// Deprecated: Use FreightRequest instead.
 type StageSubscription struct {
 	// Name specifies the name of a Stage.
 	//
@@ -182,8 +207,75 @@ type StageSubscription struct {
 	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
 }
 
+// FreightRequest expresses a Stage's need for Freight having originated from a
+// particular Warehouse.
+type FreightRequest struct {
+	// Origin specifies from where the requested Freight must have originated.
+	// This is a required field.
+	//
+	// +kubebuilder:validation:Required
+	Origin FreightOrigin `json:"origin" protobuf:"bytes,1,opt,name=origin"`
+	// Sources describes where the requested Freight may be obtained from. This is
+	// a required field.
+	Sources FreightSources `json:"sources" protobuf:"bytes,2,opt,name=sources"`
+}
+
+// FreightOrigin describes a kind of Freight in terms of where it may have
+// originated.
+//
+// +protobuf.options.(gogoproto.goproto_stringer)=false
+type FreightOrigin struct {
+	// Kind is the kind of resource from which Freight may have originated. At
+	// present, this can only be "Warehouse".
+	//
+	// +kubebuilder:validation:Required
+	Kind FreightOriginKind `json:"kind" protobuf:"bytes,1,opt,name=kind"`
+	// Name is the name of the resource of the kind indicated by the Kind field
+	// from which Freight may originated.
+	//
+	// +kubebuilder:validation:Required
+	Name string `json:"name" protobuf:"bytes,2,opt,name=name"`
+}
+
+func (f *FreightOrigin) String() string {
+	if f == nil {
+		return ""
+	}
+	return fmt.Sprintf("%s/%s", f.Kind, f.Name)
+}
+
+func (f *FreightOrigin) Equals(other *FreightOrigin) bool {
+	if f == nil && other == nil {
+		return true
+	}
+	if f == nil || other == nil {
+		return false
+	}
+	return f.Kind == other.Kind && f.Name == other.Name
+}
+
+type FreightSources struct {
+	// Direct indicates the requested Freight may be obtained directly from the
+	// Warehouse from which it originated. If this field's value is false, then
+	// the value of the Stages field must be non-empty. i.e. Between the two
+	// fields, at least one source must be specified.
+	Direct bool `json:"direct,omitempty" protobuf:"varint,1,opt,name=direct"`
+	// Stages identifies other "upstream" Stages as potential sources of the
+	// requested Freight. If this field's value is empty, then the value of the
+	// Direct field must be true. i.e. Between the two fields, at least on source
+	// must be specified.
+	Stages []string `json:"stages,omitempty" protobuf:"bytes,2,rep,name=stages"`
+}
+
 // PromotionMechanisms describes how to incorporate Freight into a Stage.
 type PromotionMechanisms struct {
+	// Origin disambiguates the origin from which artifacts used by this promotion
+	// mechanism must have originated. This is especially useful in cases where a
+	// Stage may request Freight from multiples origins (e.g. multiple Warehouses)
+	// and some of those each reference different versions of artifacts from the
+	// same repository. This field is optional. Its value is overridable by
+	// child promotion mechanisms.
+	Origin *FreightOrigin `json:"origin,omitempty" protobuf:"bytes,3,opt,name=origin"`
 	// GitRepoUpdates describes updates that should be applied to Git repositories
 	// to incorporate Freight into the Stage. This field is optional, as such
 	// actions are not required in all cases.
@@ -205,6 +297,16 @@ type GitRepoUpdate struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:Pattern=`^https?://(\w+([\.-]\w+)*@)?\w+([\.-]\w+)*(:[\d]+)?(/.*)?$`
 	RepoURL string `json:"repoURL" protobuf:"bytes,1,opt,name=repoURL"`
+	// Origin disambiguates the origin from which artifacts used by this promotion
+	// mechanism must have originated. This is especially useful in cases where a
+	// Stage may request Freight from multiples origins (e.g. multiple Warehouses)
+	// and some of those each reference different versions of artifacts from the
+	// same repository. This field is optional. When left unspecified, the branch
+	// checked out by this promotion mechanism will be the one specified by the
+	// ReadBranch field. If that, too, is unspecified, the default branch of the
+	// repository will be checked out. Always provide a value for this field if
+	// wishing to check out a specific commit indicated by a piece of Freight.
+	Origin *FreightOrigin `json:"origin,omitempty" protobuf:"bytes,9,opt,name=origin"`
 	// InsecureSkipTLSVerify specifies whether certificate verification errors
 	// should be ignored when connecting to the repository. This should be enabled
 	// only with great caution.
@@ -265,6 +367,16 @@ type KargoRenderPromotionMechanism struct {
 	//
 	// +kubebuilder:validation:Optional
 	Images []KargoRenderImageUpdate `json:"images,omitempty" protobuf:"bytes,1,rep,name=images"`
+	// Origin disambiguates the origin from which artifacts used by this promotion
+	// mechanism must have originated. This is especially useful in cases where a
+	// Stage may request Freight from multiples origins (e.g. multiple Warehouses)
+	// and some of those each reference different versions of artifacts from the
+	// same repository. This field is optional. When left unspecified, it will
+	// implicitly inherit the value of the enclosing GitRepoUpdate's Origin field.
+	// If that, too, is unspecified, Promotions will fail if there is ever
+	// ambiguity regarding from which piece of Freight an artifact is to be
+	// sourced.
+	Origin *FreightOrigin `json:"origin,omitempty" protobuf:"bytes,2,opt,name=origin"`
 }
 
 // KargoRenderImageUpdate describes how an image can be incorporated into a
@@ -274,6 +386,16 @@ type KargoRenderImageUpdate struct {
 	//
 	// +kubebuilder:validation:MinLength=1
 	Image string `json:"image" protobuf:"bytes,1,opt,name=image"`
+	// Origin disambiguates the origin from which artifacts used by this promotion
+	// mechanism must have originated. This is especially useful in cases where a
+	// Stage may request Freight from multiples origins (e.g. multiple Warehouses)
+	// and some of those each reference different versions of artifacts from the
+	// same repository. This field is optional. When left unspecified, it will
+	// implicitly inherit the value of the enclosing
+	// KargoRenderPromotionMechanism's Origin field. If that, too, is unspecified,
+	// Promotions will fail if there is ever ambiguity regarding from which piece
+	// of Freight an artifact is to be sourced.
+	Origin *FreightOrigin `json:"origin,omitempty" protobuf:"bytes,3,opt,name=origin"`
 	// UseDigest specifies whether the image's digest should be used instead of
 	// its tag.
 	//
@@ -289,6 +411,16 @@ type KustomizePromotionMechanism struct {
 	//
 	// +kubebuilder:validation:MinItems=1
 	Images []KustomizeImageUpdate `json:"images" protobuf:"bytes,1,rep,name=images"`
+	// Origin disambiguates the origin from which artifacts used by this promotion
+	// mechanism must have originated. This is especially useful in cases where a
+	// Stage may request Freight from multiples origins (e.g. multiple Warehouses)
+	// and some of those each reference different versions of artifacts from the
+	// same repository. This field is optional. When left unspecified, it will
+	// implicitly inherit the value of the enclosing GitRepoUpdate's Origin field.
+	// If that, too, is unspecified, Promotions will fail if there is ever
+	// ambiguity regarding from which piece of Freight an artifact is to be
+	// sourced.
+	Origin *FreightOrigin `json:"origin,omitempty" protobuf:"bytes,2,opt,name=origin"`
 }
 
 // KustomizeImageUpdate describes how to run `kustomize edit set image`
@@ -298,6 +430,16 @@ type KustomizeImageUpdate struct {
 	//
 	// +kubebuilder:validation:MinLength=1
 	Image string `json:"image" protobuf:"bytes,1,opt,name=image"`
+	// Origin disambiguates the origin from which artifacts used by this promotion
+	// mechanism must have originated. This is especially useful in cases where a
+	// Stage may request Freight from multiples origins (e.g. multiple Warehouses)
+	// and some of those each reference different versions of artifacts from the
+	// same repository. This field is optional. When left unspecified, it will
+	// implicitly inherit the value of the enclosing KustomizePromotionMechanism's
+	// Origin field. If that, too, is unspecified, Promotions will fail if there
+	// is ever ambiguity regarding from which piece of Freight an artifact is to
+	// be sourced.
+	Origin *FreightOrigin `json:"origin,omitempty" protobuf:"bytes,4,opt,name=origin"`
 	// Path specifies a path in which the `kustomize edit set image` command
 	// should be executed. This is a required field.
 	//
@@ -320,6 +462,16 @@ type HelmPromotionMechanism struct {
 	// Charts describes how specific chart versions can be incorporated into an
 	// umbrella chart.
 	Charts []HelmChartDependencyUpdate `json:"charts,omitempty" protobuf:"bytes,2,rep,name=charts"`
+	// Origin disambiguates the origin from which artifacts used by this promotion
+	// mechanism must have originated. This is especially useful in cases where a
+	// Stage may request Freight from multiples origins (e.g. multiple Warehouses)
+	// and some of those each reference different versions of artifacts from the
+	// same repository. This field is optional. When left unspecified, it will
+	// implicitly inherit the value of the enclosing GitRepoUpdate's Origin field.
+	// If that, too, is unspecified, Promotions will fail if there is ever
+	// ambiguity regarding from which piece of Freight an artifact is to be
+	// sourced.
+	Origin *FreightOrigin `json:"origin,omitempty" protobuf:"bytes,3,opt,name=origin"`
 }
 
 // HelmImageUpdate describes how a specific image version can be incorporated
@@ -330,6 +482,16 @@ type HelmImageUpdate struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:Pattern=`^(\w+([\.-]\w+)*(:[\d]+)?/)?(\w+([\.-]\w+)*)(/\w+([\.-]\w+)*)*$`
 	Image string `json:"image" protobuf:"bytes,1,opt,name=image"`
+	// Origin disambiguates the origin from which artifacts used by this promotion
+	// mechanism must have originated. This is especially useful in cases where a
+	// Stage may request Freight from multiples origins (e.g. multiple Warehouses)
+	// and some of those each reference different versions of artifacts from the
+	// same repository. This field is optional. When left unspecified, it will
+	// implicitly inherit the value of the enclosing HelmPromotionMechanism's
+	// Origin field. If that, too, is unspecified, Promotions will fail if there
+	// is ever ambiguity regarding from which piece of Freight an artifact is to
+	// be sourced.
+	Origin *FreightOrigin `json:"origin,omitempty" protobuf:"bytes,5,opt,name=origin"`
 	// ValuesFilePath specifies a path to the Helm values file that is to be
 	// updated. This is a required field.
 	//
@@ -377,6 +539,16 @@ type HelmChartDependencyUpdate struct {
 	//
 	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name" protobuf:"bytes,2,opt,name=name"`
+	// Origin disambiguates the origin from which artifacts used by this promotion
+	// mechanism must have originated. This is especially useful in cases where a
+	// Stage may request Freight from multiples origins (e.g. multiple Warehouses)
+	// and some of those each reference different versions of artifacts from the
+	// same repository. This field is optional. When left unspecified, it will
+	// implicitly inherit the value of the enclosing HelmPromotionMechanism's
+	// Origin field. If that, too, is unspecified, Promotions will fail if there
+	// is ever ambiguity regarding from which piece of Freight an artifact is to
+	// be sourced.
+	Origin *FreightOrigin `json:"origin,omitempty" protobuf:"bytes,4,opt,name=origin"`
 	// ChartPath is the path to an umbrella chart.
 	//
 	// +kubebuilder:validation:MinLength=1
@@ -400,6 +572,14 @@ type ArgoCDAppUpdate struct {
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
 	AppNamespace string `json:"appNamespace,omitempty" protobuf:"bytes,2,opt,name=appNamespace"`
+	// Origin disambiguates the origin from which artifacts used by this promotion
+	// mechanism must have originated. This is especially useful in cases where a
+	// Stage may request Freight from multiples origins (e.g. multiple Warehouses)
+	// and some of those each reference different versions of artifacts from the
+	// same repository. This field is optional, but Promotions will fail if there
+	// is ever ambiguity regarding which piece of Freight from which an artifact
+	// is to be sourced.
+	Origin *FreightOrigin `json:"origin,omitempty" protobuf:"bytes,4,opt,name=origin"`
 	// SourceUpdates describes updates to be applied to various sources of the
 	// specified Argo CD Application resource.
 	SourceUpdates []ArgoCDSourceUpdate `json:"sourceUpdates,omitempty" protobuf:"bytes,3,rep,name=sourceUpdates"`
@@ -429,6 +609,16 @@ type ArgoCDSourceUpdate struct {
 	//
 	// +kubebuilder:validation:Optional
 	Chart string `json:"chart,omitempty" protobuf:"bytes,2,opt,name=chart"`
+	// Origin disambiguates the origin from which artifacts used by this promotion
+	// mechanism must have originated. This is especially useful in cases where a
+	// Stage may request Freight from multiples origins (e.g. multiple Warehouses)
+	// and some of those each reference different versions of artifacts from the
+	// same repository. This field is optional. When left unspecified, it will
+	// implicitly inherit the value of the enclosing ArgoCDAppUpdate's Origin
+	// field. If that, too, is unspecified, Promotions will fail if there is ever
+	// ambiguity regarding from which piece of Freight an artifact is to be
+	// sourced.
+	Origin *FreightOrigin `json:"origin,omitempty" protobuf:"bytes,6,opt,name=origin"`
 	// UpdateTargetRevision is a bool indicating whether the source should be
 	// updated such that its TargetRevision field points at the most recently git
 	// commit (if RepoURL references a git repository) or chart version (if
@@ -449,6 +639,16 @@ type ArgoCDKustomize struct {
 	//
 	// +kubebuilder:validation:MinItems=1
 	Images []ArgoCDKustomizeImageUpdate `json:"images" protobuf:"bytes,1,rep,name=images"`
+	// Origin disambiguates the origin from which artifacts used by this promotion
+	// mechanism must have originated. This is especially useful in cases where a
+	// Stage may request Freight from multiples origins (e.g. multiple Warehouses)
+	// and some of those each reference different versions of artifacts from the
+	// same repository. This field is optional. When left unspecified, it will
+	// implicitly inherit the value of the enclosing ArgoCDSourceUpdate's Origin
+	// field. If that, too, is unspecified, Promotions will fail if there is ever
+	// ambiguity regarding from which piece of Freight an artifact is to be
+	// sourced.
+	Origin *FreightOrigin `json:"origin,omitempty" protobuf:"bytes,2,opt,name=origin"`
 }
 
 // ArgoCDHelm describes updates to an Argo CD Application source's Helm-specific
@@ -459,6 +659,16 @@ type ArgoCDHelm struct {
 	//
 	// +kubebuilder:validation:MinItems=1
 	Images []ArgoCDHelmImageUpdate `json:"images" protobuf:"bytes,1,rep,name=images"`
+	// Origin disambiguates the origin from which artifacts used by this promotion
+	// mechanism must have originated. This is especially useful in cases where a
+	// Stage may request Freight from multiples origins (e.g. multiple Warehouses)
+	// and some of those each reference different versions of artifacts from the
+	// same repository. This field is optional. When left unspecified, it will
+	// implicitly inherit the value of the enclosing ArgoCDSourceUpdate's Origin
+	// field. If that, too, is unspecified, Promotions will fail if there is ever
+	// ambiguity regarding from which piece of Freight an artifact is to be
+	// sourced.
+	Origin *FreightOrigin `json:"origin,omitempty" protobuf:"bytes,2,opt,name=origin"`
 }
 
 // ArgoCDKustomizeImageUpdate describes how a specific image version can be
@@ -468,6 +678,16 @@ type ArgoCDKustomizeImageUpdate struct {
 	//
 	// +kubebuilder:validation:MinLength=1
 	Image string `json:"image" protobuf:"bytes,1,opt,name=image"`
+	// Origin disambiguates the origin from which artifacts used by this promotion
+	// mechanism must have originated. This is especially useful in cases where a
+	// Stage may request Freight from multiples origins (e.g. multiple Warehouses)
+	// and some of those each reference different versions of artifacts from the
+	// same repository. This field is optional. When left unspecified, it will
+	// implicitly inherit the value of the enclosing ArgoCDKustomize's Origin
+	// field. If that, too, is unspecified, Promotions will fail if there is ever
+	// ambiguity regarding from which piece of Freight an artifact is to be
+	// sourced.
+	Origin *FreightOrigin `json:"origin,omitempty" protobuf:"bytes,3,opt,name=origin"`
 	// UseDigest specifies whether the image's digest should be used instead of
 	// its tag.
 	//
@@ -482,6 +702,15 @@ type ArgoCDHelmImageUpdate struct {
 	//
 	// +kubebuilder:validation:MinLength=1
 	Image string `json:"image" protobuf:"bytes,1,opt,name=image"`
+	// Origin disambiguates the origin from which artifacts used by this promotion
+	// mechanism must have originated. This is especially useful in cases where a
+	// Stage may request Freight from multiples origins (e.g. multiple Warehouses)
+	// and some of those each reference different versions of artifacts from the
+	// same repository. This field is optional. When left unspecified, it will
+	// implicitly inherit the value of the enclosing ArgoCDHelm's Origin field. If
+	// that, too, is unspecified, Promotions will fail if there is ever ambiguity
+	// regarding from which piece of Freight an artifact is to be sourced.
+	Origin *FreightOrigin `json:"origin,omitempty" protobuf:"bytes,4,opt,name=origin"`
 	// Key specifies a key within an Argo CD Application's Helm parameters that is
 	// to be updated. This is a required field.
 	//
@@ -511,11 +740,20 @@ type StageStatus struct {
 	LastHandledRefresh string `json:"lastHandledRefresh,omitempty" protobuf:"bytes,11,opt,name=lastHandledRefresh"`
 	// Phase describes where the Stage currently is in its lifecycle.
 	Phase StagePhase `json:"phase,omitempty" protobuf:"bytes,1,opt,name=phase"`
+	// FreightHistory is a list of recent Freight selections that were deployed
+	// to the Stage. By default, the last ten Freight selections are stored.
+	// The first item in the list is the most recent Freight selection and
+	// currently deployed to the Stage, subsequent items are older selections.
+	FreightHistory FreightHistory `json:"freightHistory,omitempty" protobuf:"bytes,4,rep,name=freightHistory" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	// CurrentFreight is a simplified representation of the Stage's current
 	// Freight describing what is currently deployed to the Stage.
+	//
+	// Deprecated: Use the top item in the FreightHistory stack instead.
 	CurrentFreight *FreightReference `json:"currentFreight,omitempty" protobuf:"bytes,2,opt,name=currentFreight"`
 	// History is a stack of recent Freight. By default, the last ten Freight are
 	// stored.
+	//
+	// Deprecated: Use the FreightHistory stack instead.
 	History FreightReferenceStack `json:"history,omitempty" protobuf:"bytes,3,rep,name=history"`
 	// Health is the Stage's last observed health.
 	Health *Health `json:"health,omitempty" protobuf:"bytes,8,opt,name=health"`
@@ -539,7 +777,11 @@ type FreightReference struct {
 	// equality by comparing their Names.
 	Name string `json:"name,omitempty" protobuf:"bytes,1,opt,name=name"`
 	// Warehouse is the name of the Warehouse that created this Freight.
+	//
+	// Deprecated: Use the Origin instead.
 	Warehouse string `json:"warehouse,omitempty" protobuf:"bytes,6,opt,name=warehouse"`
+	// Origin describes a kind of Freight in terms of its origin.
+	Origin FreightOrigin `json:"origin,omitempty" protobuf:"bytes,8,opt,name=origin"`
 	// Commits describes specific Git repository commits.
 	Commits []GitCommit `json:"commits,omitempty" protobuf:"bytes,2,rep,name=commits"`
 	// Images describes specific versions of specific container images.
@@ -548,12 +790,104 @@ type FreightReference struct {
 	Charts []Chart `json:"charts,omitempty" protobuf:"bytes,4,rep,name=charts"`
 	// VerificationInfo is information about any verification process that was
 	// associated with this Freight for this Stage.
+	//
+	// Deprecated: Use FreightCollection.VerificationHistory instead.
 	VerificationInfo *VerificationInfo `json:"verificationInfo,omitempty" protobuf:"bytes,5,opt,name=verificationInfo"`
 	// VerificationHistory is a stack of recent VerificationInfo. By default,
 	// the last ten VerificationInfo are stored.
+	//
+	// Deprecated: Use FreightCollection.VerificationHistory instead.
 	VerificationHistory VerificationInfoStack `json:"verificationHistory,omitempty" protobuf:"bytes,7,rep,name=verificationHistory"`
 }
 
+// FreightCollection is a collection of FreightReferences, each of which
+// represents a piece of Freight that has been selected for deployment to a
+// Stage.
+type FreightCollection struct {
+	// ID is a unique and deterministically calculated identifier for the
+	// FreightCollection. It is updated on each use of the UpdateOrPush method.
+	ID string `json:"id" protobuf:"bytes,3,opt,name=id"`
+	// Freight is a map of FreightReference objects, indexed by their Warehouse
+	// origin.
+	Freight map[string]FreightReference `json:"items,omitempty" protobuf:"bytes,1,rep,name=items" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	// VerificationHistory is a stack of recent VerificationInfo. By default,
+	// the last ten VerificationInfo are stored.
+	VerificationHistory VerificationInfoStack `json:"verificationHistory,omitempty" protobuf:"bytes,2,rep,name=verificationHistory"`
+}
+
+// UpdateOrPush updates the entry in the FreightCollection based on the
+// Warehouse name of the provided FreightReference. If no such entry exists, the
+// provided FreightReference is appended to the FreightCollection. This function
+// is not concurrency-safe.
+func (f *FreightCollection) UpdateOrPush(freight ...FreightReference) {
+	if f.Freight == nil {
+		f.Freight = make(map[string]FreightReference, len(freight))
+	}
+	for _, i := range freight {
+		f.Freight[i.Origin.String()] = i
+	}
+	freightNames := make([]string, 0, len(f.Freight))
+	for _, freight := range f.Freight {
+		freightNames = append(freightNames, freight.Name)
+	}
+	slices.Sort(freightNames)
+	f.ID = fmt.Sprintf("%x", sha1.Sum([]byte(strings.Join(freightNames, ","))))
+}
+
+// References returns a slice of FreightReference objects from the
+// FreightCollection. The slice is ordered by the origin of the
+// FreightReference objects.
+func (f *FreightCollection) References() []FreightReference {
+	if f == nil || len(f.Freight) == 0 {
+		return nil
+	}
+
+	var origins []string
+	for o := range f.Freight {
+		origins = append(origins, o)
+	}
+	slices.Sort(origins)
+
+	var refs []FreightReference
+	for _, o := range origins {
+		refs = append(refs, f.Freight[o])
+	}
+	return refs
+}
+
+// FreightHistory is a linear list of FreightCollection items. The list is
+// ordered by the time at which the FreightCollection was recorded, with the
+// most recent (current) FreightCollection at the top of the list.
+type FreightHistory []*FreightCollection
+
+// Current returns the most recent (current) FreightCollection from the history.
+func (f *FreightHistory) Current() *FreightCollection {
+	if f == nil || len(*f) == 0 {
+		return nil
+	}
+	return (*f)[0]
+}
+
+// Record appends the provided FreightCollection as the most recent (current)
+// FreightCollection in the history. I.e. The provided FreightCollection becomes
+// the first item in the list. If the list grows beyond ten items, the bottom
+// items are removed.
+func (f *FreightHistory) Record(freight ...*FreightCollection) {
+	*f = append(freight, *f...)
+	f.truncate()
+}
+
+// truncate ensures the history does not grow beyond 10 items.
+func (f *FreightHistory) truncate() {
+	const maxSize = 10
+	if f != nil && len(*f) > maxSize {
+		*f = (*f)[:maxSize]
+	}
+}
+
+// FreightReferenceStack is a linear stack of FreightReferences.
+//
+// Deprecated: Use FreightHistory instead.
 type FreightReferenceStack []FreightReference
 
 // Push appends the provided FreightReference to the top of the stack. If the
@@ -706,7 +1040,7 @@ type PromotionReference struct {
 	// Name is the name of the Promotion
 	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
 	// Freight is the freight being promoted
-	Freight FreightReference `json:"freight" protobuf:"bytes,2,opt,name=freight"`
+	Freight *FreightReference `json:"freight,omitempty" protobuf:"bytes,2,opt,name=freight"`
 	// Status is the (optional) status of the promotion
 	Status *PromotionStatus `json:"status,omitempty" protobuf:"bytes,3,opt,name=status"`
 	// FinishedAt is the time at which the Promotion was completed.
@@ -757,8 +1091,8 @@ type AnalysisRunArgument struct {
 	Value string `json:"value,omitempty" protobuf:"bytes,2,opt,name=value"`
 }
 
-// VerificationInfo contains information about the currently running
-// Verification process.
+// VerificationInfo contains the details of an instance of a Verification
+// process.
 type VerificationInfo struct {
 	// ID is the identifier of the Verification process.
 	ID string `json:"id,omitempty" protobuf:"bytes,4,opt,name=id"`
