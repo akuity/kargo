@@ -23,7 +23,7 @@ import (
 	"github.com/akuity/kargo/internal/logging"
 )
 
-type podIdentityCredentialHelper struct {
+type managedIdentityCredentialHelper struct {
 	awsAccountID string
 
 	tokenCache *cache.Cache
@@ -37,27 +37,31 @@ type podIdentityCredentialHelper struct {
 	) (string, error)
 }
 
-// NewPodIdentityCredentialHelper returns an implementation of
+// NewManagedIdentityCredentialHelper returns an implementation of
 // credentials.Helper that utilizes a cache to avoid unnecessary calls to AWS.
-func NewPodIdentityCredentialHelper(ctx context.Context) credentials.Helper {
+func NewManagedIdentityCredentialHelper(ctx context.Context) credentials.Helper {
 	logger := logging.LoggerFromContext(ctx)
 	var awsAccountID string
-	if os.Getenv("AWS_CONTAINER_CREDENTIALS_FULL_URI") == "" {
-		logger.Info("AWS_CONTAINER_CREDENTIALS_FULL_URI not set; assuming EKS Pod Identity is not in use")
+	if os.Getenv("AWS_CONTAINER_CREDENTIALS_FULL_URI") != "" {
+		logger.Info("EKS Pod Identity appears to be in use")
+	} else if os.Getenv("AWS_ROLE_ARN") != "" && os.Getenv("AWS_WEB_IDENTITY_TOKEN_FILE") != "" {
+		logger.Info("AWS_WEB_IDENTITY_TOKEN_FILE and AWS_ROLE_ARN set; assuming IRSA is being used")
+	} else {
+		logger.Info("Neither AWS_CONTAINER_CREDENTIALS_FULL_URI nor AWS_WEB_IDENTITY_TOKEN_FILE " +
+			"and AWS_ROLE_ARN are set; assuming neither EKS Pod Identity nor IRSA are in use")
 		return nil
 	}
-	logger.Info("EKS Pod Identity appears to be in use")
 	cfg, err := config.LoadDefaultConfig(ctx)
 	if err != nil {
 		logger.Error(
-			err, "error loading AWS config; EKS Pod Identity integration will be disabled",
+			err, "error loading AWS config; AWS credentials integration will be disabled",
 		)
 	} else {
 		stsSvc := sts.NewFromConfig(cfg)
 		res, err := stsSvc.GetCallerIdentity(ctx, &sts.GetCallerIdentityInput{})
 		if err != nil {
 			logger.Error(
-				err, "error getting caller identity; EKS Pod Identity integration will be disabled",
+				err, "error getting caller identity; AWS credentials integration will be disabled",
 			)
 		} else {
 			logger.Debug(
@@ -67,7 +71,7 @@ func NewPodIdentityCredentialHelper(ctx context.Context) credentials.Helper {
 			awsAccountID = *res.Account
 		}
 	}
-	p := &podIdentityCredentialHelper{
+	p := &managedIdentityCredentialHelper{
 		awsAccountID: awsAccountID,
 		tokenCache: cache.New(
 			// Tokens live for 12 hours. We'll hang on to them for 10.
@@ -79,7 +83,7 @@ func NewPodIdentityCredentialHelper(ctx context.Context) credentials.Helper {
 	return p.getCredentials
 }
 
-func (p *podIdentityCredentialHelper) getCredentials(
+func (p *managedIdentityCredentialHelper) getCredentials(
 	ctx context.Context,
 	project string,
 	credType credentials.Type,
@@ -129,7 +133,7 @@ func (p *podIdentityCredentialHelper) getCredentials(
 	return decodeAuthToken(encodedToken)
 }
 
-func (p *podIdentityCredentialHelper) tokenCacheKey(region, project string) string {
+func (p *managedIdentityCredentialHelper) tokenCacheKey(region, project string) string {
 	return fmt.Sprintf(
 		"%x",
 		sha256.Sum256([]byte(
@@ -141,7 +145,7 @@ func (p *podIdentityCredentialHelper) tokenCacheKey(region, project string) stri
 // getAuthToken returns an ECR authorization token obtained by assuming a
 // project-specific IAM role and using that to obtain a short-lived ECR access
 // token.
-func (p *podIdentityCredentialHelper) getAuthToken(
+func (p *managedIdentityCredentialHelper) getAuthToken(
 	ctx context.Context,
 	region string,
 	project string,

@@ -26,7 +26,7 @@ func TestPodIdentityCredentialHelper(t *testing.T) {
 
 	warmTokenCache := cache.New(0, 0)
 	warmTokenCache.Set(
-		(&podIdentityCredentialHelper{}).tokenCacheKey(testRegion, testProject),
+		(&managedIdentityCredentialHelper{}).tokenCacheKey(testRegion, testProject),
 		testEncodedToken,
 		cache.DefaultExpiration,
 	)
@@ -35,13 +35,13 @@ func TestPodIdentityCredentialHelper(t *testing.T) {
 		name       string
 		credType   credentials.Type
 		repoURL    string
-		helper     *podIdentityCredentialHelper
+		helper     *managedIdentityCredentialHelper
 		assertions func(*testing.T, *credentials.Credentials, *cache.Cache, error)
 	}{
 		{
 			name:     "cred type is not image",
 			credType: credentials.TypeGit,
-			helper: &podIdentityCredentialHelper{
+			helper: &managedIdentityCredentialHelper{
 				awsAccountID: testAWSAccountID,
 			},
 			assertions: func(t *testing.T, creds *credentials.Credentials, _ *cache.Cache, err error) {
@@ -53,7 +53,7 @@ func TestPodIdentityCredentialHelper(t *testing.T) {
 			name:     "EKS Pod Identity not in use",
 			credType: credentials.TypeImage,
 			repoURL:  testRepoURL,
-			helper:   &podIdentityCredentialHelper{},
+			helper:   &managedIdentityCredentialHelper{},
 			assertions: func(t *testing.T, creds *credentials.Credentials, _ *cache.Cache, err error) {
 				require.NoError(t, err)
 				require.Nil(t, creds)
@@ -63,7 +63,7 @@ func TestPodIdentityCredentialHelper(t *testing.T) {
 			name:     "repo URL does not match ECR URL regex",
 			credType: credentials.TypeImage,
 			repoURL:  "ghcr.io/fake-org/fake-repo",
-			helper: &podIdentityCredentialHelper{
+			helper: &managedIdentityCredentialHelper{
 				awsAccountID: testAWSAccountID,
 			},
 			assertions: func(t *testing.T, creds *credentials.Credentials, _ *cache.Cache, err error) {
@@ -75,7 +75,7 @@ func TestPodIdentityCredentialHelper(t *testing.T) {
 			name:     "helm repo URL does not match ECR URL regex",
 			credType: credentials.TypeHelm,
 			repoURL:  testRepoURL,
-			helper: &podIdentityCredentialHelper{
+			helper: &managedIdentityCredentialHelper{
 				awsAccountID: testAWSAccountID,
 			},
 			assertions: func(t *testing.T, creds *credentials.Credentials, _ *cache.Cache, err error) {
@@ -87,7 +87,7 @@ func TestPodIdentityCredentialHelper(t *testing.T) {
 			name:     "cache hit",
 			credType: credentials.TypeImage,
 			repoURL:  testRepoURL,
-			helper: &podIdentityCredentialHelper{
+			helper: &managedIdentityCredentialHelper{
 				awsAccountID: testAWSAccountID,
 				tokenCache:   warmTokenCache,
 			},
@@ -102,7 +102,7 @@ func TestPodIdentityCredentialHelper(t *testing.T) {
 			name:     "cache miss; error getting auth token",
 			credType: credentials.TypeImage,
 			repoURL:  testRepoURL,
-			helper: &podIdentityCredentialHelper{
+			helper: &managedIdentityCredentialHelper{
 				awsAccountID: testAWSAccountID,
 				tokenCache:   cache.New(0, 0),
 				getAuthTokenFn: func(context.Context, string, string) (string, error) {
@@ -118,7 +118,7 @@ func TestPodIdentityCredentialHelper(t *testing.T) {
 			name:     "cache miss; success",
 			credType: credentials.TypeImage,
 			repoURL:  testRepoURL,
-			helper: &podIdentityCredentialHelper{
+			helper: &managedIdentityCredentialHelper{
 				awsAccountID: testAWSAccountID,
 				tokenCache:   cache.New(0, 0),
 				getAuthTokenFn: func(context.Context, string, string) (string, error) {
@@ -131,7 +131,7 @@ func TestPodIdentityCredentialHelper(t *testing.T) {
 				require.Equal(t, testUsername, creds.Username)
 				require.Equal(t, testPassword, creds.Password)
 				_, found := c.Get(
-					(&podIdentityCredentialHelper{}).tokenCacheKey(testRegion, testProject),
+					(&managedIdentityCredentialHelper{}).tokenCacheKey(testRegion, testProject),
 				)
 				require.True(t, found)
 			},
@@ -140,7 +140,7 @@ func TestPodIdentityCredentialHelper(t *testing.T) {
 			name:     "cache miss; success (helm)",
 			credType: credentials.TypeHelm,
 			repoURL:  fmt.Sprintf("oci://%s", testRepoURL),
-			helper: &podIdentityCredentialHelper{
+			helper: &managedIdentityCredentialHelper{
 				awsAccountID: testAWSAccountID,
 				tokenCache:   cache.New(0, 0),
 				getAuthTokenFn: func(context.Context, string, string) (string, error) {
@@ -153,7 +153,7 @@ func TestPodIdentityCredentialHelper(t *testing.T) {
 				require.Equal(t, testUsername, creds.Username)
 				require.Equal(t, testPassword, creds.Password)
 				_, found := c.Get(
-					(&podIdentityCredentialHelper{}).tokenCacheKey(testRegion, testProject),
+					(&managedIdentityCredentialHelper{}).tokenCacheKey(testRegion, testProject),
 				)
 				require.True(t, found)
 			},
