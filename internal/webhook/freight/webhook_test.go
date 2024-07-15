@@ -16,6 +16,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/apiserver/pkg/authentication/serviceaccount"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -106,6 +107,18 @@ func TestDefault(t *testing.T) {
 			},
 		},
 		{
+			name:    "create with empty name",
+			op:      admissionv1.Create,
+			webhook: &webhook{},
+			freight: &kargoapi.Freight{
+				Alias: "fake-alias",
+			},
+			assertions: func(t *testing.T, freight *kargoapi.Freight, err error) {
+				require.NoError(t, err)
+				require.NotEmpty(t, freight.Name)
+			},
+		},
+		{
 			name:    "update with empty alias",
 			op:      admissionv1.Update,
 			webhook: &webhook{},
@@ -118,7 +131,6 @@ func TestDefault(t *testing.T) {
 			},
 			assertions: func(t *testing.T, freight *kargoapi.Freight, err error) {
 				require.NoError(t, err)
-				require.NotEmpty(t, freight.Name)
 				require.Empty(t, freight.Alias)
 				_, ok := freight.Labels[kargoapi.AliasLabelKey]
 				require.False(t, ok)
@@ -532,7 +544,7 @@ func TestValidateUpdate(t *testing.T) {
 			},
 			assertions: func(t *testing.T, _ *fakeevent.EventRecorder, err error) {
 				require.ErrorContains(t, err, "is invalid")
-				require.ErrorContains(t, err, "freight is immutable")
+				require.ErrorContains(t, err, "Freight is immutable")
 			},
 		},
 
@@ -567,7 +579,7 @@ func TestValidateUpdate(t *testing.T) {
 			},
 			assertions: func(t *testing.T, _ *fakeevent.EventRecorder, err error) {
 				require.ErrorContains(t, err, "is invalid")
-				require.ErrorContains(t, err, "freight is immutable")
+				require.ErrorContains(t, err, "Freight is immutable")
 			},
 		},
 		{
@@ -1037,6 +1049,121 @@ func TestValidateFreightArtifacts(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			err := validateFreightArtifacts(testCase.freight, testCase.warehouse)
 			testCase.assertions(t, err)
+		})
+	}
+}
+
+func TestCompareFreight(t *testing.T) {
+	tests := []struct {
+		name       string
+		old        *kargoapi.Freight
+		new        *kargoapi.Freight
+		assertions func(*testing.T, *kargoapi.Freight, *field.Path, any, bool)
+	}{
+		{
+			name: "Equal Freights",
+			old: &kargoapi.Freight{
+				Warehouse: "warehouse1",
+				Commits:   []kargoapi.GitCommit{{ID: "commit1"}}, Images: []kargoapi.Image{{RepoURL: "image1"}},
+				Charts: []kargoapi.Chart{{Name: "chart1"}},
+			},
+			new: &kargoapi.Freight{
+				Warehouse: "warehouse1",
+				Commits:   []kargoapi.GitCommit{{ID: "commit1"}},
+				Images:    []kargoapi.Image{{RepoURL: "image1"}}, Charts: []kargoapi.Chart{{Name: "chart1"}},
+			},
+			assertions: func(t *testing.T, _ *kargoapi.Freight, path *field.Path, val any, eq bool) {
+				require.Nil(t, path)
+				require.Nil(t, val)
+				require.True(t, eq)
+			},
+		},
+		{
+			name: "different origin",
+			old: &kargoapi.Freight{
+				Origin: kargoapi.FreightOrigin{
+					Kind: kargoapi.FreightOriginKindWarehouse,
+					Name: "warehouse1",
+				},
+			},
+			new: &kargoapi.Freight{
+				Origin: kargoapi.FreightOrigin{
+					Kind: kargoapi.FreightOriginKindWarehouse,
+					Name: "warehouse2",
+				},
+			},
+			assertions: func(t *testing.T, freight *kargoapi.Freight, path *field.Path, val any, eq bool) {
+				require.Equal(t, field.NewPath("origin"), path)
+				require.Equal(t, freight.Origin, val)
+				require.False(t, eq)
+			},
+		},
+		{
+			name: "different number of commits",
+			old:  &kargoapi.Freight{Commits: []kargoapi.GitCommit{{ID: "commit1"}}},
+			new:  &kargoapi.Freight{Commits: []kargoapi.GitCommit{{ID: "commit1"}, {ID: "commit2"}}},
+			assertions: func(t *testing.T, freight *kargoapi.Freight, path *field.Path, val any, eq bool) {
+				require.Equal(t, field.NewPath("commits"), path)
+				require.Equal(t, freight.Commits, val)
+				require.False(t, eq)
+			},
+		},
+		{
+			name: "different commit contents",
+			old:  &kargoapi.Freight{Commits: []kargoapi.GitCommit{{ID: "commit1"}, {ID: "commit2"}}},
+			new:  &kargoapi.Freight{Commits: []kargoapi.GitCommit{{ID: "commit1"}, {ID: "commit3"}}},
+			assertions: func(t *testing.T, freight *kargoapi.Freight, path *field.Path, val any, eq bool) {
+				require.Equal(t, field.NewPath("commits").Index(1), path)
+				require.Equal(t, freight.Commits[1], val)
+				require.False(t, eq)
+			},
+		},
+		{
+			name: "different number of images",
+			old:  &kargoapi.Freight{Images: []kargoapi.Image{{RepoURL: "image1"}}},
+			new:  &kargoapi.Freight{Images: []kargoapi.Image{{RepoURL: "image1"}, {RepoURL: "image2"}}},
+			assertions: func(t *testing.T, freight *kargoapi.Freight, path *field.Path, val any, eq bool) {
+				require.Equal(t, field.NewPath("images"), path)
+				require.Equal(t, freight.Images, val)
+				require.False(t, eq)
+			},
+		},
+		{
+			name: "different image contents",
+			old:  &kargoapi.Freight{Images: []kargoapi.Image{{RepoURL: "image1"}}},
+			new:  &kargoapi.Freight{Images: []kargoapi.Image{{RepoURL: "image2"}}},
+			assertions: func(t *testing.T, freight *kargoapi.Freight, path *field.Path, val any, eq bool) {
+				require.Equal(t, field.NewPath("images").Index(0), path)
+				require.Equal(t, freight.Images[0], val)
+				require.False(t, eq)
+			},
+		},
+		{
+			name: "different number of charts",
+			old:  &kargoapi.Freight{Charts: []kargoapi.Chart{{Name: "chart1"}}},
+			new:  &kargoapi.Freight{Charts: []kargoapi.Chart{{Name: "chart1"}, {Name: "chart2"}}},
+			assertions: func(t *testing.T, freight *kargoapi.Freight, path *field.Path, val any, eq bool) {
+				require.Equal(t, field.NewPath("charts"), path)
+				require.Equal(t, freight.Charts, val)
+				require.False(t, eq)
+			},
+		},
+		{
+			name: "different chart contents",
+			old:  &kargoapi.Freight{Charts: []kargoapi.Chart{{Name: "chart1"}, {Name: "chart2"}, {Name: "chart3"}}},
+			new:  &kargoapi.Freight{Charts: []kargoapi.Chart{{Name: "chart1"}, {Name: "chart2"}, {Name: "chart4"}}},
+			assertions: func(t *testing.T, freight *kargoapi.Freight, path *field.Path, val any, eq bool) {
+				require.Equal(t, field.NewPath("charts").Index(2), path)
+				require.Equal(t, freight.Charts[2], val)
+				require.False(t, eq)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			path, val, eq := compareFreight(tt.old, tt.new)
+			tt.assertions(t, tt.new, path, val, eq)
 		})
 	}
 }

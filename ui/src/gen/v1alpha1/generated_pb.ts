@@ -1933,7 +1933,7 @@ export class GitCommit extends Message<GitCommit> {
 
   /**
    * HealthCheckCommit is the ID of a specific commit. When specified,
-   * assessments of Stage health will used this value (instead of ID) when
+   * assessments of Stage health will use this value (instead of ID) when
    * determining if applicable sources of Argo CD Application resources
    * associated with the Stage are or are not synced to this commit. Note that
    * there are cases (as in that of Kargo Render being utilized as a promotion

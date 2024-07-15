@@ -864,7 +864,7 @@
                     "type": "string"
                   },
                   "healthCheckCommit": {
-                    "description": "HealthCheckCommit is the ID of a specific commit. When specified,\nassessments of Stage health will used this value (instead of ID) when\ndetermining if applicable sources of Argo CD Application resources\nassociated with the Stage are or are not synced to this commit. Note that\nthere are cases (as in that of Kargo Render being utilized as a promotion\nmechanism) wherein the value of this field may differ from the commit ID\nfound in the ID field.",
+                    "description": "HealthCheckCommit is the ID of a specific commit. When specified,\nassessments of Stage health will use this value (instead of ID) when\ndetermining if applicable sources of Argo CD Application resources\nassociated with the Stage are or are not synced to this commit. Note that\nthere are cases (as in that of Kargo Render being utilized as a promotion\nmechanism) wherein the value of this field may differ from the commit ID\nfound in the ID field.",
                     "type": "string"
                   },
                   "id": {
@@ -1111,7 +1111,7 @@
                         "type": "string"
                       },
                       "healthCheckCommit": {
-                        "description": "HealthCheckCommit is the ID of a specific commit. When specified,\nassessments of Stage health will used this value (instead of ID) when\ndetermining if applicable sources of Argo CD Application resources\nassociated with the Stage are or are not synced to this commit. Note that\nthere are cases (as in that of Kargo Render being utilized as a promotion\nmechanism) wherein the value of this field may differ from the commit ID\nfound in the ID field.",
+                        "description": "HealthCheckCommit is the ID of a specific commit. When specified,\nassessments of Stage health will use this value (instead of ID) when\ndetermining if applicable sources of Argo CD Application resources\nassociated with the Stage are or are not synced to this commit. Note that\nthere are cases (as in that of Kargo Render being utilized as a promotion\nmechanism) wherein the value of this field may differ from the commit ID\nfound in the ID field.",
                         "type": "string"
                       },
                       "id": {
@@ -1362,7 +1362,7 @@
                             "type": "string"
                           },
                           "healthCheckCommit": {
-                            "description": "HealthCheckCommit is the ID of a specific commit. When specified,\nassessments of Stage health will used this value (instead of ID) when\ndetermining if applicable sources of Argo CD Application resources\nassociated with the Stage are or are not synced to this commit. Note that\nthere are cases (as in that of Kargo Render being utilized as a promotion\nmechanism) wherein the value of this field may differ from the commit ID\nfound in the ID field.",
+                            "description": "HealthCheckCommit is the ID of a specific commit. When specified,\nassessments of Stage health will use this value (instead of ID) when\ndetermining if applicable sources of Argo CD Application resources\nassociated with the Stage are or are not synced to this commit. Note that\nthere are cases (as in that of Kargo Render being utilized as a promotion\nmechanism) wherein the value of this field may differ from the commit ID\nfound in the ID field.",
                             "type": "string"
                           },
                           "id": {
@@ -1609,7 +1609,7 @@
                                   "type": "string"
                                 },
                                 "healthCheckCommit": {
-                                  "description": "HealthCheckCommit is the ID of a specific commit. When specified,\nassessments of Stage health will used this value (instead of ID) when\ndetermining if applicable sources of Argo CD Application resources\nassociated with the Stage are or are not synced to this commit. Note that\nthere are cases (as in that of Kargo Render being utilized as a promotion\nmechanism) wherein the value of this field may differ from the commit ID\nfound in the ID field.",
+                                  "description": "HealthCheckCommit is the ID of a specific commit. When specified,\nassessments of Stage health will use this value (instead of ID) when\ndetermining if applicable sources of Argo CD Application resources\nassociated with the Stage are or are not synced to this commit. Note that\nthere are cases (as in that of Kargo Render being utilized as a promotion\nmechanism) wherein the value of this field may differ from the commit ID\nfound in the ID field.",
                                   "type": "string"
                                 },
                                 "id": {
@@ -1954,7 +1954,7 @@
                             "type": "string"
                           },
                           "healthCheckCommit": {
-                            "description": "HealthCheckCommit is the ID of a specific commit. When specified,\nassessments of Stage health will used this value (instead of ID) when\ndetermining if applicable sources of Argo CD Application resources\nassociated with the Stage are or are not synced to this commit. Note that\nthere are cases (as in that of Kargo Render being utilized as a promotion\nmechanism) wherein the value of this field may differ from the commit ID\nfound in the ID field.",
+                            "description": "HealthCheckCommit is the ID of a specific commit. When specified,\nassessments of Stage health will use this value (instead of ID) when\ndetermining if applicable sources of Argo CD Application resources\nassociated with the Stage are or are not synced to this commit. Note that\nthere are cases (as in that of Kargo Render being utilized as a promotion\nmechanism) wherein the value of this field may differ from the commit ID\nfound in the ID field.",
                             "type": "string"
                           },
                           "id": {
@@ -2340,7 +2340,7 @@
                       "type": "string"
                     },
                     "healthCheckCommit": {
-                      "description": "HealthCheckCommit is the ID of a specific commit. When specified,\nassessments of Stage health will used this value (instead of ID) when\ndetermining if applicable sources of Argo CD Application resources\nassociated with the Stage are or are not synced to this commit. Note that\nthere are cases (as in that of Kargo Render being utilized as a promotion\nmechanism) wherein the value of this field may differ from the commit ID\nfound in the ID field.",
+                      "description": "HealthCheckCommit is the ID of a specific commit. When specified,\nassessments of Stage health will use this value (instead of ID) when\ndetermining if applicable sources of Argo CD Application resources\nassociated with the Stage are or are not synced to this commit. Note that\nthere are cases (as in that of Kargo Render being utilized as a promotion\nmechanism) wherein the value of this field may differ from the commit ID\nfound in the ID field.",
                       "type": "string"
                     },
                     "id": {
@@ -2593,7 +2593,7 @@
                         "type": "string"
                       },
                       "healthCheckCommit": {
-                        "description": "HealthCheckCommit is the ID of a specific commit. When specified,\nassessments of Stage health will used this value (instead of ID) when\ndetermining if applicable sources of Argo CD Application resources\nassociated with the Stage are or are not synced to this commit. Note that\nthere are cases (as in that of Kargo Render being utilized as a promotion\nmechanism) wherein the value of this field may differ from the commit ID\nfound in the ID field.",
+                        "description": "HealthCheckCommit is the ID of a specific commit. When specified,\nassessments of Stage health will use this value (instead of ID) when\ndetermining if applicable sources of Argo CD Application resources\nassociated with the Stage are or are not synced to this commit. Note that\nthere are cases (as in that of Kargo Render being utilized as a promotion\nmechanism) wherein the value of this field may differ from the commit ID\nfound in the ID field.",
                         "type": "string"
                       },
                       "id": {
@@ -2844,7 +2844,7 @@
                             "type": "string"
                           },
                           "healthCheckCommit": {
-                            "description": "HealthCheckCommit is the ID of a specific commit. When specified,\nassessments of Stage health will used this value (instead of ID) when\ndetermining if applicable sources of Argo CD Application resources\nassociated with the Stage are or are not synced to this commit. Note that\nthere are cases (as in that of Kargo Render being utilized as a promotion\nmechanism) wherein the value of this field may differ from the commit ID\nfound in the ID field.",
+                            "description": "HealthCheckCommit is the ID of a specific commit. When specified,\nassessments of Stage health will use this value (instead of ID) when\ndetermining if applicable sources of Argo CD Application resources\nassociated with the Stage are or are not synced to this commit. Note that\nthere are cases (as in that of Kargo Render being utilized as a promotion\nmechanism) wherein the value of this field may differ from the commit ID\nfound in the ID field.",
                             "type": "string"
                           },
                           "id": {
@@ -3091,7 +3091,7 @@
                                   "type": "string"
                                 },
                                 "healthCheckCommit": {
-                                  "description": "HealthCheckCommit is the ID of a specific commit. When specified,\nassessments of Stage health will used this value (instead of ID) when\ndetermining if applicable sources of Argo CD Application resources\nassociated with the Stage are or are not synced to this commit. Note that\nthere are cases (as in that of Kargo Render being utilized as a promotion\nmechanism) wherein the value of this field may differ from the commit ID\nfound in the ID field.",
+                                  "description": "HealthCheckCommit is the ID of a specific commit. When specified,\nassessments of Stage health will use this value (instead of ID) when\ndetermining if applicable sources of Argo CD Application resources\nassociated with the Stage are or are not synced to this commit. Note that\nthere are cases (as in that of Kargo Render being utilized as a promotion\nmechanism) wherein the value of this field may differ from the commit ID\nfound in the ID field.",
                                   "type": "string"
                                 },
                                 "id": {
