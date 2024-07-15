@@ -524,3 +524,177 @@ func TestVerificationInfoStack_UpdateOrPush(t *testing.T) {
 		})
 	}
 }
+
+func TestImageDeepEquals(t *testing.T) {
+	testCases := []struct {
+		name           string
+		a              *Image
+		b              *Image
+		expectedResult bool
+	}{
+		{
+			name:           "a and b both nil",
+			expectedResult: true,
+		},
+		{
+			name:           "only a is nil",
+			b:              &Image{},
+			expectedResult: false,
+		},
+		{
+			name:           "only b is nil",
+			a:              &Image{},
+			expectedResult: false,
+		},
+		{
+			name: "repo URLs differ",
+			a: &Image{
+				RepoURL: "foo",
+			},
+			b: &Image{
+				RepoURL: "bar",
+			},
+			expectedResult: false,
+		},
+		{
+			name: "git repo URLs differ",
+			a: &Image{
+				RepoURL:    "fake-url",
+				GitRepoURL: "foo",
+			},
+			b: &Image{
+				RepoURL:    "fake-url",
+				GitRepoURL: "bar",
+			},
+			expectedResult: false,
+		},
+		{
+			name: "image tags differ",
+			a: &Image{
+				RepoURL: "fake-url",
+				Tag:     "foo",
+			},
+			b: &Image{
+				RepoURL: "fake-url",
+				Tag:     "bar",
+			},
+			expectedResult: false,
+		},
+		{
+			name: "image digests differ",
+			a: &Image{
+				RepoURL: "fake-url",
+				Digest:  "foo",
+			},
+			b: &Image{
+				RepoURL: "fake-url",
+				Digest:  "bar",
+			},
+			expectedResult: false,
+		},
+		{
+			name: "perfect match",
+			a: &Image{
+				RepoURL:    "fake-url",
+				GitRepoURL: "fake-repo-url",
+				Tag:        "fake-tag",
+				Digest:     "fake-digest",
+			},
+			b: &Image{
+				RepoURL:    "fake-url",
+				GitRepoURL: "fake-repo-url",
+				Tag:        "fake-tag",
+				Digest:     "fake-digest",
+			},
+			expectedResult: true,
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			require.Equal(t, testCase.expectedResult, testCase.a.DeepEquals(testCase.b))
+			require.Equal(t, testCase.expectedResult, testCase.b.DeepEquals(testCase.a))
+		})
+	}
+}
+
+func TestChartDeepEquals(t *testing.T) {
+	testCases := []struct {
+		name           string
+		a              *Chart
+		b              *Chart
+		expectedResult bool
+	}{
+		{
+			name:           "a and b both nil",
+			expectedResult: true,
+		},
+		{
+			name:           "only a is nil",
+			b:              &Chart{},
+			expectedResult: false,
+		},
+		{
+			name:           "only b is nil",
+			a:              &Chart{},
+			expectedResult: false,
+		},
+		{
+			name: "repo URLs differ",
+			a: &Chart{
+				RepoURL: "foo",
+			},
+			b: &Chart{
+				RepoURL: "bar",
+			},
+			expectedResult: false,
+		},
+		{
+			name: "chart names differ",
+			a: &Chart{
+				RepoURL: "fake-url",
+				Name:    "foo",
+			},
+			b: &Chart{
+				RepoURL: "fake-url",
+				Name:    "bar",
+			},
+			expectedResult: false,
+		},
+		{
+			name: "chart versions differ",
+			a: &Chart{
+				RepoURL: "fake-url",
+				Name:    "fake-name",
+				Version: "v1.0.0",
+			},
+			b: &Chart{
+				RepoURL: "fake-url",
+				Name:    "fake-name",
+				Version: "v2.0.0",
+			},
+			expectedResult: false,
+		},
+		{
+			name: "perfect match",
+			a: &Chart{
+				RepoURL: "fake-url",
+				Name:    "fake-name",
+				Version: "v1.0.0",
+			},
+			b: &Chart{
+				RepoURL: "fake-url",
+				Name:    "fake-name",
+				Version: "v1.0.0",
+			},
+			expectedResult: true,
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			require.Equal(t, testCase.expectedResult, testCase.a.DeepEquals(testCase.b))
+			require.Equal(t, testCase.expectedResult, testCase.b.DeepEquals(testCase.a))
+		})
+	}
+}

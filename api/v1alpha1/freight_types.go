@@ -128,7 +128,7 @@ type GitCommit struct {
 	// resolved to this commit.
 	Tag string `json:"tag,omitempty" protobuf:"bytes,4,opt,name=tag"`
 	// HealthCheckCommit is the ID of a specific commit. When specified,
-	// assessments of Stage health will used this value (instead of ID) when
+	// assessments of Stage health will use this value (instead of ID) when
 	// determining if applicable sources of Argo CD Application resources
 	// associated with the Stage are or are not synced to this commit. Note that
 	// there are cases (as in that of Kargo Render being utilized as a promotion
@@ -142,6 +142,37 @@ type GitCommit struct {
 	Author string `json:"author,omitempty" protobuf:"bytes,7,opt,name=author"`
 	// Committer is the person who committed the commit.
 	Committer string `json:"committer,omitempty" protobuf:"bytes,8,opt,name=committer"`
+}
+
+// DeepEquals returns a bool indicating whether the receiver deep-equals the
+// provided GitCommit. I.e., all fields must be equal.
+func (g *GitCommit) DeepEquals(other *GitCommit) bool {
+	if g == nil && other == nil {
+		return true
+	}
+	if g == nil || other == nil {
+		return false
+	}
+	return g.RepoURL == other.RepoURL &&
+		g.ID == other.ID &&
+		g.Branch == other.Branch &&
+		g.Tag == other.Tag &&
+		g.HealthCheckCommit == other.HealthCheckCommit &&
+		g.Message == other.Message &&
+		g.Author == other.Author &&
+		g.Committer == other.Committer
+}
+
+// Equals returns a bool indicating whether two GitCommits are equivalent.
+func (g *GitCommit) Equals(rhs *GitCommit) bool {
+	if g == nil && rhs == nil {
+		return true
+	}
+	if (g == nil && rhs != nil) || (g != nil && rhs == nil) {
+		return false
+	}
+	// If we get to here, both operands are non-nil
+	return g.RepoURL == rhs.RepoURL && g.ID == rhs.ID
 }
 
 // FreightStatus describes a piece of Freight's most recently observed state.

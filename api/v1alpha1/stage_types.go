@@ -947,6 +947,21 @@ type Image struct {
 	Digest string `json:"digest,omitempty" protobuf:"bytes,4,opt,name=digest"`
 }
 
+// DeepEquals returns a bool indicating whether the receiver deep-equals the
+// provided Image. I.e., all fields must be equal.
+func (i *Image) DeepEquals(other *Image) bool {
+	if i == nil && other == nil {
+		return true
+	}
+	if i == nil || other == nil {
+		return false
+	}
+	return i.RepoURL == other.RepoURL &&
+		i.GitRepoURL == other.GitRepoURL &&
+		i.Tag == other.Tag &&
+		i.Digest == other.Digest
+}
+
 // Chart describes a specific version of a Helm chart.
 type Chart struct {
 	// RepoURL specifies the URL of a Helm chart repository. Classic chart
@@ -962,16 +977,18 @@ type Chart struct {
 	Version string `json:"version,omitempty" protobuf:"bytes,3,opt,name=version"`
 }
 
-// Equals returns a bool indicating whether two GitCommits are equivalent.
-func (g *GitCommit) Equals(rhs *GitCommit) bool {
-	if g == nil && rhs == nil {
+// DeepEquals returns a bool indicating whether the receiver deep-equals the
+// provided Chart. I.e., all fields must be equal.
+func (c *Chart) DeepEquals(other *Chart) bool {
+	if c == nil && other == nil {
 		return true
 	}
-	if (g == nil && rhs != nil) || (g != nil && rhs == nil) {
+	if c == nil || other == nil {
 		return false
 	}
-	// If we get to here, both operands are non-nil
-	return g.RepoURL == rhs.RepoURL && g.ID == rhs.ID
+	return c.RepoURL == other.RepoURL &&
+		c.Name == other.Name &&
+		c.Version == other.Version
 }
 
 // Health describes the health of a Stage.
