@@ -116,17 +116,20 @@ func newWebhook(
 
 func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 	freight := obj.(*kargoapi.Freight) // nolint: forcetypeassert
-	// Re-calculate ID in case it wasn't set correctly to begin with -- possible
-	// if/when we allow users to create their own Freight.
-	freight.Name = freight.GenerateID()
 
-	// Sync the convenience alias field with the alias label
 	req, err := admission.RequestFromContext(ctx)
 	if err != nil {
 		return apierrors.NewInternalError(
 			fmt.Errorf("error getting admission request from context: %w", err),
 		)
 	}
+	if req.Operation == admissionv1.Create {
+		// Re-calculate ID in case it wasn't set correctly to begin with -- possible
+		// if/when we allow users to create their own Freight.
+		freight.Name = freight.GenerateID()
+	}
+
+	// Sync the convenience alias field with the alias label
 	if freight.Labels == nil {
 		freight.Labels = make(map[string]string, 1)
 	}
@@ -252,18 +255,16 @@ func (w *webhook) ValidateUpdate(
 		)
 	}
 
-	// Freight is meant to be immutable. We only need to compare the Name to a
-	// newly generated ID because these are both fingerprints that are
-	// deterministically derived from the artifacts referenced by the Freight.
-	if newFreight.Name != newFreight.GenerateID() || oldFreight.Warehouse != newFreight.Warehouse {
+	// Freight is meant to be immutable.
+	if changedPath, change, ok := compareFreight(oldFreight, newFreight); !ok {
 		return nil, apierrors.NewInvalid(
 			freightGroupKind,
 			oldFreight.Name,
 			field.ErrorList{
 				field.Invalid(
-					field.NewPath(""),
-					oldFreight,
-					"freight is immutable",
+					changedPath,
+					change,
+					"Freight is immutable",
 				),
 			},
 		)
@@ -500,4 +501,42 @@ func validateFreightArtifacts(
 	}
 
 	return nil
+}
+
+// compareFreight compares two Freight objects and returns the first field path
+// that differs between them, the new value, and a boolean indicating whether
+// the two Freight objects are equal.
+func compareFreight(old, new *kargoapi.Freight) (*field.Path, any, bool) {
+	if old.Warehouse != new.Warehouse {
+		return field.NewPath("warehouse"), new.Warehouse, false
+	}
+
+	if len(old.Commits) != len(new.Commits) {
+		return field.NewPath("commits"), new.Commits, false
+	}
+	for i, commit := range old.Commits {
+		if !commit.DeepEquals(&new.Commits[i]) {
+			return field.NewPath("commits").Index(i), new.Commits[i], false
+		}
+	}
+
+	if len(old.Images) != len(new.Images) {
+		return field.NewPath("images"), new.Images, false
+	}
+	for i, image := range old.Images {
+		if !image.DeepEquals(&new.Images[i]) {
+			return field.NewPath("images").Index(i), new.Images[i], false
+		}
+	}
+
+	if len(old.Charts) != len(new.Charts) {
+		return field.NewPath("charts"), new.Charts, false
+	}
+	for i, chart := range old.Charts {
+		if !chart.DeepEquals(&new.Charts[i]) {
+			return field.NewPath("charts").Index(i), new.Charts[i], false
+		}
+	}
+
+	return nil, nil, true
 }

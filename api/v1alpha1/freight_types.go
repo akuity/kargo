@@ -136,6 +136,37 @@ type GitCommit struct {
 	Committer string `json:"committer,omitempty" protobuf:"bytes,8,opt,name=committer"`
 }
 
+// DeepEquals returns a bool indicating whether the receiver deep-equals the
+// provided GitCommit. I.e., all fields must be equal.
+func (g *GitCommit) DeepEquals(other *GitCommit) bool {
+	if g == nil && other == nil {
+		return true
+	}
+	if g == nil || other == nil {
+		return false
+	}
+	return g.RepoURL == other.RepoURL &&
+		g.ID == other.ID &&
+		g.Branch == other.Branch &&
+		g.Tag == other.Tag &&
+		g.HealthCheckCommit == other.HealthCheckCommit &&
+		g.Message == other.Message &&
+		g.Author == other.Author &&
+		g.Committer == other.Committer
+}
+
+// Equals returns a bool indicating whether two GitCommits are equivalent.
+func (g *GitCommit) Equals(rhs *GitCommit) bool {
+	if g == nil && rhs == nil {
+		return true
+	}
+	if (g == nil && rhs != nil) || (g != nil && rhs == nil) {
+		return false
+	}
+	// If we get to here, both operands are non-nil
+	return g.RepoURL == rhs.RepoURL && g.ID == rhs.ID
+}
+
 // FreightStatus describes a piece of Freight's most recently observed state.
 type FreightStatus struct {
 	// VerifiedIn describes the Stages in which this Freight has been verified
