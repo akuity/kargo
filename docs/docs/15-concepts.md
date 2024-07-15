@@ -70,11 +70,11 @@ resource type.
 
 ### `Project` Resources
 
-As of Kargo `v0.4.0`, each Kargo project is represented by a cluster-scoped
-Kubernetes resource of type `Project`. Reconciliation of such a resource effects
-all boilerplate project initialization, including the creation of a
-specially-labeled `Namespace` with the same name as the `Project`. All resources
-belonging to a given `Project` should be grouped together in that `Namespace`.
+Each Kargo project is represented by a cluster-scoped Kubernetes resource of
+type `Project`. Reconciliation of such a resource effects all boilerplate
+project initialization, including the creation of a specially-labeled
+`Namespace` with the same name as the `Project`. All resources belonging to a
+given `Project` should be grouped together in that `Namespace`.
 
 A minimal `Project` resource looks like the following:
 
@@ -103,9 +103,9 @@ permitting users to create `Namespace` resources directly:
   Kargo projects _only_ without being granted more general permissions to create
   _any_ new `Namespace` directly.
 
-* In future releases, _additional_ boilerplate configuration will be created at
-  the time of `Project` creation. This will include things such as project-level
-  RBAC resources and `ServiceAccount` resources.
+* Boilerplate configuration is automatically created at the time of `Project`
+  creation. This includes things such as project-level RBAC resources and
+  `ServiceAccount` resources.
 :::
 
 :::info
@@ -117,7 +117,7 @@ and statistics in `Project` resources.
 
 A `Project` resource can additionally define project-level configuration. At
 present, this only includes **promotion policies** that describe which `Stage`s
-are eligible for automatic promotion of newly qualified `Freight`.
+are eligible for automatic promotion of newly available `Freight`.
 
 :::note
 Promotion policies are defined at the project-level because users with
@@ -130,7 +130,7 @@ the hands of someone like a "project admin."
 :::
 
 In the example below, the `test` and `uat` `Stage`s are eligible for automatic
-promotion of newly qualified `Freight`, but any other `Stage`s in the `Project`
+promotion of newly available `Freight`, but any other `Stage`s in the `Project`
 are not:
 
 ```yaml
@@ -152,7 +152,7 @@ Each Kargo stage is represented by a Kubernetes resource of type `Stage`.
 
 A `Stage` resource's `spec` field decomposes into three main areas of concern:
 
-* Subscriptions
+* Requested freight
 
 * Promotion mechanisms
 
@@ -160,32 +160,42 @@ A `Stage` resource's `spec` field decomposes into three main areas of concern:
 
 The following sections will explore each of these in greater detail.
 
-#### Subscriptions
+#### Requested Freight
 
-The `spec.subscriptions` field is used to describe the sources from which a
-`Stage` obtains `Freight`. These subscriptions can be to a single `Warehouse` or
-to one or more "upstream" `Stage` resources.
+The `spec.requestedFreight` field is used to describe one or more "types" of
+`Freight`, as specified by an `origin`, that the `Stage`'s promotion mechanisms
+will operate on, and the acceptable sources from which to obtain that `Freight`.
+Those sources may include the origin itself (e.g. a `Warehouse`) and/or any
+number of "upstream" `Stage` resources.
+
+:::info
+`Warehouse`s are the only type of origin at present, but it is anticipated that
+future versions of Kargo will introduce additional origin types. This is why
+"types" of `Freight` are described by an `origin` field having `kind` and `name`
+subfields instead of being described only by the name of a `Warehouse`.
+:::
 
 For each `Stage`, the Kargo controller will periodically check for `Freight`
-resources that are newly qualified for promotion to that `Stage`.
+resources that are newly available for promotion to that `Stage`.
 
-For any `Stage` subscribed directly to a `Warehouse`, _any_ new `Freight`
-resource from that `Warehouse` is tacitly considered to have been _verified_
-upstream, and is therefore immediately qualified for promotion to such a
-`Stage`.
+When a `Stage` accepts `Freight` directly from its origin, _all_ new `Freight`
+created by that origin (e.g. a `Warehouse` ) are immediately available for
+promotion to that `Stage`.
 
-For a `Stage` subscribed to one or more "upstream" `Stage` resources, `Freight`
-is qualified for promotion to that `Stage` after being _verified_ in at least
-one of the upstream `Stage`s. Alternatively, users with adequate permissions may
-manually _approve_ `Freight` for promotion to any given `Stage` without
-requiring upstream verification.
+When a `Stage` accepts `Freight` from one or more "upstream" `Stage` resources,
+`Freight` is considered available for promotion to that `Stage` only after being
+_verified_ in at least one of the upstream `Stage`s. Alternatively, users with
+adequate permissions may manually _approve_ `Freight` for promotion to any given
+`Stage` without requiring upstream verification.
 
 :::tip
 Explicit approvals are a useful method for applying the occasional "hotfix"
 without waiting for a `Freight` resource to traverse the entirety of a pipeline.
 :::
 
-In the following example, the `test` `Stage` subscribes to a single `Warehouse`:
+In the following example, the `test` `Stage` requests `Freight` that has
+originated from the `my-warehouse` `Warehouse` and indicates that it will accept
+new `Freight` _directly_ from that origin:
 
 ```yaml
 apiVersion: kargo.akuity.io/v1alpha1
@@ -194,12 +204,18 @@ metadata:
   name: test
   namespace: kargo-demo
 spec:
-  subscriptions:
-    warehouse: my-warehouse
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: my-warehouse
+    sources:
+      direct: true
   # ...
 ```
 
-In this example, the `uat` `Stage` subscribes to the `test` `Stage`:
+In this example, the `uat` `Stage` requests `Freight` that has originated from
+the `my-warehouse` `Warehouse`, but indicates that it will accept such `Freight`
+only after it has been _verified_ in the `test` `Stage`:
 
 ```yaml
 apiVersion: kargo.akuity.io/v1alpha1
@@ -208,11 +224,48 @@ metadata:
   name: uat
   namespace: kargo-demo
 spec:
-  subscriptions:
-    stages:
-    - test
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: my-warehouse
+    sources:
+      stages:
+      - test
   # ...
 ```
+
+Stages may also request `Freight` from multiple sources. The following example
+illustrates a `Stage` that requests `Freight` from both a `microservice-a` and
+`microservice-b` `Warehouse`:
+
+```yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: test
+  namespace: kargo-demo
+spec:
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: microservice-a
+    sources:
+      direct: true
+  - origin:
+      kind: Warehouse
+      name: microservice-b
+    sources:
+      direct: true
+  # ...
+```
+
+:::tip
+By requesting `Freight` from multiple sources, a `Stage` can effectively
+participate in _multiple pipelines_ that may each deliver different collections
+of artifacts independently of the others. At present, this is most useful for
+the delivery of microservices that are developed and deployed in parallel,
+although other uses of this feature are anticipated in the future.
+:::
 
 #### Promotion Mechanisms
 
@@ -232,26 +285,27 @@ Argo CD-based promotion mechanisms.
 
 Included among the Git-based promotion mechanisms is specialized support for:
 
-* Running `kustomize edit set image` for a specified directory, then committing
-  the changes, if any.
-
-* Updating the value of a key in a Helm values file, then committing the
+* Running `kustomize edit set image` for specific images in specified
+  directories to update the version of that image used, then committing the
   changes, if any.
 
-* Updating a `Chart.yaml` file in a Helm "umbrella chart," then committing the
-  changes, if any.
+* Updating the values of a keys in Helm values files to reference new versions
+  of specific images, then committing the changes, if any.
+
+* Updating `Chart.yaml` files in Helm charts to reference new versions of
+  specific chart dependencies, then committing the changes, if any.
 
 And among the Argo CD-based promotion mechanisms, there is specialized support
 for:
 
-* Updating image overrides in the `kustomize` section of a specified Argo CD
-  `Application` resource.
+* Updating the `kustomize.images` section of a specified Argo CD `Application`
+  resource to reference new versions of specific images.
 
-* Updating the value of a key in the `helm` section of a specified Argo CD
-  `Application` resource to point at a new Docker image.
+* Updating the `helm.parameters` section of a specified Argo CD `Application` to
+  reference new versions of specific images.
 
-* Updating a specified Argo CD `Application` resource's `targetRevision`
-  field(s) to point at a specific commit in a Git repository or a specific
+* Updating the `targetRevision` field of a specified Argo CD `Application`
+  resource to reference a specific commit in a Git repository or a specific
   version of a Helm chart.
 
 * Forcing a specified Argo CD `Application` to refresh and sync. (This is
@@ -264,7 +318,12 @@ aggregating the results of sync/health state for all such `Application`
 resources(s).
 :::
 
-The following example, shows that transitioning `Freight` into the `test`
+:::tip
+It is suggested that automatic syncing typically be disabled for Argo CD
+`Application` resources that are orchestrated by Kargo.
+:::
+
+The following example shows that transitioning `Freight` into the `test`
 `Stage` requires:
 
 1. Updating the `https://github.com/example/kargo-demo.git` repository by
@@ -294,6 +353,32 @@ spec:
     - appName: kargo-demo-test
       appNamespace: argocd
 ```
+
+:::info
+Promotion mechanisms can be thought of as expressing, "when I see this kind of
+artifact, I want to do this kind of thing with it." Because `Stage` resources
+may request different kinds of `Freight` from different sources, it is possible
+that, at times, there may be ambiguity over _what version_ of a given artifact
+a promotion mechanism should operate on.
+
+Consider, for instance, the case of two `Warehouse` resources, both subscribed
+to the _same_ GitOps monorepo, but each using different `includePaths` to
+effectively subscribe to manifest changes for only a single microservice. A
+`Stage` that requests `Freight` having originated from _both_ `Warehouses` will,
+when describing promotion mechanisms that operate on commits from the monorepo,
+need to specify whether to operate on the commit found by one `Warehouse` and
+included in one of the requested pieces of `Freight`, or the commit found by the
+other `Warehouse` and included in the _other_ requested piece of `Freight`.
+
+To this end, all promotion mechanisms accept `origin.kind` and `origin.name`
+fields to permit this kind of disambiguation. These fields need not be specified
+when there is no possible ambiguity, but they become required when Kargo can not
+infer, on its own, the correct artifact on which to operate.
+
+To prevent disambiguation from becoming overly burdensome in such cases, all
+"child" promotion mechanisms also inherit `origin` settings from their parent
+promotion mechanism and may also override them as necessary.
+:::
 
 #### Verifications
 
@@ -397,78 +482,105 @@ A `Stage` resource's `status` field records:
 
 * The current phase of the `Stage` resource's lifecycle.
 
-* Information about any in-progress `Promotion`.
+* Information about the last `Promotion` and any in-progress `Promotion`.
 
-* The `Freight` currently deployed to the `Stage`.
-
-* History of `Freight` that has been deployed to the `Stage`. (From most to
-  least recent.)
+* History of `Freight` that has been deployed to the `Stage` (from most to
+  least recent) along with the results of any associated verification processes.
 
 * The health status of any associated Argo CD `Application` resources.
-
-* The status of any in-progress of completed verification processes.
 
 For example:
 
 ```yaml
 status:
-  phase: Steady
-  currentFreight:
-    images:
-    - digest: sha256:b2487a28589657b318e0d63110056e11564e73b9fd3ec4c4afba5542f9d07d46
-      repoURL: public.ecr.aws/nginx/nginx
-      tag: 1.27.0
-    commits:
-    - repoURL: https://github.com/example/kargo-demo.git
-      id: 1234abc
-    name: 47b33c0c92b54439e5eb7fb80ecc83f8626fe390
-    verificationInfo:
-      analysisRun:
-        namespace: kargo-demo
-        name: test.ab85b188-0ad5-43d9-a36d-ddcf63666183.47b33c0
-        phase: Successful
-      id: 69219d8d-cf5e-414e-8ee9-7d3e3a7c3f15
-      phase: Successful
+  freightHistory:
+  - id: 101bca5b0e18ca7913978a1da956308d2544f741
+    items:
+      Warehouse/my-warehouse:
+        commits:
+        - healthCheckCommit: 111eaf55aa41f21bb9bb707ba1baa748b83ec51e
+          id: 961cfaedbc53aacdb65110028839a2c1c281290d
+          repoURL: https://github.com/example/kargo-demo.git
+        images:
+        - digest: sha256:b2487a28589657b318e0d63110056e11564e73b9fd3ec4c4afba5542f9d07d46
+          repoURL: public.ecr.aws/nginx/nginx
+          tag: 1.27.0
+        name: 666209fd9755a1e48bec6b27f5f447747410dd9e
+        origin:
+          kind: Warehouse
+          name: my-warehouse
     verificationHistory:
     - analysisRun:
-        namespace: kargo-demo
-        name: test.ab85b188-0ad5-43d9-a36d-ddcf63666183.47b33c0
+        name: test.01j2w7aknhf3j7jteyqs72hnbg.101bca5
+        namespace: kargo-demo-09
         phase: Successful
-      id: 69219d8d-cf5e-414e-8ee9-7d3e3a7c3f15
+      finishTime: "2024-07-15T22:13:57Z"
+      id: 5535a484-bbd0-4f12-8cf4-be2c8e0041c9
       phase: Successful
+      startTime: "2024-07-15T22:13:34Z"
   health:
     argoCDApps:
     - healthStatus:
         status: Healthy
-      name: kargo-demo-test
+      name: kargo-demo-09-test
       namespace: argocd
       syncStatus:
-        revision: 4b1bd08ffbaecf0961e1877d7f2cc8bde7090575
+        revision: 111eaf55aa41f21bb9bb707ba1baa748b83ec51e
         status: Synced
     status: Healthy
-  history:
-  - commits:
-    - repoURL: https://github.com/example/kargo-demo.git
-      id: 1234abc
-    images:
-      - digest: sha256:b2487a28589657b318e0d63110056e11564e73b9fd3ec4c4afba5542f9d07d46
-        repoURL: public.ecr.aws/nginx/nginx
-        tag: 1.27.0
-    name: 47b33c0c92b54439e5eb7fb80ecc83f8626fe390
-    warehouse: my-warehouse
-    verificationInfo:
-      analysisRun:
-        namespace: kargo-demo
-        name: test.ab85b188-0ad5-43d9-a36d-ddcf63666183.47b33c0
-        phase: Successful
-      id: 69219d8d-cf5e-414e-8ee9-7d3e3a7c3f15
-      phase: Successful
+  lastPromotion:
+    finishedAt: "2024-07-15T22:13:25Z"
+    freight:
+      commits:
+      - healthCheckCommit: 111eaf55aa41f21bb9bb707ba1baa748b83ec51e
+        id: 961cfaedbc53aacdb65110028839a2c1c281290d
+        repoURL: https://github.com/example/kargo-demo.git
+      name: 666209fd9755a1e48bec6b27f5f447747410dd9e
+      origin:
+        kind: Warehouse
+        name: kargo-demo
+    name: test.01j2w7a15cxjjgejresfyw6ysp.666209f
+    status:
+      finishedAt: "2024-07-15T22:13:25Z"
+      freight:
+        commits:
+        - healthCheckCommit: 111eaf55aa41f21bb9bb707ba1baa748b83ec51e
+          id: 961cfaedbc53aacdb65110028839a2c1c281290d
+          repoURL: https://github.com/example/kargo-demo.git
+        name: 666209fd9755a1e48bec6b27f5f447747410dd9e
+        origin:
+          kind: Warehouse
+          name: kargo-demo
+      freightCollection:
+        id: 101bca5b0e18ca7913978a1da956308d2544f741
+        items:
+          Warehouse/kargo-demo:
+            commits:
+            - healthCheckCommit: 111eaf55aa41f21bb9bb707ba1baa748b83ec51e
+              id: 961cfaedbc53aacdb65110028839a2c1c281290d
+              repoURL: https://github.com/example/kargo-demo.git
+            name: 666209fd9755a1e48bec6b27f5f447747410dd9e
+            origin:
+              kind: Warehouse
+              name: kargo-demo
+        verificationHistory:
+        - analysisRun:
+            name: test.01j2w7aknhf3j7jteyqs72hnbg.101bca5
+            namespace: kargo-demo-09
+            phase: ""
+          id: 5535a484-bbd0-4f12-8cf4-be2c8e0041c9
+          phase: Pending
+          startTime: "2024-07-15T22:13:34Z"
+      phase: Succeeded
+  observedGeneration: 1
+  phase: Steady
 ```
 
 ### `Freight` Resources
 
 Each piece of Kargo freight is represented by a Kubernetes resource of type
-`Freight`. `Freight` resources are immutable except for their `status` field.
+`Freight`. `Freight` resources are immutable except for their `alias` field
+and `status` subresource (mutable only by the Kargo controller).
 
 A single `Freight` resource references one or more versioned artifacts, such as:
 
@@ -484,10 +596,16 @@ enforced by an admission webhook.) The `metadata.name` field is therefore a
 "fingerprint", deterministically derived from the `Freight`'s contents.
 
 To provide a human-readable identifier for a `Freight` resource, a `Freight`
-resource has an `alias` field and `kargo.akuity.io/alias` label. This alias is
+resource has an `alias` field. This alias is
 a human-readable string that is unique within the `Project` to which the
-`Freight` belongs. While it can be set manually (and changed), by default,
-Kargo will automatically generate a unique alias for each `Freight` resource.
+`Freight` belongs. Kargo automatically generates unique aliases for all
+`Freight` resources, but users may update them to be more meaningful.
+
+:::tip
+Assigning meaningful and recognizable aliases to important pieces of `Freight`
+traversing your pipeline(s) can make it easier to track their progress from one
+`Stage` to another.
+:::
 
 :::note
 For more information on aliases, refer to the [aliases](./30-how-to-guides/15-working-with-freight.md#aliases)
