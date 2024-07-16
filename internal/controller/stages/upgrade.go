@@ -9,9 +9,11 @@ import (
 	extv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/kubeclient"
+	"github.com/akuity/kargo/internal/logging"
 )
 
 // upgradeStage upgrades a Stage to be v0.8-compatible.
@@ -53,9 +55,16 @@ func (r *reconciler) upgradeStage(ctx context.Context, stage *kargoapi.Stage) (c
 				return ctrl.Result{}, fmt.Errorf("unable to migrate: %w", err)
 			}
 
+			if len(warehouses) == 0 {
+				return ctrl.Result{}, reconcile.TerminalError(
+					errors.New("unable to migrate: no upstream Stages resolve to a Warehouse"),
+				)
+			}
 			if len(warehouses) > 1 {
-				return ctrl.Result{}, fmt.Errorf(
-					"unable to migrate: upstream Stages resolve to more than one Warehouse: %v", warehouses,
+				return ctrl.Result{}, reconcile.TerminalError(
+					fmt.Errorf(
+						"unable to migrate: upstream Stages resolve to more than one Warehouse: %v", warehouses,
+					),
 				)
 			}
 			warehouse := warehouses[0]
@@ -90,6 +99,7 @@ func (r *reconciler) upgradeStage(ctx context.Context, stage *kargoapi.Stage) (c
 		if err := r.kargoClient.Update(ctx, stage); err != nil {
 			return ctrl.Result{}, err
 		}
+		logging.LoggerFromContext(ctx).Debug("patched Stage spec for v0.8 compatibility")
 		patchedSpec = true
 	}
 
@@ -101,6 +111,10 @@ func (r *reconciler) upgradeStage(ctx context.Context, stage *kargoapi.Stage) (c
 		for _, item := range stage.Status.History {                                   // nolint: staticcheck
 			freightCollection := kargoapi.FreightCollection{
 				VerificationHistory: item.VerificationHistory, // nolint: staticcheck
+			}
+			item.Origin = kargoapi.FreightOrigin{
+				Kind: kargoapi.FreightOriginKindWarehouse,
+				Name: item.Warehouse, // nolint: staticcheck
 			}
 			freightCollection.UpdateOrPush(item)
 			freightHistory = append(freightHistory, &freightCollection)
@@ -117,8 +131,36 @@ func (r *reconciler) upgradeStage(ctx context.Context, stage *kargoapi.Stage) (c
 		patchedStatus = true
 	}
 
+	// If the last promotion does not have a FreightCollection, we need to
+	// create one from the existing data.
+	lastPromo := stage.Status.LastPromotion
+	if lastPromo != nil && lastPromo.Status != nil && lastPromo.Status.FreightCollection == nil {
+		if freight := lastPromo.Status.Freight; freight != nil {
+			// Update the Stage status.
+			if err := kubeclient.PatchStatus(ctx, r.kargoClient, stage, func(status *kargoapi.StageStatus) {
+				freight.Origin = kargoapi.FreightOrigin{
+					Kind: kargoapi.FreightOriginKindWarehouse,
+					Name: freight.Warehouse, // nolint: staticcheck
+				}
+
+				status.LastPromotion.Status.FreightCollection = &kargoapi.FreightCollection{}
+				status.LastPromotion.Status.FreightCollection.UpdateOrPush(*freight)
+			}); err != nil {
+				return ctrl.Result{}, err
+			}
+			logging.LoggerFromContext(ctx).Debug("patched Stage status promotions for v0.8 compatibility")
+			patchedStatus = true
+		}
+	}
+
 	// If we have patched the spec or status, we need to requeue the Stage.
 	if patchedSpec || patchedStatus {
+		// Mark the Stage as having been upgraded.
+		if err := kargoapi.AddV08CompatibilityLabel(ctx, r.kargoClient, stage); err != nil {
+			return ctrl.Result{}, err
+		}
+
+		logging.LoggerFromContext(ctx).Debug("updated Stage for v0.8 compatibility")
 		return ctrl.Result{Requeue: true}, nil
 	}
 
