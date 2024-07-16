@@ -116,7 +116,8 @@ func TestSyncControlFlowStage(t *testing.T) {
 			) {
 				require.ErrorContains(t, err, "error getting available Freight for control flow Stage")
 				require.ErrorContains(t, err, "something went wrong")
-				// Status should be returned unchanged
+				newStatus.FreightSummary = ""
+				// Status should be otherwise unchanged
 				require.Equal(t, initialStatus, newStatus)
 				// No events should be recorded
 				require.Empty(t, recorder.Events)
@@ -152,7 +153,8 @@ func TestSyncControlFlowStage(t *testing.T) {
 			) {
 				require.ErrorContains(t, err, "error marking Freight")
 				require.ErrorContains(t, err, "something went wrong")
-				// Status should be returned unchanged
+				newStatus.FreightSummary = ""
+				// Status should be otherwise unchanged
 				require.Equal(t, initialStatus, newStatus)
 
 				// No events should be recorded
@@ -204,6 +206,7 @@ func TestSyncControlFlowStage(t *testing.T) {
 				require.Nil(t, newStatus.Health)                          // Cleared
 				require.Nil(t, newStatus.CurrentFreight)                  // nolint: staticcheck
 				require.Nil(t, newStatus.History)                         // nolint: staticcheck
+				require.Equal(t, "N/A", newStatus.FreightSummary)
 
 				require.Len(t, recorder.Events, 1)
 				event := <-recorder.Events
