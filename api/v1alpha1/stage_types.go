@@ -125,7 +125,7 @@ const FreightOriginKindWarehouse FreightOriginKind = "Warehouse"
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name=Shard,type=string,JSONPath=`.spec.shard`
-// +kubebuilder:printcolumn:name=Current Freight,type=string,JSONPath=`.status.currentFreight.name`
+// +kubebuilder:printcolumn:name=Current Freight,type=string,JSONPath=`.status.freightSummary`
 // +kubebuilder:printcolumn:name=Health,type=string,JSONPath=`.status.health.status`
 // +kubebuilder:printcolumn:name=Phase,type=string,JSONPath=`.status.phase`
 // +kubebuilder:printcolumn:name=Age,type=date,JSONPath=`.metadata.creationTimestamp`
@@ -745,6 +745,17 @@ type StageStatus struct {
 	// The first item in the list is the most recent Freight selection and
 	// currently deployed to the Stage, subsequent items are older selections.
 	FreightHistory FreightHistory `json:"freightHistory,omitempty" protobuf:"bytes,4,rep,name=freightHistory" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	// FreightSummary is human-readable text maintained by the controller that
+	// summarizes what Freight is currently deployed to the Stage. For Stages that
+	// request a single piece of Freight AND the request has been fulfilled, this
+	// field will simply contain the name of the Freight. For Stages that request
+	// a single piece of Freight AND the request has NOT been fulfilled, or for
+	// Stages that request multiple pieces of Freight, this field will contain a
+	// summary of fulfilled/requested Freight. The existence of this field is a
+	// workaround for kubectl limitations so that this complex but valuable
+	// information can be displayed in a column in response to `kubectl get
+	// stages`.
+	FreightSummary string `json:"freightSummary,omitempty" protobuf:"bytes,12,opt,name=freightSummary"`
 	// CurrentFreight is a simplified representation of the Stage's current
 	// Freight describing what is currently deployed to the Stage.
 	//
