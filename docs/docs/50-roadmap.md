@@ -17,26 +17,16 @@ Project](https://github.com/akuity/kargo/milestones)
 
 ## In Progress
 
-### v0.8.0
-
-__Expected:__ 2024-07-12
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| Auth via [GitHub Apps](https://docs.github.com/en/apps) | feature | Support GitHub Apps as an authentication option for GitHub repositories. |
-| Multiple `Freight` per `Stage` | feature | The overarching theme of the release: Permit `Stage`s to host multiple pieces of `Freight` from different `Warehouse`s. This will permit different artifacts, or sets of artifacts, to be promoted through a pipeline with different/independent cadence. |
-| Production Readiness | chore | <ul><li>Prioritize stability of existing features.</li><li>Pay down technical debt.</li><li>**This is not a guarantee that v0.8.0 will be production-ready. It is a commitment to large steps in that direction.**</li></ul> |
-
-## Upcoming
-
 ### v0.9.0
 
-__Expected:__ 2024-08-16
+__Expected:__ TBA
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | [Promotion Directives](https://github.com/akuity/kargo/issues/2219) | strategic refactor | Transition from opinionated promotion mechanisms to an ordered lists of more finely-grained "promotion directives." These should enable greater flexibility in addressing outlying use cases and provide a sensible hook for the development of third-party integrations. |
 | Production Readiness | chore | <ul><li>Prioritize stability of existing features.</li><li>Pay down technical debt.</li><li>**This is not a guarantee that v0.9.0 will be production-ready. It is a commitment to large steps in that direction.**</li></ul> |
+
+## Upcoming
 
 ### v0.10.0
 
@@ -56,6 +46,14 @@ __Expected:__ 2024-08-16
 | Standalone Image Writeback | feature | Write back image changes without having to subscribe to an image repository. |
 
 ## Completed
+
+### v0.8.0
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| Auth via [GitHub Apps](https://docs.github.com/en/apps) | feature | Support GitHub Apps as an authentication option for GitHub repositories. |
+| Multiple `Freight` per `Stage` | feature | Permit `Stage`s to host multiple pieces of `Freight` from different `Warehouse`s. Different artifacts, or sets of artifacts, can be promoted through parallel pipelines with different/independent cadence. |
+| Production Readiness | chore | <ul><li>Prioritized stability of existing features.</li><li>Paid down technical debt.</li><li>**This does not mean v0.8.0 is production-ready. It means it is several steps closer to it.**</li></ul> |
 
 ### v0.7.0
 
