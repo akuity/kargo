@@ -116,7 +116,8 @@ func TestSyncControlFlowStage(t *testing.T) {
 			) {
 				require.ErrorContains(t, err, "error getting available Freight for control flow Stage")
 				require.ErrorContains(t, err, "something went wrong")
-				// Status should be returned unchanged
+				newStatus.FreightSummary = ""
+				// Status should be otherwise unchanged
 				require.Equal(t, initialStatus, newStatus)
 				// No events should be recorded
 				require.Empty(t, recorder.Events)
@@ -152,7 +153,8 @@ func TestSyncControlFlowStage(t *testing.T) {
 			) {
 				require.ErrorContains(t, err, "error marking Freight")
 				require.ErrorContains(t, err, "something went wrong")
-				// Status should be returned unchanged
+				newStatus.FreightSummary = ""
+				// Status should be otherwise unchanged
 				require.Equal(t, initialStatus, newStatus)
 
 				// No events should be recorded
@@ -204,6 +206,7 @@ func TestSyncControlFlowStage(t *testing.T) {
 				require.Nil(t, newStatus.Health)                          // Cleared
 				require.Nil(t, newStatus.CurrentFreight)                  // nolint: staticcheck
 				require.Nil(t, newStatus.History)                         // nolint: staticcheck
+				require.Equal(t, "N/A", newStatus.FreightSummary)
 
 				require.Len(t, recorder.Events, 1)
 				event := <-recorder.Events
@@ -3683,6 +3686,59 @@ func TestGetAvailableFreightByOrigin(t *testing.T) {
 
 			result, err := r.getAvailableFreightByOrigin(context.Background(), tc.stage, tc.includeApproved)
 			tc.assertions(t, result, err)
+		})
+	}
+}
+
+func TestBuildFreightSummary(t *testing.T) {
+	testCases := []struct {
+		name            string
+		requested       int
+		currentFreight  *kargoapi.FreightCollection
+		expectedSummary string
+	}{
+		{
+			name:            "requested 1, got none",
+			requested:       1,
+			expectedSummary: "0/1 Fulfilled",
+		},
+		{
+			name:      "requested 1, got 1",
+			requested: 1,
+			currentFreight: &kargoapi.FreightCollection{
+				Freight: map[string]kargoapi.FreightReference{
+					"Warehouse/fake-warehouse": {
+						Name: "fake-freight",
+					},
+				},
+			},
+			expectedSummary: "fake-freight",
+		},
+		{
+			name:            "requested multiple, got none",
+			requested:       2,
+			expectedSummary: "0/2 Fulfilled",
+		},
+		{
+			name:      "requested multiple, got some",
+			requested: 2,
+			currentFreight: &kargoapi.FreightCollection{
+				Freight: map[string]kargoapi.FreightReference{
+					"Warehouse/fake-warehouse": {
+						Name: "fake-freight",
+					},
+				},
+			},
+			expectedSummary: "1/2 Fulfilled",
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			require.Equal(
+				t,
+				testCase.expectedSummary,
+				buildFreightSummary(testCase.requested, testCase.currentFreight),
+			)
 		})
 	}
 }
