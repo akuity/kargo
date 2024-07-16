@@ -536,7 +536,7 @@ func (r *reconciler) Reconcile(
 	} else {
 		newStatus.FreightSummary = buildFreightSummary(
 			len(stage.Spec.RequestedFreight),
-			stage.Status.FreightHistory.Current(),
+			newStatus.FreightHistory.Current(),
 		)
 		// Be sure to blank this out in case there's an error in this field from
 		// the previous reconciliation
