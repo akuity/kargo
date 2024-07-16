@@ -3687,6 +3687,59 @@ func TestGetAvailableFreightByOrigin(t *testing.T) {
 	}
 }
 
+func TestBuildFreightSummary(t *testing.T) {
+	testCases := []struct {
+		name            string
+		requested       int
+		currentFreight  *kargoapi.FreightCollection
+		expectedSummary string
+	}{
+		{
+			name:            "requested 1, got none",
+			requested:       1,
+			expectedSummary: "0/1 Fulfilled",
+		},
+		{
+			name:      "requested 1, got 1",
+			requested: 1,
+			currentFreight: &kargoapi.FreightCollection{
+				Freight: map[string]kargoapi.FreightReference{
+					"Warehouse/fake-warehouse": {
+						Name: "fake-freight",
+					},
+				},
+			},
+			expectedSummary: "fake-freight",
+		},
+		{
+			name:            "requested multiple, got none",
+			requested:       2,
+			expectedSummary: "0/2 Fulfilled",
+		},
+		{
+			name:      "requested multiple, got some",
+			requested: 2,
+			currentFreight: &kargoapi.FreightCollection{
+				Freight: map[string]kargoapi.FreightReference{
+					"Warehouse/fake-warehouse": {
+						Name: "fake-freight",
+					},
+				},
+			},
+			expectedSummary: "1/2 Fulfilled",
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			require.Equal(
+				t,
+				testCase.expectedSummary,
+				buildFreightSummary(testCase.requested, testCase.currentFreight),
+			)
+		})
+	}
+}
+
 func fakeNow() time.Time {
 	return fakeTime
 }

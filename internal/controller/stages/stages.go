@@ -534,6 +534,10 @@ func (r *reconciler) Reconcile(
 		newStatus.Message = err.Error()
 		logger.Error(err, "error syncing Stage")
 	} else {
+		newStatus.FreightSummary = buildFreightSummary(
+			len(stage.Spec.RequestedFreight),
+			stage.Status.FreightHistory.Current(),
+		)
 		// Be sure to blank this out in case there's an error in this field from
 		// the previous reconciliation
 		newStatus.Message = ""
@@ -589,6 +593,7 @@ func (r *reconciler) syncControlFlowStage(
 	status.Health = nil
 	status.CurrentPromotion = nil
 	status.LastPromotion = nil
+	status.FreightSummary = "NA"
 
 	// TODO: Remove this once we remove the fields from the API.
 	status.History = nil        // nolint: staticcheck
@@ -1623,4 +1628,16 @@ func (r *reconciler) recordFreightVerificationEvent(
 	}
 
 	r.recorder.AnnotatedEventf(fr, annotations, corev1.EventTypeNormal, reason, message)
+}
+
+func buildFreightSummary(requested int, current *kargoapi.FreightCollection) string {
+	if current == nil {
+		return fmt.Sprintf("0/%d Fulfilled", requested)
+	}
+	if requested == 1 && len(current.Freight) == 1 {
+		for _, f := range current.Freight {
+			return f.Name
+		}
+	}
+	return fmt.Sprintf("%d/%d Fulfilled", len(current.Freight), requested)
 }
