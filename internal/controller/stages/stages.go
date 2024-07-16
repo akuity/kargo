@@ -593,7 +593,7 @@ func (r *reconciler) syncControlFlowStage(
 	status.Health = nil
 	status.CurrentPromotion = nil
 	status.LastPromotion = nil
-	status.FreightSummary = "NA"
+	status.FreightSummary = "N/A"
 
 	// TODO: Remove this once we remove the fields from the API.
 	status.History = nil        // nolint: staticcheck
