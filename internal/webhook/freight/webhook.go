@@ -257,17 +257,22 @@ func (w *webhook) ValidateUpdate(
 
 	// Freight is meant to be immutable.
 	if changedPath, change, ok := compareFreight(oldFreight, newFreight); !ok {
-		return nil, apierrors.NewInvalid(
-			freightGroupKind,
-			oldFreight.Name,
-			field.ErrorList{
-				field.Invalid(
-					changedPath,
-					change,
-					"Freight is immutable",
-				),
-			},
-		)
+		// Temporary workaround to allow a migration of the Warehouse field to
+		// the Origin field.
+		if changedPath == nil || changedPath.String() != "origin" ||
+			!allowWarehouseToOriginMigration(oldFreight, newFreight) {
+			return nil, apierrors.NewInvalid(
+				freightGroupKind,
+				oldFreight.Name,
+				field.ErrorList{
+					field.Invalid(
+						changedPath,
+						change,
+						"Freight is immutable",
+					),
+				},
+			)
+		}
 	}
 
 	req, err := w.admissionRequestFromContextFn(ctx)
@@ -539,4 +544,21 @@ func compareFreight(old, new *kargoapi.Freight) (*field.Path, any, bool) {
 	}
 
 	return nil, nil, true
+}
+
+func allowWarehouseToOriginMigration(old, new *kargoapi.Freight) bool {
+	// If the Origin field is already set, a migration is not allowed.
+	if old.Origin.Name != "" {
+		return false
+	}
+
+	// If the Warehouse field is still set on the new Freight, a migration is
+	// not allowed.
+	if new.Warehouse != "" { // nolint: staticcheck
+		return false
+	}
+
+	// If the Warehouse field is set on the old Freight and the Origin field is
+	// set to the Warehouse name on the new Freight, a migration is allowed.
+	return old.Warehouse != "" && new.Origin.Name == old.Warehouse // nolint: staticcheck
 }
