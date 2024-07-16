@@ -18,7 +18,7 @@ spec:
     - jsonPath: .spec.shard
       name: Shard
       type: string
-    - jsonPath: .status.currentFreight.name
+    - jsonPath: .status.freightSummary
       name: Current Freight
       type: string
     - jsonPath: .status.health.status
@@ -2596,6 +2596,19 @@ spec:
                   - id
                   type: object
                 type: array
+              freightSummary:
+                description: |-
+                  FreightSummary is human-readable text maintained by the controller that
+                  summarizes what Freight is currently deployed to the Stage. For Stages that
+                  request a single piece of Freight AND the request has been fulfilled, this
+                  field will simply contain the name of the Freight. For Stages that request
+                  a single piece of Freight AND the request has NOT been fulfilled, or for
+                  Stages that request multiple pieces of Freight, this field will contain a
+                  summary of fulfilled/requested Freight. The existence of this field is a
+                  workaround for kubectl limitations so that this complex but valuable
+                  information can be displayed in a column in response to `kubectl get
+                  stages`.
+                type: string
               health:
                 description: Health is the Stage's last observed health.
                 properties:
