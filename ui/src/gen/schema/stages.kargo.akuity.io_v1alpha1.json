@@ -2220,6 +2220,10 @@
           },
           "type": "array"
         },
+        "freightSummary": {
+          "description": "FreightSummary is human-readable text maintained by the controller that\nsummarizes what Freight is currently deployed to the Stage. For Stages that\nrequest a single piece of Freight AND the request has been fulfilled, this\nfield will simply contain the name of the Freight. For Stages that request\na single piece of Freight AND the request has NOT been fulfilled, or for\nStages that request multiple pieces of Freight, this field will contain a\nsummary of fulfilled/requested Freight. The existence of this field is a\nworkaround for kubectl limitations so that this complex but valuable\ninformation can be displayed in a column in response to `kubectl get\nstages`.",
+          "type": "string"
+        },
         "health": {
           "description": "Health is the Stage's last observed health.",
           "properties": {
