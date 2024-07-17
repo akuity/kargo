@@ -256,6 +256,17 @@ func (r *reconciler) Reconcile(
 		)
 	}
 
+	if freight != nil && (freight.Origin.Kind == "" || freight.Origin.Name == "") {
+		// This Freight looks like it is old Freight that has not been updated.
+		// The management controller handles that. Wait and try again.
+		return ctrl.Result{}, fmt.Errorf(
+			"Freight %q in namespace %q has not been updated for v0.8 "+
+				"compatibility; waiting for update",
+			promo.Spec.Freight,
+			promo.Namespace,
+		)
+	}
+
 	logger = logger.WithValues(
 		"namespace", req.NamespacedName.Namespace,
 		"promotion", req.NamespacedName.Name,
