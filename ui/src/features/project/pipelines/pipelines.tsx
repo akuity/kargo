@@ -1,4 +1,5 @@
 import { useMutation, useQuery } from '@connectrpc/connect-query';
+import { faDocker } from '@fortawesome/free-brands-svg-icons';
 import {
   faChevronDown,
   faEye,
@@ -99,6 +100,8 @@ export const Pipelines = () => {
 
   const [selectedWarehouse, setSelectedWarehouse] = React.useState('');
   const [freightTimelineCollapsed, setFreightTimelineCollapsed] = React.useState(false);
+
+  const [hideImages, setHideImages] = useLocalStorage(`${name}-hideImages`, false);
 
   const warehouseMap = useMemo(() => {
     const map = {} as { [key: string]: Warehouse };
@@ -270,8 +273,8 @@ export const Pipelines = () => {
             />
           </Suspense>
         </FreightTimelineWrapper>
-        <div className='flex flex-grow w-full'>
-          <div className={`overflow-hidden flex-grow w-full h-full ${styles.dag}`}>
+        <div className={`flex flex-grow w-full ${styles.dag}`}>
+          <div className={`overflow-hidden flex-grow w-full h-full`}>
             <div className='flex justify-end items-center p-4 mb-4'>
               <div>
                 <Tooltip title='Reassign Stage Colors'>
@@ -283,9 +286,8 @@ export const Pipelines = () => {
                       clearColors(name || '', 'warehouses');
                       window.location.reload();
                     }}
-                  >
-                    <FontAwesomeIcon icon={faPalette} />
-                  </Button>
+                    icon={<FontAwesomeIcon icon={faPalette} />}
+                  />
                 </Tooltip>{' '}
                 <Dropdown
                   menu={{
@@ -322,6 +324,15 @@ export const Pipelines = () => {
                     </Space>
                   </Button>
                 </Dropdown>
+                {hideImages && (
+                  <Tooltip title='Show Images'>
+                    <Button
+                      icon={<FontAwesomeIcon icon={faDocker} />}
+                      onClick={() => setHideImages(false)}
+                      className='ml-2'
+                    />
+                  </Tooltip>
+                )}
               </div>
             </div>
             <div className='overflow-auto p-6 h-full'>
@@ -488,7 +499,20 @@ export const Pipelines = () => {
             </div>
           </div>
 
-          <Images project={name as string} stages={sortedStages || []} />
+          {!hideImages && (
+            <div
+              className='p-6 pt-4 h-full'
+              style={{
+                width: '450px'
+              }}
+            >
+              <Images
+                project={name as string}
+                stages={sortedStages || []}
+                hide={() => setHideImages(true)}
+              />
+            </div>
+          )}
         </div>
         <SuspenseSpin>
           {stage && <StageDetails stage={stage} />}
