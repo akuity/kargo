@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"path"
+	"slices"
 	"sort"
 
 	"connectrpc.com/connect"
@@ -328,6 +329,7 @@ func appendToFreightList(list *svcv1alpha1.FreightList, f kargoapi.Freight) *svc
 }
 
 func sortFreightGroups(orderBy string, reverse bool, groups map[string]*svcv1alpha1.FreightList) {
+	// TODO
 	for k := range groups {
 		var dataToSort sort.Interface
 		switch orderBy {

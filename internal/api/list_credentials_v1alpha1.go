@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"fmt"
+	"slices"
 	"sort"
 
 	"connectrpc.com/connect"
@@ -36,8 +37,14 @@ func (s *server) ListCredentials(
 		return nil, fmt.Errorf("list secrets: %w", err)
 	}
 
-	sort.Slice(secretsList.Items, func(i, j int) bool {
-		return secretsList.Items[i].Name < secretsList.Items[j].Name
+	slices.SortFunc(secretsList.Items, func(a, b corev1.Secret) int {
+		if a.Name < b.Name {
+			return -1
+		} else if a.Name > b.Name {
+			return 1
+		} else {
+			return 0
+		}
 	})
 
 	secrets := make([]*corev1.Secret, len(secretsList.Items))

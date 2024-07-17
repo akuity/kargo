@@ -1,8 +1,10 @@
 package api
 
 import (
+	"cmp"
 	"context"
 	"fmt"
+	"slices"
 	"sort"
 
 	"connectrpc.com/connect"
@@ -40,8 +42,14 @@ func (s *server) ListAnalysisTemplates(
 		return nil, fmt.Errorf("list analysistemplates: %w", err)
 	}
 
-	sort.Slice(list.Items, func(i, j int) bool {
-		return list.Items[i].Name < list.Items[j].Name
+	slices.SortFunc(list.Items, func (a, b rollouts.AnalysisTemplate) int {
+		if a.Name < b.Name {
+			return -1
+		} else if a.Name > b.Name {
+			return 1
+		} else {
+			return 0
+		}
 	})
 
 	ats := make([]*rollouts.AnalysisTemplate, len(list.Items))

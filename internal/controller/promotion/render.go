@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -88,8 +89,7 @@ func (r *renderer) apply(
 		}
 	}
 
-	sort.StringSlice(images).Sort()
-
+	slices.Sort(images)
 	tempDir, err := os.MkdirTemp("", tmpPrefix)
 	if err != nil {
 		return nil, fmt.Errorf("error creating temporary directory: %w", err)

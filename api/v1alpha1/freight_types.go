@@ -4,6 +4,7 @@ import (
 	"crypto/sha1"
 	"fmt"
 	"path"
+	"slices"
 	"sort"
 	"strings"
 
@@ -100,7 +101,7 @@ func (f *Freight) GenerateID() string {
 			),
 		)
 	}
-	sort.Strings(artifacts)
+	slices.Sort(artifacts)
 	return fmt.Sprintf(
 		"%x",
 		sha1.Sum([]byte(strings.Join(artifacts, "|"))),

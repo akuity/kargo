@@ -1,6 +1,7 @@
 package argocd
 
 import (
+	"slices"
 	"sort"
 
 	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
@@ -42,4 +43,6 @@ func (a ByOperationPhase) Less(i, j int) bool {
 	return existsI
 }
 
-func (a ByOperationPhase) Sort() { sort.Sort(a) }
+func (a ByOperationPhase) Sort() { 
+	slices.Sort(a)
+}

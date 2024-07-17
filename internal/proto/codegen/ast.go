@@ -1,8 +1,10 @@
 package codegen
 
 import (
+	"cmp"
 	"fmt"
 	"go/ast"
+	"slices"
 	"sort"
 	"strconv"
 
@@ -107,7 +109,9 @@ func InjectStructFieldTagByJSONName(tagMap TagMap) ast.Visitor {
 			}
 
 			// Sort tags to ensure consistent output
-			sort.Sort(structTags)
+			slices.SortFunc(structTags.Tags(), func (a, b *structtag.Tag) int {
+				return cmp.Compare(a.Key, b.Key)
+			})
 			field.Tag.Value = fmt.Sprintf("`%s`", structTags.String())
 		},
 	}

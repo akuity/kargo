@@ -1,6 +1,7 @@
 package rbac
 
 import (
+	"cmp"
 	"fmt"
 	"slices"
 	"sort"
@@ -83,9 +84,7 @@ func PolicyRulesMapToSlice(rulesMap map[string]rbacv1.PolicyRule) []rbacv1.Polic
 	for key := range rulesMap {
 		ruleKeys = append(ruleKeys, key)
 	}
-	sort.Slice(ruleKeys, func(i, j int) bool {
-		return ruleKeys[i] < ruleKeys[j]
-	})
+	slices.Sort(ruleKeys)
 	rules := make([]rbacv1.PolicyRule, len(ruleKeys))
 	for i, key := range ruleKeys {
 		rules[i] = rulesMap[key]

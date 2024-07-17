@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"fmt"
+	"slices"
 	"sort"
 
 	"connectrpc.com/connect"
@@ -44,8 +45,14 @@ func (s *server) ListProjectEvents(
 		return nil, fmt.Errorf("list events: %w", err)
 	}
 
-	sort.Slice(eventsList.Items, func(i, j int) bool {
-		return eventsList.Items[i].LastTimestamp.Time.After(eventsList.Items[j].LastTimestamp.Time)
+	slices.SortFunc(eventsList.Items, func(a, b corev1.Event) int {
+		if a.LastTimestamp.Time.After(b.LastTimestamp.Time) {
+			return -1
+		} else if b.LastTimestamp.Time.After(a.LastTimestamp.Time) {
+			return 1
+		} else {
+			return 0
+		}
 	})
 
 	events := make([]*corev1.Event, len(eventsList.Items))

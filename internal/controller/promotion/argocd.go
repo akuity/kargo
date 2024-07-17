@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"path"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -690,7 +691,7 @@ func operationPhaseToPromotionPhase(phases ...argocd.OperationPhase) kargoapi.Pr
 		return ""
 	}
 
-	sort.Sort(libargocd.ByOperationPhase(phases))
+	slices.Sort(libargocd.ByOperationPhase(phases))
 
 	switch phases[0] {
 	case argocd.OperationRunning, argocd.OperationTerminating:

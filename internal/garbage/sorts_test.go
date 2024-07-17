@@ -2,6 +2,7 @@ package garbage
 
 import (
 	"math/rand"
+	"slices"
 	"sort"
 	"testing"
 	"time"

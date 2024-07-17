@@ -1,10 +1,10 @@
 package rbac
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 	"slices"
-	"sort"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
@@ -450,8 +450,8 @@ func (r *rolesDatabase) List(
 		kargoRoles = append(kargoRoles, kargoRole)
 	}
 
-	sort.Slice(kargoRoles, func(i, j int) bool {
-		return kargoRoles[i].Name < kargoRoles[j].Name
+	slices.SortFunc(kargoRoles, func(a, b *rbacapi.Role) int {
+		return cmp.Compare(a.Name, b.Name)
 	})
 
 	return kargoRoles, nil

@@ -1,12 +1,14 @@
 package helm
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
 	"os/exec"
+	"slices"
 	"sort"
 	"strings"
 
@@ -80,7 +82,9 @@ func DiscoverChartVersions(
 
 	// NB: semver.Collection sorts in ascending order by default. We want to
 	// return the versions in descending order.
-	sort.Sort(sort.Reverse(semvers))
+	slices.SortFunc(semvers, func(a, b *semver.Version) int {
+		return b.Compare(a)
+	})
 
 	return semVerCollectionToVersions(semvers), nil
 }

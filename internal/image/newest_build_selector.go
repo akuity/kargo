@@ -1,9 +1,11 @@
 package image
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 	"regexp"
+	"slices"
 	"sort"
 	"sync"
 	"time"
@@ -244,14 +246,23 @@ func (n *newestBuildSelector) getImagesByTags(
 	return images, nil
 }
 
-// sortImagesByDate sorts the provided images in place, in chronologically
-// descending order, breaking ties lexically by tag.
+// sortImagesByDate sorts the provided images in place, in chronologically descending order, breaking ties lexically by tag.
 func sortImagesByDate(images []Image) {
-	sort.Slice(images, func(i, j int) bool {
-		if images[i].CreatedAt.Equal(*images[j].CreatedAt) {
-			// If there's a tie on the date, break the tie lexically by name
-			return images[i].Tag > images[j].Tag
+	slices.SortFunc(images, func(a, b Image) int {
+		if a.CreatedAt.Equal(*b.CreatedAt) {
+			// If there's a tie on the date, break the tie lexically by tag
+			if a.Tag > b.Tag {
+				return 1
+			} else if a.Tag < b.Tag {
+				return -1
+			} else {
+				return 0
+			}
 		}
-		return images[i].CreatedAt.After(*images[j].CreatedAt)
+		if a.CreatedAt.After(*b.CreatedAt) {
+			return -1
+		} else {
+			return 1
+		}
 	})
 }

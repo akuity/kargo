@@ -1,9 +1,11 @@
 package image
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 	"regexp"
+	"slices"
 	"sort"
 
 	"github.com/Masterminds/semver/v3"
@@ -159,16 +161,15 @@ func (s *semVerSelector) selectImages(ctx context.Context) ([]Image, error) {
 	return images, nil
 }
 
-// sortImagesBySemVer sorts the provided Images in place, in descending order by
-// semantic version.
+// sortImagesBySemVer sorts the provided Images in place, in descending order by semantic version.
 func sortImagesBySemVer(images []Image) {
-	sort.Slice(images, func(i, j int) bool {
-		if comp := images[i].semVer.Compare(images[j].semVer); comp != 0 {
-			return comp > 0
+	slices.SortFunc(images, func (a, b Image) int {
+		if comp := a.semVer.Compare(b.semVer); comp != 0 {
+			return -comp
 		}
 		// If the semvers tie, break the tie lexically using the original strings
 		// used to construct the semvers. This ensures a deterministic comparison
 		// of equivalent semvers, e.g., 1.0 and 1.0.0.
-		return images[i].semVer.Original() > images[j].semVer.Original()
+		return cmp.Compare(a.semVer.Original(), b.semVer.Original())
 	})
 }

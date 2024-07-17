@@ -1,8 +1,10 @@
 package garbage
 
 import (
+	"cmp"
 	"context"
 	"fmt"
+	"slices"
 	"sort"
 	"time"
 
@@ -83,7 +85,15 @@ func (c *collector) cleanStagePromotions(
 	}
 
 	// Sort Promotions by creation time
-	sort.Sort(promosByCreation(promos.Items))
+	slices.SortFunc(promos.Items, func(a, b kargoapi.Promotion) int {
+		if a.CreationTimestamp.Time.Before(b.CreationTimestamp.Time) {
+			return -1
+		}
+		if a.CreationTimestamp.Time.After(b.CreationTimestamp.Time) {
+			return 1
+		}
+		return 0
+	})
 
 	// Step through all Promotions to find the oldest that is not terminal
 	oldestNonTerminalIndex := -1

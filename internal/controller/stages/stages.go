@@ -1510,9 +1510,14 @@ func (r *reconciler) getLatestFreightFromWarehouse(
 		return nil, nil
 	}
 	// Sort by creation timestamp, descending
-	sort.SliceStable(freight.Items, func(i, j int) bool {
-		return freight.Items[j].CreationTimestamp.
-			Before(&freight.Items[i].CreationTimestamp)
+	slices.SortFunc(freight.Items, func(i, j kargoapi.Freight) int {
+		if j.CreationTimestamp.Before(&i.CreationTimestamp) {
+			return -1
+		} else if i.CreationTimestamp.Before(&j.CreationTimestamp) {
+			return 1
+		} else {
+			return 0
+		}
 	})
 	return &freight.Items[0], nil
 }
@@ -1576,9 +1581,14 @@ func (r *reconciler) getLatestVerifiedFreight(
 		return nil, nil
 	}
 	// Sort the list by creation timestamp, descending
-	sort.SliceStable(verifiedFreight, func(i, j int) bool {
-		return verifiedFreight[j].CreationTimestamp.
-			Before(&verifiedFreight[i].CreationTimestamp)
+	slices.SortFunc(verifiedFreight, func(a, b kargoapi.Freight) int {
+		if b.CreationTimestamp.Before(&a.CreationTimestamp) {
+			return -1
+		}
+		if a.CreationTimestamp.Before(&b.CreationTimestamp) {
+			return 1
+		}
+		return 0
 	})
 	return &verifiedFreight[0], nil
 }
@@ -1611,9 +1621,14 @@ func (r *reconciler) getLatestApprovedFreight(
 		return nil, nil
 	}
 	// Sort the list by creation timestamp, descending
-	sort.SliceStable(freight.Items, func(i, j int) bool {
-		return freight.Items[j].CreationTimestamp.
-			Before(&freight.Items[i].CreationTimestamp)
+	slices.SortFunc(freight.Items, func(a, b kargoapi.Freight) int {
+		if b.CreationTimestamp.Before(&a.CreationTimestamp) {
+			return -1
+		}
+		if a.CreationTimestamp.Before(&b.CreationTimestamp) {
+			return 1
+		}
+		return 0
 	})
 	return &freight.Items[0], nil
 }

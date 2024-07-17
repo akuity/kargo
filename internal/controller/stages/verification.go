@@ -3,7 +3,7 @@ package stages
 import (
 	"context"
 	"fmt"
-	"sort"
+	"slices"
 	"strings"
 
 	"github.com/google/uuid"
@@ -92,8 +92,14 @@ func (r *reconciler) startVerification(
 		if len(analysisRuns.Items) > 0 {
 			// Sort the AnalysisRuns by creation timestamp, so that the most recent
 			// one is first.
-			sort.SliceStable(analysisRuns.Items, func(i, j int) bool {
-				return analysisRuns.Items[j].CreationTimestamp.Before(&analysisRuns.Items[i].CreationTimestamp)
+			slices.SortFunc(analysisRuns.Items, func(a, b rollouts.AnalysisRun) int {
+				if a.CreationTimestamp.Time.Before(b.CreationTimestamp.Time) {
+					return 1
+				} else if a.CreationTimestamp.Time.After(b.CreationTimestamp.Time) {
+					return -1
+				} else {
+					return 0
+				}
 			})
 
 			logger.Debug("AnalysisRun already exists for Freight")

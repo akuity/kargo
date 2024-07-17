@@ -1,8 +1,10 @@
 package garbage
 
 import (
+	"cmp"
 	"context"
 	"fmt"
+	"slices"
 	"sort"
 	"time"
 
@@ -89,7 +91,16 @@ func (c *collector) cleanWarehouseFreight(
 
 	// Sort Freight by creation time
 	sort.Sort(freightByCreation(freight.Items))
-
+	slices.SortFunc(freight.Items, func(a, b kargoapi.Freight) int {
+		if a.CreationTimestamp.Time.Before(b.CreationTimestamp.Time) {
+			return -1
+		} else if a.CreationTimestamp.Time.After(b.CreationTimestamp.Time) {
+			return 1
+		} else {
+			return 0
+		}
+	})
+	
 	// Step through all Freight and find the oldest that is still in use
 	oldestInUseIndex := -1
 	for i, f := range freight.Items {
