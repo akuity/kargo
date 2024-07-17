@@ -3,8 +3,10 @@ package warehouses
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/fields"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -55,6 +57,8 @@ type reconciler struct {
 	discoverTagsFn func(repo git.Repo, sub kargoapi.GitSubscription) ([]git.TagMetadata, error)
 
 	getDiffPathsForCommitIDFn func(repo git.Repo, commitID string) ([]string, error)
+
+	listFreightFn func(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error
 
 	createFreightFn func(context.Context, client.Object, ...client.CreateOption) error
 }
@@ -108,6 +112,7 @@ func newReconciler(
 		imageSourceURLFnsByBaseURL: map[string]func(string, string) string{
 			githubURLPrefix: getGithubImageSourceURL,
 		},
+		listFreightFn:   kubeClient.List,
 		createFreightFn: kubeClient.Create,
 	}
 
@@ -222,19 +227,39 @@ func (r *reconciler) syncWarehouse(
 			Name: warehouse.Name,
 		}
 
-		if err = r.createFreightFn(ctx, freight); client.IgnoreAlreadyExists(err) != nil {
-			return status, fmt.Errorf(
-				"error creating Freight %q in namespace %q: %w",
-				freight.Name,
-				freight.Namespace,
-				err,
-			)
-		} else if err == nil {
-			logger.Debug(
-				"created Freight",
-				"freight", freight.Name,
-				"namespace", freight.Namespace,
-			)
+		var existingFreight kargoapi.FreightList
+		if err = r.listFreightFn(
+			ctx,
+			&existingFreight,
+			&client.ListOptions{
+				Namespace: warehouse.Namespace,
+				FieldSelector: fields.OneTermEqualSelector(
+					kubeclient.FreightByWarehouseIndexField,
+					warehouse.Name,
+				),
+			},
+		); err != nil {
+			return status,
+				fmt.Errorf("error listing existing Freight from Warehouse: %w", err)
+		}
+		slices.SortFunc(existingFreight.Items, func(lhs, rhs kargoapi.Freight) int {
+			return rhs.CreationTimestamp.Time.Compare(lhs.CreationTimestamp.Time)
+		})
+		if len(existingFreight.Items) == 0 || !compareFreight(&existingFreight.Items[0], freight) {
+			if err = r.createFreightFn(ctx, freight); client.IgnoreAlreadyExists(err) != nil {
+				return status, fmt.Errorf(
+					"error creating Freight %q in namespace %q: %w",
+					freight.Name,
+					freight.Namespace,
+					err,
+				)
+			} else if err == nil {
+				logger.Debug(
+					"created Freight",
+					"freight", freight.Name,
+					"namespace", freight.Namespace,
+				)
+			}
 		}
 
 		status.LastFreightID = freight.Name
@@ -331,4 +356,35 @@ func (r *reconciler) buildFreightFromLatestArtifacts(
 	freight.Name = freight.GenerateID()
 
 	return freight, nil
+}
+
+func compareFreight(old, new *kargoapi.Freight) bool {
+	if len(old.Commits) != len(new.Commits) {
+		return false
+	}
+	for i, commit := range old.Commits {
+		if !commit.DeepEquals(&new.Commits[i]) {
+			return false
+		}
+	}
+
+	if len(old.Images) != len(new.Images) {
+		return false
+	}
+	for i, img := range old.Images {
+		if !img.DeepEquals(&new.Images[i]) {
+			return false
+		}
+	}
+
+	if len(old.Charts) != len(new.Charts) {
+		return false
+	}
+	for i, chart := range old.Charts {
+		if !chart.DeepEquals(&new.Charts[i]) {
+			return false
+		}
+	}
+
+	return true
 }
