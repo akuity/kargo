@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"go/ast"
 	"slices"
-	"sort"
 	"strconv"
 
 	"github.com/fatih/structtag"

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"regexp"
 	"slices"
-	"sort"
 
 	"github.com/Masterminds/semver/v3"
 

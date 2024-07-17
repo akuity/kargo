@@ -1,12 +1,10 @@
 package image
 
 import (
-	"cmp"
 	"context"
 	"fmt"
 	"regexp"
 	"slices"
-	"sort"
 	"sync"
 	"time"
 
