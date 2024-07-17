@@ -116,7 +116,6 @@ func (f *freightReconciler) Reconcile(
 	// Migrate the Warehouse field to the Origin field.
 	freight.Origin.Kind = kargoapi.FreightOriginKindWarehouse
 	freight.Origin.Name = freight.Warehouse // nolint: staticcheck
-	freight.Warehouse = ""                  // nolint: staticcheck
 
 	if err = f.client.Update(ctx, freight); err != nil {
 		return ctrl.Result{}, err
