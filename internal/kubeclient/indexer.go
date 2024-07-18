@@ -41,6 +41,7 @@ const (
 	ServiceAccountsByOIDCEmailIndexField   = "email"
 	ServiceAccountsByOIDCGroupIndexField   = "groups"
 	ServiceAccountsByOIDCSubjectIndexField = "subjects"
+	ServiceAccountsByOIDCClaimIndexField   = "claims"
 )
 
 func IndexEventsByInvolvedObjectAPIGroup(ctx context.Context, mgr ctrl.Manager) error {
@@ -409,77 +410,38 @@ func indexStagesByWarehouse(obj client.Object) []string {
 	return nil
 }
 
-func IndexServiceAccountsByOIDCEmail(ctx context.Context, mgr ctrl.Manager) error {
+func IndexServiceAccountsByOIDCClaim(ctx context.Context, mgr ctrl.Manager) error {
 	return mgr.GetFieldIndexer().IndexField(
 		ctx,
 		&corev1.ServiceAccount{},
-		ServiceAccountsByOIDCEmailIndexField,
-		indexServiceAccountsOIDCEmail,
+		ServiceAccountsByOIDCClaimIndexField,
+		indexServiceAccountsOIDCClaim,
 	)
 }
 
-func indexServiceAccountsOIDCEmail(obj client.Object) []string {
+func indexServiceAccountsOIDCClaim(obj client.Object) []string {
 	sa := obj.(*corev1.ServiceAccount) // nolint: forcetypeassert
-	rawEmails := strings.TrimSpace(sa.GetAnnotations()[rbacapi.AnnotationKeyOIDCEmails])
-	if rawEmails == "" {
-		return nil
-	}
-	emails := strings.Split(rawEmails, ",")
-	refinedEmails := make([]string, 0, len(emails))
-	for _, e := range emails {
-		if email := strings.TrimSpace(e); email != "" {
-			refinedEmails = append(refinedEmails, email)
+	rawClaimValues := []string{}
+	for annotationKey, annotationValue := range sa.GetAnnotations() {
+		if strings.HasPrefix(annotationKey, rbacapi.AnnotationKeyOIDCClaimNamePrefix) {
+			rawClaimValue := strings.TrimSpace(annotationValue)
+			if rawClaimValue == "" {
+				continue
+			}
+			rawClaimValues = append(rawClaimValues, rawClaimValue)
 		}
 	}
-	return refinedEmails
-}
-
-func IndexServiceAccountsByOIDCGroups(ctx context.Context, mgr ctrl.Manager) error {
-	return mgr.GetFieldIndexer().IndexField(
-		ctx,
-		&corev1.ServiceAccount{},
-		ServiceAccountsByOIDCGroupIndexField,
-		indexServiceAccountsByOIDCGroups,
-	)
-}
-
-func indexServiceAccountsByOIDCGroups(obj client.Object) []string {
-	sa := obj.(*corev1.ServiceAccount) // nolint: forcetypeassert
-	rawGroups := strings.TrimSpace(sa.GetAnnotations()[rbacapi.AnnotationKeyOIDCGroups])
-	if rawGroups == "" {
+	if len(rawClaimValues) == 0 {
 		return nil
 	}
-	groups := strings.Split(rawGroups, ",")
-	refinedGroups := make([]string, 0, len(groups))
-	for _, g := range groups {
-		if group := strings.TrimSpace(g); group != "" {
-			refinedGroups = append(refinedGroups, group)
+	refinedClaimValues := []string{}
+	for _, rawClaimValue := range rawClaimValues {
+		claimValues := strings.Split(rawClaimValue, ",")
+		for _, e := range claimValues {
+			if email := strings.TrimSpace(e); email != "" {
+				refinedClaimValues = append(refinedClaimValues, email)
+			}
 		}
 	}
-	return refinedGroups
-}
-
-func IndexServiceAccountsByOIDCSubjects(ctx context.Context, mgr ctrl.Manager) error {
-	return mgr.GetFieldIndexer().IndexField(
-		ctx,
-		&corev1.ServiceAccount{},
-		ServiceAccountsByOIDCSubjectIndexField,
-		indexServiceAccountsByOIDCSubjects,
-	)
-}
-
-func indexServiceAccountsByOIDCSubjects(obj client.Object) []string {
-	sa := obj.(*corev1.ServiceAccount) // nolint: forcetypeassert
-	rawSubjects := strings.TrimSpace(sa.GetAnnotations()[rbacapi.AnnotationKeyOIDCSubjects])
-	if rawSubjects == "" {
-		return nil
-	}
-	subjects := strings.Split(rawSubjects, ",")
-	refinedSubjects := make([]string, 0, len(subjects))
-	for _, s := range subjects {
-		if subject := strings.TrimSpace(s); subject != "" {
-			refinedSubjects = append(refinedSubjects, subject)
-		}
-	}
-	return refinedSubjects
+	return refinedClaimValues
 }

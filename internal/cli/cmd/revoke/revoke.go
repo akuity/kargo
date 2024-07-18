@@ -160,9 +160,20 @@ func (o *revokeOptions) run(ctx context.Context) error {
 	} else {
 		req.Request = &svcv1alpha1.RevokeRequest_UserClaims{
 			UserClaims: &rbacapi.UserClaims{
-				Subs:   o.Subs,
-				Emails: o.Emails,
-				Groups: o.Groups,
+				Claims: []rbacapi.Claim{
+					{
+						Name:   "subs",
+						Values: o.Subs,
+					},
+					{
+						Name:   "emails",
+						Values: o.Emails,
+					},
+					{
+						Name:   "groups",
+						Values: o.Groups,
+					},
+				},
 			},
 		}
 	}

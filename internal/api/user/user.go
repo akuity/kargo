@@ -26,6 +26,7 @@ type Info struct {
 	// Groups are the group claims obtained from credentials that have been
 	// successfully verified by the server's authentication middleware.
 	Groups []string
+	Claims map[string]any
 	// BearerToken is set only in cases where the server's authentication
 	// middleware could not verify the token it was presented with. In this case,
 	// we assume the token to be a valid credential for a Kubernetes user. When

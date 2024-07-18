@@ -323,9 +323,12 @@ func TestAuthenticate(t *testing.T) {
 					string,
 				) (claims, bool) {
 					return claims{
-						Subject: "ironman",
-						Email:   "tony@starkindustries.com",
-						Groups:  []string{"avengers"},
+						"subs":   "ironman",
+						"emails": "tony@starkindustries.com",
+						"groups": []string{
+							"avengers",
+							"shield",
+						},
 					}, true
 				},
 				listServiceAccountsFn: func(
@@ -343,9 +346,9 @@ func TestAuthenticate(t *testing.T) {
 				u, ok := user.InfoFromContext(ctx)
 				require.True(t, ok)
 				require.False(t, u.IsAdmin)
-				require.Equal(t, "ironman", u.Subject)
-				require.Equal(t, "tony@starkindustries.com", u.Email)
-				require.Equal(t, []string{"avengers"}, u.Groups)
+				require.Equal(t, "ironman", u.Claims["subs"])
+				require.Equal(t, "tony@starkindustries.com", u.Claims["emails"])
+				require.Equal(t, []string{"avengers", "shield"}, u.Claims["groups"])
 				require.Empty(t, u.BearerToken)
 			},
 		},
@@ -446,17 +449,20 @@ func TestVerifyIDPIssuedTokenFn(t *testing.T) {
 				},
 				oidcExtractClaimsFn: func(*oidc.IDToken) (claims, error) {
 					return claims{
-						Subject: "ironman",
-						Email:   "tony@starkindustries.io",
-						Groups:  []string{"avengers"},
+						"subs":   "ironman",
+						"emails": "tony@starkindustries.io",
+						"groups": []string{
+							"avengers",
+							"shield",
+						},
 					}, nil
 				},
 			},
 			assertions: func(t *testing.T, c claims, ok bool) {
 				require.True(t, ok)
-				require.Equal(t, "ironman", c.Subject)
-				require.Equal(t, "tony@starkindustries.io", c.Email)
-				require.Equal(t, []string{"avengers"}, c.Groups)
+				require.Equal(t, "ironman", c["subs"])
+				require.Equal(t, "tony@starkindustries.io", c["emails"])
+				require.Equal(t, []string{"avengers", "shield"}, c["groups"])
 			},
 		},
 	}

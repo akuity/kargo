@@ -154,9 +154,20 @@ func (o *createRoleOptions) run(ctx context.Context) error {
 						Namespace: o.Project,
 						Name:      o.Name,
 					},
-					Subs:   o.Subs,
-					Emails: o.Emails,
-					Groups: o.Groups,
+					Claims: []rbacapi.Claim{
+						{
+							Name:   "subs",
+							Values: o.Subs,
+						},
+						{
+							Name:   "emails",
+							Values: o.Emails,
+						},
+						{
+							Name:   "groups",
+							Values: o.Groups,
+						},
+					},
 				},
 			},
 		),

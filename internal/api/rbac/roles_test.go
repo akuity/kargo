@@ -98,9 +98,28 @@ func TestCreate(t *testing.T) {
 					kargoapi.AnnotationKeyDescription: "fake-description",
 				},
 			},
-			Subs:   []string{"foo-sub", "bar-sub"},
-			Emails: []string{"foo-email", "bar-email"},
-			Groups: []string{"foo-group", "bar-group"},
+			Claims: []rbacapi.Claim{
+				{
+					Name: "subs",
+					Values: []string{
+						"foo-sub",
+						"bar-sub",
+					},
+				},
+				{
+					Name: "emails",
+					Values: []string{
+						"foo-email",
+						"bar-email",
+					},
+				}, {
+					Name: "groups",
+					Values: []string{
+						"foo-group",
+						"bar-group",
+					},
+				},
+			},
 			Rules: []rbacv1.PolicyRule{
 				{
 					APIGroups: []string{kargoapi.GroupVersion.Group},
@@ -125,11 +144,11 @@ func TestCreate(t *testing.T) {
 		require.Equal(
 			t,
 			map[string]string{
-				rbacapi.AnnotationKeyManaged:      rbacapi.AnnotationValueTrue,
-				rbacapi.AnnotationKeyOIDCSubjects: "bar-sub,foo-sub",
-				rbacapi.AnnotationKeyOIDCEmails:   "bar-email,foo-email",
-				rbacapi.AnnotationKeyOIDCGroups:   "bar-group,foo-group",
-				kargoapi.AnnotationKeyDescription: "fake-description",
+				rbacapi.AnnotationKeyManaged:                        rbacapi.AnnotationValueTrue,
+				rbacapi.AnnotationKeyOIDCClaimNamePrefix + "subs":   "bar-sub,foo-sub",
+				rbacapi.AnnotationKeyOIDCClaimNamePrefix + "emails": "bar-email,foo-email",
+				rbacapi.AnnotationKeyOIDCClaimNamePrefix + "groups": "bar-group,foo-group",
+				kargoapi.AnnotationKeyDescription:                   "fake-description",
 			},
 			sa.Annotations,
 		)
@@ -219,9 +238,9 @@ func TestGet(t *testing.T) {
 	t.Run("success with non-kargo-managed role", func(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
 			plainServiceAccount(map[string]string{
-				rbacapi.AnnotationKeyOIDCSubjects: "foo-sub,bar-sub",
-				rbacapi.AnnotationKeyOIDCEmails:   "foo-email,bar-email",
-				rbacapi.AnnotationKeyOIDCGroups:   "foo-group,bar-group",
+				rbacapi.AnnotationKeyOIDCClaimNamePrefix + "subs":   "foo-sub,bar-sub",
+				rbacapi.AnnotationKeyOIDCClaimNamePrefix + "emails": "foo-email,bar-email",
+				rbacapi.AnnotationKeyOIDCClaimNamePrefix + "groups": "foo-group,bar-group",
 			}),
 			plainRole([]rbacv1.PolicyRule{
 				{ // This rule has groups and types that we don't recognize. Let's
@@ -254,9 +273,29 @@ func TestGet(t *testing.T) {
 					CreationTimestamp: now,
 				},
 				KargoManaged: false,
-				Subs:         []string{"bar-sub", "foo-sub"},
-				Emails:       []string{"bar-email", "foo-email"},
-				Groups:       []string{"bar-group", "foo-group"},
+				Claims: []rbacapi.Claim{
+					{
+						Name: "emails",
+						Values: []string{
+							"foo-email",
+							"bar-email",
+						},
+					},
+					{
+						Name: "groups",
+						Values: []string{
+							"foo-group",
+							"bar-group",
+						},
+					},
+					{
+						Name: "subs",
+						Values: []string{
+							"foo-sub",
+							"bar-sub",
+						},
+					},
+				},
 				// There should have been no attempt to normalize these rules
 				Rules: []rbacv1.PolicyRule{
 					{
@@ -278,9 +317,9 @@ func TestGet(t *testing.T) {
 	t.Run("success with non-kargo-managed role", func(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
 			managedServiceAccount(map[string]string{
-				rbacapi.AnnotationKeyOIDCSubjects: "foo-sub,bar-sub",
-				rbacapi.AnnotationKeyOIDCEmails:   "foo-email,bar-email",
-				rbacapi.AnnotationKeyOIDCGroups:   "foo-group,bar-group",
+				rbacapi.AnnotationKeyOIDCClaimNamePrefix + "subs":   "foo-sub,bar-sub",
+				rbacapi.AnnotationKeyOIDCClaimNamePrefix + "emails": "foo-email,bar-email",
+				rbacapi.AnnotationKeyOIDCClaimNamePrefix + "groups": "foo-group,bar-group",
 			}),
 			managedRole([]rbacv1.PolicyRule{{
 				APIGroups: []string{kargoapi.GroupVersion.Group},
@@ -304,9 +343,29 @@ func TestGet(t *testing.T) {
 					CreationTimestamp: now,
 				},
 				KargoManaged: true,
-				Subs:         []string{"bar-sub", "foo-sub"},
-				Emails:       []string{"bar-email", "foo-email"},
-				Groups:       []string{"bar-group", "foo-group"},
+				Claims: []rbacapi.Claim{
+					{
+						Name: "emails",
+						Values: []string{
+							"foo-email",
+							"bar-email",
+						},
+					},
+					{
+						Name: "groups",
+						Values: []string{
+							"foo-group",
+							"bar-group",
+						},
+					},
+					{
+						Name: "subs",
+						Values: []string{
+							"foo-sub",
+							"bar-sub",
+						},
+					},
+				},
 				Rules: []rbacv1.PolicyRule{
 					{
 						APIGroups: []string{kargoapi.GroupVersion.Group},
@@ -509,7 +568,12 @@ func TestGrantRoleToUsers(t *testing.T) {
 			testProject,
 			testKargoRoleName,
 			&rbacapi.UserClaims{
-				Subs: []string{"fake-sub"},
+				Claims: []rbacapi.Claim{{
+					Name: "subs",
+					Values: []string{
+						"fake-sub",
+					},
+				}},
 			},
 		)
 		require.True(t, kubeerr.IsNotFound(err))
@@ -525,7 +589,12 @@ func TestGrantRoleToUsers(t *testing.T) {
 			testProject,
 			testKargoRoleName,
 			&rbacapi.UserClaims{
-				Subs: []string{"fake-sub"},
+				Claims: []rbacapi.Claim{{
+					Name: "subs",
+					Values: []string{
+						"fake-sub",
+					},
+				}},
 			},
 		)
 		require.True(t, kubeerr.IsBadRequest(err))
@@ -534,9 +603,9 @@ func TestGrantRoleToUsers(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
 			managedServiceAccount(map[string]string{
-				rbacapi.AnnotationKeyOIDCSubjects: "foo-sub",
-				rbacapi.AnnotationKeyOIDCEmails:   "foo-email",
-				rbacapi.AnnotationKeyOIDCGroups:   "foo-group",
+				rbacapi.AnnotationKeyOIDCClaimNamePrefix + "subs":   "foo-sub",
+				rbacapi.AnnotationKeyOIDCClaimNamePrefix + "emails": "foo-email",
+				rbacapi.AnnotationKeyOIDCClaimNamePrefix + "groups": "foo-group",
 			}),
 		).Build()
 		db := NewKubernetesRolesDatabase(c)
@@ -545,9 +614,28 @@ func TestGrantRoleToUsers(t *testing.T) {
 			testProject,
 			testKargoRoleName,
 			&rbacapi.UserClaims{
-				Subs:   []string{"bar-sub"},
-				Emails: []string{"bar-email"},
-				Groups: []string{"bar-group"},
+				Claims: []rbacapi.Claim{
+					{
+						Name: "subs",
+						Values: []string{
+							"foo-sub",
+							"bar-sub",
+						},
+					},
+					{
+						Name: "emails",
+						Values: []string{
+							"foo-email",
+							"bar-email",
+						},
+					}, {
+						Name: "groups",
+						Values: []string{
+							"foo-group",
+							"bar-group",
+						},
+					},
+				},
 			},
 		)
 		require.NoError(t, err)
@@ -562,10 +650,10 @@ func TestGrantRoleToUsers(t *testing.T) {
 		require.Equal(
 			t,
 			map[string]string{
-				rbacapi.AnnotationKeyManaged:      rbacapi.AnnotationValueTrue,
-				rbacapi.AnnotationKeyOIDCSubjects: "bar-sub,foo-sub",
-				rbacapi.AnnotationKeyOIDCEmails:   "bar-email,foo-email",
-				rbacapi.AnnotationKeyOIDCGroups:   "bar-group,foo-group",
+				rbacapi.AnnotationKeyManaged:                        rbacapi.AnnotationValueTrue,
+				rbacapi.AnnotationKeyOIDCClaimNamePrefix + "subs":   "bar-sub,foo-sub",
+				rbacapi.AnnotationKeyOIDCClaimNamePrefix + "emails": "bar-email,foo-email",
+				rbacapi.AnnotationKeyOIDCClaimNamePrefix + "groups": "bar-group,foo-group",
 			},
 			sa.Annotations,
 		)
@@ -576,9 +664,9 @@ func TestList(t *testing.T) {
 	t.Run("with only kargo-managed roles", func(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
 			managedServiceAccount(map[string]string{
-				rbacapi.AnnotationKeyOIDCSubjects: "foo-sub,bar-sub",
-				rbacapi.AnnotationKeyOIDCEmails:   "foo-email,bar-email",
-				rbacapi.AnnotationKeyOIDCGroups:   "foo-group,bar-group",
+				rbacapi.AnnotationKeyOIDCClaimNamePrefix + "subs":   "foo-sub,bar-sub",
+				rbacapi.AnnotationKeyOIDCClaimNamePrefix + "emails": "foo-email,bar-email",
+				rbacapi.AnnotationKeyOIDCClaimNamePrefix + "groups": "foo-group,bar-group",
 			}),
 			managedRole([]rbacv1.PolicyRule{
 				{
@@ -606,9 +694,29 @@ func TestList(t *testing.T) {
 					CreationTimestamp: now,
 				},
 				KargoManaged: true,
-				Subs:         []string{"bar-sub", "foo-sub"},
-				Emails:       []string{"bar-email", "foo-email"},
-				Groups:       []string{"bar-group", "foo-group"},
+				Claims: []rbacapi.Claim{
+					{
+						Name: "emails",
+						Values: []string{
+							"foo-email",
+							"bar-email",
+						},
+					},
+					{
+						Name: "groups",
+						Values: []string{
+							"foo-group",
+							"bar-group",
+						},
+					},
+					{
+						Name: "subs",
+						Values: []string{
+							"foo-sub",
+							"bar-sub",
+						},
+					},
+				},
 				Rules: []rbacv1.PolicyRule{
 					{
 						APIGroups: []string{kargoapi.GroupVersion.Group},
@@ -629,9 +737,9 @@ func TestList(t *testing.T) {
 	t.Run("with a non-kargo-managed role", func(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
 			plainServiceAccount(map[string]string{
-				rbacapi.AnnotationKeyOIDCSubjects: "foo-sub,bar-sub",
-				rbacapi.AnnotationKeyOIDCEmails:   "foo-email,bar-email",
-				rbacapi.AnnotationKeyOIDCGroups:   "foo-group,bar-group",
+				rbacapi.AnnotationKeyOIDCClaimNamePrefix + "subs":   "foo-sub,bar-sub",
+				rbacapi.AnnotationKeyOIDCClaimNamePrefix + "emails": "foo-email,bar-email",
+				rbacapi.AnnotationKeyOIDCClaimNamePrefix + "groups": "foo-group,bar-group",
 			}),
 			plainRole([]rbacv1.PolicyRule{
 				{ // This rule has groups and types that we don't recognize. Let's
@@ -666,9 +774,29 @@ func TestList(t *testing.T) {
 					CreationTimestamp: now,
 				},
 				KargoManaged: false,
-				Subs:         []string{"bar-sub", "foo-sub"},
-				Emails:       []string{"bar-email", "foo-email"},
-				Groups:       []string{"bar-group", "foo-group"},
+				Claims: []rbacapi.Claim{
+					{
+						Name: "emails",
+						Values: []string{
+							"foo-email",
+							"bar-email",
+						},
+					},
+					{
+						Name: "groups",
+						Values: []string{
+							"foo-group",
+							"bar-group",
+						},
+					},
+					{
+						Name: "subs",
+						Values: []string{
+							"foo-sub",
+							"bar-sub",
+						},
+					},
+				},
 				// There should have been no attempt to normalize these rules
 				Rules: []rbacv1.PolicyRule{
 					{
@@ -785,7 +913,12 @@ func TestRevokeRoleFromUsers(t *testing.T) {
 			testProject,
 			testKargoRoleName,
 			&rbacapi.UserClaims{
-				Subs: []string{"fake-sub"},
+				Claims: []rbacapi.Claim{{
+					Name: "Subs",
+					Values: []string{
+						"fake-sub",
+					},
+				}},
 			},
 		)
 		require.True(t, kubeerr.IsNotFound(err))
@@ -801,7 +934,12 @@ func TestRevokeRoleFromUsers(t *testing.T) {
 			testProject,
 			testKargoRoleName,
 			&rbacapi.UserClaims{
-				Subs: []string{"fake-sub"},
+				Claims: []rbacapi.Claim{{
+					Name: "subs",
+					Values: []string{
+						"fake-sub",
+					},
+				}},
 			},
 		)
 		require.True(t, kubeerr.IsBadRequest(err))
@@ -810,9 +948,9 @@ func TestRevokeRoleFromUsers(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
 			managedServiceAccount(map[string]string{
-				rbacapi.AnnotationKeyOIDCSubjects: "bar-sub,foo-sub",
-				rbacapi.AnnotationKeyOIDCEmails:   "bar-email,foo-email",
-				rbacapi.AnnotationKeyOIDCGroups:   "bar-group,foo-group",
+				rbacapi.AnnotationKeyOIDCClaimNamePrefix + "subs":   "bar-sub,foo-sub",
+				rbacapi.AnnotationKeyOIDCClaimNamePrefix + "emails": "bar-email,foo-email",
+				rbacapi.AnnotationKeyOIDCClaimNamePrefix + "groups": "bar-group,foo-group",
 			}),
 		).Build()
 		db := NewKubernetesRolesDatabase(c)
@@ -821,9 +959,27 @@ func TestRevokeRoleFromUsers(t *testing.T) {
 			testProject,
 			testKargoRoleName,
 			&rbacapi.UserClaims{
-				Subs:   []string{"bar-sub"},
-				Emails: []string{"foo-email", "bar-email"},
-				Groups: []string{"foo-group", "bar-group"},
+				Claims: []rbacapi.Claim{
+					{
+						Name: "subs",
+						Values: []string{
+							"bar-sub",
+						},
+					},
+					{
+						Name: "emails",
+						Values: []string{
+							"foo-email",
+							"bar-email",
+						},
+					}, {
+						Name: "groups",
+						Values: []string{
+							"foo-group",
+							"bar-group",
+						},
+					},
+				},
 			},
 		)
 		require.NoError(t, err)
@@ -838,8 +994,8 @@ func TestRevokeRoleFromUsers(t *testing.T) {
 		require.Equal(
 			t,
 			map[string]string{
-				rbacapi.AnnotationKeyManaged:      rbacapi.AnnotationValueTrue,
-				rbacapi.AnnotationKeyOIDCSubjects: "foo-sub",
+				rbacapi.AnnotationKeyManaged:                      rbacapi.AnnotationValueTrue,
+				rbacapi.AnnotationKeyOIDCClaimNamePrefix + "subs": "foo-sub",
 			},
 			sa.Annotations,
 		)
@@ -891,9 +1047,28 @@ func TestUpdate(t *testing.T) {
 					Namespace: testProject,
 					Name:      testKargoRoleName,
 				},
-				Subs:   []string{"foo-sub", "bar-sub"},
-				Emails: []string{"foo-email", "bar-email"},
-				Groups: []string{"foo-group", "bar-group"},
+				Claims: []rbacapi.Claim{
+					{
+						Name: "subs",
+						Values: []string{
+							"foo-sub",
+							"bar-sub",
+						},
+					},
+					{
+						Name: "emails",
+						Values: []string{
+							"foo-email",
+							"bar-email",
+						},
+					}, {
+						Name: "groups",
+						Values: []string{
+							"foo-group",
+							"bar-group",
+						},
+					},
+				},
 				Rules: []rbacv1.PolicyRule{{
 					APIGroups: []string{kargoapi.GroupVersion.Group},
 					Resources: []string{"stages", "promotions"},
@@ -909,10 +1084,10 @@ func TestUpdate(t *testing.T) {
 		require.Equal(
 			t,
 			map[string]string{
-				rbacapi.AnnotationKeyManaged:      rbacapi.AnnotationValueTrue,
-				rbacapi.AnnotationKeyOIDCSubjects: "bar-sub,foo-sub",
-				rbacapi.AnnotationKeyOIDCEmails:   "bar-email,foo-email",
-				rbacapi.AnnotationKeyOIDCGroups:   "bar-group,foo-group",
+				rbacapi.AnnotationKeyManaged:                        rbacapi.AnnotationValueTrue,
+				rbacapi.AnnotationKeyOIDCClaimNamePrefix + "subs":   "bar-sub,foo-sub",
+				rbacapi.AnnotationKeyOIDCClaimNamePrefix + "emails": "bar-email,foo-email",
+				rbacapi.AnnotationKeyOIDCClaimNamePrefix + "groups": "bar-group,foo-group",
 			},
 			sa.Annotations,
 		)
@@ -963,9 +1138,9 @@ func TestUpdate(t *testing.T) {
 	t.Run("success with updated ServiceAccount and Role", func(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
 			managedServiceAccount(map[string]string{
-				rbacapi.AnnotationKeyOIDCSubjects: "foo-sub,bar-sub",
-				rbacapi.AnnotationKeyOIDCEmails:   "foo-email,bar-email",
-				rbacapi.AnnotationKeyOIDCGroups:   "foo-group,bar-group",
+				rbacapi.AnnotationKeyOIDCClaimNamePrefix + "subs":   "foo-sub,bar-sub",
+				rbacapi.AnnotationKeyOIDCClaimNamePrefix + "emails": "foo-email,bar-email",
+				rbacapi.AnnotationKeyOIDCClaimNamePrefix + "groups": "foo-group,bar-group",
 			}),
 			managedRole([]rbacv1.PolicyRule{{
 				APIGroups: []string{kargoapi.GroupVersion.Group},
@@ -985,9 +1160,25 @@ func TestUpdate(t *testing.T) {
 						kargoapi.AnnotationKeyDescription: "foo-description",
 					},
 				},
-				Subs:   []string{"foo-sub"},
-				Emails: []string{"foo-email"},
-				Groups: []string{"foo-group"},
+				Claims: []rbacapi.Claim{
+					{
+						Name: "subs",
+						Values: []string{
+							"foo-sub",
+						},
+					},
+					{
+						Name: "emails",
+						Values: []string{
+							"foo-email",
+						},
+					}, {
+						Name: "groups",
+						Values: []string{
+							"foo-group",
+						},
+					},
+				},
 				Rules: []rbacv1.PolicyRule{{
 					APIGroups: []string{kargoapi.GroupVersion.Group},
 					Resources: []string{"stages", "promotions"},
@@ -1003,11 +1194,11 @@ func TestUpdate(t *testing.T) {
 		require.Equal(
 			t,
 			map[string]string{
-				rbacapi.AnnotationKeyManaged:      rbacapi.AnnotationValueTrue,
-				rbacapi.AnnotationKeyOIDCSubjects: "foo-sub",
-				rbacapi.AnnotationKeyOIDCEmails:   "foo-email",
-				rbacapi.AnnotationKeyOIDCGroups:   "foo-group",
-				kargoapi.AnnotationKeyDescription: "foo-description",
+				rbacapi.AnnotationKeyManaged:                        rbacapi.AnnotationValueTrue,
+				rbacapi.AnnotationKeyOIDCClaimNamePrefix + "subs":   "foo-sub",
+				rbacapi.AnnotationKeyOIDCClaimNamePrefix + "emails": "foo-email",
+				rbacapi.AnnotationKeyOIDCClaimNamePrefix + "groups": "foo-group",
+				kargoapi.AnnotationKeyDescription:                   "foo-description",
 			},
 			sa.Annotations,
 		)

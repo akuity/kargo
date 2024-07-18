@@ -250,18 +250,22 @@ func (a *authInterceptor) listServiceAccounts(
 	ctx context.Context,
 	c claims,
 ) (map[string]map[types.NamespacedName]struct{}, error) {
-	queries := []libClient.MatchingFields{
-		{
-			kubeclient.ServiceAccountsByOIDCSubjectIndexField: c.Subject,
-		},
-		{
-			kubeclient.ServiceAccountsByOIDCEmailIndexField: c.Email,
-		},
-	}
-	for _, group := range c.Groups {
-		queries = append(queries, libClient.MatchingFields{
-			kubeclient.ServiceAccountsByOIDCGroupIndexField: group,
-		})
+	queries := []libClient.MatchingFields{}
+	for _, claim := range c {
+		if claimString, ok := claim.(string); ok {
+			queries = append(queries, libClient.MatchingFields{
+				kubeclient.ServiceAccountsByOIDCClaimIndexField: claimString,
+			})
+		}
+		if claimSlice, ok := claim.([]any); ok {
+			for _, claimSliceItem := range claimSlice {
+				if claimSliceItemString, ok := claimSliceItem.(string); ok {
+					queries = append(queries, libClient.MatchingFields{
+						kubeclient.ServiceAccountsByOIDCClaimIndexField: claimSliceItemString,
+					})
+				}
+			}
+		}
 	}
 	// allowedNamespaces is a set of all namespaces in which to search for
 	// ServiceAccounts the user may be mapped to. These will includes all project
@@ -384,9 +388,7 @@ func (a *authInterceptor) authenticate(
 			return user.ContextWithInfo(
 				ctx,
 				user.Info{
-					Subject:                    c.Subject,
-					Email:                      c.Email,
-					Groups:                     c.Groups,
+					Claims:                     c,
 					ServiceAccountsByNamespace: sa,
 				},
 			), nil
