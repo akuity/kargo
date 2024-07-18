@@ -115,3 +115,20 @@ func patchAnnotations(
 	}
 	return nil
 }
+
+// AddV08CompatibilityLabel adds the v0.8 compatibility label to the given
+// object.
+func AddV08CompatibilityLabel(
+	ctx context.Context,
+	c client.Client,
+	obj client.Object,
+) error {
+	patchBytes := []byte(
+		fmt.Sprintf(
+			`{"metadata":{"labels":{"%s":"true"}}}`,
+			V08CompatibilityLabelKey,
+		),
+	)
+	patch := client.RawPatch(types.MergePatchType, patchBytes)
+	return c.Patch(ctx, obj, patch)
+}

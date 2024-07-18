@@ -150,6 +150,14 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 		delete(freight.Labels, kargoapi.AliasLabelKey)
 	}
 
+	// Sync new Origin field with deprecated Warehouse field. This ensures that
+	// newer Freight remain compatible with controllers running an older version
+	// of the Kargo -- which is possible because the upgrade of the control plane
+	// and the distributed controllers is not atomic.
+	if freight.Origin.Kind == kargoapi.FreightOriginKindWarehouse && freight.Origin.Name != "" {
+		freight.Warehouse = freight.Origin.Name // nolint: staticcheck
+	}
+
 	return nil
 }
 
@@ -257,17 +265,22 @@ func (w *webhook) ValidateUpdate(
 
 	// Freight is meant to be immutable.
 	if changedPath, change, ok := compareFreight(oldFreight, newFreight); !ok {
-		return nil, apierrors.NewInvalid(
-			freightGroupKind,
-			oldFreight.Name,
-			field.ErrorList{
-				field.Invalid(
-					changedPath,
-					change,
-					"Freight is immutable",
-				),
-			},
-		)
+		// Temporary workaround to allow a migration of the Warehouse field to
+		// the Origin field.
+		if changedPath == nil || changedPath.String() != "origin" ||
+			!allowWarehouseToOriginMigration(oldFreight, newFreight) {
+			return nil, apierrors.NewInvalid(
+				freightGroupKind,
+				oldFreight.Name,
+				field.ErrorList{
+					field.Invalid(
+						changedPath,
+						change,
+						"Freight is immutable",
+					),
+				},
+			)
+		}
 	}
 
 	req, err := w.admissionRequestFromContextFn(ctx)
@@ -539,4 +552,15 @@ func compareFreight(old, new *kargoapi.Freight) (*field.Path, any, bool) {
 	}
 
 	return nil, nil, true
+}
+
+func allowWarehouseToOriginMigration(old, new *kargoapi.Freight) bool {
+	// If the Origin field is already set, a migration is not allowed.
+	if old.Origin.Name != "" {
+		return false
+	}
+
+	// If the Warehouse field is set on the old Freight and the Origin field is
+	// set to the Warehouse name on the new Freight, a migration is allowed.
+	return old.Warehouse != "" && new.Origin.Name == old.Warehouse // nolint: staticcheck
 }

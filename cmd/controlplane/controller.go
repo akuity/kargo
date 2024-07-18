@@ -7,6 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
+	extv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -143,6 +144,12 @@ func (o *controllerOptions) setupKargoManager(
 	if err = corev1.AddToScheme(scheme); err != nil {
 		return nil, stagesReconcilerCfg, fmt.Errorf(
 			"error adding Kubernetes core API to Kargo controller manager scheme: %w",
+			err,
+		)
+	}
+	if err = extv1.AddToScheme(scheme); err != nil {
+		return nil, stagesReconcilerCfg, fmt.Errorf(
+			"error adding Kubernetes API extensions API to Kargo controller manager scheme: %w",
 			err,
 		)
 	}

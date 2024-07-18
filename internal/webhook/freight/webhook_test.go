@@ -583,6 +583,76 @@ func TestValidateUpdate(t *testing.T) {
 			},
 		},
 		{
+			name: "attempt to migrate warehouse to origin",
+			setup: func() (*kargoapi.Freight, *kargoapi.Freight) {
+				oldFreight := &kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "fake-namespace",
+					},
+					Warehouse: "fake-warehouse",
+				}
+				oldFreight.Name = oldFreight.GenerateID()
+				newFreight := oldFreight.DeepCopy()
+				newFreight.Warehouse = "" // nolint: staticcheck
+				newFreight.Origin = kargoapi.FreightOrigin{
+					Kind: kargoapi.FreightOriginKindWarehouse,
+					Name: "fake-warehouse",
+				}
+				return oldFreight, newFreight
+			},
+			webhook: &webhook{
+				listFreightFn: func(
+					context.Context,
+					client.ObjectList,
+					...client.ListOption,
+				) error {
+					return nil
+				},
+				admissionRequestFromContextFn: admission.RequestFromContext,
+				isRequestFromKargoControlplaneFn: libWebhook.IsRequestFromKargoControlplane(
+					regexp.MustCompile("^system:serviceaccount:kargo:(kargo-api|kargo-controller)$"),
+				),
+			},
+			userInfo: &authnv1.UserInfo{
+				Username: "fake-user",
+			},
+			assertions: func(t *testing.T, _ *fakeevent.EventRecorder, err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "attempt to migrate warehouse to different origin name",
+			setup: func() (*kargoapi.Freight, *kargoapi.Freight) {
+				oldFreight := &kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "fake-namespace",
+					},
+					Warehouse: "fake-warehouse",
+				}
+				oldFreight.Name = oldFreight.GenerateID()
+				newFreight := oldFreight.DeepCopy()
+				newFreight.Warehouse = "" // nolint: staticcheck
+				newFreight.Origin = kargoapi.FreightOrigin{
+					Kind: kargoapi.FreightOriginKindWarehouse,
+					Name: "other-fake-warehouse",
+				}
+				return oldFreight, newFreight
+			},
+			webhook: &webhook{
+				listFreightFn: func(
+					context.Context,
+					client.ObjectList,
+					...client.ListOption,
+				) error {
+					return nil
+				},
+			},
+			assertions: func(t *testing.T, _ *fakeevent.EventRecorder, err error) {
+				require.ErrorContains(t, err, "is invalid")
+				require.ErrorContains(t, err, "Freight is immutable")
+			},
+		},
+		{
 			name: "update without mutation",
 			setup: func() (*kargoapi.Freight, *kargoapi.Freight) {
 				oldFreight := &kargoapi.Freight{

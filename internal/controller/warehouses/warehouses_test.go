@@ -6,9 +6,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -37,6 +35,7 @@ func TestNewReconciler(t *testing.T) {
 	require.NotNil(t, e.discoverBranchHistoryFn)
 	require.NotNil(t, e.discoverTagsFn)
 	require.NotNil(t, e.getDiffPathsForCommitIDFn)
+	require.NotNil(t, e.listFreightFn)
 	require.NotNil(t, e.createFreightFn)
 }
 
@@ -112,21 +111,30 @@ func TestSyncWarehouse(t *testing.T) {
 						},
 					}, nil
 				},
-				createFreightFn: func(
-					context.Context,
-					client.Object,
-					...client.CreateOption,
+				listFreightFn: func(
+					_ context.Context,
+					objList client.ObjectList,
+					_ ...client.ListOption,
 				) error {
-					return apierrors.NewAlreadyExists(
-						schema.GroupResource{
-							Group:    kargoapi.GroupVersion.Group,
-							Resource: "Warehouse",
+					freight, ok := objList.(*kargoapi.FreightList)
+					require.True(t, ok)
+					freight.Items = []kargoapi.Freight{{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "fake-freight",
+							Namespace: "fake-namespace",
 						},
-						"fake-freight",
-					)
+						Origin: kargoapi.FreightOrigin{
+							Kind: kargoapi.FreightOriginKindWarehouse,
+							Name: "fake-warehouse",
+						},
+					}}
+					return nil
 				},
 			},
 			warehouse: &kargoapi.Warehouse{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "fake-warehouse",
+				},
 				Spec: kargoapi.WarehouseSpec{
 					FreightCreationPolicy: kargoapi.FreightCreationPolicyAutomatic,
 				},
@@ -154,6 +162,9 @@ func TestSyncWarehouse(t *testing.T) {
 					*kargoapi.DiscoveredArtifacts,
 				) (*kargoapi.Freight, error) {
 					return &kargoapi.Freight{}, nil
+				},
+				listFreightFn: func(context.Context, client.ObjectList, ...client.ListOption) error {
+					return nil
 				},
 				createFreightFn: func(
 					context.Context,
@@ -192,6 +203,9 @@ func TestSyncWarehouse(t *testing.T) {
 							Namespace: "fake-namespace",
 						},
 					}, nil
+				},
+				listFreightFn: func(context.Context, client.ObjectList, ...client.ListOption) error {
+					return nil
 				},
 				createFreightFn: func(
 					context.Context,

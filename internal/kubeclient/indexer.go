@@ -293,6 +293,9 @@ func FreightByWarehouseIndexer(obj client.Object) []string {
 	if freight.Origin.Kind == kargoapi.FreightOriginKindWarehouse {
 		return []string{freight.Origin.Name}
 	}
+	if freight.Warehouse != "" { // nolint: staticcheck
+		return []string{freight.Warehouse} // nolint: staticcheck
+	}
 	return nil
 }
 

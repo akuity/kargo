@@ -523,6 +523,15 @@ func (r *reconciler) Reconcile(
 		if _, err = kargoapi.EnsureFinalizer(ctx, r.kargoClient, stage); err != nil {
 			newStatus = stage.Status
 		} else {
+			// Upgrade the Stage from <=0.7.x to be compatible with 0.8.x.
+			// If the Stage is already at 0.8.x, this is a no-op and will
+			// return a zero result.
+			var result ctrl.Result
+			if result, err = r.upgradeStage(ctx, stage); err != nil || !result.IsZero() {
+				return result, err
+			}
+
+			// Continue with the normal reconciliation process.
 			if stage.Spec.PromotionMechanisms == nil {
 				newStatus, err = r.syncControlFlowStage(ctx, stage)
 			} else {

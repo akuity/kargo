@@ -7,6 +7,7 @@ import (
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	extv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -16,6 +17,7 @@ import (
 	"github.com/akuity/kargo/internal/api/kubernetes"
 	"github.com/akuity/kargo/internal/controller/management/namespaces"
 	"github.com/akuity/kargo/internal/controller/management/projects"
+	"github.com/akuity/kargo/internal/controller/management/upgrade"
 	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/internal/os"
 	versionpkg "github.com/akuity/kargo/internal/version"
@@ -78,6 +80,11 @@ func (o *managementControllerOptions) run(ctx context.Context) error {
 		return fmt.Errorf("error setting up Projects reconciler: %w", err)
 	}
 
+	// v0.8.x upgrade controller
+	if err := upgrade.SetupFreightReconcilerWithManager(kargoMgr); err != nil {
+		return fmt.Errorf("error setting up Freight upgrade reconciler: %w", err)
+	}
+
 	if err := kargoMgr.Start(ctx); err != nil {
 		return fmt.Errorf("error starting kargo manager: %w", err)
 	}
@@ -101,6 +108,12 @@ func (o *managementControllerOptions) setupManager(ctx context.Context) (manager
 	if err = rbacv1.AddToScheme(scheme); err != nil {
 		return nil, fmt.Errorf(
 			"error adding Kubernetes RBAC API to Kargo controller manager scheme: %w",
+			err,
+		)
+	}
+	if err = extv1.AddToScheme(scheme); err != nil {
+		return nil, fmt.Errorf(
+			"error adding Kubernetes API extensions API to Kargo controller manager scheme: %w",
 			err,
 		)
 	}
