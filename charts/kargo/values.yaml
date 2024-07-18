@@ -199,6 +199,12 @@ api:
     ## @param api.oidc.cliClientID The client ID for the OIDC client used by CLI (optional). Needed by some OIDC providers (such as Dex) that require a separate Client ID for web app login vs. CLI login (`http://localhost`). If Dex is enabled, this value will be ignored and cli client ID will be automatically configured. If Dex is not enabled, and a different client app is configured for localhost CLI login, this should be the client ID configured in the IdP.
     cliClientID:
 
+    scopes: 
+      - openid
+      - profile
+      - email
+      - groups
+
     admins:
       ## @param api.oidc.admins.subs Subjects having any of these values in their sub claim will automatically be Kargo admins.
       subs: []

@@ -18,7 +18,7 @@ type Config struct {
 	// provider for CLI login.
 	CLIClientID string `envconfig:"OIDC_CLI_CLIENT_ID"`
 	// Scopes are the scopes to be requested during the authorization code flow.
-	Scopes []string
+	Scopes string `envconfig:"OIDC_SCOPES"`
 
 	// GlobalServiceAccountNamespaces is the list of namespaces to look up
 	// for shared service accounts.

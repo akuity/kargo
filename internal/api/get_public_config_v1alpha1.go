@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"strings"
 
 	"connectrpc.com/connect"
 
@@ -18,7 +19,7 @@ func (s *server) GetPublicConfig(
 			IssuerUrl:   s.cfg.OIDCConfig.IssuerURL,
 			ClientId:    s.cfg.OIDCConfig.ClientID,
 			CliClientId: s.cfg.OIDCConfig.CLIClientID,
-			Scopes:      s.cfg.OIDCConfig.Scopes,
+			Scopes:      strings.Split(s.cfg.OIDCConfig.Scopes, ","),
 		}
 	}
 	resp := &svcv1alpha1.GetPublicConfigResponse{
