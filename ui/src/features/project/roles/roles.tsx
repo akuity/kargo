@@ -26,17 +26,14 @@ const renderColumn = (key: string) => {
     title: key.charAt(0).toUpperCase() + key.slice(1),
     key,
     render: (record: Role) => {
-      const claimValues = record.claims.find(claim => claim.name === key)?.values
+      const claimValues = record.claims.find((claim) => claim.name === key)?.values;
       return (
         <div>
-          {(claimValues as string[] || []).length > 0 ? claimValues?.join(',') : 
+          {((claimValues as string[]) || []).length > 0 ? (
+            claimValues?.join(',')
+          ) : (
             <FontAwesomeIcon icon={faQuestionCircle} className='text-gray-200' />
-          }
-          {/* {if (((claimValues as string[]) || []).length > 0) {
-            (claimValues as string[]).join(',')
-           } else {
-            <FontAwesomeIcon icon={faQuestionCircle} className='text-gray-200' />
-          }} */}
+          )}
         </div>
       );
     }

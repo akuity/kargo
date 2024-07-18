@@ -1,3 +1,4 @@
+import { PartialMessage } from '@bufbuild/protobuf';
 import { useMutation } from '@connectrpc/connect-query';
 import { faPeopleGroup } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -5,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Button, Drawer, Input, Typography } from 'antd';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { string, z } from 'zod';
+import { z } from 'zod';
 
 import { FieldContainer } from '@ui/features/common/form/field-container';
 import { MultiStringEditor } from '@ui/features/common/form/multi-string-editor';
@@ -17,7 +18,6 @@ import { zodValidators } from '@ui/utils/validators';
 
 import { RuleEditor } from './rule-editor';
 import { RulesTable } from './rules-table';
-import { PartialMessage } from '@bufbuild/protobuf';
 
 type Props = {
   project: string;
@@ -55,9 +55,30 @@ export const CreateRole = ({ editing, onSuccess, project, hide }: Props) => {
     values: {
       name: editing?.metadata?.name || '',
       description: editing?.metadata?.annotations[DESCRIPTION_ANNOTATION_KEY] || '',
-      emails: editing?.claims.find((claim: Claim) => {if (claim.name === 'emails') {return claim} else { return undefined }})?.values || [],
-      subs: editing?.claims.find((claim: Claim) => {if (claim.name === 'subs') {return claim} else { return undefined }})?.values || [],
-      groups: editing?.claims.find((claim: Claim) => {if (claim.name === 'groups') {return claim} else { return undefined }})?.values || [],
+      emails:
+        editing?.claims.find((claim: Claim) => {
+          if (claim.name === 'emails') {
+            return claim;
+          } else {
+            return undefined;
+          }
+        })?.values || [],
+      subs:
+        editing?.claims.find((claim: Claim) => {
+          if (claim.name === 'subs') {
+            return claim;
+          } else {
+            return undefined;
+          }
+        })?.values || [],
+      groups:
+        editing?.claims.find((claim: Claim) => {
+          if (claim.name === 'groups') {
+            return claim;
+          } else {
+            return undefined;
+          }
+        })?.values || []
     }
   });
   const { mutate } = useMutation(createRole, {
@@ -77,31 +98,31 @@ export const CreateRole = ({ editing, onSuccess, project, hide }: Props) => {
   const onSubmit = handleSubmit((values) => {
     const annotations = annotationsWithDescription(values.description);
     const getClaims = (): PartialMessage<Claim>[] => {
-      const claimsArray: PartialMessage<Claim>[] = []
-      multiFields.map(field => {
+      const claimsArray: PartialMessage<Claim>[] = [];
+      multiFields.map((field) => {
         const newClaim = new Claim({
           name: String(field.name)
-        })
-        if (newClaim.name === 'emails'){
-          if (values.emails.length === 0){
-            return
+        });
+        if (newClaim.name === 'emails') {
+          if (values.emails.length === 0) {
+            return;
           }
-          newClaim.values = values.emails
+          newClaim.values = values.emails;
         } else if (newClaim.name === 'subs') {
-          if (values.subs.length === 0){
-            return
+          if (values.subs.length === 0) {
+            return;
           }
-          newClaim.values = values.subs
+          newClaim.values = values.subs;
         } else if (newClaim.name === 'groups') {
-          if (values.groups.length === 0){
-            return
+          if (values.groups.length === 0) {
+            return;
           }
-          newClaim.values = values.groups
+          newClaim.values = values.groups;
         }
-        claimsArray.push(newClaim)
-      })
-      return claimsArray
-    }
+        claimsArray.push(newClaim);
+      });
+      return claimsArray;
+    };
     if (editing) {
       return update({
         role: {
@@ -113,10 +134,10 @@ export const CreateRole = ({ editing, onSuccess, project, hide }: Props) => {
       });
     } else {
       mutate({
-        role: { 
-          ...values, 
-          rules, 
-          metadata: { name: values.name, namespace: project, annotations }, 
+        role: {
+          ...values,
+          rules,
+          metadata: { name: values.name, namespace: project, annotations },
           claims: getClaims()
         }
       });
