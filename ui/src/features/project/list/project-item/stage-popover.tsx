@@ -15,10 +15,16 @@ import {
 import { Freight, FreightReference, Promotion, Stage } from '@ui/gen/v1alpha1/generated_pb';
 
 export const StagePopover = ({ project, stage }: { project?: string; stage?: Stage }) => {
-  const { data: promotionData } = useQuery(getPromotion, {
-    name: stage?.status?.lastPromotion?.name,
-    project
-  });
+  const { data: promotionData } = useQuery(
+    getPromotion,
+    {
+      name: stage?.status?.lastPromotion?.name,
+      project
+    },
+    {
+      enabled: !!stage?.status?.lastPromotion?.name
+    }
+  );
   const promotion = useMemo(() => promotionData?.result?.value as Promotion, [promotionData]);
 
   const transport = useTransport();
@@ -26,7 +32,10 @@ export const StagePopover = ({ project, stage }: { project?: string; stage?: Sta
   const freightData = useQueries({
     queries: Object.values(stage?.status?.freightHistory[0] || {}).map(
       (freight: FreightReference) => {
-        return createQueryOptions(getFreight, { project, name: freight.name }, { transport });
+        return {
+          ...createQueryOptions(getFreight, { project, name: freight.name }, { transport }),
+          enabled: !!freight.name
+        };
       }
     )
   });
