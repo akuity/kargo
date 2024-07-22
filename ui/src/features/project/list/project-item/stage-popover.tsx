@@ -30,7 +30,7 @@ export const StagePopover = ({ project, stage }: { project?: string; stage?: Sta
   const transport = useTransport();
 
   const freightData = useQueries({
-    queries: Object.values(stage?.status?.freightHistory[0].items || {}).map(
+    queries: Object.values(stage?.status?.freightHistory[0]?.items || {}).map(
       (freight: FreightReference) => {
         return {
           ...createQueryOptions(getFreight, { project, name: freight.name }, { transport }),
@@ -56,7 +56,7 @@ export const StagePopover = ({ project, stage }: { project?: string; stage?: Sta
         </div>
       </div>
       <_label>CURRENT FREIGHT</_label>
-      {Object.values(stage?.status?.freightHistory[0].items || {}).map((_, i) => (
+      {Object.values(stage?.status?.freightHistory[0]?.items || {}).map((_, i) => (
         <div className='flex items-center mb-2' key={i}>
           <FontAwesomeIcon icon={faBox} className='mr-2' />
           <div>{getAlias(freightData[i]?.data?.result?.value as Freight)}</div>
