@@ -21,7 +21,7 @@ Kargo's goal is to provide an intuitive and flexible layer "above" existing GitO
 Watch the *Multi-Stage Deployment Pipelines the GitOps Way* talk by Jesse Suen & Kent Rancourt of Akuity at GitOpsCon EU 2024.
 
 <center>
-<iframe width="1280" height="720" src="https://www.youtube.com/embed/0B_JODxyK0w" title="Kargo - Multi-Stage Deployment Pipelines using GitOps - Jesse Suen / Kent Rancourt" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+<iframe style="width: 100%" src="https://www.youtube.com/embed/0B_JODxyK0w" title="Kargo - Multi-Stage Deployment Pipelines using GitOps - Jesse Suen / Kent Rancourt" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
 </center>
 :::
 
