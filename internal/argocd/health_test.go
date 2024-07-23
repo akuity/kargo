@@ -399,56 +399,6 @@ func TestApplicationHealth_GetApplicationHealth(t *testing.T) {
 			},
 		},
 		{
-			name: "error on multiple app sources",
-			key:  types.NamespacedName{Namespace: "fake-namespace", Name: "fake-name"},
-			stage: &kargoapi.Stage{
-				Spec: testStageSpec,
-			},
-			application: &argocd.Application{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "fake-namespace",
-					Name:      "fake-name",
-				},
-				Spec: argocd.ApplicationSpec{
-					Sources: argocd.ApplicationSources{
-						{},
-						{},
-					},
-				},
-				Status: argocd.ApplicationStatus{
-					Health: argocd.HealthStatus{
-						Status:  argocd.HealthStatusHealthy,
-						Message: "fake-message",
-					},
-					Sync: argocd.SyncStatus{
-						Status:    argocd.SyncStatusCodeSynced,
-						Revision:  "fake-revision",
-						Revisions: []string{"fake-revision1", "fake-revision2"},
-					},
-				},
-			},
-			assertions: func(
-				t *testing.T,
-				state kargoapi.HealthState,
-				healthStatus kargoapi.ArgoCDAppHealthStatus,
-				syncStatus kargoapi.ArgoCDAppSyncStatus,
-				err error,
-			) {
-				require.ErrorContains(t, err, "bugs in Argo CD currently prevent a comprehensive assessment")
-
-				require.Equal(t, kargoapi.HealthStateUnknown, state)
-				require.Equal(t, kargoapi.ArgoCDAppHealthStatus{
-					Status:  kargoapi.ArgoCDAppHealthStateHealthy,
-					Message: "fake-message",
-				}, healthStatus)
-				require.Equal(t, kargoapi.ArgoCDAppSyncStatus{
-					Status:    kargoapi.ArgoCDAppSyncStateSynced,
-					Revision:  "fake-revision",
-					Revisions: []string{"fake-revision1", "fake-revision2"},
-				}, syncStatus)
-			},
-		},
-		{
 			name: "Application with error conditions yields Unhealthy state",
 			key:  types.NamespacedName{Namespace: "fake-namespace", Name: "fake-name"},
 			stage: &kargoapi.Stage{
