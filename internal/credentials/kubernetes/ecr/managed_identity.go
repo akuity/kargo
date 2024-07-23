@@ -175,13 +175,21 @@ func (p *managedIdentityCredentialHelper) getAuthToken(
 			return "", err
 		}
 		logger.Debug(
-			"controller IAM role is not authorized to assume project-specific role. falling back to default config",
+			"Controller IAM role is not authorized to assume project-specific role " +
+				"or project-specific role is not authorized to obtain an ECR auth token. " +
+				"Falling back to using controller's IAM role directly.",
 		)
 		ecrSvc = ecr.NewFromConfig(cfg)
 		output, err = ecrSvc.GetAuthorizationToken(ctx, &ecr.GetAuthorizationTokenInput{})
 		if err != nil {
-			logger.Error(err, "error getting ECR authorization token")
-			return "", err
+			if !errors.As(err, &re) || re.HTTPStatusCode() != http.StatusForbidden {
+				return "", err
+			}
+			logger.Debug(
+				"Controller's IAM role is not authorized to obtain an ECR auth token. " +
+					"Treating this as no credentials found.",
+			)
+			return "", nil
 		}
 	}
 	logger.Debug("got ECR authorization token")

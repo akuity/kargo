@@ -113,7 +113,7 @@ export const Images = ({
   stages: Stage[];
   hide: () => void;
 }) => {
-  const colors = useContext(ColorContext);
+  const { stageColorMap: colors } = useContext(ColorContext);
   const images = useMemo(() => {
     const images = new Map<string, Map<string, StageStyleMap>>();
     stages.forEach((stage) => {

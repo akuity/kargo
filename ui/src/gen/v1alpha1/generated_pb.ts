@@ -4319,6 +4319,22 @@ export class StageStatus extends Message<StageStatus> {
   freightHistory: FreightCollection[] = [];
 
   /**
+   * FreightSummary is human-readable text maintained by the controller that
+   * summarizes what Freight is currently deployed to the Stage. For Stages that
+   * request a single piece of Freight AND the request has been fulfilled, this
+   * field will simply contain the name of the Freight. For Stages that request
+   * a single piece of Freight AND the request has NOT been fulfilled, or for
+   * Stages that request multiple pieces of Freight, this field will contain a
+   * summary of fulfilled/requested Freight. The existence of this field is a
+   * workaround for kubectl limitations so that this complex but valuable
+   * information can be displayed in a column in response to `kubectl get
+   * stages`.
+   *
+   * @generated from field: optional string freightSummary = 12;
+   */
+  freightSummary?: string;
+
+  /**
    * CurrentFreight is a simplified representation of the Stage's current
    * Freight describing what is currently deployed to the Stage.
    *
@@ -4386,6 +4402,7 @@ export class StageStatus extends Message<StageStatus> {
     { no: 11, name: "lastHandledRefresh", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 1, name: "phase", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 4, name: "freightHistory", kind: "message", T: FreightCollection, repeated: true },
+    { no: 12, name: "freightSummary", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 2, name: "currentFreight", kind: "message", T: FreightReference, opt: true },
     { no: 3, name: "history", kind: "message", T: FreightReference, repeated: true },
     { no: 8, name: "health", kind: "message", T: Health, opt: true },

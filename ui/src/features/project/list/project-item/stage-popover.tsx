@@ -15,18 +15,27 @@ import {
 import { Freight, FreightReference, Promotion, Stage } from '@ui/gen/v1alpha1/generated_pb';
 
 export const StagePopover = ({ project, stage }: { project?: string; stage?: Stage }) => {
-  const { data: promotionData } = useQuery(getPromotion, {
-    name: stage?.status?.lastPromotion?.name,
-    project
-  });
+  const { data: promotionData } = useQuery(
+    getPromotion,
+    {
+      name: stage?.status?.lastPromotion?.name,
+      project
+    },
+    {
+      enabled: !!stage?.status?.lastPromotion?.name
+    }
+  );
   const promotion = useMemo(() => promotionData?.result?.value as Promotion, [promotionData]);
 
   const transport = useTransport();
 
   const freightData = useQueries({
-    queries: Object.values(stage?.status?.freightHistory[0] || {}).map(
+    queries: Object.values(stage?.status?.freightHistory[0]?.items || {}).map(
       (freight: FreightReference) => {
-        return createQueryOptions(getFreight, { project, name: freight.name }, { transport });
+        return {
+          ...createQueryOptions(getFreight, { project, name: freight.name }, { transport }),
+          enabled: !!freight.name
+        };
       }
     )
   });
@@ -47,7 +56,7 @@ export const StagePopover = ({ project, stage }: { project?: string; stage?: Sta
         </div>
       </div>
       <_label>CURRENT FREIGHT</_label>
-      {Object.values(stage?.status?.freightHistory[0] || {}).map((_, i) => (
+      {Object.values(stage?.status?.freightHistory[0]?.items || {}).map((_, i) => (
         <div className='flex items-center mb-2' key={i}>
           <FontAwesomeIcon icon={faBox} className='mr-2' />
           <div>{getAlias(freightData[i]?.data?.result?.value as Freight)}</div>

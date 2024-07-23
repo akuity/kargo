@@ -3,6 +3,7 @@ import {
   faBullseye,
   faCircleCheck,
   faCircleNotch,
+  faCodePullRequest,
   faGear,
   faTruckArrowRight
 } from '@fortawesome/free-solid-svg-icons';
@@ -78,6 +79,13 @@ export const StageNode = ({
         <h3>
           <div className='truncate pb-1 mr-auto'>{stage.metadata?.name}</div>
           <div className='flex gap-1'>
+            {(stage?.spec?.promotionMechanisms?.gitRepoUpdates || []).some(
+              (g) => g.pullRequest
+            ) && (
+              <Tooltip title='PR Promotion Enabled'>
+                <FontAwesomeIcon icon={faCodePullRequest} />
+              </Tooltip>
+            )}
             {!stage?.status?.currentPromotion && stage.status?.lastPromotion && (
               <div className='pb-1'>
                 <PromotionStatusIcon
