@@ -460,7 +460,7 @@ func TestSyncWarehouse(t *testing.T) {
 			},
 			assertions: func(t *testing.T, status kargoapi.WarehouseStatus, err error) {
 				require.NoError(t, err)
-				require.Empty(t, status.Message)
+				require.Empty(t, status.Message) // nolint:staticcheck
 			},
 		},
 

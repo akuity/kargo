@@ -205,7 +205,7 @@ func (r *reconciler) syncWarehouse(
 
 	// Clear previous error message.
 	// TODO(hidde): Remove this once we have removed the deprecated field.
-	status.Message = ""
+	status.Message = "" // nolint:staticcheck
 
 	// Discover the latest artifacts.
 	if shouldDiscoverArtifacts(warehouse, status.LastHandledRefresh) {
