@@ -422,12 +422,12 @@ export const Pipelines = () => {
                           onClick={
                             state.action === FreightTimelineAction.ManualApproval
                               ? () => {
-                                manualApproveAction({
-                                  stage: node.data?.metadata?.name,
-                                  project: name,
-                                  name: state.freight
-                                });
-                              }
+                                  manualApproveAction({
+                                    stage: node.data?.metadata?.name,
+                                    project: name,
+                                    name: state.freight
+                                  });
+                                }
                               : undefined
                           }
                           onHover={(h) => onHover(h, node.data?.metadata?.name || '', true)}
@@ -441,12 +441,12 @@ export const Pipelines = () => {
                         onClick={
                           node.type === NodeType.WAREHOUSE
                             ? () =>
-                              navigate(
-                                generatePath(paths.warehouse, {
-                                  name,
-                                  warehouseName: node.warehouseName
-                                })
-                              )
+                                navigate(
+                                  generatePath(paths.warehouse, {
+                                    name,
+                                    warehouseName: node.warehouseName
+                                  })
+                                )
                             : undefined
                         }
                       >
