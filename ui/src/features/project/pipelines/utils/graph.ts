@@ -44,7 +44,10 @@ export const nodeStubFor = (type: NodeType) => {
 };
 
 export const getConnectors = (g: graphlib.Graph) => {
-  const groups: { [key: string]: { [key: string]: ConnectorsType[][] } } = {};
+  const forward: { [key: string]: { [key: string]: ConnectorsType[][] } } = {};
+  const backward: { [key: string]: { [key: string]: boolean } } = {};
+
+  // horizontal edges are only between nodes where the parent has only one child and the child has only one parent
   g.edges().map((item) => {
     const edge = g.edge(item);
     const points = edge.points;
@@ -71,22 +74,28 @@ export const getConnectors = (g: graphlib.Graph) => {
       lines.push({ x: cx, y: cy, width, angle, color: edge['color'] });
     }
 
-    const fromGr = groups[from] || {};
-    groups[from] = { ...fromGr, [to]: [...(fromGr[to] || []), lines] };
+    const fromGr = forward[from] || {};
+    forward[from] = { ...fromGr, [to]: [...(fromGr[to] || []), lines] };
+
+    const backwardGr = backward[to] || {};
+    backward[to] = { ...backwardGr, [from]: true };
   });
 
-  for (const fromKey in groups) {
-    if (Object.keys(groups[fromKey] || {}).length === 1) {
-      for (const group of Object.values(groups[fromKey])) {
-        group.forEach((lines) => {
-          lines.forEach((line) => {
-            line.angle = 0;
+  for (const fromKey in forward) {
+    if (Object.keys(forward[fromKey] || {}).length === 1) {
+      for (const toKey of Object.keys(forward[fromKey])) {
+        if (Object.keys(backward[toKey] || {}).length === 1) {
+          const group = forward[fromKey][toKey];
+          group.forEach((lines) => {
+            lines.forEach((line) => {
+              line.angle = 0;
+            });
           });
-        });
+        }
       }
     }
   }
-  return Object.values(groups).flatMap((group) =>
+  return Object.values(forward).flatMap((group) =>
     Object.values(group).flatMap((item) => Object.values(item))
   );
 };
