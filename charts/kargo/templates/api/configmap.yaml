@@ -53,7 +53,7 @@ data:
   {{- if .Values.api.oidc.cliClientID }}
   OIDC_CLI_CLIENT_ID: {{ quote .Values.api.oidc.cliClientID }}
   {{- end }}
-  OIDC_SCOPES: {{ join "," .Values.api.oidc.scopes }}
+  OIDC_ADDITIONAL_SCOPES: {{ join "," .Values.api.oidc.additionalScopes }}
   {{- end }}
   {{- end }}
   {{- if .Values.api.argocd.urls }}

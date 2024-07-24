@@ -17,8 +17,10 @@ type Config struct {
 	// CLIClientID is the client ID provided by the OpenID Connect identity
 	// provider for CLI login.
 	CLIClientID string `envconfig:"OIDC_CLI_CLIENT_ID"`
-	// Scopes are the scopes to be requested during the authorization code flow.
-	Scopes string `envconfig:"OIDC_SCOPES"`
+	// DefaultScopes are the scopes to always be requested during the authorization code flow.
+	DefaultScopes []string
+	// AdditionalScopes are any more scopes to be requested during the authorization code flow on top of the default Scopes.
+	AdditionalScopes []string `envconfig:"OIDC_ADDITIONAL_SCOPES"`
 
 	// GlobalServiceAccountNamespaces is the list of namespaces to look up
 	// for shared service accounts.
@@ -29,5 +31,6 @@ type Config struct {
 func ConfigFromEnv() Config {
 	cfg := Config{}
 	envconfig.MustProcess("", &cfg)
+	cfg.DefaultScopes = []string{"openid", "profile", "email", "groups"}
 	return cfg
 }

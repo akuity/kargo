@@ -198,12 +198,8 @@ api:
     clientID:
     ## @param api.oidc.cliClientID The client ID for the OIDC client used by CLI (optional). Needed by some OIDC providers (such as Dex) that require a separate Client ID for web app login vs. CLI login (`http://localhost`). If Dex is enabled, this value will be ignored and cli client ID will be automatically configured. If Dex is not enabled, and a different client app is configured for localhost CLI login, this should be the client ID configured in the IdP.
     cliClientID:
-    ## @param api.oidc.scopes The scopes to send to the OIDC provider. If Dex is enabled, this value will be ignored and the scopes should be in the dex connectors configuration. If Dex is not enabled, this should be set to the scopes you wish to be provided to Kargo by your identity provider.
-    scopes: 
-      - openid
-      - profile
-      - email
-      - groups
+    ## @param api.oidc.additionalScopes The additional scopes to send to the OIDC provider. This should be set to the scopes you wish to be provided to your identity provider from clients of Kargo, the scopes openid, profile, email and groups are always asked for and don't need to be added, this value is intended for any additional ones you require.
+    additionalScopes: []
 
     admins:
       ## @param api.oidc.admins.subs Subjects having any of these values in their sub claim will automatically be Kargo admins.
