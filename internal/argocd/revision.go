@@ -13,23 +13,37 @@ import (
 	"github.com/akuity/kargo/internal/logging"
 )
 
+var NO_REVISIONS = []string{}
+
+func FindRevisionMatches(revisions []string, desired []string) []string {
+	matchingRevisions := make([]string, 0)
+	for i, _ := range revisions {
+		for j, _ := range desired {
+			if revisions[i] == desired[j] {
+				matchingRevisions = append(matchingRevisions, revisions[i])
+			}
+		}
+	}
+	return matchingRevisions
+}
+
 // GetDesiredRevision returns the desired revision for the given
 // v1alpha1.Application. If that cannot be determined, an empty string is
 // returned.
-func GetDesiredRevision(
+func GetDesiredRevisions(
 	ctx context.Context,
 	cl client.Client,
 	stage *kargoapi.Stage,
 	update *kargoapi.ArgoCDAppUpdate,
 	app *argocd.Application,
 	frght []kargoapi.FreightReference,
-) (string, error) {
+) ([]string, error) {
 
 	logger := logging.LoggerFromContext(ctx)
 	if app == nil {
 		err := errors.New("Application is nil")
 		logger.Error(err, "Cannot determine desired revision for application, bailing.")
-		return "", nil
+		return NO_REVISIONS, nil
 	}
 
 	appLogger := logger.WithValues("application", app.Name, "namespace", app.Namespace)
@@ -42,16 +56,22 @@ func GetDesiredRevision(
 	// freight).
 
 	// An application may have one or more sources.
-	if app.Spec.Source != nil {
+	if !app.IsMultisource() {
+		if app.Spec.Source == nil {
+			err := errors.New("Single-source application source is nil.")
+			appLogger.Error(err, "Cannot determine desired revision for application, bailing.")
+			return NO_REVISIONS, nil
+		}
+
 		appLogger.Debug("Application source is not nil, checking.", "source", app.Spec.Source)
 		desiredRevision, err := getRevisionFromSource(ctx, cl, stage, update, app.Spec.Source, frght)
 
 		if err != nil {
-			return "", err
+			return NO_REVISIONS, err
 		}
 
 		if desiredRevision != "" {
-			return desiredRevision, nil
+			return []string{desiredRevision}, nil
 		}
 	}
 
@@ -59,21 +79,26 @@ func GetDesiredRevision(
 	// eg. a Helm and a vanilla manifest source.
 	// In that situation it doesn't matter which source's target revision is returned as ArgoCD does not support
 	// different target revisions for sources targeting the same repository.
+	revisions := make([]string, 0)
 	for i := range app.Spec.Sources {
 		desiredRevision, err := getRevisionFromSource(ctx, cl, stage, update, &app.Spec.Sources[i], frght)
 
 		if err != nil {
-			return "", err
+			return NO_REVISIONS, err
 		}
 
 		if desiredRevision != "" {
-			return desiredRevision, nil
+			revisions = append(revisions, desiredRevision)
 		}
+	}
+	if len(revisions) > 0 {
+		appLogger.Debug("Found desired revision(s) for multi-source application.", "revisions", revisions)
+		return revisions, nil
 	}
 
 	// If we end up here, no desired revision was found from any of the possible sources.
 	appLogger.Debug("Could not determine desired revision for application from any sources.")
-	return "", nil
+	return NO_REVISIONS, nil
 }
 
 func getRevisionFromSource(

@@ -199,17 +199,21 @@ func (h *applicationHealth) GetApplicationHealth(
 	// is syncing to it. We do not further care about the cluster being in sync
 	// with the desired revision, as some applications may be out of sync by
 	// default.
-	if desiredRevision, err := GetDesiredRevision(
+	desiredRevisions, err := GetDesiredRevisions(
 		ctx,
 		h.kargoClient,
 		stage,
 		update,
 		app,
 		stage.Status.FreightHistory.Current().References(),
-	); err != nil {
+	)
+
+	if err != nil {
 		return kargoapi.HealthStateUnknown, healthStatus, syncStatus, err
-	} else if desiredRevision != "" {
-		if healthState, err := stageHealthForAppSync(ctx, app, desiredRevision); err != nil {
+	}
+
+	if len(desiredRevisions) > 0 {
+		if healthState, err := stageHealthForAppSync(ctx, app, desiredRevisions); err != nil {
 			return healthState, healthStatus, syncStatus, err
 		}
 
@@ -248,11 +252,11 @@ func (h *applicationHealth) GetApplicationHealth(
 func stageHealthForAppSync(
 	ctx context.Context,
 	app *argocd.Application,
-	revision string) (kargoapi.HealthState, error) {
-	logger := logging.LoggerFromContext(ctx).WithValues("appName", app.GetName(), "revision", revision)
+	revisions []string) (kargoapi.HealthState, error) {
+	logger := logging.LoggerFromContext(ctx).WithValues("appName", app.GetName(), "revisions", revisions)
 	logger.Debug("About to determine stage health based on app sync status.")
 	switch {
-	case revision == "" && len(app.Status.Sync.Revisions) == 0:
+	case len(revisions) == 0 && len(app.Status.Sync.Revisions) == 0:
 		logger.Debug("Revision not set, assuming healthy.")
 		return kargoapi.HealthStateHealthy, nil
 	case app.Operation != nil && app.Operation.Sync != nil,
@@ -269,32 +273,51 @@ func stageHealthForAppSync(
 		// Apps may have multiple revisions in the list of revisions, so we need to check in both places.
 
 		// Trivial case where app has only a single source and revision is set.
-		if app.Status.Sync.Revision == revision {
-			return kargoapi.HealthStateHealthy, nil
+		singleSourceRevision := app.Status.Sync.Revision
+		if singleSourceRevision != "" {
+			matchingRevisions := FindRevisionMatches([]string{singleSourceRevision}, revisions)
+
+			if len(matchingRevisions) == 1 {
+				return kargoapi.HealthStateHealthy, nil
+			}
+
+			msg := fmt.Sprintf(
+				"Desired revision %q does not match current revision %q of Application %q "+
+					"in namespace %q, assuming unhealthy.",
+				revisions,
+				singleSourceRevision,
+				app.GetName(),
+				app.GetNamespace(),
+			)
+
+			return kargoapi.HealthStateUnhealthy, errors.New(msg)
 		}
 
-		if len(app.Status.Sync.Revisions) > 0 {
+		// If the app has multiple source revisions, it is a multi-source application.
+		// In this case, all desired revisions must be in the list of revisions for the app to be considered healthy.
+		multiSourceRevisions := app.Status.Sync.Revisions
+		if len(multiSourceRevisions) > 0 {
 			// App has multiple sources, so we need to check the list of revisions.
 			// Apps with multiple sources pointed at the same Git repository can only have the same revision
 			// for all sources because ArgoCD does not support the alternative, so we only need to check
 			// the first revision match.
-			for _, r := range app.Status.Sync.Revisions {
-				if r == revision {
-					logger.Debug("Found desired revision in list of revisions of multi-source application, app is healthy.",
-						"desiredRevision", revision, "currentRevisions", app.Status.Sync.Revisions)
-					return kargoapi.HealthStateHealthy, nil
-				}
+			matchingRevisions := FindRevisionMatches(multiSourceRevisions, revisions)
+
+			if len(matchingRevisions) > 0 && len(matchingRevisions) == len(revisions) {
+				logger.Debug("Found all desired revisions in list of revisions of multi-source application, app is healthy.",
+					"desiredRevisions", revisions, "currentRevisions", multiSourceRevisions)
+				return kargoapi.HealthStateHealthy, nil
 			}
 		}
 
 		msg := fmt.Sprintf(
-			"No revisions of Application %q in namespace %q match the desired revision %v"+
+			"Not all revisions of Application %q in namespace %q match the desired revisions %v"+
 				", assuming unhealthy. Current revisions: %v, current revision: %v",
 			app.GetName(),
 			app.GetNamespace(),
-			revision,
-			app.Status.Sync.Revisions,
-			app.Status.Sync.Revision,
+			revisions,
+			multiSourceRevisions,
+			singleSourceRevision,
 		)
 		logger.Debug(msg)
 		return kargoapi.HealthStateUnhealthy, errors.New(msg)

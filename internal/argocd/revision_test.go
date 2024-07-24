@@ -10,25 +10,31 @@ import (
 	argocdapi "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
 )
 
-func TestGetDesiredRevision(t *testing.T) {
+func TestGetDesiredRevisions(t *testing.T) {
 	testOrigin := kargoapi.FreightOrigin{
 		Kind: kargoapi.FreightOriginKindWarehouse,
 		Name: "fake-warehouse",
 	}
+	testOrigin2 := kargoapi.FreightOrigin{
+		Kind: kargoapi.FreightOriginKindWarehouse,
+		Name: "another-warehouse",
+	}
+
+	NO_REVISIONS := []string{}
 	testCases := []struct {
-		name    string
-		app     *argocdapi.Application
-		freight kargoapi.FreightReference
-		want    string
+		name           string
+		app            *argocdapi.Application
+		freightHistory kargoapi.FreightHistory
+		want           []string
 	}{
 		{
 			name: "no application",
-			want: "",
+			want: NO_REVISIONS,
 		},
 		{
 			name: "no application source",
 			app:  &argocdapi.Application{},
-			want: "",
+			want: NO_REVISIONS,
 		},
 		{
 			name: "no source repo URL",
@@ -37,7 +43,7 @@ func TestGetDesiredRevision(t *testing.T) {
 					Source: &argocdapi.ApplicationSource{},
 				},
 			},
-			want: "",
+			want: NO_REVISIONS,
 		},
 		{
 			name: "chart source",
@@ -49,22 +55,28 @@ func TestGetDesiredRevision(t *testing.T) {
 					},
 				},
 			},
-			freight: kargoapi.FreightReference{
-				Origin: testOrigin,
-				Charts: []kargoapi.Chart{
-					{
-						RepoURL: "https://example.com",
-						Name:    "other-fake-chart",
-						Version: "v1.0.0",
-					},
-					{
-						RepoURL: "https://example.com",
-						Name:    "fake-chart",
-						Version: "v2.0.0",
+			freightHistory: kargoapi.FreightHistory{
+				&kargoapi.FreightCollection{
+					Freight: map[string]kargoapi.FreightReference{
+						testOrigin.String(): {
+							Origin: testOrigin,
+							Charts: []kargoapi.Chart{
+								{
+									RepoURL: "https://example.com",
+									Name:    "other-fake-chart",
+									Version: "v1.0.0",
+								},
+								{
+									RepoURL: "https://example.com",
+									Name:    "fake-chart",
+									Version: "v2.0.0",
+								},
+							},
+						},
 					},
 				},
 			},
-			want: "v2.0.0",
+			want: []string{"v2.0.0"},
 		},
 		{
 			name: "git source",
@@ -75,23 +87,29 @@ func TestGetDesiredRevision(t *testing.T) {
 					},
 				},
 			},
-			freight: kargoapi.FreightReference{
-				Origin: testOrigin,
-				Commits: []kargoapi.GitCommit{
-					{
-						RepoURL: "https://github.com/bad/41",
-						ID:      "bad-revision",
-					},
-					{
-						RepoURL: "https://github.com/universe/42",
-						ID:      "fake-revision",
+			freightHistory: kargoapi.FreightHistory{
+				&kargoapi.FreightCollection{
+					Freight: map[string]kargoapi.FreightReference{
+						testOrigin.String(): {
+							Origin: testOrigin,
+							Commits: []kargoapi.GitCommit{
+								{
+									RepoURL: "https://github.com/bad/41",
+									ID:      "bad-revision",
+								},
+								{
+									RepoURL: "https://github.com/universe/42",
+									ID:      "fake-revision",
+								},
+							},
+						},
 					},
 				},
 			},
-			want: "fake-revision",
+			want: []string{"fake-revision"},
 		},
 		{
-			name: "git multisource",
+			name: "git multisource with chart",
 			app: &argocdapi.Application{
 				Spec: argocdapi.ApplicationSpec{
 					Sources: []argocdapi.ApplicationSource{
@@ -106,43 +124,68 @@ func TestGetDesiredRevision(t *testing.T) {
 					},
 				},
 			},
-			freight: kargoapi.FreightReference{
-				Origin: testOrigin,
-				Commits: []kargoapi.GitCommit{
-					{
-						RepoURL: "https://github.com/universe/42",
-						ID:      "fake-revision",
+			freightHistory: kargoapi.FreightHistory{
+				&kargoapi.FreightCollection{
+					Freight: map[string]kargoapi.FreightReference{
+						testOrigin.String(): {
+							Origin: testOrigin,
+							Commits: []kargoapi.GitCommit{
+								{
+									RepoURL: "https://github.com/universe/42",
+									ID:      "fake-revision",
+								},
+							},
+						},
 					},
 				},
 			},
-			want: "fake-revision",
+			want: []string{"fake-revision"},
 		},
 		{
-			name: "git multisource with same repo",
+			name: "git multisource with multiple freight references",
 			app: &argocdapi.Application{
 				Spec: argocdapi.ApplicationSpec{
 					Sources: []argocdapi.ApplicationSource{
+						{
+							RepoURL: "https://example.com",
+							Chart:   "fake-chart",
+						},
 						{
 							RepoURL:        "https://github.com/universe/42",
 							TargetRevision: "fake-revision",
 						},
 						{
-							RepoURL:        "https://github.com/universe/42",
+							RepoURL:        "https://github.com/another-universe/42",
 							TargetRevision: "another-revision",
 						},
 					},
 				},
 			},
-			freight: kargoapi.FreightReference{
-				Origin: testOrigin,
-				Commits: []kargoapi.GitCommit{
-					{
-						RepoURL: "https://github.com/universe/42",
-						ID:      "fake-revision",
+			freightHistory: kargoapi.FreightHistory{
+				&kargoapi.FreightCollection{
+					Freight: map[string]kargoapi.FreightReference{
+						testOrigin.String(): {
+							Origin: testOrigin,
+							Commits: []kargoapi.GitCommit{
+								{
+									RepoURL: "https://github.com/universe/42",
+									ID:      "fake-revision",
+								},
+							},
+						},
+						testOrigin2.String(): {
+							Origin: testOrigin2,
+							Commits: []kargoapi.GitCommit{
+								{
+									RepoURL: "https://github.com/another-universe/42",
+									ID:      "another-revision",
+								},
+							},
+						},
 					},
 				},
 			},
-			want: "fake-revision",
+			want: []string{"fake-revision", "another-revision"},
 		},
 		{
 			name: "git source with health check commit",
@@ -153,17 +196,23 @@ func TestGetDesiredRevision(t *testing.T) {
 					},
 				},
 			},
-			freight: kargoapi.FreightReference{
-				Origin: testOrigin,
-				Commits: []kargoapi.GitCommit{
-					{
-						RepoURL:           "https://github.com/universe/42",
-						HealthCheckCommit: "fake-revision",
-						ID:                "bad-revision",
+			freightHistory: kargoapi.FreightHistory{
+				&kargoapi.FreightCollection{
+					Freight: map[string]kargoapi.FreightReference{
+						testOrigin.String(): {
+							Origin: testOrigin,
+							Commits: []kargoapi.GitCommit{
+								{
+									RepoURL:           "https://github.com/universe/42",
+									HealthCheckCommit: "fake-revision",
+									ID:                "bad-revision",
+								},
+							},
+						},
 					},
 				},
 			},
-			want: "fake-revision",
+			want: []string{"fake-revision"},
 		},
 	}
 
@@ -172,20 +221,22 @@ func TestGetDesiredRevision(t *testing.T) {
 			stage := &kargoapi.Stage{
 				Spec: kargoapi.StageSpec{
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{
-						ArgoCDAppUpdates: []kargoapi.ArgoCDAppUpdate{{
-							Origin: &testOrigin,
-						}},
+						ArgoCDAppUpdates: []kargoapi.ArgoCDAppUpdate{
+							{
+								Origin: &testOrigin,
+							},
+							{
+								Origin: &testOrigin2,
+							},
+						},
 					},
 				},
 				Status: kargoapi.StageStatus{
-					FreightHistory: kargoapi.FreightHistory{{
-						Freight: map[string]kargoapi.FreightReference{
-							testOrigin.String(): testCase.freight,
-						},
-					}},
+					FreightHistory: testCase.freightHistory,
 				},
 			}
-			revision, err := GetDesiredRevision(
+
+			revisions, err := GetDesiredRevisions(
 				context.Background(),
 				nil, // No client is needed as long as we're always explicit about origins
 				stage,
@@ -194,7 +245,7 @@ func TestGetDesiredRevision(t *testing.T) {
 				stage.Status.FreightHistory.Current().References(),
 			)
 			require.NoError(t, err)
-			require.Equal(t, testCase.want, revision)
+			require.Equal(t, testCase.want, revisions)
 		})
 	}
 }
