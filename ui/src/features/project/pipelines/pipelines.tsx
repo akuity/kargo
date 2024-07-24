@@ -36,6 +36,7 @@ import {
   approveFreight,
   listStages,
   listWarehouses,
+  promoteToStage,
   queryFreight,
   refreshWarehouse
 } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
@@ -92,6 +93,16 @@ export const Pipelines = () => {
       message.success('Warehouse successfully refreshed');
       state.clear();
       refetchFreightData();
+    }
+  });
+
+  const { mutate: promoteAction } = useMutation(promoteToStage, {
+    onError,
+    onSuccess: () => {
+      message.success(
+        `Promotion request for stage "${state.stage}" has been successfully submitted.`
+      );
+      state.clear();
     }
   });
 
@@ -432,11 +443,19 @@ export const Pipelines = () => {
                                     name: state.freight
                                   });
                                 }
-                              : undefined
+                              : () => {
+                                  state.setStage(node.data?.metadata?.name || '');
+                                  promoteAction({
+                                    stage: node.data?.metadata?.name || '',
+                                    project: name,
+                                    freight: state.freight
+                                  });
+                                }
                           }
                           onHover={(h) => onHover(h, node.data?.metadata?.name || '', true)}
                           approving={state.action === FreightTimelineAction.ManualApproval}
                           highlighted={highlightedStages[node.data?.metadata?.name || '']}
+                          promotingFreight={state.action === FreightTimelineAction.PromoteFreight}
                         />
                       </>
                     ) : (

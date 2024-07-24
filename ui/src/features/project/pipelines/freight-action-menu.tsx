@@ -1,4 +1,5 @@
 import {
+  faArrowRight,
   faCircleCheck,
   faClipboard,
   faCopy,
@@ -21,13 +22,15 @@ export const FreightActionMenu = ({
   approveAction,
   refetchFreight,
   hide,
-  inUse
+  inUse,
+  promoteAction
 }: {
   freight: Freight;
   approveAction: () => void;
   refetchFreight: () => void;
   hide?: boolean;
   inUse?: boolean;
+  promoteAction: () => void;
 }) => {
   const { show } = useModal();
 
@@ -121,6 +124,15 @@ export const FreightActionMenu = ({
                 />
               ));
             }
+          },
+          {
+            key: '6',
+            label: (
+              <>
+                <FontAwesomeIcon icon={faArrowRight} className='mr-2' /> Promote
+              </>
+            ),
+            onClick: promoteAction
           }
         ]
       }}
@@ -128,7 +140,8 @@ export const FreightActionMenu = ({
       <FontAwesomeIcon
         onClick={(e) => e.stopPropagation()}
         icon={faEllipsisV}
-        className='cursor-pointer text-gray-500 hover:text-gray-800'
+        className='cursor-pointer text-gray-400 hover:text-blue-400'
+        style={{ marginRight: '-5px', marginTop: '-4px', padding: '2px' }}
       />
     </Dropdown>
   );

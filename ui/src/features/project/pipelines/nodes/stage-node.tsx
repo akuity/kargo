@@ -1,5 +1,6 @@
 import {
   IconDefinition,
+  faArrowRight,
   faBullseye,
   faCircleCheck,
   faCircleNotch,
@@ -35,7 +36,8 @@ export const StageNode = ({
   onClick,
   approving,
   onHover,
-  highlighted
+  highlighted,
+  promotingFreight
 }: {
   stage: Stage;
   color: string;
@@ -50,6 +52,7 @@ export const StageNode = ({
   approving?: boolean;
   onHover: (hovering: boolean) => void;
   highlighted?: boolean;
+  promotingFreight?: boolean;
 }) => {
   const navigate = useNavigate();
   return (
@@ -118,9 +121,14 @@ export const StageNode = ({
           </div>
         </h3>
         <div className={styles.body}>
-          {approving ? (
+          {approving || promotingFreight ? (
             <div className='h-full flex items-center justify-center font-bold cursor-pointer text-blue-500 hover:text-blue-400'>
-              <Button icon={<FontAwesomeIcon icon={faCircleCheck} />}>APPROVE</Button>
+              <Button
+                icon={<FontAwesomeIcon icon={approving ? faCircleCheck : faArrowRight} />}
+                className='uppercase'
+              >
+                {approving ? 'Approve' : 'Promote'}
+              </Button>
             </div>
           ) : (
             <div className='text-sm h-full flex flex-col items-center justify-center -mt-1'>
