@@ -37,3 +37,30 @@ func GetApplication(
 	}
 	return &app, nil
 }
+
+// GetAppProject returns a pointer to the Argo CD AppProject resource
+// If no such resource is found, nil is returned instead.
+func GetAppProject(
+	ctx context.Context,
+	ctrlRuntimeClient client.Client,
+	name string,
+) (*AppProject, error) {
+	appProject := AppProject{}
+	if err := ctrlRuntimeClient.Get(
+		ctx,
+		client.ObjectKey{
+			Name: name,
+		},
+		&appProject,
+	); err != nil {
+		if err = client.IgnoreNotFound(err); err == nil {
+			return nil, nil
+		}
+		return nil, fmt.Errorf(
+			"error getting Argo CD AppProject %q: %w",
+			name,
+			err,
+		)
+	}
+	return &appProject, nil
+}
