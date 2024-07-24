@@ -160,8 +160,12 @@ export const Pipelines = () => {
     const stagesPerFreight: { [key: string]: Stage[] } = {};
     const subscribersByStage = {} as { [key: string]: Set<string> };
     (data?.stages || []).forEach((stage) => {
-      const items = stagesPerFreight[stage.status?.currentFreight?.name || ''] || [];
-      stagesPerFreight[stage.status?.currentFreight?.name || ''] = [...items, stage];
+      (getCurrentFreight(stage) || []).forEach((f) => {
+        if (!stagesPerFreight[f.name || '']) {
+          stagesPerFreight[f.name || ''] = [];
+        }
+        stagesPerFreight[f.name || ''].push(stage);
+      });
       stage?.spec?.subscriptions?.upstreamStages.forEach((item) => {
         if (!subscribersByStage[item.name || '']) {
           subscribersByStage[item.name || ''] = new Set();
