@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"context"
+	"github.com/akuity/kargo/internal/credentials/kubernetes/acr"
 	"regexp"
 	"sort"
 	"strings"
@@ -59,6 +60,7 @@ func NewDatabase(
 		gar.NewServiceAccountKeyCredentialHelper(),
 		gar.NewWorkloadIdentityFederationCredentialHelper(ctx),
 		github.NewAppCredentialHelper(),
+		acr.NewWorkloadIdentityCredentialHelper(ctx, kargoClient),
 	}
 	finalCredentialHelpers := make([]credentials.Helper, 0, len(credentialHelpers))
 	for _, helper := range credentialHelpers {
