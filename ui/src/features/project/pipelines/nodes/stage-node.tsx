@@ -152,12 +152,14 @@ export const StageNode = ({
       </div>
       {!approving && (
         <>
-          <Nodule
-            begin={true}
-            nodeHeight={height}
-            onClick={() => onPromoteClick(FreightTimelineAction.Promote)}
-            selected={action === FreightTimelineAction.Promote}
-          />
+          {stage.spec?.promotionMechanisms && (
+            <Nodule
+              begin={true}
+              nodeHeight={height}
+              onClick={() => onPromoteClick(FreightTimelineAction.Promote)}
+              selected={action === FreightTimelineAction.Promote}
+            />
+          )}
           {!hasNoSubscribers && (
             <Nodule
               nodeHeight={height}
