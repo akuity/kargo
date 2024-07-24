@@ -19,7 +19,8 @@ type Config struct {
 	CLIClientID string `envconfig:"OIDC_CLI_CLIENT_ID"`
 	// DefaultScopes are the scopes to always be requested during the authorization code flow.
 	DefaultScopes []string
-	// AdditionalScopes are any more scopes to be requested during the authorization code flow on top of the default Scopes.
+	// AdditionalScopes are any more scopes to be requested during the authorization code flow
+	// on top of the default Scopes.
 	AdditionalScopes []string `envconfig:"OIDC_ADDITIONAL_SCOPES"`
 
 	// GlobalServiceAccountNamespaces is the list of namespaces to look up
