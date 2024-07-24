@@ -140,8 +140,14 @@ export const FreightActionMenu = ({
       <FontAwesomeIcon
         onClick={(e) => e.stopPropagation()}
         icon={faEllipsisV}
-        className='cursor-pointer text-gray-400 hover:text-blue-400'
-        style={{ marginRight: '-5px', marginTop: '-4px', padding: '2px' }}
+        className='cursor-pointer text-gray-400 hover:text-blue-400 '
+        style={{
+          marginRight: '-6px',
+          marginTop: '-4px',
+          padding: '3px',
+          paddingLeft: '14px',
+          paddingBottom: '8px'
+        }}
       />
     </Dropdown>
   );

@@ -54,8 +54,9 @@ export const StageNode = ({
   return (
     <>
       <div
-        className={`${styles.node} ${faded ? styles.faded : ''} ${highlighted ? styles.highlighted : ''
-          }`}
+        className={`${styles.node} ${faded ? styles.faded : ''} ${
+          highlighted ? styles.highlighted : ''
+        }`}
         style={{
           backgroundColor: color,
           borderColor: color,
@@ -80,10 +81,10 @@ export const StageNode = ({
             {(stage?.spec?.promotionMechanisms?.gitRepoUpdates || []).some(
               (g) => g.pullRequest
             ) && (
-                <Tooltip title='PR Promotion Enabled'>
-                  <FontAwesomeIcon icon={faCodePullRequest} />
-                </Tooltip>
-              )}
+              <Tooltip title='PR Promotion Enabled'>
+                <FontAwesomeIcon icon={faCodePullRequest} />
+              </Tooltip>
+            )}
             {!stage?.status?.currentPromotion && stage.status?.lastPromotion && (
               <div className='pb-1'>
                 <PromotionStatusIcon
@@ -117,7 +118,7 @@ export const StageNode = ({
         </h3>
         <div className={styles.body}>
           {action === FreightTimelineAction.ManualApproval ||
-            action === FreightTimelineAction.PromoteFreight ? (
+          action === FreightTimelineAction.PromoteFreight ? (
             <div className='h-full flex items-center justify-center font-bold cursor-pointer text-blue-500 hover:text-blue-400'>
               <Button
                 icon={
