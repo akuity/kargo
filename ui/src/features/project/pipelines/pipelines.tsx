@@ -429,11 +429,7 @@ export const Pipelines = () => {
                               );
                             }
                           }}
-                          action={
-                            (isPromoting(state) && state.stage === node.data?.metadata?.name) || ''
-                              ? state.action
-                              : undefined
-                          }
+                          action={state.action}
                           onClick={
                             state.action === FreightTimelineAction.ManualApproval
                               ? () => {
@@ -443,19 +439,19 @@ export const Pipelines = () => {
                                     name: state.freight
                                   });
                                 }
-                              : () => {
-                                  state.setStage(node.data?.metadata?.name || '');
-                                  promoteAction({
-                                    stage: node.data?.metadata?.name || '',
-                                    project: name,
-                                    freight: state.freight
-                                  });
-                                }
+                              : state.action === FreightTimelineAction.PromoteFreight
+                                ? () => {
+                                    state.setStage(node.data?.metadata?.name || '');
+                                    promoteAction({
+                                      stage: node.data?.metadata?.name || '',
+                                      project: name,
+                                      freight: state.freight
+                                    });
+                                  }
+                                : undefined
                           }
                           onHover={(h) => onHover(h, node.data?.metadata?.name || '', true)}
-                          approving={state.action === FreightTimelineAction.ManualApproval}
                           highlighted={highlightedStages[node.data?.metadata?.name || '']}
-                          promotingFreight={state.action === FreightTimelineAction.PromoteFreight}
                         />
                       </>
                     ) : (

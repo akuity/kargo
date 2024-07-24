@@ -40,7 +40,7 @@ export const FreightItem = ({
       onMouseEnter={() => onHover(true)}
       onMouseLeave={() => onHover(false)}
       style={{
-        width: empty || mode === FreightMode.Confirming ? '96px' : '135px'
+        width: empty ? '96px' : mode === FreightMode.Confirming ? '' : '135px'
       }}
     >
       <div className='flex w-full h-full mb-1 items-center justify-center max-w-full text-ellipsis overflow-hidden'>

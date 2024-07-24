@@ -34,10 +34,8 @@ export const StageNode = ({
   action,
   currentFreight,
   onClick,
-  approving,
   onHover,
-  highlighted,
-  promotingFreight
+  highlighted
 }: {
   stage: Stage;
   color: string;
@@ -49,10 +47,8 @@ export const StageNode = ({
   onPromoteClick: (type: FreightTimelineAction) => void;
   currentFreight: Freight[];
   onClick?: () => void;
-  approving?: boolean;
   onHover: (hovering: boolean) => void;
   highlighted?: boolean;
-  promotingFreight?: boolean;
 }) => {
   const navigate = useNavigate();
   return (
@@ -121,13 +117,20 @@ export const StageNode = ({
           </div>
         </h3>
         <div className={styles.body}>
-          {approving || promotingFreight ? (
+          {action === FreightTimelineAction.ManualApproval ||
+          action === FreightTimelineAction.PromoteFreight ? (
             <div className='h-full flex items-center justify-center font-bold cursor-pointer text-blue-500 hover:text-blue-400'>
               <Button
-                icon={<FontAwesomeIcon icon={approving ? faCircleCheck : faArrowRight} />}
+                icon={
+                  <FontAwesomeIcon
+                    icon={
+                      action === FreightTimelineAction.ManualApproval ? faCircleCheck : faArrowRight
+                    }
+                  />
+                }
                 className='uppercase'
               >
-                {approving ? 'Approve' : 'Promote'}
+                {action === FreightTimelineAction.ManualApproval ? 'Approve' : 'Promote'}
               </Button>
             </div>
           ) : (
@@ -158,25 +161,26 @@ export const StageNode = ({
           )}
         </div>
       </div>
-      {!approving && (
-        <>
-          {stage.spec?.promotionMechanisms && (
-            <Nodule
-              begin={true}
-              nodeHeight={height}
-              onClick={() => onPromoteClick(FreightTimelineAction.Promote)}
-              selected={action === FreightTimelineAction.Promote}
-            />
-          )}
-          {!hasNoSubscribers && (
-            <Nodule
-              nodeHeight={height}
-              onClick={() => onPromoteClick(FreightTimelineAction.PromoteSubscribers)}
-              selected={action === FreightTimelineAction.PromoteSubscribers}
-            />
-          )}
-        </>
-      )}
+      {action !== FreightTimelineAction.ManualApproval &&
+        action !== FreightTimelineAction.PromoteFreight && (
+          <>
+            {stage.spec?.promotionMechanisms && (
+              <Nodule
+                begin={true}
+                nodeHeight={height}
+                onClick={() => onPromoteClick(FreightTimelineAction.Promote)}
+                selected={action === FreightTimelineAction.Promote}
+              />
+            )}
+            {!hasNoSubscribers && (
+              <Nodule
+                nodeHeight={height}
+                onClick={() => onPromoteClick(FreightTimelineAction.PromoteSubscribers)}
+                selected={action === FreightTimelineAction.PromoteSubscribers}
+              />
+            )}
+          </>
+        )}
     </>
   );
 };
