@@ -53,7 +53,7 @@ const ImageTagRow = ({
         return (
           <Tooltip key={stage.metadata?.name} title={stage.metadata?.name}>
             <div
-              className={classNames('mr-2 bg-neutral-300 ', {
+              className={classNames('mr-2 bg-gray-300 ', {
                 'cursor-pointer': !!curStyles
               })}
               style={{
@@ -113,7 +113,7 @@ export const Images = ({
   stages: Stage[];
   hide: () => void;
 }) => {
-  const colors = useContext(ColorContext);
+  const { stageColorMap: colors } = useContext(ColorContext);
   const images = useMemo(() => {
     const images = new Map<string, Map<string, StageStyleMap>>();
     stages.forEach((stage) => {
@@ -169,8 +169,8 @@ export const Images = ({
   }, [imageURL]);
 
   return (
-    <div className='text-neutral-600 text-sm bg-neutral-100 pb-4 rounded-md overflow-hidden'>
-      <h3 className='bg-neutral-200 px-4 py-2 flex items-center text-sm text-neutral-500'>
+    <div className='text-gray-600 text-sm bg-gray-100 pb-4 rounded-md overflow-hidden'>
+      <h3 className='bg-gray-200 px-4 py-2 flex items-center text-sm text-gray-500'>
         <FontAwesomeIcon icon={faDocker} className='mr-2' /> IMAGES
         <Tooltip title='Show history'>
           <div className='ml-auto'>
@@ -227,7 +227,7 @@ const Select = ({
   options: { label?: string; value: string }[];
 }) => (
   <select
-    className='block border-none w-full text-neutral-600 appearance-none p-2 bg-neutral-200 focus:outline-none focus:ring-2 focus:ring-blue-400'
+    className='block border-none w-full text-gray-600 appearance-none p-2 bg-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-400'
     value={value}
     onChange={(e) => onChange(e.target.value)}
   >

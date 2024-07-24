@@ -16,7 +16,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useQueryClient } from '@tanstack/react-query';
-import { Button, Dropdown, Space, Spin, Tooltip, message } from 'antd';
+import { Button, Dropdown, Spin, Tooltip, message } from 'antd';
 import React, { Suspense, lazy, useMemo } from 'react';
 import { generatePath, useNavigate, useParams } from 'react-router-dom';
 
@@ -239,49 +239,51 @@ export const Pipelines = () => {
   return (
     <div className='flex flex-col flex-grow'>
       <ColorContext.Provider value={{ stageColorMap, warehouseColorMap }}>
-        <FreightTimelineHeader
-          promotingStage={state.stage}
-          action={state.action}
-          cancel={() => {
-            state.clear();
-            setSelectedWarehouse('');
-          }}
-          downstreamSubs={Array.from(subscribersByStage[state.stage || ''] || [])}
-          selectedWarehouse={selectedWarehouse || ''}
-          setSelectedWarehouse={setSelectedWarehouse}
-          warehouses={warehouseMap}
-          collapsed={freightTimelineCollapsed}
-          setCollapsed={setFreightTimelineCollapsed}
-          collapsable={
-            Object.keys(stagesPerFreight).reduce(
-              (acc, cur) => (cur?.length > 0 ? acc + stagesPerFreight[cur].length : acc),
-              0
-            ) > 0
-          }
-        />
-        <FreightTimelineWrapper>
-          <Suspense
-            fallback={
-              <div className='h-full w-full flex items-center justify-center'>
-                <Spin />
-              </div>
+        <div className='bg-gray-100'>
+          <FreightTimelineHeader
+            promotingStage={state.stage}
+            action={state.action}
+            cancel={() => {
+              state.clear();
+              setSelectedWarehouse('');
+            }}
+            downstreamSubs={Array.from(subscribersByStage[state.stage || ''] || [])}
+            selectedWarehouse={selectedWarehouse || ''}
+            setSelectedWarehouse={setSelectedWarehouse}
+            warehouses={warehouseMap}
+            collapsed={freightTimelineCollapsed}
+            setCollapsed={setFreightTimelineCollapsed}
+            collapsable={
+              Object.keys(stagesPerFreight).reduce(
+                (acc, cur) => (cur?.length > 0 ? acc + stagesPerFreight[cur].length : acc),
+                0
+              ) > 0
             }
-          >
-            <FreightTimeline
-              highlightedStages={
-                state.action === FreightTimelineAction.ManualApproval ? {} : highlightedStages
+          />
+          <FreightTimelineWrapper>
+            <Suspense
+              fallback={
+                <div className='h-full w-full flex items-center justify-center'>
+                  <Spin />
+                </div>
               }
-              refetchFreight={refetchFreightData}
-              onHover={onHover}
-              freight={filteredFreight}
-              state={state}
-              promotionEligible={{}}
-              stagesPerFreight={stagesPerFreight}
-              collapsed={freightTimelineCollapsed}
-              setCollapsed={setFreightTimelineCollapsed}
-            />
-          </Suspense>
-        </FreightTimelineWrapper>
+            >
+              <FreightTimeline
+                highlightedStages={
+                  state.action === FreightTimelineAction.ManualApproval ? {} : highlightedStages
+                }
+                refetchFreight={refetchFreightData}
+                onHover={onHover}
+                freight={filteredFreight}
+                state={state}
+                promotionEligible={{}}
+                stagesPerFreight={stagesPerFreight}
+                collapsed={freightTimelineCollapsed}
+                setCollapsed={setFreightTimelineCollapsed}
+              />
+            </Suspense>
+          </FreightTimelineWrapper>
+        </div>
         <div className={`flex flex-grow w-full ${styles.dag}`}>
           <div className={`overflow-hidden flex-grow w-full h-full`}>
             <div className='flex justify-end items-center p-4 mb-4'>
@@ -337,10 +339,7 @@ export const Pipelines = () => {
                   trigger={['click']}
                 >
                   <Button icon={<FontAwesomeIcon icon={faWandSparkles} size='1x' />}>
-                    <Space>
-                      New
-                      <FontAwesomeIcon icon={faChevronDown} size='xs' />
-                    </Space>
+                    <FontAwesomeIcon icon={faChevronDown} size='xs' className='-mr-2' />
                   </Button>
                 </Dropdown>
                 {hideImages && (

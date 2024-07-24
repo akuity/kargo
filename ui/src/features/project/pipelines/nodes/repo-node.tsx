@@ -1,4 +1,4 @@
-import { faDocker, faGit } from '@fortawesome/free-brands-svg-icons';
+import { faDocker, faGitAlt } from '@fortawesome/free-brands-svg-icons';
 import {
   faAnchor,
   faBuilding,
@@ -26,7 +26,7 @@ type Props = {
 
 const ico = {
   [NodeType.REPO_IMAGE]: faDocker,
-  [NodeType.REPO_GIT]: faGit,
+  [NodeType.REPO_GIT]: faGitAlt,
   [NodeType.WAREHOUSE]: faBuilding,
   [NodeType.REPO_CHART]: faAnchor
 };

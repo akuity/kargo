@@ -7,7 +7,8 @@ import {
   faPeopleGroup
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Tabs } from 'antd';
+import { Tooltip } from 'antd';
+import classNames from 'classnames';
 import { generatePath, useNavigate, useParams } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
@@ -77,35 +78,35 @@ export const Project = ({ tab = 'pipelines' }: { tab?: ProjectTab }) => {
 
   return (
     <div className='h-full flex flex-col'>
-      <div className='px-6 pt-5 pb-3'>
+      <div className='px-6 pt-5 pb-3 mb-2'>
         <div className='flex items-center'>
           <div className='mr-auto'>
-            <div className='font-medium text-xs text-neutral-500'>PROJECT</div>
-            <div className='text-2xl font-semibold'>{name}</div>
+            <div className='font-medium text-xs text-gray-500'>PROJECT</div>
+            <div className='text-2xl font-semibold flex items-center'>
+              {name} <ProjectSettings />
+            </div>
             <Description
               loading={isLoading}
               item={data?.result?.value as _Project}
               className='mt-1'
             />
           </div>
-          <ProjectSettings />
+          <div className='flex items-center gap-8 text-gray-500 text-sm mr-2'>
+            {Object.entries(tabs).map(([key, value]) => (
+              <Tooltip key={key} title={value.label}>
+                <div className={classNames('cursor-pointer', { 'text-blue-500': tab === key })}>
+                  <FontAwesomeIcon
+                    icon={value.icon}
+                    onClick={() => {
+                      navigate(generatePath(tabs[key as ProjectTab].path, { name }));
+                    }}
+                  />
+                </div>
+              </Tooltip>
+            ))}
+          </div>
         </div>
       </div>
-      <Tabs
-        activeKey={tab}
-        onChange={(k) => {
-          navigate(generatePath(tabs[k as ProjectTab].path, { name }));
-        }}
-        tabBarStyle={{
-          padding: '0 24px',
-          marginBottom: '0.25rem'
-        }}
-        items={Object.entries(tabs).map(([key, value]) => ({
-          key,
-          label: value.label,
-          icon: <FontAwesomeIcon icon={value.icon} />
-        }))}
-      />
       {renderTab(tab)}
     </div>
   );
