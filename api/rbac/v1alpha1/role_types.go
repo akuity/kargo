@@ -30,12 +30,6 @@ type ResourceDetails struct {
 	Verbs        []string `json:"verbs,omitempty" protobuf:"bytes,3,rep,name=verbs"`
 }
 
-// type UserClaims struct {
-// 	Subs   []string `json:"subs,omitempty" protobuf:"bytes,1,rep,name=subs"`
-// 	Emails []string `json:"emails,omitempty" protobuf:"bytes,2,rep,name=emails"`
-// 	Groups []string `json:"groups,omitempty" protobuf:"bytes,3,rep,name=groups"`
-// }
-
 type Claim struct {
 	Name   string
 	Values []string
