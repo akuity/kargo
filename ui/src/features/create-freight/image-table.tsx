@@ -40,7 +40,7 @@ export const ImageTable = ({
                 {record?.gitRepoURL}
               </a>
             ) : (
-              <FontAwesomeIcon icon={faQuestionCircle} className='text-neutral-400' />
+              <FontAwesomeIcon icon={faQuestionCircle} className='text-gray-400' />
             )
         },
         {

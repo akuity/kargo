@@ -345,8 +345,12 @@ the previous section.
       name: test
       namespace: kargo-demo
     spec:
-      subscriptions:
-        warehouse: kargo-demo
+      requestedFreight:
+      - origin:
+          kind: Warehouse
+          name: kargo-demo
+        sources:
+          direct: true
       promotionMechanisms:
         gitRepoUpdates:
         - repoURL: ${GITOPS_REPO_URL}
@@ -365,9 +369,13 @@ the previous section.
       name: uat
       namespace: kargo-demo
     spec:
-      subscriptions:
-        upstreamStages:
-        - name: test
+      requestedFreight:
+      - origin:
+          kind: Warehouse
+          name: kargo-demo
+        sources:
+          stages:
+          - test
       promotionMechanisms:
         gitRepoUpdates:
         - repoURL: ${GITOPS_REPO_URL}
@@ -386,9 +394,13 @@ the previous section.
       name: prod
       namespace: kargo-demo
     spec:
-      subscriptions:
-        upstreamStages:
-        - name: uat
+      requestedFreight:
+      - origin:
+          kind: Warehouse
+          name: kargo-demo
+        sources:
+          stages:
+          - uat
       promotionMechanisms:
         gitRepoUpdates:
         - repoURL: ${GITOPS_REPO_URL}
@@ -446,8 +458,8 @@ the previous section.
     Sample output:
 
     ```shell
-    NAME                                       ALIAS              AGE
-    f5f87aa23c9e97f43eb83dd63768ee41f5ba3766   mortal-dragonfly   35s
+    NAME                                       ALIAS               ORIGIN                 AGE
+    7a6e91f2d26aa84faadfdc340437bf84a0cc577a   pining-rottweiler   Warehouse/kargo-demo   49s
     ```
     :::info
     `Freight` is a set of references to one or more versioned artifacts, which
@@ -479,7 +491,7 @@ the previous section.
     Sample output:
 
     ```shell
-    Promotion Created: "test.01hj7grh2m556rqxq72ame6a3z.f5f87aa"
+    promotion.kargo.akuity.io/test.01j2wbtrym4r3tktv38qzteh5h.7a6e91f promotion created
     ```
 
     Query for `Promotion` resources within our project to see one has been
@@ -493,8 +505,8 @@ the previous section.
     likely, it will almost immediately be `Running`, or even `Succeeded`:
 
     ```shell
-    NAME                                      STAGE   FREIGHT                                    PHASE     AGE
-    test.01hj7grh2m556rqxq72ame6a3z.f5f87aa   test    f5f87aa23c9e97f43eb83dd63768ee41f5ba3766   Running   7s
+    NAME                                      SHARD   STAGE   FREIGHT                                    PHASE       AGE
+    test.01j2wbtrym4r3tktv38qzteh5h.7a6e91f           test    7a6e91f2d26aa84faadfdc340437bf84a0cc577a   Succeeded   57s
     ```
 
     Once the `Promotion` has succeeded, we can again view all `Stage` resources
@@ -508,10 +520,10 @@ the previous section.
     Sample output:
 
     ```shell
-    NAME   CURRENT FREIGHT                            HEALTH    PHASE           AGE
-    prod                                                        NotApplicable   118s
-    test   f5f87aa23c9e97f43eb83dd63768ee41f5ba3766   Healthy   Steady          119s
-    uat                                                         NotApplicable   118s
+    NAME   SHARD   CURRENT FREIGHT                            HEALTH    PHASE           AGE
+    prod                                                                NotApplicable   3m43s
+    test           7a6e91f2d26aa84faadfdc340437bf84a0cc577a   Healthy   Steady          3m43s
+    uat                                                                 NotApplicable   3m43s
     ```
 
     We can repeat the command above until our `test` `Stage` is in a `Healthy`
@@ -528,34 +540,107 @@ the previous section.
     kargo get stage test --project kargo-demo --output jsonpath-as-json={.status}
     ```
 
-    Truncated sample output:
+    Sample output:
 
     ```shell
-    {
-        "currentFreight": {
-            "id": "f5f87aa23c9e97f43eb83dd63768ee41f5ba3766",
-            "images": [
+    [
+        {
+            "freightHistory": [
                 {
-                    "digest": "sha256:b2487a28589657b318e0d63110056e11564e73b9fd3ec4c4afba5542f9d07d46",
-                    "repoURL": "public.ecr.aws/nginx/nginx",
-                    "tag": "1.27.0"
+                    "id": "a86e8ac937e6029cbb41b336ececbf490408dacd",
+                    "items": {
+                        "Warehouse/kargo-demo": {
+                            "images": [
+                                {
+                                    "digest": "sha256:c31bd632509dc8023d68f69a17515a6b830222f948d28f8cd4e279f3b6f4d1ed",
+                                    "repoURL": "public.ecr.aws/nginx/nginx",
+                                    "tag": "1.27.0"
+                                }
+                            ],
+                            "name": "7a6e91f2d26aa84faadfdc340437bf84a0cc577a",
+                            "origin": {
+                                "kind": "Warehouse",
+                                "name": "kargo-demo"
+                            }
+                        }
+                    }
                 }
             ],
-        },
-        ...
-        "history": [
-            {
-                "id": "f5f87aa23c9e97f43eb83dd63768ee41f5ba3766",
-                "images": [
+            "health": {
+                "argoCDApps": [
                     {
-                        "digest": "sha256:b2487a28589657b318e0d63110056e11564e73b9fd3ec4c4afba5542f9d07d46",
-                        "repoURL": "public.ecr.aws/nginx/nginx",
-                        "tag": "1.27.0"
+                        "healthStatus": {
+                            "status": "Healthy"
+                        },
+                        "name": "kargo-demo-test",
+                        "namespace": "argocd",
+                        "syncStatus": {
+                            "revision": "516ab40cb2b3da9b0a6346d37357905ec05336d5",
+                            "status": "Synced"
+                        }
                     }
                 ],
-            }
-        ]
-    }
+                "status": "Healthy"
+            },
+            "lastPromotion": {
+                "finishedAt": "2024-07-15T23:32:23Z",
+                "freight": {
+                    "images": [
+                        {
+                            "digest": "sha256:c31bd632509dc8023d68f69a17515a6b830222f948d28f8cd4e279f3b6f4d1ed",
+                            "repoURL": "public.ecr.aws/nginx/nginx",
+                            "tag": "1.27.0"
+                        }
+                    ],
+                    "name": "7a6e91f2d26aa84faadfdc340437bf84a0cc577a",
+                    "origin": {
+                        "kind": "Warehouse",
+                        "name": "kargo-demo"
+                    }
+                },
+                "name": "test.01j2wbtrym4r3tktv38qzteh5h.7a6e91f",
+                "status": {
+                    "finishedAt": "2024-07-15T23:32:23Z",
+                    "freight": {
+                        "images": [
+                            {
+                                "digest": "sha256:c31bd632509dc8023d68f69a17515a6b830222f948d28f8cd4e279f3b6f4d1ed",
+                                "repoURL": "public.ecr.aws/nginx/nginx",
+                                "tag": "1.27.0"
+                            }
+                        ],
+                        "name": "7a6e91f2d26aa84faadfdc340437bf84a0cc577a",
+                        "origin": {
+                            "kind": "Warehouse",
+                            "name": "kargo-demo"
+                        }
+                    },
+                    "freightCollection": {
+                        "id": "a86e8ac937e6029cbb41b336ececbf490408dacd",
+                        "items": {
+                            "Warehouse/kargo-demo": {
+                                "images": [
+                                    {
+                                        "digest": "sha256:c31bd632509dc8023d68f69a17515a6b830222f948d28f8cd4e279f3b6f4d1ed",
+                                        "repoURL": "public.ecr.aws/nginx/nginx",
+                                        "tag": "1.27.0"
+                                    }
+                                ],
+                                "name": "7a6e91f2d26aa84faadfdc340437bf84a0cc577a",
+                                "origin": {
+                                    "kind": "Warehouse",
+                                    "name": "kargo-demo"
+                                }
+                            }
+                        }
+                    },
+                    "phase": "Succeeded"
+                }
+            },
+            "observedGeneration": 1,
+            "phase": "Steady"
+        }
+    ]
     ```
 
 1. If we look at our `Freight` in greater detail, we'll see that by virtue of
@@ -577,11 +662,13 @@ the previous section.
     Sample output:
 
     ```shell
-    {
-        "verifiedIn": {
-            "test": {}
+    [
+        {
+            "verifiedIn": {
+                "test": {}
+            }
         }
-    }
+    ]
     ```
 
 ### Behind the Scenes

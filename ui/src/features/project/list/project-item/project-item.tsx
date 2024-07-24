@@ -6,14 +6,14 @@ import { paths } from '@ui/config/paths';
 import { Description } from '@ui/features/common/description';
 import { HealthStatusIcon } from '@ui/features/common/health-status/health-status-icon';
 import { PromotionStatusIcon } from '@ui/features/common/promotion-status/promotion-status-icon';
-import { getStageColors } from '@ui/features/stage/utils';
+import { getColors } from '@ui/features/stage/utils';
 import { Project, Stage } from '@ui/gen/v1alpha1/generated_pb';
 
 import * as styles from './project-item.module.less';
 import { StagePopover } from './stage-popover';
 
 export const ProjectItem = ({ project, stages }: { project?: Project; stages?: Stage[] }) => {
-  const stageColorMap = getStageColors(project?.metadata?.name || '', stages || []);
+  const stageColorMap = getColors(project?.metadata?.name || '', stages || []);
 
   return (
     <Link
@@ -30,12 +30,7 @@ export const ProjectItem = ({ project, stages }: { project?: Project; stages?: S
               placement='bottom'
               title={
                 stage?.status?.lastPromotion?.name && (
-                  <StagePopover
-                    promotionName={stage?.status?.lastPromotion?.name}
-                    project={project?.metadata?.name}
-                    freightName={stage?.status?.currentFreight?.name}
-                    stageName={stage?.metadata?.name}
-                  />
+                  <StagePopover project={project?.metadata?.name} stage={stage} />
                 )
               }
             >

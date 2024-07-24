@@ -8,11 +8,12 @@ import (
 	"strings"
 
 	"github.com/kelseyhightower/envconfig"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/controller/freight"
 	"github.com/akuity/kargo/internal/controller/git"
 	"github.com/akuity/kargo/internal/credentials"
-	libGit "github.com/akuity/kargo/internal/git"
 	"github.com/akuity/kargo/internal/logging"
 )
 
@@ -35,20 +36,25 @@ func GitConfigFromEnv() GitConfig {
 // update configuration in a repository. It is easily configured to support
 // different types of configuration management tools.
 type gitMechanism struct {
-	name string
-	cfg  GitConfig
+	name   string
+	client client.Client
+	cfg    GitConfig
 	// Overridable behaviors:
-	selectUpdatesFn  func([]kargoapi.GitRepoUpdate) []kargoapi.GitRepoUpdate
+	selectUpdatesFn  func([]kargoapi.GitRepoUpdate) []*kargoapi.GitRepoUpdate
 	doSingleUpdateFn func(
-		ctx context.Context,
-		promo *kargoapi.Promotion,
-		update kargoapi.GitRepoUpdate,
-		newFreight kargoapi.FreightReference,
-	) (*kargoapi.PromotionStatus, kargoapi.FreightReference, error)
+		context.Context,
+		*kargoapi.Stage,
+		*kargoapi.Promotion,
+		*kargoapi.GitRepoUpdate,
+		[]kargoapi.FreightReference,
+	) (*kargoapi.PromotionStatus, []kargoapi.FreightReference, error)
 	getReadRefFn func(
-		update kargoapi.GitRepoUpdate,
-		commits []kargoapi.GitCommit,
-	) (string, int, error)
+		context.Context,
+		client.Client,
+		*kargoapi.Stage,
+		*kargoapi.GitRepoUpdate,
+		[]kargoapi.FreightReference,
+	) (string, *kargoapi.GitCommit, error)
 	getAuthorFn      func() (*git.User, error)
 	getCredentialsFn func(
 		ctx context.Context,
@@ -57,9 +63,9 @@ type gitMechanism struct {
 	) (*git.RepoCredentials, error)
 	gitCommitFn func(
 		ctx context.Context,
-		update kargoapi.GitRepoUpdate,
-		newFreight kargoapi.FreightReference,
-		namespace string,
+		stage *kargoapi.Stage,
+		update *kargoapi.GitRepoUpdate,
+		newFreight []kargoapi.FreightReference,
 		readRef string,
 		writeBranch string,
 		repo git.Repo,
@@ -67,9 +73,9 @@ type gitMechanism struct {
 	) (string, error)
 	applyConfigManagementFn func(
 		ctx context.Context,
-		update kargoapi.GitRepoUpdate,
-		newFreight kargoapi.FreightReference,
-		namespace string,
+		stage *kargoapi.Stage,
+		update *kargoapi.GitRepoUpdate,
+		freight []kargoapi.FreightReference,
 		sourceCommit string,
 		homeDir string,
 		workingDir string,
@@ -83,13 +89,14 @@ type gitMechanism struct {
 // functions that select and carry out the relevant subset of updates.
 func newGitMechanism(
 	name string,
+	cl client.Client,
 	credentialsDB credentials.Database,
-	selectUpdatesFn func([]kargoapi.GitRepoUpdate) []kargoapi.GitRepoUpdate,
+	selectUpdatesFn func([]kargoapi.GitRepoUpdate) []*kargoapi.GitRepoUpdate,
 	applyConfigManagementFn func(
 		ctx context.Context,
-		update kargoapi.GitRepoUpdate,
-		newFreight kargoapi.FreightReference,
-		namespace string,
+		stage *kargoapi.Stage,
+		update *kargoapi.GitRepoUpdate,
+		newFreight []kargoapi.FreightReference,
 		sourceCommit string,
 		homeDir string,
 		workingDir string,
@@ -97,9 +104,10 @@ func newGitMechanism(
 	) ([]string, error),
 ) Mechanism {
 	g := &gitMechanism{
-		name: name,
+		name:   name,
+		client: cl,
+		cfg:    GitConfigFromEnv(),
 	}
-	g.cfg = GitConfigFromEnv()
 	g.selectUpdatesFn = selectUpdatesFn
 	g.doSingleUpdateFn = g.doSingleUpdate
 	g.getReadRefFn = getReadRef
@@ -120,8 +128,8 @@ func (g *gitMechanism) Promote(
 	ctx context.Context,
 	stage *kargoapi.Stage,
 	promo *kargoapi.Promotion,
-	newFreight kargoapi.FreightReference,
-) (*kargoapi.PromotionStatus, kargoapi.FreightReference, error) {
+	newFreight []kargoapi.FreightReference,
+) (*kargoapi.PromotionStatus, []kargoapi.FreightReference, error) {
 	updates := g.selectUpdatesFn(stage.Spec.PromotionMechanisms.GitRepoUpdates)
 
 	if len(updates) == 0 {
@@ -129,7 +137,6 @@ func (g *gitMechanism) Promote(
 	}
 
 	var newStatus *kargoapi.PromotionStatus
-	newFreight = *newFreight.DeepCopy()
 
 	logger := logging.LoggerFromContext(ctx).WithValues("name", g.name)
 	logger.Debug("executing promotion mechanism")
@@ -139,6 +146,7 @@ func (g *gitMechanism) Promote(
 		var otherStatus *kargoapi.PromotionStatus
 		if otherStatus, newFreight, err = g.doSingleUpdateFn(
 			ctx,
+			stage,
 			promo,
 			update,
 			newFreight,
@@ -159,11 +167,18 @@ func (g *gitMechanism) Promote(
 // committing directly.
 func (g *gitMechanism) doSingleUpdate(
 	ctx context.Context,
+	stage *kargoapi.Stage,
 	promo *kargoapi.Promotion,
-	update kargoapi.GitRepoUpdate,
-	newFreight kargoapi.FreightReference,
-) (*kargoapi.PromotionStatus, kargoapi.FreightReference, error) {
-	readRef, commitIndex, err := g.getReadRefFn(update, newFreight.Commits)
+	update *kargoapi.GitRepoUpdate,
+	newFreight []kargoapi.FreightReference,
+) (*kargoapi.PromotionStatus, []kargoapi.FreightReference, error) {
+	readRef, commit, err := g.getReadRefFn(
+		ctx,
+		g.client,
+		stage,
+		update,
+		newFreight,
+	)
 	if err != nil {
 		return nil, newFreight, err
 	}
@@ -217,9 +232,9 @@ func (g *gitMechanism) doSingleUpdate(
 
 	commitID, err := g.gitCommitFn(
 		ctx,
+		stage,
 		update,
 		newFreight,
-		promo.Namespace,
 		readRef,
 		commitBranch,
 		repo,
@@ -244,39 +259,38 @@ func (g *gitMechanism) doSingleUpdate(
 		newStatus.Phase = kargoapi.PromotionPhaseSucceeded
 	}
 
-	if commitIndex > -1 && newStatus.Phase == kargoapi.PromotionPhaseSucceeded {
-		newFreight.Commits[commitIndex].HealthCheckCommit = commitID
+	if commit != nil && newStatus.Phase == kargoapi.PromotionPhaseSucceeded {
+		commit.HealthCheckCommit = commitID
 	}
 
 	return newStatus, newFreight, nil
 }
 
-// getReadRef steps through the provided slice of commits to determine if any of
-// them are from the same repository referenced by the provided update. If so,
-// it returns the commit ID and index of the commit in the slice. If not, it
-// returns the read branch specified in the update and an pseudo-index of -1.
-// The function also returns an error if the update indicates that the write
-// branch is the same as the read branch, which would create a subscription
-// loop, and is therefore something we wish to avoid.
+// getReadRef finds a commitID or branch name to read from in order to apply the
+// provided update. It first determine if the update wants a commit from a
+// specific origin. It uses this information to find the commit required to
+// apply the update. If no such commit is found, the reference returned will be
+// the read branch specified in the update. If a commit is found, the reference
+// returned will be its ID and the commit itself will also be returned. An
+// error is possible if, whilst searching for a commit, there is any ambiguity
+// over the desired origin.
 func getReadRef(
-	update kargoapi.GitRepoUpdate,
-	commits []kargoapi.GitCommit,
-) (string, int, error) {
-	updateRepoURL := libGit.NormalizeURL(update.RepoURL)
-	for i, commit := range commits {
-		if libGit.NormalizeURL(commit.RepoURL) == updateRepoURL {
-			if update.WriteBranch == commit.Branch && update.PullRequest == nil {
-				return "", -1, fmt.Errorf(
-					"invalid update specified; cannot write to branch %q of repo %q "+
-						"because it will form a subscription loop",
-					updateRepoURL,
-					update.WriteBranch,
-				)
-			}
-			return commit.ID, i, nil
-		}
+	ctx context.Context,
+	cli client.Client,
+	stage *kargoapi.Stage,
+	update *kargoapi.GitRepoUpdate,
+	newFreight []kargoapi.FreightReference,
+) (string, *kargoapi.GitCommit, error) {
+	desiredOrigin := freight.GetDesiredOrigin(stage, update)
+	commit, err := freight.FindCommit(ctx, cli, stage, desiredOrigin, newFreight, update.RepoURL)
+	if err != nil {
+		return "", nil,
+			fmt.Errorf("error finding commit from repo %q: %w", update.RepoURL, err)
 	}
-	return update.ReadBranch, -1, nil
+	if commit != nil {
+		return commit.ID, commit, nil
+	}
+	return update.ReadBranch, nil, nil
 }
 
 // getRepoCredentialsFn returns a function that closes over the provided
@@ -356,9 +370,9 @@ func (g *gitMechanism) getAuthor() (*git.User, error) {
 // the above fails.
 func (g *gitMechanism) gitCommit(
 	ctx context.Context,
-	update kargoapi.GitRepoUpdate,
-	newFreight kargoapi.FreightReference,
-	namespace string,
+	stage *kargoapi.Stage,
+	update *kargoapi.GitRepoUpdate,
+	newFreight []kargoapi.FreightReference,
 	readRef string,
 	writeBranch string,
 	repo git.Repo,
@@ -382,9 +396,9 @@ func (g *gitMechanism) gitCommit(
 	if g.applyConfigManagementFn != nil {
 		if changes, err = g.applyConfigManagementFn(
 			ctx,
+			stage,
 			update,
 			newFreight,
-			namespace,
 			sourceCommitID,
 			repo.HomeDir(),
 			repo.WorkingDir(),

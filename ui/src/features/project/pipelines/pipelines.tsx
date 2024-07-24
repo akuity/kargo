@@ -1,9 +1,13 @@
 import { useMutation, useQuery } from '@connectrpc/connect-query';
+import { faDocker } from '@fortawesome/free-brands-svg-icons';
 import {
   faChevronDown,
+  faExpand,
   faEye,
   faEyeSlash,
   faFilter,
+  faMagnifyingGlassMinus,
+  faMagnifyingGlassPlus,
   faMasksTheater,
   faPalette,
   faRefresh,
@@ -12,7 +16,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useQueryClient } from '@tanstack/react-query';
-import { Button, Dropdown, Space, Spin, Tooltip, message } from 'antd';
+import { Button, Dropdown, Spin, Tooltip, message } from 'antd';
 import React, { Suspense, lazy, useMemo } from 'react';
 import { generatePath, useNavigate, useParams } from 'react-router-dom';
 
@@ -24,6 +28,7 @@ const FreightDetails = lazy(() => import('@ui/features/freight/freight-details')
 const FreightTimeline = lazy(() => import('@ui/features/freight-timeline/freight-timeline'));
 const StageDetails = lazy(() => import('@ui/features/stage/stage-details'));
 import { SuspenseSpin } from '@ui/features/common/suspense-spin';
+import { getCurrentFreight } from '@ui/features/common/utils';
 import { FreightTimelineHeader } from '@ui/features/freight-timeline/freight-timeline-header';
 import { FreightTimelineWrapper } from '@ui/features/freight-timeline/freight-timeline-wrapper';
 import { clearColors } from '@ui/features/stage/utils';
@@ -90,6 +95,8 @@ export const Pipelines = () => {
     }
   });
 
+  const [zoom, setZoom] = React.useState(100);
+
   const [highlightedStages, setHighlightedStages] = React.useState<{ [key: string]: boolean }>({});
   const [hideSubscriptions, setHideSubscriptions] = useLocalStorage(
     `${name}-hideSubscriptions`,
@@ -98,6 +105,8 @@ export const Pipelines = () => {
 
   const [selectedWarehouse, setSelectedWarehouse] = React.useState('');
   const [freightTimelineCollapsed, setFreightTimelineCollapsed] = React.useState(false);
+
+  const [hideImages, setHideImages] = useLocalStorage(`${name}-hideImages`, false);
 
   const warehouseMap = useMemo(() => {
     const map = {} as { [key: string]: Warehouse };
@@ -111,7 +120,11 @@ export const Pipelines = () => {
     const allFreight = freightData?.groups['']?.freight || [];
     const filteredFreight = [] as Freight[];
     allFreight.forEach((f) => {
-      if (!selectedWarehouse || f.warehouse === selectedWarehouse) {
+      if (
+        !selectedWarehouse ||
+        f.warehouse === selectedWarehouse ||
+        (f?.origin?.kind === 'Warehouse' && f?.origin.name === selectedWarehouse)
+      ) {
         filteredFreight.push(f);
       }
     });
@@ -132,7 +145,7 @@ export const Pipelines = () => {
     return () => watcher.cancelWatch();
   }, [isLoading, isVisible, name]);
 
-  const [nodes, connectors, box, sortedStages, stageColorMap] = usePipelineGraph(
+  const [nodes, connectors, box, sortedStages, stageColorMap, warehouseColorMap] = usePipelineGraph(
     name,
     data?.stages || [],
     warehouseData?.warehouses || [],
@@ -150,13 +163,29 @@ export const Pipelines = () => {
 
   const [stagesPerFreight, subscribersByStage] = useMemo(() => {
     const stagesPerFreight: { [key: string]: Stage[] } = {};
-    const subscribersByStage = {} as { [key: string]: Stage[] };
+    const subscribersByStage = {} as { [key: string]: Set<string> };
     (data?.stages || []).forEach((stage) => {
-      const items = stagesPerFreight[stage.status?.currentFreight?.name || ''] || [];
-      stagesPerFreight[stage.status?.currentFreight?.name || ''] = [...items, stage];
+      (getCurrentFreight(stage) || []).forEach((f) => {
+        if (!stagesPerFreight[f.name || '']) {
+          stagesPerFreight[f.name || ''] = [];
+        }
+        stagesPerFreight[f.name || ''].push(stage);
+      });
       stage?.spec?.subscriptions?.upstreamStages.forEach((item) => {
-        const items = subscribersByStage[item.name || ''] || [];
-        subscribersByStage[item.name || ''] = [...items, stage];
+        if (!subscribersByStage[item.name || '']) {
+          subscribersByStage[item.name || ''] = new Set();
+        }
+        subscribersByStage[item.name || ''].add(stage?.metadata?.name || '');
+      });
+      stage?.spec?.requestedFreight?.forEach((item) => {
+        if (!item.sources?.direct) {
+          (item?.sources?.stages || []).forEach((name) => {
+            if (!subscribersByStage[name]) {
+              subscribersByStage[name] = new Set();
+            }
+            subscribersByStage[name].add(stage?.metadata?.name || '');
+          });
+        }
       });
     });
     return [stagesPerFreight, subscribersByStage];
@@ -184,8 +213,8 @@ export const Pipelines = () => {
       return state.stage !== stage?.metadata?.name;
     }
     if (state.action === 'promoteSubscribers') {
-      return !subscribersByStage[state.stage || '']?.find(
-        (item) => item.metadata?.name === stage?.metadata?.name
+      return (
+        !stage?.metadata?.name || !subscribersByStage[state.stage || '']?.has(stage.metadata.name)
       );
     }
     return false;
@@ -209,67 +238,77 @@ export const Pipelines = () => {
 
   return (
     <div className='flex flex-col flex-grow'>
-      <ColorContext.Provider value={stageColorMap}>
-        <FreightTimelineHeader
-          promotingStage={state.stage}
-          action={state.action}
-          cancel={() => {
-            state.clear();
-            setSelectedWarehouse('');
-          }}
-          downstreamSubs={(subscribersByStage[state.stage || ''] || []).map(
-            (s) => s.metadata?.name || ''
-          )}
-          selectedWarehouse={selectedWarehouse || ''}
-          setSelectedWarehouse={setSelectedWarehouse}
-          warehouses={warehouseMap}
-          collapsed={freightTimelineCollapsed}
-          setCollapsed={setFreightTimelineCollapsed}
-          collapsable={
-            Object.keys(stagesPerFreight).reduce(
-              (acc, cur) => (cur?.length > 0 ? acc + stagesPerFreight[cur].length : acc),
-              0
-            ) > 0
-          }
-        />
-        <FreightTimelineWrapper>
-          <Suspense
-            fallback={
-              <div className='h-full w-full flex items-center justify-center'>
-                <Spin />
-              </div>
+      <ColorContext.Provider value={{ stageColorMap, warehouseColorMap }}>
+        <div className='bg-gray-100'>
+          <FreightTimelineHeader
+            promotingStage={state.stage}
+            action={state.action}
+            cancel={() => {
+              state.clear();
+              setSelectedWarehouse('');
+            }}
+            downstreamSubs={Array.from(subscribersByStage[state.stage || ''] || [])}
+            selectedWarehouse={selectedWarehouse || ''}
+            setSelectedWarehouse={setSelectedWarehouse}
+            warehouses={warehouseMap}
+            collapsed={freightTimelineCollapsed}
+            setCollapsed={setFreightTimelineCollapsed}
+            collapsable={
+              Object.keys(stagesPerFreight).reduce(
+                (acc, cur) => (cur?.length > 0 ? acc + stagesPerFreight[cur].length : acc),
+                0
+              ) > 0
             }
-          >
-            <FreightTimeline
-              highlightedStages={
-                state.action === FreightTimelineAction.ManualApproval ? {} : highlightedStages
+          />
+          <FreightTimelineWrapper>
+            <Suspense
+              fallback={
+                <div className='h-full w-full flex items-center justify-center'>
+                  <Spin />
+                </div>
               }
-              refetchFreight={refetchFreightData}
-              onHover={onHover}
-              freight={filteredFreight}
-              state={state}
-              promotionEligible={{}}
-              stagesPerFreight={stagesPerFreight}
-              collapsed={freightTimelineCollapsed}
-              setCollapsed={setFreightTimelineCollapsed}
-            />
-          </Suspense>
-        </FreightTimelineWrapper>
-        <div className='flex flex-grow w-full'>
-          <div className={`overflow-hidden flex-grow w-full h-full ${styles.dag}`}>
+            >
+              <FreightTimeline
+                highlightedStages={
+                  state.action === FreightTimelineAction.ManualApproval ? {} : highlightedStages
+                }
+                refetchFreight={refetchFreightData}
+                onHover={onHover}
+                freight={filteredFreight}
+                state={state}
+                promotionEligible={{}}
+                stagesPerFreight={stagesPerFreight}
+                collapsed={freightTimelineCollapsed}
+                setCollapsed={setFreightTimelineCollapsed}
+              />
+            </Suspense>
+          </FreightTimelineWrapper>
+        </div>
+        <div className={`flex flex-grow w-full ${styles.dag}`}>
+          <div className={`overflow-hidden flex-grow w-full h-full`}>
             <div className='flex justify-end items-center p-4 mb-4'>
-              <div>
+              <div className='flex gap-2'>
+                {zoom !== 100 && (
+                  <Button onClick={() => setZoom(100)} icon={<FontAwesomeIcon icon={faExpand} />} />
+                )}
+                <Button
+                  onClick={() => setZoom((prev) => Math.max(10, prev - 10))}
+                  icon={<FontAwesomeIcon icon={faMagnifyingGlassMinus} />}
+                />
+                <Button
+                  onClick={() => setZoom((prev) => Math.min(200, prev + 10))}
+                  icon={<FontAwesomeIcon icon={faMagnifyingGlassPlus} />}
+                />
                 <Tooltip title='Reassign Stage Colors'>
                   <Button
                     type='default'
-                    className='mr-2'
                     onClick={() => {
                       clearColors(name || '');
+                      clearColors(name || '', 'warehouses');
                       window.location.reload();
                     }}
-                  >
-                    <FontAwesomeIcon icon={faPalette} />
-                  </Button>
+                    icon={<FontAwesomeIcon icon={faPalette} />}
+                  />
                 </Tooltip>{' '}
                 <Dropdown
                   menu={{
@@ -300,18 +339,29 @@ export const Pipelines = () => {
                   trigger={['click']}
                 >
                   <Button icon={<FontAwesomeIcon icon={faWandSparkles} size='1x' />}>
-                    <Space>
-                      New
-                      <FontAwesomeIcon icon={faChevronDown} size='xs' />
-                    </Space>
+                    <FontAwesomeIcon icon={faChevronDown} size='xs' className='-mr-2' />
                   </Button>
                 </Dropdown>
+                {hideImages && (
+                  <Tooltip title='Show Images'>
+                    <Button
+                      icon={<FontAwesomeIcon icon={faDocker} />}
+                      onClick={() => setHideImages(false)}
+                      className='ml-2'
+                    />
+                  </Tooltip>
+                )}
               </div>
             </div>
             <div className='overflow-auto p-6 h-full'>
               <div
                 className='relative'
-                style={{ width: box?.width, height: box?.height, margin: '0 auto' }}
+                style={{
+                  width: box?.width,
+                  height: box?.height,
+                  margin: '0 auto',
+                  zoom: `${zoom}%`
+                }}
               >
                 {nodes?.map((node, index) => (
                   <div
@@ -330,17 +380,27 @@ export const Pipelines = () => {
                           height={node.height}
                           projectName={name}
                           faded={isFaded(node.data)}
-                          currentFreight={
-                            fullFreightById[node.data?.status?.currentFreight?.name || '']
-                          }
+                          currentFreight={getCurrentFreight(node.data).map(
+                            (f) => fullFreightById[f.name || '']
+                          )}
                           hasNoSubscribers={
-                            (subscribersByStage[node?.data?.metadata?.name || ''] || []).length <= 1
+                            Array.from(subscribersByStage[node?.data?.metadata?.name || ''] || [])
+                              .length <= 1
                           }
                           onPromoteClick={(type: FreightTimelineAction) => {
-                            const currentWarehouse =
-                              node.data?.status?.currentFreight?.warehouse ||
-                              node.data?.spec?.subscriptions?.warehouse ||
-                              '';
+                            const currentFreight = getCurrentFreight(node.data);
+                            const isWarehouseKind = currentFreight.reduce(
+                              (acc, cur) => acc || cur?.origin?.kind === 'Warehouse',
+                              false
+                            );
+                            let currentWarehouse = currentFreight[0]?.warehouse || '';
+                            if (currentWarehouse === '' && isWarehouseKind) {
+                              currentWarehouse =
+                                currentFreight[0]?.origin?.name ||
+                                node.data?.spec?.subscriptions?.warehouse ||
+                                node.data?.spec?.requestedFreight[0]?.origin?.name ||
+                                '';
+                            }
                             setSelectedWarehouse(currentWarehouse);
                             if (state.stage === node.data?.metadata?.name) {
                               // deselect
@@ -353,7 +413,7 @@ export const Pipelines = () => {
                                 type,
                                 stageName,
                                 type === FreightTimelineAction.PromoteSubscribers
-                                  ? node.data?.status?.currentFreight?.name || ''
+                                  ? currentFreight[0].name
                                   : undefined
                               );
                             }
@@ -443,7 +503,7 @@ export const Pipelines = () => {
                 {connectors?.map((connector) =>
                   connector.map((line, i) => (
                     <div
-                      className='absolute bg-gray-400'
+                      className='absolute bg-gray-300 rounded-full'
                       style={{
                         padding: 0,
                         margin: 0,
@@ -451,7 +511,8 @@ export const Pipelines = () => {
                         width: line.width,
                         left: line.x,
                         top: line.y,
-                        transform: `rotate(${line.angle}deg)`
+                        transform: `rotate(${line.angle}deg)`,
+                        backgroundColor: line.color
                       }}
                       key={i}
                     />
@@ -461,7 +522,20 @@ export const Pipelines = () => {
             </div>
           </div>
 
-          <Images project={name as string} stages={sortedStages || []} />
+          {!hideImages && (
+            <div
+              className='p-6 pt-4 h-full'
+              style={{
+                width: '450px'
+              }}
+            >
+              <Images
+                project={name as string}
+                stages={sortedStages || []}
+                hide={() => setHideImages(true)}
+              />
+            </div>
+          )}
         </div>
         <SuspenseSpin>
           {stage && <StageDetails stage={stage} />}

@@ -31,30 +31,37 @@ type compositeError interface {
 // ApplicationHealthEvaluator is an interface for evaluating the health of
 // Argo CD Applications.
 type ApplicationHealthEvaluator interface {
-	EvaluateHealth(context.Context, kargoapi.FreightReference, []kargoapi.ArgoCDAppUpdate) *kargoapi.Health
+	EvaluateHealth(
+		context.Context,
+		*kargoapi.Stage,
+	) *kargoapi.Health
 }
 
 // applicationHealth is an ApplicationHealthEvaluator implementation.
 type applicationHealth struct {
-	Client client.Client
+	kargoClient client.Client
+	argoClient  client.Client
 }
 
 // NewApplicationHealthEvaluator returns a new ApplicationHealthEvaluator.
-func NewApplicationHealthEvaluator(c client.Client) ApplicationHealthEvaluator {
-	return &applicationHealth{Client: c}
+func NewApplicationHealthEvaluator(kargoClient, argoClient client.Client) ApplicationHealthEvaluator {
+	return &applicationHealth{
+		kargoClient: kargoClient,
+		argoClient:  argoClient,
+	}
 }
 
 // EvaluateHealth assesses the health of a set of Argo CD Applications.
 func (h *applicationHealth) EvaluateHealth(
 	ctx context.Context,
-	freight kargoapi.FreightReference,
-	updates []kargoapi.ArgoCDAppUpdate,
+	stage *kargoapi.Stage,
 ) *kargoapi.Health {
-	if len(updates) == 0 {
+	if stage.Spec.PromotionMechanisms == nil ||
+		len(stage.Spec.PromotionMechanisms.ArgoCDAppUpdates) == 0 {
 		return nil
 	}
 
-	if h.Client == nil {
+	if h.argoClient == nil {
 		return &kargoapi.Health{
 			Status: kargoapi.HealthStateUnknown,
 			Issues: []string{
@@ -65,11 +72,12 @@ func (h *applicationHealth) EvaluateHealth(
 
 	health := kargoapi.Health{
 		Status:     kargoapi.HealthStateHealthy,
-		ArgoCDApps: make([]kargoapi.ArgoCDAppStatus, len(updates)),
+		ArgoCDApps: make([]kargoapi.ArgoCDAppStatus, len(stage.Spec.PromotionMechanisms.ArgoCDAppUpdates)),
 		Issues:     make([]string, 0),
 	}
 
-	for i, update := range updates {
+	for i := range stage.Spec.PromotionMechanisms.ArgoCDAppUpdates {
+		update := &stage.Spec.PromotionMechanisms.ArgoCDAppUpdates[i]
 		namespace := update.AppNamespace
 		if namespace == "" {
 			namespace = Namespace()
@@ -80,10 +88,15 @@ func (h *applicationHealth) EvaluateHealth(
 			Name:      update.AppName,
 		}
 
-		state, healthStatus, syncStatus, err := h.GetApplicationHealth(ctx, types.NamespacedName{
-			Namespace: health.ArgoCDApps[i].Namespace,
-			Name:      health.ArgoCDApps[i].Name,
-		}, freight)
+		state, healthStatus, syncStatus, err := h.GetApplicationHealth(
+			ctx,
+			stage,
+			update,
+			types.NamespacedName{
+				Namespace: health.ArgoCDApps[i].Namespace,
+				Name:      health.ArgoCDApps[i].Name,
+			},
+		)
 
 		health.Status = health.Status.Merge(state)
 		health.ArgoCDApps[i].HealthStatus = healthStatus
@@ -110,8 +123,9 @@ func (h *applicationHealth) EvaluateHealth(
 // returns an error with a message explaining why.
 func (h *applicationHealth) GetApplicationHealth(
 	ctx context.Context,
+	stage *kargoapi.Stage,
+	update *kargoapi.ArgoCDAppUpdate,
 	key types.NamespacedName,
-	freight kargoapi.FreightReference,
 ) (kargoapi.HealthState, kargoapi.ArgoCDAppHealthStatus, kargoapi.ArgoCDAppSyncStatus, error) {
 	var (
 		healthStatus = kargoapi.ArgoCDAppHealthStatus{
@@ -123,7 +137,7 @@ func (h *applicationHealth) GetApplicationHealth(
 	)
 
 	app := &argocd.Application{}
-	if err := h.Client.Get(ctx, key, app); err != nil {
+	if err := h.argoClient.Get(ctx, key, app); err != nil {
 		err = fmt.Errorf("error finding Argo CD Application %q in namespace %q: %w", key.Name, key.Namespace, err)
 		if client.IgnoreNotFound(err) == nil {
 			err = fmt.Errorf("unable to find Argo CD Application %q in namespace %q", key.Name, key.Namespace)
@@ -180,7 +194,16 @@ func (h *applicationHealth) GetApplicationHealth(
 	// is syncing to it. We do not further care about the cluster being in sync
 	// with the desired revision, as some applications may be out of sync by
 	// default.
-	if desiredRevision := GetDesiredRevision(app, freight); desiredRevision != "" {
+	if desiredRevision, err := GetDesiredRevision(
+		ctx,
+		h.kargoClient,
+		stage,
+		update,
+		app,
+		stage.Status.FreightHistory.Current().References(),
+	); err != nil {
+		return kargoapi.HealthStateUnknown, healthStatus, syncStatus, err
+	} else if desiredRevision != "" {
 		if healthState, err := stageHealthForAppSync(app, desiredRevision); err != nil {
 			return healthState, healthStatus, syncStatus, err
 		}
@@ -199,7 +222,7 @@ func (h *applicationHealth) GetApplicationHealth(
 			time.Sleep(duration)
 
 			// Re-fetch the application to get the latest state.
-			if err := h.Client.Get(ctx, key, app); err != nil {
+			if err := h.argoClient.Get(ctx, key, app); err != nil {
 				err = fmt.Errorf("error finding Argo CD Application %q in namespace %q: %w", key.Name, key.Namespace, err)
 				if client.IgnoreNotFound(err) == nil {
 					err = fmt.Errorf("unable to find Argo CD Application %q in namespace %q", key.Name, key.Namespace)

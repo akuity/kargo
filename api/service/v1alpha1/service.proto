@@ -58,7 +58,7 @@ service KargoService {
   rpc DeleteFreight(DeleteFreightRequest) returns (DeleteFreightResponse);
   rpc GetFreight(GetFreightRequest) returns (GetFreightResponse);
   rpc PromoteToStage(PromoteToStageRequest) returns (PromoteToStageResponse);
-  rpc PromoteToStageSubscribers(PromoteToStageSubscribersRequest) returns (PromoteToStageSubscribersResponse);
+  rpc PromoteDownstream(PromoteDownstreamRequest) returns (PromoteDownstreamResponse);
   rpc QueryFreight(QueryFreightRequest) returns (QueryFreightResponse);
   rpc UpdateFreightAlias(UpdateFreightAliasRequest) returns (UpdateFreightAliasResponse);
 
@@ -388,14 +388,14 @@ message PromoteToStageResponse {
   github.com.akuity.kargo.api.v1alpha1.Promotion promotion = 1;
 }
 
-message PromoteToStageSubscribersRequest {
+message PromoteDownstreamRequest {
   string project = 1;
   string stage = 2;
   string freight = 3;
   string freight_alias = 4 [json_name = "freightAlias"];
 }
 
-message PromoteToStageSubscribersResponse {
+message PromoteDownstreamResponse {
   repeated github.com.akuity.kargo.api.v1alpha1.Promotion promotions = 1;
 }
 
@@ -406,6 +406,7 @@ message QueryFreightRequest {
   string group = 4;
   string order_by = 5;
   bool reverse = 6;
+  repeated string origins = 7;
 }
 
 message QueryFreightResponse {

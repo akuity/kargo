@@ -80,6 +80,7 @@ export interface ConnectorsType {
   y: number;
   width: number;
   angle: number;
+  color: string;
 }
 
 export interface BoxType {

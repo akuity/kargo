@@ -167,10 +167,6 @@ func newStageTable(list *metav1.List) *metav1.Table {
 	rows := make([]metav1.TableRow, len(list.Items))
 	for i, item := range list.Items {
 		stage := item.Object.(*kargoapi.Stage) // nolint: forcetypeassert
-		var currentFreightID string
-		if stage.Status.CurrentFreight != nil {
-			currentFreightID = stage.Status.CurrentFreight.Name
-		}
 		var health string
 		if stage.Status.Health != nil {
 			health = string(stage.Status.Health.Status)
@@ -179,7 +175,7 @@ func newStageTable(list *metav1.List) *metav1.Table {
 			Cells: []any{
 				stage.Name,
 				stage.Spec.Shard,
-				currentFreightID,
+				stage.Status.FreightSummary,
 				health,
 				stage.Status.Phase,
 				duration.HumanDuration(time.Since(stage.CreationTimestamp.Time)),

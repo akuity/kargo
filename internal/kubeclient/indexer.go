@@ -3,6 +3,7 @@ package kubeclient
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
@@ -24,14 +25,10 @@ const (
 	FreightByWarehouseIndexField          = "warehouse"
 	PromotionsByStageAndFreightIndexField = "stageAndFreight"
 
-	// Note: These two do not conflict with one another, because these two
-	// indices are used by different components.
-	PromotionsByStageIndexField            = "stage"
-	NonTerminalPromotionsByStageIndexField = "stage"
+	PromotionsByStageIndexField = "stage"
 
 	RunningPromotionsByArgoCDApplicationsIndexField = "applications"
 
-	PromotionPoliciesByStageIndexField   = "stage"
 	StagesByAnalysisRunIndexField        = "analysisRun"
 	StagesByArgoCDApplicationsIndexField = "applications"
 	StagesByFreightIndexField            = "freight"
@@ -44,6 +41,12 @@ const (
 	ServiceAccountsByOIDCClaimIndexField   = "claims"
 )
 
+// IndexEventsByInvolvedObjectAPIGroup sets up the indexing of Events by the
+// API group of the involved object.
+//
+// It configures the field indexer of the provided manager to allow querying
+// Events by the API group of the involved object using the
+// EventsByInvolvedObjectAPIGroupIndexField selector.
 func IndexEventsByInvolvedObjectAPIGroup(ctx context.Context, mgr ctrl.Manager) error {
 	return mgr.GetFieldIndexer().IndexField(
 		ctx,
@@ -53,16 +56,24 @@ func IndexEventsByInvolvedObjectAPIGroup(ctx context.Context, mgr ctrl.Manager) 
 	)
 }
 
+// indexEventsByInvolvedObjectAPIGroup is a client.IndexerFunc that indexes
+// Events by the API group of the involved object.
 func indexEventsByInvolvedObjectAPIGroup(obj client.Object) []string {
 	event := obj.(*corev1.Event) // nolint: forcetypeassert
 	// Ignore invalid APIVersion
 	gv, _ := schema.ParseGroupVersion(event.InvolvedObject.APIVersion)
-	if gv.Empty() {
+	if gv.Empty() || gv.Group == "" {
 		return nil
 	}
 	return []string{gv.Group}
 }
 
+// IndexStagesByAnalysisRun sets up the indexing of Stages by the AnalysisRun
+// they are associated with.
+//
+// It configures the field indexer of the provided manager to allow querying
+// Stages by the AnalysisRun they are associated with using the
+// StagesByAnalysisRunIndexField selector.
 func IndexStagesByAnalysisRun(ctx context.Context, mgr ctrl.Manager, shardName string) error {
 	return mgr.GetFieldIndexer().IndexField(
 		ctx,
@@ -71,6 +82,8 @@ func IndexStagesByAnalysisRun(ctx context.Context, mgr ctrl.Manager, shardName s
 		indexStagesByAnalysisRun(shardName))
 }
 
+// indexStagesByAnalysisRun is a client.IndexerFunc that indexes Stages by the
+// AnalysisRun they are associated with.
 func indexStagesByAnalysisRun(shardName string) client.IndexerFunc {
 	return func(obj client.Object) []string {
 		// Return early if:
@@ -87,21 +100,34 @@ func indexStagesByAnalysisRun(shardName string) client.IndexerFunc {
 		}
 
 		stage := obj.(*kargoapi.Stage) // nolint: forcetypeassert
-		if stage.Status.CurrentFreight == nil ||
-			stage.Status.CurrentFreight.VerificationInfo == nil ||
-			stage.Status.CurrentFreight.VerificationInfo.AnalysisRun == nil {
+
+		currentFC := stage.Status.FreightHistory.Current()
+		if currentFC == nil {
 			return nil
 		}
-		return []string{
-			fmt.Sprintf(
-				"%s:%s",
-				stage.Status.CurrentFreight.VerificationInfo.AnalysisRun.Namespace,
-				stage.Status.CurrentFreight.VerificationInfo.AnalysisRun.Name,
-			),
+		currentVI := currentFC.VerificationHistory.Current()
+		if currentVI == nil || currentVI.AnalysisRun == nil {
+			return nil
 		}
+
+		return []string{fmt.Sprintf(
+			"%s:%s",
+			currentVI.AnalysisRun.Namespace,
+			currentVI.AnalysisRun.Name,
+		)}
 	}
 }
 
+// IndexStagesByArgoCDApplications sets up the indexing of Stages by the Argo CD
+// Applications they are associated with.
+//
+// It configures the field indexer of the provided manager to allow querying
+// Stages by the Argo CD Applications they are associated with using the
+// StagesByArgoCDApplicationsIndexField selector.
+//
+// When the provided shardName is non-empty, only Stages labeled with the
+// provided shardName are indexed. When the provided shardName is empty, only
+// Stages not labeled with a shardName are indexed.
 func IndexStagesByArgoCDApplications(ctx context.Context, mgr ctrl.Manager, shardName string) error {
 	return mgr.GetFieldIndexer().IndexField(
 		ctx,
@@ -110,6 +136,12 @@ func IndexStagesByArgoCDApplications(ctx context.Context, mgr ctrl.Manager, shar
 		indexStagesByArgoCDApplications(shardName))
 }
 
+// indexStagesByArgoCDApplications returns a client.IndexerFunc that indexes
+// Stages by the Argo CD Applications they are associated with.
+//
+// When the provided shardName is non-empty, only Stages labeled with the
+// provided shardName are indexed. When the provided shardName is empty, only
+// Stages not labeled with a shardName are indexed.
 func indexStagesByArgoCDApplications(shardName string) client.IndexerFunc {
 	return func(obj client.Object) []string {
 		// Return early if:
@@ -126,8 +158,7 @@ func indexStagesByArgoCDApplications(shardName string) client.IndexerFunc {
 		}
 
 		stage := obj.(*kargoapi.Stage) // nolint: forcetypeassert
-		if stage.Spec.PromotionMechanisms == nil ||
-			len(stage.Spec.PromotionMechanisms.ArgoCDAppUpdates) == 0 {
+		if stage.Spec.PromotionMechanisms == nil || len(stage.Spec.PromotionMechanisms.ArgoCDAppUpdates) == 0 {
 			return nil
 		}
 		apps := make([]string, len(stage.Spec.PromotionMechanisms.ArgoCDAppUpdates))
@@ -142,8 +173,11 @@ func indexStagesByArgoCDApplications(shardName string) client.IndexerFunc {
 	}
 }
 
-// IndexPromotionsByStage creates Promotion index by Stage for which
-// all the given predicates returns true for the Promotion.
+// IndexPromotionsByStage sets up the indexing of Promotions by the Stage they
+// reference.
+//
+// It configures the field indexer of the provided manager to allow querying
+// Promotions by the Stage they reference using the PromotionsByStageIndexField.
 func IndexPromotionsByStage(ctx context.Context, mgr ctrl.Manager) error {
 	return mgr.GetFieldIndexer().IndexField(
 		ctx,
@@ -153,23 +187,9 @@ func IndexPromotionsByStage(ctx context.Context, mgr ctrl.Manager) error {
 	)
 }
 
-// IndexNonTerminalPromotionsByStage indexes Promotions in non-terminal states
-// by Stage
-func IndexNonTerminalPromotionsByStage(ctx context.Context, mgr ctrl.Manager) error {
-	return mgr.GetFieldIndexer().IndexField(
-		ctx,
-		&kargoapi.Promotion{},
-		NonTerminalPromotionsByStageIndexField,
-		indexPromotionsByStage(isPromotionPhaseNonTerminal),
-	)
-}
-
-func isPromotionPhaseNonTerminal(promo *kargoapi.Promotion) bool {
-	return !promo.Status.Phase.IsTerminal()
-}
-
-// indexPromotionsByStage indexes Promotion if all the given predicates
-// returns true for the Promotion.
+// indexPromotionsByStage returns a client.IndexerFunc that indexes Promotions
+// by the Stage they reference. The provided predicates are used to further
+// filter the Promotions that are indexed.
 func indexPromotionsByStage(predicates ...func(*kargoapi.Promotion) bool) client.IndexerFunc {
 	return func(obj client.Object) []string {
 		promo, ok := obj.(*kargoapi.Promotion)
@@ -185,6 +205,16 @@ func indexPromotionsByStage(predicates ...func(*kargoapi.Promotion) bool) client
 	}
 }
 
+// IndexRunningPromotionsByArgoCDApplications sets up the indexing of running
+// Promotions by the Argo CD Applications they are associated with.
+//
+// It configures the field indexer of the provided manager to allow querying
+// running Promotions by the Argo CD Applications they are associated with using
+// the RunningPromotionsByArgoCDApplicationsIndexField selector.
+//
+// When the provided shardName is non-empty, only Promotions labeled with the
+// provided shardName are indexed. When the provided shardName is empty, only
+// Promotions not labeled with a shardName are indexed.
 func IndexRunningPromotionsByArgoCDApplications(
 	ctx context.Context,
 	mgr ctrl.Manager,
@@ -198,6 +228,13 @@ func IndexRunningPromotionsByArgoCDApplications(
 	)
 }
 
+// indexRunningPromotionsByArgoCDApplications returns a client.IndexerFunc that
+// indexes running Promotions by the Argo CD Applications they are associated
+// with.
+//
+// When the provided shardName is non-empty, only Promotions labeled with the
+// provided shardName are indexed. When the provided shardName is empty, only
+// Promotions not labeled with a shardName are indexed.
 func indexRunningPromotionsByArgoCDApplications(
 	ctx context.Context,
 	c client.Client,
@@ -264,8 +301,13 @@ func indexRunningPromotionsByArgoCDApplications(
 	}
 }
 
-// IndexPromotionsByStageAndFreight indexes Promotions by the Freight + Stage
-// they reference.
+// IndexPromotionsByStageAndFreight sets up indexing of Promotions by the Stage
+// and Freight they reference.
+//
+// It configures the manager's field indexer to allow querying Promotions using
+// the PromotionsByStageAndFreightIndexField selector. The value of the index is
+// the concatenation of the Stage and Freight keys, as returned by the
+// StageAndFreightKey function.
 func IndexPromotionsByStageAndFreight(
 	ctx context.Context,
 	mgr ctrl.Manager,
@@ -278,6 +320,8 @@ func IndexPromotionsByStageAndFreight(
 	)
 }
 
+// indexPromotionsByStageAndFreight is a client.IndexerFunc that indexes
+// Promotions by the Freight and Stage they reference.
 func indexPromotionsByStageAndFreight(obj client.Object) []string {
 	promo := obj.(*kargoapi.Promotion) // nolint: forcetypeassert
 	return []string{
@@ -285,39 +329,53 @@ func indexPromotionsByStageAndFreight(obj client.Object) []string {
 	}
 }
 
+// StageAndFreightKey returns a key that uniquely identifies a Stage and
+// Freight.
 func StageAndFreightKey(stage, freight string) string {
 	return fmt.Sprintf("%s:%s", stage, freight)
 }
 
+// IndexFreightByWarehouse sets up indexing of Freight by the Warehouse they are
+// associated with.
+//
+// It configures the manager's field indexer to allow querying Freight using the
+// FreightByWarehouseIndexField selector.
 func IndexFreightByWarehouse(ctx context.Context, mgr ctrl.Manager) error {
 	return mgr.GetFieldIndexer().IndexField(
 		ctx,
 		&kargoapi.Freight{},
 		FreightByWarehouseIndexField,
-		indexFreightByWarehouse,
+		FreightByWarehouseIndexer,
 	)
 }
 
-func indexFreightByWarehouse(obj client.Object) []string {
+// FreightByWarehouseIndexer is a client.IndexerFunc that indexes Freight by the
+// Warehouse it is associated with.
+func FreightByWarehouseIndexer(obj client.Object) []string {
 	freight := obj.(*kargoapi.Freight) // nolint: forcetypeassert
-	return []string{freight.Warehouse}
+	if freight.Origin.Kind == kargoapi.FreightOriginKindWarehouse {
+		return []string{freight.Origin.Name}
+	}
+	return nil
 }
 
-// IndexFreightByVerifiedStages indexes Freight by the Stages in which it has
-// been verified.
-func IndexFreightByVerifiedStages(
-	ctx context.Context,
-	mgr ctrl.Manager,
-) error {
+// IndexFreightByVerifiedStages sets up indexing of Freight by the Stages that
+// have verified it.
+//
+// It configures the manager's field indexer to allow querying Freight using
+// the FreightByVerifiedStagesIndexField selector.
+func IndexFreightByVerifiedStages(ctx context.Context, mgr ctrl.Manager) error {
 	return mgr.GetFieldIndexer().IndexField(
 		ctx,
 		&kargoapi.Freight{},
 		FreightByVerifiedStagesIndexField,
-		indexFreightByVerifiedStages,
+		FreightByVerifiedStagesIndexer,
 	)
 }
 
-func indexFreightByVerifiedStages(obj client.Object) []string {
+// FreightByVerifiedStagesIndexer is a client.IndexerFunc that indexes Freight
+// by the Stages in which it has been verified.
+func FreightByVerifiedStagesIndexer(obj client.Object) []string {
 	freight := obj.(*kargoapi.Freight) // nolint: forcetypeassert
 	verifiedStages := make([]string, len(freight.Status.VerifiedIn))
 	var i int
@@ -328,21 +386,23 @@ func indexFreightByVerifiedStages(obj client.Object) []string {
 	return verifiedStages
 }
 
-// IndexFreightByApprovedStages indexes Freight by the Stages for which it has
-// been (manually) approved.
-func IndexFreightByApprovedStages(
-	ctx context.Context,
-	mgr ctrl.Manager,
-) error {
+// IndexFreightByApprovedStages sets up indexing of Freight by the Stages for
+// which it has been (manually) approved.
+//
+// It configures the manager's field indexer to allow querying Freight using
+// the FreightApprovedForStagesIndexField selector.
+func IndexFreightByApprovedStages(ctx context.Context, mgr ctrl.Manager) error {
 	return mgr.GetFieldIndexer().IndexField(
 		ctx,
 		&kargoapi.Freight{},
 		FreightApprovedForStagesIndexField,
-		indexFreightByApprovedStages,
+		FreightApprovedForStagesIndexer,
 	)
 }
 
-func indexFreightByApprovedStages(obj client.Object) []string {
+// FreightApprovedForStagesIndexer is a client.IndexerFunc that indexes Freight
+// by the Stages for which it has been (manually) approved.
+func FreightApprovedForStagesIndexer(obj client.Object) []string {
 	freight := obj.(*kargoapi.Freight) // nolint: forcetypeassert
 	approvedStages := make([]string, len(freight.Status.ApprovedFor))
 	var i int
@@ -353,6 +413,11 @@ func indexFreightByApprovedStages(obj client.Object) []string {
 	return approvedStages
 }
 
+// IndexStagesByFreight sets up indexing of Stages by the Freight they
+// reference.
+//
+// It configures the manager's field indexer to allow querying Stages using the
+// StagesByFreightIndexField selector.
 func IndexStagesByFreight(ctx context.Context, mgr ctrl.Manager) error {
 	return mgr.GetFieldIndexer().IndexField(
 		ctx,
@@ -362,16 +427,29 @@ func IndexStagesByFreight(ctx context.Context, mgr ctrl.Manager) error {
 	)
 }
 
+// indexStagesByFreight is a client.IndexerFunc that indexes Stages by the
+// Freight they reference.
 func indexStagesByFreight(obj client.Object) []string {
 	stage := obj.(*kargoapi.Stage) // nolint: forcetypeassert
-	if stage.Status.CurrentFreight != nil {
-		if id := stage.Status.CurrentFreight.Name; id != "" {
-			return []string{id}
-		}
+
+	current := stage.Status.FreightHistory.Current()
+	if current == nil || len(current.Freight) == 0 {
+		return nil
 	}
-	return nil
+
+	var freightIDs []string
+	for _, freight := range current.Freight {
+		freightIDs = append(freightIDs, freight.Name)
+	}
+	slices.Sort(freightIDs)
+	return freightIDs
 }
 
+// IndexStagesByUpstreamStages sets up indexing of Stages by the upstream Stages
+// they reference.
+//
+// It configures the manager's field indexer to allow querying Stages using the
+// StagesByUpstreamStagesIndexField selector.
 func IndexStagesByUpstreamStages(ctx context.Context, mgr ctrl.Manager) error {
 	return mgr.GetFieldIndexer().IndexField(
 		ctx,
@@ -381,18 +459,23 @@ func IndexStagesByUpstreamStages(ctx context.Context, mgr ctrl.Manager) error {
 	)
 }
 
+// indexStagesByUpstreamStages is a client.IndexerFunc that indexes Stages by
+// the upstream Stages they reference.
 func indexStagesByUpstreamStages(obj client.Object) []string {
 	stage := obj.(*kargoapi.Stage) // nolint: forcetypeassert
-	if stage.Spec.Subscriptions.UpstreamStages == nil {
-		return nil
+	var upstreams []string
+	for _, req := range stage.Spec.RequestedFreight {
+		upstreams = append(upstreams, req.Sources.Stages...)
 	}
-	upstreamStages := make([]string, len(stage.Spec.Subscriptions.UpstreamStages))
-	for i, upstreamStage := range stage.Spec.Subscriptions.UpstreamStages {
-		upstreamStages[i] = upstreamStage.Name
-	}
-	return upstreamStages
+	slices.Sort(upstreams)
+	return slices.Compact(upstreams)
 }
 
+// IndexStagesByWarehouse sets up indexing of Stages by the Warehouse they are
+// associated with.
+//
+// It configures the manager's field indexer to allow querying Stages using the
+// StagesByWarehouseIndexField selector.
 func IndexStagesByWarehouse(ctx context.Context, mgr ctrl.Manager) error {
 	return mgr.GetFieldIndexer().IndexField(
 		ctx,
@@ -402,14 +485,25 @@ func IndexStagesByWarehouse(ctx context.Context, mgr ctrl.Manager) error {
 	)
 }
 
+// indexStagesByWarehouse is a client.IndexerFunc that indexes Stages by the
+// Warehouse they are associated with.
 func indexStagesByWarehouse(obj client.Object) []string {
 	stage := obj.(*kargoapi.Stage) // nolint: forcetypeassert
-	if stage.Spec.Subscriptions.Warehouse != "" {
-		return []string{stage.Spec.Subscriptions.Warehouse}
+	var warehouses []string
+	for _, req := range stage.Spec.RequestedFreight {
+		if req.Origin.Kind == kargoapi.FreightOriginKindWarehouse && req.Sources.Direct {
+			warehouses = append(warehouses, req.Origin.Name)
+		}
 	}
-	return nil
+	slices.Sort(warehouses)
+	return warehouses
 }
 
+// IndexServiceAccountsByOIDCClaim sets up indexing of ServiceAccounts by
+// their OIDC claim annotations.
+//
+// It configures the manager's field indexer to allow querying ServiceAccounts
+// using the ServiceAccountsByOIDCClaimIndexField selector.
 func IndexServiceAccountsByOIDCClaim(ctx context.Context, mgr ctrl.Manager) error {
 	return mgr.GetFieldIndexer().IndexField(
 		ctx,
@@ -419,6 +513,8 @@ func IndexServiceAccountsByOIDCClaim(ctx context.Context, mgr ctrl.Manager) erro
 	)
 }
 
+// indexServiceAccountsByOIDCClaims is a client.IndexerFunc that indexes
+// ServiceAccounts by their OIDC claim annotations.
 func indexServiceAccountsOIDCClaim(obj client.Object) []string {
 	sa := obj.(*corev1.ServiceAccount) // nolint: forcetypeassert
 	rawClaimValues := []string{}
@@ -444,4 +540,8 @@ func indexServiceAccountsOIDCClaim(obj client.Object) []string {
 		}
 	}
 	return refinedClaimValues
+}
+
+func isPromotionPhaseNonTerminal(promo *kargoapi.Promotion) bool {
+	return !promo.Status.Phase.IsTerminal()
 }

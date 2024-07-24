@@ -16,6 +16,8 @@ import (
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name=Alias,type=string,JSONPath=`.metadata.labels.kargo\.akuity\.io/alias`
+// +kubebuilder:printcolumn:name=Origin (Kind),type=string,JSONPath=`.origin.kind`
+// +kubebuilder:printcolumn:name=Origin (Name),type=string,JSONPath=`.origin.name`
 // +kubebuilder:printcolumn:name=Age,type=date,JSONPath=`.metadata.creationTimestamp`
 
 // Freight represents a collection of versioned artifacts.
@@ -36,8 +38,12 @@ type Freight struct {
 	// required field. TODO: It is not clear yet how this field should be set in
 	// the case of user-defined Freight.
 	//
-	// +kubebuilder:validation:Required
+	// Deprecated: Use Origin instead.
 	Warehouse string `json:"warehouse,omitempty" protobuf:"bytes,8,opt,name=warehouse"`
+	// Origin describes a kind of Freight in terms of its origin.
+	//
+	// +kubebuilder:validation:Required
+	Origin FreightOrigin `json:"origin,omitempty" protobuf:"bytes,9,opt,name=origin"`
 	// Commits describes specific Git repository commits.
 	Commits []GitCommit `json:"commits,omitempty" protobuf:"bytes,3,rep,name=commits"`
 	// Images describes specific versions of specific container images.
@@ -103,7 +109,9 @@ func (f *Freight) GenerateID() string {
 	sort.Strings(artifacts)
 	return fmt.Sprintf(
 		"%x",
-		sha1.Sum([]byte(strings.Join(artifacts, "|"))),
+		sha1.Sum([]byte(
+			fmt.Sprintf("%s:%s", f.Origin.String(), strings.Join(artifacts, "|")),
+		)),
 	)
 }
 
@@ -120,7 +128,7 @@ type GitCommit struct {
 	// resolved to this commit.
 	Tag string `json:"tag,omitempty" protobuf:"bytes,4,opt,name=tag"`
 	// HealthCheckCommit is the ID of a specific commit. When specified,
-	// assessments of Stage health will used this value (instead of ID) when
+	// assessments of Stage health will use this value (instead of ID) when
 	// determining if applicable sources of Argo CD Application resources
 	// associated with the Stage are or are not synced to this commit. Note that
 	// there are cases (as in that of Kargo Render being utilized as a promotion
@@ -134,6 +142,37 @@ type GitCommit struct {
 	Author string `json:"author,omitempty" protobuf:"bytes,7,opt,name=author"`
 	// Committer is the person who committed the commit.
 	Committer string `json:"committer,omitempty" protobuf:"bytes,8,opt,name=committer"`
+}
+
+// DeepEquals returns a bool indicating whether the receiver deep-equals the
+// provided GitCommit. I.e., all fields must be equal.
+func (g *GitCommit) DeepEquals(other *GitCommit) bool {
+	if g == nil && other == nil {
+		return true
+	}
+	if g == nil || other == nil {
+		return false
+	}
+	return g.RepoURL == other.RepoURL &&
+		g.ID == other.ID &&
+		g.Branch == other.Branch &&
+		g.Tag == other.Tag &&
+		g.HealthCheckCommit == other.HealthCheckCommit &&
+		g.Message == other.Message &&
+		g.Author == other.Author &&
+		g.Committer == other.Committer
+}
+
+// Equals returns a bool indicating whether two GitCommits are equivalent.
+func (g *GitCommit) Equals(rhs *GitCommit) bool {
+	if g == nil && rhs == nil {
+		return true
+	}
+	if (g == nil && rhs != nil) || (g != nil && rhs == nil) {
+		return false
+	}
+	// If we get to here, both operands are non-nil
+	return g.RepoURL == rhs.RepoURL && g.ID == rhs.ID
 }
 
 // FreightStatus describes a piece of Freight's most recently observed state.

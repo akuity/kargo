@@ -230,14 +230,14 @@ func (c *createdFreightEventHandler[T]) Create(
 			Namespace: freight.Namespace,
 			FieldSelector: fields.OneTermEqualSelector(
 				kubeclient.StagesByWarehouseIndexField,
-				freight.Warehouse,
+				freight.Origin.Name,
 			),
 			LabelSelector: c.shardSelector,
 		},
 	); err != nil {
 		logger.Error(
 			err, "Failed to list Stages subscribed to Warehouse",
-			"warehouse", freight.Warehouse,
+			"warehouse", freight.Origin.Name,
 			"namespace", freight.Namespace,
 		)
 		return

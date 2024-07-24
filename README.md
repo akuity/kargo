@@ -27,7 +27,7 @@ Read more about Kargo in our [docs](https://kargo.akuity.io) or get hands-on
 right away by following our 
 [Quickstart documentation](https://kargo.akuity.io/quickstart) or watch the *Multi-Stage Deployment Pipelines the GitOps Way* talk by Jesse Suen & Kent Rancourt of Akuity at GitOpsCon EU 2024:
 
-[![Multi-Stage Deployment Pipelines the GitOps Way - Kargo](https://img.youtube.com/vi/tl8w72tehZ0/0.jpg)](https://youtu.be/tl8w72tehZ0)
+[![Multi-Stage Deployment Pipelines the GitOps Way - Kargo](https://img.youtube.com/vi/0B_JODxyK0w/0.jpg)](https://youtu.be/0B_JODxyK0w)
 
 This documentation is very new, so please open issues against this repository if
 you encounter any difficulties.

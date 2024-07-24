@@ -43,15 +43,14 @@ func (c *compositeMechanism) Promote(
 	ctx context.Context,
 	stage *kargoapi.Stage,
 	promo *kargoapi.Promotion,
-	newFreight kargoapi.FreightReference,
-) (*kargoapi.PromotionStatus, kargoapi.FreightReference, error) {
+	newFreight []kargoapi.FreightReference,
+) (*kargoapi.PromotionStatus, []kargoapi.FreightReference, error) {
 	if stage.Spec.PromotionMechanisms == nil {
 		return &kargoapi.PromotionStatus{Phase: kargoapi.PromotionPhaseSucceeded},
 			newFreight, nil
 	}
 
 	var newStatus *kargoapi.PromotionStatus
-	newFreight = *newFreight.DeepCopy()
 
 	logger := logging.LoggerFromContext(ctx).WithValues("name", c.name)
 	logger.Debug("executing composite promotion mechanism")

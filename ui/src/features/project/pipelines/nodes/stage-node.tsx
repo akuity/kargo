@@ -3,6 +3,7 @@ import {
   faBullseye,
   faCircleCheck,
   faCircleNotch,
+  faCodePullRequest,
   faGear,
   faTruckArrowRight
 } from '@fortawesome/free-solid-svg-icons';
@@ -44,7 +45,7 @@ export const StageNode = ({
   hasNoSubscribers?: boolean;
   action?: FreightTimelineAction;
   onPromoteClick: (type: FreightTimelineAction) => void;
-  currentFreight: Freight;
+  currentFreight: Freight[];
   onClick?: () => void;
   approving?: boolean;
   onHover: (hovering: boolean) => void;
@@ -52,43 +53,49 @@ export const StageNode = ({
 }) => {
   const navigate = useNavigate();
   return (
-    <div
-      className={styles.node}
-      style={{ backgroundColor: color, position: 'relative', cursor: 'pointer' }}
-      onClick={() => {
-        if (onClick) {
-          onClick();
-        } else {
-          navigate(
-            generatePath(paths.stage, { name: projectName, stageName: stage.metadata?.name })
-          );
-        }
-      }}
-      onMouseEnter={() => onHover(true)}
-      onMouseLeave={() => onHover(false)}
-    >
+    <>
       <div
         className={`${styles.node} ${faded ? styles.faded : ''} ${
           highlighted ? styles.highlighted : ''
         }`}
         style={{
           backgroundColor: color,
-          position: 'relative'
+          borderColor: color,
+          position: 'relative',
+          cursor: 'pointer'
         }}
+        onClick={() => {
+          if (onClick) {
+            onClick();
+          } else {
+            navigate(
+              generatePath(paths.stage, { name: projectName, stageName: stage.metadata?.name })
+            );
+          }
+        }}
+        onMouseEnter={() => onHover(true)}
+        onMouseLeave={() => onHover(false)}
       >
-        <h3 className='flex items-center text-white'>
+        <h3>
           <div className='truncate pb-1 mr-auto'>{stage.metadata?.name}</div>
-          {!stage?.status?.currentPromotion && stage.status?.lastPromotion && (
-            <div className='pb-1 mr-2'>
-              <PromotionStatusIcon
-                placement='top'
-                status={stage.status?.lastPromotion.status}
-                color='white'
-                size='1x'
-              />
-            </div>
-          )}
-          <div className='pb-1'>
+          <div className='flex gap-1'>
+            {(stage?.spec?.promotionMechanisms?.gitRepoUpdates || []).some(
+              (g) => g.pullRequest
+            ) && (
+              <Tooltip title='PR Promotion Enabled'>
+                <FontAwesomeIcon icon={faCodePullRequest} />
+              </Tooltip>
+            )}
+            {!stage?.status?.currentPromotion && stage.status?.lastPromotion && (
+              <div className='pb-1'>
+                <PromotionStatusIcon
+                  placement='top'
+                  status={stage.status?.lastPromotion.status}
+                  color='white'
+                  size='1x'
+                />
+              </div>
+            )}
             {stage.status?.currentPromotion ? (
               <Tooltip
                 title={`Freight ${stage.status?.currentPromotion.freight?.name} is being promoted`}
@@ -118,7 +125,10 @@ export const StageNode = ({
           ) : (
             <div className='text-sm h-full flex flex-col items-center justify-center -mt-1'>
               <div className={styles.freightLabel}>Current Freight</div>
-              <FreightLabel freight={currentFreight} showContents={true} />
+              {(currentFreight || []).map((freight) => (
+                <FreightLabel freight={freight} showContents={true} key={freight?.metadata?.name} />
+              ))}
+              {currentFreight?.length === 0 && <FreightLabel />}
               {stage?.status?.lastPromotion?.finishedAt && (
                 <>
                   <div
@@ -139,25 +149,25 @@ export const StageNode = ({
             </div>
           )}
         </div>
-        {!approving && (
-          <>
-            <Nodule
-              begin={true}
-              nodeHeight={height}
-              onClick={() => onPromoteClick(FreightTimelineAction.Promote)}
-              selected={action === FreightTimelineAction.Promote}
-            />
-            {!hasNoSubscribers && (
-              <Nodule
-                nodeHeight={height}
-                onClick={() => onPromoteClick(FreightTimelineAction.PromoteSubscribers)}
-                selected={action === FreightTimelineAction.PromoteSubscribers}
-              />
-            )}
-          </>
-        )}
       </div>
-    </div>
+      {!approving && (
+        <>
+          <Nodule
+            begin={true}
+            nodeHeight={height}
+            onClick={() => onPromoteClick(FreightTimelineAction.Promote)}
+            selected={action === FreightTimelineAction.Promote}
+          />
+          {!hasNoSubscribers && (
+            <Nodule
+              nodeHeight={height}
+              onClick={() => onPromoteClick(FreightTimelineAction.PromoteSubscribers)}
+              selected={action === FreightTimelineAction.PromoteSubscribers}
+            />
+          )}
+        </>
+      )}
+    </>
   );
 };
 

@@ -89,7 +89,7 @@ func preparePullRequestBranch(repo git.Repo, prBranch string, base string) error
 // newGitProvider returns the appropriate git provider either if it was explicitly specified,
 // or if we can infer it from the repo URL.
 func newGitProvider(
-	update kargoapi.GitRepoUpdate,
+	update *kargoapi.GitRepoUpdate,
 	creds *git.RepoCredentials,
 ) (gitprovider.GitProviderService, error) {
 	gpOpts := &gitprovider.GitProviderOptions{

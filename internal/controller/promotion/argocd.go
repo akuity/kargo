@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"path"
 	"sort"
 	"strings"
 	"time"
@@ -17,6 +16,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	libargocd "github.com/akuity/kargo/internal/argocd"
 	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
+	"github.com/akuity/kargo/internal/controller/freight"
 	"github.com/akuity/kargo/internal/git"
 	"github.com/akuity/kargo/internal/logging"
 )
@@ -30,25 +30,30 @@ const (
 // argoCDMechanism is an implementation of the Mechanism interface that updates
 // Argo CD Application resources.
 type argoCDMechanism struct {
+	kargoClient  client.Client
 	argocdClient client.Client
 	// These behaviors are overridable for testing purposes:
 	buildDesiredSourcesFn func(
-		app *argocd.Application,
-		update kargoapi.ArgoCDAppUpdate,
-		newFreight kargoapi.FreightReference,
+		context.Context,
+		*kargoapi.Stage,
+		*kargoapi.ArgoCDAppUpdate,
+		*argocd.Application,
+		[]kargoapi.FreightReference,
 	) (*argocd.ApplicationSource, argocd.ApplicationSources, error)
 	mustPerformUpdateFn func(
-		app *argocd.Application,
-		update kargoapi.ArgoCDAppUpdate,
-		newFreight kargoapi.FreightReference,
-		desiredSource *argocd.ApplicationSource,
-		desiredSources argocd.ApplicationSources,
+		context.Context,
+		*kargoapi.Stage,
+		*kargoapi.ArgoCDAppUpdate,
+		*argocd.Application,
+		[]kargoapi.FreightReference,
+		*argocd.ApplicationSource,
+		argocd.ApplicationSources,
 	) (argocd.OperationPhase, bool, error)
 	updateApplicationSourcesFn func(
-		ctx context.Context,
-		app *argocd.Application,
-		desiredSource *argocd.ApplicationSource,
-		desiredSources argocd.ApplicationSources,
+		context.Context,
+		*argocd.Application,
+		*argocd.ApplicationSource,
+		argocd.ApplicationSources,
 	) error
 	getAuthorizedApplicationFn func(
 		ctx context.Context,
@@ -57,30 +62,33 @@ type argoCDMechanism struct {
 		stageMeta metav1.ObjectMeta,
 	) (*argocd.Application, error)
 	applyArgoCDSourceUpdateFn func(
+		context.Context,
+		*kargoapi.Stage,
+		*kargoapi.ArgoCDSourceUpdate,
 		argocd.ApplicationSource,
-		kargoapi.FreightReference,
-		kargoapi.ArgoCDSourceUpdate,
+		[]kargoapi.FreightReference,
 	) (argocd.ApplicationSource, error)
 	argoCDAppPatchFn func(
-		ctx context.Context,
-		obj client.Object,
-		patch client.Patch,
-		opts ...client.PatchOption,
+		context.Context,
+		client.Object,
+		client.Patch,
+		...client.PatchOption,
 	) error
 	logAppEventFn func(ctx context.Context, app *argocd.Application, user, reason, message string)
 }
 
 // newArgoCDMechanism returns an implementation of the Mechanism interface that
 // updates Argo CD Application resources.
-func newArgoCDMechanism(argocdClient client.Client) Mechanism {
+func newArgoCDMechanism(kargoClient, argocdClient client.Client) Mechanism {
 	a := &argoCDMechanism{
+		kargoClient:  kargoClient,
 		argocdClient: argocdClient,
 	}
 	a.buildDesiredSourcesFn = a.buildDesiredSources
 	a.mustPerformUpdateFn = a.mustPerformUpdate
 	a.updateApplicationSourcesFn = a.updateApplicationSources
 	a.getAuthorizedApplicationFn = a.getAuthorizedApplication
-	a.applyArgoCDSourceUpdateFn = applyArgoCDSourceUpdate
+	a.applyArgoCDSourceUpdateFn = a.applyArgoCDSourceUpdate
 	if argocdClient != nil {
 		a.argoCDAppPatchFn = argocdClient.Patch
 		a.logAppEventFn = a.logAppEvent
@@ -98,8 +106,8 @@ func (a *argoCDMechanism) Promote(
 	ctx context.Context,
 	stage *kargoapi.Stage,
 	promo *kargoapi.Promotion,
-	newFreight kargoapi.FreightReference,
-) (*kargoapi.PromotionStatus, kargoapi.FreightReference, error) {
+	newFreight []kargoapi.FreightReference,
+) (*kargoapi.PromotionStatus, []kargoapi.FreightReference, error) {
 	updates := stage.Spec.PromotionMechanisms.ArgoCDAppUpdates
 
 	if len(updates) == 0 {
@@ -119,7 +127,8 @@ func (a *argoCDMechanism) Promote(
 
 	var updateResults = make([]argocd.OperationPhase, 0, len(updates))
 	var newStatus = promo.Status.DeepCopy()
-	for _, update := range updates {
+	for i := range updates {
+		update := &updates[i]
 		// Retrieve the Argo CD Application.
 		app, err := a.getAuthorizedApplicationFn(ctx, update.AppNamespace, update.AppName, stage.ObjectMeta)
 		if err != nil {
@@ -128,8 +137,10 @@ func (a *argoCDMechanism) Promote(
 
 		// Build the desired source(s) for the Argo CD Application.
 		desiredSource, desiredSources, err := a.buildDesiredSourcesFn(
-			app,
+			ctx,
+			stage,
 			update,
+			app,
 			newFreight,
 		)
 		if err != nil {
@@ -137,7 +148,15 @@ func (a *argoCDMechanism) Promote(
 		}
 
 		// Check if the update needs to be performed and retrieve its phase.
-		phase, mustUpdate, err := a.mustPerformUpdateFn(app, update, newFreight, desiredSource, desiredSources)
+		phase, mustUpdate, err := a.mustPerformUpdateFn(
+			ctx,
+			stage,
+			update,
+			app,
+			newFreight,
+			desiredSource,
+			desiredSources,
+		)
 
 		// If we have a phase, append it to the results.
 		if phase != "" {
@@ -199,15 +218,18 @@ func (a *argoCDMechanism) Promote(
 // buildDesiredSources returns the desired source(s) for an Argo CD Application,
 // by updating the current source(s) with the given source updates.
 func (a *argoCDMechanism) buildDesiredSources(
+	ctx context.Context,
+	stage *kargoapi.Stage,
+	update *kargoapi.ArgoCDAppUpdate,
 	app *argocd.Application,
-	update kargoapi.ArgoCDAppUpdate,
-	newFreight kargoapi.FreightReference,
+	newFreight []kargoapi.FreightReference,
 ) (*argocd.ApplicationSource, argocd.ApplicationSources, error) {
 	desiredSource, desiredSources := app.Spec.Source.DeepCopy(), app.Spec.Sources.DeepCopy()
 
-	for _, srcUpdate := range update.SourceUpdates {
+	for i := range update.SourceUpdates {
+		srcUpdate := &update.SourceUpdates[i]
 		if desiredSource != nil {
-			newSrc, err := a.applyArgoCDSourceUpdateFn(*desiredSource, newFreight, srcUpdate)
+			newSrc, err := a.applyArgoCDSourceUpdateFn(ctx, stage, srcUpdate, *desiredSource, newFreight)
 			if err != nil {
 				return nil, nil, fmt.Errorf(
 					"error applying source update to Argo CD Application %q in namespace %q: %w",
@@ -219,8 +241,8 @@ func (a *argoCDMechanism) buildDesiredSources(
 			desiredSource = &newSrc
 		}
 
-		for i, curSrc := range desiredSources {
-			newSrc, err := a.applyArgoCDSourceUpdateFn(curSrc, newFreight, srcUpdate)
+		for j, curSrc := range desiredSources {
+			newSrc, err := a.applyArgoCDSourceUpdateFn(ctx, stage, srcUpdate, curSrc, newFreight)
 			if err != nil {
 				return nil, nil, fmt.Errorf(
 					"error applying source update to Argo CD Application %q in namespace %q: %w",
@@ -229,7 +251,7 @@ func (a *argoCDMechanism) buildDesiredSources(
 					err,
 				)
 			}
-			desiredSources[i] = newSrc
+			desiredSources[j] = newSrc
 		}
 	}
 
@@ -237,9 +259,11 @@ func (a *argoCDMechanism) buildDesiredSources(
 }
 
 func (a *argoCDMechanism) mustPerformUpdate(
+	ctx context.Context,
+	stage *kargoapi.Stage,
+	update *kargoapi.ArgoCDAppUpdate,
 	app *argocd.Application,
-	update kargoapi.ArgoCDAppUpdate,
-	newFreight kargoapi.FreightReference,
+	newFreight []kargoapi.FreightReference,
 	desiredSource *argocd.ApplicationSource,
 	desiredSources argocd.ApplicationSources,
 ) (phase argocd.OperationPhase, mustUpdate bool, err error) {
@@ -277,8 +301,16 @@ func (a *argoCDMechanism) mustPerformUpdate(
 	}
 
 	// Check if the desired revision was applied.
-	desiredRevision := libargocd.GetDesiredRevision(app, newFreight)
-	if desiredRevision != "" && status.SyncResult.Revision != desiredRevision {
+	if desiredRevision, err := libargocd.GetDesiredRevision(
+		ctx,
+		a.kargoClient,
+		stage,
+		update,
+		app,
+		newFreight,
+	); err != nil {
+		return "", true, fmt.Errorf("error determining desired revision: %w", err)
+	} else if desiredRevision != "" && status.SyncResult.Revision != desiredRevision {
 		// The operation did not result in the desired revision being applied.
 		// We should attempt to retry the operation.
 		return "", true, fmt.Errorf(
@@ -517,10 +549,12 @@ func authorizeArgoCDAppUpdate(
 }
 
 // applyArgoCDSourceUpdate updates a single Argo CD ApplicationSource.
-func applyArgoCDSourceUpdate(
+func (a *argoCDMechanism) applyArgoCDSourceUpdate(
+	ctx context.Context,
+	stage *kargoapi.Stage,
+	update *kargoapi.ArgoCDSourceUpdate,
 	source argocd.ApplicationSource,
-	newFreight kargoapi.FreightReference,
-	update kargoapi.ArgoCDSourceUpdate,
+	newFreight []kargoapi.FreightReference,
 ) (argocd.ApplicationSource, error) {
 	if source.Chart != "" || update.Chart != "" {
 		// Infer that we're dealing with a chart repo. No need to normalize the
@@ -528,21 +562,29 @@ func applyArgoCDSourceUpdate(
 
 		// Kargo uses the "oci://" prefix, but Argo CD does not.
 		if source.RepoURL != strings.TrimPrefix(update.RepoURL, "oci://") || source.Chart != update.Chart {
+			// There's no change to make in this case.
 			return source, nil
 		}
+
 		// If we get to here, we have confirmed that this update is applicable to
 		// this source.
-		//
-		// Now find the chart in the new freight that corresponds to this
-		// source.
-		for _, chart := range newFreight.Charts {
-			// path.Join accounts for the possibility that chart.Name is empty
-			//
-			// Kargo uses the "oci://" prefix, but Argo CD does not.
-			if path.Join(strings.TrimPrefix(chart.RepoURL, "oci://"), chart.Name) == path.Join(source.RepoURL, source.Chart) {
-				source.TargetRevision = chart.Version
-				break
-			}
+
+		desiredOrigin := freight.GetDesiredOrigin(stage, update)
+		chart, err := freight.FindChart(
+			ctx,
+			a.kargoClient,
+			stage,
+			desiredOrigin,
+			newFreight,
+			update.RepoURL,
+			update.Chart,
+		)
+		if err != nil {
+			return source,
+				fmt.Errorf("error chart from repo %q: %w", update.RepoURL, err)
+		}
+		if chart != nil {
+			source.TargetRevision = chart.Version
 		}
 	} else {
 		// We're dealing with a git repo, so we should normalize the repo URLs
@@ -551,18 +593,28 @@ func applyArgoCDSourceUpdate(
 		if sourceRepoURL != git.NormalizeURL(update.RepoURL) {
 			return source, nil
 		}
+
 		// If we get to here, we have confirmed that this update is applicable to
 		// this source.
-		//
-		// Now find the commit in the new freight that corresponds to this source.
-		for _, commit := range newFreight.Commits {
-			if git.NormalizeURL(commit.RepoURL) == sourceRepoURL {
-				if commit.Tag != "" {
-					source.TargetRevision = commit.Tag
-				} else {
-					source.TargetRevision = commit.ID
-				}
-				break
+
+		desiredOrigin := freight.GetDesiredOrigin(stage, update)
+		commit, err := freight.FindCommit(
+			ctx,
+			a.kargoClient,
+			stage,
+			desiredOrigin,
+			newFreight,
+			update.RepoURL,
+		)
+		if err != nil {
+			return source,
+				fmt.Errorf("error finding commit from repo %q: %w", update.RepoURL, err)
+		}
+		if commit != nil {
+			if commit.Tag != "" {
+				source.TargetRevision = commit.Tag
+			} else {
+				source.TargetRevision = commit.ID
 			}
 		}
 	}
@@ -571,10 +623,15 @@ func applyArgoCDSourceUpdate(
 		if source.Kustomize == nil {
 			source.Kustomize = &argocd.ApplicationSourceKustomize{}
 		}
-		source.Kustomize.Images = buildKustomizeImagesForArgoCDAppSource(
-			newFreight.Images,
-			update.Kustomize.Images,
-		)
+		var err error
+		if source.Kustomize.Images, err = a.buildKustomizeImagesForArgoCDAppSource(
+			ctx,
+			stage,
+			update.Kustomize,
+			newFreight,
+		); err != nil {
+			return source, err
+		}
 	}
 
 	if update.Helm != nil && len(update.Helm.Images) > 0 {
@@ -584,10 +641,16 @@ func applyArgoCDSourceUpdate(
 		if source.Helm.Parameters == nil {
 			source.Helm.Parameters = []argocd.HelmParameter{}
 		}
-		changes := buildHelmParamChangesForArgoCDAppSource(
-			newFreight.Images,
-			update.Helm.Images,
+		changes, err := a.buildHelmParamChangesForArgoCDAppSource(
+			ctx,
+			stage,
+			update.Helm,
+			newFreight,
 		)
+		if err != nil {
+			return source,
+				fmt.Errorf("error building Helm parameter changes: %w", err)
+		}
 	imageUpdateLoop:
 		for k, v := range changes {
 			newParam := argocd.HelmParameter{
@@ -607,55 +670,57 @@ func applyArgoCDSourceUpdate(
 	return source, nil
 }
 
-func buildKustomizeImagesForArgoCDAppSource(
-	images []kargoapi.Image,
-	imageUpdates []kargoapi.ArgoCDKustomizeImageUpdate,
-) argocd.KustomizeImages {
-	tagsByImage := make(map[string]string, len(images))
-	digestsByImage := make(map[string]string, len(images))
-	for _, image := range images {
-		tagsByImage[image.RepoURL] = image.Tag
-		digestsByImage[image.RepoURL] = image.Digest
-	}
-	kustomizeImages := make(argocd.KustomizeImages, 0, len(imageUpdates))
-	for _, imageUpdate := range imageUpdates {
-		tag, tagFound := tagsByImage[imageUpdate.Image]
-		digest, digestFound := digestsByImage[imageUpdate.Image]
-		if !tagFound && !digestFound {
+func (a *argoCDMechanism) buildKustomizeImagesForArgoCDAppSource(
+	ctx context.Context,
+	stage *kargoapi.Stage,
+	update *kargoapi.ArgoCDKustomize,
+	newFreight []kargoapi.FreightReference,
+) (argocd.KustomizeImages, error) {
+	kustomizeImages := make(argocd.KustomizeImages, 0, len(update.Images))
+	for i := range update.Images {
+		imageUpdate := &update.Images[i]
+		desiredOrigin := freight.GetDesiredOrigin(stage, imageUpdate)
+		image, err := freight.FindImage(
+			ctx,
+			a.kargoClient,
+			stage,
+			desiredOrigin,
+			newFreight,
+			imageUpdate.Image,
+		)
+		if err != nil {
+			return nil,
+				fmt.Errorf("error finding image from repo %q: %w", imageUpdate.Image, err)
+		}
+		if image == nil {
 			// There's no change to make in this case.
 			continue
 		}
 		var kustomizeImageStr string
 		if imageUpdate.UseDigest {
 			kustomizeImageStr =
-				fmt.Sprintf("%s=%s@%s", imageUpdate.Image, imageUpdate.Image, digest)
+				fmt.Sprintf("%s=%s@%s", imageUpdate.Image, imageUpdate.Image, image.Digest)
 		} else {
 			kustomizeImageStr =
-				fmt.Sprintf("%s=%s:%s", imageUpdate.Image, imageUpdate.Image, tag)
+				fmt.Sprintf("%s=%s:%s", imageUpdate.Image, imageUpdate.Image, image.Tag)
 		}
 		kustomizeImages = append(
 			kustomizeImages,
 			argocd.KustomizeImage(kustomizeImageStr),
 		)
 	}
-	return kustomizeImages
+	return kustomizeImages, nil
 }
 
-// buildHelmParamChangesForArgoCDAppSource takes a list of images and a list of
-// instructions about changes that should be made to various Helm parameters and
-// distills them into a map of new values indexed by parameter name.
-func buildHelmParamChangesForArgoCDAppSource(
-	images []kargoapi.Image,
-	imageUpdates []kargoapi.ArgoCDHelmImageUpdate,
-) map[string]string {
-	tagsByImage := make(map[string]string, len(images))
-	digestsByImage := make(map[string]string, len(images))
-	for _, image := range images {
-		tagsByImage[image.RepoURL] = image.Tag
-		digestsByImage[image.RepoURL] = image.Digest
-	}
+func (a *argoCDMechanism) buildHelmParamChangesForArgoCDAppSource(
+	ctx context.Context,
+	stage *kargoapi.Stage,
+	update *kargoapi.ArgoCDHelm,
+	newFreight []kargoapi.FreightReference,
+) (map[string]string, error) {
 	changes := map[string]string{}
-	for _, imageUpdate := range imageUpdates {
+	for i := range update.Images {
+		imageUpdate := &update.Images[i]
 		switch imageUpdate.Value {
 		case kargoapi.ImageUpdateValueTypeImageAndTag,
 			kargoapi.ImageUpdateValueTypeTag,
@@ -665,24 +730,34 @@ func buildHelmParamChangesForArgoCDAppSource(
 			// This really shouldn't happen, so we'll ignore it.
 			continue
 		}
-		tag, tagFound := tagsByImage[imageUpdate.Image]
-		digest, digestFound := digestsByImage[imageUpdate.Image]
-		if !tagFound && !digestFound {
-			// There's no change to make in this case.
+		desiredOrigin := freight.GetDesiredOrigin(stage, imageUpdate)
+		image, err := freight.FindImage(
+			ctx,
+			a.kargoClient,
+			stage,
+			desiredOrigin,
+			newFreight,
+			imageUpdate.Image,
+		)
+		if err != nil {
+			return nil,
+				fmt.Errorf("error finding image from repo %q: %w", imageUpdate.Image, err)
+		}
+		if image == nil {
 			continue
 		}
 		switch imageUpdate.Value {
 		case kargoapi.ImageUpdateValueTypeImageAndTag:
-			changes[imageUpdate.Key] = fmt.Sprintf("%s:%s", imageUpdate.Image, tag)
+			changes[imageUpdate.Key] = fmt.Sprintf("%s:%s", imageUpdate.Image, image.Tag)
 		case kargoapi.ImageUpdateValueTypeTag:
-			changes[imageUpdate.Key] = tag
+			changes[imageUpdate.Key] = image.Tag
 		case kargoapi.ImageUpdateValueTypeImageAndDigest:
-			changes[imageUpdate.Key] = fmt.Sprintf("%s@%s", imageUpdate.Image, digest)
+			changes[imageUpdate.Key] = fmt.Sprintf("%s@%s", imageUpdate.Image, image.Digest)
 		case kargoapi.ImageUpdateValueTypeDigest:
-			changes[imageUpdate.Key] = digest
+			changes[imageUpdate.Key] = image.Digest
 		}
 	}
-	return changes
+	return changes, nil
 }
 
 func operationPhaseToPromotionPhase(phases ...argocd.OperationPhase) kargoapi.PromotionPhase {

@@ -5,14 +5,15 @@ import { generatePath, useNavigate, useParams } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
 import { HealthStatusIcon } from '@ui/features/common/health-status/health-status-icon';
-import { Subscriptions } from '@ui/features/stage/subscriptions';
 import { Stage, VerificationInfo } from '@ui/gen/v1alpha1/generated_pb';
 
 import { Description } from '../common/description';
 import { ManifestPreview } from '../common/manifest-preview';
 import { useImages } from '../project/pipelines/utils/useImages';
 
+import { PrLinks } from './pr-links';
 import { Promotions } from './promotions';
+import { RequestedFreight } from './requested-freight';
 import { StageActions } from './stage-actions';
 import { Verifications } from './verifications';
 
@@ -27,7 +28,11 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
 
   const verifications = useMemo(() => {
     setIsVerificationRunning(false);
-    return (stage.status?.history || [])
+    return (
+      (stage.status?.freightHistory
+        ? stage.status?.freightHistory
+        : (stage.status?.history as { verificationHistory: VerificationInfo[] }[])) || []
+    )
       .flatMap((freight) =>
         freight.verificationHistory.map((verification) => {
           if (verification.phase === 'Running' || verification.phase === 'Pending') {
@@ -39,6 +44,10 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
         })
       )
       .sort((a, b) => moment(b.startTime?.toDate()).diff(moment(a.startTime?.toDate())));
+  }, [stage]);
+
+  const repoUrls = useMemo(() => {
+    return (stage.spec?.promotionMechanisms?.gitRepoUpdates || []).map((g) => g.repoURL || '');
   }, [stage]);
 
   return (
@@ -59,12 +68,18 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
                 <Description item={stage} loading={false} className='mt-2' />
               </div>
             </div>
+            <div className='ml-auto mr-4'>
+              <PrLinks
+                repoUrls={repoUrls}
+                metadata={stage.status?.lastPromotion?.status?.metadata}
+              />
+            </div>
             <StageActions stage={stage} verificationRunning={isVerificationRunning} />
           </div>
           <Divider style={{ marginTop: '1em' }} />
 
           <div className='flex flex-col gap-8 flex-1'>
-            <Subscriptions subscriptions={stage.spec?.subscriptions} projectName={projectName} />
+            <RequestedFreight stage={stage} projectName={projectName} />
             <Tabs
               className='flex-1'
               defaultActiveKey='1'
@@ -73,7 +88,7 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
                 {
                   key: '1',
                   label: 'Promotions',
-                  children: <Promotions />
+                  children: <Promotions repoUrls={repoUrls} />
                 },
                 {
                   key: '2',

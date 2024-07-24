@@ -6,14 +6,75 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	rbacapi "github.com/akuity/kargo/api/rbac/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/argocd"
 )
+
+func TestIndexEventsByInvolvedObjectAPIGroup(t *testing.T) {
+	t.Parallel()
+	testCases := []struct {
+		name       string
+		event      *corev1.Event
+		assertions func(*testing.T, []string)
+	}{
+		{
+			name: "Event has no involved object",
+			event: &corev1.Event{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "fake-event",
+				},
+			},
+			assertions: func(t *testing.T, res []string) {
+				require.Nil(t, res)
+			},
+		},
+		{
+			name: "Event has involved object with no API group",
+			event: &corev1.Event{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "fake-event",
+				},
+				InvolvedObject: corev1.ObjectReference{},
+			},
+			assertions: func(t *testing.T, keys []string) {
+				require.Nil(t, keys)
+			},
+		},
+		{
+			name: "Event has involved object with API group",
+			event: &corev1.Event{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "fake-event",
+				},
+				InvolvedObject: corev1.ObjectReference{
+					APIVersion: "fake-group/fake-version",
+				},
+			},
+			assertions: func(t *testing.T, keys []string) {
+				require.Equal(
+					t,
+					[]string{
+						"fake-group",
+					},
+					keys,
+				)
+			},
+		},
+	}
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			tc.assertions(t, indexEventsByInvolvedObjectAPIGroup(tc.event))
+		})
+	}
+}
 
 func TestIndexStagesByAnalysisRun(t *testing.T) {
 	const testShardName = "test-shard"
@@ -48,11 +109,18 @@ func TestIndexStagesByAnalysisRun(t *testing.T) {
 					},
 				},
 				Status: kargoapi.StageStatus{
-					CurrentFreight: &kargoapi.FreightReference{
-						VerificationInfo: &kargoapi.VerificationInfo{
-							AnalysisRun: &kargoapi.AnalysisRunReference{
-								Namespace: "fake-namespace",
-								Name:      "fake-analysis-run",
+					FreightHistory: kargoapi.FreightHistory{
+						{
+							Freight: map[string]kargoapi.FreightReference{
+								"fake-warehouse": {},
+							},
+							VerificationHistory: kargoapi.VerificationInfoStack{
+								{
+									AnalysisRun: &kargoapi.AnalysisRunReference{
+										Namespace: "fake-namespace",
+										Name:      "fake-analysis-run",
+									},
+								},
 							},
 						},
 					},
@@ -81,11 +149,18 @@ func TestIndexStagesByAnalysisRun(t *testing.T) {
 			controllerShardName: "",
 			stage: &kargoapi.Stage{
 				Status: kargoapi.StageStatus{
-					CurrentFreight: &kargoapi.FreightReference{
-						VerificationInfo: &kargoapi.VerificationInfo{
-							AnalysisRun: &kargoapi.AnalysisRunReference{
-								Namespace: "fake-namespace",
-								Name:      "fake-analysis-run",
+					FreightHistory: kargoapi.FreightHistory{
+						{
+							Freight: map[string]kargoapi.FreightReference{
+								"fake-warehouse": {},
+							},
+							VerificationHistory: kargoapi.VerificationInfoStack{
+								{
+									AnalysisRun: &kargoapi.AnalysisRunReference{
+										Namespace: "fake-namespace",
+										Name:      "fake-analysis-run",
+									},
+								},
 							},
 						},
 					},
@@ -101,6 +176,57 @@ func TestIndexStagesByAnalysisRun(t *testing.T) {
 				)
 			},
 		},
+		{
+			name: "Stage does not have any Freight history",
+			stage: &kargoapi.Stage{
+				Status: kargoapi.StageStatus{
+					FreightHistory: kargoapi.FreightHistory{},
+				},
+			},
+			assertions: func(t *testing.T, res []string) {
+				require.Nil(t, res)
+			},
+		},
+		{
+			name: "Stage does not have any Verification history",
+			stage: &kargoapi.Stage{
+				Status: kargoapi.StageStatus{
+					FreightHistory: kargoapi.FreightHistory{
+						{
+							Freight: map[string]kargoapi.FreightReference{
+								"fake-warehouse": {},
+							},
+							VerificationHistory: nil,
+						},
+					},
+				},
+			},
+			assertions: func(t *testing.T, res []string) {
+				require.Nil(t, res)
+			},
+		},
+		{
+			name: "Stage does not have any AnalysisRun references",
+			stage: &kargoapi.Stage{
+				Status: kargoapi.StageStatus{
+					FreightHistory: kargoapi.FreightHistory{
+						{
+							Freight: map[string]kargoapi.FreightReference{
+								"fake-warehouse": {},
+							},
+							VerificationHistory: kargoapi.VerificationInfoStack{
+								{
+									AnalysisRun: nil,
+								},
+							},
+						},
+					},
+				},
+			},
+			assertions: func(t *testing.T, res []string) {
+				require.Nil(t, res)
+			},
+		},
 	}
 	for _, tc := range testCases {
 		tc := tc
@@ -111,7 +237,7 @@ func TestIndexStagesByAnalysisRun(t *testing.T) {
 	}
 }
 
-func TestIndexStagesByApp(t *testing.T) {
+func TestIndexStagesByArgoCDApplications(t *testing.T) {
 	const testShardName = "test-shard"
 	t.Parallel()
 	testCases := []struct {
@@ -439,7 +565,51 @@ func TestIndexRunningPromotionsByArgoCDApplications(t *testing.T) {
 	}
 }
 
-func TestIndexFreightByVerifiedStages(t *testing.T) {
+func TestIndexPromotionsByStageAndFreight(t *testing.T) {
+	promo := &kargoapi.Promotion{
+		Spec: kargoapi.PromotionSpec{
+			Stage:   "fake-stage",
+			Freight: "fake-freight",
+		},
+	}
+	res := indexPromotionsByStageAndFreight(promo)
+	require.Equal(t, []string{"fake-stage:fake-freight"}, res)
+}
+
+func TestFreightByWarehouseIndexer(t *testing.T) {
+	testCases := []struct {
+		name     string
+		freight  *kargoapi.Freight
+		expected []string
+	}{
+		{
+			name:     "Freight has no Warehouse origin",
+			freight:  &kargoapi.Freight{},
+			expected: nil,
+		},
+		{
+			name: "Freight has a Warehouse origin",
+			freight: &kargoapi.Freight{
+				Origin: kargoapi.FreightOrigin{
+					Kind: kargoapi.FreightOriginKindWarehouse,
+					Name: "fake-warehouse",
+				},
+			},
+			expected: []string{"fake-warehouse"},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			require.Equal(
+				t,
+				testCase.expected,
+				FreightByWarehouseIndexer(testCase.freight),
+			)
+		})
+	}
+}
+
+func TestFreightByVerifiedStagesIndexer(t *testing.T) {
 	testCases := []struct {
 		name     string
 		freight  *kargoapi.Freight
@@ -468,14 +638,14 @@ func TestIndexFreightByVerifiedStages(t *testing.T) {
 				require.Equal(
 					t,
 					testCase.expected,
-					indexFreightByVerifiedStages(testCase.freight),
+					FreightByVerifiedStagesIndexer(testCase.freight),
 				)
 			})
 		})
 	}
 }
 
-func TestIndexFreightByApprovedStages(t *testing.T) {
+func TestFreightApprovedForStagesIndexer(t *testing.T) {
 	testCases := []struct {
 		name     string
 		freight  *kargoapi.Freight
@@ -504,14 +674,75 @@ func TestIndexFreightByApprovedStages(t *testing.T) {
 				require.Equal(
 					t,
 					testCase.expected,
-					indexFreightByApprovedStages(testCase.freight),
+					FreightApprovedForStagesIndexer(testCase.freight),
 				)
 			})
 		})
 	}
 }
 
+func TestIndexStagesByFreight(t *testing.T) {
+	testCases := []struct {
+		name     string
+		stage    *kargoapi.Stage
+		expected []string
+	}{
+		{
+			name:     "Stage has no current Freight",
+			stage:    &kargoapi.Stage{},
+			expected: nil,
+		},
+		{
+			name: "Stage has no Freight history",
+			stage: &kargoapi.Stage{
+				Status: kargoapi.StageStatus{
+					FreightHistory: kargoapi.FreightHistory{
+						{
+							Freight: map[string]kargoapi.FreightReference{},
+						},
+					},
+				},
+			},
+			expected: nil,
+		},
+		{
+			name: "Stage has Freight",
+			stage: &kargoapi.Stage{
+				Status: kargoapi.StageStatus{
+					FreightHistory: kargoapi.FreightHistory{
+						{
+							Freight: map[string]kargoapi.FreightReference{
+								"fake-warehouse": {
+									Name: "fake-freight",
+								},
+								"another-fake-warehouse": {
+									Name: "another-fake-freight",
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: []string{"another-fake-freight", "fake-freight"},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			require.Equal(
+				t,
+				testCase.expected,
+				indexStagesByFreight(testCase.stage),
+			)
+		})
+	}
+
+}
+
 func TestIndexStagesByUpstreamStages(t *testing.T) {
+	testOrigin := kargoapi.FreightOrigin{
+		Kind: kargoapi.FreightOriginKindWarehouse,
+		Name: "fake-warehouse",
+	}
 	testCases := []struct {
 		name     string
 		stage    *kargoapi.Stage
@@ -521,7 +752,14 @@ func TestIndexStagesByUpstreamStages(t *testing.T) {
 			name: "Stage has no upstream Stages",
 			stage: &kargoapi.Stage{
 				Spec: kargoapi.StageSpec{
-					Subscriptions: kargoapi.Subscriptions{},
+					RequestedFreight: []kargoapi.FreightRequest{
+						{
+							Origin: testOrigin,
+							Sources: kargoapi.FreightSources{
+								Direct: true,
+							},
+						},
+					},
 				},
 			},
 			expected: nil,
@@ -530,30 +768,188 @@ func TestIndexStagesByUpstreamStages(t *testing.T) {
 			name: "Stage has upstream stages",
 			stage: &kargoapi.Stage{
 				Spec: kargoapi.StageSpec{
-					Subscriptions: kargoapi.Subscriptions{
-						UpstreamStages: []kargoapi.StageSubscription{
-							{
-								Name: "fake-stage",
-							},
-							{
-								Name: "another-fake-stage",
+					RequestedFreight: []kargoapi.FreightRequest{
+						{
+							Origin: testOrigin,
+							Sources: kargoapi.FreightSources{
+								Stages: []string{
+									"fake-stage",
+									"another-fake-stage",
+								},
 							},
 						},
 					},
 				},
 			},
-			expected: []string{"fake-stage", "another-fake-stage"},
+			expected: []string{"another-fake-stage", "fake-stage"},
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			t.Run(testCase.name, func(t *testing.T) {
-				require.Equal(
-					t,
-					testCase.expected,
-					indexStagesByUpstreamStages(testCase.stage),
-				)
-			})
+			require.Equal(
+				t,
+				testCase.expected,
+				indexStagesByUpstreamStages(testCase.stage),
+			)
+		})
+	}
+}
+
+func TestIndexStagesByWarehouse(t *testing.T) {
+	testCases := []struct {
+		name     string
+		stage    *kargoapi.Stage
+		expected []string
+	}{
+		{
+			name:     "Stage has no Warehouse origin",
+			stage:    &kargoapi.Stage{},
+			expected: nil,
+		},
+		{
+			name: "Stage has Warehouse origins",
+			stage: &kargoapi.Stage{
+				Spec: kargoapi.StageSpec{
+					RequestedFreight: []kargoapi.FreightRequest{
+						{
+							Origin: kargoapi.FreightOrigin{
+								Kind: kargoapi.FreightOriginKindWarehouse,
+								Name: "fake-warehouse",
+							},
+							Sources: kargoapi.FreightSources{
+								Direct: true,
+							},
+						},
+						{
+							Origin: kargoapi.FreightOrigin{
+								Kind: kargoapi.FreightOriginKindWarehouse,
+								Name: "fake-warehouse-indirect",
+							},
+							Sources: kargoapi.FreightSources{
+								Direct: false,
+							},
+						},
+						{
+							Origin: kargoapi.FreightOrigin{
+								Kind: kargoapi.FreightOriginKindWarehouse,
+								Name: "fake-warehouse-2",
+							},
+							Sources: kargoapi.FreightSources{
+								Direct: true,
+							},
+						},
+					},
+				},
+			},
+			expected: []string{"fake-warehouse", "fake-warehouse-2"},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			require.Equal(
+				t,
+				testCase.expected,
+				indexStagesByWarehouse(testCase.stage),
+			)
+		})
+	}
+}
+
+func TestIndexServiceAccountsOIDCEmail(t *testing.T) {
+	testCases := []struct {
+		name     string
+		sa       *corev1.ServiceAccount
+		expected []string
+	}{
+		{
+			name: "ServiceAccount has no OIDC email",
+			sa:   &corev1.ServiceAccount{},
+		},
+		{
+			name: "ServiceAccount has OIDC email",
+			sa: &corev1.ServiceAccount{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						rbacapi.AnnotationKeyOIDCEmails: "fake-email, fake-email-2",
+					},
+				},
+			},
+			expected: []string{"fake-email", "fake-email-2"},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			require.Equal(
+				t,
+				testCase.expected,
+				indexServiceAccountsOIDCEmail(testCase.sa),
+			)
+		})
+	}
+}
+
+func TestIndexServiceAccountsByOIDCGroups(t *testing.T) {
+	testCases := []struct {
+		name     string
+		sa       *corev1.ServiceAccount
+		expected []string
+	}{
+		{
+			name: "ServiceAccount has no OIDC groups",
+			sa:   &corev1.ServiceAccount{},
+		},
+		{
+			name: "ServiceAccount has OIDC groups",
+			sa: &corev1.ServiceAccount{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						rbacapi.AnnotationKeyOIDCGroups: "fake-group-1, fake-group-2",
+					},
+				},
+			},
+			expected: []string{"fake-group-1", "fake-group-2"},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			require.Equal(
+				t,
+				testCase.expected,
+				indexServiceAccountsByOIDCGroups(testCase.sa),
+			)
+		})
+	}
+}
+
+func TestIndexServiceAccountsByOIDCSubjects(t *testing.T) {
+	testCases := []struct {
+		name     string
+		sa       *corev1.ServiceAccount
+		expected []string
+	}{
+		{
+			name: "ServiceAccount has no OIDC subjects",
+			sa:   &corev1.ServiceAccount{},
+		},
+		{
+			name: "ServiceAccount has OIDC subjects",
+			sa: &corev1.ServiceAccount{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						rbacapi.AnnotationKeyOIDCSubjects: "fake-subject-1, fake-subject-2",
+					},
+				},
+			},
+			expected: []string{"fake-subject-1", "fake-subject-2"},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			require.Equal(
+				t,
+				testCase.expected,
+				indexServiceAccountsByOIDCSubjects(testCase.sa),
+			)
 		})
 	}
 }

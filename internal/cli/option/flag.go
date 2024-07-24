@@ -66,6 +66,9 @@ const (
 	// OldAliasFlag is the flag name for the old-alias flag.
 	OldAliasFlag = "old-alias"
 
+	// OriginFlag is the flag name for the origin flag.
+	OriginFlag = "origin"
+
 	// PasswordFlag is the flag name for the password flag.
 	PasswordFlag = "password"
 
@@ -79,7 +82,7 @@ const (
 	// RecursiveShortFlag is the short flag name for the recursive flag.
 	RecursiveShortFlag = "R"
 
-	// Regex is the flag name for the regex flag.
+	// RegexFlag is the flag name for the regex flag.
 	RegexFlag = "regex"
 
 	// RepoURLFlag is the flag name for the repo-url flag.
@@ -100,8 +103,8 @@ const (
 	// SubFlag is the flag name for the sub flag.
 	SubFlag = "sub"
 
-	// SubscribersOfFlag is the flag name for the subscribers-of flag.
-	SubscribersOfFlag = "subscribers-of"
+	// DownstreamFromFlag is the flag name for the downstream-from flag.
+	DownstreamFromFlag = "downstream-from"
 
 	// TypeFlag is the flag name for the type flag.
 	TypeFlag = "type"
@@ -223,6 +226,11 @@ func OldAlias(fs *pflag.FlagSet, stage *string, usage string) {
 	fs.StringVar(stage, OldAliasFlag, "", usage)
 }
 
+// Origins adds the OriginsFlag to the provided flag set.
+func Origins(fs *pflag.FlagSet, origin *[]string, usage string) {
+	fs.StringArrayVar(origin, OriginFlag, nil, usage)
+}
+
 // Password adds the PasswordFlag to the provided flag set.
 func Password(fs *pflag.FlagSet, password *string, usage string) {
 	fs.StringVar(password, PasswordFlag, "", usage)
@@ -277,9 +285,9 @@ func Subs(fs *pflag.FlagSet, subs *[]string, usage string) {
 	fs.StringSliceVar(subs, SubFlag, nil, usage)
 }
 
-// SubscribersOf adds the SubscribersOfFlag to the provided flag set.
-func SubscribersOf(fs *pflag.FlagSet, subscribersOf *string, usage string) {
-	fs.StringVar(subscribersOf, SubscribersOfFlag, "", usage)
+// DownstreamFrom adds the DownstreamFromFlag to the provided flag set.
+func DownstreamFrom(fs *pflag.FlagSet, downstreamFrom *string, usage string) {
+	fs.StringVar(downstreamFrom, DownstreamFromFlag, "", usage)
 }
 
 // Type adds the TypeFlag to the provided flag set.
