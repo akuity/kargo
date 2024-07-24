@@ -1179,6 +1179,17 @@ func TestArgoCDMustPerformUpdate(t *testing.T) {
 }
 
 func TestArgoCDUpdateApplicationSources(t *testing.T) {
+	scheme := runtime.NewScheme()
+	c := fake.NewClientBuilder().WithScheme(scheme)
+	err := argocd.AddToScheme(scheme)
+	require.NoError(t, err)
+	proj := &argocd.AppProject{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "fake-project",
+		},
+	}
+	c.WithObjects(proj)
+
 	testCases := []struct {
 		name           string
 		promoMech      *argoCDMechanism
@@ -1241,6 +1252,7 @@ func TestArgoCDUpdateApplicationSources(t *testing.T) {
 		},
 	}
 	for _, testCase := range testCases {
+		testCase.promoMech.argocdClient = c.Build()
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
 				t,

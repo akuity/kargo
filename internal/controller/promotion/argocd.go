@@ -351,14 +351,17 @@ func (a *argoCDMechanism) updateApplicationSources(
 	app.Spec.Source = desiredSource.DeepCopy()
 	app.Spec.Sources = desiredSources.DeepCopy()
 
-	// retrieve AppProject object
-	project, err := argocd.GetAppProject(ctx, a.argocdClient, app.Spec.Project)
-	if err != nil {
-		return fmt.Errorf("error finding Argo CD AppProject %q in namespace %q: %w", app.Spec.Project, app.Namespace, err)
-	}
-
-	if !project.Spec.SyncWindows.Matches(app).CanSync(true) {
-		return fmt.Errorf("cannot sync: blocked by sync window")
+	if app.Spec.Project != "" {
+		// retrieve AppProject object
+		project, err := argocd.GetAppProject(ctx, a.argocdClient, app.Spec.Project)
+		if err != nil || project == nil {
+			return fmt.Errorf("error finding Argo CD AppProject %s: %w", app.Spec.Project, err)
+		}
+		if project.Spec.SyncWindows != nil {
+			if !project.Spec.SyncWindows.Matches(app).CanSync(true) {
+				return fmt.Errorf("cannot sync: blocked by sync window")
+			}
+		}
 	}
 
 	// Initiate a new operation.
