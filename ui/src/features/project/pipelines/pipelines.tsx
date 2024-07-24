@@ -36,6 +36,7 @@ import {
   approveFreight,
   listStages,
   listWarehouses,
+  promoteToStage,
   queryFreight,
   refreshWarehouse
 } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
@@ -92,6 +93,16 @@ export const Pipelines = () => {
       message.success('Warehouse successfully refreshed');
       state.clear();
       refetchFreightData();
+    }
+  });
+
+  const { mutate: promoteAction } = useMutation(promoteToStage, {
+    onError,
+    onSuccess: () => {
+      message.success(
+        `Promotion request for stage "${state.stage}" has been successfully submitted.`
+      );
+      state.clear();
     }
   });
 
@@ -418,11 +429,7 @@ export const Pipelines = () => {
                               );
                             }
                           }}
-                          action={
-                            (isPromoting(state) && state.stage === node.data?.metadata?.name) || ''
-                              ? state.action
-                              : undefined
-                          }
+                          action={state.action}
                           onClick={
                             state.action === FreightTimelineAction.ManualApproval
                               ? () => {
@@ -432,10 +439,18 @@ export const Pipelines = () => {
                                     name: state.freight
                                   });
                                 }
-                              : undefined
+                              : state.action === FreightTimelineAction.PromoteFreight
+                                ? () => {
+                                    state.setStage(node.data?.metadata?.name || '');
+                                    promoteAction({
+                                      stage: node.data?.metadata?.name || '',
+                                      project: name,
+                                      freight: state.freight
+                                    });
+                                  }
+                                : undefined
                           }
                           onHover={(h) => onHover(h, node.data?.metadata?.name || '', true)}
-                          approving={state.action === FreightTimelineAction.ManualApproval}
                           highlighted={highlightedStages[node.data?.metadata?.name || '']}
                         />
                       </>
