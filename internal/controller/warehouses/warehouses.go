@@ -226,7 +226,7 @@ func (r *reconciler) syncWarehouse(
 			&metav1.Condition{
 				Type:               kargoapi.ConditionTypeReady,
 				Status:             metav1.ConditionFalse,
-				Reason:             "AwaitingDiscovery",
+				Reason:             "DiscoveryInProgress",
 				Message:            "Waiting for discovery to complete",
 				ObservedGeneration: warehouse.GetGeneration(),
 			},
