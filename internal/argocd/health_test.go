@@ -509,7 +509,8 @@ func TestApplicationHealth_GetApplicationHealth(t *testing.T) {
 				syncStatus kargoapi.ArgoCDAppSyncStatus,
 				err error,
 			) {
-				require.ErrorContains(t, err, "Desired revision [\"other-fake-revision\"] does not match current revision \"fake-revision\" of Application")
+				require.ErrorContains(t, err, "Desired revision [\"other-fake-revision\"]")
+				require.ErrorContains(t, err, "does not match current revision \"fake-revision\" of Application")
 
 				require.Equal(t, kargoapi.HealthStateUnhealthy, state)
 				require.Equal(t, kargoapi.ArgoCDAppHealthStatus{
@@ -561,14 +562,12 @@ func TestApplicationHealth_GetApplicationHealth(t *testing.T) {
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{
 						ArgoCDAppUpdates: []kargoapi.ArgoCDAppUpdate{
 							{
-								Origin:       &testOrigin,
 								AppNamespace: "fake-namespace",
 								AppName:      "fake-name",
-							},
-							{
-								Origin:       &testOrigin2,
-								AppNamespace: "fake-namespace",
-								AppName:      "fake-name",
+								SourceUpdates: []kargoapi.ArgoCDSourceUpdate{
+									{Origin: &testOrigin, RepoURL: "https://example.com/universe/42"},
+									{Origin: &testOrigin2, RepoURL: "https://example.com/another-universe/42"},
+								},
 							}},
 					},
 				},

@@ -9,6 +9,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	libGit "github.com/akuity/kargo/internal/git"
+	"github.com/akuity/kargo/internal/logging"
 )
 
 func FindCommit(
@@ -20,11 +21,20 @@ func FindCommit(
 	repoURL string,
 ) (*kargoapi.GitCommit, error) {
 	repoURL = libGit.NormalizeURL(repoURL)
+
+	logger := logging.LoggerFromContext(ctx)
+	logger.Debug("Finding commit",
+		"stage", stage,
+		"desiredOrigin", desiredOrigin,
+		"freight", freight,
+		"repoURL", repoURL)
+
 	// If no origin was explicitly identified, we need to look at all possible
 	// origins. If there's only one that could provide the commit we're looking
 	// for, great. If there's more than one, there's ambiguity and we need to
 	// return an error.
 	if desiredOrigin == nil {
+		logger.Debug("No desired origin specified; looking at all possible origins")
 		for i := range stage.Spec.RequestedFreight {
 			requestedFreight := stage.Spec.RequestedFreight[i]
 			warehouse, err := kargoapi.GetWarehouse(
@@ -63,10 +73,13 @@ func FindCommit(
 		}
 	}
 	if desiredOrigin == nil {
+		logger.Debug("No desired origin found; returning nil")
 		// There is no chance of finding the commit we're looking for. Just return
 		// nil and let the caller decide what to do.
 		return nil, nil
 	}
+
+	logger.Debug("Looking for commit from desired origin", "desiredOrigin", desiredOrigin)
 	// We know exactly what we're after, so this should be easy
 	for i := range freight {
 		f := &freight[i]

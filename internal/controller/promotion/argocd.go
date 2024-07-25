@@ -339,7 +339,7 @@ func (a *argoCDMechanism) mustPerformUpdate(
 
 	// Check multi-source app for matching revisions.
 	if len(status.SyncResult.Revisions) > 0 {
-		matchingRevisions := libargocd.FindRevisionMatches(status.SyncResult.Revisions, desiredRevisions)
+		matchingRevisions := libargocd.GetIntersection(status.SyncResult.Revisions, desiredRevisions)
 		if len(matchingRevisions) == len(desiredRevisions) {
 			appLogger.Debug("Operation completed, no update necessary.", "phase", status.Phase)
 			return status.Phase, false, nil
@@ -353,7 +353,7 @@ func (a *argoCDMechanism) mustPerformUpdate(
 	// Check single-source app for matching revision.
 	singleSourceRevision := status.SyncResult.Revision
 	if singleSourceRevision != "" && len(desiredRevisions) > 0 {
-		matchingRevisions := libargocd.FindRevisionMatches([]string{singleSourceRevision}, desiredRevisions)
+		matchingRevisions := libargocd.GetIntersection([]string{singleSourceRevision}, desiredRevisions)
 
 		if len(matchingRevisions) != 1 {
 			// The operation did not result in the desired revision being applied.
@@ -649,7 +649,7 @@ func (a *argoCDMechanism) applyArgoCDSourceUpdate(
 		// If we get to here, we have confirmed that this update is applicable to
 		// this source.
 
-		desiredOrigin := freight.GetDesiredOrigin(stage, update)
+		desiredOrigin := freight.GetDesiredOrigin(ctx, stage, update)
 		chart, err := freight.FindChart(
 			ctx,
 			a.kargoClient,
@@ -680,7 +680,7 @@ func (a *argoCDMechanism) applyArgoCDSourceUpdate(
 		// If we get to here, we have confirmed that this update is applicable to
 		// this source.
 
-		desiredOrigin := freight.GetDesiredOrigin(stage, update)
+		desiredOrigin := freight.GetDesiredOrigin(ctx, stage, update)
 		commit, err := freight.FindCommit(
 			ctx,
 			a.kargoClient,
@@ -764,7 +764,7 @@ func (a *argoCDMechanism) buildKustomizeImagesForArgoCDAppSource(
 	kustomizeImages := make(argocd.KustomizeImages, 0, len(update.Images))
 	for i := range update.Images {
 		imageUpdate := &update.Images[i]
-		desiredOrigin := freight.GetDesiredOrigin(stage, imageUpdate)
+		desiredOrigin := freight.GetDesiredOrigin(ctx, stage, imageUpdate)
 		image, err := freight.FindImage(
 			ctx,
 			a.kargoClient,
@@ -815,7 +815,7 @@ func (a *argoCDMechanism) buildHelmParamChangesForArgoCDAppSource(
 			// This really shouldn't happen, so we'll ignore it.
 			continue
 		}
-		desiredOrigin := freight.GetDesiredOrigin(stage, imageUpdate)
+		desiredOrigin := freight.GetDesiredOrigin(ctx, stage, imageUpdate)
 		image, err := freight.FindImage(
 			ctx,
 			a.kargoClient,

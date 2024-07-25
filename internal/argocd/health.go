@@ -199,20 +199,16 @@ func (h *applicationHealth) GetApplicationHealth(
 	// is syncing to it. We do not further care about the cluster being in sync
 	// with the desired revision, as some applications may be out of sync by
 	// default.
-	desiredRevisions, err := GetDesiredRevisions(
+	if desiredRevisions, err := GetDesiredRevisions(
 		ctx,
 		h.kargoClient,
 		stage,
 		update,
 		app,
 		stage.Status.FreightHistory.Current().References(),
-	)
-
-	if err != nil {
+	); err != nil {
 		return kargoapi.HealthStateUnknown, healthStatus, syncStatus, err
-	}
-
-	if len(desiredRevisions) > 0 {
+	} else if len(desiredRevisions) > 0 {
 		if healthState, err := stageHealthForAppSync(ctx, app, desiredRevisions); err != nil {
 			return healthState, healthStatus, syncStatus, err
 		}
@@ -275,7 +271,7 @@ func stageHealthForAppSync(
 		// Trivial case where app has only a single source and revision is set.
 		singleSourceRevision := app.Status.Sync.Revision
 		if singleSourceRevision != "" {
-			matchingRevisions := FindRevisionMatches([]string{singleSourceRevision}, revisions)
+			matchingRevisions := GetIntersection([]string{singleSourceRevision}, revisions)
 
 			if len(matchingRevisions) == 1 {
 				return kargoapi.HealthStateHealthy, nil
@@ -301,7 +297,7 @@ func stageHealthForAppSync(
 			// Apps with multiple sources pointed at the same Git repository can only have the same revision
 			// for all sources because ArgoCD does not support the alternative, so we only need to check
 			// the first revision match.
-			matchingRevisions := FindRevisionMatches(multiSourceRevisions, revisions)
+			matchingRevisions := GetIntersection(multiSourceRevisions, revisions)
 
 			if len(matchingRevisions) > 0 && len(matchingRevisions) == len(revisions) {
 				logger.Debug("Found all desired revisions in list of revisions of multi-source application, app is healthy.",
