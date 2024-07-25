@@ -4,7 +4,7 @@ import { Drawer, Tabs, Typography } from 'antd';
 import { generatePath, useNavigate, useParams } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
-import { CreateFreight } from '@ui/features/create-freight/create-freight';
+import { AssembleFreight } from '@ui/features/assemble-freight/assemble-freight';
 import { Warehouse } from '@ui/gen/v1alpha1/generated_pb';
 
 import { EditWarehouse } from './edit-warehouse';
@@ -66,7 +66,7 @@ export const WarehouseDetails = ({
               tab='Freight Assembly'
               icon={<FontAwesomeIcon icon={faTools} />}
             >
-              <CreateFreight
+              <AssembleFreight
                 warehouse={warehouse}
                 onSuccess={() => {
                   onClose();
