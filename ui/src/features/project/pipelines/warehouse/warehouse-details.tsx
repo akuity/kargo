@@ -1,4 +1,9 @@
-import { faArrowDownShortWide, faFileLines, faTools } from '@fortawesome/free-solid-svg-icons';
+import {
+  faArrowDownShortWide,
+  faBuilding,
+  faFileLines,
+  faTools
+} from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Drawer, Tabs, Typography } from 'antd';
 import { generatePath, useNavigate, useParams } from 'react-router-dom';
@@ -30,7 +35,13 @@ export const WarehouseDetails = ({
           <div className='flex items-center justify-between mb-2'>
             <div className='flex gap-1 items-start'>
               <div>
-                <Typography.Title level={1} style={{ margin: 0 }}>
+                <div className='font-medium text-xs text-gray-500'>WAREHOUSE</div>
+                <Typography.Title
+                  level={1}
+                  style={{ margin: 0 }}
+                  className='flex items-center mb-2'
+                >
+                  <FontAwesomeIcon icon={faBuilding} className='mr-2 text-base text-gray-400' />
                   {warehouse.metadata?.name}
                 </Typography.Title>
                 <Typography.Text type='secondary'>{projectName}</Typography.Text>
