@@ -32,19 +32,18 @@ export const WarehouseDetails = ({
     <Drawer open={!!warehouse} onClose={onClose} width={'80%'} closable={false}>
       {warehouse && (
         <div className='flex flex-col h-full'>
-          <div className='flex items-center justify-between mb-2'>
+          <div className='flex items-center justify-between mb-4'>
             <div className='flex gap-1 items-start'>
               <div>
                 <div className='font-medium text-xs text-gray-500'>WAREHOUSE</div>
-                <Typography.Title
-                  level={1}
-                  style={{ margin: 0 }}
-                  className='flex items-center mb-2'
-                >
+                <Typography.Title level={1} className='flex items-center m-0 !mb-2'>
                   <FontAwesomeIcon icon={faBuilding} className='mr-2 text-base text-gray-400' />
                   {warehouse.metadata?.name}
                 </Typography.Title>
-                <Typography.Text type='secondary'>{projectName}</Typography.Text>
+                <Typography.Text type='secondary'>
+                  <span className='uppercase text-xs'>Project: </span>
+                  <span className='font-semibold'>{projectName}</span>
+                </Typography.Text>
               </div>
             </div>
             <WarehouseActions warehouse={warehouse} />
