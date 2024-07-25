@@ -40,7 +40,7 @@ import {
   queryFreight,
   refreshWarehouse
 } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
-import { Freight, Stage, Warehouse } from '@ui/gen/v1alpha1/generated_pb';
+import { Freight, Project, Stage, Warehouse } from '@ui/gen/v1alpha1/generated_pb';
 import { useDocumentEvent } from '@ui/utils/document';
 import { useLocalStorage } from '@ui/utils/use-local-storage';
 
@@ -59,7 +59,7 @@ import { Watcher } from './utils/watcher';
 
 const WarehouseDetails = lazy(() => import('./warehouse/warehouse-details'));
 
-export const Pipelines = () => {
+export const Pipelines = ({ project }: { project: Project }) => {
   const { name, stageName, freightName, warehouseName } = useParams();
   const { data, isLoading } = useQuery(listStages, { project: name });
   const navigate = useNavigate();
@@ -141,6 +141,16 @@ export const Pipelines = () => {
     });
     return filteredFreight;
   }, [freightData, selectedWarehouse]);
+
+  const autoPromotionMap = useMemo(() => {
+    const apMap = {} as { [key: string]: boolean };
+    (project?.spec?.promotionPolicies || []).forEach((policy) => {
+      if (policy.stage) {
+        apMap[policy.stage] = policy.autoPromotionEnabled || false;
+      }
+    });
+    return apMap;
+  }, [project]);
 
   const client = useQueryClient();
 
@@ -452,6 +462,7 @@ export const Pipelines = () => {
                           }
                           onHover={(h) => onHover(h, node.data?.metadata?.name || '', true)}
                           highlighted={highlightedStages[node.data?.metadata?.name || '']}
+                          autoPromotion={autoPromotionMap[node.data?.metadata?.name || '']}
                         />
                       </>
                     ) : (

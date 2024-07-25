@@ -6,6 +6,7 @@ import {
   faCircleNotch,
   faCodePullRequest,
   faGear,
+  faRobot,
   faTruckArrowRight
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -35,7 +36,8 @@ export const StageNode = ({
   currentFreight,
   onClick,
   onHover,
-  highlighted
+  highlighted,
+  autoPromotion
 }: {
   stage: Stage;
   color: string;
@@ -49,6 +51,7 @@ export const StageNode = ({
   onClick?: () => void;
   onHover: (hovering: boolean) => void;
   highlighted?: boolean;
+  autoPromotion?: boolean;
 }) => {
   const navigate = useNavigate();
   return (
@@ -83,6 +86,11 @@ export const StageNode = ({
             ) && (
               <Tooltip title='PR Promotion Enabled'>
                 <FontAwesomeIcon icon={faCodePullRequest} />
+              </Tooltip>
+            )}
+            {autoPromotion && (
+              <Tooltip title='Auto Promotion Enabled'>
+                <FontAwesomeIcon icon={faRobot} />
               </Tooltip>
             )}
             {!stage?.status?.currentPromotion && stage.status?.lastPromotion && (
