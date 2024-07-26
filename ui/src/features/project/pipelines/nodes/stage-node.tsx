@@ -10,18 +10,26 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Tooltip } from 'antd';
-import { formatDistance } from 'date-fns';
+import { useState } from 'react';
 import { generatePath, useNavigate } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
-import { FreightLabel } from '@ui/features/common/freight-label';
 import { HealthStatusIcon } from '@ui/features/common/health-status/health-status-icon';
 import { PromotionStatusIcon } from '@ui/features/common/promotion-status/promotion-status-icon';
 import { Freight, Stage } from '@ui/gen/v1alpha1/generated_pb';
 
-import { FreightTimelineAction } from '../types';
+import { FreightTimelineAction, NodeDimensions } from '../types';
 
+import { FreightIndicators } from './freight-indicators';
+import { FreightLabel } from './freight-label';
+import { StageNodeFooter } from './stage-node-footer';
 import * as styles from './stage-node.module.less';
+
+export const StageNodeDimensions = () =>
+  ({
+    width: 215,
+    height: 165
+  }) as NodeDimensions;
 
 export const StageNode = ({
   stage,
@@ -51,6 +59,8 @@ export const StageNode = ({
   highlighted?: boolean;
 }) => {
   const navigate = useNavigate();
+  const [visibleFreight, setVisibleFreight] = useState(0);
+
   return (
     <>
       <div
@@ -116,7 +126,10 @@ export const StageNode = ({
             )}
           </div>
         </h3>
-        <div className={styles.body}>
+        <div
+          className={styles.body}
+          style={currentFreight && currentFreight?.length > 1 ? { paddingTop: '15px' } : undefined}
+        >
           {action === FreightTimelineAction.ManualApproval ||
           action === FreightTimelineAction.PromoteFreight ? (
             <div className='h-full flex items-center justify-center font-bold cursor-pointer text-blue-500 hover:text-blue-400'>
@@ -135,32 +148,17 @@ export const StageNode = ({
               </Button>
             </div>
           ) : (
-            <div className='text-sm h-full flex flex-col items-center justify-center -mt-1'>
-              <div className={styles.freightLabel}>Current Freight</div>
-              {(currentFreight || []).map((freight) => (
-                <FreightLabel freight={freight} showContents={true} key={freight?.metadata?.name} />
-              ))}
-              {currentFreight?.length === 0 && <FreightLabel />}
-              {stage?.status?.lastPromotion?.finishedAt && (
-                <>
-                  <div
-                    className='uppercase font-medium mt-1 text-gray-400'
-                    style={{ fontSize: '9px' }}
-                  >
-                    Last Promoted
-                  </div>
-                  <div className='text-xs text-gray-600 font-mono font-semibold'>
-                    {formatDistance(
-                      stage?.status?.lastPromotion?.finishedAt?.toDate(),
-                      new Date(),
-                      { addSuffix: true }
-                    )}
-                  </div>
-                </>
-              )}
+            <div className='text-sm h-full flex flex-col items-center justify-center'>
+              <FreightIndicators
+                freight={currentFreight}
+                selectedFreight={visibleFreight}
+                onClick={(idx) => setVisibleFreight(idx)}
+              />
+              <FreightLabel freight={currentFreight[visibleFreight]} />
             </div>
           )}
         </div>
+        <StageNodeFooter lastPromotion={stage?.status?.lastPromotion?.finishedAt?.toDate()} />
       </div>
       {action !== FreightTimelineAction.ManualApproval &&
         action !== FreightTimelineAction.PromoteFreight && (

@@ -6,12 +6,6 @@ import { AnyNodeType, ConnectorsType, NodeType, RepoNodeType } from '../types';
 
 export const LINE_THICKNESS = 2;
 
-export const NODE_WIDTH = 180;
-export const NODE_HEIGHT = 140;
-
-export const WAREHOUSE_NODE_WIDTH = 185;
-export const WAREHOUSE_NODE_HEIGHT = 110;
-
 export const initNodeArray = (s: Stage) =>
   [
     {
@@ -34,14 +28,6 @@ export const newSubscriptionNode = (
   warehouseName,
   type: getNodeType(sub)
 });
-
-export const nodeStubFor = (type: NodeType) => {
-  const isStage = type === NodeType.STAGE;
-  return {
-    width: isStage ? NODE_WIDTH : WAREHOUSE_NODE_WIDTH,
-    height: isStage ? NODE_HEIGHT : WAREHOUSE_NODE_HEIGHT
-  };
-};
 
 export const getConnectors = (g: graphlib.Graph) => {
   const forward: { [key: string]: { [key: string]: ConnectorsType[][] } } = {};

@@ -47,11 +47,11 @@ import { useLocalStorage } from '@ui/utils/use-local-storage';
 import CreateStageModal from './create-stage-modal';
 import CreateWarehouseModal from './create-warehouse-modal';
 import { Images } from './images';
-import { RepoNode } from './nodes/repo-node';
+import { RepoNode, RepoNodeDimensions } from './nodes/repo-node';
 import { Nodule, StageNode } from './nodes/stage-node';
 import styles from './project-details.module.less';
 import { FreightTimelineAction, NodeType } from './types';
-import { LINE_THICKNESS, WAREHOUSE_NODE_HEIGHT } from './utils/graph';
+import { LINE_THICKNESS } from './utils/graph';
 import { isPromoting, usePipelineState } from './utils/state';
 import { usePipelineGraph } from './utils/use-pipeline-graph';
 import { onError } from './utils/util';
@@ -505,7 +505,7 @@ export const Pipelines = () => {
                         )}
                         {node.type === NodeType.WAREHOUSE && (
                           <Nodule
-                            nodeHeight={WAREHOUSE_NODE_HEIGHT}
+                            nodeHeight={RepoNodeDimensions().height}
                             onClick={() => setHideSubscriptions(!hideSubscriptions)}
                             icon={hideSubscriptions ? faEye : faEyeSlash}
                             begin={true}

@@ -11,10 +11,11 @@ import {
   DagreNode,
   NewWarehouseNode,
   NodeType,
-  RepoNodeType
+  RepoNodeType,
+  getNodeDimensions
 } from '../types';
 
-import { getConnectors, initNodeArray, newSubscriptionNode, nodeStubFor } from './graph';
+import { getConnectors, initNodeArray, newSubscriptionNode } from './graph';
 import { IndexCache } from './index-cache';
 
 const initializeNodes = (
@@ -122,7 +123,7 @@ export const usePipelineGraph = (
 
     // add nodes and edges to graph
     myNodes.forEach((item, index) => {
-      g.setNode(String(index), nodeStubFor(item.type));
+      g.setNode(String(index), getNodeDimensions(item.type));
 
       if (item.type === NodeType.STAGE) {
         const stage = item.data as Stage;

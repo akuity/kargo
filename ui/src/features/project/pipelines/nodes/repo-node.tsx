@@ -14,9 +14,15 @@ import { useContext } from 'react';
 import { ColorContext } from '@ui/context/colors';
 import { urlForImage } from '@ui/utils/url';
 
-import { NodeType, RepoNodeType } from '../types';
+import { NodeDimensions, NodeType, RepoNodeType } from '../types';
 
 import * as styles from './repo-node.module.less';
+
+export const RepoNodeDimensions = () =>
+  ({
+    width: 185,
+    height: 110
+  }) as NodeDimensions;
 
 type Props = {
   nodeData: RepoNodeType;

@@ -1,0 +1,43 @@
+import classNames from 'classnames';
+import { useContext } from 'react';
+
+import { ColorContext } from '@ui/context/colors';
+import { Freight } from '@ui/gen/v1alpha1/generated_pb';
+
+export const FreightIndicators = ({
+  freight,
+  selectedFreight,
+  onClick
+}: {
+  freight?: Freight[];
+  selectedFreight: number;
+  onClick: (index: number) => void;
+}) => {
+  const { warehouseColorMap } = useContext(ColorContext);
+
+  if (!freight || freight.length <= 1) {
+    return null;
+  }
+
+  return (
+    <div className='flex gap-2 justify-center items-center py-1 absolute top-1'>
+      {freight.map((freight, idx) => (
+        <div
+          className={classNames('rounded-full mb-2 opacity-50 hover:opacity-30', {
+            '!opacity-100': selectedFreight === idx
+          })}
+          key={freight?.metadata?.name || idx}
+          style={{
+            width: '10px',
+            height: '10px',
+            backgroundColor: warehouseColorMap[freight?.warehouse || '']
+          }}
+          onClick={(e) => {
+            e.stopPropagation();
+            onClick(idx);
+          }}
+        />
+      ))}
+    </div>
+  );
+};
