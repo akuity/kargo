@@ -297,7 +297,7 @@ api:
       #   type: Microsoft
       #   config:
       #     clientID: <your client ID>
-      #     clientSecret: "$ENTRA_CLIENT_SECRET"
+      #     clientSecret: "$CLIENT_SECRET"
       #     redirectURI: <http(s)>://<api.host>/dex/callback
       #     tenant: <tenant ID>
 
