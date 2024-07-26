@@ -291,6 +291,15 @@ api:
       #     clientID: <your client ID>
       #     clientSecret: "$CLIENT_SECRET"
       #     redirectURI: <http(s)>://<api.host>/dex/callback
+      ## Azure Example
+      # - id: microsoft
+      #   name: microsoft
+      #   type: Microsoft
+      #   config:
+      #     clientID: <your client ID>
+      #     clientSecret: "$ENTRA_CLIENT_SECRET"
+      #     redirectURI: <http(s)>://<api.host>/dex/callback
+      #     tenant: <tenant ID>
 
       ## @param api.oidc.dex.resources Resources limits and requests for the Dex server containers.
       resources: {}
