@@ -61,28 +61,35 @@ export const RepoNode = ({ nodeData, children, onClick }: Props) => {
         </div>
         <div className='flex items-center'>
           {nodeData.refreshing && <FontAwesomeIcon icon={faCircleNotch} spin className='mr-2' />}
-          {nodeData.type === NodeType.WAREHOUSE && nodeData?.data?.status?.message && (
-            <Tooltip
-              title={
-                <div className='flex overflow-y-scroll text-wrap max-h-48'>
-                  <FontAwesomeIcon icon={faExclamationCircle} className='mr-2 mt-1 pl-1' />
-                  <div
-                    className='cursor-pointer min-w-0'
-                    onClick={() => {
-                      const msg = nodeData?.data?.status?.message;
-                      if (msg) {
-                        navigator.clipboard.writeText(msg);
-                      }
-                    }}
-                  >
-                    {nodeData?.data?.status?.message}
+          {nodeData.type === NodeType.WAREHOUSE &&
+            (nodeData?.data?.status?.conditions || []).length > 0 && (
+              <Tooltip
+                title={
+                  <div className='flex overflow-y-scroll text-wrap max-h-48'>
+                    <FontAwesomeIcon icon={faExclamationCircle} className='mr-2 mt-1 pl-1' />
+                    <div
+                      className='cursor-pointer min-w-0'
+                      onClick={() => {
+                        const msg = nodeData?.data?.status?.conditions?.reduce((acc, curr) => {
+                          return acc + `${curr.message}\n\n`;
+                        }, '');
+                        if (msg) {
+                          navigator.clipboard.writeText(msg);
+                        }
+                      }}
+                    >
+                      {nodeData?.data?.status?.conditions?.map((condition, index) => (
+                        <div key={index} className='mb-4'>
+                          {condition.message}
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              }
-            >
-              <FontAwesomeIcon icon={faExclamationCircle} className='mr-1 text-red-600' />
-            </Tooltip>
-          )}
+                }
+              >
+                <FontAwesomeIcon icon={faExclamationCircle} className='mr-1 text-red-600' />
+              </Tooltip>
+            )}
           {type && (
             <FontAwesomeIcon
               icon={ico[type]}
