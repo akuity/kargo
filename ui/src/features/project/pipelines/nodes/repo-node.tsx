@@ -14,6 +14,7 @@ import { useContext } from 'react';
 import { ColorContext } from '@ui/context/colors';
 import { urlForImage } from '@ui/utils/url';
 
+import { MessageTooltip } from '../message-tooltip';
 import { NodeType, RepoNodeType } from '../types';
 
 import * as styles from './repo-node.module.less';
@@ -59,29 +60,14 @@ export const RepoNode = ({ nodeData, children, onClick }: Props) => {
         <div className='text-ellipsis whitespace-nowrap overflow-x-hidden py-1'>
           {nodeData.type === NodeType.WAREHOUSE ? nodeData.data?.metadata?.name : 'Subscription'}
         </div>
-        <div className='flex items-center'>
+        <div className='flex items-center gap-1'>
           {nodeData.refreshing && <FontAwesomeIcon icon={faCircleNotch} spin className='mr-2' />}
           {nodeData.type === NodeType.WAREHOUSE && nodeData?.data?.status?.message && (
-            <Tooltip
-              title={
-                <div className='flex overflow-y-scroll text-wrap max-h-48'>
-                  <FontAwesomeIcon icon={faExclamationCircle} className='mr-2 mt-1 pl-1' />
-                  <div
-                    className='cursor-pointer min-w-0'
-                    onClick={() => {
-                      const msg = nodeData?.data?.status?.message;
-                      if (msg) {
-                        navigator.clipboard.writeText(msg);
-                      }
-                    }}
-                  >
-                    {nodeData?.data?.status?.message}
-                  </div>
-                </div>
-              }
-            >
-              <FontAwesomeIcon icon={faExclamationCircle} className='mr-1 text-red-600' />
-            </Tooltip>
+            <MessageTooltip
+              message={nodeData?.data?.status?.message}
+              icon={faExclamationCircle}
+              iconClassName='text-red-500'
+            />
           )}
           {type && (
             <FontAwesomeIcon
