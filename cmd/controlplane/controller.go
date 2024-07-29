@@ -9,9 +9,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
@@ -194,6 +196,9 @@ func (o *controllerOptions) setupKargoManager(
 				BindAddress: "0",
 			},
 			Cache: cacheOpts,
+			Controller: config.Controller{
+				RecoverPanic: ptr.To(true),
+			},
 		},
 	)
 	return mgr, stagesReconcilerCfg, err
@@ -262,6 +267,9 @@ func (o *controllerOptions) setupArgoCDManager(ctx context.Context) (manager.Man
 				BindAddress: "0",
 			},
 			Cache: cacheOpts,
+			Controller: config.Controller{
+				RecoverPanic: ptr.To(true),
+			},
 		},
 	)
 }

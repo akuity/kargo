@@ -9,7 +9,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/config"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
@@ -99,6 +101,9 @@ func (o *webhooksServerOptions) run(ctx context.Context) error {
 			),
 			Metrics: server.Options{
 				BindAddress: "0",
+			},
+			Controller: config.Controller{
+				RecoverPanic: ptr.To(true),
 			},
 		},
 	)
