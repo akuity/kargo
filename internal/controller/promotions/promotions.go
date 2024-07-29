@@ -486,7 +486,7 @@ func (r *reconciler) promote(
 		Charts:  targetFreight.Charts,
 		Origin:  targetFreight.Origin,
 	}
-	targetFreightCol := r.buildTargetFreightCollection(targetFreightRef, stage)
+	targetFreightCol := r.buildTargetFreightCollection(ctx, targetFreightRef, stage)
 
 	newStatus, nextFreight, err :=
 		r.promoMechanisms.Promote(ctx, stage, &promo, targetFreightCol.References())
@@ -533,9 +533,11 @@ func (r *reconciler) promote(
 // FreightReferences from the previous Promotion (excepting those that are no
 // longer requested), plus a FreightReference for the provided targetFreight.
 func (r *reconciler) buildTargetFreightCollection(
+	ctx context.Context,
 	targetFreight kargoapi.FreightReference,
 	stage *kargoapi.Stage,
 ) *kargoapi.FreightCollection {
+	logger := logging.LoggerFromContext(ctx)
 	freightCol := &kargoapi.FreightCollection{}
 
 	// We don't simply copy the current FreightCollection because we want to
@@ -544,6 +546,10 @@ func (r *reconciler) buildTargetFreightCollection(
 	lastPromo := stage.Status.LastPromotion
 	if lastPromo != nil {
 		for _, req := range stage.Spec.RequestedFreight {
+			if lastPromo.Status == nil || lastPromo.Status.FreightCollection == nil {
+				logger.Debug("last promotion has no freight collection")
+				continue
+			}
 			if freight, ok := lastPromo.Status.FreightCollection.Freight[req.Origin.String()]; ok {
 				freightCol.UpdateOrPush(freight)
 			}
