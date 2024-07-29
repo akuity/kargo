@@ -62,7 +62,7 @@ export const Project = ({ tab = 'pipelines' }: { tab?: ProjectTab }) => {
   const renderTab = (key: ProjectTab) => {
     switch (key) {
       case 'pipelines':
-        return <Pipelines />;
+        return <Pipelines project={data?.result?.value as _Project} />;
       case 'credentials':
         return <CredentialsList />;
       case 'analysisTemplates':
@@ -72,7 +72,7 @@ export const Project = ({ tab = 'pipelines' }: { tab?: ProjectTab }) => {
       case 'roles':
         return <Roles />;
       default:
-        return <Pipelines />;
+        return <Pipelines project={data?.result?.value as _Project} />;
     }
   };
 
