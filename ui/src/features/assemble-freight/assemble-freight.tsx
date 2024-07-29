@@ -1,11 +1,13 @@
+import { ConnectError } from '@connectrpc/connect';
 import { useMutation } from '@connectrpc/connect-query';
 import { faDocker, faGitAlt } from '@fortawesome/free-brands-svg-icons';
 import { faAnchor } from '@fortawesome/free-solid-svg-icons';
-import { Button, message } from 'antd';
+import { Button, message, notification } from 'antd';
 import { useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import yaml from 'yaml';
 
+import { newErrorHandler, newTransportWithAuth } from '@ui/config/transport';
 import { createResource } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 import {
   Chart,
@@ -83,7 +85,7 @@ const constructFreight = (
   return freight;
 };
 
-export const CreateFreight = ({
+export const AssembleFreight = ({
   warehouse,
   onSuccess
 }: {
@@ -93,13 +95,23 @@ export const CreateFreight = ({
   const { name: project } = useParams();
   const [selected, setSelected] = useState<DiscoveryResult>();
 
+  const errorHandler = newErrorHandler((err) => {
+    const errorMessage = err instanceof ConnectError ? err.rawMessage : 'Unexpected API error';
+    if (!errorMessage.includes('already exists')) {
+      notification.error({ message: errorMessage, placement: 'bottomRight' });
+    } else {
+      notification.warning({
+        message: 'Oops! Freight with these contents already exists.',
+        placement: 'bottomRight'
+      });
+    }
+  });
+
   const { mutate } = useMutation(createResource, {
+    transport: newTransportWithAuth(errorHandler),
     onSuccess: () => {
       message.success('Freight created successfully.');
       onSuccess();
-    },
-    onError: () => {
-      message.error('Failed to create freight.');
     }
   });
 
