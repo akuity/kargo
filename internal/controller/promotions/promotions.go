@@ -543,16 +543,16 @@ func (r *reconciler) buildTargetFreightCollection(
 	// We don't simply copy the current FreightCollection because we want to
 	// account for the possibility that some freight contained therein are no
 	// longer requested by the Stage.
-	lastPromo := stage.Status.LastPromotion
-	if lastPromo != nil {
-		for _, req := range stage.Spec.RequestedFreight {
-			if lastPromo.Status == nil || lastPromo.Status.FreightCollection == nil {
-				logger.Debug("last promotion has no freight collection")
-				continue
+	if len(stage.Spec.RequestedFreight) > 1 {
+		lastPromo := stage.Status.LastPromotion
+		if lastPromo.Status != nil && lastPromo.Status.FreightCollection != nil {
+			for _, req := range stage.Spec.RequestedFreight {
+				if freight, ok := lastPromo.Status.FreightCollection.Freight[req.Origin.String()]; ok {
+					freightCol.UpdateOrPush(freight)
+				}
 			}
-			if freight, ok := lastPromo.Status.FreightCollection.Freight[req.Origin.String()]; ok {
-				freightCol.UpdateOrPush(freight)
-			}
+		} else {
+			logger.Debug("last promotion has no collection to inherit Freight from")
 		}
 	}
 	freightCol.UpdateOrPush(targetFreight)
