@@ -81,8 +81,9 @@ func GetDesiredRevisions(
 	// In that situation it doesn't matter which source's target revision is returned as ArgoCD does not support
 	// different target revisions for sources targeting the same repository.
 	var revisions []string
-	for _, s := range app.Spec.Sources {
-		desiredRevision, err := getRevisionFromSource(ctx, cl, stage, update, &s, frght)
+	for i := range app.Spec.Sources {
+		s := &app.Spec.Sources[i]
+		desiredRevision, err := getRevisionFromSource(ctx, cl, stage, update, s, frght)
 
 		if err != nil {
 			return nil, err
