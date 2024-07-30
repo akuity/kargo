@@ -20,7 +20,7 @@ func TestGetDesiredRevisions(t *testing.T) {
 		Name: "another-warehouse",
 	}
 
-	no_revisions := []string{}
+	var no_revisions []string
 	testCases := []struct {
 		name           string
 		app            *argocdapi.Application

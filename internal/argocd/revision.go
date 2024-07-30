@@ -13,8 +13,6 @@ import (
 	"github.com/akuity/kargo/internal/logging"
 )
 
-var NO_REVISIONS = []string{}
-
 func GetIntersection(revisions []string, desired []string) []string {
 	var intersection []string
 	hash := make(map[string]bool)
@@ -46,7 +44,7 @@ func GetDesiredRevisions(
 	if app == nil {
 		err := errors.New("Application is nil")
 		logger.Error(err, "Cannot determine desired revision for application, bailing.")
-		return NO_REVISIONS, nil
+		return nil, nil
 	}
 
 	appLogger := logger.WithValues("application", app.Name, "namespace", app.Namespace)
@@ -63,14 +61,14 @@ func GetDesiredRevisions(
 		if app.Spec.Source == nil {
 			err := errors.New("Single-source application source is nil")
 			appLogger.Error(err, "Cannot determine desired revision for application, bailing.")
-			return NO_REVISIONS, nil
+			return nil, nil
 		}
 
 		appLogger.Debug("Application source is not nil, checking.", "source", app.Spec.Source)
 		desiredRevision, err := getRevisionFromSource(ctx, cl, stage, update, app.Spec.Source, frght)
 
 		if err != nil {
-			return NO_REVISIONS, err
+			return nil, err
 		}
 
 		if desiredRevision != "" {
@@ -88,7 +86,7 @@ func GetDesiredRevisions(
 		desiredRevision, err := getRevisionFromSource(ctx, cl, stage, update, s, frght)
 
 		if err != nil {
-			return NO_REVISIONS, err
+			return nil, err
 		}
 
 		if desiredRevision != "" {
@@ -103,7 +101,7 @@ func GetDesiredRevisions(
 
 	// If we end up here, no desired revision was found from any of the possible sources.
 	appLogger.Debug("Could not determine desired revision for application from any sources.")
-	return NO_REVISIONS, nil
+	return nil, nil
 }
 
 func getRevisionFromSource(
@@ -120,10 +118,21 @@ func getRevisionFromSource(
 
 	// If there is a source update that targets app.Spec.Source, it might
 	// have its own ideas about the desired revision.
-	desiredOrigin := getDesiredOriginForSource(ctx, stage, update, s)
+	targetUpdate := getTargetUpdate(ctx, update, s)
+
+	desiredOrigin := freight.GetDesiredOrigin(ctx, stage, targetUpdate)
+	if desiredOrigin == nil {
+		msg := "Could not determine desired origin for application source"
+		err := errors.New(msg)
+		sourceLogger.Error(err, msg)
+		return "", nil
+	}
+
+	sourceLogger.Debug("Resolved origin for application source", "origin", desiredOrigin)
 
 	switch {
 	case s.Chart != "":
+		// This source points to a Helm chart.
 		// NB: This has to go first, as the repository URL can also point to
 		//     a Helm repository.
 		sourceLogger.Debug("Application source is a Helm chart")
@@ -148,6 +157,7 @@ func getRevisionFromSource(
 		return chart.Version, nil
 
 	case s.RepoURL != "":
+		// This source points to a Git repository.
 		sourceLogger.Debug("Application source is a Git repository")
 		commit, err := freight.FindCommit(
 			ctx,
@@ -176,12 +186,11 @@ func getRevisionFromSource(
 	return "", nil
 }
 
-func getDesiredOriginForSource(
+func getTargetUpdate(
 	ctx context.Context,
-	stage *kargoapi.Stage,
 	update *kargoapi.ArgoCDAppUpdate,
 	s *argocd.ApplicationSource,
-) *kargoapi.FreightOrigin {
+) any {
 	sourceLogger := logging.LoggerFromContext(ctx).WithValues("source", s)
 	sourceLogger.Debug("Resolving origin for application source")
 
@@ -193,20 +202,12 @@ func getDesiredOriginForSource(
 	for i := range update.SourceUpdates {
 		sourceUpdate := &update.SourceUpdates[i]
 		sourceLogger.Trace("Checking source update", "sourceUpdate", sourceUpdate)
-		if sourceUpdate.RepoURL != s.RepoURL {
-			sourceLogger.Debug("Source update does not match application source, skipping", "sourceUpdate", sourceUpdate)
-			continue
-		}
 
-		if s.Chart != "" && sourceUpdate.Chart != s.Chart {
-			sourceLogger.Debug("Source update chart does not match application source chart, skipping",
-				"sourceUpdate", sourceUpdate)
-			continue
+		if sourceUpdate.RepoURL == s.RepoURL && (sourceUpdate.Chart == "" || sourceUpdate.Chart == s.Chart) {
+			sourceLogger.Debug("Source update matching application source found", "sourceUpdate", sourceUpdate)
+			targetPromoMechanism = sourceUpdate
+			break
 		}
-
-		sourceLogger.Debug("Source update matching application source found", "sourceUpdate", sourceUpdate)
-		targetPromoMechanism = sourceUpdate
-		break
 	}
 
 	if targetPromoMechanism == nil {
@@ -214,12 +215,5 @@ func getDesiredOriginForSource(
 		targetPromoMechanism = update
 	}
 
-	origin := freight.GetDesiredOrigin(ctx, stage, targetPromoMechanism)
-	if origin == nil {
-		sourceLogger.Debug("Could not determine desired origin for application source")
-		return nil
-	}
-
-	sourceLogger.Debug("Resolved origin for application source", "origin", origin)
-	return origin
+	return targetPromoMechanism
 }
