@@ -8,6 +8,7 @@ export interface PipelineStateHook {
   stage?: string;
   clear: () => void;
   select: (action?: FreightTimelineAction, stage?: string, freight?: string) => void;
+  setStage: (stage: string) => void;
 }
 
 export const usePipelineState = (): PipelineStateHook => {
@@ -34,7 +35,7 @@ export const usePipelineState = (): PipelineStateHook => {
       ) {
         setStage(_stage);
         setFreight(undefined);
-      } else if (_action === FreightTimelineAction.ManualApproval) {
+      } else {
         setFreight(_freight);
         setStage(undefined);
       }
@@ -53,7 +54,8 @@ export const usePipelineState = (): PipelineStateHook => {
     freight,
     stage,
     clear,
-    select
+    select,
+    setStage
   };
 };
 

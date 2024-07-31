@@ -1,11 +1,13 @@
+import { ConnectError } from '@connectrpc/connect';
 import { useMutation } from '@connectrpc/connect-query';
-import { faDocker, faGit } from '@fortawesome/free-brands-svg-icons';
+import { faDocker, faGitAlt } from '@fortawesome/free-brands-svg-icons';
 import { faAnchor } from '@fortawesome/free-solid-svg-icons';
-import { Button, message } from 'antd';
+import { Button, message, notification } from 'antd';
 import { useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import yaml from 'yaml';
 
+import { newErrorHandler, newTransportWithAuth } from '@ui/config/transport';
 import { createResource } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 import {
   Chart,
@@ -83,7 +85,7 @@ const constructFreight = (
   return freight;
 };
 
-export const CreateFreight = ({
+export const AssembleFreight = ({
   warehouse,
   onSuccess
 }: {
@@ -93,13 +95,23 @@ export const CreateFreight = ({
   const { name: project } = useParams();
   const [selected, setSelected] = useState<DiscoveryResult>();
 
+  const errorHandler = newErrorHandler((err) => {
+    const errorMessage = err instanceof ConnectError ? err.rawMessage : 'Unexpected API error';
+    if (!errorMessage.includes('already exists')) {
+      notification.error({ message: errorMessage, placement: 'bottomRight' });
+    } else {
+      notification.warning({
+        message: 'Oops! Freight with these contents already exists.',
+        placement: 'bottomRight'
+      });
+    }
+  });
+
   const { mutate } = useMutation(createResource, {
+    transport: newTransportWithAuth(errorHandler),
     onSuccess: () => {
       message.success('Freight created successfully.');
       onSuccess();
-    },
-    onError: () => {
-      message.error('Failed to create freight.');
     }
   });
 
@@ -221,7 +233,7 @@ export const CreateFreight = ({
 
   return (
     <div>
-      <div className='text-xs font-medium text-neutral-500 mb-2'>FREIGHT CONTENTS</div>
+      <div className='text-xs font-medium text-gray-500 mb-2'>FREIGHT CONTENTS</div>
       <div className='mb-4 h-12 flex items-center'>
         {Object.keys(chosenItems)?.length > 0 ? (
           <>
@@ -251,24 +263,24 @@ export const CreateFreight = ({
             </Button>
           </>
         ) : (
-          <div className='text-neutral-400'>
+          <div className='text-gray-400'>
             Freight contents will appear here once you select artifacts below.
           </div>
         )}
       </div>
       {warehouse ? (
-        <div className='flex w-full border border-solid border-neutral-200 rounded-md overflow-hidden'>
-          <div className='bg-neutral-50 p-4' style={{ width: '250px' }}>
+        <div className='flex w-full border border-solid border-gray-200 rounded-md overflow-hidden'>
+          <div className='bg-gray-50 p-4' style={{ width: '250px' }}>
             <ArtifactMenuGroup icon={faDocker} label='Images' items={images} {...commonProps} />
             <ArtifactMenuGroup icon={faAnchor} label='Charts' items={charts} {...commonProps} />
-            <ArtifactMenuGroup icon={faGit} label='Git' items={git} {...commonProps} />
+            <ArtifactMenuGroup icon={faGitAlt} label='Git' items={git} {...commonProps} />
           </div>
           <div className='w-full p-4 overflow-auto'>
             <DiscoveryTable />
           </div>
         </div>
       ) : (
-        <div className='text-neutral-500 text-sm mt-2'>Please select a warehouse to continue.</div>
+        <div className='text-gray-500 text-sm mt-2'>Please select a warehouse to continue.</div>
       )}
     </div>
   );

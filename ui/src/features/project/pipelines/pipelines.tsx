@@ -16,7 +16,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useQueryClient } from '@tanstack/react-query';
-import { Button, Dropdown, Space, Spin, Tooltip, message } from 'antd';
+import { Button, Dropdown, Spin, Tooltip, message } from 'antd';
 import React, { Suspense, lazy, useMemo } from 'react';
 import { generatePath, useNavigate, useParams } from 'react-router-dom';
 
@@ -36,10 +36,11 @@ import {
   approveFreight,
   listStages,
   listWarehouses,
+  promoteToStage,
   queryFreight,
   refreshWarehouse
 } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
-import { Freight, Stage, Warehouse } from '@ui/gen/v1alpha1/generated_pb';
+import { Freight, Project, Stage, Warehouse } from '@ui/gen/v1alpha1/generated_pb';
 import { useDocumentEvent } from '@ui/utils/document';
 import { useLocalStorage } from '@ui/utils/use-local-storage';
 
@@ -58,7 +59,7 @@ import { Watcher } from './utils/watcher';
 
 const WarehouseDetails = lazy(() => import('./warehouse/warehouse-details'));
 
-export const Pipelines = () => {
+export const Pipelines = ({ project }: { project: Project }) => {
   const { name, stageName, freightName, warehouseName } = useParams();
   const { data, isLoading } = useQuery(listStages, { project: name });
   const navigate = useNavigate();
@@ -92,6 +93,16 @@ export const Pipelines = () => {
       message.success('Warehouse successfully refreshed');
       state.clear();
       refetchFreightData();
+    }
+  });
+
+  const { mutate: promoteAction } = useMutation(promoteToStage, {
+    onError,
+    onSuccess: () => {
+      message.success(
+        `Promotion request for stage "${state.stage}" has been successfully submitted.`
+      );
+      state.clear();
     }
   });
 
@@ -131,6 +142,16 @@ export const Pipelines = () => {
     return filteredFreight;
   }, [freightData, selectedWarehouse]);
 
+  const autoPromotionMap = useMemo(() => {
+    const apMap = {} as { [key: string]: boolean };
+    (project?.spec?.promotionPolicies || []).forEach((policy) => {
+      if (policy.stage) {
+        apMap[policy.stage] = policy.autoPromotionEnabled || false;
+      }
+    });
+    return apMap;
+  }, [project]);
+
   const client = useQueryClient();
 
   React.useEffect(() => {
@@ -165,8 +186,12 @@ export const Pipelines = () => {
     const stagesPerFreight: { [key: string]: Stage[] } = {};
     const subscribersByStage = {} as { [key: string]: Set<string> };
     (data?.stages || []).forEach((stage) => {
-      const items = stagesPerFreight[stage.status?.currentFreight?.name || ''] || [];
-      stagesPerFreight[stage.status?.currentFreight?.name || ''] = [...items, stage];
+      (getCurrentFreight(stage) || []).forEach((f) => {
+        if (!stagesPerFreight[f.name || '']) {
+          stagesPerFreight[f.name || ''] = [];
+        }
+        stagesPerFreight[f.name || ''].push(stage);
+      });
       stage?.spec?.subscriptions?.upstreamStages.forEach((item) => {
         if (!subscribersByStage[item.name || '']) {
           subscribersByStage[item.name || ''] = new Set();
@@ -235,49 +260,51 @@ export const Pipelines = () => {
   return (
     <div className='flex flex-col flex-grow'>
       <ColorContext.Provider value={{ stageColorMap, warehouseColorMap }}>
-        <FreightTimelineHeader
-          promotingStage={state.stage}
-          action={state.action}
-          cancel={() => {
-            state.clear();
-            setSelectedWarehouse('');
-          }}
-          downstreamSubs={Array.from(subscribersByStage[state.stage || ''] || [])}
-          selectedWarehouse={selectedWarehouse || ''}
-          setSelectedWarehouse={setSelectedWarehouse}
-          warehouses={warehouseMap}
-          collapsed={freightTimelineCollapsed}
-          setCollapsed={setFreightTimelineCollapsed}
-          collapsable={
-            Object.keys(stagesPerFreight).reduce(
-              (acc, cur) => (cur?.length > 0 ? acc + stagesPerFreight[cur].length : acc),
-              0
-            ) > 0
-          }
-        />
-        <FreightTimelineWrapper>
-          <Suspense
-            fallback={
-              <div className='h-full w-full flex items-center justify-center'>
-                <Spin />
-              </div>
+        <div className='bg-gray-100'>
+          <FreightTimelineHeader
+            promotingStage={state.stage}
+            action={state.action}
+            cancel={() => {
+              state.clear();
+              setSelectedWarehouse('');
+            }}
+            downstreamSubs={Array.from(subscribersByStage[state.stage || ''] || [])}
+            selectedWarehouse={selectedWarehouse || ''}
+            setSelectedWarehouse={setSelectedWarehouse}
+            warehouses={warehouseMap}
+            collapsed={freightTimelineCollapsed}
+            setCollapsed={setFreightTimelineCollapsed}
+            collapsable={
+              Object.keys(stagesPerFreight).reduce(
+                (acc, cur) => (cur?.length > 0 ? acc + stagesPerFreight[cur].length : acc),
+                0
+              ) > 0
             }
-          >
-            <FreightTimeline
-              highlightedStages={
-                state.action === FreightTimelineAction.ManualApproval ? {} : highlightedStages
+          />
+          <FreightTimelineWrapper>
+            <Suspense
+              fallback={
+                <div className='h-full w-full flex items-center justify-center'>
+                  <Spin />
+                </div>
               }
-              refetchFreight={refetchFreightData}
-              onHover={onHover}
-              freight={filteredFreight}
-              state={state}
-              promotionEligible={{}}
-              stagesPerFreight={stagesPerFreight}
-              collapsed={freightTimelineCollapsed}
-              setCollapsed={setFreightTimelineCollapsed}
-            />
-          </Suspense>
-        </FreightTimelineWrapper>
+            >
+              <FreightTimeline
+                highlightedStages={
+                  state.action === FreightTimelineAction.ManualApproval ? {} : highlightedStages
+                }
+                refetchFreight={refetchFreightData}
+                onHover={onHover}
+                freight={filteredFreight}
+                state={state}
+                promotionEligible={{}}
+                stagesPerFreight={stagesPerFreight}
+                collapsed={freightTimelineCollapsed}
+                setCollapsed={setFreightTimelineCollapsed}
+              />
+            </Suspense>
+          </FreightTimelineWrapper>
+        </div>
         <div className={`flex flex-grow w-full ${styles.dag}`}>
           <div className={`overflow-hidden flex-grow w-full h-full`}>
             <div className='flex justify-end items-center p-4 mb-4'>
@@ -333,10 +360,7 @@ export const Pipelines = () => {
                   trigger={['click']}
                 >
                   <Button icon={<FontAwesomeIcon icon={faWandSparkles} size='1x' />}>
-                    <Space>
-                      New
-                      <FontAwesomeIcon icon={faChevronDown} size='xs' />
-                    </Space>
+                    <FontAwesomeIcon icon={faChevronDown} size='xs' className='-mr-2' />
                   </Button>
                 </Dropdown>
                 {hideImages && (
@@ -415,11 +439,7 @@ export const Pipelines = () => {
                               );
                             }
                           }}
-                          action={
-                            (isPromoting(state) && state.stage === node.data?.metadata?.name) || ''
-                              ? state.action
-                              : undefined
-                          }
+                          action={state.action}
                           onClick={
                             state.action === FreightTimelineAction.ManualApproval
                               ? () => {
@@ -429,11 +449,20 @@ export const Pipelines = () => {
                                     name: state.freight
                                   });
                                 }
-                              : undefined
+                              : state.action === FreightTimelineAction.PromoteFreight
+                                ? () => {
+                                    state.setStage(node.data?.metadata?.name || '');
+                                    promoteAction({
+                                      stage: node.data?.metadata?.name || '',
+                                      project: name,
+                                      freight: state.freight
+                                    });
+                                  }
+                                : undefined
                           }
                           onHover={(h) => onHover(h, node.data?.metadata?.name || '', true)}
-                          approving={state.action === FreightTimelineAction.ManualApproval}
                           highlighted={highlightedStages[node.data?.metadata?.name || '']}
+                          autoPromotion={autoPromotionMap[node.data?.metadata?.name || '']}
                         />
                       </>
                     ) : (

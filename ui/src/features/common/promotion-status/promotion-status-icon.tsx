@@ -4,9 +4,9 @@ import {
   faCircleNotch,
   faHourglassStart
 } from '@fortawesome/free-solid-svg-icons';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Tooltip, theme } from 'antd';
+import { theme } from 'antd';
 
+import { MessageTooltip } from '@ui/features/project/pipelines/message-tooltip';
 import { PromotionStatus } from '@ui/gen/v1alpha1/generated_pb';
 
 const PhaseAndMessage = ({ status }: { status: PromotionStatus }) => (
@@ -18,49 +18,47 @@ const PhaseAndMessage = ({ status }: { status: PromotionStatus }) => (
 
 export const PromotionStatusIcon = ({
   status,
-  placement = 'right',
   color,
-  size = 'lg'
+  ...props
 }: {
   status?: PromotionStatus;
   placement?: 'right' | 'top';
   color?: string;
   size?: 'lg' | '1x';
 }) => {
+  if (!status) {
+    return null;
+  }
+  const message = <PhaseAndMessage status={status} />;
+  let icon = faHourglassStart;
+  let defaultColor = 'aaa';
+  let spin = false;
   switch (status?.phase) {
     case 'Succeeded':
-      return (
-        <Tooltip title={<PhaseAndMessage status={status} />} placement={placement}>
-          <FontAwesomeIcon
-            color={color ? color : theme.defaultSeed.colorSuccess}
-            icon={faCircleCheck}
-            size={size}
-          />
-        </Tooltip>
-      );
+      icon = faCircleCheck;
+      defaultColor = theme.defaultSeed.colorSuccess;
+      break;
     case 'Failed':
     case 'Errored':
-      return (
-        <Tooltip title={<PhaseAndMessage status={status} />} placement={placement}>
-          <FontAwesomeIcon
-            color={color ? color : theme.defaultSeed.colorError}
-            icon={faCircleExclamation}
-            size={size}
-          />
-        </Tooltip>
-      );
+      icon = faCircleExclamation;
+      defaultColor = theme.defaultSeed.colorError;
+      break;
     case 'Running':
-      return (
-        <Tooltip title='Promotion Running' placement={placement}>
-          <FontAwesomeIcon icon={faCircleNotch} spin size={size} />
-        </Tooltip>
-      );
+      icon = faCircleNotch;
+      spin = true;
+      break;
     case 'Pending':
     default:
-      return (
-        <Tooltip title='Promotion Pending' placement={placement}>
-          <FontAwesomeIcon color={color ? color : 'aaa'} icon={faHourglassStart} size={size} />
-        </Tooltip>
-      );
+      break;
   }
+
+  return (
+    <MessageTooltip
+      message={message}
+      icon={icon}
+      iconColor={color ? color : defaultColor}
+      spin={spin}
+      {...props}
+    />
+  );
 };
