@@ -1,4 +1,4 @@
-import { faDocker, faGit } from '@fortawesome/free-brands-svg-icons';
+import { faDocker, faGitAlt } from '@fortawesome/free-brands-svg-icons';
 import {
   faAnchor,
   faBuilding,
@@ -14,6 +14,7 @@ import { useContext } from 'react';
 import { ColorContext } from '@ui/context/colors';
 import { urlForImage } from '@ui/utils/url';
 
+import { MessageTooltip } from '../message-tooltip';
 import { NodeType, RepoNodeType } from '../types';
 
 import * as styles from './repo-node.module.less';
@@ -26,7 +27,7 @@ type Props = {
 
 const ico = {
   [NodeType.REPO_IMAGE]: faDocker,
-  [NodeType.REPO_GIT]: faGit,
+  [NodeType.REPO_GIT]: faGitAlt,
   [NodeType.WAREHOUSE]: faBuilding,
   [NodeType.REPO_CHART]: faAnchor
 };
@@ -59,12 +60,12 @@ export const RepoNode = ({ nodeData, children, onClick }: Props) => {
         <div className='text-ellipsis whitespace-nowrap overflow-x-hidden py-1'>
           {nodeData.type === NodeType.WAREHOUSE ? nodeData.data?.metadata?.name : 'Subscription'}
         </div>
-        <div className='flex items-center'>
+        <div className='flex items-center gap-1'>
           {nodeData.refreshing && <FontAwesomeIcon icon={faCircleNotch} spin className='mr-2' />}
           {nodeData.type === NodeType.WAREHOUSE &&
             (nodeData?.data?.status?.conditions || []).length > 0 && (
-              <Tooltip
-                title={
+              <MessageTooltip
+                message={
                   <div className='flex flex-col gap-4 overflow-y-scroll text-wrap max-h-48'>
                     <div
                       className='cursor-pointer min-w-0'
@@ -86,9 +87,9 @@ export const RepoNode = ({ nodeData, children, onClick }: Props) => {
                     </div>
                   </div>
                 }
-              >
-                <FontAwesomeIcon icon={faExclamationCircle} className='mr-1 text-red-600' />
-              </Tooltip>
+                icon={faExclamationCircle}
+                iconClassName='text-red-500'
+              />
             )}
           {type && (
             <FontAwesomeIcon

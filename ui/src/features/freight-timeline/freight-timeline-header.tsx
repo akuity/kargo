@@ -19,6 +19,8 @@ import { Warehouse } from '@ui/gen/v1alpha1/generated_pb';
 
 import { FreightTimelineAction } from '../project/pipelines/types';
 
+import './freight-timeline.less';
+
 export const FreightTimelineHeader = ({
   promotingStage,
   action,
@@ -60,73 +62,79 @@ export const FreightTimelineHeader = ({
 
   const navigate = useNavigate();
 
-  return (
-    <div className='w-full pl-6 h-8 mb-3 flex flex-col justify-end font-semibold text-sm'>
-      <div className='flex items-end'>
-        {action ? (
-          <>
-            <div className='flex items-center'>
-              <FontAwesomeIcon icon={getIcon(action)} className='mr-2' />
-              {promotingStage && action != 'manualApproval' ? (
-                <>
-                  PROMOTING{' '}
-                  {action === 'promoteSubscribers'
-                    ? `TO ${(downstreamSubs || []).length} DOWNSTREAM SUBSCRIBERS (${downstreamSubs?.join(', ')}) OF`
-                    : ''}{' '}
-                  STAGE :{' '}
-                  <div
-                    className='px-2 rounded text-white ml-2 font-semibold'
-                    style={{
-                      backgroundColor: stageColorMap[promotingStage]
-                    }}
-                  >
-                    {promotingStage.toUpperCase()}
-                  </div>
-                  <Tooltip
-                    title={
-                      <>
-                        Available freight are any which have been verified in{' '}
-                        {action === 'promote' && 'any immediately upstream stage OR approved for'}{' '}
-                        this stage.
-                      </>
-                    }
-                  >
-                    <FontAwesomeIcon
-                      icon={faQuestionCircle}
-                      className='cursor-pointer text-zinc-500 ml-2'
-                    />
-                  </Tooltip>
-                </>
-              ) : (
-                <>MANUALLY APPROVING FREIGHT</>
-              )}
-            </div>
+  const headerButtonStyle = 'bg-transparent text-gray-500 -mb-1 mr-2 text-xs';
 
-            <div
-              className='ml-auto mr-4 cursor-pointer px-2 py-1 text-white bg-zinc-700 rounded hover:bg-zinc-600 font-semibold text-sm'
-              onClick={cancel}
-            >
-              CANCEL
-            </div>
-          </>
-        ) : (
-          <>
-            <div className='flex items-center text-neutral-500 text-xs mr-auto'>
-              <FontAwesomeIcon icon={faTimeline} className='mr-2' />
-              FREIGHT TIMELINE
-            </div>
-            {collapsable && (
-              <Tooltip title={`${collapsed ? 'Expand' : 'Collapse'} old freight`}>
-                <Button
-                  icon={<FontAwesomeIcon icon={collapsed ? faExpand : faCompress} />}
-                  className='-mb-1 mr-2'
-                  onClick={() => setCollapsed(!collapsed)}
-                />
-              </Tooltip>
+  return (
+    <div className='w-full pl-6 flex items-center font-semibold text-sm h-8 pt-2'>
+      {action ? (
+        <>
+          <div className='flex items-center uppercase'>
+            <FontAwesomeIcon icon={getIcon(action)} className='mr-2' />
+            {promotingStage && action != 'manualApproval' ? (
+              <>
+                Promoting{' '}
+                {action === 'promoteSubscribers'
+                  ? `TO ${(downstreamSubs || []).length} Downstream Subscribers (${downstreamSubs?.join(', ')}) of`
+                  : ''}{' '}
+                Stage :{' '}
+                <div
+                  className='px-2 rounded text-white ml-2 font-semibold'
+                  style={{
+                    backgroundColor: stageColorMap[promotingStage]
+                  }}
+                >
+                  {promotingStage.toUpperCase()}
+                </div>
+                <Tooltip
+                  title={
+                    <>
+                      Available freight are any which have been verified in{' '}
+                      {action === 'promote' && 'any immediately upstream stage OR approved for'}{' '}
+                      this stage.
+                    </>
+                  }
+                >
+                  <FontAwesomeIcon
+                    icon={faQuestionCircle}
+                    className='cursor-pointer text-gray-500 ml-2'
+                  />
+                </Tooltip>
+              </>
+            ) : (
+              <>
+                {action === 'manualApproval' ? 'Manually Approving Freight' : 'Promoting Freight'}
+              </>
             )}
+          </div>
+
+          <div
+            className='ml-auto mr-4 cursor-pointer px-2 py-1 text-white bg-gray-700 rounded hover:bg-gray-600 font-semibold text-xs'
+            onClick={cancel}
+          >
+            CANCEL
+          </div>
+        </>
+      ) : (
+        <>
+          <div className='flex items-center text-gray-400 text-xs mr-auto ml-4'>
+            <FontAwesomeIcon icon={faTimeline} className='mr-2' />
+            FREIGHT TIMELINE
+          </div>
+          {collapsable && (
+            <Tooltip title={`${collapsed ? 'Expand' : 'Collapse'} old freight`}>
+              <Button
+                icon={<FontAwesomeIcon icon={collapsed ? faExpand : faCompress} />}
+                size='small'
+                className={headerButtonStyle}
+                onClick={() => setCollapsed(!collapsed)}
+              />
+            </Tooltip>
+          )}
+          <Tooltip title='Assemble Freight'>
             <Button
               icon={<FontAwesomeIcon icon={faTools} />}
-              className='-mb-1 mr-2'
+              size='small'
+              className={headerButtonStyle}
               onClick={() => {
                 navigate(
                   generatePath(paths.warehouse, {
@@ -137,34 +145,33 @@ export const FreightTimelineHeader = ({
                   })
                 );
               }}
-            >
-              Assemble Freight
-            </Button>
-            {(Object.keys(warehouses) || []).length > 1 && (
-              <div className='mr-4 -mb-1'>
-                <Select
-                  className='w-48'
-                  value={selectedWarehouse}
-                  onChange={(value) => setSelectedWarehouse(value)}
-                  labelRender={({ label }) => <div className='text-xs font-semibold'>{label}</div>}
-                  optionRender={(opt) => (
-                    <div className='text-xs font-normal w-full h-full flex items-center'>
-                      <div>{opt.label}</div>
-                    </div>
-                  )}
-                  options={[
-                    ...(Object.keys(warehouses) || []).map((w) => ({ value: w, label: w })),
-                    {
-                      value: '',
-                      label: 'All Warehouses'
-                    }
-                  ]}
-                />
-              </div>
-            )}
-          </>
-        )}
-      </div>
+            />
+          </Tooltip>
+          {(Object.keys(warehouses) || []).length > 1 && (
+            <div className='mr-4 -mb-1'>
+              <Select
+                className='w-48'
+                value={selectedWarehouse}
+                onChange={(value) => setSelectedWarehouse(value)}
+                size='small'
+                labelRender={({ label }) => <div className='text-xs font-medium'>{label}</div>}
+                optionRender={(opt) => (
+                  <div className='text-xs font-normal w-full h-full flex items-center'>
+                    <div>{opt.label}</div>
+                  </div>
+                )}
+                options={[
+                  ...(Object.keys(warehouses) || []).map((w) => ({ value: w, label: w })),
+                  {
+                    value: '',
+                    label: 'All warehouses'
+                  }
+                ]}
+              />
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 };

@@ -64,7 +64,8 @@ export const NewWarehouseNode = (warehouse: Warehouse, stageNames?: string[]): R
 export enum FreightTimelineAction {
   Promote = 'promote', // Promoting a stage. Freight has not been selected yet
   PromoteSubscribers = 'promoteSubscribers', // Promoting subscribers of a stage. Freight has not been selected yet
-  ManualApproval = 'manualApproval' // Manually approving a freight
+  ManualApproval = 'manualApproval', // Manually approving a freight
+  PromoteFreight = 'promoteFreight' // Promoting a specific freight to any stage
 }
 
 export enum FreightMode {
