@@ -65,8 +65,7 @@ export const RepoNode = ({ nodeData, children, onClick }: Props) => {
             (nodeData?.data?.status?.conditions || []).length > 0 && (
               <Tooltip
                 title={
-                  <div className='flex overflow-y-scroll text-wrap max-h-48'>
-                    <FontAwesomeIcon icon={faExclamationCircle} className='mr-2 mt-1 pl-1' />
+                  <div className='flex flex-col gap-4 overflow-y-scroll text-wrap max-h-48'>
                     <div
                       className='cursor-pointer min-w-0'
                       onClick={() => {
@@ -79,7 +78,8 @@ export const RepoNode = ({ nodeData, children, onClick }: Props) => {
                       }}
                     >
                       {nodeData?.data?.status?.conditions?.map((condition, index) => (
-                        <div key={index} className='mb-4'>
+                        <div key={index} className='flex text-wrap'>
+                          <FontAwesomeIcon icon={faExclamationCircle} className='mr-2 mt-1 pl-1' />
                           {condition.message}
                         </div>
                       ))}
