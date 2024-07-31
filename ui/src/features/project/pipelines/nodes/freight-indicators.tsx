@@ -1,7 +1,9 @@
+import { Tooltip } from 'antd';
 import classNames from 'classnames';
 import { useContext } from 'react';
 
 import { ColorContext } from '@ui/context/colors';
+import { getAlias } from '@ui/features/common/utils';
 import { Freight } from '@ui/gen/v1alpha1/generated_pb';
 
 export const FreightIndicators = ({
@@ -22,21 +24,22 @@ export const FreightIndicators = ({
   return (
     <div className='flex gap-2 justify-center items-center py-1 absolute top-1'>
       {freight.map((freight, idx) => (
-        <div
-          className={classNames('rounded-full mb-2 opacity-50 hover:opacity-30', {
-            '!opacity-100': selectedFreight === idx
-          })}
-          key={freight?.metadata?.name || idx}
-          style={{
-            width: '10px',
-            height: '10px',
-            backgroundColor: warehouseColorMap[freight?.warehouse || '']
-          }}
-          onClick={(e) => {
-            e.stopPropagation();
-            onClick(idx);
-          }}
-        />
+        <Tooltip placement='right' title={getAlias(freight)} key={freight?.metadata?.name || idx}>
+          <div
+            className={classNames('rounded-full mb-2 opacity-50 hover:opacity-30', {
+              '!opacity-100': selectedFreight === idx
+            })}
+            style={{
+              width: '10px',
+              height: '10px',
+              backgroundColor: warehouseColorMap[freight?.warehouse || '']
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onClick(idx);
+            }}
+          />
+        </Tooltip>
       ))}
     </div>
   );
