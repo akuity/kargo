@@ -137,6 +137,11 @@ func (o *loginOptions) run(ctx context.Context) error {
 	var bearerToken, refreshToken string
 	var err error
 
+	currentConfig, err := libConfig.LoadCLIConfig()
+	if err != nil {
+		return fmt.Errorf("error loading current configuration: %w", err)
+	}
+
 	switch {
 	case o.UseAdmin:
 		for {
@@ -175,6 +180,11 @@ func (o *loginOptions) run(ctx context.Context) error {
 		// instead. Since we plan not to use the refresh token for such a case,
 		// it's more secure to throw it away immediately.
 		refreshToken = ""
+	}
+
+	// To retain the existing user if he's logging into the same server
+	if currentConfig.APIAddress == o.ServerAddress {
+		o.Config = currentConfig
 	}
 
 	if err = libConfig.SaveCLIConfig(
