@@ -67,8 +67,6 @@ export const TokenRenew = () => {
     }
 
     if (!as || !client) {
-      navigate(paths.login);
-
       return;
     }
 
