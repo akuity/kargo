@@ -67,8 +67,6 @@ export const TokenRenew = () => {
     }
 
     if (!as || !client) {
-      navigate(paths.login);
-
       return;
     }
 
@@ -82,6 +80,7 @@ export const TokenRenew = () => {
           placement: 'bottomRight'
         });
         logout();
+        navigate(paths.login);
         return;
       }
 
