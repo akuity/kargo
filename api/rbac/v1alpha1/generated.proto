@@ -34,7 +34,7 @@ message Role {
 
   optional bool kargoManaged = 2;
 
-  repeated Claim claims = 3;
+  repeated Claim claims = 7;
 
   repeated k8s.io.api.rbac.v1.PolicyRule rules = 6;
 }

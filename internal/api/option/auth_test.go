@@ -266,8 +266,8 @@ func TestAuthenticate(t *testing.T) {
 				u, ok := user.InfoFromContext(ctx)
 				require.True(t, ok)
 				require.True(t, u.IsAdmin)
-				require.Empty(t, u.Subject)
-				require.Empty(t, u.Groups)
+				require.Empty(t, u.Claims["subs"])
+				require.Empty(t, u.Claims["groups"])
 				require.Empty(t, u.BearerToken)
 			},
 		},

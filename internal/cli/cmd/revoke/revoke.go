@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"connectrpc.com/connect"
 	"github.com/spf13/cobra"
@@ -32,6 +33,7 @@ type revokeOptions struct {
 	Subs         []string
 	Emails       []string
 	Groups       []string
+	Claims       []string
 	ResourceType string
 	ResourceName string
 	Verbs        []string
@@ -46,7 +48,7 @@ func NewCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams) *cobra
 
 	cmd := &cobra.Command{
 		Use: `revoke [--project=project] --role=role \
-		[--sub=sub] [--email=email] [--group=group] \
+		[--sub=sub] [--email=email] [--group=group] [--claim=name=value] \
 		[--resource-type=resource-type [--resource-name=resource-name] --verb=verb]`,
 		Short: "Revoke a role from a user or revoke permissions from a role",
 		Args:  option.NoArgs,
@@ -67,6 +69,11 @@ kargo revoke --project=my-project --role=my-role --resource-type=stage --verb=up
 # Revoke permission to promote to stage dev from my-role
 kargo revoke --project=my-project --role=my-role \
   --resource-type=stage --resource-name=dev --verb=promote
+
+# Revoke my-role from users with a non standard claim and in a specific group
+# Please take note that even though you can specify subs, emails and groups in the generic claim
+# flag, if both are set, the bespoke sub, group, and email flags take precedence
+kargo revoke --project=my-project --role=my-role --claim=group=admins --claim=given_name=alice
 `),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if err := cmdOpts.validate(); err != nil {
@@ -98,6 +105,7 @@ func (o *revokeOptions) addFlags(cmd *cobra.Command) {
 	option.Subs(cmd.Flags(), &o.Subs, "The sub claim of a user to have the role revoked.")
 	option.Emails(cmd.Flags(), &o.Emails, "The email address of a user to have the role revoked.")
 	option.Groups(cmd.Flags(), &o.Groups, "A group to have the role revoked.")
+	option.Claims(cmd.Flags(), &o.Claims, "A claim name and value to have the role revoked")
 	option.ResourceType(cmd.Flags(), &o.ResourceType, "A type of resource to revoke permissions for.")
 	option.ResourceName(cmd.Flags(), &o.ResourceName, "The name of a resource to revoke permissions for.")
 	option.Verbs(cmd.Flags(), &o.Verbs, "A verb to revoke on the resource.")
@@ -111,6 +119,7 @@ func (o *revokeOptions) addFlags(cmd *cobra.Command) {
 		option.SubFlag,
 		option.EmailFlag,
 		option.GroupFlag,
+		option.ClaimFlag,
 		option.ResourceTypeFlag,
 	)
 
@@ -119,6 +128,7 @@ func (o *revokeOptions) addFlags(cmd *cobra.Command) {
 	cmd.MarkFlagsMutuallyExclusive(option.SubFlag, option.ResourceTypeFlag)
 	cmd.MarkFlagsMutuallyExclusive(option.EmailFlag, option.ResourceTypeFlag)
 	cmd.MarkFlagsMutuallyExclusive(option.GroupFlag, option.ResourceTypeFlag)
+	cmd.MarkFlagsMutuallyExclusive(option.ClaimFlag, option.ResourceTypeFlag)
 
 	cmd.MarkFlagsRequiredTogether(option.ResourceTypeFlag, option.VerbFlag)
 }
@@ -158,23 +168,38 @@ func (o *revokeOptions) run(ctx context.Context) error {
 			},
 		}
 	} else {
+		claims := []rbacapi.Claim{}
+
+		if o.Subs != nil {
+			claims = append(claims, rbacapi.Claim{
+				Name:   "subs",
+				Values: o.Subs,
+			})
+		}
+
+		if o.Groups != nil {
+			claims = append(claims, rbacapi.Claim{
+				Name:   "groups",
+				Values: o.Groups,
+			})
+		}
+
+		if o.Emails != nil {
+			claims = append(claims, rbacapi.Claim{
+				Name:   "emails",
+				Values: o.Emails,
+			})
+		}
+
+		for _, claimFlagValue := range o.Claims {
+			claimFlagNameAndValue := strings.Split(claimFlagValue, "=")
+			claims = append(claims, rbacapi.Claim{
+				Name:   claimFlagNameAndValue[0],
+				Values: []string{claimFlagNameAndValue[1]},
+			})
+		}
 		req.Request = &svcv1alpha1.RevokeRequest_UserClaims{
-			UserClaims: &rbacapi.UserClaims{
-				Claims: []rbacapi.Claim{
-					{
-						Name:   "subs",
-						Values: o.Subs,
-					},
-					{
-						Name:   "emails",
-						Values: o.Emails,
-					},
-					{
-						Name:   "groups",
-						Values: o.Groups,
-					},
-				},
-			},
+			UserClaims: &rbacapi.UserClaims{Claims: claims},
 		}
 	}
 

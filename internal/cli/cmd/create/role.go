@@ -35,6 +35,7 @@ type createRoleOptions struct {
 	Subs        []string
 	Emails      []string
 	Groups      []string
+	Claims      []string
 }
 
 func newRoleCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams) *cobra.Command {
@@ -45,7 +46,7 @@ func newRoleCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams) *c
 	}
 
 	cmd := &cobra.Command{
-		Use:   "role [--project=project] NAME [--sub=subject] [--email=email] [--group]",
+		Use:   "role [--project=project] NAME [--sub=subject] [--email=email] [--group] [--claim=name=value]",
 		Short: "Create a role",
 		Args:  option.ExactArgs(1),
 		Example: templates.Example(`
@@ -82,6 +83,13 @@ kargo create role my-role \
 kargo config set-project my-project
 kargo create role my-role \
   --group=admins --group=engineers
+
+# Create a role in the default project and grant it to users with a specific claim name and value
+# Please take note that even though you can specify subs, emails and groups in the generic claim
+# flag, if both are set, the bespoke sub, group, and email flags take precedence
+kargo config set-project my-project
+kargo create role my-role \
+--claim=given_name=alice --claim=emails=alice@example.com
 `),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmdOpts.complete(args)
@@ -116,6 +124,7 @@ func (o *createRoleOptions) addFlags(cmd *cobra.Command) {
 	option.Subs(cmd.Flags(), &o.Subs, "A subject claim to map to the role.")
 	option.Emails(cmd.Flags(), &o.Emails, "An email address to map to the role.")
 	option.Groups(cmd.Flags(), &o.Groups, "A group claim to map to the role.")
+	option.Claims(cmd.Flags(), &o.Claims, "A claim name and value to map to the role")
 }
 
 // complete sets the options from the command arguments.
@@ -145,6 +154,37 @@ func (o *createRoleOptions) run(ctx context.Context) error {
 		return fmt.Errorf("get client from config: %w", err)
 	}
 
+	claims := []rbacapi.Claim{}
+
+	if o.Subs != nil {
+		claims = append(claims, rbacapi.Claim{
+			Name:   "subs",
+			Values: o.Subs,
+		})
+	}
+
+	if o.Groups != nil {
+		claims = append(claims, rbacapi.Claim{
+			Name:   "groups",
+			Values: o.Groups,
+		})
+	}
+
+	if o.Emails != nil {
+		claims = append(claims, rbacapi.Claim{
+			Name:   "emails",
+			Values: o.Emails,
+		})
+	}
+
+	for _, claimFlagValue := range o.Claims {
+		claimFlagNameAndValue := strings.Split(claimFlagValue, "=")
+		claims = append(claims, rbacapi.Claim{
+			Name:   claimFlagNameAndValue[0],
+			Values: []string{claimFlagNameAndValue[1]},
+		})
+	}
+
 	resp, err := kargoSvcCli.CreateRole(
 		ctx,
 		connect.NewRequest(
@@ -154,20 +194,7 @@ func (o *createRoleOptions) run(ctx context.Context) error {
 						Namespace: o.Project,
 						Name:      o.Name,
 					},
-					Claims: []rbacapi.Claim{
-						{
-							Name:   "subs",
-							Values: o.Subs,
-						},
-						{
-							Name:   "emails",
-							Values: o.Emails,
-						},
-						{
-							Name:   "groups",
-							Values: o.Groups,
-						},
-					},
+					Claims: claims,
 				},
 			},
 		),

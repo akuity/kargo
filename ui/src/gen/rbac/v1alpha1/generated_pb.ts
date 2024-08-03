@@ -120,7 +120,7 @@ export class Role extends Message<Role> {
   kargoManaged?: boolean;
 
   /**
-   * @generated from field: repeated github.com.akuity.kargo.api.rbac.v1alpha1.Claim claims = 3;
+   * @generated from field: repeated github.com.akuity.kargo.api.rbac.v1alpha1.Claim claims = 7;
    */
   claims: Claim[] = [];
 
@@ -139,7 +139,7 @@ export class Role extends Message<Role> {
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 1, name: "metadata", kind: "message", T: ObjectMeta, opt: true },
     { no: 2, name: "kargoManaged", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
-    { no: 3, name: "claims", kind: "message", T: Claim, repeated: true },
+    { no: 7, name: "claims", kind: "message", T: Claim, repeated: true },
     { no: 6, name: "rules", kind: "message", T: PolicyRule, repeated: true },
   ]);
 

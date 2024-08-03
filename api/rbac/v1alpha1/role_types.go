@@ -11,7 +11,7 @@ type Role struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 	KargoManaged      bool                `json:"kargoManaged,omitempty" protobuf:"varint,2,opt,name=kargoManaged"`
-	Claims            []Claim             `json:"claims,omitempty" protobuf:"bytes,3,rep,name=claims"`
+	Claims            []Claim             `json:"claims,omitempty" protobuf:"bytes,7,rep,name=claims"`
 	Rules             []rbacv1.PolicyRule `json:"rules,omitempty" protobuf:"bytes,6,rep,name=rules"`
 }
 
