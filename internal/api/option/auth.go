@@ -251,17 +251,17 @@ func (a *authInterceptor) listServiceAccounts(
 	c claims,
 ) (map[string]map[types.NamespacedName]struct{}, error) {
 	queries := []libClient.MatchingFields{}
-	for _, claim := range c {
-		if claimString, ok := claim.(string); ok {
+	for claimName, claimValue := range c {
+		if claimValuesString, ok := claimValue.(string); ok {
 			queries = append(queries, libClient.MatchingFields{
-				kubeclient.ServiceAccountsByOIDCClaimIndexField: claimString,
+				kubeclient.ServiceAccountsByOIDCClaimIndexField: claimName + "/" + claimValuesString,
 			})
 		}
-		if claimSlice, ok := claim.([]any); ok {
-			for _, claimSliceItem := range claimSlice {
-				if claimSliceItemString, ok := claimSliceItem.(string); ok {
+		if claimValueSlice, ok := claimValue.([]any); ok {
+			for _, claimValueSliceItem := range claimValueSlice {
+				if claimValueSliceItemString, ok := claimValueSliceItem.(string); ok {
 					queries = append(queries, libClient.MatchingFields{
-						kubeclient.ServiceAccountsByOIDCClaimIndexField: claimSliceItemString,
+						kubeclient.ServiceAccountsByOIDCClaimIndexField: claimName + "/" + claimValueSliceItemString,
 					})
 				}
 			}

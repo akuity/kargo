@@ -35,10 +35,7 @@ const (
 	StagesByUpstreamStagesIndexField     = "upstreamStages"
 	StagesByWarehouseIndexField          = "warehouse"
 
-	ServiceAccountsByOIDCEmailIndexField   = "email"
-	ServiceAccountsByOIDCGroupIndexField   = "groups"
-	ServiceAccountsByOIDCSubjectIndexField = "subjects"
-	ServiceAccountsByOIDCClaimIndexField   = "claims"
+	ServiceAccountsByOIDCClaimIndexField = "claims"
 )
 
 // IndexEventsByInvolvedObjectAPIGroup sets up the indexing of Events by the
@@ -517,25 +514,26 @@ func IndexServiceAccountsByOIDCClaim(ctx context.Context, mgr ctrl.Manager) erro
 // ServiceAccounts by their OIDC claim annotations.
 func indexServiceAccountsOIDCClaim(obj client.Object) []string {
 	sa := obj.(*corev1.ServiceAccount) // nolint: forcetypeassert
-	rawClaimValues := []string{}
+	rawClaimValues := map[string]string{}
 	for annotationKey, annotationValue := range sa.GetAnnotations() {
 		if strings.HasPrefix(annotationKey, rbacapi.AnnotationKeyOIDCClaimNamePrefix) {
+			rawClaimName := strings.ReplaceAll(annotationKey, rbacapi.AnnotationKeyOIDCClaimNamePrefix, "")
 			rawClaimValue := strings.TrimSpace(annotationValue)
 			if rawClaimValue == "" {
 				continue
 			}
-			rawClaimValues = append(rawClaimValues, rawClaimValue)
+			rawClaimValues[rawClaimName] = rawClaimValue
 		}
 	}
 	if len(rawClaimValues) == 0 {
 		return nil
 	}
 	refinedClaimValues := []string{}
-	for _, rawClaimValue := range rawClaimValues {
+	for rawClaimName, rawClaimValue := range rawClaimValues {
 		claimValues := strings.Split(rawClaimValue, ",")
 		for _, e := range claimValues {
-			if email := strings.TrimSpace(e); email != "" {
-				refinedClaimValues = append(refinedClaimValues, email)
+			if claimValue := strings.TrimSpace(e); claimValue != "" {
+				refinedClaimValues = append(refinedClaimValues, rawClaimName+"/"+claimValue)
 			}
 		}
 	}

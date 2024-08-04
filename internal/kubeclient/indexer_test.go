@@ -874,7 +874,7 @@ func TestIndexServiceAccountsOIDCClaimWithEmails(t *testing.T) {
 					},
 				},
 			},
-			expected: []string{"fake-email", "fake-email-2"},
+			expected: []string{"emails/fake-email", "emails/fake-email-2"},
 		},
 	}
 	for _, testCase := range testCases {
@@ -907,7 +907,7 @@ func TestIndexServiceAccountsByOIDCClaimsWithGroups(t *testing.T) {
 					},
 				},
 			},
-			expected: []string{"fake-group-1", "fake-group-2"},
+			expected: []string{"groups/fake-group-1", "groups/fake-group-2"},
 		},
 	}
 	for _, testCase := range testCases {
@@ -940,7 +940,7 @@ func TestIndexServiceAccountsByOIDCClaimWithSubjects(t *testing.T) {
 					},
 				},
 			},
-			expected: []string{"fake-subject-1", "fake-subject-2"},
+			expected: []string{"subs/fake-subject-1", "subs/fake-subject-2"},
 		},
 	}
 	for _, testCase := range testCases {
