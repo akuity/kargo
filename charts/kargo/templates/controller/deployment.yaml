@@ -80,6 +80,10 @@ spec:
           name: git
           readOnly: true
         {{- end }}
+        {{- if .Values.controller.ca-bundle.enabled }}
+        - mountPath: /etc/ssl/certs
+          name: certs
+        {{- end }}
         {{- end }}
         {{- with .Values.controller.securityContext | default .Values.global.securityContext }}
         securityContext:
@@ -87,6 +91,25 @@ spec:
         {{- end }}
         resources:
           {{- toYaml .Values.controller.resources | nindent 10 }}
+      {{- if .Values.controller.ca-bundle.enabled }}
+      initContainers:
+      - name: parse-ca-bundle
+        image: docker.io/alpine/curl:latest
+        command:
+        - "/bin/sh"
+        - "-c"
+        args:
+        - |
+          for FILE in /tmp/source/*; do awk 'BEGIN {c=0;} /BEGIN CERT/{c++} { print > "/usr/local/share/ca-certificates/cert." c ".crt"}' < $FILE; done
+          /usr/sbin/update-ca-certificates
+          rm -rf /tmp/target/*
+          cp -r /etc/ssl/certs/* /tmp/target/
+        volumeMounts:
+        - name: ca-bundle
+          mountPath: /tmp/source
+        - name: certs
+          mountPath: /tmp/target
+      {{- end }}
       {{- if or .Values.kubeconfigSecrets.kargo .Values.kubeconfigSecrets.argocd .Values.controller.gitClient.signingKeySecret.name }}
       volumes:
       {{- if or .Values.kubeconfigSecrets.kargo .Values.kubeconfigSecrets.argocd }}
@@ -109,6 +132,27 @@ spec:
                 path: argocd-kubeconfig.yaml
                 mode: 0644
           {{- end }}
+      {{- end }}
+      {{- if .Values.controller.ca-bundle.enabled }}
+      {{- if .Values.controller.ca-bundle.configMapName }}
+      - name: ca-bundle
+        configMap:
+          name: {{ .Values.controller.ca-bundle.configMapName }}
+      {{- end }}
+      {{- if .Values.controller.ca-bundle.secretName }}
+      - name: ca-bundle
+        secret:
+          secretName: {{ .Values.controller.ca-bundle.secretName }}
+      {{- end }}
+      {{- if not .Values.controller.ca-bundle.volume.persistentVolumeClaimName }}
+      - name: certs
+        emptyDir: {}
+      {{- end }}
+      {{- if .Values.controller.ca-bundle.volume.persistentVolumeClaimName }}
+      - name: certs
+        persistentVolumeClaim:
+          claimName: {{ .Values.controller.ca-bundle.persistentVolumeClaimName }}
+      {{- end }}
       {{- end }}
       {{- if .Values.controller.gitClient.signingKeySecret.name }}
       - name: git
