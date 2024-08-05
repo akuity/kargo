@@ -6,6 +6,9 @@ import {
   Warehouse
 } from '@ui/gen/v1alpha1/generated_pb';
 
+import { RepoNodeDimensions } from './nodes/repo-node';
+import { StageNodeDimensions } from './nodes/stage-node';
+
 export enum NodeType {
   STAGE,
   REPO_IMAGE,
@@ -13,6 +16,20 @@ export enum NodeType {
   REPO_CHART,
   WAREHOUSE
 }
+
+export type NodeDimensions = {
+  width: number;
+  height: number;
+};
+
+export const getNodeDimensions = (type: NodeType): NodeDimensions => {
+  switch (type) {
+    case NodeType.STAGE:
+      return StageNodeDimensions();
+    default:
+      return RepoNodeDimensions();
+  }
+};
 
 type NodeBase = {
   stageNames?: string[];

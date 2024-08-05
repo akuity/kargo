@@ -2,9 +2,9 @@ import classNames from 'classnames';
 
 import { Freight } from '@ui/gen/v1alpha1/generated_pb';
 
-import { FreightLabel } from '../common/freight-label';
 import { FreightMode } from '../project/pipelines/types';
 
+import { FreightItemLabel } from './freight-item-label';
 import styles from './freight-timeline.module.less';
 
 export const FreightItem = ({
@@ -52,7 +52,7 @@ export const FreightItem = ({
             mode === FreightMode.Confirming ? 'text-black' : 'text-gray-400'
           }`}
         >
-          {!hideLabel && <FreightLabel freight={freight} breakOnHyphen={true} />}
+          {!hideLabel && <FreightItemLabel freight={freight} />}
         </div>
       </div>
     </div>
