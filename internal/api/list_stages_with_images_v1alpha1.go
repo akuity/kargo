@@ -4,16 +4,16 @@ import (
 	"context"
 	"fmt"
 
+	"connectrpc.com/connect"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"connectrpc.com/connect"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
 func (s *server) ListStagesWithImages(
 	ctx context.Context,
-	req *connect.Request[svcv1alpha1.ListStagesRequest],
+	req *connect.Request[svcv1alpha1.ListStagesWithImagesRequest],
 ) (*connect.Response[svcv1alpha1.ListStagesWithImagesResponse], error) {
 	project := req.Msg.GetProject()
 	if err := validateFieldNotEmpty("project", project); err != nil {
@@ -29,21 +29,37 @@ func (s *server) ListStagesWithImages(
 		return nil, fmt.Errorf("list stages: %w", err)
 	}
 
-	images := make(map[string]*svcv1alpha1.Image)
-	stages := make([]*svcv1alpha1.StageWithImages, len(list.Items))
-	for _, stage := range list.Items {
+	stages := make([]*kargoapi.Stage, len(list.Items))
+	images := make(map[string]*svcv1alpha1.TagMap)
+
+	for idx, stage := range list.Items {
+		stages[idx] = &list.Items[idx]
+
 		for i, freightGroup := range stage.Status.FreightHistory {
 			for _, freight := range freightGroup.Freight {
 				for _, image := range freight.Images {
 					repo, ok := images[image.RepoURL]
 					if !ok || repo == nil {
-						repo := &svcv1alpha1.Image{}
+						repo = &svcv1alpha1.TagMap{}
 						images[image.RepoURL] = repo
 					}
 
-					_, ok = repo.Tags[image.Tag]
-					if !ok {
-						repo.Tags[image.Tag] = int32(i)
+					if repo.Tags == nil {
+						repo.Tags = make(map[string]*svcv1alpha1.ImageStageMap)
+					}
+
+					stagemap, ok := repo.Tags[image.Tag]
+					if !ok || stagemap == nil {
+						repo.Tags[image.Tag] = &svcv1alpha1.ImageStageMap{}
+						stagemap = repo.Tags[image.Tag]
+					}
+
+					if stagemap.Stages == nil {
+						stagemap.Stages = make(map[string]int32)
+					}
+
+					if _, ok := stagemap.Stages[stage.Name]; !ok {
+						stagemap.Stages[stage.Name] = int32(i)
 					}
 				}
 			}

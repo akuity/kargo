@@ -1112,18 +1112,57 @@ export class ListStagesResponse extends Message<ListStagesResponse> {
 }
 
 /**
+ * @generated from message akuity.io.kargo.service.v1alpha1.ListStagesWithImagesRequest
+ */
+export class ListStagesWithImagesRequest extends Message<ListStagesWithImagesRequest> {
+  /**
+   * @generated from field: string project = 1;
+   */
+  project = "";
+
+  constructor(data?: PartialMessage<ListStagesWithImagesRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.ListStagesWithImagesRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "project", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListStagesWithImagesRequest {
+    return new ListStagesWithImagesRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListStagesWithImagesRequest {
+    return new ListStagesWithImagesRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListStagesWithImagesRequest {
+    return new ListStagesWithImagesRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ListStagesWithImagesRequest | PlainMessage<ListStagesWithImagesRequest> | undefined, b: ListStagesWithImagesRequest | PlainMessage<ListStagesWithImagesRequest> | undefined): boolean {
+    return proto3.util.equals(ListStagesWithImagesRequest, a, b);
+  }
+}
+
+/**
  * @generated from message akuity.io.kargo.service.v1alpha1.ListStagesWithImagesResponse
  */
 export class ListStagesWithImagesResponse extends Message<ListStagesWithImagesResponse> {
   /**
-   * @generated from field: repeated akuity.io.kargo.service.v1alpha1.StageWithImages stages = 1;
+   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.Stage stages = 1;
    */
-  stages: StageWithImages[] = [];
+  stages: Stage[] = [];
 
   /**
-   * @generated from field: map<string, akuity.io.kargo.service.v1alpha1.Image> images = 2;
+   * images maps image repository names to their tags
+   *
+   * @generated from field: map<string, akuity.io.kargo.service.v1alpha1.TagMap> images = 2;
    */
-  images: { [key: string]: Image } = {};
+  images: { [key: string]: TagMap } = {};
 
   constructor(data?: PartialMessage<ListStagesWithImagesResponse>) {
     super();
@@ -1133,8 +1172,8 @@ export class ListStagesWithImagesResponse extends Message<ListStagesWithImagesRe
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "akuity.io.kargo.service.v1alpha1.ListStagesWithImagesResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "stages", kind: "message", T: StageWithImages, repeated: true },
-    { no: 2, name: "images", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "message", T: Image} },
+    { no: 1, name: "stages", kind: "message", T: Stage, repeated: true },
+    { no: 2, name: "images", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "message", T: TagMap} },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListStagesWithImagesResponse {
@@ -1155,82 +1194,80 @@ export class ListStagesWithImagesResponse extends Message<ListStagesWithImagesRe
 }
 
 /**
- * @generated from message akuity.io.kargo.service.v1alpha1.StageWithImages
+ * @generated from message akuity.io.kargo.service.v1alpha1.TagMap
  */
-export class StageWithImages extends Message<StageWithImages> {
+export class TagMap extends Message<TagMap> {
   /**
-   * @generated from field: github.com.akuity.kargo.api.v1alpha1.Stage stage = 1;
+   * tags maps image tag names to stages which have previously used that tag
+   *
+   * @generated from field: map<string, akuity.io.kargo.service.v1alpha1.ImageStageMap> tags = 1;
    */
-  stage?: Stage;
+  tags: { [key: string]: ImageStageMap } = {};
 
-  /**
-   * @generated from field: map<string, akuity.io.kargo.service.v1alpha1.Image> images = 2;
-   */
-  images: { [key: string]: Image } = {};
-
-  constructor(data?: PartialMessage<StageWithImages>) {
+  constructor(data?: PartialMessage<TagMap>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "akuity.io.kargo.service.v1alpha1.StageWithImages";
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.TagMap";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "stage", kind: "message", T: Stage },
-    { no: 2, name: "images", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "message", T: Image} },
+    { no: 1, name: "tags", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "message", T: ImageStageMap} },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StageWithImages {
-    return new StageWithImages().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): TagMap {
+    return new TagMap().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): StageWithImages {
-    return new StageWithImages().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): TagMap {
+    return new TagMap().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): StageWithImages {
-    return new StageWithImages().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): TagMap {
+    return new TagMap().fromJsonString(jsonString, options);
   }
 
-  static equals(a: StageWithImages | PlainMessage<StageWithImages> | undefined, b: StageWithImages | PlainMessage<StageWithImages> | undefined): boolean {
-    return proto3.util.equals(StageWithImages, a, b);
+  static equals(a: TagMap | PlainMessage<TagMap> | undefined, b: TagMap | PlainMessage<TagMap> | undefined): boolean {
+    return proto3.util.equals(TagMap, a, b);
   }
 }
 
 /**
- * @generated from message akuity.io.kargo.service.v1alpha1.Image
+ * @generated from message akuity.io.kargo.service.v1alpha1.ImageStageMap
  */
-export class Image extends Message<Image> {
+export class ImageStageMap extends Message<ImageStageMap> {
   /**
-   * @generated from field: map<string, int32> tags = 1;
+   * stages maps stage names to the order which an image was promoted to that stage
+   *
+   * @generated from field: map<string, int32> stages = 1;
    */
-  tags: { [key: string]: number } = {};
+  stages: { [key: string]: number } = {};
 
-  constructor(data?: PartialMessage<Image>) {
+  constructor(data?: PartialMessage<ImageStageMap>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "akuity.io.kargo.service.v1alpha1.Image";
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.ImageStageMap";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "tags", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 5 /* ScalarType.INT32 */} },
+    { no: 1, name: "stages", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 5 /* ScalarType.INT32 */} },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Image {
-    return new Image().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ImageStageMap {
+    return new ImageStageMap().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): Image {
-    return new Image().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ImageStageMap {
+    return new ImageStageMap().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Image {
-    return new Image().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ImageStageMap {
+    return new ImageStageMap().fromJsonString(jsonString, options);
   }
 
-  static equals(a: Image | PlainMessage<Image> | undefined, b: Image | PlainMessage<Image> | undefined): boolean {
-    return proto3.util.equals(Image, a, b);
+  static equals(a: ImageStageMap | PlainMessage<ImageStageMap> | undefined, b: ImageStageMap | PlainMessage<ImageStageMap> | undefined): boolean {
+    return proto3.util.equals(ImageStageMap, a, b);
   }
 }
 
