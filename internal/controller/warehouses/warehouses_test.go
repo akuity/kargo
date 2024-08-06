@@ -441,30 +441,6 @@ func TestSyncWarehouse(t *testing.T) {
 		},
 
 		{
-			name: "clears legacy error message",
-			reconciler: &reconciler{
-				discoverArtifactsFn: func(context.Context, *kargoapi.Warehouse) (*kargoapi.DiscoveredArtifacts, error) {
-					return &kargoapi.DiscoveredArtifacts{}, nil
-				},
-				patchStatusFn: func(context.Context, *kargoapi.Warehouse, func(*kargoapi.WarehouseStatus)) error {
-					return nil
-				},
-			},
-			warehouse: &kargoapi.Warehouse{
-				Spec: kargoapi.WarehouseSpec{
-					FreightCreationPolicy: kargoapi.FreightCreationPolicyManual,
-				},
-				Status: kargoapi.WarehouseStatus{
-					Message: "previous error",
-				},
-			},
-			assertions: func(t *testing.T, status kargoapi.WarehouseStatus, err error) {
-				require.NoError(t, err)
-				require.Empty(t, status.Message) // nolint:staticcheck
-			},
-		},
-
-		{
 			name: "clears previous transient error conditions",
 			reconciler: &reconciler{
 				discoverArtifactsFn: func(context.Context, *kargoapi.Warehouse) (*kargoapi.DiscoveredArtifacts, error) {

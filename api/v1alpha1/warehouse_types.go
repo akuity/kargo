@@ -323,11 +323,6 @@ type WarehouseStatus struct {
 	// determine whether the request to refresh the resource has been handled.
 	// +optional
 	LastHandledRefresh string `json:"lastHandledRefresh,omitempty" protobuf:"bytes,6,opt,name=lastHandledRefresh"`
-	// Message describes any errors that are preventing the Warehouse controller
-	// from polling repositories to discover new Freight.
-	//
-	// Deprecated: Use Conditions instead.
-	Message string `json:"message,omitempty" protobuf:"bytes,3,opt,name=message"`
 	// ObservedGeneration represents the .metadata.generation that this Warehouse
 	// was reconciled against.
 	ObservedGeneration int64 `json:"observedGeneration,omitempty" protobuf:"varint,4,opt,name=observedGeneration"`
