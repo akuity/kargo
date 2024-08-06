@@ -2,7 +2,6 @@ package kubernetes
 
 import (
 	"context"
-	"github.com/akuity/kargo/internal/credentials/kubernetes/acr"
 	"regexp"
 	"sort"
 	"strings"
@@ -14,6 +13,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/credentials"
+	"github.com/akuity/kargo/internal/credentials/kubernetes/acr"
 	"github.com/akuity/kargo/internal/credentials/kubernetes/basic"
 	"github.com/akuity/kargo/internal/credentials/kubernetes/ecr"
 	"github.com/akuity/kargo/internal/credentials/kubernetes/gar"

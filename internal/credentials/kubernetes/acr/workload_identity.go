@@ -5,23 +5,24 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
-	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/AzureAD/microsoft-authentication-library-for-go/apps/confidential"
-	"github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/credentials"
-	"github.com/akuity/kargo/internal/logging"
 	"io"
-	v1 "k8s.io/api/authentication/v1"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"net/http"
 	"net/url"
 	"os"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"strings"
 	"time"
 
+	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/AzureAD/microsoft-authentication-library-for-go/apps/confidential"
 	"github.com/patrickmn/go-cache"
+	v1 "k8s.io/api/authentication/v1"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/credentials"
+	"github.com/akuity/kargo/internal/logging"
 )
 
 const (
@@ -82,7 +83,12 @@ func NewWorkloadIdentityCredentialHelper(ctx context.Context, kargoClient client
 	return w.getCredentials
 }
 
-func (w *workloadIdentityCredentialHelper) getCredentials(ctx context.Context, project string, credType credentials.Type, repoURL string, _ *corev1.Secret) (*credentials.Credentials, error) {
+func (w *workloadIdentityCredentialHelper) getCredentials(
+	ctx context.Context,
+	project string,
+	credType credentials.Type,
+	repoURL string,
+	_ *corev1.Secret) (*credentials.Credentials, error) {
 	logger := logging.LoggerFromContext(ctx)
 
 	// Workload Identity isn't set up for this controller
@@ -130,13 +136,14 @@ func (w *workloadIdentityCredentialHelper) getCredentials(ctx context.Context, p
 
 	logger.Info("Retrieving service account from namespace", "project", project)
 
-	// Use the TokenRequest API to get a temporary token for the `kargo-viewer` serviceaccount for the given project namespace
+	// Use the TokenRequest API to get a temporary token for the given project namespace
 	saToken, err := w.fetchSAFn(ctx, project, audiences)
 	if err != nil {
 		return nil, err
 	}
 
-	logger.Info(fmt.Sprintf("Getting Entra OAuth token for %s, with tenantId %s and clientId %s", repoHost.Host, tenantID, clientID))
+	logger.Info("Getting Entra OAuth token",
+		"RepoRUl", repoHost.Host, "tenantID", tenantID, "clientID", clientID)
 
 	scope := w.azureEnv.ServiceManagementEndpoint
 	// .default needs to be added to the scope
@@ -144,19 +151,27 @@ func (w *workloadIdentityCredentialHelper) getCredentials(ctx context.Context, p
 		scope = fmt.Sprintf("%s/.default", scope)
 	}
 
-	authToken, err := w.exchangeTokenFn(ctx, saToken, clientID, fmt.Sprintf("%s%s/oauth2/token", w.azureEnv.ActiveDirectoryEndpoint, tenantID), scope)
+	authToken, err := w.exchangeTokenFn(
+		ctx,
+		saToken,
+		clientID,
+		fmt.Sprintf("%s%s/oauth2/token", w.azureEnv.ActiveDirectoryEndpoint, tenantID),
+		scope)
 	if err != nil {
 		return nil, err
 	}
 
 	var acrToken string
 	// Get a token scoped for the whole ACR registry
-	acrToken, err = w.fetchACRTokenFn(fmt.Sprintf("https://%s/oauth2/exchange", repoHost.Host), "refresh_token", url.Values{
-		"grant_type":   {"access_token"},
-		"service":      {repoHost.Host},
-		"tenant":       {tenantID},
-		"access_token": {authToken},
-	})
+	acrToken, err = w.fetchACRTokenFn(
+		fmt.Sprintf("https://%s/oauth2/exchange", repoHost.Host),
+		"refresh_token",
+		url.Values{
+			"grant_type":   {"access_token"},
+			"service":      {repoHost.Host},
+			"tenant":       {tenantID},
+			"access_token": {authToken},
+		})
 	if err != nil {
 		return nil, err
 	}
@@ -165,12 +180,15 @@ func (w *workloadIdentityCredentialHelper) getCredentials(ctx context.Context, p
 
 	// This part is not required per se - but if we want to scope down access to pull only access for a specific
 	// repository, as opposed to full access for the whole registry we need to fetch an access token
-	acrToken, err = w.fetchACRTokenFn(fmt.Sprintf("https://%s/oauth2/token", repoHost.Host), "access_token", url.Values{
-		"grant_type":    {"refresh_token"},
-		"service":       {repoHost.Host},
-		"scope":         {fmt.Sprintf("repository:%s:pull", repoPath)},
-		"refresh_token": {acrToken},
-	})
+	acrToken, err = w.fetchACRTokenFn(
+		fmt.Sprintf("https://%s/oauth2/token", repoHost.Host),
+		"access_token",
+		url.Values{
+			"grant_type":    {"refresh_token"},
+			"service":       {repoHost.Host},
+			"scope":         {fmt.Sprintf("repository:%s:pull", repoPath)},
+			"refresh_token": {acrToken},
+		})
 	if err != nil {
 		return nil, err
 	}
@@ -197,9 +215,10 @@ func (w *workloadIdentityCredentialHelper) tokenCacheKey(repoUrl, project string
 
 func exchangeForEntraIDToken(ctx context.Context, token, clientID, oAuthEndpoint, scope string) (string, error) {
 	// exchange token with Azure AccessToken
-	cred := confidential.NewCredFromAssertionCallback(func(ctx context.Context, aro confidential.AssertionRequestOptions) (string, error) {
-		return token, nil
-	})
+	cred := confidential.NewCredFromAssertionCallback(
+		func(_ context.Context, _ confidential.AssertionRequestOptions) (string, error) {
+			return token, nil
+		})
 	cClient, err := confidential.New(oAuthEndpoint, clientID, cred)
 	if err != nil {
 		return "", err
@@ -214,7 +233,10 @@ func exchangeForEntraIDToken(ctx context.Context, token, clientID, oAuthEndpoint
 	return authRes.AccessToken, nil
 }
 
-func (w *workloadIdentityCredentialHelper) fetchSAToken(ctx context.Context, project string, audiences []string) (string, error) {
+func (w *workloadIdentityCredentialHelper) fetchSAToken(
+	ctx context.Context,
+	project string,
+	audiences []string) (string, error) {
 	sa := corev1.ServiceAccount{}
 	err := w.kargoClient.Get(ctx, types.NamespacedName{
 		Name:      viewerRoleName,
@@ -240,7 +262,7 @@ func (w *workloadIdentityCredentialHelper) fetchSAToken(ctx context.Context, pro
 }
 
 func fetchACRToken(endpoint, tokenType string, data url.Values) (string, error) {
-	res, err := http.PostForm(endpoint, data)
+	res, err := http.PostForm(endpoint, data) //nolint
 	if err != nil {
 		return "", err
 	}
@@ -272,8 +294,8 @@ func getAzureEnvironment() (azure.Environment, error) {
 	}
 	req.Header.Set("Metadata", "true")
 
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	c := &http.Client{}
+	resp, err := c.Do(req)
 	if err != nil {
 		return azure.Environment{}, err
 	}
@@ -295,7 +317,7 @@ func getAzureEnvironment() (azure.Environment, error) {
 			ResourceGroupName string `json:"resourceGroupName"`
 		} `json:"compute"`
 	}
-	if err := json.Unmarshal(body, &metadata); err != nil {
+	if err = json.Unmarshal(body, &metadata); err != nil {
 		return azure.Environment{}, err
 	}
 
