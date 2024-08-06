@@ -376,6 +376,11 @@ export class GetPublicConfigResponse extends Message<GetPublicConfigResponse> {
    */
   adminAccountEnabled = false;
 
+  /**
+   * @generated from field: bool skip_auth = 3;
+   */
+  skipAuth = false;
+
   constructor(data?: PartialMessage<GetPublicConfigResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -386,6 +391,7 @@ export class GetPublicConfigResponse extends Message<GetPublicConfigResponse> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "oidc_config", kind: "message", T: OIDCConfig },
     { no: 2, name: "admin_account_enabled", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 3, name: "skip_auth", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetPublicConfigResponse {

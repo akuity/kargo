@@ -19,7 +19,7 @@ type StandardConfig struct {
 
 type ServerConfig struct {
 	StandardConfig
-	LocalMode                   bool
+	LocalMode                   bool // this will never be set from the environment
 	TLSConfig                   *TLSConfig
 	OIDCConfig                  *oidc.Config
 	AdminConfig                 *AdminConfig
