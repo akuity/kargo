@@ -8,6 +8,9 @@ on:
     - main
     - release-*
 
+permissions:
+  contents: read
+
 jobs:
   test-unit:
     runs-on: ubuntu-latest
@@ -60,6 +63,8 @@ jobs:
       run: make lint-ui
 
   lint-go:
+    permissions:
+      checks: write # Used to create checks (linting comments) on PRs
     runs-on: ubuntu-latest
     container:
       image: golang:1.22.5-bookworm
@@ -96,6 +101,8 @@ jobs:
       run: make lint-charts
 
   lint-proto:
+    permissions:
+      checks: write # Used to create checks (linting comments) on PRs
     runs-on: ubuntu-latest
     container:
       image: golang:1.22.5-bookworm
