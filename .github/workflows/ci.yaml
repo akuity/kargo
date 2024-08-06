@@ -9,15 +9,14 @@ on:
     - release-*
 
 jobs:
-
   test-unit:
     runs-on: ubuntu-latest
     container:
       image: golang:1.22.5-bookworm
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
-    - uses: actions/cache@v4
+      uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+    - uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9 # v4.0.2
       with:
         path: /go/pkg/mod
         key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
@@ -30,7 +29,7 @@ jobs:
         grep -v .pb.go coverage.txt | grep -v zz_generated | grep -v service.connect.go > coverage.tmp
         mv coverage.tmp coverage.txt
     - name: Upload coverage reports
-      uses: codecov/codecov-action@v4
+      uses: codecov/codecov-action@e28ff129e5465c2c0dcc6f003fc735cb6ae0c673 # v4.5.0
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
   
@@ -40,19 +39,19 @@ jobs:
       image: node:20.12.2
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
-    - uses: actions/cache@v4
+      uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+    - uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9 # v4.0.2
       with:
         path: ~/.pnpm-store
         key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
         restore-keys: |
           ${{ runner.os }}-pnpm-
     - name: Install pnpm
-      uses: pnpm/action-setup@v4
+      uses: pnpm/action-setup@fe02b34f77f8bc703788d5817da081398fad5dd2 # v4.0.0
       with:
         package_json_file: ui/package.json
     - name: Install nodejs
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@1e60f620b9541d16bece96c5465dc8ee9832be0b # v4.0.3
       with:
         node-version: "22.5.1"
         cache: "pnpm"
@@ -66,7 +65,7 @@ jobs:
       image: golang:1.22.5-bookworm
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
     - name: Install linter
       env:
         GOLANGCI_LINT_VERSION: 1.57.2
@@ -86,31 +85,31 @@ jobs:
     container:
       image: golang:1.22.5-bookworm
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Install linter
-        run: |
-          cd /usr/local/bin
-          curl -sSfL https://get.helm.sh/helm-v3.10.0-linux-amd64.tar.gz \
-          | tar xvz linux-amd64/helm --strip-components=1
-      - name: Run linter
-        run: make lint-charts
+    - name: Checkout code
+      uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+    - name: Install linter
+      run: |
+        cd /usr/local/bin
+        curl -sSfL https://get.helm.sh/helm-v3.10.0-linux-amd64.tar.gz \
+        | tar xvz linux-amd64/helm --strip-components=1
+    - name: Run linter
+      run: make lint-charts
 
   lint-proto:
     runs-on: ubuntu-latest
     container:
       image: golang:1.22.5-bookworm
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Install linter
-        uses: bufbuild/buf-setup-action@v1
-        with:
-          version: "1.20.0"
-      - name: Run linter
-        env:
-          BUF_LINT_ERROR_FORMAT: github-actions
-        run: make lint-proto
+    - name: Checkout code
+      uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+    - name: Install linter
+      uses: bufbuild/buf-setup-action@aceb106d2419c4cff48863df90161d92decb8591 # v1.35.1
+      with:
+        version: "1.20.0"
+    - name: Run linter
+      env:
+        BUF_LINT_ERROR_FORMAT: github-actions
+      run: make lint-proto
 
   check-codegen:
     runs-on: ubuntu-latest
@@ -118,11 +117,11 @@ jobs:
       image: golang:1.22.5-bookworm
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
     - name: Install tools
       run: apt update && apt install unzip
     - name: Install pnpm
-      uses: pnpm/action-setup@v4
+      uses: pnpm/action-setup@fe02b34f77f8bc703788d5817da081398fad5dd2 # v4.0.0
       with:
         package_json_file: ui/package.json
     - name: Install nodejs
@@ -134,18 +133,18 @@ jobs:
     - name: Install nodejs dependencies
       run: pnpm install --dev
       working-directory: ./ui
-    - uses: actions/cache@v4
+    - uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9 # v4.0.2
       with:
         path: /go/pkg/mod
         key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
         restore-keys: |
           ${{ runner.os }}-go-
     - name: Install buf
-      uses: bufbuild/buf-setup-action@v1.29.0-1
+      uses: bufbuild/buf-setup-action@46a2967ea50b8a012e948cb23d2468b84227e1e5 # v1.29.0-1
       with:
         version: 1.26.1
     - name: Install Protoc
-      uses: arduino/setup-protoc@v3
+      uses: arduino/setup-protoc@c65c819552d16ad3c9b72d9dfd5ba5237b9c906b # v3.0.0
       with:
         version: "25.3"
     - name: Install codegen tools
@@ -168,11 +167,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Set up QEMU
-      uses: docker/setup-qemu-action@v3
+      uses: docker/setup-qemu-action@49b3bc8e6bdd4a60e6116a5414239cba5943d3cf # v3.2.0
     - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
+      uses: docker/setup-buildx-action@988b5a0280414f521da01fcc63a27aeeb4b104db # v3.6.1
     - name: Build
-      uses: docker/build-push-action@v6
+      uses: docker/build-push-action@5176d81f87c23d6fc96624dfdbcd9f3830bbe445 # v6.5.0
       with:
         platforms: linux/amd64,linux/arm64
         push: false
@@ -186,8 +185,8 @@ jobs:
       image: golang:1.22.5-bookworm
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
-    - uses: actions/cache@v4
+      uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+    - uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9 # v4.0.2
       with:
         path: /go/pkg/mod
         key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
