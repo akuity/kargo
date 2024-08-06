@@ -56,7 +56,7 @@ func (a *appCredentialHelper) getCredentials(
 	_ string,
 	secret *corev1.Secret,
 ) (*credentials.Credentials, error) {
-	if credType != credentials.TypeGit || secret == nil {
+	if (credType != credentials.TypeGit && credType != credentials.TypeImage) || secret == nil {
 		// This helper can't handle this
 		return nil, nil
 	}

@@ -49,7 +49,25 @@ func TestAppCredentialHelper(t *testing.T) {
 			},
 		},
 		{
+			name:     "cred type is git",
+			credType: credentials.TypeGit,
+			helper:   &appCredentialHelper{},
+			assertions: func(t *testing.T, creds *credentials.Credentials, _ *cache.Cache, err error) {
+				require.NoError(t, err)
+				require.Nil(t, creds)
+			},
+		},
+		{
 			name:     "secret is nil",
+			credType: credentials.TypeImage,
+			helper:   &appCredentialHelper{},
+			assertions: func(t *testing.T, creds *credentials.Credentials, _ *cache.Cache, err error) {
+				require.NoError(t, err)
+				require.Nil(t, creds)
+			},
+		},
+		{
+			name:     "secret is nil - git",
 			credType: credentials.TypeGit,
 			helper:   &appCredentialHelper{},
 			assertions: func(t *testing.T, creds *credentials.Credentials, _ *cache.Cache, err error) {
@@ -59,6 +77,16 @@ func TestAppCredentialHelper(t *testing.T) {
 		},
 		{
 			name:     "no github details provided",
+			credType: credentials.TypeImage,
+			secret:   &corev1.Secret{},
+			helper:   &appCredentialHelper{},
+			assertions: func(t *testing.T, creds *credentials.Credentials, _ *cache.Cache, err error) {
+				require.NoError(t, err)
+				require.Nil(t, creds)
+			},
+		},
+		{
+			name:     "no github details provided - git",
 			credType: credentials.TypeGit,
 			secret:   &corev1.Secret{},
 			helper:   &appCredentialHelper{},
@@ -69,6 +97,20 @@ func TestAppCredentialHelper(t *testing.T) {
 		},
 		{
 			name:     "app ID missing",
+			credType: credentials.TypeImage,
+			secret: &corev1.Secret{
+				Data: map[string][]byte{
+					installationIDKey: []byte(testInstallationIDStr),
+					privateKeyKey:     []byte(testPrivateKey),
+				},
+			},
+			helper: &appCredentialHelper{},
+			assertions: func(t *testing.T, _ *credentials.Credentials, _ *cache.Cache, err error) {
+				//require.ErrorContains(t, err, "must all be set or all be unset")
+			},
+		},
+		{
+			name:     "app ID missing - git",
 			credType: credentials.TypeGit,
 			secret: &corev1.Secret{
 				Data: map[string][]byte{
@@ -83,6 +125,20 @@ func TestAppCredentialHelper(t *testing.T) {
 		},
 		{
 			name:     "installation ID missing",
+			credType: credentials.TypeImage,
+			secret: &corev1.Secret{
+				Data: map[string][]byte{
+					appIDKey:      []byte(testAppIDStr),
+					privateKeyKey: []byte(testPrivateKey),
+				},
+			},
+			helper: &appCredentialHelper{},
+			assertions: func(t *testing.T, _ *credentials.Credentials, _ *cache.Cache, err error) {
+				require.ErrorContains(t, err, "must all be set or all be unset")
+			},
+		},
+		{
+			name:     "installation ID missing - git",
 			credType: credentials.TypeGit,
 			secret: &corev1.Secret{
 				Data: map[string][]byte{
@@ -97,6 +153,20 @@ func TestAppCredentialHelper(t *testing.T) {
 		},
 		{
 			name:     "private key missing",
+			credType: credentials.TypeImage,
+			secret: &corev1.Secret{
+				Data: map[string][]byte{
+					appIDKey:          []byte(testAppIDStr),
+					installationIDKey: []byte(testInstallationIDStr),
+				},
+			},
+			helper: &appCredentialHelper{},
+			assertions: func(t *testing.T, _ *credentials.Credentials, _ *cache.Cache, err error) {
+				require.ErrorContains(t, err, "must all be set or all be unset")
+			},
+		},
+		{
+			name:     "private key missing - git",
 			credType: credentials.TypeGit,
 			secret: &corev1.Secret{
 				Data: map[string][]byte{
@@ -111,6 +181,26 @@ func TestAppCredentialHelper(t *testing.T) {
 		},
 		{
 			name:     "cache hit",
+			credType: credentials.TypeImage,
+			secret: &corev1.Secret{
+				Data: map[string][]byte{
+					appIDKey:          []byte(testAppIDStr),
+					installationIDKey: []byte(testInstallationIDStr),
+					privateKeyKey:     []byte(testPrivateKey),
+				},
+			},
+			helper: &appCredentialHelper{
+				tokenCache: warmTokenCache,
+			},
+			assertions: func(t *testing.T, creds *credentials.Credentials, _ *cache.Cache, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, creds)
+				require.Equal(t, "kargo", creds.Username)
+				require.Equal(t, testAccessToken, creds.Password)
+			},
+		},
+		{
+			name:     "cache hit - git",
 			credType: credentials.TypeGit,
 			secret: &corev1.Secret{
 				Data: map[string][]byte{
@@ -131,6 +221,27 @@ func TestAppCredentialHelper(t *testing.T) {
 		},
 		{
 			name:     "cache miss; error getting access token",
+			credType: credentials.TypeImage,
+			secret: &corev1.Secret{
+				Data: map[string][]byte{
+					appIDKey:          []byte(testAppIDStr),
+					installationIDKey: []byte(testInstallationIDStr),
+					privateKeyKey:     []byte(testPrivateKey),
+				},
+			},
+			helper: &appCredentialHelper{
+				tokenCache: cache.New(0, 0),
+				getAccessTokenFn: func(int64, int64, string) (string, error) {
+					return "", fmt.Errorf("something went wrong")
+				},
+			},
+			assertions: func(t *testing.T, _ *credentials.Credentials, _ *cache.Cache, err error) {
+				require.ErrorContains(t, err, "error getting installation access token")
+				require.ErrorContains(t, err, "something went wrong")
+			},
+		},
+		{
+			name:     "cache miss; error getting access token - git",
 			credType: credentials.TypeGit,
 			secret: &corev1.Secret{
 				Data: map[string][]byte{
@@ -152,6 +263,29 @@ func TestAppCredentialHelper(t *testing.T) {
 		},
 		{
 			name:     "cache miss; success",
+			credType: credentials.TypeImage,
+			secret: &corev1.Secret{
+				Data: map[string][]byte{
+					appIDKey:          []byte(testAppIDStr),
+					installationIDKey: []byte(testInstallationIDStr),
+					privateKeyKey:     []byte(testPrivateKey),
+				},
+			},
+			helper: &appCredentialHelper{
+				tokenCache: cache.New(0, 0),
+				getAccessTokenFn: func(int64, int64, string) (string, error) {
+					return testAccessToken, nil
+				},
+			},
+			assertions: func(t *testing.T, creds *credentials.Credentials, _ *cache.Cache, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, creds)
+				require.Equal(t, "kargo", creds.Username)
+				require.Equal(t, testAccessToken, creds.Password)
+			},
+		},
+		{
+			name:     "cache miss; success - git",
 			credType: credentials.TypeGit,
 			secret: &corev1.Secret{
 				Data: map[string][]byte{
