@@ -104,14 +104,11 @@ export const StageNode = ({
               </Tooltip>
             )}
             {!stage?.status?.currentPromotion && stage.status?.lastPromotion && (
-              <div className='pb-1'>
-                <PromotionStatusIcon
-                  placement='top'
-                  status={stage.status?.lastPromotion.status}
-                  color='white'
-                  size='1x'
-                />
-              </div>
+              <PromotionStatusIcon
+                placement='top'
+                status={stage.status?.lastPromotion.status}
+                color='white'
+              />
             )}
             {stage.status?.currentPromotion ? (
               <Tooltip
@@ -125,11 +122,7 @@ export const StageNode = ({
               </Tooltip>
             ) : (
               stage.status?.health && (
-                <HealthStatusIcon
-                  health={stage.status?.health}
-                  style={{ fontSize: '14px' }}
-                  hideColor={true}
-                />
+                <HealthStatusIcon health={stage.status?.health} hideColor={true} />
               )
             )}
           </div>
