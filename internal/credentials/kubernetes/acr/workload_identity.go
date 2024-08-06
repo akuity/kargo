@@ -36,12 +36,16 @@ const (
 type workloadIdentityCredentialHelper struct {
 	tokenCache *cache.Cache
 
-	// The following behaviors are overridable for testing purposes:
+	tenantID    string
+	clientID    string
+	kargoClient client.Client
+	azureEnv    *azure.Environment
 
-	getAccessTokenFn func(context.Context, string) (string, error)
-	tenantID         string
-	clientID         string
-	kargoClient      client.Client
+	// The following behaviors are overridable for testing purposes:
+	getProjectFn    func(ctx context.Context, project string) (*v1alpha1.Project, error)
+	exchangeTokenFn func(ctx context.Context, token, clientID, oAuthEndpoint, scope string) (string, error)
+	fetchSAFn       func(ctx context.Context, project string, audiences []string) (string, error)
+	fetchACRTokenFn func(endpoint, tokenType string, data url.Values) (string, error)
 }
 
 // NewWorkloadIdentityCredentialHelper returns an implementation
@@ -50,33 +54,39 @@ func NewWorkloadIdentityCredentialHelper(ctx context.Context, kargoClient client
 	logger := logging.LoggerFromContext(ctx)
 	tenantID := os.Getenv("AZURE_TENANT_ID")
 	clientID := os.Getenv("AZURE_CLIENT_ID")
-	tokenFilePath := os.Getenv("AZURE_FEDERATED_TOKEN_FILE")
 
-	// clientId is not set by default, so just check for tenant id and token file path
-	if tenantID == "" || tokenFilePath == "" {
-		logger.Info("Azure environment variables not set; Azure Workload Identity integration is disabled")
+	env, err := getAzureEnvironment()
+	if err != nil {
+		logger.Info("Azure environment not set; Azure Workload Identity integration is disabled")
 		return nil
 	}
 	logger.Info("Azure Workload Identity integration is enabled")
 
-	s := &workloadIdentityCredentialHelper{
+	w := &workloadIdentityCredentialHelper{
 		tenantID:    tenantID,
 		clientID:    clientID,
 		kargoClient: kargoClient,
+		azureEnv:    &env,
 		tokenCache: cache.New(
 			// Access tokens live for three hours. We'll hang on to them for 40 minutes.
 			40*time.Minute, // Default ttl for each entry
 			time.Hour,      // Cleanup interval
 		),
 	}
-	return s.getCredentials
+
+	w.fetchSAFn = w.fetchSAToken
+	w.getProjectFn = w.getProject
+	w.fetchACRTokenFn = fetchACRToken
+	w.exchangeTokenFn = exchangeForEntraIDToken
+
+	return w.getCredentials
 }
 
 func (w *workloadIdentityCredentialHelper) getCredentials(ctx context.Context, project string, credType credentials.Type, repoURL string, _ *corev1.Secret) (*credentials.Credentials, error) {
 	logger := logging.LoggerFromContext(ctx)
 
 	// Workload Identity isn't set up for this controller
-	if (credType != credentials.TypeImage && credType != credentials.TypeHelm) || w.tenantID == "" {
+	if (credType != credentials.TypeImage && credType != credentials.TypeHelm) || w.azureEnv == nil {
 		// This helper can't handle this
 		return nil, nil
 	}
@@ -85,6 +95,8 @@ func (w *workloadIdentityCredentialHelper) getCredentials(ctx context.Context, p
 		// Only OCI Helm repos are supported in ACR
 		return nil, nil
 	}
+
+	// TODO: add regex to verify that the URL is an Azure CR URL.
 
 	cacheKey := w.tokenCacheKey(repoURL, project)
 
@@ -95,7 +107,7 @@ func (w *workloadIdentityCredentialHelper) getCredentials(ctx context.Context, p
 		}, nil
 	}
 
-	proj, err := v1alpha1.GetProject(ctx, w.kargoClient, project)
+	proj, err := w.getProjectFn(ctx, project)
 	if err != nil {
 		return nil, err
 	}
@@ -109,11 +121,6 @@ func (w *workloadIdentityCredentialHelper) getCredentials(ctx context.Context, p
 		return nil, fmt.Errorf("project is missing annotation: %s", AnnotationTenantID)
 	}
 
-	env, err := getAzureEnvironment()
-	if err != nil {
-		return nil, err
-	}
-
 	repoHost, err := url.Parse(repoURL)
 	if err != nil {
 		return nil, err
@@ -124,21 +131,32 @@ func (w *workloadIdentityCredentialHelper) getCredentials(ctx context.Context, p
 	logger.Info("Retrieving service account from namespace", "project", project)
 
 	// Use the TokenRequest API to get a temporary token for the `kargo-viewer` serviceaccount for the given project namespace
-	saToken, err := w.fetchSAToken(ctx, project, audiences)
+	saToken, err := w.fetchSAFn(ctx, project, audiences)
 	if err != nil {
 		return nil, err
 	}
 
 	logger.Info(fmt.Sprintf("Getting Entra OAuth token for %s, with tenantId %s and clientId %s", repoHost.Host, tenantID, clientID))
 
-	authToken, err := exchangeForEntraIDToken(ctx, saToken, clientID, tenantID, env.ActiveDirectoryEndpoint, env.ServiceManagementEndpoint)
+	scope := w.azureEnv.ServiceManagementEndpoint
+	// .default needs to be added to the scope
+	if !strings.Contains(scope, ".default") {
+		scope = fmt.Sprintf("%s/.default", scope)
+	}
+
+	authToken, err := w.exchangeTokenFn(ctx, saToken, clientID, fmt.Sprintf("%s%s/oauth2/token", w.azureEnv.ActiveDirectoryEndpoint, tenantID), scope)
 	if err != nil {
 		return nil, err
 	}
 
 	var acrToken string
 	// Get a token scoped for the whole ACR registry
-	acrToken, err = fetchACRRefreshToken(authToken, tenantID, repoHost.Host)
+	acrToken, err = w.fetchACRTokenFn(fmt.Sprintf("https://%s/oauth2/exchange", repoHost.Host), "refresh_token", url.Values{
+		"grant_type":   {"access_token"},
+		"service":      {repoHost.Host},
+		"tenant":       {tenantID},
+		"access_token": {authToken},
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -147,7 +165,12 @@ func (w *workloadIdentityCredentialHelper) getCredentials(ctx context.Context, p
 
 	// This part is not required per se - but if we want to scope down access to pull only access for a specific
 	// repository, as opposed to full access for the whole registry we need to fetch an access token
-	acrToken, err = fetchACRAccessToken(acrToken, repoHost.Host, fmt.Sprintf("repository:%s:pull", repoPath))
+	acrToken, err = w.fetchACRTokenFn(fmt.Sprintf("https://%s/oauth2/token", repoHost.Host), "access_token", url.Values{
+		"grant_type":    {"refresh_token"},
+		"service":       {repoHost.Host},
+		"scope":         {fmt.Sprintf("repository:%s:pull", repoPath)},
+		"refresh_token": {acrToken},
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -159,6 +182,10 @@ func (w *workloadIdentityCredentialHelper) getCredentials(ctx context.Context, p
 	}, nil
 }
 
+func (w *workloadIdentityCredentialHelper) getProject(ctx context.Context, project string) (*v1alpha1.Project, error) {
+	return v1alpha1.GetProject(ctx, w.kargoClient, project)
+}
+
 func (w *workloadIdentityCredentialHelper) tokenCacheKey(repoUrl, project string) string {
 	return fmt.Sprintf(
 		"%x",
@@ -168,19 +195,14 @@ func (w *workloadIdentityCredentialHelper) tokenCacheKey(repoUrl, project string
 	)
 }
 
-func exchangeForEntraIDToken(ctx context.Context, token, clientID, tenantID, aadEndpoint, kvResource string) (string, error) {
+func exchangeForEntraIDToken(ctx context.Context, token, clientID, oAuthEndpoint, scope string) (string, error) {
 	// exchange token with Azure AccessToken
 	cred := confidential.NewCredFromAssertionCallback(func(ctx context.Context, aro confidential.AssertionRequestOptions) (string, error) {
 		return token, nil
 	})
-	cClient, err := confidential.New(fmt.Sprintf("%s%s/oauth2/token", aadEndpoint, tenantID), clientID, cred)
+	cClient, err := confidential.New(oAuthEndpoint, clientID, cred)
 	if err != nil {
 		return "", err
-	}
-	scope := kvResource
-	// .default needs to be added to the scope
-	if !strings.Contains(kvResource, ".default") {
-		scope = fmt.Sprintf("%s/.default", kvResource)
 	}
 	authRes, err := cClient.AcquireTokenByCredential(ctx, []string{
 		scope,
@@ -217,20 +239,14 @@ func (w *workloadIdentityCredentialHelper) fetchSAToken(ctx context.Context, pro
 	return tokenReq.Status.Token, nil
 }
 
-func fetchACRAccessToken(acrRefreshToken, registryURL, scope string) (string, error) {
-	formData := url.Values{
-		"grant_type":    {"refresh_token"},
-		"service":       {registryURL},
-		"scope":         {scope},
-		"refresh_token": {acrRefreshToken},
-	}
-	res, err := http.PostForm(fmt.Sprintf("https://%s/oauth2/token", registryURL), formData)
+func fetchACRToken(endpoint, tokenType string, data url.Values) (string, error) {
+	res, err := http.PostForm(endpoint, data)
 	if err != nil {
 		return "", err
 	}
 	defer res.Body.Close()
 	if res.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("could not generate access token, unexpected status code: %d", res.StatusCode)
+		return "", fmt.Errorf("could not generate token of type %s, unexpected status code: %d", tokenType, res.StatusCode)
 	}
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
@@ -241,44 +257,11 @@ func fetchACRAccessToken(acrRefreshToken, registryURL, scope string) (string, er
 	if err != nil {
 		return "", err
 	}
-	accessToken, ok := payload["access_token"]
+	accessToken, ok := payload[tokenType]
 	if !ok {
 		return "", fmt.Errorf("unable to get token")
 	}
 	return accessToken, nil
-}
-
-func fetchACRRefreshToken(aadAccessToken, tenantID, registryURL string) (string, error) {
-	// https://github.com/Azure/acr/blob/main/docs/AAD-OAuth.md#overview
-	// https://docs.microsoft.com/en-us/azure/container-registry/container-registry-authentication?tabs=azure-cli
-	formData := url.Values{
-		"grant_type":   {"access_token"},
-		"service":      {registryURL},
-		"tenant":       {tenantID},
-		"access_token": {aadAccessToken},
-	}
-	res, err := http.PostForm(fmt.Sprintf("https://%s/oauth2/exchange", registryURL), formData)
-	if err != nil {
-		return "", err
-	}
-	defer res.Body.Close()
-	if res.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("could not generate refresh token, unexpected status code %d, expected %d", res.StatusCode, http.StatusOK)
-	}
-	body, err := io.ReadAll(res.Body)
-	if err != nil {
-		return "", err
-	}
-	var payload map[string]string
-	err = json.Unmarshal(body, &payload)
-	if err != nil {
-		return "", err
-	}
-	refreshToken, ok := payload["refresh_token"]
-	if !ok {
-		return "", fmt.Errorf("unable to get token")
-	}
-	return refreshToken, nil
 }
 
 // Use the Azure metadata API to determine the correct OAuth endpoints for the given cluster.
