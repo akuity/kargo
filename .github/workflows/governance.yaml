@@ -1,4 +1,6 @@
 # Documentation: https://github.com/BirthdayResearch/oss-governance-bot
+name: Governance
+
 on:
   pull_request_target:
     types: [ synchronize, opened, labeled, unlabeled ]
@@ -9,6 +11,10 @@ on:
 
 jobs:
   governance:
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
     name: Governance
     runs-on: ubuntu-latest
     steps:
