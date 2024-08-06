@@ -12,6 +12,6 @@ jobs:
     name: Governance
     runs-on: ubuntu-latest
     steps:
-      - uses: BirthdayResearch/oss-governance-bot@v4
-        with:
-          config-path: .github/governance.yml
+    - uses: BirthdayResearch/oss-governance-bot@3abd2d1fd2376ba9990fbc795e7a4c54254e9c61 # v4.0.0
+      with:
+        config-path: .github/governance.yml
