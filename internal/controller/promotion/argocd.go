@@ -49,6 +49,7 @@ type argoCDMechanism struct {
 		*argocd.ApplicationSource,
 		argocd.ApplicationSources,
 	) (argocd.OperationPhase, bool, error)
+	hardRefreshApplicationFn   func(context.Context, *argocd.Application) error
 	updateApplicationSourcesFn func(
 		context.Context,
 		*argocd.Application,
@@ -86,6 +87,7 @@ func newArgoCDMechanism(kargoClient, argocdClient client.Client) Mechanism {
 	}
 	a.buildDesiredSourcesFn = a.buildDesiredSources
 	a.mustPerformUpdateFn = a.mustPerformUpdate
+	a.hardRefreshApplicationFn = a.hardRefreshApplication
 	a.updateApplicationSourcesFn = a.updateApplicationSources
 	a.getAuthorizedApplicationFn = a.getAuthorizedApplication
 	a.applyArgoCDSourceUpdateFn = a.applyArgoCDSourceUpdate
@@ -145,6 +147,15 @@ func (a *argoCDMechanism) Promote(
 		)
 		if err != nil {
 			return nil, newFreight, err
+		}
+
+		// If we have no desired source(s), we only need to perform a hard refresh.
+		if desiredSource == nil && len(desiredSources) == 0 {
+			if err = a.hardRefreshApplicationFn(ctx, app); err != nil {
+				return nil, newFreight, err
+			}
+			updateResults = append(updateResults, argocd.OperationSucceeded)
+			continue
 		}
 
 		// Check if the update needs to be performed and retrieve its phase.
@@ -335,6 +346,32 @@ func (a *argoCDMechanism) mustPerformUpdate(
 	return status.Phase, false, nil
 }
 
+func (a *argoCDMechanism) hardRefreshApplication(
+	ctx context.Context,
+	app *argocd.Application,
+) error {
+	// Create a patch for the Application.
+	patch := client.MergeFrom(app.DeepCopy())
+
+	// Initiate a "hard" refresh.
+	if app.ObjectMeta.Annotations == nil {
+		app.ObjectMeta.Annotations = make(map[string]string, 1)
+	}
+	app.ObjectMeta.Annotations[argocd.AnnotationKeyRefresh] = string(argocd.RefreshTypeHard)
+
+	// Patch the Application with the changes from above.
+	if err := a.argoCDAppPatchFn(
+		ctx,
+		app,
+		patch,
+	); err != nil {
+		return fmt.Errorf("error patching Argo CD Application %q: %w", app.Name, err)
+	}
+	logging.LoggerFromContext(ctx).Debug("refreshed Argo CD Application", "app", app.Name)
+
+	return nil
+}
+
 func (a *argoCDMechanism) updateApplicationSources(
 	ctx context.Context,
 	app *argocd.Application,
@@ -345,6 +382,9 @@ func (a *argoCDMechanism) updateApplicationSources(
 	patch := client.MergeFrom(app.DeepCopy())
 
 	// Initiate a "hard" refresh.
+	if app.ObjectMeta.Annotations == nil {
+		app.ObjectMeta.Annotations = make(map[string]string, 1)
+	}
 	app.ObjectMeta.Annotations[argocd.AnnotationKeyRefresh] = string(argocd.RefreshTypeHard)
 
 	// Update the desired source(s) in the Argo CD Application.
