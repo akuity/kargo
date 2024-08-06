@@ -40,8 +40,8 @@ func TestAppCredentialHelper(t *testing.T) {
 		assertions func(*testing.T, *credentials.Credentials, *cache.Cache, error)
 	}{
 		{
-			name:     "cred type is not git",
-			credType: credentials.TypeImage,
+			name:     "cred type is not supported",
+			credType: credentials.TypeHelm,
 			helper:   &appCredentialHelper{},
 			assertions: func(t *testing.T, creds *credentials.Credentials, _ *cache.Cache, err error) {
 				require.NoError(t, err)
@@ -58,7 +58,7 @@ func TestAppCredentialHelper(t *testing.T) {
 			},
 		},
 		{
-			name:     "secret is nil",
+			name:     "cred type is image",
 			credType: credentials.TypeImage,
 			helper:   &appCredentialHelper{},
 			assertions: func(t *testing.T, creds *credentials.Credentials, _ *cache.Cache, err error) {
@@ -67,7 +67,7 @@ func TestAppCredentialHelper(t *testing.T) {
 			},
 		},
 		{
-			name:     "secret is nil - git",
+			name:     "secret is nil",
 			credType: credentials.TypeGit,
 			helper:   &appCredentialHelper{},
 			assertions: func(t *testing.T, creds *credentials.Credentials, _ *cache.Cache, err error) {
@@ -77,16 +77,6 @@ func TestAppCredentialHelper(t *testing.T) {
 		},
 		{
 			name:     "no github details provided",
-			credType: credentials.TypeImage,
-			secret:   &corev1.Secret{},
-			helper:   &appCredentialHelper{},
-			assertions: func(t *testing.T, creds *credentials.Credentials, _ *cache.Cache, err error) {
-				require.NoError(t, err)
-				require.Nil(t, creds)
-			},
-		},
-		{
-			name:     "no github details provided - git",
 			credType: credentials.TypeGit,
 			secret:   &corev1.Secret{},
 			helper:   &appCredentialHelper{},
@@ -97,20 +87,6 @@ func TestAppCredentialHelper(t *testing.T) {
 		},
 		{
 			name:     "app ID missing",
-			credType: credentials.TypeImage,
-			secret: &corev1.Secret{
-				Data: map[string][]byte{
-					installationIDKey: []byte(testInstallationIDStr),
-					privateKeyKey:     []byte(testPrivateKey),
-				},
-			},
-			helper: &appCredentialHelper{},
-			assertions: func(t *testing.T, _ *credentials.Credentials, _ *cache.Cache, err error) {
-				//require.ErrorContains(t, err, "must all be set or all be unset")
-			},
-		},
-		{
-			name:     "app ID missing - git",
 			credType: credentials.TypeGit,
 			secret: &corev1.Secret{
 				Data: map[string][]byte{
@@ -125,20 +101,6 @@ func TestAppCredentialHelper(t *testing.T) {
 		},
 		{
 			name:     "installation ID missing",
-			credType: credentials.TypeImage,
-			secret: &corev1.Secret{
-				Data: map[string][]byte{
-					appIDKey:      []byte(testAppIDStr),
-					privateKeyKey: []byte(testPrivateKey),
-				},
-			},
-			helper: &appCredentialHelper{},
-			assertions: func(t *testing.T, _ *credentials.Credentials, _ *cache.Cache, err error) {
-				require.ErrorContains(t, err, "must all be set or all be unset")
-			},
-		},
-		{
-			name:     "installation ID missing - git",
 			credType: credentials.TypeGit,
 			secret: &corev1.Secret{
 				Data: map[string][]byte{
@@ -153,20 +115,6 @@ func TestAppCredentialHelper(t *testing.T) {
 		},
 		{
 			name:     "private key missing",
-			credType: credentials.TypeImage,
-			secret: &corev1.Secret{
-				Data: map[string][]byte{
-					appIDKey:          []byte(testAppIDStr),
-					installationIDKey: []byte(testInstallationIDStr),
-				},
-			},
-			helper: &appCredentialHelper{},
-			assertions: func(t *testing.T, _ *credentials.Credentials, _ *cache.Cache, err error) {
-				require.ErrorContains(t, err, "must all be set or all be unset")
-			},
-		},
-		{
-			name:     "private key missing - git",
 			credType: credentials.TypeGit,
 			secret: &corev1.Secret{
 				Data: map[string][]byte{
@@ -181,7 +129,7 @@ func TestAppCredentialHelper(t *testing.T) {
 		},
 		{
 			name:     "cache hit",
-			credType: credentials.TypeImage,
+			credType: credentials.TypeGit,
 			secret: &corev1.Secret{
 				Data: map[string][]byte{
 					appIDKey:          []byte(testAppIDStr),
@@ -200,8 +148,8 @@ func TestAppCredentialHelper(t *testing.T) {
 			},
 		},
 		{
-			name:     "cache hit - git",
-			credType: credentials.TypeGit,
+			name:     "cache hit - image",
+			credType: credentials.TypeImage,
 			secret: &corev1.Secret{
 				Data: map[string][]byte{
 					appIDKey:          []byte(testAppIDStr),
@@ -221,7 +169,7 @@ func TestAppCredentialHelper(t *testing.T) {
 		},
 		{
 			name:     "cache miss; error getting access token",
-			credType: credentials.TypeImage,
+			credType: credentials.TypeGit,
 			secret: &corev1.Secret{
 				Data: map[string][]byte{
 					appIDKey:          []byte(testAppIDStr),
@@ -241,8 +189,8 @@ func TestAppCredentialHelper(t *testing.T) {
 			},
 		},
 		{
-			name:     "cache miss; error getting access token - git",
-			credType: credentials.TypeGit,
+			name:     "cache miss; error getting access token - image",
+			credType: credentials.TypeImage,
 			secret: &corev1.Secret{
 				Data: map[string][]byte{
 					appIDKey:          []byte(testAppIDStr),
@@ -263,7 +211,7 @@ func TestAppCredentialHelper(t *testing.T) {
 		},
 		{
 			name:     "cache miss; success",
-			credType: credentials.TypeImage,
+			credType: credentials.TypeGit,
 			secret: &corev1.Secret{
 				Data: map[string][]byte{
 					appIDKey:          []byte(testAppIDStr),
@@ -285,8 +233,8 @@ func TestAppCredentialHelper(t *testing.T) {
 			},
 		},
 		{
-			name:     "cache miss; success - git",
-			credType: credentials.TypeGit,
+			name:     "cache miss; success - image",
+			credType: credentials.TypeImage,
 			secret: &corev1.Secret{
 				Data: map[string][]byte{
 					appIDKey:          []byte(testAppIDStr),
