@@ -21,7 +21,7 @@ import { IndexCache } from './index-cache';
 const initializeNodes = (
   warehouses: Warehouse[],
   stages: Stage[],
-  hideSubscriptions: boolean,
+  hideSubscriptions: { [key: string]: boolean },
   project?: string
 ): [AnyNodeType[], ColorMap] => {
   const warehouseMap = {} as { [key: string]: Warehouse };
@@ -78,14 +78,14 @@ const initializeNodes = (
     return n;
   });
 
-  if (!hideSubscriptions) {
-    warehouses.forEach((w) => {
-      // create subscription nodes
-      w?.spec?.subscriptions?.forEach((sub) => {
+  warehouses.forEach((w) => {
+    // create subscription nodes
+    w?.spec?.subscriptions?.forEach((sub) => {
+      if (w.metadata?.name && !hideSubscriptions[w.metadata.name]) {
         nodes.push(newSubscriptionNode(sub, w.metadata?.name || ''));
-      });
+      }
     });
-  }
+  });
 
   const warehouseColorMap = getColors(project || '', warehouses, 'warehouses');
 
@@ -97,7 +97,7 @@ export const usePipelineGraph = (
   project: string | undefined,
   stages: Stage[],
   warehouses: Warehouse[],
-  hideSubscriptions: boolean
+  hideSubscriptions: { [key: string]: boolean }
 ): [DagreNode[], ConnectorsType[][], BoxType, Stage[], ColorMap, ColorMap] => {
   return useMemo(() => {
     if (!stages || !warehouses || !project) {
