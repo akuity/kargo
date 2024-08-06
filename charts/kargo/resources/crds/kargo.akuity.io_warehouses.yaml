@@ -612,14 +612,6 @@ spec:
                   annotation that was handled by the controller. This field can be used to
                   determine whether the request to refresh the resource has been handled.
                 type: string
-              message:
-                description: |-
-                  Message describes any errors that are preventing the Warehouse controller
-                  from polling repositories to discover new Freight.
-
-
-                  Deprecated: Use Conditions instead.
-                type: string
               observedGeneration:
                 description: |-
                   ObservedGeneration represents the .metadata.generation that this Warehouse

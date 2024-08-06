@@ -4947,16 +4947,6 @@ export class WarehouseStatus extends Message<WarehouseStatus> {
   lastHandledRefresh?: string;
 
   /**
-   * Message describes any errors that are preventing the Warehouse controller
-   * from polling repositories to discover new Freight.
-   *
-   * Deprecated: Use Conditions instead.
-   *
-   * @generated from field: optional string message = 3;
-   */
-  message?: string;
-
-  /**
    * ObservedGeneration represents the .metadata.generation that this Warehouse
    * was reconciled against.
    *
@@ -4989,7 +4979,6 @@ export class WarehouseStatus extends Message<WarehouseStatus> {
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 9, name: "conditions", kind: "message", T: Condition, repeated: true },
     { no: 6, name: "lastHandledRefresh", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 3, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 4, name: "observedGeneration", kind: "scalar", T: 3 /* ScalarType.INT64 */, opt: true },
     { no: 8, name: "lastFreightID", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 7, name: "discoveredArtifacts", kind: "message", T: DiscoveredArtifacts, opt: true },
