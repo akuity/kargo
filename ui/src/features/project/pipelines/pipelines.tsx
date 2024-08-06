@@ -29,7 +29,9 @@ const FreightTimeline = lazy(() => import('@ui/features/freight-timeline/freight
 const StageDetails = lazy(() => import('@ui/features/stage/stage-details'));
 import { SuspenseSpin } from '@ui/features/common/suspense-spin';
 import { getCurrentFreight } from '@ui/features/common/utils';
-import { FreightTimelineHeader } from '@ui/features/freight-timeline/freight-timeline-header';
+const FreightTimelineHeader = lazy(
+  () => import('@ui/features/freight-timeline/freight-timeline-header')
+);
 import { FreightTimelineWrapper } from '@ui/features/freight-timeline/freight-timeline-wrapper';
 import { clearColors } from '@ui/features/stage/utils';
 import {
@@ -50,7 +52,7 @@ import { Images } from './images';
 import { RepoNode, RepoNodeDimensions } from './nodes/repo-node';
 import { Nodule, StageNode } from './nodes/stage-node';
 import styles from './project-details.module.less';
-import { FreightTimelineAction, NodeType } from './types';
+import { CollapseMode, FreightTimelineAction, NodeType } from './types';
 import { LINE_THICKNESS } from './utils/graph';
 import { isPromoting, usePipelineState } from './utils/state';
 import { usePipelineGraph } from './utils/use-pipeline-graph';
@@ -115,7 +117,9 @@ export const Pipelines = ({ project }: { project: Project }) => {
   );
 
   const [selectedWarehouse, setSelectedWarehouse] = React.useState('');
-  const [freightTimelineCollapsed, setFreightTimelineCollapsed] = React.useState(false);
+  const [freightTimelineCollapsed, setFreightTimelineCollapsed] = React.useState(
+    CollapseMode.Expanded
+  );
 
   const [hideImages, setHideImages] = useLocalStorage(`${name}-hideImages`, false);
 
