@@ -5,8 +5,11 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
 	argocdapi "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
 )
 
@@ -124,6 +127,15 @@ func TestGetDesiredRevisions(t *testing.T) {
 						},
 					},
 				},
+				Status: argocdapi.ApplicationStatus{
+					Sync: argocd.SyncStatus{
+						Status:    argocd.SyncStatusCodeSynced,
+						Revisions: []string{"chart-revision", "fake-revision"},
+					},
+					OperationState: &argocd.OperationState{
+						FinishedAt: ptr.To(metav1.Now()),
+					},
+				},
 			},
 			freightHistory: kargoapi.FreightHistory{
 				&kargoapi.FreightCollection{
@@ -140,7 +152,48 @@ func TestGetDesiredRevisions(t *testing.T) {
 					},
 				},
 			},
-			want: []string{"fake-revision"},
+			want: []string{"", "fake-revision"},
+		},
+		{
+			name: "git multisource with chart without synced revisions",
+			app: &argocdapi.Application{
+				Spec: argocdapi.ApplicationSpec{
+					Sources: []argocdapi.ApplicationSource{
+						{
+							RepoURL: "https://example.com",
+							Chart:   "fake-chart",
+						},
+						{
+							RepoURL:        "https://github.com/universe/42",
+							TargetRevision: "fake-revision",
+						},
+					},
+				},
+				Status: argocdapi.ApplicationStatus{
+					Sync: argocd.SyncStatus{
+						Status: argocd.SyncStatusCodeSynced,
+					},
+					OperationState: &argocd.OperationState{
+						FinishedAt: ptr.To(metav1.Now()),
+					},
+				},
+			},
+			freightHistory: kargoapi.FreightHistory{
+				&kargoapi.FreightCollection{
+					Freight: map[string]kargoapi.FreightReference{
+						testOrigin.String(): {
+							Origin: testOrigin,
+							Commits: []kargoapi.GitCommit{
+								{
+									RepoURL: "https://github.com/universe/42",
+									ID:      "fake-revision",
+								},
+							},
+						},
+					},
+				},
+			},
+			want: []string{"", "fake-revision"},
 		},
 		{
 			name: "git multisource with multiple freight references",
@@ -159,6 +212,15 @@ func TestGetDesiredRevisions(t *testing.T) {
 							RepoURL:        "https://github.com/another-universe/42",
 							TargetRevision: "another-revision",
 						},
+					},
+				},
+				Status: argocdapi.ApplicationStatus{
+					Sync: argocd.SyncStatus{
+						Status:    argocd.SyncStatusCodeSynced,
+						Revisions: []string{"", "fake-revision", "another-revision"},
+					},
+					OperationState: &argocd.OperationState{
+						FinishedAt: ptr.To(metav1.Now()),
 					},
 				},
 			},
@@ -202,7 +264,7 @@ func TestGetDesiredRevisions(t *testing.T) {
 					},
 				},
 			},
-			want: []string{"fake-revision", "another-revision"},
+			want: []string{"", "fake-revision", "another-revision"},
 		},
 		{
 			name: "git source with health check commit",

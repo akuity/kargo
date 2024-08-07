@@ -601,7 +601,9 @@ func TestApplicationHealth_GetApplicationHealth(t *testing.T) {
 				syncStatus kargoapi.ArgoCDAppSyncStatus,
 				err error,
 			) {
-				require.ErrorContains(t, err, "Not all revisions of Application")
+				require.ErrorContains(t, err, "Not all sources of Application")
+				require.ErrorContains(t, err, "match the desired revisions")
+				require.ErrorContains(t, err, "Source 1 with RepoURL https://example.com/another-universe/42")
 
 				require.Equal(t, kargoapi.HealthStateUnhealthy, state)
 				require.Equal(t, kargoapi.ArgoCDAppHealthStatus{

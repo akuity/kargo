@@ -322,6 +322,18 @@ func (a *argoCDMechanism) mustPerformUpdate(
 		return "", true, errors.New("operation completed without a sync result")
 	}
 
+	// Check if the desired source(s) were applied.
+	if len(update.SourceUpdates) > 0 {
+		if (desiredSource != nil && !desiredSource.Equals(&status.SyncResult.Source)) ||
+			!desiredSources.Equals(status.SyncResult.Sources) {
+			// The operation did not result in the desired source(s) being applied.
+			// We should attempt to retry the operation.
+			return "", true, fmt.Errorf(
+				"operation result source does not match desired source",
+			)
+		}
+	}
+
 	// Check if the desired revision was applied.
 	desiredRevisions, err := libargocd.GetDesiredRevisions(
 		ctx,
@@ -334,47 +346,40 @@ func (a *argoCDMechanism) mustPerformUpdate(
 	appLogger.Debug("Operation completed, checking applied revision.", "desiredRevisions", desiredRevisions)
 
 	if err != nil {
+		appLogger.Error(err, "Failed to determine desired revision, will need to retry.")
 		return "", true, fmt.Errorf("error determining desired revision: %w", err)
 	}
 
-	// Check multi-source app for matching revisions.
-	if len(status.SyncResult.Revisions) > 0 {
-		matchingRevisions := libargocd.GetIntersection(status.SyncResult.Revisions, desiredRevisions)
-		if len(matchingRevisions) == len(desiredRevisions) {
-			appLogger.Debug("Operation completed, no update necessary.", "phase", status.Phase)
-			return status.Phase, false, nil
-		}
+	if desiredRevisions == nil {
+		// We do not have a desired revision, so we cannot determine if the
+		// operation was successful.
+		return status.Phase, false, nil
+	}
 
-		return "", true, fmt.Errorf(
-			"Not all result revisions out of %v match desired revisions %v",
-			status.SyncResult.Revisions, desiredRevisions)
+	// Check multi-source app for matching revisions.
+	if app.IsMultisource() {
+		syncedRevisions := status.SyncResult.Revisions
+		for i, r := range syncedRevisions {
+			if r != desiredRevisions[i] {
+				return "", true, fmt.Errorf(
+					"Not all result revisions out of %v match desired revisions %v",
+					syncedRevisions, desiredRevisions)
+			}
+		}
+		appLogger.Debug("Operation completed, no update necessary.", "phase", status.Phase)
+		return status.Phase, false, nil
 	}
 
 	// Check single-source app for matching revision.
 	singleSourceRevision := status.SyncResult.Revision
-	if singleSourceRevision != "" && len(desiredRevisions) > 0 {
-		matchingRevisions := libargocd.GetIntersection([]string{singleSourceRevision}, desiredRevisions)
-
-		if len(matchingRevisions) != 1 {
-			// The operation did not result in the desired revision being applied.
-			// We should attempt to retry the operation.
-			return "", true, fmt.Errorf(
-				"operation result revision %q does not match desired revision %v",
-				status.SyncResult.Revision, desiredRevisions,
-			)
-		}
-	}
-
-	// Check if the desired source(s) were applied.
-	if len(update.SourceUpdates) > 0 {
-		if (desiredSource != nil && !desiredSource.Equals(&status.SyncResult.Source)) ||
-			!desiredSources.Equals(status.SyncResult.Sources) {
-			// The operation did not result in the desired source(s) being applied.
-			// We should attempt to retry the operation.
-			return "", true, fmt.Errorf(
-				"operation result source does not match desired source",
-			)
-		}
+	if len(desiredRevisions) < 1 ||
+		(desiredRevisions[0] != "" && singleSourceRevision != desiredRevisions[0]) {
+		// The operation did not result in the desired revision being applied.
+		// We should attempt to retry the operation.
+		return "", true, fmt.Errorf(
+			"operation result revision %q does not match desired revision %v",
+			singleSourceRevision, desiredRevisions,
+		)
 	}
 
 	// The operation has completed.

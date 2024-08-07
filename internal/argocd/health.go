@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strings"
 	"time"
 
 	"k8s.io/apimachinery/pkg/types"
@@ -207,6 +208,7 @@ func (h *applicationHealth) GetApplicationHealth(
 		app,
 		stage.Status.FreightHistory.Current().References(),
 	); err != nil {
+		logger.Error(err, "Error getting desired revision, assuming Unknown health state.")
 		return kargoapi.HealthStateUnknown, healthStatus, syncStatus, err
 	} else if len(desiredRevisions) > 0 {
 		if healthState, err := stageHealthForAppSync(ctx, app, desiredRevisions); err != nil {
@@ -222,17 +224,19 @@ func (h *applicationHealth) GetApplicationHealth(
 		//
 		// TODO: revisit this when https://github.com/argoproj/argo-cd/pull/18660
 		// 	 is merged and released.
-		cooldown := app.Status.OperationState.FinishedAt.Time.Add(10 * time.Second)
-		if duration := time.Until(cooldown); duration > 0 {
-			time.Sleep(duration)
+		if app.Status.OperationState != nil {
+			cooldown := app.Status.OperationState.FinishedAt.Time.Add(10 * time.Second)
+			if duration := time.Until(cooldown); duration > 0 {
+				time.Sleep(duration)
 
-			// Re-fetch the application to get the latest state.
-			if err := h.argoClient.Get(ctx, key, app); err != nil {
-				err = fmt.Errorf("error finding Argo CD Application %q in namespace %q: %w", key.Name, key.Namespace, err)
-				if client.IgnoreNotFound(err) == nil {
-					err = fmt.Errorf("unable to find Argo CD Application %q in namespace %q", key.Name, key.Namespace)
+				// Re-fetch the application to get the latest state.
+				if err := h.argoClient.Get(ctx, key, app); err != nil {
+					err = fmt.Errorf("error finding Argo CD Application %q in namespace %q: %w", key.Name, key.Namespace, err)
+					if client.IgnoreNotFound(err) == nil {
+						err = fmt.Errorf("unable to find Argo CD Application %q in namespace %q", key.Name, key.Namespace)
+					}
+					return kargoapi.HealthStateUnknown, healthStatus, syncStatus, err
 				}
-				return kargoapi.HealthStateUnknown, healthStatus, syncStatus, err
 			}
 		}
 	}
@@ -252,12 +256,12 @@ func stageHealthForAppSync(
 	logger := logging.LoggerFromContext(ctx).WithValues("appName", app.GetName(), "revisions", revisions)
 	logger.Debug("About to determine stage health based on app sync status.")
 	switch {
-	case len(revisions) == 0 && len(app.Status.Sync.Revisions) == 0:
-		logger.Debug("Revision not set, assuming healthy.")
+	case revisions == nil || (len(revisions) == 1 && revisions[0] == ""):
+		logger.Debug("Desired revision not set, assuming healthy.")
 		return kargoapi.HealthStateHealthy, nil
 	case app.Operation != nil && app.Operation.Sync != nil,
 		app.Status.OperationState == nil || app.Status.OperationState.FinishedAt.IsZero():
-		logger.Debug("Application in sync operation, assuming unknown.")
+		logger.Debug("Application in sync operation, assuming Unknown.")
 		err := fmt.Errorf(
 			"Argo CD Application %q in namespace %q is being synced",
 			app.GetName(),
@@ -270,10 +274,8 @@ func stageHealthForAppSync(
 
 		// Trivial case where app has only a single source and revision is set.
 		singleSourceRevision := app.Status.Sync.Revision
-		if singleSourceRevision != "" {
-			matchingRevisions := GetIntersection([]string{singleSourceRevision}, revisions)
-
-			if len(matchingRevisions) == 1 {
+		if !app.IsMultisource() {
+			if len(revisions) == 1 && revisions[0] == singleSourceRevision {
 				return kargoapi.HealthStateHealthy, nil
 			}
 
@@ -289,34 +291,46 @@ func stageHealthForAppSync(
 			return kargoapi.HealthStateUnhealthy, errors.New(msg)
 		}
 
-		// If the app has multiple source revisions, it is a multi-source application.
-		// In this case, all desired revisions must be in the list of revisions for the app to be considered healthy.
 		multiSourceRevisions := app.Status.Sync.Revisions
-		if len(multiSourceRevisions) > 0 {
-			// App has multiple sources, so we need to check the list of revisions.
-			// Apps with multiple sources pointed at the same Git repository can only have the same revision
-			// for all sources because ArgoCD does not support the alternative, so we only need to check
-			// the first revision match.
-			matchingRevisions := GetIntersection(multiSourceRevisions, revisions)
+		// Apps with multiple sources pointed at the same Git repository can only have the same revision
+		// for all sources because ArgoCD does not support the alternative.
+		// We follow ArgoCD shadow-array implementation here that preserves the order of app.spec.sources for
+		// the revisions.
 
-			if len(matchingRevisions) > 0 && len(matchingRevisions) == len(revisions) {
-				logger.Debug("Found all desired revisions in list of revisions of multi-source application, app is healthy.",
-					"desiredRevisions", revisions, "currentRevisions", multiSourceRevisions)
-				return kargoapi.HealthStateHealthy, nil
+		misaligned_sources := make([]string, 0)
+		for i, r := range multiSourceRevisions {
+
+			// An empty desired revision means we are not managing the corresponding source.
+			if revisions[i] == "" {
+				continue
+			}
+
+			// Multi-source applications are considered healthy if all the desired source revisions match
+			// the source-specific synced revisions.
+			if r != revisions[i] {
+				msg := fmt.Sprintf(
+					"Source %d with RepoURL %v of Application %q in namespace %q does not match the desired revision %q.",
+					i,
+					app.Spec.Sources[i].RepoURL,
+					app.GetName(),
+					app.GetNamespace(),
+					revisions[i],
+				)
+				misaligned_sources = append(misaligned_sources, msg)
+				logger.Debug(msg)
 			}
 		}
 
-		msg := fmt.Sprintf(
-			"Not all revisions of Application %q in namespace %q match the desired revisions %v"+
-				", assuming unhealthy. Current revisions: %v, current revision: %v",
-			app.GetName(),
-			app.GetNamespace(),
-			revisions,
-			multiSourceRevisions,
-			singleSourceRevision,
-		)
-		logger.Debug(msg)
-		return kargoapi.HealthStateUnhealthy, errors.New(msg)
+		if len(misaligned_sources) > 0 {
+			msg := fmt.Sprintf("Not all sources of Application %q in namespace %q "+
+				"match the desired revisions, assuming unhealthy. Issues: %s",
+				app.GetName(), app.GetNamespace(), strings.Join(misaligned_sources[:], " "))
+			return kargoapi.HealthStateUnhealthy, errors.New(msg)
+		}
+
+		logger.Debug("Found all desired revisions in list of revisions of multi-source application, app is healthy.",
+			"desiredRevisions", revisions, "currentRevisions", multiSourceRevisions)
+		return kargoapi.HealthStateHealthy, nil
 	}
 }
 

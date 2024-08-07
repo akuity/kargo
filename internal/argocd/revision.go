@@ -13,21 +13,6 @@ import (
 	"github.com/akuity/kargo/internal/logging"
 )
 
-func GetIntersection(revisions []string, desired []string) []string {
-	var intersection []string
-	hash := make(map[string]bool)
-	for _, e := range revisions {
-		hash[e] = true
-	}
-	for _, e := range desired {
-		// If elements present in the hashmap then append intersection list.
-		if hash[e] {
-			intersection = append(intersection, e)
-		}
-	}
-	return intersection
-}
-
 // GetDesiredRevision returns the desired revision for the given
 // v1alpha1.Application. If that cannot be determined, an empty string is
 // returned.
@@ -58,32 +43,74 @@ func GetDesiredRevisions(
 
 	// An application may have one or more sources.
 	if !app.IsMultisource() {
-		if app.Spec.Source == nil {
+		s := app.Spec.Source
+		if s == nil {
 			err := errors.New("Single-source application source is nil")
 			appLogger.Error(err, "Cannot determine desired revision for application, bailing.")
 			return nil, nil
 		}
 
-		appLogger.Debug("Application source is not nil, checking.", "source", app.Spec.Source)
-		desiredRevision, err := getRevisionFromSource(ctx, cl, stage, update, app.Spec.Source, frght)
+		appLogger.Debug("Application source is not nil, checking.", "source", s)
+
+		// If there is a source update that targets app.Spec.Source, it might
+		// have its own ideas about the desired revision.
+		targetUpdate := getTargetUpdate(ctx, update, s)
+		desiredOrigin := freight.GetDesiredOrigin(ctx, stage, targetUpdate)
+		if desiredOrigin == nil {
+			appLogger.WithValues("source", s,
+				"revision", app.Status.Sync.Revision).Debug("Could not determine desired origin " +
+				"for application source, using existing revision.")
+			return []string{app.Status.Sync.Revision}, nil
+		}
+
+		desiredRevision, err := getRevisionFromSource(ctx, cl, stage, s, desiredOrigin, frght)
 
 		if err != nil {
 			return nil, err
 		}
 
 		if desiredRevision != "" {
+			appLogger.WithValues("source", s,
+				"revision", desiredRevision).Debug("Found desired revision for application source.")
 			return []string{desiredRevision}, nil
 		}
+
+		appLogger.WithValues("source", s).Debug("Could not determine desired revision for application from this source.")
+		return nil, nil
 	}
 
 	// An application may have more than one source that points to the same Git repository,
 	// eg. a Helm and a vanilla manifest source.
 	// In that situation it doesn't matter which source's target revision is returned as ArgoCD does not support
 	// different target revisions for sources targeting the same repository.
-	var revisions []string
-	for _, src := range app.Spec.Sources {
+	var revisions = make([]string, len(app.Spec.Sources))
+	isSynced := app.Status.Sync.Revisions != nil
+
+	// ArgoCD uses a shadow-array to store the corresponding revisions preserving the order of app.spec.sources.
+	// We match that logic here and return the desired revision for each source,
+	// or empty string if one is not found.
+	for i, src := range app.Spec.Sources {
 		s := src
-		desiredRevision, err := getRevisionFromSource(ctx, cl, stage, update, &s, frght)
+
+		syncedRevisionOfSource := ""
+		if isSynced && i < len(app.Status.Sync.Revisions) {
+			syncedRevisionOfSource = app.Status.Sync.Revisions[i]
+		}
+
+		// If there is a source update that targets app.Spec.Source, it might
+		// have its own ideas about the desired revision.
+		targetUpdate := getTargetUpdate(ctx, update, &s)
+		desiredOrigin := freight.GetDesiredOrigin(ctx, stage, targetUpdate)
+		if desiredOrigin == nil {
+			appLogger.WithValues("source", s,
+				"revision", syncedRevisionOfSource).Debug("Could not determine desired origin" +
+				" for application source, using existing revision.")
+			revisions[i] = syncedRevisionOfSource
+			continue
+		}
+
+		logger.Debug("Resolved origin for application source", "origin", desiredOrigin)
+		desiredRevision, err := getRevisionFromSource(ctx, cl, stage, &s, desiredOrigin, frght)
 
 		if err != nil {
 			return nil, err
@@ -91,44 +118,25 @@ func GetDesiredRevisions(
 
 		if desiredRevision != "" {
 			appLogger.Trace("Found desired revision for application source.", "revision", desiredRevision, "source", &s)
-			revisions = append(revisions, desiredRevision)
 		}
-	}
-	if len(revisions) > 0 {
-		appLogger.Debug("Found desired revision(s) for multi-source application.", "revisions", revisions)
-		return revisions, nil
+		revisions[i] = desiredRevision
 	}
 
-	// If we end up here, no desired revision was found from any of the possible sources.
-	appLogger.Debug("Could not determine desired revision for application from any sources.")
-	return nil, nil
+	appLogger.Debug("Found desired revisions for multi-source application.", "revisions", revisions)
+	return revisions, nil
 }
 
 func getRevisionFromSource(
 	ctx context.Context,
 	cl client.Client,
 	stage *kargoapi.Stage,
-	update *kargoapi.ArgoCDAppUpdate,
 	s *argocd.ApplicationSource,
+	desiredOrigin *kargoapi.FreightOrigin,
 	frght []kargoapi.FreightReference) (string, error) {
 
 	logger := logging.LoggerFromContext(ctx)
 	sourceLogger := logger.WithValues("source", s)
 	sourceLogger.Debug("Getting desired revision for application source", "source", s)
-
-	// If there is a source update that targets app.Spec.Source, it might
-	// have its own ideas about the desired revision.
-	targetUpdate := getTargetUpdate(ctx, update, s)
-
-	desiredOrigin := freight.GetDesiredOrigin(ctx, stage, targetUpdate)
-	if desiredOrigin == nil {
-		msg := "Could not determine desired origin for application source"
-		err := errors.New(msg)
-		sourceLogger.Error(err, msg)
-		return "", nil
-	}
-
-	sourceLogger.Debug("Resolved origin for application source", "origin", desiredOrigin)
 
 	switch {
 	case s.Chart != "":
@@ -197,23 +205,16 @@ func getTargetUpdate(
 	// If there is a source update that targets app.Spec.Source, it might
 	// have its own ideas about the desired revision.
 	// Default to the ArgoCDAppUpdate if no source update targets app.Spec.Source.
-	var targetPromoMechanism any
-
 	for i := range update.SourceUpdates {
 		sourceUpdate := &update.SourceUpdates[i]
 		sourceLogger.Trace("Checking source update", "sourceUpdate", sourceUpdate)
 
 		if sourceUpdate.RepoURL == s.RepoURL && (sourceUpdate.Chart == "" || sourceUpdate.Chart == s.Chart) {
 			sourceLogger.Debug("Source update matching application source found", "sourceUpdate", sourceUpdate)
-			targetPromoMechanism = sourceUpdate
-			break
+			return sourceUpdate
 		}
 	}
 
-	if targetPromoMechanism == nil {
-		sourceLogger.Debug("No source update matching application source found, using ArgoCDAppUpdate")
-		targetPromoMechanism = update
-	}
-
-	return targetPromoMechanism
+	sourceLogger.Debug("No source update matching application source found, using ArgoCDAppUpdate.")
+	return update
 }
