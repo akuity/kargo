@@ -10,7 +10,7 @@ import (
 	argocdapi "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
 )
 
-func TestGetDesiredRevision(t *testing.T) {
+func TestGetDesiredRevisions(t *testing.T) {
 	testOrigin := kargoapi.FreightOrigin{
 		Kind: kargoapi.FreightOriginKindWarehouse,
 		Name: "fake-warehouse",
@@ -19,16 +19,16 @@ func TestGetDesiredRevision(t *testing.T) {
 		name    string
 		app     *argocdapi.Application
 		freight kargoapi.FreightReference
-		want    string
+		want    []string
 	}{
 		{
 			name: "no application",
-			want: "",
+			want: []string{},
 		},
 		{
 			name: "no application source",
 			app:  &argocdapi.Application{},
-			want: "",
+			want: []string{},
 		},
 		{
 			name: "no source repo URL",
@@ -37,7 +37,7 @@ func TestGetDesiredRevision(t *testing.T) {
 					Source: &argocdapi.ApplicationSource{},
 				},
 			},
-			want: "",
+			want: []string{},
 		},
 		{
 			name: "chart source",
@@ -64,7 +64,40 @@ func TestGetDesiredRevision(t *testing.T) {
 					},
 				},
 			},
-			want: "v2.0.0",
+			want: []string{"v2.0.0"},
+		},
+		{
+			name: "chart sources",
+			app: &argocdapi.Application{
+				Spec: argocdapi.ApplicationSpec{
+					Sources: argocdapi.ApplicationSources{
+						{
+							RepoURL: "https://example.com",
+							Chart:   "fake-chart",
+						},
+						{
+							RepoURL: "https://example.com",
+							Chart:   "other-fake-chart",
+						},
+					},
+				},
+			},
+			freight: kargoapi.FreightReference{
+				Origin: testOrigin,
+				Charts: []kargoapi.Chart{
+					{
+						RepoURL: "https://example.com",
+						Name:    "fake-chart",
+						Version: "v1.0.0",
+					},
+					{
+						RepoURL: "https://example.com",
+						Name:    "other-fake-chart",
+						Version: "v2.0.0",
+					},
+				},
+			},
+			want: []string{"v1.0.0", "v2.0.0"},
 		},
 		{
 			name: "git source",
@@ -88,7 +121,69 @@ func TestGetDesiredRevision(t *testing.T) {
 					},
 				},
 			},
-			want: "fake-revision",
+			want: []string{"fake-revision"},
+		},
+		{
+			name: "git sources",
+			app: &argocdapi.Application{
+				Spec: argocdapi.ApplicationSpec{
+					Sources: argocdapi.ApplicationSources{
+						{
+							RepoURL: "https://github.com/universe/42",
+						},
+						{
+							RepoURL: "https://github.com/universe/43",
+						},
+					},
+				},
+			},
+			freight: kargoapi.FreightReference{
+				Origin: testOrigin,
+				Commits: []kargoapi.GitCommit{
+					{
+						RepoURL: "https://github.com/universe/42",
+						ID:      "fake-revision",
+					},
+					{
+						RepoURL: "https://github.com/universe/43",
+						ID:      "other-fake-revision",
+					},
+				},
+			},
+			want: []string{"fake-revision", "other-fake-revision"},
+		},
+		{
+			name: "mixed sources",
+			app: &argocdapi.Application{
+				Spec: argocdapi.ApplicationSpec{
+					Sources: argocdapi.ApplicationSources{
+						{
+							RepoURL: "https://example.com",
+							Chart:   "fake-chart",
+						},
+						{
+							RepoURL: "https://github.com/universe/42",
+						},
+					},
+				},
+			},
+			freight: kargoapi.FreightReference{
+				Origin: testOrigin,
+				Charts: []kargoapi.Chart{
+					{
+						RepoURL: "https://example.com",
+						Name:    "fake-chart",
+						Version: "v1.0.0",
+					},
+				},
+				Commits: []kargoapi.GitCommit{
+					{
+						RepoURL: "https://github.com/universe/42",
+						ID:      "fake-revision",
+					},
+				},
+			},
+			want: []string{"v1.0.0", "fake-revision"},
 		},
 		{
 			name: "git source with health check commit",
@@ -109,7 +204,7 @@ func TestGetDesiredRevision(t *testing.T) {
 					},
 				},
 			},
-			want: "fake-revision",
+			want: []string{"fake-revision"},
 		},
 	}
 
@@ -131,7 +226,7 @@ func TestGetDesiredRevision(t *testing.T) {
 					}},
 				},
 			}
-			revision, err := GetDesiredRevision(
+			revisions, err := GetDesiredRevisions(
 				context.Background(),
 				nil, // No client is needed as long as we're always explicit about origins
 				stage,
@@ -140,7 +235,7 @@ func TestGetDesiredRevision(t *testing.T) {
 				stage.Status.FreightHistory.Current().References(),
 			)
 			require.NoError(t, err)
-			require.Equal(t, testCase.want, revision)
+			require.Equal(t, testCase.want, revisions)
 		})
 	}
 }

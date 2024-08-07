@@ -82,6 +82,14 @@ USER 1000:0
 CMD ["/usr/local/bin/kargo"]
 
 ####################################################################################################
+# delve
+# - installs delve for debugging
+####################################################################################################
+FROM golang:1.22.5-bookworm as delve
+
+RUN go install github.com/go-delve/delve/cmd/dlv@latest
+
+####################################################################################################
 # back-end-dev
 # - no UI
 # - relies on go build that runs on host
@@ -93,6 +101,9 @@ FROM base as back-end-dev
 USER root
 
 COPY bin/controlplane/kargo /usr/local/bin/kargo
+COPY --from=delve /go/bin/dlv /usr/local/bin/dlv
+RUN apk update
+RUN apk add --no-cache libc6-compat
 
 RUN adduser -D -H -u 1000 kargo
 USER 1000:0

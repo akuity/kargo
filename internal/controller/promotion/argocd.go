@@ -320,7 +320,7 @@ func (a *argoCDMechanism) mustPerformUpdate(
 	}
 
 	// Check if the desired revision was applied.
-	if desiredRevision, err := libargocd.GetDesiredRevision(
+	if desiredRevisions, err := libargocd.GetDesiredRevisions(
 		ctx,
 		a.kargoClient,
 		stage,
@@ -329,13 +329,30 @@ func (a *argoCDMechanism) mustPerformUpdate(
 		newFreight,
 	); err != nil {
 		return "", true, fmt.Errorf("error determining desired revision: %w", err)
-	} else if desiredRevision != "" && status.SyncResult.Revision != desiredRevision {
+	} else if len(desiredRevisions) == 1 &&
+		desiredRevisions[0] != "" &&
+		status.SyncResult.Revision != desiredRevisions[0] {
 		// The operation did not result in the desired revision being applied.
 		// We should attempt to retry the operation.
 		return "", true, fmt.Errorf(
 			"operation result revision %q does not match desired revision %q",
-			status.SyncResult.Revision, desiredRevision,
+			status.SyncResult.Revision, desiredRevisions[0],
 		)
+	} else if len(desiredRevisions) > 1 &&
+		desiredRevisions[0] != "" &&
+		len(desiredRevisions) == len(status.SyncResult.Revisions) {
+		// This is a multi-source application, so we should check if all desired
+		// revisions were applied.
+		for i, syncRevision := range status.SyncResult.Revisions {
+			if syncRevision != desiredRevisions[i] {
+				// The operation did not result in the desired revision being applied.
+				// We should attempt to retry the operation.
+				return "", true, fmt.Errorf(
+					"operation result revision %q does not match desired revision %q",
+					syncRevision, desiredRevisions[i],
+				)
+			}
+		}
 	}
 
 	// Check if the desired source(s) were applied.

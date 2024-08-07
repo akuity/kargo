@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"reflect"
 	"slices"
 	"time"
 
@@ -160,19 +161,6 @@ func (h *applicationHealth) GetApplicationHealth(
 		}
 	}
 
-	// TODO: We should re-evaluate this soon. It may have been fixed in recent
-	//       versions.
-	// TODO(hidde): Do we have an upstream reference for this?
-	if len(app.Spec.Sources) > 0 {
-		err := fmt.Errorf(
-			"bugs in Argo CD currently prevent a comprehensive assessment of "+
-				"the health of multi-source Application %q in namespace %q",
-			key.Name,
-			key.Namespace,
-		)
-		return kargoapi.HealthStateUnknown, healthStatus, syncStatus, err
-	}
-
 	// Check for any error conditions. If these are found, the application is
 	// considered unhealthy as they may indicate a problem which can result in
 	// e.g. the health status result to become unreliable.
@@ -194,7 +182,7 @@ func (h *applicationHealth) GetApplicationHealth(
 	// is syncing to it. We do not further care about the cluster being in sync
 	// with the desired revision, as some applications may be out of sync by
 	// default.
-	if desiredRevision, err := GetDesiredRevision(
+	if desiredRevisions, err := GetDesiredRevisions(
 		ctx,
 		h.kargoClient,
 		stage,
@@ -203,8 +191,8 @@ func (h *applicationHealth) GetApplicationHealth(
 		stage.Status.FreightHistory.Current().References(),
 	); err != nil {
 		return kargoapi.HealthStateUnknown, healthStatus, syncStatus, err
-	} else if desiredRevision != "" {
-		if healthState, err := stageHealthForAppSync(app, desiredRevision); err != nil {
+	} else if len(desiredRevisions) > 0 && desiredRevisions[0] != "" {
+		if healthState, err := stageHealthForAppSync(app, desiredRevisions); err != nil {
 			return healthState, healthStatus, syncStatus, err
 		}
 
@@ -240,9 +228,9 @@ func (h *applicationHealth) GetApplicationHealth(
 
 // stageHealthForAppSync returns the v1alpha1.HealthState for an Argo CD
 // Application based on its sync status.
-func stageHealthForAppSync(app *argocd.Application, revision string) (kargoapi.HealthState, error) {
+func stageHealthForAppSync(app *argocd.Application, revisions []string) (kargoapi.HealthState, error) {
 	switch {
-	case revision == "":
+	case revisions[0] == "":
 		return kargoapi.HealthStateHealthy, nil
 	case app.Operation != nil && app.Operation.Sync != nil,
 		app.Status.OperationState == nil || app.Status.OperationState.FinishedAt.IsZero():
@@ -252,7 +240,14 @@ func stageHealthForAppSync(app *argocd.Application, revision string) (kargoapi.H
 			app.GetNamespace(),
 		)
 		return kargoapi.HealthStateUnknown, err
-	case app.Status.Sync.Revision != revision:
+	case len(revisions) == 1 && app.Status.Sync.Revision != revisions[0]:
+		err := fmt.Errorf(
+			"Argo CD Application %q in namespace %q is out of sync",
+			app.GetName(),
+			app.GetNamespace(),
+		)
+		return kargoapi.HealthStateUnhealthy, err
+	case len(revisions) > 1 && !reflect.DeepEqual(app.Status.Sync.Revisions, revisions):
 		err := fmt.Errorf(
 			"Argo CD Application %q in namespace %q is out of sync",
 			app.GetName(),
