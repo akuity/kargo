@@ -35,13 +35,15 @@ type database struct {
 // DatabaseConfig represents configuration for a Kubernetes based implementation
 // of the credentials.Database interface.
 type DatabaseConfig struct {
-	GlobalCredentialsNamespaces []string `envconfig:"GLOBAL_CREDENTIALS_NAMESPACES" default:""`
+	GlobalCredentialsNamespaces            []string `envconfig:"GLOBAL_CREDENTIALS_NAMESPACES" default:""`
+	workloadIdentityCredentialHelperConfig acr.WorkloadIdentityCredentialHelperConfig
 }
 
 func DatabaseConfigFromEnv() DatabaseConfig {
 	cfg := DatabaseConfig{}
 	envconfig.MustProcess("", &cfg)
 	sort.StringSlice(cfg.GlobalCredentialsNamespaces).Sort()
+	cfg.workloadIdentityCredentialHelperConfig = acr.WorkloadIdentityCredentialHelperConfigFromEnv()
 	return cfg
 }
 
@@ -60,7 +62,7 @@ func NewDatabase(
 		gar.NewServiceAccountKeyCredentialHelper(),
 		gar.NewWorkloadIdentityFederationCredentialHelper(ctx),
 		github.NewAppCredentialHelper(),
-		acr.NewWorkloadIdentityCredentialHelper(ctx, kargoClient),
+		acr.NewWorkloadIdentityCredentialHelper(ctx, kargoClient, cfg.workloadIdentityCredentialHelperConfig),
 	}
 	finalCredentialHelpers := make([]credentials.Helper, 0, len(credentialHelpers))
 	for _, helper := range credentialHelpers {

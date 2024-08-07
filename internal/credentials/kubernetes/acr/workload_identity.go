@@ -25,57 +25,103 @@ import (
 	"github.com/akuity/kargo/internal/logging"
 )
 
-const (
-	accessTokenUsername  = "00000000-0000-0000-0000-000000000000"
-	metadataURL          = "http://169.254.169.254/metadata/instance?api-version=2021-02-01"
-	viewerRoleName       = "kargo-viewer"
-	AzureDefaultAudience = "api://AzureADTokenExchange"
-	AnnotationClientID   = "azure.workload.identity/client-id"
-	AnnotationTenantID   = "azure.workload.identity/tenant-id"
-)
+// WorkloadIdentityCredentialHelperConfig represents configuration for the
+// workload identity credential helper.
+type WorkloadIdentityCredentialHelperConfig struct {
+	// TenantID is the Azure tenant ID where the managed identities federated to
+	// Project ServiceAccounts are located. Assuming the
+	// WorkloadIdentityCredentialHelperConfig instance was populated using the
+	// WorkloadIdentityCredentialHelperConfigFromEnv() function, this field will
+	// take on the value of the AZURE_TENANT_ID environment variable IF that has
+	// been injected into the controller's pod by AKS due to the the controller's
+	// ServiceAccount having been federated with a managed identity. In the
+	// absence of that environment variable (perhaps the controller's
+	// ServiceAccount does is NOT federated to a managed identity), this field
+	// will take on the value of the KARGO_AZURE_TENANT_ID environment variable
+	// instead, which may have been set by a user at install time. If no non-empty
+	// value can be found for this field, the a workload identity credential
+	// helper will effectively be disabled.
+	TenantID string
+	// ActiveDirectoryEndpoint is the Azure Active Directory endpoint for the
+	// environment in which the controller is running.
+	ActiveDirectoryEndpoint string
+	// AzureServiceManagementEndpoint is the Azure Service Management endpoint for
+	// the environment in which the controller is running.
+	AzureServiceManagementEndpoint string
+}
+
+// WorkloadIdentityCredentialHelperConfigFromEnv returns a
+// WorkloadIdentityCredentialHelperConfig constructed from environment details
+// and a call to the Azure Instance Metadata Service (IMDS).
+func WorkloadIdentityCredentialHelperConfigFromEnv() WorkloadIdentityCredentialHelperConfig {
+	cfg := WorkloadIdentityCredentialHelperConfig{
+		TenantID: os.Getenv("AZURE_TENANT_ID"),
+	}
+	if cfg.TenantID == "" {
+		// TODO: This isn't configurable via the chart yet
+		cfg.TenantID = os.Getenv("KARGO_AZURE_TENANT_ID")
+	}
+	if azureEnv, err := getAzureEnvironment(); err != nil {
+		logging.LoggerFromContext(context.Background()).Error(
+			err, "failed to get Azure environment details",
+		)
+	} else {
+		cfg.ActiveDirectoryEndpoint = azureEnv.ActiveDirectoryEndpoint
+		cfg.AzureServiceManagementEndpoint = azureEnv.ServiceManagementEndpoint
+	}
+	return cfg
+}
 
 type workloadIdentityCredentialHelper struct {
-	tokenCache *cache.Cache
-
-	tenantID    string
 	kargoClient client.Client
-	azureEnv    *azure.Environment
+	cfg         WorkloadIdentityCredentialHelperConfig
+	tokenCache  *cache.Cache
 
 	// The following behaviors are overridable for testing purposes:
 	getProjectFn    func(ctx context.Context, project string) (*v1alpha1.Project, error)
-	exchangeTokenFn func(ctx context.Context, token, clientID, oAuthEndpoint, scope string) (string, error)
-	fetchSAFn       func(ctx context.Context, project string, audiences []string) (string, error)
+	fetchSAFn       func(ctx context.Context, project string) (string, error)
+	exchangeTokenFn func(ctx context.Context, token, clientID, scope string) (string, error)
 	fetchACRTokenFn func(endpoint, tokenType string, data url.Values) (string, error)
 }
 
-// NewWorkloadIdentityCredentialHelper returns an implementation
+// NewWorkloadIdentityCredentialHelper returns an implementation of
 // credentials.Helper that utilizes a cache to avoid unnecessary calls to Azure.
-func NewWorkloadIdentityCredentialHelper(ctx context.Context, kargoClient client.Client) credentials.Helper {
+func NewWorkloadIdentityCredentialHelper(
+	ctx context.Context,
+	kargoClient client.Client,
+	cfg WorkloadIdentityCredentialHelperConfig,
+) credentials.Helper {
 	logger := logging.LoggerFromContext(ctx)
-	tenantID := os.Getenv("AZURE_TENANT_ID")
 
-	env, err := getAzureEnvironment()
-	if err != nil {
-		logger.Info("Azure environment not set; Azure Workload Identity integration is disabled")
+	if cfg.TenantID == "" {
+		logger.Info(
+			"Azure tenant ID could not be determined; Azure Workload Identity " +
+				"integration will be disabled",
+		)
+	}
+
+	if cfg.ActiveDirectoryEndpoint == "" || cfg.AzureServiceManagementEndpoint == "" {
+		logger.Info(
+			"Azure environment details could not be determined; Azure Workload " +
+				"Identity integration will be disabled",
+		)
 		return nil
 	}
 	logger.Info("Azure Workload Identity integration is enabled")
 
 	w := &workloadIdentityCredentialHelper{
-		tenantID:    tenantID,
 		kargoClient: kargoClient,
-		azureEnv:    &env,
 		tokenCache: cache.New(
 			// Access tokens live for three hours. We'll hang on to them for 2.5 hours.
 			150*time.Minute, // Default ttl for each entry
 			time.Hour,       // Cleanup interval
 		),
+		cfg: cfg,
 	}
-
-	w.fetchSAFn = w.fetchSAToken
 	w.getProjectFn = w.getProject
+	w.fetchSAFn = w.fetchSAToken
+	w.exchangeTokenFn = w.exchangeForEntraIDToken
 	w.fetchACRTokenFn = fetchACRToken
-	w.exchangeTokenFn = exchangeForEntraIDToken
 
 	return w.getCredentials
 }
@@ -85,7 +131,9 @@ func (w *workloadIdentityCredentialHelper) getCredentials(
 	project string,
 	credType credentials.Type,
 	repo string,
-	_ *corev1.Secret) (*credentials.Credentials, error) {
+	_ *corev1.Secret,
+) (*credentials.Credentials, error) {
+	const accessTokenUsername = "00000000-0000-0000-0000-000000000000"
 	logger := logging.LoggerFromContext(ctx)
 
 	repoURL, err := url.Parse(repo)
@@ -94,7 +142,7 @@ func (w *workloadIdentityCredentialHelper) getCredentials(
 	}
 
 	// Workload Identity isn't set up for this controller
-	if (credType != credentials.TypeImage && credType != credentials.TypeHelm) || w.azureEnv == nil {
+	if credType != credentials.TypeImage && credType != credentials.TypeHelm {
 		// This helper can't handle this
 		return nil, nil
 	}
@@ -120,21 +168,16 @@ func (w *workloadIdentityCredentialHelper) getCredentials(
 		return nil, err
 	}
 
-	clientID, ok := proj.GetAnnotations()[AnnotationClientID]
+	const annotationClientID = "azure.workload.identity/client-id"
+	clientID, ok := proj.GetAnnotations()[annotationClientID]
 	if !ok {
-		return nil, fmt.Errorf("project is missing annotation: %s", AnnotationClientID)
-	}
-	tenantID, ok := proj.GetAnnotations()[AnnotationTenantID]
-	if !ok {
-		return nil, fmt.Errorf("project is missing annotation: %s", AnnotationTenantID)
+		return nil, fmt.Errorf("project is missing annotation %q", annotationClientID)
 	}
 
-	audiences := []string{AzureDefaultAudience}
-
-	logger.Info("Retrieving service account from namespace", "project", project)
+	logger.Debug("Retrieving Project ServiceAccount", "namespace", project)
 
 	// Use the TokenRequest API to get a temporary token for the given project namespace
-	saToken, err := w.fetchSAFn(ctx, project, audiences)
+	saToken, err := w.fetchSAFn(ctx, project)
 	if err != nil {
 		return nil, err
 	}
@@ -142,10 +185,10 @@ func (w *workloadIdentityCredentialHelper) getCredentials(
 	repoHost := repoURL.Host
 	repoPath := strings.Split(repoURL.Path, "/")[1]
 
-	logger.Info("Getting Entra OAuth token",
-		"repoHost", repoHost, "tenantID", tenantID, "clientID", clientID)
+	logger.Debug("Getting Entra OAuth token",
+		"repoHost", repoHost, "tenantID", w.cfg.TenantID, "clientID", clientID)
 
-	scope := w.azureEnv.ServiceManagementEndpoint
+	scope := w.cfg.AzureServiceManagementEndpoint
 	// .default needs to be added to the scope
 	if !strings.Contains(scope, ".default") {
 		scope = fmt.Sprintf("%s/.default", scope)
@@ -155,8 +198,8 @@ func (w *workloadIdentityCredentialHelper) getCredentials(
 		ctx,
 		saToken,
 		clientID,
-		fmt.Sprintf("%s%s/oauth2/token", w.azureEnv.ActiveDirectoryEndpoint, tenantID),
-		scope)
+		scope,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -169,7 +212,7 @@ func (w *workloadIdentityCredentialHelper) getCredentials(
 		url.Values{
 			"grant_type":   {"access_token"},
 			"service":      {repoHost},
-			"tenant":       {tenantID},
+			"tenant":       {w.cfg.TenantID},
 			"access_token": {authToken},
 		})
 	if err != nil {
@@ -211,13 +254,27 @@ func (w *workloadIdentityCredentialHelper) tokenCacheKey(repoUrl, project string
 	)
 }
 
-func exchangeForEntraIDToken(ctx context.Context, token, clientID, oAuthEndpoint, scope string) (string, error) {
-	// exchange token with Azure AccessToken
+// exchangeForEntraIDToken exchanges a Kubernetes ServiceAccount token for an
+// Azure AccessToken.
+func (w *workloadIdentityCredentialHelper) exchangeForEntraIDToken(
+	ctx context.Context,
+	token string,
+	clientID string,
+	scope string,
+) (string, error) {
 	cred := confidential.NewCredFromAssertionCallback(
 		func(_ context.Context, _ confidential.AssertionRequestOptions) (string, error) {
 			return token, nil
-		})
-	cClient, err := confidential.New(oAuthEndpoint, clientID, cred)
+		},
+	)
+	// TODO: The azidentity package has similar functionality. If it works here,
+	// it might prove to be more ergonomic.
+	cClient, err := confidential.New(
+		// TODO: We can probably build this URL just once during initialization
+		fmt.Sprintf("%s%s/oauth2/token", w.cfg.ActiveDirectoryEndpoint, w.cfg.TenantID),
+		clientID,
+		cred,
+	)
 	if err != nil {
 		return "", err
 	}
@@ -234,10 +291,10 @@ func exchangeForEntraIDToken(ctx context.Context, token, clientID, oAuthEndpoint
 func (w *workloadIdentityCredentialHelper) fetchSAToken(
 	ctx context.Context,
 	project string,
-	audiences []string) (string, error) {
+) (string, error) {
 	sa := corev1.ServiceAccount{}
 	err := w.kargoClient.Get(ctx, types.NamespacedName{
-		Name:      viewerRoleName,
+		Name:      "kargo-viewer", // TODO: This should use its own dedicated ServiceAccount
 		Namespace: project,
 	}, &sa)
 	if err != nil {
@@ -248,7 +305,7 @@ func (w *workloadIdentityCredentialHelper) fetchSAToken(
 
 	tokenReq := &v1.TokenRequest{
 		Spec: v1.TokenRequestSpec{
-			Audiences: audiences,
+			Audiences: []string{"api://AzureADTokenExchange"},
 		},
 	}
 	err = resource.Create(ctx, &sa, tokenReq)
@@ -284,28 +341,35 @@ func fetchACRToken(endpoint, tokenType string, data url.Values) (string, error) 
 	return accessToken, nil
 }
 
-// Use the Azure metadata API to determine the correct OAuth endpoints for the given cluster.
-func getAzureEnvironment() (azure.Environment, error) {
-	req, err := http.NewRequest("GET", metadataURL, nil)
+// getAzureEnvironment obtains Azure environment details from the Azure Instance
+// Metadata Service.
+func getAzureEnvironment() (*azure.Environment, error) {
+	req, err := http.NewRequest(
+		"GET",
+		// This is a well-known URL that returns metadata about the Azure
+		// environment
+		"http://169.254.169.254/metadata/instance?api-version=2021-02-01",
+		nil,
+	)
 	if err != nil {
-		return azure.Environment{}, err
+		return nil, err
 	}
 	req.Header.Set("Metadata", "true")
 
 	c := &http.Client{}
 	resp, err := c.Do(req)
 	if err != nil {
-		return azure.Environment{}, err
+		return nil, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return azure.Environment{}, fmt.Errorf("failed to get metadata, status code: %d", resp.StatusCode)
+		return nil, fmt.Errorf("failed to get metadata, status code: %d", resp.StatusCode)
 	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return azure.Environment{}, err
+		return nil, err
 	}
 
 	var metadata struct {
@@ -314,13 +378,13 @@ func getAzureEnvironment() (azure.Environment, error) {
 		} `json:"compute"`
 	}
 	if err = json.Unmarshal(body, &metadata); err != nil {
-		return azure.Environment{}, err
+		return nil, err
 	}
 
 	env, err := azure.EnvironmentFromName(metadata.Compute.Environment)
 	if err != nil {
-		return azure.Environment{}, err
+		return nil, err
 	}
 
-	return env, nil
+	return &env, nil
 }
