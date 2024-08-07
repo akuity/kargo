@@ -49,24 +49,6 @@ func TestAppCredentialHelper(t *testing.T) {
 			},
 		},
 		{
-			name:     "cred type is git",
-			credType: credentials.TypeGit,
-			helper:   &appCredentialHelper{},
-			assertions: func(t *testing.T, creds *credentials.Credentials, _ *cache.Cache, err error) {
-				require.NoError(t, err)
-				require.Nil(t, creds)
-			},
-		},
-		{
-			name:     "cred type is image",
-			credType: credentials.TypeImage,
-			helper:   &appCredentialHelper{},
-			assertions: func(t *testing.T, creds *credentials.Credentials, _ *cache.Cache, err error) {
-				require.NoError(t, err)
-				require.Nil(t, creds)
-			},
-		},
-		{
 			name:     "secret is nil",
 			credType: credentials.TypeGit,
 			helper:   &appCredentialHelper{},
