@@ -148,26 +148,6 @@ func TestAppCredentialHelper(t *testing.T) {
 			},
 		},
 		{
-			name:     "cache hit - image",
-			credType: credentials.TypeImage,
-			secret: &corev1.Secret{
-				Data: map[string][]byte{
-					appIDKey:          []byte(testAppIDStr),
-					installationIDKey: []byte(testInstallationIDStr),
-					privateKeyKey:     []byte(testPrivateKey),
-				},
-			},
-			helper: &appCredentialHelper{
-				tokenCache: warmTokenCache,
-			},
-			assertions: func(t *testing.T, creds *credentials.Credentials, _ *cache.Cache, err error) {
-				require.NoError(t, err)
-				require.NotNil(t, creds)
-				require.Equal(t, "kargo", creds.Username)
-				require.Equal(t, testAccessToken, creds.Password)
-			},
-		},
-		{
 			name:     "cache miss; error getting access token",
 			credType: credentials.TypeGit,
 			secret: &corev1.Secret{
@@ -189,52 +169,8 @@ func TestAppCredentialHelper(t *testing.T) {
 			},
 		},
 		{
-			name:     "cache miss; error getting access token - image",
-			credType: credentials.TypeImage,
-			secret: &corev1.Secret{
-				Data: map[string][]byte{
-					appIDKey:          []byte(testAppIDStr),
-					installationIDKey: []byte(testInstallationIDStr),
-					privateKeyKey:     []byte(testPrivateKey),
-				},
-			},
-			helper: &appCredentialHelper{
-				tokenCache: cache.New(0, 0),
-				getAccessTokenFn: func(int64, int64, string) (string, error) {
-					return "", fmt.Errorf("something went wrong")
-				},
-			},
-			assertions: func(t *testing.T, _ *credentials.Credentials, _ *cache.Cache, err error) {
-				require.ErrorContains(t, err, "error getting installation access token")
-				require.ErrorContains(t, err, "something went wrong")
-			},
-		},
-		{
 			name:     "cache miss; success",
 			credType: credentials.TypeGit,
-			secret: &corev1.Secret{
-				Data: map[string][]byte{
-					appIDKey:          []byte(testAppIDStr),
-					installationIDKey: []byte(testInstallationIDStr),
-					privateKeyKey:     []byte(testPrivateKey),
-				},
-			},
-			helper: &appCredentialHelper{
-				tokenCache: cache.New(0, 0),
-				getAccessTokenFn: func(int64, int64, string) (string, error) {
-					return testAccessToken, nil
-				},
-			},
-			assertions: func(t *testing.T, creds *credentials.Credentials, _ *cache.Cache, err error) {
-				require.NoError(t, err)
-				require.NotNil(t, creds)
-				require.Equal(t, "kargo", creds.Username)
-				require.Equal(t, testAccessToken, creds.Password)
-			},
-		},
-		{
-			name:     "cache miss; success - image",
-			credType: credentials.TypeImage,
 			secret: &corev1.Secret{
 				Data: map[string][]byte{
 					appIDKey:          []byte(testAppIDStr),
