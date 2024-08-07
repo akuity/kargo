@@ -55,7 +55,7 @@ export const CreateProjectModal = ({ visible, hide }: ModalComponentProps) => {
   const name = React.useMemo(() => {
     try {
       return yaml.parse(yamlValue).metadata.name;
-    } catch (err) {
+    } catch (_) {
       return '';
     }
   }, [yamlValue]);
