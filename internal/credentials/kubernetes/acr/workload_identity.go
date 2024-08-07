@@ -69,9 +69,9 @@ func NewWorkloadIdentityCredentialHelper(ctx context.Context, kargoClient client
 		kargoClient: kargoClient,
 		azureEnv:    &env,
 		tokenCache: cache.New(
-			// Access tokens live for three hours. We'll hang on to them for 40 minutes.
-			40*time.Minute, // Default ttl for each entry
-			time.Hour,      // Cleanup interval
+			// Access tokens live for three hours. We'll hang on to them for 2.5 hours.
+			150*time.Minute, // Default ttl for each entry
+			time.Hour,       // Cleanup interval
 		),
 	}
 
@@ -281,7 +281,7 @@ func fetchACRToken(endpoint, tokenType string, data url.Values) (string, error) 
 	}
 	accessToken, ok := payload[tokenType]
 	if !ok {
-		return "", fmt.Errorf("unable to get token")
+		return "", fmt.Errorf("unable to get token of type %s", tokenType)
 	}
 	return accessToken, nil
 }
@@ -312,9 +312,7 @@ func getAzureEnvironment() (azure.Environment, error) {
 
 	var metadata struct {
 		Compute struct {
-			Environment       string `json:"azEnvironment"`
-			SubscriptionID    string `json:"subscriptionId"`
-			ResourceGroupName string `json:"resourceGroupName"`
+			Environment string `json:"azEnvironment"`
 		} `json:"compute"`
 	}
 	if err = json.Unmarshal(body, &metadata); err != nil {
