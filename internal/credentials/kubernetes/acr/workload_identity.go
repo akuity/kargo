@@ -38,7 +38,6 @@ type workloadIdentityCredentialHelper struct {
 	tokenCache *cache.Cache
 
 	tenantID    string
-	clientID    string
 	kargoClient client.Client
 	azureEnv    *azure.Environment
 
@@ -54,7 +53,6 @@ type workloadIdentityCredentialHelper struct {
 func NewWorkloadIdentityCredentialHelper(ctx context.Context, kargoClient client.Client) credentials.Helper {
 	logger := logging.LoggerFromContext(ctx)
 	tenantID := os.Getenv("AZURE_TENANT_ID")
-	clientID := os.Getenv("AZURE_CLIENT_ID")
 
 	env, err := getAzureEnvironment()
 	if err != nil {
@@ -65,7 +63,6 @@ func NewWorkloadIdentityCredentialHelper(ctx context.Context, kargoClient client
 
 	w := &workloadIdentityCredentialHelper{
 		tenantID:    tenantID,
-		clientID:    clientID,
 		kargoClient: kargoClient,
 		azureEnv:    &env,
 		tokenCache: cache.New(
@@ -87,9 +84,14 @@ func (w *workloadIdentityCredentialHelper) getCredentials(
 	ctx context.Context,
 	project string,
 	credType credentials.Type,
-	repoURL string,
+	repo string,
 	_ *corev1.Secret) (*credentials.Credentials, error) {
 	logger := logging.LoggerFromContext(ctx)
+
+	repoURL, err := url.Parse(repo)
+	if err != nil {
+		return nil, err
+	}
 
 	// Workload Identity isn't set up for this controller
 	if (credType != credentials.TypeImage && credType != credentials.TypeHelm) || w.azureEnv == nil {
@@ -97,14 +99,14 @@ func (w *workloadIdentityCredentialHelper) getCredentials(
 		return nil, nil
 	}
 
-	if credType == credentials.TypeHelm && !strings.HasPrefix(repoURL, "oci://") {
+	if credType == credentials.TypeHelm && repoURL.Scheme != "oci" {
 		// Only OCI Helm repos are supported in ACR
 		return nil, nil
 	}
 
 	// TODO: add regex to verify that the URL is an Azure CR URL.
 
-	cacheKey := w.tokenCacheKey(repoURL, project)
+	cacheKey := w.tokenCacheKey(repo, project)
 
 	if entry, exists := w.tokenCache.Get(cacheKey); exists {
 		return &credentials.Credentials{
@@ -127,11 +129,6 @@ func (w *workloadIdentityCredentialHelper) getCredentials(
 		return nil, fmt.Errorf("project is missing annotation: %s", AnnotationTenantID)
 	}
 
-	repoHost, err := url.Parse(repoURL)
-	if err != nil {
-		return nil, err
-	}
-
 	audiences := []string{AzureDefaultAudience}
 
 	logger.Info("Retrieving service account from namespace", "project", project)
@@ -142,8 +139,11 @@ func (w *workloadIdentityCredentialHelper) getCredentials(
 		return nil, err
 	}
 
+	repoHost := repoURL.Host
+	repoPath := strings.Split(repoURL.Path, "/")[1]
+
 	logger.Info("Getting Entra OAuth token",
-		"RepoRUl", repoHost.Host, "tenantID", tenantID, "clientID", clientID)
+		"repoHost", repoHost, "tenantID", tenantID, "clientID", clientID)
 
 	scope := w.azureEnv.ServiceManagementEndpoint
 	// .default needs to be added to the scope
@@ -164,11 +164,11 @@ func (w *workloadIdentityCredentialHelper) getCredentials(
 	var acrToken string
 	// Get a token scoped for the whole ACR registry
 	acrToken, err = w.fetchACRTokenFn(
-		fmt.Sprintf("https://%s/oauth2/exchange", repoHost.Host),
+		fmt.Sprintf("https://%s/oauth2/exchange", repoHost),
 		"refresh_token",
 		url.Values{
 			"grant_type":   {"access_token"},
-			"service":      {repoHost.Host},
+			"service":      {repoHost},
 			"tenant":       {tenantID},
 			"access_token": {authToken},
 		})
@@ -176,16 +176,14 @@ func (w *workloadIdentityCredentialHelper) getCredentials(
 		return nil, err
 	}
 
-	repoPath := strings.Split(repoHost.Path, "/")[1]
-
 	// This part is not required per se - but if we want to scope down access to pull only access for a specific
 	// repository, as opposed to full access for the whole registry we need to fetch an access token
 	acrToken, err = w.fetchACRTokenFn(
-		fmt.Sprintf("https://%s/oauth2/token", repoHost.Host),
+		fmt.Sprintf("https://%s/oauth2/token", repoHost),
 		"access_token",
 		url.Values{
 			"grant_type":    {"refresh_token"},
-			"service":       {repoHost.Host},
+			"service":       {repoHost},
 			"scope":         {fmt.Sprintf("repository:%s:pull", repoPath)},
 			"refresh_token": {acrToken},
 		})
