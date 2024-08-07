@@ -1390,17 +1390,6 @@ export class Freight extends Message<Freight> {
   alias?: string;
 
   /**
-   * Warehouse is the name of the Warehouse that created this Freight. This is a
-   * required field. TODO: It is not clear yet how this field should be set in
-   * the case of user-defined Freight.
-   *
-   * Deprecated: Use Origin instead.
-   *
-   * @generated from field: optional string warehouse = 8;
-   */
-  warehouse?: string;
-
-  /**
    * Origin describes a kind of Freight in terms of its origin.
    *
    * +kubebuilder:validation:Required
@@ -1447,7 +1436,6 @@ export class Freight extends Message<Freight> {
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 1, name: "metadata", kind: "message", T: ObjectMeta, opt: true },
     { no: 7, name: "alias", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 8, name: "warehouse", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 9, name: "origin", kind: "message", T: FreightOrigin, opt: true },
     { no: 3, name: "commits", kind: "message", T: GitCommit, repeated: true },
     { no: 4, name: "images", kind: "message", T: Image, repeated: true },
@@ -1654,15 +1642,6 @@ export class FreightReference extends Message<FreightReference> {
   name?: string;
 
   /**
-   * Warehouse is the name of the Warehouse that created this Freight.
-   *
-   * Deprecated: Use the Origin instead.
-   *
-   * @generated from field: optional string warehouse = 6;
-   */
-  warehouse?: string;
-
-  /**
    * Origin describes a kind of Freight in terms of its origin.
    *
    * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.FreightOrigin origin = 8;
@@ -1690,26 +1669,6 @@ export class FreightReference extends Message<FreightReference> {
    */
   charts: Chart[] = [];
 
-  /**
-   * VerificationInfo is information about any verification process that was
-   * associated with this Freight for this Stage.
-   *
-   * Deprecated: Use FreightCollection.VerificationHistory instead.
-   *
-   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.VerificationInfo verificationInfo = 5;
-   */
-  verificationInfo?: VerificationInfo;
-
-  /**
-   * VerificationHistory is a stack of recent VerificationInfo. By default,
-   * the last ten VerificationInfo are stored.
-   *
-   * Deprecated: Use FreightCollection.VerificationHistory instead.
-   *
-   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.VerificationInfo verificationHistory = 7;
-   */
-  verificationHistory: VerificationInfo[] = [];
-
   constructor(data?: PartialMessage<FreightReference>) {
     super();
     proto2.util.initPartial(data, this);
@@ -1719,13 +1678,10 @@ export class FreightReference extends Message<FreightReference> {
   static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.FreightReference";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 6, name: "warehouse", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 8, name: "origin", kind: "message", T: FreightOrigin, opt: true },
     { no: 2, name: "commits", kind: "message", T: GitCommit, repeated: true },
     { no: 3, name: "images", kind: "message", T: Image, repeated: true },
     { no: 4, name: "charts", kind: "message", T: Chart, repeated: true },
-    { no: 5, name: "verificationInfo", kind: "message", T: VerificationInfo, opt: true },
-    { no: 7, name: "verificationHistory", kind: "message", T: VerificationInfo, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FreightReference {
@@ -4217,16 +4173,6 @@ export class StageSpec extends Message<StageSpec> {
   shard?: string;
 
   /**
-   * Subscriptions describes the Stage's sources of Freight. This is a required
-   * field.
-   *
-   * Deprecated: Use RequestedFreight instead.
-   *
-   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.Subscriptions subscriptions = 1;
-   */
-  subscriptions?: Subscriptions;
-
-  /**
    * RequestedFreight expresses the Stage's need for certain pieces of Freight,
    * each having originated from a particular Warehouse. This list must be
    * non-empty. In the common case, a Stage will request Freight having
@@ -4271,7 +4217,6 @@ export class StageSpec extends Message<StageSpec> {
   static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.StageSpec";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 4, name: "shard", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 1, name: "subscriptions", kind: "message", T: Subscriptions, opt: true },
     { no: 5, name: "requestedFreight", kind: "message", T: FreightRequest, repeated: true },
     { no: 2, name: "promotionMechanisms", kind: "message", T: PromotionMechanisms, opt: true },
     { no: 3, name: "verification", kind: "message", T: Verification, opt: true },
@@ -4345,26 +4290,6 @@ export class StageStatus extends Message<StageStatus> {
   freightSummary?: string;
 
   /**
-   * CurrentFreight is a simplified representation of the Stage's current
-   * Freight describing what is currently deployed to the Stage.
-   *
-   * Deprecated: Use the top item in the FreightHistory stack instead.
-   *
-   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.FreightReference currentFreight = 2;
-   */
-  currentFreight?: FreightReference;
-
-  /**
-   * History is a stack of recent Freight. By default, the last ten Freight are
-   * stored.
-   *
-   * Deprecated: Use the FreightHistory stack instead.
-   *
-   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.FreightReference history = 3;
-   */
-  history: FreightReference[] = [];
-
-  /**
    * Health is the Stage's last observed health.
    *
    * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.Health health = 8;
@@ -4413,8 +4338,6 @@ export class StageStatus extends Message<StageStatus> {
     { no: 1, name: "phase", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 4, name: "freightHistory", kind: "message", T: FreightCollection, repeated: true },
     { no: 12, name: "freightSummary", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 2, name: "currentFreight", kind: "message", T: FreightReference, opt: true },
-    { no: 3, name: "history", kind: "message", T: FreightReference, repeated: true },
     { no: 8, name: "health", kind: "message", T: Health, opt: true },
     { no: 9, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 6, name: "observedGeneration", kind: "scalar", T: 3 /* ScalarType.INT64 */, opt: true },
@@ -4436,105 +4359,6 @@ export class StageStatus extends Message<StageStatus> {
 
   static equals(a: StageStatus | PlainMessage<StageStatus> | undefined, b: StageStatus | PlainMessage<StageStatus> | undefined): boolean {
     return proto2.util.equals(StageStatus, a, b);
-  }
-}
-
-/**
- * StageSubscription defines a subscription to Freight from another Stage.
- *
- * Deprecated: Use FreightRequest instead.
- *
- * @generated from message github.com.akuity.kargo.api.v1alpha1.StageSubscription
- */
-export class StageSubscription extends Message<StageSubscription> {
-  /**
-   * Name specifies the name of a Stage.
-   *
-   * +kubebuilder:validation:MinLength=1
-   * +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
-   *
-   * @generated from field: optional string name = 1;
-   */
-  name?: string;
-
-  constructor(data?: PartialMessage<StageSubscription>) {
-    super();
-    proto2.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto2 = proto2;
-  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.StageSubscription";
-  static readonly fields: FieldList = proto2.util.newFieldList(() => [
-    { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StageSubscription {
-    return new StageSubscription().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): StageSubscription {
-    return new StageSubscription().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): StageSubscription {
-    return new StageSubscription().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: StageSubscription | PlainMessage<StageSubscription> | undefined, b: StageSubscription | PlainMessage<StageSubscription> | undefined): boolean {
-    return proto2.util.equals(StageSubscription, a, b);
-  }
-}
-
-/**
- * Subscriptions describes a Stage's sources of Freight.
- *
- * Deprecated: Use FreightRequest instead.
- *
- * @generated from message github.com.akuity.kargo.api.v1alpha1.Subscriptions
- */
-export class Subscriptions extends Message<Subscriptions> {
-  /**
-   * Warehouse is a subscription to a Warehouse. This field is mutually
-   * exclusive with the UpstreamStages field.
-   *
-   * @generated from field: optional string warehouse = 1;
-   */
-  warehouse?: string;
-
-  /**
-   * UpstreamStages identifies other Stages as potential sources of Freight
-   * for this Stage. This field is mutually exclusive with the Repos field.
-   *
-   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.StageSubscription upstreamStages = 2;
-   */
-  upstreamStages: StageSubscription[] = [];
-
-  constructor(data?: PartialMessage<Subscriptions>) {
-    super();
-    proto2.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto2 = proto2;
-  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.Subscriptions";
-  static readonly fields: FieldList = proto2.util.newFieldList(() => [
-    { no: 1, name: "warehouse", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 2, name: "upstreamStages", kind: "message", T: StageSubscription, repeated: true },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Subscriptions {
-    return new Subscriptions().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): Subscriptions {
-    return new Subscriptions().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Subscriptions {
-    return new Subscriptions().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: Subscriptions | PlainMessage<Subscriptions> | undefined, b: Subscriptions | PlainMessage<Subscriptions> | undefined): boolean {
-    return proto2.util.equals(Subscriptions, a, b);
   }
 }
 

@@ -2,7 +2,7 @@ import { graphlib, layout } from 'dagre';
 import { useMemo } from 'react';
 
 import { ColorMap, getColors } from '@ui/features/stage/utils';
-import { FreightRequest, Stage, Warehouse } from '@ui/gen/v1alpha1/generated_pb';
+import { Stage, Warehouse } from '@ui/gen/v1alpha1/generated_pb';
 
 import {
   AnyNodeType,
@@ -11,10 +11,11 @@ import {
   DagreNode,
   NewWarehouseNode,
   NodeType,
-  RepoNodeType
+  RepoNodeType,
+  getNodeDimensions
 } from '../types';
 
-import { getConnectors, initNodeArray, newSubscriptionNode, nodeStubFor } from './graph';
+import { getConnectors, initNodeArray, newSubscriptionNode } from './graph';
 import { IndexCache } from './index-cache';
 
 const initializeNodes = (
@@ -34,22 +35,7 @@ const initializeNodes = (
   const nodes = stages.slice().flatMap((stage) => {
     const n = initNodeArray(stage);
 
-    let requestedFreight = stage.spec?.requestedFreight;
-    const legacySubscription = stage.spec?.subscriptions?.warehouse;
-    if (!requestedFreight || (stage.spec?.requestedFreight?.length === 0 && legacySubscription)) {
-      requestedFreight = [
-        {
-          origin: {
-            kind: 'Warehouse',
-            name: legacySubscription
-          },
-          sources: {
-            direct: true
-          }
-        }
-      ] as FreightRequest[];
-    }
-
+    const requestedFreight = stage.spec?.requestedFreight;
     (requestedFreight || []).forEach((f) => {
       if (f?.origin?.kind === 'Warehouse' && f?.sources?.direct) {
         const warehouseName = f.origin?.name;
@@ -122,7 +108,7 @@ export const usePipelineGraph = (
 
     // add nodes and edges to graph
     myNodes.forEach((item, index) => {
-      g.setNode(String(index), nodeStubFor(item.type));
+      g.setNode(String(index), getNodeDimensions(item.type));
 
       if (item.type === NodeType.STAGE) {
         const stage = item.data as Stage;
@@ -143,15 +129,6 @@ export const usePipelineGraph = (
               );
             });
           }
-        });
-
-        (stage?.spec?.subscriptions?.upstreamStages || []).forEach((upstreamStage, i) => {
-          g.setEdge(
-            String(subscriberIndexCache.get(upstreamStage.name || '', myNodes)),
-            String(index),
-            {},
-            String(`${upstreamStage.name || ''} ${curStageName} ${i}`)
-          );
         });
       } else if (item.type === NodeType.WAREHOUSE) {
         // this is a warehouse node
