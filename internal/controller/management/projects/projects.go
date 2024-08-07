@@ -2,6 +2,7 @@ package projects
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/kelseyhightower/envconfig"
@@ -20,6 +21,7 @@ import (
 
 	rbacapi "github.com/akuity/kargo/api/rbac/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/conditions"
 	"github.com/akuity/kargo/internal/controller"
 	rolloutsapi "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
 	"github.com/akuity/kargo/internal/kubeclient"
@@ -35,6 +37,8 @@ func ReconcilerConfigFromEnv() ReconcilerConfig {
 	envconfig.MustProcess("", &cfg)
 	return cfg
 }
+
+var errProjectNamespaceExists = errors.New("namespace already exists and is not labeled as a Project namespace")
 
 // reconciler reconciles Project resources.
 type reconciler struct {
@@ -182,22 +186,20 @@ func (r *reconciler) Reconcile(
 		return ctrl.Result{}, nil
 	}
 
-	if project.Status.Phase.IsTerminal() {
-		logger.Debug(
-			"nothing to do",
-			"projectStatus", project.Status.Phase,
-		)
+	if newStatus, ok := migratePhaseToConditions(project); ok {
+		logger.Debug("migrated Project phase to conditions")
+		patchErr := r.patchProjectStatusFn(ctx, project, newStatus)
+		return ctrl.Result{Requeue: true}, patchErr
+	}
+
+	if reason, ok := mustReconcileProject(project); !ok {
+		logger.Debug("nothing to do", "reason", reason)
 		return ctrl.Result{}, nil
 	}
 
 	newStatus, err := r.syncProjectFn(ctx, project)
 	if err != nil {
-		newStatus.Message = err.Error()
 		logger.Error(err, "error syncing Project")
-	} else {
-		// Be sure to blank this out in case there's an error in this field from
-		// the previous reconciliation
-		newStatus.Message = ""
 	}
 
 	patchErr := r.patchProjectStatusFn(ctx, project, newStatus)
@@ -222,20 +224,70 @@ func (r *reconciler) syncProject(
 	ctx context.Context,
 	project *kargoapi.Project,
 ) (kargoapi.ProjectStatus, error) {
+	conditions.Set(&project.Status, &metav1.Condition{
+		Type:               kargoapi.ConditionTypeReconciling,
+		Status:             metav1.ConditionTrue,
+		Reason:             "Initializing",
+		Message:            "Creating project namespace and initializing permissions",
+		ObservedGeneration: project.GetGeneration(),
+	})
+
 	status, err := r.ensureNamespaceFn(ctx, project)
 	if err != nil {
+		if errors.Is(err, errProjectNamespaceExists) {
+			conditions.Delete(&status, kargoapi.ConditionTypeReconciling)
+			conditions.Set(&status, &metav1.Condition{
+				Type:   kargoapi.ConditionTypeStalled,
+				Status: metav1.ConditionTrue,
+				Reason: "ExistingNamespaceMissingLabel",
+				Message: fmt.Sprintf(
+					"Namespace %q already exists but is not labeled as a Project namespace using label %q",
+					project.Name,
+					kargoapi.ProjectLabelKey,
+				),
+				ObservedGeneration: project.GetGeneration(),
+			})
+		}
+		conditions.Set(&status, &metav1.Condition{
+			Type:               kargoapi.ConditionTypeReady,
+			Status:             metav1.ConditionFalse,
+			Reason:             "NamespaceInitializationFailed",
+			Message:            "Failed to initialize project namespace: " + err.Error(),
+			ObservedGeneration: project.GetGeneration(),
+		})
 		return status, fmt.Errorf("error ensuring namespace: %w", err)
 	}
 
 	if err = r.ensureAPIAdminPermissionsFn(ctx, project); err != nil {
+		conditions.Set(&status, &metav1.Condition{
+			Type:               kargoapi.ConditionTypeReady,
+			Status:             metav1.ConditionFalse,
+			Reason:             "PermissionsInitializationFailed",
+			Message:            "Failed to initialize project admin permissions: " + err.Error(),
+			ObservedGeneration: project.GetGeneration(),
+		})
 		return status, fmt.Errorf("error ensuring project admin permissions: %w", err)
 	}
 
 	if err = r.ensureDefaultProjectRolesFn(ctx, project); err != nil {
+		conditions.Set(&status, &metav1.Condition{
+			Type:               kargoapi.ConditionTypeReady,
+			Status:             metav1.ConditionFalse,
+			Reason:             "RolesInitializationFailed",
+			Message:            "Failed to initialize default project roles: " + err.Error(),
+			ObservedGeneration: project.GetGeneration(),
+		})
 		return status, fmt.Errorf("error ensuring default project roles: %w", err)
 	}
 
-	status.Phase = kargoapi.ProjectPhaseReady
+	conditions.Delete(&status, kargoapi.ConditionTypeReconciling)
+	conditions.Set(&status, &metav1.Condition{
+		Type:               kargoapi.ConditionTypeReady,
+		Status:             metav1.ConditionTrue,
+		Reason:             "Initialized",
+		Message:            "Project is initialized and ready for use",
+		ObservedGeneration: project.GetGeneration(),
+	})
 	return status, nil
 }
 
@@ -266,12 +318,9 @@ func (r *reconciler) ensureNamespace(
 		// We found an existing namespace with the same name as the Project. It's
 		// only a problem if it is not labeled as a Project namespace.
 		if ns.Labels[kargoapi.ProjectLabelKey] != kargoapi.LabelTrueValue {
-			status.Phase = kargoapi.ProjectPhaseInitializationFailed
 			return status, fmt.Errorf(
-				"failed to initialize Project %q because namespace %q already exists"+
-					" and is not labeled as a Project namespace",
-				project.Name,
-				project.Name,
+				"failed to initialize Project %q with namespace %q: %w",
+				project.Name, project.Name, errProjectNamespaceExists,
 			)
 		}
 		for _, ownerRef := range ns.OwnerReferences {
@@ -598,4 +647,85 @@ func (r *reconciler) patchProjectStatus(
 			*s = status
 		},
 	)
+}
+
+// migratePhaseToConditions migrates the Project's Phase and Message fields to
+// Conditions. It returns the updated ProjectStatus and a boolean indicating
+// whether the Project status was updated.
+func migratePhaseToConditions(project *kargoapi.Project) (kargoapi.ProjectStatus, bool) {
+	status := *project.Status.DeepCopy()
+	if project.Status.Phase == "" { // nolint:staticcheck
+		status.Message = ""                         // nolint:staticcheck
+		return status, project.Status.Message != "" // nolint:staticcheck
+	}
+
+	switch project.Status.Phase { // nolint:staticcheck
+	case kargoapi.ProjectPhaseInitializing:
+		conditions.Set(&status, &metav1.Condition{
+			Type:               kargoapi.ConditionTypeReconciling,
+			Status:             metav1.ConditionTrue,
+			Reason:             "Initializing",
+			Message:            "Creating project namespace and initializing permissions",
+			ObservedGeneration: project.GetGeneration(),
+		})
+		conditions.Set(&status, &metav1.Condition{
+			Type:               kargoapi.ConditionTypeReady,
+			Status:             metav1.ConditionFalse,
+			Reason:             "Initializing",
+			Message:            "Creating project namespace and initializing permissions",
+			ObservedGeneration: project.GetGeneration(),
+		})
+	case kargoapi.ProjectPhaseInitializationFailed:
+		// If the Project is in the InitializationFailed phase, it means that the
+		// namespace already exists but is not labeled as a Project namespace.
+		conditions.Set(&status, &metav1.Condition{
+			Type:   kargoapi.ConditionTypeStalled,
+			Status: metav1.ConditionTrue,
+			Reason: "ExistingNamespaceMissingLabel",
+			Message: fmt.Sprintf(
+				"Namespace %q already exists but is not labeled as a Project namespace using label %q",
+				project.Name,
+				kargoapi.ProjectLabelKey,
+			),
+			ObservedGeneration: project.GetGeneration(),
+		})
+		conditions.Set(&status, &metav1.Condition{
+			Type:               kargoapi.ConditionTypeReady,
+			Status:             metav1.ConditionFalse,
+			Reason:             "NamespaceInitializationFailed",
+			Message:            "Failed to initialize project namespace: " + errProjectNamespaceExists.Error(),
+			ObservedGeneration: project.GetGeneration(),
+		})
+	case kargoapi.ProjectPhaseReady:
+		conditions.Set(&status, &metav1.Condition{
+			Type:               kargoapi.ConditionTypeReady,
+			Status:             metav1.ConditionTrue,
+			Reason:             "Initialized",
+			Message:            "Project is initialized and ready for use",
+			ObservedGeneration: project.GetGeneration(),
+		})
+	}
+
+	// Clear the phase and message now that we've migrated them to conditions.
+	status.Phase = ""   // nolint:staticcheck
+	status.Message = "" // nolint:staticcheck
+
+	return status, true
+}
+
+// mustReconcileProject returns if the Project should be reconciled, or if it
+// should be left alone, and the reason why.
+func mustReconcileProject(project *kargoapi.Project) (string, bool) {
+	if stalled := conditions.Get(&project.Status, kargoapi.ConditionTypeStalled); stalled != nil {
+		if stalled.Status == metav1.ConditionTrue {
+			return stalled.Reason, false
+		}
+	}
+
+	if ready := conditions.Get(&project.Status, kargoapi.ConditionTypeReady); ready != nil {
+		if ready.Status == metav1.ConditionTrue {
+			return ready.Reason, false
+		}
+	}
+	return "", true
 }
