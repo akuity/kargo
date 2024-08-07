@@ -49,7 +49,7 @@
   },
   "packageManager": "pnpm@9.0.3",
   "dependencies": {
-    "@bufbuild/protobuf": "2.0.0",
+    "@bufbuild/protobuf": "1.10.0",
     "@connectrpc/connect": "1.4.0",
     "@connectrpc/connect-query": "1.4.1",
     "@connectrpc/connect-web": "1.4.0",
