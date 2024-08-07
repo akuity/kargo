@@ -93,6 +93,12 @@ export enum FreightMode {
   Confirming = 'confirming' // promoting, confirming
 }
 
+export enum CollapseMode {
+  Expanded = 'expanded',
+  HideAll = 'hideAll',
+  HideOld = 'hideOld'
+}
+
 export interface ConnectorsType {
   x: number;
   y: number;

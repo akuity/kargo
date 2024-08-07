@@ -15,7 +15,8 @@ export const FreightItem = ({
   empty,
   highlighted,
   onHover,
-  hideLabel
+  hideLabel,
+  childClassname
 }: {
   freight?: Freight;
   children: React.ReactNode;
@@ -25,6 +26,7 @@ export const FreightItem = ({
   highlighted?: boolean;
   onHover: (hovering: boolean) => void;
   hideLabel?: boolean;
+  childClassname?: string;
 }) => {
   let width = '';
   if (mode !== FreightMode.Confirming) {
@@ -51,7 +53,12 @@ export const FreightItem = ({
         width
       }}
     >
-      <div className='flex w-full h-full mb-1 items-center justify-center max-w-full text-ellipsis overflow-hidden'>
+      <div
+        className={classNames(
+          'flex w-full h-full mb-1 items-center justify-center max-w-full text-ellipsis overflow-hidden',
+          childClassname
+        )}
+      >
         {children}
       </div>
       <div className='mt-auto w-full'>
