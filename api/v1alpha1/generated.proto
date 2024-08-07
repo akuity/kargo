@@ -370,6 +370,11 @@ message ChartSubscription {
 // DiscoveredArtifacts holds the artifacts discovered by the Warehouse for its
 // subscriptions.
 message DiscoveredArtifacts {
+  // DiscoveredAt is the time at which the Warehouse discovered the artifacts.
+  //
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time discoveredAt = 4;
+
   // Git holds the commits discovered by the Warehouse for the Git
   // subscriptions.
   //
@@ -1565,15 +1570,19 @@ message WarehouseSpec {
 
 // WarehouseStatus describes a Warehouse's most recently observed state.
 message WarehouseStatus {
+  // Conditions contains the last observations of the Warehouse's current
+  // state.
+  // +patchMergeKey=type
+  // +patchStrategy=merge
+  // +listType=map
+  // +listMapKey=type
+  repeated k8s.io.apimachinery.pkg.apis.meta.v1.Condition conditions = 9;
+
   // LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh
   // annotation that was handled by the controller. This field can be used to
   // determine whether the request to refresh the resource has been handled.
   // +optional
   optional string lastHandledRefresh = 6;
-
-  // Message describes any errors that are preventing the Warehouse controller
-  // from polling repositories to discover new Freight.
-  optional string message = 3;
 
   // ObservedGeneration represents the .metadata.generation that this Warehouse
   // was reconciled against.
