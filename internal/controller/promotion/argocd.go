@@ -159,6 +159,7 @@ func (a *argoCDMechanism) Promote(
 		}
 
 		// Check if the update needs to be performed and retrieve its phase.
+		logger.Debug("Checking if update needs to be performed.")
 		phase, mustUpdate, err := a.mustPerformUpdateFn(
 			ctx,
 			stage,
@@ -168,9 +169,11 @@ func (a *argoCDMechanism) Promote(
 			desiredSource,
 			desiredSources,
 		)
+		logger.Debug("Update decision determined.", "mustUpdate", mustUpdate, "phase", phase)
 
 		// If we have a phase, append it to the results.
 		if phase != "" {
+			logger.Debug("Phase determined, appending to results.", "phase", phase)
 			updateResults = append(updateResults, phase)
 		}
 
@@ -199,13 +202,16 @@ func (a *argoCDMechanism) Promote(
 
 				// If the update failed, we can short-circuit. This is
 				// effectively "fail fast" behavior.
+				logger.Debug("Phase is in failed state, bailing.")
 				break
 			}
 			// If we get here, we can continue to the next update.
+			logger.Debug("No update necessary, skipping.")
 			continue
 		}
 
 		// Perform the update.
+		logger.Debug("About to perform update.")
 		if err := a.updateApplicationSourcesFn(ctx, app, desiredSource, desiredSources); err != nil {
 			return nil, newFreight, err
 		}
@@ -279,8 +285,12 @@ func (a *argoCDMechanism) mustPerformUpdate(
 	desiredSources argocd.ApplicationSources,
 ) (phase argocd.OperationPhase, mustUpdate bool, err error) {
 	status := app.Status.OperationState
+
+	appLogger := logging.LoggerFromContext(ctx).WithValues("app", app.Name)
+
 	if status == nil {
 		// The application has no operation.
+		appLogger.Debug("Application has no operation status, must update.")
 		return "", true, nil
 	}
 
@@ -302,6 +312,7 @@ func (a *argoCDMechanism) mustPerformUpdate(
 
 	if !status.Phase.Completed() {
 		// The operation is still running.
+		appLogger.Debug("The operation is still running.", "phase", status.Phase)
 		return status.Phase, false, nil
 	}
 
@@ -309,25 +320,6 @@ func (a *argoCDMechanism) mustPerformUpdate(
 		// We do not have a sync result, so we cannot determine if the operation
 		// was successful. The best recourse is to retry the operation.
 		return "", true, errors.New("operation completed without a sync result")
-	}
-
-	// Check if the desired revision was applied.
-	if desiredRevision, err := libargocd.GetDesiredRevision(
-		ctx,
-		a.kargoClient,
-		stage,
-		update,
-		app,
-		newFreight,
-	); err != nil {
-		return "", true, fmt.Errorf("error determining desired revision: %w", err)
-	} else if desiredRevision != "" && status.SyncResult.Revision != desiredRevision {
-		// The operation did not result in the desired revision being applied.
-		// We should attempt to retry the operation.
-		return "", true, fmt.Errorf(
-			"operation result revision %q does not match desired revision %q",
-			status.SyncResult.Revision, desiredRevision,
-		)
 	}
 
 	// Check if the desired source(s) were applied.
@@ -342,7 +334,56 @@ func (a *argoCDMechanism) mustPerformUpdate(
 		}
 	}
 
+	// Check if the desired revision was applied.
+	desiredRevisions, err := libargocd.GetDesiredRevisions(
+		ctx,
+		a.kargoClient,
+		stage,
+		update,
+		app,
+		newFreight,
+	)
+	appLogger.Debug("Operation completed, checking applied revision.", "desiredRevisions", desiredRevisions)
+
+	if err != nil {
+		appLogger.Error(err, "Failed to determine desired revision, will need to retry.")
+		return "", true, fmt.Errorf("error determining desired revision: %w", err)
+	}
+
+	if desiredRevisions == nil {
+		// We do not have a desired revision, so we cannot determine if the
+		// operation was successful.
+		return status.Phase, false, nil
+	}
+
+	// Check multi-source app for matching revisions.
+	if app.IsMultisource() {
+		syncedRevisions := status.SyncResult.Revisions
+		for i, r := range syncedRevisions {
+			if r != desiredRevisions[i] {
+				return "", true, fmt.Errorf(
+					"Not all result revisions out of %v match desired revisions %v",
+					syncedRevisions, desiredRevisions)
+			}
+		}
+		appLogger.Debug("Operation completed, no update necessary.", "phase", status.Phase)
+		return status.Phase, false, nil
+	}
+
+	// Check single-source app for matching revision.
+	singleSourceRevision := status.SyncResult.Revision
+	if len(desiredRevisions) < 1 ||
+		(desiredRevisions[0] != "" && singleSourceRevision != desiredRevisions[0]) {
+		// The operation did not result in the desired revision being applied.
+		// We should attempt to retry the operation.
+		return "", true, fmt.Errorf(
+			"operation result revision %q does not match desired revision %v",
+			singleSourceRevision, desiredRevisions,
+		)
+	}
+
 	// The operation has completed.
+	appLogger.Debug("Operation completed, no update necessary.", "phase", status.Phase)
 	return status.Phase, false, nil
 }
 
@@ -596,20 +637,24 @@ func (a *argoCDMechanism) applyArgoCDSourceUpdate(
 	source argocd.ApplicationSource,
 	newFreight []kargoapi.FreightReference,
 ) (argocd.ApplicationSource, error) {
+	logger := logging.LoggerFromContext(ctx)
+	updateLogger := logger.WithValues("source", source, "update", update)
+	updateLogger.Debug("About to apply ArgoCD source update")
+
 	if source.Chart != "" || update.Chart != "" {
 		// Infer that we're dealing with a chart repo. No need to normalize the
 		// repo URL here.
 
 		// Kargo uses the "oci://" prefix, but Argo CD does not.
 		if source.RepoURL != strings.TrimPrefix(update.RepoURL, "oci://") || source.Chart != update.Chart {
-			// There's no change to make in this case.
+			updateLogger.Trace("Source update not applicable to Application source, skipping.")
 			return source, nil
 		}
 
 		// If we get to here, we have confirmed that this update is applicable to
 		// this source.
 
-		desiredOrigin := freight.GetDesiredOrigin(stage, update)
+		desiredOrigin := freight.GetDesiredOrigin(ctx, stage, update)
 		chart, err := freight.FindChart(
 			ctx,
 			a.kargoClient,
@@ -630,14 +675,17 @@ func (a *argoCDMechanism) applyArgoCDSourceUpdate(
 		// We're dealing with a git repo, so we should normalize the repo URLs
 		// before comparing them.
 		sourceRepoURL := git.NormalizeURL(source.RepoURL)
-		if sourceRepoURL != git.NormalizeURL(update.RepoURL) {
+		updateRepoURL := git.NormalizeURL(update.RepoURL)
+		updateLogger.Debug("Source is a git repository.", "sourceRepoURL", sourceRepoURL, "updateRepoURL", updateRepoURL)
+		if sourceRepoURL != updateRepoURL {
+			updateLogger.Debug("Source git repository URL does not match expected, skipping.")
 			return source, nil
 		}
 
 		// If we get to here, we have confirmed that this update is applicable to
 		// this source.
 
-		desiredOrigin := freight.GetDesiredOrigin(stage, update)
+		desiredOrigin := freight.GetDesiredOrigin(ctx, stage, update)
 		commit, err := freight.FindCommit(
 			ctx,
 			a.kargoClient,
@@ -660,6 +708,7 @@ func (a *argoCDMechanism) applyArgoCDSourceUpdate(
 	}
 
 	if update.Kustomize != nil && len(update.Kustomize.Images) > 0 {
+		updateLogger.Debug("Applying kustomize image updates.")
 		if source.Kustomize == nil {
 			source.Kustomize = &argocd.ApplicationSourceKustomize{}
 		}
@@ -675,6 +724,7 @@ func (a *argoCDMechanism) applyArgoCDSourceUpdate(
 	}
 
 	if update.Helm != nil && len(update.Helm.Images) > 0 {
+		updateLogger.Debug("Applying Helm source updates.")
 		if source.Helm == nil {
 			source.Helm = &argocd.ApplicationSourceHelm{}
 		}
@@ -719,7 +769,7 @@ func (a *argoCDMechanism) buildKustomizeImagesForArgoCDAppSource(
 	kustomizeImages := make(argocd.KustomizeImages, 0, len(update.Images))
 	for i := range update.Images {
 		imageUpdate := &update.Images[i]
-		desiredOrigin := freight.GetDesiredOrigin(stage, imageUpdate)
+		desiredOrigin := freight.GetDesiredOrigin(ctx, stage, imageUpdate)
 		image, err := freight.FindImage(
 			ctx,
 			a.kargoClient,
@@ -770,7 +820,7 @@ func (a *argoCDMechanism) buildHelmParamChangesForArgoCDAppSource(
 			// This really shouldn't happen, so we'll ignore it.
 			continue
 		}
-		desiredOrigin := freight.GetDesiredOrigin(stage, imageUpdate)
+		desiredOrigin := freight.GetDesiredOrigin(ctx, stage, imageUpdate)
 		image, err := freight.FindImage(
 			ctx,
 			a.kargoClient,

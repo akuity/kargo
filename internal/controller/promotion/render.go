@@ -70,7 +70,7 @@ func (r *renderer) apply(
 	if len(update.Render.Images) == 0 {
 		// When no explicit image updates are specified, we will pass all images
 		// from the Freight in <url>:<tag> format.
-		desiredOrigin := freight.GetDesiredOrigin(stage, update.Render)
+		desiredOrigin := freight.GetDesiredOrigin(ctx, stage, update.Render)
 		for _, f := range newFreight {
 			for _, image := range f.Images {
 				// We actually need to "find" the image, because that will take origins
@@ -97,7 +97,7 @@ func (r *renderer) apply(
 		// a corresponding update.
 		for i := range update.Render.Images {
 			imageUpdate := &update.Render.Images[i]
-			desiredOrigin := freight.GetDesiredOrigin(stage, imageUpdate)
+			desiredOrigin := freight.GetDesiredOrigin(ctx, stage, imageUpdate)
 			image, err := freight.FindImage(
 				ctx,
 				r.client,

@@ -162,7 +162,7 @@ func (h *helmer) buildValuesFilesChanges(
 			// This really shouldn't happen, so we'll ignore it.
 			continue
 		}
-		desiredOrigin := freight.GetDesiredOrigin(stage, imageUpdate)
+		desiredOrigin := freight.GetDesiredOrigin(ctx, stage, imageUpdate)
 		image, err := freight.FindImage(ctx, h.client, stage, desiredOrigin, newFreight, imageUpdate.Image)
 		if err != nil {
 			return nil, nil,
@@ -237,7 +237,7 @@ func (h *helmer) buildChartDependencyChanges(
 			return nil, nil, fmt.Errorf("loading dependencies for chart: %w", err)
 		}
 		for _, update := range updates {
-			desiredOrigin := freight.GetDesiredOrigin(stage, update)
+			desiredOrigin := freight.GetDesiredOrigin(ctx, stage, update)
 			chart, err := freight.FindChart(
 				ctx,
 				h.client,

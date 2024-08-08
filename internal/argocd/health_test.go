@@ -321,6 +321,10 @@ func TestApplicationHealth_GetApplicationHealth(t *testing.T) {
 		Kind: kargoapi.FreightOriginKindWarehouse,
 		Name: "fake-warehouse",
 	}
+	testOrigin2 := kargoapi.FreightOrigin{
+		Kind: kargoapi.FreightOriginKindWarehouse,
+		Name: "fake-warehouse2",
+	}
 
 	testStageSpec := kargoapi.StageSpec{
 		PromotionMechanisms: &kargoapi.PromotionMechanisms{
@@ -396,56 +400,6 @@ func TestApplicationHealth_GetApplicationHealth(t *testing.T) {
 				require.Equal(t, kargoapi.HealthStateUnknown, state)
 				require.Equal(t, kargoapi.ArgoCDAppHealthStateUnknown, healthStatus.Status)
 				require.Equal(t, kargoapi.ArgoCDAppSyncStateUnknown, syncStatus.Status)
-			},
-		},
-		{
-			name: "error on multiple app sources",
-			key:  types.NamespacedName{Namespace: "fake-namespace", Name: "fake-name"},
-			stage: &kargoapi.Stage{
-				Spec: testStageSpec,
-			},
-			application: &argocd.Application{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "fake-namespace",
-					Name:      "fake-name",
-				},
-				Spec: argocd.ApplicationSpec{
-					Sources: argocd.ApplicationSources{
-						{},
-						{},
-					},
-				},
-				Status: argocd.ApplicationStatus{
-					Health: argocd.HealthStatus{
-						Status:  argocd.HealthStatusHealthy,
-						Message: "fake-message",
-					},
-					Sync: argocd.SyncStatus{
-						Status:    argocd.SyncStatusCodeSynced,
-						Revision:  "fake-revision",
-						Revisions: []string{"fake-revision1", "fake-revision2"},
-					},
-				},
-			},
-			assertions: func(
-				t *testing.T,
-				state kargoapi.HealthState,
-				healthStatus kargoapi.ArgoCDAppHealthStatus,
-				syncStatus kargoapi.ArgoCDAppSyncStatus,
-				err error,
-			) {
-				require.ErrorContains(t, err, "bugs in Argo CD currently prevent a comprehensive assessment")
-
-				require.Equal(t, kargoapi.HealthStateUnknown, state)
-				require.Equal(t, kargoapi.ArgoCDAppHealthStatus{
-					Status:  kargoapi.ArgoCDAppHealthStateHealthy,
-					Message: "fake-message",
-				}, healthStatus)
-				require.Equal(t, kargoapi.ArgoCDAppSyncStatus{
-					Status:    kargoapi.ArgoCDAppSyncStateSynced,
-					Revision:  "fake-revision",
-					Revisions: []string{"fake-revision1", "fake-revision2"},
-				}, syncStatus)
 			},
 		},
 		{
@@ -555,7 +509,8 @@ func TestApplicationHealth_GetApplicationHealth(t *testing.T) {
 				syncStatus kargoapi.ArgoCDAppSyncStatus,
 				err error,
 			) {
-				require.ErrorContains(t, err, "is out of sync")
+				require.ErrorContains(t, err, "Desired revision [\"other-fake-revision\"]")
+				require.ErrorContains(t, err, "does not match current revision \"fake-revision\" of Application")
 
 				require.Equal(t, kargoapi.HealthStateUnhealthy, state)
 				require.Equal(t, kargoapi.ArgoCDAppHealthStatus{
@@ -564,6 +519,99 @@ func TestApplicationHealth_GetApplicationHealth(t *testing.T) {
 				require.Equal(t, kargoapi.ArgoCDAppSyncStatus{
 					Status:   kargoapi.ArgoCDAppSyncStateSynced,
 					Revision: "fake-revision",
+				}, syncStatus)
+			},
+		},
+		{
+			name: "Desired revisions require Application to be synced",
+			key:  types.NamespacedName{Namespace: "fake-namespace", Name: "fake-name"},
+			application: &argocd.Application{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-namespace",
+					Name:      "fake-name",
+				},
+				Spec: argocd.ApplicationSpec{
+					Sources: argocd.ApplicationSources{
+						argocd.ApplicationSource{
+							RepoURL: "https://example.com/universe/42",
+						},
+						argocd.ApplicationSource{
+							RepoURL: "https://example.com/another-universe/42",
+						},
+						argocd.ApplicationSource{
+							Chart:   "fake-chart",
+							RepoURL: "https://example.com/",
+						},
+					},
+				},
+				Status: argocd.ApplicationStatus{
+					Health: argocd.HealthStatus{
+						Status: argocd.HealthStatusHealthy,
+					},
+					Sync: argocd.SyncStatus{
+						Status:    argocd.SyncStatusCodeSynced,
+						Revisions: []string{"warehouse1-revision1", "warehouse2-revision1", "unsubscribed-revision"},
+					},
+					OperationState: &argocd.OperationState{
+						FinishedAt: ptr.To(metav1.Now()),
+					},
+				},
+			},
+			stage: &kargoapi.Stage{
+				Spec: kargoapi.StageSpec{
+					PromotionMechanisms: &kargoapi.PromotionMechanisms{
+						ArgoCDAppUpdates: []kargoapi.ArgoCDAppUpdate{
+							{
+								AppNamespace: "fake-namespace",
+								AppName:      "fake-name",
+								SourceUpdates: []kargoapi.ArgoCDSourceUpdate{
+									{Origin: &testOrigin, RepoURL: "https://example.com/universe/42"},
+									{Origin: &testOrigin2, RepoURL: "https://example.com/another-universe/42"},
+								},
+							}},
+					},
+				},
+				Status: kargoapi.StageStatus{
+					FreightHistory: kargoapi.FreightHistory{
+						&kargoapi.FreightCollection{
+							Freight: map[string]kargoapi.FreightReference{
+								testOrigin.String(): {
+									Origin: testOrigin,
+									Commits: []kargoapi.GitCommit{{
+										RepoURL: "https://example.com/universe/42",
+										ID:      "warehouse1-revision1",
+									}},
+								},
+								testOrigin2.String(): {
+									Origin: testOrigin2,
+									Commits: []kargoapi.GitCommit{{
+										RepoURL: "https://example.com/another-universe/42",
+										ID:      "warehouse2-new-revision2",
+									}},
+								},
+							},
+						},
+					},
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				state kargoapi.HealthState,
+				healthStatus kargoapi.ArgoCDAppHealthStatus,
+				syncStatus kargoapi.ArgoCDAppSyncStatus,
+				err error,
+			) {
+				require.ErrorContains(t, err, "Not all sources of Application")
+				require.ErrorContains(t, err, "match the desired revisions")
+				require.ErrorContains(t, err, "Source 1 with RepoURL https://example.com/another-universe/42")
+
+				require.Equal(t, kargoapi.HealthStateUnhealthy, state)
+				require.Equal(t, kargoapi.ArgoCDAppHealthStatus{
+					Status: kargoapi.ArgoCDAppHealthStateHealthy,
+				}, healthStatus)
+				require.Equal(t, kargoapi.ArgoCDAppSyncStatus{
+					Status:    kargoapi.ArgoCDAppSyncStateSynced,
+					Revisions: []string{"warehouse1-revision1", "warehouse2-revision1", "unsubscribed-revision"},
 				}, syncStatus)
 			},
 		},
@@ -672,6 +720,149 @@ func TestApplicationHealth_GetApplicationHealth(t *testing.T) {
 				require.Equal(t, kargoapi.ArgoCDAppSyncStatus{
 					Status:   kargoapi.ArgoCDAppSyncStateSynced,
 					Revision: "fake-revision",
+				}, syncStatus)
+			},
+		},
+		{
+			name: "Multi-source single-warehouse Application is Healthy",
+			key:  types.NamespacedName{Namespace: "fake-namespace", Name: "fake-name"},
+			application: &argocd.Application{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-namespace",
+					Name:      "fake-name",
+				},
+				Spec: argocd.ApplicationSpec{
+					Sources: argocd.ApplicationSources{
+						argocd.ApplicationSource{
+							RepoURL: "https://example.com/universe/42",
+						},
+						argocd.ApplicationSource{
+							RepoURL: "https://example.com/another-universe/42",
+						},
+					},
+				},
+				Status: argocd.ApplicationStatus{
+					Health: argocd.HealthStatus{
+						Status: argocd.HealthStatusHealthy,
+					},
+					Sync: argocd.SyncStatus{
+						Status:    argocd.SyncStatusCodeSynced,
+						Revisions: []string{"fake-revision1", "fake-revision2"},
+					},
+					OperationState: &argocd.OperationState{
+						FinishedAt: &metav1.Time{Time: metav1.Now().Add(-10 * time.Second)},
+					},
+				},
+			},
+			stage: &kargoapi.Stage{
+				Spec: testStageSpec,
+				Status: kargoapi.StageStatus{
+					FreightHistory: kargoapi.FreightHistory{
+						&kargoapi.FreightCollection{
+							Freight: map[string]kargoapi.FreightReference{
+								testOrigin.String(): {
+									Origin: testOrigin,
+									Commits: []kargoapi.GitCommit{{
+										RepoURL: "https://example.com/universe/42",
+										ID:      "fake-revision1",
+									}},
+								},
+							},
+						},
+					},
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				state kargoapi.HealthState,
+				healthStatus kargoapi.ArgoCDAppHealthStatus,
+				syncStatus kargoapi.ArgoCDAppSyncStatus,
+				err error,
+			) {
+				require.NoError(t, err)
+
+				require.Equal(t, kargoapi.HealthStateHealthy, state)
+				require.Equal(t, kargoapi.ArgoCDAppHealthStatus{
+					Status: kargoapi.ArgoCDAppHealthStateHealthy,
+				}, healthStatus)
+				require.Equal(t, kargoapi.ArgoCDAppSyncStatus{
+					Status:    kargoapi.ArgoCDAppSyncStateSynced,
+					Revisions: []string{"fake-revision1", "fake-revision2"},
+				}, syncStatus)
+			},
+		},
+		{
+			name: "Multi-source multi-warehouse Application is Healthy",
+			key:  types.NamespacedName{Namespace: "fake-namespace", Name: "fake-name"},
+			application: &argocd.Application{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-namespace",
+					Name:      "fake-name",
+				},
+				Spec: argocd.ApplicationSpec{
+					Sources: argocd.ApplicationSources{
+						argocd.ApplicationSource{
+							RepoURL: "https://example.com/universe/42",
+						},
+						argocd.ApplicationSource{
+							RepoURL: "https://example.com/another-universe/42",
+						},
+					},
+				},
+				Status: argocd.ApplicationStatus{
+					Health: argocd.HealthStatus{
+						Status: argocd.HealthStatusHealthy,
+					},
+					Sync: argocd.SyncStatus{
+						Status:    argocd.SyncStatusCodeSynced,
+						Revisions: []string{"warehouse1-revision1", "warehouse2-revision2"},
+					},
+					OperationState: &argocd.OperationState{
+						FinishedAt: &metav1.Time{Time: metav1.Now().Add(-10 * time.Second)},
+					},
+				},
+			},
+			stage: &kargoapi.Stage{
+				Spec: testStageSpec,
+				Status: kargoapi.StageStatus{
+					FreightHistory: kargoapi.FreightHistory{
+						&kargoapi.FreightCollection{
+							Freight: map[string]kargoapi.FreightReference{
+								testOrigin.String(): {
+									Origin: testOrigin,
+									Commits: []kargoapi.GitCommit{{
+										RepoURL: "https://example.com/universe/42",
+										ID:      "warehouse1-revision1",
+									}},
+								},
+								testOrigin2.String(): {
+									Origin: testOrigin2,
+									Commits: []kargoapi.GitCommit{{
+										RepoURL: "https://example.com/another-universe/42",
+										ID:      "warehouse2-revision2",
+									}},
+								},
+							},
+						},
+					},
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				state kargoapi.HealthState,
+				healthStatus kargoapi.ArgoCDAppHealthStatus,
+				syncStatus kargoapi.ArgoCDAppSyncStatus,
+				err error,
+			) {
+				require.NoError(t, err)
+
+				require.Equal(t, kargoapi.HealthStateHealthy, state)
+				require.Equal(t, kargoapi.ArgoCDAppHealthStatus{
+					Status: kargoapi.ArgoCDAppHealthStateHealthy,
+				}, healthStatus)
+				require.Equal(t, kargoapi.ArgoCDAppSyncStatus{
+					Status:    kargoapi.ArgoCDAppSyncStateSynced,
+					Revisions: []string{"warehouse1-revision1", "warehouse2-revision2"},
 				}, syncStatus)
 			},
 		},
@@ -790,20 +981,33 @@ func Test_stageHealthForAppSync(t *testing.T) {
 	tests := []struct {
 		name       string
 		app        *argocd.Application
-		revision   string
+		revisions  []string
 		assertions func(*testing.T, kargoapi.HealthState, error)
 	}{
 		{
 			name: "empty revision",
+			app: &argocd.Application{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-namespace",
+					Name:      "fake-name",
+				},
+				Operation: &argocd.Operation{
+					Sync: &argocd.SyncOperation{},
+				},
+			},
 			assertions: func(t *testing.T, state kargoapi.HealthState, err error) {
 				require.NoError(t, err)
 				require.Equal(t, kargoapi.HealthStateHealthy, state)
 			},
 		},
 		{
-			name:     "ongoing sync operation",
-			revision: "fake-revision",
+			name:      "ongoing sync operation",
+			revisions: []string{"fake-revision"},
 			app: &argocd.Application{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-namespace",
+					Name:      "fake-name",
+				},
 				Operation: &argocd.Operation{
 					Sync: &argocd.SyncOperation{},
 				},
@@ -814,8 +1018,8 @@ func Test_stageHealthForAppSync(t *testing.T) {
 			},
 		},
 		{
-			name:     "no operation state",
-			revision: "fake-revision",
+			name:      "no operation state",
+			revisions: []string{"fake-revision"},
 			app: &argocd.Application{
 				Status: argocd.ApplicationStatus{
 					Sync: argocd.SyncStatus{
@@ -829,8 +1033,8 @@ func Test_stageHealthForAppSync(t *testing.T) {
 			},
 		},
 		{
-			name:     "operation state without finished time",
-			revision: "fake-revision",
+			name:      "operation state without finished time",
+			revisions: []string{"fake-revision"},
 			app: &argocd.Application{
 				Status: argocd.ApplicationStatus{
 					Sync: argocd.SyncStatus{
@@ -845,9 +1049,13 @@ func Test_stageHealthForAppSync(t *testing.T) {
 			},
 		},
 		{
-			name:     "sync revision mismatch",
-			revision: "fake-revision",
+			name:      "sync revision mismatch",
+			revisions: []string{"fake-revision"},
 			app: &argocd.Application{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-namespace",
+					Name:      "fake-name",
+				},
 				Status: argocd.ApplicationStatus{
 					Sync: argocd.SyncStatus{
 						Revision: "other-fake-revision",
@@ -858,14 +1066,19 @@ func Test_stageHealthForAppSync(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, state kargoapi.HealthState, err error) {
-				require.ErrorContains(t, err, "is out of sync")
+				require.ErrorContains(t, err, "Desired revision [\"fake-revision\"]")
+				require.ErrorContains(t, err, "does not match current revision \"other-fake-revision\"")
 				require.Equal(t, kargoapi.HealthStateUnhealthy, state)
 			},
 		},
 		{
-			name:     "synced",
-			revision: "fake-revision",
+			name:      "synced",
+			revisions: []string{"fake-revision"},
 			app: &argocd.Application{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-namespace",
+					Name:      "fake-name",
+				},
 				Status: argocd.ApplicationStatus{
 					Sync: argocd.SyncStatus{
 						Revision: "fake-revision",
@@ -881,9 +1094,10 @@ func Test_stageHealthForAppSync(t *testing.T) {
 			},
 		},
 	}
+	ctx := context.Background()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := stageHealthForAppSync(tt.app, tt.revision)
+			got, err := stageHealthForAppSync(ctx, tt.app, tt.revisions)
 			tt.assertions(t, got, err)
 		})
 	}
@@ -964,9 +1178,10 @@ func Test_stageHealthForAppHealth(t *testing.T) {
 			},
 		},
 	}
+	ctx := context.Background()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := stageHealthForAppHealth(tt.app)
+			got, err := stageHealthForAppHealth(ctx, tt.app)
 			tt.assertions(t, got, err)
 		})
 	}
