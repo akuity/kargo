@@ -25,6 +25,7 @@ import { FreightIndicators } from './freight-indicators';
 import { FreightLabel } from './freight-label';
 import { StageNodeFooter } from './stage-node-footer';
 import * as styles from './stage-node.module.less';
+import { useLocalStorage } from '@ui/utils/use-local-storage';
 
 export const StageNodeDimensions = () =>
   ({
@@ -62,14 +63,13 @@ export const StageNode = ({
   autoPromotion?: boolean;
 }) => {
   const navigate = useNavigate();
-  const [visibleFreight, setVisibleFreight] = useState(0);
+  const [visibleFreight, setVisibleFreight] = useLocalStorage(`${projectName}-${stage.metadata?.name}`, 0);
 
   return (
     <>
       <div
-        className={`${styles.node} ${faded ? styles.faded : ''} ${
-          highlighted ? styles.highlighted : ''
-        }`}
+        className={`${styles.node} ${faded ? styles.faded : ''} ${highlighted ? styles.highlighted : ''
+          }`}
         style={{
           backgroundColor: color,
           borderColor: color,
@@ -94,10 +94,10 @@ export const StageNode = ({
             {(stage?.spec?.promotionMechanisms?.gitRepoUpdates || []).some(
               (g) => g.pullRequest
             ) && (
-              <Tooltip title='PR Promotion Enabled'>
-                <FontAwesomeIcon icon={faCodePullRequest} />
-              </Tooltip>
-            )}
+                <Tooltip title='PR Promotion Enabled'>
+                  <FontAwesomeIcon icon={faCodePullRequest} />
+                </Tooltip>
+              )}
             {autoPromotion && (
               <Tooltip title='Auto Promotion Enabled'>
                 <FontAwesomeIcon icon={faRobot} />
@@ -132,7 +132,7 @@ export const StageNode = ({
           style={currentFreight && currentFreight?.length > 1 ? { paddingTop: '15px' } : undefined}
         >
           {action === FreightTimelineAction.ManualApproval ||
-          action === FreightTimelineAction.PromoteFreight ? (
+            action === FreightTimelineAction.PromoteFreight ? (
             <div className='h-full flex items-center justify-center font-bold cursor-pointer text-blue-500 hover:text-blue-400'>
               <Button
                 icon={
