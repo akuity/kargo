@@ -27,6 +27,7 @@ import { useModal } from '@ui/features/common/modal/use-modal';
 const FreightDetails = lazy(() => import('@ui/features/freight/freight-details'));
 const FreightTimeline = lazy(() => import('@ui/features/freight-timeline/freight-timeline'));
 const StageDetails = lazy(() => import('@ui/features/stage/stage-details'));
+const CreateStage = lazy(() => import('@ui/features/stage/create-stage'));
 import { SuspenseSpin } from '@ui/features/common/suspense-spin';
 import { getCurrentFreight } from '@ui/features/common/utils';
 import { FreightTimelineHeader } from '@ui/features/freight-timeline/freight-timeline-header';
@@ -59,7 +60,7 @@ import { Watcher } from './utils/watcher';
 
 const WarehouseDetails = lazy(() => import('./warehouse/warehouse-details'));
 
-export const Pipelines = ({ project }: { project: Project }) => {
+export const Pipelines = ({ project, creatingStage }: { project: Project; creatingStage?: boolean }) => {
   const { name, stageName, freightName, warehouseName } = useParams();
   const { data, isLoading } = useQuery(listStages, { project: name });
   const navigate = useNavigate();
@@ -332,17 +333,17 @@ export const Pipelines = ({ project }: { project: Project }) => {
                         label: (
                           <>
                             <FontAwesomeIcon icon={faMasksTheater} size='xs' className='mr-2' />{' '}
-                            Stage
+                            Create Stage
                           </>
                         ),
-                        onClick: () => showCreateStage()
+                        onClick: () => navigate(generatePath(paths.createStage, { name }))
                       },
                       {
                         key: '2',
                         label: (
                           <>
                             <FontAwesomeIcon icon={faWarehouse} size='xs' className='mr-2' />{' '}
-                            Warehouse
+                            Create Warehouse
                           </>
                         ),
                         onClick: () => showCreateWarehouse()
@@ -435,21 +436,21 @@ export const Pipelines = ({ project }: { project: Project }) => {
                           onClick={
                             state.action === FreightTimelineAction.ManualApproval
                               ? () => {
-                                  manualApproveAction({
-                                    stage: node.data?.metadata?.name,
-                                    project: name,
-                                    name: state.freight
-                                  });
-                                }
+                                manualApproveAction({
+                                  stage: node.data?.metadata?.name,
+                                  project: name,
+                                  name: state.freight
+                                });
+                              }
                               : state.action === FreightTimelineAction.PromoteFreight
                                 ? () => {
-                                    state.setStage(node.data?.metadata?.name || '');
-                                    promoteAction({
-                                      stage: node.data?.metadata?.name || '',
-                                      project: name,
-                                      freight: state.freight
-                                    });
-                                  }
+                                  state.setStage(node.data?.metadata?.name || '');
+                                  promoteAction({
+                                    stage: node.data?.metadata?.name || '',
+                                    project: name,
+                                    freight: state.freight
+                                  });
+                                }
                                 : undefined
                           }
                           onHover={(h) => onHover(h, node.data?.metadata?.name || '', true)}
@@ -463,12 +464,12 @@ export const Pipelines = ({ project }: { project: Project }) => {
                         onClick={
                           node.type === NodeType.WAREHOUSE
                             ? () =>
-                                navigate(
-                                  generatePath(paths.warehouse, {
-                                    name,
-                                    warehouseName: node.warehouseName
-                                  })
-                                )
+                              navigate(
+                                generatePath(paths.warehouse, {
+                                  name,
+                                  warehouseName: node.warehouseName
+                                })
+                              )
                             : undefined
                         }
                       >
@@ -561,6 +562,7 @@ export const Pipelines = ({ project }: { project: Project }) => {
           {warehouse && (
             <WarehouseDetails warehouse={warehouse} refetchFreight={() => refetchFreightData()} />
           )}
+          {creatingStage && <CreateStage project={name} />}
         </SuspenseSpin>
       </ColorContext.Provider>
     </div>

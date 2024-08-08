@@ -52,7 +52,7 @@ const tabs = {
 
 export type ProjectTab = keyof typeof tabs;
 
-export const Project = ({ tab = 'pipelines' }: { tab?: ProjectTab }) => {
+export const Project = ({ tab = 'pipelines', creatingStage }: { tab?: ProjectTab; creatingStage?: boolean }) => {
   const { name } = useParams();
   const navigate = useNavigate();
 
@@ -62,7 +62,7 @@ export const Project = ({ tab = 'pipelines' }: { tab?: ProjectTab }) => {
   const renderTab = (key: ProjectTab) => {
     switch (key) {
       case 'pipelines':
-        return <Pipelines project={data?.result?.value as _Project} />;
+        return <Pipelines project={data?.result?.value as _Project} creatingStage={creatingStage} />;
       case 'credentials':
         return <CredentialsList />;
       case 'analysisTemplates':
