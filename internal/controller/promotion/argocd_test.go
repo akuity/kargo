@@ -30,8 +30,7 @@ func TestNewArgoCDMechanism(t *testing.T) {
 	require.NotNil(t, apm.argocdClient)
 	require.NotNil(t, apm.buildDesiredSourcesFn)
 	require.NotNil(t, apm.mustPerformUpdateFn)
-	require.NotNil(t, apm.hardRefreshApplicationFn)
-	require.NotNil(t, apm.updateApplicationSourcesFn)
+	require.NotNil(t, apm.syncApplicationFn)
 	require.NotNil(t, apm.getAuthorizedApplicationFn)
 	require.NotNil(t, apm.applyArgoCDSourceUpdateFn)
 	require.NotNil(t, apm.argoCDAppPatchFn)
@@ -132,6 +131,89 @@ func TestArgoCDPromote(t *testing.T) {
 			},
 		},
 		{
+			name: "request sync without updates",
+			promoMech: &argoCDMechanism{
+				argocdClient: fake.NewFakeClient(),
+				getAuthorizedApplicationFn: func(
+					context.Context,
+					string,
+					string,
+					metav1.ObjectMeta,
+				) (*argocd.Application, error) {
+					return &argocd.Application{}, nil
+				},
+				syncApplicationFn: func(
+					context.Context,
+					*argocd.Application,
+					*argocd.ApplicationSource,
+					argocd.ApplicationSources,
+				) error {
+					return nil
+				},
+			},
+			stage: &kargoapi.Stage{
+				Spec: kargoapi.StageSpec{
+					PromotionMechanisms: &kargoapi.PromotionMechanisms{
+						ArgoCDAppUpdates: []kargoapi.ArgoCDAppUpdate{
+							{},
+						},
+					},
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				status *kargoapi.PromotionStatus,
+				newFreightIn []kargoapi.FreightReference,
+				newFreightOut []kargoapi.FreightReference,
+				err error,
+			) {
+				require.NoError(t, err)
+				require.Equal(t, kargoapi.PromotionPhaseSucceeded, status.Phase)
+				require.Equal(t, newFreightIn, newFreightOut)
+			},
+		},
+		{
+			name: "error requesting sync without updates",
+			promoMech: &argoCDMechanism{
+				argocdClient: fake.NewFakeClient(),
+				getAuthorizedApplicationFn: func(
+					context.Context,
+					string,
+					string,
+					metav1.ObjectMeta,
+				) (*argocd.Application, error) {
+					return &argocd.Application{}, nil
+				},
+				syncApplicationFn: func(
+					context.Context,
+					*argocd.Application,
+					*argocd.ApplicationSource,
+					argocd.ApplicationSources,
+				) error {
+					return errors.New("something went wrong")
+				},
+			},
+			stage: &kargoapi.Stage{
+				Spec: kargoapi.StageSpec{
+					PromotionMechanisms: &kargoapi.PromotionMechanisms{
+						ArgoCDAppUpdates: []kargoapi.ArgoCDAppUpdate{
+							{},
+						},
+					},
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				_ *kargoapi.PromotionStatus,
+				newFreightIn []kargoapi.FreightReference,
+				newFreightOut []kargoapi.FreightReference,
+				err error,
+			) {
+				require.ErrorContains(t, err, "something went wrong")
+				require.Equal(t, newFreightIn, newFreightOut)
+			},
+		},
+		{
 			name: "error building desired sources",
 			promoMech: &argoCDMechanism{
 				argocdClient: fake.NewFakeClient(),
@@ -157,55 +239,11 @@ func TestArgoCDPromote(t *testing.T) {
 				Spec: kargoapi.StageSpec{
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{
 						ArgoCDAppUpdates: []kargoapi.ArgoCDAppUpdate{
-							{},
-						},
-					},
-				},
-			},
-			assertions: func(
-				t *testing.T,
-				_ *kargoapi.PromotionStatus,
-				newFreightIn []kargoapi.FreightReference,
-				newFreightOut []kargoapi.FreightReference,
-				err error,
-			) {
-				require.ErrorContains(t, err, "something went wrong")
-				require.Equal(t, newFreightIn, newFreightOut)
-			},
-		},
-		{
-			name: "error performing hard refresh",
-			promoMech: &argoCDMechanism{
-				argocdClient: fake.NewFakeClient(),
-				getAuthorizedApplicationFn: func(
-					context.Context,
-					string,
-					string,
-					metav1.ObjectMeta,
-				) (*argocd.Application, error) {
-					return &argocd.Application{}, nil
-				},
-				buildDesiredSourcesFn: func(
-					context.Context,
-					*kargoapi.Stage,
-					*kargoapi.ArgoCDAppUpdate,
-					*argocd.Application,
-					[]kargoapi.FreightReference,
-				) (*argocd.ApplicationSource, argocd.ApplicationSources, error) {
-					return nil, nil, nil
-				},
-				hardRefreshApplicationFn: func(
-					context.Context,
-					*argocd.Application,
-				) error {
-					return errors.New("something went wrong")
-				},
-			},
-			stage: &kargoapi.Stage{
-				Spec: kargoapi.StageSpec{
-					PromotionMechanisms: &kargoapi.PromotionMechanisms{
-						ArgoCDAppUpdates: []kargoapi.ArgoCDAppUpdate{
-							{},
+							{
+								SourceUpdates: []kargoapi.ArgoCDSourceUpdate{
+									{},
+								},
+							},
 						},
 					},
 				},
@@ -258,7 +296,11 @@ func TestArgoCDPromote(t *testing.T) {
 				Spec: kargoapi.StageSpec{
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{
 						ArgoCDAppUpdates: []kargoapi.ArgoCDAppUpdate{
-							{},
+							{
+								SourceUpdates: []kargoapi.ArgoCDSourceUpdate{
+									{},
+								},
+							},
 						},
 					},
 				},
@@ -306,7 +348,7 @@ func TestArgoCDPromote(t *testing.T) {
 				) (argocd.OperationPhase, bool, error) {
 					return "", true, fmt.Errorf("something went wrong")
 				},
-				updateApplicationSourcesFn: func(
+				syncApplicationFn: func(
 					context.Context,
 					*argocd.Application,
 					*argocd.ApplicationSource,
@@ -319,7 +361,11 @@ func TestArgoCDPromote(t *testing.T) {
 				Spec: kargoapi.StageSpec{
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{
 						ArgoCDAppUpdates: []kargoapi.ArgoCDAppUpdate{
-							{},
+							{
+								SourceUpdates: []kargoapi.ArgoCDSourceUpdate{
+									{},
+								},
+							},
 						},
 					},
 				},
@@ -372,7 +418,11 @@ func TestArgoCDPromote(t *testing.T) {
 				Spec: kargoapi.StageSpec{
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{
 						ArgoCDAppUpdates: []kargoapi.ArgoCDAppUpdate{
-							{},
+							{
+								SourceUpdates: []kargoapi.ArgoCDSourceUpdate{
+									{},
+								},
+							},
 						},
 					},
 				},
@@ -426,7 +476,11 @@ func TestArgoCDPromote(t *testing.T) {
 				Spec: kargoapi.StageSpec{
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{
 						ArgoCDAppUpdates: []kargoapi.ArgoCDAppUpdate{
-							{},
+							{
+								SourceUpdates: []kargoapi.ArgoCDSourceUpdate{
+									{},
+								},
+							},
 						},
 					},
 				},
@@ -475,7 +529,7 @@ func TestArgoCDPromote(t *testing.T) {
 				) (argocd.OperationPhase, bool, error) {
 					return "", true, nil
 				},
-				updateApplicationSourcesFn: func(
+				syncApplicationFn: func(
 					context.Context,
 					*argocd.Application,
 					*argocd.ApplicationSource,
@@ -488,7 +542,11 @@ func TestArgoCDPromote(t *testing.T) {
 				Spec: kargoapi.StageSpec{
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{
 						ArgoCDAppUpdates: []kargoapi.ArgoCDAppUpdate{
-							{},
+							{
+								SourceUpdates: []kargoapi.ArgoCDSourceUpdate{
+									{},
+								},
+							},
 						},
 					},
 				},
@@ -556,7 +614,7 @@ func TestArgoCDPromote(t *testing.T) {
 						return "", true, nil
 					}
 				}(),
-				updateApplicationSourcesFn: func(
+				syncApplicationFn: func(
 					context.Context,
 					*argocd.Application,
 					*argocd.ApplicationSource,
@@ -569,8 +627,16 @@ func TestArgoCDPromote(t *testing.T) {
 				Spec: kargoapi.StageSpec{
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{
 						ArgoCDAppUpdates: []kargoapi.ArgoCDAppUpdate{
-							{},
-							{},
+							{
+								SourceUpdates: []kargoapi.ArgoCDSourceUpdate{
+									{},
+								},
+							},
+							{
+								SourceUpdates: []kargoapi.ArgoCDSourceUpdate{
+									{},
+								},
+							},
 						},
 					},
 				},
@@ -624,7 +690,11 @@ func TestArgoCDPromote(t *testing.T) {
 				Spec: kargoapi.StageSpec{
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{
 						ArgoCDAppUpdates: []kargoapi.ArgoCDAppUpdate{
-							{},
+							{
+								SourceUpdates: []kargoapi.ArgoCDSourceUpdate{
+									{},
+								},
+							},
 						},
 					},
 				},
@@ -677,7 +747,11 @@ func TestArgoCDPromote(t *testing.T) {
 				Spec: kargoapi.StageSpec{
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{
 						ArgoCDAppUpdates: []kargoapi.ArgoCDAppUpdate{
-							{},
+							{
+								SourceUpdates: []kargoapi.ArgoCDSourceUpdate{
+									{},
+								},
+							},
 						},
 					},
 				},
@@ -1227,70 +1301,7 @@ func TestArgoCDMustPerformUpdate(t *testing.T) {
 	}
 }
 
-func TestArgoCDHardRefreshApplication(t *testing.T) {
-	testCases := []struct {
-		name           string
-		promoMech      *argoCDMechanism
-		app            *argocd.Application
-		desiredSource  *argocd.ApplicationSource
-		desiredSources argocd.ApplicationSources
-		assertions     func(*testing.T, error)
-	}{
-		{
-			name: "error patching Application",
-			promoMech: &argoCDMechanism{
-				argoCDAppPatchFn: func(
-					context.Context,
-					client.Object,
-					client.Patch,
-					...client.PatchOption,
-				) error {
-					return errors.New("something went wrong")
-				},
-			},
-			app: &argocd.Application{},
-			assertions: func(t *testing.T, err error) {
-				require.ErrorContains(t, err, "error patching Argo CD Application")
-				require.ErrorContains(t, err, "something went wrong")
-			},
-		},
-		{
-			name: "success",
-			promoMech: &argoCDMechanism{
-				argoCDAppPatchFn: func(
-					context.Context,
-					client.Object,
-					client.Patch,
-					...client.PatchOption,
-				) error {
-					return nil
-				},
-			},
-			app: &argocd.Application{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "fake-name",
-					Namespace: "fake-namespace",
-				},
-			},
-			assertions: func(t *testing.T, err error) {
-				require.NoError(t, err)
-			},
-		},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(
-				t,
-				testCase.promoMech.hardRefreshApplication(
-					context.Background(),
-					testCase.app,
-				),
-			)
-		})
-	}
-}
-
-func TestArgoCDUpdateApplicationSources(t *testing.T) {
+func TestArgoCDSyncApplication(t *testing.T) {
 	testCases := []struct {
 		name           string
 		promoMech      *argoCDMechanism
@@ -1356,7 +1367,7 @@ func TestArgoCDUpdateApplicationSources(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
 				t,
-				testCase.promoMech.updateApplicationSources(
+				testCase.promoMech.syncApplication(
 					context.Background(),
 					testCase.app,
 					testCase.desiredSource,
