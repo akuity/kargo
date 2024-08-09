@@ -664,7 +664,7 @@ func getAuthorizedClient(globalServiceAccountNamespaces []string) func(
 			Name:        key.Name,
 		}
 
-		if userInfo.Subject != "" {
+		if userInfo.Claims["subs"] != "" {
 			var namespacesToCheck []string
 			if key.Namespace != "" {
 				// This is written the way it is to keep key.Namespace as the first

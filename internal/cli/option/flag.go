@@ -19,6 +19,9 @@ const (
 	// as-kubernetes-resources flag.
 	AsKubernetesResourcesShortFlag = "k"
 
+	// Claim is a flag name for the claim flag
+	ClaimFlag = "claim"
+
 	// EmailFlag is the flag name for the email flag.
 	EmailFlag = "email"
 
@@ -118,6 +121,11 @@ const (
 	// WaitFlag is the flag name for the wait flag.
 	WaitFlag = "wait"
 )
+
+// Claims adds a multi-value ClaimFlag to the provided flag set.
+func Claims(fs *pflag.FlagSet, claims *[]string, usage string) {
+	fs.StringSliceVar(claims, ClaimFlag, nil, usage)
+}
 
 // Alias adds the AliasFlag to the provided flag set.
 func Alias(fs *pflag.FlagSet, stage *string, usage string) {

@@ -207,19 +207,9 @@ func registerKargoIndexers(ctx context.Context, mgr ctrl.Manager) error {
 		return fmt.Errorf("index Freight by Stages for which it has been approved: %w", err)
 	}
 
-	// Index ServiceAccounts by OIDC email
-	if err := kubeclient.IndexServiceAccountsByOIDCEmail(ctx, mgr); err != nil {
-		return fmt.Errorf("index ServiceAccounts by OIDC email: %w", err)
-	}
-
-	// Index ServiceAccounts by OIDC groups
-	if err := kubeclient.IndexServiceAccountsByOIDCGroups(ctx, mgr); err != nil {
-		return fmt.Errorf("index ServiceAccounts by OIDC groups: %w", err)
-	}
-
-	// Index ServiceAccounts by OIDC subjects
-	if err := kubeclient.IndexServiceAccountsByOIDCSubjects(ctx, mgr); err != nil {
-		return fmt.Errorf("index ServiceAccounts by OIDC subjects: %w", err)
+	// Index ServiceAccounts by OIDC Claim
+	if err := kubeclient.IndexServiceAccountsByOIDCClaim(ctx, mgr); err != nil {
+		return fmt.Errorf("index ServiceAccounts by OIDC claim: %w", err)
 	}
 
 	// Index Events by InvolvedObject's API Group

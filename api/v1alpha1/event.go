@@ -67,13 +67,24 @@ func FormatEventUserActor(u user.Info) string {
 	switch {
 	case u.IsAdmin:
 		return EventActorAdmin
-	case u.Email != "":
-		return EventActorEmailPrefix + u.Email
-	case u.Subject != "":
-		return EventActorSubjectPrefix + u.Subject
+	case IsClaimValueNonEmptyString(u.Claims["emails"]):
+		claimString, _ := u.Claims["emails"].(string)
+		return EventActorEmailPrefix + claimString
+	case IsClaimValueNonEmptyString(u.Claims["subs"]):
+		claimString, _ := u.Claims["subs"].(string)
+		return EventActorSubjectPrefix + claimString
 	default:
 		return EventActorUnknown
 	}
+}
+
+func IsClaimValueNonEmptyString(claimValue any) bool {
+	if claimString, ok := claimValue.(string); ok {
+		if claimString != "" {
+			return true
+		}
+	}
+	return false
 }
 
 func FormatEventKubernetesUserActor(u authnv1.UserInfo) string {
