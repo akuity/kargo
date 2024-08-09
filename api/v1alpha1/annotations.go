@@ -3,6 +3,11 @@ package v1alpha1
 import "encoding/json"
 
 const (
+	// AnnotationKeyAzureClientID is an annotation key that can be set on a
+	// Project resource to indicate the client ID of an Azure managed identity
+	// that the Project is indirectly associated with.
+	AnnotationKeyAzureClientID = "azure.kargo.akuity.io/client-id"
+
 	// AnnotationKeyCreateActor is an annotation key that can be injected to a
 	// resource by the Kargo control plane to indicate the actor that created
 	// the resource.
