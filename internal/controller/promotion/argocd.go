@@ -49,8 +49,7 @@ type argoCDMechanism struct {
 		*argocd.ApplicationSource,
 		argocd.ApplicationSources,
 	) (argocd.OperationPhase, bool, error)
-	hardRefreshApplicationFn   func(context.Context, *argocd.Application) error
-	updateApplicationSourcesFn func(
+	syncApplicationFn func(
 		context.Context,
 		*argocd.Application,
 		*argocd.ApplicationSource,
@@ -87,8 +86,7 @@ func newArgoCDMechanism(kargoClient, argocdClient client.Client) Mechanism {
 	}
 	a.buildDesiredSourcesFn = a.buildDesiredSources
 	a.mustPerformUpdateFn = a.mustPerformUpdate
-	a.hardRefreshApplicationFn = a.hardRefreshApplication
-	a.updateApplicationSourcesFn = a.updateApplicationSources
+	a.syncApplicationFn = a.syncApplication
 	a.getAuthorizedApplicationFn = a.getAuthorizedApplication
 	a.applyArgoCDSourceUpdateFn = a.applyArgoCDSourceUpdate
 	if argocdClient != nil {
@@ -137,6 +135,25 @@ func (a *argoCDMechanism) Promote(
 			return nil, newFreight, err
 		}
 
+		// If we do not have specific source updates, request a sync of the
+		// Application with its current source(s).
+		if len(update.SourceUpdates) == 0 {
+			if err = a.syncApplicationFn(
+				ctx,
+				app,
+				app.Spec.Source.DeepCopy(),
+				app.Spec.Sources.DeepCopy(),
+			); err != nil {
+				return nil, newFreight, err
+			}
+
+			// As we have no knowledge of the specifically desired revision(s),
+			// we cannot wait for the update to complete as we would not know
+			// what to wait for.
+			updateResults = append(updateResults, argocd.OperationSucceeded)
+			continue
+		}
+
 		// Build the desired source(s) for the Argo CD Application.
 		desiredSource, desiredSources, err := a.buildDesiredSourcesFn(
 			ctx,
@@ -147,15 +164,6 @@ func (a *argoCDMechanism) Promote(
 		)
 		if err != nil {
 			return nil, newFreight, err
-		}
-
-		// If we have no desired source(s), we only need to perform a hard refresh.
-		if desiredSource == nil && len(desiredSources) == 0 {
-			if err = a.hardRefreshApplicationFn(ctx, app); err != nil {
-				return nil, newFreight, err
-			}
-			updateResults = append(updateResults, argocd.OperationSucceeded)
-			continue
 		}
 
 		// Check if the update needs to be performed and retrieve its phase.
@@ -206,7 +214,7 @@ func (a *argoCDMechanism) Promote(
 		}
 
 		// Perform the update.
-		if err := a.updateApplicationSourcesFn(ctx, app, desiredSource, desiredSources); err != nil {
+		if err = a.syncApplicationFn(ctx, app, desiredSource, desiredSources); err != nil {
 			return nil, newFreight, err
 		}
 		// As we have initiated an update, we should wait for it to complete.
@@ -346,33 +354,7 @@ func (a *argoCDMechanism) mustPerformUpdate(
 	return status.Phase, false, nil
 }
 
-func (a *argoCDMechanism) hardRefreshApplication(
-	ctx context.Context,
-	app *argocd.Application,
-) error {
-	// Create a patch for the Application.
-	patch := client.MergeFrom(app.DeepCopy())
-
-	// Initiate a "hard" refresh.
-	if app.ObjectMeta.Annotations == nil {
-		app.ObjectMeta.Annotations = make(map[string]string, 1)
-	}
-	app.ObjectMeta.Annotations[argocd.AnnotationKeyRefresh] = string(argocd.RefreshTypeHard)
-
-	// Patch the Application with the changes from above.
-	if err := a.argoCDAppPatchFn(
-		ctx,
-		app,
-		patch,
-	); err != nil {
-		return fmt.Errorf("error patching Argo CD Application %q: %w", app.Name, err)
-	}
-	logging.LoggerFromContext(ctx).Debug("refreshed Argo CD Application", "app", app.Name)
-
-	return nil
-}
-
-func (a *argoCDMechanism) updateApplicationSources(
+func (a *argoCDMechanism) syncApplication(
 	ctx context.Context,
 	app *argocd.Application,
 	desiredSource *argocd.ApplicationSource,
