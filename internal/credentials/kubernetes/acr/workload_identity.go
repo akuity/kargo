@@ -21,6 +21,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/akuity/kargo/api/v1alpha1"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/logging"
 )
@@ -70,7 +71,12 @@ type workloadIdentityCredentialHelper struct {
 	tokenCache  *cache.Cache
 
 	// The following behaviors are overridable for testing purposes:
-	getProjectFn    func(ctx context.Context, project string) (*v1alpha1.Project, error)
+	getManagedIdentityClientIDFn func(ctx context.Context, project string) (string, error)
+	getProjectFn                 func(
+		ctx context.Context,
+		client client.Client,
+		project string,
+	) (*v1alpha1.Project, error)
 	fetchSAFn       func(ctx context.Context, project string) (string, error)
 	exchangeTokenFn func(ctx context.Context, token, clientID, scope string) (string, error)
 	fetchACRTokenFn func(endpoint, tokenType string, data url.Values) (string, error)
@@ -106,7 +112,8 @@ func NewWorkloadIdentityCredentialHelper(
 		),
 		cfg: cfg,
 	}
-	w.getProjectFn = w.getProject
+	w.getManagedIdentityClientIDFn = w.getManagedIdentityClientID
+	w.getProjectFn = kargoapi.GetProject
 	w.fetchSAFn = w.fetchSAToken
 	w.exchangeTokenFn = w.exchangeForEntraIDToken
 	w.fetchACRTokenFn = fetchACRToken
@@ -149,20 +156,14 @@ func (w *workloadIdentityCredentialHelper) getCredentials(
 		), nil
 	}
 
-	proj, err := w.getProjectFn(ctx, project)
+	clientID, err := w.getManagedIdentityClientIDFn(ctx, project)
 	if err != nil {
 		return nil, err
 	}
-
-	// TODO: This annotation is typically applied to ServiceAccounts, not
-	// Projects, AND typically used in conjunction with
-	// azure.workload.identity/tenant-id. So as not to create confusion, we should
-	// create a new annotation for managing the indirect association of a Project
-	// to a managed identity.
-	const annotationClientID = "azure.workload.identity/client-id"
-	clientID, ok := proj.GetAnnotations()[annotationClientID]
-	if !ok {
-		return nil, fmt.Errorf("project is missing annotation %q", annotationClientID)
+	if clientID == "" {
+		// This isn't an error. It's just that the Project isn't federated to a
+		// managed identity.
+		return nil, nil
 	}
 
 	logger.Debug("Retrieving Project ServiceAccount", "namespace", project)
@@ -230,10 +231,6 @@ func (w *workloadIdentityCredentialHelper) getCredentials(
 	return acrTokenToCredentials(acrToken), nil
 }
 
-func (w *workloadIdentityCredentialHelper) getProject(ctx context.Context, project string) (*v1alpha1.Project, error) {
-	return v1alpha1.GetProject(ctx, w.kargoClient, project)
-}
-
 func (w *workloadIdentityCredentialHelper) tokenCacheKey(repoUrl, project string) string {
 	return fmt.Sprintf(
 		"%x",
@@ -289,6 +286,7 @@ func (w *workloadIdentityCredentialHelper) fetchSAToken(
 	if err != nil {
 		return "", err
 	}
+	// TODO: Need to deal with ServiceAccount not found
 
 	resource := w.kargoClient.SubResource("token")
 
@@ -376,6 +374,22 @@ func getAzureEnvironment() (*azure.Environment, error) {
 	}
 
 	return &env, nil
+}
+
+func (w *workloadIdentityCredentialHelper) getManagedIdentityClientID(
+	ctx context.Context,
+	project string,
+) (string, error) {
+	proj, err := w.getProjectFn(ctx, w.kargoClient, project)
+	if err != nil {
+		return "", fmt.Errorf("error finding project %q: %w", project, err)
+	}
+	if proj == nil {
+		return "", fmt.Errorf("project %q not found", project)
+	}
+	// It is perfectly ok if we return an empty string here. It just means the
+	// Project isn't configured to be federated to a managed identity.
+	return proj.Annotations[kargoapi.AnnotationKeyAzureClientID], nil
 }
 
 func acrTokenToCredentials(token string) *credentials.Credentials {
