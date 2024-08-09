@@ -1820,8 +1820,7 @@ func TestApplyArgoCDSourceUpdate(t *testing.T) {
 				Origin: testOrigin,
 				Charts: []kargoapi.Chart{
 					{
-						RepoURL: "fake-url",
-						Name:    "fake-chart",
+						RepoURL: "oci://fake-url/fake-chart",
 						Version: "fake-version",
 					},
 				},
