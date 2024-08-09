@@ -238,14 +238,33 @@ func (h *helmer) buildChartDependencyChanges(
 		}
 		for _, update := range updates {
 			desiredOrigin := freight.GetDesiredOrigin(stage, update)
+			repoURL := update.Repository
+			chartName := update.Name
+			if strings.HasPrefix(repoURL, "oci://") {
+				// Where OCI is concerned, HelmChartDependencyUpdates play by Helm
+				// rules. i.e. The repository URL is really a registry URL, and the name
+				// is a repository within that registry. Warehouses and Freight,
+				// however, handle things more correctly where a repoURL points directly
+				// to a repository and chart name is irrelevant / blank. We need to
+				// account for this when we search our Freight for the chart.
+				//
+				// Note that we don't use path.Join here because it would turn oci://
+				// into oci:/, which we do not want.
+				repoURL = fmt.Sprintf(
+					"%s/%s",
+					strings.TrimSuffix(repoURL, "/"),
+					chartName,
+				)
+				chartName = ""
+			}
 			chart, err := freight.FindChart(
 				ctx,
 				h.client,
 				stage,
 				desiredOrigin,
 				newFreight,
-				update.Repository,
-				update.Name,
+				repoURL,
+				chartName,
 			)
 			if err != nil {
 				return nil, nil,
@@ -278,7 +297,6 @@ func (h *helmer) buildChartDependencyChanges(
 				)
 			}
 		}
-
 	}
 	return changesByChart, changeSummary, nil
 }

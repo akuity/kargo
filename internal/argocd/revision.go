@@ -3,6 +3,7 @@ package argocd
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -50,14 +51,35 @@ func GetDesiredRevision(
 			targetPromoMechanism = update
 		}
 		desiredOrigin := freight.GetDesiredOrigin(stage, targetPromoMechanism)
+		repoURL := app.Spec.Source.RepoURL
+		chartName := app.Spec.Source.Chart
+		if !strings.Contains(repoURL, "://") {
+			// In Argo CD ApplicationSource, if a repo URL specifies no protocol and a
+			// chart name is set (already confirmed at this point), we can assume that
+			// the repo URL is an OCI registry URL. Kargo Warehouses and Freight,
+			// however, do use oci:// at the beginning of such URLs.
+			//
+			// Additionally, where OCI is concerned, an ApplicationSource's repoURL is
+			// really a registry URL, and the chart name is a repository within that
+			// registry. Warehouses and Freight, however, handle things more correctly
+			// where a repoURL points directly to a repository and chart name is
+			// irrelevant / blank. We need to account for this when we search our
+			// Freight for the chart.
+			repoURL = fmt.Sprintf(
+				"oci://%s/%s",
+				strings.TrimSuffix(repoURL, "/"),
+				chartName,
+			)
+			chartName = ""
+		}
 		chart, err := freight.FindChart(
 			ctx,
 			cl,
 			stage,
 			desiredOrigin,
 			frght,
-			app.Spec.Source.RepoURL,
-			app.Spec.Source.Chart,
+			repoURL,
+			chartName,
 		)
 		if err != nil {
 			return "", fmt.Errorf("error chart from repo %q: %w", app.Spec.Source.RepoURL, err)
