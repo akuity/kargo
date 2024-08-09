@@ -40,8 +40,8 @@ func TestAppCredentialHelper(t *testing.T) {
 		assertions func(*testing.T, *credentials.Credentials, *cache.Cache, error)
 	}{
 		{
-			name:     "cred type is not git",
-			credType: credentials.TypeImage,
+			name:     "cred type is not supported",
+			credType: credentials.TypeHelm,
 			helper:   &appCredentialHelper{},
 			assertions: func(t *testing.T, creds *credentials.Credentials, _ *cache.Cache, err error) {
 				require.NoError(t, err)
