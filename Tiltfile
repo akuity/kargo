@@ -3,6 +3,9 @@ allow_k8s_contexts('orbstack')
 
 load('ext://namespace', 'namespace_create')
 
+config.define_bool("debug") # Enable Delve debugging
+cfg = config.parse()
+
 local_resource(
   'back-end-compile',
   'CGO_ENABLED=0 GOOS=linux GOARCH=$(go env GOARCH) go build -o bin/controlplane/kargo ./cmd/controlplane',
@@ -39,7 +42,7 @@ k8s_resource(
   labels = ['kargo']
 )
 
-k8s_yaml(
+kargo_yaml = decode_yaml_stream(
   helm(
     './charts/kargo',
     name = 'kargo',
@@ -47,6 +50,26 @@ k8s_yaml(
     values = 'hack/tilt/values.dev.yaml'
   )
 )
+
+if cfg.get('debug'):
+  # If we're debugging, we want to run the controller under Delve
+  for o in kargo_yaml:
+    if o['kind'] == 'Deployment' and o['metadata']['name'] == 'kargo-controller':
+      o['spec']['template']['spec']['containers'][0]['command'] = [
+        "dlv",
+        "exec",
+        "--headless",
+        "--listen",
+        "0.0.0.0:50100",
+        "--api-version=2",
+        "--log",
+        "/usr/local/bin/kargo",
+        "--",
+        "controller"
+      ]
+
+k8s_yaml(encode_yaml_stream(kargo_yaml))
+
 # Normally the API server serves up the front end, but we want live updates
 # of the UI, so we're breaking it out into its own separate deployment here.
 k8s_yaml('hack/tilt/ui.yaml')
@@ -88,6 +111,9 @@ k8s_resource(
 k8s_resource(
   workload = 'kargo-controller',
   new_name = 'controller',
+  port_forwards = [
+    '50100:50100'
+  ],
   labels = ['kargo'],
   objects = [
     'kargo-controller:clusterrole',

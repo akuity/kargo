@@ -399,7 +399,7 @@ func TestApplicationHealth_GetApplicationHealth(t *testing.T) {
 			},
 		},
 		{
-			name: "error on multiple app sources",
+			name: "success on multiple app sources",
 			key:  types.NamespacedName{Namespace: "fake-namespace", Name: "fake-name"},
 			stage: &kargoapi.Stage{
 				Spec: testStageSpec,
@@ -434,9 +434,9 @@ func TestApplicationHealth_GetApplicationHealth(t *testing.T) {
 				syncStatus kargoapi.ArgoCDAppSyncStatus,
 				err error,
 			) {
-				require.ErrorContains(t, err, "bugs in Argo CD currently prevent a comprehensive assessment")
+				require.NoError(t, err)
 
-				require.Equal(t, kargoapi.HealthStateUnknown, state)
+				require.Equal(t, kargoapi.HealthStateHealthy, state)
 				require.Equal(t, kargoapi.ArgoCDAppHealthStatus{
 					Status:  kargoapi.ArgoCDAppHealthStateHealthy,
 					Message: "fake-message",
@@ -883,7 +883,7 @@ func Test_stageHealthForAppSync(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := stageHealthForAppSync(tt.app, tt.revision)
+			got, err := stageHealthForAppSync(tt.app, []string{tt.revision})
 			tt.assertions(t, got, err)
 		})
 	}

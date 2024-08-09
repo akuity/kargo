@@ -298,6 +298,36 @@ as native processes.
     altered. They can be rebuilt and replaced with a single click.
     :::
 
+    (Alternate) Build and deploy Kargo from source with debugger
+
+    ```shell
+    tilt up -- --debug
+    ```
+
+    This will start the `kargo-controller` with a Delve debugger on port 50100.
+
+    Connect to the debugger with your tool of choice to start and debug the `kargo-controller`.
+    
+    Example `launch.json` config for VSCode:
+
+    ```json
+    {
+        "version": "0.2.0",
+        "configurations": [
+            {
+                "name": "Debug Go in K8s via Tilt",
+                "type": "go",
+                "request": "attach",
+                "mode": "remote",
+                "port": 50100,
+                "host": "0.0.0.0",
+                "showLog": true,
+                "trace": "verbose"
+            }
+        ]
+    }
+    ```
+
 1. If necessary, build the CLI from source:
 
     ```shell
