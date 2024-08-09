@@ -18,6 +18,10 @@ export const Login = () => {
   const { isLoggedIn } = useAuthContext();
   const redirectTo = params.get(redirectToQueryParam);
 
+  if (data?.skipAuth) {
+    return <Navigate to={paths.home} replace />;
+  }
+
   if (isLoggedIn) {
     return <Navigate to={redirectTo ? generatePath(redirectTo) : paths.home} replace />;
   }
