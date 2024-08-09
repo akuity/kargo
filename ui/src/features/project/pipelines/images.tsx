@@ -8,30 +8,24 @@ import { generatePath, useNavigate } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
 import { ColorContext } from '@ui/context/colors';
+import { TagMap } from '@ui/gen/service/v1alpha1/service_pb';
 import { Stage } from '@ui/gen/v1alpha1/generated_pb';
 import { useLocalStorage } from '@ui/utils/use-local-storage';
-
-interface StagePixelStyle {
-  opacity: number;
-  backgroundColor: string;
-  border?: string;
-}
-
-type StageStyleMap = { [key: string]: StagePixelStyle };
 
 const ImageTagRow = ({
   tag,
   stages,
-  stylesByStage,
+  imageStageMap,
   projectName,
   showHistory
 }: {
   tag: string;
   stages: Stage[];
-  stylesByStage: StageStyleMap;
+  imageStageMap: { [key: string]: number };
   projectName: string;
   showHistory: boolean;
 }) => {
+  const { stageColorMap } = useContext(ColorContext);
   const navigate = useNavigate();
   return (
     <div className='flex items-center mb-2'>
@@ -39,29 +33,28 @@ const ImageTagRow = ({
         <div className='mr-4 font-mono text-sm text-right w-20 truncate'>{tag}</div>
       </Tooltip>
       {stages.map((stage) => {
-        let curStyles: StagePixelStyle | null = stylesByStage[stage.metadata?.name || ''];
-        if (curStyles) {
-          if (!showHistory && curStyles.opacity < 1) {
-            curStyles = null;
-          } else if (showHistory && curStyles.opacity == 1) {
-            curStyles = {
-              ...curStyles,
-              border: '3px solid rgba(255,255,255,0.3)'
-            };
-          }
-        }
+        const cur = imageStageMap?.[stage.metadata?.name || ''];
+        const len = stages?.length || 0;
+
         return (
           <Tooltip key={stage.metadata?.name} title={stage.metadata?.name}>
             <div
               className={classNames('mr-2 bg-gray-300 ', {
-                'cursor-pointer': !!curStyles
+                'cursor-pointer': cur >= 0
               })}
               style={{
                 borderRadius: '5px',
-                border: '3px solid transparent',
                 height: '30px',
                 width: '30px',
-                ...curStyles
+                opacity: len > 0 && showHistory ? 1 - cur / len : 1,
+                backgroundColor:
+                  (showHistory && cur >= 0) || cur === 0
+                    ? stageColorMap?.[stage?.metadata?.name || '']
+                    : undefined,
+                border:
+                  cur === 0 && showHistory
+                    ? '3px solid rgba(255,255,255,0.3)'
+                    : '3px solid transparent'
               }}
               onClick={() =>
                 navigate(
@@ -107,67 +100,23 @@ const HeaderButton = ({
 export const Images = ({
   project,
   stages,
-  hide
+  hide,
+  images
 }: {
   project: string;
   stages: Stage[];
   hide: () => void;
+  images: { [key: string]: TagMap };
 }) => {
-  const { stageColorMap: colors } = useContext(ColorContext);
-  const images = useMemo(() => {
-    const images = new Map<string, Map<string, StageStyleMap>>();
-    stages.forEach((stage) => {
-      const len = stage.status?.freightHistory?.length || 0;
-      stage.status?.freightHistory?.forEach((freightGroup, i) => {
-        (Object.values(freightGroup.items || {}) || []).forEach((freight) => {
-          freight.images?.forEach((image) => {
-            let repo = image.repoURL ? images.get(image.repoURL) : undefined;
-            if (!repo) {
-              repo = new Map<string, StageStyleMap>();
-              images.set(image.repoURL!, repo);
-            }
-            let curStages = image.tag ? repo.get(image.tag) : undefined;
-            if (!curStages) {
-              curStages = {} as StageStyleMap;
-            }
-            curStages[stage.metadata?.name as string] = {
-              opacity: 1 - i / len,
-              backgroundColor: colors[stage.metadata?.name as string]
-            };
-            repo.set(image.tag!, curStages);
-          });
-        });
-      });
-
-      stage.status?.currentFreight?.images?.forEach((image) => {
-        let repo = image.repoURL ? images.get(image.repoURL) : undefined;
-        if (!repo) {
-          repo = new Map<string, StageStyleMap>();
-          images.set(image.repoURL!, repo);
-        }
-        let curStages = image.tag ? repo.get(image.tag) : undefined;
-        if (!curStages) {
-          curStages = {} as StageStyleMap;
-        }
-        curStages[stage.metadata?.name as string] = {
-          opacity: 1,
-          backgroundColor: colors[stage.metadata?.name as string]
-        };
-        repo.set(image.tag!, curStages);
-      });
-    });
-    return images;
-  }, [stages]);
-
-  const [imageURL, setImageURL] = useState(images.keys().next().value as string);
+  const [imageURL, setImageURL] = useState(Object.keys(images || {})?.[0]);
   const [showHistory, setShowHistory] = useLocalStorage(`${project}-show-history`, true);
 
   useEffect(() => {
-    setImageURL(images.keys().next().value as string);
+    setImageURL(Object.keys(images || {})?.[0]);
   }, [images]);
 
   const curImage = useMemo(() => {
-    return images.get(imageURL);
+    return images[imageURL];
   }, [imageURL]);
 
   return (
@@ -192,21 +141,21 @@ export const Images = ({
               <Select
                 value={imageURL}
                 onChange={(value) => setImageURL(value as string)}
-                options={Array.from(images.keys()).map((image) => ({
+                options={Object.keys(images || []).map((image) => ({
                   label: image.split('/').pop(),
                   value: image
                 }))}
               />
             </div>
-            {Array.from(curImage.entries())
+            {(Object.keys(curImage.tags) || [])
               .sort((a, b) => b[0].localeCompare(a[0], undefined, { numeric: true }))
-              .map(([tag, tagStages]) => (
+              .map((tag) => (
                 <ImageTagRow
                   key={tag}
                   projectName={project}
                   tag={tag}
                   stages={stages}
-                  stylesByStage={tagStages}
+                  imageStageMap={curImage.tags[tag]?.stages}
                   showHistory={showHistory}
                 />
               ))}
