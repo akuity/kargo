@@ -3,6 +3,7 @@ package promotions
 import (
 	"context"
 	"fmt"
+	"runtime/debug"
 	"slices"
 	"strconv"
 	"sync"
@@ -344,9 +345,9 @@ func (r *reconciler) Reconcile(
 		defer func() {
 			if err := recover(); err != nil {
 				if theErr, ok := err.(error); ok {
-					logger.Error(theErr, "Promotion panic")
+					logger.Error(theErr, "Promotion panic", "stack", string(debug.Stack()))
 				} else {
-					logger.Error(nil, "Promotion panic")
+					logger.Error(nil, "Promotion panic", "stack", string(debug.Stack()))
 				}
 				newStatus.Phase = kargoapi.PromotionPhaseErrored
 				newStatus.Message = fmt.Sprintf("%v", err)
