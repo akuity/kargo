@@ -8,12 +8,12 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"os"
 	"strings"
 	"time"
 
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/AzureAD/microsoft-authentication-library-for-go/apps/confidential"
+	"github.com/kelseyhightower/envconfig"
 	"github.com/patrickmn/go-cache"
 	v1 "k8s.io/api/authentication/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -29,19 +29,13 @@ import (
 // workload identity credential helper.
 type WorkloadIdentityCredentialHelperConfig struct {
 	// TenantID is the Azure tenant ID where the managed identities federated to
-	// Project ServiceAccounts are located. Assuming the
-	// WorkloadIdentityCredentialHelperConfig instance was populated using the
-	// WorkloadIdentityCredentialHelperConfigFromEnv() function, this field will
-	// take on the value of the AZURE_TENANT_ID environment variable IF that has
-	// been injected into the controller's pod by AKS due to the the controller's
-	// ServiceAccount having been federated with a managed identity. In the
-	// absence of that environment variable (perhaps the controller's
-	// ServiceAccount does is NOT federated to a managed identity), this field
-	// will take on the value of the KARGO_AZURE_TENANT_ID environment variable
-	// instead, which may have been set by a user at install time. If no non-empty
-	// value can be found for this field, the a workload identity credential
-	// helper will effectively be disabled.
-	TenantID string
+	// Project ServiceAccounts are located. Note that when an instance of this
+	// struct is populated from environment variables, this field is bound to the
+	// environment variable KARGO_AZURE_TENANT_ID and NOT AZURE_TENANT_ID. This is
+	// because AZURE_TENANT_ID is reserved for future use since that is an
+	// environment variable that may be injected into the controller's pod if the
+	// controller's own ServiceAccount is federated to an Azure managed identity.
+	TenantID string `envconfig:"KARGO_AZURE_TENANT_ID"`
 	// ActiveDirectoryEndpoint is the Azure Active Directory endpoint for the
 	// environment in which the controller is running.
 	ActiveDirectoryEndpoint string
@@ -52,23 +46,21 @@ type WorkloadIdentityCredentialHelperConfig struct {
 
 // WorkloadIdentityCredentialHelperConfigFromEnv returns a
 // WorkloadIdentityCredentialHelperConfig constructed from environment details
-// and a call to the Azure Instance Metadata Service (IMDS).
+// and, if applicable, a call to the Azure Instance Metadata Service (IMDS).
 func WorkloadIdentityCredentialHelperConfigFromEnv() WorkloadIdentityCredentialHelperConfig {
-	cfg := WorkloadIdentityCredentialHelperConfig{
-		TenantID: os.Getenv("AZURE_TENANT_ID"),
-	}
+	cfg := WorkloadIdentityCredentialHelperConfig{}
+	envconfig.MustProcess("", &cfg)
+	// TenantID may not have been set if the controller isn't running in AKS. If
+	// it isn't set, we're done.
 	if cfg.TenantID == "" {
-		// TODO: This isn't configurable via the chart yet
-		cfg.TenantID = os.Getenv("KARGO_AZURE_TENANT_ID")
+		return cfg
 	}
-	if azureEnv, err := getAzureEnvironment(); err != nil {
-		logging.LoggerFromContext(context.Background()).Error(
-			err, "failed to get Azure environment details",
-		)
-	} else {
-		cfg.ActiveDirectoryEndpoint = azureEnv.ActiveDirectoryEndpoint
-		cfg.AzureServiceManagementEndpoint = azureEnv.ServiceManagementEndpoint
+	azureEnv, err := getAzureEnvironment()
+	if err != nil {
+		panic(fmt.Errorf("failed to get Azure environment details: %w", err))
 	}
+	cfg.ActiveDirectoryEndpoint = azureEnv.ActiveDirectoryEndpoint
+	cfg.AzureServiceManagementEndpoint = azureEnv.ServiceManagementEndpoint
 	return cfg
 }
 
@@ -100,14 +92,10 @@ func NewWorkloadIdentityCredentialHelper(
 		)
 	}
 
-	if cfg.ActiveDirectoryEndpoint == "" || cfg.AzureServiceManagementEndpoint == "" {
-		logger.Info(
-			"Azure environment details could not be determined; Azure Workload " +
-				"Identity integration will be disabled",
-		)
-		return nil
-	}
-	logger.Info("Azure Workload Identity integration is enabled")
+	// Note: If there was a tenantID, then we already got the rest of the
+	// configuration from IMDS when the cfg was created and if that failed, we
+	// would have panicked. So there's no need to check for any other missing
+	// configuration here.
 
 	w := &workloadIdentityCredentialHelper{
 		kargoClient: kargoClient,
@@ -133,7 +121,6 @@ func (w *workloadIdentityCredentialHelper) getCredentials(
 	repo string,
 	_ *corev1.Secret,
 ) (*credentials.Credentials, error) {
-	const accessTokenUsername = "00000000-0000-0000-0000-000000000000"
 	logger := logging.LoggerFromContext(ctx)
 
 	repoURL, err := url.Parse(repo)
@@ -157,10 +144,9 @@ func (w *workloadIdentityCredentialHelper) getCredentials(
 	cacheKey := w.tokenCacheKey(repo, project)
 
 	if entry, exists := w.tokenCache.Get(cacheKey); exists {
-		return &credentials.Credentials{
-			Username: accessTokenUsername,
-			Password: entry.(string), // nolint: forcetypeassert
-		}, nil
+		return acrTokenToCredentials(
+			entry.(string), // nolint: forcetypeassert
+		), nil
 	}
 
 	proj, err := w.getProjectFn(ctx, project)
@@ -168,6 +154,11 @@ func (w *workloadIdentityCredentialHelper) getCredentials(
 		return nil, err
 	}
 
+	// TODO: This annotation is typically applied to ServiceAccounts, not
+	// Projects, AND typically used in conjunction with
+	// azure.workload.identity/tenant-id. So as not to create confusion, we should
+	// create a new annotation for managing the indirect association of a Project
+	// to a managed identity.
 	const annotationClientID = "azure.workload.identity/client-id"
 	clientID, ok := proj.GetAnnotations()[annotationClientID]
 	if !ok {
@@ -235,10 +226,8 @@ func (w *workloadIdentityCredentialHelper) getCredentials(
 	}
 
 	w.tokenCache.Set(cacheKey, acrToken, cache.DefaultExpiration)
-	return &credentials.Credentials{
-		Username: accessTokenUsername,
-		Password: acrToken,
-	}, nil
+
+	return acrTokenToCredentials(acrToken), nil
 }
 
 func (w *workloadIdentityCredentialHelper) getProject(ctx context.Context, project string) (*v1alpha1.Project, error) {
@@ -387,4 +376,11 @@ func getAzureEnvironment() (*azure.Environment, error) {
 	}
 
 	return &env, nil
+}
+
+func acrTokenToCredentials(token string) *credentials.Credentials {
+	return &credentials.Credentials{
+		Username: "00000000-0000-0000-0000-000000000000",
+		Password: token,
+	}
 }
