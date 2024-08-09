@@ -579,11 +579,8 @@ func (a *argoCDMechanism) applyArgoCDSourceUpdate(
 	newFreight []kargoapi.FreightReference,
 ) (argocd.ApplicationSource, error) {
 	if source.Chart != "" || update.Chart != "" {
-		// Infer that we're dealing with a chart repo. No need to normalize the
-		// repo URL here.
 
-		// Kargo uses the "oci://" prefix, but Argo CD does not.
-		if source.RepoURL != strings.TrimPrefix(update.RepoURL, "oci://") || source.Chart != update.Chart {
+		if source.RepoURL != update.RepoURL || source.Chart != update.Chart {
 			// There's no change to make in this case.
 			return source, nil
 		}
@@ -592,14 +589,31 @@ func (a *argoCDMechanism) applyArgoCDSourceUpdate(
 		// this source.
 
 		desiredOrigin := freight.GetDesiredOrigin(stage, update)
+		repoURL := update.RepoURL
+		chartName := update.Chart
+		if !strings.Contains(repoURL, "://") {
+			// Where OCI is concerned, ArgoCDSourceUpdates play by Argo CD rules. i.e.
+			// No leading oci://, and the repository URL is really a registry URL, and
+			// the chart name is a repository within that registry. Warehouses and
+			// Freight, however, do lead with oci:// and handle things more correctly
+			// where a repoURL points directly to a repository and chart name is
+			// irrelevant / blank. We need to account for this when we search our
+			// Freight for the chart.
+			repoURL = fmt.Sprintf(
+				"oci://%s/%s",
+				strings.TrimSuffix(repoURL, "/"),
+				chartName,
+			)
+			chartName = ""
+		}
 		chart, err := freight.FindChart(
 			ctx,
 			a.kargoClient,
 			stage,
 			desiredOrigin,
 			newFreight,
-			update.RepoURL,
-			update.Chart,
+			repoURL,
+			chartName,
 		)
 		if err != nil {
 			return source,
