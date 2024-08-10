@@ -201,15 +201,6 @@ spec:
                   through promotion and subsequent health checks.
                 type: object
             type: object
-          warehouse:
-            description: |-
-              Warehouse is the name of the Warehouse that created this Freight. This is a
-              required field. TODO: It is not clear yet how this field should be set in
-              the case of user-defined Freight.
-
-
-              Deprecated: Use Origin instead.
-            type: string
         type: object
     served: true
     storage: true

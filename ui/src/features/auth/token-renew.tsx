@@ -23,7 +23,7 @@ export const TokenRenew = () => {
   const issuerUrl = React.useMemo(() => {
     try {
       return data?.oidcConfig?.issuerUrl ? new URL(data?.oidcConfig?.issuerUrl) : undefined;
-    } catch (err) {
+    } catch (_) {
       notification.error({
         message: 'Invalid issuerURL',
         placement: 'bottomRight'
@@ -67,8 +67,6 @@ export const TokenRenew = () => {
     }
 
     if (!as || !client) {
-      navigate(paths.login);
-
       return;
     }
 
@@ -82,6 +80,7 @@ export const TokenRenew = () => {
           placement: 'bottomRight'
         });
         logout();
+        navigate(paths.login);
         return;
       }
 

@@ -23,7 +23,7 @@ const authHandler: Interceptor = (next) => async (req) => {
 
   try {
     isTokenExpired = token && Date.now() >= JSON.parse(atob(token.split('.')[1])).exp * 1000;
-  } catch (err) {
+  } catch (_) {
     logout();
 
     throw new ConnectError('Invalid token');
