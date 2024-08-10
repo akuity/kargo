@@ -80,7 +80,7 @@ spec:
           name: git
           readOnly: true
         {{- end }}
-        {{- if .Values.controller.ca-bundle.enabled }}
+        {{- if .Values.controller.cabundle.enabled }}
         - mountPath: /etc/ssl/certs
           name: certs
         {{- end }}
@@ -91,9 +91,9 @@ spec:
         {{- end }}
         resources:
           {{- toYaml .Values.controller.resources | nindent 10 }}
-      {{- if .Values.controller.ca-bundle.enabled }}
+      {{- if .Values.controller.cabundle.enabled }}
       initContainers:
-      - name: parse-ca-bundle
+      - name: parse-cabundle
         image: docker.io/alpine/curl:latest
         command:
         - "/bin/sh"
@@ -105,12 +105,12 @@ spec:
           rm -rf /tmp/target/*
           cp -r /etc/ssl/certs/* /tmp/target/
         volumeMounts:
-        - name: ca-bundle
+        - name: cabundle
           mountPath: /tmp/source
         - name: certs
           mountPath: /tmp/target
       {{- end }}
-      {{- if or .Values.kubeconfigSecrets.kargo .Values.kubeconfigSecrets.argocd .Values.controller.gitClient.signingKeySecret.name }}
+      {{- if or .Values.kubeconfigSecrets.kargo .Values.kubeconfigSecrets.argocd .Values.controller.gitClient.signingKeySecret.name .Values.controller.cabundle.enabled }}
       volumes:
       {{- if or .Values.kubeconfigSecrets.kargo .Values.kubeconfigSecrets.argocd }}
       - name: kubeconfigs
@@ -133,25 +133,25 @@ spec:
                 mode: 0644
           {{- end }}
       {{- end }}
-      {{- if .Values.controller.ca-bundle.enabled }}
-      {{- if .Values.controller.ca-bundle.configMapName }}
-      - name: ca-bundle
+      {{- if .Values.controller.cabundle.enabled }}
+      {{- if .Values.controller.cabundle.configMapName }}
+      - name: cabundle
         configMap:
-          name: {{ .Values.controller.ca-bundle.configMapName }}
+          name: {{ .Values.controller.cabundle.configMapName }}
       {{- end }}
-      {{- if .Values.controller.ca-bundle.secretName }}
-      - name: ca-bundle
+      {{- if .Values.controller.cabundle.secretName }}
+      - name: cabundle
         secret:
-          secretName: {{ .Values.controller.ca-bundle.secretName }}
+          secretName: {{ .Values.controller.cabundle.secretName }}
       {{- end }}
-      {{- if not .Values.controller.ca-bundle.volume.persistentVolumeClaimName }}
+      {{- if not .Values.controller.cabundle.volume.persistentVolumeClaimName }}
       - name: certs
         emptyDir: {}
       {{- end }}
-      {{- if .Values.controller.ca-bundle.volume.persistentVolumeClaimName }}
+      {{- if .Values.controller.cabundle.volume.persistentVolumeClaimName }}
       - name: certs
         persistentVolumeClaim:
-          claimName: {{ .Values.controller.ca-bundle.persistentVolumeClaimName }}
+          claimName: {{ .Values.controller.cabundle.persistentVolumeClaimName }}
       {{- end }}
       {{- end }}
       {{- if .Values.controller.gitClient.signingKeySecret.name }}

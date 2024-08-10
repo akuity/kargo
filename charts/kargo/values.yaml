@@ -371,16 +371,16 @@ controller:
   ## @param controller.securityContext Security context for controller pods. Defaults to `global.securityContext`.
   securityContext: {}
 
-  ## @param controller.ca-bundle Mount a ca-bundle supplied via either a configMap or secret.  All items within the resource will be added to the trusted certs folder.
-  ca-bundle:
-    ## @param controller.ca-bundle.enabled Whether or not a ca-bundle is being provided to mount within the controller
+  ## @param controller.cabundle Mount a cabundle supplied via either a configMap or secret.  All items within the resource will be added to the trusted certs folder.
+  cabundle:
+    ## @param controller.cabundle.enabled Whether or not a cabundle is being provided to mount within the controller
     enabled: false
-    ## @param controller.ca-bundle.configMapName If a configMap holds the ca-bundle certs then specify the name of the configMap
+    ## @param controller.cabundle.configMapName If a configMap holds the cabundle certs then specify the name of the configMap
     configMapName: ""
-    ## @param controller.ca-bundle.secretName If a secret holds the ca-bundle certs then specify the name of the secret
+    ## @param controller.cabundle.secretName If a secret holds the cabundle certs then specify the name of the secret
     secretName: ""
     volume:
-      ## @param controller.ca-bundle.volume.persistentVolumeClaimName By default emptyDir is used for the certs volume, optionally a persistentVolumeClaim may be used instead
+      ## @param controller.cabundle.volume.persistentVolumeClaimName By default emptyDir is used for the certs volume, optionally a persistentVolumeClaim may be used instead
       persistentVolumeClaimName: ""
 
   ## @param controller.shardName [nullable] Set a shard name only if you are running multiple controllers backed by a single underlying control plane. Setting a shard name will cause this controller to operate **only** on resources with a matching shard name. Leaving the shard name undefined will designate this controller as the default controller that is responsible exclusively for resources that are **not** assigned to a specific shard. Leaving this undefined is the correct choice when you are not using sharding at all. It is also the correct setting if you are using sharding and want to designate a controller as the default for handling resources not assigned to a specific shard. In most cases, this setting should simply be left alone.
