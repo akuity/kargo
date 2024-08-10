@@ -122,6 +122,17 @@ api:
   affinity: {}
   ## @param api.securityContext Security context for api pods. Defaults to `global.securityContext`.
   securityContext: {}
+  ## @param api.cabundle Mount a cabundle supplied via either a configMap or secret.  All items within the resource will be added to the trusted certs folder.
+  cabundle:
+    ## @param api.cabundle.enabled Whether or not a cabundle is being provided to mount within the controller
+    enabled: false
+    ## @param api.cabundle.configMapName If a configMap holds the cabundle certs then specify the name of the configMap
+    configMapName: ""
+    ## @param api.cabundle.secretName If a secret holds the cabundle certs then specify the name of the secret
+    secretName: ""
+    volume:
+      ## @param api.cabundle.volume.persistentVolumeClaimName By default emptyDir is used for the certs volume, optionally a persistentVolumeClaim may be used instead
+      persistentVolumeClaimName: ""
   ## @param api.env Environment variables to add to API server pods.
   env: []
   #  - name: ENV_NAME

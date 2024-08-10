@@ -97,11 +97,17 @@ spec:
 {{- end }}
             initialDelaySeconds: 5
 {{- end }}
-{{- if or .Values.kubeconfigSecrets.kargo (and .Values.api.oidc.enabled .Values.api.oidc.dex.enabled) .Values.api.tls.enabled }}
+{{- if or .Values.kubeconfigSecrets.kargo (and .Values.api.oidc.enabled .Values.api.oidc.dex.enabled) .Values.api.tls.enabled .Values.api.cabundle.enabled }}
           volumeMounts:
+          {{- if or .Values.kubeconfigSecrets.kargo (and .Values.api.oidc.enabled .Values.api.oidc.dex.enabled) .Values.api.tls.enabled }}
             - mountPath: /etc/kargo
               name: config
               readOnly: true
+          {{- end }}
+          {{- if .Values.api.cabundle.enabled }}
+            - mountPath: /etc/ssl/certs
+              name: certs
+          {{- end }}
 {{- end }}
 {{- with .Values.api.securityContext | default .Values.global.securityContext }}
           securityContext:
@@ -109,8 +115,28 @@ spec:
 {{- end }}
           resources:
             {{- toYaml .Values.api.resources | nindent 12 }}
-{{- if or .Values.kubeconfigSecrets.kargo (and .Values.api.oidc.enabled .Values.api.oidc.dex.enabled) .Values.api.tls.enabled }}
+      {{- if .Values.api.cabundle.enabled }}
+      initContainers:
+      - name: parse-cabundle
+        image: docker.io/alpine/curl:latest
+        command:
+        - "/bin/sh"
+        - "-c"
+        args:
+        - |
+          for FILE in /tmp/source/*; do awk 'BEGIN {c=0;} /BEGIN CERT/{c++} { print > "/usr/local/share/ca-certificates/cert." c ".crt"}' < $FILE; done
+          /usr/sbin/update-ca-certificates
+          rm -rf /tmp/target/*
+          cp -r /etc/ssl/certs/* /tmp/target/
+        volumeMounts:
+        - name: cabundle
+          mountPath: /tmp/source
+        - name: certs
+          mountPath: /tmp/target
+      {{- end }}
+{{- if or .Values.kubeconfigSecrets.kargo (and .Values.api.oidc.enabled .Values.api.oidc.dex.enabled) .Values.api.tls.enabled .Values.api.cabundle.enabled }}
       volumes:
+{{- if or .Values.kubeconfigSecrets.kargo (and .Values.api.oidc.enabled .Values.api.oidc.dex.enabled) .Values.api.tls.enabled }}
         - name: config
           projected:
             sources:
@@ -138,6 +164,28 @@ spec:
                     - key: ca.crt
                       path: idp-ca.crt
 {{- end }}
+{{- end }}
+      {{- if .Values.api.cabundle.enabled }}
+      {{- if .Values.api.cabundle.configMapName }}
+      - name: cabundle
+        configMap:
+          name: {{ .Values.api.cabundle.configMapName }}
+      {{- end }}
+      {{- if .Values.api.cabundle.secretName }}
+      - name: cabundle
+        secret:
+          secretName: {{ .Values.api.cabundle.secretName }}
+      {{- end }}
+      {{- if not .Values.api.cabundle.volume.persistentVolumeClaimName }}
+      - name: certs
+        emptyDir: {}
+      {{- end }}
+      {{- if .Values.api.cabundle.volume.persistentVolumeClaimName }}
+      - name: certs
+        persistentVolumeClaim:
+          claimName: {{ .Values.api.cabundle.persistentVolumeClaimName }}
+      {{- end }}
+      {{- end }}
 {{- end }}
       {{- with .Values.api.nodeSelector | default .Values.global.nodeSelector }}
       nodeSelector:
