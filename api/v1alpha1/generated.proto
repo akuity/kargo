@@ -370,6 +370,11 @@ message ChartSubscription {
 // DiscoveredArtifacts holds the artifacts discovered by the Warehouse for its
 // subscriptions.
 message DiscoveredArtifacts {
+  // DiscoveredAt is the time at which the Warehouse discovered the artifacts.
+  //
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time discoveredAt = 4;
+
   // Git holds the commits discovered by the Warehouse for the Git
   // subscriptions.
   //
@@ -462,13 +467,6 @@ message Freight {
   // it to both the field and label.
   optional string alias = 7;
 
-  // Warehouse is the name of the Warehouse that created this Freight. This is a
-  // required field. TODO: It is not clear yet how this field should be set in
-  // the case of user-defined Freight.
-  //
-  // Deprecated: Use Origin instead.
-  optional string warehouse = 8;
-
   // Origin describes a kind of Freight in terms of its origin.
   //
   // +kubebuilder:validation:Required
@@ -537,11 +535,6 @@ message FreightReference {
   // equality by comparing their Names.
   optional string name = 1;
 
-  // Warehouse is the name of the Warehouse that created this Freight.
-  //
-  // Deprecated: Use the Origin instead.
-  optional string warehouse = 6;
-
   // Origin describes a kind of Freight in terms of its origin.
   optional FreightOrigin origin = 8;
 
@@ -553,18 +546,6 @@ message FreightReference {
 
   // Charts describes specific versions of specific Helm charts.
   repeated Chart charts = 4;
-
-  // VerificationInfo is information about any verification process that was
-  // associated with this Freight for this Stage.
-  //
-  // Deprecated: Use FreightCollection.VerificationHistory instead.
-  optional VerificationInfo verificationInfo = 5;
-
-  // VerificationHistory is a stack of recent VerificationInfo. By default,
-  // the last ten VerificationInfo are stored.
-  //
-  // Deprecated: Use FreightCollection.VerificationHistory instead.
-  repeated VerificationInfo verificationHistory = 7;
 }
 
 // FreightRequest expresses a Stage's need for Freight having originated from a
@@ -1405,12 +1386,6 @@ message StageSpec {
   // is empty, the webhook will ensure that label is absent.
   optional string shard = 4;
 
-  // Subscriptions describes the Stage's sources of Freight. This is a required
-  // field.
-  //
-  // Deprecated: Use RequestedFreight instead.
-  optional Subscriptions subscriptions = 1;
-
   // RequestedFreight expresses the Stage's need for certain pieces of Freight,
   // each having originated from a particular Warehouse. This list must be
   // non-empty. In the common case, a Stage will request Freight having
@@ -1466,18 +1441,6 @@ message StageStatus {
   // stages`.
   optional string freightSummary = 12;
 
-  // CurrentFreight is a simplified representation of the Stage's current
-  // Freight describing what is currently deployed to the Stage.
-  //
-  // Deprecated: Use the top item in the FreightHistory stack instead.
-  optional FreightReference currentFreight = 2;
-
-  // History is a stack of recent Freight. By default, the last ten Freight are
-  // stored.
-  //
-  // Deprecated: Use the FreightHistory stack instead.
-  repeated FreightReference history = 3;
-
   // Health is the Stage's last observed health.
   optional Health health = 8;
 
@@ -1494,30 +1457,6 @@ message StageStatus {
 
   // LastPromotion is a reference to the last completed promotion.
   optional PromotionReference lastPromotion = 10;
-}
-
-// StageSubscription defines a subscription to Freight from another Stage.
-//
-// Deprecated: Use FreightRequest instead.
-message StageSubscription {
-  // Name specifies the name of a Stage.
-  //
-  // +kubebuilder:validation:MinLength=1
-  // +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
-  optional string name = 1;
-}
-
-// Subscriptions describes a Stage's sources of Freight.
-//
-// Deprecated: Use FreightRequest instead.
-message Subscriptions {
-  // Warehouse is a subscription to a Warehouse. This field is mutually
-  // exclusive with the UpstreamStages field.
-  optional string warehouse = 1;
-
-  // UpstreamStages identifies other Stages as potential sources of Freight
-  // for this Stage. This field is mutually exclusive with the Repos field.
-  repeated StageSubscription upstreamStages = 2;
 }
 
 // Verification describes how to verify that a Promotion has been successful
@@ -1631,15 +1570,19 @@ message WarehouseSpec {
 
 // WarehouseStatus describes a Warehouse's most recently observed state.
 message WarehouseStatus {
+  // Conditions contains the last observations of the Warehouse's current
+  // state.
+  // +patchMergeKey=type
+  // +patchStrategy=merge
+  // +listType=map
+  // +listMapKey=type
+  repeated k8s.io.apimachinery.pkg.apis.meta.v1.Condition conditions = 9;
+
   // LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh
   // annotation that was handled by the controller. This field can be used to
   // determine whether the request to refresh the resource has been handled.
   // +optional
   optional string lastHandledRefresh = 6;
-
-  // Message describes any errors that are preventing the Warehouse controller
-  // from polling repositories to discover new Freight.
-  optional string message = 3;
 
   // ObservedGeneration represents the .metadata.generation that this Warehouse
   // was reconciled against.

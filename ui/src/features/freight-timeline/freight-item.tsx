@@ -2,9 +2,9 @@ import classNames from 'classnames';
 
 import { Freight } from '@ui/gen/v1alpha1/generated_pb';
 
-import { FreightLabel } from '../common/freight-label';
 import { FreightMode } from '../project/pipelines/types';
 
+import { FreightItemLabel } from './freight-item-label';
 import styles from './freight-timeline.module.less';
 
 export const FreightItem = ({
@@ -26,6 +26,14 @@ export const FreightItem = ({
   onHover: (hovering: boolean) => void;
   hideLabel?: boolean;
 }) => {
+  let width = '';
+  if (mode !== FreightMode.Confirming) {
+    if (empty) {
+      width = '96px';
+    } else {
+      width = '135px';
+    }
+  }
   return (
     <div
       className={classNames('relative h-full cursor-pointer', styles.freightItem, {
@@ -40,7 +48,7 @@ export const FreightItem = ({
       onMouseEnter={() => onHover(true)}
       onMouseLeave={() => onHover(false)}
       style={{
-        width: empty ? '96px' : mode === FreightMode.Confirming ? '' : '135px'
+        width
       }}
     >
       <div className='flex w-full h-full mb-1 items-center justify-center max-w-full text-ellipsis overflow-hidden'>
@@ -52,7 +60,7 @@ export const FreightItem = ({
             mode === FreightMode.Confirming ? 'text-black' : 'text-gray-400'
           }`}
         >
-          {!hideLabel && <FreightLabel freight={freight} breakOnHyphen={true} />}
+          {!hideLabel && <FreightItemLabel freight={freight} />}
         </div>
       </div>
     </div>

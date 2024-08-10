@@ -156,11 +156,6 @@ type StageSpec struct {
 	// kargo.akuity.io/shard label with the value of this field. When this field
 	// is empty, the webhook will ensure that label is absent.
 	Shard string `json:"shard,omitempty" protobuf:"bytes,4,opt,name=shard"`
-	// Subscriptions describes the Stage's sources of Freight. This is a required
-	// field.
-	//
-	// Deprecated: Use RequestedFreight instead.
-	Subscriptions Subscriptions `json:"subscriptions" protobuf:"bytes,1,opt,name=subscriptions"`
 	// RequestedFreight expresses the Stage's need for certain pieces of Freight,
 	// each having originated from a particular Warehouse. This list must be
 	// non-empty. In the common case, a Stage will request Freight having
@@ -182,29 +177,6 @@ type StageSpec struct {
 	// Verification describes how to verify a Stage's current Freight is fit for
 	// promotion downstream.
 	Verification *Verification `json:"verification,omitempty" protobuf:"bytes,3,opt,name=verification"`
-}
-
-// Subscriptions describes a Stage's sources of Freight.
-//
-// Deprecated: Use FreightRequest instead.
-type Subscriptions struct {
-	// Warehouse is a subscription to a Warehouse. This field is mutually
-	// exclusive with the UpstreamStages field.
-	Warehouse string `json:"warehouse,omitempty" protobuf:"bytes,1,opt,name=warehouse"`
-	// UpstreamStages identifies other Stages as potential sources of Freight
-	// for this Stage. This field is mutually exclusive with the Repos field.
-	UpstreamStages []StageSubscription `json:"upstreamStages,omitempty" protobuf:"bytes,2,rep,name=upstreamStages"`
-}
-
-// StageSubscription defines a subscription to Freight from another Stage.
-//
-// Deprecated: Use FreightRequest instead.
-type StageSubscription struct {
-	// Name specifies the name of a Stage.
-	//
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
-	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
 }
 
 // FreightRequest expresses a Stage's need for Freight having originated from a
@@ -756,16 +728,6 @@ type StageStatus struct {
 	// information can be displayed in a column in response to `kubectl get
 	// stages`.
 	FreightSummary string `json:"freightSummary,omitempty" protobuf:"bytes,12,opt,name=freightSummary"`
-	// CurrentFreight is a simplified representation of the Stage's current
-	// Freight describing what is currently deployed to the Stage.
-	//
-	// Deprecated: Use the top item in the FreightHistory stack instead.
-	CurrentFreight *FreightReference `json:"currentFreight,omitempty" protobuf:"bytes,2,opt,name=currentFreight"`
-	// History is a stack of recent Freight. By default, the last ten Freight are
-	// stored.
-	//
-	// Deprecated: Use the FreightHistory stack instead.
-	History FreightReferenceStack `json:"history,omitempty" protobuf:"bytes,3,rep,name=history"`
 	// Health is the Stage's last observed health.
 	Health *Health `json:"health,omitempty" protobuf:"bytes,8,opt,name=health"`
 	// Message describes any errors that are preventing the Stage controller
@@ -787,10 +749,6 @@ type FreightReference struct {
 	// the contents of the Freight. i.e. Two pieces of Freight can be compared for
 	// equality by comparing their Names.
 	Name string `json:"name,omitempty" protobuf:"bytes,1,opt,name=name"`
-	// Warehouse is the name of the Warehouse that created this Freight.
-	//
-	// Deprecated: Use the Origin instead.
-	Warehouse string `json:"warehouse,omitempty" protobuf:"bytes,6,opt,name=warehouse"`
 	// Origin describes a kind of Freight in terms of its origin.
 	Origin FreightOrigin `json:"origin,omitempty" protobuf:"bytes,8,opt,name=origin"`
 	// Commits describes specific Git repository commits.
@@ -799,16 +757,6 @@ type FreightReference struct {
 	Images []Image `json:"images,omitempty" protobuf:"bytes,3,rep,name=images"`
 	// Charts describes specific versions of specific Helm charts.
 	Charts []Chart `json:"charts,omitempty" protobuf:"bytes,4,rep,name=charts"`
-	// VerificationInfo is information about any verification process that was
-	// associated with this Freight for this Stage.
-	//
-	// Deprecated: Use FreightCollection.VerificationHistory instead.
-	VerificationInfo *VerificationInfo `json:"verificationInfo,omitempty" protobuf:"bytes,5,opt,name=verificationInfo"`
-	// VerificationHistory is a stack of recent VerificationInfo. By default,
-	// the last ten VerificationInfo are stored.
-	//
-	// Deprecated: Use FreightCollection.VerificationHistory instead.
-	VerificationHistory VerificationInfoStack `json:"verificationHistory,omitempty" protobuf:"bytes,7,rep,name=verificationHistory"`
 }
 
 // FreightCollection is a collection of FreightReferences, each of which
@@ -892,52 +840,6 @@ func (f *FreightHistory) Record(freight ...*FreightCollection) {
 func (f *FreightHistory) truncate() {
 	const maxSize = 10
 	if f != nil && len(*f) > maxSize {
-		*f = (*f)[:maxSize]
-	}
-}
-
-// FreightReferenceStack is a linear stack of FreightReferences.
-//
-// Deprecated: Use FreightHistory instead.
-type FreightReferenceStack []FreightReference
-
-// Push appends the provided FreightReference to the top of the stack. If the
-// stack grows beyond 10 items, the bottom items are removed.
-func (f *FreightReferenceStack) Push(freight ...FreightReference) {
-	*f = append(freight, *f...)
-	f.truncate()
-}
-
-// UpdateOrPush updates the first FreightReference with the same name as the
-// provided FreightReference or appends the provided FreightReference to the
-// stack if no such FreightReference is found.
-//
-// The order of existing items in the stack is preserved, and new items without
-// a matching name are appended to the top of the stack. If the stack grows
-// beyond 10 items, the bottom items are removed.
-func (f *FreightReferenceStack) UpdateOrPush(freight ...FreightReference) {
-	var newStack FreightReferenceStack
-	for _, i := range freight {
-		var found bool
-		for fi, item := range *f {
-			if i.Name == item.Name {
-				(*f)[fi] = i
-				found = true
-				break
-			}
-		}
-		if !found {
-			newStack = append(newStack, i)
-		}
-	}
-
-	*f = append(newStack, *f...)
-	f.truncate()
-}
-
-func (f *FreightReferenceStack) truncate() {
-	const maxSize = 10
-	if len(*f) > maxSize {
 		*f = (*f)[:maxSize]
 	}
 }
