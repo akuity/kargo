@@ -68,7 +68,7 @@ spec:
         {{- with (concat .Values.global.envFrom .Values.controller.envFrom) }}
           {{- toYaml . | nindent 8 }}
         {{- end }}
-        {{- if or .Values.kubeconfigSecrets.kargo .Values.kubeconfigSecrets.argocd .Values.controller.gitClient.signingKeySecret.name }}
+        {{- if or .Values.kubeconfigSecrets.kargo .Values.kubeconfigSecrets.argocd .Values.controller.gitClient.signingKeySecret.name .Values.controller.cabundle.enabled }}
         volumeMounts:
         {{- if or .Values.kubeconfigSecrets.kargo .Values.kubeconfigSecrets.argocd }}
         - mountPath: /etc/kargo/kubeconfigs
