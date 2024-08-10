@@ -3,6 +3,7 @@ import {
   faCircleNotch,
   faHeart,
   faHeartBroken,
+  faInfoCircle,
   faQuestionCircle,
   IconDefinition
 } from '@fortawesome/free-solid-svg-icons';
@@ -23,13 +24,29 @@ export const HealthStatusIcon = (props: {
   const reason = health?.issues?.join('; ') ?? '';
 
   return (
-    <Tooltip title={health?.status ?? '' + (reason !== '' ? `: ${reason}` : '')}>
+    <Tooltip
+      title={
+        <>
+          <div className='mb-2'>
+            {health?.status && (
+              <>
+                <b>Health Status:</b> {health.status}
+              </>
+            )}
+          </div>
+          {reason !== '' && (
+            <>
+              <FontAwesomeIcon icon={faInfoCircle} className='mr-2' /> {reason}
+            </>
+          )}
+        </>
+      }
+    >
       <FontAwesomeIcon
         icon={iconForHealthStatus(health)}
         spin={healthStatusToEnum(health?.status) === HealthStatus.PROGRESSING}
         style={{
           color: !hideColor ? colorForHealthStatus(health) : undefined,
-          fontSize: '18px',
           ...props.style
         }}
       />

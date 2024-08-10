@@ -1063,14 +1063,20 @@ func TestCompareFreight(t *testing.T) {
 		{
 			name: "Equal Freights",
 			old: &kargoapi.Freight{
-				Warehouse: "warehouse1",
-				Commits:   []kargoapi.GitCommit{{ID: "commit1"}}, Images: []kargoapi.Image{{RepoURL: "image1"}},
+				Origin: kargoapi.FreightOrigin{
+					Kind: kargoapi.FreightOriginKindWarehouse,
+					Name: "warehouse1",
+				},
+				Commits: []kargoapi.GitCommit{{ID: "commit1"}}, Images: []kargoapi.Image{{RepoURL: "image1"}},
 				Charts: []kargoapi.Chart{{Name: "chart1"}},
 			},
 			new: &kargoapi.Freight{
-				Warehouse: "warehouse1",
-				Commits:   []kargoapi.GitCommit{{ID: "commit1"}},
-				Images:    []kargoapi.Image{{RepoURL: "image1"}}, Charts: []kargoapi.Chart{{Name: "chart1"}},
+				Origin: kargoapi.FreightOrigin{
+					Kind: kargoapi.FreightOriginKindWarehouse,
+					Name: "warehouse1",
+				},
+				Commits: []kargoapi.GitCommit{{ID: "commit1"}},
+				Images:  []kargoapi.Image{{RepoURL: "image1"}}, Charts: []kargoapi.Chart{{Name: "chart1"}},
 			},
 			assertions: func(t *testing.T, _ *kargoapi.Freight, path *field.Path, val any, eq bool) {
 				require.Nil(t, path)

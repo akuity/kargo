@@ -49,7 +49,7 @@ type argoCDMechanism struct {
 		*argocd.ApplicationSource,
 		argocd.ApplicationSources,
 	) (argocd.OperationPhase, bool, error)
-	updateApplicationSourcesFn func(
+	syncApplicationFn func(
 		context.Context,
 		*argocd.Application,
 		*argocd.ApplicationSource,
@@ -86,7 +86,7 @@ func newArgoCDMechanism(kargoClient, argocdClient client.Client) Mechanism {
 	}
 	a.buildDesiredSourcesFn = a.buildDesiredSources
 	a.mustPerformUpdateFn = a.mustPerformUpdate
-	a.updateApplicationSourcesFn = a.updateApplicationSources
+	a.syncApplicationFn = a.syncApplication
 	a.getAuthorizedApplicationFn = a.getAuthorizedApplication
 	a.applyArgoCDSourceUpdateFn = a.applyArgoCDSourceUpdate
 	if argocdClient != nil {
@@ -133,6 +133,25 @@ func (a *argoCDMechanism) Promote(
 		app, err := a.getAuthorizedApplicationFn(ctx, update.AppNamespace, update.AppName, stage.ObjectMeta)
 		if err != nil {
 			return nil, newFreight, err
+		}
+
+		// If we do not have specific source updates, request a sync of the
+		// Application with its current source(s).
+		if len(update.SourceUpdates) == 0 {
+			if err = a.syncApplicationFn(
+				ctx,
+				app,
+				app.Spec.Source.DeepCopy(),
+				app.Spec.Sources.DeepCopy(),
+			); err != nil {
+				return nil, newFreight, err
+			}
+
+			// As we have no knowledge of the specifically desired revision(s),
+			// we cannot wait for the update to complete as we would not know
+			// what to wait for.
+			updateResults = append(updateResults, argocd.OperationSucceeded)
+			continue
 		}
 
 		// Build the desired source(s) for the Argo CD Application.
@@ -195,7 +214,7 @@ func (a *argoCDMechanism) Promote(
 		}
 
 		// Perform the update.
-		if err := a.updateApplicationSourcesFn(ctx, app, desiredSource, desiredSources); err != nil {
+		if err = a.syncApplicationFn(ctx, app, desiredSource, desiredSources); err != nil {
 			return nil, newFreight, err
 		}
 		// As we have initiated an update, we should wait for it to complete.
@@ -335,7 +354,7 @@ func (a *argoCDMechanism) mustPerformUpdate(
 	return status.Phase, false, nil
 }
 
-func (a *argoCDMechanism) updateApplicationSources(
+func (a *argoCDMechanism) syncApplication(
 	ctx context.Context,
 	app *argocd.Application,
 	desiredSource *argocd.ApplicationSource,
@@ -345,6 +364,9 @@ func (a *argoCDMechanism) updateApplicationSources(
 	patch := client.MergeFrom(app.DeepCopy())
 
 	// Initiate a "hard" refresh.
+	if app.ObjectMeta.Annotations == nil {
+		app.ObjectMeta.Annotations = make(map[string]string, 1)
+	}
 	app.ObjectMeta.Annotations[argocd.AnnotationKeyRefresh] = string(argocd.RefreshTypeHard)
 
 	// Update the desired source(s) in the Argo CD Application.
@@ -557,11 +579,8 @@ func (a *argoCDMechanism) applyArgoCDSourceUpdate(
 	newFreight []kargoapi.FreightReference,
 ) (argocd.ApplicationSource, error) {
 	if source.Chart != "" || update.Chart != "" {
-		// Infer that we're dealing with a chart repo. No need to normalize the
-		// repo URL here.
 
-		// Kargo uses the "oci://" prefix, but Argo CD does not.
-		if source.RepoURL != strings.TrimPrefix(update.RepoURL, "oci://") || source.Chart != update.Chart {
+		if source.RepoURL != update.RepoURL || source.Chart != update.Chart {
 			// There's no change to make in this case.
 			return source, nil
 		}
@@ -570,14 +589,31 @@ func (a *argoCDMechanism) applyArgoCDSourceUpdate(
 		// this source.
 
 		desiredOrigin := freight.GetDesiredOrigin(stage, update)
+		repoURL := update.RepoURL
+		chartName := update.Chart
+		if !strings.Contains(repoURL, "://") {
+			// Where OCI is concerned, ArgoCDSourceUpdates play by Argo CD rules. i.e.
+			// No leading oci://, and the repository URL is really a registry URL, and
+			// the chart name is a repository within that registry. Warehouses and
+			// Freight, however, do lead with oci:// and handle things more correctly
+			// where a repoURL points directly to a repository and chart name is
+			// irrelevant / blank. We need to account for this when we search our
+			// Freight for the chart.
+			repoURL = fmt.Sprintf(
+				"oci://%s/%s",
+				strings.TrimSuffix(repoURL, "/"),
+				chartName,
+			)
+			chartName = ""
+		}
 		chart, err := freight.FindChart(
 			ctx,
 			a.kargoClient,
 			stage,
 			desiredOrigin,
 			newFreight,
-			update.RepoURL,
-			update.Chart,
+			repoURL,
+			chartName,
 		)
 		if err != nil {
 			return source,

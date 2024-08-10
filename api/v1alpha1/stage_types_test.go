@@ -212,13 +212,23 @@ func TestFreightHistoryCurrent(t *testing.T) {
 			history: FreightHistory{
 				{
 					Freight: map[string]FreightReference{
-						"foo": {Warehouse: "foo"},
+						"foo": {
+							Origin: FreightOrigin{
+								Kind: FreightOriginKindWarehouse,
+								Name: "foo",
+							},
+						},
 					},
 				},
 			},
 			expectedResult: &FreightCollection{
 				Freight: map[string]FreightReference{
-					"foo": {Warehouse: "foo"},
+					"foo": {
+						Origin: FreightOrigin{
+							Kind: FreightOriginKindWarehouse,
+							Name: "foo",
+						},
+					},
 				},
 			},
 		},
@@ -227,23 +237,43 @@ func TestFreightHistoryCurrent(t *testing.T) {
 			history: FreightHistory{
 				{
 					Freight: map[string]FreightReference{
-						"baz": {Warehouse: "baz"},
+						"baz": {
+							Origin: FreightOrigin{
+								Kind: FreightOriginKindWarehouse,
+								Name: "baz",
+							},
+						},
 					},
 				},
 				{
 					Freight: map[string]FreightReference{
-						"bar": {Warehouse: "bar"},
+						"bar": {
+							Origin: FreightOrigin{
+								Kind: FreightOriginKindWarehouse,
+								Name: "bar",
+							},
+						},
 					},
 				},
 				{
 					Freight: map[string]FreightReference{
-						"foo": {Warehouse: "foo"},
+						"foo": {
+							Origin: FreightOrigin{
+								Kind: FreightOriginKindWarehouse,
+								Name: "foo",
+							},
+						},
 					},
 				},
 			},
 			expectedResult: &FreightCollection{
 				Freight: map[string]FreightReference{
-					"baz": {Warehouse: "baz"},
+					"baz": {
+						Origin: FreightOrigin{
+							Kind: FreightOriginKindWarehouse,
+							Name: "baz",
+						},
+					},
 				},
 			},
 		},
@@ -267,13 +297,23 @@ func TestFreightHistoryRecord(t *testing.T) {
 			history: nil,
 			newEntry: FreightCollection{
 				Freight: map[string]FreightReference{
-					"foo": {Warehouse: "foo"},
+					"foo": {
+						Origin: FreightOrigin{
+							Kind: FreightOriginKindWarehouse,
+							Name: "foo",
+						},
+					},
 				},
 			},
 			expectedHistory: FreightHistory{
 				{
 					Freight: map[string]FreightReference{
-						"foo": {Warehouse: "foo"},
+						"foo": {
+							Origin: FreightOrigin{
+								Kind: FreightOriginKindWarehouse,
+								Name: "foo",
+							},
+						},
 					},
 				},
 			},
@@ -283,24 +323,44 @@ func TestFreightHistoryRecord(t *testing.T) {
 			history: FreightHistory{
 				{
 					Freight: map[string]FreightReference{
-						"foo": {Warehouse: "foo"},
+						"foo": {
+							Origin: FreightOrigin{
+								Kind: FreightOriginKindWarehouse,
+								Name: "foo",
+							},
+						},
 					},
 				},
 			},
 			newEntry: FreightCollection{
 				Freight: map[string]FreightReference{
-					"bar": {Warehouse: "bar"},
+					"bar": {
+						Origin: FreightOrigin{
+							Kind: FreightOriginKindWarehouse,
+							Name: "bar",
+						},
+					},
 				},
 			},
 			expectedHistory: FreightHistory{
 				{
 					Freight: map[string]FreightReference{
-						"bar": {Warehouse: "bar"},
+						"bar": {
+							Origin: FreightOrigin{
+								Kind: FreightOriginKindWarehouse,
+								Name: "bar",
+							},
+						},
 					},
 				},
 				{
 					Freight: map[string]FreightReference{
-						"foo": {Warehouse: "foo"},
+						"foo": {
+							Origin: FreightOrigin{
+								Kind: FreightOriginKindWarehouse,
+								Name: "foo",
+							},
+						},
 					},
 				},
 			},
@@ -312,13 +372,23 @@ func TestFreightHistoryRecord(t *testing.T) {
 			},
 			newEntry: FreightCollection{
 				Freight: map[string]FreightReference{
-					"foo": {Warehouse: "foo"},
+					"foo": {
+						Origin: FreightOrigin{
+							Kind: FreightOriginKindWarehouse,
+							Name: "foo",
+						},
+					},
 				},
 			},
 			expectedHistory: FreightHistory{
 				{
 					Freight: map[string]FreightReference{
-						"foo": {Warehouse: "foo"},
+						"foo": {
+							Origin: FreightOrigin{
+								Kind: FreightOriginKindWarehouse,
+								Name: "foo",
+							},
+						},
 					},
 				},
 				{}, {}, {}, {}, {}, {}, {}, {}, {},
@@ -329,109 +399,6 @@ func TestFreightHistoryRecord(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.history.Record(testCase.newEntry.DeepCopy())
 			require.Equal(t, testCase.expectedHistory, testCase.history)
-		})
-	}
-}
-
-func TestFreightReferenceStackPush(t *testing.T) {
-	testCases := []struct {
-		name          string
-		stack         FreightReferenceStack
-		newFreight    []FreightReference
-		expectedStack FreightReferenceStack
-	}{
-		{
-			name:          "initial stack is nil",
-			stack:         nil,
-			newFreight:    []FreightReference{{Name: "foo"}, {Name: "bar"}},
-			expectedStack: FreightReferenceStack{{Name: "foo"}, {Name: "bar"}},
-		},
-		{
-			name:          "initial stack is not nil",
-			stack:         FreightReferenceStack{{Name: "foo"}},
-			newFreight:    []FreightReference{{Name: "bar"}},
-			expectedStack: FreightReferenceStack{{Name: "bar"}, {Name: "foo"}},
-		},
-		{
-			name:       "initial stack has matching names",
-			stack:      FreightReferenceStack{{Name: "foo"}, {Name: "bar"}},
-			newFreight: []FreightReference{{Name: "bar"}, {Name: "baz"}, {Name: "zab"}},
-			expectedStack: FreightReferenceStack{
-				{Name: "bar"},
-				{Name: "baz"},
-				{Name: "zab"},
-				{Name: "foo"},
-				{Name: "bar"},
-			},
-		},
-		{
-			name: "initial stack is full",
-			stack: FreightReferenceStack{
-				{}, {}, {}, {}, {}, {}, {}, {}, {}, {},
-			},
-			newFreight: []FreightReference{{Name: "foo"}},
-			expectedStack: FreightReferenceStack{
-				{Name: "foo"}, {}, {}, {}, {}, {}, {}, {}, {}, {},
-			},
-		},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			testCase.stack.Push(testCase.newFreight...)
-			require.Equal(t, testCase.expectedStack, testCase.stack)
-		})
-	}
-}
-
-func TestFreightReferenceStackUpdateOrPush(t *testing.T) {
-	testOrigin := FreightOrigin{
-		Kind: FreightOriginKindWarehouse,
-		Name: "fake-warehouse",
-	}
-	testCases := []struct {
-		name          string
-		stack         FreightReferenceStack
-		newFreight    []FreightReference
-		expectedStack FreightReferenceStack
-	}{
-		{
-			name:          "initial stack is nil",
-			stack:         nil,
-			newFreight:    []FreightReference{{Name: "foo"}, {Name: "bar"}},
-			expectedStack: FreightReferenceStack{{Name: "foo"}, {Name: "bar"}},
-		},
-		{
-			name:          "initial stack is not nil",
-			stack:         FreightReferenceStack{{Name: "foo"}},
-			newFreight:    []FreightReference{{Name: "bar"}},
-			expectedStack: FreightReferenceStack{{Name: "bar"}, {Name: "foo"}},
-		},
-		{
-			name:       "initial stack has matching names",
-			stack:      FreightReferenceStack{{Name: "foo"}, {Name: "bar"}},
-			newFreight: []FreightReference{{Name: "bar", Origin: testOrigin}, {Name: "baz"}, {Name: "zab"}},
-			expectedStack: FreightReferenceStack{
-				{Name: "baz"},
-				{Name: "zab"},
-				{Name: "foo"},
-				{Name: "bar", Origin: testOrigin},
-			},
-		},
-		{
-			name: "initial stack is full",
-			stack: FreightReferenceStack{
-				{}, {}, {}, {}, {}, {}, {}, {}, {}, {},
-			},
-			newFreight: []FreightReference{{Name: "foo"}},
-			expectedStack: FreightReferenceStack{
-				{Name: "foo"}, {}, {}, {}, {}, {}, {}, {}, {}, {},
-			},
-		},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			testCase.stack.UpdateOrPush(testCase.newFreight...)
-			require.Equal(t, testCase.expectedStack, testCase.stack)
 		})
 	}
 }
