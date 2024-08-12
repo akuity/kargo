@@ -13,7 +13,7 @@ jobs:
   test-unit:
     runs-on: ubuntu-latest
     container:
-      image: golang:1.22.5-bookworm
+      image: golang:1.22.6-bookworm
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -63,7 +63,7 @@ jobs:
   lint-go:
     runs-on: ubuntu-latest
     container:
-      image: golang:1.22.5-bookworm
+      image: golang:1.22.6-bookworm
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -84,7 +84,7 @@ jobs:
   lint-charts:
     runs-on: ubuntu-latest
     container:
-      image: golang:1.22.5-bookworm
+      image: golang:1.22.6-bookworm
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -99,7 +99,7 @@ jobs:
   lint-proto:
     runs-on: ubuntu-latest
     container:
-      image: golang:1.22.5-bookworm
+      image: golang:1.22.6-bookworm
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -115,7 +115,7 @@ jobs:
   check-codegen:
     runs-on: ubuntu-latest
     container:
-      image: golang:1.22.5-bookworm
+      image: golang:1.22.6-bookworm
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -183,7 +183,7 @@ jobs:
     needs: [test-unit, lint-go, lint-charts, lint-proto, lint-ui, check-codegen]
     runs-on: ubuntu-latest
     container:
-      image: golang:1.22.5-bookworm
+      image: golang:1.22.6-bookworm
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
