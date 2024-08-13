@@ -1,3 +1,4 @@
+import { ObjectMeta } from '@ui/gen/k8s.io/apimachinery/pkg/apis/meta/v1/generated_pb';
 import { Freight, FreightReference, Stage } from '@ui/gen/v1alpha1/generated_pb';
 
 export const ALIAS_LABEL_KEY = 'kargo.akuity.io/alias';
@@ -38,4 +39,13 @@ export function currentFreightHasVerification(stage: Stage): boolean {
     return true;
   }
   return false;
+}
+
+export function mapToNames<T extends { metadata?: ObjectMeta }>(objects: T[]) {
+  return (objects || []).reduce((acc, obj) => {
+    if (obj?.metadata?.name) {
+      acc.push(obj.metadata.name);
+    }
+    return acc;
+  }, [] as string[]);
 }

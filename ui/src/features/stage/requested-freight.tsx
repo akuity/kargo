@@ -1,34 +1,32 @@
-import { Descriptions, Space, Typography } from 'antd';
+import { faArrowRightToBracket, faTimes } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { Flex } from 'antd';
+import { useContext } from 'react';
 import { Link, generatePath } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
+import { ColorContext } from '@ui/context/colors';
 import { Stage } from '@ui/gen/v1alpha1/generated_pb';
 
-const WarehouseItem = ({ children }: { children: React.ReactNode }) => (
-  <Descriptions bordered size='small' column={1} style={{ width: '50%' }}>
-    <Descriptions.Item label='Warehouse'>{children}</Descriptions.Item>
-  </Descriptions>
-);
+import { SmallLabel } from '../common/small-label';
+import { StageTag } from '../common/stage-tag';
 
-const UpstreamStageItem = ({ stage, projectName }: { stage?: string; projectName?: string }) => (
-  <Descriptions bordered size='small' key={stage}>
-    <Descriptions.Item label='Stage'>
-      <Link
-        to={generatePath(paths.stage, {
-          name: projectName,
-          stageName: stage
-        })}
-      >
-        {stage}
-      </Link>
-    </Descriptions.Item>
-  </Descriptions>
-);
-
-export const RequestedFreight = (props: { stage?: Stage; projectName?: string }) => {
-  const { stage, projectName } = props;
-  const subscriptions = stage?.spec?.subscriptions;
-  const requestedFreight = stage?.spec?.requestedFreight;
+export const RequestedFreight = ({
+  projectName,
+  requestedFreight,
+  onDelete,
+  className,
+  itemStyle
+}: {
+  projectName?: string;
+  requestedFreight?: {
+    origin?: { kind?: string; name?: string };
+    sources?: { direct?: boolean; stages?: string[] };
+  }[];
+  onDelete?: (index: number) => void;
+  className?: string;
+  itemStyle?: React.CSSProperties;
+}) => {
   const uniqueUpstreamStages = new Set<string>();
   for (const freight of requestedFreight || []) {
     for (const stage of freight.sources?.stages || []) {
@@ -36,43 +34,71 @@ export const RequestedFreight = (props: { stage?: Stage; projectName?: string })
     }
   }
 
-  if (!stage) {
+  const { stageColorMap } = useContext(ColorContext);
+
+  if (!requestedFreight || requestedFreight.length === 0) {
     return null;
   }
 
   return (
-    <div>
-      <Typography.Title level={3}>Requested Freight</Typography.Title>
+    <div className={className}>
+      {requestedFreight?.map((freight, i) => {
+        return (
+          <div
+            key={i}
+            className='bg-gray-50 rounded-md p-3 border-2 border-solid border-gray-200'
+            style={itemStyle}
+          >
+            <Flex>
+              <div>
+                <SmallLabel className='mb-1'>
+                  {(freight.origin?.kind || 'Unknown').toUpperCase()}
+                </SmallLabel>
 
-      {subscriptions?.warehouse && <WarehouseItem>{subscriptions.warehouse}</WarehouseItem>}
+                <div className='text-base mb-3 font-semibold'>{freight.origin?.name}</div>
+              </div>
+              {onDelete && (
+                <div className='ml-auto cursor-pointer'>
+                  <FontAwesomeIcon icon={faTimes} onClick={() => onDelete(i)} />
+                </div>
+              )}
+            </Flex>
 
-      {(requestedFreight || []).length > 0 && (
-        <Space direction='vertical' style={{ width: '50%' }}>
-          {requestedFreight?.map((freight) => {
-            if (freight.origin?.kind !== 'Warehouse' || !freight.sources?.direct) {
-              return <></>;
-            }
-            return <WarehouseItem key={freight.origin?.name}>{freight.origin?.name}</WarehouseItem>;
-          })}
-        </Space>
-      )}
-
-      {(!!subscriptions?.upstreamStages.length ||
-        (Array.from(uniqueUpstreamStages) || []).length > 0) && (
-        <>
-          <Typography.Title level={5} style={{ marginTop: '.8em' }}>
-            Upstream Stages
-          </Typography.Title>
-          <Space direction='vertical' style={{ width: '50%' }}>
-            {subscriptions?.upstreamStages.map((stage) => (
-              <UpstreamStageItem stage={stage.name} projectName={projectName} key={stage.name} />
-            ))}
-            {Array.from(uniqueUpstreamStages).map((stage) => (
-              <UpstreamStageItem stage={stage} projectName={projectName} key={stage} />
-            ))}
-          </Space>
-        </>
-      )}
+            <SmallLabel className='mb-1'>SOURCE</SmallLabel>
+            <Flex gap={6}>
+              {freight.sources?.direct && (
+                <Link
+                  to={generatePath(paths.warehouse, {
+                    name: projectName,
+                    warehouseName: freight.origin?.name
+                  })}
+                >
+                  <Flex
+                    align='center'
+                    justify='center'
+                    className='bg-gray-600 text-white py-1 px-2 rounded font-semibold cursor-pointer'
+                  >
+                    <FontAwesomeIcon icon={faArrowRightToBracket} className='mr-2' />
+                    DIRECT
+                  </Flex>
+                </Link>
+              )}
+              {freight.sources?.stages?.map((stage) => (
+                <Link
+                  key={stage}
+                  to={generatePath(paths.stage, { name: projectName, stageName: stage })}
+                >
+                  <StageTag
+                    stage={{ metadata: { name: stage } } as Stage}
+                    projectName={projectName || ''}
+                    stageColorMap={stageColorMap}
+                  />
+                </Link>
+              ))}
+            </Flex>
+          </div>
+        );
+      })}
     </div>
   );
 };

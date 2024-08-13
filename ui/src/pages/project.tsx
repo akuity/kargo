@@ -13,6 +13,7 @@ import { generatePath, useNavigate, useParams } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
 import { Description } from '@ui/features/common/description';
+import { SmallLabel } from '@ui/features/common/small-label';
 import { AnalysisTemplatesList } from '@ui/features/project/analysis-templates/analysis-templates-list';
 import { CredentialsList } from '@ui/features/project/credentials/credentials-list';
 import { Events } from '@ui/features/project/events/events';
@@ -52,7 +53,13 @@ const tabs = {
 
 export type ProjectTab = keyof typeof tabs;
 
-export const Project = ({ tab = 'pipelines', creatingStage }: { tab?: ProjectTab; creatingStage?: boolean }) => {
+export const Project = ({
+  tab = 'pipelines',
+  creatingStage
+}: {
+  tab?: ProjectTab;
+  creatingStage?: boolean;
+}) => {
   const { name } = useParams();
   const navigate = useNavigate();
 
@@ -62,7 +69,9 @@ export const Project = ({ tab = 'pipelines', creatingStage }: { tab?: ProjectTab
   const renderTab = (key: ProjectTab) => {
     switch (key) {
       case 'pipelines':
-        return <Pipelines project={data?.result?.value as _Project} creatingStage={creatingStage} />;
+        return (
+          <Pipelines project={data?.result?.value as _Project} creatingStage={creatingStage} />
+        );
       case 'credentials':
         return <CredentialsList />;
       case 'analysisTemplates':
@@ -81,7 +90,7 @@ export const Project = ({ tab = 'pipelines', creatingStage }: { tab?: ProjectTab
       <div className='px-6 pt-5 pb-3 mb-2'>
         <div className='flex items-center'>
           <div className='mr-auto'>
-            <div className='font-medium text-xs text-gray-500'>PROJECT</div>
+            <SmallLabel>PROJECT</SmallLabel>
             <div className='text-2xl font-semibold flex items-center'>
               {name} <ProjectSettings />
             </div>

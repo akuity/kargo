@@ -10,6 +10,7 @@ import { generatePath, useNavigate, useParams } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
 import { AssembleFreight } from '@ui/features/assemble-freight/assemble-freight';
+import { SmallLabel } from '@ui/features/common/small-label';
 import { Warehouse } from '@ui/gen/v1alpha1/generated_pb';
 
 import { EditWarehouse } from './edit-warehouse';
@@ -35,7 +36,7 @@ export const WarehouseDetails = ({
           <div className='flex items-center justify-between mb-4'>
             <div className='flex gap-1 items-start'>
               <div>
-                <div className='font-medium text-xs text-gray-500'>WAREHOUSE</div>
+                <SmallLabel>WAREHOUSE</SmallLabel>
                 <Typography.Title level={1} className='flex items-center m-0 !mb-2'>
                   <FontAwesomeIcon icon={faBuilding} className='mr-2 text-base text-gray-400' />
                   {warehouse.metadata?.name}
