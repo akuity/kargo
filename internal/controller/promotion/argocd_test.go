@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/go-logr/logr"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -18,6 +19,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	libargocd "github.com/akuity/kargo/internal/argocd"
 	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
+	"github.com/akuity/kargo/internal/kubeclient"
 	"github.com/akuity/kargo/internal/logging"
 )
 
@@ -1321,9 +1323,8 @@ func TestArgoCDSyncApplication(t *testing.T) {
 			promoMech: &argoCDMechanism{
 				argoCDAppPatchFn: func(
 					context.Context,
-					client.Object,
-					client.Patch,
-					...client.PatchOption,
+					kubeclient.ObjectWithKind,
+					kubeclient.UnstructuredPatchFn,
 				) error {
 					return errors.New("something went wrong")
 				},
@@ -1347,9 +1348,8 @@ func TestArgoCDSyncApplication(t *testing.T) {
 			promoMech: &argoCDMechanism{
 				argoCDAppPatchFn: func(
 					context.Context,
-					client.Object,
-					client.Patch,
-					...client.PatchOption,
+					kubeclient.ObjectWithKind,
+					kubeclient.UnstructuredPatchFn,
 				) error {
 					return nil
 				},
@@ -2135,4 +2135,108 @@ func TestBuildHelmParamChangesForArgoCDAppSource(t *testing.T) {
 		},
 		result,
 	)
+}
+
+func TestRecursiveMerge(t *testing.T) {
+	testCases := []struct {
+		name     string
+		src      any
+		dst      any
+		expected any
+	}{
+		{
+			name: "merge maps",
+			src: map[string]any{
+				"key1": "value1",
+				"key2": map[string]any{
+					"subkey1": "subvalue1",
+					"subkey2": true,
+				},
+			},
+			dst: map[string]any{
+				"key1": "old_value1",
+				"key2": map[string]any{
+					"subkey2": false,
+					"subkey3": "subvalue3",
+				},
+			},
+			expected: map[string]any{
+				"key1": "value1",
+				"key2": map[string]any{
+					"subkey1": "subvalue1",
+					"subkey2": true,
+					"subkey3": "subvalue3",
+				},
+			},
+		},
+		{
+			name: "merge arrays",
+			src: []any{
+				"value1",
+				map[string]any{
+					"key1": "subvalue1",
+				},
+				true,
+			},
+			dst: []any{
+				"old_value1",
+				map[string]any{
+					"key1": "old_subvalue1",
+					"key2": "subvalue2",
+				},
+				false,
+			},
+			expected: []any{
+				"value1",
+				map[string]any{
+					"key1": "subvalue1",
+					"key2": "subvalue2",
+				},
+				true,
+			},
+		},
+		{
+			name:     "merge incompatible types (map to array)",
+			src:      map[string]any{"key1": "value1"},
+			dst:      []any{"old_value1"},
+			expected: map[string]any{"key1": "value1"},
+		},
+		{
+			name:     "merge incompatible types (array to map)",
+			src:      []any{"value1"},
+			dst:      map[string]any{"key1": "old_value1"},
+			expected: []any{"value1"},
+		},
+		{
+			name:     "overwrite types (string to int)",
+			src:      "value1",
+			dst:      42,
+			expected: "value1",
+		},
+		{
+			name:     "overwrite types (int to string)",
+			src:      true,
+			dst:      "old_value1",
+			expected: true,
+		},
+		{
+			name:     "overwrite value with nil",
+			src:      nil,
+			dst:      map[string]any{"key1": "old_value1"},
+			expected: nil,
+		},
+		{
+			name:     "overwrite nil with value",
+			src:      map[string]any{"key1": "value1"},
+			dst:      nil,
+			expected: map[string]any{"key1": "value1"},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := recursiveMerge(tc.src, tc.dst)
+			assert.Equal(t, tc.expected, result)
+		})
+	}
 }
