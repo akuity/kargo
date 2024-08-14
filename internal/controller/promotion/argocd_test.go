@@ -131,89 +131,6 @@ func TestArgoCDPromote(t *testing.T) {
 			},
 		},
 		{
-			name: "request sync without updates",
-			promoMech: &argoCDMechanism{
-				argocdClient: fake.NewFakeClient(),
-				getAuthorizedApplicationFn: func(
-					context.Context,
-					string,
-					string,
-					metav1.ObjectMeta,
-				) (*argocd.Application, error) {
-					return &argocd.Application{}, nil
-				},
-				syncApplicationFn: func(
-					context.Context,
-					*argocd.Application,
-					*argocd.ApplicationSource,
-					argocd.ApplicationSources,
-				) error {
-					return nil
-				},
-			},
-			stage: &kargoapi.Stage{
-				Spec: kargoapi.StageSpec{
-					PromotionMechanisms: &kargoapi.PromotionMechanisms{
-						ArgoCDAppUpdates: []kargoapi.ArgoCDAppUpdate{
-							{},
-						},
-					},
-				},
-			},
-			assertions: func(
-				t *testing.T,
-				origFreight *kargoapi.FreightCollection,
-				promo *kargoapi.Promotion,
-				err error,
-			) {
-				require.NoError(t, err)
-				require.Equal(t, kargoapi.PromotionPhaseSucceeded, promo.Status.Phase)
-				// The freight collection should be unaltered
-				require.Equal(t, origFreight, promo.Status.FreightCollection)
-			},
-		},
-		{
-			name: "error requesting sync without updates",
-			promoMech: &argoCDMechanism{
-				argocdClient: fake.NewFakeClient(),
-				getAuthorizedApplicationFn: func(
-					context.Context,
-					string,
-					string,
-					metav1.ObjectMeta,
-				) (*argocd.Application, error) {
-					return &argocd.Application{}, nil
-				},
-				syncApplicationFn: func(
-					context.Context,
-					*argocd.Application,
-					*argocd.ApplicationSource,
-					argocd.ApplicationSources,
-				) error {
-					return errors.New("something went wrong")
-				},
-			},
-			stage: &kargoapi.Stage{
-				Spec: kargoapi.StageSpec{
-					PromotionMechanisms: &kargoapi.PromotionMechanisms{
-						ArgoCDAppUpdates: []kargoapi.ArgoCDAppUpdate{
-							{},
-						},
-					},
-				},
-			},
-			assertions: func(
-				t *testing.T,
-				origFreight *kargoapi.FreightCollection,
-				promo *kargoapi.Promotion,
-				err error,
-			) {
-				require.ErrorContains(t, err, "something went wrong")
-				// The freight collection should be unaltered
-				require.Equal(t, origFreight, promo.Status.FreightCollection)
-			},
-		},
-		{
 			name: "error building desired sources",
 			promoMech: &argoCDMechanism{
 				argocdClient: fake.NewFakeClient(),
@@ -353,6 +270,7 @@ func TestArgoCDPromote(t *testing.T) {
 					*argocd.Application,
 					*argocd.ApplicationSource,
 					argocd.ApplicationSources,
+					string,
 				) error {
 					return nil
 				},
@@ -533,6 +451,7 @@ func TestArgoCDPromote(t *testing.T) {
 					*argocd.Application,
 					*argocd.ApplicationSource,
 					argocd.ApplicationSources,
+					string,
 				) error {
 					return errors.New("something went wrong")
 				},
@@ -618,6 +537,7 @@ func TestArgoCDPromote(t *testing.T) {
 					*argocd.Application,
 					*argocd.ApplicationSource,
 					argocd.ApplicationSources,
+					string,
 				) error {
 					return nil
 				},
@@ -1002,6 +922,7 @@ func TestArgoCDBuildDesiredSources(t *testing.T) {
 }
 
 func TestArgoCDMustPerformUpdate(t *testing.T) {
+	testFreightCollectionID := "fake-freight-collection"
 	testOrigin := kargoapi.FreightOrigin{
 		Kind: kargoapi.FreightOriginKindWarehouse,
 		Name: "fake-warehouse",
@@ -1023,7 +944,7 @@ func TestArgoCDMustPerformUpdate(t *testing.T) {
 			},
 		},
 		{
-			name: "pending operation initiated by different user",
+			name: "running operation initiated by different user",
 			modifyApplication: func(app *argocd.Application) {
 				app.Status.OperationState = &argocd.OperationState{
 					Phase: argocd.OperationRunning,
@@ -1060,7 +981,7 @@ func TestArgoCDMustPerformUpdate(t *testing.T) {
 			},
 		},
 		{
-			name: "pending operation initiated by us",
+			name: "running operation initiated for incorrect freight collection",
 			modifyApplication: func(app *argocd.Application) {
 				app.Status.OperationState = &argocd.OperationState{
 					Phase: argocd.OperationRunning,
@@ -1068,6 +989,55 @@ func TestArgoCDMustPerformUpdate(t *testing.T) {
 						InitiatedBy: argocd.OperationInitiator{
 							Username: applicationOperationInitiator,
 						},
+						Info: []*argocd.Info{{
+							Name:  freightCollectionInfoKey,
+							Value: "wrong-freight-collection",
+						}},
+					},
+				}
+			},
+			assertions: func(t *testing.T, phase argocd.OperationPhase, mustUpdate bool, err error) {
+				require.ErrorContains(t, err, "current operation was not initiated for")
+				require.ErrorContains(t, err, "waiting for operation to complete")
+				require.Equal(t, argocd.OperationRunning, phase)
+				require.False(t, mustUpdate)
+			},
+		},
+		{
+			name: "completed operation initiated for incorrect freight collection",
+			modifyApplication: func(app *argocd.Application) {
+				app.Status.OperationState = &argocd.OperationState{
+					Phase: argocd.OperationSucceeded,
+					Operation: argocd.Operation{
+						InitiatedBy: argocd.OperationInitiator{
+							Username: applicationOperationInitiator,
+						},
+						Info: []*argocd.Info{{
+							Name:  freightCollectionInfoKey,
+							Value: "wrong-freight-collection",
+						}},
+					},
+				}
+			},
+			assertions: func(t *testing.T, phase argocd.OperationPhase, mustUpdate bool, err error) {
+				require.NoError(t, err)
+				require.True(t, mustUpdate)
+				require.Empty(t, phase)
+			},
+		},
+		{
+			name: "running operation",
+			modifyApplication: func(app *argocd.Application) {
+				app.Status.OperationState = &argocd.OperationState{
+					Phase: argocd.OperationRunning,
+					Operation: argocd.Operation{
+						InitiatedBy: argocd.OperationInitiator{
+							Username: applicationOperationInitiator,
+						},
+						Info: []*argocd.Info{{
+							Name:  freightCollectionInfoKey,
+							Value: testFreightCollectionID,
+						}},
 					},
 				}
 			},
@@ -1086,6 +1056,10 @@ func TestArgoCDMustPerformUpdate(t *testing.T) {
 						InitiatedBy: argocd.OperationInitiator{
 							Username: applicationOperationInitiator,
 						},
+						Info: []*argocd.Info{{
+							Name:  freightCollectionInfoKey,
+							Value: testFreightCollectionID,
+						}},
 					},
 					SyncResult: &argocd.SyncOperationResult{},
 				}
@@ -1108,6 +1082,10 @@ func TestArgoCDMustPerformUpdate(t *testing.T) {
 						InitiatedBy: argocd.OperationInitiator{
 							Username: applicationOperationInitiator,
 						},
+						Info: []*argocd.Info{{
+							Name:  freightCollectionInfoKey,
+							Value: testFreightCollectionID,
+						}},
 					},
 				}
 			},
@@ -1137,6 +1115,10 @@ func TestArgoCDMustPerformUpdate(t *testing.T) {
 						InitiatedBy: argocd.OperationInitiator{
 							Username: applicationOperationInitiator,
 						},
+						Info: []*argocd.Info{{
+							Name:  freightCollectionInfoKey,
+							Value: testFreightCollectionID,
+						}},
 					},
 					SyncResult: &argocd.SyncOperationResult{
 						Revision: "other-fake-revision",
@@ -1170,6 +1152,10 @@ func TestArgoCDMustPerformUpdate(t *testing.T) {
 						InitiatedBy: argocd.OperationInitiator{
 							Username: applicationOperationInitiator,
 						},
+						Info: []*argocd.Info{{
+							Name:  freightCollectionInfoKey,
+							Value: testFreightCollectionID,
+						}},
 					},
 					SyncResult: &argocd.SyncOperationResult{
 						Revision: "fake-revision",
@@ -1202,6 +1188,10 @@ func TestArgoCDMustPerformUpdate(t *testing.T) {
 						InitiatedBy: argocd.OperationInitiator{
 							Username: applicationOperationInitiator,
 						},
+						Info: []*argocd.Info{{
+							Name:  freightCollectionInfoKey,
+							Value: testFreightCollectionID,
+						}},
 					},
 					SyncResult: &argocd.SyncOperationResult{
 						Revision: "fake-revision",
@@ -1237,6 +1227,10 @@ func TestArgoCDMustPerformUpdate(t *testing.T) {
 						InitiatedBy: argocd.OperationInitiator{
 							Username: applicationOperationInitiator,
 						},
+						Info: []*argocd.Info{{
+							Name:  freightCollectionInfoKey,
+							Value: testFreightCollectionID,
+						}},
 					},
 					SyncResult: &argocd.SyncOperationResult{
 						Revision: "fake-revision",
@@ -1298,6 +1292,8 @@ func TestArgoCDMustPerformUpdate(t *testing.T) {
 			for _, ref := range testCase.newFreight {
 				freight.UpdateOrPush(ref)
 			}
+			// Tamper with the freight collection ID for testing purposes
+			freight.ID = testFreightCollectionID
 
 			phase, mustUpdate, err := argocdMech.mustPerformUpdate(
 				context.Background(),
@@ -1382,6 +1378,7 @@ func TestArgoCDSyncApplication(t *testing.T) {
 					testCase.app,
 					testCase.desiredSource,
 					testCase.desiredSources,
+					"fake-freight-collection-id",
 				),
 			)
 		})

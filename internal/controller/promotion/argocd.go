@@ -27,6 +27,7 @@ const (
 	authorizedStageAnnotationKey = "kargo.akuity.io/authorized-stage"
 
 	applicationOperationInitiator = "kargo-controller"
+	freightCollectionInfoKey      = "kargo.akuity.io/freight-collection"
 )
 
 // argoCDMechanism is an implementation of the Mechanism interface that updates
@@ -52,10 +53,11 @@ type argoCDMechanism struct {
 		argocd.ApplicationSources,
 	) (argocd.OperationPhase, bool, error)
 	syncApplicationFn func(
-		context.Context,
-		*argocd.Application,
-		*argocd.ApplicationSource,
-		argocd.ApplicationSources,
+		ctx context.Context,
+		app *argocd.Application,
+		desiredSource *argocd.ApplicationSource,
+		desiredSources argocd.ApplicationSources,
+		freightColID string,
 	) error
 	getAuthorizedApplicationFn func(
 		ctx context.Context,
@@ -134,25 +136,6 @@ func (a *argoCDMechanism) Promote(
 			return err
 		}
 
-		// If we do not have specific source updates, request a sync of the
-		// Application with its current source(s).
-		if len(update.SourceUpdates) == 0 {
-			if err = a.syncApplicationFn(
-				ctx,
-				app,
-				app.Spec.Source.DeepCopy(),
-				app.Spec.Sources.DeepCopy(),
-			); err != nil {
-				return err
-			}
-
-			// As we have no knowledge of the specifically desired revision(s),
-			// we cannot wait for the update to complete as we would not know
-			// what to wait for.
-			updateResults = append(updateResults, argocd.OperationSucceeded)
-			continue
-		}
-
 		// Build the desired source(s) for the Argo CD Application.
 		desiredSource, desiredSources, err := a.buildDesiredSourcesFn(
 			ctx,
@@ -213,7 +196,13 @@ func (a *argoCDMechanism) Promote(
 		}
 
 		// Perform the update.
-		if err = a.syncApplicationFn(ctx, app, desiredSource, desiredSources); err != nil {
+		if err = a.syncApplicationFn(
+			ctx,
+			app,
+			desiredSource,
+			desiredSources,
+			promo.Status.FreightCollection.ID,
+		); err != nil {
 			return err
 		}
 		// As we have initiated an update, we should wait for it to complete.
@@ -291,6 +280,8 @@ func (a *argoCDMechanism) mustPerformUpdate(
 		return "", true, nil
 	}
 
+	// Deal with the possibility that the operation was not initiated by the
+	// expected user.
 	if status.Operation.InitiatedBy.Username != applicationOperationInitiator {
 		// The operation was not initiated by the expected user.
 		if !status.Phase.Completed() {
@@ -301,6 +292,31 @@ func (a *argoCDMechanism) mustPerformUpdate(
 			return status.Phase, false, fmt.Errorf(
 				"current operation was not initiated by %q and not by %q: waiting for operation to complete",
 				applicationOperationInitiator, status.Operation.InitiatedBy.Username,
+			)
+		}
+		// Initiate our own operation.
+		return "", true, nil
+	}
+
+	// Deal with the possibility that the operation was not initiated for the
+	// current freight collection. i.e. Not related to the current promotion.
+	var correctFreightColIDFound bool
+	for _, info := range status.Operation.Info {
+		if info.Name == freightCollectionInfoKey {
+			correctFreightColIDFound = info.Value == freightCol.ID
+			break
+		}
+	}
+	if !correctFreightColIDFound {
+		// The operation was not initiated for the current freight collection.
+		if !status.Phase.Completed() {
+			// We should wait for the operation to complete before attempting to
+			// apply an update ourselves.
+			// NB: We return the current phase here because we want the caller
+			//     to know that an operation is still running.
+			return status.Phase, false, fmt.Errorf(
+				"current operation was not initiated for freight collection %q: waiting for operation to complete",
+				freightCol.ID,
 			)
 		}
 		// Initiate our own operation.
@@ -358,6 +374,7 @@ func (a *argoCDMechanism) syncApplication(
 	app *argocd.Application,
 	desiredSource *argocd.ApplicationSource,
 	desiredSources argocd.ApplicationSources,
+	freightColID string,
 ) error {
 	// Initiate a "hard" refresh.
 	if app.ObjectMeta.Annotations == nil {
@@ -379,6 +396,10 @@ func (a *argoCDMechanism) syncApplication(
 			{
 				Name:  "Reason",
 				Value: "Promotion triggered a sync of this Application resource.",
+			},
+			{
+				Name:  freightCollectionInfoKey,
+				Value: freightColID,
 			},
 		},
 		Sync: &argocd.SyncOperation{
