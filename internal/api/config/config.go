@@ -19,7 +19,7 @@ type StandardConfig struct {
 
 type ServerConfig struct {
 	StandardConfig
-	LocalMode                   bool // this will never be set from the environment
+	LocalMode                   bool // LocalMode is true if the server is running as a non-containerized process
 	TLSConfig                   *TLSConfig
 	OIDCConfig                  *oidc.Config
 	AdminConfig                 *AdminConfig

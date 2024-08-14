@@ -1,9 +1,10 @@
-import { TransportProvider } from '@connectrpc/connect-query';
+import { TransportProvider, useQuery } from '@connectrpc/connect-query';
 import { useEffect, useRef, useState } from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
-import { transportWithAuth } from '@ui/config/transport';
+import { transport, transportWithAuth } from '@ui/config/transport';
+import { getPublicConfig } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 
 import { ModalContextProvider } from '../common/modal/modal-context';
 
@@ -11,10 +12,7 @@ import { useAuthContext } from './context/use-auth-context';
 
 export const ProtectedRoute = () => {
   const { isLoggedIn } = useAuthContext();
-
-  if (!isLoggedIn) {
-    return <Navigate to={paths.login} replace />;
-  }
+  const { data, isLoading } = useQuery(getPublicConfig);
 
   const modalRef = useRef<HTMLDivElement>(null);
   const [modalRoot, setModalRoot] = useState<HTMLDivElement | null>(null);
@@ -22,8 +20,12 @@ export const ProtectedRoute = () => {
     setModalRoot(modalRef.current);
   }, []);
 
+  if (!data?.skipAuth && !isLoading && !isLoggedIn) {
+    return <Navigate to={paths.login} replace />;
+  }
+
   return (
-    <TransportProvider transport={transportWithAuth}>
+    <TransportProvider transport={data?.skipAuth ? transport : transportWithAuth}>
       <div ref={modalRef}>
         {modalRoot && (
           <ModalContextProvider container={modalRoot}>
