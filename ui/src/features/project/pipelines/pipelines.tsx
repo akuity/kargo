@@ -111,7 +111,7 @@ export const Pipelines = ({ project }: { project: Project }) => {
   const [highlightedStages, setHighlightedStages] = React.useState<{ [key: string]: boolean }>({});
   const [hideSubscriptions, setHideSubscriptions] = useLocalStorage(
     `${name}-hideSubscriptions`,
-    {}
+    false
   );
 
   const [selectedWarehouse, setSelectedWarehouse] = React.useState('');
@@ -133,7 +133,6 @@ export const Pipelines = ({ project }: { project: Project }) => {
     allFreight.forEach((f) => {
       if (
         !selectedWarehouse ||
-        f.warehouse === selectedWarehouse ||
         (f?.origin?.kind === 'Warehouse' && f?.origin.name === selectedWarehouse)
       ) {
         filteredFreight.push(f);
@@ -191,12 +190,6 @@ export const Pipelines = ({ project }: { project: Project }) => {
           stagesPerFreight[f.name || ''] = [];
         }
         stagesPerFreight[f.name || ''].push(stage);
-      });
-      stage?.spec?.subscriptions?.upstreamStages.forEach((item) => {
-        if (!subscribersByStage[item.name || '']) {
-          subscribersByStage[item.name || ''] = new Set();
-        }
-        subscribersByStage[item.name || ''].add(stage?.metadata?.name || '');
       });
       stage?.spec?.requestedFreight?.forEach((item) => {
         if (!item.sources?.direct) {
@@ -414,11 +407,10 @@ export const Pipelines = ({ project }: { project: Project }) => {
                               (acc, cur) => acc || cur?.origin?.kind === 'Warehouse',
                               false
                             );
-                            let currentWarehouse = currentFreight[0]?.warehouse || '';
-                            if (currentWarehouse === '' && isWarehouseKind) {
+                            let currentWarehouse = '';
+                            if (isWarehouseKind) {
                               currentWarehouse =
                                 currentFreight[0]?.origin?.name ||
-                                node.data?.spec?.subscriptions?.warehouse ||
                                 node.data?.spec?.requestedFreight[0]?.origin?.name ||
                                 '';
                             }
@@ -517,13 +509,8 @@ export const Pipelines = ({ project }: { project: Project }) => {
                         {node.type === NodeType.WAREHOUSE && (
                           <Nodule
                             nodeHeight={RepoNodeDimensions().height}
-                            onClick={() =>
-                              setHideSubscriptions({
-                                ...hideSubscriptions,
-                                [node.warehouseName]: !hideSubscriptions[node.warehouseName]
-                              })
-                            }
-                            icon={hideSubscriptions[node.warehouseName] ? faEye : faEyeSlash}
+                            onClick={() => setHideSubscriptions(!hideSubscriptions)}
+                            icon={hideSubscriptions ? faEye : faEyeSlash}
                             begin={true}
                           />
                         )}
