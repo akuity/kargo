@@ -50,9 +50,8 @@ func TestArgoCDPromote(t *testing.T) {
 		newFreight []kargoapi.FreightReference
 		assertions func(
 			t *testing.T,
-			newStatus *kargoapi.PromotionStatus,
-			newFreightIn []kargoapi.FreightReference,
-			newFreightOut []kargoapi.FreightReference,
+			origFreight *kargoapi.FreightCollection,
+			promo *kargoapi.Promotion,
 			err error,
 		)
 	}{
@@ -66,13 +65,13 @@ func TestArgoCDPromote(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *kargoapi.PromotionStatus,
-				newFreightIn []kargoapi.FreightReference,
-				newFreightOut []kargoapi.FreightReference,
+				origFreight *kargoapi.FreightCollection,
+				promo *kargoapi.Promotion,
 				err error,
 			) {
 				require.NoError(t, err)
-				require.Equal(t, newFreightIn, newFreightOut)
+				// The freight collection should be unaltered
+				require.Equal(t, origFreight, promo.Status.FreightCollection)
 			},
 		},
 		{
@@ -89,9 +88,8 @@ func TestArgoCDPromote(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *kargoapi.PromotionStatus,
-				_ []kargoapi.FreightReference,
-				_ []kargoapi.FreightReference,
+				_ *kargoapi.FreightCollection,
+				_ *kargoapi.Promotion,
 				err error,
 			) {
 				require.ErrorContains(
@@ -123,13 +121,13 @@ func TestArgoCDPromote(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *kargoapi.PromotionStatus,
-				newFreightIn []kargoapi.FreightReference,
-				newFreightOut []kargoapi.FreightReference,
+				origFreight *kargoapi.FreightCollection,
+				promo *kargoapi.Promotion,
 				err error,
 			) {
 				require.ErrorContains(t, err, "something went wrong")
-				require.Equal(t, newFreightIn, newFreightOut)
+				// The freight collection should be unaltered
+				require.Equal(t, origFreight, promo.Status.FreightCollection)
 			},
 		},
 		{
@@ -164,14 +162,14 @@ func TestArgoCDPromote(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				status *kargoapi.PromotionStatus,
-				newFreightIn []kargoapi.FreightReference,
-				newFreightOut []kargoapi.FreightReference,
+				origFreight *kargoapi.FreightCollection,
+				promo *kargoapi.Promotion,
 				err error,
 			) {
 				require.NoError(t, err)
-				require.Equal(t, kargoapi.PromotionPhaseSucceeded, status.Phase)
-				require.Equal(t, newFreightIn, newFreightOut)
+				require.Equal(t, kargoapi.PromotionPhaseSucceeded, promo.Status.Phase)
+				// The freight collection should be unaltered
+				require.Equal(t, origFreight, promo.Status.FreightCollection)
 			},
 		},
 		{
@@ -206,13 +204,13 @@ func TestArgoCDPromote(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *kargoapi.PromotionStatus,
-				newFreightIn []kargoapi.FreightReference,
-				newFreightOut []kargoapi.FreightReference,
+				origFreight *kargoapi.FreightCollection,
+				promo *kargoapi.Promotion,
 				err error,
 			) {
 				require.ErrorContains(t, err, "something went wrong")
-				require.Equal(t, newFreightIn, newFreightOut)
+				// The freight collection should be unaltered
+				require.Equal(t, origFreight, promo.Status.FreightCollection)
 			},
 		},
 		{
@@ -252,13 +250,13 @@ func TestArgoCDPromote(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *kargoapi.PromotionStatus,
-				newFreightIn []kargoapi.FreightReference,
-				newFreightOut []kargoapi.FreightReference,
+				origFreight *kargoapi.FreightCollection,
+				promo *kargoapi.Promotion,
 				err error,
 			) {
 				require.ErrorContains(t, err, "something went wrong")
-				require.Equal(t, newFreightIn, newFreightOut)
+				// The freight collection should be unaltered
+				require.Equal(t, origFreight, promo.Status.FreightCollection)
 			},
 		},
 		{
@@ -287,7 +285,7 @@ func TestArgoCDPromote(t *testing.T) {
 					*kargoapi.Stage,
 					*kargoapi.ArgoCDAppUpdate,
 					*argocd.Application,
-					[]kargoapi.FreightReference,
+					*kargoapi.FreightCollection,
 					*argocd.ApplicationSource,
 					argocd.ApplicationSources,
 				) (argocd.OperationPhase, bool, error) {
@@ -309,13 +307,13 @@ func TestArgoCDPromote(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *kargoapi.PromotionStatus,
-				newFreightIn []kargoapi.FreightReference,
-				newFreightOut []kargoapi.FreightReference,
+				origFreight *kargoapi.FreightCollection,
+				promo *kargoapi.Promotion,
 				err error,
 			) {
 				require.ErrorContains(t, err, "something went wrong")
-				require.Equal(t, newFreightIn, newFreightOut)
+				// The freight collection should be unaltered
+				require.Equal(t, origFreight, promo.Status.FreightCollection)
 			},
 		},
 		{
@@ -344,7 +342,7 @@ func TestArgoCDPromote(t *testing.T) {
 					*kargoapi.Stage,
 					*kargoapi.ArgoCDAppUpdate,
 					*argocd.Application,
-					[]kargoapi.FreightReference,
+					*kargoapi.FreightCollection,
 					*argocd.ApplicationSource,
 					argocd.ApplicationSources,
 				) (argocd.OperationPhase, bool, error) {
@@ -374,13 +372,12 @@ func TestArgoCDPromote(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				status *kargoapi.PromotionStatus,
-				_ []kargoapi.FreightReference,
-				_ []kargoapi.FreightReference,
+				_ *kargoapi.FreightCollection,
+				promo *kargoapi.Promotion,
 				err error,
 			) {
 				require.NoError(t, err)
-				require.Equal(t, kargoapi.PromotionPhaseRunning, status.Phase)
+				require.Equal(t, kargoapi.PromotionPhaseRunning, promo.Status.Phase)
 			},
 		},
 		{
@@ -409,7 +406,7 @@ func TestArgoCDPromote(t *testing.T) {
 					*kargoapi.Stage,
 					*kargoapi.ArgoCDAppUpdate,
 					*argocd.Application,
-					[]kargoapi.FreightReference,
+					*kargoapi.FreightCollection,
 					*argocd.ApplicationSource,
 					argocd.ApplicationSources,
 				) (argocd.OperationPhase, bool, error) {
@@ -431,14 +428,14 @@ func TestArgoCDPromote(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				status *kargoapi.PromotionStatus,
-				newFreightIn []kargoapi.FreightReference,
-				newFreightOut []kargoapi.FreightReference,
+				origFreight *kargoapi.FreightCollection,
+				promo *kargoapi.Promotion,
 				err error,
 			) {
 				require.NoError(t, err)
-				require.Equal(t, kargoapi.PromotionPhaseRunning, status.Phase)
-				require.Equal(t, newFreightIn, newFreightOut)
+				require.Equal(t, kargoapi.PromotionPhaseRunning, promo.Status.Phase)
+				// The freight collection should be unaltered
+				require.Equal(t, origFreight, promo.Status.FreightCollection)
 			},
 		},
 		{
@@ -467,7 +464,7 @@ func TestArgoCDPromote(t *testing.T) {
 					*kargoapi.Stage,
 					*kargoapi.ArgoCDAppUpdate,
 					*argocd.Application,
-					[]kargoapi.FreightReference,
+					*kargoapi.FreightCollection,
 					*argocd.ApplicationSource,
 					argocd.ApplicationSources,
 				) (argocd.OperationPhase, bool, error) {
@@ -489,14 +486,14 @@ func TestArgoCDPromote(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				status *kargoapi.PromotionStatus,
-				newFreightIn []kargoapi.FreightReference,
-				newFreightOut []kargoapi.FreightReference,
+				origFreight *kargoapi.FreightCollection,
+				promo *kargoapi.Promotion,
 				err error,
 			) {
 				require.NoError(t, err)
-				require.Equal(t, kargoapi.PromotionPhaseRunning, status.Phase)
-				require.Equal(t, newFreightIn, newFreightOut)
+				require.Equal(t, kargoapi.PromotionPhaseRunning, promo.Status.Phase)
+				// The freight collection should be unaltered
+				require.Equal(t, origFreight, promo.Status.FreightCollection)
 			},
 		},
 		{
@@ -525,7 +522,7 @@ func TestArgoCDPromote(t *testing.T) {
 					*kargoapi.Stage,
 					*kargoapi.ArgoCDAppUpdate,
 					*argocd.Application,
-					[]kargoapi.FreightReference,
+					*kargoapi.FreightCollection,
 					*argocd.ApplicationSource,
 					argocd.ApplicationSources,
 				) (argocd.OperationPhase, bool, error) {
@@ -555,9 +552,8 @@ func TestArgoCDPromote(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *kargoapi.PromotionStatus,
-				newFreightIn []kargoapi.FreightReference,
-				newFreightOut []kargoapi.FreightReference,
+				origFreight *kargoapi.FreightCollection,
+				promo *kargoapi.Promotion,
 				err error,
 			) {
 				require.Error(t, err)
@@ -566,7 +562,8 @@ func TestArgoCDPromote(t *testing.T) {
 					"something went wrong",
 					err.Error(),
 				)
-				require.Equal(t, newFreightIn, newFreightOut)
+				// The freight collection should be unaltered
+				require.Equal(t, origFreight, promo.Status.FreightCollection)
 			},
 		},
 		{
@@ -595,7 +592,7 @@ func TestArgoCDPromote(t *testing.T) {
 					*kargoapi.Stage,
 					*kargoapi.ArgoCDAppUpdate,
 					*argocd.Application,
-					[]kargoapi.FreightReference,
+					*kargoapi.FreightCollection,
 					*argocd.ApplicationSource,
 					argocd.ApplicationSources,
 				) (argocd.OperationPhase, bool, error) {
@@ -605,7 +602,7 @@ func TestArgoCDPromote(t *testing.T) {
 						*kargoapi.Stage,
 						*kargoapi.ArgoCDAppUpdate,
 						*argocd.Application,
-						[]kargoapi.FreightReference,
+						*kargoapi.FreightCollection,
 						*argocd.ApplicationSource,
 						argocd.ApplicationSources,
 					) (argocd.OperationPhase, bool, error) {
@@ -645,14 +642,14 @@ func TestArgoCDPromote(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				status *kargoapi.PromotionStatus,
-				newFreightIn []kargoapi.FreightReference,
-				newFreightOut []kargoapi.FreightReference,
+				origFreight *kargoapi.FreightCollection,
+				promo *kargoapi.Promotion,
 				err error,
 			) {
 				require.NoError(t, err)
-				require.Equal(t, kargoapi.PromotionPhaseFailed, status.Phase)
-				require.Equal(t, newFreightIn, newFreightOut)
+				require.Equal(t, kargoapi.PromotionPhaseFailed, promo.Status.Phase)
+				// The freight collection should be unaltered
+				require.Equal(t, origFreight, promo.Status.FreightCollection)
 			},
 		},
 		{
@@ -681,7 +678,7 @@ func TestArgoCDPromote(t *testing.T) {
 					*kargoapi.Stage,
 					*kargoapi.ArgoCDAppUpdate,
 					*argocd.Application,
-					[]kargoapi.FreightReference,
+					*kargoapi.FreightCollection,
 					*argocd.ApplicationSource,
 					argocd.ApplicationSources,
 				) (argocd.OperationPhase, bool, error) {
@@ -703,13 +700,13 @@ func TestArgoCDPromote(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *kargoapi.PromotionStatus,
-				newFreightIn []kargoapi.FreightReference,
-				newFreightOut []kargoapi.FreightReference,
+				origFreight *kargoapi.FreightCollection,
+				promo *kargoapi.Promotion,
 				err error,
 			) {
 				require.ErrorContains(t, err, "could not determine promotion phase from operation phases")
-				require.Equal(t, newFreightIn, newFreightOut)
+				// The freight collection should be unaltered
+				require.Equal(t, origFreight, promo.Status.FreightCollection)
 			},
 		},
 		{
@@ -738,7 +735,7 @@ func TestArgoCDPromote(t *testing.T) {
 					*kargoapi.Stage,
 					*kargoapi.ArgoCDAppUpdate,
 					*argocd.Application,
-					[]kargoapi.FreightReference,
+					*kargoapi.FreightCollection,
 					*argocd.ApplicationSource,
 					argocd.ApplicationSources,
 				) (argocd.OperationPhase, bool, error) {
@@ -760,29 +757,37 @@ func TestArgoCDPromote(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				status *kargoapi.PromotionStatus,
-				newFreightIn []kargoapi.FreightReference,
-				newFreightOut []kargoapi.FreightReference,
+				origFreight *kargoapi.FreightCollection,
+				promo *kargoapi.Promotion,
 				err error,
 			) {
 				require.NoError(t, err)
-				require.Equal(t, kargoapi.PromotionPhaseSucceeded, status.Phase)
-				require.Equal(t, newFreightIn, newFreightOut)
+				require.Equal(t, kargoapi.PromotionPhaseSucceeded, promo.Status.Phase)
+				// The freight collection should be unaltered
+				require.Equal(t, origFreight, promo.Status.FreightCollection)
 			},
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			newStatus, newFreightOut, err := testCase.promoMech.Promote(
+			promo := &kargoapi.Promotion{
+				Status: kargoapi.PromotionStatus{
+					FreightCollection: &kargoapi.FreightCollection{},
+				},
+			}
+			for _, freight := range testCase.newFreight {
+				promo.Status.FreightCollection.UpdateOrPush(freight)
+			}
+			origFreight := promo.Status.FreightCollection.DeepCopy()
+			err := testCase.promoMech.Promote(
 				logging.ContextWithLogger(
 					context.Background(),
 					logging.Wrap(logr.Discard()),
 				),
 				testCase.stage,
-				&kargoapi.Promotion{},
-				testCase.newFreight,
+				promo,
 			)
-			testCase.assertions(t, newStatus, testCase.newFreight, newFreightOut, err)
+			testCase.assertions(t, origFreight, promo, err)
 		})
 	}
 }
@@ -1289,12 +1294,17 @@ func TestArgoCDMustPerformUpdate(t *testing.T) {
 				},
 			}
 
+			freight := &kargoapi.FreightCollection{}
+			for _, ref := range testCase.newFreight {
+				freight.UpdateOrPush(ref)
+			}
+
 			phase, mustUpdate, err := argocdMech.mustPerformUpdate(
 				context.Background(),
 				stage,
 				&stage.Spec.PromotionMechanisms.ArgoCDAppUpdates[0],
 				app,
-				testCase.newFreight,
+				freight,
 				testCase.desiredSource,
 				testCase.desiredSources,
 			)

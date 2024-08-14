@@ -47,7 +47,7 @@ type argoCDMechanism struct {
 		*kargoapi.Stage,
 		*kargoapi.ArgoCDAppUpdate,
 		*argocd.Application,
-		[]kargoapi.FreightReference,
+		*kargoapi.FreightCollection,
 		*argocd.ApplicationSource,
 		argocd.ApplicationSources,
 	) (argocd.OperationPhase, bool, error)
@@ -107,33 +107,31 @@ func (a *argoCDMechanism) Promote(
 	ctx context.Context,
 	stage *kargoapi.Stage,
 	promo *kargoapi.Promotion,
-	newFreight []kargoapi.FreightReference,
-) (*kargoapi.PromotionStatus, []kargoapi.FreightReference, error) {
+) error {
 	updates := stage.Spec.PromotionMechanisms.ArgoCDAppUpdates
 
 	if len(updates) == 0 {
-		return promo.Status.WithPhase(kargoapi.PromotionPhaseSucceeded), newFreight, nil
+		promo.Status.Phase = kargoapi.PromotionPhaseSucceeded
+		return nil
 	}
 
 	if a.argocdClient == nil {
-		return promo.Status.WithPhase(kargoapi.PromotionPhaseFailed), newFreight,
-			errors.New(
-				"Argo CD integration is disabled on this controller; cannot perform " +
-					"promotion",
-			)
+		promo.Status.Phase = kargoapi.PromotionPhaseFailed
+		return errors.New(
+			"Argo CD integration is disabled on this controller; cannot perform promotion",
+		)
 	}
 
 	logger := logging.LoggerFromContext(ctx)
 	logger.Debug("executing Argo CD-based promotion mechanisms")
 
 	var updateResults = make([]argocd.OperationPhase, 0, len(updates))
-	var newStatus = promo.Status.DeepCopy()
 	for i := range updates {
 		update := &updates[i]
 		// Retrieve the Argo CD Application.
 		app, err := a.getAuthorizedApplicationFn(ctx, update.AppNamespace, update.AppName, stage.ObjectMeta)
 		if err != nil {
-			return nil, newFreight, err
+			return err
 		}
 
 		// If we do not have specific source updates, request a sync of the
@@ -145,7 +143,7 @@ func (a *argoCDMechanism) Promote(
 				app.Spec.Source.DeepCopy(),
 				app.Spec.Sources.DeepCopy(),
 			); err != nil {
-				return nil, newFreight, err
+				return err
 			}
 
 			// As we have no knowledge of the specifically desired revision(s),
@@ -161,10 +159,10 @@ func (a *argoCDMechanism) Promote(
 			stage,
 			update,
 			app,
-			newFreight,
+			promo.Status.FreightCollection.References(),
 		)
 		if err != nil {
-			return nil, newFreight, err
+			return err
 		}
 
 		// Check if the update needs to be performed and retrieve its phase.
@@ -173,7 +171,7 @@ func (a *argoCDMechanism) Promote(
 			stage,
 			update,
 			app,
-			newFreight,
+			promo.Status.FreightCollection,
 			desiredSource,
 			desiredSources,
 		)
@@ -190,7 +188,7 @@ func (a *argoCDMechanism) Promote(
 				if phase == "" {
 					// If we do not have a phase, we cannot continue processing
 					// this update by waiting.
-					return nil, newFreight, err
+					return err
 				}
 				// Log the error as a warning, but continue to the next update.
 				logger.Info(err.Error())
@@ -198,7 +196,7 @@ func (a *argoCDMechanism) Promote(
 			if phase.Failed() {
 				// Record the reason for the failure if available.
 				if app.Status.OperationState != nil {
-					newStatus.Message = fmt.Sprintf(
+					promo.Status.Message = fmt.Sprintf(
 						"Argo CD Application %q in namespace %q failed with: %s",
 						app.Name,
 						app.Namespace,
@@ -216,7 +214,7 @@ func (a *argoCDMechanism) Promote(
 
 		// Perform the update.
 		if err = a.syncApplicationFn(ctx, app, desiredSource, desiredSources); err != nil {
-			return nil, newFreight, err
+			return err
 		}
 		// As we have initiated an update, we should wait for it to complete.
 		updateResults = append(updateResults, argocd.OperationRunning)
@@ -224,15 +222,15 @@ func (a *argoCDMechanism) Promote(
 
 	aggregatedPhase := operationPhaseToPromotionPhase(updateResults...)
 	if aggregatedPhase == "" {
-		return nil, newFreight, fmt.Errorf(
+		return fmt.Errorf(
 			"could not determine promotion phase from operation phases: %v",
 			updateResults,
 		)
 	}
 
 	logger.Debug("done executing Argo CD-based promotion mechanisms")
-	newStatus.Phase = aggregatedPhase
-	return newStatus, newFreight, nil
+	promo.Status.Phase = aggregatedPhase
+	return nil
 }
 
 // buildDesiredSources returns the desired source(s) for an Argo CD Application,
@@ -283,7 +281,7 @@ func (a *argoCDMechanism) mustPerformUpdate(
 	stage *kargoapi.Stage,
 	update *kargoapi.ArgoCDAppUpdate,
 	app *argocd.Application,
-	newFreight []kargoapi.FreightReference,
+	freightCol *kargoapi.FreightCollection,
 	desiredSource *argocd.ApplicationSource,
 	desiredSources argocd.ApplicationSources,
 ) (phase argocd.OperationPhase, mustUpdate bool, err error) {
@@ -327,7 +325,7 @@ func (a *argoCDMechanism) mustPerformUpdate(
 		stage,
 		update,
 		app,
-		newFreight,
+		freightCol.References(),
 	); err != nil {
 		return "", true, fmt.Errorf("error determining desired revision: %w", err)
 	} else if desiredRevision != "" && status.SyncResult.Revision != desiredRevision {
