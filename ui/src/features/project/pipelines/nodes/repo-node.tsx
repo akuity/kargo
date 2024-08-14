@@ -29,6 +29,7 @@ type Props = {
   nodeData: RepoNodeType;
   children?: React.ReactNode;
   onClick?: () => void;
+  hidden?: boolean;
 };
 
 const ico = {
@@ -38,7 +39,7 @@ const ico = {
   [NodeType.REPO_CHART]: faAnchor
 };
 
-export const RepoNode = ({ nodeData, children, onClick }: Props) => {
+export const RepoNode = ({ nodeData, children, onClick, hidden }: Props) => {
   const { warehouseColorMap } = useContext(ColorContext);
   const type = nodeData.type;
   const value =
@@ -47,6 +48,10 @@ export const RepoNode = ({ nodeData, children, onClick }: Props) => {
       : type === NodeType.WAREHOUSE
         ? nodeData?.data?.metadata?.name || ''
         : nodeData?.data?.repoURL || '';
+
+  if (hidden) {
+    return null;
+  }
   return (
     <div
       className={classNames([
