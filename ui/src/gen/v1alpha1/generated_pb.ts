@@ -7,7 +7,7 @@
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto2 } from "@bufbuild/protobuf";
-import { Duration, ListMeta, ObjectMeta, Time } from "../k8s.io/apimachinery/pkg/apis/meta/v1/generated_pb.js";
+import { Condition, Duration, ListMeta, ObjectMeta, Time } from "../k8s.io/apimachinery/pkg/apis/meta/v1/generated_pb.js";
 
 /**
  * AnalysisRunArgument represents an argument to be added to an AnalysisRun.
@@ -1121,6 +1121,15 @@ export class ChartSubscription extends Message<ChartSubscription> {
  */
 export class DiscoveredArtifacts extends Message<DiscoveredArtifacts> {
   /**
+   * DiscoveredAt is the time at which the Warehouse discovered the artifacts.
+   *
+   * +optional
+   *
+   * @generated from field: optional k8s.io.apimachinery.pkg.apis.meta.v1.Time discoveredAt = 4;
+   */
+  discoveredAt?: Time;
+
+  /**
    * Git holds the commits discovered by the Warehouse for the Git
    * subscriptions.
    *
@@ -1158,6 +1167,7 @@ export class DiscoveredArtifacts extends Message<DiscoveredArtifacts> {
   static readonly runtime: typeof proto2 = proto2;
   static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.DiscoveredArtifacts";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 4, name: "discoveredAt", kind: "message", T: Time, opt: true },
     { no: 1, name: "git", kind: "message", T: GitDiscoveryResult, repeated: true },
     { no: 2, name: "images", kind: "message", T: ImageDiscoveryResult, repeated: true },
     { no: 3, name: "charts", kind: "message", T: ChartDiscoveryResult, repeated: true },
@@ -4739,6 +4749,18 @@ export class WarehouseSpec extends Message<WarehouseSpec> {
  */
 export class WarehouseStatus extends Message<WarehouseStatus> {
   /**
+   * Conditions contains the last observations of the Warehouse's current
+   * state.
+   * +patchMergeKey=type
+   * +patchStrategy=merge
+   * +listType=map
+   * +listMapKey=type
+   *
+   * @generated from field: repeated k8s.io.apimachinery.pkg.apis.meta.v1.Condition conditions = 9;
+   */
+  conditions: Condition[] = [];
+
+  /**
    * LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh
    * annotation that was handled by the controller. This field can be used to
    * determine whether the request to refresh the resource has been handled.
@@ -4747,14 +4769,6 @@ export class WarehouseStatus extends Message<WarehouseStatus> {
    * @generated from field: optional string lastHandledRefresh = 6;
    */
   lastHandledRefresh?: string;
-
-  /**
-   * Message describes any errors that are preventing the Warehouse controller
-   * from polling repositories to discover new Freight.
-   *
-   * @generated from field: optional string message = 3;
-   */
-  message?: string;
 
   /**
    * ObservedGeneration represents the .metadata.generation that this Warehouse
@@ -4787,8 +4801,8 @@ export class WarehouseStatus extends Message<WarehouseStatus> {
   static readonly runtime: typeof proto2 = proto2;
   static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.WarehouseStatus";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 9, name: "conditions", kind: "message", T: Condition, repeated: true },
     { no: 6, name: "lastHandledRefresh", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 3, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 4, name: "observedGeneration", kind: "scalar", T: 3 /* ScalarType.INT64 */, opt: true },
     { no: 8, name: "lastFreightID", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 7, name: "discoveredArtifacts", kind: "message", T: DiscoveredArtifacts, opt: true },
