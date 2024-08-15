@@ -31,7 +31,7 @@ type EnqueueHighestPriorityPromotionHandler[T any] struct {
 func (e *EnqueueHighestPriorityPromotionHandler[T]) Create(
 	context.Context,
 	event.TypedCreateEvent[T],
-	workqueue.RateLimitingInterface,
+	workqueue.TypedRateLimitingInterface[reconcile.Request],
 ) {
 	// No-op
 }
@@ -41,7 +41,7 @@ func (e *EnqueueHighestPriorityPromotionHandler[T]) Create(
 func (e *EnqueueHighestPriorityPromotionHandler[T]) Delete(
 	_ context.Context,
 	evt event.TypedDeleteEvent[T],
-	wq workqueue.RateLimitingInterface,
+	wq workqueue.TypedRateLimitingInterface[reconcile.Request],
 ) {
 	if promo, ok := any(evt.Object).(*kargoapi.Promotion); ok {
 		stageKey := types.NamespacedName{
@@ -57,7 +57,7 @@ func (e *EnqueueHighestPriorityPromotionHandler[T]) Delete(
 func (e *EnqueueHighestPriorityPromotionHandler[T]) Generic(
 	context.Context,
 	event.TypedGenericEvent[T],
-	workqueue.RateLimitingInterface,
+	workqueue.TypedRateLimitingInterface[reconcile.Request],
 ) {
 	// No-op
 }
@@ -67,7 +67,7 @@ func (e *EnqueueHighestPriorityPromotionHandler[T]) Generic(
 func (e *EnqueueHighestPriorityPromotionHandler[T]) Update(
 	_ context.Context,
 	evt event.TypedUpdateEvent[T],
-	wq workqueue.RateLimitingInterface,
+	wq workqueue.TypedRateLimitingInterface[reconcile.Request],
 ) {
 	promo := any(evt.ObjectNew).(*kargoapi.Promotion) // nolint: forcetypeassert
 	if promo == nil {
@@ -93,7 +93,7 @@ func (e *EnqueueHighestPriorityPromotionHandler[T]) Update(
 // Also discards pending promotions in the queue that no longer exist
 func (e *EnqueueHighestPriorityPromotionHandler[T]) enqueueNext(
 	stageKey types.NamespacedName,
-	wq workqueue.RateLimitingInterface,
+	wq workqueue.TypedRateLimitingInterface[reconcile.Request],
 ) {
 	e.pqs.promoQueuesByStageMu.RLock()
 	defer e.pqs.promoQueuesByStageMu.RUnlock()
@@ -161,7 +161,7 @@ type UpdatedArgoCDAppHandler[T any] struct {
 func (u *UpdatedArgoCDAppHandler[T]) Create(
 	context.Context,
 	event.TypedCreateEvent[T],
-	workqueue.RateLimitingInterface,
+	workqueue.TypedRateLimitingInterface[reconcile.Request],
 ) {
 	// No-op
 }
@@ -170,7 +170,7 @@ func (u *UpdatedArgoCDAppHandler[T]) Create(
 func (u *UpdatedArgoCDAppHandler[T]) Delete(
 	context.Context,
 	event.TypedDeleteEvent[T],
-	workqueue.RateLimitingInterface,
+	workqueue.TypedRateLimitingInterface[reconcile.Request],
 ) {
 	// No-op
 }
@@ -179,7 +179,7 @@ func (u *UpdatedArgoCDAppHandler[T]) Delete(
 func (u *UpdatedArgoCDAppHandler[T]) Generic(
 	context.Context,
 	event.TypedGenericEvent[T],
-	workqueue.RateLimitingInterface,
+	workqueue.TypedRateLimitingInterface[reconcile.Request],
 ) {
 	// No-op
 }
@@ -188,7 +188,7 @@ func (u *UpdatedArgoCDAppHandler[T]) Generic(
 func (u *UpdatedArgoCDAppHandler[T]) Update(
 	ctx context.Context,
 	e event.TypedUpdateEvent[T],
-	wq workqueue.RateLimitingInterface,
+	wq workqueue.TypedRateLimitingInterface[reconcile.Request],
 ) {
 	logger := logging.LoggerFromContext(ctx)
 

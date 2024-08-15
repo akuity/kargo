@@ -791,6 +791,70 @@ export class Duration extends Message<Duration> {
 }
 
 /**
+ * FieldSelectorRequirement is a selector that contains values, a key, and an operator that
+ * relates the key and values.
+ *
+ * @generated from message k8s.io.apimachinery.pkg.apis.meta.v1.FieldSelectorRequirement
+ */
+export class FieldSelectorRequirement extends Message<FieldSelectorRequirement> {
+  /**
+   * key is the field selector key that the requirement applies to.
+   *
+   * @generated from field: optional string key = 1;
+   */
+  key?: string;
+
+  /**
+   * operator represents a key's relationship to a set of values.
+   * Valid operators are In, NotIn, Exists, DoesNotExist.
+   * The list of operators may grow in the future.
+   *
+   * @generated from field: optional string operator = 2;
+   */
+  operator?: string;
+
+  /**
+   * values is an array of string values.
+   * If the operator is In or NotIn, the values array must be non-empty.
+   * If the operator is Exists or DoesNotExist, the values array must be empty.
+   * +optional
+   * +listType=atomic
+   *
+   * @generated from field: repeated string values = 3;
+   */
+  values: string[] = [];
+
+  constructor(data?: PartialMessage<FieldSelectorRequirement>) {
+    super();
+    proto2.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto2 = proto2;
+  static readonly typeName = "k8s.io.apimachinery.pkg.apis.meta.v1.FieldSelectorRequirement";
+  static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 1, name: "key", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 2, name: "operator", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 3, name: "values", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FieldSelectorRequirement {
+    return new FieldSelectorRequirement().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): FieldSelectorRequirement {
+    return new FieldSelectorRequirement().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): FieldSelectorRequirement {
+    return new FieldSelectorRequirement().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: FieldSelectorRequirement | PlainMessage<FieldSelectorRequirement> | undefined, b: FieldSelectorRequirement | PlainMessage<FieldSelectorRequirement> | undefined): boolean {
+    return proto2.util.equals(FieldSelectorRequirement, a, b);
+  }
+}
+
+/**
  * FieldsV1 stores a set of fields in a data structure like a Trie, in JSON format.
  *
  * Each key is either a '.' representing the field itself, and will always map to an empty set,
