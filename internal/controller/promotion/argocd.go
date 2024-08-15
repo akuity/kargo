@@ -25,6 +25,7 @@ const (
 	authorizedStageAnnotationKey = "kargo.akuity.io/authorized-stage"
 
 	applicationOperationInitiator = "kargo-controller"
+	freightCollectionInfoKey      = "kargo.akuity.io/freight-collection"
 )
 
 // argoCDMechanism is an implementation of the Mechanism interface that updates
@@ -45,15 +46,16 @@ type argoCDMechanism struct {
 		*kargoapi.Stage,
 		*kargoapi.ArgoCDAppUpdate,
 		*argocd.Application,
-		[]kargoapi.FreightReference,
+		*kargoapi.FreightCollection,
 		*argocd.ApplicationSource,
 		argocd.ApplicationSources,
 	) (argocd.OperationPhase, bool, error)
 	syncApplicationFn func(
-		context.Context,
-		*argocd.Application,
-		*argocd.ApplicationSource,
-		argocd.ApplicationSources,
+		ctx context.Context,
+		app *argocd.Application,
+		desiredSource *argocd.ApplicationSource,
+		desiredSources argocd.ApplicationSources,
+		freightColID string,
 	) error
 	getAuthorizedApplicationFn func(
 		ctx context.Context,
@@ -106,52 +108,31 @@ func (a *argoCDMechanism) Promote(
 	ctx context.Context,
 	stage *kargoapi.Stage,
 	promo *kargoapi.Promotion,
-	newFreight []kargoapi.FreightReference,
-) (*kargoapi.PromotionStatus, []kargoapi.FreightReference, error) {
+) error {
 	updates := stage.Spec.PromotionMechanisms.ArgoCDAppUpdates
 
 	if len(updates) == 0 {
-		return promo.Status.WithPhase(kargoapi.PromotionPhaseSucceeded), newFreight, nil
+		promo.Status.Phase = kargoapi.PromotionPhaseSucceeded
+		return nil
 	}
 
 	if a.argocdClient == nil {
-		return promo.Status.WithPhase(kargoapi.PromotionPhaseFailed), newFreight,
-			errors.New(
-				"Argo CD integration is disabled on this controller; cannot perform " +
-					"promotion",
-			)
+		promo.Status.Phase = kargoapi.PromotionPhaseFailed
+		return errors.New(
+			"Argo CD integration is disabled on this controller; cannot perform promotion",
+		)
 	}
 
 	logger := logging.LoggerFromContext(ctx)
 	logger.Debug("executing Argo CD-based promotion mechanisms")
 
 	var updateResults = make([]argocd.OperationPhase, 0, len(updates))
-	var newStatus = promo.Status.DeepCopy()
 	for i := range updates {
 		update := &updates[i]
 		// Retrieve the Argo CD Application.
 		app, err := a.getAuthorizedApplicationFn(ctx, update.AppNamespace, update.AppName, stage.ObjectMeta)
 		if err != nil {
-			return nil, newFreight, err
-		}
-
-		// If we do not have specific source updates, request a sync of the
-		// Application with its current source(s).
-		if len(update.SourceUpdates) == 0 {
-			if err = a.syncApplicationFn(
-				ctx,
-				app,
-				app.Spec.Source.DeepCopy(),
-				app.Spec.Sources.DeepCopy(),
-			); err != nil {
-				return nil, newFreight, err
-			}
-
-			// As we have no knowledge of the specifically desired revision(s),
-			// we cannot wait for the update to complete as we would not know
-			// what to wait for.
-			updateResults = append(updateResults, argocd.OperationSucceeded)
-			continue
+			return err
 		}
 
 		// Build the desired source(s) for the Argo CD Application.
@@ -160,10 +141,10 @@ func (a *argoCDMechanism) Promote(
 			stage,
 			update,
 			app,
-			newFreight,
+			promo.Status.FreightCollection.References(),
 		)
 		if err != nil {
-			return nil, newFreight, err
+			return err
 		}
 
 		// Check if the update needs to be performed and retrieve its phase.
@@ -172,7 +153,7 @@ func (a *argoCDMechanism) Promote(
 			stage,
 			update,
 			app,
-			newFreight,
+			promo.Status.FreightCollection,
 			desiredSource,
 			desiredSources,
 		)
@@ -189,7 +170,7 @@ func (a *argoCDMechanism) Promote(
 				if phase == "" {
 					// If we do not have a phase, we cannot continue processing
 					// this update by waiting.
-					return nil, newFreight, err
+					return err
 				}
 				// Log the error as a warning, but continue to the next update.
 				logger.Info(err.Error())
@@ -197,7 +178,7 @@ func (a *argoCDMechanism) Promote(
 			if phase.Failed() {
 				// Record the reason for the failure if available.
 				if app.Status.OperationState != nil {
-					newStatus.Message = fmt.Sprintf(
+					promo.Status.Message = fmt.Sprintf(
 						"Argo CD Application %q in namespace %q failed with: %s",
 						app.Name,
 						app.Namespace,
@@ -214,8 +195,14 @@ func (a *argoCDMechanism) Promote(
 		}
 
 		// Perform the update.
-		if err = a.syncApplicationFn(ctx, app, desiredSource, desiredSources); err != nil {
-			return nil, newFreight, err
+		if err = a.syncApplicationFn(
+			ctx,
+			app,
+			desiredSource,
+			desiredSources,
+			promo.Status.FreightCollection.ID,
+		); err != nil {
+			return err
 		}
 		// As we have initiated an update, we should wait for it to complete.
 		updateResults = append(updateResults, argocd.OperationRunning)
@@ -223,15 +210,15 @@ func (a *argoCDMechanism) Promote(
 
 	aggregatedPhase := operationPhaseToPromotionPhase(updateResults...)
 	if aggregatedPhase == "" {
-		return nil, newFreight, fmt.Errorf(
+		return fmt.Errorf(
 			"could not determine promotion phase from operation phases: %v",
 			updateResults,
 		)
 	}
 
 	logger.Debug("done executing Argo CD-based promotion mechanisms")
-	newStatus.Phase = aggregatedPhase
-	return newStatus, newFreight, nil
+	promo.Status.Phase = aggregatedPhase
+	return nil
 }
 
 // buildDesiredSources returns the desired source(s) for an Argo CD Application,
@@ -282,7 +269,7 @@ func (a *argoCDMechanism) mustPerformUpdate(
 	stage *kargoapi.Stage,
 	update *kargoapi.ArgoCDAppUpdate,
 	app *argocd.Application,
-	newFreight []kargoapi.FreightReference,
+	freightCol *kargoapi.FreightCollection,
 	desiredSource *argocd.ApplicationSource,
 	desiredSources argocd.ApplicationSources,
 ) (phase argocd.OperationPhase, mustUpdate bool, err error) {
@@ -292,6 +279,8 @@ func (a *argoCDMechanism) mustPerformUpdate(
 		return "", true, nil
 	}
 
+	// Deal with the possibility that the operation was not initiated by the
+	// expected user.
 	if status.Operation.InitiatedBy.Username != applicationOperationInitiator {
 		// The operation was not initiated by the expected user.
 		if !status.Phase.Completed() {
@@ -302,6 +291,31 @@ func (a *argoCDMechanism) mustPerformUpdate(
 			return status.Phase, false, fmt.Errorf(
 				"current operation was not initiated by %q and not by %q: waiting for operation to complete",
 				applicationOperationInitiator, status.Operation.InitiatedBy.Username,
+			)
+		}
+		// Initiate our own operation.
+		return "", true, nil
+	}
+
+	// Deal with the possibility that the operation was not initiated for the
+	// current freight collection. i.e. Not related to the current promotion.
+	var correctFreightColIDFound bool
+	for _, info := range status.Operation.Info {
+		if info.Name == freightCollectionInfoKey {
+			correctFreightColIDFound = info.Value == freightCol.ID
+			break
+		}
+	}
+	if !correctFreightColIDFound {
+		// The operation was not initiated for the current freight collection.
+		if !status.Phase.Completed() {
+			// We should wait for the operation to complete before attempting to
+			// apply an update ourselves.
+			// NB: We return the current phase here because we want the caller
+			//     to know that an operation is still running.
+			return status.Phase, false, fmt.Errorf(
+				"current operation was not initiated for freight collection %q: waiting for operation to complete",
+				freightCol.ID,
 			)
 		}
 		// Initiate our own operation.
@@ -326,7 +340,7 @@ func (a *argoCDMechanism) mustPerformUpdate(
 		stage,
 		update,
 		app,
-		newFreight,
+		freightCol.References(),
 	); err != nil {
 		return "", true, fmt.Errorf("error determining desired revision: %w", err)
 	} else if desiredRevision != "" && status.SyncResult.Revision != desiredRevision {
@@ -359,6 +373,7 @@ func (a *argoCDMechanism) syncApplication(
 	app *argocd.Application,
 	desiredSource *argocd.ApplicationSource,
 	desiredSources argocd.ApplicationSources,
+	freightColID string,
 ) error {
 	// Create a patch for the Application.
 	patch := client.MergeFrom(app.DeepCopy())
@@ -383,6 +398,10 @@ func (a *argoCDMechanism) syncApplication(
 			{
 				Name:  "Reason",
 				Value: "Promotion triggered a sync of this Application resource.",
+			},
+			{
+				Name:  freightCollectionInfoKey,
+				Value: freightColID,
 			},
 		},
 		Sync: &argocd.SyncOperation{

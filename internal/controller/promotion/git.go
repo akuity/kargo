@@ -46,8 +46,7 @@ type gitMechanism struct {
 		*kargoapi.Stage,
 		*kargoapi.Promotion,
 		*kargoapi.GitRepoUpdate,
-		[]kargoapi.FreightReference,
-	) (*kargoapi.PromotionStatus, []kargoapi.FreightReference, error)
+	) error
 	getReadRefFn func(
 		context.Context,
 		client.Client,
@@ -128,37 +127,32 @@ func (g *gitMechanism) Promote(
 	ctx context.Context,
 	stage *kargoapi.Stage,
 	promo *kargoapi.Promotion,
-	newFreight []kargoapi.FreightReference,
-) (*kargoapi.PromotionStatus, []kargoapi.FreightReference, error) {
+) error {
 	updates := g.selectUpdatesFn(stage.Spec.PromotionMechanisms.GitRepoUpdates)
 
 	if len(updates) == 0 {
-		return &kargoapi.PromotionStatus{Phase: kargoapi.PromotionPhaseSucceeded}, newFreight, nil
+		promo.Status.Phase = kargoapi.PromotionPhaseSucceeded
+		return nil
 	}
-
-	var newStatus *kargoapi.PromotionStatus
 
 	logger := logging.LoggerFromContext(ctx).WithValues("name", g.name)
 	logger.Debug("executing promotion mechanism")
 
+	// Start with success and degrade as individual updates report more severe
+	// phases.
+	promo.Status.Phase = kargoapi.PromotionPhaseSucceeded
 	for _, update := range updates {
 		var err error
-		var otherStatus *kargoapi.PromotionStatus
-		if otherStatus, newFreight, err = g.doSingleUpdateFn(
-			ctx,
-			stage,
-			promo,
-			update,
-			newFreight,
-		); err != nil {
-			return nil, newFreight, err
+		origStatus := promo.Status.DeepCopy()
+		if err = g.doSingleUpdateFn(ctx, stage, promo, update); err != nil {
+			return err
 		}
-		newStatus = aggregateGitPromoStatus(newStatus, *otherStatus)
+		promo.Status = *mergePromoStatus(&promo.Status, origStatus)
 	}
 
 	logger.Debug("done executing promotion mechanism")
 
-	return newStatus, newFreight, nil
+	return nil
 }
 
 // doSingleUpdate updates configuration in a single Git repository by
@@ -170,22 +164,21 @@ func (g *gitMechanism) doSingleUpdate(
 	stage *kargoapi.Stage,
 	promo *kargoapi.Promotion,
 	update *kargoapi.GitRepoUpdate,
-	newFreight []kargoapi.FreightReference,
-) (*kargoapi.PromotionStatus, []kargoapi.FreightReference, error) {
+) error {
 	readRef, commit, err := g.getReadRefFn(
 		ctx,
 		g.client,
 		stage,
 		update,
-		newFreight,
+		promo.Status.FreightCollection.References(),
 	)
 	if err != nil {
-		return nil, newFreight, err
+		return err
 	}
 
 	author, err := g.getAuthorFn()
 	if err != nil {
-		return nil, newFreight, err
+		return err
 	}
 	if author == nil {
 		author = &git.User{}
@@ -196,7 +189,7 @@ func (g *gitMechanism) doSingleUpdate(
 		update.RepoURL,
 	)
 	if err != nil {
-		return nil, newFreight, err
+		return err
 	}
 	if creds == nil {
 		creds = &git.RepoCredentials{}
@@ -212,7 +205,7 @@ func (g *gitMechanism) doSingleUpdate(
 		},
 	)
 	if err != nil {
-		return nil, newFreight, fmt.Errorf("error cloning git repo %q: %w", update.RepoURL, err)
+		return fmt.Errorf("error cloning git repo %q: %w", update.RepoURL, err)
 	}
 	defer repo.Close()
 
@@ -225,7 +218,7 @@ func (g *gitMechanism) doSingleUpdate(
 		if getPullRequestNumberFromMetadata(promo.Status.Metadata, update.RepoURL) == -1 {
 			// PR was never created. Prepare the branch for the commit
 			if err = preparePullRequestBranch(repo, commitBranch, update.WriteBranch); err != nil {
-				return nil, newFreight, fmt.Errorf("error preparing PR branch %q: %w", update.RepoURL, err)
+				return fmt.Errorf("error preparing PR branch %q: %w", update.RepoURL, err)
 			}
 		}
 	}
@@ -234,36 +227,35 @@ func (g *gitMechanism) doSingleUpdate(
 		ctx,
 		stage,
 		update,
-		newFreight,
+		promo.Status.FreightCollection.References(),
 		readRef,
 		commitBranch,
 		repo,
 		*creds,
 	)
 	if err != nil {
-		return nil, newFreight, err
+		return err
 	}
 
-	newStatus := promo.Status.DeepCopy()
 	if update.PullRequest != nil {
 		gpClient, err := newGitProvider(update, creds)
 		if err != nil {
-			return nil, newFreight, err
+			return err
 		}
-		commitID, newStatus, err = reconcilePullRequest(ctx, promo.Status, repo, gpClient, commitBranch, update.WriteBranch)
+		commitID, err = reconcilePullRequest(ctx, promo, repo, gpClient, commitBranch, update.WriteBranch)
 		if err != nil {
-			return nil, newFreight, err
+			return err
 		}
 	} else {
 		// For git commit promotions, promotion is successful as soon as the commit is pushed.
-		newStatus.Phase = kargoapi.PromotionPhaseSucceeded
+		promo.Status.Phase = kargoapi.PromotionPhaseSucceeded
 	}
 
-	if commit != nil && newStatus.Phase == kargoapi.PromotionPhaseSucceeded {
+	if commit != nil && promo.Status.Phase == kargoapi.PromotionPhaseSucceeded {
 		commit.HealthCheckCommit = commitID
 	}
 
-	return newStatus, newFreight, nil
+	return nil
 }
 
 // getReadRef finds a commitID or branch name to read from in order to apply the
