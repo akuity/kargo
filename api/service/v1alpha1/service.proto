@@ -142,6 +142,7 @@ message GetPublicConfigRequest {}
 message GetPublicConfigResponse {
   OIDCConfig oidc_config = 1;
   bool admin_account_enabled = 2;
+  bool skip_auth = 3;
 }
 
 message OIDCConfig {

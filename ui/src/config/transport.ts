@@ -1,4 +1,4 @@
-import { Code, ConnectError, Interceptor } from '@connectrpc/connect';
+import { ConnectError, Interceptor } from '@connectrpc/connect';
 import { createConnectTransport } from '@connectrpc/connect-web';
 import { notification } from 'antd';
 
@@ -54,10 +54,6 @@ export const newErrorHandler = (handler: (err: ConnectError) => void): Intercept
       }
 
       handler(err);
-
-      if (err instanceof ConnectError && err.code === Code.Unauthenticated) {
-        logout();
-      }
 
       throw err;
     });
