@@ -15,7 +15,7 @@ jobs:
   test-unit:
     runs-on: ubuntu-latest
     container:
-      image: golang:1.22.6-bookworm
+      image: golang:1.23.0-bookworm
     steps:
     - name: Checkout code
       uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
@@ -65,7 +65,7 @@ jobs:
       checks: write # Used to create checks (linting comments) on PRs
     runs-on: ubuntu-latest
     container:
-      image: golang:1.22.6-bookworm
+      image: golang:1.23.0-bookworm
     steps:
     - name: Checkout code
       uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
@@ -86,7 +86,7 @@ jobs:
   lint-charts:
     runs-on: ubuntu-latest
     container:
-      image: golang:1.22.6-bookworm
+      image: golang:1.23.0-bookworm
     steps:
     - name: Checkout code
       uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
@@ -103,7 +103,7 @@ jobs:
       checks: write # Used to create checks (linting comments) on PRs
     runs-on: ubuntu-latest
     container:
-      image: golang:1.22.6-bookworm
+      image: golang:1.23.0-bookworm
     steps:
     - name: Checkout code
       uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
@@ -119,7 +119,7 @@ jobs:
   check-codegen:
     runs-on: ubuntu-latest
     container:
-      image: golang:1.22.6-bookworm
+      image: golang:1.23.0-bookworm
     steps:
     - name: Checkout code
       uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
@@ -187,7 +187,7 @@ jobs:
     needs: [test-unit, lint-go, lint-charts, lint-proto, lint-ui, check-codegen]
     runs-on: ubuntu-latest
     container:
-      image: golang:1.22.6-bookworm
+      image: golang:1.23.0-bookworm
     steps:
     - name: Checkout code
       uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
