@@ -486,29 +486,31 @@ func (r *reconciler) promote(
 		Charts:  targetFreight.Charts,
 		Origin:  targetFreight.Origin,
 	}
-	targetFreightCol := r.buildTargetFreightCollection(ctx, targetFreightRef, stage)
 
-	newStatus, nextFreight, err :=
-		r.promoMechanisms.Promote(ctx, stage, &promo, targetFreightCol.References())
-	if err != nil {
+	// Make a deep copy of the Promotion to pass to the promotion mechanisms,
+	// which may modify its status.
+	workingPromo := promo.DeepCopy()
+	workingPromo.Status.Freight = &targetFreightRef
+	workingPromo.Status.FreightCollection = r.buildTargetFreightCollection(
+		ctx,
+		targetFreightRef,
+		stage,
+	)
+
+	if err := r.promoMechanisms.Promote(ctx, stage, workingPromo); err != nil {
 		return nil, err
 	}
-	newStatus.Freight = &targetFreightRef
-	newStatus.FreightCollection = &kargoapi.FreightCollection{}
-	for _, freightRef := range nextFreight {
-		newStatus.FreightCollection.UpdateOrPush(freightRef)
-	}
 
-	logger.Debug("promotion", "phase", newStatus.Phase)
+	logger.Debug("promotion", "phase", workingPromo.Status.Phase)
 
-	if newStatus.Phase == kargoapi.PromotionPhaseSucceeded {
+	if workingPromo.Status.Phase == kargoapi.PromotionPhaseSucceeded {
 		// Trigger re-verification of the Stage if the promotion succeeded and
 		// this is a re-promotion of the same Freight.
 		current := stage.Status.FreightHistory.Current()
 		if current != nil && current.VerificationHistory.Current() != nil {
 			for _, f := range current.Freight {
 				if f.Name == targetFreight.Name {
-					if err = kargoapi.ReverifyStageFreight(
+					if err := kargoapi.ReverifyStageFreight(
 						ctx,
 						r.kargoClient,
 						types.NamespacedName{
@@ -526,7 +528,7 @@ func (r *reconciler) promote(
 		}
 	}
 
-	return newStatus, nil
+	return &workingPromo.Status, nil
 }
 
 // buildTargetFreightCollection constructs a FreightCollection that contains all
