@@ -71,7 +71,7 @@ jobs:
       uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
     - name: Install linter
       env:
-        GOLANGCI_LINT_VERSION: 1.57.2
+        GOLANGCI_LINT_VERSION: 1.60.1
       working-directory: /usr/local/bin
       run: |
         curl -sSfL https://github.com/golangci/golangci-lint/releases/download/v${GOLANGCI_LINT_VERSION}/golangci-lint-${GOLANGCI_LINT_VERSION}-linux-amd64.tar.gz \
