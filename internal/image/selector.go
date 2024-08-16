@@ -47,6 +47,10 @@ type Selector interface {
 
 // SelectorOptions represents options for creating a Selector.
 type SelectorOptions struct {
+	// StrictSemvers, when set to true, will cause applicable selectors to only
+	// count tags as valid semantic versions if they contain ALL of the major,
+	// minor, and patch version components.
+	StrictSemvers bool
 	// Constraint specifies selector-specific constraints on image selection.
 	Constraint string
 	// AllowRegex is an optional regular expression that can be used to constrain

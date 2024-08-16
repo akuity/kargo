@@ -7,6 +7,7 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 
+	libSemver "github.com/akuity/kargo/internal/controller/semver"
 	"github.com/akuity/kargo/internal/logging"
 )
 
@@ -115,9 +116,9 @@ func (s *semVerSelector) selectImages(ctx context.Context) ([]Image, error) {
 	images := make([]Image, 0, len(tags))
 	for _, tag := range tags {
 		if allowsTag(tag, s.opts.allowRegex) && !ignoresTag(tag, s.opts.Ignore) {
-			var sv *semver.Version
-			if sv, err = semver.NewVersion(tag); err != nil {
-				continue // tag wasn't a semantic version
+			sv := libSemver.Parse(tag, s.opts.StrictSemvers)
+			if sv == nil {
+				continue
 			}
 			if s.constraint != nil && !s.constraint.Check(sv) {
 				continue
