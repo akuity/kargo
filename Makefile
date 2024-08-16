@@ -119,6 +119,19 @@ build-nightly-cli:
 		-ldflags "-w -X $(VERSION_PACKAGE).version=$(VERSION) -X $(VERSION_PACKAGE).buildDate=$$(date -u +'%Y-%m-%dT%H:%M:%SZ') -X $(VERSION_PACKAGE).gitCommit=$(GIT_COMMIT) -X $(VERSION_PACKAGE).gitTreeState=$(GIT_TREE_STATE)" \
 		-o bin/kargo-cli/${VERSION}/${GOOS}/${GOARCH}/kargo$(shell [ ${GOOS} = windows ] && echo .exe) ./cmd/cli
 
+
+################################################################################
+# Used to build the CLI with the UI embedded                                   #
+################################################################################
+
+.PHONY: build-ui
+build-ui:
+	cd ui && NODE_ENV=production BUILD_TARGET_PATH=../internal/api/ui pnpm run build --emptyOutDir
+	touch internal/api/ui/.keep
+
+.PHONY: build-cli-with-ui
+build-cli-with-ui: build-ui build-cli
+
 ################################################################################
 # Code generation: To be run after modifications to API types                  #
 ################################################################################
