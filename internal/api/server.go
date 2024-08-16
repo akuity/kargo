@@ -44,11 +44,10 @@ var (
 )
 
 type server struct {
-	cfg            config.ServerConfig
-	client         kubernetes.Client
-	internalClient client.Client
-	rolesDB        rbac.RolesDatabase
-	recorder       record.EventRecorder
+	cfg      config.ServerConfig
+	client   kubernetes.Client
+	rolesDB  rbac.RolesDatabase
+	recorder record.EventRecorder
 
 	// The following behaviors are overridable for testing purposes:
 
@@ -160,16 +159,14 @@ type Server interface {
 func NewServer(
 	cfg config.ServerConfig,
 	kubeClient kubernetes.Client,
-	internalClient client.Client,
 	rolesDB rbac.RolesDatabase,
 	recorder record.EventRecorder,
 ) Server {
 	s := &server{
-		cfg:            cfg,
-		client:         kubeClient,
-		internalClient: internalClient,
-		rolesDB:        rolesDB,
-		recorder:       recorder,
+		cfg:      cfg,
+		client:   kubeClient,
+		rolesDB:  rolesDB,
+		recorder: recorder,
 	}
 
 	s.validateProjectExistsFn = s.validateProjectExists
@@ -196,7 +193,7 @@ func (s *server) Serve(ctx context.Context, l net.Listener) error {
 	logger := logging.LoggerFromContext(ctx)
 	mux := http.NewServeMux()
 
-	opts, err := option.NewHandlerOption(ctx, s.cfg, s.internalClient)
+	opts, err := option.NewHandlerOption(ctx, s.cfg, s.client.InternalClient())
 	if err != nil {
 		return fmt.Errorf("error initializing handler options: %w", err)
 	}
