@@ -11,6 +11,7 @@ import (
 	"github.com/gobwas/glob"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -18,6 +19,7 @@ import (
 	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/freight"
 	"github.com/akuity/kargo/internal/git"
+	"github.com/akuity/kargo/internal/kubeclient"
 	"github.com/akuity/kargo/internal/logging"
 )
 
@@ -72,9 +74,8 @@ type argoCDMechanism struct {
 	) (argocd.ApplicationSource, error)
 	argoCDAppPatchFn func(
 		context.Context,
-		client.Object,
-		client.Patch,
-		...client.PatchOption,
+		kubeclient.ObjectWithKind,
+		kubeclient.UnstructuredPatchFn,
 	) error
 	logAppEventFn func(ctx context.Context, app *argocd.Application, user, reason, message string)
 }
@@ -92,7 +93,7 @@ func newArgoCDMechanism(kargoClient, argocdClient client.Client) Mechanism {
 	a.getAuthorizedApplicationFn = a.getAuthorizedApplication
 	a.applyArgoCDSourceUpdateFn = a.applyArgoCDSourceUpdate
 	if argocdClient != nil {
-		a.argoCDAppPatchFn = argocdClient.Patch
+		a.argoCDAppPatchFn = a.argoCDAppPatch
 		a.logAppEventFn = a.logAppEvent
 	}
 	return a
@@ -375,9 +376,6 @@ func (a *argoCDMechanism) syncApplication(
 	desiredSources argocd.ApplicationSources,
 	freightColID string,
 ) error {
-	// Create a patch for the Application.
-	patch := client.MergeFrom(app.DeepCopy())
-
 	// Initiate a "hard" refresh.
 	if app.ObjectMeta.Annotations == nil {
 		app.ObjectMeta.Annotations = make(map[string]string, 1)
@@ -423,18 +421,23 @@ func (a *argoCDMechanism) syncApplication(
 		app.Operation.Sync.Revisions = append(app.Operation.Sync.Revisions, source.TargetRevision)
 	}
 
-	// Patch the Application with the changes from above.
-	if err := a.argoCDAppPatchFn(
-		ctx,
-		app,
-		patch,
-	); err != nil {
+	// Patch the Argo CD Application.
+	if err := a.argoCDAppPatchFn(ctx, app, func(src, dst unstructured.Unstructured) error {
+		// If the resource has been modified since we fetched it, an update
+		// can result in unexpected merge results. Detect this, and return an
+		// error if it occurs.
+		if src.GetGeneration() != dst.GetGeneration() {
+			return fmt.Errorf("unable to update sources to desired revisions: resource has been modified")
+		}
+
+		dst.SetAnnotations(src.GetAnnotations())
+		dst.Object["spec"] = recursiveMerge(src.Object["spec"], dst.Object["spec"])
+		dst.Object["operation"] = src.Object["operation"]
+		return nil
+	}); err != nil {
 		return fmt.Errorf("error patching Argo CD Application %q: %w", app.Name, err)
 	}
-	logging.LoggerFromContext(ctx).Debug(
-		"patched Argo CD Application",
-		"app", app.Name,
-	)
+	logging.LoggerFromContext(ctx).Debug("patched Argo CD Application", "app", app.Name)
 
 	// NB: This attempts to mimic the behavior of the Argo CD API server,
 	// which logs an event when a sync is initiated. However, we do not
@@ -453,6 +456,14 @@ func (a *argoCDMechanism) syncApplication(
 	a.logAppEventFn(ctx, app, "kargo-controller", argocd.EventReasonOperationStarted, message)
 
 	return nil
+}
+
+func (a *argoCDMechanism) argoCDAppPatch(
+	ctx context.Context,
+	app kubeclient.ObjectWithKind,
+	modify kubeclient.UnstructuredPatchFn,
+) error {
+	return kubeclient.PatchUnstructured(ctx, a.argocdClient, app, modify)
 }
 
 func (a *argoCDMechanism) logAppEvent(ctx context.Context, app *argocd.Application, user, reason, message string) {
@@ -832,4 +843,38 @@ func operationPhaseToPromotionPhase(phases ...argocd.OperationPhase) kargoapi.Pr
 	default:
 		return ""
 	}
+}
+
+func recursiveMerge(src, dst any) any {
+	switch src := src.(type) {
+	case map[string]any:
+		dst, ok := dst.(map[string]any)
+		if !ok {
+			return src
+		}
+		for srcK, srcV := range src {
+			if dstV, ok := dst[srcK]; ok {
+				dst[srcK] = recursiveMerge(srcV, dstV)
+			} else {
+				dst[srcK] = srcV
+			}
+		}
+	case []any:
+		dst, ok := dst.([]any)
+		if !ok {
+			return src
+		}
+		result := make([]any, len(src))
+		for i, srcV := range src {
+			if i < len(dst) {
+				result[i] = recursiveMerge(srcV, dst[i])
+			} else {
+				result[i] = srcV
+			}
+		}
+		return result
+	default:
+		return src
+	}
+	return dst
 }
