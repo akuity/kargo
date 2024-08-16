@@ -737,6 +737,17 @@ message GitSubscription {
   // +kubebuilder:validation:Pattern=`^\w+([-/]\w+)*$`
   optional string branch = 3;
 
+  // StrictSemvers specifies whether only "strict" semver tags should be
+  // considered. A "strict" semver tag is one containing ALL of major, minor,
+  // and patch version components. This is enabled by default, but only has any
+  // effect when the CommitSelectionStrategy is SemVer. This should be disabled
+  // cautiously, as it creates the potential for any tag containing numeric
+  // characters only to be mistaken for a semver string containing the major
+  // version number only.
+  //
+  // +kubebuilder:default=true
+  optional bool strictSemvers = 11;
+
   // SemverConstraint specifies constraints on what new tagged commits are
   // considered in determining the newest commit of interest. The value in this
   // field only has any effect when the CommitSelectionStrategy is SemVer. This
@@ -1005,6 +1016,18 @@ message ImageSubscription {
   //
   // +kubebuilder:default=SemVer
   optional string imageSelectionStrategy = 3;
+
+  // StrictSemvers specifies whether only "strict" semver tags should be
+  // considered. A "strict" semver tag is one containing ALL of major, minor,
+  // and patch version components. This is enabled by default, but only has any
+  // effect when the ImageSelectionStrategy is SemVer. This should be disabled
+  // cautiously, as it is not uncommon to tag container images with short Git
+  // commit hashes, which have the potential to contain numeric characters only
+  // and could be mistaken for a semver string containing the major version
+  // number only.
+  //
+  // +kubebuilder:default=true
+  optional bool strictSemvers = 10;
 
   // SemverConstraint specifies constraints on what new image versions are
   // permissible. The value in this field only has any effect when the
