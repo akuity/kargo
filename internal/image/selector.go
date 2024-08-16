@@ -47,15 +47,12 @@ type Selector interface {
 
 // SelectorOptions represents options for creating a Selector.
 type SelectorOptions struct {
-	// StrictSemvers, when set to true, will cause applicable selectors to only
-	// count tags as valid semantic versions if they contain ALL of the major,
-	// minor, and patch version components.
-	StrictSemvers bool
 	// Constraint specifies selector-specific constraints on image selection.
 	Constraint string
 	// AllowRegex is an optional regular expression that can be used to constrain
 	// image selection based on eligible tags.
 	AllowRegex string
+	allowRegex *regexp.Regexp
 	// Ignore is an optional list of tags that should explicitly be ignored when
 	// selecting an image.
 	Ignore []string
@@ -63,6 +60,7 @@ type SelectorOptions struct {
 	// image must match the platform constraint or Selector implementations will
 	// return nil.
 	Platform string
+	platform *platformConstraint
 	// Creds holds optional credentials for authenticating to the image
 	// repository.
 	Creds *Credentials
@@ -88,10 +86,9 @@ func NewSelector(
 		opts = &SelectorOptions{}
 	}
 
-	var allowRegex *regexp.Regexp
 	if opts.AllowRegex != "" {
 		var err error
-		if allowRegex, err = regexp.Compile(opts.AllowRegex); err != nil {
+		if opts.allowRegex, err = regexp.Compile(opts.AllowRegex); err != nil {
 			return nil, fmt.Errorf(
 				"error compiling regular expression %q: %w",
 				opts.AllowRegex,
@@ -100,13 +97,11 @@ func NewSelector(
 		}
 	}
 
-	var platform *platformConstraint
 	if opts.Platform != "" {
-		p, err := parsePlatformConstraint(opts.Platform)
-		if err != nil {
+		var err error
+		if opts.platform, err = parsePlatformConstraint(opts.Platform); err != nil {
 			return nil, fmt.Errorf("error parsing platform constraint %q: %w", opts.Platform, err)
 		}
-		platform = &p
 	}
 
 	repoClient, err := newRepositoryClient(repoURL, opts.InsecureSkipTLSVerify, opts.Creds)
@@ -120,33 +115,13 @@ func NewSelector(
 
 	switch strategy {
 	case SelectionStrategyDigest:
-		return newDigestSelector(repoClient, opts.Constraint, platform)
+		return newDigestSelector(repoClient, *opts)
 	case SelectionStrategyLexical:
-		return newLexicalSelector(
-			repoClient,
-			allowRegex,
-			opts.Ignore,
-			platform,
-			opts.DiscoveryLimit,
-		), nil
+		return newLexicalSelector(repoClient, *opts), nil
 	case SelectionStrategyNewestBuild:
-		return newNewestBuildSelector(
-			repoClient,
-			allowRegex,
-			opts.Ignore,
-			platform,
-			opts.DiscoveryLimit,
-		), nil
+		return newNewestBuildSelector(repoClient, *opts), nil
 	case SelectionStrategySemVer, "":
-		return newSemVerSelector(
-			repoClient,
-			allowRegex,
-			opts.Ignore,
-			opts.StrictSemvers,
-			opts.Constraint,
-			platform,
-			opts.DiscoveryLimit,
-		)
+		return newSemVerSelector(repoClient, *opts)
 	default:
 		return nil, fmt.Errorf("invalid image selection strategy %q", strategy)
 	}
