@@ -36,6 +36,22 @@ const (
 	// reconciled.
 	ConditionTypeReconciling = "Reconciling"
 
+	// ConditionTypeStalled denotes that the reconciliation of the resource
+	// has stalled.
+	//
+	// This condition is used to indicate that the controller has stopped
+	// making progress on the resource, and further changes to the resource
+	// are not expected until the reason for the stall is resolved, which
+	// MAY require manual intervention. The condition is removed when the
+	// controller has resumed making progress on the resource.
+	//
+	// This is a "normal-false" or "negative polarity" condition, meaning
+	// that the presence of the condition with a status of "True" indicates
+	// that the resource has stalled, and the absence of the condition or
+	// a status of "False" indicates that the resource is operating as
+	// expected.
+	ConditionTypeStalled = "Stalled"
+
 	// ConditionTypeHealthy denotes that the resource is healthy.
 	//
 	// The meaning of "healthy" is specific to the resource type. For example,

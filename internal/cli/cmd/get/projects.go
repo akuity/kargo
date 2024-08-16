@@ -20,6 +20,7 @@ import (
 	"github.com/akuity/kargo/internal/cli/io"
 	"github.com/akuity/kargo/internal/cli/kubernetes"
 	"github.com/akuity/kargo/internal/cli/templates"
+	"github.com/akuity/kargo/internal/conditions"
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
@@ -134,10 +135,18 @@ func newProjectTable(list *metav1.List) *metav1.Table {
 	rows := make([]metav1.TableRow, len(list.Items))
 	for i, item := range list.Items {
 		project := item.Object.(*kargoapi.Project) // nolint: forcetypeassert
+
+		var ready, status = string(metav1.ConditionUnknown), ""
+		if readyCond := conditions.Get(&project.Status, kargoapi.ConditionTypeReady); readyCond != nil {
+			ready = string(readyCond.Status)
+			status = readyCond.Message
+		}
+
 		rows[i] = metav1.TableRow{
 			Cells: []any{
 				project.Name,
-				project.Status.Phase,
+				ready,
+				status,
 				duration.HumanDuration(time.Since(project.CreationTimestamp.Time)),
 			},
 			Object: list.Items[i],
@@ -146,7 +155,8 @@ func newProjectTable(list *metav1.List) *metav1.Table {
 	return &metav1.Table{
 		ColumnDefinitions: []metav1.TableColumnDefinition{
 			{Name: "Name", Type: "string"},
-			{Name: "Phase", Type: "string"},
+			{Name: "Ready", Type: "string"},
+			{Name: "Status", Type: "string"},
 			{Name: "Age", Type: "string"},
 		},
 		Rows: rows,
