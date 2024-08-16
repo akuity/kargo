@@ -124,6 +124,16 @@ type GitSubscription struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:Pattern=`^\w+([-/]\w+)*$`
 	Branch string `json:"branch,omitempty" protobuf:"bytes,3,opt,name=branch"`
+	// StrictSemvers specifies whether only "strict" semver tags should be
+	// considered. A "strict" semver tag is one containing ALL of major, minor,
+	// and patch version components. This is enabled by default, but only has any
+	// effect when the CommitSelectionStrategy is SemVer. This should be disabled
+	// cautiously, as it creates the potential for any tag containing numeric
+	// characters only to be mistaken for a semver string containing the major
+	// version number only.
+	//
+	// +kubebuilder:default=true
+	StrictSemvers bool `json:"strictSemvers" protobuf:"varint,11,opt,name=strictSemvers"`
 	// SemverConstraint specifies constraints on what new tagged commits are
 	// considered in determining the newest commit of interest. The value in this
 	// field only has any effect when the CommitSelectionStrategy is SemVer. This
@@ -217,6 +227,17 @@ type ImageSubscription struct {
 	//
 	// +kubebuilder:default=SemVer
 	ImageSelectionStrategy ImageSelectionStrategy `json:"imageSelectionStrategy,omitempty" protobuf:"bytes,3,opt,name=imageSelectionStrategy"`
+	// StrictSemvers specifies whether only "strict" semver tags should be
+	// considered. A "strict" semver tag is one containing ALL of major, minor,
+	// and patch version components. This is enabled by default, but only has any
+	// effect when the ImageSelectionStrategy is SemVer. This should be disabled
+	// cautiously, as it is not uncommon to tag container images with short Git
+	// commit hashes, which have the potential to contain numeric characters only
+	// and could be mistaken for a semver string containing the major version
+	// number only.
+	//
+	// +kubebuilder:default=true
+	StrictSemvers bool `json:"strictSemvers" protobuf:"varint,10,opt,name=strictSemvers"`
 	// SemverConstraint specifies constraints on what new image versions are
 	// permissible. The value in this field only has any effect when the
 	// ImageSelectionStrategy is SemVer or left unspecified (which is implicitly
