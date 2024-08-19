@@ -108,7 +108,7 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
     - name: Install linter
-      uses: bufbuild/buf-setup-action@aceb106d2419c4cff48863df90161d92decb8591 # v1.35.1
+      uses: bufbuild/buf-setup-action@76ddbd1bcb9da6da11cb7c41bd97e47f81c39a39 # v1.37.0
       with:
         version: "1.20.0"
     - name: Run linter
@@ -145,7 +145,7 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-go-
     - name: Install buf
-      uses: bufbuild/buf-setup-action@46a2967ea50b8a012e948cb23d2468b84227e1e5 # v1.29.0-1
+      uses: bufbuild/buf-setup-action@76ddbd1bcb9da6da11cb7c41bd97e47f81c39a39 # v1.29.0-1
       with:
         version: 1.26.1
     - name: Install Protoc
