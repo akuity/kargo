@@ -201,9 +201,17 @@ DOCKER_CMD := $(CONTAINER_RUNTIME) run \
 	kargo:dev-tools
 
 DEV_TOOLS_BUILD_OPTS =
+
+# Intelligently choose to load the image into the local Docker daemon
+# depending on whether or not Docker Buildx is available.
+BUILDX_AVAILABLE ?= $(shell $(CONTAINER_RUNTIME) buildx inspect >/dev/null 2>&1 && echo true || echo false)
+ifeq ($(BUILDX_AVAILABLE),true)
+	override DEV_TOOLS_BUILD_OPTS += --load
+endif
+
 ifeq ($(GOOS),linux)
-	DEV_TOOLS_BUILD_OPTS += --build-arg USER_ID=$(shell id -u)
-	DEV_TOOLS_BUILD_OPTS += --build-arg GROUP_ID=$(shell id -g)
+	override DEV_TOOLS_BUILD_OPTS += --build-arg USER_ID=$(shell id -u)
+	override DEV_TOOLS_BUILD_OPTS += --build-arg GROUP_ID=$(shell id -g)
 endif
 
 .PHONY: hack-build-dev-tools
