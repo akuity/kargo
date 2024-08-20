@@ -69,13 +69,17 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
-    - name: Install linter
-      env:
-        GOLANGCI_LINT_VERSION: 1.60.1
-      working-directory: /usr/local/bin
-      run: |
-        curl -sSfL https://github.com/golangci/golangci-lint/releases/download/v${GOLANGCI_LINT_VERSION}/golangci-lint-${GOLANGCI_LINT_VERSION}-linux-amd64.tar.gz \
-        | tar xvz golangci-lint-${GOLANGCI_LINT_VERSION}-linux-amd64/golangci-lint --strip-components=1
+    - name: Cache golangci-lint
+      id: cache-golangci-lint
+      uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9 # v4.0.2
+      with:
+        path: |
+          hack/bin/golangci-lint
+          hack/bin/golangci-lint-*
+        key: ${{ runner.os }}-golangci-lint-${{ hashFiles('hack/tools/go.mod') }}
+    - name: Install golangci-lint
+      if: steps.cache-golangci-lint.outputs.cache-hit != 'true'
+      run: make install-golangci-lint
     - name: Configure Git
       run: git config --global --add safe.directory '*'
     - name: Run linter
@@ -90,11 +94,18 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
-    - name: Install linter
-      run: |
-        cd /usr/local/bin
-        curl -sSfL https://get.helm.sh/helm-v3.10.0-linux-amd64.tar.gz \
-        | tar xvz linux-amd64/helm --strip-components=1
+    - name: Cache helm
+      id: cache-helm
+      uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9 # v4.0.2
+      with:
+        path: |
+          hack/bin/helm
+          hack/bin/helm-*
+        key:
+          ${{ runner.os }}-helm-${{ hashFiles('hack/tools/go.mod') }}
+    - name: Install helm
+      if: steps.cache-helm.outputs.cache-hit != 'true'
+      run: make install-helm
     - name: Run linter
       run: make lint-charts
 
@@ -107,10 +118,17 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
-    - name: Install linter
-      uses: bufbuild/buf-setup-action@058316dbc9b9f2adb1bcfc8b2fce48d74e7292d9 # v1.38.0
+    - name: Cache buf
+      id: cache-buf
+      uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9 # v4.0.2
       with:
-        version: "1.20.0"
+        path: |
+          hack/bin/buf
+          hack/bin/buf-*
+        key: ${{ runner.os }}-buf-${{ hashFiles('hack/tools/go.mod') }}
+    - name: Install buf
+      if: steps.cache-buf.outputs.cache-hit != 'true'
+      run: make install-buf
     - name: Run linter
       env:
         BUF_LINT_ERROR_FORMAT: github-actions
@@ -138,26 +156,18 @@ jobs:
     - name: Install nodejs dependencies
       run: pnpm install --dev
       working-directory: ./ui
-    - uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9 # v4.0.2
+    - name: Cache Go modules
+      uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9 # v4.0.2
       with:
         path: /go/pkg/mod
         key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-        restore-keys: |
-          ${{ runner.os }}-go-
-    - name: Install buf
-      uses: bufbuild/buf-setup-action@058316dbc9b9f2adb1bcfc8b2fce48d74e7292d9 # v1.29.0-1
+    - name: Cache tools
+      uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9 # v4.0.2
       with:
-        version: 1.26.1
-    - name: Install Protoc
-      uses: arduino/setup-protoc@c65c819552d16ad3c9b72d9dfd5ba5237b9c906b # v3.0.0
-      with:
-        version: "25.3"
-    - name: Install codegen tools
-      run: |
-        go install k8s.io/code-generator/cmd/go-to-protobuf@v0.29.3
-        go install k8s.io/code-generator/cmd/go-to-protobuf/protoc-gen-gogo@v0.29.3
-        go install golang.org/x/tools/cmd/goimports@v0.21.0
-        go install sigs.k8s.io/controller-tools/cmd/controller-gen@v0.15.0
+        path: |
+          hack/bin
+          hack/include
+        key: ${{ runner.os }}-tools-${{ hashFiles('hack/tools/go.mod', 'hack/tools.mk') }}
     - name: Git stuff
       # As of go 1.20, this seems to be necessary for invoking git commands
       # within the container
