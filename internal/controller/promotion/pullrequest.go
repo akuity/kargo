@@ -112,25 +112,24 @@ func newGitProvider(
 // it tracks (i.e. PR url).
 func reconcilePullRequest(
 	ctx context.Context,
-	status kargoapi.PromotionStatus,
+	promo *kargoapi.Promotion,
 	repo git.Repo,
 	gpClient gitprovider.GitProviderService,
 	prBranch string,
 	writeBranch string,
-) (string, *kargoapi.PromotionStatus, error) {
-	newStatus := status.DeepCopy()
+) (string, error) {
 	var mergeCommitSHA string
 
-	prNumber := getPullRequestNumberFromMetadata(status.Metadata, repo.URL())
+	prNumber := getPullRequestNumberFromMetadata(promo.Status.Metadata, repo.URL())
 	if prNumber == -1 {
 		needsPR, err := repo.RefsHaveDiffs(prBranch, writeBranch)
 		if err != nil {
-			return "", nil, err
+			return "", err
 		}
 		if needsPR {
 			title, err := repo.CommitMessage(prBranch)
 			if err != nil {
-				return "", nil, err
+				return "", err
 			}
 			createOpts := gitprovider.CreatePullRequestOpts{
 				Head:  prBranch,
@@ -146,44 +145,46 @@ func reconcilePullRequest(
 					Base: writeBranch,
 				})
 				if listErr != nil || len(prs) != 1 {
-					return "", nil, err
+					return "", err
 				}
 				// If we get here, we found an existing open PR for the same branches
 				pr = prs[0]
 			}
-			newStatus.Phase = kargoapi.PromotionPhaseRunning
-			newStatus.Metadata = setPullRequestMetadata(newStatus.Metadata, repo.URL(), pr.Number, pr.URL)
+			promo.Status.Phase = kargoapi.PromotionPhaseRunning
+			promo.Status.Metadata = setPullRequestMetadata(promo.Status.Metadata, repo.URL(), pr.Number, pr.URL)
 		} else {
-			newStatus.Phase = kargoapi.PromotionPhaseSucceeded
-			newStatus.Message = "No changes to promote"
+			promo.Status.Phase = kargoapi.PromotionPhaseSucceeded
+			promo.Status.Message = "No changes to promote"
 		}
 	} else {
 		// check if existing PR is closed/merged and update promo status to either
 		// Succeeded or Failed depending if PR was merged
 		pr, err := gpClient.GetPullRequest(ctx, prNumber)
 		if err != nil {
-			return "", nil, err
+			return "", err
 		}
-		if !pr.IsOpen() {
+		if pr.IsOpen() {
+			promo.Status.Phase = kargoapi.PromotionPhaseRunning
+		} else {
 			merged, err := gpClient.IsPullRequestMerged(ctx, prNumber)
 			if err != nil {
-				return "", nil, err
+				return "", err
 			}
 			if merged {
-				newStatus.Phase = kargoapi.PromotionPhaseSucceeded
-				newStatus.Message = "Pull request was merged"
+				promo.Status.Phase = kargoapi.PromotionPhaseSucceeded
+				promo.Status.Message = "Pull request was merged"
 				if pr.MergeCommitSHA == "" {
-					return "", nil, fmt.Errorf("merge commit SHA is empty")
+					return "", fmt.Errorf("merge commit SHA is empty")
 				}
 				mergeCommitSHA = pr.MergeCommitSHA
 			} else {
-				newStatus.Phase = kargoapi.PromotionPhaseFailed
-				newStatus.Message = "Pull request was closed without being merged"
+				promo.Status.Phase = kargoapi.PromotionPhaseFailed
+				promo.Status.Message = "Pull request was closed without being merged"
 			}
 		}
 	}
 
-	return mergeCommitSHA, newStatus, nil
+	return mergeCommitSHA, nil
 }
 
 // pullRequestMetadataKey returns the key used to store the pull request number in the metadata map.

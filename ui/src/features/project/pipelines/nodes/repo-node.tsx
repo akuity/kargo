@@ -9,7 +9,7 @@ import {
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Tooltip } from 'antd';
 import classNames from 'classnames';
-import { useContext } from 'react';
+import { useContext, useMemo } from 'react';
 
 import { ColorContext } from '@ui/context/colors';
 import { urlForImage } from '@ui/utils/url';
@@ -29,6 +29,7 @@ type Props = {
   nodeData: RepoNodeType;
   children?: React.ReactNode;
   onClick?: () => void;
+  hidden?: boolean;
 };
 
 const ico = {
@@ -38,7 +39,7 @@ const ico = {
   [NodeType.REPO_CHART]: faAnchor
 };
 
-export const RepoNode = ({ nodeData, children, onClick }: Props) => {
+export const RepoNode = ({ nodeData, children, onClick, hidden }: Props) => {
   const { warehouseColorMap } = useContext(ColorContext);
   const type = nodeData.type;
   const value =
@@ -47,6 +48,43 @@ export const RepoNode = ({ nodeData, children, onClick }: Props) => {
       : type === NodeType.WAREHOUSE
         ? nodeData?.data?.metadata?.name || ''
         : nodeData?.data?.repoURL || '';
+
+  if (hidden) {
+    return null;
+  }
+  const [hasError, message, refreshing] = useMemo(() => {
+    let hasError = false;
+    let message: string | null = null;
+    let refreshing = nodeData.refreshing;
+
+    if (type === NodeType.WAREHOUSE) {
+      let hasReconcilingCondition = false;
+      let notReady = false;
+
+      for (const condition of nodeData?.data?.status?.conditions || []) {
+        if (condition.type === 'Healthy' && condition.status === 'False') {
+          hasError = true;
+          message = condition.message || null;
+        }
+        if (condition.type === 'Reconciling') {
+          hasReconcilingCondition = true;
+          if (condition.status === 'True') {
+            refreshing = true;
+          }
+        }
+        if (condition.type === 'Ready' && condition.status === 'False') {
+          notReady = true;
+          message = condition.message || null;
+        }
+      }
+      if (notReady && !hasReconcilingCondition) {
+        hasError = true;
+      }
+    }
+
+    return [hasError, message, refreshing];
+  }, [nodeData]);
+
   return (
     <div
       className={classNames([
@@ -67,10 +105,26 @@ export const RepoNode = ({ nodeData, children, onClick }: Props) => {
           {nodeData.type === NodeType.WAREHOUSE ? nodeData.data?.metadata?.name : 'Subscription'}
         </div>
         <div className='flex items-center gap-1'>
-          {nodeData.refreshing && <FontAwesomeIcon icon={faCircleNotch} spin className='mr-2' />}
-          {nodeData.type === NodeType.WAREHOUSE && nodeData?.data?.status?.message && (
+          {refreshing && <FontAwesomeIcon icon={faCircleNotch} spin className='mr-2' />}
+          {nodeData.type === NodeType.WAREHOUSE && hasError && (
             <MessageTooltip
-              message={nodeData?.data?.status?.message}
+              message={
+                <div className='flex flex-col gap-4 overflow-y-scroll text-wrap max-h-48'>
+                  <div
+                    className='cursor-pointer min-w-0'
+                    onClick={() => {
+                      if (message) {
+                        navigator.clipboard.writeText(message);
+                      }
+                    }}
+                  >
+                    <div className='flex text-wrap'>
+                      <FontAwesomeIcon icon={faExclamationCircle} className='mr-2 mt-1 pl-1' />
+                      {message}
+                    </div>
+                  </div>
+                </div>
+              }
               icon={faExclamationCircle}
               iconClassName='text-red-500'
             />

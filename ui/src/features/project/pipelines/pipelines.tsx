@@ -146,7 +146,6 @@ export const Pipelines = ({ project }: { project: Project }) => {
     allFreight.forEach((f) => {
       if (
         !selectedWarehouse ||
-        f.warehouse === selectedWarehouse ||
         (f?.origin?.kind === 'Warehouse' && f?.origin.name === selectedWarehouse)
       ) {
         filteredFreight.push(f);
@@ -182,8 +181,7 @@ export const Pipelines = ({ project }: { project: Project }) => {
   const [nodes, connectors, box, sortedStages, stageColorMap, warehouseColorMap] = usePipelineGraph(
     name,
     data?.stages || [],
-    warehouseData?.warehouses || [],
-    hideSubscriptions
+    warehouseData?.warehouses || []
   );
 
   const { mutate: manualApproveAction } = useMutation(approveFreight, {
@@ -204,12 +202,6 @@ export const Pipelines = ({ project }: { project: Project }) => {
           stagesPerFreight[f.name || ''] = [];
         }
         stagesPerFreight[f.name || ''].push(stage);
-      });
-      stage?.spec?.subscriptions?.upstreamStages.forEach((item) => {
-        if (!subscribersByStage[item.name || '']) {
-          subscribersByStage[item.name || ''] = new Set();
-        }
-        subscribersByStage[item.name || ''].add(stage?.metadata?.name || '');
       });
       stage?.spec?.requestedFreight?.forEach((item) => {
         if (!item.sources?.direct) {
@@ -427,11 +419,10 @@ export const Pipelines = ({ project }: { project: Project }) => {
                               (acc, cur) => acc || cur?.origin?.kind === 'Warehouse',
                               false
                             );
-                            let currentWarehouse = currentFreight[0]?.warehouse || '';
-                            if (currentWarehouse === '' && isWarehouseKind) {
+                            let currentWarehouse = '';
+                            if (isWarehouseKind) {
                               currentWarehouse =
                                 currentFreight[0]?.origin?.name ||
-                                node.data?.spec?.subscriptions?.warehouse ||
                                 node.data?.spec?.requestedFreight[0]?.origin?.name ||
                                 '';
                             }
@@ -480,6 +471,9 @@ export const Pipelines = ({ project }: { project: Project }) => {
                       </>
                     ) : (
                       <RepoNode
+                        hidden={
+                          node.type !== NodeType.WAREHOUSE && hideSubscriptions[node.warehouseName]
+                        }
                         nodeData={node}
                         onClick={
                           node.type === NodeType.WAREHOUSE
@@ -530,8 +524,13 @@ export const Pipelines = ({ project }: { project: Project }) => {
                         {node.type === NodeType.WAREHOUSE && (
                           <Nodule
                             nodeHeight={RepoNodeDimensions().height}
-                            onClick={() => setHideSubscriptions(!hideSubscriptions)}
-                            icon={hideSubscriptions ? faEye : faEyeSlash}
+                            onClick={() =>
+                              setHideSubscriptions({
+                                ...hideSubscriptions,
+                                [node.warehouseName]: !hideSubscriptions[node.warehouseName]
+                              })
+                            }
+                            icon={hideSubscriptions[node.warehouseName] ? faEye : faEyeSlash}
                             begin={true}
                           />
                         )}
@@ -540,22 +539,24 @@ export const Pipelines = ({ project }: { project: Project }) => {
                   </div>
                 ))}
                 {connectors?.map((connector) =>
-                  connector.map((line, i) => (
-                    <div
-                      className='absolute bg-gray-300 rounded-full'
-                      style={{
-                        padding: 0,
-                        margin: 0,
-                        height: LINE_THICKNESS,
-                        width: line.width,
-                        left: line.x,
-                        top: line.y,
-                        transform: `rotate(${line.angle}deg)`,
-                        backgroundColor: line.color
-                      }}
-                      key={i}
-                    />
-                  ))
+                  connector.map((line, i) =>
+                    hideSubscriptions[line.to] && line.from === 'subscription' ? null : (
+                      <div
+                        className='absolute bg-gray-300 rounded-full'
+                        style={{
+                          padding: 0,
+                          margin: 0,
+                          height: LINE_THICKNESS,
+                          width: line.width,
+                          left: line.x,
+                          top: line.y,
+                          transform: `rotate(${line.angle}deg)`,
+                          backgroundColor: line.color
+                        }}
+                        key={i}
+                      />
+                    )
+                  )
                 )}
               </div>
             </div>

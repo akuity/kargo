@@ -26,6 +26,14 @@ export const FreightItem = ({
   onHover: (hovering: boolean) => void;
   hideLabel?: boolean;
 }) => {
+  let width = '';
+  if (mode !== FreightMode.Confirming) {
+    if (empty) {
+      width = '96px';
+    } else {
+      width = '135px';
+    }
+  }
   return (
     <div
       className={classNames('relative h-full cursor-pointer', styles.freightItem, {
@@ -40,7 +48,7 @@ export const FreightItem = ({
       onMouseEnter={() => onHover(true)}
       onMouseLeave={() => onHover(false)}
       style={{
-        width: empty ? '96px' : mode === FreightMode.Confirming ? '' : '135px'
+        width
       }}
     >
       <div className='flex w-full h-full mb-1 items-center justify-center max-w-full text-ellipsis overflow-hidden'>

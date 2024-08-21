@@ -75,7 +75,7 @@ export default [
       '@typescript-eslint/ban-ts-comment': 'warn',
       'no-console': 'error',
       'react/jsx-key': 'error',
-      '@typescript-eslint/no-unused-vars': 'error',
+      '@typescript-eslint/no-unused-vars': ['error', { caughtErrors: 'none' }],
       'react-refresh/only-export-components': 'warn'
     }
   },

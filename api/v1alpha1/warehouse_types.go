@@ -124,6 +124,16 @@ type GitSubscription struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:Pattern=`^\w+([-/]\w+)*$`
 	Branch string `json:"branch,omitempty" protobuf:"bytes,3,opt,name=branch"`
+	// StrictSemvers specifies whether only "strict" semver tags should be
+	// considered. A "strict" semver tag is one containing ALL of major, minor,
+	// and patch version components. This is enabled by default, but only has any
+	// effect when the CommitSelectionStrategy is SemVer. This should be disabled
+	// cautiously, as it creates the potential for any tag containing numeric
+	// characters only to be mistaken for a semver string containing the major
+	// version number only.
+	//
+	// +kubebuilder:default=true
+	StrictSemvers bool `json:"strictSemvers" protobuf:"varint,11,opt,name=strictSemvers"`
 	// SemverConstraint specifies constraints on what new tagged commits are
 	// considered in determining the newest commit of interest. The value in this
 	// field only has any effect when the CommitSelectionStrategy is SemVer. This
@@ -217,6 +227,17 @@ type ImageSubscription struct {
 	//
 	// +kubebuilder:default=SemVer
 	ImageSelectionStrategy ImageSelectionStrategy `json:"imageSelectionStrategy,omitempty" protobuf:"bytes,3,opt,name=imageSelectionStrategy"`
+	// StrictSemvers specifies whether only "strict" semver tags should be
+	// considered. A "strict" semver tag is one containing ALL of major, minor,
+	// and patch version components. This is enabled by default, but only has any
+	// effect when the ImageSelectionStrategy is SemVer. This should be disabled
+	// cautiously, as it is not uncommon to tag container images with short Git
+	// commit hashes, which have the potential to contain numeric characters only
+	// and could be mistaken for a semver string containing the major version
+	// number only.
+	//
+	// +kubebuilder:default=true
+	StrictSemvers bool `json:"strictSemvers" protobuf:"varint,10,opt,name=strictSemvers"`
 	// SemverConstraint specifies constraints on what new image versions are
 	// permissible. The value in this field only has any effect when the
 	// ImageSelectionStrategy is SemVer or left unspecified (which is implicitly
@@ -311,14 +332,18 @@ type ChartSubscription struct {
 
 // WarehouseStatus describes a Warehouse's most recently observed state.
 type WarehouseStatus struct {
+	// Conditions contains the last observations of the Warehouse's current
+	// state.
+	// +patchMergeKey=type
+	// +patchStrategy=merge
+	// +listType=map
+	// +listMapKey=type
+	Conditions []metav1.Condition `json:"conditions,omitempty" patchMergeKey:"type" patchStrategy:"merge" protobuf:"bytes,9,rep,name=conditions"`
 	// LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh
 	// annotation that was handled by the controller. This field can be used to
 	// determine whether the request to refresh the resource has been handled.
 	// +optional
 	LastHandledRefresh string `json:"lastHandledRefresh,omitempty" protobuf:"bytes,6,opt,name=lastHandledRefresh"`
-	// Message describes any errors that are preventing the Warehouse controller
-	// from polling repositories to discover new Freight.
-	Message string `json:"message,omitempty" protobuf:"bytes,3,opt,name=message"`
 	// ObservedGeneration represents the .metadata.generation that this Warehouse
 	// was reconciled against.
 	ObservedGeneration int64 `json:"observedGeneration,omitempty" protobuf:"varint,4,opt,name=observedGeneration"`
@@ -329,9 +354,21 @@ type WarehouseStatus struct {
 	DiscoveredArtifacts *DiscoveredArtifacts `json:"discoveredArtifacts,omitempty" protobuf:"bytes,7,opt,name=discoveredArtifacts"`
 }
 
+func (w *WarehouseStatus) GetConditions() []metav1.Condition {
+	return w.Conditions
+}
+
+func (w *WarehouseStatus) SetConditions(conditions []metav1.Condition) {
+	w.Conditions = conditions
+}
+
 // DiscoveredArtifacts holds the artifacts discovered by the Warehouse for its
 // subscriptions.
 type DiscoveredArtifacts struct {
+	// DiscoveredAt is the time at which the Warehouse discovered the artifacts.
+	//
+	// +optional
+	DiscoveredAt metav1.Time `json:"discoveredAt" protobuf:"bytes,4,opt,name=discoveredAt"`
 	// Git holds the commits discovered by the Warehouse for the Git
 	// subscriptions.
 	//

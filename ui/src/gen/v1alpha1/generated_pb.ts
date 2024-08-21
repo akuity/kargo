@@ -7,7 +7,7 @@
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto2 } from "@bufbuild/protobuf";
-import { Duration, ListMeta, ObjectMeta, Time } from "../k8s.io/apimachinery/pkg/apis/meta/v1/generated_pb.js";
+import { Condition, Duration, ListMeta, ObjectMeta, Time } from "../k8s.io/apimachinery/pkg/apis/meta/v1/generated_pb.js";
 
 /**
  * AnalysisRunArgument represents an argument to be added to an AnalysisRun.
@@ -1121,6 +1121,15 @@ export class ChartSubscription extends Message<ChartSubscription> {
  */
 export class DiscoveredArtifacts extends Message<DiscoveredArtifacts> {
   /**
+   * DiscoveredAt is the time at which the Warehouse discovered the artifacts.
+   *
+   * +optional
+   *
+   * @generated from field: optional k8s.io.apimachinery.pkg.apis.meta.v1.Time discoveredAt = 4;
+   */
+  discoveredAt?: Time;
+
+  /**
    * Git holds the commits discovered by the Warehouse for the Git
    * subscriptions.
    *
@@ -1158,6 +1167,7 @@ export class DiscoveredArtifacts extends Message<DiscoveredArtifacts> {
   static readonly runtime: typeof proto2 = proto2;
   static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.DiscoveredArtifacts";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 4, name: "discoveredAt", kind: "message", T: Time, opt: true },
     { no: 1, name: "git", kind: "message", T: GitDiscoveryResult, repeated: true },
     { no: 2, name: "images", kind: "message", T: ImageDiscoveryResult, repeated: true },
     { no: 3, name: "charts", kind: "message", T: ChartDiscoveryResult, repeated: true },
@@ -1380,17 +1390,6 @@ export class Freight extends Message<Freight> {
   alias?: string;
 
   /**
-   * Warehouse is the name of the Warehouse that created this Freight. This is a
-   * required field. TODO: It is not clear yet how this field should be set in
-   * the case of user-defined Freight.
-   *
-   * Deprecated: Use Origin instead.
-   *
-   * @generated from field: optional string warehouse = 8;
-   */
-  warehouse?: string;
-
-  /**
    * Origin describes a kind of Freight in terms of its origin.
    *
    * +kubebuilder:validation:Required
@@ -1437,7 +1436,6 @@ export class Freight extends Message<Freight> {
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 1, name: "metadata", kind: "message", T: ObjectMeta, opt: true },
     { no: 7, name: "alias", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 8, name: "warehouse", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 9, name: "origin", kind: "message", T: FreightOrigin, opt: true },
     { no: 3, name: "commits", kind: "message", T: GitCommit, repeated: true },
     { no: 4, name: "images", kind: "message", T: Image, repeated: true },
@@ -1644,15 +1642,6 @@ export class FreightReference extends Message<FreightReference> {
   name?: string;
 
   /**
-   * Warehouse is the name of the Warehouse that created this Freight.
-   *
-   * Deprecated: Use the Origin instead.
-   *
-   * @generated from field: optional string warehouse = 6;
-   */
-  warehouse?: string;
-
-  /**
    * Origin describes a kind of Freight in terms of its origin.
    *
    * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.FreightOrigin origin = 8;
@@ -1680,26 +1669,6 @@ export class FreightReference extends Message<FreightReference> {
    */
   charts: Chart[] = [];
 
-  /**
-   * VerificationInfo is information about any verification process that was
-   * associated with this Freight for this Stage.
-   *
-   * Deprecated: Use FreightCollection.VerificationHistory instead.
-   *
-   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.VerificationInfo verificationInfo = 5;
-   */
-  verificationInfo?: VerificationInfo;
-
-  /**
-   * VerificationHistory is a stack of recent VerificationInfo. By default,
-   * the last ten VerificationInfo are stored.
-   *
-   * Deprecated: Use FreightCollection.VerificationHistory instead.
-   *
-   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.VerificationInfo verificationHistory = 7;
-   */
-  verificationHistory: VerificationInfo[] = [];
-
   constructor(data?: PartialMessage<FreightReference>) {
     super();
     proto2.util.initPartial(data, this);
@@ -1709,13 +1678,10 @@ export class FreightReference extends Message<FreightReference> {
   static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.FreightReference";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 6, name: "warehouse", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 8, name: "origin", kind: "message", T: FreightOrigin, opt: true },
     { no: 2, name: "commits", kind: "message", T: GitCommit, repeated: true },
     { no: 3, name: "images", kind: "message", T: Image, repeated: true },
     { no: 4, name: "charts", kind: "message", T: Chart, repeated: true },
-    { no: 5, name: "verificationInfo", kind: "message", T: VerificationInfo, opt: true },
-    { no: 7, name: "verificationHistory", kind: "message", T: VerificationInfo, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FreightReference {
@@ -2301,6 +2267,21 @@ export class GitSubscription extends Message<GitSubscription> {
   branch?: string;
 
   /**
+   * StrictSemvers specifies whether only "strict" semver tags should be
+   * considered. A "strict" semver tag is one containing ALL of major, minor,
+   * and patch version components. This is enabled by default, but only has any
+   * effect when the CommitSelectionStrategy is SemVer. This should be disabled
+   * cautiously, as it creates the potential for any tag containing numeric
+   * characters only to be mistaken for a semver string containing the major
+   * version number only.
+   *
+   * +kubebuilder:default=true
+   *
+   * @generated from field: optional bool strictSemvers = 11;
+   */
+  strictSemvers?: boolean;
+
+  /**
    * SemverConstraint specifies constraints on what new tagged commits are
    * considered in determining the newest commit of interest. The value in this
    * field only has any effect when the CommitSelectionStrategy is SemVer. This
@@ -2414,6 +2395,7 @@ export class GitSubscription extends Message<GitSubscription> {
     { no: 1, name: "repoURL", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 2, name: "commitSelectionStrategy", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 3, name: "branch", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 11, name: "strictSemvers", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
     { no: 4, name: "semverConstraint", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 5, name: "allowTags", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 6, name: "ignoreTags", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
@@ -2940,6 +2922,22 @@ export class ImageSubscription extends Message<ImageSubscription> {
   imageSelectionStrategy?: string;
 
   /**
+   * StrictSemvers specifies whether only "strict" semver tags should be
+   * considered. A "strict" semver tag is one containing ALL of major, minor,
+   * and patch version components. This is enabled by default, but only has any
+   * effect when the ImageSelectionStrategy is SemVer. This should be disabled
+   * cautiously, as it is not uncommon to tag container images with short Git
+   * commit hashes, which have the potential to contain numeric characters only
+   * and could be mistaken for a semver string containing the major version
+   * number only.
+   *
+   * +kubebuilder:default=true
+   *
+   * @generated from field: optional bool strictSemvers = 10;
+   */
+  strictSemvers?: boolean;
+
+  /**
    * SemverConstraint specifies constraints on what new image versions are
    * permissible. The value in this field only has any effect when the
    * ImageSelectionStrategy is SemVer or left unspecified (which is implicitly
@@ -3030,6 +3028,7 @@ export class ImageSubscription extends Message<ImageSubscription> {
     { no: 1, name: "repoURL", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 2, name: "gitRepoURL", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 3, name: "imageSelectionStrategy", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 10, name: "strictSemvers", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
     { no: 4, name: "semverConstraint", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 5, name: "allowTags", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 6, name: "ignoreTags", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
@@ -4207,16 +4206,6 @@ export class StageSpec extends Message<StageSpec> {
   shard?: string;
 
   /**
-   * Subscriptions describes the Stage's sources of Freight. This is a required
-   * field.
-   *
-   * Deprecated: Use RequestedFreight instead.
-   *
-   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.Subscriptions subscriptions = 1;
-   */
-  subscriptions?: Subscriptions;
-
-  /**
    * RequestedFreight expresses the Stage's need for certain pieces of Freight,
    * each having originated from a particular Warehouse. This list must be
    * non-empty. In the common case, a Stage will request Freight having
@@ -4261,7 +4250,6 @@ export class StageSpec extends Message<StageSpec> {
   static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.StageSpec";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 4, name: "shard", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 1, name: "subscriptions", kind: "message", T: Subscriptions, opt: true },
     { no: 5, name: "requestedFreight", kind: "message", T: FreightRequest, repeated: true },
     { no: 2, name: "promotionMechanisms", kind: "message", T: PromotionMechanisms, opt: true },
     { no: 3, name: "verification", kind: "message", T: Verification, opt: true },
@@ -4335,26 +4323,6 @@ export class StageStatus extends Message<StageStatus> {
   freightSummary?: string;
 
   /**
-   * CurrentFreight is a simplified representation of the Stage's current
-   * Freight describing what is currently deployed to the Stage.
-   *
-   * Deprecated: Use the top item in the FreightHistory stack instead.
-   *
-   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.FreightReference currentFreight = 2;
-   */
-  currentFreight?: FreightReference;
-
-  /**
-   * History is a stack of recent Freight. By default, the last ten Freight are
-   * stored.
-   *
-   * Deprecated: Use the FreightHistory stack instead.
-   *
-   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.FreightReference history = 3;
-   */
-  history: FreightReference[] = [];
-
-  /**
    * Health is the Stage's last observed health.
    *
    * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.Health health = 8;
@@ -4403,8 +4371,6 @@ export class StageStatus extends Message<StageStatus> {
     { no: 1, name: "phase", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 4, name: "freightHistory", kind: "message", T: FreightCollection, repeated: true },
     { no: 12, name: "freightSummary", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 2, name: "currentFreight", kind: "message", T: FreightReference, opt: true },
-    { no: 3, name: "history", kind: "message", T: FreightReference, repeated: true },
     { no: 8, name: "health", kind: "message", T: Health, opt: true },
     { no: 9, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 6, name: "observedGeneration", kind: "scalar", T: 3 /* ScalarType.INT64 */, opt: true },
@@ -4426,105 +4392,6 @@ export class StageStatus extends Message<StageStatus> {
 
   static equals(a: StageStatus | PlainMessage<StageStatus> | undefined, b: StageStatus | PlainMessage<StageStatus> | undefined): boolean {
     return proto2.util.equals(StageStatus, a, b);
-  }
-}
-
-/**
- * StageSubscription defines a subscription to Freight from another Stage.
- *
- * Deprecated: Use FreightRequest instead.
- *
- * @generated from message github.com.akuity.kargo.api.v1alpha1.StageSubscription
- */
-export class StageSubscription extends Message<StageSubscription> {
-  /**
-   * Name specifies the name of a Stage.
-   *
-   * +kubebuilder:validation:MinLength=1
-   * +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
-   *
-   * @generated from field: optional string name = 1;
-   */
-  name?: string;
-
-  constructor(data?: PartialMessage<StageSubscription>) {
-    super();
-    proto2.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto2 = proto2;
-  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.StageSubscription";
-  static readonly fields: FieldList = proto2.util.newFieldList(() => [
-    { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StageSubscription {
-    return new StageSubscription().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): StageSubscription {
-    return new StageSubscription().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): StageSubscription {
-    return new StageSubscription().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: StageSubscription | PlainMessage<StageSubscription> | undefined, b: StageSubscription | PlainMessage<StageSubscription> | undefined): boolean {
-    return proto2.util.equals(StageSubscription, a, b);
-  }
-}
-
-/**
- * Subscriptions describes a Stage's sources of Freight.
- *
- * Deprecated: Use FreightRequest instead.
- *
- * @generated from message github.com.akuity.kargo.api.v1alpha1.Subscriptions
- */
-export class Subscriptions extends Message<Subscriptions> {
-  /**
-   * Warehouse is a subscription to a Warehouse. This field is mutually
-   * exclusive with the UpstreamStages field.
-   *
-   * @generated from field: optional string warehouse = 1;
-   */
-  warehouse?: string;
-
-  /**
-   * UpstreamStages identifies other Stages as potential sources of Freight
-   * for this Stage. This field is mutually exclusive with the Repos field.
-   *
-   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.StageSubscription upstreamStages = 2;
-   */
-  upstreamStages: StageSubscription[] = [];
-
-  constructor(data?: PartialMessage<Subscriptions>) {
-    super();
-    proto2.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto2 = proto2;
-  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.Subscriptions";
-  static readonly fields: FieldList = proto2.util.newFieldList(() => [
-    { no: 1, name: "warehouse", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 2, name: "upstreamStages", kind: "message", T: StageSubscription, repeated: true },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Subscriptions {
-    return new Subscriptions().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): Subscriptions {
-    return new Subscriptions().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Subscriptions {
-    return new Subscriptions().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: Subscriptions | PlainMessage<Subscriptions> | undefined, b: Subscriptions | PlainMessage<Subscriptions> | undefined): boolean {
-    return proto2.util.equals(Subscriptions, a, b);
   }
 }
 
@@ -4915,6 +4782,18 @@ export class WarehouseSpec extends Message<WarehouseSpec> {
  */
 export class WarehouseStatus extends Message<WarehouseStatus> {
   /**
+   * Conditions contains the last observations of the Warehouse's current
+   * state.
+   * +patchMergeKey=type
+   * +patchStrategy=merge
+   * +listType=map
+   * +listMapKey=type
+   *
+   * @generated from field: repeated k8s.io.apimachinery.pkg.apis.meta.v1.Condition conditions = 9;
+   */
+  conditions: Condition[] = [];
+
+  /**
    * LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh
    * annotation that was handled by the controller. This field can be used to
    * determine whether the request to refresh the resource has been handled.
@@ -4923,14 +4802,6 @@ export class WarehouseStatus extends Message<WarehouseStatus> {
    * @generated from field: optional string lastHandledRefresh = 6;
    */
   lastHandledRefresh?: string;
-
-  /**
-   * Message describes any errors that are preventing the Warehouse controller
-   * from polling repositories to discover new Freight.
-   *
-   * @generated from field: optional string message = 3;
-   */
-  message?: string;
 
   /**
    * ObservedGeneration represents the .metadata.generation that this Warehouse
@@ -4963,8 +4834,8 @@ export class WarehouseStatus extends Message<WarehouseStatus> {
   static readonly runtime: typeof proto2 = proto2;
   static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.WarehouseStatus";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 9, name: "conditions", kind: "message", T: Condition, repeated: true },
     { no: 6, name: "lastHandledRefresh", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 3, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 4, name: "observedGeneration", kind: "scalar", T: 3 /* ScalarType.INT64 */, opt: true },
     { no: 8, name: "lastFreightID", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 7, name: "discoveredArtifacts", kind: "message", T: DiscoveredArtifacts, opt: true },

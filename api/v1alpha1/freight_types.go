@@ -34,12 +34,6 @@ type Freight struct {
 	// present, the defaulting webhook will choose an available alias and assign
 	// it to both the field and label.
 	Alias string `json:"alias,omitempty" protobuf:"bytes,7,opt,name=alias"`
-	// Warehouse is the name of the Warehouse that created this Freight. This is a
-	// required field. TODO: It is not clear yet how this field should be set in
-	// the case of user-defined Freight.
-	//
-	// Deprecated: Use Origin instead.
-	Warehouse string `json:"warehouse,omitempty" protobuf:"bytes,8,opt,name=warehouse"`
 	// Origin describes a kind of Freight in terms of its origin.
 	//
 	// +kubebuilder:validation:Required

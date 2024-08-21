@@ -11,13 +11,13 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Tooltip } from 'antd';
-import { useState } from 'react';
 import { generatePath, useNavigate } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
 import { HealthStatusIcon } from '@ui/features/common/health-status/health-status-icon';
 import { PromotionStatusIcon } from '@ui/features/common/promotion-status/promotion-status-icon';
 import { Freight, Stage } from '@ui/gen/v1alpha1/generated_pb';
+import { useLocalStorage } from '@ui/utils/use-local-storage';
 
 import { FreightTimelineAction, NodeDimensions } from '../types';
 
@@ -62,7 +62,10 @@ export const StageNode = ({
   autoPromotion?: boolean;
 }) => {
   const navigate = useNavigate();
-  const [visibleFreight, setVisibleFreight] = useState(0);
+  const [visibleFreight, setVisibleFreight] = useLocalStorage(
+    `${projectName}-${stage.metadata?.name}`,
+    0
+  );
 
   return (
     <>
@@ -104,14 +107,11 @@ export const StageNode = ({
               </Tooltip>
             )}
             {!stage?.status?.currentPromotion && stage.status?.lastPromotion && (
-              <div className='pb-1'>
-                <PromotionStatusIcon
-                  placement='top'
-                  status={stage.status?.lastPromotion.status}
-                  color='white'
-                  size='1x'
-                />
-              </div>
+              <PromotionStatusIcon
+                placement='top'
+                status={stage.status?.lastPromotion.status}
+                color='white'
+              />
             )}
             {stage.status?.currentPromotion ? (
               <Tooltip
@@ -125,11 +125,7 @@ export const StageNode = ({
               </Tooltip>
             ) : (
               stage.status?.health && (
-                <HealthStatusIcon
-                  health={stage.status?.health}
-                  style={{ fontSize: '14px' }}
-                  hideColor={true}
-                />
+                <HealthStatusIcon health={stage.status?.health} hideColor={true} />
               )
             )}
           </div>

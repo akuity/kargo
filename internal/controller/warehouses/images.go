@@ -166,6 +166,7 @@ func imageSelectorForSubscription(
 		sub.RepoURL,
 		image.SelectionStrategy(sub.ImageSelectionStrategy),
 		&image.SelectorOptions{
+			StrictSemvers:         sub.StrictSemvers,
 			Constraint:            sub.SemverConstraint,
 			AllowRegex:            sub.AllowTags,
 			Ignore:                sub.IgnoreTags,
