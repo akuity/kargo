@@ -11,10 +11,10 @@ import (
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
-func (s *server) ListStagesWithImages(
+func (s *server) ListImages(
 	ctx context.Context,
-	req *connect.Request[svcv1alpha1.ListStagesWithImagesRequest],
-) (*connect.Response[svcv1alpha1.ListStagesWithImagesResponse], error) {
+	req *connect.Request[svcv1alpha1.ListImagesRequest],
+) (*connect.Response[svcv1alpha1.ListImagesResponse], error) {
 	project := req.Msg.GetProject()
 	if err := validateFieldNotEmpty("project", project); err != nil {
 		return nil, err
@@ -66,8 +66,7 @@ func (s *server) ListStagesWithImages(
 		}
 	}
 
-	return connect.NewResponse(&svcv1alpha1.ListStagesWithImagesResponse{
-		Stages: stages,
+	return connect.NewResponse(&svcv1alpha1.ListImagesResponse{
 		Images: images,
 	}), nil
 }

@@ -1112,51 +1112,46 @@ export class ListStagesResponse extends Message<ListStagesResponse> {
 }
 
 /**
- * @generated from message akuity.io.kargo.service.v1alpha1.ListStagesWithImagesRequest
+ * @generated from message akuity.io.kargo.service.v1alpha1.ListImagesRequest
  */
-export class ListStagesWithImagesRequest extends Message<ListStagesWithImagesRequest> {
+export class ListImagesRequest extends Message<ListImagesRequest> {
   /**
    * @generated from field: string project = 1;
    */
   project = "";
 
-  constructor(data?: PartialMessage<ListStagesWithImagesRequest>) {
+  constructor(data?: PartialMessage<ListImagesRequest>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "akuity.io.kargo.service.v1alpha1.ListStagesWithImagesRequest";
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.ListImagesRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "project", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListStagesWithImagesRequest {
-    return new ListStagesWithImagesRequest().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListImagesRequest {
+    return new ListImagesRequest().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListStagesWithImagesRequest {
-    return new ListStagesWithImagesRequest().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListImagesRequest {
+    return new ListImagesRequest().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListStagesWithImagesRequest {
-    return new ListStagesWithImagesRequest().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListImagesRequest {
+    return new ListImagesRequest().fromJsonString(jsonString, options);
   }
 
-  static equals(a: ListStagesWithImagesRequest | PlainMessage<ListStagesWithImagesRequest> | undefined, b: ListStagesWithImagesRequest | PlainMessage<ListStagesWithImagesRequest> | undefined): boolean {
-    return proto3.util.equals(ListStagesWithImagesRequest, a, b);
+  static equals(a: ListImagesRequest | PlainMessage<ListImagesRequest> | undefined, b: ListImagesRequest | PlainMessage<ListImagesRequest> | undefined): boolean {
+    return proto3.util.equals(ListImagesRequest, a, b);
   }
 }
 
 /**
- * @generated from message akuity.io.kargo.service.v1alpha1.ListStagesWithImagesResponse
+ * @generated from message akuity.io.kargo.service.v1alpha1.ListImagesResponse
  */
-export class ListStagesWithImagesResponse extends Message<ListStagesWithImagesResponse> {
-  /**
-   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.Stage stages = 1;
-   */
-  stages: Stage[] = [];
-
+export class ListImagesResponse extends Message<ListImagesResponse> {
   /**
    * images maps image repository names to their tags
    *
@@ -1164,32 +1159,31 @@ export class ListStagesWithImagesResponse extends Message<ListStagesWithImagesRe
    */
   images: { [key: string]: TagMap } = {};
 
-  constructor(data?: PartialMessage<ListStagesWithImagesResponse>) {
+  constructor(data?: PartialMessage<ListImagesResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "akuity.io.kargo.service.v1alpha1.ListStagesWithImagesResponse";
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.ListImagesResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "stages", kind: "message", T: Stage, repeated: true },
     { no: 2, name: "images", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "message", T: TagMap} },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListStagesWithImagesResponse {
-    return new ListStagesWithImagesResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListImagesResponse {
+    return new ListImagesResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListStagesWithImagesResponse {
-    return new ListStagesWithImagesResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListImagesResponse {
+    return new ListImagesResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListStagesWithImagesResponse {
-    return new ListStagesWithImagesResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListImagesResponse {
+    return new ListImagesResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: ListStagesWithImagesResponse | PlainMessage<ListStagesWithImagesResponse> | undefined, b: ListStagesWithImagesResponse | PlainMessage<ListStagesWithImagesResponse> | undefined): boolean {
-    return proto3.util.equals(ListStagesWithImagesResponse, a, b);
+  static equals(a: ListImagesResponse | PlainMessage<ListImagesResponse> | undefined, b: ListImagesResponse | PlainMessage<ListImagesResponse> | undefined): boolean {
+    return proto3.util.equals(ListImagesResponse, a, b);
   }
 }
 
