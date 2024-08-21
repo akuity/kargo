@@ -163,7 +163,9 @@ func reconcilePullRequest(
 		if err != nil {
 			return "", err
 		}
-		if !pr.IsOpen() {
+		if pr.IsOpen() {
+			promo.Status.Phase = kargoapi.PromotionPhaseRunning
+		} else {
 			merged, err := gpClient.IsPullRequestMerged(ctx, prNumber)
 			if err != nil {
 				return "", err
