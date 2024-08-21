@@ -1,10 +1,15 @@
-import { faArrowDownShortWide, faFileLines, faTools } from '@fortawesome/free-solid-svg-icons';
+import {
+  faArrowDownShortWide,
+  faBuilding,
+  faFileLines,
+  faTools
+} from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Drawer, Tabs, Typography } from 'antd';
 import { generatePath, useNavigate, useParams } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
-import { CreateFreight } from '@ui/features/create-freight/create-freight';
+import { AssembleFreight } from '@ui/features/assemble-freight/assemble-freight';
 import { Warehouse } from '@ui/gen/v1alpha1/generated_pb';
 
 import { EditWarehouse } from './edit-warehouse';
@@ -27,13 +32,18 @@ export const WarehouseDetails = ({
     <Drawer open={!!warehouse} onClose={onClose} width={'80%'} closable={false}>
       {warehouse && (
         <div className='flex flex-col h-full'>
-          <div className='flex items-center justify-between mb-2'>
+          <div className='flex items-center justify-between mb-4'>
             <div className='flex gap-1 items-start'>
               <div>
-                <Typography.Title level={1} style={{ margin: 0 }}>
+                <div className='font-medium text-xs text-gray-500'>WAREHOUSE</div>
+                <Typography.Title level={1} className='flex items-center m-0 !mb-2'>
+                  <FontAwesomeIcon icon={faBuilding} className='mr-2 text-base text-gray-400' />
                   {warehouse.metadata?.name}
                 </Typography.Title>
-                <Typography.Text type='secondary'>{projectName}</Typography.Text>
+                <Typography.Text type='secondary'>
+                  <span className='uppercase text-xs'>Project: </span>
+                  <span className='font-semibold'>{projectName}</span>
+                </Typography.Text>
               </div>
             </div>
             <WarehouseActions warehouse={warehouse} />
@@ -66,7 +76,7 @@ export const WarehouseDetails = ({
               tab='Freight Assembly'
               icon={<FontAwesomeIcon icon={faTools} />}
             >
-              <CreateFreight
+              <AssembleFreight
                 warehouse={warehouse}
                 onSuccess={() => {
                   onClose();

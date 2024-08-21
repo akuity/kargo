@@ -1,27 +1,14 @@
-import { faBoxOpen, faCheck, faClipboard } from '@fortawesome/free-solid-svg-icons';
+import { faCheck, faClipboard } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Tooltip } from 'antd';
-import classNames from 'classnames';
 import { format, formatDistance } from 'date-fns';
 import { useEffect, useState } from 'react';
 
 import { Freight } from '@ui/gen/v1alpha1/generated_pb';
 
-import { FreightContents } from '../freight-timeline/freight-contents';
+import { getAlias } from '../common/utils';
 
-import { getAlias } from './utils';
-
-export const FreightLabel = ({
-  freight,
-  showTimestamp,
-  breakOnHyphen,
-  showContents
-}: {
-  freight?: Freight;
-  showTimestamp?: boolean;
-  breakOnHyphen?: boolean;
-  showContents?: boolean;
-}) => {
+export const FreightItemLabel = ({ freight }: { freight?: Freight }) => {
   const [copied, setCopied] = useState<boolean>(false);
 
   useEffect(() => {
@@ -52,18 +39,18 @@ export const FreightLabel = ({
   );
 
   return (
-    <div
-      className='cursor-pointer font-mono font-semibold min-w-0 w-full'
-      onClick={(e) => {
-        if (alias || id) {
-          e.preventDefault();
-          e.stopPropagation();
-          navigator.clipboard.writeText(alias || id || '');
-          setCopied(true);
-        }
-      }}
-    >
-      {alias || id ? (
+    (alias || id) && (
+      <div
+        className='cursor-pointer font-mono font-semibold min-w-0 w-full'
+        onClick={(e) => {
+          if (alias || id) {
+            e.preventDefault();
+            e.stopPropagation();
+            navigator.clipboard.writeText(alias || id || '');
+            setCopied(true);
+          }
+        }}
+      >
         <Tooltip
           overlayStyle={{ maxWidth: '320px' }}
           placement='right'
@@ -85,36 +72,18 @@ export const FreightLabel = ({
                   </div>
                 </Info>
               )}
-              {showContents && (
-                <div className='mt-2'>
-                  <FreightContents
-                    freight={freight}
-                    horizontal={true}
-                    highlighted={false}
-                    dark={true}
-                  />
-                </div>
-              )}
             </>
           }
         >
           <div
-            className={classNames('hover:text-gray-600 w-full', {
-              'h-8 flex justify-center items-end': breakOnHyphen
-            })}
+            className={'hover:text-gray-600 w-full h-8 flex justify-center items-end'}
             style={{ padding: '0 3px' }}
           >
-            <div className='truncate'>{(breakOnHyphen ? aliasLabel : alias) || id}</div>
-            {showTimestamp && <div className='text-xs text-gray-400 mt-1'>{humanReadable}</div>}
+            <div className='truncate'>{aliasLabel || id}</div>
           </div>
         </Tooltip>
-      ) : (
-        <div className='flex items-center justify-center'>
-          <FontAwesomeIcon icon={faBoxOpen} className='mr-2' />
-          EMPTY
-        </div>
-      )}
-    </div>
+      </div>
+    )
   );
 };
 

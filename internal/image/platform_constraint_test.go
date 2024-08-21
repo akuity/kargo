@@ -74,19 +74,19 @@ func TestParsePlatformConstraint(t *testing.T) {
 	testCases := []struct {
 		name        string
 		platformStr string
-		assertions  func(t *testing.T, p platformConstraint, err error)
+		assertions  func(t *testing.T, p *platformConstraint, err error)
 	}{
 		{
 			name:        "invalid",
 			platformStr: "invalid",
-			assertions: func(t *testing.T, _ platformConstraint, err error) {
+			assertions: func(t *testing.T, _ *platformConstraint, err error) {
 				require.ErrorContains(t, err, "error parsing platform constraint")
 			},
 		},
 		{
 			name:        "valid without variant",
 			platformStr: "linux/amd64",
-			assertions: func(t *testing.T, p platformConstraint, err error) {
+			assertions: func(t *testing.T, p *platformConstraint, err error) {
 				require.NoError(t, err)
 				require.Equal(t, "linux", p.os)
 				require.Equal(t, "amd64", p.arch)
@@ -96,7 +96,7 @@ func TestParsePlatformConstraint(t *testing.T) {
 		{
 			name:        "valid with variant",
 			platformStr: "linux/amd64/fake-variant",
-			assertions: func(t *testing.T, p platformConstraint, err error) {
+			assertions: func(t *testing.T, p *platformConstraint, err error) {
 				require.NoError(t, err)
 				require.Equal(t, "linux", p.os)
 				require.Equal(t, "amd64", p.arch)

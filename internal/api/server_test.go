@@ -37,7 +37,6 @@ func TestNewServer(t *testing.T) {
 	s, ok := NewServer(
 		testServerConfig,
 		testClient,
-		testClient,
 		rbac.NewKubernetesRolesDatabase(testClient),
 		testRecorder,
 	).(*server)
@@ -45,7 +44,6 @@ func TestNewServer(t *testing.T) {
 	require.True(t, ok)
 	require.NotNil(t, s)
 	require.Same(t, testClient, s.client)
-	require.Same(t, testClient, s.internalClient)
 	require.NotNil(t, testClient, s.rolesDB)
 	require.Same(t, testRecorder, s.recorder)
 	require.Equal(t, testServerConfig, s.cfg)

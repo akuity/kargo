@@ -6,20 +6,13 @@ import { AnyNodeType, ConnectorsType, NodeType, RepoNodeType } from '../types';
 
 export const LINE_THICKNESS = 2;
 
-export const NODE_WIDTH = 180;
-export const NODE_HEIGHT = 140;
-
-export const WAREHOUSE_NODE_WIDTH = 185;
-export const WAREHOUSE_NODE_HEIGHT = 110;
-
-export const initNodeArray = (s: Stage) =>
-  [
-    {
-      data: s,
-      type: NodeType.STAGE,
-      color: '#000'
-    }
-  ] as AnyNodeType[];
+export const initNode = (s: Stage) => {
+  return {
+    data: s,
+    type: NodeType.STAGE,
+    color: '#000'
+  } as AnyNodeType;
+};
 
 export const getNodeType = (sub: RepoSubscription) =>
   sub.chart ? NodeType.REPO_CHART : sub.image ? NodeType.REPO_IMAGE : NodeType.REPO_GIT;
@@ -34,14 +27,6 @@ export const newSubscriptionNode = (
   warehouseName,
   type: getNodeType(sub)
 });
-
-export const nodeStubFor = (type: NodeType) => {
-  const isStage = type === NodeType.STAGE;
-  return {
-    width: isStage ? NODE_WIDTH : WAREHOUSE_NODE_WIDTH,
-    height: isStage ? NODE_HEIGHT : WAREHOUSE_NODE_HEIGHT
-  };
-};
 
 export const getConnectors = (g: graphlib.Graph) => {
   const forward: { [key: string]: { [key: string]: ConnectorsType[][] } } = {};
@@ -71,7 +56,7 @@ export const getConnectors = (g: graphlib.Graph) => {
       const cy = (y1 + y2) / 2 - LINE_THICKNESS / 2;
 
       const angle = Math.atan2(y1 - y2, x1 - x2) * (180 / Math.PI);
-      lines.push({ x: cx, y: cy, width, angle, color: edge['color'] });
+      lines.push({ x: cx, y: cy, width, angle, color: edge['color'], from, to });
     }
 
     const fromGr = forward[from] || {};

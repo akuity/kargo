@@ -177,14 +177,16 @@ func (o *loginOptions) run(ctx context.Context) error {
 		refreshToken = ""
 	}
 
-	if err = libConfig.SaveCLIConfig(
-		libConfig.CLIConfig{
-			APIAddress:            o.ServerAddress,
-			BearerToken:           bearerToken,
-			RefreshToken:          refreshToken,
-			InsecureSkipTLSVerify: o.InsecureTLS,
-		},
-	); err != nil {
+	if o.Config.APIAddress != o.ServerAddress {
+		o.Config = libConfig.CLIConfig{}
+	}
+
+	o.Config.APIAddress = o.ServerAddress
+	o.Config.BearerToken = bearerToken
+	o.Config.RefreshToken = refreshToken
+	o.Config.InsecureSkipTLSVerify = o.InsecureTLS
+
+	if err = libConfig.SaveCLIConfig(o.Config); err != nil {
 		return fmt.Errorf("error persisting configuration: %w", err)
 	}
 	return nil

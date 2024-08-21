@@ -1,4 +1,4 @@
-import { Code, ConnectError, Interceptor } from '@connectrpc/connect';
+import { ConnectError, Interceptor } from '@connectrpc/connect';
 import { createConnectTransport } from '@connectrpc/connect-web';
 import { notification } from 'antd';
 
@@ -23,7 +23,7 @@ const authHandler: Interceptor = (next) => async (req) => {
 
   try {
     isTokenExpired = token && Date.now() >= JSON.parse(atob(token.split('.')[1])).exp * 1000;
-  } catch (err) {
+  } catch (_) {
     logout();
 
     throw new ConnectError('Invalid token');
@@ -46,30 +46,35 @@ const authHandler: Interceptor = (next) => async (req) => {
   return next(req);
 };
 
-const errorHandler: Interceptor = (next) => (req) =>
-  next(req).catch((err) => {
-    if (req.signal.aborted) {
+export const newErrorHandler = (handler: (err: ConnectError) => void): Interceptor => {
+  return (next) => (req) =>
+    next(req).catch((err) => {
+      if (req.signal.aborted) {
+        throw err;
+      }
+
+      handler(err);
+
       throw err;
-    }
+    });
+};
 
-    const errorMessage = err instanceof ConnectError ? err.rawMessage : 'Unexpected API error';
-    notification.error({ message: errorMessage, placement: 'bottomRight' });
-
-    if (err instanceof ConnectError && err.code === Code.Unauthenticated) {
-      logout();
-    }
-
-    throw err;
-  });
+const defaultErrorHandler = newErrorHandler((err) => {
+  const errorMessage = err instanceof ConnectError ? err.rawMessage : 'Unexpected API error';
+  notification.error({ message: errorMessage, placement: 'bottomRight' });
+});
 
 export const transport = createConnectTransport({
   baseUrl: '',
   useBinaryFormat: true,
-  interceptors: [errorHandler]
+  interceptors: [defaultErrorHandler]
 });
 
-export const transportWithAuth = createConnectTransport({
-  baseUrl: '',
-  useBinaryFormat: true,
-  interceptors: [authHandler, errorHandler]
-});
+export const newTransportWithAuth = (errorHandler: Interceptor) =>
+  createConnectTransport({
+    baseUrl: '',
+    useBinaryFormat: true,
+    interceptors: [authHandler, errorHandler]
+  });
+
+export const transportWithAuth = newTransportWithAuth(defaultErrorHandler);

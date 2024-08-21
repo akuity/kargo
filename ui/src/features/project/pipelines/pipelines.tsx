@@ -36,21 +36,22 @@ import {
   approveFreight,
   listStages,
   listWarehouses,
+  promoteToStage,
   queryFreight,
   refreshWarehouse
 } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
-import { Freight, Stage, Warehouse } from '@ui/gen/v1alpha1/generated_pb';
+import { Freight, Project, Stage, Warehouse } from '@ui/gen/v1alpha1/generated_pb';
 import { useDocumentEvent } from '@ui/utils/document';
 import { useLocalStorage } from '@ui/utils/use-local-storage';
 
 import CreateStageModal from './create-stage-modal';
 import CreateWarehouseModal from './create-warehouse-modal';
 import { Images } from './images';
-import { RepoNode } from './nodes/repo-node';
+import { RepoNode, RepoNodeDimensions } from './nodes/repo-node';
 import { Nodule, StageNode } from './nodes/stage-node';
 import styles from './project-details.module.less';
 import { FreightTimelineAction, NodeType } from './types';
-import { LINE_THICKNESS, WAREHOUSE_NODE_HEIGHT } from './utils/graph';
+import { LINE_THICKNESS } from './utils/graph';
 import { isPromoting, usePipelineState } from './utils/state';
 import { usePipelineGraph } from './utils/use-pipeline-graph';
 import { onError } from './utils/util';
@@ -58,7 +59,7 @@ import { Watcher } from './utils/watcher';
 
 const WarehouseDetails = lazy(() => import('./warehouse/warehouse-details'));
 
-export const Pipelines = () => {
+export const Pipelines = ({ project }: { project: Project }) => {
   const { name, stageName, freightName, warehouseName } = useParams();
   const { data, isLoading } = useQuery(listStages, { project: name });
   const navigate = useNavigate();
@@ -95,6 +96,16 @@ export const Pipelines = () => {
     }
   });
 
+  const { mutate: promoteAction } = useMutation(promoteToStage, {
+    onError,
+    onSuccess: () => {
+      message.success(
+        `Promotion request for stage "${state.stage}" has been successfully submitted.`
+      );
+      state.clear();
+    }
+  });
+
   const [zoom, setZoom] = React.useState(100);
 
   const [highlightedStages, setHighlightedStages] = React.useState<{ [key: string]: boolean }>({});
@@ -122,7 +133,6 @@ export const Pipelines = () => {
     allFreight.forEach((f) => {
       if (
         !selectedWarehouse ||
-        f.warehouse === selectedWarehouse ||
         (f?.origin?.kind === 'Warehouse' && f?.origin.name === selectedWarehouse)
       ) {
         filteredFreight.push(f);
@@ -130,6 +140,16 @@ export const Pipelines = () => {
     });
     return filteredFreight;
   }, [freightData, selectedWarehouse]);
+
+  const autoPromotionMap = useMemo(() => {
+    const apMap = {} as { [key: string]: boolean };
+    (project?.spec?.promotionPolicies || []).forEach((policy) => {
+      if (policy.stage) {
+        apMap[policy.stage] = policy.autoPromotionEnabled || false;
+      }
+    });
+    return apMap;
+  }, [project]);
 
   const client = useQueryClient();
 
@@ -148,8 +168,7 @@ export const Pipelines = () => {
   const [nodes, connectors, box, sortedStages, stageColorMap, warehouseColorMap] = usePipelineGraph(
     name,
     data?.stages || [],
-    warehouseData?.warehouses || [],
-    hideSubscriptions
+    warehouseData?.warehouses || []
   );
 
   const { mutate: manualApproveAction } = useMutation(approveFreight, {
@@ -170,12 +189,6 @@ export const Pipelines = () => {
           stagesPerFreight[f.name || ''] = [];
         }
         stagesPerFreight[f.name || ''].push(stage);
-      });
-      stage?.spec?.subscriptions?.upstreamStages.forEach((item) => {
-        if (!subscribersByStage[item.name || '']) {
-          subscribersByStage[item.name || ''] = new Set();
-        }
-        subscribersByStage[item.name || ''].add(stage?.metadata?.name || '');
       });
       stage?.spec?.requestedFreight?.forEach((item) => {
         if (!item.sources?.direct) {
@@ -393,11 +406,10 @@ export const Pipelines = () => {
                               (acc, cur) => acc || cur?.origin?.kind === 'Warehouse',
                               false
                             );
-                            let currentWarehouse = currentFreight[0]?.warehouse || '';
-                            if (currentWarehouse === '' && isWarehouseKind) {
+                            let currentWarehouse = '';
+                            if (isWarehouseKind) {
                               currentWarehouse =
                                 currentFreight[0]?.origin?.name ||
-                                node.data?.spec?.subscriptions?.warehouse ||
                                 node.data?.spec?.requestedFreight[0]?.origin?.name ||
                                 '';
                             }
@@ -418,11 +430,7 @@ export const Pipelines = () => {
                               );
                             }
                           }}
-                          action={
-                            (isPromoting(state) && state.stage === node.data?.metadata?.name) || ''
-                              ? state.action
-                              : undefined
-                          }
+                          action={state.action}
                           onClick={
                             state.action === FreightTimelineAction.ManualApproval
                               ? () => {
@@ -432,15 +440,27 @@ export const Pipelines = () => {
                                     name: state.freight
                                   });
                                 }
-                              : undefined
+                              : state.action === FreightTimelineAction.PromoteFreight
+                                ? () => {
+                                    state.setStage(node.data?.metadata?.name || '');
+                                    promoteAction({
+                                      stage: node.data?.metadata?.name || '',
+                                      project: name,
+                                      freight: state.freight
+                                    });
+                                  }
+                                : undefined
                           }
                           onHover={(h) => onHover(h, node.data?.metadata?.name || '', true)}
-                          approving={state.action === FreightTimelineAction.ManualApproval}
                           highlighted={highlightedStages[node.data?.metadata?.name || '']}
+                          autoPromotion={autoPromotionMap[node.data?.metadata?.name || '']}
                         />
                       </>
                     ) : (
                       <RepoNode
+                        hidden={
+                          node.type !== NodeType.WAREHOUSE && hideSubscriptions[node.warehouseName]
+                        }
                         nodeData={node}
                         onClick={
                           node.type === NodeType.WAREHOUSE
@@ -490,9 +510,14 @@ export const Pipelines = () => {
                         )}
                         {node.type === NodeType.WAREHOUSE && (
                           <Nodule
-                            nodeHeight={WAREHOUSE_NODE_HEIGHT}
-                            onClick={() => setHideSubscriptions(!hideSubscriptions)}
-                            icon={hideSubscriptions ? faEye : faEyeSlash}
+                            nodeHeight={RepoNodeDimensions().height}
+                            onClick={() =>
+                              setHideSubscriptions({
+                                ...hideSubscriptions,
+                                [node.warehouseName]: !hideSubscriptions[node.warehouseName]
+                              })
+                            }
+                            icon={hideSubscriptions[node.warehouseName] ? faEye : faEyeSlash}
                             begin={true}
                           />
                         )}
@@ -501,22 +526,24 @@ export const Pipelines = () => {
                   </div>
                 ))}
                 {connectors?.map((connector) =>
-                  connector.map((line, i) => (
-                    <div
-                      className='absolute bg-gray-300 rounded-full'
-                      style={{
-                        padding: 0,
-                        margin: 0,
-                        height: LINE_THICKNESS,
-                        width: line.width,
-                        left: line.x,
-                        top: line.y,
-                        transform: `rotate(${line.angle}deg)`,
-                        backgroundColor: line.color
-                      }}
-                      key={i}
-                    />
-                  ))
+                  connector.map((line, i) =>
+                    hideSubscriptions[line.to] && line.from === 'subscription' ? null : (
+                      <div
+                        className='absolute bg-gray-300 rounded-full'
+                        style={{
+                          padding: 0,
+                          margin: 0,
+                          height: LINE_THICKNESS,
+                          width: line.width,
+                          left: line.x,
+                          top: line.y,
+                          transform: `rotate(${line.angle}deg)`,
+                          backgroundColor: line.color
+                        }}
+                        key={i}
+                      />
+                    )
+                  )
                 )}
               </div>
             </div>

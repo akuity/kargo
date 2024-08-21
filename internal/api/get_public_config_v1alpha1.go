@@ -24,6 +24,7 @@ func (s *server) GetPublicConfig(
 	resp := &svcv1alpha1.GetPublicConfigResponse{
 		AdminAccountEnabled: s.cfg.AdminConfig != nil,
 		OidcConfig:          oidcCfg,
+		SkipAuth:            s.cfg.LocalMode,
 	}
 	return connect.NewResponse(resp), nil
 }

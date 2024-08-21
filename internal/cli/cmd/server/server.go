@@ -67,24 +67,18 @@ func (o *serverOptions) validate() error {
 
 // run starts a local server on the provided address.
 func (o *serverOptions) run(ctx context.Context) error {
-	// TODO: This is at present incomplete, and is a placeholder for future work.
-	//
-	// - The server should be started with a Kubernetes client which does NOT
-	//   make use of an authorization wrapper.
-	// - It should allow the user to visit the UI in their browser.
-	// - It should allow the user to interact with the API through `kargo`
-	//   commands, but _without_ needing to authenticate, as the server is
-	//   running locally using the user's kubeconfig.
-	// - It should properly handle signals and clean up after itself.
-	//
-	// xref: https://github.com/akuity/kargo/issues/1569
-
 	restCfg, err := config.GetConfig()
 	if err != nil {
 		return fmt.Errorf("get REST config: %w", err)
 	}
 
-	client, err := kubernetes.NewClient(ctx, restCfg, kubernetes.ClientOptions{})
+	client, err := kubernetes.NewClient(
+		ctx,
+		restCfg,
+		kubernetes.ClientOptions{
+			SkipAuthorization: true,
+		},
+	)
 	if err != nil {
 		return fmt.Errorf("error creating Kubernetes client: %w", err)
 	}
@@ -99,7 +93,6 @@ func (o *serverOptions) run(ctx context.Context) error {
 		apiconfig.ServerConfig{
 			LocalMode: true,
 		},
-		client,
 		client,
 		rbac.NewKubernetesRolesDatabase(client),
 		&fakeevent.EventRecorder{},

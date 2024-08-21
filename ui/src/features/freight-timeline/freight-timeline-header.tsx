@@ -68,15 +68,15 @@ export const FreightTimelineHeader = ({
     <div className='w-full pl-6 flex items-center font-semibold text-sm h-8 pt-2'>
       {action ? (
         <>
-          <div className='flex items-center'>
+          <div className='flex items-center uppercase'>
             <FontAwesomeIcon icon={getIcon(action)} className='mr-2' />
             {promotingStage && action != 'manualApproval' ? (
               <>
-                PROMOTING{' '}
+                Promoting{' '}
                 {action === 'promoteSubscribers'
-                  ? `TO ${(downstreamSubs || []).length} DOWNSTREAM SUBSCRIBERS (${downstreamSubs?.join(', ')}) OF`
+                  ? `TO ${(downstreamSubs || []).length} Downstream Subscribers (${downstreamSubs?.join(', ')}) of`
                   : ''}{' '}
-                STAGE :{' '}
+                Stage :{' '}
                 <div
                   className='px-2 rounded text-white ml-2 font-semibold'
                   style={{
@@ -101,7 +101,9 @@ export const FreightTimelineHeader = ({
                 </Tooltip>
               </>
             ) : (
-              <>MANUALLY APPROVING FREIGHT</>
+              <>
+                {action === 'manualApproval' ? 'Manually Approving Freight' : 'Promoting Freight'}
+              </>
             )}
           </div>
 

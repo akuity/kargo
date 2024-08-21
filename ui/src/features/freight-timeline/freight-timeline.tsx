@@ -158,12 +158,16 @@ export const FreightTimeline = ({
                 mode={getFreightMode(state, id, promotionEligible[id])}
                 empty={curNumStages === 0}
                 onHover={(h) => onHover(h, id)}
-                highlighted={(stagesPerFreight[id] || []).reduce((h, cur) => {
-                  if (h) {
-                    return true;
-                  }
-                  return highlightedStages[cur.metadata?.name || ''];
-                }, false)}
+                highlighted={
+                  state.action === FreightTimelineAction.PromoteFreight
+                    ? state.freight === f?.metadata?.name
+                    : (stagesPerFreight[id] || []).reduce((h, cur) => {
+                        if (h) {
+                          return true;
+                        }
+                        return highlightedStages[cur.metadata?.name || ''];
+                      }, false)
+                }
               >
                 {!state.action && (
                   <FreightActionMenu
@@ -173,6 +177,9 @@ export const FreightTimeline = ({
                     }}
                     refetchFreight={refetchFreight}
                     inUse={stagesPerFreight[id]?.length > 0}
+                    promoteAction={() => {
+                      state.select(FreightTimelineAction.PromoteFreight, undefined, id);
+                    }}
                   />
                 )}
                 <StageIndicators

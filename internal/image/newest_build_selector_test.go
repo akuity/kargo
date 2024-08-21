@@ -1,7 +1,6 @@
 package image
 
 import (
-	"regexp"
 	"testing"
 	"time"
 
@@ -9,20 +8,16 @@ import (
 )
 
 func TestNewNewestBuildSelector(t *testing.T) {
-	testAllowRegex := regexp.MustCompile("fake-regex")
-	testIgnore := []string{"fake-ignore"}
-	testPlatform := &platformConstraint{
-		os:   "linux",
-		arch: "amd64",
+	testOpts := SelectorOptions{
+		AllowRegex:     "fake-regex",
+		Ignore:         []string{"fake-ignore"},
+		Platform:       "linux/amd64",
+		DiscoveryLimit: 10,
 	}
-	testDiscoveryLimit := 10
-	s := newNewestBuildSelector(nil, testAllowRegex, testIgnore, testPlatform, testDiscoveryLimit)
+	s := newNewestBuildSelector(nil, testOpts)
 	selector, ok := s.(*newestBuildSelector)
 	require.True(t, ok)
-	require.Equal(t, testAllowRegex, selector.allowRegex)
-	require.Equal(t, testIgnore, selector.ignore)
-	require.Equal(t, testPlatform, selector.platform)
-	require.Equal(t, testDiscoveryLimit, selector.discoveryLimit)
+	require.Equal(t, testOpts, selector.opts)
 }
 
 func TestSortImagesByDate(t *testing.T) {

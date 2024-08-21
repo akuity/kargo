@@ -8,7 +8,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/akuity/kargo/internal/api/config"
-	"github.com/akuity/kargo/internal/api/user"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
@@ -37,20 +36,10 @@ func TestGetConfig(t *testing.T) {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-
-			// Simulate an admin user to prevent any authz issues with the authorizing
-			// client.
-			ctx := user.ContextWithInfo(
-				context.Background(),
-				user.Info{
-					IsAdmin: true,
-				},
-			)
-
 			svr := &server{
 				cfg: tc.cfg,
 			}
-			res, err := svr.GetConfig(ctx, connect.NewRequest(tc.req))
+			res, err := svr.GetConfig(context.Background(), connect.NewRequest(tc.req))
 			require.NoError(t, err)
 			if tc.assertions != nil {
 				tc.assertions(res.Msg)

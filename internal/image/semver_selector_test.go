@@ -1,20 +1,18 @@
 package image
 
 import (
-	"regexp"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
 
 func TestNewSemVerSelector(t *testing.T) {
-	testAllowRegex := regexp.MustCompile("fake-regex")
-	testIgnore := []string{"fake-ignore"}
-	testPlatform := &platformConstraint{
-		os:   "linux",
-		arch: "amd64",
+	testOpts := SelectorOptions{
+		AllowRegex:     "fake-regex",
+		Ignore:         []string{"fake-ignore"},
+		Platform:       "linux/amd64",
+		DiscoveryLimit: 10,
 	}
-	testDiscoveryLimit := 10
 	testCases := []struct {
 		name       string
 		constraint string
@@ -34,11 +32,8 @@ func TestNewSemVerSelector(t *testing.T) {
 				require.NoError(t, err)
 				selector, ok := s.(*semVerSelector)
 				require.True(t, ok)
-				require.Equal(t, testAllowRegex, selector.allowRegex)
-				require.Equal(t, testIgnore, selector.ignore)
+				require.Equal(t, testOpts, selector.opts)
 				require.Nil(t, selector.constraint)
-				require.Equal(t, testPlatform, selector.platform)
-				require.Equal(t, testDiscoveryLimit, selector.discoveryLimit)
 			},
 		},
 		{
@@ -48,24 +43,15 @@ func TestNewSemVerSelector(t *testing.T) {
 				require.NoError(t, err)
 				selector, ok := s.(*semVerSelector)
 				require.True(t, ok)
-				require.Equal(t, testAllowRegex, selector.allowRegex)
-				require.Equal(t, testIgnore, selector.ignore)
+				require.Equal(t, testOpts, selector.opts)
 				require.NotNil(t, selector.constraint)
-				require.Equal(t, testPlatform, selector.platform)
-				require.Equal(t, testDiscoveryLimit, selector.discoveryLimit)
 			},
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			s, err := newSemVerSelector(
-				nil,
-				testAllowRegex,
-				testIgnore,
-				testCase.constraint,
-				testPlatform,
-				testDiscoveryLimit,
-			)
+			testOpts.Constraint = testCase.constraint
+			s, err := newSemVerSelector(nil, testOpts)
 			testCase.assertions(t, s, err)
 		})
 	}

@@ -6,6 +6,9 @@ import {
   Warehouse
 } from '@ui/gen/v1alpha1/generated_pb';
 
+import { RepoNodeDimensions } from './nodes/repo-node';
+import { StageNodeDimensions } from './nodes/stage-node';
+
 export enum NodeType {
   STAGE,
   REPO_IMAGE,
@@ -13,6 +16,20 @@ export enum NodeType {
   REPO_CHART,
   WAREHOUSE
 }
+
+export type NodeDimensions = {
+  width: number;
+  height: number;
+};
+
+export const getNodeDimensions = (type: NodeType): NodeDimensions => {
+  switch (type) {
+    case NodeType.STAGE:
+      return StageNodeDimensions();
+    default:
+      return RepoNodeDimensions();
+  }
+};
 
 type NodeBase = {
   stageNames?: string[];
@@ -64,7 +81,8 @@ export const NewWarehouseNode = (warehouse: Warehouse, stageNames?: string[]): R
 export enum FreightTimelineAction {
   Promote = 'promote', // Promoting a stage. Freight has not been selected yet
   PromoteSubscribers = 'promoteSubscribers', // Promoting subscribers of a stage. Freight has not been selected yet
-  ManualApproval = 'manualApproval' // Manually approving a freight
+  ManualApproval = 'manualApproval', // Manually approving a freight
+  PromoteFreight = 'promoteFreight' // Promoting a specific freight to any stage
 }
 
 export enum FreightMode {
@@ -81,6 +99,8 @@ export interface ConnectorsType {
   width: number;
   angle: number;
   color: string;
+  from: string;
+  to: string;
 }
 
 export interface BoxType {

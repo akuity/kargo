@@ -8,6 +8,8 @@ import (
 	"strings"
 
 	authv1 "k8s.io/api/authorization/v1"
+	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -25,12 +27,26 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api/user"
+	rollouts "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
+	"github.com/akuity/kargo/internal/kubeclient"
 	"github.com/akuity/kargo/internal/logging"
 )
 
 // ClientOptions specifies options for customizing the client returned by the
 // NewClient function.
 type ClientOptions struct {
+	// SkipAuthorization, if true, will cause the implementation of the Client
+	// interface to bypass efforts to authorize the Kargo API user's authority to
+	// perform any desired operation, in which case, such operations are
+	// unconditionally executed using the implementation's own internal client.
+	// This does NOT bypass authorization entirely. The Kargo API server will
+	// still be constrained by the permissions of the Kubernetes user from whose
+	// configuration the internal client was constructed. This option is useful
+	// for scenarios where the Kargo API server is executed locally on a user's
+	// system and the user wished to provide the API server with their own
+	// Kubernetes client configuration. This is used, for instance, by the
+	// `kargo server` command.
+	SkipAuthorization bool
 	// GlobalServiceAccountNamespaces is a list of namespaces in which we should
 	// always look for ServiceAccounts when attempting to authorize a user.
 	GlobalServiceAccountNamespaces []string
@@ -67,7 +83,13 @@ func setOptionsDefaults(opts ClientOptions) (ClientOptions, error) {
 	if opts.Scheme == nil {
 		opts.Scheme = runtime.NewScheme()
 		if err := kubescheme.AddToScheme(opts.Scheme); err != nil {
-			return opts, fmt.Errorf("error adding Kubernetes API to scheme: %w", err)
+			return opts, fmt.Errorf("error adding Kubernetes core API to scheme: %w", err)
+		}
+		if err := rbacv1.AddToScheme(opts.Scheme); err != nil {
+			return opts, fmt.Errorf("error adding Kubernetes RBAC API to scheme: %w", err)
+		}
+		if err := rollouts.AddToScheme(opts.Scheme); err != nil {
+			return opts, fmt.Errorf("error adding Argo Rollouts API to Kargo API manager scheme: %w", err)
 		}
 		if err := kargoapi.AddToScheme(opts.Scheme); err != nil {
 			return opts, fmt.Errorf("error adding Kargo API to scheme: %w", err)
@@ -100,6 +122,11 @@ type Client interface {
 		subresource string,
 		key libClient.ObjectKey,
 	) error
+
+	// InternalClient returns the internal controller-runtime client used by this
+	// client. This is useful for cases where the API server needs to bypass
+	// the extra authorization checks performed by this client.
+	InternalClient() libClient.Client
 
 	// Watch returns a suitable implementation of the watch.Interface for
 	// subscribing to the resources described by the provided arguments.
@@ -158,12 +185,29 @@ func NewClient(
 	if err != nil {
 		return nil, fmt.Errorf("error building internal dynamic client: %w", err)
 	}
-	return &client{
+	c := &client{
 		internalClient:        internalClient,
 		internalDynamicClient: internalDynamicClient,
 		opts:                  opts,
-		getAuthorizedClientFn: getAuthorizedClient(opts.GlobalServiceAccountNamespaces),
-	}, nil
+	}
+	if opts.SkipAuthorization {
+		c.getAuthorizedClientFn = func(
+			context.Context,
+			libClient.Client,
+			string,
+			schema.GroupVersionResource,
+			string,
+			libClient.ObjectKey,
+		) (libClient.Client, error) {
+			return internalClient, nil // Unconditionally return the internal client
+		}
+	} else {
+		// Examine the context-bound user.Info to determine what ServiceAccounts
+		// they are associated with and whether any of those have sufficient
+		// permissions to perform the desired operation.
+		c.getAuthorizedClientFn = getAuthorizedClient(opts.GlobalServiceAccountNamespaces)
+	}
+	return c, nil
 }
 
 func newDefaultInternalClient(
@@ -175,11 +219,45 @@ func newDefaultInternalClient(
 		restCfg,
 		func(clusterOptions *libCluster.Options) {
 			clusterOptions.Scheme = scheme
+			clusterOptions.Client = libClient.Options{
+				Cache: &libClient.CacheOptions{
+					DisableFor: []libClient.Object{
+						&corev1.Secret{},
+					},
+				},
+			}
 		},
 	)
 	if err != nil {
 		return nil, fmt.Errorf("error creating controller-runtime cluster: %w", err)
 	}
+
+	// Add all indices required by the API server
+	if err = kubeclient.IndexPromotionsByStage(ctx, cluster); err != nil {
+		return nil, fmt.Errorf("error indexing Promotions by Stage: %w", err)
+	}
+	if err = kubeclient.IndexFreightByWarehouse(ctx, cluster); err != nil {
+		return nil, fmt.Errorf("error indexing Freight by Warehouse: %w", err)
+	}
+	if err = kubeclient.IndexFreightByVerifiedStages(ctx, cluster); err != nil {
+		return nil, fmt.Errorf("error indexing Freight by Stages in which it has been verified: %w", err)
+	}
+	if err = kubeclient.IndexFreightByApprovedStages(ctx, cluster); err != nil {
+		return nil, fmt.Errorf("error indexing Freight by Stages for which it has been approved: %w", err)
+	}
+	if err = kubeclient.IndexServiceAccountsByOIDCEmail(ctx, cluster); err != nil {
+		return nil, fmt.Errorf("error indexing ServiceAccounts by OIDC email: %w", err)
+	}
+	if err = kubeclient.IndexServiceAccountsByOIDCGroups(ctx, cluster); err != nil {
+		return nil, fmt.Errorf("error indexing ServiceAccounts by OIDC groups: %w", err)
+	}
+	if err = kubeclient.IndexServiceAccountsByOIDCSubjects(ctx, cluster); err != nil {
+		return nil, fmt.Errorf("error indexing ServiceAccounts by OIDC subjects: %w", err)
+	}
+	if err = kubeclient.IndexEventsByInvolvedObjectAPIGroup(ctx, cluster); err != nil {
+		return nil, fmt.Errorf("error indexing Events by InvolvedObject's API group: %w", err)
+	}
+
 	go func() {
 		err = cluster.Start(ctx)
 	}()
@@ -538,6 +616,10 @@ func (c *client) Authorize(
 		return err
 	}
 	return nil
+}
+
+func (c *client) InternalClient() libClient.Client {
+	return c.internalClient
 }
 
 func (c *client) Watch(
