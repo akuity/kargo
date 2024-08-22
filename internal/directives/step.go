@@ -2,6 +2,7 @@ package directives
 
 import (
 	"context"
+	"encoding/json"
 
 	"k8s.io/apimachinery/pkg/runtime"
 )
@@ -72,3 +73,23 @@ type Step interface {
 	// Run executes the step using the provided context and configuration.
 	Run(ctx context.Context, stepCtx *StepContext) (Result, error)
 }
+
+// configToStruct converts a Config to a (typed) configuration struct.
+func configToStruct[T any](c Config) (T, error) {
+	var result T
+
+	// Convert the map to JSON
+	jsonData, err := json.Marshal(c)
+	if err != nil {
+		return result, err
+	}
+
+	// Unmarshal the JSON data into the struct
+	err = json.Unmarshal(jsonData, &result)
+	if err != nil {
+		return result, err
+	}
+
+	return result, nil
+}
+

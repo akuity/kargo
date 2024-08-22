@@ -1,6 +1,17 @@
 package directives
 
-import "fmt"
+import (
+	"fmt"
+	"maps"
+)
+
+// builtins is the registry of built-in steps.
+var builtins = StepRegistry{}
+
+// BuiltinsRegistry returns a registry of built-in steps.
+func BuiltinsRegistry() StepRegistry {
+	return maps.Clone(builtins)
+}
 
 // StepRegistry is a map of step names to steps. It is used to register and
 // retrieve steps by name.
