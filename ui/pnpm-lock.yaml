@@ -77,11 +77,8 @@ importers:
       react-hook-form:
         specifier: ^7.52.1
         version: 7.52.1(react@18.3.1)
-      react-infinite-scroller:
-        specifier: ^1.2.6
-        version: 1.2.6(react@18.3.1)
       react-router-dom:
-        specifier: ^6.26.0
+        specifier: ^6.25.1
         version: 6.26.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       recharts:
         specifier: ^2.12.7
@@ -2789,11 +2786,6 @@ packages:
     engines: {node: '>=12.22.0'}
     peerDependencies:
       react: ^16.8.0 || ^17 || ^18 || ^19
-
-  react-infinite-scroller@1.2.6:
-    resolution: {integrity: sha512-mGdMyOD00YArJ1S1F3TVU9y4fGSfVVl6p5gh/Vt4u99CJOptfVu/q5V/Wlle72TMgYlBwIhbxK5wF0C/R33PXQ==}
-    peerDependencies:
-      react: ^0.14.9 || ^15.3.0 || ^16.0.0 || ^17.0.0 || ^18.0.0
 
   react-is@16.13.1:
     resolution: {integrity: sha512-24e6ynE2H+OKt4kqsOvNd8kBpV65zoxbA4BVsEOB3ARVWQki/DHzaUoC5KuON/BiccDaCCTZBuOcfZs70kR8bQ==}
@@ -6318,11 +6310,6 @@ snapshots:
 
   react-hook-form@7.52.1(react@18.3.1):
     dependencies:
-      react: 18.3.1
-
-  react-infinite-scroller@1.2.6(react@18.3.1):
-    dependencies:
-      prop-types: 15.8.1
       react: 18.3.1
 
   react-is@16.13.1: {}
