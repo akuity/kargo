@@ -60,9 +60,16 @@ endif
 .PHONY: lint
 lint: lint-go lint-proto lint-charts lint-ui
 
+.PHONY: format
+format: format-go format-ui
+
 .PHONY: lint-go
 lint-go:
 	golangci-lint run --out-format=$(GO_LINT_ERROR_FORMAT)
+
+.PHONY: format-go
+format-go:
+	golangci-lint run --fix
 
 .PHONY: lint-proto
 lint-proto:
@@ -80,6 +87,11 @@ lint-charts:
 lint-ui:
 	pnpm --dir=ui install --dev
 	pnpm --dir=ui run lint
+
+.PHONY: format-ui
+format-ui:
+	pnpm --dir=ui install --dev
+	pnpm --dir=ui run lint:fix
 
 .PHONY: test-unit
 test-unit:
@@ -199,6 +211,10 @@ hack-build-dev-tools:
 .PHONY: hack-lint
 hack-lint: hack-build-dev-tools
 	$(DOCKER_CMD) make lint
+
+.PHONY: hack-format
+hack-format: hack-build-dev-tools
+	$(DOCKER_CMD) make format
 
 .PHONY: hack-lint-go
 hack-lint-go: hack-build-dev-tools
