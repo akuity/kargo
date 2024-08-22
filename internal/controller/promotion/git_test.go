@@ -64,9 +64,8 @@ func TestGitPromote(t *testing.T) {
 		promoMech  *gitMechanism
 		assertions func(
 			t *testing.T,
-			status *kargoapi.PromotionStatus,
-			newFreightIn []kargoapi.FreightReference,
-			newFreightOut []kargoapi.FreightReference,
+			origFreight *kargoapi.FreightCollection,
+			promo *kargoapi.Promotion,
 			err error,
 		)
 	}{
@@ -79,13 +78,13 @@ func TestGitPromote(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *kargoapi.PromotionStatus,
-				newFreightIn []kargoapi.FreightReference,
-				newFreightOut []kargoapi.FreightReference,
+				origFreight *kargoapi.FreightCollection,
+				promo *kargoapi.Promotion,
 				err error,
 			) {
 				require.NoError(t, err)
-				require.Equal(t, newFreightIn, newFreightOut)
+				// The freight collection should be unaltered
+				require.Equal(t, origFreight, promo.Status.FreightCollection)
 			},
 		},
 		{
@@ -99,21 +98,20 @@ func TestGitPromote(t *testing.T) {
 					_ *kargoapi.Stage,
 					_ *kargoapi.Promotion,
 					_ *kargoapi.GitRepoUpdate,
-					newFreight []kargoapi.FreightReference,
-				) (*kargoapi.PromotionStatus, []kargoapi.FreightReference, error) {
-					return nil, newFreight, errors.New("something went wrong")
+				) error {
+					return errors.New("something went wrong")
 				},
 			},
 			assertions: func(
 				t *testing.T,
-				_ *kargoapi.PromotionStatus,
-				newFreightIn []kargoapi.FreightReference,
-				newFreightOut []kargoapi.FreightReference,
+				origFreight *kargoapi.FreightCollection,
+				promo *kargoapi.Promotion,
 				err error,
 			) {
 				require.Error(t, err)
 				require.Equal(t, "something went wrong", err.Error())
-				require.Equal(t, newFreightIn, newFreightOut)
+				// The freight collection should be unaltered
+				require.Equal(t, origFreight, promo.Status.FreightCollection)
 			},
 		},
 		{
@@ -125,39 +123,43 @@ func TestGitPromote(t *testing.T) {
 				doSingleUpdateFn: func(
 					_ context.Context,
 					_ *kargoapi.Stage,
-					_ *kargoapi.Promotion,
+					promo *kargoapi.Promotion,
 					_ *kargoapi.GitRepoUpdate,
-					newFreight []kargoapi.FreightReference,
-				) (*kargoapi.PromotionStatus, []kargoapi.FreightReference, error) {
-					return &kargoapi.PromotionStatus{Phase: kargoapi.PromotionPhaseSucceeded}, newFreight, nil
+				) error {
+					promo.Status.Phase = kargoapi.PromotionPhaseSucceeded
+					return nil
 				},
 			},
 			assertions: func(
 				t *testing.T,
-				_ *kargoapi.PromotionStatus,
-				newFreightIn []kargoapi.FreightReference,
-				newFreightOut []kargoapi.FreightReference,
+				origFreight *kargoapi.FreightCollection,
+				promo *kargoapi.Promotion,
 				err error,
 			) {
 				require.NoError(t, err)
-				require.Equal(t, newFreightIn, newFreightOut)
+				// The freight collection should be unaltered
+				require.Equal(t, origFreight, promo.Status.FreightCollection)
 			},
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			newFreightIn := []kargoapi.FreightReference{}
-			status, newFreightOut, err := testCase.promoMech.Promote(
+			promo := &kargoapi.Promotion{
+				Status: kargoapi.PromotionStatus{
+					FreightCollection: &kargoapi.FreightCollection{},
+				},
+			}
+			origFreight := promo.Status.FreightCollection.DeepCopy()
+			err := testCase.promoMech.Promote(
 				context.Background(),
 				&kargoapi.Stage{
 					Spec: kargoapi.StageSpec{
 						PromotionMechanisms: &kargoapi.PromotionMechanisms{},
 					},
 				},
-				&kargoapi.Promotion{},
-				newFreightIn,
+				promo,
 			)
-			testCase.assertions(t, status, newFreightIn, newFreightOut, err)
+			testCase.assertions(t, origFreight, promo, err)
 		})
 	}
 }
@@ -169,9 +171,8 @@ func TestGitDoSingleUpdate(t *testing.T) {
 		promoMech  *gitMechanism
 		assertions func(
 			t *testing.T,
-			status *kargoapi.PromotionStatus,
-			newFreightIn []kargoapi.FreightReference,
-			newFreightOut []kargoapi.FreightReference,
+			origFreight *kargoapi.FreightCollection,
+			promo *kargoapi.Promotion,
 			err error,
 		)
 	}{
@@ -190,14 +191,14 @@ func TestGitDoSingleUpdate(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *kargoapi.PromotionStatus,
-				newFreightIn []kargoapi.FreightReference,
-				newFreightOut []kargoapi.FreightReference,
+				origFreight *kargoapi.FreightCollection,
+				promo *kargoapi.Promotion,
 				err error,
 			) {
 				require.Error(t, err)
 				require.Equal(t, "something went wrong", err.Error())
-				require.Equal(t, newFreightIn, newFreightOut)
+				// The freight collection should be unaltered
+				require.Equal(t, origFreight, promo.Status.FreightCollection)
 			},
 		},
 		{
@@ -225,14 +226,14 @@ func TestGitDoSingleUpdate(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *kargoapi.PromotionStatus,
-				newFreightIn []kargoapi.FreightReference,
-				newFreightOut []kargoapi.FreightReference,
+				origFreight *kargoapi.FreightCollection,
+				promo *kargoapi.Promotion,
 				err error,
 			) {
 				require.Error(t, err)
 				require.Equal(t, "something went wrong", err.Error())
-				require.Equal(t, newFreightIn, newFreightOut)
+				// The freight collection should be unaltered
+				require.Equal(t, origFreight, promo.Status.FreightCollection)
 			},
 		},
 		{
@@ -260,14 +261,14 @@ func TestGitDoSingleUpdate(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *kargoapi.PromotionStatus,
-				newFreightIn []kargoapi.FreightReference,
-				newFreightOut []kargoapi.FreightReference,
+				origFreight *kargoapi.FreightCollection,
+				promo *kargoapi.Promotion,
 				err error,
 			) {
 				require.Error(t, err)
 				require.Equal(t, "something went wrong", err.Error())
-				require.Equal(t, newFreightIn, newFreightOut)
+				// The freight collection should be unaltered
+				require.Equal(t, origFreight, promo.Status.FreightCollection)
 			},
 		},
 		{
@@ -307,14 +308,14 @@ func TestGitDoSingleUpdate(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *kargoapi.PromotionStatus,
-				newFreightIn []kargoapi.FreightReference,
-				newFreightOut []kargoapi.FreightReference,
+				origFreight *kargoapi.FreightCollection,
+				promo *kargoapi.Promotion,
 				err error,
 			) {
 				require.Error(t, err)
 				require.Equal(t, "something went wrong", err.Error())
-				require.Equal(t, newFreightIn, newFreightOut)
+				// The freight collection should be unaltered
+				require.Equal(t, origFreight, promo.Status.FreightCollection)
 			},
 		},
 		{
@@ -356,38 +357,47 @@ func TestGitDoSingleUpdate(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *kargoapi.PromotionStatus,
-				newFreightIn []kargoapi.FreightReference,
-				newFreightOut []kargoapi.FreightReference,
+				origFreight *kargoapi.FreightCollection,
+				promo *kargoapi.Promotion,
 				err error,
 			) {
 				require.NoError(t, err)
+				origRefs := origFreight.References()
+				updatedRefs := promo.Status.FreightCollection.References()
 				require.Equal(
 					t,
 					"fake-commit-id",
-					newFreightOut[0].Commits[0].HealthCheckCommit,
+					updatedRefs[0].Commits[0].HealthCheckCommit,
 				)
 				// The newFreight is otherwise unaltered
-				newFreightIn[0].Commits[0].HealthCheckCommit = ""
-				require.Equal(t, newFreightIn, newFreightOut)
+				updatedRefs[0].Commits[0].HealthCheckCommit = ""
+				// The freight collection should be unaltered
+				require.Equal(t, origRefs, updatedRefs)
 			},
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			newFreightIn := []kargoapi.FreightReference{{
-				Commits: []kargoapi.GitCommit{{}},
-			}}
-			status, newFreightOut, err := testCase.promoMech.doSingleUpdate(
+			freight := &kargoapi.FreightCollection{}
+			freight.UpdateOrPush(
+				kargoapi.FreightReference{
+					Commits: []kargoapi.GitCommit{{}},
+				},
+			)
+			promo := &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "fake-namespace"},
+				Status: kargoapi.PromotionStatus{
+					FreightCollection: freight,
+				},
+			}
+			origFreight := freight.DeepCopy()
+			err := testCase.promoMech.doSingleUpdate(
 				context.Background(),
 				&kargoapi.Stage{},
-				&kargoapi.Promotion{
-					ObjectMeta: metav1.ObjectMeta{Namespace: "fake-namespace"},
-				},
+				promo,
 				&kargoapi.GitRepoUpdate{RepoURL: "https://github.com/akuity/kargo"},
-				newFreightIn,
 			)
-			testCase.assertions(t, status, newFreightIn, newFreightOut, err)
+			testCase.assertions(t, origFreight, promo, err)
 		})
 	}
 }

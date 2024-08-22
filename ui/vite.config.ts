@@ -13,6 +13,7 @@ const mapToken = defaultAlgorithm(defaultSeed);
 
 export const UI_VERSION = process.env.VERSION || 'development';
 export const API_URL = process.env.API_URL || 'http://localhost:30081';
+export const BUILD_TARGET_PATH = process.env.BUILD_TARGET_PATH || 'build';
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -20,7 +21,7 @@ export default defineConfig({
     __UI_VERSION__: JSON.stringify(UI_VERSION)
   },
   build: {
-    outDir: 'build',
+    outDir: BUILD_TARGET_PATH,
     sourcemap: false
   },
   css: {

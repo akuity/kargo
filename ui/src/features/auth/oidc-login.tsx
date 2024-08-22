@@ -22,7 +22,7 @@ export const OIDCLogin = ({ oidcConfig }: Props) => {
   const issuerUrl = React.useMemo(() => {
     try {
       return new URL(oidcConfig.issuerUrl);
-    } catch (err) {
+    } catch (_) {
       notification.error({
         message: 'Invalid issuerURL',
         placement: 'bottomRight'

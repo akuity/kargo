@@ -105,6 +105,8 @@ export interface ConnectorsType {
   width: number;
   angle: number;
   color: string;
+  from: string;
+  to: string;
 }
 
 export interface BoxType {

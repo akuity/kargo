@@ -3,7 +3,6 @@ package image
 import (
 	"context"
 	"fmt"
-	"regexp"
 	"sort"
 	"sync"
 	"time"
@@ -14,28 +13,16 @@ import (
 // newestBuildSelector implements the Selector interface for
 // SelectionStrategyNewestBuild.
 type newestBuildSelector struct {
-	repoClient     *repositoryClient
-	allowRegex     *regexp.Regexp
-	ignore         []string
-	platform       *platformConstraint
-	discoveryLimit int
+	repoClient *repositoryClient
+	opts       SelectorOptions
 }
 
 // newNewestBuildSelector returns an implementation of the Selector interface
 // for SelectionStrategyNewestBuild.
-func newNewestBuildSelector(
-	repoClient *repositoryClient,
-	allowRegex *regexp.Regexp,
-	ignore []string,
-	platform *platformConstraint,
-	discoveryLimit int,
-) Selector {
+func newNewestBuildSelector(repoClient *repositoryClient, opts SelectorOptions) Selector {
 	return &newestBuildSelector{
-		repoClient:     repoClient,
-		allowRegex:     allowRegex,
-		ignore:         ignore,
-		platform:       platform,
-		discoveryLimit: discoveryLimit,
+		repoClient: repoClient,
+		opts:       opts,
 	}
 }
 
@@ -45,8 +32,8 @@ func (n *newestBuildSelector) Select(ctx context.Context) ([]Image, error) {
 		"registry", n.repoClient.registry.name,
 		"image", n.repoClient.repoURL,
 		"selectionStrategy", SelectionStrategyNewestBuild,
-		"platformConstrained", n.platform != nil,
-		"discoveryLimit", n.discoveryLimit,
+		"platformConstrained", n.opts.platform != nil,
+		"discoveryLimit", n.opts.DiscoveryLimit,
 	)
 	logger.Trace("discovering images")
 
@@ -57,12 +44,12 @@ func (n *newestBuildSelector) Select(ctx context.Context) ([]Image, error) {
 		return nil, err
 	}
 
-	limit := n.discoveryLimit
+	limit := n.opts.DiscoveryLimit
 	if limit == 0 || limit > len(images) {
 		limit = len(images)
 	}
 
-	if n.platform == nil {
+	if n.opts.platform == nil {
 		for _, image := range images[:limit] {
 			logger.Trace(
 				"discovered image",
@@ -87,7 +74,7 @@ func (n *newestBuildSelector) Select(ctx context.Context) ([]Image, error) {
 			break
 		}
 
-		discoveredImage, err := n.repoClient.getImageByDigest(ctx, image.Digest, n.platform)
+		discoveredImage, err := n.repoClient.getImageByDigest(ctx, image.Digest, n.opts.platform)
 		if err != nil {
 			return nil, fmt.Errorf("error retrieving image with digest %q: %w", image.Digest, err)
 		}
@@ -136,10 +123,10 @@ func (n *newestBuildSelector) selectImages(ctx context.Context) ([]Image, error)
 	}
 	logger.Trace("got all tags")
 
-	if n.allowRegex != nil || len(n.ignore) > 0 {
+	if n.opts.allowRegex != nil || len(n.opts.Ignore) > 0 {
 		matchedTags := make([]string, 0, len(tags))
 		for _, tag := range tags {
-			if allowsTag(tag, n.allowRegex) && !ignoresTag(tag, n.ignore) {
+			if allowsTag(tag, n.opts.allowRegex) && !ignoresTag(tag, n.opts.Ignore) {
 				matchedTags = append(matchedTags, tag)
 			}
 		}

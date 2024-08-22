@@ -31,7 +31,8 @@ export const FreightTimeline = ({
   refetchFreight,
   onHover,
   collapsed,
-  setCollapsed
+  setCollapsed,
+  stageCount
 }: {
   freight: Freight[];
   state: PipelineStateHook;
@@ -42,6 +43,7 @@ export const FreightTimeline = ({
   onHover: (hovering: boolean, freightName: string) => void;
   collapsed: CollapseMode;
   setCollapsed: (collapsed: CollapseMode) => void;
+  stageCount: number;
 }) => {
   const navigate = useNavigate();
   const { name: project } = useParams();
@@ -95,6 +97,7 @@ export const FreightTimeline = ({
 
   const currentFreight = useMemo(() => {
     let interveningHiddenFreight = 0;
+    let seenStages = 0;
     if (!collapsed || collapsed === CollapseMode.Expanded) {
       return sortedFreight.map((f) => ({ freight: f }));
     }
@@ -103,14 +106,16 @@ export const FreightTimeline = ({
 
     let i = 0;
     for (const f of sortedFreight) {
-      if ((stagesPerFreight[f?.metadata?.name || ''] || []).length === 0) {
+      const curStageCount = (stagesPerFreight[f?.metadata?.name || ''] || []).length;
+      if (curStageCount === 0) {
         interveningHiddenFreight += 1;
         if (i === sortedFreight.length - 1) {
           filteredFreight.push({ count: interveningHiddenFreight, oldest: true });
-        } else if (collapsed === CollapseMode.HideOld) {
+        } else if (collapsed === CollapseMode.HideOld && seenStages < stageCount) {
           filteredFreight.push({ freight: f });
         }
       } else {
+        seenStages += curStageCount;
         if (collapsed === CollapseMode.HideAll) {
           filteredFreight.push({ count: interveningHiddenFreight });
         }

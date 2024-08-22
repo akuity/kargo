@@ -76,7 +76,7 @@ const YamlEditor: FC<YamlEditorProps> = (props) => {
 
         setManagedFieldsValue(null);
       }
-    } catch (err) {
+    } catch (_) {
       // ignore
     }
   }, [hideManagedFields, value]);

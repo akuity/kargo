@@ -14,6 +14,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/git"
+	libSemver "github.com/akuity/kargo/internal/controller/semver"
 	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/logging"
 )
@@ -254,7 +255,7 @@ func (r *reconciler) discoverTags(repo git.Repo, sub kargoapi.GitSubscription) (
 
 	switch sub.CommitSelectionStrategy {
 	case kargoapi.CommitSelectionStrategySemVer:
-		if tags, err = selectSemVerTags(tags, sub.SemverConstraint); err != nil {
+		if tags, err = selectSemVerTags(tags, sub.StrictSemvers, sub.SemverConstraint); err != nil {
 			return nil, fmt.Errorf("failed to select semver tags: %w", err)
 		}
 	case kargoapi.CommitSelectionStrategyLexical:
@@ -431,7 +432,7 @@ pathLoop:
 	return false, nil
 }
 
-func selectSemVerTags(tags []git.TagMetadata, constraint string) ([]git.TagMetadata, error) {
+func selectSemVerTags(tags []git.TagMetadata, strict bool, constraint string) ([]git.TagMetadata, error) {
 	var svConstraint *semver.Constraints
 	if constraint != "" {
 		var err error
@@ -447,8 +448,8 @@ func selectSemVerTags(tags []git.TagMetadata, constraint string) ([]git.TagMetad
 
 	var svs []semVerTag
 	for _, meta := range tags {
-		sv, err := semver.NewVersion(meta.Tag)
-		if err != nil {
+		sv := libSemver.Parse(meta.Tag, strict)
+		if sv == nil {
 			continue
 		}
 		if svConstraint == nil || svConstraint.Check(sv) {

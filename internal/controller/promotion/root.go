@@ -15,14 +15,8 @@ type Mechanism interface {
 	GetName() string
 	// Promote consults rules in the provided Stage to perform some portion of the
 	// transition to using artifacts from the provided FreightReferences. It
-	// returns updated PromotionStatus and FreightReferences, both of which may
-	// have been updated by the process.
-	Promote(
-		context.Context,
-		*kargoapi.Stage,
-		*kargoapi.Promotion,
-		[]kargoapi.FreightReference,
-	) (*kargoapi.PromotionStatus, []kargoapi.FreightReference, error)
+	// may modify the provided Promotion's status.
+	Promote(context.Context, *kargoapi.Stage, *kargoapi.Promotion) error
 }
 
 // NewMechanisms returns the entrypoint to a hierarchical tree of promotion

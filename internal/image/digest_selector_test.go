@@ -7,15 +7,16 @@ import (
 )
 
 func TestNewDigestSelector(t *testing.T) {
-	const testConstraint = "fake-constraint"
-	testPlatform := &platformConstraint{
-		os:   "linux",
-		arch: "amd64",
+	testOpts := SelectorOptions{
+		Constraint: "fake-constraint",
+		platform: &platformConstraint{
+			os:   "linux",
+			arch: "amd64",
+		},
 	}
-	s, err := newDigestSelector(nil, testConstraint, testPlatform)
+	s, err := newDigestSelector(nil, testOpts)
 	require.NoError(t, err)
 	selector, ok := s.(*digestSelector)
 	require.True(t, ok)
-	require.Equal(t, testConstraint, selector.constraint)
-	require.Equal(t, testPlatform, selector.platform)
+	require.Equal(t, testOpts, selector.opts)
 }

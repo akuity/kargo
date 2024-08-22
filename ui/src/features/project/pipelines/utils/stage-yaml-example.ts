@@ -2,12 +2,15 @@ export const getStageYAMLExample = (namespace: string) =>
   `apiVersion: kargo.akuity.io/v1alpha1
 kind: Stage
 metadata:
-  name: prod
+  name: test
   namespace: ${namespace}
 spec:
-  subscriptions:
-    upstreamStages:
-    - name: uat
+  requestedFreight:
+    - origin:
+        kind: Warehouse
+        name: kargo-demo
+      sources:
+        direct: true
   promotionMechanisms:
     gitRepoUpdates:
     - repoURL: https://github.com/akuity/kargo-demo.git

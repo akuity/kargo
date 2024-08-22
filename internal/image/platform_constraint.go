@@ -28,14 +28,17 @@ func ValidatePlatformConstraint(platformStr string) bool {
 	return err == nil
 }
 
-// parsePlatformConstraint parses a the provided platform constraint string
+// parsePlatformConstraint parses the provided platform constraint string
 // and returns a platformConstraint struct.
-func parsePlatformConstraint(platformStr string) (platformConstraint, error) {
+func parsePlatformConstraint(platformStr string) (*platformConstraint, error) {
+	if platformStr == "" {
+		return nil, nil
+	}
 	tokens := strings.SplitN(platformStr, "/", 3)
 	if len(tokens) < 2 {
-		return platformConstraint{}, fmt.Errorf("error parsing platform constraint %q", platformStr)
+		return nil, fmt.Errorf("error parsing platform constraint %q", platformStr)
 	}
-	platform := platformConstraint{
+	platform := &platformConstraint{
 		os:   tokens[0],
 		arch: tokens[1],
 	}

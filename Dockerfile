@@ -1,7 +1,7 @@
 ####################################################################################################
 # ui-builder
 ####################################################################################################
-FROM --platform=$BUILDPLATFORM docker.io/library/node:22.5.1 AS ui-builder
+FROM --platform=$BUILDPLATFORM docker.io/library/node:22.6.0 AS ui-builder
 
 ARG PNPM_VERSION=9.0.3
 RUN npm install --global pnpm@${PNPM_VERSION}
@@ -18,7 +18,7 @@ RUN NODE_ENV='production' VERSION=${VERSION} pnpm run build
 ####################################################################################################
 # back-end-builder
 ####################################################################################################
-FROM --platform=$BUILDPLATFORM golang:1.22.5-bookworm as back-end-builder
+FROM --platform=$BUILDPLATFORM golang:1.23.0-bookworm AS back-end-builder
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -53,7 +53,7 @@ WORKDIR /kargo/bin
 ####################################################################################################
 # `tools` stage allows us to take the leverage of the parallel build.
 # For example, this stage can be cached and re-used when we have to rebuild code base.
-FROM curlimages/curl:8.9.1 as tools
+FROM curlimages/curl:8.9.1 AS tools
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -68,7 +68,7 @@ RUN GRPC_HEALTH_PROBE_VERSION=v0.4.15 && \
 # base
 # - install necessary packages
 ####################################################################################################
-FROM ghcr.io/akuity/kargo-render:v0.1.0-rc.39 as base
+FROM ghcr.io/akuity/kargo-render:v0.1.0-rc.39 AS base
 
 USER root
 
@@ -88,7 +88,7 @@ CMD ["/usr/local/bin/kargo"]
 # - supports development
 # - not used for official image builds
 ####################################################################################################
-FROM base as back-end-dev
+FROM base AS back-end-dev
 
 USER root
 
@@ -106,7 +106,7 @@ CMD ["/usr/local/bin/kargo"]
 # - supports development
 # - not used for official image builds
 ####################################################################################################
-FROM --platform=$BUILDPLATFORM docker.io/library/node:22.5.1 AS ui-dev
+FROM --platform=$BUILDPLATFORM docker.io/library/node:22.6.0 AS ui-dev
 
 ARG PNPM_VERSION=9.0.3
 RUN npm install --global pnpm@${PNPM_VERSION}
@@ -124,7 +124,7 @@ CMD ["pnpm", "dev"]
 # - the official image we publish
 # - purposefully last so that it is the default target when building
 ####################################################################################################
-FROM base as final
+FROM base AS final
 
 USER root
 
