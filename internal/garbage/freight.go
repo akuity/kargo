@@ -3,7 +3,7 @@ package garbage
 import (
 	"context"
 	"fmt"
-	"sort"
+	"slices"
 	"time"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -87,8 +87,10 @@ func (c *collector) cleanWarehouseFreight(
 		return nil // Done
 	}
 
-	// Sort Freight by creation time
-	sort.Sort(freightByCreation(freight.Items))
+	// Sort by creation timestamp descending
+	slices.SortFunc(freight.Items, func(lhs, rhs kargoapi.Freight) int {
+		return rhs.CreationTimestamp.Time.Compare(lhs.CreationTimestamp.Time)
+	})
 
 	// Step through all Freight and find the oldest that is still in use
 	oldestInUseIndex := -1

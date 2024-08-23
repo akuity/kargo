@@ -107,6 +107,10 @@ func InjectStructFieldTagByJSONName(tagMap TagMap) ast.Visitor {
 			}
 
 			// Sort tags to ensure consistent output
+			//
+			// TODO: structtag.Tags underlying slice is not exported, so it's
+			// exceptionally difficult to sort with slices.SortFunc(). Keep using
+			// sort.Sort() for now.
 			sort.Sort(structTags)
 			field.Tag.Value = fmt.Sprintf("`%s`", structTags.String())
 		},

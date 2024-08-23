@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"sort"
+	"slices"
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
@@ -78,9 +78,16 @@ func DiscoverChartVersions(
 		}
 	}
 
-	// NB: semver.Collection sorts in ascending order by default. We want to
-	// return the versions in descending order.
-	sort.Sort(sort.Reverse(semvers))
+	// Sort versions in descending order
+	slices.SortFunc(semvers, func(lhs, rhs *semver.Version) int {
+		if comp := rhs.Compare(lhs); comp != 0 {
+			return comp
+		}
+		// If the semvers tie, break the tie lexically using the original strings
+		// used to construct the semvers. This ensures a deterministic comparison
+		// of equivalent semvers, e.g., "1.0.0" > "1.0"
+		return strings.Compare(rhs.Original(), lhs.Original())
+	})
 
 	return semVerCollectionToVersions(semvers), nil
 }
