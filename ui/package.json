@@ -43,13 +43,13 @@
     "typescript": "^5.5.4",
     "vite": "^5.3.5",
     "vite-plugin-compression": "^0.5.1",
-    "vite-tsconfig-paths": "^4.3.2",
+    "vite-tsconfig-paths": "^5.0.1",
     "vitest": "^2.0.4",
     "zx": "^8.1.4"
   },
   "packageManager": "pnpm@9.0.3",
   "dependencies": {
-    "@bufbuild/protobuf": "1.10.0",
+    "@bufbuild/protobuf": "2.0.0",
     "@connectrpc/connect": "1.4.0",
     "@connectrpc/connect-query": "1.4.1",
     "@connectrpc/connect-web": "1.4.0",
