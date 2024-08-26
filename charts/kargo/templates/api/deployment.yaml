@@ -165,27 +165,27 @@ spec:
                       path: idp-ca.crt
 {{- end }}
 {{- end }}
-      {{- if .Values.api.cabundle.enabled }}
-      {{- if .Values.api.cabundle.configMapName }}
-      - name: cabundle
-        configMap:
-          name: {{ .Values.api.cabundle.configMapName }}
-      {{- end }}
-      {{- if .Values.api.cabundle.secretName }}
-      - name: cabundle
-        secret:
-          secretName: {{ .Values.api.cabundle.secretName }}
-      {{- end }}
-      {{- if not .Values.api.cabundle.volume.persistentVolumeClaimName }}
-      - name: certs
-        emptyDir: {}
-      {{- end }}
-      {{- if .Values.api.cabundle.volume.persistentVolumeClaimName }}
-      - name: certs
-        persistentVolumeClaim:
-          claimName: {{ .Values.api.cabundle.persistentVolumeClaimName }}
-      {{- end }}
-      {{- end }}
+        {{- if .Values.api.cabundle.enabled }}
+        {{- if .Values.api.cabundle.configMapName }}
+        - name: cabundle
+          configMap:
+            name: {{ .Values.api.cabundle.configMapName }}
+        {{- end }}
+        {{- if .Values.api.cabundle.secretName }}
+        - name: cabundle
+          secret:
+            secretName: {{ .Values.api.cabundle.secretName }}
+        {{- end }}
+        {{- if not .Values.api.cabundle.volume.persistentVolumeClaimName }}
+        - name: certs
+          emptyDir: {}
+        {{- end }}
+        {{- if .Values.api.cabundle.volume.persistentVolumeClaimName }}
+        - name: certs
+          persistentVolumeClaim:
+            claimName: {{ .Values.api.cabundle.persistentVolumeClaimName }}
+        {{- end }}
+        {{- end }}
 {{- end }}
       {{- with .Values.api.nodeSelector | default .Values.global.nodeSelector }}
       nodeSelector:
