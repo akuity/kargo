@@ -5,30 +5,31 @@ import (
 	"maps"
 )
 
-// builtins is the registry of built-in steps.
-var builtins = StepRegistry{}
+// builtins is the registry of built-in directives.
+var builtins = DirectiveRegistry{}
 
-// BuiltinsRegistry returns a registry of built-in steps.
-func BuiltinsRegistry() StepRegistry {
+// BuiltinsRegistry returns a registry of built-in directives.
+func BuiltinsRegistry() DirectiveRegistry {
 	return maps.Clone(builtins)
 }
 
-// StepRegistry is a map of step names to steps. It is used to register and
-// retrieve steps by name.
-type StepRegistry map[string]Step
+// DirectiveRegistry is a map of directive names to directives. It is used to
+// register and retrieve directives by name.
+type DirectiveRegistry map[string]Directive
 
-// RegisterStep registers a step with the given name. If a step with the same
-// name has already been registered, it will be overwritten.
-func (r StepRegistry) RegisterStep(step Step) {
-	r[step.Name()] = step
+
+// RegisterDirective registers a Directive with the given name. If a Directive
+// with the same name has already been registered, it will be overwritten.
+func (r DirectiveRegistry) RegisterDirective(directive Directive) {
+	r[directive.Name()] = directive
 }
 
-// GetStep returns the step with the given name, or an error if no such step
-// exists.
-func (r StepRegistry) GetStep(name string) (Step, error) {
+// GetDirective returns the Directive with the given name, or an error if no
+// such Directive exists.
+func (r DirectiveRegistry) GetDirective(name string) (Directive, error) {
 	step, ok := r[name]
 	if !ok {
-		return nil, fmt.Errorf("step %q not found", name)
+		return nil, fmt.Errorf("directive %q not found", name)
 	}
 	return step, nil
 }

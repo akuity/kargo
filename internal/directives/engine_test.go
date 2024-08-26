@@ -12,19 +12,19 @@ import (
 func TestEngine_Execute(t *testing.T) {
 	tests := []struct {
 		name         string
-		directives   []Directive
-		initRegistry func() StepRegistry
+		directives   []Step
+		initRegistry func() DirectiveRegistry
 		ctx          context.Context
 		assertions   func(t *testing.T, result Result, err error)
 	}{
 		{
 			name: "success: single directive",
-			directives: []Directive{
-				{Step: "mock"},
+			directives: []Step{
+				{Directive: "mock"},
 			},
-			initRegistry: func() StepRegistry {
-				registry := make(StepRegistry)
-				registry.RegisterStep(&mockStep{
+			initRegistry: func() DirectiveRegistry {
+				registry := make(DirectiveRegistry)
+				registry.RegisterDirective(&mockDirective{
 					name:      "mock",
 					runResult: ResultSuccess,
 				})
@@ -38,17 +38,17 @@ func TestEngine_Execute(t *testing.T) {
 		},
 		{
 			name: "success: multiple directives",
-			directives: []Directive{
-				{Step: "mock1"},
-				{Step: "mock2"},
+			directives: []Step{
+				{Directive: "mock1"},
+				{Directive: "mock2"},
 			},
-			initRegistry: func() StepRegistry {
-				registry := make(StepRegistry)
-				registry.RegisterStep(&mockStep{
+			initRegistry: func() DirectiveRegistry {
+				registry := make(DirectiveRegistry)
+				registry.RegisterDirective(&mockDirective{
 					name:      "mock1",
 					runResult: ResultSuccess,
 				})
-				registry.RegisterStep(&mockStep{
+				registry.RegisterDirective(&mockDirective{
 					name:      "mock2",
 					runResult: ResultSuccess,
 				})
@@ -61,12 +61,12 @@ func TestEngine_Execute(t *testing.T) {
 			},
 		},
 		{
-			name: "failure: step not found",
-			directives: []Directive{
-				{Step: "unknown"},
+			name: "failure: directive not found",
+			directives: []Step{
+				{Directive: "unknown"},
 			},
-			initRegistry: func() StepRegistry {
-				return make(StepRegistry)
+			initRegistry: func() DirectiveRegistry {
+				return make(DirectiveRegistry)
 			},
 			ctx: context.Background(),
 			assertions: func(t *testing.T, result Result, err error) {
@@ -75,13 +75,13 @@ func TestEngine_Execute(t *testing.T) {
 			},
 		},
 		{
-			name: "failure: step returns error",
-			directives: []Directive{
-				{Step: "failing", Alias: "alias1", Config: map[string]any{"key": "value"}},
+			name: "failure: directive returns error",
+			directives: []Step{
+				{Directive: "failing", Alias: "alias1", Config: map[string]any{"key": "value"}},
 			},
-			initRegistry: func() StepRegistry {
-				registry := make(StepRegistry)
-				registry.RegisterStep(&mockStep{
+			initRegistry: func() DirectiveRegistry {
+				registry := make(DirectiveRegistry)
+				registry.RegisterDirective(&mockDirective{
 					name:      "failing",
 					runResult: ResultFailure,
 					runErr:    errors.New("something went wrong"),
@@ -96,13 +96,13 @@ func TestEngine_Execute(t *testing.T) {
 		},
 		{
 			name: "failure: context canceled",
-			directives: []Directive{
-				{Step: "mock"},
-				{Step: "mock"}, // This step should not be executed
+			directives: []Step{
+				{Directive: "mock"},
+				{Directive: "mock"}, // This directive should not be executed
 			},
-			initRegistry: func() StepRegistry {
-				registry := make(StepRegistry)
-				registry.RegisterStep(&mockStep{
+			initRegistry: func() DirectiveRegistry {
+				registry := make(DirectiveRegistry)
+				registry.RegisterDirective(&mockDirective{
 					name: "mock",
 					runFunc: func(ctx context.Context, _ *StepContext) (Result, error) {
 						<-ctx.Done() // Wait for context to be canceled

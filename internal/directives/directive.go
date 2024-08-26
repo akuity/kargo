@@ -53,24 +53,24 @@ func (c Config) DeepCopy() Config {
 	return runtime.DeepCopyJSON(c)
 }
 
-// Result is a type that represents the result of a step.
+// Result is a type that represents the result of a Directive.
 type Result string
 
 const (
-	// ResultSuccess is the result of a successful step.
+	// ResultSuccess is the result of a successful directive.
 	ResultSuccess Result = "Success"
-	// ResultFailure is the result of a failed step.
+	// ResultFailure is the result of a failed directive.
 	ResultFailure Result = "Failure"
 )
 
-// Step is an interface that represents a single step in a list of directives
-// that should be executed in sequence. Each step is responsible for executing
-// a specific action, and may modify the provided context to allow subsequent
-// steps to access the results of its execution.
-type Step interface {
-	// Name returns the name of the step.
+// Directive is an interface that a directive must implement. A directive is
+// a responsible for executing a specific action, and may modify the provided
+// context to allow subsequent directives to access the results of its
+// execution.
+type Directive interface {
+	// Name returns the name of the directive.
 	Name() string
-	// Run executes the step using the provided context and configuration.
+	// Run executes the directive using the provided context and configuration.
 	Run(ctx context.Context, stepCtx *StepContext) (Result, error)
 }
 
