@@ -176,15 +176,8 @@ spec:
           secret:
             secretName: {{ .Values.api.cabundle.secretName }}
         {{- end }}
-        {{- if not .Values.api.cabundle.volume.persistentVolumeClaimName }}
         - name: certs
           emptyDir: {}
-        {{- end }}
-        {{- if .Values.api.cabundle.volume.persistentVolumeClaimName }}
-        - name: certs
-          persistentVolumeClaim:
-            claimName: {{ .Values.api.cabundle.persistentVolumeClaimName }}
-        {{- end }}
         {{- end }}
 {{- end }}
       {{- with .Values.api.nodeSelector | default .Values.global.nodeSelector }}

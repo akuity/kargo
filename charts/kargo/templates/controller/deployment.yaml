@@ -144,15 +144,8 @@ spec:
         secret:
           secretName: {{ .Values.controller.cabundle.secretName }}
       {{- end }}
-      {{- if not .Values.controller.cabundle.volume.persistentVolumeClaimName }}
       - name: certs
         emptyDir: {}
-      {{- end }}
-      {{- if .Values.controller.cabundle.volume.persistentVolumeClaimName }}
-      - name: certs
-        persistentVolumeClaim:
-          claimName: {{ .Values.controller.cabundle.persistentVolumeClaimName }}
-      {{- end }}
       {{- end }}
       {{- if .Values.controller.gitClient.signingKeySecret.name }}
       - name: git

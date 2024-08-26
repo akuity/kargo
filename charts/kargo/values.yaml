@@ -130,9 +130,6 @@ api:
     configMapName: ""
     ## @param api.cabundle.secretName If a secret holds the cabundle certs then specify the name of the secret
     secretName: ""
-    volume:
-      ## @param api.cabundle.volume.persistentVolumeClaimName By default emptyDir is used for the certs volume, optionally a persistentVolumeClaim may be used instead
-      persistentVolumeClaimName: ""
   ## @param api.env Environment variables to add to API server pods.
   env: []
   #  - name: ENV_NAME
@@ -390,9 +387,6 @@ controller:
     configMapName: ""
     ## @param controller.cabundle.secretName If a secret holds the cabundle certs then specify the name of the secret
     secretName: ""
-    volume:
-      ## @param controller.cabundle.volume.persistentVolumeClaimName By default emptyDir is used for the certs volume, optionally a persistentVolumeClaim may be used instead
-      persistentVolumeClaimName: ""
 
   ## @param controller.shardName [nullable] Set a shard name only if you are running multiple controllers backed by a single underlying control plane. Setting a shard name will cause this controller to operate **only** on resources with a matching shard name. Leaving the shard name undefined will designate this controller as the default controller that is responsible exclusively for resources that are **not** assigned to a specific shard. Leaving this undefined is the correct choice when you are not using sharding at all. It is also the correct setting if you are using sharding and want to designate a controller as the default for handling resources not assigned to a specific shard. In most cases, this setting should simply be left alone.
   # shardName:
