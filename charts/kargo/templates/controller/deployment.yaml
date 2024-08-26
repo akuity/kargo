@@ -102,7 +102,6 @@ spec:
         - |
           for FILE in /tmp/source/*; do awk 'BEGIN {c=0;} /BEGIN CERT/{c++} { print > "/usr/local/share/ca-certificates/cert." c ".crt"}' < $FILE; done
           /usr/sbin/update-ca-certificates
-          rm -rf /tmp/target/*
           cp -r /etc/ssl/certs/* /tmp/target/
         volumeMounts:
         - name: cabundle
