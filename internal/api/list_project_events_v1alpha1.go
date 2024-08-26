@@ -3,7 +3,7 @@ package api
 import (
 	"context"
 	"fmt"
-	"sort"
+	"slices"
 
 	"connectrpc.com/connect"
 	corev1 "k8s.io/api/core/v1"
@@ -44,8 +44,9 @@ func (s *server) ListProjectEvents(
 		return nil, fmt.Errorf("list events: %w", err)
 	}
 
-	sort.Slice(eventsList.Items, func(i, j int) bool {
-		return eventsList.Items[i].LastTimestamp.Time.After(eventsList.Items[j].LastTimestamp.Time)
+	// Sort descending by last timestamp
+	slices.SortFunc(eventsList.Items, func(lhs, rhs corev1.Event) int {
+		return rhs.LastTimestamp.Time.Compare(lhs.LastTimestamp.Time)
 	})
 
 	events := make([]*corev1.Event, len(eventsList.Items))

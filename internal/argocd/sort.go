@@ -1,7 +1,8 @@
 package argocd
 
 import (
-	"sort"
+	"slices"
+	"strings"
 
 	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
 )
@@ -20,26 +21,27 @@ var operationPhaseOrder = map[argocd.OperationPhase]uint{
 
 type ByOperationPhase []argocd.OperationPhase
 
-func (a ByOperationPhase) Len() int { return len(a) }
+func (a ByOperationPhase) Sort() {
+	slices.SortFunc(a, func(lhs, rhs argocd.OperationPhase) int {
+		orderLhs, existsLhs := operationPhaseOrder[lhs]
+		orderRhs, existsRhs := operationPhaseOrder[rhs]
 
-func (a ByOperationPhase) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+		// If both elements exist in the order map, compare their order values.
+		if existsLhs && existsRhs {
+			// The max value is 4, so we can safely cast to int without worrying about
+			// overflow.
+			return int(orderLhs) - int(orderRhs) // nolint: gosec
+		}
 
-func (a ByOperationPhase) Less(i, j int) bool {
-	orderI, existsI := operationPhaseOrder[a[i]]
-	orderJ, existsJ := operationPhaseOrder[a[j]]
+		// If neither element exists, sort them lexicographically.
+		if !existsLhs && !existsRhs {
+			return strings.Compare(string(lhs), string(rhs))
+		}
 
-	// If both elements exist in the order map, compare their order values.
-	if existsI && existsJ {
-		return orderI < orderJ
-	}
-
-	// If neither element exists, sort them lexicographically.
-	if !existsI && !existsJ {
-		return a[i] < a[j]
-	}
-
-	// If only one element exists, prioritize the existing element.
-	return existsI
+		// If only one element exists, prioritize the existing element.
+		if existsLhs {
+			return -1
+		}
+		return 1
+	})
 }
-
-func (a ByOperationPhase) Sort() { sort.Sort(a) }

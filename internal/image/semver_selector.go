@@ -3,7 +3,8 @@ package image
 import (
 	"context"
 	"fmt"
-	"sort"
+	"slices"
+	"strings"
 
 	"github.com/Masterminds/semver/v3"
 
@@ -149,13 +150,13 @@ func (s *semVerSelector) selectImages(ctx context.Context) ([]Image, error) {
 // sortImagesBySemVer sorts the provided Images in place, in descending order by
 // semantic version.
 func sortImagesBySemVer(images []Image) {
-	sort.Slice(images, func(i, j int) bool {
-		if comp := images[i].semVer.Compare(images[j].semVer); comp != 0 {
-			return comp > 0
+	slices.SortFunc(images, func(lhs, rhs Image) int {
+		if comp := rhs.semVer.Compare(lhs.semVer); comp != 0 {
+			return comp
 		}
 		// If the semvers tie, break the tie lexically using the original strings
 		// used to construct the semvers. This ensures a deterministic comparison
-		// of equivalent semvers, e.g., 1.0 and 1.0.0.
-		return images[i].semVer.Original() > images[j].semVer.Original()
+		// of equivalent semvers, e.g., "1.0.0" > "1.0"
+		return strings.Compare(rhs.semVer.Original(), lhs.semVer.Original())
 	})
 }

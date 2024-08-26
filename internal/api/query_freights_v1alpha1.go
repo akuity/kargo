@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"path"
 	"slices"
-	"sort"
 	"strings"
 
 	"connectrpc.com/connect"
@@ -341,52 +340,31 @@ func appendToFreightList(list *svcv1alpha1.FreightList, f kargoapi.Freight) *svc
 	return list
 }
 
-func sortFreightGroups(orderBy string, reverse bool, groups map[string]*svcv1alpha1.FreightList) {
-	for k := range groups {
-		var dataToSort sort.Interface
-		switch orderBy {
-		case OrderByTag:
-			dataToSort = ByTag(groups[k].Freight)
-		default:
-			dataToSort = ByFirstSeen(groups[k].Freight)
-		}
-		if reverse {
-			dataToSort = sort.Reverse(dataToSort)
-		}
-		sort.Sort(dataToSort)
-	}
-}
-
-type ByFirstSeen []*kargoapi.Freight
-
-func (a ByFirstSeen) Len() int      { return len(a) }
-func (a ByFirstSeen) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
-func (a ByFirstSeen) Less(i, j int) bool {
-	return a[i].CreationTimestamp.Time.Before(a[j].CreationTimestamp.Time)
-}
-
 // NOTE: sorting by tag will sort by the first container image we found
 // or the first helm chart we found in the freight.
 //
 // TODO: KR: We might want to think about whether the current sorting behavior
 // is useful at all, given the limitations noted above.
-type ByTag []*kargoapi.Freight
-
-func (a ByTag) Len() int      { return len(a) }
-func (a ByTag) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
-func (a ByTag) Less(i, j int) bool {
-	iRepo, iTag, iVer := getRepoAndTag(a[i])
-	jRepo, jTag, jVer := getRepoAndTag(a[j])
-	// Only compare the two freight if we are comparing against the same repository
-	if iRepo == jRepo {
-		if iVer != nil && jVer != nil {
-			return iVer.LessThan(jVer)
+func sortFreightGroups(orderBy string, reverse bool, groups map[string]*svcv1alpha1.FreightList) {
+	for k := range groups {
+		slices.SortFunc(groups[k].Freight, func(lhs, rhs *kargoapi.Freight) int {
+			if orderBy == OrderByTag {
+				lhsRepo, lhsTag, lhsVer := getRepoAndTag(lhs)
+				rhsRepo, rhsTag, rhsVer := getRepoAndTag(rhs)
+				// Only compare by tag if the repos are the same
+				if lhsRepo == rhsRepo {
+					if lhsVer != nil && rhsVer != nil {
+						return lhsVer.Compare(rhsVer)
+					}
+					return strings.Compare(lhsTag, rhsTag)
+				}
+			}
+			return lhs.CreationTimestamp.Time.Compare(rhs.CreationTimestamp.Time)
+		})
+		if reverse {
+			slices.Reverse(groups[k].Freight)
 		}
-		// repo is the same, but tags are not a semver. do lexicographical comparison
-		return iTag < jTag
 	}
-	// They are not comparable. Fallback to firstSeen
-	return a[i].CreationTimestamp.Time.Before(a[j].CreationTimestamp.Time)
 }
 
 func getRepoAndTag(s *kargoapi.Freight) (string, string, *semver.Version) {
