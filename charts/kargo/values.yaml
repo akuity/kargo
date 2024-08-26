@@ -122,7 +122,6 @@ api:
   affinity: {}
   ## @param api.securityContext Security context for api pods. Defaults to `global.securityContext`.
   securityContext: {}
-  ## @param api.cabundle Mount a cabundle supplied via either a configMap or secret.  All items within the resource will be added to the trusted certs folder.
   cabundle:
     ## @param api.cabundle.enabled Whether or not a cabundle is being provided to mount within the controller
     enabled: false
@@ -379,7 +378,6 @@ controller:
   ## @param controller.securityContext Security context for controller pods. Defaults to `global.securityContext`.
   securityContext: {}
 
-  ## @param controller.cabundle Mount a cabundle supplied via either a configMap or secret.  All items within the resource will be added to the trusted certs folder.
   cabundle:
     ## @param controller.cabundle.enabled Whether or not a cabundle is being provided to mount within the controller
     enabled: false
