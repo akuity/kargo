@@ -1,21 +1,24 @@
+include $(CURDIR)/hack/tools.mk
+
 SHELL ?= /bin/bash
 
-ARGO_CD_CHART_VERSION := 6.9.2
+ARGO_CD_CHART_VERSION		:= 6.9.2
 ARGO_ROLLOUTS_CHART_VERSION := 2.35.2
-BUF_LINT_ERROR_FORMAT ?= text
-GO_LINT_ERROR_FORMAT ?= colored-line-number
-CERT_MANAGER_CHART_VERSION := 1.14.5
+CERT_MANAGER_CHART_VERSION 	:= 1.14.5
+
+BUF_LINT_ERROR_FORMAT	?= text
+GO_LINT_ERROR_FORMAT 	?= colored-line-number
 
 VERSION_PACKAGE := github.com/akuity/kargo/internal/version
 
 # Default to docker, but support alternative container runtimes that are CLI-compatible with Docker
 CONTAINER_RUNTIME ?= docker
 
-IMAGE_REPO ?= kargo
-IMAGE_TAG ?= dev
-IMAGE_PUSH ?= false
-IMAGE_PLATFORMS =
-DOCKER_BUILD_OPTS =
+IMAGE_REPO 			?= kargo
+IMAGE_TAG 			?= dev
+IMAGE_PUSH 			?= false
+IMAGE_PLATFORMS 	=
+DOCKER_BUILD_OPTS 	=
 
 # Intelligently choose to build a multi-arch image if the intent is to push to a
 # container registry (IMAGE_PUSH=true). If not pushing, build an single-arch
@@ -64,24 +67,24 @@ lint: lint-go lint-proto lint-charts lint-ui
 format: format-go format-ui
 
 .PHONY: lint-go
-lint-go:
-	golangci-lint run --out-format=$(GO_LINT_ERROR_FORMAT)
+lint-go: install-golangci-lint
+	$(GOLANGCI_LINT) run --out-format=$(GO_LINT_ERROR_FORMAT)
 
 .PHONY: format-go
 format-go:
 	golangci-lint run --fix
 
 .PHONY: lint-proto
-lint-proto:
+lint-proto: install-buf
 	# Vendor go dependencies to build protobuf definitions
 	go mod vendor
-	buf lint api --error-format=$(BUF_LINT_ERROR_FORMAT)
+	$(BUF) lint api --error-format=$(BUF_LINT_ERROR_FORMAT)
 
 .PHONY: lint-charts
-lint-charts:
+lint-charts: install-helm
 	cd charts/kargo && \
-	helm dep up && \
-	helm lint .
+	$(HELM) dep up && \
+	$(HELM) lint .
 
 .PHONY: lint-ui
 lint-ui:
@@ -152,14 +155,14 @@ build-cli-with-ui: build-ui build-cli
 codegen: codegen-proto codegen-controller codegen-ui codegen-docs
 
 .PHONY: codegen-controller
-codegen-controller:
-	controller-gen \
+codegen-controller: install-controller-gen
+	$(CONTROLLER_GEN) \
 		rbac:roleName=manager-role \
 		crd \
 		webhook \
 		paths=./api/v1alpha1/... \
 		output:crd:artifacts:config=charts/kargo/resources/crds
-	controller-gen \
+	$(CONTROLLER_GEN) \
 		object:headerFile=hack/boilerplate.go.txt \
 		paths=./...
 
@@ -169,7 +172,7 @@ codegen-docs:
 	bash hack/helm-docs/helm-docs.sh
 
 .PHONY: codegen-proto
-codegen-proto:
+codegen-proto: install-protoc install-go-to-protobuf install-protoc-gen-gogo install-goimports install-buf
 	./hack/codegen/proto.sh
 
 .PHONY: codegen-ui
@@ -198,9 +201,17 @@ DOCKER_CMD := $(CONTAINER_RUNTIME) run \
 	kargo:dev-tools
 
 DEV_TOOLS_BUILD_OPTS =
+
+# Intelligently choose to load the image into the local Docker daemon
+# depending on whether or not Docker Buildx is available.
+BUILDX_AVAILABLE ?= $(shell $(CONTAINER_RUNTIME) buildx inspect >/dev/null 2>&1 && echo true || echo false)
+ifeq ($(BUILDX_AVAILABLE),true)
+	override DEV_TOOLS_BUILD_OPTS += --load
+endif
+
 ifeq ($(GOOS),linux)
-	DEV_TOOLS_BUILD_OPTS += --build-arg USER_ID=$(shell id -u)
-	DEV_TOOLS_BUILD_OPTS += --build-arg GROUP_ID=$(shell id -g)
+	override DEV_TOOLS_BUILD_OPTS += --build-arg USER_ID=$(shell id -u)
+	override DEV_TOOLS_BUILD_OPTS += --build-arg GROUP_ID=$(shell id -g)
 endif
 
 .PHONY: hack-build-dev-tools
@@ -286,8 +297,8 @@ hack-k3d-down:
 hack-install-prereqs: hack-install-cert-manager hack-install-argocd hack-install-argo-rollouts
 
 .PHONY: hack-install-cert-manager
-hack-install-cert-manager:
-	helm upgrade cert-manager cert-manager \
+hack-install-cert-manager: install-helm
+	$(HELM) upgrade cert-manager cert-manager \
 		--repo https://charts.jetstack.io \
 		--version $(CERT_MANAGER_CHART_VERSION) \
 		--install \
@@ -297,8 +308,8 @@ hack-install-cert-manager:
 		--wait
 
 .PHONY: hack-install-argocd
-hack-install-argocd:
-	helm upgrade argocd argo-cd \
+hack-install-argocd: install-helm
+	$(HELM) upgrade argocd argo-cd \
 		--repo https://argoproj.github.io/argo-helm \
 		--version $(ARGO_CD_CHART_VERSION) \
 		--install \
@@ -314,8 +325,8 @@ hack-install-argocd:
 		--wait
 
 .PHONY: hack-install-argo-rollouts
-hack-install-argo-rollouts:
-	helm upgrade argo-rollouts argo-rollouts \
+hack-install-argo-rollouts: install-helm
+	$(HELM) upgrade argo-rollouts argo-rollouts \
 		--repo https://argoproj.github.io/argo-helm \
 		--version $(ARGO_ROLLOUTS_CHART_VERSION) \
 		--install \
@@ -327,16 +338,16 @@ hack-install-argo-rollouts:
 hack-uninstall-prereqs: hack-uninstall-argo-rollouts hack-uninstall-argocd hack-uninstall-cert-manager
 
 .PHONY: hack-uninstall-argo-rollouts
-hack-uninstall-argo-rollouts:
-	helm delete argo-rollouts --namespace argo-rollouts
+hack-uninstall-argo-rollouts: install-helm
+	$(HELM) delete argo-rollouts --namespace argo-rollouts
 
 .PHONY: hack-uninstall-argocd
-hack-uninstall-argocd:
-	helm delete argocd --namespace argocd
+hack-uninstall-argocd: install-helm
+	$(HELM) delete argocd --namespace argocd
 
 .PHONY: hack-uninstall-cert-manager
-hack-uninstall-cert-manager:
-	helm delete cert-manager --namespace cert-manager
+hack-uninstall-cert-manager: install-helm
+	$(HELM) delete cert-manager --namespace cert-manager
 
 .PHONY: start-api-local
 start-api-local:
