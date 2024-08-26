@@ -124,7 +124,10 @@ spec:
         - "-c"
         args:
         - |
-          for FILE in /tmp/source/*; do awk 'BEGIN {c=0;} /BEGIN CERT/{c++} { print > "/usr/local/share/ca-certificates/cert." c ".crt"}' < $FILE; done
+          for file in /tmp/source/*; do
+            base_filename=$(basename "$file" .crt)
+            awk 'BEGIN {c=0;} /BEGIN CERT/{c++} { print > "/usr/local/share/ca-certificates/" base_filename "." c ".crt"}' base_filename="$base_filename" < $file
+          done
           /usr/sbin/update-ca-certificates
           cp -r /etc/ssl/certs/* /tmp/target/
         volumeMounts:
