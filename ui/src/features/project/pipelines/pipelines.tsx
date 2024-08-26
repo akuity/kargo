@@ -17,7 +17,7 @@ import {
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button, Dropdown, Spin, Tooltip, message } from 'antd';
-import React, { Suspense, lazy, useMemo } from 'react';
+import React, { Suspense, lazy, useEffect, useMemo } from 'react';
 import { generatePath, useNavigate, useParams } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
@@ -29,12 +29,15 @@ const FreightTimeline = lazy(() => import('@ui/features/freight-timeline/freight
 const StageDetails = lazy(() => import('@ui/features/stage/stage-details'));
 import { SuspenseSpin } from '@ui/features/common/suspense-spin';
 import { getCurrentFreight } from '@ui/features/common/utils';
-import { FreightTimelineHeader } from '@ui/features/freight-timeline/freight-timeline-header';
+const FreightTimelineHeader = lazy(
+  () => import('@ui/features/freight-timeline/freight-timeline-header')
+);
 import { FreightTimelineWrapper } from '@ui/features/freight-timeline/freight-timeline-wrapper';
 import { clearColors } from '@ui/features/stage/utils';
 import {
   approveFreight,
   listStages,
+  listImages,
   listWarehouses,
   promoteToStage,
   queryFreight,
@@ -50,7 +53,7 @@ import { Images } from './images';
 import { RepoNode, RepoNodeDimensions } from './nodes/repo-node';
 import { Nodule, StageNode } from './nodes/stage-node';
 import styles from './project-details.module.less';
-import { FreightTimelineAction, NodeType } from './types';
+import { CollapseMode, FreightTimelineAction, NodeType } from './types';
 import { LINE_THICKNESS } from './utils/graph';
 import { isPromoting, usePipelineState } from './utils/state';
 import { usePipelineGraph } from './utils/use-pipeline-graph';
@@ -62,6 +65,7 @@ const WarehouseDetails = lazy(() => import('./warehouse/warehouse-details'));
 export const Pipelines = ({ project }: { project: Project }) => {
   const { name, stageName, freightName, warehouseName } = useParams();
   const { data, isLoading } = useQuery(listStages, { project: name });
+  const { data: imageData, isLoading: isLoadingImages } = useQuery(listImages, { project: name });
   const navigate = useNavigate();
   const {
     data: freightData,
@@ -115,9 +119,22 @@ export const Pipelines = ({ project }: { project: Project }) => {
   );
 
   const [selectedWarehouse, setSelectedWarehouse] = React.useState('');
-  const [freightTimelineCollapsed, setFreightTimelineCollapsed] = React.useState(false);
+  const [freightTimelineCollapsed, setFreightTimelineCollapsed] = React.useState(
+    CollapseMode.Expanded
+  );
 
-  const [hideImages, setHideImages] = useLocalStorage(`${name}-hideImages`, false);
+  const [hideImages, setHideImages] = useLocalStorage(
+    `${name}-hide-images`,
+    Object.keys(imageData?.images || {}).length
+  );
+  const [isNew, setIsNew] = useLocalStorage(`${name}-is-new`, false);
+
+  useEffect(() => {
+    if (Object.keys(imageData?.images || {}).length > 0 && isNew) {
+      setIsNew(false);
+      setHideImages(false);
+    }
+  }, [imageData?.images]);
 
   const warehouseMap = useMemo(() => {
     const map = {} as { [key: string]: Warehouse };
@@ -212,7 +229,7 @@ export const Pipelines = ({ project }: { project: Project }) => {
     return freightMap;
   }, [freightData]);
 
-  if (isLoading || isLoadingFreight) return <LoadingState />;
+  if (isLoading || isLoadingFreight || isLoadingImages) return <LoadingState />;
 
   const stage = stageName && (data?.stages || []).find((item) => item.metadata?.name === stageName);
   const freight = freightName && fullFreightById[freightName];
@@ -293,6 +310,7 @@ export const Pipelines = ({ project }: { project: Project }) => {
                 stagesPerFreight={stagesPerFreight}
                 collapsed={freightTimelineCollapsed}
                 setCollapsed={setFreightTimelineCollapsed}
+                stageCount={data?.stages.length || 0}
               />
             </Suspense>
           </FreightTimelineWrapper>
@@ -560,6 +578,7 @@ export const Pipelines = ({ project }: { project: Project }) => {
                 project={name as string}
                 stages={sortedStages || []}
                 hide={() => setHideImages(true)}
+                images={imageData?.images || {}}
               />
             </div>
           )}

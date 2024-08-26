@@ -57,6 +57,8 @@ const (
 	KargoServiceDeleteResourceProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/DeleteResource"
 	// KargoServiceListStagesProcedure is the fully-qualified name of the KargoService's ListStages RPC.
 	KargoServiceListStagesProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/ListStages"
+	// KargoServiceListImagesProcedure is the fully-qualified name of the KargoService's ListImages RPC.
+	KargoServiceListImagesProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/ListImages"
 	// KargoServiceGetStageProcedure is the fully-qualified name of the KargoService's GetStage RPC.
 	KargoServiceGetStageProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/GetStage"
 	// KargoServiceWatchStagesProcedure is the fully-qualified name of the KargoService's WatchStages
@@ -186,6 +188,7 @@ var (
 	kargoServiceUpdateResourceMethodDescriptor         = kargoServiceServiceDescriptor.Methods().ByName("UpdateResource")
 	kargoServiceDeleteResourceMethodDescriptor         = kargoServiceServiceDescriptor.Methods().ByName("DeleteResource")
 	kargoServiceListStagesMethodDescriptor             = kargoServiceServiceDescriptor.Methods().ByName("ListStages")
+	kargoServiceListImagesMethodDescriptor             = kargoServiceServiceDescriptor.Methods().ByName("ListImages")
 	kargoServiceGetStageMethodDescriptor               = kargoServiceServiceDescriptor.Methods().ByName("GetStage")
 	kargoServiceWatchStagesMethodDescriptor            = kargoServiceServiceDescriptor.Methods().ByName("WatchStages")
 	kargoServiceDeleteStageMethodDescriptor            = kargoServiceServiceDescriptor.Methods().ByName("DeleteStage")
@@ -243,6 +246,7 @@ type KargoServiceClient interface {
 	UpdateResource(context.Context, *connect.Request[v1alpha1.UpdateResourceRequest]) (*connect.Response[v1alpha1.UpdateResourceResponse], error)
 	DeleteResource(context.Context, *connect.Request[v1alpha1.DeleteResourceRequest]) (*connect.Response[v1alpha1.DeleteResourceResponse], error)
 	ListStages(context.Context, *connect.Request[v1alpha1.ListStagesRequest]) (*connect.Response[v1alpha1.ListStagesResponse], error)
+	ListImages(context.Context, *connect.Request[v1alpha1.ListImagesRequest]) (*connect.Response[v1alpha1.ListImagesResponse], error)
 	GetStage(context.Context, *connect.Request[v1alpha1.GetStageRequest]) (*connect.Response[v1alpha1.GetStageResponse], error)
 	WatchStages(context.Context, *connect.Request[v1alpha1.WatchStagesRequest]) (*connect.ServerStreamForClient[v1alpha1.WatchStagesResponse], error)
 	DeleteStage(context.Context, *connect.Request[v1alpha1.DeleteStageRequest]) (*connect.Response[v1alpha1.DeleteStageResponse], error)
@@ -349,6 +353,12 @@ func NewKargoServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			httpClient,
 			baseURL+KargoServiceListStagesProcedure,
 			connect.WithSchema(kargoServiceListStagesMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		listImages: connect.NewClient[v1alpha1.ListImagesRequest, v1alpha1.ListImagesResponse](
+			httpClient,
+			baseURL+KargoServiceListImagesProcedure,
+			connect.WithSchema(kargoServiceListImagesMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
 		getStage: connect.NewClient[v1alpha1.GetStageRequest, v1alpha1.GetStageResponse](
@@ -617,6 +627,7 @@ type kargoServiceClient struct {
 	updateResource         *connect.Client[v1alpha1.UpdateResourceRequest, v1alpha1.UpdateResourceResponse]
 	deleteResource         *connect.Client[v1alpha1.DeleteResourceRequest, v1alpha1.DeleteResourceResponse]
 	listStages             *connect.Client[v1alpha1.ListStagesRequest, v1alpha1.ListStagesResponse]
+	listImages             *connect.Client[v1alpha1.ListImagesRequest, v1alpha1.ListImagesResponse]
 	getStage               *connect.Client[v1alpha1.GetStageRequest, v1alpha1.GetStageResponse]
 	watchStages            *connect.Client[v1alpha1.WatchStagesRequest, v1alpha1.WatchStagesResponse]
 	deleteStage            *connect.Client[v1alpha1.DeleteStageRequest, v1alpha1.DeleteStageResponse]
@@ -705,6 +716,11 @@ func (c *kargoServiceClient) DeleteResource(ctx context.Context, req *connect.Re
 // ListStages calls akuity.io.kargo.service.v1alpha1.KargoService.ListStages.
 func (c *kargoServiceClient) ListStages(ctx context.Context, req *connect.Request[v1alpha1.ListStagesRequest]) (*connect.Response[v1alpha1.ListStagesResponse], error) {
 	return c.listStages.CallUnary(ctx, req)
+}
+
+// ListImages calls akuity.io.kargo.service.v1alpha1.KargoService.ListImages.
+func (c *kargoServiceClient) ListImages(ctx context.Context, req *connect.Request[v1alpha1.ListImagesRequest]) (*connect.Response[v1alpha1.ListImagesResponse], error) {
+	return c.listImages.CallUnary(ctx, req)
 }
 
 // GetStage calls akuity.io.kargo.service.v1alpha1.KargoService.GetStage.
@@ -932,6 +948,7 @@ type KargoServiceHandler interface {
 	UpdateResource(context.Context, *connect.Request[v1alpha1.UpdateResourceRequest]) (*connect.Response[v1alpha1.UpdateResourceResponse], error)
 	DeleteResource(context.Context, *connect.Request[v1alpha1.DeleteResourceRequest]) (*connect.Response[v1alpha1.DeleteResourceResponse], error)
 	ListStages(context.Context, *connect.Request[v1alpha1.ListStagesRequest]) (*connect.Response[v1alpha1.ListStagesResponse], error)
+	ListImages(context.Context, *connect.Request[v1alpha1.ListImagesRequest]) (*connect.Response[v1alpha1.ListImagesResponse], error)
 	GetStage(context.Context, *connect.Request[v1alpha1.GetStageRequest]) (*connect.Response[v1alpha1.GetStageResponse], error)
 	WatchStages(context.Context, *connect.Request[v1alpha1.WatchStagesRequest], *connect.ServerStream[v1alpha1.WatchStagesResponse]) error
 	DeleteStage(context.Context, *connect.Request[v1alpha1.DeleteStageRequest]) (*connect.Response[v1alpha1.DeleteStageResponse], error)
@@ -1034,6 +1051,12 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 		KargoServiceListStagesProcedure,
 		svc.ListStages,
 		connect.WithSchema(kargoServiceListStagesMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	kargoServiceListImagesHandler := connect.NewUnaryHandler(
+		KargoServiceListImagesProcedure,
+		svc.ListImages,
+		connect.WithSchema(kargoServiceListImagesMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
 	kargoServiceGetStageHandler := connect.NewUnaryHandler(
@@ -1308,6 +1331,8 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 			kargoServiceDeleteResourceHandler.ServeHTTP(w, r)
 		case KargoServiceListStagesProcedure:
 			kargoServiceListStagesHandler.ServeHTTP(w, r)
+		case KargoServiceListImagesProcedure:
+			kargoServiceListImagesHandler.ServeHTTP(w, r)
 		case KargoServiceGetStageProcedure:
 			kargoServiceGetStageHandler.ServeHTTP(w, r)
 		case KargoServiceWatchStagesProcedure:
@@ -1435,6 +1460,10 @@ func (UnimplementedKargoServiceHandler) DeleteResource(context.Context, *connect
 
 func (UnimplementedKargoServiceHandler) ListStages(context.Context, *connect.Request[v1alpha1.ListStagesRequest]) (*connect.Response[v1alpha1.ListStagesResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.ListStages is not implemented"))
+}
+
+func (UnimplementedKargoServiceHandler) ListImages(context.Context, *connect.Request[v1alpha1.ListImagesRequest]) (*connect.Response[v1alpha1.ListImagesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.ListImages is not implemented"))
 }
 
 func (UnimplementedKargoServiceHandler) GetStage(context.Context, *connect.Request[v1alpha1.GetStageRequest]) (*connect.Response[v1alpha1.GetStageResponse], error) {
