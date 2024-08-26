@@ -73,7 +73,7 @@ FROM ghcr.io/akuity/kargo-render:v0.1.0-rc.39 AS base
 USER root
 
 RUN apk update \
-    && apk add gpg gpg-agent
+    && apk add ca-certificates gpg gpg-agent
 
 COPY --from=tools /tools/ /usr/local/bin/
 

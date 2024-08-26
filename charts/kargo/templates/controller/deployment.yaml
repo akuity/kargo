@@ -94,7 +94,10 @@ spec:
       {{- if .Values.controller.cabundle.enabled }}
       initContainers:
       - name: parse-cabundle
-        image: docker.io/alpine/curl:latest
+        image: {{ include "kargo.image" . }}
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        securityContext:
+          runAsUser: 0
         command:
         - "/bin/sh"
         - "-c"
