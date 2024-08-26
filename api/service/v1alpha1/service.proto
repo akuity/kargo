@@ -639,11 +639,15 @@ message GetRoleResponse {
   }
 }
 
+message ListUserClaims {
+  repeated github.com.akuity.kargo.api.rbac.v1alpha1.UserClaim user_claims = 1;
+}
+
 message GrantRequest {
   string project = 1;
   string role = 2;
   oneof request {
-    github.com.akuity.kargo.api.rbac.v1alpha1.UserClaims user_claims = 3;
+    ListUserClaims user_claims = 3;
     github.com.akuity.kargo.api.rbac.v1alpha1.ResourceDetails resource_details = 4;
   }
 }
@@ -667,7 +671,7 @@ message RevokeRequest {
   string project = 1;
   string role = 2;
   oneof request {
-    github.com.akuity.kargo.api.rbac.v1alpha1.UserClaims user_claims = 3;
+    ListUserClaims user_claims = 3;
     github.com.akuity.kargo.api.rbac.v1alpha1.ResourceDetails resource_details = 4;
   }
 }

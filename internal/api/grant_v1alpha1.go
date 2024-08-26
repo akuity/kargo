@@ -28,7 +28,7 @@ func (s *server) Grant(
 	var err error
 	if users := req.Msg.GetUserClaims(); users != nil {
 		if role, err = s.rolesDB.GrantRoleToUsers(
-			ctx, project, req.Msg.Role, users,
+			ctx, project, req.Msg.Role, users.UserClaims,
 		); err != nil {
 			return nil, fmt.Errorf("error granting Kargo Role to users: %w", err)
 		}

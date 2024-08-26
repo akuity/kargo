@@ -17,7 +17,7 @@ type Info struct {
 	// verified as the Kargo API server's admin user. When this is true, all
 	// other fields should have an empty value.
 	IsAdmin bool
-	// Claims is the array of claims from an identity provider of a
+	// Claims is a map of claims from an identity provider of a
 	// non-admin user whose credentials have
 	// been successfully verified by the server's authentication middleware.
 	Claims map[string]any

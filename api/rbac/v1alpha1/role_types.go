@@ -11,7 +11,7 @@ type Role struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 	KargoManaged      bool                `json:"kargoManaged,omitempty" protobuf:"varint,2,opt,name=kargoManaged"`
-	Claims            []Claim             `json:"claims,omitempty" protobuf:"bytes,7,rep,name=claims"`
+	Claims            []*UserClaim        `json:"claims,omitempty" protobuf:"bytes,7,rep,name=claims"`
 	Rules             []rbacv1.PolicyRule `json:"rules,omitempty" protobuf:"bytes,6,rep,name=rules"`
 }
 
@@ -30,11 +30,7 @@ type ResourceDetails struct {
 	Verbs        []string `json:"verbs,omitempty" protobuf:"bytes,3,rep,name=verbs"`
 }
 
-type Claim struct {
-	Name   string
-	Values []string
-}
-
-type UserClaims struct {
-	Claims []Claim `json:"claims,omitempty" protobuf:"bytes,1,rep,name=claims"`
+type UserClaim struct {
+	Name   string   `json:"name,omitempty" protobuf:"bytes,4,opt,name=name"`
+	Values []string `json:"values,omitempty" protobuf:"bytes,5,rep,name=values"`
 }

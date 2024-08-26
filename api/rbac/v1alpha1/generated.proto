@@ -14,12 +14,6 @@ import "k8s.io/apimachinery/pkg/runtime/schema/generated.proto";
 // Package-wide variables from generator "generated".
 option go_package = "github.com/akuity/kargo/api/rbac/v1alpha1";
 
-message Claim {
-  optional string name = 1;
-
-  repeated string values = 2;
-}
-
 message ResourceDetails {
   optional string resourceType = 1;
 
@@ -34,7 +28,7 @@ message Role {
 
   optional bool kargoManaged = 2;
 
-  repeated Claim claims = 7;
+  repeated UserClaim claims = 7;
 
   repeated k8s.io.api.rbac.v1.PolicyRule rules = 6;
 }
@@ -50,7 +44,9 @@ message RoleResources {
   repeated k8s.io.api.rbac.v1.RoleBinding roleBindings = 4;
 }
 
-message UserClaims {
-  repeated Claim claims = 1;
+message UserClaim {
+  optional string name = 4;
+
+  repeated string values = 5;
 }
 

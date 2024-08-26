@@ -53,16 +53,6 @@ func NewCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams) *cobra
 		Short: "Revoke a role from a user or revoke permissions from a role",
 		Args:  option.NoArgs,
 		Example: templates.Example(`
-# Revoke my-role from users with specific sub claims
-kargo revoke --project=my-project --role=my-role --sub=1234567890 --sub=0987654321
-
-# Revoke my-role from users with specific email addresses
-kargo revoke --project=my-project --role=my-role \
-  --email=bob@example.com --email=alice@example.com
-
-# Revoke my-role from users in specific groups
-kargo revoke --project=my-project --role=my-role --group=admins --group=engineers
-
 # Revoke permission to update all stages from my-role
 kargo revoke --project=my-project --role=my-role --resource-type=stage --verb=update
 
@@ -70,10 +60,9 @@ kargo revoke --project=my-project --role=my-role --resource-type=stage --verb=up
 kargo revoke --project=my-project --role=my-role \
   --resource-type=stage --resource-name=dev --verb=promote
 
-# Revoke my-role from users with a non standard claim and in a specific group
-# Please take note that even though you can specify subs, emails and groups in the generic claim
-# flag, if both are set, the bespoke sub, group, and email flags take precedence
-kargo revoke --project=my-project --role=my-role --claim=group=admins --claim=given_name=alice
+# Revoke my-role from users with a non standard claim, in a specific group and with specific email and sub claims.
+kargo revoke --project=my-project --role=my-role --claim=group=admins \
+  --claim=given_name=alice --claim=subs=12345678 --claim=emails=alice@example.com
 `),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if err := cmdOpts.validate(); err != nil {
@@ -102,9 +91,6 @@ func (o *revokeOptions) addFlags(cmd *cobra.Command) {
 		"The project in which to manage a role. If not set, the default project will be used.",
 	)
 	option.Role(cmd.Flags(), &o.Role, "The role to manage.")
-	option.Subs(cmd.Flags(), &o.Subs, "The sub claim of a user to have the role revoked.")
-	option.Emails(cmd.Flags(), &o.Emails, "The email address of a user to have the role revoked.")
-	option.Groups(cmd.Flags(), &o.Groups, "A group to have the role revoked.")
 	option.Claims(cmd.Flags(), &o.Claims, "A claim name and value to have the role revoked")
 	option.ResourceType(cmd.Flags(), &o.ResourceType, "A type of resource to revoke permissions for.")
 	option.ResourceName(cmd.Flags(), &o.ResourceName, "The name of a resource to revoke permissions for.")
@@ -116,9 +102,6 @@ func (o *revokeOptions) addFlags(cmd *cobra.Command) {
 
 	// If none of these are specified, we're not revoking anything.
 	cmd.MarkFlagsOneRequired(
-		option.SubFlag,
-		option.EmailFlag,
-		option.GroupFlag,
 		option.ClaimFlag,
 		option.ResourceTypeFlag,
 	)
@@ -145,6 +128,12 @@ func (o *revokeOptions) validate() error {
 	if o.Role == "" {
 		errs = append(errs, fmt.Errorf("%s is required", option.RoleFlag))
 	}
+	// This is a check to ensure that any claims flags have exactly 1 "=".
+	for _, claim := range o.Claims {
+		if strings.Count(claim, "=") != 1 {
+			errs = append(errs, fmt.Errorf("%s should be in the format <claim-name>=<claim-value>", option.ClaimFlag))
+		}
+	}
 	return errors.Join(errs...)
 }
 
@@ -168,38 +157,16 @@ func (o *revokeOptions) run(ctx context.Context) error {
 			},
 		}
 	} else {
-		claims := []rbacapi.Claim{}
-
-		if o.Subs != nil {
-			claims = append(claims, rbacapi.Claim{
-				Name:   "subs",
-				Values: o.Subs,
-			})
-		}
-
-		if o.Groups != nil {
-			claims = append(claims, rbacapi.Claim{
-				Name:   "groups",
-				Values: o.Groups,
-			})
-		}
-
-		if o.Emails != nil {
-			claims = append(claims, rbacapi.Claim{
-				Name:   "emails",
-				Values: o.Emails,
-			})
-		}
-
+		claimsList := svcv1alpha1.ListUserClaims{}
 		for _, claimFlagValue := range o.Claims {
 			claimFlagNameAndValue := strings.Split(claimFlagValue, "=")
-			claims = append(claims, rbacapi.Claim{
+			claimsList.UserClaims = append(claimsList.UserClaims, &rbacapi.UserClaim{
 				Name:   claimFlagNameAndValue[0],
 				Values: []string{claimFlagNameAndValue[1]},
 			})
 		}
 		req.Request = &svcv1alpha1.RevokeRequest_UserClaims{
-			UserClaims: &rbacapi.UserClaims{Claims: claims},
+			UserClaims: &claimsList,
 		}
 	}
 

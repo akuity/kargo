@@ -69,27 +69,11 @@ kargo create role --project=my-project my-role \
 kargo config set-project my-project
 kargo create role my-role
 
-# Create a role in the default project and grant it to users with specific sub claims
+# Create a role in the default project and grant it to users with a specific 
+# claim name and value e.g. sub, emails, groups
 kargo config set-project my-project
 kargo create role my-role \
-  --sub=1234567890 --sub=0987654321
-
-# Create a role in the default project and grant it to users with specific email addresses
-kargo config set-project my-project
-kargo create role my-role \
-  --email=bob@example.com --email=alice@example.com
-
-# Create a role in the default project and grant it to users in specific groups
-kargo config set-project my-project
-kargo create role my-role \
-  --group=admins --group=engineers
-
-# Create a role in the default project and grant it to users with a specific claim name and value
-# Please take note that even though you can specify subs, emails and groups in the generic claim
-# flag, if both are set, the bespoke sub, group, and email flags take precedence
-kargo config set-project my-project
-kargo create role my-role \
---claim=given_name=alice --claim=emails=alice@example.com
+--claim=given_name=alice --claim=emails=alice@example.com --claim=sub=123
 `),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmdOpts.complete(args)
@@ -121,9 +105,6 @@ func (o *createRoleOptions) addFlags(cmd *cobra.Command) {
 		"The project in which to create the role. If not set, the default project will be used.",
 	)
 	option.Description(cmd.Flags(), &o.Description, "Description of the role.")
-	option.Subs(cmd.Flags(), &o.Subs, "A subject claim to map to the role.")
-	option.Emails(cmd.Flags(), &o.Emails, "An email address to map to the role.")
-	option.Groups(cmd.Flags(), &o.Groups, "A group claim to map to the role.")
 	option.Claims(cmd.Flags(), &o.Claims, "A claim name and value to map to the role")
 }
 
@@ -144,6 +125,12 @@ func (o *createRoleOptions) validate() error {
 	if o.Name == "" {
 		errs = append(errs, fmt.Errorf("%s is required", option.NameFlag))
 	}
+	// This is a check to ensure that any claims flags have exactly 1 "=".
+	for _, claim := range o.Claims {
+		if strings.Count(claim, "=") != 1 {
+			errs = append(errs, fmt.Errorf("%s should be in the format <claim-name>=<claim-value>", option.ClaimFlag))
+		}
+	}
 	return errors.Join(errs...)
 }
 
@@ -154,32 +141,11 @@ func (o *createRoleOptions) run(ctx context.Context) error {
 		return fmt.Errorf("get client from config: %w", err)
 	}
 
-	claims := []rbacapi.Claim{}
-
-	if o.Subs != nil {
-		claims = append(claims, rbacapi.Claim{
-			Name:   "subs",
-			Values: o.Subs,
-		})
-	}
-
-	if o.Groups != nil {
-		claims = append(claims, rbacapi.Claim{
-			Name:   "groups",
-			Values: o.Groups,
-		})
-	}
-
-	if o.Emails != nil {
-		claims = append(claims, rbacapi.Claim{
-			Name:   "emails",
-			Values: o.Emails,
-		})
-	}
+	claims := []*rbacapi.UserClaim{}
 
 	for _, claimFlagValue := range o.Claims {
 		claimFlagNameAndValue := strings.Split(claimFlagValue, "=")
-		claims = append(claims, rbacapi.Claim{
+		claims = append(claims, &rbacapi.UserClaim{
 			Name:   claimFlagNameAndValue[0],
 			Values: []string{claimFlagNameAndValue[1]},
 		})

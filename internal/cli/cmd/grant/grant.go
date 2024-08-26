@@ -53,16 +53,6 @@ func NewCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams) *cobra
 		Short: "Grant a role to a user or grant permissions to a role",
 		Args:  option.NoArgs,
 		Example: templates.Example(`
-# Grant my-role to users with specific sub claims
-kargo grant --project=my-project --role=my-role --sub=1234567890 --sub=0987654321
-
-# Grant my-role to users with specific email addresses
-kargo grant --project=my-project --role=my-role \
-  --email=bob@example.com --email=alice@example.com
-
-# Grant my-role to users in specific groups
-kargo grant --project=my-project --role=my-role --group=admins --group=engineers
-
 # Grant my-role permission to update all stages
 kargo grant --project=my-project --role=my-role --resource-type=stage --verb=update
 
@@ -70,11 +60,10 @@ kargo grant --project=my-project --role=my-role --resource-type=stage --verb=upd
 kargo grant --project=my-project --role=my-role \
   --resource-type=stage --resource-name=dev --verb=promote
 
-# Grant my-role to users with specific nonstandard claim and email address
-# Please take note that even though you can specify subs, emails and groups in the generic claim
-# flag, if both are set, the bespoke sub, group, and email flags take precedence
+# Grant my-role to users with specific nonstandard claim, email address, groups and sub claim
 kargo grant --project=my-project --role=my-role \
-  --claim=given_name=bob --claim=email=alice@example.com
+  --claim=given_name=bob --claim=emails=alice@example.com \
+  --claim=subs=1234567890 --claim=groups=admins
 `),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if err := cmdOpts.validate(); err != nil {
@@ -103,9 +92,6 @@ func (o *grantOptions) addFlags(cmd *cobra.Command) {
 		"The project in which to manage a role. If not set, the default project will be used.",
 	)
 	option.Role(cmd.Flags(), &o.Role, "The role to manage.")
-	option.Subs(cmd.Flags(), &o.Subs, "The sub claim of a user to be granted the role.")
-	option.Emails(cmd.Flags(), &o.Emails, "The email address of a user to be granted the role.")
-	option.Groups(cmd.Flags(), &o.Groups, "A group to be granted the role.")
 	option.Claims(cmd.Flags(), &o.Claims, "A claim name and value to be granted to the role.")
 
 	option.ResourceType(cmd.Flags(), &o.ResourceType, "A type of resource to grant permissions to.")
@@ -118,9 +104,6 @@ func (o *grantOptions) addFlags(cmd *cobra.Command) {
 
 	// If none of these are specified, we're not granting anything.
 	cmd.MarkFlagsOneRequired(
-		option.SubFlag,
-		option.EmailFlag,
-		option.GroupFlag,
 		option.ClaimFlag,
 		option.ResourceTypeFlag,
 	)
@@ -147,6 +130,12 @@ func (o *grantOptions) validate() error {
 	if o.Role == "" {
 		errs = append(errs, fmt.Errorf("%s is required", option.RoleFlag))
 	}
+	// This is a check to ensure that any claims flags have exactly 1 "=".
+	for _, claim := range o.Claims {
+		if strings.Count(claim, "=") != 1 {
+			errs = append(errs, fmt.Errorf("%s should be in the format <claim-name>=<claim-value>", option.ClaimFlag))
+		}
+	}
 	return errors.Join(errs...)
 }
 
@@ -170,40 +159,17 @@ func (o *grantOptions) run(ctx context.Context) error {
 			},
 		}
 	} else {
-		claims := []rbacapi.Claim{}
-
-		if o.Subs != nil {
-			claims = append(claims, rbacapi.Claim{
-				Name:   "subs",
-				Values: o.Subs,
-			})
-		}
-
-		if o.Groups != nil {
-			claims = append(claims, rbacapi.Claim{
-				Name:   "groups",
-				Values: o.Groups,
-			})
-		}
-
-		if o.Emails != nil {
-			claims = append(claims, rbacapi.Claim{
-				Name:   "emails",
-				Values: o.Emails,
-			})
-		}
+		claimsList := svcv1alpha1.ListUserClaims{}
 
 		for _, claimFlagValue := range o.Claims {
 			claimFlagNameAndValue := strings.Split(claimFlagValue, "=")
-			claims = append(claims, rbacapi.Claim{
+			claimsList.UserClaims = append(claimsList.UserClaims, &rbacapi.UserClaim{
 				Name:   claimFlagNameAndValue[0],
 				Values: []string{claimFlagNameAndValue[1]},
 			})
 		}
 		req.Request = &svcv1alpha1.GrantRequest_UserClaims{
-			UserClaims: &rbacapi.UserClaims{
-				Claims: claims,
-			},
+			UserClaims: &claimsList,
 		}
 	}
 

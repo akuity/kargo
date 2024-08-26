@@ -8,7 +8,7 @@ import { Message, proto3, Timestamp } from "@bufbuild/protobuf";
 import { Freight, Project, Promotion, Stage, Warehouse } from "../../v1alpha1/generated_pb.js";
 import { Event, Secret } from "../../k8s.io/api/core/v1/generated_pb.js";
 import { AnalysisRun, AnalysisTemplate } from "../../rollouts/api/v1alpha1/generated_pb.js";
-import { ResourceDetails, Role, RoleResources, UserClaims } from "../../rbac/v1alpha1/generated_pb.js";
+import { ResourceDetails, Role, RoleResources, UserClaim } from "../../rbac/v1alpha1/generated_pb.js";
 
 /**
  * @generated from enum akuity.io.kargo.service.v1alpha1.RawFormat
@@ -4491,6 +4491,43 @@ export class GetRoleResponse extends Message<GetRoleResponse> {
 }
 
 /**
+ * @generated from message akuity.io.kargo.service.v1alpha1.ListUserClaims
+ */
+export class ListUserClaims extends Message<ListUserClaims> {
+  /**
+   * @generated from field: repeated github.com.akuity.kargo.api.rbac.v1alpha1.UserClaim user_claims = 1;
+   */
+  userClaims: UserClaim[] = [];
+
+  constructor(data?: PartialMessage<ListUserClaims>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.ListUserClaims";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "user_claims", kind: "message", T: UserClaim, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListUserClaims {
+    return new ListUserClaims().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListUserClaims {
+    return new ListUserClaims().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListUserClaims {
+    return new ListUserClaims().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ListUserClaims | PlainMessage<ListUserClaims> | undefined, b: ListUserClaims | PlainMessage<ListUserClaims> | undefined): boolean {
+    return proto3.util.equals(ListUserClaims, a, b);
+  }
+}
+
+/**
  * @generated from message akuity.io.kargo.service.v1alpha1.GrantRequest
  */
 export class GrantRequest extends Message<GrantRequest> {
@@ -4509,9 +4546,9 @@ export class GrantRequest extends Message<GrantRequest> {
    */
   request: {
     /**
-     * @generated from field: github.com.akuity.kargo.api.rbac.v1alpha1.UserClaims user_claims = 3;
+     * @generated from field: akuity.io.kargo.service.v1alpha1.ListUserClaims user_claims = 3;
      */
-    value: UserClaims;
+    value: ListUserClaims;
     case: "userClaims";
   } | {
     /**
@@ -4531,7 +4568,7 @@ export class GrantRequest extends Message<GrantRequest> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "project", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "role", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "user_claims", kind: "message", T: UserClaims, oneof: "request" },
+    { no: 3, name: "user_claims", kind: "message", T: ListUserClaims, oneof: "request" },
     { no: 4, name: "resource_details", kind: "message", T: ResourceDetails, oneof: "request" },
   ]);
 
@@ -4696,9 +4733,9 @@ export class RevokeRequest extends Message<RevokeRequest> {
    */
   request: {
     /**
-     * @generated from field: github.com.akuity.kargo.api.rbac.v1alpha1.UserClaims user_claims = 3;
+     * @generated from field: akuity.io.kargo.service.v1alpha1.ListUserClaims user_claims = 3;
      */
-    value: UserClaims;
+    value: ListUserClaims;
     case: "userClaims";
   } | {
     /**
@@ -4718,7 +4755,7 @@ export class RevokeRequest extends Message<RevokeRequest> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "project", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "role", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "user_claims", kind: "message", T: UserClaims, oneof: "request" },
+    { no: 3, name: "user_claims", kind: "message", T: ListUserClaims, oneof: "request" },
     { no: 4, name: "resource_details", kind: "message", T: ResourceDetails, oneof: "request" },
   ]);
 

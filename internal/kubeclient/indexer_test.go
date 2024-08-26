@@ -855,7 +855,7 @@ func TestIndexStagesByWarehouse(t *testing.T) {
 	}
 }
 
-func TestIndexServiceAccountsOIDCClaimWithEmails(t *testing.T) {
+func TestIndexServiceAccountsOIDCClaimsWithEmails(t *testing.T) {
 	testCases := []struct {
 		name     string
 		sa       *corev1.ServiceAccount
@@ -882,73 +882,7 @@ func TestIndexServiceAccountsOIDCClaimWithEmails(t *testing.T) {
 			require.Equal(
 				t,
 				testCase.expected,
-				indexServiceAccountsOIDCClaim(testCase.sa),
-			)
-		})
-	}
-}
-
-func TestIndexServiceAccountsByOIDCClaimsWithGroups(t *testing.T) {
-	testCases := []struct {
-		name     string
-		sa       *corev1.ServiceAccount
-		expected []string
-	}{
-		{
-			name: "ServiceAccount has no OIDC groups",
-			sa:   &corev1.ServiceAccount{},
-		},
-		{
-			name: "ServiceAccount has OIDC groups",
-			sa: &corev1.ServiceAccount{
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{
-						rbacapi.AnnotationKeyOIDCClaimNamePrefix + "groups": "fake-group-1, fake-group-2",
-					},
-				},
-			},
-			expected: []string{"groups/fake-group-1", "groups/fake-group-2"},
-		},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			require.Equal(
-				t,
-				testCase.expected,
-				indexServiceAccountsOIDCClaim(testCase.sa),
-			)
-		})
-	}
-}
-
-func TestIndexServiceAccountsByOIDCClaimWithSubjects(t *testing.T) {
-	testCases := []struct {
-		name     string
-		sa       *corev1.ServiceAccount
-		expected []string
-	}{
-		{
-			name: "ServiceAccount has no OIDC subjects",
-			sa:   &corev1.ServiceAccount{},
-		},
-		{
-			name: "ServiceAccount has OIDC subjects",
-			sa: &corev1.ServiceAccount{
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{
-						rbacapi.AnnotationKeyOIDCClaimNamePrefix + "subs": "fake-subject-1, fake-subject-2",
-					},
-				},
-			},
-			expected: []string{"subs/fake-subject-1", "subs/fake-subject-2"},
-		},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			require.Equal(
-				t,
-				testCase.expected,
-				indexServiceAccountsOIDCClaim(testCase.sa),
+				indexServiceAccountsOIDCClaims(testCase.sa),
 			)
 		})
 	}

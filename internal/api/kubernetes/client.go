@@ -245,8 +245,8 @@ func newDefaultInternalClient(
 	if err = kubeclient.IndexFreightByApprovedStages(ctx, cluster); err != nil {
 		return nil, fmt.Errorf("error indexing Freight by Stages for which it has been approved: %w", err)
 	}
-	if err = kubeclient.IndexServiceAccountsByOIDCClaim(ctx, cluster); err != nil {
-		return nil, fmt.Errorf("index ServiceAccounts by OIDC claim: %w", err)
+	if err = kubeclient.IndexServiceAccountsByOIDCClaims(ctx, cluster); err != nil {
+		return nil, fmt.Errorf("index ServiceAccounts by OIDC claims: %w", err)
 	}
 	if err = kubeclient.IndexEventsByInvolvedObjectAPIGroup(ctx, cluster); err != nil {
 		return nil, fmt.Errorf("error indexing Events by InvolvedObject's API group: %w", err)

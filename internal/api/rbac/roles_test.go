@@ -98,7 +98,7 @@ func TestCreate(t *testing.T) {
 					kargoapi.AnnotationKeyDescription: "fake-description",
 				},
 			},
-			Claims: []rbacapi.Claim{
+			Claims: []*rbacapi.UserClaim{
 				{
 					Name: "subs",
 					Values: []string{
@@ -273,7 +273,7 @@ func TestGet(t *testing.T) {
 					CreationTimestamp: now,
 				},
 				KargoManaged: false,
-				Claims: []rbacapi.Claim{
+				Claims: []*rbacapi.UserClaim{
 					{
 						Name: "emails",
 						Values: []string{
@@ -343,7 +343,7 @@ func TestGet(t *testing.T) {
 					CreationTimestamp: now,
 				},
 				KargoManaged: true,
-				Claims: []rbacapi.Claim{
+				Claims: []*rbacapi.UserClaim{
 					{
 						Name: "emails",
 						Values: []string{
@@ -567,14 +567,13 @@ func TestGrantRoleToUsers(t *testing.T) {
 			context.Background(),
 			testProject,
 			testKargoRoleName,
-			&rbacapi.UserClaims{
-				Claims: []rbacapi.Claim{{
+			[]*rbacapi.UserClaim{
+				{
 					Name: "subs",
 					Values: []string{
 						"fake-sub",
 					},
 				}},
-			},
 		)
 		require.True(t, kubeerr.IsNotFound(err))
 	})
@@ -588,13 +587,13 @@ func TestGrantRoleToUsers(t *testing.T) {
 			context.Background(),
 			testProject,
 			testKargoRoleName,
-			&rbacapi.UserClaims{
-				Claims: []rbacapi.Claim{{
+			[]*rbacapi.UserClaim{
+				{
 					Name: "subs",
 					Values: []string{
 						"fake-sub",
 					},
-				}},
+				},
 			},
 		)
 		require.True(t, kubeerr.IsBadRequest(err))
@@ -613,27 +612,26 @@ func TestGrantRoleToUsers(t *testing.T) {
 			context.Background(),
 			testProject,
 			testKargoRoleName,
-			&rbacapi.UserClaims{
-				Claims: []rbacapi.Claim{
-					{
-						Name: "subs",
-						Values: []string{
-							"foo-sub",
-							"bar-sub",
-						},
+			[]*rbacapi.UserClaim{
+				{
+					Name: "subs",
+					Values: []string{
+						"foo-sub",
+						"bar-sub",
 					},
-					{
-						Name: "emails",
-						Values: []string{
-							"foo-email",
-							"bar-email",
-						},
-					}, {
-						Name: "groups",
-						Values: []string{
-							"foo-group",
-							"bar-group",
-						},
+				},
+				{
+					Name: "emails",
+					Values: []string{
+						"foo-email",
+						"bar-email",
+					},
+				},
+				{
+					Name: "groups",
+					Values: []string{
+						"foo-group",
+						"bar-group",
 					},
 				},
 			},
@@ -694,7 +692,7 @@ func TestList(t *testing.T) {
 					CreationTimestamp: now,
 				},
 				KargoManaged: true,
-				Claims: []rbacapi.Claim{
+				Claims: []*rbacapi.UserClaim{
 					{
 						Name: "emails",
 						Values: []string{
@@ -774,7 +772,7 @@ func TestList(t *testing.T) {
 					CreationTimestamp: now,
 				},
 				KargoManaged: false,
-				Claims: []rbacapi.Claim{
+				Claims: []*rbacapi.UserClaim{
 					{
 						Name: "emails",
 						Values: []string{
@@ -912,13 +910,13 @@ func TestRevokeRoleFromUsers(t *testing.T) {
 			context.Background(),
 			testProject,
 			testKargoRoleName,
-			&rbacapi.UserClaims{
-				Claims: []rbacapi.Claim{{
+			[]*rbacapi.UserClaim{
+				{
 					Name: "Subs",
 					Values: []string{
 						"fake-sub",
 					},
-				}},
+				},
 			},
 		)
 		require.True(t, kubeerr.IsNotFound(err))
@@ -933,13 +931,13 @@ func TestRevokeRoleFromUsers(t *testing.T) {
 			context.Background(),
 			testProject,
 			testKargoRoleName,
-			&rbacapi.UserClaims{
-				Claims: []rbacapi.Claim{{
+			[]*rbacapi.UserClaim{
+				{
 					Name: "subs",
 					Values: []string{
 						"fake-sub",
 					},
-				}},
+				},
 			},
 		)
 		require.True(t, kubeerr.IsBadRequest(err))
@@ -958,26 +956,25 @@ func TestRevokeRoleFromUsers(t *testing.T) {
 			context.Background(),
 			testProject,
 			testKargoRoleName,
-			&rbacapi.UserClaims{
-				Claims: []rbacapi.Claim{
-					{
-						Name: "subs",
-						Values: []string{
-							"bar-sub",
-						},
+			[]*rbacapi.UserClaim{
+				{
+					Name: "subs",
+					Values: []string{
+						"bar-sub",
 					},
-					{
-						Name: "emails",
-						Values: []string{
-							"foo-email",
-							"bar-email",
-						},
-					}, {
-						Name: "groups",
-						Values: []string{
-							"foo-group",
-							"bar-group",
-						},
+				},
+				{
+					Name: "emails",
+					Values: []string{
+						"foo-email",
+						"bar-email",
+					},
+				},
+				{
+					Name: "groups",
+					Values: []string{
+						"foo-group",
+						"bar-group",
 					},
 				},
 			},
@@ -1047,7 +1044,7 @@ func TestUpdate(t *testing.T) {
 					Namespace: testProject,
 					Name:      testKargoRoleName,
 				},
-				Claims: []rbacapi.Claim{
+				Claims: []*rbacapi.UserClaim{
 					{
 						Name: "subs",
 						Values: []string{
@@ -1160,7 +1157,7 @@ func TestUpdate(t *testing.T) {
 						kargoapi.AnnotationKeyDescription: "foo-description",
 					},
 				},
-				Claims: []rbacapi.Claim{
+				Claims: []*rbacapi.UserClaim{
 					{
 						Name: "subs",
 						Values: []string{

@@ -64,15 +64,15 @@ func FormatEventControllerActor(name string) string {
 // 3. If the subject is available, it returns subject in "subject:<subject>" format.
 // 4. Otherwise, it returns EventActorUnknown.
 func FormatEventUserActor(u user.Info) string {
+	email := u.Claims["emails"].(string) // nolint: forcetypeassert
+	subject := u.Claims["subs"].(string) // nolint: forcetypeassert
 	switch {
 	case u.IsAdmin:
 		return EventActorAdmin
-	case IsClaimValueNonEmptyString(u.Claims["emails"]):
-		claimString, _ := u.Claims["emails"].(string)
-		return EventActorEmailPrefix + claimString
-	case IsClaimValueNonEmptyString(u.Claims["subs"]):
-		claimString, _ := u.Claims["subs"].(string)
-		return EventActorSubjectPrefix + claimString
+	case email != "":
+		return EventActorEmailPrefix + email
+	case subject != "":
+		return EventActorSubjectPrefix + subject
 	default:
 		return EventActorUnknown
 	}

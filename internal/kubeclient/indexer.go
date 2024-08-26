@@ -35,7 +35,7 @@ const (
 	StagesByUpstreamStagesIndexField     = "upstreamStages"
 	StagesByWarehouseIndexField          = "warehouse"
 
-	ServiceAccountsByOIDCClaimIndexField = "claims"
+	ServiceAccountsByOIDCClaimsIndexField = "claims"
 )
 
 // IndexEventsByInvolvedObjectAPIGroup sets up the indexing of Events by the
@@ -496,46 +496,48 @@ func indexStagesByWarehouse(obj client.Object) []string {
 	return warehouses
 }
 
-// IndexServiceAccountsByOIDCClaim sets up indexing of ServiceAccounts by
+// A helper function to format a claims name and values
+// to be used by the IndexServiceAccountsByOIDCClaims index.
+func FormatClaim(claimName string, claimValue string) string {
+	return claimName + "/" + claimValue
+}
+
+// IndexServiceAccountsByOIDCClaims sets up indexing of ServiceAccounts by
 // their OIDC claim annotations.
 //
 // It configures the manager's field indexer to allow querying ServiceAccounts
 // using the ServiceAccountsByOIDCClaimIndexField selector.
-func IndexServiceAccountsByOIDCClaim(ctx context.Context, mgr ctrl.Manager) error {
-	return mgr.GetFieldIndexer().IndexField(
+func IndexServiceAccountsByOIDCClaims(ctx context.Context, clstr cluster.Cluster) error {
+	return clstr.GetFieldIndexer().IndexField(
 		ctx,
 		&corev1.ServiceAccount{},
-		ServiceAccountsByOIDCClaimIndexField,
-		indexServiceAccountsOIDCClaim,
+		ServiceAccountsByOIDCClaimsIndexField,
+		indexServiceAccountsOIDCClaims,
 	)
 }
 
-// indexServiceAccountsOIDCClaim is a client.IndexerFunc that indexes ServiceAccounts by the
+// indexServiceAccountsOIDCClaims is a client.IndexerFunc that indexes ServiceAccounts by the
 // OIDC claim name and value annotations.
-func indexServiceAccountsOIDCClaim(obj client.Object) []string {
+func indexServiceAccountsOIDCClaims(obj client.Object) []string {
 	sa := obj.(*corev1.ServiceAccount) // nolint: forcetypeassert
-	rawClaimValues := map[string]string{}
+	refinedClaimValues := []string{}
 	for annotationKey, annotationValue := range sa.GetAnnotations() {
 		if strings.HasPrefix(annotationKey, rbacapi.AnnotationKeyOIDCClaimNamePrefix) {
-			rawClaimName := strings.ReplaceAll(annotationKey, rbacapi.AnnotationKeyOIDCClaimNamePrefix, "")
+			rawClaimName := strings.TrimPrefix(annotationKey, rbacapi.AnnotationKeyOIDCClaimNamePrefix)
 			rawClaimValue := strings.TrimSpace(annotationValue)
 			if rawClaimValue == "" {
 				continue
 			}
-			rawClaimValues[rawClaimName] = rawClaimValue
-		}
-	}
-	if len(rawClaimValues) == 0 {
-		return nil
-	}
-	refinedClaimValues := []string{}
-	for rawClaimName, rawClaimValue := range rawClaimValues {
-		claimValues := strings.Split(rawClaimValue, ",")
-		for _, e := range claimValues {
-			if claimValue := strings.TrimSpace(e); claimValue != "" {
-				refinedClaimValues = append(refinedClaimValues, rawClaimName+"/"+claimValue)
+			claimValues := strings.Split(rawClaimValue, ",")
+			for _, e := range claimValues {
+				if claimValue := strings.TrimSpace(e); claimValue != "" {
+					refinedClaimValues = append(refinedClaimValues, FormatClaim(rawClaimName, claimValue))
+				}
 			}
 		}
+	}
+	if len(refinedClaimValues) == 0 {
+		return nil
 	}
 	return refinedClaimValues
 }
