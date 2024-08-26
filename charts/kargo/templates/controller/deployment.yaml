@@ -68,7 +68,7 @@ spec:
         {{- with (concat .Values.global.envFrom .Values.controller.envFrom) }}
           {{- toYaml . | nindent 8 }}
         {{- end }}
-        {{- if or .Values.kubeconfigSecrets.kargo .Values.kubeconfigSecrets.argocd .Values.controller.gitClient.signingKeySecret.name .Values.controller.cabundle.enabled }}
+        {{- if or .Values.kubeconfigSecrets.kargo .Values.kubeconfigSecrets.argocd .Values.controller.gitClient.signingKeySecret.name .Values.controller.cabundle.configMapName .Values.controller.cabundle.secretName }}
         volumeMounts:
         {{- if or .Values.kubeconfigSecrets.kargo .Values.kubeconfigSecrets.argocd }}
         - mountPath: /etc/kargo/kubeconfigs
@@ -80,7 +80,7 @@ spec:
           name: git
           readOnly: true
         {{- end }}
-        {{- if .Values.controller.cabundle.enabled }}
+        {{- if or .Values.controller.cabundle.configMapName .Values.controller.cabundle.secretName }}
         - mountPath: /etc/ssl/certs
           name: certs
         {{- end }}
@@ -91,7 +91,7 @@ spec:
         {{- end }}
         resources:
           {{- toYaml .Values.controller.resources | nindent 10 }}
-      {{- if .Values.controller.cabundle.enabled }}
+      {{- if or .Values.controller.cabundle.configMapName .Values.controller.cabundle.secretName }}
       initContainers:
       - name: parse-cabundle
         image: {{ include "kargo.image" . }}
@@ -116,7 +116,7 @@ spec:
         - name: certs
           mountPath: /tmp/target
       {{- end }}
-      {{- if or .Values.kubeconfigSecrets.kargo .Values.kubeconfigSecrets.argocd .Values.controller.gitClient.signingKeySecret.name .Values.controller.cabundle.enabled }}
+      {{- if or .Values.kubeconfigSecrets.kargo .Values.kubeconfigSecrets.argocd .Values.controller.gitClient.signingKeySecret.name .Values.controller.cabundle.configMapName .Values.controller.cabundle.secretName }}
       volumes:
       {{- if or .Values.kubeconfigSecrets.kargo .Values.kubeconfigSecrets.argocd }}
       - name: kubeconfigs
@@ -139,16 +139,15 @@ spec:
                 mode: 0644
           {{- end }}
       {{- end }}
-      {{- if .Values.controller.cabundle.enabled }}
-      {{- if .Values.controller.cabundle.configMapName }}
-      - name: cabundle
-        configMap:
-          name: {{ .Values.controller.cabundle.configMapName }}
-      {{- end }}
+      {{- if .Values.controller.cabundle.configMapName .Values.controller.cabundle.secretName }}
       {{- if .Values.controller.cabundle.secretName }}
       - name: cabundle
         secret:
           secretName: {{ .Values.controller.cabundle.secretName }}
+      {{- else }}
+      - name: cabundle
+        configMap:
+          name: {{ .Values.controller.cabundle.configMapName }}
       {{- end }}
       - name: certs
         emptyDir: {}
