@@ -87,10 +87,14 @@ func (k *kustomizer) apply(
 			continue
 		}
 		var fqImageRef string // Fully-qualified image reference
+		imageName := image.RepoURL
+		if imgUpdate.NewName != "" {
+			imageName = fmt.Sprintf("%s=%s", imageName, imgUpdate.NewName)
+		}
 		if imgUpdate.UseDigest {
-			fqImageRef = fmt.Sprintf("%s@%s", image.RepoURL, image.Digest)
+			fqImageRef = fmt.Sprintf("%s@%s", imageName, image.Digest)
 		} else {
-			fqImageRef = fmt.Sprintf("%s:%s", image.RepoURL, image.Tag)
+			fqImageRef = fmt.Sprintf("%s:%s", imageName, image.Tag)
 		}
 		dir := filepath.Join(workingDir, imgUpdate.Path)
 		if err := k.setImageFn(dir, fqImageRef); err != nil {

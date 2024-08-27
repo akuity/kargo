@@ -1162,6 +1162,11 @@ message KustomizeImageUpdate {
   //
   // +kubebuilder:validation:Optional
   optional bool useDigest = 3;
+
+  // NewName specifies a container image name override when setting the image
+  //
+  // +kubebuilder:validation:Optional
+  optional string newName = 5;
 }
 
 // KustomizePromotionMechanism describes how to use Kustomize to incorporate

@@ -615,6 +615,10 @@ spec:
                                       (without tag). This is a required field.
                                     minLength: 1
                                     type: string
+                                  newName:
+                                    description: NewName specifies a container image
+                                      name override when setting the image
+                                    type: string
                                   origin:
                                     description: |-
                                       Origin disambiguates the origin from which artifacts used by this promotion
