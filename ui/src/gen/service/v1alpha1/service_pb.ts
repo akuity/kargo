@@ -4649,6 +4649,8 @@ export class GetRoleResponse extends Message<GetRoleResponse> {
  */
 export class ListUserClaims extends Message<ListUserClaims> {
   /**
+   * Note: oneof and repeated do not work together
+   *
    * @generated from field: repeated github.com.akuity.kargo.api.rbac.v1alpha1.UserClaim user_claims = 1;
    */
   userClaims: UserClaim[] = [];

@@ -660,6 +660,7 @@ message GetRoleResponse {
 }
 
 message ListUserClaims {
+  // Note: oneof and repeated do not work together
   repeated github.com.akuity.kargo.api.rbac.v1alpha1.UserClaim user_claims = 1;
 }
 

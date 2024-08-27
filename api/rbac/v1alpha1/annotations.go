@@ -6,13 +6,11 @@ const (
 	// Kargo.
 	AnnotationKeyManaged = "rbac.kargo.akuity.io/managed"
 
-	// AnnotationKeyOIDCPrefix is an annotation key prefix that can be set on a
-	// ServiceAccount to associate it with a list of claims from an OIDC
-	// provider. The annotation is used to grant permissions to the
-	// ServiceAccount based on the claim that is both provided in the suffix and from a user who authenticates
-	// using OIDC.
-	// e.g. rbac.kargo.akuity.io/claim.subs: '123,456'
-	// The value of the annotation should be a comma-separated list.
+	// AnnotationKeyOIDCPrefixis the prefix of an annotation key that can be set on a
+	// ServiceAccount to associate it with any user authenticated via OIDC and having
+	// the claim indicated by the full annotation key with any of the values indicated by
+	// the annotation. The value of the annotation may be either a scalar string value or a
+	// comma-separated list.
 	AnnotationKeyOIDCClaimNamePrefix = "rbac.kargo.akuity.io/claim."
 
 	AnnotationValueTrue = "true"

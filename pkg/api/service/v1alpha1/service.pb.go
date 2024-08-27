@@ -6153,6 +6153,7 @@ type ListUserClaims struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// Note: oneof and repeated do not work together
 	UserClaims []*v1alpha12.UserClaim `protobuf:"bytes,1,rep,name=user_claims,json=userClaims,proto3" json:"user_claims,omitempty"`
 }
 
