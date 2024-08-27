@@ -426,7 +426,7 @@ type KustomizeImageUpdate struct {
 	// NewName specifies a container image name override when setting the image
 	//
 	// +kubebuilder:validation:Optional
-	NewName string `json:"newName" protobuf:"bytes,5,opt,name=newName"`
+	NewName string `json:"newName,omitempty" protobuf:"bytes,5,opt,name=newName"`
 }
 
 // HelmPromotionMechanism describes how to use Helm to incorporate Freight into
