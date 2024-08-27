@@ -438,6 +438,10 @@
                               "minLength": 1,
                               "type": "string"
                             },
+                            "newName": {
+                              "description": "NewName specifies a container image name override when setting the image",
+                              "type": "string"
+                            },
                             "origin": {
                               "description": "Origin disambiguates the origin from which artifacts used by this promotion\nmechanism must have originated. This is especially useful in cases where a\nStage may request Freight from multiples origins (e.g. multiple Warehouses)\nand some of those each reference different versions of artifacts from the\nsame repository. This field is optional. When left unspecified, it will\nimplicitly inherit the value of the enclosing KustomizePromotionMechanism's\nOrigin field. If that, too, is unspecified, Promotions will fail if there\nis ever ambiguity regarding from which piece of Freight an artifact is to\nbe sourced.",
                               "properties": {

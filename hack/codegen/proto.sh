@@ -35,7 +35,7 @@ function main() {
   go mod vendor
 
   echo "Generate protobuf code from Kubebuilder structs..."
-  GOPATH=${GOPATH} go-to-protobuf \
+    GOPATH=${GOPATH} go-to-protobuf \
     --go-header-file=./hack/boilerplate.go.txt \
     --packages="$(IFS=, ; echo "${API_PKGS[*]}")" \
     --apimachinery-packages="$(IFS=, ; echo "${APIMACHINERY_PKGS[*]}")" \
