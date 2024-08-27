@@ -12,7 +12,7 @@ import { FieldContainer } from '@ui/features/common/form/field-container';
 import { MultiStringEditor } from '@ui/features/common/form/multi-string-editor';
 import { DESCRIPTION_ANNOTATION_KEY, dnsRegex } from '@ui/features/common/utils';
 import { PolicyRule } from '@ui/gen/k8s.io/api/rbac/v1/generated_pb';
-import { Role, Claim } from '@ui/gen/rbac/v1alpha1/generated_pb';
+import { Role, UserClaim } from '@ui/gen/rbac/v1alpha1/generated_pb';
 import { createRole, updateRole } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 import { zodValidators } from '@ui/utils/validators';
 
@@ -56,7 +56,7 @@ export const CreateRole = ({ editing, onSuccess, project, hide }: Props) => {
       name: editing?.metadata?.name || '',
       description: editing?.metadata?.annotations[DESCRIPTION_ANNOTATION_KEY] || '',
       emails:
-        editing?.claims.find((claim: Claim) => {
+        editing?.claims.find((claim: UserClaim) => {
           if (claim.name === 'emails') {
             return claim;
           } else {
@@ -64,7 +64,7 @@ export const CreateRole = ({ editing, onSuccess, project, hide }: Props) => {
           }
         })?.values || [],
       subs:
-        editing?.claims.find((claim: Claim) => {
+        editing?.claims.find((claim: UserClaim) => {
           if (claim.name === 'subs') {
             return claim;
           } else {
@@ -72,7 +72,7 @@ export const CreateRole = ({ editing, onSuccess, project, hide }: Props) => {
           }
         })?.values || [],
       groups:
-        editing?.claims.find((claim: Claim) => {
+        editing?.claims.find((claim: UserClaim) => {
           if (claim.name === 'groups') {
             return claim;
           } else {
@@ -97,10 +97,10 @@ export const CreateRole = ({ editing, onSuccess, project, hide }: Props) => {
 
   const onSubmit = handleSubmit((values) => {
     const annotations = annotationsWithDescription(values.description);
-    const getClaims = (): PartialMessage<Claim>[] => {
-      const claimsArray: PartialMessage<Claim>[] = [];
+    const getClaims = (): PartialMessage<UserClaim>[] => {
+      const claimsArray: PartialMessage<UserClaim>[] = [];
       multiFields.map((field) => {
-        const newClaim = new Claim({
+        const newClaim = new UserClaim({
           name: String(field.name)
         });
         if (newClaim.name === 'emails') {

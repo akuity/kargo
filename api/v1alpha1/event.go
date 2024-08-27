@@ -78,15 +78,6 @@ func FormatEventUserActor(u user.Info) string {
 	}
 }
 
-func IsClaimValueNonEmptyString(claimValue any) bool {
-	if claimString, ok := claimValue.(string); ok {
-		if claimString != "" {
-			return true
-		}
-	}
-	return false
-}
-
 func FormatEventKubernetesUserActor(u authnv1.UserInfo) string {
 	return EventActorKubernetesUserPrefix + u.Username
 }
