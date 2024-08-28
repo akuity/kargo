@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "GitCommitConfig",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["path"],
+  "properties": {
+    "author": {
+      "type": "object",
+      "description": "The author of the commit.",
+      "additionalProperties": false,
+      "properties": {
+        "email": {
+          "type": "string",
+          "description": "The email of the author.",
+          "oneOf": [
+            {
+              "format": "email"
+            },
+            {
+              "const": ""
+            }
+          ]
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the author."
+        }
+      }
+    },
+    "message": {
+      "type": "string",
+      "description": "The commit message."
+    },
+    "path": {
+      "type": "string",
+      "description": "The path to a working directory of a local repository.",
+      "minLength": 1
+    }
+  }
+}
