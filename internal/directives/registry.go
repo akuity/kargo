@@ -17,7 +17,6 @@ func BuiltinsRegistry() DirectiveRegistry {
 // register and retrieve directives by name.
 type DirectiveRegistry map[string]Directive
 
-
 // RegisterDirective registers a Directive with the given name. If a Directive
 // with the same name has already been registered, it will be overwritten.
 func (r DirectiveRegistry) RegisterDirective(directive Directive) {

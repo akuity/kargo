@@ -6,7 +6,7 @@ import (
 	"fmt"
 )
 
-func init()  {
+func init() {
 	// Register the copy directive with the builtins registry.
 	builtins.RegisterDirective(&copyDirective{})
 }

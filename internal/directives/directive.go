@@ -92,4 +92,3 @@ func configToStruct[T any](c Config) (T, error) {
 
 	return result, nil
 }
-
