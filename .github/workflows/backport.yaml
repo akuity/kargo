@@ -15,32 +15,32 @@ jobs:
       pull-requests: write
     if: github.repository_owner == 'akuity' && github.event.pull_request.merged && (github.event_name != 'labeled' || startsWith('backport/', github.event.label.name))
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Create backport PRs
-        uses: korthout/backport-action@v3
-        # xref: https://github.com/korthout/backport-action#inputs
-        with:
-          # Use token to allow workflows to be triggered for the created PR
-          github_token: ${{ secrets.AKUITYBOT_PAT }}
-          # Match labels with pattern `backport/<target-branch>`
-          label_pattern: '^backport\/([^ ]+)$'
-          # A title which matches the linter constraints for semantic PR titles,
-          # while still being descriptive about the target branch
-          pull_title: 'chore(backport ${target_branch}): ${pull_title}'
-          # Simpler PR description than default
-          pull_description: |-
-            Automated backport to `${target_branch}`, triggered by a label in #${pull_number}.
-          # Copy any labels (excluding those starting with "backport/") to the backport PR
-          copy_labels_pattern: '^(?!backport\/).*'
-          # Copy associated people to the backport PR
-          copy_assignees: true
-          copy_requested_reviewers: true
-          # Skip any merge commits in the source PR
-          merge_commits: 'skip'
-          # Automatically detect "squash and merge" instead of copying all
-          # commits from the source PR to the backport PR
-          experimental: >
-            {
-              "detect_merge_method": true
-            }
+    - name: Checkout
+      uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+    - name: Create backport PRs
+      uses: korthout/backport-action@be567af183754f6a5d831ae90f648954763f17f5 # v3.1.0
+      # xref: https://github.com/korthout/backport-action#inputs
+      with:
+        # Use token to allow workflows to be triggered for the created PR
+        github_token: ${{ secrets.AKUITYBOT_PAT }}
+        # Match labels with pattern `backport/<target-branch>`
+        label_pattern: '^backport\/([^ ]+)$'
+        # A title which matches the linter constraints for semantic PR titles,
+        # while still being descriptive about the target branch
+        pull_title: 'chore(backport ${target_branch}): ${pull_title}'
+        # Simpler PR description than default
+        pull_description: |-
+          Automated backport to `${target_branch}`, triggered by a label in #${pull_number}.
+        # Copy any labels (excluding those starting with "backport/") to the backport PR
+        copy_labels_pattern: '^(?!backport\/).*'
+        # Copy associated people to the backport PR
+        copy_assignees: true
+        copy_requested_reviewers: true
+        # Skip any merge commits in the source PR
+        merge_commits: 'skip'
+        # Automatically detect "squash and merge" instead of copying all
+        # commits from the source PR to the backport PR
+        experimental: >
+          {
+            "detect_merge_method": true
+          }

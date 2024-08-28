@@ -17,7 +17,7 @@ import {
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button, Dropdown, Spin, Tooltip, message } from 'antd';
-import React, { Suspense, lazy, useMemo } from 'react';
+import React, { Suspense, lazy, useEffect, useMemo } from 'react';
 import { generatePath, useNavigate, useParams } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
@@ -30,12 +30,15 @@ const StageDetails = lazy(() => import('@ui/features/stage/stage-details'));
 const CreateStage = lazy(() => import('@ui/features/stage/create-stage'));
 import { SuspenseSpin } from '@ui/features/common/suspense-spin';
 import { getCurrentFreight, mapToNames } from '@ui/features/common/utils';
-import { FreightTimelineHeader } from '@ui/features/freight-timeline/freight-timeline-header';
+const FreightTimelineHeader = lazy(
+  () => import('@ui/features/freight-timeline/freight-timeline-header')
+);
 import { FreightTimelineWrapper } from '@ui/features/freight-timeline/freight-timeline-wrapper';
 import { clearColors } from '@ui/features/stage/utils';
 import {
   approveFreight,
   listStages,
+  listImages,
   listWarehouses,
   promoteToStage,
   queryFreight,
@@ -50,7 +53,7 @@ import { Images } from './images';
 import { RepoNode, RepoNodeDimensions } from './nodes/repo-node';
 import { Nodule, StageNode } from './nodes/stage-node';
 import styles from './project-details.module.less';
-import { FreightTimelineAction, NodeType } from './types';
+import { CollapseMode, FreightTimelineAction, NodeType } from './types';
 import { LINE_THICKNESS } from './utils/graph';
 import { isPromoting, usePipelineState } from './utils/state';
 import { usePipelineGraph } from './utils/use-pipeline-graph';
@@ -68,6 +71,7 @@ export const Pipelines = ({
 }) => {
   const { name, stageName, freightName, warehouseName } = useParams();
   const { data, isLoading } = useQuery(listStages, { project: name });
+  const { data: imageData, isLoading: isLoadingImages } = useQuery(listImages, { project: name });
   const navigate = useNavigate();
   const {
     data: freightData,
@@ -118,9 +122,22 @@ export const Pipelines = ({
   );
 
   const [selectedWarehouse, setSelectedWarehouse] = React.useState('');
-  const [freightTimelineCollapsed, setFreightTimelineCollapsed] = React.useState(false);
+  const [freightTimelineCollapsed, setFreightTimelineCollapsed] = React.useState(
+    CollapseMode.Expanded
+  );
 
-  const [hideImages, setHideImages] = useLocalStorage(`${name}-hideImages`, false);
+  const [hideImages, setHideImages] = useLocalStorage(
+    `${name}-hide-images`,
+    Object.keys(imageData?.images || {}).length
+  );
+  const [isNew, setIsNew] = useLocalStorage(`${name}-is-new`, false);
+
+  useEffect(() => {
+    if (Object.keys(imageData?.images || {}).length > 0 && isNew) {
+      setIsNew(false);
+      setHideImages(false);
+    }
+  }, [imageData?.images]);
 
   const warehouseMap = useMemo(() => {
     const map = {} as { [key: string]: Warehouse };
@@ -171,8 +188,7 @@ export const Pipelines = ({
   const [nodes, connectors, box, sortedStages, stageColorMap, warehouseColorMap] = usePipelineGraph(
     name,
     data?.stages || [],
-    warehouseData?.warehouses || [],
-    hideSubscriptions
+    warehouseData?.warehouses || []
   );
 
   const { mutate: manualApproveAction } = useMutation(approveFreight, {
@@ -216,7 +232,7 @@ export const Pipelines = ({
     return freightMap;
   }, [freightData]);
 
-  if (isLoading || isLoadingFreight) return <LoadingState />;
+  if (isLoading || isLoadingFreight || isLoadingImages) return <LoadingState />;
 
   const stage = stageName && (data?.stages || []).find((item) => item.metadata?.name === stageName);
   const freight = freightName && fullFreightById[freightName];
@@ -297,6 +313,7 @@ export const Pipelines = ({
                 stagesPerFreight={stagesPerFreight}
                 collapsed={freightTimelineCollapsed}
                 setCollapsed={setFreightTimelineCollapsed}
+                stageCount={data?.stages.length || 0}
               />
             </Suspense>
           </FreightTimelineWrapper>
@@ -462,6 +479,9 @@ export const Pipelines = ({
                       </>
                     ) : (
                       <RepoNode
+                        hidden={
+                          node.type !== NodeType.WAREHOUSE && hideSubscriptions[node.warehouseName]
+                        }
                         nodeData={node}
                         onClick={
                           node.type === NodeType.WAREHOUSE
@@ -512,8 +532,13 @@ export const Pipelines = ({
                         {node.type === NodeType.WAREHOUSE && (
                           <Nodule
                             nodeHeight={RepoNodeDimensions().height}
-                            onClick={() => setHideSubscriptions(!hideSubscriptions)}
-                            icon={hideSubscriptions ? faEye : faEyeSlash}
+                            onClick={() =>
+                              setHideSubscriptions({
+                                ...hideSubscriptions,
+                                [node.warehouseName]: !hideSubscriptions[node.warehouseName]
+                              })
+                            }
+                            icon={hideSubscriptions[node.warehouseName] ? faEye : faEyeSlash}
                             begin={true}
                           />
                         )}
@@ -522,22 +547,24 @@ export const Pipelines = ({
                   </div>
                 ))}
                 {connectors?.map((connector) =>
-                  connector.map((line, i) => (
-                    <div
-                      className='absolute bg-gray-300 rounded-full'
-                      style={{
-                        padding: 0,
-                        margin: 0,
-                        height: LINE_THICKNESS,
-                        width: line.width,
-                        left: line.x,
-                        top: line.y,
-                        transform: `rotate(${line.angle}deg)`,
-                        backgroundColor: line.color
-                      }}
-                      key={i}
-                    />
-                  ))
+                  connector.map((line, i) =>
+                    hideSubscriptions[line.to] && line.from === 'subscription' ? null : (
+                      <div
+                        className='absolute bg-gray-300 rounded-full'
+                        style={{
+                          padding: 0,
+                          margin: 0,
+                          height: LINE_THICKNESS,
+                          width: line.width,
+                          left: line.x,
+                          top: line.y,
+                          transform: `rotate(${line.angle}deg)`,
+                          backgroundColor: line.color
+                        }}
+                        key={i}
+                      />
+                    )
+                  )
                 )}
               </div>
             </div>
@@ -554,6 +581,7 @@ export const Pipelines = ({
                 project={name as string}
                 stages={sortedStages || []}
                 hide={() => setHideImages(true)}
+                images={imageData?.images || {}}
               />
             </div>
           )}

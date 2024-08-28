@@ -4,6 +4,7 @@
 bin/
 charts/kargo/*.tgz
 coverage.txt
+hack/include/
 pkg/api/v1alpha1/
 vendor/
 internal/api/ui/

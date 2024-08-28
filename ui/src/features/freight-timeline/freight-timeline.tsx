@@ -1,9 +1,6 @@
 import { useMutation, useQuery } from '@connectrpc/connect-query';
-import { faArrowsLeftRightToLine } from '@fortawesome/free-solid-svg-icons';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { message } from 'antd';
-import { useEffect, useMemo, useState } from 'react';
-import InfiniteScroll from 'react-infinite-scroller';
+import { useEffect, useMemo } from 'react';
 import { generatePath, useNavigate, useParams } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
@@ -15,7 +12,7 @@ import {
 import { Freight, Stage } from '@ui/gen/v1alpha1/generated_pb';
 
 import { FreightActionMenu } from '../project/pipelines/freight-action-menu';
-import { FreightMode, FreightTimelineAction } from '../project/pipelines/types';
+import { CollapseMode, FreightTimelineAction } from '../project/pipelines/types';
 import { PipelineStateHook, getFreightMode, isPromoting } from '../project/pipelines/utils/state';
 import { usePromotionEligibleFreight } from '../project/pipelines/utils/use-promotion-eligible-freight';
 import { getSeconds, onError } from '../project/pipelines/utils/util';
@@ -23,6 +20,7 @@ import { getSeconds, onError } from '../project/pipelines/utils/util';
 import { ConfirmPromotionDialogue } from './confirm-promotion-dialogue';
 import { FreightContents } from './freight-contents';
 import { FreightItem } from './freight-item';
+import { FreightSeparator } from './freight-separator';
 import { StageIndicators } from './stage-indicators';
 
 export const FreightTimeline = ({
@@ -33,7 +31,8 @@ export const FreightTimeline = ({
   refetchFreight,
   onHover,
   collapsed,
-  setCollapsed
+  setCollapsed,
+  stageCount
 }: {
   freight: Freight[];
   state: PipelineStateHook;
@@ -42,8 +41,9 @@ export const FreightTimeline = ({
   highlightedStages: { [key: string]: boolean };
   refetchFreight: () => void;
   onHover: (hovering: boolean, freightName: string) => void;
-  collapsed: boolean;
-  setCollapsed: (collapsed: boolean) => void;
+  collapsed: CollapseMode;
+  setCollapsed: (collapsed: CollapseMode) => void;
+  stageCount: number;
 }) => {
   const navigate = useNavigate();
   const { name: project } = useParams();
@@ -88,66 +88,66 @@ export const FreightTimeline = ({
     refetchAvailableFreight();
   }, [state.action, state.stage, freight]);
 
-  const [loadedItems, setLoadedItems] = useState(20);
-  const loadFunc = (loadedLength: number) => {
-    setLoadedItems((length) => length + loadedLength);
-  };
-
-  const currentFreight = freight.slice(0, loadedItems);
-
-  let seenStages = 0;
-  let displayedCollapsed = false;
-  const numStages = useMemo(() => {
-    return Object.keys(stagesPerFreight).reduce(
-      (acc, cur) => (cur?.length > 0 ? acc + stagesPerFreight[cur].length : acc),
-      0
+  const sortedFreight = useMemo(() => {
+    return freight.sort(
+      (a, b) =>
+        getSeconds(b.metadata?.creationTimestamp) - getSeconds(a.metadata?.creationTimestamp)
     );
-  }, [stagesPerFreight]);
+  }, [freight]);
+
+  const currentFreight = useMemo(() => {
+    let interveningHiddenFreight = 0;
+    let seenStages = 0;
+    if (!collapsed || collapsed === CollapseMode.Expanded) {
+      return sortedFreight.map((f) => ({ freight: f }));
+    }
+
+    const filteredFreight = [];
+
+    let i = 0;
+    for (const f of sortedFreight) {
+      const curStageCount = (stagesPerFreight[f?.metadata?.name || ''] || []).length;
+      if (curStageCount === 0) {
+        interveningHiddenFreight += 1;
+        if (i === sortedFreight.length - 1) {
+          filteredFreight.push({ count: interveningHiddenFreight, oldest: true });
+        } else if (collapsed === CollapseMode.HideOld && seenStages < stageCount) {
+          filteredFreight.push({ freight: f });
+        }
+      } else {
+        seenStages += curStageCount;
+        if (collapsed === CollapseMode.HideAll) {
+          filteredFreight.push({ count: interveningHiddenFreight });
+        }
+        interveningHiddenFreight = 0;
+        filteredFreight.push({ freight: f });
+      }
+      i++;
+    }
+
+    return filteredFreight;
+  }, [freight, collapsed]);
 
   return (
-    <>
-      <InfiniteScroll
-        pageStart={0}
-        loadMore={loadFunc}
-        className='w-full flex h-full'
-        hasMore={freight.length > currentFreight.length}
-      >
-        {(currentFreight || [])
-          .sort(
-            (a, b) =>
-              getSeconds(b.metadata?.creationTimestamp) - getSeconds(a.metadata?.creationTimestamp)
-          )
-          .map((f, i) => {
-            const id = f?.metadata?.name || `${i}`;
-            const curNumStages = (stagesPerFreight[id] || []).length;
-            if (curNumStages > 0) {
-              seenStages += curNumStages;
-            }
-            if (seenStages >= numStages && curNumStages === 0 && collapsed) {
-              const tmp = displayedCollapsed;
-              displayedCollapsed = true;
-              return tmp ? null : (
-                <FreightItem
-                  onClick={() => setCollapsed(false)}
-                  empty={true}
-                  highlighted={false}
-                  key='collapsed'
-                  mode={FreightMode.Default}
-                  onHover={() => null}
-                  hideLabel={true}
-                >
-                  <FontAwesomeIcon
-                    icon={faArrowsLeftRightToLine}
-                    className='text-gray-300'
-                    size='2x'
-                  />
-                </FreightItem>
-              );
-            }
-            return (
+    <div className='w-full flex h-full'>
+      {(currentFreight || []).map((obj, i) => {
+        const { freight: f, count, oldest } = obj;
+        const id = f?.metadata?.name || `${i}`;
+        const curNumStages = (stagesPerFreight[id] || []).length;
+        if (count && count > 0) {
+          return (
+            <FreightSeparator
+              key={i}
+              count={count}
+              onClick={() => setCollapsed(CollapseMode.Expanded)}
+              oldest={oldest}
+            />
+          );
+        } else if (f) {
+          return (
+            <div key={id}>
               <FreightItem
                 freight={f || undefined}
-                key={i}
                 onClick={() => {
                   if (state.stage && promotionEligible[id]) {
                     state.select(undefined, undefined, id);
@@ -220,10 +220,11 @@ export const FreightTimeline = ({
                   />
                 )}
               </FreightItem>
-            );
-          })}
-      </InfiniteScroll>
-    </>
+            </div>
+          );
+        }
+      })}
+    </div>
   );
 };
 

@@ -17,9 +17,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api/kubernetes"
-	"github.com/akuity/kargo/internal/api/user"
 	"github.com/akuity/kargo/internal/api/validation"
-	rollouts "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
@@ -135,28 +133,18 @@ func TestListPromotions(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// Simulate an admin user to prevent any authz issues with the authorizing
-			// client.
-			ctx := user.ContextWithInfo(
-				context.Background(),
-				user.Info{
-					IsAdmin: true,
-				},
-			)
+			ctx := context.Background()
 
 			client, err := kubernetes.NewClient(
 				ctx,
 				&rest.Config{},
 				kubernetes.ClientOptions{
+					SkipAuthorization: true,
 					NewInternalClient: func(
 						_ context.Context,
 						_ *rest.Config,
 						scheme *runtime.Scheme,
 					) (client.Client, error) {
-						if err := rollouts.AddToScheme(scheme); err != nil {
-							return nil, err
-						}
-
 						c := fake.NewClientBuilder().WithScheme(scheme)
 						if len(testCase.objects) > 0 {
 							c.WithObjects(testCase.objects...)

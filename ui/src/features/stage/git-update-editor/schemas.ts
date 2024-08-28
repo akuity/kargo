@@ -64,7 +64,5 @@ export const gitRepoUpdateSchema = z.object({
   readBranch: z.string(),
   writeBranch: z.string(),
   pullRequest: pullRequestMechanismSchema.optional(),
-  render: renderMechanismSchema.optional(),
-  kustomize: kustomizeMechanismSchema.optional(),
-  helm: helmMechanismSchema.optional()
+  promotionMechanisms: zodValidators.requiredString
 });

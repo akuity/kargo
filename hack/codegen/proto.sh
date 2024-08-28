@@ -20,14 +20,13 @@ readonly APIMACHINERY_PKGS=(
 work_dir=$(dirname "${0}")
 work_dir=$(readlink -f "${work_dir}/../..")
 
-cd "${work_dir}"
-
 function clean() {
   echo "Clean up intermediate resources..."
   rm -r "${work_dir}/pkg/api/v1alpha1" || true
   rm -r "${work_dir}/pkg/api/rbac" || true
   rm -r "${work_dir}/vendor" || true
 }
+trap 'clean' EXIT
 
 function main() {
   echo "Vendor dependencies for protobuf code generation..."
@@ -39,6 +38,7 @@ function main() {
     --go-header-file=./hack/boilerplate.go.txt \
     --packages="$(IFS=, ; echo "${API_PKGS[*]}")" \
     --apimachinery-packages="$(IFS=, ; echo "${APIMACHINERY_PKGS[*]}")" \
+    --proto-import "${work_dir}/hack/include" \
     --proto-import "${work_dir}/vendor"
 
   echo "Copy generated code to the working directory..."
@@ -61,6 +61,8 @@ function main() {
   pnpm run --dir=ui generate:proto-extensions
 }
 
-trap 'clean' EXIT
-
-main
+(
+  export PATH="${work_dir}/hack/bin:${PATH}"
+  cd "${work_dir}"
+  main
+)

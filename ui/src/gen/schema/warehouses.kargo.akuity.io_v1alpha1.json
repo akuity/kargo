@@ -137,10 +137,16 @@
                   "semverConstraint": {
                     "description": "SemverConstraint specifies constraints on what new tagged commits are\nconsidered in determining the newest commit of interest. The value in this\nfield only has any effect when the CommitSelectionStrategy is SemVer. This\nfield is optional. When left unspecified, there will be no constraints,\nwhich means the latest semantically tagged commit will always be used. Care\nshould be taken with leaving this field unspecified, as it can lead to the\nunanticipated rollout of breaking changes.",
                     "type": "string"
+                  },
+                  "strictSemvers": {
+                    "default": true,
+                    "description": "StrictSemvers specifies whether only \"strict\" semver tags should be\nconsidered. A \"strict\" semver tag is one containing ALL of major, minor,\nand patch version components. This is enabled by default, but only has any\neffect when the CommitSelectionStrategy is SemVer. This should be disabled\ncautiously, as it creates the potential for any tag containing numeric\ncharacters only to be mistaken for a semver string containing the major\nversion number only.",
+                    "type": "boolean"
                   }
                 },
                 "required": [
-                  "repoURL"
+                  "repoURL",
+                  "strictSemvers"
                 ],
                 "type": "object"
               },
@@ -199,10 +205,16 @@
                   "semverConstraint": {
                     "description": "SemverConstraint specifies constraints on what new image versions are\npermissible. The value in this field only has any effect when the\nImageSelectionStrategy is SemVer or left unspecified (which is implicitly\nthe same as SemVer). This field is also optional. When left unspecified,\n(and the ImageSelectionStrategy is SemVer or unspecified), there will be no\nconstraints, which means the latest semantically tagged version of an image\nwill always be used. Care should be taken with leaving this field\nunspecified, as it can lead to the unanticipated rollout of breaking\nchanges. Refer to Image Updater documentation for more details.\nMore info: https://github.com/masterminds/semver#checking-version-constraints",
                     "type": "string"
+                  },
+                  "strictSemvers": {
+                    "default": true,
+                    "description": "StrictSemvers specifies whether only \"strict\" semver tags should be\nconsidered. A \"strict\" semver tag is one containing ALL of major, minor,\nand patch version components. This is enabled by default, but only has any\neffect when the ImageSelectionStrategy is SemVer. This should be disabled\ncautiously, as it is not uncommon to tag container images with short Git\ncommit hashes, which have the potential to contain numeric characters only\nand could be mistaken for a semver string containing the major version\nnumber only.",
+                    "type": "boolean"
                   }
                 },
                 "required": [
-                  "repoURL"
+                  "repoURL",
+                  "strictSemvers"
                 ],
                 "type": "object"
               }

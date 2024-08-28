@@ -4,13 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"sort"
 	"strings"
 	"time"
 
 	"github.com/gobwas/glob"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -18,6 +18,7 @@ import (
 	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/freight"
 	"github.com/akuity/kargo/internal/git"
+	"github.com/akuity/kargo/internal/kubeclient"
 	"github.com/akuity/kargo/internal/logging"
 )
 
@@ -25,6 +26,7 @@ const (
 	authorizedStageAnnotationKey = "kargo.akuity.io/authorized-stage"
 
 	applicationOperationInitiator = "kargo-controller"
+	freightCollectionInfoKey      = "kargo.akuity.io/freight-collection"
 )
 
 // argoCDMechanism is an implementation of the Mechanism interface that updates
@@ -45,16 +47,16 @@ type argoCDMechanism struct {
 		*kargoapi.Stage,
 		*kargoapi.ArgoCDAppUpdate,
 		*argocd.Application,
-		[]kargoapi.FreightReference,
+		*kargoapi.FreightCollection,
 		*argocd.ApplicationSource,
 		argocd.ApplicationSources,
 	) (argocd.OperationPhase, bool, error)
-	hardRefreshApplicationFn   func(context.Context, *argocd.Application) error
-	updateApplicationSourcesFn func(
-		context.Context,
-		*argocd.Application,
-		*argocd.ApplicationSource,
-		argocd.ApplicationSources,
+	syncApplicationFn func(
+		ctx context.Context,
+		app *argocd.Application,
+		desiredSource *argocd.ApplicationSource,
+		desiredSources argocd.ApplicationSources,
+		freightColID string,
 	) error
 	getAuthorizedApplicationFn func(
 		ctx context.Context,
@@ -71,9 +73,8 @@ type argoCDMechanism struct {
 	) (argocd.ApplicationSource, error)
 	argoCDAppPatchFn func(
 		context.Context,
-		client.Object,
-		client.Patch,
-		...client.PatchOption,
+		kubeclient.ObjectWithKind,
+		kubeclient.UnstructuredPatchFn,
 	) error
 	logAppEventFn func(ctx context.Context, app *argocd.Application, user, reason, message string)
 }
@@ -87,12 +88,11 @@ func newArgoCDMechanism(kargoClient, argocdClient client.Client) Mechanism {
 	}
 	a.buildDesiredSourcesFn = a.buildDesiredSources
 	a.mustPerformUpdateFn = a.mustPerformUpdate
-	a.hardRefreshApplicationFn = a.hardRefreshApplication
-	a.updateApplicationSourcesFn = a.updateApplicationSources
+	a.syncApplicationFn = a.syncApplication
 	a.getAuthorizedApplicationFn = a.getAuthorizedApplication
 	a.applyArgoCDSourceUpdateFn = a.applyArgoCDSourceUpdate
 	if argocdClient != nil {
-		a.argoCDAppPatchFn = argocdClient.Patch
+		a.argoCDAppPatchFn = a.argoCDAppPatch
 		a.logAppEventFn = a.logAppEvent
 	}
 	return a
@@ -108,33 +108,31 @@ func (a *argoCDMechanism) Promote(
 	ctx context.Context,
 	stage *kargoapi.Stage,
 	promo *kargoapi.Promotion,
-	newFreight []kargoapi.FreightReference,
-) (*kargoapi.PromotionStatus, []kargoapi.FreightReference, error) {
+) error {
 	updates := stage.Spec.PromotionMechanisms.ArgoCDAppUpdates
 
 	if len(updates) == 0 {
-		return promo.Status.WithPhase(kargoapi.PromotionPhaseSucceeded), newFreight, nil
+		promo.Status.Phase = kargoapi.PromotionPhaseSucceeded
+		return nil
 	}
 
 	if a.argocdClient == nil {
-		return promo.Status.WithPhase(kargoapi.PromotionPhaseFailed), newFreight,
-			errors.New(
-				"Argo CD integration is disabled on this controller; cannot perform " +
-					"promotion",
-			)
+		promo.Status.Phase = kargoapi.PromotionPhaseFailed
+		return errors.New(
+			"Argo CD integration is disabled on this controller; cannot perform promotion",
+		)
 	}
 
 	logger := logging.LoggerFromContext(ctx)
 	logger.Debug("executing Argo CD-based promotion mechanisms")
 
 	var updateResults = make([]argocd.OperationPhase, 0, len(updates))
-	var newStatus = promo.Status.DeepCopy()
 	for i := range updates {
 		update := &updates[i]
 		// Retrieve the Argo CD Application.
 		app, err := a.getAuthorizedApplicationFn(ctx, update.AppNamespace, update.AppName, stage.ObjectMeta)
 		if err != nil {
-			return nil, newFreight, err
+			return err
 		}
 
 		// Build the desired source(s) for the Argo CD Application.
@@ -143,19 +141,10 @@ func (a *argoCDMechanism) Promote(
 			stage,
 			update,
 			app,
-			newFreight,
+			promo.Status.FreightCollection.References(),
 		)
 		if err != nil {
-			return nil, newFreight, err
-		}
-
-		// If we have no desired source(s), we only need to perform a hard refresh.
-		if desiredSource == nil && len(desiredSources) == 0 {
-			if err = a.hardRefreshApplicationFn(ctx, app); err != nil {
-				return nil, newFreight, err
-			}
-			updateResults = append(updateResults, argocd.OperationSucceeded)
-			continue
+			return err
 		}
 
 		// Check if the update needs to be performed and retrieve its phase.
@@ -164,7 +153,7 @@ func (a *argoCDMechanism) Promote(
 			stage,
 			update,
 			app,
-			newFreight,
+			promo.Status.FreightCollection,
 			desiredSource,
 			desiredSources,
 		)
@@ -181,7 +170,7 @@ func (a *argoCDMechanism) Promote(
 				if phase == "" {
 					// If we do not have a phase, we cannot continue processing
 					// this update by waiting.
-					return nil, newFreight, err
+					return err
 				}
 				// Log the error as a warning, but continue to the next update.
 				logger.Info(err.Error())
@@ -189,7 +178,7 @@ func (a *argoCDMechanism) Promote(
 			if phase.Failed() {
 				// Record the reason for the failure if available.
 				if app.Status.OperationState != nil {
-					newStatus.Message = fmt.Sprintf(
+					promo.Status.Message = fmt.Sprintf(
 						"Argo CD Application %q in namespace %q failed with: %s",
 						app.Name,
 						app.Namespace,
@@ -206,8 +195,14 @@ func (a *argoCDMechanism) Promote(
 		}
 
 		// Perform the update.
-		if err := a.updateApplicationSourcesFn(ctx, app, desiredSource, desiredSources); err != nil {
-			return nil, newFreight, err
+		if err = a.syncApplicationFn(
+			ctx,
+			app,
+			desiredSource,
+			desiredSources,
+			promo.Status.FreightCollection.ID,
+		); err != nil {
+			return err
 		}
 		// As we have initiated an update, we should wait for it to complete.
 		updateResults = append(updateResults, argocd.OperationRunning)
@@ -215,15 +210,15 @@ func (a *argoCDMechanism) Promote(
 
 	aggregatedPhase := operationPhaseToPromotionPhase(updateResults...)
 	if aggregatedPhase == "" {
-		return nil, newFreight, fmt.Errorf(
+		return fmt.Errorf(
 			"could not determine promotion phase from operation phases: %v",
 			updateResults,
 		)
 	}
 
 	logger.Debug("done executing Argo CD-based promotion mechanisms")
-	newStatus.Phase = aggregatedPhase
-	return newStatus, newFreight, nil
+	promo.Status.Phase = aggregatedPhase
+	return nil
 }
 
 // buildDesiredSources returns the desired source(s) for an Argo CD Application,
@@ -274,7 +269,7 @@ func (a *argoCDMechanism) mustPerformUpdate(
 	stage *kargoapi.Stage,
 	update *kargoapi.ArgoCDAppUpdate,
 	app *argocd.Application,
-	newFreight []kargoapi.FreightReference,
+	freightCol *kargoapi.FreightCollection,
 	desiredSource *argocd.ApplicationSource,
 	desiredSources argocd.ApplicationSources,
 ) (phase argocd.OperationPhase, mustUpdate bool, err error) {
@@ -284,6 +279,8 @@ func (a *argoCDMechanism) mustPerformUpdate(
 		return "", true, nil
 	}
 
+	// Deal with the possibility that the operation was not initiated by the
+	// expected user.
 	if status.Operation.InitiatedBy.Username != applicationOperationInitiator {
 		// The operation was not initiated by the expected user.
 		if !status.Phase.Completed() {
@@ -294,6 +291,31 @@ func (a *argoCDMechanism) mustPerformUpdate(
 			return status.Phase, false, fmt.Errorf(
 				"current operation was not initiated by %q and not by %q: waiting for operation to complete",
 				applicationOperationInitiator, status.Operation.InitiatedBy.Username,
+			)
+		}
+		// Initiate our own operation.
+		return "", true, nil
+	}
+
+	// Deal with the possibility that the operation was not initiated for the
+	// current freight collection. i.e. Not related to the current promotion.
+	var correctFreightColIDFound bool
+	for _, info := range status.Operation.Info {
+		if info.Name == freightCollectionInfoKey {
+			correctFreightColIDFound = info.Value == freightCol.ID
+			break
+		}
+	}
+	if !correctFreightColIDFound {
+		// The operation was not initiated for the current freight collection.
+		if !status.Phase.Completed() {
+			// We should wait for the operation to complete before attempting to
+			// apply an update ourselves.
+			// NB: We return the current phase here because we want the caller
+			//     to know that an operation is still running.
+			return status.Phase, false, fmt.Errorf(
+				"current operation was not initiated for freight collection %q: waiting for operation to complete",
+				freightCol.ID,
 			)
 		}
 		// Initiate our own operation.
@@ -318,7 +340,7 @@ func (a *argoCDMechanism) mustPerformUpdate(
 		stage,
 		update,
 		app,
-		newFreight,
+		freightCol.References(),
 	); err != nil {
 		return "", true, fmt.Errorf("error determining desired revision: %w", err)
 	} else if desiredRevision != "" && status.SyncResult.Revision != desiredRevision {
@@ -346,41 +368,13 @@ func (a *argoCDMechanism) mustPerformUpdate(
 	return status.Phase, false, nil
 }
 
-func (a *argoCDMechanism) hardRefreshApplication(
-	ctx context.Context,
-	app *argocd.Application,
-) error {
-	// Create a patch for the Application.
-	patch := client.MergeFrom(app.DeepCopy())
-
-	// Initiate a "hard" refresh.
-	if app.ObjectMeta.Annotations == nil {
-		app.ObjectMeta.Annotations = make(map[string]string, 1)
-	}
-	app.ObjectMeta.Annotations[argocd.AnnotationKeyRefresh] = string(argocd.RefreshTypeHard)
-
-	// Patch the Application with the changes from above.
-	if err := a.argoCDAppPatchFn(
-		ctx,
-		app,
-		patch,
-	); err != nil {
-		return fmt.Errorf("error patching Argo CD Application %q: %w", app.Name, err)
-	}
-	logging.LoggerFromContext(ctx).Debug("refreshed Argo CD Application", "app", app.Name)
-
-	return nil
-}
-
-func (a *argoCDMechanism) updateApplicationSources(
+func (a *argoCDMechanism) syncApplication(
 	ctx context.Context,
 	app *argocd.Application,
 	desiredSource *argocd.ApplicationSource,
 	desiredSources argocd.ApplicationSources,
+	freightColID string,
 ) error {
-	// Create a patch for the Application.
-	patch := client.MergeFrom(app.DeepCopy())
-
 	// Initiate a "hard" refresh.
 	if app.ObjectMeta.Annotations == nil {
 		app.ObjectMeta.Annotations = make(map[string]string, 1)
@@ -402,6 +396,10 @@ func (a *argoCDMechanism) updateApplicationSources(
 				Name:  "Reason",
 				Value: "Promotion triggered a sync of this Application resource.",
 			},
+			{
+				Name:  freightCollectionInfoKey,
+				Value: freightColID,
+			},
 		},
 		Sync: &argocd.SyncOperation{
 			Revisions: []string{},
@@ -422,18 +420,23 @@ func (a *argoCDMechanism) updateApplicationSources(
 		app.Operation.Sync.Revisions = append(app.Operation.Sync.Revisions, source.TargetRevision)
 	}
 
-	// Patch the Application with the changes from above.
-	if err := a.argoCDAppPatchFn(
-		ctx,
-		app,
-		patch,
-	); err != nil {
+	// Patch the Argo CD Application.
+	if err := a.argoCDAppPatchFn(ctx, app, func(src, dst unstructured.Unstructured) error {
+		// If the resource has been modified since we fetched it, an update
+		// can result in unexpected merge results. Detect this, and return an
+		// error if it occurs.
+		if src.GetGeneration() != dst.GetGeneration() {
+			return fmt.Errorf("unable to update sources to desired revisions: resource has been modified")
+		}
+
+		dst.SetAnnotations(src.GetAnnotations())
+		dst.Object["spec"] = recursiveMerge(src.Object["spec"], dst.Object["spec"])
+		dst.Object["operation"] = src.Object["operation"]
+		return nil
+	}); err != nil {
 		return fmt.Errorf("error patching Argo CD Application %q: %w", app.Name, err)
 	}
-	logging.LoggerFromContext(ctx).Debug(
-		"patched Argo CD Application",
-		"app", app.Name,
-	)
+	logging.LoggerFromContext(ctx).Debug("patched Argo CD Application", "app", app.Name)
 
 	// NB: This attempts to mimic the behavior of the Argo CD API server,
 	// which logs an event when a sync is initiated. However, we do not
@@ -452,6 +455,14 @@ func (a *argoCDMechanism) updateApplicationSources(
 	a.logAppEventFn(ctx, app, "kargo-controller", argocd.EventReasonOperationStarted, message)
 
 	return nil
+}
+
+func (a *argoCDMechanism) argoCDAppPatch(
+	ctx context.Context,
+	app kubeclient.ObjectWithKind,
+	modify kubeclient.UnstructuredPatchFn,
+) error {
+	return kubeclient.PatchUnstructured(ctx, a.argocdClient, app, modify)
 }
 
 func (a *argoCDMechanism) logAppEvent(ctx context.Context, app *argocd.Application, user, reason, message string) {
@@ -597,11 +608,8 @@ func (a *argoCDMechanism) applyArgoCDSourceUpdate(
 	newFreight []kargoapi.FreightReference,
 ) (argocd.ApplicationSource, error) {
 	if source.Chart != "" || update.Chart != "" {
-		// Infer that we're dealing with a chart repo. No need to normalize the
-		// repo URL here.
 
-		// Kargo uses the "oci://" prefix, but Argo CD does not.
-		if source.RepoURL != strings.TrimPrefix(update.RepoURL, "oci://") || source.Chart != update.Chart {
+		if source.RepoURL != update.RepoURL || source.Chart != update.Chart {
 			// There's no change to make in this case.
 			return source, nil
 		}
@@ -610,14 +618,31 @@ func (a *argoCDMechanism) applyArgoCDSourceUpdate(
 		// this source.
 
 		desiredOrigin := freight.GetDesiredOrigin(stage, update)
+		repoURL := update.RepoURL
+		chartName := update.Chart
+		if !strings.Contains(repoURL, "://") {
+			// Where OCI is concerned, ArgoCDSourceUpdates play by Argo CD rules. i.e.
+			// No leading oci://, and the repository URL is really a registry URL, and
+			// the chart name is a repository within that registry. Warehouses and
+			// Freight, however, do lead with oci:// and handle things more correctly
+			// where a repoURL points directly to a repository and chart name is
+			// irrelevant / blank. We need to account for this when we search our
+			// Freight for the chart.
+			repoURL = fmt.Sprintf(
+				"oci://%s/%s",
+				strings.TrimSuffix(repoURL, "/"),
+				chartName,
+			)
+			chartName = ""
+		}
 		chart, err := freight.FindChart(
 			ctx,
 			a.kargoClient,
 			stage,
 			desiredOrigin,
 			newFreight,
-			update.RepoURL,
-			update.Chart,
+			repoURL,
+			chartName,
 		)
 		if err != nil {
 			return source,
@@ -805,7 +830,7 @@ func operationPhaseToPromotionPhase(phases ...argocd.OperationPhase) kargoapi.Pr
 		return ""
 	}
 
-	sort.Sort(libargocd.ByOperationPhase(phases))
+	libargocd.ByOperationPhase(phases).Sort()
 
 	switch phases[0] {
 	case argocd.OperationRunning, argocd.OperationTerminating:
@@ -817,4 +842,38 @@ func operationPhaseToPromotionPhase(phases ...argocd.OperationPhase) kargoapi.Pr
 	default:
 		return ""
 	}
+}
+
+func recursiveMerge(src, dst any) any {
+	switch src := src.(type) {
+	case map[string]any:
+		dst, ok := dst.(map[string]any)
+		if !ok {
+			return src
+		}
+		for srcK, srcV := range src {
+			if dstV, ok := dst[srcK]; ok {
+				dst[srcK] = recursiveMerge(srcV, dstV)
+			} else {
+				dst[srcK] = srcV
+			}
+		}
+	case []any:
+		dst, ok := dst.([]any)
+		if !ok {
+			return src
+		}
+		result := make([]any, len(src))
+		for i, srcV := range src {
+			if i < len(dst) {
+				result[i] = recursiveMerge(srcV, dst[i])
+			} else {
+				result[i] = srcV
+			}
+		}
+		return result
+	default:
+		return src
+	}
+	return dst
 }

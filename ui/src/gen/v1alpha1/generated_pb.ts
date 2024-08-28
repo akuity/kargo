@@ -2267,6 +2267,21 @@ export class GitSubscription extends Message<GitSubscription> {
   branch?: string;
 
   /**
+   * StrictSemvers specifies whether only "strict" semver tags should be
+   * considered. A "strict" semver tag is one containing ALL of major, minor,
+   * and patch version components. This is enabled by default, but only has any
+   * effect when the CommitSelectionStrategy is SemVer. This should be disabled
+   * cautiously, as it creates the potential for any tag containing numeric
+   * characters only to be mistaken for a semver string containing the major
+   * version number only.
+   *
+   * +kubebuilder:default=true
+   *
+   * @generated from field: optional bool strictSemvers = 11;
+   */
+  strictSemvers?: boolean;
+
+  /**
    * SemverConstraint specifies constraints on what new tagged commits are
    * considered in determining the newest commit of interest. The value in this
    * field only has any effect when the CommitSelectionStrategy is SemVer. This
@@ -2380,6 +2395,7 @@ export class GitSubscription extends Message<GitSubscription> {
     { no: 1, name: "repoURL", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 2, name: "commitSelectionStrategy", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 3, name: "branch", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 11, name: "strictSemvers", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
     { no: 4, name: "semverConstraint", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 5, name: "allowTags", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 6, name: "ignoreTags", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
@@ -2906,6 +2922,22 @@ export class ImageSubscription extends Message<ImageSubscription> {
   imageSelectionStrategy?: string;
 
   /**
+   * StrictSemvers specifies whether only "strict" semver tags should be
+   * considered. A "strict" semver tag is one containing ALL of major, minor,
+   * and patch version components. This is enabled by default, but only has any
+   * effect when the ImageSelectionStrategy is SemVer. This should be disabled
+   * cautiously, as it is not uncommon to tag container images with short Git
+   * commit hashes, which have the potential to contain numeric characters only
+   * and could be mistaken for a semver string containing the major version
+   * number only.
+   *
+   * +kubebuilder:default=true
+   *
+   * @generated from field: optional bool strictSemvers = 10;
+   */
+  strictSemvers?: boolean;
+
+  /**
    * SemverConstraint specifies constraints on what new image versions are
    * permissible. The value in this field only has any effect when the
    * ImageSelectionStrategy is SemVer or left unspecified (which is implicitly
@@ -2996,6 +3028,7 @@ export class ImageSubscription extends Message<ImageSubscription> {
     { no: 1, name: "repoURL", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 2, name: "gitRepoURL", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 3, name: "imageSelectionStrategy", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 10, name: "strictSemvers", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
     { no: 4, name: "semverConstraint", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 5, name: "allowTags", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 6, name: "ignoreTags", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },

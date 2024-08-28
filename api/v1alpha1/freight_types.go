@@ -4,7 +4,7 @@ import (
 	"crypto/sha1"
 	"fmt"
 	"path"
-	"sort"
+	"slices"
 	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -100,7 +100,7 @@ func (f *Freight) GenerateID() string {
 			),
 		)
 	}
-	sort.Strings(artifacts)
+	slices.Sort(artifacts)
 	return fmt.Sprintf(
 		"%x",
 		sha1.Sum([]byte(

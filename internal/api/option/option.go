@@ -6,7 +6,7 @@ import (
 	"net/http"
 
 	"connectrpc.com/connect"
-	libClient "sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/akuity/kargo/internal/api/config"
 	"github.com/akuity/kargo/internal/logging"
@@ -15,14 +15,14 @@ import (
 func NewHandlerOption(
 	ctx context.Context,
 	cfg config.ServerConfig,
-	internalClient libClient.Client,
+	kubeclient client.Client,
 ) (connect.HandlerOption, error) {
 	interceptors := []connect.Interceptor{
 		newLogInterceptor(logging.LoggerFromContext(ctx), loggingIgnorableMethods),
 		newErrorInterceptor(),
 	}
 	if !cfg.LocalMode {
-		authInterceptor, err := newAuthInterceptor(ctx, cfg, internalClient)
+		authInterceptor, err := newAuthInterceptor(ctx, cfg, kubeclient)
 		if err != nil {
 			return nil, fmt.Errorf("initialize authentication interceptor: %w", err)
 		}

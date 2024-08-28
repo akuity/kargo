@@ -105,7 +105,7 @@ export const RequestedFreightEditor = ({
         onClick={handleSubmit((value) => {
           onSubmit({
             origin: {
-              kind: 'warehouse',
+              kind: 'Warehouse',
               name: value.warehouse
             } as FreightOrigin,
             sources: {

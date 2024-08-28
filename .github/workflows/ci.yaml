@@ -8,16 +8,18 @@ on:
     - main
     - release-*
 
-jobs:
+permissions:
+  contents: read
 
+jobs:
   test-unit:
     runs-on: ubuntu-latest
     container:
-      image: golang:1.22.5-bookworm
+      image: golang:1.23.0-bookworm
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
-    - uses: actions/cache@v4
+      uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+    - uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9 # v4.0.2
       with:
         path: /go/pkg/mod
         key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
@@ -30,50 +32,54 @@ jobs:
         grep -v .pb.go coverage.txt | grep -v zz_generated | grep -v service.connect.go > coverage.tmp
         mv coverage.tmp coverage.txt
     - name: Upload coverage reports
-      uses: codecov/codecov-action@v4
+      uses: codecov/codecov-action@e28ff129e5465c2c0dcc6f003fc735cb6ae0c673 # v4.5.0
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
   
   lint-ui:
     runs-on: ubuntu-latest
-    container:
-      image: node:20.12.2
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
-    - uses: actions/cache@v4
+      uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+    - uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9 # v4.0.2
       with:
         path: ~/.pnpm-store
         key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
         restore-keys: |
           ${{ runner.os }}-pnpm-
     - name: Install pnpm
-      uses: pnpm/action-setup@v4
+      uses: pnpm/action-setup@fe02b34f77f8bc703788d5817da081398fad5dd2 # v4.0.0
       with:
         package_json_file: ui/package.json
     - name: Install nodejs
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@1e60f620b9541d16bece96c5465dc8ee9832be0b # v4.0.3
       with:
-        node-version: "22.5.1"
+        node-version: "22.7.0"
         cache: "pnpm"
         cache-dependency-path: "**/pnpm-lock.yaml"
     - name: Run linter
       run: make lint-ui
 
   lint-go:
+    permissions:
+      checks: write # Used to create checks (linting comments) on PRs
     runs-on: ubuntu-latest
     container:
-      image: golang:1.22.5-bookworm
+      image: golang:1.23.0-bookworm
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
-    - name: Install linter
-      env:
-        GOLANGCI_LINT_VERSION: 1.57.2
-      working-directory: /usr/local/bin
-      run: |
-        curl -sSfL https://github.com/golangci/golangci-lint/releases/download/v${GOLANGCI_LINT_VERSION}/golangci-lint-${GOLANGCI_LINT_VERSION}-linux-amd64.tar.gz \
-        | tar xvz golangci-lint-${GOLANGCI_LINT_VERSION}-linux-amd64/golangci-lint --strip-components=1
+      uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+    - name: Cache golangci-lint
+      id: cache-golangci-lint
+      uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9 # v4.0.2
+      with:
+        path: |
+          hack/bin/golangci-lint
+          hack/bin/golangci-lint-*
+        key: ${{ runner.os }}-golangci-lint-${{ hashFiles('hack/tools/go.mod') }}
+    - name: Install golangci-lint
+      if: steps.cache-golangci-lint.outputs.cache-hit != 'true'
+      run: make install-golangci-lint
     - name: Configure Git
       run: git config --global --add safe.directory '*'
     - name: Run linter
@@ -84,76 +90,84 @@ jobs:
   lint-charts:
     runs-on: ubuntu-latest
     container:
-      image: golang:1.22.5-bookworm
+      image: golang:1.23.0-bookworm
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Install linter
-        run: |
-          cd /usr/local/bin
-          curl -sSfL https://get.helm.sh/helm-v3.10.0-linux-amd64.tar.gz \
-          | tar xvz linux-amd64/helm --strip-components=1
-      - name: Run linter
-        run: make lint-charts
+    - name: Checkout code
+      uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+    - name: Cache helm
+      id: cache-helm
+      uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9 # v4.0.2
+      with:
+        path: |
+          hack/bin/helm
+          hack/bin/helm-*
+        key:
+          ${{ runner.os }}-helm-${{ hashFiles('hack/tools/go.mod') }}
+    - name: Install helm
+      if: steps.cache-helm.outputs.cache-hit != 'true'
+      run: make install-helm
+    - name: Run linter
+      run: make lint-charts
 
   lint-proto:
+    permissions:
+      checks: write # Used to create checks (linting comments) on PRs
     runs-on: ubuntu-latest
     container:
-      image: golang:1.22.5-bookworm
+      image: golang:1.23.0-bookworm
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Install linter
-        uses: bufbuild/buf-setup-action@v1
-        with:
-          version: "1.20.0"
-      - name: Run linter
-        env:
-          BUF_LINT_ERROR_FORMAT: github-actions
-        run: make lint-proto
+    - name: Checkout code
+      uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+    - name: Cache buf
+      id: cache-buf
+      uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9 # v4.0.2
+      with:
+        path: |
+          hack/bin/buf
+          hack/bin/buf-*
+        key: ${{ runner.os }}-buf-${{ hashFiles('hack/tools/go.mod') }}
+    - name: Install buf
+      if: steps.cache-buf.outputs.cache-hit != 'true'
+      run: make install-buf
+    - name: Run linter
+      env:
+        BUF_LINT_ERROR_FORMAT: github-actions
+      run: make lint-proto
 
   check-codegen:
     runs-on: ubuntu-latest
     container:
-      image: golang:1.22.5-bookworm
+      image: golang:1.23.0-bookworm
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
     - name: Install tools
       run: apt update && apt install unzip
     - name: Install pnpm
-      uses: pnpm/action-setup@v4
+      uses: pnpm/action-setup@fe02b34f77f8bc703788d5817da081398fad5dd2 # v4.0.0
       with:
         package_json_file: ui/package.json
     - name: Install nodejs
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@1e60f620b9541d16bece96c5465dc8ee9832be0b # v4.0.3
       with:
-        node-version: "22.5.1"
+        node-version: "22.7.0"
         cache: "pnpm"
         cache-dependency-path: "**/pnpm-lock.yaml"
     - name: Install nodejs dependencies
       run: pnpm install --dev
       working-directory: ./ui
-    - uses: actions/cache@v4
+    - name: Cache Go modules
+      uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9 # v4.0.2
       with:
         path: /go/pkg/mod
         key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-        restore-keys: |
-          ${{ runner.os }}-go-
-    - name: Install buf
-      uses: bufbuild/buf-setup-action@v1.29.0-1
+    - name: Cache tools
+      uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9 # v4.0.2
       with:
-        version: 1.26.1
-    - name: Install Protoc
-      uses: arduino/setup-protoc@v3
-      with:
-        version: "25.3"
-    - name: Install codegen tools
-      run: |
-        go install k8s.io/code-generator/cmd/go-to-protobuf@v0.29.3
-        go install k8s.io/code-generator/cmd/go-to-protobuf/protoc-gen-gogo@v0.29.3
-        go install golang.org/x/tools/cmd/goimports@v0.21.0
-        go install sigs.k8s.io/controller-tools/cmd/controller-gen@v0.15.0
+        path: |
+          hack/bin
+          hack/include
+        key: ${{ runner.os }}-tools-${{ hashFiles('hack/tools/go.mod', 'hack/tools.mk') }}
     - name: Git stuff
       # As of go 1.20, this seems to be necessary for invoking git commands
       # within the container
@@ -168,11 +182,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Set up QEMU
-      uses: docker/setup-qemu-action@v3
+      uses: docker/setup-qemu-action@49b3bc8e6bdd4a60e6116a5414239cba5943d3cf # v3.2.0
     - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
+      uses: docker/setup-buildx-action@988b5a0280414f521da01fcc63a27aeeb4b104db # v3.6.1
     - name: Build
-      uses: docker/build-push-action@v6
+      uses: docker/build-push-action@5176d81f87c23d6fc96624dfdbcd9f3830bbe445 # v6.5.0
       with:
         platforms: linux/amd64,linux/arm64
         push: false
@@ -183,11 +197,11 @@ jobs:
     needs: [test-unit, lint-go, lint-charts, lint-proto, lint-ui, check-codegen]
     runs-on: ubuntu-latest
     container:
-      image: golang:1.22.5-bookworm
+      image: golang:1.23.0-bookworm
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
-    - uses: actions/cache@v4
+      uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+    - uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9 # v4.0.2
       with:
         path: /go/pkg/mod
         key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}

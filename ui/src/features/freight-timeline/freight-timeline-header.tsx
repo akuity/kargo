@@ -1,5 +1,7 @@
 import {
   faBullseye,
+  faCalendarPlus,
+  faCalendarXmark,
   faCircleCheck,
   faCompress,
   faExpand,
@@ -17,7 +19,7 @@ import { paths } from '@ui/config/paths';
 import { ColorContext } from '@ui/context/colors';
 import { Warehouse } from '@ui/gen/v1alpha1/generated_pb';
 
-import { FreightTimelineAction } from '../project/pipelines/types';
+import { CollapseMode, FreightTimelineAction } from '../project/pipelines/types';
 
 import './freight-timeline.less';
 
@@ -40,8 +42,8 @@ export const FreightTimelineHeader = ({
   selectedWarehouse: string;
   setSelectedWarehouse: (warehouse: string) => void;
   warehouses: { [key: string]: Warehouse };
-  collapsed: boolean;
-  setCollapsed: (collapsed: boolean) => void;
+  collapsed: CollapseMode;
+  setCollapsed: (collapsed: CollapseMode) => void;
   collapsable?: boolean;
 }) => {
   const { stageColorMap } = useContext(ColorContext);
@@ -49,11 +51,11 @@ export const FreightTimelineHeader = ({
 
   const getIcon = (action: FreightTimelineAction) => {
     switch (action) {
-      case 'promote':
+      case FreightTimelineAction.Promote:
         return faBullseye;
-      case 'promoteSubscribers':
+      case FreightTimelineAction.PromoteSubscribers:
         return faTruckArrowRight;
-      case 'manualApproval':
+      case FreightTimelineAction.ManualApproval:
         return faCircleCheck;
       default:
         return faQuestionCircle;
@@ -62,7 +64,8 @@ export const FreightTimelineHeader = ({
 
   const navigate = useNavigate();
 
-  const headerButtonStyle = 'bg-transparent text-gray-500 -mb-1 mr-2 text-xs';
+  const headerButtonStyle = (selected: boolean) =>
+    `bg-transparent text-gray-500 -mb-1 mr-2 text-xs ${selected ? 'border-sky-500' : ''}`;
 
   return (
     <div className='w-full pl-6 flex items-center font-semibold text-sm h-8 pt-2'>
@@ -121,20 +124,54 @@ export const FreightTimelineHeader = ({
             FREIGHT TIMELINE
           </div>
           {collapsable && (
-            <Tooltip title={`${collapsed ? 'Expand' : 'Collapse'} old freight`}>
-              <Button
-                icon={<FontAwesomeIcon icon={collapsed ? faExpand : faCompress} />}
-                size='small'
-                className={headerButtonStyle}
-                onClick={() => setCollapsed(!collapsed)}
-              />
-            </Tooltip>
+            <>
+              <Tooltip
+                title={`${collapsed === CollapseMode.HideAll ? 'Expand' : 'Collapse'} unused freight`}
+              >
+                <Button
+                  icon={
+                    <FontAwesomeIcon
+                      icon={collapsed === CollapseMode.HideAll ? faExpand : faCompress}
+                    />
+                  }
+                  size='small'
+                  className={headerButtonStyle(collapsed === CollapseMode.HideAll)}
+                  onClick={() =>
+                    setCollapsed(
+                      collapsed === CollapseMode.HideAll
+                        ? CollapseMode.Expanded
+                        : CollapseMode.HideAll
+                    )
+                  }
+                />
+              </Tooltip>
+              <Tooltip
+                title={`${collapsed === CollapseMode.HideOld ? 'Show' : 'Hide'} old freight`}
+              >
+                <Button
+                  icon={
+                    <FontAwesomeIcon
+                      icon={collapsed === CollapseMode.HideOld ? faCalendarPlus : faCalendarXmark}
+                    />
+                  }
+                  size='small'
+                  className={headerButtonStyle(collapsed === CollapseMode.HideOld)}
+                  onClick={() =>
+                    setCollapsed(
+                      collapsed === CollapseMode.HideOld
+                        ? CollapseMode.Expanded
+                        : CollapseMode.HideOld
+                    )
+                  }
+                />
+              </Tooltip>
+            </>
           )}
           <Tooltip title='Assemble Freight'>
             <Button
               icon={<FontAwesomeIcon icon={faTools} />}
               size='small'
-              className={headerButtonStyle}
+              className={headerButtonStyle(false)}
               onClick={() => {
                 navigate(
                   generatePath(paths.warehouse, {
@@ -175,3 +212,5 @@ export const FreightTimelineHeader = ({
     </div>
   );
 };
+
+export default FreightTimelineHeader;

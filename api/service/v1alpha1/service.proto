@@ -34,6 +34,7 @@ service KargoService {
   /* Stage APIs */
 
   rpc ListStages(ListStagesRequest) returns (ListStagesResponse);
+  rpc ListImages(ListImagesRequest) returns (ListImagesResponse);
   rpc GetStage(GetStageRequest) returns (GetStageResponse);
   rpc WatchStages(WatchStagesRequest) returns (stream WatchStagesResponse);
   rpc DeleteStage(DeleteStageRequest) returns (DeleteStageResponse);
@@ -142,6 +143,7 @@ message GetPublicConfigRequest {}
 message GetPublicConfigResponse {
   OIDCConfig oidc_config = 1;
   bool admin_account_enabled = 2;
+  bool skip_auth = 3;
 }
 
 message OIDCConfig {
@@ -226,6 +228,25 @@ message ListStagesRequest {
 
 message ListStagesResponse {
   repeated github.com.akuity.kargo.api.v1alpha1.Stage stages = 1;
+}
+
+message ListImagesRequest {
+  string project = 1;
+}
+
+message ListImagesResponse {
+  // images maps image repository names to their tags
+  map<string, TagMap> images = 2;
+}
+
+message TagMap {
+  // tags maps image tag names to stages which have previously used that tag
+  map<string, ImageStageMap> tags = 1;
+}
+
+message ImageStageMap {
+  // stages maps stage names to the order which an image was promoted to that stage
+  map<string, int32> stages = 1;
 }
 
 message GetStageRequest {
