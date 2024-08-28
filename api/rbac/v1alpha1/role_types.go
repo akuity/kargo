@@ -31,6 +31,6 @@ type ResourceDetails struct {
 }
 
 type UserClaim struct {
-	Name   string   `json:"name,omitempty" protobuf:"bytes,4,opt,name=name"`
-	Values []string `json:"values,omitempty" protobuf:"bytes,5,rep,name=values"`
+	Name   string   `json:"name,omitempty" protobuf:"bytes,1,opt,name=name"`
+	Values []string `json:"values,omitempty" protobuf:"bytes,2,rep,name=values"`
 }
