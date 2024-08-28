@@ -8,7 +8,7 @@ import (
 
 func init() {
 	// Register the copy directive with the builtins registry.
-	builtins.RegisterDirective(&copyDirective{})
+	builtins.RegisterDirective(&copyDirective{}, nil)
 }
 
 // copyDirective is a directive that copies a file or directory.

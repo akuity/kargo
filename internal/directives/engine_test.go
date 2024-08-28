@@ -24,10 +24,13 @@ func TestEngine_Execute(t *testing.T) {
 			},
 			initRegistry: func() DirectiveRegistry {
 				registry := make(DirectiveRegistry)
-				registry.RegisterDirective(&mockDirective{
-					name:      "mock",
-					runResult: ResultSuccess,
-				})
+				registry.RegisterDirective(
+					&mockDirective{
+						name:      "mock",
+						runResult: ResultSuccess,
+					},
+					nil,
+				)
 				return registry
 			},
 			ctx: context.Background(),
@@ -44,14 +47,20 @@ func TestEngine_Execute(t *testing.T) {
 			},
 			initRegistry: func() DirectiveRegistry {
 				registry := make(DirectiveRegistry)
-				registry.RegisterDirective(&mockDirective{
-					name:      "mock1",
-					runResult: ResultSuccess,
-				})
-				registry.RegisterDirective(&mockDirective{
-					name:      "mock2",
-					runResult: ResultSuccess,
-				})
+				registry.RegisterDirective(
+					&mockDirective{
+						name:      "mock1",
+						runResult: ResultSuccess,
+					},
+					nil,
+				)
+				registry.RegisterDirective(
+					&mockDirective{
+						name:      "mock2",
+						runResult: ResultSuccess,
+					},
+					nil,
+				)
 				return registry
 			},
 			ctx: context.Background(),
@@ -81,11 +90,14 @@ func TestEngine_Execute(t *testing.T) {
 			},
 			initRegistry: func() DirectiveRegistry {
 				registry := make(DirectiveRegistry)
-				registry.RegisterDirective(&mockDirective{
-					name:      "failing",
-					runResult: ResultFailure,
-					runErr:    errors.New("something went wrong"),
-				})
+				registry.RegisterDirective(
+					&mockDirective{
+						name:      "failing",
+						runResult: ResultFailure,
+						runErr:    errors.New("something went wrong"),
+					},
+					nil,
+				)
 				return registry
 			},
 			ctx: context.Background(),
@@ -102,13 +114,16 @@ func TestEngine_Execute(t *testing.T) {
 			},
 			initRegistry: func() DirectiveRegistry {
 				registry := make(DirectiveRegistry)
-				registry.RegisterDirective(&mockDirective{
-					name: "mock",
-					runFunc: func(ctx context.Context, _ *StepContext) (Result, error) {
-						<-ctx.Done() // Wait for context to be canceled
-						return ResultSuccess, nil
+				registry.RegisterDirective(
+					&mockDirective{
+						name: "mock",
+						runFunc: func(ctx context.Context, _ *StepContext) (Result, error) {
+							<-ctx.Done() // Wait for context to be canceled
+							return ResultSuccess, nil
+						},
 					},
-				})
+					nil,
+				)
 				return registry
 			},
 			ctx: func() context.Context {
@@ -127,7 +142,7 @@ func TestEngine_Execute(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			engine := NewEngine(tt.initRegistry())
+			engine := NewEngine(tt.initRegistry(), nil, nil, nil)
 			result, err := engine.Execute(tt.ctx, tt.directives)
 			tt.assertions(t, result, err)
 		})

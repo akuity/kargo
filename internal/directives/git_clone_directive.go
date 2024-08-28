@@ -9,7 +9,13 @@ import (
 
 func init() {
 	// Register the git-clone directive with the builtins registry.
-	builtins.RegisterDirective(newGitCloneDirective())
+	builtins.RegisterDirective(
+		newGitCloneDirective(),
+		&DirectivePermissions{
+			AllowCredentialsDB: true,
+			AllowKargoClient:   true,
+		},
+	)
 }
 
 // gitCloneDirective is a directive that clones one or more refs from a remote

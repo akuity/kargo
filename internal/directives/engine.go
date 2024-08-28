@@ -4,6 +4,10 @@ import (
 	"context"
 	"fmt"
 	"os"
+
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/akuity/kargo/internal/credentials"
 )
 
 // Step is a single step that should be executed by the Engine.
@@ -19,13 +23,24 @@ type Step struct {
 
 // Engine is a simple engine that executes a list of directives in sequence.
 type Engine struct {
-	registry DirectiveRegistry
+	registry      DirectiveRegistry
+	credentialsDB credentials.Database
+	kargoClient   client.Client
+	argoCDClient  client.Client
 }
 
 // NewEngine returns a new Engine with the provided DirectiveRegistry.
-func NewEngine(registry DirectiveRegistry) *Engine {
+func NewEngine(
+	registry DirectiveRegistry,
+	credentialsDB credentials.Database,
+	kargoClient client.Client,
+	argoCDClient client.Client,
+) *Engine {
 	return &Engine{
-		registry: registry,
+		registry:      registry,
+		credentialsDB: credentialsDB,
+		kargoClient:   kargoClient,
+		argoCDClient:  argoCDClient,
 	}
 }
 
@@ -46,17 +61,29 @@ func (e *Engine) Execute(ctx context.Context, steps []Step) (Result, error) {
 		case <-ctx.Done():
 			return ResultFailure, ctx.Err()
 		default:
-			step, err := e.registry.GetDirective(d.Directive)
+			reg, err := e.registry.GetDirectiveRegistration(d.Directive)
 			if err != nil {
 				return ResultFailure, fmt.Errorf("failed to get step %q: %w", d.Directive, err)
 			}
 
-			if result, err := step.Run(ctx, &StepContext{
+			stepCtx := &StepContext{
 				WorkDir:     workDir.Name(),
 				SharedState: state,
 				Alias:       d.Alias,
 				Config:      d.Config.DeepCopy(),
-			}); err != nil {
+			}
+			// Selectively provide these capabilities via the StepContext.
+			if reg.Permissions.AllowCredentialsDB {
+				stepCtx.CredentialsDB = e.credentialsDB
+			}
+			if reg.Permissions.AllowKargoClient {
+				stepCtx.KargoClient = e.kargoClient
+			}
+			if reg.Permissions.AllowArgoCDClient {
+				stepCtx.ArgoCDClient = e.argoCDClient
+			}
+
+			if result, err := reg.Directive.Run(ctx, stepCtx); err != nil {
 				return result, fmt.Errorf("failed to run step %q: %w", d.Directive, err)
 			}
 		}

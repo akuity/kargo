@@ -9,7 +9,7 @@ import (
 
 func init() {
 	// Register the git-commit directive with the builtins registry.
-	builtins.RegisterDirective(newGitCommitDirective())
+	builtins.RegisterDirective(newGitCommitDirective(), nil)
 }
 
 // gitCommitDirective is a directive that makes a commit to a local Git

@@ -5,6 +5,10 @@ import (
 	"encoding/json"
 
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/credentials"
 )
 
 // StepContext is a type that represents the context in which a step is
@@ -19,6 +23,55 @@ type StepContext struct {
 	// Config is the configuration of the step that is currently being
 	// executed.
 	Config Config
+	// Project is the Project that the Promotion is associated with.
+	Project string
+	// FreightRequests is the list of Freight from various origins that is
+	// requested by the Stage targeted by the Promotion. This information is
+	// sometimes useful to Steps that reference a particular artifact and, in the
+	// absence of any explicit information about the origin of that artifact, may
+	// need to examine FreightRequests to determine whether there exists any
+	// ambiguity as to its origin, which a user may then need to resolve.
+	//
+	// TODO: krancour: Longer term, if we can standardize the way that all steps
+	// express the artifacts they need to work with, we can make the Step
+	// execution engine responsible for finding them and furnishing them directly
+	// to each Step.
+	FreightRequests []kargoapi.FreightRequest
+	// Freight is the collection of all Freight referenced by the Promotion. This
+	// collection contains both the Freight that is actively being promoted as
+	// well as any Freight that has been inherited from the target Stage's current
+	// state.
+	//
+	// TODO: krancour: Longer term, if we can standardize the way that all steps
+	// express the artifacts they need to work with, we can make the Step
+	// execution engine responsible for finding them and furnishing them directly
+	// to each Step.
+	Freight kargoapi.FreightCollection
+	// KargoClient is a Kubernetes client that Steps involved in the Promotion may
+	// use to interact with the Kargo control plane. The value of this field will
+	// often be nil, as the step execution engine will only furnish a this to
+	// specially privileged Steps.
+	//
+	// TODO: krancour: Longer term, we may be able to do without this. See notes
+	// on previous two fields.
+	KargoClient client.Client
+	// ArgoCDClient is a Kubernetes client that Steps involved in the Promotion
+	// may use to interact with an Argo CD control plane. The value of this field
+	// will often be nil, as the step execution engine will only furnish this to
+	// specially privileged Steps.
+	//
+	// TODO: krancour: Longer term, we may be able to do without this. See notes
+	// on previous two fields.
+	ArgoCDClient client.Client
+	// CredentialsDB is a database of credentials that Steps may use to acquire
+	// credentials for interacting with external systems. The value of this field
+	// will often be nil, as the step execution engine will only furnish a
+	// CredentialsDB to specially privileged Steps.
+	//
+	// TODO: krancour: Longer term, if we can standardize the way that all steps
+	// express what credentials they need, we can make the Step execution engine
+	// responsible for finding them and furnishing them directly to each Step.
+	CredentialsDB credentials.Database
 }
 
 // State is a type that represents shared state between steps.

@@ -9,7 +9,7 @@ import (
 
 func init() {
 	// Register the git-push directive with the builtins registry.
-	builtins.RegisterDirective(newGitPushDirective())
+	builtins.RegisterDirective(newGitPushDirective(), nil)
 }
 
 // gitPushDirective is a directive that pushes commits from a local Git
