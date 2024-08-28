@@ -6,7 +6,7 @@ const (
 	// Kargo.
 	AnnotationKeyManaged = "rbac.kargo.akuity.io/managed"
 
-	// AnnotationKeyOIDCPrefixis the prefix of an annotation key that can be set on a
+	// AnnotationKeyOIDCPrefix is the prefix of an annotation key that can be set on a
 	// ServiceAccount to associate it with any user authenticated via OIDC and having
 	// the claim indicated by the full annotation key with any of the values indicated by
 	// the annotation. The value of the annotation may be either a scalar string value or a
