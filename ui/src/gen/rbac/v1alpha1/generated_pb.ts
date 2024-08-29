@@ -179,12 +179,12 @@ export class RoleResources extends Message<RoleResources> {
  */
 export class UserClaim extends Message<UserClaim> {
   /**
-   * @generated from field: optional string name = 4;
+   * @generated from field: optional string name = 1;
    */
   name?: string;
 
   /**
-   * @generated from field: repeated string values = 5;
+   * @generated from field: repeated string values = 2;
    */
   values: string[] = [];
 
@@ -196,8 +196,8 @@ export class UserClaim extends Message<UserClaim> {
   static readonly runtime: typeof proto2 = proto2;
   static readonly typeName = "github.com.akuity.kargo.api.rbac.v1alpha1.UserClaim";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
-    { no: 4, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 5, name: "values", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 2, name: "values", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UserClaim {

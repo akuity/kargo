@@ -45,8 +45,8 @@ message RoleResources {
 }
 
 message UserClaim {
-  optional string name = 4;
+  optional string name = 1;
 
-  repeated string values = 5;
+  repeated string values = 2;
 }
 
