@@ -15,6 +15,7 @@ const (
 	PromotionLabelKey         = "kargo.akuity.io/promotion"
 	ShardLabelKey             = "kargo.akuity.io/shard"
 	StageLabelKey             = "kargo.akuity.io/stage"
+	AnalysisEnvLabelKey       = "kargo.akuity.io/analysis-env"
 
 	LabelTrueValue = "true"
 
