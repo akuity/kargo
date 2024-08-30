@@ -667,7 +667,8 @@ func (a *argoCDMechanism) applyArgoCDSourceUpdate(
 		commit, err := freight.FindCommit(
 			ctx,
 			a.kargoClient,
-			stage,
+			stage.Namespace,
+			stage.Spec.RequestedFreight,
 			desiredOrigin,
 			newFreight,
 			update.RepoURL,

@@ -44,13 +44,14 @@ func TestFindCommit(t *testing.T) {
 	testCases := []struct {
 		name          string
 		client        func() client.Client
-		Stage         *kargoapi.Stage
+		stage         *kargoapi.Stage
 		desiredOrigin *kargoapi.FreightOrigin
 		freight       []kargoapi.FreightReference
 		assertions    func(*testing.T, *kargoapi.GitCommit, error)
 	}{
 		{
 			name:          "desired origin specified, but commit not found",
+			stage:         &kargoapi.Stage{},
 			desiredOrigin: &testOrigin1,
 			freight: []kargoapi.FreightReference{
 				{
@@ -65,6 +66,7 @@ func TestFindCommit(t *testing.T) {
 		},
 		{
 			name:          "desired origin specified and commit is found",
+			stage:         &kargoapi.Stage{},
 			desiredOrigin: &testOrigin1,
 			freight: []kargoapi.FreightReference{
 				{
@@ -88,7 +90,7 @@ func TestFindCommit(t *testing.T) {
 				// desired origin
 				return fake.NewClientBuilder().WithScheme(scheme).Build()
 			},
-			Stage: &kargoapi.Stage{
+			stage: &kargoapi.Stage{
 				Spec: kargoapi.StageSpec{
 					RequestedFreight: []kargoapi.FreightRequest{{Origin: testOrigin1}},
 				},
@@ -118,7 +120,7 @@ func TestFindCommit(t *testing.T) {
 					},
 				).Build()
 			},
-			Stage: &kargoapi.Stage{
+			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: testNamespace,
 				},
@@ -163,7 +165,7 @@ func TestFindCommit(t *testing.T) {
 					},
 				).Build()
 			},
-			Stage: &kargoapi.Stage{
+			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: testNamespace,
 				},
@@ -203,7 +205,7 @@ func TestFindCommit(t *testing.T) {
 					},
 				).Build()
 			},
-			Stage: &kargoapi.Stage{
+			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: testNamespace,
 				},
@@ -238,7 +240,8 @@ func TestFindCommit(t *testing.T) {
 			commit, err := FindCommit(
 				context.Background(),
 				cl,
-				testCase.Stage,
+				testCase.stage.Namespace,
+				testCase.stage.Spec.RequestedFreight,
 				testCase.desiredOrigin,
 				testCase.freight,
 				testRepoURL,
