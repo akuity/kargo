@@ -119,12 +119,12 @@ type ChartFromOrigin struct {
 
 type HelmUpdateImageConfig struct {
 	// A list of images which should receive updates.
-	Images []Image `json:"images"`
+	Images []HelmUpdateImageConfigImage `json:"images"`
 	// The path at which the Helm values file can be found.
 	Path string `json:"path"`
 }
 
-type Image struct {
+type HelmUpdateImageConfigImage struct {
 	FromOrigin *ChartFromOrigin `json:"fromOrigin,omitempty"`
 	// The container image (without tag) at which the update is targeted.
 	Image string `json:"image"`
@@ -133,6 +133,27 @@ type Image struct {
 	Key string `json:"key"`
 	// Specifies the new value for the specified key in the Helm values file.
 	Value Value `json:"value"`
+}
+
+type KustomizeSetImageConfig struct {
+	// Images is a list of container images to set or update in the Kustomization file.
+	Images []KustomizeSetImageConfigImage `json:"images"`
+	// Path to the directory containing the Kustomization file.
+	Path string `json:"path"`
+}
+
+type KustomizeSetImageConfigImage struct {
+	FromOrigin *ChartFromOrigin `json:"fromOrigin,omitempty"`
+	// Image name of the repository from which to pick the version. This is the image name Kargo
+	// is subscribed to, and produces Freight for.
+	Image string `json:"image"`
+	// Name of the image (as defined in the Kustomization file).
+	Name string `json:"name,omitempty"`
+	// NewName for the image. This can be used to rename the container image name in the
+	// manifests.
+	NewName string `json:"newName,omitempty"`
+	// UseDigest specifies whether to use the digest of the image instead of the tag.
+	UseDigest bool `json:"useDigest,omitempty"`
 }
 
 // The kind of origin. Currently only 'Warehouse' is supported. Required.

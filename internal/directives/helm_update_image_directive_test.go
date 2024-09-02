@@ -66,7 +66,7 @@ func Test_helmUpdateImageDirective_run(t *testing.T) {
 			},
 			cfg: HelmUpdateImageConfig{
 				Path: "values.yaml",
-				Images: []Image{
+				Images: []HelmUpdateImageConfigImage{
 					{Key: "image.tag", Image: "docker.io/library/nginx", Value: Tag},
 				},
 			},
@@ -95,7 +95,7 @@ func Test_helmUpdateImageDirective_run(t *testing.T) {
 			},
 			cfg: HelmUpdateImageConfig{
 				Path: "values.yaml",
-				Images: []Image{
+				Images: []HelmUpdateImageConfigImage{
 					{Key: "image.tag", Image: "docker.io/library/non-existent", Value: Tag},
 				},
 			},
@@ -134,7 +134,7 @@ func Test_helmUpdateImageDirective_run(t *testing.T) {
 			},
 			cfg: HelmUpdateImageConfig{
 				Path: "values.yaml",
-				Images: []Image{
+				Images: []HelmUpdateImageConfigImage{
 					{
 						Key:   "image.tag",
 						Image: "docker.io/library/nginx",
@@ -187,7 +187,7 @@ func Test_helmUpdateImageDirective_run(t *testing.T) {
 			},
 			cfg: HelmUpdateImageConfig{
 				Path: "non-existent/values.yaml",
-				Images: []Image{
+				Images: []HelmUpdateImageConfigImage{
 					{Key: "image.tag", Image: "docker.io/library/nginx", Value: Tag},
 				},
 			},
@@ -268,7 +268,7 @@ func Test_helmUpdateImageDirective_generateImageUpdates(t *testing.T) {
 				},
 			},
 			cfg: HelmUpdateImageConfig{
-				Images: []Image{
+				Images: []HelmUpdateImageConfigImage{
 					{Key: "image.tag", Image: "docker.io/library/nginx", Value: Tag},
 				},
 			},
@@ -286,7 +286,7 @@ func Test_helmUpdateImageDirective_generateImageUpdates(t *testing.T) {
 				FreightRequests: []kargoapi.FreightRequest{},
 			},
 			cfg: HelmUpdateImageConfig{
-				Images: []Image{
+				Images: []HelmUpdateImageConfigImage{
 					{Key: "image.tag", Image: "docker.io/library/non-existent", Value: Tag},
 				},
 			},
@@ -334,7 +334,7 @@ func Test_helmUpdateImageDirective_generateImageUpdates(t *testing.T) {
 				},
 			},
 			cfg: HelmUpdateImageConfig{
-				Images: []Image{
+				Images: []HelmUpdateImageConfigImage{
 					{Key: "image1.tag", Image: "docker.io/library/nginx", Value: Tag},
 					{Key: "image2.tag", Image: "docker.io/library/non-existent", Value: Tag},
 				},
@@ -383,7 +383,7 @@ func Test_helmUpdateImageDirective_generateImageUpdates(t *testing.T) {
 				},
 			},
 			cfg: HelmUpdateImageConfig{
-				Images: []Image{
+				Images: []HelmUpdateImageConfigImage{
 					{
 						Key:        "image.tag",
 						Image:      "docker.io/library/origin-image",

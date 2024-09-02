@@ -3,6 +3,7 @@
   "title": "HelmUpdateChartConfig",
   "type": "object",
   "required": ["path", "charts"],
+  "additionalProperties": false,
   "properties": {
     "path": {
       "type": "string",
@@ -14,6 +15,7 @@
       "description": "A list of chart dependencies which should receive updates.",
       "items": {
         "type": "object",
+        "additionalProperties": false,
         "properties": {
           "repository": {
             "type": "string",
@@ -31,6 +33,6 @@
         "required": ["repository", "name"]
       }
     }
-  },
+  }
 }
 

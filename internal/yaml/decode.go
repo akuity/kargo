@@ -9,6 +9,17 @@ import (
 
 const pathSeparator = "."
 
+// FieldNotFoundErr is an error type that is returned when a field is not found
+// in the YAML document.
+type FieldNotFoundErr struct {
+	path string
+}
+
+// Error implements the error interface.
+func (e FieldNotFoundErr) Error() string {
+	return fmt.Sprintf("field '%s' not found", e.path)
+}
+
 // DecodeField retrieves the value at the specified path in the YAML document
 // and decodes it into the provided value. The path is specified using a
 // dot-separated string, similar to the UpdateField function.
@@ -39,7 +50,7 @@ func findNode(node *yaml.Node, parts []string) (*yaml.Node, error) {
 				return findNode(node.Content[i+1], remainingParts)
 			}
 		}
-		return nil, fmt.Errorf("field '%s' not found", currentPart)
+		return nil, FieldNotFoundErr{path: currentPart}
 	case yaml.SequenceNode:
 		index, err := parseIndex(currentPart)
 		if err != nil {
