@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"slices"
-	"sort"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
@@ -448,8 +447,9 @@ func (r *rolesDatabase) List(
 		kargoRoles = append(kargoRoles, kargoRole)
 	}
 
-	sort.Slice(kargoRoles, func(i, j int) bool {
-		return kargoRoles[i].Name < kargoRoles[j].Name
+	// Sort ascending by name
+	slices.SortFunc(kargoRoles, func(lhs, rhs *rbacapi.Role) int {
+		return strings.Compare(lhs.Name, rhs.Name)
 	})
 
 	return kargoRoles, nil

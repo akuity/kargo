@@ -31,7 +31,7 @@ jobs:
         echo "Repository is set to: $REPO"
         echo "repo=$REPO" >> $GITHUB_OUTPUT
     - name: Setup Go
-      uses: actions/setup-go@0723387faaf9b38adef4775cd42cfd5155ed6017 # v5.0.2
+      uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5.0.2
       with:
         go-version: '1.23.0'
     - name: Set version for unstable builds
@@ -192,7 +192,7 @@ jobs:
     - name: Install nodejs
       uses: actions/setup-node@1e60f620b9541d16bece96c5465dc8ee9832be0b # v4.0.3
       with:
-        node-version: "22.6.0"
+        node-version: "22.7.0"
         cache: "pnpm"
         cache-dependency-path: "**/pnpm-lock.yaml"
     - name: Build UI
@@ -253,7 +253,7 @@ jobs:
     - name: Install nodejs
       uses: actions/setup-node@1e60f620b9541d16bece96c5465dc8ee9832be0b # v4.0.3
       with:
-        node-version: "22.6.0"
+        node-version: "22.7.0"
         cache: "pnpm"
         cache-dependency-path: "**/pnpm-lock.yaml"
     - name: Build UI

@@ -3,7 +3,8 @@ package image
 import (
 	"context"
 	"fmt"
-	"sort"
+	"slices"
+	"strings"
 
 	"github.com/akuity/kargo/internal/logging"
 )
@@ -127,7 +128,7 @@ func (l *lexicalSelector) selectTags(ctx context.Context) ([]string, error) {
 // sortTagsLexically sorts the provided tags in place, in lexically descending
 // order.
 func sortTagsLexically(tags []string) {
-	sort.Slice(tags, func(i, j int) bool {
-		return tags[i] > tags[j]
+	slices.SortFunc(tags, func(lhs, rhs string) int {
+		return strings.Compare(rhs, lhs)
 	})
 }

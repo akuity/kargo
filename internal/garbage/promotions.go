@@ -3,7 +3,7 @@ package garbage
 import (
 	"context"
 	"fmt"
-	"sort"
+	"slices"
 	"time"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -82,8 +82,10 @@ func (c *collector) cleanStagePromotions(
 		return nil // Done
 	}
 
-	// Sort Promotions by creation time
-	sort.Sort(promosByCreation(promos.Items))
+	// Sort by creation time desc descending
+	slices.SortFunc(promos.Items, func(lhs, rhs kargoapi.Promotion) int {
+		return rhs.CreationTimestamp.Time.Compare(lhs.CreationTimestamp.Time)
+	})
 
 	// Step through all Promotions to find the oldest that is not terminal
 	oldestNonTerminalIndex := -1

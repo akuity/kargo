@@ -3,7 +3,8 @@ package api
 import (
 	"context"
 	"fmt"
-	"sort"
+	"slices"
+	"strings"
 
 	"connectrpc.com/connect"
 	corev1 "k8s.io/api/core/v1"
@@ -36,8 +37,9 @@ func (s *server) ListCredentials(
 		return nil, fmt.Errorf("list secrets: %w", err)
 	}
 
-	sort.Slice(secretsList.Items, func(i, j int) bool {
-		return secretsList.Items[i].Name < secretsList.Items[j].Name
+	// Sort ascending by name
+	slices.SortFunc(secretsList.Items, func(lhs, rhs corev1.Secret) int {
+		return strings.Compare(lhs.Name, rhs.Name)
 	})
 
 	secrets := make([]*corev1.Secret, len(secretsList.Items))

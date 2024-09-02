@@ -3240,6 +3240,15 @@ export class KustomizeImageUpdate extends Message<KustomizeImageUpdate> {
    */
   useDigest?: boolean;
 
+  /**
+   * NewName specifies a container image name override when setting the image
+   *
+   * +kubebuilder:validation:Optional
+   *
+   * @generated from field: optional string newName = 5;
+   */
+  newName?: string;
+
   constructor(data?: PartialMessage<KustomizeImageUpdate>) {
     super();
     proto2.util.initPartial(data, this);
@@ -3252,6 +3261,7 @@ export class KustomizeImageUpdate extends Message<KustomizeImageUpdate> {
     { no: 4, name: "origin", kind: "message", T: FreightOrigin, opt: true },
     { no: 2, name: "path", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 3, name: "useDigest", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+    { no: 5, name: "newName", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): KustomizeImageUpdate {
