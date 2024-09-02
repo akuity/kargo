@@ -663,8 +663,8 @@ func ResourcesToRole(
 		}
 	}
 
-	sort.Slice(kargoRole.Claims, func(i, j int) bool {
-		return kargoRole.Claims[i].Name < kargoRole.Claims[j].Name
+	slices.SortFunc(kargoRole.Claims, func(lhs, rhs *rbacapi.UserClaim) int {
+		return strings.Compare(lhs.Name, rhs.Name)
 	})
 
 	kargoRole.Rules = []rbacv1.PolicyRule{}
