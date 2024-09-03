@@ -20,7 +20,10 @@ func pullRequestBranchName(project, stage string) string {
 // merging into the base branch. If the PR branch already exists, but not in a state that
 // we like (i.e. not a descendant of base), recreate it.
 func preparePullRequestBranch(repo git.Repo, prBranch string, base string) error {
-	origBranch := repo.CurrentBranch()
+	origBranch, err := repo.CurrentBranch()
+	if err != nil {
+		return err
+	}
 	baseBranchExists, err := repo.RemoteBranchExists(base)
 	if err != nil {
 		return err

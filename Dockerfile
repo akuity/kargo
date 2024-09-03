@@ -41,6 +41,10 @@ ARG GIT_COMMIT
 ARG GIT_TREE_STATE
 
 RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build \
+      -o bin/credential-helper \
+      ./cmd/credential-helper
+
+RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build \
       -ldflags "-w -X ${VERSION_PACKAGE}.version=${VERSION} -X ${VERSION_PACKAGE}.buildDate=$(date -u +'%Y-%m-%dT%H:%M:%SZ') -X ${VERSION_PACKAGE}.gitCommit=${GIT_COMMIT} -X ${VERSION_PACKAGE}.gitTreeState=${GIT_TREE_STATE}" \
       -o bin/kargo \
       ./cmd/controlplane \
@@ -92,6 +96,7 @@ FROM base AS back-end-dev
 
 USER root
 
+COPY bin/credential-helper /usr/local/bin/credential-helper
 COPY bin/controlplane/kargo /usr/local/bin/kargo
 
 RUN adduser -D -H -u 1000 kargo
