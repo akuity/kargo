@@ -4,6 +4,13 @@ package directives
 
 type CommonDefs interface{}
 
+type CopyConfig struct {
+	// InPath is the path to the file or directory to copy.
+	InPath string `json:"inPath"`
+	// OutPath is the path to the destination file or directory.
+	OutPath string `json:"outPath"`
+}
+
 type GitCloneConfig struct {
 	// The commits, branches, or tags to check out from the repository and the paths where they
 	// should be checked out. At least one must be specified.

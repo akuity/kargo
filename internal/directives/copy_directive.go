@@ -4,6 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/fs"
+	"path/filepath"
+	"strings"
+
+	securejoin "github.com/cyphar/filepath-securejoin"
+	"github.com/otiai10/copy"
+	"github.com/xeipuuv/gojsonschema"
+
+	"github.com/akuity/kargo/internal/logging"
 )
 
 func init() {
@@ -12,42 +21,83 @@ func init() {
 }
 
 // copyDirective is a directive that copies a file or directory.
-type copyDirective struct{}
-
-// copyConfig is the configuration for the copy directive.
-type copyConfig struct {
-	// InPath is the path to the file or directory to copy.
-	InPath string `json:"inPath"`
-	// OutPath is the path to the destination file or directory.
-	OutPath string `json:"outPath"`
-}
-
-// Validate validates the copy configuration, returning an error if it is invalid.
-func (c *copyConfig) Validate() error {
-	var err []error
-	if c.InPath == "" {
-		err = append(err, errors.New("inPath is required"))
-	}
-	if c.OutPath == "" {
-		err = append(err, errors.New("outPath is required"))
-	}
-	return errors.Join(err...)
+//
+// The copy is recursive, merging directories if the destination directory
+// already exists. If the destination is an existing file, it will be
+// overwritten. Symlinks are ignored.
+type copyDirective struct {
+	schemaLoader gojsonschema.JSONLoader
 }
 
 func (d *copyDirective) Name() string {
 	return "copy"
 }
 
-func (d *copyDirective) Run(_ context.Context, stepCtx *StepContext) (Result, error) {
-	cfg, err := configToStruct[copyConfig](stepCtx.Config)
+func (d *copyDirective) Run(ctx context.Context, stepCtx *StepContext) (Result, error) {
+	// Validate the configuration against the JSON Schema.
+	if err := validate(d.schemaLoader, gojsonschema.NewGoLoader(stepCtx.Config), d.Name()); err != nil {
+		return ResultFailure, err
+	}
+
+	// Convert the configuration into a typed object.
+	cfg, err := configToStruct[CopyConfig](stepCtx.Config)
 	if err != nil {
-		return ResultFailure, fmt.Errorf("could not convert config into copy config: %w", err)
-	}
-	if err = cfg.Validate(); err != nil {
-		return ResultFailure, fmt.Errorf("invalid copy config: %w", err)
+		return ResultFailure, fmt.Errorf("could not convert config into %s config: %w", d.Name(), err)
 	}
 
-	// TODO: add implementation here
+	return d.run(ctx, stepCtx, cfg)
+}
 
+func (d *copyDirective) run(ctx context.Context, stepCtx *StepContext, cfg CopyConfig) (Result, error) {
+	// Secure join the paths to prevent path traversal attacks.
+	inPath, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.InPath)
+	if err != nil {
+		return ResultFailure, fmt.Errorf("could not secure join inPath %q: %w", cfg.InPath, err)
+	}
+	outPath, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.OutPath)
+	if err != nil {
+		return ResultFailure, fmt.Errorf("could not secure join outPath %q: %w", cfg.OutPath, err)
+	}
+
+	// Perform the copy operation.
+	opts := copy.Options{
+		OnSymlink: func(src string) copy.SymlinkAction {
+			logging.LoggerFromContext(ctx).Trace("ignoring symlink", "src", src)
+			return copy.Skip
+		},
+		OnError: func(_, _ string, err error) error {
+			return sanitizePathError(err, stepCtx.WorkDir)
+		},
+	}
+	if err = copy.Copy(inPath, outPath, opts); err != nil {
+		return ResultFailure, fmt.Errorf("failed to copy %q to %q: %w", cfg.InPath, cfg.OutPath, err)
+	}
 	return ResultSuccess, nil
+}
+
+// sanitizePathError sanitizes the path in a path error to be relative to the
+// work directory. If the path cannot be made relative, the filename is used
+// instead.
+//
+// This is useful for making error messages more user-friendly, as the work
+// directory is typically a temporary directory that the user does not care
+// about.
+func sanitizePathError(err error, workDir string) error {
+	var pathErr *fs.PathError
+	if errors.As(err, &pathErr) {
+		sanitizedPath, relErr := filepath.Rel(workDir, pathErr.Path)
+		if relErr != nil || strings.Contains(sanitizedPath, "..") {
+			// If we can't make it relative, just use the filename.
+			sanitizedPath = filepath.Base(pathErr.Path)
+		}
+
+		// Reconstruct the error with the sanitized path.
+		return &fs.PathError{
+			Op:   pathErr.Op,
+			Path: sanitizedPath,
+			Err:  pathErr.Err,
+		}
+	}
+	// Return the original error if it's not a path error.
+	return err
 }
