@@ -91,7 +91,13 @@ func CloneBare(
 	if err = b.setupClient(clientOpts); err != nil {
 		return nil, err
 	}
-	return b, b.clone()
+	if err = b.clone(); err != nil {
+		return nil, err
+	}
+	if err = b.saveDirs(); err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 
 func (b *bareRepo) clone() error {
@@ -116,16 +122,17 @@ func LoadBareRepo(path string, opts *LoadBareRepoOptions) (BareRepo, error) {
 		baseRepo: &baseRepo{
 			creds:                 opts.Credentials,
 			dir:                   path,
-			homeDir:               filepath.Dir(path),
 			insecureSkipTLSVerify: opts.InsecureSkipTLSVerify,
 		},
 	}
-	res, err := libExec.Exec(b.buildGitCommand("config", "--get", "remote.origin.url"))
-	if err != nil {
-		return nil, fmt.Errorf(`error getting URL of remote "origin": %w`, err)
+	if err := b.loadHomeDir(); err != nil {
+		return nil, fmt.Errorf("error reading repo home dir from config: %w", err)
 	}
-	b.url = strings.TrimSpace(string(res))
-	if err = b.setupAuth(); err != nil {
+	if err := b.loadURL(); err != nil {
+		return nil,
+			fmt.Errorf(`error reading URL of remote "origin" from config: %w`, err)
+	}
+	if err := b.setupAuth(); err != nil {
 		return nil, fmt.Errorf("error configuring the credentials: %w", err)
 	}
 	return b, nil

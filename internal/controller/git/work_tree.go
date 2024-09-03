@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -104,24 +103,21 @@ func LoadWorkTree(path string, opts *LoadWorkTreeOptions) (WorkTree, error) {
 			insecureSkipTLSVerify: opts.InsecureSkipTLSVerify,
 		},
 	}
-	res, err := libExec.Exec(w.buildGitCommand("rev-parse", "--git-dir"))
+	res, err := libExec.Exec(w.buildGitCommand(
+		"config",
+		"kargo.repoDir",
+	))
 	if err != nil {
-		return nil, fmt.Errorf("error getting git directory: %w", err)
+		return nil, fmt.Errorf("error reading repo dir from config: %w", err)
 	}
-	// The root of the bare repo will be three levels up from the path returned
-	// by git rev-parse --git-dir
-	repoPath := filepath.Join(strings.TrimSpace(string(res)), "..", "..", "..", "repo")
-	if repoPath, err = filepath.EvalSymlinks(repoPath); err != nil {
+	repoPath := strings.TrimSpace(string(res))
+	if err = w.loadHomeDir(); err != nil {
+		return nil, fmt.Errorf("error reading repo home dir from config: %w", err)
+	}
+	if err = w.loadURL(); err != nil {
 		return nil,
-			fmt.Errorf("error resolving symlinks in path %s: %w", repoPath, err)
+			fmt.Errorf(`error reading URL of remote "origin" from config: %w`, err)
 	}
-	w.homeDir = filepath.Dir(repoPath)
-	if res, err = libExec.Exec(
-		w.buildGitCommand("config", "--get", "remote.origin.url"),
-	); err != nil {
-		return nil, fmt.Errorf(`error getting URL of remote "origin": %w`, err)
-	}
-	w.url = strings.TrimSpace(string(res))
 	if err = w.setupAuth(); err != nil {
 		return nil, fmt.Errorf("error configuring the credentials: %w", err)
 	}

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	libExec "github.com/akuity/kargo/internal/exec"
 )
@@ -106,7 +105,13 @@ func Clone(
 	if err = r.setupClient(clientOpts); err != nil {
 		return nil, err
 	}
-	return r, r.clone(cloneOpts)
+	if err = r.clone(cloneOpts); err != nil {
+		return nil, err
+	}
+	if err = r.saveDirs(); err != nil {
+		return nil, err
+	}
+	return r, nil
 }
 
 func (r *repo) clone(opts *CloneOptions) error {
@@ -144,7 +149,6 @@ func LoadRepo(path string, opts *LoadRepoOptions) (Repo, error) {
 	baseRepo := &baseRepo{
 		creds:                 opts.Credentials,
 		dir:                   path,
-		homeDir:               filepath.Dir(path),
 		insecureSkipTLSVerify: opts.InsecureSkipTLSVerify,
 	}
 	r := &repo{
@@ -153,12 +157,14 @@ func LoadRepo(path string, opts *LoadRepoOptions) (Repo, error) {
 			baseRepo: baseRepo,
 		},
 	}
-	res, err := libExec.Exec(r.buildGitCommand("config", "--get", "remote.origin.url"))
-	if err != nil {
-		return nil, fmt.Errorf(`error getting URL of remote "origin": %w`, err)
+	if err := r.loadHomeDir(); err != nil {
+		return nil, fmt.Errorf("error reading repo home dir from config: %w", err)
 	}
-	r.url = strings.TrimSpace(string(res))
-	if err = r.setupAuth(); err != nil {
+	if err := r.loadURL(); err != nil {
+		return nil,
+			fmt.Errorf(`error reading URL of remote "origin" from config: %w`, err)
+	}
+	if err := r.setupAuth(); err != nil {
 		return nil, fmt.Errorf("error configuring the credentials: %w", err)
 	}
 	return r, nil

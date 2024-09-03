@@ -155,6 +155,52 @@ func (b *baseRepo) setupAuth() error {
 	return nil
 }
 
+// saveDirs saves information about the repository's directories to the
+// repository's configuration. This is useful for reliably determining this
+// information later if an existing repository or working tree is loaded from
+// the file system.
+func (b *baseRepo) saveDirs() error {
+	if _, err := libExec.Exec(b.buildGitCommand(
+		"config",
+		"kargo.repoDir",
+		b.dir,
+	)); err != nil {
+		return fmt.Errorf("error saving repo dir as config: %w", err)
+	}
+	if _, err := libExec.Exec(b.buildGitCommand(
+		"config",
+		"kargo.repoHomeDir",
+		b.homeDir,
+	)); err != nil {
+		return fmt.Errorf("error saving repo home dir as config: %w", err)
+	}
+	return nil
+}
+
+// loadHomeDir restores the repository's home directory from the repository's
+// configuration. This is useful for reliably determining this information when
+// an existing repository or working tree is loaded from the file system.
+func (b *baseRepo) loadHomeDir() error {
+	res, err := libExec.Exec(b.buildGitCommand(
+		"config",
+		"kargo.repoHomeDir",
+	))
+	if err != nil {
+		return fmt.Errorf("error reading repo home dir from config: %w", err)
+	}
+	b.homeDir = strings.TrimSpace(string(res))
+	return nil
+}
+
+func (b *baseRepo) loadURL() error {
+	res, err := libExec.Exec(b.buildGitCommand("config", "remote.origin.url"))
+	if err != nil {
+		return fmt.Errorf(`error getting URL of remote "origin": %w`, err)
+	}
+	b.url = strings.TrimSpace(string(res))
+	return nil
+}
+
 func (b *baseRepo) buildCommand(command string, arg ...string) *exec.Cmd {
 	cmd := exec.Command(command, arg...)
 	homeEnvVar := fmt.Sprintf("HOME=%s", b.homeDir)
