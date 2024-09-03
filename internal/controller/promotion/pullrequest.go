@@ -41,7 +41,7 @@ func preparePullRequestBranch(repo git.Repo, prBranch string, base string) error
 		); err != nil {
 			return err
 		}
-		if err = repo.Push(false); err != nil {
+		if err = repo.Push(nil); err != nil {
 			return err
 		}
 	} else if err = repo.Checkout(base); err != nil {
@@ -56,7 +56,7 @@ func preparePullRequestBranch(repo git.Repo, prBranch string, base string) error
 		if err := repo.CreateChildBranch(prBranch); err != nil {
 			return err
 		}
-		if err := repo.Push(false); err != nil {
+		if err := repo.Push(nil); err != nil {
 			return err
 		}
 	} else {
@@ -80,7 +80,7 @@ func preparePullRequestBranch(repo git.Repo, prBranch string, base string) error
 			if err = repo.CreateChildBranch(prBranch); err != nil {
 				return err
 			}
-			if err = repo.Push(true); err != nil {
+			if err = repo.Push(&git.PushOptions{Force: true}); err != nil {
 				return err
 			}
 		}

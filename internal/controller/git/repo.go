@@ -55,10 +55,6 @@ type CloneOptions struct {
 	// - https://github.blog/2020-12-21-get-up-to-speed-with-partial-clone-and-shallow-clone/
 	// - https://docs.gitlab.com/ee/topics/git/partial_clone.html
 	Filter string
-	// InsecureSkipTLSVerify specifies whether certificate verification errors
-	// should be ignored when cloning the repository. The setting will be
-	// remembered for subsequent interactions with the remote repository.
-	InsecureSkipTLSVerify bool
 	// SingleBranch indicates whether the clone should be a single-branch clone.
 	// This option is ignored if Bare is true.
 	SingleBranch bool
@@ -90,11 +86,10 @@ func Clone(
 			fmt.Errorf("error resolving symlinks in path %s: %w", homeDir, err)
 	}
 	baseRepo := &baseRepo{
-		creds:                 clientOpts.Credentials,
-		dir:                   filepath.Join(homeDir, "repo"),
-		homeDir:               homeDir,
-		insecureSkipTLSVerify: cloneOpts.InsecureSkipTLSVerify,
-		url:                   repoURL,
+		creds:   clientOpts.Credentials,
+		dir:     filepath.Join(homeDir, "repo"),
+		homeDir: homeDir,
+		url:     repoURL,
 	}
 	r := &repo{
 		baseRepo: baseRepo,
@@ -138,8 +133,7 @@ func (r *repo) clone(opts *CloneOptions) error {
 }
 
 type LoadRepoOptions struct {
-	Credentials           *RepoCredentials
-	InsecureSkipTLSVerify bool
+	Credentials *RepoCredentials
 }
 
 func LoadRepo(path string, opts *LoadRepoOptions) (Repo, error) {
@@ -147,9 +141,8 @@ func LoadRepo(path string, opts *LoadRepoOptions) (Repo, error) {
 		opts = &LoadRepoOptions{}
 	}
 	baseRepo := &baseRepo{
-		creds:                 opts.Credentials,
-		dir:                   path,
-		insecureSkipTLSVerify: opts.InsecureSkipTLSVerify,
+		creds: opts.Credentials,
+		dir:   path,
 	}
 	r := &repo{
 		baseRepo: baseRepo,

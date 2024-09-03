@@ -140,7 +140,7 @@ func TestRepo(t *testing.T) {
 		require.False(t, exists)
 	})
 
-	err = rep.Push(false)
+	err = rep.Push(nil)
 	require.NoError(t, err)
 
 	t.Run("can push", func(t *testing.T) {

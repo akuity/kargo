@@ -67,8 +67,8 @@ type WorkTree interface {
 	// CommitMessage returns the text of the most recent commit message associated
 	// with the specified commit ID.
 	CommitMessage(id string) (string, error)
-	// Push pushes from the current branch to a remote branch by the same name.
-	Push(force bool) error
+	// Push pushes from the local repository to the remote repository.
+	Push(*PushOptions) error
 	// RefsHaveDiffs returns whether there is a diff between two commits/branches
 	RefsHaveDiffs(commit1 string, commit2 string) (bool, error)
 	// RemoteBranchExists returns a bool indicating if the specified branch exists
@@ -88,8 +88,7 @@ type workTree struct {
 }
 
 type LoadWorkTreeOptions struct {
-	Credentials           *RepoCredentials
-	InsecureSkipTLSVerify bool
+	Credentials *RepoCredentials
 }
 
 func LoadWorkTree(path string, opts *LoadWorkTreeOptions) (WorkTree, error) {
@@ -98,9 +97,8 @@ func LoadWorkTree(path string, opts *LoadWorkTreeOptions) (WorkTree, error) {
 	}
 	w := &workTree{
 		baseRepo: &baseRepo{
-			creds:                 opts.Credentials,
-			dir:                   path,
-			insecureSkipTLSVerify: opts.InsecureSkipTLSVerify,
+			creds: opts.Credentials,
+			dir:   path,
 		},
 	}
 	res, err := libExec.Exec(w.buildGitCommand(
@@ -122,8 +120,7 @@ func LoadWorkTree(path string, opts *LoadWorkTreeOptions) (WorkTree, error) {
 		return nil, fmt.Errorf("error configuring the credentials: %w", err)
 	}
 	br, err := LoadBareRepo(repoPath, &LoadBareRepoOptions{
-		Credentials:           opts.Credentials,
-		InsecureSkipTLSVerify: opts.InsecureSkipTLSVerify,
+		Credentials: opts.Credentials,
 	})
 	if err != nil {
 		return nil, err
@@ -181,6 +178,9 @@ func (w *workTree) Checkout(branch string) error {
 type CommitOptions struct {
 	// AllowEmpty indicates whether an empty commit should be allowed.
 	AllowEmpty bool
+	// Author is the author of the commit. If nil, the default author already
+	// configured in the git repository will be used.
+	Author *User
 }
 
 func (w *workTree) Commit(message string, opts *CommitOptions) error {
@@ -451,9 +451,27 @@ func (w *workTree) ListTags() ([]TagMetadata, error) {
 	return tags, nil
 }
 
-func (w *workTree) Push(force bool) error {
-	args := []string{"push", "origin", "HEAD"}
-	if force {
+// PushOptions represents options for pushing changes to a remote git
+// repository.
+type PushOptions struct {
+	// Force indicates whether the push should be forced.
+	Force bool
+	// TargetBranch specifies the branch to push to. If empty, the current branch
+	// will be pushed to a remote branch by the same name.
+	TargetBranch string
+}
+
+func (w *workTree) Push(opts *PushOptions) error {
+	if opts == nil {
+		opts = &PushOptions{}
+	}
+	args := []string{"push", "origin"}
+	if opts.TargetBranch != "" {
+		args = append(args, fmt.Sprintf("HEAD:%s", opts.TargetBranch))
+	} else {
+		args = append(args, "HEAD")
+	}
+	if opts.Force {
 		args = append(args, "--force")
 	}
 	if _, err := libExec.Exec(w.buildGitCommand(args...)); err != nil {

@@ -81,11 +81,10 @@ func CloneBare(
 	}
 	b := &bareRepo{
 		baseRepo: &baseRepo{
-			creds:                 clientOpts.Credentials,
-			dir:                   filepath.Join(homeDir, "repo"),
-			homeDir:               homeDir,
-			insecureSkipTLSVerify: cloneOpts.InsecureSkipTLSVerify,
-			url:                   repoURL,
+			creds:   clientOpts.Credentials,
+			dir:     filepath.Join(homeDir, "repo"),
+			homeDir: homeDir,
+			url:     repoURL,
 		},
 	}
 	if err = b.setupClient(clientOpts); err != nil {
@@ -110,8 +109,7 @@ func (b *bareRepo) clone() error {
 }
 
 type LoadBareRepoOptions struct {
-	Credentials           *RepoCredentials
-	InsecureSkipTLSVerify bool
+	Credentials *RepoCredentials
 }
 
 func LoadBareRepo(path string, opts *LoadBareRepoOptions) (BareRepo, error) {
@@ -120,9 +118,8 @@ func LoadBareRepo(path string, opts *LoadBareRepoOptions) (BareRepo, error) {
 	}
 	b := &bareRepo{
 		baseRepo: &baseRepo{
-			creds:                 opts.Credentials,
-			dir:                   path,
-			insecureSkipTLSVerify: opts.InsecureSkipTLSVerify,
+			creds: opts.Credentials,
+			dir:   path,
 		},
 	}
 	if err := b.loadHomeDir(); err != nil {
@@ -160,11 +157,10 @@ func (b *bareRepo) AddWorkTree(path, ref string) (WorkTree, error) {
 	}
 	return &workTree{
 		baseRepo: &baseRepo{
-			creds:                 b.creds,
-			dir:                   path,
-			homeDir:               b.homeDir,
-			insecureSkipTLSVerify: b.insecureSkipTLSVerify,
-			url:                   b.url,
+			creds:   b.creds,
+			dir:     path,
+			homeDir: b.homeDir,
+			url:     b.url,
 		},
 		bareRepo: b,
 	}, nil
@@ -211,11 +207,10 @@ func (b *bareRepo) WorkTrees() ([]WorkTree, error) {
 	for i, workTreePath := range workTreePaths {
 		workTrees[i] = &workTree{
 			baseRepo: &baseRepo{
-				creds:                 b.creds,
-				dir:                   workTreePath,
-				homeDir:               b.homeDir,
-				insecureSkipTLSVerify: b.insecureSkipTLSVerify,
-				url:                   b.url,
+				creds:   b.creds,
+				dir:     workTreePath,
+				homeDir: b.homeDir,
+				url:     b.url,
 			},
 			bareRepo: b,
 		}

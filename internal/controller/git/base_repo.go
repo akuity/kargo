@@ -15,11 +15,10 @@ import (
 // single working tree, a bare repository, or working tree associated with a
 // bare repository.
 type baseRepo struct {
-	creds                 *RepoCredentials
-	dir                   string
-	homeDir               string
-	insecureSkipTLSVerify bool
-	url                   string
+	creds   *RepoCredentials
+	dir     string
+	homeDir string
+	url     string
 }
 
 // ClientOptions represents options for a repository-specific Git client.
@@ -30,6 +29,9 @@ type ClientOptions struct {
 	User *User
 	// Credentials represents the authentication information.
 	Credentials *RepoCredentials
+	// InsecureSkipTLSVerify indicates whether to ignore certificate verification
+	// errors when interacting with the remote repository.
+	InsecureSkipTLSVerify bool
 }
 
 // setupClient configures the git CLI for authentication using either SSH or
@@ -45,6 +47,14 @@ func (b *baseRepo) setupClient(opts *ClientOptions) error {
 
 	if err := b.setupAuth(); err != nil {
 		return fmt.Errorf("error configuring the credentials: %w", err)
+	}
+
+	if opts.InsecureSkipTLSVerify {
+		cmd := b.buildGitCommand("config", "--global", "http.sslVerify", "false")
+		cmd.Dir = b.homeDir // Override the cmd.Dir that's set by b.buildGitCommand()
+		if _, err := libExec.Exec(cmd); err != nil {
+			return fmt.Errorf("error configuring http.sslVerify: %w", err)
+		}
 	}
 
 	return nil
@@ -222,9 +232,6 @@ func (b *baseRepo) buildGitCommand(arg ...string) *exec.Cmd {
 			"GIT_ASKPASS=/usr/local/bin/credential-helper",
 			fmt.Sprintf("GIT_PASSWORD=%s", b.creds.Password),
 		)
-	}
-	if b.insecureSkipTLSVerify {
-		cmd.Env = append(cmd.Env, "GIT_SSL_NO_VERIFY=true")
 	}
 	return cmd
 }
