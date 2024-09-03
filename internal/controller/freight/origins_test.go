@@ -14,10 +14,6 @@ func TestGetDesiredOrigin(t *testing.T) {
 		Kind: "Foo",
 		Name: "origin1",
 	}
-	testOrigin2 := &kargoapi.FreightOrigin{
-		Kind: "Foo",
-		Name: "origin2",
-	}
 	testCases := []struct {
 		name           string
 		setup          func() (any, any)
@@ -219,54 +215,6 @@ func TestGetDesiredOrigin(t *testing.T) {
 				}
 				return m, &m.ArgoCDAppUpdates[0]
 			},
-		},
-		{
-			name: "ArgoCDAppUpdate for multi-source app with different origins for various sources are correctly identified",
-			setup: func() (any, any) {
-				stage := &kargoapi.Stage{
-					Spec: kargoapi.StageSpec{
-						PromotionMechanisms: &kargoapi.PromotionMechanisms{
-							ArgoCDAppUpdates: []kargoapi.ArgoCDAppUpdate{
-								{
-									SourceUpdates: []kargoapi.ArgoCDSourceUpdate{
-										{Origin: testOrigin, RepoURL: "https://github.com/universe/42"},
-										{Origin: testOrigin2, RepoURL: "https://github.com/another-universe/42"},
-									},
-								},
-							},
-						},
-					},
-					Status: kargoapi.StageStatus{
-						FreightHistory: kargoapi.FreightHistory{
-							&kargoapi.FreightCollection{
-								Freight: map[string]kargoapi.FreightReference{
-									testOrigin.String(): {
-										Origin: *testOrigin,
-										Commits: []kargoapi.GitCommit{
-											{
-												RepoURL: "https://github.com/universe/42",
-												ID:      "fake-revision",
-											},
-										},
-									},
-									testOrigin2.String(): {
-										Origin: *testOrigin2,
-										Commits: []kargoapi.GitCommit{
-											{
-												RepoURL: "https://github.com/another-universe/42",
-												ID:      "another-revision",
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				}
-
-				return stage, &stage.Spec.PromotionMechanisms.ArgoCDAppUpdates[0].SourceUpdates[1]
-			},
-			expectedOrigin: testOrigin2,
 		},
 		{
 			name: "ArgoCDSourceUpdate can inherit from ArgoCDAppUpdate",

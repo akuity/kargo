@@ -23,22 +23,27 @@ func TestGetDesiredRevisions(t *testing.T) {
 		Name: "another-warehouse",
 	}
 
-	var no_revisions []string
 	testCases := []struct {
 		name           string
 		app            *argocdapi.Application
 		stage          *kargoapi.Stage
 		freightHistory kargoapi.FreightHistory
-		want           []string
+		assertions     func(*testing.T, []string, error)
 	}{
 		{
 			name: "no application",
-			want: no_revisions,
+			assertions: func(t *testing.T, result []string, err error) {
+				require.NoError(t, err)
+				require.Empty(t, result)
+			},
 		},
 		{
 			name: "no application source",
 			app:  &argocdapi.Application{},
-			want: no_revisions,
+			assertions: func(t *testing.T, result []string, err error) {
+				require.NoError(t, err)
+				require.Empty(t, result)
+			},
 		},
 		{
 			name: "no source repo URL",
@@ -47,7 +52,10 @@ func TestGetDesiredRevisions(t *testing.T) {
 					Source: &argocdapi.ApplicationSource{},
 				},
 			},
-			want: no_revisions,
+			assertions: func(t *testing.T, result []string, err error) {
+				require.NoError(t, err)
+				require.Equal(t, result, []string{""})
+			},
 		},
 		{
 			name: "chart source",
@@ -80,7 +88,10 @@ func TestGetDesiredRevisions(t *testing.T) {
 					},
 				},
 			},
-			want: []string{"v2.0.0"},
+			assertions: func(t *testing.T, result []string, err error) {
+				require.NoError(t, err)
+				require.Equal(t, result, []string{"v2.0.0"})
+			},
 		},
 		{
 			name: "git source",
@@ -110,7 +121,10 @@ func TestGetDesiredRevisions(t *testing.T) {
 					},
 				},
 			},
-			want: []string{"fake-revision"},
+			assertions: func(t *testing.T, result []string, err error) {
+				require.NoError(t, err)
+				require.Equal(t, result, []string{"fake-revision"})
+			},
 		},
 		{
 			name: "git multisource with chart",
@@ -152,7 +166,10 @@ func TestGetDesiredRevisions(t *testing.T) {
 					},
 				},
 			},
-			want: []string{"", "fake-revision"},
+			assertions: func(t *testing.T, result []string, err error) {
+				require.NoError(t, err)
+				require.Equal(t, result, []string{"", "fake-revision"})
+			},
 		},
 		{
 			name: "git multisource with chart without synced revisions",
@@ -193,7 +210,10 @@ func TestGetDesiredRevisions(t *testing.T) {
 					},
 				},
 			},
-			want: []string{"", "fake-revision"},
+			assertions: func(t *testing.T, result []string, err error) {
+				require.NoError(t, err)
+				require.Equal(t, result, []string{"", "fake-revision"})
+			},
 		},
 		{
 			name: "git multisource with multiple freight references",
@@ -264,7 +284,10 @@ func TestGetDesiredRevisions(t *testing.T) {
 					},
 				},
 			},
-			want: []string{"", "fake-revision", "another-revision"},
+			assertions: func(t *testing.T, result []string, err error) {
+				require.NoError(t, err)
+				require.Equal(t, result, []string{"", "fake-revision", "another-revision"})
+			},
 		},
 		{
 			name: "git source with health check commit",
@@ -291,7 +314,10 @@ func TestGetDesiredRevisions(t *testing.T) {
 					},
 				},
 			},
-			want: []string{"fake-revision"},
+			assertions: func(t *testing.T, result []string, err error) {
+				require.NoError(t, err)
+				require.Equal(t, result, []string{"fake-revision"})
+			},
 		},
 	}
 
@@ -325,7 +351,7 @@ func TestGetDesiredRevisions(t *testing.T) {
 				stage.Status.FreightHistory.Current().References(),
 			)
 			require.NoError(t, err)
-			require.Equal(t, testCase.want, revisions)
+			testCase.assertions(t, revisions, err)
 		})
 	}
 }

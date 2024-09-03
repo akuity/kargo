@@ -356,7 +356,7 @@ func (a *argoCDMechanism) mustPerformUpdate(
 		}
 	}
 
-	// Check if the desired revision was applied.
+	// Check if the desired revisions were applied.
 	desiredRevisions, err := libargocd.GetDesiredRevisions(
 		ctx,
 		a.kargoClient,
@@ -372,14 +372,14 @@ func (a *argoCDMechanism) mustPerformUpdate(
 		return "", true, fmt.Errorf("error determining desired revision: %w", err)
 	}
 
-	if desiredRevisions == nil {
+	if len(desiredRevisions) == 0 {
 		// We do not have a desired revision, so we cannot determine if the
 		// operation was successful.
 		return status.Phase, false, nil
 	}
 
 	// Check multi-source app for matching revisions.
-	if app.IsMultisource() {
+	if len(app.Spec.Sources) > 0 {
 		syncedRevisions := status.SyncResult.Revisions
 		for i, r := range syncedRevisions {
 			if r != desiredRevisions[i] {
@@ -653,8 +653,7 @@ func (a *argoCDMechanism) applyArgoCDSourceUpdate(
 	updateLogger.Debug("About to apply ArgoCD source update")
 
 	if source.Chart != "" || update.Chart != "" {
-		// Kargo uses the "oci://" prefix, but Argo CD does not.
-		if source.RepoURL != strings.TrimPrefix(update.RepoURL, "oci://") || source.Chart != update.Chart {
+		if source.RepoURL != update.RepoURL || source.Chart != update.Chart {
 			updateLogger.Trace("Source update not applicable to Application source, skipping.")
 			return source, nil
 		}

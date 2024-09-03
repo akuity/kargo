@@ -33,10 +33,6 @@ type ApplicationSource struct {
 	Path           string                      `json:"path,omitempty"`
 }
 
-func (a Application) IsMultisource() bool {
-	return a.Spec.Sources != nil && len(a.Spec.Sources) > 0
-}
-
 // Equals compares two instances of ApplicationSource and returns true if
 // they are equal.
 func (source *ApplicationSource) Equals(other *ApplicationSource) bool {

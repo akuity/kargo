@@ -991,8 +991,8 @@ func Test_stageHealthForAppSync(t *testing.T) {
 					Namespace: "fake-namespace",
 					Name:      "fake-name",
 				},
-				Operation: &argocd.Operation{
-					Sync: &argocd.SyncOperation{},
+				Status: argocd.ApplicationStatus{
+					Sync: argocd.SyncStatus{},
 				},
 			},
 			assertions: func(t *testing.T, state kargoapi.HealthState, err error) {

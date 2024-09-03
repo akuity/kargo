@@ -255,8 +255,17 @@ func stageHealthForAppSync(
 	revisions []string) (kargoapi.HealthState, error) {
 	logger := logging.LoggerFromContext(ctx).WithValues("appName", app.GetName(), "revisions", revisions)
 	logger.Debug("About to determine stage health based on app sync status.")
+
+	allRevisionsEmpty := true
+	for _, r := range revisions {
+		if r != "" {
+			allRevisionsEmpty = false
+			break
+		}
+	}
+
 	switch {
-	case revisions == nil || (len(revisions) == 1 && revisions[0] == ""):
+	case allRevisionsEmpty:
 		logger.Debug("Desired revision not set, assuming healthy.")
 		return kargoapi.HealthStateHealthy, nil
 	case app.Operation != nil && app.Operation.Sync != nil,
@@ -274,7 +283,7 @@ func stageHealthForAppSync(
 
 		// Trivial case where app has only a single source and revision is set.
 		singleSourceRevision := app.Status.Sync.Revision
-		if !app.IsMultisource() {
+		if len(app.Spec.Sources) == 0 {
 			if len(revisions) == 1 && revisions[0] == singleSourceRevision {
 				return kargoapi.HealthStateHealthy, nil
 			}
@@ -294,10 +303,9 @@ func stageHealthForAppSync(
 		multiSourceRevisions := app.Status.Sync.Revisions
 		// Apps with multiple sources pointed at the same Git repository can only have the same revision
 		// for all sources because ArgoCD does not support the alternative.
-		// We follow ArgoCD shadow-array implementation here that preserves the order of app.spec.sources for
-		// the revisions.
-
-		misaligned_sources := make([]string, 0)
+		// We follow ArgoCD implementation here, where each item in the revisions array corresponds the
+		// app.spec.sources at the same index position.
+		misalignedSources := make([]string, 0)
 		for i, r := range multiSourceRevisions {
 
 			// An empty desired revision means we are not managing the corresponding source.
@@ -316,15 +324,15 @@ func stageHealthForAppSync(
 					app.GetNamespace(),
 					revisions[i],
 				)
-				misaligned_sources = append(misaligned_sources, msg)
+				misalignedSources = append(misalignedSources, msg)
 				logger.Debug(msg)
 			}
 		}
 
-		if len(misaligned_sources) > 0 {
+		if len(misalignedSources) > 0 {
 			msg := fmt.Sprintf("Not all sources of Application %q in namespace %q "+
 				"match the desired revisions, assuming unhealthy. Issues: %s",
-				app.GetName(), app.GetNamespace(), strings.Join(misaligned_sources[:], " "))
+				app.GetName(), app.GetNamespace(), strings.Join(misalignedSources[:], " "))
 			return kargoapi.HealthStateUnhealthy, errors.New(msg)
 		}
 
