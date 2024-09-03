@@ -34,16 +34,15 @@ func (d *copyDirective) Name() string {
 }
 
 func (d *copyDirective) Run(ctx context.Context, stepCtx *StepContext) (Result, error) {
-	failure := Result{Status: StatusFailure}
 	// Validate the configuration against the JSON Schema.
 	if err := validate(d.schemaLoader, gojsonschema.NewGoLoader(stepCtx.Config), d.Name()); err != nil {
-		return failure, err
+		return Result{Status: StatusFailure}, err
 	}
 
 	// Convert the configuration into a typed object.
 	cfg, err := configToStruct[CopyConfig](stepCtx.Config)
 	if err != nil {
-		return failure, fmt.Errorf("could not convert config into %s config: %w", d.Name(), err)
+		return Result{Status: StatusFailure}, fmt.Errorf("could not convert config into %s config: %w", d.Name(), err)
 	}
 
 	return d.run(ctx, stepCtx, cfg)

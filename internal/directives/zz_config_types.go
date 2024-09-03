@@ -25,6 +25,9 @@ type Checkout struct {
 	// The branch to checkout. Mutually exclusive with 'tag' and 'fromFreight=true'. If none of
 	// these is specified, the default branch is checked out.
 	Branch string `json:"branch,omitempty"`
+	// Indicates whether a new, empty orphan branch should be created if the branch does not
+	// already exist. Default is false.
+	Create bool `json:"create,omitempty"`
 	// Indicates whether the ID of a commit to check out may be obtained from Freight. A value
 	// of 'true' is mutually exclusive with 'branch' and 'tag'. If none of these is specified,
 	// the default branch is checked out.
@@ -47,8 +50,10 @@ type CheckoutFromOrigin struct {
 type GitCommitConfig struct {
 	// The author of the commit.
 	Author *Author `json:"author,omitempty"`
-	// The commit message.
+	// The commit message. Mutually exclusive with 'messageFrom'.
 	Message string `json:"message,omitempty"`
+	// TODO
+	MessageFrom []string `json:"messageFrom,omitempty"`
 	// The path to a working directory of a local repository.
 	Path string `json:"path"`
 }
@@ -61,6 +66,37 @@ type Author struct {
 	Name string `json:"name,omitempty"`
 }
 
+type GitOpenPRConfig struct {
+	// Indicates whether a new, empty orphan branch should be created and pushed to the remote
+	// if the target branch does not already exist there. Default is false.
+	CreateTargetBranch bool `json:"createTargetBranch,omitempty"`
+	// Indicates whether to skip TLS verification when cloning the repository. Default is false.
+	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty"`
+	// The name of the Git provider to use. Currently only 'github' and 'gitlab' are supported.
+	// Kargo will try to infer the provider if it is not explicitly specified.
+	Provider *Provider `json:"provider,omitempty"`
+	// The URL of a remote Git repository to clone.
+	RepoURL string `json:"repoURL"`
+	// The branch containing the changes to be merged. This branch must already exist and be up
+	// to date on the remote.
+	SourceBranch string `json:"sourceBranch,omitempty"`
+	// References a previous push step by alias and will use the branch written to by that step
+	// as the source branch.
+	SourceBranchFromPush string `json:"sourceBranchFromPush,omitempty"`
+	// The branch to which the changes should be merged. This branch must already exist and be
+	// up to date on the remote.
+	TargetBranch string `json:"targetBranch"`
+}
+
+type GitOverwriteConfig struct {
+	// A path to a directory from which to copy all contents, excluding the .git/ directory, if
+	// one exists.
+	InPath string `json:"inPath"`
+	// A path to a git working tree which will be cleared of all existing content before
+	// receiving a copy of all content specified by inPath.
+	OutPath string `json:"outPath"`
+}
+
 type GitPushConfig struct {
 	// Indicates whether to push to a new remote branch. A value of 'true' is mutually exclusive
 	// with 'targetBranch'. If neither of these is provided, the target branch will be the
@@ -71,6 +107,20 @@ type GitPushConfig struct {
 	// The target branch to push to. Mutually exclusive with 'generateTargetBranch=true'. If
 	// neither of these is provided, the target branch will be the currently checked out branch.
 	TargetBranch string `json:"targetBranch,omitempty"`
+}
+
+type GitWaitForPRConfig struct {
+	// Indicates whether to skip TLS verification when cloning the repository. Default is false.
+	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty"`
+	// The number of the pull request to wait for.
+	PRNumber int64 `json:"prNumber,omitempty"`
+	// References a previous open step by alias and will use the PR number opened by that step.
+	PRNumberFromOpen string `json:"prNumberFromOpen,omitempty"`
+	// The name of the Git provider to use. Currently only 'github' and 'gitlab' are supported.
+	// Kargo will try to infer the provider if it is not explicitly specified.
+	Provider *Provider `json:"provider,omitempty"`
+	// The URL of a remote Git repository to clone.
+	RepoURL string `json:"repoURL"`
 }
 
 type HelmTemplateConfig struct {
@@ -168,6 +218,15 @@ type Kind string
 
 const (
 	Warehouse Kind = "Warehouse"
+)
+
+// The name of the Git provider to use. Currently only 'github' and 'gitlab' are supported.
+// Kargo will try to infer the provider if it is not explicitly specified.
+type Provider string
+
+const (
+	Github Provider = "github"
+	Gitlab Provider = "gitlab"
 )
 
 // Specifies the new value for the specified key in the Helm values file.

@@ -25,6 +25,8 @@ type StepContext struct {
 	Config Config
 	// Project is the Project that the Promotion is associated with.
 	Project string
+	// Stage is the Stage that the Promotion is targeting.
+	Stage string
 	// FreightRequests is the list of Freight from various origins that is
 	// requested by the Stage targeted by the Promotion. This information is
 	// sometimes useful to Steps that reference a particular artifact and, in the
@@ -122,10 +124,14 @@ func (c Config) DeepCopy() Config {
 type Status string
 
 const (
-	// StatusSuccess is the result of a successful directive execution.
-	StatusSuccess Status = "Success"
 	// StatusFailure is the result of a failed directive execution.
 	StatusFailure Status = "Failure"
+	// StatusPending is the result of a directive execution that is waiting on
+	// some external state (such as waiting for an open PR to be merged or
+	// closed).
+	StatusPending Status = "Pending"
+	// StatusSuccess is the result of a successful directive execution.
+	StatusSuccess Status = "Success"
 )
 
 // Result represents the outcome of a directive execution, including its status

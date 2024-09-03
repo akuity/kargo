@@ -73,3 +73,44 @@ type PullRequest struct {
 func (pr *PullRequest) IsOpen() bool {
 	return pr.State == PullRequestStateOpen
 }
+
+type FakeGitProviderService struct {
+	CreatePullRequestFn func(
+		context.Context,
+		CreatePullRequestOpts,
+	) (*PullRequest, error)
+	GetPullRequestFn   func(context.Context, int64) (*PullRequest, error)
+	ListPullRequestsFn func(
+		context.Context,
+		ListPullRequestOpts,
+	) ([]*PullRequest, error)
+	IsPullRequestMergedFn func(context.Context, int64) (bool, error)
+}
+
+func (f *FakeGitProviderService) CreatePullRequest(
+	ctx context.Context,
+	opts CreatePullRequestOpts,
+) (*PullRequest, error) {
+	return f.CreatePullRequestFn(ctx, opts)
+}
+
+func (f *FakeGitProviderService) GetPullRequest(
+	ctx context.Context,
+	number int64,
+) (*PullRequest, error) {
+	return f.GetPullRequestFn(ctx, number)
+}
+
+func (f *FakeGitProviderService) ListPullRequests(
+	ctx context.Context,
+	opts ListPullRequestOpts,
+) ([]*PullRequest, error) {
+	return f.ListPullRequestsFn(ctx, opts)
+}
+
+func (f *FakeGitProviderService) IsPullRequestMerged(
+	ctx context.Context,
+	number int64,
+) (bool, error) {
+	return f.IsPullRequestMergedFn(ctx, number)
+}

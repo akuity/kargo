@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "GitWaitForPRConfig",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["repoURL"],
+  "properties": {
+    "insecureSkipTLSVerify" : {
+      "type": "boolean",
+      "description": "Indicates whether to skip TLS verification when cloning the repository. Default is false."
+    },
+    "provider": {
+      "type": "string",
+      "description": "The name of the Git provider to use. Currently only 'github' and 'gitlab' are supported. Kargo will try to infer the provider if it is not explicitly specified.",
+      "enum": ["github", "gitlab"]
+    },
+    "prNumber": {
+      "type": "number",
+      "description": "The number of the pull request to wait for."
+    },
+    "prNumberFromOpen": {
+      "type": "string",
+      "description": "References a previous open step by alias and will use the PR number opened by that step.",
+      "minLength": 1
+    },
+    "repoURL": {
+      "type": "string",
+      "description": "The URL of a remote Git repository to clone.",
+      "minLength": 1,
+      "format": "uri"
+    }
+  },
+  "oneOf": [
+    {
+      "required": ["prNumber"],
+      "properties": {
+        "prNumberFromOpen": {  "enum": ["", null] }
+      }
+    },
+    {
+      "required": ["prNumberFromOpen"],
+      "properties": {
+        "prNumber": {  "enum": [0, null] }
+      }
+    }
+  ]
+}

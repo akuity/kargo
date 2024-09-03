@@ -21,6 +21,10 @@ printf "${generated_code_warning}$(cat ${out_file})" > ${out_file}
 # on Linux. So we use -i.bak, which works on both.
 sed -i.bak 's/\*bool/bool/g' ${out_file}
 sed -i.bak 's/\*string/string/g' ${out_file}
+# As of right now, this transformation is ok, but we can revisit it if we ever
+# need nullable numbers or non-int numbers.
+sed -i.bak 's/\*float64/int64/g' ${out_file}
+
 rm ${out_file}.bak
 
 gofmt -w ${out_file}
