@@ -58,7 +58,7 @@ func TestWorkTree(t *testing.T) {
 	require.NoError(t, err)
 	err = setupRep.AddAllAndCommit(fmt.Sprintf("initial commit %s", uuid.NewString()))
 	require.NoError(t, err)
-	err = setupRep.Push(false)
+	err = setupRep.Push(nil)
 	require.NoError(t, err)
 	err = setupRep.Close()
 	require.NoError(t, err)

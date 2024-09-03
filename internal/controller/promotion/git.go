@@ -197,12 +197,11 @@ func (g *gitMechanism) doSingleUpdate(
 	repo, err := git.Clone(
 		update.RepoURL,
 		&git.ClientOptions{
-			User:        author,
-			Credentials: creds,
-		},
-		&git.CloneOptions{
+			User:                  author,
+			Credentials:           creds,
 			InsecureSkipTLSVerify: update.InsecureSkipTLSVerify,
 		},
+		nil,
 	)
 	if err != nil {
 		return fmt.Errorf("error cloning git repo %q: %w", update.RepoURL, err)
@@ -464,7 +463,7 @@ func (g *gitMechanism) gitCommit(
 		if err = repo.AddAllAndCommit(commitMsg); err != nil {
 			return "", fmt.Errorf("error committing updates to git repo %q: %w", update.RepoURL, err)
 		}
-		if err = repo.Push(false); err != nil {
+		if err = repo.Push(nil); err != nil {
 			return "", fmt.Errorf("error pushing updates to git repo %q: %w", update.RepoURL, err)
 		}
 	}
