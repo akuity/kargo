@@ -35,18 +35,19 @@ func (g *gitCommitDirective) Run(
 	_ context.Context,
 	stepCtx *StepContext,
 ) (Result, error) {
+	failure := Result{Status: StatusFailure}
 	// Validate the configuration against the JSON Schema
 	if err := validate(
 		g.schemaLoader,
 		gojsonschema.NewGoLoader(stepCtx.Config),
 		"git-commit",
 	); err != nil {
-		return ResultFailure, err
+		return failure, err
 	}
 	if _, err := configToStruct[GitCommitConfig](stepCtx.Config); err != nil {
-		return ResultFailure,
+		return failure,
 			fmt.Errorf("could not convert config into git-commit config: %w", err)
 	}
 	// TODO: Add implementation here
-	return ResultSuccess, nil
+	return Result{Status: StatusSuccess}, nil
 }

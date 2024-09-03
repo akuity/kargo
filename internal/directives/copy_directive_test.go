@@ -16,7 +16,7 @@ func Test_copyDirective_run(t *testing.T) {
 		name       string
 		setupFiles func(*testing.T) string
 		cfg        CopyConfig
-		assertions func(*testing.T, string, Result, error)
+		assertions func(*testing.T, string, error)
 	}{
 		{
 			name: "succeeds copying file",
@@ -32,8 +32,7 @@ func Test_copyDirective_run(t *testing.T) {
 				InPath:  "input.txt",
 				OutPath: "output.txt",
 			},
-			assertions: func(t *testing.T, workDir string, result Result, err error) {
-				assert.Equal(t, ResultSuccess, result)
+			assertions: func(t *testing.T, workDir string, err error) {
 				assert.NoError(t, err)
 
 				outPath := filepath.Join(workDir, "output.txt")
@@ -64,8 +63,7 @@ func Test_copyDirective_run(t *testing.T) {
 				InPath:  "input/",
 				OutPath: "output/",
 			},
-			assertions: func(t *testing.T, workDir string, result Result, err error) {
-				assert.Equal(t, ResultSuccess, result)
+			assertions: func(t *testing.T, workDir string, err error) {
 				assert.NoError(t, err)
 
 				outDir := filepath.Join(workDir, "output")
@@ -102,8 +100,7 @@ func Test_copyDirective_run(t *testing.T) {
 				InPath:  "input/",
 				OutPath: "output/",
 			},
-			assertions: func(t *testing.T, workDir string, result Result, err error) {
-				assert.Equal(t, ResultSuccess, result)
+			assertions: func(t *testing.T, workDir string, err error) {
 				assert.NoError(t, err)
 
 				outDir := filepath.Join(workDir, "output")
@@ -127,9 +124,8 @@ func Test_copyDirective_run(t *testing.T) {
 			cfg: CopyConfig{
 				InPath: "input.txt",
 			},
-			assertions: func(t *testing.T, _ string, result Result, err error) {
+			assertions: func(t *testing.T, _ string, err error) {
 				require.ErrorContains(t, err, "failed to copy")
-				assert.Equal(t, ResultFailure, result)
 			},
 		},
 	}
@@ -139,8 +135,11 @@ func Test_copyDirective_run(t *testing.T) {
 			workDir := tt.setupFiles(t)
 
 			d := &copyDirective{}
-			result, err := d.run(context.Background(), &StepContext{WorkDir: workDir}, tt.cfg)
-			tt.assertions(t, workDir, result, err)
+			tt.assertions(
+				t,
+				workDir,
+				d.run(context.Background(), &StepContext{WorkDir: workDir}, tt.cfg),
+			)
 		})
 	}
 }

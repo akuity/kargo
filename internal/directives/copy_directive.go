@@ -34,29 +34,33 @@ func (d *copyDirective) Name() string {
 }
 
 func (d *copyDirective) Run(ctx context.Context, stepCtx *StepContext) (Result, error) {
+	failure := Result{Status: StatusFailure}
 	// Validate the configuration against the JSON Schema.
 	if err := validate(d.schemaLoader, gojsonschema.NewGoLoader(stepCtx.Config), d.Name()); err != nil {
-		return ResultFailure, err
+		return failure, err
 	}
 
 	// Convert the configuration into a typed object.
 	cfg, err := configToStruct[CopyConfig](stepCtx.Config)
 	if err != nil {
-		return ResultFailure, fmt.Errorf("could not convert config into %s config: %w", d.Name(), err)
+		return failure, fmt.Errorf("could not convert config into %s config: %w", d.Name(), err)
 	}
 
-	return d.run(ctx, stepCtx, cfg)
+	if err = d.run(ctx, stepCtx, cfg); err != nil {
+		return failure, err
+	}
+	return Result{Status: StatusSuccess}, nil
 }
 
-func (d *copyDirective) run(ctx context.Context, stepCtx *StepContext, cfg CopyConfig) (Result, error) {
+func (d *copyDirective) run(ctx context.Context, stepCtx *StepContext, cfg CopyConfig) error {
 	// Secure join the paths to prevent path traversal attacks.
 	inPath, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.InPath)
 	if err != nil {
-		return ResultFailure, fmt.Errorf("could not secure join inPath %q: %w", cfg.InPath, err)
+		return fmt.Errorf("could not secure join inPath %q: %w", cfg.InPath, err)
 	}
 	outPath, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.OutPath)
 	if err != nil {
-		return ResultFailure, fmt.Errorf("could not secure join outPath %q: %w", cfg.OutPath, err)
+		return fmt.Errorf("could not secure join outPath %q: %w", cfg.OutPath, err)
 	}
 
 	// Perform the copy operation.
@@ -70,9 +74,9 @@ func (d *copyDirective) run(ctx context.Context, stepCtx *StepContext, cfg CopyC
 		},
 	}
 	if err = copy.Copy(inPath, outPath, opts); err != nil {
-		return ResultFailure, fmt.Errorf("failed to copy %q to %q: %w", cfg.InPath, cfg.OutPath, err)
+		return fmt.Errorf("failed to copy %q to %q: %w", cfg.InPath, cfg.OutPath, err)
 	}
-	return ResultSuccess, nil
+	return nil
 }
 
 // sanitizePathError sanitizes the path in a path error to be relative to the

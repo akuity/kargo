@@ -10,12 +10,14 @@ import (
 )
 
 func TestEngine_Execute(t *testing.T) {
+	failureResult := Result{Status: StatusFailure}
+	successResult := Result{Status: StatusSuccess}
 	tests := []struct {
 		name         string
 		directives   []Step
 		initRegistry func() DirectiveRegistry
 		ctx          context.Context
-		assertions   func(t *testing.T, result Result, err error)
+		assertions   func(t *testing.T, status Status, err error)
 	}{
 		{
 			name: "success: single directive",
@@ -27,15 +29,15 @@ func TestEngine_Execute(t *testing.T) {
 				registry.RegisterDirective(
 					&mockDirective{
 						name:      "mock",
-						runResult: ResultSuccess,
+						runResult: successResult,
 					},
 					nil,
 				)
 				return registry
 			},
 			ctx: context.Background(),
-			assertions: func(t *testing.T, result Result, err error) {
-				assert.Equal(t, ResultSuccess, result)
+			assertions: func(t *testing.T, status Status, err error) {
+				assert.Equal(t, StatusSuccess, status)
 				assert.NoError(t, err)
 			},
 		},
@@ -50,22 +52,22 @@ func TestEngine_Execute(t *testing.T) {
 				registry.RegisterDirective(
 					&mockDirective{
 						name:      "mock1",
-						runResult: ResultSuccess,
+						runResult: successResult,
 					},
 					nil,
 				)
 				registry.RegisterDirective(
 					&mockDirective{
 						name:      "mock2",
-						runResult: ResultSuccess,
+						runResult: successResult,
 					},
 					nil,
 				)
 				return registry
 			},
 			ctx: context.Background(),
-			assertions: func(t *testing.T, result Result, err error) {
-				assert.Equal(t, ResultSuccess, result)
+			assertions: func(t *testing.T, status Status, err error) {
+				assert.Equal(t, StatusSuccess, status)
 				assert.NoError(t, err)
 			},
 		},
@@ -78,8 +80,8 @@ func TestEngine_Execute(t *testing.T) {
 				return make(DirectiveRegistry)
 			},
 			ctx: context.Background(),
-			assertions: func(t *testing.T, result Result, err error) {
-				assert.Equal(t, ResultFailure, result)
+			assertions: func(t *testing.T, status Status, err error) {
+				assert.Equal(t, StatusFailure, status)
 				assert.ErrorContains(t, err, "not found")
 			},
 		},
@@ -93,7 +95,7 @@ func TestEngine_Execute(t *testing.T) {
 				registry.RegisterDirective(
 					&mockDirective{
 						name:      "failing",
-						runResult: ResultFailure,
+						runResult: failureResult,
 						runErr:    errors.New("something went wrong"),
 					},
 					nil,
@@ -101,8 +103,8 @@ func TestEngine_Execute(t *testing.T) {
 				return registry
 			},
 			ctx: context.Background(),
-			assertions: func(t *testing.T, result Result, err error) {
-				assert.Equal(t, ResultFailure, result)
+			assertions: func(t *testing.T, status Status, err error) {
+				assert.Equal(t, StatusFailure, status)
 				assert.ErrorContains(t, err, "something went wrong")
 			},
 		},
@@ -119,7 +121,7 @@ func TestEngine_Execute(t *testing.T) {
 						name: "mock",
 						runFunc: func(ctx context.Context, _ *StepContext) (Result, error) {
 							<-ctx.Done() // Wait for context to be canceled
-							return ResultSuccess, nil
+							return successResult, nil
 						},
 					},
 					nil,
@@ -134,8 +136,8 @@ func TestEngine_Execute(t *testing.T) {
 				}()
 				return ctx
 			}(),
-			assertions: func(t *testing.T, result Result, err error) {
-				assert.Equal(t, ResultFailure, result)
+			assertions: func(t *testing.T, status Status, err error) {
+				assert.Equal(t, StatusFailure, status)
 				assert.ErrorIs(t, err, context.Canceled)
 			},
 		},
@@ -143,8 +145,8 @@ func TestEngine_Execute(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			engine := NewEngine(tt.initRegistry(), nil, nil, nil)
-			result, err := engine.Execute(tt.ctx, tt.directives)
-			tt.assertions(t, result, err)
+			status, err := engine.Execute(tt.ctx, tt.directives)
+			tt.assertions(t, status, err)
 		})
 	}
 }

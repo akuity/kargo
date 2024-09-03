@@ -45,11 +45,11 @@ func NewEngine(
 }
 
 // Execute runs the provided list of directives in sequence.
-func (e *Engine) Execute(ctx context.Context, steps []Step) (Result, error) {
+func (e *Engine) Execute(ctx context.Context, steps []Step) (Status, error) {
 	// TODO(hidde): allow the workDir to be restored from a previous execution.
 	workDir, err := os.MkdirTemp("", "run-")
 	if err != nil {
-		return ResultFailure, fmt.Errorf("temporary working directory creation failed: %w", err)
+		return StatusFailure, fmt.Errorf("temporary working directory creation failed: %w", err)
 	}
 	defer os.RemoveAll(workDir)
 
@@ -59,16 +59,18 @@ func (e *Engine) Execute(ctx context.Context, steps []Step) (Result, error) {
 	for _, d := range steps {
 		select {
 		case <-ctx.Done():
-			return ResultFailure, ctx.Err()
+			return StatusFailure, ctx.Err()
 		default:
 			reg, err := e.registry.GetDirectiveRegistration(d.Directive)
 			if err != nil {
-				return ResultFailure, fmt.Errorf("failed to get step %q: %w", d.Directive, err)
+				return StatusFailure, fmt.Errorf("failed to get step %q: %w", d.Directive, err)
 			}
+
+			stateCopy := state.DeepCopy()
 
 			stepCtx := &StepContext{
 				WorkDir:     workDir,
-				SharedState: state,
+				SharedState: stateCopy,
 				Alias:       d.Alias,
 				Config:      d.Config.DeepCopy(),
 			}
@@ -83,10 +85,15 @@ func (e *Engine) Execute(ctx context.Context, steps []Step) (Result, error) {
 				stepCtx.ArgoCDClient = e.argoCDClient
 			}
 
-			if result, err := reg.Directive.Run(ctx, stepCtx); err != nil {
-				return result, fmt.Errorf("failed to run step %q: %w", d.Directive, err)
+			result, err := reg.Directive.Run(ctx, stepCtx)
+			if err != nil {
+				return result.Status, fmt.Errorf("failed to run step %q: %w", d.Directive, err)
+			}
+
+			if d.Alias != "" {
+				state[d.Alias] = result.Output
 			}
 		}
 	}
-	return ResultSuccess, nil
+	return StatusSuccess, nil
 }

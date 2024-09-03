@@ -90,6 +90,17 @@ func (s State) Get(key string) (any, bool) {
 	return value, ok
 }
 
+// DeepCopy returns a deep copy of the state.
+func (s *State) DeepCopy() State {
+	if s == nil {
+		return nil
+	}
+	// TODO(hidde): we piggyback on the runtime package for now, as we expect
+	// the configuration to originate from a Kubernetes API object. We should
+	// consider writing our own implementation in the future.
+	return runtime.DeepCopyJSON(*s)
+}
+
 // Config is a map of configuration values that can be passed to a step.
 // The keys and values are arbitrary, and the step is responsible for
 // interpreting them.
@@ -106,15 +117,26 @@ func (c Config) DeepCopy() Config {
 	return runtime.DeepCopyJSON(c)
 }
 
-// Result is a type that represents the result of a Directive.
-type Result string
+// Status is a type that represents the high-level outcome of a directive
+// execution.
+type Status string
 
 const (
-	// ResultSuccess is the result of a successful directive.
-	ResultSuccess Result = "Success"
-	// ResultFailure is the result of a failed directive.
-	ResultFailure Result = "Failure"
+	// StatusSuccess is the result of a successful directive execution.
+	StatusSuccess Status = "Success"
+	// StatusFailure is the result of a failed directive execution.
+	StatusFailure Status = "Failure"
 )
+
+// Result represents the outcome of a directive execution, including its status
+// (e.g. Success or Failure) and any output (State) that the execution engine
+// executing the directive must append to the shared state.
+type Result struct {
+	// Status is the high-level outcome of the directive execution.
+	Status Status
+	// Output is the output of the directive execution.
+	Output State
+}
 
 // Directive is an interface that a directive must implement. A directive is
 // a responsible for executing a specific action, and may modify the provided
