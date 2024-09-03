@@ -135,6 +135,13 @@ type HelmUpdateImageConfigImage struct {
 	Value Value `json:"value"`
 }
 
+type KustomizeBuildConfig struct {
+	// OutPath is the file path to write the built manifests to.
+	OutPath string `json:"outPath"`
+	// Path to the directory containing the Kustomization file.
+	Path string `json:"path"`
+}
+
 type KustomizeSetImageConfig struct {
 	// Images is a list of container images to set or update in the Kustomization file.
 	Images []KustomizeSetImageConfigImage `json:"images"`

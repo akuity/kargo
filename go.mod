@@ -19,6 +19,7 @@ require (
 	github.com/cyphar/filepath-securejoin v0.3.1
 	github.com/evanphx/json-patch/v5 v5.9.0
 	github.com/fatih/structtag v1.2.0
+	github.com/fluxcd/pkg/kustomize v1.13.0
 	github.com/gobwas/glob v0.2.3
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang-jwt/jwt/v5 v5.2.1
@@ -145,7 +146,7 @@ require (
 	github.com/emicklei/go-restful/v3 v3.11.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
-	github.com/go-errors/errors v1.4.2 // indirect
+	github.com/go-errors/errors v1.5.1 // indirect
 	github.com/go-jose/go-jose/v4 v4.0.2 // indirect
 	github.com/go-logr/logr v1.4.2
 	github.com/go-logr/stdr v1.2.2 // indirect
@@ -199,7 +200,7 @@ require (
 	go.opentelemetry.io/otel/metric v1.29.0 // indirect
 	go.opentelemetry.io/otel/trace v1.29.0 // indirect
 	go.starlark.net v0.0.0-20230525235612-a134d8f9ddca // indirect
-	golang.org/x/exp v0.0.0-20230807204917-050eac23e9de // indirect
+	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56 // indirect
 	golang.org/x/sys v0.25.0 // indirect
 	golang.org/x/term v0.24.0 // indirect
 	golang.org/x/text v0.18.0 // indirect
@@ -211,7 +212,7 @@ require (
 	k8s.io/apiextensions-apiserver v0.31.0 // indirect
 	k8s.io/kube-openapi v0.0.0-20240228011516-70dd3763d340 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
-	sigs.k8s.io/kustomize/api v0.17.2
-	sigs.k8s.io/kustomize/kyaml v0.17.1
+	sigs.k8s.io/kustomize/api v0.17.3
+	sigs.k8s.io/kustomize/kyaml v0.17.2
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.1 // indirect
 )
