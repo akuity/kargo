@@ -22,6 +22,7 @@ import { Warehouse } from '@ui/gen/v1alpha1/generated_pb';
 import { CollapseMode, FreightTimelineAction } from '../project/pipelines/types';
 
 import './freight-timeline.less';
+import { headerButtonStyle } from './utils';
 
 export const FreightTimelineHeader = ({
   promotingStage,
@@ -63,9 +64,6 @@ export const FreightTimelineHeader = ({
   };
 
   const navigate = useNavigate();
-
-  const headerButtonStyle = (selected: boolean) =>
-    `bg-transparent text-gray-500 -mb-1 mr-2 text-xs ${selected ? 'border-sky-500' : ''}`;
 
   return (
     <div className='w-full pl-6 flex items-center font-semibold text-sm h-8 pt-2'>

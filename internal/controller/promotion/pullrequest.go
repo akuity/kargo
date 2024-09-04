@@ -20,7 +20,10 @@ func pullRequestBranchName(project, stage string) string {
 // merging into the base branch. If the PR branch already exists, but not in a state that
 // we like (i.e. not a descendant of base), recreate it.
 func preparePullRequestBranch(repo git.Repo, prBranch string, base string) error {
-	origBranch := repo.CurrentBranch()
+	origBranch, err := repo.CurrentBranch()
+	if err != nil {
+		return err
+	}
 	baseBranchExists, err := repo.RemoteBranchExists(base)
 	if err != nil {
 		return err
@@ -38,7 +41,7 @@ func preparePullRequestBranch(repo git.Repo, prBranch string, base string) error
 		); err != nil {
 			return err
 		}
-		if err = repo.Push(false); err != nil {
+		if err = repo.Push(nil); err != nil {
 			return err
 		}
 	} else if err = repo.Checkout(base); err != nil {
@@ -53,7 +56,7 @@ func preparePullRequestBranch(repo git.Repo, prBranch string, base string) error
 		if err := repo.CreateChildBranch(prBranch); err != nil {
 			return err
 		}
-		if err := repo.Push(false); err != nil {
+		if err := repo.Push(nil); err != nil {
 			return err
 		}
 	} else {
@@ -77,7 +80,7 @@ func preparePullRequestBranch(repo git.Repo, prBranch string, base string) error
 			if err = repo.CreateChildBranch(prBranch); err != nil {
 				return err
 			}
-			if err = repo.Push(true); err != nil {
+			if err = repo.Push(&git.PushOptions{Force: true}); err != nil {
 				return err
 			}
 		}

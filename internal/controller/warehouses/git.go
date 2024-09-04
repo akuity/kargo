@@ -69,15 +69,15 @@ func (r *reconciler) discoverCommits(
 
 		// Clone the Git repository.
 		cloneOpts := &git.CloneOptions{
-			Branch:                sub.Branch,
-			SingleBranch:          true,
-			Filter:                git.FilterBlobless,
-			InsecureSkipTLSVerify: sub.InsecureSkipTLSVerify,
+			Branch:       sub.Branch,
+			SingleBranch: true,
+			Filter:       git.FilterBlobless,
 		}
 		repo, err := r.gitCloneFn(
 			sub.RepoURL,
 			&git.ClientOptions{
-				Credentials: repoCreds,
+				Credentials:           repoCreds,
+				InsecureSkipTLSVerify: sub.InsecureSkipTLSVerify,
 			},
 			cloneOpts,
 		)

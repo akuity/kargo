@@ -55,3 +55,25 @@ updates:
       go-major:
         update-types:
         - "major"
+
+  - package-ecosystem: "gomod"
+    directory: "/hack/tools"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+    commit-message:
+      prefix: "chore(deps/tools):"
+    allow:
+      - dependency-type: "direct"
+    deny:
+      - dependency-type: "indirect"
+    groups:
+      go-patch:
+        update-types:
+          - "patch"
+      go-minor:
+        update-types:
+          - "minor"
+      go-major:
+        update-types:
+          - "major"

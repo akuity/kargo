@@ -8,7 +8,7 @@ local_resource(
   'CGO_ENABLED=0 GOOS=linux GOARCH=$(go env GOARCH) go build -o bin/controlplane/kargo ./cmd/controlplane',
   deps=[
     'api/',
-    'cmd/',
+    'cmd/controlplane/',
     'internal/',
     'pkg/',
     'go.mod',
@@ -17,10 +17,20 @@ local_resource(
   labels = ['native-processes'],
   trigger_mode = TRIGGER_MODE_AUTO
 )
+local_resource(
+  'credential-helper-compile',
+  'CGO_ENABLED=0 GOOS=linux GOARCH=$(go env GOARCH) go build -o bin/credential-helper ./cmd/credential-helper',
+  deps=['cmd/credential-helper/'],
+  labels = ['native-processes'],
+  trigger_mode = TRIGGER_MODE_AUTO
+)
 docker_build(
   'ghcr.io/akuity/kargo',
   '.',
-  only = ['bin/controlplane/kargo'],
+  only = [
+    'bin/controlplane/kargo',
+    'bin/credential-helper'
+  ],
   target = 'back-end-dev', # Just the back end, built natively, copied to the image
 )
 
@@ -99,7 +109,7 @@ k8s_resource(
     'kargo-controller-rollouts:clusterrole',
     'kargo-controller-rollouts:clusterrolebinding'
   ],
-  resource_deps=['back-end-compile']
+  resource_deps=['back-end-compile', 'credential-helper-compile', ]
 )
 
 k8s_resource(
