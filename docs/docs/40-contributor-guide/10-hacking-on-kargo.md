@@ -5,10 +5,12 @@ sidebar_label: Hacking on Kargo
 
 # Hacking on Kargo
 
-Kargo is implemented in Go. For maximum productivity in your text editor or IDE,
-it is recommended that you have installed the latest stable releases of Go and
-applicable editor/IDE extensions, however, this is not strictly required to be
-successful.
+Kargo is implemented in Go. To start hacking on Kargo, you can find the complete 
+source code and start exploring the project by visiting our 
+[GitHub Repository](https://github.com/akuity/kargo). For maximum 
+productivity in your text editor or IDE, it is recommended that you have installed
+the latest stable releases of Go and applicable editor/IDE extensions, however, 
+this is not strictly required to be successful.
 
 ## Running Tests
 
