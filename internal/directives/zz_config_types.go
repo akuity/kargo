@@ -28,8 +28,8 @@ type Checkout struct {
 	// Indicates whether the ID of a commit to check out may be obtained from Freight. A value
 	// of 'true' is mutually exclusive with 'branch' and 'tag'. If none of these is specified,
 	// the default branch is checked out.
-	FromFreight bool    `json:"fromFreight,omitempty"`
-	FromOrigin  *Origin `json:"fromOrigin,omitempty"`
+	FromFreight bool                `json:"fromFreight,omitempty"`
+	FromOrigin  *CheckoutFromOrigin `json:"fromOrigin,omitempty"`
 	// The path where the repository should be checked out.
 	Path string `json:"path"`
 	// The tag to checkout. Mutually exclusive with 'branch' and 'fromFreight=true'. If none of
@@ -37,7 +37,7 @@ type Checkout struct {
 	Tag string `json:"tag,omitempty"`
 }
 
-type Origin struct {
+type CheckoutFromOrigin struct {
 	// The kind of origin. Currently only 'Warehouse' is supported. Required.
 	Kind Kind `json:"kind"`
 	// The name of the origin. Required.
@@ -71,6 +71,29 @@ type GitPushConfig struct {
 	// The target branch to push to. Mutually exclusive with 'generateTargetBranch=true'. If
 	// neither of these is provided, the target branch will be the currently checked out branch.
 	TargetBranch string `json:"targetBranch,omitempty"`
+}
+
+type HelmUpdateChartConfig struct {
+	// A list of chart dependencies which should receive updates.
+	Charts []Chart `json:"charts"`
+	// The path at which the umbrella chart with the dependency can be found.
+	Path string `json:"path"`
+}
+
+type Chart struct {
+	FromOrigin *ChartFromOrigin `json:"fromOrigin,omitempty"`
+	// The name of the subchart, as defined in `Chart.yaml`.
+	Name string `json:"name"`
+	// The repository of the subchart, as defined in `Chart.yaml`. It also supports OCI charts
+	// using `oci://`.
+	Repository string `json:"repository"`
+}
+
+type ChartFromOrigin struct {
+	// The kind of origin. Currently only 'Warehouse' is supported. Required.
+	Kind Kind `json:"kind"`
+	// The name of the origin. Required.
+	Name string `json:"name"`
 }
 
 // The kind of origin. Currently only 'Warehouse' is supported. Required.
