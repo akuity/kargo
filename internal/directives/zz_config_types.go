@@ -96,9 +96,37 @@ type ChartFromOrigin struct {
 	Name string `json:"name"`
 }
 
+type HelmUpdateImageConfig struct {
+	// A list of images which should receive updates.
+	Images []Image `json:"images"`
+	// The path at which the Helm values file can be found.
+	Path string `json:"path"`
+}
+
+type Image struct {
+	FromOrigin *ChartFromOrigin `json:"fromOrigin,omitempty"`
+	// The container image (without tag) at which the update is targeted.
+	Image string `json:"image"`
+	// The key in the Helm values file of which the value needs to be updated. For nested
+	// values, it takes a YAML dot notation path.
+	Key string `json:"key"`
+	// Specifies the new value for the specified key in the Helm values file.
+	Value Value `json:"value"`
+}
+
 // The kind of origin. Currently only 'Warehouse' is supported. Required.
 type Kind string
 
 const (
 	Warehouse Kind = "Warehouse"
+)
+
+// Specifies the new value for the specified key in the Helm values file.
+type Value string
+
+const (
+	Digest         Value = "Digest"
+	ImageAndDigest Value = "ImageAndDigest"
+	ImageAndTag    Value = "ImageAndTag"
+	Tag            Value = "Tag"
 )
