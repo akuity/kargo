@@ -389,14 +389,7 @@ export const Pipelines = () => {
                               setSelectedWarehouse('');
                             } else {
                               const stageName = node.data?.metadata?.name || '';
-                              // default to current freight when promoting subscribers
-                              state.select(
-                                type,
-                                stageName,
-                                type === FreightTimelineAction.PromoteSubscribers
-                                  ? currentFreight[0].name
-                                  : undefined
-                              );
+                              state.select(type, stageName, undefined);
                             }
                           }}
                           action={
