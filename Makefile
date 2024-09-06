@@ -20,6 +20,8 @@ IMAGE_PUSH 			?= false
 IMAGE_PLATFORMS 	=
 DOCKER_BUILD_OPTS 	=
 
+DOCS_PORT 				?= 3000
+
 # Intelligently choose to build a multi-arch image if the intent is to push to a
 # container registry (IMAGE_PUSH=true). If not pushing, build an single-arch
 # image for the local architecture. Honor IMAGE_PLATFORMS above all.
@@ -190,15 +192,15 @@ codegen-ui:
 # Prevents issues with vcs stamping within docker containers. 
 GOFLAGS="-buildvcs=false"
 
-DOCKER_CMD := $(CONTAINER_RUNTIME) run \
-	-it \
+DOCKER_OPTS := -it \
 	--rm \
 	-e GOFLAGS=$(GOFLAGS) \
 	-v gomodcache:/home/user/gocache \
 	-v $(dir $(realpath $(firstword $(MAKEFILE_LIST)))):/workspaces/kargo \
 	-v /workspaces/kargo/ui/node_modules \
-	-w /workspaces/kargo \
-	kargo:dev-tools
+	-w /workspaces/kargo
+
+DOCKER_CMD := $(CONTAINER_RUNTIME) run $(DOCKER_OPTS) kargo:dev-tools
 
 DEV_TOOLS_BUILD_OPTS =
 
@@ -358,3 +360,18 @@ start-controller-local:
 	KUBECONFIG=~/.kube/config \
 	ARGOCD_KUBECONFIG=~/.kube/config \
     	go run ./cmd/controlplane controller
+
+################################################################################
+# Docs                                                                         #
+#                                                                              #
+# Convenience targets for building and running the documentation site natively #
+# or in a container.                                                           #
+################################################################################
+
+.PHONY: hack-docs
+hack-docs: hack-build-dev-tools
+	$(CONTAINER_RUNTIME) run $(DOCKER_OPTS) -p $(DOCS_PORT):$(DOCS_PORT) kargo:dev-tools make docs
+
+.PHONY: docs
+docs:
+	cd docs && pnpm install && pnpm start
