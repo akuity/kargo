@@ -5,6 +5,7 @@ import {
   faCircleCheck,
   faCircleNotch,
   faCodePullRequest,
+  faExclamationTriangle,
   faGear,
   faRobot,
   faTruckArrowRight
@@ -25,6 +26,7 @@ import { FreightIndicators } from './freight-indicators';
 import { FreightLabel } from './freight-label';
 import { StageNodeFooter } from './stage-node-footer';
 import * as styles from './stage-node.module.less';
+import { lastVerificationErrored } from './util';
 
 export const StageNodeDimensions = () =>
   ({
@@ -127,6 +129,20 @@ export const StageNode = ({
               stage.status?.health && (
                 <HealthStatusIcon health={stage.status?.health} hideColor={true} />
               )
+            )}
+            {lastVerificationErrored(stage) && (
+              <Tooltip
+                title={
+                  <>
+                    <div>
+                      <b>Verification Failure:</b>
+                    </div>
+                    {stage?.status?.freightHistory?.[0]?.verificationHistory?.[0]?.message}
+                  </>
+                }
+              >
+                <FontAwesomeIcon icon={faExclamationTriangle} />
+              </Tooltip>
             )}
           </div>
         </h3>
