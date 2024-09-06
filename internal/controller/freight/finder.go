@@ -89,45 +89,45 @@ func FindCommit(
 func FindImage(
 	ctx context.Context,
 	cl client.Client,
-	stage *kargoapi.Stage,
+	project string,
+	freightReqs []kargoapi.FreightRequest,
 	desiredOrigin *kargoapi.FreightOrigin,
 	freight []kargoapi.FreightReference,
 	repoURL string,
 ) (*kargoapi.Image, error) {
 	// If no origin was explicitly identified, we need to look at all possible
 	// origins. If there's only one that could provide the commit we're looking
-	// for, great. If there's more than one, there's ambiguity and we need to
+	// for, great. If there's more than one, there's ambiguity, and we need to
 	// return an error.
 	if desiredOrigin == nil {
-		for i := range stage.Spec.RequestedFreight {
-			requestedFreight := stage.Spec.RequestedFreight[i]
+		for i := range freightReqs {
+			requestedFreight := freightReqs[i]
 			warehouse, err := kargoapi.GetWarehouse(
 				ctx,
 				cl,
 				types.NamespacedName{
 					Name:      requestedFreight.Origin.Name,
-					Namespace: stage.Namespace,
+					Namespace: project,
 				},
 			)
 			if err != nil {
 				return nil, fmt.Errorf(
 					"error getting Warehouse %q in namespace %q: %w",
-					requestedFreight.Origin.Name, stage.Namespace, err,
+					requestedFreight.Origin.Name, project, err,
 				)
 			}
 			if warehouse == nil {
 				return nil, fmt.Errorf(
 					"Warehouse %q not found in namespace %q",
-					requestedFreight.Origin.Name, stage.Namespace,
+					requestedFreight.Origin.Name, project,
 				)
 			}
 			for _, sub := range warehouse.Spec.Subscriptions {
 				if sub.Image != nil && sub.Image.RepoURL == repoURL {
 					if desiredOrigin != nil {
 						return nil, fmt.Errorf(
-							"multiple requested Freight could potentially provide a "+
-								"container image from repo %s; please update promotion "+
-								"mechanisms to disambiguate",
+							"multiple requested Freight could potentially provide a container image from "+
+								"repository %s: please provide a Freight origin to disambiguate",
 							repoURL,
 						)
 					}
@@ -161,7 +161,8 @@ func FindImage(
 func FindChart(
 	ctx context.Context,
 	cl client.Client,
-	stage *kargoapi.Stage,
+	project string,
+	freightReqs []kargoapi.FreightRequest,
 	desiredOrigin *kargoapi.FreightOrigin,
 	freight []kargoapi.FreightReference,
 	repoURL string,
@@ -169,38 +170,37 @@ func FindChart(
 ) (*kargoapi.Chart, error) {
 	// If no origin was explicitly identified, we need to look at all possible
 	// origins. If there's only one that could provide the commit we're looking
-	// for, great. If there's more than one, there's ambiguity and we need to
+	// for, great. If there's more than one, there's ambiguity, and we need to
 	// return an error.
 	if desiredOrigin == nil {
-		for i := range stage.Spec.RequestedFreight {
-			requestedFreight := stage.Spec.RequestedFreight[i]
+		for i := range freightReqs {
+			requestedFreight := freightReqs[i]
 			warehouse, err := kargoapi.GetWarehouse(
 				ctx,
 				cl,
 				types.NamespacedName{
 					Name:      requestedFreight.Origin.Name,
-					Namespace: stage.Namespace,
+					Namespace: project,
 				},
 			)
 			if err != nil {
 				return nil, fmt.Errorf(
 					"error getting Warehouse %q in namespace %q: %w",
-					requestedFreight.Origin.Name, stage.Namespace, err,
+					requestedFreight.Origin.Name, project, err,
 				)
 			}
 			if warehouse == nil {
 				return nil, fmt.Errorf(
 					"Warehouse %q not found in namespace %q",
-					requestedFreight.Origin.Name, stage.Namespace,
+					requestedFreight.Origin.Name, project,
 				)
 			}
 			for _, sub := range warehouse.Spec.Subscriptions {
 				if sub.Chart != nil && sub.Chart.RepoURL == repoURL && sub.Chart.Name == chartName {
 					if desiredOrigin != nil {
 						return nil, fmt.Errorf(
-							"multiple requested Freight could potentially provide a Helm "+
-								"chart from repo %s; please update promotion mechanisms to "+
-								"disambiguate",
+							"multiple requested Freight could potentially provide a chart from "+
+								"repository %s: please provide a Freight origin to disambiguate",
 							repoURL,
 						)
 					}

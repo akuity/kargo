@@ -53,7 +53,8 @@ type kustomizer struct {
 	findImageFn func(
 		ctx context.Context,
 		cl client.Client,
-		stage *kargoapi.Stage,
+		project string,
+		requestedFreight []kargoapi.FreightRequest,
 		desiredOrigin *kargoapi.FreightOrigin,
 		freight []kargoapi.FreightReference,
 		repoURL string,
@@ -77,7 +78,8 @@ func (k *kustomizer) apply(
 	for i := range update.Kustomize.Images {
 		imgUpdate := &update.Kustomize.Images[i]
 		desiredOrigin := freight.GetDesiredOrigin(stage, imgUpdate)
-		image, err := k.findImageFn(ctx, k.client, stage, desiredOrigin, newFreight, imgUpdate.Image)
+		image, err := k.findImageFn(ctx, k.client, stage.Namespace,
+			stage.Spec.RequestedFreight, desiredOrigin, newFreight, imgUpdate.Image)
 		if err != nil {
 			return nil,
 				fmt.Errorf("error finding image %q from Freight: %w", imgUpdate.Image, err)
