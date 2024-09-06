@@ -6,6 +6,8 @@ description: Find out more about Kargo - a next-generation continuous delivery a
 
 # What is Kargo?
 
+This is a test.
+
 Kargo is a next-generation continuous delivery and application lifecycle
 orchestration platform for Kubernetes. It builds upon
 [GitOps](https://opengitops.dev/) principles and integrates with existing
