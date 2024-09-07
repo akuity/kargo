@@ -100,6 +100,29 @@ This will require quite a variety of tools to be installed locally, so we do not
 recommend this if you can avoid it.
 :::
 
+## Build and serve the website locally
+
+After making your contribution to the website, ensure the changes render as you expect.
+To build and view the documentation locally, you can either use the native method or 
+run it in a container. This ensures you have the latest updates available as you work
+on the documentation or codebase.
+
+```shell
+make hack-docs
+```
+
+:::info
+If you wish to opt-out of executing code-generation within a container (for
+performance reasons, perhaps), drop the `hack-` prefix from the target to run the docs natively on your system:
+
+```shell
+make docs
+```
+
+This will require quite a variety of tools to be installed locally, so we do not
+recommend this if you can avoid it.
+:::
+
 ## Building the Image
 
 To build source into a Docker image that will be tagged as `kargo:dev`,
