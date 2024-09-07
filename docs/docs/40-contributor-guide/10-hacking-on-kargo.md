@@ -108,7 +108,7 @@ run it in a container. This ensures you have the latest updates available as you
 on the documentation or codebase.
 
 ```shell
-make hack-docs
+make hack-serve-docs
 ```
 
 :::info
@@ -116,7 +116,7 @@ If you wish to opt-out of executing code-generation within a container (for
 performance reasons, perhaps), drop the `hack-` prefix from the target to run the docs natively on your system:
 
 ```shell
-make docs
+make serve-docs
 ```
 
 This will require quite a variety of tools to be installed locally, so we do not
