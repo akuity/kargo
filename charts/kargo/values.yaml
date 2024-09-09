@@ -106,7 +106,7 @@ api:
   ## @param api.podAnnotations Optional annotations to add to pods. Merges with `global.podAnnotations`, allowing you to override or add to the global annotations.
   podAnnotations: {}
 
-  ## @param api.enableSecretManagement <description>
+  ## @param api.enableSecretManagement Specifies whether secret management is enabled. When enabled, the API server will manage secrets as allowed by its configured permissions. If disabled, the API server will not manage secrets, and related operations will be restricted or result in unimplemented responses. This setting enhances security by limiting the API server's permissions and reducing its attack surface. If secret management is not needed, it is advisable to disable this feature.
   enableSecretManagement: true
 
   ## @param api.resources Resources limits and requests for the api containers.
