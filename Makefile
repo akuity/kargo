@@ -368,10 +368,10 @@ start-controller-local:
 # or in a container.                                                           #
 ################################################################################
 
-.PHONY: hack-docs
-hack-docs: hack-build-dev-tools
-	$(CONTAINER_RUNTIME) run $(DOCKER_OPTS) -p $(DOCS_PORT):$(DOCS_PORT) kargo:dev-tools make docs
+.PHONY: hack-serve-docs
+hack-serve-docs: hack-build-dev-tools
+	$(CONTAINER_RUNTIME) run $(DOCKER_OPTS) -p $(DOCS_PORT):$(DOCS_PORT) kargo:dev-tools make serve-docs
 
-.PHONY: docs
-docs:
+.PHONY: serve-docs
+serve-docs:
 	cd docs && pnpm install && pnpm start
