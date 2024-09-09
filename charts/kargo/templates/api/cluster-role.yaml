@@ -117,7 +117,9 @@ rules:
     - ""
   resources:
     - configmaps
+    {{- if .Values.api.enableSecretManagement }}
     - secrets
+    {{- end }}
     - serviceaccounts
   verbs:
     - "*"

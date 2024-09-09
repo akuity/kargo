@@ -303,6 +303,11 @@ export class GetConfigResponse extends Message<GetConfigResponse> {
    */
   argocdShards: { [key: string]: ArgoCDShard } = {};
 
+  /**
+   * @generated from field: bool secret_management_enabled = 2;
+   */
+  secretManagementEnabled = false;
+
   constructor(data?: PartialMessage<GetConfigResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -312,6 +317,7 @@ export class GetConfigResponse extends Message<GetConfigResponse> {
   static readonly typeName = "akuity.io.kargo.service.v1alpha1.GetConfigResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "argocd_shards", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "message", T: ArgoCDShard} },
+    { no: 2, name: "secret_management_enabled", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetConfigResponse {
