@@ -18,6 +18,7 @@ import (
 	"github.com/akuity/kargo/internal/api/kubernetes"
 	"github.com/akuity/kargo/internal/api/validation"
 	libCreds "github.com/akuity/kargo/internal/credentials"
+	"github.com/akuity/kargo/internal/api/config"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
@@ -275,6 +276,9 @@ func TestGetCredentials(t *testing.T) {
 			svr := &server{
 				client:                    client,
 				externalValidateProjectFn: validation.ValidateProject,
+				cfg:                       config.ServerConfig{
+					EnableSecretManagement: true,
+				},
 			}
 			res, err := (svr).GetCredentials(ctx, connect.NewRequest(testCase.req))
 			testCase.assertions(t, res, err)
