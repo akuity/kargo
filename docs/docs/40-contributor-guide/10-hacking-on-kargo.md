@@ -100,29 +100,6 @@ This will require quite a variety of tools to be installed locally, so we do not
 recommend this if you can avoid it.
 :::
 
-## Build and serve the website locally
-
-After making your contribution to the website, ensure the changes render as you expect.
-To build and view the documentation locally, you can either use the native method or 
-run it in a container. This ensures you have the latest updates available as you work
-on the documentation or codebase.
-
-```shell
-make hack-serve-docs
-```
-
-:::info
-If you wish to opt-out of executing code-generation within a container (for
-performance reasons, perhaps), drop the `hack-` prefix from the target to run the docs natively on your system:
-
-```shell
-make serve-docs
-```
-
-This will require quite a variety of tools to be installed locally, so we do not
-recommend this if you can avoid it.
-:::
-
 ## Building the Image
 
 To build source into a Docker image that will be tagged as `kargo:dev`,
@@ -444,3 +421,35 @@ as native processes.
 
     </TabItem>
     </Tabs>
+
+## Contributing to Documentation
+
+Contributors should ensure that their changes are accompanied by relevant documentation
+updates. This helps maintain the project's sustainability. Pull requests with
+corresponding documentation updates are more likely to be merged faster.
+
+To make this process smoother, you can refer to [Docusaurus](https://docusaurus.io/docs)
+for guidance on writing and maintaining docs effectively.
+
+### Previewing Doc Changes Locally
+
+After making your changes, preview the documentation locally to ensure everything renders
+correctly. You can either run it in a container or natively on your system.
+
+To build and serve the docs inside a container:
+
+```shell
+make hack-serve-docs
+```
+
+:::info
+If you wish to opt-out of executing code-generation within a container (for
+performance reasons, perhaps), drop the `hack-` prefix from the target to run the docs natively on your system:
+
+```shell
+make serve-docs
+```
+
+This will require quite a variety of tools to be installed locally, so we do not
+recommend this if you can avoid it.
+:::
