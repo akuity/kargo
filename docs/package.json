@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "docusaurus": "docusaurus",
-    "start": "pnpm build-gtag-plugin && docusaurus start",
+    "start": "pnpm build-gtag-plugin && docusaurus start --host 0.0.0.0",
     "build-gtag-plugin": "cd plugins/gtag && pnpm install && pnpm build",
     "build": "pnpm build-gtag-plugin && docusaurus build",
     "swizzle": "docusaurus swizzle",
