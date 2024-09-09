@@ -237,7 +237,7 @@ func (d *helmUpdateChartDirective) loadDependencyCredentials(
 				Password: creds.Password,
 			})
 		} else {
-			if err := registryClient.Login(
+			if err = registryClient.Login(
 				strings.TrimPrefix(dep.Repository, "oci://"),
 				registry.LoginOptBasicAuth(creds.Username, creds.Password),
 			); err != nil {

@@ -30,6 +30,8 @@ func NewRegistryClient(home string) (*registry.Client, error) {
 		registry.ClientOptCredentialsFile(credentialsPath),
 		// NB: Disable the cache, preventing Helm from opting to use a global cache.
 		registry.ClientOptEnableCache(false),
+		// TODO(hidde): enable https://github.com/helm/helm/pull/12588 to further
+		// isolate ourselves from the system global configuration.
 	}
 
 	return registry.NewClient(opts...)

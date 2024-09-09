@@ -2,8 +2,6 @@ package directives
 
 import (
 	"context"
-	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"testing"
@@ -155,6 +153,24 @@ dependencies:
 			},
 			assertions: func(t *testing.T, workDir string, result Result, err error) {
 				require.ErrorContains(t, err, "missing chart dependencies")
+				assert.Equal(t, ResultFailure, result)
+
+				require.NoFileExists(t, filepath.Join(workDir, "output.yaml"))
+			},
+		},
+		{
+			name: "Helm action initialization error",
+			files: map[string]string{
+				"charts/test-chart/Chart.yaml": `apiVersion: v1
+name: test-chart
+version: 0.1.0`,
+			},
+			cfg: HelmTemplateConfig{
+				Path:        "charts/test-chart",
+				KubeVersion: "invalid",
+			},
+			assertions: func(t *testing.T, workDir string, result Result, err error) {
+				require.ErrorContains(t, err, "failed to initialize Helm action config")
 				assert.Equal(t, ResultFailure, result)
 
 				require.NoFileExists(t, filepath.Join(workDir, "output.yaml"))
@@ -530,74 +546,4 @@ func Test_defaultValue(t *testing.T) {
 			assert.Equal(t, tt.expected, defaultValue(tt.value, tt.defValue))
 		})
 	}
-}
-
-func copyFileOrDir(src, dst string) error {
-	srcI, err := os.Stat(src)
-	if err != nil {
-		return fmt.Errorf("error getting source info: %v", err)
-	}
-
-	if srcI.IsDir() {
-		return copyDir(src, dst)
-	}
-	return copyFile(src, dst)
-}
-
-func copyFile(src, dst string) error {
-	srcF, err := os.Open(src)
-	if err != nil {
-		return fmt.Errorf("error opening source file: %v", err)
-	}
-	defer srcF.Close()
-
-	dstF, err := os.Create(dst)
-	if err != nil {
-		return fmt.Errorf("error creating destination file: %v", err)
-	}
-	defer dstF.Close()
-
-	if _, err = io.Copy(dstF, srcF); err != nil {
-		return fmt.Errorf("error copying file: %v", err)
-	}
-
-	srcI, err := os.Stat(src)
-	if err != nil {
-		return fmt.Errorf("error getting source file info: %v", err)
-	}
-
-	return os.Chmod(dst, srcI.Mode())
-}
-
-func copyDir(src, dst string) error {
-	srcI, err := os.Stat(src)
-	if err != nil {
-		return fmt.Errorf("error getting source directory info: %v", err)
-	}
-
-	err = os.MkdirAll(dst, srcI.Mode())
-	if err != nil {
-		return fmt.Errorf("error creating destination directory: %v", err)
-	}
-
-	entries, err := os.ReadDir(src)
-	if err != nil {
-		return fmt.Errorf("error reading source directory: %v", err)
-	}
-
-	for _, entry := range entries {
-		srcP := filepath.Join(src, entry.Name())
-		dstP := filepath.Join(dst, entry.Name())
-
-		if entry.IsDir() {
-			if err = copyDir(srcP, dstP); err != nil {
-				return fmt.Errorf("error copying subdirectory: %v", err)
-			}
-		} else {
-			if err = copyFile(srcP, dstP); err != nil {
-				return fmt.Errorf("error copying file: %v", err)
-			}
-		}
-	}
-	return nil
 }
