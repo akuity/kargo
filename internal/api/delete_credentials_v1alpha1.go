@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"connectrpc.com/connect"
@@ -15,6 +16,14 @@ func (s *server) DeleteCredentials(
 	ctx context.Context,
 	req *connect.Request[svcv1alpha1.DeleteCredentialsRequest],
 ) (*connect.Response[svcv1alpha1.DeleteCredentialsResponse], error) {
+	// Check if secret management is enabled
+	if !s.cfg.EnableSecretManagement {
+		return nil, connect.NewError(
+			connect.CodeUnimplemented,
+			errors.New("secret management is not enabled"),
+		)
+	}
+
 	project := req.Msg.GetProject()
 	if err := validateFieldNotEmpty("project", project); err != nil {
 		return nil, err
