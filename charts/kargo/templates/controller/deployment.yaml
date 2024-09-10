@@ -139,7 +139,7 @@ spec:
                 mode: 0644
           {{- end }}
       {{- end }}
-      {{- if .Values.controller.cabundle.configMapName .Values.controller.cabundle.secretName }}
+      {{- if or .Values.controller.cabundle.configMapName .Values.controller.cabundle.secretName }}
       {{- if .Values.controller.cabundle.secretName }}
       - name: cabundle
         secret:
