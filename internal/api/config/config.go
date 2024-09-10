@@ -33,9 +33,7 @@ type ServerConfig struct {
 func ServerConfigFromEnv() ServerConfig {
 	cfg := ServerConfig{}
 	envconfig.MustProcess("", &cfg.StandardConfig)
-	if types.MustParseBool(os.GetEnv("ENABLE_SECRET_MANAGEMENT", "true")) {
-		cfg.EnableSecretManagement = true
-	}
+	cfg.EnableSecretManagement = types.MustParseBool(os.GetEnv("ENABLE_SECRET_MANAGEMENT", "false"))
 	if types.MustParseBool(os.GetEnv("TLS_ENABLED", "false")) {
 		tlsCfg := TLSConfigFromEnv()
 		cfg.TLSConfig = &tlsCfg
