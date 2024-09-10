@@ -75,7 +75,7 @@ func Test_helmUpdateImageDirective_run(t *testing.T) {
 			},
 			assertions: func(t *testing.T, workDir string, result Result, err error) {
 				assert.NoError(t, err)
-				assert.Equal(t, ResultSuccess, result)
+				assert.Equal(t, Result{Status: StatusSuccess}, result)
 				content, err := os.ReadFile(path.Join(workDir, "values.yaml"))
 				require.NoError(t, err)
 				assert.Contains(t, string(content), "tag: 1.19.0")
@@ -99,7 +99,7 @@ func Test_helmUpdateImageDirective_run(t *testing.T) {
 			},
 			assertions: func(t *testing.T, workDir string, result Result, err error) {
 				assert.NoError(t, err)
-				assert.Equal(t, ResultSuccess, result)
+				assert.Equal(t, Result{Status: StatusSuccess}, result)
 				content, err := os.ReadFile(path.Join(workDir, "values.yaml"))
 				require.NoError(t, err)
 				assert.Contains(t, string(content), "tag: oldtag")
@@ -140,7 +140,7 @@ func Test_helmUpdateImageDirective_run(t *testing.T) {
 			assertions: func(t *testing.T, _ string, result Result, err error) {
 				require.ErrorContains(t, err, "failed to generate image updates")
 				require.Errorf(t, err, "something went wrong")
-				assert.Equal(t, ResultFailure, result)
+				assert.Equal(t, Result{Status: StatusFailure}, result)
 			},
 		},
 		{
@@ -188,7 +188,7 @@ func Test_helmUpdateImageDirective_run(t *testing.T) {
 			},
 			assertions: func(t *testing.T, _ string, result Result, err error) {
 				assert.Error(t, err)
-				assert.Equal(t, ResultFailure, result)
+				assert.Equal(t, Result{Status: StatusFailure}, result)
 				assert.Contains(t, err.Error(), "values file update failed")
 			},
 		},

@@ -37,19 +37,21 @@ func (d *helmUpdateImageDirective) Name() string {
 
 // Run implements the Directive interface.
 func (d *helmUpdateImageDirective) Run(ctx context.Context, stepCtx *StepContext) (Result, error) {
+	failure := Result{Status: StatusFailure}
+
 	// Validate the configuration against the JSON Schema
 	if err := validate(
 		d.schemaLoader,
 		gojsonschema.NewGoLoader(stepCtx.Config),
 		d.Name(),
 	); err != nil {
-		return ResultFailure, err
+		return failure, err
 	}
 
 	// Convert the configuration into a typed struct
 	cfg, err := configToStruct[HelmUpdateImageConfig](stepCtx.Config)
 	if err != nil {
-		return ResultFailure, fmt.Errorf("could not convert config into %s config: %w", d.Name(), err)
+		return failure, fmt.Errorf("could not convert config into %s config: %w", d.Name(), err)
 	}
 
 	return d.run(ctx, stepCtx, cfg)
@@ -62,16 +64,16 @@ func (d *helmUpdateImageDirective) run(
 ) (Result, error) {
 	changes, err := d.generateImageUpdates(ctx, stepCtx, cfg)
 	if err != nil {
-		return ResultFailure, fmt.Errorf("failed to generate image updates: %w", err)
+		return Result{Status: StatusFailure}, fmt.Errorf("failed to generate image updates: %w", err)
 	}
 
 	if len(changes) > 0 {
 		if err := d.updateValuesFile(stepCtx.WorkDir, cfg.Path, changes); err != nil {
-			return ResultFailure, fmt.Errorf("values file update failed: %w", err)
+			return Result{Status: StatusFailure}, fmt.Errorf("values file update failed: %w", err)
 		}
 	}
 
-	return ResultSuccess, nil
+	return Result{Status: StatusSuccess}, nil
 }
 
 func (d *helmUpdateImageDirective) generateImageUpdates(

@@ -51,19 +51,21 @@ func (d *helmUpdateChartDirective) Name() string {
 
 // Run implements the Directive interface.
 func (d *helmUpdateChartDirective) Run(ctx context.Context, stepCtx *StepContext) (Result, error) {
+	failure := Result{Status: StatusFailure}
+
 	// Validate the configuration against the JSON Schema
 	if err := validate(
 		d.schemaLoader,
 		gojsonschema.NewGoLoader(stepCtx.Config),
 		d.Name(),
 	); err != nil {
-		return ResultFailure, err
+		return failure, err
 	}
 
 	// Convert the configuration into a typed struct
 	cfg, err := configToStruct[HelmUpdateChartConfig](stepCtx.Config)
 	if err != nil {
-		return ResultFailure, fmt.Errorf("could not convert config into %s config: %w", d.Name(), err)
+		return failure, fmt.Errorf("could not convert config into %s config: %w", d.Name(), err)
 	}
 
 	return d.run(ctx, stepCtx, cfg)
@@ -76,35 +78,39 @@ func (d *helmUpdateChartDirective) run(
 ) (Result, error) {
 	absChartPath, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.Path)
 	if err != nil {
-		return ResultFailure, fmt.Errorf("failed to join path %q: %w", cfg.Path, err)
+		return Result{Status: StatusFailure}, fmt.Errorf("failed to join path %q: %w", cfg.Path, err)
 	}
 
 	chartFilePath := filepath.Join(absChartPath, "Chart.yaml")
 	chartDependencies, err := loadChartDependencies(chartFilePath)
 	if err != nil {
-		return ResultFailure, fmt.Errorf("failed to load chart dependencies from %q: %w", chartFilePath, err)
+		return Result{
+			Status: StatusFailure,
+		}, fmt.Errorf("failed to load chart dependencies from %q: %w", chartFilePath, err)
 	}
 
 	changes, err := d.processChartUpdates(ctx, stepCtx, cfg, chartDependencies)
 	if err != nil {
-		return ResultFailure, err
+		return Result{Status: StatusFailure}, err
 	}
 
 	if err = intyaml.SetStringsInFile(chartFilePath, changes); err != nil {
-		return ResultFailure, fmt.Errorf("failed to update chart dependencies in %q: %w", chartFilePath, err)
+		return Result{
+			Status: StatusFailure,
+		}, fmt.Errorf("failed to update chart dependencies in %q: %w", chartFilePath, err)
 	}
 
 	helmHome, err := os.MkdirTemp("", "helm-chart-update-")
 	if err != nil {
-		return ResultFailure, fmt.Errorf("failed to create temporary Helm home directory: %w", err)
+		return Result{Status: StatusFailure}, fmt.Errorf("failed to create temporary Helm home directory: %w", err)
 	}
 	defer os.RemoveAll(helmHome)
 
 	if err := d.updateDependencies(ctx, stepCtx, helmHome, absChartPath, chartDependencies); err != nil {
-		return ResultFailure, err
+		return Result{Status: StatusFailure}, err
 	}
 
-	return ResultSuccess, nil
+	return Result{Status: StatusSuccess}, nil
 }
 
 func (d *helmUpdateChartDirective) processChartUpdates(

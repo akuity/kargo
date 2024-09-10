@@ -97,7 +97,7 @@ func Test_helmUpdateChartDirective_run(t *testing.T) {
 			},
 			assertions: func(t *testing.T, tempDir string, result Result, err error) {
 				assert.NoError(t, err)
-				assert.Equal(t, ResultSuccess, result)
+				assert.Equal(t, Result{Status: StatusSuccess}, result)
 
 				// Check if Chart.yaml was updated correctly
 				updatedChartYaml, err := os.ReadFile(filepath.Join(tempDir, "testchart", "Chart.yaml"))

@@ -42,19 +42,21 @@ func (d *helmTemplateDirective) Name() string {
 
 // Run implements the Directive interface.
 func (d *helmTemplateDirective) Run(ctx context.Context, stepCtx *StepContext) (Result, error) {
+	failure := Result{Status: StatusFailure}
+
 	// Validate the configuration against the JSON Schema
 	if err := validate(
 		d.schemaLoader,
 		gojsonschema.NewGoLoader(stepCtx.Config),
 		d.Name(),
 	); err != nil {
-		return ResultFailure, err
+		return failure, err
 	}
 
 	// Convert the configuration into a typed struct
 	cfg, err := configToStruct[HelmTemplateConfig](stepCtx.Config)
 	if err != nil {
-		return ResultFailure, fmt.Errorf("could not convert config into %s config: %w", d.Name(), err)
+		return failure, fmt.Errorf("could not convert config into %s config: %w", d.Name(), err)
 	}
 
 	return d.run(ctx, stepCtx, cfg)
@@ -67,32 +69,32 @@ func (d *helmTemplateDirective) run(
 ) (Result, error) {
 	composedValues, err := d.composeValues(stepCtx.WorkDir, cfg.ValuesFiles)
 	if err != nil {
-		return ResultFailure, fmt.Errorf("failed to compose values: %w", err)
+		return Result{Status: StatusFailure}, fmt.Errorf("failed to compose values: %w", err)
 	}
 
 	chartRequested, err := d.loadChart(stepCtx.WorkDir, cfg.Path)
 	if err != nil {
-		return ResultFailure, fmt.Errorf("failed to load chart from %q: %w", cfg.Path, err)
+		return Result{Status: StatusFailure}, fmt.Errorf("failed to load chart from %q: %w", cfg.Path, err)
 	}
 
 	if err = d.checkDependencies(chartRequested); err != nil {
-		return ResultFailure, fmt.Errorf("missing chart dependencies: %w", err)
+		return Result{Status: StatusFailure}, fmt.Errorf("missing chart dependencies: %w", err)
 	}
 
 	install, err := d.newInstallAction(cfg, stepCtx.Project)
 	if err != nil {
-		return ResultFailure, fmt.Errorf("failed to initialize Helm action config: %w", err)
+		return Result{Status: StatusFailure}, fmt.Errorf("failed to initialize Helm action config: %w", err)
 	}
 
 	rls, err := install.RunWithContext(ctx, chartRequested, composedValues)
 	if err != nil {
-		return ResultFailure, fmt.Errorf("failed to render chart: %w", err)
+		return Result{Status: StatusFailure}, fmt.Errorf("failed to render chart: %w", err)
 	}
 
 	if err = d.writeOutput(stepCtx.WorkDir, cfg.OutPath, rls.Manifest); err != nil {
-		return ResultFailure, fmt.Errorf("failed to write rendered chart: %w", err)
+		return Result{Status: StatusFailure}, fmt.Errorf("failed to write rendered chart: %w", err)
 	}
-	return ResultSuccess, nil
+	return Result{Status: StatusSuccess}, nil
 }
 
 // composeValues composes the values from the given values files. It merges the
