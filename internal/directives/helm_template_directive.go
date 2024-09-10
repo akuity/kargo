@@ -30,9 +30,9 @@ type helmTemplateDirective struct {
 
 // newHelmTemplateDirective creates a new helm-update-image directive.
 func newHelmTemplateDirective() Directive {
-	return &helmTemplateDirective{
-		schemaLoader: getConfigSchemaLoader("helm-template"),
-	}
+	d := &helmTemplateDirective{}
+	d.schemaLoader = getConfigSchemaLoader(d.Name())
+	return d
 }
 
 // Name implements the Directive interface.
