@@ -36,10 +36,7 @@ func FindCommit(
 				},
 			)
 			if err != nil {
-				return nil, fmt.Errorf(
-					"error getting Warehouse %q in namespace %q: %w",
-					requestedFreight.Origin.Name, stage.Namespace, err,
-				)
+				return nil, err
 			}
 			if warehouse == nil {
 				return nil, fmt.Errorf(
@@ -111,10 +108,7 @@ func FindImage(
 				},
 			)
 			if err != nil {
-				return nil, fmt.Errorf(
-					"error getting Warehouse %q in namespace %q: %w",
-					requestedFreight.Origin.Name, project, err,
-				)
+				return nil, err
 			}
 			if warehouse == nil {
 				return nil, fmt.Errorf(
@@ -184,10 +178,7 @@ func FindChart(
 				},
 			)
 			if err != nil {
-				return nil, fmt.Errorf(
-					"error getting Warehouse %q in namespace %q: %w",
-					requestedFreight.Origin.Name, project, err,
-				)
+				return nil, err
 			}
 			if warehouse == nil {
 				return nil, fmt.Errorf(
