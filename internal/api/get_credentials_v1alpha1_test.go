@@ -15,10 +15,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/api/config"
 	"github.com/akuity/kargo/internal/api/kubernetes"
 	"github.com/akuity/kargo/internal/api/validation"
 	libCreds "github.com/akuity/kargo/internal/credentials"
-	"github.com/akuity/kargo/internal/api/config"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
@@ -276,7 +276,7 @@ func TestGetCredentials(t *testing.T) {
 			svr := &server{
 				client:                    client,
 				externalValidateProjectFn: validation.ValidateProject,
-				cfg:                       config.ServerConfig{
+				cfg: config.ServerConfig{
 					EnableSecretManagement: true,
 				},
 			}
