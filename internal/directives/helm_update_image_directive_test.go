@@ -75,7 +75,12 @@ func Test_helmUpdateImageDirective_run(t *testing.T) {
 			},
 			assertions: func(t *testing.T, workDir string, result Result, err error) {
 				assert.NoError(t, err)
-				assert.Equal(t, Result{Status: StatusSuccess}, result)
+				assert.Equal(t, Result{
+					Status: StatusSuccess,
+					Output: State{
+						"commitMessage": "Updated values.yaml to use new image\n\n- docker.io/library/nginx:1.19.0",
+					},
+				}, result)
 				content, err := os.ReadFile(path.Join(workDir, "values.yaml"))
 				require.NoError(t, err)
 				assert.Contains(t, string(content), "tag: 1.19.0")
@@ -223,7 +228,7 @@ func Test_helmUpdateImageDirective_generateImageUpdates(t *testing.T) {
 		objects    []client.Object
 		stepCtx    *StepContext
 		cfg        HelmUpdateImageConfig
-		assertions func(*testing.T, map[string]string, error)
+		assertions func(*testing.T, map[string]string, []string, error)
 	}{
 		{
 			name: "finds image update",
@@ -267,9 +272,10 @@ func Test_helmUpdateImageDirective_generateImageUpdates(t *testing.T) {
 					{Key: "image.tag", Image: "docker.io/library/nginx", Value: Tag},
 				},
 			},
-			assertions: func(t *testing.T, changes map[string]string, err error) {
+			assertions: func(t *testing.T, changes map[string]string, summary []string, err error) {
 				assert.NoError(t, err)
 				assert.Equal(t, map[string]string{"image.tag": "1.19.0"}, changes)
+				assert.Equal(t, []string{"docker.io/library/nginx:1.19.0"}, summary)
 			},
 		},
 		{
@@ -284,9 +290,10 @@ func Test_helmUpdateImageDirective_generateImageUpdates(t *testing.T) {
 					{Key: "image.tag", Image: "docker.io/library/non-existent", Value: Tag},
 				},
 			},
-			assertions: func(t *testing.T, changes map[string]string, err error) {
+			assertions: func(t *testing.T, changes map[string]string, summary []string, err error) {
 				assert.NoError(t, err)
 				assert.Empty(t, changes)
+				assert.Empty(t, summary)
 			},
 		},
 		{
@@ -332,9 +339,10 @@ func Test_helmUpdateImageDirective_generateImageUpdates(t *testing.T) {
 					{Key: "image2.tag", Image: "docker.io/library/non-existent", Value: Tag},
 				},
 			},
-			assertions: func(t *testing.T, changes map[string]string, err error) {
+			assertions: func(t *testing.T, changes map[string]string, summary []string, err error) {
 				assert.NoError(t, err)
 				assert.Equal(t, map[string]string{"image1.tag": "1.19.0"}, changes)
+				assert.Equal(t, []string{"docker.io/library/nginx:1.19.0"}, summary)
 			},
 		},
 		{
@@ -384,9 +392,10 @@ func Test_helmUpdateImageDirective_generateImageUpdates(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, changes map[string]string, err error) {
+			assertions: func(t *testing.T, changes map[string]string, summary []string, err error) {
 				assert.NoError(t, err)
 				assert.Equal(t, map[string]string{"image.tag": "2.0.0"}, changes)
+				assert.Equal(t, []string{"docker.io/library/origin-image:2.0.0"}, summary)
 			},
 		},
 	}
@@ -400,8 +409,8 @@ func Test_helmUpdateImageDirective_generateImageUpdates(t *testing.T) {
 			stepCtx.KargoClient = fake.NewClientBuilder().WithScheme(scheme).WithObjects(tt.objects...).Build()
 
 			d := &helmUpdateImageDirective{}
-			changes, err := d.generateImageUpdates(context.Background(), stepCtx, tt.cfg)
-			tt.assertions(t, changes, err)
+			changes, summary, err := d.generateImageUpdates(context.Background(), stepCtx, tt.cfg)
+			tt.assertions(t, changes, summary, err)
 		})
 	}
 }
@@ -442,12 +451,12 @@ func Test_helmUpdateImageDirective_getDesiredOrigin(t *testing.T) {
 	}
 }
 
-func Test_helmUpdateImageDirective_getImageValue(t *testing.T) {
+func Test_helmUpdateImageDirective_getImageValues(t *testing.T) {
 	tests := []struct {
 		name       string
 		image      *kargoapi.Image
 		valueType  Value
-		assertions func(*testing.T, string, error)
+		assertions func(*testing.T, string, string, error)
 	}{
 		{
 			name: "image and tag",
@@ -456,20 +465,23 @@ func Test_helmUpdateImageDirective_getImageValue(t *testing.T) {
 				Tag:     "1.19",
 			},
 			valueType: ImageAndTag,
-			assertions: func(t *testing.T, value string, err error) {
+			assertions: func(t *testing.T, value, ref string, err error) {
 				assert.NoError(t, err)
 				assert.Equal(t, "docker.io/library/nginx:1.19", value)
+				assert.Equal(t, "docker.io/library/nginx:1.19", ref)
 			},
 		},
 		{
 			name: "tag only",
 			image: &kargoapi.Image{
-				Tag: "1.19",
+				RepoURL: "docker.io/library/nginx",
+				Tag:     "1.19",
 			},
 			valueType: Tag,
-			assertions: func(t *testing.T, value string, err error) {
+			assertions: func(t *testing.T, value, ref string, err error) {
 				assert.NoError(t, err)
 				assert.Equal(t, "1.19", value)
+				assert.Equal(t, "docker.io/library/nginx:1.19", ref)
 			},
 		},
 		{
@@ -479,29 +491,33 @@ func Test_helmUpdateImageDirective_getImageValue(t *testing.T) {
 				Digest:  "sha256:abcdef1234567890",
 			},
 			valueType: ImageAndDigest,
-			assertions: func(t *testing.T, value string, err error) {
+			assertions: func(t *testing.T, value, ref string, err error) {
 				assert.NoError(t, err)
 				assert.Equal(t, "docker.io/library/nginx@sha256:abcdef1234567890", value)
+				assert.Equal(t, "docker.io/library/nginx@sha256:abcdef1234567890", ref)
 			},
 		},
 		{
 			name: "digest only",
 			image: &kargoapi.Image{
-				Digest: "sha256:abcdef1234567890",
+				RepoURL: "docker.io/library/nginx",
+				Digest:  "sha256:abcdef1234567890",
 			},
 			valueType: Digest,
-			assertions: func(t *testing.T, value string, err error) {
+			assertions: func(t *testing.T, value, ref string, err error) {
 				assert.NoError(t, err)
 				assert.Equal(t, "sha256:abcdef1234567890", value)
+				assert.Equal(t, "docker.io/library/nginx@sha256:abcdef1234567890", ref)
 			},
 		},
 		{
 			name:      "unknown value type",
 			image:     &kargoapi.Image{},
 			valueType: "unknown",
-			assertions: func(t *testing.T, value string, err error) {
+			assertions: func(t *testing.T, value, ref string, err error) {
 				assert.Error(t, err)
 				assert.Empty(t, value)
+				assert.Empty(t, ref)
 			},
 		},
 	}
@@ -509,8 +525,8 @@ func Test_helmUpdateImageDirective_getImageValue(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			d := &helmUpdateImageDirective{}
-			value, err := d.getImageValue(tt.image, tt.valueType)
-			tt.assertions(t, value, err)
+			value, ref, err := d.getImageValues(tt.image, tt.valueType)
+			tt.assertions(t, value, ref, err)
 		})
 	}
 }
@@ -571,6 +587,53 @@ func Test_helmUpdateImageDirective_updateValuesFile(t *testing.T) {
 			d := &helmUpdateImageDirective{}
 			err := d.updateValuesFile(workDir, path.Base(valuesFile), tt.changes)
 			tt.assertions(t, valuesFile, err)
+		})
+	}
+}
+
+func Test_helmUpdateImageDirective_generateCommitMessage(t *testing.T) {
+	tests := []struct {
+		name          string
+		path          string
+		fullImageRefs []string
+		assertions    func(*testing.T, string)
+	}{
+		{
+			name:          "no image references",
+			path:          "values.yaml",
+			fullImageRefs: []string{},
+			assertions: func(t *testing.T, result string) {
+				assert.Empty(t, result)
+			},
+		},
+		{
+			name:          "single image reference",
+			path:          "values.yaml",
+			fullImageRefs: []string{"repo/image:tag1"},
+			assertions: func(t *testing.T, result string) {
+				assert.Equal(t, `Updated values.yaml to use new image
+
+- repo/image:tag1`, result)
+			},
+		},
+		{
+			name:          "multiple image references",
+			path:          "chart/values.yaml",
+			fullImageRefs: []string{"repo1/image1:tag1", "repo2/image2:tag2"},
+			assertions: func(t *testing.T, result string) {
+				assert.Equal(t, `Updated chart/values.yaml to use new images
+
+- repo1/image1:tag1
+- repo2/image2:tag2`, result)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			d := &helmUpdateImageDirective{}
+			result := d.generateCommitMessage(tt.path, tt.fullImageRefs)
+			tt.assertions(t, result)
 		})
 	}
 }

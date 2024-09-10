@@ -3,6 +3,7 @@ package directives
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/xeipuuv/gojsonschema"
@@ -62,26 +63,33 @@ func (d *helmUpdateImageDirective) run(
 	stepCtx *StepContext,
 	cfg HelmUpdateImageConfig,
 ) (Result, error) {
-	changes, err := d.generateImageUpdates(ctx, stepCtx, cfg)
+	updates, fullImageRefs, err := d.generateImageUpdates(ctx, stepCtx, cfg)
 	if err != nil {
 		return Result{Status: StatusFailure}, fmt.Errorf("failed to generate image updates: %w", err)
 	}
 
-	if len(changes) > 0 {
-		if err := d.updateValuesFile(stepCtx.WorkDir, cfg.Path, changes); err != nil {
+	result := Result{Status: StatusSuccess}
+	if len(updates) > 0 {
+		if err = d.updateValuesFile(stepCtx.WorkDir, cfg.Path, updates); err != nil {
 			return Result{Status: StatusFailure}, fmt.Errorf("values file update failed: %w", err)
 		}
-	}
 
-	return Result{Status: StatusSuccess}, nil
+		if commitMsg := d.generateCommitMessage(cfg.Path, fullImageRefs); commitMsg != "" {
+			result.Output = make(State, 1)
+			result.Output.Set("commitMessage", commitMsg)
+		}
+	}
+	return result, nil
 }
 
 func (d *helmUpdateImageDirective) generateImageUpdates(
 	ctx context.Context,
 	stepCtx *StepContext,
 	cfg HelmUpdateImageConfig,
-) (map[string]string, error) {
-	changes := make(map[string]string, len(cfg.Images))
+) (map[string]string, []string, error) {
+	updates := make(map[string]string, len(cfg.Images))
+	fullImageRefs := make([]string, 0, len(cfg.Images))
+
 	for _, image := range cfg.Images {
 		desiredOrigin := d.getDesiredOrigin(image.FromOrigin)
 
@@ -95,21 +103,22 @@ func (d *helmUpdateImageDirective) generateImageUpdates(
 			image.Image,
 		)
 		if err != nil {
-			return nil, fmt.Errorf("failed to find image %s: %w", image.Image, err)
+			return nil, nil, fmt.Errorf("failed to find image %s: %w", image.Image, err)
 		}
 
 		if targetImage == nil {
 			continue
 		}
 
-		value, err := d.getImageValue(targetImage, image.Value)
+		value, imageRef, err := d.getImageValues(targetImage, image.Value)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
-		changes[image.Key] = value
+		updates[image.Key] = value
+		fullImageRefs = append(fullImageRefs, imageRef)
 	}
-	return changes, nil
+	return updates, fullImageRefs, nil
 }
 
 func (d *helmUpdateImageDirective) getDesiredOrigin(fromOrigin *ChartFromOrigin) *kargoapi.FreightOrigin {
@@ -122,18 +131,20 @@ func (d *helmUpdateImageDirective) getDesiredOrigin(fromOrigin *ChartFromOrigin)
 	}
 }
 
-func (d *helmUpdateImageDirective) getImageValue(image *kargoapi.Image, valueType Value) (string, error) {
+func (d *helmUpdateImageDirective) getImageValues(image *kargoapi.Image, valueType Value) (string, string, error) {
 	switch valueType {
 	case ImageAndTag:
-		return fmt.Sprintf("%s:%s", image.RepoURL, image.Tag), nil
+		imageRef := fmt.Sprintf("%s:%s", image.RepoURL, image.Tag)
+		return imageRef, imageRef, nil
 	case Tag:
-		return image.Tag, nil
+		return image.Tag, fmt.Sprintf("%s:%s", image.RepoURL, image.Tag), nil
 	case ImageAndDigest:
-		return fmt.Sprintf("%s@%s", image.RepoURL, image.Digest), nil
+		imageRef := fmt.Sprintf("%s@%s", image.RepoURL, image.Digest)
+		return imageRef, imageRef, nil
 	case Digest:
-		return image.Digest, nil
+		return image.Digest, fmt.Sprintf("%s@%s", image.RepoURL, image.Digest), nil
 	default:
-		return "", fmt.Errorf("unknown image value type %q", valueType)
+		return "", "", fmt.Errorf("unknown image value type %q", valueType)
 	}
 }
 
@@ -146,4 +157,23 @@ func (d *helmUpdateImageDirective) updateValuesFile(workDir, path string, change
 		return fmt.Errorf("error updating image references in values file %q: %w", path, err)
 	}
 	return nil
+}
+
+func (d *helmUpdateImageDirective) generateCommitMessage(path string, fullImageRefs []string) string {
+	if len(fullImageRefs) == 0 {
+		return ""
+	}
+
+	var commitMsg strings.Builder
+	_, _ = commitMsg.WriteString(fmt.Sprintf("Updated %s to use new image", path))
+	if len(fullImageRefs) > 1 {
+		_, _ = commitMsg.WriteString("s")
+	}
+	_, _ = commitMsg.WriteString("\n")
+
+	for _, s := range fullImageRefs {
+		_, _ = commitMsg.WriteString(fmt.Sprintf("\n- %s", s))
+	}
+
+	return commitMsg.String()
 }
