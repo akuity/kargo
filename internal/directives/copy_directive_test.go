@@ -16,7 +16,7 @@ func Test_copyDirective_run(t *testing.T) {
 		name       string
 		setupFiles func(*testing.T) string
 		cfg        CopyConfig
-		assertions func(*testing.T, string, error)
+		assertions func(*testing.T, string, Result, error)
 	}{
 		{
 			name: "succeeds copying file",
@@ -32,8 +32,9 @@ func Test_copyDirective_run(t *testing.T) {
 				InPath:  "input.txt",
 				OutPath: "output.txt",
 			},
-			assertions: func(t *testing.T, workDir string, err error) {
+			assertions: func(t *testing.T, workDir string, result Result, err error) {
 				assert.NoError(t, err)
+				assert.Equal(t, Result{Status: StatusSuccess}, result)
 
 				outPath := filepath.Join(workDir, "output.txt")
 				b, err := os.ReadFile(outPath)
@@ -63,20 +64,21 @@ func Test_copyDirective_run(t *testing.T) {
 				InPath:  "input/",
 				OutPath: "output/",
 			},
-			assertions: func(t *testing.T, workDir string, err error) {
+			assertions: func(t *testing.T, workDir string, result Result, err error) {
 				assert.NoError(t, err)
+				assert.Equal(t, Result{Status: StatusSuccess}, result)
 
 				outDir := filepath.Join(workDir, "output")
 
 				outPath := filepath.Join(outDir, "input.txt")
 				b, err := os.ReadFile(outPath)
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				assert.Equal(t, "test content", string(b))
 
 				nestedDir := filepath.Join(outDir, "nested")
 				nestedPath := filepath.Join(nestedDir, "nested.txt")
 				b, err = os.ReadFile(nestedPath)
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				assert.Equal(t, "nested content", string(b))
 			},
 		},
@@ -100,8 +102,9 @@ func Test_copyDirective_run(t *testing.T) {
 				InPath:  "input/",
 				OutPath: "output/",
 			},
-			assertions: func(t *testing.T, workDir string, err error) {
+			assertions: func(t *testing.T, workDir string, result Result, err error) {
 				assert.NoError(t, err)
+				require.Equal(t, Result{Status: StatusSuccess}, result)
 
 				outDir := filepath.Join(workDir, "output")
 
@@ -124,7 +127,8 @@ func Test_copyDirective_run(t *testing.T) {
 			cfg: CopyConfig{
 				InPath: "input.txt",
 			},
-			assertions: func(t *testing.T, _ string, err error) {
+			assertions: func(t *testing.T, _ string, result Result, err error) {
+				require.Equal(t, Result{Status: StatusFailure}, result)
 				require.ErrorContains(t, err, "failed to copy")
 			},
 		},
@@ -135,11 +139,8 @@ func Test_copyDirective_run(t *testing.T) {
 			workDir := tt.setupFiles(t)
 
 			d := &copyDirective{}
-			tt.assertions(
-				t,
-				workDir,
-				d.run(context.Background(), &StepContext{WorkDir: workDir}, tt.cfg),
-			)
+			result, err := d.run(context.Background(), &StepContext{WorkDir: workDir}, tt.cfg)
+			tt.assertions(t, workDir, result, err)
 		})
 	}
 }

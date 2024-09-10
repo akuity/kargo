@@ -46,21 +46,18 @@ func (d *copyDirective) Run(ctx context.Context, stepCtx *StepContext) (Result, 
 		return failure, fmt.Errorf("could not convert config into %s config: %w", d.Name(), err)
 	}
 
-	if err = d.run(ctx, stepCtx, cfg); err != nil {
-		return failure, err
-	}
-	return Result{Status: StatusSuccess}, nil
+	return d.run(ctx, stepCtx, cfg)
 }
 
-func (d *copyDirective) run(ctx context.Context, stepCtx *StepContext, cfg CopyConfig) error {
+func (d *copyDirective) run(ctx context.Context, stepCtx *StepContext, cfg CopyConfig) (Result, error) {
 	// Secure join the paths to prevent path traversal attacks.
 	inPath, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.InPath)
 	if err != nil {
-		return fmt.Errorf("could not secure join inPath %q: %w", cfg.InPath, err)
+		return Result{Status: StatusFailure}, fmt.Errorf("could not secure join inPath %q: %w", cfg.InPath, err)
 	}
 	outPath, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.OutPath)
 	if err != nil {
-		return fmt.Errorf("could not secure join outPath %q: %w", cfg.OutPath, err)
+		return Result{Status: StatusFailure}, fmt.Errorf("could not secure join outPath %q: %w", cfg.OutPath, err)
 	}
 
 	// Perform the copy operation.
@@ -74,9 +71,9 @@ func (d *copyDirective) run(ctx context.Context, stepCtx *StepContext, cfg CopyC
 		},
 	}
 	if err = copy.Copy(inPath, outPath, opts); err != nil {
-		return fmt.Errorf("failed to copy %q to %q: %w", cfg.InPath, cfg.OutPath, err)
+		return Result{Status: StatusFailure}, fmt.Errorf("failed to copy %q to %q: %w", cfg.InPath, cfg.OutPath, err)
 	}
-	return nil
+	return Result{Status: StatusSuccess}, nil
 }
 
 // sanitizePathError sanitizes the path in a path error to be relative to the
