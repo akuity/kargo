@@ -60,15 +60,28 @@ func (d *helmUpdateImageDirective) run(
 	stepCtx *StepContext,
 	cfg HelmUpdateImageConfig,
 ) (Result, error) {
+	changes, err := d.generateImageUpdates(ctx, stepCtx, cfg)
+	if err != nil {
+		return ResultFailure, fmt.Errorf("failed to generate image updates: %w", err)
+	}
+
+	if len(changes) > 0 {
+		if err := d.updateValuesFile(stepCtx.WorkDir, cfg.Path, changes); err != nil {
+			return ResultFailure, fmt.Errorf("values file update failed: %w", err)
+		}
+	}
+
+	return ResultSuccess, nil
+}
+
+func (d *helmUpdateImageDirective) generateImageUpdates(
+	ctx context.Context,
+	stepCtx *StepContext,
+	cfg HelmUpdateImageConfig,
+) (map[string]string, error) {
 	changes := make(map[string]string, len(cfg.Images))
 	for _, image := range cfg.Images {
-		var desiredOrigin *kargoapi.FreightOrigin
-		if image.FromOrigin != nil {
-			desiredOrigin = &kargoapi.FreightOrigin{
-				Kind: kargoapi.FreightOriginKind(image.FromOrigin.Kind),
-				Name: image.FromOrigin.Name,
-			}
-		}
+		desiredOrigin := d.getDesiredOrigin(image.FromOrigin)
 
 		targetImage, err := freight.FindImage(
 			ctx,
@@ -80,34 +93,55 @@ func (d *helmUpdateImageDirective) run(
 			image.Image,
 		)
 		if err != nil {
-			return ResultFailure, err
+			return nil, fmt.Errorf("failed to find image %s: %w", image.Image, err)
 		}
 
 		if targetImage == nil {
 			continue
 		}
 
-		switch image.Value {
-		case ImageAndTag:
-			changes[image.Key] = fmt.Sprintf("%s:%s", targetImage.RepoURL, targetImage.Tag)
-		case Tag:
-			changes[image.Key] = targetImage.Tag
-		case ImageAndDigest:
-			changes[image.Key] = fmt.Sprintf("%s@%s", targetImage.RepoURL, targetImage.Digest)
-		case Digest:
-			changes[image.Key] = targetImage.Digest
-		}
-	}
-
-	if len(changes) > 0 {
-		absValuesFile, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.Path)
+		value, err := d.getImageValue(targetImage, image.Value)
 		if err != nil {
-			return ResultFailure, fmt.Errorf("error joining path %q: %w", cfg.Path, err)
+			return nil, err
 		}
-		if err = libYAML.SetStringsInFile(absValuesFile, changes); err != nil {
-			return ResultFailure, fmt.Errorf("error updating image references in values file %q: %w", cfg.Path, err)
-		}
-	}
 
-	return ResultSuccess, nil
+		changes[image.Key] = value
+	}
+	return changes, nil
+}
+
+func (d *helmUpdateImageDirective) getDesiredOrigin(fromOrigin *ChartFromOrigin) *kargoapi.FreightOrigin {
+	if fromOrigin == nil {
+		return nil
+	}
+	return &kargoapi.FreightOrigin{
+		Kind: kargoapi.FreightOriginKind(fromOrigin.Kind),
+		Name: fromOrigin.Name,
+	}
+}
+
+func (d *helmUpdateImageDirective) getImageValue(image *kargoapi.Image, valueType Value) (string, error) {
+	switch valueType {
+	case ImageAndTag:
+		return fmt.Sprintf("%s:%s", image.RepoURL, image.Tag), nil
+	case Tag:
+		return image.Tag, nil
+	case ImageAndDigest:
+		return fmt.Sprintf("%s@%s", image.RepoURL, image.Digest), nil
+	case Digest:
+		return image.Digest, nil
+	default:
+		return "", fmt.Errorf("unknown image value type %q", valueType)
+	}
+}
+
+func (d *helmUpdateImageDirective) updateValuesFile(workDir, path string, changes map[string]string) error {
+	absValuesFile, err := securejoin.SecureJoin(workDir, path)
+	if err != nil {
+		return fmt.Errorf("error joining path %q: %w", path, err)
+	}
+	if err := libYAML.SetStringsInFile(absValuesFile, changes); err != nil {
+		return fmt.Errorf("error updating image references in values file %q: %w", path, err)
+	}
+	return nil
 }
