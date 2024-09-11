@@ -71,8 +71,9 @@ func Test_helmUpdateChartDirective_run(t *testing.T) {
 				},
 			},
 			chartMetadata: &chart.Metadata{
-				Name:    "test-chart",
-				Version: "0.1.0",
+				APIVersion: chart.APIVersionV2,
+				Name:       "test-chart",
+				Version:    "0.1.0",
 				Dependencies: []*chart.Dependency{
 					{
 						Name:       "examplechart",
@@ -97,7 +98,14 @@ func Test_helmUpdateChartDirective_run(t *testing.T) {
 			},
 			assertions: func(t *testing.T, tempDir string, result Result, err error) {
 				assert.NoError(t, err)
-				assert.Equal(t, Result{Status: StatusSuccess}, result)
+				assert.Equal(t, Result{
+					Status: StatusSuccess,
+					Output: State{
+						"commitMessage": `Updated chart dependencies for testchart
+
+- examplechart: 0.1.0`,
+					},
+				}, result)
 
 				// Check if Chart.yaml was updated correctly
 				updatedChartYaml, err := os.ReadFile(filepath.Join(tempDir, "testchart", "Chart.yaml"))
@@ -106,6 +114,9 @@ func Test_helmUpdateChartDirective_run(t *testing.T) {
 
 				// Check if the dependency was downloaded
 				assert.FileExists(t, filepath.Join(tempDir, "testchart", "charts", "examplechart-0.1.0.tgz"))
+
+				// Check if the Chart.lock file was created
+				assert.FileExists(t, filepath.Join(tempDir, "testchart", "Chart.lock"))
 			},
 		},
 	}
@@ -390,8 +401,9 @@ func Test_helmUpdateChartDirective_updateDependencies(t *testing.T) {
 		// Prepare the dependant chart with a Chart.yaml file
 		chartPath := t.TempDir()
 		metadata := chart.Metadata{
-			Name:    "test-chart",
-			Version: "0.1.0",
+			APIVersion: chart.APIVersionV2,
+			Name:       "test-chart",
+			Version:    "0.1.0",
 			Dependencies: []*chart.Dependency{
 				{
 					Name:       "examplechart",
@@ -411,11 +423,21 @@ func Test_helmUpdateChartDirective_updateDependencies(t *testing.T) {
 
 		// Run the directive and assert the dependencies are updated
 		d := &helmUpdateChartDirective{}
-		err = d.updateDependencies(context.Background(), &StepContext{}, t.TempDir(), chartPath, nil)
+		newVersions, err := d.updateDependencies(
+			context.Background(),
+			&StepContext{},
+			t.TempDir(),
+			chartPath,
+			nil,
+		)
 		require.NoError(t, err)
 		require.DirExists(t, filepath.Join(chartPath, "charts"))
 		assert.FileExists(t, filepath.Join(chartPath, "charts", "examplechart-0.1.0.tgz"))
 		assert.FileExists(t, filepath.Join(chartPath, "charts", "demo-0.1.0.tgz"))
+		assert.Equal(t, map[string]string{
+			"examplechart": "0.1.0",
+			"demo":         "0.1.0",
+		}, newVersions)
 	})
 
 	t.Run("updates dependencies with credentials", func(t *testing.T) {
@@ -441,8 +463,9 @@ func Test_helmUpdateChartDirective_updateDependencies(t *testing.T) {
 		// Prepare the dependant chart with a Chart.yaml file
 		chartPath := t.TempDir()
 		metadata := chart.Metadata{
-			Name:    "test-chart",
-			Version: "0.1.0",
+			APIVersion: chart.APIVersionV2,
+			Name:       "test-chart",
+			Version:    "0.1.0",
 			Dependencies: []*chart.Dependency{
 				{
 					Name:       "demo",
@@ -467,7 +490,7 @@ func Test_helmUpdateChartDirective_updateDependencies(t *testing.T) {
 
 		// Run the directive and assert the dependency is updated
 		d := &helmUpdateChartDirective{}
-		err = d.updateDependencies(context.Background(), &StepContext{
+		newVersions, err := d.updateDependencies(context.Background(), &StepContext{
 			CredentialsDB: credentialsDB,
 		}, t.TempDir(), chartPath, []chartDependency{
 			{
@@ -478,6 +501,9 @@ func Test_helmUpdateChartDirective_updateDependencies(t *testing.T) {
 		require.NoError(t, err)
 		require.DirExists(t, filepath.Join(chartPath, "charts"))
 		assert.FileExists(t, filepath.Join(chartPath, "charts", "demo-0.1.0.tgz"))
+		assert.Equal(t, map[string]string{
+			"demo": "0.1.0",
+		}, newVersions)
 	})
 
 	tests := []struct {
@@ -544,7 +570,7 @@ func Test_helmUpdateChartDirective_updateDependencies(t *testing.T) {
 			helmHome, chartPath := t.TempDir(), t.TempDir()
 
 			d := &helmUpdateChartDirective{}
-			err := d.updateDependencies(context.Background(), &StepContext{
+			_, err := d.updateDependencies(context.Background(), &StepContext{
 				CredentialsDB: tt.credentialsDB,
 			}, helmHome, chartPath, tt.chartDependencies)
 			tt.assertions(t, helmHome, chartPath, err)
@@ -738,6 +764,122 @@ func Test_helmUpdateChartDirective_loadDependencyCredentials(t *testing.T) {
 	}
 }
 
+func Test_helmUpdateChartDirective_generateCommitMessage(t *testing.T) {
+	tests := []struct {
+		name        string
+		path        string
+		newVersions map[string]string
+		assertions  func(*testing.T, string)
+	}{
+		{
+			name:        "empty newVersions",
+			path:        "charts/mychart",
+			newVersions: map[string]string{},
+			assertions: func(t *testing.T, got string) {
+				assert.Empty(t, got)
+			},
+		},
+		{
+			name: "single update",
+			path: "charts/mychart",
+			newVersions: map[string]string{
+				"chart1": "1.0.0 -> 1.1.0",
+			},
+			assertions: func(t *testing.T, got string) {
+				assert.Contains(t, got, "Updated chart dependencies for charts/mychart")
+				assert.Contains(t, got, "- chart1: 1.0.0 -> 1.1.0")
+				assert.Equal(t, 2, strings.Count(got, "\n"))
+			},
+		},
+		{
+			name: "multiple updates",
+			path: "charts/mychart",
+			newVersions: map[string]string{
+				"chart1": "1.0.0 -> 1.1.0",
+				"chart2": "2.0.0 -> 2.1.0",
+				"chart3": "3.0.0 -> 3.1.0",
+			},
+			assertions: func(t *testing.T, got string) {
+				assert.Contains(t, got, "Updated chart dependencies for charts/mychart")
+				assert.Contains(t, got, "- chart1: 1.0.0 -> 1.1.0")
+				assert.Contains(t, got, "- chart2: 2.0.0 -> 2.1.0")
+				assert.Contains(t, got, "- chart3: 3.0.0 -> 3.1.0")
+				assert.Equal(t, 4, strings.Count(got, "\n"))
+			},
+		},
+		{
+			name: "updates and removals",
+			path: "charts/mychart",
+			newVersions: map[string]string{
+				"chart1": "1.0.0 -> 1.1.0",
+				"chart2": "",
+				"chart3": "3.0.0 -> 3.1.0",
+			},
+			assertions: func(t *testing.T, got string) {
+				assert.Contains(t, got, "Updated chart dependencies for charts/mychart")
+				assert.Contains(t, got, "- chart1: 1.0.0 -> 1.1.0")
+				assert.Contains(t, got, "- chart2: removed")
+				assert.Contains(t, got, "- chart3: 3.0.0 -> 3.1.0")
+				assert.Equal(t, 4, strings.Count(got, "\n"))
+			},
+		},
+		{
+			name: "only removals",
+			path: "charts/mychart",
+			newVersions: map[string]string{
+				"chart1": "",
+				"chart2": "",
+			},
+			assertions: func(t *testing.T, got string) {
+				assert.Contains(t, got, "Updated chart dependencies for charts/mychart")
+				assert.Contains(t, got, "- chart1: removed")
+				assert.Contains(t, got, "- chart2: removed")
+				assert.Equal(t, 3, strings.Count(got, "\n"))
+			},
+		},
+		{
+			name: "new additions",
+			path: "charts/mychart",
+			newVersions: map[string]string{
+				"chart1": "1.0.0",
+				"chart2": "2.0.0",
+			},
+			assertions: func(t *testing.T, got string) {
+				assert.Contains(t, got, "Updated chart dependencies for charts/mychart")
+				assert.Contains(t, got, "- chart1: 1.0.0")
+				assert.Contains(t, got, "- chart2: 2.0.0")
+				assert.Equal(t, 3, strings.Count(got, "\n"))
+			},
+		},
+		{
+			name: "mixed updates, removals, and additions",
+			path: "charts/mychart",
+			newVersions: map[string]string{
+				"chart1": "1.0.0 -> 1.1.0",
+				"chart2": "",
+				"chart3": "3.0.0",
+				"chart4": "4.0.0 -> 4.1.0",
+			},
+			assertions: func(t *testing.T, got string) {
+				assert.Contains(t, got, "Updated chart dependencies for charts/mychart")
+				assert.Contains(t, got, "- chart1: 1.0.0 -> 1.1.0")
+				assert.Contains(t, got, "- chart2: removed")
+				assert.Contains(t, got, "- chart3: 3.0.0")
+				assert.Contains(t, got, "- chart4: 4.0.0 -> 4.1.0")
+				assert.Equal(t, 5, strings.Count(got, "\n"))
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			d := &helmUpdateChartDirective{}
+			got := d.generateCommitMessage(tt.path, tt.newVersions)
+			tt.assertions(t, got)
+		})
+	}
+}
+
 func Test_normalizeChartReference(t *testing.T) {
 	tests := []struct {
 		name            string
@@ -806,16 +948,16 @@ func Test_normalizeChartReference(t *testing.T) {
 	}
 }
 
-func Test_loadChartDependencies(t *testing.T) {
+func Test_readChartDependencies(t *testing.T) {
 	tests := []struct {
-		name   string
-		setup  func(*testing.T) string
-		assert func(*testing.T, []chartDependency, error)
+		name       string
+		setup      func(*testing.T) string
+		assertions func(*testing.T, []chartDependency, error)
 	}{
 		{
 			name: "valid chart.yaml",
 			setup: func(t *testing.T) string {
-				tempDir := t.TempDir()
+				tmpDir := t.TempDir()
 
 				const chartYAML = `---
 apiVersion: v2
@@ -829,12 +971,12 @@ dependencies:
   version: 2.0.0
   repository: oci://registry.example.com/charts
 `
-				chartPath := filepath.Join(tempDir, "Chart.yaml")
+				chartPath := filepath.Join(tmpDir, "Chart.yaml")
 				require.NoError(t, os.WriteFile(chartPath, []byte(chartYAML), 0o600))
 
 				return chartPath
 			},
-			assert: func(t *testing.T, dependencies []chartDependency, err error) {
+			assertions: func(t *testing.T, dependencies []chartDependency, err error) {
 				require.NoError(t, err)
 				assert.Len(t, dependencies, 2)
 
@@ -847,17 +989,17 @@ dependencies:
 		{
 			name: "invalid Chart.yaml",
 			setup: func(t *testing.T) string {
-				tempDir := t.TempDir()
+				tmpDir := t.TempDir()
 
 				const chartYAML = `---
 this is not a valid chart.yaml
 `
-				chartPath := filepath.Join(tempDir, "Chart.yaml")
+				chartPath := filepath.Join(tmpDir, "Chart.yaml")
 				require.NoError(t, os.WriteFile(chartPath, []byte(chartYAML), 0o600))
 
 				return chartPath
 			},
-			assert: func(t *testing.T, dependencies []chartDependency, err error) {
+			assertions: func(t *testing.T, dependencies []chartDependency, err error) {
 				require.ErrorContains(t, err, "failed to unmarshal")
 				assert.Nil(t, dependencies)
 			},
@@ -867,7 +1009,7 @@ this is not a valid chart.yaml
 			setup: func(t *testing.T) string {
 				return filepath.Join(t.TempDir(), "Chart.yaml")
 			},
-			assert: func(t *testing.T, dependencies []chartDependency, err error) {
+			assertions: func(t *testing.T, dependencies []chartDependency, err error) {
 				require.ErrorContains(t, err, "failed to read file")
 				assert.Nil(t, dependencies)
 			},
@@ -877,8 +1019,140 @@ this is not a valid chart.yaml
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			chartPath := tt.setup(t)
-			dependencies, err := loadChartDependencies(chartPath)
-			tt.assert(t, dependencies, err)
+			dependencies, err := readChartDependencies(chartPath)
+			tt.assertions(t, dependencies, err)
+		})
+	}
+}
+
+func Test_readChartLock(t *testing.T) {
+	tests := []struct {
+		name       string
+		setup      func(*testing.T) string
+		assertions func(*testing.T, map[string]string, error)
+	}{
+		{
+			name: "valid Chart.lock",
+			setup: func(t *testing.T) string {
+				tmpDir := t.TempDir()
+
+				const chartLock = `---
+dependencies:
+- name: dep1
+  version: 1.0.0
+  repository: https://charts.example.com
+- name: dep2
+  version: 2.0.0
+  repository: oci://registry.example.com/charts
+`
+				require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "Chart.lock"), []byte(chartLock), 0o600))
+				return tmpDir
+			},
+			assertions: func(t *testing.T, charts map[string]string, err error) {
+				require.NoError(t, err)
+
+				assert.Len(t, charts, 2)
+				assert.Equal(t, "1.0.0", charts["dep1"])
+				assert.Equal(t, "2.0.0", charts["dep2"])
+			},
+		},
+		{
+			name: "invalid Chart.lock",
+			setup: func(t *testing.T) string {
+				tmpDir := t.TempDir()
+
+				const chartLock = `---
+this is not a valid Chart.lock
+`
+				require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "Chart.lock"), []byte(chartLock), 0o600))
+				return tmpDir
+			},
+			assertions: func(t *testing.T, charts map[string]string, err error) {
+				require.ErrorContains(t, err, "failed to parse Chart.lock")
+				assert.Empty(t, charts)
+			},
+		},
+		{
+			name: "missing Chart.lock",
+			setup: func(t *testing.T) string {
+				return t.TempDir()
+			},
+			assertions: func(t *testing.T, charts map[string]string, err error) {
+				require.NoError(t, err)
+				assert.Empty(t, charts)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			chartPath := tt.setup(t)
+			charts, err := readChartLock(chartPath)
+			tt.assertions(t, charts, err)
+		})
+	}
+}
+
+func Test_compareChartVersions(t *testing.T) {
+	tests := []struct {
+		name   string
+		before map[string]string
+		after  map[string]string
+		want   map[string]string
+	}{
+		{
+			name:   "No changes",
+			before: map[string]string{"chart1": "1.0.0", "chart2": "2.0.0"},
+			after:  map[string]string{"chart1": "1.0.0", "chart2": "2.0.0"},
+			want:   map[string]string{},
+		},
+		{
+			name:   "version update",
+			before: map[string]string{"chart1": "1.0.0", "chart2": "2.0.0"},
+			after:  map[string]string{"chart1": "1.1.0", "chart2": "2.0.0"},
+			want:   map[string]string{"chart1": "1.0.0 -> 1.1.0"},
+		},
+		{
+			name:   "new chart added",
+			before: map[string]string{"chart1": "1.0.0"},
+			after:  map[string]string{"chart1": "1.0.0", "chart2": "2.0.0"},
+			want:   map[string]string{"chart2": "2.0.0"},
+		},
+		{
+			name:   "chart removed",
+			before: map[string]string{"chart1": "1.0.0", "chart2": "2.0.0"},
+			after:  map[string]string{"chart1": "1.0.0"},
+			want:   map[string]string{"chart2": ""},
+		},
+		{
+			name:   "multiple changes",
+			before: map[string]string{"chart1": "1.0.0", "chart2": "2.0.0", "chart3": "3.0.0"},
+			after:  map[string]string{"chart1": "1.1.0", "chart2": "2.0.0", "chart4": "4.0.0"},
+			want:   map[string]string{"chart1": "1.0.0 -> 1.1.0", "chart3": "", "chart4": "4.0.0"},
+		},
+		{
+			name:   "empty before",
+			before: map[string]string{},
+			after:  map[string]string{"chart1": "1.0.0", "chart2": "2.0.0"},
+			want:   map[string]string{"chart1": "1.0.0", "chart2": "2.0.0"},
+		},
+		{
+			name:   "empty after",
+			before: map[string]string{"chart1": "1.0.0", "chart2": "2.0.0"},
+			after:  map[string]string{},
+			want:   map[string]string{"chart1": "", "chart2": ""},
+		},
+		{
+			name:   "both empty",
+			before: map[string]string{},
+			after:  map[string]string{},
+			want:   map[string]string{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, compareChartVersions(tt.before, tt.after))
 		})
 	}
 }
