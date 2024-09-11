@@ -870,11 +870,11 @@ func TestIndexServiceAccountsOIDCClaimsWithEmails(t *testing.T) {
 			sa: &corev1.ServiceAccount{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
-						rbacapi.AnnotationKeyOIDCClaimNamePrefix + "emails": "fake-email, fake-email-2",
+						rbacapi.AnnotationKeyOIDCClaimNamePrefix + "email": "fake-email, fake-email-2",
 					},
 				},
 			},
-			expected: []string{"emails/fake-email", "emails/fake-email-2"},
+			expected: []string{"email/fake-email", "email/fake-email-2"},
 		},
 	}
 	for _, testCase := range testCases {

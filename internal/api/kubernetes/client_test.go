@@ -432,7 +432,7 @@ func TestGetAuthorizedClient(t *testing.T) {
 			name: "sso user",
 			userInfo: &user.Info{
 				Claims: map[string]any{
-					"subs": "test-user",
+					"sub": "test-user",
 				},
 			},
 			assert: func(t *testing.T, _ libClient.Client, err error) {
