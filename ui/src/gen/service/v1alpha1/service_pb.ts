@@ -8,7 +8,7 @@ import { Message, proto3, Timestamp } from "@bufbuild/protobuf";
 import { Freight, Project, Promotion, Stage, Warehouse } from "../../v1alpha1/generated_pb.js";
 import { ConfigMap, Event, Secret } from "../../k8s.io/api/core/v1/generated_pb.js";
 import { AnalysisRun, AnalysisTemplate } from "../../rollouts/api/v1alpha1/generated_pb.js";
-import { ResourceDetails, Role, RoleResources, UserClaim } from "../../rbac/v1alpha1/generated_pb.js";
+import { Claim, ResourceDetails, Role, RoleResources } from "../../rbac/v1alpha1/generated_pb.js";
 
 /**
  * @generated from enum akuity.io.kargo.service.v1alpha1.RawFormat
@@ -4651,9 +4651,9 @@ export class Claims extends Message<Claims> {
   /**
    * Note: oneof and repeated do not work together
    *
-   * @generated from field: repeated github.com.akuity.kargo.api.rbac.v1alpha1.UserClaim claims = 1;
+   * @generated from field: repeated github.com.akuity.kargo.api.rbac.v1alpha1.Claim claims = 1;
    */
-  claims: UserClaim[] = [];
+  claims: Claim[] = [];
 
   constructor(data?: PartialMessage<Claims>) {
     super();
@@ -4663,7 +4663,7 @@ export class Claims extends Message<Claims> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "akuity.io.kargo.service.v1alpha1.Claims";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "claims", kind: "message", T: UserClaim, repeated: true },
+    { no: 1, name: "claims", kind: "message", T: Claim, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Claims {
