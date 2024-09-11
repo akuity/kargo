@@ -26,7 +26,7 @@ type Props = {
   hide: () => void;
 };
 
-type AllowedFields = 'name' | 'emails' | 'subs' | 'groups';
+type AllowedFields = 'name' | 'email' | 'sub' | 'group';
 
 const annotationsWithDescription = (description: string): { [key: string]: string } => {
   return description ? { [DESCRIPTION_ANNOTATION_KEY]: description } : {};
@@ -38,15 +38,15 @@ const nonZeroArray = (name: string) =>
 const formSchema = z.object({
   name: zodValidators.requiredString.regex(dnsRegex, 'Role name must be a valid DNS subdomain.'),
   description: z.string().optional(),
-  emails: nonZeroArray('email'),
-  subs: nonZeroArray('sub'),
-  groups: nonZeroArray('group')
+  email: nonZeroArray('email'),
+  sub: nonZeroArray('sub'),
+  group: nonZeroArray('group')
 });
 
 const multiFields: { name: AllowedFields; label?: string; placeholder: string }[] = [
-  { name: 'emails', placeholder: 'email@corp.com' },
-  { name: 'subs', label: 'Subjects', placeholder: 'mysubject' },
-  { name: 'groups', placeholder: 'mygroup' }
+  { name: 'email', placeholder: 'email@corp.com' },
+  { name: 'sub', label: 'Subjects', placeholder: 'mysubject' },
+  { name: 'group', placeholder: 'mygroup' }
 ];
 
 export const CreateRole = ({ editing, onSuccess, project, hide }: Props) => {
@@ -55,25 +55,25 @@ export const CreateRole = ({ editing, onSuccess, project, hide }: Props) => {
     values: {
       name: editing?.metadata?.name || '',
       description: editing?.metadata?.annotations[DESCRIPTION_ANNOTATION_KEY] || '',
-      emails:
+      email:
         editing?.claims.find((claim: Claim) => {
-          if (claim.name === 'emails') {
+          if (claim.name === 'email') {
             return claim;
           } else {
             return undefined;
           }
         })?.values || [],
-      subs:
+      sub:
         editing?.claims.find((claim: Claim) => {
-          if (claim.name === 'subs') {
+          if (claim.name === 'sub') {
             return claim;
           } else {
             return undefined;
           }
         })?.values || [],
-      groups:
+      group:
         editing?.claims.find((claim: Claim) => {
-          if (claim.name === 'groups') {
+          if (claim.name === 'group') {
             return claim;
           } else {
             return undefined;
@@ -103,21 +103,21 @@ export const CreateRole = ({ editing, onSuccess, project, hide }: Props) => {
         const newClaim = new Claim({
           name: String(field.name)
         });
-        if (newClaim.name === 'emails') {
-          if (values.emails.length === 0) {
+        if (newClaim.name === 'email') {
+          if (values.email.length === 0) {
             return;
           }
-          newClaim.values = values.emails;
-        } else if (newClaim.name === 'subs') {
-          if (values.subs.length === 0) {
+          newClaim.values = values.email;
+        } else if (newClaim.name === 'sub') {
+          if (values.sub.length === 0) {
             return;
           }
-          newClaim.values = values.subs;
-        } else if (newClaim.name === 'groups') {
-          if (values.groups.length === 0) {
+          newClaim.values = values.sub;
+        } else if (newClaim.name === 'group') {
+          if (values.group.length === 0) {
             return;
           }
-          newClaim.values = values.groups;
+          newClaim.values = values.group;
         }
         claimsArray.push(newClaim);
       });
