@@ -4645,41 +4645,41 @@ export class GetRoleResponse extends Message<GetRoleResponse> {
 }
 
 /**
- * @generated from message akuity.io.kargo.service.v1alpha1.UserClaims
+ * @generated from message akuity.io.kargo.service.v1alpha1.Claims
  */
-export class UserClaims extends Message<UserClaims> {
+export class Claims extends Message<Claims> {
   /**
    * Note: oneof and repeated do not work together
    *
-   * @generated from field: repeated github.com.akuity.kargo.api.rbac.v1alpha1.UserClaim user_claims = 1;
+   * @generated from field: repeated github.com.akuity.kargo.api.rbac.v1alpha1.UserClaim claims = 1;
    */
-  userClaims: UserClaim[] = [];
+  claims: UserClaim[] = [];
 
-  constructor(data?: PartialMessage<UserClaims>) {
+  constructor(data?: PartialMessage<Claims>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "akuity.io.kargo.service.v1alpha1.UserClaims";
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.Claims";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "user_claims", kind: "message", T: UserClaim, repeated: true },
+    { no: 1, name: "claims", kind: "message", T: UserClaim, repeated: true },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UserClaims {
-    return new UserClaims().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Claims {
+    return new Claims().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UserClaims {
-    return new UserClaims().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): Claims {
+    return new Claims().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UserClaims {
-    return new UserClaims().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Claims {
+    return new Claims().fromJsonString(jsonString, options);
   }
 
-  static equals(a: UserClaims | PlainMessage<UserClaims> | undefined, b: UserClaims | PlainMessage<UserClaims> | undefined): boolean {
-    return proto3.util.equals(UserClaims, a, b);
+  static equals(a: Claims | PlainMessage<Claims> | undefined, b: Claims | PlainMessage<Claims> | undefined): boolean {
+    return proto3.util.equals(Claims, a, b);
   }
 }
 
@@ -4702,9 +4702,9 @@ export class GrantRequest extends Message<GrantRequest> {
    */
   request: {
     /**
-     * @generated from field: akuity.io.kargo.service.v1alpha1.UserClaims user_claims = 3;
+     * @generated from field: akuity.io.kargo.service.v1alpha1.Claims user_claims = 3;
      */
-    value: UserClaims;
+    value: Claims;
     case: "userClaims";
   } | {
     /**
@@ -4724,7 +4724,7 @@ export class GrantRequest extends Message<GrantRequest> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "project", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "role", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "user_claims", kind: "message", T: UserClaims, oneof: "request" },
+    { no: 3, name: "user_claims", kind: "message", T: Claims, oneof: "request" },
     { no: 4, name: "resource_details", kind: "message", T: ResourceDetails, oneof: "request" },
   ]);
 
@@ -4889,9 +4889,9 @@ export class RevokeRequest extends Message<RevokeRequest> {
    */
   request: {
     /**
-     * @generated from field: akuity.io.kargo.service.v1alpha1.UserClaims user_claims = 3;
+     * @generated from field: akuity.io.kargo.service.v1alpha1.Claims user_claims = 3;
      */
-    value: UserClaims;
+    value: Claims;
     case: "userClaims";
   } | {
     /**
@@ -4911,7 +4911,7 @@ export class RevokeRequest extends Message<RevokeRequest> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "project", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "role", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "user_claims", kind: "message", T: UserClaims, oneof: "request" },
+    { no: 3, name: "user_claims", kind: "message", T: Claims, oneof: "request" },
     { no: 4, name: "resource_details", kind: "message", T: ResourceDetails, oneof: "request" },
   ]);
 
