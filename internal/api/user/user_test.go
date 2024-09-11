@@ -9,9 +9,7 @@ import (
 
 func TestContextWithUserInfo(t *testing.T) {
 	testUserInfo := Info{
-		Claims: map[string]any{
-			"sub": "hansolo",
-		},
+		Claims: map[string]any{"sub": "hansolo"},
 	}
 	ctx := ContextWithInfo(context.Background(), testUserInfo)
 	require.Equal(t, testUserInfo, ctx.Value(userInfoKey{}))
@@ -21,9 +19,7 @@ func TestUserInfoFromContext(t *testing.T) {
 	_, ok := InfoFromContext(context.Background())
 	require.False(t, ok)
 	testUserInfo := Info{
-		Claims: map[string]any{
-			"sub": "hansolo",
-		},
+		Claims: map[string]any{"sub": "hansolo"},
 	}
 	ctx := context.WithValue(context.Background(), userInfoKey{}, testUserInfo)
 	u, ok := InfoFromContext(ctx)

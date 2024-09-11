@@ -431,9 +431,7 @@ func TestGetAuthorizedClient(t *testing.T) {
 		{
 			name: "sso user",
 			userInfo: &user.Info{
-				Claims: map[string]any{
-					"sub": "test-user",
-				},
+				Claims: map[string]any{"sub": "test-user"},
 			},
 			assert: func(t *testing.T, _ libClient.Client, err error) {
 				require.True(t, kubeerr.IsForbidden(err))
