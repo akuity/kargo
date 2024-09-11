@@ -197,11 +197,16 @@ export const Pipelines = ({ project }: { project: Project }) => {
     }
   });
 
-  const [stagesPerFreight, subscribersByStage] = useMemo(() => {
+  const [stagesPerFreight, subscribersByStage, stagesWithFreight] = useMemo(() => {
     const stagesPerFreight: { [key: string]: Stage[] } = {};
     const subscribersByStage = {} as { [key: string]: Set<string> };
+    let stagesWithFreight = 0;
     (data?.stages || []).forEach((stage) => {
-      (getCurrentFreight(stage) || []).forEach((f) => {
+      const currentFreight = getCurrentFreight(stage);
+      if (currentFreight.length > 0) {
+        stagesWithFreight++;
+      }
+      (currentFreight || []).forEach((f) => {
         if (!stagesPerFreight[f.name || '']) {
           stagesPerFreight[f.name || ''] = [];
         }
@@ -218,7 +223,7 @@ export const Pipelines = ({ project }: { project: Project }) => {
         }
       });
     });
-    return [stagesPerFreight, subscribersByStage];
+    return [stagesPerFreight, subscribersByStage, stagesWithFreight];
   }, [data, freightData]);
 
   const fullFreightById: { [key: string]: Freight } = useMemo(() => {
@@ -310,7 +315,7 @@ export const Pipelines = ({ project }: { project: Project }) => {
                 stagesPerFreight={stagesPerFreight}
                 collapsed={freightTimelineCollapsed}
                 setCollapsed={setFreightTimelineCollapsed}
-                stageCount={data?.stages.length || 0}
+                stageCount={stagesWithFreight}
               />
             </Suspense>
           </FreightTimelineWrapper>
@@ -438,14 +443,7 @@ export const Pipelines = ({ project }: { project: Project }) => {
                               setSelectedWarehouse('');
                             } else {
                               const stageName = node.data?.metadata?.name || '';
-                              // default to current freight when promoting subscribers
-                              state.select(
-                                type,
-                                stageName,
-                                type === FreightTimelineAction.PromoteSubscribers
-                                  ? currentFreight[0].name
-                                  : undefined
-                              );
+                              state.select(type, stageName, undefined);
                             }
                           }}
                           action={state.action}

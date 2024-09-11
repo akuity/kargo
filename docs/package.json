@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "docusaurus": "docusaurus",
-    "start": "pnpm build-gtag-plugin && docusaurus start",
+    "start": "pnpm build-gtag-plugin && docusaurus start --host 0.0.0.0",
     "build-gtag-plugin": "cd plugins/gtag && pnpm install && pnpm build",
     "build": "pnpm build-gtag-plugin && docusaurus build",
     "swizzle": "docusaurus swizzle",
@@ -15,6 +15,7 @@
     "write-heading-ids": "docusaurus write-heading-ids",
     "typecheck": "tsc"
   },
+  "packageManager": "pnpm@9.0.3",
   "dependencies": {
     "@cmfcmf/docusaurus-search-local": "^0.11.0",
     "@docusaurus/core": "^3.0.0",

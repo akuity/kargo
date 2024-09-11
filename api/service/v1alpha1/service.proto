@@ -91,6 +91,11 @@ service KargoService {
   rpc DeleteAnalysisTemplate(DeleteAnalysisTemplateRequest) returns (DeleteAnalysisTemplateResponse);
   rpc GetAnalysisRun(GetAnalysisRunRequest) returns (GetAnalysisRunResponse);
 
+  rpc ListAnalysisTemplateConfigMaps(ListAnalysisTemplateConfigMapsRequest) returns (ListAnalysisTemplateConfigMapsResponse);
+  rpc GetAnalysisTemplateConfigMap(GetAnalysisTemplateConfigMapRequest) returns (GetAnalysisTemplateConfigMapResponse);
+  rpc ListAnalysisTemplateSecrets(ListAnalysisTemplateSecretsRequest) returns (ListAnalysisTemplateSecretsResponse);
+  rpc GetAnalysisTemplateSecret(GetAnalysisTemplateSecretRequest) returns (GetAnalysisTemplateSecretResponse);
+
   /* Event APIs */
 
   rpc ListProjectEvents(ListProjectEventsRequest) returns (ListProjectEventsResponse);
@@ -707,4 +712,46 @@ message UpdateRoleRequest {
 
 message UpdateRoleResponse {
   github.com.akuity.kargo.api.rbac.v1alpha1.Role role = 1;
+}
+
+message ListAnalysisTemplateConfigMapsRequest {
+  string project = 1;
+}
+
+message ListAnalysisTemplateConfigMapsResponse {
+  repeated k8s.io.api.core.v1.ConfigMap config_maps = 1;
+}
+
+message GetAnalysisTemplateConfigMapRequest {
+  string project = 1;
+  string name = 2;
+  RawFormat format = 3;
+}
+
+message GetAnalysisTemplateConfigMapResponse {
+  oneof result {
+    k8s.io.api.core.v1.ConfigMap config_map = 1;
+    bytes raw = 2;
+  }
+}
+
+message ListAnalysisTemplateSecretsRequest {
+  string project = 1;
+}
+
+message ListAnalysisTemplateSecretsResponse {
+  repeated k8s.io.api.core.v1.Secret secrets = 1;
+}
+
+message GetAnalysisTemplateSecretRequest {
+  string project = 1;
+  string name = 2;
+  RawFormat format = 3;
+}
+
+message GetAnalysisTemplateSecretResponse {
+  oneof result {
+    k8s.io.api.core.v1.Secret secret = 1;
+    bytes raw = 2;
+  }
 }
