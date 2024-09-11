@@ -30,9 +30,6 @@ type grantOptions struct {
 
 	Project      string
 	Role         string
-	Subs         []string
-	Emails       []string
-	Groups       []string
 	Claims       []string
 	ResourceType string
 	ResourceName string
@@ -47,23 +44,21 @@ func NewCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams) *cobra
 	}
 
 	cmd := &cobra.Command{
-		Use: `grant [--project=project] --role=role \
-		[--sub=sub] [--email=email] [--group=group] [--claim=name=value] \
-		[--resource-type=resource-type [--resource-name=resource-name] --verb=verb]`,
+		Use: `grant [--project=project] --role=role [--claim=name=value1,value2,...]... \
+		[--verb=verb --resource-type=resource-type [--resource-name=resource-name]]`,
 		Short: "Grant a role to a user or grant permissions to a role",
 		Args:  option.NoArgs,
 		Example: templates.Example(`
 # Grant my-role permission to update all stages
-kargo grant --project=my-project --role=my-role --resource-type=stage --verb=update
+kargo grant --project=my-project --role=my-role --verb=update --resource-type=stage
 
 # Grant my-role permission to promote to stage dev
 kargo grant --project=my-project --role=my-role \
-  --resource-type=stage --resource-name=dev --verb=promote
+  --verb=promote --resource-type=stage --resource-name=dev
 
-# Grant my-role to users with specific nonstandard claim, email address, groups and sub claim
+# Grant my-role to users with specific claims
 kargo grant --project=my-project --role=my-role \
-  --claim=given_name=bob --claim=emails=alice@example.com \
-  --claim=subs=1234567890 --claim=groups=admins
+  --claim=email=alice@example.com --claim=groups=admins,power-users
 `),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if err := cmdOpts.validate(); err != nil {
@@ -110,10 +105,9 @@ func (o *grantOptions) addFlags(cmd *cobra.Command) {
 
 	// You can't grant a role to users and grant permissions to a role at the same
 	// time.
-	cmd.MarkFlagsMutuallyExclusive(option.SubFlag, option.ResourceTypeFlag)
-	cmd.MarkFlagsMutuallyExclusive(option.EmailFlag, option.ResourceTypeFlag)
-	cmd.MarkFlagsMutuallyExclusive(option.GroupFlag, option.ResourceTypeFlag)
+	cmd.MarkFlagsMutuallyExclusive(option.ClaimFlag, option.VerbFlag)
 	cmd.MarkFlagsMutuallyExclusive(option.ClaimFlag, option.ResourceTypeFlag)
+	cmd.MarkFlagsMutuallyExclusive(option.ClaimFlag, option.ResourceNameFlag)
 
 	cmd.MarkFlagsRequiredTogether(option.ResourceTypeFlag, option.VerbFlag)
 }

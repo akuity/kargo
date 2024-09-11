@@ -30,9 +30,6 @@ type revokeOptions struct {
 
 	Project      string
 	Role         string
-	Subs         []string
-	Emails       []string
-	Groups       []string
 	Claims       []string
 	ResourceType string
 	ResourceName string
@@ -47,22 +44,21 @@ func NewCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams) *cobra
 	}
 
 	cmd := &cobra.Command{
-		Use: `revoke [--project=project] --role=role \
-		[--sub=sub] [--email=email] [--group=group] [--claim=name=value] \
-		[--resource-type=resource-type [--resource-name=resource-name] --verb=verb]`,
+		Use: `revoke [--project=project] --role=role [--claim=name=value1,value2,...]... \
+		[--verb=verb --resource-type=resource-type [--resource-name=resource-name]]`,
 		Short: "Revoke a role from a user or revoke permissions from a role",
 		Args:  option.NoArgs,
 		Example: templates.Example(`
 # Revoke permission to update all stages from my-role
-kargo revoke --project=my-project --role=my-role --resource-type=stage --verb=update
+kargo revoke --project=my-project --role=my-role --verb=update --resource-type=stage
 
 # Revoke permission to promote to stage dev from my-role
 kargo revoke --project=my-project --role=my-role \
-  --resource-type=stage --resource-name=dev --verb=promote
+  --verb=promote --resource-type=stage --resource-name=dev
 
-# Revoke my-role from users with a non standard claim, in a specific group and with specific email and sub claims.
-kargo revoke --project=my-project --role=my-role --claim=group=admins \
-  --claim=given_name=alice --claim=subs=12345678 --claim=emails=alice@example.com
+# Revoke my-role from users with specific claims
+kargo revoke --project=my-project --role=my-role \
+  --claim=email=alice@example.com --claim=groups=admins,power-users
 `),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if err := cmdOpts.validate(); err != nil {
@@ -108,10 +104,9 @@ func (o *revokeOptions) addFlags(cmd *cobra.Command) {
 
 	// You can't revoke a role from users and revoke permissions from a role at
 	// the same time.
-	cmd.MarkFlagsMutuallyExclusive(option.SubFlag, option.ResourceTypeFlag)
-	cmd.MarkFlagsMutuallyExclusive(option.EmailFlag, option.ResourceTypeFlag)
-	cmd.MarkFlagsMutuallyExclusive(option.GroupFlag, option.ResourceTypeFlag)
+	cmd.MarkFlagsMutuallyExclusive(option.ClaimFlag, option.VerbFlag)
 	cmd.MarkFlagsMutuallyExclusive(option.ClaimFlag, option.ResourceTypeFlag)
+	cmd.MarkFlagsMutuallyExclusive(option.ClaimFlag, option.ResourceNameFlag)
 
 	cmd.MarkFlagsRequiredTogether(option.ResourceTypeFlag, option.VerbFlag)
 }
