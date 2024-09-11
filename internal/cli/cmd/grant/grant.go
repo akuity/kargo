@@ -153,7 +153,7 @@ func (o *grantOptions) run(ctx context.Context) error {
 			},
 		}
 	} else {
-		claimsList := svcv1alpha1.ListUserClaims{}
+		claimsList := svcv1alpha1.UserClaims{}
 
 		for _, claimFlagValue := range o.Claims {
 			claimFlagNameAndValue := strings.Split(claimFlagValue, "=")
