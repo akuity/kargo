@@ -19,6 +19,14 @@ func (s *server) GetCredentials(
 	ctx context.Context,
 	req *connect.Request[svcv1alpha1.GetCredentialsRequest],
 ) (*connect.Response[svcv1alpha1.GetCredentialsResponse], error) {
+	// Check if secret management is enabled
+	if !s.cfg.EnableSecretManagement {
+		return nil, connect.NewError(
+			connect.CodeUnimplemented,
+			fmt.Errorf("secret management is not enabled"),
+		)
+	}
+
 	project := req.Msg.GetProject()
 	if err := validateFieldNotEmpty("project", project); err != nil {
 		return nil, err
