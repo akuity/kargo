@@ -32,9 +32,6 @@ type createRoleOptions struct {
 	Project     string
 	Name        string
 	Description string
-	Subs        []string
-	Emails      []string
-	Groups      []string
 	Claims      []string
 }
 
@@ -46,34 +43,25 @@ func newRoleCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams) *c
 	}
 
 	cmd := &cobra.Command{
-		Use:   "role [--project=project] NAME [--sub=subject] [--email=email] [--group] [--claim=name=value]",
+		Use:   "role [--project=project] NAME [--claim=name=value1,value2,...]...",
 		Short: "Create a role",
 		Args:  option.ExactArgs(1),
 		Example: templates.Example(`
 # Create a role in a project without initially granting it to any users
 kargo create role --project=my-project my-role
 
-# Create a role in a project and grant it to users with specific sub claims
+# Create a role in a project and grant it to users with specific claims
 kargo create role --project=my-project my-role \
-  --sub=1234567890 --sub=0987654321
-
-# Create a role in a project and grant it to users with specific email addresses
-kargo create role --project=my-project my-role \
-  --email=bob@example.com --email=alice@example.com
-
-# Create a role in a project and grant it to users in specific groups
-kargo create role --project=my-project my-role \
-  --group=admins --group=engineers
+  --claim=email=alice@example.com --claim=groups=admins,power-users
 
 # Create a role the default project without initially granting it to any users
 kargo config set-project my-project
 kargo create role my-role
 
-# Create a role in the default project and grant it to users with a specific 
-# claim name and value e.g. sub, emails, groups
+# Create a role in the default project and grant it to users with specific claims
 kargo config set-project my-project
 kargo create role my-role \
---claim=given_name=alice --claim=emails=alice@example.com --claim=sub=123
+  --claim=email=alice@example.com --claim=groups=admins,power-users
 `),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmdOpts.complete(args)
