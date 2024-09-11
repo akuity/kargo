@@ -38,7 +38,7 @@ func (s *server) ListAnalysisTemplateConfigMaps(
 	opts := []client.ListOption{
 		client.InNamespace(project),
 		client.MatchingLabels{
-			kargoapi.AnalysisEnvLabelKey: kargoapi.LabelTrueValue,
+			kargoapi.AnalysisRunTemplateLabelKey: kargoapi.AnalysisRunTemplateLabelValueConfig,
 		},
 	}
 	if err := s.client.List(ctx, &list, opts...); err != nil {

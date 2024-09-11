@@ -61,7 +61,7 @@ func (s *server) GetAnalysisTemplateConfigMap(
 		return nil, err
 	}
 
-	if u.GetLabels()[kargoapi.AnalysisEnvLabelKey] != kargoapi.LabelTrueValue {
+	if u.GetLabels()[kargoapi.AnalysisRunTemplateLabelKey] != kargoapi.AnalysisRunTemplateLabelValueConfig {
 		// Hide existence of the ConfigMap for the security
 		err := fmt.Errorf("ConfigMap %q not found in namespace %q", name, project)
 		return nil, connect.NewError(connect.CodeNotFound, err)

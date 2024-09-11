@@ -61,7 +61,7 @@ func (s *server) GetAnalysisTemplateSecret(
 		return nil, err
 	}
 
-	if u.GetLabels()[kargoapi.AnalysisEnvLabelKey] != kargoapi.LabelTrueValue {
+	if u.GetLabels()[kargoapi.AnalysisRunTemplateLabelKey] != kargoapi.AnalysisRunTemplateLabelValueConfig {
 		// Hide existence of the Secret for the security
 		err := fmt.Errorf("Secret %q not found in namespace %q", name, project)
 		return nil, connect.NewError(connect.CodeNotFound, err)
