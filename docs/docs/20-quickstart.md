@@ -60,6 +60,12 @@ for Docker Desktop for Mac OS only. You can follow
 [these instructions](https://docs.orbstack.dev/kubernetes/) to enable its
 built-in Kubernetes support.
 
+To ensure that your Kubernetes cluster is up and running, use the following command:
+
+```shell
+orb start k8s
+```
+
 :::info
 Although this is one of the fastest paths to a local Kubernetes cluster, be
 aware that OrbStack supports only a _single_ Kubernetes cluster. If
@@ -146,10 +152,14 @@ At the end of this process:
 * The Argo CD dashboard will be accessible at [localhost:31443](https://localhost:31443).
 
   The username and password are both `admin`.
+  
+  ![Argo-dashboard-screenshot](../static/img/argo-dashboard-1.png)
 
 * The Kargo dashboard will be accessible at [localhost:31444](https://localhost:31444).
 
   The admin password is `admin`.
+
+  ![Kargo-dashboard-screenshot](../static/img/kargo-dashboard-1.png)
 
 * You can safely ignore all cert errors for both of the above.
 
@@ -260,6 +270,8 @@ If you visit [your Argo CD dashboard](https://localhost:31443), you will notice
 all three Argo CD `Application`s have not yet synced because they're not
 configured to do so automatically, and in fact, the branches referenced by their
 `targetRevision` fields do not even exist yet.
+
+![Argo-dashboard-screenshot](../static/img/argo-dashboard-2.png)
 
 :::info
 Our three stages all existing in a single cluster is for the sake of expediency.
@@ -568,14 +580,17 @@ the previous section.
     version of the `public.ecr.aws/nginx/nginx` container image.
     :::
 
-1. We'll use it later, so save the ID of the `Freight` to an environment
+4. We'll use it later, so save the ID of the `Freight` to an environment
    variable:
 
     ```shell
     export FREIGHT_ALIAS=$(kargo get freight --project kargo-demo --output jsonpath={.alias})
     ```
 
-1. Now, let's _promote_ the `Freight` into the `test` `Stage`:
+     For additional details and a visual overview, please refer to the Kargo dashboard.
+  ![Argo-dashboard-screenshot](../static/img/kargo-dashboard-projects.png)
+
+5. Now, let's _promote_ the `Freight` into the `test` `Stage`:
 
     ```shell
     kargo promote --project kargo-demo --freight-alias $FREIGHT_ALIAS --stage test
@@ -623,6 +638,10 @@ the previous section.
     state and we can further validate the success of this entire process by
     visiting the test instance of our site at
     [localhost:30081](http://localhost:30081).
+
+    For a visual confirmation, you can also review the Kargo dashboard, where you should see that the `test` `Stage` has been promoted successfully and is displayed as Healthy:
+
+    ![Kargo-dashboard-screenshot](../static/img/kargo-dashboard-promotion.png)
 
     If we once again view the `status` of our `test` `Stage` in more detail, we
     will see that it now reflects its current `Freight`, and the history of all
