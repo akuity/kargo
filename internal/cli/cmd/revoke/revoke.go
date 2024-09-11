@@ -44,7 +44,7 @@ func NewCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams) *cobra
 	}
 
 	cmd := &cobra.Command{
-		Use: `revoke [--project=project] --role=role [--claim=name=value1,value2,...]... \
+		Use: `revoke [--project=project] --role=role [--claim=name=value]... \
 		[--verb=verb --resource-type=resource-type [--resource-name=resource-name]]`,
 		Short: "Revoke a role from a user or revoke permissions from a role",
 		Args:  option.NoArgs,

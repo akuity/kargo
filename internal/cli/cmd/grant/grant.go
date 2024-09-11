@@ -44,7 +44,7 @@ func NewCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams) *cobra
 	}
 
 	cmd := &cobra.Command{
-		Use: `grant [--project=project] --role=role [--claim=name=value1,value2,...]... \
+		Use: `grant [--project=project] --role=role [--claim=name=value]... \
 		[--verb=verb --resource-type=resource-type [--resource-name=resource-name]]`,
 		Short: "Grant a role to a user or grant permissions to a role",
 		Args:  option.NoArgs,

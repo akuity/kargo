@@ -43,7 +43,7 @@ func newRoleCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams) *c
 	}
 
 	cmd := &cobra.Command{
-		Use:   "role [--project=project] NAME [--claim=name=value1,value2,...]...",
+		Use:   "role [--project=project] NAME [--claim=name=value]...",
 		Short: "Create a role",
 		Args:  option.ExactArgs(1),
 		Example: templates.Example(`
