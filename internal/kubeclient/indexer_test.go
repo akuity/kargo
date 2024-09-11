@@ -855,7 +855,7 @@ func TestIndexStagesByWarehouse(t *testing.T) {
 	}
 }
 
-func TestIndexServiceAccountsOIDCClaimsWithEmails(t *testing.T) {
+func TestIndexServiceAccountsByOIDCClaims(t *testing.T) {
 	testCases := []struct {
 		name     string
 		sa       *corev1.ServiceAccount
@@ -882,7 +882,7 @@ func TestIndexServiceAccountsOIDCClaimsWithEmails(t *testing.T) {
 			require.Equal(
 				t,
 				testCase.expected,
-				indexServiceAccountsOIDCClaims(testCase.sa),
+				indexServiceAccountsByOIDCClaims(testCase.sa),
 			)
 		})
 	}

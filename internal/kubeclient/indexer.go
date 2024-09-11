@@ -512,13 +512,13 @@ func IndexServiceAccountsByOIDCClaims(ctx context.Context, clstr cluster.Cluster
 		ctx,
 		&corev1.ServiceAccount{},
 		ServiceAccountsByOIDCClaimsIndexField,
-		indexServiceAccountsOIDCClaims,
+		indexServiceAccountsByOIDCClaims,
 	)
 }
 
-// indexServiceAccountsOIDCClaims is a client.IndexerFunc that indexes ServiceAccounts by the
-// OIDC claim name and value annotations.
-func indexServiceAccountsOIDCClaims(obj client.Object) []string {
+// indexServiceAccountsByOIDCClaims is a client.IndexerFunc that indexes
+// ServiceAccounts by the OIDC claims.
+func indexServiceAccountsByOIDCClaims(obj client.Object) []string {
 	sa := obj.(*corev1.ServiceAccount) // nolint: forcetypeassert
 	refinedClaimValues := []string{}
 	for annotationKey, annotationValue := range sa.GetAnnotations() {
