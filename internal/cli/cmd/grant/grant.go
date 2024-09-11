@@ -153,17 +153,17 @@ func (o *grantOptions) run(ctx context.Context) error {
 			},
 		}
 	} else {
-		claimsList := svcv1alpha1.UserClaims{}
+		claims := svcv1alpha1.Claims{}
 
 		for _, claimFlagValue := range o.Claims {
 			claimFlagNameAndValue := strings.Split(claimFlagValue, "=")
-			claimsList.UserClaims = append(claimsList.UserClaims, &rbacapi.UserClaim{
+			claims.Claims = append(claims.Claims, &rbacapi.UserClaim{
 				Name:   claimFlagNameAndValue[0],
 				Values: []string{claimFlagNameAndValue[1]},
 			})
 		}
 		req.Request = &svcv1alpha1.GrantRequest_UserClaims{
-			UserClaims: &claimsList,
+			UserClaims: &claims,
 		}
 	}
 

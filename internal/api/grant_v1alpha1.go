@@ -26,9 +26,9 @@ func (s *server) Grant(
 
 	var role *rbacapi.Role
 	var err error
-	if users := req.Msg.GetUserClaims(); users != nil {
+	if claims := req.Msg.GetUserClaims(); claims != nil {
 		if role, err = s.rolesDB.GrantRoleToUsers(
-			ctx, project, req.Msg.Role, users.UserClaims,
+			ctx, project, req.Msg.Role, claims.Claims,
 		); err != nil {
 			return nil, fmt.Errorf("error granting Kargo Role to users: %w", err)
 		}

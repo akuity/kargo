@@ -26,9 +26,9 @@ func (s *server) Revoke(
 
 	var role *rbacapi.Role
 	var err error
-	if users := req.Msg.GetUserClaims(); users != nil {
+	if claims := req.Msg.GetUserClaims(); claims != nil {
 		if role, err = s.rolesDB.RevokeRoleFromUsers(
-			ctx, project, req.Msg.Role, users.UserClaims,
+			ctx, project, req.Msg.Role, claims.Claims,
 		); err != nil {
 			return nil, fmt.Errorf("error revoking Kargo Role from users: %w", err)
 		}
