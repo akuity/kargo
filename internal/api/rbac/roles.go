@@ -57,7 +57,7 @@ type RolesDatabase interface {
 		ctx context.Context,
 		project string,
 		name string,
-		userClaims []*rbacapi.UserClaim,
+		userClaims []rbacapi.Claim,
 	) (*rbacapi.Role, error)
 	// List returns Kargo Role representations of underlying ServiceAccounts and
 	// andy Roles and RoleBindings associated with them.
@@ -81,7 +81,7 @@ type RolesDatabase interface {
 		ctx context.Context,
 		project string,
 		name string,
-		userClaims []*rbacapi.UserClaim,
+		userClaims []rbacapi.Claim,
 	) (*rbacapi.Role, error)
 	// Update updates the underlying ServiceAccount and Role resources underlying
 	// a Kargo Role. It will return an error if no underlying ServiceAccount
@@ -392,7 +392,7 @@ func (r *rolesDatabase) GrantRoleToUsers(
 	ctx context.Context,
 	project string,
 	name string,
-	userClaims []*rbacapi.UserClaim,
+	userClaims []rbacapi.Claim,
 ) (*rbacapi.Role, error) {
 	sa, roles, rbs, err := r.GetAsResources(ctx, project, name)
 	if err != nil {
@@ -541,7 +541,7 @@ func (r *rolesDatabase) RevokeRoleFromUsers(
 	ctx context.Context,
 	project string,
 	name string,
-	userClaims []*rbacapi.UserClaim,
+	userClaims []rbacapi.Claim,
 ) (*rbacapi.Role, error) {
 	// Make sure at least part of the ServiceAccount/Role/RoleBinding trio exists
 	sa, roles, rbs, err := r.GetAsResources(ctx, project, name)
@@ -656,14 +656,17 @@ func ResourcesToRole(
 
 	for annotationKey, annotationValue := range sa.Annotations {
 		if strings.HasPrefix(annotationKey, rbacapi.AnnotationKeyOIDCClaimNamePrefix) {
-			newClaim := rbacapi.UserClaim{}
-			newClaim.Name = strings.Replace(annotationKey, rbacapi.AnnotationKeyOIDCClaimNamePrefix, "", -1)
-			newClaim.Values = strings.Split(annotationValue, ",")
-			kargoRole.Claims = append(kargoRole.Claims, &newClaim)
+			kargoRole.Claims = append(
+				kargoRole.Claims,
+				rbacapi.Claim{
+					Name:   strings.Replace(annotationKey, rbacapi.AnnotationKeyOIDCClaimNamePrefix, "", -1),
+					Values: strings.Split(annotationValue, ","),
+				},
+			)
 		}
 	}
 
-	slices.SortFunc(kargoRole.Claims, func(lhs, rhs *rbacapi.UserClaim) int {
+	slices.SortFunc(kargoRole.Claims, func(lhs, rhs rbacapi.Claim) int {
 		return strings.Compare(lhs.Name, rhs.Name)
 	})
 
@@ -705,7 +708,7 @@ func RoleToResources(
 	return sa, role, rb, nil
 }
 
-func replaceClaimAnnotation(sa *corev1.ServiceAccount, prefix string, claims []*rbacapi.UserClaim) {
+func replaceClaimAnnotation(sa *corev1.ServiceAccount, prefix string, claims []rbacapi.Claim) {
 	for _, claim := range claims {
 		slices.Sort(claim.Values)
 		claim.Values = slices.Compact(claim.Values)
@@ -716,7 +719,7 @@ func replaceClaimAnnotation(sa *corev1.ServiceAccount, prefix string, claims []*
 	}
 }
 
-func amendClaimAnnotation(sa *corev1.ServiceAccount, prefix string, claims []*rbacapi.UserClaim) {
+func amendClaimAnnotation(sa *corev1.ServiceAccount, prefix string, claims []rbacapi.Claim) {
 	for _, claim := range claims {
 		if existing, exists := sa.Annotations[prefix+claim.Name]; exists {
 			claim.Values = append(strings.Split(existing, ","), claim.Values...)
@@ -730,7 +733,7 @@ func amendClaimAnnotation(sa *corev1.ServiceAccount, prefix string, claims []*rb
 	}
 }
 
-func dropFromClaimAnnotation(sa *corev1.ServiceAccount, prefix string, claims []*rbacapi.UserClaim) {
+func dropFromClaimAnnotation(sa *corev1.ServiceAccount, prefix string, claims []rbacapi.Claim) {
 	for _, claim := range claims {
 		slices.Sort(claim.Values)
 		claim.Values = slices.Compact(claim.Values)

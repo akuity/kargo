@@ -155,7 +155,7 @@ func (o *revokeOptions) run(ctx context.Context) error {
 		claims := svcv1alpha1.Claims{}
 		for _, claimFlagValue := range o.Claims {
 			claimFlagNameAndValue := strings.Split(claimFlagValue, "=")
-			claims.Claims = append(claims.Claims, &rbacapi.UserClaim{
+			claims.Claims = append(claims.Claims, &rbacapi.Claim{
 				Name:   claimFlagNameAndValue[0],
 				Values: []string{claimFlagNameAndValue[1]},
 			})

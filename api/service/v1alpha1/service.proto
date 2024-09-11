@@ -666,7 +666,7 @@ message GetRoleResponse {
 
 message Claims {
   // Note: oneof and repeated do not work together
-  repeated github.com.akuity.kargo.api.rbac.v1alpha1.UserClaim claims = 1;
+  repeated github.com.akuity.kargo.api.rbac.v1alpha1.Claim claims = 1;
 }
 
 message GrantRequest {

@@ -157,7 +157,7 @@ func (o *grantOptions) run(ctx context.Context) error {
 
 		for _, claimFlagValue := range o.Claims {
 			claimFlagNameAndValue := strings.Split(claimFlagValue, "=")
-			claims.Claims = append(claims.Claims, &rbacapi.UserClaim{
+			claims.Claims = append(claims.Claims, &rbacapi.Claim{
 				Name:   claimFlagNameAndValue[0],
 				Values: []string{claimFlagNameAndValue[1]},
 			})

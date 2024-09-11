@@ -98,7 +98,7 @@ func TestCreate(t *testing.T) {
 					kargoapi.AnnotationKeyDescription: "fake-description",
 				},
 			},
-			Claims: []*rbacapi.UserClaim{
+			Claims: []rbacapi.Claim{
 				{
 					Name:   "sub",
 					Values: []string{"foo-sub", "bar-sub"},
@@ -264,7 +264,7 @@ func TestGet(t *testing.T) {
 					CreationTimestamp: now,
 				},
 				KargoManaged: false,
-				Claims: []*rbacapi.UserClaim{
+				Claims: []rbacapi.Claim{
 					{
 						Name:   "email",
 						Values: []string{"foo-email", "bar-email"},
@@ -325,7 +325,7 @@ func TestGet(t *testing.T) {
 					CreationTimestamp: now,
 				},
 				KargoManaged: true,
-				Claims: []*rbacapi.UserClaim{
+				Claims: []rbacapi.Claim{
 					{
 						Name:   "email",
 						Values: []string{"foo-email", "bar-email"},
@@ -540,7 +540,7 @@ func TestGrantRoleToUsers(t *testing.T) {
 			context.Background(),
 			testProject,
 			testKargoRoleName,
-			[]*rbacapi.UserClaim{
+			[]rbacapi.Claim{
 				{
 					Name:   "sub",
 					Values: []string{"fake-sub"},
@@ -558,7 +558,7 @@ func TestGrantRoleToUsers(t *testing.T) {
 			context.Background(),
 			testProject,
 			testKargoRoleName,
-			[]*rbacapi.UserClaim{
+			[]rbacapi.Claim{
 				{
 					Name:   "sub",
 					Values: []string{"fake-sub"},
@@ -581,7 +581,7 @@ func TestGrantRoleToUsers(t *testing.T) {
 			context.Background(),
 			testProject,
 			testKargoRoleName,
-			[]*rbacapi.UserClaim{
+			[]rbacapi.Claim{
 				{
 					Name:   "sub",
 					Values: []string{"foo-sub", "bar-sub"},
@@ -652,7 +652,7 @@ func TestList(t *testing.T) {
 					CreationTimestamp: now,
 				},
 				KargoManaged: true,
-				Claims: []*rbacapi.UserClaim{
+				Claims: []rbacapi.Claim{
 					{
 						Name:   "email",
 						Values: []string{"foo-email", "bar-email"},
@@ -723,7 +723,7 @@ func TestList(t *testing.T) {
 					CreationTimestamp: now,
 				},
 				KargoManaged: false,
-				Claims: []*rbacapi.UserClaim{
+				Claims: []rbacapi.Claim{
 					{
 						Name:   "email",
 						Values: []string{"foo-email", "bar-email"},
@@ -852,7 +852,7 @@ func TestRevokeRoleFromUsers(t *testing.T) {
 			context.Background(),
 			testProject,
 			testKargoRoleName,
-			[]*rbacapi.UserClaim{
+			[]rbacapi.Claim{
 				{
 					Name:   "sub",
 					Values: []string{"fake-sub"},
@@ -871,7 +871,7 @@ func TestRevokeRoleFromUsers(t *testing.T) {
 			context.Background(),
 			testProject,
 			testKargoRoleName,
-			[]*rbacapi.UserClaim{
+			[]rbacapi.Claim{
 				{
 					Name:   "sub",
 					Values: []string{"fake-sub"},
@@ -894,7 +894,7 @@ func TestRevokeRoleFromUsers(t *testing.T) {
 			context.Background(),
 			testProject,
 			testKargoRoleName,
-			[]*rbacapi.UserClaim{
+			[]rbacapi.Claim{
 				{
 					Name:   "sub",
 					Values: []string{"bar-sub"},
@@ -974,7 +974,7 @@ func TestUpdate(t *testing.T) {
 					Namespace: testProject,
 					Name:      testKargoRoleName,
 				},
-				Claims: []*rbacapi.UserClaim{
+				Claims: []rbacapi.Claim{
 					{
 						Name:   "sub",
 						Values: []string{"foo-sub", "bar-sub"},
@@ -1078,7 +1078,7 @@ func TestUpdate(t *testing.T) {
 						kargoapi.AnnotationKeyDescription: "foo-description",
 					},
 				},
-				Claims: []*rbacapi.UserClaim{
+				Claims: []rbacapi.Claim{
 					{
 						Name:   "sub",
 						Values: []string{"foo-sub"},

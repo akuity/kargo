@@ -129,11 +129,11 @@ func (o *createRoleOptions) run(ctx context.Context) error {
 		return fmt.Errorf("get client from config: %w", err)
 	}
 
-	claims := []*rbacapi.UserClaim{}
+	claims := []rbacapi.Claim{}
 
 	for _, claimFlagValue := range o.Claims {
 		claimFlagNameAndValue := strings.Split(claimFlagValue, "=")
-		claims = append(claims, &rbacapi.UserClaim{
+		claims = append(claims, rbacapi.Claim{
 			Name:   claimFlagNameAndValue[0],
 			Values: []string{claimFlagNameAndValue[1]},
 		})
