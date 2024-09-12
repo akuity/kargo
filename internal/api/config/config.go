@@ -19,7 +19,7 @@ type StandardConfig struct {
 
 type ServerConfig struct {
 	StandardConfig
-	EnableSecretManagement      bool
+	SecretManagementEnabled      bool
 	LocalMode                   bool // LocalMode is true if the server is running as a non-containerized process
 	TLSConfig                   *TLSConfig
 	OIDCConfig                  *oidc.Config
@@ -33,7 +33,7 @@ type ServerConfig struct {
 func ServerConfigFromEnv() ServerConfig {
 	cfg := ServerConfig{}
 	envconfig.MustProcess("", &cfg.StandardConfig)
-	cfg.EnableSecretManagement = types.MustParseBool(os.GetEnv("ENABLE_SECRET_MANAGEMENT", "false"))
+	cfg.SecretManagementEnabled = types.MustParseBool(os.GetEnv("SECRET_MANAGEMENT_ENABLED", "false"))
 	if types.MustParseBool(os.GetEnv("TLS_ENABLED", "false")) {
 		tlsCfg := TLSConfigFromEnv()
 		cfg.TLSConfig = &tlsCfg

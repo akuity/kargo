@@ -18,8 +18,8 @@ data:
   TLS_CERT_PATH: /etc/kargo/tls.crt
   TLS_KEY_PATH: /etc/kargo/tls.key
   {{- end }}
-  {{- if .Values.api.enableSecretManagement }}
-  ENABLE_SECRET_MANAGEMENT: "true"
+  {{- if .Values.api.secretManagementEnabled }}
+  SECRET_MANAGEMENT_ENABLED: "true"
   {{- end }}
   PERMISSIVE_CORS_POLICY_ENABLED: {{ quote .Values.api.permissiveCORSPolicyEnabled }}
   {{- if .Values.api.adminAccount.enabled }}
