@@ -57,7 +57,7 @@ type RolesDatabase interface {
 		ctx context.Context,
 		project string,
 		name string,
-		userClaims []rbacapi.Claim,
+		claims []rbacapi.Claim,
 	) (*rbacapi.Role, error)
 	// List returns Kargo Role representations of underlying ServiceAccounts and
 	// andy Roles and RoleBindings associated with them.
@@ -81,7 +81,7 @@ type RolesDatabase interface {
 		ctx context.Context,
 		project string,
 		name string,
-		userClaims []rbacapi.Claim,
+		claims []rbacapi.Claim,
 	) (*rbacapi.Role, error)
 	// Update updates the underlying ServiceAccount and Role resources underlying
 	// a Kargo Role. It will return an error if no underlying ServiceAccount
@@ -392,7 +392,7 @@ func (r *rolesDatabase) GrantRoleToUsers(
 	ctx context.Context,
 	project string,
 	name string,
-	userClaims []rbacapi.Claim,
+	claims []rbacapi.Claim,
 ) (*rbacapi.Role, error) {
 	sa, roles, rbs, err := r.GetAsResources(ctx, project, name)
 	if err != nil {
@@ -404,7 +404,7 @@ func (r *rolesDatabase) GrantRoleToUsers(
 	if err != nil {
 		return nil, err
 	}
-	amendClaimAnnotation(sa, rbacapi.AnnotationKeyOIDCClaimNamePrefix, userClaims)
+	amendClaimAnnotations(sa, claimListToMap(claims))
 	if err = r.client.Update(ctx, sa); err != nil {
 		return nil, fmt.Errorf("error updating ServiceAccount %q in namespace %q: %w", name, project, err)
 	}
@@ -541,7 +541,7 @@ func (r *rolesDatabase) RevokeRoleFromUsers(
 	ctx context.Context,
 	project string,
 	name string,
-	userClaims []rbacapi.Claim,
+	claims []rbacapi.Claim,
 ) (*rbacapi.Role, error) {
 	// Make sure at least part of the ServiceAccount/Role/RoleBinding trio exists
 	sa, roles, rbs, err := r.GetAsResources(ctx, project, name)
@@ -554,7 +554,7 @@ func (r *rolesDatabase) RevokeRoleFromUsers(
 	if err != nil {
 		return nil, err
 	}
-	dropFromClaimAnnotation(sa, rbacapi.AnnotationKeyOIDCClaimNamePrefix, userClaims)
+	dropFromClaimAnnotations(sa, claimListToMap(claims))
 	if err = r.client.Update(ctx, sa); err != nil {
 		return nil, fmt.Errorf("error updating ServiceAccount %q in namespace %q: %w", name, project, err)
 	}
@@ -581,7 +581,7 @@ func (r *rolesDatabase) Update(
 		return nil, err
 	}
 
-	replaceClaimAnnotation(sa, rbacapi.AnnotationKeyOIDCClaimNamePrefix, kargoRole.Claims)
+	replaceClaimAnnotations(sa, claimListToMap(kargoRole.Claims))
 	if description, ok := kargoRole.Annotations[kargoapi.AnnotationKeyDescription]; ok {
 		if sa.Annotations == nil {
 			sa.Annotations = map[string]string{}
@@ -695,7 +695,7 @@ func RoleToResources(
 	kargoRole *rbacapi.Role,
 ) (*corev1.ServiceAccount, *rbacv1.Role, *rbacv1.RoleBinding, error) {
 	sa := buildNewServiceAccount(kargoRole.Namespace, kargoRole.Name)
-	amendClaimAnnotation(sa, rbacapi.AnnotationKeyOIDCClaimNamePrefix, kargoRole.Claims)
+	amendClaimAnnotations(sa, claimListToMap(kargoRole.Claims))
 
 	role := buildNewRole(kargoRole.Namespace, kargoRole.Name)
 	var err error
@@ -708,45 +708,68 @@ func RoleToResources(
 	return sa, role, rb, nil
 }
 
-func replaceClaimAnnotation(sa *corev1.ServiceAccount, prefix string, claims []rbacapi.Claim) {
+func claimListToMap(claims []rbacapi.Claim) map[string][]string {
+	claimMap := map[string][]string{}
 	for _, claim := range claims {
-		slices.Sort(claim.Values)
-		claim.Values = slices.Compact(claim.Values)
-		if sa.Annotations == nil {
-			sa.Annotations = map[string]string{}
+		if _, ok := claimMap[claim.Name]; !ok {
+			claimMap[claim.Name] = claim.Values
+		} else {
+			claimMap[claim.Name] = append(claimMap[claim.Name], claim.Values...)
 		}
-		sa.Annotations[prefix+claim.Name] = strings.Join(claim.Values, ",")
+		slices.Sort(claimMap[claim.Name])
+		claimMap[claim.Name] = slices.Compact(claimMap[claim.Name])
+	}
+	return claimMap
+}
+
+func replaceClaimAnnotations(sa *corev1.ServiceAccount, claims map[string][]string) {
+	// Step through the existing annotations and for each that looks like a claim
+	// annotation, remove it if the corresponding claim is not in the new claims
+	// map.
+	for k := range sa.Annotations {
+		if name, ok := rbacapi.OIDCClaimNameFromAnnotationKey(k); ok {
+			if _, exists := claims[name]; !exists {
+				delete(sa.Annotations, k)
+			}
+		}
+	}
+	if sa.Annotations == nil {
+		sa.Annotations = map[string]string{}
+	}
+	// Add or update the annotations for the new claims
+	for name, values := range claims {
+		sa.Annotations[rbacapi.AnnotationKeyOIDCClaim(name)] = strings.Join(values, ",")
 	}
 }
 
-func amendClaimAnnotation(sa *corev1.ServiceAccount, prefix string, claims []rbacapi.Claim) {
-	for _, claim := range claims {
-		if existing, exists := sa.Annotations[prefix+claim.Name]; exists {
-			claim.Values = append(strings.Split(existing, ","), claim.Values...)
+func amendClaimAnnotations(sa *corev1.ServiceAccount, claims map[string][]string) {
+	for name, values := range claims {
+		if existing, exists := sa.Annotations[rbacapi.AnnotationKeyOIDCClaim(name)]; exists {
+			values = append(strings.Split(existing, ","), values...)
 		}
-		slices.Sort(claim.Values)
-		claim.Values = slices.Compact(claim.Values)
+		slices.Sort(values)
+		values = slices.Compact(values)
 		if sa.Annotations == nil {
 			sa.Annotations = map[string]string{}
 		}
-		sa.Annotations[prefix+claim.Name] = strings.Join(claim.Values, ",")
+		sa.Annotations[rbacapi.AnnotationKeyOIDCClaim(name)] = strings.Join(values, ",")
 	}
 }
 
-func dropFromClaimAnnotation(sa *corev1.ServiceAccount, prefix string, claims []rbacapi.Claim) {
-	for _, claim := range claims {
-		slices.Sort(claim.Values)
-		claim.Values = slices.Compact(claim.Values)
-		claim.Values = removeFromStringSlice(strings.Split(sa.Annotations[prefix+claim.Name], ","), claim.Values)
-		if len(claim.Values) == 0 {
-			delete(sa.Annotations, prefix+claim.Name)
+func dropFromClaimAnnotations(sa *corev1.ServiceAccount, claims map[string][]string) {
+	for name, values := range claims {
+		slices.Sort(values)
+		values = slices.Compact(values)
+		values = removeFromStringSlice(strings.Split(sa.Annotations[rbacapi.AnnotationKeyOIDCClaim(name)], ","), values)
+		if len(values) == 0 {
+			delete(sa.Annotations, rbacapi.AnnotationKeyOIDCClaim(name))
 			continue
 		}
-		slices.Sort(claim.Values)
+		slices.Sort(values)
 		if sa.Annotations == nil {
 			sa.Annotations = map[string]string{}
 		}
-		sa.Annotations[prefix+claim.Name] = strings.Join(claim.Values, ",")
+		sa.Annotations[rbacapi.AnnotationKeyOIDCClaim(name)] = strings.Join(values, ",")
 	}
 }
 

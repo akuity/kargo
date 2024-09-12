@@ -1,5 +1,7 @@
 package v1alpha1
 
+import strings "strings"
+
 const (
 	// AnnotationKeyManaged is an annotation key that can be set on a
 	// ServiceAccount, Role, or RoleBinding to indicate that it is managed by
@@ -15,3 +17,14 @@ const (
 
 	AnnotationValueTrue = "true"
 )
+
+func AnnotationKeyOIDCClaim(name string) string {
+	return AnnotationKeyOIDCClaimNamePrefix + name
+}
+
+func OIDCClaimNameFromAnnotationKey(key string) (string, bool) {
+	if !strings.HasPrefix(key, AnnotationKeyOIDCClaimNamePrefix) {
+		return "", false
+	}
+	return strings.TrimPrefix(key, AnnotationKeyOIDCClaimNamePrefix), true
+}
