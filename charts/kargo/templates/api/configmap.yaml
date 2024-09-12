@@ -21,7 +21,7 @@ data:
   {{- if .Values.api.enableSecretManagement }}
   ENABLE_SECRET_MANAGEMENT: "true"
   {{- end }}
-  PERMISSIVE_CORS_POLICY_ENABLED: {{ quote .Values.api.enablePermissiveCORSPolicy }}
+  PERMISSIVE_CORS_POLICY_ENABLED: {{ quote .Values.api.permissiveCORSPolicyEnabled }}
   {{- if .Values.api.adminAccount.enabled }}
   ADMIN_ACCOUNT_ENABLED: "true"
   {{- if or .Values.api.tls.enabled (and .Values.api.ingress.enabled .Values.api.ingress.tls.enabled) }}

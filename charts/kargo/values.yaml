@@ -151,9 +151,8 @@ api:
     ## @param api.tls.selfSignedCert Whether to generate a self-signed certificate for use by the API server. If `true`, `cert-manager` CRDs **must** be present in the cluster. Kargo will create and use its own namespaced issuer. If `false`, a cert secret named `kargo-api-cert` **must** be provided in the same namespace as Kargo.
     selfSignedCert: true
 
-  ## @param api.permissiveCORSPolicy.enabled Whether to enable a permissive CORS (Cross Origin Resource Sharing) policy. This is sometimes advantageous during local development, but otherwise, should generally be left disabled.
-  permissiveCORSPolicy:
-    enabled: false
+  ## @param api.permissiveCORSPolicyEnabled Whether to enable a permissive CORS (Cross Origin Resource Sharing) policy. This is sometimes advantageous during local development, but otherwise, should generally be left disabled.
+  permissiveCORSPolicyEnabled: false
 
   ingress:
     ## @param api.ingress.enabled Whether to enable ingress. By default, this is disabled. Enabling ingress is advanced usage.
