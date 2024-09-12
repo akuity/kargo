@@ -60,12 +60,6 @@ for Docker Desktop for Mac OS only. You can follow
 [these instructions](https://docs.orbstack.dev/kubernetes/) to enable its
 built-in Kubernetes support.
 
-To ensure that your Kubernetes cluster is up and running, use the following command:
-
-```shell
-orb start k8s
-```
-
 :::info
 Although this is one of the fastest paths to a local Kubernetes cluster, be
 aware that OrbStack supports only a _single_ Kubernetes cluster. If
@@ -520,9 +514,9 @@ the previous section.
     EOF
     ```
     
-  :::info
-  Kargo uses [semver](https://github.com/masterminds/semver#checking-version-constraints) to handle semantic versioning constraints.
-  :::
+      :::info
+      Kargo uses [semver](https://github.com/masterminds/semver#checking-version-constraints) to handle semantic versioning constraints.
+      :::
 
 1. Use the CLI to view our `Warehouse` resource:
 
@@ -580,7 +574,7 @@ the previous section.
     version of the `public.ecr.aws/nginx/nginx` container image.
     :::
 
-4. We'll use it later, so save the ID of the `Freight` to an environment
+1. We'll use it later, so save the ID of the `Freight` to an environment
    variable:
 
     ```shell
@@ -590,7 +584,7 @@ the previous section.
      For additional details and a visual overview, please refer to the Kargo dashboard.
   ![Argo-dashboard-screenshot](../static/img/kargo-dashboard-projects.png)
 
-5. Now, let's _promote_ the `Freight` into the `test` `Stage`:
+1. Now, let's _promote_ the `Freight` into the `test` `Stage`:
 
     ```shell
     kargo promote --project kargo-demo --freight-alias $FREIGHT_ALIAS --stage test
