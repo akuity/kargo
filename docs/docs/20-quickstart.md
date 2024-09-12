@@ -581,7 +581,11 @@ the previous section.
     export FREIGHT_ALIAS=$(kargo get freight --project kargo-demo --output jsonpath={.alias})
     ```
 
-     For additional details and a visual overview, please refer to the Kargo dashboard.
+   For a comprehensive overview of your `Project`, you can also access these components rendered
+   on the [Kargo Dashboard](https://localhost:31444/).
+   By selecting the "Projects" section and then 
+   choosing your "kargo-demo," you will be able to view detailed visual representation of the `Project`, 
+   including the `Warehouse` and the various `Stage`s: `test`, `uat`, and `prod`.
   ![Argo-dashboard-screenshot](../static/img/kargo-dashboard-projects.png)
 
 1. Now, let's _promote_ the `Freight` into the `test` `Stage`:
@@ -633,7 +637,10 @@ the previous section.
     visiting the test instance of our site at
     [localhost:30081](http://localhost:30081).
 
-    For a visual confirmation, you can also review the Kargo dashboard, where you should see that the `test` `Stage` has been promoted successfully and is displayed as Healthy:
+   To check the status of the `test` stage on the Kargo dashboard, navigate to the "Projects"
+   section and choose your "kargo-demo". Look for the _heart_ symbol, which 
+   indicates a _healthy_ state, along with a _tick_ mark that signifies the _successful promotion_
+   of the `test` stage. 
 
     ![Kargo-dashboard-screenshot](../static/img/kargo-dashboard-promotion.png)
 
