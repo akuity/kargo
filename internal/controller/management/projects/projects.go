@@ -92,6 +92,8 @@ type reconciler struct {
 
 	ensureAPIAdminPermissionsFn func(context.Context, *kargoapi.Project) error
 
+	ensureControllerPermissionsFn func(context.Context, *kargoapi.Project) error
+
 	ensureDefaultProjectRolesFn func(context.Context, *kargoapi.Project) error
 
 	createServiceAccountFn func(
@@ -147,6 +149,7 @@ func newReconciler(kubeClient client.Client, cfg ReconcilerConfig) *reconciler {
 	r.patchOwnerReferencesFn = kargoapi.PatchOwnerReferences
 	r.ensureFinalizerFn = kargoapi.EnsureFinalizer
 	r.ensureAPIAdminPermissionsFn = r.ensureAPIAdminPermissions
+	r.ensureControllerPermissionsFn = r.ensureControllerPermissions
 	r.ensureDefaultProjectRolesFn = r.ensureDefaultProjectRoles
 	r.createServiceAccountFn = r.client.Create
 	r.createRoleFn = r.client.Create
@@ -229,6 +232,11 @@ func (r *reconciler) syncProject(
 
 	if err = r.ensureAPIAdminPermissionsFn(ctx, project); err != nil {
 		return status, fmt.Errorf("error ensuring project admin permissions: %w", err)
+	}
+
+	if err = r.ensureControllerPermissionsFn(ctx, project); err != nil {
+		return status, fmt.Errorf("error ensuring controller permissions: %w", err)
+
 	}
 
 	if err = r.ensureDefaultProjectRolesFn(ctx, project); err != nil {
@@ -388,6 +396,54 @@ func (r *reconciler) ensureAPIAdminPermissions(
 		)
 	}
 	logger.Debug("granted API server and kargo-admin project admin permissions")
+
+	return nil
+}
+
+func (r *reconciler) ensureControllerPermissions(
+	ctx context.Context,
+	project *kargoapi.Project,
+) error {
+	const roleBindingName = "kargo-controller-secrets-readonly"
+
+	logger := logging.LoggerFromContext(ctx).WithValues(
+		"project", project.Name,
+		"name", project.Name,
+		"namespace", project.Name,
+		"roleBinding", roleBindingName,
+	)
+
+	roleBinding := &rbacv1.RoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      roleBindingName,
+			Namespace: project.Name,
+		},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: rbacv1.GroupName,
+			Kind:     "ClusterRole",
+			Name:     "kargo-controller-secrets-readonly",
+		},
+		Subjects: []rbacv1.Subject{
+			{
+				Kind:      "ServiceAccount",
+				Name:      "kargo-controller",
+				Namespace: r.cfg.KargoNamespace,
+			},
+		},
+	}
+	if err := r.createRoleBindingFn(ctx, roleBinding); err != nil {
+		if kubeerr.IsAlreadyExists(err) {
+			logger.Debug("RoleBinding already exists in project namespace")
+			return nil
+		}
+		return fmt.Errorf(
+			"error creating RoleBinding %q in project namespace %q: %w",
+			roleBinding.Name,
+			project.Name,
+			err,
+		)
+	}
+	logger.Debug("granted kargo-controller project secrets permissions")
 
 	return nil
 }
