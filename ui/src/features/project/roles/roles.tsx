@@ -85,8 +85,8 @@ export const Roles = () => {
             key: 'name',
             render: (record: Role) => <>{record.metadata?.name}</>
           },
-          renderColumn('emails'),
-          renderColumn('subs'),
+          renderColumn('email'),
+          renderColumn('sub'),
           renderColumn('groups'),
           {
             title: 'Rules',

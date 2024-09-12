@@ -26,7 +26,7 @@ type Props = {
   hide: () => void;
 };
 
-type AllowedFields = 'name' | 'email' | 'sub' | 'group';
+type AllowedFields = 'name' | 'email' | 'sub' | 'groups';
 
 const annotationsWithDescription = (description: string): { [key: string]: string } => {
   return description ? { [DESCRIPTION_ANNOTATION_KEY]: description } : {};
@@ -40,13 +40,13 @@ const formSchema = z.object({
   description: z.string().optional(),
   email: nonZeroArray('email'),
   sub: nonZeroArray('sub'),
-  group: nonZeroArray('group')
+  groups: nonZeroArray('groups')
 });
 
 const multiFields: { name: AllowedFields; label?: string; placeholder: string }[] = [
   { name: 'email', placeholder: 'email@corp.com' },
   { name: 'sub', label: 'Subjects', placeholder: 'mysubject' },
-  { name: 'group', placeholder: 'mygroup' }
+  { name: 'groups', placeholder: 'mygroup' }
 ];
 
 export const CreateRole = ({ editing, onSuccess, project, hide }: Props) => {
@@ -71,9 +71,9 @@ export const CreateRole = ({ editing, onSuccess, project, hide }: Props) => {
             return undefined;
           }
         })?.values || [],
-      group:
+      groups:
         editing?.claims.find((claim: Claim) => {
-          if (claim.name === 'group') {
+          if (claim.name === 'groups') {
             return claim;
           } else {
             return undefined;
@@ -113,11 +113,16 @@ export const CreateRole = ({ editing, onSuccess, project, hide }: Props) => {
             return;
           }
           newClaim.values = values.sub;
-        } else if (newClaim.name === 'group') {
-          if (values.group.length === 0) {
+        } else if (newClaim.name === 'groups') {
+          if (values.groups.length === 0) {
             return;
           }
-          newClaim.values = values.group;
+          newClaim.values = values.groups;
+        } else {
+          if (values[field.name].length === 0) {
+            return;
+          }
+          newClaim.values = values[field.name] as string[];
         }
         claimsArray.push(newClaim);
       });
