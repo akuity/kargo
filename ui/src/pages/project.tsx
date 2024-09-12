@@ -9,6 +9,7 @@ import {
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Tooltip } from 'antd';
 import classNames from 'classnames';
+import { useMemo } from 'react';
 import { generatePath, useNavigate, useParams } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
@@ -19,52 +20,63 @@ import { Events } from '@ui/features/project/events/events';
 import { Pipelines } from '@ui/features/project/pipelines/pipelines';
 import { Roles } from '@ui/features/project/roles/roles';
 import { ProjectSettings } from '@ui/features/project/settings/project-settings';
-import { getProject } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
+import { getConfig, getProject } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 import { Project as _Project } from '@ui/gen/v1alpha1/generated_pb';
 
-const tabs = {
-  pipelines: {
-    path: paths.project,
-    label: 'Pipelines',
-    icon: faDiagramProject
-  },
-  credentials: {
-    path: paths.projectCredentials,
-    label: 'Credentials',
-    icon: faIdBadge
-  },
-  analysisTemplates: {
-    path: paths.projectAnalysisTemplates,
-    label: 'Analysis Templates',
-    icon: faChartBar
-  },
-  events: {
-    path: paths.projectEvents,
-    label: 'Events',
-    icon: faClockRotateLeft
-  },
-  roles: {
-    path: paths.projectRoles,
-    label: 'Roles',
-    icon: faPeopleGroup
-  }
-};
-
-export type ProjectTab = keyof typeof tabs;
-
-export const Project = ({ tab = 'pipelines' }: { tab?: ProjectTab }) => {
+export const Project = ({ tab = 'pipelines' }: { tab?: string }) => {
   const { name } = useParams();
   const navigate = useNavigate();
 
   const { data, isLoading } = useQuery(getProject, { name });
+  const { data: config } = useQuery(getConfig);
+
+  const [tabs] = useMemo(() => {
+    return [
+      {
+        pipelines: {
+          path: paths.project,
+          label: 'Pipelines',
+          icon: faDiagramProject
+        },
+        ...(config?.secretManagementEnabled
+          ? {
+              credentials: {
+                path: paths.projectCredentials,
+                label: 'Credentials',
+                icon: faIdBadge
+              }
+            }
+          : {}),
+        analysisTemplates: {
+          path: paths.projectAnalysisTemplates,
+          label: 'Analysis Templates',
+          icon: faChartBar
+        },
+        events: {
+          path: paths.projectEvents,
+          label: 'Events',
+          icon: faClockRotateLeft
+        },
+        roles: {
+          path: paths.projectRoles,
+          label: 'Roles',
+          icon: faPeopleGroup
+        }
+      }
+    ];
+  }, [config]);
 
   // we must render the tab contents outside of the Antd tabs component to prevent layout issues in the ProjectDetails component
-  const renderTab = (key: ProjectTab) => {
+  const renderTab = (key: string) => {
     switch (key) {
       case 'pipelines':
         return <Pipelines project={data?.result?.value as _Project} />;
       case 'credentials':
-        return <CredentialsList />;
+        return config?.secretManagementEnabled ? (
+          <CredentialsList />
+        ) : (
+          <Pipelines project={data?.result?.value as _Project} />
+        );
       case 'analysisTemplates':
         return <AnalysisTemplatesList />;
       case 'events':
@@ -98,7 +110,7 @@ export const Project = ({ tab = 'pipelines' }: { tab?: ProjectTab }) => {
                   <FontAwesomeIcon
                     icon={value.icon}
                     onClick={() => {
-                      navigate(generatePath(tabs[key as ProjectTab].path, { name }));
+                      navigate(generatePath(tabs[key as keyof typeof tabs].path, { name }));
                     }}
                   />
                 </div>
