@@ -141,6 +141,7 @@ message ArgoCDShard {
 
 message GetConfigResponse {
   map<string, ArgoCDShard> argocd_shards = 1;
+  bool secret_management_enabled = 2;
 }
 
 message GetPublicConfigRequest {}
