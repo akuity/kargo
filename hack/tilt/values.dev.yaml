@@ -20,6 +20,10 @@ api:
         type: mockCallback
       probes:
         enabled: false
+    admins:
+      claims:
+        email:
+        - kilgore@kilgore.trout
 controller:
   logLevel: DEBUG
 crds:
