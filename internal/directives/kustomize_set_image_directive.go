@@ -12,14 +12,13 @@ import (
 
 	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/xeipuuv/gojsonschema"
-	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/kustomize/api/konfig"
 	kustypes "sigs.k8s.io/kustomize/api/types"
 	kyaml "sigs.k8s.io/kustomize/kyaml/yaml"
 	yaml "sigs.k8s.io/yaml/goyaml.v3"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/controller/freight"
 	intyaml "github.com/akuity/kargo/internal/yaml"
 )
 
@@ -82,11 +81,7 @@ func (d *kustomizeSetImageDirective) run(
 	}
 
 	// Discover image origins and collect target images.
-	images, err := discoverImages(ctx, stepCtx.KargoClient, stepCtx.Project, cfg.Images, stepCtx.FreightRequests)
-	if err != nil {
-		return Result{Status: StatusFailure}, err
-	}
-	targetImages, err := buildTargetImages(images, stepCtx.Freight.Freight)
+	targetImages, err := d.buildTargetImages(ctx, stepCtx, cfg.Images)
 	if err != nil {
 		return Result{Status: StatusFailure}, err
 	}
@@ -99,120 +94,54 @@ func (d *kustomizeSetImageDirective) run(
 	return Result{Status: StatusSuccess}, nil
 }
 
-func discoverImages(
+func (d *kustomizeSetImageDirective) buildTargetImages(
 	ctx context.Context,
-	c client.Client,
-	namespace string,
+	stepCtx *StepContext,
 	images []KustomizeSetImageConfigImage,
-	freight []kargoapi.FreightRequest,
-) ([]KustomizeSetImageConfigImage, error) {
-	discoveredImages := slices.Clone(images)
-	for i, img := range discoveredImages {
-		discoveredImage, err := discoverImage(ctx, c, namespace, img, freight)
+) (map[string]kustypes.Image, error) {
+	targetImages := make(map[string]kustypes.Image, len(images))
+
+	for _, img := range images {
+		var desiredOrigin *kargoapi.FreightOrigin
+		if img.FromOrigin != nil {
+			desiredOrigin = &kargoapi.FreightOrigin{
+				Kind: kargoapi.FreightOriginKind(img.FromOrigin.Kind),
+				Name: img.FromOrigin.Name,
+			}
+		}
+
+		discoveredImage, err := freight.FindImage(
+			ctx,
+			stepCtx.KargoClient,
+			stepCtx.Project,
+			stepCtx.FreightRequests,
+			desiredOrigin,
+			stepCtx.Freight.References(),
+			img.Image,
+		)
 		if err != nil {
 			return nil, fmt.Errorf("unable to discover image for %q: %w", img.Image, err)
 		}
 		if discoveredImage == nil {
 			return nil, fmt.Errorf("no image found for %q", img.Image)
 		}
-		discoveredImages[i] = *discoveredImage
-	}
-	return discoveredImages, nil
-}
 
-func discoverImage(
-	ctx context.Context,
-	c client.Client,
-	namespace string,
-	image KustomizeSetImageConfigImage,
-	requestedFreight []kargoapi.FreightRequest,
-) (*KustomizeSetImageConfigImage, error) {
-	if image.FromOrigin != nil {
-		return &image, nil
-	}
+		targetImage := kustypes.Image{
+			Name:    img.Image,
+			NewName: img.NewName,
+			NewTag:  discoveredImage.Tag,
+		}
+		if img.Name != "" {
+			targetImage.Name = img.Name
+		}
+		if img.UseDigest {
+			targetImage.Digest = discoveredImage.Digest
+		}
 
-	var discoverdImage *KustomizeSetImageConfigImage
-	for _, req := range requestedFreight {
-		warehouse, err := kargoapi.GetWarehouse(ctx, c, types.NamespacedName{
-			Name:      req.Origin.Name,
-			Namespace: namespace,
-		})
-		if err != nil {
-			return nil, fmt.Errorf("error getting Warehouse %q in namespace %q: %w", req.Origin.Name, namespace, err)
-		}
-		if warehouse == nil {
-			return nil, fmt.Errorf("Warehouse %q not found in namespace %q", req.Origin.Name, namespace)
-		}
-		for _, sub := range warehouse.Spec.Subscriptions {
-			if sub.Image != nil && sub.Image.RepoURL == image.Image {
-				if discoverdImage != nil {
-					return nil, fmt.Errorf(
-						"multiple requested Freight could provide a container image from repository %q: "+
-							"please provide an origin manually to disambiguate", image.Image)
-				}
-				image.FromOrigin = &ChartFromOrigin{
-					Kind: Kind(warehouse.Kind),
-					Name: warehouse.Name,
-				}
-				discoverdImage = &image
-			}
-		}
-	}
-	return discoverdImage, nil
-}
-
-func buildTargetImages(
-	images []KustomizeSetImageConfigImage,
-	freight map[string]kargoapi.FreightReference,
-) (map[string]kustypes.Image, error) {
-	targetImages := make(map[string]kustypes.Image, len(images))
-
-	for _, img := range images {
-		targetImage, err := buildTargetImage(img, freight)
-		if err != nil {
-			return nil, err
-		}
 		targetImages[targetImage.Name] = targetImage
 	}
 
 	return targetImages, nil
-}
-
-func buildTargetImage(
-	img KustomizeSetImageConfigImage,
-	freight map[string]kargoapi.FreightReference,
-) (kustypes.Image, error) {
-	if img.FromOrigin == nil {
-		return kustypes.Image{}, fmt.Errorf("image %q has no origin specified", img.Image)
-	}
-
-	for _, f := range freight {
-		if !f.Origin.Equals(&kargoapi.FreightOrigin{
-			Kind: kargoapi.FreightOriginKind(img.FromOrigin.Kind),
-			Name: img.FromOrigin.Name,
-		}) {
-			continue
-		}
-
-		for _, i := range f.Images {
-			if i.RepoURL == img.Image {
-				targetImage := kustypes.Image{
-					Name:    img.Image,
-					NewName: img.NewName,
-					NewTag:  i.Tag,
-				}
-				if img.Name != "" {
-					targetImage.Name = img.Name
-				}
-				if img.UseDigest {
-					targetImage.Digest = i.Digest
-				}
-				return targetImage, nil
-			}
-		}
-	}
-
-	return kustypes.Image{}, fmt.Errorf("no matching image found in freight for %q", img.Image)
 }
 
 func updateKustomizationFile(kusPath string, targetImages map[string]kustypes.Image) error {

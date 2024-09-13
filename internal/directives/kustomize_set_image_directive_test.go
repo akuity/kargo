@@ -162,29 +162,26 @@ images:
 	}
 }
 
-func Test_discoverImages(t *testing.T) {
+func Test_kustomizeSetImageDirective_buildTargetImages(t *testing.T) {
 	const testNamespace = "test-project"
 
 	tests := []struct {
-		name             string
-		images           []KustomizeSetImageConfigImage
-		requestedFreight []kargoapi.FreightRequest
-		objects          []runtime.Object
-		assertions       func(*testing.T, []KustomizeSetImageConfigImage, error)
+		name              string
+		images            []KustomizeSetImageConfigImage
+		freightRequests   []kargoapi.FreightRequest
+		objects           []runtime.Object
+		freightReferences map[string]kargoapi.FreightReference
+		assertions        func(*testing.T, map[string]kustypes.Image, error)
 	}{
 		{
-			name: "discovers origins for all images",
+			name: "discovers origins and builds target images",
 			images: []KustomizeSetImageConfigImage{
 				{Image: "nginx:latest"},
 				{Image: "redis:6"},
 			},
-			requestedFreight: []kargoapi.FreightRequest{
-				{
-					Origin: kargoapi.FreightOrigin{Name: "warehouse1", Kind: "Warehouse"},
-				},
-				{
-					Origin: kargoapi.FreightOrigin{Name: "warehouse2", Kind: "Warehouse"},
-				},
+			freightRequests: []kargoapi.FreightRequest{
+				{Origin: kargoapi.FreightOrigin{Name: "warehouse1", Kind: "Warehouse"}},
+				{Origin: kargoapi.FreightOrigin{Name: "warehouse2", Kind: "Warehouse"}},
 			},
 			objects: []runtime.Object{
 				mockWarehouse(testNamespace, "warehouse1", kargoapi.WarehouseSpec{
@@ -198,134 +195,7 @@ func Test_discoverImages(t *testing.T) {
 					},
 				}),
 			},
-			assertions: func(t *testing.T, result []KustomizeSetImageConfigImage, err error) {
-				require.NoError(t, err)
-				assert.ElementsMatch(t, []KustomizeSetImageConfigImage{
-					{Image: "nginx:latest", FromOrigin: &ChartFromOrigin{Kind: "Warehouse", Name: "warehouse1"}},
-					{Image: "redis:6", FromOrigin: &ChartFromOrigin{Kind: "Warehouse", Name: "warehouse2"}},
-				}, result)
-			},
-		},
-		{
-			name: "error when no origin found",
-			images: []KustomizeSetImageConfigImage{
-				{Image: "mysql:8"},
-			},
-			requestedFreight: []kargoapi.FreightRequest{
-				{
-					Origin: kargoapi.FreightOrigin{Name: "warehouse1", Kind: "Warehouse"},
-				},
-			},
-			objects: []runtime.Object{
-				mockWarehouse(testNamespace, "warehouse1", kargoapi.WarehouseSpec{
-					Subscriptions: []kargoapi.RepoSubscription{
-						{Image: &kargoapi.ImageSubscription{RepoURL: "nginx:latest"}},
-					},
-				}),
-			},
-			assertions: func(t *testing.T, _ []KustomizeSetImageConfigImage, err error) {
-				require.ErrorContains(t, err, "no image found")
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			scheme := runtime.NewScheme()
-			require.NoError(t, kargoapi.AddToScheme(scheme))
-			c := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(tt.objects...).Build()
-
-			result, err := discoverImages(context.Background(), c, testNamespace, tt.images, tt.requestedFreight)
-			tt.assertions(t, result, err)
-		})
-	}
-}
-
-func Test_discoverImage(t *testing.T) {
-	const testNamespace = "test-project"
-
-	tests := []struct {
-		name             string
-		image            KustomizeSetImageConfigImage
-		requestedFreight []kargoapi.FreightRequest
-		objects          []runtime.Object
-		assertions       func(*testing.T, *KustomizeSetImageConfigImage, error)
-	}{
-		{
-			name:  "finds origin for image",
-			image: KustomizeSetImageConfigImage{Image: "nginx:latest"},
-			requestedFreight: []kargoapi.FreightRequest{
-				{
-					Origin: kargoapi.FreightOrigin{Name: "warehouse1", Kind: "Warehouse"},
-				},
-			},
-			objects: []runtime.Object{
-				mockWarehouse(testNamespace, "warehouse1", kargoapi.WarehouseSpec{
-					Subscriptions: []kargoapi.RepoSubscription{
-						{Image: &kargoapi.ImageSubscription{RepoURL: "nginx:latest"}},
-					},
-				}),
-			},
-			assertions: func(t *testing.T, result *KustomizeSetImageConfigImage, err error) {
-				require.NoError(t, err)
-				assert.Equal(t, &KustomizeSetImageConfigImage{
-					Image:      "nginx:latest",
-					FromOrigin: &ChartFromOrigin{Kind: "Warehouse", Name: "warehouse1"}},
-					result)
-			},
-		},
-		{
-			name:  "error when multiple origins found",
-			image: KustomizeSetImageConfigImage{Image: "nginx:latest"},
-			requestedFreight: []kargoapi.FreightRequest{
-				{Origin: kargoapi.FreightOrigin{Name: "warehouse1", Kind: "Warehouse"}},
-				{Origin: kargoapi.FreightOrigin{Name: "warehouse2", Kind: "Warehouse"}},
-			},
-			objects: []runtime.Object{
-				mockWarehouse(testNamespace, "warehouse1", kargoapi.WarehouseSpec{
-					Subscriptions: []kargoapi.RepoSubscription{
-						{Image: &kargoapi.ImageSubscription{RepoURL: "nginx:latest"}},
-					},
-				}),
-				mockWarehouse(testNamespace, "warehouse2", kargoapi.WarehouseSpec{
-					Subscriptions: []kargoapi.RepoSubscription{
-						{Image: &kargoapi.ImageSubscription{RepoURL: "nginx:latest"}},
-					},
-				}),
-			},
-			assertions: func(t *testing.T, result *KustomizeSetImageConfigImage, err error) {
-				require.ErrorContains(t, err, "please provide an origin manually to disambiguate")
-				assert.Nil(t, result)
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			scheme := runtime.NewScheme()
-			require.NoError(t, kargoapi.AddToScheme(scheme))
-			c := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(tt.objects...).Build()
-
-			result, err := discoverImage(context.Background(), c, testNamespace, tt.image, tt.requestedFreight)
-			tt.assertions(t, result, err)
-		})
-	}
-}
-
-func Test_buildTargetImages(t *testing.T) {
-	tests := []struct {
-		name       string
-		images     []KustomizeSetImageConfigImage
-		freight    map[string]kargoapi.FreightReference
-		assertions func(*testing.T, map[string]kustypes.Image, error)
-	}{
-		{
-			name: "collects target images",
-			images: []KustomizeSetImageConfigImage{
-				{Image: "nginx:latest", FromOrigin: &ChartFromOrigin{Kind: "Warehouse", Name: "warehouse1"}},
-				{Image: "redis:6", FromOrigin: &ChartFromOrigin{Kind: "Warehouse", Name: "warehouse2"}},
-			},
-			freight: map[string]kargoapi.FreightReference{
+			freightReferences: map[string]kargoapi.FreightReference{
 				"Warehouse/warehouse1": {
 					Origin: kargoapi.FreightOrigin{Kind: "Warehouse", Name: "warehouse1"},
 					Images: []kargoapi.Image{{RepoURL: "nginx:latest", Tag: "1.21.0", Digest: "sha256:123"}},
@@ -344,172 +214,148 @@ func Test_buildTargetImages(t *testing.T) {
 			},
 		},
 		{
-			name: "error when image has no origin",
+			name: "error when no origin found",
+			images: []KustomizeSetImageConfigImage{
+				{Image: "mysql:8"},
+			},
+			freightRequests: []kargoapi.FreightRequest{
+				{Origin: kargoapi.FreightOrigin{Name: "warehouse1", Kind: "Warehouse"}},
+			},
+			objects: []runtime.Object{
+				mockWarehouse(testNamespace, "warehouse1", kargoapi.WarehouseSpec{
+					Subscriptions: []kargoapi.RepoSubscription{
+						{Image: &kargoapi.ImageSubscription{RepoURL: "nginx:latest"}},
+					},
+				}),
+			},
+			freightReferences: map[string]kargoapi.FreightReference{
+				"Warehouse/warehouse1": {
+					Origin: kargoapi.FreightOrigin{Kind: "Warehouse", Name: "warehouse1"},
+					Images: []kargoapi.Image{{RepoURL: "nginx:latest", Tag: "1.21.0", Digest: "sha256:123"}},
+				},
+			},
+			assertions: func(t *testing.T, _ map[string]kustypes.Image, err error) {
+				require.ErrorContains(t, err, "no image found")
+			},
+		},
+		{
+			name: "uses provided origin",
+			images: []KustomizeSetImageConfigImage{
+				{Image: "nginx:latest", FromOrigin: &ChartFromOrigin{Kind: "Warehouse", Name: "warehouse1"}},
+			},
+			freightRequests: []kargoapi.FreightRequest{
+				{Origin: kargoapi.FreightOrigin{Name: "warehouse1", Kind: "Warehouse"}},
+			},
+			objects: []runtime.Object{
+				mockWarehouse(testNamespace, "warehouse1", kargoapi.WarehouseSpec{
+					Subscriptions: []kargoapi.RepoSubscription{
+						{Image: &kargoapi.ImageSubscription{RepoURL: "nginx:latest"}},
+					},
+				}),
+			},
+			freightReferences: map[string]kargoapi.FreightReference{
+				"Warehouse/warehouse1": {
+					Origin: kargoapi.FreightOrigin{Kind: "Warehouse", Name: "warehouse1"},
+					Images: []kargoapi.Image{{RepoURL: "nginx:latest", Tag: "1.21.0", Digest: "sha256:123"}},
+				},
+			},
+			assertions: func(t *testing.T, result map[string]kustypes.Image, err error) {
+				require.NoError(t, err)
+				assert.Equal(t, map[string]kustypes.Image{
+					"nginx:latest": {Name: "nginx:latest", NewTag: "1.21.0"},
+				}, result)
+			},
+		},
+		{
+			name: "uses custom name and digest",
+			images: []KustomizeSetImageConfigImage{
+				{
+					Image:     "nginx:latest",
+					Name:      "custom-nginx",
+					UseDigest: true,
+					FromOrigin: &ChartFromOrigin{
+						Kind: "Warehouse",
+						Name: "warehouse1",
+					},
+				},
+			},
+			freightRequests: []kargoapi.FreightRequest{
+				{Origin: kargoapi.FreightOrigin{Name: "warehouse1", Kind: "Warehouse"}},
+			},
+			objects: []runtime.Object{
+				mockWarehouse(testNamespace, "warehouse1", kargoapi.WarehouseSpec{
+					Subscriptions: []kargoapi.RepoSubscription{
+						{Image: &kargoapi.ImageSubscription{RepoURL: "nginx:latest"}},
+					},
+				}),
+			},
+			freightReferences: map[string]kargoapi.FreightReference{
+				"Warehouse/warehouse1": {
+					Origin: kargoapi.FreightOrigin{Kind: "Warehouse", Name: "warehouse1"},
+					Images: []kargoapi.Image{{RepoURL: "nginx:latest", Tag: "1.21.0", Digest: "sha256:123"}},
+				},
+			},
+			assertions: func(t *testing.T, result map[string]kustypes.Image, err error) {
+				require.NoError(t, err)
+				assert.Equal(t, map[string]kustypes.Image{
+					"custom-nginx": {Name: "custom-nginx", NewTag: "1.21.0", Digest: "sha256:123"},
+				}, result)
+			},
+		},
+		{
+			name: "error when multiple origins found",
 			images: []KustomizeSetImageConfigImage{
 				{Image: "nginx:latest"},
 			},
-			freight: map[string]kargoapi.FreightReference{},
+			freightRequests: []kargoapi.FreightRequest{
+				{Origin: kargoapi.FreightOrigin{Name: "warehouse1", Kind: "Warehouse"}},
+				{Origin: kargoapi.FreightOrigin{Name: "warehouse2", Kind: "Warehouse"}},
+			},
+			objects: []runtime.Object{
+				mockWarehouse(testNamespace, "warehouse1", kargoapi.WarehouseSpec{
+					Subscriptions: []kargoapi.RepoSubscription{
+						{Image: &kargoapi.ImageSubscription{RepoURL: "nginx:latest"}},
+					},
+				}),
+				mockWarehouse(testNamespace, "warehouse2", kargoapi.WarehouseSpec{
+					Subscriptions: []kargoapi.RepoSubscription{
+						{Image: &kargoapi.ImageSubscription{RepoURL: "nginx:latest"}},
+					},
+				}),
+			},
+			freightReferences: map[string]kargoapi.FreightReference{
+				"Warehouse/warehouse1": {
+					Origin: kargoapi.FreightOrigin{Kind: "Warehouse", Name: "warehouse1"},
+					Images: []kargoapi.Image{{RepoURL: "nginx:latest", Tag: "1.21.0", Digest: "sha256:123"}},
+				},
+				"Warehouse/warehouse2": {
+					Origin: kargoapi.FreightOrigin{Kind: "Warehouse", Name: "warehouse2"},
+					Images: []kargoapi.Image{{RepoURL: "nginx:latest", Tag: "1.21.0", Digest: "sha256:456"}},
+				},
+			},
 			assertions: func(t *testing.T, _ map[string]kustypes.Image, err error) {
-				require.ErrorContains(t, err, "has no origin specified")
+				require.ErrorContains(t, err, "multiple requested Freight could potentially provide a container image")
 			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := buildTargetImages(tt.images, tt.freight)
-			tt.assertions(t, result, err)
-		})
-	}
-}
+			scheme := runtime.NewScheme()
+			require.NoError(t, kargoapi.AddToScheme(scheme))
+			fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(tt.objects...).Build()
 
-func Test_buildTargetImage(t *testing.T) {
-	tests := []struct {
-		name       string
-		img        KustomizeSetImageConfigImage
-		freight    map[string]kargoapi.FreightReference
-		assertions func(*testing.T, kustypes.Image, error)
-	}{
-		{
-			name: "builds target image",
-			img: KustomizeSetImageConfigImage{
-				Image: "nginx:latest",
-				FromOrigin: &ChartFromOrigin{
-					Kind: "Warehouse",
-					Name: "warehouse1",
+			stepCtx := &StepContext{
+				KargoClient:     fakeClient,
+				Project:         testNamespace,
+				FreightRequests: tt.freightRequests,
+				Freight: kargoapi.FreightCollection{
+					Freight: tt.freightReferences,
 				},
-			},
-			freight: map[string]kargoapi.FreightReference{
-				"Warehouse/warehouse1": {
-					Origin: kargoapi.FreightOrigin{
-						Kind: "Warehouse",
-						Name: "warehouse1",
-					},
-					Images: []kargoapi.Image{
-						{
-							RepoURL: "nginx:latest",
-							Tag:     "1.21.0",
-							Digest:  "sha256:abcdef",
-						},
-					},
-				},
-			},
-			assertions: func(t *testing.T, result kustypes.Image, err error) {
-				require.NoError(t, err)
-				assert.Equal(t, "nginx:latest", result.Name)
-				assert.Equal(t, "1.21.0", result.NewTag)
-				assert.Empty(t, result.Digest)
-			},
-		},
-		{
-			name: "builds target image with custom name",
-			img: KustomizeSetImageConfigImage{
-				Image: "nginx:latest",
-				Name:  "custom-nginx",
-				FromOrigin: &ChartFromOrigin{
-					Kind: "Warehouse",
-					Name: "warehouse1",
-				},
-			},
-			freight: map[string]kargoapi.FreightReference{
-				"Warehouse/warehouse1": {
-					Origin: kargoapi.FreightOrigin{
-						Kind: "Warehouse",
-						Name: "warehouse1",
-					},
-					Images: []kargoapi.Image{
-						{
-							RepoURL: "nginx:latest",
-							Tag:     "1.21.0",
-							Digest:  "sha256:abcdef",
-						},
-					},
-				},
-			},
-			assertions: func(t *testing.T, result kustypes.Image, err error) {
-				require.NoError(t, err)
-				assert.Equal(t, "custom-nginx", result.Name)
-				assert.Equal(t, "1.21.0", result.NewTag)
-				assert.Empty(t, result.Digest)
-			},
-		},
-		{
-			name: "builds target image with digest",
-			img: KustomizeSetImageConfigImage{
-				Image:     "nginx:latest",
-				UseDigest: true,
-				FromOrigin: &ChartFromOrigin{
-					Kind: "Warehouse",
-					Name: "warehouse1",
-				},
-			},
-			freight: map[string]kargoapi.FreightReference{
-				"Warehouse/warehouse1": {
-					Origin: kargoapi.FreightOrigin{
-						Kind: "Warehouse",
-						Name: "warehouse1",
-					},
-					Images: []kargoapi.Image{
-						{
-							RepoURL: "nginx:latest",
-							Tag:     "1.21.0",
-							Digest:  "sha256:abcdef",
-						},
-					},
-				},
-			},
-			assertions: func(t *testing.T, result kustypes.Image, err error) {
-				assert.NoError(t, err)
-				assert.Equal(t, "nginx:latest", result.Name)
-				assert.Equal(t, "1.21.0", result.NewTag)
-				assert.Equal(t, "sha256:abcdef", result.Digest)
-			},
-		},
-		{
-			name: "no origin specified",
-			img: KustomizeSetImageConfigImage{
-				Image: "nginx:latest",
-			},
-			freight: map[string]kargoapi.FreightReference{},
-			assertions: func(t *testing.T, result kustypes.Image, err error) {
-				require.ErrorContains(t, err, "has no origin specified")
-				assert.Empty(t, result)
-			},
-		},
-		{
-			name: "no matching origin",
-			img: KustomizeSetImageConfigImage{
-				Image: "nginx:latest",
-				FromOrigin: &ChartFromOrigin{
-					Kind: "Warehouse",
-					Name: "warehouse2",
-				},
-			},
-			freight: map[string]kargoapi.FreightReference{
-				"Warehouse/warehouse1": {
-					Origin: kargoapi.FreightOrigin{
-						Kind: "Warehouse",
-						Name: "warehouse1",
-					},
-					Images: []kargoapi.Image{
-						{
-							RepoURL: "nginx:latest",
-							Tag:     "1.21.0",
-							Digest:  "sha256:abcdef",
-						},
-					},
-				},
-			},
-			assertions: func(t *testing.T, result kustypes.Image, err error) {
-				require.ErrorContains(t, err, "no matching image found in freight")
-				assert.Empty(t, result)
-			},
-		},
-	}
+			}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result, err := buildTargetImage(tt.img, tt.freight)
+			d := &kustomizeSetImageDirective{}
+			result, err := d.buildTargetImages(context.Background(), stepCtx, tt.images)
 			tt.assertions(t, result, err)
 		})
 	}
