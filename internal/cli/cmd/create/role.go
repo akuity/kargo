@@ -32,9 +32,7 @@ type createRoleOptions struct {
 	Project     string
 	Name        string
 	Description string
-	Subs        []string
-	Emails      []string
-	Groups      []string
+	Claims      []string
 }
 
 func newRoleCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams) *cobra.Command {
@@ -45,43 +43,25 @@ func newRoleCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams) *c
 	}
 
 	cmd := &cobra.Command{
-		Use:   "role [--project=project] NAME [--sub=subject] [--email=email] [--group]",
+		Use:   "role [--project=project] NAME [--claim=name=value]...",
 		Short: "Create a role",
 		Args:  option.ExactArgs(1),
 		Example: templates.Example(`
 # Create a role in a project without initially granting it to any users
 kargo create role --project=my-project my-role
 
-# Create a role in a project and grant it to users with specific sub claims
+# Create a role in a project and grant it to users with specific claims
 kargo create role --project=my-project my-role \
-  --sub=1234567890 --sub=0987654321
-
-# Create a role in a project and grant it to users with specific email addresses
-kargo create role --project=my-project my-role \
-  --email=bob@example.com --email=alice@example.com
-
-# Create a role in a project and grant it to users in specific groups
-kargo create role --project=my-project my-role \
-  --group=admins --group=engineers
+  --claim=email=alice@example.com --claim=groups=admins,power-users
 
 # Create a role the default project without initially granting it to any users
 kargo config set-project my-project
 kargo create role my-role
 
-# Create a role in the default project and grant it to users with specific sub claims
+# Create a role in the default project and grant it to users with specific claims
 kargo config set-project my-project
 kargo create role my-role \
-  --sub=1234567890 --sub=0987654321
-
-# Create a role in the default project and grant it to users with specific email addresses
-kargo config set-project my-project
-kargo create role my-role \
-  --email=bob@example.com --email=alice@example.com
-
-# Create a role in the default project and grant it to users in specific groups
-kargo config set-project my-project
-kargo create role my-role \
-  --group=admins --group=engineers
+  --claim=email=alice@example.com --claim=groups=admins,power-users
 `),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmdOpts.complete(args)
@@ -113,9 +93,7 @@ func (o *createRoleOptions) addFlags(cmd *cobra.Command) {
 		"The project in which to create the role. If not set, the default project will be used.",
 	)
 	option.Description(cmd.Flags(), &o.Description, "Description of the role.")
-	option.Subs(cmd.Flags(), &o.Subs, "A subject claim to map to the role.")
-	option.Emails(cmd.Flags(), &o.Emails, "An email address to map to the role.")
-	option.Groups(cmd.Flags(), &o.Groups, "A group claim to map to the role.")
+	option.Claims(cmd.Flags(), &o.Claims, "A claim name and value to map to the role")
 }
 
 // complete sets the options from the command arguments.
@@ -135,6 +113,12 @@ func (o *createRoleOptions) validate() error {
 	if o.Name == "" {
 		errs = append(errs, fmt.Errorf("%s is required", option.NameFlag))
 	}
+	// This is a check to ensure that any claims flags have exactly 1 "=".
+	for _, claim := range o.Claims {
+		if strings.Count(claim, "=") != 1 {
+			errs = append(errs, fmt.Errorf("%s should be in the format <claim-name>=<claim-value>", option.ClaimFlag))
+		}
+	}
 	return errors.Join(errs...)
 }
 
@@ -143,6 +127,16 @@ func (o *createRoleOptions) run(ctx context.Context) error {
 	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return fmt.Errorf("get client from config: %w", err)
+	}
+
+	claims := []rbacapi.Claim{}
+
+	for _, claimFlagValue := range o.Claims {
+		claimFlagNameAndValue := strings.Split(claimFlagValue, "=")
+		claims = append(claims, rbacapi.Claim{
+			Name:   claimFlagNameAndValue[0],
+			Values: []string{claimFlagNameAndValue[1]},
+		})
 	}
 
 	resp, err := kargoSvcCli.CreateRole(
@@ -154,9 +148,7 @@ func (o *createRoleOptions) run(ctx context.Context) error {
 						Namespace: o.Project,
 						Name:      o.Name,
 					},
-					Subs:   o.Subs,
-					Emails: o.Emails,
-					Groups: o.Groups,
+					Claims: claims,
 				},
 			},
 		),

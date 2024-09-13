@@ -855,7 +855,7 @@ func TestIndexStagesByWarehouse(t *testing.T) {
 	}
 }
 
-func TestIndexServiceAccountsOIDCEmail(t *testing.T) {
+func TestIndexServiceAccountsByOIDCClaims(t *testing.T) {
 	testCases := []struct {
 		name     string
 		sa       *corev1.ServiceAccount
@@ -870,11 +870,11 @@ func TestIndexServiceAccountsOIDCEmail(t *testing.T) {
 			sa: &corev1.ServiceAccount{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
-						rbacapi.AnnotationKeyOIDCEmails: "fake-email, fake-email-2",
+						rbacapi.AnnotationKeyOIDCClaimNamePrefix + "email": "fake-email, fake-email-2",
 					},
 				},
 			},
-			expected: []string{"fake-email", "fake-email-2"},
+			expected: []string{"email/fake-email", "email/fake-email-2"},
 		},
 	}
 	for _, testCase := range testCases {
@@ -882,73 +882,7 @@ func TestIndexServiceAccountsOIDCEmail(t *testing.T) {
 			require.Equal(
 				t,
 				testCase.expected,
-				indexServiceAccountsOIDCEmail(testCase.sa),
-			)
-		})
-	}
-}
-
-func TestIndexServiceAccountsByOIDCGroups(t *testing.T) {
-	testCases := []struct {
-		name     string
-		sa       *corev1.ServiceAccount
-		expected []string
-	}{
-		{
-			name: "ServiceAccount has no OIDC groups",
-			sa:   &corev1.ServiceAccount{},
-		},
-		{
-			name: "ServiceAccount has OIDC groups",
-			sa: &corev1.ServiceAccount{
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{
-						rbacapi.AnnotationKeyOIDCGroups: "fake-group-1, fake-group-2",
-					},
-				},
-			},
-			expected: []string{"fake-group-1", "fake-group-2"},
-		},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			require.Equal(
-				t,
-				testCase.expected,
-				indexServiceAccountsByOIDCGroups(testCase.sa),
-			)
-		})
-	}
-}
-
-func TestIndexServiceAccountsByOIDCSubjects(t *testing.T) {
-	testCases := []struct {
-		name     string
-		sa       *corev1.ServiceAccount
-		expected []string
-	}{
-		{
-			name: "ServiceAccount has no OIDC subjects",
-			sa:   &corev1.ServiceAccount{},
-		},
-		{
-			name: "ServiceAccount has OIDC subjects",
-			sa: &corev1.ServiceAccount{
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{
-						rbacapi.AnnotationKeyOIDCSubjects: "fake-subject-1, fake-subject-2",
-					},
-				},
-			},
-			expected: []string{"fake-subject-1", "fake-subject-2"},
-		},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			require.Equal(
-				t,
-				testCase.expected,
-				indexServiceAccountsByOIDCSubjects(testCase.sa),
+				indexServiceAccountsByOIDCClaims(testCase.sa),
 			)
 		})
 	}

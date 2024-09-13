@@ -8,7 +8,7 @@ import { Message, proto3, Timestamp } from "@bufbuild/protobuf";
 import { Freight, Project, Promotion, Stage, Warehouse } from "../../v1alpha1/generated_pb.js";
 import { ConfigMap, Event, Secret } from "../../k8s.io/api/core/v1/generated_pb.js";
 import { AnalysisRun, AnalysisTemplate } from "../../rollouts/api/v1alpha1/generated_pb.js";
-import { ResourceDetails, Role, RoleResources, UserClaims } from "../../rbac/v1alpha1/generated_pb.js";
+import { Claim, ResourceDetails, Role, RoleResources } from "../../rbac/v1alpha1/generated_pb.js";
 
 /**
  * @generated from enum akuity.io.kargo.service.v1alpha1.RawFormat
@@ -4651,6 +4651,45 @@ export class GetRoleResponse extends Message<GetRoleResponse> {
 }
 
 /**
+ * @generated from message akuity.io.kargo.service.v1alpha1.Claims
+ */
+export class Claims extends Message<Claims> {
+  /**
+   * Note: oneof and repeated do not work together
+   *
+   * @generated from field: repeated github.com.akuity.kargo.api.rbac.v1alpha1.Claim claims = 1;
+   */
+  claims: Claim[] = [];
+
+  constructor(data?: PartialMessage<Claims>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.Claims";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "claims", kind: "message", T: Claim, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Claims {
+    return new Claims().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): Claims {
+    return new Claims().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Claims {
+    return new Claims().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: Claims | PlainMessage<Claims> | undefined, b: Claims | PlainMessage<Claims> | undefined): boolean {
+    return proto3.util.equals(Claims, a, b);
+  }
+}
+
+/**
  * @generated from message akuity.io.kargo.service.v1alpha1.GrantRequest
  */
 export class GrantRequest extends Message<GrantRequest> {
@@ -4669,9 +4708,9 @@ export class GrantRequest extends Message<GrantRequest> {
    */
   request: {
     /**
-     * @generated from field: github.com.akuity.kargo.api.rbac.v1alpha1.UserClaims user_claims = 3;
+     * @generated from field: akuity.io.kargo.service.v1alpha1.Claims user_claims = 3;
      */
-    value: UserClaims;
+    value: Claims;
     case: "userClaims";
   } | {
     /**
@@ -4691,7 +4730,7 @@ export class GrantRequest extends Message<GrantRequest> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "project", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "role", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "user_claims", kind: "message", T: UserClaims, oneof: "request" },
+    { no: 3, name: "user_claims", kind: "message", T: Claims, oneof: "request" },
     { no: 4, name: "resource_details", kind: "message", T: ResourceDetails, oneof: "request" },
   ]);
 
@@ -4856,9 +4895,9 @@ export class RevokeRequest extends Message<RevokeRequest> {
    */
   request: {
     /**
-     * @generated from field: github.com.akuity.kargo.api.rbac.v1alpha1.UserClaims user_claims = 3;
+     * @generated from field: akuity.io.kargo.service.v1alpha1.Claims user_claims = 3;
      */
-    value: UserClaims;
+    value: Claims;
     case: "userClaims";
   } | {
     /**
@@ -4878,7 +4917,7 @@ export class RevokeRequest extends Message<RevokeRequest> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "project", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "role", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "user_claims", kind: "message", T: UserClaims, oneof: "request" },
+    { no: 3, name: "user_claims", kind: "message", T: Claims, oneof: "request" },
     { no: 4, name: "resource_details", kind: "message", T: ResourceDetails, oneof: "request" },
   ]);
 

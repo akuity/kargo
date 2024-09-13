@@ -35,9 +35,7 @@ const (
 	StagesByUpstreamStagesIndexField     = "upstreamStages"
 	StagesByWarehouseIndexField          = "warehouse"
 
-	ServiceAccountsByOIDCEmailIndexField   = "email"
-	ServiceAccountsByOIDCGroupIndexField   = "groups"
-	ServiceAccountsByOIDCSubjectIndexField = "subjects"
+	ServiceAccountsByOIDCClaimsIndexField = "claims"
 )
 
 // IndexEventsByInvolvedObjectAPIGroup sets up the indexing of Events by the
@@ -498,100 +496,50 @@ func indexStagesByWarehouse(obj client.Object) []string {
 	return warehouses
 }
 
-// IndexServiceAccountsByOIDCEmail sets up indexing of ServiceAccounts by their
-// OIDC email annotations.
+// A helper function to format a claims name and values
+// to be used by the IndexServiceAccountsByOIDCClaims index.
+func FormatClaim(claimName string, claimValue string) string {
+	return claimName + "/" + claimValue
+}
+
+// IndexServiceAccountsByOIDCClaims sets up indexing of ServiceAccounts by
+// their OIDC claim annotations.
 //
-// It configures the cluster's field indexer to allow querying ServiceAccounts
-// using the ServiceAccountsByOIDCEmailIndexField selector.
-func IndexServiceAccountsByOIDCEmail(ctx context.Context, clstr cluster.Cluster) error {
+// It configures the manager's field indexer to allow querying ServiceAccounts
+// using the ServiceAccountsByOIDCClaimIndexField selector.
+func IndexServiceAccountsByOIDCClaims(ctx context.Context, clstr cluster.Cluster) error {
 	return clstr.GetFieldIndexer().IndexField(
 		ctx,
 		&corev1.ServiceAccount{},
-		ServiceAccountsByOIDCEmailIndexField,
-		indexServiceAccountsOIDCEmail,
+		ServiceAccountsByOIDCClaimsIndexField,
+		indexServiceAccountsByOIDCClaims,
 	)
 }
 
-// indexServiceAccountsOIDCEmail is a client.IndexerFunc that indexes
-// ServiceAccounts by their OIDC email annotations.
-func indexServiceAccountsOIDCEmail(obj client.Object) []string {
+// indexServiceAccountsByOIDCClaims is a client.IndexerFunc that indexes
+// ServiceAccounts by the OIDC claims.
+func indexServiceAccountsByOIDCClaims(obj client.Object) []string {
 	sa := obj.(*corev1.ServiceAccount) // nolint: forcetypeassert
-	rawEmails := strings.TrimSpace(sa.GetAnnotations()[rbacapi.AnnotationKeyOIDCEmails])
-	if rawEmails == "" {
-		return nil
-	}
-	emails := strings.Split(rawEmails, ",")
-	refinedEmails := make([]string, 0, len(emails))
-	for _, e := range emails {
-		if email := strings.TrimSpace(e); email != "" {
-			refinedEmails = append(refinedEmails, email)
+	refinedClaimValues := []string{}
+	for annotationKey, annotationValue := range sa.GetAnnotations() {
+		if strings.HasPrefix(annotationKey, rbacapi.AnnotationKeyOIDCClaimNamePrefix) {
+			rawClaimName := strings.TrimPrefix(annotationKey, rbacapi.AnnotationKeyOIDCClaimNamePrefix)
+			rawClaimValue := strings.TrimSpace(annotationValue)
+			if rawClaimValue == "" {
+				continue
+			}
+			claimValues := strings.Split(rawClaimValue, ",")
+			for _, e := range claimValues {
+				if claimValue := strings.TrimSpace(e); claimValue != "" {
+					refinedClaimValues = append(refinedClaimValues, FormatClaim(rawClaimName, claimValue))
+				}
+			}
 		}
 	}
-	return refinedEmails
-}
-
-// IndexServiceAccountsByOIDCGroups sets up indexing of ServiceAccounts by
-// their OIDC group annotations.
-//
-// It configures the cluster's field indexer to allow querying ServiceAccounts
-// using the ServiceAccountsByOIDCGroupIndexField selector.
-func IndexServiceAccountsByOIDCGroups(ctx context.Context, clstr cluster.Cluster) error {
-	return clstr.GetFieldIndexer().IndexField(
-		ctx,
-		&corev1.ServiceAccount{},
-		ServiceAccountsByOIDCGroupIndexField,
-		indexServiceAccountsByOIDCGroups,
-	)
-}
-
-// indexServiceAccountsByOIDCGroups is a client.IndexerFunc that indexes
-// ServiceAccounts by their OIDC group annotations.
-func indexServiceAccountsByOIDCGroups(obj client.Object) []string {
-	sa := obj.(*corev1.ServiceAccount) // nolint: forcetypeassert
-	rawGroups := strings.TrimSpace(sa.GetAnnotations()[rbacapi.AnnotationKeyOIDCGroups])
-	if rawGroups == "" {
+	if len(refinedClaimValues) == 0 {
 		return nil
 	}
-	groups := strings.Split(rawGroups, ",")
-	refinedGroups := make([]string, 0, len(groups))
-	for _, g := range groups {
-		if group := strings.TrimSpace(g); group != "" {
-			refinedGroups = append(refinedGroups, group)
-		}
-	}
-	return refinedGroups
-}
-
-// IndexServiceAccountsByOIDCSubjects sets up indexing of ServiceAccounts by
-// their OIDC subject annotations.
-//
-// It configures the cluster's field indexer to allow querying ServiceAccounts
-// using the ServiceAccountsByOIDCSubjectIndexField selector.
-func IndexServiceAccountsByOIDCSubjects(ctx context.Context, clstr cluster.Cluster) error {
-	return clstr.GetFieldIndexer().IndexField(
-		ctx,
-		&corev1.ServiceAccount{},
-		ServiceAccountsByOIDCSubjectIndexField,
-		indexServiceAccountsByOIDCSubjects,
-	)
-}
-
-// indexServiceAccountsByOIDCSubjects is a client.IndexerFunc that indexes
-// ServiceAccounts by their OIDC subject annotations.
-func indexServiceAccountsByOIDCSubjects(obj client.Object) []string {
-	sa := obj.(*corev1.ServiceAccount) // nolint: forcetypeassert
-	rawSubjects := strings.TrimSpace(sa.GetAnnotations()[rbacapi.AnnotationKeyOIDCSubjects])
-	if rawSubjects == "" {
-		return nil
-	}
-	subjects := strings.Split(rawSubjects, ",")
-	refinedSubjects := make([]string, 0, len(subjects))
-	for _, s := range subjects {
-		if subject := strings.TrimSpace(s); subject != "" {
-			refinedSubjects = append(refinedSubjects, subject)
-		}
-	}
-	return refinedSubjects
+	return refinedClaimValues
 }
 
 func isPromotionPhaseNonTerminal(promo *kargoapi.Promotion) bool {

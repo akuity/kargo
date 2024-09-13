@@ -245,14 +245,8 @@ func newDefaultInternalClient(
 	if err = kubeclient.IndexFreightByApprovedStages(ctx, cluster); err != nil {
 		return nil, fmt.Errorf("error indexing Freight by Stages for which it has been approved: %w", err)
 	}
-	if err = kubeclient.IndexServiceAccountsByOIDCEmail(ctx, cluster); err != nil {
-		return nil, fmt.Errorf("error indexing ServiceAccounts by OIDC email: %w", err)
-	}
-	if err = kubeclient.IndexServiceAccountsByOIDCGroups(ctx, cluster); err != nil {
-		return nil, fmt.Errorf("error indexing ServiceAccounts by OIDC groups: %w", err)
-	}
-	if err = kubeclient.IndexServiceAccountsByOIDCSubjects(ctx, cluster); err != nil {
-		return nil, fmt.Errorf("error indexing ServiceAccounts by OIDC subjects: %w", err)
+	if err = kubeclient.IndexServiceAccountsByOIDCClaims(ctx, cluster); err != nil {
+		return nil, fmt.Errorf("index ServiceAccounts by OIDC claims: %w", err)
 	}
 	if err = kubeclient.IndexEventsByInvolvedObjectAPIGroup(ctx, cluster); err != nil {
 		return nil, fmt.Errorf("error indexing Events by InvolvedObject's API group: %w", err)
@@ -746,7 +740,9 @@ func getAuthorizedClient(globalServiceAccountNamespaces []string) func(
 			Name:        key.Name,
 		}
 
-		if userInfo.Subject != "" {
+		// sub is a standard claim. If the user has this claim, we can infer that
+		// they authenticated using OIDC.
+		if userInfo.Claims["sub"] != "" {
 			var namespacesToCheck []string
 			if key.Namespace != "" {
 				// This is written the way it is to keep key.Namespace as the first

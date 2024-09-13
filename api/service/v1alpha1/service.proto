@@ -665,11 +665,16 @@ message GetRoleResponse {
   }
 }
 
+message Claims {
+  // Note: oneof and repeated do not work together
+  repeated github.com.akuity.kargo.api.rbac.v1alpha1.Claim claims = 1;
+}
+
 message GrantRequest {
   string project = 1;
   string role = 2;
   oneof request {
-    github.com.akuity.kargo.api.rbac.v1alpha1.UserClaims user_claims = 3;
+    Claims user_claims = 3;
     github.com.akuity.kargo.api.rbac.v1alpha1.ResourceDetails resource_details = 4;
   }
 }
@@ -693,7 +698,7 @@ message RevokeRequest {
   string project = 1;
   string role = 2;
   oneof request {
-    github.com.akuity.kargo.api.rbac.v1alpha1.UserClaims user_claims = 3;
+    Claims user_claims = 3;
     github.com.akuity.kargo.api.rbac.v1alpha1.ResourceDetails resource_details = 4;
   }
 }

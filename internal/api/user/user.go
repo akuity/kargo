@@ -17,15 +17,10 @@ type Info struct {
 	// verified as the Kargo API server's admin user. When this is true, all
 	// other fields should have an empty value.
 	IsAdmin bool
-	// Subject is the unique identified of a non-admin user whose credentials have
+	// Claims is a map of claims from an identity provider of a
+	// non-admin user whose credentials have
 	// been successfully verified by the server's authentication middleware.
-	Subject string
-	// Email is the verified email address of a non-admin user whose credentials
-	// have been successfully verified by the server's authentication middleware.
-	Email string
-	// Groups are the group claims obtained from credentials that have been
-	// successfully verified by the server's authentication middleware.
-	Groups []string
+	Claims map[string]any
 	// BearerToken is set only in cases where the server's authentication
 	// middleware could not verify the token it was presented with. In this case,
 	// we assume the token to be a valid credential for a Kubernetes user. When

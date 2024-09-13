@@ -206,22 +206,32 @@ api:
     clientID:
     ## @param api.oidc.cliClientID The client ID for the OIDC client used by CLI (optional). Needed by some OIDC providers (such as Dex) that require a separate Client ID for web app login vs. CLI login (`http://localhost`). If Dex is enabled, this value will be ignored and cli client ID will be automatically configured. If Dex is not enabled, and a different client app is configured for localhost CLI login, this should be the client ID configured in the IdP.
     cliClientID:
+    ## @param api.oidc.additionalScopes The additional scopes to send to the OIDC provider. This should be set to the scopes you wish to be provided to your identity provider from clients of Kargo, the scopes openid, profile, email and groups are always asked for and don't need to be added, this value is intended for any additional ones you require.
+    additionalScopes: []
 
     admins:
-      ## @param api.oidc.admins.subs Subjects having any of these values in their sub claim will automatically be Kargo admins.
-      subs: []
-      ## @param api.oidc.admins.emails Subjects having any of these values in their email claim will automatically be Kargo admins.
-      emails: []
-      ## @param api.oidc.admins.groups Subjects having any of these values in their groups claim will automatically be Kargo admins.
-      groups: []
+      ## @param api.oidc.admins.claims Subjects having any of these claims will automatically be Kargo admins.
+      claims: {}
+        # sub:
+        # - alice
+        # - bob
+        # email:
+        # - alice@example.com
+        # - bob@examples.com
+        # groups:
+        # - kargo-admin
 
     viewers:
-      ## @param api.oidc.viewers.subs Subjects having any of these values in their sub claim will automatically receive read-only access to all Kargo resources.
-      subs: []
-      ## @param api.oidc.viewers.emails Subjects having any of these values in their email claim will automatically receive read-only access to all Kargo resources.
-      emails: []
-      ## @param api.oidc.viewers.groups Subjects having any of these values in their groups claim will automatically receive read-only access to all Kargo resources.
-      groups: []
+      ## @param api.oidc.viewers.claims Subjects having any of these claims will automatically receive read-only access to all Kargo resources.
+      claims: {}
+        # sub:
+        # - alice
+        # - bob
+        # email:
+        # - alice@example.com
+        # - bob@examples.com
+        # groups:
+        # - kargo-viewer
 
     globalServiceAccounts:
       ## @param api.oidc.globalServiceAccounts.namespaces List of namespaces to look for shared service accounts.

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"connectrpc.com/connect"
 	"github.com/spf13/cobra"
@@ -29,9 +30,7 @@ type revokeOptions struct {
 
 	Project      string
 	Role         string
-	Subs         []string
-	Emails       []string
-	Groups       []string
+	Claims       []string
 	ResourceType string
 	ResourceName string
 	Verbs        []string
@@ -45,28 +44,21 @@ func NewCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams) *cobra
 	}
 
 	cmd := &cobra.Command{
-		Use: `revoke [--project=project] --role=role \
-		[--sub=sub] [--email=email] [--group=group] \
-		[--resource-type=resource-type [--resource-name=resource-name] --verb=verb]`,
+		Use: `revoke [--project=project] --role=role [--claim=name=value]... \
+		[--verb=verb --resource-type=resource-type [--resource-name=resource-name]]`,
 		Short: "Revoke a role from a user or revoke permissions from a role",
 		Args:  option.NoArgs,
 		Example: templates.Example(`
-# Revoke my-role from users with specific sub claims
-kargo revoke --project=my-project --role=my-role --sub=1234567890 --sub=0987654321
-
-# Revoke my-role from users with specific email addresses
-kargo revoke --project=my-project --role=my-role \
-  --email=bob@example.com --email=alice@example.com
-
-# Revoke my-role from users in specific groups
-kargo revoke --project=my-project --role=my-role --group=admins --group=engineers
-
 # Revoke permission to update all stages from my-role
-kargo revoke --project=my-project --role=my-role --resource-type=stage --verb=update
+kargo revoke --project=my-project --role=my-role --verb=update --resource-type=stage
 
 # Revoke permission to promote to stage dev from my-role
 kargo revoke --project=my-project --role=my-role \
-  --resource-type=stage --resource-name=dev --verb=promote
+  --verb=promote --resource-type=stage --resource-name=dev
+
+# Revoke my-role from users with specific claims
+kargo revoke --project=my-project --role=my-role \
+  --claim=email=alice@example.com --claim=groups=admins,power-users
 `),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if err := cmdOpts.validate(); err != nil {
@@ -95,9 +87,7 @@ func (o *revokeOptions) addFlags(cmd *cobra.Command) {
 		"The project in which to manage a role. If not set, the default project will be used.",
 	)
 	option.Role(cmd.Flags(), &o.Role, "The role to manage.")
-	option.Subs(cmd.Flags(), &o.Subs, "The sub claim of a user to have the role revoked.")
-	option.Emails(cmd.Flags(), &o.Emails, "The email address of a user to have the role revoked.")
-	option.Groups(cmd.Flags(), &o.Groups, "A group to have the role revoked.")
+	option.Claims(cmd.Flags(), &o.Claims, "A claim name and value to have the role revoked")
 	option.ResourceType(cmd.Flags(), &o.ResourceType, "A type of resource to revoke permissions for.")
 	option.ResourceName(cmd.Flags(), &o.ResourceName, "The name of a resource to revoke permissions for.")
 	option.Verbs(cmd.Flags(), &o.Verbs, "A verb to revoke on the resource.")
@@ -108,17 +98,15 @@ func (o *revokeOptions) addFlags(cmd *cobra.Command) {
 
 	// If none of these are specified, we're not revoking anything.
 	cmd.MarkFlagsOneRequired(
-		option.SubFlag,
-		option.EmailFlag,
-		option.GroupFlag,
+		option.ClaimFlag,
 		option.ResourceTypeFlag,
 	)
 
 	// You can't revoke a role from users and revoke permissions from a role at
 	// the same time.
-	cmd.MarkFlagsMutuallyExclusive(option.SubFlag, option.ResourceTypeFlag)
-	cmd.MarkFlagsMutuallyExclusive(option.EmailFlag, option.ResourceTypeFlag)
-	cmd.MarkFlagsMutuallyExclusive(option.GroupFlag, option.ResourceTypeFlag)
+	cmd.MarkFlagsMutuallyExclusive(option.ClaimFlag, option.VerbFlag)
+	cmd.MarkFlagsMutuallyExclusive(option.ClaimFlag, option.ResourceTypeFlag)
+	cmd.MarkFlagsMutuallyExclusive(option.ClaimFlag, option.ResourceNameFlag)
 
 	cmd.MarkFlagsRequiredTogether(option.ResourceTypeFlag, option.VerbFlag)
 }
@@ -134,6 +122,12 @@ func (o *revokeOptions) validate() error {
 	}
 	if o.Role == "" {
 		errs = append(errs, fmt.Errorf("%s is required", option.RoleFlag))
+	}
+	// This is a check to ensure that any claims flags have exactly 1 "=".
+	for _, claim := range o.Claims {
+		if strings.Count(claim, "=") != 1 {
+			errs = append(errs, fmt.Errorf("%s should be in the format <claim-name>=<claim-value>", option.ClaimFlag))
+		}
 	}
 	return errors.Join(errs...)
 }
@@ -158,12 +152,16 @@ func (o *revokeOptions) run(ctx context.Context) error {
 			},
 		}
 	} else {
+		claims := svcv1alpha1.Claims{}
+		for _, claimFlagValue := range o.Claims {
+			claimFlagNameAndValue := strings.Split(claimFlagValue, "=")
+			claims.Claims = append(claims.Claims, &rbacapi.Claim{
+				Name:   claimFlagNameAndValue[0],
+				Values: []string{claimFlagNameAndValue[1]},
+			})
+		}
 		req.Request = &svcv1alpha1.RevokeRequest_UserClaims{
-			UserClaims: &rbacapi.UserClaims{
-				Subs:   o.Subs,
-				Emails: o.Emails,
-				Groups: o.Groups,
-			},
+			UserClaims: &claims,
 		}
 	}
 
