@@ -23,6 +23,7 @@ api:
     admins:
       claims:
         email:
+        # This email claim is hard-coded in the Dex mockCallback connector
         - kilgore@kilgore.trout
 controller:
   logLevel: DEBUG
