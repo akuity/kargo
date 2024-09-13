@@ -75,9 +75,12 @@ func TestWorkTree(t *testing.T) {
 	defer rep.Close()
 
 	workingTreePath := filepath.Join(rep.HomeDir(), "working-tree")
-	// "master" is still the default branch name for a new repository unless
-	// you configure it otherwise.
-	workTree, err := rep.AddWorkTree(workingTreePath, "master")
+	workTree, err := rep.AddWorkTree(
+		workingTreePath,
+		// "master" is still the default branch name for a new repository unless
+		// you configure it otherwise.
+		&AddWorkTreeOptions{Ref: "master"},
+	)
 	require.NoError(t, err)
 	defer workTree.Close()
 
