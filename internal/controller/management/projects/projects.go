@@ -413,6 +413,21 @@ func (r *reconciler) ensureControllerPermissions(
 		"roleBinding", roleBindingName,
 	)
 
+	// Get all ServiceAccounts labeled as controller ServiceAccounts
+	controllerSAs := &corev1.ServiceAccountList{}
+	if err := r.client.List(ctx, controllerSAs, client.InNamespace(r.cfg.KargoNamespace), client.MatchingLabels{"app.kubernetes.io/component": "controller"}); err != nil {
+		return fmt.Errorf("error listing controller ServiceAccounts: %w", err)
+	}
+
+	subjects := make([]rbacv1.Subject, len(controllerSAs.Items))
+	for i, sa := range controllerSAs.Items {
+		subjects[i] = rbacv1.Subject{
+			Kind:      "ServiceAccount",
+			Name:      sa.Name,
+			Namespace: r.cfg.KargoNamespace,
+		}
+	}
+
 	roleBinding := &rbacv1.RoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      roleBindingName,
@@ -423,27 +438,32 @@ func (r *reconciler) ensureControllerPermissions(
 			Kind:     "ClusterRole",
 			Name:     "kargo-controller-secrets-readonly",
 		},
-		Subjects: []rbacv1.Subject{
-			{
-				Kind:      "ServiceAccount",
-				Name:      "kargo-controller",
-				Namespace: r.cfg.KargoNamespace,
-			},
-		},
+		Subjects: subjects,
 	}
+
 	if err := r.createRoleBindingFn(ctx, roleBinding); err != nil {
 		if kubeerr.IsAlreadyExists(err) {
-			logger.Debug("RoleBinding already exists in project namespace")
-			return nil
+			// Update the existing RoleBinding
+			existingRoleBinding := &rbacv1.RoleBinding{}
+			if err := r.client.Get(ctx, client.ObjectKey{Name: roleBindingName, Namespace: project.Name}, existingRoleBinding); err != nil {
+				return fmt.Errorf("error getting existing RoleBinding: %w", err)
+			}
+			existingRoleBinding.Subjects = subjects
+			if err := r.client.Update(ctx, existingRoleBinding); err != nil {
+				return fmt.Errorf("error updating RoleBinding: %w", err)
+			}
+			logger.Debug("Updated RoleBinding with all controller ServiceAccounts")
+		} else {
+			return fmt.Errorf(
+				"error creating RoleBinding %q in project namespace %q: %w",
+				roleBinding.Name,
+				project.Name,
+				err,
+			)
 		}
-		return fmt.Errorf(
-			"error creating RoleBinding %q in project namespace %q: %w",
-			roleBinding.Name,
-			project.Name,
-			err,
-		)
+	} else {
+		logger.Debug("Created RoleBinding for all controller ServiceAccounts")
 	}
-	logger.Debug("granted kargo-controller project secrets permissions")
 
 	return nil
 }
