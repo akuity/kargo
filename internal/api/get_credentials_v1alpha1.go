@@ -20,7 +20,7 @@ func (s *server) GetCredentials(
 	req *connect.Request[svcv1alpha1.GetCredentialsRequest],
 ) (*connect.Response[svcv1alpha1.GetCredentialsResponse], error) {
 	// Check if secret management is enabled
-	if !s.cfg.EnableSecretManagement {
+	if !s.cfg.SecretManagementEnabled {
 		return nil, connect.NewError(
 			connect.CodeUnimplemented,
 			fmt.Errorf("secret management is not enabled"),

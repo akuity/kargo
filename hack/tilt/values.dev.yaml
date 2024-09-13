@@ -3,7 +3,7 @@ api:
   host: localhost:30081
   tls:
     enabled: false
-  enablePermissiveCORSPolicy: true
+  permissiveCORSPolicyEnabled: true
   probes:
     enabled: false
   adminAccount:
