@@ -277,7 +277,7 @@ func TestGetCredentials(t *testing.T) {
 				client:                    client,
 				externalValidateProjectFn: validation.ValidateProject,
 				cfg: config.ServerConfig{
-					EnableSecretManagement: true,
+					SecretManagementEnabled: true,
 				},
 			}
 			res, err := (svr).GetCredentials(ctx, connect.NewRequest(testCase.req))

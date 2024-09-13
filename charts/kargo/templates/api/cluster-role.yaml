@@ -133,7 +133,7 @@ rules:
     - ""
   resources:
     - configmaps
-    {{- if .Values.api.enableSecretManagement }}
+    {{- if .Values.api.secretManagementEnabled }}
     - secrets
     {{- end }}
     - serviceaccounts
