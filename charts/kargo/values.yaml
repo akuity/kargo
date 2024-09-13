@@ -210,20 +210,28 @@ api:
     additionalScopes: []
 
     admins:
-      ## @param api.oidc.admins.subs Subjects having any of these values in their sub claim will automatically be Kargo admins.
-      subs: []
-      ## @param api.oidc.admins.emails Subjects having any of these values in their email claim will automatically be Kargo admins.
-      emails: []
-      ## @param api.oidc.admins.groups Subjects having any of these values in their groups claim will automatically be Kargo admins.
-      groups: []
+      ## @param api.oidc.admins.claims Subjects having any of these claims will automatically be Kargo admins.
+      claims: {}
+        # sub:
+        # - alice
+        # - bob
+        # email:
+        # - alice@example.com
+        # - bob@examples.com
+        # groups:
+        # - kargo-admin
 
     viewers:
-      ## @param api.oidc.viewers.subs Subjects having any of these values in their sub claim will automatically receive read-only access to all Kargo resources.
-      subs: []
-      ## @param api.oidc.viewers.emails Subjects having any of these values in their email claim will automatically receive read-only access to all Kargo resources.
-      emails: []
-      ## @param api.oidc.viewers.groups Subjects having any of these values in their groups claim will automatically receive read-only access to all Kargo resources.
-      groups: []
+      ## @param api.oidc.viewers.claims Subjects having any of these claims will automatically receive read-only access to all Kargo resources.
+      claims: {}
+        # sub:
+        # - alice
+        # - bob
+        # email:
+        # - alice@example.com
+        # - bob@examples.com
+        # groups:
+        # - kargo-viewer
 
     globalServiceAccounts:
       ## @param api.oidc.globalServiceAccounts.namespaces List of namespaces to look for shared service accounts.
