@@ -11,7 +11,7 @@ require (
 	github.com/aws/aws-sdk-go-v2 v1.30.5
 	github.com/aws/aws-sdk-go-v2/config v1.27.33
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.32
-	github.com/aws/aws-sdk-go-v2/service/ecr v1.32.4
+	github.com/aws/aws-sdk-go-v2/service/ecr v1.33.0
 	github.com/aws/aws-sdk-go-v2/service/sts v1.30.7
 	github.com/bacongobbler/browser v1.1.0
 	github.com/bombsimon/logrusr/v4 v4.1.0
@@ -41,8 +41,8 @@ require (
 	golang.org/x/net v0.29.0
 	golang.org/x/oauth2 v0.23.0
 	golang.org/x/sync v0.8.0
-	google.golang.org/api v0.196.0
-	google.golang.org/grpc v1.66.0
+	google.golang.org/api v0.197.0
+	google.golang.org/grpc v1.66.1
 	google.golang.org/protobuf v1.34.2
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/api v0.31.0
@@ -77,7 +77,7 @@ require (
 	github.com/gofrs/uuid v4.0.0+incompatible // indirect
 	github.com/google/go-github/v64 v64.0.0 // indirect
 	github.com/google/s2a-go v0.1.8 // indirect
-	github.com/googleapis/enterprise-certificate-proxy v0.3.3 // indirect
+	github.com/googleapis/enterprise-certificate-proxy v0.3.4 // indirect
 	github.com/googleapis/gax-go/v2 v2.13.0 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	go.opencensus.io v0.24.0 // indirect
