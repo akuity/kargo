@@ -66,6 +66,8 @@ type PullRequest struct {
 	MergeCommitSHA string `json:"mergeCommitSHA"`
 	// Object is the underlying object from the provider
 	Object any `json:"-"`
+	// HeadSHA is the SHA of the head commit
+	HeadSHA string `json:"headSHA"`
 }
 
 func (pr *PullRequest) IsOpen() bool {
