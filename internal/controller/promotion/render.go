@@ -78,7 +78,8 @@ func (r *renderer) apply(
 				foundImage, err := freight.FindImage(
 					ctx,
 					r.client,
-					stage,
+					stage.Namespace,
+					stage.Spec.RequestedFreight,
 					desiredOrigin,
 					newFreight,
 					image.RepoURL,
@@ -101,7 +102,8 @@ func (r *renderer) apply(
 			image, err := freight.FindImage(
 				ctx,
 				r.client,
-				stage,
+				stage.Namespace,
+				stage.Spec.RequestedFreight,
 				desiredOrigin,
 				newFreight,
 				imageUpdate.Image,

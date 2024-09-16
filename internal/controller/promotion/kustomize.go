@@ -53,7 +53,8 @@ type kustomizer struct {
 	findImageFn func(
 		ctx context.Context,
 		cl client.Client,
-		stage *kargoapi.Stage,
+		project string,
+		requestedFreight []kargoapi.FreightRequest,
 		desiredOrigin *kargoapi.FreightOrigin,
 		freight []kargoapi.FreightReference,
 		repoURL string,
@@ -77,7 +78,8 @@ func (k *kustomizer) apply(
 	for i := range update.Kustomize.Images {
 		imgUpdate := &update.Kustomize.Images[i]
 		desiredOrigin := freight.GetDesiredOrigin(stage, imgUpdate)
-		image, err := k.findImageFn(ctx, k.client, stage, desiredOrigin, newFreight, imgUpdate.Image)
+		image, err := k.findImageFn(ctx, k.client, stage.Namespace,
+			stage.Spec.RequestedFreight, desiredOrigin, newFreight, imgUpdate.Image)
 		if err != nil {
 			return nil,
 				fmt.Errorf("error finding image %q from Freight: %w", imgUpdate.Image, err)
@@ -87,10 +89,14 @@ func (k *kustomizer) apply(
 			continue
 		}
 		var fqImageRef string // Fully-qualified image reference
+		imageName := image.RepoURL
+		if imgUpdate.NewName != "" {
+			imageName = fmt.Sprintf("%s=%s", imageName, imgUpdate.NewName)
+		}
 		if imgUpdate.UseDigest {
-			fqImageRef = fmt.Sprintf("%s@%s", image.RepoURL, image.Digest)
+			fqImageRef = fmt.Sprintf("%s@%s", imageName, image.Digest)
 		} else {
-			fqImageRef = fmt.Sprintf("%s:%s", image.RepoURL, image.Tag)
+			fqImageRef = fmt.Sprintf("%s:%s", imageName, image.Tag)
 		}
 		dir := filepath.Join(workingDir, imgUpdate.Path)
 		if err := k.setImageFn(dir, fqImageRef); err != nil {

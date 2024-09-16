@@ -20,6 +20,8 @@ IMAGE_PUSH 			?= false
 IMAGE_PLATFORMS 	=
 DOCKER_BUILD_OPTS 	=
 
+DOCS_PORT 				?= 3000
+
 # Intelligently choose to build a multi-arch image if the intent is to push to a
 # container registry (IMAGE_PUSH=true). If not pushing, build an single-arch
 # image for the local architecture. Honor IMAGE_PLATFORMS above all.
@@ -152,7 +154,11 @@ build-cli-with-ui: build-ui build-cli
 ################################################################################
 
 .PHONY: codegen
-codegen: codegen-proto codegen-controller codegen-ui codegen-docs
+codegen: codegen-proto codegen-controller codegen-directive-configs codegen-ui codegen-docs
+
+.PHONY: codegen-proto
+codegen-proto: install-protoc install-go-to-protobuf install-protoc-gen-gogo install-goimports install-buf
+	./hack/codegen/proto.sh
 
 .PHONY: codegen-controller
 codegen-controller: install-controller-gen
@@ -166,19 +172,20 @@ codegen-controller: install-controller-gen
 		object:headerFile=hack/boilerplate.go.txt \
 		paths=./...
 
-.PHONY: codegen-docs
-codegen-docs:
-	npm install -g @bitnami/readme-generator-for-helm
-	bash hack/helm-docs/helm-docs.sh
-
-.PHONY: codegen-proto
-codegen-proto: install-protoc install-go-to-protobuf install-protoc-gen-gogo install-goimports install-buf
-	./hack/codegen/proto.sh
+.PHONY: codegen-directive-configs
+codegen-directive-configs:
+	npm install -g quicktype
+	./hack/codegen/directive-configs.sh
 
 .PHONY: codegen-ui
 codegen-ui:
 	pnpm --dir=ui install --dev
 	pnpm --dir=ui run generate:schema
+
+.PHONY: codegen-docs
+codegen-docs:
+	npm install -g @bitnami/readme-generator-for-helm
+	bash hack/helm-docs/helm-docs.sh
 
 ################################################################################
 # Hack: Targets to help you hack                                               #
@@ -190,15 +197,15 @@ codegen-ui:
 # Prevents issues with vcs stamping within docker containers. 
 GOFLAGS="-buildvcs=false"
 
-DOCKER_CMD := $(CONTAINER_RUNTIME) run \
-	-it \
+DOCKER_OPTS := -it \
 	--rm \
 	-e GOFLAGS=$(GOFLAGS) \
 	-v gomodcache:/home/user/gocache \
 	-v $(dir $(realpath $(firstword $(MAKEFILE_LIST)))):/workspaces/kargo \
 	-v /workspaces/kargo/ui/node_modules \
-	-w /workspaces/kargo \
-	kargo:dev-tools
+	-w /workspaces/kargo
+
+DOCKER_CMD := $(CONTAINER_RUNTIME) run $(DOCKER_OPTS) kargo:dev-tools
 
 DEV_TOOLS_BUILD_OPTS =
 
@@ -358,3 +365,18 @@ start-controller-local:
 	KUBECONFIG=~/.kube/config \
 	ARGOCD_KUBECONFIG=~/.kube/config \
     	go run ./cmd/controlplane controller
+
+################################################################################
+# Docs                                                                         #
+#                                                                              #
+# Convenience targets for building and running the documentation site natively #
+# or in a container.                                                           #
+################################################################################
+
+.PHONY: hack-serve-docs
+hack-serve-docs: hack-build-dev-tools
+	$(CONTAINER_RUNTIME) run $(DOCKER_OPTS) -p $(DOCS_PORT):$(DOCS_PORT) kargo:dev-tools make serve-docs
+
+.PHONY: serve-docs
+serve-docs:
+	cd docs && pnpm install && pnpm start

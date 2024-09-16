@@ -250,18 +250,24 @@ func (a *authInterceptor) listServiceAccounts(
 	ctx context.Context,
 	c claims,
 ) (map[string]map[types.NamespacedName]struct{}, error) {
-	queries := []libClient.MatchingFields{
-		{
-			kubeclient.ServiceAccountsByOIDCSubjectIndexField: c.Subject,
-		},
-		{
-			kubeclient.ServiceAccountsByOIDCEmailIndexField: c.Email,
-		},
-	}
-	for _, group := range c.Groups {
-		queries = append(queries, libClient.MatchingFields{
-			kubeclient.ServiceAccountsByOIDCGroupIndexField: group,
-		})
+	queries := []libClient.MatchingFields{}
+	for claimName, claimValue := range c {
+		if claimValuesString, ok := claimValue.(string); ok {
+			queries = append(queries, libClient.MatchingFields{
+				kubeclient.ServiceAccountsByOIDCClaimsIndexField: kubeclient.FormatClaim(claimName, claimValuesString),
+			})
+		}
+		if claimValueSlice, ok := claimValue.([]any); ok {
+			for _, claimValueSliceItem := range claimValueSlice {
+				if claimValueSliceItemString, ok := claimValueSliceItem.(string); ok {
+					queries = append(queries, libClient.MatchingFields{
+						kubeclient.ServiceAccountsByOIDCClaimsIndexField: kubeclient.FormatClaim(
+							claimName, claimValueSliceItemString,
+						),
+					})
+				}
+			}
+		}
 	}
 	// allowedNamespaces is a set of all namespaces in which to search for
 	// ServiceAccounts the user may be mapped to. These will includes all project
@@ -384,9 +390,7 @@ func (a *authInterceptor) authenticate(
 			return user.ContextWithInfo(
 				ctx,
 				user.Info{
-					Subject:                    c.Subject,
-					Email:                      c.Email,
-					Groups:                     c.Groups,
+					Claims:                     c,
 					ServiceAccountsByNamespace: sa,
 				},
 			), nil
@@ -447,11 +451,7 @@ func (a *authInterceptor) verifyKargoIssuedToken(rawToken string) bool {
 	return err == nil
 }
 
-type claims struct {
-	Subject string   `json:"sub"`
-	Email   string   `json:"email"`
-	Groups  []string `json:"groups"`
-}
+type claims map[string]any
 
 func oidcExtractClaims(token *oidc.IDToken) (claims, error) {
 	c := claims{}

@@ -1,4 +1,4 @@
-FROM golang:1.23.0-bookworm
+FROM golang:1.23.1-bookworm
 
 ARG TARGETARCH
 

@@ -75,7 +75,8 @@ func GetDesiredRevision(
 		chart, err := freight.FindChart(
 			ctx,
 			cl,
-			stage,
+			stage.Namespace,
+			stage.Spec.RequestedFreight,
 			desiredOrigin,
 			frght,
 			repoURL,

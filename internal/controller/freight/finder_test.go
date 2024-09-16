@@ -277,13 +277,14 @@ func TestFindImage(t *testing.T) {
 	testCases := []struct {
 		name          string
 		client        func() client.Client
-		Stage         *kargoapi.Stage
+		stage         *kargoapi.Stage
 		desiredOrigin *kargoapi.FreightOrigin
 		freight       []kargoapi.FreightReference
 		assertions    func(*testing.T, *kargoapi.Image, error)
 	}{
 		{
 			name:          "desired origin specified, but image not found",
+			stage:         &kargoapi.Stage{},
 			desiredOrigin: &testOrigin1,
 			freight: []kargoapi.FreightReference{
 				{
@@ -298,6 +299,7 @@ func TestFindImage(t *testing.T) {
 		},
 		{
 			name:          "desired origin specified and image is found",
+			stage:         &kargoapi.Stage{},
 			desiredOrigin: &testOrigin1,
 			freight: []kargoapi.FreightReference{
 				{
@@ -319,7 +321,7 @@ func TestFindImage(t *testing.T) {
 			client: func() client.Client {
 				return fake.NewClientBuilder().WithScheme(scheme).Build()
 			},
-			Stage: &kargoapi.Stage{
+			stage: &kargoapi.Stage{
 				Spec: kargoapi.StageSpec{
 					RequestedFreight: []kargoapi.FreightRequest{{Origin: testOrigin1}},
 				},
@@ -349,7 +351,7 @@ func TestFindImage(t *testing.T) {
 					},
 				).Build()
 			},
-			Stage: &kargoapi.Stage{
+			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: testNamespace,
 				},
@@ -394,7 +396,7 @@ func TestFindImage(t *testing.T) {
 					},
 				).Build()
 			},
-			Stage: &kargoapi.Stage{
+			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: testNamespace,
 				},
@@ -434,7 +436,7 @@ func TestFindImage(t *testing.T) {
 					},
 				).Build()
 			},
-			Stage: &kargoapi.Stage{
+			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: testNamespace,
 				},
@@ -469,7 +471,8 @@ func TestFindImage(t *testing.T) {
 			image, err := FindImage(
 				context.Background(),
 				cl,
-				testCase.Stage,
+				testCase.stage.Namespace,
+				testCase.stage.Spec.RequestedFreight,
 				testCase.desiredOrigin,
 				testCase.freight,
 				testRepoURL,
@@ -511,13 +514,14 @@ func TestFindChart(t *testing.T) {
 	testCases := []struct {
 		name          string
 		client        func() client.Client
-		Stage         *kargoapi.Stage
+		stage         *kargoapi.Stage
 		desiredOrigin *kargoapi.FreightOrigin
 		freight       []kargoapi.FreightReference
 		assertions    func(*testing.T, *kargoapi.Chart, error)
 	}{
 		{
 			name:          "desired origin specified, but chart not found",
+			stage:         &kargoapi.Stage{},
 			desiredOrigin: &testOrigin1,
 			freight: []kargoapi.FreightReference{
 				{
@@ -532,6 +536,7 @@ func TestFindChart(t *testing.T) {
 		},
 		{
 			name:          "desired origin specified and chart is found",
+			stage:         &kargoapi.Stage{},
 			desiredOrigin: &testOrigin1,
 			freight: []kargoapi.FreightReference{
 				{
@@ -553,7 +558,7 @@ func TestFindChart(t *testing.T) {
 			client: func() client.Client {
 				return fake.NewClientBuilder().WithScheme(scheme).Build()
 			},
-			Stage: &kargoapi.Stage{
+			stage: &kargoapi.Stage{
 				Spec: kargoapi.StageSpec{
 					RequestedFreight: []kargoapi.FreightRequest{{Origin: testOrigin1}},
 				},
@@ -584,7 +589,7 @@ func TestFindChart(t *testing.T) {
 					},
 				).Build()
 			},
-			Stage: &kargoapi.Stage{
+			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: testNamespace,
 				},
@@ -631,7 +636,7 @@ func TestFindChart(t *testing.T) {
 					},
 				).Build()
 			},
-			Stage: &kargoapi.Stage{
+			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: testNamespace,
 				},
@@ -672,7 +677,7 @@ func TestFindChart(t *testing.T) {
 					},
 				).Build()
 			},
-			Stage: &kargoapi.Stage{
+			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: testNamespace,
 				},
@@ -707,7 +712,8 @@ func TestFindChart(t *testing.T) {
 			chart, err := FindChart(
 				context.Background(),
 				cl,
-				testCase.Stage,
+				testCase.stage.Namespace,
+				testCase.stage.Spec.RequestedFreight,
 				testCase.desiredOrigin,
 				testCase.freight,
 				testRepoURL,
