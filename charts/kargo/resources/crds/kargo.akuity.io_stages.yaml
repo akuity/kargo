@@ -878,6 +878,46 @@ spec:
                     - name
                     type: object
                 type: object
+              promotionTemplate:
+                description: |-
+                  PromotionTemplate describes how to incorporate Freight into the Stage
+                  using a Promotion.
+                properties:
+                  spec:
+                    description: |-
+                      PromotionTemplateSpec describes the (partial) specification of a Promotion
+                      for a Stage. This is a template that can be used to create a Promotion for a
+                      Stage.
+                    properties:
+                      steps:
+                        description: |-
+                          Steps specifies the directives to be executed as part of a Promotion.
+                          The order in which the directives are executed is the order in which they
+                          are listed in this field.
+                        items:
+                          description: PromotionStep describes a directive to be executed
+                            as part of a Promotion.
+                          properties:
+                            as:
+                              description: As is the alias this step can be referred
+                                to as.
+                              type: string
+                            config:
+                              description: Config is the configuration for the directive.
+                              x-kubernetes-preserve-unknown-fields: true
+                            step:
+                              description: Step is the name of the directive to run.
+                              minLength: 1
+                              type: string
+                          required:
+                          - step
+                          type: object
+                        minItems: 1
+                        type: array
+                    type: object
+                required:
+                - spec
+                type: object
               requestedFreight:
                 description: |-
                   RequestedFreight expresses the Stage's need for certain pieces of Freight,

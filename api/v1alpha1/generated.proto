@@ -12,6 +12,10 @@ import "k8s.io/apimachinery/pkg/runtime/schema/generated.proto";
 // Package-wide variables from generator "generated".
 option go_package = "github.com/akuity/kargo/api/v1alpha1";
 
+message JSON {
+  optional bytes raw = 1;
+}
+
 // AnalysisRunArgument represents an argument to be added to an AnalysisRun.
 message AnalysisRunArgument {
   // Name is the name of the argument.
@@ -1324,6 +1328,11 @@ message PromotionSpec {
   //
   // +kubebuilder:validation:MinLength=1
   optional string freight = 2;
+
+  // Steps specifies the directives to be executed as part of this Promotion.
+  // The order in which the directives are executed is the order in which they
+  // are listed in this field.
+  repeated PromotionStep steps = 3;
 }
 
 // PromotionStatus describes the current state of the transition represented by
@@ -1358,6 +1367,38 @@ message PromotionStatus {
 
   // FinishedAt is the time when the promotion was completed.
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Time finishedAt = 6;
+}
+
+// PromotionStep describes a directive to be executed as part of a Promotion.
+message PromotionStep {
+  // Step is the name of the directive to run.
+  //
+  // +kubebuilder:validation:MinLength=1
+  optional string step = 1;
+
+  // As is the alias this step can be referred to as.
+  optional string as = 2;
+
+  // Config is the configuration for the directive.
+  optional JSON config = 3;
+}
+
+// PromotionTemplate defines a template for a Promotion that can be used to
+// incorporate Freight into a Stage.
+message PromotionTemplate {
+  optional PromotionTemplateSpec spec = 1;
+}
+
+// PromotionTemplateSpec describes the (partial) specification of a Promotion
+// for a Stage. This is a template that can be used to create a Promotion for a
+// Stage.
+message PromotionTemplateSpec {
+  // Steps specifies the directives to be executed as part of a Promotion.
+  // The order in which the directives are executed is the order in which they
+  // are listed in this field.
+  //
+  // +kubebuilder:validation:MinItems=1
+  repeated PromotionStep steps = 1;
 }
 
 // PullRequestPromotionMechanism describes how to generate a pull request against the write branch during promotion
@@ -1425,6 +1466,10 @@ message StageSpec {
   //
   // +kubebuilder:validation:MinItems=1
   repeated FreightRequest requestedFreight = 5;
+
+  // PromotionTemplate describes how to incorporate Freight into the Stage
+  // using a Promotion.
+  optional PromotionTemplate promotionTemplate = 6;
 
   // PromotionMechanisms describes how to incorporate Freight into the Stage.
   // This is an optional field as it is sometimes useful to aggregates available
