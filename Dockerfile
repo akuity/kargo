@@ -57,7 +57,7 @@ WORKDIR /kargo/bin
 ####################################################################################################
 # `tools` stage allows us to take the leverage of the parallel build.
 # For example, this stage can be cached and re-used when we have to rebuild code base.
-FROM curlimages/curl:8.9.1 AS tools
+FROM curlimages/curl:8.10.0 AS tools
 
 ARG TARGETOS
 ARG TARGETARCH
