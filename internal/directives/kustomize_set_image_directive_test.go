@@ -42,7 +42,7 @@ kind: Kustomization
 			cfg: KustomizeSetImageConfig{
 				Path: ".",
 				Images: []KustomizeSetImageConfigImage{
-					{Image: "nginx:latest"},
+					{Image: "nginx"},
 				},
 			},
 			setupStepCtx: func(t *testing.T, workDir string) *StepContext {
@@ -51,7 +51,7 @@ kind: Kustomization
 				c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
 					mockWarehouse(testNamespace, "warehouse1", kargoapi.WarehouseSpec{
 						Subscriptions: []kargoapi.RepoSubscription{
-							{Image: &kargoapi.ImageSubscription{RepoURL: "nginx:latest"}},
+							{Image: &kargoapi.ImageSubscription{RepoURL: "nginx"}},
 						},
 					}),
 				).Build()
@@ -67,7 +67,7 @@ kind: Kustomization
 						Freight: map[string]kargoapi.FreightReference{
 							"Warehouse/warehouse1": {
 								Origin: kargoapi.FreightOrigin{Kind: "Warehouse", Name: "warehouse1"},
-								Images: []kargoapi.Image{{RepoURL: "nginx:latest", Tag: "1.21.0", Digest: "sha256:123"}},
+								Images: []kargoapi.Image{{RepoURL: "nginx", Tag: "1.21.0", Digest: "sha256:123"}},
 							},
 						},
 					},
@@ -75,7 +75,12 @@ kind: Kustomization
 			},
 			assertions: func(t *testing.T, workDir string, result Result, err error) {
 				require.NoError(t, err)
-				assert.Equal(t, Result{Status: StatusSuccess}, result)
+				assert.Equal(t, Result{
+					Status: StatusSuccess,
+					Output: State{
+						"commitMessage": "Updated . to use new image\n\n- nginx:1.21.0",
+					},
+				}, result)
 
 				b, err := os.ReadFile(filepath.Join(workDir, "kustomization.yaml"))
 				require.NoError(t, err)
@@ -90,7 +95,7 @@ kind: Kustomization
 			cfg: KustomizeSetImageConfig{
 				Path: ".",
 				Images: []KustomizeSetImageConfigImage{
-					{Image: "nginx:latest"},
+					{Image: "nginx"},
 				},
 			},
 			setupStepCtx: func(t *testing.T, workDir string) *StepContext {
@@ -127,7 +132,7 @@ images:
 			cfg: KustomizeSetImageConfig{
 				Path: ".",
 				Images: []KustomizeSetImageConfigImage{
-					{Image: "nginx:latest"},
+					{Image: "nginx"},
 				},
 			},
 			setupStepCtx: func(t *testing.T, workDir string) *StepContext {
@@ -177,8 +182,8 @@ func Test_kustomizeSetImageDirective_buildTargetImages(t *testing.T) {
 		{
 			name: "discovers origins and builds target images",
 			images: []KustomizeSetImageConfigImage{
-				{Image: "nginx:latest"},
-				{Image: "redis:6"},
+				{Image: "nginx"},
+				{Image: "redis"},
 			},
 			freightRequests: []kargoapi.FreightRequest{
 				{Origin: kargoapi.FreightOrigin{Name: "warehouse1", Kind: "Warehouse"}},
@@ -187,37 +192,37 @@ func Test_kustomizeSetImageDirective_buildTargetImages(t *testing.T) {
 			objects: []runtime.Object{
 				mockWarehouse(testNamespace, "warehouse1", kargoapi.WarehouseSpec{
 					Subscriptions: []kargoapi.RepoSubscription{
-						{Image: &kargoapi.ImageSubscription{RepoURL: "nginx:latest"}},
+						{Image: &kargoapi.ImageSubscription{RepoURL: "nginx"}},
 					},
 				}),
 				mockWarehouse(testNamespace, "warehouse2", kargoapi.WarehouseSpec{
 					Subscriptions: []kargoapi.RepoSubscription{
-						{Image: &kargoapi.ImageSubscription{RepoURL: "redis:6"}},
+						{Image: &kargoapi.ImageSubscription{RepoURL: "redis"}},
 					},
 				}),
 			},
 			freightReferences: map[string]kargoapi.FreightReference{
 				"Warehouse/warehouse1": {
 					Origin: kargoapi.FreightOrigin{Kind: "Warehouse", Name: "warehouse1"},
-					Images: []kargoapi.Image{{RepoURL: "nginx:latest", Tag: "1.21.0", Digest: "sha256:123"}},
+					Images: []kargoapi.Image{{RepoURL: "nginx", Tag: "1.21.0", Digest: "sha256:123"}},
 				},
 				"Warehouse/warehouse2": {
 					Origin: kargoapi.FreightOrigin{Kind: "Warehouse", Name: "warehouse2"},
-					Images: []kargoapi.Image{{RepoURL: "redis:6", Tag: "6.2.5", Digest: "sha256:456"}},
+					Images: []kargoapi.Image{{RepoURL: "redis", Tag: "6.2.5", Digest: "sha256:456"}},
 				},
 			},
 			assertions: func(t *testing.T, result map[string]kustypes.Image, err error) {
 				require.NoError(t, err)
 				assert.Equal(t, map[string]kustypes.Image{
-					"nginx:latest": {Name: "nginx:latest", NewTag: "1.21.0"},
-					"redis:6":      {Name: "redis:6", NewTag: "6.2.5"},
+					"nginx": {Name: "nginx", NewTag: "1.21.0"},
+					"redis": {Name: "redis", NewTag: "6.2.5"},
 				}, result)
 			},
 		},
 		{
 			name: "error when no origin found",
 			images: []KustomizeSetImageConfigImage{
-				{Image: "mysql:8"},
+				{Image: "mysql"},
 			},
 			freightRequests: []kargoapi.FreightRequest{
 				{Origin: kargoapi.FreightOrigin{Name: "warehouse1", Kind: "Warehouse"}},
@@ -225,14 +230,14 @@ func Test_kustomizeSetImageDirective_buildTargetImages(t *testing.T) {
 			objects: []runtime.Object{
 				mockWarehouse(testNamespace, "warehouse1", kargoapi.WarehouseSpec{
 					Subscriptions: []kargoapi.RepoSubscription{
-						{Image: &kargoapi.ImageSubscription{RepoURL: "nginx:latest"}},
+						{Image: &kargoapi.ImageSubscription{RepoURL: "nginx"}},
 					},
 				}),
 			},
 			freightReferences: map[string]kargoapi.FreightReference{
 				"Warehouse/warehouse1": {
 					Origin: kargoapi.FreightOrigin{Kind: "Warehouse", Name: "warehouse1"},
-					Images: []kargoapi.Image{{RepoURL: "nginx:latest", Tag: "1.21.0", Digest: "sha256:123"}},
+					Images: []kargoapi.Image{{RepoURL: "nginx", Tag: "1.21.0", Digest: "sha256:123"}},
 				},
 			},
 			assertions: func(t *testing.T, _ map[string]kustypes.Image, err error) {
@@ -242,7 +247,7 @@ func Test_kustomizeSetImageDirective_buildTargetImages(t *testing.T) {
 		{
 			name: "uses provided origin",
 			images: []KustomizeSetImageConfigImage{
-				{Image: "nginx:latest", FromOrigin: &ChartFromOrigin{Kind: "Warehouse", Name: "warehouse1"}},
+				{Image: "nginx", FromOrigin: &ChartFromOrigin{Kind: "Warehouse", Name: "warehouse1"}},
 			},
 			freightRequests: []kargoapi.FreightRequest{
 				{Origin: kargoapi.FreightOrigin{Name: "warehouse1", Kind: "Warehouse"}},
@@ -250,20 +255,20 @@ func Test_kustomizeSetImageDirective_buildTargetImages(t *testing.T) {
 			objects: []runtime.Object{
 				mockWarehouse(testNamespace, "warehouse1", kargoapi.WarehouseSpec{
 					Subscriptions: []kargoapi.RepoSubscription{
-						{Image: &kargoapi.ImageSubscription{RepoURL: "nginx:latest"}},
+						{Image: &kargoapi.ImageSubscription{RepoURL: "nginx"}},
 					},
 				}),
 			},
 			freightReferences: map[string]kargoapi.FreightReference{
 				"Warehouse/warehouse1": {
 					Origin: kargoapi.FreightOrigin{Kind: "Warehouse", Name: "warehouse1"},
-					Images: []kargoapi.Image{{RepoURL: "nginx:latest", Tag: "1.21.0", Digest: "sha256:123"}},
+					Images: []kargoapi.Image{{RepoURL: "nginx", Tag: "1.21.0", Digest: "sha256:123"}},
 				},
 			},
 			assertions: func(t *testing.T, result map[string]kustypes.Image, err error) {
 				require.NoError(t, err)
 				assert.Equal(t, map[string]kustypes.Image{
-					"nginx:latest": {Name: "nginx:latest", NewTag: "1.21.0"},
+					"nginx": {Name: "nginx", NewTag: "1.21.0"},
 				}, result)
 			},
 		},
@@ -271,7 +276,7 @@ func Test_kustomizeSetImageDirective_buildTargetImages(t *testing.T) {
 			name: "uses custom name and digest",
 			images: []KustomizeSetImageConfigImage{
 				{
-					Image:     "nginx:latest",
+					Image:     "nginx",
 					Name:      "custom-nginx",
 					UseDigest: true,
 					FromOrigin: &ChartFromOrigin{
@@ -286,14 +291,14 @@ func Test_kustomizeSetImageDirective_buildTargetImages(t *testing.T) {
 			objects: []runtime.Object{
 				mockWarehouse(testNamespace, "warehouse1", kargoapi.WarehouseSpec{
 					Subscriptions: []kargoapi.RepoSubscription{
-						{Image: &kargoapi.ImageSubscription{RepoURL: "nginx:latest"}},
+						{Image: &kargoapi.ImageSubscription{RepoURL: "nginx"}},
 					},
 				}),
 			},
 			freightReferences: map[string]kargoapi.FreightReference{
 				"Warehouse/warehouse1": {
 					Origin: kargoapi.FreightOrigin{Kind: "Warehouse", Name: "warehouse1"},
-					Images: []kargoapi.Image{{RepoURL: "nginx:latest", Tag: "1.21.0", Digest: "sha256:123"}},
+					Images: []kargoapi.Image{{RepoURL: "nginx", Tag: "1.21.0", Digest: "sha256:123"}},
 				},
 			},
 			assertions: func(t *testing.T, result map[string]kustypes.Image, err error) {
@@ -306,7 +311,7 @@ func Test_kustomizeSetImageDirective_buildTargetImages(t *testing.T) {
 		{
 			name: "error when multiple origins found",
 			images: []KustomizeSetImageConfigImage{
-				{Image: "nginx:latest"},
+				{Image: "nginx"},
 			},
 			freightRequests: []kargoapi.FreightRequest{
 				{Origin: kargoapi.FreightOrigin{Name: "warehouse1", Kind: "Warehouse"}},
@@ -315,23 +320,23 @@ func Test_kustomizeSetImageDirective_buildTargetImages(t *testing.T) {
 			objects: []runtime.Object{
 				mockWarehouse(testNamespace, "warehouse1", kargoapi.WarehouseSpec{
 					Subscriptions: []kargoapi.RepoSubscription{
-						{Image: &kargoapi.ImageSubscription{RepoURL: "nginx:latest"}},
+						{Image: &kargoapi.ImageSubscription{RepoURL: "nginx"}},
 					},
 				}),
 				mockWarehouse(testNamespace, "warehouse2", kargoapi.WarehouseSpec{
 					Subscriptions: []kargoapi.RepoSubscription{
-						{Image: &kargoapi.ImageSubscription{RepoURL: "nginx:latest"}},
+						{Image: &kargoapi.ImageSubscription{RepoURL: "nginx"}},
 					},
 				}),
 			},
 			freightReferences: map[string]kargoapi.FreightReference{
 				"Warehouse/warehouse1": {
 					Origin: kargoapi.FreightOrigin{Kind: "Warehouse", Name: "warehouse1"},
-					Images: []kargoapi.Image{{RepoURL: "nginx:latest", Tag: "1.21.0", Digest: "sha256:123"}},
+					Images: []kargoapi.Image{{RepoURL: "nginx", Tag: "1.21.0", Digest: "sha256:123"}},
 				},
 				"Warehouse/warehouse2": {
 					Origin: kargoapi.FreightOrigin{Kind: "Warehouse", Name: "warehouse2"},
-					Images: []kargoapi.Image{{RepoURL: "nginx:latest", Tag: "1.21.0", Digest: "sha256:456"}},
+					Images: []kargoapi.Image{{RepoURL: "nginx", Tag: "1.21.0", Digest: "sha256:456"}},
 				},
 			},
 			assertions: func(t *testing.T, _ map[string]kustypes.Image, err error) {

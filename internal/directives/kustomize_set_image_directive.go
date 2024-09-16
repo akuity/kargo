@@ -96,7 +96,7 @@ func (d *kustomizeSetImageDirective) run(
 		result.Output = make(State, 1)
 		result.Output.Set("commitMessage", commitMsg)
 	}
-	return Result{Status: StatusSuccess}, nil
+	return result, nil
 }
 
 func (d *kustomizeSetImageDirective) buildTargetImages(
