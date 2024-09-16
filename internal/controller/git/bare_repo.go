@@ -14,9 +14,8 @@ import (
 
 // BareRepo is an interface for interacting with a bare Git repository.
 type BareRepo interface {
-	// AddWorkTree adds a working tree to the repository. The working tree will be
-	// created at the specified path and will be checked out to the specified ref.
-	AddWorkTree(path, ref string) (WorkTree, error)
+	// AddWorkTree adds a working tree to the repository.
+	AddWorkTree(path string, opts *AddWorkTreeOptions) (WorkTree, error)
 	// Close cleans up file system resources used by this repository. This should
 	// always be called before a repository goes out of scope.
 	Close() error
@@ -25,6 +24,9 @@ type BareRepo interface {
 	// HomeDir returns an absolute path to the home directory of the system user
 	// who has cloned this repo.
 	HomeDir() string
+	// RemoteBranchExists returns a bool indicating if the specified branch exists
+	// in the remote repository.
+	RemoteBranchExists(branch string) (bool, error)
 	// RemoveWorkTree removes a working tree from the repository. The working tree
 	// will be removed from the file system.
 	RemoveWorkTree(path string) error
@@ -135,7 +137,21 @@ func LoadBareRepo(path string, opts *LoadBareRepoOptions) (BareRepo, error) {
 	return b, nil
 }
 
-func (b *bareRepo) AddWorkTree(path, ref string) (WorkTree, error) {
+// AddWorkTreeOptions represents options for adding a working tree to a bare
+// repository.
+type AddWorkTreeOptions struct {
+	// Orphan specifies whether the working tree should be created from a new,
+	// orphaned branch. If true, the Ref field will be ignored.
+	Orphan bool
+	// Ref specifies the branch or commit to check out in the working tree. Will
+	// be ignored if Orphan is true.
+	Ref string
+}
+
+func (b *bareRepo) AddWorkTree(path string, opts *AddWorkTreeOptions) (WorkTree, error) {
+	if opts == nil {
+		opts = &AddWorkTreeOptions{}
+	}
 	path, err := filepath.Abs(path)
 	if err != nil {
 		return nil, fmt.Errorf("error resolving absolute path for %s: %w", path, err)
@@ -147,9 +163,13 @@ func (b *bareRepo) AddWorkTree(path, ref string) (WorkTree, error) {
 	if slices.Contains(workTreePaths, path) {
 		return nil, fmt.Errorf("working tree already exists at %q", path)
 	}
-	if _, err = libExec.Exec(
-		b.buildGitCommand("worktree", "add", path, ref),
-	); err != nil {
+	args := []string{"worktree", "add", path}
+	if opts.Orphan {
+		args = append(args, "--orphan")
+	} else {
+		args = append(args, opts.Ref)
+	}
+	if _, err = libExec.Exec(b.buildGitCommand(args...)); err != nil {
 		return nil, fmt.Errorf("error adding working tree at %q: %w", path, err)
 	}
 	if path, err = filepath.EvalSymlinks(path); err != nil {

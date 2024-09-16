@@ -1,6 +1,7 @@
 package git
 
 import (
+	"errors"
 	"fmt"
 	"net/url"
 	"os"
@@ -242,6 +243,30 @@ func (b *baseRepo) Dir() string {
 
 func (b *baseRepo) HomeDir() string {
 	return b.homeDir
+}
+
+func (b *baseRepo) RemoteBranchExists(branch string) (bool, error) {
+	_, err := libExec.Exec(b.buildGitCommand(
+		"ls-remote",
+		"--heads",
+		"--exit-code", // Return 2 if not found
+		b.url,
+		branch,
+	))
+	var exitErr *libExec.ExitError
+	if errors.As(err, &exitErr) && exitErr.ExitCode == 2 {
+		// Branch does not exist
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf(
+			"error checking for existence of branch %q in remote repo %q: %w",
+			branch,
+			b.url,
+			err,
+		)
+	}
+	return true, nil
 }
 
 func (b *baseRepo) URL() string {

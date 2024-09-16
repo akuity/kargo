@@ -23,6 +23,8 @@ type WorkTree interface {
 	AddAllAndCommit(message string) error
 	// Clean cleans the working tree.
 	Clean() error
+	// Clear executes `git rm -rf .` to remove all files from the working tree.
+	Clear() error
 	// Close cleans up file system resources used by this working tree. This
 	// should always be called before a WorkTree goes out of scope.
 	Close() error
@@ -146,6 +148,15 @@ func (w *workTree) AddAllAndCommit(message string) error {
 func (w *workTree) Clean() error {
 	if _, err := libExec.Exec(w.buildGitCommand("clean", "-fd")); err != nil {
 		return fmt.Errorf("error cleaning worktree: %w", err)
+	}
+	return nil
+}
+
+func (w *workTree) Clear() error {
+	if _, err := libExec.Exec(
+		w.buildGitCommand("rm", "-rf", "--ignore-unmatch", "."),
+	); err != nil {
+		return fmt.Errorf("error clearing worktree: %w", err)
 	}
 	return nil
 }
@@ -494,30 +505,6 @@ func (w *workTree) RefsHaveDiffs(commit1 string, commit2 string) (bool, error) {
 		}
 	}
 	return false, fmt.Errorf("error diffing commits %s..%s: %w", commit1, commit2, err)
-}
-
-func (w *workTree) RemoteBranchExists(branch string) (bool, error) {
-	_, err := libExec.Exec(w.buildGitCommand(
-		"ls-remote",
-		"--heads",
-		"--exit-code", // Return 2 if not found
-		w.url,
-		branch,
-	))
-	var exitErr *libExec.ExitError
-	if errors.As(err, &exitErr) && exitErr.ExitCode == 2 {
-		// Branch does not exist
-		return false, nil
-	}
-	if err != nil {
-		return false, fmt.Errorf(
-			"error checking for existence of branch %q in remote repo %q: %w",
-			branch,
-			w.url,
-			err,
-		)
-	}
-	return true, nil
 }
 
 func (w *workTree) ResetHard() error {
