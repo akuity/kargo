@@ -167,6 +167,9 @@ type StageSpec struct {
 	//
 	// +kubebuilder:validation:MinItems=1
 	RequestedFreight []FreightRequest `json:"requestedFreight" protobuf:"bytes,5,rep,name=requestedFreight"`
+	// PromotionTemplate describes how to incorporate Freight into the Stage
+	// using a Promotion.
+	PromotionTemplate *PromotionTemplate `json:"promotionTemplate,omitempty" protobuf:"bytes,6,opt,name=promotionTemplate"`
 	// PromotionMechanisms describes how to incorporate Freight into the Stage.
 	// This is an optional field as it is sometimes useful to aggregates available
 	// Freight from multiple upstream Stages without performing any actions. The
@@ -237,6 +240,24 @@ type FreightSources struct {
 	// Direct field must be true. i.e. Between the two fields, at least on source
 	// must be specified.
 	Stages []string `json:"stages,omitempty" protobuf:"bytes,2,rep,name=stages"`
+}
+
+// PromotionTemplate defines a template for a Promotion that can be used to
+// incorporate Freight into a Stage.
+type PromotionTemplate struct {
+	Spec PromotionTemplateSpec `json:"spec" protobuf:"bytes,1,opt,name=spec"`
+}
+
+// PromotionTemplateSpec describes the (partial) specification of a Promotion
+// for a Stage. This is a template that can be used to create a Promotion for a
+// Stage.
+type PromotionTemplateSpec struct {
+	// Steps specifies the directives to be executed as part of a Promotion.
+	// The order in which the directives are executed is the order in which they
+	// are listed in this field.
+	//
+	// +kubebuilder:validation:MinItems=1
+	Steps []PromotionStep `json:"steps,omitempty" protobuf:"bytes,1,rep,name=steps"`
 }
 
 // PromotionMechanisms describes how to incorporate Freight into a Stage.
