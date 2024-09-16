@@ -154,7 +154,11 @@ build-cli-with-ui: build-ui build-cli
 ################################################################################
 
 .PHONY: codegen
-codegen: codegen-proto codegen-controller codegen-ui codegen-docs
+codegen: codegen-proto codegen-controller codegen-directive-configs codegen-ui codegen-docs
+
+.PHONY: codegen-proto
+codegen-proto: install-protoc install-go-to-protobuf install-protoc-gen-gogo install-goimports install-buf
+	./hack/codegen/proto.sh
 
 .PHONY: codegen-controller
 codegen-controller: install-controller-gen
@@ -168,19 +172,20 @@ codegen-controller: install-controller-gen
 		object:headerFile=hack/boilerplate.go.txt \
 		paths=./...
 
-.PHONY: codegen-docs
-codegen-docs:
-	npm install -g @bitnami/readme-generator-for-helm
-	bash hack/helm-docs/helm-docs.sh
-
-.PHONY: codegen-proto
-codegen-proto: install-protoc install-go-to-protobuf install-protoc-gen-gogo install-goimports install-buf
-	./hack/codegen/proto.sh
+.PHONY: codegen-directive-configs
+codegen-directive-configs:
+	npm install -g quicktype
+	./hack/codegen/directive-configs.sh
 
 .PHONY: codegen-ui
 codegen-ui:
 	pnpm --dir=ui install --dev
 	pnpm --dir=ui run generate:schema
+
+.PHONY: codegen-docs
+codegen-docs:
+	npm install -g @bitnami/readme-generator-for-helm
+	bash hack/helm-docs/helm-docs.sh
 
 ################################################################################
 # Hack: Targets to help you hack                                               #

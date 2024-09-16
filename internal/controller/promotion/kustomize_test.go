@@ -97,7 +97,8 @@ func TestKustomizerApply(t *testing.T) {
 				findImageFn: func(
 					context.Context,
 					client.Client,
-					*kargoapi.Stage,
+					string,
+					[]kargoapi.FreightRequest,
 					*kargoapi.FreightOrigin,
 					[]kargoapi.FreightReference,
 					string,
@@ -123,7 +124,8 @@ func TestKustomizerApply(t *testing.T) {
 				findImageFn: func(
 					context.Context,
 					client.Client,
-					*kargoapi.Stage,
+					string,
+					[]kargoapi.FreightRequest,
 					*kargoapi.FreightOrigin,
 					[]kargoapi.FreightReference,
 					string,
@@ -155,7 +157,8 @@ func TestKustomizerApply(t *testing.T) {
 				findImageFn: func(
 					context.Context,
 					client.Client,
-					*kargoapi.Stage,
+					string,
+					[]kargoapi.FreightRequest,
 					*kargoapi.FreightOrigin,
 					[]kargoapi.FreightReference,
 					string,
@@ -197,7 +200,8 @@ func TestKustomizerApply(t *testing.T) {
 				findImageFn: func(
 					context.Context,
 					client.Client,
-					*kargoapi.Stage,
+					string,
+					[]kargoapi.FreightRequest,
 					*kargoapi.FreightOrigin,
 					[]kargoapi.FreightReference,
 					string,

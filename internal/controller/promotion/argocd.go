@@ -638,7 +638,8 @@ func (a *argoCDMechanism) applyArgoCDSourceUpdate(
 		chart, err := freight.FindChart(
 			ctx,
 			a.kargoClient,
-			stage,
+			stage.Namespace,
+			stage.Spec.RequestedFreight,
 			desiredOrigin,
 			newFreight,
 			repoURL,
@@ -748,7 +749,8 @@ func (a *argoCDMechanism) buildKustomizeImagesForArgoCDAppSource(
 		image, err := freight.FindImage(
 			ctx,
 			a.kargoClient,
-			stage,
+			stage.Namespace,
+			stage.Spec.RequestedFreight,
 			desiredOrigin,
 			newFreight,
 			imageUpdate.Image,
@@ -799,7 +801,8 @@ func (a *argoCDMechanism) buildHelmParamChangesForArgoCDAppSource(
 		image, err := freight.FindImage(
 			ctx,
 			a.kargoClient,
-			stage,
+			stage.Namespace,
+			stage.Spec.RequestedFreight,
 			desiredOrigin,
 			newFreight,
 			imageUpdate.Image,

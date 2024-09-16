@@ -163,7 +163,15 @@ func (h *helmer) buildValuesFilesChanges(
 			continue
 		}
 		desiredOrigin := freight.GetDesiredOrigin(stage, imageUpdate)
-		image, err := freight.FindImage(ctx, h.client, stage, desiredOrigin, newFreight, imageUpdate.Image)
+		image, err := freight.FindImage(
+			ctx,
+			h.client,
+			stage.Namespace,
+			stage.Spec.RequestedFreight,
+			desiredOrigin,
+			newFreight,
+			imageUpdate.Image,
+		)
 		if err != nil {
 			return nil, nil,
 				fmt.Errorf("error finding image from repo %q: %w", imageUpdate.Image, err)
@@ -260,7 +268,8 @@ func (h *helmer) buildChartDependencyChanges(
 			chart, err := freight.FindChart(
 				ctx,
 				h.client,
-				stage,
+				stage.Namespace,
+				stage.Spec.RequestedFreight,
 				desiredOrigin,
 				newFreight,
 				repoURL,
