@@ -5,16 +5,13 @@ syntax = "proto2";
 
 package github.com.akuity.kargo.api.v1alpha1;
 
+import "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1/generated.proto";
 import "k8s.io/apimachinery/pkg/apis/meta/v1/generated.proto";
 import "k8s.io/apimachinery/pkg/runtime/generated.proto";
 import "k8s.io/apimachinery/pkg/runtime/schema/generated.proto";
 
 // Package-wide variables from generator "generated".
 option go_package = "github.com/akuity/kargo/api/v1alpha1";
-
-message JSON {
-  optional bytes raw = 1;
-}
 
 // AnalysisRunArgument represents an argument to be added to an AnalysisRun.
 message AnalysisRunArgument {
@@ -1380,7 +1377,7 @@ message PromotionStep {
   optional string as = 2;
 
   // Config is the configuration for the directive.
-  optional JSON config = 3;
+  optional k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON config = 3;
 }
 
 // PromotionTemplate defines a template for a Promotion that can be used to

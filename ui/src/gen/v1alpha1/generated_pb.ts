@@ -8,43 +8,7 @@
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto2 } from "@bufbuild/protobuf";
 import { Condition, Duration, ListMeta, ObjectMeta, Time } from "../k8s.io/apimachinery/pkg/apis/meta/v1/generated_pb.js";
-
-/**
- * @generated from message github.com.akuity.kargo.api.v1alpha1.JSON
- */
-export class JSON extends Message<JSON> {
-  /**
-   * @generated from field: optional bytes raw = 1;
-   */
-  raw?: Uint8Array;
-
-  constructor(data?: PartialMessage<JSON>) {
-    super();
-    proto2.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto2 = proto2;
-  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.JSON";
-  static readonly fields: FieldList = proto2.util.newFieldList(() => [
-    { no: 1, name: "raw", kind: "scalar", T: 12 /* ScalarType.BYTES */, opt: true },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): JSON {
-    return new JSON().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): JSON {
-    return new JSON().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): JSON {
-    return new JSON().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: JSON | PlainMessage<JSON> | undefined, b: JSON | PlainMessage<JSON> | undefined): boolean {
-    return proto2.util.equals(JSON, a, b);
-  }
-}
+import { JSON } from "../k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1/generated_pb.js";
 
 /**
  * AnalysisRunArgument represents an argument to be added to an AnalysisRun.
@@ -4058,7 +4022,7 @@ export class PromotionStep extends Message<PromotionStep> {
   /**
    * Config is the configuration for the directive.
    *
-   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.JSON config = 3;
+   * @generated from field: optional k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON config = 3;
    */
   config?: JSON;
 
