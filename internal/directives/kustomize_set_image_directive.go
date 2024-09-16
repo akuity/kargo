@@ -87,10 +87,15 @@ func (d *kustomizeSetImageDirective) run(
 	}
 
 	// Update the Kustomization file with the new images.
-	if err := updateKustomizationFile(kusPath, targetImages); err != nil {
+	if err = updateKustomizationFile(kusPath, targetImages); err != nil {
 		return Result{Status: StatusFailure}, err
 	}
 
+	result := Result{Status: StatusSuccess}
+	if commitMsg := d.generateCommitMessage(cfg.Path, targetImages); commitMsg != "" {
+		result.Output = make(State, 1)
+		result.Output.Set("commitMessage", commitMsg)
+	}
 	return Result{Status: StatusSuccess}, nil
 }
 
@@ -142,6 +147,35 @@ func (d *kustomizeSetImageDirective) buildTargetImages(
 	}
 
 	return targetImages, nil
+}
+
+func (d *kustomizeSetImageDirective) generateCommitMessage(path string, images map[string]kustypes.Image) string {
+	if len(images) == 0 {
+		return ""
+	}
+
+	var commitMsg strings.Builder
+	_, _ = commitMsg.WriteString(fmt.Sprintf("Updated %s to use new image", path))
+	if len(images) > 1 {
+		_, _ = commitMsg.WriteString("s")
+	}
+	_, _ = commitMsg.WriteString("\n")
+
+	for _, i := range images {
+		ref := i.Name
+		if i.NewName != "" {
+			ref = i.NewName
+		}
+		if i.NewTag != "" {
+			ref = fmt.Sprintf("%s:%s", ref, i.NewTag)
+		}
+		if i.Digest != "" {
+			ref = fmt.Sprintf("%s@%s", ref, i.Digest)
+		}
+		_, _ = commitMsg.WriteString(fmt.Sprintf("\n- %s", ref))
+	}
+
+	return commitMsg.String()
 }
 
 func updateKustomizationFile(kusPath string, targetImages map[string]kustypes.Image) error {

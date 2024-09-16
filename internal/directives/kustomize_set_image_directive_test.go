@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -357,6 +358,98 @@ func Test_kustomizeSetImageDirective_buildTargetImages(t *testing.T) {
 			d := &kustomizeSetImageDirective{}
 			result, err := d.buildTargetImages(context.Background(), stepCtx, tt.images)
 			tt.assertions(t, result, err)
+		})
+	}
+}
+
+func Test_kustomizeSetImageDirective_generateCommitMessage(t *testing.T) {
+	tests := []struct {
+		name       string
+		path       string
+		images     map[string]kustypes.Image
+		assertions func(*testing.T, string)
+	}{
+		{
+			name:   "empty images",
+			path:   "path/to/kustomization",
+			images: map[string]kustypes.Image{},
+			assertions: func(t *testing.T, got string) {
+				assert.Empty(t, got)
+			},
+		},
+		{
+			name: "single image update",
+			path: "path/to/kustomization",
+			images: map[string]kustypes.Image{
+				"image1": {Name: "nginx", NewTag: "1.19"},
+			},
+			assertions: func(t *testing.T, got string) {
+				assert.Contains(t, got, "Updated path/to/kustomization to use new image")
+				assert.Contains(t, got, "- nginx:1.19")
+				assert.Equal(t, 2, strings.Count(got, "\n"))
+			},
+		},
+		{
+			name: "multiple image updates",
+			path: "path/to/kustomization",
+			images: map[string]kustypes.Image{
+				"image1": {Name: "nginx", NewTag: "1.19"},
+				"image2": {Name: "redis", NewTag: "6.0"},
+			},
+			assertions: func(t *testing.T, got string) {
+				assert.Contains(t, got, "Updated path/to/kustomization to use new images")
+				assert.Contains(t, got, "- nginx:1.19")
+				assert.Contains(t, got, "- redis:6.0")
+				assert.Equal(t, 3, strings.Count(got, "\n"))
+			},
+		},
+		{
+			name: "image update with new name",
+			path: "path/to/kustomization",
+			images: map[string]kustypes.Image{
+				"image1": {Name: "nginx", NewName: "custom-nginx", NewTag: "1.19"},
+			},
+			assertions: func(t *testing.T, got string) {
+				assert.Contains(t, got, "Updated path/to/kustomization to use new image")
+				assert.Contains(t, got, "- custom-nginx:1.19")
+				assert.Equal(t, 2, strings.Count(got, "\n"))
+			},
+		},
+		{
+			name: "image update with digest",
+			path: "path/to/kustomization",
+			images: map[string]kustypes.Image{
+				"image1": {Name: "nginx", Digest: "sha256:abcdef1234567890"},
+			},
+			assertions: func(t *testing.T, got string) {
+				assert.Contains(t, got, "Updated path/to/kustomization to use new image")
+				assert.Contains(t, got, "- nginx@sha256:abcdef1234567890")
+				assert.Equal(t, 2, strings.Count(got, "\n"))
+			},
+		},
+		{
+			name: "mixed image updates",
+			path: "path/to/kustomization",
+			images: map[string]kustypes.Image{
+				"image1": {Name: "nginx", NewTag: "1.19"},
+				"image2": {Name: "redis", NewName: "custom-redis", NewTag: "6.0"},
+				"image3": {Name: "postgres", Digest: "sha256:abcdef1234567890"},
+			},
+			assertions: func(t *testing.T, got string) {
+				assert.Contains(t, got, "Updated path/to/kustomization to use new images")
+				assert.Contains(t, got, "- nginx:1.19")
+				assert.Contains(t, got, "- custom-redis:6.0")
+				assert.Contains(t, got, "- postgres@sha256:abcdef1234567890")
+				assert.Equal(t, 4, strings.Count(got, "\n"))
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			d := &kustomizeSetImageDirective{}
+			got := d.generateCommitMessage(tt.path, tt.images)
+			tt.assertions(t, got)
 		})
 	}
 }
