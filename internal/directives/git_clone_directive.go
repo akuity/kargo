@@ -81,14 +81,16 @@ func (g *gitCloneDirective) run(
 	}
 
 	var repoCreds *git.RepoCredentials
-	if creds, found, err := stepCtx.CredentialsDB.Get(
+	creds, found, err := stepCtx.CredentialsDB.Get(
 		ctx,
 		stepCtx.Project,
 		credentials.TypeGit,
 		cfg.RepoURL,
-	); err != nil {
+	)
+	if err != nil {
 		return Result{Status: StatusFailure}, fmt.Errorf("error getting credentials for %s: %w", cfg.RepoURL, err)
-	} else if found {
+	}
+	if found {
 		repoCreds = &git.RepoCredentials{
 			Username:      creds.Username,
 			Password:      creds.Password,
