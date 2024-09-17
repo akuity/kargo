@@ -178,7 +178,7 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 			promo.Namespace,
 		)
 	}
-	if stage.Spec.PromotionMechanisms == nil {
+	if len(promo.Spec.Steps) == 0 && stage.Spec.PromotionMechanisms == nil {
 		return fmt.Errorf(
 			"Stage %q in namespace %q has no PromotionMechanisms",
 			promo.Spec.Stage,

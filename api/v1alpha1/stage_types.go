@@ -143,6 +143,21 @@ type Stage struct {
 	Status StageStatus `json:"status,omitempty" protobuf:"bytes,3,opt,name=status"`
 }
 
+// IsControlFlow returns true if the Stage is a control flow Stage. A control
+// flow Stage is one that does not incorporate Freight into itself, but rather
+// orchestrates the promotion of Freight from one or more upstream Stages to
+// one or more downstream Stages.
+func (s *Stage) IsControlFlow() bool {
+	switch {
+	case s.Spec.PromotionMechanisms != nil:
+		return false
+	case s.Spec.PromotionTemplate != nil && len(s.Spec.PromotionTemplate.Spec.Steps) > 0:
+		return false
+	default:
+		return true
+	}
+}
+
 func (s *Stage) GetStatus() *StageStatus {
 	return &s.Status
 }

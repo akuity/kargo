@@ -3,6 +3,7 @@ package v1alpha1
 import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/yaml"
 )
 
 type PromotionPhase string
@@ -98,6 +99,19 @@ type PromotionStep struct {
 	As string `json:"as,omitempty" protobuf:"bytes,2,opt,name=as"`
 	// Config is the configuration for the directive.
 	Config *apiextensionsv1.JSON `json:"config,omitempty" protobuf:"bytes,3,opt,name=config"`
+}
+
+// GetConfig returns the Config field as unmarshalled YAML.
+func (s *PromotionStep) GetConfig() map[string]any {
+	if s.Config == nil {
+		return nil
+	}
+
+	var config map[string]any
+	if err := yaml.Unmarshal(s.Config.Raw, &config); err != nil {
+		return nil
+	}
+	return config
 }
 
 // PromotionStatus describes the current state of the transition represented by
