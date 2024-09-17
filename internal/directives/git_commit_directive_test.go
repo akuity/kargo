@@ -312,9 +312,14 @@ func TestBuildCommitMessage(t *testing.T) {
 			},
 		},
 	}
+
+	d := newGitCommitDirective()
+	dir, ok := d.(*gitCommitDirective)
+	require.True(t, ok)
+
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			commitMsg, err := buildCommitMessage(testCase.sharedState, testCase.cfg)
+			commitMsg, err := dir.buildCommitMessage(testCase.sharedState, testCase.cfg)
 			testCase.assertions(t, commitMsg, err)
 		})
 	}

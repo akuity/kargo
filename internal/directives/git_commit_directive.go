@@ -76,7 +76,7 @@ func (g *gitCommitDirective) run(
 		return Result{Status: StatusFailure},
 			fmt.Errorf("error adding all changes to working tree: %w", err)
 	}
-	commitMsg, err := buildCommitMessage(stepCtx.SharedState, cfg)
+	commitMsg, err := g.buildCommitMessage(stepCtx.SharedState, cfg)
 	if err != nil {
 		return Result{Status: StatusFailure},
 			fmt.Errorf("error building commit message: %w", err)
@@ -98,7 +98,10 @@ func (g *gitCommitDirective) run(
 	return Result{Status: StatusSuccess}, nil
 }
 
-func buildCommitMessage(sharedState State, cfg GitCommitConfig) (string, error) {
+func (g *gitCommitDirective) buildCommitMessage(
+	sharedState State,
+	cfg GitCommitConfig,
+) (string, error) {
 	var commitMsg string
 	if cfg.Message != "" {
 		commitMsg = cfg.Message
