@@ -57,6 +57,7 @@ type argoCDMechanism struct {
 		desiredSource *argocd.ApplicationSource,
 		desiredSources argocd.ApplicationSources,
 		freightColID string,
+		stage *kargoapi.Stage,
 	) error
 	getAuthorizedApplicationFn func(
 		ctx context.Context,
@@ -201,6 +202,7 @@ func (a *argoCDMechanism) Promote(
 			desiredSource,
 			desiredSources,
 			promo.Status.FreightCollection.ID,
+			stage,
 		); err != nil {
 			return err
 		}
@@ -301,7 +303,12 @@ func (a *argoCDMechanism) mustPerformUpdate(
 	// current freight collection. i.e. Not related to the current promotion.
 	var correctFreightColIDFound bool
 	for _, info := range status.Operation.Info {
-		if info.Name == freightCollectionInfoKey {
+		if info.Name == fmt.Sprintf(
+			"%s/%s/%s",
+			freightCollectionInfoKey,
+			stage.ObjectMeta.Namespace,
+			stage.ObjectMeta.Name,
+		) {
 			correctFreightColIDFound = info.Value == freightCol.ID
 			break
 		}
@@ -374,6 +381,7 @@ func (a *argoCDMechanism) syncApplication(
 	desiredSource *argocd.ApplicationSource,
 	desiredSources argocd.ApplicationSources,
 	freightColID string,
+	stage *kargoapi.Stage,
 ) error {
 	// Initiate a "hard" refresh.
 	if app.ObjectMeta.Annotations == nil {
@@ -385,22 +393,43 @@ func (a *argoCDMechanism) syncApplication(
 	app.Spec.Source = desiredSource.DeepCopy()
 	app.Spec.Sources = desiredSources.DeepCopy()
 
+	kargoKey := fmt.Sprintf("%s/%s/%s", freightCollectionInfoKey, stage.ObjectMeta.Namespace, stage.ObjectMeta.Name)
+	reason := "Promotion triggered a sync of this Application resource."
+
+	newInfo := make(map[string]string)
+	defaultInfo := map[string]string{
+		"Reason": reason,
+		kargoKey: freightColID,
+	}
+
+	if app.Status.OperationState != nil && app.Status.OperationState.Operation.Info != nil {
+		for _, info := range app.Status.OperationState.Operation.Info {
+			newInfo[info.Name] = info.Value
+		}
+		if newInfo["Reason"] == reason {
+			newInfo[kargoKey] = freightColID
+		} else {
+			newInfo = defaultInfo
+		}
+	} else {
+		newInfo = defaultInfo
+	}
+
+	infoArray := []*argocd.Info{}
+	for k, v := range newInfo {
+		infoArray = append(infoArray, &argocd.Info{
+			Name:  k,
+			Value: v,
+		})
+	}
+
 	// Initiate a new operation.
 	app.Operation = &argocd.Operation{
 		InitiatedBy: argocd.OperationInitiator{
 			Username:  applicationOperationInitiator,
 			Automated: true,
 		},
-		Info: []*argocd.Info{
-			{
-				Name:  "Reason",
-				Value: "Promotion triggered a sync of this Application resource.",
-			},
-			{
-				Name:  freightCollectionInfoKey,
-				Value: freightColID,
-			},
-		},
+		Info: infoArray,
 		Sync: &argocd.SyncOperation{
 			Revisions: []string{},
 		},

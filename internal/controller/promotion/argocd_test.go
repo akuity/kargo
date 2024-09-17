@@ -271,6 +271,7 @@ func TestArgoCDPromote(t *testing.T) {
 					*argocd.ApplicationSource,
 					argocd.ApplicationSources,
 					string,
+					*kargoapi.Stage,
 				) error {
 					return nil
 				},
@@ -452,6 +453,7 @@ func TestArgoCDPromote(t *testing.T) {
 					*argocd.ApplicationSource,
 					argocd.ApplicationSources,
 					string,
+					*kargoapi.Stage,
 				) error {
 					return errors.New("something went wrong")
 				},
@@ -538,6 +540,7 @@ func TestArgoCDPromote(t *testing.T) {
 					*argocd.ApplicationSource,
 					argocd.ApplicationSources,
 					string,
+					*kargoapi.Stage,
 				) error {
 					return nil
 				},
@@ -990,7 +993,7 @@ func TestArgoCDMustPerformUpdate(t *testing.T) {
 							Username: applicationOperationInitiator,
 						},
 						Info: []*argocd.Info{{
-							Name:  freightCollectionInfoKey,
+							Name:  fmt.Sprintf("%s/fake-namespace/fake-name", freightCollectionInfoKey),
 							Value: "wrong-freight-collection",
 						}},
 					},
@@ -1013,7 +1016,7 @@ func TestArgoCDMustPerformUpdate(t *testing.T) {
 							Username: applicationOperationInitiator,
 						},
 						Info: []*argocd.Info{{
-							Name:  freightCollectionInfoKey,
+							Name:  fmt.Sprintf("%s/fake-namespace/fake-name", freightCollectionInfoKey),
 							Value: "wrong-freight-collection",
 						}},
 					},
@@ -1035,7 +1038,7 @@ func TestArgoCDMustPerformUpdate(t *testing.T) {
 							Username: applicationOperationInitiator,
 						},
 						Info: []*argocd.Info{{
-							Name:  freightCollectionInfoKey,
+							Name:  fmt.Sprintf("%s/fake-namespace/fake-name", freightCollectionInfoKey),
 							Value: testFreightCollectionID,
 						}},
 					},
@@ -1057,7 +1060,7 @@ func TestArgoCDMustPerformUpdate(t *testing.T) {
 							Username: applicationOperationInitiator,
 						},
 						Info: []*argocd.Info{{
-							Name:  freightCollectionInfoKey,
+							Name:  fmt.Sprintf("%s/fake-namespace/fake-name", freightCollectionInfoKey),
 							Value: testFreightCollectionID,
 						}},
 					},
@@ -1083,7 +1086,7 @@ func TestArgoCDMustPerformUpdate(t *testing.T) {
 							Username: applicationOperationInitiator,
 						},
 						Info: []*argocd.Info{{
-							Name:  freightCollectionInfoKey,
+							Name:  fmt.Sprintf("%s/fake-namespace/fake-name", freightCollectionInfoKey),
 							Value: testFreightCollectionID,
 						}},
 					},
@@ -1116,7 +1119,7 @@ func TestArgoCDMustPerformUpdate(t *testing.T) {
 							Username: applicationOperationInitiator,
 						},
 						Info: []*argocd.Info{{
-							Name:  freightCollectionInfoKey,
+							Name:  fmt.Sprintf("%s/fake-namespace/fake-name", freightCollectionInfoKey),
 							Value: testFreightCollectionID,
 						}},
 					},
@@ -1153,7 +1156,7 @@ func TestArgoCDMustPerformUpdate(t *testing.T) {
 							Username: applicationOperationInitiator,
 						},
 						Info: []*argocd.Info{{
-							Name:  freightCollectionInfoKey,
+							Name:  fmt.Sprintf("%s/fake-namespace/fake-name", freightCollectionInfoKey),
 							Value: testFreightCollectionID,
 						}},
 					},
@@ -1189,7 +1192,7 @@ func TestArgoCDMustPerformUpdate(t *testing.T) {
 							Username: applicationOperationInitiator,
 						},
 						Info: []*argocd.Info{{
-							Name:  freightCollectionInfoKey,
+							Name:  fmt.Sprintf("%s/fake-namespace/fake-name", freightCollectionInfoKey),
 							Value: testFreightCollectionID,
 						}},
 					},
@@ -1228,7 +1231,7 @@ func TestArgoCDMustPerformUpdate(t *testing.T) {
 							Username: applicationOperationInitiator,
 						},
 						Info: []*argocd.Info{{
-							Name:  freightCollectionInfoKey,
+							Name:  fmt.Sprintf("%s/fake-namespace/fake-name", freightCollectionInfoKey),
 							Value: testFreightCollectionID,
 						}},
 					},
@@ -1276,6 +1279,10 @@ func TestArgoCDMustPerformUpdate(t *testing.T) {
 			require.True(t, ok)
 
 			stage := &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "fake-name",
+					Namespace: "fake-namespace",
+				},
 				Spec: kargoapi.StageSpec{
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{
 						ArgoCDAppUpdates: []kargoapi.ArgoCDAppUpdate{{
@@ -1317,6 +1324,7 @@ func TestArgoCDSyncApplication(t *testing.T) {
 		desiredSource  *argocd.ApplicationSource
 		desiredSources argocd.ApplicationSources
 		assertions     func(*testing.T, error)
+		stage          *kargoapi.Stage
 	}{
 		{
 			name: "error patching Application",
@@ -1341,6 +1349,12 @@ func TestArgoCDSyncApplication(t *testing.T) {
 			assertions: func(t *testing.T, err error) {
 				require.ErrorContains(t, err, "error patching Argo CD Application")
 				require.ErrorContains(t, err, "something went wrong")
+			},
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "fake-name",
+					Namespace: "fake-namespace",
+				},
 			},
 		},
 		{
@@ -1367,6 +1381,12 @@ func TestArgoCDSyncApplication(t *testing.T) {
 			assertions: func(t *testing.T, err error) {
 				require.NoError(t, err)
 			},
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "fake-name",
+					Namespace: "fake-namespace",
+				},
+			},
 		},
 	}
 	for _, testCase := range testCases {
@@ -1379,6 +1399,7 @@ func TestArgoCDSyncApplication(t *testing.T) {
 					testCase.desiredSource,
 					testCase.desiredSources,
 					"fake-freight-collection-id",
+					testCase.stage,
 				),
 			)
 		})
