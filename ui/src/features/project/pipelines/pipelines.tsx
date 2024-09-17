@@ -27,8 +27,9 @@ import { useModal } from '@ui/features/common/modal/use-modal';
 const FreightDetails = lazy(() => import('@ui/features/freight/freight-details'));
 const FreightTimeline = lazy(() => import('@ui/features/freight-timeline/freight-timeline'));
 const StageDetails = lazy(() => import('@ui/features/stage/stage-details'));
+const CreateStage = lazy(() => import('@ui/features/stage/create-stage'));
 import { SuspenseSpin } from '@ui/features/common/suspense-spin';
-import { getCurrentFreight } from '@ui/features/common/utils';
+import { getCurrentFreight, mapToNames } from '@ui/features/common/utils';
 const FreightTimelineHeader = lazy(
   () => import('@ui/features/freight-timeline/freight-timeline-header')
 );
@@ -47,7 +48,6 @@ import { Freight, Project, Stage, Warehouse } from '@ui/gen/v1alpha1/generated_p
 import { useDocumentEvent } from '@ui/utils/document';
 import { useLocalStorage } from '@ui/utils/use-local-storage';
 
-import CreateStageModal from './create-stage-modal';
 import CreateWarehouseModal from './create-warehouse-modal';
 import { Images } from './images';
 import { RepoNode, RepoNodeDimensions } from './nodes/repo-node';
@@ -62,7 +62,13 @@ import { Watcher } from './utils/watcher';
 
 const WarehouseDetails = lazy(() => import('./warehouse/warehouse-details'));
 
-export const Pipelines = ({ project }: { project: Project }) => {
+export const Pipelines = ({
+  project,
+  creatingStage
+}: {
+  project: Project;
+  creatingStage?: boolean;
+}) => {
   const { name, stageName, freightName, warehouseName } = useParams();
   const { data, isLoading } = useQuery(listStages, { project: name });
   const { data: imageData, isLoading: isLoadingImages } = useQuery(listImages, { project: name });
@@ -77,9 +83,6 @@ export const Pipelines = ({ project }: { project: Project }) => {
     project: name
   });
 
-  const { show: showCreateStage } = useModal(
-    name ? (p) => <CreateStageModal {...p} project={name} /> : undefined
-  );
   const { show: showCreateWarehouse } = useModal(
     name ? (p) => <CreateWarehouseModal {...p} project={name} /> : undefined
   );
@@ -354,16 +357,16 @@ export const Pipelines = ({ project }: { project: Project }) => {
                         label: (
                           <>
                             <FontAwesomeIcon icon={faMasksTheater} size='xs' className='mr-2' />{' '}
-                            Stage
+                            Create Stage
                           </>
                         ),
-                        onClick: () => showCreateStage()
+                        onClick: () => navigate(generatePath(paths.createStage, { name }))
                       },
                       {
                         key: '2',
                         label: (
                           <>
-                            <FontAwesomeIcon icon={faWarehouse} size='xs' className='mr-2' />{' '}
+                            <FontAwesomeIcon icon={faWarehouse} size='xs' className='mr-2' /> Create
                             Warehouse
                           </>
                         ),
@@ -586,6 +589,13 @@ export const Pipelines = ({ project }: { project: Project }) => {
           {freight && <FreightDetails freight={freight} refetchFreight={refetchFreightData} />}
           {warehouse && (
             <WarehouseDetails warehouse={warehouse} refetchFreight={() => refetchFreightData()} />
+          )}
+          {creatingStage && (
+            <CreateStage
+              project={name}
+              warehouses={mapToNames(warehouseData?.warehouses || [])}
+              stages={mapToNames(data?.stages || [])}
+            />
           )}
         </SuspenseSpin>
       </ColorContext.Provider>

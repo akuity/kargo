@@ -28,11 +28,7 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
 
   const verifications = useMemo(() => {
     setIsVerificationRunning(false);
-    return (
-      (stage.status?.freightHistory
-        ? stage.status?.freightHistory
-        : (stage.status?.history as { verificationHistory: VerificationInfo[] }[])) || []
-    )
+    return (stage.status?.freightHistory || [])
       .flatMap((freight) =>
         freight.verificationHistory.map((verification) => {
           if (verification.phase === 'Running' || verification.phase === 'Pending') {
@@ -79,7 +75,15 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
           <Divider style={{ marginTop: '1em' }} />
 
           <div className='flex flex-col gap-8 flex-1'>
-            <RequestedFreight stage={stage} projectName={projectName} />
+            <div>
+              <Typography.Title level={3}>Requested Freight</Typography.Title>
+
+              <RequestedFreight
+                requestedFreight={stage?.spec?.requestedFreight || []}
+                projectName={projectName}
+                itemStyle={{ width: '250px' }}
+              />
+            </div>
             <Tabs
               className='flex-1'
               defaultActiveKey='1'

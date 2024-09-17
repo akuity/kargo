@@ -14,6 +14,7 @@ import { generatePath, useNavigate, useParams } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
 import { Description } from '@ui/features/common/description';
+import { SmallLabel } from '@ui/features/common/small-label';
 import { AnalysisTemplatesList } from '@ui/features/project/analysis-templates/analysis-templates-list';
 import { CredentialsList } from '@ui/features/project/credentials/credentials-list';
 import { Events } from '@ui/features/project/events/events';
@@ -23,7 +24,13 @@ import { ProjectSettings } from '@ui/features/project/settings/project-settings'
 import { getConfig, getProject } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 import { Project as _Project } from '@ui/gen/v1alpha1/generated_pb';
 
-export const Project = ({ tab = 'pipelines' }: { tab?: string }) => {
+export const Project = ({
+  tab = 'pipelines',
+  creatingStage
+}: {
+  tab?: string;
+  creatingStage?: boolean;
+}) => {
   const { name } = useParams();
   const navigate = useNavigate();
 
@@ -70,7 +77,9 @@ export const Project = ({ tab = 'pipelines' }: { tab?: string }) => {
   const renderTab = (key: string) => {
     switch (key) {
       case 'pipelines':
-        return <Pipelines project={data?.result?.value as _Project} />;
+        return (
+          <Pipelines project={data?.result?.value as _Project} creatingStage={creatingStage} />
+        );
       case 'credentials':
         return config?.secretManagementEnabled ? (
           <CredentialsList />
@@ -93,7 +102,7 @@ export const Project = ({ tab = 'pipelines' }: { tab?: string }) => {
       <div className='px-6 pt-5 pb-3 mb-2'>
         <div className='flex items-center'>
           <div className='mr-auto'>
-            <div className='font-medium text-xs text-gray-500'>PROJECT</div>
+            <SmallLabel>PROJECT</SmallLabel>
             <div className='text-2xl font-semibold flex items-center'>
               {name} <ProjectSettings />
             </div>
@@ -110,7 +119,7 @@ export const Project = ({ tab = 'pipelines' }: { tab?: string }) => {
                   <FontAwesomeIcon
                     icon={value.icon}
                     onClick={() => {
-                      navigate(generatePath(tabs[key as keyof typeof tabs].path, { name }));
+                      navigate(generatePath(tabs[key as keyof typeof tabs]?.path ?? '', { name }));
                     }}
                   />
                 </div>
