@@ -24,36 +24,6 @@ import { ProjectSettings } from '@ui/features/project/settings/project-settings'
 import { getConfig, getProject } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 import { Project as _Project } from '@ui/gen/v1alpha1/generated_pb';
 
-const tabs = {
-  pipelines: {
-    path: paths.project,
-    label: 'Pipelines',
-    icon: faDiagramProject
-  },
-  credentials: {
-    path: paths.projectCredentials,
-    label: 'Credentials',
-    icon: faIdBadge
-  },
-  analysisTemplates: {
-    path: paths.projectAnalysisTemplates,
-    label: 'Analysis Templates',
-    icon: faChartBar
-  },
-  events: {
-    path: paths.projectEvents,
-    label: 'Events',
-    icon: faClockRotateLeft
-  },
-  roles: {
-    path: paths.projectRoles,
-    label: 'Roles',
-    icon: faPeopleGroup
-  }
-};
-
-export type ProjectTab = keyof typeof tabs;
-
 export const Project = ({
   tab = 'pipelines',
   creatingStage
@@ -149,7 +119,7 @@ export const Project = ({
                   <FontAwesomeIcon
                     icon={value.icon}
                     onClick={() => {
-                      navigate(generatePath(tabs[key as keyof typeof tabs].path, { name }));
+                      navigate(generatePath(tabs[key as keyof typeof tabs]?.path ?? '', { name }));
                     }}
                   />
                 </div>
