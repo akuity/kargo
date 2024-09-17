@@ -55,7 +55,7 @@ func ReconcilerConfigFromEnv() ReconcilerConfig {
 // reconciler reconciles Promotion resources.
 type reconciler struct {
 	kargoClient      client.Client
-	directivesEngine *directives.Engine
+	directivesEngine directives.Engine
 	promoMechanisms  promotion.Mechanism
 
 	cfg ReconcilerConfig
@@ -188,7 +188,7 @@ func newReconciler(
 	}
 	r := &reconciler{
 		kargoClient: kargoClient,
-		directivesEngine: directives.NewEngine(
+		directivesEngine: directives.NewSimpleEngine(
 			directives.BuiltinsRegistry(),
 			credentialsDB,
 			kargoClient,
