@@ -17,6 +17,14 @@ jobs:
     container:
       image: golang:1.23.1-bookworm
     steps:
+    # Install Git from "trixie" repository to get a more recent version than
+    # the one available in "stable". This can be removed once the version in
+    # "stable" is updated to >= 2.42.0 (which supports `--orphan` for `git
+    # worktree add`).
+    - name: Update Git to >= 2.42
+      run: |
+        echo "deb http://deb.debian.org/debian trixie main" > /etc/apt/sources.list.d/trixie.list
+        apt update && apt install -y -t trixie git
     - name: Checkout code
       uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
     - uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9 # v4.0.2

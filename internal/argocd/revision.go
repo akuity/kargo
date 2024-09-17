@@ -109,7 +109,8 @@ func GetDesiredRevision(
 		commit, err := freight.FindCommit(
 			ctx,
 			cl,
-			stage,
+			stage.Namespace,
+			stage.Spec.RequestedFreight,
 			desiredOrigin,
 			frght,
 			app.Spec.Source.RepoURL,
