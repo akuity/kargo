@@ -169,7 +169,7 @@ func (a *argocdUpdateDirective) run(
 	}
 
 	logger := logging.LoggerFromContext(ctx)
-	logger.Debug("executing Argo CD-based promotion mechanisms")
+	logger.Debug("executing argocd-update directive")
 
 	stage, err := a.getStageFn(ctx, stepCtx.KargoClient, client.ObjectKey{
 		Namespace: stepCtx.Project,
@@ -295,7 +295,7 @@ func (a *argocdUpdateDirective) run(
 		)
 	}
 
-	logger.Debug("done executing Argo CD-based promotion mechanisms")
+	logger.Debug("done executing argocd-update directive")
 	return Result{Status: aggregatedStatus}, nil
 }
 

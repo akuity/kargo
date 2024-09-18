@@ -192,8 +192,8 @@ func TestGetDesiredOrigin(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			mechanism, targetMechanism := tc.setup()
-			actual := getDesiredOrigin(mechanism, targetMechanism)
+			update, targetUpdate := tc.setup()
+			actual := getDesiredOrigin(update, targetUpdate)
 			require.Equal(t, expectedOrigin, actual)
 		})
 	}

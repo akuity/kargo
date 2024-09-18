@@ -12,8 +12,8 @@ import (
 // origin is inherited. This function essentially permits children to inherit or
 // override origins specified by their ancestors despite the fact that they
 // never have any back-reference to their parent.
-func getDesiredOrigin(mechanism any, targetMechanism any) *kargoapi.FreightOrigin {
-	origin := getDesiredOriginInternal(mechanism, targetMechanism, nil)
+func getDesiredOrigin(update any, targetUpdate any) *kargoapi.FreightOrigin {
+	origin := getDesiredOriginInternal(update, targetUpdate, nil)
 	if origin == nil {
 		return nil
 	}
@@ -24,52 +24,52 @@ func getDesiredOrigin(mechanism any, targetMechanism any) *kargoapi.FreightOrigi
 }
 
 func getDesiredOriginInternal(
-	mechanism any,
-	targetMechanism any,
+	update any,
+	targetUpdate any,
 	defaultOrigin *AppFromOrigin,
 ) *AppFromOrigin {
-	// As a small sanity check, verify that mechanism and targetMechanism are both
+	// As a small sanity check, verify that update and targetUpdate are both
 	// pointers.
-	if reflect.ValueOf(mechanism).Kind() != reflect.Ptr {
-		panic("mechanism must be a pointer")
+	if reflect.ValueOf(update).Kind() != reflect.Ptr {
+		panic("update must be a pointer")
 	}
-	if reflect.ValueOf(targetMechanism).Kind() != reflect.Ptr {
-		panic("targetMechanism must be a pointer")
+	if reflect.ValueOf(targetUpdate).Kind() != reflect.Ptr {
+		panic("targetUpdate must be a pointer")
 	}
 
 	var origin *AppFromOrigin
-	var subMechs []any
-	switch m := mechanism.(type) {
+	var subUpdates []any
+	switch m := update.(type) {
 	// Begin root
 	case *ArgoCDUpdateConfig:
 		origin = m.FromOrigin
-		subMechs = make([]any, len(m.Apps))
+		subUpdates = make([]any, len(m.Apps))
 		for i := range m.Apps {
-			subMechs[i] = &m.Apps[i]
+			subUpdates[i] = &m.Apps[i]
 		}
 	case *ArgoCDAppUpdate:
 		origin = m.FromOrigin
-		subMechs = make([]any, len(m.Sources))
+		subUpdates = make([]any, len(m.Sources))
 		for i := range m.Sources {
-			subMechs[i] = &m.Sources[i]
+			subUpdates[i] = &m.Sources[i]
 		}
 	case *ArgoCDAppSourceUpdate:
 		origin = m.FromOrigin
-		subMechs = []any{m.Kustomize, m.Helm}
+		subUpdates = []any{m.Kustomize, m.Helm}
 	// Begin Kustomize-based
 	case *ArgoCDKustomizeImageUpdates:
 		origin = m.FromOrigin
-		subMechs = make([]any, len(m.Images))
+		subUpdates = make([]any, len(m.Images))
 		for i := range m.Images {
-			subMechs[i] = &m.Images[i]
+			subUpdates[i] = &m.Images[i]
 		}
 	case *ArgoCDKustomizeImageUpdate:
 		origin = m.FromOrigin
 	case *ArgoCDHelmParameterUpdates:
 		origin = m.FromOrigin
-		subMechs = make([]any, len(m.Images))
+		subUpdates = make([]any, len(m.Images))
 		for i := range m.Images {
-			subMechs[i] = &m.Images[i]
+			subUpdates[i] = &m.Images[i]
 		}
 	case *ArgoCDHelmImageUpdate:
 		origin = m.FromOrigin
@@ -77,14 +77,14 @@ func getDesiredOriginInternal(
 	if origin == nil {
 		origin = defaultOrigin
 	}
-	if mechanism == targetMechanism {
+	if update == targetUpdate {
 		return origin
 	}
-	for _, ts := range subMechs {
+	for _, ts := range subUpdates {
 		if reflect.ValueOf(ts).IsNil() {
 			continue
 		}
-		result := getDesiredOriginInternal(ts, targetMechanism, origin)
+		result := getDesiredOriginInternal(ts, targetUpdate, origin)
 		if result != nil {
 			return result
 		}
