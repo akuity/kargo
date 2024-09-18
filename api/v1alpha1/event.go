@@ -64,8 +64,18 @@ func FormatEventControllerActor(name string) string {
 // 3. If the subject is available, it returns subject in "subject:<subject>" format.
 // 4. Otherwise, it returns EventActorUnknown.
 func FormatEventUserActor(u user.Info) string {
-	email := u.Claims["email"].(string) // nolint: forcetypeassert
-	subject := u.Claims["sub"].(string) // nolint: forcetypeassert
+	var email, subject string
+	if emailClaim, ok := u.Claims["email"]; ok {
+		if emailStr, ok := emailClaim.(string); ok {
+			email = emailStr
+		}
+	}
+	if subClaim, ok := u.Claims["sub"]; ok {
+		if subStr, ok := subClaim.(string); ok {
+			subject = subStr
+		}
+	}
+
 	switch {
 	case u.IsAdmin:
 		return EventActorAdmin
