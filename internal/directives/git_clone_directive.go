@@ -121,9 +121,10 @@ func (g *gitCloneDirective) run(
 			}
 		case checkout.FromFreight:
 			var desiredOrigin *kargoapi.FreightOrigin
-			if checkout.FromOrigin == nil {
+			if checkout.FromOrigin != nil {
 				desiredOrigin = &kargoapi.FreightOrigin{
 					Kind: kargoapi.FreightOriginKind(checkout.FromOrigin.Kind),
+					Name: checkout.FromOrigin.Name,
 				}
 			}
 			var commit *kargoapi.GitCommit
