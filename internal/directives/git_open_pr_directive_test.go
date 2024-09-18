@@ -54,17 +54,17 @@ func TestGitOpenPRDirective_Validate(t *testing.T) {
 			},
 		},
 		{
-			name:   "neither sourceBranch nor sourceBranchFromPush specified",
+			name:   "neither sourceBranch nor sourceBranchFrom specified",
 			config: Config{},
 			expectedProblems: []string{
 				"(root): Must validate one and only one schema",
 			},
 		},
 		{
-			name: "both sourceBranch and sourceBranchFromPush specified",
+			name: "both sourceBranch and sourceBranchFrom specified",
 			config: Config{
-				"sourceBranch":         "main",
-				"sourceBranchFromPush": "push",
+				"sourceBranch":     "main",
+				"sourceBranchFrom": "push",
 			},
 			expectedProblems: []string{
 				"(root): Must validate one and only one schema",
@@ -99,10 +99,10 @@ func TestGitOpenPRDirective_Validate(t *testing.T) {
 		{
 			name: "valid with source branch from push",
 			config: Config{
-				"provider":             "github",
-				"repoURL":              "https://github.com/example/repo.git",
-				"sourceBranchFromPush": "fake-step",
-				"targetBranch":         "fake-branch",
+				"provider":         "github",
+				"repoURL":          "https://github.com/example/repo.git",
+				"sourceBranchFrom": "fake-step",
+				"targetBranch":     "fake-branch",
 			},
 		},
 	}
@@ -207,10 +207,10 @@ func TestGitOpenPRDirective_Run(t *testing.T) {
 		GitOpenPRConfig{
 			RepoURL: testRepoURL,
 			// We get slightly better coverage by using this option
-			SourceBranchFromPush: "fake-step",
-			TargetBranch:         testTargetBranch,
-			CreateTargetBranch:   true,
-			Provider:             ptr.To(Provider(fakeGitProviderName)),
+			SourceBranchFrom:   "fake-step",
+			TargetBranch:       testTargetBranch,
+			CreateTargetBranch: true,
+			Provider:           ptr.To(Provider(fakeGitProviderName)),
 		},
 	)
 	require.NoError(t, err)

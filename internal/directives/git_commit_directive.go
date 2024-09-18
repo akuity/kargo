@@ -10,6 +10,8 @@ import (
 	"github.com/akuity/kargo/internal/controller/git"
 )
 
+const commitKey = "commit"
+
 func init() {
 	// Register the git-commit directive with the builtins registry.
 	builtins.RegisterDirective(newGitCommitDirective(), nil)
@@ -95,7 +97,15 @@ func (g *gitCommitDirective) run(
 		return Result{Status: StatusFailure},
 			fmt.Errorf("error committing to working tree: %w", err)
 	}
-	return Result{Status: StatusSuccess}, nil
+	commitID, err := workTree.LastCommitID()
+	if err != nil {
+		return Result{Status: StatusFailure},
+			fmt.Errorf("error getting last commit ID: %w", err)
+	}
+	return Result{
+		Status: StatusSuccess,
+		Output: State{commitKey: commitID},
+	}, nil
 }
 
 func (g *gitCommitDirective) buildCommitMessage(
