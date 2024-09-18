@@ -144,8 +144,8 @@ func TestEngine_Execute(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			engine := NewEngine(tt.initRegistry(), nil, nil, nil)
-			status, err := engine.Execute(tt.ctx, tt.directives)
+			engine := NewSimpleEngine(tt.initRegistry(), nil, nil, nil)
+			status, err := engine.Execute(tt.ctx, PromotionContext{}, tt.directives)
 			tt.assertions(t, status, err)
 		})
 	}

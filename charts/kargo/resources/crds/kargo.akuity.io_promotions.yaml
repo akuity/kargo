@@ -76,6 +76,29 @@ spec:
                 minLength: 1
                 pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
                 type: string
+              steps:
+                description: |-
+                  Steps specifies the directives to be executed as part of this Promotion.
+                  The order in which the directives are executed is the order in which they
+                  are listed in this field.
+                items:
+                  description: PromotionStep describes a directive to be executed
+                    as part of a Promotion.
+                  properties:
+                    as:
+                      description: As is the alias this step can be referred to as.
+                      type: string
+                    config:
+                      description: Config is the configuration for the directive.
+                      x-kubernetes-preserve-unknown-fields: true
+                    step:
+                      description: Step is the name of the directive to run.
+                      minLength: 1
+                      type: string
+                  required:
+                  - step
+                  type: object
+                type: array
             required:
             - freight
             - stage

@@ -3,6 +3,7 @@ package promotion
 import (
 	"context"
 	"fmt"
+	"reflect"
 
 	admissionv1 "k8s.io/api/admission/v1"
 	authzv1 "k8s.io/api/authorization/v1"
@@ -177,7 +178,7 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 			promo.Namespace,
 		)
 	}
-	if stage.Spec.PromotionMechanisms == nil {
+	if len(promo.Spec.Steps) == 0 && stage.Spec.PromotionMechanisms == nil {
 		return fmt.Errorf(
 			"Stage %q in namespace %q has no PromotionMechanisms",
 			promo.Spec.Stage,
@@ -245,7 +246,7 @@ func (w *webhook) ValidateUpdate(
 	}
 
 	// PromotionSpecs are meant to be immutable
-	if promo.Spec != (oldObj.(*kargoapi.Promotion).Spec) { // nolint: forcetypeassert
+	if !reflect.DeepEqual(promo.Spec, oldObj.(*kargoapi.Promotion).Spec) { // nolint: forcetypeassert
 		return nil, apierrors.NewInvalid(
 			promotionGroupKind,
 			promo.Name,

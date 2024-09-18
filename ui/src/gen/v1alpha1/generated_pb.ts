@@ -8,6 +8,7 @@
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto2 } from "@bufbuild/protobuf";
 import { Condition, Duration, ListMeta, ObjectMeta, Time } from "../k8s.io/apimachinery/pkg/apis/meta/v1/generated_pb.js";
+import { JSON } from "../k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1/generated_pb.js";
 
 /**
  * AnalysisRunArgument represents an argument to be added to an AnalysisRun.
@@ -3858,6 +3859,15 @@ export class PromotionSpec extends Message<PromotionSpec> {
    */
   freight?: string;
 
+  /**
+   * Steps specifies the directives to be executed as part of this Promotion.
+   * The order in which the directives are executed is the order in which they
+   * are listed in this field.
+   *
+   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.PromotionStep steps = 3;
+   */
+  steps: PromotionStep[] = [];
+
   constructor(data?: PartialMessage<PromotionSpec>) {
     super();
     proto2.util.initPartial(data, this);
@@ -3868,6 +3878,7 @@ export class PromotionSpec extends Message<PromotionSpec> {
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 1, name: "stage", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 2, name: "freight", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 3, name: "steps", kind: "message", T: PromotionStep, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PromotionSpec {
@@ -3983,6 +3994,152 @@ export class PromotionStatus extends Message<PromotionStatus> {
 
   static equals(a: PromotionStatus | PlainMessage<PromotionStatus> | undefined, b: PromotionStatus | PlainMessage<PromotionStatus> | undefined): boolean {
     return proto2.util.equals(PromotionStatus, a, b);
+  }
+}
+
+/**
+ * PromotionStep describes a directive to be executed as part of a Promotion.
+ *
+ * @generated from message github.com.akuity.kargo.api.v1alpha1.PromotionStep
+ */
+export class PromotionStep extends Message<PromotionStep> {
+  /**
+   * Step is the name of the directive to run.
+   *
+   * +kubebuilder:validation:MinLength=1
+   *
+   * @generated from field: optional string step = 1;
+   */
+  step?: string;
+
+  /**
+   * As is the alias this step can be referred to as.
+   *
+   * @generated from field: optional string as = 2;
+   */
+  as?: string;
+
+  /**
+   * Config is the configuration for the directive.
+   *
+   * @generated from field: optional k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON config = 3;
+   */
+  config?: JSON;
+
+  constructor(data?: PartialMessage<PromotionStep>) {
+    super();
+    proto2.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto2 = proto2;
+  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.PromotionStep";
+  static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 1, name: "step", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 2, name: "as", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 3, name: "config", kind: "message", T: JSON, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PromotionStep {
+    return new PromotionStep().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): PromotionStep {
+    return new PromotionStep().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): PromotionStep {
+    return new PromotionStep().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: PromotionStep | PlainMessage<PromotionStep> | undefined, b: PromotionStep | PlainMessage<PromotionStep> | undefined): boolean {
+    return proto2.util.equals(PromotionStep, a, b);
+  }
+}
+
+/**
+ * PromotionTemplate defines a template for a Promotion that can be used to
+ * incorporate Freight into a Stage.
+ *
+ * @generated from message github.com.akuity.kargo.api.v1alpha1.PromotionTemplate
+ */
+export class PromotionTemplate extends Message<PromotionTemplate> {
+  /**
+   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.PromotionTemplateSpec spec = 1;
+   */
+  spec?: PromotionTemplateSpec;
+
+  constructor(data?: PartialMessage<PromotionTemplate>) {
+    super();
+    proto2.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto2 = proto2;
+  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.PromotionTemplate";
+  static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 1, name: "spec", kind: "message", T: PromotionTemplateSpec, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PromotionTemplate {
+    return new PromotionTemplate().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): PromotionTemplate {
+    return new PromotionTemplate().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): PromotionTemplate {
+    return new PromotionTemplate().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: PromotionTemplate | PlainMessage<PromotionTemplate> | undefined, b: PromotionTemplate | PlainMessage<PromotionTemplate> | undefined): boolean {
+    return proto2.util.equals(PromotionTemplate, a, b);
+  }
+}
+
+/**
+ * PromotionTemplateSpec describes the (partial) specification of a Promotion
+ * for a Stage. This is a template that can be used to create a Promotion for a
+ * Stage.
+ *
+ * @generated from message github.com.akuity.kargo.api.v1alpha1.PromotionTemplateSpec
+ */
+export class PromotionTemplateSpec extends Message<PromotionTemplateSpec> {
+  /**
+   * Steps specifies the directives to be executed as part of a Promotion.
+   * The order in which the directives are executed is the order in which they
+   * are listed in this field.
+   *
+   * +kubebuilder:validation:MinItems=1
+   *
+   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.PromotionStep steps = 1;
+   */
+  steps: PromotionStep[] = [];
+
+  constructor(data?: PartialMessage<PromotionTemplateSpec>) {
+    super();
+    proto2.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto2 = proto2;
+  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.PromotionTemplateSpec";
+  static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 1, name: "steps", kind: "message", T: PromotionStep, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PromotionTemplateSpec {
+    return new PromotionTemplateSpec().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): PromotionTemplateSpec {
+    return new PromotionTemplateSpec().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): PromotionTemplateSpec {
+    return new PromotionTemplateSpec().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: PromotionTemplateSpec | PlainMessage<PromotionTemplateSpec> | undefined, b: PromotionTemplateSpec | PlainMessage<PromotionTemplateSpec> | undefined): boolean {
+    return proto2.util.equals(PromotionTemplateSpec, a, b);
   }
 }
 
@@ -4232,6 +4389,14 @@ export class StageSpec extends Message<StageSpec> {
   requestedFreight: FreightRequest[] = [];
 
   /**
+   * PromotionTemplate describes how to incorporate Freight into the Stage
+   * using a Promotion.
+   *
+   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.PromotionTemplate promotionTemplate = 6;
+   */
+  promotionTemplate?: PromotionTemplate;
+
+  /**
    * PromotionMechanisms describes how to incorporate Freight into the Stage.
    * This is an optional field as it is sometimes useful to aggregates available
    * Freight from multiple upstream Stages without performing any actions. The
@@ -4261,6 +4426,7 @@ export class StageSpec extends Message<StageSpec> {
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 4, name: "shard", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 5, name: "requestedFreight", kind: "message", T: FreightRequest, repeated: true },
+    { no: 6, name: "promotionTemplate", kind: "message", T: PromotionTemplate, opt: true },
     { no: 2, name: "promotionMechanisms", kind: "message", T: PromotionMechanisms, opt: true },
     { no: 3, name: "verification", kind: "message", T: Verification, opt: true },
   ]);

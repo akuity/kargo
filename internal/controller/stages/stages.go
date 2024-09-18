@@ -523,7 +523,7 @@ func (r *reconciler) Reconcile(
 		if _, err = kargoapi.EnsureFinalizer(ctx, r.kargoClient, stage); err != nil {
 			newStatus = stage.Status
 		} else {
-			if stage.Spec.PromotionMechanisms == nil {
+			if stage.IsControlFlow() {
 				newStatus, err = r.syncControlFlowStage(ctx, stage)
 			} else {
 				newStatus, err = r.syncNormalStage(ctx, stage)

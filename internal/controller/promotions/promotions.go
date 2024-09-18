@@ -26,6 +26,7 @@ import (
 	"github.com/akuity/kargo/internal/controller/promotion"
 	"github.com/akuity/kargo/internal/controller/runtime"
 	"github.com/akuity/kargo/internal/credentials"
+	"github.com/akuity/kargo/internal/directives"
 	"github.com/akuity/kargo/internal/kargo"
 	"github.com/akuity/kargo/internal/kubeclient"
 	libEvent "github.com/akuity/kargo/internal/kubernetes/event"
@@ -53,8 +54,9 @@ func ReconcilerConfigFromEnv() ReconcilerConfig {
 
 // reconciler reconciles Promotion resources.
 type reconciler struct {
-	kargoClient     client.Client
-	promoMechanisms promotion.Mechanism
+	kargoClient      client.Client
+	directivesEngine directives.Engine
+	promoMechanisms  promotion.Mechanism
 
 	cfg ReconcilerConfig
 
@@ -186,9 +188,15 @@ func newReconciler(
 	}
 	r := &reconciler{
 		kargoClient: kargoClient,
-		recorder:    recorder,
-		cfg:         cfg,
-		pqs:         &pqs,
+		directivesEngine: directives.NewSimpleEngine(
+			directives.BuiltinsRegistry(),
+			credentialsDB,
+			kargoClient,
+			argocdClient,
+		),
+		recorder: recorder,
+		cfg:      cfg,
+		pqs:      &pqs,
 		promoMechanisms: promotion.NewMechanisms(
 			kargoClient,
 			argocdClient,
@@ -497,8 +505,38 @@ func (r *reconciler) promote(
 		stage,
 	)
 
-	if err := r.promoMechanisms.Promote(ctx, stage, workingPromo); err != nil {
-		return nil, err
+	if workingPromo.Spec.Steps == nil {
+		// If the Promotion has no steps, assume we are dealing with "legacy"
+		// Promotion mechanisms.
+		if err := r.promoMechanisms.Promote(ctx, stage, workingPromo); err != nil {
+			return nil, err
+		}
+	} else {
+		// If the Promotion has steps, execute them in sequence.
+		var steps []directives.Step
+		for _, step := range workingPromo.Spec.Steps {
+			steps = append(steps, directives.Step{
+				Directive: step.Step,
+				Alias:     step.As,
+				Config:    step.GetConfig(),
+			})
+		}
+
+		status, err := r.directivesEngine.Execute(ctx, directives.PromotionContext{
+			Project:         stageNamespace,
+			Stage:           stageName,
+			FreightRequests: stage.Spec.RequestedFreight,
+			Freight:         *workingPromo.Status.FreightCollection.DeepCopy(),
+		}, steps)
+		switch status {
+		case directives.StatusSuccess:
+			workingPromo.Status.Phase = kargoapi.PromotionPhaseSucceeded
+		case directives.StatusFailure:
+			workingPromo.Status.Phase = kargoapi.PromotionPhaseFailed
+		}
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	logger.Debug("promotion", "phase", workingPromo.Status.Phase)

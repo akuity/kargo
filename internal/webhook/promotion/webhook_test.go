@@ -43,6 +43,7 @@ func TestNewWebhook(t *testing.T) {
 func TestDefault(t *testing.T) {
 	testCases := []struct {
 		name       string
+		promotion  *kargoapi.Promotion
 		webhook    *webhook
 		assertions func(*testing.T, *kargoapi.Promotion, error)
 	}{
@@ -101,7 +102,7 @@ func TestDefault(t *testing.T) {
 			},
 		},
 		{
-			name: "success",
+			name: "success with PromotionMechanisms",
 			webhook: &webhook{
 				admissionRequestFromContextFn: func(context.Context) (admission.Request, error) {
 					return admission.Request{}, nil
@@ -125,13 +126,48 @@ func TestDefault(t *testing.T) {
 				require.NotEmpty(t, promo.OwnerReferences)
 			},
 		},
+		{
+			name: "success with PromotionTemplate",
+			promotion: &kargoapi.Promotion{
+				Spec: kargoapi.PromotionSpec{
+					Stage: "fake-stage",
+					Steps: []kargoapi.PromotionStep{
+						{},
+					},
+				},
+			},
+			webhook: &webhook{
+				admissionRequestFromContextFn: func(context.Context) (admission.Request, error) {
+					return admission.Request{}, nil
+				},
+				getStageFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Stage, error) {
+					return &kargoapi.Stage{
+						Spec: kargoapi.StageSpec{
+							Shard: "fake-shard",
+						},
+					}, nil
+				},
+			},
+			assertions: func(t *testing.T, promo *kargoapi.Promotion, err error) {
+				require.NoError(t, err)
+				require.Equal(t, "fake-shard", promo.Labels[kargoapi.ShardLabelKey])
+				require.NotEmpty(t, promo.OwnerReferences)
+			},
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			promo := &kargoapi.Promotion{
-				Spec: kargoapi.PromotionSpec{
-					Stage: "fake-stage",
-				},
+			promo := testCase.promotion
+			if promo == nil {
+				promo = &kargoapi.Promotion{
+					Spec: kargoapi.PromotionSpec{
+						Stage: "fake-stage",
+					},
+				}
 			}
 			err := testCase.webhook.Default(context.Background(), promo)
 			testCase.assertions(t, promo, err)
