@@ -122,14 +122,20 @@ func (g *gitPushDirective) run(
 				fmt.Errorf("error getting current branch: %w", err)
 		}
 	}
-	if err := workTree.Push(pushOpts); err != nil {
+	if err = workTree.Push(pushOpts); err != nil {
 		return Result{Status: StatusFailure},
 			fmt.Errorf("error pushing commits to remote: %w", err)
+	}
+	commitID, err := workTree.LastCommitID()
+	if err != nil {
+		return Result{Status: StatusFailure},
+			fmt.Errorf("error getting last commit ID: %w", err)
 	}
 	return Result{
 		Status: StatusSuccess,
 		Output: State{
 			branchKey: targetBranch,
+			commitKey: commitID,
 		},
 	}, nil
 }

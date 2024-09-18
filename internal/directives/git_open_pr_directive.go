@@ -181,32 +181,32 @@ func (g *gitOpenPRDirective) run(
 
 func getSourceBranch(sharedState State, cfg GitOpenPRConfig) (string, error) {
 	sourceBranch := cfg.SourceBranch
-	if cfg.SourceBranchFromPush != "" {
-		stepOutput, exists := sharedState.Get(cfg.SourceBranchFromPush)
+	if cfg.SourceBranchFrom != "" {
+		stepOutput, exists := sharedState.Get(cfg.SourceBranchFrom)
 		if !exists {
 			return "", fmt.Errorf(
 				"no output found from step with alias %q",
-				cfg.SourceBranchFromPush,
+				cfg.SourceBranchFrom,
 			)
 		}
 		stepOutputState, ok := stepOutput.(State)
 		if !ok {
 			return "", fmt.Errorf(
 				"output from step with alias %q is not a State",
-				cfg.SourceBranchFromPush,
+				cfg.SourceBranchFrom,
 			)
 		}
 		sourceBranchAny, exists := stepOutputState.Get(branchKey)
 		if !exists {
 			return "", fmt.Errorf(
 				"no branch found in output from step with alias %q",
-				cfg.SourceBranchFromPush,
+				cfg.SourceBranchFrom,
 			)
 		}
 		if sourceBranch, ok = sourceBranchAny.(string); !ok {
 			return "", fmt.Errorf(
 				"branch name in output from step with alias %q is not a string",
-				cfg.SourceBranchFromPush,
+				cfg.SourceBranchFrom,
 			)
 		}
 	}

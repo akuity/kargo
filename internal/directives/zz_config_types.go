@@ -80,9 +80,9 @@ type GitOpenPRConfig struct {
 	// The branch containing the changes to be merged. This branch must already exist and be up
 	// to date on the remote.
 	SourceBranch string `json:"sourceBranch,omitempty"`
-	// References a previous push step by alias and will use the branch written to by that step
-	// as the source branch.
-	SourceBranchFromPush string `json:"sourceBranchFromPush,omitempty"`
+	// References the 'branch' output from a previous step. This step will use that value as the
+	// source branch.
+	SourceBranchFrom string `json:"sourceBranchFrom,omitempty"`
 	// The branch to which the changes should be merged. This branch must already exist and be
 	// up to date on the remote.
 	TargetBranch string `json:"targetBranch"`
