@@ -511,8 +511,6 @@ func (r *reconciler) promote(
 		if err := r.promoMechanisms.Promote(ctx, stage, workingPromo); err != nil {
 			return nil, err
 		}
-
-		logger.Debug("promotion", "phase", workingPromo.Status.Phase)
 	} else {
 		// If the Promotion has steps, execute them in sequence.
 		var steps []directives.Step
@@ -523,6 +521,7 @@ func (r *reconciler) promote(
 				Config:    step.GetConfig(),
 			})
 		}
+
 		status, err := r.directivesEngine.Execute(ctx, directives.PromotionContext{
 			Project:         stageNamespace,
 			Stage:           stageName,
@@ -539,6 +538,8 @@ func (r *reconciler) promote(
 			return nil, err
 		}
 	}
+
+	logger.Debug("promotion", "phase", workingPromo.Status.Phase)
 
 	if workingPromo.Status.Phase == kargoapi.PromotionPhaseSucceeded {
 		// Trigger re-verification of the Stage if the promotion succeeded and
