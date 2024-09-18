@@ -536,7 +536,7 @@ func (a *argocdUpdateDirective) syncApplication(
 		ctx,
 		stepCtx,
 		app,
-		"kargo-controller",
+		applicationOperationInitiator,
 		argocd.EventReasonOperationStarted,
 		message,
 	)
