@@ -140,6 +140,10 @@ func (g *gitCloneDirective) run(
 				return Result{Status: StatusFailure},
 					fmt.Errorf("error finding commit from repo %s: %w", cfg.RepoURL, err)
 			}
+			if commit == nil {
+				return Result{Status: StatusFailure},
+					fmt.Errorf("could not find any commit from repo %s", cfg.RepoURL)
+			}
 			ref = commit.ID
 		case checkout.Tag != "":
 			ref = checkout.Tag
