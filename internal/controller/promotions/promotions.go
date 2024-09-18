@@ -523,7 +523,12 @@ func (r *reconciler) promote(
 				Config:    step.GetConfig(),
 			})
 		}
-		status, err := r.directivesEngine.Execute(ctx, steps)
+		status, err := r.directivesEngine.Execute(ctx, directives.PromotionContext{
+			Project:         stageNamespace,
+			Stage:           stageName,
+			FreightRequests: stage.Spec.RequestedFreight,
+			Freight:         *workingPromo.Status.FreightCollection.DeepCopy(),
+		}, steps)
 		switch status {
 		case directives.StatusSuccess:
 			workingPromo.Status.Phase = kargoapi.PromotionPhaseSucceeded

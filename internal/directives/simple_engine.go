@@ -34,13 +34,16 @@ func NewSimpleEngine(
 }
 
 // Execute runs the provided list of directives in sequence.
-func (e *SimpleEngine) Execute(ctx context.Context, steps []Step) (Status, error) {
-	// TODO(hidde): allow the workDir to be restored from a previous execution.
-	workDir, err := os.MkdirTemp("", "run-")
-	if err != nil {
-		return StatusFailure, fmt.Errorf("temporary working directory creation failed: %w", err)
+func (e *SimpleEngine) Execute(ctx context.Context, promoCtx PromotionContext, steps []Step) (Status, error) {
+	workDir := promoCtx.WorkDir
+	if workDir == "" {
+		var err error
+		workDir, err = os.MkdirTemp("", "run-")
+		if err != nil {
+			return StatusFailure, fmt.Errorf("temporary working directory creation failed: %w", err)
+		}
+		defer os.RemoveAll(workDir)
 	}
-	defer os.RemoveAll(workDir)
 
 	// Initialize the shared state that will be passed to each step.
 	state := make(State)
@@ -58,10 +61,14 @@ func (e *SimpleEngine) Execute(ctx context.Context, steps []Step) (Status, error
 			stateCopy := state.DeepCopy()
 
 			stepCtx := &StepContext{
-				WorkDir:     workDir,
-				SharedState: stateCopy,
-				Alias:       d.Alias,
-				Config:      d.Config.DeepCopy(),
+				WorkDir:         workDir,
+				SharedState:     stateCopy,
+				Alias:           d.Alias,
+				Config:          d.Config.DeepCopy(),
+				Project:         promoCtx.Project,
+				Stage:           promoCtx.Stage,
+				FreightRequests: promoCtx.FreightRequests,
+				Freight:         promoCtx.Freight,
 			}
 			// Selectively provide these capabilities via the StepContext.
 			if reg.Permissions.AllowCredentialsDB {
