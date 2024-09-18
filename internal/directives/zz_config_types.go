@@ -4,6 +4,89 @@ package directives
 
 type CommonDefs interface{}
 
+type ArgoCDUpdateConfig struct {
+	Apps       []ArgoCDAppUpdate `json:"apps"`
+	FromOrigin *AppFromOrigin    `json:"fromOrigin,omitempty"`
+}
+
+type ArgoCDAppUpdate struct {
+	FromOrigin *AppFromOrigin `json:"fromOrigin,omitempty"`
+	// Specifies the name of an Argo CD Application resource to be updated.
+	Name string `json:"name"`
+	// Specifies the namespace of an Argo CD Application resource to be updated. If left
+	// unspecified, the namespace will be the controller's configured default.
+	Namespace string `json:"namespace,omitempty"`
+	// Describes updates to be applied to various sources of an Argo CD Application resource.
+	Sources []ArgoCDAppSourceUpdate `json:"sources,omitempty"`
+}
+
+type AppFromOrigin struct {
+	// The kind of origin. Currently only 'Warehouse' is supported. Required.
+	Kind Kind `json:"kind"`
+	// The name of the origin. Required.
+	Name string `json:"name"`
+}
+
+type ArgoCDAppSourceUpdate struct {
+	// If applicable, identifies a specific chart within the Helm chart repository specified by
+	// the 'repoURL' field. When the source to be updated references a Helm chart repository,
+	// the values of the 'repoURL' and 'chart' fields should exactly match the values of the
+	// same fields in the source. i.e. Do not match the values of these two fields to your
+	// Warehouse; match them to the Application source you wish to update.
+	Chart      string                       `json:"chart,omitempty"`
+	FromOrigin *AppFromOrigin               `json:"fromOrigin,omitempty"`
+	Helm       *ArgoCDHelmParameterUpdates  `json:"helm,omitempty"`
+	Kustomize  *ArgoCDKustomizeImageUpdates `json:"kustomize,omitempty"`
+	// With possible help from the 'chart' field, identifies which of an Argo CD Application's
+	// sources is to be updated. When the source to be updated references a Helm chart
+	// repository, the values of the 'repoURL' and 'chart' fields should exactly match the
+	// values of the same fields in the source. i.e. Do not match the values of these two fields
+	// to your Warehouse; match them to the Application source you wish to update.
+	RepoURL string `json:"repoURL"`
+	// Indicates whether the source should be updated such that its TargetRevision field points
+	// at the most recently git commit (if 'repoURL' references a Git repository) or chart
+	// version (if 'repoURL' references a chart repository).
+	UpdateTargetRevision bool `json:"updateTargetRevision,omitempty"`
+}
+
+// Describes updates to an Argo CD Application source's Helm parameters.
+type ArgoCDHelmParameterUpdates struct {
+	FromOrigin *AppFromOrigin          `json:"fromOrigin,omitempty"`
+	Images     []ArgoCDHelmImageUpdate `json:"images"`
+}
+
+// Describes how to update a Helm parameter to reference a specific version of a container
+// image.
+type ArgoCDHelmImageUpdate struct {
+	FromOrigin *AppFromOrigin `json:"fromOrigin,omitempty"`
+	// Specifies a key within an Argo CD Application source's Helm parameters that is to be
+	// updated.
+	Key string `json:"key"`
+	// The URL of a container image repository.
+	RepoURL string `json:"repoURL"`
+	// Specifies a new value for the setting within an Argo CD Application source's Helm
+	// parameters identified by the 'key' field.
+	Value Value `json:"value"`
+}
+
+// Describes updates to an Argo CD Application source's Kustomize images.
+type ArgoCDKustomizeImageUpdates struct {
+	FromOrigin *AppFromOrigin               `json:"fromOrigin,omitempty"`
+	Images     []ArgoCDKustomizeImageUpdate `json:"images,omitempty"`
+}
+
+// Describes how to update a Kustomize image to reference a specific version of a container
+// image.
+type ArgoCDKustomizeImageUpdate struct {
+	FromOrigin *AppFromOrigin `json:"fromOrigin,omitempty"`
+	// Specifies a container image name override.
+	NewName string `json:"newName,omitempty"`
+	// The URL of a container image repository.
+	RepoURL string `json:"repoURL"`
+	// Specifies whether the image's digest should be used instead of its tag.
+	UseDigest bool `json:"useDigest,omitempty"`
+}
+
 type CopyConfig struct {
 	// InPath is the path to the file or directory to copy.
 	InPath string `json:"inPath"`
@@ -220,15 +303,9 @@ const (
 	Warehouse Kind = "Warehouse"
 )
 
-// The name of the Git provider to use. Currently only 'github' and 'gitlab' are supported.
-// Kargo will try to infer the provider if it is not explicitly specified.
-type Provider string
-
-const (
-	Github Provider = "github"
-	Gitlab Provider = "gitlab"
-)
-
+// Specifies a new value for the setting within an Argo CD Application source's Helm
+// parameters identified by the 'key' field.
+//
 // Specifies the new value for the specified key in the Helm values file.
 type Value string
 
@@ -237,4 +314,13 @@ const (
 	ImageAndDigest Value = "ImageAndDigest"
 	ImageAndTag    Value = "ImageAndTag"
 	Tag            Value = "Tag"
+)
+
+// The name of the Git provider to use. Currently only 'github' and 'gitlab' are supported.
+// Kargo will try to infer the provider if it is not explicitly specified.
+type Provider string
+
+const (
+	Github Provider = "github"
+	Gitlab Provider = "gitlab"
 )
