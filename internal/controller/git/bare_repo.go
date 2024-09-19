@@ -42,6 +42,21 @@ type bareRepo struct {
 	*baseRepo
 }
 
+// workTreeInfo represents information about a working tree.
+type workTreeInfo struct {
+	// Path is the absolute path to the working tree.
+	Path string
+	// HEAD is the commit ID of the HEAD of the working tree.
+	HEAD string
+	// Branch is the name of the branch that the working tree is on,
+	// or an empty string if the working tree is in a detached HEAD state.
+	Branch string
+	// Bare is true if the working tree is a bare repository.
+	Bare bool
+	// Detached is true if the working tree is in a detached HEAD state.
+	Detached bool
+}
+
 // BareCloneOptions represents options for cloning a Git repository without a
 // working tree.
 type BareCloneOptions struct {
@@ -239,21 +254,74 @@ func (b *bareRepo) WorkTrees() ([]WorkTree, error) {
 }
 
 func (b *bareRepo) workTrees() ([]string, error) {
-	res, err := libExec.Exec(b.buildGitCommand("worktree", "list"))
+	res, err := libExec.Exec(b.buildGitCommand("worktree", "list", "--porcelain"))
 	if err != nil {
 		return nil, fmt.Errorf("error listing working trees: %w", err)
 	}
-	workTrees := []string{}
-	scanner := bufio.NewScanner(bytes.NewReader(res))
+	trees, err := b.parseWorkTreeOutput(res)
+	if err != nil {
+		return nil, fmt.Errorf("error listing repository trees: %w", err)
+	}
+	return b.filterNonBarePaths(trees), nil
+}
+
+func (b *bareRepo) parseWorkTreeOutput(output []byte) ([]workTreeInfo, error) {
+	var trees []workTreeInfo
+	var current *workTreeInfo
+
+	scanner := bufio.NewScanner(bytes.NewReader(output))
 	for scanner.Scan() {
 		line := scanner.Text()
-		if !strings.HasSuffix(line, "(bare)") {
-			fields := strings.Fields(line)
-			if len(fields) != 3 {
-				return nil, fmt.Errorf("unexpected number of fields: %q", line)
+		parts := strings.SplitN(line, " ", 2)
+
+		key := parts[0]
+		value := ""
+		if len(parts) > 1 {
+			value = parts[1]
+		}
+
+		switch key {
+		case "worktree":
+			if current != nil {
+				trees = append(trees, *current)
 			}
-			workTrees = append(workTrees, fields[0])
+			current = &workTreeInfo{Path: value}
+		case "HEAD":
+			if current != nil {
+				current.HEAD = value
+			}
+		case "branch":
+			if current != nil {
+				current.Branch = value
+			}
+		case "bare":
+			if current != nil {
+				current.Bare = true
+			}
+		case "detached":
+			if current != nil {
+				current.Detached = true
+			}
 		}
 	}
-	return workTrees, err
+
+	if current != nil {
+		trees = append(trees, *current)
+	}
+
+	if err := scanner.Err(); err != nil {
+		return nil, fmt.Errorf("error scanning worktree output: %w", err)
+	}
+
+	return trees, nil
+}
+
+func (b *bareRepo) filterNonBarePaths(trees []workTreeInfo) []string {
+	var paths []string
+	for _, info := range trees {
+		if !info.Bare {
+			paths = append(paths, info.Path)
+		}
+	}
+	return paths
 }
