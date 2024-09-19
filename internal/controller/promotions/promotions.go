@@ -3,6 +3,8 @@ package promotions
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 	"slices"
 	"strconv"
 	"sync"
@@ -522,20 +524,35 @@ func (r *reconciler) promote(
 			})
 		}
 
+		workDir := filepath.Join(os.TempDir(), "promotion-"+string(workingPromo.UID))
+		if err := os.MkdirAll(workDir, 0o700); err != nil && !os.IsExist(err) {
+			return nil, fmt.Errorf("error creating working directory: %w", err)
+		}
+		defer func() {
+			if workingPromo.Status.Phase.IsTerminal() {
+				if err := os.RemoveAll(workDir); err != nil {
+					logger.Error(err, "could not remove working directory")
+				}
+			}
+		}()
+
 		status, err := r.directivesEngine.Execute(ctx, directives.PromotionContext{
+			WorkDir:         workDir,
 			Project:         stageNamespace,
 			Stage:           stageName,
 			FreightRequests: stage.Spec.RequestedFreight,
 			Freight:         *workingPromo.Status.FreightCollection.DeepCopy(),
 		}, steps)
 		switch status {
+		case directives.StatusPending:
+			workingPromo.Status.Phase = kargoapi.PromotionPhaseRunning
 		case directives.StatusSuccess:
 			workingPromo.Status.Phase = kargoapi.PromotionPhaseSucceeded
 		case directives.StatusFailure:
 			workingPromo.Status.Phase = kargoapi.PromotionPhaseFailed
 		}
 		if err != nil {
-			return nil, err
+			return &workingPromo.Status, err
 		}
 	}
 
