@@ -9,7 +9,7 @@ import {
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Tooltip } from 'antd';
 import classNames from 'classnames';
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { generatePath, useNavigate, useParams } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
@@ -34,8 +34,14 @@ export const Project = ({
   const { name } = useParams();
   const navigate = useNavigate();
 
-  const { data, isLoading } = useQuery(getProject, { name });
+  const { data, isLoading, error } = useQuery(getProject, { name });
   const { data: config } = useQuery(getConfig);
+
+  useEffect(() => {
+    if (!isLoading && (!data?.result?.value || error)) {
+      navigate(paths.projects);
+    }
+  }, [isLoading]);
 
   const [tabs] = useMemo(() => {
     return [
