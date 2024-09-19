@@ -176,7 +176,8 @@ type OperationState struct {
 }
 
 type SyncOperationResult struct {
-	Revision string             `json:"revision,omitempty"`
-	Source   ApplicationSource  `json:"source,omitempty"`
-	Sources  ApplicationSources `json:"sources,omitempty"`
+	Revision  string             `json:"revision,omitempty"`
+	Revisions []string           `json:"revisions,omitempty"`
+	Source    ApplicationSource  `json:"source,omitempty"`
+	Sources   ApplicationSources `json:"sources,omitempty"`
 }
