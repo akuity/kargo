@@ -17,12 +17,17 @@ import { KargoService } from '@ui/gen/service/v1alpha1/service_connect';
 import { ListPromotionsResponse } from '@ui/gen/service/v1alpha1/service_pb';
 import { Freight, Promotion } from '@ui/gen/v1alpha1/generated_pb';
 
+import { useModal } from '../common/modal/use-modal';
 import { PromotionStatusIcon } from '../common/promotion-status/promotion-status-icon';
 
 import { PrLinks } from './pr-links';
+import { PromotionDetailsModal } from './promotion-details-modal';
 
 export const Promotions = ({ repoUrls }: { repoUrls?: string[] }) => {
   const client = useQueryClient();
+
+  const { show } = useModal();
+
   const { name: projectName, stageName } = useParams();
   const { data: promotionsResponse, isLoading } = useQuery(
     listPromotions,
@@ -108,7 +113,11 @@ export const Promotions = ({ repoUrls }: { repoUrls?: string[] }) => {
     },
     {
       title: 'Name',
-      dataIndex: ['metadata', 'name']
+      render: (_, promotion) => (
+        <a onClick={() => show((p) => <PromotionDetailsModal {...p} promotion={promotion} />)}>
+          {promotion.metadata?.name}
+        </a>
+      )
     },
     {
       title: 'Created By',
