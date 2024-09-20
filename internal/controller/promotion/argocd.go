@@ -41,20 +41,18 @@ type argoCDMechanism struct {
 		*kargoapi.ArgoCDAppUpdate,
 		*argocd.Application,
 		[]kargoapi.FreightReference,
-	) (*argocd.ApplicationSource, argocd.ApplicationSources, error)
+	) (argocd.ApplicationSources, error)
 	mustPerformUpdateFn func(
 		context.Context,
 		*kargoapi.Stage,
 		*kargoapi.ArgoCDAppUpdate,
 		*argocd.Application,
 		*kargoapi.FreightCollection,
-		*argocd.ApplicationSource,
 		argocd.ApplicationSources,
 	) (argocd.OperationPhase, bool, error)
 	syncApplicationFn func(
 		ctx context.Context,
 		app *argocd.Application,
-		desiredSource *argocd.ApplicationSource,
 		desiredSources argocd.ApplicationSources,
 		freightColID string,
 	) error
@@ -135,8 +133,8 @@ func (a *argoCDMechanism) Promote(
 			return err
 		}
 
-		// Build the desired source(s) for the Argo CD Application.
-		desiredSource, desiredSources, err := a.buildDesiredSourcesFn(
+		// Build the desired sources for the Argo CD Application.
+		desiredSources, err := a.buildDesiredSourcesFn(
 			ctx,
 			stage,
 			update,
@@ -154,7 +152,6 @@ func (a *argoCDMechanism) Promote(
 			update,
 			app,
 			promo.Status.FreightCollection,
-			desiredSource,
 			desiredSources,
 		)
 
@@ -198,7 +195,6 @@ func (a *argoCDMechanism) Promote(
 		if err = a.syncApplicationFn(
 			ctx,
 			app,
-			desiredSource,
 			desiredSources,
 			promo.Status.FreightCollection.ID,
 		); err != nil {
@@ -229,39 +225,32 @@ func (a *argoCDMechanism) buildDesiredSources(
 	update *kargoapi.ArgoCDAppUpdate,
 	app *argocd.Application,
 	newFreight []kargoapi.FreightReference,
-) (*argocd.ApplicationSource, argocd.ApplicationSources, error) {
-	desiredSource, desiredSources := app.Spec.Source.DeepCopy(), app.Spec.Sources.DeepCopy()
-
-	for i := range update.SourceUpdates {
-		srcUpdate := &update.SourceUpdates[i]
-		if desiredSource != nil {
-			newSrc, err := a.applyArgoCDSourceUpdateFn(ctx, stage, srcUpdate, *desiredSource, newFreight)
-			if err != nil {
-				return nil, nil, fmt.Errorf(
+) (argocd.ApplicationSources, error) {
+	desiredSources := app.Spec.Sources.DeepCopy()
+	if len(desiredSources) == 0 && app.Spec.Source != nil {
+		desiredSources = []argocd.ApplicationSource{*app.Spec.Source.DeepCopy()}
+	}
+	for i := range desiredSources {
+		for j := range update.SourceUpdates {
+			srcUpdate := &update.SourceUpdates[j]
+			var err error
+			if desiredSources[i], err = a.applyArgoCDSourceUpdateFn(
+				ctx,
+				stage,
+				srcUpdate,
+				desiredSources[i],
+				newFreight,
+			); err != nil {
+				return nil, fmt.Errorf(
 					"error applying source update to Argo CD Application %q in namespace %q: %w",
 					update.AppName,
 					app.Namespace,
 					err,
 				)
 			}
-			desiredSource = &newSrc
-		}
-
-		for j, curSrc := range desiredSources {
-			newSrc, err := a.applyArgoCDSourceUpdateFn(ctx, stage, srcUpdate, curSrc, newFreight)
-			if err != nil {
-				return nil, nil, fmt.Errorf(
-					"error applying source update to Argo CD Application %q in namespace %q: %w",
-					update.AppName,
-					app.Namespace,
-					err,
-				)
-			}
-			desiredSources[j] = newSrc
 		}
 	}
-
-	return desiredSource, desiredSources, nil
+	return desiredSources, nil
 }
 
 func (a *argoCDMechanism) mustPerformUpdate(
@@ -270,7 +259,6 @@ func (a *argoCDMechanism) mustPerformUpdate(
 	update *kargoapi.ArgoCDAppUpdate,
 	app *argocd.Application,
 	freightCol *kargoapi.FreightCollection,
-	desiredSource *argocd.ApplicationSource,
 	desiredSources argocd.ApplicationSources,
 ) (phase argocd.OperationPhase, mustUpdate bool, err error) {
 	status := app.Status.OperationState
@@ -333,33 +321,48 @@ func (a *argoCDMechanism) mustPerformUpdate(
 		return "", true, errors.New("operation completed without a sync result")
 	}
 
-	// Check if the desired revision was applied.
-	if desiredRevision, err := libargocd.GetDesiredRevision(
+	// Check if the desired sources were applied.
+	if (status.SyncResult.Source.RepoURL != "" && !status.SyncResult.Source.Equals(&desiredSources[0])) ||
+		(status.SyncResult.Source.RepoURL == "" && !status.SyncResult.Sources.Equals(desiredSources)) {
+		// The operation did not result in the desired sources being applied. We
+		// should attempt to retry the operation.
+		return "", true, fmt.Errorf(
+			"operation result source does not match desired source",
+		)
+	}
+
+	// Check if the desired revisions were applied.
+	desiredRevisions, err := libargocd.GetDesiredRevisions(
 		ctx,
 		a.kargoClient,
 		stage,
 		update,
 		app,
 		freightCol.References(),
-	); err != nil {
+	)
+	if err != nil {
 		return "", true, fmt.Errorf("error determining desired revision: %w", err)
-	} else if desiredRevision != "" && status.SyncResult.Revision != desiredRevision {
-		// The operation did not result in the desired revision being applied.
-		// We should attempt to retry the operation.
-		return "", true, fmt.Errorf(
-			"operation result revision %q does not match desired revision %q",
-			status.SyncResult.Revision, desiredRevision,
-		)
 	}
 
-	// Check if the desired source(s) were applied.
-	if len(update.SourceUpdates) > 0 {
-		if (desiredSource != nil && !desiredSource.Equals(&status.SyncResult.Source)) ||
-			!desiredSources.Equals(status.SyncResult.Sources) {
-			// The operation did not result in the desired source(s) being applied.
-			// We should attempt to retry the operation.
+	if len(desiredRevisions) == 0 {
+		// We do not have any desired revisions, so we cannot determine if the
+		// operation was successful.
+		return status.Phase, false, nil
+	}
+
+	observedRevisions := status.SyncResult.Revisions
+	if len(observedRevisions) == 0 {
+		observedRevisions = []string{status.SyncResult.Revision}
+	}
+	for i, observedRevision := range observedRevisions {
+		desiredRevision := desiredRevisions[i]
+		if desiredRevision == "" {
+			continue
+		}
+		if observedRevision != desiredRevision {
 			return "", true, fmt.Errorf(
-				"operation result source does not match desired source",
+				"sync result revisions %v do not match desired revisions %v",
+				observedRevisions, desiredRevisions,
 			)
 		}
 	}
@@ -371,7 +374,6 @@ func (a *argoCDMechanism) mustPerformUpdate(
 func (a *argoCDMechanism) syncApplication(
 	ctx context.Context,
 	app *argocd.Application,
-	desiredSource *argocd.ApplicationSource,
 	desiredSources argocd.ApplicationSources,
 	freightColID string,
 ) error {
@@ -382,8 +384,11 @@ func (a *argoCDMechanism) syncApplication(
 	app.ObjectMeta.Annotations[argocd.AnnotationKeyRefresh] = string(argocd.RefreshTypeHard)
 
 	// Update the desired source(s) in the Argo CD Application.
-	app.Spec.Source = desiredSource.DeepCopy()
-	app.Spec.Sources = desiredSources.DeepCopy()
+	if app.Spec.Source != nil {
+		app.Spec.Source = desiredSources[0].DeepCopy()
+	} else {
+		app.Spec.Sources = desiredSources.DeepCopy()
+	}
 
 	// Initiate a new operation.
 	app.Operation = &argocd.Operation{

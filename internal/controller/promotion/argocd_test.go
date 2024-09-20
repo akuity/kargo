@@ -148,8 +148,8 @@ func TestArgoCDPromote(t *testing.T) {
 					*kargoapi.ArgoCDAppUpdate,
 					*argocd.Application,
 					[]kargoapi.FreightReference,
-				) (*argocd.ApplicationSource, argocd.ApplicationSources, error) {
-					return nil, nil, errors.New("something went wrong")
+				) (argocd.ApplicationSources, error) {
+					return nil, errors.New("something went wrong")
 				},
 			},
 			stage: &kargoapi.Stage{
@@ -194,8 +194,8 @@ func TestArgoCDPromote(t *testing.T) {
 					*kargoapi.ArgoCDAppUpdate,
 					*argocd.Application,
 					[]kargoapi.FreightReference,
-				) (*argocd.ApplicationSource, argocd.ApplicationSources, error) {
-					return &argocd.ApplicationSource{}, nil, nil
+				) (argocd.ApplicationSources, error) {
+					return []argocd.ApplicationSource{{}}, nil
 				},
 				mustPerformUpdateFn: func(
 					context.Context,
@@ -203,7 +203,6 @@ func TestArgoCDPromote(t *testing.T) {
 					*kargoapi.ArgoCDAppUpdate,
 					*argocd.Application,
 					*kargoapi.FreightCollection,
-					*argocd.ApplicationSource,
 					argocd.ApplicationSources,
 				) (argocd.OperationPhase, bool, error) {
 					return "", false, errors.New("something went wrong")
@@ -251,8 +250,8 @@ func TestArgoCDPromote(t *testing.T) {
 					*kargoapi.ArgoCDAppUpdate,
 					*argocd.Application,
 					[]kargoapi.FreightReference,
-				) (*argocd.ApplicationSource, argocd.ApplicationSources, error) {
-					return &argocd.ApplicationSource{}, nil, nil
+				) (argocd.ApplicationSources, error) {
+					return []argocd.ApplicationSource{{}}, nil
 				},
 				mustPerformUpdateFn: func(
 					context.Context,
@@ -260,7 +259,6 @@ func TestArgoCDPromote(t *testing.T) {
 					*kargoapi.ArgoCDAppUpdate,
 					*argocd.Application,
 					*kargoapi.FreightCollection,
-					*argocd.ApplicationSource,
 					argocd.ApplicationSources,
 				) (argocd.OperationPhase, bool, error) {
 					return "", true, fmt.Errorf("something went wrong")
@@ -268,7 +266,6 @@ func TestArgoCDPromote(t *testing.T) {
 				syncApplicationFn: func(
 					context.Context,
 					*argocd.Application,
-					*argocd.ApplicationSource,
 					argocd.ApplicationSources,
 					string,
 				) error {
@@ -316,8 +313,8 @@ func TestArgoCDPromote(t *testing.T) {
 					*kargoapi.ArgoCDAppUpdate,
 					*argocd.Application,
 					[]kargoapi.FreightReference,
-				) (*argocd.ApplicationSource, argocd.ApplicationSources, error) {
-					return &argocd.ApplicationSource{}, nil, nil
+				) (argocd.ApplicationSources, error) {
+					return []argocd.ApplicationSource{{}}, nil
 				},
 				mustPerformUpdateFn: func(
 					context.Context,
@@ -325,7 +322,6 @@ func TestArgoCDPromote(t *testing.T) {
 					*kargoapi.ArgoCDAppUpdate,
 					*argocd.Application,
 					*kargoapi.FreightCollection,
-					*argocd.ApplicationSource,
 					argocd.ApplicationSources,
 				) (argocd.OperationPhase, bool, error) {
 					return argocd.OperationRunning, false, nil
@@ -374,8 +370,8 @@ func TestArgoCDPromote(t *testing.T) {
 					*kargoapi.ArgoCDAppUpdate,
 					*argocd.Application,
 					[]kargoapi.FreightReference,
-				) (*argocd.ApplicationSource, argocd.ApplicationSources, error) {
-					return &argocd.ApplicationSource{}, nil, nil
+				) (argocd.ApplicationSources, error) {
+					return []argocd.ApplicationSource{{}}, nil
 				},
 				mustPerformUpdateFn: func(
 					context.Context,
@@ -383,7 +379,6 @@ func TestArgoCDPromote(t *testing.T) {
 					*kargoapi.ArgoCDAppUpdate,
 					*argocd.Application,
 					*kargoapi.FreightCollection,
-					*argocd.ApplicationSource,
 					argocd.ApplicationSources,
 				) (argocd.OperationPhase, bool, error) {
 					return argocd.OperationRunning, false, fmt.Errorf("waiting for operation to complete")
@@ -432,8 +427,8 @@ func TestArgoCDPromote(t *testing.T) {
 					*kargoapi.ArgoCDAppUpdate,
 					*argocd.Application,
 					[]kargoapi.FreightReference,
-				) (*argocd.ApplicationSource, argocd.ApplicationSources, error) {
-					return &argocd.ApplicationSource{}, nil, nil
+				) (argocd.ApplicationSources, error) {
+					return []argocd.ApplicationSource{{}}, nil
 				},
 				mustPerformUpdateFn: func(
 					context.Context,
@@ -441,7 +436,6 @@ func TestArgoCDPromote(t *testing.T) {
 					*kargoapi.ArgoCDAppUpdate,
 					*argocd.Application,
 					*kargoapi.FreightCollection,
-					*argocd.ApplicationSource,
 					argocd.ApplicationSources,
 				) (argocd.OperationPhase, bool, error) {
 					return "", true, nil
@@ -449,7 +443,6 @@ func TestArgoCDPromote(t *testing.T) {
 				syncApplicationFn: func(
 					context.Context,
 					*argocd.Application,
-					*argocd.ApplicationSource,
 					argocd.ApplicationSources,
 					string,
 				) error {
@@ -503,8 +496,8 @@ func TestArgoCDPromote(t *testing.T) {
 					*kargoapi.ArgoCDAppUpdate,
 					*argocd.Application,
 					[]kargoapi.FreightReference,
-				) (*argocd.ApplicationSource, argocd.ApplicationSources, error) {
-					return &argocd.ApplicationSource{}, nil, nil
+				) (argocd.ApplicationSources, error) {
+					return []argocd.ApplicationSource{{}}, nil
 				},
 				mustPerformUpdateFn: func() func(
 					context.Context,
@@ -512,7 +505,6 @@ func TestArgoCDPromote(t *testing.T) {
 					*kargoapi.ArgoCDAppUpdate,
 					*argocd.Application,
 					*kargoapi.FreightCollection,
-					*argocd.ApplicationSource,
 					argocd.ApplicationSources,
 				) (argocd.OperationPhase, bool, error) {
 					var count uint
@@ -522,7 +514,6 @@ func TestArgoCDPromote(t *testing.T) {
 						*kargoapi.ArgoCDAppUpdate,
 						*argocd.Application,
 						*kargoapi.FreightCollection,
-						*argocd.ApplicationSource,
 						argocd.ApplicationSources,
 					) (argocd.OperationPhase, bool, error) {
 						count++
@@ -535,7 +526,6 @@ func TestArgoCDPromote(t *testing.T) {
 				syncApplicationFn: func(
 					context.Context,
 					*argocd.Application,
-					*argocd.ApplicationSource,
 					argocd.ApplicationSources,
 					string,
 				) error {
@@ -590,8 +580,8 @@ func TestArgoCDPromote(t *testing.T) {
 					*kargoapi.ArgoCDAppUpdate,
 					*argocd.Application,
 					[]kargoapi.FreightReference,
-				) (*argocd.ApplicationSource, argocd.ApplicationSources, error) {
-					return &argocd.ApplicationSource{}, nil, nil
+				) (argocd.ApplicationSources, error) {
+					return []argocd.ApplicationSource{{}}, nil
 				},
 				mustPerformUpdateFn: func(
 					context.Context,
@@ -599,7 +589,6 @@ func TestArgoCDPromote(t *testing.T) {
 					*kargoapi.ArgoCDAppUpdate,
 					*argocd.Application,
 					*kargoapi.FreightCollection,
-					*argocd.ApplicationSource,
 					argocd.ApplicationSources,
 				) (argocd.OperationPhase, bool, error) {
 					return "Unknown", false, nil
@@ -647,8 +636,8 @@ func TestArgoCDPromote(t *testing.T) {
 					*kargoapi.ArgoCDAppUpdate,
 					*argocd.Application,
 					[]kargoapi.FreightReference,
-				) (*argocd.ApplicationSource, argocd.ApplicationSources, error) {
-					return &argocd.ApplicationSource{}, nil, nil
+				) (argocd.ApplicationSources, error) {
+					return []argocd.ApplicationSource{{}}, nil
 				},
 				mustPerformUpdateFn: func(
 					context.Context,
@@ -656,7 +645,6 @@ func TestArgoCDPromote(t *testing.T) {
 					*kargoapi.ArgoCDAppUpdate,
 					*argocd.Application,
 					*kargoapi.FreightCollection,
-					*argocd.ApplicationSource,
 					argocd.ApplicationSources,
 				) (argocd.OperationPhase, bool, error) {
 					return argocd.OperationSucceeded, false, nil
@@ -720,53 +708,10 @@ func TestArgoCDBuildDesiredSources(t *testing.T) {
 		update            kargoapi.ArgoCDAppUpdate
 		assertions        func(
 			t *testing.T,
-			oldSource, newSource *argocd.ApplicationSource,
-			oldSources, newSources argocd.ApplicationSources,
+			desiredSources argocd.ApplicationSources,
 			err error,
 		)
 	}{
-		{
-			name: "applies updates to source",
-			reconciler: &argoCDMechanism{
-				applyArgoCDSourceUpdateFn: func(
-					_ context.Context,
-					_ *kargoapi.Stage,
-					_ *kargoapi.ArgoCDSourceUpdate,
-					src argocd.ApplicationSource,
-					_ []kargoapi.FreightReference,
-				) (argocd.ApplicationSource, error) {
-					if src.RepoURL == "updated-url" {
-						src.TargetRevision = "updated-revision"
-						return src, nil
-					}
-					if src.RepoURL == "" {
-						src.RepoURL = "updated-url"
-					}
-					return src, nil
-				},
-			},
-			modifyApplication: func(app *argocd.Application) {
-				app.Spec.Source = &argocd.ApplicationSource{}
-			},
-			update: kargoapi.ArgoCDAppUpdate{
-				SourceUpdates: []kargoapi.ArgoCDSourceUpdate{
-					{}, {},
-				},
-			},
-			assertions: func(
-				t *testing.T,
-				oldSource, newSource *argocd.ApplicationSource,
-				oldSources, newSources argocd.ApplicationSources,
-				err error,
-			) {
-				require.NoError(t, err)
-				require.True(t, oldSources.Equals(newSources))
-
-				require.False(t, oldSource.Equals(newSource))
-				require.Equal(t, "updated-url", newSource.RepoURL)
-				require.Equal(t, "updated-revision", newSource.TargetRevision)
-			},
-		},
 		{
 			name: "error applying update to source",
 			reconciler: &argoCDMechanism{
@@ -790,13 +735,11 @@ func TestArgoCDBuildDesiredSources(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_, newSource *argocd.ApplicationSource,
-				_, newSources argocd.ApplicationSources,
+				desiredSources argocd.ApplicationSources,
 				err error,
 			) {
 				require.ErrorContains(t, err, "something went wrong")
-				require.Nil(t, newSource)
-				require.Nil(t, newSources)
+				require.Nil(t, desiredSources)
 			},
 		},
 		{
@@ -837,55 +780,16 @@ func TestArgoCDBuildDesiredSources(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				oldSource, newSource *argocd.ApplicationSource,
-				oldSources, newSources argocd.ApplicationSources,
+				desiredSources argocd.ApplicationSources,
 				err error,
 			) {
 				require.NoError(t, err)
-				require.True(t, oldSource.Equals(newSource))
-				require.False(t, oldSources.Equals(newSources))
-
-				require.Equal(t, 2, len(newSources))
-				require.Equal(t, "updated-revision-1", newSources[0].TargetRevision)
-				require.Equal(t, "updated-revision-2", newSources[1].TargetRevision)
-			},
-		},
-		{
-			name: "error applying update to sources",
-			reconciler: &argoCDMechanism{
-				applyArgoCDSourceUpdateFn: func(
-					context.Context,
-					*kargoapi.Stage,
-					*kargoapi.ArgoCDSourceUpdate,
-					argocd.ApplicationSource,
-					[]kargoapi.FreightReference,
-				) (argocd.ApplicationSource, error) {
-					return argocd.ApplicationSource{}, errors.New("something went wrong")
-				},
-			},
-			modifyApplication: func(app *argocd.Application) {
-				app.Spec.Sources = argocd.ApplicationSources{
-					{},
-				}
-			},
-			update: kargoapi.ArgoCDAppUpdate{
-				SourceUpdates: []kargoapi.ArgoCDSourceUpdate{
-					{},
-				},
-			},
-			assertions: func(
-				t *testing.T,
-				_, newSource *argocd.ApplicationSource,
-				_, newSources argocd.ApplicationSources,
-				err error,
-			) {
-				require.ErrorContains(t, err, "something went wrong")
-				require.Nil(t, newSource)
-				require.Nil(t, newSources)
+				require.Equal(t, 2, len(desiredSources))
+				require.Equal(t, "updated-revision-1", desiredSources[0].TargetRevision)
+				require.Equal(t, "updated-revision-2", desiredSources[1].TargetRevision)
 			},
 		},
 	}
-
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			app := &argocd.Application{
@@ -897,7 +801,6 @@ func TestArgoCDBuildDesiredSources(t *testing.T) {
 			if testCase.modifyApplication != nil {
 				testCase.modifyApplication(app)
 			}
-
 			stage := &kargoapi.Stage{
 				Spec: kargoapi.StageSpec{
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{
@@ -907,16 +810,14 @@ func TestArgoCDBuildDesiredSources(t *testing.T) {
 					},
 				},
 			}
-
-			oldSource, oldSources := app.Spec.Source.DeepCopy(), app.Spec.Sources.DeepCopy()
-			newSource, newSources, err := testCase.reconciler.buildDesiredSources(
+			desiredSources, err := testCase.reconciler.buildDesiredSources(
 				context.Background(),
 				stage,
 				&stage.Spec.PromotionMechanisms.ArgoCDAppUpdates[0],
 				app,
 				[]kargoapi.FreightReference{},
 			)
-			testCase.assertions(t, oldSource, newSource, oldSources, newSources, err)
+			testCase.assertions(t, desiredSources, err)
 		})
 	}
 }
@@ -931,7 +832,6 @@ func TestArgoCDMustPerformUpdate(t *testing.T) {
 		name              string
 		modifyApplication func(*argocd.Application)
 		newFreight        []kargoapi.FreightReference
-		desiredSource     *argocd.ApplicationSource
 		desiredSources    argocd.ApplicationSources
 		assertions        func(t *testing.T, phase argocd.OperationPhase, mustUpdate bool, err error)
 	}{
@@ -1048,7 +948,7 @@ func TestArgoCDMustPerformUpdate(t *testing.T) {
 			},
 		},
 		{
-			name: "unable to determine desired revision",
+			name: "unable to determine desired revisions",
 			modifyApplication: func(app *argocd.Application) {
 				app.Status.OperationState = &argocd.OperationState{
 					Phase: argocd.OperationSucceeded,
@@ -1135,41 +1035,8 @@ func TestArgoCDMustPerformUpdate(t *testing.T) {
 				},
 			}},
 			assertions: func(t *testing.T, phase argocd.OperationPhase, mustUpdate bool, err error) {
-				require.ErrorContains(t, err, "does not match desired revision")
-				require.Empty(t, phase)
-				require.True(t, mustUpdate)
-			},
-		},
-		{
-			name: "desired source does not match operation state",
-			modifyApplication: func(app *argocd.Application) {
-				app.Spec.Source = &argocd.ApplicationSource{
-					RepoURL: "https://github.com/universe/42",
-				}
-				app.Status.OperationState = &argocd.OperationState{
-					Phase: argocd.OperationSucceeded,
-					Operation: argocd.Operation{
-						InitiatedBy: argocd.OperationInitiator{
-							Username: applicationOperationInitiator,
-						},
-						Info: []*argocd.Info{{
-							Name:  freightCollectionInfoKey,
-							Value: testFreightCollectionID,
-						}},
-					},
-					SyncResult: &argocd.SyncOperationResult{
-						Revision: "fake-revision",
-						Source: argocd.ApplicationSource{
-							RepoURL: "https://github.com/different/universe",
-						},
-					},
-				}
-			},
-			desiredSource: &argocd.ApplicationSource{
-				RepoURL: "http://github.com/universe/42",
-			},
-			assertions: func(t *testing.T, phase argocd.OperationPhase, mustUpdate bool, err error) {
-				require.ErrorContains(t, err, "does not match desired source")
+				require.ErrorContains(t, err, "sync result revisions")
+				require.ErrorContains(t, err, "do not match desired revisions")
 				require.Empty(t, phase)
 				require.True(t, mustUpdate)
 			},
@@ -1203,7 +1070,6 @@ func TestArgoCDMustPerformUpdate(t *testing.T) {
 					},
 				}
 			},
-			desiredSource: &argocd.ApplicationSource{},
 			desiredSources: argocd.ApplicationSources{
 				{
 					RepoURL: "https://github.com/universe/42",
@@ -1301,7 +1167,6 @@ func TestArgoCDMustPerformUpdate(t *testing.T) {
 				&stage.Spec.PromotionMechanisms.ArgoCDAppUpdates[0],
 				app,
 				freight,
-				testCase.desiredSource,
 				testCase.desiredSources,
 			)
 			testCase.assertions(t, phase, mustUpdate, err)
@@ -1314,7 +1179,6 @@ func TestArgoCDSyncApplication(t *testing.T) {
 		name           string
 		promoMech      *argoCDMechanism
 		app            *argocd.Application
-		desiredSource  *argocd.ApplicationSource
 		desiredSources argocd.ApplicationSources
 		assertions     func(*testing.T, error)
 	}{
@@ -1376,7 +1240,6 @@ func TestArgoCDSyncApplication(t *testing.T) {
 				testCase.promoMech.syncApplication(
 					context.Background(),
 					testCase.app,
-					testCase.desiredSource,
 					testCase.desiredSources,
 					"fake-freight-collection-id",
 				),

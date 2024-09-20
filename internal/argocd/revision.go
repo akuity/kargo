@@ -12,47 +12,75 @@ import (
 	"github.com/akuity/kargo/internal/controller/freight"
 )
 
-// GetDesiredRevision returns the desired revision for the given
-// v1alpha1.Application. If that cannot be determined, an empty string is
-// returned.
-func GetDesiredRevision(
+// GetDesiredRevision returns the desired revisions for all sources of the given
+// Application. For a single-source Application, the returned slice will have
+// precisely one value. For a multi-source Application, the returned slice will
+// have the same length as and will be indexed identically to the Application's
+// Sources slice. For any source whose desired revision cannot be determined,
+// the slice will contain an empty string at the corresponding index.
+func GetDesiredRevisions(
 	ctx context.Context,
 	cl client.Client,
 	stage *kargoapi.Stage,
 	update *kargoapi.ArgoCDAppUpdate,
 	app *argocd.Application,
 	frght []kargoapi.FreightReference,
-) (string, error) {
+) ([]string, error) {
 	// Note that frght was provided as an argument instead of being plucked
 	// directly from stage.Status, because this gives us the flexibility to use
 	// this function for finding the revision to sync to either in the context of
 	// a health check (current freight) or in the context of a promotion (new
 	// freight).
-	switch {
-	case app == nil || app.Spec.Source == nil:
-		// Without an Application, we can't determine the desired revision.
-		return "", nil
-	case app.Spec.Source.Chart != "":
-		// This source points to a Helm chart.
-		// NB: This has to go first, as the repository URL can also point to
-		//     a Helm repository.
+	if app == nil {
+		return nil, nil
+	}
+	sources := app.Spec.Sources
+	if len(sources) == 0 && app.Spec.Source != nil {
+		sources = []argocd.ApplicationSource{*app.Spec.Source}
+	}
+	if len(sources) == 0 {
+		return nil, nil
+	}
+	revisions := make([]string, len(sources))
+	for i, src := range sources {
+		var desiredOrigin *kargoapi.FreightOrigin
+		// If there is a source update that targets this source, it might be
+		// specific about which origin the desired revision should come from.
+		sourceUpdate := findSourceUpdate(update, src)
+		if sourceUpdate != nil {
+			desiredOrigin = freight.GetDesiredOrigin(stage, sourceUpdate)
+		} else {
+			desiredOrigin = freight.GetDesiredOrigin(stage, update)
+		}
+		desiredRevision, err := getDesiredRevisionForSource(
+			ctx,
+			cl,
+			stage,
+			&src,
+			desiredOrigin,
+			frght,
+		)
+		if err != nil {
+			return nil, err
+		}
+		revisions[i] = desiredRevision
+	}
+	return revisions, nil
+}
 
-		// If there is a source update that targets app.Spec.Source, it might
-		// have its own ideas about the desired revision.
-		var targetPromoMechanism any
-		for i := range update.SourceUpdates {
-			sourceUpdate := &update.SourceUpdates[i]
-			if sourceUpdate.RepoURL == app.Spec.Source.RepoURL && sourceUpdate.Chart == app.Spec.Source.Chart {
-				targetPromoMechanism = sourceUpdate
-				break
-			}
-		}
-		if targetPromoMechanism == nil {
-			targetPromoMechanism = update
-		}
-		desiredOrigin := freight.GetDesiredOrigin(stage, targetPromoMechanism)
-		repoURL := app.Spec.Source.RepoURL
-		chartName := app.Spec.Source.Chart
+func getDesiredRevisionForSource(
+	ctx context.Context,
+	cl client.Client,
+	stage *kargoapi.Stage,
+	src *argocd.ApplicationSource,
+	desiredOrigin *kargoapi.FreightOrigin,
+	frght []kargoapi.FreightReference,
+) (string, error) {
+	switch {
+	case src.Chart != "":
+		// This source points to a Helm chart.
+		repoURL := src.RepoURL
+		chartName := src.Chart
 		if !strings.Contains(repoURL, "://") {
 			// In Argo CD ApplicationSource, if a repo URL specifies no protocol and a
 			// chart name is set (already confirmed at this point), we can assume that
@@ -83,29 +111,15 @@ func GetDesiredRevision(
 			chartName,
 		)
 		if err != nil {
-			return "", fmt.Errorf("error chart from repo %q: %w", app.Spec.Source.RepoURL, err)
+			return "",
+				fmt.Errorf("error finding chart from repo %q: %w", repoURL, err)
 		}
 		if chart == nil {
 			return "", nil
 		}
 		return chart.Version, nil
-	case app.Spec.Source.RepoURL != "":
+	case src.RepoURL != "":
 		// This source points to a Git repository.
-
-		// If there is a source update that targets app.Spec.Source, it might
-		// have its own ideas about the desired revision.
-		var targetPromoMechanism any
-		for i := range update.SourceUpdates {
-			sourceUpdate := &update.SourceUpdates[i]
-			if sourceUpdate.RepoURL == app.Spec.Source.RepoURL {
-				targetPromoMechanism = sourceUpdate
-				break
-			}
-		}
-		if targetPromoMechanism == nil {
-			targetPromoMechanism = update
-		}
-		desiredOrigin := freight.GetDesiredOrigin(stage, targetPromoMechanism)
 		commit, err := freight.FindCommit(
 			ctx,
 			cl,
@@ -113,11 +127,11 @@ func GetDesiredRevision(
 			stage.Spec.RequestedFreight,
 			desiredOrigin,
 			frght,
-			app.Spec.Source.RepoURL,
+			src.RepoURL,
 		)
 		if err != nil {
 			return "",
-				fmt.Errorf("error finding commit from repo %q: %w", app.Spec.Source.RepoURL, err)
+				fmt.Errorf("error finding commit from repo %q: %w", src.RepoURL, err)
 		}
 		if commit == nil {
 			return "", nil
@@ -129,4 +143,19 @@ func GetDesiredRevision(
 	}
 	// If we end up here, no desired revision was found.
 	return "", nil
+}
+
+// findSourceUpdate finds and returns the ArgoCDSourceUpdate that targets the
+// given source. If no such update exists, it returns nil.
+func findSourceUpdate(
+	update *kargoapi.ArgoCDAppUpdate,
+	src argocd.ApplicationSource,
+) *kargoapi.ArgoCDSourceUpdate {
+	for i := range update.SourceUpdates {
+		sourceUpdate := &update.SourceUpdates[i]
+		if sourceUpdate.RepoURL == src.RepoURL && sourceUpdate.Chart == src.Chart {
+			return sourceUpdate
+		}
+	}
+	return nil
 }

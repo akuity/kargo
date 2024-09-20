@@ -10,7 +10,7 @@ import (
 	argocdapi "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
 )
 
-func TestGetDesiredRevision(t *testing.T) {
+func TestGetDesiredRevisions(t *testing.T) {
 	testOrigin := kargoapi.FreightOrigin{
 		Kind: kargoapi.FreightOriginKindWarehouse,
 		Name: "fake-warehouse",
@@ -18,101 +18,106 @@ func TestGetDesiredRevision(t *testing.T) {
 	testCases := []struct {
 		name    string
 		app     *argocdapi.Application
-		freight kargoapi.FreightReference
-		want    string
+		freight []kargoapi.FreightReference
+		want    []string
 	}{
 		{
 			name: "no application",
-			want: "",
+			want: nil,
 		},
 		{
-			name: "no application source",
+			name: "no sources",
 			app:  &argocdapi.Application{},
-			want: "",
+			want: nil,
 		},
 		{
-			name: "no source repo URL",
+			name: "multisource",
 			app: &argocdapi.Application{
 				Spec: argocdapi.ApplicationSpec{
-					Source: &argocdapi.ApplicationSource{},
-				},
-			},
-			want: "",
-		},
-		{
-			name: "chart source",
-			app: &argocdapi.Application{
-				Spec: argocdapi.ApplicationSpec{
-					Source: &argocdapi.ApplicationSource{
-						RepoURL: "https://example.com",
-						Chart:   "fake-chart",
+					Sources: []argocdapi.ApplicationSource{
+						{
+							// This has no repoURL. This probably cannot actually happen, but
+							// our logic says we'll have an empty string (no desired revision)
+							// in this case.
+						},
+						{
+							// This has an update and a matching artifact in the Freight. We
+							// should know what revision we want.
+							RepoURL: "https://example.com",
+							Chart:   "fake-chart",
+						},
+						{
+							// This has no matching update, but does have a matching artifact
+							// in the Freight. We should know what revision we want.
+							RepoURL: "https://example.com",
+							Chart:   "another-fake-chart",
+						},
+						{
+							// This has no matching update, but does have a matching artifact
+							// in the Freight. We should know what revision we want.
+							//
+							// OCI is a special case.
+							RepoURL: "example.com",
+							Chart:   "fake-chart",
+						},
+						{
+							// This has no matching artifact in the Freight. We should not
+							// know what revision we want.
+							RepoURL: "https://example.com",
+							Chart:   "yet-another-fake-chart",
+						},
+						{
+							// This has an update and a matching artifact in the Freight. We
+							// should know what revision we want.
+							RepoURL: "https://github.com/universe/42",
+						},
+						{
+							// This has no matching update, but does have a matching artifact
+							// in the Freight. We should know what revision we want.
+							RepoURL: "https://github.com/another-universe/42",
+						},
+						{
+							// This has no matching artifact in the Freight. We should not
+							// know what revision we want.
+							RepoURL: "https://github.com/yet-another-universe/42",
+						},
 					},
 				},
 			},
-			freight: kargoapi.FreightReference{
-				Origin: testOrigin,
-				Charts: []kargoapi.Chart{
-					{
-						RepoURL: "https://example.com",
-						Name:    "other-fake-chart",
-						Version: "v1.0.0",
+			freight: []kargoapi.FreightReference{
+				{
+					Origin: testOrigin,
+					Charts: []kargoapi.Chart{
+						{
+							RepoURL: "https://example.com",
+							Name:    "fake-chart",
+							Version: "v2.0.0",
+						},
+						{
+							RepoURL: "https://example.com",
+							Name:    "another-fake-chart",
+							Version: "v1.0.0",
+						},
+						{
+							RepoURL: "oci://example.com/fake-chart",
+							Version: "v3.0.0",
+						},
 					},
-					{
-						RepoURL: "https://example.com",
-						Name:    "fake-chart",
-						Version: "v2.0.0",
-					},
-				},
-			},
-			want: "v2.0.0",
-		},
-		{
-			name: "git source",
-			app: &argocdapi.Application{
-				Spec: argocdapi.ApplicationSpec{
-					Source: &argocdapi.ApplicationSource{
-						RepoURL: "https://github.com/universe/42",
-					},
-				},
-			},
-			freight: kargoapi.FreightReference{
-				Origin: testOrigin,
-				Commits: []kargoapi.GitCommit{
-					{
-						RepoURL: "https://github.com/bad/41",
-						ID:      "bad-revision",
-					},
-					{
-						RepoURL: "https://github.com/universe/42",
-						ID:      "fake-revision",
+					Commits: []kargoapi.GitCommit{
+						{
+							RepoURL: "https://github.com/universe/42",
+							ID:      "fake-commit",
+						},
+						{
+							RepoURL: "https://github.com/another-universe/42",
+							ID:      "another-fake-commit",
+						},
 					},
 				},
 			},
-			want: "fake-revision",
-		},
-		{
-			name: "git source with health check commit",
-			app: &argocdapi.Application{
-				Spec: argocdapi.ApplicationSpec{
-					Source: &argocdapi.ApplicationSource{
-						RepoURL: "https://github.com/universe/42",
-					},
-				},
-			},
-			freight: kargoapi.FreightReference{
-				Origin: testOrigin,
-				Commits: []kargoapi.GitCommit{
-					{
-						RepoURL:           "https://github.com/universe/42",
-						HealthCheckCommit: "fake-revision",
-						ID:                "bad-revision",
-					},
-				},
-			},
-			want: "fake-revision",
+			want: []string{"", "v2.0.0", "v1.0.0", "v3.0.0", "", "fake-commit", "another-fake-commit", ""},
 		},
 	}
-
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			stage := &kargoapi.Stage{
@@ -120,27 +125,29 @@ func TestGetDesiredRevision(t *testing.T) {
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{
 						ArgoCDAppUpdates: []kargoapi.ArgoCDAppUpdate{{
 							Origin: &testOrigin,
+							SourceUpdates: []kargoapi.ArgoCDSourceUpdate{
+								{
+									RepoURL: "https://example.com",
+									Chart:   "fake-chart",
+								},
+								{
+									RepoURL: "https://github.com/universe/42",
+								},
+							},
 						}},
 					},
 				},
-				Status: kargoapi.StageStatus{
-					FreightHistory: kargoapi.FreightHistory{{
-						Freight: map[string]kargoapi.FreightReference{
-							testOrigin.String(): testCase.freight,
-						},
-					}},
-				},
 			}
-			revision, err := GetDesiredRevision(
+			revisions, err := GetDesiredRevisions(
 				context.Background(),
 				nil, // No client is needed as long as we're always explicit about origins
 				stage,
 				&stage.Spec.PromotionMechanisms.ArgoCDAppUpdates[0],
 				testCase.app,
-				stage.Status.FreightHistory.Current().References(),
+				testCase.freight,
 			)
 			require.NoError(t, err)
-			require.Equal(t, testCase.want, revision)
+			require.Equal(t, testCase.want, revisions)
 		})
 	}
 }
