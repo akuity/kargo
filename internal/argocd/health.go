@@ -240,14 +240,7 @@ func stageHealthForAppSync(
 	app *argocd.Application,
 	desiredRevisions []string,
 ) (kargoapi.HealthState, error) {
-	var haveDesiredRevisions bool
-	for _, r := range desiredRevisions {
-		if r != "" {
-			haveDesiredRevisions = true
-			break
-		}
-	}
-	if !haveDesiredRevisions {
+	if !slices.ContainsFunc(desiredRevisions, func(rev string) bool { return rev != "" }) {
 		// We have no idea what this App should be synced to, so it does not
 		// negatively impact Stage health.
 		return kargoapi.HealthStateHealthy, nil
