@@ -463,8 +463,8 @@ func TestArgoCDUpdateDirective_run(t *testing.T) {
 					*kargoapi.Stage,
 					*ArgoCDAppUpdate,
 					*argocd.Application,
-				) (*argocd.ApplicationSource, argocd.ApplicationSources, error) {
-					return nil, nil, errors.New("something went wrong")
+				) (argocd.ApplicationSources, error) {
+					return nil, errors.New("something went wrong")
 				},
 			},
 			stepCtx: &StepContext{
@@ -503,8 +503,8 @@ func TestArgoCDUpdateDirective_run(t *testing.T) {
 					*kargoapi.Stage,
 					*ArgoCDAppUpdate,
 					*argocd.Application,
-				) (*argocd.ApplicationSource, argocd.ApplicationSources, error) {
-					return &argocd.ApplicationSource{}, nil, nil
+				) (argocd.ApplicationSources, error) {
+					return []argocd.ApplicationSource{{}}, nil
 				},
 				mustPerformUpdateFn: func(
 					context.Context,
@@ -513,7 +513,6 @@ func TestArgoCDUpdateDirective_run(t *testing.T) {
 					*kargoapi.Stage,
 					*ArgoCDAppUpdate,
 					*argocd.Application,
-					*argocd.ApplicationSource,
 					argocd.ApplicationSources,
 				) (argocd.OperationPhase, bool, error) {
 					return "", false, errors.New("something went wrong")
@@ -554,8 +553,8 @@ func TestArgoCDUpdateDirective_run(t *testing.T) {
 					*kargoapi.Stage,
 					*ArgoCDAppUpdate,
 					*argocd.Application,
-				) (*argocd.ApplicationSource, argocd.ApplicationSources, error) {
-					return &argocd.ApplicationSource{}, nil, nil
+				) (argocd.ApplicationSources, error) {
+					return []argocd.ApplicationSource{{}}, nil
 				},
 				mustPerformUpdateFn: func(
 					context.Context,
@@ -564,7 +563,6 @@ func TestArgoCDUpdateDirective_run(t *testing.T) {
 					*kargoapi.Stage,
 					*ArgoCDAppUpdate,
 					*argocd.Application,
-					*argocd.ApplicationSource,
 					argocd.ApplicationSources,
 				) (argocd.OperationPhase, bool, error) {
 					return "", true, errors.New("something went wrong")
@@ -573,7 +571,6 @@ func TestArgoCDUpdateDirective_run(t *testing.T) {
 					context.Context,
 					*StepContext,
 					*argocd.Application,
-					*argocd.ApplicationSource,
 					argocd.ApplicationSources,
 				) error {
 					return nil
@@ -614,8 +611,8 @@ func TestArgoCDUpdateDirective_run(t *testing.T) {
 					*kargoapi.Stage,
 					*ArgoCDAppUpdate,
 					*argocd.Application,
-				) (*argocd.ApplicationSource, argocd.ApplicationSources, error) {
-					return &argocd.ApplicationSource{}, nil, nil
+				) (argocd.ApplicationSources, error) {
+					return []argocd.ApplicationSource{{}}, nil
 				},
 				mustPerformUpdateFn: func(
 					context.Context,
@@ -624,7 +621,6 @@ func TestArgoCDUpdateDirective_run(t *testing.T) {
 					*kargoapi.Stage,
 					*ArgoCDAppUpdate,
 					*argocd.Application,
-					*argocd.ApplicationSource,
 					argocd.ApplicationSources,
 				) (argocd.OperationPhase, bool, error) {
 					return argocd.OperationRunning, false, nil
@@ -665,8 +661,8 @@ func TestArgoCDUpdateDirective_run(t *testing.T) {
 					*kargoapi.Stage,
 					*ArgoCDAppUpdate,
 					*argocd.Application,
-				) (*argocd.ApplicationSource, argocd.ApplicationSources, error) {
-					return &argocd.ApplicationSource{}, nil, nil
+				) (argocd.ApplicationSources, error) {
+					return []argocd.ApplicationSource{{}}, nil
 				},
 				mustPerformUpdateFn: func(
 					context.Context,
@@ -675,7 +671,6 @@ func TestArgoCDUpdateDirective_run(t *testing.T) {
 					*kargoapi.Stage,
 					*ArgoCDAppUpdate,
 					*argocd.Application,
-					*argocd.ApplicationSource,
 					argocd.ApplicationSources,
 				) (argocd.OperationPhase, bool, error) {
 					return argocd.OperationRunning, false, fmt.Errorf("waiting for operation to complete")
@@ -716,8 +711,8 @@ func TestArgoCDUpdateDirective_run(t *testing.T) {
 					*kargoapi.Stage,
 					*ArgoCDAppUpdate,
 					*argocd.Application,
-				) (*argocd.ApplicationSource, argocd.ApplicationSources, error) {
-					return &argocd.ApplicationSource{}, nil, nil
+				) (argocd.ApplicationSources, error) {
+					return []argocd.ApplicationSource{{}}, nil
 				},
 				mustPerformUpdateFn: func(
 					context.Context,
@@ -726,7 +721,6 @@ func TestArgoCDUpdateDirective_run(t *testing.T) {
 					*kargoapi.Stage,
 					*ArgoCDAppUpdate,
 					*argocd.Application,
-					*argocd.ApplicationSource,
 					argocd.ApplicationSources,
 				) (argocd.OperationPhase, bool, error) {
 					return "", true, nil
@@ -735,7 +729,6 @@ func TestArgoCDUpdateDirective_run(t *testing.T) {
 					context.Context,
 					*StepContext,
 					*argocd.Application,
-					*argocd.ApplicationSource,
 					argocd.ApplicationSources,
 				) error {
 					return errors.New("something went wrong")
@@ -777,8 +770,8 @@ func TestArgoCDUpdateDirective_run(t *testing.T) {
 					*kargoapi.Stage,
 					*ArgoCDAppUpdate,
 					*argocd.Application,
-				) (*argocd.ApplicationSource, argocd.ApplicationSources, error) {
-					return &argocd.ApplicationSource{}, nil, nil
+				) (argocd.ApplicationSources, error) {
+					return []argocd.ApplicationSource{{}}, nil
 				},
 				mustPerformUpdateFn: func() func(
 					context.Context,
@@ -787,7 +780,6 @@ func TestArgoCDUpdateDirective_run(t *testing.T) {
 					*kargoapi.Stage,
 					*ArgoCDAppUpdate,
 					*argocd.Application,
-					*argocd.ApplicationSource,
 					argocd.ApplicationSources,
 				) (argocd.OperationPhase, bool, error) {
 					var count uint
@@ -798,7 +790,6 @@ func TestArgoCDUpdateDirective_run(t *testing.T) {
 						*kargoapi.Stage,
 						*ArgoCDAppUpdate,
 						*argocd.Application,
-						*argocd.ApplicationSource,
 						argocd.ApplicationSources,
 					) (argocd.OperationPhase, bool, error) {
 						count++
@@ -812,7 +803,6 @@ func TestArgoCDUpdateDirective_run(t *testing.T) {
 					context.Context,
 					*StepContext,
 					*argocd.Application,
-					*argocd.ApplicationSource,
 					argocd.ApplicationSources,
 				) error {
 					return nil
@@ -856,8 +846,8 @@ func TestArgoCDUpdateDirective_run(t *testing.T) {
 					*kargoapi.Stage,
 					*ArgoCDAppUpdate,
 					*argocd.Application,
-				) (*argocd.ApplicationSource, argocd.ApplicationSources, error) {
-					return &argocd.ApplicationSource{}, nil, nil
+				) (argocd.ApplicationSources, error) {
+					return []argocd.ApplicationSource{{}}, nil
 				},
 				mustPerformUpdateFn: func(
 					context.Context,
@@ -866,7 +856,6 @@ func TestArgoCDUpdateDirective_run(t *testing.T) {
 					*kargoapi.Stage,
 					*ArgoCDAppUpdate,
 					*argocd.Application,
-					*argocd.ApplicationSource,
 					argocd.ApplicationSources,
 				) (argocd.OperationPhase, bool, error) {
 					return "Unknown", false, nil
@@ -907,8 +896,8 @@ func TestArgoCDUpdateDirective_run(t *testing.T) {
 					*kargoapi.Stage,
 					*ArgoCDAppUpdate,
 					*argocd.Application,
-				) (*argocd.ApplicationSource, argocd.ApplicationSources, error) {
-					return &argocd.ApplicationSource{}, nil, nil
+				) (argocd.ApplicationSources, error) {
+					return []argocd.ApplicationSource{{}}, nil
 				},
 				mustPerformUpdateFn: func(
 					context.Context,
@@ -917,7 +906,6 @@ func TestArgoCDUpdateDirective_run(t *testing.T) {
 					*kargoapi.Stage,
 					*ArgoCDAppUpdate,
 					*argocd.Application,
-					*argocd.ApplicationSource,
 					argocd.ApplicationSources,
 				) (argocd.OperationPhase, bool, error) {
 					return argocd.OperationSucceeded, false, nil
@@ -955,52 +943,10 @@ func TestArgoCDUpdateDirective_buildDesiredSources(t *testing.T) {
 		update            *ArgoCDAppUpdate
 		assertions        func(
 			t *testing.T,
-			oldSource, newSource *argocd.ApplicationSource,
-			oldSources, newSources argocd.ApplicationSources,
+			desiredSources argocd.ApplicationSources,
 			err error,
 		)
 	}{
-		{
-			name: "applies updates to source",
-			dir: &argocdUpdateDirective{
-				applyArgoCDSourceUpdateFn: func(
-					_ context.Context,
-					_ *StepContext,
-					_ *ArgoCDUpdateConfig,
-					_ *kargoapi.Stage,
-					_ *ArgoCDAppSourceUpdate,
-					src argocd.ApplicationSource,
-				) (argocd.ApplicationSource, error) {
-					if src.RepoURL == "updated-url" {
-						src.TargetRevision = "updated-revision"
-						return src, nil
-					}
-					if src.RepoURL == "" {
-						src.RepoURL = "updated-url"
-					}
-					return src, nil
-				},
-			},
-			modifyApplication: func(app *argocd.Application) {
-				app.Spec.Source = &argocd.ApplicationSource{}
-			},
-			update: &ArgoCDAppUpdate{
-				Sources: []ArgoCDAppSourceUpdate{{}, {}},
-			},
-			assertions: func(
-				t *testing.T,
-				oldSource, newSource *argocd.ApplicationSource,
-				oldSources, newSources argocd.ApplicationSources,
-				err error,
-			) {
-				require.NoError(t, err)
-				require.True(t, oldSources.Equals(newSources))
-
-				require.False(t, oldSource.Equals(newSource))
-				require.Equal(t, "updated-url", newSource.RepoURL)
-				require.Equal(t, "updated-revision", newSource.TargetRevision)
-			},
-		},
 		{
 			name: "error applying update to source",
 			dir: &argocdUpdateDirective{
@@ -1023,13 +969,11 @@ func TestArgoCDUpdateDirective_buildDesiredSources(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_, newSource *argocd.ApplicationSource,
-				_, newSources argocd.ApplicationSources,
+				desiredSources argocd.ApplicationSources,
 				err error,
 			) {
 				require.ErrorContains(t, err, "something went wrong")
-				require.Nil(t, newSource)
-				require.Nil(t, newSources)
+				require.Nil(t, desiredSources)
 			},
 		},
 		{
@@ -1069,54 +1013,16 @@ func TestArgoCDUpdateDirective_buildDesiredSources(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				oldSource, newSource *argocd.ApplicationSource,
-				oldSources, newSources argocd.ApplicationSources,
+				desiredSources argocd.ApplicationSources,
 				err error,
 			) {
 				require.NoError(t, err)
-				require.True(t, oldSource.Equals(newSource))
-				require.False(t, oldSources.Equals(newSources))
-
-				require.Equal(t, 2, len(newSources))
-				require.Equal(t, "updated-revision-1", newSources[0].TargetRevision)
-				require.Equal(t, "updated-revision-2", newSources[1].TargetRevision)
-			},
-		},
-		{
-			name: "error applying update to sources",
-			dir: &argocdUpdateDirective{
-				applyArgoCDSourceUpdateFn: func(
-					context.Context,
-					*StepContext,
-					*ArgoCDUpdateConfig,
-					*kargoapi.Stage,
-					*ArgoCDAppSourceUpdate,
-					argocd.ApplicationSource,
-				) (argocd.ApplicationSource, error) {
-					return argocd.ApplicationSource{}, errors.New("something went wrong")
-				},
-			},
-			modifyApplication: func(app *argocd.Application) {
-				app.Spec.Sources = argocd.ApplicationSources{
-					{},
-				}
-			},
-			update: &ArgoCDAppUpdate{
-				Sources: []ArgoCDAppSourceUpdate{{}},
-			},
-			assertions: func(
-				t *testing.T,
-				_, newSource *argocd.ApplicationSource,
-				_, newSources argocd.ApplicationSources,
-				err error,
-			) {
-				require.ErrorContains(t, err, "something went wrong")
-				require.Nil(t, newSource)
-				require.Nil(t, newSources)
+				require.Equal(t, 2, len(desiredSources))
+				require.Equal(t, "updated-revision-1", desiredSources[0].TargetRevision)
+				require.Equal(t, "updated-revision-2", desiredSources[1].TargetRevision)
 			},
 		},
 	}
-
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			app := &argocd.Application{
@@ -1128,16 +1034,15 @@ func TestArgoCDUpdateDirective_buildDesiredSources(t *testing.T) {
 			if testCase.modifyApplication != nil {
 				testCase.modifyApplication(app)
 			}
-			oldSource, oldSources := app.Spec.Source.DeepCopy(), app.Spec.Sources.DeepCopy()
-			newSource, newSources, err := testCase.dir.buildDesiredSources(
+			desiredSources, err := testCase.dir.buildDesiredSources(
 				context.Background(),
 				&StepContext{},
 				&ArgoCDUpdateConfig{},
-				&kargoapi.Stage{},
+				nil,
 				testCase.update,
 				app,
 			)
-			testCase.assertions(t, oldSource, newSource, oldSources, newSources, err)
+			testCase.assertions(t, desiredSources, err)
 		})
 	}
 }
@@ -1152,7 +1057,6 @@ func TestArgoCDUpdateDirective_mustPerformUpdate(t *testing.T) {
 		name              string
 		modifyApplication func(*argocd.Application)
 		newFreight        []kargoapi.FreightReference
-		desiredSource     *argocd.ApplicationSource
 		desiredSources    argocd.ApplicationSources
 		assertions        func(t *testing.T, phase argocd.OperationPhase, mustUpdate bool, err error)
 	}{
@@ -1269,7 +1173,7 @@ func TestArgoCDUpdateDirective_mustPerformUpdate(t *testing.T) {
 			},
 		},
 		{
-			name: "unable to determine desired revision",
+			name: "unable to determine desired revisions",
 			modifyApplication: func(app *argocd.Application) {
 				app.Status.OperationState = &argocd.OperationState{
 					Phase: argocd.OperationSucceeded,
@@ -1356,41 +1260,8 @@ func TestArgoCDUpdateDirective_mustPerformUpdate(t *testing.T) {
 				},
 			}},
 			assertions: func(t *testing.T, phase argocd.OperationPhase, mustUpdate bool, err error) {
-				require.ErrorContains(t, err, "does not match desired revision")
-				require.Empty(t, phase)
-				require.True(t, mustUpdate)
-			},
-		},
-		{
-			name: "desired source does not match operation state",
-			modifyApplication: func(app *argocd.Application) {
-				app.Spec.Source = &argocd.ApplicationSource{
-					RepoURL: "https://github.com/universe/42",
-				}
-				app.Status.OperationState = &argocd.OperationState{
-					Phase: argocd.OperationSucceeded,
-					Operation: argocd.Operation{
-						InitiatedBy: argocd.OperationInitiator{
-							Username: applicationOperationInitiator,
-						},
-						Info: []*argocd.Info{{
-							Name:  freightCollectionInfoKey,
-							Value: testFreightCollectionID,
-						}},
-					},
-					SyncResult: &argocd.SyncOperationResult{
-						Revision: "fake-revision",
-						Source: argocd.ApplicationSource{
-							RepoURL: "https://github.com/different/universe",
-						},
-					},
-				}
-			},
-			desiredSource: &argocd.ApplicationSource{
-				RepoURL: "http://github.com/universe/42",
-			},
-			assertions: func(t *testing.T, phase argocd.OperationPhase, mustUpdate bool, err error) {
-				require.ErrorContains(t, err, "does not match desired source")
+				require.ErrorContains(t, err, "sync result revisions")
+				require.ErrorContains(t, err, "do not match desired revisions")
 				require.Empty(t, phase)
 				require.True(t, mustUpdate)
 			},
@@ -1424,7 +1295,6 @@ func TestArgoCDUpdateDirective_mustPerformUpdate(t *testing.T) {
 					},
 				}
 			},
-			desiredSource: &argocd.ApplicationSource{},
 			desiredSources: argocd.ApplicationSources{
 				{
 					RepoURL: "https://github.com/universe/42",
@@ -1516,7 +1386,6 @@ func TestArgoCDUpdateDirective_mustPerformUpdate(t *testing.T) {
 				&kargoapi.Stage{},
 				&stepCfg.Apps[0],
 				app,
-				testCase.desiredSource,
 				testCase.desiredSources,
 			)
 			testCase.assertions(t, phase, mustUpdate, err)
@@ -1524,12 +1393,11 @@ func TestArgoCDUpdateDirective_mustPerformUpdate(t *testing.T) {
 	}
 }
 
-func TestArgoCDSyncApplication(t *testing.T) {
+func TestArgoCDUpdateDirective_syncApplication(t *testing.T) {
 	testCases := []struct {
 		name           string
 		dir            *argocdUpdateDirective
 		app            *argocd.Application
-		desiredSource  *argocd.ApplicationSource
 		desiredSources argocd.ApplicationSources
 		assertions     func(*testing.T, error)
 	}{
@@ -1609,7 +1477,6 @@ func TestArgoCDSyncApplication(t *testing.T) {
 					context.Background(),
 					stepCtx,
 					testCase.app,
-					testCase.desiredSource,
 					testCase.desiredSources,
 				),
 			)
@@ -1617,7 +1484,7 @@ func TestArgoCDSyncApplication(t *testing.T) {
 	}
 }
 
-func TestLogAppEvent(t *testing.T) {
+func TestArgoCDUpdateDirective_logAppEvent(t *testing.T) {
 	testCases := []struct {
 		name         string
 		app          *argocd.Application
@@ -1707,7 +1574,7 @@ func TestLogAppEvent(t *testing.T) {
 	}
 }
 
-func TestArgoCDGetAuthorizedApplication(t *testing.T) {
+func TestArgoCDUpdateDirective_getAuthorizedApplication(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, argocd.AddToScheme(scheme))
 
@@ -1801,7 +1668,7 @@ func TestArgoCDGetAuthorizedApplication(t *testing.T) {
 	}
 }
 
-func TestAuthorizeArgoCDAppUpdate(t *testing.T) {
+func TestArgoCDUpdateDirective_authorizeArgoCDAppUpdate(t *testing.T) {
 	permErr := "does not permit mutation"
 	parseErr := "unable to parse"
 	invalidGlobErr := "invalid glob expression"
@@ -1902,7 +1769,7 @@ func TestAuthorizeArgoCDAppUpdate(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			err := authorizeArgoCDAppUpdate(
+			err := (&argocdUpdateDirective{}).authorizeArgoCDAppUpdate(
 				&StepContext{
 					Project: "ns-yep",
 					Stage:   "name-yep",
@@ -1918,7 +1785,7 @@ func TestAuthorizeArgoCDAppUpdate(t *testing.T) {
 	}
 }
 
-func TestApplyArgoCDSourceUpdate(t *testing.T) {
+func TestArgoCDUpdateDirective_applyArgoCDSourceUpdate(t *testing.T) {
 	testOrigin := kargoapi.FreightOrigin{
 		Kind: kargoapi.FreightOriginKindWarehouse,
 		Name: "fake-warehouse",
@@ -2197,7 +2064,7 @@ func TestApplyArgoCDSourceUpdate(t *testing.T) {
 	}
 }
 
-func TestBuildKustomizeImagesForArgoCDAppSource(t *testing.T) {
+func TestArgoCDUpdateDirective_buildKustomizeImagesForAppSource(t *testing.T) {
 	testOrigin := kargoapi.FreightOrigin{
 		Kind: kargoapi.FreightOriginKindWarehouse,
 		Name: "fake-warehouse",
@@ -2243,7 +2110,7 @@ func TestBuildKustomizeImagesForArgoCDAppSource(t *testing.T) {
 	}
 
 	dir := &argocdUpdateDirective{}
-	result, err := dir.buildKustomizeImagesForArgoCDAppSource(
+	result, err := dir.buildKustomizeImagesForAppSource(
 		context.Background(),
 		&StepContext{
 			Freight: freight,
@@ -2263,7 +2130,7 @@ func TestBuildKustomizeImagesForArgoCDAppSource(t *testing.T) {
 	)
 }
 
-func TestBuildHelmParamChangesForArgoCDAppSource(t *testing.T) {
+func TestArgoCDUpdateDirective_buildHelmParamChangesForAppSource(t *testing.T) {
 	testOrigin := kargoapi.FreightOrigin{
 		Kind: kargoapi.FreightOriginKindWarehouse,
 		Name: "fake-warehouse",
@@ -2337,7 +2204,7 @@ func TestBuildHelmParamChangesForArgoCDAppSource(t *testing.T) {
 	}
 
 	dir := &argocdUpdateDirective{}
-	result, err := dir.buildHelmParamChangesForArgoCDAppSource(
+	result, err := dir.buildHelmParamChangesForAppSource(
 		context.Background(),
 		&StepContext{
 			Freight: freight,
@@ -2359,7 +2226,7 @@ func TestBuildHelmParamChangesForArgoCDAppSource(t *testing.T) {
 	)
 }
 
-func TestRecursiveMerge(t *testing.T) {
+func TestArgoCDUpdateDirective_recursiveMerge(t *testing.T) {
 	testCases := []struct {
 		name     string
 		src      any
@@ -2457,7 +2324,7 @@ func TestRecursiveMerge(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			result := recursiveMerge(tc.src, tc.dst)
+			result := (&argocdUpdateDirective{}).recursiveMerge(tc.src, tc.dst)
 			assert.Equal(t, tc.expected, result)
 		})
 	}
