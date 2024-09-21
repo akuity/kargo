@@ -10,20 +10,18 @@ import (
 )
 
 func TestEngine_Execute(t *testing.T) {
-	failureResult := Result{Status: StatusFailure}
-	successResult := Result{Status: StatusSuccess}
+	failureResult := PromotionStepResult{Status: PromotionStatusFailure}
+	successResult := PromotionStepResult{Status: PromotionStatusSuccess}
 	tests := []struct {
 		name         string
-		directives   []Step
+		directives   []PromotionStep
 		initRegistry func() DirectiveRegistry
 		ctx          context.Context
-		assertions   func(t *testing.T, status Status, err error)
+		assertions   func(*testing.T, PromotionResult, error)
 	}{
 		{
-			name: "success: single directive",
-			directives: []Step{
-				{Directive: "mock"},
-			},
+			name:       "success: single directive",
+			directives: []PromotionStep{{Kind: "mock"}},
 			initRegistry: func() DirectiveRegistry {
 				registry := make(DirectiveRegistry)
 				registry.RegisterDirective(
@@ -36,16 +34,16 @@ func TestEngine_Execute(t *testing.T) {
 				return registry
 			},
 			ctx: context.Background(),
-			assertions: func(t *testing.T, status Status, err error) {
-				assert.Equal(t, StatusSuccess, status)
+			assertions: func(t *testing.T, res PromotionResult, err error) {
+				assert.Equal(t, PromotionStatusSuccess, res.Status)
 				assert.NoError(t, err)
 			},
 		},
 		{
 			name: "success: multiple directives",
-			directives: []Step{
-				{Directive: "mock1"},
-				{Directive: "mock2"},
+			directives: []PromotionStep{
+				{Kind: "mock1"},
+				{Kind: "mock2"},
 			},
 			initRegistry: func() DirectiveRegistry {
 				registry := make(DirectiveRegistry)
@@ -66,29 +64,29 @@ func TestEngine_Execute(t *testing.T) {
 				return registry
 			},
 			ctx: context.Background(),
-			assertions: func(t *testing.T, status Status, err error) {
-				assert.Equal(t, StatusSuccess, status)
+			assertions: func(t *testing.T, res PromotionResult, err error) {
+				assert.Equal(t, PromotionStatusSuccess, res.Status)
 				assert.NoError(t, err)
 			},
 		},
 		{
 			name: "failure: directive not found",
-			directives: []Step{
-				{Directive: "unknown"},
+			directives: []PromotionStep{
+				{Kind: "unknown"},
 			},
 			initRegistry: func() DirectiveRegistry {
 				return make(DirectiveRegistry)
 			},
 			ctx: context.Background(),
-			assertions: func(t *testing.T, status Status, err error) {
-				assert.Equal(t, StatusFailure, status)
+			assertions: func(t *testing.T, res PromotionResult, err error) {
+				assert.Equal(t, PromotionStatusFailure, res.Status)
 				assert.ErrorContains(t, err, "not found")
 			},
 		},
 		{
 			name: "failure: directive returns error",
-			directives: []Step{
-				{Directive: "failing", Alias: "alias1", Config: map[string]any{"key": "value"}},
+			directives: []PromotionStep{
+				{Kind: "failing", Alias: "alias1", Config: map[string]any{"key": "value"}},
 			},
 			initRegistry: func() DirectiveRegistry {
 				registry := make(DirectiveRegistry)
@@ -103,23 +101,23 @@ func TestEngine_Execute(t *testing.T) {
 				return registry
 			},
 			ctx: context.Background(),
-			assertions: func(t *testing.T, status Status, err error) {
-				assert.Equal(t, StatusFailure, status)
+			assertions: func(t *testing.T, res PromotionResult, err error) {
+				assert.Equal(t, PromotionStatusFailure, res.Status)
 				assert.ErrorContains(t, err, "something went wrong")
 			},
 		},
 		{
 			name: "failure: context canceled",
-			directives: []Step{
-				{Directive: "mock"},
-				{Directive: "mock"}, // This directive should not be executed
+			directives: []PromotionStep{
+				{Kind: "mock"},
+				{Kind: "mock"}, // This directive should not be executed
 			},
 			initRegistry: func() DirectiveRegistry {
 				registry := make(DirectiveRegistry)
 				registry.RegisterDirective(
 					&mockDirective{
 						name: "mock",
-						runFunc: func(ctx context.Context, _ *StepContext) (Result, error) {
+						runFunc: func(ctx context.Context, _ *PromotionStepContext) (PromotionStepResult, error) {
 							<-ctx.Done() // Wait for context to be canceled
 							return successResult, nil
 						},
@@ -136,8 +134,8 @@ func TestEngine_Execute(t *testing.T) {
 				}()
 				return ctx
 			}(),
-			assertions: func(t *testing.T, status Status, err error) {
-				assert.Equal(t, StatusFailure, status)
+			assertions: func(t *testing.T, res PromotionResult, err error) {
+				assert.Equal(t, PromotionStatusFailure, res.Status)
 				assert.ErrorIs(t, err, context.Canceled)
 			},
 		},
@@ -145,8 +143,8 @@ func TestEngine_Execute(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			engine := NewSimpleEngine(tt.initRegistry(), nil, nil, nil)
-			status, err := engine.Execute(tt.ctx, PromotionContext{}, tt.directives)
-			tt.assertions(t, status, err)
+			res, err := engine.Promote(tt.ctx, PromotionContext{}, tt.directives)
+			tt.assertions(t, res, err)
 		})
 	}
 }

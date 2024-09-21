@@ -7,6 +7,7 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/credentials"
 )
 
@@ -33,14 +34,19 @@ func NewSimpleEngine(
 	}
 }
 
-// Execute runs the provided list of directives in sequence.
-func (e *SimpleEngine) Execute(ctx context.Context, promoCtx PromotionContext, steps []Step) (Status, error) {
+// Promote implements the Engine interface.
+func (e *SimpleEngine) Promote(
+	ctx context.Context,
+	promoCtx PromotionContext,
+	steps []PromotionStep,
+) (PromotionResult, error) {
 	workDir := promoCtx.WorkDir
 	if workDir == "" {
 		var err error
 		workDir, err = os.MkdirTemp("", "run-")
 		if err != nil {
-			return StatusFailure, fmt.Errorf("temporary working directory creation failed: %w", err)
+			return PromotionResult{Status: PromotionStatusFailure},
+				fmt.Errorf("temporary working directory creation failed: %w", err)
 		}
 		defer os.RemoveAll(workDir)
 	}
@@ -51,16 +57,17 @@ func (e *SimpleEngine) Execute(ctx context.Context, promoCtx PromotionContext, s
 	for _, d := range steps {
 		select {
 		case <-ctx.Done():
-			return StatusFailure, ctx.Err()
+			return PromotionResult{Status: PromotionStatusFailure}, ctx.Err()
 		default:
-			reg, err := e.registry.GetDirectiveRegistration(d.Directive)
+			reg, err := e.registry.GetDirectiveRegistration(d.Kind)
 			if err != nil {
-				return StatusFailure, fmt.Errorf("failed to get step %q: %w", d.Directive, err)
+				return PromotionResult{Status: PromotionStatusFailure},
+					fmt.Errorf("failed to get step %q: %w", d.Kind, err)
 			}
 
 			stateCopy := state.DeepCopy()
 
-			stepCtx := &StepContext{
+			stepCtx := &PromotionStepContext{
 				WorkDir:         workDir,
 				SharedState:     stateCopy,
 				Alias:           d.Alias,
@@ -70,7 +77,7 @@ func (e *SimpleEngine) Execute(ctx context.Context, promoCtx PromotionContext, s
 				FreightRequests: promoCtx.FreightRequests,
 				Freight:         promoCtx.Freight,
 			}
-			// Selectively provide these capabilities via the StepContext.
+			// Selectively provide these capabilities via the PromotionStepContext.
 			if reg.Permissions.AllowCredentialsDB {
 				stepCtx.CredentialsDB = e.credentialsDB
 			}
@@ -81,9 +88,10 @@ func (e *SimpleEngine) Execute(ctx context.Context, promoCtx PromotionContext, s
 				stepCtx.ArgoCDClient = e.argoCDClient
 			}
 
-			result, err := reg.Directive.Run(ctx, stepCtx)
+			result, err := reg.Directive.RunPromotionStep(ctx, stepCtx)
 			if err != nil {
-				return result.Status, fmt.Errorf("failed to run step %q: %w", d.Directive, err)
+				return PromotionResult{Status: PromotionStatusFailure},
+					fmt.Errorf("failed to run step %q: %w", d.Kind, err)
 			}
 
 			if d.Alias != "" {
@@ -91,5 +99,15 @@ func (e *SimpleEngine) Execute(ctx context.Context, promoCtx PromotionContext, s
 			}
 		}
 	}
-	return StatusSuccess, nil
+	return PromotionResult{Status: PromotionStatusSuccess}, nil
+}
+
+// CheckHealth implements the Engine interface.
+func (e *SimpleEngine) CheckHealth(
+	context.Context,
+	HealthCheckContext,
+	[]HealthCheckStep,
+) kargoapi.Health {
+	// TODO: Implement health checks.
+	return kargoapi.Health{Status: kargoapi.HealthStateNotApplicable}
 }
