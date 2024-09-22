@@ -8,15 +8,15 @@ require (
 	github.com/AlecAivazis/survey/v2 v2.3.7
 	github.com/Masterminds/semver/v3 v3.3.0
 	github.com/adrg/xdg v0.5.0
-	github.com/aws/aws-sdk-go-v2 v1.30.5
-	github.com/aws/aws-sdk-go-v2/config v1.27.33
-	github.com/aws/aws-sdk-go-v2/credentials v1.17.32
+	github.com/aws/aws-sdk-go-v2 v1.31.0
+	github.com/aws/aws-sdk-go-v2/config v1.27.36
+	github.com/aws/aws-sdk-go-v2/credentials v1.17.34
 	github.com/aws/aws-sdk-go-v2/service/ecr v1.33.0
-	github.com/aws/aws-sdk-go-v2/service/sts v1.30.7
+	github.com/aws/aws-sdk-go-v2/service/sts v1.31.0
 	github.com/bacongobbler/browser v1.1.0
 	github.com/bombsimon/logrusr/v4 v4.1.0
 	github.com/coreos/go-oidc/v3 v3.11.0
-	github.com/cyphar/filepath-securejoin v0.3.1
+	github.com/cyphar/filepath-securejoin v0.3.2
 	github.com/evanphx/json-patch/v5 v5.9.0
 	github.com/fatih/structtag v1.2.0
 	github.com/fluxcd/pkg/kustomize v1.13.0
@@ -71,15 +71,15 @@ require (
 	github.com/Masterminds/sprig/v3 v3.2.3 // indirect
 	github.com/Masterminds/squirrel v1.5.4 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20200428143746-21a406dcc535 // indirect
-	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.16.13 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/configsources v1.3.17 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.6.17 // indirect
+	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.16.14 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/configsources v1.3.18 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.6.18 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/ini v1.8.1 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.11.4 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.11.19 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sso v1.22.7 // indirect
-	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.26.7 // indirect
-	github.com/aws/smithy-go v1.20.4 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.11.5 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.11.20 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sso v1.23.0 // indirect
+	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.27.0 // indirect
+	github.com/aws/smithy-go v1.21.0 // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
 	github.com/chai2010/gettext-go v1.0.2 // indirect
 	github.com/containerd/errdefs v0.1.0 // indirect
@@ -209,7 +209,7 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240903143218-8af14fe29dc1 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
-	k8s.io/apiextensions-apiserver v0.31.0
+	k8s.io/apiextensions-apiserver v0.31.1
 	k8s.io/kube-openapi v0.0.0-20240228011516-70dd3763d340 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/kustomize/api v0.17.3
