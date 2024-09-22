@@ -14,6 +14,8 @@ import (
 	"helm.sh/helm/v3/pkg/chart/loader"
 	"helm.sh/helm/v3/pkg/chartutil"
 	"helm.sh/helm/v3/pkg/cli/values"
+
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
 func init() {
@@ -41,8 +43,11 @@ func (d *helmTemplateDirective) Name() string {
 }
 
 // Run implements the Directive interface.
-func (d *helmTemplateDirective) Run(ctx context.Context, stepCtx *StepContext) (Result, error) {
-	failure := Result{Status: StatusFailure}
+func (d *helmTemplateDirective) RunPromotionStep(
+	ctx context.Context,
+	stepCtx *PromotionStepContext,
+) (PromotionStepResult, error) {
+	failure := PromotionStepResult{Status: PromotionStatusFailure}
 
 	// Validate the configuration against the JSON Schema
 	if err := validate(
@@ -59,42 +64,56 @@ func (d *helmTemplateDirective) Run(ctx context.Context, stepCtx *StepContext) (
 		return failure, fmt.Errorf("could not convert config into %s config: %w", d.Name(), err)
 	}
 
-	return d.run(ctx, stepCtx, cfg)
+	return d.runPromotionStep(ctx, stepCtx, cfg)
 }
 
-func (d *helmTemplateDirective) run(
+// RunHealthCheckStep implements the Directive interface.
+func (d *helmTemplateDirective) RunHealthCheckStep(
+	context.Context,
+	*HealthCheckStepContext,
+) HealthCheckStepResult {
+	return HealthCheckStepResult{Status: kargoapi.HealthStateNotApplicable}
+}
+
+func (d *helmTemplateDirective) runPromotionStep(
 	ctx context.Context,
-	stepCtx *StepContext,
+	stepCtx *PromotionStepContext,
 	cfg HelmTemplateConfig,
-) (Result, error) {
+) (PromotionStepResult, error) {
 	composedValues, err := d.composeValues(stepCtx.WorkDir, cfg.ValuesFiles)
 	if err != nil {
-		return Result{Status: StatusFailure}, fmt.Errorf("failed to compose values: %w", err)
+		return PromotionStepResult{Status: PromotionStatusFailure},
+			fmt.Errorf("failed to compose values: %w", err)
 	}
 
 	chartRequested, err := d.loadChart(stepCtx.WorkDir, cfg.Path)
 	if err != nil {
-		return Result{Status: StatusFailure}, fmt.Errorf("failed to load chart from %q: %w", cfg.Path, err)
+		return PromotionStepResult{Status: PromotionStatusFailure},
+			fmt.Errorf("failed to load chart from %q: %w", cfg.Path, err)
 	}
 
 	if err = d.checkDependencies(chartRequested); err != nil {
-		return Result{Status: StatusFailure}, fmt.Errorf("missing chart dependencies: %w", err)
+		return PromotionStepResult{Status: PromotionStatusFailure},
+			fmt.Errorf("missing chart dependencies: %w", err)
 	}
 
 	install, err := d.newInstallAction(cfg, stepCtx.Project)
 	if err != nil {
-		return Result{Status: StatusFailure}, fmt.Errorf("failed to initialize Helm action config: %w", err)
+		return PromotionStepResult{Status: PromotionStatusFailure},
+			fmt.Errorf("failed to initialize Helm action config: %w", err)
 	}
 
 	rls, err := install.RunWithContext(ctx, chartRequested, composedValues)
 	if err != nil {
-		return Result{Status: StatusFailure}, fmt.Errorf("failed to render chart: %w", err)
+		return PromotionStepResult{Status: PromotionStatusFailure},
+			fmt.Errorf("failed to render chart: %w", err)
 	}
 
 	if err = d.writeOutput(stepCtx.WorkDir, cfg.OutPath, rls.Manifest); err != nil {
-		return Result{Status: StatusFailure}, fmt.Errorf("failed to write rendered chart: %w", err)
+		return PromotionStepResult{Status: PromotionStatusFailure},
+			fmt.Errorf("failed to write rendered chart: %w", err)
 	}
-	return Result{Status: StatusSuccess}, nil
+	return PromotionStepResult{Status: PromotionStatusSuccess}, nil
 }
 
 // composeValues composes the values from the given values files. It merges the

@@ -12,6 +12,7 @@ import (
 	"github.com/otiai10/copy"
 	"github.com/xeipuuv/gojsonschema"
 
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/logging"
 )
 
@@ -29,34 +30,54 @@ type copyDirective struct {
 	schemaLoader gojsonschema.JSONLoader
 }
 
+// Name implements the Directive interface.
 func (d *copyDirective) Name() string {
 	return "copy"
 }
 
-func (d *copyDirective) Run(ctx context.Context, stepCtx *StepContext) (Result, error) {
+// RunPromotionStep implements the Directive interface.
+func (d *copyDirective) RunPromotionStep(
+	ctx context.Context,
+	stepCtx *PromotionStepContext,
+) (PromotionStepResult, error) {
 	// Validate the configuration against the JSON Schema.
 	if err := validate(d.schemaLoader, gojsonschema.NewGoLoader(stepCtx.Config), d.Name()); err != nil {
-		return Result{Status: StatusFailure}, err
+		return PromotionStepResult{Status: PromotionStatusFailure}, err
 	}
 
 	// Convert the configuration into a typed object.
 	cfg, err := configToStruct[CopyConfig](stepCtx.Config)
 	if err != nil {
-		return Result{Status: StatusFailure}, fmt.Errorf("could not convert config into %s config: %w", d.Name(), err)
+		return PromotionStepResult{Status: PromotionStatusFailure},
+			fmt.Errorf("could not convert config into %s config: %w", d.Name(), err)
 	}
 
-	return d.run(ctx, stepCtx, cfg)
+	return d.runPromotionStep(ctx, stepCtx, cfg)
 }
 
-func (d *copyDirective) run(ctx context.Context, stepCtx *StepContext, cfg CopyConfig) (Result, error) {
+// RunHealthCheckStep implements the Directive interface.
+func (d *copyDirective) RunHealthCheckStep(
+	context.Context,
+	*HealthCheckStepContext,
+) HealthCheckStepResult {
+	return HealthCheckStepResult{Status: kargoapi.HealthStateNotApplicable}
+}
+
+func (d *copyDirective) runPromotionStep(
+	ctx context.Context,
+	stepCtx *PromotionStepContext,
+	cfg CopyConfig,
+) (PromotionStepResult, error) {
 	// Secure join the paths to prevent path traversal attacks.
 	inPath, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.InPath)
 	if err != nil {
-		return Result{Status: StatusFailure}, fmt.Errorf("could not secure join inPath %q: %w", cfg.InPath, err)
+		return PromotionStepResult{Status: PromotionStatusFailure},
+			fmt.Errorf("could not secure join inPath %q: %w", cfg.InPath, err)
 	}
 	outPath, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.OutPath)
 	if err != nil {
-		return Result{Status: StatusFailure}, fmt.Errorf("could not secure join outPath %q: %w", cfg.OutPath, err)
+		return PromotionStepResult{Status: PromotionStatusFailure},
+			fmt.Errorf("could not secure join outPath %q: %w", cfg.OutPath, err)
 	}
 
 	// Perform the copy operation.
@@ -70,9 +91,10 @@ func (d *copyDirective) run(ctx context.Context, stepCtx *StepContext, cfg CopyC
 		},
 	}
 	if err = copy.Copy(inPath, outPath, opts); err != nil {
-		return Result{Status: StatusFailure}, fmt.Errorf("failed to copy %q to %q: %w", cfg.InPath, cfg.OutPath, err)
+		return PromotionStepResult{Status: PromotionStatusFailure},
+			fmt.Errorf("failed to copy %q to %q: %w", cfg.InPath, cfg.OutPath, err)
 	}
-	return Result{Status: StatusSuccess}, nil
+	return PromotionStepResult{Status: PromotionStatusSuccess}, nil
 }
 
 // sanitizePathError sanitizes the path in a path error to be relative to the

@@ -53,45 +53,57 @@ func (d *kustomizeSetImageDirective) Name() string {
 	return "kustomize-set-image"
 }
 
-func (d *kustomizeSetImageDirective) Run(ctx context.Context, stepCtx *StepContext) (Result, error) {
+func (d *kustomizeSetImageDirective) RunPromotionStep(
+	ctx context.Context,
+	stepCtx *PromotionStepContext,
+) (PromotionStepResult, error) {
 	// Validate the configuration against the JSON Schema.
 	if err := validate(d.schemaLoader, gojsonschema.NewGoLoader(stepCtx.Config), d.Name()); err != nil {
-		return Result{Status: StatusFailure}, err
+		return PromotionStepResult{Status: PromotionStatusFailure}, err
 	}
 
 	// Convert the configuration into a typed object.
 	cfg, err := configToStruct[KustomizeSetImageConfig](stepCtx.Config)
 	if err != nil {
-		return Result{Status: StatusFailure},
+		return PromotionStepResult{Status: PromotionStatusFailure},
 			fmt.Errorf("could not convert config into kustomize-set-image config: %w", err)
 	}
 
-	return d.run(ctx, stepCtx, cfg)
+	return d.runPromotionStep(ctx, stepCtx, cfg)
 }
 
-func (d *kustomizeSetImageDirective) run(
+// RunHealthCheckStep implements the Directive interface.
+func (d *kustomizeSetImageDirective) RunHealthCheckStep(
+	context.Context,
+	*HealthCheckStepContext,
+) HealthCheckStepResult {
+	return HealthCheckStepResult{Status: kargoapi.HealthStateNotApplicable}
+}
+
+func (d *kustomizeSetImageDirective) runPromotionStep(
 	ctx context.Context,
-	stepCtx *StepContext,
+	stepCtx *PromotionStepContext,
 	cfg KustomizeSetImageConfig,
-) (Result, error) {
+) (PromotionStepResult, error) {
 	// Find the Kustomization file.
 	kusPath, err := findKustomization(stepCtx.WorkDir, cfg.Path)
 	if err != nil {
-		return Result{Status: StatusFailure}, fmt.Errorf("could not discover kustomization file: %w", err)
+		return PromotionStepResult{Status: PromotionStatusFailure},
+			fmt.Errorf("could not discover kustomization file: %w", err)
 	}
 
 	// Discover image origins and collect target images.
 	targetImages, err := d.buildTargetImages(ctx, stepCtx, cfg.Images)
 	if err != nil {
-		return Result{Status: StatusFailure}, err
+		return PromotionStepResult{Status: PromotionStatusFailure}, err
 	}
 
 	// Update the Kustomization file with the new images.
 	if err = updateKustomizationFile(kusPath, targetImages); err != nil {
-		return Result{Status: StatusFailure}, err
+		return PromotionStepResult{Status: PromotionStatusFailure}, err
 	}
 
-	result := Result{Status: StatusSuccess}
+	result := PromotionStepResult{Status: PromotionStatusSuccess}
 	if commitMsg := d.generateCommitMessage(cfg.Path, targetImages); commitMsg != "" {
 		result.Output = make(State, 1)
 		result.Output.Set("commitMessage", commitMsg)
@@ -101,7 +113,7 @@ func (d *kustomizeSetImageDirective) run(
 
 func (d *kustomizeSetImageDirective) buildTargetImages(
 	ctx context.Context,
-	stepCtx *StepContext,
+	stepCtx *PromotionStepContext,
 	images []KustomizeSetImageConfigImage,
 ) (map[string]kustypes.Image, error) {
 	targetImages := make(map[string]kustypes.Image, len(images))

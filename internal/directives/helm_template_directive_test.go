@@ -13,12 +13,12 @@ import (
 	"helm.sh/helm/v3/pkg/chartutil"
 )
 
-func Test_helmTemplateDirective_run(t *testing.T) {
+func Test_helmTemplateDirective_runPromotionStep(t *testing.T) {
 	tests := []struct {
 		name       string
 		files      map[string]string
 		cfg        HelmTemplateConfig
-		assertions func(*testing.T, string, Result, error)
+		assertions func(*testing.T, string, PromotionStepResult, error)
 	}{
 		{
 			name: "successful run",
@@ -44,9 +44,9 @@ data:
 				ReleaseName: "test-release",
 				Namespace:   "test-namespace",
 			},
-			assertions: func(t *testing.T, workDir string, result Result, err error) {
+			assertions: func(t *testing.T, workDir string, result PromotionStepResult, err error) {
 				require.NoError(t, err)
-				assert.Equal(t, Result{Status: StatusSuccess}, result)
+				assert.Equal(t, PromotionStepResult{Status: PromotionStatusSuccess}, result)
 
 				outPath := filepath.Join(workDir, "output.yaml")
 				require.FileExists(t, outPath)
@@ -90,9 +90,9 @@ data:
 				ReleaseName: "test-release",
 				Namespace:   "test-namespace",
 			},
-			assertions: func(t *testing.T, workDir string, result Result, err error) {
+			assertions: func(t *testing.T, workDir string, result PromotionStepResult, err error) {
 				require.NoError(t, err)
-				assert.Equal(t, Result{Status: StatusSuccess}, result)
+				assert.Equal(t, PromotionStepResult{Status: PromotionStatusSuccess}, result)
 
 				outPath := filepath.Join(workDir, "output.yaml")
 				require.FileExists(t, outPath)
@@ -116,9 +116,9 @@ data:
 			cfg: HelmTemplateConfig{
 				ValuesFiles: []string{"non-existent.yaml"},
 			},
-			assertions: func(t *testing.T, workDir string, result Result, err error) {
+			assertions: func(t *testing.T, workDir string, result PromotionStepResult, err error) {
 				require.ErrorContains(t, err, "failed to compose values")
-				assert.Equal(t, Result{Status: StatusFailure}, result)
+				assert.Equal(t, PromotionStepResult{Status: PromotionStatusFailure}, result)
 
 				require.NoFileExists(t, filepath.Join(workDir, "output.yaml"))
 			},
@@ -128,9 +128,9 @@ data:
 			cfg: HelmTemplateConfig{
 				Path: "./",
 			},
-			assertions: func(t *testing.T, workDir string, result Result, err error) {
+			assertions: func(t *testing.T, workDir string, result PromotionStepResult, err error) {
 				require.ErrorContains(t, err, "failed to load chart")
-				assert.Equal(t, Result{Status: StatusFailure}, result)
+				assert.Equal(t, PromotionStepResult{Status: PromotionStatusFailure}, result)
 
 				require.NoFileExists(t, filepath.Join(workDir, "output.yaml"))
 			},
@@ -151,9 +151,9 @@ dependencies:
 				Path:    "charts/test-chart",
 				OutPath: "output.yaml",
 			},
-			assertions: func(t *testing.T, workDir string, result Result, err error) {
+			assertions: func(t *testing.T, workDir string, result PromotionStepResult, err error) {
 				require.ErrorContains(t, err, "missing chart dependencies")
-				assert.Equal(t, Result{Status: StatusFailure}, result)
+				assert.Equal(t, PromotionStepResult{Status: PromotionStatusFailure}, result)
 
 				require.NoFileExists(t, filepath.Join(workDir, "output.yaml"))
 			},
@@ -169,9 +169,9 @@ version: 0.1.0`,
 				Path:        "charts/test-chart",
 				KubeVersion: "invalid",
 			},
-			assertions: func(t *testing.T, workDir string, result Result, err error) {
+			assertions: func(t *testing.T, workDir string, result PromotionStepResult, err error) {
 				require.ErrorContains(t, err, "failed to initialize Helm action config")
-				assert.Equal(t, Result{Status: StatusFailure}, result)
+				assert.Equal(t, PromotionStepResult{Status: PromotionStatusFailure}, result)
 
 				require.NoFileExists(t, filepath.Join(workDir, "output.yaml"))
 			},
@@ -195,9 +195,9 @@ data:
 				Path:    "charts/test-chart",
 				OutPath: "output.yaml",
 			},
-			assertions: func(t *testing.T, workDir string, result Result, err error) {
+			assertions: func(t *testing.T, workDir string, result PromotionStepResult, err error) {
 				require.ErrorContains(t, err, "failed to render chart")
-				assert.Equal(t, Result{Status: StatusFailure}, result)
+				assert.Equal(t, PromotionStepResult{Status: PromotionStatusFailure}, result)
 
 				require.NoFileExists(t, filepath.Join(workDir, "output.yaml"))
 			},
@@ -220,9 +220,9 @@ metadata:
 				Path:    "./chart/",
 				OutPath: "output.yaml",
 			},
-			assertions: func(t *testing.T, workDir string, result Result, err error) {
+			assertions: func(t *testing.T, workDir string, result PromotionStepResult, err error) {
 				require.ErrorContains(t, err, "failed to write rendered chart")
-				assert.Equal(t, Result{Status: StatusFailure}, result)
+				assert.Equal(t, PromotionStepResult{Status: PromotionStatusFailure}, result)
 
 				require.NoFileExists(t, filepath.Join(workDir, "output.yaml"))
 			},
@@ -238,11 +238,11 @@ metadata:
 			}
 
 			d := &helmTemplateDirective{}
-			stepCtx := &StepContext{
+			stepCtx := &PromotionStepContext{
 				WorkDir: workDir,
 				Project: "test-project",
 			}
-			result, err := d.run(context.Background(), stepCtx, tt.cfg)
+			result, err := d.runPromotionStep(context.Background(), stepCtx, tt.cfg)
 			tt.assertions(t, workDir, result, err)
 		})
 	}

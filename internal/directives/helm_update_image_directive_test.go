@@ -18,14 +18,14 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
-func Test_helmUpdateImageDirective_run(t *testing.T) {
+func Test_helmUpdateImageDirective_runPromotionStep(t *testing.T) {
 	tests := []struct {
 		name       string
 		objects    []client.Object
-		stepCtx    *StepContext
+		stepCtx    *PromotionStepContext
 		cfg        HelmUpdateImageConfig
 		files      map[string]string
-		assertions func(*testing.T, string, Result, error)
+		assertions func(*testing.T, string, PromotionStepResult, error)
 	}{
 		{
 			name: "successful run with image updates",
@@ -46,7 +46,7 @@ func Test_helmUpdateImageDirective_run(t *testing.T) {
 					},
 				},
 			},
-			stepCtx: &StepContext{
+			stepCtx: &PromotionStepContext{
 				Project: "test-project",
 				Freight: kargoapi.FreightCollection{
 					Freight: map[string]kargoapi.FreightReference{
@@ -73,10 +73,10 @@ func Test_helmUpdateImageDirective_run(t *testing.T) {
 			files: map[string]string{
 				"values.yaml": "image:\n  tag: oldtag\n",
 			},
-			assertions: func(t *testing.T, workDir string, result Result, err error) {
+			assertions: func(t *testing.T, workDir string, result PromotionStepResult, err error) {
 				assert.NoError(t, err)
-				assert.Equal(t, Result{
-					Status: StatusSuccess,
+				assert.Equal(t, PromotionStepResult{
+					Status: PromotionStatusSuccess,
 					Output: State{
 						"commitMessage": "Updated values.yaml to use new image\n\n- docker.io/library/nginx:1.19.0",
 					},
@@ -88,7 +88,7 @@ func Test_helmUpdateImageDirective_run(t *testing.T) {
 		},
 		{
 			name: "no image updates",
-			stepCtx: &StepContext{
+			stepCtx: &PromotionStepContext{
 				Project:         "test-project",
 				Freight:         kargoapi.FreightCollection{},
 				FreightRequests: []kargoapi.FreightRequest{},
@@ -102,9 +102,9 @@ func Test_helmUpdateImageDirective_run(t *testing.T) {
 			files: map[string]string{
 				"values.yaml": "image:\n  tag: oldtag\n",
 			},
-			assertions: func(t *testing.T, workDir string, result Result, err error) {
+			assertions: func(t *testing.T, workDir string, result PromotionStepResult, err error) {
 				assert.NoError(t, err)
-				assert.Equal(t, Result{Status: StatusSuccess}, result)
+				assert.Equal(t, PromotionStepResult{Status: PromotionStatusSuccess}, result)
 				content, err := os.ReadFile(path.Join(workDir, "values.yaml"))
 				require.NoError(t, err)
 				assert.Contains(t, string(content), "tag: oldtag")
@@ -113,7 +113,7 @@ func Test_helmUpdateImageDirective_run(t *testing.T) {
 
 		{
 			name: "failed to generate image updates",
-			stepCtx: &StepContext{
+			stepCtx: &PromotionStepContext{
 				KargoClient: fake.NewClientBuilder().WithInterceptorFuncs(interceptor.Funcs{
 					Get: func(
 						context.Context,
@@ -142,10 +142,10 @@ func Test_helmUpdateImageDirective_run(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, _ string, result Result, err error) {
+			assertions: func(t *testing.T, _ string, result PromotionStepResult, err error) {
 				require.ErrorContains(t, err, "failed to generate image updates")
 				require.Errorf(t, err, "something went wrong")
-				assert.Equal(t, Result{Status: StatusFailure}, result)
+				assert.Equal(t, PromotionStepResult{Status: PromotionStatusFailure}, result)
 			},
 		},
 		{
@@ -167,7 +167,7 @@ func Test_helmUpdateImageDirective_run(t *testing.T) {
 					},
 				},
 			},
-			stepCtx: &StepContext{
+			stepCtx: &PromotionStepContext{
 				Project: "test-project",
 				Freight: kargoapi.FreightCollection{
 					Freight: map[string]kargoapi.FreightReference{
@@ -191,9 +191,9 @@ func Test_helmUpdateImageDirective_run(t *testing.T) {
 					{Key: "image.tag", Image: "docker.io/library/nginx", Value: Tag},
 				},
 			},
-			assertions: func(t *testing.T, _ string, result Result, err error) {
+			assertions: func(t *testing.T, _ string, result PromotionStepResult, err error) {
 				assert.Error(t, err)
-				assert.Equal(t, Result{Status: StatusFailure}, result)
+				assert.Equal(t, PromotionStepResult{Status: PromotionStatusFailure}, result)
 				assert.Contains(t, err.Error(), "values file update failed")
 			},
 		},
@@ -216,7 +216,7 @@ func Test_helmUpdateImageDirective_run(t *testing.T) {
 			}
 
 			d := &helmUpdateImageDirective{}
-			result, err := d.run(context.Background(), stepCtx, tt.cfg)
+			result, err := d.runPromotionStep(context.Background(), stepCtx, tt.cfg)
 			tt.assertions(t, stepCtx.WorkDir, result, err)
 		})
 	}
@@ -226,7 +226,7 @@ func Test_helmUpdateImageDirective_generateImageUpdates(t *testing.T) {
 	tests := []struct {
 		name       string
 		objects    []client.Object
-		stepCtx    *StepContext
+		stepCtx    *PromotionStepContext
 		cfg        HelmUpdateImageConfig
 		assertions func(*testing.T, map[string]string, []string, error)
 	}{
@@ -249,7 +249,7 @@ func Test_helmUpdateImageDirective_generateImageUpdates(t *testing.T) {
 					},
 				},
 			},
-			stepCtx: &StepContext{
+			stepCtx: &PromotionStepContext{
 				Project: "test-project",
 				Freight: kargoapi.FreightCollection{
 					Freight: map[string]kargoapi.FreightReference{
@@ -280,7 +280,7 @@ func Test_helmUpdateImageDirective_generateImageUpdates(t *testing.T) {
 		},
 		{
 			name: "image not found",
-			stepCtx: &StepContext{
+			stepCtx: &PromotionStepContext{
 				Project:         "test-project",
 				Freight:         kargoapi.FreightCollection{},
 				FreightRequests: []kargoapi.FreightRequest{},
@@ -315,7 +315,7 @@ func Test_helmUpdateImageDirective_generateImageUpdates(t *testing.T) {
 					},
 				},
 			},
-			stepCtx: &StepContext{
+			stepCtx: &PromotionStepContext{
 				Project: "test-project",
 				Freight: kargoapi.FreightCollection{
 					Freight: map[string]kargoapi.FreightReference{
@@ -364,7 +364,7 @@ func Test_helmUpdateImageDirective_generateImageUpdates(t *testing.T) {
 					},
 				},
 			},
-			stepCtx: &StepContext{
+			stepCtx: &PromotionStepContext{
 				Project: "test-project",
 				Freight: kargoapi.FreightCollection{
 					Freight: map[string]kargoapi.FreightReference{

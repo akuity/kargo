@@ -18,7 +18,7 @@ import (
 // the slice will contain an empty string at the corresponding index.
 func (a *argocdUpdateDirective) getDesiredRevisions(
 	ctx context.Context,
-	stepCtx *StepContext,
+	stepCtx *PromotionStepContext,
 	stepCfg *ArgoCDUpdateConfig,
 	stage *kargoapi.Stage,
 	update *ArgoCDAppUpdate,
@@ -62,7 +62,7 @@ func (a *argocdUpdateDirective) getDesiredRevisions(
 
 func (a *argocdUpdateDirective) getDesiredRevisionForSource(
 	ctx context.Context,
-	stepCtx *StepContext,
+	stepCtx *PromotionStepContext,
 	stage *kargoapi.Stage,
 	src *argocd.ApplicationSource,
 	desiredOrigin *kargoapi.FreightOrigin,

@@ -7,6 +7,7 @@ import (
 	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/xeipuuv/gojsonschema"
 
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/git"
 )
 
@@ -36,19 +37,27 @@ func (g *gitCommitDirective) Name() string {
 }
 
 // Run implements the Directive interface.
-func (g *gitCommitDirective) Run(
+func (g *gitCommitDirective) RunPromotionStep(
 	ctx context.Context,
-	stepCtx *StepContext,
-) (Result, error) {
+	stepCtx *PromotionStepContext,
+) (PromotionStepResult, error) {
 	if err := g.validate(stepCtx.Config); err != nil {
-		return Result{Status: StatusFailure}, err
+		return PromotionStepResult{Status: PromotionStatusFailure}, err
 	}
 	cfg, err := configToStruct[GitCommitConfig](stepCtx.Config)
 	if err != nil {
-		return Result{Status: StatusFailure},
+		return PromotionStepResult{Status: PromotionStatusFailure},
 			fmt.Errorf("could not convert config into %s config: %w", g.Name(), err)
 	}
-	return g.run(ctx, stepCtx, cfg)
+	return g.runPromotionStep(ctx, stepCtx, cfg)
+}
+
+// RunHealthCheckStep implements the Directive interface.
+func (g *gitCommitDirective) RunHealthCheckStep(
+	context.Context,
+	*HealthCheckStepContext,
+) HealthCheckStepResult {
+	return HealthCheckStepResult{Status: kargoapi.HealthStateNotApplicable}
 }
 
 // validate validates the git-commit directive configuration against the JSON
@@ -57,30 +66,30 @@ func (g *gitCommitDirective) validate(cfg Config) error {
 	return validate(g.schemaLoader, gojsonschema.NewGoLoader(cfg), g.Name())
 }
 
-func (g *gitCommitDirective) run(
+func (g *gitCommitDirective) runPromotionStep(
 	_ context.Context,
-	stepCtx *StepContext,
+	stepCtx *PromotionStepContext,
 	cfg GitCommitConfig,
-) (Result, error) {
+) (PromotionStepResult, error) {
 	path, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.Path)
 	if err != nil {
-		return Result{Status: StatusFailure}, fmt.Errorf(
+		return PromotionStepResult{Status: PromotionStatusFailure}, fmt.Errorf(
 			"error joining path %s with work dir %s: %w",
 			cfg.Path, stepCtx.WorkDir, err,
 		)
 	}
 	workTree, err := git.LoadWorkTree(path, nil)
 	if err != nil {
-		return Result{Status: StatusFailure},
+		return PromotionStepResult{Status: PromotionStatusFailure},
 			fmt.Errorf("error loading working tree from %s: %w", cfg.Path, err)
 	}
 	if err = workTree.AddAll(); err != nil {
-		return Result{Status: StatusFailure},
+		return PromotionStepResult{Status: PromotionStatusFailure},
 			fmt.Errorf("error adding all changes to working tree: %w", err)
 	}
 	commitMsg, err := g.buildCommitMessage(stepCtx.SharedState, cfg)
 	if err != nil {
-		return Result{Status: StatusFailure},
+		return PromotionStepResult{Status: PromotionStatusFailure},
 			fmt.Errorf("error building commit message: %w", err)
 	}
 	commitOpts := &git.CommitOptions{}
@@ -94,16 +103,16 @@ func (g *gitCommitDirective) run(
 		}
 	}
 	if err = workTree.Commit(commitMsg, commitOpts); err != nil {
-		return Result{Status: StatusFailure},
+		return PromotionStepResult{Status: PromotionStatusFailure},
 			fmt.Errorf("error committing to working tree: %w", err)
 	}
 	commitID, err := workTree.LastCommitID()
 	if err != nil {
-		return Result{Status: StatusFailure},
+		return PromotionStepResult{Status: PromotionStatusFailure},
 			fmt.Errorf("error getting last commit ID: %w", err)
 	}
-	return Result{
-		Status: StatusSuccess,
+	return PromotionStepResult{
+		Status: PromotionStatusSuccess,
 		Output: State{commitKey: commitID},
 	}, nil
 }

@@ -14,6 +14,8 @@ import (
 	"sigs.k8s.io/kustomize/api/resmap"
 	kustypes "sigs.k8s.io/kustomize/api/types"
 	"sigs.k8s.io/kustomize/kyaml/filesys"
+
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
 // kustomizeRenderMutex is a mutex that ensures only one kustomize build is
@@ -46,8 +48,11 @@ func (d *kustomizeBuildDirective) Name() string {
 }
 
 // Run implements the Directive interface.
-func (d *kustomizeBuildDirective) Run(_ context.Context, stepCtx *StepContext) (Result, error) {
-	failure := Result{Status: StatusFailure}
+func (d *kustomizeBuildDirective) RunPromotionStep(
+	_ context.Context,
+	stepCtx *PromotionStepContext,
+) (PromotionStepResult, error) {
+	failure := PromotionStepResult{Status: PromotionStatusFailure}
 
 	// Validate the configuration against the JSON Schema.
 	if err := validate(d.schemaLoader, gojsonschema.NewGoLoader(stepCtx.Config), d.Name()); err != nil {
@@ -60,43 +65,51 @@ func (d *kustomizeBuildDirective) Run(_ context.Context, stepCtx *StepContext) (
 		return failure, fmt.Errorf("could not convert config into %s config: %w", d.Name(), err)
 	}
 
-	return d.run(stepCtx, cfg)
+	return d.runPromotionStep(stepCtx, cfg)
 }
 
-func (d *kustomizeBuildDirective) run(
-	stepCtx *StepContext,
+// RunHealthCheckStep implements the Directive interface.
+func (d *kustomizeBuildDirective) RunHealthCheckStep(
+	context.Context,
+	*HealthCheckStepContext,
+) HealthCheckStepResult {
+	return HealthCheckStepResult{Status: kargoapi.HealthStateNotApplicable}
+}
+
+func (d *kustomizeBuildDirective) runPromotionStep(
+	stepCtx *PromotionStepContext,
 	cfg KustomizeBuildConfig,
-) (_ Result, err error) {
+) (PromotionStepResult, error) {
 	// Create a "chrooted" filesystem for the kustomize build.
 	fs, err := securefs.MakeFsOnDiskSecureBuild(stepCtx.WorkDir)
 	if err != nil {
-		return Result{Status: StatusFailure}, err
+		return PromotionStepResult{Status: PromotionStatusFailure}, err
 	}
 
 	// Build the manifests.
 	rm, err := kustomizeBuild(fs, filepath.Join(stepCtx.WorkDir, cfg.Path))
 	if err != nil {
-		return Result{Status: StatusFailure}, err
+		return PromotionStepResult{Status: PromotionStatusFailure}, err
 	}
 
 	// Prepare the output path.
 	outPath, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.OutPath)
 	if err != nil {
-		return Result{Status: StatusFailure}, err
+		return PromotionStepResult{Status: PromotionStatusFailure}, err
 	}
 	if err = os.MkdirAll(filepath.Dir(outPath), 0o700); err != nil {
-		return Result{Status: StatusFailure}, err
+		return PromotionStepResult{Status: PromotionStatusFailure}, err
 	}
 
 	// Write the built manifests to the output path.
 	b, err := rm.AsYaml()
 	if err != nil {
-		return Result{Status: StatusFailure}, err
+		return PromotionStepResult{Status: PromotionStatusFailure}, err
 	}
 	if err = os.WriteFile(outPath, b, 0o600); err != nil {
-		return Result{Status: StatusFailure}, err
+		return PromotionStepResult{Status: PromotionStatusFailure}, err
 	}
-	return Result{Status: StatusSuccess}, nil
+	return PromotionStepResult{Status: PromotionStatusSuccess}, nil
 }
 
 // kustomizeBuild builds the manifests in the given directory using Kustomize.

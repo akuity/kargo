@@ -28,18 +28,18 @@ import (
 	"github.com/akuity/kargo/internal/helm"
 )
 
-func Test_helmUpdateChartDirective_run(t *testing.T) {
+func Test_helmUpdateChartDirective_runPromotionStep(t *testing.T) {
 	tests := []struct {
 		name            string
-		context         *StepContext
+		context         *PromotionStepContext
 		cfg             HelmUpdateChartConfig
 		chartMetadata   *chart.Metadata
 		setupRepository func(t *testing.T) (string, func())
-		assertions      func(*testing.T, string, Result, error)
+		assertions      func(*testing.T, string, PromotionStepResult, error)
 	}{
 		{
 			name: "successful run with HTTP repository",
-			context: &StepContext{
+			context: &PromotionStepContext{
 				Project: "test-project",
 				Freight: kargoapi.FreightCollection{
 					Freight: map[string]kargoapi.FreightReference{
@@ -96,10 +96,10 @@ func Test_helmUpdateChartDirective_run(t *testing.T) {
 
 				return httpRepository.URL, httpRepository.Close
 			},
-			assertions: func(t *testing.T, tempDir string, result Result, err error) {
+			assertions: func(t *testing.T, tempDir string, result PromotionStepResult, err error) {
 				assert.NoError(t, err)
-				assert.Equal(t, Result{
-					Status: StatusSuccess,
+				assert.Equal(t, PromotionStepResult{
+					Status: PromotionStatusSuccess,
 					Output: State{
 						"commitMessage": `Updated chart dependencies for testchart
 
@@ -159,7 +159,7 @@ func Test_helmUpdateChartDirective_run(t *testing.T) {
 			}
 
 			d := &helmUpdateChartDirective{}
-			result, err := d.run(context.Background(), stepCtx, tt.cfg)
+			result, err := d.runPromotionStep(context.Background(), stepCtx, tt.cfg)
 			tt.assertions(t, stepCtx.WorkDir, result, err)
 		})
 	}
@@ -169,7 +169,7 @@ func Test_helmUpdateChartDirective_processChartUpdates(t *testing.T) {
 	tests := []struct {
 		name              string
 		objects           []client.Object
-		context           *StepContext
+		context           *PromotionStepContext
 		cfg               HelmUpdateChartConfig
 		chartDependencies []chartDependency
 		assertions        func(*testing.T, map[string]string, error)
@@ -194,7 +194,7 @@ func Test_helmUpdateChartDirective_processChartUpdates(t *testing.T) {
 					},
 				},
 			},
-			context: &StepContext{
+			context: &PromotionStepContext{
 				Project: "test-project",
 				Freight: kargoapi.FreightCollection{
 					Freight: map[string]kargoapi.FreightReference{
@@ -227,7 +227,7 @@ func Test_helmUpdateChartDirective_processChartUpdates(t *testing.T) {
 		},
 		{
 			name: "chart not found",
-			context: &StepContext{
+			context: &PromotionStepContext{
 				Project:         "test-project",
 				Freight:         kargoapi.FreightCollection{},
 				FreightRequests: []kargoapi.FreightRequest{},
@@ -265,7 +265,7 @@ func Test_helmUpdateChartDirective_processChartUpdates(t *testing.T) {
 					},
 				},
 			},
-			context: &StepContext{
+			context: &PromotionStepContext{
 				Project: "test-project",
 				Freight: kargoapi.FreightCollection{
 					Freight: map[string]kargoapi.FreightReference{
@@ -318,7 +318,7 @@ func Test_helmUpdateChartDirective_processChartUpdates(t *testing.T) {
 					},
 				},
 			},
-			context: &StepContext{
+			context: &PromotionStepContext{
 				Project: "test-project",
 				Freight: kargoapi.FreightCollection{
 					Freight: map[string]kargoapi.FreightReference{
@@ -425,7 +425,7 @@ func Test_helmUpdateChartDirective_updateDependencies(t *testing.T) {
 		d := &helmUpdateChartDirective{}
 		newVersions, err := d.updateDependencies(
 			context.Background(),
-			&StepContext{},
+			&PromotionStepContext{},
 			t.TempDir(),
 			chartPath,
 			nil,
@@ -490,7 +490,7 @@ func Test_helmUpdateChartDirective_updateDependencies(t *testing.T) {
 
 		// Run the directive and assert the dependency is updated
 		d := &helmUpdateChartDirective{}
-		newVersions, err := d.updateDependencies(context.Background(), &StepContext{
+		newVersions, err := d.updateDependencies(context.Background(), &PromotionStepContext{
 			CredentialsDB: credentialsDB,
 		}, t.TempDir(), chartPath, []chartDependency{
 			{
@@ -582,7 +582,7 @@ func Test_helmUpdateChartDirective_updateDependencies(t *testing.T) {
 			helmHome, chartPath := t.TempDir(), t.TempDir()
 
 			d := &helmUpdateChartDirective{}
-			_, err := d.updateDependencies(context.Background(), &StepContext{
+			_, err := d.updateDependencies(context.Background(), &PromotionStepContext{
 				CredentialsDB: tt.credentialsDB,
 			}, helmHome, chartPath, tt.chartDependencies)
 			tt.assertions(t, helmHome, chartPath, err)

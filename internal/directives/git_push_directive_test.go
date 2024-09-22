@@ -132,7 +132,7 @@ func TestGitPushDirective_Validate(t *testing.T) {
 	}
 }
 
-func TestGitPushDirective_Run(t *testing.T) {
+func TestGitPushDirective_runPromotionStep(t *testing.T) {
 	// Set up a test Git server in-process
 	service := gitkit.New(
 		gitkit.Config{
@@ -190,9 +190,9 @@ func TestGitPushDirective_Run(t *testing.T) {
 	dir, ok := d.(*gitPushDirective)
 	require.True(t, ok)
 
-	res, err := dir.run(
+	res, err := dir.runPromotionStep(
 		context.Background(),
-		&StepContext{
+		&PromotionStepContext{
 			Project:       "fake-project",
 			Stage:         "fake-stage",
 			WorkDir:       workDir,

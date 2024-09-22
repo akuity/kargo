@@ -56,13 +56,13 @@ type argocdUpdateDirective struct {
 
 	getAuthorizedApplicationFn func(
 		context.Context,
-		*StepContext,
+		*PromotionStepContext,
 		client.ObjectKey,
 	) (*argocd.Application, error)
 
 	buildDesiredSourcesFn func(
 		context.Context,
-		*StepContext,
+		*PromotionStepContext,
 		*ArgoCDUpdateConfig,
 		*kargoapi.Stage,
 		*ArgoCDAppUpdate,
@@ -71,7 +71,7 @@ type argocdUpdateDirective struct {
 
 	mustPerformUpdateFn func(
 		context.Context,
-		*StepContext,
+		*PromotionStepContext,
 		*ArgoCDUpdateConfig,
 		*kargoapi.Stage,
 		*ArgoCDAppUpdate,
@@ -81,14 +81,14 @@ type argocdUpdateDirective struct {
 
 	syncApplicationFn func(
 		ctx context.Context,
-		stepCtx *StepContext,
+		stepCtx *PromotionStepContext,
 		app *argocd.Application,
 		desiredSources argocd.ApplicationSources,
 	) error
 
 	applyArgoCDSourceUpdateFn func(
 		context.Context,
-		*StepContext,
+		*PromotionStepContext,
 		*ArgoCDUpdateConfig,
 		*kargoapi.Stage,
 		*ArgoCDAppSourceUpdate,
@@ -97,14 +97,14 @@ type argocdUpdateDirective struct {
 
 	argoCDAppPatchFn func(
 		context.Context,
-		*StepContext,
+		*PromotionStepContext,
 		kubeclient.ObjectWithKind,
 		kubeclient.UnstructuredPatchFn,
 	) error
 
 	logAppEventFn func(
 		ctx context.Context,
-		stepCtx *StepContext,
+		stepCtx *PromotionStepContext,
 		app *argocd.Application,
 		user string,
 		reason string,
@@ -133,19 +133,28 @@ func (a *argocdUpdateDirective) Name() string {
 }
 
 // Run implements the Directive interface.
-func (a *argocdUpdateDirective) Run(
+func (a *argocdUpdateDirective) RunPromotionStep(
 	ctx context.Context,
-	stepCtx *StepContext,
-) (Result, error) {
+	stepCtx *PromotionStepContext,
+) (PromotionStepResult, error) {
 	if err := a.validate(stepCtx.Config); err != nil {
-		return Result{Status: StatusFailure}, err
+		return PromotionStepResult{Status: PromotionStatusFailure}, err
 	}
 	cfg, err := configToStruct[ArgoCDUpdateConfig](stepCtx.Config)
 	if err != nil {
-		return Result{Status: StatusFailure},
+		return PromotionStepResult{Status: PromotionStatusFailure},
 			fmt.Errorf("could not convert config into %s config: %w", a.Name(), err)
 	}
-	return a.run(ctx, stepCtx, cfg)
+	return a.runPromotionStep(ctx, stepCtx, cfg)
+}
+
+// RunHealthCheckStep implements the Directive interface.
+func (a *argocdUpdateDirective) RunHealthCheckStep(
+	context.Context,
+	*HealthCheckStepContext,
+) HealthCheckStepResult {
+	// TODO: Implement health checks.
+	return HealthCheckStepResult{Status: kargoapi.HealthStateNotApplicable}
 }
 
 // validate validates the argocd-update directive configuration against the JSON
@@ -154,13 +163,13 @@ func (a *argocdUpdateDirective) validate(cfg Config) error {
 	return validate(a.schemaLoader, gojsonschema.NewGoLoader(cfg), a.Name())
 }
 
-func (a *argocdUpdateDirective) run(
+func (a *argocdUpdateDirective) runPromotionStep(
 	ctx context.Context,
-	stepCtx *StepContext,
+	stepCtx *PromotionStepContext,
 	stepCfg ArgoCDUpdateConfig,
-) (Result, error) {
+) (PromotionStepResult, error) {
 	if stepCtx.ArgoCDClient == nil {
-		return Result{Status: StatusFailure}, errors.New(
+		return PromotionStepResult{Status: PromotionStatusFailure}, errors.New(
 			"Argo CD integration is disabled on this controller; cannot update " +
 				"Argo CD Application resources",
 		)
@@ -174,13 +183,13 @@ func (a *argocdUpdateDirective) run(
 		Name:      stepCtx.Stage,
 	})
 	if err != nil {
-		return Result{Status: StatusFailure}, fmt.Errorf(
+		return PromotionStepResult{Status: PromotionStatusFailure}, fmt.Errorf(
 			"error getting Stage %q in namespace %q: %w",
 			stepCtx.Stage, stepCtx.Project, err,
 		)
 	}
 	if stage == nil {
-		return Result{Status: StatusFailure}, fmt.Errorf(
+		return PromotionStepResult{Status: PromotionStatusFailure}, fmt.Errorf(
 			"Stage %q not found in namespace %q",
 			stepCtx.Stage, stepCtx.Project,
 		)
@@ -199,7 +208,7 @@ func (a *argocdUpdateDirective) run(
 		}
 		app, err := a.getAuthorizedApplicationFn(ctx, stepCtx, appKey)
 		if err != nil {
-			return Result{Status: StatusFailure}, fmt.Errorf(
+			return PromotionStepResult{Status: PromotionStatusFailure}, fmt.Errorf(
 				"error getting Argo CD Application %q in namespace %q: %w",
 				appKey.Name, appKey.Namespace, err,
 			)
@@ -215,7 +224,7 @@ func (a *argocdUpdateDirective) run(
 			app,
 		)
 		if err != nil {
-			return Result{Status: StatusFailure}, fmt.Errorf(
+			return PromotionStepResult{Status: PromotionStatusFailure}, fmt.Errorf(
 				"error building desired sources for Argo CD Application %q in namespace %q: %w",
 				app.Name, app.Namespace, err,
 			)
@@ -244,7 +253,7 @@ func (a *argocdUpdateDirective) run(
 				if phase == "" {
 					// If we do not have a phase, we cannot continue processing
 					// this update by waiting.
-					return Result{Status: StatusFailure}, err
+					return PromotionStepResult{Status: PromotionStatusFailure}, err
 				}
 				// Log the error as a warning, but continue to the next update.
 				logger.Info(err.Error())
@@ -252,7 +261,7 @@ func (a *argocdUpdateDirective) run(
 			if phase.Failed() {
 				// Record the reason for the failure if available.
 				if app.Status.OperationState != nil {
-					return Result{Status: StatusFailure}, fmt.Errorf(
+					return PromotionStepResult{Status: PromotionStatusFailure}, fmt.Errorf(
 						"Argo CD Application %q in namespace %q failed with: %s",
 						app.Name,
 						app.Namespace,
@@ -261,7 +270,7 @@ func (a *argocdUpdateDirective) run(
 				}
 				// If the update failed, we can short-circuit. This is
 				// effectively "fail fast" behavior.
-				return Result{Status: StatusFailure}, nil
+				return PromotionStepResult{Status: PromotionStatusFailure}, nil
 			}
 			// If we get here, we can continue to the next update.
 			continue
@@ -274,7 +283,7 @@ func (a *argocdUpdateDirective) run(
 			app,
 			desiredSources,
 		); err != nil {
-			return Result{Status: StatusFailure}, fmt.Errorf(
+			return PromotionStepResult{Status: PromotionStatusFailure}, fmt.Errorf(
 				"error syncing Argo CD Application %q in namespace %q: %w",
 				app.Name, app.Namespace, err,
 			)
@@ -285,21 +294,21 @@ func (a *argocdUpdateDirective) run(
 
 	aggregatedStatus := a.operationPhaseToDirectiveStatus(updateResults...)
 	if aggregatedStatus == "" {
-		return Result{Status: StatusFailure}, fmt.Errorf(
+		return PromotionStepResult{Status: PromotionStatusFailure}, fmt.Errorf(
 			"could not determine directive status from operation phases: %v",
 			updateResults,
 		)
 	}
 
 	logger.Debug("done executing argocd-update directive")
-	return Result{Status: aggregatedStatus}, nil
+	return PromotionStepResult{Status: aggregatedStatus}, nil
 }
 
 // buildDesiredSources returns the desired source(s) for an Argo CD Application,
 // by updating the current source(s) with the given source updates.
 func (a *argocdUpdateDirective) buildDesiredSources(
 	ctx context.Context,
-	stepCtx *StepContext,
+	stepCtx *PromotionStepContext,
 	stepCfg *ArgoCDUpdateConfig,
 	stage *kargoapi.Stage,
 	update *ArgoCDAppUpdate,
@@ -335,7 +344,7 @@ func (a *argocdUpdateDirective) buildDesiredSources(
 
 func (a *argocdUpdateDirective) mustPerformUpdate(
 	ctx context.Context,
-	stepCtx *StepContext,
+	stepCtx *PromotionStepContext,
 	stepCfg *ArgoCDUpdateConfig,
 	stage *kargoapi.Stage,
 	update *ArgoCDAppUpdate,
@@ -456,7 +465,7 @@ func (a *argocdUpdateDirective) mustPerformUpdate(
 
 func (a *argocdUpdateDirective) syncApplication(
 	ctx context.Context,
-	stepCtx *StepContext,
+	stepCtx *PromotionStepContext,
 	app *argocd.Application,
 	desiredSources argocd.ApplicationSources,
 ) error {
@@ -553,7 +562,7 @@ func (a *argocdUpdateDirective) syncApplication(
 
 func (a *argocdUpdateDirective) argoCDAppPatch(
 	ctx context.Context,
-	stepCtx *StepContext,
+	stepCtx *PromotionStepContext,
 	app kubeclient.ObjectWithKind,
 	modify kubeclient.UnstructuredPatchFn,
 ) error {
@@ -562,7 +571,7 @@ func (a *argocdUpdateDirective) argoCDAppPatch(
 
 func (a *argocdUpdateDirective) logAppEvent(
 	ctx context.Context,
-	stepCtx *StepContext,
+	stepCtx *PromotionStepContext,
 	app *argocd.Application,
 	user string,
 	reason string,
@@ -620,7 +629,7 @@ func (a *argocdUpdateDirective) logAppEvent(
 // represented by stageMeta.
 func (a *argocdUpdateDirective) getAuthorizedApplication(
 	ctx context.Context,
-	stepCtx *StepContext,
+	stepCtx *PromotionStepContext,
 	appKey client.ObjectKey,
 ) (*argocd.Application, error) {
 	app, err := argocd.GetApplication(
@@ -653,7 +662,7 @@ func (a *argocdUpdateDirective) getAuthorizedApplication(
 // represented by appMeta does not explicitly permit mutation by the Kargo Stage
 // represented by stageMeta.
 func (a *argocdUpdateDirective) authorizeArgoCDAppUpdate(
-	stepCtx *StepContext,
+	stepCtx *PromotionStepContext,
 	appMeta metav1.ObjectMeta,
 ) error {
 	permErr := fmt.Errorf(
@@ -710,7 +719,7 @@ func (a *argocdUpdateDirective) authorizeArgoCDAppUpdate(
 // applyArgoCDSourceUpdate updates a single Argo CD ApplicationSource.
 func (a *argocdUpdateDirective) applyArgoCDSourceUpdate(
 	ctx context.Context,
-	stepCtx *StepContext,
+	stepCtx *PromotionStepContext,
 	stepCfg *ArgoCDUpdateConfig,
 	stage *kargoapi.Stage,
 	update *ArgoCDAppSourceUpdate,
@@ -854,7 +863,7 @@ func (a *argocdUpdateDirective) applyArgoCDSourceUpdate(
 
 func (a *argocdUpdateDirective) buildKustomizeImagesForAppSource(
 	ctx context.Context,
-	stepCtx *StepContext,
+	stepCtx *PromotionStepContext,
 	stepCfg *ArgoCDUpdateConfig,
 	stage *kargoapi.Stage,
 	update *ArgoCDKustomizeImageUpdates,
@@ -899,7 +908,7 @@ func (a *argocdUpdateDirective) buildKustomizeImagesForAppSource(
 
 func (a *argocdUpdateDirective) buildHelmParamChangesForAppSource(
 	ctx context.Context,
-	stepCtx *StepContext,
+	stepCtx *PromotionStepContext,
 	stepCfg *ArgoCDUpdateConfig,
 	stage *kargoapi.Stage,
 	update *ArgoCDHelmParameterUpdates,
@@ -944,7 +953,7 @@ func (a *argocdUpdateDirective) buildHelmParamChangesForAppSource(
 	return changes, nil
 }
 
-func (a *argocdUpdateDirective) operationPhaseToDirectiveStatus(phases ...argocd.OperationPhase) Status {
+func (a *argocdUpdateDirective) operationPhaseToDirectiveStatus(phases ...argocd.OperationPhase) PromotionStatus {
 	if len(phases) == 0 {
 		return ""
 	}
@@ -953,11 +962,11 @@ func (a *argocdUpdateDirective) operationPhaseToDirectiveStatus(phases ...argocd
 
 	switch phases[0] {
 	case argocd.OperationRunning, argocd.OperationTerminating:
-		return StatusPending
+		return PromotionStatusPending
 	case argocd.OperationFailed, argocd.OperationError:
-		return StatusFailure
+		return PromotionStatusFailure
 	case argocd.OperationSucceeded:
-		return StatusSuccess
+		return PromotionStatusSuccess
 	default:
 		return ""
 	}

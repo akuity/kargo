@@ -72,7 +72,7 @@ func TestGitOverwriteDirective_Validate(t *testing.T) {
 	}
 }
 
-func TestGitOverwriteDirective_Run(t *testing.T) {
+func TestGitOverwriteDirective_runPromotionStep(t *testing.T) {
 	// Set up a test Git server in-process
 	service := gitkit.New(
 		gitkit.Config{
@@ -126,9 +126,9 @@ func TestGitOverwriteDirective_Run(t *testing.T) {
 	dir, ok := d.(*gitOverwriteDirective)
 	require.True(t, ok)
 
-	res, err := dir.run(
+	res, err := dir.runPromotionStep(
 		context.Background(),
-		&StepContext{
+		&PromotionStepContext{
 			Project: "fake-project",
 			Stage:   "fake-stage",
 			WorkDir: workDir,
@@ -139,7 +139,7 @@ func TestGitOverwriteDirective_Run(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
-	require.Equal(t, StatusSuccess, res.Status)
+	require.Equal(t, PromotionStatusSuccess, res.Status)
 
 	// Make sure old files are gone
 	_, err = os.Stat(filepath.Join(workTree.Dir(), "original.txt"))

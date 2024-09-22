@@ -37,8 +37,11 @@ func (d *helmUpdateImageDirective) Name() string {
 }
 
 // Run implements the Directive interface.
-func (d *helmUpdateImageDirective) Run(ctx context.Context, stepCtx *StepContext) (Result, error) {
-	failure := Result{Status: StatusFailure}
+func (d *helmUpdateImageDirective) RunPromotionStep(
+	ctx context.Context,
+	stepCtx *PromotionStepContext,
+) (PromotionStepResult, error) {
+	failure := PromotionStepResult{Status: PromotionStatusFailure}
 
 	// Validate the configuration against the JSON Schema
 	if err := validate(
@@ -55,23 +58,33 @@ func (d *helmUpdateImageDirective) Run(ctx context.Context, stepCtx *StepContext
 		return failure, fmt.Errorf("could not convert config into %s config: %w", d.Name(), err)
 	}
 
-	return d.run(ctx, stepCtx, cfg)
+	return d.runPromotionStep(ctx, stepCtx, cfg)
 }
 
-func (d *helmUpdateImageDirective) run(
+// RunHealthCheckStep implements the Directive interface.
+func (d *helmUpdateImageDirective) RunHealthCheckStep(
+	context.Context,
+	*HealthCheckStepContext,
+) HealthCheckStepResult {
+	return HealthCheckStepResult{Status: kargoapi.HealthStateNotApplicable}
+}
+
+func (d *helmUpdateImageDirective) runPromotionStep(
 	ctx context.Context,
-	stepCtx *StepContext,
+	stepCtx *PromotionStepContext,
 	cfg HelmUpdateImageConfig,
-) (Result, error) {
+) (PromotionStepResult, error) {
 	updates, fullImageRefs, err := d.generateImageUpdates(ctx, stepCtx, cfg)
 	if err != nil {
-		return Result{Status: StatusFailure}, fmt.Errorf("failed to generate image updates: %w", err)
+		return PromotionStepResult{Status: PromotionStatusFailure},
+			fmt.Errorf("failed to generate image updates: %w", err)
 	}
 
-	result := Result{Status: StatusSuccess}
+	result := PromotionStepResult{Status: PromotionStatusSuccess}
 	if len(updates) > 0 {
 		if err = d.updateValuesFile(stepCtx.WorkDir, cfg.Path, updates); err != nil {
-			return Result{Status: StatusFailure}, fmt.Errorf("values file update failed: %w", err)
+			return PromotionStepResult{Status: PromotionStatusFailure},
+				fmt.Errorf("values file update failed: %w", err)
 		}
 
 		if commitMsg := d.generateCommitMessage(cfg.Path, fullImageRefs); commitMsg != "" {
@@ -84,7 +97,7 @@ func (d *helmUpdateImageDirective) run(
 
 func (d *helmUpdateImageDirective) generateImageUpdates(
 	ctx context.Context,
-	stepCtx *StepContext,
+	stepCtx *PromotionStepContext,
 	cfg HelmUpdateImageConfig,
 ) (map[string]string, []string, error) {
 	updates := make(map[string]string, len(cfg.Images))

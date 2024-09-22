@@ -154,7 +154,7 @@ func TestGitCommitDirective_Validate(t *testing.T) {
 	}
 }
 
-func TestGitCommitDirective_Run(t *testing.T) {
+func TestGitCommitDirective_runPromotionStep(t *testing.T) {
 	// Set up a test Git server in-process
 	service := gitkit.New(
 		gitkit.Config{
@@ -208,11 +208,11 @@ func TestGitCommitDirective_Run(t *testing.T) {
 	dir, ok := d.(*gitCommitDirective)
 	require.True(t, ok)
 
-	stepCtx := &StepContext{
+	stepCtx := &PromotionStepContext{
 		WorkDir: workDir,
 	}
 
-	res, err := dir.run(
+	res, err := dir.runPromotionStep(
 		context.Background(),
 		stepCtx,
 		GitCommitConfig{
@@ -221,7 +221,7 @@ func TestGitCommitDirective_Run(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
-	require.Equal(t, StatusSuccess, res.Status)
+	require.Equal(t, PromotionStatusSuccess, res.Status)
 	expectedCommit, err := workTree.LastCommitID()
 	require.NoError(t, err)
 	actualCommit, ok := res.Output.Get(commitKey)

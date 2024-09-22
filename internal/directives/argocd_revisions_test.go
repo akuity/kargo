@@ -120,7 +120,7 @@ func TestGetDesiredRevisions(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			stepCtx := &StepContext{
+			stepCtx := &PromotionStepContext{
 				Freight: kargoapi.FreightCollection{},
 			}
 			for _, freight := range testCase.freight {

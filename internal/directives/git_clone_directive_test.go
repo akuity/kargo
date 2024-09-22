@@ -269,7 +269,7 @@ func TestGitCloneDirective_Validate(t *testing.T) {
 	}
 }
 
-func TestGitCloneDirective_Run(t *testing.T) {
+func TestGitCloneDirective_runPromotionStep(t *testing.T) {
 	// Set up a test Git server in-process
 	service := gitkit.New(
 		gitkit.Config{
@@ -301,12 +301,12 @@ func TestGitCloneDirective_Run(t *testing.T) {
 	dir, ok := d.(*gitCloneDirective)
 	require.True(t, ok)
 
-	stepCtx := &StepContext{
+	stepCtx := &PromotionStepContext{
 		CredentialsDB: &credentials.FakeDB{},
 		WorkDir:       t.TempDir(),
 	}
 
-	res, err := dir.run(
+	res, err := dir.runPromotionStep(
 		context.Background(),
 		stepCtx,
 		GitCloneConfig{
@@ -326,7 +326,7 @@ func TestGitCloneDirective_Run(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
-	require.Equal(t, StatusSuccess, res.Status)
+	require.Equal(t, PromotionStatusSuccess, res.Status)
 	require.DirExists(t, filepath.Join(stepCtx.WorkDir, "master"))
 	// The checked out master branch should have the content we know is in the
 	// test remote's master branch.

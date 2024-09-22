@@ -125,7 +125,7 @@ func TestGitOpenPRDirective_Validate(t *testing.T) {
 	}
 }
 
-func TestGitOpenPRDirective_Run(t *testing.T) {
+func TestGitOpenPRDirective_runPromotionStep(t *testing.T) {
 	const testSourceBranch = "source"
 	const testTargetBranch = "target"
 
@@ -191,9 +191,9 @@ func TestGitOpenPRDirective_Run(t *testing.T) {
 	dir, ok := d.(*gitOpenPRDirective)
 	require.True(t, ok)
 
-	res, err := dir.run(
+	res, err := dir.runPromotionStep(
 		context.Background(),
-		&StepContext{
+		&PromotionStepContext{
 			Project:       "fake-project",
 			Stage:         "fake-stage",
 			WorkDir:       workDir,
