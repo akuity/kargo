@@ -338,7 +338,7 @@ export const Pipelines = ({
                   onClick={() => setZoom((prev) => Math.min(200, prev + 10))}
                   icon={<FontAwesomeIcon icon={faMagnifyingGlassPlus} />}
                 />
-                <Tooltip title='Reassign Stage Colors'>
+                <Tooltip title='Regenerate Stage Colors'>
                   <Button
                     type='default'
                     onClick={() => {
