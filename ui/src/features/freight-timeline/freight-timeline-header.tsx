@@ -165,7 +165,7 @@ export const FreightTimelineHeader = ({
               </Tooltip>
             </>
           )}
-          <Tooltip title='Assemble Freight'>
+          <Tooltip title='Assemble Freight' placement='left'>
             <Button
               icon={<FontAwesomeIcon icon={faTools} />}
               size='small'
