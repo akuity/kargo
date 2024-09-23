@@ -6,6 +6,7 @@ import (
 	"slices"
 	"strings"
 
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -77,17 +78,19 @@ const (
 type HealthState string
 
 const (
-	HealthStateHealthy     HealthState = "Healthy"
-	HealthStateUnhealthy   HealthState = "Unhealthy"
-	HealthStateProgressing HealthState = "Progressing"
-	HealthStateUnknown     HealthState = "Unknown"
+	HealthStateHealthy       HealthState = "Healthy"
+	HealthStateNotApplicable HealthState = "NotApplicable"
+	HealthStateProgressing   HealthState = "Progressing"
+	HealthStateUnknown       HealthState = "Unknown"
+	HealthStateUnhealthy     HealthState = "Unhealthy"
 )
 
 var stateOrder = map[HealthState]int{
-	HealthStateHealthy:     0,
-	HealthStateProgressing: 1,
-	HealthStateUnknown:     2,
-	HealthStateUnhealthy:   3,
+	HealthStateHealthy:       0,
+	HealthStateNotApplicable: 1,
+	HealthStateProgressing:   2,
+	HealthStateUnknown:       3,
+	HealthStateUnhealthy:     4,
 }
 
 // Merge returns the more severe of two HealthStates.
@@ -953,6 +956,11 @@ type Health struct {
 	Issues []string `json:"issues,omitempty" protobuf:"bytes,2,rep,name=issues"`
 	// ArgoCDApps describes the current state of any related ArgoCD Applications.
 	ArgoCDApps []ArgoCDAppStatus `json:"argoCDApps,omitempty" protobuf:"bytes,3,rep,name=argoCDApps"`
+	// Config is the opaque configuration of all health checks performed on this
+	// Stage.
+	Config *apiextensionsv1.JSON `json:"config,omitempty" protobuf:"bytes,4,opt,name=config"`
+	// Output is the opaque output of all health checks performed on this Stage.
+	Output *apiextensionsv1.JSON `json:"output,omitempty" protobuf:"bytes,5,opt,name=output"`
 }
 
 // ArgoCDAppStatus describes the current state of a single ArgoCD Application.
