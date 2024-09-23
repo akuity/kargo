@@ -140,7 +140,9 @@ type ApplicationList struct {
 type SyncStatusCode string
 
 const (
-	SyncStatusCodeSynced SyncStatusCode = "Synced"
+	SyncStatusCodeSynced    SyncStatusCode = "Synced"
+	SyncStatusCodeOutOfSync SyncStatusCode = "OutOfSync"
+	SyncStatusCodeUnknown   SyncStatusCode = "Unknown"
 )
 
 type SyncStatus struct {
