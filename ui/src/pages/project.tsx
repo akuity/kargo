@@ -7,12 +7,13 @@ import {
   faPeopleGroup
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Tooltip } from 'antd';
+import { Button, Result, Tooltip } from 'antd';
 import classNames from 'classnames';
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import { generatePath, useNavigate, useParams } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
+import { LoadingState } from '@ui/features/common';
 import { Description } from '@ui/features/common/description';
 import { SmallLabel } from '@ui/features/common/small-label';
 import { AnalysisTemplatesList } from '@ui/features/project/analysis-templates/analysis-templates-list';
@@ -36,12 +37,6 @@ export const Project = ({
 
   const { data, isLoading, error } = useQuery(getProject, { name });
   const { data: config } = useQuery(getConfig);
-
-  useEffect(() => {
-    if (!isLoading && (!data?.result?.value || error)) {
-      navigate(paths.projects);
-    }
-  }, [isLoading]);
 
   const [tabs] = useMemo(() => {
     return [
@@ -78,6 +73,25 @@ export const Project = ({
       }
     ];
   }, [config]);
+
+  if (isLoading) {
+    return <LoadingState />;
+  }
+
+  if (error) {
+    return (
+      <Result
+        status='404'
+        title='Error'
+        subTitle={error?.message}
+        extra={
+          <Button type='primary' onClick={() => navigate(paths.projects)}>
+            Go to Projects Page
+          </Button>
+        }
+      />
+    );
+  }
 
   // we must render the tab contents outside of the Antd tabs component to prevent layout issues in the ProjectDetails component
   const renderTab = (key: string) => {
