@@ -1864,6 +1864,11 @@ spec:
                       - namespace
                       type: object
                     type: array
+                  config:
+                    description: |-
+                      Config is the opaque configuration of all health checks performed on this
+                      Stage.
+                    x-kubernetes-preserve-unknown-fields: true
                   issues:
                     description: |-
                       Issues clarifies why a Stage in any state other than Healthy is in that
@@ -1871,6 +1876,10 @@ spec:
                     items:
                       type: string
                     type: array
+                  output:
+                    description: Output is the opaque output of all health checks
+                      performed on this Stage.
+                    x-kubernetes-preserve-unknown-fields: true
                   status:
                     description: Status describes the health of the Stage.
                     type: string
