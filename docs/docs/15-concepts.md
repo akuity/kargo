@@ -19,10 +19,12 @@ for automatic promotions of new **freight**.
 ### What is a Stage?
 
 When you hear the term “environment”, what you envision will depend
-significantly on your perspective. To eliminate confusion, Kargo avoids the term
-"environment" altogether in favor of **stage**. The important feature of a stage
-is that its name ("test" or "prod," for instance) denotes an application
-instance's _purpose_ and not necessarily its _location_.
+significantly on your perspective. For a developer, the term "environment" will
+have a different meaning while for a Devops engineer, the meaning will be different.
+
+To eliminate confusion, Kargo avoids the term "environment" altogether in favor of **stage**.
+The important feature of a stage is that its name ("test" or "prod," for instance)
+denotes an application instance's _purpose_ and not necessarily its _location_.
 [This blog post](https://akuity.io/blog/kargo-stage-not-environment/) discusses
 the rationale behind this choice.
 
@@ -33,9 +35,10 @@ more "prod" stages at the end.
 
 ### What is Freight?
 
-**Freight** is Kargo's second most important concept. A single "piece of
-freight" is a set of references to one or more versioned artifacts, which may
-include one or more:
+**Freight** is Kargo's second most important concept. Frieight generally refers
+to a collection of artifacts that gets promoted together to the next stage.
+A single "piece of freight" is a set of references to one or more versioned
+artifacts, which may include one or more:
 
 * Container images (from image repositories)
 
@@ -48,7 +51,10 @@ Kargo seeks to progress from one stage to another.
 
 ### What is a Warehouse?
 
-A **warehouse** is a _source_ of freight. A warehouse subscribes to one or more:
+A **warehouse** is a _source_ of freight. It is where a collection of 'Freight'
+gets stored before the 'Freight' is deployed anywhere.
+
+A warehouse subscribes to one or more:
 
 * Container image repositories
 
