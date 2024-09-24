@@ -133,7 +133,10 @@ export const usePipelineGraph = (
           {
             color: warehouseColorMap[item.warehouseName]
           },
-          `subscription ${item.warehouseName} ${index}`
+          // segregating multiple subscription is important in graph
+          // the reason being, we want multiple subscription source to be uniquely identified such that "warehouse" can backtrack accurately
+          // without this, graph saw it as if warehouse has single subscription and broke the visual line
+          `subscription-${index} ${item.warehouseName} ${index}`
         );
       }
     });

@@ -546,7 +546,7 @@ export const Pipelines = ({
                 ))}
                 {connectors?.map((connector) =>
                   connector.map((line, i) =>
-                    hideSubscriptions[line.to] && line.from === 'subscription' ? null : (
+                    hideSubscriptions[line.to] && line.from?.startsWith('subscription-') ? null : (
                       <div
                         className='absolute bg-gray-300 rounded-full'
                         style={{
