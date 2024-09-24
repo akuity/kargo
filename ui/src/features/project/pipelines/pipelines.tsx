@@ -241,7 +241,7 @@ export const Pipelines = ({
   useEffect(() => {
     if (fullFreightById && stagesPerFreight) {
       const freights = Object.keys(fullFreightById || {});
-      const freightsInStages = Object.keys(stagesPerFreight);
+      const freightsInStages = Object.keys(stagesPerFreight || {});
 
       for (const freightInStage of freightsInStages) {
         if (!freights?.find((freight) => freight === freightInStage)) {
