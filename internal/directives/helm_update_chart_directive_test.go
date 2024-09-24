@@ -563,6 +563,18 @@ func Test_helmUpdateChartDirective_updateDependencies(t *testing.T) {
 				require.ErrorContains(t, err, "Chart.yaml file is missing")
 			},
 		},
+		{
+			name: "error validating file dependency",
+			chartDependencies: []chartDependency{
+				{
+					Name:       "dep1",
+					Repository: "file:///absolute/path",
+				},
+			},
+			assertions: func(t *testing.T, _, _ string, err error) {
+				assert.ErrorContains(t, err, "dependency path must be relative")
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -574,6 +586,122 @@ func Test_helmUpdateChartDirective_updateDependencies(t *testing.T) {
 				CredentialsDB: tt.credentialsDB,
 			}, helmHome, chartPath, tt.chartDependencies)
 			tt.assertions(t, helmHome, chartPath, err)
+		})
+	}
+}
+
+func Test_helmUpdateChartDirective_validateFileDependency(t *testing.T) {
+	tests := []struct {
+		name       string
+		setup      func(t *testing.T) (workDir, chartPath, dependencyPath string)
+		assertions func(t *testing.T, err error)
+	}{
+		{
+			name: "valid file dependency",
+			setup: func(t *testing.T) (string, string, string) {
+				workDir := absoluteTempDir(t)
+
+				chartPath := filepath.Join(workDir, "chart")
+				require.NoError(t, os.Mkdir(chartPath, 0o700))
+
+				dependencyPath := filepath.Join(workDir, "valid-dep")
+				require.NoError(t, os.Mkdir(dependencyPath, 0o700))
+
+				return workDir, chartPath, "../valid-dep"
+			},
+			assertions: func(t *testing.T, err error) {
+				assert.NoError(t, err)
+			},
+		},
+		{
+			name: "dependency outside work directory",
+			setup: func(t *testing.T) (string, string, string) {
+				tmpDir := absoluteTempDir(t)
+
+				workDir := filepath.Join(tmpDir, "work")
+				chartPath := filepath.Join(workDir, "chart")
+				require.NoError(t, os.MkdirAll(chartPath, 0o700))
+
+				dependencyPath := filepath.Join(tmpDir, "outside-dep")
+				require.NoError(t, os.Mkdir(dependencyPath, 0o700))
+
+				return workDir, chartPath, "../../outside-dep"
+			},
+			assertions: func(t *testing.T, err error) {
+				assert.ErrorContains(t, err, "dependency path is outside of the work directory")
+			},
+		},
+		{
+			name: "valid symlink within work directory",
+			setup: func(t *testing.T) (string, string, string) {
+				workDir := absoluteTempDir(t)
+
+				chartPath := filepath.Join(workDir, "chart")
+				require.NoError(t, os.Mkdir(chartPath, 0o700))
+
+				dependencyPath := filepath.Join(workDir, "valid-dep")
+				require.NoError(t, os.Mkdir(dependencyPath, 0o700))
+
+				symlinkPath := filepath.Join(workDir, "symlink-dep")
+				require.NoError(t, os.Symlink(dependencyPath, symlinkPath))
+
+				return workDir, chartPath, "../symlink-dep"
+			},
+			assertions: func(t *testing.T, err error) {
+				assert.NoError(t, err)
+			},
+		},
+		{
+			name: "symlink pointing outside work directory",
+			setup: func(t *testing.T) (string, string, string) {
+				tmpDir := absoluteTempDir(t)
+
+				workDir := filepath.Join(tmpDir, "work")
+				chartPath := filepath.Join(workDir, "chart")
+				require.NoError(t, os.MkdirAll(chartPath, 0o700))
+
+				dependencyPath := filepath.Join(tmpDir, "outside-dep")
+				require.NoError(t, os.Mkdir(dependencyPath, 0o700))
+
+				symlinkPath := filepath.Join(workDir, "symlink-dep")
+				require.NoError(t, os.Symlink(dependencyPath, symlinkPath))
+
+				return workDir, chartPath, "../symlink-dep"
+			},
+			assertions: func(t *testing.T, err error) {
+				assert.ErrorContains(t, err, "dependency path is outside of the work directory")
+			},
+		},
+		{
+			name: "non-existent dependency path",
+			setup: func(t *testing.T) (string, string, string) {
+				workDir := absoluteTempDir(t)
+				chartPath := filepath.Join(workDir, "chart")
+				return workDir, chartPath, "../non-existent-dep"
+			},
+			assertions: func(t *testing.T, err error) {
+				assert.ErrorContains(t, err, "failed to resolve dependency path: lstat non-existent-dep")
+			},
+		},
+		{
+			name: "absolute dependency path",
+			setup: func(t *testing.T) (string, string, string) {
+				workDir := absoluteTempDir(t)
+				chartPath := filepath.Join(workDir, "chart")
+				return workDir, chartPath, "/absolute-dep"
+			},
+			assertions: func(t *testing.T, err error) {
+				assert.ErrorContains(t, err, "dependency path must be relative")
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			workDir, chartPath, dependencyPath := tt.setup(t)
+			d := &helmUpdateChartDirective{}
+			err := d.validateFileDependency(workDir, chartPath, dependencyPath)
+			tt.assertions(t, err)
 		})
 	}
 }
@@ -1155,6 +1283,308 @@ func Test_compareChartVersions(t *testing.T) {
 			assert.Equal(t, tt.want, compareChartVersions(tt.before, tt.after))
 		})
 	}
+}
+
+func Test_checkSymlinks(t *testing.T) {
+	tests := []struct {
+		name       string
+		setup      func(t *testing.T) (root string, dirPath string)
+		maxDepth   int
+		assertions func(*testing.T, map[string]struct{}, error)
+	}{
+		{
+			name: "no symlinks",
+			setup: func(t *testing.T) (string, string) {
+				root := absoluteTempDir(t)
+				require.NoError(t, os.WriteFile(filepath.Join(root, "file.txt"), []byte("content"), 0o600))
+				return root, root
+			},
+			assertions: func(t *testing.T, visited map[string]struct{}, err error) {
+				assert.NoError(t, err)
+				assert.Len(t, visited, 1)
+			},
+		},
+		{
+			name: "symlink within root",
+			setup: func(t *testing.T) (string, string) {
+				root := absoluteTempDir(t)
+				require.NoError(t, os.WriteFile(filepath.Join(root, "file.txt"), []byte("content"), 0o600))
+				require.NoError(t, os.Symlink(filepath.Join(root, "file.txt"), filepath.Join(root, "link.txt")))
+				return root, root
+			},
+			assertions: func(t *testing.T, visited map[string]struct{}, err error) {
+				assert.NoError(t, err)
+				assert.Len(t, visited, 2)
+			},
+		},
+		{
+			name: "symlink outside root",
+			setup: func(t *testing.T) (string, string) {
+				dir := absoluteTempDir(t)
+				require.NoError(t, os.WriteFile(filepath.Join(dir, "outside.txt"), []byte("content"), 0o600))
+				root := filepath.Join(dir, "root")
+				require.NoError(t, os.Mkdir(root, 0o700))
+				require.NoError(t, os.Symlink(filepath.Join(dir, "outside.txt"), filepath.Join(root, "link.txt")))
+				return root, root
+			},
+			assertions: func(t *testing.T, visited map[string]struct{}, err error) {
+				assert.ErrorContains(t, err, "symlink at link.txt points outside the path boundary")
+				assert.Len(t, visited, 1)
+			},
+		},
+		{
+			name: "symlink to directory",
+			setup: func(t *testing.T) (string, string) {
+				dir := absoluteTempDir(t)
+				subDir := filepath.Join(dir, "subdir")
+				require.NoError(t, os.Mkdir(subDir, 0o700))
+				require.NoError(t, os.WriteFile(filepath.Join(subDir, "file.txt"), []byte("content"), 0o600))
+				require.NoError(t, os.Symlink(subDir, filepath.Join(dir, "link")))
+				return dir, dir
+			},
+			assertions: func(t *testing.T, visited map[string]struct{}, err error) {
+				assert.NoError(t, err)
+				assert.Len(t, visited, 2)
+			},
+		},
+		{
+			name: "circular symlink",
+			setup: func(t *testing.T) (string, string) {
+				root := absoluteTempDir(t)
+				subDir := filepath.Join(root, "subdir")
+				require.NoError(t, os.Mkdir(subDir, 0o700))
+				require.NoError(t, os.Symlink(root, filepath.Join(subDir, "parent")))
+				return root, root
+			},
+			assertions: func(t *testing.T, visited map[string]struct{}, err error) {
+				assert.NoError(t, err)
+				assert.Len(t, visited, 2)
+			},
+		},
+		{
+			name: "symlink with relative path",
+			setup: func(t *testing.T) (string, string) {
+				root := absoluteTempDir(t)
+				require.NoError(t, os.WriteFile(filepath.Join(root, "file.txt"), []byte("content"), 0o600))
+				require.NoError(t, os.Symlink("file.txt", filepath.Join(root, "link.txt")))
+				return root, root
+			},
+			assertions: func(t *testing.T, visited map[string]struct{}, err error) {
+				assert.NoError(t, err)
+				assert.Len(t, visited, 2)
+			},
+		},
+		{
+			name: "symlink to non-existent file",
+			setup: func(t *testing.T) (string, string) {
+				root := absoluteTempDir(t)
+				require.NoError(t, os.Symlink(filepath.Join(root, "non-existent.txt"), filepath.Join(root, "link.txt")))
+				return root, root
+			},
+			assertions: func(t *testing.T, visited map[string]struct{}, err error) {
+				assert.Error(t, err)
+				assert.Len(t, visited, 1)
+			},
+		},
+		{
+			name: "symlink chain within root",
+			setup: func(t *testing.T) (string, string) {
+				root := absoluteTempDir(t)
+				require.NoError(t, os.WriteFile(filepath.Join(root, "file.txt"), []byte("content"), 0o600))
+				require.NoError(t, os.Symlink(filepath.Join(root, "file.txt"), filepath.Join(root, "link1.txt")))
+				require.NoError(t, os.Symlink(filepath.Join(root, "link1.txt"), filepath.Join(root, "link2.txt")))
+				return root, root
+			},
+			assertions: func(t *testing.T, visited map[string]struct{}, err error) {
+				assert.NoError(t, err)
+				assert.Len(t, visited, 2)
+			},
+		},
+		{
+			name: "symlink to directory outside root",
+			setup: func(t *testing.T) (string, string) {
+				dir := absoluteTempDir(t)
+				outsideDir := filepath.Join(dir, "outside")
+				require.NoError(t, os.Mkdir(outsideDir, 0o700))
+				root := filepath.Join(dir, "root")
+				require.NoError(t, os.Mkdir(root, 0o700))
+				require.NoError(t, os.Symlink(outsideDir, filepath.Join(root, "link")))
+				return root, root
+			},
+			assertions: func(t *testing.T, visited map[string]struct{}, err error) {
+				assert.ErrorContains(t, err, "symlink at link points outside the path boundary")
+				assert.Len(t, visited, 1)
+			},
+		},
+		{
+			name: "invalid symlink target",
+			setup: func(t *testing.T) (string, string) {
+				root := absoluteTempDir(t)
+				require.NoError(t, os.Symlink("non-existent.txt", filepath.Join(root, "invalidLink.txt")))
+				return root, root
+			},
+			assertions: func(t *testing.T, visited map[string]struct{}, err error) {
+				assert.ErrorContains(t, err, "failed to resolve symlink: lstat non-existent.txt")
+				assert.Len(t, visited, 1)
+			},
+		},
+		{
+			name: "multiple links to same target",
+			setup: func(t *testing.T) (string, string) {
+				root := absoluteTempDir(t)
+				require.NoError(t, os.WriteFile(filepath.Join(root, "file.txt"), []byte("content"), 0o600))
+				require.NoError(t, os.Symlink(filepath.Join(root, "file.txt"), filepath.Join(root, "link1.txt")))
+				require.NoError(t, os.Symlink(filepath.Join(root, "file.txt"), filepath.Join(root, "link2.txt")))
+				return root, root
+			},
+			assertions: func(t *testing.T, visited map[string]struct{}, err error) {
+				assert.NoError(t, err)
+				assert.Len(t, visited, 2)
+			},
+		},
+		{
+			name:     "recursion depth limit exceeded",
+			maxDepth: 5,
+			setup: func(t *testing.T) (string, string) {
+				root := absoluteTempDir(t)
+				subDir := root
+				// Create a deep directory structure
+				for i := 0; i < 10; i++ { // Exceeds depth limit of 5
+					subDir = filepath.Join(subDir, fmt.Sprintf("level%d", i))
+					require.NoError(t, os.Mkdir(subDir, 0o700))
+				}
+				return root, root
+			},
+			assertions: func(t *testing.T, visited map[string]struct{}, err error) {
+				assert.ErrorContains(t, err, "maximum recursion depth exceeded")
+				assert.Len(t, visited, 6) // Root and 5 levels of subdirectories
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			root, dirPath := tt.setup(t)
+			visited := make(map[string]struct{})
+			maxDepth := tt.maxDepth
+			if maxDepth <= 0 {
+				maxDepth = 100
+			}
+			err := checkSymlinks(root, dirPath, visited, 0, maxDepth)
+			tt.assertions(t, visited, err)
+		})
+	}
+}
+
+func Test_isSubPath(t *testing.T) {
+	tests := []struct {
+		name   string
+		parent string
+		child  string
+		want   bool
+	}{
+		{
+			name:   "child is direct subdirectory",
+			parent: "a/b",
+			child:  "a/b/c",
+			want:   true,
+		},
+		{
+			name:   "child is nested subdirectory",
+			parent: "a/b",
+			child:  "a/b/c/d",
+			want:   true,
+		},
+		{
+			name:   "child is parent directory",
+			parent: "a/b/c",
+			child:  "a",
+			want:   false,
+		},
+		{
+			name:   "child is same as parent",
+			parent: "a/b",
+			child:  "a/b",
+			want:   true,
+		},
+		{
+			name:   "child is sibling directory",
+			parent: "a/b1",
+			child:  "a/b2",
+			want:   false,
+		},
+		{
+			name:   "parent is root",
+			parent: ".",
+			child:  "a/b",
+			want:   true,
+		},
+		{
+			name:   "child contains parent as prefix",
+			parent: "a/b",
+			child:  "a/bc/d",
+			want:   false,
+		},
+		{
+			name:   "parent and child on different roots",
+			parent: "x/y",
+			child:  "a/b",
+			want:   false,
+		},
+		{
+			name:   "child is parent with trailing separator",
+			parent: "a/b",
+			child:  "a/b/",
+			want:   true,
+		},
+		{
+			name:   "parent and child with relative paths",
+			parent: "a",
+			child:  "a/b",
+			want:   true,
+		},
+		{
+			name:   "complex nested structure",
+			parent: "a/b/c",
+			child:  "a/b/c/d/e/f",
+			want:   true,
+		},
+		{
+			name:   "parent is empty string",
+			parent: "",
+			child:  "a",
+			want:   true,
+		},
+		{
+			name:   "child is empty string",
+			parent: "a",
+			child:  "",
+			want:   false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Convert slashes to OS-specific separators
+			parent := filepath.FromSlash(tt.parent)
+			child := filepath.FromSlash(tt.child)
+
+			got := isSubPath(parent, child)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+// absoluteTempDir returns the absolute path of a temporary directory created
+// by t.TempDir(). This is useful when working with symlinks, as the temporary
+// directory path may actually be a symlink on some platforms like macOS.
+func absoluteTempDir(t *testing.T) string {
+	t.Helper()
+
+	dir := t.TempDir()
+	absDir, err := filepath.EvalSymlinks(dir)
+	require.NoError(t, err)
+	return absDir
 }
 
 func copyFile(src, dst string) error {

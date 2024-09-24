@@ -85,19 +85,24 @@ func (d *copyDirective) run(ctx context.Context, stepCtx *StepContext, cfg CopyC
 func sanitizePathError(err error, workDir string) error {
 	var pathErr *fs.PathError
 	if errors.As(err, &pathErr) {
-		sanitizedPath, relErr := filepath.Rel(workDir, pathErr.Path)
-		if relErr != nil || strings.Contains(sanitizedPath, "..") {
-			// If we can't make it relative, just use the filename.
-			sanitizedPath = filepath.Base(pathErr.Path)
-		}
-
 		// Reconstruct the error with the sanitized path.
 		return &fs.PathError{
 			Op:   pathErr.Op,
-			Path: sanitizedPath,
+			Path: relativePath(workDir, pathErr.Path),
 			Err:  pathErr.Err,
 		}
 	}
 	// Return the original error if it's not a path error.
 	return err
+}
+
+// relativePath returns a path relative to the base path, or the base if
+// the path cannot be made relative.
+func relativePath(base, path string) string {
+	rel, err := filepath.Rel(base, path)
+	if err != nil || strings.Contains(rel, "..") {
+		// If we can't make it relative, just use the filename.
+		return filepath.Base(path)
+	}
+	return rel
 }
