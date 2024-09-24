@@ -18,7 +18,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
-func Test_helmUpdateImageDirective_runPromotionStep(t *testing.T) {
+func Test_helmImageUpdater_runPromotionStep(t *testing.T) {
 	tests := []struct {
 		name       string
 		objects    []client.Object
@@ -199,6 +199,8 @@ func Test_helmUpdateImageDirective_runPromotionStep(t *testing.T) {
 		},
 	}
 
+	runner := &helmImageUpdater{}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			stepCtx := tt.stepCtx
@@ -215,14 +217,13 @@ func Test_helmUpdateImageDirective_runPromotionStep(t *testing.T) {
 				stepCtx.KargoClient = fake.NewClientBuilder().WithScheme(scheme).WithObjects(tt.objects...).Build()
 			}
 
-			d := &helmUpdateImageDirective{}
-			result, err := d.runPromotionStep(context.Background(), stepCtx, tt.cfg)
+			result, err := runner.runPromotionStep(context.Background(), stepCtx, tt.cfg)
 			tt.assertions(t, stepCtx.WorkDir, result, err)
 		})
 	}
 }
 
-func Test_helmUpdateImageDirective_generateImageUpdates(t *testing.T) {
+func Test_helmImageUpdater_generateImageUpdates(t *testing.T) {
 	tests := []struct {
 		name       string
 		objects    []client.Object
@@ -400,6 +401,8 @@ func Test_helmUpdateImageDirective_generateImageUpdates(t *testing.T) {
 		},
 	}
 
+	runner := &helmImageUpdater{}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			scheme := runtime.NewScheme()
@@ -408,14 +411,13 @@ func Test_helmUpdateImageDirective_generateImageUpdates(t *testing.T) {
 			stepCtx := tt.stepCtx
 			stepCtx.KargoClient = fake.NewClientBuilder().WithScheme(scheme).WithObjects(tt.objects...).Build()
 
-			d := &helmUpdateImageDirective{}
-			changes, summary, err := d.generateImageUpdates(context.Background(), stepCtx, tt.cfg)
+			changes, summary, err := runner.generateImageUpdates(context.Background(), stepCtx, tt.cfg)
 			tt.assertions(t, changes, summary, err)
 		})
 	}
 }
 
-func Test_helmUpdateImageDirective_getDesiredOrigin(t *testing.T) {
+func Test_helmImageUpdater_getDesiredOrigin(t *testing.T) {
 	tests := []struct {
 		name       string
 		fromOrigin *ChartFromOrigin
@@ -442,16 +444,17 @@ func Test_helmUpdateImageDirective_getDesiredOrigin(t *testing.T) {
 		},
 	}
 
+	runner := &helmImageUpdater{}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			d := &helmUpdateImageDirective{}
-			origin := d.getDesiredOrigin(tt.fromOrigin)
+			origin := runner.getDesiredOrigin(tt.fromOrigin)
 			tt.assertions(t, origin)
 		})
 	}
 }
 
-func Test_helmUpdateImageDirective_getImageValues(t *testing.T) {
+func Test_helmImageUpdater_getImageValues(t *testing.T) {
 	tests := []struct {
 		name       string
 		image      *kargoapi.Image
@@ -522,16 +525,17 @@ func Test_helmUpdateImageDirective_getImageValues(t *testing.T) {
 		},
 	}
 
+	runner := &helmImageUpdater{}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			d := &helmUpdateImageDirective{}
-			value, ref, err := d.getImageValues(tt.image, tt.valueType)
+			value, ref, err := runner.getImageValues(tt.image, tt.valueType)
 			tt.assertions(t, value, ref, err)
 		})
 	}
 }
 
-func Test_helmUpdateImageDirective_updateValuesFile(t *testing.T) {
+func Test_helmImageUpdater_updateValuesFile(t *testing.T) {
 	tests := []struct {
 		name          string
 		valuesContent string
@@ -574,6 +578,8 @@ func Test_helmUpdateImageDirective_updateValuesFile(t *testing.T) {
 		},
 	}
 
+	runner := &helmImageUpdater{}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			workDir := t.TempDir()
@@ -584,14 +590,13 @@ func Test_helmUpdateImageDirective_updateValuesFile(t *testing.T) {
 				require.NoError(t, err)
 			}
 
-			d := &helmUpdateImageDirective{}
-			err := d.updateValuesFile(workDir, path.Base(valuesFile), tt.changes)
+			err := runner.updateValuesFile(workDir, path.Base(valuesFile), tt.changes)
 			tt.assertions(t, valuesFile, err)
 		})
 	}
 }
 
-func Test_helmUpdateImageDirective_generateCommitMessage(t *testing.T) {
+func Test_helmImageUpdater_generateCommitMessage(t *testing.T) {
 	tests := []struct {
 		name          string
 		path          string
@@ -629,10 +634,11 @@ func Test_helmUpdateImageDirective_generateCommitMessage(t *testing.T) {
 		},
 	}
 
+	runner := &helmImageUpdater{}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			d := &helmUpdateImageDirective{}
-			result := d.generateCommitMessage(tt.path, tt.fullImageRefs)
+			result := runner.generateCommitMessage(tt.path, tt.fullImageRefs)
 			tt.assertions(t, result)
 		})
 	}

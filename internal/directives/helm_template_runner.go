@@ -14,36 +14,39 @@ import (
 	"helm.sh/helm/v3/pkg/chart/loader"
 	"helm.sh/helm/v3/pkg/chartutil"
 	"helm.sh/helm/v3/pkg/cli/values"
-
-	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
 func init() {
-	// Register the helm-template directive with the builtins registry.
-	builtins.RegisterDirective(newHelmTemplateDirective(), &DirectivePermissions{
-		AllowArgoCDClient:  true,
-		AllowCredentialsDB: true,
-	})
+	builtins.RegisterPromotionStepRunner(
+		newHelmTemplateRunner(),
+		&StepRunnerPermissions{
+			AllowArgoCDClient:  true,
+			AllowCredentialsDB: true,
+		},
+	)
 }
 
-type helmTemplateDirective struct {
+// helmTemplateRunner is an implementation of the PromotionStepRunner interface
+// that renders a Helm chart.
+type helmTemplateRunner struct {
 	schemaLoader gojsonschema.JSONLoader
 }
 
-// newHelmTemplateDirective creates a new helm-update-image directive.
-func newHelmTemplateDirective() Directive {
-	d := &helmTemplateDirective{}
-	d.schemaLoader = getConfigSchemaLoader(d.Name())
-	return d
+// newHelmTemplateRunner returns an implementation of the PromotionStepRunner
+// interface that renders a Helm chart.
+func newHelmTemplateRunner() PromotionStepRunner {
+	r := &helmTemplateRunner{}
+	r.schemaLoader = getConfigSchemaLoader(r.Name())
+	return r
 }
 
-// Name implements the Directive interface.
-func (d *helmTemplateDirective) Name() string {
+// Name implements the PromotionStepRunner interface.
+func (h *helmTemplateRunner) Name() string {
 	return "helm-template"
 }
 
-// Run implements the Directive interface.
-func (d *helmTemplateDirective) RunPromotionStep(
+// RunPromotionStep implements the PromotionStepRunner interface.
+func (h *helmTemplateRunner) RunPromotionStep(
 	ctx context.Context,
 	stepCtx *PromotionStepContext,
 ) (PromotionStepResult, error) {
@@ -51,9 +54,9 @@ func (d *helmTemplateDirective) RunPromotionStep(
 
 	// Validate the configuration against the JSON Schema
 	if err := validate(
-		d.schemaLoader,
+		h.schemaLoader,
 		gojsonschema.NewGoLoader(stepCtx.Config),
-		d.Name(),
+		h.Name(),
 	); err != nil {
 		return failure, err
 	}
@@ -61,43 +64,35 @@ func (d *helmTemplateDirective) RunPromotionStep(
 	// Convert the configuration into a typed struct
 	cfg, err := configToStruct[HelmTemplateConfig](stepCtx.Config)
 	if err != nil {
-		return failure, fmt.Errorf("could not convert config into %s config: %w", d.Name(), err)
+		return failure, fmt.Errorf("could not convert config into %s config: %w", h.Name(), err)
 	}
 
-	return d.runPromotionStep(ctx, stepCtx, cfg)
+	return h.runPromotionStep(ctx, stepCtx, cfg)
 }
 
-// RunHealthCheckStep implements the Directive interface.
-func (d *helmTemplateDirective) RunHealthCheckStep(
-	context.Context,
-	*HealthCheckStepContext,
-) HealthCheckStepResult {
-	return HealthCheckStepResult{Status: kargoapi.HealthStateNotApplicable}
-}
-
-func (d *helmTemplateDirective) runPromotionStep(
+func (h *helmTemplateRunner) runPromotionStep(
 	ctx context.Context,
 	stepCtx *PromotionStepContext,
 	cfg HelmTemplateConfig,
 ) (PromotionStepResult, error) {
-	composedValues, err := d.composeValues(stepCtx.WorkDir, cfg.ValuesFiles)
+	composedValues, err := h.composeValues(stepCtx.WorkDir, cfg.ValuesFiles)
 	if err != nil {
 		return PromotionStepResult{Status: PromotionStatusFailure},
 			fmt.Errorf("failed to compose values: %w", err)
 	}
 
-	chartRequested, err := d.loadChart(stepCtx.WorkDir, cfg.Path)
+	chartRequested, err := h.loadChart(stepCtx.WorkDir, cfg.Path)
 	if err != nil {
 		return PromotionStepResult{Status: PromotionStatusFailure},
 			fmt.Errorf("failed to load chart from %q: %w", cfg.Path, err)
 	}
 
-	if err = d.checkDependencies(chartRequested); err != nil {
+	if err = h.checkDependencies(chartRequested); err != nil {
 		return PromotionStepResult{Status: PromotionStatusFailure},
 			fmt.Errorf("missing chart dependencies: %w", err)
 	}
 
-	install, err := d.newInstallAction(cfg, stepCtx.Project)
+	install, err := h.newInstallAction(cfg, stepCtx.Project)
 	if err != nil {
 		return PromotionStepResult{Status: PromotionStatusFailure},
 			fmt.Errorf("failed to initialize Helm action config: %w", err)
@@ -109,7 +104,7 @@ func (d *helmTemplateDirective) runPromotionStep(
 			fmt.Errorf("failed to render chart: %w", err)
 	}
 
-	if err = d.writeOutput(stepCtx.WorkDir, cfg.OutPath, rls.Manifest); err != nil {
+	if err = h.writeOutput(stepCtx.WorkDir, cfg.OutPath, rls.Manifest); err != nil {
 		return PromotionStepResult{Status: PromotionStatusFailure},
 			fmt.Errorf("failed to write rendered chart: %w", err)
 	}
@@ -118,7 +113,7 @@ func (d *helmTemplateDirective) runPromotionStep(
 
 // composeValues composes the values from the given values files. It merges the
 // values in the order they are provided.
-func (d *helmTemplateDirective) composeValues(workDir string, valuesFiles []string) (map[string]any, error) {
+func (h *helmTemplateRunner) composeValues(workDir string, valuesFiles []string) (map[string]any, error) {
 	valueOpts := &values.Options{}
 	for _, p := range valuesFiles {
 		absValuesPath, err := securejoin.SecureJoin(workDir, p)
@@ -133,7 +128,7 @@ func (d *helmTemplateDirective) composeValues(workDir string, valuesFiles []stri
 // newInstallAction creates a new Helm install action with the given
 // configuration. It sets the action to dry-run mode and client-only mode,
 // meaning that it will not install the chart, but only render the manifest.
-func (d *helmTemplateDirective) newInstallAction(cfg HelmTemplateConfig, project string) (*action.Install, error) {
+func (h *helmTemplateRunner) newInstallAction(cfg HelmTemplateConfig, project string) (*action.Install, error) {
 	client := action.NewInstall(&action.Configuration{})
 
 	client.DryRun = true
@@ -157,7 +152,7 @@ func (d *helmTemplateDirective) newInstallAction(cfg HelmTemplateConfig, project
 }
 
 // loadChart loads the chart from the given path.
-func (d *helmTemplateDirective) loadChart(workDir, path string) (*chart.Chart, error) {
+func (h *helmTemplateRunner) loadChart(workDir, path string) (*chart.Chart, error) {
 	absChartPath, err := securejoin.SecureJoin(workDir, path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to join path %q: %w", path, err)
@@ -166,7 +161,7 @@ func (d *helmTemplateDirective) loadChart(workDir, path string) (*chart.Chart, e
 }
 
 // checkDependencies checks if the chart has all its dependencies.
-func (d *helmTemplateDirective) checkDependencies(chartRequested *chart.Chart) error {
+func (h *helmTemplateRunner) checkDependencies(chartRequested *chart.Chart) error {
 	if req := chartRequested.Metadata.Dependencies; req != nil {
 		if err := action.CheckDependencies(chartRequested, req); err != nil {
 			return err
@@ -177,7 +172,7 @@ func (d *helmTemplateDirective) checkDependencies(chartRequested *chart.Chart) e
 
 // writeOutput writes the rendered manifest to the output path. It creates the
 // directory if it does not exist.
-func (d *helmTemplateDirective) writeOutput(workDir, outPath, manifest string) error {
+func (h *helmTemplateRunner) writeOutput(workDir, outPath, manifest string) error {
 	absOutPath, err := securejoin.SecureJoin(workDir, outPath)
 	if err != nil {
 		return fmt.Errorf("failed to join path %q: %w", outPath, err)

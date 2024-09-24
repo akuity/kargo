@@ -15,7 +15,7 @@ import (
 	"github.com/akuity/kargo/internal/gitprovider"
 )
 
-func TestGitOpenPRDirective_Validate(t *testing.T) {
+func Test_gitPROpener_validate(t *testing.T) {
 	testCases := []struct {
 		name             string
 		config           Config
@@ -107,13 +107,13 @@ func TestGitOpenPRDirective_Validate(t *testing.T) {
 		},
 	}
 
-	d := newGitOpenPRDirective()
-	dir, ok := d.(*gitOpenPRDirective)
+	r := newGitPROpener()
+	runner, ok := r.(*gitPROpener)
 	require.True(t, ok)
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			err := dir.validate(testCase.config)
+			err := runner.validate(testCase.config)
 			if len(testCase.expectedProblems) == 0 {
 				require.NoError(t, err)
 			} else {
@@ -125,7 +125,7 @@ func TestGitOpenPRDirective_Validate(t *testing.T) {
 	}
 }
 
-func TestGitOpenPRDirective_runPromotionStep(t *testing.T) {
+func Test_gitPROpener_runPromotionStep(t *testing.T) {
 	const testSourceBranch = "source"
 	const testTargetBranch = "target"
 
@@ -185,13 +185,13 @@ func TestGitOpenPRDirective_runPromotionStep(t *testing.T) {
 		},
 	)
 
-	// Now we can proceed to test the git-open-pr directive...
+	// Now we can proceed to test gitPROpener...
 
-	d := newGitOpenPRDirective()
-	dir, ok := d.(*gitOpenPRDirective)
+	r := newGitPROpener()
+	runner, ok := r.(*gitPROpener)
 	require.True(t, ok)
 
-	res, err := dir.runPromotionStep(
+	res, err := runner.runPromotionStep(
 		context.Background(),
 		&PromotionStepContext{
 			Project:       "fake-project",

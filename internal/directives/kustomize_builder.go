@@ -14,8 +14,6 @@ import (
 	"sigs.k8s.io/kustomize/api/resmap"
 	kustypes "sigs.k8s.io/kustomize/api/types"
 	"sigs.k8s.io/kustomize/kyaml/filesys"
-
-	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
 // kustomizeRenderMutex is a mutex that ensures only one kustomize build is
@@ -25,58 +23,51 @@ import (
 var kustomizeRenderMutex sync.Mutex
 
 func init() {
-	// Register the kustomize-build directive with the builtins registry.
-	builtins.RegisterDirective(newKustomizeBuildDirective(), nil)
+	builtins.RegisterPromotionStepRunner(newKustomizeBuilder(), nil)
 }
 
-// kustomizeBuildDirective is a directive that builds a set of Kubernetes
-// manifests using Kustomize.
-type kustomizeBuildDirective struct {
+// kustomizeBuilder is an implementation of the PromotionStepRunner interface
+// that builds a set of Kubernetes manifests using Kustomize.
+type kustomizeBuilder struct {
 	schemaLoader gojsonschema.JSONLoader
 }
 
-// newKustomizeBuildDirective creates a new kustomize-build directive.
-func newKustomizeBuildDirective() Directive {
-	return &kustomizeBuildDirective{
+// newKustomizeBuilder returns an implementation of the
+// PromotionStepRunner interface that builds a set of Kubernetes manifests using
+// Kustomize.
+func newKustomizeBuilder() PromotionStepRunner {
+	return &kustomizeBuilder{
 		schemaLoader: getConfigSchemaLoader("kustomize-build"),
 	}
 }
 
-// Name implements the Directive interface.
-func (d *kustomizeBuildDirective) Name() string {
+// Name implements the PromotionStepRunner interface.
+func (k *kustomizeBuilder) Name() string {
 	return "kustomize-build"
 }
 
-// Run implements the Directive interface.
-func (d *kustomizeBuildDirective) RunPromotionStep(
+// RunPromotionStep implements the PromotionStepRunner interface.
+func (k *kustomizeBuilder) RunPromotionStep(
 	_ context.Context,
 	stepCtx *PromotionStepContext,
 ) (PromotionStepResult, error) {
 	failure := PromotionStepResult{Status: PromotionStatusFailure}
 
 	// Validate the configuration against the JSON Schema.
-	if err := validate(d.schemaLoader, gojsonschema.NewGoLoader(stepCtx.Config), d.Name()); err != nil {
+	if err := validate(k.schemaLoader, gojsonschema.NewGoLoader(stepCtx.Config), k.Name()); err != nil {
 		return failure, err
 	}
 
 	// Convert the configuration into a typed object.
 	cfg, err := configToStruct[KustomizeBuildConfig](stepCtx.Config)
 	if err != nil {
-		return failure, fmt.Errorf("could not convert config into %s config: %w", d.Name(), err)
+		return failure, fmt.Errorf("could not convert config into %s config: %w", k.Name(), err)
 	}
 
-	return d.runPromotionStep(stepCtx, cfg)
+	return k.runPromotionStep(stepCtx, cfg)
 }
 
-// RunHealthCheckStep implements the Directive interface.
-func (d *kustomizeBuildDirective) RunHealthCheckStep(
-	context.Context,
-	*HealthCheckStepContext,
-) HealthCheckStepResult {
-	return HealthCheckStepResult{Status: kargoapi.HealthStateNotApplicable}
-}
-
-func (d *kustomizeBuildDirective) runPromotionStep(
+func (k *kustomizeBuilder) runPromotionStep(
 	stepCtx *PromotionStepContext,
 	cfg KustomizeBuildConfig,
 ) (PromotionStepResult, error) {

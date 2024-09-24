@@ -6,7 +6,6 @@ import (
 
 	"github.com/xeipuuv/gojsonschema"
 
-	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/git"
 	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/gitprovider"
@@ -15,32 +14,33 @@ import (
 const prNumberKey = "prNumber"
 
 func init() {
-	// Register the git-open-pr directive with the builtins registry.
-	builtins.RegisterDirective(
-		newGitOpenPRDirective(),
-		&DirectivePermissions{AllowCredentialsDB: true},
+	builtins.RegisterPromotionStepRunner(
+		newGitPROpener(),
+		&StepRunnerPermissions{AllowCredentialsDB: true},
 	)
 }
 
-// gitOpenPRDirective is a directive that opens a pull request.
-type gitOpenPRDirective struct {
+// gitPROpener is an implementation of the PromotionStepRunner interface that
+// opens a pull request.
+type gitPROpener struct {
 	schemaLoader gojsonschema.JSONLoader
 }
 
-// newGitOpenPRDirective creates a new git-open-pr directive.
-func newGitOpenPRDirective() Directive {
-	d := &gitOpenPRDirective{}
-	d.schemaLoader = getConfigSchemaLoader(d.Name())
-	return d
+// newGitPROpener returns an implementation of the PromotionStepRunner interface
+// that opens a pull request.
+func newGitPROpener() PromotionStepRunner {
+	r := &gitPROpener{}
+	r.schemaLoader = getConfigSchemaLoader(r.Name())
+	return r
 }
 
-// Name implements the Directive interface.
-func (g *gitOpenPRDirective) Name() string {
+// Name implements the PromotionStepRunner interface.
+func (g *gitPROpener) Name() string {
 	return "git-open-pr"
 }
 
-// Run implements the Directive interface.
-func (g *gitOpenPRDirective) RunPromotionStep(
+// RunPromotionStep implements the PromotionStepRunner interface.
+func (g *gitPROpener) RunPromotionStep(
 	ctx context.Context,
 	stepCtx *PromotionStepContext,
 ) (PromotionStepResult, error) {
@@ -55,21 +55,12 @@ func (g *gitOpenPRDirective) RunPromotionStep(
 	return g.runPromotionStep(ctx, stepCtx, cfg)
 }
 
-// RunHealthCheckStep implements the Directive interface.
-func (g *gitOpenPRDirective) RunHealthCheckStep(
-	context.Context,
-	*HealthCheckStepContext,
-) HealthCheckStepResult {
-	return HealthCheckStepResult{Status: kargoapi.HealthStateNotApplicable}
-}
-
-// validate validates the git-open-pr directive configuration against the JSON
-// schema.
-func (g *gitOpenPRDirective) validate(cfg Config) error {
+// validate validates gitPROpener configuration against a JSON schema.
+func (g *gitPROpener) validate(cfg Config) error {
 	return validate(g.schemaLoader, gojsonschema.NewGoLoader(cfg), g.Name())
 }
 
-func (g *gitOpenPRDirective) runPromotionStep(
+func (g *gitPROpener) runPromotionStep(
 	ctx context.Context,
 	stepCtx *PromotionStepContext,
 	cfg GitOpenPRConfig,

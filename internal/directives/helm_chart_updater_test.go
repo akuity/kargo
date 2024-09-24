@@ -28,7 +28,7 @@ import (
 	"github.com/akuity/kargo/internal/helm"
 )
 
-func Test_helmUpdateChartDirective_runPromotionStep(t *testing.T) {
+func Test_helmChartUpdater_runPromotionStep(t *testing.T) {
 	tests := []struct {
 		name            string
 		context         *PromotionStepContext
@@ -121,6 +121,8 @@ func Test_helmUpdateChartDirective_runPromotionStep(t *testing.T) {
 		},
 	}
 
+	runner := &helmChartUpdater{}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			scheme := runtime.NewScheme()
@@ -158,14 +160,13 @@ func Test_helmUpdateChartDirective_runPromotionStep(t *testing.T) {
 				require.NoError(t, os.WriteFile(filepath.Join(chartPath, "Chart.yaml"), b, 0o600))
 			}
 
-			d := &helmUpdateChartDirective{}
-			result, err := d.runPromotionStep(context.Background(), stepCtx, tt.cfg)
+			result, err := runner.runPromotionStep(context.Background(), stepCtx, tt.cfg)
 			tt.assertions(t, stepCtx.WorkDir, result, err)
 		})
 	}
 }
 
-func Test_helmUpdateChartDirective_processChartUpdates(t *testing.T) {
+func Test_helmChartUpdater_processChartUpdates(t *testing.T) {
 	tests := []struct {
 		name              string
 		objects           []client.Object
@@ -355,6 +356,8 @@ func Test_helmUpdateChartDirective_processChartUpdates(t *testing.T) {
 		},
 	}
 
+	runner := &helmChartUpdater{}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			scheme := runtime.NewScheme()
@@ -363,14 +366,15 @@ func Test_helmUpdateChartDirective_processChartUpdates(t *testing.T) {
 			stepCtx := tt.context
 			stepCtx.KargoClient = fake.NewClientBuilder().WithScheme(scheme).WithObjects(tt.objects...).Build()
 
-			d := &helmUpdateChartDirective{}
-			changes, err := d.processChartUpdates(context.Background(), stepCtx, tt.cfg, tt.chartDependencies)
+			changes, err := runner.processChartUpdates(context.Background(), stepCtx, tt.cfg, tt.chartDependencies)
 			tt.assertions(t, changes, err)
 		})
 	}
 }
 
-func Test_helmUpdateChartDirective_updateDependencies(t *testing.T) {
+func Test_helmChartUpdater_updateDependencies(t *testing.T) {
+	runner := &helmChartUpdater{}
+
 	t.Run("updates dependencies", func(t *testing.T) {
 		// Set up the HTTP repository
 		httpRepositoryRoot := t.TempDir()
@@ -421,9 +425,8 @@ func Test_helmUpdateChartDirective_updateDependencies(t *testing.T) {
 		require.NoError(t, err)
 		require.NoError(t, os.WriteFile(filepath.Join(chartPath, "Chart.yaml"), b, 0o600))
 
-		// Run the directive and assert the dependencies are updated
-		d := &helmUpdateChartDirective{}
-		newVersions, err := d.updateDependencies(
+		// Run the promotion step and assert the dependencies are updated
+		newVersions, err := runner.updateDependencies(
 			context.Background(),
 			&PromotionStepContext{},
 			t.TempDir(),
@@ -488,9 +491,8 @@ func Test_helmUpdateChartDirective_updateDependencies(t *testing.T) {
 			},
 		}
 
-		// Run the directive and assert the dependency is updated
-		d := &helmUpdateChartDirective{}
-		newVersions, err := d.updateDependencies(context.Background(), &PromotionStepContext{
+		// Run the promotion step and assert the dependency is updated
+		newVersions, err := runner.updateDependencies(context.Background(), &PromotionStepContext{
 			CredentialsDB: credentialsDB,
 		}, t.TempDir(), chartPath, []chartDependency{
 			{
@@ -580,9 +582,7 @@ func Test_helmUpdateChartDirective_updateDependencies(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			helmHome, chartPath := t.TempDir(), t.TempDir()
-
-			d := &helmUpdateChartDirective{}
-			_, err := d.updateDependencies(context.Background(), &PromotionStepContext{
+			_, err := runner.updateDependencies(context.Background(), &PromotionStepContext{
 				CredentialsDB: tt.credentialsDB,
 			}, helmHome, chartPath, tt.chartDependencies)
 			tt.assertions(t, helmHome, chartPath, err)
@@ -590,7 +590,7 @@ func Test_helmUpdateChartDirective_updateDependencies(t *testing.T) {
 	}
 }
 
-func Test_helmUpdateChartDirective_validateFileDependency(t *testing.T) {
+func Test_helmChartUpdater_validateFileDependency(t *testing.T) {
 	tests := []struct {
 		name       string
 		setup      func(t *testing.T) (workDir, chartPath, dependencyPath string)
@@ -696,17 +696,18 @@ func Test_helmUpdateChartDirective_validateFileDependency(t *testing.T) {
 		},
 	}
 
+	runner := &helmChartUpdater{}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			workDir, chartPath, dependencyPath := tt.setup(t)
-			d := &helmUpdateChartDirective{}
-			err := d.validateFileDependency(workDir, chartPath, dependencyPath)
+			err := runner.validateFileDependency(workDir, chartPath, dependencyPath)
 			tt.assertions(t, err)
 		})
 	}
 }
 
-func Test_helmUpdateChartDirective_loadDependencyCredentials(t *testing.T) {
+func Test_helmChartUpdater_loadDependencyCredentials(t *testing.T) {
 	tests := []struct {
 		name              string
 		credentialsDB     credentials.Database
@@ -867,6 +868,9 @@ func Test_helmUpdateChartDirective_loadDependencyCredentials(t *testing.T) {
 			},
 		},
 	}
+
+	runner := &helmChartUpdater{}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			helmHome, registryClient := tt.newRegistryClient(t)
@@ -878,8 +882,7 @@ func Test_helmUpdateChartDirective_loadDependencyCredentials(t *testing.T) {
 
 			dependencies := tt.buildDependencies(registryURL)
 
-			d := &helmUpdateChartDirective{}
-			err := d.loadDependencyCredentials(
+			err := runner.loadDependencyCredentials(
 				context.Background(),
 				tt.credentialsDB,
 				registryClient,
@@ -892,7 +895,7 @@ func Test_helmUpdateChartDirective_loadDependencyCredentials(t *testing.T) {
 	}
 }
 
-func Test_helmUpdateChartDirective_generateCommitMessage(t *testing.T) {
+func Test_helmChartUpdater_generateCommitMessage(t *testing.T) {
 	tests := []struct {
 		name        string
 		path        string
@@ -999,10 +1002,11 @@ func Test_helmUpdateChartDirective_generateCommitMessage(t *testing.T) {
 		},
 	}
 
+	runner := &helmChartUpdater{}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			d := &helmUpdateChartDirective{}
-			got := d.generateCommitMessage(tt.path, tt.newVersions)
+			got := runner.generateCommitMessage(tt.path, tt.newVersions)
 			tt.assertions(t, got)
 		})
 	}

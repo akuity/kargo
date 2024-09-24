@@ -21,23 +21,23 @@ import (
 	"github.com/akuity/kargo/internal/kubeclient"
 )
 
-func TestNewArgocdUpdateDirective(t *testing.T) {
-	d := newArgocdUpdateDirective()
-	dir, ok := d.(*argocdUpdateDirective)
+func Test_newArgocdUpdater(t *testing.T) {
+	r := newArgocdUpdater()
+	runner, ok := r.(*argocdUpdater)
 	require.True(t, ok)
-	require.Equal(t, "argocd-update", d.Name())
-	require.NotNil(t, dir.getStageFn)
-	require.NotNil(t, dir.schemaLoader)
-	require.NotNil(t, dir.getAuthorizedApplicationFn)
-	require.NotNil(t, dir.buildDesiredSourcesFn)
-	require.NotNil(t, dir.mustPerformUpdateFn)
-	require.NotNil(t, dir.syncApplicationFn)
-	require.NotNil(t, dir.applyArgoCDSourceUpdateFn)
-	require.NotNil(t, dir.argoCDAppPatchFn)
-	require.NotNil(t, dir.logAppEventFn)
+	require.Equal(t, "argocd-update", r.Name())
+	require.NotNil(t, runner.getStageFn)
+	require.NotNil(t, runner.schemaLoader)
+	require.NotNil(t, runner.getAuthorizedApplicationFn)
+	require.NotNil(t, runner.buildDesiredSourcesFn)
+	require.NotNil(t, runner.mustPerformUpdateFn)
+	require.NotNil(t, runner.syncApplicationFn)
+	require.NotNil(t, runner.applyArgoCDSourceUpdateFn)
+	require.NotNil(t, runner.argoCDAppPatchFn)
+	require.NotNil(t, runner.logAppEventFn)
 }
 
-func TestArgoCDUpdateDirective_validate(t *testing.T) {
+func Test_argoCDUpdater_validate(t *testing.T) {
 	testCases := []struct {
 		name             string
 		config           Config
@@ -329,13 +329,13 @@ func TestArgoCDUpdateDirective_validate(t *testing.T) {
 		},
 	}
 
-	d := newArgocdUpdateDirective()
-	dir, ok := d.(*argocdUpdateDirective)
+	r := newArgocdUpdater()
+	runner, ok := r.(*argocdUpdater)
 	require.True(t, ok)
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			err := dir.validate(testCase.config)
+			err := runner.validate(testCase.config)
 			if len(testCase.expectedProblems) == 0 {
 				require.NoError(t, err)
 			} else {
@@ -347,17 +347,17 @@ func TestArgoCDUpdateDirective_validate(t *testing.T) {
 	}
 }
 
-func TestArgoCDUpdateDirective_runPromotionStep(t *testing.T) {
+func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 	testCases := []struct {
 		name       string
-		dir        *argocdUpdateDirective
+		runner     *argocdUpdater
 		stepCtx    *PromotionStepContext
 		stepCfg    ArgoCDUpdateConfig
 		assertions func(*testing.T, PromotionStepResult, error)
 	}{
 		{
 			name:    "argo cd integration disabled",
-			dir:     &argocdUpdateDirective{},
+			runner:  &argocdUpdater{},
 			stepCtx: &PromotionStepContext{},
 			stepCfg: ArgoCDUpdateConfig{},
 			assertions: func(t *testing.T, res PromotionStepResult, err error) {
@@ -369,7 +369,7 @@ func TestArgoCDUpdateDirective_runPromotionStep(t *testing.T) {
 		},
 		{
 			name: "error getting Stage",
-			dir: &argocdUpdateDirective{
+			runner: &argocdUpdater{
 				getStageFn: func(
 					context.Context,
 					client.Client,
@@ -390,7 +390,7 @@ func TestArgoCDUpdateDirective_runPromotionStep(t *testing.T) {
 		},
 		{
 			name: "Stage not found",
-			dir: &argocdUpdateDirective{
+			runner: &argocdUpdater{
 				getStageFn: func(
 					context.Context,
 					client.Client,
@@ -411,7 +411,7 @@ func TestArgoCDUpdateDirective_runPromotionStep(t *testing.T) {
 		},
 		{
 			name: "error retrieving authorized application",
-			dir: &argocdUpdateDirective{
+			runner: &argocdUpdater{
 				getStageFn: func(
 					context.Context,
 					client.Client,
@@ -441,7 +441,7 @@ func TestArgoCDUpdateDirective_runPromotionStep(t *testing.T) {
 		},
 		{
 			name: "error building desired sources",
-			dir: &argocdUpdateDirective{
+			runner: &argocdUpdater{
 				getStageFn: func(
 					context.Context,
 					client.Client,
@@ -481,7 +481,7 @@ func TestArgoCDUpdateDirective_runPromotionStep(t *testing.T) {
 		},
 		{
 			name: "error determining if update is necessary",
-			dir: &argocdUpdateDirective{
+			runner: &argocdUpdater{
 				getStageFn: func(
 					context.Context,
 					client.Client,
@@ -531,7 +531,7 @@ func TestArgoCDUpdateDirective_runPromotionStep(t *testing.T) {
 		},
 		{
 			name: "determination error can be solved by applying update",
-			dir: &argocdUpdateDirective{
+			runner: &argocdUpdater{
 				getStageFn: func(
 					context.Context,
 					client.Client,
@@ -589,7 +589,7 @@ func TestArgoCDUpdateDirective_runPromotionStep(t *testing.T) {
 		},
 		{
 			name: "must wait for update to complete",
-			dir: &argocdUpdateDirective{
+			runner: &argocdUpdater{
 				getStageFn: func(
 					context.Context,
 					client.Client,
@@ -639,7 +639,7 @@ func TestArgoCDUpdateDirective_runPromotionStep(t *testing.T) {
 		},
 		{
 			name: "must wait for operation from different user to complete",
-			dir: &argocdUpdateDirective{
+			runner: &argocdUpdater{
 				getStageFn: func(
 					context.Context,
 					client.Client,
@@ -689,7 +689,7 @@ func TestArgoCDUpdateDirective_runPromotionStep(t *testing.T) {
 		},
 		{
 			name: "error applying update",
-			dir: &argocdUpdateDirective{
+			runner: &argocdUpdater{
 				getStageFn: func(
 					context.Context,
 					client.Client,
@@ -748,7 +748,7 @@ func TestArgoCDUpdateDirective_runPromotionStep(t *testing.T) {
 		},
 		{
 			name: "failed and pending update",
-			dir: &argocdUpdateDirective{
+			runner: &argocdUpdater{
 				getStageFn: func(
 					context.Context,
 					client.Client,
@@ -824,7 +824,7 @@ func TestArgoCDUpdateDirective_runPromotionStep(t *testing.T) {
 		},
 		{
 			name: "operation phase aggregation error",
-			dir: &argocdUpdateDirective{
+			runner: &argocdUpdater{
 				getStageFn: func(
 					context.Context,
 					client.Client,
@@ -869,12 +869,12 @@ func TestArgoCDUpdateDirective_runPromotionStep(t *testing.T) {
 			},
 			assertions: func(t *testing.T, res PromotionStepResult, err error) {
 				require.Equal(t, PromotionStatusFailure, res.Status)
-				require.ErrorContains(t, err, "could not determine directive status")
+				require.ErrorContains(t, err, "could not determine promotion step status")
 			},
 		},
 		{
 			name: "completed",
-			dir: &argocdUpdateDirective{
+			runner: &argocdUpdater{
 				getStageFn: func(
 					context.Context,
 					client.Client,
@@ -925,7 +925,7 @@ func TestArgoCDUpdateDirective_runPromotionStep(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			res, err := testCase.dir.runPromotionStep(
+			res, err := testCase.runner.runPromotionStep(
 				context.Background(),
 				testCase.stepCtx,
 				testCase.stepCfg,
@@ -935,10 +935,10 @@ func TestArgoCDUpdateDirective_runPromotionStep(t *testing.T) {
 	}
 }
 
-func TestArgoCDUpdateDirective_buildDesiredSources(t *testing.T) {
+func Test_argoCDUpdater_buildDesiredSources(t *testing.T) {
 	testCases := []struct {
 		name              string
-		dir               *argocdUpdateDirective
+		runner            *argocdUpdater
 		modifyApplication func(*argocd.Application)
 		update            *ArgoCDAppUpdate
 		assertions        func(
@@ -949,7 +949,7 @@ func TestArgoCDUpdateDirective_buildDesiredSources(t *testing.T) {
 	}{
 		{
 			name: "error applying update to source",
-			dir: &argocdUpdateDirective{
+			runner: &argocdUpdater{
 				applyArgoCDSourceUpdateFn: func(
 					context.Context,
 					*PromotionStepContext,
@@ -978,7 +978,7 @@ func TestArgoCDUpdateDirective_buildDesiredSources(t *testing.T) {
 		},
 		{
 			name: "applies updates to sources",
-			dir: &argocdUpdateDirective{
+			runner: &argocdUpdater{
 				applyArgoCDSourceUpdateFn: func(
 					_ context.Context,
 					_ *PromotionStepContext,
@@ -1034,7 +1034,7 @@ func TestArgoCDUpdateDirective_buildDesiredSources(t *testing.T) {
 			if testCase.modifyApplication != nil {
 				testCase.modifyApplication(app)
 			}
-			desiredSources, err := testCase.dir.buildDesiredSources(
+			desiredSources, err := testCase.runner.buildDesiredSources(
 				context.Background(),
 				&PromotionStepContext{},
 				&ArgoCDUpdateConfig{},
@@ -1047,7 +1047,7 @@ func TestArgoCDUpdateDirective_buildDesiredSources(t *testing.T) {
 	}
 }
 
-func TestArgoCDUpdateDirective_mustPerformUpdate(t *testing.T) {
+func Test_argoCDUpdater_mustPerformUpdate(t *testing.T) {
 	testFreightCollectionID := "fake-freight-collection"
 	testOrigin := kargoapi.FreightOrigin{
 		Kind: kargoapi.FreightOriginKindWarehouse,
@@ -1344,6 +1344,8 @@ func TestArgoCDUpdateDirective_mustPerformUpdate(t *testing.T) {
 		},
 	}
 
+	runner := &argocdUpdater{}
+
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			app := &argocd.Application{
@@ -1355,8 +1357,6 @@ func TestArgoCDUpdateDirective_mustPerformUpdate(t *testing.T) {
 			if testCase.modifyApplication != nil {
 				testCase.modifyApplication(app)
 			}
-
-			dir := &argocdUpdateDirective{}
 
 			freight := kargoapi.FreightCollection{}
 			for _, ref := range testCase.newFreight {
@@ -1377,7 +1377,7 @@ func TestArgoCDUpdateDirective_mustPerformUpdate(t *testing.T) {
 				}},
 			}
 
-			phase, mustUpdate, err := dir.mustPerformUpdate(
+			phase, mustUpdate, err := runner.mustPerformUpdate(
 				context.Background(),
 				&PromotionStepContext{
 					Freight: freight,
@@ -1393,17 +1393,17 @@ func TestArgoCDUpdateDirective_mustPerformUpdate(t *testing.T) {
 	}
 }
 
-func TestArgoCDUpdateDirective_syncApplication(t *testing.T) {
+func Test_argoCDUpdater_syncApplication(t *testing.T) {
 	testCases := []struct {
 		name           string
-		dir            *argocdUpdateDirective
+		runner         *argocdUpdater
 		app            *argocd.Application
 		desiredSources argocd.ApplicationSources
 		assertions     func(*testing.T, error)
 	}{
 		{
 			name: "error patching Application",
-			dir: &argocdUpdateDirective{
+			runner: &argocdUpdater{
 				argoCDAppPatchFn: func(
 					context.Context,
 					*PromotionStepContext,
@@ -1429,7 +1429,7 @@ func TestArgoCDUpdateDirective_syncApplication(t *testing.T) {
 		},
 		{
 			name: "success",
-			dir: &argocdUpdateDirective{
+			runner: &argocdUpdater{
 				argoCDAppPatchFn: func(
 					context.Context,
 					*PromotionStepContext,
@@ -1473,7 +1473,7 @@ func TestArgoCDUpdateDirective_syncApplication(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
 				t,
-				testCase.dir.syncApplication(
+				testCase.runner.syncApplication(
 					context.Background(),
 					stepCtx,
 					testCase.app,
@@ -1484,7 +1484,7 @@ func TestArgoCDUpdateDirective_syncApplication(t *testing.T) {
 	}
 }
 
-func TestArgoCDUpdateDirective_logAppEvent(t *testing.T) {
+func Test_argoCDUpdater_logAppEvent(t *testing.T) {
 	testCases := []struct {
 		name         string
 		app          *argocd.Application
@@ -1556,10 +1556,13 @@ func TestArgoCDUpdateDirective_logAppEvent(t *testing.T) {
 			},
 		},
 	}
+
+	runner := &argocdUpdater{}
+
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			c := fake.NewFakeClient()
-			(&argocdUpdateDirective{}).logAppEvent(
+			runner.logAppEvent(
 				context.Background(),
 				&PromotionStepContext{
 					ArgoCDClient: c,
@@ -1574,7 +1577,7 @@ func TestArgoCDUpdateDirective_logAppEvent(t *testing.T) {
 	}
 }
 
-func TestArgoCDUpdateDirective_getAuthorizedApplication(t *testing.T) {
+func Test_argoCDUpdater_getAuthorizedApplication(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, argocd.AddToScheme(scheme))
 
@@ -1641,6 +1644,8 @@ func TestArgoCDUpdateDirective_getAuthorizedApplication(t *testing.T) {
 		},
 	}
 
+	runner := &argocdUpdater{}
+
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			c := fake.NewClientBuilder().
@@ -1651,7 +1656,7 @@ func TestArgoCDUpdateDirective_getAuthorizedApplication(t *testing.T) {
 				c.WithObjects(testCase.app)
 			}
 
-			app, err := (&argocdUpdateDirective{}).getAuthorizedApplication(
+			app, err := runner.getAuthorizedApplication(
 				context.Background(),
 				&PromotionStepContext{
 					Project:      "fake-namespace",
@@ -1668,7 +1673,7 @@ func TestArgoCDUpdateDirective_getAuthorizedApplication(t *testing.T) {
 	}
 }
 
-func TestArgoCDUpdateDirective_authorizeArgoCDAppUpdate(t *testing.T) {
+func Test_argoCDUpdater_authorizeArgoCDAppUpdate(t *testing.T) {
 	permErr := "does not permit mutation"
 	parseErr := "unable to parse"
 	invalidGlobErr := "invalid glob expression"
@@ -1767,9 +1772,12 @@ func TestArgoCDUpdateDirective_authorizeArgoCDAppUpdate(t *testing.T) {
 			errMsg: invalidGlobErr,
 		},
 	}
+
+	runner := &argocdUpdater{}
+
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			err := (&argocdUpdateDirective{}).authorizeArgoCDAppUpdate(
+			err := runner.authorizeArgoCDAppUpdate(
 				&PromotionStepContext{
 					Project: "ns-yep",
 					Stage:   "name-yep",
@@ -1785,7 +1793,7 @@ func TestArgoCDUpdateDirective_authorizeArgoCDAppUpdate(t *testing.T) {
 	}
 }
 
-func TestArgoCDUpdateDirective_applyArgoCDSourceUpdate(t *testing.T) {
+func Test_argoCDUpdater_applyArgoCDSourceUpdate(t *testing.T) {
 	testOrigin := kargoapi.FreightOrigin{
 		Kind: kargoapi.FreightOriginKindWarehouse,
 		Name: "fake-warehouse",
@@ -2033,8 +2041,9 @@ func TestArgoCDUpdateDirective_applyArgoCDSourceUpdate(t *testing.T) {
 		},
 	}
 
+	runner := &argocdUpdater{}
+
 	for _, testCase := range testCases {
-		dir := &argocdUpdateDirective{}
 		t.Run(testCase.name, func(t *testing.T) {
 			freight := kargoapi.FreightCollection{}
 			for _, ref := range testCase.freight {
@@ -2049,7 +2058,7 @@ func TestArgoCDUpdateDirective_applyArgoCDSourceUpdate(t *testing.T) {
 					Sources: []ArgoCDAppSourceUpdate{testCase.update},
 				}},
 			}
-			updatedSource, err := dir.applyArgoCDSourceUpdate(
+			updatedSource, err := runner.applyArgoCDSourceUpdate(
 				context.Background(),
 				&PromotionStepContext{
 					Freight: freight,
@@ -2064,7 +2073,7 @@ func TestArgoCDUpdateDirective_applyArgoCDSourceUpdate(t *testing.T) {
 	}
 }
 
-func TestArgoCDUpdateDirective_buildKustomizeImagesForAppSource(t *testing.T) {
+func Test_argoCDUpdater_buildKustomizeImagesForAppSource(t *testing.T) {
 	testOrigin := kargoapi.FreightOrigin{
 		Kind: kargoapi.FreightOriginKindWarehouse,
 		Name: "fake-warehouse",
@@ -2109,16 +2118,16 @@ func TestArgoCDUpdateDirective_buildKustomizeImagesForAppSource(t *testing.T) {
 		}},
 	}
 
-	dir := &argocdUpdateDirective{}
-	result, err := dir.buildKustomizeImagesForAppSource(
-		context.Background(),
-		&PromotionStepContext{
-			Freight: freight,
-		},
-		stepCfg,
-		&kargoapi.Stage{},
-		stepCfg.Apps[0].Sources[0].Kustomize,
-	)
+	result, err := (&argocdUpdater{}).
+		buildKustomizeImagesForAppSource(
+			context.Background(),
+			&PromotionStepContext{
+				Freight: freight,
+			},
+			stepCfg,
+			&kargoapi.Stage{},
+			stepCfg.Apps[0].Sources[0].Kustomize,
+		)
 	require.NoError(t, err)
 	require.Equal(
 		t,
@@ -2130,7 +2139,7 @@ func TestArgoCDUpdateDirective_buildKustomizeImagesForAppSource(t *testing.T) {
 	)
 }
 
-func TestArgoCDUpdateDirective_buildHelmParamChangesForAppSource(t *testing.T) {
+func Test_argoCDUpdater_buildHelmParamChangesForAppSource(t *testing.T) {
 	testOrigin := kargoapi.FreightOrigin{
 		Kind: kargoapi.FreightOriginKindWarehouse,
 		Name: "fake-warehouse",
@@ -2203,16 +2212,16 @@ func TestArgoCDUpdateDirective_buildHelmParamChangesForAppSource(t *testing.T) {
 		}},
 	}
 
-	dir := &argocdUpdateDirective{}
-	result, err := dir.buildHelmParamChangesForAppSource(
-		context.Background(),
-		&PromotionStepContext{
-			Freight: freight,
-		},
-		stepCfg,
-		&kargoapi.Stage{},
-		stepCfg.Apps[0].Sources[0].Helm,
-	)
+	result, err := (&argocdUpdater{}).
+		buildHelmParamChangesForAppSource(
+			context.Background(),
+			&PromotionStepContext{
+				Freight: freight,
+			},
+			stepCfg,
+			&kargoapi.Stage{},
+			stepCfg.Apps[0].Sources[0].Helm,
+		)
 	require.NoError(t, err)
 	require.Equal(
 		t,
@@ -2226,7 +2235,7 @@ func TestArgoCDUpdateDirective_buildHelmParamChangesForAppSource(t *testing.T) {
 	)
 }
 
-func TestArgoCDUpdateDirective_recursiveMerge(t *testing.T) {
+func Test_argoCDUpdater_recursiveMerge(t *testing.T) {
 	testCases := []struct {
 		name     string
 		src      any
@@ -2322,9 +2331,11 @@ func TestArgoCDUpdateDirective_recursiveMerge(t *testing.T) {
 		},
 	}
 
+	runner := &argocdUpdater{}
+
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			result := (&argocdUpdateDirective{}).recursiveMerge(tc.src, tc.dst)
+			result := runner.recursiveMerge(tc.src, tc.dst)
 			assert.Equal(t, tc.expected, result)
 		})
 	}

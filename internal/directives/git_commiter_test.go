@@ -14,7 +14,7 @@ import (
 	"github.com/akuity/kargo/internal/controller/git"
 )
 
-func TestGitCommitDirective_Validate(t *testing.T) {
+func Test_gitCommitter_validate(t *testing.T) {
 	testCases := []struct {
 		name             string
 		config           Config
@@ -136,13 +136,13 @@ func TestGitCommitDirective_Validate(t *testing.T) {
 		},
 	}
 
-	d := newGitCommitDirective()
-	dir, ok := d.(*gitCommitDirective)
+	r := newGitCommitter()
+	runner, ok := r.(*gitCommitter)
 	require.True(t, ok)
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			err := dir.validate(testCase.config)
+			err := runner.validate(testCase.config)
 			if len(testCase.expectedProblems) == 0 {
 				require.NoError(t, err)
 			} else {
@@ -154,7 +154,7 @@ func TestGitCommitDirective_Validate(t *testing.T) {
 	}
 }
 
-func TestGitCommitDirective_runPromotionStep(t *testing.T) {
+func Test_gitCommitter_runPromotionStep(t *testing.T) {
 	// Set up a test Git server in-process
 	service := gitkit.New(
 		gitkit.Config{
@@ -172,8 +172,8 @@ func TestGitCommitDirective_runPromotionStep(t *testing.T) {
 	workDir := t.TempDir()
 
 	// Finagle a local bare repo and working tree into place the way that the
-	// git-clone directive might have so we can verify the git-commit directive's
-	// ability to reload the working tree from the file system.
+	// gitCloner might have so we can verify gitCommitter's ability to reload the
+	// working tree from the file system.
 	repo, err := git.CloneBare(
 		testRepoURL,
 		nil,
@@ -193,26 +193,26 @@ func TestGitCommitDirective_runPromotionStep(t *testing.T) {
 	require.NoError(t, err)
 	// `git worktree add` doesn't give much control over the branch name when you
 	// create an orphaned working tree, so we have to follow up with this to make
-	// the branch name look like what we wanted. The git-clone directive does
-	// this internally as well.
+	// the branch name look like what we wanted. gitCloner does this internally as
+	// well.
 	err = workTree.CreateOrphanedBranch("master")
 	require.NoError(t, err)
 
-	// Write a file. It will be the git-commit directive's job to commit it.
+	// Write a file. It will be gitCommitter's job to commit it.
 	err = os.WriteFile(filepath.Join(workTree.Dir(), "test.txt"), []byte("foo"), 0600)
 	require.NoError(t, err)
 
-	// Now we can proceed to test the git-commit directive...
+	// Now we can proceed to test gitCommitter...
 
-	d := newGitCommitDirective()
-	dir, ok := d.(*gitCommitDirective)
+	r := newGitCommitter()
+	runner, ok := r.(*gitCommitter)
 	require.True(t, ok)
 
 	stepCtx := &PromotionStepContext{
 		WorkDir: workDir,
 	}
 
-	res, err := dir.runPromotionStep(
+	res, err := runner.runPromotionStep(
 		context.Background(),
 		stepCtx,
 		GitCommitConfig{
@@ -232,7 +232,7 @@ func TestGitCommitDirective_runPromotionStep(t *testing.T) {
 	require.Equal(t, "Initial commit", lastCommitMsg)
 }
 
-func TestBuildCommitMessage(t *testing.T) {
+func Test_gitCommitter_buildCommitMessage(t *testing.T) {
 	testCases := []struct {
 		name        string
 		sharedState State
@@ -318,13 +318,16 @@ func TestBuildCommitMessage(t *testing.T) {
 		},
 	}
 
-	d := newGitCommitDirective()
-	dir, ok := d.(*gitCommitDirective)
+	r := newGitCommitter()
+	runner, ok := r.(*gitCommitter)
 	require.True(t, ok)
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			commitMsg, err := dir.buildCommitMessage(testCase.sharedState, testCase.cfg)
+			commitMsg, err := runner.buildCommitMessage(
+				testCase.sharedState,
+				testCase.cfg,
+			)
 			testCase.assertions(t, commitMsg, err)
 		})
 	}

@@ -191,7 +191,6 @@ func newReconciler(
 	r := &reconciler{
 		kargoClient: kargoClient,
 		directivesEngine: directives.NewSimpleEngine(
-			directives.BuiltinsRegistry(),
 			credentialsDB,
 			kargoClient,
 			argocdClient,

@@ -18,7 +18,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
-func Test_kustomizeSetImageDirective_runPromotionStep(t *testing.T) {
+func Test_kustomizeImageSetter_runPromotionStep(t *testing.T) {
 	const testNamespace = "test-project-run"
 
 	tests := []struct {
@@ -156,19 +156,20 @@ images:
 		},
 	}
 
+	runner := &kustomizeImageSetter{}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			workDir := tt.setupFiles(t)
 			stepCtx := tt.setupStepCtx(t, workDir)
 
-			d := &kustomizeSetImageDirective{}
-			result, err := d.runPromotionStep(context.Background(), stepCtx, tt.cfg)
+			result, err := runner.runPromotionStep(context.Background(), stepCtx, tt.cfg)
 			tt.assertions(t, workDir, result, err)
 		})
 	}
 }
 
-func Test_kustomizeSetImageDirective_buildTargetImages(t *testing.T) {
+func Test_kustomizeImageSetter_buildTargetImages(t *testing.T) {
 	const testNamespace = "test-project"
 
 	tests := []struct {
@@ -345,6 +346,8 @@ func Test_kustomizeSetImageDirective_buildTargetImages(t *testing.T) {
 		},
 	}
 
+	runner := &kustomizeImageSetter{}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			scheme := runtime.NewScheme()
@@ -360,14 +363,13 @@ func Test_kustomizeSetImageDirective_buildTargetImages(t *testing.T) {
 				},
 			}
 
-			d := &kustomizeSetImageDirective{}
-			result, err := d.buildTargetImages(context.Background(), stepCtx, tt.images)
+			result, err := runner.buildTargetImages(context.Background(), stepCtx, tt.images)
 			tt.assertions(t, result, err)
 		})
 	}
 }
 
-func Test_kustomizeSetImageDirective_generateCommitMessage(t *testing.T) {
+func Test_kustomizeImageSetter_generateCommitMessage(t *testing.T) {
 	tests := []struct {
 		name       string
 		path       string
@@ -450,10 +452,11 @@ func Test_kustomizeSetImageDirective_generateCommitMessage(t *testing.T) {
 		},
 	}
 
+	runner := &kustomizeImageSetter{}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			d := &kustomizeSetImageDirective{}
-			got := d.generateCommitMessage(tt.path, tt.images)
+			got := runner.generateCommitMessage(tt.path, tt.images)
 			tt.assertions(t, got)
 		})
 	}

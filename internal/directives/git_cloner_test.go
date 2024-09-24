@@ -15,7 +15,7 @@ import (
 	"github.com/akuity/kargo/internal/credentials"
 )
 
-func TestGitCloneDirective_Validate(t *testing.T) {
+func Test_gitCloner_validate(t *testing.T) {
 	testCases := []struct {
 		name             string
 		config           Config
@@ -251,13 +251,13 @@ func TestGitCloneDirective_Validate(t *testing.T) {
 		},
 	}
 
-	d := newGitCloneDirective()
-	dir, ok := d.(*gitCloneDirective)
+	r := newGitCloner()
+	runner, ok := r.(*gitCloner)
 	require.True(t, ok)
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			err := dir.validate(testCase.config)
+			err := runner.validate(testCase.config)
 			if len(testCase.expectedProblems) == 0 {
 				require.NoError(t, err)
 			} else {
@@ -269,7 +269,7 @@ func TestGitCloneDirective_Validate(t *testing.T) {
 	}
 }
 
-func TestGitCloneDirective_runPromotionStep(t *testing.T) {
+func Test_gitCloner_runPromotionStep(t *testing.T) {
 	// Set up a test Git server in-process
 	service := gitkit.New(
 		gitkit.Config{
@@ -295,10 +295,10 @@ func TestGitCloneDirective_runPromotionStep(t *testing.T) {
 	err = repo.Push(nil)
 	require.NoError(t, err)
 
-	// Now we can proceed to test the git-clone directive...
+	// Now we can proceed to test gitCloner...
 
-	d := newGitCloneDirective()
-	dir, ok := d.(*gitCloneDirective)
+	r := newGitCloner()
+	runner, ok := r.(*gitCloner)
 	require.True(t, ok)
 
 	stepCtx := &PromotionStepContext{
@@ -306,7 +306,7 @@ func TestGitCloneDirective_runPromotionStep(t *testing.T) {
 		WorkDir:       t.TempDir(),
 	}
 
-	res, err := dir.runPromotionStep(
+	res, err := runner.runPromotionStep(
 		context.Background(),
 		stepCtx,
 		GitCloneConfig{

@@ -14,30 +14,35 @@ import (
 )
 
 func init() {
-	// Register the helm-update-image directive with the builtins registry.
-	builtins.RegisterDirective(newHelmUpdateImageDirective(), &DirectivePermissions{
-		AllowKargoClient: true,
-	})
+	builtins.RegisterPromotionStepRunner(
+		newHelmImageUpdater(),
+		&StepRunnerPermissions{
+			AllowKargoClient: true,
+		},
+	)
 }
 
-type helmUpdateImageDirective struct {
+// helmImageUpdater is an implementation of the PromotionStepRunner interface
+// that updates image references in a Helm values file.
+type helmImageUpdater struct {
 	schemaLoader gojsonschema.JSONLoader
 }
 
-// newHelmUpdateImageDirective creates a new helm-update-image directive.
-func newHelmUpdateImageDirective() Directive {
-	d := &helmUpdateImageDirective{}
-	d.schemaLoader = getConfigSchemaLoader(d.Name())
-	return d
+// newHelmImageUpdater returns an implementation of the PromotionStepRunner
+// interface that updates image references in a Helm values file.
+func newHelmImageUpdater() PromotionStepRunner {
+	r := &helmImageUpdater{}
+	r.schemaLoader = getConfigSchemaLoader(r.Name())
+	return r
 }
 
-// Name implements the Directive interface.
-func (d *helmUpdateImageDirective) Name() string {
+// Name implements the PromotionStepRunner HealthCheckStepRunner interface.
+func (h *helmImageUpdater) Name() string {
 	return "helm-update-image"
 }
 
-// Run implements the Directive interface.
-func (d *helmUpdateImageDirective) RunPromotionStep(
+// RunPromotionStep implements the PromotionStepRunner interface.
+func (h *helmImageUpdater) RunPromotionStep(
 	ctx context.Context,
 	stepCtx *PromotionStepContext,
 ) (PromotionStepResult, error) {
@@ -45,9 +50,9 @@ func (d *helmUpdateImageDirective) RunPromotionStep(
 
 	// Validate the configuration against the JSON Schema
 	if err := validate(
-		d.schemaLoader,
+		h.schemaLoader,
 		gojsonschema.NewGoLoader(stepCtx.Config),
-		d.Name(),
+		h.Name(),
 	); err != nil {
 		return failure, err
 	}
@@ -55,26 +60,18 @@ func (d *helmUpdateImageDirective) RunPromotionStep(
 	// Convert the configuration into a typed struct
 	cfg, err := configToStruct[HelmUpdateImageConfig](stepCtx.Config)
 	if err != nil {
-		return failure, fmt.Errorf("could not convert config into %s config: %w", d.Name(), err)
+		return failure, fmt.Errorf("could not convert config into %s config: %w", h.Name(), err)
 	}
 
-	return d.runPromotionStep(ctx, stepCtx, cfg)
+	return h.runPromotionStep(ctx, stepCtx, cfg)
 }
 
-// RunHealthCheckStep implements the Directive interface.
-func (d *helmUpdateImageDirective) RunHealthCheckStep(
-	context.Context,
-	*HealthCheckStepContext,
-) HealthCheckStepResult {
-	return HealthCheckStepResult{Status: kargoapi.HealthStateNotApplicable}
-}
-
-func (d *helmUpdateImageDirective) runPromotionStep(
+func (h *helmImageUpdater) runPromotionStep(
 	ctx context.Context,
 	stepCtx *PromotionStepContext,
 	cfg HelmUpdateImageConfig,
 ) (PromotionStepResult, error) {
-	updates, fullImageRefs, err := d.generateImageUpdates(ctx, stepCtx, cfg)
+	updates, fullImageRefs, err := h.generateImageUpdates(ctx, stepCtx, cfg)
 	if err != nil {
 		return PromotionStepResult{Status: PromotionStatusFailure},
 			fmt.Errorf("failed to generate image updates: %w", err)
@@ -82,12 +79,12 @@ func (d *helmUpdateImageDirective) runPromotionStep(
 
 	result := PromotionStepResult{Status: PromotionStatusSuccess}
 	if len(updates) > 0 {
-		if err = d.updateValuesFile(stepCtx.WorkDir, cfg.Path, updates); err != nil {
+		if err = h.updateValuesFile(stepCtx.WorkDir, cfg.Path, updates); err != nil {
 			return PromotionStepResult{Status: PromotionStatusFailure},
 				fmt.Errorf("values file update failed: %w", err)
 		}
 
-		if commitMsg := d.generateCommitMessage(cfg.Path, fullImageRefs); commitMsg != "" {
+		if commitMsg := h.generateCommitMessage(cfg.Path, fullImageRefs); commitMsg != "" {
 			result.Output = make(State, 1)
 			result.Output.Set("commitMessage", commitMsg)
 		}
@@ -95,7 +92,7 @@ func (d *helmUpdateImageDirective) runPromotionStep(
 	return result, nil
 }
 
-func (d *helmUpdateImageDirective) generateImageUpdates(
+func (h *helmImageUpdater) generateImageUpdates(
 	ctx context.Context,
 	stepCtx *PromotionStepContext,
 	cfg HelmUpdateImageConfig,
@@ -104,7 +101,7 @@ func (d *helmUpdateImageDirective) generateImageUpdates(
 	fullImageRefs := make([]string, 0, len(cfg.Images))
 
 	for _, image := range cfg.Images {
-		desiredOrigin := d.getDesiredOrigin(image.FromOrigin)
+		desiredOrigin := h.getDesiredOrigin(image.FromOrigin)
 
 		targetImage, err := freight.FindImage(
 			ctx,
@@ -123,7 +120,7 @@ func (d *helmUpdateImageDirective) generateImageUpdates(
 			continue
 		}
 
-		value, imageRef, err := d.getImageValues(targetImage, image.Value)
+		value, imageRef, err := h.getImageValues(targetImage, image.Value)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -134,7 +131,7 @@ func (d *helmUpdateImageDirective) generateImageUpdates(
 	return updates, fullImageRefs, nil
 }
 
-func (d *helmUpdateImageDirective) getDesiredOrigin(fromOrigin *ChartFromOrigin) *kargoapi.FreightOrigin {
+func (h *helmImageUpdater) getDesiredOrigin(fromOrigin *ChartFromOrigin) *kargoapi.FreightOrigin {
 	if fromOrigin == nil {
 		return nil
 	}
@@ -144,7 +141,7 @@ func (d *helmUpdateImageDirective) getDesiredOrigin(fromOrigin *ChartFromOrigin)
 	}
 }
 
-func (d *helmUpdateImageDirective) getImageValues(image *kargoapi.Image, valueType Value) (string, string, error) {
+func (h *helmImageUpdater) getImageValues(image *kargoapi.Image, valueType Value) (string, string, error) {
 	switch valueType {
 	case ImageAndTag:
 		imageRef := fmt.Sprintf("%s:%s", image.RepoURL, image.Tag)
@@ -161,7 +158,7 @@ func (d *helmUpdateImageDirective) getImageValues(image *kargoapi.Image, valueTy
 	}
 }
 
-func (d *helmUpdateImageDirective) updateValuesFile(workDir, path string, changes map[string]string) error {
+func (h *helmImageUpdater) updateValuesFile(workDir string, path string, changes map[string]string) error {
 	absValuesFile, err := securejoin.SecureJoin(workDir, path)
 	if err != nil {
 		return fmt.Errorf("error joining path %q: %w", path, err)
@@ -172,7 +169,7 @@ func (d *helmUpdateImageDirective) updateValuesFile(workDir, path string, change
 	return nil
 }
 
-func (d *helmUpdateImageDirective) generateCommitMessage(path string, fullImageRefs []string) string {
+func (h *helmImageUpdater) generateCommitMessage(path string, fullImageRefs []string) string {
 	if len(fullImageRefs) == 0 {
 		return ""
 	}

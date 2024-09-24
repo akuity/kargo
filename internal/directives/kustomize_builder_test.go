@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func Test_kustomizeBuildDirective_runPromotionStep(t *testing.T) {
+func Test_kustomizeBuilder_runPromotionStep(t *testing.T) {
 	tests := []struct {
 		name       string
 		setupFiles func(*testing.T, string)
@@ -78,6 +78,8 @@ metadata:
 		},
 	}
 
+	runner := &kustomizeBuilder{}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tempDir := t.TempDir()
@@ -88,8 +90,7 @@ metadata:
 				WorkDir: tempDir,
 			}
 
-			d := &kustomizeBuildDirective{}
-			result, err := d.runPromotionStep(stepCtx, tt.config)
+			result, err := runner.runPromotionStep(stepCtx, tt.config)
 			tt.assertions(t, tempDir, result, err)
 		})
 	}

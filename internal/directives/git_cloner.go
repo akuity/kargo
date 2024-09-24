@@ -15,36 +15,38 @@ import (
 )
 
 func init() {
-	// Register the git-clone directive with the builtins registry.
-	builtins.RegisterDirective(
-		newGitCloneDirective(),
-		&DirectivePermissions{
+	builtins.RegisterPromotionStepRunner(
+		newGitCloner(),
+		&StepRunnerPermissions{
 			AllowCredentialsDB: true,
 			AllowKargoClient:   true,
 		},
 	)
 }
 
-// gitCloneDirective is a directive that clones one or more refs from a remote
-// Git repository to one or more working directories.
-type gitCloneDirective struct {
+// gitCloner is an implementation of the PromotionStepRunner interface that
+// clones one or more refs from a remote Git repository to one or more working
+// directories.
+type gitCloner struct {
 	schemaLoader gojsonschema.JSONLoader
 }
 
-// newGitCloneDirective creates a new git-clone directive.
-func newGitCloneDirective() Directive {
-	d := &gitCloneDirective{}
-	d.schemaLoader = getConfigSchemaLoader(d.Name())
-	return d
+// newGitCloner returns an implementation of the PromotionStepRunner interface
+// that clones one or more refs from a remote Git repository to one or more
+// working directories.
+func newGitCloner() PromotionStepRunner {
+	r := &gitCloner{}
+	r.schemaLoader = getConfigSchemaLoader(r.Name())
+	return r
 }
 
-// Name implements the Directive interface.
-func (g *gitCloneDirective) Name() string {
+// Name implements the PromotionStepRunner interface.
+func (g *gitCloner) Name() string {
 	return "git-clone"
 }
 
-// Run implements the Directive interface.
-func (g *gitCloneDirective) RunPromotionStep(
+// RunPromotionStep implements the PromotionStepRunner interface.
+func (g *gitCloner) RunPromotionStep(
 	ctx context.Context,
 	stepCtx *PromotionStepContext,
 ) (PromotionStepResult, error) {
@@ -59,21 +61,12 @@ func (g *gitCloneDirective) RunPromotionStep(
 	return g.runPromotionStep(ctx, stepCtx, cfg)
 }
 
-// RunHealthCheckStep implements the Directive interface.
-func (g *gitCloneDirective) RunHealthCheckStep(
-	context.Context,
-	*HealthCheckStepContext,
-) HealthCheckStepResult {
-	return HealthCheckStepResult{Status: kargoapi.HealthStateNotApplicable}
-}
-
-// validate validates the git-clone directive configuration against the JSON
-// schema.
-func (g *gitCloneDirective) validate(cfg Config) error {
+// validate validates gitCloner configuration against a JSON schema.
+func (g *gitCloner) validate(cfg Config) error {
 	return validate(g.schemaLoader, gojsonschema.NewGoLoader(cfg), g.Name())
 }
 
-func (g *gitCloneDirective) runPromotionStep(
+func (g *gitCloner) runPromotionStep(
 	ctx context.Context,
 	stepCtx *PromotionStepContext,
 	cfg GitCloneConfig,
@@ -176,16 +169,16 @@ func (g *gitCloneDirective) runPromotionStep(
 		}
 	}
 	// Note: We do NOT defer repo.Close() because we want to keep the repository
-	// around on the FS for subsequent directives to use. The directive execution
-	// engine will handle all work dir cleanup.
+	// around on the FS for subsequent promotion steps to use. The Engine will
+	// handle all work dir cleanup.
 	return PromotionStepResult{Status: PromotionStatusSuccess}, nil
 }
 
 // mustCloneRepo determines if the repository must be cloned. At present, there
-// is no concept of partial success or retries for directives, so if any one
-// working tree's path already exists, we can assume a previous attempt to clone
-// the repository was fully successful. If that were not the case, this
-// directive would not even be executed again.
+// is no concept of partial success or retries for PromotionStepRunners, so if
+// any one working tree's path already exists, we can assume a previous attempt
+// to clone the repository was fully successful. If that were not the case, this
+// PromotionStepRunner would not even be executed again.
 func mustCloneRepo(stepCtx *PromotionStepContext, cfg GitCloneConfig) (bool, error) {
 	if len(cfg.Checkout) == 0 {
 		// This shouldn't actually happen because the schema enforces this being

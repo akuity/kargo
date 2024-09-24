@@ -9,36 +9,37 @@ import (
 	"github.com/otiai10/copy"
 	"github.com/xeipuuv/gojsonschema"
 
-	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/git"
 	"github.com/akuity/kargo/internal/logging"
 )
 
 func init() {
-	// Register the git-overwrite directive with the builtins registry.
-	builtins.RegisterDirective(newGitOverwriteDirective(), nil)
+	builtins.RegisterPromotionStepRunner(newGitTreeOverwriter(), nil)
 }
 
-// gitOverwriteDirective is a directive that overwrites the content of a Git
-// working tree with the content from another directory.
-type gitOverwriteDirective struct {
+// gitTreeOverwriter is an implementation of the PromotionStepRunner interface
+// that overwrites the content of a Git working tree with the content from
+// another directory.
+type gitTreeOverwriter struct {
 	schemaLoader gojsonschema.JSONLoader
 }
 
-// newGitOverwriteDirective creates a new git-overwrite directive.
-func newGitOverwriteDirective() Directive {
-	d := &gitOverwriteDirective{}
-	d.schemaLoader = getConfigSchemaLoader(d.Name())
-	return d
+// newGitTreeOverwriter returns an implementation of the PromotionStepRunner
+// interface that overwrites the content of a Git working tree with the content
+// from another directory.
+func newGitTreeOverwriter() PromotionStepRunner {
+	r := &gitTreeOverwriter{}
+	r.schemaLoader = getConfigSchemaLoader(r.Name())
+	return r
 }
 
-// Name implements the Directive interface.
-func (g *gitOverwriteDirective) Name() string {
+// Name implements the PromotionStepRunner interface.
+func (g *gitTreeOverwriter) Name() string {
 	return "git-overwrite"
 }
 
-// Run implements the Directive interface.
-func (g *gitOverwriteDirective) RunPromotionStep(
+// RunPromotionStep implements the PromotionStepRunner interface.
+func (g *gitTreeOverwriter) RunPromotionStep(
 	ctx context.Context,
 	stepCtx *PromotionStepContext,
 ) (PromotionStepResult, error) {
@@ -53,21 +54,12 @@ func (g *gitOverwriteDirective) RunPromotionStep(
 	return g.runPromotionStep(ctx, stepCtx, cfg)
 }
 
-// RunHealthCheckStep implements the Directive interface.
-func (g *gitOverwriteDirective) RunHealthCheckStep(
-	context.Context,
-	*HealthCheckStepContext,
-) HealthCheckStepResult {
-	return HealthCheckStepResult{Status: kargoapi.HealthStateNotApplicable}
-}
-
-// validate validates the git-overwrite directive configuration against the JSON
-// schema.
-func (g *gitOverwriteDirective) validate(cfg Config) error {
+// validate validates gitTreeOverwriter configuration against a JSON schema.
+func (g *gitTreeOverwriter) validate(cfg Config) error {
 	return validate(g.schemaLoader, gojsonschema.NewGoLoader(cfg), g.Name())
 }
 
-func (g *gitOverwriteDirective) runPromotionStep(
+func (g *gitTreeOverwriter) runPromotionStep(
 	ctx context.Context,
 	stepCtx *PromotionStepContext,
 	cfg GitOverwriteConfig,

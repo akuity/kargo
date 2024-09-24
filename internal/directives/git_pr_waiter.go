@@ -6,40 +6,39 @@ import (
 
 	"github.com/xeipuuv/gojsonschema"
 
-	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/git"
 	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/gitprovider"
 )
 
 func init() {
-	// Register the git-wait-for-pr directive with the builtins registry.
-	builtins.RegisterDirective(
-		newGitWaitForPRDirective(),
-		&DirectivePermissions{AllowCredentialsDB: true},
+	builtins.RegisterPromotionStepRunner(
+		newGitPRWaiter(),
+		&StepRunnerPermissions{AllowCredentialsDB: true},
 	)
 }
 
-// gitWaitForPRDirective is a directive that waits for a pull request to be
-// merged or closed unmerged.
-type gitWaitForPRDirective struct {
+// gitPRWaiter is an implementation of the PromotionStepRunner interface that
+// waits for a pull request to be merged or closed unmerged.
+type gitPRWaiter struct {
 	schemaLoader gojsonschema.JSONLoader
 }
 
-// newGitWaitForPRDirective creates a new git-wait-for-pr directive.
-func newGitWaitForPRDirective() Directive {
-	d := &gitWaitForPRDirective{}
-	d.schemaLoader = getConfigSchemaLoader(d.Name())
-	return d
+// newGitPRWaiter returns an implementation of the PromotionStepRunner interface
+// that waits for a pull request to be merged or closed unmerged.
+func newGitPRWaiter() PromotionStepRunner {
+	r := &gitPRWaiter{}
+	r.schemaLoader = getConfigSchemaLoader(r.Name())
+	return r
 }
 
-// Name implements the Directive interface.
-func (g *gitWaitForPRDirective) Name() string {
+// Name implements the PromotionStepRunner interface.
+func (g *gitPRWaiter) Name() string {
 	return "git-wait-for-pr"
 }
 
-// Run implements the Directive interface.
-func (g *gitWaitForPRDirective) RunPromotionStep(
+// RunPromotionStep implements the PromotionStepRunner interface.
+func (g *gitPRWaiter) RunPromotionStep(
 	ctx context.Context,
 	stepCtx *PromotionStepContext,
 ) (PromotionStepResult, error) {
@@ -54,21 +53,12 @@ func (g *gitWaitForPRDirective) RunPromotionStep(
 	return g.runPromotionStep(ctx, stepCtx, cfg)
 }
 
-// RunHealthCheckStep implements the Directive interface.
-func (g *gitWaitForPRDirective) RunHealthCheckStep(
-	context.Context,
-	*HealthCheckStepContext,
-) HealthCheckStepResult {
-	return HealthCheckStepResult{Status: kargoapi.HealthStateNotApplicable}
-}
-
-// validate validates the git-wait-for-pr directive configuration against the
-// JSON schema.
-func (g *gitWaitForPRDirective) validate(cfg Config) error {
+// validate validates gitPRWaiter configuration against a JSON schema.
+func (g *gitPRWaiter) validate(cfg Config) error {
 	return validate(g.schemaLoader, gojsonschema.NewGoLoader(cfg), g.Name())
 }
 
-func (g *gitWaitForPRDirective) runPromotionStep(
+func (g *gitPRWaiter) runPromotionStep(
 	ctx context.Context,
 	stepCtx *PromotionStepContext,
 	cfg GitWaitForPRConfig,

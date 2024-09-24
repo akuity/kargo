@@ -7,7 +7,6 @@ import (
 	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/xeipuuv/gojsonschema"
 
-	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/git"
 	"github.com/akuity/kargo/internal/credentials"
 )
@@ -15,33 +14,33 @@ import (
 const branchKey = "branch"
 
 func init() {
-	// Register the git-push directive with the builtins registry.
-	builtins.RegisterDirective(
-		newGitPushDirective(),
-		&DirectivePermissions{AllowCredentialsDB: true},
+	builtins.RegisterPromotionStepRunner(
+		newGitPusher(),
+		&StepRunnerPermissions{AllowCredentialsDB: true},
 	)
 }
 
-// gitPushDirective is a directive that pushes commits from a local Git
-// repository to a remote Git repository.
-type gitPushDirective struct {
+// gitPushPusher is an implementation of the PromotionStepRunner interface that
+// pushes commits from a local Git repository to a remote Git repository.
+type gitPushPusher struct {
 	schemaLoader gojsonschema.JSONLoader
 }
 
-// newGitPushDirective creates a new git-push directive.
-func newGitPushDirective() Directive {
-	d := &gitPushDirective{}
-	d.schemaLoader = getConfigSchemaLoader(d.Name())
-	return d
+// newGitPusher returns an implementation of the PromotionStepRunner interface
+// that pushes commits from a local Git repository to a remote Git repository.
+func newGitPusher() PromotionStepRunner {
+	r := &gitPushPusher{}
+	r.schemaLoader = getConfigSchemaLoader(r.Name())
+	return r
 }
 
-// Name implements the Directive interface.
-func (g *gitPushDirective) Name() string {
+// Name implements the PromotionStepRunner interface.
+func (g *gitPushPusher) Name() string {
 	return "git-push"
 }
 
-// Run implements the Directive interface.
-func (g *gitPushDirective) RunPromotionStep(
+// RunPromotionStep implements the PromotionStepRunner interface.
+func (g *gitPushPusher) RunPromotionStep(
 	ctx context.Context,
 	stepCtx *PromotionStepContext,
 ) (PromotionStepResult, error) {
@@ -56,21 +55,12 @@ func (g *gitPushDirective) RunPromotionStep(
 	return g.runPromotionStep(ctx, stepCtx, cfg)
 }
 
-// RunHealthCheckStep implements the Directive interface.
-func (g *gitPushDirective) RunHealthCheckStep(
-	context.Context,
-	*HealthCheckStepContext,
-) HealthCheckStepResult {
-	return HealthCheckStepResult{Status: kargoapi.HealthStateNotApplicable}
-}
-
-// validate validates the git-push directive configuration against the JSON
-// schema.
-func (g *gitPushDirective) validate(cfg Config) error {
+// validate validates gitPusher configuration against a JSON schema.
+func (g *gitPushPusher) validate(cfg Config) error {
 	return validate(g.schemaLoader, gojsonschema.NewGoLoader(cfg), "git-push")
 }
 
-func (g *gitPushDirective) runPromotionStep(
+func (g *gitPushPusher) runPromotionStep(
 	ctx context.Context,
 	stepCtx *PromotionStepContext,
 	cfg GitPushConfig,

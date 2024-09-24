@@ -15,7 +15,7 @@ import (
 	"github.com/akuity/kargo/internal/credentials"
 )
 
-func TestGitPushDirective_Validate(t *testing.T) {
+func Test_gitPusher_validate(t *testing.T) {
 	testCases := []struct {
 		name             string
 		config           Config
@@ -114,13 +114,13 @@ func TestGitPushDirective_Validate(t *testing.T) {
 		},
 	}
 
-	d := newGitPushDirective()
-	dir, ok := d.(*gitPushDirective)
+	r := newGitPusher()
+	runner, ok := r.(*gitPushPusher)
 	require.True(t, ok)
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			err := dir.validate(testCase.config)
+			err := runner.validate(testCase.config)
 			if len(testCase.expectedProblems) == 0 {
 				require.NoError(t, err)
 			} else {
@@ -132,7 +132,7 @@ func TestGitPushDirective_Validate(t *testing.T) {
 	}
 }
 
-func TestGitPushDirective_runPromotionStep(t *testing.T) {
+func Test_gitPusher_runPromotionStep(t *testing.T) {
 	// Set up a test Git server in-process
 	service := gitkit.New(
 		gitkit.Config{
@@ -149,9 +149,9 @@ func TestGitPushDirective_runPromotionStep(t *testing.T) {
 
 	workDir := t.TempDir()
 
-	// Finagle a local bare repo and working tree into place the way that the
-	// git-clone directive might have so we can verify the git-push directive's
-	// ability to reload the working tree from the file system.
+	// Finagle a local bare repo and working tree into place the way that
+	// gitCloner might have so we can verify gitPusher's ability to reload the
+	// working tree from the file system.
 	repo, err := git.CloneBare(
 		testRepoURL,
 		nil,
@@ -171,26 +171,27 @@ func TestGitPushDirective_runPromotionStep(t *testing.T) {
 	require.NoError(t, err)
 	// `git worktree add` doesn't give much control over the branch name when you
 	// create an orphaned working tree, so we have to follow up with this to make
-	// the branch name look like what we wanted. The git-clone directive does
-	// this internally as well.
+	// the branch name look like what we wanted. gitCloner does this internally as
+	// well.
 	err = workTree.CreateOrphanedBranch("master")
 	require.NoError(t, err)
 
-	// Write a file. It will be the git-commit directive's job to commit it.
+	// Write a file.
 	err = os.WriteFile(filepath.Join(workTree.Dir(), "test.txt"), []byte("foo"), 0600)
 	require.NoError(t, err)
 
-	// Commit the changes similarly to how the git-commit directive would.
+	// Commit the changes similarly to how gitCommitter would
+	// have. It will be gitPushStepRunner's job to push this commit.
 	err = workTree.AddAllAndCommit("Initial commit")
 	require.NoError(t, err)
 
-	// Now we can proceed to test the git-push directive...
+	// Now we can proceed to test gitPusher...
 
-	d := newGitPushDirective()
-	dir, ok := d.(*gitPushDirective)
+	r := newGitPusher()
+	runner, ok := r.(*gitPushPusher)
 	require.True(t, ok)
 
-	res, err := dir.runPromotionStep(
+	res, err := runner.runPromotionStep(
 		context.Background(),
 		&PromotionStepContext{
 			Project:       "fake-project",

@@ -13,7 +13,7 @@ import (
 	"github.com/akuity/kargo/internal/gitprovider"
 )
 
-func TestGitWaitForPRDirective_Validate(t *testing.T) {
+func Test_gitPRWaiter_validate(t *testing.T) {
 	testCases := []struct {
 		name             string
 		config           Config
@@ -78,13 +78,13 @@ func TestGitWaitForPRDirective_Validate(t *testing.T) {
 		},
 	}
 
-	d := newGitWaitForPRDirective()
-	dir, ok := d.(*gitWaitForPRDirective)
+	r := newGitPRWaiter()
+	runner, ok := r.(*gitPRWaiter)
 	require.True(t, ok)
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			err := dir.validate(testCase.config)
+			err := runner.validate(testCase.config)
 			if len(testCase.expectedProblems) == 0 {
 				require.NoError(t, err)
 			} else {
@@ -96,7 +96,7 @@ func TestGitWaitForPRDirective_Validate(t *testing.T) {
 	}
 }
 
-func TestGitWaitForPRDirective_runPromotionStep(t *testing.T) {
+func Test_gitPRWaiter_runPromotionStep(t *testing.T) {
 	testCases := []struct {
 		name       string
 		provider   gitprovider.GitProviderService
@@ -199,8 +199,8 @@ func TestGitWaitForPRDirective_runPromotionStep(t *testing.T) {
 		},
 	}
 
-	d := newGitWaitForPRDirective()
-	dir, ok := d.(*gitWaitForPRDirective)
+	r := newGitPRWaiter()
+	runner, ok := r.(*gitPRWaiter)
 	require.True(t, ok)
 
 	for _, testCase := range testCases {
@@ -221,7 +221,7 @@ func TestGitWaitForPRDirective_runPromotionStep(t *testing.T) {
 				},
 			)
 
-			res, err := dir.runPromotionStep(
+			res, err := runner.runPromotionStep(
 				context.Background(),
 				&PromotionStepContext{
 					CredentialsDB: &credentials.FakeDB{},

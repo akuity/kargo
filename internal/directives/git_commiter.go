@@ -7,37 +7,36 @@ import (
 	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/xeipuuv/gojsonschema"
 
-	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/git"
 )
 
 const commitKey = "commit"
 
 func init() {
-	// Register the git-commit directive with the builtins registry.
-	builtins.RegisterDirective(newGitCommitDirective(), nil)
+	builtins.RegisterPromotionStepRunner(newGitCommitter(), nil)
 }
 
-// gitCommitDirective is a directive that makes a commit to a local Git
-// repository.
-type gitCommitDirective struct {
+// gitCommitter is an implementation of the PromotionStepRunner interface that
+// makes a commit to a local Git repository.
+type gitCommitter struct {
 	schemaLoader gojsonschema.JSONLoader
 }
 
-// newGitCommitDirective creates a new git-commit directive.
-func newGitCommitDirective() Directive {
-	d := &gitCommitDirective{}
-	d.schemaLoader = getConfigSchemaLoader(d.Name())
-	return d
+// newGitCommitter returns an implementation of the PromotionStepRunner
+// interface that makes a commit to a local Git repository.
+func newGitCommitter() PromotionStepRunner {
+	r := &gitCommitter{}
+	r.schemaLoader = getConfigSchemaLoader(r.Name())
+	return r
 }
 
-// Name implements the Directive interface.
-func (g *gitCommitDirective) Name() string {
+// Name implements the PromotionStepRunner interface.
+func (g *gitCommitter) Name() string {
 	return "git-commit"
 }
 
-// Run implements the Directive interface.
-func (g *gitCommitDirective) RunPromotionStep(
+// RunPromotionStep implements the PromotionStepRunner interface.
+func (g *gitCommitter) RunPromotionStep(
 	ctx context.Context,
 	stepCtx *PromotionStepContext,
 ) (PromotionStepResult, error) {
@@ -52,21 +51,12 @@ func (g *gitCommitDirective) RunPromotionStep(
 	return g.runPromotionStep(ctx, stepCtx, cfg)
 }
 
-// RunHealthCheckStep implements the Directive interface.
-func (g *gitCommitDirective) RunHealthCheckStep(
-	context.Context,
-	*HealthCheckStepContext,
-) HealthCheckStepResult {
-	return HealthCheckStepResult{Status: kargoapi.HealthStateNotApplicable}
-}
-
-// validate validates the git-commit directive configuration against the JSON
-// schema.
-func (g *gitCommitDirective) validate(cfg Config) error {
+// validate validates gitCommitter configuration against a JSON schema.
+func (g *gitCommitter) validate(cfg Config) error {
 	return validate(g.schemaLoader, gojsonschema.NewGoLoader(cfg), g.Name())
 }
 
-func (g *gitCommitDirective) runPromotionStep(
+func (g *gitCommitter) runPromotionStep(
 	_ context.Context,
 	stepCtx *PromotionStepContext,
 	cfg GitCommitConfig,
@@ -117,7 +107,7 @@ func (g *gitCommitDirective) runPromotionStep(
 	}, nil
 }
 
-func (g *gitCommitDirective) buildCommitMessage(
+func (g *gitCommitter) buildCommitMessage(
 	sharedState State,
 	cfg GitCommitConfig,
 ) (string, error) {

@@ -11,23 +11,24 @@ import (
 	"github.com/akuity/kargo/internal/credentials"
 )
 
-// SimpleEngine is a simple engine that executes a list of directives in sequence.
+// SimpleEngine is a simple engine that executes a list of PromotionSteps in
+// sequence.
 type SimpleEngine struct {
-	registry      DirectiveRegistry
+	registry      *StepRunnerRegistry
 	credentialsDB credentials.Database
 	kargoClient   client.Client
 	argoCDClient  client.Client
 }
 
-// NewSimpleEngine returns a new SimpleEngine with the provided DirectiveRegistry.
+// NewSimpleEngine returns a new SimpleEngine that uses the package's built-in
+// StepRunnerRegistry.
 func NewSimpleEngine(
-	registry DirectiveRegistry,
 	credentialsDB credentials.Database,
 	kargoClient client.Client,
 	argoCDClient client.Client,
 ) *SimpleEngine {
 	return &SimpleEngine{
-		registry:      registry,
+		registry:      builtins,
 		credentialsDB: credentialsDB,
 		kargoClient:   kargoClient,
 		argoCDClient:  argoCDClient,
@@ -54,15 +55,15 @@ func (e *SimpleEngine) Promote(
 	// Initialize the shared state that will be passed to each step.
 	state := make(State)
 
-	for _, d := range steps {
+	for _, step := range steps {
 		select {
 		case <-ctx.Done():
 			return PromotionResult{Status: PromotionStatusFailure}, ctx.Err()
 		default:
-			reg, err := e.registry.GetDirectiveRegistration(d.Kind)
+			reg, err := e.registry.GetPromotionStepRunnerRegistration(step.Kind)
 			if err != nil {
 				return PromotionResult{Status: PromotionStatusFailure},
-					fmt.Errorf("failed to get step %q: %w", d.Kind, err)
+					fmt.Errorf("failed to get step %q: %w", step.Kind, err)
 			}
 
 			stateCopy := state.DeepCopy()
@@ -70,8 +71,8 @@ func (e *SimpleEngine) Promote(
 			stepCtx := &PromotionStepContext{
 				WorkDir:         workDir,
 				SharedState:     stateCopy,
-				Alias:           d.Alias,
-				Config:          d.Config.DeepCopy(),
+				Alias:           step.Alias,
+				Config:          step.Config.DeepCopy(),
 				Project:         promoCtx.Project,
 				Stage:           promoCtx.Stage,
 				FreightRequests: promoCtx.FreightRequests,
@@ -88,14 +89,14 @@ func (e *SimpleEngine) Promote(
 				stepCtx.ArgoCDClient = e.argoCDClient
 			}
 
-			result, err := reg.Directive.RunPromotionStep(ctx, stepCtx)
+			result, err := reg.Runner.RunPromotionStep(ctx, stepCtx)
 			if err != nil {
 				return PromotionResult{Status: PromotionStatusFailure},
-					fmt.Errorf("failed to run step %q: %w", d.Kind, err)
+					fmt.Errorf("failed to run step %q: %w", step.Kind, err)
 			}
 
-			if d.Alias != "" {
-				state[d.Alias] = result.Output
+			if step.Alias != "" {
+				state[step.Alias] = result.Output
 			}
 		}
 	}

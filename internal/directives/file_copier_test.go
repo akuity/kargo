@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func Test_copyDirective_runPromotionStep(t *testing.T) {
+func Test_fileCopier_runPromotionStep(t *testing.T) {
 	tests := []struct {
 		name       string
 		setupFiles func(*testing.T) string
@@ -134,12 +134,16 @@ func Test_copyDirective_runPromotionStep(t *testing.T) {
 		},
 	}
 
+	runner := &fileCopier{}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			workDir := tt.setupFiles(t)
-
-			d := &copyDirective{}
-			result, err := d.runPromotionStep(context.Background(), &PromotionStepContext{WorkDir: workDir}, tt.cfg)
+			result, err := runner.runPromotionStep(
+				context.Background(),
+				&PromotionStepContext{WorkDir: workDir},
+				tt.cfg,
+			)
 			tt.assertions(t, workDir, result, err)
 		})
 	}

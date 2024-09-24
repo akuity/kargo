@@ -12,36 +12,43 @@ import (
 	"github.com/otiai10/copy"
 	"github.com/xeipuuv/gojsonschema"
 
-	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/logging"
 )
 
 func init() {
-	// Register the copy directive with the builtins registry.
-	builtins.RegisterDirective(&copyDirective{}, nil)
+	builtins.RegisterPromotionStepRunner(newFileCopier(), nil)
 }
 
-// copyDirective is a directive that copies a file or directory.
+// fileCopier is an implementation of the PromotionStepRunner interface that
+// copies a file or directory.
 //
 // The copy is recursive, merging directories if the destination directory
 // already exists. If the destination is an existing file, it will be
 // overwritten. Symlinks are ignored.
-type copyDirective struct {
+type fileCopier struct {
 	schemaLoader gojsonschema.JSONLoader
 }
 
-// Name implements the Directive interface.
-func (d *copyDirective) Name() string {
+// newFileCopier returns an implementation of the PromotionStepRunner interface
+// that copies a file or directory.
+func newFileCopier() PromotionStepRunner {
+	r := &fileCopier{}
+	r.schemaLoader = getConfigSchemaLoader(r.Name())
+	return r
+}
+
+// Name implements the PromotionStepRunner interface.
+func (f *fileCopier) Name() string {
 	return "copy"
 }
 
-// RunPromotionStep implements the Directive interface.
-func (d *copyDirective) RunPromotionStep(
+// RunPromotionStep implements the PromotionStepRunner interface.
+func (f *fileCopier) RunPromotionStep(
 	ctx context.Context,
 	stepCtx *PromotionStepContext,
 ) (PromotionStepResult, error) {
 	// Validate the configuration against the JSON Schema.
-	if err := validate(d.schemaLoader, gojsonschema.NewGoLoader(stepCtx.Config), d.Name()); err != nil {
+	if err := validate(f.schemaLoader, gojsonschema.NewGoLoader(stepCtx.Config), f.Name()); err != nil {
 		return PromotionStepResult{Status: PromotionStatusFailure}, err
 	}
 
@@ -49,21 +56,13 @@ func (d *copyDirective) RunPromotionStep(
 	cfg, err := configToStruct[CopyConfig](stepCtx.Config)
 	if err != nil {
 		return PromotionStepResult{Status: PromotionStatusFailure},
-			fmt.Errorf("could not convert config into %s config: %w", d.Name(), err)
+			fmt.Errorf("could not convert config into %s config: %w", f.Name(), err)
 	}
 
-	return d.runPromotionStep(ctx, stepCtx, cfg)
+	return f.runPromotionStep(ctx, stepCtx, cfg)
 }
 
-// RunHealthCheckStep implements the Directive interface.
-func (d *copyDirective) RunHealthCheckStep(
-	context.Context,
-	*HealthCheckStepContext,
-) HealthCheckStepResult {
-	return HealthCheckStepResult{Status: kargoapi.HealthStateNotApplicable}
-}
-
-func (d *copyDirective) runPromotionStep(
+func (f *fileCopier) runPromotionStep(
 	ctx context.Context,
 	stepCtx *PromotionStepContext,
 	cfg CopyConfig,

@@ -14,18 +14,18 @@ func TestEngine_Execute(t *testing.T) {
 	successResult := PromotionStepResult{Status: PromotionStatusSuccess}
 	tests := []struct {
 		name         string
-		directives   []PromotionStep
-		initRegistry func() DirectiveRegistry
+		steps        []PromotionStep
+		initRegistry func() *StepRunnerRegistry
 		ctx          context.Context
 		assertions   func(*testing.T, PromotionResult, error)
 	}{
 		{
-			name:       "success: single directive",
-			directives: []PromotionStep{{Kind: "mock"}},
-			initRegistry: func() DirectiveRegistry {
-				registry := make(DirectiveRegistry)
-				registry.RegisterDirective(
-					&mockDirective{
+			name:  "success: single step",
+			steps: []PromotionStep{{Kind: "mock"}},
+			initRegistry: func() *StepRunnerRegistry {
+				registry := NewStepRunnerRegistry()
+				registry.RegisterPromotionStepRunner(
+					&mockPromotionStepRunner{
 						name:      "mock",
 						runResult: successResult,
 					},
@@ -40,22 +40,22 @@ func TestEngine_Execute(t *testing.T) {
 			},
 		},
 		{
-			name: "success: multiple directives",
-			directives: []PromotionStep{
+			name: "success: multiple steps",
+			steps: []PromotionStep{
 				{Kind: "mock1"},
 				{Kind: "mock2"},
 			},
-			initRegistry: func() DirectiveRegistry {
-				registry := make(DirectiveRegistry)
-				registry.RegisterDirective(
-					&mockDirective{
+			initRegistry: func() *StepRunnerRegistry {
+				registry := NewStepRunnerRegistry()
+				registry.RegisterPromotionStepRunner(
+					&mockPromotionStepRunner{
 						name:      "mock1",
 						runResult: successResult,
 					},
 					nil,
 				)
-				registry.RegisterDirective(
-					&mockDirective{
+				registry.RegisterPromotionStepRunner(
+					&mockPromotionStepRunner{
 						name:      "mock2",
 						runResult: successResult,
 					},
@@ -70,12 +70,12 @@ func TestEngine_Execute(t *testing.T) {
 			},
 		},
 		{
-			name: "failure: directive not found",
-			directives: []PromotionStep{
+			name: "failure: runner not found",
+			steps: []PromotionStep{
 				{Kind: "unknown"},
 			},
-			initRegistry: func() DirectiveRegistry {
-				return make(DirectiveRegistry)
+			initRegistry: func() *StepRunnerRegistry {
+				return NewStepRunnerRegistry()
 			},
 			ctx: context.Background(),
 			assertions: func(t *testing.T, res PromotionResult, err error) {
@@ -84,14 +84,14 @@ func TestEngine_Execute(t *testing.T) {
 			},
 		},
 		{
-			name: "failure: directive returns error",
-			directives: []PromotionStep{
+			name: "failure: runner returns error",
+			steps: []PromotionStep{
 				{Kind: "failing", Alias: "alias1", Config: map[string]any{"key": "value"}},
 			},
-			initRegistry: func() DirectiveRegistry {
-				registry := make(DirectiveRegistry)
-				registry.RegisterDirective(
-					&mockDirective{
+			initRegistry: func() *StepRunnerRegistry {
+				registry := NewStepRunnerRegistry()
+				registry.RegisterPromotionStepRunner(
+					&mockPromotionStepRunner{
 						name:      "failing",
 						runResult: failureResult,
 						runErr:    errors.New("something went wrong"),
@@ -108,14 +108,14 @@ func TestEngine_Execute(t *testing.T) {
 		},
 		{
 			name: "failure: context canceled",
-			directives: []PromotionStep{
+			steps: []PromotionStep{
 				{Kind: "mock"},
-				{Kind: "mock"}, // This directive should not be executed
+				{Kind: "mock"}, // This runner should not be executed
 			},
-			initRegistry: func() DirectiveRegistry {
-				registry := make(DirectiveRegistry)
-				registry.RegisterDirective(
-					&mockDirective{
+			initRegistry: func() *StepRunnerRegistry {
+				registry := NewStepRunnerRegistry()
+				registry.RegisterPromotionStepRunner(
+					&mockPromotionStepRunner{
 						name: "mock",
 						runFunc: func(ctx context.Context, _ *PromotionStepContext) (PromotionStepResult, error) {
 							<-ctx.Done() // Wait for context to be canceled
@@ -142,8 +142,9 @@ func TestEngine_Execute(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			engine := NewSimpleEngine(tt.initRegistry(), nil, nil, nil)
-			res, err := engine.Promote(tt.ctx, PromotionContext{}, tt.directives)
+			engine := NewSimpleEngine(nil, nil, nil)
+			engine.registry = tt.initRegistry()
+			res, err := engine.Promote(tt.ctx, PromotionContext{}, tt.steps)
 			tt.assertions(t, res, err)
 		})
 	}
