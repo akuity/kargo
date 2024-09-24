@@ -67,7 +67,7 @@ type argocdUpdateDirective struct {
 		*kargoapi.Stage,
 		*ArgoCDAppUpdate,
 		*argocd.Application,
-	) (*argocd.ApplicationSource, argocd.ApplicationSources, error)
+	) (argocd.ApplicationSources, error)
 
 	mustPerformUpdateFn func(
 		context.Context,
@@ -76,7 +76,6 @@ type argocdUpdateDirective struct {
 		*kargoapi.Stage,
 		*ArgoCDAppUpdate,
 		*argocd.Application,
-		*argocd.ApplicationSource,
 		argocd.ApplicationSources,
 	) (argocd.OperationPhase, bool, error)
 
@@ -84,7 +83,6 @@ type argocdUpdateDirective struct {
 		ctx context.Context,
 		stepCtx *StepContext,
 		app *argocd.Application,
-		desiredSource *argocd.ApplicationSource,
 		desiredSources argocd.ApplicationSources,
 	) error
 
@@ -208,7 +206,7 @@ func (a *argocdUpdateDirective) run(
 		}
 
 		// Build the desired source(s) for the Argo CD Application.
-		desiredSource, desiredSources, err := a.buildDesiredSourcesFn(
+		desiredSources, err := a.buildDesiredSourcesFn(
 			ctx,
 			stepCtx,
 			&stepCfg,
@@ -231,7 +229,6 @@ func (a *argocdUpdateDirective) run(
 			stage,
 			update,
 			app,
-			desiredSource,
 			desiredSources,
 		)
 
@@ -275,7 +272,6 @@ func (a *argocdUpdateDirective) run(
 			ctx,
 			stepCtx,
 			app,
-			desiredSource,
 			desiredSources,
 		); err != nil {
 			return Result{Status: StatusFailure}, fmt.Errorf(
@@ -287,7 +283,7 @@ func (a *argocdUpdateDirective) run(
 		updateResults = append(updateResults, argocd.OperationRunning)
 	}
 
-	aggregatedStatus := operationPhaseToDirectiveStatus(updateResults...)
+	aggregatedStatus := a.operationPhaseToDirectiveStatus(updateResults...)
 	if aggregatedStatus == "" {
 		return Result{Status: StatusFailure}, fmt.Errorf(
 			"could not determine directive status from operation phases: %v",
@@ -308,39 +304,33 @@ func (a *argocdUpdateDirective) buildDesiredSources(
 	stage *kargoapi.Stage,
 	update *ArgoCDAppUpdate,
 	app *argocd.Application,
-) (*argocd.ApplicationSource, argocd.ApplicationSources, error) {
-	desiredSource, desiredSources := app.Spec.Source.DeepCopy(), app.Spec.Sources.DeepCopy()
-
-	for i := range update.Sources {
-		srcUpdate := &update.Sources[i]
-		if desiredSource != nil {
-			newSrc, err := a.applyArgoCDSourceUpdateFn(ctx, stepCtx, stepCfg, stage, srcUpdate, *desiredSource)
-			if err != nil {
-				return nil, nil, fmt.Errorf(
+) (argocd.ApplicationSources, error) {
+	desiredSources := app.Spec.Sources.DeepCopy()
+	if len(desiredSources) == 0 && app.Spec.Source != nil {
+		desiredSources = []argocd.ApplicationSource{*app.Spec.Source.DeepCopy()}
+	}
+	for i := range desiredSources {
+		for j := range update.Sources {
+			srcUpdate := &update.Sources[j]
+			var err error
+			if desiredSources[i], err = a.applyArgoCDSourceUpdateFn(
+				ctx,
+				stepCtx,
+				stepCfg,
+				stage,
+				srcUpdate,
+				desiredSources[i],
+			); err != nil {
+				return nil, fmt.Errorf(
 					"error applying source update to Argo CD Application %q in namespace %q: %w",
-					app.Name,
+					update.Name,
 					app.Namespace,
 					err,
 				)
 			}
-			desiredSource = &newSrc
-		}
-
-		for j, curSrc := range desiredSources {
-			newSrc, err := a.applyArgoCDSourceUpdateFn(ctx, stepCtx, stepCfg, stage, srcUpdate, curSrc)
-			if err != nil {
-				return nil, nil, fmt.Errorf(
-					"error applying source update to Argo CD Application %q in namespace %q: %w",
-					app.Name,
-					app.Namespace,
-					err,
-				)
-			}
-			desiredSources[j] = newSrc
 		}
 	}
-
-	return desiredSource, desiredSources, nil
+	return desiredSources, nil
 }
 
 func (a *argocdUpdateDirective) mustPerformUpdate(
@@ -350,7 +340,6 @@ func (a *argocdUpdateDirective) mustPerformUpdate(
 	stage *kargoapi.Stage,
 	update *ArgoCDAppUpdate,
 	app *argocd.Application,
-	desiredSource *argocd.ApplicationSource,
 	desiredSources argocd.ApplicationSources,
 ) (phase argocd.OperationPhase, mustUpdate bool, err error) {
 	status := app.Status.OperationState
@@ -413,33 +402,50 @@ func (a *argocdUpdateDirective) mustPerformUpdate(
 		return "", true, errors.New("operation completed without a sync result")
 	}
 
-	// Check if the desired revision was applied.
-	if desiredRevision, err := getDesiredRevision(
+	// Check if the desired sources were applied.
+	if len(update.Sources) > 0 {
+		if (status.SyncResult.Source.RepoURL != "" && !status.SyncResult.Source.Equals(&desiredSources[0])) ||
+			(status.SyncResult.Source.RepoURL == "" && !status.SyncResult.Sources.Equals(desiredSources)) {
+			// The operation did not result in the desired sources being applied. We
+			// should attempt to retry the operation.
+			return "", true, fmt.Errorf(
+				"operation result source does not match desired source",
+			)
+		}
+	}
+
+	// Check if the desired revisions were applied.
+	desiredRevisions, err := a.getDesiredRevisions(
 		ctx,
 		stepCtx,
 		stepCfg,
 		stage,
 		update,
 		app,
-	); err != nil {
+	)
+	if err != nil {
 		return "", true, fmt.Errorf("error determining desired revision: %w", err)
-	} else if desiredRevision != "" && status.SyncResult.Revision != desiredRevision {
-		// The operation did not result in the desired revision being applied.
-		// We should attempt to retry the operation.
-		return "", true, fmt.Errorf(
-			"operation result revision %q does not match desired revision %q",
-			status.SyncResult.Revision, desiredRevision,
-		)
 	}
 
-	// Check if the desired source(s) were applied.
-	if len(update.Sources) > 0 {
-		if (desiredSource != nil && !desiredSource.Equals(&status.SyncResult.Source)) ||
-			!desiredSources.Equals(status.SyncResult.Sources) {
-			// The operation did not result in the desired source(s) being applied.
-			// We should attempt to retry the operation.
+	if len(desiredRevisions) == 0 {
+		// We do not have any desired revisions, so we cannot determine if the
+		// operation was successful.
+		return status.Phase, false, nil
+	}
+
+	observedRevisions := status.SyncResult.Revisions
+	if len(observedRevisions) == 0 {
+		observedRevisions = []string{status.SyncResult.Revision}
+	}
+	for i, observedRevision := range observedRevisions {
+		desiredRevision := desiredRevisions[i]
+		if desiredRevision == "" {
+			continue
+		}
+		if observedRevision != desiredRevision {
 			return "", true, fmt.Errorf(
-				"operation result source does not match desired source",
+				"sync result revisions %v do not match desired revisions %v",
+				observedRevisions, desiredRevisions,
 			)
 		}
 	}
@@ -452,7 +458,6 @@ func (a *argocdUpdateDirective) syncApplication(
 	ctx context.Context,
 	stepCtx *StepContext,
 	app *argocd.Application,
-	desiredSource *argocd.ApplicationSource,
 	desiredSources argocd.ApplicationSources,
 ) error {
 	// Initiate a "hard" refresh.
@@ -462,8 +467,11 @@ func (a *argocdUpdateDirective) syncApplication(
 	app.ObjectMeta.Annotations[argocd.AnnotationKeyRefresh] = string(argocd.RefreshTypeHard)
 
 	// Update the desired source(s) in the Argo CD Application.
-	app.Spec.Source = desiredSource.DeepCopy()
-	app.Spec.Sources = desiredSources.DeepCopy()
+	if app.Spec.Source != nil {
+		app.Spec.Source = desiredSources[0].DeepCopy()
+	} else {
+		app.Spec.Sources = desiredSources.DeepCopy()
+	}
 
 	// Initiate a new operation.
 	app.Operation = &argocd.Operation{
@@ -510,7 +518,7 @@ func (a *argocdUpdateDirective) syncApplication(
 		}
 
 		dst.SetAnnotations(src.GetAnnotations())
-		dst.Object["spec"] = recursiveMerge(src.Object["spec"], dst.Object["spec"])
+		dst.Object["spec"] = a.recursiveMerge(src.Object["spec"], dst.Object["spec"])
 		dst.Object["operation"] = src.Object["operation"]
 		return nil
 	}); err != nil {
@@ -634,7 +642,7 @@ func (a *argocdUpdateDirective) getAuthorizedApplication(
 		)
 	}
 
-	if err = authorizeArgoCDAppUpdate(stepCtx, app.ObjectMeta); err != nil {
+	if err = a.authorizeArgoCDAppUpdate(stepCtx, app.ObjectMeta); err != nil {
 		return nil, err
 	}
 
@@ -644,7 +652,7 @@ func (a *argocdUpdateDirective) getAuthorizedApplication(
 // authorizeArgoCDAppUpdate returns an error if the Argo CD Application
 // represented by appMeta does not explicitly permit mutation by the Kargo Stage
 // represented by stageMeta.
-func authorizeArgoCDAppUpdate(
+func (a *argocdUpdateDirective) authorizeArgoCDAppUpdate(
 	stepCtx *StepContext,
 	appMeta metav1.ObjectMeta,
 ) error {
@@ -796,7 +804,7 @@ func (a *argocdUpdateDirective) applyArgoCDSourceUpdate(
 			source.Kustomize = &argocd.ApplicationSourceKustomize{}
 		}
 		var err error
-		if source.Kustomize.Images, err = a.buildKustomizeImagesForArgoCDAppSource(
+		if source.Kustomize.Images, err = a.buildKustomizeImagesForAppSource(
 			ctx,
 			stepCtx,
 			stepCfg,
@@ -814,7 +822,7 @@ func (a *argocdUpdateDirective) applyArgoCDSourceUpdate(
 		if source.Helm.Parameters == nil {
 			source.Helm.Parameters = []argocd.HelmParameter{}
 		}
-		changes, err := a.buildHelmParamChangesForArgoCDAppSource(
+		changes, err := a.buildHelmParamChangesForAppSource(
 			ctx,
 			stepCtx,
 			stepCfg,
@@ -844,7 +852,7 @@ func (a *argocdUpdateDirective) applyArgoCDSourceUpdate(
 	return source, nil
 }
 
-func (a *argocdUpdateDirective) buildKustomizeImagesForArgoCDAppSource(
+func (a *argocdUpdateDirective) buildKustomizeImagesForAppSource(
 	ctx context.Context,
 	stepCtx *StepContext,
 	stepCfg *ArgoCDUpdateConfig,
@@ -889,7 +897,7 @@ func (a *argocdUpdateDirective) buildKustomizeImagesForArgoCDAppSource(
 	return kustomizeImages, nil
 }
 
-func (a *argocdUpdateDirective) buildHelmParamChangesForArgoCDAppSource(
+func (a *argocdUpdateDirective) buildHelmParamChangesForAppSource(
 	ctx context.Context,
 	stepCtx *StepContext,
 	stepCfg *ArgoCDUpdateConfig,
@@ -936,7 +944,7 @@ func (a *argocdUpdateDirective) buildHelmParamChangesForArgoCDAppSource(
 	return changes, nil
 }
 
-func operationPhaseToDirectiveStatus(phases ...argocd.OperationPhase) Status {
+func (a *argocdUpdateDirective) operationPhaseToDirectiveStatus(phases ...argocd.OperationPhase) Status {
 	if len(phases) == 0 {
 		return ""
 	}
@@ -955,7 +963,7 @@ func operationPhaseToDirectiveStatus(phases ...argocd.OperationPhase) Status {
 	}
 }
 
-func recursiveMerge(src, dst any) any {
+func (a *argocdUpdateDirective) recursiveMerge(src, dst any) any {
 	switch src := src.(type) {
 	case map[string]any:
 		dst, ok := dst.(map[string]any)
@@ -964,7 +972,7 @@ func recursiveMerge(src, dst any) any {
 		}
 		for srcK, srcV := range src {
 			if dstV, ok := dst[srcK]; ok {
-				dst[srcK] = recursiveMerge(srcV, dstV)
+				dst[srcK] = a.recursiveMerge(srcV, dstV)
 			} else {
 				dst[srcK] = srcV
 			}
@@ -977,7 +985,7 @@ func recursiveMerge(src, dst any) any {
 		result := make([]any, len(src))
 		for i, srcV := range src {
 			if i < len(dst) {
-				result[i] = recursiveMerge(srcV, dst[i])
+				result[i] = a.recursiveMerge(srcV, dst[i])
 			} else {
 				result[i] = srcV
 			}
@@ -987,118 +995,4 @@ func recursiveMerge(src, dst any) any {
 		return src
 	}
 	return dst
-}
-
-// getDesiredRevision returns the desired revision for the given
-// v1alpha1.Application. If that cannot be determined, an empty string is
-// returned.
-func getDesiredRevision(
-	ctx context.Context,
-	stepCtx *StepContext,
-	stepCfg *ArgoCDUpdateConfig,
-	stage *kargoapi.Stage,
-	update *ArgoCDAppUpdate,
-	app *argocd.Application,
-) (string, error) {
-	switch {
-	case app == nil || app.Spec.Source == nil:
-		// Without an Application, we can't determine the desired revision.
-		return "", nil
-	case app.Spec.Source.Chart != "":
-		// This source points to a Helm chart.
-		// NB: This has to go first, as the repository URL can also point to
-		//     a Helm repository.
-
-		// If there is a source update that targets app.Spec.Source, it might
-		// have its own ideas about the desired revision.
-		var targetUpdate any
-		for i := range update.Sources {
-			sourceUpdate := &update.Sources[i]
-			if sourceUpdate.RepoURL == app.Spec.Source.RepoURL && sourceUpdate.Chart == app.Spec.Source.Chart {
-				targetUpdate = sourceUpdate
-				break
-			}
-		}
-		if targetUpdate == nil {
-			targetUpdate = &update
-		}
-		desiredOrigin := getDesiredOrigin(stepCfg, targetUpdate)
-		repoURL := app.Spec.Source.RepoURL
-		chartName := app.Spec.Source.Chart
-		if !strings.Contains(repoURL, "://") {
-			// In Argo CD ApplicationSource, if a repo URL specifies no protocol and a
-			// chart name is set (already confirmed at this point), we can assume that
-			// the repo URL is an OCI registry URL. Kargo Warehouses and Freight,
-			// however, do use oci:// at the beginning of such URLs.
-			//
-			// Additionally, where OCI is concerned, an ApplicationSource's repoURL is
-			// really a registry URL, and the chart name is a repository within that
-			// registry. Warehouses and Freight, however, handle things more correctly
-			// where a repoURL points directly to a repository and chart name is
-			// irrelevant / blank. We need to account for this when we search our
-			// Freight for the chart.
-			repoURL = fmt.Sprintf(
-				"oci://%s/%s",
-				strings.TrimSuffix(repoURL, "/"),
-				chartName,
-			)
-			chartName = ""
-		}
-		chart, err := freight.FindChart(
-			ctx,
-			stepCtx.KargoClient,
-			stepCtx.Project,
-			stage.Spec.RequestedFreight,
-			desiredOrigin,
-			stepCtx.Freight.References(),
-			repoURL,
-			chartName,
-		)
-		if err != nil {
-			return "", fmt.Errorf("error chart from repo %q: %w", app.Spec.Source.RepoURL, err)
-		}
-		if chart == nil {
-			return "", nil
-		}
-		return chart.Version, nil
-	case app.Spec.Source.RepoURL != "":
-		// This source points to a Git repository.
-
-		// If there is a source update that targets app.Spec.Source, it might
-		// have its own ideas about the desired revision.
-		var targetUpdate any
-		for i := range update.Sources {
-			sourceUpdate := &update.Sources[i]
-			if sourceUpdate.RepoURL == app.Spec.Source.RepoURL {
-				targetUpdate = sourceUpdate
-				break
-			}
-		}
-		if targetUpdate == nil {
-			targetUpdate = update
-		}
-		desiredOrigin := getDesiredOrigin(stepCfg, targetUpdate)
-		commit, err := freight.FindCommit(
-			ctx,
-			stepCtx.KargoClient,
-			stepCtx.Project,
-			stage.Spec.RequestedFreight,
-			desiredOrigin,
-			stepCtx.Freight.References(),
-			app.Spec.Source.RepoURL,
-		)
-		if err != nil {
-			return "",
-				fmt.Errorf("error finding commit from repo %q: %w", app.Spec.Source.RepoURL, err)
-		}
-		if commit == nil {
-			return "", nil
-		}
-		if commit.HealthCheckCommit != "" {
-			return commit.HealthCheckCommit, nil
-		}
-		return commit.ID, nil
-	}
-	// If we end up here, no desired revision was found.
-	return "", nil
 }

@@ -108,7 +108,7 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
                   key: '3',
                   label: 'Live Manifest',
                   className: 'h-full pb-2',
-                  children: <ManifestPreview object={stage} />
+                  children: <ManifestPreview object={stage} height='700px' />
                 }
               ]}
             />

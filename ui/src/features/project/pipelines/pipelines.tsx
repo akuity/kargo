@@ -338,7 +338,7 @@ export const Pipelines = ({
                   onClick={() => setZoom((prev) => Math.min(200, prev + 10))}
                   icon={<FontAwesomeIcon icon={faMagnifyingGlassPlus} />}
                 />
-                <Tooltip title='Reassign Stage Colors'>
+                <Tooltip title='Regenerate Stage Colors'>
                   <Button
                     type='default'
                     onClick={() => {
@@ -546,7 +546,7 @@ export const Pipelines = ({
                 ))}
                 {connectors?.map((connector) =>
                   connector.map((line, i) =>
-                    hideSubscriptions[line.to] && line.from === 'subscription' ? null : (
+                    hideSubscriptions[line.to] && line.from?.startsWith('subscription-') ? null : (
                       <div
                         className='absolute bg-gray-300 rounded-full'
                         style={{
