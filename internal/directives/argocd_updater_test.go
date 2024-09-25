@@ -25,7 +25,6 @@ func Test_newArgocdUpdater(t *testing.T) {
 	runner, ok := r.(*argocdUpdater)
 	require.True(t, ok)
 	require.Equal(t, "argocd-update", r.Name())
-	require.NotNil(t, runner.getStageFn)
 	require.NotNil(t, runner.schemaLoader)
 	require.NotNil(t, runner.getAuthorizedApplicationFn)
 	require.NotNil(t, runner.buildDesiredSourcesFn)
@@ -367,57 +366,8 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 			},
 		},
 		{
-			name: "error getting Stage",
-			runner: &argocdUpdater{
-				getStageFn: func(
-					context.Context,
-					client.Client,
-					client.ObjectKey,
-				) (*kargoapi.Stage, error) {
-					return nil, errors.New("something went wrong")
-				},
-			},
-			stepCtx: &PromotionStepContext{
-				ArgoCDClient: fake.NewFakeClient(),
-			},
-			stepCfg: ArgoCDUpdateConfig{},
-			assertions: func(t *testing.T, res PromotionStepResult, err error) {
-				require.Equal(t, PromotionStatusFailure, res.Status)
-				require.ErrorContains(t, err, "error getting Stage")
-				require.ErrorContains(t, err, "something went wrong")
-			},
-		},
-		{
-			name: "Stage not found",
-			runner: &argocdUpdater{
-				getStageFn: func(
-					context.Context,
-					client.Client,
-					client.ObjectKey,
-				) (*kargoapi.Stage, error) {
-					return nil, nil
-				},
-			},
-			stepCtx: &PromotionStepContext{
-				ArgoCDClient: fake.NewFakeClient(),
-			},
-			stepCfg: ArgoCDUpdateConfig{},
-			assertions: func(t *testing.T, res PromotionStepResult, err error) {
-				require.Equal(t, PromotionStatusFailure, res.Status)
-				require.ErrorContains(t, err, "Stage")
-				require.ErrorContains(t, err, "not found in namespace")
-			},
-		},
-		{
 			name: "error retrieving authorized application",
 			runner: &argocdUpdater{
-				getStageFn: func(
-					context.Context,
-					client.Client,
-					client.ObjectKey,
-				) (*kargoapi.Stage, error) {
-					return &kargoapi.Stage{}, nil
-				},
 				getAuthorizedApplicationFn: func(
 					context.Context,
 					*PromotionStepContext,
@@ -441,13 +391,6 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 		{
 			name: "error building desired sources",
 			runner: &argocdUpdater{
-				getStageFn: func(
-					context.Context,
-					client.Client,
-					client.ObjectKey,
-				) (*kargoapi.Stage, error) {
-					return &kargoapi.Stage{}, nil
-				},
 				getAuthorizedApplicationFn: func(
 					context.Context,
 					*PromotionStepContext,
@@ -459,7 +402,6 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 					context.Context,
 					*PromotionStepContext,
 					*ArgoCDUpdateConfig,
-					*kargoapi.Stage,
 					*ArgoCDAppUpdate,
 					*argocd.Application,
 				) (argocd.ApplicationSources, error) {
@@ -481,13 +423,6 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 		{
 			name: "error determining if update is necessary",
 			runner: &argocdUpdater{
-				getStageFn: func(
-					context.Context,
-					client.Client,
-					client.ObjectKey,
-				) (*kargoapi.Stage, error) {
-					return &kargoapi.Stage{}, nil
-				},
 				getAuthorizedApplicationFn: func(
 					context.Context,
 					*PromotionStepContext,
@@ -499,7 +434,6 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 					context.Context,
 					*PromotionStepContext,
 					*ArgoCDUpdateConfig,
-					*kargoapi.Stage,
 					*ArgoCDAppUpdate,
 					*argocd.Application,
 				) (argocd.ApplicationSources, error) {
@@ -509,7 +443,6 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 					context.Context,
 					*PromotionStepContext,
 					*ArgoCDUpdateConfig,
-					*kargoapi.Stage,
 					*ArgoCDAppUpdate,
 					*argocd.Application,
 					argocd.ApplicationSources,
@@ -531,13 +464,6 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 		{
 			name: "determination error can be solved by applying update",
 			runner: &argocdUpdater{
-				getStageFn: func(
-					context.Context,
-					client.Client,
-					client.ObjectKey,
-				) (*kargoapi.Stage, error) {
-					return &kargoapi.Stage{}, nil
-				},
 				getAuthorizedApplicationFn: func(
 					context.Context,
 					*PromotionStepContext,
@@ -549,7 +475,6 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 					context.Context,
 					*PromotionStepContext,
 					*ArgoCDUpdateConfig,
-					*kargoapi.Stage,
 					*ArgoCDAppUpdate,
 					*argocd.Application,
 				) (argocd.ApplicationSources, error) {
@@ -559,7 +484,6 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 					context.Context,
 					*PromotionStepContext,
 					*ArgoCDUpdateConfig,
-					*kargoapi.Stage,
 					*ArgoCDAppUpdate,
 					*argocd.Application,
 					argocd.ApplicationSources,
@@ -589,13 +513,6 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 		{
 			name: "must wait for update to complete",
 			runner: &argocdUpdater{
-				getStageFn: func(
-					context.Context,
-					client.Client,
-					client.ObjectKey,
-				) (*kargoapi.Stage, error) {
-					return &kargoapi.Stage{}, nil
-				},
 				getAuthorizedApplicationFn: func(
 					context.Context,
 					*PromotionStepContext,
@@ -607,7 +524,6 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 					context.Context,
 					*PromotionStepContext,
 					*ArgoCDUpdateConfig,
-					*kargoapi.Stage,
 					*ArgoCDAppUpdate,
 					*argocd.Application,
 				) (argocd.ApplicationSources, error) {
@@ -617,7 +533,6 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 					context.Context,
 					*PromotionStepContext,
 					*ArgoCDUpdateConfig,
-					*kargoapi.Stage,
 					*ArgoCDAppUpdate,
 					*argocd.Application,
 					argocd.ApplicationSources,
@@ -639,13 +554,6 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 		{
 			name: "must wait for operation from different user to complete",
 			runner: &argocdUpdater{
-				getStageFn: func(
-					context.Context,
-					client.Client,
-					client.ObjectKey,
-				) (*kargoapi.Stage, error) {
-					return &kargoapi.Stage{}, nil
-				},
 				getAuthorizedApplicationFn: func(
 					context.Context,
 					*PromotionStepContext,
@@ -657,7 +565,6 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 					context.Context,
 					*PromotionStepContext,
 					*ArgoCDUpdateConfig,
-					*kargoapi.Stage,
 					*ArgoCDAppUpdate,
 					*argocd.Application,
 				) (argocd.ApplicationSources, error) {
@@ -667,7 +574,6 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 					context.Context,
 					*PromotionStepContext,
 					*ArgoCDUpdateConfig,
-					*kargoapi.Stage,
 					*ArgoCDAppUpdate,
 					*argocd.Application,
 					argocd.ApplicationSources,
@@ -689,13 +595,6 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 		{
 			name: "error applying update",
 			runner: &argocdUpdater{
-				getStageFn: func(
-					context.Context,
-					client.Client,
-					client.ObjectKey,
-				) (*kargoapi.Stage, error) {
-					return &kargoapi.Stage{}, nil
-				},
 				getAuthorizedApplicationFn: func(
 					context.Context,
 					*PromotionStepContext,
@@ -707,7 +606,6 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 					context.Context,
 					*PromotionStepContext,
 					*ArgoCDUpdateConfig,
-					*kargoapi.Stage,
 					*ArgoCDAppUpdate,
 					*argocd.Application,
 				) (argocd.ApplicationSources, error) {
@@ -717,7 +615,6 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 					context.Context,
 					*PromotionStepContext,
 					*ArgoCDUpdateConfig,
-					*kargoapi.Stage,
 					*ArgoCDAppUpdate,
 					*argocd.Application,
 					argocd.ApplicationSources,
@@ -748,13 +645,6 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 		{
 			name: "failed and pending update",
 			runner: &argocdUpdater{
-				getStageFn: func(
-					context.Context,
-					client.Client,
-					client.ObjectKey,
-				) (*kargoapi.Stage, error) {
-					return &kargoapi.Stage{}, nil
-				},
 				getAuthorizedApplicationFn: func(
 					context.Context,
 					*PromotionStepContext,
@@ -766,7 +656,6 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 					context.Context,
 					*PromotionStepContext,
 					*ArgoCDUpdateConfig,
-					*kargoapi.Stage,
 					*ArgoCDAppUpdate,
 					*argocd.Application,
 				) (argocd.ApplicationSources, error) {
@@ -776,7 +665,6 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 					context.Context,
 					*PromotionStepContext,
 					*ArgoCDUpdateConfig,
-					*kargoapi.Stage,
 					*ArgoCDAppUpdate,
 					*argocd.Application,
 					argocd.ApplicationSources,
@@ -786,7 +674,6 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 						context.Context,
 						*PromotionStepContext,
 						*ArgoCDUpdateConfig,
-						*kargoapi.Stage,
 						*ArgoCDAppUpdate,
 						*argocd.Application,
 						argocd.ApplicationSources,
@@ -824,13 +711,6 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 		{
 			name: "operation phase aggregation error",
 			runner: &argocdUpdater{
-				getStageFn: func(
-					context.Context,
-					client.Client,
-					client.ObjectKey,
-				) (*kargoapi.Stage, error) {
-					return &kargoapi.Stage{}, nil
-				},
 				getAuthorizedApplicationFn: func(
 					context.Context,
 					*PromotionStepContext,
@@ -842,7 +722,6 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 					context.Context,
 					*PromotionStepContext,
 					*ArgoCDUpdateConfig,
-					*kargoapi.Stage,
 					*ArgoCDAppUpdate,
 					*argocd.Application,
 				) (argocd.ApplicationSources, error) {
@@ -852,7 +731,6 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 					context.Context,
 					*PromotionStepContext,
 					*ArgoCDUpdateConfig,
-					*kargoapi.Stage,
 					*ArgoCDAppUpdate,
 					*argocd.Application,
 					argocd.ApplicationSources,
@@ -874,13 +752,6 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 		{
 			name: "completed",
 			runner: &argocdUpdater{
-				getStageFn: func(
-					context.Context,
-					client.Client,
-					client.ObjectKey,
-				) (*kargoapi.Stage, error) {
-					return &kargoapi.Stage{}, nil
-				},
 				getAuthorizedApplicationFn: func(
 					context.Context,
 					*PromotionStepContext,
@@ -892,7 +763,6 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 					context.Context,
 					*PromotionStepContext,
 					*ArgoCDUpdateConfig,
-					*kargoapi.Stage,
 					*ArgoCDAppUpdate,
 					*argocd.Application,
 				) (argocd.ApplicationSources, error) {
@@ -902,7 +772,6 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 					context.Context,
 					*PromotionStepContext,
 					*ArgoCDUpdateConfig,
-					*kargoapi.Stage,
 					*ArgoCDAppUpdate,
 					*argocd.Application,
 					argocd.ApplicationSources,
@@ -953,7 +822,6 @@ func Test_argoCDUpdater_buildDesiredSources(t *testing.T) {
 					context.Context,
 					*PromotionStepContext,
 					*ArgoCDUpdateConfig,
-					*kargoapi.Stage,
 					*ArgoCDAppSourceUpdate,
 					argocd.ApplicationSource,
 				) (argocd.ApplicationSource, error) {
@@ -982,7 +850,6 @@ func Test_argoCDUpdater_buildDesiredSources(t *testing.T) {
 					_ context.Context,
 					_ *PromotionStepContext,
 					_ *ArgoCDUpdateConfig,
-					_ *kargoapi.Stage,
 					_ *ArgoCDAppSourceUpdate,
 					src argocd.ApplicationSource,
 				) (argocd.ApplicationSource, error) {
@@ -1037,7 +904,6 @@ func Test_argoCDUpdater_buildDesiredSources(t *testing.T) {
 				context.Background(),
 				&PromotionStepContext{},
 				&ArgoCDUpdateConfig{},
-				nil,
 				testCase.update,
 				app,
 			)
@@ -1382,7 +1248,6 @@ func Test_argoCDUpdater_mustPerformUpdate(t *testing.T) {
 					Freight: freight,
 				},
 				stepCfg,
-				&kargoapi.Stage{},
 				&stepCfg.Apps[0],
 				app,
 				testCase.desiredSources,
@@ -2063,7 +1928,6 @@ func Test_argoCDUpdater_applyArgoCDSourceUpdate(t *testing.T) {
 					Freight: freight,
 				},
 				stepCfg,
-				&kargoapi.Stage{},
 				&stepCfg.Apps[0].Sources[0],
 				testCase.source,
 			)
@@ -2124,7 +1988,6 @@ func Test_argoCDUpdater_buildKustomizeImagesForAppSource(t *testing.T) {
 				Freight: freight,
 			},
 			stepCfg,
-			&kargoapi.Stage{},
 			stepCfg.Apps[0].Sources[0].Kustomize,
 		)
 	require.NoError(t, err)
@@ -2218,7 +2081,6 @@ func Test_argoCDUpdater_buildHelmParamChangesForAppSource(t *testing.T) {
 				Freight: freight,
 			},
 			stepCfg,
-			&kargoapi.Stage{},
 			stepCfg.Apps[0].Sources[0].Helm,
 		)
 	require.NoError(t, err)

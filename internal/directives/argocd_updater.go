@@ -14,7 +14,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	libargocd "github.com/akuity/kargo/internal/argocd"
 	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/freight"
@@ -47,12 +46,6 @@ type argocdUpdater struct {
 
 	// These behaviors are overridable for testing purposes:
 
-	getStageFn func(
-		context.Context,
-		client.Client,
-		client.ObjectKey,
-	) (*kargoapi.Stage, error)
-
 	getAuthorizedApplicationFn func(
 		context.Context,
 		*PromotionStepContext,
@@ -63,7 +56,6 @@ type argocdUpdater struct {
 		context.Context,
 		*PromotionStepContext,
 		*ArgoCDUpdateConfig,
-		*kargoapi.Stage,
 		*ArgoCDAppUpdate,
 		*argocd.Application,
 	) (argocd.ApplicationSources, error)
@@ -72,7 +64,6 @@ type argocdUpdater struct {
 		context.Context,
 		*PromotionStepContext,
 		*ArgoCDUpdateConfig,
-		*kargoapi.Stage,
 		*ArgoCDAppUpdate,
 		*argocd.Application,
 		argocd.ApplicationSources,
@@ -89,7 +80,6 @@ type argocdUpdater struct {
 		context.Context,
 		*PromotionStepContext,
 		*ArgoCDUpdateConfig,
-		*kargoapi.Stage,
 		*ArgoCDAppSourceUpdate,
 		argocd.ApplicationSource,
 	) (argocd.ApplicationSource, error)
@@ -115,7 +105,6 @@ type argocdUpdater struct {
 // interface that updates one or more Argo CD Application resources.
 func newArgocdUpdater() PromotionStepRunner {
 	r := &argocdUpdater{}
-	r.getStageFn = kargoapi.GetStage
 	r.schemaLoader = getConfigSchemaLoader(r.Name())
 	r.getAuthorizedApplicationFn = r.getAuthorizedApplication
 	r.buildDesiredSourcesFn = r.buildDesiredSources
@@ -169,23 +158,6 @@ func (a *argocdUpdater) runPromotionStep(
 	logger := logging.LoggerFromContext(ctx)
 	logger.Debug("executing argocd-update promotion step")
 
-	stage, err := a.getStageFn(ctx, stepCtx.KargoClient, client.ObjectKey{
-		Namespace: stepCtx.Project,
-		Name:      stepCtx.Stage,
-	})
-	if err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailure}, fmt.Errorf(
-			"error getting Stage %q in namespace %q: %w",
-			stepCtx.Stage, stepCtx.Project, err,
-		)
-	}
-	if stage == nil {
-		return PromotionStepResult{Status: PromotionStatusFailure}, fmt.Errorf(
-			"Stage %q not found in namespace %q",
-			stepCtx.Stage, stepCtx.Project,
-		)
-	}
-
 	var updateResults = make([]argocd.OperationPhase, 0, len(stepCfg.Apps))
 	for i := range stepCfg.Apps {
 		update := &stepCfg.Apps[i]
@@ -210,7 +182,6 @@ func (a *argocdUpdater) runPromotionStep(
 			ctx,
 			stepCtx,
 			&stepCfg,
-			stage,
 			update,
 			app,
 		)
@@ -226,7 +197,6 @@ func (a *argocdUpdater) runPromotionStep(
 			ctx,
 			stepCtx,
 			&stepCfg,
-			stage,
 			update,
 			app,
 			desiredSources,
@@ -301,7 +271,6 @@ func (a *argocdUpdater) buildDesiredSources(
 	ctx context.Context,
 	stepCtx *PromotionStepContext,
 	stepCfg *ArgoCDUpdateConfig,
-	stage *kargoapi.Stage,
 	update *ArgoCDAppUpdate,
 	app *argocd.Application,
 ) (argocd.ApplicationSources, error) {
@@ -317,7 +286,6 @@ func (a *argocdUpdater) buildDesiredSources(
 				ctx,
 				stepCtx,
 				stepCfg,
-				stage,
 				srcUpdate,
 				desiredSources[i],
 			); err != nil {
@@ -337,7 +305,6 @@ func (a *argocdUpdater) mustPerformUpdate(
 	ctx context.Context,
 	stepCtx *PromotionStepContext,
 	stepCfg *ArgoCDUpdateConfig,
-	stage *kargoapi.Stage,
 	update *ArgoCDAppUpdate,
 	app *argocd.Application,
 	desiredSources argocd.ApplicationSources,
@@ -419,7 +386,6 @@ func (a *argocdUpdater) mustPerformUpdate(
 		ctx,
 		stepCtx,
 		stepCfg,
-		stage,
 		update,
 		app,
 	)
@@ -712,7 +678,6 @@ func (a *argocdUpdater) applyArgoCDSourceUpdate(
 	ctx context.Context,
 	stepCtx *PromotionStepContext,
 	stepCfg *ArgoCDUpdateConfig,
-	stage *kargoapi.Stage,
 	update *ArgoCDAppSourceUpdate,
 	source argocd.ApplicationSource,
 ) (argocd.ApplicationSource, error) {
@@ -749,7 +714,7 @@ func (a *argocdUpdater) applyArgoCDSourceUpdate(
 				ctx,
 				stepCtx.KargoClient,
 				stepCtx.Project,
-				stage.Spec.RequestedFreight,
+				stepCtx.FreightRequests,
 				desiredOrigin,
 				stepCtx.Freight.References(),
 				repoURL,
@@ -780,7 +745,7 @@ func (a *argocdUpdater) applyArgoCDSourceUpdate(
 				ctx,
 				stepCtx.KargoClient,
 				stepCtx.Project,
-				stage.Spec.RequestedFreight,
+				stepCtx.FreightRequests,
 				desiredOrigin,
 				stepCtx.Freight.References(),
 				update.RepoURL,
@@ -808,7 +773,6 @@ func (a *argocdUpdater) applyArgoCDSourceUpdate(
 			ctx,
 			stepCtx,
 			stepCfg,
-			stage,
 			update.Kustomize,
 		); err != nil {
 			return source, err
@@ -826,7 +790,6 @@ func (a *argocdUpdater) applyArgoCDSourceUpdate(
 			ctx,
 			stepCtx,
 			stepCfg,
-			stage,
 			update.Helm,
 		)
 		if err != nil {
@@ -856,7 +819,6 @@ func (a *argocdUpdater) buildKustomizeImagesForAppSource(
 	ctx context.Context,
 	stepCtx *PromotionStepContext,
 	stepCfg *ArgoCDUpdateConfig,
-	stage *kargoapi.Stage,
 	update *ArgoCDKustomizeImageUpdates,
 ) (argocd.KustomizeImages, error) {
 	kustomizeImages := make(argocd.KustomizeImages, 0, len(update.Images))
@@ -867,7 +829,7 @@ func (a *argocdUpdater) buildKustomizeImagesForAppSource(
 			ctx,
 			stepCtx.KargoClient,
 			stepCtx.Project,
-			stage.Spec.RequestedFreight,
+			stepCtx.FreightRequests,
 			desiredOrigin,
 			stepCtx.Freight.References(),
 			imageUpdate.RepoURL,
@@ -901,7 +863,6 @@ func (a *argocdUpdater) buildHelmParamChangesForAppSource(
 	ctx context.Context,
 	stepCtx *PromotionStepContext,
 	stepCfg *ArgoCDUpdateConfig,
-	stage *kargoapi.Stage,
 	update *ArgoCDHelmParameterUpdates,
 ) (map[string]string, error) {
 	changes := map[string]string{}
@@ -918,7 +879,7 @@ func (a *argocdUpdater) buildHelmParamChangesForAppSource(
 			ctx,
 			stepCtx.KargoClient,
 			stepCtx.Project,
-			stage.Spec.RequestedFreight,
+			stepCtx.FreightRequests,
 			desiredOrigin,
 			stepCtx.Freight.References(),
 			imageUpdate.RepoURL,
