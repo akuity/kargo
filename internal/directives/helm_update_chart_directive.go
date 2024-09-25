@@ -2,6 +2,7 @@ package directives
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -177,6 +178,15 @@ func (d *helmUpdateChartDirective) updateDependencies(
 
 	repositoryFile := repo.NewFile()
 
+	for _, dep := range chartDependencies {
+		if strings.HasPrefix(dep.Repository, "file://") {
+			depPath := filepath.FromSlash(strings.TrimPrefix(dep.Repository, "file://"))
+			if err = d.validateFileDependency(stepCtx.WorkDir, chartPath, depPath); err != nil {
+				return nil, fmt.Errorf("invalid dependency %q: %w", dep.Repository, err)
+			}
+		}
+	}
+
 	if err = d.loadDependencyCredentials(
 		ctx,
 		stepCtx.CredentialsDB,
@@ -227,6 +237,29 @@ func (d *helmUpdateChartDirective) updateDependencies(
 
 	// Compare the versions to return the actual changes
 	return compareChartVersions(initialVersions, updatedVersions), nil
+}
+
+func (d *helmUpdateChartDirective) validateFileDependency(workDir, chartPath, dependencyPath string) error {
+	if filepath.IsAbs(dependencyPath) {
+		return errors.New("dependency path must be relative")
+	}
+
+	// Resolve the dependency path relative to the chart directory
+	dependencyPath = filepath.Join(chartPath, dependencyPath)
+
+	// Check if the resolved dependency path is within the work directory
+	resolvedDependencyPath, err := filepath.EvalSymlinks(dependencyPath)
+	if err != nil {
+		return fmt.Errorf("failed to resolve dependency path: %w", sanitizePathError(err, workDir))
+	}
+	if !isSubPath(workDir, resolvedDependencyPath) {
+		return errors.New("dependency path is outside of the work directory")
+	}
+
+	// Recursively check for symlinks that go outside the work directory,
+	// as Helm follows symlinks when packaging charts
+	visited := make(map[string]struct{})
+	return checkSymlinks(workDir, dependencyPath, visited, 0, 100)
 }
 
 func (d *helmUpdateChartDirective) loadDependencyCredentials(
@@ -370,4 +403,101 @@ func compareChartVersions(before, after map[string]string) map[string]string {
 	}
 
 	return changes
+}
+
+// checkSymlinks recursively checks for symlinks that point outside the root path
+// and avoids infinite recursion by using a single map of visited directories
+// (absolute paths). The depth parameter is used to limit the recursion depth,
+// with a value of -1 indicating no limit.
+func checkSymlinks(root, dir string, visited map[string]struct{}, depth, maxDepth int) error {
+	// Get the absolute path of the current directory
+	absDir, err := filepath.Abs(dir)
+	if err != nil {
+		return fmt.Errorf("failed to get absolute path for dir: %v", err)
+	}
+
+	// Check if we've already visited this directory
+	if _, ok := visited[absDir]; ok {
+		// Skip it to avoid infinite recursion or redundant visits
+		return nil
+	}
+
+	// Mark this directory as visited only when starting to process it
+	visited[absDir] = struct{}{}
+
+	// Check if the recursion depth is within the limit
+	if maxDepth >= 0 && depth >= maxDepth {
+		return fmt.Errorf("maximum recursion depth exceeded")
+	}
+
+	// Open the directory
+	dirEntries, err := os.ReadDir(absDir)
+	if err != nil {
+		return fmt.Errorf("failed to read directory: %w", sanitizePathError(err, root))
+	}
+
+	// Process each entry in the directory
+	for _, entry := range dirEntries {
+		entryPath := filepath.Join(dir, entry.Name())
+
+		// If the entry is a symlink, resolve it
+		if entry.Type()&os.ModeSymlink != 0 {
+			// Resolve the symlink to its target
+			target, pathErr := filepath.EvalSymlinks(entryPath)
+			if pathErr != nil {
+				return fmt.Errorf("failed to resolve symlink: %w", sanitizePathError(pathErr, root))
+			}
+
+			// Convert the target path to its absolute form
+			absTarget, pathErr := filepath.Abs(target)
+			if pathErr != nil {
+				return pathErr
+			}
+
+			// Ensure the target is within the root directory
+			if !isSubPath(root, absTarget) {
+				return fmt.Errorf("symlink at %s points outside the path boundary", relativePath(root, entryPath))
+			}
+
+			// Recursively check the symlinked directory or file if not visited yet
+			if _, ok := visited[absTarget]; !ok {
+				// Check if the symlink target is a directory
+				targetInfo, pathErr := os.Stat(absTarget)
+				if pathErr != nil {
+					return fmt.Errorf(
+						"failed to stat symlink target of %s: %w",
+						relativePath(root, entryPath),
+						sanitizePathError(pathErr, root),
+					)
+				}
+
+				if targetInfo.IsDir() {
+					// Recursively call the function for the symlinked directory
+					if err = checkSymlinks(root, absTarget, visited, depth+1, maxDepth); err != nil {
+						return err
+					}
+				}
+
+				// It's a file, no further need for recursion here
+				// We still add it to the visited map to avoid redundant checks
+				visited[absTarget] = struct{}{}
+			}
+		} else if entry.IsDir() {
+			// If it's a directory, manually recurse into it
+			if err = checkSymlinks(root, entryPath, visited, depth+1, maxDepth); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+// isSubPath checks if the child path is a subpath of the parent path.
+func isSubPath(parent, child string) bool {
+	rel, err := filepath.Rel(parent, child)
+	if err != nil {
+		return false
+	}
+	return !strings.HasPrefix(rel, ".."+string(os.PathSeparator)) && rel != ".."
 }
