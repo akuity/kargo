@@ -74,10 +74,11 @@ type PromotionResult struct {
 	// Issues aggregates issues encountered during execution of individual
 	// PromotionSteps by their corresponding PromotionStepRunners.
 	Issues []string
-	// HealthCheckConfig aggregates configuration returned from the execution of
-	// individual PromotionSteps by their corresponding PromotionStepRunners. This
-	// configuration can later be used as input to health check processes.
-	HealthCheckConfig Config
+	// HealthCheckSteps collects health check configuration returned from the
+	// execution of individual PromotionSteps by their corresponding
+	// PromotionStepRunners. This configuration can later be used as input to
+	// health check processes.
+	HealthCheckSteps []HealthCheckStep
 }
 
 // PromotionStatus is a type that represents the high-level outcome of the
@@ -177,8 +178,8 @@ type PromotionStepResult struct {
 	// PromotionStepRunner. The Engine will update shared state with this output,
 	// making it available to subsequent steps.
 	Output State
-	// HealthCheckConfig is opaque configuration optionally returned by a
-	// PromotionStepRunner's successful execution of a PromotionStep. This
+	// HealthCheckStep is health check opaque configuration optionally returned by
+	// a PromotionStepRunner's successful execution of a PromotionStep. This
 	// configuration can later be used as input to health check processes.
-	HealthCheckConfig Config
+	HealthCheckStep *HealthCheckStep
 }
