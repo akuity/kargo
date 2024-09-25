@@ -237,6 +237,21 @@ export const Pipelines = ({
     return freightMap;
   }, [freightData]);
 
+  // if we find any stage with freight and UI don't have details, refresh freights
+  useEffect(() => {
+    if (fullFreightById && stagesPerFreight) {
+      const freights = Object.keys(fullFreightById || {});
+      const freightsInStages = Object.keys(stagesPerFreight || {});
+
+      for (const freightInStage of freightsInStages) {
+        if (!freights?.find((freight) => freight === freightInStage)) {
+          refetchFreightData();
+          return;
+        }
+      }
+    }
+  }, [stagesPerFreight, fullFreightById]);
+
   if (isLoading || isLoadingFreight || isLoadingImages) return <LoadingState />;
 
   const stage = stageName && (data?.stages || []).find((item) => item.metadata?.name === stageName);
