@@ -27,38 +27,46 @@ import (
 )
 
 func init() {
-	// Register the helm-update-chart directive with the builtins registry.
-	builtins.RegisterDirective(newHelmUpdateChartDirective(), &DirectivePermissions{
-		AllowArgoCDClient:  true,
-		AllowCredentialsDB: true,
-	})
+	builtins.RegisterPromotionStepRunner(
+		newHelmChartUpdater(),
+		&StepRunnerPermissions{
+			AllowArgoCDClient:  true,
+			AllowCredentialsDB: true,
+		},
+	)
 }
 
-type helmUpdateChartDirective struct {
+// helmChartUpdater is an implementation of the PromotionStepRunner interface
+// that updates the dependencies of a Helm chart.
+type helmChartUpdater struct {
 	schemaLoader gojsonschema.JSONLoader
 }
 
-// newHelmUpdateChartDirective creates a new helm-update-image directive.
-func newHelmUpdateChartDirective() Directive {
-	d := &helmUpdateChartDirective{}
-	d.schemaLoader = getConfigSchemaLoader(d.Name())
-	return d
+// newHelmChartUpdater returns an implementation of the PromotionStepRunner
+// interface that updates the dependencies of a Helm chart.
+func newHelmChartUpdater() PromotionStepRunner {
+	r := &helmChartUpdater{}
+	r.schemaLoader = getConfigSchemaLoader(r.Name())
+	return r
 }
 
-// Name implements the Directive interface.
-func (d *helmUpdateChartDirective) Name() string {
+// Name implements the PromotionStepRunner interface.
+func (h *helmChartUpdater) Name() string {
 	return "helm-update-chart"
 }
 
-// Run implements the Directive interface.
-func (d *helmUpdateChartDirective) Run(ctx context.Context, stepCtx *StepContext) (Result, error) {
-	failure := Result{Status: StatusFailure}
+// RunPromotionStep implements the PromotionStepRunner interface.
+func (h *helmChartUpdater) RunPromotionStep(
+	ctx context.Context,
+	stepCtx *PromotionStepContext,
+) (PromotionStepResult, error) {
+	failure := PromotionStepResult{Status: PromotionStatusFailure}
 
 	// Validate the configuration against the JSON Schema
 	if err := validate(
-		d.schemaLoader,
+		h.schemaLoader,
 		gojsonschema.NewGoLoader(stepCtx.Config),
-		d.Name(),
+		h.Name(),
 	); err != nil {
 		return failure, err
 	}
@@ -66,63 +74,65 @@ func (d *helmUpdateChartDirective) Run(ctx context.Context, stepCtx *StepContext
 	// Convert the configuration into a typed struct
 	cfg, err := configToStruct[HelmUpdateChartConfig](stepCtx.Config)
 	if err != nil {
-		return failure, fmt.Errorf("could not convert config into %s config: %w", d.Name(), err)
+		return failure, fmt.Errorf("could not convert config into %s config: %w", h.Name(), err)
 	}
 
-	return d.run(ctx, stepCtx, cfg)
+	return h.runPromotionStep(ctx, stepCtx, cfg)
 }
 
-func (d *helmUpdateChartDirective) run(
+func (h *helmChartUpdater) runPromotionStep(
 	ctx context.Context,
-	stepCtx *StepContext,
+	stepCtx *PromotionStepContext,
 	cfg HelmUpdateChartConfig,
-) (Result, error) {
+) (PromotionStepResult, error) {
 	absChartPath, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.Path)
 	if err != nil {
-		return Result{Status: StatusFailure}, fmt.Errorf("failed to join path %q: %w", cfg.Path, err)
+		return PromotionStepResult{Status: PromotionStatusFailure},
+			fmt.Errorf("failed to join path %q: %w", cfg.Path, err)
 	}
 
 	chartFilePath := filepath.Join(absChartPath, "Chart.yaml")
 	chartDependencies, err := readChartDependencies(chartFilePath)
 	if err != nil {
-		return Result{
-			Status: StatusFailure,
+		return PromotionStepResult{
+			Status: PromotionStatusFailure,
 		}, fmt.Errorf("failed to load chart dependencies from %q: %w", chartFilePath, err)
 	}
 
-	changes, err := d.processChartUpdates(ctx, stepCtx, cfg, chartDependencies)
+	changes, err := h.processChartUpdates(ctx, stepCtx, cfg, chartDependencies)
 	if err != nil {
-		return Result{Status: StatusFailure}, err
+		return PromotionStepResult{Status: PromotionStatusFailure}, err
 	}
 
 	if err = intyaml.SetStringsInFile(chartFilePath, changes); err != nil {
-		return Result{
-			Status: StatusFailure,
+		return PromotionStepResult{
+			Status: PromotionStatusFailure,
 		}, fmt.Errorf("failed to update chart dependencies in %q: %w", chartFilePath, err)
 	}
 
 	helmHome, err := os.MkdirTemp("", "helm-chart-update-")
 	if err != nil {
-		return Result{Status: StatusFailure}, fmt.Errorf("failed to create temporary Helm home directory: %w", err)
+		return PromotionStepResult{Status: PromotionStatusFailure},
+			fmt.Errorf("failed to create temporary Helm home directory: %w", err)
 	}
 	defer os.RemoveAll(helmHome)
 
-	newVersions, err := d.updateDependencies(ctx, stepCtx, helmHome, absChartPath, chartDependencies)
+	newVersions, err := h.updateDependencies(ctx, stepCtx, helmHome, absChartPath, chartDependencies)
 	if err != nil {
-		return Result{Status: StatusFailure}, err
+		return PromotionStepResult{Status: PromotionStatusFailure}, err
 	}
 
-	result := Result{Status: StatusSuccess}
-	if commitMsg := d.generateCommitMessage(cfg.Path, newVersions); commitMsg != "" {
+	result := PromotionStepResult{Status: PromotionStatusSuccess}
+	if commitMsg := h.generateCommitMessage(cfg.Path, newVersions); commitMsg != "" {
 		result.Output = make(State, 1)
 		result.Output.Set("commitMessage", commitMsg)
 	}
 	return result, nil
 }
 
-func (d *helmUpdateChartDirective) processChartUpdates(
+func (h *helmChartUpdater) processChartUpdates(
 	ctx context.Context,
-	stepCtx *StepContext,
+	stepCtx *PromotionStepContext,
 	cfg HelmUpdateChartConfig,
 	chartDependencies []chartDependency,
 ) (map[string]string, error) {
@@ -165,9 +175,9 @@ func (d *helmUpdateChartDirective) processChartUpdates(
 	return changes, nil
 }
 
-func (d *helmUpdateChartDirective) updateDependencies(
+func (h *helmChartUpdater) updateDependencies(
 	ctx context.Context,
-	stepCtx *StepContext,
+	stepCtx *PromotionStepContext,
 	helmHome, chartPath string,
 	chartDependencies []chartDependency,
 ) (map[string]string, error) {
@@ -181,13 +191,13 @@ func (d *helmUpdateChartDirective) updateDependencies(
 	for _, dep := range chartDependencies {
 		if strings.HasPrefix(dep.Repository, "file://") {
 			depPath := filepath.FromSlash(strings.TrimPrefix(dep.Repository, "file://"))
-			if err = d.validateFileDependency(stepCtx.WorkDir, chartPath, depPath); err != nil {
+			if err = h.validateFileDependency(stepCtx.WorkDir, chartPath, depPath); err != nil {
 				return nil, fmt.Errorf("invalid dependency %q: %w", dep.Repository, err)
 			}
 		}
 	}
 
-	if err = d.loadDependencyCredentials(
+	if err = h.loadDependencyCredentials(
 		ctx,
 		stepCtx.CredentialsDB,
 		registryClient,
@@ -239,7 +249,7 @@ func (d *helmUpdateChartDirective) updateDependencies(
 	return compareChartVersions(initialVersions, updatedVersions), nil
 }
 
-func (d *helmUpdateChartDirective) validateFileDependency(workDir, chartPath, dependencyPath string) error {
+func (h *helmChartUpdater) validateFileDependency(workDir, chartPath, dependencyPath string) error {
 	if filepath.IsAbs(dependencyPath) {
 		return errors.New("dependency path must be relative")
 	}
@@ -262,7 +272,7 @@ func (d *helmUpdateChartDirective) validateFileDependency(workDir, chartPath, de
 	return checkSymlinks(workDir, dependencyPath, visited, 0, 100)
 }
 
-func (d *helmUpdateChartDirective) loadDependencyCredentials(
+func (h *helmChartUpdater) loadDependencyCredentials(
 	ctx context.Context,
 	credentialsDB credentials.Database,
 	registryClient *registry.Client,
@@ -312,7 +322,7 @@ func (d *helmUpdateChartDirective) loadDependencyCredentials(
 	return nil
 }
 
-func (d *helmUpdateChartDirective) generateCommitMessage(chartPath string, newVersions map[string]string) string {
+func (h *helmChartUpdater) generateCommitMessage(chartPath string, newVersions map[string]string) string {
 	if len(newVersions) == 0 {
 		return ""
 	}

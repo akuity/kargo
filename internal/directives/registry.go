@@ -2,72 +2,122 @@ package directives
 
 import (
 	"fmt"
-	"maps"
 )
 
-// builtins is the registry of built-in directives.
-var builtins = DirectiveRegistry{}
+// builtins is a registry of built-in PromotionStepRunner and
+// HealthCheckStepRunner implementations.
+var builtins = NewStepRunnerRegistry()
 
-// BuiltinsRegistry returns a registry of built-in directives.
-func BuiltinsRegistry() DirectiveRegistry {
-	return maps.Clone(builtins)
+// StepRunnerRegistry is a registry of built-in PromotionStepRunner and
+// HealthCheckStepRunner implementations.
+type StepRunnerRegistry struct {
+	promotionStepRunners   map[string]PromotionStepRunnerRegistration
+	healthCheckStepRunners map[string]HealthCheckStepRunnerRegistration
 }
 
-// DirectiveRegistry is a map of directive names to DirectiveRegistrations. It
-// is used to register and retrieve directives by name.
-type DirectiveRegistry map[string]DirectiveRegistration
+// NewStepRunnerRegistry returns a new StepRunnerRegistry.
+func NewStepRunnerRegistry() *StepRunnerRegistry {
+	return &StepRunnerRegistry{
+		promotionStepRunners:   make(map[string]PromotionStepRunnerRegistration),
+		healthCheckStepRunners: make(map[string]HealthCheckStepRunnerRegistration),
+	}
+}
 
-// DirectiveRegistration is a registration for a single Directive. It includes
-// the Directive itself and a set of permissions that indicate capabilities
-// the Directive execution engine should enable for the Directive.
-type DirectiveRegistration struct {
+// PromotionStepRunnerRegistration is a registration for a single
+// PromotionStepRunner. It includes the PromotionStepRunner itself and a set of
+// permissions that indicate capabilities the Engine should enable for the
+// PromotionStepRunner.
+type PromotionStepRunnerRegistration struct {
 	// Permissions is a set of permissions that indicate capabilities the
-	// Directive execution engine should enable for the Directive.
-	Permissions DirectivePermissions
-	// Directive is a Directive that performs a discrete action in the context
-	// of a Promotion.
-	Directive Directive
+	// Engine should enable for the PromotionStepRunner.
+	Permissions StepRunnerPermissions
+	// Runner is a PromotionStepRunner executes a discrete PromotionStep in the
+	// context of a Promotion.
+	Runner PromotionStepRunner
 }
 
-// DirectivePermissions is a set of permissions that indicate capabilities the
-// Directive execution engine should enable for a Directive.
-type DirectivePermissions struct {
-	// AllowCredentialsDB indicates whether the Directive execution engine may
-	// provide the Directive with access to the credentials database.
+// HealthCheckStepRunnerRegistration is a registration for a single
+// HealthCheckStepRunner. It includes the HealthCheckStepRunner itself and a set
+// of permissions that indicate capabilities the Engine should enable for the
+// HealthCheckStepRunner.
+type HealthCheckStepRunnerRegistration struct {
+	// Permissions is a set of permissions that indicate capabilities the Engine
+	// should enable for the HealthCheckStepRunner.
+	Permissions StepRunnerPermissions
+	// Runner is a HealthCheckStepRunner executes a discrete HealthCheckStep.
+	Runner HealthCheckStepRunner
+}
+
+// StepRunnerPermissions is a set of permissions that indicate capabilities the
+// Engine should enable for a PromotionStepRunner or HealthCheckStepRunner.
+type StepRunnerPermissions struct {
+	// AllowCredentialsDB indicates whether the Engine may provide the step runner
+	// with access to the credentials database.
 	AllowCredentialsDB bool
-	// AllowKargoClient indicates whether the Directive execution engine may
-	// provide the Directive with access to a Kubernetes client for the Kargo
-	// control plane.
+	// AllowKargoClient indicates whether the Engine may provide the step runner
+	// with access to a Kubernetes client for the Kargo control plane.
 	AllowKargoClient bool
-	// AllowArgoCDClient indicates whether the Directive execution engine may
-	// provide the Directive with access to a Kubernetes client for the Argo CD
-	// control plane.
+	// AllowArgoCDClient indicates whether the Engine may provide the step runner
+	// with access to a Kubernetes client for the Argo CD control plane.
 	AllowArgoCDClient bool
 }
 
-// RegisterDirective registers a Directive with the given name. If a Directive
-// with the same name has already been registered, it will be overwritten.
-func (r DirectiveRegistry) RegisterDirective(
-	directive Directive,
-	permissions *DirectivePermissions,
+// RegisterPromotionStepRunner registers a PromotionStepRunner with the given
+// name. If a PromotionStepRunner with the same name has already been
+// registered, it will be overwritten.
+func (s StepRunnerRegistry) RegisterPromotionStepRunner(
+	runner PromotionStepRunner,
+	permissions *StepRunnerPermissions,
 ) {
 	if permissions == nil {
-		permissions = &DirectivePermissions{}
+		permissions = &StepRunnerPermissions{}
 	}
-	r[directive.Name()] = DirectiveRegistration{
+	s.promotionStepRunners[runner.Name()] = PromotionStepRunnerRegistration{
 		Permissions: *permissions,
-		Directive:   directive,
+		Runner:      runner,
 	}
 }
 
-// GetDirectiveRegistration returns the DirectiveRegistration for the Directive
-// with the given name, or an error if no such Directive is registered.
-func (r DirectiveRegistry) GetDirectiveRegistration(
+// GetPromotionStepRunnerRegistration returns the
+// PromotionStepRunnerRegistration for the promotion step with the given name,
+// or an error if no such PromotionStepRunner is registered.
+func (s StepRunnerRegistry) GetPromotionStepRunnerRegistration(
 	name string,
-) (DirectiveRegistration, error) {
-	step, ok := r[name]
+) (PromotionStepRunnerRegistration, error) {
+	reg, ok := s.promotionStepRunners[name]
 	if !ok {
-		return DirectiveRegistration{}, fmt.Errorf("directive %q not found", name)
+		return PromotionStepRunnerRegistration{},
+			fmt.Errorf("runner not found for promotion step %q", name)
 	}
-	return step, nil
+	return reg, nil
+}
+
+// RegisterHealthCheckStepRunner registers a HealthCheckStepRunner with the
+// given name. If a HealthCheckStepRunner with the same name has already been
+// registered, it will be overwritten.
+func (s StepRunnerRegistry) RegisterHealthCheckStepRunner(
+	runner HealthCheckStepRunner,
+	permissions *StepRunnerPermissions,
+) {
+	if permissions == nil {
+		permissions = &StepRunnerPermissions{}
+	}
+	s.healthCheckStepRunners[runner.Name()] = HealthCheckStepRunnerRegistration{
+		Permissions: *permissions,
+		Runner:      runner,
+	}
+}
+
+// GetHealthCheckStepRunnerRegistration returns the HealthStepRunnerRegistration
+// for the health check step with the given name, or an error if no such
+// HealthCheckStepRunner is registered.
+func (s StepRunnerRegistry) GetHealthCheckStepRunnerRegistration(
+	name string,
+) (HealthCheckStepRunnerRegistration, error) {
+	reg, ok := s.healthCheckStepRunners[name]
+	if !ok {
+		return HealthCheckStepRunnerRegistration{},
+			fmt.Errorf("runner not found for health check step %q", name)
+	}
+	return reg, nil
 }

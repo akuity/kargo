@@ -15,69 +15,70 @@ import (
 )
 
 func init() {
-	// Register the git-clone directive with the builtins registry.
-	builtins.RegisterDirective(
-		newGitCloneDirective(),
-		&DirectivePermissions{
+	builtins.RegisterPromotionStepRunner(
+		newGitCloner(),
+		&StepRunnerPermissions{
 			AllowCredentialsDB: true,
 			AllowKargoClient:   true,
 		},
 	)
 }
 
-// gitCloneDirective is a directive that clones one or more refs from a remote
-// Git repository to one or more working directories.
-type gitCloneDirective struct {
+// gitCloner is an implementation of the PromotionStepRunner interface that
+// clones one or more refs from a remote Git repository to one or more working
+// directories.
+type gitCloner struct {
 	schemaLoader gojsonschema.JSONLoader
 }
 
-// newGitCloneDirective creates a new git-clone directive.
-func newGitCloneDirective() Directive {
-	d := &gitCloneDirective{}
-	d.schemaLoader = getConfigSchemaLoader(d.Name())
-	return d
+// newGitCloner returns an implementation of the PromotionStepRunner interface
+// that clones one or more refs from a remote Git repository to one or more
+// working directories.
+func newGitCloner() PromotionStepRunner {
+	r := &gitCloner{}
+	r.schemaLoader = getConfigSchemaLoader(r.Name())
+	return r
 }
 
-// Name implements the Directive interface.
-func (g *gitCloneDirective) Name() string {
+// Name implements the PromotionStepRunner interface.
+func (g *gitCloner) Name() string {
 	return "git-clone"
 }
 
-// Run implements the Directive interface.
-func (g *gitCloneDirective) Run(
+// RunPromotionStep implements the PromotionStepRunner interface.
+func (g *gitCloner) RunPromotionStep(
 	ctx context.Context,
-	stepCtx *StepContext,
-) (Result, error) {
+	stepCtx *PromotionStepContext,
+) (PromotionStepResult, error) {
 	if err := g.validate(stepCtx.Config); err != nil {
-		return Result{Status: StatusFailure}, err
+		return PromotionStepResult{Status: PromotionStatusFailure}, err
 	}
 	cfg, err := configToStruct[GitCloneConfig](stepCtx.Config)
 	if err != nil {
-		return Result{Status: StatusFailure},
+		return PromotionStepResult{Status: PromotionStatusFailure},
 			fmt.Errorf("could not convert config into %s config: %w", g.Name(), err)
 	}
-	return g.run(ctx, stepCtx, cfg)
+	return g.runPromotionStep(ctx, stepCtx, cfg)
 }
 
-// validate validates the git-clone directive configuration against the JSON
-// schema.
-func (g *gitCloneDirective) validate(cfg Config) error {
+// validate validates gitCloner configuration against a JSON schema.
+func (g *gitCloner) validate(cfg Config) error {
 	return validate(g.schemaLoader, gojsonschema.NewGoLoader(cfg), g.Name())
 }
 
-func (g *gitCloneDirective) run(
+func (g *gitCloner) runPromotionStep(
 	ctx context.Context,
-	stepCtx *StepContext,
+	stepCtx *PromotionStepContext,
 	cfg GitCloneConfig,
-) (Result, error) {
+) (PromotionStepResult, error) {
 	mustClone, err := mustCloneRepo(stepCtx, cfg)
 	if err != nil {
-		return Result{Status: StatusFailure}, fmt.Errorf(
+		return PromotionStepResult{Status: PromotionStatusFailure}, fmt.Errorf(
 			"error determining if repo %s must be cloned: %w", cfg.RepoURL, err,
 		)
 	}
 	if !mustClone {
-		return Result{Status: StatusSuccess}, nil
+		return PromotionStepResult{Status: PromotionStatusSuccess}, nil
 	}
 
 	var repoCreds *git.RepoCredentials
@@ -88,7 +89,8 @@ func (g *gitCloneDirective) run(
 		cfg.RepoURL,
 	)
 	if err != nil {
-		return Result{Status: StatusFailure}, fmt.Errorf("error getting credentials for %s: %w", cfg.RepoURL, err)
+		return PromotionStepResult{Status: PromotionStatusFailure},
+			fmt.Errorf("error getting credentials for %s: %w", cfg.RepoURL, err)
 	}
 	if found {
 		repoCreds = &git.RepoCredentials{
@@ -108,7 +110,8 @@ func (g *gitCloneDirective) run(
 		},
 	)
 	if err != nil {
-		return Result{Status: StatusFailure}, fmt.Errorf("error cloning %s: %w", cfg.RepoURL, err)
+		return PromotionStepResult{Status: PromotionStatusFailure},
+			fmt.Errorf("error cloning %s: %w", cfg.RepoURL, err)
 	}
 	for _, checkout := range cfg.Checkout {
 		var ref string
@@ -116,7 +119,7 @@ func (g *gitCloneDirective) run(
 		case checkout.Branch != "":
 			ref = checkout.Branch
 			if err = ensureRemoteBranch(repo, ref); err != nil {
-				return Result{Status: StatusFailure},
+				return PromotionStepResult{Status: PromotionStatusFailure},
 					fmt.Errorf("error ensuring existence of remote branch %s: %w", ref, err)
 			}
 		case checkout.FromFreight:
@@ -137,11 +140,11 @@ func (g *gitCloneDirective) run(
 				stepCtx.Freight.References(),
 				cfg.RepoURL,
 			); err != nil {
-				return Result{Status: StatusFailure},
+				return PromotionStepResult{Status: PromotionStatusFailure},
 					fmt.Errorf("error finding commit from repo %s: %w", cfg.RepoURL, err)
 			}
 			if commit == nil {
-				return Result{Status: StatusFailure},
+				return PromotionStepResult{Status: PromotionStatusFailure},
 					fmt.Errorf("could not find any commit from repo %s", cfg.RepoURL)
 			}
 			ref = commit.ID
@@ -150,7 +153,7 @@ func (g *gitCloneDirective) run(
 		}
 		path, err := securejoin.SecureJoin(stepCtx.WorkDir, checkout.Path)
 		if err != nil {
-			return Result{Status: StatusFailure}, fmt.Errorf(
+			return PromotionStepResult{Status: PromotionStatusFailure}, fmt.Errorf(
 				"error joining path %s with work dir %s: %w",
 				checkout.Path, stepCtx.WorkDir, err,
 			)
@@ -159,24 +162,24 @@ func (g *gitCloneDirective) run(
 			path,
 			&git.AddWorkTreeOptions{Ref: ref},
 		); err != nil {
-			return Result{Status: StatusFailure}, fmt.Errorf(
+			return PromotionStepResult{Status: PromotionStatusFailure}, fmt.Errorf(
 				"error adding work tree %s to repo %s: %w",
 				checkout.Path, cfg.RepoURL, err,
 			)
 		}
 	}
 	// Note: We do NOT defer repo.Close() because we want to keep the repository
-	// around on the FS for subsequent directives to use. The directive execution
-	// engine will handle all work dir cleanup.
-	return Result{Status: StatusSuccess}, nil
+	// around on the FS for subsequent promotion steps to use. The Engine will
+	// handle all work dir cleanup.
+	return PromotionStepResult{Status: PromotionStatusSuccess}, nil
 }
 
 // mustCloneRepo determines if the repository must be cloned. At present, there
-// is no concept of partial success or retries for directives, so if any one
-// working tree's path already exists, we can assume a previous attempt to clone
-// the repository was fully successful. If that were not the case, this
-// directive would not even be executed again.
-func mustCloneRepo(stepCtx *StepContext, cfg GitCloneConfig) (bool, error) {
+// is no concept of partial success or retries for PromotionStepRunners, so if
+// any one working tree's path already exists, we can assume a previous attempt
+// to clone the repository was fully successful. If that were not the case, this
+// PromotionStepRunner would not even be executed again.
+func mustCloneRepo(stepCtx *PromotionStepContext, cfg GitCloneConfig) (bool, error) {
 	if len(cfg.Checkout) == 0 {
 		// This shouldn't actually happen because the schema enforces this being
 		// non-empty.

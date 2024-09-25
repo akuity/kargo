@@ -16,9 +16,9 @@ import (
 // have the same length as and will be indexed identically to the Application's
 // Sources slice. For any source whose desired revision cannot be determined,
 // the slice will contain an empty string at the corresponding index.
-func (a *argocdUpdateDirective) getDesiredRevisions(
+func (a *argocdUpdater) getDesiredRevisions(
 	ctx context.Context,
-	stepCtx *StepContext,
+	stepCtx *PromotionStepContext,
 	stepCfg *ArgoCDUpdateConfig,
 	stage *kargoapi.Stage,
 	update *ArgoCDAppUpdate,
@@ -60,9 +60,9 @@ func (a *argocdUpdateDirective) getDesiredRevisions(
 	return revisions, nil
 }
 
-func (a *argocdUpdateDirective) getDesiredRevisionForSource(
+func (a *argocdUpdater) getDesiredRevisionForSource(
 	ctx context.Context,
-	stepCtx *StepContext,
+	stepCtx *PromotionStepContext,
 	stage *kargoapi.Stage,
 	src *argocd.ApplicationSource,
 	desiredOrigin *kargoapi.FreightOrigin,
@@ -138,7 +138,7 @@ func (a *argocdUpdateDirective) getDesiredRevisionForSource(
 
 // findSourceUpdate finds and returns the ArgoCDSourceUpdate that targets the
 // given source. If no such update exists, it returns nil.
-func (a *argocdUpdateDirective) findSourceUpdate(
+func (a *argocdUpdater) findSourceUpdate(
 	update *ArgoCDAppUpdate,
 	src argocd.ApplicationSource,
 ) *ArgoCDAppSourceUpdate {

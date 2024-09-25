@@ -2451,6 +2451,21 @@ export class Health extends Message<Health> {
    */
   argoCDApps: ArgoCDAppStatus[] = [];
 
+  /**
+   * Config is the opaque configuration of all health checks performed on this
+   * Stage.
+   *
+   * @generated from field: optional k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON config = 4;
+   */
+  config?: JSON;
+
+  /**
+   * Output is the opaque output of all health checks performed on this Stage.
+   *
+   * @generated from field: optional k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON output = 5;
+   */
+  output?: JSON;
+
   constructor(data?: PartialMessage<Health>) {
     super();
     proto2.util.initPartial(data, this);
@@ -2462,6 +2477,8 @@ export class Health extends Message<Health> {
     { no: 1, name: "status", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 2, name: "issues", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 3, name: "argoCDApps", kind: "message", T: ArgoCDAppStatus, repeated: true },
+    { no: 4, name: "config", kind: "message", T: JSON, opt: true },
+    { no: 5, name: "output", kind: "message", T: JSON, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Health {

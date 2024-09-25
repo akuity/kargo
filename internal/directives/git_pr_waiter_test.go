@@ -13,7 +13,7 @@ import (
 	"github.com/akuity/kargo/internal/gitprovider"
 )
 
-func TestGitWaitForPRDirective_Validate(t *testing.T) {
+func Test_gitPRWaiter_validate(t *testing.T) {
 	testCases := []struct {
 		name             string
 		config           Config
@@ -78,13 +78,13 @@ func TestGitWaitForPRDirective_Validate(t *testing.T) {
 		},
 	}
 
-	d := newGitWaitForPRDirective()
-	dir, ok := d.(*gitWaitForPRDirective)
+	r := newGitPRWaiter()
+	runner, ok := r.(*gitPRWaiter)
 	require.True(t, ok)
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			err := dir.validate(testCase.config)
+			err := runner.validate(testCase.config)
 			if len(testCase.expectedProblems) == 0 {
 				require.NoError(t, err)
 			} else {
@@ -96,11 +96,11 @@ func TestGitWaitForPRDirective_Validate(t *testing.T) {
 	}
 }
 
-func TestGitWaitForPRDirective__Run(t *testing.T) {
+func Test_gitPRWaiter_runPromotionStep(t *testing.T) {
 	testCases := []struct {
 		name       string
 		provider   gitprovider.GitProviderService
-		assertions func(*testing.T, Result, error)
+		assertions func(*testing.T, PromotionStepResult, error)
 	}{
 		{
 			name: "error finding PR",
@@ -112,10 +112,10 @@ func TestGitWaitForPRDirective__Run(t *testing.T) {
 					return nil, errors.New("something went wrong")
 				},
 			},
-			assertions: func(t *testing.T, res Result, err error) {
+			assertions: func(t *testing.T, res PromotionStepResult, err error) {
 				require.ErrorContains(t, err, "error getting pull request")
 				require.ErrorContains(t, err, "something went wrong")
-				require.Equal(t, StatusFailure, res.Status)
+				require.Equal(t, PromotionStatusFailure, res.Status)
 			},
 		},
 		{
@@ -130,9 +130,9 @@ func TestGitWaitForPRDirective__Run(t *testing.T) {
 					}, nil
 				},
 			},
-			assertions: func(t *testing.T, res Result, err error) {
+			assertions: func(t *testing.T, res PromotionStepResult, err error) {
 				require.NoError(t, err)
-				require.Equal(t, StatusPending, res.Status)
+				require.Equal(t, PromotionStatusPending, res.Status)
 			},
 		},
 		{
@@ -150,11 +150,11 @@ func TestGitWaitForPRDirective__Run(t *testing.T) {
 					return false, errors.New("something went wrong")
 				},
 			},
-			assertions: func(t *testing.T, res Result, err error) {
+			assertions: func(t *testing.T, res PromotionStepResult, err error) {
 				require.ErrorContains(t, err, "error checking if pull request")
 				require.ErrorContains(t, err, "was merged")
 				require.ErrorContains(t, err, "something went wrong")
-				require.Equal(t, StatusFailure, res.Status)
+				require.Equal(t, PromotionStatusFailure, res.Status)
 			},
 		},
 		{
@@ -172,9 +172,9 @@ func TestGitWaitForPRDirective__Run(t *testing.T) {
 					return false, nil
 				},
 			},
-			assertions: func(t *testing.T, res Result, err error) {
+			assertions: func(t *testing.T, res PromotionStepResult, err error) {
 				require.ErrorContains(t, err, "was closed without being merged")
-				require.Equal(t, StatusFailure, res.Status)
+				require.Equal(t, PromotionStatusFailure, res.Status)
 			},
 		},
 		{
@@ -192,15 +192,15 @@ func TestGitWaitForPRDirective__Run(t *testing.T) {
 					return true, nil
 				},
 			},
-			assertions: func(t *testing.T, res Result, err error) {
+			assertions: func(t *testing.T, res PromotionStepResult, err error) {
 				require.NoError(t, err)
-				require.Equal(t, StatusSuccess, res.Status)
+				require.Equal(t, PromotionStatusSuccess, res.Status)
 			},
 		},
 	}
 
-	d := newGitWaitForPRDirective()
-	dir, ok := d.(*gitWaitForPRDirective)
+	r := newGitPRWaiter()
+	runner, ok := r.(*gitPRWaiter)
 	require.True(t, ok)
 
 	for _, testCase := range testCases {
@@ -221,9 +221,9 @@ func TestGitWaitForPRDirective__Run(t *testing.T) {
 				},
 			)
 
-			res, err := dir.run(
+			res, err := runner.runPromotionStep(
 				context.Background(),
-				&StepContext{
+				&PromotionStepContext{
 					CredentialsDB: &credentials.FakeDB{},
 				},
 				GitWaitForPRConfig{

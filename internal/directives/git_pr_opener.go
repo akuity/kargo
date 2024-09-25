@@ -14,60 +14,60 @@ import (
 const prNumberKey = "prNumber"
 
 func init() {
-	// Register the git-open-pr directive with the builtins registry.
-	builtins.RegisterDirective(
-		newGitOpenPRDirective(),
-		&DirectivePermissions{AllowCredentialsDB: true},
+	builtins.RegisterPromotionStepRunner(
+		newGitPROpener(),
+		&StepRunnerPermissions{AllowCredentialsDB: true},
 	)
 }
 
-// gitOpenPRDirective is a directive that opens a pull request.
-type gitOpenPRDirective struct {
+// gitPROpener is an implementation of the PromotionStepRunner interface that
+// opens a pull request.
+type gitPROpener struct {
 	schemaLoader gojsonschema.JSONLoader
 }
 
-// newGitOpenPRDirective creates a new git-open-pr directive.
-func newGitOpenPRDirective() Directive {
-	d := &gitOpenPRDirective{}
-	d.schemaLoader = getConfigSchemaLoader(d.Name())
-	return d
+// newGitPROpener returns an implementation of the PromotionStepRunner interface
+// that opens a pull request.
+func newGitPROpener() PromotionStepRunner {
+	r := &gitPROpener{}
+	r.schemaLoader = getConfigSchemaLoader(r.Name())
+	return r
 }
 
-// Name implements the Directive interface.
-func (g *gitOpenPRDirective) Name() string {
+// Name implements the PromotionStepRunner interface.
+func (g *gitPROpener) Name() string {
 	return "git-open-pr"
 }
 
-// Run implements the Directive interface.
-func (g *gitOpenPRDirective) Run(
+// RunPromotionStep implements the PromotionStepRunner interface.
+func (g *gitPROpener) RunPromotionStep(
 	ctx context.Context,
-	stepCtx *StepContext,
-) (Result, error) {
+	stepCtx *PromotionStepContext,
+) (PromotionStepResult, error) {
 	if err := g.validate(stepCtx.Config); err != nil {
-		return Result{Status: StatusFailure}, err
+		return PromotionStepResult{Status: PromotionStatusFailure}, err
 	}
 	cfg, err := configToStruct[GitOpenPRConfig](stepCtx.Config)
 	if err != nil {
-		return Result{Status: StatusFailure},
+		return PromotionStepResult{Status: PromotionStatusFailure},
 			fmt.Errorf("could not convert config into git-open-pr config: %w", err)
 	}
-	return g.run(ctx, stepCtx, cfg)
+	return g.runPromotionStep(ctx, stepCtx, cfg)
 }
 
-// validate validates the git-open-pr directive configuration against the JSON
-// schema.
-func (g *gitOpenPRDirective) validate(cfg Config) error {
+// validate validates gitPROpener configuration against a JSON schema.
+func (g *gitPROpener) validate(cfg Config) error {
 	return validate(g.schemaLoader, gojsonschema.NewGoLoader(cfg), g.Name())
 }
 
-func (g *gitOpenPRDirective) run(
+func (g *gitPROpener) runPromotionStep(
 	ctx context.Context,
-	stepCtx *StepContext,
+	stepCtx *PromotionStepContext,
 	cfg GitOpenPRConfig,
-) (Result, error) {
+) (PromotionStepResult, error) {
 	sourceBranch, err := getSourceBranch(stepCtx.SharedState, cfg)
 	if err != nil {
-		return Result{Status: StatusFailure},
+		return PromotionStepResult{Status: PromotionStatusFailure},
 			fmt.Errorf("error determining source branch: %w", err)
 	}
 
@@ -79,7 +79,8 @@ func (g *gitOpenPRDirective) run(
 		cfg.RepoURL,
 	)
 	if err != nil {
-		return Result{Status: StatusFailure}, fmt.Errorf("error getting credentials for %s: %w", cfg.RepoURL, err)
+		return PromotionStepResult{Status: PromotionStatusFailure},
+			fmt.Errorf("error getting credentials for %s: %w", cfg.RepoURL, err)
 	}
 	if found {
 		repoCreds = &git.RepoCredentials{
@@ -101,7 +102,7 @@ func (g *gitOpenPRDirective) run(
 		},
 	)
 	if err != nil {
-		return Result{Status: StatusFailure},
+		return PromotionStepResult{Status: PromotionStatusFailure},
 			fmt.Errorf("error cloning %s: %w", cfg.RepoURL, err)
 	}
 	defer repo.Close()
@@ -117,7 +118,7 @@ func (g *gitOpenPRDirective) run(
 	}
 	gitProviderSvc, err := gitprovider.NewGitProviderService(cfg.RepoURL, gpOpts)
 	if err != nil {
-		return Result{Status: StatusFailure},
+		return PromotionStepResult{Status: PromotionStatusFailure},
 			fmt.Errorf("error creating git provider service: %w", err)
 	}
 
@@ -130,11 +131,11 @@ func (g *gitOpenPRDirective) run(
 		cfg.TargetBranch,
 	)
 	if err != nil {
-		return Result{Status: StatusFailure},
+		return PromotionStepResult{Status: PromotionStatusFailure},
 			fmt.Errorf("error determining if pull request must be opened: %w", err)
 	}
 	if !mustOpen {
-		return Result{Status: StatusSuccess}, nil
+		return PromotionStepResult{Status: PromotionStatusSuccess}, nil
 	}
 
 	// Get the title from the commit message of the head of the source branch
@@ -142,7 +143,7 @@ func (g *gitOpenPRDirective) run(
 	// that may involve creating a new branch and committing to it.
 	title, err := repo.CommitMessage(sourceBranch)
 	if err != nil {
-		return Result{Status: StatusFailure}, fmt.Errorf(
+		return PromotionStepResult{Status: PromotionStatusFailure}, fmt.Errorf(
 			"error getting commit message from head of branch %s: %w",
 			sourceBranch, err,
 		)
@@ -153,7 +154,7 @@ func (g *gitOpenPRDirective) run(
 		cfg.TargetBranch,
 		cfg.CreateTargetBranch,
 	); err != nil {
-		return Result{Status: StatusFailure}, fmt.Errorf(
+		return PromotionStepResult{Status: PromotionStatusFailure}, fmt.Errorf(
 			"error ensuring existence of remote branch %s: %w",
 			cfg.TargetBranch, err,
 		)
@@ -168,11 +169,11 @@ func (g *gitOpenPRDirective) run(
 		},
 	)
 	if err != nil {
-		return Result{Status: StatusFailure},
+		return PromotionStepResult{Status: PromotionStatusFailure},
 			fmt.Errorf("error creating pull request: %w", err)
 	}
-	return Result{
-		Status: StatusSuccess,
+	return PromotionStepResult{
+		Status: PromotionStatusSuccess,
 		Output: State{
 			prNumberKey: pr.Number,
 		},

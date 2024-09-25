@@ -14,7 +14,7 @@ import (
 	"github.com/akuity/kargo/internal/controller/git"
 )
 
-func TestGitOverwriteDirective_Validate(t *testing.T) {
+func Test_gitTreeOverwriter_validate(t *testing.T) {
 	testCases := []struct {
 		name             string
 		config           Config
@@ -54,13 +54,13 @@ func TestGitOverwriteDirective_Validate(t *testing.T) {
 		},
 	}
 
-	d := newGitOverwriteDirective()
-	dir, ok := d.(*gitOverwriteDirective)
+	r := newGitTreeOverwriter()
+	runner, ok := r.(*gitTreeOverwriter)
 	require.True(t, ok)
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			err := dir.validate(testCase.config)
+			err := runner.validate(testCase.config)
 			if len(testCase.expectedProblems) == 0 {
 				require.NoError(t, err)
 			} else {
@@ -72,7 +72,7 @@ func TestGitOverwriteDirective_Validate(t *testing.T) {
 	}
 }
 
-func TestGitOverwriteDirective_Run(t *testing.T) {
+func Test_gitTreeOverwriter_runPromotionStep(t *testing.T) {
 	// Set up a test Git server in-process
 	service := gitkit.New(
 		gitkit.Config{
@@ -89,9 +89,9 @@ func TestGitOverwriteDirective_Run(t *testing.T) {
 
 	workDir := t.TempDir()
 
-	// Finagle a local bare repo and working tree into place the way that the
-	// git-clone directive might have so we can verify the git-push directive's
-	// ability to reload the working tree from the file system.
+	// Finagle a local bare repo and working tree into place the way that
+	// gitCloner might have so we can verify gitPusher's ability to reload the
+	// working tree from the file system.
 	repo, err := git.CloneBare(
 		testRepoURL,
 		nil,
@@ -115,20 +115,20 @@ func TestGitOverwriteDirective_Run(t *testing.T) {
 	require.NoError(t, err)
 
 	// Write another file to a different directory. This will be the source
-	// directory for the git-overwrite directive.
+	// directory for the gitTreeOverwriter.
 	srcDir := filepath.Join(workDir, "src")
 	err = os.Mkdir(srcDir, 0700)
 	require.NoError(t, err)
 	err = os.WriteFile(filepath.Join(srcDir, "new.txt"), []byte("bar"), 0600)
 	require.NoError(t, err)
 
-	d := newGitOverwriteDirective()
-	dir, ok := d.(*gitOverwriteDirective)
+	r := newGitTreeOverwriter()
+	runner, ok := r.(*gitTreeOverwriter)
 	require.True(t, ok)
 
-	res, err := dir.run(
+	res, err := runner.runPromotionStep(
 		context.Background(),
-		&StepContext{
+		&PromotionStepContext{
 			Project: "fake-project",
 			Stage:   "fake-stage",
 			WorkDir: workDir,
@@ -139,7 +139,7 @@ func TestGitOverwriteDirective_Run(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
-	require.Equal(t, StatusSuccess, res.Status)
+	require.Equal(t, PromotionStatusSuccess, res.Status)
 
 	// Make sure old files are gone
 	_, err = os.Stat(filepath.Join(workTree.Dir(), "original.txt"))

@@ -13,74 +13,73 @@ import (
 const commitKey = "commit"
 
 func init() {
-	// Register the git-commit directive with the builtins registry.
-	builtins.RegisterDirective(newGitCommitDirective(), nil)
+	builtins.RegisterPromotionStepRunner(newGitCommitter(), nil)
 }
 
-// gitCommitDirective is a directive that makes a commit to a local Git
-// repository.
-type gitCommitDirective struct {
+// gitCommitter is an implementation of the PromotionStepRunner interface that
+// makes a commit to a local Git repository.
+type gitCommitter struct {
 	schemaLoader gojsonschema.JSONLoader
 }
 
-// newGitCommitDirective creates a new git-commit directive.
-func newGitCommitDirective() Directive {
-	d := &gitCommitDirective{}
-	d.schemaLoader = getConfigSchemaLoader(d.Name())
-	return d
+// newGitCommitter returns an implementation of the PromotionStepRunner
+// interface that makes a commit to a local Git repository.
+func newGitCommitter() PromotionStepRunner {
+	r := &gitCommitter{}
+	r.schemaLoader = getConfigSchemaLoader(r.Name())
+	return r
 }
 
-// Name implements the Directive interface.
-func (g *gitCommitDirective) Name() string {
+// Name implements the PromotionStepRunner interface.
+func (g *gitCommitter) Name() string {
 	return "git-commit"
 }
 
-// Run implements the Directive interface.
-func (g *gitCommitDirective) Run(
+// RunPromotionStep implements the PromotionStepRunner interface.
+func (g *gitCommitter) RunPromotionStep(
 	ctx context.Context,
-	stepCtx *StepContext,
-) (Result, error) {
+	stepCtx *PromotionStepContext,
+) (PromotionStepResult, error) {
 	if err := g.validate(stepCtx.Config); err != nil {
-		return Result{Status: StatusFailure}, err
+		return PromotionStepResult{Status: PromotionStatusFailure}, err
 	}
 	cfg, err := configToStruct[GitCommitConfig](stepCtx.Config)
 	if err != nil {
-		return Result{Status: StatusFailure},
+		return PromotionStepResult{Status: PromotionStatusFailure},
 			fmt.Errorf("could not convert config into %s config: %w", g.Name(), err)
 	}
-	return g.run(ctx, stepCtx, cfg)
+	return g.runPromotionStep(ctx, stepCtx, cfg)
 }
 
-// validate validates the git-commit directive configuration against the JSON
-// schema.
-func (g *gitCommitDirective) validate(cfg Config) error {
+// validate validates gitCommitter configuration against a JSON schema.
+func (g *gitCommitter) validate(cfg Config) error {
 	return validate(g.schemaLoader, gojsonschema.NewGoLoader(cfg), g.Name())
 }
 
-func (g *gitCommitDirective) run(
+func (g *gitCommitter) runPromotionStep(
 	_ context.Context,
-	stepCtx *StepContext,
+	stepCtx *PromotionStepContext,
 	cfg GitCommitConfig,
-) (Result, error) {
+) (PromotionStepResult, error) {
 	path, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.Path)
 	if err != nil {
-		return Result{Status: StatusFailure}, fmt.Errorf(
+		return PromotionStepResult{Status: PromotionStatusFailure}, fmt.Errorf(
 			"error joining path %s with work dir %s: %w",
 			cfg.Path, stepCtx.WorkDir, err,
 		)
 	}
 	workTree, err := git.LoadWorkTree(path, nil)
 	if err != nil {
-		return Result{Status: StatusFailure},
+		return PromotionStepResult{Status: PromotionStatusFailure},
 			fmt.Errorf("error loading working tree from %s: %w", cfg.Path, err)
 	}
 	if err = workTree.AddAll(); err != nil {
-		return Result{Status: StatusFailure},
+		return PromotionStepResult{Status: PromotionStatusFailure},
 			fmt.Errorf("error adding all changes to working tree: %w", err)
 	}
 	commitMsg, err := g.buildCommitMessage(stepCtx.SharedState, cfg)
 	if err != nil {
-		return Result{Status: StatusFailure},
+		return PromotionStepResult{Status: PromotionStatusFailure},
 			fmt.Errorf("error building commit message: %w", err)
 	}
 	commitOpts := &git.CommitOptions{}
@@ -94,21 +93,21 @@ func (g *gitCommitDirective) run(
 		}
 	}
 	if err = workTree.Commit(commitMsg, commitOpts); err != nil {
-		return Result{Status: StatusFailure},
+		return PromotionStepResult{Status: PromotionStatusFailure},
 			fmt.Errorf("error committing to working tree: %w", err)
 	}
 	commitID, err := workTree.LastCommitID()
 	if err != nil {
-		return Result{Status: StatusFailure},
+		return PromotionStepResult{Status: PromotionStatusFailure},
 			fmt.Errorf("error getting last commit ID: %w", err)
 	}
-	return Result{
-		Status: StatusSuccess,
+	return PromotionStepResult{
+		Status: PromotionStatusSuccess,
 		Output: State{commitKey: commitID},
 	}, nil
 }
 
-func (g *gitCommitDirective) buildCommitMessage(
+func (g *gitCommitter) buildCommitMessage(
 	sharedState State,
 	cfg GitCommitConfig,
 ) (string, error) {

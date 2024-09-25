@@ -13,12 +13,12 @@ import (
 	"helm.sh/helm/v3/pkg/chartutil"
 )
 
-func Test_helmTemplateDirective_run(t *testing.T) {
+func Test_helmTemplateRunner_runPromotionStep(t *testing.T) {
 	tests := []struct {
 		name       string
 		files      map[string]string
 		cfg        HelmTemplateConfig
-		assertions func(*testing.T, string, Result, error)
+		assertions func(*testing.T, string, PromotionStepResult, error)
 	}{
 		{
 			name: "successful run",
@@ -44,9 +44,9 @@ data:
 				ReleaseName: "test-release",
 				Namespace:   "test-namespace",
 			},
-			assertions: func(t *testing.T, workDir string, result Result, err error) {
+			assertions: func(t *testing.T, workDir string, result PromotionStepResult, err error) {
 				require.NoError(t, err)
-				assert.Equal(t, Result{Status: StatusSuccess}, result)
+				assert.Equal(t, PromotionStepResult{Status: PromotionStatusSuccess}, result)
 
 				outPath := filepath.Join(workDir, "output.yaml")
 				require.FileExists(t, outPath)
@@ -90,9 +90,9 @@ data:
 				ReleaseName: "test-release",
 				Namespace:   "test-namespace",
 			},
-			assertions: func(t *testing.T, workDir string, result Result, err error) {
+			assertions: func(t *testing.T, workDir string, result PromotionStepResult, err error) {
 				require.NoError(t, err)
-				assert.Equal(t, Result{Status: StatusSuccess}, result)
+				assert.Equal(t, PromotionStepResult{Status: PromotionStatusSuccess}, result)
 
 				outPath := filepath.Join(workDir, "output.yaml")
 				require.FileExists(t, outPath)
@@ -116,9 +116,9 @@ data:
 			cfg: HelmTemplateConfig{
 				ValuesFiles: []string{"non-existent.yaml"},
 			},
-			assertions: func(t *testing.T, workDir string, result Result, err error) {
+			assertions: func(t *testing.T, workDir string, result PromotionStepResult, err error) {
 				require.ErrorContains(t, err, "failed to compose values")
-				assert.Equal(t, Result{Status: StatusFailure}, result)
+				assert.Equal(t, PromotionStepResult{Status: PromotionStatusFailure}, result)
 
 				require.NoFileExists(t, filepath.Join(workDir, "output.yaml"))
 			},
@@ -128,9 +128,9 @@ data:
 			cfg: HelmTemplateConfig{
 				Path: "./",
 			},
-			assertions: func(t *testing.T, workDir string, result Result, err error) {
+			assertions: func(t *testing.T, workDir string, result PromotionStepResult, err error) {
 				require.ErrorContains(t, err, "failed to load chart")
-				assert.Equal(t, Result{Status: StatusFailure}, result)
+				assert.Equal(t, PromotionStepResult{Status: PromotionStatusFailure}, result)
 
 				require.NoFileExists(t, filepath.Join(workDir, "output.yaml"))
 			},
@@ -151,9 +151,9 @@ dependencies:
 				Path:    "charts/test-chart",
 				OutPath: "output.yaml",
 			},
-			assertions: func(t *testing.T, workDir string, result Result, err error) {
+			assertions: func(t *testing.T, workDir string, result PromotionStepResult, err error) {
 				require.ErrorContains(t, err, "missing chart dependencies")
-				assert.Equal(t, Result{Status: StatusFailure}, result)
+				assert.Equal(t, PromotionStepResult{Status: PromotionStatusFailure}, result)
 
 				require.NoFileExists(t, filepath.Join(workDir, "output.yaml"))
 			},
@@ -169,9 +169,9 @@ version: 0.1.0`,
 				Path:        "charts/test-chart",
 				KubeVersion: "invalid",
 			},
-			assertions: func(t *testing.T, workDir string, result Result, err error) {
+			assertions: func(t *testing.T, workDir string, result PromotionStepResult, err error) {
 				require.ErrorContains(t, err, "failed to initialize Helm action config")
-				assert.Equal(t, Result{Status: StatusFailure}, result)
+				assert.Equal(t, PromotionStepResult{Status: PromotionStatusFailure}, result)
 
 				require.NoFileExists(t, filepath.Join(workDir, "output.yaml"))
 			},
@@ -195,9 +195,9 @@ data:
 				Path:    "charts/test-chart",
 				OutPath: "output.yaml",
 			},
-			assertions: func(t *testing.T, workDir string, result Result, err error) {
+			assertions: func(t *testing.T, workDir string, result PromotionStepResult, err error) {
 				require.ErrorContains(t, err, "failed to render chart")
-				assert.Equal(t, Result{Status: StatusFailure}, result)
+				assert.Equal(t, PromotionStepResult{Status: PromotionStatusFailure}, result)
 
 				require.NoFileExists(t, filepath.Join(workDir, "output.yaml"))
 			},
@@ -220,14 +220,16 @@ metadata:
 				Path:    "./chart/",
 				OutPath: "output.yaml",
 			},
-			assertions: func(t *testing.T, workDir string, result Result, err error) {
+			assertions: func(t *testing.T, workDir string, result PromotionStepResult, err error) {
 				require.ErrorContains(t, err, "failed to write rendered chart")
-				assert.Equal(t, Result{Status: StatusFailure}, result)
+				assert.Equal(t, PromotionStepResult{Status: PromotionStatusFailure}, result)
 
 				require.NoFileExists(t, filepath.Join(workDir, "output.yaml"))
 			},
 		},
 	}
+
+	runner := &helmTemplateRunner{}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -236,19 +238,17 @@ metadata:
 				require.NoError(t, os.MkdirAll(filepath.Dir(filepath.Join(workDir, p)), 0o700))
 				require.NoError(t, os.WriteFile(filepath.Join(workDir, p), []byte(c), 0o600))
 			}
-
-			d := &helmTemplateDirective{}
-			stepCtx := &StepContext{
+			stepCtx := &PromotionStepContext{
 				WorkDir: workDir,
 				Project: "test-project",
 			}
-			result, err := d.run(context.Background(), stepCtx, tt.cfg)
+			result, err := runner.runPromotionStep(context.Background(), stepCtx, tt.cfg)
 			tt.assertions(t, workDir, result, err)
 		})
 	}
 }
 
-func Test_helmTemplateDirective_composeValues(t *testing.T) {
+func Test_helmTemplateRunner_composeValues(t *testing.T) {
 	tests := []struct {
 		name           string
 		workDir        string
@@ -283,20 +283,20 @@ func Test_helmTemplateDirective_composeValues(t *testing.T) {
 		},
 	}
 
+	runner := (&helmTemplateRunner{})
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			for p, c := range tt.valuesContents {
 				require.NoError(t, os.WriteFile(filepath.Join(tt.workDir, p), []byte(c), 0o600))
 			}
-
-			d := &helmTemplateDirective{}
-			result, err := d.composeValues(tt.workDir, tt.valuesFiles)
+			result, err := runner.composeValues(tt.workDir, tt.valuesFiles)
 			tt.assertions(t, result, err)
 		})
 	}
 }
 
-func Test_helmTemplateDirective_newInstallAction(t *testing.T) {
+func Test_helmTemplateRunner_newInstallAction(t *testing.T) {
 	tests := []struct {
 		name       string
 		cfg        HelmTemplateConfig
@@ -350,16 +350,17 @@ func Test_helmTemplateDirective_newInstallAction(t *testing.T) {
 		},
 	}
 
+	runner := (&helmTemplateRunner{})
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			d := &helmTemplateDirective{}
-			client, err := d.newInstallAction(tt.cfg, tt.project)
+			client, err := runner.newInstallAction(tt.cfg, tt.project)
 			tt.assertions(t, client, err)
 		})
 	}
 }
 
-func TestHelmTemplateDirective_loadChart(t *testing.T) {
+func Test_helmTemplateRunner_loadChart(t *testing.T) {
 	tests := []struct {
 		name       string
 		workDir    string
@@ -388,16 +389,17 @@ func TestHelmTemplateDirective_loadChart(t *testing.T) {
 		},
 	}
 
+	runner := &helmTemplateRunner{}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			d := &helmTemplateDirective{}
-			c, err := d.loadChart(tt.workDir, tt.path)
+			c, err := runner.loadChart(tt.workDir, tt.path)
 			tt.assertions(t, c, err)
 		})
 	}
 }
 
-func Test_helmTemplateDirective_checkDependencies(t *testing.T) {
+func Test_helmTemplateRunner_checkDependencies(t *testing.T) {
 	tests := []struct {
 		name       string
 		chart      *chart.Chart
@@ -428,16 +430,17 @@ func Test_helmTemplateDirective_checkDependencies(t *testing.T) {
 		},
 	}
 
+	runner := &helmTemplateRunner{}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			d := &helmTemplateDirective{}
-			err := d.checkDependencies(tt.chart)
+			err := runner.checkDependencies(tt.chart)
 			tt.assertions(t, err)
 		})
 	}
 }
 
-func Test_helmTemplateDirective_writeOutput(t *testing.T) {
+func Test_helmTemplateRunner_writeOutput(t *testing.T) {
 	tests := []struct {
 		name       string
 		workDir    string
@@ -484,13 +487,14 @@ func Test_helmTemplateDirective_writeOutput(t *testing.T) {
 		},
 	}
 
+	runner := &helmTemplateRunner{}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.setup != nil {
 				tt.setup(tt.workDir)
 			}
-			d := &helmTemplateDirective{}
-			err := d.writeOutput(tt.workDir, tt.outPath, tt.manifest)
+			err := runner.writeOutput(tt.workDir, tt.outPath, tt.manifest)
 			tt.assertions(t, tt.workDir, err)
 		})
 	}

@@ -191,7 +191,6 @@ func newReconciler(
 	r := &reconciler{
 		kargoClient: kargoClient,
 		directivesEngine: directives.NewSimpleEngine(
-			directives.BuiltinsRegistry(),
 			credentialsDB,
 			kargoClient,
 			argocdClient,
@@ -515,12 +514,12 @@ func (r *reconciler) promote(
 		}
 	} else {
 		// If the Promotion has steps, execute them in sequence.
-		var steps []directives.Step
+		var steps []directives.PromotionStep
 		for _, step := range workingPromo.Spec.Steps {
-			steps = append(steps, directives.Step{
-				Directive: step.Step,
-				Alias:     step.As,
-				Config:    step.GetConfig(),
+			steps = append(steps, directives.PromotionStep{
+				Kind:   step.Step,
+				Alias:  step.As,
+				Config: step.GetConfig(),
 			})
 		}
 
@@ -536,19 +535,19 @@ func (r *reconciler) promote(
 			}
 		}()
 
-		status, err := r.directivesEngine.Execute(ctx, directives.PromotionContext{
+		res, err := r.directivesEngine.Promote(ctx, directives.PromotionContext{
 			WorkDir:         workDir,
 			Project:         stageNamespace,
 			Stage:           stageName,
 			FreightRequests: stage.Spec.RequestedFreight,
 			Freight:         *workingPromo.Status.FreightCollection.DeepCopy(),
 		}, steps)
-		switch status {
-		case directives.StatusPending:
+		switch res.Status {
+		case directives.PromotionStatusPending:
 			workingPromo.Status.Phase = kargoapi.PromotionPhaseRunning
-		case directives.StatusSuccess:
+		case directives.PromotionStatusSuccess:
 			workingPromo.Status.Phase = kargoapi.PromotionPhaseSucceeded
-		case directives.StatusFailure:
+		case directives.PromotionStatusFailure:
 			workingPromo.Status.Phase = kargoapi.PromotionPhaseFailed
 		}
 		if err != nil {

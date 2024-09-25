@@ -10,7 +10,7 @@ import (
 	argocdapi "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
 )
 
-func TestGetDesiredRevisions(t *testing.T) {
+func Test_argoCDUpdater_getDesiredRevisions(t *testing.T) {
 	testOrigin := kargoapi.FreightOrigin{
 		Kind: kargoapi.FreightOriginKindWarehouse,
 		Name: "fake-warehouse",
@@ -118,9 +118,12 @@ func TestGetDesiredRevisions(t *testing.T) {
 			want: []string{"", "v2.0.0", "v1.0.0", "v3.0.0", "", "fake-commit", "another-fake-commit", ""},
 		},
 	}
+
+	runner := &argocdUpdater{}
+
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			stepCtx := &StepContext{
+			stepCtx := &PromotionStepContext{
 				Freight: kargoapi.FreightCollection{},
 			}
 			for _, freight := range testCase.freight {
@@ -143,7 +146,7 @@ func TestGetDesiredRevisions(t *testing.T) {
 					},
 				}},
 			}
-			revisions, err := (&argocdUpdateDirective{}).getDesiredRevisions(
+			revisions, err := runner.getDesiredRevisions(
 				context.Background(),
 				stepCtx,
 				stepCfg,

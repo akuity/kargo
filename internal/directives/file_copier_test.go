@@ -11,12 +11,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func Test_copyDirective_run(t *testing.T) {
+func Test_fileCopier_runPromotionStep(t *testing.T) {
 	tests := []struct {
 		name       string
 		setupFiles func(*testing.T) string
 		cfg        CopyConfig
-		assertions func(*testing.T, string, Result, error)
+		assertions func(*testing.T, string, PromotionStepResult, error)
 	}{
 		{
 			name: "succeeds copying file",
@@ -32,9 +32,9 @@ func Test_copyDirective_run(t *testing.T) {
 				InPath:  "input.txt",
 				OutPath: "output.txt",
 			},
-			assertions: func(t *testing.T, workDir string, result Result, err error) {
+			assertions: func(t *testing.T, workDir string, result PromotionStepResult, err error) {
 				assert.NoError(t, err)
-				assert.Equal(t, Result{Status: StatusSuccess}, result)
+				assert.Equal(t, PromotionStepResult{Status: PromotionStatusSuccess}, result)
 
 				outPath := filepath.Join(workDir, "output.txt")
 				b, err := os.ReadFile(outPath)
@@ -64,9 +64,9 @@ func Test_copyDirective_run(t *testing.T) {
 				InPath:  "input/",
 				OutPath: "output/",
 			},
-			assertions: func(t *testing.T, workDir string, result Result, err error) {
+			assertions: func(t *testing.T, workDir string, result PromotionStepResult, err error) {
 				assert.NoError(t, err)
-				assert.Equal(t, Result{Status: StatusSuccess}, result)
+				assert.Equal(t, PromotionStepResult{Status: PromotionStatusSuccess}, result)
 
 				outDir := filepath.Join(workDir, "output")
 
@@ -102,9 +102,9 @@ func Test_copyDirective_run(t *testing.T) {
 				InPath:  "input/",
 				OutPath: "output/",
 			},
-			assertions: func(t *testing.T, workDir string, result Result, err error) {
+			assertions: func(t *testing.T, workDir string, result PromotionStepResult, err error) {
 				assert.NoError(t, err)
-				require.Equal(t, Result{Status: StatusSuccess}, result)
+				require.Equal(t, PromotionStepResult{Status: PromotionStatusSuccess}, result)
 
 				outDir := filepath.Join(workDir, "output")
 
@@ -127,19 +127,23 @@ func Test_copyDirective_run(t *testing.T) {
 			cfg: CopyConfig{
 				InPath: "input.txt",
 			},
-			assertions: func(t *testing.T, _ string, result Result, err error) {
-				require.Equal(t, Result{Status: StatusFailure}, result)
+			assertions: func(t *testing.T, _ string, result PromotionStepResult, err error) {
+				require.Equal(t, PromotionStepResult{Status: PromotionStatusFailure}, result)
 				require.ErrorContains(t, err, "failed to copy")
 			},
 		},
 	}
 
+	runner := &fileCopier{}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			workDir := tt.setupFiles(t)
-
-			d := &copyDirective{}
-			result, err := d.run(context.Background(), &StepContext{WorkDir: workDir}, tt.cfg)
+			result, err := runner.runPromotionStep(
+				context.Background(),
+				&PromotionStepContext{WorkDir: workDir},
+				tt.cfg,
+			)
 			tt.assertions(t, workDir, result, err)
 		})
 	}

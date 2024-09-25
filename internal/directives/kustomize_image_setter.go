@@ -27,81 +27,87 @@ import (
 const preserveSeparator = "*"
 
 func init() {
-	// Register the kustomize-set-image directive with the builtins registry.
-	builtins.RegisterDirective(
-		newKustomizeSetImageDirective(),
-		&DirectivePermissions{
+	builtins.RegisterPromotionStepRunner(
+		newKustomizeImageSetter(),
+		&StepRunnerPermissions{
 			AllowKargoClient: true,
 		},
 	)
 }
 
-// kustomizeSetImageDirective is a directive that sets images in a Kustomization
-// file.
-type kustomizeSetImageDirective struct {
+// kustomizeImageSetter is an implementation  of the PromotionStepRunner
+// interface that sets images in a Kustomization file.
+type kustomizeImageSetter struct {
 	schemaLoader gojsonschema.JSONLoader
 }
 
-// newKustomizeSetImageDirective creates a new kustomize-set-image directive.
-func newKustomizeSetImageDirective() Directive {
-	return &kustomizeSetImageDirective{
+// newKustomizeImageSetter returns an implementation  of the PromotionStepRunner
+// interface that sets images in a Kustomization file.
+func newKustomizeImageSetter() PromotionStepRunner {
+	return &kustomizeImageSetter{
 		schemaLoader: getConfigSchemaLoader("kustomize-set-image"),
 	}
 }
 
-func (d *kustomizeSetImageDirective) Name() string {
+// Name implements the PromotionStepRunner interface.
+func (k *kustomizeImageSetter) Name() string {
 	return "kustomize-set-image"
 }
 
-func (d *kustomizeSetImageDirective) Run(ctx context.Context, stepCtx *StepContext) (Result, error) {
+// RunPromotionStep implements the PromotionStepRunner interface.
+func (k *kustomizeImageSetter) RunPromotionStep(
+	ctx context.Context,
+	stepCtx *PromotionStepContext,
+) (PromotionStepResult, error) {
 	// Validate the configuration against the JSON Schema.
-	if err := validate(d.schemaLoader, gojsonschema.NewGoLoader(stepCtx.Config), d.Name()); err != nil {
-		return Result{Status: StatusFailure}, err
+	if err := validate(k.schemaLoader, gojsonschema.NewGoLoader(stepCtx.Config), k.Name()); err != nil {
+		return PromotionStepResult{Status: PromotionStatusFailure}, err
 	}
 
 	// Convert the configuration into a typed object.
 	cfg, err := configToStruct[KustomizeSetImageConfig](stepCtx.Config)
 	if err != nil {
-		return Result{Status: StatusFailure},
+		return PromotionStepResult{Status: PromotionStatusFailure},
 			fmt.Errorf("could not convert config into kustomize-set-image config: %w", err)
 	}
 
-	return d.run(ctx, stepCtx, cfg)
+	return k.runPromotionStep(ctx, stepCtx, cfg)
 }
 
-func (d *kustomizeSetImageDirective) run(
+func (k *kustomizeImageSetter) runPromotionStep(
 	ctx context.Context,
-	stepCtx *StepContext,
+	stepCtx *PromotionStepContext,
 	cfg KustomizeSetImageConfig,
-) (Result, error) {
+) (PromotionStepResult, error) {
 	// Find the Kustomization file.
 	kusPath, err := findKustomization(stepCtx.WorkDir, cfg.Path)
 	if err != nil {
-		return Result{Status: StatusFailure}, fmt.Errorf("could not discover kustomization file: %w", err)
+		return PromotionStepResult{Status: PromotionStatusFailure},
+			fmt.Errorf("could not discover kustomization file: %w", err)
 	}
 
 	// Discover image origins and collect target images.
-	targetImages, err := d.buildTargetImages(ctx, stepCtx, cfg.Images)
+	targetImages, err := k.buildTargetImages(ctx, stepCtx, cfg.Images)
 	if err != nil {
-		return Result{Status: StatusFailure}, err
+		return PromotionStepResult{Status: PromotionStatusFailure}, err
 	}
 
 	// Update the Kustomization file with the new images.
 	if err = updateKustomizationFile(kusPath, targetImages); err != nil {
-		return Result{Status: StatusFailure}, err
+		return PromotionStepResult{Status: PromotionStatusFailure}, err
 	}
 
-	result := Result{Status: StatusSuccess}
-	if commitMsg := d.generateCommitMessage(cfg.Path, targetImages); commitMsg != "" {
+	result := PromotionStepResult{Status: PromotionStatusSuccess}
+	if commitMsg := k.generateCommitMessage(cfg.Path, targetImages); commitMsg != "" {
 		result.Output = make(State, 1)
 		result.Output.Set("commitMessage", commitMsg)
 	}
 	return result, nil
 }
 
-func (d *kustomizeSetImageDirective) buildTargetImages(
+func (k *kustomizeImageSetter) buildTargetImages(
 	ctx context.Context,
-	stepCtx *StepContext,
+	stepCtx *PromotionStepContext,
 	images []KustomizeSetImageConfigImage,
 ) (map[string]kustypes.Image, error) {
 	targetImages := make(map[string]kustypes.Image, len(images))
@@ -149,7 +155,7 @@ func (d *kustomizeSetImageDirective) buildTargetImages(
 	return targetImages, nil
 }
 
-func (d *kustomizeSetImageDirective) generateCommitMessage(path string, images map[string]kustypes.Image) string {
+func (k *kustomizeImageSetter) generateCommitMessage(path string, images map[string]kustypes.Image) string {
 	if len(images) == 0 {
 		return ""
 	}

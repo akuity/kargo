@@ -9,12 +9,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func Test_kustomizeBuildDirective_run(t *testing.T) {
+func Test_kustomizeBuilder_runPromotionStep(t *testing.T) {
 	tests := []struct {
 		name       string
 		setupFiles func(*testing.T, string)
 		config     KustomizeBuildConfig
-		assertions func(*testing.T, string, Result, error)
+		assertions func(*testing.T, string, PromotionStepResult, error)
 	}{
 		{
 			name: "successful build",
@@ -36,9 +36,9 @@ metadata:
 				Path:    ".",
 				OutPath: "output.yaml",
 			},
-			assertions: func(t *testing.T, dir string, result Result, err error) {
+			assertions: func(t *testing.T, dir string, result PromotionStepResult, err error) {
 				require.NoError(t, err)
-				assert.Equal(t, Result{Status: StatusSuccess}, result)
+				assert.Equal(t, PromotionStepResult{Status: PromotionStatusSuccess}, result)
 
 				assert.FileExists(t, filepath.Join(dir, "output.yaml"))
 				b, err := os.ReadFile(filepath.Join(dir, "output.yaml"))
@@ -53,9 +53,9 @@ metadata:
 				Path:    "invalid/",
 				OutPath: "output.yaml",
 			},
-			assertions: func(t *testing.T, dir string, result Result, err error) {
+			assertions: func(t *testing.T, dir string, result PromotionStepResult, err error) {
 				require.ErrorContains(t, err, "no such file or directory")
-				assert.Equal(t, Result{Status: StatusFailure}, result)
+				assert.Equal(t, PromotionStepResult{Status: PromotionStatusFailure}, result)
 
 				assert.NoFileExists(t, filepath.Join(dir, "output.yaml"))
 			},
@@ -69,14 +69,16 @@ metadata:
 				Path:    ".",
 				OutPath: "output.yaml",
 			},
-			assertions: func(t *testing.T, dir string, result Result, err error) {
+			assertions: func(t *testing.T, dir string, result PromotionStepResult, err error) {
 				require.ErrorContains(t, err, "invalid Kustomization")
-				assert.Equal(t, Result{Status: StatusFailure}, result)
+				assert.Equal(t, PromotionStepResult{Status: PromotionStatusFailure}, result)
 
 				assert.NoFileExists(t, filepath.Join(dir, "output.yaml"))
 			},
 		},
 	}
+
+	runner := &kustomizeBuilder{}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -84,12 +86,11 @@ metadata:
 
 			tt.setupFiles(t, tempDir)
 
-			stepCtx := &StepContext{
+			stepCtx := &PromotionStepContext{
 				WorkDir: tempDir,
 			}
 
-			d := &kustomizeBuildDirective{}
-			result, err := d.run(stepCtx, tt.config)
+			result, err := runner.runPromotionStep(stepCtx, tt.config)
 			tt.assertions(t, tempDir, result, err)
 		})
 	}

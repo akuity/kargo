@@ -16,47 +16,67 @@ import (
 )
 
 func init() {
-	// Register the copy directive with the builtins registry.
-	builtins.RegisterDirective(&copyDirective{}, nil)
+	builtins.RegisterPromotionStepRunner(newFileCopier(), nil)
 }
 
-// copyDirective is a directive that copies a file or directory.
+// fileCopier is an implementation of the PromotionStepRunner interface that
+// copies a file or directory.
 //
 // The copy is recursive, merging directories if the destination directory
 // already exists. If the destination is an existing file, it will be
 // overwritten. Symlinks are ignored.
-type copyDirective struct {
+type fileCopier struct {
 	schemaLoader gojsonschema.JSONLoader
 }
 
-func (d *copyDirective) Name() string {
+// newFileCopier returns an implementation of the PromotionStepRunner interface
+// that copies a file or directory.
+func newFileCopier() PromotionStepRunner {
+	r := &fileCopier{}
+	r.schemaLoader = getConfigSchemaLoader(r.Name())
+	return r
+}
+
+// Name implements the PromotionStepRunner interface.
+func (f *fileCopier) Name() string {
 	return "copy"
 }
 
-func (d *copyDirective) Run(ctx context.Context, stepCtx *StepContext) (Result, error) {
+// RunPromotionStep implements the PromotionStepRunner interface.
+func (f *fileCopier) RunPromotionStep(
+	ctx context.Context,
+	stepCtx *PromotionStepContext,
+) (PromotionStepResult, error) {
 	// Validate the configuration against the JSON Schema.
-	if err := validate(d.schemaLoader, gojsonschema.NewGoLoader(stepCtx.Config), d.Name()); err != nil {
-		return Result{Status: StatusFailure}, err
+	if err := validate(f.schemaLoader, gojsonschema.NewGoLoader(stepCtx.Config), f.Name()); err != nil {
+		return PromotionStepResult{Status: PromotionStatusFailure}, err
 	}
 
 	// Convert the configuration into a typed object.
 	cfg, err := configToStruct[CopyConfig](stepCtx.Config)
 	if err != nil {
-		return Result{Status: StatusFailure}, fmt.Errorf("could not convert config into %s config: %w", d.Name(), err)
+		return PromotionStepResult{Status: PromotionStatusFailure},
+			fmt.Errorf("could not convert config into %s config: %w", f.Name(), err)
 	}
 
-	return d.run(ctx, stepCtx, cfg)
+	return f.runPromotionStep(ctx, stepCtx, cfg)
 }
 
-func (d *copyDirective) run(ctx context.Context, stepCtx *StepContext, cfg CopyConfig) (Result, error) {
+func (f *fileCopier) runPromotionStep(
+	ctx context.Context,
+	stepCtx *PromotionStepContext,
+	cfg CopyConfig,
+) (PromotionStepResult, error) {
 	// Secure join the paths to prevent path traversal attacks.
 	inPath, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.InPath)
 	if err != nil {
-		return Result{Status: StatusFailure}, fmt.Errorf("could not secure join inPath %q: %w", cfg.InPath, err)
+		return PromotionStepResult{Status: PromotionStatusFailure},
+			fmt.Errorf("could not secure join inPath %q: %w", cfg.InPath, err)
 	}
 	outPath, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.OutPath)
 	if err != nil {
-		return Result{Status: StatusFailure}, fmt.Errorf("could not secure join outPath %q: %w", cfg.OutPath, err)
+		return PromotionStepResult{Status: PromotionStatusFailure},
+			fmt.Errorf("could not secure join outPath %q: %w", cfg.OutPath, err)
 	}
 
 	// Perform the copy operation.
@@ -70,9 +90,10 @@ func (d *copyDirective) run(ctx context.Context, stepCtx *StepContext, cfg CopyC
 		},
 	}
 	if err = copy.Copy(inPath, outPath, opts); err != nil {
-		return Result{Status: StatusFailure}, fmt.Errorf("failed to copy %q to %q: %w", cfg.InPath, cfg.OutPath, err)
+		return PromotionStepResult{Status: PromotionStatusFailure},
+			fmt.Errorf("failed to copy %q to %q: %w", cfg.InPath, cfg.OutPath, err)
 	}
-	return Result{Status: StatusSuccess}, nil
+	return PromotionStepResult{Status: PromotionStatusSuccess}, nil
 }
 
 // sanitizePathError sanitizes the path in a path error to be relative to the

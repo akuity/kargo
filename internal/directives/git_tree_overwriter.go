@@ -14,83 +14,84 @@ import (
 )
 
 func init() {
-	// Register the git-overwrite directive with the builtins registry.
-	builtins.RegisterDirective(newGitOverwriteDirective(), nil)
+	builtins.RegisterPromotionStepRunner(newGitTreeOverwriter(), nil)
 }
 
-// gitOverwriteDirective is a directive that overwrites the content of a Git
-// working tree with the content from another directory.
-type gitOverwriteDirective struct {
+// gitTreeOverwriter is an implementation of the PromotionStepRunner interface
+// that overwrites the content of a Git working tree with the content from
+// another directory.
+type gitTreeOverwriter struct {
 	schemaLoader gojsonschema.JSONLoader
 }
 
-// newGitOverwriteDirective creates a new git-overwrite directive.
-func newGitOverwriteDirective() Directive {
-	d := &gitOverwriteDirective{}
-	d.schemaLoader = getConfigSchemaLoader(d.Name())
-	return d
+// newGitTreeOverwriter returns an implementation of the PromotionStepRunner
+// interface that overwrites the content of a Git working tree with the content
+// from another directory.
+func newGitTreeOverwriter() PromotionStepRunner {
+	r := &gitTreeOverwriter{}
+	r.schemaLoader = getConfigSchemaLoader(r.Name())
+	return r
 }
 
-// Name implements the Directive interface.
-func (g *gitOverwriteDirective) Name() string {
+// Name implements the PromotionStepRunner interface.
+func (g *gitTreeOverwriter) Name() string {
 	return "git-overwrite"
 }
 
-// Run implements the Directive interface.
-func (g *gitOverwriteDirective) Run(
+// RunPromotionStep implements the PromotionStepRunner interface.
+func (g *gitTreeOverwriter) RunPromotionStep(
 	ctx context.Context,
-	stepCtx *StepContext,
-) (Result, error) {
+	stepCtx *PromotionStepContext,
+) (PromotionStepResult, error) {
 	if err := g.validate(stepCtx.Config); err != nil {
-		return Result{Status: StatusFailure}, err
+		return PromotionStepResult{Status: PromotionStatusFailure}, err
 	}
 	cfg, err := configToStruct[GitOverwriteConfig](stepCtx.Config)
 	if err != nil {
-		return Result{Status: StatusFailure},
+		return PromotionStepResult{Status: PromotionStatusFailure},
 			fmt.Errorf("could not convert config into %s config: %w", g.Name(), err)
 	}
-	return g.run(ctx, stepCtx, cfg)
+	return g.runPromotionStep(ctx, stepCtx, cfg)
 }
 
-// validate validates the git-overwrite directive configuration against the JSON
-// schema.
-func (g *gitOverwriteDirective) validate(cfg Config) error {
+// validate validates gitTreeOverwriter configuration against a JSON schema.
+func (g *gitTreeOverwriter) validate(cfg Config) error {
 	return validate(g.schemaLoader, gojsonschema.NewGoLoader(cfg), g.Name())
 }
 
-func (g *gitOverwriteDirective) run(
+func (g *gitTreeOverwriter) runPromotionStep(
 	ctx context.Context,
-	stepCtx *StepContext,
+	stepCtx *PromotionStepContext,
 	cfg GitOverwriteConfig,
-) (Result, error) {
+) (PromotionStepResult, error) {
 	inPath, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.InPath)
 	if err != nil {
-		return Result{Status: StatusFailure}, fmt.Errorf(
+		return PromotionStepResult{Status: PromotionStatusFailure}, fmt.Errorf(
 			"error joining path %s with work dir %s: %w",
 			cfg.InPath, stepCtx.WorkDir, err,
 		)
 	}
 	outPath, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.OutPath)
 	if err != nil {
-		return Result{Status: StatusFailure}, fmt.Errorf(
+		return PromotionStepResult{Status: PromotionStatusFailure}, fmt.Errorf(
 			"error joining path %s with work dir %s: %w",
 			cfg.OutPath, stepCtx.WorkDir, err,
 		)
 	}
 	workTree, err := git.LoadWorkTree(outPath, nil)
 	if err != nil {
-		return Result{Status: StatusFailure},
+		return PromotionStepResult{Status: PromotionStatusFailure},
 			fmt.Errorf("error loading working tree from %s: %w", cfg.OutPath, err)
 	}
 	// workTree.Clear() won't remove any files that aren't indexed. This is a bit
 	// of a hack to ensure that we don't have any untracked files in the working
 	// tree so that workTree.Clear() will remove everything.
 	if err = workTree.AddAll(); err != nil {
-		return Result{Status: StatusFailure},
+		return PromotionStepResult{Status: PromotionStatusFailure},
 			fmt.Errorf("error adding all files to working tree at %s: %w", cfg.OutPath, err)
 	}
 	if err = workTree.Clear(); err != nil {
-		return Result{Status: StatusFailure},
+		return PromotionStepResult{Status: PromotionStatusFailure},
 			fmt.Errorf("error clearing working tree at %s: %w", cfg.OutPath, err)
 	}
 	if err = copy.Copy(
@@ -109,8 +110,8 @@ func (g *gitOverwriteDirective) run(
 			},
 		},
 	); err != nil {
-		return Result{Status: StatusFailure},
+		return PromotionStepResult{Status: PromotionStatusFailure},
 			fmt.Errorf("failed to copy %q to %q: %w", cfg.InPath, cfg.OutPath, err)
 	}
-	return Result{Status: StatusSuccess}, nil
+	return PromotionStepResult{Status: PromotionStatusSuccess}, nil
 }

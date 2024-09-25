@@ -23,80 +23,84 @@ import (
 var kustomizeRenderMutex sync.Mutex
 
 func init() {
-	// Register the kustomize-build directive with the builtins registry.
-	builtins.RegisterDirective(newKustomizeBuildDirective(), nil)
+	builtins.RegisterPromotionStepRunner(newKustomizeBuilder(), nil)
 }
 
-// kustomizeBuildDirective is a directive that builds a set of Kubernetes
-// manifests using Kustomize.
-type kustomizeBuildDirective struct {
+// kustomizeBuilder is an implementation of the PromotionStepRunner interface
+// that builds a set of Kubernetes manifests using Kustomize.
+type kustomizeBuilder struct {
 	schemaLoader gojsonschema.JSONLoader
 }
 
-// newKustomizeBuildDirective creates a new kustomize-build directive.
-func newKustomizeBuildDirective() Directive {
-	return &kustomizeBuildDirective{
+// newKustomizeBuilder returns an implementation of the
+// PromotionStepRunner interface that builds a set of Kubernetes manifests using
+// Kustomize.
+func newKustomizeBuilder() PromotionStepRunner {
+	return &kustomizeBuilder{
 		schemaLoader: getConfigSchemaLoader("kustomize-build"),
 	}
 }
 
-// Name implements the Directive interface.
-func (d *kustomizeBuildDirective) Name() string {
+// Name implements the PromotionStepRunner interface.
+func (k *kustomizeBuilder) Name() string {
 	return "kustomize-build"
 }
 
-// Run implements the Directive interface.
-func (d *kustomizeBuildDirective) Run(_ context.Context, stepCtx *StepContext) (Result, error) {
-	failure := Result{Status: StatusFailure}
+// RunPromotionStep implements the PromotionStepRunner interface.
+func (k *kustomizeBuilder) RunPromotionStep(
+	_ context.Context,
+	stepCtx *PromotionStepContext,
+) (PromotionStepResult, error) {
+	failure := PromotionStepResult{Status: PromotionStatusFailure}
 
 	// Validate the configuration against the JSON Schema.
-	if err := validate(d.schemaLoader, gojsonschema.NewGoLoader(stepCtx.Config), d.Name()); err != nil {
+	if err := validate(k.schemaLoader, gojsonschema.NewGoLoader(stepCtx.Config), k.Name()); err != nil {
 		return failure, err
 	}
 
 	// Convert the configuration into a typed object.
 	cfg, err := configToStruct[KustomizeBuildConfig](stepCtx.Config)
 	if err != nil {
-		return failure, fmt.Errorf("could not convert config into %s config: %w", d.Name(), err)
+		return failure, fmt.Errorf("could not convert config into %s config: %w", k.Name(), err)
 	}
 
-	return d.run(stepCtx, cfg)
+	return k.runPromotionStep(stepCtx, cfg)
 }
 
-func (d *kustomizeBuildDirective) run(
-	stepCtx *StepContext,
+func (k *kustomizeBuilder) runPromotionStep(
+	stepCtx *PromotionStepContext,
 	cfg KustomizeBuildConfig,
-) (_ Result, err error) {
+) (PromotionStepResult, error) {
 	// Create a "chrooted" filesystem for the kustomize build.
 	fs, err := securefs.MakeFsOnDiskSecureBuild(stepCtx.WorkDir)
 	if err != nil {
-		return Result{Status: StatusFailure}, err
+		return PromotionStepResult{Status: PromotionStatusFailure}, err
 	}
 
 	// Build the manifests.
 	rm, err := kustomizeBuild(fs, filepath.Join(stepCtx.WorkDir, cfg.Path))
 	if err != nil {
-		return Result{Status: StatusFailure}, err
+		return PromotionStepResult{Status: PromotionStatusFailure}, err
 	}
 
 	// Prepare the output path.
 	outPath, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.OutPath)
 	if err != nil {
-		return Result{Status: StatusFailure}, err
+		return PromotionStepResult{Status: PromotionStatusFailure}, err
 	}
 	if err = os.MkdirAll(filepath.Dir(outPath), 0o700); err != nil {
-		return Result{Status: StatusFailure}, err
+		return PromotionStepResult{Status: PromotionStatusFailure}, err
 	}
 
 	// Write the built manifests to the output path.
 	b, err := rm.AsYaml()
 	if err != nil {
-		return Result{Status: StatusFailure}, err
+		return PromotionStepResult{Status: PromotionStatusFailure}, err
 	}
 	if err = os.WriteFile(outPath, b, 0o600); err != nil {
-		return Result{Status: StatusFailure}, err
+		return PromotionStepResult{Status: PromotionStatusFailure}, err
 	}
-	return Result{Status: StatusSuccess}, nil
+	return PromotionStepResult{Status: PromotionStatusSuccess}, nil
 }
 
 // kustomizeBuild builds the manifests in the given directory using Kustomize.
