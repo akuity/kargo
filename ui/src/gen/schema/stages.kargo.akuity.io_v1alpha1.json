@@ -1296,6 +1296,28 @@
                   ],
                   "type": "object"
                 },
+                "healthChecks": {
+                  "description": "HealthChecks contains the health check directives to be executed after\nthe Promotion has completed.",
+                  "items": {
+                    "description": "HealthCheckStep describes a health check directive which can be executed by\na Stage to verify the health of a Promotion result.",
+                    "properties": {
+                      "config": {
+                        "description": "Config is the configuration for the directive.",
+                        "x-kubernetes-preserve-unknown-fields": true
+                      },
+                      "step": {
+                        "description": "Step is the name of the directive to run.",
+                        "minLength": 1,
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "step"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
                 "lastHandledRefresh": {
                   "description": "LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh\nannotation that was handled by the controller. This field can be used to\ndetermine whether the request to refresh the resource has been handled.",
                   "type": "string"
@@ -2074,6 +2096,28 @@
                     "id"
                   ],
                   "type": "object"
+                },
+                "healthChecks": {
+                  "description": "HealthChecks contains the health check directives to be executed after\nthe Promotion has completed.",
+                  "items": {
+                    "description": "HealthCheckStep describes a health check directive which can be executed by\na Stage to verify the health of a Promotion result.",
+                    "properties": {
+                      "config": {
+                        "description": "Config is the configuration for the directive.",
+                        "x-kubernetes-preserve-unknown-fields": true
+                      },
+                      "step": {
+                        "description": "Step is the name of the directive to run.",
+                        "minLength": 1,
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "step"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
                 },
                 "lastHandledRefresh": {
                   "description": "LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh\nannotation that was handled by the controller. This field can be used to\ndetermine whether the request to refresh the resource has been handled.",

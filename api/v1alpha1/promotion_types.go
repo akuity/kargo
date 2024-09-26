@@ -138,8 +138,36 @@ type PromotionStatus struct {
 	// by this Promotion as well as any additional Freight that is carried over
 	// from the target Stage's current state.
 	FreightCollection *FreightCollection `json:"freightCollection,omitempty" protobuf:"bytes,7,opt,name=freightCollection"`
+	// HealthChecks contains the health check directives to be executed after
+	// the Promotion has completed.
+	HealthChecks []HealthCheckStep `json:"healthChecks,omitempty" protobuf:"bytes,8,rep,name=healthChecks"`
 	// FinishedAt is the time when the promotion was completed.
 	FinishedAt *metav1.Time `json:"finishedAt,omitempty" protobuf:"bytes,6,opt,name=finishedAt"`
+}
+
+// HealthCheckStep describes a health check directive which can be executed by
+// a Stage to verify the health of a Promotion result.
+type HealthCheckStep struct {
+	// Step is the name of the directive to run.
+	//
+	// +kubebuilder:validation:MinLength=1
+	Step string `json:"step" protobuf:"bytes,1,opt,name=step"`
+
+	// Config is the configuration for the directive.
+	Config *apiextensionsv1.JSON `json:"config,omitempty" protobuf:"bytes,2,opt,name=config"`
+}
+
+// GetConfig returns the Config field as unmarshalled YAML.
+func (s *HealthCheckStep) GetConfig() map[string]any {
+	if s.Config == nil {
+		return nil
+	}
+
+	var config map[string]any
+	if err := yaml.Unmarshal(s.Config.Raw, &config); err != nil {
+		return nil
+	}
+	return config
 }
 
 // WithPhase returns a copy of PromotionStatus with the given phase

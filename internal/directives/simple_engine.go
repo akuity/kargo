@@ -56,7 +56,7 @@ func (e *SimpleEngine) Promote(
 
 	// Initialize the shared state that will be passed to each step.
 	state := make(State)
-	healthCheckSteps := []HealthCheckStep{}
+	var healthCheckSteps []HealthCheckStep
 	for _, step := range steps {
 		select {
 		case <-ctx.Done():
