@@ -796,7 +796,6 @@ func TestValidateDelete(t *testing.T) {
 		},
 	}
 	for name, tc := range testCases {
-		tc := tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			_, err := tc.webhook.ValidateDelete(context.Background(), tc.input)

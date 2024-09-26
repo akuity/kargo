@@ -225,7 +225,6 @@ func waitForPromotions(
 ) error {
 	g, ctx := errgroup.WithContext(ctx)
 	for _, promo := range p {
-		promo := promo
 		g.Go(func() error {
 			return waitForPromotion(ctx, kargoSvcCli, promo)
 		})
