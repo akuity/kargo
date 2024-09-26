@@ -20,7 +20,6 @@ func (a *argocdUpdater) getDesiredRevisions(
 	ctx context.Context,
 	stepCtx *PromotionStepContext,
 	stepCfg *ArgoCDUpdateConfig,
-	stage *kargoapi.Stage,
 	update *ArgoCDAppUpdate,
 	app *argocd.Application,
 ) ([]string, error) {
@@ -48,7 +47,6 @@ func (a *argocdUpdater) getDesiredRevisions(
 		desiredRevision, err := a.getDesiredRevisionForSource(
 			ctx,
 			stepCtx,
-			stage,
 			&src,
 			desiredOrigin,
 		)
@@ -63,7 +61,6 @@ func (a *argocdUpdater) getDesiredRevisions(
 func (a *argocdUpdater) getDesiredRevisionForSource(
 	ctx context.Context,
 	stepCtx *PromotionStepContext,
-	stage *kargoapi.Stage,
 	src *argocd.ApplicationSource,
 	desiredOrigin *kargoapi.FreightOrigin,
 ) (string, error) {
@@ -95,7 +92,7 @@ func (a *argocdUpdater) getDesiredRevisionForSource(
 			ctx,
 			stepCtx.KargoClient,
 			stepCtx.Project,
-			stage.Spec.RequestedFreight,
+			stepCtx.FreightRequests,
 			desiredOrigin,
 			stepCtx.Freight.References(),
 			repoURL,
@@ -115,7 +112,7 @@ func (a *argocdUpdater) getDesiredRevisionForSource(
 			ctx,
 			stepCtx.KargoClient,
 			stepCtx.Project,
-			stage.Spec.RequestedFreight,
+			stepCtx.FreightRequests,
 			desiredOrigin,
 			stepCtx.Freight.References(),
 			src.RepoURL,
