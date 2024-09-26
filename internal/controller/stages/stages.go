@@ -29,6 +29,7 @@ import (
 	"github.com/akuity/kargo/internal/controller"
 	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
 	rollouts "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
+	"github.com/akuity/kargo/internal/directives"
 	"github.com/akuity/kargo/internal/kargo"
 	"github.com/akuity/kargo/internal/kubeclient"
 	libEvent "github.com/akuity/kargo/internal/kubernetes/event"
@@ -58,8 +59,9 @@ func ReconcilerConfigFromEnv() ReconcilerConfig {
 
 // reconciler reconciles Stage resources.
 type reconciler struct {
-	kargoClient  client.Client
-	argocdClient client.Client
+	kargoClient      client.Client
+	argocdClient     client.Client
+	directivesEngine directives.Engine
 
 	recorder record.EventRecorder
 
@@ -439,8 +441,13 @@ func newReconciler(
 	r := &reconciler{
 		kargoClient:  kargoClient,
 		argocdClient: argocdClient,
-		recorder:     recorder,
-		cfg:          cfg,
+		directivesEngine: directives.NewSimpleEngine(
+			nil, // TODO: is this required here?
+			kargoClient,
+			argocdClient,
+		),
+		recorder: recorder,
+		cfg:      cfg,
 		appHealth: libargocd.NewApplicationHealthEvaluator(
 			kargoClient,
 			argocdClient,
@@ -676,16 +683,40 @@ func (r *reconciler) syncNormalStage(
 			"Stage has no current Freight; no health checks or verification to perform",
 		)
 	} else {
-		// Always check the health of the Argo CD Applications associated with the
-		// Stage. This is regardless of the phase of the Stage, as the health of the
-		// Argo CD Applications is always relevant.
-		if status.Health = r.appHealth.EvaluateHealth(
-			ctx,
-			stage,
-		); status.Health != nil {
-			logger.WithValues("health", status.Health.Status).Debug("Stage health assessed")
+		if stage.Spec.PromotionTemplate != nil &&
+			stage.Status.LastPromotion != nil &&
+			stage.Status.LastPromotion.Status != nil {
+			if len(stage.Status.LastPromotion.Status.HealthChecks) > 0 {
+				var steps []directives.HealthCheckStep
+				for _, step := range stage.Status.LastPromotion.Status.HealthChecks {
+					steps = append(steps, directives.HealthCheckStep{
+						Kind:   step.Step,
+						Config: step.GetConfig(),
+					})
+				}
+
+				health := r.directivesEngine.CheckHealth(ctx, directives.HealthCheckContext{
+					Project: stage.Namespace,
+					Stage:   stage.Name,
+				}, steps)
+				status.Health = &health
+
+				logger.WithValues("health", status.Health.Status).Debug("Stage health assessed")
+			} else {
+				logger.Debug("Stage has no health checks to perform")
+			}
 		} else {
-			logger.Debug("Stage health deemed not applicable")
+			// Always check the health of the Argo CD Applications associated with the
+			// Stage. This is regardless of the phase of the Stage, as the health of the
+			// Argo CD Applications is always relevant.
+			if status.Health = r.appHealth.EvaluateHealth(
+				ctx,
+				stage,
+			); status.Health != nil {
+				logger.WithValues("health", status.Health.Status).Debug("Stage health assessed")
+			} else {
+				logger.Debug("Stage health deemed not applicable")
+			}
 		}
 
 		// currentVI is VerificationInfo of the currentFC
