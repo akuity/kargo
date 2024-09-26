@@ -23,6 +23,11 @@ func (c Config) DeepCopy() Config {
 	return runtime.DeepCopyJSON(c)
 }
 
+// ToJSON marshals the configuration to JSON.
+func (c Config) ToJSON() ([]byte, error) {
+	return json.Marshal(c)
+}
+
 // configToStruct converts a Config to a (typed) configuration struct.
 func configToStruct[T any](c Config) (T, error) {
 	var result T

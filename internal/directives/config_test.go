@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestConfig_DeepCopy(t *testing.T) {
@@ -83,6 +84,57 @@ func TestConfig_DeepCopy(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.assertions(t, tt.config, tt.config.DeepCopy())
+		})
+	}
+}
+
+func TestConfig_ToJSON(t *testing.T) {
+	tests := []struct {
+		name   string
+		config Config
+		want   string
+	}{
+		{
+			name:   "empty config",
+			config: Config{},
+			want:   "{}",
+		},
+		{
+			name: "simple config",
+			config: Config{
+				"key1": "value1",
+				"key2": int64(42),
+				"key3": true,
+			},
+			want: `{"key1":"value1","key2":42,"key3":true}`,
+		},
+		{
+			name: "nested config",
+			config: Config{
+				"key1": "value1",
+				"key2": map[string]any{
+					"nested1": "nestedValue1",
+					"nested2": int64(99),
+				},
+				"key3": []any{int64(1), int64(2), int64(3)},
+			},
+			want: `{"key1":"value1","key2":{"nested1":"nestedValue1","nested2":99},"key3":[1,2,3]}`,
+		},
+		{
+			name: "config with nil value",
+			config: Config{
+				"key1": nil,
+				"key2": "value2",
+			},
+			want: `{"key1":null,"key2":"value2"}`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := tt.config.ToJSON()
+			require.NoError(t, err)
+			assert.JSONEq(t, tt.want, string(got))
 		})
 	}
 }

@@ -12,6 +12,7 @@ import (
 
 	"github.com/kelseyhightower/envconfig"
 	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
@@ -546,7 +547,22 @@ func (r *reconciler) promote(
 		case directives.PromotionStatusPending:
 			workingPromo.Status.Phase = kargoapi.PromotionPhaseRunning
 		case directives.PromotionStatusSuccess:
+			var healthChecks []kargoapi.HealthCheckStep
+			for _, step := range res.HealthCheckSteps {
+				var config []byte
+				if config, err = step.Config.ToJSON(); err != nil {
+					workingPromo.Status.Phase = kargoapi.PromotionPhaseErrored
+					return &workingPromo.Status, fmt.Errorf("error marshaling health check config: %w", err)
+				}
+
+				healthChecks = append(healthChecks, kargoapi.HealthCheckStep{
+					Step:   step.Kind,
+					Config: &apiextensionsv1.JSON{Raw: config},
+				})
+			}
+
 			workingPromo.Status.Phase = kargoapi.PromotionPhaseSucceeded
+			workingPromo.Status.HealthChecks = healthChecks
 		case directives.PromotionStatusFailure:
 			workingPromo.Status.Phase = kargoapi.PromotionPhaseFailed
 		}
