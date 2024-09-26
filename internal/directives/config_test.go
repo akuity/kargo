@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestConfig_DeepCopy(t *testing.T) {
@@ -97,7 +96,6 @@ func TestConfig_ToJSON(t *testing.T) {
 		{
 			name:   "empty config",
 			config: Config{},
-			want:   "{}",
 		},
 		{
 			name: "simple config",
@@ -132,8 +130,11 @@ func TestConfig_ToJSON(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := tt.config.ToJSON()
-			require.NoError(t, err)
+			got := tt.config.ToJSON()
+			if tt.want == "" {
+				assert.Nil(t, got)
+				return
+			}
 			assert.JSONEq(t, tt.want, string(got))
 		})
 	}

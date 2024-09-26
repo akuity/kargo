@@ -28,7 +28,6 @@ import (
 	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/promotion"
 	"github.com/akuity/kargo/internal/controller/runtime"
-	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/directives"
 	"github.com/akuity/kargo/internal/kargo"
 	"github.com/akuity/kargo/internal/kubeclient"
@@ -90,7 +89,8 @@ func SetupReconcilerWithManager(
 	ctx context.Context,
 	kargoMgr manager.Manager,
 	argocdMgr manager.Manager,
-	credentialsDB credentials.Database,
+	directivesEngine directives.Engine,
+	promotionMechanisms promotion.Mechanism,
 	cfg ReconcilerConfig,
 ) error {
 	// Index running Promotions by Argo CD Applications
@@ -108,16 +108,11 @@ func SetupReconcilerWithManager(
 	}
 	shardSelector := labels.NewSelector().Add(*shardRequirement)
 
-	var argocdClient client.Client
-	if argocdMgr != nil {
-		argocdClient = argocdMgr.GetClient()
-	}
-
 	reconciler := newReconciler(
 		kargoMgr.GetClient(),
-		argocdClient,
 		libEvent.NewRecorder(ctx, kargoMgr.GetScheme(), kargoMgr.GetClient(), cfg.Name()),
-		credentialsDB,
+		directivesEngine,
+		promotionMechanisms,
 		cfg,
 	)
 
@@ -180,9 +175,9 @@ func SetupReconcilerWithManager(
 
 func newReconciler(
 	kargoClient client.Client,
-	argocdClient client.Client,
 	recorder record.EventRecorder,
-	credentialsDB credentials.Database,
+	directivesEngine directives.Engine,
+	promoMechanisms promotion.Mechanism,
 	cfg ReconcilerConfig,
 ) *reconciler {
 	pqs := promoQueues{
@@ -190,20 +185,12 @@ func newReconciler(
 		pendingPromoQueuesByStage: map[types.NamespacedName]runtime.PriorityQueue{},
 	}
 	r := &reconciler{
-		kargoClient: kargoClient,
-		directivesEngine: directives.NewSimpleEngine(
-			credentialsDB,
-			kargoClient,
-			argocdClient,
-		),
-		recorder: recorder,
-		cfg:      cfg,
-		pqs:      &pqs,
-		promoMechanisms: promotion.NewMechanisms(
-			kargoClient,
-			argocdClient,
-			credentialsDB,
-		),
+		kargoClient:      kargoClient,
+		directivesEngine: directivesEngine,
+		recorder:         recorder,
+		cfg:              cfg,
+		pqs:              &pqs,
+		promoMechanisms:  promoMechanisms,
 	}
 	r.getStageFn = kargoapi.GetStage
 	r.promoteFn = r.promote
@@ -549,15 +536,9 @@ func (r *reconciler) promote(
 		case directives.PromotionStatusSuccess:
 			var healthChecks []kargoapi.HealthCheckStep
 			for _, step := range res.HealthCheckSteps {
-				var config []byte
-				if config, err = step.Config.ToJSON(); err != nil {
-					workingPromo.Status.Phase = kargoapi.PromotionPhaseErrored
-					return &workingPromo.Status, fmt.Errorf("error marshaling health check config: %w", err)
-				}
-
 				healthChecks = append(healthChecks, kargoapi.HealthCheckStep{
 					Step:   step.Kind,
-					Config: &apiextensionsv1.JSON{Raw: config},
+					Config: &apiextensionsv1.JSON{Raw: step.Config.ToJSON()},
 				})
 			}
 
