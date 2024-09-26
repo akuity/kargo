@@ -30,12 +30,17 @@ const (
 )
 
 func init() {
+	runner := newArgocdUpdater()
 	builtins.RegisterPromotionStepRunner(
-		newArgocdUpdater(),
+		runner,
 		&StepRunnerPermissions{
 			AllowKargoClient:  true,
 			AllowArgoCDClient: true,
 		},
+	)
+	builtins.RegisterHealthCheckStepRunner(
+		runner,
+		&StepRunnerPermissions{AllowArgoCDClient: true},
 	)
 }
 
@@ -53,11 +58,12 @@ type argocdUpdater struct {
 	) (*argocd.Application, error)
 
 	buildDesiredSourcesFn func(
-		context.Context,
-		*PromotionStepContext,
-		*ArgoCDUpdateConfig,
-		*ArgoCDAppUpdate,
-		*argocd.Application,
+		ctx context.Context,
+		stepCtx *PromotionStepContext,
+		stepCfg *ArgoCDUpdateConfig,
+		update *ArgoCDAppUpdate,
+		desiredRevisions []string,
+		app *argocd.Application,
 	) (argocd.ApplicationSources, error)
 
 	mustPerformUpdateFn func(
@@ -77,11 +83,12 @@ type argocdUpdater struct {
 	) error
 
 	applyArgoCDSourceUpdateFn func(
-		context.Context,
-		*PromotionStepContext,
-		*ArgoCDUpdateConfig,
-		*ArgoCDAppSourceUpdate,
-		argocd.ApplicationSource,
+		ctx context.Context,
+		stepCtx *PromotionStepContext,
+		stepCfg *ArgoCDUpdateConfig,
+		update *ArgoCDAppSourceUpdate,
+		desiredRevision string,
+		src argocd.ApplicationSource,
 	) (argocd.ApplicationSource, error)
 
 	argoCDAppPatchFn func(
@@ -101,9 +108,10 @@ type argocdUpdater struct {
 	)
 }
 
-// newArgocdUpdater returns a implementation of the PromotionStepRunner
-// interface that updates one or more Argo CD Application resources.
-func newArgocdUpdater() PromotionStepRunner {
+// newArgocdUpdater returns a implementation of the PromotionStepRunner and
+// HealthCheckStepRunner interfaces that updates Argo CD Application resources
+// and monitors their health.
+func newArgocdUpdater() *argocdUpdater {
 	r := &argocdUpdater{}
 	r.schemaLoader = getConfigSchemaLoader(r.Name())
 	r.getAuthorizedApplicationFn = r.getAuthorizedApplication
@@ -159,6 +167,7 @@ func (a *argocdUpdater) runPromotionStep(
 	logger.Debug("executing argocd-update promotion step")
 
 	var updateResults = make([]argocd.OperationPhase, 0, len(stepCfg.Apps))
+	appHealthChecks := make([]ArgoCDAppHealthCheck, len(stepCfg.Apps))
 	for i := range stepCfg.Apps {
 		update := &stepCfg.Apps[i]
 		// Retrieve the Argo CD Application.
@@ -177,12 +186,33 @@ func (a *argocdUpdater) runPromotionStep(
 			)
 		}
 
+		desiredRevisions, err := a.getDesiredRevisions(
+			ctx,
+			stepCtx,
+			&stepCfg,
+			update,
+			app,
+		)
+		if err != nil {
+			return PromotionStepResult{Status: PromotionStatusFailure}, fmt.Errorf(
+				"error determining desired revisions for Argo CD Application %q in "+
+					"namespace %q: %w",
+				app.Name, app.Namespace, err,
+			)
+		}
+		appHealthChecks[i] = ArgoCDAppHealthCheck{
+			Name:             app.Name,
+			Namespace:        app.Namespace,
+			DesiredRevisions: desiredRevisions,
+		}
+
 		// Build the desired source(s) for the Argo CD Application.
 		desiredSources, err := a.buildDesiredSourcesFn(
 			ctx,
 			stepCtx,
 			&stepCfg,
 			update,
+			desiredRevisions,
 			app,
 		)
 		if err != nil {
@@ -262,7 +292,16 @@ func (a *argocdUpdater) runPromotionStep(
 	}
 
 	logger.Debug("done executing argocd-update promotion step")
-	return PromotionStepResult{Status: aggregatedStatus}, nil
+
+	return PromotionStepResult{
+		Status: aggregatedStatus,
+		HealthCheckStep: &HealthCheckStep{
+			Kind: a.Name(),
+			Config: Config{
+				"apps": appHealthChecks,
+			},
+		},
+	}, nil
 }
 
 // buildDesiredSources returns the desired source(s) for an Argo CD Application,
@@ -272,11 +311,19 @@ func (a *argocdUpdater) buildDesiredSources(
 	stepCtx *PromotionStepContext,
 	stepCfg *ArgoCDUpdateConfig,
 	update *ArgoCDAppUpdate,
+	desiredRevisions []string,
 	app *argocd.Application,
 ) (argocd.ApplicationSources, error) {
 	desiredSources := app.Spec.Sources.DeepCopy()
 	if len(desiredSources) == 0 && app.Spec.Source != nil {
 		desiredSources = []argocd.ApplicationSource{*app.Spec.Source.DeepCopy()}
+	}
+	if len(desiredSources) != len(desiredRevisions) {
+		// This really shouldn't happen.
+		return nil, fmt.Errorf(
+			"Argo CD Application %q in namespace %q has %d sources but %d desired revisions",
+			app.Name, app.Namespace, len(desiredSources), len(desiredRevisions),
+		)
 	}
 	for i := range desiredSources {
 		for j := range update.Sources {
@@ -287,6 +334,7 @@ func (a *argocdUpdater) buildDesiredSources(
 				stepCtx,
 				stepCfg,
 				srcUpdate,
+				desiredRevisions[i],
 				desiredSources[i],
 			); err != nil {
 				return nil, fmt.Errorf(
@@ -390,7 +438,7 @@ func (a *argocdUpdater) mustPerformUpdate(
 		app,
 	)
 	if err != nil {
-		return "", true, fmt.Errorf("error determining desired revision: %w", err)
+		return "", true, fmt.Errorf("error determining desired revisions: %w", err)
 	}
 
 	if len(desiredRevisions) == 0 {
@@ -679,89 +727,29 @@ func (a *argocdUpdater) applyArgoCDSourceUpdate(
 	stepCtx *PromotionStepContext,
 	stepCfg *ArgoCDUpdateConfig,
 	update *ArgoCDAppSourceUpdate,
+	desiredRevision string,
 	source argocd.ApplicationSource,
 ) (argocd.ApplicationSource, error) {
 	if source.Chart != "" || update.Chart != "" {
-
 		if source.RepoURL != update.RepoURL || source.Chart != update.Chart {
 			// There's no change to make in this case.
 			return source, nil
 		}
-
 		// If we get to here, we have confirmed that this update is applicable to
 		// this source.
-
-		if update.UpdateTargetRevision {
-			desiredOrigin := getDesiredOrigin(stepCfg, update)
-			repoURL := update.RepoURL
-			chartName := update.Chart
-			if !strings.Contains(repoURL, "://") {
-				// Where OCI is concerned, ArgoCDSourceUpdates play by Argo CD rules. i.e.
-				// No leading oci://, and the repository URL is really a registry URL, and
-				// the chart name is a repository within that registry. Warehouses and
-				// Freight, however, do lead with oci:// and handle things more correctly
-				// where a repoURL points directly to a repository and chart name is
-				// irrelevant / blank. We need to account for this when we search our
-				// Freight for the chart.
-				repoURL = fmt.Sprintf(
-					"oci://%s/%s",
-					strings.TrimSuffix(repoURL, "/"),
-					chartName,
-				)
-				chartName = ""
-			}
-			chart, err := freight.FindChart(
-				ctx,
-				stepCtx.KargoClient,
-				stepCtx.Project,
-				stepCtx.FreightRequests,
-				desiredOrigin,
-				stepCtx.Freight.References(),
-				repoURL,
-				chartName,
-			)
-			if err != nil {
-				return source,
-					fmt.Errorf("error chart from repo %q: %w", update.RepoURL, err)
-			}
-			if chart != nil {
-				source.TargetRevision = chart.Version
-			}
+		if update.UpdateTargetRevision && desiredRevision != "" {
+			source.TargetRevision = desiredRevision
 		}
-	} else {
+	} else if update.UpdateTargetRevision && desiredRevision != "" {
 		// We're dealing with a git repo, so we should normalize the repo URLs
 		// before comparing them.
 		sourceRepoURL := git.NormalizeURL(source.RepoURL)
 		if sourceRepoURL != git.NormalizeURL(update.RepoURL) {
 			return source, nil
 		}
-
 		// If we get to here, we have confirmed that this update is applicable to
 		// this source.
-
-		if update.UpdateTargetRevision {
-			desiredOrigin := getDesiredOrigin(stepCfg, update)
-			commit, err := freight.FindCommit(
-				ctx,
-				stepCtx.KargoClient,
-				stepCtx.Project,
-				stepCtx.FreightRequests,
-				desiredOrigin,
-				stepCtx.Freight.References(),
-				update.RepoURL,
-			)
-			if err != nil {
-				return source,
-					fmt.Errorf("error finding commit from repo %q: %w", update.RepoURL, err)
-			}
-			if commit != nil {
-				if commit.Tag != "" {
-					source.TargetRevision = commit.Tag
-				} else {
-					source.TargetRevision = commit.ID
-				}
-			}
-		}
+		source.TargetRevision = desiredRevision
 	}
 
 	if update.Kustomize != nil && len(update.Kustomize.Images) > 0 {
