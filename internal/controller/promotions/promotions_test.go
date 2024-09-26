@@ -15,7 +15,9 @@ import (
 
 	"github.com/akuity/kargo/api/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/controller/promotion"
 	"github.com/akuity/kargo/internal/credentials"
+	"github.com/akuity/kargo/internal/directives"
 	fakeevent "github.com/akuity/kargo/internal/kubernetes/event/fake"
 )
 
@@ -23,12 +25,15 @@ func TestNewPromotionReconciler(t *testing.T) {
 	kubeClient := fake.NewClientBuilder().Build()
 	r := newReconciler(
 		kubeClient,
-		kubeClient,
 		&fakeevent.EventRecorder{},
-		&credentials.FakeDB{},
+		&directives.FakeEngine{},
+		promotion.NewMechanisms(kubeClient, kubeClient, &credentials.FakeDB{}),
 		ReconcilerConfig{},
 	)
 	require.NotNil(t, r.kargoClient)
+	require.NotNil(t, r.recorder)
+	require.NotNil(t, r.directivesEngine)
+	require.NotNil(t, r.promoMechanisms)
 	require.NotNil(t, r.pqs.pendingPromoQueuesByStage)
 	require.NotNil(t, r.getStageFn)
 	require.NotNil(t, r.promoteFn)
@@ -46,9 +51,9 @@ func newFakeReconciler(
 	kubeClient := fake.NewClientBuilder().Build()
 	return newReconciler(
 		kargoClient,
-		kubeClient,
 		recorder,
-		&credentials.FakeDB{},
+		&directives.FakeEngine{},
+		promotion.NewMechanisms(kargoClient, kubeClient, &credentials.FakeDB{}),
 		ReconcilerConfig{},
 	)
 }

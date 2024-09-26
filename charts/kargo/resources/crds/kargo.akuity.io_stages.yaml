@@ -1064,7 +1064,7 @@ spec:
                     format: date-time
                     type: string
                   freight:
-                    description: Freight is the freight being promoted
+                    description: Freight is the freight being promoted.
                     properties:
                       charts:
                         description: Charts describes specific versions of specific
@@ -1195,10 +1195,10 @@ spec:
                         type: object
                     type: object
                   name:
-                    description: Name is the name of the Promotion
+                    description: Name is the name of the Promotion.
                     type: string
                   status:
-                    description: Status is the (optional) status of the promotion
+                    description: Status is the (optional) status of the Promotion.
                     properties:
                       finishedAt:
                         description: FinishedAt is the time when the promotion was
@@ -1555,6 +1555,26 @@ spec:
                         required:
                         - id
                         type: object
+                      healthChecks:
+                        description: |-
+                          HealthChecks contains the health check directives to be executed after
+                          the Promotion has completed.
+                        items:
+                          description: |-
+                            HealthCheckStep describes a health check directive which can be executed by
+                            a Stage to verify the health of a Promotion result.
+                          properties:
+                            config:
+                              description: Config is the configuration for the directive.
+                              x-kubernetes-preserve-unknown-fields: true
+                            step:
+                              description: Step is the name of the directive to run.
+                              minLength: 1
+                              type: string
+                          required:
+                          - step
+                          type: object
+                        type: array
                       lastHandledRefresh:
                         description: |-
                           LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh
@@ -1899,7 +1919,7 @@ spec:
                     format: date-time
                     type: string
                   freight:
-                    description: Freight is the freight being promoted
+                    description: Freight is the freight being promoted.
                     properties:
                       charts:
                         description: Charts describes specific versions of specific
@@ -2030,10 +2050,10 @@ spec:
                         type: object
                     type: object
                   name:
-                    description: Name is the name of the Promotion
+                    description: Name is the name of the Promotion.
                     type: string
                   status:
-                    description: Status is the (optional) status of the promotion
+                    description: Status is the (optional) status of the Promotion.
                     properties:
                       finishedAt:
                         description: FinishedAt is the time when the promotion was
@@ -2390,6 +2410,26 @@ spec:
                         required:
                         - id
                         type: object
+                      healthChecks:
+                        description: |-
+                          HealthChecks contains the health check directives to be executed after
+                          the Promotion has completed.
+                        items:
+                          description: |-
+                            HealthCheckStep describes a health check directive which can be executed by
+                            a Stage to verify the health of a Promotion result.
+                          properties:
+                            config:
+                              description: Config is the configuration for the directive.
+                              x-kubernetes-preserve-unknown-fields: true
+                            step:
+                              description: Step is the name of the directive to run.
+                              minLength: 1
+                              type: string
+                          required:
+                          - step
+                          type: object
+                        type: array
                       lastHandledRefresh:
                         description: |-
                           LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh

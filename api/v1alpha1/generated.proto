@@ -845,6 +845,18 @@ message Health {
   optional k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON output = 5;
 }
 
+// HealthCheckStep describes a health check directive which can be executed by
+// a Stage to verify the health of a Promotion result.
+message HealthCheckStep {
+  // Step is the name of the directive to run.
+  //
+  // +kubebuilder:validation:MinLength=1
+  optional string step = 1;
+
+  // Config is the configuration for the directive.
+  optional k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON config = 2;
+}
+
 // HelmChartDependencyUpdate describes how a specific Helm chart that is used
 // as a subchart of an umbrella chart can be updated.
 message HelmChartDependencyUpdate {
@@ -1302,14 +1314,16 @@ message PromotionPolicy {
   optional bool autoPromotionEnabled = 2;
 }
 
+// PromotionReference contains the relevant information about a Promotion
+// as observed by a Stage.
 message PromotionReference {
-  // Name is the name of the Promotion
+  // Name is the name of the Promotion.
   optional string name = 1;
 
-  // Freight is the freight being promoted
+  // Freight is the freight being promoted.
   optional FreightReference freight = 2;
 
-  // Status is the (optional) status of the promotion
+  // Status is the (optional) status of the Promotion.
   optional PromotionStatus status = 3;
 
   // FinishedAt is the time at which the Promotion was completed.
@@ -1368,6 +1382,10 @@ message PromotionStatus {
   // by this Promotion as well as any additional Freight that is carried over
   // from the target Stage's current state.
   optional FreightCollection freightCollection = 7;
+
+  // HealthChecks contains the health check directives to be executed after
+  // the Promotion has completed.
+  repeated HealthCheckStep healthChecks = 8;
 
   // FinishedAt is the time when the promotion was completed.
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Time finishedAt = 6;
