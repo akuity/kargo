@@ -3837,25 +3837,28 @@ export class PromotionPolicy extends Message<PromotionPolicy> {
 }
 
 /**
+ * PromotionReference contains the relevant information about a Promotion
+ * as observed by a Stage.
+ *
  * @generated from message github.com.akuity.kargo.api.v1alpha1.PromotionReference
  */
 export class PromotionReference extends Message<PromotionReference> {
   /**
-   * Name is the name of the Promotion
+   * Name is the name of the Promotion.
    *
    * @generated from field: optional string name = 1;
    */
   name?: string;
 
   /**
-   * Freight is the freight being promoted
+   * Freight is the freight being promoted.
    *
    * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.FreightReference freight = 2;
    */
   freight?: FreightReference;
 
   /**
-   * Status is the (optional) status of the promotion
+   * Status is the (optional) status of the Promotion.
    *
    * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.PromotionStatus status = 3;
    */

@@ -846,7 +846,7 @@
               "type": "string"
             },
             "freight": {
-              "description": "Freight is the freight being promoted",
+              "description": "Freight is the freight being promoted.",
               "properties": {
                 "charts": {
                   "description": "Charts describes specific versions of specific Helm charts.",
@@ -967,11 +967,11 @@
               "type": "object"
             },
             "name": {
-              "description": "Name is the name of the Promotion",
+              "description": "Name is the name of the Promotion.",
               "type": "string"
             },
             "status": {
-              "description": "Status is the (optional) status of the promotion",
+              "description": "Status is the (optional) status of the Promotion.",
               "properties": {
                 "finishedAt": {
                   "description": "FinishedAt is the time when the promotion was completed.",
@@ -1647,7 +1647,7 @@
               "type": "string"
             },
             "freight": {
-              "description": "Freight is the freight being promoted",
+              "description": "Freight is the freight being promoted.",
               "properties": {
                 "charts": {
                   "description": "Charts describes specific versions of specific Helm charts.",
@@ -1768,11 +1768,11 @@
               "type": "object"
             },
             "name": {
-              "description": "Name is the name of the Promotion",
+              "description": "Name is the name of the Promotion.",
               "type": "string"
             },
             "status": {
-              "description": "Status is the (optional) status of the promotion",
+              "description": "Status is the (optional) status of the Promotion.",
               "properties": {
                 "finishedAt": {
                   "description": "FinishedAt is the time when the promotion was completed.",

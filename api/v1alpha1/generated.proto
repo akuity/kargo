@@ -1314,14 +1314,16 @@ message PromotionPolicy {
   optional bool autoPromotionEnabled = 2;
 }
 
+// PromotionReference contains the relevant information about a Promotion
+// as observed by a Stage.
 message PromotionReference {
-  // Name is the name of the Promotion
+  // Name is the name of the Promotion.
   optional string name = 1;
 
-  // Freight is the freight being promoted
+  // Freight is the freight being promoted.
   optional FreightReference freight = 2;
 
-  // Status is the (optional) status of the promotion
+  // Status is the (optional) status of the Promotion.
   optional PromotionStatus status = 3;
 
   // FinishedAt is the time at which the Promotion was completed.

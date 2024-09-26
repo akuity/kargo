@@ -1064,7 +1064,7 @@ spec:
                     format: date-time
                     type: string
                   freight:
-                    description: Freight is the freight being promoted
+                    description: Freight is the freight being promoted.
                     properties:
                       charts:
                         description: Charts describes specific versions of specific
@@ -1195,10 +1195,10 @@ spec:
                         type: object
                     type: object
                   name:
-                    description: Name is the name of the Promotion
+                    description: Name is the name of the Promotion.
                     type: string
                   status:
-                    description: Status is the (optional) status of the promotion
+                    description: Status is the (optional) status of the Promotion.
                     properties:
                       finishedAt:
                         description: FinishedAt is the time when the promotion was
@@ -1919,7 +1919,7 @@ spec:
                     format: date-time
                     type: string
                   freight:
-                    description: Freight is the freight being promoted
+                    description: Freight is the freight being promoted.
                     properties:
                       charts:
                         description: Charts describes specific versions of specific
@@ -2050,10 +2050,10 @@ spec:
                         type: object
                     type: object
                   name:
-                    description: Name is the name of the Promotion
+                    description: Name is the name of the Promotion.
                     type: string
                   status:
-                    description: Status is the (optional) status of the promotion
+                    description: Status is the (optional) status of the Promotion.
                     properties:
                       finishedAt:
                         description: FinishedAt is the time when the promotion was

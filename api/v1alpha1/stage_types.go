@@ -997,15 +997,25 @@ type StageList struct {
 	Items           []Stage `json:"items" protobuf:"bytes,2,rep,name=items"`
 }
 
+// PromotionReference contains the relevant information about a Promotion
+// as observed by a Stage.
 type PromotionReference struct {
-	// Name is the name of the Promotion
+	// Name is the name of the Promotion.
 	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
-	// Freight is the freight being promoted
+	// Freight is the freight being promoted.
 	Freight *FreightReference `json:"freight,omitempty" protobuf:"bytes,2,opt,name=freight"`
-	// Status is the (optional) status of the promotion
+	// Status is the (optional) status of the Promotion.
 	Status *PromotionStatus `json:"status,omitempty" protobuf:"bytes,3,opt,name=status"`
 	// FinishedAt is the time at which the Promotion was completed.
 	FinishedAt *metav1.Time `json:"finishedAt,omitempty" protobuf:"bytes,4,opt,name=finishedAt"`
+}
+
+// GetHealthChecks returns the list of health checks for the PromotionReference.
+func (r *PromotionReference) GetHealthChecks() []HealthCheckStep {
+	if r == nil || r.Status == nil {
+		return nil
+	}
+	return r.Status.HealthChecks
 }
 
 // Verification describes how to verify that a Promotion has been successful
