@@ -64,22 +64,20 @@ func (r *ServiceAccountReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return ctrl.Result{}, fmt.Errorf("failed to get ServiceAccount: %w", err)
 	}
 
-	annotations := sa.Annotations
-
-	if val, ok := annotations[OldAnnotationKeySub]; ok {
-		annotations[rbacapi.AnnotationKeyOIDCClaim("sub")] = val
-		delete(annotations, OldAnnotationKeySub)
+	if val, ok := sa.Annotations[OldAnnotationKeySub]; ok {
+		sa.Annotations[rbacapi.AnnotationKeyOIDCClaim("sub")] = val
+		delete(sa.Annotations, OldAnnotationKeySub)
 	}
-	if val, ok := annotations[OldAnnotationKeyEmail]; ok {
-		annotations[rbacapi.AnnotationKeyOIDCClaim("email")] = val
-		delete(annotations, OldAnnotationKeyEmail)
+	if val, ok := sa.Annotations[OldAnnotationKeyEmail]; ok {
+		sa.Annotations[rbacapi.AnnotationKeyOIDCClaim("email")] = val
+		delete(sa.Annotations, OldAnnotationKeyEmail)
 	}
-	if val, ok := annotations[OldAnnotationKeyGroups]; ok {
-		annotations[rbacapi.AnnotationKeyOIDCClaim("groups")] = val
-		delete(annotations, OldAnnotationKeyGroups)
+	if val, ok := sa.Annotations[OldAnnotationKeyGroups]; ok {
+		sa.Annotations[rbacapi.AnnotationKeyOIDCClaim("groups")] = val
+		delete(sa.Annotations, OldAnnotationKeyGroups)
 	}
 
-	sa.SetAnnotations(annotations)
+	sa.SetAnnotations(sa.Annotations)
 	if err := r.Update(ctx, sa); err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to update ServiceAccount annotations: %w", err)
 	}
