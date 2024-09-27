@@ -54,17 +54,17 @@ func Test_gitPROpener_validate(t *testing.T) {
 			},
 		},
 		{
-			name:   "neither sourceBranch nor sourceBranchFrom specified",
+			name:   "neither sourceBranch nor sourceBranchFromStep specified",
 			config: Config{},
 			expectedProblems: []string{
 				"(root): Must validate one and only one schema",
 			},
 		},
 		{
-			name: "both sourceBranch and sourceBranchFrom specified",
+			name: "both sourceBranch and sourceBranchFromStep specified",
 			config: Config{
-				"sourceBranch":     "main",
-				"sourceBranchFrom": "push",
+				"sourceBranch":         "main",
+				"sourceBranchFromStep": "push",
 			},
 			expectedProblems: []string{
 				"(root): Must validate one and only one schema",
@@ -99,10 +99,10 @@ func Test_gitPROpener_validate(t *testing.T) {
 		{
 			name: "valid with source branch from push",
 			config: Config{
-				"provider":         "github",
-				"repoURL":          "https://github.com/example/repo.git",
-				"sourceBranchFrom": "fake-step",
-				"targetBranch":     "fake-branch",
+				"provider":             "github",
+				"repoURL":              "https://github.com/example/repo.git",
+				"sourceBranchFromStep": "fake-step",
+				"targetBranch":         "fake-branch",
 			},
 		},
 	}
@@ -207,10 +207,10 @@ func Test_gitPROpener_runPromotionStep(t *testing.T) {
 		GitOpenPRConfig{
 			RepoURL: testRepoURL,
 			// We get slightly better coverage by using this option
-			SourceBranchFrom:   "fake-step",
-			TargetBranch:       testTargetBranch,
-			CreateTargetBranch: true,
-			Provider:           ptr.To(Provider(fakeGitProviderName)),
+			SourceBranchFromStep: "fake-step",
+			TargetBranch:         testTargetBranch,
+			CreateTargetBranch:   true,
+			Provider:             ptr.To(Provider(fakeGitProviderName)),
 		},
 	)
 	require.NoError(t, err)

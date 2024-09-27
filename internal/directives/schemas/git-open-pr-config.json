@@ -29,7 +29,7 @@
       "description": "The branch containing the changes to be merged. This branch must already exist and be up to date on the remote.",
       "minLength": 1
     },
-    "sourceBranchFrom": {
+    "sourceBranchFromStep": {
       "type": "string",
       "description": "References the 'branch' output from a previous step. This step will use that value as the source branch.",
       "minLength": 1
@@ -44,11 +44,11 @@
     {
       "required": ["sourceBranch"],
       "properties": {
-        "sourceBranchFrom": {  "enum": ["", null] }
+        "sourceBranchFromStep": {  "enum": ["", null] }
       }
     },
     {
-      "required": ["sourceBranchFrom"],
+      "required": ["sourceBranchFromStep"],
       "properties": {
         "sourceBranch": {  "enum": ["", null] }
       }

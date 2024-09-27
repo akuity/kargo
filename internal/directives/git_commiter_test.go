@@ -37,17 +37,17 @@ func Test_gitCommitter_validate(t *testing.T) {
 			},
 		},
 		{
-			name:   "neither message nor messageFrom is specified",
+			name:   "neither message nor messageFromSteps is specified",
 			config: Config{},
 			expectedProblems: []string{
 				"(root): Must validate one and only one schema",
 			},
 		},
 		{
-			name: "both message and messageFrom are specified",
+			name: "both message and messageFromSteps are specified",
 			config: Config{
-				"message":     "fake commit message",
-				"messageFrom": []string{"fake-step-alias"},
+				"message":          "fake commit message",
+				"messageFromSteps": []string{"fake-step-alias"},
 			},
 			expectedProblems: []string{
 				"(root): Must validate one and only one schema",
@@ -63,21 +63,21 @@ func Test_gitCommitter_validate(t *testing.T) {
 			},
 		},
 		{
-			name: "messageFrom is empty array",
+			name: "messageFromSteps is empty array",
 			config: Config{
-				"messageFrom": []string{},
+				"messageFromSteps": []string{},
 			},
 			expectedProblems: []string{
-				"messageFrom: Array must have at least 1 items",
+				"messageFromSteps: Array must have at least 1 items",
 			},
 		},
 		{
-			name: "messageFrom array contains an empty string",
+			name: "messageFromSteps array contains an empty string",
 			config: Config{
-				"messageFrom": []string{""},
+				"messageFromSteps": []string{""},
 			},
 			expectedProblems: []string{
-				"messageFrom.0: String length must be greater than or equal to 1",
+				"messageFromSteps.0: String length must be greater than or equal to 1",
 			},
 		},
 		{
@@ -250,7 +250,7 @@ func Test_gitCommitter_buildCommitMessage(t *testing.T) {
 		{
 			name:        "no output from step with alias",
 			sharedState: State{},
-			cfg:         GitCommitConfig{MessageFrom: []string{"fake-step-alias"}},
+			cfg:         GitCommitConfig{MessageFromSteps: []string{"fake-step-alias"}},
 			assertions: func(t *testing.T, _ string, err error) {
 				require.ErrorContains(t, err, "no output found from step with alias")
 			},
@@ -260,7 +260,7 @@ func Test_gitCommitter_buildCommitMessage(t *testing.T) {
 			sharedState: State{
 				"fake-step-alias": "not a State",
 			},
-			cfg: GitCommitConfig{MessageFrom: []string{"fake-step-alias"}},
+			cfg: GitCommitConfig{MessageFromSteps: []string{"fake-step-alias"}},
 			assertions: func(t *testing.T, _ string, err error) {
 				require.ErrorContains(t, err, "output from step with alias")
 				require.ErrorContains(t, err, "is not a State")
@@ -271,7 +271,7 @@ func Test_gitCommitter_buildCommitMessage(t *testing.T) {
 			sharedState: State{
 				"fake-step-alias": State{},
 			},
-			cfg: GitCommitConfig{MessageFrom: []string{"fake-step-alias"}},
+			cfg: GitCommitConfig{MessageFromSteps: []string{"fake-step-alias"}},
 			assertions: func(t *testing.T, _ string, err error) {
 				require.ErrorContains(
 					t, err, "no commit message found in output from step with alias",
@@ -285,7 +285,7 @@ func Test_gitCommitter_buildCommitMessage(t *testing.T) {
 					"commitMessage": 42,
 				},
 			},
-			cfg: GitCommitConfig{MessageFrom: []string{"fake-step-alias"}},
+			cfg: GitCommitConfig{MessageFromSteps: []string{"fake-step-alias"}},
 			assertions: func(t *testing.T, _ string, err error) {
 				require.ErrorContains(
 					t, err, "commit message in output from step with alias",
@@ -304,7 +304,7 @@ func Test_gitCommitter_buildCommitMessage(t *testing.T) {
 				},
 			},
 			cfg: GitCommitConfig{
-				MessageFrom: []string{
+				MessageFromSteps: []string{
 					"fake-step-alias",
 					"another-fake-step-alias",
 				},
