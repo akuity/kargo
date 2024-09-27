@@ -848,10 +848,10 @@ message Health {
 // HealthCheckStep describes a health check directive which can be executed by
 // a Stage to verify the health of a Promotion result.
 message HealthCheckStep {
-  // Step is the name of the directive to run.
+  // Uses identifies a runner that can execute this step.
   //
   // +kubebuilder:validation:MinLength=1
-  optional string step = 1;
+  optional string uses = 1;
 
   // Config is the configuration for the directive.
   optional k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON config = 2;
@@ -1393,10 +1393,10 @@ message PromotionStatus {
 
 // PromotionStep describes a directive to be executed as part of a Promotion.
 message PromotionStep {
-  // Step is the name of the directive to run.
+  // Uses identifies a runner that can execute this step.
   //
   // +kubebuilder:validation:MinLength=1
-  optional string step = 1;
+  optional string uses = 1;
 
   // As is the alias this step can be referred to as.
   optional string as = 2;
