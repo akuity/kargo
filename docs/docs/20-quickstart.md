@@ -581,12 +581,17 @@ the previous section.
     export FREIGHT_ALIAS=$(kargo get freight --project kargo-demo --output jsonpath={.alias})
     ```
 
-   For a comprehensive overview of your `Project`, you can also access these components rendered
-   on the [Kargo Dashboard](https://localhost:31444/).
-   By selecting the "Projects" section and then 
-   choosing your "kargo-demo," you will be able to view detailed visual representation of the `Project`, 
-   including the `Warehouse` and the various `Stage`s: `test`, `uat`, and `prod`.
-  ![Argo-dashboard-screenshot](../static/img/kargo-dashboard-projects.png)
+   For a comprehensive overview of your `Project`, follow these steps to access and 
+   view the components on the [Kargo Dashboard](https://localhost:31444/):
+
+   1. Navigate to the Kargo Dashboard by clicking the link above or entering the URL directly in your browser.
+   1. In the left-hand menu, select the <Hlt>Projects</Hlt> section.
+   1. Choose your `Project`, <Hlt>kargo-demo</Hlt>, from the list of available `Project`s.
+   1. Once there, you will see a detailed visual representation of the `Project`. This includes:
+      1. The <Hlt>Warehouse</Hlt> and its status.
+      1. Various `Stage`s: <Hlt>test</Hlt>, <Hlt>uat</Hlt>, and <Hlt>prod</Hlt>.
+
+      ![Argo-dashboard-screenshot](../static/img/kargo-dashboard-projects.png)
 
 1. Now, let's _promote_ the `Freight` into the `test` `Stage`:
 
@@ -637,10 +642,13 @@ the previous section.
     visiting the test instance of our site at
     [localhost:30081](http://localhost:30081).
 
-   To check the status of the `test` stage on the Kargo dashboard, navigate to the "Projects"
-   section and choose your "kargo-demo". Look for the _heart_ symbol, which 
-   indicates a _healthy_ state, along with a _tick_ mark that signifies the _successful promotion_
-   of the `test` stage. 
+    To check the status of the `test` stage on the **Kargo Dashboard**:
+    
+    1. Navigate to the <Hlt>Projects</Hlt> section in the **left-hand menu**.
+    1. Select your `Project`, <Hlt>kargo-demo</Hlt>.
+    1. Within the `Project` overview, locate the <Hlt>test</Hlt> stage.
+    1. Look for the **_heart_ symbol**, which indicates a <Hlt>healthy</Hlt> state.
+    1. Ensure there is a **_tick mark_**, which signifies the <Hlt>successful promotion</Hlt> of the `test` stage.
 
     ![Kargo-dashboard-screenshot](../static/img/kargo-dashboard-promotion.png)
 
