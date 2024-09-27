@@ -686,7 +686,7 @@ func (r *reconciler) syncNormalStage(
 				var steps []directives.HealthCheckStep
 				for _, step := range healthChecks {
 					steps = append(steps, directives.HealthCheckStep{
-						Kind:   step.Step,
+						Kind:   step.Uses,
 						Config: step.GetConfig(),
 					})
 				}

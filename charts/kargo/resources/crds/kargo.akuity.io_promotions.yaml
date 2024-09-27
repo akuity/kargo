@@ -91,12 +91,13 @@ spec:
                     config:
                       description: Config is the configuration for the directive.
                       x-kubernetes-preserve-unknown-fields: true
-                    step:
-                      description: Step is the name of the directive to run.
+                    uses:
+                      description: Uses identifies a runner that can execute this
+                        step.
                       minLength: 1
                       type: string
                   required:
-                  - step
+                  - uses
                   type: object
                 type: array
             required:
@@ -467,12 +468,13 @@ spec:
                     config:
                       description: Config is the configuration for the directive.
                       x-kubernetes-preserve-unknown-fields: true
-                    step:
-                      description: Step is the name of the directive to run.
+                    uses:
+                      description: Uses identifies a runner that can execute this
+                        step.
                       minLength: 1
                       type: string
                   required:
-                  - step
+                  - uses
                   type: object
                 type: array
               lastHandledRefresh:

@@ -91,10 +91,10 @@ type PromotionSpec struct {
 
 // PromotionStep describes a directive to be executed as part of a Promotion.
 type PromotionStep struct {
-	// Step is the name of the directive to run.
+	// Uses identifies a runner that can execute this step.
 	//
 	// +kubebuilder:validation:MinLength=1
-	Step string `json:"step" protobuf:"bytes,1,opt,name=step"`
+	Uses string `json:"uses" protobuf:"bytes,1,opt,name=uses"`
 	// As is the alias this step can be referred to as.
 	As string `json:"as,omitempty" protobuf:"bytes,2,opt,name=as"`
 	// Config is the configuration for the directive.
@@ -148,10 +148,10 @@ type PromotionStatus struct {
 // HealthCheckStep describes a health check directive which can be executed by
 // a Stage to verify the health of a Promotion result.
 type HealthCheckStep struct {
-	// Step is the name of the directive to run.
+	// Uses identifies a runner that can execute this step.
 	//
 	// +kubebuilder:validation:MinLength=1
-	Step string `json:"step" protobuf:"bytes,1,opt,name=step"`
+	Uses string `json:"uses" protobuf:"bytes,1,opt,name=uses"`
 
 	// Config is the configuration for the directive.
 	Config *apiextensionsv1.JSON `json:"config,omitempty" protobuf:"bytes,2,opt,name=config"`

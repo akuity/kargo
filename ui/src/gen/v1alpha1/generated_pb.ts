@@ -2506,13 +2506,13 @@ export class Health extends Message<Health> {
  */
 export class HealthCheckStep extends Message<HealthCheckStep> {
   /**
-   * Step is the name of the directive to run.
+   * Uses identifies a runner that can execute this step.
    *
    * +kubebuilder:validation:MinLength=1
    *
-   * @generated from field: optional string step = 1;
+   * @generated from field: optional string uses = 1;
    */
-  step?: string;
+  uses?: string;
 
   /**
    * Config is the configuration for the directive.
@@ -2529,7 +2529,7 @@ export class HealthCheckStep extends Message<HealthCheckStep> {
   static readonly runtime: typeof proto2 = proto2;
   static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.HealthCheckStep";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
-    { no: 1, name: "step", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 1, name: "uses", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 2, name: "config", kind: "message", T: JSON, opt: true },
   ]);
 
@@ -4085,13 +4085,13 @@ export class PromotionStatus extends Message<PromotionStatus> {
  */
 export class PromotionStep extends Message<PromotionStep> {
   /**
-   * Step is the name of the directive to run.
+   * Uses identifies a runner that can execute this step.
    *
    * +kubebuilder:validation:MinLength=1
    *
-   * @generated from field: optional string step = 1;
+   * @generated from field: optional string uses = 1;
    */
-  step?: string;
+  uses?: string;
 
   /**
    * As is the alias this step can be referred to as.
@@ -4115,7 +4115,7 @@ export class PromotionStep extends Message<PromotionStep> {
   static readonly runtime: typeof proto2 = proto2;
   static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.PromotionStep";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
-    { no: 1, name: "step", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 1, name: "uses", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 2, name: "as", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 3, name: "config", kind: "message", T: JSON, opt: true },
   ]);
