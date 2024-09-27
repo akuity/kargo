@@ -854,7 +854,7 @@ message HealthCheckStep {
   optional string uses = 1;
 
   // Config is the configuration for the directive.
-  optional k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON config = 2;
+  optional .k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON config = 2;
 }
 
 // HelmChartDependencyUpdate describes how a specific Helm chart that is used
@@ -1397,7 +1397,7 @@ message PromotionStatus {
 
   // State stores the state of the promotion process between reconciliation
   // attempts.
-  optional k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON state = 10;
+  optional .k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON state = 10;
 }
 
 // PromotionStep describes a directive to be executed as part of a Promotion.
