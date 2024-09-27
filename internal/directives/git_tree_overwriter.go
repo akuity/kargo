@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/otiai10/copy"
@@ -98,8 +99,8 @@ func (g *gitTreeOverwriter) runPromotionStep(
 		inPath,
 		outPath,
 		copy.Options{
-			Skip: func(srcFI os.FileInfo, _, _ string) (bool, error) {
-				return srcFI.IsDir() && srcFI.Name() == ".git", nil
+			Skip: func(_ os.FileInfo, src, _ string) (bool, error) {
+				return src == filepath.Join(inPath, ".git"), nil
 			},
 			OnSymlink: func(src string) copy.SymlinkAction {
 				logging.LoggerFromContext(ctx).Trace("ignoring symlink", "src", src)
