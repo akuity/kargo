@@ -35,10 +35,25 @@ func (a *argocdUpdater) getDesiredRevisions(
 	}
 	revisions := make([]string, len(sources))
 	for i, src := range sources {
+		sourceUpdate := a.findSourceUpdate(update, src)
+		// If there is a source update that targets this source, it might be
+		// specific about a previous step whose output should be used as the desired
+		// revision.
+		if sourceUpdate != nil {
+			var err error
+			if revisions[i], err = getCommitFromStep(
+				stepCtx.SharedState,
+				sourceUpdate.DesiredCommitFromStep,
+			); err != nil {
+				return nil, err
+			}
+			if revisions[i] != "" {
+				continue
+			}
+		}
 		var desiredOrigin *kargoapi.FreightOrigin
 		// If there is a source update that targets this source, it might be
 		// specific about which origin the desired revision should come from.
-		sourceUpdate := a.findSourceUpdate(update, src)
 		if sourceUpdate != nil {
 			desiredOrigin = getDesiredOrigin(stepCfg, sourceUpdate)
 		} else {
@@ -146,4 +161,32 @@ func (a *argocdUpdater) findSourceUpdate(
 		}
 	}
 	return nil
+}
+
+func getCommitFromStep(sharedState State, stepAlias string) (string, error) {
+	if stepAlias == "" {
+		return "", nil
+	}
+	stepOutput, exists := sharedState.Get(stepAlias)
+	if !exists {
+		return "", fmt.Errorf("no output found from step with alias %q", stepAlias)
+	}
+	stepOutputState, ok := stepOutput.(State)
+	if !ok {
+		return "",
+			fmt.Errorf("output from step with alias %q is not a State", stepAlias)
+	}
+	commitAny, exists := stepOutputState.Get(commitKey)
+	if !exists {
+		return "",
+			fmt.Errorf("no commit found in output from step with alias %q", stepAlias)
+	}
+	commit, ok := commitAny.(string)
+	if !ok {
+		return "", fmt.Errorf(
+			"commit in output from step with alias %q is not a string",
+			stepAlias,
+		)
+	}
+	return commit, nil
 }
