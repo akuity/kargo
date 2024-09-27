@@ -17,9 +17,9 @@ import (
 
 // Old annotation keys
 const (
-	OldAnnotationKeySub    = "rbac.kargo.akuity.io/sub"
-	OldAnnotationKeyEmail  = "rbac.kargo.akuity.io/email"
-	OldAnnotationKeyGroups = "rbac.kargo.akuity.io/groups"
+	oldAnnotationKeySub    = "rbac.kargo.akuity.io/sub"
+	oldAnnotationKeyEmail  = "rbac.kargo.akuity.io/email"
+	oldAnnotationKeyGroups = "rbac.kargo.akuity.io/groups"
 )
 
 // ServiceAccountReconciler Reconciles for ServiceAccounts that need annotation migration
@@ -64,24 +64,26 @@ func (r *ServiceAccountReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return ctrl.Result{}, fmt.Errorf("failed to get ServiceAccount: %w", err)
 	}
 
-	if val, ok := sa.Annotations[OldAnnotationKeySub]; ok {
+	if val, ok := sa.Annotations[oldAnnotationKeySub]; ok {
 		sa.Annotations[rbacapi.AnnotationKeyOIDCClaim("sub")] = val
-		delete(sa.Annotations, OldAnnotationKeySub)
+		delete(sa.Annotations, oldAnnotationKeySub)
 	}
-	if val, ok := sa.Annotations[OldAnnotationKeyEmail]; ok {
+	if val, ok := sa.Annotations[oldAnnotationKeyEmail]; ok {
 		sa.Annotations[rbacapi.AnnotationKeyOIDCClaim("email")] = val
-		delete(sa.Annotations, OldAnnotationKeyEmail)
+		delete(sa.Annotations, oldAnnotationKeyEmail)
 	}
-	if val, ok := sa.Annotations[OldAnnotationKeyGroups]; ok {
+	if val, ok := sa.Annotations[oldAnnotationKeyGroups]; ok {
 		sa.Annotations[rbacapi.AnnotationKeyOIDCClaim("groups")] = val
-		delete(sa.Annotations, OldAnnotationKeyGroups)
+		delete(sa.Annotations, oldAnnotationKeyGroups)
 	}
 
-	sa.SetAnnotations(sa.Annotations)
 	if err := r.Update(ctx, sa); err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to update ServiceAccount annotations: %w", err)
 	}
-	logger.Info("Successfully migrated ServiceAccount annotations", "ServiceAccount", req.NamespacedName)
+	logger.Info(
+		"Successfully migrated SSO user --> ServiceAccount annotations",
+		"serviceAccount", sa.Name, "namespace", sa.Namespace,
+	)
 
 	return ctrl.Result{}, nil
 }
@@ -91,8 +93,8 @@ func hasOldAnnotations(annotations map[string]string) bool {
 	if annotations == nil {
 		return false
 	}
-	_, hasSub := annotations[OldAnnotationKeySub]
-	_, hasEmail := annotations[OldAnnotationKeyEmail]
-	_, hasGroups := annotations[OldAnnotationKeyGroups]
+	_, hasSub := annotations[oldAnnotationKeySub]
+	_, hasEmail := annotations[oldAnnotationKeyEmail]
+	_, hasGroups := annotations[oldAnnotationKeyGroups]
 	return hasSub || hasEmail || hasGroups
 }
