@@ -124,7 +124,10 @@ func (g *gitPRWaiter) runPromotionStep(
 			fmt.Errorf("pull request %d was closed without being merged", prNumber)
 	}
 
-	return PromotionStepResult{Status: PromotionStatusSuccess}, nil
+	return PromotionStepResult{
+		Status: PromotionStatusSuccess,
+		Output: State{commitKey: pr.MergeCommitSHA},
+	}, nil
 }
 
 func getPRNumber(sharedState State, cfg GitWaitForPRConfig) (int64, error) {
