@@ -114,9 +114,9 @@ func (g *gitCommitter) buildCommitMessage(
 	var commitMsg string
 	if cfg.Message != "" {
 		commitMsg = cfg.Message
-	} else if len(cfg.MessageFrom) > 0 {
-		commitMsgParts := make([]string, len(cfg.MessageFrom))
-		for i, alias := range cfg.MessageFrom {
+	} else if len(cfg.MessageFromSteps) > 0 {
+		commitMsgParts := make([]string, len(cfg.MessageFromSteps))
+		for i, alias := range cfg.MessageFromSteps {
 			stepOutput, exists := sharedState.Get(alias)
 			if !exists {
 				return "", fmt.Errorf(
