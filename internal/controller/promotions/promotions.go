@@ -505,7 +505,7 @@ func (r *reconciler) promote(
 		var steps []directives.PromotionStep
 		for _, step := range workingPromo.Spec.Steps {
 			steps = append(steps, directives.PromotionStep{
-				Kind:   step.Step,
+				Kind:   step.Uses,
 				Alias:  step.As,
 				Config: step.GetConfig(),
 			})
@@ -537,7 +537,7 @@ func (r *reconciler) promote(
 			var healthChecks []kargoapi.HealthCheckStep
 			for _, step := range res.HealthCheckSteps {
 				healthChecks = append(healthChecks, kargoapi.HealthCheckStep{
-					Step:   step.Kind,
+					Uses:   step.Kind,
 					Config: &apiextensionsv1.JSON{Raw: step.Config.ToJSON()},
 				})
 			}
