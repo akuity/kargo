@@ -99,7 +99,7 @@ func (e *SimpleEngine) Promote(
 		}
 
 		if step.Alias != "" {
-			state[step.Alias] = result.Output
+			state[step.Alias] = map[string]any(result.Output)
 		}
 
 		if result.HealthCheckStep != nil {
