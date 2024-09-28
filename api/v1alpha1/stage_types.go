@@ -194,6 +194,8 @@ type StageSpec struct {
 	// utility of this is to allow multiple downstream Stages to subscribe to a
 	// single upstream Stage where they may otherwise have subscribed to multiple
 	// upstream Stages.
+	//
+	// Deprecated: Use PromotionTemplate instead.
 	PromotionMechanisms *PromotionMechanisms `json:"promotionMechanisms,omitempty" protobuf:"bytes,2,opt,name=promotionMechanisms"`
 	// Verification describes how to verify a Stage's current Freight is fit for
 	// promotion downstream.
