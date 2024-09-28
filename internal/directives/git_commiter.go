@@ -92,9 +92,16 @@ func (g *gitCommitter) runPromotionStep(
 			commitOpts.Author.Email = cfg.Author.Email
 		}
 	}
-	if err = workTree.Commit(commitMsg, commitOpts); err != nil {
+	hasDiffs, err := workTree.HasDiffs()
+	if err != nil {
 		return PromotionStepResult{Status: PromotionStatusFailure},
-			fmt.Errorf("error committing to working tree: %w", err)
+			fmt.Errorf("error checking for diffs in working tree: %w", err)
+	}
+	if hasDiffs {
+		if err = workTree.Commit(commitMsg, commitOpts); err != nil {
+			return PromotionStepResult{Status: PromotionStatusFailure},
+				fmt.Errorf("error committing to working tree: %w", err)
+		}
 	}
 	commitID, err := workTree.LastCommitID()
 	if err != nil {
