@@ -38,7 +38,7 @@ func getDesiredOriginInternal(
 	case *kargoapi.Stage:
 		// Stage is not technically a promotion mechanism, but it is a convenient
 		// entry point for the recursion.
-		subMechs = []any{m.Spec.PromotionMechanisms}
+		subMechs = []any{m.Spec.PromotionMechanisms} // nolint: staticcheck
 	case *kargoapi.PromotionMechanisms:
 		origin = m.Origin
 		subMechs = make([]any, len(m.GitRepoUpdates)+len(m.ArgoCDAppUpdates))

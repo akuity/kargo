@@ -128,6 +128,7 @@ func (g *gitMechanism) Promote(
 	stage *kargoapi.Stage,
 	promo *kargoapi.Promotion,
 ) error {
+	// nolint: staticcheck
 	updates := g.selectUpdatesFn(stage.Spec.PromotionMechanisms.GitRepoUpdates)
 
 	if len(updates) == 0 {

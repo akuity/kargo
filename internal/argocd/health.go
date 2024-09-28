@@ -57,6 +57,7 @@ func (h *applicationHealth) EvaluateHealth(
 	ctx context.Context,
 	stage *kargoapi.Stage,
 ) *kargoapi.Health {
+	// nolint: staticcheck
 	if stage.Spec.PromotionMechanisms == nil ||
 		len(stage.Spec.PromotionMechanisms.ArgoCDAppUpdates) == 0 {
 		return nil
@@ -72,11 +73,15 @@ func (h *applicationHealth) EvaluateHealth(
 	}
 
 	health := kargoapi.Health{
-		Status:     kargoapi.HealthStateHealthy,
-		ArgoCDApps: make([]kargoapi.ArgoCDAppStatus, len(stage.Spec.PromotionMechanisms.ArgoCDAppUpdates)),
-		Issues:     make([]string, 0),
+		Status: kargoapi.HealthStateHealthy,
+		ArgoCDApps: make(
+			[]kargoapi.ArgoCDAppStatus,
+			len(stage.Spec.PromotionMechanisms.ArgoCDAppUpdates), // nolint: staticcheck
+		),
+		Issues: make([]string, 0),
 	}
 
+	// nolint: staticcheck
 	for i := range stage.Spec.PromotionMechanisms.ArgoCDAppUpdates {
 		update := &stage.Spec.PromotionMechanisms.ArgoCDAppUpdates[i]
 		namespace := update.AppNamespace

@@ -239,7 +239,7 @@ func TestKustomizerApply(t *testing.T) {
 			changes, err := testCase.kustomizer.apply(
 				context.Background(),
 				stage,
-				&stage.Spec.PromotionMechanisms.GitRepoUpdates[0],
+				&stage.Spec.PromotionMechanisms.GitRepoUpdates[0], // nolint: staticcheck
 				[]kargoapi.FreightReference{{
 					Images: []kargoapi.Image{
 						{

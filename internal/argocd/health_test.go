@@ -607,7 +607,7 @@ func TestApplicationHealth_GetApplicationHealth(t *testing.T) {
 			state, healthStatus, syncStatus, err := h.GetApplicationHealth(
 				context.Background(),
 				stage,
-				&stage.Spec.PromotionMechanisms.ArgoCDAppUpdates[0],
+				&stage.Spec.PromotionMechanisms.ArgoCDAppUpdates[0], // nolint: staticcheck
 				client.ObjectKey{
 					Namespace: app.Namespace,
 					Name:      app.Name,
@@ -657,7 +657,7 @@ func TestApplicationHealth_GetApplicationHealth(t *testing.T) {
 		_, _, _, err := h.GetApplicationHealth(
 			context.Background(),
 			testStage,
-			&testStage.Spec.PromotionMechanisms.ArgoCDAppUpdates[0],
+			&testStage.Spec.PromotionMechanisms.ArgoCDAppUpdates[0], // nolint: staticcheck
 			client.ObjectKey{
 				Namespace: "fake-namespace",
 				Name:      "fake-name",

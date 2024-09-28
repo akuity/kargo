@@ -107,7 +107,7 @@ func (a *argoCDMechanism) Promote(
 	stage *kargoapi.Stage,
 	promo *kargoapi.Promotion,
 ) error {
-	updates := stage.Spec.PromotionMechanisms.ArgoCDAppUpdates
+	updates := stage.Spec.PromotionMechanisms.ArgoCDAppUpdates // nolint: staticcheck
 
 	if len(updates) == 0 {
 		promo.Status.Phase = kargoapi.PromotionPhaseSucceeded

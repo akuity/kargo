@@ -1053,7 +1053,7 @@ func TestValidateSpec(t *testing.T) {
 						{
 							Type:     field.ErrorTypeInvalid,
 							Field:    "spec.promotionMechanisms",
-							BadValue: spec.PromotionMechanisms,
+							BadValue: spec.PromotionMechanisms, // nolint: staticcheck
 							Detail: "at least one of " +
 								"spec.promotionMechanisms.gitRepoUpdates or " +
 								"spec.promotionMechanisms.argoCDAppUpdates must be non-empty",
