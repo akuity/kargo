@@ -85,8 +85,9 @@ func (h *helmImageUpdater) runPromotionStep(
 		}
 
 		if commitMsg := h.generateCommitMessage(cfg.Path, fullImageRefs); commitMsg != "" {
-			result.Output = make(State, 1)
-			result.Output.Set("commitMessage", commitMsg)
+			result.Output = map[string]any{
+				"commitMessage": commitMsg,
+			}
 		}
 	}
 	return result, nil

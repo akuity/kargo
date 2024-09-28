@@ -86,7 +86,7 @@ type HealthCheckStepResult struct {
 	// HealthCheckStepRunner. The Engine will aggregate this output and include it
 	// in the final results of the health check, which will ultimately be included
 	// in StageStatus.
-	Output State
+	Output map[string]any
 	// Issues is a list of issues that were encountered during the execution of
 	// the HealthCheckStep by a HealthCheckStepRunner.
 	Issues []string

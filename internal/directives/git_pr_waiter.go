@@ -126,7 +126,7 @@ func (g *gitPRWaiter) runPromotionStep(
 
 	return PromotionStepResult{
 		Status: PromotionStatusSuccess,
-		Output: State{commitKey: pr.MergeCommitSHA},
+		Output: map[string]any{commitKey: pr.MergeCommitSHA},
 	}, nil
 }
 
@@ -140,14 +140,14 @@ func getPRNumber(sharedState State, cfg GitWaitForPRConfig) (int64, error) {
 				cfg.PRNumberFromOpen,
 			)
 		}
-		stepOutputState, ok := stepOutput.(State)
+		stepOutputMap, ok := stepOutput.(map[string]any)
 		if !ok {
 			return 0, fmt.Errorf(
-				"output from step with alias %q is not a State",
+				"output from step with alias %q is not a map[string]any",
 				cfg.PRNumberFromOpen,
 			)
 		}
-		prNumberAny, exists := stepOutputState.Get(branchKey)
+		prNumberAny, exists := stepOutputMap[branchKey]
 		if !exists {
 			return 0, fmt.Errorf(
 				"no PR number found in output from step with alias %q",

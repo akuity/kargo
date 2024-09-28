@@ -124,8 +124,9 @@ func (h *helmChartUpdater) runPromotionStep(
 
 	result := PromotionStepResult{Status: PromotionStatusSuccess}
 	if commitMsg := h.generateCommitMessage(cfg.Path, newVersions); commitMsg != "" {
-		result.Output = make(State, 1)
-		result.Output.Set("commitMessage", commitMsg)
+		result.Output = map[string]any{
+			"commitMessage": commitMsg,
+		}
 	}
 	return result, nil
 }

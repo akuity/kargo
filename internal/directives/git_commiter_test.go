@@ -224,7 +224,7 @@ func Test_gitCommitter_runPromotionStep(t *testing.T) {
 	require.Equal(t, PromotionStatusSuccess, res.Status)
 	expectedCommit, err := workTree.LastCommitID()
 	require.NoError(t, err)
-	actualCommit, ok := res.Output.Get(commitKey)
+	actualCommit, ok := res.Output[commitKey]
 	require.True(t, ok)
 	require.Equal(t, expectedCommit, actualCommit)
 	lastCommitMsg, err := workTree.CommitMessage("HEAD")
@@ -263,13 +263,13 @@ func Test_gitCommitter_buildCommitMessage(t *testing.T) {
 			cfg: GitCommitConfig{MessageFromSteps: []string{"fake-step-alias"}},
 			assertions: func(t *testing.T, _ string, err error) {
 				require.ErrorContains(t, err, "output from step with alias")
-				require.ErrorContains(t, err, "is not a State")
+				require.ErrorContains(t, err, "is not a map[string]any")
 			},
 		},
 		{
 			name: "output from step with alias does not contain a commit message",
 			sharedState: State{
-				"fake-step-alias": State{},
+				"fake-step-alias": map[string]any{},
 			},
 			cfg: GitCommitConfig{MessageFromSteps: []string{"fake-step-alias"}},
 			assertions: func(t *testing.T, _ string, err error) {
@@ -281,7 +281,7 @@ func Test_gitCommitter_buildCommitMessage(t *testing.T) {
 		{
 			name: "output from step with alias contain a commit message that isn't a string",
 			sharedState: State{
-				"fake-step-alias": State{
+				"fake-step-alias": map[string]any{
 					"commitMessage": 42,
 				},
 			},
@@ -296,10 +296,10 @@ func Test_gitCommitter_buildCommitMessage(t *testing.T) {
 		{
 			name: "successful message construction",
 			sharedState: State{
-				"fake-step-alias": State{
+				"fake-step-alias": map[string]any{
 					"commitMessage": "part one",
 				},
-				"another-fake-step-alias": State{
+				"another-fake-step-alias": map[string]any{
 					"commitMessage": "part two",
 				},
 			},
