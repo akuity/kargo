@@ -167,6 +167,9 @@ func (s *Stage) GetStatus() *StageStatus {
 
 // StageSpec describes the sources of Freight used by a Stage and how to
 // incorporate Freight into the Stage.
+//
+// +kubebuilder:validation:XValidation:rule="(has(self.promotionTemplate) || has(self.promotionMechanisms))",message="one of promotionTemplate or promotionMechanisms must be specified"
+// +kubebuilder:validation:XValidation:rule="(has(self.promotionTemplate) && !has(self.promotionMechanisms)) || (!has(self.promotionTemplate) && has(self.promotionMechanisms))",message="only one of promotionTemplate or promotionMechanisms can be specified"
 type StageSpec struct {
 	// Shard is the name of the shard that this Stage belongs to. This is an
 	// optional field. If not specified, the Stage will belong to the default
