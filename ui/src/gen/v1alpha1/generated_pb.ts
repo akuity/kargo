@@ -4439,6 +4439,9 @@ export class StageList extends Message<StageList> {
  * StageSpec describes the sources of Freight used by a Stage and how to
  * incorporate Freight into the Stage.
  *
+ * +kubebuilder:validation:XValidation:rule="(has(self.promotionTemplate) || has(self.promotionMechanisms))",message="one of promotionTemplate or promotionMechanisms must be specified"
+ * +kubebuilder:validation:XValidation:rule="(has(self.promotionTemplate) && !has(self.promotionMechanisms)) || (!has(self.promotionTemplate) && has(self.promotionMechanisms))",message="only one of promotionTemplate or promotionMechanisms can be specified"
+ *
  * @generated from message github.com.akuity.kargo.api.v1alpha1.StageSpec
  */
 export class StageSpec extends Message<StageSpec> {
@@ -4484,6 +4487,8 @@ export class StageSpec extends Message<StageSpec> {
    * utility of this is to allow multiple downstream Stages to subscribe to a
    * single upstream Stage where they may otherwise have subscribed to multiple
    * upstream Stages.
+   *
+   * Deprecated: Use PromotionTemplate instead.
    *
    * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.PromotionMechanisms promotionMechanisms = 2;
    */

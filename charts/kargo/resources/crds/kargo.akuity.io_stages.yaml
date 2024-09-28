@@ -65,6 +65,9 @@ spec:
                   utility of this is to allow multiple downstream Stages to subscribe to a
                   single upstream Stage where they may otherwise have subscribed to multiple
                   upstream Stages.
+
+
+                  Deprecated: Use PromotionTemplate instead.
                 properties:
                   argoCDAppUpdates:
                     description: |-
@@ -1051,6 +1054,13 @@ spec:
             required:
             - requestedFreight
             type: object
+            x-kubernetes-validations:
+            - message: one of promotionTemplate or promotionMechanisms must be specified
+              rule: (has(self.promotionTemplate) || has(self.promotionMechanisms))
+            - message: only one of promotionTemplate or promotionMechanisms can be
+                specified
+              rule: (has(self.promotionTemplate) && !has(self.promotionMechanisms))
+                || (!has(self.promotionTemplate) && has(self.promotionMechanisms))
           status:
             description: Status describes the Stage's current and recent Freight,
               health, and more.
