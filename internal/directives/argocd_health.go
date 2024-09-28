@@ -124,7 +124,7 @@ func (a *argocdUpdater) runHealthCheckStep(
 			}
 		}
 	}
-	health.Output = State{
+	health.Output = map[string]any{
 		applicationStatusesKey: appStatuses,
 	}
 	return health

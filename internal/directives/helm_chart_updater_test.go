@@ -100,7 +100,7 @@ func Test_helmChartUpdater_runPromotionStep(t *testing.T) {
 				assert.NoError(t, err)
 				assert.Equal(t, PromotionStepResult{
 					Status: PromotionStatusSuccess,
-					Output: State{
+					Output: map[string]any{
 						"commitMessage": `Updated chart dependencies for testchart
 
 - examplechart: 0.1.0`,

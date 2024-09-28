@@ -77,7 +77,7 @@ func Test_helmImageUpdater_runPromotionStep(t *testing.T) {
 				assert.NoError(t, err)
 				assert.Equal(t, PromotionStepResult{
 					Status: PromotionStatusSuccess,
-					Output: State{
+					Output: map[string]any{
 						"commitMessage": "Updated values.yaml to use new image\n\n- docker.io/library/nginx:1.19.0",
 					},
 				}, result)

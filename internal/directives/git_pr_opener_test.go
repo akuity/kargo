@@ -199,7 +199,7 @@ func Test_gitPROpener_runPromotionStep(t *testing.T) {
 			WorkDir:       workDir,
 			CredentialsDB: &credentials.FakeDB{},
 			SharedState: State{
-				"fake-step": State{
+				"fake-step": map[string]any{
 					branchKey: testSourceBranch,
 				},
 			},
@@ -214,7 +214,7 @@ func Test_gitPROpener_runPromotionStep(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
-	prNumber, ok := res.Output.Get(prNumberKey)
+	prNumber, ok := res.Output[prNumberKey]
 	require.True(t, ok)
 	require.Equal(t, testPRNumber, prNumber)
 

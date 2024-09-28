@@ -177,7 +177,7 @@ type PromotionStepResult struct {
 	// Output is the opaque output of a PromotionStep executed by a
 	// PromotionStepRunner. The Engine will update shared state with this output,
 	// making it available to subsequent steps.
-	Output State
+	Output map[string]any
 	// HealthCheckStep is health check opaque configuration optionally returned by
 	// a PromotionStepRunner's successful execution of a PromotionStep. This
 	// configuration can later be used as input to health check processes.

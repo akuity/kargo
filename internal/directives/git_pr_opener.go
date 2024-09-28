@@ -174,7 +174,7 @@ func (g *gitPROpener) runPromotionStep(
 	}
 	return PromotionStepResult{
 		Status: PromotionStatusSuccess,
-		Output: State{
+		Output: map[string]any{
 			prNumberKey: pr.Number,
 		},
 	}, nil
@@ -190,14 +190,14 @@ func getSourceBranch(sharedState State, cfg GitOpenPRConfig) (string, error) {
 				cfg.SourceBranchFromStep,
 			)
 		}
-		stepOutputState, ok := stepOutput.(State)
+		stepOutputMap, ok := stepOutput.(map[string]any)
 		if !ok {
 			return "", fmt.Errorf(
-				"output from step with alias %q is not a State",
+				"output from step with alias %q is not a mao[string]any",
 				cfg.SourceBranchFromStep,
 			)
 		}
-		sourceBranchAny, exists := stepOutputState.Get(branchKey)
+		sourceBranchAny, exists := stepOutputMap[branchKey]
 		if !exists {
 			return "", fmt.Errorf(
 				"no branch found in output from step with alias %q",
