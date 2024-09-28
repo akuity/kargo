@@ -142,7 +142,7 @@ func TestGetDesiredRevisions(t *testing.T) {
 				context.Background(),
 				nil, // No client is needed as long as we're always explicit about origins
 				stage,
-				&stage.Spec.PromotionMechanisms.ArgoCDAppUpdates[0],
+				&stage.Spec.PromotionMechanisms.ArgoCDAppUpdates[0], // nolint: staticcheck
 				testCase.app,
 				testCase.freight,
 			)

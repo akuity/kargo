@@ -199,7 +199,7 @@ func (w *webhook) validateSpec(
 		errs,
 		w.validatePromotionMechanisms(
 			f.Child("promotionMechanisms"),
-			spec.PromotionMechanisms,
+			spec.PromotionMechanisms, // nolint: staticcheck
 		)...,
 	)
 }
