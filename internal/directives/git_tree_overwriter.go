@@ -95,6 +95,14 @@ func (g *gitTreeOverwriter) runPromotionStep(
 		return PromotionStepResult{Status: PromotionStatusFailure},
 			fmt.Errorf("error clearing working tree at %s: %w", cfg.OutPath, err)
 	}
+	inFI, err := os.Stat(inPath)
+	if err != nil {
+		return PromotionStepResult{Status: PromotionStatusFailure},
+			fmt.Errorf("error getting info for path %s: %w", inPath, err)
+	}
+	if !inFI.IsDir() {
+		outPath = filepath.Join(outPath, inFI.Name())
+	}
 	if err = copy.Copy(
 		inPath,
 		outPath,
