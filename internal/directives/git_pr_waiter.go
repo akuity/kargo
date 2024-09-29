@@ -147,7 +147,7 @@ func getPRNumber(sharedState State, cfg GitWaitForPRConfig) (int64, error) {
 				cfg.PRNumberFromOpen,
 			)
 		}
-		prNumberAny, exists := stepOutputMap[branchKey]
+		prNumberAny, exists := stepOutputMap[prNumberKey]
 		if !exists {
 			return 0, fmt.Errorf(
 				"no PR number found in output from step with alias %q",
