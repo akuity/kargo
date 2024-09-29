@@ -511,25 +511,34 @@ func (r *reconciler) promote(
 			})
 		}
 
-		workDir := filepath.Join(os.TempDir(), "promotion-"+string(workingPromo.UID))
-		if err := os.MkdirAll(workDir, 0o700); err != nil && !os.IsExist(err) {
+		promoCtx := directives.PromotionContext{
+			WorkDir:         filepath.Join(os.TempDir(), "promotion-"+string(workingPromo.UID)),
+			Project:         stageNamespace,
+			Stage:           stageName,
+			FreightRequests: stage.Spec.RequestedFreight,
+			Freight:         *workingPromo.Status.FreightCollection.DeepCopy(),
+			StartFromStep:   promo.Status.CurrentStep,
+			State:           directives.State(workingPromo.Status.GetState()),
+		}
+		if err := os.Mkdir(promoCtx.WorkDir, 0o700); err == nil {
+			// If we're working with a fresh directory, we should start the promotion
+			// process again from the beginning.
+			promoCtx.StartFromStep = 0
+			promoCtx.State = nil
+		} else if !os.IsExist(err) {
 			return nil, fmt.Errorf("error creating working directory: %w", err)
 		}
 		defer func() {
 			if workingPromo.Status.Phase.IsTerminal() {
-				if err := os.RemoveAll(workDir); err != nil {
+				if err := os.RemoveAll(promoCtx.WorkDir); err != nil {
 					logger.Error(err, "could not remove working directory")
 				}
 			}
 		}()
 
-		res, err := r.directivesEngine.Promote(ctx, directives.PromotionContext{
-			WorkDir:         workDir,
-			Project:         stageNamespace,
-			Stage:           stageName,
-			FreightRequests: stage.Spec.RequestedFreight,
-			Freight:         *workingPromo.Status.FreightCollection.DeepCopy(),
-		}, steps)
+		res, err := r.directivesEngine.Promote(ctx, promoCtx, steps)
+		workingPromo.Status.CurrentStep = res.CurrentStep
+		workingPromo.Status.State = &apiextensionsv1.JSON{Raw: res.State.ToJSON()}
 		switch res.Status {
 		case directives.PromotionStatusPending:
 			workingPromo.Status.Phase = kargoapi.PromotionPhaseRunning
@@ -541,7 +550,6 @@ func (r *reconciler) promote(
 					Config: &apiextensionsv1.JSON{Raw: step.Config.ToJSON()},
 				})
 			}
-
 			workingPromo.Status.Phase = kargoapi.PromotionPhaseSucceeded
 			workingPromo.Status.HealthChecks = healthChecks
 		case directives.PromotionStatusFailure:
