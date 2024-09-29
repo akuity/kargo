@@ -98,6 +98,10 @@ func (e *SimpleEngine) Promote(
 				fmt.Errorf("failed to run step %q: %w", step.Kind, err)
 		}
 
+		if result.Status != PromotionStatusSuccess {
+			return PromotionResult{Status: result.Status}, nil
+		}
+
 		if step.Alias != "" {
 			state[step.Alias] = result.Output
 		}
