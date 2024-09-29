@@ -127,7 +127,7 @@ func (g *gitPROpener) runPromotionStep(
 		ctx,
 		repo,
 		gitProviderSvc,
-		cfg.SourceBranch,
+		sourceBranch,
 		cfg.TargetBranch,
 	)
 	if err != nil {
@@ -163,7 +163,7 @@ func (g *gitPROpener) runPromotionStep(
 	pr, err := gitProviderSvc.CreatePullRequest(
 		ctx,
 		gitprovider.CreatePullRequestOpts{
-			Head:  cfg.SourceBranch,
+			Head:  sourceBranch,
 			Base:  cfg.TargetBranch,
 			Title: title,
 		},
