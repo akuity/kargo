@@ -1389,6 +1389,15 @@ message PromotionStatus {
 
   // FinishedAt is the time when the promotion was completed.
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Time finishedAt = 6;
+
+  // CurrentStep is the index of the current promotion step being executed. This
+  // permits steps that have already run successfully to be skipped on
+  // subsequent reconciliations attempts.
+  optional int64 currentStep = 9;
+
+  // State stores the state of the promotion process between reconciliation
+  // attempts.
+  optional k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON state = 10;
 }
 
 // PromotionStep describes a directive to be executed as part of a Promotion.

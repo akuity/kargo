@@ -109,6 +109,13 @@ spec:
               Status describes the current state of the transition represented by this
               Promotion.
             properties:
+              currentStep:
+                description: |-
+                  CurrentStep is the index of the current promotion step being executed. This
+                  permits steps that have already run successfully to be skipped on
+                  subsequent reconciliations attempts.
+                format: int64
+                type: integer
               finishedAt:
                 description: FinishedAt is the time when the promotion was completed.
                 format: date-time
@@ -501,6 +508,11 @@ spec:
                 description: Phase describes where the Promotion currently is in its
                   lifecycle.
                 type: string
+              state:
+                description: |-
+                  State stores the state of the promotion process between reconciliation
+                  attempts.
+                x-kubernetes-preserve-unknown-fields: true
             type: object
         required:
         - spec

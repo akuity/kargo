@@ -4043,6 +4043,23 @@ export class PromotionStatus extends Message<PromotionStatus> {
    */
   finishedAt?: Time;
 
+  /**
+   * CurrentStep is the index of the current promotion step being executed. This
+   * permits steps that have already run successfully to be skipped on
+   * subsequent reconciliations attempts.
+   *
+   * @generated from field: optional int64 currentStep = 9;
+   */
+  currentStep?: bigint;
+
+  /**
+   * State stores the state of the promotion process between reconciliation
+   * attempts.
+   *
+   * @generated from field: optional k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON state = 10;
+   */
+  state?: JSON;
+
   constructor(data?: PartialMessage<PromotionStatus>) {
     super();
     proto2.util.initPartial(data, this);
@@ -4059,6 +4076,8 @@ export class PromotionStatus extends Message<PromotionStatus> {
     { no: 7, name: "freightCollection", kind: "message", T: FreightCollection, opt: true },
     { no: 8, name: "healthChecks", kind: "message", T: HealthCheckStep, repeated: true },
     { no: 6, name: "finishedAt", kind: "message", T: Time, opt: true },
+    { no: 9, name: "currentStep", kind: "scalar", T: 3 /* ScalarType.INT64 */, opt: true },
+    { no: 10, name: "state", kind: "message", T: JSON, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PromotionStatus {
