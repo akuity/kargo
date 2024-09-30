@@ -36,15 +36,18 @@ const Step = ({ step, result }: { step: PromotionStep; result: PromotionDirectiv
       unstable_icons: []
     };
 
-    const userConfig = JSON.stringify(
-      JSON.parse(
-        decodeRawData({
-          result: { case: 'raw', value: step?.config?.raw || new Uint8Array() }
-        })
-      ),
-      null,
-      ' '
-    );
+    let userConfig = '';
+    if (step?.config?.raw) {
+      userConfig = JSON.stringify(
+        JSON.parse(
+          decodeRawData({
+            result: { case: 'raw', value: step?.config?.raw || new Uint8Array() }
+          })
+        ),
+        null,
+        ' '
+      );
+    }
 
     return {
       spec: runnerMetadata,
