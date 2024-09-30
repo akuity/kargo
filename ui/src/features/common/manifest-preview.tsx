@@ -18,6 +18,12 @@ export const ManifestPreview = ({
     if (Array.isArray(v) && v.length === 0) {
       return;
     }
+
+    // problem: API responds the manifest with nested JSON config as raw Uint8Array JSON string, we just need to convert it
+    // happens in promotion directives step YAML view
+    if (typeof v.raw === 'string') {
+      return JSON.parse(atob(v.raw));
+    }
     return v;
   });
 

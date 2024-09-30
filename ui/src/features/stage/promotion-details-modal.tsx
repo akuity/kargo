@@ -1,63 +1,66 @@
-import { faDocker, faGitAlt } from '@fortawesome/free-brands-svg-icons';
 import {
   faCaretDown,
   faCaretUp,
-  faClipboard,
-  faClock,
-  faClone,
-  faCodeCommit,
-  faCodePullRequest,
-  faDharmachakra,
-  faDrawPolygon,
+  faCheck,
+  faCircleNotch,
   faFileLines,
-  faHammer,
-  faHeart,
-  faPenNib,
   faShoePrints,
-  faTextSlash,
-  faTurnUp,
-  IconDefinition
+  faTimes
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Flex, Modal, Tabs } from 'antd';
+import Alert from 'antd/es/alert/Alert';
 import classNames from 'classnames';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
-import { Promotion, PromotionSpec } from '@ui/gen/v1alpha1/generated_pb';
+import YamlEditor from '@ui/features/common/code-editor/yaml-editor-lazy';
+import { ManifestPreview } from '@ui/features/common/manifest-preview';
+import { ModalProps } from '@ui/features/common/modal/use-modal';
+import {
+  getPromotionDirectiveStepStatus,
+  PromotionDirectiveStepStatus
+} from '@ui/features/common/promotion-directive-step-status/utils';
+import { usePromotionDirectivesRegistryContext } from '@ui/features/promotion-directives/registry/context/use-registry-context';
+import { Runner } from '@ui/features/promotion-directives/registry/types';
+import { Promotion, PromotionStep } from '@ui/gen/v1alpha1/generated_pb';
+import { decodeRawData } from '@ui/utils/decode-raw-data';
 
-import YamlEditor from '../common/code-editor/yaml-editor-lazy';
-import { ManifestPreview } from '../common/manifest-preview';
-import { ModalProps } from '../common/modal/use-modal';
-
-import { testDirectives } from './test-directives';
-
-const builtInDirectives: { [key: string]: IconDefinition[] } = {
-  'git-clone': [faGitAlt, faClone],
-  'kargo-render': [faDrawPolygon],
-  'kustomize-set-image': [faDocker, faPenNib],
-  'kustomize-build': [faDocker, faHammer],
-  'helm-update-image': [faDharmachakra, faDocker],
-  'helm-update-chart': [faDharmachakra],
-  'helm-template': [faDharmachakra],
-  'argocd-health': [faHeart],
-  'git-commit': [faGitAlt, faCodeCommit],
-  'git-push': [faGitAlt, faTurnUp],
-  'pr-open': [faCodePullRequest],
-  'git-overwrite': [faGitAlt, faTextSlash],
-  'pr-wait': [faCodePullRequest, faClock],
-  copy: [faClipboard]
-};
-
-// todo: replace any with proper Step type
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const Step = ({ step, order, selected }: { step: any; order: number; selected?: boolean }) => {
+const Step = ({ step, result }: { step: PromotionStep; result: PromotionDirectiveStepStatus }) => {
   const [showDetails, setShowDetails] = useState(false);
+
+  const { registry } = usePromotionDirectivesRegistryContext();
+
+  const meta = useMemo(() => {
+    const runnerMetadata: Runner = registry.runners.find((r) => r.identifier === step.uses) || {
+      identifier: step.uses || 'unknown-step',
+      unstable_icons: []
+    };
+
+    const userConfig = JSON.stringify(
+      JSON.parse(
+        decodeRawData({
+          result: { case: 'raw', value: step?.config?.raw || new Uint8Array() }
+        })
+      ),
+      null,
+      ' '
+    );
+
+    return {
+      spec: runnerMetadata,
+      config: userConfig
+    };
+  }, [registry, step]);
+
+  const progressing = result === PromotionDirectiveStepStatus.RUNNING;
+  const success = result === PromotionDirectiveStepStatus.SUCCESS;
+  const failed = result === PromotionDirectiveStepStatus.FAILED;
 
   return (
     <Flex
       className={classNames('rounded-md border-2 border-solid p-2 mb-3', {
-        'border-green-500': selected,
-        'border-gray-200': !selected
+        'border-green-500': progressing,
+        'border-gray-200': !progressing
       })}
       vertical
     >
@@ -65,27 +68,23 @@ const Step = ({ step, order, selected }: { step: any; order: number; selected?: 
         <Flex
           align='center'
           justify='center'
-          className='rounded-full p-1 text-white bg-gray-500 font-bold mr-4'
+          className='mr-2'
           style={{ width: '20px', height: '20px', marginBottom: '1px' }}
         >
-          {order + 1}
+          {progressing && <FontAwesomeIcon spin icon={faCircleNotch} />}
+          {success && <FontAwesomeIcon icon={faCheck} className='text-green-500' />}
+          {failed && <FontAwesomeIcon icon={faTimes} className='text-red-500' />}
         </Flex>
         <Flex className='font-semibold text-base w-full' align='center'>
-          {step.step}
+          {meta.spec.identifier}
           <Flex className='ml-auto' align='center'>
             <Flex
               align='center'
               className='bg-gray-500 text-white uppercase p-2 rounded-md font-medium mr-3 gap-2 text-sm'
             >
-              {builtInDirectives[step.step] ? (
-                <>
-                  {builtInDirectives[step.step].map((icon, i) => (
-                    <FontAwesomeIcon key={i} icon={icon} />
-                  ))}
-                </>
-              ) : (
-                <span className='text-xs'>Custom Directive</span>
-              )}
+              {meta.spec.unstable_icons.map((icon, i) => (
+                <FontAwesomeIcon key={i} icon={icon} />
+              ))}
             </Flex>
             {step.config && (
               <FontAwesomeIcon
@@ -97,14 +96,7 @@ const Step = ({ step, order, selected }: { step: any; order: number; selected?: 
           </Flex>
         </Flex>
       </Flex>
-      {showDetails && (
-        <YamlEditor
-          value={JSON.stringify(step.config, null, 2)}
-          height='200px'
-          className='mt-2'
-          disabled
-        />
-      )}
+      {showDetails && <YamlEditor value={meta.config} height='200px' className='mt-2' disabled />}
     </Flex>
   );
 };
@@ -112,19 +104,14 @@ const Step = ({ step, order, selected }: { step: any; order: number; selected?: 
 export const PromotionDetailsModal = ({
   promotion,
   hide,
-  visible,
-  currentStep
+  visible
 }: {
-  // todo: remove type extension once Promotion type is updated
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  promotion: Promotion & { spec: PromotionSpec & { steps: any[] } };
-  currentStep?: number; // currentStep should indicate which step the promotion is on
+  promotion: Promotion;
 } & ModalProps) => {
-  promotion.spec.steps = testDirectives;
   return (
     <Modal
       title='Promotion Details'
-      visible={visible}
+      open={visible}
       width='800px'
       okText='Close'
       onOk={hide}
@@ -135,8 +122,15 @@ export const PromotionDetailsModal = ({
         {promotion.spec?.steps && (
           <Tabs.TabPane tab='Steps' key='1' icon={<FontAwesomeIcon icon={faShoePrints} />}>
             {promotion.spec.steps.map((step, i) => (
-              <Step key={i} step={step} order={i} selected={i === currentStep} />
+              <Step
+                key={i}
+                step={step}
+                result={getPromotionDirectiveStepStatus(i, promotion.status)}
+              />
             ))}
+            {!!promotion?.status?.message && (
+              <Alert message={promotion.status.message} type='error' className='mt4' />
+            )}
           </Tabs.TabPane>
         )}
         <Tabs.TabPane tab='YAML' key='2' icon={<FontAwesomeIcon icon={faFileLines} />}>
