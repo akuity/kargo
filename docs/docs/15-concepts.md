@@ -379,6 +379,22 @@ of the Argo Rollouts documentation for comprehensive coverage of the full range
 of `AnalysisTemplate` capabilities.
 :::
 
+**Using the `kargo verify` Command**
+
+The `kargo verify` command can be used to manage this verification process for `Stage`s. It allows you to rerun or abort the verification of a `Stage`'s current `Freight`.
+
+For example:
+
+- To rerun the verification for `test` `Stage`:
+  ```shell
+  kargo verify stage --project=kargo-demo test
+  ```
+
+- To stop an ongoing verification process in the `test` `Stage`:
+  ```shell
+  kargo verify stage --project=kargo-demo test --abort
+  ```
+
 #### Status
 
 A `Stage` resource's `status` field records:
