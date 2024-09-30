@@ -36,17 +36,17 @@ func Test_gitPRWaiter_validate(t *testing.T) {
 			},
 		},
 		{
-			name:   "neither prNumber nor prNumberFromOpen specified",
+			name:   "neither prNumber nor PRNumberFromStep specified",
 			config: Config{},
 			expectedProblems: []string{
 				"(root): Must validate one and only one schema",
 			},
 		},
 		{
-			name: "both prNumber and prNumberFromOpen specified",
+			name: "both prNumber and PRNumberFromStep specified",
 			config: Config{
 				"prNumber":         42,
-				"prNumberFromOpen": "fake-step",
+				"PRNumberFromStep": "fake-step",
 			},
 			expectedProblems: []string{
 				"(root): Must validate one and only one schema",
