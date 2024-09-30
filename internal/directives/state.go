@@ -1,6 +1,10 @@
 package directives
 
-import "k8s.io/apimachinery/pkg/runtime"
+import (
+	"encoding/json"
+
+	"k8s.io/apimachinery/pkg/runtime"
+)
 
 // State is a type that represents shared state between executions of
 // PromotionSteps. It is not safe for concurrent use at present, as we expect
@@ -27,4 +31,13 @@ func (s *State) DeepCopy() State {
 	// the configuration to originate from a Kubernetes API object. We should
 	// consider writing our own implementation in the future.
 	return runtime.DeepCopyJSON(*s)
+}
+
+// ToJSON marshals the State to JSON.
+func (s State) ToJSON() []byte {
+	if len(s) == 0 {
+		return nil
+	}
+	b, _ := json.Marshal(s)
+	return b
 }

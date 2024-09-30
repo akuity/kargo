@@ -44,6 +44,11 @@ type PromotionContext struct {
 	// well as any Freight that has been inherited from the target Stage's current
 	// state.
 	Freight kargoapi.FreightCollection
+	// SharedState is the index of the step from which the promotion should begin
+	// execution.
+	StartFromStep int64
+	// State is the current state of the promotion process.
+	State State
 }
 
 // PromotionStep describes a single step in a user-defined promotion process.
@@ -79,6 +84,12 @@ type PromotionResult struct {
 	// PromotionStepRunners. This configuration can later be used as input to
 	// health check processes.
 	HealthCheckSteps []HealthCheckStep
+	// If the promotion process remains in-progress, perhaps waiting for a change
+	// in some external state, the value of this field will indicated where to
+	// resume the process in the next reconciliation.
+	CurrentStep int64
+	// State is the current state of the promotion process.
+	State State
 }
 
 // PromotionStatus is a type that represents the high-level outcome of the
