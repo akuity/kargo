@@ -17,7 +17,7 @@
       "description": "Spec describes sources of Freight used by the Stage and how to incorporate\nFreight into the Stage.",
       "properties": {
         "promotionMechanisms": {
-          "description": "PromotionMechanisms describes how to incorporate Freight into the Stage.\nThis is an optional field as it is sometimes useful to aggregates available\nFreight from multiple upstream Stages without performing any actions. The\nutility of this is to allow multiple downstream Stages to subscribe to a\nsingle upstream Stage where they may otherwise have subscribed to multiple\nupstream Stages.",
+          "description": "PromotionMechanisms describes how to incorporate Freight into the Stage.\nThis is an optional field as it is sometimes useful to aggregates available\nFreight from multiple upstream Stages without performing any actions. The\nutility of this is to allow multiple downstream Stages to subscribe to a\nsingle upstream Stage where they may otherwise have subscribed to multiple\nupstream Stages.\n\n\nDeprecated: Use PromotionTemplate instead.",
           "properties": {
             "argoCDAppUpdates": {
               "description": "ArgoCDAppUpdates describes updates that should be applied to Argo CD\nApplication resources to incorporate Freight into the Stage. This field is\noptional, as such actions are not required in all cases. Note that all\nupdates specified by the GitRepoUpdates field, if any, are applied BEFORE\nthese.",
@@ -665,6 +665,48 @@
           },
           "type": "object"
         },
+        "promotionTemplate": {
+          "description": "PromotionTemplate describes how to incorporate Freight into the Stage\nusing a Promotion.",
+          "properties": {
+            "spec": {
+              "description": "PromotionTemplateSpec describes the (partial) specification of a Promotion\nfor a Stage. This is a template that can be used to create a Promotion for a\nStage.",
+              "properties": {
+                "steps": {
+                  "description": "Steps specifies the directives to be executed as part of a Promotion.\nThe order in which the directives are executed is the order in which they\nare listed in this field.",
+                  "items": {
+                    "description": "PromotionStep describes a directive to be executed as part of a Promotion.",
+                    "properties": {
+                      "as": {
+                        "description": "As is the alias this step can be referred to as.",
+                        "type": "string"
+                      },
+                      "config": {
+                        "description": "Config is the configuration for the directive.",
+                        "x-kubernetes-preserve-unknown-fields": true
+                      },
+                      "uses": {
+                        "description": "Uses identifies a runner that can execute this step.",
+                        "minLength": 1,
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "uses"
+                    ],
+                    "type": "object"
+                  },
+                  "minItems": 1,
+                  "type": "array"
+                }
+              },
+              "type": "object"
+            }
+          },
+          "required": [
+            "spec"
+          ],
+          "type": "object"
+        },
         "requestedFreight": {
           "description": "RequestedFreight expresses the Stage's need for certain pieces of Freight,\neach having originated from a particular Warehouse. This list must be\nnon-empty. In the common case, a Stage will request Freight having\noriginated from just one specific Warehouse. In advanced cases, requesting\nFreight from multiple Warehouses provides a method of advancing new\nartifacts of different types through parallel pipelines at different\nspeeds. This can be useful, for instance, if a Stage is home to multiple\nmicroservices that are independently versioned.",
           "items": {
@@ -790,7 +832,17 @@
       "required": [
         "requestedFreight"
       ],
-      "type": "object"
+      "type": "object",
+      "x-kubernetes-validations": [
+        {
+          "message": "one of promotionTemplate or promotionMechanisms must be specified",
+          "rule": "(has(self.promotionTemplate) || has(self.promotionMechanisms))"
+        },
+        {
+          "message": "only one of promotionTemplate or promotionMechanisms can be specified",
+          "rule": "(has(self.promotionTemplate) && !has(self.promotionMechanisms)) || (!has(self.promotionTemplate) && has(self.promotionMechanisms))"
+        }
+      ]
     },
     "status": {
       "description": "Status describes the Stage's current and recent Freight, health, and more.",
@@ -804,7 +856,7 @@
               "type": "string"
             },
             "freight": {
-              "description": "Freight is the freight being promoted",
+              "description": "Freight is the freight being promoted.",
               "properties": {
                 "charts": {
                   "description": "Charts describes specific versions of specific Helm charts.",
@@ -925,12 +977,19 @@
               "type": "object"
             },
             "name": {
-              "description": "Name is the name of the Promotion",
+              "description": "Name is the name of the Promotion.",
               "type": "string"
             },
             "status": {
-              "description": "Status is the (optional) status of the promotion",
+              "description": "Status is the (optional) status of the Promotion.",
               "properties": {
+                "currentStep": {
+                  "description": "CurrentStep is the index of the current promotion step being executed. This\npermits steps that have already run successfully to be skipped on\nsubsequent reconciliations attempts.",
+                  "format": "int64",
+                  "maximum": 9223372036854776000,
+                  "minimum": -9223372036854776000,
+                  "type": "integer"
+                },
                 "finishedAt": {
                   "description": "FinishedAt is the time when the promotion was completed.",
                   "format": "date-time",
@@ -1254,6 +1313,28 @@
                   ],
                   "type": "object"
                 },
+                "healthChecks": {
+                  "description": "HealthChecks contains the health check directives to be executed after\nthe Promotion has completed.",
+                  "items": {
+                    "description": "HealthCheckStep describes a health check directive which can be executed by\na Stage to verify the health of a Promotion result.",
+                    "properties": {
+                      "config": {
+                        "description": "Config is the configuration for the directive.",
+                        "x-kubernetes-preserve-unknown-fields": true
+                      },
+                      "uses": {
+                        "description": "Uses identifies a runner that can execute this step.",
+                        "minLength": 1,
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "uses"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
                 "lastHandledRefresh": {
                   "description": "LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh\nannotation that was handled by the controller. This field can be used to\ndetermine whether the request to refresh the resource has been handled.",
                   "type": "string"
@@ -1272,6 +1353,10 @@
                 "phase": {
                   "description": "Phase describes where the Promotion currently is in its lifecycle.",
                   "type": "string"
+                },
+                "state": {
+                  "description": "State stores the state of the promotion process between reconciliation\nattempts.",
+                  "x-kubernetes-preserve-unknown-fields": true
                 }
               },
               "type": "object"
@@ -1548,12 +1633,20 @@
               },
               "type": "array"
             },
+            "config": {
+              "description": "Config is the opaque configuration of all health checks performed on this\nStage.",
+              "x-kubernetes-preserve-unknown-fields": true
+            },
             "issues": {
               "description": "Issues clarifies why a Stage in any state other than Healthy is in that\nstate. This field will always be the empty when a Stage is Healthy.",
               "items": {
                 "type": "string"
               },
               "type": "array"
+            },
+            "output": {
+              "description": "Output is the opaque output of all health checks performed on this Stage.",
+              "x-kubernetes-preserve-unknown-fields": true
             },
             "status": {
               "description": "Status describes the health of the Stage.",
@@ -1575,7 +1668,7 @@
               "type": "string"
             },
             "freight": {
-              "description": "Freight is the freight being promoted",
+              "description": "Freight is the freight being promoted.",
               "properties": {
                 "charts": {
                   "description": "Charts describes specific versions of specific Helm charts.",
@@ -1696,12 +1789,19 @@
               "type": "object"
             },
             "name": {
-              "description": "Name is the name of the Promotion",
+              "description": "Name is the name of the Promotion.",
               "type": "string"
             },
             "status": {
-              "description": "Status is the (optional) status of the promotion",
+              "description": "Status is the (optional) status of the Promotion.",
               "properties": {
+                "currentStep": {
+                  "description": "CurrentStep is the index of the current promotion step being executed. This\npermits steps that have already run successfully to be skipped on\nsubsequent reconciliations attempts.",
+                  "format": "int64",
+                  "maximum": 9223372036854776000,
+                  "minimum": -9223372036854776000,
+                  "type": "integer"
+                },
                 "finishedAt": {
                   "description": "FinishedAt is the time when the promotion was completed.",
                   "format": "date-time",
@@ -2025,6 +2125,28 @@
                   ],
                   "type": "object"
                 },
+                "healthChecks": {
+                  "description": "HealthChecks contains the health check directives to be executed after\nthe Promotion has completed.",
+                  "items": {
+                    "description": "HealthCheckStep describes a health check directive which can be executed by\na Stage to verify the health of a Promotion result.",
+                    "properties": {
+                      "config": {
+                        "description": "Config is the configuration for the directive.",
+                        "x-kubernetes-preserve-unknown-fields": true
+                      },
+                      "uses": {
+                        "description": "Uses identifies a runner that can execute this step.",
+                        "minLength": 1,
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "uses"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
                 "lastHandledRefresh": {
                   "description": "LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh\nannotation that was handled by the controller. This field can be used to\ndetermine whether the request to refresh the resource has been handled.",
                   "type": "string"
@@ -2043,6 +2165,10 @@
                 "phase": {
                   "description": "Phase describes where the Promotion currently is in its lifecycle.",
                   "type": "string"
+                },
+                "state": {
+                  "description": "State stores the state of the promotion process between reconciliation\nattempts.",
+                  "x-kubernetes-preserve-unknown-fields": true
                 }
               },
               "type": "object"

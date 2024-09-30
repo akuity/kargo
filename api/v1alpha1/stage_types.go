@@ -6,6 +6,7 @@ import (
 	"slices"
 	"strings"
 
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -77,17 +78,19 @@ const (
 type HealthState string
 
 const (
-	HealthStateHealthy     HealthState = "Healthy"
-	HealthStateUnhealthy   HealthState = "Unhealthy"
-	HealthStateProgressing HealthState = "Progressing"
-	HealthStateUnknown     HealthState = "Unknown"
+	HealthStateHealthy       HealthState = "Healthy"
+	HealthStateNotApplicable HealthState = "NotApplicable"
+	HealthStateProgressing   HealthState = "Progressing"
+	HealthStateUnknown       HealthState = "Unknown"
+	HealthStateUnhealthy     HealthState = "Unhealthy"
 )
 
 var stateOrder = map[HealthState]int{
-	HealthStateHealthy:     0,
-	HealthStateProgressing: 1,
-	HealthStateUnknown:     2,
-	HealthStateUnhealthy:   3,
+	HealthStateHealthy:       0,
+	HealthStateNotApplicable: 1,
+	HealthStateProgressing:   2,
+	HealthStateUnknown:       3,
+	HealthStateUnhealthy:     4,
 }
 
 // Merge returns the more severe of two HealthStates.
@@ -143,12 +146,30 @@ type Stage struct {
 	Status StageStatus `json:"status,omitempty" protobuf:"bytes,3,opt,name=status"`
 }
 
+// IsControlFlow returns true if the Stage is a control flow Stage. A control
+// flow Stage is one that does not incorporate Freight into itself, but rather
+// orchestrates the promotion of Freight from one or more upstream Stages to
+// one or more downstream Stages.
+func (s *Stage) IsControlFlow() bool {
+	switch {
+	case s.Spec.PromotionMechanisms != nil:
+		return false
+	case s.Spec.PromotionTemplate != nil && len(s.Spec.PromotionTemplate.Spec.Steps) > 0:
+		return false
+	default:
+		return true
+	}
+}
+
 func (s *Stage) GetStatus() *StageStatus {
 	return &s.Status
 }
 
 // StageSpec describes the sources of Freight used by a Stage and how to
 // incorporate Freight into the Stage.
+//
+// +kubebuilder:validation:XValidation:rule="(has(self.promotionTemplate) || has(self.promotionMechanisms))",message="one of promotionTemplate or promotionMechanisms must be specified"
+// +kubebuilder:validation:XValidation:rule="(has(self.promotionTemplate) && !has(self.promotionMechanisms)) || (!has(self.promotionTemplate) && has(self.promotionMechanisms))",message="only one of promotionTemplate or promotionMechanisms can be specified"
 type StageSpec struct {
 	// Shard is the name of the shard that this Stage belongs to. This is an
 	// optional field. If not specified, the Stage will belong to the default
@@ -167,12 +188,17 @@ type StageSpec struct {
 	//
 	// +kubebuilder:validation:MinItems=1
 	RequestedFreight []FreightRequest `json:"requestedFreight" protobuf:"bytes,5,rep,name=requestedFreight"`
+	// PromotionTemplate describes how to incorporate Freight into the Stage
+	// using a Promotion.
+	PromotionTemplate *PromotionTemplate `json:"promotionTemplate,omitempty" protobuf:"bytes,6,opt,name=promotionTemplate"`
 	// PromotionMechanisms describes how to incorporate Freight into the Stage.
 	// This is an optional field as it is sometimes useful to aggregates available
 	// Freight from multiple upstream Stages without performing any actions. The
 	// utility of this is to allow multiple downstream Stages to subscribe to a
 	// single upstream Stage where they may otherwise have subscribed to multiple
 	// upstream Stages.
+	//
+	// Deprecated: Use PromotionTemplate instead.
 	PromotionMechanisms *PromotionMechanisms `json:"promotionMechanisms,omitempty" protobuf:"bytes,2,opt,name=promotionMechanisms"`
 	// Verification describes how to verify a Stage's current Freight is fit for
 	// promotion downstream.
@@ -237,6 +263,24 @@ type FreightSources struct {
 	// Direct field must be true. i.e. Between the two fields, at least on source
 	// must be specified.
 	Stages []string `json:"stages,omitempty" protobuf:"bytes,2,rep,name=stages"`
+}
+
+// PromotionTemplate defines a template for a Promotion that can be used to
+// incorporate Freight into a Stage.
+type PromotionTemplate struct {
+	Spec PromotionTemplateSpec `json:"spec" protobuf:"bytes,1,opt,name=spec"`
+}
+
+// PromotionTemplateSpec describes the (partial) specification of a Promotion
+// for a Stage. This is a template that can be used to create a Promotion for a
+// Stage.
+type PromotionTemplateSpec struct {
+	// Steps specifies the directives to be executed as part of a Promotion.
+	// The order in which the directives are executed is the order in which they
+	// are listed in this field.
+	//
+	// +kubebuilder:validation:MinItems=1
+	Steps []PromotionStep `json:"steps,omitempty" protobuf:"bytes,1,rep,name=steps"`
 }
 
 // PromotionMechanisms describes how to incorporate Freight into a Stage.
@@ -917,6 +961,11 @@ type Health struct {
 	Issues []string `json:"issues,omitempty" protobuf:"bytes,2,rep,name=issues"`
 	// ArgoCDApps describes the current state of any related ArgoCD Applications.
 	ArgoCDApps []ArgoCDAppStatus `json:"argoCDApps,omitempty" protobuf:"bytes,3,rep,name=argoCDApps"`
+	// Config is the opaque configuration of all health checks performed on this
+	// Stage.
+	Config *apiextensionsv1.JSON `json:"config,omitempty" protobuf:"bytes,4,opt,name=config"`
+	// Output is the opaque output of all health checks performed on this Stage.
+	Output *apiextensionsv1.JSON `json:"output,omitempty" protobuf:"bytes,5,opt,name=output"`
 }
 
 // ArgoCDAppStatus describes the current state of a single ArgoCD Application.
@@ -953,15 +1002,25 @@ type StageList struct {
 	Items           []Stage `json:"items" protobuf:"bytes,2,rep,name=items"`
 }
 
+// PromotionReference contains the relevant information about a Promotion
+// as observed by a Stage.
 type PromotionReference struct {
-	// Name is the name of the Promotion
+	// Name is the name of the Promotion.
 	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
-	// Freight is the freight being promoted
+	// Freight is the freight being promoted.
 	Freight *FreightReference `json:"freight,omitempty" protobuf:"bytes,2,opt,name=freight"`
-	// Status is the (optional) status of the promotion
+	// Status is the (optional) status of the Promotion.
 	Status *PromotionStatus `json:"status,omitempty" protobuf:"bytes,3,opt,name=status"`
 	// FinishedAt is the time at which the Promotion was completed.
 	FinishedAt *metav1.Time `json:"finishedAt,omitempty" protobuf:"bytes,4,opt,name=finishedAt"`
+}
+
+// GetHealthChecks returns the list of health checks for the PromotionReference.
+func (r *PromotionReference) GetHealthChecks() []HealthCheckStep {
+	if r == nil || r.Status == nil {
+		return nil
+	}
+	return r.Status.HealthChecks
 }
 
 // Verification describes how to verify that a Promotion has been successful

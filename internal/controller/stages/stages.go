@@ -29,6 +29,7 @@ import (
 	"github.com/akuity/kargo/internal/controller"
 	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
 	rollouts "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
+	"github.com/akuity/kargo/internal/directives"
 	"github.com/akuity/kargo/internal/kargo"
 	"github.com/akuity/kargo/internal/kubeclient"
 	libEvent "github.com/akuity/kargo/internal/kubernetes/event"
@@ -58,10 +59,9 @@ func ReconcilerConfigFromEnv() ReconcilerConfig {
 
 // reconciler reconciles Stage resources.
 type reconciler struct {
-	kargoClient  client.Client
-	argocdClient client.Client
-
-	recorder record.EventRecorder
+	kargoClient      client.Client
+	directivesEngine directives.Engine
+	recorder         record.EventRecorder
 
 	cfg ReconcilerConfig
 
@@ -228,6 +228,7 @@ func SetupReconcilerWithManager(
 	ctx context.Context,
 	kargoMgr manager.Manager,
 	argocdMgr manager.Manager,
+	directivesEngine directives.Engine,
 	cfg ReconcilerConfig,
 ) error {
 	// Index Promotions by Stage
@@ -319,6 +320,7 @@ func SetupReconcilerWithManager(
 			newReconciler(
 				kargoMgr.GetClient(),
 				argocdClient,
+				directivesEngine,
 				libEvent.NewRecorder(ctx, kargoMgr.GetScheme(), kargoMgr.GetClient(), cfg.Name()),
 				cfg,
 				shardRequirement,
@@ -432,15 +434,16 @@ func SetupReconcilerWithManager(
 func newReconciler(
 	kargoClient client.Client,
 	argocdClient client.Client,
+	directivesEngine directives.Engine,
 	recorder record.EventRecorder,
 	cfg ReconcilerConfig,
 	shardRequirement *labels.Requirement,
 ) *reconciler {
 	r := &reconciler{
-		kargoClient:  kargoClient,
-		argocdClient: argocdClient,
-		recorder:     recorder,
-		cfg:          cfg,
+		kargoClient:      kargoClient,
+		directivesEngine: directivesEngine,
+		recorder:         recorder,
+		cfg:              cfg,
 		appHealth: libargocd.NewApplicationHealthEvaluator(
 			kargoClient,
 			argocdClient,
@@ -523,7 +526,7 @@ func (r *reconciler) Reconcile(
 		if _, err = kargoapi.EnsureFinalizer(ctx, r.kargoClient, stage); err != nil {
 			newStatus = stage.Status
 		} else {
-			if stage.Spec.PromotionMechanisms == nil {
+			if stage.IsControlFlow() {
 				newStatus, err = r.syncControlFlowStage(ctx, stage)
 			} else {
 				newStatus, err = r.syncNormalStage(ctx, stage)
@@ -676,16 +679,40 @@ func (r *reconciler) syncNormalStage(
 			"Stage has no current Freight; no health checks or verification to perform",
 		)
 	} else {
-		// Always check the health of the Argo CD Applications associated with the
-		// Stage. This is regardless of the phase of the Stage, as the health of the
-		// Argo CD Applications is always relevant.
-		if status.Health = r.appHealth.EvaluateHealth(
-			ctx,
-			stage,
-		); status.Health != nil {
-			logger.WithValues("health", status.Health.Status).Debug("Stage health assessed")
-		} else {
-			logger.Debug("Stage health deemed not applicable")
+		switch {
+		case stage.Spec.PromotionTemplate != nil:
+			healthChecks := stage.Status.LastPromotion.GetHealthChecks()
+			if len(healthChecks) > 0 {
+				var steps []directives.HealthCheckStep
+				for _, step := range healthChecks {
+					steps = append(steps, directives.HealthCheckStep{
+						Kind:   step.Uses,
+						Config: step.GetConfig(),
+					})
+				}
+
+				health := r.directivesEngine.CheckHealth(ctx, directives.HealthCheckContext{
+					Project: stage.Namespace,
+					Stage:   stage.Name,
+				}, steps)
+				status.Health = &health
+
+				logger.WithValues("health", status.Health.Status).Debug("Stage health assessed")
+			} else {
+				logger.Debug("Stage has no health checks to perform for last Promotion")
+			}
+		default:
+			// Always check the health of the Argo CD Applications associated with the
+			// Stage. This is regardless of the phase of the Stage, as the health of the
+			// Argo CD Applications is always relevant.
+			if status.Health = r.appHealth.EvaluateHealth(
+				ctx,
+				stage,
+			); status.Health != nil {
+				logger.WithValues("health", status.Health.Status).Debug("Stage health assessed")
+			} else {
+				logger.Debug("Stage health deemed not applicable")
+			}
 		}
 
 		// currentVI is VerificationInfo of the currentFC

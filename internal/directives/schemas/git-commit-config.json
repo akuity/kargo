@@ -30,10 +30,10 @@
     },
     "message": {
       "type": "string",
-      "description": "The commit message. Mutually exclusive with 'messageFrom'.",
+      "description": "The commit message. Mutually exclusive with 'messageFromSteps'.",
       "minLength": 1
     },
-    "messageFrom": {
+    "messageFromSteps": {
       "type": "array",
       "description": "TODO",
       "minItems": 1,
@@ -52,11 +52,11 @@
     {
       "required": ["message"],
       "properties": {
-        "messageFrom": { "enum": [null] }
+        "messageFromSteps": { "enum": [null] }
       }
     },
     {
-      "required": ["messageFrom"],
+      "required": ["messageFromSteps"],
       "properties": {
         "message": { "enum": [null] }
       }

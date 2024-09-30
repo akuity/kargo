@@ -5,6 +5,7 @@ syntax = "proto2";
 
 package github.com.akuity.kargo.api.v1alpha1;
 
+import "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1/generated.proto";
 import "k8s.io/apimachinery/pkg/apis/meta/v1/generated.proto";
 import "k8s.io/apimachinery/pkg/runtime/generated.proto";
 import "k8s.io/apimachinery/pkg/runtime/schema/generated.proto";
@@ -835,6 +836,25 @@ message Health {
 
   // ArgoCDApps describes the current state of any related ArgoCD Applications.
   repeated ArgoCDAppStatus argoCDApps = 3;
+
+  // Config is the opaque configuration of all health checks performed on this
+  // Stage.
+  optional k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON config = 4;
+
+  // Output is the opaque output of all health checks performed on this Stage.
+  optional k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON output = 5;
+}
+
+// HealthCheckStep describes a health check directive which can be executed by
+// a Stage to verify the health of a Promotion result.
+message HealthCheckStep {
+  // Uses identifies a runner that can execute this step.
+  //
+  // +kubebuilder:validation:MinLength=1
+  optional string uses = 1;
+
+  // Config is the configuration for the directive.
+  optional k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON config = 2;
 }
 
 // HelmChartDependencyUpdate describes how a specific Helm chart that is used
@@ -1294,14 +1314,16 @@ message PromotionPolicy {
   optional bool autoPromotionEnabled = 2;
 }
 
+// PromotionReference contains the relevant information about a Promotion
+// as observed by a Stage.
 message PromotionReference {
-  // Name is the name of the Promotion
+  // Name is the name of the Promotion.
   optional string name = 1;
 
-  // Freight is the freight being promoted
+  // Freight is the freight being promoted.
   optional FreightReference freight = 2;
 
-  // Status is the (optional) status of the promotion
+  // Status is the (optional) status of the Promotion.
   optional PromotionStatus status = 3;
 
   // FinishedAt is the time at which the Promotion was completed.
@@ -1324,6 +1346,11 @@ message PromotionSpec {
   //
   // +kubebuilder:validation:MinLength=1
   optional string freight = 2;
+
+  // Steps specifies the directives to be executed as part of this Promotion.
+  // The order in which the directives are executed is the order in which they
+  // are listed in this field.
+  repeated PromotionStep steps = 3;
 }
 
 // PromotionStatus describes the current state of the transition represented by
@@ -1356,8 +1383,53 @@ message PromotionStatus {
   // from the target Stage's current state.
   optional FreightCollection freightCollection = 7;
 
+  // HealthChecks contains the health check directives to be executed after
+  // the Promotion has completed.
+  repeated HealthCheckStep healthChecks = 8;
+
   // FinishedAt is the time when the promotion was completed.
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Time finishedAt = 6;
+
+  // CurrentStep is the index of the current promotion step being executed. This
+  // permits steps that have already run successfully to be skipped on
+  // subsequent reconciliations attempts.
+  optional int64 currentStep = 9;
+
+  // State stores the state of the promotion process between reconciliation
+  // attempts.
+  optional k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON state = 10;
+}
+
+// PromotionStep describes a directive to be executed as part of a Promotion.
+message PromotionStep {
+  // Uses identifies a runner that can execute this step.
+  //
+  // +kubebuilder:validation:MinLength=1
+  optional string uses = 1;
+
+  // As is the alias this step can be referred to as.
+  optional string as = 2;
+
+  // Config is the configuration for the directive.
+  optional k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON config = 3;
+}
+
+// PromotionTemplate defines a template for a Promotion that can be used to
+// incorporate Freight into a Stage.
+message PromotionTemplate {
+  optional PromotionTemplateSpec spec = 1;
+}
+
+// PromotionTemplateSpec describes the (partial) specification of a Promotion
+// for a Stage. This is a template that can be used to create a Promotion for a
+// Stage.
+message PromotionTemplateSpec {
+  // Steps specifies the directives to be executed as part of a Promotion.
+  // The order in which the directives are executed is the order in which they
+  // are listed in this field.
+  //
+  // +kubebuilder:validation:MinItems=1
+  repeated PromotionStep steps = 1;
 }
 
 // PullRequestPromotionMechanism describes how to generate a pull request against the write branch during promotion
@@ -1406,6 +1478,9 @@ message StageList {
 
 // StageSpec describes the sources of Freight used by a Stage and how to
 // incorporate Freight into the Stage.
+//
+// +kubebuilder:validation:XValidation:rule="(has(self.promotionTemplate) || has(self.promotionMechanisms))",message="one of promotionTemplate or promotionMechanisms must be specified"
+// +kubebuilder:validation:XValidation:rule="(has(self.promotionTemplate) && !has(self.promotionMechanisms)) || (!has(self.promotionTemplate) && has(self.promotionMechanisms))",message="only one of promotionTemplate or promotionMechanisms can be specified"
 message StageSpec {
   // Shard is the name of the shard that this Stage belongs to. This is an
   // optional field. If not specified, the Stage will belong to the default
@@ -1426,12 +1501,18 @@ message StageSpec {
   // +kubebuilder:validation:MinItems=1
   repeated FreightRequest requestedFreight = 5;
 
+  // PromotionTemplate describes how to incorporate Freight into the Stage
+  // using a Promotion.
+  optional PromotionTemplate promotionTemplate = 6;
+
   // PromotionMechanisms describes how to incorporate Freight into the Stage.
   // This is an optional field as it is sometimes useful to aggregates available
   // Freight from multiple upstream Stages without performing any actions. The
   // utility of this is to allow multiple downstream Stages to subscribe to a
   // single upstream Stage where they may otherwise have subscribed to multiple
   // upstream Stages.
+  //
+  // Deprecated: Use PromotionTemplate instead.
   optional PromotionMechanisms promotionMechanisms = 2;
 
   // Verification describes how to verify a Stage's current Freight is fit for

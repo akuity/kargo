@@ -8,6 +8,7 @@
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto2 } from "@bufbuild/protobuf";
 import { Condition, Duration, ListMeta, ObjectMeta, Time } from "../k8s.io/apimachinery/pkg/apis/meta/v1/generated_pb.js";
+import { JSON } from "../k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1/generated_pb.js";
 
 /**
  * AnalysisRunArgument represents an argument to be added to an AnalysisRun.
@@ -2450,6 +2451,21 @@ export class Health extends Message<Health> {
    */
   argoCDApps: ArgoCDAppStatus[] = [];
 
+  /**
+   * Config is the opaque configuration of all health checks performed on this
+   * Stage.
+   *
+   * @generated from field: optional k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON config = 4;
+   */
+  config?: JSON;
+
+  /**
+   * Output is the opaque output of all health checks performed on this Stage.
+   *
+   * @generated from field: optional k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON output = 5;
+   */
+  output?: JSON;
+
   constructor(data?: PartialMessage<Health>) {
     super();
     proto2.util.initPartial(data, this);
@@ -2461,6 +2477,8 @@ export class Health extends Message<Health> {
     { no: 1, name: "status", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 2, name: "issues", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 3, name: "argoCDApps", kind: "message", T: ArgoCDAppStatus, repeated: true },
+    { no: 4, name: "config", kind: "message", T: JSON, opt: true },
+    { no: 5, name: "output", kind: "message", T: JSON, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Health {
@@ -2477,6 +2495,58 @@ export class Health extends Message<Health> {
 
   static equals(a: Health | PlainMessage<Health> | undefined, b: Health | PlainMessage<Health> | undefined): boolean {
     return proto2.util.equals(Health, a, b);
+  }
+}
+
+/**
+ * HealthCheckStep describes a health check directive which can be executed by
+ * a Stage to verify the health of a Promotion result.
+ *
+ * @generated from message github.com.akuity.kargo.api.v1alpha1.HealthCheckStep
+ */
+export class HealthCheckStep extends Message<HealthCheckStep> {
+  /**
+   * Uses identifies a runner that can execute this step.
+   *
+   * +kubebuilder:validation:MinLength=1
+   *
+   * @generated from field: optional string uses = 1;
+   */
+  uses?: string;
+
+  /**
+   * Config is the configuration for the directive.
+   *
+   * @generated from field: optional k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON config = 2;
+   */
+  config?: JSON;
+
+  constructor(data?: PartialMessage<HealthCheckStep>) {
+    super();
+    proto2.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto2 = proto2;
+  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.HealthCheckStep";
+  static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 1, name: "uses", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 2, name: "config", kind: "message", T: JSON, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): HealthCheckStep {
+    return new HealthCheckStep().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): HealthCheckStep {
+    return new HealthCheckStep().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): HealthCheckStep {
+    return new HealthCheckStep().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: HealthCheckStep | PlainMessage<HealthCheckStep> | undefined, b: HealthCheckStep | PlainMessage<HealthCheckStep> | undefined): boolean {
+    return proto2.util.equals(HealthCheckStep, a, b);
   }
 }
 
@@ -3767,25 +3837,28 @@ export class PromotionPolicy extends Message<PromotionPolicy> {
 }
 
 /**
+ * PromotionReference contains the relevant information about a Promotion
+ * as observed by a Stage.
+ *
  * @generated from message github.com.akuity.kargo.api.v1alpha1.PromotionReference
  */
 export class PromotionReference extends Message<PromotionReference> {
   /**
-   * Name is the name of the Promotion
+   * Name is the name of the Promotion.
    *
    * @generated from field: optional string name = 1;
    */
   name?: string;
 
   /**
-   * Freight is the freight being promoted
+   * Freight is the freight being promoted.
    *
    * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.FreightReference freight = 2;
    */
   freight?: FreightReference;
 
   /**
-   * Status is the (optional) status of the promotion
+   * Status is the (optional) status of the Promotion.
    *
    * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.PromotionStatus status = 3;
    */
@@ -3858,6 +3931,15 @@ export class PromotionSpec extends Message<PromotionSpec> {
    */
   freight?: string;
 
+  /**
+   * Steps specifies the directives to be executed as part of this Promotion.
+   * The order in which the directives are executed is the order in which they
+   * are listed in this field.
+   *
+   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.PromotionStep steps = 3;
+   */
+  steps: PromotionStep[] = [];
+
   constructor(data?: PartialMessage<PromotionSpec>) {
     super();
     proto2.util.initPartial(data, this);
@@ -3868,6 +3950,7 @@ export class PromotionSpec extends Message<PromotionSpec> {
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 1, name: "stage", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 2, name: "freight", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 3, name: "steps", kind: "message", T: PromotionStep, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PromotionSpec {
@@ -3946,11 +4029,36 @@ export class PromotionStatus extends Message<PromotionStatus> {
   freightCollection?: FreightCollection;
 
   /**
+   * HealthChecks contains the health check directives to be executed after
+   * the Promotion has completed.
+   *
+   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.HealthCheckStep healthChecks = 8;
+   */
+  healthChecks: HealthCheckStep[] = [];
+
+  /**
    * FinishedAt is the time when the promotion was completed.
    *
    * @generated from field: optional k8s.io.apimachinery.pkg.apis.meta.v1.Time finishedAt = 6;
    */
   finishedAt?: Time;
+
+  /**
+   * CurrentStep is the index of the current promotion step being executed. This
+   * permits steps that have already run successfully to be skipped on
+   * subsequent reconciliations attempts.
+   *
+   * @generated from field: optional int64 currentStep = 9;
+   */
+  currentStep?: bigint;
+
+  /**
+   * State stores the state of the promotion process between reconciliation
+   * attempts.
+   *
+   * @generated from field: optional k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON state = 10;
+   */
+  state?: JSON;
 
   constructor(data?: PartialMessage<PromotionStatus>) {
     super();
@@ -3966,7 +4074,10 @@ export class PromotionStatus extends Message<PromotionStatus> {
     { no: 3, name: "metadata", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 9 /* ScalarType.STRING */} },
     { no: 5, name: "freight", kind: "message", T: FreightReference, opt: true },
     { no: 7, name: "freightCollection", kind: "message", T: FreightCollection, opt: true },
+    { no: 8, name: "healthChecks", kind: "message", T: HealthCheckStep, repeated: true },
     { no: 6, name: "finishedAt", kind: "message", T: Time, opt: true },
+    { no: 9, name: "currentStep", kind: "scalar", T: 3 /* ScalarType.INT64 */, opt: true },
+    { no: 10, name: "state", kind: "message", T: JSON, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PromotionStatus {
@@ -3983,6 +4094,152 @@ export class PromotionStatus extends Message<PromotionStatus> {
 
   static equals(a: PromotionStatus | PlainMessage<PromotionStatus> | undefined, b: PromotionStatus | PlainMessage<PromotionStatus> | undefined): boolean {
     return proto2.util.equals(PromotionStatus, a, b);
+  }
+}
+
+/**
+ * PromotionStep describes a directive to be executed as part of a Promotion.
+ *
+ * @generated from message github.com.akuity.kargo.api.v1alpha1.PromotionStep
+ */
+export class PromotionStep extends Message<PromotionStep> {
+  /**
+   * Uses identifies a runner that can execute this step.
+   *
+   * +kubebuilder:validation:MinLength=1
+   *
+   * @generated from field: optional string uses = 1;
+   */
+  uses?: string;
+
+  /**
+   * As is the alias this step can be referred to as.
+   *
+   * @generated from field: optional string as = 2;
+   */
+  as?: string;
+
+  /**
+   * Config is the configuration for the directive.
+   *
+   * @generated from field: optional k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON config = 3;
+   */
+  config?: JSON;
+
+  constructor(data?: PartialMessage<PromotionStep>) {
+    super();
+    proto2.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto2 = proto2;
+  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.PromotionStep";
+  static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 1, name: "uses", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 2, name: "as", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 3, name: "config", kind: "message", T: JSON, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PromotionStep {
+    return new PromotionStep().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): PromotionStep {
+    return new PromotionStep().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): PromotionStep {
+    return new PromotionStep().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: PromotionStep | PlainMessage<PromotionStep> | undefined, b: PromotionStep | PlainMessage<PromotionStep> | undefined): boolean {
+    return proto2.util.equals(PromotionStep, a, b);
+  }
+}
+
+/**
+ * PromotionTemplate defines a template for a Promotion that can be used to
+ * incorporate Freight into a Stage.
+ *
+ * @generated from message github.com.akuity.kargo.api.v1alpha1.PromotionTemplate
+ */
+export class PromotionTemplate extends Message<PromotionTemplate> {
+  /**
+   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.PromotionTemplateSpec spec = 1;
+   */
+  spec?: PromotionTemplateSpec;
+
+  constructor(data?: PartialMessage<PromotionTemplate>) {
+    super();
+    proto2.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto2 = proto2;
+  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.PromotionTemplate";
+  static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 1, name: "spec", kind: "message", T: PromotionTemplateSpec, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PromotionTemplate {
+    return new PromotionTemplate().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): PromotionTemplate {
+    return new PromotionTemplate().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): PromotionTemplate {
+    return new PromotionTemplate().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: PromotionTemplate | PlainMessage<PromotionTemplate> | undefined, b: PromotionTemplate | PlainMessage<PromotionTemplate> | undefined): boolean {
+    return proto2.util.equals(PromotionTemplate, a, b);
+  }
+}
+
+/**
+ * PromotionTemplateSpec describes the (partial) specification of a Promotion
+ * for a Stage. This is a template that can be used to create a Promotion for a
+ * Stage.
+ *
+ * @generated from message github.com.akuity.kargo.api.v1alpha1.PromotionTemplateSpec
+ */
+export class PromotionTemplateSpec extends Message<PromotionTemplateSpec> {
+  /**
+   * Steps specifies the directives to be executed as part of a Promotion.
+   * The order in which the directives are executed is the order in which they
+   * are listed in this field.
+   *
+   * +kubebuilder:validation:MinItems=1
+   *
+   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.PromotionStep steps = 1;
+   */
+  steps: PromotionStep[] = [];
+
+  constructor(data?: PartialMessage<PromotionTemplateSpec>) {
+    super();
+    proto2.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto2 = proto2;
+  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.PromotionTemplateSpec";
+  static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 1, name: "steps", kind: "message", T: PromotionStep, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PromotionTemplateSpec {
+    return new PromotionTemplateSpec().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): PromotionTemplateSpec {
+    return new PromotionTemplateSpec().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): PromotionTemplateSpec {
+    return new PromotionTemplateSpec().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: PromotionTemplateSpec | PlainMessage<PromotionTemplateSpec> | undefined, b: PromotionTemplateSpec | PlainMessage<PromotionTemplateSpec> | undefined): boolean {
+    return proto2.util.equals(PromotionTemplateSpec, a, b);
   }
 }
 
@@ -4201,6 +4458,9 @@ export class StageList extends Message<StageList> {
  * StageSpec describes the sources of Freight used by a Stage and how to
  * incorporate Freight into the Stage.
  *
+ * +kubebuilder:validation:XValidation:rule="(has(self.promotionTemplate) || has(self.promotionMechanisms))",message="one of promotionTemplate or promotionMechanisms must be specified"
+ * +kubebuilder:validation:XValidation:rule="(has(self.promotionTemplate) && !has(self.promotionMechanisms)) || (!has(self.promotionTemplate) && has(self.promotionMechanisms))",message="only one of promotionTemplate or promotionMechanisms can be specified"
+ *
  * @generated from message github.com.akuity.kargo.api.v1alpha1.StageSpec
  */
 export class StageSpec extends Message<StageSpec> {
@@ -4232,12 +4492,22 @@ export class StageSpec extends Message<StageSpec> {
   requestedFreight: FreightRequest[] = [];
 
   /**
+   * PromotionTemplate describes how to incorporate Freight into the Stage
+   * using a Promotion.
+   *
+   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.PromotionTemplate promotionTemplate = 6;
+   */
+  promotionTemplate?: PromotionTemplate;
+
+  /**
    * PromotionMechanisms describes how to incorporate Freight into the Stage.
    * This is an optional field as it is sometimes useful to aggregates available
    * Freight from multiple upstream Stages without performing any actions. The
    * utility of this is to allow multiple downstream Stages to subscribe to a
    * single upstream Stage where they may otherwise have subscribed to multiple
    * upstream Stages.
+   *
+   * Deprecated: Use PromotionTemplate instead.
    *
    * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.PromotionMechanisms promotionMechanisms = 2;
    */
@@ -4261,6 +4531,7 @@ export class StageSpec extends Message<StageSpec> {
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 4, name: "shard", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 5, name: "requestedFreight", kind: "message", T: FreightRequest, repeated: true },
+    { no: 6, name: "promotionTemplate", kind: "message", T: PromotionTemplate, opt: true },
     { no: 2, name: "promotionMechanisms", kind: "message", T: PromotionMechanisms, opt: true },
     { no: 3, name: "verification", kind: "message", T: Verification, opt: true },
   ]);

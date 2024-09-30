@@ -18,9 +18,9 @@
       "type": "number",
       "description": "The number of the pull request to wait for."
     },
-    "prNumberFromOpen": {
+    "prNumberFromStep": {
       "type": "string",
-      "description": "References a previous open step by alias and will use the PR number opened by that step.",
+      "description": "This field references the 'prNumber' output from a previous step and uses it as the number of the pull request to wait for.",
       "minLength": 1
     },
     "repoURL": {
@@ -34,11 +34,11 @@
     {
       "required": ["prNumber"],
       "properties": {
-        "prNumberFromOpen": {  "enum": ["", null] }
+        "prNumberFromStep": {  "enum": ["", null] }
       }
     },
     {
-      "required": ["prNumberFromOpen"],
+      "required": ["prNumberFromStep"],
       "properties": {
         "prNumber": {  "enum": [0, null] }
       }

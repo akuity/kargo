@@ -237,6 +237,21 @@ export const Pipelines = ({
     return freightMap;
   }, [freightData]);
 
+  // if we find any stage with freight and UI don't have details, refresh freights
+  useEffect(() => {
+    if (fullFreightById && stagesPerFreight) {
+      const freights = Object.keys(fullFreightById || {});
+      const freightsInStages = Object.keys(stagesPerFreight || {});
+
+      for (const freightInStage of freightsInStages) {
+        if (!freights?.find((freight) => freight === freightInStage)) {
+          refetchFreightData();
+          return;
+        }
+      }
+    }
+  }, [stagesPerFreight, fullFreightById]);
+
   if (isLoading || isLoadingFreight || isLoadingImages) return <LoadingState />;
 
   const stage = stageName && (data?.stages || []).find((item) => item.metadata?.name === stageName);
@@ -338,7 +353,7 @@ export const Pipelines = ({
                   onClick={() => setZoom((prev) => Math.min(200, prev + 10))}
                   icon={<FontAwesomeIcon icon={faMagnifyingGlassPlus} />}
                 />
-                <Tooltip title='Reassign Stage Colors'>
+                <Tooltip title='Regenerate Stage Colors'>
                   <Button
                     type='default'
                     onClick={() => {
@@ -381,7 +396,7 @@ export const Pipelines = ({
                     <FontAwesomeIcon icon={faChevronDown} size='xs' className='-mr-2' />
                   </Button>
                 </Dropdown>
-                {hideImages && (
+                {!!hideImages && (
                   <Tooltip title='Show Images'>
                     <Button
                       icon={<FontAwesomeIcon icon={faDocker} />}
@@ -546,7 +561,7 @@ export const Pipelines = ({
                 ))}
                 {connectors?.map((connector) =>
                   connector.map((line, i) =>
-                    hideSubscriptions[line.to] && line.from === 'subscription' ? null : (
+                    hideSubscriptions[line.to] && line.from?.startsWith('subscription-') ? null : (
                       <div
                         className='absolute bg-gray-300 rounded-full'
                         style={{

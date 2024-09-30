@@ -309,6 +309,7 @@ func TestHelmerApply(t *testing.T) {
 					},
 				},
 			}
+			// nolint: staticcheck
 			changes, err := testCase.helmer.apply(
 				context.Background(),
 				stage,
@@ -376,7 +377,7 @@ func TestBuildValuesFilesChanges(t *testing.T) {
 	result, changeSummary, err := h.buildValuesFilesChanges(
 		context.Background(),
 		stage,
-		stage.Spec.PromotionMechanisms.GitRepoUpdates[0].Helm,
+		stage.Spec.PromotionMechanisms.GitRepoUpdates[0].Helm, // nolint: staticcheck
 		[]kargoapi.FreightReference{{
 			Origin: testOrigin,
 			Images: []kargoapi.Image{
@@ -525,7 +526,7 @@ func TestBuildChartDependencyChanges(t *testing.T) {
 	result, changeSummary, err := h.buildChartDependencyChanges(
 		context.Background(),
 		stage,
-		stage.Spec.PromotionMechanisms.GitRepoUpdates[0].Helm,
+		stage.Spec.PromotionMechanisms.GitRepoUpdates[0].Helm, // nolint: staticcheck
 		freight,
 		testDir,
 	)

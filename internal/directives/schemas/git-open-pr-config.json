@@ -29,9 +29,9 @@
       "description": "The branch containing the changes to be merged. This branch must already exist and be up to date on the remote.",
       "minLength": 1
     },
-    "sourceBranchFromPush": {
+    "sourceBranchFromStep": {
       "type": "string",
-      "description": "References a previous push step by alias and will use the branch written to by that step as the source branch.",
+      "description": "References the 'branch' output from a previous step. This step will use that value as the source branch.",
       "minLength": 1
     },
     "targetBranch": {
@@ -44,11 +44,11 @@
     {
       "required": ["sourceBranch"],
       "properties": {
-        "sourceBranchFromPush": {  "enum": ["", null] }
+        "sourceBranchFromStep": {  "enum": ["", null] }
       }
     },
     {
-      "required": ["sourceBranchFromPush"],
+      "required": ["sourceBranchFromStep"],
       "properties": {
         "sourceBranch": {  "enum": ["", null] }
       }

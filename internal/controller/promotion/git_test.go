@@ -478,7 +478,7 @@ func TestGetReadRef(t *testing.T) {
 				context.Background(),
 				fake.NewFakeClient(),
 				stage,
-				&stage.Spec.PromotionMechanisms.GitRepoUpdates[0],
+				&stage.Spec.PromotionMechanisms.GitRepoUpdates[0], // nolint: staticcheck
 				testCase.freight,
 			)
 			testCase.assertions(t, readBranch, commit, err)

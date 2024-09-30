@@ -4,6 +4,98 @@ package directives
 
 type CommonDefs interface{}
 
+type ArgoCDUpdateConfig struct {
+	Apps       []ArgoCDAppUpdate `json:"apps"`
+	FromOrigin *AppFromOrigin    `json:"fromOrigin,omitempty"`
+}
+
+type ArgoCDAppUpdate struct {
+	FromOrigin *AppFromOrigin `json:"fromOrigin,omitempty"`
+	// Specifies the name of an Argo CD Application resource to be updated.
+	Name string `json:"name"`
+	// Specifies the namespace of an Argo CD Application resource to be updated. If left
+	// unspecified, the namespace will be the controller's configured default.
+	Namespace string `json:"namespace,omitempty"`
+	// Describes updates to be applied to various sources of an Argo CD Application resource.
+	Sources []ArgoCDAppSourceUpdate `json:"sources,omitempty"`
+}
+
+type AppFromOrigin struct {
+	// The kind of origin. Currently only 'Warehouse' is supported. Required.
+	Kind Kind `json:"kind"`
+	// The name of the origin. Required.
+	Name string `json:"name"`
+}
+
+type ArgoCDAppSourceUpdate struct {
+	// If applicable, identifies a specific chart within the Helm chart repository specified by
+	// the 'repoURL' field. When the source to be updated references a Helm chart repository,
+	// the values of the 'repoURL' and 'chart' fields should exactly match the values of the
+	// same fields in the source. i.e. Do not match the values of these two fields to your
+	// Warehouse; match them to the Application source you wish to update.
+	Chart string `json:"chart,omitempty"`
+	// Applicable only when 'repoURL' references a Git repository, this field references the
+	// 'commit' output from a previous step and uses it as the desired revision for the source.
+	// If this is left undefined, the desired revision will be determined by Freight (if
+	// possible). Note that the source's 'targetRevision' will not be updated to this commit
+	// unless 'updateTargetRevision=true' is set. The utility of this field is to ensure that
+	// health checks on Argo CD ApplicationSources can account for scenarios where the desired
+	// revision differs from what may be found in Freight, likely due to the use of rendered
+	// branches and/or PR-based promotion workflows.
+	DesiredCommitFromStep string                       `json:"desiredCommitFromStep,omitempty"`
+	FromOrigin            *AppFromOrigin               `json:"fromOrigin,omitempty"`
+	Helm                  *ArgoCDHelmParameterUpdates  `json:"helm,omitempty"`
+	Kustomize             *ArgoCDKustomizeImageUpdates `json:"kustomize,omitempty"`
+	// With possible help from the 'chart' field, identifies which of an Argo CD Application's
+	// sources is to be updated. When the source to be updated references a Helm chart
+	// repository, the values of the 'repoURL' and 'chart' fields should exactly match the
+	// values of the same fields in the source. i.e. Do not match the values of these two fields
+	// to your Warehouse; match them to the Application source you wish to update.
+	RepoURL string `json:"repoURL"`
+	// Indicates whether the source should be updated such that its TargetRevision field points
+	// at the most recently git commit (if 'repoURL' references a Git repository) or chart
+	// version (if 'repoURL' references a chart repository).
+	UpdateTargetRevision bool `json:"updateTargetRevision,omitempty"`
+}
+
+// Describes updates to an Argo CD Application source's Helm parameters.
+type ArgoCDHelmParameterUpdates struct {
+	FromOrigin *AppFromOrigin          `json:"fromOrigin,omitempty"`
+	Images     []ArgoCDHelmImageUpdate `json:"images"`
+}
+
+// Describes how to update a Helm parameter to reference a specific version of a container
+// image.
+type ArgoCDHelmImageUpdate struct {
+	FromOrigin *AppFromOrigin `json:"fromOrigin,omitempty"`
+	// Specifies a key within an Argo CD Application source's Helm parameters that is to be
+	// updated.
+	Key string `json:"key"`
+	// The URL of a container image repository.
+	RepoURL string `json:"repoURL"`
+	// Specifies a new value for the setting within an Argo CD Application source's Helm
+	// parameters identified by the 'key' field.
+	Value Value `json:"value"`
+}
+
+// Describes updates to an Argo CD Application source's Kustomize images.
+type ArgoCDKustomizeImageUpdates struct {
+	FromOrigin *AppFromOrigin               `json:"fromOrigin,omitempty"`
+	Images     []ArgoCDKustomizeImageUpdate `json:"images,omitempty"`
+}
+
+// Describes how to update a Kustomize image to reference a specific version of a container
+// image.
+type ArgoCDKustomizeImageUpdate struct {
+	FromOrigin *AppFromOrigin `json:"fromOrigin,omitempty"`
+	// Specifies a container image name override.
+	NewName string `json:"newName,omitempty"`
+	// The URL of a container image repository.
+	RepoURL string `json:"repoURL"`
+	// Specifies whether the image's digest should be used instead of its tag.
+	UseDigest bool `json:"useDigest,omitempty"`
+}
+
 type CopyConfig struct {
 	// InPath is the path to the file or directory to copy.
 	InPath string `json:"inPath"`
@@ -50,10 +142,10 @@ type CheckoutFromOrigin struct {
 type GitCommitConfig struct {
 	// The author of the commit.
 	Author *Author `json:"author,omitempty"`
-	// The commit message. Mutually exclusive with 'messageFrom'.
+	// The commit message. Mutually exclusive with 'messageFromSteps'.
 	Message string `json:"message,omitempty"`
 	// TODO
-	MessageFrom []string `json:"messageFrom,omitempty"`
+	MessageFromSteps []string `json:"messageFromSteps,omitempty"`
 	// The path to a working directory of a local repository.
 	Path string `json:"path"`
 }
@@ -80,9 +172,9 @@ type GitOpenPRConfig struct {
 	// The branch containing the changes to be merged. This branch must already exist and be up
 	// to date on the remote.
 	SourceBranch string `json:"sourceBranch,omitempty"`
-	// References a previous push step by alias and will use the branch written to by that step
-	// as the source branch.
-	SourceBranchFromPush string `json:"sourceBranchFromPush,omitempty"`
+	// References the 'branch' output from a previous step. This step will use that value as the
+	// source branch.
+	SourceBranchFromStep string `json:"sourceBranchFromStep,omitempty"`
 	// The branch to which the changes should be merged. This branch must already exist and be
 	// up to date on the remote.
 	TargetBranch string `json:"targetBranch"`
@@ -114,8 +206,9 @@ type GitWaitForPRConfig struct {
 	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty"`
 	// The number of the pull request to wait for.
 	PRNumber int64 `json:"prNumber,omitempty"`
-	// References a previous open step by alias and will use the PR number opened by that step.
-	PRNumberFromOpen string `json:"prNumberFromOpen,omitempty"`
+	// This field references the 'prNumber' output from a previous step and uses it as the
+	// number of the pull request to wait for.
+	PRNumberFromStep string `json:"prNumberFromStep,omitempty"`
 	// The name of the Git provider to use. Currently only 'github' and 'gitlab' are supported.
 	// Kargo will try to infer the provider if it is not explicitly specified.
 	Provider *Provider `json:"provider,omitempty"`
@@ -220,15 +313,9 @@ const (
 	Warehouse Kind = "Warehouse"
 )
 
-// The name of the Git provider to use. Currently only 'github' and 'gitlab' are supported.
-// Kargo will try to infer the provider if it is not explicitly specified.
-type Provider string
-
-const (
-	Github Provider = "github"
-	Gitlab Provider = "gitlab"
-)
-
+// Specifies a new value for the setting within an Argo CD Application source's Helm
+// parameters identified by the 'key' field.
+//
 // Specifies the new value for the specified key in the Helm values file.
 type Value string
 
@@ -237,4 +324,13 @@ const (
 	ImageAndDigest Value = "ImageAndDigest"
 	ImageAndTag    Value = "ImageAndTag"
 	Tag            Value = "Tag"
+)
+
+// The name of the Git provider to use. Currently only 'github' and 'gitlab' are supported.
+// Kargo will try to infer the provider if it is not explicitly specified.
+type Provider string
+
+const (
+	Github Provider = "github"
+	Gitlab Provider = "gitlab"
 )

@@ -334,6 +334,7 @@ func TestGetDesiredOrigin(t *testing.T) {
 						},
 					},
 				}
+				// nolint: staticcheck
 				return m, &m.Spec.PromotionMechanisms.GitRepoUpdates[0].Kustomize.Images[0]
 			},
 		},
@@ -353,6 +354,7 @@ func TestGetDesiredOrigin(t *testing.T) {
 						},
 					},
 				}
+				// nolint: staticcheck
 				return m, &m.Spec.PromotionMechanisms.GitRepoUpdates[0].Kustomize.Images[0]
 			},
 		},

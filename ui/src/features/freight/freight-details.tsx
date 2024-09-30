@@ -111,7 +111,7 @@ export const FreightDetails = ({
                   label: 'Live Manifest',
                   icon: <FontAwesomeIcon icon={faFile} />,
                   className: 'h-full pb-2',
-                  children: <ManifestPreview object={freight} />
+                  children: <ManifestPreview object={freight} height='900px' />
                 }
               ]}
             />

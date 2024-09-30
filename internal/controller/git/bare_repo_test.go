@@ -10,6 +10,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/sosedoff/gitkit"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/akuity/kargo/internal/types"
@@ -159,5 +160,164 @@ func TestBareRepo(t *testing.T) {
 		require.Error(t, err)
 		require.True(t, os.IsNotExist(err))
 	})
+}
 
+func Test_bareRepo_parseWorkTreeOutput(t *testing.T) {
+	tests := []struct {
+		name       string
+		input      []byte
+		assertions func(*testing.T, []workTreeInfo, error)
+	}{
+		{
+			name: "single worktree",
+			input: []byte(`worktree /path/to/worktree
+HEAD abcdef1234567890
+branch main
+`),
+			assertions: func(t *testing.T, result []workTreeInfo, err error) {
+				assert.NoError(t, err)
+				assert.Len(t, result, 1)
+				assert.Equal(t, result, []workTreeInfo{
+					{Path: "/path/to/worktree", HEAD: "abcdef1234567890", Branch: "main"},
+				})
+			},
+		},
+		{
+			name: "multiple worktrees",
+			input: []byte(`worktree /path/to/worktree1
+HEAD abcdef1234567890
+branch main
+
+worktree /path/to/worktree2
+HEAD fedcba9876543210
+branch feature
+bare
+detached
+`),
+			assertions: func(t *testing.T, result []workTreeInfo, err error) {
+				assert.NoError(t, err)
+				assert.Len(t, result, 2)
+				assert.Equal(t, result, []workTreeInfo{
+					{
+						Path:   "/path/to/worktree1",
+						HEAD:   "abcdef1234567890",
+						Branch: "main",
+					},
+					{
+						Path:     "/path/to/worktree2",
+						HEAD:     "fedcba9876543210",
+						Branch:   "feature",
+						Bare:     true,
+						Detached: true,
+					},
+				})
+			},
+		},
+		{
+			name:  "empty input",
+			input: []byte(``),
+			assertions: func(t *testing.T, result []workTreeInfo, err error) {
+				assert.NoError(t, err)
+				assert.Empty(t, result)
+			},
+		},
+		{
+			name: "incomplete worktree info",
+			input: []byte(`worktree /path/to/incomplete
+HEAD
+branch
+
+worktree /path/to/complete
+HEAD abcdef1234567890
+branch main
+`),
+			assertions: func(t *testing.T, result []workTreeInfo, err error) {
+				assert.NoError(t, err)
+				assert.Len(t, result, 2)
+				assert.Equal(t, result, []workTreeInfo{
+					{Path: "/path/to/incomplete"},
+					{
+						Path:   "/path/to/complete",
+						HEAD:   "abcdef1234567890",
+						Branch: "main",
+					},
+				})
+			},
+		},
+		{
+			name: "invalid input",
+			input: []byte(`invalid input
+not a worktree
+`),
+			assertions: func(t *testing.T, result []workTreeInfo, err error) {
+				assert.NoError(t, err)
+				assert.Empty(t, result)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			b := &bareRepo{}
+			result, err := b.parseWorkTreeOutput(tt.input)
+			tt.assertions(t, result, err)
+		})
+	}
+}
+
+func Test_bareRepo_filterNonBarePaths(t *testing.T) {
+	tests := []struct {
+		name       string
+		input      []workTreeInfo
+		assertions func(*testing.T, []string)
+	}{
+		{
+			name: "mixed bare and non-bare worktrees",
+			input: []workTreeInfo{
+				{Path: "/path/to/worktree1", Bare: false},
+				{Path: "/path/to/worktree2", Bare: true},
+				{Path: "/path/to/worktree3", Bare: false},
+			},
+			assertions: func(t *testing.T, result []string) {
+				assert.Len(t, result, 2)
+				assert.Equal(t, result, []string{"/path/to/worktree1", "/path/to/worktree3"})
+			},
+		},
+		{
+			name: "all non-bare worktrees",
+			input: []workTreeInfo{
+				{Path: "/path/to/worktree1", Bare: false},
+				{Path: "/path/to/worktree2", Bare: false},
+			},
+			assertions: func(t *testing.T, result []string) {
+				assert.Len(t, result, 2)
+				assert.Equal(t, result, []string{"/path/to/worktree1", "/path/to/worktree2"})
+			},
+		},
+		{
+			name: "all bare worktrees",
+			input: []workTreeInfo{
+				{Path: "/path/to/worktree1", Bare: true},
+				{Path: "/path/to/worktree2", Bare: true},
+			},
+			assertions: func(t *testing.T, result []string) {
+				assert.Empty(t, result)
+			},
+		},
+		{
+			name:  "empty input",
+			input: []workTreeInfo{},
+			assertions: func(t *testing.T, result []string) {
+				assert.Empty(t, result)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			b := &bareRepo{}
+			result := b.filterNonBarePaths(tt.input)
+			tt.assertions(t, result)
+		})
+	}
 }

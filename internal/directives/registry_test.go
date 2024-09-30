@@ -7,40 +7,76 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestDirectiveRegistry_RegisterDirective(t *testing.T) {
-	t.Run("registers directive", func(t *testing.T) {
-		r := make(DirectiveRegistry)
-		s := &mockDirective{}
-		r.RegisterDirective(s, nil)
-		assert.Same(t, s, r[s.Name()].Directive)
+func TestStepRunnerRegistry_RegisterPromotionStepRunner(t *testing.T) {
+	t.Run("registers", func(t *testing.T) {
+		registry := NewStepRunnerRegistry()
+		runner := &mockPromotionStepRunner{}
+		registry.RegisterPromotionStepRunner(runner, nil)
+		assert.Same(t, runner, registry.promotionStepRunners[runner.Name()].Runner)
 	})
 
-	t.Run("overwrites directive", func(t *testing.T) {
-		r := make(DirectiveRegistry)
-		s := &mockDirective{}
-		r.RegisterDirective(s, nil)
-		s2 := &mockDirective{
+	t.Run("overwrites registration", func(t *testing.T) {
+		registry := NewStepRunnerRegistry()
+		runner1 := &mockPromotionStepRunner{}
+		registry.RegisterPromotionStepRunner(runner1, nil)
+		runner2 := &mockPromotionStepRunner{
 			runErr: fmt.Errorf("error"),
 		}
-		r.RegisterDirective(s2, nil)
-		assert.NotSame(t, s, r[s2.Name()].Directive)
-		assert.Same(t, s2, r[s2.Name()].Directive)
+		registry.RegisterPromotionStepRunner(runner2, nil)
+		assert.NotSame(t, runner1, registry.promotionStepRunners[runner2.Name()].Runner)
+		assert.Same(t, runner2, registry.promotionStepRunners[runner2.Name()].Runner)
 	})
 }
 
-func TestDirectiveRegistry_GetDirectiveRegistration(t *testing.T) {
-	t.Run("directive exists", func(t *testing.T) {
-		r := make(DirectiveRegistry)
-		s := &mockDirective{}
-		r.RegisterDirective(s, nil)
-		reg, err := r.GetDirectiveRegistration(s.Name())
+func TestStepRunnerRegistry_GetPromotionStepRunnerRegistration(t *testing.T) {
+	t.Run("registration exists", func(t *testing.T) {
+		registry := NewStepRunnerRegistry()
+		runner := &mockPromotionStepRunner{}
+		registry.RegisterPromotionStepRunner(runner, nil)
+		reg, err := registry.GetPromotionStepRunnerRegistration(runner.Name())
 		assert.NoError(t, err)
-		assert.Same(t, s, reg.Directive)
+		assert.Same(t, runner, reg.Runner)
 	})
 
-	t.Run("directive does not exist", func(t *testing.T) {
-		r := make(DirectiveRegistry)
-		_, err := r.GetDirectiveRegistration("nonexistent")
+	t.Run("registration does not exist", func(t *testing.T) {
+		_, err := NewStepRunnerRegistry().
+			GetPromotionStepRunnerRegistration("nonexistent")
+		assert.ErrorContains(t, err, "not found")
+	})
+}
+
+func TestStepRunnerRegistry_RegisterHealthCheckStepRunner(t *testing.T) {
+	t.Run("registers", func(t *testing.T) {
+		registry := NewStepRunnerRegistry()
+		runner := &mockHealthCheckStepRunner{}
+		registry.RegisterHealthCheckStepRunner(runner, nil)
+		assert.Same(t, runner, registry.healthCheckStepRunners[runner.Name()].Runner)
+	})
+
+	t.Run("overwrites registration", func(t *testing.T) {
+		registry := NewStepRunnerRegistry()
+		runner1 := &mockHealthCheckStepRunner{}
+		registry.RegisterHealthCheckStepRunner(runner1, nil)
+		runner2 := &mockHealthCheckStepRunner{}
+		registry.RegisterHealthCheckStepRunner(runner2, nil)
+		assert.NotSame(t, runner1, registry.healthCheckStepRunners[runner2.Name()].Runner)
+		assert.Same(t, runner2, registry.healthCheckStepRunners[runner2.Name()].Runner)
+	})
+}
+
+func TestStepRunnerRegistry_GetHealthCheckStepRunnerRegistration(t *testing.T) {
+	t.Run("registration exists", func(t *testing.T) {
+		registry := NewStepRunnerRegistry()
+		runner := &mockHealthCheckStepRunner{}
+		registry.RegisterHealthCheckStepRunner(runner, nil)
+		reg, err := registry.GetHealthCheckStepRunnerRegistration(runner.Name())
+		assert.NoError(t, err)
+		assert.Same(t, runner, reg.Runner)
+	})
+
+	t.Run("registration does not exist", func(t *testing.T) {
+		_, err := NewStepRunnerRegistry().
+			GetHealthCheckStepRunnerRegistration("nonexistent")
 		assert.ErrorContains(t, err, "not found")
 	})
 }
