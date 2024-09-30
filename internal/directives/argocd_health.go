@@ -1,4 +1,4 @@
-package argocd
+package directives
 
 import (
 	"context"
@@ -8,18 +8,43 @@ import (
 	"strings"
 	"time"
 
-	"k8s.io/apimachinery/pkg/types"
+	kubeerr "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	libargocd "github.com/akuity/kargo/internal/argocd"
 	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
 )
 
-// healthErrorConditions are the v1alpha1.ApplicationConditionType conditions
-// that indicate an Argo CD Application is unhealthy.
-var healthErrorConditions = []argocd.ApplicationConditionType{
-	argocd.ApplicationConditionComparisonError,
-	argocd.ApplicationConditionInvalidSpecError,
+const applicationStatusesKey = "applicationStatuses"
+
+// ArgoCDHealthConfig is the configuration for a health check to be executed by
+// the argocd-update directive.
+type ArgoCDHealthConfig struct {
+	// Apps is a list health checks to perform on specific Argo CD Applications.
+	Apps []ArgoCDAppHealthCheck `json:"apps"`
+}
+
+// ArgoCDAppHealthCheck is the configuration for a health check on a single Argo
+// CD Application.
+type ArgoCDAppHealthCheck struct {
+	// Name is the name of the Argo CD Application to check.
+	Name string `json:"name"`
+	// Namespace is the namespace of the Argo CD Application to check. If empty,
+	// the default Argo CD namespace is used.
+	Namespace string `json:"namespace,omitempty"`
+	// DesiredRevisions is a list of desired revisions for the Argo CD Application
+	// to be synced to.
+	DesiredRevisions []string `json:"desiredRevisions,omitempty"`
+}
+
+// ArgoCDAppStatus describes the current state of a single ArgoCD Application.
+type ArgoCDAppStatus struct {
+	// Namespace is the namespace of the ArgoCD Application.
+	Namespace string
+	// Name is the name of the ArgoCD Application.
+	Name                     string
+	argocd.ApplicationStatus `json:",inline"`
 }
 
 // compositeError is an interface for wrapped standard errors produced by
@@ -29,85 +54,66 @@ type compositeError interface {
 	Unwrap() []error
 }
 
-// ApplicationHealthEvaluator is an interface for evaluating the health of
-// Argo CD Applications.
-type ApplicationHealthEvaluator interface {
-	EvaluateHealth(
-		context.Context,
-		*kargoapi.Stage,
-	) *kargoapi.Health
-}
-
-// applicationHealth is an ApplicationHealthEvaluator implementation.
-type applicationHealth struct {
-	kargoClient client.Client
-	argoClient  client.Client
-}
-
-// NewApplicationHealthEvaluator returns a new ApplicationHealthEvaluator.
-func NewApplicationHealthEvaluator(kargoClient, argoClient client.Client) ApplicationHealthEvaluator {
-	return &applicationHealth{
-		kargoClient: kargoClient,
-		argoClient:  argoClient,
-	}
-}
-
-// EvaluateHealth assesses the health of a set of Argo CD Applications.
-func (h *applicationHealth) EvaluateHealth(
+// RunHealthCheckStep implements the Directive interface.
+func (a *argocdUpdater) RunHealthCheckStep(
 	ctx context.Context,
-	stage *kargoapi.Stage,
-) *kargoapi.Health {
-	// nolint: staticcheck
-	if stage.Spec.PromotionMechanisms == nil ||
-		len(stage.Spec.PromotionMechanisms.ArgoCDAppUpdates) == 0 {
-		return nil
-	}
-
-	if h.argoClient == nil {
-		return &kargoapi.Health{
+	healthCtx *HealthCheckStepContext,
+) HealthCheckStepResult {
+	cfg, err := configToStruct[ArgoCDHealthConfig](healthCtx.Config)
+	if err != nil {
+		return HealthCheckStepResult{
 			Status: kargoapi.HealthStateUnknown,
 			Issues: []string{
-				"Argo CD integration is disabled; cannot assess the health or sync status of Argo CD Applications",
+				fmt.Sprintf(
+					"could not convert config into %s health check config: %s",
+					a.Name(), err.Error(),
+				),
 			},
 		}
 	}
+	return a.runHealthCheckStep(ctx, healthCtx, cfg)
+}
 
-	health := kargoapi.Health{
+func (a *argocdUpdater) runHealthCheckStep(
+	ctx context.Context,
+	healthCtx *HealthCheckStepContext,
+	healthCfg ArgoCDHealthConfig,
+) HealthCheckStepResult {
+	if healthCtx.ArgoCDClient == nil {
+		return HealthCheckStepResult{
+			Status: kargoapi.HealthStateUnknown,
+			Issues: []string{
+				"Argo CD integration is disabled on this controller; cannot assess " +
+					"the health or sync status of Argo CD Applications",
+			},
+		}
+	}
+	health := HealthCheckStepResult{
 		Status: kargoapi.HealthStateHealthy,
-		ArgoCDApps: make(
-			[]kargoapi.ArgoCDAppStatus,
-			len(stage.Spec.PromotionMechanisms.ArgoCDAppUpdates), // nolint: staticcheck
-		),
 		Issues: make([]string, 0),
 	}
-
-	// nolint: staticcheck
-	for i := range stage.Spec.PromotionMechanisms.ArgoCDAppUpdates {
-		update := &stage.Spec.PromotionMechanisms.ArgoCDAppUpdates[i]
-		namespace := update.AppNamespace
+	appStatuses := make([]ArgoCDAppStatus, len(healthCfg.Apps))
+	for i, appHealthCheck := range healthCfg.Apps {
+		namespace := appHealthCheck.Namespace
 		if namespace == "" {
-			namespace = Namespace()
+			namespace = libargocd.Namespace()
 		}
-
-		health.ArgoCDApps[i] = kargoapi.ArgoCDAppStatus{
+		appStatuses[i] = ArgoCDAppStatus{
 			Namespace: namespace,
-			Name:      update.AppName,
+			Name:      appHealthCheck.Name,
 		}
-
-		state, healthStatus, syncStatus, err := h.GetApplicationHealth(
+		var state kargoapi.HealthState
+		var err error
+		state, appStatuses[i], err = a.getApplicationHealth(
 			ctx,
-			stage,
-			update,
-			types.NamespacedName{
-				Namespace: health.ArgoCDApps[i].Namespace,
-				Name:      health.ArgoCDApps[i].Name,
+			healthCtx,
+			client.ObjectKey{
+				Namespace: namespace,
+				Name:      appHealthCheck.Name,
 			},
+			appHealthCheck.DesiredRevisions,
 		)
-
 		health.Status = health.Status.Merge(state)
-		health.ArgoCDApps[i].HealthStatus = healthStatus
-		health.ArgoCDApps[i].SyncStatus = syncStatus
-
 		if err != nil {
 			if cErr, ok := err.(compositeError); ok {
 				for _, e := range cErr.Unwrap() {
@@ -118,58 +124,65 @@ func (h *applicationHealth) EvaluateHealth(
 			}
 		}
 	}
-
-	return &health
+	health.Output = map[string]any{
+		applicationStatusesKey: appStatuses,
+	}
+	return health
 }
 
-// GetApplicationHealth assesses the health of an Argo CD Application by looking
+// healthErrorConditions are the v1alpha1.ApplicationConditionType conditions
+// that indicate an Argo CD Application is unhealthy.
+var healthErrorConditions = []argocd.ApplicationConditionType{
+	argocd.ApplicationConditionComparisonError,
+	argocd.ApplicationConditionInvalidSpecError,
+}
+
+// getApplicationHealth assesses the health of an Argo CD Application by looking
 // at its conditions, health status, and sync status. Based on these, it returns
 // an overall health state, the Argo CD Application's health status, and its sync
 // status. If it can not (fully) assess the health of the Argo CD Application, it
 // returns an error with a message explaining why.
-func (h *applicationHealth) GetApplicationHealth(
+func (a *argocdUpdater) getApplicationHealth(
 	ctx context.Context,
-	stage *kargoapi.Stage,
-	update *kargoapi.ArgoCDAppUpdate,
+	healthCtx *HealthCheckStepContext,
 	appKey client.ObjectKey,
-) (kargoapi.HealthState, kargoapi.ArgoCDAppHealthStatus, kargoapi.ArgoCDAppSyncStatus, error) {
-	var (
-		healthStatus = kargoapi.ArgoCDAppHealthStatus{
-			Status: kargoapi.ArgoCDAppHealthStateUnknown,
-		}
-		syncStatus = kargoapi.ArgoCDAppSyncStatus{
-			Status: kargoapi.ArgoCDAppSyncStateUnknown,
-		}
-	)
-
+	desiredRevisions []string,
+) (kargoapi.HealthState, ArgoCDAppStatus, error) {
+	appStatus := ArgoCDAppStatus{
+		Namespace: appKey.Namespace,
+		Name:      appKey.Name,
+		ApplicationStatus: argocd.ApplicationStatus{
+			Health: argocd.HealthStatus{
+				Status: argocd.HealthStatusUnknown,
+			},
+			Sync: argocd.SyncStatus{
+				Status: argocd.SyncStatusCodeUnknown,
+			},
+		},
+	}
 	app := &argocd.Application{}
-	if err := h.argoClient.Get(ctx, appKey, app); err != nil {
-		err = fmt.Errorf("error finding Argo CD Application %q in namespace %q: %w", appKey.Name, appKey.Namespace, err)
-		if client.IgnoreNotFound(err) == nil {
-			err = fmt.Errorf("unable to find Argo CD Application %q in namespace %q", appKey.Name, appKey.Namespace)
+	if err := healthCtx.ArgoCDClient.Get(ctx, appKey, app); err != nil {
+		if kubeerr.IsNotFound(err) {
+			err = fmt.Errorf(
+				"unable to find Argo CD Application %q in namespace %q",
+				appKey.Name, appKey.Namespace,
+			)
+		} else {
+			err = fmt.Errorf(
+				"error finding Argo CD Application %q in namespace %q: %w",
+				appKey.Name, appKey.Namespace, err,
+			)
 		}
-		return kargoapi.HealthStateUnknown, healthStatus, syncStatus, err
+		return kargoapi.HealthStateUnknown, appStatus, err
 	}
 
-	// Mirror the health and sync status of the Argo CD Application.
-	if app.Status.Health.Status != "" {
-		healthStatus = kargoapi.ArgoCDAppHealthStatus{
-			Status:  kargoapi.ArgoCDAppHealthState(app.Status.Health.Status),
-			Message: app.Status.Health.Message,
-		}
-	}
-	if app.Status.Sync.Status != "" {
-		syncStatus = kargoapi.ArgoCDAppSyncStatus{
-			Status:    kargoapi.ArgoCDAppSyncState(app.Status.Sync.Status),
-			Revision:  app.Status.Sync.Revision,
-			Revisions: app.Status.Sync.Revisions,
-		}
-	}
+	// Reflect the health and sync status of the Argo CD Application.
+	appStatus.ApplicationStatus = app.Status
 
 	// Check for any error conditions. If these are found, the application is
 	// considered unhealthy as they may indicate a problem which can result in
 	// e.g. the health status result to become unreliable.
-	if errConditions := filterAppConditions(app, healthErrorConditions...); len(errConditions) > 0 {
+	if errConditions := a.filterAppConditions(app, healthErrorConditions...); len(errConditions) > 0 {
 		issues := make([]error, len(errConditions))
 		for _, condition := range errConditions {
 			issues = append(issues, fmt.Errorf(
@@ -180,27 +193,13 @@ func (h *applicationHealth) GetApplicationHealth(
 				condition.Message,
 			))
 		}
-		return kargoapi.HealthStateUnhealthy, healthStatus, syncStatus, errors.Join(issues...)
+		return kargoapi.HealthStateUnhealthy, appStatus, errors.Join(issues...)
 	}
 
-	// If we have desired revisions, we should confirm the Argo CD Application is
-	// syncing to them. We do not further care about the cluster actually being in
-	// sync with the desired revisions, as some applications operate in a state of
-	// perpetual drift and this can be considered "normal."
-	if desiredRevisions, err := GetDesiredRevisions(
-		ctx,
-		h.kargoClient,
-		stage,
-		update,
-		app,
-		stage.Status.FreightHistory.Current().References(),
-	); err != nil {
-		return kargoapi.HealthStateUnknown, healthStatus, syncStatus, err
-	} else if len(desiredRevisions) > 0 {
-		if healthState, err := stageHealthForAppSync(app, desiredRevisions); err != nil {
-			return healthState, healthStatus, syncStatus, err
+	if len(desiredRevisions) > 0 {
+		if stageHealth, err := a.stageHealthForAppSync(app, desiredRevisions); err != nil {
+			return stageHealth, appStatus, err
 		}
-
 		// If we care about revisions, and recently finished an operation, we
 		// should wait for a cooldown period before assessing the health of the
 		// application. This is to ensure the health check has a chance to run
@@ -214,20 +213,20 @@ func (h *applicationHealth) GetApplicationHealth(
 			cooldown := app.Status.OperationState.FinishedAt.Time.Add(10 * time.Second)
 			if duration := time.Until(cooldown); duration > 0 {
 				time.Sleep(duration)
-
 				// Re-fetch the application to get the latest state.
-				if err := h.argoClient.Get(ctx, appKey, app); err != nil {
-					err = fmt.Errorf(
-						"error finding Argo CD Application %q in namespace %q: %w",
-						appKey.Name, appKey.Namespace, err,
-					)
-					if client.IgnoreNotFound(err) == nil {
+				if err := healthCtx.ArgoCDClient.Get(ctx, appKey, app); err != nil {
+					if kubeerr.IsNotFound(err) {
 						err = fmt.Errorf(
 							"unable to find Argo CD Application %q in namespace %q",
 							appKey.Name, appKey.Namespace,
 						)
+					} else {
+						err = fmt.Errorf(
+							"error finding Argo CD Application %q in namespace %q: %w",
+							appKey.Name, appKey.Namespace, err,
+						)
 					}
-					return kargoapi.HealthStateUnknown, healthStatus, syncStatus, err
+					return kargoapi.HealthStateUnknown, appStatus, err
 				}
 			}
 		}
@@ -235,13 +234,13 @@ func (h *applicationHealth) GetApplicationHealth(
 
 	// With all the above checks passed, we can now assume the Argo CD
 	// Application's health state is reliable.
-	healthState, err := stageHealthForAppHealth(app)
-	return healthState, healthStatus, syncStatus, err
+	stageHealth, err := a.stageHealthForAppHealth(app)
+	return stageHealth, appStatus, err
 }
 
 // stageHealthForAppSync returns the v1alpha1.HealthState for an Argo CD
 // Application based on its sync status.
-func stageHealthForAppSync(
+func (a *argocdUpdater) stageHealthForAppSync(
 	app *argocd.Application,
 	desiredRevisions []string,
 ) (kargoapi.HealthState, error) {
@@ -312,7 +311,9 @@ func stageHealthForAppSync(
 
 // stageHealthForAppHealth returns the v1alpha1.HealthState for an Argo CD
 // Application based on its health status.
-func stageHealthForAppHealth(app *argocd.Application) (kargoapi.HealthState, error) {
+func (a *argocdUpdater) stageHealthForAppHealth(
+	app *argocd.Application,
+) (kargoapi.HealthState, error) {
 	switch app.Status.Health.Status {
 	case argocd.HealthStatusProgressing, "":
 		err := fmt.Errorf(
@@ -346,7 +347,7 @@ func stageHealthForAppHealth(app *argocd.Application) (kargoapi.HealthState, err
 
 // filterAppConditions returns a slice of v1alpha1.ApplicationCondition that
 // match the provided types.
-func filterAppConditions(
+func (a *argocdUpdater) filterAppConditions(
 	app *argocd.Application,
 	t ...argocd.ApplicationConditionType,
 ) []argocd.ApplicationCondition {

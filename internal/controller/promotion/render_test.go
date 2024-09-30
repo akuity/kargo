@@ -239,7 +239,7 @@ func TestKargoRenderApply(t *testing.T) {
 			changes, err := testCase.renderer.apply(
 				context.Background(),
 				stage,
-				&stage.Spec.PromotionMechanisms.GitRepoUpdates[0],
+				&stage.Spec.PromotionMechanisms.GitRepoUpdates[0], // nolint: staticcheck
 				testCase.newFreight,
 				testSourceCommitID,
 				"", // Home directory is not used by this implementation

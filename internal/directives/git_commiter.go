@@ -92,9 +92,16 @@ func (g *gitCommitter) runPromotionStep(
 			commitOpts.Author.Email = cfg.Author.Email
 		}
 	}
-	if err = workTree.Commit(commitMsg, commitOpts); err != nil {
+	hasDiffs, err := workTree.HasDiffs()
+	if err != nil {
 		return PromotionStepResult{Status: PromotionStatusFailure},
-			fmt.Errorf("error committing to working tree: %w", err)
+			fmt.Errorf("error checking for diffs in working tree: %w", err)
+	}
+	if hasDiffs {
+		if err = workTree.Commit(commitMsg, commitOpts); err != nil {
+			return PromotionStepResult{Status: PromotionStatusFailure},
+				fmt.Errorf("error committing to working tree: %w", err)
+		}
 	}
 	commitID, err := workTree.LastCommitID()
 	if err != nil {
@@ -103,7 +110,7 @@ func (g *gitCommitter) runPromotionStep(
 	}
 	return PromotionStepResult{
 		Status: PromotionStatusSuccess,
-		Output: State{commitKey: commitID},
+		Output: map[string]any{commitKey: commitID},
 	}, nil
 }
 
@@ -114,9 +121,9 @@ func (g *gitCommitter) buildCommitMessage(
 	var commitMsg string
 	if cfg.Message != "" {
 		commitMsg = cfg.Message
-	} else if len(cfg.MessageFrom) > 0 {
-		commitMsgParts := make([]string, len(cfg.MessageFrom))
-		for i, alias := range cfg.MessageFrom {
+	} else if len(cfg.MessageFromSteps) > 0 {
+		commitMsgParts := make([]string, len(cfg.MessageFromSteps))
+		for i, alias := range cfg.MessageFromSteps {
 			stepOutput, exists := sharedState.Get(alias)
 			if !exists {
 				return "", fmt.Errorf(
@@ -125,15 +132,15 @@ func (g *gitCommitter) buildCommitMessage(
 					alias,
 				)
 			}
-			stepOutputState, ok := stepOutput.(State)
+			stepOutputMap, ok := stepOutput.(map[string]any)
 			if !ok {
 				return "", fmt.Errorf(
-					"output from step with alias %q is not a State; cannot construct "+
+					"output from step with alias %q is not a map[string]any; cannot construct "+
 						"commit message",
 					alias,
 				)
 			}
-			commitMsgPart, exists := stepOutputState.Get("commitMessage")
+			commitMsgPart, exists := stepOutputMap["commitMessage"]
 			if !exists {
 				return "", fmt.Errorf(
 					"no commit message found in output from step with alias %q; cannot "+

@@ -813,7 +813,7 @@ func TestArgoCDBuildDesiredSources(t *testing.T) {
 			desiredSources, err := testCase.reconciler.buildDesiredSources(
 				context.Background(),
 				stage,
-				&stage.Spec.PromotionMechanisms.ArgoCDAppUpdates[0],
+				&stage.Spec.PromotionMechanisms.ArgoCDAppUpdates[0], // nolint: staticcheck
 				app,
 				[]kargoapi.FreightReference{},
 			)
@@ -1164,7 +1164,7 @@ func TestArgoCDMustPerformUpdate(t *testing.T) {
 			phase, mustUpdate, err := argocdMech.mustPerformUpdate(
 				context.Background(),
 				stage,
-				&stage.Spec.PromotionMechanisms.ArgoCDAppUpdates[0],
+				&stage.Spec.PromotionMechanisms.ArgoCDAppUpdates[0], // nolint: staticcheck
 				app,
 				freight,
 				testCase.desiredSources,
@@ -1841,7 +1841,7 @@ func TestApplyArgoCDSourceUpdate(t *testing.T) {
 			updatedSource, err := mech.applyArgoCDSourceUpdate(
 				context.Background(),
 				stage,
-				&stage.Spec.PromotionMechanisms.ArgoCDAppUpdates[0].SourceUpdates[0],
+				&stage.Spec.PromotionMechanisms.ArgoCDAppUpdates[0].SourceUpdates[0], // nolint: staticcheck
 				testCase.source,
 				testCase.freight,
 			)
@@ -1895,7 +1895,7 @@ func TestBuildKustomizeImagesForArgoCDAppSource(t *testing.T) {
 	result, err := mech.buildKustomizeImagesForArgoCDAppSource(
 		context.Background(),
 		stage,
-		stage.Spec.PromotionMechanisms.ArgoCDAppUpdates[0].SourceUpdates[0].Kustomize,
+		stage.Spec.PromotionMechanisms.ArgoCDAppUpdates[0].SourceUpdates[0].Kustomize, // nolint: staticcheck
 		freight,
 	)
 	require.NoError(t, err)
@@ -1984,7 +1984,7 @@ func TestBuildHelmParamChangesForArgoCDAppSource(t *testing.T) {
 	result, err := mech.buildHelmParamChangesForArgoCDAppSource(
 		context.Background(),
 		stage,
-		stage.Spec.PromotionMechanisms.ArgoCDAppUpdates[0].SourceUpdates[0].Helm,
+		stage.Spec.PromotionMechanisms.ArgoCDAppUpdates[0].SourceUpdates[0].Helm, // nolint: staticcheck
 		freight,
 	)
 	require.NoError(t, err)

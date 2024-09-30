@@ -132,7 +132,7 @@ func (g *gitPushPusher) runPromotionStep(
 	}
 	return PromotionStepResult{
 		Status: PromotionStatusSuccess,
-		Output: State{
+		Output: map[string]any{
 			branchKey: targetBranch,
 			commitKey: commitID,
 		},

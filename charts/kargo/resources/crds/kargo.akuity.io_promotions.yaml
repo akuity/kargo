@@ -91,12 +91,13 @@ spec:
                     config:
                       description: Config is the configuration for the directive.
                       x-kubernetes-preserve-unknown-fields: true
-                    step:
-                      description: Step is the name of the directive to run.
+                    uses:
+                      description: Uses identifies a runner that can execute this
+                        step.
                       minLength: 1
                       type: string
                   required:
-                  - step
+                  - uses
                   type: object
                 type: array
             required:
@@ -108,6 +109,13 @@ spec:
               Status describes the current state of the transition represented by this
               Promotion.
             properties:
+              currentStep:
+                description: |-
+                  CurrentStep is the index of the current promotion step being executed. This
+                  permits steps that have already run successfully to be skipped on
+                  subsequent reconciliations attempts.
+                format: int64
+                type: integer
               finishedAt:
                 description: FinishedAt is the time when the promotion was completed.
                 format: date-time
@@ -455,6 +463,27 @@ spec:
                 required:
                 - id
                 type: object
+              healthChecks:
+                description: |-
+                  HealthChecks contains the health check directives to be executed after
+                  the Promotion has completed.
+                items:
+                  description: |-
+                    HealthCheckStep describes a health check directive which can be executed by
+                    a Stage to verify the health of a Promotion result.
+                  properties:
+                    config:
+                      description: Config is the configuration for the directive.
+                      x-kubernetes-preserve-unknown-fields: true
+                    uses:
+                      description: Uses identifies a runner that can execute this
+                        step.
+                      minLength: 1
+                      type: string
+                  required:
+                  - uses
+                  type: object
+                type: array
               lastHandledRefresh:
                 description: |-
                   LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh
@@ -479,6 +508,11 @@ spec:
                 description: Phase describes where the Promotion currently is in its
                   lifecycle.
                 type: string
+              state:
+                description: |-
+                  State stores the state of the promotion process between reconciliation
+                  attempts.
+                x-kubernetes-preserve-unknown-fields: true
             type: object
         required:
         - spec

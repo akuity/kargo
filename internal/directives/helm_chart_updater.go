@@ -9,6 +9,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"time"
 
 	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/xeipuuv/gojsonschema"
@@ -23,6 +24,7 @@ import (
 	"github.com/akuity/kargo/internal/controller/freight"
 	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/helm"
+	"github.com/akuity/kargo/internal/logging"
 	intyaml "github.com/akuity/kargo/internal/yaml"
 )
 
@@ -124,8 +126,9 @@ func (h *helmChartUpdater) runPromotionStep(
 
 	result := PromotionStepResult{Status: PromotionStatusSuccess}
 	if commitMsg := h.generateCommitMessage(cfg.Path, newVersions); commitMsg != "" {
-		result.Output = make(State, 1)
-		result.Output.Set("commitMessage", commitMsg)
+		result.Output = map[string]any{
+			"commitMessage": commitMsg,
+		}
 	}
 	return result, nil
 }
@@ -213,40 +216,79 @@ func (h *helmChartUpdater) updateDependencies(
 		return nil, fmt.Errorf("failed to write Helm repositories file: %w", err)
 	}
 
-	// Read the current versions of the chart dependencies from the lock file
+	// Check if Chart.lock exists and create a backup if it does
+	lockFile := filepath.Join(chartPath, "Chart.lock")
+	bakLockFile := fmt.Sprintf("%s.%s.bak", lockFile, time.Now().Format("20060102150405"))
+	if _, err = os.Lstat(lockFile); err == nil {
+		if err = backupFile(lockFile, bakLockFile); err != nil {
+			return nil, fmt.Errorf("failed to backup Chart.lock: %w", err)
+		}
+
+		// Ensure backup file is deleted at the end
+		defer func() {
+			if removeErr := os.Remove(bakLockFile); removeErr != nil && !os.IsNotExist(removeErr) {
+				logging.LoggerFromContext(ctx).Error(
+					sanitizePathError(removeErr, stepCtx.WorkDir),
+					"failed to remove backup of Chart.lock",
+				)
+			}
+		}()
+	} else if !os.IsNotExist(err) {
+		return nil, fmt.Errorf("failed to check Chart.lock: %w", err)
+	}
+
+	// Run the dependency update
+	env := &cli.EnvSettings{
+		RepositoryConfig: repositoryConfig,
+		RepositoryCache:  filepath.Join(helmHome, "cache"),
+	}
+	manager := downloader.Manager{
+		Out:              io.Discard,
+		ChartPath:        chartPath,
+		Verify:           downloader.VerifyNever,
+		SkipUpdate:       false,
+		Getters:          getter.All(env),
+		RegistryClient:   registryClient,
+		RepositoryConfig: env.RepositoryConfig,
+		RepositoryCache:  env.RepositoryCache,
+	}
+	if err = manager.Update(); err != nil {
+		return nil, fmt.Errorf("failed to update chart dependencies: %w", err)
+	}
+
+	// Read versions from both Chart.lock files after the update.
 	//
 	// NB: We rely on the lock file to determine the version changes because
 	// the dependency update process may change the version of a dependency
 	// without updating the Chart.yaml. For example, because a new version is
 	// available in the repository for a dependency that has a version range
 	// specified in the Chart.yaml.
-	initialVersions, err := readChartLock(chartPath)
+	initialVersions, err := readChartLock(bakLockFile)
+	if err != nil && !os.IsNotExist(err) {
+		return nil, fmt.Errorf(
+			"failed to read original chart lock file: %w", sanitizePathError(err, stepCtx.WorkDir),
+		)
+	}
+	updatedVersions, err := readChartLock(lockFile)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read chart lock file: %w", err)
+		return nil, fmt.Errorf(
+			"failed to read updated chart lock file: %w",
+			sanitizePathError(err, stepCtx.WorkDir),
+		)
 	}
 
-	manager := downloader.Manager{
-		Out:              io.Discard,
-		ChartPath:        chartPath,
-		Verify:           downloader.VerifyNever,
-		SkipUpdate:       false,
-		Getters:          getter.All(&cli.EnvSettings{}),
-		RegistryClient:   registryClient,
-		RepositoryConfig: repositoryConfig,
-		RepositoryCache:  filepath.Join(helmHome, "cache"),
-	}
-	if err = manager.Update(); err != nil {
-		return nil, fmt.Errorf("failed to update chart dependencies: %w", err)
-	}
+	// Compare the versions to determine if any changes occurred
+	changes := compareChartVersions(initialVersions, updatedVersions)
 
-	// Read the updated versions of the chart dependencies from the lock file
-	updatedVersions, err := readChartLock(chartPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read chart lock file: %w", err)
+	// If no versions changed, restore the original Chart.lock
+	if len(changes) == 0 {
+		if err = os.Rename(bakLockFile, lockFile); err != nil {
+			return nil, fmt.Errorf(
+				"failed to restore original Chart.lock: %w", sanitizePathError(err, stepCtx.WorkDir),
+			)
+		}
 	}
-
-	// Compare the versions to return the actual changes
-	return compareChartVersions(initialVersions, updatedVersions), nil
+	return changes, nil
 }
 
 func (h *helmChartUpdater) validateFileDependency(workDir, chartPath, dependencyPath string) error {
@@ -369,9 +411,8 @@ func readChartDependencies(chartFilePath string) ([]chartDependency, error) {
 	return chartMeta.Dependencies, nil
 }
 
-func readChartLock(chartPath string) (map[string]string, error) {
-	lockFile := filepath.Join(chartPath, "Chart.lock")
-	data, err := os.ReadFile(lockFile)
+func readChartLock(src string) (map[string]string, error) {
+	data, err := os.ReadFile(src)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return make(map[string]string), nil
@@ -510,4 +551,46 @@ func isSubPath(parent, child string) bool {
 		return false
 	}
 	return !strings.HasPrefix(rel, ".."+string(os.PathSeparator)) && rel != ".."
+}
+
+// backupFile creates a backup of the source file at the destination path.
+func backupFile(src, dst string) (err error) {
+	// Open the source file
+	srcFile, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		closeErr := srcFile.Close()
+		if err == nil {
+			err = closeErr
+		}
+	}()
+
+	// Get file info to retrieve permissions
+	srcInfo, err := os.Stat(src)
+	if err != nil {
+		return err
+	}
+
+	// Create the destination file with the same permissions
+	dstFile, err := os.OpenFile(dst, os.O_WRONLY|os.O_CREATE|os.O_EXCL, srcInfo.Mode())
+	if err != nil {
+		return err
+	}
+	defer func() {
+		closeErr := dstFile.Close()
+		if err == nil {
+			err = closeErr
+		}
+		if err != nil {
+			_ = os.Remove(dst)
+		}
+	}()
+
+	// Copy the contents
+	if _, err = io.Copy(dstFile, srcFile); err != nil {
+		return err
+	}
+	return nil
 }

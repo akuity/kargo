@@ -20,7 +20,6 @@ func (a *argocdUpdater) getDesiredRevisions(
 	ctx context.Context,
 	stepCtx *PromotionStepContext,
 	stepCfg *ArgoCDUpdateConfig,
-	stage *kargoapi.Stage,
 	update *ArgoCDAppUpdate,
 	app *argocd.Application,
 ) ([]string, error) {
@@ -36,10 +35,25 @@ func (a *argocdUpdater) getDesiredRevisions(
 	}
 	revisions := make([]string, len(sources))
 	for i, src := range sources {
+		sourceUpdate := a.findSourceUpdate(update, src)
+		// If there is a source update that targets this source, it might be
+		// specific about a previous step whose output should be used as the desired
+		// revision.
+		if sourceUpdate != nil {
+			var err error
+			if revisions[i], err = getCommitFromStep(
+				stepCtx.SharedState,
+				sourceUpdate.DesiredCommitFromStep,
+			); err != nil {
+				return nil, err
+			}
+			if revisions[i] != "" {
+				continue
+			}
+		}
 		var desiredOrigin *kargoapi.FreightOrigin
 		// If there is a source update that targets this source, it might be
 		// specific about which origin the desired revision should come from.
-		sourceUpdate := a.findSourceUpdate(update, src)
 		if sourceUpdate != nil {
 			desiredOrigin = getDesiredOrigin(stepCfg, sourceUpdate)
 		} else {
@@ -48,7 +62,6 @@ func (a *argocdUpdater) getDesiredRevisions(
 		desiredRevision, err := a.getDesiredRevisionForSource(
 			ctx,
 			stepCtx,
-			stage,
 			&src,
 			desiredOrigin,
 		)
@@ -63,7 +76,6 @@ func (a *argocdUpdater) getDesiredRevisions(
 func (a *argocdUpdater) getDesiredRevisionForSource(
 	ctx context.Context,
 	stepCtx *PromotionStepContext,
-	stage *kargoapi.Stage,
 	src *argocd.ApplicationSource,
 	desiredOrigin *kargoapi.FreightOrigin,
 ) (string, error) {
@@ -95,7 +107,7 @@ func (a *argocdUpdater) getDesiredRevisionForSource(
 			ctx,
 			stepCtx.KargoClient,
 			stepCtx.Project,
-			stage.Spec.RequestedFreight,
+			stepCtx.FreightRequests,
 			desiredOrigin,
 			stepCtx.Freight.References(),
 			repoURL,
@@ -115,7 +127,7 @@ func (a *argocdUpdater) getDesiredRevisionForSource(
 			ctx,
 			stepCtx.KargoClient,
 			stepCtx.Project,
-			stage.Spec.RequestedFreight,
+			stepCtx.FreightRequests,
 			desiredOrigin,
 			stepCtx.Freight.References(),
 			src.RepoURL,
@@ -149,4 +161,32 @@ func (a *argocdUpdater) findSourceUpdate(
 		}
 	}
 	return nil
+}
+
+func getCommitFromStep(sharedState State, stepAlias string) (string, error) {
+	if stepAlias == "" {
+		return "", nil
+	}
+	stepOutput, exists := sharedState.Get(stepAlias)
+	if !exists {
+		return "", fmt.Errorf("no output found from step with alias %q", stepAlias)
+	}
+	stepOutputMap, ok := stepOutput.(map[string]any)
+	if !ok {
+		return "",
+			fmt.Errorf("output from step with alias %q is not a map[string]any", stepAlias)
+	}
+	commitAny, exists := stepOutputMap[commitKey]
+	if !exists {
+		return "",
+			fmt.Errorf("no commit found in output from step with alias %q", stepAlias)
+	}
+	commit, ok := commitAny.(string)
+	if !ok {
+		return "", fmt.Errorf(
+			"commit in output from step with alias %q is not a string",
+			stepAlias,
+		)
+	}
+	return commit, nil
 }

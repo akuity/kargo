@@ -77,7 +77,7 @@ kind: Kustomization
 				require.NoError(t, err)
 				assert.Equal(t, PromotionStepResult{
 					Status: PromotionStatusSuccess,
-					Output: State{
+					Output: map[string]any{
 						"commitMessage": "Updated . to use new image\n\n- nginx:1.21.0",
 					},
 				}, result)

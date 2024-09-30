@@ -91,10 +91,10 @@ type PromotionSpec struct {
 
 // PromotionStep describes a directive to be executed as part of a Promotion.
 type PromotionStep struct {
-	// Step is the name of the directive to run.
+	// Uses identifies a runner that can execute this step.
 	//
 	// +kubebuilder:validation:MinLength=1
-	Step string `json:"step" protobuf:"bytes,1,opt,name=step"`
+	Uses string `json:"uses" protobuf:"bytes,1,opt,name=uses"`
 	// As is the alias this step can be referred to as.
 	As string `json:"as,omitempty" protobuf:"bytes,2,opt,name=as"`
 	// Config is the configuration for the directive.
@@ -138,8 +138,56 @@ type PromotionStatus struct {
 	// by this Promotion as well as any additional Freight that is carried over
 	// from the target Stage's current state.
 	FreightCollection *FreightCollection `json:"freightCollection,omitempty" protobuf:"bytes,7,opt,name=freightCollection"`
+	// HealthChecks contains the health check directives to be executed after
+	// the Promotion has completed.
+	HealthChecks []HealthCheckStep `json:"healthChecks,omitempty" protobuf:"bytes,8,rep,name=healthChecks"`
 	// FinishedAt is the time when the promotion was completed.
 	FinishedAt *metav1.Time `json:"finishedAt,omitempty" protobuf:"bytes,6,opt,name=finishedAt"`
+	// CurrentStep is the index of the current promotion step being executed. This
+	// permits steps that have already run successfully to be skipped on
+	// subsequent reconciliations attempts.
+	CurrentStep int64 `json:"currentStep,omitempty" protobuf:"varint,9,opt,name=currentStep"`
+	// State stores the state of the promotion process between reconciliation
+	// attempts.
+	State *apiextensionsv1.JSON `json:"state,omitempty" protobuf:"bytes,10,opt,name=state"`
+}
+
+// GetState returns the State field as unmarshalled YAML.
+func (s *PromotionStatus) GetState() map[string]any {
+	if s.State == nil {
+		return nil
+	}
+
+	var state map[string]any
+	if err := yaml.Unmarshal(s.State.Raw, &state); err != nil {
+		return nil
+	}
+	return state
+}
+
+// HealthCheckStep describes a health check directive which can be executed by
+// a Stage to verify the health of a Promotion result.
+type HealthCheckStep struct {
+	// Uses identifies a runner that can execute this step.
+	//
+	// +kubebuilder:validation:MinLength=1
+	Uses string `json:"uses" protobuf:"bytes,1,opt,name=uses"`
+
+	// Config is the configuration for the directive.
+	Config *apiextensionsv1.JSON `json:"config,omitempty" protobuf:"bytes,2,opt,name=config"`
+}
+
+// GetConfig returns the Config field as unmarshalled YAML.
+func (s *HealthCheckStep) GetConfig() map[string]any {
+	if s.Config == nil {
+		return nil
+	}
+
+	var config map[string]any
+	if err := yaml.Unmarshal(s.Config.Raw, &config); err != nil {
+		return nil
+	}
+	return config
 }
 
 // WithPhase returns a copy of PromotionStatus with the given phase

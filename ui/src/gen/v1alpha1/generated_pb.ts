@@ -2499,6 +2499,58 @@ export class Health extends Message<Health> {
 }
 
 /**
+ * HealthCheckStep describes a health check directive which can be executed by
+ * a Stage to verify the health of a Promotion result.
+ *
+ * @generated from message github.com.akuity.kargo.api.v1alpha1.HealthCheckStep
+ */
+export class HealthCheckStep extends Message<HealthCheckStep> {
+  /**
+   * Uses identifies a runner that can execute this step.
+   *
+   * +kubebuilder:validation:MinLength=1
+   *
+   * @generated from field: optional string uses = 1;
+   */
+  uses?: string;
+
+  /**
+   * Config is the configuration for the directive.
+   *
+   * @generated from field: optional k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON config = 2;
+   */
+  config?: JSON;
+
+  constructor(data?: PartialMessage<HealthCheckStep>) {
+    super();
+    proto2.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto2 = proto2;
+  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.HealthCheckStep";
+  static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 1, name: "uses", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 2, name: "config", kind: "message", T: JSON, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): HealthCheckStep {
+    return new HealthCheckStep().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): HealthCheckStep {
+    return new HealthCheckStep().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): HealthCheckStep {
+    return new HealthCheckStep().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: HealthCheckStep | PlainMessage<HealthCheckStep> | undefined, b: HealthCheckStep | PlainMessage<HealthCheckStep> | undefined): boolean {
+    return proto2.util.equals(HealthCheckStep, a, b);
+  }
+}
+
+/**
  * HelmChartDependencyUpdate describes how a specific Helm chart that is used
  * as a subchart of an umbrella chart can be updated.
  *
@@ -3785,25 +3837,28 @@ export class PromotionPolicy extends Message<PromotionPolicy> {
 }
 
 /**
+ * PromotionReference contains the relevant information about a Promotion
+ * as observed by a Stage.
+ *
  * @generated from message github.com.akuity.kargo.api.v1alpha1.PromotionReference
  */
 export class PromotionReference extends Message<PromotionReference> {
   /**
-   * Name is the name of the Promotion
+   * Name is the name of the Promotion.
    *
    * @generated from field: optional string name = 1;
    */
   name?: string;
 
   /**
-   * Freight is the freight being promoted
+   * Freight is the freight being promoted.
    *
    * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.FreightReference freight = 2;
    */
   freight?: FreightReference;
 
   /**
-   * Status is the (optional) status of the promotion
+   * Status is the (optional) status of the Promotion.
    *
    * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.PromotionStatus status = 3;
    */
@@ -3974,11 +4029,36 @@ export class PromotionStatus extends Message<PromotionStatus> {
   freightCollection?: FreightCollection;
 
   /**
+   * HealthChecks contains the health check directives to be executed after
+   * the Promotion has completed.
+   *
+   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.HealthCheckStep healthChecks = 8;
+   */
+  healthChecks: HealthCheckStep[] = [];
+
+  /**
    * FinishedAt is the time when the promotion was completed.
    *
    * @generated from field: optional k8s.io.apimachinery.pkg.apis.meta.v1.Time finishedAt = 6;
    */
   finishedAt?: Time;
+
+  /**
+   * CurrentStep is the index of the current promotion step being executed. This
+   * permits steps that have already run successfully to be skipped on
+   * subsequent reconciliations attempts.
+   *
+   * @generated from field: optional int64 currentStep = 9;
+   */
+  currentStep?: bigint;
+
+  /**
+   * State stores the state of the promotion process between reconciliation
+   * attempts.
+   *
+   * @generated from field: optional k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON state = 10;
+   */
+  state?: JSON;
 
   constructor(data?: PartialMessage<PromotionStatus>) {
     super();
@@ -3994,7 +4074,10 @@ export class PromotionStatus extends Message<PromotionStatus> {
     { no: 3, name: "metadata", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 9 /* ScalarType.STRING */} },
     { no: 5, name: "freight", kind: "message", T: FreightReference, opt: true },
     { no: 7, name: "freightCollection", kind: "message", T: FreightCollection, opt: true },
+    { no: 8, name: "healthChecks", kind: "message", T: HealthCheckStep, repeated: true },
     { no: 6, name: "finishedAt", kind: "message", T: Time, opt: true },
+    { no: 9, name: "currentStep", kind: "scalar", T: 3 /* ScalarType.INT64 */, opt: true },
+    { no: 10, name: "state", kind: "message", T: JSON, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PromotionStatus {
@@ -4021,13 +4104,13 @@ export class PromotionStatus extends Message<PromotionStatus> {
  */
 export class PromotionStep extends Message<PromotionStep> {
   /**
-   * Step is the name of the directive to run.
+   * Uses identifies a runner that can execute this step.
    *
    * +kubebuilder:validation:MinLength=1
    *
-   * @generated from field: optional string step = 1;
+   * @generated from field: optional string uses = 1;
    */
-  step?: string;
+  uses?: string;
 
   /**
    * As is the alias this step can be referred to as.
@@ -4051,7 +4134,7 @@ export class PromotionStep extends Message<PromotionStep> {
   static readonly runtime: typeof proto2 = proto2;
   static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.PromotionStep";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
-    { no: 1, name: "step", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 1, name: "uses", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 2, name: "as", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 3, name: "config", kind: "message", T: JSON, opt: true },
   ]);
@@ -4375,6 +4458,9 @@ export class StageList extends Message<StageList> {
  * StageSpec describes the sources of Freight used by a Stage and how to
  * incorporate Freight into the Stage.
  *
+ * +kubebuilder:validation:XValidation:rule="(has(self.promotionTemplate) || has(self.promotionMechanisms))",message="one of promotionTemplate or promotionMechanisms must be specified"
+ * +kubebuilder:validation:XValidation:rule="(has(self.promotionTemplate) && !has(self.promotionMechanisms)) || (!has(self.promotionTemplate) && has(self.promotionMechanisms))",message="only one of promotionTemplate or promotionMechanisms can be specified"
+ *
  * @generated from message github.com.akuity.kargo.api.v1alpha1.StageSpec
  */
 export class StageSpec extends Message<StageSpec> {
@@ -4420,6 +4506,8 @@ export class StageSpec extends Message<StageSpec> {
    * utility of this is to allow multiple downstream Stages to subscribe to a
    * single upstream Stage where they may otherwise have subscribed to multiple
    * upstream Stages.
+   *
+   * Deprecated: Use PromotionTemplate instead.
    *
    * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.PromotionMechanisms promotionMechanisms = 2;
    */

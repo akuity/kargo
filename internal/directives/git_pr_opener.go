@@ -127,7 +127,7 @@ func (g *gitPROpener) runPromotionStep(
 		ctx,
 		repo,
 		gitProviderSvc,
-		cfg.SourceBranch,
+		sourceBranch,
 		cfg.TargetBranch,
 	)
 	if err != nil {
@@ -163,7 +163,7 @@ func (g *gitPROpener) runPromotionStep(
 	pr, err := gitProviderSvc.CreatePullRequest(
 		ctx,
 		gitprovider.CreatePullRequestOpts{
-			Head:  cfg.SourceBranch,
+			Head:  sourceBranch,
 			Base:  cfg.TargetBranch,
 			Title: title,
 		},
@@ -174,7 +174,7 @@ func (g *gitPROpener) runPromotionStep(
 	}
 	return PromotionStepResult{
 		Status: PromotionStatusSuccess,
-		Output: State{
+		Output: map[string]any{
 			prNumberKey: pr.Number,
 		},
 	}, nil
@@ -182,32 +182,32 @@ func (g *gitPROpener) runPromotionStep(
 
 func getSourceBranch(sharedState State, cfg GitOpenPRConfig) (string, error) {
 	sourceBranch := cfg.SourceBranch
-	if cfg.SourceBranchFrom != "" {
-		stepOutput, exists := sharedState.Get(cfg.SourceBranchFrom)
+	if cfg.SourceBranchFromStep != "" {
+		stepOutput, exists := sharedState.Get(cfg.SourceBranchFromStep)
 		if !exists {
 			return "", fmt.Errorf(
 				"no output found from step with alias %q",
-				cfg.SourceBranchFrom,
+				cfg.SourceBranchFromStep,
 			)
 		}
-		stepOutputState, ok := stepOutput.(State)
+		stepOutputMap, ok := stepOutput.(map[string]any)
 		if !ok {
 			return "", fmt.Errorf(
-				"output from step with alias %q is not a State",
-				cfg.SourceBranchFrom,
+				"output from step with alias %q is not a mao[string]any",
+				cfg.SourceBranchFromStep,
 			)
 		}
-		sourceBranchAny, exists := stepOutputState.Get(branchKey)
+		sourceBranchAny, exists := stepOutputMap[branchKey]
 		if !exists {
 			return "", fmt.Errorf(
 				"no branch found in output from step with alias %q",
-				cfg.SourceBranchFrom,
+				cfg.SourceBranchFromStep,
 			)
 		}
 		if sourceBranch, ok = sourceBranchAny.(string); !ok {
 			return "", fmt.Errorf(
 				"branch name in output from step with alias %q is not a string",
-				cfg.SourceBranchFrom,
+				cfg.SourceBranchFromStep,
 			)
 		}
 	}

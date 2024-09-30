@@ -161,7 +161,9 @@ export const StageNode = ({
                     }
                   />
                 }
-                disabled={stage?.spec?.promotionMechanisms === undefined}
+                disabled={
+                  stage?.spec?.promotionMechanisms === undefined || !stage.spec?.promotionTemplate
+                }
                 className='uppercase'
               >
                 {action === FreightTimelineAction.ManualApproval ? 'Approve' : 'Promote'}
@@ -183,7 +185,7 @@ export const StageNode = ({
       {action !== FreightTimelineAction.ManualApproval &&
         action !== FreightTimelineAction.PromoteFreight && (
           <>
-            {stage.spec?.promotionMechanisms && (
+            {(stage.spec?.promotionMechanisms || stage.spec?.promotionTemplate) && (
               <Nodule
                 begin={true}
                 nodeHeight={height}

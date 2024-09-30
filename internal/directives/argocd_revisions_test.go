@@ -150,7 +150,6 @@ func Test_argoCDUpdater_getDesiredRevisions(t *testing.T) {
 				context.Background(),
 				stepCtx,
 				stepCfg,
-				&kargoapi.Stage{},
 				&stepCfg.Apps[0],
 				testCase.app,
 			)

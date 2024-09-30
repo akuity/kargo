@@ -167,6 +167,9 @@ func (s *Stage) GetStatus() *StageStatus {
 
 // StageSpec describes the sources of Freight used by a Stage and how to
 // incorporate Freight into the Stage.
+//
+// +kubebuilder:validation:XValidation:rule="(has(self.promotionTemplate) || has(self.promotionMechanisms))",message="one of promotionTemplate or promotionMechanisms must be specified"
+// +kubebuilder:validation:XValidation:rule="(has(self.promotionTemplate) && !has(self.promotionMechanisms)) || (!has(self.promotionTemplate) && has(self.promotionMechanisms))",message="only one of promotionTemplate or promotionMechanisms can be specified"
 type StageSpec struct {
 	// Shard is the name of the shard that this Stage belongs to. This is an
 	// optional field. If not specified, the Stage will belong to the default
@@ -194,6 +197,8 @@ type StageSpec struct {
 	// utility of this is to allow multiple downstream Stages to subscribe to a
 	// single upstream Stage where they may otherwise have subscribed to multiple
 	// upstream Stages.
+	//
+	// Deprecated: Use PromotionTemplate instead.
 	PromotionMechanisms *PromotionMechanisms `json:"promotionMechanisms,omitempty" protobuf:"bytes,2,opt,name=promotionMechanisms"`
 	// Verification describes how to verify a Stage's current Freight is fit for
 	// promotion downstream.
@@ -997,15 +1002,25 @@ type StageList struct {
 	Items           []Stage `json:"items" protobuf:"bytes,2,rep,name=items"`
 }
 
+// PromotionReference contains the relevant information about a Promotion
+// as observed by a Stage.
 type PromotionReference struct {
-	// Name is the name of the Promotion
+	// Name is the name of the Promotion.
 	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
-	// Freight is the freight being promoted
+	// Freight is the freight being promoted.
 	Freight *FreightReference `json:"freight,omitempty" protobuf:"bytes,2,opt,name=freight"`
-	// Status is the (optional) status of the promotion
+	// Status is the (optional) status of the Promotion.
 	Status *PromotionStatus `json:"status,omitempty" protobuf:"bytes,3,opt,name=status"`
 	// FinishedAt is the time at which the Promotion was completed.
 	FinishedAt *metav1.Time `json:"finishedAt,omitempty" protobuf:"bytes,4,opt,name=finishedAt"`
+}
+
+// GetHealthChecks returns the list of health checks for the PromotionReference.
+func (r *PromotionReference) GetHealthChecks() []HealthCheckStep {
+	if r == nil || r.Status == nil {
+		return nil
+	}
+	return r.Status.HealthChecks
 }
 
 // Verification describes how to verify that a Promotion has been successful

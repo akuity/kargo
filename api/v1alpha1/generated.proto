@@ -845,6 +845,18 @@ message Health {
   optional k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON output = 5;
 }
 
+// HealthCheckStep describes a health check directive which can be executed by
+// a Stage to verify the health of a Promotion result.
+message HealthCheckStep {
+  // Uses identifies a runner that can execute this step.
+  //
+  // +kubebuilder:validation:MinLength=1
+  optional string uses = 1;
+
+  // Config is the configuration for the directive.
+  optional k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON config = 2;
+}
+
 // HelmChartDependencyUpdate describes how a specific Helm chart that is used
 // as a subchart of an umbrella chart can be updated.
 message HelmChartDependencyUpdate {
@@ -1302,14 +1314,16 @@ message PromotionPolicy {
   optional bool autoPromotionEnabled = 2;
 }
 
+// PromotionReference contains the relevant information about a Promotion
+// as observed by a Stage.
 message PromotionReference {
-  // Name is the name of the Promotion
+  // Name is the name of the Promotion.
   optional string name = 1;
 
-  // Freight is the freight being promoted
+  // Freight is the freight being promoted.
   optional FreightReference freight = 2;
 
-  // Status is the (optional) status of the promotion
+  // Status is the (optional) status of the Promotion.
   optional PromotionStatus status = 3;
 
   // FinishedAt is the time at which the Promotion was completed.
@@ -1369,16 +1383,29 @@ message PromotionStatus {
   // from the target Stage's current state.
   optional FreightCollection freightCollection = 7;
 
+  // HealthChecks contains the health check directives to be executed after
+  // the Promotion has completed.
+  repeated HealthCheckStep healthChecks = 8;
+
   // FinishedAt is the time when the promotion was completed.
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Time finishedAt = 6;
+
+  // CurrentStep is the index of the current promotion step being executed. This
+  // permits steps that have already run successfully to be skipped on
+  // subsequent reconciliations attempts.
+  optional int64 currentStep = 9;
+
+  // State stores the state of the promotion process between reconciliation
+  // attempts.
+  optional k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON state = 10;
 }
 
 // PromotionStep describes a directive to be executed as part of a Promotion.
 message PromotionStep {
-  // Step is the name of the directive to run.
+  // Uses identifies a runner that can execute this step.
   //
   // +kubebuilder:validation:MinLength=1
-  optional string step = 1;
+  optional string uses = 1;
 
   // As is the alias this step can be referred to as.
   optional string as = 2;
@@ -1451,6 +1478,9 @@ message StageList {
 
 // StageSpec describes the sources of Freight used by a Stage and how to
 // incorporate Freight into the Stage.
+//
+// +kubebuilder:validation:XValidation:rule="(has(self.promotionTemplate) || has(self.promotionMechanisms))",message="one of promotionTemplate or promotionMechanisms must be specified"
+// +kubebuilder:validation:XValidation:rule="(has(self.promotionTemplate) && !has(self.promotionMechanisms)) || (!has(self.promotionTemplate) && has(self.promotionMechanisms))",message="only one of promotionTemplate or promotionMechanisms can be specified"
 message StageSpec {
   // Shard is the name of the shard that this Stage belongs to. This is an
   // optional field. If not specified, the Stage will belong to the default
@@ -1481,6 +1511,8 @@ message StageSpec {
   // utility of this is to allow multiple downstream Stages to subscribe to a
   // single upstream Stage where they may otherwise have subscribed to multiple
   // upstream Stages.
+  //
+  // Deprecated: Use PromotionTemplate instead.
   optional PromotionMechanisms promotionMechanisms = 2;
 
   // Verification describes how to verify a Stage's current Freight is fit for

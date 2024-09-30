@@ -40,14 +40,14 @@
                 "description": "Config is the configuration for the directive.",
                 "x-kubernetes-preserve-unknown-fields": true
               },
-              "step": {
-                "description": "Step is the name of the directive to run.",
+              "uses": {
+                "description": "Uses identifies a runner that can execute this step.",
                 "minLength": 1,
                 "type": "string"
               }
             },
             "required": [
-              "step"
+              "uses"
             ],
             "type": "object"
           },
@@ -63,6 +63,13 @@
     "status": {
       "description": "Status describes the current state of the transition represented by this\nPromotion.",
       "properties": {
+        "currentStep": {
+          "description": "CurrentStep is the index of the current promotion step being executed. This\npermits steps that have already run successfully to be skipped on\nsubsequent reconciliations attempts.",
+          "format": "int64",
+          "maximum": 9223372036854776000,
+          "minimum": -9223372036854776000,
+          "type": "integer"
+        },
         "finishedAt": {
           "description": "FinishedAt is the time when the promotion was completed.",
           "format": "date-time",
@@ -386,6 +393,28 @@
           ],
           "type": "object"
         },
+        "healthChecks": {
+          "description": "HealthChecks contains the health check directives to be executed after\nthe Promotion has completed.",
+          "items": {
+            "description": "HealthCheckStep describes a health check directive which can be executed by\na Stage to verify the health of a Promotion result.",
+            "properties": {
+              "config": {
+                "description": "Config is the configuration for the directive.",
+                "x-kubernetes-preserve-unknown-fields": true
+              },
+              "uses": {
+                "description": "Uses identifies a runner that can execute this step.",
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "uses"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
         "lastHandledRefresh": {
           "description": "LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh\nannotation that was handled by the controller. This field can be used to\ndetermine whether the request to refresh the resource has been handled.",
           "type": "string"
@@ -404,6 +433,10 @@
         "phase": {
           "description": "Phase describes where the Promotion currently is in its lifecycle.",
           "type": "string"
+        },
+        "state": {
+          "description": "State stores the state of the promotion process between reconciliation\nattempts.",
+          "x-kubernetes-preserve-unknown-fields": true
         }
       },
       "type": "object"

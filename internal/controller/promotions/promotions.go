@@ -12,6 +12,7 @@ import (
 
 	"github.com/kelseyhightower/envconfig"
 	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
@@ -27,7 +28,6 @@ import (
 	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/promotion"
 	"github.com/akuity/kargo/internal/controller/runtime"
-	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/directives"
 	"github.com/akuity/kargo/internal/kargo"
 	"github.com/akuity/kargo/internal/kubeclient"
@@ -89,7 +89,8 @@ func SetupReconcilerWithManager(
 	ctx context.Context,
 	kargoMgr manager.Manager,
 	argocdMgr manager.Manager,
-	credentialsDB credentials.Database,
+	directivesEngine directives.Engine,
+	promotionMechanisms promotion.Mechanism,
 	cfg ReconcilerConfig,
 ) error {
 	// Index running Promotions by Argo CD Applications
@@ -107,16 +108,11 @@ func SetupReconcilerWithManager(
 	}
 	shardSelector := labels.NewSelector().Add(*shardRequirement)
 
-	var argocdClient client.Client
-	if argocdMgr != nil {
-		argocdClient = argocdMgr.GetClient()
-	}
-
 	reconciler := newReconciler(
 		kargoMgr.GetClient(),
-		argocdClient,
 		libEvent.NewRecorder(ctx, kargoMgr.GetScheme(), kargoMgr.GetClient(), cfg.Name()),
-		credentialsDB,
+		directivesEngine,
+		promotionMechanisms,
 		cfg,
 	)
 
@@ -179,9 +175,9 @@ func SetupReconcilerWithManager(
 
 func newReconciler(
 	kargoClient client.Client,
-	argocdClient client.Client,
 	recorder record.EventRecorder,
-	credentialsDB credentials.Database,
+	directivesEngine directives.Engine,
+	promoMechanisms promotion.Mechanism,
 	cfg ReconcilerConfig,
 ) *reconciler {
 	pqs := promoQueues{
@@ -189,20 +185,12 @@ func newReconciler(
 		pendingPromoQueuesByStage: map[types.NamespacedName]runtime.PriorityQueue{},
 	}
 	r := &reconciler{
-		kargoClient: kargoClient,
-		directivesEngine: directives.NewSimpleEngine(
-			credentialsDB,
-			kargoClient,
-			argocdClient,
-		),
-		recorder: recorder,
-		cfg:      cfg,
-		pqs:      &pqs,
-		promoMechanisms: promotion.NewMechanisms(
-			kargoClient,
-			argocdClient,
-			credentialsDB,
-		),
+		kargoClient:      kargoClient,
+		directivesEngine: directivesEngine,
+		recorder:         recorder,
+		cfg:              cfg,
+		pqs:              &pqs,
+		promoMechanisms:  promoMechanisms,
 	}
 	r.getStageFn = kargoapi.GetStage
 	r.promoteFn = r.promote
@@ -517,36 +505,53 @@ func (r *reconciler) promote(
 		var steps []directives.PromotionStep
 		for _, step := range workingPromo.Spec.Steps {
 			steps = append(steps, directives.PromotionStep{
-				Kind:   step.Step,
+				Kind:   step.Uses,
 				Alias:  step.As,
 				Config: step.GetConfig(),
 			})
 		}
 
-		workDir := filepath.Join(os.TempDir(), "promotion-"+string(workingPromo.UID))
-		if err := os.MkdirAll(workDir, 0o700); err != nil && !os.IsExist(err) {
+		promoCtx := directives.PromotionContext{
+			WorkDir:         filepath.Join(os.TempDir(), "promotion-"+string(workingPromo.UID)),
+			Project:         stageNamespace,
+			Stage:           stageName,
+			FreightRequests: stage.Spec.RequestedFreight,
+			Freight:         *workingPromo.Status.FreightCollection.DeepCopy(),
+			StartFromStep:   promo.Status.CurrentStep,
+			State:           directives.State(workingPromo.Status.GetState()),
+		}
+		if err := os.Mkdir(promoCtx.WorkDir, 0o700); err == nil {
+			// If we're working with a fresh directory, we should start the promotion
+			// process again from the beginning.
+			promoCtx.StartFromStep = 0
+			promoCtx.State = nil
+		} else if !os.IsExist(err) {
 			return nil, fmt.Errorf("error creating working directory: %w", err)
 		}
 		defer func() {
 			if workingPromo.Status.Phase.IsTerminal() {
-				if err := os.RemoveAll(workDir); err != nil {
+				if err := os.RemoveAll(promoCtx.WorkDir); err != nil {
 					logger.Error(err, "could not remove working directory")
 				}
 			}
 		}()
 
-		res, err := r.directivesEngine.Promote(ctx, directives.PromotionContext{
-			WorkDir:         workDir,
-			Project:         stageNamespace,
-			Stage:           stageName,
-			FreightRequests: stage.Spec.RequestedFreight,
-			Freight:         *workingPromo.Status.FreightCollection.DeepCopy(),
-		}, steps)
+		res, err := r.directivesEngine.Promote(ctx, promoCtx, steps)
+		workingPromo.Status.CurrentStep = res.CurrentStep
+		workingPromo.Status.State = &apiextensionsv1.JSON{Raw: res.State.ToJSON()}
 		switch res.Status {
 		case directives.PromotionStatusPending:
 			workingPromo.Status.Phase = kargoapi.PromotionPhaseRunning
 		case directives.PromotionStatusSuccess:
+			var healthChecks []kargoapi.HealthCheckStep
+			for _, step := range res.HealthCheckSteps {
+				healthChecks = append(healthChecks, kargoapi.HealthCheckStep{
+					Uses:   step.Kind,
+					Config: &apiextensionsv1.JSON{Raw: step.Config.ToJSON()},
+				})
+			}
 			workingPromo.Status.Phase = kargoapi.PromotionPhaseSucceeded
+			workingPromo.Status.HealthChecks = healthChecks
 		case directives.PromotionStatusFailure:
 			workingPromo.Status.Phase = kargoapi.PromotionPhaseFailed
 		}

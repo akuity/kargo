@@ -44,7 +44,7 @@ func (c *compositeMechanism) Promote(
 	stage *kargoapi.Stage,
 	promo *kargoapi.Promotion,
 ) error {
-	if stage.Spec.PromotionMechanisms == nil {
+	if stage.Spec.PromotionMechanisms == nil { // nolint: staticcheck
 		promo.Status.Phase = kargoapi.PromotionPhaseSucceeded
 		return nil
 	}

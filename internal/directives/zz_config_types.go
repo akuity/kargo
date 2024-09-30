@@ -33,10 +33,19 @@ type ArgoCDAppSourceUpdate struct {
 	// the values of the 'repoURL' and 'chart' fields should exactly match the values of the
 	// same fields in the source. i.e. Do not match the values of these two fields to your
 	// Warehouse; match them to the Application source you wish to update.
-	Chart      string                       `json:"chart,omitempty"`
-	FromOrigin *AppFromOrigin               `json:"fromOrigin,omitempty"`
-	Helm       *ArgoCDHelmParameterUpdates  `json:"helm,omitempty"`
-	Kustomize  *ArgoCDKustomizeImageUpdates `json:"kustomize,omitempty"`
+	Chart string `json:"chart,omitempty"`
+	// Applicable only when 'repoURL' references a Git repository, this field references the
+	// 'commit' output from a previous step and uses it as the desired revision for the source.
+	// If this is left undefined, the desired revision will be determined by Freight (if
+	// possible). Note that the source's 'targetRevision' will not be updated to this commit
+	// unless 'updateTargetRevision=true' is set. The utility of this field is to ensure that
+	// health checks on Argo CD ApplicationSources can account for scenarios where the desired
+	// revision differs from what may be found in Freight, likely due to the use of rendered
+	// branches and/or PR-based promotion workflows.
+	DesiredCommitFromStep string                       `json:"desiredCommitFromStep,omitempty"`
+	FromOrigin            *AppFromOrigin               `json:"fromOrigin,omitempty"`
+	Helm                  *ArgoCDHelmParameterUpdates  `json:"helm,omitempty"`
+	Kustomize             *ArgoCDKustomizeImageUpdates `json:"kustomize,omitempty"`
 	// With possible help from the 'chart' field, identifies which of an Argo CD Application's
 	// sources is to be updated. When the source to be updated references a Helm chart
 	// repository, the values of the 'repoURL' and 'chart' fields should exactly match the
@@ -133,10 +142,10 @@ type CheckoutFromOrigin struct {
 type GitCommitConfig struct {
 	// The author of the commit.
 	Author *Author `json:"author,omitempty"`
-	// The commit message. Mutually exclusive with 'messageFrom'.
+	// The commit message. Mutually exclusive with 'messageFromSteps'.
 	Message string `json:"message,omitempty"`
 	// TODO
-	MessageFrom []string `json:"messageFrom,omitempty"`
+	MessageFromSteps []string `json:"messageFromSteps,omitempty"`
 	// The path to a working directory of a local repository.
 	Path string `json:"path"`
 }
@@ -165,7 +174,7 @@ type GitOpenPRConfig struct {
 	SourceBranch string `json:"sourceBranch,omitempty"`
 	// References the 'branch' output from a previous step. This step will use that value as the
 	// source branch.
-	SourceBranchFrom string `json:"sourceBranchFrom,omitempty"`
+	SourceBranchFromStep string `json:"sourceBranchFromStep,omitempty"`
 	// The branch to which the changes should be merged. This branch must already exist and be
 	// up to date on the remote.
 	TargetBranch string `json:"targetBranch"`
@@ -197,8 +206,9 @@ type GitWaitForPRConfig struct {
 	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty"`
 	// The number of the pull request to wait for.
 	PRNumber int64 `json:"prNumber,omitempty"`
-	// References a previous open step by alias and will use the PR number opened by that step.
-	PRNumberFromOpen string `json:"prNumberFromOpen,omitempty"`
+	// This field references the 'prNumber' output from a previous step and uses it as the
+	// number of the pull request to wait for.
+	PRNumberFromStep string `json:"prNumberFromStep,omitempty"`
 	// The name of the Git provider to use. Currently only 'github' and 'gitlab' are supported.
 	// Kargo will try to infer the provider if it is not explicitly specified.
 	Provider *Provider `json:"provider,omitempty"`

@@ -155,10 +155,13 @@ func indexStagesByArgoCDApplications(shardName string) client.IndexerFunc {
 		}
 
 		stage := obj.(*kargoapi.Stage) // nolint: forcetypeassert
+		// nolint: staticcheck
 		if stage.Spec.PromotionMechanisms == nil || len(stage.Spec.PromotionMechanisms.ArgoCDAppUpdates) == 0 {
 			return nil
 		}
+		// nolint: staticcheck
 		apps := make([]string, len(stage.Spec.PromotionMechanisms.ArgoCDAppUpdates))
+		// nolint: staticcheck
 		for i, appCheck := range stage.Spec.PromotionMechanisms.ArgoCDAppUpdates {
 			namespace := appCheck.AppNamespace
 			if namespace == "" {
@@ -280,13 +283,16 @@ func indexRunningPromotionsByArgoCDApplications(
 			return nil
 		}
 
+		// nolint: staticcheck
 		if stage.Spec.PromotionMechanisms == nil || len(stage.Spec.PromotionMechanisms.ArgoCDAppUpdates) == 0 {
 			// If the Stage has no Argo CD Application promotion mechanisms,
 			// then we have nothing to index.
 			return nil
 		}
 
+		// nolint: staticcheck
 		res := make([]string, len(stage.Spec.PromotionMechanisms.ArgoCDAppUpdates))
+		// nolint: staticcheck
 		for i, appUpdate := range stage.Spec.PromotionMechanisms.ArgoCDAppUpdates {
 			namespace := appUpdate.AppNamespace
 			if namespace == "" {

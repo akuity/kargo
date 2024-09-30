@@ -65,8 +65,6 @@ updates:
       prefix: "chore(deps/tools):"
     allow:
       - dependency-type: "direct"
-    deny:
-      - dependency-type: "indirect"
     groups:
       go-patch:
         update-types:

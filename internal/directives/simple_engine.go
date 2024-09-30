@@ -48,24 +48,40 @@ func (e *SimpleEngine) Promote(
 		var err error
 		workDir, err = os.MkdirTemp("", "run-")
 		if err != nil {
-			return PromotionResult{Status: PromotionStatusFailure},
+			return PromotionResult{
+					Status:      PromotionStatusFailure,
+					CurrentStep: 0,
+				},
 				fmt.Errorf("temporary working directory creation failed: %w", err)
 		}
 		defer os.RemoveAll(workDir)
 	}
 
 	// Initialize the shared state that will be passed to each step.
-	state := make(State)
-	healthCheckSteps := []HealthCheckStep{}
-	for _, step := range steps {
+	state := promoCtx.State.DeepCopy()
+	if state == nil {
+		state = make(State)
+	}
+	var healthCheckSteps []HealthCheckStep
+
+	for i := promoCtx.StartFromStep; i < int64(len(steps)); i++ {
+		step := steps[i]
 		select {
 		case <-ctx.Done():
-			return PromotionResult{Status: PromotionStatusFailure}, ctx.Err()
+			return PromotionResult{
+				Status:      PromotionStatusFailure,
+				CurrentStep: i,
+				State:       state,
+			}, ctx.Err()
 		default:
 		}
 		reg, err := e.registry.GetPromotionStepRunnerRegistration(step.Kind)
 		if err != nil {
-			return PromotionResult{Status: PromotionStatusFailure},
+			return PromotionResult{
+					Status:      PromotionStatusFailure,
+					CurrentStep: i,
+					State:       state,
+				},
 				fmt.Errorf("no runner registered for step kind %q: %w", step.Kind, err)
 		}
 
@@ -93,13 +109,24 @@ func (e *SimpleEngine) Promote(
 		}
 
 		result, err := reg.Runner.RunPromotionStep(ctx, stepCtx)
+		if step.Alias != "" {
+			state[step.Alias] = result.Output
+		}
 		if err != nil {
-			return PromotionResult{Status: PromotionStatusFailure},
+			return PromotionResult{
+					Status:      PromotionStatusFailure,
+					CurrentStep: i,
+					State:       state,
+				},
 				fmt.Errorf("failed to run step %q: %w", step.Kind, err)
 		}
 
-		if step.Alias != "" {
-			state[step.Alias] = result.Output
+		if result.Status != PromotionStatusSuccess {
+			return PromotionResult{
+				Status:      result.Status,
+				CurrentStep: i,
+				State:       state,
+			}, nil
 		}
 
 		if result.HealthCheckStep != nil {
@@ -109,6 +136,8 @@ func (e *SimpleEngine) Promote(
 	return PromotionResult{
 		Status:           PromotionStatusSuccess,
 		HealthCheckSteps: healthCheckSteps,
+		CurrentStep:      0,
+		State:            state,
 	}, nil
 }
 

@@ -145,7 +145,7 @@ func TestSimpleEngine_Promote(t *testing.T) {
 }
 
 func TestSimpleEngine_CheckHealth(t *testing.T) {
-	testOutput := State{
+	testOutput := map[string]any{
 		"fake-key": "fake-value",
 	}
 	testOutputBytes, err := json.Marshal(testOutput)
