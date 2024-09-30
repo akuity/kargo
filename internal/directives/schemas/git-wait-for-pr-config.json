@@ -34,11 +34,11 @@
     {
       "required": ["prNumber"],
       "properties": {
-        "prNumberFromOpen": {  "enum": ["", null] }
+        "prNumberFromStep": {  "enum": ["", null] }
       }
     },
     {
-      "required": ["prNumberFromOpen"],
+      "required": ["prNumberFromStep"],
       "properties": {
         "prNumber": {  "enum": [0, null] }
       }
