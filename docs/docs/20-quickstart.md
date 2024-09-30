@@ -49,7 +49,7 @@ remove not just Kargo-related resources, but _all_ your workloads and data.
 :::
 
 ```shell
-curl -L https://raw.githubusercontent.com/akuity/kargo/main/hack/quickstart/install.sh | sh
+curl -L https://raw.githubusercontent.com/akuity/kargo/release-0.8/hack/quickstart/install.sh | sh
 ```
 
 </TabItem>
@@ -68,7 +68,7 @@ remove not just Kargo-related resources, but _all_ your workloads and data.
 :::
 
 ```shell
-curl -L https://raw.githubusercontent.com/akuity/kargo/main/hack/quickstart/install.sh | sh
+curl -L https://raw.githubusercontent.com/akuity/kargo/release-0.8/hack/quickstart/install.sh | sh
 ```
 
 </TabItem>
@@ -80,7 +80,7 @@ just for this quickstart using
 [kind](https://kind.sigs.k8s.io/#installation-and-usage).
 
 ```shell
-curl -L https://raw.githubusercontent.com/akuity/kargo/main/hack/quickstart/kind.sh | sh
+curl -L https://raw.githubusercontent.com/akuity/kargo/release-0.8/hack/quickstart/kind.sh | sh
 ```
 
 :::info
@@ -98,7 +98,7 @@ Docker, Docker Desktop, or OrbStack), you can easily launch a disposable cluster
 just for this quickstart using [k3d](https://k3d.io).
 
 ```shell
-curl -L https://raw.githubusercontent.com/akuity/kargo/main/hack/quickstart/k3d.sh | sh
+curl -L https://raw.githubusercontent.com/akuity/kargo/release-0.8/hack/quickstart/k3d.sh | sh
 ```
 
 :::info
@@ -163,7 +163,7 @@ To download the Kargo CLI:
 ```shell
 arch=$(uname -m)
 [ "$arch" = "x86_64" ] && arch=amd64
-curl -L -o kargo https://github.com/akuity/kargo/releases/latest/download/kargo-"$(uname -s | tr '[:upper:]' '[:lower:]')-${arch}"
+curl -L -o kargo https://github.com/akuity/kargo/releases/download/v0.8.7/kargo-"$(uname -s | tr '[:upper:]' '[:lower:]')-${arch}"
 chmod +x kargo
 ```
 
@@ -176,7 +176,7 @@ value of your `PATH` environment variable.
 To download the Kargo CLI:
 
 ```shell
-Invoke-WebRequest -URI https://github.com/akuity/kargo/releases/latest/download/kargo-windows-amd64.exe -OutFile kargo.exe
+Invoke-WebRequest -URI https://github.com/akuity/kargo/releases/download/v0.8.7/kargo-windows-amd64.exe -OutFile kargo.exe
 ```
 
 Then move `kargo.exe` to a location in your file system that is included in the value
@@ -733,7 +733,7 @@ If, instead, you wish to preserve non-Kargo-related workloads and data, you
 will need to manually uninstall Kargo and its prerequisites:
 
 ```shell
-curl -L https://raw.githubusercontent.com/akuity/kargo/main/hack/quickstart/uninstall.sh | sh
+curl -L https://raw.githubusercontent.com/akuity/kargo/release-0.8/hack/quickstart/uninstall.sh | sh
 ```
 
 </TabItem>
@@ -751,7 +751,7 @@ If, instead, you wish to preserve non-Kargo-related workloads and data, you
 will need to manually uninstall Kargo and its prerequisites:
 
 ```shell
-curl -L https://raw.githubusercontent.com/akuity/kargo/main/hack/quickstart/uninstall.sh | sh
+curl -L https://raw.githubusercontent.com/akuity/kargo/release-0.8/hack/quickstart/uninstall.sh | sh
 ```
 
 </TabItem>
