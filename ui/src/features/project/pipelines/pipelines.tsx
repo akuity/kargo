@@ -396,7 +396,7 @@ export const Pipelines = ({
                     <FontAwesomeIcon icon={faChevronDown} size='xs' className='-mr-2' />
                   </Button>
                 </Dropdown>
-                {hideImages && (
+                {!!hideImages && (
                   <Tooltip title='Show Images'>
                     <Button
                       icon={<FontAwesomeIcon icon={faDocker} />}
