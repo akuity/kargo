@@ -112,12 +112,22 @@ resource as it progresses through the `Stage`s of a pipeline.
 
 This is conveniently accomplished via the Kargo CLI:
 
-```shell
-kargo update freight \
-  f5f87aa23c9e97f43eb83dd63768ee41f5ba3766 \
-  --alias frozen-tauntaun \
-  --project kargo-demo
-```
+1. **Using Name**
+   ```shell
+   kargo update freight \
+     --project=kargo-demo \
+     --name=f5f87aa23c9e97f43eb83dd63768ee41f5ba3766 \
+     --new-alias=frozen-tauntaun
+   ```
+
+1. **Using Old Alias**:
+   If you have the old alias and prefer to use it
+   ```shell
+   kargo update freight \
+     --project=kargo-demo \
+     --old-alias=mortal-dragonfly \
+     --new-alias=frozen-tauntaun
+   ```
 
 This can also be accomplished via `kubectl` commands `apply`, `edit`, `patch`,
 etc. by updating the `alias` field of the `Freight` resource.
