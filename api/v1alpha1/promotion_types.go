@@ -152,7 +152,7 @@ type PromotionStatus struct {
 	State *apiextensionsv1.JSON `json:"state,omitempty" protobuf:"bytes,10,opt,name=state"`
 }
 
-// GetConfig returns the State field as unmarshalled YAML.
+// GetState returns the State field as unmarshalled YAML.
 func (s *PromotionStatus) GetState() map[string]any {
 	if s.State == nil {
 		return nil
