@@ -206,8 +206,9 @@ type GitWaitForPRConfig struct {
 	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty"`
 	// The number of the pull request to wait for.
 	PRNumber int64 `json:"prNumber,omitempty"`
-	// References a previous open step by alias and will use the PR number opened by that step.
-	PRNumberFromOpen string `json:"prNumberFromOpen,omitempty"`
+	// This field references the 'prNumber' output from a previous step and uses it as the
+	// number of the pull request to wait for.
+	PRNumberFromStep string `json:"prNumberFromStep,omitempty"`
 	// The name of the Git provider to use. Currently only 'github' and 'gitlab' are supported.
 	// Kargo will try to infer the provider if it is not explicitly specified.
 	Provider *Provider `json:"provider,omitempty"`

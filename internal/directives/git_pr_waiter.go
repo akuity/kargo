@@ -131,28 +131,28 @@ func (g *gitPRWaiter) runPromotionStep(
 }
 
 func getPRNumber(sharedState State, cfg GitWaitForPRConfig) (int64, error) {
-	if cfg.PRNumberFromOpen == "" {
+	if cfg.PRNumberFromStep == "" {
 		return cfg.PRNumber, nil
 	}
-	stepOutput, exists := sharedState.Get(cfg.PRNumberFromOpen)
+	stepOutput, exists := sharedState.Get(cfg.PRNumberFromStep)
 	if !exists {
 		return 0, fmt.Errorf(
 			"no output found from step with alias %q",
-			cfg.PRNumberFromOpen,
+			cfg.PRNumberFromStep,
 		)
 	}
 	stepOutputMap, ok := stepOutput.(map[string]any)
 	if !ok {
 		return 0, fmt.Errorf(
 			"output from step with alias %q is not a map[string]any",
-			cfg.PRNumberFromOpen,
+			cfg.PRNumberFromStep,
 		)
 	}
 	prNumberAny, exists := stepOutputMap[prNumberKey]
 	if !exists {
 		return 0, fmt.Errorf(
 			"no PR number found in output from step with alias %q",
-			cfg.PRNumberFromOpen,
+			cfg.PRNumberFromStep,
 		)
 	}
 	// If the state was rehydrated from PromotionStatus, which makes use of
@@ -166,7 +166,7 @@ func getPRNumber(sharedState State, cfg GitWaitForPRConfig) (int64, error) {
 	default:
 		return 0, fmt.Errorf(
 			"PR number in output from step with alias %q is not an int64",
-			cfg.PRNumberFromOpen,
+			cfg.PRNumberFromStep,
 		)
 	}
 }
