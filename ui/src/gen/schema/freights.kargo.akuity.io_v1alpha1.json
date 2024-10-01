@@ -151,5 +151,8 @@
       "type": "object"
     }
   },
+  "required": [
+    "origin"
+  ],
   "type": "object"
 }

@@ -60,6 +60,6 @@ func (s *server) ListProjects(
 	}
 	return connect.NewResponse(&svcv1alpha1.ListProjectsResponse{
 		Projects: projects,
-		Total:    int32(total),
+		Total:    int32(total), // nolint: gosec
 	}), nil
 }

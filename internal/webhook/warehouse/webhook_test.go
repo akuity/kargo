@@ -329,7 +329,6 @@ func TestValidateSpec(t *testing.T) {
 	}
 	w := &webhook{}
 	for _, testCase := range testCases {
-		testCase := testCase
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
 				t,

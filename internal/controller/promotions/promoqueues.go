@@ -47,7 +47,6 @@ func (pqs *promoQueues) initializeQueues(ctx context.Context, promos kargoapi.Pr
 	defer pqs.promoQueuesByStageMu.Unlock()
 	logger := logging.LoggerFromContext(ctx)
 	for _, promo := range promos.Items {
-		promo := promo // This is to sidestep implicit memory aliasing in this for loop
 		if promo.Status.Phase.IsTerminal() || len(promo.Spec.Stage) == 0 {
 			continue
 		}

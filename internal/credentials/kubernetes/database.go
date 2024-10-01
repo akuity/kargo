@@ -169,8 +169,6 @@ func (k *database) getCredentialsSecret(
 	// Search for a matching Secret.
 	var matchingSecret *corev1.Secret
 	for _, secret := range secrets.Items {
-		secret := secret
-
 		if secret.Data == nil {
 			continue
 		}
