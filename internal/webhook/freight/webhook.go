@@ -22,7 +22,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/git"
 	"github.com/akuity/kargo/internal/helm"
-	"github.com/akuity/kargo/internal/kubeclient"
+	"github.com/akuity/kargo/internal/indexer"
 	libEvent "github.com/akuity/kargo/internal/kubernetes/event"
 	libWebhook "github.com/akuity/kargo/internal/webhook"
 )
@@ -298,7 +298,7 @@ func (w *webhook) ValidateDelete(
 		&list,
 		client.InNamespace(freight.GetNamespace()),
 		client.MatchingFields{
-			kubeclient.StagesByFreightIndexField: freight.Name,
+			indexer.StagesByFreightIndexField: freight.Name,
 		},
 	); err != nil {
 		return nil, fmt.Errorf("list stages: %w", err)

@@ -9,7 +9,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/kubeclient"
+	"github.com/akuity/kargo/internal/indexer"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
@@ -33,7 +33,7 @@ func (s *server) ListPromotions(
 		client.InNamespace(project),
 	}
 	if stage != "" {
-		opts = append(opts, client.MatchingFields{kubeclient.PromotionsByStageIndexField: stage})
+		opts = append(opts, client.MatchingFields{indexer.PromotionsByStageIndexField: stage})
 	}
 	if err := s.client.List(ctx, &list, opts...); err != nil {
 		return nil, fmt.Errorf("list promotions: %w", err)

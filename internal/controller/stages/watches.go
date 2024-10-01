@@ -18,7 +18,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
 	rollouts "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
-	"github.com/akuity/kargo/internal/kubeclient"
+	"github.com/akuity/kargo/internal/indexer"
 	"github.com/akuity/kargo/internal/logging"
 )
 
@@ -84,7 +84,7 @@ func (v *verifiedFreightEventHandler[T]) Update(
 			&client.ListOptions{
 				Namespace: newFreight.Namespace,
 				FieldSelector: fields.OneTermEqualSelector(
-					kubeclient.StagesByUpstreamStagesIndexField,
+					indexer.StagesByUpstreamStagesIndexField,
 					newlyVerifiedStage,
 				),
 				LabelSelector: v.shardSelector,
@@ -230,7 +230,7 @@ func (c *createdFreightEventHandler[T]) Create(
 		&client.ListOptions{
 			Namespace: freight.Namespace,
 			FieldSelector: fields.OneTermEqualSelector(
-				kubeclient.StagesByWarehouseIndexField,
+				indexer.StagesByWarehouseIndexField,
 				freight.Origin.Name,
 			),
 			LabelSelector: c.shardSelector,
@@ -475,7 +475,7 @@ func (p *phaseChangedAnalysisRunHandler[T]) Update(
 			stages,
 			&client.ListOptions{
 				FieldSelector: fields.OneTermEqualSelector(
-					kubeclient.StagesByAnalysisRunIndexField,
+					indexer.StagesByAnalysisRunIndexField,
 					fmt.Sprintf("%s:%s", analysisRun.Namespace, analysisRun.Name),
 				),
 				LabelSelector: p.shardSelector,
