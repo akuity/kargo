@@ -79,7 +79,7 @@ const Step = ({ step, result }: { step: PromotionStep; result: PromotionDirectiv
           {success && <FontAwesomeIcon icon={faCheck} className='text-green-500' />}
           {failed && <FontAwesomeIcon icon={faTimes} className='text-red-500' />}
         </Flex>
-        <Flex className='font-semibold text-base w-full' align='center'>
+        <Flex className={'font-semibold text-base w-full'} align='center'>
           {meta.spec.identifier}
           <Flex className='ml-auto' align='center'>
             <Flex

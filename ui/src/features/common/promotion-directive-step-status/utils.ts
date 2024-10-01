@@ -5,7 +5,8 @@ import { PromotionStatus } from '@ui/gen/v1alpha1/generated_pb';
 export enum PromotionDirectiveStepStatus {
   RUNNING,
   FAILED,
-  SUCCESS
+  SUCCESS,
+  WONT_RUN // because previous step failed
 }
 
 export const getPromotionDirectiveStepStatus = (
@@ -19,10 +20,18 @@ export const getPromotionDirectiveStepStatus = (
     return PromotionDirectiveStepStatus.RUNNING;
   }
 
-  // TODO: controller should point 'currentStep' to exact failed step
-  // at the moment, it is defaulted to 0
-  if (promotionStatus?.phase !== PromotionStatusPhase.SUCCEEDED) {
+  if (
+    promotionStatus?.phase === PromotionStatusPhase.ERRORED &&
+    stepNumber === Number(promotionStatus?.currentStep)
+  ) {
     return PromotionDirectiveStepStatus.FAILED;
+  }
+
+  if (
+    promotionStatus?.phase === PromotionStatusPhase.ERRORED &&
+    stepNumber > Number(promotionStatus?.currentStep)
+  ) {
+    return PromotionDirectiveStepStatus.WONT_RUN;
   }
 
   return PromotionDirectiveStepStatus.SUCCESS;
