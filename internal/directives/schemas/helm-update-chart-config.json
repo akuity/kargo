@@ -27,7 +27,7 @@
             "description": "The name of the subchart, as defined in `Chart.yaml`."
           },
           "fromOrigin": {
-              "$ref": "./common.json#definitions/origin"
+              "$ref": "./common.json#/definitions/origin"
           }
         },
         "required": ["repository", "name"]

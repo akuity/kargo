@@ -37,7 +37,7 @@
             "description": "Indicates whether the ID of a commit to check out may be obtained from Freight. A value of 'true' is mutually exclusive with 'branch' and 'tag'. If none of these is specified, the default branch is checked out."
           },
           "fromOrigin": {
-            "$ref": "./common.json#definitions/origin"
+            "$ref": "./common.json#/definitions/origin"
           },
           "path": {
             "type": "string",
