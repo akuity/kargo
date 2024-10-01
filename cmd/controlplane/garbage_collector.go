@@ -15,7 +15,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api/kubernetes"
 	"github.com/akuity/kargo/internal/garbage"
-	"github.com/akuity/kargo/internal/kubeclient"
+	"github.com/akuity/kargo/internal/indexer"
 	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/internal/os"
 	versionpkg "github.com/akuity/kargo/internal/version"
@@ -112,15 +112,15 @@ func (o *garbageCollectorOptions) setupManager(ctx context.Context) (manager.Man
 	}
 
 	// Index Promotions by Stage
-	if err = kubeclient.IndexPromotionsByStage(ctx, mgr); err != nil {
+	if err = indexer.IndexPromotionsByStage(ctx, mgr); err != nil {
 		return nil, fmt.Errorf("error indexing Promotions by Stage: %w", err)
 	}
 	// Index Freight by Warehouse
-	if err = kubeclient.IndexFreightByWarehouse(ctx, mgr); err != nil {
+	if err = indexer.IndexFreightByWarehouse(ctx, mgr); err != nil {
 		return nil, fmt.Errorf("error indexing Freight by Warehouse: %w", err)
 	}
 	// Index Stages by Freight
-	if err = kubeclient.IndexStagesByFreight(ctx, mgr); err != nil {
+	if err = indexer.IndexStagesByFreight(ctx, mgr); err != nil {
 		return nil, fmt.Errorf("error indexing Stages by Freight: %w", err)
 	}
 	return mgr, nil

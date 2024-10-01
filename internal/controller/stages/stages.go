@@ -30,6 +30,7 @@ import (
 	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
 	rollouts "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
 	"github.com/akuity/kargo/internal/directives"
+	"github.com/akuity/kargo/internal/indexer"
 	"github.com/akuity/kargo/internal/kargo"
 	"github.com/akuity/kargo/internal/kubeclient"
 	libEvent "github.com/akuity/kargo/internal/kubernetes/event"
@@ -232,42 +233,42 @@ func SetupReconcilerWithManager(
 	cfg ReconcilerConfig,
 ) error {
 	// Index Promotions by Stage
-	if err := kubeclient.IndexPromotionsByStage(ctx, kargoMgr); err != nil {
+	if err := indexer.IndexPromotionsByStage(ctx, kargoMgr); err != nil {
 		return fmt.Errorf("index non-terminal Promotions by Stage: %w", err)
 	}
 
 	// Index Promotions by Stage + Freight
-	if err := kubeclient.IndexPromotionsByStageAndFreight(ctx, kargoMgr); err != nil {
+	if err := indexer.IndexPromotionsByStageAndFreight(ctx, kargoMgr); err != nil {
 		return fmt.Errorf("index Promotions by Stage and Freight: %w", err)
 	}
 
 	// Index Freight by Warehouse
-	if err := kubeclient.IndexFreightByWarehouse(ctx, kargoMgr); err != nil {
+	if err := indexer.IndexFreightByWarehouse(ctx, kargoMgr); err != nil {
 		return fmt.Errorf("index Freight by Warehouse: %w", err)
 	}
 
 	// Index Freight by Stages in which it has been verified
-	if err := kubeclient.IndexFreightByVerifiedStages(ctx, kargoMgr); err != nil {
+	if err := indexer.IndexFreightByVerifiedStages(ctx, kargoMgr); err != nil {
 		return fmt.Errorf("index Freight by Stages in which it has been verified: %w", err)
 	}
 
 	// Index Freight by Stages for which it has been approved
-	if err := kubeclient.IndexFreightByApprovedStages(ctx, kargoMgr); err != nil {
+	if err := indexer.IndexFreightByApprovedStages(ctx, kargoMgr); err != nil {
 		return fmt.Errorf("index Freight by Stages for which it has been approved: %w", err)
 	}
 
 	// Index Stages by upstream Stages
-	if err := kubeclient.IndexStagesByUpstreamStages(ctx, kargoMgr); err != nil {
+	if err := indexer.IndexStagesByUpstreamStages(ctx, kargoMgr); err != nil {
 		return fmt.Errorf("index Stages by upstream Stages: %w", err)
 	}
 
 	// Index Stages by Warehouse
-	if err := kubeclient.IndexStagesByWarehouse(ctx, kargoMgr); err != nil {
+	if err := indexer.IndexStagesByWarehouse(ctx, kargoMgr); err != nil {
 		return fmt.Errorf("index Stages by Warehouse: %w", err)
 	}
 
 	// Index Stages by AnalysisRun
-	if err := kubeclient.IndexStagesByAnalysisRun(ctx, kargoMgr, cfg.ShardName); err != nil {
+	if err := indexer.IndexStagesByAnalysisRun(ctx, kargoMgr, cfg.ShardName); err != nil {
 		return fmt.Errorf("index Stages by Argo Rollouts AnalysisRun: %w", err)
 	}
 
@@ -947,8 +948,8 @@ func (r *reconciler) syncNormalStage(
 			&client.ListOptions{
 				Namespace: stage.Namespace,
 				FieldSelector: fields.OneTermEqualSelector(
-					kubeclient.PromotionsByStageAndFreightIndexField,
-					kubeclient.StageAndFreightKey(stage.Name, latestFreight.Name),
+					indexer.PromotionsByStageAndFreightIndexField,
+					indexer.StageAndFreightKey(stage.Name, latestFreight.Name),
 				),
 				Limit: 1,
 			},
@@ -1147,7 +1148,7 @@ func (r *reconciler) clearVerifications(
 		&client.ListOptions{
 			Namespace: stage.Namespace,
 			FieldSelector: fields.OneTermEqualSelector(
-				kubeclient.FreightByVerifiedStagesIndexField,
+				indexer.FreightByVerifiedStagesIndexField,
 				stage.Name,
 			),
 		},
@@ -1189,7 +1190,7 @@ func (r *reconciler) clearApprovals(
 		&client.ListOptions{
 			Namespace: stage.Namespace,
 			FieldSelector: fields.OneTermEqualSelector(
-				kubeclient.FreightApprovedForStagesIndexField,
+				indexer.FreightApprovedForStagesIndexField,
 				stage.Name,
 			),
 		},
@@ -1365,7 +1366,7 @@ func (r *reconciler) getPromotionsForStage(
 		&client.ListOptions{
 			Namespace: stageNamespace,
 			FieldSelector: fields.OneTermEqualSelector(
-				kubeclient.PromotionsByStageIndexField,
+				indexer.PromotionsByStageIndexField,
 				stageName,
 			),
 		},
@@ -1396,7 +1397,7 @@ func (r *reconciler) getAvailableFreight(
 				&client.ListOptions{
 					Namespace: stage.Namespace,
 					FieldSelector: fields.OneTermEqualSelector(
-						kubeclient.FreightByWarehouseIndexField,
+						indexer.FreightByWarehouseIndexField,
 						req.Origin.Name,
 					),
 				},
@@ -1419,7 +1420,7 @@ func (r *reconciler) getAvailableFreight(
 				&client.ListOptions{
 					Namespace: stage.Namespace,
 					FieldSelector: fields.OneTermEqualSelector(
-						kubeclient.FreightByVerifiedStagesIndexField,
+						indexer.FreightByVerifiedStagesIndexField,
 						upstream,
 					),
 				},
@@ -1443,7 +1444,7 @@ func (r *reconciler) getAvailableFreight(
 			&client.ListOptions{
 				Namespace: stage.Namespace,
 				FieldSelector: fields.OneTermEqualSelector(
-					kubeclient.FreightApprovedForStagesIndexField,
+					indexer.FreightApprovedForStagesIndexField,
 					stage.Name,
 				),
 			},
@@ -1490,7 +1491,7 @@ func (r *reconciler) getAvailableFreightByOrigin(
 				&client.ListOptions{
 					Namespace: stage.Namespace,
 					FieldSelector: fields.OneTermEqualSelector(
-						kubeclient.FreightByWarehouseIndexField,
+						indexer.FreightByWarehouseIndexField,
 						req.Origin.Name,
 					),
 				},
@@ -1522,11 +1523,11 @@ func (r *reconciler) getAvailableFreightByOrigin(
 						// TODO(hidde): once we support more Freight origin
 						// kinds, we need to adjust this.
 						fields.OneTermEqualSelector(
-							kubeclient.FreightByWarehouseIndexField,
+							indexer.FreightByWarehouseIndexField,
 							req.Origin.Name,
 						),
 						fields.OneTermEqualSelector(
-							kubeclient.FreightByVerifiedStagesIndexField,
+							indexer.FreightByVerifiedStagesIndexField,
 							upstream,
 						),
 					),
@@ -1554,11 +1555,11 @@ func (r *reconciler) getAvailableFreightByOrigin(
 						// TODO(hidde): once we support more Freight origin
 						// kinds, we need to adjust this.
 						fields.OneTermEqualSelector(
-							kubeclient.FreightByWarehouseIndexField,
+							indexer.FreightByWarehouseIndexField,
 							req.Origin.Name,
 						),
 						fields.OneTermEqualSelector(
-							kubeclient.FreightApprovedForStagesIndexField,
+							indexer.FreightApprovedForStagesIndexField,
 							stage.Name,
 						),
 					),

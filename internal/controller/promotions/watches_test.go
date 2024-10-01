@@ -21,7 +21,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
-	"github.com/akuity/kargo/internal/kubeclient"
+	"github.com/akuity/kargo/internal/indexer"
 )
 
 func TestUpdatedArgoCDAppHandler_Update(t *testing.T) {
@@ -287,7 +287,7 @@ func TestUpdatedArgoCDAppHandler_Update(t *testing.T) {
 				WithObjects(tt.applications...).
 				WithIndex(
 					&kargoapi.Promotion{},
-					kubeclient.RunningPromotionsByArgoCDApplicationsIndexField,
+					indexer.RunningPromotionsByArgoCDApplicationsIndexField,
 					tt.indexer,
 				).
 				WithInterceptorFuncs(tt.interceptor)
