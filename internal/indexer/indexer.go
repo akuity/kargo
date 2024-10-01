@@ -2,6 +2,7 @@ package indexer
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"slices"
 	"strings"
@@ -14,6 +15,7 @@ import (
 	rbacapi "github.com/akuity/kargo/api/rbac/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	libargocd "github.com/akuity/kargo/internal/argocd"
+	"github.com/akuity/kargo/internal/directives"
 	"github.com/akuity/kargo/internal/logging"
 )
 
@@ -207,6 +209,52 @@ func indexRunningPromotionsByArgoCDApplications(
 			return nil
 		}
 
+		// If the Promotion has directive steps, then we should extract the
+		// Argo CD Applications from those steps.
+		//
+		// TODO(hidde): While this is arguably already better than the "legacy"
+		// approach further down, which had to query the Stage to get the
+		// Applications, it is still not ideal as it requires parsing the
+		// directives and treating some of them as special cases. We should
+		// consider a more general approach in the future.
+		if len(promo.Spec.Steps) > 0 {
+			var res []string
+			for i, step := range promo.Spec.Steps {
+				if step.Uses != "argocd-update" || step.Config == nil {
+					continue
+				}
+
+				config := directives.ArgoCDUpdateConfig{}
+				if err := json.Unmarshal(step.Config.Raw, &config); err != nil {
+					logger.Error(
+						err,
+						fmt.Sprintf(
+							"failed to extract config from Promotion step %d:"+
+								"ignoring any Argo CD Applications from this step",
+							i,
+						),
+						"promo", promo.Name,
+						"namespace", promo.Namespace,
+					)
+					continue
+				}
+
+				for _, app := range config.Apps {
+					namespace := app.Namespace
+					if namespace == "" {
+						namespace = libargocd.Namespace()
+					}
+					res = append(res, fmt.Sprintf("%s:%s", namespace, app.Name))
+				}
+			}
+			return res
+		}
+
+		// If there are no directive steps, then we should query the Stage to get
+		// the Argo CD Applications.
+		//
+		// TODO(hidde): Remove this once we fully transition to directive-based
+		// Promotions.
 		stage := kargoapi.Stage{}
 		if err := c.Get(
 			ctx,
