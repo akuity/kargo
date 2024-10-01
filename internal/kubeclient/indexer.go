@@ -115,64 +115,6 @@ func indexStagesByAnalysisRun(shardName string) client.IndexerFunc {
 	}
 }
 
-// IndexStagesByArgoCDApplications sets up the indexing of Stages by the Argo CD
-// Applications they are associated with.
-//
-// It configures the field indexer of the provided cluster to allow querying
-// Stages by the Argo CD Applications they are associated with using the
-// StagesByArgoCDApplicationsIndexField selector.
-//
-// When the provided shardName is non-empty, only Stages labeled with the
-// provided shardName are indexed. When the provided shardName is empty, only
-// Stages not labeled with a shardName are indexed.
-func IndexStagesByArgoCDApplications(ctx context.Context, clstr cluster.Cluster, shardName string) error {
-	return clstr.GetFieldIndexer().IndexField(
-		ctx,
-		&kargoapi.Stage{},
-		StagesByArgoCDApplicationsIndexField,
-		indexStagesByArgoCDApplications(shardName))
-}
-
-// indexStagesByArgoCDApplications returns a client.IndexerFunc that indexes
-// Stages by the Argo CD Applications they are associated with.
-//
-// When the provided shardName is non-empty, only Stages labeled with the
-// provided shardName are indexed. When the provided shardName is empty, only
-// Stages not labeled with a shardName are indexed.
-func indexStagesByArgoCDApplications(shardName string) client.IndexerFunc {
-	return func(obj client.Object) []string {
-		// Return early if:
-		//
-		// 1. This is the default controller, but the object is labeled for a
-		//    specific shard.
-		//
-		// 2. This is a shard-specific controller, but the object is not labeled for
-		//    this shard.
-		objShardName, labeled := obj.GetLabels()[kargoapi.ShardLabelKey]
-		if (shardName == "" && labeled) ||
-			(shardName != "" && shardName != objShardName) {
-			return nil
-		}
-
-		stage := obj.(*kargoapi.Stage) // nolint: forcetypeassert
-		// nolint: staticcheck
-		if stage.Spec.PromotionMechanisms == nil || len(stage.Spec.PromotionMechanisms.ArgoCDAppUpdates) == 0 {
-			return nil
-		}
-		// nolint: staticcheck
-		apps := make([]string, len(stage.Spec.PromotionMechanisms.ArgoCDAppUpdates))
-		// nolint: staticcheck
-		for i, appCheck := range stage.Spec.PromotionMechanisms.ArgoCDAppUpdates {
-			namespace := appCheck.AppNamespace
-			if namespace == "" {
-				namespace = libargocd.Namespace()
-			}
-			apps[i] = fmt.Sprintf("%s:%s", namespace, appCheck.AppName)
-		}
-		return apps
-	}
-}
-
 // IndexPromotionsByStage sets up the indexing of Promotions by the Stage they
 // reference.
 //
