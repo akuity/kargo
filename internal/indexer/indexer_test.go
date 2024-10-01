@@ -1,4 +1,4 @@
-package kubeclient
+package indexer
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -351,6 +352,64 @@ func TestIndexRunningPromotionsByArgoCDApplications(t *testing.T) {
 			},
 			shardName: testShardName,
 			expected:  nil,
+		},
+		{
+			name: "Promotion has directive steps",
+			obj: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-namespace",
+				},
+				Spec: kargoapi.PromotionSpec{
+					Stage: "fake-stage",
+					Steps: []kargoapi.PromotionStep{
+						{
+							Uses: "argocd-update",
+							Config: &apiextensionsv1.JSON{
+								Raw: []byte(`{"apps":[{"namespace":"fake-namespace","name":"fake-app"}]}`),
+							},
+						},
+						{
+							Uses: "fake-directive",
+						},
+						{
+							Uses: "argocd-update",
+							Config: &apiextensionsv1.JSON{
+								Raw: []byte(`{"apps":[{"name":"fake-app-2"}]}`),
+							},
+						},
+					},
+				},
+				Status: kargoapi.PromotionStatus{
+					Phase: kargoapi.PromotionPhaseRunning,
+				},
+			},
+			expected: []string{
+				"fake-namespace:fake-app",
+				fmt.Sprintf("%s:%s", argocd.Namespace(), "fake-app-2"),
+			},
+		},
+		{
+			name: "Promotion has directive steps without Applications",
+			obj: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-namespace",
+				},
+				Spec: kargoapi.PromotionSpec{
+					Stage: "fake-stage",
+					Steps: []kargoapi.PromotionStep{
+						{
+							Uses: "fake-directive",
+						},
+						{
+							Uses: "fake-directive",
+						},
+					},
+				},
+				Status: kargoapi.PromotionStatus{
+					Phase: kargoapi.PromotionPhaseRunning,
+				},
+			},
+			expected: nil,
 		},
 		{
 			name: "Related Promotion Stage does not have Argo CD Application mechanisms",

@@ -9,7 +9,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/kubeclient"
+	"github.com/akuity/kargo/internal/indexer"
 	"github.com/akuity/kargo/internal/logging"
 )
 
@@ -72,7 +72,7 @@ func (c *collector) cleanWarehouseFreight(
 		&freight,
 		client.InNamespace(project),
 		client.MatchingFields{
-			kubeclient.FreightByWarehouseIndexField: warehouse,
+			indexer.FreightByWarehouseIndexField: warehouse,
 		},
 	); err != nil {
 		return fmt.Errorf(
@@ -101,7 +101,7 @@ func (c *collector) cleanWarehouseFreight(
 			&stages,
 			client.InNamespace(project),
 			client.MatchingFields{
-				kubeclient.StagesByFreightIndexField: f.Name,
+				indexer.StagesByFreightIndexField: f.Name,
 			},
 		); err != nil {
 			logger.Error(
