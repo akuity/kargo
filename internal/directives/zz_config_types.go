@@ -220,6 +220,8 @@ type HelmTemplateConfig struct {
 	// APIVersions allows a manual set of supported API Versions to be passed when rendering the
 	// manifests.
 	APIVersions []string `json:"apiVersions,omitempty"`
+	// Whether to disable hooks in the rendered manifests.
+	DisableHooks bool `json:"disableHooks,omitempty"`
 	// Whether to include CRDs in the rendered manifests.
 	IncludeCRDs bool `json:"includeCRDs,omitempty"`
 	// KubeVersion allows for passing a specific Kubernetes version to use when rendering the
@@ -233,6 +235,8 @@ type HelmTemplateConfig struct {
 	Path string `json:"path"`
 	// ReleaseName to use for the rendered manifests.
 	ReleaseName string `json:"releaseName,omitempty"`
+	// Whether to skip tests when rendering the manifests.
+	SkipTests bool `json:"skipTests,omitempty"`
 	// ValuesFiles to use for rendering the Helm chart.
 	ValuesFiles []string `json:"valuesFiles,omitempty"`
 }
