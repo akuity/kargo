@@ -246,7 +246,7 @@ spec:
       source:
         repoURL: ${GITOPS_REPO_URL}
         targetRevision: stage/{{stage}}
-        path: stages/{{stage}}
+        path: .
       destination:
         server: https://kubernetes.default.svc
         namespace: kargo-demo-{{stage}}
@@ -351,17 +351,49 @@ the previous section.
           name: kargo-demo
         sources:
           direct: true
-      promotionMechanisms:
-        gitRepoUpdates:
-        - repoURL: ${GITOPS_REPO_URL}
-          writeBranch: stage/test
-          kustomize:
-            images:
-            - image: public.ecr.aws/nginx/nginx
-              path: stages/test
-        argoCDAppUpdates:
-        - appName: kargo-demo-test
-          appNamespace: argocd
+      promotionTemplate:
+        spec:
+          steps:
+          - uses: git-clone
+            config:
+              repoURL: ${GITOPS_REPO_URL}
+              checkout:
+              - branch: main
+                path: ./main
+              - branch: stage/test
+                create: true
+                path: ./out
+          - uses: kustomize-set-image
+            as: update-image
+            config:
+              path: ./main/base
+              images:
+              - image: public.ecr.aws/nginx/nginx
+          - uses: kustomize-build
+            config:
+              path: ./main/stages/test
+              outPath: ./manifests.yaml
+          - uses: git-overwrite
+            config:
+              inPath: ./manifests.yaml
+              outPath: ./out
+          - uses: git-commit
+            as: commit
+            config:
+              path: ./out
+              messageFromSteps:
+              - update-image
+          - uses: git-push
+            config:
+              path: ./out
+              targetBranch: stage/test
+          - uses: argocd-update
+            config:
+              apps:
+              - name: kargo-demo-test
+                sources:
+                - repoURL: ${GITOPS_REPO_URL}
+                  desiredCommitFromStep: commit
     ---
     apiVersion: kargo.akuity.io/v1alpha1
     kind: Stage
@@ -376,17 +408,49 @@ the previous section.
         sources:
           stages:
           - test
-      promotionMechanisms:
-        gitRepoUpdates:
-        - repoURL: ${GITOPS_REPO_URL}
-          writeBranch: stage/uat
-          kustomize:
-            images:
-            - image: public.ecr.aws/nginx/nginx
-              path: stages/uat
-        argoCDAppUpdates:
-        - appName: kargo-demo-uat
-          appNamespace: argocd
+      promotionTemplate:
+        spec:
+          steps:
+          - uses: git-clone
+            config:
+              repoURL: ${GITOPS_REPO_URL}
+              checkout:
+              - branch: main
+                path: ./main
+              - branch: stage/uat
+                create: true
+                path: ./out
+          - uses: kustomize-set-image
+            as: update-image
+            config:
+              path: ./main/base
+              images:
+              - image: public.ecr.aws/nginx/nginx
+          - uses: kustomize-build
+            config:
+              path: ./main/stages/test
+              outPath: ./manifests.yaml
+          - uses: git-overwrite
+            config:
+              inPath: ./manifests.yaml
+              outPath: ./out
+          - uses: git-commit
+            as: commit
+            config:
+              path: ./out
+              messageFromSteps:
+              - update-image
+          - uses: git-push
+            config:
+              path: ./out
+              targetBranch: stage/uat
+          - uses: argocd-update
+            config:
+              apps:
+              - name: kargo-demo-uat
+                sources:
+                - repoURL: ${GITOPS_REPO_URL}
+                  desiredCommitFromStep: commit
     ---
     apiVersion: kargo.akuity.io/v1alpha1
     kind: Stage
@@ -401,17 +465,49 @@ the previous section.
         sources:
           stages:
           - uat
-      promotionMechanisms:
-        gitRepoUpdates:
-        - repoURL: ${GITOPS_REPO_URL}
-          writeBranch: stage/prod
-          kustomize:
-            images:
-            - image: public.ecr.aws/nginx/nginx
-              path: stages/prod
-        argoCDAppUpdates:
-        - appName: kargo-demo-prod
-          appNamespace: argocd
+      promotionTemplate:
+        spec:
+          steps:
+          - uses: git-clone
+            config:
+              repoURL: ${GITOPS_REPO_URL}
+              checkout:
+              - branch: main
+                path: ./main
+              - branch: stage/prod
+                create: true
+                path: ./out
+          - uses: kustomize-set-image
+            as: update-image
+            config:
+              path: ./main/base
+              images:
+              - image: public.ecr.aws/nginx/nginx
+          - uses: kustomize-build
+            config:
+              path: ./main/stages/test
+              outPath: ./manifests.yaml
+          - uses: git-overwrite
+            config:
+              inPath: ./manifests.yaml
+              outPath: ./out
+          - uses: git-commit
+            as: commit
+            config:
+              path: ./out
+              messageFromSteps:
+              - update-image
+          - uses: git-push
+            config:
+              path: ./out
+              targetBranch: stage/prod
+          - uses: argocd-update
+            config:
+              apps:
+              - name: kargo-demo-prod
+                sources:
+                - repoURL: ${GITOPS_REPO_URL}
+                  desiredCommitFromStep: commit
     EOF
     ```
     
@@ -442,9 +538,9 @@ the previous section.
 
     ```shell
     NAME   SHARD   CURRENT FREIGHT   HEALTH   PHASE           AGE
-    prod                                      NotApplicable   20s
-    test                                      NotApplicable   20s
-    uat                                       NotApplicable   20s
+    prod           0/1 Fulfilled              NotApplicable   19s
+    test           0/1 Fulfilled              NotApplicable   19s
+    uat            0/1 Fulfilled              NotApplicable   19s
     ```
 
 1. After a few seconds, our `Warehouse`, which subscribes to the
@@ -458,8 +554,8 @@ the previous section.
     Sample output:
 
     ```shell
-    NAME                                       ALIAS               ORIGIN                 AGE
-    7a6e91f2d26aa84faadfdc340437bf84a0cc577a   pining-rottweiler   Warehouse/kargo-demo   49s
+    NAME                                       ALIAS        ORIGIN                 AGE
+    b2ceb4f821be8b682861c579171874028e4275fd   lanky-pika   Warehouse/kargo-demo   42s
     ```
     :::info
     `Freight` is a set of references to one or more versioned artifacts, which
@@ -506,7 +602,7 @@ the previous section.
 
     ```shell
     NAME                                      SHARD   STAGE   FREIGHT                                    PHASE       AGE
-    test.01j2wbtrym4r3tktv38qzteh5h.7a6e91f           test    7a6e91f2d26aa84faadfdc340437bf84a0cc577a   Succeeded   57s
+    test.01j92m3mx7jn49rc5p62tmnsf1.b2ceb4f           test    b2ceb4f821be8b682861c579171874028e4275fd   Succeeded   57s
     ```
 
     Once the `Promotion` has succeeded, we can again view all `Stage` resources
@@ -521,9 +617,9 @@ the previous section.
 
     ```shell
     NAME   SHARD   CURRENT FREIGHT                            HEALTH    PHASE           AGE
-    prod                                                                NotApplicable   3m43s
-    test           7a6e91f2d26aa84faadfdc340437bf84a0cc577a   Healthy   Steady          3m43s
-    uat                                                                 NotApplicable   3m43s
+    prod           0/1 Fulfilled                                        NotApplicable   1m34s
+    test           b2ceb4f821be8b682861c579171874028e4275fd   Healthy   Steady          1m34s
+    uat            0/1 Fulfilled                                        NotApplicable   1m34s
     ```
 
     We can repeat the command above until our `test` `Stage` is in a `Healthy`
@@ -547,17 +643,17 @@ the previous section.
         {
             "freightHistory": [
                 {
-                    "id": "a86e8ac937e6029cbb41b336ececbf490408dacd",
+                    "id": "b69280b76a5f5dc40f9dbb1357f553a22958dda1",
                     "items": {
                         "Warehouse/kargo-demo": {
                             "images": [
                                 {
-                                    "digest": "sha256:c31bd632509dc8023d68f69a17515a6b830222f948d28f8cd4e279f3b6f4d1ed",
+                                    "digest": "sha256:880533409097c86a27961c44bfcd60ca478a693e6baa4d9ee3c09b45865e5ea6",
                                     "repoURL": "public.ecr.aws/nginx/nginx",
-                                    "tag": "1.27.0"
+                                    "tag": "1.27.1"
                                 }
                             ],
-                            "name": "7a6e91f2d26aa84faadfdc340437bf84a0cc577a",
+                            "name": "b2ceb4f821be8b682861c579171874028e4275fd",
                             "origin": {
                                 "kind": "Warehouse",
                                 "name": "kargo-demo"
@@ -566,67 +662,110 @@ the previous section.
                     }
                 }
             ],
+            "freightSummary": "b2ceb4f821be8b682861c579171874028e4275fd",
             "health": {
-                "argoCDApps": [
+                "output": [
                     {
-                        "healthStatus": {
-                            "status": "Healthy"
-                        },
-                        "name": "kargo-demo-test",
-                        "namespace": "argocd",
-                        "syncStatus": {
-                            "revision": "516ab40cb2b3da9b0a6346d37357905ec05336d5",
-                            "status": "Synced"
-                        }
+                        "applicationStatuses": [
+                            {
+                                "Name": "kargo-demo-test",
+                                "Namespace": "argocd",
+                                "health": {
+                                    "status": "Healthy"
+                                },
+                                "operationState": {
+                                    "finishedAt": "2024-09-30T23:26:40Z",
+                                    "message": "successfully synced (all tasks run)",
+                                    "operation": {
+                                        "info": [
+                                            {
+                                                "name": "Reason",
+                                                "value": "Promotion triggered a sync of this Application resource."
+                                            },
+                                            {
+                                                "name": "kargo.akuity.io/freight-collection",
+                                                "value": "b69280b76a5f5dc40f9dbb1357f553a22958dda1"
+                                            }
+                                        ],
+                                        "initiatedBy": {
+                                            "automated": true,
+                                            "username": "kargo-controller"
+                                        },
+                                        "retry": {},
+                                        "sync": {
+                                            "revisions": [
+                                                "stage/test"
+                                            ],
+                                            "syncOptions": [
+                                                "CreateNamespace=true"
+                                            ]
+                                        }
+                                    },
+                                    "phase": "Succeeded",
+                                    "syncResult": {
+                                        "revision": "707412fa2be1aae72767c0acb652684c233a2802",
+                                        "source": {
+                                            "repoURL": "https://github.com/krancour/kargo-demo-gitops-2.git",
+                                            "targetRevision": "stage/test"
+                                        }
+                                    }
+                                },
+                                "sync": {
+                                    "revision": "707412fa2be1aae72767c0acb652684c233a2802",
+                                    "status": "Synced"
+                                }
+                            }
+                        ]
                     }
                 ],
                 "status": "Healthy"
             },
+            "lastHandledRefresh": "2024-09-30T23:31:40Z",
             "lastPromotion": {
-                "finishedAt": "2024-07-15T23:32:23Z",
+                "finishedAt": "2024-09-30T23:31:37Z",
                 "freight": {
                     "images": [
                         {
-                            "digest": "sha256:c31bd632509dc8023d68f69a17515a6b830222f948d28f8cd4e279f3b6f4d1ed",
+                            "digest": "sha256:880533409097c86a27961c44bfcd60ca478a693e6baa4d9ee3c09b45865e5ea6",
                             "repoURL": "public.ecr.aws/nginx/nginx",
-                            "tag": "1.27.0"
+                            "tag": "1.27.1"
                         }
                     ],
-                    "name": "7a6e91f2d26aa84faadfdc340437bf84a0cc577a",
+                    "name": "b2ceb4f821be8b682861c579171874028e4275fd",
                     "origin": {
                         "kind": "Warehouse",
                         "name": "kargo-demo"
                     }
                 },
-                "name": "test.01j2wbtrym4r3tktv38qzteh5h.7a6e91f",
+                "name": "test.01j92m3mx7jn49rc5p62tmnsf1.b2ceb4f",
                 "status": {
-                    "finishedAt": "2024-07-15T23:32:23Z",
+                    "finishedAt": "2024-09-30T23:31:37Z",
                     "freight": {
                         "images": [
                             {
-                                "digest": "sha256:c31bd632509dc8023d68f69a17515a6b830222f948d28f8cd4e279f3b6f4d1ed",
+                                "digest": "sha256:880533409097c86a27961c44bfcd60ca478a693e6baa4d9ee3c09b45865e5ea6",
                                 "repoURL": "public.ecr.aws/nginx/nginx",
-                                "tag": "1.27.0"
+                                "tag": "1.27.1"
                             }
                         ],
-                        "name": "7a6e91f2d26aa84faadfdc340437bf84a0cc577a",
+                        "name": "b2ceb4f821be8b682861c579171874028e4275fd",
                         "origin": {
                             "kind": "Warehouse",
                             "name": "kargo-demo"
                         }
                     },
                     "freightCollection": {
-                        "id": "a86e8ac937e6029cbb41b336ececbf490408dacd",
+                        "id": "b69280b76a5f5dc40f9dbb1357f553a22958dda1",
                         "items": {
                             "Warehouse/kargo-demo": {
                                 "images": [
                                     {
-                                        "digest": "sha256:c31bd632509dc8023d68f69a17515a6b830222f948d28f8cd4e279f3b6f4d1ed",
+                                        "digest": "sha256:880533409097c86a27961c44bfcd60ca478a693e6baa4d9ee3c09b45865e5ea6",
                                         "repoURL": "public.ecr.aws/nginx/nginx",
-                                        "tag": "1.27.0"
+                                        "tag": "1.27.1"
                                     }
                                 ],
-                                "name": "7a6e91f2d26aa84faadfdc340437bf84a0cc577a",
+                                "name": "b2ceb4f821be8b682861c579171874028e4275fd",
                                 "origin": {
                                     "kind": "Warehouse",
                                     "name": "kargo-demo"
@@ -634,7 +773,31 @@ the previous section.
                             }
                         }
                     },
-                    "phase": "Succeeded"
+                    "healthChecks": [
+                        {
+                            "config": {
+                                "apps": [
+                                    {
+                                        "desiredRevisions": [
+                                            "707412fa2be1aae72767c0acb652684c233a2802"
+                                        ],
+                                        "name": "kargo-demo-test",
+                                        "namespace": "argocd"
+                                    }
+                                ]
+                            },
+                            "uses": "argocd-update"
+                        }
+                    ],
+                    "phase": "Succeeded",
+                    "state": {
+                        "commit": {
+                            "commit": "707412fa2be1aae72767c0acb652684c233a2802"
+                        },
+                        "update-image": {
+                            "commitMessage": "Updated ./main/base to use new image\n\n- public.ecr.aws/nginx/nginx:1.27.1"
+                        }
+                    }
                 }
             },
             "observedGeneration": 1,
@@ -677,10 +840,10 @@ So what has Kargo done behind the scenes?
 
 Visiting our fork of https://github.com/akuity/kargo-demo, we will see that
 Kargo has recently created a `stage/test` branch for us. It has taken the latest
-manifests from the `main` branch as a starting point, run `kustomize edit set image`
-within the `stages/test/` directory, and written the modified configuration to a
-stage-specific branch -- the same branch referenced by the `test` Argo CD
-`Applicaton`'s `targetRevision` field.
+manifests from the `main` branch as a starting point, run `kustomize edit set
+image` and `kustomize build` within the `stages/test/` directory, and written
+the resulting manifests to a stage-specific branch -- the same branch referenced
+by the `test` Argo CD `Applicaton`'s `targetRevision` field.
 
 :::info
 Although not strictly required for all cases, using stage-specific branches is a
