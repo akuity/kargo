@@ -36,6 +36,16 @@
       "description": "Whether to include CRDs in the rendered manifests.",
       "default": false
     },
+    "disableHooks": {
+      "type": "boolean",
+      "description": "Whether to disable hooks in the rendered manifests.",
+      "default": false
+    },
+    "skipTests": {
+      "type": "boolean",
+      "description": "Whether to skip tests when rendering the manifests.",
+      "default": false
+    },
     "kubeVersion": {
       "type": "string",
       "description": "KubeVersion allows for passing a specific Kubernetes version to use when rendering the manifests."
