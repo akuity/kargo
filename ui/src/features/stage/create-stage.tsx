@@ -23,10 +23,11 @@ import schema from '@ui/gen/schema/stages.kargo.akuity.io_v1alpha1.json';
 import { createResource } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 import { zodValidators } from '@ui/utils/validators';
 
-import { promoStepsExample } from '../project/pipelines/utils/promotion-steps-example';
 import { getStageYAMLExample } from '../project/pipelines/utils/stage-yaml-example';
 
 import { requestedFreightSchema } from './git-update-editor/schemas';
+import { PromotionStepsWizard } from './promotion-steps-wizard/promotion-steps-wizard';
+import { usePromotionWizardStepsState } from './promotion-steps-wizard/use-promotion-wizard-steps-state';
 import { RequestedFreight } from './requested-freight';
 import { RequestedFreightEditor } from './requested-freight-editor';
 import { ColorMapHex } from './utils';
@@ -39,12 +40,14 @@ const wizardSchema = z.object({
   name: zodValidators.requiredString,
   requestedFreight: z.array(requestedFreightSchema),
   promotionMechanisms: z.string().optional(),
-  color: z.string().optional(),
-  // next step is to wizardify this
-  promotionTemplateSteps: z.string().optional()
+  color: z.string().optional()
 });
 
-const stageFormToYAML = (data: z.infer<typeof wizardSchema>, namespace: string) => {
+const stageFormToYAML = (
+  data: z.infer<typeof wizardSchema>,
+  namespace: string,
+  promotionTemplateSteps: string
+) => {
   return yaml.stringify({
     kind: 'Stage',
     apiVersion: 'kargo.akuity.io/v1alpha1',
@@ -63,8 +66,8 @@ const stageFormToYAML = (data: z.infer<typeof wizardSchema>, namespace: string) 
       ...(data.promotionMechanisms && {
         promotionMechanisms: yaml.parse(data.promotionMechanisms)
       }),
-      ...(data.promotionTemplateSteps && {
-        promotionTemplate: { spec: { steps: yaml.parse(data.promotionTemplateSteps) } }
+      ...(promotionTemplateSteps && {
+        promotionTemplate: { spec: { steps: yaml.parse(promotionTemplateSteps) } }
       })
     }
   });
@@ -112,7 +115,11 @@ export const CreateStage = ({
   const onSubmit = handleSubmit(async (data) => {
     let value = data.value;
     if (tab === 'wizard') {
-      const unmarshalled = stageFormToYAML(watch(), project || '');
+      const unmarshalled = stageFormToYAML(
+        watch(),
+        project || '',
+        promotionWizardStepsState.getYAML()
+      );
       setValue('value', unmarshalled);
       value = unmarshalled;
     }
@@ -128,6 +135,8 @@ export const CreateStage = ({
 
   const requestedFreight = watch('requestedFreight');
   const color = watch('color');
+
+  const promotionWizardStepsState = usePromotionWizardStepsState();
 
   return (
     <Drawer open={!!project} width={'80%'} closable={false} onClose={close}>
@@ -151,7 +160,10 @@ export const CreateStage = ({
       <Tabs
         onChange={(newTab) => {
           if (tab === 'wizard' && newTab === 'yaml') {
-            setValue('value', stageFormToYAML(watch(), project || ''));
+            setValue(
+              'value',
+              stageFormToYAML(watch(), project || '', promotionWizardStepsState.getYAML())
+            );
           }
           setTab(newTab);
         }}
@@ -248,17 +260,12 @@ export const CreateStage = ({
 
           <Typography.Title level={4}>Promotion Steps</Typography.Title>
           <FieldContainer name='promotionTemplateSteps' control={wizardControl}>
-            {({ field: { value, onChange } }) => (
-              <YamlEditor
-                value={value as string}
-                onChange={(e) => onChange(e || '')}
-                height='250px'
-                schema={
-                  (schema as JSONSchema4).properties?.spec.properties?.promotionTemplate?.properties
-                    ?.spec?.properties?.steps
-                }
-                resourceType='stages'
-                placeholder={promoStepsExample}
+            {() => (
+              <PromotionStepsWizard
+                steps={promotionWizardStepsState.state}
+                onChange={(newSteps) => {
+                  promotionWizardStepsState.onChange(newSteps);
+                }}
               />
             )}
           </FieldContainer>

@@ -33,7 +33,8 @@ const Step = ({ step, result }: { step: PromotionStep; result: PromotionDirectiv
   const meta = useMemo(() => {
     const runnerMetadata: Runner = registry.runners.find((r) => r.identifier === step.uses) || {
       identifier: step.uses || 'unknown-step',
-      unstable_icons: []
+      unstable_icons: [],
+      config: {}
     };
 
     let userConfig = '';

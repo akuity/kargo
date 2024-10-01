@@ -17,8 +17,25 @@ import {
   faRedoAlt,
   faSyncAlt,
   faUpDown,
+  faUpload,
   faWrench
 } from '@fortawesome/free-solid-svg-icons';
+import { JSONSchema7 } from 'json-schema';
+
+// IMPORTANT(Marvin9): this must be replaced with proper discovery mechanism
+import argocdUpdateConfig from '@ui/gen/directives/argocd-update-config.json';
+import copyConfig from '@ui/gen/directives/copy-directive-config.json';
+import gitCloneConfig from '@ui/gen/directives/git-clone-config.json';
+import gitCommitConfig from '@ui/gen/directives/git-commit-config.json';
+import gitOpenPR from '@ui/gen/directives/git-open-pr-config.json';
+import gitOverwriteConfig from '@ui/gen/directives/git-overwrite-config.json';
+import gitPushConfig from '@ui/gen/directives/git-push-config.json';
+import gitWaitForPR from '@ui/gen/directives/git-wait-for-pr-config.json';
+import helmTemplateConfig from '@ui/gen/directives/helm-template-config.json';
+import helmUpdateChartConfig from '@ui/gen/directives/helm-update-chart-config.json';
+import helmUpdateImageConfig from '@ui/gen/directives/helm-update-image-config.json';
+import kustomizeBuildConfig from '@ui/gen/directives/kustomize-build-config.json';
+import kustomizeSetImageConfig from '@ui/gen/directives/kustomize-set-image-config.json';
 
 import { PromotionDirectivesRegistry } from './types';
 
@@ -26,60 +43,87 @@ export const useDiscoverPromotionDirectivesRegistries = (): PromotionDirectivesR
   // at this point, we have only built-in runners and available out of the box
   // for that reason, we don't need to delegate discovery logic, this is the source of truth
   // when we actually starts accepting external promotion directives registry, this must be the only place to care about
-  return {
+  const registry: PromotionDirectivesRegistry = {
     runners: [
       {
         identifier: 'argocd-update',
-        unstable_icons: [faUpDown, faHeart]
+        unstable_icons: [faUpDown, faHeart],
+        config: argocdUpdateConfig as JSONSchema7
       },
       {
         identifier: 'copy',
-        unstable_icons: [faCopy]
+        unstable_icons: [faCopy],
+        config: copyConfig as JSONSchema7
       },
       {
         identifier: 'git-clone',
-        unstable_icons: [faCodeBranch, faClone]
-      },
-      {
-        identifier: 'git-commit',
-        unstable_icons: [faCheck, faCodeBranch]
-      },
-      {
-        identifier: 'git-open-pr',
-        unstable_icons: [faCodePullRequest, faFileCode]
-      },
-      {
-        identifier: 'git-wait-for-pr',
-        unstable_icons: [faClock, faCodePullRequest]
+        unstable_icons: [faCodeBranch, faClone],
+        config: gitCloneConfig as JSONSchema7
       },
       {
         identifier: 'git-push',
-        unstable_icons: [faArrowUp, faCloudUploadAlt]
+        unstable_icons: [faArrowUp, faCloudUploadAlt, faUpload],
+        config: gitPushConfig as JSONSchema7
+      },
+      {
+        identifier: 'git-commit',
+        unstable_icons: [faCheck, faCodeBranch],
+        config: gitCommitConfig as unknown as JSONSchema7
+      },
+      {
+        identifier: 'git-open-pr',
+        unstable_icons: [faCodePullRequest, faFileCode],
+        config: gitOpenPR as unknown as JSONSchema7
+      },
+      {
+        identifier: 'git-wait-for-pr',
+        unstable_icons: [faClock, faCodePullRequest],
+        config: gitWaitForPR as unknown as JSONSchema7
+      },
+      {
+        identifier: 'git-push',
+        unstable_icons: [faArrowUp, faCloudUploadAlt],
+        config: gitPushConfig as unknown as JSONSchema7
       },
       {
         identifier: 'git-overwrite',
-        unstable_icons: [faRedoAlt, faCodeBranch]
+        unstable_icons: [faRedoAlt, faCodeBranch],
+        config: gitOverwriteConfig as JSONSchema7
       },
       {
         identifier: 'helm-update-chart',
-        unstable_icons: [faSyncAlt, faChartLine]
+        unstable_icons: [faSyncAlt, faChartLine],
+        config: helmUpdateChartConfig as JSONSchema7
       },
       {
         identifier: 'helm-update-image',
-        unstable_icons: [faSyncAlt, faFileImage]
+        unstable_icons: [faSyncAlt, faFileImage],
+        config: helmUpdateImageConfig as JSONSchema7
       },
       {
         identifier: 'helm-template',
-        unstable_icons: [faFileCode, faDraftingCompass]
+        unstable_icons: [faFileCode, faDraftingCompass],
+        config: helmTemplateConfig as JSONSchema7
       },
       {
         identifier: 'kustomize-build',
-        unstable_icons: [faWrench, faHammer]
+        unstable_icons: [faWrench, faHammer],
+        config: kustomizeBuildConfig as JSONSchema7
       },
       {
         identifier: 'kustomize-set-image',
-        unstable_icons: [faFileImage, faFileEdit]
+        unstable_icons: [faFileImage, faFileEdit],
+        config: kustomizeSetImageConfig as JSONSchema7
       }
     ]
   };
+
+  registry.runners = registry.runners.map((runner) => {
+    delete runner.config.$ref;
+    delete runner.config.$schema;
+    delete runner.config.title;
+    return runner;
+  });
+
+  return registry;
 };

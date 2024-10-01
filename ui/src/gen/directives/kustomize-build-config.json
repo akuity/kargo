@@ -1,0 +1,18 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "title": "KustomizeBuildConfig",
+ "type": "object",
+ "additionalProperties": false,
+ "properties": {
+  "path": {
+   "type": "string",
+   "description": "Path to the directory containing the Kustomization file.",
+   "minLength": 1
+  },
+  "outPath": {
+   "type": "string",
+   "description": "OutPath is the file path to write the built manifests to.",
+   "minLength": 1
+  }
+ }
+}

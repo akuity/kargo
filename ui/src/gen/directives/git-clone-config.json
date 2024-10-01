@@ -1,0 +1,68 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "title": "GitCloneConfig",
+ "type": "object",
+ "additionalProperties": false,
+ "properties": {
+  "insecureSkipTLSVerify": {
+   "type": "boolean",
+   "description": "Indicates whether to skip TLS verification when cloning the repository. Default is false."
+  },
+  "repoURL": {
+   "type": "string",
+   "description": "The URL of a remote Git repository to clone. Required.",
+   "minLength": 1,
+   "format": "uri"
+  },
+  "checkout": {
+   "type": "array",
+   "description": "The commits, branches, or tags to check out from the repository and the paths where they should be checked out. At least one must be specified.",
+   "minItems": 1,
+   "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+     "branch": {
+      "type": "string",
+      "description": "The branch to checkout. Mutually exclusive with 'tag' and 'fromFreight=true'. If none of these is specified, the default branch is checked out."
+     },
+     "create": {
+      "type": "boolean",
+      "description": "Indicates whether a new, empty orphan branch should be created if the branch does not already exist. Default is false."
+     },
+     "fromFreight": {
+      "type": "boolean",
+      "description": "Indicates whether the ID of a commit to check out may be obtained from Freight. A value of 'true' is mutually exclusive with 'branch' and 'tag'. If none of these is specified, the default branch is checked out."
+     },
+     "fromOrigin": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+       "kind": {
+        "type": "string",
+        "description": "The kind of origin. Currently only 'Warehouse' is supported. Required.",
+        "enum": [
+         "Warehouse"
+        ]
+       },
+       "name": {
+        "type": "string",
+        "description": "The name of the origin. Required.",
+        "minLength": 1
+       }
+      }
+     },
+     "path": {
+      "type": "string",
+      "description": "The path where the repository should be checked out.",
+      "minLength": 1
+     },
+     "tag": {
+      "type": "string",
+      "description": "The tag to checkout. Mutually exclusive with 'branch' and 'fromFreight=true'. If none of these is specified, the default branch is checked out."
+     }
+    }
+   }
+  }
+ }
+}
