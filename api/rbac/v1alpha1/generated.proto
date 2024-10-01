@@ -30,23 +30,23 @@ message ResourceDetails {
 
 // +kubebuilder:object:root=true
 message Role {
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
 
   optional bool kargoManaged = 2;
 
   repeated Claim claims = 7;
 
-  repeated k8s.io.api.rbac.v1.PolicyRule rules = 6;
+  repeated .k8s.io.api.rbac.v1.PolicyRule rules = 6;
 }
 
 // +kubebuilder:object:root=true
 message RoleResources {
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
 
-  optional k8s.io.api.core.v1.ServiceAccount serviceAccount = 2;
+  optional .k8s.io.api.core.v1.ServiceAccount serviceAccount = 2;
 
-  repeated k8s.io.api.rbac.v1.Role roles = 3;
+  repeated .k8s.io.api.rbac.v1.Role roles = 3;
 
-  repeated k8s.io.api.rbac.v1.RoleBinding roleBindings = 4;
+  repeated .k8s.io.api.rbac.v1.RoleBinding roleBindings = 4;
 }
 

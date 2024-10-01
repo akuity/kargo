@@ -70,7 +70,6 @@ func TestIndexEventsByInvolvedObjectAPIGroup(t *testing.T) {
 		},
 	}
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			tc.assertions(t, indexEventsByInvolvedObjectAPIGroup(tc.event))
 		})
@@ -230,7 +229,6 @@ func TestIndexStagesByAnalysisRun(t *testing.T) {
 		},
 	}
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			res := indexStagesByAnalysisRun(tc.controllerShardName)(tc.stage)
 			tc.assertions(t, res)
@@ -296,7 +294,6 @@ func TestIndexPromotionsByStage(t *testing.T) {
 		},
 	}
 	for name, tc := range testCases {
-		tc := tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			actual := indexPromotionsByStage(tc.predicates...)(tc.input)

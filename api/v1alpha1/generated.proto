@@ -374,7 +374,7 @@ message DiscoveredArtifacts {
   // DiscoveredAt is the time at which the Warehouse discovered the artifacts.
   //
   // +optional
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time discoveredAt = 4;
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time discoveredAt = 4;
 
   // Git holds the commits discovered by the Warehouse for the Git
   // subscriptions.
@@ -424,7 +424,7 @@ message DiscoveredCommit {
 
   // CreatorDate is the commit creation date as specified by the commit, or
   // the tagger date if the commit belongs to an annotated tag.
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time creatorDate = 7;
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time creatorDate = 7;
 }
 
 // DiscoveredImageReference represents an image reference discovered by a
@@ -450,12 +450,12 @@ message DiscoveredImageReference {
 
   // CreatedAt is the time the image was created. This field is optional, and
   // not populated for every ImageSelectionStrategy.
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time createdAt = 4;
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time createdAt = 4;
 }
 
 // Freight represents a collection of versioned artifacts.
 message Freight {
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
 
   // Alias is a human-friendly alias for a piece of Freight. This is an optional
   // field. A defaulting webhook will sync this field with the value of the
@@ -505,7 +505,7 @@ message FreightCollection {
 
 // FreightList is a list of Freight resources.
 message FreightList {
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
 
   repeated Freight items = 2;
 }
@@ -839,10 +839,10 @@ message Health {
 
   // Config is the opaque configuration of all health checks performed on this
   // Stage.
-  optional k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON config = 4;
+  optional .k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON config = 4;
 
   // Output is the opaque output of all health checks performed on this Stage.
-  optional k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON output = 5;
+  optional .k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON output = 5;
 }
 
 // HealthCheckStep describes a health check directive which can be executed by
@@ -854,7 +854,7 @@ message HealthCheckStep {
   optional string uses = 1;
 
   // Config is the configuration for the directive.
-  optional k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON config = 2;
+  optional .k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON config = 2;
 }
 
 // HelmChartDependencyUpdate describes how a specific Helm chart that is used
@@ -1217,7 +1217,7 @@ message KustomizePromotionMechanism {
 // Project is a resource type that reconciles to a specially labeled namespace
 // and other TODO: TBD project-level resources.
 message Project {
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
 
   // Spec describes a Project.
   optional ProjectSpec spec = 2;
@@ -1228,7 +1228,7 @@ message Project {
 
 // ProjectList is a list of Project resources.
 message ProjectList {
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
 
   repeated Project items = 2;
 }
@@ -1254,7 +1254,7 @@ message ProjectStatus {
 // Promotion represents a request to transition a particular Stage into a
 // particular Freight.
 message Promotion {
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
 
   // Spec describes the desired transition of a specific Stage into a specific
   // Freight.
@@ -1269,7 +1269,7 @@ message Promotion {
 
 // PromotionList contains a list of Promotion
 message PromotionList {
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
 
   repeated Promotion items = 2;
 }
@@ -1327,7 +1327,7 @@ message PromotionReference {
   optional PromotionStatus status = 3;
 
   // FinishedAt is the time at which the Promotion was completed.
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time finishedAt = 4;
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time finishedAt = 4;
 }
 
 // PromotionSpec describes the desired transition of a specific Stage into a
@@ -1388,7 +1388,7 @@ message PromotionStatus {
   repeated HealthCheckStep healthChecks = 8;
 
   // FinishedAt is the time when the promotion was completed.
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time finishedAt = 6;
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time finishedAt = 6;
 
   // CurrentStep is the index of the current promotion step being executed. This
   // permits steps that have already run successfully to be skipped on
@@ -1397,7 +1397,7 @@ message PromotionStatus {
 
   // State stores the state of the promotion process between reconciliation
   // attempts.
-  optional k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON state = 10;
+  optional .k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON state = 10;
 }
 
 // PromotionStep describes a directive to be executed as part of a Promotion.
@@ -1411,7 +1411,7 @@ message PromotionStep {
   optional string as = 2;
 
   // Config is the configuration for the directive.
-  optional k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON config = 3;
+  optional .k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON config = 3;
 }
 
 // PromotionTemplate defines a template for a Promotion that can be used to
@@ -1457,7 +1457,7 @@ message RepoSubscription {
 
 // Stage is the Kargo API's main type.
 message Stage {
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
 
   // Spec describes sources of Freight used by the Stage and how to incorporate
   // Freight into the Stage.
@@ -1471,7 +1471,7 @@ message Stage {
 
 // StageList is a list of Stage resources.
 message StageList {
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
 
   repeated Stage items = 2;
 }
@@ -1595,7 +1595,7 @@ message VerificationInfo {
   optional string actor = 7;
 
   // StartTime is the time at which the Verification process was started.
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time startTime = 5;
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time startTime = 5;
 
   // Phase describes the current phase of the Verification process. Generally,
   // this will be a reflection of the underlying AnalysisRun's phase, however,
@@ -1612,7 +1612,7 @@ message VerificationInfo {
   optional AnalysisRunReference analysisRun = 3;
 
   // FinishTime is the time at which the Verification process finished.
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time finishTime = 6;
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time finishTime = 6;
 }
 
 // VerifiedStage describes a Stage in which Freight has been verified.
@@ -1621,7 +1621,7 @@ message VerifiedStage {
 
 // Warehouse is a source of Freight.
 message Warehouse {
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
 
   // Spec describes sources of artifacts.
   //
@@ -1634,7 +1634,7 @@ message Warehouse {
 
 // WarehouseList is a list of Warehouse resources.
 message WarehouseList {
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
 
   repeated Warehouse items = 2;
 }
@@ -1660,7 +1660,7 @@ message WarehouseSpec {
   // +kubebuilder:validation:Type=string
   // +kubebuilder:validation:Pattern="^([0-9]+(\\.[0-9]+)?(s|m|h))+$"
   // +kubebuilder:default="5m0s"
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration interval = 4;
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Duration interval = 4;
 
   // FreightCreationPolicy describes how Freight is created by this Warehouse.
   // This field is optional. When left unspecified, the field is implicitly
@@ -1685,7 +1685,7 @@ message WarehouseStatus {
   // +patchStrategy=merge
   // +listType=map
   // +listMapKey=type
-  repeated k8s.io.apimachinery.pkg.apis.meta.v1.Condition conditions = 9;
+  repeated .k8s.io.apimachinery.pkg.apis.meta.v1.Condition conditions = 9;
 
   // LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh
   // annotation that was handled by the controller. This field can be used to

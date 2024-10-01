@@ -8,7 +8,7 @@ import (
 
 const defaultStackLength = 32
 
-func takeStacktrace(n, skip uint) string {
+func takeStacktrace(n, skip uint32) string {
 	var builder strings.Builder
 	pcs := make([]uintptr, n)
 

@@ -14,7 +14,7 @@ import (
 	"github.com/akuity/kargo/internal/os"
 )
 
-type Level int
+type Level uint32
 
 const (
 	ErrorLevel = Level(logrus.ErrorLevel)
