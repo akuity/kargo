@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"fmt"
+	"math"
 
 	"connectrpc.com/connect"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -36,6 +37,11 @@ func (s *server) ListImages(
 		stages[idx] = &list.Items[idx]
 
 		for i, freightGroup := range stage.Status.FreightHistory {
+			if i > math.MaxInt32 {
+				return nil, fmt.Errorf("index %d exceeds maximum value for int32", i)
+			}
+			safeI := int32(math.Min(float64(i), math.MaxInt32))
+
 			for _, freight := range freightGroup.Freight {
 				for _, image := range freight.Images {
 					repo, ok := images[image.RepoURL]
@@ -59,7 +65,7 @@ func (s *server) ListImages(
 					}
 
 					if _, ok := stagemap.Stages[stage.Name]; !ok {
-						stagemap.Stages[stage.Name] = int32(i)
+						stagemap.Stages[stage.Name] = safeI
 					}
 				}
 			}

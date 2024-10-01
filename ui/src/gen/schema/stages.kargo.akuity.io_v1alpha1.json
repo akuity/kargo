@@ -17,7 +17,7 @@
       "description": "Spec describes sources of Freight used by the Stage and how to incorporate\nFreight into the Stage.",
       "properties": {
         "promotionMechanisms": {
-          "description": "PromotionMechanisms describes how to incorporate Freight into the Stage.\nThis is an optional field as it is sometimes useful to aggregates available\nFreight from multiple upstream Stages without performing any actions. The\nutility of this is to allow multiple downstream Stages to subscribe to a\nsingle upstream Stage where they may otherwise have subscribed to multiple\nupstream Stages.\n\n\nDeprecated: Use PromotionTemplate instead.",
+          "description": "PromotionMechanisms describes how to incorporate Freight into the Stage.\nThis is an optional field as it is sometimes useful to aggregates available\nFreight from multiple upstream Stages without performing any actions. The\nutility of this is to allow multiple downstream Stages to subscribe to a\nsingle upstream Stage where they may otherwise have subscribed to multiple\nupstream Stages.\n\nDeprecated: Use PromotionTemplate instead.",
           "properties": {
             "argoCDAppUpdates": {
               "description": "ArgoCDAppUpdates describes updates that should be applied to Argo CD\nApplication resources to incorporate Freight into the Stage. This field is\noptional, as such actions are not required in all cases. Note that all\nupdates specified by the GitRepoUpdates field, if any, are applied BEFORE\nthese.",
@@ -105,7 +105,7 @@
                                     "type": "object"
                                   },
                                   "value": {
-                                    "description": "Value specifies the new value for the specified key in the Argo CD\nApplication's Helm parameters. Valid values are:\n\n\n- ImageAndTag: Replaces the value of the specified key with\n  <image name>:<tag>\n- Tag: Replaces the value of the specified key with just the new tag\n- ImageAndDigest: Replaces the value of the specified key with\n  <image name>@<digest>\n- Digest: Replaces the value of the specified key with just the new digest.\n\n\nThis is a required field.",
+                                    "description": "Value specifies the new value for the specified key in the Argo CD\nApplication's Helm parameters. Valid values are:\n\n- ImageAndTag: Replaces the value of the specified key with\n  <image name>:<tag>\n- Tag: Replaces the value of the specified key with just the new tag\n- ImageAndDigest: Replaces the value of the specified key with\n  <image name>@<digest>\n- Digest: Replaces the value of the specified key with just the new digest.\n\nThis is a required field.",
                                     "enum": [
                                       "ImageAndTag",
                                       "Tag",
@@ -371,7 +371,7 @@
                               "type": "object"
                             },
                             "value": {
-                              "description": "Value specifies the new value for the specified key in the specified Helm\nvalues file. Valid values are:\n\n\n- ImageAndTag: Replaces the value of the specified key with\n  <image name>:<tag>\n- Tag: Replaces the value of the specified key with just the new tag\n- ImageAndDigest: Replaces the value of the specified key with\n  <image name>@<digest>\n- Digest: Replaces the value of the specified key with just the new digest.\n\n\nThis is a required field.",
+                              "description": "Value specifies the new value for the specified key in the specified Helm\nvalues file. Valid values are:\n\n- ImageAndTag: Replaces the value of the specified key with\n  <image name>:<tag>\n- Tag: Replaces the value of the specified key with just the new tag\n- ImageAndDigest: Replaces the value of the specified key with\n  <image name>@<digest>\n- Digest: Replaces the value of the specified key with just the new digest.\n\nThis is a required field.",
                               "enum": [
                                 "ImageAndTag",
                                 "Tag",
@@ -819,7 +819,8 @@
                   }
                 },
                 "required": [
-                  "name"
+                  "name",
+                  "value"
                 ],
                 "type": "object"
               },

@@ -23,9 +23,7 @@ GOLANGCI_LINT_VERSION	?= $(shell grep github.com/golangci/golangci-lint $(TOOLS_
 HELM_VERSION            ?= $(shell grep helm.sh/helm/v3 $(TOOLS_MOD_FILE) | awk '{print $$2}')
 GOIMPORTS_VERSION       ?= $(shell grep golang.org/x/tools $(TOOLS_MOD_FILE) | awk '{print $$2}')
 CODE_GENERATOR_VERSION	?= $(shell grep k8s.io/code-generator $(TOOLS_MOD_FILE) | awk '{print $$2}')
-# TODO: Temporarily unlinked from the go.mod version, as it's downgraded
-# due to the code-generator version.
-CONTROLLER_GEN_VERSION	?= v0.15.0
+CONTROLLER_GEN_VERSION	?= $(shell grep k8s.io/controller-tools $(TOOLS_MOD_FILE) | awk '{print $$2}')
 PROTOC_VERSION			?= v25.3
 BUF_VERSION				?= $(shell grep github.com/bufbuild/buf $(TOOLS_MOD_FILE) | awk '{print $$2}')
 

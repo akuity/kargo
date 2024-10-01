@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.15.0
+    controller-gen.kubebuilder.io/version: v0.16.3
   name: freights.kargo.akuity.io
 spec:
   group: kargo.akuity.io
@@ -201,6 +201,8 @@ spec:
                   through promotion and subsequent health checks.
                 type: object
             type: object
+        required:
+        - origin
         type: object
     served: true
     storage: true
