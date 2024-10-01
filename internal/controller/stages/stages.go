@@ -247,31 +247,23 @@ func SetupReconcilerWithManager(
 	}
 
 	// Index Freight by Stages in which it has been verified
-	if err :=
-		kubeclient.IndexFreightByVerifiedStages(ctx, kargoMgr); err != nil {
+	if err := kubeclient.IndexFreightByVerifiedStages(ctx, kargoMgr); err != nil {
 		return fmt.Errorf("index Freight by Stages in which it has been verified: %w", err)
 	}
 
 	// Index Freight by Stages for which it has been approved
-	if err :=
-		kubeclient.IndexFreightByApprovedStages(ctx, kargoMgr); err != nil {
+	if err := kubeclient.IndexFreightByApprovedStages(ctx, kargoMgr); err != nil {
 		return fmt.Errorf("index Freight by Stages for which it has been approved: %w", err)
 	}
 
 	// Index Stages by upstream Stages
-	if err :=
-		kubeclient.IndexStagesByUpstreamStages(ctx, kargoMgr); err != nil {
+	if err := kubeclient.IndexStagesByUpstreamStages(ctx, kargoMgr); err != nil {
 		return fmt.Errorf("index Stages by upstream Stages: %w", err)
 	}
 
 	// Index Stages by Warehouse
 	if err := kubeclient.IndexStagesByWarehouse(ctx, kargoMgr); err != nil {
 		return fmt.Errorf("index Stages by Warehouse: %w", err)
-	}
-
-	// Index Stages by Argo CD Applications
-	if err := kubeclient.IndexStagesByArgoCDApplications(ctx, kargoMgr, cfg.ShardName); err != nil {
-		return fmt.Errorf("index Stages by Argo CD Applications: %w", err)
 	}
 
 	// Index Stages by AnalysisRun
