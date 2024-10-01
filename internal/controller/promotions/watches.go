@@ -14,7 +14,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
-	"github.com/akuity/kargo/internal/kubeclient"
+	"github.com/akuity/kargo/internal/indexer"
 	"github.com/akuity/kargo/internal/logging"
 )
 
@@ -208,7 +208,7 @@ func (u *UpdatedArgoCDAppHandler[T]) Update(
 		promotions,
 		&client.ListOptions{
 			FieldSelector: fields.OneTermEqualSelector(
-				kubeclient.RunningPromotionsByArgoCDApplicationsIndexField,
+				indexer.RunningPromotionsByArgoCDApplicationsIndexField,
 				fmt.Sprintf("%s:%s", newApp.Namespace, newApp.Name),
 			),
 			LabelSelector: u.shardSelector,

@@ -28,7 +28,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api/user"
 	rollouts "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
-	"github.com/akuity/kargo/internal/kubeclient"
+	"github.com/akuity/kargo/internal/indexer"
 	"github.com/akuity/kargo/internal/logging"
 )
 
@@ -233,22 +233,22 @@ func newDefaultInternalClient(
 	}
 
 	// Add all indices required by the API server
-	if err = kubeclient.IndexPromotionsByStage(ctx, cluster); err != nil {
+	if err = indexer.IndexPromotionsByStage(ctx, cluster); err != nil {
 		return nil, fmt.Errorf("error indexing Promotions by Stage: %w", err)
 	}
-	if err = kubeclient.IndexFreightByWarehouse(ctx, cluster); err != nil {
+	if err = indexer.IndexFreightByWarehouse(ctx, cluster); err != nil {
 		return nil, fmt.Errorf("error indexing Freight by Warehouse: %w", err)
 	}
-	if err = kubeclient.IndexFreightByVerifiedStages(ctx, cluster); err != nil {
+	if err = indexer.IndexFreightByVerifiedStages(ctx, cluster); err != nil {
 		return nil, fmt.Errorf("error indexing Freight by Stages in which it has been verified: %w", err)
 	}
-	if err = kubeclient.IndexFreightByApprovedStages(ctx, cluster); err != nil {
+	if err = indexer.IndexFreightByApprovedStages(ctx, cluster); err != nil {
 		return nil, fmt.Errorf("error indexing Freight by Stages for which it has been approved: %w", err)
 	}
-	if err = kubeclient.IndexServiceAccountsByOIDCClaims(ctx, cluster); err != nil {
+	if err = indexer.IndexServiceAccountsByOIDCClaims(ctx, cluster); err != nil {
 		return nil, fmt.Errorf("index ServiceAccounts by OIDC claims: %w", err)
 	}
-	if err = kubeclient.IndexEventsByInvolvedObjectAPIGroup(ctx, cluster); err != nil {
+	if err = indexer.IndexEventsByInvolvedObjectAPIGroup(ctx, cluster); err != nil {
 		return nil, fmt.Errorf("error indexing Events by InvolvedObject's API group: %w", err)
 	}
 

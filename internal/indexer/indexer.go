@@ -1,4 +1,4 @@
-package kubeclient
+package indexer
 
 import (
 	"context"
