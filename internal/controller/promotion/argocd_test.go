@@ -1198,7 +1198,7 @@ func TestArgoCDSyncApplication(t *testing.T) {
 					Name:      "fake-name",
 					Namespace: "fake-namespace",
 					Annotations: map[string]string{
-						authorizedStageAnnotationKey: "fake-namespace:fake-name",
+						kargoapi.AnnotationKeyAuthorizedStage: "fake-namespace:fake-name",
 					},
 				},
 			},
@@ -1224,7 +1224,7 @@ func TestArgoCDSyncApplication(t *testing.T) {
 					Name:      "fake-name",
 					Namespace: "fake-namespace",
 					Annotations: map[string]string{
-						authorizedStageAnnotationKey: "fake-namespace:fake-name",
+						kargoapi.AnnotationKeyAuthorizedStage: "fake-namespace:fake-name",
 					},
 				},
 			},
@@ -1402,7 +1402,7 @@ func TestArgoCDGetAuthorizedApplication(t *testing.T) {
 					Name:      "fake-name",
 					Namespace: "fake-namespace",
 					Annotations: map[string]string{
-						authorizedStageAnnotationKey: "fake-namespace:fake-stage",
+						kargoapi.AnnotationKeyAuthorizedStage: "fake-namespace:fake-stage",
 					},
 				},
 			},
@@ -1423,7 +1423,7 @@ func TestArgoCDGetAuthorizedApplication(t *testing.T) {
 					Name:      "fake-name",
 					Namespace: libargocd.Namespace(),
 					Annotations: map[string]string{
-						authorizedStageAnnotationKey: "*:fake-stage",
+						kargoapi.AnnotationKeyAuthorizedStage: "fake-namespace:fake-stage",
 					},
 				},
 			},
@@ -1460,9 +1460,12 @@ func TestArgoCDGetAuthorizedApplication(t *testing.T) {
 }
 
 func TestAuthorizeArgoCDAppUpdate(t *testing.T) {
-	permErr := "does not permit mutation"
-	parseErr := "unable to parse"
-	invalidGlobErr := "invalid glob expression"
+	const (
+		permErr           = "does not permit mutation"
+		parseErr          = "unable to parse"
+		deprecatedGlobErr = "deprecated glob expression"
+	)
+
 	testCases := []struct {
 		name    string
 		appMeta metav1.ObjectMeta
@@ -1484,7 +1487,7 @@ func TestAuthorizeArgoCDAppUpdate(t *testing.T) {
 			name: "annotation cannot be parsed",
 			appMeta: metav1.ObjectMeta{
 				Annotations: map[string]string{
-					authorizedStageAnnotationKey: "bogus",
+					kargoapi.AnnotationKeyAuthorizedStage: "bogus",
 				},
 			},
 			errMsg: parseErr,
@@ -1493,7 +1496,7 @@ func TestAuthorizeArgoCDAppUpdate(t *testing.T) {
 			name: "mutation is not allowed",
 			appMeta: metav1.ObjectMeta{
 				Annotations: map[string]string{
-					authorizedStageAnnotationKey: "ns-nope:name-nope",
+					kargoapi.AnnotationKeyAuthorizedStage: "ns-nope:name-nope",
 				},
 			},
 			errMsg: permErr,
@@ -1502,7 +1505,7 @@ func TestAuthorizeArgoCDAppUpdate(t *testing.T) {
 			name: "mutation is allowed",
 			appMeta: metav1.ObjectMeta{
 				Annotations: map[string]string{
-					authorizedStageAnnotationKey: "ns-yep:name-yep",
+					kargoapi.AnnotationKeyAuthorizedStage: "ns-yep:name-yep",
 				},
 			},
 		},
@@ -1510,52 +1513,19 @@ func TestAuthorizeArgoCDAppUpdate(t *testing.T) {
 			name: "wildcard namespace with full name",
 			appMeta: metav1.ObjectMeta{
 				Annotations: map[string]string{
-					authorizedStageAnnotationKey: "*:name-yep",
+					kargoapi.AnnotationKeyAuthorizedStage: "*:name-yep",
 				},
 			},
+			errMsg: deprecatedGlobErr,
 		},
 		{
 			name: "full namespace with wildcard name",
 			appMeta: metav1.ObjectMeta{
 				Annotations: map[string]string{
-					authorizedStageAnnotationKey: "ns-yep:*",
+					kargoapi.AnnotationKeyAuthorizedStage: "ns-yep:*",
 				},
 			},
-		},
-		{
-			name: "partial wildcards in namespace and name",
-			appMeta: metav1.ObjectMeta{
-				Annotations: map[string]string{
-					authorizedStageAnnotationKey: "*-ye*:*-y*",
-				},
-			},
-		},
-		{
-			name: "wildcards do not match",
-			appMeta: metav1.ObjectMeta{
-				Annotations: map[string]string{
-					authorizedStageAnnotationKey: "*-nope:*-nope",
-				},
-			},
-			errMsg: permErr,
-		},
-		{
-			name: "invalid namespace glob",
-			appMeta: metav1.ObjectMeta{
-				Annotations: map[string]string{
-					authorizedStageAnnotationKey: "*[:*",
-				},
-			},
-			errMsg: invalidGlobErr,
-		},
-		{
-			name: "invalid name glob",
-			appMeta: metav1.ObjectMeta{
-				Annotations: map[string]string{
-					authorizedStageAnnotationKey: "*:*[",
-				},
-			},
-			errMsg: invalidGlobErr,
+			errMsg: deprecatedGlobErr,
 		},
 	}
 	for _, testCase := range testCases {

@@ -3,6 +3,7 @@ package stages
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/fields"
@@ -329,26 +330,40 @@ func (u *updatedArgoCDAppHandler[T]) Update(
 ) {
 	if appHealthOrSyncStatusChanged(ctx, e) {
 		newApp := any(e.ObjectNew).(*argocd.Application) // nolint: forcetypeassert
-		logger := logging.LoggerFromContext(ctx)
-		stages := &kargoapi.StageList{}
-		if err := u.kargoClient.List(
-			ctx,
-			stages,
-			&client.ListOptions{
-				FieldSelector: fields.OneTermEqualSelector(
-					kubeclient.StagesByArgoCDApplicationsIndexField,
-					fmt.Sprintf("%s:%s", newApp.Namespace, newApp.Name),
-				),
-				LabelSelector: u.shardSelector,
-			},
-		); err != nil {
-			logger.Error(
-				err, "error listing Stages for Application",
-				"app", newApp.Name,
-				"namespace", newApp.Namespace,
-			)
+
+		stageRef, ok := newApp.Annotations[kargoapi.AnnotationKeyAuthorizedStage]
+		if !ok {
+			return
 		}
-		for _, stage := range stages.Items {
+		parts := strings.SplitN(stageRef, ":", 2)
+		if len(parts) != 2 {
+			return
+		}
+		projectName, stageName := parts[0], parts[1]
+
+		logger := logging.LoggerFromContext(ctx)
+		stage := &kargoapi.Stage{}
+		if err := u.kargoClient.Get(
+			ctx,
+			types.NamespacedName{
+				Namespace: projectName,
+				Name:      stageName,
+			},
+			stage,
+		); err != nil {
+			if client.IgnoreNotFound(err) != nil {
+				logger.Error(
+					err,
+					"error getting Stage for Application",
+					"namespace", projectName,
+					"stage", stageName,
+					"app", newApp.Name,
+				)
+			}
+			return
+		}
+
+		if u.shardSelector.Empty() || u.shardSelector.Matches(labels.Set(stage.Labels)) {
 			wq.Add(
 				reconcile.Request{
 					NamespacedName: types.NamespacedName{

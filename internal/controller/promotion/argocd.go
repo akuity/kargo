@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gobwas/glob"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -23,8 +22,6 @@ import (
 )
 
 const (
-	authorizedStageAnnotationKey = "kargo.akuity.io/authorized-stage"
-
 	applicationOperationInitiator = "kargo-controller"
 	freightCollectionInfoKey      = "kargo.akuity.io/freight-collection"
 )
@@ -561,44 +558,34 @@ func authorizeArgoCDAppUpdate(
 		stageMeta.Name,
 		stageMeta.Namespace,
 	)
-	if appMeta.Annotations == nil {
-		return permErr
-	}
-	allowedStage, ok := appMeta.Annotations[authorizedStageAnnotationKey]
+
+	allowedStage, ok := appMeta.Annotations[kargoapi.AnnotationKeyAuthorizedStage]
 	if !ok {
 		return permErr
 	}
+
 	tokens := strings.SplitN(allowedStage, ":", 2)
 	if len(tokens) != 2 {
 		return fmt.Errorf(
-			"unable to parse value of annotation %q (%q) on Argo CD Application "+
-				"%q in namespace %q",
-			authorizedStageAnnotationKey,
+			"unable to parse value of annotation %q (%q) on Argo CD Application %q in namespace %q",
+			kargoapi.AnnotationKeyAuthorizedStage,
 			allowedStage,
 			appMeta.Name,
 			appMeta.Namespace,
 		)
 	}
-	allowedNamespaceGlob, err := glob.Compile(tokens[0])
-	if err != nil {
+
+	projectName, stageName := tokens[0], tokens[1]
+	if strings.Contains(projectName, "*") || strings.Contains(stageName, "*") {
 		return fmt.Errorf(
-			"Argo CD Application %q in namespace %q has invalid glob expression: %q",
+			"Argo CD Application %q in namespace %q has deprecated glob expression in annotation %q (%q)",
 			appMeta.Name,
 			appMeta.Namespace,
-			tokens[0],
+			kargoapi.AnnotationKeyAuthorizedStage,
+			allowedStage,
 		)
 	}
-	allowedNameGlob, err := glob.Compile(tokens[1])
-	if err != nil {
-		return fmt.Errorf(
-			"Argo CD Application %q in namespace %q has invalid glob expression: %q",
-			appMeta.Name,
-			appMeta.Namespace,
-			tokens[1],
-		)
-	}
-	if !allowedNamespaceGlob.Match(stageMeta.Namespace) ||
-		!allowedNameGlob.Match(stageMeta.Name) {
+	if projectName != stageMeta.Namespace || stageName != stageMeta.Name {
 		return permErr
 	}
 	return nil
