@@ -540,6 +540,7 @@ func (r *reconciler) promote(
 
 		res, err := r.directivesEngine.Promote(ctx, promoCtx, steps)
 		workingPromo.Status.Phase = res.Status
+		workingPromo.Status.Message = res.Message
 		workingPromo.Status.CurrentStep = res.CurrentStep
 		workingPromo.Status.State = &apiextensionsv1.JSON{Raw: res.State.ToJSON()}
 		if res.Status == kargoapi.PromotionPhaseSucceeded {

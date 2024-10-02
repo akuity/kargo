@@ -76,9 +76,9 @@ type PromotionResult struct {
 	// Status is the high-level outcome of the user-defined promotion executed by
 	// the Engine.
 	Status kargoapi.PromotionPhase
-	// Issues aggregates issues encountered during execution of individual
-	// PromotionSteps by their corresponding PromotionStepRunners.
-	Issues []string
+	// Message is an optional message that provides additional context about the
+	// outcome of the user-defined promotion executed by the Engine.
+	Message string
 	// HealthCheckSteps collects health check configuration returned from the
 	// execution of individual PromotionSteps by their corresponding
 	// PromotionStepRunners. This configuration can later be used as input to
@@ -163,6 +163,9 @@ type PromotionStepResult struct {
 	// Status is the high-level outcome a PromotionStep executed by a
 	// PromotionStepRunner.
 	Status kargoapi.PromotionPhase
+	// Message is an optional message that provides additional context about the
+	// outcome of a PromotionStep executed by a PromotionStepRunner.
+	Message string
 	// Output is the opaque output of a PromotionStep executed by a
 	// PromotionStepRunner. The Engine will update shared state with this output,
 	// making it available to subsequent steps.
