@@ -136,7 +136,7 @@ func (e *SimpleEngine) Promote(
 	return PromotionResult{
 		Status:           PromotionStatusSuccess,
 		HealthCheckSteps: healthCheckSteps,
-		CurrentStep:      int64(len(steps)-1),
+		CurrentStep:      int64(len(steps)) - 1,
 		State:            state,
 	}, nil
 }
