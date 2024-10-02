@@ -542,7 +542,7 @@ func (r *reconciler) promote(
 		workingPromo.Status.CurrentStep = res.CurrentStep
 		workingPromo.Status.State = &apiextensionsv1.JSON{Raw: res.State.ToJSON()}
 		switch res.Status {
-		case directives.PromotionStatusPending:
+		case directives.PromotionStatusRunning:
 			workingPromo.Status.Phase = kargoapi.PromotionPhaseRunning
 		case directives.PromotionStatusSuccess:
 			var healthChecks []kargoapi.HealthCheckStep

@@ -505,7 +505,7 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 				Apps: []ArgoCDAppUpdate{{}},
 			},
 			assertions: func(t *testing.T, res PromotionStepResult, err error) {
-				require.Equal(t, PromotionStatusPending, res.Status)
+				require.Equal(t, PromotionStatusRunning, res.Status)
 				require.NoError(t, err)
 			},
 		},
@@ -547,7 +547,7 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 				Apps: []ArgoCDAppUpdate{{}},
 			},
 			assertions: func(t *testing.T, res PromotionStepResult, err error) {
-				require.Equal(t, PromotionStatusPending, res.Status)
+				require.Equal(t, PromotionStatusRunning, res.Status)
 				require.NoError(t, err)
 			},
 		},
@@ -589,7 +589,7 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 				Apps: []ArgoCDAppUpdate{{}},
 			},
 			assertions: func(t *testing.T, res PromotionStepResult, err error) {
-				require.Equal(t, PromotionStatusPending, res.Status)
+				require.Equal(t, PromotionStatusRunning, res.Status)
 				require.NoError(t, err)
 			},
 		},

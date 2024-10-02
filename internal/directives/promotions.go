@@ -106,12 +106,11 @@ const (
 	// process executed by the Engine or a single PromotionStep executed by a
 	// PromotionStepRunner which has failed.
 	PromotionStatusFailed PromotionStatus = "Failed"
-	// PromotionStatusPending is the result of either a user-defined promotion
+	// PromotionStatusRunning is the result of either a user-defined promotion
 	// process executed by the Engine or a single PromotionStep executed by a
-	// PromotionStepRunner which was unable to complete because it is waiting on
-	// some external state (such as waiting for an open PR to be merged or
-	// closed).
-	PromotionStatusPending PromotionStatus = "Pending"
+	// PromotionStepRunner which remains in-progress because it is waiting on some
+	// external state (such as waiting for an open PR to be merged or closed).
+	PromotionStatusRunning PromotionStatus = "Running"
 	// PromotionStatusSuccess is the result of either a user-defined promotion
 	// process executed by the Engine or a single PromotionStep executed by a
 	// PromotionStepRunner which has succeeded.

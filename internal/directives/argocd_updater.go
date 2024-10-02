@@ -892,7 +892,7 @@ func (a *argocdUpdater) operationPhaseToPromotionStatus(
 
 	switch phases[0] {
 	case argocd.OperationRunning, argocd.OperationTerminating:
-		return PromotionStatusPending
+		return PromotionStatusRunning
 	case argocd.OperationFailed, argocd.OperationError:
 		return PromotionStatusErrored
 	case argocd.OperationSucceeded:

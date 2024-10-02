@@ -109,7 +109,7 @@ func (g *gitPRWaiter) runPromotionStep(
 			fmt.Errorf("error getting pull request %d: %w", prNumber, err)
 	}
 	if pr.IsOpen() {
-		return PromotionStepResult{Status: PromotionStatusPending}, nil
+		return PromotionStepResult{Status: PromotionStatusRunning}, nil
 	}
 
 	merged, err := gitProviderSvc.IsPullRequestMerged(ctx, prNumber)
