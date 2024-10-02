@@ -1,11 +1,14 @@
 package directives
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"reflect"
+	"strings"
 
 	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/xeipuuv/gojsonschema"
@@ -14,6 +17,7 @@ import (
 	"helm.sh/helm/v3/pkg/chart/loader"
 	"helm.sh/helm/v3/pkg/chartutil"
 	"helm.sh/helm/v3/pkg/cli/values"
+	"helm.sh/helm/v3/pkg/release"
 )
 
 func init() {
@@ -24,6 +28,14 @@ func init() {
 			AllowCredentialsDB: true,
 		},
 	)
+}
+
+// OutPathIsFile returns true if the output path contains a YAML extension.
+// Otherwise, the output path is considered to target a directory where the
+// rendered manifest will be written to.
+func (c HelmTemplateConfig) OutPathIsFile() bool {
+	ext := filepath.Ext(c.OutPath)
+	return ext == ".yaml" || ext == ".yml"
 }
 
 // helmTemplateRunner is an implementation of the PromotionStepRunner interface
@@ -92,7 +104,13 @@ func (h *helmTemplateRunner) runPromotionStep(
 			fmt.Errorf("missing chart dependencies: %w", err)
 	}
 
-	install, err := h.newInstallAction(cfg, stepCtx.Project)
+	absOutPath, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.OutPath)
+	if err != nil {
+		return PromotionStepResult{Status: PromotionStatusFailure},
+			fmt.Errorf("failed to join path %q: %w", cfg.OutPath, err)
+	}
+
+	install, err := h.newInstallAction(cfg, stepCtx.Project, absOutPath)
 	if err != nil {
 		return PromotionStepResult{Status: PromotionStatusFailure},
 			fmt.Errorf("failed to initialize Helm action config: %w", err)
@@ -104,7 +122,7 @@ func (h *helmTemplateRunner) runPromotionStep(
 			fmt.Errorf("failed to render chart: %w", err)
 	}
 
-	if err = h.writeOutput(stepCtx.WorkDir, cfg.OutPath, rls.Manifest); err != nil {
+	if err = h.writeOutput(cfg, rls, absOutPath); err != nil {
 		return PromotionStepResult{Status: PromotionStatusFailure},
 			fmt.Errorf("failed to write rendered chart: %w", err)
 	}
@@ -128,7 +146,10 @@ func (h *helmTemplateRunner) composeValues(workDir string, valuesFiles []string)
 // newInstallAction creates a new Helm install action with the given
 // configuration. It sets the action to dry-run mode and client-only mode,
 // meaning that it will not install the chart, but only render the manifest.
-func (h *helmTemplateRunner) newInstallAction(cfg HelmTemplateConfig, project string) (*action.Install, error) {
+func (h *helmTemplateRunner) newInstallAction(
+	cfg HelmTemplateConfig,
+	project, absOutPath string,
+) (*action.Install, error) {
 	client := action.NewInstall(&action.Configuration{})
 
 	client.DryRun = true
@@ -136,9 +157,17 @@ func (h *helmTemplateRunner) newInstallAction(cfg HelmTemplateConfig, project st
 	client.Replace = true
 	client.ClientOnly = true
 	client.ReleaseName = defaultValue(cfg.ReleaseName, "release-name")
+	client.UseReleaseName = cfg.UseReleaseName
 	client.Namespace = defaultValue(cfg.Namespace, project)
 	client.IncludeCRDs = cfg.IncludeCRDs
 	client.APIVersions = cfg.APIVersions
+	client.DisableHooks = cfg.DisableHooks
+
+	// If the output path does not have a YAML extension, it is considered a
+	// directory where the manifest will be written to.
+	if !cfg.OutPathIsFile() {
+		client.OutputDir = absOutPath
+	}
 
 	if cfg.KubeVersion != "" {
 		kubeVersion, err := chartutil.ParseKubeVersion(cfg.KubeVersion)
@@ -152,10 +181,10 @@ func (h *helmTemplateRunner) newInstallAction(cfg HelmTemplateConfig, project st
 }
 
 // loadChart loads the chart from the given path.
-func (h *helmTemplateRunner) loadChart(workDir, path string) (*chart.Chart, error) {
-	absChartPath, err := securejoin.SecureJoin(workDir, path)
+func (h *helmTemplateRunner) loadChart(workDir, relPath string) (*chart.Chart, error) {
+	absChartPath, err := securejoin.SecureJoin(workDir, relPath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to join path %q: %w", path, err)
+		return nil, fmt.Errorf("failed to join relPath %q: %w", relPath, err)
 	}
 	return loader.Load(absChartPath)
 }
@@ -170,17 +199,54 @@ func (h *helmTemplateRunner) checkDependencies(chartRequested *chart.Chart) erro
 	return nil
 }
 
-// writeOutput writes the rendered manifest to the output path. It creates the
-// directory if it does not exist.
-func (h *helmTemplateRunner) writeOutput(workDir, outPath, manifest string) error {
-	absOutPath, err := securejoin.SecureJoin(workDir, outPath)
-	if err != nil {
-		return fmt.Errorf("failed to join path %q: %w", outPath, err)
+// writeOutput writes the rendered manifest to the output path.
+func (h *helmTemplateRunner) writeOutput(cfg HelmTemplateConfig, rls *release.Release, outPath string) error {
+	var (
+		manifests     bytes.Buffer
+		outPathIsFile = cfg.OutPathIsFile()
+	)
+
+	if outPathIsFile {
+		_, _ = fmt.Fprintln(&manifests, strings.TrimSpace(rls.Manifest))
 	}
-	if err = os.MkdirAll(filepath.Dir(absOutPath), 0o700); err != nil {
-		return fmt.Errorf("failed to create directory %q: %w", outPath, err)
+
+	if !cfg.DisableHooks {
+		for _, h := range rls.Hooks {
+			if cfg.SkipTests && isTestHook(h) {
+				continue
+			}
+
+			if outPathIsFile {
+				_, _ = fmt.Fprintf(&manifests, "---\n# Source: %s\n%s\n", h.Path, h.Manifest)
+				continue
+			}
+
+			exists := true
+			outDir := outPath
+			if cfg.UseReleaseName {
+				outDir = filepath.Join(outDir, cfg.ReleaseName)
+			}
+			if _, err := os.Stat(filepath.Join(outDir, h.Path)); err != nil {
+				if !os.IsNotExist(err) {
+					return fmt.Errorf("failed to check if file %q exists: %w", h.Path, err)
+				}
+				exists = false
+			}
+
+			if err := writeToHelmFile(outPath, h.Path, h.Manifest, exists); err != nil {
+				return fmt.Errorf("failed to write hook %q: %w", h.Path, err)
+			}
+		}
 	}
-	return os.WriteFile(absOutPath, []byte(manifest), 0o600)
+
+	if !outPathIsFile {
+		return nil
+	}
+
+	if err := os.MkdirAll(filepath.Dir(outPath), 0o700); err != nil {
+		return fmt.Errorf("failed to create directory %q: %w", cfg.OutPath, err)
+	}
+	return os.WriteFile(outPath, manifests.Bytes(), 0o600)
 }
 
 // defaultValue returns the value if it is not zero or empty, otherwise it
@@ -190,4 +256,64 @@ func defaultValue[T any](value, defaultValue T) T {
 		return defaultValue
 	}
 	return value
+}
+
+// isTestHook returns true if the hook is a test hook.
+func isTestHook(h *release.Hook) bool {
+	for _, e := range h.Events {
+		if e == release.HookTest {
+			return true
+		}
+	}
+	return false
+}
+
+// The logic below is directly derived from the Helm source code:
+// https://github.com/helm/helm/blob/b2286c4caabdfdcf2baaecb42819db9d38c04597/cmd/helm/template.go#L222
+// Licensed under the Apache License 2.0.
+
+// writeToHelmFile writes the given data to the output directory with the given
+// name. If the append flag is set to true, the data is appended to the file.
+func writeToHelmFile(outputDir string, name string, data string, append bool) (err error) {
+	outfileName := strings.Join([]string{outputDir, name}, string(filepath.Separator))
+
+	if err = ensureDirectoryForHelmFile(outfileName); err != nil {
+		return err
+	}
+
+	f, err := createOrOpenHelmFile(outfileName, append)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if closeErr := f.Close(); closeErr != nil && err == nil {
+			err = closeErr
+		}
+	}()
+
+	if _, err = f.WriteString(fmt.Sprintf("---\n# Source: %s\n%s\n", name, data)); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// createOrOpenHelmFile creates or opens the file with the given name. If the
+// append flag is set to true, the file is opened in append mode.
+func createOrOpenHelmFile(filename string, append bool) (*os.File, error) {
+	if append {
+		return os.OpenFile(filename, os.O_APPEND|os.O_WRONLY, 0o600)
+	}
+	return os.Create(filename)
+}
+
+// ensureDirectoryForHelmFile ensures that the directory for the given file
+// exists. If the directory does not exist, it is created with the default
+// permissions.
+func ensureDirectoryForHelmFile(file string) error {
+	baseDir := path.Dir(file)
+	if _, err := os.Stat(baseDir); err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	return os.MkdirAll(baseDir, 0o755)
 }
