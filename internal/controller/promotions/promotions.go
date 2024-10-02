@@ -356,12 +356,13 @@ func (r *reconciler) Reconcile(
 			stage,
 			freight,
 		)
+		if otherStatus != nil {
+			newStatus = otherStatus
+		}
 		if promoteErr != nil {
 			newStatus.Phase = kargoapi.PromotionPhaseErrored
 			newStatus.Message = promoteErr.Error()
 			logger.Error(promoteErr, "error executing Promotion")
-		} else {
-			newStatus = otherStatus
 		}
 	}()
 
