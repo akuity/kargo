@@ -12,12 +12,17 @@
     },
     "outPath": {
       "type": "string",
-      "description": "OutPath to write the rendered manifests to.",
+      "description": "OutPath to write the rendered manifests to. If it points to a .yaml or .yml file, the rendered manifests will be written to that file. If it points to a directory, the rendered manifests will be written to this directory joined with the chart name.",
       "minLength": 1
     },
     "releaseName": {
       "type": "string",
       "description": "ReleaseName to use for the rendered manifests."
+    },
+    "useReleaseName": {
+      "type": "boolean",
+      "description": "Whether to use the release name in the output path (instead of the chart name). This only has an effect if outPath is set to a directory.",
+      "default": false
     },
     "namespace": {
       "type": "string",
