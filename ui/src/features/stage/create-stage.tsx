@@ -23,7 +23,7 @@ import schema from '@ui/gen/schema/stages.kargo.akuity.io_v1alpha1.json';
 import { createResource } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 import { zodValidators } from '@ui/utils/validators';
 
-import { promoMechanismExample } from '../project/pipelines/utils/promo-mechanism-example';
+import { promoStepsExample } from '../project/pipelines/utils/promotion-steps-example';
 import { getStageYAMLExample } from '../project/pipelines/utils/stage-yaml-example';
 
 import { requestedFreightSchema } from './git-update-editor/schemas';
@@ -39,7 +39,9 @@ const wizardSchema = z.object({
   name: zodValidators.requiredString,
   requestedFreight: z.array(requestedFreightSchema),
   promotionMechanisms: z.string().optional(),
-  color: z.string().optional()
+  color: z.string().optional(),
+  // next step is to wizardify this
+  promotionTemplateSteps: z.string().optional()
 });
 
 const stageFormToYAML = (data: z.infer<typeof wizardSchema>, namespace: string) => {
@@ -58,7 +60,12 @@ const stageFormToYAML = (data: z.infer<typeof wizardSchema>, namespace: string) 
     },
     spec: {
       requestedFreight: data.requestedFreight,
-      ...(data.promotionMechanisms && { promotionMechanisms: yaml.parse(data.promotionMechanisms) })
+      ...(data.promotionMechanisms && {
+        promotionMechanisms: yaml.parse(data.promotionMechanisms)
+      }),
+      ...(data.promotionTemplateSteps && {
+        promotionTemplate: { spec: { steps: yaml.parse(data.promotionTemplateSteps) } }
+      })
     }
   });
 };
@@ -96,7 +103,8 @@ export const CreateStage = ({
       name: '',
       requestedFreight: [],
       promotionMechanisms: '',
-      color: undefined
+      color: undefined,
+      promotionTemplateSteps: ''
     },
     resolver: zodResolver(wizardSchema)
   });
@@ -238,16 +246,19 @@ export const CreateStage = ({
             )}
           />
 
-          <Typography.Title level={4}>Promotion Mechanisms</Typography.Title>
-          <FieldContainer name='promotionMechanisms' control={wizardControl}>
+          <Typography.Title level={4}>Promotion Steps</Typography.Title>
+          <FieldContainer name='promotionTemplateSteps' control={wizardControl}>
             {({ field: { value, onChange } }) => (
               <YamlEditor
                 value={value as string}
                 onChange={(e) => onChange(e || '')}
                 height='250px'
-                schema={(schema as JSONSchema4).properties?.spec.properties?.promotionMechanisms}
+                schema={
+                  (schema as JSONSchema4).properties?.spec.properties?.promotionTemplate?.properties
+                    ?.spec?.properties?.steps
+                }
                 resourceType='stages'
-                placeholder={promoMechanismExample}
+                placeholder={promoStepsExample}
               />
             )}
           </FieldContainer>
