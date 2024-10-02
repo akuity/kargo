@@ -12,6 +12,8 @@ import (
 	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/chartutil"
 	"helm.sh/helm/v3/pkg/release"
+
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
 func Test_helmTemplateRunner_runPromotionStep(t *testing.T) {
@@ -47,7 +49,7 @@ data:
 			},
 			assertions: func(t *testing.T, workDir string, result PromotionStepResult, err error) {
 				require.NoError(t, err)
-				assert.Equal(t, PromotionStepResult{Status: PromotionStatusSucceeded}, result)
+				assert.Equal(t, PromotionStepResult{Status: kargoapi.PromotionPhaseSucceeded}, result)
 
 				outPath := filepath.Join(workDir, "output.yaml")
 				require.FileExists(t, outPath)
@@ -93,7 +95,7 @@ data:
 			},
 			assertions: func(t *testing.T, workDir string, result PromotionStepResult, err error) {
 				require.NoError(t, err)
-				assert.Equal(t, PromotionStepResult{Status: PromotionStatusSucceeded}, result)
+				assert.Equal(t, PromotionStepResult{Status: kargoapi.PromotionPhaseSucceeded}, result)
 
 				outPath := filepath.Join(workDir, "output.yaml")
 				require.FileExists(t, outPath)
@@ -138,7 +140,7 @@ data:
 			},
 			assertions: func(t *testing.T, workDir string, result PromotionStepResult, err error) {
 				require.NoError(t, err)
-				assert.Equal(t, PromotionStepResult{Status: PromotionStatusSucceeded}, result)
+				assert.Equal(t, PromotionStepResult{Status: kargoapi.PromotionPhaseSucceeded}, result)
 
 				outPath := filepath.Join(workDir, "output", "test-chart")
 				require.DirExists(t, outPath)
@@ -164,7 +166,7 @@ data:
 			},
 			assertions: func(t *testing.T, workDir string, result PromotionStepResult, err error) {
 				require.ErrorContains(t, err, "failed to compose values")
-				assert.Equal(t, PromotionStepResult{Status: PromotionStatusErrored}, result)
+				assert.Equal(t, PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, result)
 
 				require.NoFileExists(t, filepath.Join(workDir, "output.yaml"))
 			},
@@ -176,7 +178,7 @@ data:
 			},
 			assertions: func(t *testing.T, workDir string, result PromotionStepResult, err error) {
 				require.ErrorContains(t, err, "failed to load chart")
-				assert.Equal(t, PromotionStepResult{Status: PromotionStatusErrored}, result)
+				assert.Equal(t, PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, result)
 
 				require.NoFileExists(t, filepath.Join(workDir, "output.yaml"))
 			},
@@ -199,7 +201,7 @@ dependencies:
 			},
 			assertions: func(t *testing.T, workDir string, result PromotionStepResult, err error) {
 				require.ErrorContains(t, err, "missing chart dependencies")
-				assert.Equal(t, PromotionStepResult{Status: PromotionStatusErrored}, result)
+				assert.Equal(t, PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, result)
 
 				require.NoFileExists(t, filepath.Join(workDir, "output.yaml"))
 			},
@@ -217,7 +219,7 @@ version: 0.1.0`,
 			},
 			assertions: func(t *testing.T, workDir string, result PromotionStepResult, err error) {
 				require.ErrorContains(t, err, "failed to initialize Helm action config")
-				assert.Equal(t, PromotionStepResult{Status: PromotionStatusErrored}, result)
+				assert.Equal(t, PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, result)
 
 				require.NoFileExists(t, filepath.Join(workDir, "output.yaml"))
 			},
@@ -243,7 +245,7 @@ data:
 			},
 			assertions: func(t *testing.T, workDir string, result PromotionStepResult, err error) {
 				require.ErrorContains(t, err, "failed to render chart")
-				assert.Equal(t, PromotionStepResult{Status: PromotionStatusErrored}, result)
+				assert.Equal(t, PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, result)
 
 				require.NoFileExists(t, filepath.Join(workDir, "output.yaml"))
 			},
@@ -268,7 +270,7 @@ metadata:
 			},
 			assertions: func(t *testing.T, workDir string, result PromotionStepResult, err error) {
 				require.ErrorContains(t, err, "failed to write rendered chart")
-				assert.Equal(t, PromotionStepResult{Status: PromotionStatusErrored}, result)
+				assert.Equal(t, PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, result)
 
 				require.NoFileExists(t, filepath.Join(workDir, "output.yaml"))
 			},

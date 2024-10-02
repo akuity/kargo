@@ -75,7 +75,7 @@ type PromotionStep struct {
 type PromotionResult struct {
 	// Status is the high-level outcome of the user-defined promotion executed by
 	// the Engine.
-	Status PromotionStatus
+	Status kargoapi.PromotionPhase
 	// Issues aggregates issues encountered during execution of individual
 	// PromotionSteps by their corresponding PromotionStepRunners.
 	Issues []string
@@ -91,31 +91,6 @@ type PromotionResult struct {
 	// State is the current state of the promotion process.
 	State State
 }
-
-// PromotionStatus is a type that represents the high-level outcome of the
-// Engine's execution of a user-defined promotion process or the outcome of a
-// PromotionStepRunner's execution of a single PromotionStep.
-type PromotionStatus string
-
-const (
-	// PromotionStatusErrored is the result of either a user-defined promotion
-	// process executed by the Engine or a single PromotionStep executed by a
-	// PromotionStepRunner which has failed for technical reasons.
-	PromotionStatusErrored PromotionStatus = "Errored"
-	// PromotionStatusFailed is the result of either a user-defined promotion
-	// process executed by the Engine or a single PromotionStep executed by a
-	// PromotionStepRunner which has failed.
-	PromotionStatusFailed PromotionStatus = "Failed"
-	// PromotionStatusRunning is the result of either a user-defined promotion
-	// process executed by the Engine or a single PromotionStep executed by a
-	// PromotionStepRunner which remains in-progress because it is waiting on some
-	// external state (such as waiting for an open PR to be merged or closed).
-	PromotionStatusRunning PromotionStatus = "Running"
-	// PromotionStatusSucceeded is the result of either a user-defined promotion
-	// process executed by the Engine or a single PromotionStep executed by a
-	// PromotionStepRunner which has succeeded.
-	PromotionStatusSucceeded PromotionStatus = "Succeeded"
-)
 
 // PromotionStepContext is a type that represents the context in which a
 // SinglePromotion step is executed by a PromotionStepRunner.
@@ -187,7 +162,7 @@ type PromotionStepContext struct {
 type PromotionStepResult struct {
 	// Status is the high-level outcome a PromotionStep executed by a
 	// PromotionStepRunner.
-	Status PromotionStatus
+	Status kargoapi.PromotionPhase
 	// Output is the opaque output of a PromotionStep executed by a
 	// PromotionStepRunner. The Engine will update shared state with this output,
 	// making it available to subsequent steps.

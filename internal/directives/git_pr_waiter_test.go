@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/utils/ptr"
 
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/gitprovider"
 )
@@ -115,7 +116,7 @@ func Test_gitPRWaiter_runPromotionStep(t *testing.T) {
 			assertions: func(t *testing.T, res PromotionStepResult, err error) {
 				require.ErrorContains(t, err, "error getting pull request")
 				require.ErrorContains(t, err, "something went wrong")
-				require.Equal(t, PromotionStatusErrored, res.Status)
+				require.Equal(t, kargoapi.PromotionPhaseErrored, res.Status)
 			},
 		},
 		{
@@ -132,7 +133,7 @@ func Test_gitPRWaiter_runPromotionStep(t *testing.T) {
 			},
 			assertions: func(t *testing.T, res PromotionStepResult, err error) {
 				require.NoError(t, err)
-				require.Equal(t, PromotionStatusRunning, res.Status)
+				require.Equal(t, kargoapi.PromotionPhaseRunning, res.Status)
 			},
 		},
 		{
@@ -154,7 +155,7 @@ func Test_gitPRWaiter_runPromotionStep(t *testing.T) {
 				require.ErrorContains(t, err, "error checking if pull request")
 				require.ErrorContains(t, err, "was merged")
 				require.ErrorContains(t, err, "something went wrong")
-				require.Equal(t, PromotionStatusErrored, res.Status)
+				require.Equal(t, kargoapi.PromotionPhaseErrored, res.Status)
 			},
 		},
 		{
@@ -174,7 +175,7 @@ func Test_gitPRWaiter_runPromotionStep(t *testing.T) {
 			},
 			assertions: func(t *testing.T, res PromotionStepResult, err error) {
 				require.ErrorContains(t, err, "was closed without being merged")
-				require.Equal(t, PromotionStatusFailed, res.Status)
+				require.Equal(t, kargoapi.PromotionPhaseFailed, res.Status)
 			},
 		},
 		{
@@ -194,7 +195,7 @@ func Test_gitPRWaiter_runPromotionStep(t *testing.T) {
 			},
 			assertions: func(t *testing.T, res PromotionStepResult, err error) {
 				require.NoError(t, err)
-				require.Equal(t, PromotionStatusSucceeded, res.Status)
+				require.Equal(t, kargoapi.PromotionPhaseSucceeded, res.Status)
 			},
 		},
 	}

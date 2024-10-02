@@ -20,7 +20,7 @@ func (e *FakeEngine) Promote(
 	steps []PromotionStep,
 ) (PromotionResult, error) {
 	if e.ExecuteFn == nil {
-		return PromotionResult{Status: PromotionStatusSucceeded}, nil
+		return PromotionResult{Status: kargoapi.PromotionPhaseSucceeded}, nil
 	}
 	return e.ExecuteFn(ctx, promoCtx, steps)
 }

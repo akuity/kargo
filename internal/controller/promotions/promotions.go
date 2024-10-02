@@ -539,12 +539,10 @@ func (r *reconciler) promote(
 		}()
 
 		res, err := r.directivesEngine.Promote(ctx, promoCtx, steps)
+		workingPromo.Status.Phase = res.Status
 		workingPromo.Status.CurrentStep = res.CurrentStep
 		workingPromo.Status.State = &apiextensionsv1.JSON{Raw: res.State.ToJSON()}
-		switch res.Status {
-		case directives.PromotionStatusRunning:
-			workingPromo.Status.Phase = kargoapi.PromotionPhaseRunning
-		case directives.PromotionStatusSucceeded:
+		if res.Status == kargoapi.PromotionPhaseSucceeded {
 			var healthChecks []kargoapi.HealthCheckStep
 			for _, step := range res.HealthCheckSteps {
 				healthChecks = append(healthChecks, kargoapi.HealthCheckStep{
@@ -552,12 +550,10 @@ func (r *reconciler) promote(
 					Config: &apiextensionsv1.JSON{Raw: step.Config.ToJSON()},
 				})
 			}
-			workingPromo.Status.Phase = kargoapi.PromotionPhaseSucceeded
 			workingPromo.Status.HealthChecks = healthChecks
-		case directives.PromotionStatusErrored:
-			workingPromo.Status.Phase = kargoapi.PromotionPhaseFailed
 		}
 		if err != nil {
+			workingPromo.Status.Phase = kargoapi.PromotionPhaseErrored
 			return &workingPromo.Status, err
 		}
 	}

@@ -76,7 +76,7 @@ kind: Kustomization
 			assertions: func(t *testing.T, workDir string, result PromotionStepResult, err error) {
 				require.NoError(t, err)
 				assert.Equal(t, PromotionStepResult{
-					Status: PromotionStatusSucceeded,
+					Status: kargoapi.PromotionPhaseSucceeded,
 					Output: map[string]any{
 						"commitMessage": "Updated . to use new image\n\n- nginx:1.21.0",
 					},
@@ -111,7 +111,7 @@ kind: Kustomization
 			},
 			assertions: func(t *testing.T, _ string, result PromotionStepResult, err error) {
 				require.ErrorContains(t, err, "could not discover kustomization file:")
-				assert.Equal(t, PromotionStepResult{Status: PromotionStatusErrored}, result)
+				assert.Equal(t, PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, result)
 			},
 		},
 		{
@@ -151,7 +151,7 @@ images:
 			},
 			assertions: func(t *testing.T, _ string, result PromotionStepResult, err error) {
 				require.ErrorContains(t, err, "unable to discover image")
-				assert.Equal(t, PromotionStepResult{Status: PromotionStatusErrored}, result)
+				assert.Equal(t, PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, result)
 			},
 		},
 	}

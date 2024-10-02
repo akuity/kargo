@@ -11,6 +11,7 @@ import (
 	"github.com/sosedoff/gitkit"
 	"github.com/stretchr/testify/require"
 
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/git"
 	"github.com/akuity/kargo/internal/credentials"
 )
@@ -326,7 +327,7 @@ func Test_gitCloner_runPromotionStep(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
-	require.Equal(t, PromotionStatusSucceeded, res.Status)
+	require.Equal(t, kargoapi.PromotionPhaseSucceeded, res.Status)
 	require.DirExists(t, filepath.Join(stepCtx.WorkDir, "master"))
 	// The checked out master branch should have the content we know is in the
 	// test remote's master branch.

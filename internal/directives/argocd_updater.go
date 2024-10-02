@@ -133,11 +133,11 @@ func (a *argocdUpdater) RunPromotionStep(
 	stepCtx *PromotionStepContext,
 ) (PromotionStepResult, error) {
 	if err := a.validate(stepCtx.Config); err != nil {
-		return PromotionStepResult{Status: PromotionStatusErrored}, err
+		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, err
 	}
 	cfg, err := configToStruct[ArgoCDUpdateConfig](stepCtx.Config)
 	if err != nil {
-		return PromotionStepResult{Status: PromotionStatusErrored},
+		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
 			fmt.Errorf("could not convert config into %s config: %w", a.Name(), err)
 	}
 	return a.runPromotionStep(ctx, stepCtx, cfg)
@@ -155,7 +155,7 @@ func (a *argocdUpdater) runPromotionStep(
 	stepCfg ArgoCDUpdateConfig,
 ) (PromotionStepResult, error) {
 	if stepCtx.ArgoCDClient == nil {
-		return PromotionStepResult{Status: PromotionStatusErrored}, errors.New(
+		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, errors.New(
 			"Argo CD integration is disabled on this controller; cannot update " +
 				"Argo CD Application resources",
 		)
@@ -178,7 +178,7 @@ func (a *argocdUpdater) runPromotionStep(
 		}
 		app, err := a.getAuthorizedApplicationFn(ctx, stepCtx, appKey)
 		if err != nil {
-			return PromotionStepResult{Status: PromotionStatusErrored}, fmt.Errorf(
+			return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, fmt.Errorf(
 				"error getting Argo CD Application %q in namespace %q: %w",
 				appKey.Name, appKey.Namespace, err,
 			)
@@ -192,7 +192,7 @@ func (a *argocdUpdater) runPromotionStep(
 			app,
 		)
 		if err != nil {
-			return PromotionStepResult{Status: PromotionStatusErrored}, fmt.Errorf(
+			return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, fmt.Errorf(
 				"error determining desired revisions for Argo CD Application %q in "+
 					"namespace %q: %w",
 				app.Name, app.Namespace, err,
@@ -214,7 +214,7 @@ func (a *argocdUpdater) runPromotionStep(
 			app,
 		)
 		if err != nil {
-			return PromotionStepResult{Status: PromotionStatusErrored}, fmt.Errorf(
+			return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, fmt.Errorf(
 				"error building desired sources for Argo CD Application %q in namespace %q: %w",
 				app.Name, app.Namespace, err,
 			)
@@ -242,7 +242,7 @@ func (a *argocdUpdater) runPromotionStep(
 				if phase == "" {
 					// If we do not have a phase, we cannot continue processing
 					// this update by waiting.
-					return PromotionStepResult{Status: PromotionStatusErrored}, err
+					return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, err
 				}
 				// Log the error as a warning, but continue to the next update.
 				logger.Info(err.Error())
@@ -250,7 +250,7 @@ func (a *argocdUpdater) runPromotionStep(
 			if phase.Failed() {
 				// Record the reason for the failure if available.
 				if app.Status.OperationState != nil {
-					return PromotionStepResult{Status: PromotionStatusErrored}, fmt.Errorf(
+					return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, fmt.Errorf(
 						"Argo CD Application %q in namespace %q failed with: %s",
 						app.Name,
 						app.Namespace,
@@ -259,7 +259,7 @@ func (a *argocdUpdater) runPromotionStep(
 				}
 				// If the update failed, we can short-circuit. This is
 				// effectively "fail fast" behavior.
-				return PromotionStepResult{Status: PromotionStatusErrored}, nil
+				return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, nil
 			}
 			// If we get here, we can continue to the next update.
 			continue
@@ -272,7 +272,7 @@ func (a *argocdUpdater) runPromotionStep(
 			app,
 			desiredSources,
 		); err != nil {
-			return PromotionStepResult{Status: PromotionStatusErrored}, fmt.Errorf(
+			return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, fmt.Errorf(
 				"error syncing Argo CD Application %q in namespace %q: %w",
 				app.Name, app.Namespace, err,
 			)
@@ -283,7 +283,7 @@ func (a *argocdUpdater) runPromotionStep(
 
 	aggregatedStatus := a.operationPhaseToPromotionStatus(updateResults...)
 	if aggregatedStatus == "" {
-		return PromotionStepResult{Status: PromotionStatusErrored}, fmt.Errorf(
+		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, fmt.Errorf(
 			"could not determine promotion step status from operation phases: %v",
 			updateResults,
 		)
@@ -883,7 +883,7 @@ func (a *argocdUpdater) buildHelmParamChangesForAppSource(
 
 func (a *argocdUpdater) operationPhaseToPromotionStatus(
 	phases ...argocd.OperationPhase,
-) PromotionStatus {
+) kargoapi.PromotionPhase {
 	if len(phases) == 0 {
 		return ""
 	}
@@ -892,11 +892,11 @@ func (a *argocdUpdater) operationPhaseToPromotionStatus(
 
 	switch phases[0] {
 	case argocd.OperationRunning, argocd.OperationTerminating:
-		return PromotionStatusRunning
+		return kargoapi.PromotionPhaseRunning
 	case argocd.OperationFailed, argocd.OperationError:
-		return PromotionStatusErrored
+		return kargoapi.PromotionPhaseErrored
 	case argocd.OperationSucceeded:
-		return PromotionStatusSucceeded
+		return kargoapi.PromotionPhaseSucceeded
 	default:
 		return ""
 	}

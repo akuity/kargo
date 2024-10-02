@@ -76,7 +76,7 @@ func Test_helmImageUpdater_runPromotionStep(t *testing.T) {
 			assertions: func(t *testing.T, workDir string, result PromotionStepResult, err error) {
 				assert.NoError(t, err)
 				assert.Equal(t, PromotionStepResult{
-					Status: PromotionStatusSucceeded,
+					Status: kargoapi.PromotionPhaseSucceeded,
 					Output: map[string]any{
 						"commitMessage": "Updated values.yaml to use new image\n\n- docker.io/library/nginx:1.19.0",
 					},
@@ -104,7 +104,7 @@ func Test_helmImageUpdater_runPromotionStep(t *testing.T) {
 			},
 			assertions: func(t *testing.T, workDir string, result PromotionStepResult, err error) {
 				assert.NoError(t, err)
-				assert.Equal(t, PromotionStepResult{Status: PromotionStatusSucceeded}, result)
+				assert.Equal(t, PromotionStepResult{Status: kargoapi.PromotionPhaseSucceeded}, result)
 				content, err := os.ReadFile(path.Join(workDir, "values.yaml"))
 				require.NoError(t, err)
 				assert.Contains(t, string(content), "tag: oldtag")
@@ -145,7 +145,7 @@ func Test_helmImageUpdater_runPromotionStep(t *testing.T) {
 			assertions: func(t *testing.T, _ string, result PromotionStepResult, err error) {
 				require.ErrorContains(t, err, "failed to generate image updates")
 				require.Errorf(t, err, "something went wrong")
-				assert.Equal(t, PromotionStepResult{Status: PromotionStatusErrored}, result)
+				assert.Equal(t, PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, result)
 			},
 		},
 		{
@@ -193,7 +193,7 @@ func Test_helmImageUpdater_runPromotionStep(t *testing.T) {
 			},
 			assertions: func(t *testing.T, _ string, result PromotionStepResult, err error) {
 				assert.Error(t, err)
-				assert.Equal(t, PromotionStepResult{Status: PromotionStatusErrored}, result)
+				assert.Equal(t, PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, result)
 				assert.Contains(t, err.Error(), "values file update failed")
 			},
 		},
