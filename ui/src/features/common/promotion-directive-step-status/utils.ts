@@ -28,7 +28,7 @@ export const getPromotionDirectiveStepStatus = (
   }
 
   if (
-    promotionStatus?.phase === PromotionStatusPhase.ERRORED &&
+    promotionStatus?.phase !== PromotionStatusPhase.SUCCEEDED &&
     stepNumber > Number(promotionStatus?.currentStep)
   ) {
     return PromotionDirectiveStepStatus.WONT_RUN;
