@@ -38,7 +38,7 @@ metadata:
 			},
 			assertions: func(t *testing.T, dir string, result PromotionStepResult, err error) {
 				require.NoError(t, err)
-				assert.Equal(t, PromotionStepResult{Status: PromotionStatusSuccess}, result)
+				assert.Equal(t, PromotionStepResult{Status: PromotionStatusSucceeded}, result)
 
 				assert.FileExists(t, filepath.Join(dir, "output.yaml"))
 				b, err := os.ReadFile(filepath.Join(dir, "output.yaml"))
@@ -68,7 +68,7 @@ metadata:
 			},
 			assertions: func(t *testing.T, dir string, result PromotionStepResult, err error) {
 				require.NoError(t, err)
-				assert.Equal(t, PromotionStepResult{Status: PromotionStatusSuccess}, result)
+				assert.Equal(t, PromotionStepResult{Status: PromotionStatusSucceeded}, result)
 
 				assert.DirExists(t, filepath.Join(dir, "output"))
 				b, err := os.ReadFile(filepath.Join(dir, "output", "deployment-test-deployment.yaml"))

@@ -15,7 +15,7 @@ func TestFakeEngine_Promote(t *testing.T) {
 		engine := &FakeEngine{}
 		res, err := engine.Promote(context.Background(), PromotionContext{}, nil)
 		assert.NoError(t, err)
-		assert.Equal(t, PromotionStatusSuccess, res.Status)
+		assert.Equal(t, PromotionStatusSucceeded, res.Status)
 	})
 
 	t.Run("with function injection", func(t *testing.T) {

@@ -97,7 +97,7 @@ func (k *kustomizeImageSetter) runPromotionStep(
 		return PromotionStepResult{Status: PromotionStatusErrored}, err
 	}
 
-	result := PromotionStepResult{Status: PromotionStatusSuccess}
+	result := PromotionStepResult{Status: PromotionStatusSucceeded}
 	if commitMsg := k.generateCommitMessage(cfg.Path, targetImages); commitMsg != "" {
 		result.Output = map[string]any{
 			"commitMessage": commitMsg,

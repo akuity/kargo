@@ -125,7 +125,7 @@ func (g *gitPRWaiter) runPromotionStep(
 	}
 
 	return PromotionStepResult{
-		Status: PromotionStatusSuccess,
+		Status: PromotionStatusSucceeded,
 		Output: map[string]any{commitKey: pr.MergeCommitSHA},
 	}, nil
 }

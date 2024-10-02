@@ -124,7 +124,7 @@ func (h *helmChartUpdater) runPromotionStep(
 		return PromotionStepResult{Status: PromotionStatusErrored}, err
 	}
 
-	result := PromotionStepResult{Status: PromotionStatusSuccess}
+	result := PromotionStepResult{Status: PromotionStatusSucceeded}
 	if commitMsg := h.generateCommitMessage(cfg.Path, newVersions); commitMsg != "" {
 		result.Output = map[string]any{
 			"commitMessage": commitMsg,

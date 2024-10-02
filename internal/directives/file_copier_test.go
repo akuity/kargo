@@ -34,7 +34,7 @@ func Test_fileCopier_runPromotionStep(t *testing.T) {
 			},
 			assertions: func(t *testing.T, workDir string, result PromotionStepResult, err error) {
 				assert.NoError(t, err)
-				assert.Equal(t, PromotionStepResult{Status: PromotionStatusSuccess}, result)
+				assert.Equal(t, PromotionStepResult{Status: PromotionStatusSucceeded}, result)
 
 				outPath := filepath.Join(workDir, "output.txt")
 				b, err := os.ReadFile(outPath)
@@ -66,7 +66,7 @@ func Test_fileCopier_runPromotionStep(t *testing.T) {
 			},
 			assertions: func(t *testing.T, workDir string, result PromotionStepResult, err error) {
 				assert.NoError(t, err)
-				assert.Equal(t, PromotionStepResult{Status: PromotionStatusSuccess}, result)
+				assert.Equal(t, PromotionStepResult{Status: PromotionStatusSucceeded}, result)
 
 				outDir := filepath.Join(workDir, "output")
 
@@ -104,7 +104,7 @@ func Test_fileCopier_runPromotionStep(t *testing.T) {
 			},
 			assertions: func(t *testing.T, workDir string, result PromotionStepResult, err error) {
 				assert.NoError(t, err)
-				require.Equal(t, PromotionStepResult{Status: PromotionStatusSuccess}, result)
+				require.Equal(t, PromotionStepResult{Status: PromotionStatusSucceeded}, result)
 
 				outDir := filepath.Join(workDir, "output")
 

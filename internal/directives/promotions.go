@@ -111,10 +111,10 @@ const (
 	// PromotionStepRunner which remains in-progress because it is waiting on some
 	// external state (such as waiting for an open PR to be merged or closed).
 	PromotionStatusRunning PromotionStatus = "Running"
-	// PromotionStatusSuccess is the result of either a user-defined promotion
+	// PromotionStatusSucceeded is the result of either a user-defined promotion
 	// process executed by the Engine or a single PromotionStep executed by a
 	// PromotionStepRunner which has succeeded.
-	PromotionStatusSuccess PromotionStatus = "Success"
+	PromotionStatusSucceeded PromotionStatus = "Succeeded"
 )
 
 // PromotionStepContext is a type that represents the context in which a

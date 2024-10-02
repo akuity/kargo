@@ -47,7 +47,7 @@ data:
 			},
 			assertions: func(t *testing.T, workDir string, result PromotionStepResult, err error) {
 				require.NoError(t, err)
-				assert.Equal(t, PromotionStepResult{Status: PromotionStatusSuccess}, result)
+				assert.Equal(t, PromotionStepResult{Status: PromotionStatusSucceeded}, result)
 
 				outPath := filepath.Join(workDir, "output.yaml")
 				require.FileExists(t, outPath)
@@ -93,7 +93,7 @@ data:
 			},
 			assertions: func(t *testing.T, workDir string, result PromotionStepResult, err error) {
 				require.NoError(t, err)
-				assert.Equal(t, PromotionStepResult{Status: PromotionStatusSuccess}, result)
+				assert.Equal(t, PromotionStepResult{Status: PromotionStatusSucceeded}, result)
 
 				outPath := filepath.Join(workDir, "output.yaml")
 				require.FileExists(t, outPath)
@@ -138,7 +138,7 @@ data:
 			},
 			assertions: func(t *testing.T, workDir string, result PromotionStepResult, err error) {
 				require.NoError(t, err)
-				assert.Equal(t, PromotionStepResult{Status: PromotionStatusSuccess}, result)
+				assert.Equal(t, PromotionStepResult{Status: PromotionStatusSucceeded}, result)
 
 				outPath := filepath.Join(workDir, "output", "test-chart")
 				require.DirExists(t, outPath)

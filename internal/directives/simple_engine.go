@@ -121,7 +121,7 @@ func (e *SimpleEngine) Promote(
 				fmt.Errorf("failed to run step %q: %w", step.Kind, err)
 		}
 
-		if result.Status != PromotionStatusSuccess {
+		if result.Status != PromotionStatusSucceeded {
 			return PromotionResult{
 				Status:      result.Status,
 				CurrentStep: i,
@@ -134,7 +134,7 @@ func (e *SimpleEngine) Promote(
 		}
 	}
 	return PromotionResult{
-		Status:           PromotionStatusSuccess,
+		Status:           PromotionStatusSucceeded,
 		HealthCheckSteps: healthCheckSteps,
 		CurrentStep:      int64(len(steps)) - 1,
 		State:            state,

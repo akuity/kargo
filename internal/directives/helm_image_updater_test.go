@@ -76,7 +76,7 @@ func Test_helmImageUpdater_runPromotionStep(t *testing.T) {
 			assertions: func(t *testing.T, workDir string, result PromotionStepResult, err error) {
 				assert.NoError(t, err)
 				assert.Equal(t, PromotionStepResult{
-					Status: PromotionStatusSuccess,
+					Status: PromotionStatusSucceeded,
 					Output: map[string]any{
 						"commitMessage": "Updated values.yaml to use new image\n\n- docker.io/library/nginx:1.19.0",
 					},
@@ -104,7 +104,7 @@ func Test_helmImageUpdater_runPromotionStep(t *testing.T) {
 			},
 			assertions: func(t *testing.T, workDir string, result PromotionStepResult, err error) {
 				assert.NoError(t, err)
-				assert.Equal(t, PromotionStepResult{Status: PromotionStatusSuccess}, result)
+				assert.Equal(t, PromotionStepResult{Status: PromotionStatusSucceeded}, result)
 				content, err := os.ReadFile(path.Join(workDir, "values.yaml"))
 				require.NoError(t, err)
 				assert.Contains(t, string(content), "tag: oldtag")

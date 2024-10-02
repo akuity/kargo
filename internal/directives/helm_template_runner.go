@@ -126,7 +126,7 @@ func (h *helmTemplateRunner) runPromotionStep(
 		return PromotionStepResult{Status: PromotionStatusErrored},
 			fmt.Errorf("failed to write rendered chart: %w", err)
 	}
-	return PromotionStepResult{Status: PromotionStatusSuccess}, nil
+	return PromotionStepResult{Status: PromotionStatusSucceeded}, nil
 }
 
 // composeValues composes the values from the given values files. It merges the

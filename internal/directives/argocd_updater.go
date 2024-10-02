@@ -896,7 +896,7 @@ func (a *argocdUpdater) operationPhaseToPromotionStatus(
 	case argocd.OperationFailed, argocd.OperationError:
 		return PromotionStatusErrored
 	case argocd.OperationSucceeded:
-		return PromotionStatusSuccess
+		return PromotionStatusSucceeded
 	default:
 		return ""
 	}

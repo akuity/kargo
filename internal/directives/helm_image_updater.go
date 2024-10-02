@@ -77,7 +77,7 @@ func (h *helmImageUpdater) runPromotionStep(
 			fmt.Errorf("failed to generate image updates: %w", err)
 	}
 
-	result := PromotionStepResult{Status: PromotionStatusSuccess}
+	result := PromotionStepResult{Status: PromotionStatusSucceeded}
 	if len(updates) > 0 {
 		if err = h.updateValuesFile(stepCtx.WorkDir, cfg.Path, updates); err != nil {
 			return PromotionStepResult{Status: PromotionStatusErrored},

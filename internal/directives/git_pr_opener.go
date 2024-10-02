@@ -135,7 +135,7 @@ func (g *gitPROpener) runPromotionStep(
 			fmt.Errorf("error determining if pull request must be opened: %w", err)
 	}
 	if !mustOpen {
-		return PromotionStepResult{Status: PromotionStatusSuccess}, nil
+		return PromotionStepResult{Status: PromotionStatusSucceeded}, nil
 	}
 
 	// Get the title from the commit message of the head of the source branch
@@ -173,7 +173,7 @@ func (g *gitPROpener) runPromotionStep(
 			fmt.Errorf("error creating pull request: %w", err)
 	}
 	return PromotionStepResult{
-		Status: PromotionStatusSuccess,
+		Status: PromotionStatusSucceeded,
 		Output: map[string]any{
 			prNumberKey: pr.Number,
 		},

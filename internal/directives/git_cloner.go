@@ -78,7 +78,7 @@ func (g *gitCloner) runPromotionStep(
 		)
 	}
 	if !mustClone {
-		return PromotionStepResult{Status: PromotionStatusSuccess}, nil
+		return PromotionStepResult{Status: PromotionStatusSucceeded}, nil
 	}
 
 	var repoCreds *git.RepoCredentials
@@ -171,7 +171,7 @@ func (g *gitCloner) runPromotionStep(
 	// Note: We do NOT defer repo.Close() because we want to keep the repository
 	// around on the FS for subsequent promotion steps to use. The Engine will
 	// handle all work dir cleanup.
-	return PromotionStepResult{Status: PromotionStatusSuccess}, nil
+	return PromotionStepResult{Status: PromotionStatusSucceeded}, nil
 }
 
 // mustCloneRepo determines if the repository must be cloned. At present, there

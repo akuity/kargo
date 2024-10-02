@@ -24,7 +24,7 @@ func TestSimpleEngine_Promote(t *testing.T) {
 
 	failureResult := PromotionStepResult{Status: PromotionStatusErrored}
 	successResult := PromotionStepResult{
-		Status:          PromotionStatusSuccess,
+		Status:          PromotionStatusSucceeded,
 		HealthCheckStep: &testHealthCheckStep,
 	}
 
@@ -72,7 +72,7 @@ func TestSimpleEngine_Promote(t *testing.T) {
 			steps: []PromotionStep{{Kind: successStepName}},
 			ctx:   context.Background(),
 			assertions: func(t *testing.T, res PromotionResult, err error) {
-				assert.Equal(t, PromotionStatusSuccess, res.Status)
+				assert.Equal(t, PromotionStatusSucceeded, res.Status)
 				assert.Equal(t, []HealthCheckStep{testHealthCheckStep}, res.HealthCheckSteps)
 				assert.NoError(t, err)
 			},
@@ -85,7 +85,7 @@ func TestSimpleEngine_Promote(t *testing.T) {
 			},
 			ctx: context.Background(),
 			assertions: func(t *testing.T, res PromotionResult, err error) {
-				assert.Equal(t, PromotionStatusSuccess, res.Status)
+				assert.Equal(t, PromotionStatusSucceeded, res.Status)
 				assert.Equal(
 					t,
 					[]HealthCheckStep{testHealthCheckStep, testHealthCheckStep},

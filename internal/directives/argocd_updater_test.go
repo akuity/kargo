@@ -791,7 +791,7 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 				Apps: []ArgoCDAppUpdate{{}},
 			},
 			assertions: func(t *testing.T, res PromotionStepResult, err error) {
-				require.Equal(t, PromotionStatusSuccess, res.Status)
+				require.Equal(t, PromotionStatusSucceeded, res.Status)
 				require.NoError(t, err)
 			},
 		},

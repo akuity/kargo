@@ -122,5 +122,5 @@ func (g *gitTreeOverwriter) runPromotionStep(
 		return PromotionStepResult{Status: PromotionStatusErrored},
 			fmt.Errorf("failed to copy %q to %q: %w", cfg.InPath, cfg.OutPath, err)
 	}
-	return PromotionStepResult{Status: PromotionStatusSuccess}, nil
+	return PromotionStepResult{Status: PromotionStatusSucceeded}, nil
 }

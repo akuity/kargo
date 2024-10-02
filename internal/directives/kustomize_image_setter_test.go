@@ -76,7 +76,7 @@ kind: Kustomization
 			assertions: func(t *testing.T, workDir string, result PromotionStepResult, err error) {
 				require.NoError(t, err)
 				assert.Equal(t, PromotionStepResult{
-					Status: PromotionStatusSuccess,
+					Status: PromotionStatusSucceeded,
 					Output: map[string]any{
 						"commitMessage": "Updated . to use new image\n\n- nginx:1.21.0",
 					},

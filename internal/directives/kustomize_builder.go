@@ -97,7 +97,7 @@ func (k *kustomizeBuilder) runPromotionStep(
 			sanitizePathError(err, stepCtx.WorkDir),
 		)
 	}
-	return PromotionStepResult{Status: PromotionStatusSuccess}, nil
+	return PromotionStepResult{Status: PromotionStatusSucceeded}, nil
 }
 
 func (k *kustomizeBuilder) writeResult(rm resmap.ResMap, outPath string) error {

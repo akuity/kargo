@@ -139,7 +139,7 @@ func Test_gitTreeOverwriter_runPromotionStep(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
-	require.Equal(t, PromotionStatusSuccess, res.Status)
+	require.Equal(t, PromotionStatusSucceeded, res.Status)
 
 	// Make sure old files are gone
 	_, err = os.Stat(filepath.Join(workTree.Dir(), "original.txt"))

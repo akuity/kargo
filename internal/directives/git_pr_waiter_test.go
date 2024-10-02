@@ -194,7 +194,7 @@ func Test_gitPRWaiter_runPromotionStep(t *testing.T) {
 			},
 			assertions: func(t *testing.T, res PromotionStepResult, err error) {
 				require.NoError(t, err)
-				require.Equal(t, PromotionStatusSuccess, res.Status)
+				require.Equal(t, PromotionStatusSucceeded, res.Status)
 			},
 		},
 	}

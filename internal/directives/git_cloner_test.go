@@ -326,7 +326,7 @@ func Test_gitCloner_runPromotionStep(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
-	require.Equal(t, PromotionStatusSuccess, res.Status)
+	require.Equal(t, PromotionStatusSucceeded, res.Status)
 	require.DirExists(t, filepath.Join(stepCtx.WorkDir, "master"))
 	// The checked out master branch should have the content we know is in the
 	// test remote's master branch.

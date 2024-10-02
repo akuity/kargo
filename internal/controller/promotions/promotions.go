@@ -544,7 +544,7 @@ func (r *reconciler) promote(
 		switch res.Status {
 		case directives.PromotionStatusRunning:
 			workingPromo.Status.Phase = kargoapi.PromotionPhaseRunning
-		case directives.PromotionStatusSuccess:
+		case directives.PromotionStatusSucceeded:
 			var healthChecks []kargoapi.HealthCheckStep
 			for _, step := range res.HealthCheckSteps {
 				healthChecks = append(healthChecks, kargoapi.HealthCheckStep{

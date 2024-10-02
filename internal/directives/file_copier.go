@@ -93,7 +93,7 @@ func (f *fileCopier) runPromotionStep(
 		return PromotionStepResult{Status: PromotionStatusErrored},
 			fmt.Errorf("failed to copy %q to %q: %w", cfg.InPath, cfg.OutPath, err)
 	}
-	return PromotionStepResult{Status: PromotionStatusSuccess}, nil
+	return PromotionStepResult{Status: PromotionStatusSucceeded}, nil
 }
 
 // sanitizePathError sanitizes the path in a path error to be relative to the

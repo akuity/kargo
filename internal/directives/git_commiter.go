@@ -109,7 +109,7 @@ func (g *gitCommitter) runPromotionStep(
 			fmt.Errorf("error getting last commit ID: %w", err)
 	}
 	return PromotionStepResult{
-		Status: PromotionStatusSuccess,
+		Status: PromotionStatusSucceeded,
 		Output: map[string]any{commitKey: commitID},
 	}, nil
 }
