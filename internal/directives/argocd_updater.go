@@ -133,11 +133,11 @@ func (a *argocdUpdater) RunPromotionStep(
 	stepCtx *PromotionStepContext,
 ) (PromotionStepResult, error) {
 	if err := a.validate(stepCtx.Config); err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailed}, err
+		return PromotionStepResult{Status: PromotionStatusErrored}, err
 	}
 	cfg, err := configToStruct[ArgoCDUpdateConfig](stepCtx.Config)
 	if err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailed},
+		return PromotionStepResult{Status: PromotionStatusErrored},
 			fmt.Errorf("could not convert config into %s config: %w", a.Name(), err)
 	}
 	return a.runPromotionStep(ctx, stepCtx, cfg)
@@ -155,7 +155,7 @@ func (a *argocdUpdater) runPromotionStep(
 	stepCfg ArgoCDUpdateConfig,
 ) (PromotionStepResult, error) {
 	if stepCtx.ArgoCDClient == nil {
-		return PromotionStepResult{Status: PromotionStatusFailed}, errors.New(
+		return PromotionStepResult{Status: PromotionStatusErrored}, errors.New(
 			"Argo CD integration is disabled on this controller; cannot update " +
 				"Argo CD Application resources",
 		)
@@ -178,7 +178,7 @@ func (a *argocdUpdater) runPromotionStep(
 		}
 		app, err := a.getAuthorizedApplicationFn(ctx, stepCtx, appKey)
 		if err != nil {
-			return PromotionStepResult{Status: PromotionStatusFailed}, fmt.Errorf(
+			return PromotionStepResult{Status: PromotionStatusErrored}, fmt.Errorf(
 				"error getting Argo CD Application %q in namespace %q: %w",
 				appKey.Name, appKey.Namespace, err,
 			)
@@ -192,7 +192,7 @@ func (a *argocdUpdater) runPromotionStep(
 			app,
 		)
 		if err != nil {
-			return PromotionStepResult{Status: PromotionStatusFailed}, fmt.Errorf(
+			return PromotionStepResult{Status: PromotionStatusErrored}, fmt.Errorf(
 				"error determining desired revisions for Argo CD Application %q in "+
 					"namespace %q: %w",
 				app.Name, app.Namespace, err,
@@ -214,7 +214,7 @@ func (a *argocdUpdater) runPromotionStep(
 			app,
 		)
 		if err != nil {
-			return PromotionStepResult{Status: PromotionStatusFailed}, fmt.Errorf(
+			return PromotionStepResult{Status: PromotionStatusErrored}, fmt.Errorf(
 				"error building desired sources for Argo CD Application %q in namespace %q: %w",
 				app.Name, app.Namespace, err,
 			)
@@ -242,7 +242,7 @@ func (a *argocdUpdater) runPromotionStep(
 				if phase == "" {
 					// If we do not have a phase, we cannot continue processing
 					// this update by waiting.
-					return PromotionStepResult{Status: PromotionStatusFailed}, err
+					return PromotionStepResult{Status: PromotionStatusErrored}, err
 				}
 				// Log the error as a warning, but continue to the next update.
 				logger.Info(err.Error())
@@ -250,7 +250,7 @@ func (a *argocdUpdater) runPromotionStep(
 			if phase.Failed() {
 				// Record the reason for the failure if available.
 				if app.Status.OperationState != nil {
-					return PromotionStepResult{Status: PromotionStatusFailed}, fmt.Errorf(
+					return PromotionStepResult{Status: PromotionStatusErrored}, fmt.Errorf(
 						"Argo CD Application %q in namespace %q failed with: %s",
 						app.Name,
 						app.Namespace,
@@ -259,7 +259,7 @@ func (a *argocdUpdater) runPromotionStep(
 				}
 				// If the update failed, we can short-circuit. This is
 				// effectively "fail fast" behavior.
-				return PromotionStepResult{Status: PromotionStatusFailed}, nil
+				return PromotionStepResult{Status: PromotionStatusErrored}, nil
 			}
 			// If we get here, we can continue to the next update.
 			continue
@@ -272,7 +272,7 @@ func (a *argocdUpdater) runPromotionStep(
 			app,
 			desiredSources,
 		); err != nil {
-			return PromotionStepResult{Status: PromotionStatusFailed}, fmt.Errorf(
+			return PromotionStepResult{Status: PromotionStatusErrored}, fmt.Errorf(
 				"error syncing Argo CD Application %q in namespace %q: %w",
 				app.Name, app.Namespace, err,
 			)
@@ -283,7 +283,7 @@ func (a *argocdUpdater) runPromotionStep(
 
 	aggregatedStatus := a.operationPhaseToPromotionStatus(updateResults...)
 	if aggregatedStatus == "" {
-		return PromotionStepResult{Status: PromotionStatusFailed}, fmt.Errorf(
+		return PromotionStepResult{Status: PromotionStatusErrored}, fmt.Errorf(
 			"could not determine promotion step status from operation phases: %v",
 			updateResults,
 		)
@@ -894,7 +894,7 @@ func (a *argocdUpdater) operationPhaseToPromotionStatus(
 	case argocd.OperationRunning, argocd.OperationTerminating:
 		return PromotionStatusPending
 	case argocd.OperationFailed, argocd.OperationError:
-		return PromotionStatusFailed
+		return PromotionStatusErrored
 	case argocd.OperationSucceeded:
 		return PromotionStatusSuccess
 	default:

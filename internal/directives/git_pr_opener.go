@@ -45,11 +45,11 @@ func (g *gitPROpener) RunPromotionStep(
 	stepCtx *PromotionStepContext,
 ) (PromotionStepResult, error) {
 	if err := g.validate(stepCtx.Config); err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailed}, err
+		return PromotionStepResult{Status: PromotionStatusErrored}, err
 	}
 	cfg, err := configToStruct[GitOpenPRConfig](stepCtx.Config)
 	if err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailed},
+		return PromotionStepResult{Status: PromotionStatusErrored},
 			fmt.Errorf("could not convert config into git-open-pr config: %w", err)
 	}
 	return g.runPromotionStep(ctx, stepCtx, cfg)
@@ -67,7 +67,7 @@ func (g *gitPROpener) runPromotionStep(
 ) (PromotionStepResult, error) {
 	sourceBranch, err := getSourceBranch(stepCtx.SharedState, cfg)
 	if err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailed},
+		return PromotionStepResult{Status: PromotionStatusErrored},
 			fmt.Errorf("error determining source branch: %w", err)
 	}
 
@@ -79,7 +79,7 @@ func (g *gitPROpener) runPromotionStep(
 		cfg.RepoURL,
 	)
 	if err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailed},
+		return PromotionStepResult{Status: PromotionStatusErrored},
 			fmt.Errorf("error getting credentials for %s: %w", cfg.RepoURL, err)
 	}
 	if found {
@@ -102,7 +102,7 @@ func (g *gitPROpener) runPromotionStep(
 		},
 	)
 	if err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailed},
+		return PromotionStepResult{Status: PromotionStatusErrored},
 			fmt.Errorf("error cloning %s: %w", cfg.RepoURL, err)
 	}
 	defer repo.Close()
@@ -118,7 +118,7 @@ func (g *gitPROpener) runPromotionStep(
 	}
 	gitProviderSvc, err := gitprovider.NewGitProviderService(cfg.RepoURL, gpOpts)
 	if err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailed},
+		return PromotionStepResult{Status: PromotionStatusErrored},
 			fmt.Errorf("error creating git provider service: %w", err)
 	}
 
@@ -131,7 +131,7 @@ func (g *gitPROpener) runPromotionStep(
 		cfg.TargetBranch,
 	)
 	if err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailed},
+		return PromotionStepResult{Status: PromotionStatusErrored},
 			fmt.Errorf("error determining if pull request must be opened: %w", err)
 	}
 	if !mustOpen {
@@ -143,7 +143,7 @@ func (g *gitPROpener) runPromotionStep(
 	// that may involve creating a new branch and committing to it.
 	title, err := repo.CommitMessage(sourceBranch)
 	if err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailed}, fmt.Errorf(
+		return PromotionStepResult{Status: PromotionStatusErrored}, fmt.Errorf(
 			"error getting commit message from head of branch %s: %w",
 			sourceBranch, err,
 		)
@@ -154,7 +154,7 @@ func (g *gitPROpener) runPromotionStep(
 		cfg.TargetBranch,
 		cfg.CreateTargetBranch,
 	); err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailed}, fmt.Errorf(
+		return PromotionStepResult{Status: PromotionStatusErrored}, fmt.Errorf(
 			"error ensuring existence of remote branch %s: %w",
 			cfg.TargetBranch, err,
 		)
@@ -169,7 +169,7 @@ func (g *gitPROpener) runPromotionStep(
 		},
 	)
 	if err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailed},
+		return PromotionStepResult{Status: PromotionStatusErrored},
 			fmt.Errorf("error creating pull request: %w", err)
 	}
 	return PromotionStepResult{

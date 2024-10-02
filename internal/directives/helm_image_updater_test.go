@@ -145,7 +145,7 @@ func Test_helmImageUpdater_runPromotionStep(t *testing.T) {
 			assertions: func(t *testing.T, _ string, result PromotionStepResult, err error) {
 				require.ErrorContains(t, err, "failed to generate image updates")
 				require.Errorf(t, err, "something went wrong")
-				assert.Equal(t, PromotionStepResult{Status: PromotionStatusFailed}, result)
+				assert.Equal(t, PromotionStepResult{Status: PromotionStatusErrored}, result)
 			},
 		},
 		{
@@ -193,7 +193,7 @@ func Test_helmImageUpdater_runPromotionStep(t *testing.T) {
 			},
 			assertions: func(t *testing.T, _ string, result PromotionStepResult, err error) {
 				assert.Error(t, err)
-				assert.Equal(t, PromotionStepResult{Status: PromotionStatusFailed}, result)
+				assert.Equal(t, PromotionStepResult{Status: PromotionStatusErrored}, result)
 				assert.Contains(t, err.Error(), "values file update failed")
 			},
 		},

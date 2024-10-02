@@ -45,11 +45,11 @@ func (g *gitTreeOverwriter) RunPromotionStep(
 	stepCtx *PromotionStepContext,
 ) (PromotionStepResult, error) {
 	if err := g.validate(stepCtx.Config); err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailed}, err
+		return PromotionStepResult{Status: PromotionStatusErrored}, err
 	}
 	cfg, err := configToStruct[GitOverwriteConfig](stepCtx.Config)
 	if err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailed},
+		return PromotionStepResult{Status: PromotionStatusErrored},
 			fmt.Errorf("could not convert config into %s config: %w", g.Name(), err)
 	}
 	return g.runPromotionStep(ctx, stepCtx, cfg)
@@ -67,37 +67,37 @@ func (g *gitTreeOverwriter) runPromotionStep(
 ) (PromotionStepResult, error) {
 	inPath, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.InPath)
 	if err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailed}, fmt.Errorf(
+		return PromotionStepResult{Status: PromotionStatusErrored}, fmt.Errorf(
 			"error joining path %s with work dir %s: %w",
 			cfg.InPath, stepCtx.WorkDir, err,
 		)
 	}
 	outPath, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.OutPath)
 	if err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailed}, fmt.Errorf(
+		return PromotionStepResult{Status: PromotionStatusErrored}, fmt.Errorf(
 			"error joining path %s with work dir %s: %w",
 			cfg.OutPath, stepCtx.WorkDir, err,
 		)
 	}
 	workTree, err := git.LoadWorkTree(outPath, nil)
 	if err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailed},
+		return PromotionStepResult{Status: PromotionStatusErrored},
 			fmt.Errorf("error loading working tree from %s: %w", cfg.OutPath, err)
 	}
 	// workTree.Clear() won't remove any files that aren't indexed. This is a bit
 	// of a hack to ensure that we don't have any untracked files in the working
 	// tree so that workTree.Clear() will remove everything.
 	if err = workTree.AddAll(); err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailed},
+		return PromotionStepResult{Status: PromotionStatusErrored},
 			fmt.Errorf("error adding all files to working tree at %s: %w", cfg.OutPath, err)
 	}
 	if err = workTree.Clear(); err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailed},
+		return PromotionStepResult{Status: PromotionStatusErrored},
 			fmt.Errorf("error clearing working tree at %s: %w", cfg.OutPath, err)
 	}
 	inFI, err := os.Stat(inPath)
 	if err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailed},
+		return PromotionStepResult{Status: PromotionStatusErrored},
 			fmt.Errorf("error getting info for path %s: %w", inPath, err)
 	}
 	if !inFI.IsDir() {
@@ -119,7 +119,7 @@ func (g *gitTreeOverwriter) runPromotionStep(
 			},
 		},
 	); err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailed},
+		return PromotionStepResult{Status: PromotionStatusErrored},
 			fmt.Errorf("failed to copy %q to %q: %w", cfg.InPath, cfg.OutPath, err)
 	}
 	return PromotionStepResult{Status: PromotionStatusSuccess}, nil

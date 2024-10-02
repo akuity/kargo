@@ -62,7 +62,7 @@ func (h *helmChartUpdater) RunPromotionStep(
 	ctx context.Context,
 	stepCtx *PromotionStepContext,
 ) (PromotionStepResult, error) {
-	failure := PromotionStepResult{Status: PromotionStatusFailed}
+	failure := PromotionStepResult{Status: PromotionStatusErrored}
 
 	// Validate the configuration against the JSON Schema
 	if err := validate(
@@ -89,7 +89,7 @@ func (h *helmChartUpdater) runPromotionStep(
 ) (PromotionStepResult, error) {
 	absChartPath, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.Path)
 	if err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailed},
+		return PromotionStepResult{Status: PromotionStatusErrored},
 			fmt.Errorf("failed to join path %q: %w", cfg.Path, err)
 	}
 
@@ -97,31 +97,31 @@ func (h *helmChartUpdater) runPromotionStep(
 	chartDependencies, err := readChartDependencies(chartFilePath)
 	if err != nil {
 		return PromotionStepResult{
-			Status: PromotionStatusFailed,
+			Status: PromotionStatusErrored,
 		}, fmt.Errorf("failed to load chart dependencies from %q: %w", chartFilePath, err)
 	}
 
 	changes, err := h.processChartUpdates(ctx, stepCtx, cfg, chartDependencies)
 	if err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailed}, err
+		return PromotionStepResult{Status: PromotionStatusErrored}, err
 	}
 
 	if err = intyaml.SetStringsInFile(chartFilePath, changes); err != nil {
 		return PromotionStepResult{
-			Status: PromotionStatusFailed,
+			Status: PromotionStatusErrored,
 		}, fmt.Errorf("failed to update chart dependencies in %q: %w", chartFilePath, err)
 	}
 
 	helmHome, err := os.MkdirTemp("", "helm-chart-update-")
 	if err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailed},
+		return PromotionStepResult{Status: PromotionStatusErrored},
 			fmt.Errorf("failed to create temporary Helm home directory: %w", err)
 	}
 	defer os.RemoveAll(helmHome)
 
 	newVersions, err := h.updateDependencies(ctx, stepCtx, helmHome, absChartPath, chartDependencies)
 	if err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailed}, err
+		return PromotionStepResult{Status: PromotionStatusErrored}, err
 	}
 
 	result := PromotionStepResult{Status: PromotionStatusSuccess}

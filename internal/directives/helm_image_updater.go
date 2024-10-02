@@ -46,7 +46,7 @@ func (h *helmImageUpdater) RunPromotionStep(
 	ctx context.Context,
 	stepCtx *PromotionStepContext,
 ) (PromotionStepResult, error) {
-	failure := PromotionStepResult{Status: PromotionStatusFailed}
+	failure := PromotionStepResult{Status: PromotionStatusErrored}
 
 	// Validate the configuration against the JSON Schema
 	if err := validate(
@@ -73,14 +73,14 @@ func (h *helmImageUpdater) runPromotionStep(
 ) (PromotionStepResult, error) {
 	updates, fullImageRefs, err := h.generateImageUpdates(ctx, stepCtx, cfg)
 	if err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailed},
+		return PromotionStepResult{Status: PromotionStatusErrored},
 			fmt.Errorf("failed to generate image updates: %w", err)
 	}
 
 	result := PromotionStepResult{Status: PromotionStatusSuccess}
 	if len(updates) > 0 {
 		if err = h.updateValuesFile(stepCtx.WorkDir, cfg.Path, updates); err != nil {
-			return PromotionStepResult{Status: PromotionStatusFailed},
+			return PromotionStepResult{Status: PromotionStatusErrored},
 				fmt.Errorf("values file update failed: %w", err)
 		}
 

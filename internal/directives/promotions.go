@@ -98,6 +98,10 @@ type PromotionResult struct {
 type PromotionStatus string
 
 const (
+	// PromotionStatusErrored is the result of either a user-defined promotion
+	// process executed by the Engine or a single PromotionStep executed by a
+	// PromotionStepRunner which has failed for technical reasons.
+	PromotionStatusErrored PromotionStatus = "Errored"
 	// PromotionStatusFailed is the result of either a user-defined promotion
 	// process executed by the Engine or a single PromotionStep executed by a
 	// PromotionStepRunner which has failed.

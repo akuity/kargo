@@ -43,11 +43,11 @@ func (g *gitPRWaiter) RunPromotionStep(
 	stepCtx *PromotionStepContext,
 ) (PromotionStepResult, error) {
 	if err := g.validate(stepCtx.Config); err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailed}, err
+		return PromotionStepResult{Status: PromotionStatusErrored}, err
 	}
 	cfg, err := configToStruct[GitWaitForPRConfig](stepCtx.Config)
 	if err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailed},
+		return PromotionStepResult{Status: PromotionStatusErrored},
 			fmt.Errorf("could not convert config into git-wait-for-pr config: %w", err)
 	}
 	return g.runPromotionStep(ctx, stepCtx, cfg)
@@ -65,7 +65,7 @@ func (g *gitPRWaiter) runPromotionStep(
 ) (PromotionStepResult, error) {
 	prNumber, err := getPRNumber(stepCtx.SharedState, cfg)
 	if err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailed},
+		return PromotionStepResult{Status: PromotionStatusErrored},
 			fmt.Errorf("error getting PR number: %w", err)
 	}
 
@@ -77,7 +77,7 @@ func (g *gitPRWaiter) runPromotionStep(
 		cfg.RepoURL,
 	)
 	if err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailed},
+		return PromotionStepResult{Status: PromotionStatusErrored},
 			fmt.Errorf("error getting credentials for %s: %w", cfg.RepoURL, err)
 	}
 	if found {
@@ -99,13 +99,13 @@ func (g *gitPRWaiter) runPromotionStep(
 	}
 	gitProviderSvc, err := gitprovider.NewGitProviderService(cfg.RepoURL, gpOpts)
 	if err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailed},
+		return PromotionStepResult{Status: PromotionStatusErrored},
 			fmt.Errorf("error creating git provider service: %w", err)
 	}
 
 	pr, err := gitProviderSvc.GetPullRequest(ctx, prNumber)
 	if err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailed},
+		return PromotionStepResult{Status: PromotionStatusErrored},
 			fmt.Errorf("error getting pull request %d: %w", prNumber, err)
 	}
 	if pr.IsOpen() {
@@ -114,7 +114,7 @@ func (g *gitPRWaiter) runPromotionStep(
 
 	merged, err := gitProviderSvc.IsPullRequestMerged(ctx, prNumber)
 	if err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailed}, fmt.Errorf(
+		return PromotionStepResult{Status: PromotionStatusErrored}, fmt.Errorf(
 			"error checking if pull request %d was merged: %w",
 			prNumber, err,
 		)

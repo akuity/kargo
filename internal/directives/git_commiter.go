@@ -41,11 +41,11 @@ func (g *gitCommitter) RunPromotionStep(
 	stepCtx *PromotionStepContext,
 ) (PromotionStepResult, error) {
 	if err := g.validate(stepCtx.Config); err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailed}, err
+		return PromotionStepResult{Status: PromotionStatusErrored}, err
 	}
 	cfg, err := configToStruct[GitCommitConfig](stepCtx.Config)
 	if err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailed},
+		return PromotionStepResult{Status: PromotionStatusErrored},
 			fmt.Errorf("could not convert config into %s config: %w", g.Name(), err)
 	}
 	return g.runPromotionStep(ctx, stepCtx, cfg)
@@ -63,23 +63,23 @@ func (g *gitCommitter) runPromotionStep(
 ) (PromotionStepResult, error) {
 	path, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.Path)
 	if err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailed}, fmt.Errorf(
+		return PromotionStepResult{Status: PromotionStatusErrored}, fmt.Errorf(
 			"error joining path %s with work dir %s: %w",
 			cfg.Path, stepCtx.WorkDir, err,
 		)
 	}
 	workTree, err := git.LoadWorkTree(path, nil)
 	if err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailed},
+		return PromotionStepResult{Status: PromotionStatusErrored},
 			fmt.Errorf("error loading working tree from %s: %w", cfg.Path, err)
 	}
 	if err = workTree.AddAll(); err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailed},
+		return PromotionStepResult{Status: PromotionStatusErrored},
 			fmt.Errorf("error adding all changes to working tree: %w", err)
 	}
 	commitMsg, err := g.buildCommitMessage(stepCtx.SharedState, cfg)
 	if err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailed},
+		return PromotionStepResult{Status: PromotionStatusErrored},
 			fmt.Errorf("error building commit message: %w", err)
 	}
 	commitOpts := &git.CommitOptions{}
@@ -94,18 +94,18 @@ func (g *gitCommitter) runPromotionStep(
 	}
 	hasDiffs, err := workTree.HasDiffs()
 	if err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailed},
+		return PromotionStepResult{Status: PromotionStatusErrored},
 			fmt.Errorf("error checking for diffs in working tree: %w", err)
 	}
 	if hasDiffs {
 		if err = workTree.Commit(commitMsg, commitOpts); err != nil {
-			return PromotionStepResult{Status: PromotionStatusFailed},
+			return PromotionStepResult{Status: PromotionStatusErrored},
 				fmt.Errorf("error committing to working tree: %w", err)
 		}
 	}
 	commitID, err := workTree.LastCommitID()
 	if err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailed},
+		return PromotionStepResult{Status: PromotionStatusErrored},
 			fmt.Errorf("error getting last commit ID: %w", err)
 	}
 	return PromotionStepResult{
