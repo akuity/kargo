@@ -236,7 +236,7 @@ type HelmTemplateConfig struct {
 	// Path at which the Helm chart can be found.
 	Path string `json:"path"`
 	// ReleaseName to use for the rendered manifests.
-	ReleaseName string `json:"releaseName,omitempty"`
+	ReleaseName string `json:"releaseName"`
 	// Whether to skip tests when rendering the manifests.
 	SkipTests bool `json:"skipTests,omitempty"`
 	// Whether to use the release name in the output path (instead of the chart name). This only
