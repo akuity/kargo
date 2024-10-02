@@ -61,13 +61,13 @@ func (k *kustomizeImageSetter) RunPromotionStep(
 ) (PromotionStepResult, error) {
 	// Validate the configuration against the JSON Schema.
 	if err := validate(k.schemaLoader, gojsonschema.NewGoLoader(stepCtx.Config), k.Name()); err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailure}, err
+		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, err
 	}
 
 	// Convert the configuration into a typed object.
 	cfg, err := configToStruct[KustomizeSetImageConfig](stepCtx.Config)
 	if err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailure},
+		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
 			fmt.Errorf("could not convert config into kustomize-set-image config: %w", err)
 	}
 
@@ -82,22 +82,22 @@ func (k *kustomizeImageSetter) runPromotionStep(
 	// Find the Kustomization file.
 	kusPath, err := findKustomization(stepCtx.WorkDir, cfg.Path)
 	if err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailure},
+		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
 			fmt.Errorf("could not discover kustomization file: %w", err)
 	}
 
 	// Discover image origins and collect target images.
 	targetImages, err := k.buildTargetImages(ctx, stepCtx, cfg.Images)
 	if err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailure}, err
+		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, err
 	}
 
 	// Update the Kustomization file with the new images.
 	if err = updateKustomizationFile(kusPath, targetImages); err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailure}, err
+		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, err
 	}
 
-	result := PromotionStepResult{Status: PromotionStatusSuccess}
+	result := PromotionStepResult{Status: kargoapi.PromotionPhaseSucceeded}
 	if commitMsg := k.generateCommitMessage(cfg.Path, targetImages); commitMsg != "" {
 		result.Output = map[string]any{
 			"commitMessage": commitMsg,

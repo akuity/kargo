@@ -6,6 +6,7 @@ import (
 
 	"github.com/xeipuuv/gojsonschema"
 
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/git"
 	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/gitprovider"
@@ -43,11 +44,11 @@ func (g *gitPRWaiter) RunPromotionStep(
 	stepCtx *PromotionStepContext,
 ) (PromotionStepResult, error) {
 	if err := g.validate(stepCtx.Config); err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailure}, err
+		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, err
 	}
 	cfg, err := configToStruct[GitWaitForPRConfig](stepCtx.Config)
 	if err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailure},
+		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
 			fmt.Errorf("could not convert config into git-wait-for-pr config: %w", err)
 	}
 	return g.runPromotionStep(ctx, stepCtx, cfg)
@@ -65,7 +66,7 @@ func (g *gitPRWaiter) runPromotionStep(
 ) (PromotionStepResult, error) {
 	prNumber, err := getPRNumber(stepCtx.SharedState, cfg)
 	if err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailure},
+		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
 			fmt.Errorf("error getting PR number: %w", err)
 	}
 
@@ -77,7 +78,7 @@ func (g *gitPRWaiter) runPromotionStep(
 		cfg.RepoURL,
 	)
 	if err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailure},
+		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
 			fmt.Errorf("error getting credentials for %s: %w", cfg.RepoURL, err)
 	}
 	if found {
@@ -99,33 +100,35 @@ func (g *gitPRWaiter) runPromotionStep(
 	}
 	gitProviderSvc, err := gitprovider.NewGitProviderService(cfg.RepoURL, gpOpts)
 	if err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailure},
+		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
 			fmt.Errorf("error creating git provider service: %w", err)
 	}
 
 	pr, err := gitProviderSvc.GetPullRequest(ctx, prNumber)
 	if err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailure},
+		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
 			fmt.Errorf("error getting pull request %d: %w", prNumber, err)
 	}
 	if pr.IsOpen() {
-		return PromotionStepResult{Status: PromotionStatusPending}, nil
+		return PromotionStepResult{Status: kargoapi.PromotionPhaseRunning}, nil
 	}
 
 	merged, err := gitProviderSvc.IsPullRequestMerged(ctx, prNumber)
 	if err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailure}, fmt.Errorf(
+		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, fmt.Errorf(
 			"error checking if pull request %d was merged: %w",
 			prNumber, err,
 		)
 	}
 	if !merged {
-		return PromotionStepResult{Status: PromotionStatusFailure},
-			fmt.Errorf("pull request %d was closed without being merged", prNumber)
+		return PromotionStepResult{
+			Status:  kargoapi.PromotionPhaseFailed,
+			Message: fmt.Sprintf("pull request %d was closed without being merged", prNumber),
+		}, err
 	}
 
 	return PromotionStepResult{
-		Status: PromotionStatusSuccess,
+		Status: kargoapi.PromotionPhaseSucceeded,
 		Output: map[string]any{commitKey: pr.MergeCommitSHA},
 	}, nil
 }

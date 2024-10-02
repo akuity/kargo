@@ -11,6 +11,7 @@ import (
 	"github.com/sosedoff/gitkit"
 	"github.com/stretchr/testify/require"
 
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/git"
 )
 
@@ -221,7 +222,7 @@ func Test_gitCommitter_runPromotionStep(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
-	require.Equal(t, PromotionStatusSuccess, res.Status)
+	require.Equal(t, kargoapi.PromotionPhaseSucceeded, res.Status)
 	expectedCommit, err := workTree.LastCommitID()
 	require.NoError(t, err)
 	actualCommit, ok := res.Output[commitKey]

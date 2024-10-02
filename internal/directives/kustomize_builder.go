@@ -15,6 +15,8 @@ import (
 	"sigs.k8s.io/kustomize/api/resmap"
 	kustypes "sigs.k8s.io/kustomize/api/types"
 	"sigs.k8s.io/kustomize/kyaml/filesys"
+
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
 // kustomizeRenderMutex is a mutex that ensures only one kustomize build is
@@ -52,7 +54,7 @@ func (k *kustomizeBuilder) RunPromotionStep(
 	_ context.Context,
 	stepCtx *PromotionStepContext,
 ) (PromotionStepResult, error) {
-	failure := PromotionStepResult{Status: PromotionStatusFailure}
+	failure := PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}
 
 	// Validate the configuration against the JSON Schema.
 	if err := validate(k.schemaLoader, gojsonschema.NewGoLoader(stepCtx.Config), k.Name()); err != nil {
@@ -75,29 +77,29 @@ func (k *kustomizeBuilder) runPromotionStep(
 	// Create a "chrooted" filesystem for the kustomize build.
 	fs, err := securefs.MakeFsOnDiskSecureBuild(stepCtx.WorkDir)
 	if err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailure}, err
+		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, err
 	}
 
 	// Build the manifests.
 	rm, err := kustomizeBuild(fs, filepath.Join(stepCtx.WorkDir, cfg.Path))
 	if err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailure}, err
+		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, err
 	}
 
 	// Prepare the output path.
 	outPath, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.OutPath)
 	if err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailure}, err
+		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, err
 	}
 
 	// Write the built manifests to the output path.
 	if err := k.writeResult(rm, outPath); err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailure}, fmt.Errorf(
+		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, fmt.Errorf(
 			"failed to write built manifests to %q: %w", cfg.OutPath,
 			sanitizePathError(err, stepCtx.WorkDir),
 		)
 	}
-	return PromotionStepResult{Status: PromotionStatusSuccess}, nil
+	return PromotionStepResult{Status: kargoapi.PromotionPhaseSucceeded}, nil
 }
 
 func (k *kustomizeBuilder) writeResult(rm resmap.ResMap, outPath string) error {
