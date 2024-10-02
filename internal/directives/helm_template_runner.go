@@ -157,6 +157,7 @@ func (h *helmTemplateRunner) newInstallAction(
 	client.Replace = true
 	client.ClientOnly = true
 	client.ReleaseName = defaultValue(cfg.ReleaseName, "release-name")
+	client.UseReleaseName = cfg.UseReleaseName
 	client.Namespace = defaultValue(cfg.Namespace, project)
 	client.IncludeCRDs = cfg.IncludeCRDs
 	client.APIVersions = cfg.APIVersions
@@ -221,7 +222,11 @@ func (h *helmTemplateRunner) writeOutput(cfg HelmTemplateConfig, rls *release.Re
 			}
 
 			exists := true
-			if _, err := os.Stat(filepath.Join(outPath, h.Path)); err != nil {
+			outDir := outPath
+			if cfg.UseReleaseName {
+				outDir = filepath.Join(outDir, cfg.ReleaseName)
+			}
+			if _, err := os.Stat(filepath.Join(outDir, h.Path)); err != nil {
 				if !os.IsNotExist(err) {
 					return fmt.Errorf("failed to check if file %q exists: %w", h.Path, err)
 				}
