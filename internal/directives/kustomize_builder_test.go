@@ -47,6 +47,36 @@ metadata:
 			},
 		},
 		{
+			name: "successful build with output directory",
+			setupFiles: func(t *testing.T, dir string) {
+				require.NoError(t, os.WriteFile(filepath.Join(dir, "kustomization.yaml"), []byte(`
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+- deployment.yaml
+`), 0o600))
+				require.NoError(t, os.WriteFile(filepath.Join(dir, "deployment.yaml"), []byte(`---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test-deployment
+`), 0o600))
+			},
+			config: KustomizeBuildConfig{
+				Path:    ".",
+				OutPath: "output/",
+			},
+			assertions: func(t *testing.T, dir string, result PromotionStepResult, err error) {
+				require.NoError(t, err)
+				assert.Equal(t, PromotionStepResult{Status: PromotionStatusSuccess}, result)
+
+				assert.DirExists(t, filepath.Join(dir, "output"))
+				b, err := os.ReadFile(filepath.Join(dir, "output", "deployment-test-deployment.yaml"))
+				require.NoError(t, err)
+				assert.Contains(t, string(b), "test-deployment")
+			},
+		},
+		{
 			name:       "kustomization file not found",
 			setupFiles: func(*testing.T, string) {},
 			config: KustomizeBuildConfig{
