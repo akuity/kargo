@@ -17,7 +17,8 @@
     },
     "releaseName": {
       "type": "string",
-      "description": "ReleaseName to use for the rendered manifests."
+      "description": "ReleaseName to use for the rendered manifests.",
+      "minLength": 1
     },
     "useReleaseName": {
       "type": "boolean",
