@@ -121,8 +121,10 @@ func (g *gitPRWaiter) runPromotionStep(
 		)
 	}
 	if !merged {
-		return PromotionStepResult{Status: kargoapi.PromotionPhaseFailed},
-			fmt.Errorf("pull request %d was closed without being merged", prNumber)
+		return PromotionStepResult{
+			Status:  kargoapi.PromotionPhaseFailed,
+			Message: fmt.Sprintf("pull request %d was closed without being merged", prNumber),
+		}, err
 	}
 
 	return PromotionStepResult{

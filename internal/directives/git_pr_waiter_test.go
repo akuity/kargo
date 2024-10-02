@@ -174,7 +174,8 @@ func Test_gitPRWaiter_runPromotionStep(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, res PromotionStepResult, err error) {
-				require.ErrorContains(t, err, "was closed without being merged")
+				require.NoError(t, err)
+				require.Contains(t, res.Message, "closed without being merged")
 				require.Equal(t, kargoapi.PromotionPhaseFailed, res.Status)
 			},
 		},
