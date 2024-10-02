@@ -61,13 +61,13 @@ func (k *kustomizeImageSetter) RunPromotionStep(
 ) (PromotionStepResult, error) {
 	// Validate the configuration against the JSON Schema.
 	if err := validate(k.schemaLoader, gojsonschema.NewGoLoader(stepCtx.Config), k.Name()); err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailure}, err
+		return PromotionStepResult{Status: PromotionStatusFailed}, err
 	}
 
 	// Convert the configuration into a typed object.
 	cfg, err := configToStruct[KustomizeSetImageConfig](stepCtx.Config)
 	if err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailure},
+		return PromotionStepResult{Status: PromotionStatusFailed},
 			fmt.Errorf("could not convert config into kustomize-set-image config: %w", err)
 	}
 
@@ -82,19 +82,19 @@ func (k *kustomizeImageSetter) runPromotionStep(
 	// Find the Kustomization file.
 	kusPath, err := findKustomization(stepCtx.WorkDir, cfg.Path)
 	if err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailure},
+		return PromotionStepResult{Status: PromotionStatusFailed},
 			fmt.Errorf("could not discover kustomization file: %w", err)
 	}
 
 	// Discover image origins and collect target images.
 	targetImages, err := k.buildTargetImages(ctx, stepCtx, cfg.Images)
 	if err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailure}, err
+		return PromotionStepResult{Status: PromotionStatusFailed}, err
 	}
 
 	// Update the Kustomization file with the new images.
 	if err = updateKustomizationFile(kusPath, targetImages); err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailure}, err
+		return PromotionStepResult{Status: PromotionStatusFailed}, err
 	}
 
 	result := PromotionStepResult{Status: PromotionStatusSuccess}

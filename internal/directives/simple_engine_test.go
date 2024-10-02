@@ -22,7 +22,7 @@ func TestSimpleEngine_Promote(t *testing.T) {
 		},
 	}
 
-	failureResult := PromotionStepResult{Status: PromotionStatusFailure}
+	failureResult := PromotionStepResult{Status: PromotionStatusFailed}
 	successResult := PromotionStepResult{
 		Status:          PromotionStatusSuccess,
 		HealthCheckStep: &testHealthCheckStep,
@@ -99,7 +99,7 @@ func TestSimpleEngine_Promote(t *testing.T) {
 			steps: []PromotionStep{{Kind: "unknown"}},
 			ctx:   context.Background(),
 			assertions: func(t *testing.T, res PromotionResult, err error) {
-				assert.Equal(t, PromotionStatusFailure, res.Status)
+				assert.Equal(t, PromotionStatusFailed, res.Status)
 				assert.ErrorContains(t, err, "not found")
 			},
 		},
@@ -108,7 +108,7 @@ func TestSimpleEngine_Promote(t *testing.T) {
 			steps: []PromotionStep{{Kind: failureStepName}},
 			ctx:   context.Background(),
 			assertions: func(t *testing.T, res PromotionResult, err error) {
-				assert.Equal(t, PromotionStatusFailure, res.Status)
+				assert.Equal(t, PromotionStatusFailed, res.Status)
 				assert.ErrorContains(t, err, "something went wrong")
 			},
 		},
@@ -127,7 +127,7 @@ func TestSimpleEngine_Promote(t *testing.T) {
 				return ctx
 			}(),
 			assertions: func(t *testing.T, res PromotionResult, err error) {
-				assert.Equal(t, PromotionStatusFailure, res.Status)
+				assert.Equal(t, PromotionStatusFailed, res.Status)
 				assert.ErrorIs(t, err, context.Canceled)
 			},
 		},

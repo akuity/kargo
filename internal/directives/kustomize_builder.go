@@ -52,7 +52,7 @@ func (k *kustomizeBuilder) RunPromotionStep(
 	_ context.Context,
 	stepCtx *PromotionStepContext,
 ) (PromotionStepResult, error) {
-	failure := PromotionStepResult{Status: PromotionStatusFailure}
+	failure := PromotionStepResult{Status: PromotionStatusFailed}
 
 	// Validate the configuration against the JSON Schema.
 	if err := validate(k.schemaLoader, gojsonschema.NewGoLoader(stepCtx.Config), k.Name()); err != nil {
@@ -75,24 +75,24 @@ func (k *kustomizeBuilder) runPromotionStep(
 	// Create a "chrooted" filesystem for the kustomize build.
 	fs, err := securefs.MakeFsOnDiskSecureBuild(stepCtx.WorkDir)
 	if err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailure}, err
+		return PromotionStepResult{Status: PromotionStatusFailed}, err
 	}
 
 	// Build the manifests.
 	rm, err := kustomizeBuild(fs, filepath.Join(stepCtx.WorkDir, cfg.Path))
 	if err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailure}, err
+		return PromotionStepResult{Status: PromotionStatusFailed}, err
 	}
 
 	// Prepare the output path.
 	outPath, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.OutPath)
 	if err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailure}, err
+		return PromotionStepResult{Status: PromotionStatusFailed}, err
 	}
 
 	// Write the built manifests to the output path.
 	if err := k.writeResult(rm, outPath); err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailure}, fmt.Errorf(
+		return PromotionStepResult{Status: PromotionStatusFailed}, fmt.Errorf(
 			"failed to write built manifests to %q: %w", cfg.OutPath,
 			sanitizePathError(err, stepCtx.WorkDir),
 		)

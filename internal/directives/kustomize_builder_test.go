@@ -85,7 +85,7 @@ metadata:
 			},
 			assertions: func(t *testing.T, dir string, result PromotionStepResult, err error) {
 				require.ErrorContains(t, err, "no such file or directory")
-				assert.Equal(t, PromotionStepResult{Status: PromotionStatusFailure}, result)
+				assert.Equal(t, PromotionStepResult{Status: PromotionStatusFailed}, result)
 
 				assert.NoFileExists(t, filepath.Join(dir, "output.yaml"))
 			},
@@ -101,7 +101,7 @@ metadata:
 			},
 			assertions: func(t *testing.T, dir string, result PromotionStepResult, err error) {
 				require.ErrorContains(t, err, "invalid Kustomization")
-				assert.Equal(t, PromotionStepResult{Status: PromotionStatusFailure}, result)
+				assert.Equal(t, PromotionStepResult{Status: PromotionStatusFailed}, result)
 
 				assert.NoFileExists(t, filepath.Join(dir, "output.yaml"))
 			},

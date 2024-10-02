@@ -128,7 +128,7 @@ func Test_fileCopier_runPromotionStep(t *testing.T) {
 				InPath: "input.txt",
 			},
 			assertions: func(t *testing.T, _ string, result PromotionStepResult, err error) {
-				require.Equal(t, PromotionStepResult{Status: PromotionStatusFailure}, result)
+				require.Equal(t, PromotionStepResult{Status: PromotionStatusFailed}, result)
 				require.ErrorContains(t, err, "failed to copy")
 			},
 		},

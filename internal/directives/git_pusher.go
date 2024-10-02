@@ -45,11 +45,11 @@ func (g *gitPushPusher) RunPromotionStep(
 	stepCtx *PromotionStepContext,
 ) (PromotionStepResult, error) {
 	if err := g.validate(stepCtx.Config); err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailure}, err
+		return PromotionStepResult{Status: PromotionStatusFailed}, err
 	}
 	cfg, err := configToStruct[GitPushConfig](stepCtx.Config)
 	if err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailure},
+		return PromotionStepResult{Status: PromotionStatusFailed},
 			fmt.Errorf("could not convert config into git-push config: %w", err)
 	}
 	return g.runPromotionStep(ctx, stepCtx, cfg)
@@ -70,7 +70,7 @@ func (g *gitPushPusher) runPromotionStep(
 	// credentials and, if found, reload the work tree with the credentials.
 	path, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.Path)
 	if err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailure}, fmt.Errorf(
+		return PromotionStepResult{Status: PromotionStatusFailed}, fmt.Errorf(
 			"error joining path %s with work dir %s: %w",
 			cfg.Path, stepCtx.WorkDir, err,
 		)
@@ -78,7 +78,7 @@ func (g *gitPushPusher) runPromotionStep(
 	loadOpts := &git.LoadWorkTreeOptions{}
 	workTree, err := git.LoadWorkTree(path, loadOpts)
 	if err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailure},
+		return PromotionStepResult{Status: PromotionStatusFailed},
 			fmt.Errorf("error loading working tree from %s: %w", cfg.Path, err)
 	}
 	var creds credentials.Credentials
@@ -89,7 +89,7 @@ func (g *gitPushPusher) runPromotionStep(
 		credentials.TypeGit,
 		workTree.URL(),
 	); err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailure},
+		return PromotionStepResult{Status: PromotionStatusFailed},
 			fmt.Errorf("error getting credentials for %s: %w", workTree.URL(), err)
 	} else if found {
 		loadOpts.Credentials = &git.RepoCredentials{
@@ -99,7 +99,7 @@ func (g *gitPushPusher) runPromotionStep(
 		}
 	}
 	if workTree, err = git.LoadWorkTree(path, loadOpts); err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailure},
+		return PromotionStepResult{Status: PromotionStatusFailed},
 			fmt.Errorf("error loading working tree from %s: %w", cfg.Path, err)
 	}
 	pushOpts := &git.PushOptions{
@@ -117,17 +117,17 @@ func (g *gitPushPusher) runPromotionStep(
 		// because we will want to return the branch that was pushed to, but we
 		// don't want to mess with the options any further.
 		if targetBranch, err = workTree.CurrentBranch(); err != nil {
-			return PromotionStepResult{Status: PromotionStatusFailure},
+			return PromotionStepResult{Status: PromotionStatusFailed},
 				fmt.Errorf("error getting current branch: %w", err)
 		}
 	}
 	if err = workTree.Push(pushOpts); err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailure},
+		return PromotionStepResult{Status: PromotionStatusFailed},
 			fmt.Errorf("error pushing commits to remote: %w", err)
 	}
 	commitID, err := workTree.LastCommitID()
 	if err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailure},
+		return PromotionStepResult{Status: PromotionStatusFailed},
 			fmt.Errorf("error getting last commit ID: %w", err)
 	}
 	return PromotionStepResult{

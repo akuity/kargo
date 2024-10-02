@@ -164,7 +164,7 @@ data:
 			},
 			assertions: func(t *testing.T, workDir string, result PromotionStepResult, err error) {
 				require.ErrorContains(t, err, "failed to compose values")
-				assert.Equal(t, PromotionStepResult{Status: PromotionStatusFailure}, result)
+				assert.Equal(t, PromotionStepResult{Status: PromotionStatusFailed}, result)
 
 				require.NoFileExists(t, filepath.Join(workDir, "output.yaml"))
 			},
@@ -176,7 +176,7 @@ data:
 			},
 			assertions: func(t *testing.T, workDir string, result PromotionStepResult, err error) {
 				require.ErrorContains(t, err, "failed to load chart")
-				assert.Equal(t, PromotionStepResult{Status: PromotionStatusFailure}, result)
+				assert.Equal(t, PromotionStepResult{Status: PromotionStatusFailed}, result)
 
 				require.NoFileExists(t, filepath.Join(workDir, "output.yaml"))
 			},
@@ -199,7 +199,7 @@ dependencies:
 			},
 			assertions: func(t *testing.T, workDir string, result PromotionStepResult, err error) {
 				require.ErrorContains(t, err, "missing chart dependencies")
-				assert.Equal(t, PromotionStepResult{Status: PromotionStatusFailure}, result)
+				assert.Equal(t, PromotionStepResult{Status: PromotionStatusFailed}, result)
 
 				require.NoFileExists(t, filepath.Join(workDir, "output.yaml"))
 			},
@@ -217,7 +217,7 @@ version: 0.1.0`,
 			},
 			assertions: func(t *testing.T, workDir string, result PromotionStepResult, err error) {
 				require.ErrorContains(t, err, "failed to initialize Helm action config")
-				assert.Equal(t, PromotionStepResult{Status: PromotionStatusFailure}, result)
+				assert.Equal(t, PromotionStepResult{Status: PromotionStatusFailed}, result)
 
 				require.NoFileExists(t, filepath.Join(workDir, "output.yaml"))
 			},
@@ -243,7 +243,7 @@ data:
 			},
 			assertions: func(t *testing.T, workDir string, result PromotionStepResult, err error) {
 				require.ErrorContains(t, err, "failed to render chart")
-				assert.Equal(t, PromotionStepResult{Status: PromotionStatusFailure}, result)
+				assert.Equal(t, PromotionStepResult{Status: PromotionStatusFailed}, result)
 
 				require.NoFileExists(t, filepath.Join(workDir, "output.yaml"))
 			},
@@ -268,7 +268,7 @@ metadata:
 			},
 			assertions: func(t *testing.T, workDir string, result PromotionStepResult, err error) {
 				require.ErrorContains(t, err, "failed to write rendered chart")
-				assert.Equal(t, PromotionStepResult{Status: PromotionStatusFailure}, result)
+				assert.Equal(t, PromotionStepResult{Status: PromotionStatusFailed}, result)
 
 				require.NoFileExists(t, filepath.Join(workDir, "output.yaml"))
 			},

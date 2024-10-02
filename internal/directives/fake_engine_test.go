@@ -34,13 +34,13 @@ func TestFakeEngine_Promote(t *testing.T) {
 				assert.Equal(t, ctx, givenCtx)
 				assert.Equal(t, promoCtx, givenPromoCtx)
 				assert.Equal(t, steps, givenSteps)
-				return PromotionResult{Status: PromotionStatusFailure},
+				return PromotionResult{Status: PromotionStatusFailed},
 					errors.New("something went wrong")
 			},
 		}
 		res, err := engine.Promote(ctx, promoCtx, steps)
 		assert.ErrorContains(t, err, "something went wrong")
-		assert.Equal(t, PromotionStatusFailure, res.Status)
+		assert.Equal(t, PromotionStatusFailed, res.Status)
 	})
 }
 

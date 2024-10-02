@@ -554,7 +554,7 @@ func (r *reconciler) promote(
 			}
 			workingPromo.Status.Phase = kargoapi.PromotionPhaseSucceeded
 			workingPromo.Status.HealthChecks = healthChecks
-		case directives.PromotionStatusFailure:
+		case directives.PromotionStatusFailed:
 			workingPromo.Status.Phase = kargoapi.PromotionPhaseFailed
 		}
 		if err != nil {

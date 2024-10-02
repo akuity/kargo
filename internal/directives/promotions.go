@@ -98,10 +98,10 @@ type PromotionResult struct {
 type PromotionStatus string
 
 const (
-	// PromotionStatusFailure is the result of either a user-defined promotion
+	// PromotionStatusFailed is the result of either a user-defined promotion
 	// process executed by the Engine or a single PromotionStep executed by a
 	// PromotionStepRunner which has failed.
-	PromotionStatusFailure PromotionStatus = "Failure"
+	PromotionStatusFailed PromotionStatus = "Failed"
 	// PromotionStatusPending is the result of either a user-defined promotion
 	// process executed by the Engine or a single PromotionStep executed by a
 	// PromotionStepRunner which was unable to complete because it is waiting on

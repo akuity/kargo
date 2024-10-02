@@ -49,7 +49,7 @@ func (e *SimpleEngine) Promote(
 		workDir, err = os.MkdirTemp("", "run-")
 		if err != nil {
 			return PromotionResult{
-					Status:      PromotionStatusFailure,
+					Status:      PromotionStatusFailed,
 					CurrentStep: 0,
 				},
 				fmt.Errorf("temporary working directory creation failed: %w", err)
@@ -69,7 +69,7 @@ func (e *SimpleEngine) Promote(
 		select {
 		case <-ctx.Done():
 			return PromotionResult{
-				Status:      PromotionStatusFailure,
+				Status:      PromotionStatusFailed,
 				CurrentStep: i,
 				State:       state,
 			}, ctx.Err()
@@ -78,7 +78,7 @@ func (e *SimpleEngine) Promote(
 		reg, err := e.registry.GetPromotionStepRunnerRegistration(step.Kind)
 		if err != nil {
 			return PromotionResult{
-					Status:      PromotionStatusFailure,
+					Status:      PromotionStatusFailed,
 					CurrentStep: i,
 					State:       state,
 				},
@@ -114,7 +114,7 @@ func (e *SimpleEngine) Promote(
 		}
 		if err != nil {
 			return PromotionResult{
-					Status:      PromotionStatusFailure,
+					Status:      PromotionStatusFailed,
 					CurrentStep: i,
 					State:       state,
 				},

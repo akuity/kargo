@@ -62,7 +62,7 @@ func (h *helmTemplateRunner) RunPromotionStep(
 	ctx context.Context,
 	stepCtx *PromotionStepContext,
 ) (PromotionStepResult, error) {
-	failure := PromotionStepResult{Status: PromotionStatusFailure}
+	failure := PromotionStepResult{Status: PromotionStatusFailed}
 
 	// Validate the configuration against the JSON Schema
 	if err := validate(
@@ -89,41 +89,41 @@ func (h *helmTemplateRunner) runPromotionStep(
 ) (PromotionStepResult, error) {
 	composedValues, err := h.composeValues(stepCtx.WorkDir, cfg.ValuesFiles)
 	if err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailure},
+		return PromotionStepResult{Status: PromotionStatusFailed},
 			fmt.Errorf("failed to compose values: %w", err)
 	}
 
 	chartRequested, err := h.loadChart(stepCtx.WorkDir, cfg.Path)
 	if err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailure},
+		return PromotionStepResult{Status: PromotionStatusFailed},
 			fmt.Errorf("failed to load chart from %q: %w", cfg.Path, err)
 	}
 
 	if err = h.checkDependencies(chartRequested); err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailure},
+		return PromotionStepResult{Status: PromotionStatusFailed},
 			fmt.Errorf("missing chart dependencies: %w", err)
 	}
 
 	absOutPath, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.OutPath)
 	if err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailure},
+		return PromotionStepResult{Status: PromotionStatusFailed},
 			fmt.Errorf("failed to join path %q: %w", cfg.OutPath, err)
 	}
 
 	install, err := h.newInstallAction(cfg, stepCtx.Project, absOutPath)
 	if err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailure},
+		return PromotionStepResult{Status: PromotionStatusFailed},
 			fmt.Errorf("failed to initialize Helm action config: %w", err)
 	}
 
 	rls, err := install.RunWithContext(ctx, chartRequested, composedValues)
 	if err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailure},
+		return PromotionStepResult{Status: PromotionStatusFailed},
 			fmt.Errorf("failed to render chart: %w", err)
 	}
 
 	if err = h.writeOutput(cfg, rls, absOutPath); err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailure},
+		return PromotionStepResult{Status: PromotionStatusFailed},
 			fmt.Errorf("failed to write rendered chart: %w", err)
 	}
 	return PromotionStepResult{Status: PromotionStatusSuccess}, nil

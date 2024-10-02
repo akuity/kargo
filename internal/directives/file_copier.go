@@ -49,13 +49,13 @@ func (f *fileCopier) RunPromotionStep(
 ) (PromotionStepResult, error) {
 	// Validate the configuration against the JSON Schema.
 	if err := validate(f.schemaLoader, gojsonschema.NewGoLoader(stepCtx.Config), f.Name()); err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailure}, err
+		return PromotionStepResult{Status: PromotionStatusFailed}, err
 	}
 
 	// Convert the configuration into a typed object.
 	cfg, err := configToStruct[CopyConfig](stepCtx.Config)
 	if err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailure},
+		return PromotionStepResult{Status: PromotionStatusFailed},
 			fmt.Errorf("could not convert config into %s config: %w", f.Name(), err)
 	}
 
@@ -70,12 +70,12 @@ func (f *fileCopier) runPromotionStep(
 	// Secure join the paths to prevent path traversal attacks.
 	inPath, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.InPath)
 	if err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailure},
+		return PromotionStepResult{Status: PromotionStatusFailed},
 			fmt.Errorf("could not secure join inPath %q: %w", cfg.InPath, err)
 	}
 	outPath, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.OutPath)
 	if err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailure},
+		return PromotionStepResult{Status: PromotionStatusFailed},
 			fmt.Errorf("could not secure join outPath %q: %w", cfg.OutPath, err)
 	}
 
@@ -90,7 +90,7 @@ func (f *fileCopier) runPromotionStep(
 		},
 	}
 	if err = copy.Copy(inPath, outPath, opts); err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailure},
+		return PromotionStepResult{Status: PromotionStatusFailed},
 			fmt.Errorf("failed to copy %q to %q: %w", cfg.InPath, cfg.OutPath, err)
 	}
 	return PromotionStepResult{Status: PromotionStatusSuccess}, nil

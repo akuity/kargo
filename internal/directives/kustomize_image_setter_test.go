@@ -111,7 +111,7 @@ kind: Kustomization
 			},
 			assertions: func(t *testing.T, _ string, result PromotionStepResult, err error) {
 				require.ErrorContains(t, err, "could not discover kustomization file:")
-				assert.Equal(t, PromotionStepResult{Status: PromotionStatusFailure}, result)
+				assert.Equal(t, PromotionStepResult{Status: PromotionStatusFailed}, result)
 			},
 		},
 		{
@@ -151,7 +151,7 @@ images:
 			},
 			assertions: func(t *testing.T, _ string, result PromotionStepResult, err error) {
 				require.ErrorContains(t, err, "unable to discover image")
-				assert.Equal(t, PromotionStepResult{Status: PromotionStatusFailure}, result)
+				assert.Equal(t, PromotionStepResult{Status: PromotionStatusFailed}, result)
 			},
 		},
 	}

@@ -115,7 +115,7 @@ func Test_gitPRWaiter_runPromotionStep(t *testing.T) {
 			assertions: func(t *testing.T, res PromotionStepResult, err error) {
 				require.ErrorContains(t, err, "error getting pull request")
 				require.ErrorContains(t, err, "something went wrong")
-				require.Equal(t, PromotionStatusFailure, res.Status)
+				require.Equal(t, PromotionStatusFailed, res.Status)
 			},
 		},
 		{
@@ -154,7 +154,7 @@ func Test_gitPRWaiter_runPromotionStep(t *testing.T) {
 				require.ErrorContains(t, err, "error checking if pull request")
 				require.ErrorContains(t, err, "was merged")
 				require.ErrorContains(t, err, "something went wrong")
-				require.Equal(t, PromotionStatusFailure, res.Status)
+				require.Equal(t, PromotionStatusFailed, res.Status)
 			},
 		},
 		{
@@ -174,7 +174,7 @@ func Test_gitPRWaiter_runPromotionStep(t *testing.T) {
 			},
 			assertions: func(t *testing.T, res PromotionStepResult, err error) {
 				require.ErrorContains(t, err, "was closed without being merged")
-				require.Equal(t, PromotionStatusFailure, res.Status)
+				require.Equal(t, PromotionStatusFailed, res.Status)
 			},
 		},
 		{
