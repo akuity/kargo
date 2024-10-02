@@ -3,7 +3,7 @@
   "title": "HelmTemplateConfig",
   "type": "object",
   "additionalProperties": false,
-  "required": ["path", "outPath"],
+  "required": ["outPath", "path", "releaseName"],
   "properties": {
     "path": {
       "type": "string",
