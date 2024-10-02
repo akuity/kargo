@@ -22,14 +22,14 @@ func TestSimpleEngine_Promote(t *testing.T) {
 		},
 	}
 
-	failureResult := PromotionStepResult{Status: PromotionStatusFailure}
+	errorResult := PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}
 	successResult := PromotionStepResult{
-		Status:          PromotionStatusSuccess,
+		Status:          kargoapi.PromotionPhaseSucceeded,
 		HealthCheckStep: &testHealthCheckStep,
 	}
 
 	const successStepName = "success"
-	const failureStepName = "failure"
+	const errorStepName = "failure"
 	const contextWaiterStep = "waiter"
 	testRegistry := NewStepRunnerRegistry()
 	testRegistry.RegisterPromotionStepRunner(
@@ -41,8 +41,8 @@ func TestSimpleEngine_Promote(t *testing.T) {
 	)
 	testRegistry.RegisterPromotionStepRunner(
 		&mockPromotionStepRunner{
-			name:      failureStepName,
-			runResult: failureResult,
+			name:      errorStepName,
+			runResult: errorResult,
 			runErr:    errors.New("something went wrong"),
 		},
 		nil,
@@ -72,7 +72,7 @@ func TestSimpleEngine_Promote(t *testing.T) {
 			steps: []PromotionStep{{Kind: successStepName}},
 			ctx:   context.Background(),
 			assertions: func(t *testing.T, res PromotionResult, err error) {
-				assert.Equal(t, PromotionStatusSuccess, res.Status)
+				assert.Equal(t, kargoapi.PromotionPhaseSucceeded, res.Status)
 				assert.Equal(t, []HealthCheckStep{testHealthCheckStep}, res.HealthCheckSteps)
 				assert.NoError(t, err)
 			},
@@ -85,7 +85,7 @@ func TestSimpleEngine_Promote(t *testing.T) {
 			},
 			ctx: context.Background(),
 			assertions: func(t *testing.T, res PromotionResult, err error) {
-				assert.Equal(t, PromotionStatusSuccess, res.Status)
+				assert.Equal(t, kargoapi.PromotionPhaseSucceeded, res.Status)
 				assert.Equal(
 					t,
 					[]HealthCheckStep{testHealthCheckStep, testHealthCheckStep},
@@ -99,16 +99,16 @@ func TestSimpleEngine_Promote(t *testing.T) {
 			steps: []PromotionStep{{Kind: "unknown"}},
 			ctx:   context.Background(),
 			assertions: func(t *testing.T, res PromotionResult, err error) {
-				assert.Equal(t, PromotionStatusFailure, res.Status)
+				assert.Equal(t, kargoapi.PromotionPhaseErrored, res.Status)
 				assert.ErrorContains(t, err, "not found")
 			},
 		},
 		{
 			name:  "failure: runner returns error",
-			steps: []PromotionStep{{Kind: failureStepName}},
+			steps: []PromotionStep{{Kind: errorStepName}},
 			ctx:   context.Background(),
 			assertions: func(t *testing.T, res PromotionResult, err error) {
-				assert.Equal(t, PromotionStatusFailure, res.Status)
+				assert.Equal(t, kargoapi.PromotionPhaseErrored, res.Status)
 				assert.ErrorContains(t, err, "something went wrong")
 			},
 		},
@@ -127,7 +127,7 @@ func TestSimpleEngine_Promote(t *testing.T) {
 				return ctx
 			}(),
 			assertions: func(t *testing.T, res PromotionResult, err error) {
-				assert.Equal(t, PromotionStatusFailure, res.Status)
+				assert.Equal(t, kargoapi.PromotionPhaseErrored, res.Status)
 				assert.ErrorIs(t, err, context.Canceled)
 			},
 		},
