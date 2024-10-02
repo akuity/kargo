@@ -229,7 +229,9 @@ type HelmTemplateConfig struct {
 	KubeVersion string `json:"kubeVersion,omitempty"`
 	// Namespace to use for the rendered manifests.
 	Namespace string `json:"namespace,omitempty"`
-	// OutPath to write the rendered manifests to.
+	// OutPath to write the rendered manifests to. If it points to a .yaml or .yml file, the
+	// rendered manifests will be written to that file. If it points to a directory, the
+	// rendered manifests will be written to this directory joined with the chart name.
 	OutPath string `json:"outPath"`
 	// Path at which the Helm chart can be found.
 	Path string `json:"path"`
@@ -237,6 +239,9 @@ type HelmTemplateConfig struct {
 	ReleaseName string `json:"releaseName,omitempty"`
 	// Whether to skip tests when rendering the manifests.
 	SkipTests bool `json:"skipTests,omitempty"`
+	// Whether to use the release name in the output path (instead of the chart name). This only
+	// has an effect if outPath is set to a directory.
+	UseReleaseName bool `json:"useReleaseName,omitempty"`
 	// ValuesFiles to use for rendering the Helm chart.
 	ValuesFiles []string `json:"valuesFiles,omitempty"`
 }
