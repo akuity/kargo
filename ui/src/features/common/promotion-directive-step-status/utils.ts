@@ -21,7 +21,8 @@ export const getPromotionDirectiveStepStatus = (
   }
 
   if (
-    promotionStatus?.phase === PromotionStatusPhase.ERRORED &&
+    (promotionStatus?.phase === PromotionStatusPhase.ERRORED ||
+      promotionStatus?.phase === PromotionStatusPhase.FAILED) &&
     stepNumber === Number(promotionStatus?.currentStep)
   ) {
     return PromotionDirectiveStepStatus.FAILED;
