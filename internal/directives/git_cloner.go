@@ -51,11 +51,11 @@ func (g *gitCloner) RunPromotionStep(
 	stepCtx *PromotionStepContext,
 ) (PromotionStepResult, error) {
 	if err := g.validate(stepCtx.Config); err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailure}, err
+		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, err
 	}
 	cfg, err := configToStruct[GitCloneConfig](stepCtx.Config)
 	if err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailure},
+		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
 			fmt.Errorf("could not convert config into %s config: %w", g.Name(), err)
 	}
 	return g.runPromotionStep(ctx, stepCtx, cfg)
@@ -73,12 +73,12 @@ func (g *gitCloner) runPromotionStep(
 ) (PromotionStepResult, error) {
 	mustClone, err := mustCloneRepo(stepCtx, cfg)
 	if err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailure}, fmt.Errorf(
+		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, fmt.Errorf(
 			"error determining if repo %s must be cloned: %w", cfg.RepoURL, err,
 		)
 	}
 	if !mustClone {
-		return PromotionStepResult{Status: PromotionStatusSuccess}, nil
+		return PromotionStepResult{Status: kargoapi.PromotionPhaseSucceeded}, nil
 	}
 
 	var repoCreds *git.RepoCredentials
@@ -89,7 +89,7 @@ func (g *gitCloner) runPromotionStep(
 		cfg.RepoURL,
 	)
 	if err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailure},
+		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
 			fmt.Errorf("error getting credentials for %s: %w", cfg.RepoURL, err)
 	}
 	if found {
@@ -110,7 +110,7 @@ func (g *gitCloner) runPromotionStep(
 		},
 	)
 	if err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailure},
+		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
 			fmt.Errorf("error cloning %s: %w", cfg.RepoURL, err)
 	}
 	for _, checkout := range cfg.Checkout {
@@ -119,7 +119,7 @@ func (g *gitCloner) runPromotionStep(
 		case checkout.Branch != "":
 			ref = checkout.Branch
 			if err = ensureRemoteBranch(repo, ref); err != nil {
-				return PromotionStepResult{Status: PromotionStatusFailure},
+				return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
 					fmt.Errorf("error ensuring existence of remote branch %s: %w", ref, err)
 			}
 		case checkout.FromFreight:
@@ -140,11 +140,11 @@ func (g *gitCloner) runPromotionStep(
 				stepCtx.Freight.References(),
 				cfg.RepoURL,
 			); err != nil {
-				return PromotionStepResult{Status: PromotionStatusFailure},
+				return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
 					fmt.Errorf("error finding commit from repo %s: %w", cfg.RepoURL, err)
 			}
 			if commit == nil {
-				return PromotionStepResult{Status: PromotionStatusFailure},
+				return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
 					fmt.Errorf("could not find any commit from repo %s", cfg.RepoURL)
 			}
 			ref = commit.ID
@@ -153,7 +153,7 @@ func (g *gitCloner) runPromotionStep(
 		}
 		path, err := securejoin.SecureJoin(stepCtx.WorkDir, checkout.Path)
 		if err != nil {
-			return PromotionStepResult{Status: PromotionStatusFailure}, fmt.Errorf(
+			return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, fmt.Errorf(
 				"error joining path %s with work dir %s: %w",
 				checkout.Path, stepCtx.WorkDir, err,
 			)
@@ -162,7 +162,7 @@ func (g *gitCloner) runPromotionStep(
 			path,
 			&git.AddWorkTreeOptions{Ref: ref},
 		); err != nil {
-			return PromotionStepResult{Status: PromotionStatusFailure}, fmt.Errorf(
+			return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, fmt.Errorf(
 				"error adding work tree %s to repo %s: %w",
 				checkout.Path, cfg.RepoURL, err,
 			)
@@ -171,7 +171,7 @@ func (g *gitCloner) runPromotionStep(
 	// Note: We do NOT defer repo.Close() because we want to keep the repository
 	// around on the FS for subsequent promotion steps to use. The Engine will
 	// handle all work dir cleanup.
-	return PromotionStepResult{Status: PromotionStatusSuccess}, nil
+	return PromotionStepResult{Status: kargoapi.PromotionPhaseSucceeded}, nil
 }
 
 // mustCloneRepo determines if the repository must be cloned. At present, there

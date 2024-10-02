@@ -9,6 +9,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
 func Test_fileCopier_runPromotionStep(t *testing.T) {
@@ -34,7 +36,7 @@ func Test_fileCopier_runPromotionStep(t *testing.T) {
 			},
 			assertions: func(t *testing.T, workDir string, result PromotionStepResult, err error) {
 				assert.NoError(t, err)
-				assert.Equal(t, PromotionStepResult{Status: PromotionStatusSuccess}, result)
+				assert.Equal(t, PromotionStepResult{Status: kargoapi.PromotionPhaseSucceeded}, result)
 
 				outPath := filepath.Join(workDir, "output.txt")
 				b, err := os.ReadFile(outPath)
@@ -66,7 +68,7 @@ func Test_fileCopier_runPromotionStep(t *testing.T) {
 			},
 			assertions: func(t *testing.T, workDir string, result PromotionStepResult, err error) {
 				assert.NoError(t, err)
-				assert.Equal(t, PromotionStepResult{Status: PromotionStatusSuccess}, result)
+				assert.Equal(t, PromotionStepResult{Status: kargoapi.PromotionPhaseSucceeded}, result)
 
 				outDir := filepath.Join(workDir, "output")
 
@@ -104,7 +106,7 @@ func Test_fileCopier_runPromotionStep(t *testing.T) {
 			},
 			assertions: func(t *testing.T, workDir string, result PromotionStepResult, err error) {
 				assert.NoError(t, err)
-				require.Equal(t, PromotionStepResult{Status: PromotionStatusSuccess}, result)
+				require.Equal(t, PromotionStepResult{Status: kargoapi.PromotionPhaseSucceeded}, result)
 
 				outDir := filepath.Join(workDir, "output")
 
@@ -128,7 +130,7 @@ func Test_fileCopier_runPromotionStep(t *testing.T) {
 				InPath: "input.txt",
 			},
 			assertions: func(t *testing.T, _ string, result PromotionStepResult, err error) {
-				require.Equal(t, PromotionStepResult{Status: PromotionStatusFailure}, result)
+				require.Equal(t, PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, result)
 				require.ErrorContains(t, err, "failed to copy")
 			},
 		},

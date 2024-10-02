@@ -6,6 +6,7 @@ import (
 
 	"github.com/xeipuuv/gojsonschema"
 
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/git"
 	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/gitprovider"
@@ -45,11 +46,11 @@ func (g *gitPROpener) RunPromotionStep(
 	stepCtx *PromotionStepContext,
 ) (PromotionStepResult, error) {
 	if err := g.validate(stepCtx.Config); err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailure}, err
+		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, err
 	}
 	cfg, err := configToStruct[GitOpenPRConfig](stepCtx.Config)
 	if err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailure},
+		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
 			fmt.Errorf("could not convert config into git-open-pr config: %w", err)
 	}
 	return g.runPromotionStep(ctx, stepCtx, cfg)
@@ -67,7 +68,7 @@ func (g *gitPROpener) runPromotionStep(
 ) (PromotionStepResult, error) {
 	sourceBranch, err := getSourceBranch(stepCtx.SharedState, cfg)
 	if err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailure},
+		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
 			fmt.Errorf("error determining source branch: %w", err)
 	}
 
@@ -79,7 +80,7 @@ func (g *gitPROpener) runPromotionStep(
 		cfg.RepoURL,
 	)
 	if err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailure},
+		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
 			fmt.Errorf("error getting credentials for %s: %w", cfg.RepoURL, err)
 	}
 	if found {
@@ -102,7 +103,7 @@ func (g *gitPROpener) runPromotionStep(
 		},
 	)
 	if err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailure},
+		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
 			fmt.Errorf("error cloning %s: %w", cfg.RepoURL, err)
 	}
 	defer repo.Close()
@@ -118,7 +119,7 @@ func (g *gitPROpener) runPromotionStep(
 	}
 	gitProviderSvc, err := gitprovider.NewGitProviderService(cfg.RepoURL, gpOpts)
 	if err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailure},
+		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
 			fmt.Errorf("error creating git provider service: %w", err)
 	}
 
@@ -131,11 +132,11 @@ func (g *gitPROpener) runPromotionStep(
 		cfg.TargetBranch,
 	)
 	if err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailure},
+		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
 			fmt.Errorf("error determining if pull request must be opened: %w", err)
 	}
 	if !mustOpen {
-		return PromotionStepResult{Status: PromotionStatusSuccess}, nil
+		return PromotionStepResult{Status: kargoapi.PromotionPhaseSucceeded}, nil
 	}
 
 	// Get the title from the commit message of the head of the source branch
@@ -143,7 +144,7 @@ func (g *gitPROpener) runPromotionStep(
 	// that may involve creating a new branch and committing to it.
 	title, err := repo.CommitMessage(sourceBranch)
 	if err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailure}, fmt.Errorf(
+		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, fmt.Errorf(
 			"error getting commit message from head of branch %s: %w",
 			sourceBranch, err,
 		)
@@ -154,7 +155,7 @@ func (g *gitPROpener) runPromotionStep(
 		cfg.TargetBranch,
 		cfg.CreateTargetBranch,
 	); err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailure}, fmt.Errorf(
+		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, fmt.Errorf(
 			"error ensuring existence of remote branch %s: %w",
 			cfg.TargetBranch, err,
 		)
@@ -169,11 +170,11 @@ func (g *gitPROpener) runPromotionStep(
 		},
 	)
 	if err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailure},
+		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
 			fmt.Errorf("error creating pull request: %w", err)
 	}
 	return PromotionStepResult{
-		Status: PromotionStatusSuccess,
+		Status: kargoapi.PromotionPhaseSucceeded,
 		Output: map[string]any{
 			prNumberKey: pr.Number,
 		},
