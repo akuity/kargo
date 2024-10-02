@@ -10,6 +10,8 @@ import {
   createResource,
   listAnalysisTemplates
 } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
+import { queryCache } from '@ui/utils/cache';
+import { decodeUint8ArrayYamlManifestToJson } from '@ui/utils/decode-raw-data';
 
 import { getAnalysisTemplateYAMLExample } from './utils/analysis-template-example';
 
@@ -21,7 +23,16 @@ export const CreateAnalysisTemplateModal = ({ visible, hide, namespace }: Props)
   const queryClient = useQueryClient();
 
   const { mutateAsync, isPending } = useMutation(createResource, {
-    onSuccess: () => hide()
+    onSuccess: (response) => {
+      for (const result of response?.results || []) {
+        if (result?.result?.case === 'createdResourceManifest') {
+          queryCache.analysisTemplates.add(namespace || '', [
+            decodeUint8ArrayYamlManifestToJson(result?.result?.value)
+          ]);
+        }
+      }
+      hide();
+    }
   });
 
   const { control, handleSubmit } = useForm({

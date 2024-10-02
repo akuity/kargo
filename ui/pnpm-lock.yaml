@@ -99,6 +99,9 @@ importers:
       '@openapi-contrib/openapi-schema-to-json-schema':
         specifier: ^5.1.0
         version: 5.1.0
+      '@tanstack/react-query-devtools':
+        specifier: ^5.59.0
+        version: 5.59.0(@tanstack/react-query@5.56.2(react@18.3.1))(react@18.3.1)
       '@types/json-schema':
         specifier: ^7.0.15
         version: 7.0.15
@@ -789,6 +792,15 @@ packages:
 
   '@tanstack/query-core@5.56.2':
     resolution: {integrity: sha512-gor0RI3/R5rVV3gXfddh1MM+hgl0Z4G7tj6Xxpq6p2I03NGPaJ8dITY9Gz05zYYb/EJq9vPas/T4wn9EaDPd4Q==}
+
+  '@tanstack/query-devtools@5.58.0':
+    resolution: {integrity: sha512-iFdQEFXaYYxqgrv63ots+65FGI+tNp5ZS5PdMU1DWisxk3fez5HG3FyVlbUva+RdYS5hSLbxZ9aw3yEs97GNTw==}
+
+  '@tanstack/react-query-devtools@5.59.0':
+    resolution: {integrity: sha512-Kz7577FQGU8qmJxROIT/aOwmkTcxfBqgTP6r1AIvuJxVMVHPkp8eQxWQ7BnfBsy/KTJHiV9vMtRVo1+R1tB3vg==}
+    peerDependencies:
+      '@tanstack/react-query': ^5.59.0
+      react: ^18 || ^19
 
   '@tanstack/react-query@5.56.2':
     resolution: {integrity: sha512-SR0GzHVo6yzhN72pnRhkEFRAHMsUo5ZPzAxfTMvUxFIDVS6W9LYUp6nXW3fcHVdg0ZJl8opSH85jqahvm6DSVg==}
@@ -3839,6 +3851,14 @@ snapshots:
   '@rtsao/scc@1.1.0': {}
 
   '@tanstack/query-core@5.56.2': {}
+
+  '@tanstack/query-devtools@5.58.0': {}
+
+  '@tanstack/react-query-devtools@5.59.0(@tanstack/react-query@5.56.2(react@18.3.1))(react@18.3.1)':
+    dependencies:
+      '@tanstack/query-devtools': 5.58.0
+      '@tanstack/react-query': 5.56.2(react@18.3.1)
+      react: 18.3.1
 
   '@tanstack/react-query@5.56.2(react@18.3.1)':
     dependencies:
