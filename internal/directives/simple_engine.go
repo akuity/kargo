@@ -124,6 +124,7 @@ func (e *SimpleEngine) Promote(
 		if result.Status != kargoapi.PromotionPhaseSucceeded {
 			return PromotionResult{
 				Status:      result.Status,
+				Message:     result.Message,
 				CurrentStep: i,
 				State:       state,
 			}, nil
