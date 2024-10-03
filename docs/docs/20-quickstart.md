@@ -363,6 +363,9 @@ the previous section.
               - branch: stage/test
                 create: true
                 path: ./out
+          - uses: git-clear
+            config:
+              path: ./out
           - uses: kustomize-set-image
             as: update-image
             config:
@@ -372,11 +375,7 @@ the previous section.
           - uses: kustomize-build
             config:
               path: ./main/stages/test
-              outPath: ./manifests.yaml
-          - uses: git-overwrite
-            config:
-              inPath: ./manifests.yaml
-              outPath: ./out
+              outPath: ./out/manifests.yaml
           - uses: git-commit
             as: commit
             config:
@@ -420,6 +419,9 @@ the previous section.
               - branch: stage/uat
                 create: true
                 path: ./out
+          - uses: git-clear
+            config:
+              path: ./out
           - uses: kustomize-set-image
             as: update-image
             config:
@@ -429,11 +431,7 @@ the previous section.
           - uses: kustomize-build
             config:
               path: ./main/stages/test
-              outPath: ./manifests.yaml
-          - uses: git-overwrite
-            config:
-              inPath: ./manifests.yaml
-              outPath: ./out
+              outPath: ./out/manifests.yaml
           - uses: git-commit
             as: commit
             config:
@@ -477,6 +475,9 @@ the previous section.
               - branch: stage/prod
                 create: true
                 path: ./out
+          - uses: git-clear
+            config:
+              path: ./out
           - uses: kustomize-set-image
             as: update-image
             config:
@@ -486,11 +487,7 @@ the previous section.
           - uses: kustomize-build
             config:
               path: ./main/stages/test
-              outPath: ./manifests.yaml
-          - uses: git-overwrite
-            config:
-              inPath: ./manifests.yaml
-              outPath: ./out
+              outPath: ./out/manifests.yaml
           - uses: git-commit
             as: commit
             config:
