@@ -836,12 +836,8 @@
       "type": "object",
       "x-kubernetes-validations": [
         {
-          "message": "one of promotionTemplate or promotionMechanisms must be specified",
-          "rule": "(has(self.promotionTemplate) || has(self.promotionMechanisms))"
-        },
-        {
-          "message": "only one of promotionTemplate or promotionMechanisms can be specified",
-          "rule": "(has(self.promotionTemplate) && !has(self.promotionMechanisms)) || (!has(self.promotionTemplate) && has(self.promotionMechanisms))"
+          "message": "at most one of promotionTemplate or promotionMechanisms can be specified",
+          "rule": "(!has(self.promotionTemplate) && !has(self.promotionMechanisms) ) || ( has(self.promotionTemplate) && !has(self.promotionMechanisms) ) || (!has(self.promotionTemplate) && has(self.promotionMechanisms))"
         }
       ]
     },
