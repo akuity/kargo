@@ -6,11 +6,11 @@ import { useForm } from 'react-hook-form';
 import YamlEditor from '@ui/features/common/code-editor/yaml-editor-lazy';
 import { FieldContainer } from '@ui/features/common/form/field-container';
 import { ModalProps } from '@ui/features/common/modal/use-modal';
+import { queryCache } from '@ui/features/utils/cache';
 import {
   createResource,
   listAnalysisTemplates
 } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
-import { queryCache } from '@ui/utils/cache';
 import { decodeUint8ArrayYamlManifestToJson } from '@ui/utils/decode-raw-data';
 
 import { getAnalysisTemplateYAMLExample } from './utils/analysis-template-example';
