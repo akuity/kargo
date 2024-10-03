@@ -21,17 +21,23 @@
   },
   "oneOf": [
     {
-      "required": ["generateTargetBranch"],
       "properties": {
         "generateTargetBranch": { "const": true },
-        "targetBranch": {  "enum": ["", null] }
-      }
+        "targetBranch": { "enum": ["", null] }
+      },
+      "required": ["generateTargetBranch"]
     },
     {
-      "required": ["targetBranch"],
       "properties": {
-        "generateTargetBranch": { "enum": [null, false] },
+        "generateTargetBranch": { "enum": [false, null] },
         "targetBranch": { "minLength": 1 }
+      },
+      "required": ["targetBranch"]
+    },
+    {
+      "properties": {
+        "generateTargetBranch": { "enum": [false, null] },
+        "targetBranch": { "enum": ["", null] }
       }
     }
   ]
