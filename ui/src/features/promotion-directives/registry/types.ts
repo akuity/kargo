@@ -10,7 +10,7 @@ export type PromotionDirectivesRegistry = {
 // runner is source of truth for all configuration and metadata related to installed runner
 export type Runner = {
   // unique identifier such that kargo knows which runner to operate
-  // example - git-clone, git-overwrite
+  // example - git-clone, git-clear
   identifier: string;
   // UI helper
   // this accepts font-awesome icon

@@ -22,41 +22,25 @@ func Test_gitTreeOverwriter_validate(t *testing.T) {
 		expectedProblems []string
 	}{
 		{
-			name:   "inPath not specified",
+			name:   "path not specified",
 			config: Config{},
 			expectedProblems: []string{
-				"(root): inPath is required",
+				"(root): path is required",
 			},
 		},
 		{
-			name: "inPath is empty string",
+			name: "path is empty string",
 			config: Config{
-				"inPath": "",
+				"path": "",
 			},
 			expectedProblems: []string{
-				"inPath: String length must be greater than or equal to 1",
-			},
-		},
-		{
-			name:   "outPath not specified",
-			config: Config{},
-			expectedProblems: []string{
-				"(root): outPath is required",
-			},
-		},
-		{
-			name: "outPath is empty string",
-			config: Config{
-				"outPath": "",
-			},
-			expectedProblems: []string{
-				"outPath: String length must be greater than or equal to 1",
+				"path: String length must be greater than or equal to 1",
 			},
 		},
 	}
 
-	r := newGitTreeOverwriter()
-	runner, ok := r.(*gitTreeOverwriter)
+	r := newGitTreeClearer()
+	runner, ok := r.(*gitTreeClearer)
 	require.True(t, ok)
 
 	for _, testCase := range testCases {
@@ -101,7 +85,9 @@ func Test_gitTreeOverwriter_runPromotionStep(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
-	defer repo.Close()
+	t.Cleanup(func() {
+		_ = repo.Close()
+	})
 	// "master" is still the default branch name for a new repository
 	// unless you configure it otherwise.
 	workTreePath := filepath.Join(workDir, "master")
@@ -115,16 +101,9 @@ func Test_gitTreeOverwriter_runPromotionStep(t *testing.T) {
 	err = os.WriteFile(filepath.Join(workTree.Dir(), "original.txt"), []byte("foo"), 0600)
 	require.NoError(t, err)
 
-	// Write another file to a different directory. This will be the source
-	// directory for the gitTreeOverwriter.
-	srcDir := filepath.Join(workDir, "src")
-	err = os.Mkdir(srcDir, 0700)
-	require.NoError(t, err)
-	err = os.WriteFile(filepath.Join(srcDir, "new.txt"), []byte("bar"), 0600)
-	require.NoError(t, err)
-
-	r := newGitTreeOverwriter()
-	runner, ok := r.(*gitTreeOverwriter)
+	// Run the directive
+	r := newGitTreeClearer()
+	runner, ok := r.(*gitTreeClearer)
 	require.True(t, ok)
 
 	res, err := runner.runPromotionStep(
@@ -134,9 +113,8 @@ func Test_gitTreeOverwriter_runPromotionStep(t *testing.T) {
 			Stage:   "fake-stage",
 			WorkDir: workDir,
 		},
-		GitOverwriteConfig{
-			InPath:  "src",
-			OutPath: "master",
+		GitClearConfig{
+			Path: "master",
 		},
 	)
 	require.NoError(t, err)
@@ -146,9 +124,6 @@ func Test_gitTreeOverwriter_runPromotionStep(t *testing.T) {
 	_, err = os.Stat(filepath.Join(workTree.Dir(), "original.txt"))
 	require.Error(t, err)
 	require.True(t, os.IsNotExist(err))
-	// Make sure new files are present
-	_, err = os.Stat(filepath.Join(workTree.Dir(), "new.txt"))
-	require.NoError(t, err)
 	// Make sure the .git directory is still there
 	_, err = os.Stat(filepath.Join(workTree.Dir(), ".git"))
 	require.NoError(t, err)

@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "GitClearConfig",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["path"],
+  "properties": {
+    "path": {
+      "type": "string",
+      "description": "Path to a working directory of a local repository from which to remove all files, excluding the .git/ directory.",
+      "minLength": 1
+    }
+  }
+}

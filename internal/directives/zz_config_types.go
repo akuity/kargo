@@ -103,6 +103,12 @@ type CopyConfig struct {
 	OutPath string `json:"outPath"`
 }
 
+type GitClearConfig struct {
+	// Path to a working directory of a local repository from which to remove all files,
+	// excluding the .git/ directory.
+	Path string `json:"path"`
+}
+
 type GitCloneConfig struct {
 	// The commits, branches, or tags to check out from the repository and the paths where they
 	// should be checked out. At least one must be specified.
@@ -178,15 +184,6 @@ type GitOpenPRConfig struct {
 	// The branch to which the changes should be merged. This branch must already exist and be
 	// up to date on the remote.
 	TargetBranch string `json:"targetBranch"`
-}
-
-type GitOverwriteConfig struct {
-	// A path to a directory from which to copy all contents, excluding the .git/ directory, if
-	// one exists.
-	InPath string `json:"inPath"`
-	// A path to a git working tree which will be cleared of all existing content before
-	// receiving a copy of all content specified by inPath.
-	OutPath string `json:"outPath"`
 }
 
 type GitPushConfig struct {
