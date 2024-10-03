@@ -57,7 +57,7 @@ export const useDiscoverPromotionDirectivesRegistries = (): PromotionDirectivesR
         unstable_icons: [faArrowUp, faCloudUploadAlt]
       },
       {
-        identifier: 'git-overwrite',
+        identifier: 'git-clear',
         unstable_icons: [faRedoAlt, faCodeBranch]
       },
       {
