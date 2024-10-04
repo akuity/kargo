@@ -24,7 +24,9 @@ const formSchema = z.object({
 
 export const CreateWarehouseModal = ({ visible, hide, project }: Props) => {
   const { mutateAsync, isPending } = useMutation(createResource, {
-    onSuccess: () => hide()
+    onSuccess: () => {
+      hide();
+    }
   });
 
   const { control, handleSubmit } = useForm({
