@@ -1,5 +1,6 @@
 import { TransportProvider } from '@connectrpc/connect-query';
 import { QueryClientProvider } from '@tanstack/react-query';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { ConfigProvider } from 'antd';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 
@@ -54,6 +55,7 @@ export const App = () => (
           </BrowserRouter>
         </AuthContextProvider>
       </ConfigProvider>
+      <ReactQueryDevtools />
     </QueryClientProvider>
   </TransportProvider>
 );

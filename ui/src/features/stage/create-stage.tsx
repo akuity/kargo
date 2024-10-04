@@ -84,7 +84,9 @@ export const CreateStage = ({
   const [tab, setTab] = useState('wizard');
 
   const { mutateAsync, isPending } = useMutation(createResource, {
-    onSuccess: () => close()
+    onSuccess: () => {
+      close();
+    }
   });
 
   const { control, handleSubmit, setValue } = useForm({
