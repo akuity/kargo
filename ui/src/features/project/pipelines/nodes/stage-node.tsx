@@ -185,7 +185,8 @@ export const StageNode = ({
       {action !== FreightTimelineAction.ManualApproval &&
         action !== FreightTimelineAction.PromoteFreight && (
           <>
-            {(stage.spec?.promotionMechanisms || stage.spec?.promotionTemplate) && (
+            {(stage.spec?.promotionMechanisms ||
+              !!stage.spec?.promotionTemplate?.spec?.steps?.length) && (
               <Nodule
                 begin={true}
                 nodeHeight={height}
