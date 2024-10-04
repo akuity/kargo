@@ -12,7 +12,6 @@
   "images": {
    "type": "array",
    "description": "Images is a list of container images to set or update in the Kustomization file.",
-   "minItems": 1,
    "items": {
     "type": "object",
     "additionalProperties": false,

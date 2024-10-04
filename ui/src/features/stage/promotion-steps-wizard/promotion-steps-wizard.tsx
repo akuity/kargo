@@ -1,24 +1,14 @@
-import {
-  faAdd,
-  faCaretDown,
-  faCaretUp,
-  faCog,
-  faEye,
-  faTrash
-} from '@fortawesome/free-solid-svg-icons';
+import { faAdd, faCaretDown, faCaretUp, faCog, faTrash } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Tag } from 'antd';
 import Card from 'antd/es/card/Card';
 import classNames from 'classnames';
 import { useState } from 'react';
 
-import YamlEditor from '@ui/features/common/code-editor/yaml-editor-lazy';
-import { useModal } from '@ui/features/common/modal/use-modal';
 import { usePromotionDirectivesRegistryContext } from '@ui/features/promotion-directives/registry/context/use-registry-context';
 
-import { PromotionStepDrawer } from './promotion-step-drawer';
+import { PromotionStepForm } from './promotion-step-form';
 import { RunnerWithConfiguration } from './types';
-import { isRunnersEqual } from './utils';
 
 export type PromotionStepsWizardType = {
   // let the YAML -> state transformation dance delegate to component up in the tree
@@ -32,12 +22,12 @@ export const PromotionStepsWizard = (props: PromotionStepsWizardType) => {
   const selectedRunners = props.steps;
   const setSelectedRunners = props.onChange;
 
-  const runnerEdit = useModal();
+  const [editingRunner, setEditingRunner] = useState<
+    (RunnerWithConfiguration & { order: number }) | undefined
+  >();
 
-  const [viewingRunner, setViewingRunner] = useState<RunnerWithConfiguration | undefined>();
-
-  const liveViewingRunner: RunnerWithConfiguration | undefined =
-    viewingRunner && selectedRunners?.find((r) => isRunnersEqual(r, viewingRunner));
+  const liveEditingRunner: RunnerWithConfiguration | undefined =
+    editingRunner && selectedRunners?.find((_, idx) => idx === editingRunner?.order);
 
   return (
     <div>
@@ -56,11 +46,6 @@ export const PromotionStepsWizard = (props: PromotionStepsWizardType) => {
               icon={<FontAwesomeIcon className='mr-2' icon={faAdd} />}
             >
               {runner.identifier}
-
-              {runner.unstable_icons.length > 0 &&
-                runner.unstable_icons.map((icon) => (
-                  <FontAwesomeIcon className='ml-2' key={icon.iconName} icon={icon} />
-                ))}
             </Tag>
           ))}
       </div>
@@ -68,38 +53,20 @@ export const PromotionStepsWizard = (props: PromotionStepsWizardType) => {
       {/* SELECTED RUNNERS */}
       {selectedRunners.length > 0 && (
         <div className='flex gap-5 relative'>
-          <div className='mt-5 space-y-4 w-6/12'>
+          <div className='mt-5 space-y-4 w-4/12'>
             {selectedRunners.map((runner, order) => {
-              const patchRunner = (nextRunner: RunnerWithConfiguration) => {
-                setSelectedRunners(
-                  selectedRunners.map((localRunner, localOrder) => {
-                    if (order === localOrder) {
-                      return {
-                        ...localRunner,
-                        ...nextRunner
-                      };
-                    }
-
-                    return localRunner;
-                  })
-                );
-              };
-
               const onSettingOpen = () => {
-                runnerEdit.show((props) => (
-                  <PromotionStepDrawer
-                    {...props}
-                    selectedRunner={runner}
-                    patchSelectedRunner={patchRunner}
-                  />
-                ));
+                setEditingRunner({ ...runner, order });
               };
+
+              const isEditingThisRunner = editingRunner?.order === order;
 
               return (
                 <Card
-                  key={runner.identifier}
+                  key={`${runner.identifier}-${order}`}
                   className={classNames('cursor-pointer', {
-                    'border-gray-500': isRunnersEqual(runner, viewingRunner)
+                    'shadow-sm': isEditingThisRunner,
+                    'border-gray-400': isEditingThisRunner
                   })}
                   size='small'
                   onClick={onSettingOpen}
@@ -138,30 +105,21 @@ export const PromotionStepsWizard = (props: PromotionStepsWizardType) => {
                       {order + 1} - {runner.identifier}
                     </span>
 
-                    {runner.unstable_icons.length > 0 && (
-                      <div className='flex ml-auto gap-2'>
-                        {runner.unstable_icons.map((icon) => (
-                          <FontAwesomeIcon key={icon.iconName} icon={icon} />
-                        ))}
-                      </div>
+                    {!!runner?.as && (
+                      <Tag className='text-xs max-w-20 overflow-hidden ml-auto' color='blue'>
+                        {runner.as}
+                      </Tag>
                     )}
 
-                    <div className='space-x-4'>
+                    <div className={classNames('space-x-4', { 'ml-auto': !runner?.as })}>
                       <Button icon={<FontAwesomeIcon icon={faCog} />} onClick={onSettingOpen} />
                       <Button
                         icon={<FontAwesomeIcon icon={faTrash} className='text-red-500' />}
                         onClick={(e) => {
                           e.stopPropagation();
                           setSelectedRunners(
-                            selectedRunners.filter((r) => r.identifier !== runner.identifier)
+                            selectedRunners.filter((_, deleteOrder) => deleteOrder !== order)
                           );
-                        }}
-                      />
-                      <Button
-                        icon={<FontAwesomeIcon icon={faEye} />}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setViewingRunner(runner);
                         }}
                       />
                     </div>
@@ -171,28 +129,39 @@ export const PromotionStepsWizard = (props: PromotionStepsWizardType) => {
             })}
           </div>
 
-          {viewingRunner && liveViewingRunner && (
+          {editingRunner && liveEditingRunner && (
             <Card
               color='lightgray'
-              className='w-6/12 mt-5 h-fit sticky top-0'
+              className='w-8/12 mt-5 h-fit sticky top-0'
               size='small'
               title={
                 <>
-                  <FontAwesomeIcon icon={faEye} className='mr-2' />
-                  {liveViewingRunner.identifier}{' '}
-                  {liveViewingRunner?.as && (
+                  <FontAwesomeIcon icon={faCog} className='mr-2' />
+                  {editingRunner.order} - {liveEditingRunner.identifier}{' '}
+                  {liveEditingRunner?.as && (
                     <Tag color='blue' className='ml-4'>
-                      {liveViewingRunner.as}
+                      {liveEditingRunner.as}
                     </Tag>
                   )}
                 </>
               }
             >
-              <YamlEditor
-                value={JSON.stringify(liveViewingRunner?.state, null, ' ')}
-                height='350px'
-                disabled
-                key={JSON.stringify(liveViewingRunner?.state)}
+              <PromotionStepForm
+                selectedRunner={liveEditingRunner}
+                patchSelectedRunner={(nextRunner) => {
+                  setSelectedRunners(
+                    selectedRunners.map((localRunner, localOrder) => {
+                      if (editingRunner?.order === localOrder) {
+                        return {
+                          ...localRunner,
+                          ...nextRunner
+                        };
+                      }
+
+                      return localRunner;
+                    })
+                  );
+                }}
               />
             </Card>
           )}

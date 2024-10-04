@@ -1,6 +1,6 @@
 import Form, { Templates } from '@rjsf/antd';
 import validator from '@rjsf/validator-ajv8';
-import { Button, Collapse } from 'antd';
+import { Collapse } from 'antd';
 import Alert from 'antd/es/alert/Alert';
 
 import { ErrorBoundary } from '@ui/features/common/layout/error-boundary';
@@ -13,6 +13,29 @@ export type RunnerFormType = {
   onSubmit(
     runnerConfig: object /* this is dynamic config that we should not care about and pass to YAML as it is */
   ): void;
+};
+
+// https://github.com/rjsf-team/react-jsonschema-form/issues/2106#issuecomment-734990380
+// @ts-expect-error when dependency doesn't provide a good way to define types
+const ObjectFieldTemplate = (props) => {
+  if (!Templates.ObjectFieldTemplate) {
+    throw new Error('[BUG]: Templates.ObjectFieldTemplate is undefined');
+  }
+
+  if (props.title) {
+    return (
+      <Collapse
+        items={[
+          {
+            children: <Templates.ObjectFieldTemplate {...props} />,
+            label: props.title
+          }
+        ]}
+      />
+    );
+  }
+
+  return <Templates.ObjectFieldTemplate {...props} />;
 };
 
 export const RunnerForm = (props: RunnerFormType) => {
@@ -34,7 +57,7 @@ export const RunnerForm = (props: RunnerFormType) => {
         <Form
           schema={props.runner.config}
           validator={validator}
-          onSubmit={(d) => {
+          onChange={(d) => {
             props.onSubmit(d.formData);
           }}
           ref={(attach) => {
@@ -49,34 +72,9 @@ export const RunnerForm = (props: RunnerFormType) => {
             }
           }}
           templates={{
-            ObjectFieldTemplate: (props) => {
-              if (!Templates.ObjectFieldTemplate) {
-                throw new Error('[BUG]: Templates.ObjectFieldTemplate is undefined');
-              }
-
-              if (props.title) {
-                return (
-                  <Collapse
-                    items={[
-                      {
-                        children: <Templates.ObjectFieldTemplate {...props} />,
-                        label: props.title
-                      }
-                    ]}
-                  />
-                );
-              }
-
-              return <Templates.ObjectFieldTemplate {...props} />;
-            }
+            ObjectFieldTemplate
           }}
-        >
-          <div className='absolute bottom-0 h-10 w-full pt-1 bg-white'>
-            <Button htmlType='submit' type='primary'>
-              Update
-            </Button>
-          </div>
-        </Form>
+        />
       </div>
     </ErrorBoundary>
   );

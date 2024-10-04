@@ -13,7 +13,7 @@ import type { JSONSchema4 } from 'json-schema';
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { generatePath, useNavigate } from 'react-router-dom';
-import yaml from 'yaml';
+import yaml, { parse, stringify } from 'yaml';
 import { z } from 'zod';
 
 import { paths } from '@ui/config/paths';
@@ -21,6 +21,7 @@ import { YamlEditor } from '@ui/features/common/code-editor/yaml-editor';
 import { FieldContainer } from '@ui/features/common/form/field-container';
 import schema from '@ui/gen/schema/stages.kargo.akuity.io_v1alpha1.json';
 import { createResource } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
+import { Stage } from '@ui/gen/v1alpha1/generated_pb';
 import { zodValidators } from '@ui/utils/validators';
 
 import { getStageYAMLExample } from '../project/pipelines/utils/stage-yaml-example';
@@ -94,7 +95,7 @@ export const CreateStage = ({
     }
   });
 
-  const { control, handleSubmit, setValue } = useForm({
+  const { control, handleSubmit, setValue, getValues } = useForm({
     defaultValues: {
       value: getStageYAMLExample(project || '')
     },
@@ -168,6 +169,18 @@ export const CreateStage = ({
               'value',
               stageFormToYAML(watch(), project || '', promotionWizardStepsState.getYAML())
             );
+          } else {
+            const yaml = getValues('value');
+
+            try {
+              const stageSpec: Stage = parse(yaml);
+
+              promotionWizardStepsState.setYAML(
+                stringify(stageSpec?.spec?.promotionTemplate?.spec?.steps)
+              );
+            } catch (e) {
+              // explicitly ignore
+            }
           }
           setTab(newTab);
         }}

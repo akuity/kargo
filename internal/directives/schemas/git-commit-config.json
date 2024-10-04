@@ -36,6 +36,7 @@
     "messageFromSteps": {
       "type": "array",
       "description": "TODO",
+      "minItems": 1,
       "items": {
         "type": "string",
         "minLength": 1

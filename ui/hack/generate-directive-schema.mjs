@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 // source schemas from internal/directives/schemas/*.json
 // expand the references such that UI can parse easily
 // output to ui/src/gen/directives
@@ -58,18 +57,19 @@ const main = async () => {
   const UISources = readdirSync(UIDirectivesDir);
 
   for (const uiSource of UISources) {
-    try {
-      // $ref: any-file.json#./.. -> expand
-      let referenced = await $RefParser.dereference(path.resolve(UIDirectivesDir, uiSource));
+    // $ref: any-file.json#./.. -> expand
+    let referenced = await $RefParser.dereference(path.resolve(UIDirectivesDir, uiSource));
 
-      // remove 'anyOf', 'oneOf', 'allOf'
-      referenced = removePropertiesRecursively(referenced, ['anyOf', 'oneOf', 'allOf', 'required']);
+    // remove 'anyOf', 'oneOf', 'allOf'
+    referenced = removePropertiesRecursively(referenced, [
+      'anyOf',
+      'oneOf',
+      'allOf',
+      'required',
+      'minItems'
+    ]);
 
-      writeFileSync(path.resolve(UIDirectivesDir, uiSource), JSON.stringify(referenced, null, ' '));
-    } catch (e) {
-      console.error(uiSource);
-      console.error(e);
-    }
+    writeFileSync(path.resolve(UIDirectivesDir, uiSource), JSON.stringify(referenced, null, ' '));
   }
 };
 

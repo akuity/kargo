@@ -17,7 +17,6 @@
   "checkout": {
    "type": "array",
    "description": "The commits, branches, or tags to check out from the repository and the paths where they should be checked out. At least one must be specified.",
-   "minItems": 1,
    "items": {
     "type": "object",
     "additionalProperties": false,

@@ -37,7 +37,6 @@
     "sources": {
      "type": "array",
      "description": "Describes updates to be applied to various sources of an Argo CD Application resource.",
-     "minItems": 1,
      "items": {
       "type": "object",
       "additionalProperties": false,
@@ -95,7 +94,6 @@
          },
          "images": {
           "type": "array",
-          "minItems": 1,
           "items": {
            "type": "object",
            "description": "Describes how to update a Helm parameter to reference a specific version of a container image.",
@@ -169,7 +167,6 @@
          },
          "images": {
           "type": "array",
-          "minItems": 1,
           "items": {
            "type": "object",
            "description": "Describes how to update a Kustomize image to reference a specific version of a container image.",
@@ -283,7 +280,6 @@
       },
       "images": {
        "type": "array",
-       "minItems": 1,
        "items": {
         "type": "object",
         "description": "Describes how to update a Helm parameter to reference a specific version of a container image.",
@@ -357,7 +353,6 @@
       },
       "images": {
        "type": "array",
-       "minItems": 1,
        "items": {
         "type": "object",
         "description": "Describes how to update a Kustomize image to reference a specific version of a container image.",
@@ -436,7 +431,6 @@
     },
     "images": {
      "type": "array",
-     "minItems": 1,
      "items": {
       "type": "object",
       "description": "Describes how to update a Helm parameter to reference a specific version of a container image.",
@@ -555,7 +549,6 @@
     },
     "images": {
      "type": "array",
-     "minItems": 1,
      "items": {
       "type": "object",
       "description": "Describes how to update a Kustomize image to reference a specific version of a container image.",
@@ -661,7 +654,6 @@
  "properties": {
   "apps": {
    "type": "array",
-   "minItems": 1,
    "items": {
     "type": "object",
     "additionalProperties": false,
@@ -697,7 +689,6 @@
      "sources": {
       "type": "array",
       "description": "Describes updates to be applied to various sources of an Argo CD Application resource.",
-      "minItems": 1,
       "items": {
        "type": "object",
        "additionalProperties": false,
@@ -755,7 +746,6 @@
           },
           "images": {
            "type": "array",
-           "minItems": 1,
            "items": {
             "type": "object",
             "description": "Describes how to update a Helm parameter to reference a specific version of a container image.",
@@ -829,7 +819,6 @@
           },
           "images": {
            "type": "array",
-           "minItems": 1,
            "items": {
             "type": "object",
             "description": "Describes how to update a Kustomize image to reference a specific version of a container image.",
