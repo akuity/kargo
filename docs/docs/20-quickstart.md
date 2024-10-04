@@ -359,7 +359,7 @@ the previous section.
               repoURL: ${GITOPS_REPO_URL}
               checkout:
               - branch: main
-                path: ./main
+                path: ./src
               - branch: stage/test
                 create: true
                 path: ./out
@@ -369,12 +369,12 @@ the previous section.
           - uses: kustomize-set-image
             as: update-image
             config:
-              path: ./main/base
+              path: ./src/base
               images:
               - image: public.ecr.aws/nginx/nginx
           - uses: kustomize-build
             config:
-              path: ./main/stages/test
+              path: ./src/stages/test
               outPath: ./out/manifests.yaml
           - uses: git-commit
             as: commit
@@ -415,7 +415,7 @@ the previous section.
               repoURL: ${GITOPS_REPO_URL}
               checkout:
               - branch: main
-                path: ./main
+                path: ./src
               - branch: stage/uat
                 create: true
                 path: ./out
@@ -425,12 +425,12 @@ the previous section.
           - uses: kustomize-set-image
             as: update-image
             config:
-              path: ./main/base
+              path: ./src/base
               images:
               - image: public.ecr.aws/nginx/nginx
           - uses: kustomize-build
             config:
-              path: ./main/stages/test
+              path: ./src/stages/test
               outPath: ./out/manifests.yaml
           - uses: git-commit
             as: commit
@@ -471,7 +471,7 @@ the previous section.
               repoURL: ${GITOPS_REPO_URL}
               checkout:
               - branch: main
-                path: ./main
+                path: ./src
               - branch: stage/prod
                 create: true
                 path: ./out
@@ -481,12 +481,12 @@ the previous section.
           - uses: kustomize-set-image
             as: update-image
             config:
-              path: ./main/base
+              path: ./src/base
               images:
               - image: public.ecr.aws/nginx/nginx
           - uses: kustomize-build
             config:
-              path: ./main/stages/test
+              path: ./src/stages/test
               outPath: ./out/manifests.yaml
           - uses: git-commit
             as: commit
@@ -792,7 +792,7 @@ the previous section.
                             "commit": "707412fa2be1aae72767c0acb652684c233a2802"
                         },
                         "update-image": {
-                            "commitMessage": "Updated ./main/base to use new image\n\n- public.ecr.aws/nginx/nginx:1.27.1"
+                            "commitMessage": "Updated ./src/base to use new image\n\n- public.ecr.aws/nginx/nginx:1.27.1"
                         }
                     }
                 }
