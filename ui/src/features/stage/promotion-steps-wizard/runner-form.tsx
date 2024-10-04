@@ -71,7 +71,7 @@ export const RunnerForm = (props: RunnerFormType) => {
             }
           }}
         >
-          <div className='absolute bottom-0 h-10 w-full bg-white'>
+          <div className='absolute bottom-0 h-10 w-full pt-1 bg-white'>
             <Button htmlType='submit' type='primary'>
               Update
             </Button>
