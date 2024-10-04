@@ -1,11 +1,4 @@
-import {
-  faAdd,
-  faAngleRight,
-  faCaretDown,
-  faCaretUp,
-  faCog,
-  faTrash
-} from '@fortawesome/free-solid-svg-icons';
+import { faAdd, faCaretDown, faCaretUp, faCog, faTrash } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Tag } from 'antd';
 import Card from 'antd/es/card/Card';
@@ -33,38 +26,32 @@ export const PromotionStepsWizard = (props: PromotionStepsWizardType) => {
   return (
     <div>
       {/* AVAILABLE RUNNERS - TODO(Marvin9) add search functionality */}
-      <div className='flex gap-2 relative'>
-        <div className='flex overflow-hidden'>
-          {registry.runners
-            .filter((runner) => !selectedRunners.find((r) => r.identifier === runner.identifier))
-            // .slice(0, 5)
-            .map((runner, idx) => (
-              <Tag
-                className='cursor-pointer'
-                key={runner.identifier + idx}
-                onClick={() => {
-                  setSelectedRunners([...selectedRunners, runner]);
-                }}
-                icon={<FontAwesomeIcon className='mr-2' icon={faAdd} />}
-              >
-                {runner.identifier}
+      <div className='flex gap-2 flex-wrap'>
+        {registry.runners
+          .filter((runner) => !selectedRunners.find((r) => r.identifier === runner.identifier))
+          // .slice(0, 5)
+          .map((runner, idx) => (
+            <Tag
+              className='cursor-pointer'
+              key={runner.identifier + idx}
+              onClick={() => {
+                setSelectedRunners([...selectedRunners, runner]);
+              }}
+              icon={<FontAwesomeIcon className='mr-2' icon={faAdd} />}
+            >
+              {runner.identifier}
 
-                {runner.unstable_icons.length > 0 &&
-                  runner.unstable_icons.map((icon) => (
-                    <FontAwesomeIcon className='ml-2' key={icon.iconName} icon={icon} />
-                  ))}
-              </Tag>
-            ))}
-        </div>
-        <FontAwesomeIcon
-          className='absolute text-lg right-0 bg-white h-full pl-5 cursor-pointer'
-          icon={faAngleRight}
-        />
+              {runner.unstable_icons.length > 0 &&
+                runner.unstable_icons.map((icon) => (
+                  <FontAwesomeIcon className='ml-2' key={icon.iconName} icon={icon} />
+                ))}
+            </Tag>
+          ))}
       </div>
 
       {/* SELECTED RUNNERS */}
       {selectedRunners.length > 0 && (
-        <div className='mt-5 space-y-4 w-6/12'>
+        <div className='mt-5 space-y-4'>
           {selectedRunners.map((runner, order) => {
             const patchRunner = (nextRunner: RunnerWithConfiguration) => {
               setSelectedRunners(
@@ -98,7 +85,9 @@ export const PromotionStepsWizard = (props: PromotionStepsWizardType) => {
                     {order > 0 && (
                       <FontAwesomeIcon
                         icon={faCaretUp}
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
                           const newOrder = [...selectedRunners];
                           newOrder[order] = selectedRunners[order - 1];
                           newOrder[order - 1] = runner;
@@ -109,7 +98,9 @@ export const PromotionStepsWizard = (props: PromotionStepsWizardType) => {
                     {order < selectedRunners.length - 1 && (
                       <FontAwesomeIcon
                         icon={faCaretDown}
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
                           const newOrder = [...selectedRunners];
                           newOrder[order] = selectedRunners[order + 1];
                           newOrder[order + 1] = runner;
