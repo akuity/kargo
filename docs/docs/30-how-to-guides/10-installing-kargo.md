@@ -45,7 +45,7 @@ user-specified admin password:
 ```shell
 helm install kargo \
   oci://ghcr.io/akuity/kargo-charts/kargo \
-  --version 0.9.0-rc.2 \
+  --version 0.9.0-rc.3 \
   --namespace kargo \
   --create-namespace \
   --set api.adminAccount.passwordHash='$2a$10$Zrhhie4vLz5ygtVSaif6o.qN36jgs6vjtMBdM6yrU1FOeiAAMMxOm' \
@@ -84,7 +84,7 @@ following:
    ```shell
    helm install kargo \
      oci://ghcr.io/akuity/kargo-charts/kargo \
-     --version 0.9.0-rc.2 \
+     --version 0.9.0-rc.3 \
      --namespace kargo \
      --create-namespace \
      --values ~/kargo-values.yaml \
