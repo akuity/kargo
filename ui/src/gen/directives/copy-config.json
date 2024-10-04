@@ -13,6 +13,11 @@
    "type": "string",
    "description": "OutPath is the path to the destination file or directory.",
    "minLength": 1
+  },
+  "ignore": {
+   "type": "string",
+   "description": "Ignore is a (multiline) string of glob patterns to ignore when copying files. It accepts the same syntax as .gitignore files.",
+   "minLength": 1
   }
  }
 }

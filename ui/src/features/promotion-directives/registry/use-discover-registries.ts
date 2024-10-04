@@ -24,11 +24,11 @@ import { JSONSchema7 } from 'json-schema';
 
 // IMPORTANT(Marvin9): this must be replaced with proper discovery mechanism
 import argocdUpdateConfig from '@ui/gen/directives/argocd-update-config.json';
-import copyConfig from '@ui/gen/directives/copy-directive-config.json';
+import copyConfig from '@ui/gen/directives/copy-config.json';
+import gitOverwriteConfig from '@ui/gen/directives/git-clear-config.json';
 import gitCloneConfig from '@ui/gen/directives/git-clone-config.json';
 import gitCommitConfig from '@ui/gen/directives/git-commit-config.json';
 import gitOpenPR from '@ui/gen/directives/git-open-pr-config.json';
-import gitOverwriteConfig from '@ui/gen/directives/git-overwrite-config.json';
 import gitPushConfig from '@ui/gen/directives/git-push-config.json';
 import gitWaitForPR from '@ui/gen/directives/git-wait-for-pr-config.json';
 import helmTemplateConfig from '@ui/gen/directives/helm-template-config.json';
