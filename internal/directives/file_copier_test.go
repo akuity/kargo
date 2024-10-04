@@ -5,8 +5,10 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
+	"github.com/go-git/go-git/v5/plumbing/format/gitignore"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -122,6 +124,117 @@ func Test_fileCopier_runPromotionStep(t *testing.T) {
 			},
 		},
 		{
+			name: "default ignore rule ignores .git directory",
+			setupFiles: func(t *testing.T) string {
+				tmpDir := t.TempDir()
+
+				inDir := filepath.Join(tmpDir, "input")
+				require.NoError(t, os.Mkdir(inDir, 0o755))
+
+				ignoreFilePath := filepath.Join(inDir, ".git", "file.txt")
+				require.NoError(t, os.MkdirAll(filepath.Dir(ignoreFilePath), 0o755))
+				require.NoError(t, os.WriteFile(ignoreFilePath, []byte("ignored content"), 0o600))
+
+				filePath := filepath.Join(inDir, "input.txt")
+				require.NoError(t, os.WriteFile(filePath, []byte("test content"), 0o600))
+
+				return tmpDir
+			},
+			cfg: CopyConfig{
+				InPath:  "input/",
+				OutPath: "output/",
+			},
+			assertions: func(t *testing.T, workDir string, result PromotionStepResult, err error) {
+				assert.NoError(t, err)
+				require.Equal(t, PromotionStepResult{Status: kargoapi.PromotionPhaseSucceeded}, result)
+
+				outDir := filepath.Join(workDir, "output")
+
+				outPath := filepath.Join(outDir, "input.txt")
+				b, err := os.ReadFile(outPath)
+				require.NoError(t, err)
+				assert.Equal(t, "test content", string(b))
+
+				ignoreFilePath := filepath.Join(outDir, ".git", "file.txt")
+				require.NoDirExists(t, filepath.Dir(ignoreFilePath))
+				require.NoFileExists(t, ignoreFilePath)
+			},
+		},
+		{
+			name: "default ignore rule ignores .git file",
+			setupFiles: func(t *testing.T) string {
+				tmpDir := t.TempDir()
+
+				inDir := filepath.Join(tmpDir, "input")
+				require.NoError(t, os.Mkdir(inDir, 0o755))
+
+				ignoreFilePath := filepath.Join(inDir, ".git")
+				require.NoError(t, os.WriteFile(ignoreFilePath, []byte("ignored content"), 0o600))
+
+				filePath := filepath.Join(inDir, "input.txt")
+				require.NoError(t, os.WriteFile(filePath, []byte("test content"), 0o600))
+
+				return tmpDir
+			},
+			cfg: CopyConfig{
+				InPath:  "input/",
+				OutPath: "output/",
+			},
+			assertions: func(t *testing.T, workDir string, result PromotionStepResult, err error) {
+				assert.NoError(t, err)
+				require.Equal(t, PromotionStepResult{Status: kargoapi.PromotionPhaseSucceeded}, result)
+
+				outDir := filepath.Join(workDir, "output")
+
+				outPath := filepath.Join(outDir, "input.txt")
+				b, err := os.ReadFile(outPath)
+				require.NoError(t, err)
+				assert.Equal(t, "test content", string(b))
+
+				ignoreFilePath := filepath.Join(outDir, ".git")
+				require.NoFileExists(t, ignoreFilePath)
+			},
+		},
+		{
+			name: "overwrite default ignore rules",
+			setupFiles: func(t *testing.T) string {
+				tmpDir := t.TempDir()
+
+				inDir := filepath.Join(tmpDir, "input")
+				require.NoError(t, os.Mkdir(inDir, 0o755))
+
+				ignoreFilePath := filepath.Join(inDir, ".git", "file.txt")
+				require.NoError(t, os.MkdirAll(filepath.Dir(ignoreFilePath), 0o755))
+				require.NoError(t, os.WriteFile(ignoreFilePath, []byte("included content"), 0o600))
+
+				filePath := filepath.Join(inDir, "input.txt")
+				require.NoError(t, os.WriteFile(filePath, []byte("test content"), 0o600))
+
+				return tmpDir
+			},
+			cfg: CopyConfig{
+				InPath:  "input/",
+				OutPath: "output/",
+				Ignore:  "!.git/",
+			},
+			assertions: func(t *testing.T, workDir string, result PromotionStepResult, err error) {
+				assert.NoError(t, err)
+				require.Equal(t, PromotionStepResult{Status: kargoapi.PromotionPhaseSucceeded}, result)
+
+				outDir := filepath.Join(workDir, "output")
+
+				outPath := filepath.Join(outDir, "input.txt")
+				b, err := os.ReadFile(outPath)
+				require.NoError(t, err)
+				assert.Equal(t, "test content", string(b))
+
+				ignoreFilePath := filepath.Join(outDir, ".git", "file.txt")
+				b, err = os.ReadFile(ignoreFilePath)
+				require.NoError(t, err)
+				assert.Equal(t, "included content", string(b))
+			},
+		},
+		{
 			name: "fails with invalid input path",
 			setupFiles: func(t *testing.T) string {
 				return t.TempDir()
@@ -147,6 +260,110 @@ func Test_fileCopier_runPromotionStep(t *testing.T) {
 				tt.cfg,
 			)
 			tt.assertions(t, workDir, result, err)
+		})
+	}
+}
+
+func Test_fileCopier_loadIgnoreRules(t *testing.T) {
+	tests := []struct {
+		name       string
+		inPath     string
+		rules      string
+		setup      func(*testing.T) string
+		assertions func(*testing.T, string, gitignore.Matcher, error)
+	}{
+		{
+			name:   "directory path",
+			inPath: "testdir",
+			rules: `*.txt
+# comment
+*.go`,
+			setup: func(t *testing.T) string {
+				return t.TempDir()
+			},
+			assertions: func(t *testing.T, inPath string, matcher gitignore.Matcher, err error) {
+				assert.NoError(t, err)
+				assert.NotNil(t, matcher)
+
+				basePath := strings.Split(inPath, string(filepath.Separator))
+
+				// Provided rules
+				assert.True(t, matcher.Match(append(basePath, "file.txt"), false))
+				assert.True(t, matcher.Match(append(basePath, "file.go"), false))
+				assert.False(t, matcher.Match(append(basePath, "file.log"), false))
+
+				// Default rules
+				assert.True(t, matcher.Match(append(basePath, ".git"), true))
+				assert.True(t, matcher.Match(append(basePath, ".git", "file.log"), true))
+			},
+		},
+		{
+			name:  "file path",
+			rules: "*.log",
+			setup: func(t *testing.T) string {
+				dir := t.TempDir()
+				inPath := filepath.Join(dir, "testfile.txt")
+				assert.NoError(t, os.WriteFile(inPath, []byte("test"), 0o600))
+				return inPath
+			},
+			assertions: func(t *testing.T, inPath string, matcher gitignore.Matcher, err error) {
+				assert.NoError(t, err)
+				assert.NotNil(t, matcher)
+
+				basePath := strings.Split(filepath.Dir(inPath), string(filepath.Separator))
+				assert.True(t, matcher.Match(append(basePath, "something.log"), false))
+				assert.False(t, matcher.Match(append(basePath, "testfile.txt"), false))
+				assert.True(t, matcher.Match(append(basePath, ".git", "file"), false))
+			},
+		},
+		{
+			name:   "non-existent path",
+			inPath: "nonexistent",
+			rules:  "*.tmp",
+			setup: func(*testing.T) string {
+				return "does-not-exist"
+			},
+			assertions: func(t *testing.T, _ string, matcher gitignore.Matcher, err error) {
+				assert.NoError(t, err)
+				assert.NotNil(t, matcher)
+			},
+		},
+		{
+			name:   "empty rules",
+			inPath: "testdir",
+			rules:  "",
+			setup: func(t *testing.T) string {
+				return t.TempDir()
+			},
+			assertions: func(t *testing.T, inPath string, matcher gitignore.Matcher, err error) {
+				assert.NoError(t, err)
+				assert.NotNil(t, matcher)
+
+				basePath := strings.Split(inPath, string(filepath.Separator))
+				assert.True(t, matcher.Match(append(basePath, ".git", "file"), false))
+				assert.False(t, matcher.Match(append(basePath, "file.txt"), false))
+			},
+		},
+		{
+			name: "invalid path",
+			setup: func(*testing.T) string {
+				return string([]byte{0})
+			},
+			rules: "*.tmp",
+			assertions: func(t *testing.T, _ string, matcher gitignore.Matcher, err error) {
+				assert.ErrorContains(t, err, "failed to determine domain")
+				assert.Nil(t, matcher)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		f := &fileCopier{}
+
+		t.Run(tt.name, func(t *testing.T) {
+			inPath := tt.setup(t)
+			matcher, err := f.loadIgnoreRules(inPath, tt.rules)
+			tt.assertions(t, inPath, matcher, err)
 		})
 	}
 }
