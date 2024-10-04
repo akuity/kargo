@@ -97,6 +97,9 @@ type ArgoCDKustomizeImageUpdate struct {
 }
 
 type CopyConfig struct {
+	// Ignore is a (multiline) string of glob patterns to ignore when copying files. It accepts
+	// the same syntax as .gitignore files.
+	Ignore string `json:"ignore,omitempty"`
 	// InPath is the path to the file or directory to copy.
 	InPath string `json:"inPath"`
 	// OutPath is the path to the destination file or directory.
