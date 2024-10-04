@@ -136,7 +136,7 @@ func (s *server) PromoteDownstream(
 		newPromo := kargo.NewPromotion(ctx, downstream, freight.Name)
 		// nolint: staticcheck
 		if downstream.Spec.PromotionMechanisms == nil &&
-			downstream.Spec.PromotionTemplate != nil && 
+			downstream.Spec.PromotionTemplate != nil &&
 			len(downstream.Spec.PromotionTemplate.Spec.Steps) == 0 {
 			// Avoid creating a Promotion if the downstream Stage has no
 			// PromotionMechanisms, and no promotion steps and is a "control flow" Stage.
