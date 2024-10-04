@@ -8,7 +8,7 @@ import {
   faTimes
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Collapse, Flex, Modal, Segmented, Tabs } from 'antd';
+import { Collapse, Flex, Modal, Segmented, Tabs, Tag } from 'antd';
 import Alert from 'antd/es/alert/Alert';
 import { SegmentedOptions } from 'antd/es/segmented';
 import classNames from 'classnames';
@@ -117,7 +117,12 @@ const Step = ({
         </Flex>
         <Flex className={'font-semibold text-base w-full'} align='center'>
           {meta.spec.identifier}
-          <Flex className='ml-auto' align='center'>
+          {!!step?.as && (
+            <Tag className='text-xs ml-auto mr-5' color='blue'>
+              {step.as}
+            </Tag>
+          )}
+          <Flex className={classNames({ 'ml-auto': !step?.as })} align='center'>
             <Flex
               align='center'
               className='bg-gray-500 text-white uppercase p-2 rounded-md font-medium mr-3 gap-2 text-sm'
@@ -198,7 +203,7 @@ export const PromotionDetailsModal = ({
               })}
             />
             {!!promotion?.status?.message && (
-              <Alert message={promotion.status.message} type='error' className='mt4' />
+              <Alert message={promotion.status.message} type='error' className='mt-4' />
             )}
           </Tabs.TabPane>
         )}
