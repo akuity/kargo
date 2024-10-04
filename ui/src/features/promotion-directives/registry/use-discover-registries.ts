@@ -86,7 +86,7 @@ export const useDiscoverPromotionDirectivesRegistries = (): PromotionDirectivesR
         config: gitPushConfig as unknown as JSONSchema7
       },
       {
-        identifier: 'git-overwrite',
+        identifier: 'git-clear',
         unstable_icons: [faRedoAlt, faCodeBranch],
         config: gitOverwriteConfig as JSONSchema7
       },

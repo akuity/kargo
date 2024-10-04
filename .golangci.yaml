@@ -16,7 +16,7 @@ linters:
     - bodyclose
     - depguard
     - errcheck
-    - exportloopref
+    - copyloopvar
     - forcetypeassert
     - gci
     - goconst

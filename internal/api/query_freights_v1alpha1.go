@@ -14,7 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/kubeclient"
+	"github.com/akuity/kargo/internal/indexer"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
@@ -169,7 +169,7 @@ func (s *server) getAvailableFreightForStage(
 		&client.ListOptions{
 			Namespace: project,
 			FieldSelector: fields.OneTermEqualSelector(
-				kubeclient.FreightApprovedForStagesIndexField,
+				indexer.FreightApprovedForStagesIndexField,
 				stage,
 			),
 		},
@@ -216,7 +216,7 @@ func (s *server) getFreightFromWarehouses(
 			&client.ListOptions{
 				Namespace: project,
 				FieldSelector: fields.OneTermEqualSelector(
-					kubeclient.FreightByWarehouseIndexField,
+					indexer.FreightByWarehouseIndexField,
 					warehouse,
 				),
 			},
@@ -247,7 +247,7 @@ func (s *server) getVerifiedFreight(
 			&client.ListOptions{
 				Namespace: project,
 				FieldSelector: fields.OneTermEqualSelector(
-					kubeclient.FreightByVerifiedStagesIndexField,
+					indexer.FreightByVerifiedStagesIndexField,
 					upstream,
 				),
 			},

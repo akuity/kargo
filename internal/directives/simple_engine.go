@@ -49,7 +49,7 @@ func (e *SimpleEngine) Promote(
 		workDir, err = os.MkdirTemp("", "run-")
 		if err != nil {
 			return PromotionResult{
-					Status:      PromotionStatusFailure,
+					Status:      kargoapi.PromotionPhaseErrored,
 					CurrentStep: 0,
 				},
 				fmt.Errorf("temporary working directory creation failed: %w", err)
@@ -69,7 +69,7 @@ func (e *SimpleEngine) Promote(
 		select {
 		case <-ctx.Done():
 			return PromotionResult{
-				Status:      PromotionStatusFailure,
+				Status:      kargoapi.PromotionPhaseErrored,
 				CurrentStep: i,
 				State:       state,
 			}, ctx.Err()
@@ -78,7 +78,7 @@ func (e *SimpleEngine) Promote(
 		reg, err := e.registry.GetPromotionStepRunnerRegistration(step.Kind)
 		if err != nil {
 			return PromotionResult{
-					Status:      PromotionStatusFailure,
+					Status:      kargoapi.PromotionPhaseErrored,
 					CurrentStep: i,
 					State:       state,
 				},
@@ -114,16 +114,17 @@ func (e *SimpleEngine) Promote(
 		}
 		if err != nil {
 			return PromotionResult{
-					Status:      PromotionStatusFailure,
+					Status:      kargoapi.PromotionPhaseErrored,
 					CurrentStep: i,
 					State:       state,
 				},
 				fmt.Errorf("failed to run step %q: %w", step.Kind, err)
 		}
 
-		if result.Status != PromotionStatusSuccess {
+		if result.Status != kargoapi.PromotionPhaseSucceeded {
 			return PromotionResult{
 				Status:      result.Status,
+				Message:     result.Message,
 				CurrentStep: i,
 				State:       state,
 			}, nil
@@ -134,9 +135,9 @@ func (e *SimpleEngine) Promote(
 		}
 	}
 	return PromotionResult{
-		Status:           PromotionStatusSuccess,
+		Status:           kargoapi.PromotionPhaseSucceeded,
 		HealthCheckSteps: healthCheckSteps,
-		CurrentStep:      int64(len(steps)-1),
+		CurrentStep:      int64(len(steps)) - 1,
 		State:            state,
 	}, nil
 }

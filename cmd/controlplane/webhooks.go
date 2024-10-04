@@ -15,7 +15,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api/kubernetes"
-	"github.com/akuity/kargo/internal/kubeclient"
+	"github.com/akuity/kargo/internal/indexer"
 	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/internal/os"
 	versionpkg "github.com/akuity/kargo/internal/version"
@@ -107,7 +107,7 @@ func (o *webhooksServerOptions) run(ctx context.Context) error {
 	}
 
 	// Index Stages by Freight
-	if err = kubeclient.IndexStagesByFreight(ctx, mgr); err != nil {
+	if err = indexer.IndexStagesByFreight(ctx, mgr); err != nil {
 		return fmt.Errorf("index Stages by Freight: %w", err)
 	}
 

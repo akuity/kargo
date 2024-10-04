@@ -11,6 +11,9 @@ import (
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/chartutil"
+	"helm.sh/helm/v3/pkg/release"
+
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
 func Test_helmTemplateRunner_runPromotionStep(t *testing.T) {
@@ -46,7 +49,7 @@ data:
 			},
 			assertions: func(t *testing.T, workDir string, result PromotionStepResult, err error) {
 				require.NoError(t, err)
-				assert.Equal(t, PromotionStepResult{Status: PromotionStatusSuccess}, result)
+				assert.Equal(t, PromotionStepResult{Status: kargoapi.PromotionPhaseSucceeded}, result)
 
 				outPath := filepath.Join(workDir, "output.yaml")
 				require.FileExists(t, outPath)
@@ -92,7 +95,7 @@ data:
 			},
 			assertions: func(t *testing.T, workDir string, result PromotionStepResult, err error) {
 				require.NoError(t, err)
-				assert.Equal(t, PromotionStepResult{Status: PromotionStatusSuccess}, result)
+				assert.Equal(t, PromotionStepResult{Status: kargoapi.PromotionPhaseSucceeded}, result)
 
 				outPath := filepath.Join(workDir, "output.yaml")
 				require.FileExists(t, outPath)
@@ -112,13 +115,58 @@ data:
 			},
 		},
 		{
+			name: "successful run with output directory",
+			files: map[string]string{
+				"values.yaml": "key: value",
+				"charts/test-chart/Chart.yaml": `apiVersion: v1
+name: test-chart
+version: 0.1.0`,
+				"charts/test-chart/templates/test.yaml": `---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-configmap
+  namespace: {{ .Release.Namespace }}
+data:
+  value: {{ .Values.key }}
+`,
+			},
+			cfg: HelmTemplateConfig{
+				Path:        "charts/test-chart",
+				ValuesFiles: []string{"values.yaml"},
+				OutPath:     "output/",
+				ReleaseName: "test-release",
+				Namespace:   "test-namespace",
+			},
+			assertions: func(t *testing.T, workDir string, result PromotionStepResult, err error) {
+				require.NoError(t, err)
+				assert.Equal(t, PromotionStepResult{Status: kargoapi.PromotionPhaseSucceeded}, result)
+
+				outPath := filepath.Join(workDir, "output", "test-chart")
+				require.DirExists(t, outPath)
+
+				content, err := os.ReadFile(filepath.Join(outPath, "templates/test.yaml"))
+				require.NoError(t, err)
+				assert.Equal(t, `---
+# Source: test-chart/templates/test.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-release-configmap
+  namespace: test-namespace
+data:
+  value: value
+`, string(content))
+			},
+		},
+		{
 			name: "missing values file",
 			cfg: HelmTemplateConfig{
 				ValuesFiles: []string{"non-existent.yaml"},
 			},
 			assertions: func(t *testing.T, workDir string, result PromotionStepResult, err error) {
 				require.ErrorContains(t, err, "failed to compose values")
-				assert.Equal(t, PromotionStepResult{Status: PromotionStatusFailure}, result)
+				assert.Equal(t, PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, result)
 
 				require.NoFileExists(t, filepath.Join(workDir, "output.yaml"))
 			},
@@ -130,7 +178,7 @@ data:
 			},
 			assertions: func(t *testing.T, workDir string, result PromotionStepResult, err error) {
 				require.ErrorContains(t, err, "failed to load chart")
-				assert.Equal(t, PromotionStepResult{Status: PromotionStatusFailure}, result)
+				assert.Equal(t, PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, result)
 
 				require.NoFileExists(t, filepath.Join(workDir, "output.yaml"))
 			},
@@ -153,7 +201,7 @@ dependencies:
 			},
 			assertions: func(t *testing.T, workDir string, result PromotionStepResult, err error) {
 				require.ErrorContains(t, err, "missing chart dependencies")
-				assert.Equal(t, PromotionStepResult{Status: PromotionStatusFailure}, result)
+				assert.Equal(t, PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, result)
 
 				require.NoFileExists(t, filepath.Join(workDir, "output.yaml"))
 			},
@@ -171,7 +219,7 @@ version: 0.1.0`,
 			},
 			assertions: func(t *testing.T, workDir string, result PromotionStepResult, err error) {
 				require.ErrorContains(t, err, "failed to initialize Helm action config")
-				assert.Equal(t, PromotionStepResult{Status: PromotionStatusFailure}, result)
+				assert.Equal(t, PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, result)
 
 				require.NoFileExists(t, filepath.Join(workDir, "output.yaml"))
 			},
@@ -197,7 +245,7 @@ data:
 			},
 			assertions: func(t *testing.T, workDir string, result PromotionStepResult, err error) {
 				require.ErrorContains(t, err, "failed to render chart")
-				assert.Equal(t, PromotionStepResult{Status: PromotionStatusFailure}, result)
+				assert.Equal(t, PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, result)
 
 				require.NoFileExists(t, filepath.Join(workDir, "output.yaml"))
 			},
@@ -222,7 +270,7 @@ metadata:
 			},
 			assertions: func(t *testing.T, workDir string, result PromotionStepResult, err error) {
 				require.ErrorContains(t, err, "failed to write rendered chart")
-				assert.Equal(t, PromotionStepResult{Status: PromotionStatusFailure}, result)
+				assert.Equal(t, PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, result)
 
 				require.NoFileExists(t, filepath.Join(workDir, "output.yaml"))
 			},
@@ -283,7 +331,7 @@ func Test_helmTemplateRunner_composeValues(t *testing.T) {
 		},
 	}
 
-	runner := (&helmTemplateRunner{})
+	runner := &helmTemplateRunner{}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -301,6 +349,7 @@ func Test_helmTemplateRunner_newInstallAction(t *testing.T) {
 		name       string
 		cfg        HelmTemplateConfig
 		project    string
+		absOutPath string
 		assertions func(*testing.T, *action.Install, error)
 	}{
 		{
@@ -339,6 +388,39 @@ func Test_helmTemplateRunner_newInstallAction(t *testing.T) {
 			},
 		},
 		{
+			name: "output directory",
+			cfg: HelmTemplateConfig{
+				OutPath: "output/",
+			},
+			absOutPath: "/tmp/output",
+			assertions: func(t *testing.T, client *action.Install, err error) {
+				require.NoError(t, err)
+				assert.Equal(t, "/tmp/output", client.OutputDir)
+			},
+		},
+		{
+			name: "output file (YAML)",
+			cfg: HelmTemplateConfig{
+				OutPath: "output.yaml",
+			},
+			absOutPath: "/tmp/output.yaml",
+			assertions: func(t *testing.T, client *action.Install, err error) {
+				require.NoError(t, err)
+				assert.Empty(t, client.OutputDir)
+			},
+		},
+		{
+			name: "output file (YML)",
+			cfg: HelmTemplateConfig{
+				OutPath: "output.yml",
+			},
+			absOutPath: "/tmp/output.yml",
+			assertions: func(t *testing.T, client *action.Install, err error) {
+				require.NoError(t, err)
+				assert.Empty(t, client.OutputDir)
+			},
+		},
+		{
 			name: "KubeVersion parsing error",
 			cfg: HelmTemplateConfig{
 				KubeVersion: "invalid",
@@ -350,11 +432,11 @@ func Test_helmTemplateRunner_newInstallAction(t *testing.T) {
 		},
 	}
 
-	runner := (&helmTemplateRunner{})
+	runner := &helmTemplateRunner{}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			client, err := runner.newInstallAction(tt.cfg, tt.project)
+			client, err := runner.newInstallAction(tt.cfg, tt.project, tt.absOutPath)
 			tt.assertions(t, client, err)
 		})
 	}
@@ -443,46 +525,181 @@ func Test_helmTemplateRunner_checkDependencies(t *testing.T) {
 func Test_helmTemplateRunner_writeOutput(t *testing.T) {
 	tests := []struct {
 		name       string
-		workDir    string
-		outPath    string
-		manifest   string
-		setup      func(string)
+		cfg        HelmTemplateConfig
+		rls        *release.Release
+		setup      func(*testing.T) (outPath string)
 		assertions func(*testing.T, string, error)
 	}{
 		{
-			name:     "successful write",
-			workDir:  t.TempDir(),
-			outPath:  "output.yaml",
-			manifest: "key: value",
+			name: "successful write to file",
+			cfg: HelmTemplateConfig{
+				OutPath: "output.yaml",
+			},
+			rls: &release.Release{
+				Manifest: "key: value",
+			},
+			setup: func(t *testing.T) (workDir string) {
+				return t.TempDir()
+			},
 			assertions: func(t *testing.T, workDir string, err error) {
 				require.NoError(t, err)
+
 				content, err := os.ReadFile(filepath.Join(workDir, "output.yaml"))
 				require.NoError(t, err)
-				assert.Equal(t, "key: value", string(content))
+				assert.Equal(t, "key: value\n", string(content))
 			},
 		},
 		{
-			name:     "write to non-existent directory",
-			workDir:  t.TempDir(),
-			outPath:  "subdir/output.yaml",
-			manifest: "key: value",
+			name: "write to non-existent directory",
+			cfg: HelmTemplateConfig{
+				OutPath: "subdir/output.yaml",
+			},
+			rls: &release.Release{
+				Manifest: "key: value",
+			},
+			setup: func(t *testing.T) (workDir string) {
+				return t.TempDir()
+			},
 			assertions: func(t *testing.T, workDir string, err error) {
 				require.NoError(t, err)
+
 				content, err := os.ReadFile(filepath.Join(workDir, "subdir", "output.yaml"))
 				require.NoError(t, err)
-				assert.Equal(t, "key: value", string(content))
+				assert.Equal(t, "key: value\n", string(content))
 			},
 		},
 		{
-			name:     "path traversal outside work directory",
-			workDir:  t.TempDir(),
-			outPath:  "../../output.yaml",
-			manifest: "key: value",
+			name: "write hooks to separate files",
+			cfg: HelmTemplateConfig{
+				OutPath: "output",
+			},
+			rls: &release.Release{
+				Manifest: "main: manifest",
+				Hooks: []*release.Hook{
+					{Path: "hook1.yaml", Manifest: "hook1: content"},
+					{Path: "hook2.yaml", Manifest: "hook2: content"},
+				},
+			},
+			setup: func(t *testing.T) (outPath string) {
+				return t.TempDir()
+			},
+			assertions: func(t *testing.T, workDir string, err error) {
+				require.NoError(t, err)
+
+				hook1Content, err := os.ReadFile(filepath.Join(workDir, "output", "hook1.yaml"))
+				require.NoError(t, err)
+				assert.Equal(t, "---\n# Source: hook1.yaml\nhook1: content\n", string(hook1Content))
+
+				hook2Content, err := os.ReadFile(filepath.Join(workDir, "output", "hook2.yaml"))
+				require.NoError(t, err)
+				assert.Equal(t, "---\n# Source: hook2.yaml\nhook2: content\n", string(hook2Content))
+			},
+		},
+		{
+			name: "skip test hooks",
+			cfg: HelmTemplateConfig{
+				OutPath:   "output",
+				SkipTests: true,
+			},
+			rls: &release.Release{
+				Manifest: "main: manifest",
+				Hooks: []*release.Hook{
+					{Path: "hook1.yaml", Manifest: "hook1: content"},
+					{Path: "test.yaml", Manifest: "test: content", Events: []release.HookEvent{release.HookTest}},
+				},
+			},
+			setup: func(t *testing.T) (outPath string) {
+				return t.TempDir()
+			},
+			assertions: func(t *testing.T, workDir string, err error) {
+				require.NoError(t, err)
+
+				hook1Content, err := os.ReadFile(filepath.Join(workDir, "output", "hook1.yaml"))
+				require.NoError(t, err)
+				assert.Equal(t, "---\n# Source: hook1.yaml\nhook1: content\n", string(hook1Content))
+
+				assert.NoFileExists(t, filepath.Join(workDir, "output", "test.yaml"))
+			},
+		},
+		{
+			name: "write hooks to single file",
+			cfg: HelmTemplateConfig{
+				OutPath: "output.yaml",
+			},
+			rls: &release.Release{
+				Manifest: "main: manifest",
+				Hooks: []*release.Hook{
+					{Path: "hook1.yaml", Manifest: "hook1: content"},
+					{Path: "hook2.yaml", Manifest: "hook2: content"},
+				},
+			},
+			setup: func(t *testing.T) (outPath string) {
+				return t.TempDir()
+			},
 			assertions: func(t *testing.T, workDir string, err error) {
 				require.NoError(t, err)
 				content, err := os.ReadFile(filepath.Join(workDir, "output.yaml"))
 				require.NoError(t, err)
-				assert.Equal(t, "key: value", string(content))
+				assert.Equal(t, `main: manifest
+---
+# Source: hook1.yaml
+hook1: content
+---
+# Source: hook2.yaml
+hook2: content
+`, string(content))
+			},
+		},
+		{
+			name: "disable hooks",
+			cfg: HelmTemplateConfig{
+				OutPath:      "output",
+				DisableHooks: true,
+			},
+			rls: &release.Release{
+				Manifest: "main: manifest",
+				Hooks: []*release.Hook{
+					{Path: "hook1.yaml", Manifest: "hook1: content"},
+				},
+			},
+			setup: func(t *testing.T) (outPath string) {
+				return t.TempDir()
+			},
+			assertions: func(t *testing.T, workDir string, err error) {
+				require.NoError(t, err)
+				_, err = os.Stat(filepath.Join(workDir, "output", "hook1.yaml"))
+				assert.True(t, os.IsNotExist(err))
+			},
+		},
+		{
+			name: "append to existing hook file",
+			cfg: HelmTemplateConfig{
+				OutPath: "output",
+			},
+			rls: &release.Release{
+				Manifest: "main: manifest",
+				Hooks: []*release.Hook{
+					{Path: "hook1.yaml", Manifest: "new content"},
+				},
+			},
+			setup: func(t *testing.T) (workDir string) {
+				workDir = t.TempDir()
+
+				require.NoError(t, os.MkdirAll(filepath.Join(workDir, "output"), 0o700))
+				require.NoError(t, os.WriteFile(
+					filepath.Join(workDir, "output", "hook1.yaml"),
+					[]byte("existing content\n"),
+					0o600,
+				))
+
+				return workDir
+			},
+			assertions: func(t *testing.T, workDir string, err error) {
+				require.NoError(t, err)
+
+				content, err := os.ReadFile(filepath.Join(workDir, "output", "hook1.yaml"))
+				require.NoError(t, err)
+				assert.Equal(t, "existing content\n---\n# Source: hook1.yaml\nnew content\n", string(content))
 			},
 		},
 	}
@@ -491,11 +708,9 @@ func Test_helmTemplateRunner_writeOutput(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if tt.setup != nil {
-				tt.setup(tt.workDir)
-			}
-			err := runner.writeOutput(tt.workDir, tt.outPath, tt.manifest)
-			tt.assertions(t, tt.workDir, err)
+			workDir := tt.setup(t)
+			err := runner.writeOutput(tt.cfg, tt.rls, filepath.Join(workDir, tt.cfg.OutPath))
+			tt.assertions(t, workDir, err)
 		})
 	}
 }

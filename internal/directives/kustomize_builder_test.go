@@ -7,6 +7,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
 func Test_kustomizeBuilder_runPromotionStep(t *testing.T) {
@@ -38,10 +40,40 @@ metadata:
 			},
 			assertions: func(t *testing.T, dir string, result PromotionStepResult, err error) {
 				require.NoError(t, err)
-				assert.Equal(t, PromotionStepResult{Status: PromotionStatusSuccess}, result)
+				assert.Equal(t, PromotionStepResult{Status: kargoapi.PromotionPhaseSucceeded}, result)
 
 				assert.FileExists(t, filepath.Join(dir, "output.yaml"))
 				b, err := os.ReadFile(filepath.Join(dir, "output.yaml"))
+				require.NoError(t, err)
+				assert.Contains(t, string(b), "test-deployment")
+			},
+		},
+		{
+			name: "successful build with output directory",
+			setupFiles: func(t *testing.T, dir string) {
+				require.NoError(t, os.WriteFile(filepath.Join(dir, "kustomization.yaml"), []byte(`
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+- deployment.yaml
+`), 0o600))
+				require.NoError(t, os.WriteFile(filepath.Join(dir, "deployment.yaml"), []byte(`---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test-deployment
+`), 0o600))
+			},
+			config: KustomizeBuildConfig{
+				Path:    ".",
+				OutPath: "output/",
+			},
+			assertions: func(t *testing.T, dir string, result PromotionStepResult, err error) {
+				require.NoError(t, err)
+				assert.Equal(t, PromotionStepResult{Status: kargoapi.PromotionPhaseSucceeded}, result)
+
+				assert.DirExists(t, filepath.Join(dir, "output"))
+				b, err := os.ReadFile(filepath.Join(dir, "output", "deployment-test-deployment.yaml"))
 				require.NoError(t, err)
 				assert.Contains(t, string(b), "test-deployment")
 			},
@@ -55,7 +87,7 @@ metadata:
 			},
 			assertions: func(t *testing.T, dir string, result PromotionStepResult, err error) {
 				require.ErrorContains(t, err, "no such file or directory")
-				assert.Equal(t, PromotionStepResult{Status: PromotionStatusFailure}, result)
+				assert.Equal(t, PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, result)
 
 				assert.NoFileExists(t, filepath.Join(dir, "output.yaml"))
 			},
@@ -71,7 +103,7 @@ metadata:
 			},
 			assertions: func(t *testing.T, dir string, result PromotionStepResult, err error) {
 				require.ErrorContains(t, err, "invalid Kustomization")
-				assert.Equal(t, PromotionStepResult{Status: PromotionStatusFailure}, result)
+				assert.Equal(t, PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, result)
 
 				assert.NoFileExists(t, filepath.Join(dir, "output.yaml"))
 			},

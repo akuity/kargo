@@ -17,35 +17,57 @@ Project](https://github.com/akuity/kargo/milestones)
 
 ## In Progress
 
-### v0.9.0
+### v1.0.0
 
-__Expected:__ TBA
+__Expected:__ 18 October 2024
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| [Promotion Directives](https://github.com/akuity/kargo/issues/2219) | strategic refactor | Transition from opinionated promotion mechanisms to an ordered lists of more finely-grained "promotion directives." These should enable greater flexibility in addressing outlying use cases and provide a sensible hook for the development of third-party integrations. |
-| Production Readiness | chore | <ul><li>Prioritize stability of existing features.</li><li>Pay down technical debt.</li><li>**This is not a guarantee that v0.9.0 will be production-ready. It is a commitment to large steps in that direction.**</li></ul> |
+v1.0.0 will be our long-anticipated GA release. There are no major features
+planned and the release will focus almost entirely on bug fixes and stability.
+
+__One notable change, however, will be the removal of the legacy (opinionated)
+promotion mechanisms that were deprecated in v0.9.0.__
 
 ## Upcoming
 
-### v0.10.0
+v1.0.0 is a major milestone for the project and signals that we are confident in
+the design and stability of Kargo's _core features_, but we're still just
+getting started!
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| [Patch Promotions](https://github.com/akuity/kargo/issues/1250) | poc | Support a generalized option to promote arbitrary configuration (e.g. strings, files, and directories) to other paths of a GitOps repository. Dependent on changes scheduled for v0.9.0. |
-| Production Readiness | chore | <ul><li>Prioritize stability of existing features.</li><li>Pay down technical debt.</li><li>**This is not a guarantee that v0.10.0 will be production-ready. It is a commitment to large steps in that direction.**</li></ul> |
+### v1.1.0 and Beyond
 
-### v0.11.0 .. v0.n.0
+v0.9.0's strategic refactor to promotion steps has opened up a world of
+possibilities for Kargo.
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| Promotion Mechanism Extensibility | feature | User-defined promotion mechanisms. |
-| `Project` Improvements | feature | <ul><li>Permit promotion policies to "freeze" `Freight` production and/or promotions based on time or other constraints.</li><li>Aggregate useful project-level status and statistics in `ProjectStatus`.</li></ul> |
-| `Freight` Enrichment | feature | Enhance `Freight` metadata for improved insight into contents and the expected result of promoting a piece of `Freight` to a given `Stage`. |
-| `kargo init` | feature | Addition of an `init` sub-command to the Kargo CLI for streamlining project / pipeline creation. |
-| Standalone Image Writeback | feature | Write back image changes without having to subscribe to an image repository. |
+The general theme for our first several minor releases post-GA will be
+_extensibility_. With an end-goal of enabling third-party integrations in the
+form of promotion steps, we will be working on:
+
+* Ensuring a secure and isolated execution environment for promotion steps.
+
+* Publishing a formal specification for developers wishing to implement their
+  own promotion steps.
+
+* Providing the mechanisms for operators to install and users to leverage
+  versioned, third-party promotion steps.
+
+Through this work, we intend to enable a rich ecosystem of promotion steps that will provide a wide range of capabilities including, but not limited to, notifications, approval workflows, alternative GitOps agents, and non-Kubernetes deployments.
+
+Several UX improvements are also planned, including:
+
+* Packaging common workflows as pre-defined, composite promotion steps.
+
+* Implementing an expression language that permits promotion step configuration
+  to more easily reference things like Freight, credentials, and the output of
+  previous promotion steps.
 
 ## Completed
+
+### v0.9.0
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [Promotion Steps](https://github.com/akuity/kargo/issues/2219) | strategic refactor | Transitioned from opinionated promotion mechanisms to an ordered lists of more finely-grained promotion directives steps reminiscent of GitHub Actions. These enable greater flexibility in addressing outlying use cases and have left us with a clear path forward for to eventually enable third-party integrations. |
+| Production Readiness | chore | <ul><li>Prioritized stability of existing features.</li><li>Paid down technical debt.</li><li>**This does not mean v0.9.0 is production-ready. It means it is several steps closer to it.**</li></ul> |
 
 ### v0.8.0
 

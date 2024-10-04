@@ -29,6 +29,7 @@ import (
 	"github.com/akuity/kargo/internal/controller/promotion"
 	"github.com/akuity/kargo/internal/controller/runtime"
 	"github.com/akuity/kargo/internal/directives"
+	"github.com/akuity/kargo/internal/indexer"
 	"github.com/akuity/kargo/internal/kargo"
 	"github.com/akuity/kargo/internal/kubeclient"
 	libEvent "github.com/akuity/kargo/internal/kubernetes/event"
@@ -94,7 +95,7 @@ func SetupReconcilerWithManager(
 	cfg ReconcilerConfig,
 ) error {
 	// Index running Promotions by Argo CD Applications
-	if err := kubeclient.IndexRunningPromotionsByArgoCDApplications(ctx, kargoMgr, cfg.ShardName); err != nil {
+	if err := indexer.IndexRunningPromotionsByArgoCDApplications(ctx, kargoMgr, cfg.ShardName); err != nil {
 		return fmt.Errorf("index running Promotions by Argo CD Applications: %w", err)
 	}
 
@@ -355,12 +356,13 @@ func (r *reconciler) Reconcile(
 			stage,
 			freight,
 		)
+		if otherStatus != nil {
+			newStatus = otherStatus
+		}
 		if promoteErr != nil {
 			newStatus.Phase = kargoapi.PromotionPhaseErrored
 			newStatus.Message = promoteErr.Error()
 			logger.Error(promoteErr, "error executing Promotion")
-		} else {
-			newStatus = otherStatus
 		}
 	}()
 
@@ -537,12 +539,11 @@ func (r *reconciler) promote(
 		}()
 
 		res, err := r.directivesEngine.Promote(ctx, promoCtx, steps)
+		workingPromo.Status.Phase = res.Status
+		workingPromo.Status.Message = res.Message
 		workingPromo.Status.CurrentStep = res.CurrentStep
 		workingPromo.Status.State = &apiextensionsv1.JSON{Raw: res.State.ToJSON()}
-		switch res.Status {
-		case directives.PromotionStatusPending:
-			workingPromo.Status.Phase = kargoapi.PromotionPhaseRunning
-		case directives.PromotionStatusSuccess:
+		if res.Status == kargoapi.PromotionPhaseSucceeded {
 			var healthChecks []kargoapi.HealthCheckStep
 			for _, step := range res.HealthCheckSteps {
 				healthChecks = append(healthChecks, kargoapi.HealthCheckStep{
@@ -550,12 +551,10 @@ func (r *reconciler) promote(
 					Config: &apiextensionsv1.JSON{Raw: step.Config.ToJSON()},
 				})
 			}
-			workingPromo.Status.Phase = kargoapi.PromotionPhaseSucceeded
 			workingPromo.Status.HealthChecks = healthChecks
-		case directives.PromotionStatusFailure:
-			workingPromo.Status.Phase = kargoapi.PromotionPhaseFailed
 		}
 		if err != nil {
+			workingPromo.Status.Phase = kargoapi.PromotionPhaseErrored
 			return &workingPromo.Status, err
 		}
 	}

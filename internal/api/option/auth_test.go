@@ -375,7 +375,6 @@ func TestAuthenticate(t *testing.T) {
 		},
 	}
 	for name, ts := range testSets {
-		ts := ts
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			header := http.Header{}

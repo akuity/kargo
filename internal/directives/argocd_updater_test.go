@@ -355,7 +355,7 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 			stepCtx: &PromotionStepContext{},
 			stepCfg: ArgoCDUpdateConfig{},
 			assertions: func(t *testing.T, res PromotionStepResult, err error) {
-				require.Equal(t, PromotionStatusFailure, res.Status)
+				require.Equal(t, kargoapi.PromotionPhaseErrored, res.Status)
 				require.ErrorContains(
 					t, err, "Argo CD integration is disabled on this controller",
 				)
@@ -379,7 +379,7 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 				Apps: []ArgoCDAppUpdate{{}},
 			},
 			assertions: func(t *testing.T, res PromotionStepResult, err error) {
-				require.Equal(t, PromotionStatusFailure, res.Status)
+				require.Equal(t, kargoapi.PromotionPhaseErrored, res.Status)
 				require.ErrorContains(t, err, "error getting Argo CD Application")
 				require.ErrorContains(t, err, "something went wrong")
 			},
@@ -412,7 +412,7 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 				Apps: []ArgoCDAppUpdate{{}},
 			},
 			assertions: func(t *testing.T, res PromotionStepResult, err error) {
-				require.Equal(t, PromotionStatusFailure, res.Status)
+				require.Equal(t, kargoapi.PromotionPhaseErrored, res.Status)
 				require.ErrorContains(t, err, "error building desired sources for Argo CD Application")
 				require.ErrorContains(t, err, "something went wrong")
 			},
@@ -455,7 +455,7 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 				Apps: []ArgoCDAppUpdate{{}},
 			},
 			assertions: func(t *testing.T, res PromotionStepResult, err error) {
-				require.Equal(t, PromotionStatusFailure, res.Status)
+				require.Equal(t, kargoapi.PromotionPhaseErrored, res.Status)
 				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
@@ -505,7 +505,7 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 				Apps: []ArgoCDAppUpdate{{}},
 			},
 			assertions: func(t *testing.T, res PromotionStepResult, err error) {
-				require.Equal(t, PromotionStatusPending, res.Status)
+				require.Equal(t, kargoapi.PromotionPhaseRunning, res.Status)
 				require.NoError(t, err)
 			},
 		},
@@ -547,7 +547,7 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 				Apps: []ArgoCDAppUpdate{{}},
 			},
 			assertions: func(t *testing.T, res PromotionStepResult, err error) {
-				require.Equal(t, PromotionStatusPending, res.Status)
+				require.Equal(t, kargoapi.PromotionPhaseRunning, res.Status)
 				require.NoError(t, err)
 			},
 		},
@@ -589,7 +589,7 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 				Apps: []ArgoCDAppUpdate{{}},
 			},
 			assertions: func(t *testing.T, res PromotionStepResult, err error) {
-				require.Equal(t, PromotionStatusPending, res.Status)
+				require.Equal(t, kargoapi.PromotionPhaseRunning, res.Status)
 				require.NoError(t, err)
 			},
 		},
@@ -639,7 +639,7 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 				Apps: []ArgoCDAppUpdate{{}},
 			},
 			assertions: func(t *testing.T, res PromotionStepResult, err error) {
-				require.Equal(t, PromotionStatusFailure, res.Status)
+				require.Equal(t, kargoapi.PromotionPhaseErrored, res.Status)
 				require.ErrorContains(t, err, "error syncing Argo CD Application")
 				require.ErrorContains(t, err, "something went wrong")
 			},
@@ -707,7 +707,7 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, res PromotionStepResult, err error) {
-				require.Equal(t, PromotionStatusFailure, res.Status)
+				require.Equal(t, kargoapi.PromotionPhaseErrored, res.Status)
 				require.NoError(t, err)
 			},
 		},
@@ -749,7 +749,7 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 				Apps: []ArgoCDAppUpdate{{}},
 			},
 			assertions: func(t *testing.T, res PromotionStepResult, err error) {
-				require.Equal(t, PromotionStatusFailure, res.Status)
+				require.Equal(t, kargoapi.PromotionPhaseErrored, res.Status)
 				require.ErrorContains(t, err, "could not determine promotion step status")
 			},
 		},
@@ -791,7 +791,7 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 				Apps: []ArgoCDAppUpdate{{}},
 			},
 			assertions: func(t *testing.T, res PromotionStepResult, err error) {
-				require.Equal(t, PromotionStatusSuccess, res.Status)
+				require.Equal(t, kargoapi.PromotionPhaseSucceeded, res.Status)
 				require.NoError(t, err)
 			},
 		},
@@ -1289,7 +1289,7 @@ func Test_argoCDUpdater_syncApplication(t *testing.T) {
 					Name:      "fake-name",
 					Namespace: "fake-namespace",
 					Annotations: map[string]string{
-						authorizedStageAnnotationKey: "fake-namespace:fake-name",
+						kargoapi.AnnotationKeyAuthorizedStage: "fake-namespace:fake-name",
 					},
 				},
 			},
@@ -1324,7 +1324,7 @@ func Test_argoCDUpdater_syncApplication(t *testing.T) {
 					Name:      "fake-name",
 					Namespace: "fake-namespace",
 					Annotations: map[string]string{
-						authorizedStageAnnotationKey: "fake-namespace:fake-name",
+						kargoapi.AnnotationKeyAuthorizedStage: "fake-namespace:fake-name",
 					},
 				},
 			},
@@ -1504,7 +1504,7 @@ func Test_argoCDUpdater_getAuthorizedApplication(t *testing.T) {
 					Name:      "fake-app",
 					Namespace: "fake-namespace",
 					Annotations: map[string]string{
-						authorizedStageAnnotationKey: "fake-namespace:fake-stage",
+						kargoapi.AnnotationKeyAuthorizedStage: "fake-namespace:fake-stage",
 					},
 				},
 			},
@@ -1545,9 +1545,12 @@ func Test_argoCDUpdater_getAuthorizedApplication(t *testing.T) {
 }
 
 func Test_argoCDUpdater_authorizeArgoCDAppUpdate(t *testing.T) {
-	permErr := "does not permit mutation"
-	parseErr := "unable to parse"
-	invalidGlobErr := "invalid glob expression"
+	const (
+		permErr           = "does not permit mutation"
+		parseErr          = "unable to parse"
+		deprecatedGlobErr = "deprecated glob expression"
+	)
+
 	testCases := []struct {
 		name    string
 		appMeta metav1.ObjectMeta
@@ -1569,7 +1572,7 @@ func Test_argoCDUpdater_authorizeArgoCDAppUpdate(t *testing.T) {
 			name: "annotation cannot be parsed",
 			appMeta: metav1.ObjectMeta{
 				Annotations: map[string]string{
-					authorizedStageAnnotationKey: "bogus",
+					kargoapi.AnnotationKeyAuthorizedStage: "bogus",
 				},
 			},
 			errMsg: parseErr,
@@ -1578,7 +1581,7 @@ func Test_argoCDUpdater_authorizeArgoCDAppUpdate(t *testing.T) {
 			name: "mutation is not allowed",
 			appMeta: metav1.ObjectMeta{
 				Annotations: map[string]string{
-					authorizedStageAnnotationKey: "ns-nope:name-nope",
+					kargoapi.AnnotationKeyAuthorizedStage: "ns-nope:name-nope",
 				},
 			},
 			errMsg: permErr,
@@ -1587,7 +1590,7 @@ func Test_argoCDUpdater_authorizeArgoCDAppUpdate(t *testing.T) {
 			name: "mutation is allowed",
 			appMeta: metav1.ObjectMeta{
 				Annotations: map[string]string{
-					authorizedStageAnnotationKey: "ns-yep:name-yep",
+					kargoapi.AnnotationKeyAuthorizedStage: "ns-yep:name-yep",
 				},
 			},
 		},
@@ -1595,52 +1598,19 @@ func Test_argoCDUpdater_authorizeArgoCDAppUpdate(t *testing.T) {
 			name: "wildcard namespace with full name",
 			appMeta: metav1.ObjectMeta{
 				Annotations: map[string]string{
-					authorizedStageAnnotationKey: "*:name-yep",
+					kargoapi.AnnotationKeyAuthorizedStage: "*:name-yep",
 				},
 			},
+			errMsg: deprecatedGlobErr,
 		},
 		{
 			name: "full namespace with wildcard name",
 			appMeta: metav1.ObjectMeta{
 				Annotations: map[string]string{
-					authorizedStageAnnotationKey: "ns-yep:*",
+					kargoapi.AnnotationKeyAuthorizedStage: "ns-yep:*",
 				},
 			},
-		},
-		{
-			name: "partial wildcards in namespace and name",
-			appMeta: metav1.ObjectMeta{
-				Annotations: map[string]string{
-					authorizedStageAnnotationKey: "*-ye*:*-y*",
-				},
-			},
-		},
-		{
-			name: "wildcards do not match",
-			appMeta: metav1.ObjectMeta{
-				Annotations: map[string]string{
-					authorizedStageAnnotationKey: "*-nope:*-nope",
-				},
-			},
-			errMsg: permErr,
-		},
-		{
-			name: "invalid namespace glob",
-			appMeta: metav1.ObjectMeta{
-				Annotations: map[string]string{
-					authorizedStageAnnotationKey: "*[:*",
-				},
-			},
-			errMsg: invalidGlobErr,
-		},
-		{
-			name: "invalid name glob",
-			appMeta: metav1.ObjectMeta{
-				Annotations: map[string]string{
-					authorizedStageAnnotationKey: "*:*[",
-				},
-			},
-			errMsg: invalidGlobErr,
+			errMsg: deprecatedGlobErr,
 		},
 	}
 

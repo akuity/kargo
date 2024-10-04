@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	securejoin "github.com/cyphar/filepath-securejoin"
@@ -14,6 +15,8 @@ import (
 	"sigs.k8s.io/kustomize/api/resmap"
 	kustypes "sigs.k8s.io/kustomize/api/types"
 	"sigs.k8s.io/kustomize/kyaml/filesys"
+
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
 // kustomizeRenderMutex is a mutex that ensures only one kustomize build is
@@ -51,7 +54,7 @@ func (k *kustomizeBuilder) RunPromotionStep(
 	_ context.Context,
 	stepCtx *PromotionStepContext,
 ) (PromotionStepResult, error) {
-	failure := PromotionStepResult{Status: PromotionStatusFailure}
+	failure := PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}
 
 	// Validate the configuration against the JSON Schema.
 	if err := validate(k.schemaLoader, gojsonschema.NewGoLoader(stepCtx.Config), k.Name()); err != nil {
@@ -74,33 +77,69 @@ func (k *kustomizeBuilder) runPromotionStep(
 	// Create a "chrooted" filesystem for the kustomize build.
 	fs, err := securefs.MakeFsOnDiskSecureBuild(stepCtx.WorkDir)
 	if err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailure}, err
+		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, err
 	}
 
 	// Build the manifests.
 	rm, err := kustomizeBuild(fs, filepath.Join(stepCtx.WorkDir, cfg.Path))
 	if err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailure}, err
+		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, err
 	}
 
 	// Prepare the output path.
 	outPath, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.OutPath)
 	if err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailure}, err
-	}
-	if err = os.MkdirAll(filepath.Dir(outPath), 0o700); err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailure}, err
+		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, err
 	}
 
 	// Write the built manifests to the output path.
-	b, err := rm.AsYaml()
-	if err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailure}, err
+	if err := k.writeResult(rm, outPath); err != nil {
+		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, fmt.Errorf(
+			"failed to write built manifests to %q: %w", cfg.OutPath,
+			sanitizePathError(err, stepCtx.WorkDir),
+		)
 	}
-	if err = os.WriteFile(outPath, b, 0o600); err != nil {
-		return PromotionStepResult{Status: PromotionStatusFailure}, err
+	return PromotionStepResult{Status: kargoapi.PromotionPhaseSucceeded}, nil
+}
+
+func (k *kustomizeBuilder) writeResult(rm resmap.ResMap, outPath string) error {
+	if ext := filepath.Ext(outPath); ext == ".yaml" || ext == ".yml" {
+		if err := os.MkdirAll(filepath.Dir(outPath), 0o700); err != nil {
+			return err
+		}
+		b, err := rm.AsYaml()
+		if err != nil {
+			return err
+		}
+		return os.WriteFile(outPath, b, 0o600)
 	}
-	return PromotionStepResult{Status: PromotionStatusSuccess}, nil
+
+	// If the output path is a directory, write each manifest to a separate file.
+	if err := os.MkdirAll(outPath, 0o700); err != nil {
+		return err
+	}
+	for _, r := range rm.Resources() {
+		kind, namespace, name := r.GetKind(), r.GetNamespace(), r.GetName()
+		if kind == "" || name == "" {
+			return fmt.Errorf("resource kind and name of %q must be non-empty to write to a directory", r.CurId())
+		}
+
+		fileName := fmt.Sprintf("%s-%s", kind, name)
+		if namespace != "" {
+			fileName = fmt.Sprintf("%s-%s", namespace, fileName)
+		}
+
+		b, err := r.AsYAML()
+		if err != nil {
+			return fmt.Errorf("failed to convert %q to YAML: %w", r.CurId(), err)
+		}
+
+		path := filepath.Join(outPath, fmt.Sprintf("%s.yaml", strings.ToLower(fileName)))
+		if err = os.WriteFile(path, b, 0o600); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // kustomizeBuild builds the manifests in the given directory using Kustomize.

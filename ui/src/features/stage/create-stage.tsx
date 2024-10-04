@@ -40,7 +40,9 @@ const wizardSchema = z.object({
   name: zodValidators.requiredString,
   requestedFreight: z.array(requestedFreightSchema),
   promotionMechanisms: z.string().optional(),
-  color: z.string().optional()
+  color: z.string().optional(),
+  // next step is to wizardify this
+  promotionTemplateSteps: z.string().optional()
 });
 
 const stageFormToYAML = (
@@ -87,7 +89,9 @@ export const CreateStage = ({
   const [tab, setTab] = useState('wizard');
 
   const { mutateAsync, isPending } = useMutation(createResource, {
-    onSuccess: () => close()
+    onSuccess: () => {
+      close();
+    }
   });
 
   const { control, handleSubmit, setValue } = useForm({
