@@ -172,7 +172,12 @@ export const CreateStage = ({
           setTab(newTab);
         }}
       >
-        <Tabs.TabPane key='wizard' tab='Form' icon={<FontAwesomeIcon icon={faListCheck} />}>
+        <Tabs.TabPane
+          key='wizard'
+          tab='Form'
+          icon={<FontAwesomeIcon icon={faListCheck} />}
+          className='mb-4'
+        >
           <FieldContainer name='name' label='Name' control={wizardControl}>
             {({ field }) => <Input {...field} placeholder='my-stage' />}
           </FieldContainer>
@@ -263,16 +268,12 @@ export const CreateStage = ({
           />
 
           <Typography.Title level={4}>Promotion Steps</Typography.Title>
-          <FieldContainer name='promotionTemplateSteps' control={wizardControl}>
-            {() => (
-              <PromotionStepsWizard
-                steps={promotionWizardStepsState.state}
-                onChange={(newSteps) => {
-                  promotionWizardStepsState.onChange(newSteps);
-                }}
-              />
-            )}
-          </FieldContainer>
+          <PromotionStepsWizard
+            steps={promotionWizardStepsState.state}
+            onChange={(newSteps) => {
+              promotionWizardStepsState.onChange(newSteps);
+            }}
+          />
         </Tabs.TabPane>
         <Tabs.TabPane key='yaml' tab='YAML' icon={<FontAwesomeIcon icon={faCode} />}>
           <FieldContainer name='value' control={control}>

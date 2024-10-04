@@ -71,9 +71,11 @@ export const RunnerForm = (props: RunnerFormType) => {
             }
           }}
         >
-          <Button htmlType='submit' type='primary'>
-            Update
-          </Button>
+          <div className='absolute bottom-0 h-10 w-full bg-white'>
+            <Button htmlType='submit' type='primary'>
+              Update
+            </Button>
+          </div>
         </Form>
       </div>
     </ErrorBoundary>
