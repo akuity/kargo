@@ -17,7 +17,6 @@ import { KargoService } from '@ui/gen/service/v1alpha1/service_connect';
 import { ListPromotionsResponse } from '@ui/gen/service/v1alpha1/service_pb';
 import { Freight, Promotion } from '@ui/gen/v1alpha1/generated_pb';
 
-import { useModal } from '../common/modal/use-modal';
 import { PromotionStatusIcon } from '../common/promotion-status/promotion-status-icon';
 
 import { PrLinks } from './pr-links';
@@ -25,8 +24,6 @@ import { PromotionDetailsModal } from './promotion-details-modal';
 
 export const Promotions = ({ repoUrls }: { repoUrls?: string[] }) => {
   const client = useQueryClient();
-
-  const { show } = useModal();
 
   const { name: projectName, stageName } = useParams();
   const { data: promotionsResponse, isLoading } = useQuery(
@@ -44,6 +41,9 @@ export const Promotions = ({ repoUrls }: { repoUrls?: string[] }) => {
       enabled: !!curFreight
     }
   );
+
+  // modal kept in the same component for live view
+  const [selectedPromotion, setSelectedPromotion] = useState<Promotion | undefined>();
 
   useEffect(() => {
     if (isLoading || !promotionsResponse) {
@@ -114,9 +114,7 @@ export const Promotions = ({ repoUrls }: { repoUrls?: string[] }) => {
     {
       title: 'Name',
       render: (_, promotion) => (
-        <a onClick={() => show((p) => <PromotionDetailsModal {...p} promotion={promotion} />)}>
-          {promotion.metadata?.name}
-        </a>
+        <a onClick={() => setSelectedPromotion(promotion)}>{promotion.metadata?.name}</a>
       )
     },
     {
@@ -161,13 +159,26 @@ export const Promotions = ({ repoUrls }: { repoUrls?: string[] }) => {
   ];
 
   return (
-    <Table
-      columns={columns}
-      dataSource={promotions}
-      size='small'
-      pagination={{ hideOnSinglePage: true }}
-      rowKey={(p) => p.metadata?.uid || ''}
-      loading={isLoading}
-    />
+    <>
+      <Table
+        columns={columns}
+        dataSource={promotions}
+        size='small'
+        pagination={{ hideOnSinglePage: true }}
+        rowKey={(p) => p.metadata?.uid || ''}
+        loading={isLoading}
+      />
+
+      {selectedPromotion && (
+        <PromotionDetailsModal
+          // @ts-expect-error // know that there will always be value available of this promotion
+          promotion={promotions?.find(
+            (p) => p?.metadata?.name === selectedPromotion?.metadata?.name
+          )}
+          visible={!!selectedPromotion}
+          hide={() => setSelectedPromotion(undefined)}
+        />
+      )}
+    </>
   );
 };
