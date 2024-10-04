@@ -1,15 +1,16 @@
 import {
-  faCaretDown,
-  faCaretUp,
   faCheck,
   faCircleNotch,
+  faCog,
   faFileLines,
+  faLinesLeaning,
   faShoePrints,
   faTimes
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Flex, Modal, Tabs } from 'antd';
+import { Collapse, Flex, Modal, Segmented, Tabs, Tag } from 'antd';
 import Alert from 'antd/es/alert/Alert';
+import { SegmentedOptions } from 'antd/es/segmented';
 import classNames from 'classnames';
 import { useMemo, useState } from 'react';
 
@@ -25,7 +26,15 @@ import { Runner } from '@ui/features/promotion-directives/registry/types';
 import { Promotion, PromotionStep } from '@ui/gen/v1alpha1/generated_pb';
 import { decodeRawData } from '@ui/utils/decode-raw-data';
 
-const Step = ({ step, result }: { step: PromotionStep; result: PromotionDirectiveStepStatus }) => {
+const Step = ({
+  step,
+  result,
+  logs
+}: {
+  step: PromotionStep;
+  result: PromotionDirectiveStepStatus;
+  logs?: object;
+}) => {
   const [showDetails, setShowDetails] = useState(false);
 
   const { registry } = usePromotionDirectivesRegistryContext();
@@ -59,15 +68,43 @@ const Step = ({ step, result }: { step: PromotionStep; result: PromotionDirectiv
   const success = result === PromotionDirectiveStepStatus.SUCCESS;
   const failed = result === PromotionDirectiveStepStatus.FAILED;
 
-  return (
-    <Flex
-      className={classNames('rounded-md border-2 border-solid p-2 mb-3', {
-        'border-green-500': progressing,
-        'border-gray-200': !progressing
-      })}
-      vertical
-    >
-      <Flex align='center'>
+  const opts: SegmentedOptions<string> = [];
+
+  if (logs) {
+    opts.push({
+      label: 'Output',
+      value: 'output',
+      icon: <FontAwesomeIcon icon={faLinesLeaning} className='text-xs' />,
+      className: 'p-2'
+    });
+  }
+
+  if (meta?.config) {
+    opts.push({
+      label: 'Config',
+      value: 'config',
+      icon: <FontAwesomeIcon icon={faCog} className='text-xs' />,
+      className: 'p-2'
+    });
+  }
+
+  const [selectedOpts, setSelectedOpts] = useState(
+    // @ts-expect-error value is there
+    opts?.[0]?.value
+  );
+
+  const yamlView = {
+    config: meta?.config,
+    output: logs ? JSON.stringify(logs || {}, null, ' ') : ''
+  };
+
+  return {
+    className: classNames('', {
+      'border-green-500': progressing,
+      'border-gray-200': !progressing
+    }),
+    label: (
+      <Flex align='center' onClick={() => setShowDetails(!showDetails)}>
         <Flex
           align='center'
           justify='center'
@@ -80,7 +117,12 @@ const Step = ({ step, result }: { step: PromotionStep; result: PromotionDirectiv
         </Flex>
         <Flex className={'font-semibold text-base w-full'} align='center'>
           {meta.spec.identifier}
-          <Flex className='ml-auto' align='center'>
+          {!!step?.as && (
+            <Tag className='text-xs ml-auto mr-5' color='blue'>
+              {step.as}
+            </Tag>
+          )}
+          <Flex className={classNames({ 'ml-auto': !step?.as })} align='center'>
             <Flex
               align='center'
               className='bg-gray-500 text-white uppercase p-2 rounded-md font-medium mr-3 gap-2 text-sm'
@@ -89,19 +131,29 @@ const Step = ({ step, result }: { step: PromotionStep; result: PromotionDirectiv
                 <FontAwesomeIcon key={i} icon={icon} />
               ))}
             </Flex>
-            {step.config && (
-              <FontAwesomeIcon
-                icon={showDetails ? faCaretUp : faCaretDown}
-                onClick={() => setShowDetails(!showDetails)}
-                className='mr-2 text-blue-500 cursor-pointer'
-              />
-            )}
           </Flex>
         </Flex>
       </Flex>
-      {showDetails && <YamlEditor value={meta.config} height='200px' className='mt-2' disabled />}
-    </Flex>
-  );
+    ),
+    children: (
+      <>
+        {opts.length > 1 && (
+          <Segmented
+            value={selectedOpts}
+            size='small'
+            options={opts}
+            onChange={setSelectedOpts}
+            className='mb-2'
+          />
+        )}
+        <YamlEditor
+          value={yamlView[selectedOpts as keyof typeof yamlView]}
+          height='200px'
+          disabled
+        />
+      </>
+    )
+  };
 };
 
 export const PromotionDetailsModal = ({
@@ -111,6 +163,21 @@ export const PromotionDetailsModal = ({
 }: {
   promotion: Promotion;
 } & ModalProps) => {
+  const logsByStepAlias: Record<string, object> = useMemo(() => {
+    if (promotion?.status?.state?.raw) {
+      try {
+        const raw = decodeRawData({ result: { case: 'raw', value: promotion.status.state.raw } });
+
+        return JSON.parse(raw);
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.error(e);
+      }
+    }
+
+    return {};
+  }, [promotion]);
+
   return (
     <Modal
       title='Promotion Details'
@@ -124,15 +191,19 @@ export const PromotionDetailsModal = ({
       <Tabs defaultActiveKey='1'>
         {promotion.spec?.steps && (
           <Tabs.TabPane tab='Steps' key='1' icon={<FontAwesomeIcon icon={faShoePrints} />}>
-            {promotion.spec.steps.map((step, i) => (
-              <Step
-                key={i}
-                step={step}
-                result={getPromotionDirectiveStepStatus(i, promotion.status)}
-              />
-            ))}
+            <Collapse
+              expandIconPosition='end'
+              bordered={false}
+              items={promotion.spec.steps.map((step, i) => {
+                return Step({
+                  step,
+                  result: getPromotionDirectiveStepStatus(i, promotion.status),
+                  logs: logsByStepAlias?.[step?.as || '']
+                });
+              })}
+            />
             {!!promotion?.status?.message && (
-              <Alert message={promotion.status.message} type='error' className='mt4' />
+              <Alert message={promotion.status.message} type='error' className='mt-4' />
             )}
           </Tabs.TabPane>
         )}
