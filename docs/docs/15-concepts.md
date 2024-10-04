@@ -305,7 +305,7 @@ promotionTemplate:
         repoURL: https://github.com/example/repo.git
         checkout:
         - fromFreight: true
-          path: ./main
+          path: ./src
         - branch: stage/test
           create: true
           path: ./out
@@ -315,12 +315,12 @@ promotionTemplate:
     - uses: kustomize-set-image
       as: update-image
       config:
-        path: ./main/base
+        path: ./src/base
         images:
         - image: public.ecr.aws/nginx/nginx
     - uses: kustomize-build
       config:
-        path: ./main/stages/test
+        path: ./src/stages/test
         outPath: ./out
     - uses: git-commit
       as: commit

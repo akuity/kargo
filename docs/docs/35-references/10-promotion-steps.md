@@ -57,7 +57,7 @@ steps:
     repoURL: https://github.com/example/repo.git
     checkout:
     - fromFreight: true
-      path: ./main
+      path: ./src
     - branch: stage/test
       create: true
       path: ./out
@@ -86,7 +86,7 @@ steps:
       fromOrigin:
         kind: Warehouse
         name: base
-      path: ./main
+      path: ./src
     - fromFreight: true
       fromOrigin:
         kind: Warehouse
@@ -101,10 +101,10 @@ steps:
 - uses: copy
   config:
     inPath: ./overlay/stages/test/kustomization.yaml
-    outPath: ./main/stages/test/kustomization.yaml
+    outPath: ./src/stages/test/kustomization.yaml
 - uses: kustomize-build
   config:
-    path: ./main/stages/test
+    path: ./src/stages/test
     outPath: ./out
 # Commit, push, etc...
 ```
@@ -179,7 +179,7 @@ steps:
       fromOrigin:
         kind: Warehouse
         name: base
-      path: ./main
+      path: ./src
     - fromFreight: true
       fromOrigin:
         kind: Warehouse
@@ -194,7 +194,7 @@ steps:
 - uses: copy
   config:
     inPath: ./overlay/stages/test/kustomization.yaml
-    outPath: ./main/stages/test/kustomization.yaml
+    outPath: ./src/stages/test/kustomization.yaml
 # Render manifests to ./out, commit, push, etc...
 ```
 
@@ -232,7 +232,7 @@ steps:
       fromOrigin:
         kind: Warehouse
         name: base
-      path: ./main
+      path: ./src
     - branch: stage/test
       create: true
       path: ./out
@@ -241,7 +241,7 @@ steps:
     path: ./out
 - uses: kustomize-set-image
   config:
-    path: ./main/base
+    path: ./src/base
     images:
     - image: my/image
 # Render manifests to ./out, commit, push, etc...
@@ -269,7 +269,7 @@ steps:
       fromOrigin:
         kind: Warehouse
         name: base
-      path: ./main
+      path: ./src
     - branch: stage/test
       create: true
       path: ./out
@@ -278,7 +278,7 @@ steps:
     path: ./out
 - uses: kustomize-set-image
   config:
-    path: ./main/base
+    path: ./src/base
     images:
     - image: 123456789012.dkr.ecr.us-east-1.amazonaws.com/my-image
       newName: 123456789012.dkr.ecr.us-west-2.amazonaws.com/my-image
@@ -324,7 +324,7 @@ steps:
     repoURL: https://github.com/example/repo.git
     checkout:
     - fromFreight: true
-      path: ./main
+      path: ./src
     - branch: stage/test
       create: true
       path: ./out
@@ -333,7 +333,7 @@ steps:
     path: ./out
 - uses: kustomize-build
   config:
-    path: ./main/stages/test
+    path: ./src/stages/test
     outPath: ./out/manifests.yaml
 # Commit, push, etc...
 ```
@@ -349,7 +349,7 @@ steps:
     repoURL: https://github.com/example/repo.git
     checkout:
     - fromFreight: true
-      path: ./main
+      path: ./src
     - branch: stage/test
       create: true
       path: ./out
@@ -358,7 +358,7 @@ steps:
     path: ./out
 - uses: kustomize-build
   config:
-    path: ./main/stages/test
+    path: ./src/stages/test
     outPath: ./out
 # Commit, push, etc...
 ```
@@ -396,7 +396,7 @@ steps:
     repoURL: https://github.com/example/repo.git
     checkout:
     - fromFreight: true
-      path: ./main
+      path: ./src
     - branch: stage/test
       create: true
       path: ./out
@@ -405,7 +405,7 @@ steps:
     path: ./out
 - uses: helm-update-image
   config:
-    path: ./main/charts/my-chart/values.yaml
+    path: ./src/charts/my-chart/values.yaml
     images:
     - image: my/image
       key: image.tag
@@ -467,7 +467,7 @@ steps:
     repoURL: https://github.com/example/repo.git
     checkout:
     - fromFreight: true
-      path: ./main
+      path: ./src
     - branch: stage/test
       create: true
       path: ./out
@@ -476,7 +476,7 @@ steps:
     path: ./out
 - uses: helm-update-chart
   config:
-    path: ./main/charts/my-chart
+    path: ./src/charts/my-chart
     charts:
     - repository: https://example-chart-repo
       name: some-chart
@@ -567,7 +567,7 @@ steps:
     repoURL: https://github.com/example/repo.git
     checkout:
     - fromFreight: true
-      path: ./main
+      path: ./src
     - branch: stage/test
       create: true
       path: ./out
@@ -576,7 +576,7 @@ steps:
     path: ./out
 - uses: helm-update-chart
   config:
-    path: ./main/charts/my-chart
+    path: ./src/charts/my-chart
     charts:
     - repository: oci://example-chart-registry
       name: some-chart
@@ -627,7 +627,7 @@ steps:
     repoURL: https://github.com/example/repo.git
     checkout:
     - fromFreight: true
-      path: ./main
+      path: ./src
     - branch: stage/test
       create: true
       path: ./out
@@ -636,9 +636,9 @@ steps:
     path: ./out
 - uses: helm-template
   config:
-    path: ./main/charts/my-chart
+    path: ./src/charts/my-chart
     valuesFiles:
-    - ./main/charts/my-chart/test-values.yaml
+    - ./src/charts/my-chart/test-values.yaml
     outPath: ./out/manifests.yaml
 # Commit, push, etc...
 ```
@@ -654,7 +654,7 @@ steps:
     repoURL: https://github.com/example/repo.git
     checkout:
     - fromFreight: true
-      path: ./main
+      path: ./src
     - branch: stage/test
       create: true
       path: ./out
@@ -663,9 +663,9 @@ steps:
     path: ./out
 - uses: helm-template
   config:
-    path: ./main/charts/my-chart
+    path: ./src/charts/my-chart
     valuesFiles:
-    - ./main/charts/my-chart/test-values.yaml
+    - ./src/charts/my-chart/test-values.yaml
     outPath: ./out
 # Commit, push, etc...
 ```
@@ -700,7 +700,7 @@ steps:
     repoURL: https://github.com/example/repo.git
     checkout:
     - fromFreight: true
-      path: ./main
+      path: ./src
     - branch: stage/test
       create: true
       path: ./out
@@ -714,7 +714,7 @@ steps:
     - image: my/image
 - uses: kustomize-build
   config:
-    path: ./main/stages/test
+    path: ./src/stages/test
     outPath: ./out
 - uses: git-commit
   config:
@@ -1067,7 +1067,7 @@ being promoted to learn the desired revision of the `my/image` container image:
 ```yaml
 - uses: kustomize-set-image
   config:
-    path: ./main/base
+    path: ./src/base
     images:
     - image: my/image
 ```
@@ -1102,7 +1102,7 @@ steps:
       fromOrigin:
         kind: Warehouse
         name: base
-      path: ./main
+      path: ./src
     - fromFreight: true
       fromOrigin:
         kind: Warehouse
@@ -1117,10 +1117,10 @@ steps:
 - uses: copy
   config:
     inPath: ./overlay/stages/test/kustomization.yaml
-    outPath: ./main/stages/test/kustomization.yaml
+    outPath: ./src/stages/test/kustomization.yaml
 - uses: kustomize-build
   config:
-    path: ./main/stages/test
+    path: ./src/stages/test
     outPath: ./out
 # Commit, push, etc...
 ```
