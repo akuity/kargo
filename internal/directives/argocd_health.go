@@ -184,14 +184,14 @@ func (a *argocdUpdater) getApplicationHealth(
 	// e.g. the health status result to become unreliable.
 	if errConditions := a.filterAppConditions(app, healthErrorConditions...); len(errConditions) > 0 {
 		issues := make([]error, len(errConditions))
-		for _, condition := range errConditions {
-			issues = append(issues, fmt.Errorf(
+		for i, condition := range errConditions {
+			issues[i] = fmt.Errorf(
 				"Argo CD Application %q in namespace %q has %q condition: %s",
 				appKey.Name,
 				appKey.Namespace,
 				condition.Type,
 				condition.Message,
-			))
+			)
 		}
 		return kargoapi.HealthStateUnhealthy, appStatus, errors.Join(issues...)
 	}
