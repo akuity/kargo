@@ -134,9 +134,9 @@ func (s *server) PromoteDownstream(
 	createdPromos := make([]*kargoapi.Promotion, 0, len(downstreams))
 	for _, downstream := range downstreams {
 		newPromo := kargo.NewPromotion(ctx, downstream, freight.Name)
-		if downstream.Spec.PromotionMechanisms == nil { // nolint: staticcheck
+		if downstream.Spec.PromotionMechanisms == nil && downstream.Spec.PromotionTemplate != nil && len(downstream.Spec.PromotionTemplate.Spec.Steps) == 0 { // nolint: staticcheck
 			// Avoid creating a Promotion if the downstream Stage has no
-			// PromotionMechanisms, and is a "control flow" Stage.
+			// PromotionMechanisms, and no promotion steps and is a "control flow" Stage.
 			continue
 		}
 		if err := s.createPromotionFn(ctx, &newPromo); err != nil {
