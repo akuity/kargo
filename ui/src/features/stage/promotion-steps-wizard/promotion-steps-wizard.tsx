@@ -63,7 +63,7 @@ export const PromotionStepsWizard = (props: PromotionStepsWizardType) => {
 
               return (
                 <Card
-                  key={`${runner.identifier}-${order}`}
+                  key={`${runner.identifier}-${order}-${runner?.as}`}
                   className={classNames('cursor-pointer', {
                     'shadow-sm': isEditingThisRunner,
                     'border-gray-400': isEditingThisRunner
@@ -83,6 +83,7 @@ export const PromotionStepsWizard = (props: PromotionStepsWizardType) => {
                             newOrder[order] = selectedRunners[order - 1];
                             newOrder[order - 1] = runner;
                             setSelectedRunners(newOrder);
+                            setEditingRunner({ ...runner, order: order - 1 });
                           }}
                         />
                       )}
@@ -96,6 +97,7 @@ export const PromotionStepsWizard = (props: PromotionStepsWizardType) => {
                             newOrder[order] = selectedRunners[order + 1];
                             newOrder[order + 1] = runner;
                             setSelectedRunners(newOrder);
+                            setEditingRunner({ ...runner, order: order + 1 });
                           }}
                         />
                       )}
@@ -137,7 +139,7 @@ export const PromotionStepsWizard = (props: PromotionStepsWizardType) => {
               title={
                 <>
                   <FontAwesomeIcon icon={faCog} className='mr-2' />
-                  {editingRunner.order} - {liveEditingRunner.identifier}{' '}
+                  {editingRunner.order + 1} - {liveEditingRunner.identifier}{' '}
                   {liveEditingRunner?.as && (
                     <Tag color='blue' className='ml-4'>
                       {liveEditingRunner.as}
