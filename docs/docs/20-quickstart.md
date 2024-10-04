@@ -163,7 +163,7 @@ To download the Kargo CLI:
 ```shell
 arch=$(uname -m)
 [ "$arch" = "x86_64" ] && arch=amd64
-curl -L -o kargo https://github.com/akuity/kargo/releases/download/v0.9.0-rc.2/kargo-"$(uname -s | tr '[:upper:]' '[:lower:]')-${arch}"
+curl -L -o kargo https://github.com/akuity/kargo/releases/download/v0.9.0-rc.3/kargo-"$(uname -s | tr '[:upper:]' '[:lower:]')-${arch}"
 chmod +x kargo
 ```
 
@@ -176,7 +176,7 @@ value of your `PATH` environment variable.
 To download the Kargo CLI:
 
 ```shell
-Invoke-WebRequest -URI https://github.com/akuity/kargo/releases/download/v0.9.0-rc.2/kargo-windows-amd64.exe -OutFile kargo.exe
+Invoke-WebRequest -URI https://github.com/akuity/kargo/releases/download/v0.9.0-rc.3/kargo-windows-amd64.exe -OutFile kargo.exe
 ```
 
 Then move `kargo.exe` to a location in your file system that is included in the value
