@@ -60,12 +60,7 @@ export const RunnerForm = (props: RunnerFormType) => {
           onChange={(d) => {
             props.onSubmit(d.formData);
           }}
-          ref={(attach) => {
-            // save yourself from infinite re-renders by not settings this state using 'formData' props
-            if (props.runner.state) {
-              attach?.setState({ ...attach.state, formData: props.runner.state });
-            }
-          }}
+          formData={props.runner.state}
           uiSchema={{
             'ui:submitButtonOptions': {
               norender: true

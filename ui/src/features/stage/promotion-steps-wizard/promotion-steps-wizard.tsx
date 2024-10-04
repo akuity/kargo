@@ -134,7 +134,7 @@ export const PromotionStepsWizard = (props: PromotionStepsWizardType) => {
           {editingRunner && liveEditingRunner && (
             <Card
               color='lightgray'
-              className='w-8/12 mt-5 h-fit sticky top-0'
+              className='w-8/12 mt-5'
               size='small'
               title={
                 <>
