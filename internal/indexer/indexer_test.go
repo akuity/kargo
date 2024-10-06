@@ -1,4 +1,4 @@
-package kubeclient
+package indexer
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -69,7 +70,6 @@ func TestIndexEventsByInvolvedObjectAPIGroup(t *testing.T) {
 		},
 	}
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			tc.assertions(t, indexEventsByInvolvedObjectAPIGroup(tc.event))
 		})
@@ -229,126 +229,8 @@ func TestIndexStagesByAnalysisRun(t *testing.T) {
 		},
 	}
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			res := indexStagesByAnalysisRun(tc.controllerShardName)(tc.stage)
-			tc.assertions(t, res)
-		})
-	}
-}
-
-func TestIndexStagesByArgoCDApplications(t *testing.T) {
-	const testShardName = "test-shard"
-	t.Parallel()
-	testCases := []struct {
-		name                string
-		controllerShardName string
-		stage               *kargoapi.Stage
-		assertions          func(*testing.T, []string)
-	}{
-		{
-			name:                "Stage belongs to another shard",
-			controllerShardName: testShardName,
-			stage: &kargoapi.Stage{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{
-						kargoapi.ShardLabelKey: "another-shard",
-					},
-				},
-				Spec: kargoapi.StageSpec{
-					PromotionMechanisms: &kargoapi.PromotionMechanisms{
-						ArgoCDAppUpdates: []kargoapi.ArgoCDAppUpdate{
-							{
-								AppNamespace: "fake-namespace",
-								AppName:      "fake-app",
-							},
-						},
-					},
-				},
-			},
-			assertions: func(t *testing.T, res []string) {
-				require.Nil(t, res)
-			},
-		},
-		{
-			name:                "Stage belongs to this shard",
-			controllerShardName: testShardName,
-			stage: &kargoapi.Stage{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{
-						kargoapi.ShardLabelKey: testShardName,
-					},
-				},
-				Spec: kargoapi.StageSpec{
-					PromotionMechanisms: &kargoapi.PromotionMechanisms{
-						ArgoCDAppUpdates: []kargoapi.ArgoCDAppUpdate{
-							{
-								AppNamespace: "fake-namespace",
-								AppName:      "fake-app",
-							},
-						},
-					},
-				},
-			},
-			assertions: func(t *testing.T, res []string) {
-				require.Equal(
-					t,
-					[]string{
-						"fake-namespace:fake-app",
-					},
-					res,
-				)
-			},
-		},
-		{
-			name:                "Stage is unlabeled and this is not the default controller",
-			controllerShardName: testShardName,
-			stage: &kargoapi.Stage{
-				Spec: kargoapi.StageSpec{
-					PromotionMechanisms: &kargoapi.PromotionMechanisms{
-						ArgoCDAppUpdates: []kargoapi.ArgoCDAppUpdate{
-							{
-								AppNamespace: "fake-namespace",
-								AppName:      "fake-app",
-							},
-						},
-					},
-				},
-			},
-			assertions: func(t *testing.T, res []string) {
-				require.Nil(t, res)
-			},
-		},
-		{
-			name:                "Stage is unlabeled and this is the default controller",
-			controllerShardName: "",
-			stage: &kargoapi.Stage{
-				Spec: kargoapi.StageSpec{
-					PromotionMechanisms: &kargoapi.PromotionMechanisms{
-						ArgoCDAppUpdates: []kargoapi.ArgoCDAppUpdate{
-							{
-								AppNamespace: "fake-namespace",
-								AppName:      "fake-app",
-							},
-						},
-					},
-				},
-			},
-			assertions: func(t *testing.T, res []string) {
-				require.Equal(
-					t,
-					[]string{
-						"fake-namespace:fake-app",
-					},
-					res,
-				)
-			},
-		},
-	}
-	for _, tc := range testCases {
-		tc := tc
-		t.Run(tc.name, func(t *testing.T) {
-			res := indexStagesByArgoCDApplications(tc.controllerShardName)(tc.stage)
 			tc.assertions(t, res)
 		})
 	}
@@ -412,7 +294,6 @@ func TestIndexPromotionsByStage(t *testing.T) {
 		},
 	}
 	for name, tc := range testCases {
-		tc := tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			actual := indexPromotionsByStage(tc.predicates...)(tc.input)
@@ -468,6 +349,64 @@ func TestIndexRunningPromotionsByArgoCDApplications(t *testing.T) {
 			},
 			shardName: testShardName,
 			expected:  nil,
+		},
+		{
+			name: "Promotion has directive steps",
+			obj: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-namespace",
+				},
+				Spec: kargoapi.PromotionSpec{
+					Stage: "fake-stage",
+					Steps: []kargoapi.PromotionStep{
+						{
+							Uses: "argocd-update",
+							Config: &apiextensionsv1.JSON{
+								Raw: []byte(`{"apps":[{"namespace":"fake-namespace","name":"fake-app"}]}`),
+							},
+						},
+						{
+							Uses: "fake-directive",
+						},
+						{
+							Uses: "argocd-update",
+							Config: &apiextensionsv1.JSON{
+								Raw: []byte(`{"apps":[{"name":"fake-app-2"}]}`),
+							},
+						},
+					},
+				},
+				Status: kargoapi.PromotionStatus{
+					Phase: kargoapi.PromotionPhaseRunning,
+				},
+			},
+			expected: []string{
+				"fake-namespace:fake-app",
+				fmt.Sprintf("%s:%s", argocd.Namespace(), "fake-app-2"),
+			},
+		},
+		{
+			name: "Promotion has directive steps without Applications",
+			obj: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-namespace",
+				},
+				Spec: kargoapi.PromotionSpec{
+					Stage: "fake-stage",
+					Steps: []kargoapi.PromotionStep{
+						{
+							Uses: "fake-directive",
+						},
+						{
+							Uses: "fake-directive",
+						},
+					},
+				},
+				Status: kargoapi.PromotionStatus{
+					Phase: kargoapi.PromotionPhaseRunning,
+				},
+			},
+			expected: nil,
 		},
 		{
 			name: "Related Promotion Stage does not have Argo CD Application mechanisms",

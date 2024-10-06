@@ -22,7 +22,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api/config"
 	"github.com/akuity/kargo/internal/api/user"
-	"github.com/akuity/kargo/internal/kubeclient"
+	"github.com/akuity/kargo/internal/indexer"
 )
 
 const authHeaderKey = "Authorization"
@@ -254,14 +254,14 @@ func (a *authInterceptor) listServiceAccounts(
 	for claimName, claimValue := range c {
 		if claimValuesString, ok := claimValue.(string); ok {
 			queries = append(queries, libClient.MatchingFields{
-				kubeclient.ServiceAccountsByOIDCClaimsIndexField: kubeclient.FormatClaim(claimName, claimValuesString),
+				indexer.ServiceAccountsByOIDCClaimsIndexField: indexer.FormatClaim(claimName, claimValuesString),
 			})
 		}
 		if claimValueSlice, ok := claimValue.([]any); ok {
 			for _, claimValueSliceItem := range claimValueSlice {
 				if claimValueSliceItemString, ok := claimValueSliceItem.(string); ok {
 					queries = append(queries, libClient.MatchingFields{
-						kubeclient.ServiceAccountsByOIDCClaimsIndexField: kubeclient.FormatClaim(
+						indexer.ServiceAccountsByOIDCClaimsIndexField: indexer.FormatClaim(
 							claimName, claimValueSliceItemString,
 						),
 					})

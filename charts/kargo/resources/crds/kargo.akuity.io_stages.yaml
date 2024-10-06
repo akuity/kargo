@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.15.0
+    controller-gen.kubebuilder.io/version: v0.16.3
   name: stages.kargo.akuity.io
 spec:
   group: kargo.akuity.io
@@ -65,7 +65,6 @@ spec:
                   utility of this is to allow multiple downstream Stages to subscribe to a
                   single upstream Stage where they may otherwise have subscribed to multiple
                   upstream Stages.
-
 
                   Deprecated: Use PromotionTemplate instead.
                 properties:
@@ -197,14 +196,12 @@ spec:
                                             Value specifies the new value for the specified key in the Argo CD
                                             Application's Helm parameters. Valid values are:
 
-
                                             - ImageAndTag: Replaces the value of the specified key with
                                               <image name>:<tag>
                                             - Tag: Replaces the value of the specified key with just the new tag
                                             - ImageAndDigest: Replaces the value of the specified key with
                                               <image name>@<digest>
                                             - Digest: Replaces the value of the specified key with just the new digest.
-
 
                                             This is a required field.
                                           enum:
@@ -534,14 +531,12 @@ spec:
                                       Value specifies the new value for the specified key in the specified Helm
                                       values file. Valid values are:
 
-
                                       - ImageAndTag: Replaces the value of the specified key with
                                         <image name>:<tag>
                                       - Tag: Replaces the value of the specified key with just the new tag
                                       - ImageAndDigest: Replaces the value of the specified key with
                                         <image name>@<digest>
                                       - Digest: Replaces the value of the specified key with just the new digest.
-
 
                                       This is a required field.
                                     enum:
@@ -1053,6 +1048,7 @@ spec:
                           type: string
                       required:
                       - name
+                      - value
                       type: object
                     type: array
                 type: object
@@ -1060,12 +1056,11 @@ spec:
             - requestedFreight
             type: object
             x-kubernetes-validations:
-            - message: one of promotionTemplate or promotionMechanisms must be specified
-              rule: (has(self.promotionTemplate) || has(self.promotionMechanisms))
-            - message: only one of promotionTemplate or promotionMechanisms can be
-                specified
-              rule: (has(self.promotionTemplate) && !has(self.promotionMechanisms))
-                || (!has(self.promotionTemplate) && has(self.promotionMechanisms))
+            - message: at most one of promotionTemplate or promotionMechanisms can
+                be specified
+              rule: (!has(self.promotionTemplate) && !has(self.promotionMechanisms)
+                ) || ( has(self.promotionTemplate) && !has(self.promotionMechanisms)
+                ) || (!has(self.promotionTemplate) && has(self.promotionMechanisms))
           status:
             description: Status describes the Stage's current and recent Freight,
               health, and more.
@@ -1216,6 +1211,13 @@ spec:
                   status:
                     description: Status is the (optional) status of the Promotion.
                     properties:
+                      currentStep:
+                        description: |-
+                          CurrentStep is the index of the current promotion step being executed. This
+                          permits steps that have already run successfully to be skipped on
+                          subsequent reconciliations attempts.
+                        format: int64
+                        type: integer
                       finishedAt:
                         description: FinishedAt is the time when the promotion was
                           completed.
@@ -1616,6 +1618,11 @@ spec:
                         description: Phase describes where the Promotion currently
                           is in its lifecycle.
                         type: string
+                      state:
+                        description: |-
+                          State stores the state of the promotion process between reconciliation
+                          attempts.
+                        x-kubernetes-preserve-unknown-fields: true
                     type: object
                 required:
                 - name
@@ -2072,6 +2079,13 @@ spec:
                   status:
                     description: Status is the (optional) status of the Promotion.
                     properties:
+                      currentStep:
+                        description: |-
+                          CurrentStep is the index of the current promotion step being executed. This
+                          permits steps that have already run successfully to be skipped on
+                          subsequent reconciliations attempts.
+                        format: int64
+                        type: integer
                       finishedAt:
                         description: FinishedAt is the time when the promotion was
                           completed.
@@ -2472,6 +2486,11 @@ spec:
                         description: Phase describes where the Promotion currently
                           is in its lifecycle.
                         type: string
+                      state:
+                        description: |-
+                          State stores the state of the promotion process between reconciliation
+                          attempts.
+                        x-kubernetes-preserve-unknown-fields: true
                     type: object
                 required:
                 - name

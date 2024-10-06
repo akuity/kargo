@@ -3,6 +3,7 @@ package stages
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/fields"
@@ -17,7 +18,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
 	rollouts "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
-	"github.com/akuity/kargo/internal/kubeclient"
+	"github.com/akuity/kargo/internal/indexer"
 	"github.com/akuity/kargo/internal/logging"
 )
 
@@ -83,7 +84,7 @@ func (v *verifiedFreightEventHandler[T]) Update(
 			&client.ListOptions{
 				Namespace: newFreight.Namespace,
 				FieldSelector: fields.OneTermEqualSelector(
-					kubeclient.StagesByUpstreamStagesIndexField,
+					indexer.StagesByUpstreamStagesIndexField,
 					newlyVerifiedStage,
 				),
 				LabelSelector: v.shardSelector,
@@ -229,7 +230,7 @@ func (c *createdFreightEventHandler[T]) Create(
 		&client.ListOptions{
 			Namespace: freight.Namespace,
 			FieldSelector: fields.OneTermEqualSelector(
-				kubeclient.StagesByWarehouseIndexField,
+				indexer.StagesByWarehouseIndexField,
 				freight.Origin.Name,
 			),
 			LabelSelector: c.shardSelector,
@@ -329,26 +330,40 @@ func (u *updatedArgoCDAppHandler[T]) Update(
 ) {
 	if appHealthOrSyncStatusChanged(ctx, e) {
 		newApp := any(e.ObjectNew).(*argocd.Application) // nolint: forcetypeassert
-		logger := logging.LoggerFromContext(ctx)
-		stages := &kargoapi.StageList{}
-		if err := u.kargoClient.List(
-			ctx,
-			stages,
-			&client.ListOptions{
-				FieldSelector: fields.OneTermEqualSelector(
-					kubeclient.StagesByArgoCDApplicationsIndexField,
-					fmt.Sprintf("%s:%s", newApp.Namespace, newApp.Name),
-				),
-				LabelSelector: u.shardSelector,
-			},
-		); err != nil {
-			logger.Error(
-				err, "error listing Stages for Application",
-				"app", newApp.Name,
-				"namespace", newApp.Namespace,
-			)
+
+		stageRef, ok := newApp.Annotations[kargoapi.AnnotationKeyAuthorizedStage]
+		if !ok {
+			return
 		}
-		for _, stage := range stages.Items {
+		parts := strings.SplitN(stageRef, ":", 2)
+		if len(parts) != 2 {
+			return
+		}
+		projectName, stageName := parts[0], parts[1]
+
+		logger := logging.LoggerFromContext(ctx)
+		stage := &kargoapi.Stage{}
+		if err := u.kargoClient.Get(
+			ctx,
+			types.NamespacedName{
+				Namespace: projectName,
+				Name:      stageName,
+			},
+			stage,
+		); err != nil {
+			if client.IgnoreNotFound(err) != nil {
+				logger.Error(
+					err,
+					"error getting Stage for Application",
+					"namespace", projectName,
+					"stage", stageName,
+					"app", newApp.Name,
+				)
+			}
+			return
+		}
+
+		if u.shardSelector.Empty() || u.shardSelector.Matches(labels.Set(stage.Labels)) {
 			wq.Add(
 				reconcile.Request{
 					NamespacedName: types.NamespacedName{
@@ -460,7 +475,7 @@ func (p *phaseChangedAnalysisRunHandler[T]) Update(
 			stages,
 			&client.ListOptions{
 				FieldSelector: fields.OneTermEqualSelector(
-					kubeclient.StagesByAnalysisRunIndexField,
+					indexer.StagesByAnalysisRunIndexField,
 					fmt.Sprintf("%s:%s", analysisRun.Namespace, analysisRun.Name),
 				),
 				LabelSelector: p.shardSelector,

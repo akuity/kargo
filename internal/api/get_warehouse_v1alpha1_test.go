@@ -222,7 +222,6 @@ func TestGetWarehouse(t *testing.T) {
 		},
 	}
 	for name, ts := range testSets {
-		ts := ts
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 

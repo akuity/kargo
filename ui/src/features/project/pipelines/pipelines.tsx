@@ -173,17 +173,20 @@ export const Pipelines = ({
 
   const client = useQueryClient();
 
-  React.useEffect(() => {
-    if (!data || !isVisible || !warehouseData || !name) {
+  useEffect(() => {
+    if (!name || !isVisible) {
       return;
     }
 
     const watcher = new Watcher(name, client);
-    watcher.watchStages(data.stages.slice());
-    watcher.watchWarehouses(warehouseData?.warehouses || [], refetchFreightData);
 
-    return () => watcher.cancelWatch();
-  }, [isLoading, isVisible, name]);
+    watcher.watchStages();
+    watcher.watchWarehouses(refetchFreightData);
+
+    return () => {
+      watcher.cancelWatch();
+    };
+  }, [name, client, isVisible]);
 
   const [nodes, connectors, box, sortedStages, stageColorMap, warehouseColorMap] = usePipelineGraph(
     name,
@@ -396,7 +399,7 @@ export const Pipelines = ({
                     <FontAwesomeIcon icon={faChevronDown} size='xs' className='-mr-2' />
                   </Button>
                 </Dropdown>
-                {hideImages && (
+                {!!hideImages && (
                   <Tooltip title='Show Images'>
                     <Button
                       icon={<FontAwesomeIcon icon={faDocker} />}

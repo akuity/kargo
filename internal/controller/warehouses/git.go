@@ -175,8 +175,8 @@ func (r *reconciler) discoverCommits(
 func (r *reconciler) discoverBranchHistory(repo git.Repo, sub kargoapi.GitSubscription) ([]git.CommitMetadata, error) {
 	limit := int(sub.DiscoveryLimit)
 	var filteredCommits = make([]git.CommitMetadata, 0, limit)
-	for skip := uint(0); ; skip += uint(limit) {
-		commits, err := r.listCommitsFn(repo, uint(limit), skip)
+	for skip := uint(0); ; skip += uint(limit) { // nolint: gosec
+		commits, err := r.listCommitsFn(repo, uint(limit), skip) // nolint: gosec
 		if err != nil {
 			return nil, fmt.Errorf("error listing commits from git repo %q: %w", sub.RepoURL, err)
 		}

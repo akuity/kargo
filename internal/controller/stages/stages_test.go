@@ -23,7 +23,7 @@ import (
 	"github.com/akuity/kargo/internal/controller"
 	rollouts "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
 	"github.com/akuity/kargo/internal/directives"
-	"github.com/akuity/kargo/internal/kubeclient"
+	"github.com/akuity/kargo/internal/indexer"
 	fakeevent "github.com/akuity/kargo/internal/kubernetes/event/fake"
 )
 
@@ -3525,7 +3525,7 @@ func TestGetAvailableFreightByOrigin(t *testing.T) {
 
 					if strings.Contains(
 						lo.FieldSelector.String(),
-						fmt.Sprintf("%s=%s", kubeclient.FreightByVerifiedStagesIndexField, "fake-upstream-stage"),
+						fmt.Sprintf("%s=%s", indexer.FreightByVerifiedStagesIndexField, "fake-upstream-stage"),
 					) {
 						return fmt.Errorf("something went wrong")
 					}
@@ -3571,7 +3571,7 @@ func TestGetAvailableFreightByOrigin(t *testing.T) {
 
 					if strings.Contains(
 						lo.FieldSelector.String(),
-						fmt.Sprintf("%s=%s", kubeclient.FreightApprovedForStagesIndexField, "fake-stage"),
+						fmt.Sprintf("%s=%s", indexer.FreightApprovedForStagesIndexField, "fake-stage"),
 					) {
 						return fmt.Errorf("something went wrong")
 					}
@@ -3619,11 +3619,11 @@ func TestGetAvailableFreightByOrigin(t *testing.T) {
 					lo := &client.ListOptions{}
 					lo.ApplyOptions(opts)
 
-					if strings.Contains(lo.FieldSelector.String(), kubeclient.FreightApprovedForStagesIndexField) {
+					if strings.Contains(lo.FieldSelector.String(), indexer.FreightApprovedForStagesIndexField) {
 						return fmt.Errorf("something went wrong")
 					}
 
-					if strings.Contains(lo.FieldSelector.String(), kubeclient.FreightByVerifiedStagesIndexField) {
+					if strings.Contains(lo.FieldSelector.String(), indexer.FreightByVerifiedStagesIndexField) {
 						return fmt.Errorf("something went wrong")
 					}
 
@@ -3663,18 +3663,18 @@ func TestGetAvailableFreightByOrigin(t *testing.T) {
 				WithScheme(s).
 				WithIndex(
 					&kargoapi.Freight{},
-					kubeclient.FreightByWarehouseIndexField,
-					kubeclient.FreightByWarehouseIndexer,
+					indexer.FreightByWarehouseIndexField,
+					indexer.FreightByWarehouseIndexer,
 				).
 				WithIndex(
 					&kargoapi.Freight{},
-					kubeclient.FreightByVerifiedStagesIndexField,
-					kubeclient.FreightByVerifiedStagesIndexer,
+					indexer.FreightByVerifiedStagesIndexField,
+					indexer.FreightByVerifiedStagesIndexer,
 				).
 				WithIndex(
 					&kargoapi.Freight{},
-					kubeclient.FreightApprovedForStagesIndexField,
-					kubeclient.FreightApprovedForStagesIndexer,
+					indexer.FreightApprovedForStagesIndexField,
+					indexer.FreightApprovedForStagesIndexer,
 				).
 				WithInterceptorFuncs(tc.interceptor).
 				WithObjects(tc.objects...).

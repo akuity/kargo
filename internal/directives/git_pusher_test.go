@@ -40,15 +40,15 @@ func Test_gitPusher_validate(t *testing.T) {
 		{
 			name: "just generateTargetBranch is true",
 			config: Config{ // Should be completely valid
-				"generateTargetBranch": true,
 				"path":                 "/fake/path",
+				"generateTargetBranch": true,
 			},
 		},
 		{
 			name: "generateTargetBranch is true and targetBranch is empty string",
 			config: Config{ // Should be completely valid
-				"generateTargetBranch": true,
 				"path":                 "/fake/path",
+				"generateTargetBranch": true,
 				"targetBranch":         "",
 			},
 		},
@@ -56,6 +56,7 @@ func Test_gitPusher_validate(t *testing.T) {
 			name: "generateTargetBranch is true and targetBranch is specified",
 			// These are meant to be mutually exclusive.
 			config: Config{
+				"path":                 "/fake/path",
 				"generateTargetBranch": true,
 				"targetBranch":         "fake-branch",
 			},
@@ -64,19 +65,16 @@ func Test_gitPusher_validate(t *testing.T) {
 			},
 		},
 		{
-			name:   "generateTargetBranch not specified and targetBranch not specified",
-			config: Config{},
-			expectedProblems: []string{
-				"(root): Must validate one and only one schema",
+			name: "generateTargetBranch not specified and targetBranch not specified",
+			config: Config{ // Should be completely valid
+				"path": "/fake/path",
 			},
 		},
 		{
 			name: "generateTargetBranch not specified and targetBranch is empty string",
-			config: Config{
+			config: Config{ // Should be completely valid
+				"path":         "/fake/path",
 				"targetBranch": "",
-			},
-			expectedProblems: []string{
-				"(root): Must validate one and only one schema",
 			},
 		},
 		{
@@ -88,21 +86,17 @@ func Test_gitPusher_validate(t *testing.T) {
 		},
 		{
 			name: "just generateTargetBranch is false",
-			config: Config{
+			config: Config{ // Should be completely valid
+				"path":                 "/fake/path",
 				"generateTargetBranch": false,
-			},
-			expectedProblems: []string{
-				"(root): Must validate one and only one schema",
 			},
 		},
 		{
 			name: "generateTargetBranch is false and targetBranch is empty string",
-			config: Config{
+			config: Config{ // Should be completely valid
+				"path":                 "/fake/path",
 				"generateTargetBranch": false,
 				"targetBranch":         "",
-			},
-			expectedProblems: []string{
-				"(root): Must validate one and only one schema",
 			},
 		},
 		{

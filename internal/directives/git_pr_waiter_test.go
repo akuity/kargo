@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/utils/ptr"
 
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/gitprovider"
 )
@@ -36,17 +37,17 @@ func Test_gitPRWaiter_validate(t *testing.T) {
 			},
 		},
 		{
-			name:   "neither prNumber nor prNumberFromOpen specified",
+			name:   "neither prNumber nor prNumberFromStep specified",
 			config: Config{},
 			expectedProblems: []string{
 				"(root): Must validate one and only one schema",
 			},
 		},
 		{
-			name: "both prNumber and prNumberFromOpen specified",
+			name: "both prNumber and prNumberFromStep specified",
 			config: Config{
 				"prNumber":         42,
-				"prNumberFromOpen": "fake-step",
+				"prNumberFromStep": "fake-step",
 			},
 			expectedProblems: []string{
 				"(root): Must validate one and only one schema",
@@ -115,7 +116,7 @@ func Test_gitPRWaiter_runPromotionStep(t *testing.T) {
 			assertions: func(t *testing.T, res PromotionStepResult, err error) {
 				require.ErrorContains(t, err, "error getting pull request")
 				require.ErrorContains(t, err, "something went wrong")
-				require.Equal(t, PromotionStatusFailure, res.Status)
+				require.Equal(t, kargoapi.PromotionPhaseErrored, res.Status)
 			},
 		},
 		{
@@ -132,7 +133,7 @@ func Test_gitPRWaiter_runPromotionStep(t *testing.T) {
 			},
 			assertions: func(t *testing.T, res PromotionStepResult, err error) {
 				require.NoError(t, err)
-				require.Equal(t, PromotionStatusPending, res.Status)
+				require.Equal(t, kargoapi.PromotionPhaseRunning, res.Status)
 			},
 		},
 		{
@@ -154,7 +155,7 @@ func Test_gitPRWaiter_runPromotionStep(t *testing.T) {
 				require.ErrorContains(t, err, "error checking if pull request")
 				require.ErrorContains(t, err, "was merged")
 				require.ErrorContains(t, err, "something went wrong")
-				require.Equal(t, PromotionStatusFailure, res.Status)
+				require.Equal(t, kargoapi.PromotionPhaseErrored, res.Status)
 			},
 		},
 		{
@@ -173,8 +174,9 @@ func Test_gitPRWaiter_runPromotionStep(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, res PromotionStepResult, err error) {
-				require.ErrorContains(t, err, "was closed without being merged")
-				require.Equal(t, PromotionStatusFailure, res.Status)
+				require.NoError(t, err)
+				require.Contains(t, res.Message, "closed without being merged")
+				require.Equal(t, kargoapi.PromotionPhaseFailed, res.Status)
 			},
 		},
 		{
@@ -194,7 +196,7 @@ func Test_gitPRWaiter_runPromotionStep(t *testing.T) {
 			},
 			assertions: func(t *testing.T, res PromotionStepResult, err error) {
 				require.NoError(t, err)
-				require.Equal(t, PromotionStatusSuccess, res.Status)
+				require.Equal(t, kargoapi.PromotionPhaseSucceeded, res.Status)
 			},
 		},
 	}

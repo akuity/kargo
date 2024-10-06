@@ -20,9 +20,11 @@ import { Freight, Promotion } from '@ui/gen/v1alpha1/generated_pb';
 import { PromotionStatusIcon } from '../common/promotion-status/promotion-status-icon';
 
 import { PrLinks } from './pr-links';
+import { PromotionDetailsModal } from './promotion-details-modal';
 
 export const Promotions = ({ repoUrls }: { repoUrls?: string[] }) => {
   const client = useQueryClient();
+
   const { name: projectName, stageName } = useParams();
   const { data: promotionsResponse, isLoading } = useQuery(
     listPromotions,
@@ -39,6 +41,9 @@ export const Promotions = ({ repoUrls }: { repoUrls?: string[] }) => {
       enabled: !!curFreight
     }
   );
+
+  // modal kept in the same component for live view
+  const [selectedPromotion, setSelectedPromotion] = useState<Promotion | undefined>();
 
   useEffect(() => {
     if (isLoading || !promotionsResponse) {
@@ -108,7 +113,9 @@ export const Promotions = ({ repoUrls }: { repoUrls?: string[] }) => {
     },
     {
       title: 'Name',
-      dataIndex: ['metadata', 'name']
+      render: (_, promotion) => (
+        <a onClick={() => setSelectedPromotion(promotion)}>{promotion.metadata?.name}</a>
+      )
     },
     {
       title: 'Created By',
@@ -152,13 +159,26 @@ export const Promotions = ({ repoUrls }: { repoUrls?: string[] }) => {
   ];
 
   return (
-    <Table
-      columns={columns}
-      dataSource={promotions}
-      size='small'
-      pagination={{ hideOnSinglePage: true }}
-      rowKey={(p) => p.metadata?.uid || ''}
-      loading={isLoading}
-    />
+    <>
+      <Table
+        columns={columns}
+        dataSource={promotions}
+        size='small'
+        pagination={{ hideOnSinglePage: true }}
+        rowKey={(p) => p.metadata?.uid || ''}
+        loading={isLoading}
+      />
+
+      {selectedPromotion && (
+        <PromotionDetailsModal
+          // @ts-expect-error // know that there will always be value available of this promotion
+          promotion={promotions?.find(
+            (p) => p?.metadata?.name === selectedPromotion?.metadata?.name
+          )}
+          visible={!!selectedPromotion}
+          hide={() => setSelectedPromotion(undefined)}
+        />
+      )}
+    </>
   );
 };

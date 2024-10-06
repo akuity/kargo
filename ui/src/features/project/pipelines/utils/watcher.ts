@@ -10,15 +10,17 @@ import {
   listWarehouses
 } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 import { KargoService } from '@ui/gen/service/v1alpha1/service_connect';
+import { ListStagesResponse, ListWarehousesResponse } from '@ui/gen/service/v1alpha1/service_pb';
 import { Stage, Warehouse } from '@ui/gen/v1alpha1/generated_pb';
 
 async function ProcessEvents<T extends { type: string }, S extends { metadata?: ObjectMeta }>(
   stream: AsyncIterable<T>,
-  data: S[],
+  getData: () => S[],
   getter: (e: T) => S,
   callback: (item: S, data: S[]) => void
 ) {
   for await (const e of stream) {
+    let data = getData();
     const index = data.findIndex((item) => item.metadata?.name === getter(e).metadata?.name);
     if (e.type === 'DELETED') {
       if (index !== -1) {
@@ -53,7 +55,7 @@ export class Watcher {
     this.cancel.abort();
   }
 
-  async watchStages(stages: Stage[]) {
+  async watchStages() {
     const stream = this.promiseClient.watchStages(
       { project: this.project },
       { signal: this.cancel.signal }
@@ -61,7 +63,13 @@ export class Watcher {
 
     ProcessEvents(
       stream,
-      stages,
+      () => {
+        const data = this.client.getQueryData(
+          createConnectQueryKey(listStages, { project: this.project })
+        );
+
+        return (data as ListStagesResponse)?.stages || [];
+      },
       (e) => e.stage as Stage,
       (stage, data) => {
         // update Stages list
@@ -78,7 +86,7 @@ export class Watcher {
     );
   }
 
-  async watchWarehouses(warehouses: Warehouse[], refreshHook: () => void) {
+  async watchWarehouses(refreshHook: () => void) {
     const stream = this.promiseClient.watchWarehouses(
       { project: this.project },
       { signal: this.cancel.signal }
@@ -87,7 +95,13 @@ export class Watcher {
 
     ProcessEvents(
       stream,
-      warehouses,
+      () => {
+        const data = this.client.getQueryData(
+          createConnectQueryKey(listWarehouses, { project: this.project })
+        );
+
+        return (data as ListWarehousesResponse)?.warehouses || [];
+      },
       (e) => e.warehouse as Warehouse,
       (warehouse, data) => {
         // refetch freight if necessary

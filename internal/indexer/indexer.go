@@ -1,7 +1,8 @@
-package kubeclient
+package indexer
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"slices"
 	"strings"
@@ -14,6 +15,7 @@ import (
 	rbacapi "github.com/akuity/kargo/api/rbac/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	libargocd "github.com/akuity/kargo/internal/argocd"
+	"github.com/akuity/kargo/internal/directives"
 	"github.com/akuity/kargo/internal/logging"
 )
 
@@ -115,64 +117,6 @@ func indexStagesByAnalysisRun(shardName string) client.IndexerFunc {
 	}
 }
 
-// IndexStagesByArgoCDApplications sets up the indexing of Stages by the Argo CD
-// Applications they are associated with.
-//
-// It configures the field indexer of the provided cluster to allow querying
-// Stages by the Argo CD Applications they are associated with using the
-// StagesByArgoCDApplicationsIndexField selector.
-//
-// When the provided shardName is non-empty, only Stages labeled with the
-// provided shardName are indexed. When the provided shardName is empty, only
-// Stages not labeled with a shardName are indexed.
-func IndexStagesByArgoCDApplications(ctx context.Context, clstr cluster.Cluster, shardName string) error {
-	return clstr.GetFieldIndexer().IndexField(
-		ctx,
-		&kargoapi.Stage{},
-		StagesByArgoCDApplicationsIndexField,
-		indexStagesByArgoCDApplications(shardName))
-}
-
-// indexStagesByArgoCDApplications returns a client.IndexerFunc that indexes
-// Stages by the Argo CD Applications they are associated with.
-//
-// When the provided shardName is non-empty, only Stages labeled with the
-// provided shardName are indexed. When the provided shardName is empty, only
-// Stages not labeled with a shardName are indexed.
-func indexStagesByArgoCDApplications(shardName string) client.IndexerFunc {
-	return func(obj client.Object) []string {
-		// Return early if:
-		//
-		// 1. This is the default controller, but the object is labeled for a
-		//    specific shard.
-		//
-		// 2. This is a shard-specific controller, but the object is not labeled for
-		//    this shard.
-		objShardName, labeled := obj.GetLabels()[kargoapi.ShardLabelKey]
-		if (shardName == "" && labeled) ||
-			(shardName != "" && shardName != objShardName) {
-			return nil
-		}
-
-		stage := obj.(*kargoapi.Stage) // nolint: forcetypeassert
-		// nolint: staticcheck
-		if stage.Spec.PromotionMechanisms == nil || len(stage.Spec.PromotionMechanisms.ArgoCDAppUpdates) == 0 {
-			return nil
-		}
-		// nolint: staticcheck
-		apps := make([]string, len(stage.Spec.PromotionMechanisms.ArgoCDAppUpdates))
-		// nolint: staticcheck
-		for i, appCheck := range stage.Spec.PromotionMechanisms.ArgoCDAppUpdates {
-			namespace := appCheck.AppNamespace
-			if namespace == "" {
-				namespace = libargocd.Namespace()
-			}
-			apps[i] = fmt.Sprintf("%s:%s", namespace, appCheck.AppName)
-		}
-		return apps
-	}
-}
-
 // IndexPromotionsByStage sets up the indexing of Promotions by the Stage they
 // reference.
 //
@@ -265,6 +209,52 @@ func indexRunningPromotionsByArgoCDApplications(
 			return nil
 		}
 
+		// If the Promotion has directive steps, then we should extract the
+		// Argo CD Applications from those steps.
+		//
+		// TODO(hidde): While this is arguably already better than the "legacy"
+		// approach further down, which had to query the Stage to get the
+		// Applications, it is still not ideal as it requires parsing the
+		// directives and treating some of them as special cases. We should
+		// consider a more general approach in the future.
+		if len(promo.Spec.Steps) > 0 {
+			var res []string
+			for i, step := range promo.Spec.Steps {
+				if step.Uses != "argocd-update" || step.Config == nil {
+					continue
+				}
+
+				config := directives.ArgoCDUpdateConfig{}
+				if err := json.Unmarshal(step.Config.Raw, &config); err != nil {
+					logger.Error(
+						err,
+						fmt.Sprintf(
+							"failed to extract config from Promotion step %d:"+
+								"ignoring any Argo CD Applications from this step",
+							i,
+						),
+						"promo", promo.Name,
+						"namespace", promo.Namespace,
+					)
+					continue
+				}
+
+				for _, app := range config.Apps {
+					namespace := app.Namespace
+					if namespace == "" {
+						namespace = libargocd.Namespace()
+					}
+					res = append(res, fmt.Sprintf("%s:%s", namespace, app.Name))
+				}
+			}
+			return res
+		}
+
+		// If there are no directive steps, then we should query the Stage to get
+		// the Argo CD Applications.
+		//
+		// TODO(hidde): Remove this once we fully transition to directive-based
+		// Promotions.
 		stage := kargoapi.Stage{}
 		if err := c.Get(
 			ctx,
