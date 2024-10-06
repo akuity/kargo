@@ -165,6 +165,7 @@ func TestStartVerification(t *testing.T) {
 					*kargoapi.VerificationInfo,
 					*kargoapi.FreightCollection,
 					[]*rollouts.AnalysisTemplate,
+					[]*rollouts.ClusterAnalysisTemplate,
 				) (*rollouts.AnalysisRun, error) {
 					return &rollouts.AnalysisRun{
 						ObjectMeta: metav1.ObjectMeta{
@@ -237,6 +238,50 @@ func TestStartVerification(t *testing.T) {
 			},
 		},
 		{
+			name: "error getting ClusterAnalysisTemplate",
+			stage: &kargoapi.Stage{
+				Spec: kargoapi.StageSpec{
+					Verification: &kargoapi.Verification{
+						AnalysisTemplates: []kargoapi.AnalysisTemplateReference{{ClusterScope: true}},
+					},
+				},
+			},
+			freightCol: &kargoapi.FreightCollection{
+				Freight: map[string]kargoapi.FreightReference{
+					"fake-id": {
+						Name: "fake-id",
+					},
+				},
+			},
+			reconciler: &reconciler{
+				cfg: ReconcilerConfig{
+					RolloutsIntegrationEnabled: true,
+				},
+				kargoClient: fake.NewClientBuilder().Build(),
+				nowFn:       fakeNow,
+				listAnalysisRunsFn: func(
+					context.Context,
+					client.ObjectList,
+					...client.ListOption,
+				) error {
+					return nil
+				},
+				getClusterAnalysisTemplateFn: func(
+					context.Context,
+					client.Client,
+					string,
+				) (*rollouts.ClusterAnalysisTemplate, error) {
+					return nil, errors.New("something went wrong")
+				},
+			},
+			assertions: func(t *testing.T, vi *kargoapi.VerificationInfo, err error) {
+				require.ErrorContains(t, err, "something went wrong")
+				require.NotNil(t, vi)
+				require.Contains(t, vi.Message, "something went wrong")
+				require.Contains(t, vi.Message, "error getting ClusterAnalysisTemplate")
+			},
+		},
+		{
 			name: "AnalysisTemplate not found",
 			stage: &kargoapi.Stage{
 				Spec: kargoapi.StageSpec{
@@ -282,6 +327,51 @@ func TestStartVerification(t *testing.T) {
 			},
 		},
 		{
+			name: "ClusterAnalysisTemplate not found",
+			stage: &kargoapi.Stage{
+				Spec: kargoapi.StageSpec{
+					Verification: &kargoapi.Verification{
+						AnalysisTemplates: []kargoapi.AnalysisTemplateReference{{ClusterScope: true}},
+					},
+				},
+				Status: kargoapi.StageStatus{},
+			},
+			freightCol: &kargoapi.FreightCollection{
+				Freight: map[string]kargoapi.FreightReference{
+					"fake-id": {
+						Name: "fake-id",
+					},
+				},
+			},
+			reconciler: &reconciler{
+				cfg: ReconcilerConfig{
+					RolloutsIntegrationEnabled: true,
+				},
+				kargoClient: fake.NewClientBuilder().Build(),
+				nowFn:       fakeNow,
+				listAnalysisRunsFn: func(
+					context.Context,
+					client.ObjectList,
+					...client.ListOption,
+				) error {
+					return nil
+				},
+				getClusterAnalysisTemplateFn: func(
+					context.Context,
+					client.Client,
+					string,
+				) (*rollouts.ClusterAnalysisTemplate, error) {
+					return nil, nil
+				},
+			},
+			assertions: func(t *testing.T, vi *kargoapi.VerificationInfo, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, vi)
+				require.Contains(t, vi.Message, "ClusterAnalysisTemplate")
+				require.Contains(t, vi.Message, "not found")
+			},
+		},
+		{
 			name: "error building AnalysisRun",
 			stage: &kargoapi.Stage{
 				Spec: kargoapi.StageSpec{
@@ -323,6 +413,7 @@ func TestStartVerification(t *testing.T) {
 					*kargoapi.VerificationInfo,
 					*kargoapi.FreightCollection,
 					[]*rollouts.AnalysisTemplate,
+					[]*rollouts.ClusterAnalysisTemplate,
 				) (*rollouts.AnalysisRun, error) {
 					return nil, errors.New("something went wrong")
 				},
@@ -376,6 +467,7 @@ func TestStartVerification(t *testing.T) {
 					*kargoapi.VerificationInfo,
 					*kargoapi.FreightCollection,
 					[]*rollouts.AnalysisTemplate,
+					[]*rollouts.ClusterAnalysisTemplate,
 				) (*rollouts.AnalysisRun, error) {
 					return &rollouts.AnalysisRun{}, nil
 				},
@@ -435,6 +527,7 @@ func TestStartVerification(t *testing.T) {
 					*kargoapi.VerificationInfo,
 					*kargoapi.FreightCollection,
 					[]*rollouts.AnalysisTemplate,
+					[]*rollouts.ClusterAnalysisTemplate,
 				) (*rollouts.AnalysisRun, error) {
 					return &rollouts.AnalysisRun{}, nil
 				},
@@ -497,6 +590,7 @@ func TestStartVerification(t *testing.T) {
 					*kargoapi.VerificationInfo,
 					*kargoapi.FreightCollection,
 					[]*rollouts.AnalysisTemplate,
+					[]*rollouts.ClusterAnalysisTemplate,
 				) (*rollouts.AnalysisRun, error) {
 					return &rollouts.AnalysisRun{
 						ObjectMeta: metav1.ObjectMeta{
@@ -839,6 +933,7 @@ func TestBuildAnalysisRun(t *testing.T) {
 		stage            *kargoapi.Stage
 		verificationInfo *kargoapi.VerificationInfo
 		templates        []*rollouts.AnalysisTemplate
+		clusterTemplates []*rollouts.ClusterAnalysisTemplate
 		reconciler       *reconciler
 		assertions       func(*testing.T, *kargoapi.Stage, []*rollouts.AnalysisTemplate, *rollouts.AnalysisRun, error)
 	}{
@@ -901,6 +996,7 @@ func TestBuildAnalysisRun(t *testing.T) {
 					},
 				},
 			},
+			clusterTemplates: []*rollouts.ClusterAnalysisTemplate{},
 			reconciler: &reconciler{
 				getFreightFn: func(
 					context.Context,
@@ -1015,6 +1111,7 @@ func TestBuildAnalysisRun(t *testing.T) {
 					},
 				},
 			},
+			clusterTemplates: []*rollouts.ClusterAnalysisTemplate{},
 			reconciler: &reconciler{
 				getFreightFn: func(
 					context.Context,
@@ -1036,6 +1133,100 @@ func TestBuildAnalysisRun(t *testing.T) {
 
 				require.Len(t, ar.Spec.Metrics, 2)
 				require.Len(t, ar.Spec.Args, 2)
+			},
+		},
+		{
+			name: "Flattens mixture of template kinds",
+			stage: &kargoapi.Stage{
+				Spec: kargoapi.StageSpec{
+					Verification: &kargoapi.Verification{},
+				},
+			},
+			templates: []*rollouts.AnalysisTemplate{
+				{
+					Spec: rollouts.AnalysisTemplateSpec{
+						Metrics: []rollouts.Metric{
+							{
+								Name:             "foo",
+								SuccessCondition: "true",
+							},
+						},
+						Args: []rollouts.Argument{
+							{
+								Name:  "test",
+								Value: ptr.To("true"),
+							},
+						},
+					},
+				},
+				{
+					Spec: rollouts.AnalysisTemplateSpec{
+						Metrics: []rollouts.Metric{
+							{
+								Name:             "bar",
+								SuccessCondition: "false",
+							},
+						},
+						Args: []rollouts.Argument{
+							{
+								Name:  "test",
+								Value: ptr.To("true"),
+							},
+							{
+								Name:  "another",
+								Value: ptr.To("true"),
+							},
+						},
+					},
+				},
+			},
+			clusterTemplates: []*rollouts.ClusterAnalysisTemplate{
+				{
+					Spec: rollouts.AnalysisTemplateSpec{
+						Metrics: []rollouts.Metric{
+							{
+								Name:             "fee",
+								SuccessCondition: "false",
+							},
+						},
+						Args: []rollouts.Argument{
+							{
+								Name:  "test",
+								Value: ptr.To("true"),
+							},
+							{
+								Name:  "another",
+								Value: ptr.To("true"),
+							},
+							{
+								Name:  "one",
+								Value: ptr.To("true"),
+							},
+						},
+					},
+				},
+			},
+			reconciler: &reconciler{
+				getFreightFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Freight, error) {
+					return testFreight, nil
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				_ *kargoapi.Stage,
+				_ []*rollouts.AnalysisTemplate,
+				ar *rollouts.AnalysisRun,
+				err error,
+			) {
+				require.NoError(t, err)
+				require.NotNil(t, ar)
+
+				require.Len(t, ar.Spec.Metrics, 3)
+				require.Len(t, ar.Spec.Args, 3)
 			},
 		},
 		{
@@ -1231,6 +1422,7 @@ func TestBuildAnalysisRun(t *testing.T) {
 				testCase.verificationInfo,
 				testFreightCol,
 				testCase.templates,
+				testCase.clusterTemplates,
 			)
 			testCase.assertions(t, testCase.stage, testCase.templates, ar, err)
 		})
@@ -1251,7 +1443,7 @@ func TestFlattenTemplates(t *testing.T) {
 		}
 	}
 	t.Run("Handle empty list", func(t *testing.T) {
-		template, err := flattenTemplates([]*rollouts.AnalysisTemplate{})
+		template, err := flattenTemplates([]*rollouts.AnalysisTemplate{}, []*rollouts.ClusterAnalysisTemplate{})
 		require.Nil(t, err)
 		require.Len(t, template.Spec.Metrics, 0)
 		require.Len(t, template.Spec.Args, 0)
@@ -1264,13 +1456,14 @@ func TestFlattenTemplates(t *testing.T) {
 				Args:    []rollouts.Argument{arg("test", ptr.To("true"))},
 			},
 		}
-		template, err := flattenTemplates([]*rollouts.AnalysisTemplate{orig})
+		template, err := flattenTemplates([]*rollouts.AnalysisTemplate{orig}, []*rollouts.ClusterAnalysisTemplate{})
 		require.Nil(t, err)
 		require.Equal(t, orig.Spec, template.Spec)
 	})
 	t.Run("Merge multiple metrics successfully", func(t *testing.T) {
 		fooMetric := metric("foo", "true")
 		barMetric := metric("bar", "true")
+		feeMetric := metric("fee", "true")
 		template, err := flattenTemplates([]*rollouts.AnalysisTemplate{
 			{
 				Spec: rollouts.AnalysisTemplateSpec{
@@ -1295,12 +1488,25 @@ func TestFlattenTemplates(t *testing.T) {
 					Args: nil,
 				},
 			},
-		})
+		},
+			[]*rollouts.ClusterAnalysisTemplate{{
+				Spec: rollouts.AnalysisTemplateSpec{
+					Metrics: []rollouts.Metric{feeMetric},
+					DryRun: []rollouts.DryRun{{
+						MetricName: "fee",
+					}},
+					MeasurementRetention: []rollouts.MeasurementRetention{{
+						MetricName: "fee",
+					}},
+					Args: nil,
+				},
+			}})
 		require.Nil(t, err)
 		require.Nil(t, template.Spec.Args)
-		require.Len(t, template.Spec.Metrics, 2)
+		require.Len(t, template.Spec.Metrics, 3)
 		require.Equal(t, fooMetric, template.Spec.Metrics[0])
 		require.Equal(t, barMetric, template.Spec.Metrics[1])
+		require.Equal(t, feeMetric, template.Spec.Metrics[2])
 	})
 	t.Run("Merge analysis templates successfully", func(t *testing.T) {
 		fooMetric := metric("foo", "true")
@@ -1338,7 +1544,7 @@ func TestFlattenTemplates(t *testing.T) {
 					Args: nil,
 				},
 			},
-		})
+		}, []*rollouts.ClusterAnalysisTemplate{})
 		require.Nil(t, err)
 		require.Nil(t, template.Spec.Args)
 		require.Len(t, template.Spec.Metrics, 2)
@@ -1359,7 +1565,7 @@ func TestFlattenTemplates(t *testing.T) {
 					Args:    nil,
 				},
 			},
-		})
+		}, []*rollouts.ClusterAnalysisTemplate{})
 		require.Nil(t, template)
 		require.Equal(t, err, fmt.Errorf("two metrics have the same name 'foo'"))
 	})
@@ -1388,7 +1594,7 @@ func TestFlattenTemplates(t *testing.T) {
 					Args: nil,
 				},
 			},
-		})
+		}, []*rollouts.ClusterAnalysisTemplate{})
 		require.Nil(t, template)
 		require.Equal(t, err, fmt.Errorf("two Dry-Run metric rules have the same name 'foo'"))
 	})
@@ -1417,7 +1623,7 @@ func TestFlattenTemplates(t *testing.T) {
 					Args: nil,
 				},
 			},
-		})
+		}, []*rollouts.ClusterAnalysisTemplate{})
 		require.Nil(t, template)
 		require.Equal(t, err, fmt.Errorf("two Measurement Retention metric rules have the same name 'foo'"))
 	})
@@ -1436,7 +1642,7 @@ func TestFlattenTemplates(t *testing.T) {
 					Args:    []rollouts.Argument{barArgs},
 				},
 			},
-		})
+		}, []*rollouts.ClusterAnalysisTemplate{})
 		require.Nil(t, err)
 		require.Len(t, template.Spec.Args, 2)
 		require.Equal(t, fooArgs, template.Spec.Args[0])
@@ -1457,7 +1663,7 @@ func TestFlattenTemplates(t *testing.T) {
 					Args:    []rollouts.Argument{fooArgsNoValue},
 				},
 			},
-		})
+		}, []*rollouts.ClusterAnalysisTemplate{})
 		require.Nil(t, err)
 		require.Len(t, template.Spec.Args, 1)
 		require.Contains(t, template.Spec.Args, fooArgsValue)
@@ -1477,7 +1683,7 @@ func TestFlattenTemplates(t *testing.T) {
 					Args:    []rollouts.Argument{fooArgsWithDiffValue},
 				},
 			},
-		})
+		}, []*rollouts.ClusterAnalysisTemplate{})
 		require.Equal(t, fmt.Errorf("Argument `foo` specified multiple times with different values: 'true', 'false'"), err)
 		require.Nil(t, template)
 	})

@@ -119,6 +119,12 @@ type reconciler struct {
 		types.NamespacedName,
 	) (*rollouts.AnalysisTemplate, error)
 
+	getClusterAnalysisTemplateFn func(
+		context.Context,
+		client.Client,
+		string,
+	) (*rollouts.ClusterAnalysisTemplate, error)
+
 	listAnalysisRunsFn func(
 		context.Context,
 		client.ObjectList,
@@ -131,6 +137,7 @@ type reconciler struct {
 		*kargoapi.VerificationInfo,
 		*kargoapi.FreightCollection,
 		[]*rollouts.AnalysisTemplate,
+		[]*rollouts.ClusterAnalysisTemplate,
 	) (*rollouts.AnalysisRun, error)
 
 	createAnalysisRunFn func(
@@ -461,6 +468,7 @@ func newReconciler(
 	r.abortVerificationFn = r.abortVerification
 	r.getVerificationInfoFn = r.getVerificationInfo
 	r.getAnalysisTemplateFn = rollouts.GetAnalysisTemplate
+	r.getClusterAnalysisTemplateFn = rollouts.GetClusterAnalysisTemplate
 	r.listAnalysisRunsFn = r.kargoClient.List
 	r.buildAnalysisRunFn = r.buildAnalysisRun
 	r.createAnalysisRunFn = r.kargoClient.Create

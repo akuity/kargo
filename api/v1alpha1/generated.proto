@@ -55,6 +55,12 @@ message AnalysisTemplateReference {
   //
   // +kubebuilder:validation:Required
   optional string name = 1;
+
+  // ClusterScope determines whether the template is an
+  // AnalysisTemplate or a ClusterAnalysisTemplate resource
+  //
+  // +kubebuilder:validation:Optional
+  optional bool clusterScope = 2;
 }
 
 // ApprovedStage describes a Stage for which Freight has been (manually)

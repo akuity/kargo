@@ -7,7 +7,7 @@ import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialM
 import { Message, proto3, Timestamp } from "@bufbuild/protobuf";
 import { Freight, Project, Promotion, Stage, Warehouse } from "../../v1alpha1/generated_pb.js";
 import { ConfigMap, Event, Secret } from "../../k8s.io/api/core/v1/generated_pb.js";
-import { AnalysisRun, AnalysisTemplate } from "../../rollouts/api/v1alpha1/generated_pb.js";
+import { AnalysisRun, AnalysisTemplate, ClusterAnalysisTemplate } from "../../rollouts/api/v1alpha1/generated_pb.js";
 import { Claim, ResourceDetails, Role, RoleResources } from "../../rbac/v1alpha1/generated_pb.js";
 
 /**
@@ -4140,6 +4140,167 @@ export class GetAnalysisTemplateResponse extends Message<GetAnalysisTemplateResp
 }
 
 /**
+ * @generated from message akuity.io.kargo.service.v1alpha1.ListClusterAnalysisTemplatesRequest
+ */
+export class ListClusterAnalysisTemplatesRequest extends Message<ListClusterAnalysisTemplatesRequest> {
+  constructor(data?: PartialMessage<ListClusterAnalysisTemplatesRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.ListClusterAnalysisTemplatesRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListClusterAnalysisTemplatesRequest {
+    return new ListClusterAnalysisTemplatesRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListClusterAnalysisTemplatesRequest {
+    return new ListClusterAnalysisTemplatesRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListClusterAnalysisTemplatesRequest {
+    return new ListClusterAnalysisTemplatesRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ListClusterAnalysisTemplatesRequest | PlainMessage<ListClusterAnalysisTemplatesRequest> | undefined, b: ListClusterAnalysisTemplatesRequest | PlainMessage<ListClusterAnalysisTemplatesRequest> | undefined): boolean {
+    return proto3.util.equals(ListClusterAnalysisTemplatesRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message akuity.io.kargo.service.v1alpha1.ListClusterAnalysisTemplatesResponse
+ */
+export class ListClusterAnalysisTemplatesResponse extends Message<ListClusterAnalysisTemplatesResponse> {
+  /**
+   * @generated from field: repeated github.com.akuity.kargo.internal.controller.rollouts.api.v1alpha1.ClusterAnalysisTemplate cluster_analysis_templates = 1 [json_name = "clusteranalysisTemplates"];
+   */
+  clusterAnalysisTemplates: ClusterAnalysisTemplate[] = [];
+
+  constructor(data?: PartialMessage<ListClusterAnalysisTemplatesResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.ListClusterAnalysisTemplatesResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "cluster_analysis_templates", jsonName: "clusteranalysisTemplates", kind: "message", T: ClusterAnalysisTemplate, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListClusterAnalysisTemplatesResponse {
+    return new ListClusterAnalysisTemplatesResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListClusterAnalysisTemplatesResponse {
+    return new ListClusterAnalysisTemplatesResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListClusterAnalysisTemplatesResponse {
+    return new ListClusterAnalysisTemplatesResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ListClusterAnalysisTemplatesResponse | PlainMessage<ListClusterAnalysisTemplatesResponse> | undefined, b: ListClusterAnalysisTemplatesResponse | PlainMessage<ListClusterAnalysisTemplatesResponse> | undefined): boolean {
+    return proto3.util.equals(ListClusterAnalysisTemplatesResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message akuity.io.kargo.service.v1alpha1.GetClusterAnalysisTemplateRequest
+ */
+export class GetClusterAnalysisTemplateRequest extends Message<GetClusterAnalysisTemplateRequest> {
+  /**
+   * @generated from field: string name = 2;
+   */
+  name = "";
+
+  /**
+   * @generated from field: akuity.io.kargo.service.v1alpha1.RawFormat format = 3;
+   */
+  format = RawFormat.UNSPECIFIED;
+
+  constructor(data?: PartialMessage<GetClusterAnalysisTemplateRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.GetClusterAnalysisTemplateRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "format", kind: "enum", T: proto3.getEnumType(RawFormat) },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetClusterAnalysisTemplateRequest {
+    return new GetClusterAnalysisTemplateRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetClusterAnalysisTemplateRequest {
+    return new GetClusterAnalysisTemplateRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetClusterAnalysisTemplateRequest {
+    return new GetClusterAnalysisTemplateRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetClusterAnalysisTemplateRequest | PlainMessage<GetClusterAnalysisTemplateRequest> | undefined, b: GetClusterAnalysisTemplateRequest | PlainMessage<GetClusterAnalysisTemplateRequest> | undefined): boolean {
+    return proto3.util.equals(GetClusterAnalysisTemplateRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message akuity.io.kargo.service.v1alpha1.GetClusterAnalysisTemplateResponse
+ */
+export class GetClusterAnalysisTemplateResponse extends Message<GetClusterAnalysisTemplateResponse> {
+  /**
+   * @generated from oneof akuity.io.kargo.service.v1alpha1.GetClusterAnalysisTemplateResponse.result
+   */
+  result: {
+    /**
+     * @generated from field: github.com.akuity.kargo.internal.controller.rollouts.api.v1alpha1.ClusterAnalysisTemplate cluster_analysis_template = 1;
+     */
+    value: ClusterAnalysisTemplate;
+    case: "clusterAnalysisTemplate";
+  } | {
+    /**
+     * @generated from field: bytes raw = 2;
+     */
+    value: Uint8Array;
+    case: "raw";
+  } | { case: undefined; value?: undefined } = { case: undefined };
+
+  constructor(data?: PartialMessage<GetClusterAnalysisTemplateResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.GetClusterAnalysisTemplateResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "cluster_analysis_template", kind: "message", T: ClusterAnalysisTemplate, oneof: "result" },
+    { no: 2, name: "raw", kind: "scalar", T: 12 /* ScalarType.BYTES */, oneof: "result" },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetClusterAnalysisTemplateResponse {
+    return new GetClusterAnalysisTemplateResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetClusterAnalysisTemplateResponse {
+    return new GetClusterAnalysisTemplateResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetClusterAnalysisTemplateResponse {
+    return new GetClusterAnalysisTemplateResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetClusterAnalysisTemplateResponse | PlainMessage<GetClusterAnalysisTemplateResponse> | undefined, b: GetClusterAnalysisTemplateResponse | PlainMessage<GetClusterAnalysisTemplateResponse> | undefined): boolean {
+    return proto3.util.equals(GetClusterAnalysisTemplateResponse, a, b);
+  }
+}
+
+/**
  * @generated from message akuity.io.kargo.service.v1alpha1.GetAnalysisRunRequest
  */
 export class GetAnalysisRunRequest extends Message<GetAnalysisRunRequest> {
@@ -4311,6 +4472,76 @@ export class DeleteAnalysisTemplateResponse extends Message<DeleteAnalysisTempla
 
   static equals(a: DeleteAnalysisTemplateResponse | PlainMessage<DeleteAnalysisTemplateResponse> | undefined, b: DeleteAnalysisTemplateResponse | PlainMessage<DeleteAnalysisTemplateResponse> | undefined): boolean {
     return proto3.util.equals(DeleteAnalysisTemplateResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message akuity.io.kargo.service.v1alpha1.DeleteClusterAnalysisTemplateRequest
+ */
+export class DeleteClusterAnalysisTemplateRequest extends Message<DeleteClusterAnalysisTemplateRequest> {
+  /**
+   * @generated from field: string name = 2;
+   */
+  name = "";
+
+  constructor(data?: PartialMessage<DeleteClusterAnalysisTemplateRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.DeleteClusterAnalysisTemplateRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteClusterAnalysisTemplateRequest {
+    return new DeleteClusterAnalysisTemplateRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeleteClusterAnalysisTemplateRequest {
+    return new DeleteClusterAnalysisTemplateRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeleteClusterAnalysisTemplateRequest {
+    return new DeleteClusterAnalysisTemplateRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DeleteClusterAnalysisTemplateRequest | PlainMessage<DeleteClusterAnalysisTemplateRequest> | undefined, b: DeleteClusterAnalysisTemplateRequest | PlainMessage<DeleteClusterAnalysisTemplateRequest> | undefined): boolean {
+    return proto3.util.equals(DeleteClusterAnalysisTemplateRequest, a, b);
+  }
+}
+
+/**
+ * explicitly empty 
+ *
+ * @generated from message akuity.io.kargo.service.v1alpha1.DeleteClusterAnalysisTemplateResponse
+ */
+export class DeleteClusterAnalysisTemplateResponse extends Message<DeleteClusterAnalysisTemplateResponse> {
+  constructor(data?: PartialMessage<DeleteClusterAnalysisTemplateResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.DeleteClusterAnalysisTemplateResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteClusterAnalysisTemplateResponse {
+    return new DeleteClusterAnalysisTemplateResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeleteClusterAnalysisTemplateResponse {
+    return new DeleteClusterAnalysisTemplateResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeleteClusterAnalysisTemplateResponse {
+    return new DeleteClusterAnalysisTemplateResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DeleteClusterAnalysisTemplateResponse | PlainMessage<DeleteClusterAnalysisTemplateResponse> | undefined, b: DeleteClusterAnalysisTemplateResponse | PlainMessage<DeleteClusterAnalysisTemplateResponse> | undefined): boolean {
+    return proto3.util.equals(DeleteClusterAnalysisTemplateResponse, a, b);
   }
 }
 

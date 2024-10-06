@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { AbortVerificationRequest, AbortVerificationResponse, AdminLoginRequest, AdminLoginResponse, ApproveFreightRequest, ApproveFreightResponse, CreateCredentialsRequest, CreateCredentialsResponse, CreateOrUpdateResourceRequest, CreateOrUpdateResourceResponse, CreateResourceRequest, CreateResourceResponse, CreateRoleRequest, CreateRoleResponse, DeleteAnalysisTemplateRequest, DeleteAnalysisTemplateResponse, DeleteCredentialsRequest, DeleteCredentialsResponse, DeleteFreightRequest, DeleteFreightResponse, DeleteProjectRequest, DeleteProjectResponse, DeleteResourceRequest, DeleteResourceResponse, DeleteRoleRequest, DeleteRoleResponse, DeleteStageRequest, DeleteStageResponse, DeleteWarehouseRequest, DeleteWarehouseResponse, GetAnalysisRunRequest, GetAnalysisRunResponse, GetAnalysisTemplateConfigMapRequest, GetAnalysisTemplateConfigMapResponse, GetAnalysisTemplateRequest, GetAnalysisTemplateResponse, GetAnalysisTemplateSecretRequest, GetAnalysisTemplateSecretResponse, GetConfigRequest, GetConfigResponse, GetCredentialsRequest, GetCredentialsResponse, GetFreightRequest, GetFreightResponse, GetProjectRequest, GetProjectResponse, GetPromotionRequest, GetPromotionResponse, GetPublicConfigRequest, GetPublicConfigResponse, GetRoleRequest, GetRoleResponse, GetStageRequest, GetStageResponse, GetVersionInfoRequest, GetVersionInfoResponse, GetWarehouseRequest, GetWarehouseResponse, GrantRequest, GrantResponse, ListAnalysisTemplateConfigMapsRequest, ListAnalysisTemplateConfigMapsResponse, ListAnalysisTemplateSecretsRequest, ListAnalysisTemplateSecretsResponse, ListAnalysisTemplatesRequest, ListAnalysisTemplatesResponse, ListCredentialsRequest, ListCredentialsResponse, ListImagesRequest, ListImagesResponse, ListProjectEventsRequest, ListProjectEventsResponse, ListProjectsRequest, ListProjectsResponse, ListPromotionsRequest, ListPromotionsResponse, ListRolesRequest, ListRolesResponse, ListStagesRequest, ListStagesResponse, ListWarehousesRequest, ListWarehousesResponse, PromoteDownstreamRequest, PromoteDownstreamResponse, PromoteToStageRequest, PromoteToStageResponse, QueryFreightRequest, QueryFreightResponse, RefreshStageRequest, RefreshStageResponse, RefreshWarehouseRequest, RefreshWarehouseResponse, ReverifyRequest, ReverifyResponse, RevokeRequest, RevokeResponse, UpdateCredentialsRequest, UpdateCredentialsResponse, UpdateFreightAliasRequest, UpdateFreightAliasResponse, UpdateResourceRequest, UpdateResourceResponse, UpdateRoleRequest, UpdateRoleResponse, WatchPromotionRequest, WatchPromotionResponse, WatchPromotionsRequest, WatchPromotionsResponse, WatchStagesRequest, WatchStagesResponse, WatchWarehousesRequest, WatchWarehousesResponse } from "./service_pb.js";
+import { AbortVerificationRequest, AbortVerificationResponse, AdminLoginRequest, AdminLoginResponse, ApproveFreightRequest, ApproveFreightResponse, CreateCredentialsRequest, CreateCredentialsResponse, CreateOrUpdateResourceRequest, CreateOrUpdateResourceResponse, CreateResourceRequest, CreateResourceResponse, CreateRoleRequest, CreateRoleResponse, DeleteAnalysisTemplateRequest, DeleteAnalysisTemplateResponse, DeleteClusterAnalysisTemplateRequest, DeleteClusterAnalysisTemplateResponse, DeleteCredentialsRequest, DeleteCredentialsResponse, DeleteFreightRequest, DeleteFreightResponse, DeleteProjectRequest, DeleteProjectResponse, DeleteResourceRequest, DeleteResourceResponse, DeleteRoleRequest, DeleteRoleResponse, DeleteStageRequest, DeleteStageResponse, DeleteWarehouseRequest, DeleteWarehouseResponse, GetAnalysisRunRequest, GetAnalysisRunResponse, GetAnalysisTemplateConfigMapRequest, GetAnalysisTemplateConfigMapResponse, GetAnalysisTemplateRequest, GetAnalysisTemplateResponse, GetAnalysisTemplateSecretRequest, GetAnalysisTemplateSecretResponse, GetClusterAnalysisTemplateRequest, GetClusterAnalysisTemplateResponse, GetConfigRequest, GetConfigResponse, GetCredentialsRequest, GetCredentialsResponse, GetFreightRequest, GetFreightResponse, GetProjectRequest, GetProjectResponse, GetPromotionRequest, GetPromotionResponse, GetPublicConfigRequest, GetPublicConfigResponse, GetRoleRequest, GetRoleResponse, GetStageRequest, GetStageResponse, GetVersionInfoRequest, GetVersionInfoResponse, GetWarehouseRequest, GetWarehouseResponse, GrantRequest, GrantResponse, ListAnalysisTemplateConfigMapsRequest, ListAnalysisTemplateConfigMapsResponse, ListAnalysisTemplateSecretsRequest, ListAnalysisTemplateSecretsResponse, ListAnalysisTemplatesRequest, ListAnalysisTemplatesResponse, ListClusterAnalysisTemplatesRequest, ListClusterAnalysisTemplatesResponse, ListCredentialsRequest, ListCredentialsResponse, ListImagesRequest, ListImagesResponse, ListProjectEventsRequest, ListProjectEventsResponse, ListProjectsRequest, ListProjectsResponse, ListPromotionsRequest, ListPromotionsResponse, ListRolesRequest, ListRolesResponse, ListStagesRequest, ListStagesResponse, ListWarehousesRequest, ListWarehousesResponse, PromoteDownstreamRequest, PromoteDownstreamResponse, PromoteToStageRequest, PromoteToStageResponse, QueryFreightRequest, QueryFreightResponse, RefreshStageRequest, RefreshStageResponse, RefreshWarehouseRequest, RefreshWarehouseResponse, ReverifyRequest, ReverifyResponse, RevokeRequest, RevokeResponse, UpdateCredentialsRequest, UpdateCredentialsResponse, UpdateFreightAliasRequest, UpdateFreightAliasResponse, UpdateResourceRequest, UpdateResourceResponse, UpdateRoleRequest, UpdateRoleResponse, WatchPromotionRequest, WatchPromotionResponse, WatchPromotionsRequest, WatchPromotionsResponse, WatchStagesRequest, WatchStagesResponse, WatchWarehousesRequest, WatchWarehousesResponse } from "./service_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -400,6 +400,33 @@ export const KargoService = {
       name: "DeleteAnalysisTemplate",
       I: DeleteAnalysisTemplateRequest,
       O: DeleteAnalysisTemplateResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.ListClusterAnalysisTemplates
+     */
+    listClusterAnalysisTemplates: {
+      name: "ListClusterAnalysisTemplates",
+      I: ListClusterAnalysisTemplatesRequest,
+      O: ListClusterAnalysisTemplatesResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.GetClusterAnalysisTemplate
+     */
+    getClusterAnalysisTemplate: {
+      name: "GetClusterAnalysisTemplate",
+      I: GetClusterAnalysisTemplateRequest,
+      O: GetClusterAnalysisTemplateResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.DeleteClusterAnalysisTemplate
+     */
+    deleteClusterAnalysisTemplate: {
+      name: "DeleteClusterAnalysisTemplate",
+      I: DeleteClusterAnalysisTemplateRequest,
+      O: DeleteClusterAnalysisTemplateResponse,
       kind: MethodKind.Unary,
     },
     /**

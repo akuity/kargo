@@ -136,6 +136,12 @@ type server struct {
 		types.NamespacedName,
 	) (*rollouts.AnalysisTemplate, error)
 
+	getClusterAnalysisTemplateFn func(
+		context.Context,
+		client.Client,
+		string,
+	) (*rollouts.ClusterAnalysisTemplate, error)
+
 	getAnalysisRunFn func(
 		context.Context,
 		client.Client,
@@ -184,6 +190,7 @@ func NewServer(
 	s.patchFreightStatusFn = s.patchFreightStatus
 	s.authorizeFn = kubeClient.Authorize
 	s.getAnalysisTemplateFn = rollouts.GetAnalysisTemplate
+	s.getClusterAnalysisTemplateFn = rollouts.GetClusterAnalysisTemplate
 	s.getAnalysisRunFn = rollouts.GetAnalysisRun
 
 	return s

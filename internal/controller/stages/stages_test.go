@@ -63,6 +63,7 @@ func TestNewReconciler(t *testing.T) {
 	require.NotNil(t, r.startVerificationFn)
 	require.NotNil(t, r.getVerificationInfoFn)
 	require.NotNil(t, r.getAnalysisTemplateFn)
+	require.NotNil(t, r.getClusterAnalysisTemplateFn)
 	require.NotNil(t, r.listAnalysisRunsFn)
 	require.NotNil(t, r.buildAnalysisRunFn)
 	require.NotNil(t, r.createAnalysisRunFn)

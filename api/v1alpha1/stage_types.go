@@ -1044,6 +1044,11 @@ type AnalysisTemplateReference struct {
 	//
 	// +kubebuilder:validation:Required
 	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
+	// ClusterScope determines whether the template is an
+	// AnalysisTemplate or a ClusterAnalysisTemplate resource
+	//
+	// +kubebuilder:validation:Optional
+	ClusterScope bool `json:"clusterScope" protobuf:"varint,2,opt,name=clusterScope"`
 }
 
 // AnalysisRunMetadata contains optional metadata that should be applied to all

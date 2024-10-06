@@ -154,6 +154,15 @@ const (
 	// KargoServiceDeleteAnalysisTemplateProcedure is the fully-qualified name of the KargoService's
 	// DeleteAnalysisTemplate RPC.
 	KargoServiceDeleteAnalysisTemplateProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/DeleteAnalysisTemplate"
+	// KargoServiceListClusterAnalysisTemplatesProcedure is the fully-qualified name of the
+	// KargoService's ListClusterAnalysisTemplates RPC.
+	KargoServiceListClusterAnalysisTemplatesProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/ListClusterAnalysisTemplates"
+	// KargoServiceGetClusterAnalysisTemplateProcedure is the fully-qualified name of the KargoService's
+	// GetClusterAnalysisTemplate RPC.
+	KargoServiceGetClusterAnalysisTemplateProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/GetClusterAnalysisTemplate"
+	// KargoServiceDeleteClusterAnalysisTemplateProcedure is the fully-qualified name of the
+	// KargoService's DeleteClusterAnalysisTemplate RPC.
+	KargoServiceDeleteClusterAnalysisTemplateProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/DeleteClusterAnalysisTemplate"
 	// KargoServiceGetAnalysisRunProcedure is the fully-qualified name of the KargoService's
 	// GetAnalysisRun RPC.
 	KargoServiceGetAnalysisRunProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/GetAnalysisRun"
@@ -234,6 +243,9 @@ var (
 	kargoServiceListAnalysisTemplatesMethodDescriptor          = kargoServiceServiceDescriptor.Methods().ByName("ListAnalysisTemplates")
 	kargoServiceGetAnalysisTemplateMethodDescriptor            = kargoServiceServiceDescriptor.Methods().ByName("GetAnalysisTemplate")
 	kargoServiceDeleteAnalysisTemplateMethodDescriptor         = kargoServiceServiceDescriptor.Methods().ByName("DeleteAnalysisTemplate")
+	kargoServiceListClusterAnalysisTemplatesMethodDescriptor   = kargoServiceServiceDescriptor.Methods().ByName("ListClusterAnalysisTemplates")
+	kargoServiceGetClusterAnalysisTemplateMethodDescriptor     = kargoServiceServiceDescriptor.Methods().ByName("GetClusterAnalysisTemplate")
+	kargoServiceDeleteClusterAnalysisTemplateMethodDescriptor  = kargoServiceServiceDescriptor.Methods().ByName("DeleteClusterAnalysisTemplate")
 	kargoServiceGetAnalysisRunMethodDescriptor                 = kargoServiceServiceDescriptor.Methods().ByName("GetAnalysisRun")
 	kargoServiceListAnalysisTemplateConfigMapsMethodDescriptor = kargoServiceServiceDescriptor.Methods().ByName("ListAnalysisTemplateConfigMaps")
 	kargoServiceGetAnalysisTemplateConfigMapMethodDescriptor   = kargoServiceServiceDescriptor.Methods().ByName("GetAnalysisTemplateConfigMap")
@@ -296,6 +308,9 @@ type KargoServiceClient interface {
 	ListAnalysisTemplates(context.Context, *connect.Request[v1alpha1.ListAnalysisTemplatesRequest]) (*connect.Response[v1alpha1.ListAnalysisTemplatesResponse], error)
 	GetAnalysisTemplate(context.Context, *connect.Request[v1alpha1.GetAnalysisTemplateRequest]) (*connect.Response[v1alpha1.GetAnalysisTemplateResponse], error)
 	DeleteAnalysisTemplate(context.Context, *connect.Request[v1alpha1.DeleteAnalysisTemplateRequest]) (*connect.Response[v1alpha1.DeleteAnalysisTemplateResponse], error)
+	ListClusterAnalysisTemplates(context.Context, *connect.Request[v1alpha1.ListClusterAnalysisTemplatesRequest]) (*connect.Response[v1alpha1.ListClusterAnalysisTemplatesResponse], error)
+	GetClusterAnalysisTemplate(context.Context, *connect.Request[v1alpha1.GetClusterAnalysisTemplateRequest]) (*connect.Response[v1alpha1.GetClusterAnalysisTemplateResponse], error)
+	DeleteClusterAnalysisTemplate(context.Context, *connect.Request[v1alpha1.DeleteClusterAnalysisTemplateRequest]) (*connect.Response[v1alpha1.DeleteClusterAnalysisTemplateResponse], error)
 	GetAnalysisRun(context.Context, *connect.Request[v1alpha1.GetAnalysisRunRequest]) (*connect.Response[v1alpha1.GetAnalysisRunResponse], error)
 	ListAnalysisTemplateConfigMaps(context.Context, *connect.Request[v1alpha1.ListAnalysisTemplateConfigMapsRequest]) (*connect.Response[v1alpha1.ListAnalysisTemplateConfigMapsResponse], error)
 	GetAnalysisTemplateConfigMap(context.Context, *connect.Request[v1alpha1.GetAnalysisTemplateConfigMapRequest]) (*connect.Response[v1alpha1.GetAnalysisTemplateConfigMapResponse], error)
@@ -579,6 +594,24 @@ func NewKargoServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(kargoServiceDeleteAnalysisTemplateMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
+		listClusterAnalysisTemplates: connect.NewClient[v1alpha1.ListClusterAnalysisTemplatesRequest, v1alpha1.ListClusterAnalysisTemplatesResponse](
+			httpClient,
+			baseURL+KargoServiceListClusterAnalysisTemplatesProcedure,
+			connect.WithSchema(kargoServiceListClusterAnalysisTemplatesMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		getClusterAnalysisTemplate: connect.NewClient[v1alpha1.GetClusterAnalysisTemplateRequest, v1alpha1.GetClusterAnalysisTemplateResponse](
+			httpClient,
+			baseURL+KargoServiceGetClusterAnalysisTemplateProcedure,
+			connect.WithSchema(kargoServiceGetClusterAnalysisTemplateMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		deleteClusterAnalysisTemplate: connect.NewClient[v1alpha1.DeleteClusterAnalysisTemplateRequest, v1alpha1.DeleteClusterAnalysisTemplateResponse](
+			httpClient,
+			baseURL+KargoServiceDeleteClusterAnalysisTemplateProcedure,
+			connect.WithSchema(kargoServiceDeleteClusterAnalysisTemplateMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
 		getAnalysisRun: connect.NewClient[v1alpha1.GetAnalysisRunRequest, v1alpha1.GetAnalysisRunResponse](
 			httpClient,
 			baseURL+KargoServiceGetAnalysisRunProcedure,
@@ -705,6 +738,9 @@ type kargoServiceClient struct {
 	listAnalysisTemplates          *connect.Client[v1alpha1.ListAnalysisTemplatesRequest, v1alpha1.ListAnalysisTemplatesResponse]
 	getAnalysisTemplate            *connect.Client[v1alpha1.GetAnalysisTemplateRequest, v1alpha1.GetAnalysisTemplateResponse]
 	deleteAnalysisTemplate         *connect.Client[v1alpha1.DeleteAnalysisTemplateRequest, v1alpha1.DeleteAnalysisTemplateResponse]
+	listClusterAnalysisTemplates   *connect.Client[v1alpha1.ListClusterAnalysisTemplatesRequest, v1alpha1.ListClusterAnalysisTemplatesResponse]
+	getClusterAnalysisTemplate     *connect.Client[v1alpha1.GetClusterAnalysisTemplateRequest, v1alpha1.GetClusterAnalysisTemplateResponse]
+	deleteClusterAnalysisTemplate  *connect.Client[v1alpha1.DeleteClusterAnalysisTemplateRequest, v1alpha1.DeleteClusterAnalysisTemplateResponse]
 	getAnalysisRun                 *connect.Client[v1alpha1.GetAnalysisRunRequest, v1alpha1.GetAnalysisRunResponse]
 	listAnalysisTemplateConfigMaps *connect.Client[v1alpha1.ListAnalysisTemplateConfigMapsRequest, v1alpha1.ListAnalysisTemplateConfigMapsResponse]
 	getAnalysisTemplateConfigMap   *connect.Client[v1alpha1.GetAnalysisTemplateConfigMapRequest, v1alpha1.GetAnalysisTemplateConfigMapResponse]
@@ -937,6 +973,24 @@ func (c *kargoServiceClient) DeleteAnalysisTemplate(ctx context.Context, req *co
 	return c.deleteAnalysisTemplate.CallUnary(ctx, req)
 }
 
+// ListClusterAnalysisTemplates calls
+// akuity.io.kargo.service.v1alpha1.KargoService.ListClusterAnalysisTemplates.
+func (c *kargoServiceClient) ListClusterAnalysisTemplates(ctx context.Context, req *connect.Request[v1alpha1.ListClusterAnalysisTemplatesRequest]) (*connect.Response[v1alpha1.ListClusterAnalysisTemplatesResponse], error) {
+	return c.listClusterAnalysisTemplates.CallUnary(ctx, req)
+}
+
+// GetClusterAnalysisTemplate calls
+// akuity.io.kargo.service.v1alpha1.KargoService.GetClusterAnalysisTemplate.
+func (c *kargoServiceClient) GetClusterAnalysisTemplate(ctx context.Context, req *connect.Request[v1alpha1.GetClusterAnalysisTemplateRequest]) (*connect.Response[v1alpha1.GetClusterAnalysisTemplateResponse], error) {
+	return c.getClusterAnalysisTemplate.CallUnary(ctx, req)
+}
+
+// DeleteClusterAnalysisTemplate calls
+// akuity.io.kargo.service.v1alpha1.KargoService.DeleteClusterAnalysisTemplate.
+func (c *kargoServiceClient) DeleteClusterAnalysisTemplate(ctx context.Context, req *connect.Request[v1alpha1.DeleteClusterAnalysisTemplateRequest]) (*connect.Response[v1alpha1.DeleteClusterAnalysisTemplateResponse], error) {
+	return c.deleteClusterAnalysisTemplate.CallUnary(ctx, req)
+}
+
 // GetAnalysisRun calls akuity.io.kargo.service.v1alpha1.KargoService.GetAnalysisRun.
 func (c *kargoServiceClient) GetAnalysisRun(ctx context.Context, req *connect.Request[v1alpha1.GetAnalysisRunRequest]) (*connect.Response[v1alpha1.GetAnalysisRunResponse], error) {
 	return c.getAnalysisRun.CallUnary(ctx, req)
@@ -1054,6 +1108,9 @@ type KargoServiceHandler interface {
 	ListAnalysisTemplates(context.Context, *connect.Request[v1alpha1.ListAnalysisTemplatesRequest]) (*connect.Response[v1alpha1.ListAnalysisTemplatesResponse], error)
 	GetAnalysisTemplate(context.Context, *connect.Request[v1alpha1.GetAnalysisTemplateRequest]) (*connect.Response[v1alpha1.GetAnalysisTemplateResponse], error)
 	DeleteAnalysisTemplate(context.Context, *connect.Request[v1alpha1.DeleteAnalysisTemplateRequest]) (*connect.Response[v1alpha1.DeleteAnalysisTemplateResponse], error)
+	ListClusterAnalysisTemplates(context.Context, *connect.Request[v1alpha1.ListClusterAnalysisTemplatesRequest]) (*connect.Response[v1alpha1.ListClusterAnalysisTemplatesResponse], error)
+	GetClusterAnalysisTemplate(context.Context, *connect.Request[v1alpha1.GetClusterAnalysisTemplateRequest]) (*connect.Response[v1alpha1.GetClusterAnalysisTemplateResponse], error)
+	DeleteClusterAnalysisTemplate(context.Context, *connect.Request[v1alpha1.DeleteClusterAnalysisTemplateRequest]) (*connect.Response[v1alpha1.DeleteClusterAnalysisTemplateResponse], error)
 	GetAnalysisRun(context.Context, *connect.Request[v1alpha1.GetAnalysisRunRequest]) (*connect.Response[v1alpha1.GetAnalysisRunResponse], error)
 	ListAnalysisTemplateConfigMaps(context.Context, *connect.Request[v1alpha1.ListAnalysisTemplateConfigMapsRequest]) (*connect.Response[v1alpha1.ListAnalysisTemplateConfigMapsResponse], error)
 	GetAnalysisTemplateConfigMap(context.Context, *connect.Request[v1alpha1.GetAnalysisTemplateConfigMapRequest]) (*connect.Response[v1alpha1.GetAnalysisTemplateConfigMapResponse], error)
@@ -1333,6 +1390,24 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(kargoServiceDeleteAnalysisTemplateMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
+	kargoServiceListClusterAnalysisTemplatesHandler := connect.NewUnaryHandler(
+		KargoServiceListClusterAnalysisTemplatesProcedure,
+		svc.ListClusterAnalysisTemplates,
+		connect.WithSchema(kargoServiceListClusterAnalysisTemplatesMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	kargoServiceGetClusterAnalysisTemplateHandler := connect.NewUnaryHandler(
+		KargoServiceGetClusterAnalysisTemplateProcedure,
+		svc.GetClusterAnalysisTemplate,
+		connect.WithSchema(kargoServiceGetClusterAnalysisTemplateMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	kargoServiceDeleteClusterAnalysisTemplateHandler := connect.NewUnaryHandler(
+		KargoServiceDeleteClusterAnalysisTemplateProcedure,
+		svc.DeleteClusterAnalysisTemplate,
+		connect.WithSchema(kargoServiceDeleteClusterAnalysisTemplateMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
 	kargoServiceGetAnalysisRunHandler := connect.NewUnaryHandler(
 		KargoServiceGetAnalysisRunProcedure,
 		svc.GetAnalysisRun,
@@ -1499,6 +1574,12 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 			kargoServiceGetAnalysisTemplateHandler.ServeHTTP(w, r)
 		case KargoServiceDeleteAnalysisTemplateProcedure:
 			kargoServiceDeleteAnalysisTemplateHandler.ServeHTTP(w, r)
+		case KargoServiceListClusterAnalysisTemplatesProcedure:
+			kargoServiceListClusterAnalysisTemplatesHandler.ServeHTTP(w, r)
+		case KargoServiceGetClusterAnalysisTemplateProcedure:
+			kargoServiceGetClusterAnalysisTemplateHandler.ServeHTTP(w, r)
+		case KargoServiceDeleteClusterAnalysisTemplateProcedure:
+			kargoServiceDeleteClusterAnalysisTemplateHandler.ServeHTTP(w, r)
 		case KargoServiceGetAnalysisRunProcedure:
 			kargoServiceGetAnalysisRunHandler.ServeHTTP(w, r)
 		case KargoServiceListAnalysisTemplateConfigMapsProcedure:
@@ -1704,6 +1785,18 @@ func (UnimplementedKargoServiceHandler) GetAnalysisTemplate(context.Context, *co
 
 func (UnimplementedKargoServiceHandler) DeleteAnalysisTemplate(context.Context, *connect.Request[v1alpha1.DeleteAnalysisTemplateRequest]) (*connect.Response[v1alpha1.DeleteAnalysisTemplateResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.DeleteAnalysisTemplate is not implemented"))
+}
+
+func (UnimplementedKargoServiceHandler) ListClusterAnalysisTemplates(context.Context, *connect.Request[v1alpha1.ListClusterAnalysisTemplatesRequest]) (*connect.Response[v1alpha1.ListClusterAnalysisTemplatesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.ListClusterAnalysisTemplates is not implemented"))
+}
+
+func (UnimplementedKargoServiceHandler) GetClusterAnalysisTemplate(context.Context, *connect.Request[v1alpha1.GetClusterAnalysisTemplateRequest]) (*connect.Response[v1alpha1.GetClusterAnalysisTemplateResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.GetClusterAnalysisTemplate is not implemented"))
+}
+
+func (UnimplementedKargoServiceHandler) DeleteClusterAnalysisTemplate(context.Context, *connect.Request[v1alpha1.DeleteClusterAnalysisTemplateRequest]) (*connect.Response[v1alpha1.DeleteClusterAnalysisTemplateResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.DeleteClusterAnalysisTemplate is not implemented"))
 }
 
 func (UnimplementedKargoServiceHandler) GetAnalysisRun(context.Context, *connect.Request[v1alpha1.GetAnalysisRunRequest]) (*connect.Response[v1alpha1.GetAnalysisRunResponse], error) {

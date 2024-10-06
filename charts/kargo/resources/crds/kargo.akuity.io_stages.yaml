@@ -1024,6 +1024,11 @@ spec:
                       description: AnalysisTemplateReference is a reference to an
                         AnalysisTemplate.
                       properties:
+                        clusterScope:
+                          description: |-
+                            ClusterScope determines whether the template is an
+                            AnalysisTemplate or a ClusterAnalysisTemplate resource
+                          type: boolean
                         name:
                           description: |-
                             Name is the name of the AnalysisTemplate in the same project/namespace as
