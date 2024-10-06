@@ -352,11 +352,11 @@ processes that should be executed after a `Promotion` has successfully deployed
 healthy state.
 
 Verification processes are defined through _references_ to one or more 
-[Argo Rollouts `AnalysisTemplate` resources](https://argoproj.github.io/argo-rollouts/features/analysis/)
-that reside in the same `Project`/`Namespace` as the `Stage` resource.
+[Argo Rollouts `AnalysisTemplate` or `ClusterAnalysisTemplate` resources](https://argoproj.github.io/argo-rollouts/features/analysis/).
+`AnalysisTemplate` resources must reside in the same `Project`/`Namespace` as the `Stage` resource but `ClusterAnalysisTemplate` can be referenced by any `Stage`.
 
 :::info
-Argo Rollouts `AnalysisTemplate` resources (and the `AnalysisRun` resources that
+Argo Rollouts `AnalysisTemplate` and `ClusterAnalysisTemplate` resources (and the `AnalysisRun` resources that
 are spawned from them) were intentionally built to be re-usable in contexts
 other than Argo Rollouts. Re-using this resource type to define verification
 processes means those processes benefit from this rich and battle-tested feature
