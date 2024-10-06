@@ -441,6 +441,23 @@ spec:
       value: bar
 ```
 
+To refer to a `ClusterAnalysisTemplate` that exists across all namespaces,
+use the `clusterScope` option.
+
+```yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: test
+  namespace: kargo-demo
+spec:
+  # ...
+  verification:
+    analysisTemplates:
+    - name: kargo-demo
+      clusterScope: true
+```
+
 An `AnalysisTemplate` could be as simple as the following, which merely executes
 a Kubernetes `Job` that is defined inline:
 
