@@ -32,6 +32,6 @@ type Config struct {
 func ConfigFromEnv() Config {
 	cfg := Config{}
 	envconfig.MustProcess("", &cfg)
-	cfg.DefaultScopes = []string{"openid", "profile", "email", "groups"}
+	cfg.DefaultScopes = []string{"openid", "profile", "email"}
 	return cfg
 }
