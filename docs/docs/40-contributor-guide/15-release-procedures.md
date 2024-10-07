@@ -41,9 +41,9 @@ release date -- which is always a Friday.
 
       :::note
       "Edge" documentation at
-      [main.kargo.akuity.io](https://main.kargo.akuity.io) is continuously
+      [main.kargo.akuity.io](https://main.docs.kargo.io) is continuously
       published from the `main` branch and production documentation at
-      [kargo.akuity.io](https://kargo.akuity.io) is continuously published from
+      [kargo.akuity.io](https://docs.kargo.io) is continuously published from
       the previous release branch (`release-M.m-1` or `release-M-1.L`). There
       are two consequences of this:
 

@@ -47,7 +47,7 @@ export const MainLayout = () => {
               <NavItem icon={faBoxes} path={paths.projects}>
                 Projects
               </NavItem>
-              <NavItem icon={faBook} path='https://kargo.akuity.io' target='_blank'>
+              <NavItem icon={faBook} path='https://docs.kargo.io' target='_blank'>
                 Docs
               </NavItem>
               <NavItem icon={faTerminal} path={paths.downloads}>
