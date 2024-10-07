@@ -164,16 +164,6 @@ spec:
                         committer:
                           description: Committer is the person who committed the commit.
                           type: string
-                        healthCheckCommit:
-                          description: |-
-                            HealthCheckCommit is the ID of a specific commit. When specified,
-                            assessments of Stage health will use this value (instead of ID) when
-                            determining if applicable sources of Argo CD Application resources
-                            associated with the Stage are or are not synced to this commit. Note that
-                            there are cases (as in that of Kargo Render being utilized as a promotion
-                            mechanism) wherein the value of this field may differ from the commit ID
-                            found in the ID field.
-                          type: string
                         id:
                           description: |-
                             ID is the ID of a specific commit in the Git repository specified by
@@ -308,16 +298,6 @@ spec:
                               committer:
                                 description: Committer is the person who committed
                                   the commit.
-                                type: string
-                              healthCheckCommit:
-                                description: |-
-                                  HealthCheckCommit is the ID of a specific commit. When specified,
-                                  assessments of Stage health will use this value (instead of ID) when
-                                  determining if applicable sources of Argo CD Application resources
-                                  associated with the Stage are or are not synced to this commit. Note that
-                                  there are cases (as in that of Kargo Render being utilized as a promotion
-                                  mechanism) wherein the value of this field may differ from the commit ID
-                                  found in the ID field.
                                 type: string
                               id:
                                 description: |-
@@ -497,13 +477,6 @@ spec:
                   i.e. If the Phase field has a value of Failed, this field can be expected
                   to explain why.
                 type: string
-              metadata:
-                additionalProperties:
-                  type: string
-                description: |-
-                  Metadata holds arbitrary metadata set by promotion mechanisms
-                  (e.g. for display purposes, or internal bookkeeping)
-                type: object
               phase:
                 description: Phase describes where the Promotion currently is in its
                   lifecycle.
