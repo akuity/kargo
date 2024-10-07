@@ -404,13 +404,9 @@ func (r *reconciler) ensureControllerPermissions(
 	ctx context.Context,
 	project *kargoapi.Project,
 ) error {
-	const roleBindingName = "kargo-controller-secrets-readonly"
-
 	logger := logging.LoggerFromContext(ctx).WithValues(
 		"project", project.Name,
-		"name", project.Name,
 		"namespace", project.Name,
-		"roleBinding", roleBindingName,
 	)
 
 	// Get all ServiceAccounts labeled as controller ServiceAccounts
@@ -419,50 +415,54 @@ func (r *reconciler) ensureControllerPermissions(
 		return fmt.Errorf("error listing controller ServiceAccounts: %w", err)
 	}
 
-	subjects := make([]rbacv1.Subject, len(controllerSAs.Items))
-	for i, sa := range controllerSAs.Items {
-		subjects[i] = rbacv1.Subject{
-			Kind:      "ServiceAccount",
-			Name:      sa.Name,
-			Namespace: r.cfg.KargoNamespace,
+	// Create/update a RoleBinding for each ServiceAccount
+	for _, sa := range controllerSAs.Items {
+		roleBindingName := fmt.Sprintf("kargo-controller-secrets-readonly-%s", sa.Name)
+		logger := logger.WithValues("serviceAccount", sa.Name, "roleBinding", roleBindingName)
+
+		roleBinding := &rbacv1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      roleBindingName,
+				Namespace: project.Name,
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "ClusterRole",
+				Name:     "kargo-controller-secrets-readonly",
+			},
+			Subjects: []rbacv1.Subject{
+				{
+					Kind:      "ServiceAccount",
+					Name:      sa.Name,
+					Namespace: r.cfg.KargoNamespace,
+				},
+			},
 		}
-	}
 
-	roleBinding := &rbacv1.RoleBinding{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      roleBindingName,
-			Namespace: project.Name,
-		},
-		RoleRef: rbacv1.RoleRef{
-			APIGroup: rbacv1.GroupName,
-			Kind:     "ClusterRole",
-			Name:     "kargo-controller-secrets-readonly",
-		},
-		Subjects: subjects,
-	}
-
-	if err := r.createRoleBindingFn(ctx, roleBinding); err != nil {
-		if kubeerr.IsAlreadyExists(err) {
-			// Update the existing RoleBinding
-			existingRoleBinding := &rbacv1.RoleBinding{}
-			if err := r.client.Get(ctx, client.ObjectKey{Name: roleBindingName, Namespace: project.Name}, existingRoleBinding); err != nil {
-				return fmt.Errorf("error getting existing RoleBinding: %w", err)
+		if err := r.createRoleBindingFn(ctx, roleBinding); err != nil {
+			if kubeerr.IsAlreadyExists(err) {
+				existingRoleBinding := &rbacv1.RoleBinding{}
+				if err := r.client.Get(ctx, client.ObjectKey{Name: roleBindingName, Namespace: project.Name}, existingRoleBinding); err != nil {
+					return fmt.Errorf("error getting existing RoleBinding: %w", err)
+				}
+				existingRoleBinding.Subjects = roleBinding.Subjects
+				if err := r.client.Update(ctx, existingRoleBinding); err != nil {
+					return fmt.Errorf("error updating RoleBinding: %w", err)
+				} else {
+					logger.Debug("Updated RoleBinding for ServiceAccount", "serviceAccount", sa.Name)
+				}
+			} else {
+				return fmt.Errorf(
+					"error creating RoleBinding %q for ServiceAccount %q in project namespace %q: %w",
+					roleBinding.Name,
+					sa.Name,
+					project.Name,
+					err,
+				)
 			}
-			existingRoleBinding.Subjects = subjects
-			if err := r.client.Update(ctx, existingRoleBinding); err != nil {
-				return fmt.Errorf("error updating RoleBinding: %w", err)
-			}
-			logger.Debug("Updated RoleBinding with all controller ServiceAccounts")
 		} else {
-			return fmt.Errorf(
-				"error creating RoleBinding %q in project namespace %q: %w",
-				roleBinding.Name,
-				project.Name,
-				err,
-			)
+			logger.Debug("Created RoleBinding for ServiceAccount", "serviceAccount", sa.Name)
 		}
-	} else {
-		logger.Debug("Created RoleBinding for all controller ServiceAccounts")
 	}
 
 	return nil
