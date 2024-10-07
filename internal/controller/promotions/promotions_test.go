@@ -15,8 +15,6 @@ import (
 
 	"github.com/akuity/kargo/api/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/controller/promotion"
-	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/directives"
 	fakeevent "github.com/akuity/kargo/internal/kubernetes/event/fake"
 )
@@ -27,13 +25,11 @@ func TestNewPromotionReconciler(t *testing.T) {
 		kubeClient,
 		&fakeevent.EventRecorder{},
 		&directives.FakeEngine{},
-		promotion.NewMechanisms(kubeClient, kubeClient, &credentials.FakeDB{}),
 		ReconcilerConfig{},
 	)
 	require.NotNil(t, r.kargoClient)
 	require.NotNil(t, r.recorder)
 	require.NotNil(t, r.directivesEngine)
-	require.NotNil(t, r.promoMechanisms)
 	require.NotNil(t, r.pqs.pendingPromoQueuesByStage)
 	require.NotNil(t, r.getStageFn)
 	require.NotNil(t, r.promoteFn)
@@ -48,12 +44,10 @@ func newFakeReconciler(
 	require.NoError(t, kargoapi.SchemeBuilder.AddToScheme(scheme))
 	kargoClient := fake.NewClientBuilder().WithScheme(scheme).
 		WithObjects(objects...).WithStatusSubresource(objects...).Build()
-	kubeClient := fake.NewClientBuilder().Build()
 	return newReconciler(
 		kargoClient,
 		recorder,
 		&directives.FakeEngine{},
-		promotion.NewMechanisms(kargoClient, kubeClient, &credentials.FakeDB{}),
 		ReconcilerConfig{},
 	)
 }
@@ -282,7 +276,7 @@ func TestReconcile(t *testing.T) {
 	}
 }
 
-// Tests that initalizeQueues is called properly
+// Tests that initializeQueues is called properly
 func TestReconcileInitializeQueues(t *testing.T) {
 	ctx := context.TODO()
 	promos := []client.Object{

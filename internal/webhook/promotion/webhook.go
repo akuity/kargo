@@ -178,10 +178,9 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 			promo.Namespace,
 		)
 	}
-	// nolint: staticcheck
-	if len(promo.Spec.Steps) == 0 && stage.Spec.PromotionMechanisms == nil {
+	if len(promo.Spec.Steps) == 0 {
 		return fmt.Errorf(
-			"Stage %q in namespace %q has no PromotionMechanisms",
+			"Stage %q in namespace %q defines no promotion steps",
 			promo.Spec.Stage,
 			promo.Namespace,
 		)

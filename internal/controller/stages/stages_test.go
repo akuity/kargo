@@ -27,9 +27,7 @@ import (
 	fakeevent "github.com/akuity/kargo/internal/kubernetes/event/fake"
 )
 
-var (
-	fakeTime = time.Date(2024, time.April, 10, 0, 0, 0, 0, time.UTC)
-)
+var fakeTime = time.Date(2024, time.April, 10, 0, 0, 0, 0, time.UTC)
 
 func TestNewReconciler(t *testing.T) {
 	testCfg := ReconcilerConfig{
@@ -42,7 +40,6 @@ func TestNewReconciler(t *testing.T) {
 	recorder := &fakeevent.EventRecorder{Events: nil}
 	r := newReconciler(
 		kubeClient,
-		kubeClient,
 		directivesEngine,
 		recorder,
 		testCfg,
@@ -52,7 +49,6 @@ func TestNewReconciler(t *testing.T) {
 	require.NotNil(t, r.kargoClient)
 	require.NotNil(t, r.directivesEngine)
 	require.NotNil(t, r.recorder)
-	require.NotNil(t, r.appHealth)
 	// Assert that all overridable behaviors were initialized to a default:
 	// Loop guard:
 	require.NotNil(t, r.nowFn)
@@ -286,8 +282,7 @@ func TestSyncNormalStage(t *testing.T) {
 					},
 				},
 				Spec: kargoapi.StageSpec{
-					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
-					Verification:        &kargoapi.Verification{},
+					Verification: &kargoapi.Verification{},
 				},
 				Status: kargoapi.StageStatus{
 					Phase: kargoapi.StagePhaseSteady,
@@ -317,7 +312,6 @@ func TestSyncNormalStage(t *testing.T) {
 				) (kargoapi.StageStatus, error) {
 					return status, nil
 				},
-				appHealth: &mockAppHealthEvaluator{},
 				startVerificationFn: func(
 					context.Context,
 					*kargoapi.Stage,
@@ -376,8 +370,7 @@ func TestSyncNormalStage(t *testing.T) {
 					},
 				},
 				Spec: kargoapi.StageSpec{
-					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
-					Verification:        &kargoapi.Verification{},
+					Verification: &kargoapi.Verification{},
 				},
 				Status: kargoapi.StageStatus{
 					Phase: kargoapi.StagePhaseSteady,
@@ -408,7 +401,6 @@ func TestSyncNormalStage(t *testing.T) {
 				) (kargoapi.StageStatus, error) {
 					return status, nil
 				},
-				appHealth: &mockAppHealthEvaluator{},
 				getFreightFn: func(
 					context.Context,
 					client.Client,
@@ -438,8 +430,7 @@ func TestSyncNormalStage(t *testing.T) {
 			name: "error starting verification",
 			stage: &kargoapi.Stage{
 				Spec: kargoapi.StageSpec{
-					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
-					Verification:        &kargoapi.Verification{},
+					Verification: &kargoapi.Verification{},
 				},
 				Status: kargoapi.StageStatus{
 					Phase: kargoapi.StagePhaseVerifying,
@@ -462,7 +453,6 @@ func TestSyncNormalStage(t *testing.T) {
 				) (kargoapi.StageStatus, error) {
 					return status, nil
 				},
-				appHealth: &mockAppHealthEvaluator{},
 				startVerificationFn: func(
 					context.Context,
 					*kargoapi.Stage,
@@ -529,8 +519,7 @@ func TestSyncNormalStage(t *testing.T) {
 			name: "retryable error starting verification",
 			stage: &kargoapi.Stage{
 				Spec: kargoapi.StageSpec{
-					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
-					Verification:        &kargoapi.Verification{},
+					Verification: &kargoapi.Verification{},
 				},
 				Status: kargoapi.StageStatus{
 					Phase: kargoapi.StagePhaseVerifying,
@@ -553,7 +542,6 @@ func TestSyncNormalStage(t *testing.T) {
 				) (kargoapi.StageStatus, error) {
 					return status, nil
 				},
-				appHealth: &mockAppHealthEvaluator{},
 				startVerificationFn: func(
 					context.Context,
 					*kargoapi.Stage,
@@ -597,8 +585,7 @@ func TestSyncNormalStage(t *testing.T) {
 			name: "error checking verification result",
 			stage: &kargoapi.Stage{
 				Spec: kargoapi.StageSpec{
-					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
-					Verification:        &kargoapi.Verification{},
+					Verification: &kargoapi.Verification{},
 				},
 				Status: kargoapi.StageStatus{
 					Phase: kargoapi.StagePhaseVerifying,
@@ -630,7 +617,6 @@ func TestSyncNormalStage(t *testing.T) {
 				) (kargoapi.StageStatus, error) {
 					return status, nil
 				},
-				appHealth: &mockAppHealthEvaluator{},
 				getFreightFn: func(
 					context.Context,
 					client.Client,
@@ -697,8 +683,7 @@ func TestSyncNormalStage(t *testing.T) {
 			name: "retryable error checking verification result",
 			stage: &kargoapi.Stage{
 				Spec: kargoapi.StageSpec{
-					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
-					Verification:        &kargoapi.Verification{},
+					Verification: &kargoapi.Verification{},
 				},
 				Status: kargoapi.StageStatus{
 					Phase: kargoapi.StagePhaseVerifying,
@@ -730,7 +715,6 @@ func TestSyncNormalStage(t *testing.T) {
 				) (kargoapi.StageStatus, error) {
 					return status, nil
 				},
-				appHealth: &mockAppHealthEvaluator{},
 				getVerificationInfoFn: func(
 					context.Context,
 					*kargoapi.Stage,
@@ -787,8 +771,7 @@ func TestSyncNormalStage(t *testing.T) {
 					},
 				},
 				Spec: kargoapi.StageSpec{
-					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
-					Verification:        &kargoapi.Verification{},
+					Verification: &kargoapi.Verification{},
 				},
 				Status: kargoapi.StageStatus{
 					Phase: kargoapi.StagePhaseVerifying,
@@ -820,7 +803,6 @@ func TestSyncNormalStage(t *testing.T) {
 				) (kargoapi.StageStatus, error) {
 					return status, nil
 				},
-				appHealth: &mockAppHealthEvaluator{},
 				getAnalysisRunFn: func(
 					context.Context,
 					client.Client,
@@ -905,8 +887,7 @@ func TestSyncNormalStage(t *testing.T) {
 					},
 				},
 				Spec: kargoapi.StageSpec{
-					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
-					Verification:        &kargoapi.Verification{},
+					Verification: &kargoapi.Verification{},
 				},
 				Status: kargoapi.StageStatus{
 					Phase: kargoapi.StagePhaseVerifying,
@@ -939,7 +920,6 @@ func TestSyncNormalStage(t *testing.T) {
 				) (kargoapi.StageStatus, error) {
 					return status, nil
 				},
-				appHealth: &mockAppHealthEvaluator{},
 				getAnalysisRunFn: func(
 					context.Context,
 					client.Client,
@@ -1021,9 +1001,6 @@ func TestSyncNormalStage(t *testing.T) {
 		{
 			name: "error marking Freight as verified in Stage",
 			stage: &kargoapi.Stage{
-				Spec: kargoapi.StageSpec{
-					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
-				},
 				Status: kargoapi.StageStatus{
 					Phase: kargoapi.StagePhaseVerifying,
 					FreightHistory: kargoapi.FreightHistory{
@@ -1045,7 +1022,6 @@ func TestSyncNormalStage(t *testing.T) {
 				) (kargoapi.StageStatus, error) {
 					return status, nil
 				},
-				appHealth: &mockAppHealthEvaluator{},
 				verifyFreightInStageFn: func(context.Context, string, string, string) (bool, error) {
 					return false, errors.New("something went wrong")
 				},
@@ -1076,8 +1052,7 @@ func TestSyncNormalStage(t *testing.T) {
 			name: "error checking if auto-promotion is permitted",
 			stage: &kargoapi.Stage{
 				Spec: kargoapi.StageSpec{
-					RequestedFreight:    []kargoapi.FreightRequest{{}},
-					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
+					RequestedFreight: []kargoapi.FreightRequest{{}},
 				},
 				Status: kargoapi.StageStatus{
 					Phase: kargoapi.StagePhaseSteady,
@@ -1100,7 +1075,6 @@ func TestSyncNormalStage(t *testing.T) {
 				) (kargoapi.StageStatus, error) {
 					return status, nil
 				},
-				appHealth: &mockAppHealthEvaluator{},
 				verifyFreightInStageFn: func(context.Context, string, string, string) (bool, error) {
 					return false, nil
 				},
@@ -1141,8 +1115,7 @@ func TestSyncNormalStage(t *testing.T) {
 			name: "auto-promotion is not permitted",
 			stage: &kargoapi.Stage{
 				Spec: kargoapi.StageSpec{
-					RequestedFreight:    []kargoapi.FreightRequest{{}},
-					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
+					RequestedFreight: []kargoapi.FreightRequest{{}},
 				},
 				Status: kargoapi.StageStatus{
 					Phase: kargoapi.StagePhaseSteady,
@@ -1165,7 +1138,6 @@ func TestSyncNormalStage(t *testing.T) {
 				) (kargoapi.StageStatus, error) {
 					return status, nil
 				},
-				appHealth: &mockAppHealthEvaluator{},
 				verifyFreightInStageFn: func(context.Context, string, string, string) (bool, error) {
 					return false, nil
 				},
@@ -1205,8 +1177,7 @@ func TestSyncNormalStage(t *testing.T) {
 			name: "error getting available Freight",
 			stage: &kargoapi.Stage{
 				Spec: kargoapi.StageSpec{
-					RequestedFreight:    []kargoapi.FreightRequest{{}},
-					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
+					RequestedFreight: []kargoapi.FreightRequest{{}},
 				},
 				Status: kargoapi.StageStatus{
 					Phase: kargoapi.StagePhaseSteady,
@@ -1229,7 +1200,6 @@ func TestSyncNormalStage(t *testing.T) {
 				) (kargoapi.StageStatus, error) {
 					return status, nil
 				},
-				appHealth: &mockAppHealthEvaluator{},
 				verifyFreightInStageFn: func(context.Context, string, string, string) (bool, error) {
 					return false, nil
 				},
@@ -1275,8 +1245,7 @@ func TestSyncNormalStage(t *testing.T) {
 			name: "no Freight found",
 			stage: &kargoapi.Stage{
 				Spec: kargoapi.StageSpec{
-					RequestedFreight:    []kargoapi.FreightRequest{{}},
-					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
+					RequestedFreight: []kargoapi.FreightRequest{{}},
 				},
 				Status: kargoapi.StageStatus{
 					Phase: kargoapi.StagePhaseSteady,
@@ -1304,7 +1273,6 @@ func TestSyncNormalStage(t *testing.T) {
 				) (kargoapi.StageStatus, error) {
 					return status, nil
 				},
-				appHealth: &mockAppHealthEvaluator{},
 				getFreightFn: func(
 					context.Context,
 					client.Client,
@@ -1357,7 +1325,6 @@ func TestSyncNormalStage(t *testing.T) {
 							},
 						},
 					},
-					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
 				},
 				Status: kargoapi.StageStatus{
 					Phase: kargoapi.StagePhaseSteady,
@@ -1381,7 +1348,6 @@ func TestSyncNormalStage(t *testing.T) {
 				) (kargoapi.StageStatus, error) {
 					return status, nil
 				},
-				appHealth: &mockAppHealthEvaluator{},
 				verifyFreightInStageFn: func(context.Context, string, string, string) (bool, error) {
 					return false, nil
 				},
@@ -1434,8 +1400,7 @@ func TestSyncNormalStage(t *testing.T) {
 			name: "Promotion already exists",
 			stage: &kargoapi.Stage{
 				Spec: kargoapi.StageSpec{
-					RequestedFreight:    []kargoapi.FreightRequest{{}},
-					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
+					RequestedFreight: []kargoapi.FreightRequest{{}},
 				},
 				Status: kargoapi.StageStatus{
 					Phase: kargoapi.StagePhaseSteady,
@@ -1458,7 +1423,6 @@ func TestSyncNormalStage(t *testing.T) {
 				) (kargoapi.StageStatus, error) {
 					return status, nil
 				},
-				appHealth: &mockAppHealthEvaluator{},
 				verifyFreightInStageFn: func(context.Context, string, string, string) (bool, error) {
 					return false, nil
 				},
@@ -1525,8 +1489,7 @@ func TestSyncNormalStage(t *testing.T) {
 			name: "error listing Promotions",
 			stage: &kargoapi.Stage{
 				Spec: kargoapi.StageSpec{
-					RequestedFreight:    []kargoapi.FreightRequest{{}},
-					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
+					RequestedFreight: []kargoapi.FreightRequest{{}},
 				},
 				Status: kargoapi.StageStatus{
 					Phase: kargoapi.StagePhaseSteady,
@@ -1549,7 +1512,6 @@ func TestSyncNormalStage(t *testing.T) {
 				) (kargoapi.StageStatus, error) {
 					return status, nil
 				},
-				appHealth: &mockAppHealthEvaluator{},
 				verifyFreightInStageFn: func(context.Context, string, string, string) (bool, error) {
 					return false, nil
 				},
@@ -1613,8 +1575,7 @@ func TestSyncNormalStage(t *testing.T) {
 			name: "error creating Promotion",
 			stage: &kargoapi.Stage{
 				Spec: kargoapi.StageSpec{
-					RequestedFreight:    []kargoapi.FreightRequest{{}},
-					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
+					RequestedFreight: []kargoapi.FreightRequest{{}},
 				},
 				Status: kargoapi.StageStatus{
 					Phase: kargoapi.StagePhaseSteady,
@@ -1637,7 +1598,6 @@ func TestSyncNormalStage(t *testing.T) {
 				) (kargoapi.StageStatus, error) {
 					return status, nil
 				},
-				appHealth: &mockAppHealthEvaluator{},
 				verifyFreightInStageFn: func(context.Context, string, string, string) (bool, error) {
 					return false, nil
 				},
@@ -1713,8 +1673,7 @@ func TestSyncNormalStage(t *testing.T) {
 					Name:       "fake-stage",
 				},
 				Spec: kargoapi.StageSpec{
-					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
-					Verification:        &kargoapi.Verification{},
+					Verification: &kargoapi.Verification{},
 				},
 				Status: kargoapi.StageStatus{
 					Phase: kargoapi.StagePhaseSteady,
@@ -1742,11 +1701,7 @@ func TestSyncNormalStage(t *testing.T) {
 				) (kargoapi.StageStatus, error) {
 					return status, nil
 				},
-				appHealth: &mockAppHealthEvaluator{
-					Health: &kargoapi.Health{
-						Status: kargoapi.HealthStateHealthy,
-					},
-				},
+				directivesEngine: &directives.FakeEngine{},
 				getVerificationInfoFn: func(
 					context.Context,
 					*kargoapi.Stage,
@@ -1838,12 +1793,17 @@ func TestSyncNormalStage(t *testing.T) {
 					Generation: 42,
 				},
 				Spec: kargoapi.StageSpec{
-					RequestedFreight:    []kargoapi.FreightRequest{{}},
-					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
-					Verification:        &kargoapi.Verification{},
+					RequestedFreight:  []kargoapi.FreightRequest{{}},
+					PromotionTemplate: &kargoapi.PromotionTemplate{},
+					Verification:      &kargoapi.Verification{},
 				},
 				Status: kargoapi.StageStatus{
 					Phase: kargoapi.StagePhaseVerifying,
+					LastPromotion: &kargoapi.PromotionReference{
+						Status: &kargoapi.PromotionStatus{
+							HealthChecks: []kargoapi.HealthCheckStep{{}},
+						},
+					},
 					FreightHistory: kargoapi.FreightHistory{
 						{
 							Freight: map[string]kargoapi.FreightReference{
@@ -1872,11 +1832,7 @@ func TestSyncNormalStage(t *testing.T) {
 				) (kargoapi.StageStatus, error) {
 					return status, nil
 				},
-				appHealth: &mockAppHealthEvaluator{
-					Health: &kargoapi.Health{
-						Status: kargoapi.HealthStateHealthy,
-					},
-				},
+				directivesEngine: &directives.FakeEngine{}, // Returns healthy by default
 				getAnalysisRunFn: func(
 					context.Context,
 					client.Client,
@@ -2006,12 +1962,20 @@ func TestSyncNormalStage(t *testing.T) {
 		{
 			name: "success with multiple Freight requests",
 			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Generation: 42,
+				},
 				Spec: kargoapi.StageSpec{
-					RequestedFreight:    []kargoapi.FreightRequest{{}, {}},
-					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
+					RequestedFreight:  []kargoapi.FreightRequest{{}, {}},
+					PromotionTemplate: &kargoapi.PromotionTemplate{},
 				},
 				Status: kargoapi.StageStatus{
 					Phase: kargoapi.StagePhaseSteady,
+					LastPromotion: &kargoapi.PromotionReference{
+						Status: &kargoapi.PromotionStatus{
+							HealthChecks: []kargoapi.HealthCheckStep{{}},
+						},
+					},
 					FreightHistory: kargoapi.FreightHistory{
 						{
 							Freight: map[string]kargoapi.FreightReference{
@@ -2031,7 +1995,7 @@ func TestSyncNormalStage(t *testing.T) {
 				) (kargoapi.StageStatus, error) {
 					return status, nil
 				},
-				appHealth: &mockAppHealthEvaluator{},
+				directivesEngine: &directives.FakeEngine{}, // Returns healthy by default
 				verifyFreightInStageFn: func(context.Context, string, string, string) (bool, error) {
 					return false, nil
 				},
@@ -2107,7 +2071,9 @@ func TestSyncNormalStage(t *testing.T) {
 			) {
 				require.NoError(t, err)
 
+				require.Equal(t, int64(42), newStatus.ObservedGeneration) // Set
 				require.Equal(t, kargoapi.StagePhaseSteady, newStatus.Phase)
+				require.NotNil(t, newStatus.Health) // Set
 
 				// Two events should have been recorded:
 				require.Len(t, recorder.Events, 2)

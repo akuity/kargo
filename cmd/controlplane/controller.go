@@ -20,7 +20,6 @@ import (
 	libargocd "github.com/akuity/kargo/internal/argocd"
 	"github.com/akuity/kargo/internal/controller"
 	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
-	"github.com/akuity/kargo/internal/controller/promotion"
 	"github.com/akuity/kargo/internal/controller/promotions"
 	rollouts "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/stages"
@@ -281,14 +280,12 @@ func (o *controllerOptions) setupReconcilers(
 	}
 
 	directivesEngine := directives.NewSimpleEngine(credentialsDB, kargoMgr.GetClient(), argoCDClient)
-	promoMechanisms := promotion.NewMechanisms(kargoMgr.GetClient(), argoCDClient, credentialsDB)
 
 	if err := promotions.SetupReconcilerWithManager(
 		ctx,
 		kargoMgr,
 		argocdMgr,
 		directivesEngine,
-		promoMechanisms,
 		promotionsReconcilerCfg,
 	); err != nil {
 		return fmt.Errorf("error setting up Promotions reconciler: %w", err)

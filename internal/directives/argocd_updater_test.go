@@ -1089,8 +1089,7 @@ func Test_argoCDUpdater_mustPerformUpdate(t *testing.T) {
 			newFreight: []kargoapi.FreightReference{{
 				Commits: []kargoapi.GitCommit{
 					{
-						RepoURL:           "https://github.com/universe/42",
-						HealthCheckCommit: "fake-revision",
+						RepoURL: "https://github.com/universe/42",
 					},
 				},
 			}},
