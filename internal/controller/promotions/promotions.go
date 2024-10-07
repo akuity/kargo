@@ -13,6 +13,7 @@ import (
 	"github.com/kelseyhightower/envconfig"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
@@ -376,11 +377,23 @@ func (r *reconciler) Reconcile(
 		newStatus.LastHandledRefresh = token
 	}
 
-	err = kubeclient.PatchStatus(ctx, r.kargoClient, promo, func(status *kargoapi.PromotionStatus) {
+	if err = kubeclient.PatchStatus(ctx, r.kargoClient, promo, func(status *kargoapi.PromotionStatus) {
 		*status = *newStatus
-	})
-	if err != nil {
+	}); err != nil {
 		logger.Error(err, "error updating Promotion status")
+
+		if apierrors.IsInvalid(err) {
+			// If the error is due to an invalid status update, we should mark
+			// the Promotion as errored to prevent it from being requeued.
+			//
+			// NB: This should be a rare occurrence, and is either due to the
+			// CustomResourceDefinition being out of sync with the controller
+			// version, or us inventing non-backwards-compatible changes.
+			err = kubeclient.PatchStatus(ctx, r.kargoClient, promo, func(status *kargoapi.PromotionStatus) {
+				status.Phase = kargoapi.PromotionPhaseErrored
+				status.Message = fmt.Sprintf("error updating status: %v", err)
+			})
+		}
 	}
 
 	// Record event after patching status if new phase is terminal
