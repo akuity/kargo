@@ -164,7 +164,7 @@ jobs:
     if: github.event_name == 'release'
     runs-on: ubuntu-latest
     container:
-      image: golang:1.23.1-bookworm
+      image: golang:1.23.2-bookworm
     strategy:
       matrix:
         os: [linux, darwin, windows]
@@ -232,7 +232,7 @@ jobs:
     if: github.event_name != 'release'
     runs-on: ubuntu-latest
     container:
-      image: golang:1.23.1-bookworm
+      image: golang:1.23.2-bookworm
     strategy:
       matrix:
         os: [linux, darwin, windows]
