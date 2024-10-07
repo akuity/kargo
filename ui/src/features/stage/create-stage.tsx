@@ -139,7 +139,7 @@ export const CreateStage = ({
           Create Stage
         </Typography.Title>
         <Typography.Link
-          href='https://kargo.akuity.io/concepts/#stage-resources'
+          href='https://docs.kargo.io/concepts/#stage-resources'
           target='_blank'
           className='ml-3'
         >

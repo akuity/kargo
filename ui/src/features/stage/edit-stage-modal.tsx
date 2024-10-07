@@ -62,10 +62,7 @@ export const EditStageModal = ({ visible, hide, projectName, stageName }: Props)
       width={680}
       footer={
         <div className='flex items-center justify-between'>
-          <Typography.Link
-            href='https://kargo.akuity.io/quickstart/#the-test-stage'
-            target='_blank'
-          >
+          <Typography.Link href='https://docs.kargo.io/quickstart/#the-test-stage' target='_blank'>
             Documentation
           </Typography.Link>
           <Space>
