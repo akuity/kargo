@@ -1,3 +1,3 @@
 # Kargo contributor guide
 
-See https://kargo.akuity.io/contributor-guide/
+See https://docs.kargo.io/contributor-guide/
