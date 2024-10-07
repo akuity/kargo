@@ -1,3 +1,3 @@
 # Code of conduct
 
-See https://kargo.akuity.io/contributor-guide/code-of-conduct/
+See https://docs.kargo.io/contributor-guide/code-of-conduct/
