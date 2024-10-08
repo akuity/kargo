@@ -118,7 +118,7 @@ spec:
       {{- if or .Values.api.cabundle.configMapName .Values.api.cabundle.secretName }}
       initContainers:
       - name: parse-cabundle
-        image: {{ include "kargo.image" . }}
+        image: alpine/curl:latest
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         securityContext:
           runAsUser: 0

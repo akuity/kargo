@@ -15,6 +15,11 @@ jobs:
       packages: write # Used to push images to `ghcr.io`
       id-token: write # Needed to create an OIDC token for keyless signing
     runs-on: ubuntu-latest
+    services:
+      registry:
+        image: registry:2
+        ports:
+        - 5000:5000
     outputs:
       image-digest: ${{ steps.image.outputs.digest }}
       kargo-repo: ${{ steps.repo.outputs.repo }}
@@ -67,12 +72,18 @@ jobs:
         tags: |
           type=semver,pattern={{raw}}
           type=raw,value=${{ steps.unstable-version.outputs.unstable-version }},enable=${{ github.event_name != 'release'}}
-    - name: Build and push
+    - name: Build base image
+      run: |
+        BASE_IMAGE=localhost:5000/kargo-base make build-base-image
+        docker push localhost:5000/kargo-base:latest-arm64
+        docker push localhost:5000/kargo-base:latest-amd64
+    - name: Build and push final image
       id: image
       uses: docker/build-push-action@v6
       with:
         platforms: linux/amd64,linux/arm64
         build-args: |
+          BASE_IMAGE=localhost:5000/kargo-base
           VERSION=${{ github.ref_name }}
           GIT_COMMIT=${{ github.sha }}
           GIT_TREE_STATE=clean

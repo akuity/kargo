@@ -2,6 +2,7 @@
 .pnpm-store/
 .vscode/
 bin/
+build/
 charts/kargo/*.tgz
 coverage.txt
 hack/include/
