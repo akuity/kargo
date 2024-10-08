@@ -19,10 +19,9 @@ import { Freight, Promotion } from '@ui/gen/v1alpha1/generated_pb';
 
 import { PromotionStatusIcon } from '../common/promotion-status/promotion-status-icon';
 
-import { PrLinks } from './pr-links';
 import { PromotionDetailsModal } from './promotion-details-modal';
 
-export const Promotions = ({ repoUrls }: { repoUrls?: string[] }) => {
+export const Promotions = () => {
   const client = useQueryClient();
 
   const { name: projectName, stageName } = useParams();
@@ -149,11 +148,6 @@ export const Promotions = ({ repoUrls }: { repoUrls?: string[] }) => {
             {promotion.spec?.freight?.substring(0, 7)}
           </Link>
         </Tooltip>
-      )
-    },
-    {
-      render: (_, promotion) => (
-        <PrLinks repoUrls={repoUrls} metadata={promotion.status?.metadata} />
       )
     }
   ];
