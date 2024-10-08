@@ -15,7 +15,7 @@ VERSION_PACKAGE := github.com/akuity/kargo/internal/version
 CONTAINER_RUNTIME ?= docker
 
 IMAGE_REPO 			?= kargo
-LOCAL_REG_PORT  ?= 5000
+LOCAL_REG_PORT			?= 5000
 BASE_IMAGE 			?= localhost:$(LOCAL_REG_PORT)/$(IMAGE_REPO)-base
 IMAGE_TAG 			?= dev
 IMAGE_PUSH 			?= false
