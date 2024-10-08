@@ -94,7 +94,7 @@ spec:
       {{- if or .Values.controller.cabundle.configMapName .Values.controller.cabundle.secretName }}
       initContainers:
       - name: parse-cabundle
-        image: alpine:latest
+        image: alpine/curl:latest
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         securityContext:
           runAsUser: 0
@@ -103,8 +103,6 @@ spec:
         - "-c"
         args:
         - |
-          apk update
-          apk add ca-certificates
           for file in /tmp/source/*; do
             base_filename=$(basename "$file" .crt)
             awk 'BEGIN {c=0;} /BEGIN CERT/{c++} { print > "/usr/local/share/ca-certificates/" base_filename "." c ".crt"}' base_filename="$base_filename" < $file

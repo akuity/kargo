@@ -77,9 +77,9 @@ RUN GRPC_HEALTH_PROBE_VERSION=v0.4.15 && \
 # - supports development
 # - not used for official image builds
 ####################################################################################################
-FROM alpine:3.20.3 AS back-end-dev
+FROM alpine:latest AS back-end-dev
 
-RUN apk update && apk add git gpg gpg-agent openssh-client
+RUN apk update && apk add ca-certificates git gpg gpg-agent openssh-client
 
 COPY bin/credential-helper /usr/local/bin/credential-helper
 COPY bin/controlplane/kargo /usr/local/bin/kargo
