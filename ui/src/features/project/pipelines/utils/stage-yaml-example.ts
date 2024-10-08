@@ -11,14 +11,15 @@ spec:
         name: kargo-demo
       sources:
         direct: true
-  promotionMechanisms:
-    gitRepoUpdates:
-    - repoURL: https://github.com/akuity/kargo-demo.git
-      writeBranch: main
-      kustomize:
-        images:
-        - image: public.ecr.aws/nginx/nginx
-          path: stages/prod
-    argoCDAppUpdates:
-    - appName: kargo-demo-prod
-      appNamespace: argocd`;
+  promotionTemplate:
+    spec:
+      steps:
+      - uses: git-clone
+        config:
+          repoURL: https://github.com/akuity/kargo-advanced
+          checkout:
+          - branch: main
+            path: ./src
+          - branch: stage/uat
+            create: true
+            path: ./out`;

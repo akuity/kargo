@@ -27,7 +27,6 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller"
 	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
-	"github.com/akuity/kargo/internal/controller/promotion"
 	"github.com/akuity/kargo/internal/controller/runtime"
 	"github.com/akuity/kargo/internal/directives"
 	"github.com/akuity/kargo/internal/indexer"
@@ -60,7 +59,6 @@ func ReconcilerConfigFromEnv() ReconcilerConfig {
 type reconciler struct {
 	kargoClient      client.Client
 	directivesEngine directives.Engine
-	promoMechanisms  promotion.Mechanism
 
 	cfg ReconcilerConfig
 
@@ -92,7 +90,6 @@ func SetupReconcilerWithManager(
 	kargoMgr manager.Manager,
 	argocdMgr manager.Manager,
 	directivesEngine directives.Engine,
-	promotionMechanisms promotion.Mechanism,
 	cfg ReconcilerConfig,
 ) error {
 	// Index running Promotions by Argo CD Applications
@@ -114,7 +111,6 @@ func SetupReconcilerWithManager(
 		kargoMgr.GetClient(),
 		libEvent.NewRecorder(ctx, kargoMgr.GetScheme(), kargoMgr.GetClient(), cfg.Name()),
 		directivesEngine,
-		promotionMechanisms,
 		cfg,
 	)
 
@@ -179,7 +175,6 @@ func newReconciler(
 	kargoClient client.Client,
 	recorder record.EventRecorder,
 	directivesEngine directives.Engine,
-	promoMechanisms promotion.Mechanism,
 	cfg ReconcilerConfig,
 ) *reconciler {
 	pqs := promoQueues{
@@ -192,7 +187,6 @@ func newReconciler(
 		recorder:         recorder,
 		cfg:              cfg,
 		pqs:              &pqs,
-		promoMechanisms:  promoMechanisms,
 	}
 	r.getStageFn = kargoapi.GetStage
 	r.promoteFn = r.promote
@@ -499,8 +493,8 @@ func (r *reconciler) promote(
 		Origin:  targetFreight.Origin,
 	}
 
-	// Make a deep copy of the Promotion to pass to the promotion mechanisms,
-	// which may modify its status.
+	// Make a deep copy of the Promotion to pass to the promotion steps execution
+	// engine, which may modify its status.
 	workingPromo := promo.DeepCopy()
 	workingPromo.Status.Freight = &targetFreightRef
 	workingPromo.Status.FreightCollection = r.buildTargetFreightCollection(
@@ -509,67 +503,59 @@ func (r *reconciler) promote(
 		stage,
 	)
 
-	if workingPromo.Spec.Steps == nil {
-		// If the Promotion has no steps, assume we are dealing with "legacy"
-		// Promotion mechanisms.
-		if err := r.promoMechanisms.Promote(ctx, stage, workingPromo); err != nil {
-			return nil, err
+	// If the Promotion has steps, execute them in sequence.
+	var steps []directives.PromotionStep
+	for _, step := range workingPromo.Spec.Steps {
+		steps = append(steps, directives.PromotionStep{
+			Kind:   step.Uses,
+			Alias:  step.As,
+			Config: step.GetConfig(),
+		})
+	}
+
+	promoCtx := directives.PromotionContext{
+		WorkDir:         filepath.Join(os.TempDir(), "promotion-"+string(workingPromo.UID)),
+		Project:         stageNamespace,
+		Stage:           stageName,
+		FreightRequests: stage.Spec.RequestedFreight,
+		Freight:         *workingPromo.Status.FreightCollection.DeepCopy(),
+		StartFromStep:   promo.Status.CurrentStep,
+		State:           directives.State(workingPromo.Status.GetState()),
+	}
+	if err := os.Mkdir(promoCtx.WorkDir, 0o700); err == nil {
+		// If we're working with a fresh directory, we should start the promotion
+		// process again from the beginning.
+		promoCtx.StartFromStep = 0
+		promoCtx.State = nil
+	} else if !os.IsExist(err) {
+		return nil, fmt.Errorf("error creating working directory: %w", err)
+	}
+	defer func() {
+		if workingPromo.Status.Phase.IsTerminal() {
+			if err := os.RemoveAll(promoCtx.WorkDir); err != nil {
+				logger.Error(err, "could not remove working directory")
+			}
 		}
-	} else {
-		// If the Promotion has steps, execute them in sequence.
-		var steps []directives.PromotionStep
-		for _, step := range workingPromo.Spec.Steps {
-			steps = append(steps, directives.PromotionStep{
-				Kind:   step.Uses,
-				Alias:  step.As,
-				Config: step.GetConfig(),
+	}()
+
+	res, err := r.directivesEngine.Promote(ctx, promoCtx, steps)
+	workingPromo.Status.Phase = res.Status
+	workingPromo.Status.Message = res.Message
+	workingPromo.Status.CurrentStep = res.CurrentStep
+	workingPromo.Status.State = &apiextensionsv1.JSON{Raw: res.State.ToJSON()}
+	if res.Status == kargoapi.PromotionPhaseSucceeded {
+		var healthChecks []kargoapi.HealthCheckStep
+		for _, step := range res.HealthCheckSteps {
+			healthChecks = append(healthChecks, kargoapi.HealthCheckStep{
+				Uses:   step.Kind,
+				Config: &apiextensionsv1.JSON{Raw: step.Config.ToJSON()},
 			})
 		}
-
-		promoCtx := directives.PromotionContext{
-			WorkDir:         filepath.Join(os.TempDir(), "promotion-"+string(workingPromo.UID)),
-			Project:         stageNamespace,
-			Stage:           stageName,
-			FreightRequests: stage.Spec.RequestedFreight,
-			Freight:         *workingPromo.Status.FreightCollection.DeepCopy(),
-			StartFromStep:   promo.Status.CurrentStep,
-			State:           directives.State(workingPromo.Status.GetState()),
-		}
-		if err := os.Mkdir(promoCtx.WorkDir, 0o700); err == nil {
-			// If we're working with a fresh directory, we should start the promotion
-			// process again from the beginning.
-			promoCtx.StartFromStep = 0
-			promoCtx.State = nil
-		} else if !os.IsExist(err) {
-			return nil, fmt.Errorf("error creating working directory: %w", err)
-		}
-		defer func() {
-			if workingPromo.Status.Phase.IsTerminal() {
-				if err := os.RemoveAll(promoCtx.WorkDir); err != nil {
-					logger.Error(err, "could not remove working directory")
-				}
-			}
-		}()
-
-		res, err := r.directivesEngine.Promote(ctx, promoCtx, steps)
-		workingPromo.Status.Phase = res.Status
-		workingPromo.Status.Message = res.Message
-		workingPromo.Status.CurrentStep = res.CurrentStep
-		workingPromo.Status.State = &apiextensionsv1.JSON{Raw: res.State.ToJSON()}
-		if res.Status == kargoapi.PromotionPhaseSucceeded {
-			var healthChecks []kargoapi.HealthCheckStep
-			for _, step := range res.HealthCheckSteps {
-				healthChecks = append(healthChecks, kargoapi.HealthCheckStep{
-					Uses:   step.Kind,
-					Config: &apiextensionsv1.JSON{Raw: step.Config.ToJSON()},
-				})
-			}
-			workingPromo.Status.HealthChecks = healthChecks
-		}
-		if err != nil {
-			workingPromo.Status.Phase = kargoapi.PromotionPhaseErrored
-			return &workingPromo.Status, err
-		}
+		workingPromo.Status.HealthChecks = healthChecks
+	}
+	if err != nil {
+		workingPromo.Status.Phase = kargoapi.PromotionPhaseErrored
+		return &workingPromo.Status, err
 	}
 
 	logger.Debug("promotion", "phase", workingPromo.Status.Phase)

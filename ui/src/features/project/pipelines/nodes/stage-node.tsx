@@ -17,10 +17,12 @@ import { generatePath, useNavigate } from 'react-router-dom';
 import { paths } from '@ui/config/paths';
 import { HealthStatusIcon } from '@ui/features/common/health-status/health-status-icon';
 import { PromotionStatusIcon } from '@ui/features/common/promotion-status/promotion-status-icon';
+import { willStagePromotionOpenPR } from '@ui/features/promotion-directives/utils';
 import { Freight, Stage } from '@ui/gen/v1alpha1/generated_pb';
 import { useLocalStorage } from '@ui/utils/use-local-storage';
 
 import { FreightTimelineAction, NodeDimensions } from '../types';
+import { isStageControlFlow } from '../utils/util';
 
 import { FreightIndicators } from './freight-indicators';
 import { FreightLabel } from './freight-label';
@@ -96,10 +98,8 @@ export const StageNode = ({
         <h3>
           <div className='truncate pb-1 mr-auto'>{stage.metadata?.name}</div>
           <div className='flex gap-1'>
-            {(stage?.spec?.promotionMechanisms?.gitRepoUpdates || []).some(
-              (g) => g.pullRequest
-            ) && (
-              <Tooltip title='PR Promotion Enabled'>
+            {willStagePromotionOpenPR(stage) && (
+              <Tooltip title='contains git-open-pr'>
                 <FontAwesomeIcon icon={faCodePullRequest} />
               </Tooltip>
             )}
@@ -161,9 +161,7 @@ export const StageNode = ({
                     }
                   />
                 }
-                disabled={
-                  stage?.spec?.promotionMechanisms === undefined || !stage.spec?.promotionTemplate
-                }
+                disabled={isStageControlFlow(stage)}
                 className='uppercase'
               >
                 {action === FreightTimelineAction.ManualApproval ? 'Approve' : 'Promote'}
@@ -185,8 +183,7 @@ export const StageNode = ({
       {action !== FreightTimelineAction.ManualApproval &&
         action !== FreightTimelineAction.PromoteFreight && (
           <>
-            {(stage.spec?.promotionMechanisms ||
-              !!stage.spec?.promotionTemplate?.spec?.steps?.length) && (
+            {!isStageControlFlow(stage) && (
               <Nodule
                 begin={true}
                 nodeHeight={height}

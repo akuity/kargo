@@ -28,6 +28,7 @@ import { Stage } from '@ui/gen/v1alpha1/generated_pb';
 import { useConfirmModal } from '../common/confirm-modal/use-confirm-modal';
 import { useModal } from '../common/modal/use-modal';
 import { currentFreightHasVerification } from '../common/utils';
+import { getPromotionArgoCDApps } from '../promotion-directives/utils';
 
 import { EditStageModal } from './edit-stage-modal';
 
@@ -87,13 +88,15 @@ export const StageActions = ({
     const shardKey = stage?.metadata?.labels['kargo.akuity.io/shard'] || '';
     const shard = config?.argocdShards?.[shardKey];
 
-    if (!shard || !stage.spec?.promotionMechanisms?.argoCDAppUpdates.length) {
+    const argocdApps = getPromotionArgoCDApps(stage);
+
+    if (!shard || !argocdApps.length) {
       return [];
     }
 
-    return stage.spec?.promotionMechanisms?.argoCDAppUpdates.map((argoCD) => ({
-      label: argoCD.appName,
-      url: `${shard.url}/applications/${shard.namespace}/${argoCD.appName}`
+    return argocdApps.map((appName) => ({
+      label: appName,
+      url: `${shard.url}/applications/${shard.namespace}/${appName}`
     }));
   }, [config, stage]);
 

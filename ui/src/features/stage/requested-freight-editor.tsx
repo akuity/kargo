@@ -9,7 +9,7 @@ import { FreightOrigin, FreightRequest, FreightSources } from '@ui/gen/v1alpha1/
 
 import { FieldContainer } from '../common/form/field-container';
 
-import { requestedFreightSchema } from './git-update-editor/schemas';
+import { requestedFreightSchema } from './schemas';
 
 export const RequestedFreightEditor = ({
   onSubmit,

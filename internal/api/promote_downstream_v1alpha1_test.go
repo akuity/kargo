@@ -445,7 +445,11 @@ func TestPromoteDownstream(t *testing.T) {
 					return []kargoapi.Stage{
 						{
 							Spec: kargoapi.StageSpec{
-								PromotionMechanisms: &kargoapi.PromotionMechanisms{},
+								PromotionTemplate: &kargoapi.PromotionTemplate{
+									Spec: kargoapi.PromotionTemplateSpec{
+										Steps: []kargoapi.PromotionStep{{}},
+									},
+								},
 							},
 						},
 					}, nil
@@ -514,7 +518,11 @@ func TestPromoteDownstream(t *testing.T) {
 					return []kargoapi.Stage{
 						{
 							Spec: kargoapi.StageSpec{
-								PromotionMechanisms: &kargoapi.PromotionMechanisms{},
+								PromotionTemplate: &kargoapi.PromotionTemplate{
+									Spec: kargoapi.PromotionTemplateSpec{
+										Steps: []kargoapi.PromotionStep{{}},
+									},
+								},
 							},
 						},
 					}, nil
