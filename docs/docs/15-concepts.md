@@ -52,10 +52,7 @@ Kargo seeks to progress from one stage to another.
 
 ### What is a Warehouse?
 
-A **warehouse** is a _source_ of freight. It is where a collection of 'Freight'
-gets stored before the 'Freight' is deployed anywhere.
-
-A warehouse subscribes to one or more:
+A **warehouse** is a _source_ of freight. A warehouse subscribes to one or more:
 
 * Container image repositories
 
