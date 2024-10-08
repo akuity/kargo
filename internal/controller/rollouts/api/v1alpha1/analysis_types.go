@@ -25,6 +25,22 @@ type AnalysisTemplateList struct {
 	Items           []AnalysisTemplate `json:"items" protobuf:"bytes,2,rep,name=items"`
 }
 
+//+kubebuilder:object:root=true
+
+type ClusterAnalysisTemplate struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+	Spec              AnalysisTemplateSpec `json:"spec" protobuf:"bytes,2,opt,name=spec"`
+}
+
+//+kubebuilder:object:root=true
+
+type ClusterAnalysisTemplateList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata" protobuf:"bytes,1,opt,name=metadata"`
+	Items           []ClusterAnalysisTemplate `json:"items" protobuf:"bytes,2,rep,name=items"`
+}
+
 type AnalysisTemplateSpec struct {
 	Metrics              []Metric               `json:"metrics" protobuf:"bytes,1,rep,name=metrics"`
 	Args                 []Argument             `json:"args,omitempty" protobuf:"bytes,2,rep,name=args"`

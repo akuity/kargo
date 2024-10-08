@@ -722,6 +722,92 @@ export class CloudWatchMetricStatMetricDimension extends Message<CloudWatchMetri
 }
 
 /**
+ * @generated from message github.com.akuity.kargo.internal.controller.rollouts.api.v1alpha1.ClusterAnalysisTemplate
+ */
+export class ClusterAnalysisTemplate extends Message<ClusterAnalysisTemplate> {
+  /**
+   * @generated from field: optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
+   */
+  metadata?: ObjectMeta;
+
+  /**
+   * @generated from field: optional github.com.akuity.kargo.internal.controller.rollouts.api.v1alpha1.AnalysisTemplateSpec spec = 2;
+   */
+  spec?: AnalysisTemplateSpec;
+
+  constructor(data?: PartialMessage<ClusterAnalysisTemplate>) {
+    super();
+    proto2.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto2 = proto2;
+  static readonly typeName = "github.com.akuity.kargo.internal.controller.rollouts.api.v1alpha1.ClusterAnalysisTemplate";
+  static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 1, name: "metadata", kind: "message", T: ObjectMeta, opt: true },
+    { no: 2, name: "spec", kind: "message", T: AnalysisTemplateSpec, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ClusterAnalysisTemplate {
+    return new ClusterAnalysisTemplate().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ClusterAnalysisTemplate {
+    return new ClusterAnalysisTemplate().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ClusterAnalysisTemplate {
+    return new ClusterAnalysisTemplate().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ClusterAnalysisTemplate | PlainMessage<ClusterAnalysisTemplate> | undefined, b: ClusterAnalysisTemplate | PlainMessage<ClusterAnalysisTemplate> | undefined): boolean {
+    return proto2.util.equals(ClusterAnalysisTemplate, a, b);
+  }
+}
+
+/**
+ * @generated from message github.com.akuity.kargo.internal.controller.rollouts.api.v1alpha1.ClusterAnalysisTemplateList
+ */
+export class ClusterAnalysisTemplateList extends Message<ClusterAnalysisTemplateList> {
+  /**
+   * @generated from field: optional k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
+   */
+  metadata?: ListMeta;
+
+  /**
+   * @generated from field: repeated github.com.akuity.kargo.internal.controller.rollouts.api.v1alpha1.ClusterAnalysisTemplate items = 2;
+   */
+  items: ClusterAnalysisTemplate[] = [];
+
+  constructor(data?: PartialMessage<ClusterAnalysisTemplateList>) {
+    super();
+    proto2.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto2 = proto2;
+  static readonly typeName = "github.com.akuity.kargo.internal.controller.rollouts.api.v1alpha1.ClusterAnalysisTemplateList";
+  static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 1, name: "metadata", kind: "message", T: ListMeta, opt: true },
+    { no: 2, name: "items", kind: "message", T: ClusterAnalysisTemplate, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ClusterAnalysisTemplateList {
+    return new ClusterAnalysisTemplateList().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ClusterAnalysisTemplateList {
+    return new ClusterAnalysisTemplateList().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ClusterAnalysisTemplateList {
+    return new ClusterAnalysisTemplateList().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ClusterAnalysisTemplateList | PlainMessage<ClusterAnalysisTemplateList> | undefined, b: ClusterAnalysisTemplateList | PlainMessage<ClusterAnalysisTemplateList> | undefined): boolean {
+    return proto2.util.equals(ClusterAnalysisTemplateList, a, b);
+  }
+}
+
+/**
  * @generated from message github.com.akuity.kargo.internal.controller.rollouts.api.v1alpha1.DatadogMetric
  */
 export class DatadogMetric extends Message<DatadogMetric> {

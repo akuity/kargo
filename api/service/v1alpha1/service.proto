@@ -89,6 +89,9 @@ service KargoService {
   rpc ListAnalysisTemplates(ListAnalysisTemplatesRequest) returns (ListAnalysisTemplatesResponse);
   rpc GetAnalysisTemplate(GetAnalysisTemplateRequest) returns (GetAnalysisTemplateResponse);
   rpc DeleteAnalysisTemplate(DeleteAnalysisTemplateRequest) returns (DeleteAnalysisTemplateResponse);
+  rpc ListClusterAnalysisTemplates(ListClusterAnalysisTemplatesRequest) returns (ListClusterAnalysisTemplatesResponse);
+  rpc GetClusterAnalysisTemplate(GetClusterAnalysisTemplateRequest) returns (GetClusterAnalysisTemplateResponse);
+  rpc DeleteClusterAnalysisTemplate(DeleteClusterAnalysisTemplateRequest) returns (DeleteClusterAnalysisTemplateResponse);
   rpc GetAnalysisRun(GetAnalysisRunRequest) returns (GetAnalysisRunResponse);
 
   rpc ListAnalysisTemplateConfigMaps(ListAnalysisTemplateConfigMapsRequest) returns (ListAnalysisTemplateConfigMapsResponse);
@@ -603,6 +606,24 @@ message GetAnalysisTemplateResponse {
   }
 }
 
+message ListClusterAnalysisTemplatesRequest {}
+
+message ListClusterAnalysisTemplatesResponse {
+  repeated github.com.akuity.kargo.internal.controller.rollouts.api.v1alpha1.ClusterAnalysisTemplate cluster_analysis_templates = 1 [json_name = "clusteranalysisTemplates"];
+}
+
+message GetClusterAnalysisTemplateRequest {
+  string name = 2;
+  RawFormat format = 3;
+}
+
+message GetClusterAnalysisTemplateResponse {
+  oneof result {
+    github.com.akuity.kargo.internal.controller.rollouts.api.v1alpha1.ClusterAnalysisTemplate cluster_analysis_template = 1 [json_name = "clusterAnalysisTemplate"];
+    bytes raw = 2;
+  }
+}
+
 message GetAnalysisRunRequest {
   string namespace = 1;
   string name = 2;
@@ -622,6 +643,14 @@ message DeleteAnalysisTemplateRequest {
 }
 
 message DeleteAnalysisTemplateResponse {
+  /* explicitly empty */
+}
+
+message DeleteClusterAnalysisTemplateRequest {
+  string name = 2;
+}
+
+message DeleteClusterAnalysisTemplateResponse {
   /* explicitly empty */
 }
 

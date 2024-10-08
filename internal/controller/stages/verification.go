@@ -114,41 +114,71 @@ func (r *reconciler) startVerification(
 
 	ver := stage.Spec.Verification
 
-	templates := make([]*rollouts.AnalysisTemplate, len(ver.AnalysisTemplates))
-	for i, templateRef := range ver.AnalysisTemplates {
-		template, err := r.getAnalysisTemplateFn(
-			ctx,
-			r.kargoClient,
-			types.NamespacedName{
-				Namespace: stage.Namespace,
-				Name:      templateRef.Name,
-			},
-		)
-		if err != nil {
-			newInfo.FinishTime = ptr.To(metav1.NewTime(r.nowFn()))
-			newInfo.Phase = kargoapi.VerificationPhaseError
-			newInfo.Message = fmt.Errorf(
-				"error getting AnalysisTemplate %q in namespace %q: %w",
+	templates := make([]*rollouts.AnalysisTemplate, 0)
+	clusterTemplates := make([]*rollouts.ClusterAnalysisTemplate, 0)
+	for _, templateRef := range ver.AnalysisTemplates {
+		if templateRef.ClusterScope {
+			template, err := r.getClusterAnalysisTemplateFn(
+				ctx,
+				r.kargoClient,
 				templateRef.Name,
-				stage.Namespace,
-				err,
-			).Error()
-			return newInfo, err
+			)
+			if err != nil {
+				newInfo.FinishTime = ptr.To(metav1.NewTime(r.nowFn()))
+				newInfo.Phase = kargoapi.VerificationPhaseError
+				newInfo.Message = fmt.Errorf(
+					"error getting ClusterAnalysisTemplate %q in namespace %q: %w",
+					templateRef.Name,
+					stage.Namespace,
+					err,
+				).Error()
+				return newInfo, err
+			}
+			if template == nil {
+				newInfo.FinishTime = ptr.To(metav1.NewTime(r.nowFn()))
+				newInfo.Phase = kargoapi.VerificationPhaseError
+				newInfo.Message = fmt.Errorf(
+					"ClusterAnalysisTemplate %q not found",
+					templateRef.Name,
+				).Error()
+				return newInfo, nil
+			}
+			clusterTemplates = append(clusterTemplates, template)
+		} else {
+			template, err := r.getAnalysisTemplateFn(
+				ctx,
+				r.kargoClient,
+				types.NamespacedName{
+					Namespace: stage.Namespace,
+					Name:      templateRef.Name,
+				},
+			)
+			if err != nil {
+				newInfo.FinishTime = ptr.To(metav1.NewTime(r.nowFn()))
+				newInfo.Phase = kargoapi.VerificationPhaseError
+				newInfo.Message = fmt.Errorf(
+					"error getting AnalysisTemplate %q in namespace %q: %w",
+					templateRef.Name,
+					stage.Namespace,
+					err,
+				).Error()
+				return newInfo, err
+			}
+			if template == nil {
+				newInfo.FinishTime = ptr.To(metav1.NewTime(r.nowFn()))
+				newInfo.Phase = kargoapi.VerificationPhaseError
+				newInfo.Message = fmt.Errorf(
+					"AnalysisTemplate %q in namespace %q not found",
+					templateRef.Name,
+					stage.Namespace,
+				).Error()
+				return newInfo, nil
+			}
+			templates = append(templates, template)
 		}
-		if template == nil {
-			newInfo.FinishTime = ptr.To(metav1.NewTime(r.nowFn()))
-			newInfo.Phase = kargoapi.VerificationPhaseError
-			newInfo.Message = fmt.Errorf(
-				"AnalysisTemplate %q in namespace %q not found",
-				templateRef.Name,
-				stage.Namespace,
-			).Error()
-			return newInfo, nil
-		}
-		templates[i] = template
 	}
 
-	run, err := r.buildAnalysisRunFn(ctx, stage, curVer, freightCol, templates)
+	run, err := r.buildAnalysisRunFn(ctx, stage, curVer, freightCol, templates, clusterTemplates)
 	if err != nil {
 		newInfo.FinishTime = ptr.To(metav1.NewTime(r.nowFn()))
 		newInfo.Phase = kargoapi.VerificationPhaseError
@@ -329,6 +359,7 @@ func (r *reconciler) buildAnalysisRun(
 	verificationInfo *kargoapi.VerificationInfo,
 	freightCol *kargoapi.FreightCollection,
 	templates []*rollouts.AnalysisTemplate,
+	clusterTemplates []*rollouts.ClusterAnalysisTemplate,
 ) (*rollouts.AnalysisRun, error) {
 	// maximum length of the stage name used in the promotion name prefix before it exceeds
 	// kubernetes resource name limit of 253
@@ -386,8 +417,8 @@ func (r *reconciler) buildAnalysisRun(
 		lbls["argo-rollouts.argoproj.io/controller-instance-id"] = r.cfg.RolloutsControllerInstanceID
 	}
 
-	// Flatten templates into a single template
-	template, err := flattenTemplates(templates)
+	// Flatten templates and clusterTemplates into a single template
+	template, err := flattenTemplates(templates, clusterTemplates)
 	if err != nil {
 		return nil, fmt.Errorf("error flattening templates: %w", err)
 	}
@@ -464,21 +495,22 @@ func (r *reconciler) buildAnalysisRun(
 
 func flattenTemplates(
 	templates []*rollouts.AnalysisTemplate,
+	clusterTemplates []*rollouts.ClusterAnalysisTemplate,
 ) (*rollouts.AnalysisTemplate, error) {
-	metrics, err := flattenMetrics(templates)
+	metrics, err := flattenMetrics(templates, clusterTemplates)
 	if err != nil {
 		return nil, err
 	}
-	dryRunMetrics, err := flattenDryRunMetrics(templates)
+	dryRunMetrics, err := flattenDryRunMetrics(templates, clusterTemplates)
 	if err != nil {
 		return nil, err
 	}
 	measurementRetentionMetrics, err :=
-		flattenMeasurementRetentionMetrics(templates)
+		flattenMeasurementRetentionMetrics(templates, clusterTemplates)
 	if err != nil {
 		return nil, err
 	}
-	args, err := flattenArgs(templates)
+	args, err := flattenArgs(templates, clusterTemplates)
 	if err != nil {
 		return nil, err
 	}
@@ -494,10 +526,14 @@ func flattenTemplates(
 
 func flattenMetrics(
 	templates []*rollouts.AnalysisTemplate,
+	clusterTemplates []*rollouts.ClusterAnalysisTemplate,
 ) ([]rollouts.Metric, error) {
 	var combinedMetrics []rollouts.Metric
 	for _, template := range templates {
 		combinedMetrics = append(combinedMetrics, template.Spec.Metrics...)
+	}
+	for _, clusterTemplate := range clusterTemplates {
+		combinedMetrics = append(combinedMetrics, clusterTemplate.Spec.Metrics...)
 	}
 	metricMap := map[string]bool{}
 	for _, metric := range combinedMetrics {
@@ -511,10 +547,14 @@ func flattenMetrics(
 
 func flattenDryRunMetrics(
 	templates []*rollouts.AnalysisTemplate,
+	clusterTemplates []*rollouts.ClusterAnalysisTemplate,
 ) ([]rollouts.DryRun, error) {
 	var combinedDryRunMetrics []rollouts.DryRun
 	for _, template := range templates {
 		combinedDryRunMetrics = append(combinedDryRunMetrics, template.Spec.DryRun...)
+	}
+	for _, clusterTemplate := range clusterTemplates {
+		combinedDryRunMetrics = append(combinedDryRunMetrics, clusterTemplate.Spec.DryRun...)
 	}
 	err := validateDryRunMetrics(combinedDryRunMetrics)
 	if err != nil {
@@ -525,11 +565,16 @@ func flattenDryRunMetrics(
 
 func flattenMeasurementRetentionMetrics(
 	templates []*rollouts.AnalysisTemplate,
+	clusterTemplates []*rollouts.ClusterAnalysisTemplate,
 ) ([]rollouts.MeasurementRetention, error) {
 	var combinedMeasurementRetentionMetrics []rollouts.MeasurementRetention
 	for _, template := range templates {
 		combinedMeasurementRetentionMetrics =
 			append(combinedMeasurementRetentionMetrics, template.Spec.MeasurementRetention...)
+	}
+	for _, clusterTemplate := range clusterTemplates {
+		combinedMeasurementRetentionMetrics =
+			append(combinedMeasurementRetentionMetrics, clusterTemplate.Spec.MeasurementRetention...)
 	}
 	err := validateMeasurementRetentionMetrics(combinedMeasurementRetentionMetrics)
 	if err != nil {
@@ -540,6 +585,7 @@ func flattenMeasurementRetentionMetrics(
 
 func flattenArgs(
 	templates []*rollouts.AnalysisTemplate,
+	clusterTemplates []*rollouts.ClusterAnalysisTemplate,
 ) ([]rollouts.Argument, error) {
 	var combinedArgs []rollouts.Argument
 	appendOrUpdate := func(newArg rollouts.Argument) error {
@@ -571,6 +617,13 @@ func flattenArgs(
 	}
 	for _, template := range templates {
 		for _, arg := range template.Spec.Args {
+			if err := appendOrUpdate(arg); err != nil {
+				return nil, err
+			}
+		}
+	}
+	for _, clusterTemplate := range clusterTemplates {
+		for _, arg := range clusterTemplate.Spec.Args {
 			if err := appendOrUpdate(arg); err != nil {
 				return nil, err
 			}

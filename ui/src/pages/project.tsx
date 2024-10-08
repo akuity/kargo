@@ -16,7 +16,7 @@ import { paths } from '@ui/config/paths';
 import { LoadingState } from '@ui/features/common';
 import { Description } from '@ui/features/common/description';
 import { SmallLabel } from '@ui/features/common/small-label';
-import { AnalysisTemplatesList } from '@ui/features/project/analysis-templates/analysis-templates-list';
+import { ScopedAnalysisTemplateList } from '@ui/features/project/analysis-templates/analysis-templates-list';
 import { CredentialsList } from '@ui/features/project/credentials/credentials-list';
 import { Events } from '@ui/features/project/events/events';
 import { Pipelines } from '@ui/features/project/pipelines/pipelines';
@@ -107,7 +107,7 @@ export const Project = ({
           <Pipelines project={data?.result?.value as _Project} />
         );
       case 'analysisTemplates':
-        return <AnalysisTemplatesList />;
+        return <ScopedAnalysisTemplateList />;
       case 'events':
         return <Events />;
       case 'roles':
