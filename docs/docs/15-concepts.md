@@ -37,10 +37,9 @@ more "prod" stages at the end.
 
 ### What is Freight?
 
-**Freight** is Kargo's second most important concept. Frieight generally refers
-to a collection of artifacts that gets promoted together to the next stage.
-A single "piece of freight" is a set of references to one or more versioned
-artifacts, which may include one or more:
+**Freight** is Kargo's second most important concept. A single "piece of
+freight" is a set of references to one or more versioned artifacts, which may
+include one or more:
 
 * Container images (from image repositories)
 
