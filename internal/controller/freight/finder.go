@@ -53,7 +53,7 @@ func FindCommit(
 					if desiredOrigin != nil {
 						return nil, fmt.Errorf(
 							"multiple requested Freight could potentially provide a "+
-								"commit from repo %s; please update promotion mechanisms to "+
+								"commit from repo %s; please update promotion steps to "+
 								"disambiguate",
 							repoURL,
 						)

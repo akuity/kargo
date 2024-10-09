@@ -121,14 +121,6 @@ type GitCommit struct {
 	// Tag denotes a tag in the repository that matched selection criteria and
 	// resolved to this commit.
 	Tag string `json:"tag,omitempty" protobuf:"bytes,4,opt,name=tag"`
-	// HealthCheckCommit is the ID of a specific commit. When specified,
-	// assessments of Stage health will use this value (instead of ID) when
-	// determining if applicable sources of Argo CD Application resources
-	// associated with the Stage are or are not synced to this commit. Note that
-	// there are cases (as in that of Kargo Render being utilized as a promotion
-	// mechanism) wherein the value of this field may differ from the commit ID
-	// found in the ID field.
-	HealthCheckCommit string `json:"healthCheckCommit,omitempty" protobuf:"bytes,5,opt,name=healthCheckCommit"`
 	// Message is the message associated with the commit. At present, this only
 	// contains the first line (subject) of the commit message.
 	Message string `json:"message,omitempty" protobuf:"bytes,6,opt,name=message"`
@@ -151,7 +143,6 @@ func (g *GitCommit) DeepEquals(other *GitCommit) bool {
 		g.ID == other.ID &&
 		g.Branch == other.Branch &&
 		g.Tag == other.Tag &&
-		g.HealthCheckCommit == other.HealthCheckCommit &&
 		g.Message == other.Message &&
 		g.Author == other.Author &&
 		g.Committer == other.Committer

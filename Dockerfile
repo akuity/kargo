@@ -1,3 +1,5 @@
+ARG BASE_IMAGE=kargo-base
+
 ####################################################################################################
 # ui-builder
 ####################################################################################################
@@ -18,7 +20,7 @@ RUN NODE_ENV='production' VERSION=${VERSION} pnpm run build
 ####################################################################################################
 # back-end-builder
 ####################################################################################################
-FROM --platform=$BUILDPLATFORM golang:1.23.1-bookworm AS back-end-builder
+FROM --platform=$BUILDPLATFORM golang:1.23.2-bookworm AS back-end-builder
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -69,32 +71,15 @@ RUN GRPC_HEALTH_PROBE_VERSION=v0.4.15 && \
     chmod +x /tools/grpc_health_probe
 
 ####################################################################################################
-# base
-# - install necessary packages
-####################################################################################################
-FROM ghcr.io/akuity/kargo-render:v0.1.0-rc.39 AS base
-
-USER root
-
-RUN apk update \
-    && apk add ca-certificates gpg gpg-agent
-
-COPY --from=tools /tools/ /usr/local/bin/
-
-USER 1000:0
-
-CMD ["/usr/local/bin/kargo"]
-
-####################################################################################################
 # back-end-dev
 # - no UI
 # - relies on go build that runs on host
 # - supports development
 # - not used for official image builds
 ####################################################################################################
-FROM base AS back-end-dev
+FROM alpine:latest AS back-end-dev
 
-USER root
+RUN apk update && apk add ca-certificates git gpg gpg-agent openssh-client
 
 COPY bin/credential-helper /usr/local/bin/credential-helper
 COPY bin/controlplane/kargo /usr/local/bin/kargo
@@ -129,14 +114,9 @@ CMD ["pnpm", "dev"]
 # - the official image we publish
 # - purposefully last so that it is the default target when building
 ####################################################################################################
-FROM base AS final
-
-USER root
+FROM ${BASE_IMAGE}:latest-${TARGETARCH} AS final
 
 COPY --from=back-end-builder /kargo/bin/ /usr/local/bin/
 COPY --from=tools /tools/ /usr/local/bin/
-
-RUN adduser -D -H -u 1000 kargo
-USER 1000:0
 
 CMD ["/usr/local/bin/kargo"]

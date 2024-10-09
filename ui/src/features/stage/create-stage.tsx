@@ -26,11 +26,11 @@ import { zodValidators } from '@ui/utils/validators';
 
 import { getStageYAMLExample } from '../project/pipelines/utils/stage-yaml-example';
 
-import { requestedFreightSchema } from './git-update-editor/schemas';
 import { PromotionStepsWizard } from './promotion-steps-wizard/promotion-steps-wizard';
 import { usePromotionWizardStepsState } from './promotion-steps-wizard/use-promotion-wizard-steps-state';
 import { RequestedFreight } from './requested-freight';
 import { RequestedFreightEditor } from './requested-freight-editor';
+import { requestedFreightSchema } from './schemas';
 import { ColorMapHex } from './utils';
 
 const formSchema = z.object({
@@ -40,7 +40,6 @@ const formSchema = z.object({
 const wizardSchema = z.object({
   name: zodValidators.requiredString,
   requestedFreight: z.array(requestedFreightSchema),
-  promotionMechanisms: z.string().optional(),
   color: z.string().optional(),
   // next step is to wizardify this
   promotionTemplateSteps: z.string().optional()
@@ -66,10 +65,7 @@ const stageFormToYAML = (
     },
     spec: {
       requestedFreight: data.requestedFreight,
-      ...(data.promotionMechanisms && {
-        promotionMechanisms: yaml.parse(data.promotionMechanisms)
-      }),
-      ...(promotionTemplateSteps && {
+      ...(data.promotionTemplateSteps && {
         promotionTemplate: { spec: { steps: yaml.parse(promotionTemplateSteps) } }
       })
     }
@@ -110,7 +106,6 @@ export const CreateStage = ({
     defaultValues: {
       name: '',
       requestedFreight: [],
-      promotionMechanisms: '',
       color: undefined,
       promotionTemplateSteps: ''
     },
@@ -151,7 +146,7 @@ export const CreateStage = ({
           Create Stage
         </Typography.Title>
         <Typography.Link
-          href='https://kargo.akuity.io/concepts/#stage-resources'
+          href='https://docs.kargo.io/concepts/#stage-resources'
           target='_blank'
           className='ml-3'
         >

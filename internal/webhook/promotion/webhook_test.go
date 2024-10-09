@@ -84,7 +84,7 @@ func TestDefault(t *testing.T) {
 			},
 		},
 		{
-			name: "stage without promotion mechanisms",
+			name: "stage without promotion steps",
 			webhook: &webhook{
 				admissionRequestFromContextFn: func(context.Context) (admission.Request, error) {
 					return admission.Request{}, nil
@@ -98,32 +98,7 @@ func TestDefault(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, _ *kargoapi.Promotion, err error) {
-				require.ErrorContains(t, err, "has no PromotionMechanisms")
-			},
-		},
-		{
-			name: "success with PromotionMechanisms",
-			webhook: &webhook{
-				admissionRequestFromContextFn: func(context.Context) (admission.Request, error) {
-					return admission.Request{}, nil
-				},
-				getStageFn: func(
-					context.Context,
-					client.Client,
-					types.NamespacedName,
-				) (*kargoapi.Stage, error) {
-					return &kargoapi.Stage{
-						Spec: kargoapi.StageSpec{
-							PromotionMechanisms: &kargoapi.PromotionMechanisms{},
-							Shard:               "fake-shard",
-						},
-					}, nil
-				},
-			},
-			assertions: func(t *testing.T, promo *kargoapi.Promotion, err error) {
-				require.NoError(t, err)
-				require.Equal(t, "fake-shard", promo.Labels[kargoapi.ShardLabelKey])
-				require.NotEmpty(t, promo.OwnerReferences)
+				require.ErrorContains(t, err, "defines no promotion steps")
 			},
 		},
 		{

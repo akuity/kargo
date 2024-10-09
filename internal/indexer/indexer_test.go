@@ -11,7 +11,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	rbacapi "github.com/akuity/kargo/api/rbac/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -408,95 +407,16 @@ func TestIndexRunningPromotionsByArgoCDApplications(t *testing.T) {
 			},
 			expected: nil,
 		},
-		{
-			name: "Related Promotion Stage does not have Argo CD Application mechanisms",
-			obj: &kargoapi.Promotion{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "fake-namespace",
-				},
-				Spec: kargoapi.PromotionSpec{
-					Stage: "fake-stage",
-				},
-				Status: kargoapi.PromotionStatus{
-					Phase: kargoapi.PromotionPhaseRunning,
-				},
-			},
-			stage: &kargoapi.Stage{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "fake-stage",
-					Namespace: "fake-namespace",
-				},
-			},
-		},
-		{
-			name: "Related Promotion Stage has Argo CD Application mechanisms",
-			obj: &kargoapi.Promotion{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "fake-namespace",
-				},
-				Spec: kargoapi.PromotionSpec{
-					Stage: "fake-stage",
-				},
-				Status: kargoapi.PromotionStatus{
-					Phase: kargoapi.PromotionPhaseRunning,
-				},
-			},
-			stage: &kargoapi.Stage{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "fake-stage",
-					Namespace: "fake-namespace",
-				},
-				Spec: kargoapi.StageSpec{
-					PromotionMechanisms: &kargoapi.PromotionMechanisms{
-						ArgoCDAppUpdates: []kargoapi.ArgoCDAppUpdate{
-							{
-								AppNamespace: "fake-app-namespace",
-								AppName:      "fake-app-name",
-							},
-							{
-								AppName: "fake-app-name-default-namespace",
-							},
-						},
-					},
-				},
-			},
-			expected: []string{
-				"fake-app-namespace:fake-app-name",
-				fmt.Sprintf("%s:%s", argocd.Namespace(), "fake-app-name-default-namespace"),
-			},
-		},
-		{
-			name: "Can not find related Promotion Stage",
-			obj: &kargoapi.Promotion{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "fake-namespace",
-				},
-				Spec: kargoapi.PromotionSpec{
-					Stage: "fake-stage",
-				},
-				Status: kargoapi.PromotionStatus{
-					Phase: kargoapi.PromotionPhaseRunning,
-				},
-			},
-			expected: nil,
-		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			scheme := runtime.NewScheme()
 			require.NoError(t, kargoapi.AddToScheme(scheme))
-
-			c := fake.NewClientBuilder().WithScheme(scheme)
-			if testCase.stage != nil {
-				c.WithObjects(testCase.stage)
-			}
-
 			require.Equal(
 				t,
 				testCase.expected,
 				indexRunningPromotionsByArgoCDApplications(
 					context.TODO(),
-					c.Build(),
 					testCase.shardName,
 				)(testCase.obj),
 			)

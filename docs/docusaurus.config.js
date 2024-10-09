@@ -9,7 +9,7 @@ const darkCodeTheme = themes.dracula;
 /** @type {import('@docusaurus/types').Config} */
 const config = {
   title: 'Kargo Docs',
-  url: 'https://kargo.akuity.io',
+  url: 'https://docs.kargo.io',
   baseUrl: '/',
   onBrokenLinks: 'throw',
   onBrokenMarkdownLinks: 'warn',

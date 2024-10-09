@@ -25,7 +25,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	libargocd "github.com/akuity/kargo/internal/argocd"
 	"github.com/akuity/kargo/internal/controller"
 	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
 	rollouts "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
@@ -89,10 +88,6 @@ type reconciler struct {
 		client.ObjectList,
 		...client.ListOption,
 	) error
-
-	// Health checks:
-
-	appHealth libargocd.ApplicationHealthEvaluator
 
 	// Freight verification:
 
@@ -282,10 +277,6 @@ func SetupReconcilerWithManager(
 		return fmt.Errorf("error creating shard requirement: %w", err)
 	}
 	shardSelector := labels.NewSelector().Add(*shardRequirement)
-	var argocdClient client.Client
-	if argocdMgr != nil {
-		argocdClient = argocdMgr.GetClient()
-	}
 
 	c, err := ctrl.NewControllerManagedBy(kargoMgr).
 		For(&kargoapi.Stage{}).
@@ -312,7 +303,6 @@ func SetupReconcilerWithManager(
 		Build(
 			newReconciler(
 				kargoMgr.GetClient(),
-				argocdClient,
 				directivesEngine,
 				libEvent.NewRecorder(ctx, kargoMgr.GetScheme(), kargoMgr.GetClient(), cfg.Name()),
 				cfg,
@@ -426,7 +416,6 @@ func SetupReconcilerWithManager(
 
 func newReconciler(
 	kargoClient client.Client,
-	argocdClient client.Client,
 	directivesEngine directives.Engine,
 	recorder record.EventRecorder,
 	cfg ReconcilerConfig,
@@ -437,10 +426,6 @@ func newReconciler(
 		directivesEngine: directivesEngine,
 		recorder:         recorder,
 		cfg:              cfg,
-		appHealth: libargocd.NewApplicationHealthEvaluator(
-			kargoClient,
-			argocdClient,
-		),
 		shardRequirement: shardRequirement,
 	}
 	// The following default behaviors are overridable for testing purposes:
@@ -581,10 +566,10 @@ func (r *reconciler) syncControlFlowStage(
 	status.ObservedGeneration = stage.Generation
 	status.Phase = kargoapi.StagePhaseNotApplicable
 
-	// A Stage without promotion mechanisms shouldn't have history, health, or
-	// promotions. Make sure this is empty to avoid confusion. A reason this
-	// could be non-empty to begin with is that the Stage USED TO have promotion
-	// mechanisms, but they were removed, thus becoming a control flow Stage.
+	// A Stage without promotion steps shouldn't have history, health, or
+	// promotions. Make sure this is empty to avoid confusion. A reason this could
+	// be non-empty to begin with is that the Stage USED TO have promotion steps,
+	// but they were removed, thus becoming a control flow Stage.
 	status.FreightHistory = nil
 	status.Health = nil
 	status.CurrentPromotion = nil
@@ -672,8 +657,7 @@ func (r *reconciler) syncNormalStage(
 			"Stage has no current Freight; no health checks or verification to perform",
 		)
 	} else {
-		switch {
-		case stage.Spec.PromotionTemplate != nil:
+		if stage.Spec.PromotionTemplate != nil {
 			healthChecks := stage.Status.LastPromotion.GetHealthChecks()
 			if len(healthChecks) > 0 {
 				var steps []directives.HealthCheckStep
@@ -693,18 +677,6 @@ func (r *reconciler) syncNormalStage(
 				logger.WithValues("health", status.Health.Status).Debug("Stage health assessed")
 			} else {
 				logger.Debug("Stage has no health checks to perform for last Promotion")
-			}
-		default:
-			// Always check the health of the Argo CD Applications associated with the
-			// Stage. This is regardless of the phase of the Stage, as the health of the
-			// Argo CD Applications is always relevant.
-			if status.Health = r.appHealth.EvaluateHealth(
-				ctx,
-				stage,
-			); status.Health != nil {
-				logger.WithValues("health", status.Health.Status).Debug("Stage health assessed")
-			} else {
-				logger.Debug("Stage health deemed not applicable")
 			}
 		}
 

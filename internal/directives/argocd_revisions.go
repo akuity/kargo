@@ -139,9 +139,6 @@ func (a *argocdUpdater) getDesiredRevisionForSource(
 		if commit == nil {
 			return "", nil
 		}
-		if commit.HealthCheckCommit != "" {
-			return commit.HealthCheckCommit, nil
-		}
 		return commit.ID, nil
 	}
 	// If we end up here, no desired revision was found.
