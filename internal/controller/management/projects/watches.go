@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/logging"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	kubeerr "k8s.io/apimachinery/pkg/api/errors"
@@ -14,6 +12,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/logging"
 )
 
 // ServiceAccountEventHandler handles events related to ServiceAccounts.
@@ -75,35 +76,7 @@ func (h *ServiceAccountEventHandler[T]) Update(
 			h.logger.Debug("Removed RB for ServiceAccount", "serviceAccount", newSA.Name)
 		}
 	} else if !hasControllerLabel(oldSA) && hasControllerLabel(newSA) {
-		project := &kargoapi.Project{}
-		if err := h.kargoClient.Get(
-			ctx,
-			types.NamespacedName{
-				Namespace: newSA.Namespace,
-				Name:      newSA.Namespace,
-			},
-			project,
-		); err != nil {
-			h.logger.Error(
-				err,
-				"Failed to find corresponding Project",
-				"project", project.Name,
-			)
-			return
-		}
-		wq.Add(
-			reconcile.Request{
-				NamespacedName: types.NamespacedName{
-					Namespace: project.Namespace,
-					Name:      project.Name,
-				},
-			},
-		)
-		h.logger.Debug(
-			"enqueued Project for reconciliation due to ServiceAccount creation",
-			"namespace", project.Namespace,
-			"project", project.Name,
-		)
+		h.enqueueProjectForReconciliation(ctx, newSA, wq)
 	}
 }
 
@@ -121,9 +94,7 @@ func (h *ServiceAccountEventHandler[T]) Delete(
 		return
 	}
 
-	// Check if the deleted ServiceAccount has the controller label
 	if hasControllerLabel(sa) {
-		// Call the handler function to remove the RoleBinding
 		err := h.removeControllerPermissions(ctx, sa)
 		if err != nil {
 			h.logger.Error(err, "Failed to remove RB for deleted ServiceAccount", "serviceAccount", sa.Name)
@@ -204,9 +175,8 @@ func (h *ServiceAccountEventHandler[T]) removeControllerPermissions(
 		if kubeerr.IsNotFound(err) {
 			h.logger.Debug("RoleBinding not found, nothing to remove", "roleBinding", roleBindingName)
 			return nil
-		} else {
-			return err
 		}
+		return err
 	}
 
 	if err := h.kargoClient.Delete(ctx, roleBinding); err != nil {
