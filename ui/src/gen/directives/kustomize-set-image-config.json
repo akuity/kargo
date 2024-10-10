@@ -1,0 +1,57 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "title": "KustomizeSetImageConfig",
+ "type": "object",
+ "additionalProperties": false,
+ "properties": {
+  "path": {
+   "type": "string",
+   "description": "Path to the directory containing the Kustomization file.",
+   "minLength": 1
+  },
+  "images": {
+   "type": "array",
+   "description": "Images is a list of container images to set or update in the Kustomization file.",
+   "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+     "image": {
+      "type": "string",
+      "description": "Image name of the repository from which to pick the version. This is the image name Kargo is subscribed to, and produces Freight for."
+     },
+     "fromOrigin": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+       "kind": {
+        "type": "string",
+        "description": "The kind of origin. Currently only 'Warehouse' is supported. Required.",
+        "enum": [
+         "Warehouse"
+        ]
+       },
+       "name": {
+        "type": "string",
+        "description": "The name of the origin. Required.",
+        "minLength": 1
+       }
+      }
+     },
+     "name": {
+      "type": "string",
+      "description": "Name of the image (as defined in the Kustomization file)."
+     },
+     "newName": {
+      "type": "string",
+      "description": "NewName for the image. This can be used to rename the container image name in the manifests."
+     },
+     "useDigest": {
+      "type": "boolean",
+      "description": "UseDigest specifies whether to use the digest of the image instead of the tag."
+     }
+    }
+   }
+  }
+ }
+}

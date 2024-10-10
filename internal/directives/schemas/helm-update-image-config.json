@@ -23,7 +23,7 @@
             "minLength": 1
           },
           "fromOrigin": {
-            "$ref": "./common.json#definitions/origin"
+            "$ref": "./common.json#/definitions/origin"
           },
           "key": {
             "type": "string",

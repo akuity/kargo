@@ -1,11 +1,12 @@
 import React from 'react';
 
 interface ErrorProps {
-  hasError: boolean;
   children: React.ReactNode;
+  errorRender?: React.ReactNode;
+  onError?: (err: string) => void;
 }
 export class ErrorBoundary extends React.Component<ErrorProps> {
-  state: { hasError: boolean };
+  state: { hasError: boolean; err?: string };
 
   constructor(props: ErrorProps) {
     super(props);
@@ -16,9 +17,13 @@ export class ErrorBoundary extends React.Component<ErrorProps> {
     return { hasError: true };
   }
 
+  componentDidCatch(error: Error) {
+    this.props.onError?.(error?.message);
+  }
+
   render() {
     if (this.state.hasError) {
-      return <p>Loading failed! Please reload.</p>;
+      return this.props.errorRender || <p>Loading failed! Please reload.</p>;
     }
 
     return this.props.children;
