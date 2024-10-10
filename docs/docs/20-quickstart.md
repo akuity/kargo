@@ -146,10 +146,14 @@ At the end of this process:
 * The Argo CD dashboard will be accessible at [localhost:31443](https://localhost:31443).
 
   The username and password are both `admin`.
+  
+  ![Argo-dashboard-screenshot](../static/img/argo-dashboard-1.png)
 
 * The Kargo dashboard will be accessible at [localhost:31444](https://localhost:31444).
 
   The admin password is `admin`.
+
+  ![Kargo-dashboard-screenshot](../static/img/kargo-dashboard-1.png)
 
 * You can safely ignore all cert errors for both of the above.
 
@@ -260,6 +264,8 @@ If you visit [your Argo CD dashboard](https://localhost:31443), you will notice
 all three Argo CD `Application`s have not yet synced because they're not
 configured to do so automatically, and in fact, the branches referenced by their
 `targetRevision` fields do not even exist yet.
+
+![Argo-dashboard-screenshot](../static/img/argo-dashboard-2.png)
 
 :::info
 Our three stages all existing in a single cluster is for the sake of expediency.
@@ -508,9 +514,9 @@ the previous section.
     EOF
     ```
     
-  :::info
-  Kargo uses [semver](https://github.com/masterminds/semver#checking-version-constraints) to handle semantic versioning constraints.
-  :::
+      :::info
+      Kargo uses [semver](https://github.com/masterminds/semver#checking-version-constraints) to handle semantic versioning constraints.
+      :::
 
 1. Use the CLI to view our `Warehouse` resource:
 
@@ -575,6 +581,18 @@ the previous section.
     export FREIGHT_ALIAS=$(kargo get freight --project kargo-demo --output jsonpath={.alias})
     ```
 
+   For a comprehensive overview of your `Project`, follow these steps to access and 
+   view the components on the [Kargo Dashboard](https://localhost:31444/):
+
+   1. Navigate to the Kargo Dashboard by clicking the link above or entering the URL directly in your browser.
+   1. In the left-hand menu, select the <Hlt>Projects</Hlt> section.
+   1. Choose your `Project`, <Hlt>kargo-demo</Hlt>, from the list of available `Project`s.
+   1. Once there, you will see a detailed visual representation of the `Project`. This includes:
+      1. The <Hlt>Warehouse</Hlt> and its status.
+      1. Various `Stage`s: <Hlt>test</Hlt>, <Hlt>uat</Hlt>, and <Hlt>prod</Hlt>.
+
+      ![Argo-dashboard-screenshot](../static/img/kargo-dashboard-projects.png)
+
 1. Now, let's _promote_ the `Freight` into the `test` `Stage`:
 
     ```shell
@@ -623,6 +641,16 @@ the previous section.
     state and we can further validate the success of this entire process by
     visiting the test instance of our site at
     [localhost:30081](http://localhost:30081).
+
+    To check the status of the `test` stage on the **Kargo Dashboard**:
+    
+    1. Navigate to the <Hlt>Projects</Hlt> section in the **left-hand menu**.
+    1. Select your `Project`, <Hlt>kargo-demo</Hlt>.
+    1. Within the `Project` overview, locate the <Hlt>test</Hlt> stage.
+    1. Look for the **_heart_ symbol**, which indicates a <Hlt>healthy</Hlt> state.
+    1. Ensure there is a **_tick mark_**, which signifies the <Hlt>successful promotion</Hlt> of the `test` stage.
+
+    ![Kargo-dashboard-screenshot](../static/img/kargo-dashboard-promotion.png)
 
     If we once again view the `status` of our `test` `Stage` in more detail, we
     will see that it now reflects its current `Freight`, and the history of all
