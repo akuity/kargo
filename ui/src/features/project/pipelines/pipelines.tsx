@@ -23,11 +23,11 @@ import { generatePath, useNavigate, useParams } from 'react-router-dom';
 import { paths } from '@ui/config/paths';
 import { ColorContext } from '@ui/context/colors';
 import { LoadingState } from '@ui/features/common';
-import { useModal } from '@ui/features/common/modal/use-modal';
 const FreightDetails = lazy(() => import('@ui/features/freight/freight-details'));
 const FreightTimeline = lazy(() => import('@ui/features/freight-timeline/freight-timeline'));
 const StageDetails = lazy(() => import('@ui/features/stage/stage-details'));
 const CreateStage = lazy(() => import('@ui/features/stage/create-stage'));
+const CreateWarehouse = lazy(() => import('@ui/features/stage/create-warehouse'));
 import { SuspenseSpin } from '@ui/features/common/suspense-spin';
 import { getCurrentFreight, mapToNames } from '@ui/features/common/utils';
 const FreightTimelineHeader = lazy(
@@ -35,6 +35,8 @@ const FreightTimelineHeader = lazy(
 );
 import { FreightTimelineWrapper } from '@ui/features/freight-timeline/freight-timeline-wrapper';
 import { clearColors } from '@ui/features/stage/utils';
+import { URLStates } from '@ui/features/utils/url-query-state/states';
+import { useURLQueryState } from '@ui/features/utils/url-query-state/use-url-query-state';
 import {
   approveFreight,
   listStages,
@@ -48,7 +50,6 @@ import { Freight, Project, Stage, Warehouse } from '@ui/gen/v1alpha1/generated_p
 import { useDocumentEvent } from '@ui/utils/document';
 import { useLocalStorage } from '@ui/utils/use-local-storage';
 
-import CreateWarehouseModal from './create-warehouse-modal';
 import { Images } from './images';
 import { RepoNode, RepoNodeDimensions } from './nodes/repo-node';
 import { Nodule, StageNode } from './nodes/stage-node';
@@ -69,6 +70,7 @@ export const Pipelines = ({
   project: Project;
   creatingStage?: boolean;
 }) => {
+  const [urlQuery, setURLQuery] = useURLQueryState<URLStates['project']>();
   const { name, stageName, freightName, warehouseName } = useParams();
   const { data, isLoading } = useQuery(listStages, { project: name });
   const { data: imageData, isLoading: isLoadingImages } = useQuery(listImages, { project: name });
@@ -82,10 +84,6 @@ export const Pipelines = ({
   const { data: warehouseData } = useQuery(listWarehouses, {
     project: name
   });
-
-  const { show: showCreateWarehouse } = useModal(
-    name ? (p) => <CreateWarehouseModal {...p} project={name} /> : undefined
-  );
 
   const state = usePipelineState();
 
@@ -388,7 +386,8 @@ export const Pipelines = ({
                             Warehouse
                           </>
                         ),
-                        onClick: () => showCreateWarehouse()
+                        onClick: () =>
+                          setURLQuery({ ...urlQuery, create: 'warehouse', tab: 'wizard' })
                       }
                     ]
                   }}
@@ -615,6 +614,7 @@ export const Pipelines = ({
               stages={mapToNames(data?.stages || [])}
             />
           )}
+          <CreateWarehouse visible={urlQuery?.create === 'warehouse'} hide={() => setURLQuery()} />
         </SuspenseSpin>
       </ColorContext.Provider>
     </div>
