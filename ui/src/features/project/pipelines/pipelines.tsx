@@ -27,7 +27,7 @@ const FreightDetails = lazy(() => import('@ui/features/freight/freight-details')
 const FreightTimeline = lazy(() => import('@ui/features/freight-timeline/freight-timeline'));
 const StageDetails = lazy(() => import('@ui/features/stage/stage-details'));
 const CreateStage = lazy(() => import('@ui/features/stage/create-stage'));
-const CreateWarehouse = lazy(() => import('@ui/features/stage/create-warehouse'));
+const CreateWarehouse = lazy(() => import('@ui/features/stage/create-warehouse/create-warehouse'));
 import { SuspenseSpin } from '@ui/features/common/suspense-spin';
 import { getCurrentFreight, mapToNames } from '@ui/features/common/utils';
 const FreightTimelineHeader = lazy(

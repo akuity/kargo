@@ -7,5 +7,8 @@ export type URLStates /* by page */ = {
 
     // for warehouse modal
     tab: 'wizard' | 'yaml';
+
+    // wizard state - JSON stringify + encode URI
+    state: string;
   };
 };
