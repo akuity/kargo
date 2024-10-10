@@ -300,7 +300,6 @@ hack-build: build-base-image
 		$(CONTAINER_RUNTIME) buildx build \
 			$(DOCKER_BUILD_OPTS) \
 			--network host \
-			--platform linux/amd64 \
 			--build-arg BASE_IMAGE=$(BASE_IMAGE) \
 			--build-arg GIT_COMMIT=$(shell git rev-parse HEAD) \
 			--build-arg GIT_TREE_STATE=$(shell if [ -z "`git status --porcelain`" ]; then echo "clean" ; else echo "dirty"; fi) \
