@@ -420,7 +420,7 @@ func (r *reconciler) ensureControllerPermissions(
 
 	// Create/update a RoleBinding for each ServiceAccount
 	for _, sa := range controllerSAs.Items {
-		roleBindingName := fmt.Sprintf("kargo-controller-secrets-readonly-%s", sa.Name)
+		roleBindingName := fmt.Sprintf("%s-readonly-secrets", sa.Name)
 		loggerWithSA := logger.WithValues("serviceAccount", sa.Name, "roleBinding", roleBindingName)
 
 		roleBinding := &rbacv1.RoleBinding{
@@ -444,16 +444,9 @@ func (r *reconciler) ensureControllerPermissions(
 
 		if err := r.createRoleBindingFn(ctx, roleBinding); err != nil {
 			if kubeerr.IsAlreadyExists(err) {
-				existingRoleBinding := &rbacv1.RoleBinding{}
-				if err := r.client.Get(
-					ctx, client.ObjectKey{Name: roleBindingName, Namespace: project.Name},
-					existingRoleBinding,
-				); err != nil {
-					return fmt.Errorf("error getting existing RoleBinding: %w", err)
-				}
-				existingRoleBinding.Subjects = roleBinding.Subjects
-				if err := r.client.Update(ctx, existingRoleBinding); err != nil {
-					return fmt.Errorf("error updating RoleBinding: %w", err)
+				if err := r.client.Update(ctx, roleBinding); err != nil {
+					return fmt.Errorf("error updating RoleBinding %q in project namespace %q: %w",
+						roleBinding.Name, project.Name, err)
 				}
 				loggerWithSA.Debug("Updated RoleBinding for ServiceAccount", "serviceAccount", sa.Name)
 			} else {

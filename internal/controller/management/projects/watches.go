@@ -167,7 +167,7 @@ func (h *ServiceAccountEventHandler[T]) removeControllerPermissions(
 	sa *corev1.ServiceAccount,
 ) error {
 
-	roleBindingName := fmt.Sprintf("kargo-controller-secrets-readonly-%s", sa.Name)
+	roleBindingName := fmt.Sprintf("%s-readonly-secrets", sa.Name)
 
 	roleBinding := &rbacv1.RoleBinding{}
 	err := h.kargoClient.Get(ctx, client.ObjectKey{Name: roleBindingName, Namespace: sa.Namespace}, roleBinding)
