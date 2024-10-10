@@ -65,7 +65,7 @@ const stageFormToYAML = (
     },
     spec: {
       requestedFreight: data.requestedFreight,
-      ...(data.promotionTemplateSteps && {
+      ...(promotionTemplateSteps && {
         promotionTemplate: { spec: { steps: yaml.parse(promotionTemplateSteps) } }
       })
     }
@@ -101,7 +101,8 @@ export const CreateStage = ({
   const {
     control: wizardControl,
     watch,
-    setValue: setWizardValue
+    setValue: setWizardValue,
+    getValues: getWizardValues
   } = useForm({
     defaultValues: {
       name: '',
@@ -116,7 +117,7 @@ export const CreateStage = ({
     let value = data.value;
     if (tab === 'wizard') {
       const unmarshalled = stageFormToYAML(
-        watch(),
+        getWizardValues(),
         project || '',
         promotionWizardStepsState.getYAML()
       );
@@ -162,7 +163,7 @@ export const CreateStage = ({
           if (tab === 'wizard' && newTab === 'yaml') {
             setValue(
               'value',
-              stageFormToYAML(watch(), project || '', promotionWizardStepsState.getYAML())
+              stageFormToYAML(getWizardValues(), project || '', promotionWizardStepsState.getYAML())
             );
           } else {
             const yaml = getValues('value');

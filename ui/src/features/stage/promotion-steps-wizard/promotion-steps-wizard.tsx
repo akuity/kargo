@@ -1,13 +1,13 @@
-import { faAdd, faCaretDown, faCaretUp, faCog, faTrash } from '@fortawesome/free-solid-svg-icons';
+import { faAdd, faCog } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Button, Tag } from 'antd';
+import { Tag } from 'antd';
 import Card from 'antd/es/card/Card';
-import classNames from 'classnames';
 import { useState } from 'react';
 
 import { usePromotionDirectivesRegistryContext } from '@ui/features/promotion-directives/registry/context/use-registry-context';
 
 import { PromotionStepForm } from './promotion-step-form';
+import { SelectedRunner } from './selected-runner';
 import { RunnerWithConfiguration } from './types';
 
 export type PromotionStepsWizardType = {
@@ -62,71 +62,33 @@ export const PromotionStepsWizard = (props: PromotionStepsWizardType) => {
               const isEditingThisRunner = editingRunner?.order === order;
 
               return (
-                <Card
+                <SelectedRunner
                   key={`${runner.identifier}-${order}-${runner?.as}`}
-                  className={classNames('cursor-pointer', {
-                    'shadow-sm': isEditingThisRunner,
-                    'border-gray-400': isEditingThisRunner
-                  })}
-                  size='small'
-                  onClick={onSettingOpen}
-                >
-                  <div className='flex items-center gap-5'>
-                    <div className='flex flex-col gap-5 text-2xl cursor-pointer'>
-                      {order > 0 && (
-                        <FontAwesomeIcon
-                          icon={faCaretUp}
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            const newOrder = [...selectedRunners];
-                            newOrder[order] = selectedRunners[order - 1];
-                            newOrder[order - 1] = runner;
-                            setSelectedRunners(newOrder);
-                            setEditingRunner({ ...runner, order: order - 1 });
-                          }}
-                        />
-                      )}
-                      {order < selectedRunners.length - 1 && (
-                        <FontAwesomeIcon
-                          icon={faCaretDown}
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            const newOrder = [...selectedRunners];
-                            newOrder[order] = selectedRunners[order + 1];
-                            newOrder[order + 1] = runner;
-                            setSelectedRunners(newOrder);
-                            setEditingRunner({ ...runner, order: order + 1 });
-                          }}
-                        />
-                      )}
-                    </div>
-
-                    <span className='font-semibold'>
-                      {order + 1} - {runner.identifier}
-                    </span>
-
-                    {!!runner?.as && (
-                      <Tag className='text-xs max-w-20 overflow-hidden ml-auto' color='blue'>
-                        {runner.as}
-                      </Tag>
-                    )}
-
-                    <div className={classNames('space-x-4', { 'ml-auto': !runner?.as })}>
-                      <Button icon={<FontAwesomeIcon icon={faCog} />} onClick={onSettingOpen} />
-                      <Button
-                        icon={<FontAwesomeIcon icon={faTrash} className='text-red-500' />}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedRunners(
-                            selectedRunners.filter((_, deleteOrder) => deleteOrder !== order)
-                          );
-                        }}
-                      />
-                    </div>
-                  </div>
-                </Card>
+                  isEditing={isEditingThisRunner}
+                  onSettingOpen={onSettingOpen}
+                  order={order}
+                  runner={runner}
+                  lastIndexOfOrder={selectedRunners.length - 1}
+                  onDelete={() => {
+                    setSelectedRunners(
+                      selectedRunners.filter((_, deleteOrder) => deleteOrder !== order)
+                    );
+                  }}
+                  orderMoveUp={() => {
+                    const newOrder = [...selectedRunners];
+                    newOrder[order] = selectedRunners[order - 1];
+                    newOrder[order - 1] = runner;
+                    setEditingRunner({ ...runner, order: order - 1 });
+                    setSelectedRunners(newOrder);
+                  }}
+                  orderMoveDown={() => {
+                    const newOrder = [...selectedRunners];
+                    newOrder[order] = selectedRunners[order + 1];
+                    newOrder[order + 1] = runner;
+                    setEditingRunner({ ...runner, order: order + 1 });
+                    setSelectedRunners(newOrder);
+                  }}
+                />
               );
             })}
           </div>
