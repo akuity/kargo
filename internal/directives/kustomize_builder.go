@@ -156,9 +156,20 @@ func kustomizeBuild(fs filesys.FileSystem, path string) (_ resmap.ResMap, err er
 		}
 	}()
 
+	// Disable plugins (i.e. "function based" plugins), but enable builtins
+	// (e.g. transformers, generators).
+	pluginCfg := kustypes.DisabledPluginConfig()
+	// Helm plugin builtin requires explicit enabling. Kustomize itself ensures
+	// the further Helm files (e.g. cache, data) are stored in a temporary
+	// directory, AS LONG AS the global configuration is not set.
+	pluginCfg.HelmConfig.Enabled = true
+	pluginCfg.HelmConfig.Command = "helm"
+
 	buildOptions := &krusty.Options{
+		// As we make use of a "chrooted" filesystem, we can safely allow
+		// loading of files from anywhere.
 		LoadRestrictions: kustypes.LoadRestrictionsNone,
-		PluginConfig:     kustypes.DisabledPluginConfig(),
+		PluginConfig:     pluginCfg,
 	}
 
 	k := krusty.MakeKustomizer(buildOptions)
