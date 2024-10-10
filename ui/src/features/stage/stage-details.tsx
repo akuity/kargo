@@ -65,12 +65,13 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
 
           <div className='flex flex-col gap-8 flex-1'>
             <div>
-              <Typography.Title level={3}>Requested Freight</Typography.Title>
-
               <RequestedFreight
                 requestedFreight={stage?.spec?.requestedFreight || []}
                 projectName={projectName}
                 itemStyle={{ width: '250px' }}
+                className='space-y-5'
+                freightHistory={stage?.status?.freightHistory || []}
+                currentActiveFreight={stage?.status?.lastPromotion?.freight?.name}
               />
             </div>
             <Tabs

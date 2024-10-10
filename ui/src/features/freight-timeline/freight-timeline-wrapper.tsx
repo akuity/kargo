@@ -1,11 +1,18 @@
 import { faCaretLeft, faCaretRight } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Flex } from 'antd';
+import classNames from 'classnames';
 import { useLayoutEffect, useRef, useState } from 'react';
 
 import { headerButtonStyle } from './utils';
 
-export const FreightTimelineWrapper = ({ children }: { children: React.ReactNode }) => {
+export const FreightTimelineWrapper = ({
+  children,
+  containerClassName
+}: {
+  children: React.ReactNode;
+  containerClassName?: string;
+}) => {
   const timeline = useRef<HTMLDivElement>(null);
   const [showScrollbars, setShowScrollbars] = useState(false);
 
@@ -26,8 +33,8 @@ export const FreightTimelineWrapper = ({ children }: { children: React.ReactNode
   }, [timeline]);
 
   return (
-    <div className='w-full py-3 flex flex-col overflow-hidden'>
-      <div className='flex h-48 w-full items-center px-1'>
+    <div className={classNames(containerClassName, 'w-full py-3 flex flex-col overflow-hidden')}>
+      <div className={'flex h-48 w-full items-center px-1'}>
         <div
           className='text-gray-500 text-sm font-semibold mb-2 w-min h-min'
           style={{ transform: 'rotate(-0.25turn)' }}
