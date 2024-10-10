@@ -126,7 +126,7 @@ func (b *baseRepo) setupAuth() error {
 	// If an SSH key was provided, use that.
 	if b.creds.SSHPrivateKey != "" {
 		sshPath := filepath.Join(b.homeDir, ".ssh")
-		if err := os.Mkdir(sshPath, 0700); err != nil {
+		if err := os.MkdirAll(sshPath, 0700); err != nil {
 			return fmt.Errorf("error creating SSH directory %q: %w", sshPath, err)
 		}
 		sshConfigPath := filepath.Join(sshPath, "config")

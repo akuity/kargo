@@ -24,7 +24,7 @@
             "description": "Image name of the repository from which to pick the version. This is the image name Kargo is subscribed to, and produces Freight for."
           },
           "fromOrigin": {
-            "$ref": "./common.json#definitions/origin"
+            "$ref": "./common.json#/definitions/origin"
           },
           "name": {
             "type": "string",
