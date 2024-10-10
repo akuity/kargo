@@ -292,7 +292,7 @@ hack-codegen: hack-build-dev-tools
 # 	make hack-build IMAGE_PLATFORMS=linux/amd64 DOCKER_BUILD_OPTS=--no-cache
 .PHONY: hack-build
 hack-build: build-base-image
-	@{ \
+	{ \
 		$(CONTAINER_RUNTIME) run -d -p 5000:$(LOCAL_REG_PORT) --name tmp-registry registry:2; \
 		trap '$(CONTAINER_RUNTIME) rm -f tmp-registry' EXIT; \
 		docker push $(BASE_IMAGE):latest-amd64; \
