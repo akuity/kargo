@@ -14,6 +14,33 @@
         "type": "string",
         "description": "OutPath is the file path to write the built manifests to.",
         "minLength": 1
+    },
+    "plugin": {
+      "type": "object",
+      "description": "Plugin contains configuration for customizing the behavior of builtin Kustomize plugins.",
+      "additionalProperties": false,
+      "properties": {
+        "helm": {
+          "type": "object",
+          "description": "Helm contains configuration for inflating a Helm chart.",
+          "additionalProperties": false,
+          "properties": {
+            "apiVersions": {
+              "type": "array",
+              "additionalProperties": false,
+              "description": "APIVersions allows a manual set of supported API versions to be passed when inflating a Helm chart.",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "kubeVersion": {
+              "type": "string",
+              "description": "KubeVersion allows for passing a specific Kubernetes version to use when inflating a Helm chart."
+            }
+          }
+        }
+      }
     }
   }
 }

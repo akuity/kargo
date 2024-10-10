@@ -81,7 +81,7 @@ func (k *kustomizeBuilder) runPromotionStep(
 	}
 
 	// Build the manifests.
-	rm, err := kustomizeBuild(fs, filepath.Join(stepCtx.WorkDir, cfg.Path))
+	rm, err := kustomizeBuild(fs, filepath.Join(stepCtx.WorkDir, cfg.Path), cfg.Plugin)
 	if err != nil {
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, err
 	}
@@ -143,7 +143,7 @@ func (k *kustomizeBuilder) writeResult(rm resmap.ResMap, outPath string) error {
 }
 
 // kustomizeBuild builds the manifests in the given directory using Kustomize.
-func kustomizeBuild(fs filesys.FileSystem, path string) (_ resmap.ResMap, err error) {
+func kustomizeBuild(fs filesys.FileSystem, path string, pluginCfg *Plugin) (_ resmap.ResMap, err error) {
 	kustomizeRenderMutex.Lock()
 	defer kustomizeRenderMutex.Unlock()
 
@@ -158,18 +158,23 @@ func kustomizeBuild(fs filesys.FileSystem, path string) (_ resmap.ResMap, err er
 
 	// Disable plugins (i.e. "function based" plugins), but enable builtins
 	// (e.g. transformers, generators).
-	pluginCfg := kustypes.DisabledPluginConfig()
+	buildPluginCfg := kustypes.DisabledPluginConfig()
 	// Helm plugin builtin requires explicit enabling. Kustomize itself ensures
 	// the further Helm files (e.g. cache, data) are stored in a temporary
 	// directory, AS LONG AS the global configuration is not set.
-	pluginCfg.HelmConfig.Enabled = true
-	pluginCfg.HelmConfig.Command = "helm"
+	buildPluginCfg.HelmConfig.Enabled = true
+	buildPluginCfg.HelmConfig.Command = "helm"
+
+	if pluginCfg != nil && pluginCfg.Helm != nil {
+		buildPluginCfg.HelmConfig.ApiVersions = pluginCfg.Helm.APIVersions
+		buildPluginCfg.HelmConfig.KubeVersion = pluginCfg.Helm.KubeVersion
+	}
 
 	buildOptions := &krusty.Options{
 		// As we make use of a "chrooted" filesystem, we can safely allow
 		// loading of files from anywhere.
 		LoadRestrictions: kustypes.LoadRestrictionsNone,
-		PluginConfig:     pluginCfg,
+		PluginConfig:     buildPluginCfg,
 	}
 
 	k := krusty.MakeKustomizer(buildOptions)
