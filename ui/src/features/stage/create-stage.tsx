@@ -1,3 +1,4 @@
+import { PlainMessage } from '@bufbuild/protobuf';
 import { useMutation } from '@connectrpc/connect-query';
 import {
   faBook,
@@ -21,7 +22,7 @@ import { YamlEditor } from '@ui/features/common/code-editor/yaml-editor';
 import { FieldContainer } from '@ui/features/common/form/field-container';
 import schema from '@ui/gen/schema/stages.kargo.akuity.io_v1alpha1.json';
 import { createResource } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
-import { Stage } from '@ui/gen/v1alpha1/generated_pb';
+import { PromotionStep, Stage } from '@ui/gen/v1alpha1/generated_pb';
 import { zodValidators } from '@ui/utils/validators';
 
 import { getStageYAMLExample } from '../project/pipelines/utils/stage-yaml-example';
@@ -48,7 +49,7 @@ const wizardSchema = z.object({
 const stageFormToYAML = (
   data: z.infer<typeof wizardSchema>,
   namespace: string,
-  promotionTemplateSteps: string
+  promotionTemplateSteps: PlainMessage<PromotionStep>[]
 ) => {
   return yaml.stringify({
     kind: 'Stage',
@@ -65,8 +66,8 @@ const stageFormToYAML = (
     },
     spec: {
       requestedFreight: data.requestedFreight,
-      ...(promotionTemplateSteps && {
-        promotionTemplate: { spec: { steps: yaml.parse(promotionTemplateSteps) } }
+      ...(promotionTemplateSteps?.length > 0 && {
+        promotionTemplate: { spec: { steps: promotionTemplateSteps } }
       })
     }
   });
@@ -119,7 +120,11 @@ export const CreateStage = ({
       const unmarshalled = stageFormToYAML(
         getWizardValues(),
         project || '',
-        promotionWizardStepsState.getYAML()
+        promotionWizardStepsState.state?.map((step) => ({
+          uses: step?.identifier,
+          as: step?.as,
+          config: step?.state
+        }))
       );
       setValue('value', unmarshalled);
       value = unmarshalled;
@@ -163,7 +168,15 @@ export const CreateStage = ({
           if (tab === 'wizard' && newTab === 'yaml') {
             setValue(
               'value',
-              stageFormToYAML(getWizardValues(), project || '', promotionWizardStepsState.getYAML())
+              stageFormToYAML(
+                getWizardValues(),
+                project || '',
+                promotionWizardStepsState.state?.map((step) => ({
+                  uses: step?.identifier,
+                  as: step?.as,
+                  config: step?.state
+                }))
+              )
             );
           } else {
             const yaml = getValues('value');
