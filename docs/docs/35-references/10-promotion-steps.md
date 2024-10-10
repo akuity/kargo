@@ -310,6 +310,8 @@ preceded by a [`git-clear`](#git-clear) step and followed by
 |------|------|----------|-------------|
 | `path` | `string` | Y | Path to a directory containing a `kustomization.yaml` file. This path is relative to the temporary workspace that Kargo provisions for use by the promotion process. |
 | `outPath` | `string` | Y | Path to the file or directory where rendered manifests are to be written. If the path ends with `.yaml` or `.yml` it is presumed to indicate a file and is otherwise presumed to indicate a directory. This path is relative to the temporary workspace that Kargo provisions for use by the promotion process. |
+| `plugin.helm.apiVersions` | `[]string` | N | Optionally specifies a list of supported API versions to be used when rendering manifests using Kustomize's Helm chart plugin. This is useful for charts that may contain logic specific to different Kubernetes API versions. |
+| `plugin.helm.kubeVersion` | `string` | N | Optionally specifies a Kubernetes version to be assumed when rendering manifests using Kustomize's Helm chart plugin. This is useful for charts that may contain logic specific to different Kubernetes versions. |
 
 ### `kustomize-build` Examples
 
