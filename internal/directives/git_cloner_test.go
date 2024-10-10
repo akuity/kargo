@@ -36,7 +36,6 @@ func Test_gitCloner_validate(t *testing.T) {
 			},
 			expectedProblems: []string{
 				"repoURL: String length must be greater than or equal to 1",
-				"repoURL: Does not match format 'uri'",
 			},
 		},
 		{
