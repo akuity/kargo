@@ -3449,21 +3449,7 @@ export class ProjectSpec extends Message<ProjectSpec> {
  */
 export class ProjectStatus extends Message<ProjectStatus> {
   /**
-   * Conditions contains the last observations of the Project's current
-   * state.
-   * +patchMergeKey=type
-   * +patchStrategy=merge
-   * +listType=map
-   * +listMapKey=type
-   *
-   * @generated from field: repeated k8s.io.apimachinery.pkg.apis.meta.v1.Condition conditions = 3;
-   */
-  conditions: Condition[] = [];
-
-  /**
    * Phase describes the Project's current phase.
-   *
-   * Deprecated: Use the Conditions field instead.
    *
    * @generated from field: optional string phase = 1;
    */
@@ -3473,8 +3459,6 @@ export class ProjectStatus extends Message<ProjectStatus> {
    * Message is a display message about the Project, including any errors
    * preventing the Project from being reconciled. i.e. If the Phase field has a
    * value of CreationFailed, this field can be expected to explain why.
-   *
-   * Deprecated: Use the Conditions field instead.
    *
    * @generated from field: optional string message = 2;
    */
@@ -3488,7 +3472,6 @@ export class ProjectStatus extends Message<ProjectStatus> {
   static readonly runtime: typeof proto2 = proto2;
   static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.ProjectStatus";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
-    { no: 3, name: "conditions", kind: "message", T: Condition, repeated: true },
     { no: 1, name: "phase", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 2, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);

@@ -1194,24 +1194,12 @@ message ProjectSpec {
 
 // ProjectStatus describes a Project's current status.
 message ProjectStatus {
-  // Conditions contains the last observations of the Project's current
-  // state.
-  // +patchMergeKey=type
-  // +patchStrategy=merge
-  // +listType=map
-  // +listMapKey=type
-  repeated k8s.io.apimachinery.pkg.apis.meta.v1.Condition conditions = 3;
-
   // Phase describes the Project's current phase.
-  //
-  // Deprecated: Use the Conditions field instead.
   optional string phase = 1;
 
   // Message is a display message about the Project, including any errors
   // preventing the Project from being reconciled. i.e. If the Phase field has a
   // value of CreationFailed, this field can be expected to explain why.
-  //
-  // Deprecated: Use the Conditions field instead.
   optional string message = 2;
 }
 
