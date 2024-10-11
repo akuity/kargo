@@ -10,6 +10,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -83,6 +84,28 @@ func (r *ServiceAccountReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return ctrl.Result{}, err
 	}
 
+	if controllerutil.AddFinalizer(sa, kargoapi.FinalizerName) {
+		if err := r.Update(ctx, sa); err != nil {
+			return ctrl.Result{}, err
+		}
+		logger.Debug("Added finalizer to ServiceAccount", "serviceaccount", sa.Name)
+		return ctrl.Result{}, nil
+	}
+
+	// Handle deletion logic
+	if sa.DeletionTimestamp != nil {
+		logger.Debug("Deleting role bindings for ServiceAccount", "serviceaccount", sa.Name)
+		if err := r.deleteRoleBindingsForAllProjects(ctx, sa); err != nil {
+			return ctrl.Result{}, err
+		}
+		controllerutil.RemoveFinalizer(sa, kargoapi.FinalizerName)
+		if err := r.Update(ctx, sa); err != nil {
+			return ctrl.Result{}, err
+		}
+		logger.Debug("Removed finalizer from ServiceAccount", "serviceaccount", sa.Name)
+		return ctrl.Result{}, nil
+	}
+
 	// Handle creation and update cases
 	if !hasControllerLabel(sa) {
 		logger.Debug("Deleting role bindings for ServiceAccount",
@@ -137,25 +160,25 @@ func (r *ServiceAccountReconciler) createRoleBindingForAllProjects(ctx context.C
 			},
 		}
 
-		// Create or update the RoleBinding
-		if err := r.Client.Create(ctx, roleBinding); err != nil {
-			if kubeerr.IsAlreadyExists(err) {
-				if err := r.Client.Update(ctx, roleBinding); err != nil {
-					return fmt.Errorf("error updating RoleBinding %q in project namespace %q: %w",
-						roleBinding.Name, project.Name, err)
+		// Create or update the RoleBinding		
+		if err := r.Client.Get(ctx, client.ObjectKey{Name: roleBindingName, Namespace: project.Name}, roleBinding); err != nil {
+			if kubeerr.IsNotFound(err) {
+				// Create RoleBinding
+				if err := r.Client.Create(ctx, roleBinding); err != nil {
+					return fmt.Errorf("error creating RoleBinding %q for ServiceAccount %q in project namespace %q: %w",
+						roleBinding.Name, sa.Name, project.Name, err)
 				}
-				logger.Debug("Updated RoleBinding for ServiceAccount", "roleBinding", roleBindingName, "namespace", project.Name)
+				logger.Info("Created RoleBinding for ServiceAccount", "roleBinding", roleBindingName, "namespace", project.Name)
 			} else {
-				return fmt.Errorf(
-					"error creating RoleBinding %q for ServiceAccount %q in project namespace %q: %w",
-					roleBinding.Name,
-					sa.Name,
-					project.Name,
-					err,
-				)
+				return fmt.Errorf("error retrieving RoleBinding %q in namespace %q: %w", roleBindingName, project.Name, err)
 			}
+		} else {
+			// Update RoleBinding
+			if err := r.Client.Update(ctx, roleBinding); err != nil {
+				return fmt.Errorf("error updating RoleBinding %q in project namespace %q: %w", roleBinding.Name, project.Name, err)
+			}
+			logger.Debug("Updated RoleBinding for ServiceAccount", "roleBinding", roleBindingName, "namespace", project.Name)
 		}
-		logger.Debug("Created RoleBinding for ServiceAccount", "roleBinding", roleBindingName, "namespace", project.Name)
 	}
 	logger.Info("Completed creating RoleBindings for all projects")
 	return nil
