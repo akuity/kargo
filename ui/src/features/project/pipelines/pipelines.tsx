@@ -70,7 +70,7 @@ export const Pipelines = ({
   project: Project;
   creatingStage?: boolean;
 }) => {
-  const [urlQuery, setURLQuery] = useURLQueryState<URLStates['project']>();
+  const [urlQuery, setURLQuery, clearState] = useURLQueryState<URLStates['project']>();
   const { name, stageName, freightName, warehouseName } = useParams();
   const { data, isLoading } = useQuery(listStages, { project: name });
   const { data: imageData, isLoading: isLoadingImages } = useQuery(listImages, { project: name });
@@ -386,8 +386,7 @@ export const Pipelines = ({
                             Warehouse
                           </>
                         ),
-                        onClick: () =>
-                          setURLQuery({ ...urlQuery, create: 'warehouse', tab: 'wizard' })
+                        onClick: () => setURLQuery({ create: 'warehouse', tab: 'wizard' })
                       }
                     ]
                   }}
@@ -614,7 +613,7 @@ export const Pipelines = ({
               stages={mapToNames(data?.stages || [])}
             />
           )}
-          <CreateWarehouse visible={urlQuery?.create === 'warehouse'} hide={() => setURLQuery()} />
+          <CreateWarehouse visible={urlQuery?.create === 'warehouse'} hide={() => clearState()} />
         </SuspenseSpin>
       </ColorContext.Provider>
     </div>

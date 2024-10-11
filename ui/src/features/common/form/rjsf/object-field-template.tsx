@@ -1,9 +1,8 @@
 import { Templates } from '@rjsf/antd';
+import { ObjectFieldTemplateProps } from '@rjsf/utils';
 import { Collapse } from 'antd';
 
-// https://github.com/rjsf-team/react-jsonschema-form/issues/2106#issuecomment-734990380
-// @ts-expect-error when dependency doesn't provide a good way to define types
-export const ObjectFieldTemplate = (props) => {
+export const ObjectFieldTemplate = (props: ObjectFieldTemplateProps) => {
   if (!Templates.ObjectFieldTemplate) {
     throw new Error('[BUG]: Templates.ObjectFieldTemplate is undefined');
   }
