@@ -10,12 +10,14 @@ import { Stage } from '@ui/gen/v1alpha1/generated_pb';
 
 import { SmallLabel } from '../common/small-label';
 import { StageTag } from '../common/stage-tag';
+
 export const RequestedFreight = ({
   projectName,
   requestedFreight,
   onDelete,
   className,
-  itemStyle
+  itemStyle,
+  hideTitle
 }: {
   projectName?: string;
   requestedFreight?: {
@@ -25,6 +27,7 @@ export const RequestedFreight = ({
   onDelete?: (index: number) => void;
   className?: string;
   itemStyle?: React.CSSProperties;
+  hideTitle?: boolean;
 }) => {
   const { stageColorMap } = useContext(ColorContext);
 
@@ -42,7 +45,7 @@ export const RequestedFreight = ({
 
   return (
     <div className={className}>
-      <h3>Requested Freight</h3>
+      {!hideTitle && <h3>Requested Freight</h3>}
 
       <div className='flex gap-5 flex-wrap'>
         {requestedFreight?.map((freight, i) => {

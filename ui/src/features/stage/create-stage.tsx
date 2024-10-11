@@ -264,6 +264,7 @@ export const CreateStage = ({
                           ...field.value.slice(index + 1)
                         ]);
                       }}
+                      hideTitle
                     />
                   ) : (
                     <Flex
