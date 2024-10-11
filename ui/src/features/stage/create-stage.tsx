@@ -256,7 +256,8 @@ export const CreateStage = ({
                     <RequestedFreight
                       requestedFreight={requestedFreight}
                       projectName={project}
-                      className='mb-4 grid grid-cols-2 gap-4'
+                      className='mb-4'
+                      itemStyle={{ width: '45%' }}
                       onDelete={(index) => {
                         field.onChange([
                           ...field.value.slice(0, index),
