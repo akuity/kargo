@@ -19,10 +19,14 @@ for automatic promotions of new **freight**.
 ### What is a Stage?
 
 When you hear the term “environment”, what you envision will depend
-significantly on your perspective. To eliminate confusion, Kargo avoids the term
-"environment" altogether in favor of **stage**. The important feature of a stage
-is that its name ("test" or "prod," for instance) denotes an application
-instance's _purpose_ and not necessarily its _location_.
+significantly on your perspective. A developer, for example, may think of
+an "environment" as a specific _instance_ of an application they work on,
+while a DevOps engineer, may think of an "environment" as a particular segment
+of the infrastructure they maintain.
+
+To eliminate confusion, Kargo avoids the term "environment" altogether in favor of **stage**.
+The important feature of a stage is that its name ("test" or "prod," for instance)
+denotes an application instance's _purpose_ and not necessarily its _location_.
 [This blog post](https://akuity.io/blog/kargo-stage-not-environment/) discusses
 the rationale behind this choice.
 
