@@ -5,6 +5,7 @@ contents:
   - https://packages.wolfi.dev/os
   packages:
   - busybox # TODO: Remove this if we can figure out how to get by without a shell
+  - ca-certificates
   - git~2
   - gpg~2
   - gpg-agent~2
