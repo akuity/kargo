@@ -247,7 +247,7 @@ func TestPromoteToStage(t *testing.T) {
 				) (*kargoapi.Freight, error) {
 					return &kargoapi.Freight{}, nil
 				},
-				isFreightAvailableFn: func(*kargoapi.Freight, string, []string) bool {
+				isFreightAvailableFn: func(*kargoapi.Stage, *kargoapi.Freight) bool {
 					return false
 				},
 			},
@@ -294,7 +294,7 @@ func TestPromoteToStage(t *testing.T) {
 				) (*kargoapi.Freight, error) {
 					return &kargoapi.Freight{}, nil
 				},
-				isFreightAvailableFn: func(*kargoapi.Freight, string, []string) bool {
+				isFreightAvailableFn: func(*kargoapi.Stage, *kargoapi.Freight) bool {
 					return true
 				},
 				authorizeFn: func(
@@ -344,7 +344,7 @@ func TestPromoteToStage(t *testing.T) {
 				) (*kargoapi.Freight, error) {
 					return &kargoapi.Freight{}, nil
 				},
-				isFreightAvailableFn: func(*kargoapi.Freight, string, []string) bool {
+				isFreightAvailableFn: func(*kargoapi.Stage, *kargoapi.Freight) bool {
 					return true
 				},
 				authorizeFn: func(
@@ -401,7 +401,7 @@ func TestPromoteToStage(t *testing.T) {
 				) (*kargoapi.Freight, error) {
 					return &kargoapi.Freight{}, nil
 				},
-				isFreightAvailableFn: func(*kargoapi.Freight, string, []string) bool {
+				isFreightAvailableFn: func(*kargoapi.Stage, *kargoapi.Freight) bool {
 					return true
 				},
 				authorizeFn: func(

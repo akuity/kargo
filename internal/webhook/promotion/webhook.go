@@ -221,15 +221,38 @@ func (w *webhook) ValidateCreate(
 		return nil, fmt.Errorf("get admission request from context: %w", err)
 	}
 
+	stage, err := w.getStageFn(ctx, w.client, types.NamespacedName{
+		Namespace: promo.Namespace,
+		Name:      promo.Spec.Stage,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("get stage: %w", err)
+	}
+
+	freight, err := w.getFreightFn(ctx, w.client, types.NamespacedName{
+		Namespace: promo.Namespace,
+		Name:      promo.Spec.Freight,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("get freight: %w", err)
+	}
+
+	if !kargoapi.IsFreightAvailable(stage, freight) {
+		return nil, apierrors.NewInvalid(
+			promotionGroupKind,
+			promo.Name,
+			field.ErrorList{
+				field.Invalid(
+					field.NewPath("spec", "freight"),
+					promo.Spec.Freight,
+					"Freight is not available to this Stage",
+				),
+			},
+		)
+	}
+
 	// Record Promotion created event if the request doesn't come from Kargo controlplane
 	if !w.isRequestFromKargoControlplaneFn(req) {
-		freight, err := w.getFreightFn(ctx, w.client, types.NamespacedName{
-			Namespace: promo.Namespace,
-			Name:      promo.Spec.Freight,
-		})
-		if err != nil {
-			return nil, fmt.Errorf("get freight: %w", err)
-		}
 		w.recordPromotionCreatedEvent(ctx, req, promo, freight)
 	}
 	return nil, nil
