@@ -19,6 +19,7 @@ LOCAL_REG_PORT			?= 5000
 BASE_IMAGE 			?= localhost:$(LOCAL_REG_PORT)/$(IMAGE_REPO)-base
 IMAGE_TAG 			?= dev
 IMAGE_PUSH 			?= false
+IMAGE_PLATFORMS 	?=
 DOCKER_BUILD_OPTS 	=
 
 DOCS_PORT 				?= 3000
