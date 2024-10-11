@@ -233,8 +233,10 @@ func kubeconfigLogin(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("error loading kubeconfig: %w", err)
 	}
 	bearerToken, err := kubeclient.GetCredential(ctx, restCfg)
-	return bearerToken,
-		fmt.Errorf("error retrieving bearer token from kubeconfig: %w", err)
+	if err != nil {
+		return "", fmt.Errorf("error retrieving bearer token from kubeconfig: %w", err)
+	}
+	return bearerToken, nil
 }
 
 // ssoLogin performs a login using OpenID Connect. It first retrieves
