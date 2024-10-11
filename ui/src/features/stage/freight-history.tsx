@@ -4,6 +4,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useQueryClient } from '@tanstack/react-query';
 import { Empty } from 'antd';
 import classNames from 'classnames';
+import { useMemo } from 'react';
 import { generatePath, Link, useNavigate } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
@@ -42,39 +43,43 @@ export const FreightHistory = ({
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
-  // to show the history
-  const freightHistoryPerWarehouse: Record<
-    string /* warehouse eg. Warehouse/w-1 or Warehouse/w-2 */,
-    FreightReference[]
-  > = {};
+  const { freightHistoryPerWarehouse, freightMap } = useMemo(() => {
+    // to show the history
+    const freightHistoryPerWarehouse: Record<
+      string /* warehouse eg. Warehouse/w-1 or Warehouse/w-2 */,
+      FreightReference[]
+    > = {};
 
-  for (const freightCollection of freightHistory || []) {
-    // key - value
-    // warehouse identifier - freight reference
-    const items = freightCollection?.items || {};
+    for (const freightCollection of freightHistory || []) {
+      // key - value
+      // warehouse identifier - freight reference
+      const items = freightCollection?.items || {};
 
-    for (const [warehouseIdentifier, freightReference] of Object.entries(items)) {
-      if (!freightHistoryPerWarehouse[warehouseIdentifier]) {
-        freightHistoryPerWarehouse[warehouseIdentifier] = [];
+      for (const [warehouseIdentifier, freightReference] of Object.entries(items)) {
+        if (!freightHistoryPerWarehouse[warehouseIdentifier]) {
+          freightHistoryPerWarehouse[warehouseIdentifier] = [];
+        }
+
+        freightHistoryPerWarehouse[warehouseIdentifier].push(freightReference);
       }
-
-      freightHistoryPerWarehouse[warehouseIdentifier].push(freightReference);
     }
-  }
 
-  const freightData = queryClient.getQueryData(
-    createConnectQueryKey(queryFreight, { project: projectName })
-  ) as QueryFreightResponse;
+    const freightData = queryClient.getQueryData(
+      createConnectQueryKey(queryFreight, { project: projectName })
+    ) as QueryFreightResponse;
 
-  // generate metadata.name -> full freight data (because history doesn't have it all) to show in freight history
-  const freightMap: Record<string, Freight> = {};
+    // generate metadata.name -> full freight data (because history doesn't have it all) to show in freight history
+    const freightMap: Record<string, Freight> = {};
 
-  for (const freight of freightData?.groups?.['']?.freight || []) {
-    const freightId = freight?.metadata?.name;
-    if (freightId) {
-      freightMap[freightId] = freight;
+    for (const freight of freightData?.groups?.['']?.freight || []) {
+      const freightId = freight?.metadata?.name;
+      if (freightId) {
+        freightMap[freightId] = freight;
+      }
     }
-  }
+
+    return { freightHistoryPerWarehouse, freightMap };
+  }, [freightHistory, queryClient, projectName]);
 
   return (
     <div className={className}>
@@ -103,7 +108,10 @@ export const FreightHistory = ({
             <div key={i} className='py-5 bg-gray-50'>
               <div className='flex gap-8'>
                 {freightReferences.length === 0 && (
-                  <Empty description='No freight history' className='mx-auto' />
+                  <Empty
+                    description={`No freight history of ${freightUniqueIdentifier}`}
+                    className='mx-auto'
+                  />
                 )}
                 {freightReferences.length > 0 && (
                   <FreightTimelineWrapper containerClassName='py-0'>
