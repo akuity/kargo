@@ -56,15 +56,23 @@ field), MUST contain the following keys:
 
 * `repoURL`: The full URL of the repository the credentials are for.
 
-* `username`: The username to use when authenticating to the repository.
+* Either:
 
-* `password`: A password or personal access token.
+  * `username`: The username to use when authenticating to the repository.
+
+  * `password`: A password or personal access token.
 
     :::info
     If the value of the `password` key is a personal access token, the value of
     the `username` field may be inconsequential. You should consult your
     repository's documentation for more information.
     :::
+
+  OR:
+
+  * `sshPrivateKey`: A PEM-encoded SSH private key. Applicable to Git
+    repositories only.
+    
 
 Optionally, the following keys may also be included:
 
