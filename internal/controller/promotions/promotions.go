@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"slices"
 	"strconv"
 	"sync"
 	"time"
@@ -466,15 +465,8 @@ func (r *reconciler) promote(
 	if targetFreight == nil {
 		return nil, fmt.Errorf("Freight %q not found in namespace %q", promo.Spec.Freight, promo.Namespace)
 	}
-	var upstreams []string
-	for _, req := range stage.Spec.RequestedFreight {
-		upstreams = append(upstreams, req.Sources.Stages...)
-	}
-	// De-dupe upstreams
-	slices.Sort(upstreams)
-	upstreams = slices.Compact(upstreams)
 
-	if !kargoapi.IsFreightAvailable(targetFreight, stageName, upstreams) {
+	if !kargoapi.IsFreightAvailable(stage, targetFreight) {
 		return nil, fmt.Errorf(
 			"Freight %q is not available to Stage %q in namespace %q",
 			promo.Spec.Freight,
