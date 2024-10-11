@@ -92,22 +92,26 @@ func (s *server) PromoteDownstream(
 		}
 		return nil, connect.NewError(connect.CodeNotFound, err)
 	}
-	if !s.isFreightAvailableFn(
-		freight,
-		"",                  // approved for not considered
-		[]string{stageName}, // verified in
-	) {
+
+	var directAllowed bool
+	for _, req := range stage.Spec.RequestedFreight {
+		if req.Origin.Equals(&freight.Origin) && req.Sources.Direct {
+			directAllowed = true
+			break
+		}
+	}
+	if _, verified := freight.Status.VerifiedIn[stage.Name]; !verified && !directAllowed {
 		return nil, connect.NewError(
 			connect.CodeInvalidArgument,
 			fmt.Errorf(
-				"Freight %q is not available to Stage %q",
+				"Freight %q is not available to Stages down stream from %q",
 				freightName,
 				stageName,
 			),
 		)
 	}
 
-	downstreams, err := s.findDownstreamStagesFn(ctx, stage)
+	downstreams, err := s.findDownstreamStagesFn(ctx, stage, freight.Origin)
 	if err != nil {
 		return nil, fmt.Errorf("find downstream stages: %w", err)
 	}
@@ -160,9 +164,13 @@ func (s *server) PromoteDownstream(
 }
 
 // findDownstreamStages returns a list of Stages that are immediately downstream
-// from the given Stage.
+// from the given Stage and request Freight from the given origin.
 // TODO: this could be powered by an index.
-func (s *server) findDownstreamStages(ctx context.Context, stage *kargoapi.Stage) ([]kargoapi.Stage, error) {
+func (s *server) findDownstreamStages(
+	ctx context.Context,
+	stage *kargoapi.Stage,
+	origin kargoapi.FreightOrigin,
+) ([]kargoapi.Stage, error) {
 	var allStages kargoapi.StageList
 	if err := s.client.List(ctx, &allStages, client.InNamespace(stage.Namespace)); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
@@ -170,6 +178,9 @@ func (s *server) findDownstreamStages(ctx context.Context, stage *kargoapi.Stage
 	var downstreams []kargoapi.Stage
 	for _, s := range allStages.Items {
 		for _, req := range s.Spec.RequestedFreight {
+			if !req.Origin.Equals(&origin) {
+				continue
+			}
 			for _, upstream := range req.Sources.Stages {
 				if upstream == stage.Name {
 					downstreams = append(downstreams, s)

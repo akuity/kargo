@@ -151,6 +151,8 @@ func TestDefault(t *testing.T) {
 }
 
 func TestValidateCreate(t *testing.T) {
+	const testWarehouse = "fake-warehouse"
+
 	testCases := []struct {
 		name       string
 		webhook    *webhook
@@ -195,6 +197,103 @@ func TestValidateCreate(t *testing.T) {
 			},
 		},
 		{
+			name: "error getting Stage",
+			webhook: &webhook{
+				validateProjectFn: func(
+					context.Context,
+					client.Client,
+					schema.GroupKind,
+					client.Object,
+				) error {
+					return nil
+				},
+				authorizeFn: func(context.Context, *kargoapi.Promotion, string) error {
+					return nil
+				},
+				admissionRequestFromContextFn: admission.RequestFromContext,
+				getStageFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Stage, error) {
+					return nil, errors.New("something went wrong")
+				},
+			},
+			assertions: func(t *testing.T, _ *fakeevent.EventRecorder, err error) {
+				require.ErrorContains(t, err, "get stage")
+				require.ErrorContains(t, err, "something went wrong")
+			},
+		},
+		{
+			name: "error getting Freight",
+			webhook: &webhook{
+				validateProjectFn: func(
+					context.Context,
+					client.Client,
+					schema.GroupKind,
+					client.Object,
+				) error {
+					return nil
+				},
+				authorizeFn: func(context.Context, *kargoapi.Promotion, string) error {
+					return nil
+				},
+				admissionRequestFromContextFn: admission.RequestFromContext,
+				getStageFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Stage, error) {
+					return &kargoapi.Stage{}, nil
+				},
+				getFreightFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Freight, error) {
+					return nil, errors.New("something went wrong")
+				},
+			},
+			assertions: func(t *testing.T, _ *fakeevent.EventRecorder, err error) {
+				require.ErrorContains(t, err, "get freight")
+				require.ErrorContains(t, err, "something went wrong")
+			},
+		},
+		{
+			name: "Freight is not available to Stage",
+			webhook: &webhook{
+				validateProjectFn: func(
+					context.Context,
+					client.Client,
+					schema.GroupKind,
+					client.Object,
+				) error {
+					return nil
+				},
+				authorizeFn: func(context.Context, *kargoapi.Promotion, string) error {
+					return nil
+				},
+				admissionRequestFromContextFn: admission.RequestFromContext,
+				getStageFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Stage, error) {
+					return &kargoapi.Stage{}, nil
+				},
+				getFreightFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Freight, error) {
+					return &kargoapi.Freight{}, nil
+				},
+			},
+			assertions: func(t *testing.T, _ *fakeevent.EventRecorder, err error) {
+				require.ErrorContains(t, err, "Freight is not available to this Stage")
+			},
+		},
+		{
 			name: "record promotion created event on non-controlplane request",
 			webhook: &webhook{
 				validateProjectFn: func(
@@ -209,12 +308,34 @@ func TestValidateCreate(t *testing.T) {
 					return nil
 				},
 				admissionRequestFromContextFn: admission.RequestFromContext,
+				getStageFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Stage, error) {
+					return &kargoapi.Stage{
+						Spec: kargoapi.StageSpec{
+							RequestedFreight: []kargoapi.FreightRequest{{
+								Origin: kargoapi.FreightOrigin{
+									Kind: kargoapi.FreightOriginKindWarehouse,
+									Name: testWarehouse,
+								},
+								Sources: kargoapi.FreightSources{Direct: true},
+							}},
+						},
+					}, nil
+				},
 				getFreightFn: func(
 					context.Context,
 					client.Client,
 					types.NamespacedName,
 				) (*kargoapi.Freight, error) {
-					return nil, nil
+					return &kargoapi.Freight{
+						Origin: kargoapi.FreightOrigin{
+							Kind: kargoapi.FreightOriginKindWarehouse,
+							Name: testWarehouse,
+						},
+					}, nil
 				},
 				isRequestFromKargoControlplaneFn: libWebhook.IsRequestFromKargoControlplane(
 					regexp.MustCompile("^system:serviceaccount:kargo:(kargo-api|kargo-controller)$"),
@@ -243,6 +364,35 @@ func TestValidateCreate(t *testing.T) {
 				},
 				authorizeFn: func(context.Context, *kargoapi.Promotion, string) error {
 					return nil
+				},
+				getStageFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Stage, error) {
+					return &kargoapi.Stage{
+						Spec: kargoapi.StageSpec{
+							RequestedFreight: []kargoapi.FreightRequest{{
+								Origin: kargoapi.FreightOrigin{
+									Kind: kargoapi.FreightOriginKindWarehouse,
+									Name: "fake-warehouse",
+								},
+								Sources: kargoapi.FreightSources{Direct: true},
+							}},
+						},
+					}, nil
+				},
+				getFreightFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Freight, error) {
+					return &kargoapi.Freight{
+						Origin: kargoapi.FreightOrigin{
+							Kind: kargoapi.FreightOriginKindWarehouse,
+							Name: "fake-warehouse",
+						},
+					}, nil
 				},
 				admissionRequestFromContextFn: admission.RequestFromContext,
 				isRequestFromKargoControlplaneFn: libWebhook.IsRequestFromKargoControlplane(
