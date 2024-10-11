@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
 
-import { cleanEmptyObjectValues } from './helpers';
+import { cleanEmptyObjectValues, removePropertiesRecursively } from './helpers';
 
 test('cleanEmptyObjectValues', () => {
   expect(cleanEmptyObjectValues({})).toStrictEqual({});
@@ -78,4 +78,25 @@ test('cleanEmptyObjectValues', () => {
       ]
     }
   });
+});
+
+test('removePropertiesRecursively', () => {
+  expect(
+    removePropertiesRecursively(
+      {
+        a: {
+          b: 'c'
+        }
+      },
+      ['b']
+    )
+  ).toStrictEqual({ a: {} });
+
+  expect(
+    removePropertiesRecursively({ a: 'b', c: { d: { e: [{ f: 'g' }] } } }, ['f'])
+  ).toStrictEqual({ a: 'b', c: { d: { e: [{}] } } });
+
+  expect(
+    removePropertiesRecursively({ a: 'b', c: { d: { e: [{ f: 'g' }, { h: 'i' }] } } }, ['f'])
+  ).toStrictEqual({ a: 'b', c: { d: { e: [{}, { h: 'i' }] } } });
 });

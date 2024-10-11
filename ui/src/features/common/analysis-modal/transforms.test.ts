@@ -1,4 +1,5 @@
 // eslint-disable-file @typescript-eslint/ban-ts-comment
+import { describe, test, beforeAll, afterAll, expect } from 'vitest';
 
 import {
   GithubComArgoprojArgoRolloutsPkgApisRolloutsV1alpha1Argument,

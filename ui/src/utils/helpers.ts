@@ -37,3 +37,27 @@ export const cleanEmptyObjectValues = <T extends Record<string, unknown>>(obj: T
 
   return obj;
 };
+
+export const removePropertiesRecursively = <T extends Record<string, unknown>>(
+  schema: T,
+  props: string[]
+) => {
+  // remove keys
+  for (const prop of props) {
+    if (schema?.[prop]) {
+      delete schema[prop];
+    }
+  }
+
+  // recurse
+  for (const [key, value] of Object.entries(schema || {})) {
+    if (typeof value === 'object') {
+      schema[key as keyof T] = removePropertiesRecursively(
+        value as Record<string, unknown>,
+        props
+      ) as T[keyof T];
+    }
+  }
+
+  return schema;
+};
