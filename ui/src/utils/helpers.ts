@@ -8,7 +8,7 @@ export const cleanEmptyObjectValues = <T extends Record<string, unknown>>(obj: T
   //   recursively remove nested empty
   for (const [k, v] of Object.entries(obj)) {
     if (Array.isArray(v)) {
-      // @ts-expect-error
+      // @ts-expect-error valid array
       obj[k] = v.filter((element) => {
         if (typeof element === 'object') {
           return Object.keys(cleanEmptyObjectValues(element)).length > 0;
@@ -19,7 +19,7 @@ export const cleanEmptyObjectValues = <T extends Record<string, unknown>>(obj: T
     }
 
     if (typeof v === 'object') {
-      // @ts-expect-error
+      // @ts-expect-error valid object
       obj[k] = cleanEmptyObjectValues(v);
     }
   }
