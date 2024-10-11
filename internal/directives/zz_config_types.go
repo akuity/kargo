@@ -292,6 +292,24 @@ type KustomizeBuildConfig struct {
 	OutPath string `json:"outPath"`
 	// Path to the directory containing the Kustomization file.
 	Path string `json:"path"`
+	// Plugin contains configuration for customizing the behavior of builtin Kustomize plugins.
+	Plugin *Plugin `json:"plugin,omitempty"`
+}
+
+// Plugin contains configuration for customizing the behavior of builtin Kustomize plugins.
+type Plugin struct {
+	// Helm contains configuration for inflating a Helm chart.
+	Helm *Helm `json:"helm,omitempty"`
+}
+
+// Helm contains configuration for inflating a Helm chart.
+type Helm struct {
+	// APIVersions allows a manual set of supported API versions to be passed when inflating a
+	// Helm chart.
+	APIVersions []string `json:"apiVersions,omitempty"`
+	// KubeVersion allows for passing a specific Kubernetes version to use when inflating a Helm
+	// chart.
+	KubeVersion string `json:"kubeVersion,omitempty"`
 }
 
 type KustomizeSetImageConfig struct {
