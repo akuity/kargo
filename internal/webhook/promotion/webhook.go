@@ -3,6 +3,7 @@ package promotion
 import (
 	"context"
 	"fmt"
+	"reflect"
 
 	admissionv1 "k8s.io/api/admission/v1"
 	authzv1 "k8s.io/api/authorization/v1"
@@ -177,9 +178,9 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 			promo.Namespace,
 		)
 	}
-	if stage.Spec.PromotionMechanisms == nil {
+	if len(promo.Spec.Steps) == 0 {
 		return fmt.Errorf(
-			"Stage %q in namespace %q has no PromotionMechanisms",
+			"Stage %q in namespace %q defines no promotion steps",
 			promo.Spec.Stage,
 			promo.Namespace,
 		)
@@ -220,15 +221,38 @@ func (w *webhook) ValidateCreate(
 		return nil, fmt.Errorf("get admission request from context: %w", err)
 	}
 
+	stage, err := w.getStageFn(ctx, w.client, types.NamespacedName{
+		Namespace: promo.Namespace,
+		Name:      promo.Spec.Stage,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("get stage: %w", err)
+	}
+
+	freight, err := w.getFreightFn(ctx, w.client, types.NamespacedName{
+		Namespace: promo.Namespace,
+		Name:      promo.Spec.Freight,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("get freight: %w", err)
+	}
+
+	if !kargoapi.IsFreightAvailable(stage, freight) {
+		return nil, apierrors.NewInvalid(
+			promotionGroupKind,
+			promo.Name,
+			field.ErrorList{
+				field.Invalid(
+					field.NewPath("spec", "freight"),
+					promo.Spec.Freight,
+					"Freight is not available to this Stage",
+				),
+			},
+		)
+	}
+
 	// Record Promotion created event if the request doesn't come from Kargo controlplane
 	if !w.isRequestFromKargoControlplaneFn(req) {
-		freight, err := w.getFreightFn(ctx, w.client, types.NamespacedName{
-			Namespace: promo.Namespace,
-			Name:      promo.Spec.Freight,
-		})
-		if err != nil {
-			return nil, fmt.Errorf("get freight: %w", err)
-		}
 		w.recordPromotionCreatedEvent(ctx, req, promo, freight)
 	}
 	return nil, nil
@@ -245,7 +269,7 @@ func (w *webhook) ValidateUpdate(
 	}
 
 	// PromotionSpecs are meant to be immutable
-	if promo.Spec != (oldObj.(*kargoapi.Promotion).Spec) { // nolint: forcetypeassert
+	if !reflect.DeepEqual(promo.Spec, oldObj.(*kargoapi.Promotion).Spec) { // nolint: forcetypeassert
 		return nil, apierrors.NewInvalid(
 			promotionGroupKind,
 			promo.Name,

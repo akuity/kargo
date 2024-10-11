@@ -14,42 +14,36 @@ import (
 // digestSelector implements the Selector interface for SelectionStrategyDigest.
 type digestSelector struct {
 	repoClient *repositoryClient
-	constraint string
-	platform   *platformConstraint
+	opts       SelectorOptions
 }
 
 // newDigestSelector returns an implementation of the Selector interface for
 // SelectionStrategyDigest.
-func newDigestSelector(
-	repoClient *repositoryClient,
-	constraint string,
-	platform *platformConstraint,
-) (Selector, error) {
-	if constraint == "" {
+func newDigestSelector(repoClient *repositoryClient, opts SelectorOptions) (Selector, error) {
+	if opts.Constraint == "" {
 		return nil, errors.New("digest selection strategy requires a constraint")
 	}
 	return &digestSelector{
 		repoClient: repoClient,
-		constraint: constraint,
-		platform:   platform,
+		opts:       opts,
 	}, nil
 }
 
 // Select implements the Selector interface.
 func (d *digestSelector) Select(ctx context.Context) ([]Image, error) {
-	tag := d.constraint
+	tag := d.opts.Constraint
 	logger := logging.LoggerFromContext(ctx).WithValues(
 		"registry", d.repoClient.registry.name,
 		"image", d.repoClient.repoURL,
 		"selectionStrategy", SelectionStrategyDigest,
 		"tag", tag,
-		"platformConstrained", d.platform != nil,
+		"platformConstrained", d.opts.platform != nil,
 	)
 	logger.Trace("selecting image")
 
 	ctx = logging.ContextWithLogger(ctx, logger)
 
-	image, err := d.repoClient.getImageByTag(ctx, tag, d.platform)
+	image, err := d.repoClient.getImageByTag(ctx, tag, d.opts.platform)
 	if err != nil {
 		var te *transport.Error
 		if errors.As(err, &te) && te.StatusCode == http.StatusNotFound {

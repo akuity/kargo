@@ -12,6 +12,49 @@ import { PolicyRule, Role as Role$1, RoleBinding } from "../../k8s.io/api/rbac/v
 import { ServiceAccount } from "../../k8s.io/api/core/v1/generated_pb.js";
 
 /**
+ * @generated from message github.com.akuity.kargo.api.rbac.v1alpha1.Claim
+ */
+export class Claim extends Message<Claim> {
+  /**
+   * @generated from field: optional string name = 1;
+   */
+  name?: string;
+
+  /**
+   * @generated from field: repeated string values = 2;
+   */
+  values: string[] = [];
+
+  constructor(data?: PartialMessage<Claim>) {
+    super();
+    proto2.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto2 = proto2;
+  static readonly typeName = "github.com.akuity.kargo.api.rbac.v1alpha1.Claim";
+  static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 2, name: "values", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Claim {
+    return new Claim().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): Claim {
+    return new Claim().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Claim {
+    return new Claim().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: Claim | PlainMessage<Claim> | undefined, b: Claim | PlainMessage<Claim> | undefined): boolean {
+    return proto2.util.equals(Claim, a, b);
+  }
+}
+
+/**
  * @generated from message github.com.akuity.kargo.api.rbac.v1alpha1.ResourceDetails
  */
 export class ResourceDetails extends Message<ResourceDetails> {
@@ -77,19 +120,9 @@ export class Role extends Message<Role> {
   kargoManaged?: boolean;
 
   /**
-   * @generated from field: repeated string subs = 3;
+   * @generated from field: repeated github.com.akuity.kargo.api.rbac.v1alpha1.Claim claims = 7;
    */
-  subs: string[] = [];
-
-  /**
-   * @generated from field: repeated string emails = 4;
-   */
-  emails: string[] = [];
-
-  /**
-   * @generated from field: repeated string groups = 5;
-   */
-  groups: string[] = [];
+  claims: Claim[] = [];
 
   /**
    * @generated from field: repeated k8s.io.api.rbac.v1.PolicyRule rules = 6;
@@ -106,9 +139,7 @@ export class Role extends Message<Role> {
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 1, name: "metadata", kind: "message", T: ObjectMeta, opt: true },
     { no: 2, name: "kargoManaged", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
-    { no: 3, name: "subs", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 4, name: "emails", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 5, name: "groups", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 7, name: "claims", kind: "message", T: Claim, repeated: true },
     { no: 6, name: "rules", kind: "message", T: PolicyRule, repeated: true },
   ]);
 
@@ -183,55 +214,6 @@ export class RoleResources extends Message<RoleResources> {
 
   static equals(a: RoleResources | PlainMessage<RoleResources> | undefined, b: RoleResources | PlainMessage<RoleResources> | undefined): boolean {
     return proto2.util.equals(RoleResources, a, b);
-  }
-}
-
-/**
- * @generated from message github.com.akuity.kargo.api.rbac.v1alpha1.UserClaims
- */
-export class UserClaims extends Message<UserClaims> {
-  /**
-   * @generated from field: repeated string subs = 1;
-   */
-  subs: string[] = [];
-
-  /**
-   * @generated from field: repeated string emails = 2;
-   */
-  emails: string[] = [];
-
-  /**
-   * @generated from field: repeated string groups = 3;
-   */
-  groups: string[] = [];
-
-  constructor(data?: PartialMessage<UserClaims>) {
-    super();
-    proto2.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto2 = proto2;
-  static readonly typeName = "github.com.akuity.kargo.api.rbac.v1alpha1.UserClaims";
-  static readonly fields: FieldList = proto2.util.newFieldList(() => [
-    { no: 1, name: "subs", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 2, name: "emails", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 3, name: "groups", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UserClaims {
-    return new UserClaims().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UserClaims {
-    return new UserClaims().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UserClaims {
-    return new UserClaims().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: UserClaims | PlainMessage<UserClaims> | undefined, b: UserClaims | PlainMessage<UserClaims> | undefined): boolean {
-    return proto2.util.equals(UserClaims, a, b);
   }
 }
 

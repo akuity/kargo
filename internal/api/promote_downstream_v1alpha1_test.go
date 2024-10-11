@@ -8,6 +8,7 @@ import (
 	"connectrpc.com/connect"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -246,9 +247,6 @@ func TestPromoteDownstream(t *testing.T) {
 				) (*kargoapi.Freight, error) {
 					return &kargoapi.Freight{}, nil
 				},
-				isFreightAvailableFn: func(*kargoapi.Freight, string, []string) bool {
-					return false
-				},
 			},
 			assertions: func(
 				t *testing.T,
@@ -281,6 +279,10 @@ func TestPromoteDownstream(t *testing.T) {
 					types.NamespacedName,
 				) (*kargoapi.Stage, error) {
 					return &kargoapi.Stage{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: "fake-project",
+							Name:      "fake-stage",
+						},
 						Spec: testStageSpec,
 					}, nil
 				},
@@ -289,12 +291,19 @@ func TestPromoteDownstream(t *testing.T) {
 					client.Client,
 					string, string, string,
 				) (*kargoapi.Freight, error) {
-					return &kargoapi.Freight{}, nil
+					return &kargoapi.Freight{
+						Status: kargoapi.FreightStatus{
+							VerifiedIn: map[string]kargoapi.VerifiedStage{
+								"fake-stage": {},
+							},
+						},
+					}, nil
 				},
-				isFreightAvailableFn: func(*kargoapi.Freight, string, []string) bool {
-					return true
-				},
-				findDownstreamStagesFn: func(context.Context, *kargoapi.Stage) ([]kargoapi.Stage, error) {
+				findDownstreamStagesFn: func(
+					context.Context,
+					*kargoapi.Stage,
+					kargoapi.FreightOrigin,
+				) ([]kargoapi.Stage, error) {
 					return nil, errors.New("something went wrong")
 				},
 			},
@@ -325,6 +334,10 @@ func TestPromoteDownstream(t *testing.T) {
 					types.NamespacedName,
 				) (*kargoapi.Stage, error) {
 					return &kargoapi.Stage{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: "fake-project",
+							Name:      "fake-stage",
+						},
 						Spec: testStageSpec,
 					}, nil
 				},
@@ -333,12 +346,19 @@ func TestPromoteDownstream(t *testing.T) {
 					client.Client,
 					string, string, string,
 				) (*kargoapi.Freight, error) {
-					return &kargoapi.Freight{}, nil
+					return &kargoapi.Freight{
+						Status: kargoapi.FreightStatus{
+							VerifiedIn: map[string]kargoapi.VerifiedStage{
+								"fake-stage": {},
+							},
+						},
+					}, nil
 				},
-				isFreightAvailableFn: func(*kargoapi.Freight, string, []string) bool {
-					return true
-				},
-				findDownstreamStagesFn: func(context.Context, *kargoapi.Stage) ([]kargoapi.Stage, error) {
+				findDownstreamStagesFn: func(
+					context.Context,
+					*kargoapi.Stage,
+					kargoapi.FreightOrigin,
+				) ([]kargoapi.Stage, error) {
 					return nil, nil
 				},
 			},
@@ -373,6 +393,10 @@ func TestPromoteDownstream(t *testing.T) {
 					types.NamespacedName,
 				) (*kargoapi.Stage, error) {
 					return &kargoapi.Stage{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: "fake-project",
+							Name:      "fake-stage",
+						},
 						Spec: testStageSpec,
 					}, nil
 				},
@@ -383,12 +407,19 @@ func TestPromoteDownstream(t *testing.T) {
 					string,
 					string,
 				) (*kargoapi.Freight, error) {
-					return &kargoapi.Freight{}, nil
+					return &kargoapi.Freight{
+						Status: kargoapi.FreightStatus{
+							VerifiedIn: map[string]kargoapi.VerifiedStage{
+								"fake-stage": {},
+							},
+						},
+					}, nil
 				},
-				isFreightAvailableFn: func(*kargoapi.Freight, string, []string) bool {
-					return true
-				},
-				findDownstreamStagesFn: func(context.Context, *kargoapi.Stage) ([]kargoapi.Stage, error) {
+				findDownstreamStagesFn: func(
+					context.Context,
+					*kargoapi.Stage,
+					kargoapi.FreightOrigin,
+				) ([]kargoapi.Stage, error) {
 					return []kargoapi.Stage{{}}, nil
 				},
 				authorizeFn: func(
@@ -428,6 +459,10 @@ func TestPromoteDownstream(t *testing.T) {
 					types.NamespacedName,
 				) (*kargoapi.Stage, error) {
 					return &kargoapi.Stage{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: "fake-project",
+							Name:      "fake-stage",
+						},
 						Spec: testStageSpec,
 					}, nil
 				},
@@ -436,16 +471,27 @@ func TestPromoteDownstream(t *testing.T) {
 					client.Client,
 					string, string, string,
 				) (*kargoapi.Freight, error) {
-					return &kargoapi.Freight{}, nil
+					return &kargoapi.Freight{
+						Status: kargoapi.FreightStatus{
+							VerifiedIn: map[string]kargoapi.VerifiedStage{
+								"fake-stage": {},
+							},
+						},
+					}, nil
 				},
-				isFreightAvailableFn: func(*kargoapi.Freight, string, []string) bool {
-					return true
-				},
-				findDownstreamStagesFn: func(context.Context, *kargoapi.Stage) ([]kargoapi.Stage, error) {
+				findDownstreamStagesFn: func(
+					context.Context,
+					*kargoapi.Stage,
+					kargoapi.FreightOrigin,
+				) ([]kargoapi.Stage, error) {
 					return []kargoapi.Stage{
 						{
 							Spec: kargoapi.StageSpec{
-								PromotionMechanisms: &kargoapi.PromotionMechanisms{},
+								PromotionTemplate: &kargoapi.PromotionTemplate{
+									Spec: kargoapi.PromotionTemplateSpec{
+										Steps: []kargoapi.PromotionStep{{}},
+									},
+								},
 							},
 						},
 					}, nil
@@ -497,6 +543,10 @@ func TestPromoteDownstream(t *testing.T) {
 					types.NamespacedName,
 				) (*kargoapi.Stage, error) {
 					return &kargoapi.Stage{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: "fake-project",
+							Name:      "fake-stage",
+						},
 						Spec: testStageSpec,
 					}, nil
 				},
@@ -505,16 +555,27 @@ func TestPromoteDownstream(t *testing.T) {
 					client.Client,
 					string, string, string,
 				) (*kargoapi.Freight, error) {
-					return &kargoapi.Freight{}, nil
+					return &kargoapi.Freight{
+						Status: kargoapi.FreightStatus{
+							VerifiedIn: map[string]kargoapi.VerifiedStage{
+								"fake-stage": {},
+							},
+						},
+					}, nil
 				},
-				isFreightAvailableFn: func(*kargoapi.Freight, string, []string) bool {
-					return true
-				},
-				findDownstreamStagesFn: func(context.Context, *kargoapi.Stage) ([]kargoapi.Stage, error) {
+				findDownstreamStagesFn: func(
+					context.Context,
+					*kargoapi.Stage,
+					kargoapi.FreightOrigin,
+				) ([]kargoapi.Stage, error) {
 					return []kargoapi.Stage{
 						{
 							Spec: kargoapi.StageSpec{
-								PromotionMechanisms: &kargoapi.PromotionMechanisms{},
+								PromotionTemplate: &kargoapi.PromotionTemplate{
+									Spec: kargoapi.PromotionTemplateSpec{
+										Steps: []kargoapi.PromotionStep{{}},
+									},
+								},
 							},
 						},
 					}, nil

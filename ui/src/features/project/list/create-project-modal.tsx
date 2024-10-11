@@ -1,6 +1,5 @@
-import { createConnectQueryKey, useMutation } from '@connectrpc/connect-query';
+import { useMutation } from '@connectrpc/connect-query';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useQueryClient } from '@tanstack/react-query';
 import { Form, Input, Modal, Tabs } from 'antd';
 import type { JSONSchema4 } from 'json-schema';
 import React from 'react';
@@ -11,11 +10,10 @@ import { z } from 'zod';
 import { YamlEditor } from '@ui/features/common/code-editor/yaml-editor';
 import { FieldContainer } from '@ui/features/common/form/field-container';
 import { ModalComponentProps } from '@ui/features/common/modal/modal-context';
+import { queryCache } from '@ui/features/utils/cache';
 import schema from '@ui/gen/schema/projects.kargo.akuity.io_v1alpha1.json';
-import {
-  createResource,
-  listProjects
-} from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
+import { createResource } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
+import { decodeUint8ArrayYamlManifestToJson } from '@ui/utils/decode-raw-data';
 import { zodValidators } from '@ui/utils/validators';
 
 import { projectYAMLExample } from './utils/project-yaml-example';
@@ -25,9 +23,15 @@ const formSchema = z.object({
 });
 
 export const CreateProjectModal = ({ visible, hide }: ModalComponentProps) => {
-  const queryClient = useQueryClient();
   const { mutateAsync, isPending } = useMutation(createResource, {
-    onSuccess: () => hide()
+    onSuccess: (response) => {
+      for (const result of response?.results || []) {
+        if (result?.result?.case === 'createdResourceManifest') {
+          queryCache.project.add([decodeUint8ArrayYamlManifestToJson(result?.result?.value)]);
+        }
+      }
+      hide();
+    }
   });
 
   const { control, handleSubmit, watch, setValue } = useForm({
@@ -39,15 +43,9 @@ export const CreateProjectModal = ({ visible, hide }: ModalComponentProps) => {
 
   const onSubmit = handleSubmit(async (data) => {
     const textEncoder = new TextEncoder();
-    await mutateAsync(
-      {
-        manifest: textEncoder.encode(data.value)
-      },
-      {
-        onSuccess: () =>
-          queryClient.invalidateQueries({ queryKey: createConnectQueryKey(listProjects) })
-      }
-    );
+    await mutateAsync({
+      manifest: textEncoder.encode(data.value)
+    });
   });
 
   const yamlValue = watch('value');
@@ -55,7 +53,7 @@ export const CreateProjectModal = ({ visible, hide }: ModalComponentProps) => {
   const name = React.useMemo(() => {
     try {
       return yaml.parse(yamlValue).metadata.name;
-    } catch (err) {
+    } catch (_) {
       return '';
     }
   }, [yamlValue]);

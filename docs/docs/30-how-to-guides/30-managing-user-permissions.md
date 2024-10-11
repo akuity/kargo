@@ -7,7 +7,8 @@ sidebar_label: Managing user permissions
 
 Kargo is typically configured to support single-sign-on (SSO) using an external
 identity provider that implements the
-[OpenID Connect](https://openid.net/developers/how-connect-works/) protocol.
+[OpenID Connect](https://openid.net/developers/how-connect-works/) (OIDC)
+ protocol.
 
 :::info
 Refer to
@@ -35,12 +36,10 @@ Whether logged into the Kargo CLI or UI, Kargo users are interacting with Kargo
 via the Kargo API server. The Kargo API server authenticates users via a bearer
 token issued by the external identity provider. On every request, the Kargo
 API server validates and decodes the token to obtain trusted information about
-the user. This includes:
-
-* The user's unique identifier (the standard OpenID Connect `sub` claim)
-* The user's email address (the standard OpenID Connect `email` claim)
-* Groups to which the user belongs (the non-standard, but widely supported
-  `groups` claim)
+the user which, importantly, includes _claims_ such as username, email address,
+and group membership. The exact claims available depend on the identity provider
+and the configuration of the Kargo API server. (Refer again to
+[the advanced section of the installation guide](./10-installing-kargo.md#advanced-installation).)
 
 Also at the time of authentication, the Kargo API server queries the Kubernetes
 API server to obtain a list of all `ServiceAccount` resources to which the user
@@ -49,26 +48,15 @@ in Kargo project namespaces only (i.e. only those labeled with
 `kargo.akuity.io/project: "true"`). Refer to the next section for exceptions to
 this rule.
 
-ServiceAccount resources may be mapped to users through the use of three
-different annotations:
-
-* `rbac.kargo.akuity.io/sub`: This annotation's value may be a comma-delimited
-  list of user identifiers. All users in the list will be mapped to the
-  `ServiceAccount`.
-
-* `rbac.kargo.akuity.io/email`: This annotation's value may be a comma-delimited
-  list of user email addresses. All users in the list having one of the listed
-  email addresses will be mapped to the `ServiceAccount`.
-
-* `rbac.kargo.akuity.io/groups`: This annotation's value may be a
-  comma-delimited list of group identifiers. All users in the list belonging to
-  one or more of the listed groups will be mapped to the `ServiceAccount`.
+ServiceAccount resources may be mapped to users through the use of annotations
+whose key begins with `rbac.kargo.akuity.io/claim.`. The value of the annotation
+may be a single value, or a comma-delimited list of values.
 
 In the following example, the `ServiceAccount` resource is mapped to all of:
 
-* A user identified as `bob`.
-* A user with the email address `alice@example.com`.
-* All users in the group `devops`.
+* Users identified as `alice` or `bob`.
+* A user with the email address `carl@example.com`.
+* All users in _either_ the `devops` or `kargo-admin` group.
 
 ```yaml
 apiVersion: v1
@@ -77,9 +65,9 @@ metadata:
   name: admin
   namespace: kargo-demo
   annotations:
-    rbac.kargo.akuity.io/sub: bob
-    rbac.kargo.akuity.io/email: alice@example.com
-    rbac.kargo.akuity.io/groups: devops
+    rbac.kargo.akuity.io/claim.sub: alice,bob
+    rbac.kargo.akuity.io/claim.email: carl@example.com
+    rbac.kargo.akuity.io/claim.groups: devops,kargo-admin
 ```
 
 A user may be mapped to multiple `ServiceAccount` resources. A user's effective
@@ -151,7 +139,7 @@ command:
 kargo create role developer --project kargo-demo
 ```
 
-```
+```shell
 role.rbac.kargo.akuity.io/developer created
 ```
 
@@ -186,10 +174,10 @@ metadata:
 ```
 
 To make things more interesting, we can grant the `developer` Kargo Role to
-a users having the `developer` group claim:
+a users having the value `developer` in their `groups` claim:
 
 ```shell
-kargo grant --role developer --group developer --project kargo-demo
+kargo grant --role developer --claim groups=developer --project kargo-demo
 ```
 
 ```shell
@@ -201,7 +189,7 @@ Role:
 
 ```shell
 kargo grant --role developer \
-  --resource-type stages --verb '*' \
+  --verb '*' --resource-type stages \
   --project kargo-demo
 ```
 
@@ -218,8 +206,10 @@ kargo get role developer --project kargo-demo -o yaml
 
 ```yaml
 apiVersion: rbac.kargo.akuity.io/v1alpha1
-groups:
-- developer
+claims:
+  - name: groups
+    values:
+    - developer
 kargoManaged: true
 kind: Role
 metadata:
@@ -246,10 +236,10 @@ We can also revoke the `developer` Kargo Role from the `developer` group or
 revoke any permissions from the `developer` Kargo Role using the `kargo revoke`
 command, which supports all the same flags as the `kargo grant` command.
 
-Last, it may sometimes be useful to view a Kargo Role's underlying `ServiceAccount`,
-`Role`, and `RoleBinding` resources. This may be useful, for instance, to users
-who have managed Project-level permissions imperatively up to a point and now
-wish to make the transition to GitOps'ing those permissions.
+Last, it may sometimes be useful to view a Kargo Role's underlying
+`ServiceAccount`, `Role`, and `RoleBinding` resources. This may be useful, for
+instance, to users who have managed Project-level permissions imperatively up to
+a point and now wish to make the transition to GitOps'ing those permissions.
 
 ```shell
 kargo get role developer --as-kubernetes-resources --project kargo-demo

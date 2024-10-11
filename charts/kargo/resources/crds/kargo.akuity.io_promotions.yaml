@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.15.0
+    controller-gen.kubebuilder.io/version: v0.16.3
   name: promotions.kargo.akuity.io
 spec:
   group: kargo.akuity.io
@@ -76,6 +76,30 @@ spec:
                 minLength: 1
                 pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
                 type: string
+              steps:
+                description: |-
+                  Steps specifies the directives to be executed as part of this Promotion.
+                  The order in which the directives are executed is the order in which they
+                  are listed in this field.
+                items:
+                  description: PromotionStep describes a directive to be executed
+                    as part of a Promotion.
+                  properties:
+                    as:
+                      description: As is the alias this step can be referred to as.
+                      type: string
+                    config:
+                      description: Config is the configuration for the directive.
+                      x-kubernetes-preserve-unknown-fields: true
+                    uses:
+                      description: Uses identifies a runner that can execute this
+                        step.
+                      minLength: 1
+                      type: string
+                  required:
+                  - uses
+                  type: object
+                type: array
             required:
             - freight
             - stage
@@ -85,6 +109,13 @@ spec:
               Status describes the current state of the transition represented by this
               Promotion.
             properties:
+              currentStep:
+                description: |-
+                  CurrentStep is the index of the current promotion step being executed. This
+                  permits steps that have already run successfully to be skipped on
+                  subsequent reconciliations attempts.
+                format: int64
+                type: integer
               finishedAt:
                 description: FinishedAt is the time when the promotion was completed.
                 format: date-time
@@ -132,16 +163,6 @@ spec:
                           type: string
                         committer:
                           description: Committer is the person who committed the commit.
-                          type: string
-                        healthCheckCommit:
-                          description: |-
-                            HealthCheckCommit is the ID of a specific commit. When specified,
-                            assessments of Stage health will use this value (instead of ID) when
-                            determining if applicable sources of Argo CD Application resources
-                            associated with the Stage are or are not synced to this commit. Note that
-                            there are cases (as in that of Kargo Render being utilized as a promotion
-                            mechanism) wherein the value of this field may differ from the commit ID
-                            found in the ID field.
                           type: string
                         id:
                           description: |-
@@ -277,16 +298,6 @@ spec:
                               committer:
                                 description: Committer is the person who committed
                                   the commit.
-                                type: string
-                              healthCheckCommit:
-                                description: |-
-                                  HealthCheckCommit is the ID of a specific commit. When specified,
-                                  assessments of Stage health will use this value (instead of ID) when
-                                  determining if applicable sources of Argo CD Application resources
-                                  associated with the Stage are or are not synced to this commit. Note that
-                                  there are cases (as in that of Kargo Render being utilized as a promotion
-                                  mechanism) wherein the value of this field may differ from the commit ID
-                                  found in the ID field.
                                 type: string
                               id:
                                 description: |-
@@ -432,6 +443,27 @@ spec:
                 required:
                 - id
                 type: object
+              healthChecks:
+                description: |-
+                  HealthChecks contains the health check directives to be executed after
+                  the Promotion has completed.
+                items:
+                  description: |-
+                    HealthCheckStep describes a health check directive which can be executed by
+                    a Stage to verify the health of a Promotion result.
+                  properties:
+                    config:
+                      description: Config is the configuration for the directive.
+                      x-kubernetes-preserve-unknown-fields: true
+                    uses:
+                      description: Uses identifies a runner that can execute this
+                        step.
+                      minLength: 1
+                      type: string
+                  required:
+                  - uses
+                  type: object
+                type: array
               lastHandledRefresh:
                 description: |-
                   LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh
@@ -445,17 +477,15 @@ spec:
                   i.e. If the Phase field has a value of Failed, this field can be expected
                   to explain why.
                 type: string
-              metadata:
-                additionalProperties:
-                  type: string
-                description: |-
-                  Metadata holds arbitrary metadata set by promotion mechanisms
-                  (e.g. for display purposes, or internal bookkeeping)
-                type: object
               phase:
                 description: Phase describes where the Promotion currently is in its
                   lifecycle.
                 type: string
+              state:
+                description: |-
+                  State stores the state of the promotion process between reconciliation
+                  attempts.
+                x-kubernetes-preserve-unknown-fields: true
             type: object
         required:
         - spec

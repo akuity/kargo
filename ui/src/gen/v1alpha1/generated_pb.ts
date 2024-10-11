@@ -8,6 +8,7 @@
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto2 } from "@bufbuild/protobuf";
 import { Condition, Duration, ListMeta, ObjectMeta, Time } from "../k8s.io/apimachinery/pkg/apis/meta/v1/generated_pb.js";
+import { JSON } from "../k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1/generated_pb.js";
 
 /**
  * AnalysisRunArgument represents an argument to be added to an AnalysisRun.
@@ -405,480 +406,6 @@ export class ArgoCDAppSyncStatus extends Message<ArgoCDAppSyncStatus> {
 
   static equals(a: ArgoCDAppSyncStatus | PlainMessage<ArgoCDAppSyncStatus> | undefined, b: ArgoCDAppSyncStatus | PlainMessage<ArgoCDAppSyncStatus> | undefined): boolean {
     return proto2.util.equals(ArgoCDAppSyncStatus, a, b);
-  }
-}
-
-/**
- * ArgoCDAppUpdate describes updates that should be applied to an Argo CD
- * Application resources to incorporate Freight into a Stage.
- *
- * @generated from message github.com.akuity.kargo.api.v1alpha1.ArgoCDAppUpdate
- */
-export class ArgoCDAppUpdate extends Message<ArgoCDAppUpdate> {
-  /**
-   * AppName specifies the name of an Argo CD Application resource to be
-   * updated.
-   *
-   * +kubebuilder:validation:MinLength=1
-   * +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
-   *
-   * @generated from field: optional string appName = 1;
-   */
-  appName?: string;
-
-  /**
-   * AppNamespace specifies the namespace of an Argo CD Application resource to
-   * be updated. If left unspecified, the namespace of this Application resource
-   * will use the value of ARGOCD_NAMESPACE or "argocd"
-   *
-   * +kubebuilder:validation:Optional
-   * +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
-   *
-   * @generated from field: optional string appNamespace = 2;
-   */
-  appNamespace?: string;
-
-  /**
-   * Origin disambiguates the origin from which artifacts used by this promotion
-   * mechanism must have originated. This is especially useful in cases where a
-   * Stage may request Freight from multiples origins (e.g. multiple Warehouses)
-   * and some of those each reference different versions of artifacts from the
-   * same repository. This field is optional, but Promotions will fail if there
-   * is ever ambiguity regarding which piece of Freight from which an artifact
-   * is to be sourced.
-   *
-   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.FreightOrigin origin = 4;
-   */
-  origin?: FreightOrigin;
-
-  /**
-   * SourceUpdates describes updates to be applied to various sources of the
-   * specified Argo CD Application resource.
-   *
-   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.ArgoCDSourceUpdate sourceUpdates = 3;
-   */
-  sourceUpdates: ArgoCDSourceUpdate[] = [];
-
-  constructor(data?: PartialMessage<ArgoCDAppUpdate>) {
-    super();
-    proto2.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto2 = proto2;
-  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.ArgoCDAppUpdate";
-  static readonly fields: FieldList = proto2.util.newFieldList(() => [
-    { no: 1, name: "appName", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 2, name: "appNamespace", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 4, name: "origin", kind: "message", T: FreightOrigin, opt: true },
-    { no: 3, name: "sourceUpdates", kind: "message", T: ArgoCDSourceUpdate, repeated: true },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ArgoCDAppUpdate {
-    return new ArgoCDAppUpdate().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ArgoCDAppUpdate {
-    return new ArgoCDAppUpdate().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ArgoCDAppUpdate {
-    return new ArgoCDAppUpdate().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: ArgoCDAppUpdate | PlainMessage<ArgoCDAppUpdate> | undefined, b: ArgoCDAppUpdate | PlainMessage<ArgoCDAppUpdate> | undefined): boolean {
-    return proto2.util.equals(ArgoCDAppUpdate, a, b);
-  }
-}
-
-/**
- * ArgoCDHelm describes updates to an Argo CD Application source's Helm-specific
- * attributes to incorporate newly observed Freight into a Stage.
- *
- * @generated from message github.com.akuity.kargo.api.v1alpha1.ArgoCDHelm
- */
-export class ArgoCDHelm extends Message<ArgoCDHelm> {
-  /**
-   * Images describes how specific image versions can be incorporated into an
-   * Argo CD Application's Helm parameters.
-   *
-   * +kubebuilder:validation:MinItems=1
-   *
-   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.ArgoCDHelmImageUpdate images = 1;
-   */
-  images: ArgoCDHelmImageUpdate[] = [];
-
-  /**
-   * Origin disambiguates the origin from which artifacts used by this promotion
-   * mechanism must have originated. This is especially useful in cases where a
-   * Stage may request Freight from multiples origins (e.g. multiple Warehouses)
-   * and some of those each reference different versions of artifacts from the
-   * same repository. This field is optional. When left unspecified, it will
-   * implicitly inherit the value of the enclosing ArgoCDSourceUpdate's Origin
-   * field. If that, too, is unspecified, Promotions will fail if there is ever
-   * ambiguity regarding from which piece of Freight an artifact is to be
-   * sourced.
-   *
-   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.FreightOrigin origin = 2;
-   */
-  origin?: FreightOrigin;
-
-  constructor(data?: PartialMessage<ArgoCDHelm>) {
-    super();
-    proto2.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto2 = proto2;
-  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.ArgoCDHelm";
-  static readonly fields: FieldList = proto2.util.newFieldList(() => [
-    { no: 1, name: "images", kind: "message", T: ArgoCDHelmImageUpdate, repeated: true },
-    { no: 2, name: "origin", kind: "message", T: FreightOrigin, opt: true },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ArgoCDHelm {
-    return new ArgoCDHelm().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ArgoCDHelm {
-    return new ArgoCDHelm().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ArgoCDHelm {
-    return new ArgoCDHelm().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: ArgoCDHelm | PlainMessage<ArgoCDHelm> | undefined, b: ArgoCDHelm | PlainMessage<ArgoCDHelm> | undefined): boolean {
-    return proto2.util.equals(ArgoCDHelm, a, b);
-  }
-}
-
-/**
- * ArgoCDHelmImageUpdate describes how a specific image version can be
- * incorporated into an Argo CD Application's Helm parameters.
- *
- * @generated from message github.com.akuity.kargo.api.v1alpha1.ArgoCDHelmImageUpdate
- */
-export class ArgoCDHelmImageUpdate extends Message<ArgoCDHelmImageUpdate> {
-  /**
-   * Image specifies a container image (without tag). This is a required field.
-   *
-   * +kubebuilder:validation:MinLength=1
-   *
-   * @generated from field: optional string image = 1;
-   */
-  image?: string;
-
-  /**
-   * Origin disambiguates the origin from which artifacts used by this promotion
-   * mechanism must have originated. This is especially useful in cases where a
-   * Stage may request Freight from multiples origins (e.g. multiple Warehouses)
-   * and some of those each reference different versions of artifacts from the
-   * same repository. This field is optional. When left unspecified, it will
-   * implicitly inherit the value of the enclosing ArgoCDHelm's Origin field. If
-   * that, too, is unspecified, Promotions will fail if there is ever ambiguity
-   * regarding from which piece of Freight an artifact is to be sourced.
-   *
-   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.FreightOrigin origin = 4;
-   */
-  origin?: FreightOrigin;
-
-  /**
-   * Key specifies a key within an Argo CD Application's Helm parameters that is
-   * to be updated. This is a required field.
-   *
-   * +kubebuilder:validation:MinLength=1
-   *
-   * @generated from field: optional string key = 2;
-   */
-  key?: string;
-
-  /**
-   * Value specifies the new value for the specified key in the Argo CD
-   * Application's Helm parameters. Valid values are:
-   *
-   * - ImageAndTag: Replaces the value of the specified key with
-   *   <image name>:<tag>
-   * - Tag: Replaces the value of the specified key with just the new tag
-   * - ImageAndDigest: Replaces the value of the specified key with
-   *   <image name>@<digest>
-   * - Digest: Replaces the value of the specified key with just the new digest.
-   *
-   * This is a required field.
-   *
-   * @generated from field: optional string value = 3;
-   */
-  value?: string;
-
-  constructor(data?: PartialMessage<ArgoCDHelmImageUpdate>) {
-    super();
-    proto2.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto2 = proto2;
-  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.ArgoCDHelmImageUpdate";
-  static readonly fields: FieldList = proto2.util.newFieldList(() => [
-    { no: 1, name: "image", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 4, name: "origin", kind: "message", T: FreightOrigin, opt: true },
-    { no: 2, name: "key", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 3, name: "value", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ArgoCDHelmImageUpdate {
-    return new ArgoCDHelmImageUpdate().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ArgoCDHelmImageUpdate {
-    return new ArgoCDHelmImageUpdate().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ArgoCDHelmImageUpdate {
-    return new ArgoCDHelmImageUpdate().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: ArgoCDHelmImageUpdate | PlainMessage<ArgoCDHelmImageUpdate> | undefined, b: ArgoCDHelmImageUpdate | PlainMessage<ArgoCDHelmImageUpdate> | undefined): boolean {
-    return proto2.util.equals(ArgoCDHelmImageUpdate, a, b);
-  }
-}
-
-/**
- * ArgoCDKustomize describes updates to an Argo CD Application source's
- * Kustomize-specific attributes to incorporate newly observed Freight into a
- * Stage.
- *
- * @generated from message github.com.akuity.kargo.api.v1alpha1.ArgoCDKustomize
- */
-export class ArgoCDKustomize extends Message<ArgoCDKustomize> {
-  /**
-   * Images describes how specific image versions can be incorporated into an
-   * Argo CD Application's Kustomize parameters.
-   *
-   * +kubebuilder:validation:MinItems=1
-   *
-   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.ArgoCDKustomizeImageUpdate images = 1;
-   */
-  images: ArgoCDKustomizeImageUpdate[] = [];
-
-  /**
-   * Origin disambiguates the origin from which artifacts used by this promotion
-   * mechanism must have originated. This is especially useful in cases where a
-   * Stage may request Freight from multiples origins (e.g. multiple Warehouses)
-   * and some of those each reference different versions of artifacts from the
-   * same repository. This field is optional. When left unspecified, it will
-   * implicitly inherit the value of the enclosing ArgoCDSourceUpdate's Origin
-   * field. If that, too, is unspecified, Promotions will fail if there is ever
-   * ambiguity regarding from which piece of Freight an artifact is to be
-   * sourced.
-   *
-   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.FreightOrigin origin = 2;
-   */
-  origin?: FreightOrigin;
-
-  constructor(data?: PartialMessage<ArgoCDKustomize>) {
-    super();
-    proto2.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto2 = proto2;
-  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.ArgoCDKustomize";
-  static readonly fields: FieldList = proto2.util.newFieldList(() => [
-    { no: 1, name: "images", kind: "message", T: ArgoCDKustomizeImageUpdate, repeated: true },
-    { no: 2, name: "origin", kind: "message", T: FreightOrigin, opt: true },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ArgoCDKustomize {
-    return new ArgoCDKustomize().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ArgoCDKustomize {
-    return new ArgoCDKustomize().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ArgoCDKustomize {
-    return new ArgoCDKustomize().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: ArgoCDKustomize | PlainMessage<ArgoCDKustomize> | undefined, b: ArgoCDKustomize | PlainMessage<ArgoCDKustomize> | undefined): boolean {
-    return proto2.util.equals(ArgoCDKustomize, a, b);
-  }
-}
-
-/**
- * ArgoCDKustomizeImageUpdate describes how a specific image version can be
- * incorporated into an Argo CD Application's Kustomize parameters.
- *
- * @generated from message github.com.akuity.kargo.api.v1alpha1.ArgoCDKustomizeImageUpdate
- */
-export class ArgoCDKustomizeImageUpdate extends Message<ArgoCDKustomizeImageUpdate> {
-  /**
-   * Image specifies a container image (without tag). This is a required field.
-   *
-   * +kubebuilder:validation:MinLength=1
-   *
-   * @generated from field: optional string image = 1;
-   */
-  image?: string;
-
-  /**
-   * Origin disambiguates the origin from which artifacts used by this promotion
-   * mechanism must have originated. This is especially useful in cases where a
-   * Stage may request Freight from multiples origins (e.g. multiple Warehouses)
-   * and some of those each reference different versions of artifacts from the
-   * same repository. This field is optional. When left unspecified, it will
-   * implicitly inherit the value of the enclosing ArgoCDKustomize's Origin
-   * field. If that, too, is unspecified, Promotions will fail if there is ever
-   * ambiguity regarding from which piece of Freight an artifact is to be
-   * sourced.
-   *
-   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.FreightOrigin origin = 3;
-   */
-  origin?: FreightOrigin;
-
-  /**
-   * UseDigest specifies whether the image's digest should be used instead of
-   * its tag.
-   *
-   * +kubebuilder:validation:Optional
-   *
-   * @generated from field: optional bool useDigest = 2;
-   */
-  useDigest?: boolean;
-
-  constructor(data?: PartialMessage<ArgoCDKustomizeImageUpdate>) {
-    super();
-    proto2.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto2 = proto2;
-  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.ArgoCDKustomizeImageUpdate";
-  static readonly fields: FieldList = proto2.util.newFieldList(() => [
-    { no: 1, name: "image", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 3, name: "origin", kind: "message", T: FreightOrigin, opt: true },
-    { no: 2, name: "useDigest", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ArgoCDKustomizeImageUpdate {
-    return new ArgoCDKustomizeImageUpdate().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ArgoCDKustomizeImageUpdate {
-    return new ArgoCDKustomizeImageUpdate().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ArgoCDKustomizeImageUpdate {
-    return new ArgoCDKustomizeImageUpdate().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: ArgoCDKustomizeImageUpdate | PlainMessage<ArgoCDKustomizeImageUpdate> | undefined, b: ArgoCDKustomizeImageUpdate | PlainMessage<ArgoCDKustomizeImageUpdate> | undefined): boolean {
-    return proto2.util.equals(ArgoCDKustomizeImageUpdate, a, b);
-  }
-}
-
-/**
- * ArgoCDSourceUpdate describes updates that should be applied to one of an Argo
- * CD Application resource's sources.
- *
- * @generated from message github.com.akuity.kargo.api.v1alpha1.ArgoCDSourceUpdate
- */
-export class ArgoCDSourceUpdate extends Message<ArgoCDSourceUpdate> {
-  /**
-   * RepoURL along with the Chart field identifies which of an Argo CD
-   * Application's sources this update is intended for. Note: As of Argo CD 2.6,
-   * Applications can use multiple sources. When the source to be updated
-   * references a Helm chart repository, the values of the RepoURL and Chart
-   * fields should exactly match the values of the fields of the same names in
-   * the source. i.e. Do not match the values of these two fields to your
-   * Warehouse; match them to the Application source you wish to update. This is
-   * a required field.
-   *
-   * +kubebuilder:validation:MinLength=1
-   *
-   * @generated from field: optional string repoURL = 1;
-   */
-  repoURL?: string;
-
-  /**
-   * Chart along with the RepoURL field identifies which of an Argo CD
-   * Application's sources this update is intended for. Note: As of Argo CD 2.6,
-   * Applications can use multiple sources. When the source to be updated
-   * references a Helm chart repository, the values of the RepoURL and Chart
-   * fields should exactly match the values of the fields of the same names in
-   * the source. i.e. Do not match the values of these two fields to your
-   * Warehouse; match them to the Application source you wish to update.
-   *
-   * +kubebuilder:validation:Optional
-   *
-   * @generated from field: optional string chart = 2;
-   */
-  chart?: string;
-
-  /**
-   * Origin disambiguates the origin from which artifacts used by this promotion
-   * mechanism must have originated. This is especially useful in cases where a
-   * Stage may request Freight from multiples origins (e.g. multiple Warehouses)
-   * and some of those each reference different versions of artifacts from the
-   * same repository. This field is optional. When left unspecified, it will
-   * implicitly inherit the value of the enclosing ArgoCDAppUpdate's Origin
-   * field. If that, too, is unspecified, Promotions will fail if there is ever
-   * ambiguity regarding from which piece of Freight an artifact is to be
-   * sourced.
-   *
-   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.FreightOrigin origin = 6;
-   */
-  origin?: FreightOrigin;
-
-  /**
-   * UpdateTargetRevision is a bool indicating whether the source should be
-   * updated such that its TargetRevision field points at the most recently git
-   * commit (if RepoURL references a git repository) or chart version (if
-   * RepoURL references a chart repository).
-   *
-   * @generated from field: optional bool updateTargetRevision = 3;
-   */
-  updateTargetRevision?: boolean;
-
-  /**
-   * Kustomize describes updates to the source's Kustomize-specific attributes.
-   *
-   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.ArgoCDKustomize kustomize = 4;
-   */
-  kustomize?: ArgoCDKustomize;
-
-  /**
-   * Helm describes updates to the source's Helm-specific attributes.
-   *
-   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.ArgoCDHelm helm = 5;
-   */
-  helm?: ArgoCDHelm;
-
-  constructor(data?: PartialMessage<ArgoCDSourceUpdate>) {
-    super();
-    proto2.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto2 = proto2;
-  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.ArgoCDSourceUpdate";
-  static readonly fields: FieldList = proto2.util.newFieldList(() => [
-    { no: 1, name: "repoURL", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 2, name: "chart", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 6, name: "origin", kind: "message", T: FreightOrigin, opt: true },
-    { no: 3, name: "updateTargetRevision", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
-    { no: 4, name: "kustomize", kind: "message", T: ArgoCDKustomize, opt: true },
-    { no: 5, name: "helm", kind: "message", T: ArgoCDHelm, opt: true },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ArgoCDSourceUpdate {
-    return new ArgoCDSourceUpdate().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ArgoCDSourceUpdate {
-    return new ArgoCDSourceUpdate().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ArgoCDSourceUpdate {
-    return new ArgoCDSourceUpdate().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: ArgoCDSourceUpdate | PlainMessage<ArgoCDSourceUpdate> | undefined, b: ArgoCDSourceUpdate | PlainMessage<ArgoCDSourceUpdate> | undefined): boolean {
-    return proto2.util.equals(ArgoCDSourceUpdate, a, b);
   }
 }
 
@@ -1898,19 +1425,6 @@ export class GitCommit extends Message<GitCommit> {
   tag?: string;
 
   /**
-   * HealthCheckCommit is the ID of a specific commit. When specified,
-   * assessments of Stage health will use this value (instead of ID) when
-   * determining if applicable sources of Argo CD Application resources
-   * associated with the Stage are or are not synced to this commit. Note that
-   * there are cases (as in that of Kargo Render being utilized as a promotion
-   * mechanism) wherein the value of this field may differ from the commit ID
-   * found in the ID field.
-   *
-   * @generated from field: optional string healthCheckCommit = 5;
-   */
-  healthCheckCommit?: string;
-
-  /**
    * Message is the message associated with the commit. At present, this only
    * contains the first line (subject) of the commit message.
    *
@@ -1944,7 +1458,6 @@ export class GitCommit extends Message<GitCommit> {
     { no: 2, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 3, name: "branch", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 4, name: "tag", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 5, name: "healthCheckCommit", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 6, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 7, name: "author", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 8, name: "committer", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
@@ -2025,205 +1538,6 @@ export class GitDiscoveryResult extends Message<GitDiscoveryResult> {
 }
 
 /**
- * @generated from message github.com.akuity.kargo.api.v1alpha1.GitHubPullRequest
- */
-export class GitHubPullRequest extends Message<GitHubPullRequest> {
-  constructor(data?: PartialMessage<GitHubPullRequest>) {
-    super();
-    proto2.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto2 = proto2;
-  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.GitHubPullRequest";
-  static readonly fields: FieldList = proto2.util.newFieldList(() => [
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GitHubPullRequest {
-    return new GitHubPullRequest().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GitHubPullRequest {
-    return new GitHubPullRequest().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GitHubPullRequest {
-    return new GitHubPullRequest().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: GitHubPullRequest | PlainMessage<GitHubPullRequest> | undefined, b: GitHubPullRequest | PlainMessage<GitHubPullRequest> | undefined): boolean {
-    return proto2.util.equals(GitHubPullRequest, a, b);
-  }
-}
-
-/**
- * @generated from message github.com.akuity.kargo.api.v1alpha1.GitLabPullRequest
- */
-export class GitLabPullRequest extends Message<GitLabPullRequest> {
-  constructor(data?: PartialMessage<GitLabPullRequest>) {
-    super();
-    proto2.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto2 = proto2;
-  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.GitLabPullRequest";
-  static readonly fields: FieldList = proto2.util.newFieldList(() => [
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GitLabPullRequest {
-    return new GitLabPullRequest().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GitLabPullRequest {
-    return new GitLabPullRequest().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GitLabPullRequest {
-    return new GitLabPullRequest().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: GitLabPullRequest | PlainMessage<GitLabPullRequest> | undefined, b: GitLabPullRequest | PlainMessage<GitLabPullRequest> | undefined): boolean {
-    return proto2.util.equals(GitLabPullRequest, a, b);
-  }
-}
-
-/**
- * GitRepoUpdate describes updates that should be applied to a Git repository
- * (using various configuration management tools) to incorporate Freight into a
- * Stage.
- *
- * @generated from message github.com.akuity.kargo.api.v1alpha1.GitRepoUpdate
- */
-export class GitRepoUpdate extends Message<GitRepoUpdate> {
-  /**
-   * RepoURL is the URL of the repository to update. This is a required field.
-   *
-   * +kubebuilder:validation:MinLength=1
-   * +kubebuilder:validation:Pattern=`^https?://(\w+([\.-]\w+)*@)?\w+([\.-]\w+)*(:[\d]+)?(/.*)?$`
-   *
-   * @generated from field: optional string repoURL = 1;
-   */
-  repoURL?: string;
-
-  /**
-   * Origin disambiguates the origin from which artifacts used by this promotion
-   * mechanism must have originated. This is especially useful in cases where a
-   * Stage may request Freight from multiples origins (e.g. multiple Warehouses)
-   * and some of those each reference different versions of artifacts from the
-   * same repository. This field is optional. When left unspecified, the branch
-   * checked out by this promotion mechanism will be the one specified by the
-   * ReadBranch field. If that, too, is unspecified, the default branch of the
-   * repository will be checked out. Always provide a value for this field if
-   * wishing to check out a specific commit indicated by a piece of Freight.
-   *
-   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.FreightOrigin origin = 9;
-   */
-  origin?: FreightOrigin;
-
-  /**
-   * InsecureSkipTLSVerify specifies whether certificate verification errors
-   * should be ignored when connecting to the repository. This should be enabled
-   * only with great caution.
-   *
-   * @generated from field: optional bool insecureSkipTLSVerify = 2;
-   */
-  insecureSkipTLSVerify?: boolean;
-
-  /**
-   * ReadBranch specifies a particular branch of the repository from which to
-   * locate contents that will be written to the branch specified by the
-   * WriteBranch field. This field is optional. When not specified, the
-   * ReadBranch is implicitly the repository's default branch AND in cases where
-   * a Freight includes a GitCommit, that commit's ID will supersede the value
-   * of this field. Therefore, in practice, this field is only used to clarify
-   * what branch of a repository can be treated as a source of manifests or
-   * other configuration when a Stage has no subscription to that repository.
-   *
-   * +kubebuilder:validation:Optional
-   * +kubebuilder:validation:Pattern=`^(\w+([-/]\w+)*)?$`
-   *
-   * @generated from field: optional string readBranch = 3;
-   */
-  readBranch?: string;
-
-  /**
-   * WriteBranch specifies the particular branch of the repository to be
-   * updated. This is a required field.
-   *
-   * +kubebuilder:validation:MinLength=1
-   * +kubebuilder:validation:Pattern=`^\w+([-/]\w+)*$`
-   *
-   * @generated from field: optional string writeBranch = 4;
-   */
-  writeBranch?: string;
-
-  /**
-   * PullRequest will generate a pull request instead of making the commit directly
-   *
-   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.PullRequestPromotionMechanism pullRequest = 5;
-   */
-  pullRequest?: PullRequestPromotionMechanism;
-
-  /**
-   * Render describes how to use Kargo Render to incorporate Freight into the
-   * Stage. This is mutually exclusive with the Kustomize and Helm fields.
-   *
-   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.KargoRenderPromotionMechanism render = 6;
-   */
-  render?: KargoRenderPromotionMechanism;
-
-  /**
-   * Kustomize describes how to use Kustomize to incorporate Freight into the
-   * Stage. This is mutually exclusive with the Render and Helm fields.
-   *
-   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.KustomizePromotionMechanism kustomize = 7;
-   */
-  kustomize?: KustomizePromotionMechanism;
-
-  /**
-   * Helm describes how to use Helm to incorporate Freight into the Stage. This
-   * is mutually exclusive with the Render and Kustomize fields.
-   *
-   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.HelmPromotionMechanism helm = 8;
-   */
-  helm?: HelmPromotionMechanism;
-
-  constructor(data?: PartialMessage<GitRepoUpdate>) {
-    super();
-    proto2.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto2 = proto2;
-  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.GitRepoUpdate";
-  static readonly fields: FieldList = proto2.util.newFieldList(() => [
-    { no: 1, name: "repoURL", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 9, name: "origin", kind: "message", T: FreightOrigin, opt: true },
-    { no: 2, name: "insecureSkipTLSVerify", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
-    { no: 3, name: "readBranch", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 4, name: "writeBranch", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 5, name: "pullRequest", kind: "message", T: PullRequestPromotionMechanism, opt: true },
-    { no: 6, name: "render", kind: "message", T: KargoRenderPromotionMechanism, opt: true },
-    { no: 7, name: "kustomize", kind: "message", T: KustomizePromotionMechanism, opt: true },
-    { no: 8, name: "helm", kind: "message", T: HelmPromotionMechanism, opt: true },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GitRepoUpdate {
-    return new GitRepoUpdate().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GitRepoUpdate {
-    return new GitRepoUpdate().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GitRepoUpdate {
-    return new GitRepoUpdate().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: GitRepoUpdate | PlainMessage<GitRepoUpdate> | undefined, b: GitRepoUpdate | PlainMessage<GitRepoUpdate> | undefined): boolean {
-    return proto2.util.equals(GitRepoUpdate, a, b);
-  }
-}
-
-/**
  * GitSubscription defines a subscription to a Git repository.
  *
  * @generated from message github.com.akuity.kargo.api.v1alpha1.GitSubscription
@@ -2265,6 +1579,21 @@ export class GitSubscription extends Message<GitSubscription> {
    * @generated from field: optional string branch = 3;
    */
   branch?: string;
+
+  /**
+   * StrictSemvers specifies whether only "strict" semver tags should be
+   * considered. A "strict" semver tag is one containing ALL of major, minor,
+   * and patch version components. This is enabled by default, but only has any
+   * effect when the CommitSelectionStrategy is SemVer. This should be disabled
+   * cautiously, as it creates the potential for any tag containing numeric
+   * characters only to be mistaken for a semver string containing the major
+   * version number only.
+   *
+   * +kubebuilder:default=true
+   *
+   * @generated from field: optional bool strictSemvers = 11;
+   */
+  strictSemvers?: boolean;
 
   /**
    * SemverConstraint specifies constraints on what new tagged commits are
@@ -2380,6 +1709,7 @@ export class GitSubscription extends Message<GitSubscription> {
     { no: 1, name: "repoURL", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 2, name: "commitSelectionStrategy", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 3, name: "branch", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 11, name: "strictSemvers", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
     { no: 4, name: "semverConstraint", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 5, name: "allowTags", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 6, name: "ignoreTags", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
@@ -2434,6 +1764,21 @@ export class Health extends Message<Health> {
    */
   argoCDApps: ArgoCDAppStatus[] = [];
 
+  /**
+   * Config is the opaque configuration of all health checks performed on this
+   * Stage.
+   *
+   * @generated from field: optional k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON config = 4;
+   */
+  config?: JSON;
+
+  /**
+   * Output is the opaque output of all health checks performed on this Stage.
+   *
+   * @generated from field: optional k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON output = 5;
+   */
+  output?: JSON;
+
   constructor(data?: PartialMessage<Health>) {
     super();
     proto2.util.initPartial(data, this);
@@ -2445,6 +1790,8 @@ export class Health extends Message<Health> {
     { no: 1, name: "status", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 2, name: "issues", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 3, name: "argoCDApps", kind: "message", T: ArgoCDAppStatus, repeated: true },
+    { no: 4, name: "config", kind: "message", T: JSON, opt: true },
+    { no: 5, name: "output", kind: "message", T: JSON, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Health {
@@ -2465,264 +1812,54 @@ export class Health extends Message<Health> {
 }
 
 /**
- * HelmChartDependencyUpdate describes how a specific Helm chart that is used
- * as a subchart of an umbrella chart can be updated.
+ * HealthCheckStep describes a health check directive which can be executed by
+ * a Stage to verify the health of a Promotion result.
  *
- * @generated from message github.com.akuity.kargo.api.v1alpha1.HelmChartDependencyUpdate
+ * @generated from message github.com.akuity.kargo.api.v1alpha1.HealthCheckStep
  */
-export class HelmChartDependencyUpdate extends Message<HelmChartDependencyUpdate> {
+export class HealthCheckStep extends Message<HealthCheckStep> {
   /**
-   * Repository along with Name identifies a subchart of the umbrella chart at
-   * ChartPath whose version should be updated. The values of both fields should
-   * exactly match the values of the fields of the same names in a dependency
-   * expressed in the Chart.yaml of the umbrella chart at ChartPath. i.e. Do not
-   * match the values of these two fields to your Warehouse; match them to the
-   * Chart.yaml. This is a required field.
-   *
-   * +kubebuilder:validation:MinLength=1
-   * +kubebuilder:validation:Pattern=`^(((https?)|(oci))://)([\w\d\.\-]+)(:[\d]+)?(/.*)*$`
-   *
-   * @generated from field: optional string repository = 1;
-   */
-  repository?: string;
-
-  /**
-   * Name along with Repository identifies a subchart of the umbrella chart at
-   * ChartPath whose version should be updated. The values of both fields should
-   * exactly match the values of the fields of the same names in a dependency
-   * expressed in the Chart.yaml of the umbrella chart at ChartPath. i.e. Do not
-   * match the values of these two fields to your Warehouse; match them to the
-   * Chart.yaml. This is a required field.
+   * Uses identifies a runner that can execute this step.
    *
    * +kubebuilder:validation:MinLength=1
    *
-   * @generated from field: optional string name = 2;
+   * @generated from field: optional string uses = 1;
    */
-  name?: string;
+  uses?: string;
 
   /**
-   * Origin disambiguates the origin from which artifacts used by this promotion
-   * mechanism must have originated. This is especially useful in cases where a
-   * Stage may request Freight from multiples origins (e.g. multiple Warehouses)
-   * and some of those each reference different versions of artifacts from the
-   * same repository. This field is optional. When left unspecified, it will
-   * implicitly inherit the value of the enclosing HelmPromotionMechanism's
-   * Origin field. If that, too, is unspecified, Promotions will fail if there
-   * is ever ambiguity regarding from which piece of Freight an artifact is to
-   * be sourced.
+   * Config is the configuration for the directive.
    *
-   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.FreightOrigin origin = 4;
+   * @generated from field: optional k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON config = 2;
    */
-  origin?: FreightOrigin;
+  config?: JSON;
 
-  /**
-   * ChartPath is the path to an umbrella chart.
-   *
-   * +kubebuilder:validation:MinLength=1
-   * +kubebuilder:validation:Pattern=^[\w-\.]+(/[\w-\.]+)*$
-   *
-   * @generated from field: optional string chartPath = 3;
-   */
-  chartPath?: string;
-
-  constructor(data?: PartialMessage<HelmChartDependencyUpdate>) {
+  constructor(data?: PartialMessage<HealthCheckStep>) {
     super();
     proto2.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto2 = proto2;
-  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.HelmChartDependencyUpdate";
+  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.HealthCheckStep";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
-    { no: 1, name: "repository", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 4, name: "origin", kind: "message", T: FreightOrigin, opt: true },
-    { no: 3, name: "chartPath", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 1, name: "uses", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 2, name: "config", kind: "message", T: JSON, opt: true },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): HelmChartDependencyUpdate {
-    return new HelmChartDependencyUpdate().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): HealthCheckStep {
+    return new HealthCheckStep().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): HelmChartDependencyUpdate {
-    return new HelmChartDependencyUpdate().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): HealthCheckStep {
+    return new HealthCheckStep().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): HelmChartDependencyUpdate {
-    return new HelmChartDependencyUpdate().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): HealthCheckStep {
+    return new HealthCheckStep().fromJsonString(jsonString, options);
   }
 
-  static equals(a: HelmChartDependencyUpdate | PlainMessage<HelmChartDependencyUpdate> | undefined, b: HelmChartDependencyUpdate | PlainMessage<HelmChartDependencyUpdate> | undefined): boolean {
-    return proto2.util.equals(HelmChartDependencyUpdate, a, b);
-  }
-}
-
-/**
- * HelmImageUpdate describes how a specific image version can be incorporated
- * into a specific Helm values file.
- *
- * @generated from message github.com.akuity.kargo.api.v1alpha1.HelmImageUpdate
- */
-export class HelmImageUpdate extends Message<HelmImageUpdate> {
-  /**
-   * Image specifies a container image (without tag). This is a required field.
-   *
-   * +kubebuilder:validation:MinLength=1
-   * +kubebuilder:validation:Pattern=`^(\w+([\.-]\w+)*(:[\d]+)?/)?(\w+([\.-]\w+)*)(/\w+([\.-]\w+)*)*$`
-   *
-   * @generated from field: optional string image = 1;
-   */
-  image?: string;
-
-  /**
-   * Origin disambiguates the origin from which artifacts used by this promotion
-   * mechanism must have originated. This is especially useful in cases where a
-   * Stage may request Freight from multiples origins (e.g. multiple Warehouses)
-   * and some of those each reference different versions of artifacts from the
-   * same repository. This field is optional. When left unspecified, it will
-   * implicitly inherit the value of the enclosing HelmPromotionMechanism's
-   * Origin field. If that, too, is unspecified, Promotions will fail if there
-   * is ever ambiguity regarding from which piece of Freight an artifact is to
-   * be sourced.
-   *
-   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.FreightOrigin origin = 5;
-   */
-  origin?: FreightOrigin;
-
-  /**
-   * ValuesFilePath specifies a path to the Helm values file that is to be
-   * updated. This is a required field.
-   *
-   * +kubebuilder:validation:MinLength=1
-   * +kubebuilder:validation:Pattern=^[\w-\.]+(/[\w-\.]+)*$
-   *
-   * @generated from field: optional string valuesFilePath = 2;
-   */
-  valuesFilePath?: string;
-
-  /**
-   * Key specifies a key within the Helm values file that is to be updated. This
-   * is a required field.
-   *
-   * +kubebuilder:validation:MinLength=1
-   *
-   * @generated from field: optional string key = 3;
-   */
-  key?: string;
-
-  /**
-   * Value specifies the new value for the specified key in the specified Helm
-   * values file. Valid values are:
-   *
-   * - ImageAndTag: Replaces the value of the specified key with
-   *   <image name>:<tag>
-   * - Tag: Replaces the value of the specified key with just the new tag
-   * - ImageAndDigest: Replaces the value of the specified key with
-   *   <image name>@<digest>
-   * - Digest: Replaces the value of the specified key with just the new digest.
-   *
-   * This is a required field.
-   *
-   * @generated from field: optional string value = 4;
-   */
-  value?: string;
-
-  constructor(data?: PartialMessage<HelmImageUpdate>) {
-    super();
-    proto2.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto2 = proto2;
-  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.HelmImageUpdate";
-  static readonly fields: FieldList = proto2.util.newFieldList(() => [
-    { no: 1, name: "image", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 5, name: "origin", kind: "message", T: FreightOrigin, opt: true },
-    { no: 2, name: "valuesFilePath", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 3, name: "key", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 4, name: "value", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): HelmImageUpdate {
-    return new HelmImageUpdate().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): HelmImageUpdate {
-    return new HelmImageUpdate().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): HelmImageUpdate {
-    return new HelmImageUpdate().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: HelmImageUpdate | PlainMessage<HelmImageUpdate> | undefined, b: HelmImageUpdate | PlainMessage<HelmImageUpdate> | undefined): boolean {
-    return proto2.util.equals(HelmImageUpdate, a, b);
-  }
-}
-
-/**
- * HelmPromotionMechanism describes how to use Helm to incorporate Freight into
- * a Stage.
- *
- * @generated from message github.com.akuity.kargo.api.v1alpha1.HelmPromotionMechanism
- */
-export class HelmPromotionMechanism extends Message<HelmPromotionMechanism> {
-  /**
-   * Images describes how specific image versions can be incorporated into Helm
-   * values files.
-   *
-   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.HelmImageUpdate images = 1;
-   */
-  images: HelmImageUpdate[] = [];
-
-  /**
-   * Charts describes how specific chart versions can be incorporated into an
-   * umbrella chart.
-   *
-   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.HelmChartDependencyUpdate charts = 2;
-   */
-  charts: HelmChartDependencyUpdate[] = [];
-
-  /**
-   * Origin disambiguates the origin from which artifacts used by this promotion
-   * mechanism must have originated. This is especially useful in cases where a
-   * Stage may request Freight from multiples origins (e.g. multiple Warehouses)
-   * and some of those each reference different versions of artifacts from the
-   * same repository. This field is optional. When left unspecified, it will
-   * implicitly inherit the value of the enclosing GitRepoUpdate's Origin field.
-   * If that, too, is unspecified, Promotions will fail if there is ever
-   * ambiguity regarding from which piece of Freight an artifact is to be
-   * sourced.
-   *
-   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.FreightOrigin origin = 3;
-   */
-  origin?: FreightOrigin;
-
-  constructor(data?: PartialMessage<HelmPromotionMechanism>) {
-    super();
-    proto2.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto2 = proto2;
-  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.HelmPromotionMechanism";
-  static readonly fields: FieldList = proto2.util.newFieldList(() => [
-    { no: 1, name: "images", kind: "message", T: HelmImageUpdate, repeated: true },
-    { no: 2, name: "charts", kind: "message", T: HelmChartDependencyUpdate, repeated: true },
-    { no: 3, name: "origin", kind: "message", T: FreightOrigin, opt: true },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): HelmPromotionMechanism {
-    return new HelmPromotionMechanism().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): HelmPromotionMechanism {
-    return new HelmPromotionMechanism().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): HelmPromotionMechanism {
-    return new HelmPromotionMechanism().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: HelmPromotionMechanism | PlainMessage<HelmPromotionMechanism> | undefined, b: HelmPromotionMechanism | PlainMessage<HelmPromotionMechanism> | undefined): boolean {
-    return proto2.util.equals(HelmPromotionMechanism, a, b);
+  static equals(a: HealthCheckStep | PlainMessage<HealthCheckStep> | undefined, b: HealthCheckStep | PlainMessage<HealthCheckStep> | undefined): boolean {
+    return proto2.util.equals(HealthCheckStep, a, b);
   }
 }
 
@@ -2906,6 +2043,22 @@ export class ImageSubscription extends Message<ImageSubscription> {
   imageSelectionStrategy?: string;
 
   /**
+   * StrictSemvers specifies whether only "strict" semver tags should be
+   * considered. A "strict" semver tag is one containing ALL of major, minor,
+   * and patch version components. This is enabled by default, but only has any
+   * effect when the ImageSelectionStrategy is SemVer. This should be disabled
+   * cautiously, as it is not uncommon to tag container images with short Git
+   * commit hashes, which have the potential to contain numeric characters only
+   * and could be mistaken for a semver string containing the major version
+   * number only.
+   *
+   * +kubebuilder:default=true
+   *
+   * @generated from field: optional bool strictSemvers = 10;
+   */
+  strictSemvers?: boolean;
+
+  /**
    * SemverConstraint specifies constraints on what new image versions are
    * permissible. The value in this field only has any effect when the
    * ImageSelectionStrategy is SemVer or left unspecified (which is implicitly
@@ -2996,6 +2149,7 @@ export class ImageSubscription extends Message<ImageSubscription> {
     { no: 1, name: "repoURL", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 2, name: "gitRepoURL", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 3, name: "imageSelectionStrategy", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 10, name: "strictSemvers", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
     { no: 4, name: "semverConstraint", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 5, name: "allowTags", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 6, name: "ignoreTags", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
@@ -3018,284 +2172,6 @@ export class ImageSubscription extends Message<ImageSubscription> {
 
   static equals(a: ImageSubscription | PlainMessage<ImageSubscription> | undefined, b: ImageSubscription | PlainMessage<ImageSubscription> | undefined): boolean {
     return proto2.util.equals(ImageSubscription, a, b);
-  }
-}
-
-/**
- * KargoRenderImageUpdate describes how an image can be incorporated into a
- * Stage using Kargo Render.
- *
- * @generated from message github.com.akuity.kargo.api.v1alpha1.KargoRenderImageUpdate
- */
-export class KargoRenderImageUpdate extends Message<KargoRenderImageUpdate> {
-  /**
-   * Image specifies a container image (without tag). This is a required field.
-   *
-   * +kubebuilder:validation:MinLength=1
-   *
-   * @generated from field: optional string image = 1;
-   */
-  image?: string;
-
-  /**
-   * Origin disambiguates the origin from which artifacts used by this promotion
-   * mechanism must have originated. This is especially useful in cases where a
-   * Stage may request Freight from multiples origins (e.g. multiple Warehouses)
-   * and some of those each reference different versions of artifacts from the
-   * same repository. This field is optional. When left unspecified, it will
-   * implicitly inherit the value of the enclosing
-   * KargoRenderPromotionMechanism's Origin field. If that, too, is unspecified,
-   * Promotions will fail if there is ever ambiguity regarding from which piece
-   * of Freight an artifact is to be sourced.
-   *
-   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.FreightOrigin origin = 3;
-   */
-  origin?: FreightOrigin;
-
-  /**
-   * UseDigest specifies whether the image's digest should be used instead of
-   * its tag.
-   *
-   * +kubebuilder:validation:Optional
-   *
-   * @generated from field: optional bool useDigest = 2;
-   */
-  useDigest?: boolean;
-
-  constructor(data?: PartialMessage<KargoRenderImageUpdate>) {
-    super();
-    proto2.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto2 = proto2;
-  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.KargoRenderImageUpdate";
-  static readonly fields: FieldList = proto2.util.newFieldList(() => [
-    { no: 1, name: "image", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 3, name: "origin", kind: "message", T: FreightOrigin, opt: true },
-    { no: 2, name: "useDigest", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): KargoRenderImageUpdate {
-    return new KargoRenderImageUpdate().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): KargoRenderImageUpdate {
-    return new KargoRenderImageUpdate().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): KargoRenderImageUpdate {
-    return new KargoRenderImageUpdate().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: KargoRenderImageUpdate | PlainMessage<KargoRenderImageUpdate> | undefined, b: KargoRenderImageUpdate | PlainMessage<KargoRenderImageUpdate> | undefined): boolean {
-    return proto2.util.equals(KargoRenderImageUpdate, a, b);
-  }
-}
-
-/**
- * KargoRenderPromotionMechanism describes how to use Kargo Render to
- * incorporate Freight into a Stage.
- *
- * @generated from message github.com.akuity.kargo.api.v1alpha1.KargoRenderPromotionMechanism
- */
-export class KargoRenderPromotionMechanism extends Message<KargoRenderPromotionMechanism> {
-  /**
-   * Images describes how images can be incorporated into a Stage using Kargo
-   * Render. If this field is omitted, all images in the Freight being promoted
-   * will be passed to Kargo Render in the form <image name>:<tag>. (e.g. Will
-   * not use digests by default.)
-   *
-   * +kubebuilder:validation:Optional
-   *
-   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.KargoRenderImageUpdate images = 1;
-   */
-  images: KargoRenderImageUpdate[] = [];
-
-  /**
-   * Origin disambiguates the origin from which artifacts used by this promotion
-   * mechanism must have originated. This is especially useful in cases where a
-   * Stage may request Freight from multiples origins (e.g. multiple Warehouses)
-   * and some of those each reference different versions of artifacts from the
-   * same repository. This field is optional. When left unspecified, it will
-   * implicitly inherit the value of the enclosing GitRepoUpdate's Origin field.
-   * If that, too, is unspecified, Promotions will fail if there is ever
-   * ambiguity regarding from which piece of Freight an artifact is to be
-   * sourced.
-   *
-   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.FreightOrigin origin = 2;
-   */
-  origin?: FreightOrigin;
-
-  constructor(data?: PartialMessage<KargoRenderPromotionMechanism>) {
-    super();
-    proto2.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto2 = proto2;
-  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.KargoRenderPromotionMechanism";
-  static readonly fields: FieldList = proto2.util.newFieldList(() => [
-    { no: 1, name: "images", kind: "message", T: KargoRenderImageUpdate, repeated: true },
-    { no: 2, name: "origin", kind: "message", T: FreightOrigin, opt: true },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): KargoRenderPromotionMechanism {
-    return new KargoRenderPromotionMechanism().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): KargoRenderPromotionMechanism {
-    return new KargoRenderPromotionMechanism().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): KargoRenderPromotionMechanism {
-    return new KargoRenderPromotionMechanism().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: KargoRenderPromotionMechanism | PlainMessage<KargoRenderPromotionMechanism> | undefined, b: KargoRenderPromotionMechanism | PlainMessage<KargoRenderPromotionMechanism> | undefined): boolean {
-    return proto2.util.equals(KargoRenderPromotionMechanism, a, b);
-  }
-}
-
-/**
- * KustomizeImageUpdate describes how to run `kustomize edit set image`
- * for a given image.
- *
- * @generated from message github.com.akuity.kargo.api.v1alpha1.KustomizeImageUpdate
- */
-export class KustomizeImageUpdate extends Message<KustomizeImageUpdate> {
-  /**
-   * Image specifies a container image (without tag). This is a required field.
-   *
-   * +kubebuilder:validation:MinLength=1
-   *
-   * @generated from field: optional string image = 1;
-   */
-  image?: string;
-
-  /**
-   * Origin disambiguates the origin from which artifacts used by this promotion
-   * mechanism must have originated. This is especially useful in cases where a
-   * Stage may request Freight from multiples origins (e.g. multiple Warehouses)
-   * and some of those each reference different versions of artifacts from the
-   * same repository. This field is optional. When left unspecified, it will
-   * implicitly inherit the value of the enclosing KustomizePromotionMechanism's
-   * Origin field. If that, too, is unspecified, Promotions will fail if there
-   * is ever ambiguity regarding from which piece of Freight an artifact is to
-   * be sourced.
-   *
-   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.FreightOrigin origin = 4;
-   */
-  origin?: FreightOrigin;
-
-  /**
-   * Path specifies a path in which the `kustomize edit set image` command
-   * should be executed. This is a required field.
-   *
-   * +kubebuilder:validation:MinLength=1
-   * +kubebuilder:validation:Pattern=^[\w-\.]+(/[\w-\.]+)*$
-   *
-   * @generated from field: optional string path = 2;
-   */
-  path?: string;
-
-  /**
-   * UseDigest specifies whether the image's digest should be used instead of
-   * its tag.
-   *
-   * +kubebuilder:validation:Optional
-   *
-   * @generated from field: optional bool useDigest = 3;
-   */
-  useDigest?: boolean;
-
-  constructor(data?: PartialMessage<KustomizeImageUpdate>) {
-    super();
-    proto2.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto2 = proto2;
-  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.KustomizeImageUpdate";
-  static readonly fields: FieldList = proto2.util.newFieldList(() => [
-    { no: 1, name: "image", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 4, name: "origin", kind: "message", T: FreightOrigin, opt: true },
-    { no: 2, name: "path", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 3, name: "useDigest", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): KustomizeImageUpdate {
-    return new KustomizeImageUpdate().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): KustomizeImageUpdate {
-    return new KustomizeImageUpdate().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): KustomizeImageUpdate {
-    return new KustomizeImageUpdate().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: KustomizeImageUpdate | PlainMessage<KustomizeImageUpdate> | undefined, b: KustomizeImageUpdate | PlainMessage<KustomizeImageUpdate> | undefined): boolean {
-    return proto2.util.equals(KustomizeImageUpdate, a, b);
-  }
-}
-
-/**
- * KustomizePromotionMechanism describes how to use Kustomize to incorporate
- * Freight into a Stage.
- *
- * @generated from message github.com.akuity.kargo.api.v1alpha1.KustomizePromotionMechanism
- */
-export class KustomizePromotionMechanism extends Message<KustomizePromotionMechanism> {
-  /**
-   * Images describes images for which `kustomize edit set image` should be
-   * executed and the paths in which those commands should be executed.
-   *
-   * +kubebuilder:validation:MinItems=1
-   *
-   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.KustomizeImageUpdate images = 1;
-   */
-  images: KustomizeImageUpdate[] = [];
-
-  /**
-   * Origin disambiguates the origin from which artifacts used by this promotion
-   * mechanism must have originated. This is especially useful in cases where a
-   * Stage may request Freight from multiples origins (e.g. multiple Warehouses)
-   * and some of those each reference different versions of artifacts from the
-   * same repository. This field is optional. When left unspecified, it will
-   * implicitly inherit the value of the enclosing GitRepoUpdate's Origin field.
-   * If that, too, is unspecified, Promotions will fail if there is ever
-   * ambiguity regarding from which piece of Freight an artifact is to be
-   * sourced.
-   *
-   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.FreightOrigin origin = 2;
-   */
-  origin?: FreightOrigin;
-
-  constructor(data?: PartialMessage<KustomizePromotionMechanism>) {
-    super();
-    proto2.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto2 = proto2;
-  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.KustomizePromotionMechanism";
-  static readonly fields: FieldList = proto2.util.newFieldList(() => [
-    { no: 1, name: "images", kind: "message", T: KustomizeImageUpdate, repeated: true },
-    { no: 2, name: "origin", kind: "message", T: FreightOrigin, opt: true },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): KustomizePromotionMechanism {
-    return new KustomizePromotionMechanism().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): KustomizePromotionMechanism {
-    return new KustomizePromotionMechanism().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): KustomizePromotionMechanism {
-    return new KustomizePromotionMechanism().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: KustomizePromotionMechanism | PlainMessage<KustomizePromotionMechanism> | undefined, b: KustomizePromotionMechanism | PlainMessage<KustomizePromotionMechanism> | undefined): boolean {
-    return proto2.util.equals(KustomizePromotionMechanism, a, b);
   }
 }
 
@@ -3599,74 +2475,6 @@ export class PromotionList extends Message<PromotionList> {
 }
 
 /**
- * PromotionMechanisms describes how to incorporate Freight into a Stage.
- *
- * @generated from message github.com.akuity.kargo.api.v1alpha1.PromotionMechanisms
- */
-export class PromotionMechanisms extends Message<PromotionMechanisms> {
-  /**
-   * Origin disambiguates the origin from which artifacts used by this promotion
-   * mechanism must have originated. This is especially useful in cases where a
-   * Stage may request Freight from multiples origins (e.g. multiple Warehouses)
-   * and some of those each reference different versions of artifacts from the
-   * same repository. This field is optional. Its value is overridable by
-   * child promotion mechanisms.
-   *
-   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.FreightOrigin origin = 3;
-   */
-  origin?: FreightOrigin;
-
-  /**
-   * GitRepoUpdates describes updates that should be applied to Git repositories
-   * to incorporate Freight into the Stage. This field is optional, as such
-   * actions are not required in all cases.
-   *
-   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.GitRepoUpdate gitRepoUpdates = 1;
-   */
-  gitRepoUpdates: GitRepoUpdate[] = [];
-
-  /**
-   * ArgoCDAppUpdates describes updates that should be applied to Argo CD
-   * Application resources to incorporate Freight into the Stage. This field is
-   * optional, as such actions are not required in all cases. Note that all
-   * updates specified by the GitRepoUpdates field, if any, are applied BEFORE
-   * these.
-   *
-   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.ArgoCDAppUpdate argoCDAppUpdates = 2;
-   */
-  argoCDAppUpdates: ArgoCDAppUpdate[] = [];
-
-  constructor(data?: PartialMessage<PromotionMechanisms>) {
-    super();
-    proto2.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto2 = proto2;
-  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.PromotionMechanisms";
-  static readonly fields: FieldList = proto2.util.newFieldList(() => [
-    { no: 3, name: "origin", kind: "message", T: FreightOrigin, opt: true },
-    { no: 1, name: "gitRepoUpdates", kind: "message", T: GitRepoUpdate, repeated: true },
-    { no: 2, name: "argoCDAppUpdates", kind: "message", T: ArgoCDAppUpdate, repeated: true },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PromotionMechanisms {
-    return new PromotionMechanisms().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): PromotionMechanisms {
-    return new PromotionMechanisms().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): PromotionMechanisms {
-    return new PromotionMechanisms().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: PromotionMechanisms | PlainMessage<PromotionMechanisms> | undefined, b: PromotionMechanisms | PlainMessage<PromotionMechanisms> | undefined): boolean {
-    return proto2.util.equals(PromotionMechanisms, a, b);
-  }
-}
-
-/**
  * PromotionPolicy defines policies governing the promotion of Freight to a
  * specific Stage.
  *
@@ -3724,25 +2532,28 @@ export class PromotionPolicy extends Message<PromotionPolicy> {
 }
 
 /**
+ * PromotionReference contains the relevant information about a Promotion
+ * as observed by a Stage.
+ *
  * @generated from message github.com.akuity.kargo.api.v1alpha1.PromotionReference
  */
 export class PromotionReference extends Message<PromotionReference> {
   /**
-   * Name is the name of the Promotion
+   * Name is the name of the Promotion.
    *
    * @generated from field: optional string name = 1;
    */
   name?: string;
 
   /**
-   * Freight is the freight being promoted
+   * Freight is the freight being promoted.
    *
    * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.FreightReference freight = 2;
    */
   freight?: FreightReference;
 
   /**
-   * Status is the (optional) status of the promotion
+   * Status is the (optional) status of the Promotion.
    *
    * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.PromotionStatus status = 3;
    */
@@ -3815,6 +2626,15 @@ export class PromotionSpec extends Message<PromotionSpec> {
    */
   freight?: string;
 
+  /**
+   * Steps specifies the directives to be executed as part of this Promotion.
+   * The order in which the directives are executed is the order in which they
+   * are listed in this field.
+   *
+   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.PromotionStep steps = 3;
+   */
+  steps: PromotionStep[] = [];
+
   constructor(data?: PartialMessage<PromotionSpec>) {
     super();
     proto2.util.initPartial(data, this);
@@ -3825,6 +2645,7 @@ export class PromotionSpec extends Message<PromotionSpec> {
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 1, name: "stage", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 2, name: "freight", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 3, name: "steps", kind: "message", T: PromotionStep, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PromotionSpec {
@@ -3879,14 +2700,6 @@ export class PromotionStatus extends Message<PromotionStatus> {
   message?: string;
 
   /**
-   * Metadata holds arbitrary metadata set by promotion mechanisms
-   * (e.g. for display purposes, or internal bookkeeping)
-   *
-   * @generated from field: map<string, string> metadata = 3;
-   */
-  metadata: { [key: string]: string } = {};
-
-  /**
    * Freight is the detail of the piece of freight that was referenced by this promotion.
    *
    * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.FreightReference freight = 5;
@@ -3903,11 +2716,36 @@ export class PromotionStatus extends Message<PromotionStatus> {
   freightCollection?: FreightCollection;
 
   /**
+   * HealthChecks contains the health check directives to be executed after
+   * the Promotion has completed.
+   *
+   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.HealthCheckStep healthChecks = 8;
+   */
+  healthChecks: HealthCheckStep[] = [];
+
+  /**
    * FinishedAt is the time when the promotion was completed.
    *
    * @generated from field: optional k8s.io.apimachinery.pkg.apis.meta.v1.Time finishedAt = 6;
    */
   finishedAt?: Time;
+
+  /**
+   * CurrentStep is the index of the current promotion step being executed. This
+   * permits steps that have already run successfully to be skipped on
+   * subsequent reconciliations attempts.
+   *
+   * @generated from field: optional int64 currentStep = 9;
+   */
+  currentStep?: bigint;
+
+  /**
+   * State stores the state of the promotion process between reconciliation
+   * attempts.
+   *
+   * @generated from field: optional k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON state = 10;
+   */
+  state?: JSON;
 
   constructor(data?: PartialMessage<PromotionStatus>) {
     super();
@@ -3920,10 +2758,12 @@ export class PromotionStatus extends Message<PromotionStatus> {
     { no: 4, name: "lastHandledRefresh", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 1, name: "phase", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 2, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 3, name: "metadata", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 9 /* ScalarType.STRING */} },
     { no: 5, name: "freight", kind: "message", T: FreightReference, opt: true },
     { no: 7, name: "freightCollection", kind: "message", T: FreightCollection, opt: true },
+    { no: 8, name: "healthChecks", kind: "message", T: HealthCheckStep, repeated: true },
     { no: 6, name: "finishedAt", kind: "message", T: Time, opt: true },
+    { no: 9, name: "currentStep", kind: "scalar", T: 3 /* ScalarType.INT64 */, opt: true },
+    { no: 10, name: "state", kind: "message", T: JSON, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PromotionStatus {
@@ -3944,52 +2784,148 @@ export class PromotionStatus extends Message<PromotionStatus> {
 }
 
 /**
- * PullRequestPromotionMechanism describes how to generate a pull request against the write branch during promotion
- * Attempts to infer the git provider from well-known git domains.
+ * PromotionStep describes a directive to be executed as part of a Promotion.
  *
- * @generated from message github.com.akuity.kargo.api.v1alpha1.PullRequestPromotionMechanism
+ * @generated from message github.com.akuity.kargo.api.v1alpha1.PromotionStep
  */
-export class PullRequestPromotionMechanism extends Message<PullRequestPromotionMechanism> {
+export class PromotionStep extends Message<PromotionStep> {
   /**
-   * GitHub indicates git provider is GitHub
+   * Uses identifies a runner that can execute this step.
    *
-   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.GitHubPullRequest github = 1;
+   * +kubebuilder:validation:MinLength=1
+   *
+   * @generated from field: optional string uses = 1;
    */
-  github?: GitHubPullRequest;
+  uses?: string;
 
   /**
-   * GitLab indicates git provider is GitLab
+   * As is the alias this step can be referred to as.
    *
-   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.GitLabPullRequest gitlab = 2;
+   * @generated from field: optional string as = 2;
    */
-  gitlab?: GitLabPullRequest;
+  as?: string;
 
-  constructor(data?: PartialMessage<PullRequestPromotionMechanism>) {
+  /**
+   * Config is the configuration for the directive.
+   *
+   * @generated from field: optional k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON config = 3;
+   */
+  config?: JSON;
+
+  constructor(data?: PartialMessage<PromotionStep>) {
     super();
     proto2.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto2 = proto2;
-  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.PullRequestPromotionMechanism";
+  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.PromotionStep";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
-    { no: 1, name: "github", kind: "message", T: GitHubPullRequest, opt: true },
-    { no: 2, name: "gitlab", kind: "message", T: GitLabPullRequest, opt: true },
+    { no: 1, name: "uses", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 2, name: "as", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 3, name: "config", kind: "message", T: JSON, opt: true },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PullRequestPromotionMechanism {
-    return new PullRequestPromotionMechanism().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PromotionStep {
+    return new PromotionStep().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): PullRequestPromotionMechanism {
-    return new PullRequestPromotionMechanism().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): PromotionStep {
+    return new PromotionStep().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): PullRequestPromotionMechanism {
-    return new PullRequestPromotionMechanism().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): PromotionStep {
+    return new PromotionStep().fromJsonString(jsonString, options);
   }
 
-  static equals(a: PullRequestPromotionMechanism | PlainMessage<PullRequestPromotionMechanism> | undefined, b: PullRequestPromotionMechanism | PlainMessage<PullRequestPromotionMechanism> | undefined): boolean {
-    return proto2.util.equals(PullRequestPromotionMechanism, a, b);
+  static equals(a: PromotionStep | PlainMessage<PromotionStep> | undefined, b: PromotionStep | PlainMessage<PromotionStep> | undefined): boolean {
+    return proto2.util.equals(PromotionStep, a, b);
+  }
+}
+
+/**
+ * PromotionTemplate defines a template for a Promotion that can be used to
+ * incorporate Freight into a Stage.
+ *
+ * @generated from message github.com.akuity.kargo.api.v1alpha1.PromotionTemplate
+ */
+export class PromotionTemplate extends Message<PromotionTemplate> {
+  /**
+   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.PromotionTemplateSpec spec = 1;
+   */
+  spec?: PromotionTemplateSpec;
+
+  constructor(data?: PartialMessage<PromotionTemplate>) {
+    super();
+    proto2.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto2 = proto2;
+  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.PromotionTemplate";
+  static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 1, name: "spec", kind: "message", T: PromotionTemplateSpec, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PromotionTemplate {
+    return new PromotionTemplate().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): PromotionTemplate {
+    return new PromotionTemplate().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): PromotionTemplate {
+    return new PromotionTemplate().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: PromotionTemplate | PlainMessage<PromotionTemplate> | undefined, b: PromotionTemplate | PlainMessage<PromotionTemplate> | undefined): boolean {
+    return proto2.util.equals(PromotionTemplate, a, b);
+  }
+}
+
+/**
+ * PromotionTemplateSpec describes the (partial) specification of a Promotion
+ * for a Stage. This is a template that can be used to create a Promotion for a
+ * Stage.
+ *
+ * @generated from message github.com.akuity.kargo.api.v1alpha1.PromotionTemplateSpec
+ */
+export class PromotionTemplateSpec extends Message<PromotionTemplateSpec> {
+  /**
+   * Steps specifies the directives to be executed as part of a Promotion.
+   * The order in which the directives are executed is the order in which they
+   * are listed in this field.
+   *
+   * +kubebuilder:validation:MinItems=1
+   *
+   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.PromotionStep steps = 1;
+   */
+  steps: PromotionStep[] = [];
+
+  constructor(data?: PartialMessage<PromotionTemplateSpec>) {
+    super();
+    proto2.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto2 = proto2;
+  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.PromotionTemplateSpec";
+  static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 1, name: "steps", kind: "message", T: PromotionStep, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PromotionTemplateSpec {
+    return new PromotionTemplateSpec().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): PromotionTemplateSpec {
+    return new PromotionTemplateSpec().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): PromotionTemplateSpec {
+    return new PromotionTemplateSpec().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: PromotionTemplateSpec | PlainMessage<PromotionTemplateSpec> | undefined, b: PromotionTemplateSpec | PlainMessage<PromotionTemplateSpec> | undefined): boolean {
+    return proto2.util.equals(PromotionTemplateSpec, a, b);
   }
 }
 
@@ -4189,16 +3125,12 @@ export class StageSpec extends Message<StageSpec> {
   requestedFreight: FreightRequest[] = [];
 
   /**
-   * PromotionMechanisms describes how to incorporate Freight into the Stage.
-   * This is an optional field as it is sometimes useful to aggregates available
-   * Freight from multiple upstream Stages without performing any actions. The
-   * utility of this is to allow multiple downstream Stages to subscribe to a
-   * single upstream Stage where they may otherwise have subscribed to multiple
-   * upstream Stages.
+   * PromotionTemplate describes how to incorporate Freight into the Stage
+   * using a Promotion.
    *
-   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.PromotionMechanisms promotionMechanisms = 2;
+   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.PromotionTemplate promotionTemplate = 6;
    */
-  promotionMechanisms?: PromotionMechanisms;
+  promotionTemplate?: PromotionTemplate;
 
   /**
    * Verification describes how to verify a Stage's current Freight is fit for
@@ -4218,7 +3150,7 @@ export class StageSpec extends Message<StageSpec> {
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 4, name: "shard", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 5, name: "requestedFreight", kind: "message", T: FreightRequest, repeated: true },
-    { no: 2, name: "promotionMechanisms", kind: "message", T: PromotionMechanisms, opt: true },
+    { no: 6, name: "promotionTemplate", kind: "message", T: PromotionTemplate, opt: true },
     { no: 3, name: "verification", kind: "message", T: Verification, opt: true },
   ]);
 

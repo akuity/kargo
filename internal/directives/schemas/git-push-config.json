@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "GitPushConfig",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["path"],
+  "properties": {
+    "generateTargetBranch": {
+      "type": "boolean",
+      "description": "Indicates whether to push to a new remote branch. A value of 'true' is mutually exclusive with 'targetBranch'. If neither of these is provided, the target branch will be the currently checked out branch."
+    },
+    "path": {
+      "type": "string",
+      "description": "The path to a working directory of a local repository.",
+      "minLength": 1
+    },
+    "targetBranch": {
+      "type": "string",
+      "description": "The target branch to push to. Mutually exclusive with 'generateTargetBranch=true'. If neither of these is provided, the target branch will be the currently checked out branch."
+    }
+  },
+  "oneOf": [
+    {
+      "properties": {
+        "generateTargetBranch": { "const": true },
+        "targetBranch": { "enum": ["", null] }
+      },
+      "required": ["generateTargetBranch"]
+    },
+    {
+      "properties": {
+        "generateTargetBranch": { "enum": [false, null] },
+        "targetBranch": { "minLength": 1 }
+      },
+      "required": ["targetBranch"]
+    },
+    {
+      "properties": {
+        "generateTargetBranch": { "enum": [false, null] },
+        "targetBranch": { "enum": ["", null] }
+      }
+    }
+  ]
+}

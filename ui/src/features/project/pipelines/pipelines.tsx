@@ -17,7 +17,7 @@ import {
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button, Dropdown, Spin, Tooltip, message } from 'antd';
-import React, { Suspense, lazy, useMemo } from 'react';
+import React, { Suspense, lazy, useEffect, useMemo } from 'react';
 import { generatePath, useNavigate, useParams } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
@@ -27,14 +27,18 @@ import { useModal } from '@ui/features/common/modal/use-modal';
 const FreightDetails = lazy(() => import('@ui/features/freight/freight-details'));
 const FreightTimeline = lazy(() => import('@ui/features/freight-timeline/freight-timeline'));
 const StageDetails = lazy(() => import('@ui/features/stage/stage-details'));
+const CreateStage = lazy(() => import('@ui/features/stage/create-stage'));
 import { SuspenseSpin } from '@ui/features/common/suspense-spin';
-import { getCurrentFreight } from '@ui/features/common/utils';
-import { FreightTimelineHeader } from '@ui/features/freight-timeline/freight-timeline-header';
+import { getCurrentFreight, mapToNames } from '@ui/features/common/utils';
+const FreightTimelineHeader = lazy(
+  () => import('@ui/features/freight-timeline/freight-timeline-header')
+);
 import { FreightTimelineWrapper } from '@ui/features/freight-timeline/freight-timeline-wrapper';
 import { clearColors } from '@ui/features/stage/utils';
 import {
   approveFreight,
   listStages,
+  listImages,
   listWarehouses,
   promoteToStage,
   queryFreight,
@@ -44,13 +48,12 @@ import { Freight, Project, Stage, Warehouse } from '@ui/gen/v1alpha1/generated_p
 import { useDocumentEvent } from '@ui/utils/document';
 import { useLocalStorage } from '@ui/utils/use-local-storage';
 
-import CreateStageModal from './create-stage-modal';
 import CreateWarehouseModal from './create-warehouse-modal';
 import { Images } from './images';
 import { RepoNode, RepoNodeDimensions } from './nodes/repo-node';
 import { Nodule, StageNode } from './nodes/stage-node';
 import styles from './project-details.module.less';
-import { FreightTimelineAction, NodeType } from './types';
+import { CollapseMode, FreightTimelineAction, NodeType } from './types';
 import { LINE_THICKNESS } from './utils/graph';
 import { isPromoting, usePipelineState } from './utils/state';
 import { usePipelineGraph } from './utils/use-pipeline-graph';
@@ -59,9 +62,16 @@ import { Watcher } from './utils/watcher';
 
 const WarehouseDetails = lazy(() => import('./warehouse/warehouse-details'));
 
-export const Pipelines = ({ project }: { project: Project }) => {
+export const Pipelines = ({
+  project,
+  creatingStage
+}: {
+  project: Project;
+  creatingStage?: boolean;
+}) => {
   const { name, stageName, freightName, warehouseName } = useParams();
   const { data, isLoading } = useQuery(listStages, { project: name });
+  const { data: imageData, isLoading: isLoadingImages } = useQuery(listImages, { project: name });
   const navigate = useNavigate();
   const {
     data: freightData,
@@ -73,9 +83,6 @@ export const Pipelines = ({ project }: { project: Project }) => {
     project: name
   });
 
-  const { show: showCreateStage } = useModal(
-    name ? (p) => <CreateStageModal {...p} project={name} /> : undefined
-  );
   const { show: showCreateWarehouse } = useModal(
     name ? (p) => <CreateWarehouseModal {...p} project={name} /> : undefined
   );
@@ -115,9 +122,22 @@ export const Pipelines = ({ project }: { project: Project }) => {
   );
 
   const [selectedWarehouse, setSelectedWarehouse] = React.useState('');
-  const [freightTimelineCollapsed, setFreightTimelineCollapsed] = React.useState(false);
+  const [freightTimelineCollapsed, setFreightTimelineCollapsed] = React.useState(
+    CollapseMode.Expanded
+  );
 
-  const [hideImages, setHideImages] = useLocalStorage(`${name}-hideImages`, false);
+  const [hideImages, setHideImages] = useLocalStorage(
+    `${name}-hide-images`,
+    Object.keys(imageData?.images || {}).length
+  );
+  const [isNew, setIsNew] = useLocalStorage(`${name}-is-new`, false);
+
+  useEffect(() => {
+    if (Object.keys(imageData?.images || {}).length > 0 && isNew) {
+      setIsNew(false);
+      setHideImages(false);
+    }
+  }, [imageData?.images]);
 
   const warehouseMap = useMemo(() => {
     const map = {} as { [key: string]: Warehouse };
@@ -153,23 +173,25 @@ export const Pipelines = ({ project }: { project: Project }) => {
 
   const client = useQueryClient();
 
-  React.useEffect(() => {
-    if (!data || !isVisible || !warehouseData || !name) {
+  useEffect(() => {
+    if (!name || !isVisible) {
       return;
     }
 
     const watcher = new Watcher(name, client);
-    watcher.watchStages(data.stages.slice());
-    watcher.watchWarehouses(warehouseData?.warehouses || [], refetchFreightData);
 
-    return () => watcher.cancelWatch();
-  }, [isLoading, isVisible, name]);
+    watcher.watchStages();
+    watcher.watchWarehouses(refetchFreightData);
+
+    return () => {
+      watcher.cancelWatch();
+    };
+  }, [name, client, isVisible]);
 
   const [nodes, connectors, box, sortedStages, stageColorMap, warehouseColorMap] = usePipelineGraph(
     name,
     data?.stages || [],
-    warehouseData?.warehouses || [],
-    hideSubscriptions
+    warehouseData?.warehouses || []
   );
 
   const { mutate: manualApproveAction } = useMutation(approveFreight, {
@@ -181,11 +203,16 @@ export const Pipelines = ({ project }: { project: Project }) => {
     }
   });
 
-  const [stagesPerFreight, subscribersByStage] = useMemo(() => {
+  const [stagesPerFreight, subscribersByStage, stagesWithFreight] = useMemo(() => {
     const stagesPerFreight: { [key: string]: Stage[] } = {};
     const subscribersByStage = {} as { [key: string]: Set<string> };
+    let stagesWithFreight = 0;
     (data?.stages || []).forEach((stage) => {
-      (getCurrentFreight(stage) || []).forEach((f) => {
+      const currentFreight = getCurrentFreight(stage);
+      if (currentFreight.length > 0) {
+        stagesWithFreight++;
+      }
+      (currentFreight || []).forEach((f) => {
         if (!stagesPerFreight[f.name || '']) {
           stagesPerFreight[f.name || ''] = [];
         }
@@ -202,7 +229,7 @@ export const Pipelines = ({ project }: { project: Project }) => {
         }
       });
     });
-    return [stagesPerFreight, subscribersByStage];
+    return [stagesPerFreight, subscribersByStage, stagesWithFreight];
   }, [data, freightData]);
 
   const fullFreightById: { [key: string]: Freight } = useMemo(() => {
@@ -213,7 +240,22 @@ export const Pipelines = ({ project }: { project: Project }) => {
     return freightMap;
   }, [freightData]);
 
-  if (isLoading || isLoadingFreight) return <LoadingState />;
+  // if we find any stage with freight and UI don't have details, refresh freights
+  useEffect(() => {
+    if (fullFreightById && stagesPerFreight) {
+      const freights = Object.keys(fullFreightById || {});
+      const freightsInStages = Object.keys(stagesPerFreight || {});
+
+      for (const freightInStage of freightsInStages) {
+        if (!freights?.find((freight) => freight === freightInStage)) {
+          refetchFreightData();
+          return;
+        }
+      }
+    }
+  }, [stagesPerFreight, fullFreightById]);
+
+  if (isLoading || isLoadingFreight || isLoadingImages) return <LoadingState />;
 
   const stage = stageName && (data?.stages || []).find((item) => item.metadata?.name === stageName);
   const freight = freightName && fullFreightById[freightName];
@@ -294,6 +336,7 @@ export const Pipelines = ({ project }: { project: Project }) => {
                 stagesPerFreight={stagesPerFreight}
                 collapsed={freightTimelineCollapsed}
                 setCollapsed={setFreightTimelineCollapsed}
+                stageCount={stagesWithFreight}
               />
             </Suspense>
           </FreightTimelineWrapper>
@@ -313,7 +356,7 @@ export const Pipelines = ({ project }: { project: Project }) => {
                   onClick={() => setZoom((prev) => Math.min(200, prev + 10))}
                   icon={<FontAwesomeIcon icon={faMagnifyingGlassPlus} />}
                 />
-                <Tooltip title='Reassign Stage Colors'>
+                <Tooltip title='Regenerate Stage Colors'>
                   <Button
                     type='default'
                     onClick={() => {
@@ -332,16 +375,16 @@ export const Pipelines = ({ project }: { project: Project }) => {
                         label: (
                           <>
                             <FontAwesomeIcon icon={faMasksTheater} size='xs' className='mr-2' />{' '}
-                            Stage
+                            Create Stage
                           </>
                         ),
-                        onClick: () => showCreateStage()
+                        onClick: () => navigate(generatePath(paths.createStage, { name }))
                       },
                       {
                         key: '2',
                         label: (
                           <>
-                            <FontAwesomeIcon icon={faWarehouse} size='xs' className='mr-2' />{' '}
+                            <FontAwesomeIcon icon={faWarehouse} size='xs' className='mr-2' /> Create
                             Warehouse
                           </>
                         ),
@@ -356,7 +399,7 @@ export const Pipelines = ({ project }: { project: Project }) => {
                     <FontAwesomeIcon icon={faChevronDown} size='xs' className='-mr-2' />
                   </Button>
                 </Dropdown>
-                {hideImages && (
+                {!!hideImages && (
                   <Tooltip title='Show Images'>
                     <Button
                       icon={<FontAwesomeIcon icon={faDocker} />}
@@ -421,14 +464,7 @@ export const Pipelines = ({ project }: { project: Project }) => {
                               setSelectedWarehouse('');
                             } else {
                               const stageName = node.data?.metadata?.name || '';
-                              // default to current freight when promoting subscribers
-                              state.select(
-                                type,
-                                stageName,
-                                type === FreightTimelineAction.PromoteSubscribers
-                                  ? currentFreight[0].name
-                                  : undefined
-                              );
+                              state.select(type, stageName, undefined);
                             }
                           }}
                           action={state.action}
@@ -459,6 +495,9 @@ export const Pipelines = ({ project }: { project: Project }) => {
                       </>
                     ) : (
                       <RepoNode
+                        hidden={
+                          node.type !== NodeType.WAREHOUSE && hideSubscriptions[node.warehouseName]
+                        }
                         nodeData={node}
                         onClick={
                           node.type === NodeType.WAREHOUSE
@@ -509,8 +548,13 @@ export const Pipelines = ({ project }: { project: Project }) => {
                         {node.type === NodeType.WAREHOUSE && (
                           <Nodule
                             nodeHeight={RepoNodeDimensions().height}
-                            onClick={() => setHideSubscriptions(!hideSubscriptions)}
-                            icon={hideSubscriptions ? faEye : faEyeSlash}
+                            onClick={() =>
+                              setHideSubscriptions({
+                                ...hideSubscriptions,
+                                [node.warehouseName]: !hideSubscriptions[node.warehouseName]
+                              })
+                            }
+                            icon={hideSubscriptions[node.warehouseName] ? faEye : faEyeSlash}
                             begin={true}
                           />
                         )}
@@ -519,22 +563,24 @@ export const Pipelines = ({ project }: { project: Project }) => {
                   </div>
                 ))}
                 {connectors?.map((connector) =>
-                  connector.map((line, i) => (
-                    <div
-                      className='absolute bg-gray-300 rounded-full'
-                      style={{
-                        padding: 0,
-                        margin: 0,
-                        height: LINE_THICKNESS,
-                        width: line.width,
-                        left: line.x,
-                        top: line.y,
-                        transform: `rotate(${line.angle}deg)`,
-                        backgroundColor: line.color
-                      }}
-                      key={i}
-                    />
-                  ))
+                  connector.map((line, i) =>
+                    hideSubscriptions[line.to] && line.from?.startsWith('subscription-') ? null : (
+                      <div
+                        className='absolute bg-gray-300 rounded-full'
+                        style={{
+                          padding: 0,
+                          margin: 0,
+                          height: LINE_THICKNESS,
+                          width: line.width,
+                          left: line.x,
+                          top: line.y,
+                          transform: `rotate(${line.angle}deg)`,
+                          backgroundColor: line.color
+                        }}
+                        key={i}
+                      />
+                    )
+                  )
                 )}
               </div>
             </div>
@@ -551,6 +597,7 @@ export const Pipelines = ({ project }: { project: Project }) => {
                 project={name as string}
                 stages={sortedStages || []}
                 hide={() => setHideImages(true)}
+                images={imageData?.images || {}}
               />
             </div>
           )}
@@ -560,6 +607,13 @@ export const Pipelines = ({ project }: { project: Project }) => {
           {freight && <FreightDetails freight={freight} refetchFreight={refetchFreightData} />}
           {warehouse && (
             <WarehouseDetails warehouse={warehouse} refetchFreight={() => refetchFreightData()} />
+          )}
+          {creatingStage && (
+            <CreateStage
+              project={name}
+              warehouses={mapToNames(warehouseData?.warehouses || [])}
+              stages={mapToNames(data?.stages || [])}
+            />
           )}
         </SuspenseSpin>
       </ColorContext.Provider>

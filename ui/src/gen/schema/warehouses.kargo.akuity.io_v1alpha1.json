@@ -137,10 +137,16 @@
                   "semverConstraint": {
                     "description": "SemverConstraint specifies constraints on what new tagged commits are\nconsidered in determining the newest commit of interest. The value in this\nfield only has any effect when the CommitSelectionStrategy is SemVer. This\nfield is optional. When left unspecified, there will be no constraints,\nwhich means the latest semantically tagged commit will always be used. Care\nshould be taken with leaving this field unspecified, as it can lead to the\nunanticipated rollout of breaking changes.",
                     "type": "string"
+                  },
+                  "strictSemvers": {
+                    "default": true,
+                    "description": "StrictSemvers specifies whether only \"strict\" semver tags should be\nconsidered. A \"strict\" semver tag is one containing ALL of major, minor,\nand patch version components. This is enabled by default, but only has any\neffect when the CommitSelectionStrategy is SemVer. This should be disabled\ncautiously, as it creates the potential for any tag containing numeric\ncharacters only to be mistaken for a semver string containing the major\nversion number only.",
+                    "type": "boolean"
                   }
                 },
                 "required": [
-                  "repoURL"
+                  "repoURL",
+                  "strictSemvers"
                 ],
                 "type": "object"
               },
@@ -199,10 +205,16 @@
                   "semverConstraint": {
                     "description": "SemverConstraint specifies constraints on what new image versions are\npermissible. The value in this field only has any effect when the\nImageSelectionStrategy is SemVer or left unspecified (which is implicitly\nthe same as SemVer). This field is also optional. When left unspecified,\n(and the ImageSelectionStrategy is SemVer or unspecified), there will be no\nconstraints, which means the latest semantically tagged version of an image\nwill always be used. Care should be taken with leaving this field\nunspecified, as it can lead to the unanticipated rollout of breaking\nchanges. Refer to Image Updater documentation for more details.\nMore info: https://github.com/masterminds/semver#checking-version-constraints",
                     "type": "string"
+                  },
+                  "strictSemvers": {
+                    "default": true,
+                    "description": "StrictSemvers specifies whether only \"strict\" semver tags should be\nconsidered. A \"strict\" semver tag is one containing ALL of major, minor,\nand patch version components. This is enabled by default, but only has any\neffect when the ImageSelectionStrategy is SemVer. This should be disabled\ncautiously, as it is not uncommon to tag container images with short Git\ncommit hashes, which have the potential to contain numeric characters only\nand could be mistaken for a semver string containing the major version\nnumber only.",
+                    "type": "boolean"
                   }
                 },
                 "required": [
-                  "repoURL"
+                  "repoURL",
+                  "strictSemvers"
                 ],
                 "type": "object"
               }
@@ -225,7 +237,7 @@
         "conditions": {
           "description": "Conditions contains the last observations of the Warehouse's current\nstate.",
           "items": {
-            "description": "Condition contains details for one aspect of the current state of this API Resource.\n---\nThis struct is intended for direct use as an array at the field path .status.conditions.  For example,\n\n\n\ttype FooStatus struct{\n\t    // Represents the observations of a foo's current state.\n\t    // Known .status.conditions.type are: \"Available\", \"Progressing\", and \"Degraded\"\n\t    // +patchMergeKey=type\n\t    // +patchStrategy=merge\n\t    // +listType=map\n\t    // +listMapKey=type\n\t    Conditions []metav1.Condition `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\" protobuf:\"bytes,1,rep,name=conditions\"`\n\n\n\t    // other fields\n\t}",
+            "description": "Condition contains details for one aspect of the current state of this API Resource.",
             "properties": {
               "lastTransitionTime": {
                 "description": "lastTransitionTime is the last time the condition transitioned from one status to another.\nThis should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.",
@@ -261,7 +273,7 @@
                 "type": "string"
               },
               "type": {
-                "description": "type of condition in CamelCase or in foo.example.com/CamelCase.\n---\nMany .condition.type values are consistent across resources like Available, but because arbitrary conditions can be\nuseful (see .node.status.conditions), the ability to deconflict is important.\nThe regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)",
+                "description": "type of condition in CamelCase or in foo.example.com/CamelCase.",
                 "maxLength": 316,
                 "pattern": "^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$",
                 "type": "string"

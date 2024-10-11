@@ -94,9 +94,7 @@ func TestByOperationPhaseSort(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			sorted := ByOperationPhase(tc.input)
 			sorted.Sort()
-			for i := range sorted {
-				require.Equal(t, tc.expected[i], sorted[i])
-			}
+			require.Equal(t, ByOperationPhase(tc.expected), sorted)
 		})
 	}
 }

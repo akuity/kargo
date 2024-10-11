@@ -19,10 +19,14 @@ for automatic promotions of new **freight**.
 ### What is a Stage?
 
 When you hear the term “environment”, what you envision will depend
-significantly on your perspective. To eliminate confusion, Kargo avoids the term
-"environment" altogether in favor of **stage**. The important feature of a stage
-is that its name ("test" or "prod," for instance) denotes an application
-instance's _purpose_ and not necessarily its _location_.
+significantly on your perspective. A developer, for example, may think of
+an "environment" as a specific _instance_ of an application they work on,
+while a DevOps engineer, may think of an "environment" as a particular segment
+of the infrastructure they maintain.
+
+To eliminate confusion, Kargo avoids the term "environment" altogether in favor of **stage**.
+The important feature of a stage is that its name ("test" or "prod," for instance)
+denotes an application instance's _purpose_ and not necessarily its _location_.
 [This blog post](https://akuity.io/blog/kargo-stage-not-environment/) discusses
 the rationale behind this choice.
 
@@ -154,7 +158,7 @@ A `Stage` resource's `spec` field decomposes into three main areas of concern:
 
 * Requested freight
 
-* Promotion mechanisms
+* Promotion template
 
 * Verification
 
@@ -163,10 +167,11 @@ The following sections will explore each of these in greater detail.
 #### Requested Freight
 
 The `spec.requestedFreight` field is used to describe one or more "types" of
-`Freight`, as specified by an `origin`, that the `Stage`'s promotion mechanisms
-will operate on, and the acceptable sources from which to obtain that `Freight`.
-Those sources may include the origin itself (e.g. a `Warehouse`) and/or any
-number of "upstream" `Stage` resources.
+`Freight`, as specified by an `origin`, that the `Stage`'s promotion process, as
+specified by `spec.promotionTemplate`, will operate on, and the acceptable
+sources from which to obtain that `Freight`. Those sources may include the
+origin itself (e.g. a `Warehouse`) and/or any number of "upstream" `Stage`
+resources.
 
 :::info
 `Warehouse`s are the only type of origin at present, but it is anticipated that
@@ -267,118 +272,81 @@ the delivery of microservices that are developed and deployed in parallel,
 although other uses of this feature are anticipated in the future.
 :::
 
-#### Promotion Mechanisms
+#### Promotion Templates
 
-The `spec.promotionMechanisms` field is used to describe _how_ to transition
-`Freight` into the `Stage`.
+The `spec.promotionTemplate` field is used to describe _how_ to transition
+`Freight` into the `Stage`. The `spec.promotionTemplate.steps` field describes
+the discrete steps of a promotion process in detail.
 
-There are two general methods of accomplishing this:
+In the following, very common example, the `promotionTemplate` describes steps
+to:
 
-* Committing changes to a GitOps repository.
+1. Clone a Git repository containing Kubernetes manifests and Kustomize
+   configuration, checking out two different branches to two different
+   directories.
 
-* Making changes to an Argo CD `Application` resource. (Often, the only change
-  is to force a sync and refresh of the `Application`.)
+1. Clears the contents of one working tree, with intentions to fully replace its
+   contents.
 
-These two approaches are, in many cases, used in conjunction with one another.
-The Kargo controller always applies Git-based promotion mechanisms first _then_
-Argo CD-based promotion mechanisms.
+1. Runs the equivalent of `kustomize edit set image` to update a
+   `kustomization.yaml` file with a reference to an updated
+   `public.ecr.aws/nginx/nginx` container image.
 
-Included among the Git-based promotion mechanisms is specialized support for:
+1. Renders the updated manifests using the equivalent of `kustomize build`.
 
-* Running `kustomize edit set image` for specific images in specified
-  directories to update the version of that image used, then committing the
-  changes, if any.
+1. Commits the updated manifests and pushes them to the `stage/test` of the
+   remote repository.
 
-* Updating the values of a keys in Helm values files to reference new versions
-  of specific images, then committing the changes, if any.
-
-* Updating `Chart.yaml` files in Helm charts to reference new versions of
-  specific chart dependencies, then committing the changes, if any.
-
-And among the Argo CD-based promotion mechanisms, there is specialized support
-for:
-
-* Updating the `kustomize.images` section of a specified Argo CD `Application`
-  resource to reference new versions of specific images.
-
-* Updating the `helm.parameters` section of a specified Argo CD `Application` to
-  reference new versions of specific images.
-
-* Updating the `targetRevision` field of a specified Argo CD `Application`
-  resource to reference a specific commit in a Git repository or a specific
-  version of a Helm chart.
-
-* Forcing a specified Argo CD `Application` to refresh and sync. (This is
-  automatic for any `Application` resource a `Stage` interacts with.)
-
-:::info
-Additionally, interaction with any Argo CD `Application` resources(s) as
-described above implicitly results in periodic evaluation of `Stage` health by
-aggregating the results of sync/health state for all such `Application`
-resources(s).
-:::
-
-:::tip
-It is suggested that automatic syncing typically be disabled for Argo CD
-`Application` resources that are orchestrated by Kargo.
-:::
-
-The following example shows that transitioning `Freight` into the `test`
-`Stage` requires:
-
-1. Updating the `https://github.com/example/kargo-demo.git` repository by
-   running `kustomize edit set image` in the `stages/test` directory and
-   committing those changes to a stage-specific `stages/test` branch.
-
-1. Forcing the Argo CD `Application` named `kargo-demo-test` in the `argocd`
-   namespace to refresh and sync.
+1. Forces Argo CD to sync the `kargo-demo-test` application to the latest commit
+   of the `stage/test` branch.
 
 ```yaml
-apiVersion: kargo.akuity.io/v1alpha1
-kind: Stage
-metadata:
-  name: test
-  namespace: kargo-demo
-spec:
-  # ...
-  promotionMechanisms:
-    gitRepoUpdates:
-    - repoURL: https://github.com/example/kargo-demo.git
-      writeBranch: stages/test
-      kustomize:
+promotionTemplate:
+  spec:
+    steps:
+    - uses: git-clone
+      config:
+        repoURL: https://github.com/example/repo.git
+        checkout:
+        - fromFreight: true
+          path: ./src
+        - branch: stage/test
+          create: true
+          path: ./out
+    - uses: git-clear
+      config:
+        path: ./out
+    - uses: kustomize-set-image
+      as: update-image
+      config:
+        path: ./src/base
         images:
         - image: public.ecr.aws/nginx/nginx
-          path: stages/test
-    argoCDAppUpdates:
-    - appName: kargo-demo-test
-      appNamespace: argocd
+    - uses: kustomize-build
+      config:
+        path: ./src/stages/test
+        outPath: ./out
+    - uses: git-commit
+      as: commit
+      config:
+        path: ./out
+        messageFromSteps:
+        - update-image
+    - uses: git-push
+      config:
+        path: ./out
+        targetBranch: stage/test
+    - uses: argocd-update
+      config:
+        apps:
+        - name: kargo-demo-test
+          sources:
+          - repoURL: https://github.com/example/repo.git
+            desiredCommitFromStep: commit
 ```
 
-:::info
-Promotion mechanisms can be thought of as expressing, "when I see this kind of
-artifact, I want to do this kind of thing with it." Because `Stage` resources
-may request different kinds of `Freight` from different sources, it is possible
-that, at times, there may be ambiguity over _what version_ of a given artifact
-a promotion mechanism should operate on.
-
-Consider, for instance, the case of two `Warehouse` resources, both subscribed
-to the _same_ GitOps monorepo, but each using different `includePaths` to
-effectively subscribe to manifest changes for only a single microservice. A
-`Stage` that requests `Freight` having originated from _both_ `Warehouses` will,
-when describing promotion mechanisms that operate on commits from the monorepo,
-need to specify whether to operate on the commit found by one `Warehouse` and
-included in one of the requested pieces of `Freight`, or the commit found by the
-other `Warehouse` and included in the _other_ requested piece of `Freight`.
-
-To this end, all promotion mechanisms accept `origin.kind` and `origin.name`
-fields to permit this kind of disambiguation. These fields need not be specified
-when there is no possible ambiguity, but they become required when Kargo can not
-infer, on its own, the correct artifact on which to operate.
-
-To prevent disambiguation from becoming overly burdensome in such cases, all
-"child" promotion mechanisms also inherit `origin` settings from their parent
-promotion mechanism and may also override them as necessary.
-:::
+__For complete documentation of all of Kargo's built-in promotion steps, refer
+to the [Promotion Steps Reference](./35-references/10-promotion-steps.md).__
 
 #### Verifications
 

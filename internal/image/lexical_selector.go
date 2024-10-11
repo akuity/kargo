@@ -3,8 +3,8 @@ package image
 import (
 	"context"
 	"fmt"
-	"regexp"
-	"sort"
+	"slices"
+	"strings"
 
 	"github.com/akuity/kargo/internal/logging"
 )
@@ -12,28 +12,16 @@ import (
 // lexicalSelector implements the Selector interface for
 // SelectionStrategyLexical.
 type lexicalSelector struct {
-	repoClient     *repositoryClient
-	allowRegex     *regexp.Regexp
-	ignore         []string
-	platform       *platformConstraint
-	discoveryLimit int
+	repoClient *repositoryClient
+	opts       SelectorOptions
 }
 
 // newLexicalSelector returns an implementation of the Selector interface for
 // SelectionStrategyLexical.
-func newLexicalSelector(
-	repoClient *repositoryClient,
-	allowRegex *regexp.Regexp,
-	ignore []string,
-	platform *platformConstraint,
-	discoveryLimit int,
-) Selector {
+func newLexicalSelector(repoClient *repositoryClient, opts SelectorOptions) Selector {
 	return &lexicalSelector{
-		repoClient:     repoClient,
-		allowRegex:     allowRegex,
-		ignore:         ignore,
-		platform:       platform,
-		discoveryLimit: discoveryLimit,
+		repoClient: repoClient,
+		opts:       opts,
 	}
 }
 
@@ -43,8 +31,8 @@ func (l *lexicalSelector) Select(ctx context.Context) ([]Image, error) {
 		"registry", l.repoClient.registry.name,
 		"image", l.repoClient.repoURL,
 		"selectionStrategy", SelectionStrategyLexical,
-		"platformConstrained", l.platform != nil,
-		"discoveryLimit", l.discoveryLimit,
+		"platformConstrained", l.opts.platform != nil,
+		"discoveryLimit", l.opts.DiscoveryLimit,
 	)
 	logger.Trace("discovering images")
 
@@ -55,7 +43,7 @@ func (l *lexicalSelector) Select(ctx context.Context) ([]Image, error) {
 		return nil, err
 	}
 
-	limit := l.discoveryLimit
+	limit := l.opts.DiscoveryLimit
 	if limit == 0 || limit > len(tags) {
 		limit = len(tags)
 	}
@@ -66,7 +54,7 @@ func (l *lexicalSelector) Select(ctx context.Context) ([]Image, error) {
 			break
 		}
 
-		image, err := l.repoClient.getImageByTag(ctx, tag, l.platform)
+		image, err := l.repoClient.getImageByTag(ctx, tag, l.opts.platform)
 		if err != nil {
 			return nil, fmt.Errorf("error retrieving image with tag %q: %w", tag, err)
 		}
@@ -114,10 +102,10 @@ func (l *lexicalSelector) selectTags(ctx context.Context) ([]string, error) {
 	}
 	logger.Trace("got all tags")
 
-	if l.allowRegex != nil || len(l.ignore) > 0 {
+	if l.opts.allowRegex != nil || len(l.opts.Ignore) > 0 {
 		matchedTags := make([]string, 0, len(tags))
 		for _, tag := range tags {
-			if allowsTag(tag, l.allowRegex) && !ignoresTag(tag, l.ignore) {
+			if allowsTag(tag, l.opts.allowRegex) && !ignoresTag(tag, l.opts.Ignore) {
 				matchedTags = append(matchedTags, tag)
 			}
 		}
@@ -140,7 +128,7 @@ func (l *lexicalSelector) selectTags(ctx context.Context) ([]string, error) {
 // sortTagsLexically sorts the provided tags in place, in lexically descending
 // order.
 func sortTagsLexically(tags []string) {
-	sort.Slice(tags, func(i, j int) bool {
-		return tags[i] > tags[j]
+	slices.SortFunc(tags, func(lhs, rhs string) int {
+		return strings.Compare(rhs, lhs)
 	})
 }

@@ -3,13 +3,13 @@ package garbage
 import (
 	"context"
 	"fmt"
-	"sort"
+	"slices"
 	"time"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/kubeclient"
+	"github.com/akuity/kargo/internal/indexer"
 	"github.com/akuity/kargo/internal/logging"
 )
 
@@ -67,7 +67,7 @@ func (c *collector) cleanStagePromotions(
 		&promos,
 		client.InNamespace(project),
 		client.MatchingFields{
-			kubeclient.PromotionsByStageIndexField: stage,
+			indexer.PromotionsByStageIndexField: stage,
 		},
 	); err != nil {
 		return fmt.Errorf(
@@ -82,8 +82,10 @@ func (c *collector) cleanStagePromotions(
 		return nil // Done
 	}
 
-	// Sort Promotions by creation time
-	sort.Sort(promosByCreation(promos.Items))
+	// Sort by creation time desc descending
+	slices.SortFunc(promos.Items, func(lhs, rhs kargoapi.Promotion) int {
+		return rhs.CreationTimestamp.Time.Compare(lhs.CreationTimestamp.Time)
+	})
 
 	// Step through all Promotions to find the oldest that is not terminal
 	oldestNonTerminalIndex := -1

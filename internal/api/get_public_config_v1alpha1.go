@@ -18,12 +18,13 @@ func (s *server) GetPublicConfig(
 			IssuerUrl:   s.cfg.OIDCConfig.IssuerURL,
 			ClientId:    s.cfg.OIDCConfig.ClientID,
 			CliClientId: s.cfg.OIDCConfig.CLIClientID,
-			Scopes:      s.cfg.OIDCConfig.Scopes,
+			Scopes:      append(s.cfg.OIDCConfig.DefaultScopes, s.cfg.OIDCConfig.AdditionalScopes...),
 		}
 	}
 	resp := &svcv1alpha1.GetPublicConfigResponse{
 		AdminAccountEnabled: s.cfg.AdminConfig != nil,
 		OidcConfig:          oidcCfg,
+		SkipAuth:            s.cfg.LocalMode,
 	}
 	return connect.NewResponse(resp), nil
 }

@@ -15,7 +15,7 @@ import "k8s.io/apimachinery/pkg/util/intstr/generated.proto";
 option go_package = "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1";
 
 message AnalysisRun {
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
 
   optional AnalysisRunSpec spec = 2;
 
@@ -23,7 +23,7 @@ message AnalysisRun {
 }
 
 message AnalysisRunList {
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
 
   repeated AnalysisRun items = 2;
 }
@@ -47,7 +47,7 @@ message AnalysisRunStatus {
 
   repeated MetricResult metricResults = 3;
 
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time startedAt = 4;
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time startedAt = 4;
 
   optional RunSummary runSummary = 5;
 
@@ -55,13 +55,13 @@ message AnalysisRunStatus {
 }
 
 message AnalysisTemplate {
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
 
   optional AnalysisTemplateSpec spec = 2;
 }
 
 message AnalysisTemplateList {
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
 
   repeated AnalysisTemplate items = 2;
 }
@@ -105,7 +105,7 @@ message CloudWatchMetricDataQuery {
 
   optional CloudWatchMetricStat metricStat = 4;
 
-  optional k8s.io.apimachinery.pkg.util.intstr.IntOrString period = 5;
+  optional .k8s.io.apimachinery.pkg.util.intstr.IntOrString period = 5;
 
   optional bool returnData = 6;
 }
@@ -113,7 +113,7 @@ message CloudWatchMetricDataQuery {
 message CloudWatchMetricStat {
   optional CloudWatchMetricStatMetric metric = 1;
 
-  optional k8s.io.apimachinery.pkg.util.intstr.IntOrString period = 2;
+  optional .k8s.io.apimachinery.pkg.util.intstr.IntOrString period = 2;
 
   optional string stat = 3;
 
@@ -168,9 +168,9 @@ message InfluxdbMetric {
 }
 
 message JobMetric {
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
 
-  optional k8s.io.api.batch.v1.JobSpec spec = 2;
+  optional .k8s.io.api.batch.v1.JobSpec spec = 2;
 }
 
 message KayentaMetric {
@@ -210,15 +210,15 @@ message Measurement {
 
   optional string message = 2;
 
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time startedAt = 3;
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time startedAt = 3;
 
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time finishedAt = 4;
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time finishedAt = 4;
 
   optional string value = 5;
 
   map<string, string> metadata = 6;
 
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time resumeAt = 7;
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time resumeAt = 7;
 }
 
 message MeasurementRetention {
@@ -234,17 +234,17 @@ message Metric {
 
   optional string initialDelay = 3;
 
-  optional k8s.io.apimachinery.pkg.util.intstr.IntOrString count = 4;
+  optional .k8s.io.apimachinery.pkg.util.intstr.IntOrString count = 4;
 
   optional string successCondition = 5;
 
   optional string failureCondition = 6;
 
-  optional k8s.io.apimachinery.pkg.util.intstr.IntOrString failureLimit = 7;
+  optional .k8s.io.apimachinery.pkg.util.intstr.IntOrString failureLimit = 7;
 
-  optional k8s.io.apimachinery.pkg.util.intstr.IntOrString inconclusiveLimit = 8;
+  optional .k8s.io.apimachinery.pkg.util.intstr.IntOrString inconclusiveLimit = 8;
 
-  optional k8s.io.apimachinery.pkg.util.intstr.IntOrString consecutiveErrorLimit = 9;
+  optional .k8s.io.apimachinery.pkg.util.intstr.IntOrString consecutiveErrorLimit = 9;
 
   optional MetricProvider provider = 10;
 }

@@ -39,7 +39,7 @@ func (s *server) RefreshStage(
 	// server's own internal client so that individual users are not required to
 	// have this permission, which they really do not otherwise need.
 	if stage.Status.CurrentPromotion != nil {
-		if _, err := kargoapi.RefreshPromotion(ctx, s.internalClient, client.ObjectKey{
+		if _, err := kargoapi.RefreshPromotion(ctx, s.client.InternalClient(), client.ObjectKey{
 			Namespace: project,
 			Name:      stage.Status.CurrentPromotion.Name,
 		}); err != nil {

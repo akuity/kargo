@@ -21,7 +21,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
-	"github.com/akuity/kargo/internal/kubeclient"
+	"github.com/akuity/kargo/internal/indexer"
 )
 
 func TestUpdatedArgoCDAppHandler_Update(t *testing.T) {
@@ -32,14 +32,14 @@ func TestUpdatedArgoCDAppHandler_Update(t *testing.T) {
 		interceptor   interceptor.Funcs
 		shardSelector labels.Selector
 		e             event.TypedUpdateEvent[*argocd.Application]
-		assertions    func(*testing.T, workqueue.RateLimitingInterface)
+		assertions    func(*testing.T, workqueue.TypedRateLimitingInterface[reconcile.Request])
 	}{
 		{
 			name: "Event without new object",
 			e: event.TypedUpdateEvent[*argocd.Application]{
 				ObjectOld: &argocd.Application{},
 			},
-			assertions: func(t *testing.T, wq workqueue.RateLimitingInterface) {
+			assertions: func(t *testing.T, wq workqueue.TypedRateLimitingInterface[reconcile.Request]) {
 				require.Equal(t, 0, wq.Len())
 			},
 		},
@@ -48,7 +48,7 @@ func TestUpdatedArgoCDAppHandler_Update(t *testing.T) {
 			e: event.TypedUpdateEvent[*argocd.Application]{
 				ObjectNew: &argocd.Application{},
 			},
-			assertions: func(t *testing.T, wq workqueue.RateLimitingInterface) {
+			assertions: func(t *testing.T, wq workqueue.TypedRateLimitingInterface[reconcile.Request]) {
 				require.Equal(t, 0, wq.Len())
 			},
 		},
@@ -83,7 +83,7 @@ func TestUpdatedArgoCDAppHandler_Update(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, wq workqueue.RateLimitingInterface) {
+			assertions: func(t *testing.T, wq workqueue.TypedRateLimitingInterface[reconcile.Request]) {
 				require.Equal(t, 1, wq.Len())
 
 				item, _ := wq.Get()
@@ -132,7 +132,7 @@ func TestUpdatedArgoCDAppHandler_Update(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, wq workqueue.RateLimitingInterface) {
+			assertions: func(t *testing.T, wq workqueue.TypedRateLimitingInterface[reconcile.Request]) {
 				require.Equal(t, 2, wq.Len())
 
 				var items []any
@@ -207,7 +207,7 @@ func TestUpdatedArgoCDAppHandler_Update(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, wq workqueue.RateLimitingInterface) {
+			assertions: func(t *testing.T, wq workqueue.TypedRateLimitingInterface[reconcile.Request]) {
 				require.Equal(t, 1, wq.Len())
 
 				item, _ := wq.Get()
@@ -241,7 +241,7 @@ func TestUpdatedArgoCDAppHandler_Update(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, wq workqueue.RateLimitingInterface) {
+			assertions: func(t *testing.T, wq workqueue.TypedRateLimitingInterface[reconcile.Request]) {
 				require.Equal(t, 0, wq.Len())
 			},
 		},
@@ -272,7 +272,7 @@ func TestUpdatedArgoCDAppHandler_Update(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, wq workqueue.RateLimitingInterface) {
+			assertions: func(t *testing.T, wq workqueue.TypedRateLimitingInterface[reconcile.Request]) {
 				require.Equal(t, 0, wq.Len())
 			},
 		},
@@ -287,7 +287,7 @@ func TestUpdatedArgoCDAppHandler_Update(t *testing.T) {
 				WithObjects(tt.applications...).
 				WithIndex(
 					&kargoapi.Promotion{},
-					kubeclient.RunningPromotionsByArgoCDApplicationsIndexField,
+					indexer.RunningPromotionsByArgoCDApplicationsIndexField,
 					tt.indexer,
 				).
 				WithInterceptorFuncs(tt.interceptor)
@@ -297,7 +297,7 @@ func TestUpdatedArgoCDAppHandler_Update(t *testing.T) {
 				shardSelector: tt.shardSelector,
 			}
 
-			wq := workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter())
+			wq := workqueue.NewTypedRateLimitingQueue(workqueue.DefaultTypedControllerRateLimiter[reconcile.Request]())
 			u.Update(context.TODO(), tt.e, wq)
 
 			tt.assertions(t, wq)

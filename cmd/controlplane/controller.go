@@ -26,6 +26,7 @@ import (
 	"github.com/akuity/kargo/internal/controller/warehouses"
 	"github.com/akuity/kargo/internal/credentials"
 	credsdb "github.com/akuity/kargo/internal/credentials/kubernetes"
+	"github.com/akuity/kargo/internal/directives"
 	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/internal/os"
 	"github.com/akuity/kargo/internal/types"
@@ -273,11 +274,18 @@ func (o *controllerOptions) setupReconcilers(
 	promotionsReconcilerCfg promotions.ReconcilerConfig,
 	stagesReconcilerCfg stages.ReconcilerConfig,
 ) error {
+	var argoCDClient client.Client
+	if argocdMgr != nil {
+		argoCDClient = argocdMgr.GetClient()
+	}
+
+	directivesEngine := directives.NewSimpleEngine(credentialsDB, kargoMgr.GetClient(), argoCDClient)
+
 	if err := promotions.SetupReconcilerWithManager(
 		ctx,
 		kargoMgr,
 		argocdMgr,
-		credentialsDB,
+		directivesEngine,
 		promotionsReconcilerCfg,
 	); err != nil {
 		return fmt.Errorf("error setting up Promotions reconciler: %w", err)
@@ -287,6 +295,7 @@ func (o *controllerOptions) setupReconcilers(
 		ctx,
 		kargoMgr,
 		argocdMgr,
+		directivesEngine,
 		stagesReconcilerCfg,
 	); err != nil {
 		return fmt.Errorf("error setting up Stages reconciler: %w", err)

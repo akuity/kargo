@@ -2,20 +2,24 @@ export const getStageYAMLExample = (namespace: string) =>
   `apiVersion: kargo.akuity.io/v1alpha1
 kind: Stage
 metadata:
-  name: prod
+  name: test
   namespace: ${namespace}
 spec:
-  subscriptions:
-    upstreamStages:
-    - name: uat
-  promotionMechanisms:
-    gitRepoUpdates:
-    - repoURL: https://github.com/akuity/kargo-demo.git
-      writeBranch: main
-      kustomize:
-        images:
-        - image: public.ecr.aws/nginx/nginx
-          path: stages/prod
-    argoCDAppUpdates:
-    - appName: kargo-demo-prod
-      appNamespace: argocd`;
+  requestedFreight:
+    - origin:
+        kind: Warehouse
+        name: kargo-demo
+      sources:
+        direct: true
+  promotionTemplate:
+    spec:
+      steps:
+      - uses: git-clone
+        config:
+          repoURL: https://github.com/akuity/kargo-advanced
+          checkout:
+          - branch: main
+            path: ./src
+          - branch: stage/uat
+            create: true
+            path: ./out`;

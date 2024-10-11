@@ -3,7 +3,7 @@ package kubernetes
 import (
 	"context"
 	"regexp"
-	"sort"
+	"slices"
 	"strings"
 
 	"github.com/kelseyhightower/envconfig"
@@ -40,7 +40,7 @@ type DatabaseConfig struct {
 func DatabaseConfigFromEnv() DatabaseConfig {
 	cfg := DatabaseConfig{}
 	envconfig.MustProcess("", &cfg)
-	sort.StringSlice(cfg.GlobalCredentialsNamespaces).Sort()
+	slices.Sort(cfg.GlobalCredentialsNamespaces)
 	return cfg
 }
 
@@ -156,8 +156,8 @@ func (k *database) getCredentialsSecret(
 
 	// Sort the secrets for consistent ordering every time this function is
 	// called.
-	sort.Slice(secrets.Items, func(i, j int) bool {
-		return secrets.Items[i].Name < secrets.Items[j].Name
+	slices.SortFunc(secrets.Items, func(lhs, rhs corev1.Secret) int {
+		return strings.Compare(lhs.Name, rhs.Name)
 	})
 
 	// Normalize the repository URL. These normalizations should be safe even
@@ -169,8 +169,6 @@ func (k *database) getCredentialsSecret(
 	// Search for a matching Secret.
 	var matchingSecret *corev1.Secret
 	for _, secret := range secrets.Items {
-		secret := secret
-
 		if secret.Data == nil {
 			continue
 		}

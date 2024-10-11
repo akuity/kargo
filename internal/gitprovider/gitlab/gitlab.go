@@ -184,6 +184,7 @@ func convertGitlabMR(glMR *gitlab.MergeRequest) *gitprovider.PullRequest {
 		State:          prState,
 		MergeCommitSHA: glMR.MergeCommitSHA,
 		Object:         glMR,
+		HeadSHA:        glMR.SHA,
 	}
 }
 

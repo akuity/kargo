@@ -7,64 +7,105 @@ import {
   faPeopleGroup
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Tooltip } from 'antd';
+import { Button, Result, Tooltip } from 'antd';
 import classNames from 'classnames';
+import { useMemo } from 'react';
 import { generatePath, useNavigate, useParams } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
+import { LoadingState } from '@ui/features/common';
 import { Description } from '@ui/features/common/description';
+import { SmallLabel } from '@ui/features/common/small-label';
 import { AnalysisTemplatesList } from '@ui/features/project/analysis-templates/analysis-templates-list';
 import { CredentialsList } from '@ui/features/project/credentials/credentials-list';
 import { Events } from '@ui/features/project/events/events';
 import { Pipelines } from '@ui/features/project/pipelines/pipelines';
 import { Roles } from '@ui/features/project/roles/roles';
 import { ProjectSettings } from '@ui/features/project/settings/project-settings';
-import { getProject } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
+import { getConfig, getProject } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 import { Project as _Project } from '@ui/gen/v1alpha1/generated_pb';
 
-const tabs = {
-  pipelines: {
-    path: paths.project,
-    label: 'Pipelines',
-    icon: faDiagramProject
-  },
-  credentials: {
-    path: paths.projectCredentials,
-    label: 'Credentials',
-    icon: faIdBadge
-  },
-  analysisTemplates: {
-    path: paths.projectAnalysisTemplates,
-    label: 'Analysis Templates',
-    icon: faChartBar
-  },
-  events: {
-    path: paths.projectEvents,
-    label: 'Events',
-    icon: faClockRotateLeft
-  },
-  roles: {
-    path: paths.projectRoles,
-    label: 'Roles',
-    icon: faPeopleGroup
-  }
-};
-
-export type ProjectTab = keyof typeof tabs;
-
-export const Project = ({ tab = 'pipelines' }: { tab?: ProjectTab }) => {
+export const Project = ({
+  tab = 'pipelines',
+  creatingStage
+}: {
+  tab?: string;
+  creatingStage?: boolean;
+}) => {
   const { name } = useParams();
   const navigate = useNavigate();
 
-  const { data, isLoading } = useQuery(getProject, { name });
+  const { data, isLoading, error } = useQuery(getProject, { name });
+  const { data: config } = useQuery(getConfig);
+
+  const [tabs] = useMemo(() => {
+    return [
+      {
+        pipelines: {
+          path: paths.project,
+          label: 'Pipelines',
+          icon: faDiagramProject
+        },
+        ...(config?.secretManagementEnabled
+          ? {
+              credentials: {
+                path: paths.projectCredentials,
+                label: 'Credentials',
+                icon: faIdBadge
+              }
+            }
+          : {}),
+        analysisTemplates: {
+          path: paths.projectAnalysisTemplates,
+          label: 'Analysis Templates',
+          icon: faChartBar
+        },
+        events: {
+          path: paths.projectEvents,
+          label: 'Events',
+          icon: faClockRotateLeft
+        },
+        roles: {
+          path: paths.projectRoles,
+          label: 'Roles',
+          icon: faPeopleGroup
+        }
+      }
+    ];
+  }, [config]);
+
+  if (isLoading) {
+    return <LoadingState />;
+  }
+
+  if (error) {
+    return (
+      <Result
+        status='404'
+        title='Error'
+        subTitle={error?.message}
+        extra={
+          <Button type='primary' onClick={() => navigate(paths.projects)}>
+            Go to Projects Page
+          </Button>
+        }
+      />
+    );
+  }
 
   // we must render the tab contents outside of the Antd tabs component to prevent layout issues in the ProjectDetails component
-  const renderTab = (key: ProjectTab) => {
+  const renderTab = (key: string) => {
     switch (key) {
       case 'pipelines':
-        return <Pipelines project={data?.result?.value as _Project} />;
+        return (
+          <Pipelines project={data?.result?.value as _Project} creatingStage={creatingStage} />
+        );
       case 'credentials':
-        return <CredentialsList />;
+        return config?.secretManagementEnabled ? (
+          <CredentialsList />
+        ) : (
+          <Pipelines project={data?.result?.value as _Project} />
+        );
       case 'analysisTemplates':
         return <AnalysisTemplatesList />;
       case 'events':
@@ -81,7 +122,7 @@ export const Project = ({ tab = 'pipelines' }: { tab?: ProjectTab }) => {
       <div className='px-6 pt-5 pb-3 mb-2'>
         <div className='flex items-center'>
           <div className='mr-auto'>
-            <div className='font-medium text-xs text-gray-500'>PROJECT</div>
+            <SmallLabel>PROJECT</SmallLabel>
             <div className='text-2xl font-semibold flex items-center'>
               {name} <ProjectSettings />
             </div>
@@ -98,7 +139,7 @@ export const Project = ({ tab = 'pipelines' }: { tab?: ProjectTab }) => {
                   <FontAwesomeIcon
                     icon={value.icon}
                     onClick={() => {
-                      navigate(generatePath(tabs[key as ProjectTab].path, { name }));
+                      navigate(generatePath(tabs[key as keyof typeof tabs]?.path ?? '', { name }));
                     }}
                   />
                 </div>

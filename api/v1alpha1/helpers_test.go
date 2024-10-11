@@ -210,7 +210,6 @@ func Test_patchAnnotation(t *testing.T) {
 		},
 	}
 	for name, tc := range testCases {
-		tc := tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			err := patchAnnotation(context.Background(), tc.client, tc.obj, tc.key, tc.value)

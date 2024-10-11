@@ -1,3 +1,4 @@
+import { ObjectMeta } from '@ui/gen/k8s.io/apimachinery/pkg/apis/meta/v1/generated_pb';
 import { Freight, FreightReference, Stage } from '@ui/gen/v1alpha1/generated_pb';
 
 export const ALIAS_LABEL_KEY = 'kargo.akuity.io/alias';
@@ -24,18 +25,19 @@ export function getDescription<T extends HasDescriptionAnnotation>(item: T) {
 export function getCurrentFreight(stage: Stage): FreightReference[] {
   return stage?.status?.freightHistory[0]
     ? Object.values(stage?.status?.freightHistory[0]?.items)
-    : stage?.status?.currentFreight
-      ? [stage?.status?.currentFreight]
-      : [];
+    : [];
 }
 
 export function currentFreightHasVerification(stage: Stage): boolean {
   const collection = stage?.status?.freightHistory[0];
-  if (
-    (collection && (collection.verificationHistory || []).length > 0) ||
-    stage?.status?.currentFreight?.verificationHistory
-  ) {
-    return true;
-  }
-  return false;
+  return (collection && (collection.verificationHistory || []).length > 0) || false;
+}
+
+export function mapToNames<T extends { metadata?: ObjectMeta }>(objects: T[]) {
+  return (objects || []).reduce((acc, obj) => {
+    if (obj?.metadata?.name) {
+      acc.push(obj.metadata.name);
+    }
+    return acc;
+  }, [] as string[]);
 }

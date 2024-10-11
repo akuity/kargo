@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.15.0
+    controller-gen.kubebuilder.io/version: v0.16.3
   name: warehouses.kargo.akuity.io
 spec:
   group: kargo.akuity.io
@@ -246,8 +246,20 @@ spec:
                             should be taken with leaving this field unspecified, as it can lead to the
                             unanticipated rollout of breaking changes.
                           type: string
+                        strictSemvers:
+                          default: true
+                          description: |-
+                            StrictSemvers specifies whether only "strict" semver tags should be
+                            considered. A "strict" semver tag is one containing ALL of major, minor,
+                            and patch version components. This is enabled by default, but only has any
+                            effect when the CommitSelectionStrategy is SemVer. This should be disabled
+                            cautiously, as it creates the potential for any tag containing numeric
+                            characters only to be mistaken for a semver string containing the major
+                            version number only.
+                          type: boolean
                       required:
                       - repoURL
+                      - strictSemvers
                       type: object
                     image:
                       description: Image describes a subscription to container image
@@ -337,8 +349,21 @@ spec:
                             changes. Refer to Image Updater documentation for more details.
                             More info: https://github.com/masterminds/semver#checking-version-constraints
                           type: string
+                        strictSemvers:
+                          default: true
+                          description: |-
+                            StrictSemvers specifies whether only "strict" semver tags should be
+                            considered. A "strict" semver tag is one containing ALL of major, minor,
+                            and patch version components. This is enabled by default, but only has any
+                            effect when the ImageSelectionStrategy is SemVer. This should be disabled
+                            cautiously, as it is not uncommon to tag container images with short Git
+                            commit hashes, which have the potential to contain numeric characters only
+                            and could be mistaken for a semver string containing the major version
+                            number only.
+                          type: boolean
                       required:
                       - repoURL
+                      - strictSemvers
                       type: object
                   type: object
                 minItems: 1
@@ -355,16 +380,8 @@ spec:
                   Conditions contains the last observations of the Warehouse's current
                   state.
                 items:
-                  description: "Condition contains details for one aspect of the current
-                    state of this API Resource.\n---\nThis struct is intended for
-                    direct use as an array at the field path .status.conditions.  For
-                    example,\n\n\n\ttype FooStatus struct{\n\t    // Represents the
-                    observations of a foo's current state.\n\t    // Known .status.conditions.type
-                    are: \"Available\", \"Progressing\", and \"Degraded\"\n\t    //
-                    +patchMergeKey=type\n\t    // +patchStrategy=merge\n\t    // +listType=map\n\t
-                    \   // +listMapKey=type\n\t    Conditions []metav1.Condition `json:\"conditions,omitempty\"
-                    patchStrategy:\"merge\" patchMergeKey:\"type\" protobuf:\"bytes,1,rep,name=conditions\"`\n\n\n\t
-                    \   // other fields\n\t}"
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
                   properties:
                     lastTransitionTime:
                       description: |-
@@ -405,12 +422,7 @@ spec:
                       - Unknown
                       type: string
                     type:
-                      description: |-
-                        type of condition in CamelCase or in foo.example.com/CamelCase.
-                        ---
-                        Many .condition.type values are consistent across resources like Available, but because arbitrary conditions can be
-                        useful (see .node.status.conditions), the ability to deconflict is important.
-                        The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
                       maxLength: 316
                       pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
                       type: string

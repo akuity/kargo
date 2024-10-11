@@ -17,7 +17,6 @@ import (
 
 	"github.com/akuity/kargo/internal/api/config"
 	"github.com/akuity/kargo/internal/api/kubernetes"
-	"github.com/akuity/kargo/internal/api/user"
 	"github.com/akuity/kargo/internal/api/validation"
 	rollouts "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
@@ -184,18 +183,10 @@ func TestGetAnalysisTemplate(t *testing.T) {
 		},
 	}
 	for name, testCase := range testCases {
-		testCase := testCase
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// Simulate an admin user to prevent any authz issues with the authorizing
-			// client.
-			ctx := user.ContextWithInfo(
-				context.Background(),
-				user.Info{
-					IsAdmin: true,
-				},
-			)
+			ctx := context.Background()
 
 			cfg := config.ServerConfigFromEnv()
 			if testCase.rolloutsDisabled {
@@ -206,15 +197,12 @@ func TestGetAnalysisTemplate(t *testing.T) {
 				ctx,
 				&rest.Config{},
 				kubernetes.ClientOptions{
+					SkipAuthorization: true,
 					NewInternalClient: func(
 						_ context.Context,
 						_ *rest.Config,
 						scheme *runtime.Scheme,
 					) (client.Client, error) {
-						if err := rollouts.AddToScheme(scheme); err != nil {
-							return nil, err
-						}
-
 						return fake.NewClientBuilder().
 							WithScheme(scheme).
 							WithObjects(

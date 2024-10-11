@@ -15,62 +15,46 @@ import {
   getNodeDimensions
 } from '../types';
 
-import { getConnectors, initNodeArray, newSubscriptionNode } from './graph';
+import { getConnectors, initNode, newSubscriptionNode } from './graph';
 import { IndexCache } from './index-cache';
 
 const initializeNodes = (
   warehouses: Warehouse[],
   stages: Stage[],
-  hideSubscriptions: boolean,
   project?: string
 ): [AnyNodeType[], ColorMap] => {
-  const warehouseMap = {} as { [key: string]: Warehouse };
   const warehouseNodeMap = {} as { [key: string]: RepoNodeType };
+  const nodes = [];
 
   (warehouses || []).forEach((w: Warehouse) => {
-    warehouseMap[w?.metadata?.name || ''] = w;
-    warehouseNodeMap[w.metadata?.name || ''] = NewWarehouseNode(w);
+    const warehouseName = w?.metadata?.name;
+    if (warehouseName) {
+      w?.spec?.subscriptions?.forEach((sub) => {
+        nodes.push(newSubscriptionNode(sub, warehouseName));
+      });
+      warehouseNodeMap[warehouseName] = NewWarehouseNode(w);
+    }
   });
 
-  const nodes = stages.slice().flatMap((stage) => {
-    const n = initNodeArray(stage);
-
-    const requestedFreight = stage.spec?.requestedFreight;
-    (requestedFreight || []).forEach((f) => {
+  stages.forEach((stage) => {
+    (stage.spec?.requestedFreight || []).forEach((f) => {
       if (f?.origin?.kind === 'Warehouse' && f?.sources?.direct) {
         const warehouseName = f.origin?.name;
-        // create warehouse nodes
         if (warehouseName) {
-          const cur = warehouseMap[warehouseName];
-          if (!warehouseNodeMap[warehouseName] && cur) {
-            // if warehouse node does not yet exist, create it and add this stage as its first child
-            warehouseNodeMap[warehouseName] = NewWarehouseNode(cur, [stage.metadata?.name || '']);
-          } else {
-            // the warehouse node already exists, so add this stage to its children
-            const stageNames = [
+          // the warehouse node will already exist, unless a stage references a missing warehouse
+          warehouseNodeMap[warehouseName] = {
+            ...warehouseNodeMap[warehouseName],
+            stageNames: [
               ...(warehouseNodeMap[warehouseName]?.stageNames || []),
               stage.metadata?.name || ''
-            ];
-            warehouseNodeMap[warehouseName] = {
-              ...warehouseNodeMap[warehouseName],
-              stageNames
-            };
-          }
+            ]
+          };
         }
       }
     });
 
-    return n;
+    nodes.push(initNode(stage));
   });
-
-  if (!hideSubscriptions) {
-    warehouses.forEach((w) => {
-      // create subscription nodes
-      w?.spec?.subscriptions?.forEach((sub) => {
-        nodes.push(newSubscriptionNode(sub, w.metadata?.name || ''));
-      });
-    });
-  }
 
   const warehouseColorMap = getColors(project || '', warehouses, 'warehouses');
 
@@ -81,8 +65,7 @@ const initializeNodes = (
 export const usePipelineGraph = (
   project: string | undefined,
   stages: Stage[],
-  warehouses: Warehouse[],
-  hideSubscriptions: boolean
+  warehouses: Warehouse[]
 ): [DagreNode[], ConnectorsType[][], BoxType, Stage[], ColorMap, ColorMap] => {
   return useMemo(() => {
     if (!stages || !warehouses || !project) {
@@ -93,12 +76,7 @@ export const usePipelineGraph = (
     g.setGraph({ rankdir: 'LR' });
     g.setDefaultEdgeLabel(() => ({}));
 
-    const [myNodes, warehouseColorMap] = initializeNodes(
-      warehouses,
-      stages,
-      hideSubscriptions,
-      project
-    );
+    const [myNodes, warehouseColorMap] = initializeNodes(warehouses, stages, project);
     const parentIndexCache = new IndexCache((node, warehouseName) => {
       return node.type === NodeType.WAREHOUSE && node.warehouseName === warehouseName;
     });
@@ -155,7 +133,10 @@ export const usePipelineGraph = (
           {
             color: warehouseColorMap[item.warehouseName]
           },
-          `${item.warehouseName} ${index}`
+          // segregating multiple subscription is important in graph
+          // the reason being, we want multiple subscription source to be uniquely identified such that "warehouse" can backtrack accurately
+          // without this, graph saw it as if warehouse has single subscription and broke the visual line
+          `subscription-${index} ${item.warehouseName} ${index}`
         );
       }
     });
@@ -204,5 +185,5 @@ export const usePipelineGraph = (
     });
 
     return [nodes, connectors, box, sortedStages, stageColorMap, warehouseColorMap];
-  }, [stages, warehouses, hideSubscriptions, project]);
+  }, [stages, warehouses, project]);
 };

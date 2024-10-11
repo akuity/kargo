@@ -24,7 +24,9 @@ const formSchema = z.object({
 
 export const CreateWarehouseModal = ({ visible, hide, project }: Props) => {
   const { mutateAsync, isPending } = useMutation(createResource, {
-    onSuccess: () => hide()
+    onSuccess: () => {
+      hide();
+    }
   });
 
   const { control, handleSubmit } = useForm({
@@ -50,7 +52,7 @@ export const CreateWarehouseModal = ({ visible, hide, project }: Props) => {
       footer={
         <div className='flex items-center justify-between'>
           <Typography.Link
-            href='https://kargo.akuity.io/quickstart#hands-on-with-the-kargo-cli'
+            href='https://docs.kargo.io/quickstart#hands-on-with-the-kargo-cli'
             target='_blank'
           >
             Documentation

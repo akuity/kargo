@@ -34,6 +34,22 @@ rules:
       - create
       - patch
   - apiGroups:
+      - ""
+    resources:
+      - configmaps
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - secrets
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
       - authorization.k8s.io
     resources:
       - subjectaccessreviews
@@ -116,7 +132,10 @@ rules:
 - apiGroups:
     - ""
   resources:
+    - configmaps
+    {{- if .Values.api.secretManagementEnabled }}
     - secrets
+    {{- end }}
     - serviceaccounts
   verbs:
     - "*"

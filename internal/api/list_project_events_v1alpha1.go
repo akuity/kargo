@@ -3,7 +3,7 @@ package api
 import (
 	"context"
 	"fmt"
-	"sort"
+	"slices"
 
 	"connectrpc.com/connect"
 	corev1 "k8s.io/api/core/v1"
@@ -11,7 +11,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/kubeclient"
+	"github.com/akuity/kargo/internal/indexer"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
@@ -36,7 +36,7 @@ func (s *server) ListProjectEvents(
 		// List Kargo related events only
 		client.MatchingFieldsSelector{
 			Selector: fields.OneTermEqualSelector(
-				kubeclient.EventsByInvolvedObjectAPIGroupIndexField,
+				indexer.EventsByInvolvedObjectAPIGroupIndexField,
 				kargoapi.GroupVersion.Group,
 			),
 		},
@@ -44,8 +44,9 @@ func (s *server) ListProjectEvents(
 		return nil, fmt.Errorf("list events: %w", err)
 	}
 
-	sort.Slice(eventsList.Items, func(i, j int) bool {
-		return eventsList.Items[i].LastTimestamp.Time.After(eventsList.Items[j].LastTimestamp.Time)
+	// Sort descending by last timestamp
+	slices.SortFunc(eventsList.Items, func(lhs, rhs corev1.Event) int {
+		return rhs.LastTimestamp.Time.Compare(lhs.LastTimestamp.Time)
 	})
 
 	events := make([]*corev1.Event, len(eventsList.Items))

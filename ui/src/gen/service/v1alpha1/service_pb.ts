@@ -6,9 +6,9 @@
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto3, Timestamp } from "@bufbuild/protobuf";
 import { Freight, Project, Promotion, Stage, Warehouse } from "../../v1alpha1/generated_pb.js";
-import { Event, Secret } from "../../k8s.io/api/core/v1/generated_pb.js";
+import { ConfigMap, Event, Secret } from "../../k8s.io/api/core/v1/generated_pb.js";
 import { AnalysisRun, AnalysisTemplate } from "../../rollouts/api/v1alpha1/generated_pb.js";
-import { ResourceDetails, Role, RoleResources, UserClaims } from "../../rbac/v1alpha1/generated_pb.js";
+import { Claim, ResourceDetails, Role, RoleResources } from "../../rbac/v1alpha1/generated_pb.js";
 
 /**
  * @generated from enum akuity.io.kargo.service.v1alpha1.RawFormat
@@ -303,6 +303,11 @@ export class GetConfigResponse extends Message<GetConfigResponse> {
    */
   argocdShards: { [key: string]: ArgoCDShard } = {};
 
+  /**
+   * @generated from field: bool secret_management_enabled = 2;
+   */
+  secretManagementEnabled = false;
+
   constructor(data?: PartialMessage<GetConfigResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -312,6 +317,7 @@ export class GetConfigResponse extends Message<GetConfigResponse> {
   static readonly typeName = "akuity.io.kargo.service.v1alpha1.GetConfigResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "argocd_shards", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "message", T: ArgoCDShard} },
+    { no: 2, name: "secret_management_enabled", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetConfigResponse {
@@ -376,6 +382,11 @@ export class GetPublicConfigResponse extends Message<GetPublicConfigResponse> {
    */
   adminAccountEnabled = false;
 
+  /**
+   * @generated from field: bool skip_auth = 3;
+   */
+  skipAuth = false;
+
   constructor(data?: PartialMessage<GetPublicConfigResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -386,6 +397,7 @@ export class GetPublicConfigResponse extends Message<GetPublicConfigResponse> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "oidc_config", kind: "message", T: OIDCConfig },
     { no: 2, name: "admin_account_enabled", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 3, name: "skip_auth", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetPublicConfigResponse {
@@ -1108,6 +1120,160 @@ export class ListStagesResponse extends Message<ListStagesResponse> {
 
   static equals(a: ListStagesResponse | PlainMessage<ListStagesResponse> | undefined, b: ListStagesResponse | PlainMessage<ListStagesResponse> | undefined): boolean {
     return proto3.util.equals(ListStagesResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message akuity.io.kargo.service.v1alpha1.ListImagesRequest
+ */
+export class ListImagesRequest extends Message<ListImagesRequest> {
+  /**
+   * @generated from field: string project = 1;
+   */
+  project = "";
+
+  constructor(data?: PartialMessage<ListImagesRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.ListImagesRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "project", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListImagesRequest {
+    return new ListImagesRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListImagesRequest {
+    return new ListImagesRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListImagesRequest {
+    return new ListImagesRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ListImagesRequest | PlainMessage<ListImagesRequest> | undefined, b: ListImagesRequest | PlainMessage<ListImagesRequest> | undefined): boolean {
+    return proto3.util.equals(ListImagesRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message akuity.io.kargo.service.v1alpha1.ListImagesResponse
+ */
+export class ListImagesResponse extends Message<ListImagesResponse> {
+  /**
+   * images maps image repository names to their tags
+   *
+   * @generated from field: map<string, akuity.io.kargo.service.v1alpha1.TagMap> images = 2;
+   */
+  images: { [key: string]: TagMap } = {};
+
+  constructor(data?: PartialMessage<ListImagesResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.ListImagesResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 2, name: "images", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "message", T: TagMap} },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListImagesResponse {
+    return new ListImagesResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListImagesResponse {
+    return new ListImagesResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListImagesResponse {
+    return new ListImagesResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ListImagesResponse | PlainMessage<ListImagesResponse> | undefined, b: ListImagesResponse | PlainMessage<ListImagesResponse> | undefined): boolean {
+    return proto3.util.equals(ListImagesResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message akuity.io.kargo.service.v1alpha1.TagMap
+ */
+export class TagMap extends Message<TagMap> {
+  /**
+   * tags maps image tag names to stages which have previously used that tag
+   *
+   * @generated from field: map<string, akuity.io.kargo.service.v1alpha1.ImageStageMap> tags = 1;
+   */
+  tags: { [key: string]: ImageStageMap } = {};
+
+  constructor(data?: PartialMessage<TagMap>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.TagMap";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "tags", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "message", T: ImageStageMap} },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): TagMap {
+    return new TagMap().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): TagMap {
+    return new TagMap().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): TagMap {
+    return new TagMap().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: TagMap | PlainMessage<TagMap> | undefined, b: TagMap | PlainMessage<TagMap> | undefined): boolean {
+    return proto3.util.equals(TagMap, a, b);
+  }
+}
+
+/**
+ * @generated from message akuity.io.kargo.service.v1alpha1.ImageStageMap
+ */
+export class ImageStageMap extends Message<ImageStageMap> {
+  /**
+   * stages maps stage names to the order which an image was promoted to that stage
+   *
+   * @generated from field: map<string, int32> stages = 1;
+   */
+  stages: { [key: string]: number } = {};
+
+  constructor(data?: PartialMessage<ImageStageMap>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.ImageStageMap";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "stages", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 5 /* ScalarType.INT32 */} },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ImageStageMap {
+    return new ImageStageMap().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ImageStageMap {
+    return new ImageStageMap().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ImageStageMap {
+    return new ImageStageMap().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ImageStageMap | PlainMessage<ImageStageMap> | undefined, b: ImageStageMap | PlainMessage<ImageStageMap> | undefined): boolean {
+    return proto3.util.equals(ImageStageMap, a, b);
   }
 }
 
@@ -4485,6 +4651,45 @@ export class GetRoleResponse extends Message<GetRoleResponse> {
 }
 
 /**
+ * @generated from message akuity.io.kargo.service.v1alpha1.Claims
+ */
+export class Claims extends Message<Claims> {
+  /**
+   * Note: oneof and repeated do not work together
+   *
+   * @generated from field: repeated github.com.akuity.kargo.api.rbac.v1alpha1.Claim claims = 1;
+   */
+  claims: Claim[] = [];
+
+  constructor(data?: PartialMessage<Claims>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.Claims";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "claims", kind: "message", T: Claim, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Claims {
+    return new Claims().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): Claims {
+    return new Claims().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Claims {
+    return new Claims().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: Claims | PlainMessage<Claims> | undefined, b: Claims | PlainMessage<Claims> | undefined): boolean {
+    return proto3.util.equals(Claims, a, b);
+  }
+}
+
+/**
  * @generated from message akuity.io.kargo.service.v1alpha1.GrantRequest
  */
 export class GrantRequest extends Message<GrantRequest> {
@@ -4503,9 +4708,9 @@ export class GrantRequest extends Message<GrantRequest> {
    */
   request: {
     /**
-     * @generated from field: github.com.akuity.kargo.api.rbac.v1alpha1.UserClaims user_claims = 3;
+     * @generated from field: akuity.io.kargo.service.v1alpha1.Claims user_claims = 3;
      */
-    value: UserClaims;
+    value: Claims;
     case: "userClaims";
   } | {
     /**
@@ -4525,7 +4730,7 @@ export class GrantRequest extends Message<GrantRequest> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "project", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "role", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "user_claims", kind: "message", T: UserClaims, oneof: "request" },
+    { no: 3, name: "user_claims", kind: "message", T: Claims, oneof: "request" },
     { no: 4, name: "resource_details", kind: "message", T: ResourceDetails, oneof: "request" },
   ]);
 
@@ -4690,9 +4895,9 @@ export class RevokeRequest extends Message<RevokeRequest> {
    */
   request: {
     /**
-     * @generated from field: github.com.akuity.kargo.api.rbac.v1alpha1.UserClaims user_claims = 3;
+     * @generated from field: akuity.io.kargo.service.v1alpha1.Claims user_claims = 3;
      */
-    value: UserClaims;
+    value: Claims;
     case: "userClaims";
   } | {
     /**
@@ -4712,7 +4917,7 @@ export class RevokeRequest extends Message<RevokeRequest> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "project", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "role", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "user_claims", kind: "message", T: UserClaims, oneof: "request" },
+    { no: 3, name: "user_claims", kind: "message", T: Claims, oneof: "request" },
     { no: 4, name: "resource_details", kind: "message", T: ResourceDetails, oneof: "request" },
   ]);
 
@@ -4841,6 +5046,352 @@ export class UpdateRoleResponse extends Message<UpdateRoleResponse> {
 
   static equals(a: UpdateRoleResponse | PlainMessage<UpdateRoleResponse> | undefined, b: UpdateRoleResponse | PlainMessage<UpdateRoleResponse> | undefined): boolean {
     return proto3.util.equals(UpdateRoleResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message akuity.io.kargo.service.v1alpha1.ListAnalysisTemplateConfigMapsRequest
+ */
+export class ListAnalysisTemplateConfigMapsRequest extends Message<ListAnalysisTemplateConfigMapsRequest> {
+  /**
+   * @generated from field: string project = 1;
+   */
+  project = "";
+
+  constructor(data?: PartialMessage<ListAnalysisTemplateConfigMapsRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.ListAnalysisTemplateConfigMapsRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "project", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListAnalysisTemplateConfigMapsRequest {
+    return new ListAnalysisTemplateConfigMapsRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListAnalysisTemplateConfigMapsRequest {
+    return new ListAnalysisTemplateConfigMapsRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListAnalysisTemplateConfigMapsRequest {
+    return new ListAnalysisTemplateConfigMapsRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ListAnalysisTemplateConfigMapsRequest | PlainMessage<ListAnalysisTemplateConfigMapsRequest> | undefined, b: ListAnalysisTemplateConfigMapsRequest | PlainMessage<ListAnalysisTemplateConfigMapsRequest> | undefined): boolean {
+    return proto3.util.equals(ListAnalysisTemplateConfigMapsRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message akuity.io.kargo.service.v1alpha1.ListAnalysisTemplateConfigMapsResponse
+ */
+export class ListAnalysisTemplateConfigMapsResponse extends Message<ListAnalysisTemplateConfigMapsResponse> {
+  /**
+   * @generated from field: repeated k8s.io.api.core.v1.ConfigMap config_maps = 1;
+   */
+  configMaps: ConfigMap[] = [];
+
+  constructor(data?: PartialMessage<ListAnalysisTemplateConfigMapsResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.ListAnalysisTemplateConfigMapsResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "config_maps", kind: "message", T: ConfigMap, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListAnalysisTemplateConfigMapsResponse {
+    return new ListAnalysisTemplateConfigMapsResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListAnalysisTemplateConfigMapsResponse {
+    return new ListAnalysisTemplateConfigMapsResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListAnalysisTemplateConfigMapsResponse {
+    return new ListAnalysisTemplateConfigMapsResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ListAnalysisTemplateConfigMapsResponse | PlainMessage<ListAnalysisTemplateConfigMapsResponse> | undefined, b: ListAnalysisTemplateConfigMapsResponse | PlainMessage<ListAnalysisTemplateConfigMapsResponse> | undefined): boolean {
+    return proto3.util.equals(ListAnalysisTemplateConfigMapsResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message akuity.io.kargo.service.v1alpha1.GetAnalysisTemplateConfigMapRequest
+ */
+export class GetAnalysisTemplateConfigMapRequest extends Message<GetAnalysisTemplateConfigMapRequest> {
+  /**
+   * @generated from field: string project = 1;
+   */
+  project = "";
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name = "";
+
+  /**
+   * @generated from field: akuity.io.kargo.service.v1alpha1.RawFormat format = 3;
+   */
+  format = RawFormat.UNSPECIFIED;
+
+  constructor(data?: PartialMessage<GetAnalysisTemplateConfigMapRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.GetAnalysisTemplateConfigMapRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "project", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "format", kind: "enum", T: proto3.getEnumType(RawFormat) },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetAnalysisTemplateConfigMapRequest {
+    return new GetAnalysisTemplateConfigMapRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetAnalysisTemplateConfigMapRequest {
+    return new GetAnalysisTemplateConfigMapRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetAnalysisTemplateConfigMapRequest {
+    return new GetAnalysisTemplateConfigMapRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetAnalysisTemplateConfigMapRequest | PlainMessage<GetAnalysisTemplateConfigMapRequest> | undefined, b: GetAnalysisTemplateConfigMapRequest | PlainMessage<GetAnalysisTemplateConfigMapRequest> | undefined): boolean {
+    return proto3.util.equals(GetAnalysisTemplateConfigMapRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message akuity.io.kargo.service.v1alpha1.GetAnalysisTemplateConfigMapResponse
+ */
+export class GetAnalysisTemplateConfigMapResponse extends Message<GetAnalysisTemplateConfigMapResponse> {
+  /**
+   * @generated from oneof akuity.io.kargo.service.v1alpha1.GetAnalysisTemplateConfigMapResponse.result
+   */
+  result: {
+    /**
+     * @generated from field: k8s.io.api.core.v1.ConfigMap config_map = 1;
+     */
+    value: ConfigMap;
+    case: "configMap";
+  } | {
+    /**
+     * @generated from field: bytes raw = 2;
+     */
+    value: Uint8Array;
+    case: "raw";
+  } | { case: undefined; value?: undefined } = { case: undefined };
+
+  constructor(data?: PartialMessage<GetAnalysisTemplateConfigMapResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.GetAnalysisTemplateConfigMapResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "config_map", kind: "message", T: ConfigMap, oneof: "result" },
+    { no: 2, name: "raw", kind: "scalar", T: 12 /* ScalarType.BYTES */, oneof: "result" },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetAnalysisTemplateConfigMapResponse {
+    return new GetAnalysisTemplateConfigMapResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetAnalysisTemplateConfigMapResponse {
+    return new GetAnalysisTemplateConfigMapResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetAnalysisTemplateConfigMapResponse {
+    return new GetAnalysisTemplateConfigMapResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetAnalysisTemplateConfigMapResponse | PlainMessage<GetAnalysisTemplateConfigMapResponse> | undefined, b: GetAnalysisTemplateConfigMapResponse | PlainMessage<GetAnalysisTemplateConfigMapResponse> | undefined): boolean {
+    return proto3.util.equals(GetAnalysisTemplateConfigMapResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message akuity.io.kargo.service.v1alpha1.ListAnalysisTemplateSecretsRequest
+ */
+export class ListAnalysisTemplateSecretsRequest extends Message<ListAnalysisTemplateSecretsRequest> {
+  /**
+   * @generated from field: string project = 1;
+   */
+  project = "";
+
+  constructor(data?: PartialMessage<ListAnalysisTemplateSecretsRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.ListAnalysisTemplateSecretsRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "project", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListAnalysisTemplateSecretsRequest {
+    return new ListAnalysisTemplateSecretsRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListAnalysisTemplateSecretsRequest {
+    return new ListAnalysisTemplateSecretsRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListAnalysisTemplateSecretsRequest {
+    return new ListAnalysisTemplateSecretsRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ListAnalysisTemplateSecretsRequest | PlainMessage<ListAnalysisTemplateSecretsRequest> | undefined, b: ListAnalysisTemplateSecretsRequest | PlainMessage<ListAnalysisTemplateSecretsRequest> | undefined): boolean {
+    return proto3.util.equals(ListAnalysisTemplateSecretsRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message akuity.io.kargo.service.v1alpha1.ListAnalysisTemplateSecretsResponse
+ */
+export class ListAnalysisTemplateSecretsResponse extends Message<ListAnalysisTemplateSecretsResponse> {
+  /**
+   * @generated from field: repeated k8s.io.api.core.v1.Secret secrets = 1;
+   */
+  secrets: Secret[] = [];
+
+  constructor(data?: PartialMessage<ListAnalysisTemplateSecretsResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.ListAnalysisTemplateSecretsResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "secrets", kind: "message", T: Secret, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListAnalysisTemplateSecretsResponse {
+    return new ListAnalysisTemplateSecretsResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListAnalysisTemplateSecretsResponse {
+    return new ListAnalysisTemplateSecretsResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListAnalysisTemplateSecretsResponse {
+    return new ListAnalysisTemplateSecretsResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ListAnalysisTemplateSecretsResponse | PlainMessage<ListAnalysisTemplateSecretsResponse> | undefined, b: ListAnalysisTemplateSecretsResponse | PlainMessage<ListAnalysisTemplateSecretsResponse> | undefined): boolean {
+    return proto3.util.equals(ListAnalysisTemplateSecretsResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message akuity.io.kargo.service.v1alpha1.GetAnalysisTemplateSecretRequest
+ */
+export class GetAnalysisTemplateSecretRequest extends Message<GetAnalysisTemplateSecretRequest> {
+  /**
+   * @generated from field: string project = 1;
+   */
+  project = "";
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name = "";
+
+  /**
+   * @generated from field: akuity.io.kargo.service.v1alpha1.RawFormat format = 3;
+   */
+  format = RawFormat.UNSPECIFIED;
+
+  constructor(data?: PartialMessage<GetAnalysisTemplateSecretRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.GetAnalysisTemplateSecretRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "project", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "format", kind: "enum", T: proto3.getEnumType(RawFormat) },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetAnalysisTemplateSecretRequest {
+    return new GetAnalysisTemplateSecretRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetAnalysisTemplateSecretRequest {
+    return new GetAnalysisTemplateSecretRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetAnalysisTemplateSecretRequest {
+    return new GetAnalysisTemplateSecretRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetAnalysisTemplateSecretRequest | PlainMessage<GetAnalysisTemplateSecretRequest> | undefined, b: GetAnalysisTemplateSecretRequest | PlainMessage<GetAnalysisTemplateSecretRequest> | undefined): boolean {
+    return proto3.util.equals(GetAnalysisTemplateSecretRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message akuity.io.kargo.service.v1alpha1.GetAnalysisTemplateSecretResponse
+ */
+export class GetAnalysisTemplateSecretResponse extends Message<GetAnalysisTemplateSecretResponse> {
+  /**
+   * @generated from oneof akuity.io.kargo.service.v1alpha1.GetAnalysisTemplateSecretResponse.result
+   */
+  result: {
+    /**
+     * @generated from field: k8s.io.api.core.v1.Secret secret = 1;
+     */
+    value: Secret;
+    case: "secret";
+  } | {
+    /**
+     * @generated from field: bytes raw = 2;
+     */
+    value: Uint8Array;
+    case: "raw";
+  } | { case: undefined; value?: undefined } = { case: undefined };
+
+  constructor(data?: PartialMessage<GetAnalysisTemplateSecretResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.GetAnalysisTemplateSecretResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "secret", kind: "message", T: Secret, oneof: "result" },
+    { no: 2, name: "raw", kind: "scalar", T: 12 /* ScalarType.BYTES */, oneof: "result" },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetAnalysisTemplateSecretResponse {
+    return new GetAnalysisTemplateSecretResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetAnalysisTemplateSecretResponse {
+    return new GetAnalysisTemplateSecretResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetAnalysisTemplateSecretResponse {
+    return new GetAnalysisTemplateSecretResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetAnalysisTemplateSecretResponse | PlainMessage<GetAnalysisTemplateSecretResponse> | undefined, b: GetAnalysisTemplateSecretResponse | PlainMessage<GetAnalysisTemplateSecretResponse> | undefined): boolean {
+    return proto3.util.equals(GetAnalysisTemplateSecretResponse, a, b);
   }
 }
 

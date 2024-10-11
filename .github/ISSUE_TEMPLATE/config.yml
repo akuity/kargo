@@ -2,7 +2,7 @@ blank_issues_enabled: true
 
 contact_links:
   - name: Have you read the docs?
-    url: https://kargo.akuity.io
+    url: https://docs.kargo.io
     about: Much help can be found in the docs
   - name: Ask a question
     url: https://github.com/akuity/kargo/discussions/new

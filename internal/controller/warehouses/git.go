@@ -14,6 +14,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/git"
+	libSemver "github.com/akuity/kargo/internal/controller/semver"
 	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/logging"
 )
@@ -34,7 +35,24 @@ func (r *reconciler) discoverCommits(
 	namespace string,
 	subs []kargoapi.RepoSubscription,
 ) ([]kargoapi.GitDiscoveryResult, error) {
+	logger := logging.LoggerFromContext(ctx)
+
 	results := make([]kargoapi.GitDiscoveryResult, 0, len(subs))
+
+	repos := make([]git.Repo, 0, len(subs))
+	defer func() {
+		for _, repo := range repos {
+			if err := repo.Close(); err != nil {
+				logger.Error(
+					err,
+					"failed to clean up git repo",
+					"repo", repo.URL(),
+					"home", repo.HomeDir(),
+					"path", repo.Dir(),
+				)
+			}
+		}
+	}()
 
 	for _, s := range subs {
 		if s.Git == nil {
@@ -43,7 +61,7 @@ func (r *reconciler) discoverCommits(
 
 		sub := *s.Git
 
-		logger := logging.LoggerFromContext(ctx).WithValues("repo", sub.RepoURL)
+		repoLogger := logger.WithValues("repo", sub.RepoURL)
 
 		// Obtain credentials for the Git repository.
 		creds, ok, err := r.credentialsDB.Get(ctx, namespace, credentials.TypeGit, sub.RepoURL)
@@ -61,31 +79,40 @@ func (r *reconciler) discoverCommits(
 				Password:      creds.Password,
 				SSHPrivateKey: creds.SSHPrivateKey,
 			}
-			logger.Debug("obtained credentials for git repo")
+			repoLogger.Debug("obtained credentials for git repo")
 		} else {
-			logger.Debug("found no credentials for git repo")
+			repoLogger.Debug("found no credentials for git repo")
 		}
 
 		// Clone the Git repository.
 		cloneOpts := &git.CloneOptions{
-			Branch:                sub.Branch,
-			SingleBranch:          true,
-			Filter:                git.FilterBlobless,
-			InsecureSkipTLSVerify: sub.InsecureSkipTLSVerify,
+			Branch:       sub.Branch,
+			SingleBranch: true,
+			Filter:       git.FilterBlobless,
 		}
 		repo, err := r.gitCloneFn(
 			sub.RepoURL,
 			&git.ClientOptions{
-				Credentials: repoCreds,
+				Credentials:           repoCreds,
+				InsecureSkipTLSVerify: sub.InsecureSkipTLSVerify,
 			},
 			cloneOpts,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to clone git repo %q: %w", sub.RepoURL, err)
 		}
+		// TODO: repos is a slice of repos that will be iterated and closed
+		// (deleted) when this function returns. Implementations of r.gitCloneFn
+		// used for testing sometimes return a nil repo since we don't have a mock
+		// implementation for the git.Repo interface at present. With as many
+		// methods as it has, it's a bit more expedient to just check that repo
+		// isn't nil before adding it to the slice of repos to be closed.
+		if repo != nil {
+			repos = append(repos, repo)
+		}
 
 		// Enrich the logger with additional fields for this subscription.
-		logger = logger.WithValues(gitDiscoveryLogFields(sub))
+		repoLogger = repoLogger.WithValues(gitDiscoveryLogFields(sub))
 
 		// Discover commits based on the subscription's commit selection strategy.
 		var discovered []kargoapi.DiscoveredCommit
@@ -111,7 +138,7 @@ func (r *reconciler) discoverCommits(
 					Committer:   meta.Committer,
 					CreatorDate: &metav1.Time{Time: meta.CreatorDate},
 				})
-				logger.Trace(
+				repoLogger.Trace(
 					"discovered commit from tag",
 					"tag", meta.Tag,
 					"commit", meta.CommitID,
@@ -137,7 +164,7 @@ func (r *reconciler) discoverCommits(
 					Committer:   meta.Committer,
 					CreatorDate: &metav1.Time{Time: meta.CommitDate},
 				})
-				logger.Trace(
+				repoLogger.Trace(
 					"discovered commit from branch",
 					"commit", meta.ID,
 					"creatorDate", meta.CommitDate.Format(time.RFC3339),
@@ -149,7 +176,7 @@ func (r *reconciler) discoverCommits(
 			results = append(results, kargoapi.GitDiscoveryResult{
 				RepoURL: sub.RepoURL,
 			})
-			logger.Debug("discovered no commits")
+			repoLogger.Debug("discovered no commits")
 			continue
 		}
 
@@ -157,7 +184,7 @@ func (r *reconciler) discoverCommits(
 			RepoURL: sub.RepoURL,
 			Commits: discovered,
 		})
-		logger.Debug(
+		repoLogger.Debug(
 			"discovered commits",
 			"count", len(discovered),
 		)
@@ -174,8 +201,8 @@ func (r *reconciler) discoverCommits(
 func (r *reconciler) discoverBranchHistory(repo git.Repo, sub kargoapi.GitSubscription) ([]git.CommitMetadata, error) {
 	limit := int(sub.DiscoveryLimit)
 	var filteredCommits = make([]git.CommitMetadata, 0, limit)
-	for skip := uint(0); ; skip += uint(limit) {
-		commits, err := r.listCommitsFn(repo, uint(limit), skip)
+	for skip := uint(0); ; skip += uint(limit) { // nolint: gosec
+		commits, err := r.listCommitsFn(repo, uint(limit), skip) // nolint: gosec
 		if err != nil {
 			return nil, fmt.Errorf("error listing commits from git repo %q: %w", sub.RepoURL, err)
 		}
@@ -254,7 +281,7 @@ func (r *reconciler) discoverTags(repo git.Repo, sub kargoapi.GitSubscription) (
 
 	switch sub.CommitSelectionStrategy {
 	case kargoapi.CommitSelectionStrategySemVer:
-		if tags, err = selectSemVerTags(tags, sub.SemverConstraint); err != nil {
+		if tags, err = selectSemVerTags(tags, sub.StrictSemvers, sub.SemverConstraint); err != nil {
 			return nil, fmt.Errorf("failed to select semver tags: %w", err)
 		}
 	case kargoapi.CommitSelectionStrategyLexical:
@@ -431,7 +458,7 @@ pathLoop:
 	return false, nil
 }
 
-func selectSemVerTags(tags []git.TagMetadata, constraint string) ([]git.TagMetadata, error) {
+func selectSemVerTags(tags []git.TagMetadata, strict bool, constraint string) ([]git.TagMetadata, error) {
 	var svConstraint *semver.Constraints
 	if constraint != "" {
 		var err error
@@ -447,8 +474,8 @@ func selectSemVerTags(tags []git.TagMetadata, constraint string) ([]git.TagMetad
 
 	var svs []semVerTag
 	for _, meta := range tags {
-		sv, err := semver.NewVersion(meta.Tag)
-		if err != nil {
+		sv := libSemver.Parse(meta.Tag, strict)
+		if sv == nil {
 			continue
 		}
 		if svConstraint == nil || svConstraint.Check(sv) {

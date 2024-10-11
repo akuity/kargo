@@ -59,6 +59,9 @@ func NewPromotion(
 			Freight: freight,
 		},
 	}
+	if stage.Spec.PromotionTemplate != nil {
+		promotion.Spec.Steps = stage.Spec.PromotionTemplate.Spec.Steps
+	}
 	return promotion
 }
 

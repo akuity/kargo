@@ -21,15 +21,16 @@ import { deleteRole, listRoles } from '@ui/gen/service/v1alpha1/service-KargoSer
 import { CreateRole } from './create-role';
 import { RulesModal } from './rules-modal';
 
-const renderColumn = (key: keyof Role) => {
+const renderColumn = (key: string) => {
   return {
     title: key.charAt(0).toUpperCase() + key.slice(1),
     key,
     render: (record: Role) => {
+      const claimValues = record.claims.find((claim) => claim.name === key)?.values;
       return (
         <div>
-          {((record[key] as string[]) || []).length > 0 ? (
-            (record[key] as string[]).join(',')
+          {((claimValues as string[]) || []).length > 0 ? (
+            claimValues?.join(',')
           ) : (
             <FontAwesomeIcon icon={faQuestionCircle} className='text-gray-200' />
           )}
@@ -84,8 +85,8 @@ export const Roles = () => {
             key: 'name',
             render: (record: Role) => <>{record.metadata?.name}</>
           },
-          renderColumn('emails'),
-          renderColumn('subs'),
+          renderColumn('email'),
+          renderColumn('sub'),
           renderColumn('groups'),
           {
             title: 'Rules',

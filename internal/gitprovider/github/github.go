@@ -158,6 +158,7 @@ func convertGithubPR(ghPR *github.PullRequest) *gitprovider.PullRequest {
 		State:          prState,
 		MergeCommitSHA: ptr.Deref(ghPR.MergeCommitSHA, ""),
 		Object:         ghPR,
+		HeadSHA:        ptr.Deref(ghPR.Head.SHA, ""),
 	}
 }
 

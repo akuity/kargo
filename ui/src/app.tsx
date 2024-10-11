@@ -1,5 +1,6 @@
 import { TransportProvider } from '@connectrpc/connect-query';
 import { QueryClientProvider } from '@tanstack/react-query';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { ConfigProvider } from 'antd';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 
@@ -42,6 +43,10 @@ export const App = () => (
                   <Route path={paths.freight} element={<Project />} />
                   <Route path={paths.warehouse} element={<Project />} />
                   <Route path={paths.downloads} element={<Downloads />} />
+                  <Route
+                    path={paths.createStage}
+                    element={<Project tab='pipelines' creatingStage={true} />}
+                  />
                 </Route>
               </Route>
               <Route path={paths.login} element={<Login />} />
@@ -50,6 +55,7 @@ export const App = () => (
           </BrowserRouter>
         </AuthContextProvider>
       </ConfigProvider>
+      <ReactQueryDevtools />
     </QueryClientProvider>
   </TransportProvider>
 );

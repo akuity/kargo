@@ -11,7 +11,6 @@ import { Description } from '../common/description';
 import { ManifestPreview } from '../common/manifest-preview';
 import { useImages } from '../project/pipelines/utils/useImages';
 
-import { PrLinks } from './pr-links';
 import { Promotions } from './promotions';
 import { RequestedFreight } from './requested-freight';
 import { StageActions } from './stage-actions';
@@ -28,11 +27,7 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
 
   const verifications = useMemo(() => {
     setIsVerificationRunning(false);
-    return (
-      (stage.status?.freightHistory
-        ? stage.status?.freightHistory
-        : (stage.status?.history as { verificationHistory: VerificationInfo[] }[])) || []
-    )
+    return (stage.status?.freightHistory || [])
       .flatMap((freight) =>
         freight.verificationHistory.map((verification) => {
           if (verification.phase === 'Running' || verification.phase === 'Pending') {
@@ -44,10 +39,6 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
         })
       )
       .sort((a, b) => moment(b.startTime?.toDate()).diff(moment(a.startTime?.toDate())));
-  }, [stage]);
-
-  const repoUrls = useMemo(() => {
-    return (stage.spec?.promotionMechanisms?.gitRepoUpdates || []).map((g) => g.repoURL || '');
   }, [stage]);
 
   return (
@@ -68,18 +59,20 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
                 <Description item={stage} loading={false} className='mt-2' />
               </div>
             </div>
-            <div className='ml-auto mr-4'>
-              <PrLinks
-                repoUrls={repoUrls}
-                metadata={stage.status?.lastPromotion?.status?.metadata}
-              />
-            </div>
             <StageActions stage={stage} verificationRunning={isVerificationRunning} />
           </div>
           <Divider style={{ marginTop: '1em' }} />
 
           <div className='flex flex-col gap-8 flex-1'>
-            <RequestedFreight stage={stage} projectName={projectName} />
+            <div>
+              <Typography.Title level={3}>Requested Freight</Typography.Title>
+
+              <RequestedFreight
+                requestedFreight={stage?.spec?.requestedFreight || []}
+                projectName={projectName}
+                itemStyle={{ width: '250px' }}
+              />
+            </div>
             <Tabs
               className='flex-1'
               defaultActiveKey='1'
@@ -88,7 +81,7 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
                 {
                   key: '1',
                   label: 'Promotions',
-                  children: <Promotions repoUrls={repoUrls} />
+                  children: <Promotions />
                 },
                 {
                   key: '2',
@@ -104,7 +97,7 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
                   key: '3',
                   label: 'Live Manifest',
                   className: 'h-full pb-2',
-                  children: <ManifestPreview object={stage} />
+                  children: <ManifestPreview object={stage} height='700px' />
                 }
               ]}
             />

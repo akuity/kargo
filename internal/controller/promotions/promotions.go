@@ -3,13 +3,16 @@ package promotions
 import (
 	"context"
 	"fmt"
-	"slices"
+	"os"
+	"path/filepath"
 	"strconv"
 	"sync"
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
 	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
@@ -23,9 +26,9 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller"
 	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
-	"github.com/akuity/kargo/internal/controller/promotion"
 	"github.com/akuity/kargo/internal/controller/runtime"
-	"github.com/akuity/kargo/internal/credentials"
+	"github.com/akuity/kargo/internal/directives"
+	"github.com/akuity/kargo/internal/indexer"
 	"github.com/akuity/kargo/internal/kargo"
 	"github.com/akuity/kargo/internal/kubeclient"
 	libEvent "github.com/akuity/kargo/internal/kubernetes/event"
@@ -53,8 +56,8 @@ func ReconcilerConfigFromEnv() ReconcilerConfig {
 
 // reconciler reconciles Promotion resources.
 type reconciler struct {
-	kargoClient     client.Client
-	promoMechanisms promotion.Mechanism
+	kargoClient      client.Client
+	directivesEngine directives.Engine
 
 	cfg ReconcilerConfig
 
@@ -85,11 +88,11 @@ func SetupReconcilerWithManager(
 	ctx context.Context,
 	kargoMgr manager.Manager,
 	argocdMgr manager.Manager,
-	credentialsDB credentials.Database,
+	directivesEngine directives.Engine,
 	cfg ReconcilerConfig,
 ) error {
 	// Index running Promotions by Argo CD Applications
-	if err := kubeclient.IndexRunningPromotionsByArgoCDApplications(ctx, kargoMgr, cfg.ShardName); err != nil {
+	if err := indexer.IndexRunningPromotionsByArgoCDApplications(ctx, kargoMgr, cfg.ShardName); err != nil {
 		return fmt.Errorf("index running Promotions by Argo CD Applications: %w", err)
 	}
 
@@ -103,16 +106,10 @@ func SetupReconcilerWithManager(
 	}
 	shardSelector := labels.NewSelector().Add(*shardRequirement)
 
-	var argocdClient client.Client
-	if argocdMgr != nil {
-		argocdClient = argocdMgr.GetClient()
-	}
-
 	reconciler := newReconciler(
 		kargoMgr.GetClient(),
-		argocdClient,
 		libEvent.NewRecorder(ctx, kargoMgr.GetScheme(), kargoMgr.GetClient(), cfg.Name()),
-		credentialsDB,
+		directivesEngine,
 		cfg,
 	)
 
@@ -175,9 +172,8 @@ func SetupReconcilerWithManager(
 
 func newReconciler(
 	kargoClient client.Client,
-	argocdClient client.Client,
 	recorder record.EventRecorder,
-	credentialsDB credentials.Database,
+	directivesEngine directives.Engine,
 	cfg ReconcilerConfig,
 ) *reconciler {
 	pqs := promoQueues{
@@ -185,15 +181,11 @@ func newReconciler(
 		pendingPromoQueuesByStage: map[types.NamespacedName]runtime.PriorityQueue{},
 	}
 	r := &reconciler{
-		kargoClient: kargoClient,
-		recorder:    recorder,
-		cfg:         cfg,
-		pqs:         &pqs,
-		promoMechanisms: promotion.NewMechanisms(
-			kargoClient,
-			argocdClient,
-			credentialsDB,
-		),
+		kargoClient:      kargoClient,
+		directivesEngine: directivesEngine,
+		recorder:         recorder,
+		cfg:              cfg,
+		pqs:              &pqs,
 	}
 	r.getStageFn = kargoapi.GetStage
 	r.promoteFn = r.promote
@@ -358,12 +350,13 @@ func (r *reconciler) Reconcile(
 			stage,
 			freight,
 		)
+		if otherStatus != nil {
+			newStatus = otherStatus
+		}
 		if promoteErr != nil {
 			newStatus.Phase = kargoapi.PromotionPhaseErrored
 			newStatus.Message = promoteErr.Error()
 			logger.Error(promoteErr, "error executing Promotion")
-		} else {
-			newStatus = otherStatus
 		}
 	}()
 
@@ -377,11 +370,23 @@ func (r *reconciler) Reconcile(
 		newStatus.LastHandledRefresh = token
 	}
 
-	err = kubeclient.PatchStatus(ctx, r.kargoClient, promo, func(status *kargoapi.PromotionStatus) {
+	if err = kubeclient.PatchStatus(ctx, r.kargoClient, promo, func(status *kargoapi.PromotionStatus) {
 		*status = *newStatus
-	})
-	if err != nil {
+	}); err != nil {
 		logger.Error(err, "error updating Promotion status")
+
+		if apierrors.IsInvalid(err) {
+			// If the error is due to an invalid status update, we should mark
+			// the Promotion as errored to prevent it from being requeued.
+			//
+			// NB: This should be a rare occurrence, and is either due to the
+			// CustomResourceDefinition being out of sync with the controller
+			// version, or us inventing non-backwards-compatible changes.
+			err = kubeclient.PatchStatus(ctx, r.kargoClient, promo, func(status *kargoapi.PromotionStatus) {
+				status.Phase = kargoapi.PromotionPhaseErrored
+				status.Message = fmt.Sprintf("error updating status: %v", err)
+			})
+		}
 	}
 
 	// Record event after patching status if new phase is terminal
@@ -460,15 +465,8 @@ func (r *reconciler) promote(
 	if targetFreight == nil {
 		return nil, fmt.Errorf("Freight %q not found in namespace %q", promo.Spec.Freight, promo.Namespace)
 	}
-	var upstreams []string
-	for _, req := range stage.Spec.RequestedFreight {
-		upstreams = append(upstreams, req.Sources.Stages...)
-	}
-	// De-dupe upstreams
-	slices.Sort(upstreams)
-	upstreams = slices.Compact(upstreams)
 
-	if !kargoapi.IsFreightAvailable(targetFreight, stageName, upstreams) {
+	if !kargoapi.IsFreightAvailable(stage, targetFreight) {
 		return nil, fmt.Errorf(
 			"Freight %q is not available to Stage %q in namespace %q",
 			promo.Spec.Freight,
@@ -486,29 +484,82 @@ func (r *reconciler) promote(
 		Charts:  targetFreight.Charts,
 		Origin:  targetFreight.Origin,
 	}
-	targetFreightCol := r.buildTargetFreightCollection(ctx, targetFreightRef, stage)
 
-	newStatus, nextFreight, err :=
-		r.promoMechanisms.Promote(ctx, stage, &promo, targetFreightCol.References())
+	// Make a deep copy of the Promotion to pass to the promotion steps execution
+	// engine, which may modify its status.
+	workingPromo := promo.DeepCopy()
+	workingPromo.Status.Freight = &targetFreightRef
+	workingPromo.Status.FreightCollection = r.buildTargetFreightCollection(
+		ctx,
+		targetFreightRef,
+		stage,
+	)
+
+	// If the Promotion has steps, execute them in sequence.
+	var steps []directives.PromotionStep
+	for _, step := range workingPromo.Spec.Steps {
+		steps = append(steps, directives.PromotionStep{
+			Kind:   step.Uses,
+			Alias:  step.As,
+			Config: step.GetConfig(),
+		})
+	}
+
+	promoCtx := directives.PromotionContext{
+		WorkDir:         filepath.Join(os.TempDir(), "promotion-"+string(workingPromo.UID)),
+		Project:         stageNamespace,
+		Stage:           stageName,
+		FreightRequests: stage.Spec.RequestedFreight,
+		Freight:         *workingPromo.Status.FreightCollection.DeepCopy(),
+		StartFromStep:   promo.Status.CurrentStep,
+		State:           directives.State(workingPromo.Status.GetState()),
+	}
+	if err := os.Mkdir(promoCtx.WorkDir, 0o700); err == nil {
+		// If we're working with a fresh directory, we should start the promotion
+		// process again from the beginning.
+		promoCtx.StartFromStep = 0
+		promoCtx.State = nil
+	} else if !os.IsExist(err) {
+		return nil, fmt.Errorf("error creating working directory: %w", err)
+	}
+	defer func() {
+		if workingPromo.Status.Phase.IsTerminal() {
+			if err := os.RemoveAll(promoCtx.WorkDir); err != nil {
+				logger.Error(err, "could not remove working directory")
+			}
+		}
+	}()
+
+	res, err := r.directivesEngine.Promote(ctx, promoCtx, steps)
+	workingPromo.Status.Phase = res.Status
+	workingPromo.Status.Message = res.Message
+	workingPromo.Status.CurrentStep = res.CurrentStep
+	workingPromo.Status.State = &apiextensionsv1.JSON{Raw: res.State.ToJSON()}
+	if res.Status == kargoapi.PromotionPhaseSucceeded {
+		var healthChecks []kargoapi.HealthCheckStep
+		for _, step := range res.HealthCheckSteps {
+			healthChecks = append(healthChecks, kargoapi.HealthCheckStep{
+				Uses:   step.Kind,
+				Config: &apiextensionsv1.JSON{Raw: step.Config.ToJSON()},
+			})
+		}
+		workingPromo.Status.HealthChecks = healthChecks
+	}
 	if err != nil {
-		return nil, err
-	}
-	newStatus.Freight = &targetFreightRef
-	newStatus.FreightCollection = &kargoapi.FreightCollection{}
-	for _, freightRef := range nextFreight {
-		newStatus.FreightCollection.UpdateOrPush(freightRef)
+		workingPromo.Status.Phase = kargoapi.PromotionPhaseErrored
+		return &workingPromo.Status, err
 	}
 
-	logger.Debug("promotion", "phase", newStatus.Phase)
+	logger.Debug("promotion", "phase", workingPromo.Status.Phase)
 
-	if newStatus.Phase == kargoapi.PromotionPhaseSucceeded {
+	if workingPromo.Status.Phase == kargoapi.PromotionPhaseSucceeded {
 		// Trigger re-verification of the Stage if the promotion succeeded and
 		// this is a re-promotion of the same Freight.
 		current := stage.Status.FreightHistory.Current()
 		if current != nil && current.VerificationHistory.Current() != nil {
 			for _, f := range current.Freight {
 				if f.Name == targetFreight.Name {
-					if err = kargoapi.ReverifyStageFreight(
+					if err := kargoapi.ReverifyStageFreight(
 						ctx,
 						r.kargoClient,
 						types.NamespacedName{
@@ -526,7 +577,7 @@ func (r *reconciler) promote(
 		}
 	}
 
-	return newStatus, nil
+	return &workingPromo.Status, nil
 }
 
 // buildTargetFreightCollection constructs a FreightCollection that contains all

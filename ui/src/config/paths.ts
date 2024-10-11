@@ -9,6 +9,7 @@ export const paths = {
   stage: '/project/:name/stage/:stageName',
   warehouse: '/project/:name/warehouse/:warehouseName/:tab?',
   freight: '/project/:name/freight/:freightName',
+  createStage: '/project/:name/create-stage',
 
   downloads: '/downloads',
   login: '/login',

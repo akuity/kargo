@@ -76,7 +76,7 @@ const YamlEditor: FC<YamlEditorProps> = (props) => {
 
         setManagedFieldsValue(null);
       }
-    } catch (err) {
+    } catch (_) {
       // ignore
     }
   }, [hideManagedFields, value]);
@@ -99,6 +99,29 @@ const YamlEditor: FC<YamlEditorProps> = (props) => {
     });
   }, []);
 
+  // Handle readonly field (without onChange)
+  const _value = React.useMemo(() => {
+    if (onChange) {
+      return value;
+    }
+
+    try {
+      const data = yaml.parse(value);
+
+      // Hide managedFields
+      if (hideManagedFields && data?.metadata?.managedFields) {
+        setManagedFieldsValue(data?.metadata?.managedFields);
+        delete data.metadata.managedFields;
+
+        return yaml.stringify(data);
+      }
+
+      return value;
+    } catch (_) {
+      return value;
+    }
+  }, [value, hideManagedFields]);
+
   const handleEditorDidMount = (editor: monaco.editor.IStandaloneCodeEditor) => {
     editorRef.current = editor;
   };
@@ -114,22 +137,24 @@ const YamlEditor: FC<YamlEditorProps> = (props) => {
   return (
     <>
       <Flex
-        justify='end'
         align='center'
         className={isHideManagedFieldsDisplayed || label ? 'mb-2 mt-1' : ''}
+        gap={8}
       >
         <div>{label}</div>
-        {isHideManagedFieldsDisplayed && (
-          <label>
-            <Checkbox
-              className='mr-2'
-              checked={hideManagedFields}
-              onChange={(e) => setHideManagedFields(e.target.checked)}
-            />
-            Hide Managed Fields
-          </label>
-        )}
-        {toolbar && <div className='ml-4'>{toolbar}</div>}
+        <Flex align='center' justify='end' gap={8} flex={1}>
+          {isHideManagedFieldsDisplayed && (
+            <label>
+              <Checkbox
+                className='mr-2'
+                checked={hideManagedFields}
+                onChange={(e) => setHideManagedFields(e.target.checked)}
+              />
+              Hide Managed Fields
+            </label>
+          )}
+          {toolbar && <div>{toolbar}</div>}
+        </Flex>
       </Flex>
       <div
         style={{ border: '1px solid #d9d9d9', height, overflow: 'hidden' }}
@@ -151,7 +176,7 @@ const YamlEditor: FC<YamlEditorProps> = (props) => {
           width={width}
           height={height}
           language='yaml'
-          value={value}
+          value={_value}
           onChange={handleOnChange}
           onMount={handleEditorDidMount}
         />

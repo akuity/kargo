@@ -26,6 +26,32 @@
           "minLength": 1,
           "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$",
           "type": "string"
+        },
+        "steps": {
+          "description": "Steps specifies the directives to be executed as part of this Promotion.\nThe order in which the directives are executed is the order in which they\nare listed in this field.",
+          "items": {
+            "description": "PromotionStep describes a directive to be executed as part of a Promotion.",
+            "properties": {
+              "as": {
+                "description": "As is the alias this step can be referred to as.",
+                "type": "string"
+              },
+              "config": {
+                "description": "Config is the configuration for the directive.",
+                "x-kubernetes-preserve-unknown-fields": true
+              },
+              "uses": {
+                "description": "Uses identifies a runner that can execute this step.",
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "uses"
+            ],
+            "type": "object"
+          },
+          "type": "array"
         }
       },
       "required": [
@@ -37,6 +63,13 @@
     "status": {
       "description": "Status describes the current state of the transition represented by this\nPromotion.",
       "properties": {
+        "currentStep": {
+          "description": "CurrentStep is the index of the current promotion step being executed. This\npermits steps that have already run successfully to be skipped on\nsubsequent reconciliations attempts.",
+          "format": "int64",
+          "maximum": 9223372036854776000,
+          "minimum": -9223372036854776000,
+          "type": "integer"
+        },
         "finishedAt": {
           "description": "FinishedAt is the time when the promotion was completed.",
           "format": "date-time",
@@ -82,10 +115,6 @@
                   },
                   "committer": {
                     "description": "Committer is the person who committed the commit.",
-                    "type": "string"
-                  },
-                  "healthCheckCommit": {
-                    "description": "HealthCheckCommit is the ID of a specific commit. When specified,\nassessments of Stage health will use this value (instead of ID) when\ndetermining if applicable sources of Argo CD Application resources\nassociated with the Stage are or are not synced to this commit. Note that\nthere are cases (as in that of Kargo Render being utilized as a promotion\nmechanism) wherein the value of this field may differ from the commit ID\nfound in the ID field.",
                     "type": "string"
                   },
                   "id": {
@@ -211,10 +240,6 @@
                         },
                         "committer": {
                           "description": "Committer is the person who committed the commit.",
-                          "type": "string"
-                        },
-                        "healthCheckCommit": {
-                          "description": "HealthCheckCommit is the ID of a specific commit. When specified,\nassessments of Stage health will use this value (instead of ID) when\ndetermining if applicable sources of Argo CD Application resources\nassociated with the Stage are or are not synced to this commit. Note that\nthere are cases (as in that of Kargo Render being utilized as a promotion\nmechanism) wherein the value of this field may differ from the commit ID\nfound in the ID field.",
                           "type": "string"
                         },
                         "id": {
@@ -360,6 +385,28 @@
           ],
           "type": "object"
         },
+        "healthChecks": {
+          "description": "HealthChecks contains the health check directives to be executed after\nthe Promotion has completed.",
+          "items": {
+            "description": "HealthCheckStep describes a health check directive which can be executed by\na Stage to verify the health of a Promotion result.",
+            "properties": {
+              "config": {
+                "description": "Config is the configuration for the directive.",
+                "x-kubernetes-preserve-unknown-fields": true
+              },
+              "uses": {
+                "description": "Uses identifies a runner that can execute this step.",
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "uses"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
         "lastHandledRefresh": {
           "description": "LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh\nannotation that was handled by the controller. This field can be used to\ndetermine whether the request to refresh the resource has been handled.",
           "type": "string"
@@ -368,16 +415,13 @@
           "description": "Message is a display message about the promotion, including any errors\npreventing the Promotion controller from executing this Promotion.\ni.e. If the Phase field has a value of Failed, this field can be expected\nto explain why.",
           "type": "string"
         },
-        "metadata": {
-          "additionalProperties": {
-            "type": "string"
-          },
-          "description": "Metadata holds arbitrary metadata set by promotion mechanisms\n(e.g. for display purposes, or internal bookkeeping)",
-          "type": "object"
-        },
         "phase": {
           "description": "Phase describes where the Promotion currently is in its lifecycle.",
           "type": "string"
+        },
+        "state": {
+          "description": "State stores the state of the promotion process between reconciliation\nattempts.",
+          "x-kubernetes-preserve-unknown-fields": true
         }
       },
       "type": "object"

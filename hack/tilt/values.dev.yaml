@@ -3,7 +3,7 @@ api:
   host: localhost:30081
   tls:
     enabled: false
-  enablePermissiveCORSPolicy: true
+  permissiveCORSPolicyEnabled: true
   probes:
     enabled: false
   adminAccount:
@@ -20,6 +20,11 @@ api:
         type: mockCallback
       probes:
         enabled: false
+    admins:
+      claims:
+        email:
+        # This email claim is hard-coded in the Dex mockCallback connector
+        - kilgore@kilgore.trout
 controller:
   logLevel: DEBUG
 crds:

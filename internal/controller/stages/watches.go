@@ -3,6 +3,7 @@ package stages
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/fields"
@@ -17,7 +18,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
 	rollouts "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
-	"github.com/akuity/kargo/internal/kubeclient"
+	"github.com/akuity/kargo/internal/indexer"
 	"github.com/akuity/kargo/internal/logging"
 )
 
@@ -33,7 +34,7 @@ type verifiedFreightEventHandler[T any] struct {
 func (v *verifiedFreightEventHandler[T]) Create(
 	context.Context,
 	event.TypedCreateEvent[T],
-	workqueue.RateLimitingInterface,
+	workqueue.TypedRateLimitingInterface[reconcile.Request],
 ) {
 	// No-op
 }
@@ -42,7 +43,7 @@ func (v *verifiedFreightEventHandler[T]) Create(
 func (v *verifiedFreightEventHandler[T]) Delete(
 	context.Context,
 	event.TypedDeleteEvent[T],
-	workqueue.RateLimitingInterface,
+	workqueue.TypedRateLimitingInterface[reconcile.Request],
 ) {
 	// No-op
 }
@@ -51,7 +52,7 @@ func (v *verifiedFreightEventHandler[T]) Delete(
 func (v *verifiedFreightEventHandler[T]) Generic(
 	context.Context,
 	event.TypedGenericEvent[T],
-	workqueue.RateLimitingInterface,
+	workqueue.TypedRateLimitingInterface[reconcile.Request],
 ) {
 	// No-op
 }
@@ -60,7 +61,7 @@ func (v *verifiedFreightEventHandler[T]) Generic(
 func (v *verifiedFreightEventHandler[T]) Update(
 	ctx context.Context,
 	evt event.TypedUpdateEvent[T],
-	wq workqueue.RateLimitingInterface,
+	wq workqueue.TypedRateLimitingInterface[reconcile.Request],
 ) {
 	logger := logging.LoggerFromContext(ctx)
 	oldFreight := any(evt.ObjectOld).(*kargoapi.Freight) // nolint: forcetypeassert
@@ -83,7 +84,7 @@ func (v *verifiedFreightEventHandler[T]) Update(
 			&client.ListOptions{
 				Namespace: newFreight.Namespace,
 				FieldSelector: fields.OneTermEqualSelector(
-					kubeclient.StagesByUpstreamStagesIndexField,
+					indexer.StagesByUpstreamStagesIndexField,
 					newlyVerifiedStage,
 				),
 				LabelSelector: v.shardSelector,
@@ -138,7 +139,7 @@ type approvedFreightEventHandler[T any] struct {
 func (a *approvedFreightEventHandler[T]) Create(
 	context.Context,
 	event.TypedCreateEvent[T],
-	workqueue.RateLimitingInterface,
+	workqueue.TypedRateLimitingInterface[reconcile.Request],
 ) {
 	// No-op
 }
@@ -147,7 +148,7 @@ func (a *approvedFreightEventHandler[T]) Create(
 func (a *approvedFreightEventHandler[T]) Delete(
 	context.Context,
 	event.TypedDeleteEvent[T],
-	workqueue.RateLimitingInterface,
+	workqueue.TypedRateLimitingInterface[reconcile.Request],
 ) {
 	// No-op
 }
@@ -156,7 +157,7 @@ func (a *approvedFreightEventHandler[T]) Delete(
 func (a *approvedFreightEventHandler[T]) Generic(
 	context.Context,
 	event.TypedGenericEvent[T],
-	workqueue.RateLimitingInterface,
+	workqueue.TypedRateLimitingInterface[reconcile.Request],
 ) {
 	// No-op
 }
@@ -165,7 +166,7 @@ func (a *approvedFreightEventHandler[T]) Generic(
 func (a *approvedFreightEventHandler[T]) Update(
 	ctx context.Context,
 	evt event.TypedUpdateEvent[T],
-	wq workqueue.RateLimitingInterface,
+	wq workqueue.TypedRateLimitingInterface[reconcile.Request],
 ) {
 	logger := logging.LoggerFromContext(ctx)
 	oldFreight := any(evt.ObjectOld).(*kargoapi.Freight) // nolint: forcetypeassert
@@ -218,7 +219,7 @@ type createdFreightEventHandler[T any] struct {
 func (c *createdFreightEventHandler[T]) Create(
 	ctx context.Context,
 	evt event.TypedCreateEvent[T],
-	wq workqueue.RateLimitingInterface,
+	wq workqueue.TypedRateLimitingInterface[reconcile.Request],
 ) {
 	logger := logging.LoggerFromContext(ctx)
 	freight := any(evt.Object).(*kargoapi.Freight) // nolint: forcetypeassert
@@ -229,7 +230,7 @@ func (c *createdFreightEventHandler[T]) Create(
 		&client.ListOptions{
 			Namespace: freight.Namespace,
 			FieldSelector: fields.OneTermEqualSelector(
-				kubeclient.StagesByWarehouseIndexField,
+				indexer.StagesByWarehouseIndexField,
 				freight.Origin.Name,
 			),
 			LabelSelector: c.shardSelector,
@@ -263,7 +264,7 @@ func (c *createdFreightEventHandler[T]) Create(
 func (c *createdFreightEventHandler[T]) Delete(
 	context.Context,
 	event.TypedDeleteEvent[T],
-	workqueue.RateLimitingInterface,
+	workqueue.TypedRateLimitingInterface[reconcile.Request],
 ) {
 	// No-op
 }
@@ -272,7 +273,7 @@ func (c *createdFreightEventHandler[T]) Delete(
 func (c *createdFreightEventHandler[T]) Generic(
 	context.Context,
 	event.TypedGenericEvent[T],
-	workqueue.RateLimitingInterface,
+	workqueue.TypedRateLimitingInterface[reconcile.Request],
 ) {
 	// No-op
 }
@@ -281,7 +282,7 @@ func (c *createdFreightEventHandler[T]) Generic(
 func (c *createdFreightEventHandler[T]) Update(
 	context.Context,
 	event.TypedUpdateEvent[T],
-	workqueue.RateLimitingInterface,
+	workqueue.TypedRateLimitingInterface[reconcile.Request],
 ) {
 	// No-op
 }
@@ -298,7 +299,7 @@ type updatedArgoCDAppHandler[T any] struct {
 func (u *updatedArgoCDAppHandler[T]) Create(
 	context.Context,
 	event.TypedCreateEvent[T],
-	workqueue.RateLimitingInterface,
+	workqueue.TypedRateLimitingInterface[reconcile.Request],
 ) {
 	// No-op
 }
@@ -307,7 +308,7 @@ func (u *updatedArgoCDAppHandler[T]) Create(
 func (u *updatedArgoCDAppHandler[T]) Delete(
 	context.Context,
 	event.TypedDeleteEvent[T],
-	workqueue.RateLimitingInterface,
+	workqueue.TypedRateLimitingInterface[reconcile.Request],
 ) {
 	// No-op
 }
@@ -316,7 +317,7 @@ func (u *updatedArgoCDAppHandler[T]) Delete(
 func (u *updatedArgoCDAppHandler[T]) Generic(
 	context.Context,
 	event.TypedGenericEvent[T],
-	workqueue.RateLimitingInterface,
+	workqueue.TypedRateLimitingInterface[reconcile.Request],
 ) {
 	// No-op
 }
@@ -325,30 +326,44 @@ func (u *updatedArgoCDAppHandler[T]) Generic(
 func (u *updatedArgoCDAppHandler[T]) Update(
 	ctx context.Context,
 	e event.TypedUpdateEvent[T],
-	wq workqueue.RateLimitingInterface,
+	wq workqueue.TypedRateLimitingInterface[reconcile.Request],
 ) {
 	if appHealthOrSyncStatusChanged(ctx, e) {
 		newApp := any(e.ObjectNew).(*argocd.Application) // nolint: forcetypeassert
-		logger := logging.LoggerFromContext(ctx)
-		stages := &kargoapi.StageList{}
-		if err := u.kargoClient.List(
-			ctx,
-			stages,
-			&client.ListOptions{
-				FieldSelector: fields.OneTermEqualSelector(
-					kubeclient.StagesByArgoCDApplicationsIndexField,
-					fmt.Sprintf("%s:%s", newApp.Namespace, newApp.Name),
-				),
-				LabelSelector: u.shardSelector,
-			},
-		); err != nil {
-			logger.Error(
-				err, "error listing Stages for Application",
-				"app", newApp.Name,
-				"namespace", newApp.Namespace,
-			)
+
+		stageRef, ok := newApp.Annotations[kargoapi.AnnotationKeyAuthorizedStage]
+		if !ok {
+			return
 		}
-		for _, stage := range stages.Items {
+		parts := strings.SplitN(stageRef, ":", 2)
+		if len(parts) != 2 {
+			return
+		}
+		projectName, stageName := parts[0], parts[1]
+
+		logger := logging.LoggerFromContext(ctx)
+		stage := &kargoapi.Stage{}
+		if err := u.kargoClient.Get(
+			ctx,
+			types.NamespacedName{
+				Namespace: projectName,
+				Name:      stageName,
+			},
+			stage,
+		); err != nil {
+			if client.IgnoreNotFound(err) != nil {
+				logger.Error(
+					err,
+					"error getting Stage for Application",
+					"namespace", projectName,
+					"stage", stageName,
+					"app", newApp.Name,
+				)
+			}
+			return
+		}
+
+		if u.shardSelector.Empty() || u.shardSelector.Matches(labels.Set(stage.Labels)) {
 			wq.Add(
 				reconcile.Request{
 					NamespacedName: types.NamespacedName{
@@ -421,7 +436,7 @@ type phaseChangedAnalysisRunHandler[T any] struct {
 func (p *phaseChangedAnalysisRunHandler[T]) Create(
 	context.Context,
 	event.TypedCreateEvent[T],
-	workqueue.RateLimitingInterface,
+	workqueue.TypedRateLimitingInterface[reconcile.Request],
 ) {
 	// No-op
 }
@@ -430,7 +445,7 @@ func (p *phaseChangedAnalysisRunHandler[T]) Create(
 func (p *phaseChangedAnalysisRunHandler[T]) Delete(
 	context.Context,
 	event.TypedDeleteEvent[T],
-	workqueue.RateLimitingInterface,
+	workqueue.TypedRateLimitingInterface[reconcile.Request],
 ) {
 	// No-op
 }
@@ -439,7 +454,7 @@ func (p *phaseChangedAnalysisRunHandler[T]) Delete(
 func (p *phaseChangedAnalysisRunHandler[T]) Generic(
 	context.Context,
 	event.TypedGenericEvent[T],
-	workqueue.RateLimitingInterface,
+	workqueue.TypedRateLimitingInterface[reconcile.Request],
 ) {
 	// No-op
 }
@@ -448,7 +463,7 @@ func (p *phaseChangedAnalysisRunHandler[T]) Generic(
 func (p *phaseChangedAnalysisRunHandler[T]) Update(
 	ctx context.Context,
 	e event.TypedUpdateEvent[T],
-	wq workqueue.RateLimitingInterface,
+	wq workqueue.TypedRateLimitingInterface[reconcile.Request],
 ) {
 	if analysisRunPhaseChanged(ctx, e) {
 		analysisRun := any(e.ObjectNew).(*rollouts.AnalysisRun) // nolint: forcetypeassert
@@ -460,7 +475,7 @@ func (p *phaseChangedAnalysisRunHandler[T]) Update(
 			stages,
 			&client.ListOptions{
 				FieldSelector: fields.OneTermEqualSelector(
-					kubeclient.StagesByAnalysisRunIndexField,
+					indexer.StagesByAnalysisRunIndexField,
 					fmt.Sprintf("%s:%s", analysisRun.Namespace, analysisRun.Name),
 				),
 				LabelSelector: p.shardSelector,

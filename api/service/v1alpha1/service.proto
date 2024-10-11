@@ -34,6 +34,7 @@ service KargoService {
   /* Stage APIs */
 
   rpc ListStages(ListStagesRequest) returns (ListStagesResponse);
+  rpc ListImages(ListImagesRequest) returns (ListImagesResponse);
   rpc GetStage(GetStageRequest) returns (GetStageResponse);
   rpc WatchStages(WatchStagesRequest) returns (stream WatchStagesResponse);
   rpc DeleteStage(DeleteStageRequest) returns (DeleteStageResponse);
@@ -90,6 +91,11 @@ service KargoService {
   rpc DeleteAnalysisTemplate(DeleteAnalysisTemplateRequest) returns (DeleteAnalysisTemplateResponse);
   rpc GetAnalysisRun(GetAnalysisRunRequest) returns (GetAnalysisRunResponse);
 
+  rpc ListAnalysisTemplateConfigMaps(ListAnalysisTemplateConfigMapsRequest) returns (ListAnalysisTemplateConfigMapsResponse);
+  rpc GetAnalysisTemplateConfigMap(GetAnalysisTemplateConfigMapRequest) returns (GetAnalysisTemplateConfigMapResponse);
+  rpc ListAnalysisTemplateSecrets(ListAnalysisTemplateSecretsRequest) returns (ListAnalysisTemplateSecretsResponse);
+  rpc GetAnalysisTemplateSecret(GetAnalysisTemplateSecretRequest) returns (GetAnalysisTemplateSecretResponse);
+
   /* Event APIs */
 
   rpc ListProjectEvents(ListProjectEventsRequest) returns (ListProjectEventsResponse);
@@ -135,6 +141,7 @@ message ArgoCDShard {
 
 message GetConfigResponse {
   map<string, ArgoCDShard> argocd_shards = 1;
+  bool secret_management_enabled = 2;
 }
 
 message GetPublicConfigRequest {}
@@ -142,6 +149,7 @@ message GetPublicConfigRequest {}
 message GetPublicConfigResponse {
   OIDCConfig oidc_config = 1;
   bool admin_account_enabled = 2;
+  bool skip_auth = 3;
 }
 
 message OIDCConfig {
@@ -226,6 +234,25 @@ message ListStagesRequest {
 
 message ListStagesResponse {
   repeated github.com.akuity.kargo.api.v1alpha1.Stage stages = 1;
+}
+
+message ListImagesRequest {
+  string project = 1;
+}
+
+message ListImagesResponse {
+  // images maps image repository names to their tags
+  map<string, TagMap> images = 2;
+}
+
+message TagMap {
+  // tags maps image tag names to stages which have previously used that tag
+  map<string, ImageStageMap> tags = 1;
+}
+
+message ImageStageMap {
+  // stages maps stage names to the order which an image was promoted to that stage
+  map<string, int32> stages = 1;
 }
 
 message GetStageRequest {
@@ -638,11 +665,16 @@ message GetRoleResponse {
   }
 }
 
+message Claims {
+  // Note: oneof and repeated do not work together
+  repeated github.com.akuity.kargo.api.rbac.v1alpha1.Claim claims = 1;
+}
+
 message GrantRequest {
   string project = 1;
   string role = 2;
   oneof request {
-    github.com.akuity.kargo.api.rbac.v1alpha1.UserClaims user_claims = 3;
+    Claims user_claims = 3;
     github.com.akuity.kargo.api.rbac.v1alpha1.ResourceDetails resource_details = 4;
   }
 }
@@ -666,7 +698,7 @@ message RevokeRequest {
   string project = 1;
   string role = 2;
   oneof request {
-    github.com.akuity.kargo.api.rbac.v1alpha1.UserClaims user_claims = 3;
+    Claims user_claims = 3;
     github.com.akuity.kargo.api.rbac.v1alpha1.ResourceDetails resource_details = 4;
   }
 }
@@ -681,4 +713,46 @@ message UpdateRoleRequest {
 
 message UpdateRoleResponse {
   github.com.akuity.kargo.api.rbac.v1alpha1.Role role = 1;
+}
+
+message ListAnalysisTemplateConfigMapsRequest {
+  string project = 1;
+}
+
+message ListAnalysisTemplateConfigMapsResponse {
+  repeated k8s.io.api.core.v1.ConfigMap config_maps = 1;
+}
+
+message GetAnalysisTemplateConfigMapRequest {
+  string project = 1;
+  string name = 2;
+  RawFormat format = 3;
+}
+
+message GetAnalysisTemplateConfigMapResponse {
+  oneof result {
+    k8s.io.api.core.v1.ConfigMap config_map = 1;
+    bytes raw = 2;
+  }
+}
+
+message ListAnalysisTemplateSecretsRequest {
+  string project = 1;
+}
+
+message ListAnalysisTemplateSecretsResponse {
+  repeated k8s.io.api.core.v1.Secret secrets = 1;
+}
+
+message GetAnalysisTemplateSecretRequest {
+  string project = 1;
+  string name = 2;
+  RawFormat format = 3;
+}
+
+message GetAnalysisTemplateSecretResponse {
+  oneof result {
+    k8s.io.api.core.v1.Secret secret = 1;
+    bytes raw = 2;
+  }
 }

@@ -19,8 +19,8 @@ const (
 	// as-kubernetes-resources flag.
 	AsKubernetesResourcesShortFlag = "k"
 
-	// EmailFlag is the flag name for the email flag.
-	EmailFlag = "email"
+	// Claim is a flag name for the claim flag
+	ClaimFlag = "claim"
 
 	// FilenameFlag is the flag name for the filename flag.
 	FilenameFlag = "filename"
@@ -35,9 +35,6 @@ const (
 
 	// GitFlag is the flag name for the git flag.
 	GitFlag = string(credentials.TypeGit)
-
-	// GroupFlag is the flag name for the group flag.
-	GroupFlag = "group"
 
 	// HelmFlag is the flag name for the helm flag.
 	HelmFlag = string(credentials.TypeHelm)
@@ -100,9 +97,6 @@ const (
 	// StageFlag is the flag name for the stage flag.
 	StageFlag = "stage"
 
-	// SubFlag is the flag name for the sub flag.
-	SubFlag = "sub"
-
 	// DownstreamFromFlag is the flag name for the downstream-from flag.
 	DownstreamFromFlag = "downstream-from"
 
@@ -141,14 +135,14 @@ func AsKubernetesResources(fs *pflag.FlagSet, asKubernetesResources *bool, usage
 	)
 }
 
+// Claims adds a multi-value ClaimFlag to the provided flag set.
+func Claims(fs *pflag.FlagSet, claims *[]string, usage string) {
+	fs.StringSliceVar(claims, ClaimFlag, nil, usage)
+}
+
 // Description adds the DescriptionFlag to the provided flag set.
 func Description(fs *pflag.FlagSet, stage *string, usage string) {
 	fs.StringVar(stage, DescriptionFlag, "", usage)
-}
-
-// Emails adds a multi-value EmailFlag to the provided flag set.
-func Emails(fs *pflag.FlagSet, emails *[]string, usage string) {
-	fs.StringSliceVar(emails, EmailFlag, nil, usage)
 }
 
 // Filenames adds the FilenameFlag and FilenameShortFlag to the provided flag set.
@@ -169,11 +163,6 @@ func FreightAlias(fs *pflag.FlagSet, stage *string, usage string) {
 // Git adds the GitFlag to the provided flag set.
 func Git(fs *pflag.FlagSet, git *bool, usage string) {
 	fs.BoolVar(git, GitFlag, false, usage)
-}
-
-// Groups adds a multi-value GroupFlag to the provided flag set.
-func Groups(fs *pflag.FlagSet, groups *[]string, usage string) {
-	fs.StringSliceVar(groups, GroupFlag, nil, usage)
 }
 
 // Helm adds the HelmFlag to the provided flag set.
@@ -278,11 +267,6 @@ func Role(fs *pflag.FlagSet, role *string, usage string) {
 // Stage adds the StageFlag to the provided flag set.
 func Stage(fs *pflag.FlagSet, stage *string, usage string) {
 	fs.StringVar(stage, StageFlag, "", usage)
-}
-
-// Subs adds a multi-value SubFlag to the provided flag set.
-func Subs(fs *pflag.FlagSet, subs *[]string, usage string) {
-	fs.StringSliceVar(subs, SubFlag, nil, usage)
 }
 
 // DownstreamFrom adds the DownstreamFromFlag to the provided flag set.

@@ -1,3 +1,4 @@
+import { PartialMessage } from '@bufbuild/protobuf';
 import { useMutation } from '@connectrpc/connect-query';
 import { faPeopleGroup } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -11,7 +12,7 @@ import { FieldContainer } from '@ui/features/common/form/field-container';
 import { MultiStringEditor } from '@ui/features/common/form/multi-string-editor';
 import { DESCRIPTION_ANNOTATION_KEY, dnsRegex } from '@ui/features/common/utils';
 import { PolicyRule } from '@ui/gen/k8s.io/api/rbac/v1/generated_pb';
-import { Role } from '@ui/gen/rbac/v1alpha1/generated_pb';
+import { Claim, Role } from '@ui/gen/rbac/v1alpha1/generated_pb';
 import { createRole, updateRole } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 import { zodValidators } from '@ui/utils/validators';
 
@@ -25,7 +26,7 @@ type Props = {
   hide: () => void;
 };
 
-type AllowedFields = 'name' | 'emails' | 'subs' | 'groups';
+type AllowedFields = 'name' | 'email' | 'sub' | 'groups';
 
 const annotationsWithDescription = (description: string): { [key: string]: string } => {
   return description ? { [DESCRIPTION_ANNOTATION_KEY]: description } : {};
@@ -37,14 +38,14 @@ const nonZeroArray = (name: string) =>
 const formSchema = z.object({
   name: zodValidators.requiredString.regex(dnsRegex, 'Role name must be a valid DNS subdomain.'),
   description: z.string().optional(),
-  emails: nonZeroArray('email'),
-  subs: nonZeroArray('sub'),
-  groups: nonZeroArray('group')
+  email: nonZeroArray('email'),
+  sub: nonZeroArray('sub'),
+  groups: nonZeroArray('groups')
 });
 
 const multiFields: { name: AllowedFields; label?: string; placeholder: string }[] = [
-  { name: 'emails', placeholder: 'email@corp.com' },
-  { name: 'subs', label: 'Subjects', placeholder: 'mysubject' },
+  { name: 'email', placeholder: 'email@corp.com' },
+  { name: 'sub', label: 'Subjects', placeholder: 'mysubject' },
   { name: 'groups', placeholder: 'mygroup' }
 ];
 
@@ -54,12 +55,32 @@ export const CreateRole = ({ editing, onSuccess, project, hide }: Props) => {
     values: {
       name: editing?.metadata?.name || '',
       description: editing?.metadata?.annotations[DESCRIPTION_ANNOTATION_KEY] || '',
-      emails: editing?.emails || [],
-      subs: editing?.subs || [],
-      groups: editing?.groups || []
+      email:
+        editing?.claims.find((claim: Claim) => {
+          if (claim.name === 'email') {
+            return claim;
+          } else {
+            return undefined;
+          }
+        })?.values || [],
+      sub:
+        editing?.claims.find((claim: Claim) => {
+          if (claim.name === 'sub') {
+            return claim;
+          } else {
+            return undefined;
+          }
+        })?.values || [],
+      groups:
+        editing?.claims.find((claim: Claim) => {
+          if (claim.name === 'groups') {
+            return claim;
+          } else {
+            return undefined;
+          }
+        })?.values || []
     }
   });
-
   const { mutate } = useMutation(createRole, {
     onSuccess: () => {
       hide();
@@ -76,17 +97,54 @@ export const CreateRole = ({ editing, onSuccess, project, hide }: Props) => {
 
   const onSubmit = handleSubmit((values) => {
     const annotations = annotationsWithDescription(values.description);
+    const getClaims = (): PartialMessage<Claim>[] => {
+      const claimsArray: PartialMessage<Claim>[] = [];
+      multiFields.map((field) => {
+        const newClaim = new Claim({
+          name: String(field.name)
+        });
+        if (newClaim.name === 'email') {
+          if (values.email.length === 0) {
+            return;
+          }
+          newClaim.values = values.email;
+        } else if (newClaim.name === 'sub') {
+          if (values.sub.length === 0) {
+            return;
+          }
+          newClaim.values = values.sub;
+        } else if (newClaim.name === 'groups') {
+          if (values.groups.length === 0) {
+            return;
+          }
+          newClaim.values = values.groups;
+        } else {
+          if (values[field.name].length === 0) {
+            return;
+          }
+          newClaim.values = values[field.name] as string[];
+        }
+        claimsArray.push(newClaim);
+      });
+      return claimsArray;
+    };
     if (editing) {
       return update({
         role: {
           ...values,
           rules,
-          metadata: { namespace: project, name: editing?.metadata?.name, annotations }
+          metadata: { namespace: project, name: editing?.metadata?.name, annotations },
+          claims: getClaims()
         }
       });
     } else {
       mutate({
-        role: { ...values, rules, metadata: { name: values.name, namespace: project, annotations } }
+        role: {
+          ...values,
+          rules,
+          metadata: { name: values.name, namespace: project, annotations },
+          claims: getClaims()
+        }
       });
     }
   });

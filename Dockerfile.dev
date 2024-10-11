@@ -1,40 +1,25 @@
-FROM golang:1.22.5-bookworm
+FROM golang:1.23.2-bookworm
 
 ARG TARGETARCH
 
-ARG BUF_VERSION=v1.26.1
-ARG CODE_GENERATOR_VERSION=v0.29.3
-ARG CONTROLLER_GEN_VERSION=v0.15.0
-ARG GOIMPORTS_VERSION=v0.21.0
-ARG GOLANGCI_LINT_VERSION=1.57.2
-ARG HELM_VERSION=v3.12.3
 ARG NODE_MAJOR=20
-ARG PROTOC_VERSION=25.3
 ARG PNPM_VERSION=9.0.3
 
 RUN apt update && apt install -y ca-certificates curl gnupg unzip \
-    && export PROTOC_REL=protoc-${PROTOC_VERSION}-linux-$([ $(uname -m) = "aarch64" ] && echo "aarch" || echo "x86")_64.zip \
-    && curl -sSfLO https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/${PROTOC_REL} \
-    && unzip ${PROTOC_REL} -d protoc \
-    && mv protoc /usr/local \
-    && ln -s /usr/local/protoc/bin/protoc /usr/local/bin \
-    && rm ${PROTOC_REL} \
-    && go install k8s.io/code-generator/cmd/go-to-protobuf@${CODE_GENERATOR_VERSION} \
-    && go install k8s.io/code-generator/cmd/go-to-protobuf/protoc-gen-gogo@${CODE_GENERATOR_VERSION} \
-    && go install golang.org/x/tools/cmd/goimports@${GOIMPORTS_VERSION} \
-    && go install github.com/bufbuild/buf/cmd/buf@${BUF_VERSION} \
-    && go install sigs.k8s.io/controller-tools/cmd/controller-gen@${CONTROLLER_GEN_VERSION} \
-    && cd /usr/local/bin \
-    && curl -sSfL https://github.com/golangci/golangci-lint/releases/download/v${GOLANGCI_LINT_VERSION}/golangci-lint-${GOLANGCI_LINT_VERSION}-linux-${TARGETARCH}.tar.gz \
-        | tar xvz golangci-lint-${GOLANGCI_LINT_VERSION}-linux-${TARGETARCH}/golangci-lint --strip-components=1 \
-    && curl -sSfL https://get.helm.sh/helm-$HELM_VERSION-linux-${TARGETARCH}.tar.gz \
-        | tar xvz linux-${TARGETARCH}/helm --strip-components=1 \
     && mkdir -p /etc/apt/keyrings \
     && curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg \
     && echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_$NODE_MAJOR.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list \
-    && apt-get update && apt-get install nodejs -y
-
-RUN npm install --global pnpm@${PNPM_VERSION}
+    && apt-get update && apt-get install nodejs -y \
+    && npm install --global pnpm@${PNPM_VERSION} \
+    # Install Git from "trixie" repository to get a more recent version than
+    # the one available in "stable". This can be removed once the version in
+    # "stable" is updated to >= 2.42.0 (which supports `--orphan` for `git
+    # worktree add`).
+    && echo "deb http://deb.debian.org/debian trixie main" > /etc/apt/sources.list.d/trixie.list \
+    && apt update \
+    && apt install -y -t trixie git \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 ARG USER_ID=1000
 ARG GROUP_ID=1000
