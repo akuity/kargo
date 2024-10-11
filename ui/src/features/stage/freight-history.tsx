@@ -1,7 +1,6 @@
-import { createConnectQueryKey } from '@connectrpc/connect-query';
+import { useQuery } from '@connectrpc/connect-query';
 import { faHistory } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { useQueryClient } from '@tanstack/react-query';
 import { Empty } from 'antd';
 import classNames from 'classnames';
 import { useMemo } from 'react';
@@ -10,7 +9,6 @@ import { generatePath, Link, useNavigate } from 'react-router-dom';
 import { paths } from '@ui/config/paths';
 import freightTimelineStyles from '@ui/features/freight-timeline/freight-timeline.module.less';
 import { queryFreight } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
-import { QueryFreightResponse } from '@ui/gen/service/v1alpha1/service_pb';
 import {
   Freight,
   FreightReference,
@@ -18,6 +16,7 @@ import {
   StageStatus
 } from '@ui/gen/v1alpha1/generated_pb';
 
+import { LoadingState } from '../common';
 import { FreightContents } from '../freight-timeline/freight-contents';
 import { FreightItemLabel } from '../freight-timeline/freight-item-label';
 import { FreightTimelineWrapper } from '../freight-timeline/freight-timeline-wrapper';
@@ -40,10 +39,26 @@ export const FreightHistory = ({
   // usually last one is active but we have to consider multi-pipeline case
   currentActiveFreight?: string;
 }) => {
-  const queryClient = useQueryClient();
   const navigate = useNavigate();
 
-  const { freightHistoryPerWarehouse, freightMap } = useMemo(() => {
+  const freightQuery = useQuery(queryFreight, { project: projectName });
+
+  const freightMap = useMemo(() => {
+    const freightData = freightQuery.data;
+    // generate metadata.name -> full freight data (because history doesn't have it all) to show in freight history
+    const freightMap: Record<string, Freight> = {};
+
+    for (const freight of freightData?.groups?.['']?.freight || []) {
+      const freightId = freight?.metadata?.name;
+      if (freightId) {
+        freightMap[freightId] = freight;
+      }
+    }
+
+    return freightMap;
+  }, [freightQuery.data]);
+
+  const freightHistoryPerWarehouse = useMemo(() => {
     // to show the history
     const freightHistoryPerWarehouse: Record<
       string /* warehouse eg. Warehouse/w-1 or Warehouse/w-2 */,
@@ -64,22 +79,12 @@ export const FreightHistory = ({
       }
     }
 
-    const freightData = queryClient.getQueryData(
-      createConnectQueryKey(queryFreight, { project: projectName })
-    ) as QueryFreightResponse;
+    return freightHistoryPerWarehouse;
+  }, [freightHistory]);
 
-    // generate metadata.name -> full freight data (because history doesn't have it all) to show in freight history
-    const freightMap: Record<string, Freight> = {};
-
-    for (const freight of freightData?.groups?.['']?.freight || []) {
-      const freightId = freight?.metadata?.name;
-      if (freightId) {
-        freightMap[freightId] = freight;
-      }
-    }
-
-    return { freightHistoryPerWarehouse, freightMap };
-  }, [freightHistory, queryClient, projectName]);
+  if (freightQuery.isFetching) {
+    return <LoadingState />;
+  }
 
   return (
     <div className={className}>
