@@ -10,7 +10,7 @@
       "required": ["name"],
       "properties": {
         "fromOrigin": {
-          "$ref": "#definitions/origin"
+          "$ref": "#/definitions/origin"
         },
         "name": {
           "type": "string",
@@ -49,7 +49,7 @@
           "minLength": 1
         },
         "fromOrigin": {
-          "$ref": "#definitions/origin"
+          "$ref": "#/definitions/origin"
         },
         "helm": {
           "$ref": "#/definitions/argoCDHelmParameterUpdates"
@@ -76,7 +76,7 @@
       "required": ["images"],
       "properties": {
         "fromOrigin": {
-          "$ref": "#definitions/origin"
+          "$ref": "#/definitions/origin"
         },
         "images": {
           "type": "array",
@@ -95,7 +95,7 @@
       "required": ["key", "repoURL", "value"],
       "properties": {
         "fromOrigin": {
-          "$ref": "#definitions/origin"
+          "$ref": "#/definitions/origin"
         },
         "key": {
           "type": "string",
@@ -121,7 +121,7 @@
       "additionalProperties": false,
       "properties": {
         "fromOrigin": {
-          "$ref": "#definitions/origin"
+          "$ref": "#/definitions/origin"
         },
         "images": {
           "type": "array",
@@ -140,7 +140,7 @@
       "required": ["repoURL"],
       "properties": {
         "fromOrigin": {
-          "$ref": "#definitions/origin"
+          "$ref": "#/definitions/origin"
         },
         "newName": {
           "type": "string",
@@ -191,7 +191,7 @@
       }
     },
     "fromOrigin": {
-      "$ref": "#definitions/origin"
+      "$ref": "#/definitions/origin"
     }
   }
 }
