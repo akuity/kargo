@@ -1,6 +1,7 @@
 // central registry with available/installed runners
 
 import { IconDefinition } from '@fortawesome/free-solid-svg-icons';
+import { JSONSchema7 } from 'json-schema';
 
 // runners are basically what you can configure in promotionTemplates.spec.stages in Stage resource
 export type PromotionDirectivesRegistry = {
@@ -15,6 +16,5 @@ export type Runner = {
   // UI helper
   // this accepts font-awesome icon
   unstable_icons: IconDefinition[];
-  // IMPORTANT: this runner should have configuration definition in Json schema in future
-  // config: JsonSchema
+  config: JSONSchema7;
 };

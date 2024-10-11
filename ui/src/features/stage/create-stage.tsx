@@ -1,3 +1,4 @@
+import { PlainMessage } from '@bufbuild/protobuf';
 import { useMutation } from '@connectrpc/connect-query';
 import {
   faBook,
@@ -13,7 +14,7 @@ import type { JSONSchema4 } from 'json-schema';
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { generatePath, useNavigate } from 'react-router-dom';
-import yaml from 'yaml';
+import yaml, { parse, stringify } from 'yaml';
 import { z } from 'zod';
 
 import { paths } from '@ui/config/paths';
@@ -21,11 +22,13 @@ import { YamlEditor } from '@ui/features/common/code-editor/yaml-editor';
 import { FieldContainer } from '@ui/features/common/form/field-container';
 import schema from '@ui/gen/schema/stages.kargo.akuity.io_v1alpha1.json';
 import { createResource } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
+import { PromotionStep, Stage } from '@ui/gen/v1alpha1/generated_pb';
 import { zodValidators } from '@ui/utils/validators';
 
-import { promoStepsExample } from '../project/pipelines/utils/promotion-steps-example';
 import { getStageYAMLExample } from '../project/pipelines/utils/stage-yaml-example';
 
+import { PromotionStepsWizard } from './promotion-steps-wizard/promotion-steps-wizard';
+import { usePromotionWizardStepsState } from './promotion-steps-wizard/use-promotion-wizard-steps-state';
 import { RequestedFreight } from './requested-freight';
 import { RequestedFreightEditor } from './requested-freight-editor';
 import { requestedFreightSchema } from './schemas';
@@ -43,7 +46,11 @@ const wizardSchema = z.object({
   promotionTemplateSteps: z.string().optional()
 });
 
-const stageFormToYAML = (data: z.infer<typeof wizardSchema>, namespace: string) => {
+const stageFormToYAML = (
+  data: z.infer<typeof wizardSchema>,
+  namespace: string,
+  promotionTemplateSteps: PlainMessage<PromotionStep>[]
+) => {
   return yaml.stringify({
     kind: 'Stage',
     apiVersion: 'kargo.akuity.io/v1alpha1',
@@ -59,8 +66,8 @@ const stageFormToYAML = (data: z.infer<typeof wizardSchema>, namespace: string) 
     },
     spec: {
       requestedFreight: data.requestedFreight,
-      ...(data.promotionTemplateSteps && {
-        promotionTemplate: { spec: { steps: yaml.parse(data.promotionTemplateSteps) } }
+      ...(promotionTemplateSteps?.length > 0 && {
+        promotionTemplate: { spec: { steps: promotionTemplateSteps } }
       })
     }
   });
@@ -85,7 +92,7 @@ export const CreateStage = ({
     }
   });
 
-  const { control, handleSubmit, setValue } = useForm({
+  const { control, handleSubmit, setValue, getValues } = useForm({
     defaultValues: {
       value: getStageYAMLExample(project || '')
     },
@@ -95,7 +102,8 @@ export const CreateStage = ({
   const {
     control: wizardControl,
     watch,
-    setValue: setWizardValue
+    setValue: setWizardValue,
+    getValues: getWizardValues
   } = useForm({
     defaultValues: {
       name: '',
@@ -109,7 +117,15 @@ export const CreateStage = ({
   const onSubmit = handleSubmit(async (data) => {
     let value = data.value;
     if (tab === 'wizard') {
-      const unmarshalled = stageFormToYAML(watch(), project || '');
+      const unmarshalled = stageFormToYAML(
+        getWizardValues(),
+        project || '',
+        promotionWizardStepsState.state?.map((step) => ({
+          uses: step?.identifier,
+          as: step?.as,
+          config: step?.state
+        }))
+      );
       setValue('value', unmarshalled);
       value = unmarshalled;
     }
@@ -125,6 +141,8 @@ export const CreateStage = ({
 
   const requestedFreight = watch('requestedFreight');
   const color = watch('color');
+
+  const promotionWizardStepsState = usePromotionWizardStepsState();
 
   return (
     <Drawer open={!!project} width={'80%'} closable={false} onClose={close}>
@@ -148,12 +166,40 @@ export const CreateStage = ({
       <Tabs
         onChange={(newTab) => {
           if (tab === 'wizard' && newTab === 'yaml') {
-            setValue('value', stageFormToYAML(watch(), project || ''));
+            setValue(
+              'value',
+              stageFormToYAML(
+                getWizardValues(),
+                project || '',
+                promotionWizardStepsState.state?.map((step) => ({
+                  uses: step?.identifier,
+                  as: step?.as,
+                  config: step?.state
+                }))
+              )
+            );
+          } else {
+            const yaml = getValues('value');
+
+            try {
+              const stageSpec: Stage = parse(yaml);
+
+              promotionWizardStepsState.setYAML(
+                stringify(stageSpec?.spec?.promotionTemplate?.spec?.steps)
+              );
+            } catch (e) {
+              // explicitly ignore
+            }
           }
           setTab(newTab);
         }}
       >
-        <Tabs.TabPane key='wizard' tab='Form' icon={<FontAwesomeIcon icon={faListCheck} />}>
+        <Tabs.TabPane
+          key='wizard'
+          tab='Form'
+          icon={<FontAwesomeIcon icon={faListCheck} />}
+          className='mb-4'
+        >
           <FieldContainer name='name' label='Name' control={wizardControl}>
             {({ field }) => <Input {...field} placeholder='my-stage' />}
           </FieldContainer>
@@ -244,21 +290,12 @@ export const CreateStage = ({
           />
 
           <Typography.Title level={4}>Promotion Steps</Typography.Title>
-          <FieldContainer name='promotionTemplateSteps' control={wizardControl}>
-            {({ field: { value, onChange } }) => (
-              <YamlEditor
-                value={value as string}
-                onChange={(e) => onChange(e || '')}
-                height='250px'
-                schema={
-                  (schema as JSONSchema4).properties?.spec.properties?.promotionTemplate?.properties
-                    ?.spec?.properties?.steps
-                }
-                resourceType='stages'
-                placeholder={promoStepsExample}
-              />
-            )}
-          </FieldContainer>
+          <PromotionStepsWizard
+            steps={promotionWizardStepsState.state}
+            onChange={(newSteps) => {
+              promotionWizardStepsState.onChange(newSteps);
+            }}
+          />
         </Tabs.TabPane>
         <Tabs.TabPane key='yaml' tab='YAML' icon={<FontAwesomeIcon icon={faCode} />}>
           <FieldContainer name='value' control={control}>
