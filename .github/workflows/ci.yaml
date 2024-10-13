@@ -26,7 +26,7 @@ jobs:
         echo "deb http://deb.debian.org/debian trixie main" > /etc/apt/sources.list.d/trixie.list
         apt update && apt install -y -t trixie git
     - name: Checkout code
-      uses: actions/checkout@d632683dd7b4114ad314bca15554477dd762a938 # v4.2.0
+      uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
     - uses: actions/cache@3624ceb22c1c5a301c8db4169662070a689d9ea8 # v4.1.1
       with:
         path: /go/pkg/mod
@@ -48,7 +48,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
-      uses: actions/checkout@d632683dd7b4114ad314bca15554477dd762a938 # v4.2.0
+      uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
     - uses: actions/cache@3624ceb22c1c5a301c8db4169662070a689d9ea8 # v4.1.1
       with:
         path: ~/.pnpm-store
@@ -76,7 +76,7 @@ jobs:
       image: golang:1.23.2-bookworm
     steps:
     - name: Checkout code
-      uses: actions/checkout@d632683dd7b4114ad314bca15554477dd762a938 # v4.2.0
+      uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
     - name: Cache golangci-lint
       id: cache-golangci-lint
       uses: actions/cache@3624ceb22c1c5a301c8db4169662070a689d9ea8 # v4.1.1
@@ -101,7 +101,7 @@ jobs:
       image: golang:1.23.2-bookworm
     steps:
     - name: Checkout code
-      uses: actions/checkout@d632683dd7b4114ad314bca15554477dd762a938 # v4.2.0
+      uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
     - name: Cache helm
       id: cache-helm
       uses: actions/cache@3624ceb22c1c5a301c8db4169662070a689d9ea8 # v4.1.1
@@ -125,7 +125,7 @@ jobs:
       image: golang:1.23.2-bookworm
     steps:
     - name: Checkout code
-      uses: actions/checkout@d632683dd7b4114ad314bca15554477dd762a938 # v4.2.0
+      uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
     - name: Cache buf
       id: cache-buf
       uses: actions/cache@3624ceb22c1c5a301c8db4169662070a689d9ea8 # v4.1.1
@@ -148,7 +148,7 @@ jobs:
       image: golang:1.23.2-bookworm
     steps:
     - name: Checkout code
-      uses: actions/checkout@d632683dd7b4114ad314bca15554477dd762a938 # v4.2.0
+      uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
     - name: Install tools
       run: apt update && apt install unzip
     - name: Install pnpm
@@ -201,7 +201,7 @@ jobs:
       with:
         driver-opts: network=host
     - name: Checkout code
-      uses: actions/checkout@d632683dd7b4114ad314bca15554477dd762a938 # v4.2.0
+      uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
     - name: Build base image
       run: |
         BASE_IMAGE=localhost:5000/kargo-base make build-base-image
@@ -224,7 +224,7 @@ jobs:
       image: golang:1.23.2-bookworm
     steps:
     - name: Checkout code
-      uses: actions/checkout@d632683dd7b4114ad314bca15554477dd762a938 # v4.2.0
+      uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
     - uses: actions/cache@3624ceb22c1c5a301c8db4169662070a689d9ea8 # v4.1.1
       with:
         path: /go/pkg/mod
