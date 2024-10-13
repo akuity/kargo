@@ -16,6 +16,7 @@ import (
 	"github.com/akuity/kargo/internal/api/kubernetes"
 	"github.com/akuity/kargo/internal/controller/management/namespaces"
 	"github.com/akuity/kargo/internal/controller/management/projects"
+	"github.com/akuity/kargo/internal/controller/management/serviceaccounts"
 	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/internal/os"
 	versionpkg "github.com/akuity/kargo/internal/version"
@@ -76,6 +77,13 @@ func (o *managementControllerOptions) run(ctx context.Context) error {
 		projects.ReconcilerConfigFromEnv(),
 	); err != nil {
 		return fmt.Errorf("error setting up Projects reconciler: %w", err)
+	}
+
+	if err := serviceaccounts.SetupReconcilerWithManager(
+		kargoMgr,
+		serviceaccounts.ReconcilerConfigFromEnv(),
+	); err != nil {
+		return fmt.Errorf("error setting up ServiceAccount reconciler: %w", err)
 	}
 
 	if err := kargoMgr.Start(ctx); err != nil {
