@@ -32,7 +32,7 @@ func init() {
 	builtins.RegisterPromotionStepRunner(
 		newHelmChartUpdater(),
 		&StepRunnerPermissions{
-			AllowArgoCDClient:  true,
+			AllowKargoClient:   true,
 			AllowCredentialsDB: true,
 		},
 	)
