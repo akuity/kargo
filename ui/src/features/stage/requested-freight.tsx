@@ -16,7 +16,8 @@ export const RequestedFreight = ({
   requestedFreight,
   onDelete,
   className,
-  itemStyle
+  itemStyle,
+  hideTitle
 }: {
   projectName?: string;
   requestedFreight?: {
@@ -26,15 +27,17 @@ export const RequestedFreight = ({
   onDelete?: (index: number) => void;
   className?: string;
   itemStyle?: React.CSSProperties;
+  hideTitle?: boolean;
 }) => {
+  const { stageColorMap } = useContext(ColorContext);
+
   const uniqueUpstreamStages = new Set<string>();
+
   for (const freight of requestedFreight || []) {
     for (const stage of freight.sources?.stages || []) {
       uniqueUpstreamStages.add(stage);
     }
   }
-
-  const { stageColorMap } = useContext(ColorContext);
 
   if (!requestedFreight || requestedFreight.length === 0) {
     return null;
@@ -42,63 +45,67 @@ export const RequestedFreight = ({
 
   return (
     <div className={className}>
-      {requestedFreight?.map((freight, i) => {
-        return (
-          <div
-            key={i}
-            className='bg-gray-50 rounded-md p-3 border-2 border-solid border-gray-200'
-            style={itemStyle}
-          >
-            <Flex>
-              <div>
-                <SmallLabel className='mb-1'>
-                  {(freight.origin?.kind || 'Unknown').toUpperCase()}
-                </SmallLabel>
+      {!hideTitle && <h3>Requested Freight</h3>}
 
-                <div className='text-base mb-3 font-semibold'>{freight.origin?.name}</div>
-              </div>
-              {onDelete && (
-                <div className='ml-auto cursor-pointer'>
-                  <FontAwesomeIcon icon={faTimes} onClick={() => onDelete(i)} />
+      <div className='flex gap-5 flex-wrap'>
+        {requestedFreight?.map((freight, i) => {
+          return (
+            <div
+              key={i}
+              className='bg-gray-50 rounded-md p-3 border-2 border-solid border-gray-200'
+              style={itemStyle}
+            >
+              <Flex>
+                <div>
+                  <SmallLabel className='mb-1'>
+                    {(freight.origin?.kind || 'Unknown').toUpperCase()}
+                  </SmallLabel>
+
+                  <div className='text-base mb-3 font-semibold'>{freight.origin?.name}</div>
                 </div>
-              )}
-            </Flex>
+                {onDelete && (
+                  <div className='ml-auto cursor-pointer'>
+                    <FontAwesomeIcon icon={faTimes} onClick={() => onDelete(i)} />
+                  </div>
+                )}
+              </Flex>
 
-            <SmallLabel className='mb-1'>SOURCE</SmallLabel>
-            <Flex gap={6}>
-              {freight.sources?.direct && (
-                <Link
-                  to={generatePath(paths.warehouse, {
-                    name: projectName,
-                    warehouseName: freight.origin?.name
-                  })}
-                >
-                  <Flex
-                    align='center'
-                    justify='center'
-                    className='bg-gray-600 text-white py-1 px-2 rounded font-semibold cursor-pointer'
+              <SmallLabel className='mb-1'>SOURCE</SmallLabel>
+              <Flex gap={6}>
+                {freight.sources?.direct && (
+                  <Link
+                    to={generatePath(paths.warehouse, {
+                      name: projectName,
+                      warehouseName: freight.origin?.name
+                    })}
                   >
-                    <FontAwesomeIcon icon={faArrowRightToBracket} className='mr-2' />
-                    DIRECT
-                  </Flex>
-                </Link>
-              )}
-              {freight.sources?.stages?.map((stage) => (
-                <Link
-                  key={stage}
-                  to={generatePath(paths.stage, { name: projectName, stageName: stage })}
-                >
-                  <StageTag
-                    stage={{ metadata: { name: stage } } as Stage}
-                    projectName={projectName || ''}
-                    stageColorMap={stageColorMap}
-                  />
-                </Link>
-              ))}
-            </Flex>
-          </div>
-        );
-      })}
+                    <Flex
+                      align='center'
+                      justify='center'
+                      className='bg-gray-600 text-white py-1 px-2 rounded font-semibold cursor-pointer'
+                    >
+                      <FontAwesomeIcon icon={faArrowRightToBracket} className='mr-2' />
+                      DIRECT
+                    </Flex>
+                  </Link>
+                )}
+                {freight.sources?.stages?.map((stage) => (
+                  <Link
+                    key={stage}
+                    to={generatePath(paths.stage, { name: projectName, stageName: stage })}
+                  >
+                    <StageTag
+                      stage={{ metadata: { name: stage } } as Stage}
+                      projectName={projectName || ''}
+                      stageColorMap={stageColorMap}
+                    />
+                  </Link>
+                ))}
+              </Flex>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 };
