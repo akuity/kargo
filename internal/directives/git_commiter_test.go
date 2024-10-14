@@ -253,7 +253,7 @@ func Test_gitCommitter_buildCommitMessage(t *testing.T) {
 			sharedState: State{},
 			cfg:         GitCommitConfig{MessageFromSteps: []string{"fake-step-alias"}},
 			assertions: func(t *testing.T, _ string, err error) {
-				require.ErrorContains(t, err, "no output found from step with alias")
+				require.NoError(t, err)
 			},
 		},
 		{
@@ -273,10 +273,9 @@ func Test_gitCommitter_buildCommitMessage(t *testing.T) {
 				"fake-step-alias": map[string]any{},
 			},
 			cfg: GitCommitConfig{MessageFromSteps: []string{"fake-step-alias"}},
-			assertions: func(t *testing.T, _ string, err error) {
-				require.ErrorContains(
-					t, err, "no commit message found in output from step with alias",
-				)
+			assertions: func(t *testing.T, msg string, err error) {
+				require.NoError(t, err)
+				require.Equal(t, "Kargo made some changes", msg)
 			},
 		},
 		{
