@@ -255,6 +255,12 @@ func TestSyncProject(t *testing.T) {
 				) error {
 					return nil
 				},
+				ensureControllerPermissionsFn: func(
+					context.Context,
+					*kargoapi.Project,
+				) error {
+					return nil
+				},
 				ensureDefaultProjectRolesFn: func(
 					context.Context,
 					*kargoapi.Project,
@@ -278,6 +284,12 @@ func TestSyncProject(t *testing.T) {
 					return *project.Status.DeepCopy(), nil
 				},
 				ensureAPIAdminPermissionsFn: func(
+					context.Context,
+					*kargoapi.Project,
+				) error {
+					return nil
+				},
+				ensureControllerPermissionsFn: func(
 					context.Context,
 					*kargoapi.Project,
 				) error {
