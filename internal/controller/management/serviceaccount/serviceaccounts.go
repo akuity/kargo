@@ -205,24 +205,20 @@ func (r *reconciler) ensureControllerPermissions(ctx context.Context, sa *corev1
 			},
 		}
 
-		// Create a new RoleBinding if it doesn't exist, or update it if it does.
-		if err := r.client.Get(ctx, client.ObjectKey{Name: roleBindingName, Namespace: project.Name}, roleBinding); err != nil {
-			if kubeerr.IsNotFound(err) {
-				// Create RoleBinding
-				if err := r.createRoleBindingFn(ctx, roleBinding); err != nil {
-					return fmt.Errorf("error creating RoleBinding %q for ServiceAccount %q in Project namespace %q: %w",
-						roleBinding.Name, sa.Name, project.Name, err)
+		// Try to create RoleBinding directly, update if it already exists.
+		if err := r.createRoleBindingFn(ctx, roleBinding); err != nil {
+			if kubeerr.IsAlreadyExists(err) {
+				// RoleBinding already exists, proceed with updating it
+				if err := r.client.Update(ctx, roleBinding); err != nil {
+					return fmt.Errorf("error updating existing RoleBinding %q in Project namespace %q: %w", roleBinding.Name, project.Name, err)
 				}
-				logger.Info("Created RoleBinding for ServiceAccount", "roleBinding", roleBindingName, "namespace", project.Name)
+				logger.Debug("Updated existing RoleBinding for ServiceAccount", "roleBinding", roleBindingName, "namespace", project.Name)
 			} else {
-				return fmt.Errorf("error retrieving RoleBinding %q in namespace %q: %w", roleBindingName, project.Name, err)
+				return fmt.Errorf("error creating RoleBinding %q for ServiceAccount %q in Project namespace %q: %w",
+					roleBinding.Name, sa.Name, project.Name, err)
 			}
 		} else {
-			// Update RoleBinding
-			if err := r.client.Update(ctx, roleBinding); err != nil {
-				return fmt.Errorf("error updating RoleBinding %q in Project namespace %q: %w", roleBinding.Name, project.Name, err)
-			}
-			logger.Debug("Updated RoleBinding for ServiceAccount", "roleBinding", roleBindingName, "namespace", project.Name)
+			logger.Info("Created RoleBinding for ServiceAccount", "roleBinding", roleBindingName, "namespace", project.Name)
 		}
 	}
 	logger.Info("Completed creating RoleBindings for all Projects")
