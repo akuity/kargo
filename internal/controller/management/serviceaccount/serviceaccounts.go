@@ -62,7 +62,7 @@ type reconciler struct {
 	) error
 
 	ensureControllerPermissionsFn func(context.Context, *corev1.ServiceAccount) error
-	removeControllerPermissionsFn func(context.Context, *corev1.ServiceAccount) error
+	removeControllerPermissionsFn func(context.Context, types.NamespacedName) error
 }
 
 // SetupReconcilerWithManager initializes a reconciler for ServiceAccount 
@@ -85,9 +85,6 @@ func SetupReconcilerWithManager(kargoMgr manager.Manager, cfg ReconcilerConfig) 
 					oldSA := e.ObjectOld.(*corev1.ServiceAccount)
 					newSA := e.ObjectNew.(*corev1.ServiceAccount)
 					return hasControllerLabel(oldSA) != hasControllerLabel(newSA) || hasControllerLabel(newSA) && newSA.DeletionTimestamp != nil
-				},
-				GenericFunc: func(event.GenericEvent) bool {
-					return false
 				},
 			},
 		).
@@ -124,7 +121,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			// If not found it means the ServiceAccount with the
 			// controller label was deleted, hence remove Controller
 			// Permissions for the ServiceAccount.
-			return ctrl.Result{}, r.removeControllerPermissionsFn(ctx, sa)
+			return ctrl.Result{}, r.removeControllerPermissionsFn(ctx, req.NamespacedName)
 		}
 		logger.Error(err, "Failed to get ServiceAccount")
 		return ctrl.Result{}, err
@@ -133,7 +130,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	// Handle SA deletion
 	if sa.DeletionTimestamp != nil {
 		logger.Debug("Deleting RoleBindings for ServiceAccount", "serviceaccount", sa.Name)
-		if err := r.removeControllerPermissionsFn(ctx, sa); err != nil {
+		if err := r.removeControllerPermissionsFn(ctx, req.NamespacedName); err != nil {
 			return ctrl.Result{}, err
 		}
 		controllerutil.RemoveFinalizer(sa, kargoapi.FinalizerName)
@@ -151,7 +148,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		logger.Debug("Deleting RoleBindings for ServiceAccount",
 			"serviceaccount", sa.Name,
 		)
-		return ctrl.Result{}, r.removeControllerPermissionsFn(ctx, sa)
+		return ctrl.Result{}, r.removeControllerPermissionsFn(ctx, req.NamespacedName)
 	}
 
 	// If we get to here, we had a not found error and we can proceed with
@@ -243,7 +240,7 @@ func (r *reconciler) ensureControllerPermissions(ctx context.Context, sa *corev1
 // from all Projects. This function is called when the ServiceAccount is no longer
 // managed by the controller, ensuring that permissions are cleaned up to prevent
 // unauthorized access to resources.
-func (r *reconciler) removeControllerPermissions(ctx context.Context, sa *corev1.ServiceAccount) error {
+func (r *reconciler) removeControllerPermissions(ctx context.Context, sa types.NamespacedName) error {
 
 	roleBindingName := fmt.Sprintf("%s-readonly-secrets", sa.Name)
 

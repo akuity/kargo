@@ -236,7 +236,6 @@ func (r *reconciler) syncProject(
 
 	if err = r.ensureControllerPermissionsFn(ctx, project); err != nil {
 		return status, fmt.Errorf("error ensuring controller permissions: %w", err)
-
 	}
 
 	if err = r.ensureDefaultProjectRolesFn(ctx, project); err != nil {
