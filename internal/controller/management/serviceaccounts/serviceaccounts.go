@@ -6,7 +6,9 @@ import (
 
 	"github.com/kelseyhightower/envconfig"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	kubeerr "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -14,9 +16,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
-
-	rbacv1 "k8s.io/api/rbac/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/logging"
@@ -65,26 +64,27 @@ type reconciler struct {
 	removeControllerPermissionsFn func(context.Context, types.NamespacedName) error
 }
 
-// SetupReconcilerWithManager initializes a reconciler for ServiceAccount 
+// SetupReconcilerWithManager initializes a reconciler for ServiceAccount
 // resources and registers it with the provided Manager.
 func SetupReconcilerWithManager(kargoMgr manager.Manager, cfg ReconcilerConfig) error {
 	return ctrl.NewControllerManagedBy(kargoMgr).
 		For(&corev1.ServiceAccount{}).
 		WithEventFilter(
 			predicate.Funcs{
-				CreateFunc: func(e event.CreateEvent) bool {
+				CreateFunc: func(event.CreateEvent) bool {
 					// Allow creation events to be handled for all ServiceAccounts
 					// This ensures any labeled or unlabeled SA gets proper
 					// reconciliation, including on restarts
 					return true
 				},
-				DeleteFunc: func(e event.DeleteEvent) bool {
+				DeleteFunc: func(event.DeleteEvent) bool {
 					return false
 				},
 				UpdateFunc: func(e event.UpdateEvent) bool {
-					oldSA := e.ObjectOld.(*corev1.ServiceAccount)
-					newSA := e.ObjectNew.(*corev1.ServiceAccount)
-					return hasControllerLabel(oldSA) != hasControllerLabel(newSA) || hasControllerLabel(newSA) && newSA.DeletionTimestamp != nil
+					oldSA, _ := e.ObjectOld.(*corev1.ServiceAccount)
+					newSA, _ := e.ObjectNew.(*corev1.ServiceAccount)
+					return hasControllerLabel(oldSA) != hasControllerLabel(newSA) ||
+						hasControllerLabel(newSA) && newSA.DeletionTimestamp != nil
 				},
 			},
 		).
@@ -127,7 +127,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, err
 	}
 
-	// Handle ServiceAccount deletion or updates where the 
+	// Handle ServiceAccount deletion or updates where the
 	// controller label has been removed from the ServiceAccount.
 	// This indicates that the ServiceAccount is no longer managed by the controller,
 	// and we need to clean up any associated RoleBindings.
@@ -207,16 +207,16 @@ func (r *reconciler) ensureControllerPermissions(ctx context.Context, sa *corev1
 
 		// Try to create RoleBinding directly, update if it already exists.
 		if err := r.createRoleBindingFn(ctx, roleBinding); err != nil {
-			if kubeerr.IsAlreadyExists(err) {
-				// RoleBinding already exists, proceed with updating it
-				if err := r.client.Update(ctx, roleBinding); err != nil {
-					return fmt.Errorf("error updating existing RoleBinding %q in Project namespace %q: %w", roleBinding.Name, project.Name, err)
-				}
-				logger.Debug("Updated existing RoleBinding for ServiceAccount", "roleBinding", roleBindingName, "namespace", project.Name)
-			} else {
+			if !kubeerr.IsAlreadyExists(err) {
 				return fmt.Errorf("error creating RoleBinding %q for ServiceAccount %q in Project namespace %q: %w",
 					roleBinding.Name, sa.Name, project.Name, err)
 			}
+			if updateErr := r.client.Update(ctx, roleBinding); updateErr != nil {
+				return fmt.Errorf("error updating existing RoleBinding %q in Project namespace %q: %w",
+					roleBinding.Name, project.Name, updateErr)
+			}
+			logger.Debug("Updated existing RoleBinding for ServiceAccount", "roleBinding",
+				roleBindingName, "namespace", project.Name)
 		} else {
 			logger.Info("Created RoleBinding for ServiceAccount", "roleBinding", roleBindingName, "namespace", project.Name)
 		}
@@ -255,15 +255,18 @@ func (r *reconciler) removeControllerPermissions(ctx context.Context, sa types.N
 
 		if err := r.deleteRoleBindingFn(ctx, roleBinding); err != nil {
 			if kubeerr.IsNotFound(err) {
-				logger.Debug("RoleBinding not found, skipping deletion", "roleBinding", roleBindingName, "namespace", project.Namespace)
+				logger.Debug("RoleBinding not found, skipping deletion", "roleBinding",
+					roleBindingName, "namespace", project.Namespace)
 				continue // Skip to the next project if RoleBinding is not found
 			}
 
 			// Return the error to trigger a requeue and stop further cleanup until the issue is resolved.
-			return fmt.Errorf("error deleting RoleBinding %q in Project namespace %q: %w", roleBindingName, project.Namespace, err)
+			return fmt.Errorf("error deleting RoleBinding %q in Project namespace %q: %w",
+				roleBindingName, project.Namespace, err)
 		}
 
-		logger.Debug("Deleted RoleBinding for ServiceAccount", "roleBinding", roleBindingName, "in namespace", project.Namespace)
+		logger.Debug("Deleted RoleBinding for ServiceAccount", "roleBinding",
+			roleBindingName, "in namespace", project.Namespace)
 	}
 	logger.Info("Completed deletion of RoleBindings for all Projects")
 	return nil

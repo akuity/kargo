@@ -442,21 +442,15 @@ func (r *reconciler) ensureControllerPermissions(
 		}
 
 		if err := r.createRoleBindingFn(ctx, roleBinding); err != nil {
-			if kubeerr.IsAlreadyExists(err) {
-				if err := r.client.Update(ctx, roleBinding); err != nil {
-					return fmt.Errorf("error updating RoleBinding %q in project namespace %q: %w",
-						roleBinding.Name, project.Name, err)
-				}
-				loggerWithSA.Debug("Updated RoleBinding for ServiceAccount", "serviceAccount", sa.Name)
-			} else {
-				return fmt.Errorf(
-					"error creating RoleBinding %q for ServiceAccount %q in project namespace %q: %w",
-					roleBinding.Name,
-					sa.Name,
-					project.Name,
-					err,
-				)
+			if !kubeerr.IsAlreadyExists(err) {
+				return fmt.Errorf("error creating RoleBinding %q for ServiceAccount %q in Project namespace %q: %w",
+					roleBinding.Name, sa.Name, project.Name, err)
 			}
+			if err := r.client.Update(ctx, roleBinding); err != nil {
+				return fmt.Errorf("error updating existing RoleBinding %q in Project namespace %q: %w",
+					roleBinding.Name, project.Name, err)
+			}
+			loggerWithSA.Debug("Updated RoleBinding for ServiceAccount", "serviceAccount", sa.Name)
 		} else {
 			loggerWithSA.Debug("Created RoleBinding for ServiceAccount", "serviceAccount", sa.Name)
 		}
