@@ -6,6 +6,7 @@ import (
 	"os"
 
 	securejoin "github.com/cyphar/filepath-securejoin"
+	"github.com/kelseyhightower/envconfig"
 	"github.com/xeipuuv/gojsonschema"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -28,14 +29,34 @@ func init() {
 // clones one or more refs from a remote Git repository to one or more working
 // directories.
 type gitCloner struct {
+	gitUser      git.User
 	schemaLoader gojsonschema.JSONLoader
+}
+
+// gitUserFromEnv populates a git.User struct from environment variables.
+func gitUserFromEnv() git.User {
+	cfg := struct {
+		Name           string `envconfig:"GITCLIENT_NAME"`
+		Email          string `envconfig:"GITCLIENT_EMAIL"`
+		SigningKeyType string `envconfig:"GITCLIENT_SIGNING_KEY_TYPE"`
+		SigningKeyPath string `envconfig:"GITCLIENT_SIGNING_KEY_PATH"`
+	}{}
+	envconfig.MustProcess("", &cfg)
+	return git.User{
+		Name:           cfg.Name,
+		Email:          cfg.Email,
+		SigningKeyType: git.SigningKeyType(cfg.SigningKeyType),
+		SigningKeyPath: cfg.SigningKeyPath,
+	}
 }
 
 // newGitCloner returns an implementation of the PromotionStepRunner interface
 // that clones one or more refs from a remote Git repository to one or more
 // working directories.
 func newGitCloner() PromotionStepRunner {
-	r := &gitCloner{}
+	r := &gitCloner{
+		gitUser: gitUserFromEnv(),
+	}
 	r.schemaLoader = getConfigSchemaLoader(r.Name())
 	return r
 }
@@ -102,6 +123,7 @@ func (g *gitCloner) runPromotionStep(
 	repo, err := git.CloneBare(
 		cfg.RepoURL,
 		&git.ClientOptions{
+			User:                  &g.gitUser,
 			Credentials:           repoCreds,
 			InsecureSkipTLSVerify: cfg.InsecureSkipTLSVerify,
 		},
