@@ -86,6 +86,9 @@ func SetupReconcilerWithManager(kargoMgr manager.Manager, cfg ReconcilerConfig) 
 					return hasControllerLabel(oldSA) != hasControllerLabel(newSA) ||
 						hasControllerLabel(newSA) && newSA.DeletionTimestamp != nil
 				},
+				GenericFunc: func(event.GenericEvent) bool {
+					return false
+				},
 			},
 		).
 		Complete(newReconciler(kargoMgr.GetClient(), cfg))

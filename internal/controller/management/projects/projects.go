@@ -451,9 +451,9 @@ func (r *reconciler) ensureControllerPermissions(
 					roleBinding.Name, project.Name, err)
 			}
 			loggerWithSA.Debug("Updated RoleBinding for ServiceAccount", "serviceAccount", sa.Name)
-		} else {
-			loggerWithSA.Debug("Created RoleBinding for ServiceAccount", "serviceAccount", sa.Name)
+			continue
 		}
+		loggerWithSA.Debug("Created RoleBinding for ServiceAccount", "serviceAccount", sa.Name)
 	}
 
 	return nil
