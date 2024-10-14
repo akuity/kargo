@@ -127,8 +127,11 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, err
 	}
 
-	// Handle SA deletion
-	if sa.DeletionTimestamp != nil {
+	// Handle ServiceAccount deletion or updates where the 
+	// controller label has been removed from the ServiceAccount.
+	// This indicates that the ServiceAccount is no longer managed by the controller,
+	// and we need to clean up any associated RoleBindings.
+	if sa.DeletionTimestamp != nil || !hasControllerLabel(sa) {
 		logger.Debug("Deleting RoleBindings for ServiceAccount", "serviceaccount", sa.Name)
 		if err := r.removeControllerPermissionsFn(ctx, req.NamespacedName); err != nil {
 			return ctrl.Result{}, err
@@ -139,16 +142,6 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		}
 		logger.Debug("Removed finalizer from ServiceAccount", "serviceaccount", sa.Name)
 		return ctrl.Result{}, nil
-	}
-
-	// Handle updates where the controller label has been removed from the ServiceAccount.
-	// This indicates that the ServiceAccount is no longer managed by the controller,
-	// and we need to clean up any associated RoleBindings.
-	if !hasControllerLabel(sa) {
-		logger.Debug("Deleting RoleBindings for ServiceAccount",
-			"serviceaccount", sa.Name,
-		)
-		return ctrl.Result{}, r.removeControllerPermissionsFn(ctx, req.NamespacedName)
 	}
 
 	// If we get to here, we had a not found error and we can proceed with
@@ -270,9 +263,8 @@ func (r *reconciler) removeControllerPermissions(ctx context.Context, sa types.N
 				continue // Skip to the next project if RoleBinding is not found
 			}
 
-			// Log the error but continue to the next project
-			logger.Error(err, "Failed to delete RoleBinding", "roleBinding", roleBindingName, "namespace", project.Namespace)
-			continue // Continue with the next project even after an error
+			// Return the error to trigger a requeue and stop further cleanup until the issue is resolved.
+			return fmt.Errorf("error deleting RoleBinding %q in Project namespace %q: %w", roleBindingName, project.Namespace, err)
 		}
 
 		logger.Debug("Deleted RoleBinding for ServiceAccount", "roleBinding", roleBindingName, "in namespace", project.Namespace)
