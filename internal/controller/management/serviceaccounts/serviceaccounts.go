@@ -273,7 +273,7 @@ func (r *reconciler) removeControllerPermissions(ctx context.Context, sa types.N
 		roleBinding := &rbacv1.RoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      roleBindingName,
-				Namespace: project.Namespace,
+				Namespace: project.Name,
 			},
 		}
 
