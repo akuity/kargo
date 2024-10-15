@@ -37,7 +37,8 @@ import (
 
 // ReconcilerConfig represents configuration for the promotion reconciler.
 type ReconcilerConfig struct {
-	ShardName string `envconfig:"SHARD_NAME"`
+	ShardName        string `envconfig:"SHARD_NAME"`
+	APIServerBaseURL string `envconfig:"API_SERVER_BASE_URL"`
 }
 
 func (c ReconcilerConfig) Name() string {
@@ -523,6 +524,7 @@ func (r *reconciler) promote(
 	}
 
 	promoCtx := directives.PromotionContext{
+		UIBaseURL:       r.cfg.APIServerBaseURL,
 		WorkDir:         filepath.Join(os.TempDir(), "promotion-"+string(workingPromo.UID)),
 		Project:         stageNamespace,
 		Stage:           stageName,

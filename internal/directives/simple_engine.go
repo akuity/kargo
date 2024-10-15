@@ -88,6 +88,7 @@ func (e *SimpleEngine) Promote(
 		stateCopy := state.DeepCopy()
 
 		stepCtx := &PromotionStepContext{
+			UIBaseURL:       promoCtx.UIBaseURL,
 			WorkDir:         workDir,
 			SharedState:     stateCopy,
 			Alias:           step.Alias,
