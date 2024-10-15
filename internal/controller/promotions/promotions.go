@@ -83,7 +83,9 @@ type reconciler struct {
 
 	terminatePromotionFn func(
 		context.Context,
+		*kargoapi.AbortPromotionRequest,
 		*kargoapi.Promotion,
+		*kargoapi.Freight,
 	) error
 }
 
@@ -264,7 +266,7 @@ func (r *reconciler) Reconcile(
 	if req, ok := kargoapi.AbortPromotionAnnotationValue(
 		promo.GetAnnotations(),
 	); ok && req.Action == kargoapi.AbortActionTerminate {
-		if err = r.terminatePromotionFn(ctx, promo); err != nil {
+		if err = r.terminatePromotionFn(ctx, req, promo, freight); err != nil {
 			return ctrl.Result{}, err
 		}
 		return ctrl.Result{}, nil
@@ -628,7 +630,12 @@ func (r *reconciler) buildTargetFreightCollection(
 // terminatePromotion terminates the given Promotion with a message indicating
 // that it was terminated on user request. It does nothing if the Promotion is
 // already in a terminal phase.
-func (r *reconciler) terminatePromotion(ctx context.Context, promo *kargoapi.Promotion) error {
+func (r *reconciler) terminatePromotion(
+	ctx context.Context,
+	req *kargoapi.AbortPromotionRequest,
+	promo *kargoapi.Promotion,
+	freight *kargoapi.Freight,
+) error {
 	logger := logging.LoggerFromContext(ctx)
 
 	if promo.Status.Phase.IsTerminal() {
@@ -636,7 +643,7 @@ func (r *reconciler) terminatePromotion(ctx context.Context, promo *kargoapi.Pro
 		return nil
 	}
 
-	logger.Info("terminating promotion")
+	logger.Info("terminating Promotion")
 
 	newStatus := promo.Status.DeepCopy()
 	newStatus.Phase = kargoapi.PromotionPhaseAborted
@@ -649,7 +656,25 @@ func (r *reconciler) terminatePromotion(ctx context.Context, promo *kargoapi.Pro
 		return err
 	}
 
-	// TODO: record event
+	eventMeta := kargoapi.NewPromotionEventAnnotations(ctx, "", promo, freight)
+
+	// Normally, the actor is inherited from the creator of the Promotion for
+	// events. For an abort request, however, we do not want to inherit this
+	// as the abort request is not necessarily made by the creator of the
+	// Promotion.
+	actor := kargoapi.FormatEventControllerActor(r.cfg.Name())
+	if req.Actor != "" {
+		actor = req.Actor
+	}
+	eventMeta[kargoapi.AnnotationKeyEventActor] = actor
+
+	r.recorder.AnnotatedEventf(
+		promo,
+		eventMeta,
+		corev1.EventTypeNormal,
+		kargoapi.EventReasonPromotionAborted,
+		newStatus.Message,
+	)
 
 	return nil
 }

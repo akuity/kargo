@@ -272,7 +272,12 @@ func TestReconcile(t *testing.T) {
 			}
 
 			terminateWasCalled := false
-			r.terminatePromotionFn = func(_ context.Context, promotion *kargoapi.Promotion) error {
+			r.terminatePromotionFn = func(
+				_ context.Context,
+				_ *kargoapi.AbortPromotionRequest,
+				promotion *kargoapi.Promotion,
+				_ *kargoapi.Freight,
+			) error {
 				terminateWasCalled = true
 				if tc.terminateFn != nil {
 					return tc.terminateFn(ctx, promotion)
@@ -321,9 +326,11 @@ func Test_reconciler_terminatePromotion(t *testing.T) {
 
 	tests := []struct {
 		name        string
+		req         kargoapi.AbortPromotionRequest
 		promo       *kargoapi.Promotion
+		freight     *kargoapi.Freight
 		interceptor interceptor.Funcs
-		assertions  func(*testing.T, *kargoapi.Promotion, error)
+		assertions  func(*testing.T, *fakeevent.EventRecorder, *kargoapi.Promotion, error)
 	}{
 		{
 			name: "terminates pending promotion",
@@ -334,11 +341,40 @@ func Test_reconciler_terminatePromotion(t *testing.T) {
 				kargoapi.PromotionPhasePending,
 				now,
 			),
-			assertions: func(t *testing.T, promo *kargoapi.Promotion, err error) {
+			assertions: func(t *testing.T, recorder *fakeevent.EventRecorder, promo *kargoapi.Promotion, err error) {
 				require.NoError(t, err)
 				require.Equal(t, kargoapi.PromotionPhaseAborted, promo.Status.Phase)
 				require.Contains(t, promo.Status.Message, "terminated")
 				require.NotNil(t, now, promo.Status.FinishedAt)
+
+				require.Len(t, recorder.Events, 1)
+				event := <-recorder.Events
+				require.Equal(t, kargoapi.EventReasonPromotionAborted, event.Reason)
+			},
+		},
+		{
+			name: "emits event with actor",
+			req: kargoapi.AbortPromotionRequest{
+				Actor: "fake-actor",
+			},
+			promo: newPromo(
+				"fake-namespace",
+				"fake-promo",
+				"fake-stage",
+				kargoapi.PromotionPhasePending,
+				now,
+			),
+			assertions: func(t *testing.T, recorder *fakeevent.EventRecorder, promo *kargoapi.Promotion, err error) {
+				require.NoError(t, err)
+				require.Equal(t, kargoapi.PromotionPhaseAborted, promo.Status.Phase)
+				require.Contains(t, promo.Status.Message, "terminated")
+				require.NotNil(t, now, promo.Status.FinishedAt)
+
+				require.Len(t, recorder.Events, 1)
+				event := <-recorder.Events
+				require.Equal(t, kargoapi.EventReasonPromotionAborted, event.Reason)
+				actor := event.Annotations[kargoapi.AnnotationKeyEventActor]
+				require.Equal(t, "fake-actor", actor)
 			},
 		},
 		{
@@ -354,10 +390,11 @@ func Test_reconciler_terminatePromotion(t *testing.T) {
 				p.Status.Message = "an existing message"
 				return p
 			}(),
-			assertions: func(t *testing.T, promo *kargoapi.Promotion, err error) {
+			assertions: func(t *testing.T, recorder *fakeevent.EventRecorder, promo *kargoapi.Promotion, err error) {
 				require.NoError(t, err)
 				require.Equal(t, kargoapi.PromotionPhaseSucceeded, promo.Status.Phase)
 				require.Equal(t, "an existing message", promo.Status.Message)
+				require.Len(t, recorder.Events, 0)
 			},
 		},
 		{
@@ -381,9 +418,10 @@ func Test_reconciler_terminatePromotion(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(t *testing.T, promo *kargoapi.Promotion, err error) {
+			assertions: func(t *testing.T, recorder *fakeevent.EventRecorder, promo *kargoapi.Promotion, err error) {
 				require.ErrorContains(t, err, "something went wrong")
 				require.Equal(t, kargoapi.PromotionPhasePending, promo.Status.Phase)
+				require.Len(t, recorder.Events, 0)
 			},
 		},
 	}
@@ -395,14 +433,15 @@ func Test_reconciler_terminatePromotion(t *testing.T) {
 				WithStatusSubresource(&kargoapi.Promotion{}).
 				WithInterceptorFuncs(tt.interceptor).
 				Build()
+			recorder := fakeevent.NewEventRecorder(1)
 
 			r := &reconciler{
 				kargoClient: c,
-				recorder:    &fakeevent.EventRecorder{},
+				recorder:    recorder,
 			}
 
-			err := r.terminatePromotion(context.Background(), tt.promo)
-			tt.assertions(t, tt.promo, err)
+			err := r.terminatePromotion(context.Background(), tt.req.DeepCopy(), tt.promo, tt.freight)
+			tt.assertions(t, recorder, tt.promo, err)
 		})
 	}
 }
