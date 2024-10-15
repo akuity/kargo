@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -187,7 +188,7 @@ func (r *reconciler) Reconcile(
 	}
 
 	// Everything succeeded, look for new changes on the defined interval.
-	return ctrl.Result{RequeueAfter: warehouse.Spec.Interval.Duration}, nil
+	return ctrl.Result{RequeueAfter: getRequeueInterval(warehouse)}, nil
 }
 
 func (r *reconciler) syncWarehouse(
@@ -684,4 +685,21 @@ func shouldDiscoverArtifacts(
 	default:
 		return false
 	}
+}
+
+// getRequeueInterval calculates and returns the time interval remaining until
+// the next requeue should occur. If the interval has already passed, it returns
+// a zero duration.
+func getRequeueInterval(warehouse *kargoapi.Warehouse) time.Duration {
+	if warehouse.Status.DiscoveredArtifacts == nil ||
+		warehouse.Status.DiscoveredArtifacts.DiscoveredAt.IsZero() {
+		return warehouse.Spec.Interval.Duration
+	}
+	interval := warehouse.Status.DiscoveredArtifacts.DiscoveredAt.
+		Add(warehouse.Spec.Interval.Duration).
+		Sub(metav1.Now().Time)
+	if interval < 0 {
+		return 0
+	}
+	return interval
 }
