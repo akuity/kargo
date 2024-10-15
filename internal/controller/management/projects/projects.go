@@ -102,6 +102,12 @@ type reconciler struct {
 		...client.CreateOption,
 	) error
 
+	listServiceAccountsFn func(
+		context.Context,
+		client.ObjectList,
+		...client.ListOption,
+	) error
+
 	createRoleFn func(
 		context.Context,
 		client.Object,
@@ -152,6 +158,7 @@ func newReconciler(kubeClient client.Client, cfg ReconcilerConfig) *reconciler {
 	r.ensureControllerPermissionsFn = r.ensureControllerPermissions
 	r.ensureDefaultProjectRolesFn = r.ensureDefaultProjectRoles
 	r.createServiceAccountFn = r.client.Create
+	r.listServiceAccountsFn = r.client.List
 	r.createRoleFn = r.client.Create
 	r.createRoleBindingFn = r.client.Create
 	return r
@@ -410,7 +417,7 @@ func (r *reconciler) ensureControllerPermissions(
 
 	// Get all ServiceAccounts labeled as controller ServiceAccounts
 	controllerSAs := &corev1.ServiceAccountList{}
-	if err := r.client.List(
+	if err := r.listServiceAccountsFn(
 		ctx, controllerSAs, client.InNamespace(r.cfg.KargoNamespace),
 		client.MatchingLabels{"app.kubernetes.io/component": "controller"},
 	); err != nil {

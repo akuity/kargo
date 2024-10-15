@@ -241,6 +241,32 @@ func TestSyncProject(t *testing.T) {
 			},
 		},
 		{
+			name: "error ensuring controller permissions",
+			reconciler: &reconciler{
+				ensureNamespaceFn: func(
+					_ context.Context,
+					project *kargoapi.Project,
+				) (kargoapi.ProjectStatus, error) {
+					return *project.Status.DeepCopy(), nil
+				},
+				ensureAPIAdminPermissionsFn: func(
+					context.Context,
+					*kargoapi.Project,
+				) error {
+					return nil
+				},
+				ensureControllerPermissionsFn: func(
+					context.Context,
+					*kargoapi.Project,
+				) error {
+					return errors.New("something went wrong")
+				},
+			},
+			assertions: func(t *testing.T, _ kargoapi.ProjectStatus, err error) {
+				require.ErrorContains(t, err, "something went wrong")
+			},
+		},
+		{
 			name: "error ensuring default project roles",
 			reconciler: &reconciler{
 				ensureNamespaceFn: func(
@@ -668,6 +694,42 @@ func TestEnsureAPIAdminPermissions(t *testing.T) {
 			testCase.assertions(
 				t,
 				testCase.reconciler.ensureAPIAdminPermissions(
+					context.Background(),
+					&kargoapi.Project{},
+				),
+			)
+		})
+	}
+}
+
+func TestEnsureControllerPermissions(t *testing.T) {
+	testCases := []struct {
+		name       string
+		reconciler *reconciler
+		assertions func(*testing.T, error)
+	}{
+		{
+			name: "error listing service accounts",
+			reconciler: &reconciler{
+				listServiceAccountsFn: func(
+					context.Context,
+					client.ObjectList,
+					...client.ListOption,
+				) error {
+					return errors.New("something went wrong")
+				},
+			},
+			assertions: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "error listing controller ServiceAccounts")
+				require.ErrorContains(t, err, "something went wrong")
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			testCase.assertions(
+				t,
+				testCase.reconciler.ensureControllerPermissions(
 					context.Background(),
 					&kargoapi.Project{},
 				),
