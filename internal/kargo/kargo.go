@@ -233,8 +233,8 @@ func (p AbortRequested) Update(e event.UpdateEvent) bool {
 		return false
 	}
 
-	if newVal, newOk := kargoapi.AbortAnnotationValue(e.ObjectNew.GetAnnotations()); newOk {
-		if oldVal, oldOk := kargoapi.AbortAnnotationValue(e.ObjectOld.GetAnnotations()); oldOk {
+	if newVal, newOk := kargoapi.AbortVerificationAnnotationValue(e.ObjectNew.GetAnnotations()); newOk {
+		if oldVal, oldOk := kargoapi.AbortVerificationAnnotationValue(e.ObjectOld.GetAnnotations()); oldOk {
 			return !newVal.ForID(oldVal.ID)
 		}
 		return true

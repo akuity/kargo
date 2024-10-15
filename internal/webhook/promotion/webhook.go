@@ -139,20 +139,28 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 	if promo.Annotations == nil {
 		promo.Annotations = make(map[string]string, 1)
 	}
-	if req.Operation == admissionv1.Create {
+
+	switch req.Operation {
+	case admissionv1.Create:
 		// Set actor as an admission request's user info when the promotion is created
 		// to allow controllers to track who created it.
 		if !w.isRequestFromKargoControlplaneFn(req) {
 			promo.Annotations[kargoapi.AnnotationKeyCreateActor] =
 				kargoapi.FormatEventKubernetesUserActor(req.UserInfo)
 		}
-	} else if req.Operation == admissionv1.Update {
+
+		// Enrich the annotation with the actor and control plane information.
+		w.setAbortAnnotationActor(req, nil, promo)
+	case admissionv1.Update:
 		// Ensure actor annotation immutability
 		if oldActor, ok := oldPromo.Annotations[kargoapi.AnnotationKeyCreateActor]; ok {
 			promo.Annotations[kargoapi.AnnotationKeyCreateActor] = oldActor
 		} else {
 			delete(promo.Annotations, kargoapi.AnnotationKeyCreateActor)
 		}
+
+		// Enrich the annotation with the actor and control plane information.
+		w.setAbortAnnotationActor(req, oldPromo, promo)
 	}
 
 	stage, err := w.getStageFn(
@@ -371,4 +379,25 @@ func (w *webhook) recordPromotionCreatedEvent(
 		p.Spec.Stage,
 		actor,
 	)
+}
+
+func (w *webhook) setAbortAnnotationActor(req admission.Request, old, new *kargoapi.Promotion) {
+	if abortReq, ok := kargoapi.AbortPromotionAnnotationValue(new.Annotations); ok {
+		var oldAbortReq *kargoapi.AbortPromotionRequest
+		if old != nil {
+			oldAbortReq, _ = kargoapi.AbortPromotionAnnotationValue(old.Annotations)
+		}
+		// If the abort request has changed, enrich the annotation with the
+		// actor and control plane information.
+		if old == nil || oldAbortReq == nil || !abortReq.Equals(oldAbortReq) {
+			abortReq.ControlPlane = w.isRequestFromKargoControlplaneFn(req)
+			if !abortReq.ControlPlane {
+				// If the abort request is not from the control plane, then it's
+				// from a specific Kubernetes user. Without this check we would
+				// overwrite the actor field set by the control plane.
+				abortReq.Actor = kargoapi.FormatEventKubernetesUserActor(req.UserInfo)
+			}
+			new.Annotations[kargoapi.AnnotationKeyAbort] = abortReq.String()
+		}
+	}
 }

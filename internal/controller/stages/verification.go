@@ -276,7 +276,7 @@ func (r *reconciler) abortVerification(
 
 	// Extract the actor who requested the abort to be used in the new
 	// verification info.
-	if req, _ := kargoapi.AbortAnnotationValue(stage.GetAnnotations()); req.ForID(currentVI.ID) {
+	if req, _ := kargoapi.AbortVerificationAnnotationValue(stage.GetAnnotations()); req.ForID(currentVI.ID) {
 		newVI.Actor = req.Actor
 	}
 

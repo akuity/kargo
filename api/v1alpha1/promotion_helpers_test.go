@@ -14,6 +14,92 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
+func TestAbortPromotionRequest_Equals(t *testing.T) {
+	tests := []struct {
+		name     string
+		r1       *AbortPromotionRequest
+		r2       *AbortPromotionRequest
+		expected bool
+	}{
+		{
+			name:     "both nil",
+			r1:       nil,
+			r2:       nil,
+			expected: true,
+		},
+		{
+			name:     "one nil",
+			r1:       &AbortPromotionRequest{Action: "fake-action", Actor: "fake-actor", ControlPlane: false},
+			r2:       nil,
+			expected: false,
+		},
+		{
+			name:     "other nil",
+			r1:       nil,
+			r2:       &AbortPromotionRequest{Action: "fake-action", Actor: "fake-actor", ControlPlane: false},
+			expected: false,
+		},
+		{
+			name:     "different actions",
+			r1:       &AbortPromotionRequest{Action: "fake-action", Actor: "fake-actor", ControlPlane: false},
+			r2:       &AbortPromotionRequest{Action: "other-action", Actor: "fake-actor", ControlPlane: false},
+			expected: false,
+		},
+		{
+			name:     "different actors",
+			r1:       &AbortPromotionRequest{Action: "fake-action", Actor: "fake-actor", ControlPlane: true},
+			r2:       &AbortPromotionRequest{Action: "fake-action", Actor: "other-actor", ControlPlane: true},
+			expected: false,
+		},
+		{
+			name:     "different control plane flags",
+			r1:       &AbortPromotionRequest{Action: "fake-action", Actor: "fake-actor", ControlPlane: true},
+			r2:       &AbortPromotionRequest{Action: "fake-action", Actor: "fake-actor", ControlPlane: false},
+			expected: false,
+		},
+		{
+			name:     "equal",
+			r1:       &AbortPromotionRequest{Action: "fake-action", Actor: "fake-actor", ControlPlane: true},
+			r2:       &AbortPromotionRequest{Action: "fake-action", Actor: "fake-actor", ControlPlane: true},
+			expected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.r1.Equals(tt.r2), tt.expected)
+		})
+	}
+}
+
+func TestAbortPromotionRequest_String(t *testing.T) {
+	t.Run("abort request is nil", func(t *testing.T) {
+		var r *AbortPromotionRequest
+		require.Empty(t, r.String())
+	})
+
+	t.Run("abort request is empty", func(t *testing.T) {
+		r := &AbortPromotionRequest{}
+		require.Empty(t, r.String())
+	})
+
+	t.Run("abort request has empty action", func(t *testing.T) {
+		r := &AbortPromotionRequest{
+			Action: "",
+		}
+		require.Empty(t, r.String())
+	})
+
+	t.Run("abort request has data", func(t *testing.T) {
+		r := &AbortPromotionRequest{
+			Action:       "foo",
+			Actor:        "fake-actor",
+			ControlPlane: true,
+		}
+		require.Equal(t, `{"action":"foo","actor":"fake-actor","controlPlane":true}`, r.String())
+	})
+}
+
 func TestGetPromotion(t *testing.T) {
 	scheme := k8sruntime.NewScheme()
 	require.NoError(t, SchemeBuilder.AddToScheme(scheme))
@@ -63,6 +149,75 @@ func TestGetPromotion(t *testing.T) {
 			testCase.assertions(t, promo, err)
 		})
 	}
+}
+
+func TestAbortPromotion(t *testing.T) {
+	scheme := k8sruntime.NewScheme()
+	require.NoError(t, SchemeBuilder.AddToScheme(scheme))
+
+	t.Run("not found", func(t *testing.T) {
+		c := fake.NewClientBuilder().WithScheme(scheme).Build()
+
+		err := AbortPromotion(context.TODO(), c, types.NamespacedName{
+			Namespace: "fake-namespace",
+			Name:      "fake-promotion",
+		}, AbortActionTerminate)
+		require.ErrorContains(t, err, "not found")
+	})
+
+	t.Run("already in a terminal phase", func(t *testing.T) {
+		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+			&Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-namespace",
+					Name:      "fake-promotion",
+				},
+				Status: PromotionStatus{
+					Phase: PromotionPhaseSucceeded,
+				},
+			},
+		).Build()
+
+		err := AbortPromotion(context.TODO(), c, types.NamespacedName{
+			Namespace: "fake-namespace",
+			Name:      "fake-promotion",
+		}, AbortActionTerminate)
+		require.NoError(t, err)
+
+		promotion, err := GetPromotion(context.TODO(), c, types.NamespacedName{
+			Namespace: "fake-namespace",
+			Name:      "fake-promotion",
+		})
+		require.NoError(t, err)
+		_, ok := promotion.Annotations[AnnotationKeyAbort]
+		require.False(t, ok)
+	})
+
+	t.Run("success", func(t *testing.T) {
+		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+			&Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-namespace",
+					Name:      "fake-promotion",
+				},
+			},
+		).Build()
+
+		err := AbortPromotion(context.TODO(), c, types.NamespacedName{
+			Namespace: "fake-namespace",
+			Name:      "fake-promotion",
+		}, AbortActionTerminate)
+		require.NoError(t, err)
+
+		stage, err := GetPromotion(context.TODO(), c, types.NamespacedName{
+			Namespace: "fake-namespace",
+			Name:      "fake-promotion",
+		})
+		require.NoError(t, err)
+		require.Equal(t, (&AbortPromotionRequest{
+			Action: AbortActionTerminate,
+		}).String(), stage.Annotations[AnnotationKeyAbort])
+	})
 }
 
 func Test_ComparePromotionByPhaseAndCreationTime(t *testing.T) {

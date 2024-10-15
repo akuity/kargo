@@ -34,6 +34,7 @@ const (
 	EventReasonPromotionSucceeded              = "PromotionSucceeded"
 	EventReasonPromotionFailed                 = "PromotionFailed"
 	EventReasonPromotionErrored                = "PromotionErrored"
+	EventReasonPromotionAborted                = "PromotionAborted"
 	EventReasonFreightApproved                 = "FreightApproved"
 	EventReasonFreightVerificationSucceeded    = "FreightVerificationSucceeded"
 	EventReasonFreightVerificationFailed       = "FreightVerificationFailed"

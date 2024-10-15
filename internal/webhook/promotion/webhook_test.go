@@ -2,14 +2,17 @@ package promotion
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"regexp"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	admissionv1 "k8s.io/api/admission/v1"
 	authnv1 "k8s.io/api/authentication/v1"
 	authzv1 "k8s.io/api/authorization/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apiserver/pkg/authentication/serviceaccount"
@@ -41,18 +44,20 @@ func TestNewWebhook(t *testing.T) {
 }
 
 func TestDefault(t *testing.T) {
+	scheme := runtime.NewScheme()
+	require.NoError(t, kargoapi.AddToScheme(scheme))
+
 	testCases := []struct {
 		name       string
 		promotion  *kargoapi.Promotion
+		req        admission.Request
 		webhook    *webhook
 		assertions func(*testing.T, *kargoapi.Promotion, error)
 	}{
 		{
 			name: "error getting stage",
 			webhook: &webhook{
-				admissionRequestFromContextFn: func(context.Context) (admission.Request, error) {
-					return admission.Request{}, nil
-				},
+				admissionRequestFromContextFn: admission.RequestFromContext,
 				getStageFn: func(
 					context.Context,
 					client.Client,
@@ -60,7 +65,16 @@ func TestDefault(t *testing.T) {
 				) (*kargoapi.Stage, error) {
 					return nil, errors.New("something went wrong")
 				},
+				isRequestFromKargoControlplaneFn: func(admission.Request) bool {
+					return false
+				},
 			},
+			req: admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					Operation: admissionv1.Create,
+				},
+			},
+			promotion: &kargoapi.Promotion{},
 			assertions: func(t *testing.T, _ *kargoapi.Promotion, err error) {
 				require.ErrorContains(t, err, "something went wrong")
 			},
@@ -68,9 +82,7 @@ func TestDefault(t *testing.T) {
 		{
 			name: "stage not found",
 			webhook: &webhook{
-				admissionRequestFromContextFn: func(context.Context) (admission.Request, error) {
-					return admission.Request{}, nil
-				},
+				admissionRequestFromContextFn: admission.RequestFromContext,
 				getStageFn: func(
 					context.Context,
 					client.Client,
@@ -78,7 +90,16 @@ func TestDefault(t *testing.T) {
 				) (*kargoapi.Stage, error) {
 					return nil, nil
 				},
+				isRequestFromKargoControlplaneFn: func(admission.Request) bool {
+					return false
+				},
 			},
+			req: admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					Operation: admissionv1.Create,
+				},
+			},
+			promotion: &kargoapi.Promotion{},
 			assertions: func(t *testing.T, _ *kargoapi.Promotion, err error) {
 				require.ErrorContains(t, err, "could not find Stage")
 			},
@@ -86,9 +107,7 @@ func TestDefault(t *testing.T) {
 		{
 			name: "stage without promotion steps",
 			webhook: &webhook{
-				admissionRequestFromContextFn: func(context.Context) (admission.Request, error) {
-					return admission.Request{}, nil
-				},
+				admissionRequestFromContextFn: admission.RequestFromContext,
 				getStageFn: func(
 					context.Context,
 					client.Client,
@@ -96,25 +115,24 @@ func TestDefault(t *testing.T) {
 				) (*kargoapi.Stage, error) {
 					return &kargoapi.Stage{}, nil
 				},
+				isRequestFromKargoControlplaneFn: func(admission.Request) bool {
+					return false
+				},
 			},
+			req: admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					Operation: admissionv1.Create,
+				},
+			},
+			promotion: &kargoapi.Promotion{},
 			assertions: func(t *testing.T, _ *kargoapi.Promotion, err error) {
 				require.ErrorContains(t, err, "defines no promotion steps")
 			},
 		},
 		{
 			name: "success with PromotionTemplate",
-			promotion: &kargoapi.Promotion{
-				Spec: kargoapi.PromotionSpec{
-					Stage: "fake-stage",
-					Steps: []kargoapi.PromotionStep{
-						{},
-					},
-				},
-			},
 			webhook: &webhook{
-				admissionRequestFromContextFn: func(context.Context) (admission.Request, error) {
-					return admission.Request{}, nil
-				},
+				admissionRequestFromContextFn: admission.RequestFromContext,
 				getStageFn: func(
 					context.Context,
 					client.Client,
@@ -126,6 +144,22 @@ func TestDefault(t *testing.T) {
 						},
 					}, nil
 				},
+				isRequestFromKargoControlplaneFn: func(admission.Request) bool {
+					return false
+				},
+			},
+			req: admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					Operation: admissionv1.Create,
+				},
+			},
+			promotion: &kargoapi.Promotion{
+				Spec: kargoapi.PromotionSpec{
+					Stage: "fake-stage",
+					Steps: []kargoapi.PromotionStep{
+						{},
+					},
+				},
 			},
 			assertions: func(t *testing.T, promo *kargoapi.Promotion, err error) {
 				require.NoError(t, err)
@@ -133,19 +167,468 @@ func TestDefault(t *testing.T) {
 				require.NotEmpty(t, promo.OwnerReferences)
 			},
 		},
+		{
+			name: "set abort actor when request doesn't come from kargo control plane",
+			webhook: &webhook{
+				admissionRequestFromContextFn: admission.RequestFromContext,
+				getStageFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Stage, error) {
+					return &kargoapi.Stage{}, nil
+				},
+				isRequestFromKargoControlplaneFn: func(admission.Request) bool {
+					return false
+				},
+			},
+			req: admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					Operation: admissionv1.Update,
+					UserInfo: authnv1.UserInfo{
+						Username: "real-user",
+					},
+					OldObject: runtime.RawExtension{
+						Object: &kargoapi.Promotion{},
+					},
+				},
+			},
+			promotion: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyAbort: "fake-action",
+					},
+				},
+				Spec: kargoapi.PromotionSpec{
+					Steps: []kargoapi.PromotionStep{
+						{},
+					},
+				},
+			},
+			assertions: func(t *testing.T, promotion *kargoapi.Promotion, err error) {
+				require.NoError(t, err)
+				require.Contains(t, promotion.Annotations, kargoapi.AnnotationKeyAbort)
+				rr, ok := kargoapi.AbortPromotionAnnotationValue(promotion.Annotations)
+				require.True(t, ok)
+				require.Equal(t, &kargoapi.AbortPromotionRequest{
+					Action: "fake-action",
+					Actor: kargoapi.FormatEventKubernetesUserActor(authnv1.UserInfo{
+						Username: "real-user",
+					}),
+					ControlPlane: false,
+				}, rr)
+			},
+		},
+		{
+			name: "overwrite with admission request user info if abort actor annotation exists",
+			webhook: &webhook{
+				admissionRequestFromContextFn: admission.RequestFromContext,
+				getStageFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Stage, error) {
+					return &kargoapi.Stage{}, nil
+				},
+				isRequestFromKargoControlplaneFn: func(admission.Request) bool {
+					return false
+				},
+			},
+			req: admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					Operation: admissionv1.Update,
+					UserInfo: authnv1.UserInfo{
+						Username: "real-user",
+					},
+					OldObject: runtime.RawExtension{
+						Object: &kargoapi.Promotion{},
+					},
+				},
+			},
+			promotion: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyAbort: (&kargoapi.AbortPromotionRequest{
+							Action: "fake-action",
+							Actor:  "fake-user",
+						}).String(),
+					},
+				},
+				Spec: kargoapi.PromotionSpec{
+					Steps: []kargoapi.PromotionStep{
+						{},
+					},
+				},
+			},
+			assertions: func(t *testing.T, promotion *kargoapi.Promotion, err error) {
+				require.NoError(t, err)
+				require.Contains(t, promotion.Annotations, kargoapi.AnnotationKeyAbort)
+				rr, ok := kargoapi.AbortPromotionAnnotationValue(promotion.Annotations)
+				require.True(t, ok)
+				require.Equal(t, &kargoapi.AbortPromotionRequest{
+					Action: "fake-action",
+					Actor: kargoapi.FormatEventKubernetesUserActor(authnv1.UserInfo{
+						Username: "real-user",
+					}),
+					ControlPlane: false,
+				}, rr)
+			},
+		},
+		{
+			name: "do not overwrite abort actor when request comes from control plane",
+			webhook: &webhook{
+				admissionRequestFromContextFn: admission.RequestFromContext,
+				getStageFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Stage, error) {
+					return &kargoapi.Stage{}, nil
+				},
+				isRequestFromKargoControlplaneFn: func(admission.Request) bool {
+					return true
+				},
+			},
+			req: admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					Operation: admissionv1.Update,
+					UserInfo: authnv1.UserInfo{
+						Username: "control-plane-user",
+					},
+					OldObject: runtime.RawExtension{
+						Object: &kargoapi.Promotion{},
+					},
+				},
+			},
+			promotion: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyAbort: (&kargoapi.AbortPromotionRequest{
+							Action: "fake-action",
+							Actor:  kargoapi.EventActorAdmin,
+						}).String(),
+					},
+				},
+				Spec: kargoapi.PromotionSpec{
+					Steps: []kargoapi.PromotionStep{
+						{},
+					},
+				},
+			},
+			assertions: func(t *testing.T, promotion *kargoapi.Promotion, err error) {
+				require.NoError(t, err)
+				require.Contains(t, promotion.Annotations, kargoapi.AnnotationKeyAbort)
+				rr, ok := kargoapi.AbortPromotionAnnotationValue(promotion.Annotations)
+				require.True(t, ok)
+				require.Equal(t, &kargoapi.AbortPromotionRequest{
+					Action:       "fake-action",
+					Actor:        kargoapi.EventActorAdmin,
+					ControlPlane: true,
+				}, rr)
+			},
+		},
+		{
+			name: "overwrite abort actor when it has changed for the same ID",
+			webhook: &webhook{
+				admissionRequestFromContextFn: admission.RequestFromContext,
+				getStageFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Stage, error) {
+					return &kargoapi.Stage{}, nil
+				},
+				isRequestFromKargoControlplaneFn: func(admission.Request) bool {
+					return false
+				},
+			},
+			req: admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					Operation: admissionv1.Update,
+					UserInfo: authnv1.UserInfo{
+						Username: "real-user",
+					},
+					OldObject: runtime.RawExtension{
+						Object: &kargoapi.Promotion{
+							ObjectMeta: metav1.ObjectMeta{
+								Annotations: map[string]string{
+									kargoapi.AnnotationKeyAbort: (&kargoapi.AbortPromotionRequest{
+										Action: "fake-action",
+										Actor:  "fake-user",
+									}).String(),
+								},
+							},
+						},
+					},
+				},
+			},
+			promotion: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyAbort: (&kargoapi.AbortPromotionRequest{
+							Action: "fake-action",
+							Actor:  "illegitimate-user",
+						}).String(),
+					},
+				},
+				Spec: kargoapi.PromotionSpec{
+					Steps: []kargoapi.PromotionStep{
+						{},
+					},
+				},
+			},
+			assertions: func(t *testing.T, promotion *kargoapi.Promotion, err error) {
+				require.NoError(t, err)
+				require.Contains(t, promotion.Annotations, kargoapi.AnnotationKeyAbort)
+				rr, ok := kargoapi.AbortPromotionAnnotationValue(promotion.Annotations)
+				require.True(t, ok)
+				require.Equal(t, &kargoapi.AbortPromotionRequest{
+					Action: "fake-action",
+					Actor:  kargoapi.FormatEventKubernetesUserActor(authnv1.UserInfo{Username: "real-user"}),
+				}, rr)
+			},
+		},
+		{
+			name: "overwrite abort control plane flag when it has changed for the same ID",
+			webhook: &webhook{
+				admissionRequestFromContextFn: admission.RequestFromContext,
+				getStageFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Stage, error) {
+					return &kargoapi.Stage{}, nil
+				},
+				isRequestFromKargoControlplaneFn: func(admission.Request) bool {
+					return false
+				},
+			},
+			req: admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					Operation: admissionv1.Update,
+					UserInfo: authnv1.UserInfo{
+						Username: "real-user",
+					},
+					OldObject: runtime.RawExtension{
+						Object: &kargoapi.Promotion{
+							ObjectMeta: metav1.ObjectMeta{
+								Annotations: map[string]string{
+									kargoapi.AnnotationKeyAbort: (&kargoapi.AbortPromotionRequest{
+										Action: "fake-action",
+										Actor:  "fake-user",
+									}).String(),
+								},
+							},
+						},
+					},
+				},
+			},
+			promotion: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyAbort: (&kargoapi.AbortPromotionRequest{
+							Action:       "fake-action",
+							Actor:        "fake-user",
+							ControlPlane: true,
+						}).String(),
+					},
+				},
+				Spec: kargoapi.PromotionSpec{
+					Steps: []kargoapi.PromotionStep{
+						{},
+					},
+				},
+			},
+			assertions: func(t *testing.T, promotion *kargoapi.Promotion, err error) {
+				require.NoError(t, err)
+				require.Contains(t, promotion.Annotations, kargoapi.AnnotationKeyAbort)
+				rr, ok := kargoapi.AbortPromotionAnnotationValue(promotion.Annotations)
+				require.True(t, ok)
+				require.Equal(t, &kargoapi.AbortPromotionRequest{
+					Action:       "fake-action",
+					Actor:        kargoapi.FormatEventKubernetesUserActor(authnv1.UserInfo{Username: "real-user"}),
+					ControlPlane: false,
+				}, rr)
+			},
+		},
+		{
+			name: "ignore empty abort annotation",
+			webhook: &webhook{
+				admissionRequestFromContextFn: admission.RequestFromContext,
+				getStageFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Stage, error) {
+					return &kargoapi.Stage{}, nil
+				},
+				isRequestFromKargoControlplaneFn: func(admission.Request) bool {
+					return false
+				},
+			},
+			req: admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					Operation: admissionv1.Update,
+					UserInfo: authnv1.UserInfo{
+						Username: "real-user",
+					},
+					OldObject: runtime.RawExtension{
+						Object: &kargoapi.Promotion{},
+					},
+				},
+			},
+			promotion: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyAbort: "",
+					},
+				},
+				Spec: kargoapi.PromotionSpec{
+					Steps: []kargoapi.PromotionStep{
+						{},
+					},
+				},
+			},
+			assertions: func(t *testing.T, promotion *kargoapi.Promotion, err error) {
+				require.NoError(t, err)
+				v, ok := promotion.Annotations[kargoapi.AnnotationKeyAbort]
+				require.True(t, ok)
+				require.Empty(t, v)
+			},
+		},
+		{
+			name: "ignore abort annotation with empty ID",
+			webhook: &webhook{
+				admissionRequestFromContextFn: admission.RequestFromContext,
+				getStageFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Stage, error) {
+					return &kargoapi.Stage{}, nil
+				},
+				isRequestFromKargoControlplaneFn: func(admission.Request) bool {
+					return false
+				},
+			},
+			req: admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					Operation: admissionv1.Update,
+					UserInfo: authnv1.UserInfo{
+						Username: "real-user",
+					},
+					OldObject: runtime.RawExtension{
+						Object: &kargoapi.Promotion{},
+					},
+				},
+			},
+			promotion: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyAbort: (&kargoapi.AbortPromotionRequest{
+							Action: "",
+						}).String(),
+					},
+				},
+				Spec: kargoapi.PromotionSpec{
+					Steps: []kargoapi.PromotionStep{
+						{},
+					},
+				},
+			},
+			assertions: func(t *testing.T, promotion *kargoapi.Promotion, err error) {
+				require.NoError(t, err)
+				v, ok := promotion.Annotations[kargoapi.AnnotationKeyAbort]
+				require.True(t, ok)
+				require.Equal(t, (&kargoapi.AbortPromotionRequest{
+					Action: "",
+				}).String(), v)
+			},
+		},
+		{
+			name: "ignore unchanged abort annotation",
+			webhook: &webhook{
+				admissionRequestFromContextFn: admission.RequestFromContext,
+				getStageFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Stage, error) {
+					return &kargoapi.Stage{}, nil
+				},
+				isRequestFromKargoControlplaneFn: func(admission.Request) bool {
+					return false
+				},
+			},
+			req: admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					Operation: admissionv1.Update,
+					UserInfo: authnv1.UserInfo{
+						Username: "real-user",
+					},
+					OldObject: runtime.RawExtension{
+						Object: &kargoapi.Promotion{
+							ObjectMeta: metav1.ObjectMeta{
+								Annotations: map[string]string{
+									kargoapi.AnnotationKeyAbort: (&kargoapi.AbortPromotionRequest{
+										Action: "fake-action",
+										Actor:  "fake-user",
+									}).String(),
+								},
+							},
+						},
+					},
+				},
+			},
+			promotion: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyAbort: (&kargoapi.AbortPromotionRequest{
+							Action: "fake-action",
+							Actor:  "fake-user",
+						}).String(),
+					},
+				},
+				Spec: kargoapi.PromotionSpec{
+					Steps: []kargoapi.PromotionStep{
+						{},
+					},
+				},
+			},
+			assertions: func(t *testing.T, promotion *kargoapi.Promotion, err error) {
+				require.NoError(t, err)
+				v, ok := promotion.Annotations[kargoapi.AnnotationKeyAbort]
+				require.True(t, ok)
+				require.Equal(t, (&kargoapi.AbortPromotionRequest{
+					Action: "fake-action",
+					Actor:  "fake-user",
+				}).String(), v)
+			},
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			promo := testCase.promotion
-			if promo == nil {
-				promo = &kargoapi.Promotion{
-					Spec: kargoapi.PromotionSpec{
-						Stage: "fake-stage",
-					},
-				}
+			// Apply default decoder to all test cases
+			testCase.webhook.decoder = admission.NewDecoder(scheme)
+
+			// Make sure old object has corresponding Raw data instead of Object
+			// since controller-runtime doesn't decode the old object.
+			if testCase.req.OldObject.Object != nil {
+				data, err := json.Marshal(testCase.req.OldObject.Object)
+				require.NoError(t, err)
+				testCase.req.OldObject.Raw = data
+				testCase.req.OldObject.Object = nil
 			}
-			err := testCase.webhook.Default(context.Background(), promo)
-			testCase.assertions(t, promo, err)
+
+			ctx := admission.NewContextWithRequest(
+				context.Background(),
+				testCase.req,
+			)
+			testCase.assertions(
+				t,
+				testCase.promotion,
+				testCase.webhook.Default(ctx, testCase.promotion),
+			)
 		})
 	}
 }
@@ -460,7 +943,7 @@ func TestValidateUpdate(t *testing.T) {
 			name: "attempt to mutate",
 			setup: func() (*kargoapi.Promotion, *kargoapi.Promotion) {
 				oldPromo := &kargoapi.Promotion{
-					ObjectMeta: v1.ObjectMeta{
+					ObjectMeta: metav1.ObjectMeta{
 						Name:      "fake-name",
 						Namespace: "fake-namespace",
 					},
@@ -486,7 +969,7 @@ func TestValidateUpdate(t *testing.T) {
 			name: "update without mutation",
 			setup: func() (*kargoapi.Promotion, *kargoapi.Promotion) {
 				oldPromo := &kargoapi.Promotion{
-					ObjectMeta: v1.ObjectMeta{
+					ObjectMeta: metav1.ObjectMeta{
 						Name:      "fake-name",
 						Namespace: "fake-namespace",
 					},
@@ -652,7 +1135,7 @@ func TestAuthorize(t *testing.T) {
 				w.authorize(
 					context.Background(),
 					&kargoapi.Promotion{
-						ObjectMeta: v1.ObjectMeta{
+						ObjectMeta: metav1.ObjectMeta{
 							Name:      "fake-promotion",
 							Namespace: "fake-namespace",
 						},

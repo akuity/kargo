@@ -730,7 +730,7 @@ func (r *reconciler) syncNormalStage(
 
 					// Abort the verification if it's still running and the Stage has
 					// been marked to do so.
-					if req, _ := kargoapi.AbortAnnotationValue(
+					if req, _ := kargoapi.AbortVerificationAnnotationValue(
 						stage.GetAnnotations(),
 					); !currentVI.Phase.IsTerminal() && req.ForID(currentVI.ID) {
 						logger.Debug("aborting verification")

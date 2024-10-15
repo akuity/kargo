@@ -80,6 +80,13 @@ type reconciler struct {
 		*kargoapi.Stage,
 		*kargoapi.Freight,
 	) (*kargoapi.PromotionStatus, error)
+
+	terminatePromotionFn func(
+		context.Context,
+		*kargoapi.AbortPromotionRequest,
+		*kargoapi.Promotion,
+		*kargoapi.Freight,
+	) error
 }
 
 // SetupReconcilerWithManager initializes a reconciler for Promotion resources
@@ -254,6 +261,16 @@ func (r *reconciler) Reconcile(
 		"stage", promo.Spec.Stage,
 		"freight", promo.Spec.Freight,
 	)
+
+	// Terminate the Promotion if requested by the user.
+	if req, ok := kargoapi.AbortPromotionAnnotationValue(
+		promo.GetAnnotations(),
+	); ok && req.Action == kargoapi.AbortActionTerminate {
+		if err = r.terminatePromotionFn(ctx, req, promo, freight); err != nil {
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{}, nil
+	}
 
 	if promo.Status.Phase == kargoapi.PromotionPhaseRunning {
 		// anything we've already marked Running, we allow it to continue to reconcile
@@ -608,4 +625,56 @@ func (r *reconciler) buildTargetFreightCollection(
 	}
 	freightCol.UpdateOrPush(targetFreight)
 	return freightCol
+}
+
+// terminatePromotion terminates the given Promotion with a message indicating
+// that it was terminated on user request. It does nothing if the Promotion is
+// already in a terminal phase.
+func (r *reconciler) terminatePromotion(
+	ctx context.Context,
+	req *kargoapi.AbortPromotionRequest,
+	promo *kargoapi.Promotion,
+	freight *kargoapi.Freight,
+) error {
+	logger := logging.LoggerFromContext(ctx)
+
+	if promo.Status.Phase.IsTerminal() {
+		logger.Debug("can not terminate Promotion in terminal phase", "phase", promo.Status.Phase)
+		return nil
+	}
+
+	logger.Info("terminating Promotion")
+
+	newStatus := promo.Status.DeepCopy()
+	newStatus.Phase = kargoapi.PromotionPhaseAborted
+	newStatus.Message = "Promotion terminated on user request"
+	newStatus.FinishedAt = &metav1.Time{Time: time.Now()}
+
+	if err := kubeclient.PatchStatus(ctx, r.kargoClient, promo, func(status *kargoapi.PromotionStatus) {
+		*status = *newStatus
+	}); err != nil {
+		return err
+	}
+
+	eventMeta := kargoapi.NewPromotionEventAnnotations(ctx, "", promo, freight)
+
+	// Normally, the actor is inherited from the creator of the Promotion for
+	// events. For an abort request, however, we do not want to inherit this
+	// as the abort request is not necessarily made by the creator of the
+	// Promotion.
+	actor := kargoapi.FormatEventControllerActor(r.cfg.Name())
+	if req.Actor != "" {
+		actor = req.Actor
+	}
+	eventMeta[kargoapi.AnnotationKeyEventActor] = actor
+
+	r.recorder.AnnotatedEventf(
+		promo,
+		eventMeta,
+		corev1.EventTypeNormal,
+		kargoapi.EventReasonPromotionAborted,
+		newStatus.Message,
+	)
+
+	return nil
 }
