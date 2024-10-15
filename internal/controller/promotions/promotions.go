@@ -37,7 +37,8 @@ import (
 
 // ReconcilerConfig represents configuration for the promotion reconciler.
 type ReconcilerConfig struct {
-	ShardName string `envconfig:"SHARD_NAME"`
+	ShardName        string `envconfig:"SHARD_NAME"`
+	APIServerBaseURL string `envconfig:"API_SERVER_BASE_URL"`
 }
 
 func (c ReconcilerConfig) Name() string {
@@ -506,13 +507,14 @@ func (r *reconciler) promote(
 	}
 
 	promoCtx := directives.PromotionContext{
-		WorkDir:         filepath.Join(os.TempDir(), "promotion-"+string(workingPromo.UID)),
-		Project:         stageNamespace,
-		Stage:           stageName,
-		FreightRequests: stage.Spec.RequestedFreight,
-		Freight:         *workingPromo.Status.FreightCollection.DeepCopy(),
-		StartFromStep:   promo.Status.CurrentStep,
-		State:           directives.State(workingPromo.Status.GetState()),
+		APIServerBaseURL: r.cfg.APIServerBaseURL,
+		WorkDir:          filepath.Join(os.TempDir(), "promotion-"+string(workingPromo.UID)),
+		Project:          stageNamespace,
+		Stage:            stageName,
+		FreightRequests:  stage.Spec.RequestedFreight,
+		Freight:          *workingPromo.Status.FreightCollection.DeepCopy(),
+		StartFromStep:    promo.Status.CurrentStep,
+		State:            directives.State(workingPromo.Status.GetState()),
 	}
 	if err := os.Mkdir(promoCtx.WorkDir, 0o700); err == nil {
 		// If we're working with a fresh directory, we should start the promotion

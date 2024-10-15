@@ -8,6 +8,13 @@ metadata:
     {{- include "kargo.labels" . | nindent 4 }}
     {{- include "kargo.controller.labels" . | nindent 4 }}
 data:
+  {{- if .Values.api.enabled }}
+  {{- if or .Values.api.tls.enabled (and .Values.api.ingress.enabled .Values.api.ingress.tls.enabled) }}
+  API_SERVER_BASE_URL: https://{{ .Values.api.host }}
+  {{- else }}
+  API_SERVER_BASE_URL: http://{{ .Values.api.host }}
+  {{- end }}
+  {{- end }}
   LOG_LEVEL: {{ quote .Values.controller.logLevel }}
   {{- if .Values.controller.shardName }}
   SHARD_NAME: {{ .Values.controller.shardName }}
