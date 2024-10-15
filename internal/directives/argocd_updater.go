@@ -831,7 +831,6 @@ func (a *argocdUpdater) buildKustomizeImagesForAppSource(
 			desiredOrigin,
 			stepCtx.Freight.References(),
 			imageUpdate.RepoURL,
-			true, // Treat as an error if not found
 		)
 		if err != nil {
 			return nil,
@@ -878,7 +877,6 @@ func (a *argocdUpdater) buildHelmParamChangesForAppSource(
 			desiredOrigin,
 			stepCtx.Freight.References(),
 			imageUpdate.RepoURL,
-			true, // Treat as an error if not found
 		)
 		if err != nil {
 			return nil,

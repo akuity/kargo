@@ -11,6 +11,14 @@ import (
 	libGit "github.com/akuity/kargo/internal/git"
 )
 
+type NotFoundError struct {
+	msg string
+}
+
+func (n NotFoundError) Error() string {
+	return n.msg
+}
+
 func FindCommit(
 	ctx context.Context,
 	cl client.Client,
@@ -19,7 +27,6 @@ func FindCommit(
 	desiredOrigin *kargoapi.FreightOrigin,
 	freight []kargoapi.FreightReference,
 	repoURL string,
-	mustFind bool,
 ) (*kargoapi.GitCommit, error) {
 	repoURL = libGit.NormalizeURL(repoURL)
 	// If no origin was explicitly identified, we need to look at all possible
@@ -65,11 +72,9 @@ func FindCommit(
 		}
 	}
 	if desiredOrigin == nil {
-		if mustFind {
-			// There is no chance of finding the commit we're looking for.
-			return nil, fmt.Errorf("commit from repo %s not found in referenced Freight", repoURL)
+		return nil, NotFoundError{
+			msg: fmt.Sprintf("commit from repo %s not found in referenced Freight", repoURL),
 		}
-		return nil, nil // The caller will decide how to deal with this
 	}
 	// We know exactly what we're after, so this should be easy
 	for i := range freight {
@@ -86,10 +91,9 @@ func FindCommit(
 	// If we get to here, we looked at all the FreightReferences and didn't find
 	// any that came from the desired origin. This could be because no Freight
 	// from the desired origin has been promoted yet.
-	if mustFind {
-		return nil, fmt.Errorf("commit from repo %s not found in referenced Freight", repoURL)
+	return nil, NotFoundError{
+		msg: fmt.Sprintf("commit from repo %s not found in referenced Freight", repoURL),
 	}
-	return nil, nil // The caller will decide how to deal with this
 }
 
 func FindImage(
@@ -100,7 +104,6 @@ func FindImage(
 	desiredOrigin *kargoapi.FreightOrigin,
 	freight []kargoapi.FreightReference,
 	repoURL string,
-	mustFind bool,
 ) (*kargoapi.Image, error) {
 	// If no origin was explicitly identified, we need to look at all possible
 	// origins. If there's only one that could provide the commit we're looking
@@ -143,10 +146,9 @@ func FindImage(
 	if desiredOrigin == nil {
 		// There is no chance of finding the commit we're looking for. Just return
 		// nil and let the caller decide what to do.
-		if mustFind {
-			return nil, fmt.Errorf("image from repo %s not found in referenced Freight", repoURL)
+		return nil, NotFoundError{
+			msg: fmt.Sprintf("image from repo %s not found in referenced Freight", repoURL),
 		}
-		return nil, nil // The caller will decide how to deal with this
 	}
 	// We know exactly what we're after, so this should be easy
 	for _, f := range freight {
@@ -161,10 +163,9 @@ func FindImage(
 	// If we get to here, we looked at all the FreightReferences and didn't find
 	// any that came from the desired origin. This could be because no Freight
 	// from the desired origin has been promoted yet.
-	if mustFind {
-		return nil, fmt.Errorf("image from repo %s not found in referenced Freight", repoURL)
+	return nil, NotFoundError{
+		msg: fmt.Sprintf("image from repo %s not found in referenced Freight", repoURL),
 	}
-	return nil, nil // The caller will decide how to deal with this
 }
 
 func FindChart(
@@ -176,7 +177,6 @@ func FindChart(
 	freight []kargoapi.FreightReference,
 	repoURL string,
 	chartName string,
-	mustFind bool,
 ) (*kargoapi.Chart, error) {
 	// If no origin was explicitly identified, we need to look at all possible
 	// origins. If there's only one that could provide the commit we're looking
@@ -217,13 +217,14 @@ func FindChart(
 		}
 		if desiredOrigin == nil {
 			// There is no chance of finding the chart version we're looking for.
-			if mustFind {
-				if chartName == "" {
-					return nil, fmt.Errorf("chart from repo %s not found in referenced Freight", repoURL)
+			if chartName == "" {
+				return nil, NotFoundError{
+					msg: fmt.Sprintf("chart from repo %s not found in referenced Freight", repoURL),
 				}
-				return nil, fmt.Errorf("chart %q from repo %s not found in referenced Freight", chartName, repoURL)
 			}
-			return nil, nil // The caller will decide how to deal with this
+			return nil, NotFoundError{
+				msg: fmt.Sprintf("chart %q from repo %s not found in referenced Freight", chartName, repoURL),
+			}
 		}
 	}
 	// We know exactly what we're after, so this should be easy
@@ -239,11 +240,12 @@ func FindChart(
 	// If we get to here, we looked at all the FreightReferences and didn't find
 	// any that came from the desired origin. This could be because no Freight
 	// from the desired origin has been promoted yet.
-	if mustFind {
-		if chartName == "" {
-			return nil, fmt.Errorf("chart from repo %s not found in referenced Freight", repoURL)
+	if chartName == "" {
+		return nil, NotFoundError{
+			msg: fmt.Sprintf("chart from repo %s not found in referenced Freight", repoURL),
 		}
-		return nil, fmt.Errorf("chart %q from repo %s not found in referenced Freight", chartName, repoURL)
 	}
-	return nil, nil // The caller will decide how to deal with this
+	return nil, NotFoundError{
+		msg: fmt.Sprintf("chart %q from repo %s not found in referenced Freight", chartName, repoURL),
+	}
 }

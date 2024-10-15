@@ -112,7 +112,6 @@ func (h *helmImageUpdater) generateImageUpdates(
 			desiredOrigin,
 			stepCtx.Freight.References(),
 			image.Image,
-			true, // Treat as an error if not found
 		)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to find image %s: %w", image.Image, err)

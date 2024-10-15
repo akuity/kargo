@@ -112,14 +112,13 @@ func (a *argocdUpdater) getDesiredRevisionForSource(
 			stepCtx.Freight.References(),
 			repoURL,
 			chartName,
-			false, // mustFind = false means we'll deal with a nil result ourselves
 		)
 		if err != nil {
+			if _, ok := err.(freight.NotFoundError); ok {
+				return "", nil
+			}
 			return "",
 				fmt.Errorf("error finding chart from repo %q: %w", repoURL, err)
-		}
-		if chart == nil {
-			return "", nil
 		}
 		return chart.Version, nil
 	case src.RepoURL != "":
@@ -132,14 +131,13 @@ func (a *argocdUpdater) getDesiredRevisionForSource(
 			desiredOrigin,
 			stepCtx.Freight.References(),
 			src.RepoURL,
-			false, // mustFind = false means we'll deal with a nil result ourselves
 		)
 		if err != nil {
+			if _, ok := err.(freight.NotFoundError); ok {
+				return "", nil
+			}
 			return "",
 				fmt.Errorf("error finding commit from repo %q: %w", src.RepoURL, err)
-		}
-		if commit == nil {
-			return "", nil
 		}
 		return commit.ID, nil
 	}

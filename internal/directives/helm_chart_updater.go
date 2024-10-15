@@ -160,7 +160,6 @@ func (h *helmChartUpdater) processChartUpdates(
 			stepCtx.Freight.References(),
 			repoURL,
 			chartName,
-			true, // Treat as an error if not found
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to find chart: %w", err)

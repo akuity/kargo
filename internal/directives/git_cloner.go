@@ -139,7 +139,6 @@ func (g *gitCloner) runPromotionStep(
 				desiredOrigin,
 				stepCtx.Freight.References(),
 				cfg.RepoURL,
-				true, // Treat as an error if not found
 			); err != nil {
 				return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
 					fmt.Errorf("error finding commit from repo %s: %w", cfg.RepoURL, err)
