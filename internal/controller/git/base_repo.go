@@ -12,6 +12,11 @@ import (
 	libExec "github.com/akuity/kargo/internal/exec"
 )
 
+const (
+	defaultUsername = "Kargo"
+	defaultEmail    = "no-reply@kargo.io"
+)
+
 // baseRepo implements the common underpinnings of a Git repository with a
 // single working tree, a bare repository, or working tree associated with a
 // bare repository.
@@ -83,7 +88,7 @@ func (b *baseRepo) setupAuthor(author *User) error {
 	}
 
 	if author.Name == "" {
-		author.Name = "Kargo"
+		author.Name = defaultUsername
 	}
 
 	cmd := b.buildGitCommand("config", "--global", "user.name", author.Name)
@@ -93,7 +98,7 @@ func (b *baseRepo) setupAuthor(author *User) error {
 	}
 
 	if author.Email == "" {
-		author.Name = "kargo@akuity.io"
+		author.Email = defaultEmail
 	}
 
 	cmd = b.buildGitCommand("config", "--global", "user.email", author.Email)
