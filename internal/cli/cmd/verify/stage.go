@@ -74,7 +74,10 @@ func (o *verifyStageOptions) addFlags(cmd *cobra.Command) {
 		cmd.Flags(), &o.Project, o.Config.Project,
 		"The project the stage belongs to. If not set, the default project will be used.",
 	)
-	cmd.Flags().BoolVar(&o.Abort, "abort", false, "If set, the verification will be aborted.")
+	option.Abort(
+		cmd.Flags(), &o.Abort, false,
+		"If set, the verification will be aborted.",
+	)
 }
 
 // complete sets the options from the command arguments.
