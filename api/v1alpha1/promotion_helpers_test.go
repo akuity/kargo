@@ -65,6 +65,75 @@ func TestGetPromotion(t *testing.T) {
 	}
 }
 
+func TestAbortPromotion(t *testing.T) {
+	scheme := k8sruntime.NewScheme()
+	require.NoError(t, SchemeBuilder.AddToScheme(scheme))
+
+	t.Run("not found", func(t *testing.T) {
+		c := fake.NewClientBuilder().WithScheme(scheme).Build()
+
+		err := AbortPromotion(context.TODO(), c, types.NamespacedName{
+			Namespace: "fake-namespace",
+			Name:      "fake-promotion",
+		}, AbortActionTerminate)
+		require.ErrorContains(t, err, "not found")
+	})
+
+	t.Run("already in a terminal phase", func(t *testing.T) {
+		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+			&Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-namespace",
+					Name:      "fake-promotion",
+				},
+				Status: PromotionStatus{
+					Phase: PromotionPhaseSucceeded,
+				},
+			},
+		).Build()
+
+		err := AbortPromotion(context.TODO(), c, types.NamespacedName{
+			Namespace: "fake-namespace",
+			Name:      "fake-promotion",
+		}, AbortActionTerminate)
+		require.NoError(t, err)
+
+		promotion, err := GetPromotion(context.TODO(), c, types.NamespacedName{
+			Namespace: "fake-namespace",
+			Name:      "fake-promotion",
+		})
+		require.NoError(t, err)
+		_, ok := promotion.Annotations[AnnotationKeyAbort]
+		require.False(t, ok)
+	})
+
+	t.Run("success", func(t *testing.T) {
+		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+			&Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-namespace",
+					Name:      "fake-promotion",
+				},
+			},
+		).Build()
+
+		err := AbortPromotion(context.TODO(), c, types.NamespacedName{
+			Namespace: "fake-namespace",
+			Name:      "fake-promotion",
+		}, AbortActionTerminate)
+		require.NoError(t, err)
+
+		stage, err := GetPromotion(context.TODO(), c, types.NamespacedName{
+			Namespace: "fake-namespace",
+			Name:      "fake-promotion",
+		})
+		require.NoError(t, err)
+		require.Equal(t, (&AbortPromotionRequest{
+			Action: AbortActionTerminate,
+		}).String(), stage.Annotations[AnnotationKeyAbort])
+	})
+}
+
 func Test_ComparePromotionByPhaseAndCreationTime(t *testing.T) {
 	now := time.Date(2024, time.April, 10, 0, 0, 0, 0, time.UTC)
 	ulidEarlier := ulid.MustNew(ulid.Timestamp(now.Add(-time.Hour)), nil)

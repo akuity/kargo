@@ -9,6 +9,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/akuity/kargo/internal/api/user"
 )
 
 // AbortAction is an action to take on a Promotion to abort it.
@@ -75,6 +77,43 @@ func RefreshPromotion(
 		return nil, fmt.Errorf("refresh: %w", err)
 	}
 	return promo, nil
+}
+
+// AbortPromotion forces aborting the Promotion by setting an annotation on the
+// object, causing the controller to abort the Promotion. The annotation value
+// is the action to take on the Promotion to abort it.
+func AbortPromotion(
+	ctx context.Context,
+	c client.Client,
+	namespacedName types.NamespacedName,
+	action AbortAction,
+) error {
+	promotion, err := GetPromotion(ctx, c, namespacedName)
+	if err != nil || promotion == nil {
+		if promotion == nil {
+			err = fmt.Errorf(
+				"Promotion %q in namespace %q not found",
+				namespacedName.Name,
+				namespacedName.Namespace,
+			)
+		}
+		return err
+	}
+
+	if promotion.Status.Phase.IsTerminal() {
+		// The Promotion is already in a terminal phase, so we can skip the
+		// abort request.
+		return nil
+	}
+
+	ar := AbortPromotionRequest{
+		Action: action,
+	}
+	// Put actor information to track on the controller side
+	if u, ok := user.InfoFromContext(ctx); ok {
+		ar.Actor = FormatEventUserActor(u)
+	}
+	return patchAnnotation(ctx, c, promotion, AnnotationKeyAbort, ar.String())
 }
 
 // ComparePromotionByPhaseAndCreationTime compares two Promotions by their

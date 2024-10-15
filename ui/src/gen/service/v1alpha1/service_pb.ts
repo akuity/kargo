@@ -1970,6 +1970,82 @@ export class WatchPromotionResponse extends Message<WatchPromotionResponse> {
 }
 
 /**
+ * @generated from message akuity.io.kargo.service.v1alpha1.AbortPromotionRequest
+ */
+export class AbortPromotionRequest extends Message<AbortPromotionRequest> {
+  /**
+   * @generated from field: string project = 1;
+   */
+  project = "";
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name = "";
+
+  constructor(data?: PartialMessage<AbortPromotionRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.AbortPromotionRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "project", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AbortPromotionRequest {
+    return new AbortPromotionRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): AbortPromotionRequest {
+    return new AbortPromotionRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): AbortPromotionRequest {
+    return new AbortPromotionRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: AbortPromotionRequest | PlainMessage<AbortPromotionRequest> | undefined, b: AbortPromotionRequest | PlainMessage<AbortPromotionRequest> | undefined): boolean {
+    return proto3.util.equals(AbortPromotionRequest, a, b);
+  }
+}
+
+/**
+ * explicitly empty 
+ *
+ * @generated from message akuity.io.kargo.service.v1alpha1.AbortPromotionResponse
+ */
+export class AbortPromotionResponse extends Message<AbortPromotionResponse> {
+  constructor(data?: PartialMessage<AbortPromotionResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.AbortPromotionResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AbortPromotionResponse {
+    return new AbortPromotionResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): AbortPromotionResponse {
+    return new AbortPromotionResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): AbortPromotionResponse {
+    return new AbortPromotionResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: AbortPromotionResponse | PlainMessage<AbortPromotionResponse> | undefined, b: AbortPromotionResponse | PlainMessage<AbortPromotionResponse> | undefined): boolean {
+    return proto3.util.equals(AbortPromotionResponse, a, b);
+  }
+}
+
+/**
  * @generated from message akuity.io.kargo.service.v1alpha1.DeleteProjectRequest
  */
 export class DeleteProjectRequest extends Message<DeleteProjectRequest> {
