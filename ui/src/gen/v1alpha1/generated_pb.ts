@@ -11,65 +11,6 @@ import { Condition, Duration, ListMeta, ObjectMeta, Time } from "../k8s.io/apima
 import { JSON } from "../k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1/generated_pb.js";
 
 /**
- * AbortPromotionRequest is a request payload with an optional actor field which
- * can be used to annotate a Promotion using the AnnotationKeyAbort annotation.
- *
- * @generated from message github.com.akuity.kargo.api.v1alpha1.AbortPromotionRequest
- */
-export class AbortPromotionRequest extends Message<AbortPromotionRequest> {
-  /**
-   * Action is the action to take on the Promotion to abort it.
-   *
-   * @generated from field: optional string action = 1;
-   */
-  action?: string;
-
-  /**
-   * Actor is the user who initiated the request.
-   *
-   * @generated from field: optional string actor = 2;
-   */
-  actor?: string;
-
-  /**
-   * ControlPlane is a flag to indicate if the request has been initiated by
-   * a control plane.
-   *
-   * @generated from field: optional bool controlPlane = 3;
-   */
-  controlPlane?: boolean;
-
-  constructor(data?: PartialMessage<AbortPromotionRequest>) {
-    super();
-    proto2.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto2 = proto2;
-  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.AbortPromotionRequest";
-  static readonly fields: FieldList = proto2.util.newFieldList(() => [
-    { no: 1, name: "action", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 2, name: "actor", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 3, name: "controlPlane", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AbortPromotionRequest {
-    return new AbortPromotionRequest().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): AbortPromotionRequest {
-    return new AbortPromotionRequest().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): AbortPromotionRequest {
-    return new AbortPromotionRequest().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: AbortPromotionRequest | PlainMessage<AbortPromotionRequest> | undefined, b: AbortPromotionRequest | PlainMessage<AbortPromotionRequest> | undefined): boolean {
-    return proto2.util.equals(AbortPromotionRequest, a, b);
-  }
-}
-
-/**
  * AnalysisRunArgument represents an argument to be added to an AnalysisRun.
  *
  * @generated from message github.com.akuity.kargo.api.v1alpha1.AnalysisRunArgument

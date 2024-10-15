@@ -440,7 +440,8 @@ func Test_reconciler_terminatePromotion(t *testing.T) {
 				recorder:    recorder,
 			}
 
-			err := r.terminatePromotion(context.Background(), tt.req.DeepCopy(), tt.promo, tt.freight)
+			req := tt.req
+			err := r.terminatePromotion(context.Background(), &req, tt.promo, tt.freight)
 			tt.assertions(t, recorder, tt.promo, err)
 		})
 	}
