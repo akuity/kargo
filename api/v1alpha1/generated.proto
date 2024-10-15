@@ -13,6 +13,20 @@ import "k8s.io/apimachinery/pkg/runtime/schema/generated.proto";
 // Package-wide variables from generator "generated".
 option go_package = "github.com/akuity/kargo/api/v1alpha1";
 
+// AbortPromotionRequest is a request payload with an optional actor field which
+// can be used to annotate a Promotion using the AnnotationKeyAbort annotation.
+message AbortPromotionRequest {
+  // Action is the action to take on the Promotion to abort it.
+  optional string action = 1;
+
+  // Actor is the user who initiated the request.
+  optional string actor = 2;
+
+  // ControlPlane is a flag to indicate if the request has been initiated by
+  // a control plane.
+  optional bool controlPlane = 3;
+}
+
 // AnalysisRunArgument represents an argument to be added to an AnalysisRun.
 message AnalysisRunArgument {
   // Name is the name of the argument.

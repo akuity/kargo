@@ -11,6 +11,28 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+// AbortAction is an action to take on a Promotion to abort it.
+type AbortAction string
+
+const (
+	// AbortActionTerminate is an action to terminate the Promotion.
+	// I.e. the Promotion will be marked as failed and the controller
+	// will stop processing it.
+	AbortActionTerminate AbortAction = "terminate"
+)
+
+// AbortPromotionRequest is a request payload with an optional actor field which
+// can be used to annotate a Promotion using the AnnotationKeyAbort annotation.
+type AbortPromotionRequest struct {
+	// Action is the action to take on the Promotion to abort it.
+	Action AbortAction `json:"action,omitempty" protobuf:"bytes,1,opt,name=action"`
+	// Actor is the user who initiated the request.
+	Actor string `json:"actor,omitempty" protobuf:"bytes,2,opt,name=actor"`
+	// ControlPlane is a flag to indicate if the request has been initiated by
+	// a control plane.
+	ControlPlane bool `json:"controlPlane,omitempty" protobuf:"varint,3,opt,name=controlPlane"`
+}
+
 // GetPromotion returns a pointer to the Promotion resource specified by the
 // namespacedName argument. If no such resource is found, nil is returned
 // instead.

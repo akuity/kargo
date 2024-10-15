@@ -127,10 +127,10 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 			}
 		}
 
-		if verReq, ok := kargoapi.AbortAnnotationValue(stage.Annotations); ok {
+		if verReq, ok := kargoapi.AbortVerificationAnnotationValue(stage.Annotations); ok {
 			var oldVerReq *kargoapi.VerificationRequest
 			if oldStage != nil {
-				oldVerReq, _ = kargoapi.AbortAnnotationValue(oldStage.Annotations)
+				oldVerReq, _ = kargoapi.AbortVerificationAnnotationValue(oldStage.Annotations)
 			}
 			// If the abort request has changed, enrich the annotation with the
 			// actor and control plane information.
