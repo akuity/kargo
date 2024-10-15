@@ -14,10 +14,10 @@ import (
 // SetStringsInFile overwrites the specified file with the changes specified by
 // the changes map applied. The changes map maps keys to new values. Keys are of
 // the form <key 0>.<key 1>...<key n>. Integers may be used as keys in cases
-// where a specific node needs to be selected from a sequence. Individual
-// changes are ignored without error if their key is not found or if their key
-// is found not to address a scalar node. Importantly, all comments and style
-// choices in the input bytes are preserved in the output.
+// where a specific node needs to be selected from a sequence. An error is
+// returned for any attempted update to a key that does not exist or does not
+// address a scalar node. Importantly, all comments and style choices in the
+// input bytes are preserved in the output.
 func SetStringsInFile(file string, changes map[string]string) error {
 	inBytes, err := os.ReadFile(file)
 	if err != nil {
@@ -50,9 +50,9 @@ func SetStringsInFile(file string, changes map[string]string) error {
 // specified by the changes map applied. The changes map maps keys to new
 // values. Keys are of the form <key 0>.<key 1>...<key n>. Integers may be used
 // as keys in cases where a specific node needs to be selected from a sequence.
-// Individual changes are ignored without error if their key is not found or
-// if their key is found not to address a scalar node. Importantly, all comments
-// and style choices in the input bytes are preserved in the output.
+// An error is returned for any attempted update to a key that does not exist or
+// does not address a scalar node. Importantly, all comments and style choices
+// in the input bytes are preserved in the output.
 func SetStringsInBytes(
 	inBytes []byte,
 	changes map[string]string,
@@ -69,11 +69,13 @@ func SetStringsInBytes(
 	changesByLine := map[int]change{}
 	for k, v := range changes {
 		keyPath := strings.Split(k, ".")
-		if found, line, col := findScalarNode(doc, keyPath); found {
-			changesByLine[line] = change{
-				col:   col,
-				value: v,
-			}
+		line, col, err := findScalarNode(doc, keyPath)
+		if err != nil {
+			return nil, fmt.Errorf("error finding key %s: %w", k, err)
+		}
+		changesByLine[line] = change{
+			col:   col,
+			value: v,
 		}
 	}
 
@@ -115,12 +117,12 @@ func SetStringsInBytes(
 	return outBuf.Bytes(), nil
 }
 
-func findScalarNode(node *yaml.Node, keyPath []string) (bool, int, int) {
+func findScalarNode(node *yaml.Node, keyPath []string) (int, int, error) {
 	if len(keyPath) == 0 {
 		if node.Kind == yaml.ScalarNode {
-			return true, node.Line - 1, node.Column - 1
+			return node.Line - 1, node.Column - 1, nil
 		}
-		return false, 0, 0
+		return 0, 0, fmt.Errorf("key path does not address a scalar node")
 	}
 	switch node.Kind {
 	case yaml.DocumentNode:
@@ -134,9 +136,9 @@ func findScalarNode(node *yaml.Node, keyPath []string) (bool, int, int) {
 	case yaml.SequenceNode:
 		index, err := strconv.Atoi(keyPath[0])
 		if err != nil {
-			return false, 0, 0
+			return 0, 0, err
 		}
 		return findScalarNode(node.Content[index], keyPath[1:])
 	}
-	return false, 0, 0
+	return 0, 0, fmt.Errorf("key path not found")
 }

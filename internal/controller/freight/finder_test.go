@@ -59,9 +59,8 @@ func TestFindCommit(t *testing.T) {
 					Commits: []kargoapi.GitCommit{testCommit2},
 				},
 			},
-			assertions: func(t *testing.T, commit *kargoapi.GitCommit, err error) {
-				require.NoError(t, err)
-				require.Nil(t, commit)
+			assertions: func(t *testing.T, _ *kargoapi.GitCommit, err error) {
+				require.ErrorContains(t, err, "not found in referenced Freight")
 			},
 		},
 		{
@@ -128,9 +127,8 @@ func TestFindCommit(t *testing.T) {
 					RequestedFreight: []kargoapi.FreightRequest{{Origin: testOrigin1}},
 				},
 			},
-			assertions: func(t *testing.T, commit *kargoapi.GitCommit, err error) {
-				require.NoError(t, err)
-				require.Nil(t, commit)
+			assertions: func(t *testing.T, _ *kargoapi.GitCommit, err error) {
+				require.ErrorContains(t, err, "not found in referenced Freight")
 			},
 		},
 		{
@@ -295,9 +293,8 @@ func TestFindImage(t *testing.T) {
 					Images: []kargoapi.Image{testImage2},
 				},
 			},
-			assertions: func(t *testing.T, image *kargoapi.Image, err error) {
-				require.NoError(t, err)
-				require.Nil(t, image)
+			assertions: func(t *testing.T, _ *kargoapi.Image, err error) {
+				require.ErrorContains(t, err, "not found in referenced Freight")
 			},
 		},
 		{
@@ -362,9 +359,8 @@ func TestFindImage(t *testing.T) {
 					RequestedFreight: []kargoapi.FreightRequest{{Origin: testOrigin1}},
 				},
 			},
-			assertions: func(t *testing.T, image *kargoapi.Image, err error) {
-				require.NoError(t, err)
-				require.Nil(t, image)
+			assertions: func(t *testing.T, _ *kargoapi.Image, err error) {
+				require.ErrorContains(t, err, "not found in referenced Freight")
 			},
 		},
 		{
@@ -478,8 +474,7 @@ func TestFindImage(t *testing.T) {
 				testCase.stage.Spec.RequestedFreight,
 				testCase.desiredOrigin,
 				testCase.freight,
-				testRepoURL,
-			)
+				testRepoURL)
 			testCase.assertions(t, image, err)
 		})
 	}
@@ -532,9 +527,8 @@ func TestFindChart(t *testing.T) {
 					Charts: []kargoapi.Chart{testChart2},
 				},
 			},
-			assertions: func(t *testing.T, chart *kargoapi.Chart, err error) {
-				require.NoError(t, err)
-				require.Nil(t, chart)
+			assertions: func(t *testing.T, _ *kargoapi.Chart, err error) {
+				require.ErrorContains(t, err, "not found in referenced Freight")
 			},
 		},
 		{
@@ -600,9 +594,8 @@ func TestFindChart(t *testing.T) {
 					RequestedFreight: []kargoapi.FreightRequest{{Origin: testOrigin1}},
 				},
 			},
-			assertions: func(t *testing.T, chart *kargoapi.Chart, err error) {
-				require.NoError(t, err)
-				require.Nil(t, chart)
+			assertions: func(t *testing.T, _ *kargoapi.Chart, err error) {
+				require.ErrorContains(t, err, "not found in referenced Freight")
 			},
 		},
 		{

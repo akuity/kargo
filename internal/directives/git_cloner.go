@@ -165,10 +165,6 @@ func (g *gitCloner) runPromotionStep(
 				return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
 					fmt.Errorf("error finding commit from repo %s: %w", cfg.RepoURL, err)
 			}
-			if commit == nil {
-				return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
-					fmt.Errorf("could not find any commit from repo %s", cfg.RepoURL)
-			}
 			ref = commit.ID
 		case checkout.Tag != "":
 			ref = checkout.Tag

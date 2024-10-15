@@ -117,10 +117,6 @@ func (h *helmImageUpdater) generateImageUpdates(
 			return nil, nil, fmt.Errorf("failed to find image %s: %w", image.Image, err)
 		}
 
-		if targetImage == nil {
-			continue
-		}
-
 		value, imageRef, err := h.getImageValues(targetImage, image.Value)
 		if err != nil {
 			return nil, nil, err
