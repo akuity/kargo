@@ -130,12 +130,10 @@ func (k *kustomizeImageSetter) buildTargetImages(
 			desiredOrigin,
 			stepCtx.Freight.References(),
 			img.Image,
+			true, // Treat as an error if not found
 		)
 		if err != nil {
 			return nil, fmt.Errorf("unable to discover image for %q: %w", img.Image, err)
-		}
-		if discoveredImage == nil {
-			return nil, fmt.Errorf("no image found for %q", img.Image)
 		}
 
 		targetImage := kustypes.Image{

@@ -241,9 +241,8 @@ func Test_helmChartUpdater_processChartUpdates(t *testing.T) {
 			chartDependencies: []chartDependency{
 				{Repository: "https://charts.example.com", Name: "non-existent-chart"},
 			},
-			assertions: func(t *testing.T, changes map[string]string, err error) {
-				assert.NoError(t, err)
-				assert.Empty(t, changes)
+			assertions: func(t *testing.T, _ map[string]string, err error) {
+				assert.ErrorContains(t, err, "not found in referenced Freight")
 			},
 		},
 		{
@@ -294,9 +293,8 @@ func Test_helmChartUpdater_processChartUpdates(t *testing.T) {
 				{Repository: "https://charts.example.com", Name: "chart1"},
 				{Repository: "https://charts.example.com", Name: "chart2"},
 			},
-			assertions: func(t *testing.T, changes map[string]string, err error) {
-				assert.NoError(t, err)
-				assert.Equal(t, map[string]string{"dependencies.0.version": "1.0.0"}, changes)
+			assertions: func(t *testing.T, _ map[string]string, err error) {
+				assert.ErrorContains(t, err, "not found in referenced Freight")
 			},
 		},
 		{

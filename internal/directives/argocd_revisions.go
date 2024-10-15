@@ -112,6 +112,7 @@ func (a *argocdUpdater) getDesiredRevisionForSource(
 			stepCtx.Freight.References(),
 			repoURL,
 			chartName,
+			false, // mustFind = false means we'll deal with a nil result ourselves
 		)
 		if err != nil {
 			return "",
@@ -131,6 +132,7 @@ func (a *argocdUpdater) getDesiredRevisionForSource(
 			desiredOrigin,
 			stepCtx.Freight.References(),
 			src.RepoURL,
+			false, // mustFind = false means we'll deal with a nil result ourselves
 		)
 		if err != nil {
 			return "",
