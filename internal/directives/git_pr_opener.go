@@ -164,11 +164,11 @@ func (g *gitPROpener) runPromotionStep(
 
 	title := strings.Split(commitMsg, "\n")[0]
 	description := commitMsg
-	if stepCtx.APIServerBaseURL != "" {
+	if stepCtx.UIBaseURL != "" {
 		description = fmt.Sprintf(
 			"%s\n\n[View in Kargo UI](%s/project/%s/stage/%s)",
 			description,
-			stepCtx.APIServerBaseURL,
+			stepCtx.UIBaseURL,
 			stepCtx.Project,
 			stepCtx.Stage,
 		)

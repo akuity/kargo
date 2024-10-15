@@ -88,15 +88,15 @@ func (e *SimpleEngine) Promote(
 		stateCopy := state.DeepCopy()
 
 		stepCtx := &PromotionStepContext{
-			APIServerBaseURL: promoCtx.APIServerBaseURL,
-			WorkDir:          workDir,
-			SharedState:      stateCopy,
-			Alias:            step.Alias,
-			Config:           step.Config.DeepCopy(),
-			Project:          promoCtx.Project,
-			Stage:            promoCtx.Stage,
-			FreightRequests:  promoCtx.FreightRequests,
-			Freight:          promoCtx.Freight,
+			UIBaseURL:       promoCtx.UIBaseURL,
+			WorkDir:         workDir,
+			SharedState:     stateCopy,
+			Alias:           step.Alias,
+			Config:          step.Config.DeepCopy(),
+			Project:         promoCtx.Project,
+			Stage:           promoCtx.Stage,
+			FreightRequests: promoCtx.FreightRequests,
+			Freight:         promoCtx.Freight,
 		}
 		// Selectively provide these capabilities via the PromotionStepContext.
 		if reg.Permissions.AllowCredentialsDB {

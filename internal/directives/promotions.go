@@ -25,10 +25,9 @@ type PromotionStepRunner interface {
 // PromotionContext is the context of a user-defined promotion process that is
 // executed by the Engine.
 type PromotionContext struct {
-	// APIServerBaseURL is the base URL of the Kargo API server. Steps may use
-	// this to construct URLs for interacting with the Kargo UI (which is served
-	// by the API server).
-	APIServerBaseURL string
+	// UIBaseURL may be used to construct deeper URLs for interacting with the
+	// Kargo UI.
+	UIBaseURL string
 	// WorkDir is the working directory to use for the Promotion.
 	WorkDir string
 	// Project is the Project that the Promotion is associated with.
@@ -99,10 +98,9 @@ type PromotionResult struct {
 // PromotionStepContext is a type that represents the context in which a
 // SinglePromotion step is executed by a PromotionStepRunner.
 type PromotionStepContext struct {
-	// APIServerBaseURL is the base URL of the Kargo API server. Steps may use
-	// this to construct URLs for interacting with the Kargo UI (which is served
-	// by the API server).
-	APIServerBaseURL string
+	// UIBaseURL may be used to construct deeper URLs for interacting with the
+	// Kargo UI.
+	UIBaseURL string
 	// WorkDir is the root directory for the execution of a step.
 	WorkDir string
 	// SharedState is the state shared between steps.

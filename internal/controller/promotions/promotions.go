@@ -507,14 +507,14 @@ func (r *reconciler) promote(
 	}
 
 	promoCtx := directives.PromotionContext{
-		APIServerBaseURL: r.cfg.APIServerBaseURL,
-		WorkDir:          filepath.Join(os.TempDir(), "promotion-"+string(workingPromo.UID)),
-		Project:          stageNamespace,
-		Stage:            stageName,
-		FreightRequests:  stage.Spec.RequestedFreight,
-		Freight:          *workingPromo.Status.FreightCollection.DeepCopy(),
-		StartFromStep:    promo.Status.CurrentStep,
-		State:            directives.State(workingPromo.Status.GetState()),
+		UIBaseURL:       r.cfg.APIServerBaseURL,
+		WorkDir:         filepath.Join(os.TempDir(), "promotion-"+string(workingPromo.UID)),
+		Project:         stageNamespace,
+		Stage:           stageName,
+		FreightRequests: stage.Spec.RequestedFreight,
+		Freight:         *workingPromo.Status.FreightCollection.DeepCopy(),
+		StartFromStep:   promo.Status.CurrentStep,
+		State:           directives.State(workingPromo.Status.GetState()),
 	}
 	if err := os.Mkdir(promoCtx.WorkDir, 0o700); err == nil {
 		// If we're working with a fresh directory, we should start the promotion
