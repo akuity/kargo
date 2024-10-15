@@ -2,6 +2,7 @@ package directives
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -114,7 +115,7 @@ func (a *argocdUpdater) getDesiredRevisionForSource(
 			chartName,
 		)
 		if err != nil {
-			if _, ok := err.(freight.NotFoundError); ok {
+			if errors.As(err, &freight.NotFoundError{}) {
 				return "", nil
 			}
 			return "",
@@ -133,7 +134,7 @@ func (a *argocdUpdater) getDesiredRevisionForSource(
 			src.RepoURL,
 		)
 		if err != nil {
-			if _, ok := err.(freight.NotFoundError); ok {
+			if errors.As(err, &freight.NotFoundError{}) {
 				return "", nil
 			}
 			return "",
