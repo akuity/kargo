@@ -12,6 +12,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	"github.com/akuity/kargo/api/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -58,11 +59,13 @@ func TestReconcile(t *testing.T) {
 		promos    []client.Object
 		promoteFn func(context.Context, v1alpha1.Promotion,
 			*v1alpha1.Freight) (*kargoapi.PromotionStatus, error)
-		promoToReconcile      *types.NamespacedName // if nil, uses the first of the promos
-		expectPromoteFnCalled bool
-		expectedPhase         kargoapi.PromotionPhase
-		expectedEventRecorded bool
-		expectedEventReason   string
+		terminateFn             func(context.Context, *kargoapi.Promotion) error
+		promoToReconcile        *types.NamespacedName // if nil, uses the first of the promos
+		expectPromoteFnCalled   bool
+		expectTerminateFnCalled bool
+		expectedPhase           kargoapi.PromotionPhase
+		expectedEventRecorded   bool
+		expectedEventReason     string
 	}{
 		{
 			name:                  "normal reconcile",
@@ -227,12 +230,33 @@ func TestReconcile(t *testing.T) {
 				return nil, errors.New("expected error")
 			},
 		},
+		{
+			name: "terminates promotion on request",
+			promos: []client.Object{
+				func() *kargoapi.Promotion {
+					p := newPromo(
+						"fake-namespace",
+						"fake-promo",
+						"fake-stage",
+						kargoapi.PromotionPhasePending,
+						now,
+					)
+					p.Annotations = map[string]string{
+						kargoapi.AnnotationKeyAbort: string(kargoapi.AbortActionTerminate),
+					}
+					return p
+				}(),
+			},
+			expectPromoteFnCalled:   false,
+			expectTerminateFnCalled: true,
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := context.TODO()
 			recorder := fakeevent.NewEventRecorder(1)
 			r := newFakeReconciler(t, recorder, tc.promos...)
+
 			promoteWasCalled := false
 			r.promoteFn = func(
 				ctx context.Context,
@@ -246,6 +270,19 @@ func TestReconcile(t *testing.T) {
 				}
 				return &kargoapi.PromotionStatus{Phase: kargoapi.PromotionPhaseSucceeded}, nil
 			}
+
+			terminateWasCalled := false
+			r.terminatePromotionFn = func(_ context.Context, promotion *kargoapi.Promotion) error {
+				terminateWasCalled = true
+				if tc.terminateFn != nil {
+					return tc.terminateFn(ctx, promotion)
+				}
+				promotion.Status.Phase = kargoapi.PromotionPhaseAborted
+				promotion.Status.Message = "terminated"
+				promotion.Status.FinishedAt = &metav1.Time{Time: now.Time}
+				return nil
+			}
+
 			var req ctrl.Request
 			if tc.promoToReconcile != nil {
 				req = ctrl.Request{NamespacedName: *tc.promoToReconcile}
@@ -260,6 +297,8 @@ func TestReconcile(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, tc.expectPromoteFnCalled, promoteWasCalled,
 				"promoteFn called: %t, expected %t", promoteWasCalled, tc.expectPromoteFnCalled)
+			require.Equal(t, tc.expectTerminateFnCalled, terminateWasCalled,
+				"terminateFn called: %t, expected %t", terminateWasCalled, tc.expectTerminateFnCalled)
 
 			if tc.expectedPhase != "" {
 				var updatedPromo kargoapi.Promotion
@@ -272,6 +311,98 @@ func TestReconcile(t *testing.T) {
 					require.Equal(t, tc.expectedEventReason, event.Reason)
 				}
 			}
+		})
+	}
+}
+
+func Test_reconciler_terminatePromotion(t *testing.T) {
+	scheme := k8sruntime.NewScheme()
+	require.NoError(t, kargoapi.SchemeBuilder.AddToScheme(scheme))
+
+	tests := []struct {
+		name        string
+		promo       *kargoapi.Promotion
+		interceptor interceptor.Funcs
+		assertions  func(*testing.T, *kargoapi.Promotion, error)
+	}{
+		{
+			name: "terminates pending promotion",
+			promo: newPromo(
+				"fake-namespace",
+				"fake-promo",
+				"fake-stage",
+				kargoapi.PromotionPhasePending,
+				now,
+			),
+			assertions: func(t *testing.T, promo *kargoapi.Promotion, err error) {
+				require.NoError(t, err)
+				require.Equal(t, kargoapi.PromotionPhaseAborted, promo.Status.Phase)
+				require.Contains(t, promo.Status.Message, "terminated")
+				require.NotNil(t, now, promo.Status.FinishedAt)
+			},
+		},
+		{
+			name: "promotion is already terminated",
+			promo: func() *kargoapi.Promotion {
+				p := newPromo(
+					"fake-namespace",
+					"fake-promo",
+					"fake-stage",
+					kargoapi.PromotionPhaseSucceeded,
+					now,
+				)
+				p.Status.Message = "an existing message"
+				return p
+			}(),
+			assertions: func(t *testing.T, promo *kargoapi.Promotion, err error) {
+				require.NoError(t, err)
+				require.Equal(t, kargoapi.PromotionPhaseSucceeded, promo.Status.Phase)
+				require.Equal(t, "an existing message", promo.Status.Message)
+			},
+		},
+		{
+			name: "status patch error",
+			promo: newPromo(
+				"fake-namespace",
+				"fake-promo",
+				"fake-stage",
+				kargoapi.PromotionPhasePending,
+				now,
+			),
+			interceptor: interceptor.Funcs{
+				SubResourcePatch: func(
+					context.Context,
+					client.Client,
+					string,
+					client.Object,
+					client.Patch,
+					...client.SubResourcePatchOption,
+				) error {
+					return errors.New("something went wrong")
+				},
+			},
+			assertions: func(t *testing.T, promo *kargoapi.Promotion, err error) {
+				require.ErrorContains(t, err, "something went wrong")
+				require.Equal(t, kargoapi.PromotionPhasePending, promo.Status.Phase)
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(tt.promo).
+				WithStatusSubresource(&kargoapi.Promotion{}).
+				WithInterceptorFuncs(tt.interceptor).
+				Build()
+
+			r := &reconciler{
+				kargoClient: c,
+				recorder:    &fakeevent.EventRecorder{},
+			}
+
+			err := r.terminatePromotion(context.Background(), tt.promo)
+			tt.assertions(t, tt.promo, err)
 		})
 	}
 }

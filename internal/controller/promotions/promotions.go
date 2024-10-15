@@ -80,6 +80,11 @@ type reconciler struct {
 		*kargoapi.Stage,
 		*kargoapi.Freight,
 	) (*kargoapi.PromotionStatus, error)
+
+	terminatePromotionFn func(
+		context.Context,
+		*kargoapi.Promotion,
+	) error
 }
 
 // SetupReconcilerWithManager initializes a reconciler for Promotion resources
@@ -254,6 +259,16 @@ func (r *reconciler) Reconcile(
 		"stage", promo.Spec.Stage,
 		"freight", promo.Spec.Freight,
 	)
+
+	// Terminate the Promotion if requested by the user.
+	if req, ok := kargoapi.AbortPromotionAnnotationValue(
+		promo.GetAnnotations(),
+	); ok && req.Action == kargoapi.AbortActionTerminate {
+		if err = r.terminatePromotionFn(ctx, promo); err != nil {
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{}, nil
+	}
 
 	if promo.Status.Phase == kargoapi.PromotionPhaseRunning {
 		// anything we've already marked Running, we allow it to continue to reconcile
@@ -608,4 +623,33 @@ func (r *reconciler) buildTargetFreightCollection(
 	}
 	freightCol.UpdateOrPush(targetFreight)
 	return freightCol
+}
+
+// terminatePromotion terminates the given Promotion with a message indicating
+// that it was terminated on user request. It does nothing if the Promotion is
+// already in a terminal phase.
+func (r *reconciler) terminatePromotion(ctx context.Context, promo *kargoapi.Promotion) error {
+	logger := logging.LoggerFromContext(ctx)
+
+	if promo.Status.Phase.IsTerminal() {
+		logger.Debug("can not terminate Promotion in terminal phase", "phase", promo.Status.Phase)
+		return nil
+	}
+
+	logger.Info("terminating promotion")
+
+	newStatus := promo.Status.DeepCopy()
+	newStatus.Phase = kargoapi.PromotionPhaseAborted
+	newStatus.Message = "Promotion terminated on user request"
+	newStatus.FinishedAt = &metav1.Time{Time: time.Now()}
+
+	if err := kubeclient.PatchStatus(ctx, r.kargoClient, promo, func(status *kargoapi.PromotionStatus) {
+		*status = *newStatus
+	}); err != nil {
+		return err
+	}
+
+	// TODO: record event
+
+	return nil
 }
