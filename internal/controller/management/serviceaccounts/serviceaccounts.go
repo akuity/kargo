@@ -48,16 +48,34 @@ type reconciler struct {
 		...client.GetOption,
 	) error
 
+	updateServiceAccountFn func(
+		context.Context,
+		client.Object,
+		...client.UpdateOption,
+	) error
+
 	createRoleBindingFn func(
 		context.Context,
 		client.Object,
 		...client.CreateOption,
 	) error
 
+	updateRoleBindingFn func(
+		context.Context,
+		client.Object,
+		...client.UpdateOption,
+	) error
+
 	deleteRoleBindingFn func(
 		context.Context,
 		client.Object,
 		...client.DeleteOption,
+	) error
+
+	listProjectFn func(
+		context.Context,
+		client.ObjectList,
+		...client.ListOption,
 	) error
 
 	ensureControllerPermissionsFn func(context.Context, *corev1.ServiceAccount) error
@@ -100,8 +118,11 @@ func newReconciler(kubeClient client.Client, cfg ReconcilerConfig) *reconciler {
 		client: kubeClient,
 	}
 	r.getServiceAccountFn = r.client.Get
+	r.updateServiceAccountFn = r.client.Update
 	r.createRoleBindingFn = r.client.Create
+	r.updateRoleBindingFn = r.client.Update
 	r.deleteRoleBindingFn = r.client.Delete
+	r.listProjectFn = r.client.List
 	r.ensureControllerPermissionsFn = r.ensureControllerPermissions
 	r.removeControllerPermissionsFn = r.removeControllerPermissions
 	return r
@@ -140,7 +161,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			return ctrl.Result{}, err
 		}
 		controllerutil.RemoveFinalizer(sa, kargoapi.FinalizerName)
-		if err := r.client.Update(ctx, sa); err != nil {
+		if err := r.updateServiceAccountFn(ctx, sa); err != nil {
 			return ctrl.Result{}, err
 		}
 		logger.Debug("Removed finalizer from ServiceAccount", "serviceaccount", sa.Name)
@@ -155,7 +176,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	// - Returns false if the finalizer is already present, avoiding redundant logs.
 	// - Adds the finalizer if not present, ensuring proper cleanup.
 	if controllerutil.AddFinalizer(sa, kargoapi.FinalizerName) {
-		if err := r.client.Update(ctx, sa); err != nil {
+		if err := r.updateServiceAccountFn(ctx, sa); err != nil {
 			return ctrl.Result{}, err
 		}
 		logger.Debug("Added finalizer to ServiceAccount", "serviceaccount", sa.Name)
@@ -182,7 +203,7 @@ func (r *reconciler) ensureControllerPermissions(ctx context.Context, sa *corev1
 	logger.Info("starting to create RoleBindings for all Projects")
 
 	projectList := &kargoapi.ProjectList{}
-	if err := r.client.List(ctx, projectList); err != nil {
+	if err := r.listProjectFn(ctx, projectList); err != nil {
 		return fmt.Errorf("error listing Projects: %w", err)
 	}
 
@@ -214,7 +235,7 @@ func (r *reconciler) ensureControllerPermissions(ctx context.Context, sa *corev1
 				return fmt.Errorf("error creating RoleBinding %q for ServiceAccount %q in Project namespace %q: %w",
 					roleBinding.Name, sa.Name, project.Name, err)
 			}
-			if updateErr := r.client.Update(ctx, roleBinding); updateErr != nil {
+			if updateErr := r.updateRoleBindingFn(ctx, roleBinding); updateErr != nil {
 				return fmt.Errorf("error updating existing RoleBinding %q in Project namespace %q: %w",
 					roleBinding.Name, project.Name, updateErr)
 			}
@@ -243,7 +264,7 @@ func (r *reconciler) removeControllerPermissions(ctx context.Context, sa types.N
 	logger.Info("Starting to delete RoleBindings for all Projects")
 
 	projectList := &kargoapi.ProjectList{}
-	if err := r.client.List(ctx, projectList); err != nil {
+	if err := r.listProjectFn(ctx, projectList); err != nil {
 		return fmt.Errorf("error listing Projects: %w", err)
 	}
 
