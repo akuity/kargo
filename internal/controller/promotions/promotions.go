@@ -274,10 +274,7 @@ func (r *reconciler) Reconcile(
 		return ctrl.Result{}, nil
 	}
 
-	if promo.Status.Phase == kargoapi.PromotionPhaseRunning {
-		// anything we've already marked Running, we allow it to continue to reconcile
-		logger.Debug("continuing Promotion")
-	} else {
+	if promo.Status.Phase == "" {
 		// promo is Pending. Try to begin it.
 		if !r.pqs.tryBegin(ctx, promo) {
 			// It wasn't our turn. Mark this promo as Pending (if it wasn't already)
@@ -288,17 +285,6 @@ func (r *reconciler) Reconcile(
 				return ctrl.Result{}, err
 			}
 			return ctrl.Result{}, nil
-		}
-		logger.Info("began promotion")
-	}
-
-	// Update promo status as Running to give visibility in UI. Also, a promo which
-	// has already entered Running status will be allowed to continue to reconcile.
-	if promo.Status.Phase != kargoapi.PromotionPhaseRunning {
-		if err = kubeclient.PatchStatus(ctx, r.kargoClient, promo, func(status *kargoapi.PromotionStatus) {
-			status.Phase = kargoapi.PromotionPhaseRunning
-		}); err != nil {
-			return ctrl.Result{}, err
 		}
 	}
 
@@ -323,7 +309,6 @@ func (r *reconciler) Reconcile(
 			promo.Spec.Stage, promo.Namespace,
 		)
 	}
-	logger.Debug("found associated Stage")
 
 	// Confirm that the Stage is awaiting this Promotion.
 	//
@@ -342,6 +327,19 @@ func (r *reconciler) Reconcile(
 	if stage.Status.CurrentPromotion == nil || stage.Status.CurrentPromotion.Name != promo.Name {
 		logger.Debug("Stage is not awaiting Promotion", "stage", stage.Name, "promotion", promo.Name)
 		return ctrl.Result{Requeue: true}, nil
+	}
+
+	// Update promo status as Running to give visibility in UI. Also, a promo which
+	// has already entered Running status will be allowed to continue to reconcile.
+	if promo.Status.Phase != kargoapi.PromotionPhaseRunning {
+		if err = kubeclient.PatchStatus(ctx, r.kargoClient, promo, func(status *kargoapi.PromotionStatus) {
+			status.Phase = kargoapi.PromotionPhaseRunning
+		}); err != nil {
+			return ctrl.Result{}, err
+		}
+		logger.Info("began promotion")
+	} else {
+		logger.Debug("continuing Promotion")
 	}
 
 	promoCtx := logging.ContextWithLogger(ctx, logger)
