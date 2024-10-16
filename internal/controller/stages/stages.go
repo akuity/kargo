@@ -778,7 +778,7 @@ func (r *reconciler) syncNormalStage(
 		// THEN
 		// Mark the Freight as verified in this Stage
 		if (status.Health == nil || status.Health.Status == kargoapi.HealthStateHealthy) &&
-			currentVI.Phase == kargoapi.VerificationPhaseSuccessful {
+			(currentVI != nil && currentVI.Phase == kargoapi.VerificationPhaseSuccessful) {
 			for _, freight := range currentFC.Freight {
 				updated, err := r.verifyFreightInStageFn(
 					ctx,
