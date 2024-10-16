@@ -1,3 +1,4 @@
+import { useMutation } from '@connectrpc/connect-query';
 import {
   faCheck,
   faCircleNotch,
@@ -5,10 +6,11 @@ import {
   faFileLines,
   faLinesLeaning,
   faShoePrints,
+  faStopCircle,
   faTimes
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Collapse, Flex, Modal, Segmented, Tabs, Tag } from 'antd';
+import { Button, Collapse, Flex, Modal, Segmented, Tabs, Tag } from 'antd';
 import Alert from 'antd/es/alert/Alert';
 import { SegmentedOptions } from 'antd/es/segmented';
 import classNames from 'classnames';
@@ -23,8 +25,11 @@ import {
 } from '@ui/features/common/promotion-directive-step-status/utils';
 import { usePromotionDirectivesRegistryContext } from '@ui/features/promotion-directives/registry/context/use-registry-context';
 import { Runner } from '@ui/features/promotion-directives/registry/types';
+import { abortPromotion } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 import { Promotion, PromotionStep } from '@ui/gen/v1alpha1/generated_pb';
 import { decodeRawData } from '@ui/utils/decode-raw-data';
+
+import { canAbortPromotion } from './utils/promotion';
 
 const Step = ({
   step,
@@ -160,10 +165,14 @@ const Step = ({
 export const PromotionDetailsModal = ({
   promotion,
   hide,
-  visible
+  visible,
+  project
 }: {
   promotion: Promotion;
+  project: string;
 } & ModalProps) => {
+  const abortPromotionMutation = useMutation(abortPromotion);
+
   const logsByStepAlias: Record<string, object> = useMemo(() => {
     if (promotion?.status?.state?.raw) {
       try {
@@ -188,6 +197,24 @@ export const PromotionDetailsModal = ({
       onOk={hide}
       onCancel={hide}
       cancelButtonProps={{ hidden: true }}
+      footer={
+        canAbortPromotion(promotion) && (
+          <>
+            <Button onClick={hide} type='primary'>
+              Close
+            </Button>
+            <Button
+              danger
+              icon={<FontAwesomeIcon icon={faStopCircle} className='text-lg' />}
+              onClick={() =>
+                abortPromotionMutation.mutate({ name: promotion?.metadata?.name, project })
+              }
+            >
+              Abort
+            </Button>
+          </>
+        )
+      }
     >
       <Tabs defaultActiveKey='1'>
         {promotion.spec?.steps && (

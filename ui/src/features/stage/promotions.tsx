@@ -166,11 +166,13 @@ export const Promotions = () => {
       {selectedPromotion && (
         <PromotionDetailsModal
           // @ts-expect-error // know that there will always be value available of this promotion
+          // IMPORTANT: the reason why selectedPromotion is not used is because promotions are live while selectedPromotion snapshot at particular point
           promotion={promotions?.find(
             (p) => p?.metadata?.name === selectedPromotion?.metadata?.name
           )}
           visible={!!selectedPromotion}
           hide={() => setSelectedPromotion(undefined)}
+          project={projectName || ''}
         />
       )}
     </>
