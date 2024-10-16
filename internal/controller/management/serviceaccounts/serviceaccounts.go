@@ -200,7 +200,7 @@ func (r *reconciler) ensureControllerPermissions(ctx context.Context, sa *corev1
 		"serviceaccount", sa.Name,
 		"roleBinding", roleBindingName,
 	)
-	logger.Info("starting to create RoleBindings for all Projects")
+	logger.Debug("starting to create RoleBindings for all Projects")
 
 	projectList := &kargoapi.ProjectList{}
 	if err := r.listProjectFn(ctx, projectList); err != nil {
@@ -242,10 +242,10 @@ func (r *reconciler) ensureControllerPermissions(ctx context.Context, sa *corev1
 			logger.Debug("Updated existing RoleBinding for ServiceAccount", "roleBinding",
 				roleBindingName, "namespace", project.Name)
 		} else {
-			logger.Info("Created RoleBinding for ServiceAccount", "roleBinding", roleBindingName, "namespace", project.Name)
+			logger.Debug("Created RoleBinding for ServiceAccount", "roleBinding", roleBindingName, "namespace", project.Name)
 		}
 	}
-	logger.Info("Completed creating RoleBindings for all Projects")
+	logger.Debug("Completed creating RoleBindings for all Projects")
 	return nil
 }
 
@@ -261,7 +261,7 @@ func (r *reconciler) removeControllerPermissions(ctx context.Context, sa types.N
 		"serviceaccount", sa.Name,
 		"roleBinding", roleBindingName,
 	)
-	logger.Info("Starting to delete RoleBindings for all Projects")
+	logger.Debug("Starting to delete RoleBindings for all Projects")
 
 	projectList := &kargoapi.ProjectList{}
 	if err := r.listProjectFn(ctx, projectList); err != nil {
@@ -269,6 +269,8 @@ func (r *reconciler) removeControllerPermissions(ctx context.Context, sa types.N
 	}
 
 	for _, project := range projectList.Items {
+
+		projectLogger := logger.WithValues("namespace", project.Name, "roleBinding", roleBindingName)
 
 		roleBinding := &rbacv1.RoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
@@ -279,20 +281,18 @@ func (r *reconciler) removeControllerPermissions(ctx context.Context, sa types.N
 
 		if err := r.deleteRoleBindingFn(ctx, roleBinding); err != nil {
 			if kubeerr.IsNotFound(err) {
-				logger.Debug("RoleBinding not found, skipping deletion", "roleBinding",
-					roleBindingName, "namespace", project.Namespace)
-				continue // Skip to the next project if RoleBinding is not found
+				projectLogger.Debug("RoleBinding not found")
+				continue // RoleBinding does not exist; moving to the next Project.
 			}
 
 			// Return the error to trigger a requeue and stop further cleanup until the issue is resolved.
 			return fmt.Errorf("error deleting RoleBinding %q in Project namespace %q: %w",
-				roleBindingName, project.Namespace, err)
+				roleBindingName, project.Name, err)
 		}
 
-		logger.Debug("Deleted RoleBinding for ServiceAccount", "roleBinding",
-			roleBindingName, "in namespace", project.Namespace)
+		projectLogger.Debug("Deleted RoleBinding")
 	}
-	logger.Info("Completed deletion of RoleBindings for all Projects")
+	logger.Debug("Completed deletion of RoleBindings for all Projects")
 	return nil
 }
 

@@ -54,9 +54,13 @@ func TestEnsureControllerPermissions(t *testing.T) {
 
 	// Fake client with ServiceAccount and Project.
 	scheme := runtime.NewScheme()
-	_ = kargoapi.AddToScheme(scheme)
-	_ = corev1.AddToScheme(scheme)
-	_ = rbacv1.AddToScheme(scheme)
+	err := kargoapi.AddToScheme(scheme)
+	require.NoError(t, err)
+	err = corev1.AddToScheme(scheme)
+	require.NoError(t, err)
+	err = rbacv1.AddToScheme(scheme)
+	require.NoError(t, err)
+
 	kubeClient := fake.NewClientBuilder().
 		WithScheme(scheme).
 		WithObjects(serviceAccount, project).
@@ -64,7 +68,7 @@ func TestEnsureControllerPermissions(t *testing.T) {
 
 	r := newReconciler(kubeClient, ReconcilerConfig{KargoNamespace: saNamespace})
 
-	err := r.ensureControllerPermissions(context.Background(), serviceAccount)
+	err = r.ensureControllerPermissions(context.Background(), serviceAccount)
 	require.NoError(t, err)
 
 	roleBinding := &rbacv1.RoleBinding{}
@@ -96,8 +100,11 @@ func TestRemoveControllerPermissions(t *testing.T) {
 	}
 
 	scheme := runtime.NewScheme()
-	_ = kargoapi.AddToScheme(scheme)
-	_ = rbacv1.AddToScheme(scheme)
+	err := kargoapi.AddToScheme(scheme)
+	require.NoError(t, err)
+	err = rbacv1.AddToScheme(scheme)
+	require.NoError(t, err)
+
 	kubeClient := fake.NewClientBuilder().
 		WithScheme(scheme).
 		WithObjects(roleBinding, project).
@@ -105,7 +112,7 @@ func TestRemoveControllerPermissions(t *testing.T) {
 
 	r := newReconciler(kubeClient, ReconcilerConfig{KargoNamespace: "fake-ns"})
 
-	err := r.removeControllerPermissions(context.Background(), types.NamespacedName{Name: saName})
+	err = r.removeControllerPermissions(context.Background(), types.NamespacedName{Name: saName})
 	require.NoError(t, err)
 
 	err = kubeClient.Get(context.Background(), types.NamespacedName{
@@ -113,5 +120,5 @@ func TestRemoveControllerPermissions(t *testing.T) {
 		Namespace: projectName,
 	}, roleBinding)
 	require.Error(t, err)
-	require.True(t, apierrors.IsNotFound(err), "expected NotFound error but got: %v", err)
+	require.True(t, apierrors.IsNotFound(err))
 }
