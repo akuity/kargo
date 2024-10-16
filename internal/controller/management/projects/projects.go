@@ -457,10 +457,10 @@ func (r *reconciler) ensureControllerPermissions(
 				return fmt.Errorf("error updating existing RoleBinding %q in Project namespace %q: %w",
 					roleBinding.Name, project.Name, err)
 			}
-			loggerWithSA.Debug("Updated RoleBinding for ServiceAccount", "serviceAccount", sa.Name)
+			loggerWithSA.Debug("updated RoleBinding for ServiceAccount", "serviceAccount", sa.Name)
 			continue
 		}
-		loggerWithSA.Debug("Created RoleBinding for ServiceAccount", "serviceAccount", sa.Name)
+		loggerWithSA.Debug("created RoleBinding for ServiceAccount", "serviceAccount", sa.Name)
 	}
 
 	return nil

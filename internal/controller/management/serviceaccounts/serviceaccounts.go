@@ -156,7 +156,6 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	// This indicates that the ServiceAccount is no longer managed by the controller,
 	// and we need to clean up any associated RoleBindings.
 	if sa.DeletionTimestamp != nil || !hasControllerLabel(sa) {
-		logger.Debug("Deleting RoleBindings for ServiceAccount", "serviceaccount", sa.Name)
 		if err := r.removeControllerPermissionsFn(ctx, req.NamespacedName); err != nil {
 			return ctrl.Result{}, err
 		}
@@ -164,28 +163,23 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		if err := r.updateServiceAccountFn(ctx, sa); err != nil {
 			return ctrl.Result{}, err
 		}
-		logger.Debug("Removed finalizer from ServiceAccount", "serviceaccount", sa.Name)
+		logger.Debug("removed finalizer from ServiceAccount", "serviceaccount", sa.Name)
 		return ctrl.Result{}, nil
 	}
 
 	// If we get to here, we had a not found error and we can proceed with
 	// creating the RoleBindings.
 
-	// Add a finalizer to the ServiceAccount to prevent premature deletion
-	// before RoleBindings are removed. The AddFinalizer function:
-	// - Returns false if the finalizer is already present, avoiding redundant logs.
-	// - Adds the finalizer if not present, ensuring proper cleanup.
+	// Add a finalizer to the ServiceAccount to ensure the opportunity for cleanup
+	// upon ServiceAccount deletion.
 	if controllerutil.AddFinalizer(sa, kargoapi.FinalizerName) {
 		if err := r.updateServiceAccountFn(ctx, sa); err != nil {
 			return ctrl.Result{}, err
 		}
-		logger.Debug("Added finalizer to ServiceAccount", "serviceaccount", sa.Name)
+		logger.Debug("added finalizer to ServiceAccount", "serviceaccount", sa.Name)
 		return ctrl.Result{}, nil
 	}
 
-	logger.Debug("Creating RoleBindings for ServiceAccount",
-		"serviceaccount", sa.Name,
-	)
 	return ctrl.Result{}, r.ensureControllerPermissionsFn(ctx, req.NamespacedName)
 }
 
