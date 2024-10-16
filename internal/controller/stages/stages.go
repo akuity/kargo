@@ -295,7 +295,7 @@ func SetupReconcilerWithManager(
 				predicate.GenerationChangedPredicate{},
 				kargo.RefreshRequested{},
 				kargo.ReverifyRequested{},
-				kargo.AbortRequested{},
+				kargo.VerificationAbortRequested{},
 			),
 		).
 		WithEventFilter(shardPredicate).

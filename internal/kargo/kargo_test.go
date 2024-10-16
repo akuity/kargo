@@ -459,7 +459,7 @@ func TestReverifyRequested_Update(t *testing.T) {
 	}
 }
 
-func TestAbortRequested_Update(t *testing.T) {
+func TestVerificationAbortRequested_Update(t *testing.T) {
 	tests := []struct {
 		name      string
 		oldObject client.Object
@@ -635,7 +635,192 @@ func TestAbortRequested_Update(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			p := AbortRequested{}
+			p := VerificationAbortRequested{}
+			require.Equal(t, tt.want, p.Update(event.UpdateEvent{
+				ObjectOld: tt.oldObject,
+				ObjectNew: tt.newObject,
+			}))
+		})
+	}
+}
+
+func TestPromotionAbortRequested_Update(t *testing.T) {
+	tests := []struct {
+		name      string
+		oldObject client.Object
+		newObject client.Object
+		want      bool
+	}{
+		{
+			name:      "no old or new object",
+			oldObject: nil,
+			newObject: nil,
+			want:      false,
+		},
+		{
+			name:      "no old object",
+			oldObject: nil,
+			newObject: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyAbort: "foo",
+					},
+				},
+			},
+			want: false,
+		},
+		{
+			name: "no new object",
+			oldObject: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyAbort: "foo",
+					},
+				},
+			},
+			newObject: nil,
+			want:      false,
+		},
+		{
+			name: "no abort annotation",
+			oldObject: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{},
+				},
+			},
+			newObject: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						"other": "annotation",
+					},
+				},
+			},
+			want: false,
+		},
+		{
+			name: "abort annotation set on new object",
+			oldObject: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{},
+				},
+			},
+			newObject: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyAbort: "foo",
+					},
+				},
+			},
+			want: true,
+		},
+		{
+			name: "abort annotation removed from new object",
+			oldObject: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyAbort: "foo",
+					},
+				},
+			},
+			newObject: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{},
+				},
+			},
+			want: false,
+		},
+		{
+			name: "empty abort annotation value",
+			oldObject: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyAbort: (&kargoapi.AbortPromotionRequest{
+							Action: "foo",
+						}).String(),
+					},
+				},
+			},
+			newObject: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyAbort: "",
+					},
+				},
+			},
+			want: false,
+		},
+		{
+			name: "abort annotation action changed",
+			oldObject: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyAbort: (&kargoapi.AbortPromotionRequest{
+							Action: "foo",
+						}).String(),
+					},
+				},
+			},
+			newObject: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyAbort: (&kargoapi.AbortPromotionRequest{
+							Action: "bar",
+						}).String(),
+					},
+				},
+			},
+			want: true,
+		},
+		{
+			name: "abort annotation actor changed with same ID",
+			oldObject: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyAbort: (&kargoapi.AbortPromotionRequest{
+							Action: "foo",
+							Actor:  "fake-actor",
+						}).String(),
+					},
+				},
+			},
+			newObject: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyAbort: (&kargoapi.AbortPromotionRequest{
+							Action: "foo",
+							Actor:  "real-actor",
+						}).String(),
+					},
+				},
+			},
+			want: false,
+		},
+		{
+			name: "abort annotation ID equal",
+			oldObject: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyAbort: (&kargoapi.AbortPromotionRequest{
+							Action: "foo",
+						}).String(),
+					},
+				},
+			},
+			newObject: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyAbort: (&kargoapi.AbortPromotionRequest{
+							Action: "foo",
+						}).String(),
+					},
+				},
+			},
+			want: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := PromotionAbortRequested{}
 			require.Equal(t, tt.want, p.Update(event.UpdateEvent{
 				ObjectOld: tt.oldObject,
 				ObjectNew: tt.newObject,
