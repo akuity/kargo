@@ -15,14 +15,6 @@ rules:
   - create
   - patch
 - apiGroups:
-  - ""
-  resources:
-  - secrets
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
   - kargo.akuity.io
   resources:
   - projects
@@ -68,6 +60,23 @@ rules:
   - warehouses/status
   verbs:
   - patch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kargo-controller-read-secrets
+  labels:
+    {{- include "kargo.labels" . | nindent 4 }}
+    {{- include "kargo.controller.labels" . | nindent 4 }}
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+  - list
+  - watch
 {{- if and .Values.controller.argocd.integrationEnabled (not .Values.controller.argocd.watchArgocdNamespaceOnly) }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1

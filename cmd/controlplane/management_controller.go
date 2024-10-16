@@ -9,6 +9,8 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
@@ -16,6 +18,7 @@ import (
 	"github.com/akuity/kargo/internal/api/kubernetes"
 	"github.com/akuity/kargo/internal/controller/management/namespaces"
 	"github.com/akuity/kargo/internal/controller/management/projects"
+	"github.com/akuity/kargo/internal/controller/management/serviceaccounts"
 	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/internal/os"
 	versionpkg "github.com/akuity/kargo/internal/version"
@@ -78,6 +81,13 @@ func (o *managementControllerOptions) run(ctx context.Context) error {
 		return fmt.Errorf("error setting up Projects reconciler: %w", err)
 	}
 
+	if err := serviceaccounts.SetupReconcilerWithManager(
+		kargoMgr,
+		serviceaccounts.ReconcilerConfigFromEnv(),
+	); err != nil {
+		return fmt.Errorf("error setting up ServiceAccount reconciler: %w", err)
+	}
+
 	if err := kargoMgr.Start(ctx); err != nil {
 		return fmt.Errorf("error starting kargo manager: %w", err)
 	}
@@ -117,6 +127,15 @@ func (o *managementControllerOptions) setupManager(ctx context.Context) (manager
 			Scheme: scheme,
 			Metrics: server.Options{
 				BindAddress: "0",
+			},
+			Cache: cache.Options{
+				ByObject: map[client.Object]cache.ByObject{
+					&corev1.ServiceAccount{}: {
+						Namespaces: map[string]cache.Config{
+							os.GetEnv("KARGO_NAMESPACE", "kargo"): {},
+						},
+					},
+				},
 			},
 		},
 	)

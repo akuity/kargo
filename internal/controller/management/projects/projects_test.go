@@ -3,17 +3,21 @@ package projects
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/conditions"
@@ -268,6 +272,32 @@ func TestSyncProject(t *testing.T) {
 			},
 		},
 		{
+			name: "error ensuring controller permissions",
+			reconciler: &reconciler{
+				ensureNamespaceFn: func(
+					_ context.Context,
+					project *kargoapi.Project,
+				) (kargoapi.ProjectStatus, error) {
+					return *project.Status.DeepCopy(), nil
+				},
+				ensureAPIAdminPermissionsFn: func(
+					context.Context,
+					*kargoapi.Project,
+				) error {
+					return nil
+				},
+				ensureControllerPermissionsFn: func(
+					context.Context,
+					*kargoapi.Project,
+				) error {
+					return errors.New("something went wrong")
+				},
+			},
+			assertions: func(t *testing.T, _ kargoapi.ProjectStatus, err error) {
+				require.ErrorContains(t, err, "something went wrong")
+			},
+		},
+		{
 			name: "error ensuring default project roles",
 			reconciler: &reconciler{
 				ensureNamespaceFn: func(
@@ -277,6 +307,12 @@ func TestSyncProject(t *testing.T) {
 					return *project.Status.DeepCopy(), nil
 				},
 				ensureAPIAdminPermissionsFn: func(
+					context.Context,
+					*kargoapi.Project,
+				) error {
+					return nil
+				},
+				ensureControllerPermissionsFn: func(
 					context.Context,
 					*kargoapi.Project,
 				) error {
@@ -316,6 +352,12 @@ func TestSyncProject(t *testing.T) {
 					return *project.Status.DeepCopy(), nil
 				},
 				ensureAPIAdminPermissionsFn: func(
+					context.Context,
+					*kargoapi.Project,
+				) error {
+					return nil
+				},
+				ensureControllerPermissionsFn: func(
 					context.Context,
 					*kargoapi.Project,
 				) error {
@@ -658,6 +700,260 @@ func TestEnsureAPIAdminPermissions(t *testing.T) {
 					&kargoapi.Project{},
 				),
 			)
+		})
+	}
+}
+
+func TestEnsureControllerPermissions(t *testing.T) {
+	cfg := ReconcilerConfigFromEnv()
+
+	testControllerSA := &corev1.ServiceAccount{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "fake-controller",
+			Namespace: cfg.KargoNamespace,
+			Labels: map[string]string{
+				cfg.ControllerServiceAccountLabelKey: cfg.ControllerServiceAccountLabelValue,
+			},
+			Finalizers: []string{kargoapi.FinalizerName},
+		},
+	}
+
+	testProject := &kargoapi.Project{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "fake-project",
+		},
+	}
+
+	scheme := runtime.NewScheme()
+	err := corev1.AddToScheme(scheme)
+	require.NoError(t, err)
+	err = rbacv1.AddToScheme(scheme)
+	require.NoError(t, err)
+
+	testCases := []struct {
+		name       string
+		client     client.Client
+		assertions func(*testing.T, client.Client, error)
+	}{
+		{
+			name: "error listing ServiceAccounts",
+			client: fake.NewClientBuilder().WithScheme(scheme).
+				WithInterceptorFuncs(interceptor.Funcs{
+					List: func(
+						context.Context,
+						client.WithWatch,
+						client.ObjectList,
+						...client.ListOption,
+					) error {
+						return fmt.Errorf("something went wrong")
+					},
+				}).Build(),
+			assertions: func(t *testing.T, _ client.Client, err error) {
+				require.ErrorContains(t, err, "error listing controller ServiceAccounts")
+				require.ErrorContains(t, err, "something went wrong")
+			},
+		},
+
+		{
+			name: "error adding finalizer",
+			client: fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(
+					&corev1.ServiceAccount{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "fake-controller",
+							Namespace: cfg.KargoNamespace,
+							Labels: map[string]string{
+								cfg.ControllerServiceAccountLabelKey: cfg.ControllerServiceAccountLabelValue,
+							},
+							// Lacks an existing finalizer
+						},
+					},
+				).
+				WithInterceptorFuncs(interceptor.Funcs{
+					Update: func(
+						context.Context,
+						client.WithWatch,
+						client.Object,
+						...client.UpdateOption,
+					) error {
+						return fmt.Errorf("something went wrong")
+					},
+				}).Build(),
+			assertions: func(t *testing.T, _ client.Client, err error) {
+				require.ErrorContains(t, err, "error adding finalizer to controller ServiceAccount")
+			},
+		},
+		{
+			name: "finalizer is added when it does not exist",
+			client: fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(
+					&corev1.ServiceAccount{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "fake-controller",
+							Namespace: cfg.KargoNamespace,
+							Labels: map[string]string{
+								cfg.ControllerServiceAccountLabelKey: cfg.ControllerServiceAccountLabelValue,
+							},
+							// Lacks an existing finalizer
+						},
+					},
+				).Build(),
+			assertions: func(t *testing.T, cl client.Client, err error) {
+				require.NoError(t, err)
+				sa := &corev1.ServiceAccount{}
+				err = cl.Get(
+					context.Background(),
+					types.NamespacedName{
+						Name:      "fake-controller",
+						Namespace: cfg.KargoNamespace,
+					},
+					sa,
+				)
+				require.NoError(t, err)
+				require.Contains(t, sa.Finalizers, kargoapi.FinalizerName)
+			},
+		},
+		{
+			name: "error creating RoleBinding",
+			client: fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(testControllerSA).
+				WithInterceptorFuncs(interceptor.Funcs{
+					Create: func(
+						context.Context,
+						client.WithWatch,
+						client.Object,
+						...client.CreateOption,
+					) error {
+						return fmt.Errorf("something went wrong")
+					},
+				}).Build(),
+			assertions: func(t *testing.T, _ client.Client, err error) {
+				require.ErrorContains(t, err, "error creating RoleBinding")
+				require.ErrorContains(t, err, "something went wrong")
+			},
+		},
+		{
+			name: "RoleBinding is created when it does not exist",
+			client: fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(testControllerSA).
+				Build(),
+			assertions: func(t *testing.T, cl client.Client, err error) {
+				require.NoError(t, err)
+				rb := &rbacv1.RoleBinding{}
+				err = cl.Get(
+					context.Background(),
+					types.NamespacedName{
+						Name:      getRoleBindingName(testControllerSA.Name),
+						Namespace: testProject.Name,
+					},
+					rb,
+				)
+				require.NoError(t, err)
+				require.Len(t, rb.Subjects, 1)
+				require.Equal(
+					t,
+					rbacv1.RoleRef{
+						APIGroup: rbacv1.GroupName,
+						Kind:     "ClusterRole",
+						Name:     controllerReadSecretsClusterRoleName,
+					},
+					rb.RoleRef,
+				)
+				require.Equal(
+					t,
+					rbacv1.Subject{
+						Kind:      "ServiceAccount",
+						Name:      testControllerSA.Name,
+						Namespace: testControllerSA.Namespace,
+					},
+					rb.Subjects[0],
+				)
+			},
+		},
+		{
+			name: "RoleBinding is updated when it already exists",
+			client: fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(
+					testControllerSA,
+					&rbacv1.RoleBinding{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: testProject.Name,
+							Name:      getRoleBindingName(testControllerSA.Name),
+						},
+					},
+				).Build(),
+			assertions: func(t *testing.T, cl client.Client, err error) {
+				require.NoError(t, err)
+				rb := &rbacv1.RoleBinding{}
+				err = cl.Get(
+					context.Background(),
+					types.NamespacedName{
+						Name:      getRoleBindingName(testControllerSA.Name),
+						Namespace: testProject.Name,
+					},
+					rb,
+				)
+				require.NoError(t, err)
+				require.Len(t, rb.Subjects, 1)
+				require.Equal(
+					t,
+					rbacv1.RoleRef{
+						APIGroup: rbacv1.GroupName,
+						Kind:     "ClusterRole",
+						Name:     controllerReadSecretsClusterRoleName,
+					},
+					rb.RoleRef,
+				)
+				require.Equal(
+					t,
+					rbacv1.Subject{
+						Kind:      "ServiceAccount",
+						Name:      testControllerSA.Name,
+						Namespace: testControllerSA.Namespace,
+					},
+					rb.Subjects[0],
+				)
+			},
+		},
+		{
+			name: "error updating existing RoleBinding",
+			client: fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(
+					testControllerSA,
+					&rbacv1.RoleBinding{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      getRoleBindingName(testControllerSA.Name),
+							Namespace: testProject.Name,
+						},
+					},
+				).
+				WithInterceptorFuncs(interceptor.Funcs{
+					Update: func(
+						context.Context,
+						client.WithWatch,
+						client.Object,
+						...client.UpdateOption,
+					) error {
+						return fmt.Errorf("something went wrong")
+					},
+				}).Build(),
+			assertions: func(t *testing.T, _ client.Client, err error) {
+				require.ErrorContains(t, err, "error updating existing RoleBinding")
+				require.ErrorContains(t, err, "something went wrong")
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			r := newReconciler(testCase.client, cfg)
+			err = r.ensureControllerPermissions(context.Background(), testProject)
+			testCase.assertions(t, testCase.client, err)
 		})
 	}
 }

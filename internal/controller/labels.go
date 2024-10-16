@@ -9,7 +9,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/credentials"
 )
 
 // GetShardPredicate constructs a predicate used as an event filter for various
@@ -61,20 +60,5 @@ func GetShardRequirement(shard string) (*labels.Requirement, error) {
 		}
 	}
 
-	return req, nil
-}
-
-// GetCredentialsRequirement returns a label requirement that matches only
-// resources that have a credential type label set to one of the supported
-// credential types.
-func GetCredentialsRequirement() (*labels.Requirement, error) {
-	req, err := labels.NewRequirement(kargoapi.CredentialTypeLabelKey, selection.In, []string{
-		credentials.TypeGit.String(),
-		credentials.TypeHelm.String(),
-		credentials.TypeImage.String(),
-	})
-	if err != nil {
-		return nil, fmt.Errorf("error creating credentials label selector: %w", err)
-	}
 	return req, nil
 }

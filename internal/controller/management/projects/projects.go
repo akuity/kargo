@@ -28,8 +28,12 @@ import (
 	"github.com/akuity/kargo/internal/logging"
 )
 
+const controllerReadSecretsClusterRoleName = "kargo-controller-read-secrets"
+
 type ReconcilerConfig struct {
-	KargoNamespace string `envconfig:"KARGO_NAMESPACE" required:"true"`
+	KargoNamespace                     string `envconfig:"KARGO_NAMESPACE" default:"kargo"`
+	ControllerServiceAccountLabelKey   string `envconfig:"CONTROLLER_SERVICE_ACCOUNT_LABEL_KEY" default:"app.kubernetes.io/component"` // nolint: lll
+	ControllerServiceAccountLabelValue string `envconfig:"CONTROLLER_SERVICE_ACCOUNT_LABEL_VALUE" default:"controller"`
 }
 
 func ReconcilerConfigFromEnv() ReconcilerConfig {
@@ -96,6 +100,8 @@ type reconciler struct {
 
 	ensureAPIAdminPermissionsFn func(context.Context, *kargoapi.Project) error
 
+	ensureControllerPermissionsFn func(context.Context, *kargoapi.Project) error
+
 	ensureDefaultProjectRolesFn func(context.Context, *kargoapi.Project) error
 
 	createServiceAccountFn func(
@@ -151,6 +157,7 @@ func newReconciler(kubeClient client.Client, cfg ReconcilerConfig) *reconciler {
 	r.patchOwnerReferencesFn = kargoapi.PatchOwnerReferences
 	r.ensureFinalizerFn = kargoapi.EnsureFinalizer
 	r.ensureAPIAdminPermissionsFn = r.ensureAPIAdminPermissions
+	r.ensureControllerPermissionsFn = r.ensureControllerPermissions
 	r.ensureDefaultProjectRolesFn = r.ensureDefaultProjectRoles
 	r.createServiceAccountFn = r.client.Create
 	r.createRoleFn = r.client.Create
@@ -267,6 +274,10 @@ func (r *reconciler) syncProject(
 			ObservedGeneration: project.GetGeneration(),
 		})
 		return status, fmt.Errorf("error ensuring project admin permissions: %w", err)
+	}
+
+	if err = r.ensureControllerPermissionsFn(ctx, project); err != nil {
+		return status, fmt.Errorf("error ensuring controller permissions: %w", err)
 	}
 
 	if err = r.ensureDefaultProjectRolesFn(ctx, project); err != nil {
@@ -437,6 +448,87 @@ func (r *reconciler) ensureAPIAdminPermissions(
 		)
 	}
 	logger.Debug("granted API server and kargo-admin project admin permissions")
+
+	return nil
+}
+
+func (r *reconciler) ensureControllerPermissions(
+	ctx context.Context,
+	project *kargoapi.Project,
+) error {
+	logger := logging.LoggerFromContext(ctx).WithValues(
+		"project", project.Name,
+		"namespace", project.Name,
+	)
+
+	// Get all ServiceAccounts labeled as controller ServiceAccounts
+	controllerSAs := &corev1.ServiceAccountList{}
+	if err := r.client.List(
+		ctx, controllerSAs,
+		client.InNamespace(r.cfg.KargoNamespace),
+		client.MatchingLabels{
+			r.cfg.ControllerServiceAccountLabelKey: r.cfg.ControllerServiceAccountLabelValue,
+		},
+	); err != nil {
+		return fmt.Errorf("error listing controller ServiceAccounts: %w", err)
+	}
+
+	// Create/update a RoleBinding for each ServiceAccount
+	for _, controllerSA := range controllerSAs.Items {
+		sa := &controllerSA
+		if controllerutil.AddFinalizer(sa, kargoapi.FinalizerName) {
+			if err := r.client.Update(ctx, sa); err != nil {
+				return fmt.Errorf(
+					"error adding finalizer to controller ServiceAccount %q in namespace %q: %w",
+					sa.Name, sa.Namespace, err,
+				)
+			}
+		}
+
+		roleBindingName := getRoleBindingName(sa.Name)
+		saLogger := logger.WithValues(
+			"serviceAccount", sa.Name,
+			"serviceAccount.namespace", sa.Namespace,
+			"roleBinding", roleBindingName,
+		)
+
+		roleBinding := &rbacv1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      roleBindingName,
+				Namespace: project.Name,
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "ClusterRole",
+				Name:     controllerReadSecretsClusterRoleName,
+			},
+			Subjects: []rbacv1.Subject{
+				{
+					Kind:      "ServiceAccount",
+					Name:      sa.Name,
+					Namespace: sa.Namespace,
+				},
+			},
+		}
+
+		if err := r.client.Create(ctx, roleBinding); err != nil {
+			if !kubeerr.IsAlreadyExists(err) {
+				return fmt.Errorf(
+					"error creating RoleBinding %q for ServiceAccount %q in Project namespace %q: %w",
+					roleBinding.Name, sa.Name, project.Name, err,
+				)
+			}
+			if err = r.client.Update(ctx, roleBinding); err != nil {
+				return fmt.Errorf(
+					"error updating existing RoleBinding %q in Project namespace %q: %w",
+					roleBinding.Name, project.Name, err,
+				)
+			}
+			saLogger.Debug("updated RoleBinding")
+			continue
+		}
+		saLogger.Debug("created RoleBinding")
+	}
 
 	return nil
 }
@@ -728,4 +820,8 @@ func mustReconcileProject(project *kargoapi.Project) (string, bool) {
 		}
 	}
 	return "", true
+}
+
+func getRoleBindingName(serviceAccountName string) string {
+	return fmt.Sprintf("%s-read-secrets", serviceAccountName)
 }

@@ -7,7 +7,6 @@ import (
 
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
@@ -18,7 +17,6 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api/kubernetes"
 	libargocd "github.com/akuity/kargo/internal/argocd"
-	"github.com/akuity/kargo/internal/controller"
 	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/promotions"
 	rollouts "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
@@ -172,21 +170,6 @@ func (o *controllerOptions) setupKargoManager(
 		}
 	}
 
-	secretReq, err := controller.GetCredentialsRequirement()
-	if err != nil {
-		return nil, stagesReconcilerCfg, fmt.Errorf("error getting label requirement for credentials Secrets: %w", err)
-	}
-
-	cacheOpts := cache.Options{
-		ByObject: map[client.Object]cache.ByObject{
-			// Only watch Secrets matching the label requirements
-			// for credentials.
-			&corev1.Secret{}: {
-				Label: labels.NewSelector().Add(*secretReq),
-			},
-		},
-	}
-
 	mgr, err := ctrl.NewManager(
 		restCfg,
 		ctrl.Options{
@@ -194,7 +177,16 @@ func (o *controllerOptions) setupKargoManager(
 			Metrics: server.Options{
 				BindAddress: "0",
 			},
-			Cache: cacheOpts,
+			Client: client.Options{
+				Cache: &client.CacheOptions{
+					// The controller does not have cluster-wide permissions, to
+					// get/list/watch Secrets. Its access to Secrets grows and shrinks
+					// dynamically as Projects are created and deleted. We disable caching
+					// here since the underlying informer will not be able to watch
+					// Secrets in all namespaces.
+					DisableFor: []client.Object{&corev1.Secret{}},
+				},
+			},
 		},
 	)
 	return mgr, stagesReconcilerCfg, err
