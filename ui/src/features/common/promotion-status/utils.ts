@@ -4,5 +4,6 @@ export enum PromotionStatusPhase {
   RUNNING = 'Running',
   SUCCEEDED = 'Succeeded',
   FAILED = 'Failed',
-  ERRORED = 'Errored'
+  ERRORED = 'Errored',
+  ABORTED = 'Aborted'
 }
