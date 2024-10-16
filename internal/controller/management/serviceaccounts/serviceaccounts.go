@@ -78,7 +78,7 @@ type reconciler struct {
 		...client.ListOption,
 	) error
 
-	ensureControllerPermissionsFn func(context.Context, *corev1.ServiceAccount) error
+	ensureControllerPermissionsFn func(context.Context, types.NamespacedName) error
 	removeControllerPermissionsFn func(context.Context, types.NamespacedName) error
 }
 
@@ -186,13 +186,13 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	logger.Debug("Creating RoleBindings for ServiceAccount",
 		"serviceaccount", sa.Name,
 	)
-	return ctrl.Result{}, r.ensureControllerPermissionsFn(ctx, sa)
+	return ctrl.Result{}, r.ensureControllerPermissionsFn(ctx, req.NamespacedName)
 }
 
 // ensureControllerPermissions grants the controller ServiceAccount necessary access to all Projects
 // by creating RoleBindings in each Project's namespace. This function ensures that the
 // controller has the necessary permissions to manage resources across all Projects.
-func (r *reconciler) ensureControllerPermissions(ctx context.Context, sa *corev1.ServiceAccount) error {
+func (r *reconciler) ensureControllerPermissions(ctx context.Context, sa types.NamespacedName) error {
 
 	roleBindingName := fmt.Sprintf("%s-readonly-secrets", sa.Name)
 

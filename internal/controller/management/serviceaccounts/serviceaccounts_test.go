@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -45,30 +44,22 @@ func TestEnsureControllerPermissions(t *testing.T) {
 			Name: projectName,
 		},
 	}
-	serviceAccount := &corev1.ServiceAccount{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      saName,
-			Namespace: saNamespace,
-		},
-	}
 
 	// Fake client with ServiceAccount and Project.
 	scheme := runtime.NewScheme()
 	err := kargoapi.AddToScheme(scheme)
-	require.NoError(t, err)
-	err = corev1.AddToScheme(scheme)
 	require.NoError(t, err)
 	err = rbacv1.AddToScheme(scheme)
 	require.NoError(t, err)
 
 	kubeClient := fake.NewClientBuilder().
 		WithScheme(scheme).
-		WithObjects(serviceAccount, project).
+		WithObjects(project).
 		Build()
 
 	r := newReconciler(kubeClient, ReconcilerConfig{KargoNamespace: saNamespace})
 
-	err = r.ensureControllerPermissions(context.Background(), serviceAccount)
+	err = r.ensureControllerPermissions(context.Background(), types.NamespacedName{Name: saName})
 	require.NoError(t, err)
 
 	roleBinding := &rbacv1.RoleBinding{}
