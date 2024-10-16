@@ -140,7 +140,7 @@ func SetupReconcilerWithManager(
 	// If Argo CD integration is disabled, this manager will be nil and we won't
 	// care about this watch anyway.
 	if argocdMgr != nil {
-		if err := c.Watch(
+		if err = c.Watch(
 			source.Kind(
 				argocdMgr.GetCache(),
 				&argocd.Application{},
@@ -165,7 +165,7 @@ func SetupReconcilerWithManager(
 		pqs:         reconciler.pqs,
 	}
 	promoWentTerminal := kargo.NewPromoWentTerminalPredicate(logger)
-	if err := c.Watch(
+	if err = c.Watch(
 		source.Kind(
 			kargoMgr.GetCache(),
 			&kargoapi.Promotion{},
@@ -174,6 +174,17 @@ func SetupReconcilerWithManager(
 		),
 	); err != nil {
 		return fmt.Errorf("unable to watch Promotions: %w", err)
+	}
+
+	// Watch Stages that acknowledge their next Promotion and enqueue it
+	if err = c.Watch(
+		source.Kind(
+			kargoMgr.GetCache(),
+			&kargoapi.Stage{},
+			&PromotionAcknowledgedByStageHandler[*kargoapi.Stage]{},
+		),
+	); err != nil {
+		return fmt.Errorf("unable to watch Stages: %w", err)
 	}
 
 	return nil
@@ -326,7 +337,9 @@ func (r *reconciler) Reconcile(
 	// collection it is promoting.
 	if stage.Status.CurrentPromotion == nil || stage.Status.CurrentPromotion.Name != promo.Name {
 		logger.Debug("Stage is not awaiting Promotion", "stage", stage.Name, "promotion", promo.Name)
-		return ctrl.Result{Requeue: true}, nil
+		// Our watch will catch this and requeue the Promotion when the Stage
+		// acknowledges it. Which typically should be faster.
+		return ctrl.Result{RequeueAfter: 5 * time.Minute}, nil
 	}
 
 	// Update promo status as Running to give visibility in UI. Also, a promo which
