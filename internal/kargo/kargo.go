@@ -219,16 +219,16 @@ func (r ReverifyRequested) Update(e event.UpdateEvent) bool {
 	return false
 }
 
-// AbortRequested is a predicate that returns true if the abort annotation has
+// VerificationAbortRequested is a predicate that returns true if the abort annotation has
 // been set on a resource, or the ID of the request has changed compared to the
 // previous state.
-type AbortRequested struct {
+type VerificationAbortRequested struct {
 	predicate.Funcs
 }
 
 // Update returns true if the abort annotation has been set on the new object,
 // or if the ID of the request has changed compared to the old object.
-func (p AbortRequested) Update(e event.UpdateEvent) bool {
+func (p VerificationAbortRequested) Update(e event.UpdateEvent) bool {
 	if e.ObjectOld == nil || e.ObjectNew == nil {
 		return false
 	}
@@ -236,6 +236,29 @@ func (p AbortRequested) Update(e event.UpdateEvent) bool {
 	if newVal, newOk := kargoapi.AbortVerificationAnnotationValue(e.ObjectNew.GetAnnotations()); newOk {
 		if oldVal, oldOk := kargoapi.AbortVerificationAnnotationValue(e.ObjectOld.GetAnnotations()); oldOk {
 			return !newVal.ForID(oldVal.ID)
+		}
+		return true
+	}
+	return false
+}
+
+// PromotionAbortRequested is a predicate that returns true if the abort
+// annotation has been set on a resource, or the action of the request has
+// changed compared to the previous state.
+type PromotionAbortRequested struct {
+	predicate.Funcs
+}
+
+// Update returns true if the abort annotation has been set on the new object,
+// or if the action of the request has changed compared to the old object.
+func (p PromotionAbortRequested) Update(e event.UpdateEvent) bool {
+	if e.ObjectOld == nil || e.ObjectNew == nil {
+		return false
+	}
+
+	if newVal, newOk := kargoapi.AbortPromotionAnnotationValue(e.ObjectNew.GetAnnotations()); newOk {
+		if oldVal, oldOk := kargoapi.AbortPromotionAnnotationValue(e.ObjectOld.GetAnnotations()); oldOk {
+			return oldVal.Action != newVal.Action
 		}
 		return true
 	}

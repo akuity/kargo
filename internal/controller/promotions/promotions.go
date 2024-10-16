@@ -126,6 +126,7 @@ func SetupReconcilerWithManager(
 		WithEventFilter(predicate.Or(
 			predicate.GenerationChangedPredicate{},
 			kargo.RefreshRequested{},
+			kargo.PromotionAbortRequested{},
 		)).
 		WithEventFilter(shardPredicate).
 		WithOptions(controller.CommonOptions()).
