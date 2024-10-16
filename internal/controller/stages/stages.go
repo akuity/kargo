@@ -1005,8 +1005,32 @@ func (r *reconciler) syncPromotions(
 	// current state of the Stage.
 	slices.SortFunc(promotions, kargoapi.ComparePromotionByPhaseAndCreationTime)
 
+	// The latest Promotion is the first element in the sorted list.
+	latestPromo := promotions[0]
+
+	// If the latest Promotion does not match the current Promotion, or is in a
+	// terminal phase, then the current Promotion is no longer valid.
+	if curPromotion := status.CurrentPromotion; curPromotion != nil {
+		if curPromotion.Name != latestPromo.Name || latestPromo.Status.Phase.IsTerminal() {
+			status.CurrentPromotion = nil
+		}
+	}
+
+	// If there is any ongoing verification, we need to let it finish before we
+	// can continue with acknowledging the new Promotion.
+	if curFreightCol := status.FreightHistory.Current(); curFreightCol != nil {
+		for _, verification := range curFreightCol.VerificationHistory {
+			if !verification.Phase.IsTerminal() {
+				logger.WithValues("verification", verification.ID).Debug(
+					"Stage has a running verification: waiting for it to complete before promoting new Freight",
+				)
+				return status, nil
+			}
+		}
+	}
+
 	// If the latest Promotion is in a running phase, the Stage is promoting.
-	if latestPromo := promotions[0]; !latestPromo.Status.Phase.IsTerminal() {
+	if !latestPromo.Status.Phase.IsTerminal() {
 		logger.WithValues("promotion", latestPromo.Name).Debug("Stage has a running Promotion")
 		status.Phase = kargoapi.StagePhasePromoting
 		status.CurrentPromotion = &kargoapi.PromotionReference{
@@ -1015,8 +1039,6 @@ func (r *reconciler) syncPromotions(
 		if latestPromo.Status.Freight != nil {
 			status.CurrentPromotion.Freight = latestPromo.Status.Freight.DeepCopy()
 		}
-	} else {
-		status.CurrentPromotion = nil
 	}
 
 	// Determine if there are any new Promotions that have been completed since
