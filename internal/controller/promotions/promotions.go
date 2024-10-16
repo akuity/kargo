@@ -198,6 +198,7 @@ func newReconciler(
 	}
 	r.getStageFn = kargoapi.GetStage
 	r.promoteFn = r.promote
+	r.terminatePromotionFn = r.terminatePromotion
 	return r
 }
 
