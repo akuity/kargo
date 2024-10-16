@@ -1,4 +1,6 @@
 import Form from '@rjsf/antd';
+import { getDefaultRegistry } from '@rjsf/core';
+import { RegistryFieldsType } from '@rjsf/utils';
 import validator from '@rjsf/validator-ajv8';
 import { Checkbox, Input } from 'antd';
 import AntdFormLabel from 'antd/es/form/FormItemLabel';
@@ -54,6 +56,7 @@ export const CreateWarehouseWizard = (props: CreateWarehouseWizardProps) => {
             ArrayFieldDescriptionTemplate: () => null,
             FieldTemplate
           }}
+          fields={fields}
           uiSchema={{
             'ui:submitButtonOptions': {
               norender: true
@@ -63,4 +66,15 @@ export const CreateWarehouseWizard = (props: CreateWarehouseWizardProps) => {
       </div>
     </>
   );
+};
+
+const {
+  fields: { ObjectField }
+} = getDefaultRegistry();
+
+const fields: RegistryFieldsType = {
+  ObjectField: (props) => {
+    console.log(props);
+    return <ObjectField {...props} />;
+  }
 };
