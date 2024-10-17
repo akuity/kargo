@@ -522,13 +522,6 @@ func (a *argocdUpdater) syncApplication(
 
 	// Patch the Argo CD Application.
 	if err := a.argoCDAppPatchFn(ctx, stepCtx, app, func(src, dst unstructured.Unstructured) error {
-		// If the resource has been modified since we fetched it, an update
-		// can result in unexpected merge results. Detect this, and return an
-		// error if it occurs.
-		if src.GetGeneration() != dst.GetGeneration() {
-			return fmt.Errorf("unable to update sources to desired revisions: resource has been modified")
-		}
-
 		dst.SetAnnotations(src.GetAnnotations())
 		dst.Object["spec"] = a.recursiveMerge(src.Object["spec"], dst.Object["spec"])
 		dst.Object["operation"] = src.Object["operation"]
