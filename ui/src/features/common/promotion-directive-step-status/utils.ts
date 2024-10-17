@@ -13,27 +13,31 @@ export const getPromotionDirectiveStepStatus = (
   stepNumber: number,
   promotionStatus?: PromotionStatus
 ) => {
-  if (
-    promotionStatus?.phase === PromotionStatusPhase.RUNNING &&
-    stepNumber === Number(promotionStatus?.currentStep)
-  ) {
-    return PromotionDirectiveStepStatus.RUNNING;
+  let currentStep = 0;
+
+  // there will always be some value of currentStep
+  // this is just for type saftey
+  if (promotionStatus?.currentStep) {
+    currentStep = Number(promotionStatus.currentStep);
   }
 
-  if (
-    (promotionStatus?.phase === PromotionStatusPhase.ERRORED ||
-      promotionStatus?.phase === PromotionStatusPhase.FAILED) &&
-    stepNumber === Number(promotionStatus?.currentStep)
-  ) {
-    return PromotionDirectiveStepStatus.FAILED;
+  if (stepNumber < currentStep) {
+    // assumes that controller successfully ran this step
+    return PromotionDirectiveStepStatus.SUCCESS;
   }
 
-  if (
-    promotionStatus?.phase !== PromotionStatusPhase.SUCCEEDED &&
-    stepNumber > Number(promotionStatus?.currentStep)
-  ) {
-    return PromotionDirectiveStepStatus.WONT_RUN;
+  if (stepNumber === currentStep) {
+    switch (promotionStatus?.phase) {
+      case PromotionStatusPhase.RUNNING:
+        return PromotionDirectiveStepStatus.RUNNING;
+      case PromotionStatusPhase.ERRORED:
+      case PromotionStatusPhase.FAILED:
+        return PromotionDirectiveStepStatus.FAILED;
+      case PromotionStatusPhase.SUCCEEDED:
+        return PromotionDirectiveStepStatus.SUCCESS;
+    }
   }
 
-  return PromotionDirectiveStepStatus.SUCCESS;
+  // if step number is > current step, no matter which state promotion is in, the given step number "has not" run yet or "will not" depends on the promotion phase but that doesn't matter....YET
+  return PromotionDirectiveStepStatus.WONT_RUN;
 };
