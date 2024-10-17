@@ -1009,7 +1009,8 @@ func (r *reconciler) syncPromotions(
 	// is the one that we will consider for the current state of the Stage.
 	highestPrioPromo := promotions[0]
 
-	// If the latest Promotion does not match the current Promotion, or is in a
+	// If the highest priority Promotion does not match the current Promotion, or
+	// is in a terminal phase, then the current Promotion is no longer valid.
 	// terminal phase, then the current Promotion is no longer valid.
 	if curPromotion := status.CurrentPromotion; curPromotion != nil {
 		if curPromotion.Name != highestPrioPromo.Name || highestPrioPromo.Status.Phase.IsTerminal() {
