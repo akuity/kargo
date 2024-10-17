@@ -1084,11 +1084,16 @@ func (r *reconciler) syncPromotions(
 	for _, p := range newPromotions {
 		promo := p
 		status.LastPromotion = &promo
-		if promo.Status.Phase == kargoapi.PromotionPhaseSucceeded {
-			status.FreightHistory.Record(status.LastPromotion.Status.FreightCollection)
+		switch promo.Status.Phase {
+		case kargoapi.PromotionPhaseSucceeded:
+			status.FreightHistory.Record(promo.Status.FreightCollection)
 			if status.CurrentPromotion == nil {
 				status.Phase = kargoapi.StagePhaseSteady
 			}
+		case kargoapi.PromotionPhasePending, kargoapi.PromotionPhaseRunning:
+			// No-op for safety in case the surrounding logic ever changes
+		default:
+			status.Phase = kargoapi.StagePhaseFailed
 		}
 	}
 
