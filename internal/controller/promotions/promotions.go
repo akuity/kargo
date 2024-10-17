@@ -137,10 +137,21 @@ func SetupReconcilerWithManager(
 
 	logger := logging.LoggerFromContext(ctx)
 
-	// If Argo CD integration is disabled, this manager will be nil and we won't
+	// Watch Stages that acknowledge their next Promotion and enqueue it.
+	if err = c.Watch(
+		source.Kind(
+			kargoMgr.GetCache(),
+			&kargoapi.Stage{},
+			&PromotionAcknowledgedByStageHandler[*kargoapi.Stage]{},
+		),
+	); err != nil {
+		return fmt.Errorf("unable to watch Stages: %w", err)
+	}
+
+	// If Argo CD integration is disabled, this manager will be nil, and we won't
 	// care about this watch anyway.
 	if argocdMgr != nil {
-		if err := c.Watch(
+		if err = c.Watch(
 			source.Kind(
 				argocdMgr.GetCache(),
 				&argocd.Application{},
@@ -165,7 +176,7 @@ func SetupReconcilerWithManager(
 		pqs:         reconciler.pqs,
 	}
 	promoWentTerminal := kargo.NewPromoWentTerminalPredicate(logger)
-	if err := c.Watch(
+	if err = c.Watch(
 		source.Kind(
 			kargoMgr.GetCache(),
 			&kargoapi.Promotion{},
@@ -274,31 +285,19 @@ func (r *reconciler) Reconcile(
 		return ctrl.Result{}, nil
 	}
 
-	if promo.Status.Phase == kargoapi.PromotionPhaseRunning {
-		// anything we've already marked Running, we allow it to continue to reconcile
-		logger.Debug("continuing Promotion")
-	} else {
-		// promo is Pending. Try to begin it.
-		if !r.pqs.tryBegin(ctx, promo) {
-			// It wasn't our turn. Mark this promo as Pending (if it wasn't already)
-			if promo.Status.Phase != kargoapi.PromotionPhasePending {
-				err = kubeclient.PatchStatus(ctx, r.kargoClient, promo, func(status *kargoapi.PromotionStatus) {
-					status.Phase = kargoapi.PromotionPhasePending
-				})
-				return ctrl.Result{}, err
-			}
-			return ctrl.Result{}, nil
-		}
-		logger.Info("began promotion")
-	}
-
-	// Update promo status as Running to give visibility in UI. Also, a promo which
-	// has already entered Running status will be allowed to continue to reconcile.
-	if promo.Status.Phase != kargoapi.PromotionPhaseRunning {
-		if err = kubeclient.PatchStatus(ctx, r.kargoClient, promo, func(status *kargoapi.PromotionStatus) {
-			status.Phase = kargoapi.PromotionPhaseRunning
-		}); err != nil {
+	// If the Promotion does not have a Phase, it must be new and (initially)
+	// pending. Mark it as such, and confirm we are actually allowed to start
+	// in case multiple are queued.
+	if isPending := promo.Status.Phase == kargoapi.PromotionPhasePending; isPending || promo.Status.Phase == "" {
+		if !isPending {
+			err = kubeclient.PatchStatus(ctx, r.kargoClient, promo, func(status *kargoapi.PromotionStatus) {
+				status.Phase = kargoapi.PromotionPhasePending
+			})
 			return ctrl.Result{}, err
+		}
+
+		if !r.pqs.tryBegin(ctx, promo) {
+			return ctrl.Result{}, nil
 		}
 	}
 
@@ -323,7 +322,6 @@ func (r *reconciler) Reconcile(
 			promo.Spec.Stage, promo.Namespace,
 		)
 	}
-	logger.Debug("found associated Stage")
 
 	// Confirm that the Stage is awaiting this Promotion.
 	//
@@ -341,7 +339,22 @@ func (r *reconciler) Reconcile(
 	// collection it is promoting.
 	if stage.Status.CurrentPromotion == nil || stage.Status.CurrentPromotion.Name != promo.Name {
 		logger.Debug("Stage is not awaiting Promotion", "stage", stage.Name, "promotion", promo.Name)
-		return ctrl.Result{Requeue: true}, nil
+		// Our watch will catch this and requeue the Promotion when the Stage
+		// acknowledges it. Which typically should be faster.
+		return ctrl.Result{RequeueAfter: 5 * time.Minute}, nil
+	}
+
+	// Update promo status as Running to give visibility in UI. Also, a promo which
+	// has already entered Running status will be allowed to continue to reconcile.
+	if promo.Status.Phase != kargoapi.PromotionPhaseRunning {
+		if err = kubeclient.PatchStatus(ctx, r.kargoClient, promo, func(status *kargoapi.PromotionStatus) {
+			status.Phase = kargoapi.PromotionPhaseRunning
+		}); err != nil {
+			return ctrl.Result{}, err
+		}
+		logger.Info("began promotion")
+	} else {
+		logger.Debug("continuing Promotion")
 	}
 
 	promoCtx := logging.ContextWithLogger(ctx, logger)
