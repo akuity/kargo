@@ -81,11 +81,13 @@ func (o *managementControllerOptions) run(ctx context.Context) error {
 		return fmt.Errorf("error setting up Projects reconciler: %w", err)
 	}
 
-	if err := serviceaccounts.SetupReconcilerWithManager(
-		kargoMgr,
-		serviceaccounts.ReconcilerConfigFromEnv(),
-	); err != nil {
-		return fmt.Errorf("error setting up ServiceAccount reconciler: %w", err)
+	if os.GetEnv("MANAGE_CONTROLLER_ROLE_BINDINGS", "true") == "true" {
+		if err := serviceaccounts.SetupReconcilerWithManager(
+			kargoMgr,
+			serviceaccounts.ReconcilerConfigFromEnv(),
+		); err != nil {
+			return fmt.Errorf("error setting up ServiceAccount reconciler: %w", err)
+		}
 	}
 
 	if err := kargoMgr.Start(ctx); err != nil {

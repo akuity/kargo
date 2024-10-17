@@ -89,7 +89,7 @@ func TestReconcile(t *testing.T) {
 						Name:      testControllerSARef.Name,
 						Namespace: testControllerSARef.Namespace,
 						Labels: map[string]string{
-							cfg.ControllerServiceAccountLabelKey: cfg.ControllerServiceAccountLabelValue,
+							controllerServiceAccountLabelKey: controllerServiceAccountLabelValue,
 						},
 						DeletionTimestamp: &metav1.Time{
 							Time: time.Now(),
@@ -204,7 +204,7 @@ func TestReconcile(t *testing.T) {
 						Name:      testControllerSARef.Name,
 						Namespace: testControllerSARef.Namespace,
 						Labels: map[string]string{
-							cfg.ControllerServiceAccountLabelKey: cfg.ControllerServiceAccountLabelValue,
+							controllerServiceAccountLabelKey: controllerServiceAccountLabelValue,
 						},
 						DeletionTimestamp: &metav1.Time{
 							Time: time.Now(),
@@ -239,7 +239,7 @@ func TestReconcile(t *testing.T) {
 						Name:      testControllerSARef.Name,
 						Namespace: testControllerSARef.Namespace,
 						Labels: map[string]string{
-							cfg.ControllerServiceAccountLabelKey: cfg.ControllerServiceAccountLabelValue,
+							controllerServiceAccountLabelKey: controllerServiceAccountLabelValue,
 						},
 					},
 				},
@@ -266,7 +266,7 @@ func TestReconcile(t *testing.T) {
 						Name:      testControllerSARef.Name,
 						Namespace: testControllerSARef.Namespace,
 						Labels: map[string]string{
-							cfg.ControllerServiceAccountLabelKey: cfg.ControllerServiceAccountLabelValue,
+							controllerServiceAccountLabelKey: controllerServiceAccountLabelValue,
 						},
 					},
 				},

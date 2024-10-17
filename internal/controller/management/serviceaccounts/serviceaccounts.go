@@ -21,12 +21,15 @@ import (
 	"github.com/akuity/kargo/internal/logging"
 )
 
+const (
+	controllerServiceAccountLabelKey   = "app.kubernetes.io/component"
+	controllerServiceAccountLabelValue = "controller"
+)
+
 const controllerReadSecretsClusterRoleName = "kargo-controller-read-secrets"
 
 type ReconcilerConfig struct {
-	KargoNamespace                     string `envconfig:"KARGO_NAMESPACE" default:"kargo"`
-	ControllerServiceAccountLabelKey   string `envconfig:"CONTROLLER_SERVICE_ACCOUNT_LABEL_KEY" default:"app.kubernetes.io/component"` // nolint: lll
-	ControllerServiceAccountLabelValue string `envconfig:"CONTROLLER_SERVICE_ACCOUNT_LABEL_VALUE" default:"controller"`
+	KargoNamespace string `envconfig:"KARGO_NAMESPACE" default:"kargo"`
 }
 
 func ReconcilerConfigFromEnv() ReconcilerConfig {
@@ -87,7 +90,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		)
 	}
 
-	if (sa.DeletionTimestamp != nil || !r.hasControllerLabel(sa)) &&
+	if (sa.DeletionTimestamp != nil || !hasControllerLabel(sa)) &&
 		controllerutil.ContainsFinalizer(sa, kargoapi.FinalizerName) {
 		// Ensure non-existence of RoleBindings that grant this controller
 		// ServiceAccount access to read Secrets in all Project namespaces.
@@ -107,7 +110,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, nil
 	}
 
-	if sa.DeletionTimestamp == nil && r.hasControllerLabel(sa) {
+	if sa.DeletionTimestamp == nil && hasControllerLabel(sa) {
 		// Ensure the existence of RoleBindings that grant this controller
 		// ServiceAccount access to read Secrets in all Project namespaces.
 		if controllerutil.AddFinalizer(sa, kargoapi.FinalizerName) {
@@ -230,8 +233,8 @@ func (r *reconciler) removeControllerPermissions(ctx context.Context, sa types.N
 	return nil
 }
 
-func (r *reconciler) hasControllerLabel(sa *corev1.ServiceAccount) bool {
-	return sa.GetLabels()[r.cfg.ControllerServiceAccountLabelKey] == r.cfg.ControllerServiceAccountLabelValue
+func hasControllerLabel(sa *corev1.ServiceAccount) bool {
+	return sa.GetLabels()[controllerServiceAccountLabelKey] == controllerServiceAccountLabelValue
 }
 
 func getRoleBindingName(serviceAccountName string) string {

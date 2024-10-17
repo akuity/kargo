@@ -28,12 +28,15 @@ import (
 	"github.com/akuity/kargo/internal/logging"
 )
 
-const controllerReadSecretsClusterRoleName = "kargo-controller-read-secrets"
+const (
+	controllerServiceAccountLabelKey     = "app.kubernetes.io/component"
+	controllerServiceAccountLabelValue   = "controller"
+	controllerReadSecretsClusterRoleName = "kargo-controller-read-secrets"
+)
 
 type ReconcilerConfig struct {
-	KargoNamespace                     string `envconfig:"KARGO_NAMESPACE" default:"kargo"`
-	ControllerServiceAccountLabelKey   string `envconfig:"CONTROLLER_SERVICE_ACCOUNT_LABEL_KEY" default:"app.kubernetes.io/component"` // nolint: lll
-	ControllerServiceAccountLabelValue string `envconfig:"CONTROLLER_SERVICE_ACCOUNT_LABEL_VALUE" default:"controller"`
+	ManageControllerRoleBindings bool   `envconfig:"MANAGE_CONTROLLER_ROLE_BINDINGS" default:"true"`
+	KargoNamespace               string `envconfig:"KARGO_NAMESPACE" default:"kargo"`
 }
 
 func ReconcilerConfigFromEnv() ReconcilerConfig {
@@ -276,8 +279,10 @@ func (r *reconciler) syncProject(
 		return status, fmt.Errorf("error ensuring project admin permissions: %w", err)
 	}
 
-	if err = r.ensureControllerPermissionsFn(ctx, project); err != nil {
-		return status, fmt.Errorf("error ensuring controller permissions: %w", err)
+	if r.cfg.ManageControllerRoleBindings {
+		if err = r.ensureControllerPermissionsFn(ctx, project); err != nil {
+			return status, fmt.Errorf("error ensuring controller permissions: %w", err)
+		}
 	}
 
 	if err = r.ensureDefaultProjectRolesFn(ctx, project); err != nil {
@@ -467,7 +472,7 @@ func (r *reconciler) ensureControllerPermissions(
 		ctx, controllerSAs,
 		client.InNamespace(r.cfg.KargoNamespace),
 		client.MatchingLabels{
-			r.cfg.ControllerServiceAccountLabelKey: r.cfg.ControllerServiceAccountLabelValue,
+			controllerServiceAccountLabelKey: controllerServiceAccountLabelValue,
 		},
 	); err != nil {
 		return fmt.Errorf("error listing controller ServiceAccounts: %w", err)

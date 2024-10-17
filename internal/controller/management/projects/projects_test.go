@@ -274,6 +274,9 @@ func TestSyncProject(t *testing.T) {
 		{
 			name: "error ensuring controller permissions",
 			reconciler: &reconciler{
+				cfg: ReconcilerConfig{
+					ManageControllerRoleBindings: true,
+				},
 				ensureNamespaceFn: func(
 					_ context.Context,
 					project *kargoapi.Project,
@@ -307,12 +310,6 @@ func TestSyncProject(t *testing.T) {
 					return *project.Status.DeepCopy(), nil
 				},
 				ensureAPIAdminPermissionsFn: func(
-					context.Context,
-					*kargoapi.Project,
-				) error {
-					return nil
-				},
-				ensureControllerPermissionsFn: func(
 					context.Context,
 					*kargoapi.Project,
 				) error {
@@ -352,12 +349,6 @@ func TestSyncProject(t *testing.T) {
 					return *project.Status.DeepCopy(), nil
 				},
 				ensureAPIAdminPermissionsFn: func(
-					context.Context,
-					*kargoapi.Project,
-				) error {
-					return nil
-				},
-				ensureControllerPermissionsFn: func(
 					context.Context,
 					*kargoapi.Project,
 				) error {
@@ -712,7 +703,7 @@ func TestEnsureControllerPermissions(t *testing.T) {
 			Name:      "fake-controller",
 			Namespace: cfg.KargoNamespace,
 			Labels: map[string]string{
-				cfg.ControllerServiceAccountLabelKey: cfg.ControllerServiceAccountLabelValue,
+				controllerServiceAccountLabelKey: controllerServiceAccountLabelValue,
 			},
 			Finalizers: []string{kargoapi.FinalizerName},
 		},
@@ -764,7 +755,7 @@ func TestEnsureControllerPermissions(t *testing.T) {
 							Name:      "fake-controller",
 							Namespace: cfg.KargoNamespace,
 							Labels: map[string]string{
-								cfg.ControllerServiceAccountLabelKey: cfg.ControllerServiceAccountLabelValue,
+								controllerServiceAccountLabelKey: controllerServiceAccountLabelValue,
 							},
 							// Lacks an existing finalizer
 						},
@@ -794,7 +785,7 @@ func TestEnsureControllerPermissions(t *testing.T) {
 							Name:      "fake-controller",
 							Namespace: cfg.KargoNamespace,
 							Labels: map[string]string{
-								cfg.ControllerServiceAccountLabelKey: cfg.ControllerServiceAccountLabelValue,
+								controllerServiceAccountLabelKey: controllerServiceAccountLabelValue,
 							},
 							// Lacks an existing finalizer
 						},
