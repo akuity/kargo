@@ -1011,7 +1011,6 @@ func (r *reconciler) syncPromotions(
 
 	// If the highest priority Promotion does not match the current Promotion, or
 	// is in a terminal phase, then the current Promotion is no longer valid.
-	// terminal phase, then the current Promotion is no longer valid.
 	if curPromotion := status.CurrentPromotion; curPromotion != nil {
 		if curPromotion.Name != highestPrioPromo.Name || highestPrioPromo.Status.Phase.IsTerminal() {
 			status.CurrentPromotion = nil
