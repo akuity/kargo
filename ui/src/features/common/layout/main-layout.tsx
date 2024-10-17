@@ -12,6 +12,7 @@ import { Outlet } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
 import { useAuthContext } from '@ui/features/auth/context/use-auth-context';
+import { KargoLogo } from '@ui/features/common/logo/logo';
 
 import * as styles from './main-layout.module.less';
 import { NavItem } from './nav-item/nav-item';
@@ -30,16 +31,7 @@ export const MainLayout = () => {
       >
         <div className={styles.wrapper}>
           <aside className={styles.sidebar}>
-            <div className={styles.logo}>
-              <img
-                src='/kargo-icon.png'
-                alt='Kargo Icon'
-                className={styles.icon}
-                width={50}
-                height={31.5}
-              />
-              kargo
-            </div>
+            <KargoLogo className='my-4' />
             <Tooltip className={styles.version} title={__UI_VERSION__} placement='right'>
               {__UI_VERSION__ === 'development' ? 'dev' : __UI_VERSION__}
             </Tooltip>

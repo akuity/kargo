@@ -506,7 +506,7 @@ var splashHTML = []byte(`<!DOCTYPE html>
   <meta http-equiv='X-UA-Compatible' content='IE=edge'>
   <meta name='viewport' content='width=device-width, initial-scale=1'>
   <title>Kargo</title>
-  <link rel="shortcut icon" type="image/jpg" href="/assets/favicon.ico"/>
+  <link rel="shortcut icon" type="image/png" href="/assets/kargo.png"/>
   <link rel='stylesheet' type='text/css' media='screen' href='/assets/splash.css'>
 </head>
 <body>
