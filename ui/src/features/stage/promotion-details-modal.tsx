@@ -1,3 +1,4 @@
+import { useMutation } from '@connectrpc/connect-query';
 import {
   faCheck,
   faCircleNotch,
@@ -5,10 +6,11 @@ import {
   faFileLines,
   faLinesLeaning,
   faShoePrints,
+  faStopCircle,
   faTimes
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Collapse, Flex, Modal, Segmented, Tabs, Tag } from 'antd';
+import { Button, Collapse, Descriptions, Flex, message, Modal, Segmented, Tabs, Tag } from 'antd';
 import Alert from 'antd/es/alert/Alert';
 import { SegmentedOptions } from 'antd/es/segmented';
 import classNames from 'classnames';
@@ -23,6 +25,8 @@ import {
 } from '@ui/features/common/promotion-directive-step-status/utils';
 import { usePromotionDirectivesRegistryContext } from '@ui/features/promotion-directives/registry/context/use-registry-context';
 import { Runner } from '@ui/features/promotion-directives/registry/types';
+import { canAbortPromotion } from '@ui/features/stage/utils/promotion';
+import { abortPromotion } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 import { Promotion, PromotionStep } from '@ui/gen/v1alpha1/generated_pb';
 import { decodeRawData } from '@ui/utils/decode-raw-data';
 
@@ -160,10 +164,20 @@ const Step = ({
 export const PromotionDetailsModal = ({
   promotion,
   hide,
-  visible
+  visible,
+  project
 }: {
   promotion: Promotion;
+  project: string;
 } & ModalProps) => {
+  const abortPromotionMutation = useMutation(abortPromotion, {
+    onSuccess: () =>
+      // Abort promotion annotates the Promotion resource and then controller acts
+      message.success({
+        content: `Abort Promotion ${promotion.metadata?.name} requested successfully.`
+      })
+  });
+
   const logsByStepAlias: Record<string, object> = useMemo(() => {
     if (promotion?.status?.state?.raw) {
       try {
@@ -179,6 +193,38 @@ export const PromotionDetailsModal = ({
     return {};
   }, [promotion]);
 
+  const confirmAbortRequest = () =>
+    Modal.confirm({
+      width: '656px',
+      icon: <FontAwesomeIcon icon={faStopCircle} className='text-lg text-red-500 mr-5' />,
+      title: 'Abort Promotion Request',
+      onOk: () => abortPromotionMutation.mutate({ project, name: promotion?.metadata?.name }),
+      okText: 'Abort',
+      okButtonProps: {
+        danger: true
+      },
+      content: (
+        <Descriptions
+          size='small'
+          className='mt-2'
+          column={1}
+          bordered
+          items={[
+            {
+              key: 'name',
+              label: 'Name',
+              children: promotion.metadata?.name
+            },
+            {
+              key: 'date',
+              label: 'Start Date',
+              children: promotion.metadata?.creationTimestamp?.toDate().toString()
+            }
+          ]}
+        />
+      )
+    });
+
   return (
     <Modal
       title='Promotion Details'
@@ -188,6 +234,22 @@ export const PromotionDetailsModal = ({
       onOk={hide}
       onCancel={hide}
       cancelButtonProps={{ hidden: true }}
+      footer={
+        canAbortPromotion(promotion) && (
+          <>
+            <Button onClick={hide} type='primary'>
+              Close
+            </Button>
+            <Button
+              danger
+              icon={<FontAwesomeIcon icon={faStopCircle} className='text-lg' />}
+              onClick={confirmAbortRequest}
+            >
+              Abort
+            </Button>
+          </>
+        )
+      }
     >
       <Tabs defaultActiveKey='1'>
         {promotion.spec?.steps && (

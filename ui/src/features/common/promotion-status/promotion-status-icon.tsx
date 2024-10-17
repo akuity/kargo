@@ -1,4 +1,5 @@
 import {
+  faCancel,
   faCircleCheck,
   faCircleExclamation,
   faCircleNotch,
@@ -46,6 +47,9 @@ export const PromotionStatusIcon = ({
     case 'Running':
       icon = faCircleNotch;
       spin = true;
+      break;
+    case 'Aborted':
+      icon = faCancel;
       break;
     case 'Pending':
     default:

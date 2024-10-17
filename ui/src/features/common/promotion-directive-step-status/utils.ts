@@ -13,6 +13,9 @@ export const getPromotionDirectiveStepStatus = (
   stepNumber: number,
   promotionStatus?: PromotionStatus
 ) => {
+  // stepNumber index starts from 0
+  // currentStep index starts from 0
+
   if (
     promotionStatus?.phase === PromotionStatusPhase.RUNNING &&
     stepNumber === Number(promotionStatus?.currentStep)
@@ -30,7 +33,7 @@ export const getPromotionDirectiveStepStatus = (
 
   if (
     promotionStatus?.phase !== PromotionStatusPhase.SUCCEEDED &&
-    stepNumber > Number(promotionStatus?.currentStep)
+    stepNumber >= Number(promotionStatus?.currentStep)
   ) {
     return PromotionDirectiveStepStatus.WONT_RUN;
   }

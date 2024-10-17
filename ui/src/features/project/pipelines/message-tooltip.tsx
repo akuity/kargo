@@ -44,7 +44,13 @@ export const MessageTooltip = ({
         </div>
       }
     >
-      <FontAwesomeIcon icon={icon} color={iconColor} size={size} className={iconClassName} />
+      <FontAwesomeIcon
+        icon={icon}
+        color={iconColor}
+        size={size}
+        className={iconClassName}
+        spin={spin}
+      />
     </Tooltip>
   );
 };
