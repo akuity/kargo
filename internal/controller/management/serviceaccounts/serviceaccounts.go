@@ -118,9 +118,9 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 				)
 			}
 			logger.Debug("added finalizer to ServiceAccount")
-			if err := r.ensureControllerPermissions(ctx, req.NamespacedName); err != nil {
-				return ctrl.Result{}, err
-			}
+		}
+		if err := r.ensureControllerPermissions(ctx, req.NamespacedName); err != nil {
+			return ctrl.Result{}, err
 		}
 	}
 
