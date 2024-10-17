@@ -49,6 +49,8 @@ include one or more:
 
 Freight can therefore be thought of as a sort of meta-artifact. Freight is what
 Kargo seeks to progress from one stage to another.
+For detailed guidance on working with Freight, refer to
+[this guide](https://kargo.akuity.io/how-to-guides/working-with-freight).
 
 ### What is a Warehouse?
 
