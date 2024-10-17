@@ -1005,13 +1005,14 @@ func (r *reconciler) syncPromotions(
 	// current state of the Stage.
 	slices.SortFunc(promotions, kargoapi.ComparePromotionByPhaseAndCreationTime)
 
-	// The latest Promotion is the first element in the sorted list.
-	latestPromo := promotions[0]
+	// The Promotion with the highest priority (i.e. a Running or Pending phase)
+	// is the one that we will consider for the current state of the Stage.
+	highestPrioPromo := promotions[0]
 
 	// If the latest Promotion does not match the current Promotion, or is in a
 	// terminal phase, then the current Promotion is no longer valid.
 	if curPromotion := status.CurrentPromotion; curPromotion != nil {
-		if curPromotion.Name != latestPromo.Name || latestPromo.Status.Phase.IsTerminal() {
+		if curPromotion.Name != highestPrioPromo.Name || highestPrioPromo.Status.Phase.IsTerminal() {
 			status.CurrentPromotion = nil
 		}
 	}
@@ -1030,14 +1031,14 @@ func (r *reconciler) syncPromotions(
 	}
 
 	// If the latest Promotion is in a running phase, the Stage is promoting.
-	if !latestPromo.Status.Phase.IsTerminal() {
-		logger.WithValues("promotion", latestPromo.Name).Debug("Stage has a running Promotion")
+	if !highestPrioPromo.Status.Phase.IsTerminal() {
+		logger.WithValues("promotion", highestPrioPromo.Name).Debug("Stage has a running Promotion")
 		status.Phase = kargoapi.StagePhasePromoting
 		status.CurrentPromotion = &kargoapi.PromotionReference{
-			Name: latestPromo.Name,
+			Name: highestPrioPromo.Name,
 		}
-		if latestPromo.Status.Freight != nil {
-			status.CurrentPromotion.Freight = latestPromo.Status.Freight.DeepCopy()
+		if highestPrioPromo.Status.Freight != nil {
+			status.CurrentPromotion.Freight = highestPrioPromo.Status.Freight.DeepCopy()
 		}
 	}
 

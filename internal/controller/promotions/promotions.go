@@ -137,7 +137,18 @@ func SetupReconcilerWithManager(
 
 	logger := logging.LoggerFromContext(ctx)
 
-	// If Argo CD integration is disabled, this manager will be nil and we won't
+	// Watch Stages that acknowledge their next Promotion and enqueue it.
+	if err = c.Watch(
+		source.Kind(
+			kargoMgr.GetCache(),
+			&kargoapi.Stage{},
+			&PromotionAcknowledgedByStageHandler[*kargoapi.Stage]{},
+		),
+	); err != nil {
+		return fmt.Errorf("unable to watch Stages: %w", err)
+	}
+
+	// If Argo CD integration is disabled, this manager will be nil, and we won't
 	// care about this watch anyway.
 	if argocdMgr != nil {
 		if err = c.Watch(
@@ -174,17 +185,6 @@ func SetupReconcilerWithManager(
 		),
 	); err != nil {
 		return fmt.Errorf("unable to watch Promotions: %w", err)
-	}
-
-	// Watch Stages that acknowledge their next Promotion and enqueue it
-	if err = c.Watch(
-		source.Kind(
-			kargoMgr.GetCache(),
-			&kargoapi.Stage{},
-			&PromotionAcknowledgedByStageHandler[*kargoapi.Stage]{},
-		),
-	); err != nil {
-		return fmt.Errorf("unable to watch Stages: %w", err)
 	}
 
 	return nil
@@ -285,17 +285,17 @@ func (r *reconciler) Reconcile(
 		return ctrl.Result{}, nil
 	}
 
-	if promo.Status.Phase == "" {
-		// Mark the Promotion as pending.
-		if promo.Status.Phase != kargoapi.PromotionPhasePending {
+	// If the Promotion does not have a Phase, it must be new and (initially)
+	// pending. Mark it as such, and confirm we are actually allowed to start
+	// in case multiple are queued.
+	if isPending := promo.Status.Phase == kargoapi.PromotionPhasePending; isPending || promo.Status.Phase == "" {
+		if !isPending {
 			err = kubeclient.PatchStatus(ctx, r.kargoClient, promo, func(status *kargoapi.PromotionStatus) {
 				status.Phase = kargoapi.PromotionPhasePending
 			})
 			return ctrl.Result{}, err
 		}
 
-		// Confirm we are actually allowed to start, in case multiple
-		// are queued.
 		if !r.pqs.tryBegin(ctx, promo) {
 			return ctrl.Result{}, nil
 		}
