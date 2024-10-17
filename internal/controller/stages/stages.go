@@ -1031,7 +1031,8 @@ func (r *reconciler) syncPromotions(
 		}
 	}
 
-	// If the latest Promotion is in a running phase, the Stage is promoting.
+	// If the highest priority Promotion is in a running phase, the Stage is
+	// promoting.
 	if !highestPrioPromo.Status.Phase.IsTerminal() {
 		logger.WithValues("promotion", highestPrioPromo.Name).Debug("Stage has a running Promotion")
 		status.Phase = kargoapi.StagePhasePromoting
