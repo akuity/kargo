@@ -286,15 +286,17 @@ func (r *reconciler) Reconcile(
 	}
 
 	if promo.Status.Phase == "" {
-		// promo is Pending. Try to begin it.
+		// Mark the Promotion as pending.
+		if promo.Status.Phase != kargoapi.PromotionPhasePending {
+			err = kubeclient.PatchStatus(ctx, r.kargoClient, promo, func(status *kargoapi.PromotionStatus) {
+				status.Phase = kargoapi.PromotionPhasePending
+			})
+			return ctrl.Result{}, err
+		}
+
+		// Confirm we are actually allowed to start, in case multiple
+		// are queued.
 		if !r.pqs.tryBegin(ctx, promo) {
-			// It wasn't our turn. Mark this promo as Pending (if it wasn't already)
-			if promo.Status.Phase != kargoapi.PromotionPhasePending {
-				err = kubeclient.PatchStatus(ctx, r.kargoClient, promo, func(status *kargoapi.PromotionStatus) {
-					status.Phase = kargoapi.PromotionPhasePending
-				})
-				return ctrl.Result{}, err
-			}
 			return ctrl.Result{}, nil
 		}
 	}
