@@ -648,9 +648,22 @@ func (r *reconciler) terminatePromotion(
 
 	logger.Info("terminating Promotion")
 
+	// Normally, the actor is inherited from the creator of the Promotion for
+	// events. For an abort request, however, we do not want to inherit this
+	// as the abort request is not necessarily made by the creator of the
+	// Promotion.
+	actor := kargoapi.FormatEventControllerActor(r.cfg.Name())
+	if req.Actor != "" {
+		actor = req.Actor
+	}
+
 	newStatus := promo.Status.DeepCopy()
 	newStatus.Phase = kargoapi.PromotionPhaseAborted
-	newStatus.Message = "Promotion terminated on user request"
+	if actor != "" {
+		newStatus.Message = fmt.Sprintf("Promotion terminated by %s", actor)
+	} else {
+		newStatus.Message = "Promotion terminated per user request"
+	}
 	newStatus.FinishedAt = &metav1.Time{Time: time.Now()}
 
 	if err := kubeclient.PatchStatus(ctx, r.kargoClient, promo, func(status *kargoapi.PromotionStatus) {
@@ -660,15 +673,6 @@ func (r *reconciler) terminatePromotion(
 	}
 
 	eventMeta := kargoapi.NewPromotionEventAnnotations(ctx, "", promo, freight)
-
-	// Normally, the actor is inherited from the creator of the Promotion for
-	// events. For an abort request, however, we do not want to inherit this
-	// as the abort request is not necessarily made by the creator of the
-	// Promotion.
-	actor := kargoapi.FormatEventControllerActor(r.cfg.Name())
-	if req.Actor != "" {
-		actor = req.Actor
-	}
 	eventMeta[kargoapi.AnnotationKeyEventActor] = actor
 
 	r.recorder.AnnotatedEventf(
