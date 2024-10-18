@@ -5,6 +5,7 @@ import { Tooltip } from 'antd';
 import classNames from 'classnames';
 import { useContext, useEffect, useMemo, useState } from 'react';
 import { generatePath, useNavigate } from 'react-router-dom';
+import semver from 'semver';
 
 import { paths } from '@ui/config/paths';
 import { ColorContext } from '@ui/context/colors';
@@ -117,7 +118,7 @@ export const Images = ({
 
   const curImage = useMemo(() => {
     return images[imageURL];
-  }, [imageURL]);
+  }, [imageURL, images]);
 
   return (
     <div className='text-gray-600 text-sm bg-gray-100 pb-4 rounded-md overflow-hidden'>
@@ -148,7 +149,14 @@ export const Images = ({
               />
             </div>
             {(Object.keys(curImage.tags) || [])
-              .sort((a, b) => b[0].localeCompare(a[0], undefined, { numeric: true }))
+              .sort((a, b) => {
+                try {
+                  return semver.compare(b, a);
+                } catch (e) {
+                  // no chance of dirty semver but just-in-case
+                  return 0;
+                }
+              })
               .map((tag) => (
                 <ImageTagRow
                   key={tag}
