@@ -71,13 +71,26 @@ export const Pipelines = ({
 }) => {
   const { name, stageName, freightName, warehouseName } = useParams();
   const { data, isLoading } = useQuery(listStages, { project: name });
-  const { data: imageData, isLoading: isLoadingImages } = useQuery(listImages, { project: name });
+  const {
+    data: imageData,
+    isLoading: isLoadingImages
+    // refetch: refetchListImages
+  } = useQuery(listImages, { project: name });
+
   const navigate = useNavigate();
   const {
     data: freightData,
     isLoading: isLoadingFreight,
     refetch: refetchFreightData
   } = useQuery(queryFreight, { project: name });
+
+  // poor man's live view for images
+  // keeping this for reference
+  // TODO(Marvin9): refactor this
+  // list images re-construct data
+  // useEffect(() => {
+  //   refetchListImages();
+  // }, [freightData, data]);
 
   const { data: warehouseData } = useQuery(listWarehouses, {
     project: name
