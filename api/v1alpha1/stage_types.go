@@ -22,6 +22,9 @@ const (
 	StagePhasePromoting StagePhase = "Promoting"
 	// StagePhaseVerifying denotes a Stage that is currently being verified.
 	StagePhaseVerifying StagePhase = "Verifying"
+	// StagePhaseFailed denotes a Stage that is in a failed state. For example,
+	// the Stage may have failed to promote or verify its Freight.
+	StagePhaseFailed StagePhase = "Failed"
 )
 
 type VerificationPhase string

@@ -1,4 +1,5 @@
-![Kargo by Akuity, creators of Argo](kargo-logo.png)
+![Kargo by Akuity, creators of Argo](./ui/public/kargo-logo-white.png#gh-dark-mode-only)
+![Kargo by Akuity, creators of Argo](kargo-logo.png#gh-light-mode-only)
 
 ![CI](https://github.com/akuity/kargo/actions/workflows/ci.yaml/badge.svg)
 [![codecov](https://codecov.io/gh/akuity/kargo/branch/main/graph/badge.svg?token=FGUq4netA6)](https://codecov.io/gh/akuity/kargo)

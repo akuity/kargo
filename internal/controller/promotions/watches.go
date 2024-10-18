@@ -239,3 +239,74 @@ func (u *UpdatedArgoCDAppHandler[T]) Update(
 		)
 	}
 }
+
+// PromotionAcknowledgedByStageHandler is an event handler that enqueues a
+// Promotion for reconciliation when it has been acknowledged by the Stage\
+// it is for.
+type PromotionAcknowledgedByStageHandler[T any] struct{}
+
+// Create implements TypedEventHandler.
+func (u *PromotionAcknowledgedByStageHandler[T]) Create(
+	context.Context,
+	event.TypedCreateEvent[T],
+	workqueue.TypedRateLimitingInterface[reconcile.Request],
+) {
+	// No-op
+}
+
+// Delete implements TypedEventHandler.
+func (u *PromotionAcknowledgedByStageHandler[T]) Delete(
+	context.Context,
+	event.TypedDeleteEvent[T],
+	workqueue.TypedRateLimitingInterface[reconcile.Request],
+) {
+	// No-op
+}
+
+// Generic implements TypedEventHandler.
+func (u *PromotionAcknowledgedByStageHandler[T]) Generic(
+	context.Context,
+	event.TypedGenericEvent[T],
+	workqueue.TypedRateLimitingInterface[reconcile.Request],
+) {
+	// No-op
+}
+
+// Update implements TypedEventHandler.
+func (u *PromotionAcknowledgedByStageHandler[T]) Update(
+	ctx context.Context,
+	e event.TypedUpdateEvent[T],
+	wq workqueue.TypedRateLimitingInterface[reconcile.Request],
+) {
+	logger := logging.LoggerFromContext(ctx)
+
+	oldStage := any(e.ObjectOld).(*kargoapi.Stage) // nolint: forcetypeassert
+	newStage := any(e.ObjectNew).(*kargoapi.Stage) // nolint: forcetypeassert
+	if newStage == nil || oldStage == nil {
+		logger.Error(
+			nil, "Update event has no new or old object",
+			"event", e,
+		)
+		return
+	}
+
+	if newStage.Status.CurrentPromotion == nil {
+		return
+	}
+
+	if oldStage.Status.CurrentPromotion == nil ||
+		oldStage.Status.CurrentPromotion.Name != newStage.Status.CurrentPromotion.Name {
+		wq.Add(reconcile.Request{
+			NamespacedName: types.NamespacedName{
+				Namespace: newStage.Namespace,
+				Name:      newStage.Status.CurrentPromotion.Name,
+			},
+		})
+		logger.Debug(
+			"enqueued Promotion for reconciliation",
+			"namespace", newStage.Namespace,
+			"promotion", newStage.Status.CurrentPromotion.Name,
+			"stage", newStage.Name,
+		)
+	}
+}

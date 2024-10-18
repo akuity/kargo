@@ -106,6 +106,7 @@ k8s_resource(
     'kargo-controller:serviceaccount',
     'kargo-controller-argocd:clusterrole',
     'kargo-controller-argocd:clusterrolebinding',
+    'kargo-controller-read-secrets:clusterrole',
     'kargo-controller-rollouts:clusterrole',
     'kargo-controller-rollouts:clusterrolebinding'
   ],
