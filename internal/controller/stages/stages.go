@@ -232,6 +232,11 @@ func SetupReconcilerWithManager(
 		return fmt.Errorf("index non-terminal Promotions by Stage: %w", err)
 	}
 
+	// Index Promotions by whether or not they are terminal
+	if err := indexer.IndexPromotionsByTerminal(ctx, kargoMgr); err != nil {
+		return fmt.Errorf("index Promotions by terminal status: %w", err)
+	}
+
 	// Index Promotions by Stage + Freight
 	if err := indexer.IndexPromotionsByStageAndFreight(ctx, kargoMgr); err != nil {
 		return fmt.Errorf("index Promotions by Stage and Freight: %w", err)
@@ -550,8 +555,32 @@ func (r *reconciler) Reconcile(
 		return ctrl.Result{}, err
 	}
 
-	// Everything succeeded, look for new changes on the defined interval.
-	//
+	// TODO: krancour: This is a bit hacky, but it's expedient. We'll simply
+	// repeat the entire reconciliation loop if we finished without error, the
+	// Stage doesn't have a current Promotion, and there are non-terminal
+	// Promotions for the Stage waiting to be handled.
+	var mustRequeue bool
+	if !stage.IsControlFlow() && newStatus.CurrentPromotion == nil {
+		promos := kargoapi.PromotionList{}
+		if err := r.kargoClient.List(
+			ctx,
+			&promos,
+			client.InNamespace(stage.Namespace),
+			client.MatchingFields{
+				indexer.PromotionsByStageIndexField:    stage.Name,
+				indexer.PromotionsByTerminalIndexField: "false",
+			},
+			client.Limit(1),
+		); err != nil {
+			return ctrl.Result{}, err
+		}
+		mustRequeue = len(promos.Items) > 0
+	}
+
+	if mustRequeue {
+		return ctrl.Result{Requeue: true}, nil
+	}
+
 	// TODO: Make this configurable
 	return ctrl.Result{RequeueAfter: 5 * time.Minute}, nil
 }
@@ -1030,19 +1059,6 @@ func (r *reconciler) syncPromotions(
 		}
 	}
 
-	// If the highest priority Promotion is in a running phase, the Stage is
-	// promoting.
-	if !highestPrioPromo.Status.Phase.IsTerminal() {
-		logger.WithValues("promotion", highestPrioPromo.Name).Debug("Stage has a running Promotion")
-		status.Phase = kargoapi.StagePhasePromoting
-		status.CurrentPromotion = &kargoapi.PromotionReference{
-			Name: highestPrioPromo.Name,
-		}
-		if highestPrioPromo.Status.Freight != nil {
-			status.CurrentPromotion.Freight = highestPrioPromo.Status.Freight.DeepCopy()
-		}
-	}
-
 	// Determine if there are any new Promotions that have been completed since
 	// the last reconciliation.
 	logger.Debug("checking for new terminated Promotions")
@@ -1096,6 +1112,33 @@ func (r *reconciler) syncPromotions(
 			// No-op for safety in case the surrounding logic ever changes
 		default:
 			status.Phase = kargoapi.StagePhaseFailed
+		}
+	}
+
+	// If we've entered the steady state and there are no verification results
+	// yet, then we should remain in the steady state for now and not immediately
+	// begin a new promotion or else verification won't ever start... unless the
+	// Stage is unhealthy, in which case we will theoretically NEVER get around to
+	// verification, which means we should allow the next promotion to start, as
+	// it may be the only way to get the Stage back into a healthy state.
+	if (status.Phase == kargoapi.StagePhaseSteady || status.Phase == kargoapi.StagePhaseVerifying) &&
+		status.FreightHistory.Current() != nil &&
+		len(status.FreightHistory.Current().VerificationHistory) == 0 &&
+		status.Health != nil && status.Health.Status != kargoapi.HealthStateUnhealthy {
+		logger.WithValues().Debug("Stage is waiting for verification to start")
+		return status, nil
+	}
+
+	// If the highest priority Promotion is in a non-terminal phase, the Stage is
+	// now promoting.
+	if !highestPrioPromo.Status.Phase.IsTerminal() {
+		logger.WithValues("promotion", highestPrioPromo.Name).Debug("Stage has a non-terminal Promotion")
+		status.Phase = kargoapi.StagePhasePromoting
+		status.CurrentPromotion = &kargoapi.PromotionReference{
+			Name: highestPrioPromo.Name,
+		}
+		if highestPrioPromo.Status.Freight != nil {
+			status.CurrentPromotion.Freight = highestPrioPromo.Status.Freight.DeepCopy()
 		}
 	}
 
