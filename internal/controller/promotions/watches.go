@@ -290,11 +290,7 @@ func (u *PromotionAcknowledgedByStageHandler[T]) Update(
 		return
 	}
 
-	if oldStage.Status.CurrentPromotion == nil && newStage.Status.CurrentPromotion == nil {
-		return
-	}
-
-	if oldStage.Status.CurrentPromotion != nil && newStage.Status.CurrentPromotion == nil {
+	if newStage.Status.CurrentPromotion == nil {
 		return
 	}
 
