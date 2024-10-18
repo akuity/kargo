@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -20,6 +21,11 @@ import (
 	fakeevent "github.com/akuity/kargo/internal/kubernetes/event/fake"
 )
 
+var (
+	now    = metav1.Now()
+	before = metav1.Time{Time: now.Add(time.Second * -1)}
+)
+
 func TestNewPromotionReconciler(t *testing.T) {
 	kubeClient := fake.NewClientBuilder().Build()
 	r := newReconciler(
@@ -31,7 +37,6 @@ func TestNewPromotionReconciler(t *testing.T) {
 	require.NotNil(t, r.kargoClient)
 	require.NotNil(t, r.recorder)
 	require.NotNil(t, r.directivesEngine)
-	require.NotNil(t, r.pqs.pendingPromoQueuesByStage)
 	require.NotNil(t, r.getStageFn)
 	require.NotNil(t, r.promoteFn)
 }
@@ -132,6 +137,17 @@ func TestReconcile(t *testing.T) {
 			promoToReconcile:      &types.NamespacedName{Namespace: "fake-namespace", Name: "fake-promo2"},
 			expectedPhase:         kargoapi.PromotionPhasePending,
 			promos: []client.Object{
+				&kargoapi.Stage{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "fake-stage",
+						Namespace: "fake-namespace",
+					},
+					Status: kargoapi.StageStatus{
+						CurrentPromotion: &kargoapi.PromotionReference{
+							Name: "other-fake-promo1",
+						},
+					},
+				},
 				newPromo("fake-namespace", "fake-promo1", "fake-stage", kargoapi.PromotionPhasePending, before),
 				newPromo("fake-namespace", "fake-promo2", "fake-stage", "", now), // intentionally empty string phase
 			},
@@ -447,23 +463,22 @@ func Test_reconciler_terminatePromotion(t *testing.T) {
 	}
 }
 
-// Tests that initializeQueues is called properly
-func TestReconcileInitializeQueues(t *testing.T) {
-	ctx := context.TODO()
-	promos := []client.Object{
-		newPromo("fake-namespace", "fake-promo1", "fake-stage", kargoapi.PromotionPhasePending, before),
-		newPromo("fake-namespace", "fake-promo2", "fake-stage", kargoapi.PromotionPhasePending, now),
+// nolint: unparam
+func newPromo(namespace, name, stage string,
+	phase kargoapi.PromotionPhase,
+	creationTimestamp metav1.Time,
+) *kargoapi.Promotion {
+	return &kargoapi.Promotion{
+		ObjectMeta: metav1.ObjectMeta{
+			CreationTimestamp: creationTimestamp,
+			Name:              name,
+			Namespace:         namespace,
+		},
+		Spec: kargoapi.PromotionSpec{
+			Stage: stage,
+		},
+		Status: kargoapi.PromotionStatus{
+			Phase: phase,
+		},
 	}
-	recorder := &fakeevent.EventRecorder{}
-	r := newFakeReconciler(t, recorder, promos...)
-
-	// reconcile a non-existent promo to trigger initializeQueues
-	req := ctrl.Request{NamespacedName: types.NamespacedName{Namespace: "does-not-exist", Name: "does-not-exist"}}
-
-	_, err := r.Reconcile(ctx, req)
-	require.NoError(t, err)
-
-	// Verifies queues got set up
-	stageKey := types.NamespacedName{Namespace: "fake-namespace", Name: "fake-stage"}
-	require.Equal(t, 2, r.pqs.pendingPromoQueuesByStage[stageKey].Depth())
 }

@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
-	"sync"
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
@@ -26,7 +25,6 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller"
 	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
-	"github.com/akuity/kargo/internal/controller/runtime"
 	"github.com/akuity/kargo/internal/directives"
 	"github.com/akuity/kargo/internal/indexer"
 	"github.com/akuity/kargo/internal/kargo"
@@ -63,9 +61,6 @@ type reconciler struct {
 	cfg ReconcilerConfig
 
 	recorder record.EventRecorder
-
-	pqs            *promoQueues
-	initializeOnce sync.Once
 
 	// The following behaviors are overridable for testing purposes:
 
@@ -168,25 +163,6 @@ func SetupReconcilerWithManager(
 		}
 	}
 
-	// Watch Promotions that complete and enqueue the next highest promotion key
-	priorityQueueHandler := &EnqueueHighestPriorityPromotionHandler[*kargoapi.Promotion]{
-		ctx:         ctx,
-		logger:      logger,
-		kargoClient: reconciler.kargoClient,
-		pqs:         reconciler.pqs,
-	}
-	promoWentTerminal := kargo.NewPromoWentTerminalPredicate(logger)
-	if err = c.Watch(
-		source.Kind(
-			kargoMgr.GetCache(),
-			&kargoapi.Promotion{},
-			priorityQueueHandler,
-			promoWentTerminal,
-		),
-	); err != nil {
-		return fmt.Errorf("unable to watch Promotions: %w", err)
-	}
-
 	return nil
 }
 
@@ -196,16 +172,11 @@ func newReconciler(
 	directivesEngine directives.Engine,
 	cfg ReconcilerConfig,
 ) *reconciler {
-	pqs := promoQueues{
-		activePromoByStage:        map[types.NamespacedName]string{},
-		pendingPromoQueuesByStage: map[types.NamespacedName]runtime.PriorityQueue{},
-	}
 	r := &reconciler{
 		kargoClient:      kargoClient,
 		directivesEngine: directivesEngine,
 		recorder:         recorder,
 		cfg:              cfg,
-		pqs:              &pqs,
 	}
 	r.getStageFn = kargoapi.GetStage
 	r.promoteFn = r.promote
@@ -224,25 +195,6 @@ func (r *reconciler) Reconcile(
 	)
 	ctx = logging.ContextWithLogger(ctx, logger)
 	logger.Debug("reconciling Promotion")
-
-	// Note that initialization occurs here because we basically know that the
-	// controller runtime client's cache is ready at this point. We cannot attempt
-	// to list Promotions prior to that point.
-	var err error
-	r.initializeOnce.Do(func() {
-		promos := kargoapi.PromotionList{}
-		if err = r.kargoClient.List(ctx, &promos); err != nil {
-			err = fmt.Errorf("error listing promotions: %w", err)
-		} else {
-			r.pqs.initializeQueues(ctx, promos)
-			logger.Debug(
-				"initialized Stage-specific Promotion queues from list of existing Promotions",
-			)
-		}
-	})
-	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("error initializing Promotion queues: %w", err)
-	}
 
 	// Find the Promotion
 	promo, err := kargoapi.GetPromotion(ctx, r.kargoClient, req.NamespacedName)
@@ -286,18 +238,12 @@ func (r *reconciler) Reconcile(
 	}
 
 	// If the Promotion does not have a Phase, it must be new and (initially)
-	// pending. Mark it as such, and confirm we are actually allowed to start
-	// in case multiple are queued.
-	if isPending := promo.Status.Phase == kargoapi.PromotionPhasePending; isPending || promo.Status.Phase == "" {
-		if !isPending {
-			err = kubeclient.PatchStatus(ctx, r.kargoClient, promo, func(status *kargoapi.PromotionStatus) {
-				status.Phase = kargoapi.PromotionPhasePending
-			})
+	// pending. Mark it as such.
+	if promo.Status.Phase == "" {
+		if err = kubeclient.PatchStatus(ctx, r.kargoClient, promo, func(status *kargoapi.PromotionStatus) {
+			status.Phase = kargoapi.PromotionPhasePending
+		}); err != nil {
 			return ctrl.Result{}, err
-		}
-
-		if !r.pqs.tryBegin(ctx, promo) {
-			return ctrl.Result{}, nil
 		}
 	}
 
@@ -324,24 +270,13 @@ func (r *reconciler) Reconcile(
 	}
 
 	// Confirm that the Stage is awaiting this Promotion.
-	//
-	// This is a temporary measure to ensure that the Promotion is only
-	// allowed to proceed if the Stage is expecting it. This is necessary
-	// to ensure we can derive Freight from the previous Promotion in the
-	// Stage's status to construct the Freight collection for the current
-	// Promotion.
-	//
-	// TODO(hidde): This adds tight coupling between the Promotion and the
-	// Stage (again, but without patching the Stage this time). We should
-	// explore a more loosely-coupled approach, perhaps by making the
-	// Freight self-aware of the Stages it has been promoted to, or even
-	// more radically, by making the Promotion self-aware of the Freight
-	// collection it is promoting.
+	// This effectively prevents the Promotion from running until the Stage
+	// decides it is the next Promotion to run.
 	if stage.Status.CurrentPromotion == nil || stage.Status.CurrentPromotion.Name != promo.Name {
+		// The watch on the Stage will requeue the Promotion if the Stage
+		// acknowledges it.
 		logger.Debug("Stage is not awaiting Promotion", "stage", stage.Name, "promotion", promo.Name)
-		// Our watch will catch this and requeue the Promotion when the Stage
-		// acknowledges it. Which typically should be faster.
-		return ctrl.Result{RequeueAfter: 5 * time.Minute}, nil
+		return ctrl.Result{}, nil
 	}
 
 	// Update promo status as Running to give visibility in UI. Also, a promo which
