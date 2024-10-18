@@ -295,7 +295,7 @@ func (u *PromotionAcknowledgedByStageHandler[T]) Update(
 	}
 
 	if oldStage.Status.CurrentPromotion == nil ||
-		oldStage.Status.CurrentPromotion.Name == newStage.Status.CurrentPromotion.Name {
+		oldStage.Status.CurrentPromotion.Name != newStage.Status.CurrentPromotion.Name {
 		wq.Add(reconcile.Request{
 			NamespacedName: types.NamespacedName{
 				Namespace: newStage.Namespace,
