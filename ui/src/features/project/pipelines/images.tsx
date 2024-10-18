@@ -122,17 +122,14 @@ export const Images = ({
 
   const sortedTags = useMemo(() => {
     if (curImage?.tags) {
-      return (
-        Object.keys(curImage.tags || {}) ||
-        [].sort((a, b) => {
-          try {
-            return semver.compare(b, a);
-          } catch (e) {
-            // no chance of dirty semver but just-in-case
-            return 0;
-          }
-        })
-      );
+      return (Object.keys(curImage.tags || {}) || []).sort((a, b) => {
+        try {
+          return semver.compare(b, a);
+        } catch (e) {
+          // no chance of dirty semver but just-in-case
+          return 0;
+        }
+      });
     }
 
     return [];
