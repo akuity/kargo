@@ -143,11 +143,7 @@ export const Promotions = () => {
         const annotation = promotion.metadata?.annotations['kargo.akuity.io/create-actor'];
         const email = annotation ? annotation.split(':')[1] : 'N/A';
 
-        if (!email) {
-          return annotation;
-        }
-
-        return email;
+        return email || annotation;
       }
     },
     {
