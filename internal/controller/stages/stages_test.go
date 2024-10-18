@@ -2275,7 +2275,8 @@ func TestReconciler_syncPromotions(t *testing.T) {
 			assertions: func(t *testing.T, status kargoapi.StageStatus, err error) {
 				require.NoError(t, err)
 
-				require.Equal(t, kargoapi.StagePhaseSteady, status.Phase)
+				// Phase should be Failed because the last Promotion failed.
+				require.Equal(t, kargoapi.StagePhaseFailed, status.Phase)
 				require.Nil(t, status.CurrentPromotion)
 
 				status.LastPromotion.FinishedAt = nil

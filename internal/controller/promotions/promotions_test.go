@@ -163,7 +163,7 @@ func TestReconcile(t *testing.T) {
 			name:                  "stage not awaiting promo",
 			expectPromoteFnCalled: false,
 			promoToReconcile:      &types.NamespacedName{Namespace: "fake-namespace", Name: "fake-promo"},
-			expectedPhase:         kargoapi.PromotionPhaseRunning,
+			expectedPhase:         kargoapi.PromotionPhasePending,
 			expectedEventRecorded: false,
 			promos: []client.Object{
 				&kargoapi.Stage{
