@@ -83,4 +83,27 @@ test('promotionCompareFn', () => {
       .sort(promotionCompareFn)
       .map((p) => p.name)
   ).toStrictEqual([2, 100, 1, 10]);
+
+  expect(
+    [
+      {
+        metadata: { creationTimestamp: { toDate: () => new Date('01/01/2000 01:01:01') } },
+        name: 'a'
+      },
+      {
+        metadata: { creationTimestamp: { toDate: () => new Date('01/01/2000 01:01:01') } },
+        name: 'b'
+      },
+      {
+        metadata: { creationTimestamp: { toDate: () => new Date('01/01/2000 01:01:04') } },
+        name: 'c'
+      },
+      {
+        metadata: { creationTimestamp: { toDate: () => new Date('01/01/2000 01:01:03') } },
+        name: 'd'
+      }
+    ]
+      .sort(promotionCompareFn)
+      .map((p) => p.name)
+  ).toStrictEqual(['c', 'd', 'a', 'b']);
 });
