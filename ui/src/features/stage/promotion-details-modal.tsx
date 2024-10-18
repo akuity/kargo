@@ -235,11 +235,9 @@ export const PromotionDetailsModal = ({
       onCancel={hide}
       cancelButtonProps={{ hidden: true }}
       footer={
-        canAbortPromotion(promotion) && (
-          <>
-            <Button onClick={hide} type='primary'>
-              Close
-            </Button>
+        <>
+          <Button onClick={hide}>Close</Button>
+          {canAbortPromotion(promotion) && (
             <Button
               danger
               icon={<FontAwesomeIcon icon={faStopCircle} className='text-lg' />}
@@ -247,8 +245,8 @@ export const PromotionDetailsModal = ({
             >
               Abort
             </Button>
-          </>
-        )
+          )}
+        </>
       }
     >
       <Tabs defaultActiveKey='1'>
