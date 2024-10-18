@@ -19,3 +19,26 @@ export const hasAbortRequest = (promotion: Promotion) => {
 
   return !!abortAnnotation;
 };
+
+export const promotionCompareFn = (
+  promotion1: Partial<Promotion>,
+  promotion2: Partial<Promotion>
+) => {
+  const promo1Date = promotion1.metadata?.creationTimestamp?.toDate();
+  const promo2Date = promotion2.metadata?.creationTimestamp?.toDate();
+
+  if (promo1Date && promo2Date) {
+    // latest promotion should have lower index in array
+
+    if (promo2Date < promo1Date) {
+      return -1;
+    }
+
+    if (promo1Date < promo2Date) {
+      return 1;
+    }
+  }
+
+  // doesn't matter that much... this is to keep UI in the same state on refresh because dates are in second precision and the promotion that happened in same seconds needs ordering
+  return (promotion1?.metadata?.name || 0) < (promotion2?.metadata?.name || 0) ? -1 : 1;
+};

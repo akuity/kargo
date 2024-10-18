@@ -23,7 +23,7 @@ import { ListPromotionsResponse } from '@ui/gen/service/v1alpha1/service_pb';
 import { Freight, Promotion } from '@ui/gen/v1alpha1/generated_pb';
 
 import { PromotionDetailsModal } from './promotion-details-modal';
-import { hasAbortRequest } from './utils/promotion';
+import { hasAbortRequest, promotionCompareFn } from './utils/promotion';
 
 export const Promotions = () => {
   const client = useQueryClient();
@@ -98,7 +98,7 @@ export const Promotions = () => {
 
   const promotions = React.useMemo(() => {
     // Immutable sorting
-    return [...(promotionsResponse?.promotions || [])];
+    return [...(promotionsResponse?.promotions || [])].sort(promotionCompareFn);
   }, [promotionsResponse]);
 
   const columns: ColumnsType<Promotion> = [
