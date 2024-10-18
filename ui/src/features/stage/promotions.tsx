@@ -9,6 +9,11 @@ import { Link, generatePath, useParams } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
 import { transportWithAuth } from '@ui/config/transport';
+import { PromotionStatusIcon } from '@ui/features/common/promotion-status/promotion-status-icon';
+import {
+  getPromotionStatusPhase,
+  isPromotionPhaseTerminal
+} from '@ui/features/common/promotion-status/utils';
 import {
   getFreight,
   listPromotions
@@ -17,9 +22,8 @@ import { KargoService } from '@ui/gen/service/v1alpha1/service_connect';
 import { ListPromotionsResponse } from '@ui/gen/service/v1alpha1/service_pb';
 import { Freight, Promotion } from '@ui/gen/v1alpha1/generated_pb';
 
-import { PromotionStatusIcon } from '../common/promotion-status/promotion-status-icon';
-
 import { PromotionDetailsModal } from './promotion-details-modal';
+import { hasAbortRequest } from './utils/promotion';
 
 export const Promotions = () => {
   const client = useQueryClient();
@@ -101,7 +105,24 @@ export const Promotions = () => {
     {
       title: '',
       width: 24,
-      render: (_, promotion) => <PromotionStatusIcon status={promotion?.status} />
+      render: (_, promotion) => {
+        const isAbortRequestPending =
+          hasAbortRequest(promotion) &&
+          !isPromotionPhaseTerminal(getPromotionStatusPhase(promotion));
+
+        // generally controller quickly Abort promotion
+        // but incase if controller is off for some reason, this messaging ensures accurate information
+        if (isAbortRequestPending && promotion?.status) {
+          promotion.status.message = 'Promotion Abort Request is in Queue';
+        }
+
+        return (
+          <PromotionStatusIcon
+            status={promotion.status}
+            color={isAbortRequestPending ? 'red' : ''}
+          />
+        );
+      }
     },
     {
       title: 'Date',
@@ -121,7 +142,8 @@ export const Promotions = () => {
       render: (_, promotion) => {
         const annotation = promotion.metadata?.annotations['kargo.akuity.io/create-actor'];
         const email = annotation ? annotation.split(':')[1] : 'N/A';
-        return email;
+
+        return email || annotation;
       }
     },
     {
@@ -166,11 +188,13 @@ export const Promotions = () => {
       {selectedPromotion && (
         <PromotionDetailsModal
           // @ts-expect-error // know that there will always be value available of this promotion
+          // IMPORTANT: the reason why selectedPromotion is not used is because promotions are live while selectedPromotion snapshot at particular point
           promotion={promotions?.find(
             (p) => p?.metadata?.name === selectedPromotion?.metadata?.name
           )}
           visible={!!selectedPromotion}
           hide={() => setSelectedPromotion(undefined)}
+          project={projectName || ''}
         />
       )}
     </>

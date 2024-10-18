@@ -112,6 +112,13 @@ test('getPromotionDirectiveStepStatus', () => {
           phase: PromotionStatusPhase.ERRORED,
           currentStep: 15
         }
+      },
+      {
+        step: 11,
+        promotionStatus: {
+          phase: PromotionStatusPhase.ABORTED,
+          currentStep: 15
+        }
       }
     ],
     [PromotionDirectiveStepStatus.WONT_RUN]: [
@@ -148,6 +155,20 @@ test('getPromotionDirectiveStepStatus', () => {
         promotionStatus: {
           currentStep: 0,
           phase: PromotionStatusPhase.PENDING
+        }
+      },
+      {
+        step: 0,
+        promotionStatus: {
+          currentStep: 0,
+          phase: PromotionStatusPhase.ABORTED
+        }
+      },
+      {
+        step: 100,
+        promotionStatus: {
+          currentStep: 90,
+          phase: PromotionStatusPhase.ABORTED
         }
       }
     ]
