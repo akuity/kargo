@@ -230,26 +230,25 @@ export const PromotionDetailsModal = ({
       title='Promotion Details'
       open={visible}
       width='800px'
-      okText='Close'
+      okButtonProps={{ hidden: true }}
       onOk={hide}
       onCancel={hide}
-      cancelButtonProps={{ hidden: true }}
-      footer={
-        <>
-          <Button onClick={hide}>Close</Button>
-          {canAbortPromotion(promotion) && (
+    >
+      <Tabs
+        defaultActiveKey='1'
+        tabBarExtraContent={
+          canAbortPromotion(promotion) && (
             <Button
               danger
-              icon={<FontAwesomeIcon icon={faStopCircle} className='text-lg' />}
+              icon={<FontAwesomeIcon icon={faStopCircle} className='text-sm' />}
               onClick={confirmAbortRequest}
+              size='small'
             >
               Abort
             </Button>
-          )}
-        </>
-      }
-    >
-      <Tabs defaultActiveKey='1'>
+          )
+        }
+      >
         {promotion.spec?.steps && (
           <Tabs.TabPane tab='Steps' key='1' icon={<FontAwesomeIcon icon={faShoePrints} />}>
             <Collapse
