@@ -1124,7 +1124,7 @@ func (r *reconciler) syncPromotions(
 	if (status.Phase == kargoapi.StagePhaseSteady || status.Phase == kargoapi.StagePhaseVerifying) &&
 		status.FreightHistory.Current() != nil &&
 		len(status.FreightHistory.Current().VerificationHistory) == 0 &&
-		status.Health != nil && status.Health.Status != kargoapi.HealthStateUnhealthy {
+		(status.Health == nil || status.Health.Status != kargoapi.HealthStateUnhealthy) {
 		logger.WithValues().Debug("Stage is waiting for verification to start")
 		return status, nil
 	}
