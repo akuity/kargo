@@ -11,6 +11,9 @@ import (
 	"github.com/akuity/kargo/internal/controller/git"
 	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/gitprovider"
+
+	_ "github.com/akuity/kargo/internal/gitprovider/github" // GitHub provider registration
+	_ "github.com/akuity/kargo/internal/gitprovider/gitlab" // GitLab provider registration
 )
 
 const prNumberKey = "prNumber"
