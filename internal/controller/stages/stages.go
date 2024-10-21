@@ -1115,18 +1115,51 @@ func (r *reconciler) syncPromotions(
 		}
 	}
 
-	// If we've entered the steady state and there are no verification results
-	// yet, then we should remain in the steady state for now and not immediately
-	// begin a new promotion or else verification won't ever start... unless the
-	// Stage is unhealthy, in which case we will theoretically NEVER get around to
-	// verification, which means we should allow the next promotion to start, as
-	// it may be the only way to get the Stage back into a healthy state.
-	if (status.Phase == kargoapi.StagePhaseSteady || status.Phase == kargoapi.StagePhaseVerifying) &&
-		status.FreightHistory.Current() != nil &&
-		len(status.FreightHistory.Current().VerificationHistory) == 0 &&
-		(status.Health == nil || status.Health.Status != kargoapi.HealthStateUnhealthy) {
-		logger.WithValues().Debug("Stage is waiting for verification to start")
-		return status, nil
+	// We already dealt with in-progress verification above. At this point we
+	// need to decide between waiting for verification of the the current Freight
+	// to start or moving on to the next Promotion.
+	if status.Phase == kargoapi.StagePhaseSteady || status.Phase == kargoapi.StagePhaseVerifying {
+		// TODO: krancour: This is hacky but expedient. We check the health
+		// elsewhere as well, but it's crucial that we have up-to-date health info
+		// here. This duplication will be dealt with in a forthcoming refactor.
+		health := kargoapi.Health{
+			Status: kargoapi.HealthStateHealthy,
+		}
+		if healthChecks := stage.Status.LastPromotion.GetHealthChecks(); len(healthChecks) > 0 {
+			var steps []directives.HealthCheckStep
+			for _, step := range healthChecks {
+				steps = append(steps, directives.HealthCheckStep{
+					Kind:   step.Uses,
+					Config: step.GetConfig(),
+				})
+			}
+			health = r.directivesEngine.CheckHealth(ctx, directives.HealthCheckContext{
+				Project: stage.Namespace,
+				Stage:   stage.Name,
+			}, steps)
+		}
+		// If the Stage is unhealthy, it probably won't ever reach a healthy state
+		// again without a new promotion, so we should only consider waiting if
+		// the Stage has some health state BESIDES unhealthy.
+		if health.Status != kargoapi.HealthStateUnhealthy {
+			if stage.Spec.Verification != nil { // nolint: revive
+				// If there were explicit verification procedures defined and we find no
+				// verification history, then we need to wait.
+				if status.FreightHistory.Current() == nil || len(status.FreightHistory.Current().VerificationHistory) == 0 {
+					logger.WithValues().Debug(
+						"Stage is waiting for explicitly defined verification process to start; not moving on to next Promotion",
+					)
+					return status, nil
+				}
+			} else if health.Status != kargoapi.HealthStateHealthy {
+				// If no explicit verification procedures were defined, we just need to
+				// wait for the Stage to become healthy.
+				logger.WithValues().Debug(
+					"Stage is waiting to reach a healthy state; not moving on to next Promotion",
+				)
+				return status, nil
+			}
+		}
 	}
 
 	// If the highest priority Promotion is in a non-terminal phase, the Stage is
