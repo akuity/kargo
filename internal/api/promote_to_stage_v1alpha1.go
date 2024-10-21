@@ -138,7 +138,7 @@ func (s *server) recordPromotionCreatedEvent(
 
 	s.recorder.AnnotatedEventf(
 		p,
-		kargoapi.NewPromotionEventAnnotations(ctx, actor, p, f),
+		NewPromotionEventAnnotations(ctx, actor, p, f),
 		corev1.EventTypeNormal,
 		kargoapi.EventReasonPromotionCreated,
 		msg,

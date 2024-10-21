@@ -25,6 +25,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/api"
 	"github.com/akuity/kargo/internal/controller"
 	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
 	rollouts "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
@@ -982,7 +983,7 @@ func (r *reconciler) syncNormalStage(
 
 		r.recorder.AnnotatedEventf(
 			&promo,
-			kargoapi.NewPromotionEventAnnotations(
+			api.NewPromotionEventAnnotations(
 				ctx,
 				kargoapi.FormatEventControllerActor(r.cfg.Name()),
 				&promo,
