@@ -742,7 +742,7 @@ func getAuthorizedClient(globalServiceAccountNamespaces []string) func(
 
 		// sub is a standard claim. If the user has this claim, we can infer that
 		// they authenticated using OIDC.
-		if userInfo.Claims["sub"] != "" {
+		if _, ok := userInfo.Claims["sub"]; ok {
 			var namespacesToCheck []string
 			if key.Namespace != "" {
 				// This is written the way it is to keep key.Namespace as the first
