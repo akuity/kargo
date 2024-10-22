@@ -16,7 +16,7 @@ VERSION_PACKAGE := github.com/akuity/kargo/internal/version
 CONTAINER_RUNTIME ?= docker
 
 IMAGE_REPO 			?= kargo
-LOCAL_REG_PORT			?= 5000
+LOCAL_REG_PORT			?= 5001
 BASE_IMAGE 			?= localhost:$(LOCAL_REG_PORT)/$(IMAGE_REPO)-base
 IMAGE_TAG 			?= dev
 IMAGE_PUSH 			?= false
@@ -294,7 +294,7 @@ hack-codegen: hack-build-dev-tools
 .PHONY: hack-build
 hack-build: build-base-image
 	{ \
-		$(CONTAINER_RUNTIME) run -d -p 5000:$(LOCAL_REG_PORT) --name tmp-registry registry:2; \
+		$(CONTAINER_RUNTIME) run -d -p $(LOCAL_REG_PORT):5000 --name tmp-registry registry:2; \
 		trap '$(CONTAINER_RUNTIME) rm -f tmp-registry' EXIT; \
 		docker push $(BASE_IMAGE):latest-amd64; \
 		docker push $(BASE_IMAGE):latest-arm64; \
