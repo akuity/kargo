@@ -20,7 +20,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/api"
 	libEvent "github.com/akuity/kargo/internal/kubernetes/event"
 	"github.com/akuity/kargo/internal/logging"
 	libWebhook "github.com/akuity/kargo/internal/webhook"
@@ -373,7 +372,7 @@ func (w *webhook) recordPromotionCreatedEvent(
 	actor := kargoapi.FormatEventKubernetesUserActor(req.UserInfo)
 	w.recorder.AnnotatedEventf(
 		p,
-		api.NewPromotionEventAnnotations(ctx, actor, p, f),
+		libEvent.NewPromotionEventAnnotations(ctx, actor, p, f),
 		corev1.EventTypeNormal,
 		kargoapi.EventReasonPromotionCreated,
 		"Promotion created for Stage %q by %q",
