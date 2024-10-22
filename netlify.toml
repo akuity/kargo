@@ -10,6 +10,7 @@
   ignore = "git diff --quiet main -- docs"
 
 [[redirects]]
-  from = "https://kargo.akuity.io"
+  from = "https://kargo.akuity.io/*"
   to = "https://kargo.io"
   status = 301
+  force = true
