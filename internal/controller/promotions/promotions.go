@@ -13,7 +13,6 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -99,16 +98,6 @@ func SetupReconcilerWithManager(
 		return fmt.Errorf("index running Promotions by Argo CD Applications: %w", err)
 	}
 
-	shardPredicate, err := controller.GetShardPredicate(cfg.ShardName)
-	if err != nil {
-		return fmt.Errorf("error creating shard selector predicate: %w", err)
-	}
-	shardRequirement, err := controller.GetShardRequirement(cfg.ShardName)
-	if err != nil {
-		return fmt.Errorf("error creating shard requirement: %w", err)
-	}
-	shardSelector := labels.NewSelector().Add(*shardRequirement)
-
 	reconciler := newReconciler(
 		kargoMgr.GetClient(),
 		libEvent.NewRecorder(ctx, kargoMgr.GetScheme(), kargoMgr.GetClient(), cfg.Name()),
@@ -123,7 +112,6 @@ func SetupReconcilerWithManager(
 			kargo.RefreshRequested{},
 			kargo.PromotionAbortRequested{},
 		)).
-		WithEventFilter(shardPredicate).
 		WithOptions(controller.CommonOptions()).
 		Build(reconciler)
 	if err != nil {
@@ -151,8 +139,7 @@ func SetupReconcilerWithManager(
 				argocdMgr.GetCache(),
 				&argocd.Application{},
 				&UpdatedArgoCDAppHandler[*argocd.Application]{
-					kargoClient:   kargoMgr.GetClient(),
-					shardSelector: shardSelector,
+					kargoClient: kargoMgr.GetClient(),
 				},
 				ArgoCDAppOperationCompleted[*argocd.Application]{
 					logger: logger,
