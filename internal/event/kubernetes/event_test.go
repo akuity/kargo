@@ -1,4 +1,4 @@
-package event
+package kubernetes
 
 import (
 	"context"

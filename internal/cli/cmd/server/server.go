@@ -15,7 +15,7 @@ import (
 	"github.com/akuity/kargo/internal/api/rbac"
 	"github.com/akuity/kargo/internal/cli/option"
 	"github.com/akuity/kargo/internal/cli/templates"
-	fakeevent "github.com/akuity/kargo/internal/kubernetes/event/fake"
+	fakeevent "github.com/akuity/kargo/internal/event/kubernetes/fake"
 )
 
 type serverOptions struct {

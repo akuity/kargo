@@ -18,7 +18,8 @@ import (
 	"github.com/akuity/kargo/api/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/directives"
-	fakeevent "github.com/akuity/kargo/internal/kubernetes/event/fake"
+	kargoEvent "github.com/akuity/kargo/internal/event"
+	fakeevent "github.com/akuity/kargo/internal/event/kubernetes/fake"
 )
 
 var (
@@ -77,7 +78,7 @@ func TestReconcile(t *testing.T) {
 			expectPromoteFnCalled: true,
 			expectedPhase:         kargoapi.PromotionPhaseSucceeded,
 			expectedEventRecorded: true,
-			expectedEventReason:   kargoapi.EventReasonPromotionSucceeded,
+			expectedEventReason:   kargoEvent.EventReasonPromotionSucceeded,
 			promos: []client.Object{
 				&kargoapi.Stage{
 					ObjectMeta: metav1.ObjectMeta{
@@ -104,7 +105,7 @@ func TestReconcile(t *testing.T) {
 			expectPromoteFnCalled: false,
 			expectedPhase:         kargoapi.PromotionPhaseErrored,
 			expectedEventRecorded: false,
-			expectedEventReason:   kargoapi.EventReasonPromotionErrored,
+			expectedEventReason:   kargoEvent.EventReasonPromotionErrored,
 			promos: []client.Object{
 				newPromo("fake-namespace", "fake-promo", "fake-stage", kargoapi.PromotionPhaseErrored, now),
 			},
@@ -114,7 +115,7 @@ func TestReconcile(t *testing.T) {
 			expectPromoteFnCalled: true,
 			expectedPhase:         kargoapi.PromotionPhaseSucceeded,
 			expectedEventRecorded: true,
-			expectedEventReason:   kargoapi.EventReasonPromotionSucceeded,
+			expectedEventReason:   kargoEvent.EventReasonPromotionSucceeded,
 			promos: []client.Object{
 				&kargoapi.Stage{
 					ObjectMeta: metav1.ObjectMeta{
@@ -158,7 +159,7 @@ func TestReconcile(t *testing.T) {
 			promoToReconcile:      &types.NamespacedName{Namespace: "fake-namespace", Name: "fake-promo1"},
 			expectedPhase:         kargoapi.PromotionPhaseSucceeded,
 			expectedEventRecorded: true,
-			expectedEventReason:   kargoapi.EventReasonPromotionSucceeded,
+			expectedEventReason:   kargoEvent.EventReasonPromotionSucceeded,
 			promos: []client.Object{
 				&kargoapi.Stage{
 					ObjectMeta: metav1.ObjectMeta{
@@ -201,7 +202,7 @@ func TestReconcile(t *testing.T) {
 			expectPromoteFnCalled: true,
 			expectedPhase:         kargoapi.PromotionPhaseErrored,
 			expectedEventRecorded: true,
-			expectedEventReason:   kargoapi.EventReasonPromotionErrored,
+			expectedEventReason:   kargoEvent.EventReasonPromotionErrored,
 			promos: []client.Object{
 				&kargoapi.Stage{
 					ObjectMeta: metav1.ObjectMeta{
@@ -226,7 +227,7 @@ func TestReconcile(t *testing.T) {
 			expectPromoteFnCalled: true,
 			expectedPhase:         kargoapi.PromotionPhaseErrored,
 			expectedEventRecorded: true,
-			expectedEventReason:   kargoapi.EventReasonPromotionErrored,
+			expectedEventReason:   kargoEvent.EventReasonPromotionErrored,
 			promos: []client.Object{
 				&kargoapi.Stage{
 					ObjectMeta: metav1.ObjectMeta{
@@ -365,7 +366,7 @@ func Test_reconciler_terminatePromotion(t *testing.T) {
 
 				require.Len(t, recorder.Events, 1)
 				event := <-recorder.Events
-				require.Equal(t, kargoapi.EventReasonPromotionAborted, event.Reason)
+				require.Equal(t, kargoEvent.EventReasonPromotionAborted, event.Reason)
 			},
 		},
 		{
@@ -388,8 +389,8 @@ func Test_reconciler_terminatePromotion(t *testing.T) {
 
 				require.Len(t, recorder.Events, 1)
 				event := <-recorder.Events
-				require.Equal(t, kargoapi.EventReasonPromotionAborted, event.Reason)
-				actor := event.Annotations[kargoapi.AnnotationKeyEventActor]
+				require.Equal(t, kargoEvent.EventReasonPromotionAborted, event.Reason)
+				actor := event.Annotations[kargoEvent.AnnotationKeyEventActor]
 				require.Equal(t, "fake-actor", actor)
 			},
 		},

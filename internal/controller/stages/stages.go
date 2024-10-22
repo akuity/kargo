@@ -29,10 +29,12 @@ import (
 	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
 	rollouts "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
 	"github.com/akuity/kargo/internal/directives"
+	kargoEvent "github.com/akuity/kargo/internal/event"
+	k8sEvent "github.com/akuity/kargo/internal/event/kubernetes"
+	"github.com/akuity/kargo/internal/helpers"
 	"github.com/akuity/kargo/internal/indexer"
 	"github.com/akuity/kargo/internal/kargo"
 	"github.com/akuity/kargo/internal/kubeclient"
-	libEvent "github.com/akuity/kargo/internal/kubernetes/event"
 	"github.com/akuity/kargo/internal/logging"
 )
 
@@ -309,7 +311,7 @@ func SetupReconcilerWithManager(
 			newReconciler(
 				kargoMgr.GetClient(),
 				directivesEngine,
-				libEvent.NewRecorder(ctx, kargoMgr.GetScheme(), kargoMgr.GetClient(), cfg.Name()),
+				k8sEvent.NewRecorder(ctx, kargoMgr.GetScheme(), kargoMgr.GetClient(), cfg.Name()),
 				cfg,
 				shardRequirement,
 			),
@@ -449,12 +451,12 @@ func newReconciler(
 	r.createAnalysisRunFn = r.kargoClient.Create
 	r.patchAnalysisRunFn = r.kargoClient.Patch
 	r.getAnalysisRunFn = rollouts.GetAnalysisRun
-	r.getFreightFn = kargoapi.GetFreight
+	r.getFreightFn = helpers.GetFreight
 	r.verifyFreightInStageFn = r.verifyFreightInStage
 	r.patchFreightStatusFn = r.patchFreightStatus
 	// Auto-promotion:
 	r.isAutoPromotionPermittedFn = r.isAutoPromotionPermitted
-	r.getProjectFn = kargoapi.GetProject
+	r.getProjectFn = helpers.GetProject
 	r.createPromotionFn = kargoClient.Create
 	// Discovering Freight:
 	r.getAvailableFreightFn = r.getAvailableFreight
@@ -481,7 +483,7 @@ func (r *reconciler) Reconcile(
 	logger.Debug("reconciling Stage")
 
 	// Find the Stage
-	stage, err := kargoapi.GetStage(ctx, r.kargoClient, req.NamespacedName)
+	stage, err := helpers.GetStage(ctx, r.kargoClient, req.NamespacedName)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -501,12 +503,12 @@ func (r *reconciler) Reconcile(
 	if stage.DeletionTimestamp != nil {
 		newStatus, err = r.syncStageDelete(ctx, stage)
 		if err == nil {
-			if err = kargoapi.RemoveFinalizer(ctx, r.kargoClient, stage); err != nil {
+			if err = helpers.RemoveFinalizer(ctx, r.kargoClient, stage); err != nil {
 				err = fmt.Errorf("error removing finalizer: %w", err)
 			}
 		}
 	} else {
-		if _, err = kargoapi.EnsureFinalizer(ctx, r.kargoClient, stage); err != nil {
+		if _, err = helpers.EnsureFinalizer(ctx, r.kargoClient, stage); err != nil {
 			newStatus = stage.Status
 		} else {
 			if stage.IsControlFlow() {
@@ -982,14 +984,14 @@ func (r *reconciler) syncNormalStage(
 
 		r.recorder.AnnotatedEventf(
 			&promo,
-			kargoapi.NewPromotionEventAnnotations(
+			kargoEvent.NewPromotionEventAnnotations(
 				ctx,
-				kargoapi.FormatEventControllerActor(r.cfg.Name()),
+				kargoEvent.FormatEventControllerActor(r.cfg.Name()),
 				&promo,
 				&latestFreight,
 			),
 			corev1.EventTypeNormal,
-			kargoapi.EventReasonPromotionCreated,
+			kargoEvent.EventReasonPromotionCreated,
 			"Automatically promoted Freight from origin %q for Stage %q",
 			origin,
 			promo.Spec.Stage,
@@ -1032,7 +1034,7 @@ func (r *reconciler) syncPromotions(
 
 	// Sort the Promotions by phase and creation time so that we can determine the
 	// current state of the Stage.
-	slices.SortFunc(promotions, kargoapi.ComparePromotionByPhaseAndCreationTime)
+	slices.SortFunc(promotions, helpers.ComparePromotionByPhaseAndCreationTime)
 
 	// The Promotion with the highest priority (i.e. a Running or Pending phase)
 	// is the one that we will consider for the current state of the Stage.
@@ -1641,50 +1643,50 @@ func (r *reconciler) recordFreightVerificationEvent(
 	ar *rollouts.AnalysisRun,
 ) {
 	annotations := map[string]string{
-		kargoapi.AnnotationKeyEventActor:             kargoapi.FormatEventControllerActor(r.cfg.Name()),
-		kargoapi.AnnotationKeyEventProject:           s.Namespace,
-		kargoapi.AnnotationKeyEventStageName:         s.Name,
-		kargoapi.AnnotationKeyEventFreightAlias:      fr.Alias,
-		kargoapi.AnnotationKeyEventFreightName:       fr.Name,
-		kargoapi.AnnotationKeyEventFreightCreateTime: fr.CreationTimestamp.Format(time.RFC3339),
+		kargoEvent.AnnotationKeyEventActor:             kargoEvent.FormatEventControllerActor(r.cfg.Name()),
+		kargoEvent.AnnotationKeyEventProject:           s.Namespace,
+		kargoEvent.AnnotationKeyEventStageName:         s.Name,
+		kargoEvent.AnnotationKeyEventFreightAlias:      fr.Alias,
+		kargoEvent.AnnotationKeyEventFreightName:       fr.Name,
+		kargoEvent.AnnotationKeyEventFreightCreateTime: fr.CreationTimestamp.Format(time.RFC3339),
 	}
 	if vi.StartTime != nil {
-		annotations[kargoapi.AnnotationKeyEventVerificationStartTime] = vi.StartTime.Format(time.RFC3339)
+		annotations[kargoEvent.AnnotationKeyEventVerificationStartTime] = vi.StartTime.Format(time.RFC3339)
 	}
 	if vi.FinishTime != nil {
-		annotations[kargoapi.AnnotationKeyEventVerificationFinishTime] = vi.FinishTime.Format(time.RFC3339)
+		annotations[kargoEvent.AnnotationKeyEventVerificationFinishTime] = vi.FinishTime.Format(time.RFC3339)
 	}
 
 	// Extract metadata from the AnalysisRun if available
 	if ar != nil {
-		annotations[kargoapi.AnnotationKeyEventAnalysisRunName] = ar.Name
+		annotations[kargoEvent.AnnotationKeyEventAnalysisRunName] = ar.Name
 		// AnalysisRun that triggered by a Promotion contains the Promotion name
 		if promoName, ok := ar.Labels[kargoapi.PromotionLabelKey]; ok {
-			annotations[kargoapi.AnnotationKeyEventPromotionName] = promoName
+			annotations[kargoEvent.AnnotationKeyEventPromotionName] = promoName
 		}
 	}
 
 	// If the verification is manually triggered (e.g. reverify),
 	// override the actor with the one who triggered the verification.
 	if vi.Actor != "" {
-		annotations[kargoapi.AnnotationKeyEventActor] = vi.Actor
+		annotations[kargoEvent.AnnotationKeyEventActor] = vi.Actor
 	}
 
-	reason := kargoapi.EventReasonFreightVerificationUnknown
+	reason := kargoEvent.EventReasonFreightVerificationUnknown
 	message := vi.Message
 
 	switch vi.Phase {
 	case kargoapi.VerificationPhaseSuccessful:
-		reason = kargoapi.EventReasonFreightVerificationSucceeded
+		reason = kargoEvent.EventReasonFreightVerificationSucceeded
 		message = "Freight verification succeeded"
 	case kargoapi.VerificationPhaseFailed:
-		reason = kargoapi.EventReasonFreightVerificationFailed
+		reason = kargoEvent.EventReasonFreightVerificationFailed
 	case kargoapi.VerificationPhaseError:
-		reason = kargoapi.EventReasonFreightVerificationErrored
+		reason = kargoEvent.EventReasonFreightVerificationErrored
 	case kargoapi.VerificationPhaseAborted:
-		reason = kargoapi.EventReasonFreightVerificationAborted
+		reason = kargoEvent.EventReasonFreightVerificationAborted
 	case kargoapi.VerificationPhaseInconclusive:
-		reason = kargoapi.EventReasonFreightVerificationInconclusive
+		reason = kargoEvent.EventReasonFreightVerificationInconclusive
 	}
 
 	r.recorder.AnnotatedEventf(fr, annotations, corev1.EventTypeNormal, reason, message)

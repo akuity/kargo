@@ -19,6 +19,7 @@ import (
 	"github.com/akuity/kargo/internal/controller/git"
 	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/helm"
+	"github.com/akuity/kargo/internal/helpers"
 	"github.com/akuity/kargo/internal/image"
 	"github.com/akuity/kargo/internal/kargo"
 	"github.com/akuity/kargo/internal/kubeclient"
@@ -147,7 +148,7 @@ func (r *reconciler) Reconcile(
 	logger.Debug("reconciling Warehouse")
 
 	// Find the Warehouse
-	warehouse, err := kargoapi.GetWarehouse(ctx, r.client, req.NamespacedName)
+	warehouse, err := helpers.GetWarehouse(ctx, r.client, req.NamespacedName)
 	if err != nil {
 		return ctrl.Result{}, err
 	}

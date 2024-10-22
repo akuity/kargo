@@ -1,4 +1,4 @@
-package v1alpha1
+package helpers
 
 import (
 	"context"
@@ -10,13 +10,15 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
 func TestVerificationRequest_Equals(t *testing.T) {
 	tests := []struct {
 		name     string
-		r1       *VerificationRequest
-		r2       *VerificationRequest
+		r1       *kargoapi.VerificationRequest
+		r2       *kargoapi.VerificationRequest
 		expected bool
 	}{
 		{
@@ -27,38 +29,38 @@ func TestVerificationRequest_Equals(t *testing.T) {
 		},
 		{
 			name:     "one nil",
-			r1:       &VerificationRequest{ID: "fake-id", Actor: "fake-actor", ControlPlane: false},
+			r1:       &kargoapi.VerificationRequest{ID: "fake-id", Actor: "fake-actor", ControlPlane: false},
 			r2:       nil,
 			expected: false,
 		},
 		{
 			name:     "other nil",
 			r1:       nil,
-			r2:       &VerificationRequest{ID: "fake-id", Actor: "fake-actor", ControlPlane: false},
+			r2:       &kargoapi.VerificationRequest{ID: "fake-id", Actor: "fake-actor", ControlPlane: false},
 			expected: false,
 		},
 		{
 			name:     "different IDs",
-			r1:       &VerificationRequest{ID: "fake-id", Actor: "fake-actor", ControlPlane: false},
-			r2:       &VerificationRequest{ID: "other-id", Actor: "fake-actor", ControlPlane: false},
+			r1:       &kargoapi.VerificationRequest{ID: "fake-id", Actor: "fake-actor", ControlPlane: false},
+			r2:       &kargoapi.VerificationRequest{ID: "other-id", Actor: "fake-actor", ControlPlane: false},
 			expected: false,
 		},
 		{
 			name:     "different actors",
-			r1:       &VerificationRequest{ID: "fake-id", Actor: "fake-actor", ControlPlane: true},
-			r2:       &VerificationRequest{ID: "fake-id", Actor: "other-actor", ControlPlane: true},
+			r1:       &kargoapi.VerificationRequest{ID: "fake-id", Actor: "fake-actor", ControlPlane: true},
+			r2:       &kargoapi.VerificationRequest{ID: "fake-id", Actor: "other-actor", ControlPlane: true},
 			expected: false,
 		},
 		{
 			name:     "different control plane flags",
-			r1:       &VerificationRequest{ID: "fake-id", Actor: "fake-actor", ControlPlane: true},
-			r2:       &VerificationRequest{ID: "fake-id", Actor: "fake-actor", ControlPlane: false},
+			r1:       &kargoapi.VerificationRequest{ID: "fake-id", Actor: "fake-actor", ControlPlane: true},
+			r2:       &kargoapi.VerificationRequest{ID: "fake-id", Actor: "fake-actor", ControlPlane: false},
 			expected: false,
 		},
 		{
 			name:     "equal",
-			r1:       &VerificationRequest{ID: "fake-id", Actor: "fake-actor", ControlPlane: true},
-			r2:       &VerificationRequest{ID: "fake-id", Actor: "fake-actor", ControlPlane: true},
+			r1:       &kargoapi.VerificationRequest{ID: "fake-id", Actor: "fake-actor", ControlPlane: true},
+			r2:       &kargoapi.VerificationRequest{ID: "fake-id", Actor: "fake-actor", ControlPlane: true},
 			expected: true,
 		},
 	}
@@ -72,19 +74,19 @@ func TestVerificationRequest_Equals(t *testing.T) {
 
 func TestVerificationRequest_HasID(t *testing.T) {
 	t.Run("verification request is nil", func(t *testing.T) {
-		var r *VerificationRequest
+		var r *kargoapi.VerificationRequest
 		require.False(t, r.HasID())
 	})
 
 	t.Run("verification request has empty ID", func(t *testing.T) {
-		r := &VerificationRequest{
+		r := &kargoapi.VerificationRequest{
 			ID: "",
 		}
 		require.False(t, r.HasID())
 	})
 
 	t.Run("verification request has ID", func(t *testing.T) {
-		r := &VerificationRequest{
+		r := &kargoapi.VerificationRequest{
 			ID: "foo",
 		}
 		require.True(t, r.HasID())
@@ -93,12 +95,12 @@ func TestVerificationRequest_HasID(t *testing.T) {
 
 func TestVerificationRequest_ForID(t *testing.T) {
 	t.Run("verification request is nil", func(t *testing.T) {
-		var r *VerificationRequest
+		var r *kargoapi.VerificationRequest
 		require.False(t, r.ForID("foo"))
 	})
 
 	t.Run("verification request has ID", func(t *testing.T) {
-		r := &VerificationRequest{
+		r := &kargoapi.VerificationRequest{
 			ID: "foo",
 		}
 		require.True(t, r.ForID("foo"))
@@ -106,7 +108,7 @@ func TestVerificationRequest_ForID(t *testing.T) {
 	})
 
 	t.Run("verification request has empty ID", func(t *testing.T) {
-		r := &VerificationRequest{
+		r := &kargoapi.VerificationRequest{
 			ID: "",
 		}
 		require.False(t, r.ForID(""))
@@ -116,24 +118,24 @@ func TestVerificationRequest_ForID(t *testing.T) {
 
 func TestVerificationRequest_String(t *testing.T) {
 	t.Run("verification request is nil", func(t *testing.T) {
-		var r *VerificationRequest
+		var r *kargoapi.VerificationRequest
 		require.Empty(t, r.String())
 	})
 
 	t.Run("verification request is empty", func(t *testing.T) {
-		r := &VerificationRequest{}
+		r := &kargoapi.VerificationRequest{}
 		require.Empty(t, r.String())
 	})
 
 	t.Run("verification request has empty ID", func(t *testing.T) {
-		r := &VerificationRequest{
+		r := &kargoapi.VerificationRequest{
 			ID: "",
 		}
 		require.Empty(t, r.String())
 	})
 
 	t.Run("verification request has data", func(t *testing.T) {
-		r := &VerificationRequest{
+		r := &kargoapi.VerificationRequest{
 			ID:           "foo",
 			Actor:        "fake-actor",
 			ControlPlane: true,
@@ -144,17 +146,17 @@ func TestVerificationRequest_String(t *testing.T) {
 
 func TestGetStage(t *testing.T) {
 	scheme := k8sruntime.NewScheme()
-	require.NoError(t, SchemeBuilder.AddToScheme(scheme))
+	require.NoError(t, kargoapi.SchemeBuilder.AddToScheme(scheme))
 
 	testCases := []struct {
 		name       string
 		client     client.Client
-		assertions func(*testing.T, *Stage, error)
+		assertions func(*testing.T, *kargoapi.Stage, error)
 	}{
 		{
 			name:   "not found",
 			client: fake.NewClientBuilder().WithScheme(scheme).Build(),
-			assertions: func(t *testing.T, stage *Stage, err error) {
+			assertions: func(t *testing.T, stage *kargoapi.Stage, err error) {
 				require.NoError(t, err)
 				require.Nil(t, stage)
 			},
@@ -163,14 +165,14 @@ func TestGetStage(t *testing.T) {
 		{
 			name: "found",
 			client: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
-				&Stage{
+				&kargoapi.Stage{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "fake-stage",
 						Namespace: "fake-namespace",
 					},
 				},
 			).Build(),
-			assertions: func(t *testing.T, stage *Stage, err error) {
+			assertions: func(t *testing.T, stage *kargoapi.Stage, err error) {
 				require.NoError(t, err)
 				require.Equal(t, "fake-stage", stage.Name)
 				require.Equal(t, "fake-namespace", stage.Namespace)
@@ -195,7 +197,7 @@ func TestGetStage(t *testing.T) {
 
 func TestReverifyStageFreight(t *testing.T) {
 	scheme := k8sruntime.NewScheme()
-	require.NoError(t, SchemeBuilder.AddToScheme(scheme))
+	require.NoError(t, kargoapi.SchemeBuilder.AddToScheme(scheme))
 
 	t.Run("not found", func(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(scheme).Build()
@@ -209,7 +211,7 @@ func TestReverifyStageFreight(t *testing.T) {
 
 	t.Run("missing current freight", func(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
-			&Stage{
+			&kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "fake-stage",
 					Namespace: "fake-namespace",
@@ -226,15 +228,15 @@ func TestReverifyStageFreight(t *testing.T) {
 
 	t.Run("missing verification info", func(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
-			&Stage{
+			&kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "fake-stage",
 					Namespace: "fake-namespace",
 				},
-				Status: StageStatus{
-					FreightHistory: FreightHistory{
+				Status: kargoapi.StageStatus{
+					FreightHistory: kargoapi.FreightHistory{
 						{
-							Freight: map[string]FreightReference{
+							Freight: map[string]kargoapi.FreightReference{
 								"fake-warehouse": {},
 							},
 						},
@@ -252,18 +254,18 @@ func TestReverifyStageFreight(t *testing.T) {
 
 	t.Run("missing verification info ID", func(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
-			&Stage{
+			&kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "fake-stage",
 					Namespace: "fake-namespace",
 				},
-				Status: StageStatus{
-					FreightHistory: FreightHistory{
+				Status: kargoapi.StageStatus{
+					FreightHistory: kargoapi.FreightHistory{
 						{
-							Freight: map[string]FreightReference{
+							Freight: map[string]kargoapi.FreightReference{
 								"fake-warehouse": {},
 							},
-							VerificationHistory: []VerificationInfo{{}},
+							VerificationHistory: []kargoapi.VerificationInfo{{}},
 						},
 					},
 				},
@@ -279,18 +281,18 @@ func TestReverifyStageFreight(t *testing.T) {
 
 	t.Run("success", func(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
-			&Stage{
+			&kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "fake-stage",
 					Namespace: "fake-namespace",
 				},
-				Status: StageStatus{
-					FreightHistory: FreightHistory{
+				Status: kargoapi.StageStatus{
+					FreightHistory: kargoapi.FreightHistory{
 						{
-							Freight: map[string]FreightReference{
+							Freight: map[string]kargoapi.FreightReference{
 								"fake-warehouse": {},
 							},
-							VerificationHistory: []VerificationInfo{{
+							VerificationHistory: []kargoapi.VerificationInfo{{
 								ID: "fake-id",
 							}},
 						},
@@ -310,15 +312,15 @@ func TestReverifyStageFreight(t *testing.T) {
 			Name:      "fake-stage",
 		})
 		require.NoError(t, err)
-		require.Equal(t, (&VerificationRequest{
+		require.Equal(t, (&kargoapi.VerificationRequest{
 			ID: "fake-id",
-		}).String(), stage.Annotations[AnnotationKeyReverify])
+		}).String(), stage.Annotations[kargoapi.AnnotationKeyReverify])
 	})
 }
 
 func TestAbortStageFreightVerification(t *testing.T) {
 	scheme := k8sruntime.NewScheme()
-	require.NoError(t, SchemeBuilder.AddToScheme(scheme))
+	require.NoError(t, kargoapi.SchemeBuilder.AddToScheme(scheme))
 
 	t.Run("not found", func(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(scheme).Build()
@@ -332,7 +334,7 @@ func TestAbortStageFreightVerification(t *testing.T) {
 
 	t.Run("missing current freight", func(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
-			&Stage{
+			&kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "fake-stage",
 					Namespace: "fake-namespace",
@@ -349,15 +351,15 @@ func TestAbortStageFreightVerification(t *testing.T) {
 
 	t.Run("missing verification info", func(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
-			&Stage{
+			&kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "fake-stage",
 					Namespace: "fake-namespace",
 				},
-				Status: StageStatus{
-					FreightHistory: FreightHistory{
+				Status: kargoapi.StageStatus{
+					FreightHistory: kargoapi.FreightHistory{
 						{
-							Freight: map[string]FreightReference{
+							Freight: map[string]kargoapi.FreightReference{
 								"fake-warehouse": {},
 							},
 						},
@@ -375,18 +377,18 @@ func TestAbortStageFreightVerification(t *testing.T) {
 
 	t.Run("missing verification info ID", func(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
-			&Stage{
+			&kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "fake-stage",
 					Namespace: "fake-namespace",
 				},
-				Status: StageStatus{
-					FreightHistory: FreightHistory{
+				Status: kargoapi.StageStatus{
+					FreightHistory: kargoapi.FreightHistory{
 						{
-							Freight: map[string]FreightReference{
+							Freight: map[string]kargoapi.FreightReference{
 								"fake-warehouse": {},
 							},
-							VerificationHistory: []VerificationInfo{{}},
+							VerificationHistory: []kargoapi.VerificationInfo{{}},
 						},
 					},
 				},
@@ -402,20 +404,20 @@ func TestAbortStageFreightVerification(t *testing.T) {
 
 	t.Run("verification in terminal phase", func(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
-			&Stage{
+			&kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "fake-stage",
 					Namespace: "fake-namespace",
 				},
-				Status: StageStatus{
-					FreightHistory: FreightHistory{
+				Status: kargoapi.StageStatus{
+					FreightHistory: kargoapi.FreightHistory{
 						{
-							Freight: map[string]FreightReference{
+							Freight: map[string]kargoapi.FreightReference{
 								"fake-warehouse": {},
 							},
-							VerificationHistory: []VerificationInfo{{
+							VerificationHistory: []kargoapi.VerificationInfo{{
 								ID:    "fake-id",
-								Phase: VerificationPhaseError,
+								Phase: kargoapi.VerificationPhaseError,
 							}},
 						},
 					},
@@ -434,24 +436,24 @@ func TestAbortStageFreightVerification(t *testing.T) {
 			Name:      "fake-stage",
 		})
 		require.NoError(t, err)
-		_, ok := stage.Annotations[AnnotationKeyAbort]
+		_, ok := stage.Annotations[kargoapi.AnnotationKeyAbort]
 		require.False(t, ok)
 	})
 
 	t.Run("success", func(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
-			&Stage{
+			&kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "fake-stage",
 					Namespace: "fake-namespace",
 				},
-				Status: StageStatus{
-					FreightHistory: FreightHistory{
+				Status: kargoapi.StageStatus{
+					FreightHistory: kargoapi.FreightHistory{
 						{
-							Freight: map[string]FreightReference{
+							Freight: map[string]kargoapi.FreightReference{
 								"fake-warehouse": {},
 							},
-							VerificationHistory: []VerificationInfo{{
+							VerificationHistory: []kargoapi.VerificationInfo{{
 								ID: "fake-id",
 							}},
 						},
@@ -471,8 +473,8 @@ func TestAbortStageFreightVerification(t *testing.T) {
 			Name:      "fake-stage",
 		})
 		require.NoError(t, err)
-		require.Equal(t, (&VerificationRequest{
+		require.Equal(t, (&kargoapi.VerificationRequest{
 			ID: "fake-id",
-		}).String(), stage.Annotations[AnnotationKeyAbort])
+		}).String(), stage.Annotations[kargoapi.AnnotationKeyAbort])
 	})
 }

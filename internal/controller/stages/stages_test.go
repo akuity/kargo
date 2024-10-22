@@ -23,8 +23,9 @@ import (
 	"github.com/akuity/kargo/internal/controller"
 	rollouts "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
 	"github.com/akuity/kargo/internal/directives"
+	kargoEvent "github.com/akuity/kargo/internal/event"
+	fakeevent "github.com/akuity/kargo/internal/event/kubernetes/fake"
 	"github.com/akuity/kargo/internal/indexer"
-	fakeevent "github.com/akuity/kargo/internal/kubernetes/event/fake"
 )
 
 var fakeTime = time.Date(2024, time.April, 10, 0, 0, 0, 0, time.UTC)
@@ -205,10 +206,10 @@ func TestSyncControlFlowStage(t *testing.T) {
 
 				require.Len(t, recorder.Events, 1)
 				event := <-recorder.Events
-				require.Equal(t, kargoapi.EventReasonFreightVerificationSucceeded, event.Reason)
+				require.Equal(t, kargoEvent.EventReasonFreightVerificationSucceeded, event.Reason)
 				require.Equal(t,
 					fakeTime.Format(time.RFC3339),
-					event.Annotations[kargoapi.AnnotationKeyEventVerificationStartTime],
+					event.Annotations[kargoEvent.AnnotationKeyEventVerificationStartTime],
 				)
 			},
 		},
@@ -503,14 +504,14 @@ func TestSyncNormalStage(t *testing.T) {
 				// The unrecoverable error should have been recorded as an event
 				require.Len(t, recorder.Events, 1)
 				event := <-recorder.Events
-				require.Equal(t, kargoapi.EventReasonFreightVerificationErrored, event.Reason)
+				require.Equal(t, kargoEvent.EventReasonFreightVerificationErrored, event.Reason)
 				require.Equal(t,
 					fakeTime.Format(time.RFC3339),
-					event.Annotations[kargoapi.AnnotationKeyEventVerificationStartTime],
+					event.Annotations[kargoEvent.AnnotationKeyEventVerificationStartTime],
 				)
 				require.Equal(t,
 					fakeTime.Format(time.RFC3339),
-					event.Annotations[kargoapi.AnnotationKeyEventVerificationFinishTime],
+					event.Annotations[kargoEvent.AnnotationKeyEventVerificationFinishTime],
 				)
 			},
 		},
@@ -667,14 +668,14 @@ func TestSyncNormalStage(t *testing.T) {
 				// The unrecoverable error should have been recorded as an event
 				require.Len(t, recorder.Events, 1)
 				event := <-recorder.Events
-				require.Equal(t, kargoapi.EventReasonFreightVerificationErrored, event.Reason)
+				require.Equal(t, kargoEvent.EventReasonFreightVerificationErrored, event.Reason)
 				require.Equal(t,
 					fakeTime.Format(time.RFC3339),
-					event.Annotations[kargoapi.AnnotationKeyEventVerificationStartTime],
+					event.Annotations[kargoEvent.AnnotationKeyEventVerificationStartTime],
 				)
 				require.Equal(t,
 					fakeTime.Format(time.RFC3339),
-					event.Annotations[kargoapi.AnnotationKeyEventVerificationFinishTime],
+					event.Annotations[kargoEvent.AnnotationKeyEventVerificationFinishTime],
 				)
 			},
 		},
@@ -866,14 +867,14 @@ func TestSyncNormalStage(t *testing.T) {
 				// The aborted verification should have been recorded as an event
 				require.Len(t, recorder.Events, 1)
 				event := <-recorder.Events
-				require.Equal(t, kargoapi.EventReasonFreightVerificationAborted, event.Reason)
+				require.Equal(t, kargoEvent.EventReasonFreightVerificationAborted, event.Reason)
 				require.Equal(t,
 					fakeTime.Format(time.RFC3339),
-					event.Annotations[kargoapi.AnnotationKeyEventVerificationStartTime],
+					event.Annotations[kargoEvent.AnnotationKeyEventVerificationStartTime],
 				)
 				require.Equal(t,
 					fakeTime.Format(time.RFC3339),
-					event.Annotations[kargoapi.AnnotationKeyEventVerificationFinishTime],
+					event.Annotations[kargoEvent.AnnotationKeyEventVerificationFinishTime],
 				)
 			},
 		},
@@ -986,14 +987,14 @@ func TestSyncNormalStage(t *testing.T) {
 				// The verification error should have been recorded as an event
 				require.Len(t, recorder.Events, 1)
 				event := <-recorder.Events
-				require.Equal(t, kargoapi.EventReasonFreightVerificationErrored, event.Reason)
+				require.Equal(t, kargoEvent.EventReasonFreightVerificationErrored, event.Reason)
 				require.Equal(t,
 					fakeTime.Format(time.RFC3339),
-					event.Annotations[kargoapi.AnnotationKeyEventVerificationStartTime],
+					event.Annotations[kargoEvent.AnnotationKeyEventVerificationStartTime],
 				)
 				require.Equal(t,
 					fakeTime.Format(time.RFC3339),
-					event.Annotations[kargoapi.AnnotationKeyEventVerificationFinishTime],
+					event.Annotations[kargoEvent.AnnotationKeyEventVerificationFinishTime],
 				)
 			},
 		},
@@ -1943,19 +1944,19 @@ func TestSyncNormalStage(t *testing.T) {
 
 				// Successful verification should have been recorded as an event
 				event := <-recorder.Events
-				require.Equal(t, kargoapi.EventReasonFreightVerificationSucceeded, event.Reason)
+				require.Equal(t, kargoEvent.EventReasonFreightVerificationSucceeded, event.Reason)
 				require.Equal(t,
 					fakeTime.Format(time.RFC3339),
-					event.Annotations[kargoapi.AnnotationKeyEventVerificationStartTime],
+					event.Annotations[kargoEvent.AnnotationKeyEventVerificationStartTime],
 				)
 				require.Equal(t,
 					fakeTime.Format(time.RFC3339),
-					event.Annotations[kargoapi.AnnotationKeyEventVerificationFinishTime],
+					event.Annotations[kargoEvent.AnnotationKeyEventVerificationFinishTime],
 				)
 
 				// Auto-promotion should have been recorded as an event
 				event = <-recorder.Events
-				require.Equal(t, kargoapi.EventReasonPromotionCreated, event.Reason)
+				require.Equal(t, kargoEvent.EventReasonPromotionCreated, event.Reason)
 			},
 		},
 
@@ -2080,10 +2081,10 @@ func TestSyncNormalStage(t *testing.T) {
 
 				// Two auto-promotions should have been recorded as events
 				event := <-recorder.Events
-				require.Equal(t, kargoapi.EventReasonPromotionCreated, event.Reason)
+				require.Equal(t, kargoEvent.EventReasonPromotionCreated, event.Reason)
 
 				event = <-recorder.Events
-				require.Equal(t, kargoapi.EventReasonPromotionCreated, event.Reason)
+				require.Equal(t, kargoEvent.EventReasonPromotionCreated, event.Reason)
 			},
 		},
 	}

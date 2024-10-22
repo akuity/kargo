@@ -1,4 +1,4 @@
-package v1alpha1
+package helpers
 
 import (
 	"context"
@@ -10,21 +10,23 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
 func TestGetFreight(t *testing.T) {
 	scheme := k8sruntime.NewScheme()
-	require.NoError(t, SchemeBuilder.AddToScheme(scheme))
+	require.NoError(t, kargoapi.SchemeBuilder.AddToScheme(scheme))
 
 	testCases := []struct {
 		name       string
 		client     client.Client
-		assertions func(*testing.T, *Freight, error)
+		assertions func(*testing.T, *kargoapi.Freight, error)
 	}{
 		{
 			name:   "not found",
 			client: fake.NewClientBuilder().WithScheme(scheme).Build(),
-			assertions: func(t *testing.T, freight *Freight, err error) {
+			assertions: func(t *testing.T, freight *kargoapi.Freight, err error) {
 				require.NoError(t, err)
 				require.Nil(t, freight)
 			},
@@ -33,14 +35,14 @@ func TestGetFreight(t *testing.T) {
 		{
 			name: "found",
 			client: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
-				&Freight{
+				&kargoapi.Freight{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "fake-freight",
 						Namespace: "fake-namespace",
 					},
 				},
 			).Build(),
-			assertions: func(t *testing.T, freight *Freight, err error) {
+			assertions: func(t *testing.T, freight *kargoapi.Freight, err error) {
 				require.NoError(t, err)
 				require.Equal(t, "fake-freight", freight.Name)
 				require.Equal(t, "fake-namespace", freight.Namespace)
@@ -65,17 +67,17 @@ func TestGetFreight(t *testing.T) {
 
 func TestGetFreightByAlias(t *testing.T) {
 	scheme := k8sruntime.NewScheme()
-	require.NoError(t, SchemeBuilder.AddToScheme(scheme))
+	require.NoError(t, kargoapi.SchemeBuilder.AddToScheme(scheme))
 
 	testCases := []struct {
 		name       string
 		client     client.Client
-		assertions func(*testing.T, *Freight, error)
+		assertions func(*testing.T, *kargoapi.Freight, error)
 	}{
 		{
 			name:   "not found",
 			client: fake.NewClientBuilder().WithScheme(scheme).Build(),
-			assertions: func(t *testing.T, freight *Freight, err error) {
+			assertions: func(t *testing.T, freight *kargoapi.Freight, err error) {
 				require.NoError(t, err)
 				require.Nil(t, freight)
 			},
@@ -84,17 +86,17 @@ func TestGetFreightByAlias(t *testing.T) {
 		{
 			name: "found",
 			client: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
-				&Freight{
+				&kargoapi.Freight{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "fake-freight",
 						Namespace: "fake-namespace",
 						Labels: map[string]string{
-							AliasLabelKey: "fake-alias",
+							kargoapi.AliasLabelKey: "fake-alias",
 						},
 					},
 				},
 			).Build(),
-			assertions: func(t *testing.T, freight *Freight, err error) {
+			assertions: func(t *testing.T, freight *kargoapi.Freight, err error) {
 				require.NoError(t, err)
 				require.Equal(t, "fake-freight", freight.Name)
 				require.Equal(t, "fake-namespace", freight.Namespace)
@@ -122,8 +124,8 @@ func TestIsFreightAvailable(t *testing.T) {
 
 	testCases := []struct {
 		name     string
-		stage    *Stage
-		Freight  *Freight
+		stage    *kargoapi.Stage
+		Freight  *kargoapi.Freight
 		expected bool
 	}{
 		{
@@ -136,12 +138,12 @@ func TestIsFreightAvailable(t *testing.T) {
 		},
 		{
 			name: "stage and freight are in different namespaces",
-			stage: &Stage{
+			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: testNamespace,
 				},
 			},
-			Freight: &Freight{
+			Freight: &kargoapi.Freight{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "wrong-namespace",
 				},
@@ -150,19 +152,19 @@ func TestIsFreightAvailable(t *testing.T) {
 		},
 		{
 			name: "freight is approved for stage",
-			stage: &Stage{
+			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: testNamespace,
 					Name:      testStage,
 				},
 			},
-			Freight: &Freight{
+			Freight: &kargoapi.Freight{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: testNamespace,
 					Name:      testStage,
 				},
-				Status: FreightStatus{
-					ApprovedFor: map[string]ApprovedStage{
+				Status: kargoapi.FreightStatus{
+					ApprovedFor: map[string]kargoapi.ApprovedStage{
 						testStage: {},
 					},
 				},
@@ -171,28 +173,28 @@ func TestIsFreightAvailable(t *testing.T) {
 		},
 		{
 			name: "stage accepts freight direct from origin",
-			stage: &Stage{
+			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: testNamespace,
 				},
-				Spec: StageSpec{
-					RequestedFreight: []FreightRequest{{
-						Origin: FreightOrigin{
-							Kind: FreightOriginKindWarehouse,
+				Spec: kargoapi.StageSpec{
+					RequestedFreight: []kargoapi.FreightRequest{{
+						Origin: kargoapi.FreightOrigin{
+							Kind: kargoapi.FreightOriginKindWarehouse,
 							Name: testWarehouse,
 						},
-						Sources: FreightSources{
+						Sources: kargoapi.FreightSources{
 							Direct: true,
 						},
 					}},
 				},
 			},
-			Freight: &Freight{
+			Freight: &kargoapi.Freight{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: testNamespace,
 				},
-				Origin: FreightOrigin{
-					Kind: FreightOriginKindWarehouse,
+				Origin: kargoapi.FreightOrigin{
+					Kind: kargoapi.FreightOriginKindWarehouse,
 					Name: testWarehouse,
 				},
 			},
@@ -200,32 +202,32 @@ func TestIsFreightAvailable(t *testing.T) {
 		},
 		{
 			name: "freight is verified in an upstream stage",
-			stage: &Stage{
+			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: testNamespace,
 				},
-				Spec: StageSpec{
-					RequestedFreight: []FreightRequest{{
-						Origin: FreightOrigin{
-							Kind: FreightOriginKindWarehouse,
+				Spec: kargoapi.StageSpec{
+					RequestedFreight: []kargoapi.FreightRequest{{
+						Origin: kargoapi.FreightOrigin{
+							Kind: kargoapi.FreightOriginKindWarehouse,
 							Name: testWarehouse,
 						},
-						Sources: FreightSources{
+						Sources: kargoapi.FreightSources{
 							Stages: []string{"upstream-stage"},
 						},
 					}},
 				},
 			},
-			Freight: &Freight{
+			Freight: &kargoapi.Freight{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: testNamespace,
 				},
-				Origin: FreightOrigin{
-					Kind: FreightOriginKindWarehouse,
+				Origin: kargoapi.FreightOrigin{
+					Kind: kargoapi.FreightOriginKindWarehouse,
 					Name: testWarehouse,
 				},
-				Status: FreightStatus{
-					VerifiedIn: map[string]VerifiedStage{
+				Status: kargoapi.FreightStatus{
+					VerifiedIn: map[string]kargoapi.VerifiedStage{
 						"upstream-stage": {},
 					},
 				},
@@ -234,32 +236,32 @@ func TestIsFreightAvailable(t *testing.T) {
 		},
 		{
 			name: "freight from origin not requested",
-			stage: &Stage{
+			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: testNamespace,
 				},
-				Spec: StageSpec{
-					RequestedFreight: []FreightRequest{{
-						Origin: FreightOrigin{
-							Kind: FreightOriginKindWarehouse,
+				Spec: kargoapi.StageSpec{
+					RequestedFreight: []kargoapi.FreightRequest{{
+						Origin: kargoapi.FreightOrigin{
+							Kind: kargoapi.FreightOriginKindWarehouse,
 							Name: testWarehouse,
 						},
-						Sources: FreightSources{
+						Sources: kargoapi.FreightSources{
 							Stages: []string{"upstream-stage"},
 						},
 					}},
 				},
 			},
-			Freight: &Freight{
+			Freight: &kargoapi.Freight{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: testNamespace,
 				},
-				Origin: FreightOrigin{
-					Kind: FreightOriginKindWarehouse,
+				Origin: kargoapi.FreightOrigin{
+					Kind: kargoapi.FreightOriginKindWarehouse,
 					Name: "wrong-warehouse",
 				},
-				Status: FreightStatus{
-					VerifiedIn: map[string]VerifiedStage{
+				Status: kargoapi.FreightStatus{
+					VerifiedIn: map[string]kargoapi.VerifiedStage{
 						"upstream-stage": {},
 					},
 				},

@@ -18,6 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/event"
 	libWebhook "github.com/akuity/kargo/internal/webhook"
 )
 
@@ -152,7 +153,7 @@ func TestDefault(t *testing.T) {
 				require.True(t, ok)
 				require.Equal(t, &kargoapi.VerificationRequest{
 					ID: "fake-id",
-					Actor: kargoapi.FormatEventKubernetesUserActor(authnv1.UserInfo{
+					Actor: event.FormatEventKubernetesUserActor(authnv1.UserInfo{
 						Username: "real-user",
 					}),
 					ControlPlane: false,
@@ -195,7 +196,7 @@ func TestDefault(t *testing.T) {
 				require.True(t, ok)
 				require.Equal(t, &kargoapi.VerificationRequest{
 					ID: "fake-id",
-					Actor: kargoapi.FormatEventKubernetesUserActor(authnv1.UserInfo{
+					Actor: event.FormatEventKubernetesUserActor(authnv1.UserInfo{
 						Username: "real-user",
 					}),
 					ControlPlane: false,
@@ -226,7 +227,7 @@ func TestDefault(t *testing.T) {
 					Annotations: map[string]string{
 						kargoapi.AnnotationKeyReverify: (&kargoapi.VerificationRequest{
 							ID:    "fake-id",
-							Actor: kargoapi.EventActorAdmin,
+							Actor: event.EventActorAdmin,
 						}).String(),
 					},
 				},
@@ -238,7 +239,7 @@ func TestDefault(t *testing.T) {
 				require.True(t, ok)
 				require.Equal(t, &kargoapi.VerificationRequest{
 					ID:           "fake-id",
-					Actor:        kargoapi.EventActorAdmin,
+					Actor:        event.EventActorAdmin,
 					ControlPlane: true,
 				}, rr)
 			},
@@ -288,7 +289,7 @@ func TestDefault(t *testing.T) {
 				require.True(t, ok)
 				require.Equal(t, &kargoapi.VerificationRequest{
 					ID:    "fake-id",
-					Actor: kargoapi.FormatEventKubernetesUserActor(authnv1.UserInfo{Username: "real-user"}),
+					Actor: event.FormatEventKubernetesUserActor(authnv1.UserInfo{Username: "real-user"}),
 				}, rr)
 			},
 		},
@@ -338,7 +339,7 @@ func TestDefault(t *testing.T) {
 				require.True(t, ok)
 				require.Equal(t, &kargoapi.VerificationRequest{
 					ID:           "fake-id",
-					Actor:        kargoapi.FormatEventKubernetesUserActor(authnv1.UserInfo{Username: "real-user"}),
+					Actor:        event.FormatEventKubernetesUserActor(authnv1.UserInfo{Username: "real-user"}),
 					ControlPlane: false,
 				}, rr)
 			},
@@ -494,7 +495,7 @@ func TestDefault(t *testing.T) {
 				require.True(t, ok)
 				require.Equal(t, &kargoapi.VerificationRequest{
 					ID: "fake-id",
-					Actor: kargoapi.FormatEventKubernetesUserActor(authnv1.UserInfo{
+					Actor: event.FormatEventKubernetesUserActor(authnv1.UserInfo{
 						Username: "real-user",
 					}),
 					ControlPlane: false,
@@ -537,7 +538,7 @@ func TestDefault(t *testing.T) {
 				require.True(t, ok)
 				require.Equal(t, &kargoapi.VerificationRequest{
 					ID: "fake-id",
-					Actor: kargoapi.FormatEventKubernetesUserActor(authnv1.UserInfo{
+					Actor: event.FormatEventKubernetesUserActor(authnv1.UserInfo{
 						Username: "real-user",
 					}),
 					ControlPlane: false,
@@ -568,7 +569,7 @@ func TestDefault(t *testing.T) {
 					Annotations: map[string]string{
 						kargoapi.AnnotationKeyAbort: (&kargoapi.VerificationRequest{
 							ID:    "fake-id",
-							Actor: kargoapi.EventActorAdmin,
+							Actor: event.EventActorAdmin,
 						}).String(),
 					},
 				},
@@ -580,7 +581,7 @@ func TestDefault(t *testing.T) {
 				require.True(t, ok)
 				require.Equal(t, &kargoapi.VerificationRequest{
 					ID:           "fake-id",
-					Actor:        kargoapi.EventActorAdmin,
+					Actor:        event.EventActorAdmin,
 					ControlPlane: true,
 				}, rr)
 			},
@@ -630,7 +631,7 @@ func TestDefault(t *testing.T) {
 				require.True(t, ok)
 				require.Equal(t, &kargoapi.VerificationRequest{
 					ID:    "fake-id",
-					Actor: kargoapi.FormatEventKubernetesUserActor(authnv1.UserInfo{Username: "real-user"}),
+					Actor: event.FormatEventKubernetesUserActor(authnv1.UserInfo{Username: "real-user"}),
 				}, rr)
 			},
 		},
@@ -680,7 +681,7 @@ func TestDefault(t *testing.T) {
 				require.True(t, ok)
 				require.Equal(t, &kargoapi.VerificationRequest{
 					ID:           "fake-id",
-					Actor:        kargoapi.FormatEventKubernetesUserActor(authnv1.UserInfo{Username: "real-user"}),
+					Actor:        event.FormatEventKubernetesUserActor(authnv1.UserInfo{Username: "real-user"}),
 					ControlPlane: false,
 				}, rr)
 			},

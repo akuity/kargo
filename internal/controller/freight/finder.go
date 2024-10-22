@@ -9,6 +9,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	libGit "github.com/akuity/kargo/internal/git"
+	"github.com/akuity/kargo/internal/helpers"
 )
 
 type NotFoundError struct {
@@ -36,7 +37,7 @@ func FindCommit(
 	if desiredOrigin == nil {
 		for i := range freightReqs {
 			requestedFreight := freightReqs[i]
-			warehouse, err := kargoapi.GetWarehouse(
+			warehouse, err := helpers.GetWarehouse(
 				ctx,
 				cl,
 				types.NamespacedName{
@@ -112,7 +113,7 @@ func FindImage(
 	if desiredOrigin == nil {
 		for i := range freightReqs {
 			requestedFreight := freightReqs[i]
-			warehouse, err := kargoapi.GetWarehouse(
+			warehouse, err := helpers.GetWarehouse(
 				ctx,
 				cl,
 				types.NamespacedName{
@@ -185,7 +186,7 @@ func FindChart(
 	if desiredOrigin == nil {
 		for i := range freightReqs {
 			requestedFreight := freightReqs[i]
-			warehouse, err := kargoapi.GetWarehouse(
+			warehouse, err := helpers.GetWarehouse(
 				ctx,
 				cl,
 				types.NamespacedName{

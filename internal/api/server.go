@@ -31,6 +31,7 @@ import (
 	"github.com/akuity/kargo/internal/api/rbac"
 	"github.com/akuity/kargo/internal/api/validation"
 	rollouts "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
+	"github.com/akuity/kargo/internal/helpers"
 	httputil "github.com/akuity/kargo/internal/http"
 	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/pkg/api/service/v1alpha1/svcv1alpha1connect"
@@ -171,9 +172,9 @@ func NewServer(
 
 	s.validateProjectExistsFn = s.validateProjectExists
 	s.externalValidateProjectFn = validation.ValidateProject
-	s.getStageFn = kargoapi.GetStage
-	s.getFreightByNameOrAliasFn = kargoapi.GetFreightByNameOrAlias
-	s.isFreightAvailableFn = kargoapi.IsFreightAvailable
+	s.getStageFn = helpers.GetStage
+	s.getFreightByNameOrAliasFn = helpers.GetFreightByNameOrAlias
+	s.isFreightAvailableFn = helpers.IsFreightAvailable
 	s.createPromotionFn = kubeClient.Create
 	s.findDownstreamStagesFn = s.findDownstreamStages
 	s.listFreightFn = kubeClient.List

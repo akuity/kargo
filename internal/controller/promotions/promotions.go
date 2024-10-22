@@ -26,10 +26,12 @@ import (
 	"github.com/akuity/kargo/internal/controller"
 	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
 	"github.com/akuity/kargo/internal/directives"
+	"github.com/akuity/kargo/internal/event"
+	k8sEvent "github.com/akuity/kargo/internal/event/kubernetes"
+	"github.com/akuity/kargo/internal/helpers"
 	"github.com/akuity/kargo/internal/indexer"
 	"github.com/akuity/kargo/internal/kargo"
 	"github.com/akuity/kargo/internal/kubeclient"
-	libEvent "github.com/akuity/kargo/internal/kubernetes/event"
 	"github.com/akuity/kargo/internal/logging"
 )
 
@@ -111,7 +113,7 @@ func SetupReconcilerWithManager(
 
 	reconciler := newReconciler(
 		kargoMgr.GetClient(),
-		libEvent.NewRecorder(ctx, kargoMgr.GetScheme(), kargoMgr.GetClient(), cfg.Name()),
+		k8sEvent.NewRecorder(ctx, kargoMgr.GetScheme(), kargoMgr.GetClient(), cfg.Name()),
 		directivesEngine,
 		cfg,
 	)
@@ -178,7 +180,7 @@ func newReconciler(
 		recorder:         recorder,
 		cfg:              cfg,
 	}
-	r.getStageFn = kargoapi.GetStage
+	r.getStageFn = helpers.GetStage
 	r.promoteFn = r.promote
 	r.terminatePromotionFn = r.terminatePromotion
 	return r
@@ -198,7 +200,7 @@ func (r *reconciler) Reconcile(
 	logger.Debug("reconciling Promotion")
 
 	// Find the Promotion
-	promo, err := kargoapi.GetPromotion(ctx, r.kargoClient, req.NamespacedName)
+	promo, err := helpers.GetPromotion(ctx, r.kargoClient, req.NamespacedName)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -208,7 +210,7 @@ func (r *reconciler) Reconcile(
 		return ctrl.Result{}, nil
 	}
 	// Find the Freight
-	freight, err := kargoapi.GetFreight(ctx, r.kargoClient, types.NamespacedName{
+	freight, err := helpers.GetFreight(ctx, r.kargoClient, types.NamespacedName{
 		Namespace: promo.Namespace,
 		Name:      promo.Spec.Freight,
 	})
@@ -381,11 +383,11 @@ func (r *reconciler) Reconcile(
 		var reason string
 		switch newStatus.Phase {
 		case kargoapi.PromotionPhaseSucceeded:
-			reason = kargoapi.EventReasonPromotionSucceeded
+			reason = event.EventReasonPromotionSucceeded
 		case kargoapi.PromotionPhaseFailed:
-			reason = kargoapi.EventReasonPromotionFailed
+			reason = event.EventReasonPromotionFailed
 		case kargoapi.PromotionPhaseErrored:
-			reason = kargoapi.EventReasonPromotionErrored
+			reason = event.EventReasonPromotionErrored
 		}
 
 		msg := fmt.Sprintf("Promotion %s", newStatus.Phase)
@@ -393,12 +395,12 @@ func (r *reconciler) Reconcile(
 			msg += fmt.Sprintf(": %s", newStatus.Message)
 		}
 
-		eventAnnotations := kargoapi.NewPromotionEventAnnotations(ctx,
-			kargoapi.FormatEventControllerActor(r.cfg.Name()),
+		eventAnnotations := event.NewPromotionEventAnnotations(ctx,
+			event.FormatEventControllerActor(r.cfg.Name()),
 			promo, freight)
 
 		if newStatus.Phase == kargoapi.PromotionPhaseSucceeded {
-			eventAnnotations[kargoapi.AnnotationKeyEventVerificationPending] =
+			eventAnnotations[event.AnnotationKeyEventVerificationPending] =
 				strconv.FormatBool(stage.Spec.Verification != nil)
 		}
 		r.recorder.AnnotatedEventf(promo, eventAnnotations, corev1.EventTypeNormal, reason, msg)
@@ -434,7 +436,7 @@ func (r *reconciler) promote(
 		return nil, fmt.Errorf("Freight %q not found in namespace %q", promo.Spec.Freight, promo.Namespace)
 	}
 
-	if !kargoapi.IsFreightAvailable(stage, targetFreight) {
+	if !helpers.IsFreightAvailable(stage, targetFreight) {
 		return nil, fmt.Errorf(
 			"Freight %q is not available to Stage %q in namespace %q",
 			promo.Spec.Freight,
@@ -528,7 +530,7 @@ func (r *reconciler) promote(
 		if current != nil && current.VerificationHistory.Current() != nil {
 			for _, f := range current.Freight {
 				if f.Name == targetFreight.Name {
-					if err := kargoapi.ReverifyStageFreight(
+					if err := helpers.ReverifyStageFreight(
 						ctx,
 						r.kargoClient,
 						types.NamespacedName{
@@ -601,7 +603,7 @@ func (r *reconciler) terminatePromotion(
 	// events. For an abort request, however, we do not want to inherit this
 	// as the abort request is not necessarily made by the creator of the
 	// Promotion.
-	actor := kargoapi.FormatEventControllerActor(r.cfg.Name())
+	actor := event.FormatEventControllerActor(r.cfg.Name())
 	if req.Actor != "" {
 		actor = req.Actor
 	}
@@ -621,14 +623,14 @@ func (r *reconciler) terminatePromotion(
 		return err
 	}
 
-	eventMeta := kargoapi.NewPromotionEventAnnotations(ctx, "", promo, freight)
-	eventMeta[kargoapi.AnnotationKeyEventActor] = actor
+	eventMeta := event.NewPromotionEventAnnotations(ctx, "", promo, freight)
+	eventMeta[event.AnnotationKeyEventActor] = actor
 
 	r.recorder.AnnotatedEventf(
 		promo,
 		eventMeta,
 		corev1.EventTypeNormal,
-		kargoapi.EventReasonPromotionAborted,
+		event.EventReasonPromotionAborted,
 		newStatus.Message,
 	)
 

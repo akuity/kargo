@@ -13,7 +13,7 @@ import (
 	"github.com/akuity/kargo/internal/api/config"
 	"github.com/akuity/kargo/internal/api/kubernetes"
 	"github.com/akuity/kargo/internal/api/rbac"
-	fakeevent "github.com/akuity/kargo/internal/kubernetes/event/fake"
+	fakeevent "github.com/akuity/kargo/internal/event/kubernetes/fake"
 )
 
 func TestNewServer(t *testing.T) {

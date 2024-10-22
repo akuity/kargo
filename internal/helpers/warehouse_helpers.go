@@ -1,4 +1,4 @@
-package v1alpha1
+package helpers
 
 import (
 	"context"
@@ -8,6 +8,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
 // GetWarehouse returns a pointer to the Warehouse resource specified by the
@@ -17,8 +19,8 @@ func GetWarehouse(
 	ctx context.Context,
 	c client.Client,
 	namespacedName types.NamespacedName,
-) (*Warehouse, error) {
-	warehouse := Warehouse{}
+) (*kargoapi.Warehouse, error) {
+	warehouse := kargoapi.Warehouse{}
 	if err := c.Get(ctx, namespacedName, &warehouse); err != nil {
 		if err = client.IgnoreNotFound(err); err == nil {
 			return nil, nil
@@ -41,8 +43,8 @@ func RefreshWarehouse(
 	ctx context.Context,
 	c client.Client,
 	namespacedName types.NamespacedName,
-) (*Warehouse, error) {
-	warehouse := &Warehouse{
+) (*kargoapi.Warehouse, error) {
+	warehouse := &kargoapi.Warehouse{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespacedName.Namespace,
 			Name:      namespacedName.Name,
@@ -52,7 +54,7 @@ func RefreshWarehouse(
 		ctx,
 		c,
 		warehouse,
-		AnnotationKeyRefresh,
+		kargoapi.AnnotationKeyRefresh,
 		time.Now().Format(time.RFC3339),
 	); err != nil {
 		return nil, fmt.Errorf("refresh: %w", err)

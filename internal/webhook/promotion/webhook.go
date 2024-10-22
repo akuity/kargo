@@ -20,7 +20,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	libEvent "github.com/akuity/kargo/internal/kubernetes/event"
+	"github.com/akuity/kargo/internal/event"
+	k8sEvent "github.com/akuity/kargo/internal/event/kubernetes"
+	"github.com/akuity/kargo/internal/helpers"
 	"github.com/akuity/kargo/internal/logging"
 	libWebhook "github.com/akuity/kargo/internal/webhook"
 )
@@ -89,7 +91,7 @@ func SetupWebhookWithManager(
 		cfg,
 		mgr.GetClient(),
 		admission.NewDecoder(mgr.GetScheme()),
-		libEvent.NewRecorder(ctx, mgr.GetScheme(), mgr.GetClient(), "promotion-webhook"),
+		k8sEvent.NewRecorder(ctx, mgr.GetScheme(), mgr.GetClient(), "promotion-webhook"),
 	)
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(&kargoapi.Promotion{}).
@@ -109,8 +111,8 @@ func newWebhook(
 		decoder:  decoder,
 		recorder: recorder,
 	}
-	w.getFreightFn = kargoapi.GetFreight
-	w.getStageFn = kargoapi.GetStage
+	w.getFreightFn = helpers.GetFreight
+	w.getStageFn = helpers.GetStage
 	w.validateProjectFn = libWebhook.ValidateProject
 	w.authorizeFn = w.authorize
 	w.admissionRequestFromContextFn = admission.RequestFromContext
@@ -146,7 +148,7 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 		// to allow controllers to track who created it.
 		if !w.isRequestFromKargoControlplaneFn(req) {
 			promo.Annotations[kargoapi.AnnotationKeyCreateActor] =
-				kargoapi.FormatEventKubernetesUserActor(req.UserInfo)
+				event.FormatEventKubernetesUserActor(req.UserInfo)
 		}
 
 		// Enrich the annotation with the actor and control plane information.
@@ -245,7 +247,7 @@ func (w *webhook) ValidateCreate(
 		return nil, fmt.Errorf("get freight: %w", err)
 	}
 
-	if !kargoapi.IsFreightAvailable(stage, freight) {
+	if !helpers.IsFreightAvailable(stage, freight) {
 		return nil, apierrors.NewInvalid(
 			promotionGroupKind,
 			promo.Name,
@@ -369,12 +371,12 @@ func (w *webhook) recordPromotionCreatedEvent(
 	p *kargoapi.Promotion,
 	f *kargoapi.Freight,
 ) {
-	actor := kargoapi.FormatEventKubernetesUserActor(req.UserInfo)
+	actor := event.FormatEventKubernetesUserActor(req.UserInfo)
 	w.recorder.AnnotatedEventf(
 		p,
-		kargoapi.NewPromotionEventAnnotations(ctx, actor, p, f),
+		event.NewPromotionEventAnnotations(ctx, actor, p, f),
 		corev1.EventTypeNormal,
-		kargoapi.EventReasonPromotionCreated,
+		event.EventReasonPromotionCreated,
 		"Promotion created for Stage %q by %q",
 		p.Spec.Stage,
 		actor,
@@ -395,7 +397,7 @@ func (w *webhook) setAbortAnnotationActor(req admission.Request, old, new *kargo
 				// If the abort request is not from the control plane, then it's
 				// from a specific Kubernetes user. Without this check we would
 				// overwrite the actor field set by the control plane.
-				abortReq.Actor = kargoapi.FormatEventKubernetesUserActor(req.UserInfo)
+				abortReq.Actor = event.FormatEventKubernetesUserActor(req.UserInfo)
 			}
 			new.Annotations[kargoapi.AnnotationKeyAbort] = abortReq.String()
 		}

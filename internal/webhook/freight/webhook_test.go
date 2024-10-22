@@ -23,7 +23,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	fakeevent "github.com/akuity/kargo/internal/kubernetes/event/fake"
+	kargoEvent "github.com/akuity/kargo/internal/event"
+	fakeevent "github.com/akuity/kargo/internal/event/kubernetes/fake"
 	libWebhook "github.com/akuity/kargo/internal/webhook"
 )
 
@@ -666,7 +667,7 @@ func TestValidateUpdate(t *testing.T) {
 				require.NoError(t, err)
 				require.Len(t, r.Events, 1)
 				event := <-r.Events
-				require.Equal(t, kargoapi.EventReasonFreightApproved, event.Reason)
+				require.Equal(t, kargoEvent.EventReasonFreightApproved, event.Reason)
 			},
 		},
 		{

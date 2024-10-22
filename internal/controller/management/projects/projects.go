@@ -24,6 +24,7 @@ import (
 	"github.com/akuity/kargo/internal/conditions"
 	"github.com/akuity/kargo/internal/controller"
 	rolloutsapi "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
+	"github.com/akuity/kargo/internal/helpers"
 	"github.com/akuity/kargo/internal/kubeclient"
 	"github.com/akuity/kargo/internal/logging"
 )
@@ -151,14 +152,14 @@ func newReconciler(kubeClient client.Client, cfg ReconcilerConfig) *reconciler {
 		cfg:    cfg,
 		client: kubeClient,
 	}
-	r.getProjectFn = kargoapi.GetProject
+	r.getProjectFn = helpers.GetProject
 	r.syncProjectFn = r.syncProject
 	r.ensureNamespaceFn = r.ensureNamespace
 	r.patchProjectStatusFn = r.patchProjectStatus
 	r.getNamespaceFn = r.client.Get
 	r.createNamespaceFn = r.client.Create
-	r.patchOwnerReferencesFn = kargoapi.PatchOwnerReferences
-	r.ensureFinalizerFn = kargoapi.EnsureFinalizer
+	r.patchOwnerReferencesFn = helpers.PatchOwnerReferences
+	r.ensureFinalizerFn = helpers.EnsureFinalizer
 	r.ensureAPIAdminPermissionsFn = r.ensureAPIAdminPermissions
 	r.ensureControllerPermissionsFn = r.ensureControllerPermissions
 	r.ensureDefaultProjectRolesFn = r.ensureDefaultProjectRoles

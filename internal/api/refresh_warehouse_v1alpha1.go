@@ -6,7 +6,7 @@ import (
 	"connectrpc.com/connect"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/helpers"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
@@ -28,7 +28,7 @@ func (s *server) RefreshWarehouse(
 		return nil, err
 	}
 
-	warehouse, err := kargoapi.RefreshWarehouse(ctx, s.client, client.ObjectKey{
+	warehouse, err := helpers.RefreshWarehouse(ctx, s.client, client.ObjectKey{
 		Namespace: project,
 		Name:      name,
 	})

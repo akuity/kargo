@@ -13,7 +13,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	fakeevent "github.com/akuity/kargo/internal/kubernetes/event/fake"
+	kargoEvent "github.com/akuity/kargo/internal/event"
+	fakeevent "github.com/akuity/kargo/internal/event/kubernetes/fake"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
@@ -433,7 +434,7 @@ func TestPromoteToStage(t *testing.T) {
 				require.Len(t, recorder.Events, 1)
 				event := <-recorder.Events
 				require.Equal(t, corev1.EventTypeNormal, event.EventType)
-				require.Equal(t, kargoapi.EventReasonPromotionCreated, event.Reason)
+				require.Equal(t, kargoEvent.EventReasonPromotionCreated, event.Reason)
 			},
 		},
 	}

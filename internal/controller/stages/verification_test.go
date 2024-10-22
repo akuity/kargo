@@ -17,6 +17,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	rollouts "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
+	"github.com/akuity/kargo/internal/event"
 )
 
 func TestStartVerification(t *testing.T) {
@@ -1134,7 +1135,7 @@ func TestBuildAnalysisRun(t *testing.T) {
 					Annotations: map[string]string{
 						kargoapi.AnnotationKeyReverify: (&kargoapi.VerificationRequest{
 							ID:           "fake-id",
-							Actor:        kargoapi.EventActorAdmin,
+							Actor:        event.EventActorAdmin,
 							ControlPlane: true,
 						}).String(),
 					},

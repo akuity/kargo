@@ -6,7 +6,7 @@ import (
 	"connectrpc.com/connect"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/helpers"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
@@ -31,7 +31,7 @@ func (s *server) AbortVerification(
 		Namespace: project,
 		Name:      stage,
 	}
-	if err := kargoapi.AbortStageFreightVerification(ctx, s.client, objKey); err != nil {
+	if err := helpers.AbortStageFreightVerification(ctx, s.client, objKey); err != nil {
 		return nil, err
 	}
 	return connect.NewResponse(&svcv1alpha1.AbortVerificationResponse{}), nil

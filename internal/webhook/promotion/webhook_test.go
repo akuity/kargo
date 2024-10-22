@@ -21,7 +21,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	fakeevent "github.com/akuity/kargo/internal/kubernetes/event/fake"
+	kargoEvent "github.com/akuity/kargo/internal/event"
+	fakeevent "github.com/akuity/kargo/internal/event/kubernetes/fake"
 	libWebhook "github.com/akuity/kargo/internal/webhook"
 )
 
@@ -212,7 +213,7 @@ func TestDefault(t *testing.T) {
 				require.True(t, ok)
 				require.Equal(t, &kargoapi.AbortPromotionRequest{
 					Action: "fake-action",
-					Actor: kargoapi.FormatEventKubernetesUserActor(authnv1.UserInfo{
+					Actor: kargoEvent.FormatEventKubernetesUserActor(authnv1.UserInfo{
 						Username: "real-user",
 					}),
 					ControlPlane: false,
@@ -267,7 +268,7 @@ func TestDefault(t *testing.T) {
 				require.True(t, ok)
 				require.Equal(t, &kargoapi.AbortPromotionRequest{
 					Action: "fake-action",
-					Actor: kargoapi.FormatEventKubernetesUserActor(authnv1.UserInfo{
+					Actor: kargoEvent.FormatEventKubernetesUserActor(authnv1.UserInfo{
 						Username: "real-user",
 					}),
 					ControlPlane: false,
@@ -305,7 +306,7 @@ func TestDefault(t *testing.T) {
 					Annotations: map[string]string{
 						kargoapi.AnnotationKeyAbort: (&kargoapi.AbortPromotionRequest{
 							Action: "fake-action",
-							Actor:  kargoapi.EventActorAdmin,
+							Actor:  kargoEvent.EventActorAdmin,
 						}).String(),
 					},
 				},
@@ -322,7 +323,7 @@ func TestDefault(t *testing.T) {
 				require.True(t, ok)
 				require.Equal(t, &kargoapi.AbortPromotionRequest{
 					Action:       "fake-action",
-					Actor:        kargoapi.EventActorAdmin,
+					Actor:        kargoEvent.EventActorAdmin,
 					ControlPlane: true,
 				}, rr)
 			},
@@ -384,7 +385,7 @@ func TestDefault(t *testing.T) {
 				require.True(t, ok)
 				require.Equal(t, &kargoapi.AbortPromotionRequest{
 					Action: "fake-action",
-					Actor:  kargoapi.FormatEventKubernetesUserActor(authnv1.UserInfo{Username: "real-user"}),
+					Actor:  kargoEvent.FormatEventKubernetesUserActor(authnv1.UserInfo{Username: "real-user"}),
 				}, rr)
 			},
 		},
@@ -446,7 +447,7 @@ func TestDefault(t *testing.T) {
 				require.True(t, ok)
 				require.Equal(t, &kargoapi.AbortPromotionRequest{
 					Action:       "fake-action",
-					Actor:        kargoapi.FormatEventKubernetesUserActor(authnv1.UserInfo{Username: "real-user"}),
+					Actor:        kargoEvent.FormatEventKubernetesUserActor(authnv1.UserInfo{Username: "real-user"}),
 					ControlPlane: false,
 				}, rr)
 			},
@@ -831,7 +832,7 @@ func TestValidateCreate(t *testing.T) {
 				require.NoError(t, err)
 				require.Len(t, r.Events, 1)
 				event := <-r.Events
-				require.Equal(t, kargoapi.EventReasonPromotionCreated, event.Reason)
+				require.Equal(t, kargoEvent.EventReasonPromotionCreated, event.Reason)
 			},
 		},
 		{

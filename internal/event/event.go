@@ -1,4 +1,4 @@
-package v1alpha1
+package event
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 
 	authnv1 "k8s.io/api/authentication/v1"
 
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api/user"
 	"github.com/akuity/kargo/internal/logging"
 )
@@ -93,7 +94,7 @@ func FormatEventKubernetesUserActor(u authnv1.UserInfo) string {
 	return EventActorKubernetesUserPrefix + u.Username
 }
 
-func NewFreightApprovedEventAnnotations(actor string, f *Freight, stageName string) map[string]string {
+func NewFreightApprovedEventAnnotations(actor string, f *kargoapi.Freight, stageName string) map[string]string {
 	annotations := map[string]string{
 		AnnotationKeyEventProject:           f.Namespace,
 		AnnotationKeyEventFreightCreateTime: f.CreationTimestamp.Format(time.RFC3339),
@@ -112,8 +113,8 @@ func NewFreightApprovedEventAnnotations(actor string, f *Freight, stageName stri
 func NewPromotionEventAnnotations(
 	ctx context.Context,
 	actor string,
-	p *Promotion,
-	f *Freight,
+	p *kargoapi.Promotion,
+	f *kargoapi.Freight,
 ) map[string]string {
 	logger := logging.LoggerFromContext(ctx)
 
@@ -130,7 +131,7 @@ func NewPromotionEventAnnotations(
 	}
 	// All Promotion-related events are emitted after the promotion was created.
 	// Therefore, if the promotion knows who triggered it, set them as an actor.
-	if promoteActor, ok := p.Annotations[AnnotationKeyCreateActor]; ok {
+	if promoteActor, ok := p.Annotations[kargoapi.AnnotationKeyCreateActor]; ok {
 		annotations[AnnotationKeyEventActor] = promoteActor
 	}
 

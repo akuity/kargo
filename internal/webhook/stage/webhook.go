@@ -14,6 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/event"
 	libWebhook "github.com/akuity/kargo/internal/webhook"
 )
 
@@ -121,7 +122,7 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 					// If the re-verification request is not from the control plane, then
 					// it's from a specific Kubernetes user. Without this check we would
 					// overwrite the actor field set by the control plane.
-					verReq.Actor = kargoapi.FormatEventKubernetesUserActor(req.UserInfo)
+					verReq.Actor = event.FormatEventKubernetesUserActor(req.UserInfo)
 				}
 				stage.Annotations[kargoapi.AnnotationKeyReverify] = verReq.String()
 			}
@@ -140,7 +141,7 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 					// If the abort request is not from the control plane, then
 					// it's from a specific Kubernetes user. Without this check we would
 					// overwrite the actor field set by the control plane.
-					verReq.Actor = kargoapi.FormatEventKubernetesUserActor(req.UserInfo)
+					verReq.Actor = event.FormatEventKubernetesUserActor(req.UserInfo)
 				}
 				stage.Annotations[kargoapi.AnnotationKeyAbort] = verReq.String()
 			}

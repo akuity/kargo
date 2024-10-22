@@ -12,6 +12,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api/user"
+	"github.com/akuity/kargo/internal/event"
 	"github.com/akuity/kargo/internal/kargo"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
@@ -132,15 +133,15 @@ func (s *server) recordPromotionCreatedEvent(
 	var actor string
 	msg := fmt.Sprintf("Promotion created for Stage %q", p.Spec.Stage)
 	if u, ok := user.InfoFromContext(ctx); ok {
-		actor = kargoapi.FormatEventUserActor(u)
+		actor = event.FormatEventUserActor(u)
 		msg += fmt.Sprintf(" by %q", actor)
 	}
 
 	s.recorder.AnnotatedEventf(
 		p,
-		kargoapi.NewPromotionEventAnnotations(ctx, actor, p, f),
+		event.NewPromotionEventAnnotations(ctx, actor, p, f),
 		corev1.EventTypeNormal,
-		kargoapi.EventReasonPromotionCreated,
+		event.EventReasonPromotionCreated,
 		msg,
 	)
 }

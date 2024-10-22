@@ -20,10 +20,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/event"
+	k8sEvent "github.com/akuity/kargo/internal/event/kubernetes"
 	"github.com/akuity/kargo/internal/git"
 	"github.com/akuity/kargo/internal/helm"
+	"github.com/akuity/kargo/internal/helpers"
 	"github.com/akuity/kargo/internal/indexer"
-	libEvent "github.com/akuity/kargo/internal/kubernetes/event"
 	libWebhook "github.com/akuity/kargo/internal/webhook"
 )
 
@@ -84,7 +86,7 @@ func SetupWebhookWithManager(
 	w := newWebhook(
 		cfg,
 		mgr.GetClient(),
-		libEvent.NewRecorder(ctx, mgr.GetScheme(), mgr.GetClient(), "freight-webhook"),
+		k8sEvent.NewRecorder(ctx, mgr.GetScheme(), mgr.GetClient(), "freight-webhook"),
 	)
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(&kargoapi.Freight{}).
@@ -108,7 +110,7 @@ func newWebhook(
 	w.validateProjectFn = libWebhook.ValidateProject
 	w.listFreightFn = kubeClient.List
 	w.listStagesFn = kubeClient.List
-	w.getWarehouseFn = kargoapi.GetWarehouse
+	w.getWarehouseFn = helpers.GetWarehouse
 	w.validateFreightArtifactsFn = validateFreightArtifacts
 	w.isRequestFromKargoControlplaneFn = libWebhook.IsRequestFromKargoControlplane(cfg.ControlplaneUserRegex)
 	return w
@@ -322,12 +324,12 @@ func (w *webhook) recordFreightApprovedEvent(
 	f *kargoapi.Freight,
 	stageName string,
 ) {
-	actor := kargoapi.FormatEventKubernetesUserActor(req.UserInfo)
+	actor := event.FormatEventKubernetesUserActor(req.UserInfo)
 	w.recorder.AnnotatedEventf(
 		f,
-		kargoapi.NewFreightApprovedEventAnnotations(actor, f, stageName),
+		event.NewFreightApprovedEventAnnotations(actor, f, stageName),
 		corev1.EventTypeNormal,
-		kargoapi.EventReasonFreightApproved,
+		event.EventReasonFreightApproved,
 		"Freight approved for Stage %q by %q",
 		stageName,
 		actor,

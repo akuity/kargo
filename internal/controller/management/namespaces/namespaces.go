@@ -16,6 +16,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller"
+	"github.com/akuity/kargo/internal/helpers"
 	"github.com/akuity/kargo/internal/logging"
 )
 
@@ -70,7 +71,7 @@ func newReconciler(kubeClient client.Client) *reconciler {
 	}
 	r.getNamespaceFn = r.client.Get
 	r.deleteProjectFn = r.client.Delete
-	r.removeFinalizerFn = kargoapi.RemoveFinalizer
+	r.removeFinalizerFn = helpers.RemoveFinalizer
 	return r
 }
 

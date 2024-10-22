@@ -1,4 +1,4 @@
-package v1alpha1
+package helpers
 
 import (
 	"context"
@@ -6,6 +6,8 @@ import (
 
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
 // GetFreightByNameOrAlias returns a pointer to the Freight resource specified
@@ -17,7 +19,7 @@ func GetFreightByNameOrAlias(
 	project string,
 	name string,
 	alias string,
-) (*Freight, error) {
+) (*kargoapi.Freight, error) {
 	if name != "" {
 		return GetFreight(
 			ctx,
@@ -38,8 +40,8 @@ func GetFreight(
 	ctx context.Context,
 	c client.Client,
 	namespacedName types.NamespacedName,
-) (*Freight, error) {
-	freight := Freight{}
+) (*kargoapi.Freight, error) {
+	freight := kargoapi.Freight{}
 	if err := c.Get(ctx, namespacedName, &freight); err != nil {
 		if err = client.IgnoreNotFound(err); err == nil {
 			return nil, nil
@@ -62,14 +64,14 @@ func GetFreightByAlias(
 	c client.Client,
 	project string,
 	alias string,
-) (*Freight, error) {
-	freightList := FreightList{}
+) (*kargoapi.Freight, error) {
+	freightList := kargoapi.FreightList{}
 	if err := c.List(
 		ctx,
 		&freightList,
 		client.InNamespace(project),
 		client.MatchingLabels{
-			AliasLabelKey: alias,
+			kargoapi.AliasLabelKey: alias,
 		},
 	); err != nil {
 		return nil, fmt.Errorf(
@@ -87,7 +89,7 @@ func GetFreightByAlias(
 
 // IsFreightAvailable answers whether the specified Freight is available to the
 // specified Stage.
-func IsFreightAvailable(stage *Stage, freight *Freight) bool {
+func IsFreightAvailable(stage *kargoapi.Stage, freight *kargoapi.Freight) bool {
 	if stage == nil || freight == nil || stage.Namespace != freight.Namespace {
 		return false
 	}

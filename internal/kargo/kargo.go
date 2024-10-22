@@ -12,6 +12,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api/user"
+	kargoEvent "github.com/akuity/kargo/internal/event"
 	"github.com/akuity/kargo/internal/logging"
 )
 
@@ -41,7 +42,7 @@ func NewPromotion(
 	annotations := make(map[string]string, 1)
 	// Put actor information to track on the controller side
 	if u, ok := user.InfoFromContext(ctx); ok {
-		annotations[kargoapi.AnnotationKeyCreateActor] = kargoapi.FormatEventUserActor(u)
+		annotations[kargoapi.AnnotationKeyCreateActor] = kargoEvent.FormatEventUserActor(u)
 	}
 
 	// ulid.Make() is pseudo-random, not crypto-random, but we don't care.
