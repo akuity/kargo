@@ -17,50 +17,47 @@ Project](https://github.com/akuity/kargo/milestones)
 
 ## In Progress
 
-### v1.0.0
+### v1.1.0
 
-__Expected:__ 18 October 2024
+__Expected:__ 22 November 2024
 
-v1.0.0 will be our long-anticipated GA release. There are no major features
-planned and the release will focus almost entirely on bug fixes and stability.
+This release will focus on improving the flexibility of the promotion steps
+introduced in v0.9.0 through the addition of support for an expression language.
 
-__One notable change, however, will be the removal of the legacy (opinionated)
-promotion mechanisms that were deprecated in v0.9.0.__
+This release also kicks off a three phase plan with the end goal of enabling
+custom/third-party promotion steps.
 
 ## Upcoming
 
-v1.0.0 is a major milestone for the project and signals that we are confident in
-the design and stability of Kargo's _core features_, but we're still just
-getting started!
+### v1.2.0
 
-### v1.1.0 and Beyond
+This release is to be the second phase of three advancing Kargo toward support
+for custom/third-party promotion steps, with a focus on ensuring a secure and
+isolated execution environment for those steps.
 
-v0.9.0's strategic refactor to promotion steps has opened up a world of
-possibilities for Kargo.
+### v1.3.0
 
-The general theme for our first several minor releases post-GA will be
-_extensibility_. With an end-goal of enabling third-party integrations in the
-form of promotion steps, we will be working on:
+The third and final phase of the three advancing Kargo toward support for
+custom/third-party promotion steps will focus on:
 
-* Ensuring a secure and isolated execution environment for promotion steps.
-
-* Publishing a formal specification for developers wishing to implement their
+* Establishing a formal specification for developers wishing to implement their
   own promotion steps.
 
-* Providing the mechanisms for operators to install and users to leverage
-  versioned, third-party promotion steps.
+* Building the mechanisms whereby operators may install and users may leverage
+  versioned, custom/third-party promotion steps.
 
-Through this work, we intend to enable a rich ecosystem of promotion steps that will provide a wide range of capabilities including, but not limited to, notifications, approval workflows, alternative GitOps agents, and non-Kubernetes deployments.
-
-Several UX improvements are also planned, including:
+### v1.4.0 and Beyond
 
 * Packaging common workflows as pre-defined, composite promotion steps.
-
-* Implementing an expression language that permits promotion step configuration
-  to more easily reference things like Freight, credentials, and the output of
-  previous promotion steps.
+* TBD
 
 ## Completed
+
+### v1.0.0
+
+v1.0.0 was our long-anticipated GA release containing only small features,
+bug fixes, stability improvements, and the final removal of the legacy
+promotion mechanisms that were deprecated in v0.9.0.
 
 ### v0.9.0
 
@@ -127,11 +124,3 @@ Several UX improvements are also planned, including:
 | `Freight` CRD | feature | Freight changed from being a property of a `Stage`, to being its own `Freight` CRD. |
 | `Warehouse` CRD | feature | `Freight` production was decoupled from a pipeline's first `Stage` and now comes from a `Warehouse`. |
 | Kargo Render | breaking change | The Bookkeeper project was rebranded as Kargo Render -- a Kargo sub-project for rendering manifests. |
-
-## Criteria for a Production-Ready 1.0.0 Release
-
-Maintainers will consider cutting a stable v1.0.0 release once:
-
-* Confident in API stability. (No further breaking changes anticipated.)
-* No critical, "show-stopping" bugs remaining in the backlog.
-* Observing evidence of successful community adoption (of beta releases) in production environments
