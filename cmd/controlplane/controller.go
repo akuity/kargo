@@ -7,6 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
@@ -17,6 +18,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api/kubernetes"
 	libargocd "github.com/akuity/kargo/internal/argocd"
+	"github.com/akuity/kargo/internal/controller"
 	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/promotions"
 	rollouts "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
@@ -29,8 +31,6 @@ import (
 	"github.com/akuity/kargo/internal/os"
 	"github.com/akuity/kargo/internal/types"
 	versionpkg "github.com/akuity/kargo/internal/version"
-
-	_ "github.com/akuity/kargo/internal/gitprovider/github"
 )
 
 type controllerOptions struct {
@@ -170,6 +170,12 @@ func (o *controllerOptions) setupKargoManager(
 		}
 	}
 
+	shardReq, err := controller.GetShardRequirement(stagesReconcilerCfg.ShardName)
+	if err != nil {
+		return nil, stagesReconcilerCfg, fmt.Errorf("error getting shard requirement: %w", err)
+	}
+	shardSelector := labels.NewSelector().Add(*shardReq)
+
 	mgr, err := ctrl.NewManager(
 		restCfg,
 		ctrl.Options{
@@ -185,6 +191,17 @@ func (o *controllerOptions) setupKargoManager(
 					// here since the underlying informer will not be able to watch
 					// Secrets in all namespaces.
 					DisableFor: []client.Object{&corev1.Secret{}},
+				},
+			},
+			Cache: cache.Options{
+				// When Kargo is sharded, we expect the controller to only handle
+				// resources in the shard it is responsible for. This is enforced
+				// by the following label selectors on the informers, EXCEPT for
+				// Warehouses — which should be accessible by all controllers in
+				// a sharded setup, but handled by only one controller at a time.
+				ByObject: map[client.Object]cache.ByObject{
+					&kargoapi.Stage{}:     {Label: shardSelector},
+					&kargoapi.Promotion{}: {Label: shardSelector},
 				},
 			},
 		},

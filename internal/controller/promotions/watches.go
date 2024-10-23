@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/fields"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -21,8 +20,7 @@ import (
 // UpdatedArgoCDAppHandler is an event handler that enqueues Promotions for
 // reconciliation when an associated ArgoCD Application is updated.
 type UpdatedArgoCDAppHandler[T any] struct {
-	kargoClient   client.Client
-	shardSelector labels.Selector
+	kargoClient client.Client
 }
 
 // Create implements TypedEventHandler.
@@ -79,7 +77,6 @@ func (u *UpdatedArgoCDAppHandler[T]) Update(
 				indexer.RunningPromotionsByArgoCDApplicationsIndexField,
 				fmt.Sprintf("%s:%s", newApp.Namespace, newApp.Name),
 			),
-			LabelSelector: u.shardSelector,
 		},
 	); err != nil {
 		logger.Error(

@@ -71,7 +71,6 @@ func SetupReconcilerWithManager(
 	credentialsDB credentials.Database,
 	shardName string,
 ) error {
-
 	shardPredicate, err := controller.GetShardPredicate(shardName)
 	if err != nil {
 		return fmt.Errorf("error creating shard selector predicate: %w", err)

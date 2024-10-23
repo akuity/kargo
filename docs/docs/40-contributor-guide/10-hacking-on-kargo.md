@@ -114,6 +114,18 @@ There is seldom a need to do this, as the next section will cover a better
 option for rapidly building and deploying Kargo from source.
 :::
 
+:::tip
+The [Docker buildx](https://github.com/docker/buildx) machine required by the
+build process has to be created with the `--driver-opt network=host` option to
+allow it to access the (temporary) local image registry used for the base image.
+
+If you encounter an error during the build process (e.g. `failed to resolve
+source metadata for localhost:5001/kargo-base:latest-arm64` or `granting
+entitlement network.host is not allowed by build daemon configuration`), you
+may need to (re)create the machine using `docker buildx create` with this
+option set.
+:::
+
 ## Iterating Quickly
 
 This section focuses on the best approaches for gaining rapid feedback on
