@@ -163,7 +163,7 @@ To download the Kargo CLI:
 ```shell
 arch=$(uname -m)
 [ "$arch" = "x86_64" ] && arch=amd64
-curl -L -o kargo https://github.com/akuity/kargo/releases/download/v0.9.0-rc.3/kargo-"$(uname -s | tr '[:upper:]' '[:lower:]')-${arch}"
+curl -L -o kargo https://github.com/akuity/kargo/releases/latest/download/kargo-"$(uname -s | tr '[:upper:]' '[:lower:]')-${arch}"
 chmod +x kargo
 ```
 
@@ -176,7 +176,7 @@ value of your `PATH` environment variable.
 To download the Kargo CLI:
 
 ```shell
-Invoke-WebRequest -URI https://github.com/akuity/kargo/releases/download/v0.9.0-rc.3/kargo-windows-amd64.exe -OutFile kargo.exe
+Invoke-WebRequest -URI https://github.com/akuity/kargo/releases/latest/download/kargo-windows-amd64.exe -OutFile kargo.exe
 ```
 
 Then move `kargo.exe` to a location in your file system that is included in the value
@@ -516,22 +516,21 @@ the previous section.
 
 1. After applying the above configuration, you can view the pipeline you just created using the [Kargo Dashboard](https://localhost:31444/).
 
-   1. In the left-hand menu, select the <Hlt>Projects</Hlt> section
    1. Choose your `Project`, <Hlt>kargo-demo</Hlt>, from the list of available `Project`s
    1. You can find the pipeline you've created in the center of your Project screen.
    1. The pipeline consists of connected rectangles representing:
       1. <Hlt>Subscription</Hlt>: Has information about the container image repository that the `Warehouse` is subscribed to.
-      1. <Hlt>kargo-kemo</Hlt>: This represents your `Warehouse`. It will automatically subscribe to the image and should produce Freight shortly.
+      1. <Hlt>kargo-kemo</Hlt>: This represents your `Warehouse`. It will automatically subscribe to the image and should produce `Freight` shortly.
       1. <Hlt>test</Hlt>, <Hlt>uat</Hlt>, and <Hlt>prod</Hlt>: These are the deployment `Stage` resources.
 
    ![Kargo-dashboard-screenshot](../static/img/kargo-dashboard-projects.png)
 
 1. After a few seconds, our `Warehouse`, which subscribes to the
    `public.ecr.aws/nginx/nginx` container image, also should have already
-   produced `Freight`. You can monitor the status of Freight in the various stages directly on the interface, 
+   produced `Freight`. You can monitor the status of `Freight` in the various stages directly on the interface, 
    where it will appear under the respective stages (`test`, `uat`, `prod`).
 
-   The top of the screen displays a Freight Timeline. As your application progresses through the pipeline, the timeline will update to show you the current stage of your Freight.
+   The top of the screen displays a Freight Timeline. As your application progresses through the pipeline, the timeline will update to show you the current `Stage` of your `Freight`.
 
     :::info
     `Freight` is a set of references to one or more versioned artifacts, which
@@ -547,53 +546,34 @@ the previous section.
     version of the `public.ecr.aws/nginx/nginx` container image.
     :::
 
-1. We'll use it later, so save the ID of the `Freight` to an environment
-   variable:
-
-    ```shell
-    export FREIGHT_ALIAS=$(kargo get freight --project kargo-demo --output jsonpath={.alias})
-    ```
-
 ### Promote to Test
 
-1. Now, let's _promote_ the `Freight` into the `test` `Stage`:
+1. To promote `Freight` to the `test` `Stage`, select the existing `Freight` from
+    the Freight Timeline above. Click the three dots, choose <Hlt>Promote</Hlt>,
+    and then select <Hlt>Promote</Hlt> that appeared on the `test` `Stage`.
+ 
+    The promotion may briefly appear in a `Pending` state, but it will likely
+    transition to `Running`, or even `Succeeded` within moments, as shown below:
 
-    ```shell
-    kargo promote --project kargo-demo --freight-alias $FREIGHT_ALIAS --stage test
-    ```
+    ![Kargo-dashboard-screenshot](../static/img/kargo-dashboard-promotion.png)
 
-    Sample output:
+    You'll notice a **_check mark_**, indicating a <Hlt>successful promotion</Hlt>.
+   At this point, we can view all `Stage` resources in our `Project` and quickly see
+   that the `test` `Stage` is now either in a `Progressing` or `Healthy` state.
 
-    ```shell
-    promotion.kargo.akuity.io/test.01j2wbtrym4r3tktv38qzteh5h.7a6e91f promotion created
-    ```
+   Once the `test` `Stage` reaches a `Healthy` state, you can further confirm the 
+   success of this process by visiting the test instance of the site at [localhost:30081](http://localhost:30081).
 
-    Our `Promotion` may briefly appear to be in a `Pending` phase, but more than
-    likely, it will almost immediately be `Running`, or even `Succeeded`:
+   By checking the detailed `status` of the `test` `Stage`, you'll see it now reflects
+   the current `Freight` and may include a history of all the previous `Freight` that
+   passed through this `Stage`, listed from the most recent to the oldest.
 
-    ![Kargo-dashboard-screenshot](../static/img/kargo-dashboard-promotion.png) <!-- todo: change screenshot to Healthy state of test stage -->
-
-    You'll notice a **_tick mark_**, which signifies <Hlt>successful promotion</Hlt>.
-    At this point, we can view all `Stage` resources in our project and quickly see
-    that the `test` `Stage` is now either in a `Progressing` or `Healthy` state.
-    
-    Once our `test` `Stage` is in a `Healthy` state, you can further validate the
-    success of this entire process by  visiting the test instance of our site
-    at [localhost:30081](http://localhost:30081).
-
-    If we once again view the `status` of our `test` `Stage` in more detail, we
-    will see that it now reflects its current `Freight`, and the history of all
-    `Freight` that have passed through this stage. (The collection is ordered
-    most to least recent.)
-
-   <!-- todo: add a screenshot of zoomed test stage with test stage reflecting freight.-->
-
-1. If we look at our `Freight` in greater detail, we'll see that by virtue of
+1. If we select the `Freight` from the <Hlt>Freight Timeline</Hlt>, we'll see that by virtue of
    the `test` `Stage` having achieved a `Healthy` state, the `Freight` is now
    _verified_ in `test`, which designates it as eligible for promotion to the
    next `Stage` -- in our case, `uat`.
 
-    <!-- todo: add a screenshot mentioning in the freight timeline select the freight to view the detail and share screenshot of right-emerging-panel-->
+   ![Kargo-Freight-Verified](../static/img/kargo-freight-verified.png)
 
     :::note
     Although this example does not demonstrate it, it is also possible to verify
