@@ -194,10 +194,12 @@ func (o *controllerOptions) setupKargoManager(
 				},
 			},
 			Cache: cache.Options{
-				// Ensure that the controller only watches resources in the shard
-				// it is responsible for.
+				// When Kargo is sharded, we expect the controller to only handle
+				// resources in the shard it is responsible for. This is enforced
+				// by the following label selectors on the informers, EXCEPT for
+				// Warehouses — which should be accessible by all controllers in
+				// a sharded setup, but handled by only one controller at a time.
 				ByObject: map[client.Object]cache.ByObject{
-					&kargoapi.Warehouse{}: {Label: shardSelector},
 					&kargoapi.Stage{}:     {Label: shardSelector},
 					&kargoapi.Promotion{}: {Label: shardSelector},
 				},
@@ -311,6 +313,7 @@ func (o *controllerOptions) setupReconcilers(
 	if err := warehouses.SetupReconcilerWithManager(
 		kargoMgr,
 		credentialsDB,
+		o.ShardName,
 	); err != nil {
 		return fmt.Errorf("error setting up Warehouses reconciler: %w", err)
 	}
