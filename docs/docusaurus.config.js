@@ -76,6 +76,11 @@ const config = {
             position: 'left',
           },
           {
+            href: 'https://kargo.io/',
+            label: 'Kargo.io',
+            position: 'left',
+          },
+          {
             href: 'https://github.com/akuity/kargo',
             label: 'GitHub',
             position: 'right',
