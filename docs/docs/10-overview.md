@@ -27,10 +27,6 @@ Watch the *Multi-Stage Deployment Pipelines the GitOps Way* talk by Jesse Suen &
 </center>
 :::
 
-:::caution
-Kargo is undergoing active development and everyone is invited to [join us](https://github.com/akuity/kargo) in the journey to a GA release (`v1.0.0`)! Please expect breaking changes between pre-GA releases (`v0.x.x`).
-:::
-
 :::info
 Join the Akuity Community [Discord server](https://discord.gg/dHJBZw6ewT)!
 :::
