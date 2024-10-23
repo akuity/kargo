@@ -2,6 +2,7 @@ package event
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"testing"
@@ -14,6 +15,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/akuity/kargo/api/v1alpha1"
@@ -149,7 +151,7 @@ func TestNewPromotionEventAnnotations(t *testing.T) {
 				v1alpha1.AnnotationKeyEventFreightCommits:      `[{"tag":"test-tag"}]`,
 				v1alpha1.AnnotationKeyEventFreightImages:       `[{"tag":"test-tag"}]`,
 				v1alpha1.AnnotationKeyEventFreightCharts:       `[{"name":"test-chart"}]`,
-				v1alpha1.AnnotationKeyEventApplications: `[{"name":"test-app-1"},` +
+				v1alpha1.AnnotationKeyEventApplications: `[{"name":"test-app-1","namespace":"argocd"},` +
 					`{"name":"test-app-2","namespace":"test-namespace"}]`,
 			},
 		},
@@ -158,9 +160,19 @@ func TestNewPromotionEventAnnotations(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			result := NewPromotionEventAnnotations(context.TODO(), tc.actor, tc.promotion, tc.freight)
-
 			require.Equal(t, len(tc.expected), len(result), "Number of annotations doesn't match")
 			for key, expectedValue := range tc.expected {
+				if key == v1alpha1.AnnotationKeyEventApplications {
+					expectedAppsJSON := tc.expected[v1alpha1.AnnotationKeyEventApplications]
+					actualAppsJSON := result[v1alpha1.AnnotationKeyEventApplications]
+					var expectedApps, actualApps []types.NamespacedName
+					err := json.Unmarshal([]byte(expectedAppsJSON), &expectedApps)
+					require.NoError(t, err, "Failed to unmarshal expected applications")
+					err = json.Unmarshal([]byte(actualAppsJSON), &actualApps)
+					require.NoError(t, err, "Failed to unmarshal actual applications")
+					require.Equal(t, expectedApps, actualApps, "Applications mismatch")
+					continue
+				}
 				actualValue, exists := result[key]
 				require.True(t, exists, "Expected annotation %s not found", key)
 				require.Equal(t, expectedValue, actualValue, "Annotation %s value mismatch", key)
