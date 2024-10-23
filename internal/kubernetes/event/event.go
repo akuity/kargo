@@ -16,6 +16,7 @@ import (
 	libClient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	libargocd "github.com/akuity/kargo/internal/argocd"
 	"github.com/akuity/kargo/internal/directives"
 	"github.com/akuity/kargo/internal/logging"
 )
@@ -145,11 +146,6 @@ func (e *sink) Patch(event *corev1.Event, data []byte) (*corev1.Event, error) {
 	return event, err
 }
 
-type AppReference struct {
-	Name      string `json:"name"`
-	Namespace string `json:"namespace,omitempty"`
-}
-
 // NewPromotionEventAnnotations returns annotations for a Promotion related event.
 // It may skip some fields when error occurred during serialization, to record event with best-effort.
 func NewPromotionEventAnnotations(
@@ -206,7 +202,7 @@ func NewPromotionEventAnnotations(
 		}
 	}
 
-	var apps []AppReference
+	var apps []types.NamespacedName
 	for _, step := range p.Spec.Steps {
 		if step.Uses != "argocd-update" || step.Config == nil {
 			continue
@@ -217,10 +213,14 @@ func NewPromotionEventAnnotations(
 			continue
 		}
 		for _, app := range cfg.Apps {
-			apps = append(apps, AppReference{
-				Name:      app.Name,
+			namespacedName := types.NamespacedName{
 				Namespace: app.Namespace,
-			})
+				Name:      app.Name,
+			}
+			if namespacedName.Namespace == "" {
+				namespacedName.Namespace = libargocd.Namespace()
+			}
+			apps = append(apps, namespacedName)
 		}
 	}
 	if len(apps) > 0 {
