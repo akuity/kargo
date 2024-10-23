@@ -146,14 +146,10 @@ At the end of this process:
 * The Argo CD dashboard will be accessible at [localhost:31443](https://localhost:31443).
 
   The username and password are both `admin`.
-  
-  ![Argo-dashboard-screenshot](../static/img/argo-dashboard-1.png)
 
 * The Kargo dashboard will be accessible at [localhost:31444](https://localhost:31444).
 
   The admin password is `admin`.
-
-  ![Kargo-dashboard-screenshot](../static/img/kargo-dashboard-1.png)
 
 * You can safely ignore all cert errors for both of the above.
 
@@ -265,7 +261,7 @@ all three Argo CD `Application`s have not yet synced because they're not
 configured to do so automatically, and in fact, the branches referenced by their
 `targetRevision` fields do not even exist yet.
 
-![Argo-dashboard-screenshot](../static/img/argo-dashboard-2.png)
+![Argo-dashboard-screenshot](../static/img/argo-dashboard.png)
 
 :::info
 Our three stages all existing in a single cluster is for the sake of expediency.
@@ -273,7 +269,7 @@ A single Argo CD control plane can manage multiple clusters, so these could just
 as easily have been spread across multiple clusters.
 :::
 
-### Hands on with the Kargo CLI
+### Define Your First Pipeline
 
 Up to this point, we haven't done anything with Kargo -- in fact everything
 we've done thus far should be familiar to anyone who's already using Argo CD and
@@ -518,48 +514,25 @@ the previous section.
       Kargo uses [semver](https://github.com/masterminds/semver#checking-version-constraints) to handle semantic versioning constraints.
       :::
 
-1. Use the CLI to view our `Warehouse` resource:
+1. After applying the above configuration, you can view the pipeline you just created using the [Kargo Dashboard](https://localhost:31444/).
 
-    ```shell
-    kargo get warehouses --project kargo-demo
-    ```
+   1. In the left-hand menu, select the <Hlt>Projects</Hlt> section
+   1. Choose your `Project`, <Hlt>kargo-demo</Hlt>, from the list of available `Project`s
+   1. You can find the pipeline you've created in the center of your Project screen.
+   1. The pipeline consists of connected rectangles representing:
+      1. <Hlt>Subscription</Hlt>: Has information about the container image repository that the `Warehouse` is subscribed to.
+      1. <Hlt>kargo-kemo</Hlt>: This represents your `Warehouse`. It will automatically subscribe to the image and should produce Freight shortly.
+      1. <Hlt>test</Hlt>, <Hlt>uat</Hlt>, and <Hlt>prod</Hlt>: These are the deployment `Stage` resources.
 
-    Sample output:
-
-    ```shell
-    NAME         SHARD   AGE
-    kargo-demo           13s
-    ```
-
-1. Use the CLI to view our three `Stage` resources:
-
-    ```shell
-    kargo get stages --project kargo-demo
-    ```
-
-    Sample output:
-
-    ```shell
-    NAME   SHARD   CURRENT FREIGHT   HEALTH   PHASE           AGE
-    prod           0/1 Fulfilled              NotApplicable   19s
-    test           0/1 Fulfilled              NotApplicable   19s
-    uat            0/1 Fulfilled              NotApplicable   19s
-    ```
+   ![Kargo-dashboard-screenshot](../static/img/kargo-dashboard-projects.png)
 
 1. After a few seconds, our `Warehouse`, which subscribes to the
    `public.ecr.aws/nginx/nginx` container image, also should have already
-   produced `Freight`:
+   produced `Freight`. You can monitor the status of Freight in the various stages directly on the interface, 
+   where it will appear under the respective stages (`test`, `uat`, `prod`).
 
-    ```shell
-    kargo get freight --project kargo-demo
-    ```
+   The top of the screen displays a Freight Timeline. As your application progresses through the pipeline, the timeline will update to show you the current stage of your Freight.
 
-    Sample output:
-
-    ```shell
-    NAME                                       ALIAS        ORIGIN                 AGE
-    b2ceb4f821be8b682861c579171874028e4275fd   lanky-pika   Warehouse/kargo-demo   42s
-    ```
     :::info
     `Freight` is a set of references to one or more versioned artifacts, which
     may include:
@@ -581,17 +554,7 @@ the previous section.
     export FREIGHT_ALIAS=$(kargo get freight --project kargo-demo --output jsonpath={.alias})
     ```
 
-   For a comprehensive overview of your `Project`, follow these steps to access and 
-   view the components on the [Kargo Dashboard](https://localhost:31444/):
-
-   1. Navigate to the Kargo Dashboard by clicking the link above or entering the URL directly in your browser.
-   1. In the left-hand menu, select the <Hlt>Projects</Hlt> section.
-   1. Choose your `Project`, <Hlt>kargo-demo</Hlt>, from the list of available `Project`s.
-   1. Once there, you will see a detailed visual representation of the `Project`. This includes:
-      1. The <Hlt>Warehouse</Hlt> and its status.
-      1. Various `Stage`s: <Hlt>test</Hlt>, <Hlt>uat</Hlt>, and <Hlt>prod</Hlt>.
-
-      ![Argo-dashboard-screenshot](../static/img/kargo-dashboard-projects.png)
+### Promote to Test
 
 1. Now, let's _promote_ the `Freight` into the `test` `Stage`:
 
@@ -605,236 +568,32 @@ the previous section.
     promotion.kargo.akuity.io/test.01j2wbtrym4r3tktv38qzteh5h.7a6e91f promotion created
     ```
 
-    Query for `Promotion` resources within our project to see one has been
-    created:
-
-    ```shell
-    kargo get promotions --project kargo-demo
-    ```
-
     Our `Promotion` may briefly appear to be in a `Pending` phase, but more than
     likely, it will almost immediately be `Running`, or even `Succeeded`:
 
-    ```shell
-    NAME                                      SHARD   STAGE   FREIGHT                                    PHASE       AGE
-    test.01j92m3mx7jn49rc5p62tmnsf1.b2ceb4f           test    b2ceb4f821be8b682861c579171874028e4275fd   Succeeded   57s
-    ```
+    ![Kargo-dashboard-screenshot](../static/img/kargo-dashboard-promotion.png) <!-- todo: change screenshot to Healthy state of test stage -->
 
-    Once the `Promotion` has succeeded, we can again view all `Stage` resources
-    in our project, and at a glance, see that the `test` `Stage` is now either
-    in a `Progressing` or `Healthy` state.
-
-    ```shell
-    kargo get stages --project kargo-demo
-    ```
-
-    Sample output:
-
-    ```shell
-    NAME   SHARD   CURRENT FREIGHT                            HEALTH    PHASE           AGE
-    prod           0/1 Fulfilled                                        NotApplicable   1m34s
-    test           b2ceb4f821be8b682861c579171874028e4275fd   Healthy   Steady          1m34s
-    uat            0/1 Fulfilled                                        NotApplicable   1m34s
-    ```
-
-    We can repeat the command above until our `test` `Stage` is in a `Healthy`
-    state and we can further validate the success of this entire process by
-    visiting the test instance of our site at
-    [localhost:30081](http://localhost:30081).
-
-    To check the status of the `test` stage on the **Kargo Dashboard**:
+    You'll notice a **_tick mark_**, which signifies <Hlt>successful promotion</Hlt>.
+    At this point, we can view all `Stage` resources in our project and quickly see
+    that the `test` `Stage` is now either in a `Progressing` or `Healthy` state.
     
-    1. Navigate to the <Hlt>Projects</Hlt> section in the **left-hand menu**.
-    1. Select your `Project`, <Hlt>kargo-demo</Hlt>.
-    1. Within the `Project` overview, locate the <Hlt>test</Hlt> stage.
-    1. Look for the **_heart_ symbol**, which indicates a <Hlt>healthy</Hlt> state.
-    1. Ensure there is a **_tick mark_**, which signifies the <Hlt>successful promotion</Hlt> of the `test` stage.
-
-    ![Kargo-dashboard-screenshot](../static/img/kargo-dashboard-promotion.png)
+    Once our `test` `Stage` is in a `Healthy` state, you can further validate the
+    success of this entire process by  visiting the test instance of our site
+    at [localhost:30081](http://localhost:30081).
 
     If we once again view the `status` of our `test` `Stage` in more detail, we
     will see that it now reflects its current `Freight`, and the history of all
     `Freight` that have passed through this stage. (The collection is ordered
     most to least recent.)
 
-    ```shell
-    kargo get stage test --project kargo-demo --output jsonpath-as-json={.status}
-    ```
-
-    Sample output:
-
-    ```shell
-    [
-        {
-            "freightHistory": [
-                {
-                    "id": "b69280b76a5f5dc40f9dbb1357f553a22958dda1",
-                    "items": {
-                        "Warehouse/kargo-demo": {
-                            "images": [
-                                {
-                                    "digest": "sha256:880533409097c86a27961c44bfcd60ca478a693e6baa4d9ee3c09b45865e5ea6",
-                                    "repoURL": "public.ecr.aws/nginx/nginx",
-                                    "tag": "1.27.1"
-                                }
-                            ],
-                            "name": "b2ceb4f821be8b682861c579171874028e4275fd",
-                            "origin": {
-                                "kind": "Warehouse",
-                                "name": "kargo-demo"
-                            }
-                        }
-                    }
-                }
-            ],
-            "freightSummary": "b2ceb4f821be8b682861c579171874028e4275fd",
-            "health": {
-                "output": [
-                    {
-                        "applicationStatuses": [
-                            {
-                                "Name": "kargo-demo-test",
-                                "Namespace": "argocd",
-                                "health": {
-                                    "status": "Healthy"
-                                },
-                                "operationState": {
-                                    "finishedAt": "2024-09-30T23:26:40Z",
-                                    "message": "successfully synced (all tasks run)",
-                                    "operation": {
-                                        "info": [
-                                            {
-                                                "name": "Reason",
-                                                "value": "Promotion triggered a sync of this Application resource."
-                                            },
-                                            {
-                                                "name": "kargo.akuity.io/freight-collection",
-                                                "value": "b69280b76a5f5dc40f9dbb1357f553a22958dda1"
-                                            }
-                                        ],
-                                        "initiatedBy": {
-                                            "automated": true,
-                                            "username": "kargo-controller"
-                                        },
-                                        "retry": {},
-                                        "sync": {
-                                            "revisions": [
-                                                "stage/test"
-                                            ],
-                                            "syncOptions": [
-                                                "CreateNamespace=true"
-                                            ]
-                                        }
-                                    },
-                                    "phase": "Succeeded",
-                                    "syncResult": {
-                                        "revision": "707412fa2be1aae72767c0acb652684c233a2802",
-                                        "source": {
-                                            "repoURL": "https://github.com/krancour/kargo-demo-gitops-2.git",
-                                            "targetRevision": "stage/test"
-                                        }
-                                    }
-                                },
-                                "sync": {
-                                    "revision": "707412fa2be1aae72767c0acb652684c233a2802",
-                                    "status": "Synced"
-                                }
-                            }
-                        ]
-                    }
-                ],
-                "status": "Healthy"
-            },
-            "lastHandledRefresh": "2024-09-30T23:31:40Z",
-            "lastPromotion": {
-                "finishedAt": "2024-09-30T23:31:37Z",
-                "freight": {
-                    "images": [
-                        {
-                            "digest": "sha256:880533409097c86a27961c44bfcd60ca478a693e6baa4d9ee3c09b45865e5ea6",
-                            "repoURL": "public.ecr.aws/nginx/nginx",
-                            "tag": "1.27.1"
-                        }
-                    ],
-                    "name": "b2ceb4f821be8b682861c579171874028e4275fd",
-                    "origin": {
-                        "kind": "Warehouse",
-                        "name": "kargo-demo"
-                    }
-                },
-                "name": "test.01j92m3mx7jn49rc5p62tmnsf1.b2ceb4f",
-                "status": {
-                    "finishedAt": "2024-09-30T23:31:37Z",
-                    "freight": {
-                        "images": [
-                            {
-                                "digest": "sha256:880533409097c86a27961c44bfcd60ca478a693e6baa4d9ee3c09b45865e5ea6",
-                                "repoURL": "public.ecr.aws/nginx/nginx",
-                                "tag": "1.27.1"
-                            }
-                        ],
-                        "name": "b2ceb4f821be8b682861c579171874028e4275fd",
-                        "origin": {
-                            "kind": "Warehouse",
-                            "name": "kargo-demo"
-                        }
-                    },
-                    "freightCollection": {
-                        "id": "b69280b76a5f5dc40f9dbb1357f553a22958dda1",
-                        "items": {
-                            "Warehouse/kargo-demo": {
-                                "images": [
-                                    {
-                                        "digest": "sha256:880533409097c86a27961c44bfcd60ca478a693e6baa4d9ee3c09b45865e5ea6",
-                                        "repoURL": "public.ecr.aws/nginx/nginx",
-                                        "tag": "1.27.1"
-                                    }
-                                ],
-                                "name": "b2ceb4f821be8b682861c579171874028e4275fd",
-                                "origin": {
-                                    "kind": "Warehouse",
-                                    "name": "kargo-demo"
-                                }
-                            }
-                        }
-                    },
-                    "healthChecks": [
-                        {
-                            "config": {
-                                "apps": [
-                                    {
-                                        "desiredRevisions": [
-                                            "707412fa2be1aae72767c0acb652684c233a2802"
-                                        ],
-                                        "name": "kargo-demo-test",
-                                        "namespace": "argocd"
-                                    }
-                                ]
-                            },
-                            "uses": "argocd-update"
-                        }
-                    ],
-                    "phase": "Succeeded",
-                    "state": {
-                        "commit": {
-                            "commit": "707412fa2be1aae72767c0acb652684c233a2802"
-                        },
-                        "update-image": {
-                            "commitMessage": "Updated ./src/base to use new image\n\n- public.ecr.aws/nginx/nginx:1.27.1"
-                        }
-                    }
-                }
-            },
-            "observedGeneration": 1,
-            "phase": "Steady"
-        }
-    ]
-    ```
+   <!-- todo: add a screenshot of zoomed test stage with test stage reflecting freight.-->
 
 1. If we look at our `Freight` in greater detail, we'll see that by virtue of
    the `test` `Stage` having achieved a `Healthy` state, the `Freight` is now
    _verified_ in `test`, which designates it as eligible for promotion to the
    next `Stage` -- in our case, `uat`.
+
+    <!-- todo: add a screenshot mentioning in the freight timeline select the freight to view the detail and share screenshot of right-emerging-panel-->
 
     :::note
     Although this example does not demonstrate it, it is also possible to verify
@@ -842,22 +601,6 @@ the previous section.
     [relevant section](./15-concepts.md#verifications) of the concepts page to
     learn more.
     :::
-
-    ```shell
-    kargo get freight --alias $FREIGHT_ALIAS --project kargo-demo --output jsonpath-as-json={.status}
-    ```
-
-    Sample output:
-
-    ```shell
-    [
-        {
-            "verifiedIn": {
-                "test": {}
-            }
-        }
-    ]
-    ```
 
 ### Behind the Scenes
 
