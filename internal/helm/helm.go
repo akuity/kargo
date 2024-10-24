@@ -43,6 +43,7 @@ func DiscoverChartVersions(
 	semverConstraint string,
 	creds *Credentials,
 ) ([]string, error) {
+	var isOCI bool
 	var versions []string
 	var err error
 	switch {
@@ -50,6 +51,7 @@ func DiscoverChartVersions(
 		versions, err = getChartVersionsFromClassicRepo(repoURL, chart, creds)
 	case strings.HasPrefix(repoURL, "oci://"):
 		versions, err = getChartVersionsFromOCIRepo(ctx, repoURL, creds)
+		isOCI = true
 	default:
 		return nil, fmt.Errorf("repository URL %q is invalid", repoURL)
 	}
@@ -62,7 +64,7 @@ func DiscoverChartVersions(
 		)
 	}
 
-	semvers := versionsToSemVerCollection(versions)
+	semvers := versionsToSemVerCollection(versions, isOCI)
 	if len(semvers) == 0 {
 		return nil, nil
 	}
@@ -185,10 +187,25 @@ func getChartVersionsFromOCIRepo(
 
 // versionsToSemVerCollection converts a slice of versions to a semver.Collection.
 // Any versions that cannot be parsed as SemVer are ignored.
-func versionsToSemVerCollection(versions []string) semver.Collection {
+func versionsToSemVerCollection(versions []string, isOCI bool) semver.Collection {
+	newSemver := semver.NewVersion
+	if isOCI {
+		// OCI artifact tags produced by Helm are STRICT SemVer, meaning that
+		// they must contain a patch version and do not start with a "v".
+		// I.e., "1.0.0" is valid, but "v1.0" is not. This is enforced by Helm
+		// itself when publishing charts.
+		newSemver = semver.StrictNewVersion
+	}
+
 	semvers := make(semver.Collection, 0, len(versions))
 	for _, version := range versions {
-		semverVersion, err := semver.NewVersion(version)
+		// OCI artifact tags are not allowed to contain the "+" character,
+		// which is used by SemVer to separate the version from the build
+		// metadata. To work around this, Helm uses "_" instead of "+".
+		if isOCI {
+			version = strings.ReplaceAll(version, "_", "+")
+		}
+		semverVersion, err := newSemver(version)
 		if err == nil {
 			semvers = append(semvers, semverVersion)
 		}
@@ -201,7 +218,8 @@ func versionsToSemVerCollection(versions []string) semver.Collection {
 func semVerCollectionToVersions(semvers semver.Collection) []string {
 	versions := make([]string, len(semvers))
 	for i, semverVersion := range semvers {
-		versions[i] = semverVersion.Original()
+		original := semverVersion.Original()
+		versions[i] = original
 	}
 	return versions
 }
