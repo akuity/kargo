@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
-	"os/exec"
 	"slices"
 	"strings"
 
@@ -15,8 +13,6 @@ import (
 	"oras.land/oras-go/pkg/registry"
 	"oras.land/oras-go/pkg/registry/remote"
 	"oras.land/oras-go/pkg/registry/remote/auth"
-
-	libExec "github.com/akuity/kargo/internal/exec"
 )
 
 // DiscoverChartVersions connects to the specified Helm chart repository and
@@ -241,84 +237,6 @@ func filterSemVers(semvers semver.Collection, semverConstraint string) (semver.C
 	return filtered, nil
 }
 
-// Login runs `helm registry login` or `helm repo add` for the provided
-// repository. The provided homePath is used to set the HOME environment
-// variable, as well as the XDG_* environment variables. This ensures that Helm
-// uses the provided homePath as its configuration directory, and allows for
-// isolation.
-func Login(homePath, repository string, credentials Credentials) error {
-	var args []string
-	switch {
-	case strings.HasPrefix(repository, "oci://"):
-		// When logging into an OCI registry, both username and password are
-		// required. If the password is missing, return an error as otherwise
-		// it would prompt the user for it.
-		if credentials.Username == "" || credentials.Password == "" {
-			return fmt.Errorf("missing username and/or password for OCI registry login")
-		}
-
-		// NB: Registry login works _without_ the oci:// prefix.
-		args = append(args, "registry", "login", NormalizeChartRepositoryURL(repository))
-	case strings.HasPrefix(repository, "https://"):
-		// When logging into an HTTPS repository, a password is required if a
-		// username is provided. If the password is missing, return an error as
-		// otherwise it would prompt the user for it.
-		if credentials.Username != "" && credentials.Password == "" {
-			return fmt.Errorf("missing password for HTTPS repository login")
-		}
-
-		// NB: The repository "alias" does not accept slashes, but does accept
-		// any other type of character.
-		args = append(args, "repo", "add", strings.ReplaceAll(repository, "/", ""), repository)
-	default:
-		return fmt.Errorf("unsupported repository URL %q", repository)
-	}
-
-	// Flags for username and password are the same for both `helm registry login`
-	// and `helm repo add`.
-	if credentials.Username != "" {
-		args = append(args, "--username", credentials.Username)
-	}
-	if credentials.Password != "" {
-		args = append(args, "--password-stdin")
-	}
-
-	cmd := exec.Command("helm", args...)
-	cmd.Env = append(cmd.Env, os.Environ()...)
-	cmd.Env = append(cmd.Env, helmEnv(homePath)...)
-
-	// If a password is provided, write it to the command's stdin.
-	if credentials.Password != "" {
-		in, err := cmd.StdinPipe()
-		if err != nil {
-			return fmt.Errorf("stdin pipe for password: %w", err)
-		}
-		go func() {
-			defer in.Close()
-			_, _ = io.WriteString(in, credentials.Password)
-		}()
-	}
-
-	if _, err := libExec.Exec(cmd); err != nil {
-		return err
-	}
-	return nil
-}
-
-// UpdateChartDependencies runs `helm dependency update` for the chart at the
-// provided chartPath. The homePath is used to set the HOME environment variable,
-// as well as the XDG_* environment variables. This ensures that Helm uses the
-// provided homePath as its configuration directory, and allows for isolation.
-func UpdateChartDependencies(homePath, chartPath string) error {
-	cmd := exec.Command("helm", "dependency", "update", chartPath)
-	cmd.Env = append(cmd.Env, os.Environ()...)
-	cmd.Env = append(cmd.Env, helmEnv(homePath)...)
-	if _, err := libExec.Exec(cmd); err != nil {
-		return err
-	}
-	return nil
-}
-
 // NormalizeChartRepositoryURL normalizes a chart repository URL for purposes
 // of comparison. Crucially, this function removes the oci:// prefix from the
 // URL if there is one.
@@ -329,19 +247,4 @@ func NormalizeChartRepositoryURL(repo string) string {
 		),
 		"oci://",
 	)
-}
-
-// helmEnv returns a slice of environment variables that should be set when
-// running Helm commands. The provided homePath is used to set the HOME
-// environment variable, as well as the XDG_* environment variables.
-//
-// This ensures that Helm uses the provided homePath as its configuration
-// directory.
-func helmEnv(homePath string) []string {
-	return []string{
-		fmt.Sprintf("HOME=%s", homePath),
-		fmt.Sprintf("XDG_CACHE_HOME=%s/cache", homePath),
-		fmt.Sprintf("XDG_CONFIG_HOME=%s/config", homePath),
-		fmt.Sprintf("XDG_DATA_HOME=%s/data", homePath),
-	}
 }
