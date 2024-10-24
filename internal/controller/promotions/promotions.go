@@ -380,7 +380,7 @@ func (r *reconciler) Reconcile(
 			msg += fmt.Sprintf(": %s", newStatus.Message)
 		}
 
-		eventAnnotations := kargoapi.NewPromotionEventAnnotations(ctx,
+		eventAnnotations := libEvent.NewPromotionEventAnnotations(ctx,
 			kargoapi.FormatEventControllerActor(r.cfg.Name()),
 			promo, freight)
 
@@ -608,7 +608,7 @@ func (r *reconciler) terminatePromotion(
 		return err
 	}
 
-	eventMeta := kargoapi.NewPromotionEventAnnotations(ctx, "", promo, freight)
+	eventMeta := libEvent.NewPromotionEventAnnotations(ctx, "", promo, freight)
 	eventMeta[kargoapi.AnnotationKeyEventActor] = actor
 
 	r.recorder.AnnotatedEventf(

@@ -955,7 +955,7 @@ func (r *reconciler) syncNormalStage(
 
 		r.recorder.AnnotatedEventf(
 			&promo,
-			kargoapi.NewPromotionEventAnnotations(
+			libEvent.NewPromotionEventAnnotations(
 				ctx,
 				kargoapi.FormatEventControllerActor(r.cfg.Name()),
 				&promo,
