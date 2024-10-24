@@ -24,6 +24,8 @@ import (
 type garbageCollectorOptions struct {
 	KubeConfig string
 
+	PprofBindAddress string
+
 	Logger *logging.Logger
 }
 
@@ -51,6 +53,7 @@ func newGarbageCollectorCommand() *cobra.Command {
 
 func (o *garbageCollectorOptions) complete() {
 	o.KubeConfig = os.GetEnv("KUBECONFIG", "")
+	o.PprofBindAddress = os.GetEnv("PPROF_BIND_ADDRESS", "")
 }
 
 func (o *garbageCollectorOptions) run(ctx context.Context) error {
@@ -105,6 +108,7 @@ func (o *garbageCollectorOptions) setupManager(ctx context.Context) (manager.Man
 			Metrics: server.Options{
 				BindAddress: "0",
 			},
+			PprofBindAddress: o.PprofBindAddress,
 		},
 	)
 	if err != nil {

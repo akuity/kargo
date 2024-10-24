@@ -41,6 +41,8 @@ type controllerOptions struct {
 	ArgoCDKubeConfig    string
 	ArgoCDNamespaceOnly bool
 
+	PprofBindAddress string
+
 	Logger *logging.Logger
 }
 
@@ -72,6 +74,7 @@ func (o *controllerOptions) complete() {
 	o.ArgoCDEnabled = types.MustParseBool(os.GetEnv("ARGOCD_INTEGRATION_ENABLED", "true"))
 	o.ArgoCDKubeConfig = os.GetEnv("ARGOCD_KUBECONFIG", "")
 	o.ArgoCDNamespaceOnly = types.MustParseBool(os.GetEnv("ARGOCD_WATCH_ARGOCD_NAMESPACE_ONLY", "false"))
+	o.PprofBindAddress = os.GetEnv("PPROF_BIND_ADDRESS", "")
 }
 
 func (o *controllerOptions) run(ctx context.Context) error {
@@ -183,6 +186,7 @@ func (o *controllerOptions) setupKargoManager(
 			Metrics: server.Options{
 				BindAddress: "0",
 			},
+			PprofBindAddress: o.PprofBindAddress,
 			Client: client.Options{
 				Cache: &client.CacheOptions{
 					// The controller does not have cluster-wide permissions, to
