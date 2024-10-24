@@ -108,6 +108,7 @@ func TestVersionsToSemVerCollection(t *testing.T) {
 	testCases := []struct {
 		name     string
 		input    []string
+		isOCI    bool
 		expected semver.Collection
 	}{
 		{
@@ -151,11 +152,27 @@ func TestVersionsToSemVerCollection(t *testing.T) {
 				semver.MustParse("7.8.9+build.3"),
 			},
 		},
+		{
+			name:  "metadata versions from OCI origin",
+			input: []string{"1.2.3_build.1", "4.5.6_build.2", "7.8.9_build.3"},
+			isOCI: true,
+			expected: semver.Collection{
+				semver.MustParse("1.2.3+build.1"),
+				semver.MustParse("4.5.6+build.2"),
+				semver.MustParse("7.8.9+build.3"),
+			},
+		},
+		{
+			name:     "loose versions from OCI origin",
+			input:    []string{"v1.2.3", "v4.5.6", "v7.8.9"},
+			isOCI:    true,
+			expected: semver.Collection{},
+		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			actual := versionsToSemVerCollection(tc.input)
+			actual := versionsToSemVerCollection(tc.input, tc.isOCI)
 			assert.Equal(t, tc.expected, actual)
 		})
 	}
@@ -198,15 +215,6 @@ func TestSemVerCollectionToVersions(t *testing.T) {
 				semver.MustParse("7.8.9+build.3"),
 			},
 			expected: []string{"1.2.3+build.1", "4.5.6+build.2", "7.8.9+build.3"},
-		},
-		{
-			name: "loose versions",
-			input: semver.Collection{
-				semver.MustParse("v1.2.3"),
-				semver.MustParse("v4.5.6"),
-				semver.MustParse("v7.8.9"),
-			},
-			expected: []string{"v1.2.3", "v4.5.6", "v7.8.9"},
 		},
 	}
 
