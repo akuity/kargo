@@ -18,6 +18,7 @@ require (
 	github.com/coreos/go-oidc/v3 v3.11.0
 	github.com/cyphar/filepath-securejoin v0.3.4
 	github.com/evanphx/json-patch/v5 v5.9.0
+	github.com/expr-lang/expr v1.16.9
 	github.com/fatih/structtag v1.2.0
 	github.com/fluxcd/pkg/kustomize v1.13.0
 	github.com/go-git/go-git/v5 v5.12.0
@@ -39,6 +40,7 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.9.0
 	github.com/technosophos/moniker v0.0.0-20210218184952-3ea787d3943b
+	github.com/valyala/fasttemplate v1.2.2
 	github.com/xeipuuv/gojsonschema v1.2.0
 	go.uber.org/ratelimit v0.3.1
 	golang.org/x/crypto v0.28.0
@@ -118,6 +120,7 @@ require (
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/shopspring/decimal v1.4.0 // indirect
 	github.com/spf13/cast v1.7.0 // indirect
+	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb // indirect
 	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
