@@ -18,10 +18,6 @@ application's lifecycle.
 
 ![Screenshot](docs/static/img/screenshot.png)
 
-> ⚠️&nbsp;&nbsp;Kargo is undergoing active development and everyone is invited
-> to join us in the journey to a GA release (`v1.0.0`)! Please expect breaking changes
-> between pre-GA releases (`v0.x.x`).
-
 ## Getting Started
 
 Read more about Kargo in our [docs](https://docs.kargo.io) or get hands-on
