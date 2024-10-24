@@ -10,6 +10,7 @@ import { z } from 'zod';
 
 import { YamlEditor } from '@ui/features/common/code-editor/yaml-editor';
 import { FieldContainer } from '@ui/features/common/form/field-container';
+import { WarehouseManifestsGen } from '@ui/features/utils/manifest-generator';
 import schema from '@ui/gen/schema/warehouses.kargo.akuity.io_v1alpha1.json';
 import {
   getWarehouse,
@@ -18,8 +19,6 @@ import {
 import { RawFormat } from '@ui/gen/service/v1alpha1/service_pb';
 import { decodeRawData } from '@ui/utils/decode-raw-data';
 import { zodValidators } from '@ui/utils/validators';
-
-import { getWarehouseYAMLExample } from '../utils/warehouse-yaml-example';
 
 type Props = {
   projectName?: string;
@@ -65,7 +64,21 @@ export const EditWarehouse = ({ projectName, warehouseName }: Props) => {
             onChange={(e) => onChange(e || '')}
             height='500px'
             schema={schema as JSONSchema4}
-            placeholder={getWarehouseYAMLExample(projectName || '')}
+            placeholder={WarehouseManifestsGen.v1alpha1({
+              projectName: projectName || '',
+              warehouseName: warehouseName || '',
+              spec: {
+                subscriptions: [
+                  {
+                    image: {
+                      repoURL: 'public.ecr.aws/nginx/nginx',
+                      semverConstraint: '^1.24.0',
+                      ignoreTags: []
+                    }
+                  }
+                ]
+              }
+            })}
             isLoading={isLoading}
             isHideManagedFieldsDisplayed
             disabled={!editing}
