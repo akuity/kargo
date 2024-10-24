@@ -269,7 +269,7 @@ A single Argo CD control plane can manage multiple clusters, so these could just
 as easily have been spread across multiple clusters.
 :::
 
-### Define Your First Pipeline
+### Your First Kargo Project
 
 Up to this point, we haven't done anything with Kargo -- in fact everything
 we've done thus far should be familiar to anyone who's already using Argo CD and
@@ -509,28 +509,36 @@ the previous section.
                   desiredCommitFromStep: commit
     EOF
     ```
-    
-      :::info
-      Kargo uses [semver](https://github.com/masterminds/semver#checking-version-constraints) to handle semantic versioning constraints.
-      :::
 
-1. After applying the above configuration, you can view the pipeline you just created using the [Kargo Dashboard](https://localhost:31444/).
+1. View the pipeline you just created using the [Kargo Dashboard](https://localhost:31444/):
 
-   1. Choose your `Project`, <Hlt>kargo-demo</Hlt>, from the list of available `Project`s
-   1. You can find the pipeline you've created in the center of your Project screen.
-   1. The pipeline consists of connected rectangles representing:
-      1. <Hlt>Subscription</Hlt>: Has information about the container image repository that the `Warehouse` is subscribed to.
-      1. <Hlt>kargo-kemo</Hlt>: This represents your `Warehouse`. It will automatically subscribe to the image and should produce `Freight` shortly.
-      1. <Hlt>test</Hlt>, <Hlt>uat</Hlt>, and <Hlt>prod</Hlt>: These are the deployment `Stage` resources.
+   1. Log in using the password `admin`.
+      - This will take you to a list of `Project`s. 
+        It currently includes only the one created in the previous step.
+        ![Kargo-dashboard](../static/img/kargo-projects.png)
+   1. Select your `Project`, <Hlt>kargo-demo</Hlt>, from the list.
+      Here you can see a detailed overview of the `Project` we created
+      using the CLI, including:
+      - An interactive, visual representation of your pipeline, composed of:
+        - A container image repository.
+        - A `Warehouse` that discovers new images as they are pushed to the repository.
+        - Three `Stage`s representing distinct instances of our demo application.
 
-   ![Kargo-dashboard-screenshot](../static/img/kargo-dashboard-projects.png)
+        ![Kargo-dashboard-screenshot](../static/img/kargo-dashboard-projects.png)
+      - An interactive `Freight` timeline:
+        - `Freight` discovered by the `Warehouse` are ordered chronologically, 
+        with newer `Freight` on the left and older `Freight` on the right.
+      
+        ![Kargo-Freight-Timeline](../static/img/kargo-frieght-timeline.png)
 
-1. After a few seconds, our `Warehouse`, which subscribes to the
-   `public.ecr.aws/nginx/nginx` container image, also should have already
-   produced `Freight`. You can monitor the status of `Freight` in the various stages directly on the interface, 
-   where it will appear under the respective stages (`test`, `uat`, `prod`).
+1. After a few seconds, a piece of `Freight` should appear in the `Freight` timeline, if it isn't there already. 
 
-   The top of the screen displays a Freight Timeline. As your application progresses through the pipeline, the timeline will update to show you the current `Stage` of your `Freight`.
+    :::note
+    Note that the timeline _may_ not refresh automatically and you may need to refresh the page to see new `Freight`.
+
+    This inconvenience will be addressed in a forthcoming update.
+    :::
+
 
     :::info
     `Freight` is a set of references to one or more versioned artifacts, which
@@ -546,30 +554,35 @@ the previous section.
     version of the `public.ecr.aws/nginx/nginx` container image.
     :::
 
-### Promote to Test
+### Your First Promotion
 
-1. To promote `Freight` to the `test` `Stage`, select the existing `Freight` from
-    the Freight Timeline above. Click the three dots, choose <Hlt>Promote</Hlt>,
-    and then select <Hlt>Promote</Hlt> that appeared on the `test` `Stage`.
- 
-    The promotion may briefly appear in a `Pending` state, but it will likely
-    transition to `Running`, or even `Succeeded` within moments, as shown below:
+1. To promote `Freight` to the `test` `Stage`, start by selecting the `test` `Stage`, then click on
+    <Hlt>Promote into Stage</Hlt>:
+    
+    ![Kargo-Promote](../static/img/kargo-promote-option.png)
+
+    Next, select the existing `Freight` from the <Hlt>Freight Timeline</Hlt> above and
+    confirm the promotion by selecting **Yes**.
+    
+    ![Kargo-Promote](../static/img/kargo-promote-option-2.png)
+
+    As soon as the promotion process is completed, you'll see a **check mark**, indicating
+    that the promotion was successful.
 
     ![Kargo-dashboard-screenshot](../static/img/kargo-dashboard-promotion.png)
 
-    You'll notice a **_check mark_**, indicating a <Hlt>successful promotion</Hlt>.
-   At this point, we can view all `Stage` resources in our `Project` and quickly see
-   that the `test` `Stage` is now either in a `Progressing` or `Healthy` state.
+    After the promotion, periodic health checks will run. When the `test` `Stage` reaches a
+    **Healthy** state, this will be reflected with a **heart icon**. You can also verify the
+    status by visiting the test instance of the site at [localhost:30081](http://localhost:30081).
 
-   Once the `test` `Stage` reaches a `Healthy` state, you can further confirm the 
-   success of this process by visiting the test instance of the site at [localhost:30081](http://localhost:30081).
-
-   By checking the detailed `status` of the `test` `Stage`, you'll see it now reflects
-   the current `Freight` and may include a history of all the previous `Freight` that
-   passed through this `Stage`, listed from the most recent to the oldest.
+    The `Freight` timeline will automatically update to show the current `Stage` of
+    your `Freight`, with color-coding to indicate which `Stage`s are actively using
+    it. Additionally, the `test` `Stage` details will display the current `Freight`
+    status, along with a history of previously promoted `Freight`, listed from most
+    recent to oldest.
 
 1. If we select the `Freight` from the <Hlt>Freight Timeline</Hlt>, we'll see that by virtue of
-   the `test` `Stage` having achieved a `Healthy` state, the `Freight` is now
+   the `test` `Stage` having achieved a **Healthy** state, the `Freight` is now
    _verified_ in `test`, which designates it as eligible for promotion to the
    next `Stage` -- in our case, `uat`.
 
