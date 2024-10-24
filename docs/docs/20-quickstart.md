@@ -15,8 +15,6 @@ This guide presents a basic introduction to Kargo. Together, we will:
     Create a new local Kubernetes cluster with Kargo and its dependencies
     already installed.
 
-1. Install the Kargo CLI.
-
 1. Demonstrate how Kargo can progress changes through multiple stages by
    interacting with your GitOps repository and Argo CD `Application` resources.
 
@@ -153,38 +151,6 @@ At the end of this process:
 
 * You can safely ignore all cert errors for both of the above.
 
-### Installing the Kargo CLI
-
-<Tabs groupId="os">
-<TabItem value="general" label="Mac, Linux, or WSL" default>
-
-To download the Kargo CLI:
-
-```shell
-arch=$(uname -m)
-[ "$arch" = "x86_64" ] && arch=amd64
-curl -L -o kargo https://github.com/akuity/kargo/releases/latest/download/kargo-"$(uname -s | tr '[:upper:]' '[:lower:]')-${arch}"
-chmod +x kargo
-```
-
-Then move `kargo` to a location in your file system that is included in the
-value of your `PATH` environment variable.
-
-</TabItem>
-<TabItem value="windows" label="Windows Powershell">
-
-To download the Kargo CLI:
-
-```shell
-Invoke-WebRequest -URI https://github.com/akuity/kargo/releases/latest/download/kargo-windows-amd64.exe -OutFile kargo.exe
-```
-
-Then move `kargo.exe` to a location in your file system that is included in the value
-of your `PATH` environment variable.
-
-</TabItem>
-</Tabs>
-
 ## Trying It Out
 
 ### Create a GitOps Repository
@@ -288,15 +254,6 @@ the previous section.
    export GITHUB_PAT=<your personal access token>
    ```
 
-1. Then, log into Kargo:
-
-    ```shell
-    kargo login https://localhost:31444 \
-      --admin \
-      --password admin \
-      --insecure-skip-tls-verify
-    ```
-
 1. Next, we'll create several Kargo resource:
 
     1. A `Project`, which, when reconciled, will effect all boilerplate project
@@ -309,229 +266,491 @@ the previous section.
 
     1. Three `Stage` resources -- `test`, `uat`, and `prod`
 
-    ```shell
-    cat <<EOF | kargo apply -f -
-    apiVersion: kargo.akuity.io/v1alpha1
-    kind: Project
-    metadata:
-      name: kargo-demo
-    ---
-    apiVersion: v1
-    kind: Secret
-    type: Opaque
-    metadata:
-      name: kargo-demo-repo
-      namespace: kargo-demo
-      labels:
-        kargo.akuity.io/cred-type: git
-    stringData:
-      repoURL: ${GITOPS_REPO_URL}
-      username: ${GITHUB_USERNAME}
-      password: ${GITHUB_PAT}
-    ---
-    apiVersion: kargo.akuity.io/v1alpha1
-    kind: Warehouse
-    metadata:
-      name: kargo-demo
-      namespace: kargo-demo
-    spec:
-      subscriptions:
-      - image:
-          repoURL: public.ecr.aws/nginx/nginx
-          semverConstraint: ^1.26.0
-          discoveryLimit: 5
-    ---
-    apiVersion: kargo.akuity.io/v1alpha1
-    kind: Stage
-    metadata:
-      name: test
-      namespace: kargo-demo
-    spec:
-      requestedFreight:
-      - origin:
-          kind: Warehouse
-          name: kargo-demo
-        sources:
-          direct: true
-      promotionTemplate:
-        spec:
-          steps:
-          - uses: git-clone
-            config:
+    Using CLI allows us to create resources declaratively, making it easier to manage and understand the setup.
+
+    There are two ways to interact with Kargo i.e. using the `kubectl` CLI or using the Kargo CLI.
+
+    :::info
+      For demo purposes, using `kubectl` is the quickest way to declaratively define your first Project. However, in 
+      practical, day-to-day use cases, where users may not have direct access to the underlying cluster, the Kargo CLI 
+      offers additional functionality and uses OpenID Connect for authentication.
+    :::
+      <Tabs groupId="login-method">
+      <TabItem value="kubectl-cli" label="Using kubectl" default>
+
+            ```shell
+            cat <<EOF | kubectl apply -f -
+            apiVersion: kargo.akuity.io/v1alpha1
+            kind: Project
+            metadata:
+              name: kargo-demo
+            ---
+            apiVersion: v1
+            kind: Secret
+            type: Opaque
+            metadata:
+              name: kargo-demo-repo
+              namespace: kargo-demo
+              labels:
+                kargo.akuity.io/cred-type: git
+            stringData:
               repoURL: ${GITOPS_REPO_URL}
-              checkout:
-              - branch: main
-                path: ./src
-              - branch: stage/test
-                create: true
-                path: ./out
-          - uses: git-clear
-            config:
-              path: ./out
-          - uses: kustomize-set-image
-            as: update-image
-            config:
-              path: ./src/base
-              images:
-              - image: public.ecr.aws/nginx/nginx
-          - uses: kustomize-build
-            config:
-              path: ./src/stages/test
-              outPath: ./out/manifests.yaml
-          - uses: git-commit
-            as: commit
-            config:
-              path: ./out
-              messageFromSteps:
-              - update-image
-          - uses: git-push
-            config:
-              path: ./out
-              targetBranch: stage/test
-          - uses: argocd-update
-            config:
-              apps:
-              - name: kargo-demo-test
+              username: ${GITHUB_USERNAME}
+              password: ${GITHUB_PAT}
+            ---
+            apiVersion: kargo.akuity.io/v1alpha1
+            kind: Warehouse
+            metadata:
+              name: kargo-demo
+              namespace: kargo-demo
+            spec:
+              subscriptions:
+              - image:
+                  repoURL: public.ecr.aws/nginx/nginx
+                  semverConstraint: ^1.26.0
+                  discoveryLimit: 5
+            ---
+            apiVersion: kargo.akuity.io/v1alpha1
+            kind: Stage
+            metadata:
+              name: test
+              namespace: kargo-demo
+            spec:
+              requestedFreight:
+              - origin:
+                  kind: Warehouse
+                  name: kargo-demo
                 sources:
-                - repoURL: ${GITOPS_REPO_URL}
-                  desiredCommitFromStep: commit
-    ---
-    apiVersion: kargo.akuity.io/v1alpha1
-    kind: Stage
-    metadata:
-      name: uat
-      namespace: kargo-demo
-    spec:
-      requestedFreight:
-      - origin:
-          kind: Warehouse
-          name: kargo-demo
-        sources:
-          stages:
-          - test
-      promotionTemplate:
-        spec:
-          steps:
-          - uses: git-clone
-            config:
+                  direct: true
+              promotionTemplate:
+                spec:
+                  steps:
+                  - uses: git-clone
+                    config:
+                      repoURL: ${GITOPS_REPO_URL}
+                      checkout:
+                      - branch: main
+                        path: ./src
+                      - branch: stage/test
+                        create: true
+                        path: ./out
+                  - uses: git-clear
+                    config:
+                      path: ./out
+                  - uses: kustomize-set-image
+                    as: update-image
+                    config:
+                      path: ./src/base
+                      images:
+                      - image: public.ecr.aws/nginx/nginx
+                  - uses: kustomize-build
+                    config:
+                      path: ./src/stages/test
+                      outPath: ./out/manifests.yaml
+                  - uses: git-commit
+                    as: commit
+                    config:
+                      path: ./out
+                      messageFromSteps:
+                      - update-image
+                  - uses: git-push
+                    config:
+                      path: ./out
+                      targetBranch: stage/test
+                  - uses: argocd-update
+                    config:
+                      apps:
+                      - name: kargo-demo-test
+                        sources:
+                        - repoURL: ${GITOPS_REPO_URL}
+                          desiredCommitFromStep: commit
+            ---
+            apiVersion: kargo.akuity.io/v1alpha1
+            kind: Stage
+            metadata:
+              name: uat
+              namespace: kargo-demo
+            spec:
+              requestedFreight:
+              - origin:
+                  kind: Warehouse
+                  name: kargo-demo
+                sources:
+                  stages:
+                  - test
+              promotionTemplate:
+                spec:
+                  steps:
+                  - uses: git-clone
+                    config:
+                      repoURL: ${GITOPS_REPO_URL}
+                      checkout:
+                      - branch: main
+                        path: ./src
+                      - branch: stage/uat
+                        create: true
+                        path: ./out
+                  - uses: git-clear
+                    config:
+                      path: ./out
+                  - uses: kustomize-set-image
+                    as: update-image
+                    config:
+                      path: ./src/base
+                      images:
+                      - image: public.ecr.aws/nginx/nginx
+                  - uses: kustomize-build
+                    config:
+                      path: ./src/stages/test
+                      outPath: ./out/manifests.yaml
+                  - uses: git-commit
+                    as: commit
+                    config:
+                      path: ./out
+                      messageFromSteps:
+                      - update-image
+                  - uses: git-push
+                    config:
+                      path: ./out
+                      targetBranch: stage/uat
+                  - uses: argocd-update
+                    config:
+                      apps:
+                      - name: kargo-demo-uat
+                        sources:
+                        - repoURL: ${GITOPS_REPO_URL}
+                          desiredCommitFromStep: commit
+            ---
+            apiVersion: kargo.akuity.io/v1alpha1
+            kind: Stage
+            metadata:
+              name: prod
+              namespace: kargo-demo
+            spec:
+              requestedFreight:
+              - origin:
+                  kind: Warehouse
+                  name: kargo-demo
+                sources:
+                  stages:
+                  - uat
+              promotionTemplate:
+                spec:
+                  steps:
+                  - uses: git-clone
+                    config:
+                      repoURL: ${GITOPS_REPO_URL}
+                      checkout:
+                      - branch: main
+                        path: ./src
+                      - branch: stage/prod
+                        create: true
+                        path: ./out
+                  - uses: git-clear
+                    config:
+                      path: ./out
+                  - uses: kustomize-set-image
+                    as: update-image
+                    config:
+                      path: ./src/base
+                      images:
+                      - image: public.ecr.aws/nginx/nginx
+                  - uses: kustomize-build
+                    config:
+                      path: ./src/stages/test
+                      outPath: ./out/manifests.yaml
+                  - uses: git-commit
+                    as: commit
+                    config:
+                      path: ./out
+                      messageFromSteps:
+                      - update-image
+                  - uses: git-push
+                    config:
+                      path: ./out
+                      targetBranch: stage/prod
+                  - uses: argocd-update
+                    config:
+                      apps:
+                      - name: kargo-demo-prod
+                        sources:
+                        - repoURL: ${GITOPS_REPO_URL}
+                          desiredCommitFromStep: commit
+            EOF
+            ```
+      </TabItem>
+
+      <TabItem value="kargo-cli" label="Using Kargo CLI">
+        
+        1. Install the Kargo CLI
+
+            <Tabs groupId="os">
+            <TabItem value="general" label="Mac, Linux, or WSL" default>
+
+            ```shell
+            arch=$(uname -m)
+            [ "$arch" = "x86_64" ] && arch=amd64
+            curl -L -o kargo https://github.com/akuity/kargo/releases/latest/download/kargo-"$(uname -s | tr '[:upper:]' '[:lower:]')-${arch}"
+            chmod +x kargo
+            ```
+
+            Then move `kargo` to a location in your file system that is included in the
+            value of your `PATH` environment variable.
+
+            </TabItem>
+            <TabItem value="windows" label="Windows Powershell">
+
+            ```shell
+            Invoke-WebRequest -URI https://github.com/akuity/kargo/releases/latest/download/kargo-windows-amd64.exe -OutFile kargo.exe
+            ```
+
+            Then move `kargo.exe` to a location in your file system that is included in the value
+            of your `PATH` environment variable.
+
+            </TabItem>
+            </Tabs>
+
+        1. Log into Kargo:
+
+            ```shell
+            kargo login https://localhost:31444 \
+              --admin \
+              --password admin \
+              --insecure-skip-tls-verify
+            ```
+
+        1. Create Kargo resources using Kargo CLI
+
+            ```shell
+            cat <<EOF | kargo apply -f -
+            apiVersion: kargo.akuity.io/v1alpha1
+            kind: Project
+            metadata:
+              name: kargo-demo
+            ---
+            apiVersion: v1
+            kind: Secret
+            type: Opaque
+            metadata:
+              name: kargo-demo-repo
+              namespace: kargo-demo
+              labels:
+                kargo.akuity.io/cred-type: git
+            stringData:
               repoURL: ${GITOPS_REPO_URL}
-              checkout:
-              - branch: main
-                path: ./src
-              - branch: stage/uat
-                create: true
-                path: ./out
-          - uses: git-clear
-            config:
-              path: ./out
-          - uses: kustomize-set-image
-            as: update-image
-            config:
-              path: ./src/base
-              images:
-              - image: public.ecr.aws/nginx/nginx
-          - uses: kustomize-build
-            config:
-              path: ./src/stages/test
-              outPath: ./out/manifests.yaml
-          - uses: git-commit
-            as: commit
-            config:
-              path: ./out
-              messageFromSteps:
-              - update-image
-          - uses: git-push
-            config:
-              path: ./out
-              targetBranch: stage/uat
-          - uses: argocd-update
-            config:
-              apps:
-              - name: kargo-demo-uat
+              username: ${GITHUB_USERNAME}
+              password: ${GITHUB_PAT}
+            ---
+            apiVersion: kargo.akuity.io/v1alpha1
+            kind: Warehouse
+            metadata:
+              name: kargo-demo
+              namespace: kargo-demo
+            spec:
+              subscriptions:
+              - image:
+                  repoURL: public.ecr.aws/nginx/nginx
+                  semverConstraint: ^1.26.0
+                  discoveryLimit: 5
+            ---
+            apiVersion: kargo.akuity.io/v1alpha1
+            kind: Stage
+            metadata:
+              name: test
+              namespace: kargo-demo
+            spec:
+              requestedFreight:
+              - origin:
+                  kind: Warehouse
+                  name: kargo-demo
                 sources:
-                - repoURL: ${GITOPS_REPO_URL}
-                  desiredCommitFromStep: commit
-    ---
-    apiVersion: kargo.akuity.io/v1alpha1
-    kind: Stage
-    metadata:
-      name: prod
-      namespace: kargo-demo
-    spec:
-      requestedFreight:
-      - origin:
-          kind: Warehouse
-          name: kargo-demo
-        sources:
-          stages:
-          - uat
-      promotionTemplate:
-        spec:
-          steps:
-          - uses: git-clone
-            config:
-              repoURL: ${GITOPS_REPO_URL}
-              checkout:
-              - branch: main
-                path: ./src
-              - branch: stage/prod
-                create: true
-                path: ./out
-          - uses: git-clear
-            config:
-              path: ./out
-          - uses: kustomize-set-image
-            as: update-image
-            config:
-              path: ./src/base
-              images:
-              - image: public.ecr.aws/nginx/nginx
-          - uses: kustomize-build
-            config:
-              path: ./src/stages/test
-              outPath: ./out/manifests.yaml
-          - uses: git-commit
-            as: commit
-            config:
-              path: ./out
-              messageFromSteps:
-              - update-image
-          - uses: git-push
-            config:
-              path: ./out
-              targetBranch: stage/prod
-          - uses: argocd-update
-            config:
-              apps:
-              - name: kargo-demo-prod
+                  direct: true
+              promotionTemplate:
+                spec:
+                  steps:
+                  - uses: git-clone
+                    config:
+                      repoURL: ${GITOPS_REPO_URL}
+                      checkout:
+                      - branch: main
+                        path: ./src
+                      - branch: stage/test
+                        create: true
+                        path: ./out
+                  - uses: git-clear
+                    config:
+                      path: ./out
+                  - uses: kustomize-set-image
+                    as: update-image
+                    config:
+                      path: ./src/base
+                      images:
+                      - image: public.ecr.aws/nginx/nginx
+                  - uses: kustomize-build
+                    config:
+                      path: ./src/stages/test
+                      outPath: ./out/manifests.yaml
+                  - uses: git-commit
+                    as: commit
+                    config:
+                      path: ./out
+                      messageFromSteps:
+                      - update-image
+                  - uses: git-push
+                    config:
+                      path: ./out
+                      targetBranch: stage/test
+                  - uses: argocd-update
+                    config:
+                      apps:
+                      - name: kargo-demo-test
+                        sources:
+                        - repoURL: ${GITOPS_REPO_URL}
+                          desiredCommitFromStep: commit
+            ---
+            apiVersion: kargo.akuity.io/v1alpha1
+            kind: Stage
+            metadata:
+              name: uat
+              namespace: kargo-demo
+            spec:
+              requestedFreight:
+              - origin:
+                  kind: Warehouse
+                  name: kargo-demo
                 sources:
-                - repoURL: ${GITOPS_REPO_URL}
-                  desiredCommitFromStep: commit
-    EOF
-    ```
+                  stages:
+                  - test
+              promotionTemplate:
+                spec:
+                  steps:
+                  - uses: git-clone
+                    config:
+                      repoURL: ${GITOPS_REPO_URL}
+                      checkout:
+                      - branch: main
+                        path: ./src
+                      - branch: stage/uat
+                        create: true
+                        path: ./out
+                  - uses: git-clear
+                    config:
+                      path: ./out
+                  - uses: kustomize-set-image
+                    as: update-image
+                    config:
+                      path: ./src/base
+                      images:
+                      - image: public.ecr.aws/nginx/nginx
+                  - uses: kustomize-build
+                    config:
+                      path: ./src/stages/test
+                      outPath: ./out/manifests.yaml
+                  - uses: git-commit
+                    as: commit
+                    config:
+                      path: ./out
+                      messageFromSteps:
+                      - update-image
+                  - uses: git-push
+                    config:
+                      path: ./out
+                      targetBranch: stage/uat
+                  - uses: argocd-update
+                    config:
+                      apps:
+                      - name: kargo-demo-uat
+                        sources:
+                        - repoURL: ${GITOPS_REPO_URL}
+                          desiredCommitFromStep: commit
+            ---
+            apiVersion: kargo.akuity.io/v1alpha1
+            kind: Stage
+            metadata:
+              name: prod
+              namespace: kargo-demo
+            spec:
+              requestedFreight:
+              - origin:
+                  kind: Warehouse
+                  name: kargo-demo
+                sources:
+                  stages:
+                  - uat
+              promotionTemplate:
+                spec:
+                  steps:
+                  - uses: git-clone
+                    config:
+                      repoURL: ${GITOPS_REPO_URL}
+                      checkout:
+                      - branch: main
+                        path: ./src
+                      - branch: stage/prod
+                        create: true
+                        path: ./out
+                  - uses: git-clear
+                    config:
+                      path: ./out
+                  - uses: kustomize-set-image
+                    as: update-image
+                    config:
+                      path: ./src/base
+                      images:
+                      - image: public.ecr.aws/nginx/nginx
+                  - uses: kustomize-build
+                    config:
+                      path: ./src/stages/test
+                      outPath: ./out/manifests.yaml
+                  - uses: git-commit
+                    as: commit
+                    config:
+                      path: ./out
+                      messageFromSteps:
+                      - update-image
+                  - uses: git-push
+                    config:
+                      path: ./out
+                      targetBranch: stage/prod
+                  - uses: argocd-update
+                    config:
+                      apps:
+                      - name: kargo-demo-prod
+                        sources:
+                        - repoURL: ${GITOPS_REPO_URL}
+                          desiredCommitFromStep: commit
+            EOF
+            ```
+
+      </TabItem>
+      </Tabs>
 
 1. View the pipeline you just created using the [Kargo Dashboard](https://localhost:31444/):
 
    1. Log in using the password `admin`.
+
       - This will take you to a list of `Project`s. 
         It currently includes only the one created in the previous step.
         ![Kargo-dashboard](../static/img/kargo-projects.png)
+
    1. Select your `Project`, <Hlt>kargo-demo</Hlt>, from the list.
       Here you can see a detailed overview of the `Project` we created
       using the CLI, including:
+
       - An interactive, visual representation of your pipeline, composed of:
         - A container image repository.
         - A `Warehouse` that discovers new images as they are pushed to the repository.
         - Three `Stage`s representing distinct instances of our demo application.
 
         ![Kargo-dashboard-screenshot](../static/img/kargo-dashboard-projects.png)
-      - An interactive `Freight` timeline:
+
+      - An interactive <Hlt>Freight timeline</Hlt>:
         - `Freight` discovered by the `Warehouse` are ordered chronologically, 
         with newer `Freight` on the left and older `Freight` on the right.
       
         ![Kargo-Freight-Timeline](../static/img/kargo-frieght-timeline.png)
 
-1. After a few seconds, a piece of `Freight` should appear in the `Freight` timeline, if it isn't there already. 
+1. After a few seconds, a piece of `Freight` should appear in the <Hlt>Freight timeline</Hlt>, if it isn't there already.
 
     :::note
     Note that the timeline _may_ not refresh automatically and you may need to refresh the page to see new `Freight`.
@@ -561,8 +780,8 @@ the previous section.
     
     ![Kargo-Promote](../static/img/kargo-promote-option.png)
 
-    Next, select the existing `Freight` from the <Hlt>Freight Timeline</Hlt> above and
-    confirm the promotion by selecting **Yes**.
+    Next, select the existing `Freight` from the <Hlt>Freight timeline</Hlt> and
+    confirm the promotion by selecting **Yes**:
     
     ![Kargo-Promote](../static/img/kargo-promote-option-2.png)
 
@@ -575,13 +794,13 @@ the previous section.
     **Healthy** state, this will be reflected with a **heart icon**. You can also verify the
     status by visiting the test instance of the site at [localhost:30081](http://localhost:30081).
 
-    The `Freight` timeline will automatically update to show the current `Stage` of
+    The <Hlt>Freight timeline</Hlt> will automatically update to show the current `Stage` of
     your `Freight`, with color-coding to indicate which `Stage`s are actively using
     it. Additionally, the `test` `Stage` details will display the current `Freight`
     status, along with a history of previously promoted `Freight`, listed from most
     recent to oldest.
 
-1. If we select the `Freight` from the <Hlt>Freight Timeline</Hlt>, we'll see that by virtue of
+1. If we select the `Freight` from the <Hlt>Freight timeline</Hlt>, we'll see that by virtue of
    the `test` `Stage` having achieved a **Healthy** state, the `Freight` is now
    _verified_ in `test`, which designates it as eligible for promotion to the
    next `Stage` -- in our case, `uat`.
