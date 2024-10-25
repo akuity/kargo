@@ -99,13 +99,13 @@ func (v *downstreamStageEnqueuer[T]) Update(
 		); err != nil {
 			logger.Error(
 				err, "Failed to list downstream Stages",
-				"stage", evt.ObjectOld,
+				"stage", newlyVerifiedStage,
 				"namespace", newFreight.Namespace,
 			)
 			return
 		}
 		for _, stage := range stages.Items {
-			if stage.IsControlFlow() && !v.forControlFlowStages {
+			if stage.IsControlFlow() != v.forControlFlowStages {
 				continue
 			}
 			downstreamStages[stage.Name] = struct{}{}
@@ -261,7 +261,7 @@ func (c *warehouseStageEnqueuer[T]) Create(
 	}
 
 	for _, stage := range stages.Items {
-		if stage.IsControlFlow() && !c.forControlFlowStages {
+		if stage.IsControlFlow() != c.forControlFlowStages {
 			continue
 		}
 

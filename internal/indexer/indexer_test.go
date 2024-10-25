@@ -75,7 +75,7 @@ func TestIndexEventsByInvolvedObjectAPIGroup(t *testing.T) {
 	}
 }
 
-func TestIndexStagesByAnalysisRun(t *testing.T) {
+func TestStagesByAnalysisRunIndexer(t *testing.T) {
 	const testShardName = "test-shard"
 	t.Parallel()
 	testCases := []struct {
@@ -229,7 +229,7 @@ func TestIndexStagesByAnalysisRun(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			res := indexStagesByAnalysisRun(tc.controllerShardName)(tc.stage)
+			res := StagesByAnalysisRunIndexer(tc.controllerShardName)(tc.stage)
 			tc.assertions(t, res)
 		})
 	}

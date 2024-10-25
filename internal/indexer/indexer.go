@@ -80,12 +80,12 @@ func IndexStagesByAnalysisRun(ctx context.Context, clstr cluster.Cluster, shardN
 		ctx,
 		&kargoapi.Stage{},
 		StagesByAnalysisRunIndexField,
-		indexStagesByAnalysisRun(shardName))
+		StagesByAnalysisRunIndexer(shardName))
 }
 
-// indexStagesByAnalysisRun is a client.IndexerFunc that indexes Stages by the
+// StagesByAnalysisRunIndexer is a client.IndexerFunc that indexes Stages by the
 // AnalysisRun they are associated with.
-func indexStagesByAnalysisRun(shardName string) client.IndexerFunc {
+func StagesByAnalysisRunIndexer(shardName string) client.IndexerFunc {
 	return func(obj client.Object) []string {
 		// Return early if:
 		//
