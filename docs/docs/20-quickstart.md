@@ -401,7 +401,7 @@ the previous section.
               - image: public.ecr.aws/nginx/nginx
           - uses: kustomize-build
             config:
-              path: ./src/stages/test
+              path: ./src/stages/uat
               outPath: ./out/manifests.yaml
           - uses: git-commit
             as: commit
@@ -457,7 +457,7 @@ the previous section.
               - image: public.ecr.aws/nginx/nginx
           - uses: kustomize-build
             config:
-              path: ./src/stages/test
+              path: ./src/stages/prod
               outPath: ./out/manifests.yaml
           - uses: git-commit
             as: commit
@@ -645,7 +645,7 @@ the previous section.
               - image: public.ecr.aws/nginx/nginx
           - uses: kustomize-build
             config:
-              path: ./src/stages/test
+              path: ./src/stages/uat
               outPath: ./out/manifests.yaml
           - uses: git-commit
             as: commit
@@ -701,7 +701,7 @@ the previous section.
               - image: public.ecr.aws/nginx/nginx
           - uses: kustomize-build
             config:
-              path: ./src/stages/test
+              path: ./src/stages/prod
               outPath: ./out/manifests.yaml
           - uses: git-commit
             as: commit
