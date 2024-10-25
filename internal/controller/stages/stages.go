@@ -188,12 +188,6 @@ type reconciler struct {
 
 	// Discovering Freight:
 
-	getAvailableFreightFn func(
-		ctx context.Context,
-		stage *kargoapi.Stage,
-		includeApproved bool,
-	) ([]kargoapi.Freight, error)
-
 	getAvailableFreightByOriginFn func(
 		ctx context.Context,
 		stage *kargoapi.Stage,
@@ -435,7 +429,6 @@ func newReconciler(
 	r.getProjectFn = kargoapi.GetProject
 	r.createPromotionFn = kargoClient.Create
 	// Discovering Freight:
-	r.getAvailableFreightFn = r.getAvailableFreight
 	r.getAvailableFreightByOriginFn = r.getAvailableFreightByOrigin
 	r.listFreightFn = r.kargoClient.List
 	// Stage deletion:
@@ -468,6 +461,10 @@ func (r *reconciler) Reconcile(
 		// current reconciliation request was issued.
 		return ctrl.Result{}, nil // Do not requeue
 	}
+	if stage.IsControlFlow() {
+		return ctrl.Result{}, nil
+	}
+
 	logger.Debug("found Stage")
 
 	var newStatus kargoapi.StageStatus
@@ -482,11 +479,7 @@ func (r *reconciler) Reconcile(
 		if _, err = kargoapi.EnsureFinalizer(ctx, r.kargoClient, stage); err != nil {
 			newStatus = stage.Status
 		} else {
-			if stage.IsControlFlow() {
-				newStatus, err = r.syncControlFlowStage(ctx, stage)
-			} else {
-				newStatus, err = r.syncNormalStage(ctx, stage)
-			}
+			newStatus, err = r.syncNormalStage(ctx, stage)
 		}
 	}
 	if err != nil {
@@ -556,73 +549,6 @@ func (r *reconciler) Reconcile(
 
 	// TODO: Make this configurable
 	return ctrl.Result{RequeueAfter: 5 * time.Minute}, nil
-}
-
-func (r *reconciler) syncControlFlowStage(
-	ctx context.Context,
-	stage *kargoapi.Stage,
-) (kargoapi.StageStatus, error) {
-	startTime := r.nowFn()
-
-	status := *stage.Status.DeepCopy()
-	status.ObservedGeneration = stage.Generation
-	status.Phase = kargoapi.StagePhaseNotApplicable
-
-	// A Stage without promotion steps shouldn't have history, health, or
-	// promotions. Make sure this is empty to avoid confusion. A reason this could
-	// be non-empty to begin with is that the Stage USED TO have promotion steps,
-	// but they were removed, thus becoming a control flow Stage.
-	status.FreightHistory = nil
-	status.Health = nil
-	status.CurrentPromotion = nil
-	status.LastPromotion = nil
-	status.FreightSummary = "N/A"
-
-	// Find all Freight available to this Stage, except for those that
-	// are available on account of manual approval.
-	availableFreight, err := r.getAvailableFreightFn(ctx, stage, false)
-	if err != nil {
-		return status, fmt.Errorf(
-			"error getting available Freight for control flow Stage %q in namespace %q: %w",
-			stage.Name,
-			stage.Namespace,
-			err,
-		)
-	}
-
-	finishTime := r.nowFn()
-	for _, available := range availableFreight {
-		af := available // Avoid implicit memory aliasing
-		// Only bother to mark as verified in this Stage if not already the case.
-		if _, verified := af.Status.VerifiedIn[stage.Name]; !verified {
-			newStatus := *af.Status.DeepCopy()
-			if newStatus.VerifiedIn == nil {
-				newStatus.VerifiedIn = map[string]kargoapi.VerifiedStage{}
-			}
-			newStatus.VerifiedIn[stage.Name] = kargoapi.VerifiedStage{}
-			if err := r.patchFreightStatusFn(ctx, &af, newStatus); err != nil {
-				return status, fmt.Errorf(
-					"error marking Freight %q in namespace %q as verified in Stage %q: %w",
-					af.Name,
-					stage.Namespace,
-					stage.Name,
-					err,
-				)
-			}
-
-			r.recordFreightVerificationEvent(
-				stage,
-				&af,
-				&kargoapi.VerificationInfo{
-					StartTime:  ptr.To(metav1.NewTime(startTime)),
-					FinishTime: ptr.To(metav1.NewTime(finishTime)),
-					Phase:      kargoapi.VerificationPhaseSuccessful,
-				},
-				nil, // Explicitly pass `nil` here since there is no associated AnalysisRun
-			)
-		}
-	}
-	return status, nil
 }
 
 func (r *reconciler) syncNormalStage(
@@ -1429,95 +1355,6 @@ func (r *reconciler) getPromotionsForStage(
 		)
 	}
 	return promos.Items, nil
-}
-
-func (r *reconciler) getAvailableFreight(
-	ctx context.Context,
-	stage *kargoapi.Stage,
-	includeApproved bool,
-) ([]kargoapi.Freight, error) {
-	var availableFreight []kargoapi.Freight
-	for _, req := range stage.Spec.RequestedFreight {
-		// Get Freight direct from Warehouses if allowed
-		if req.Origin.Kind == kargoapi.FreightOriginKindWarehouse && req.Sources.Direct {
-			var freight kargoapi.FreightList
-			if err := r.listFreightFn(
-				ctx,
-				&freight,
-				&client.ListOptions{
-					Namespace: stage.Namespace,
-					FieldSelector: fields.OneTermEqualSelector(
-						indexer.FreightByWarehouseIndexField,
-						req.Origin.Name,
-					),
-				},
-			); err != nil {
-				return nil, fmt.Errorf(
-					"error listing Freight from %s in namespace %q: %w",
-					req.Origin.String(),
-					stage.Namespace,
-					err,
-				)
-			}
-			availableFreight = append(availableFreight, freight.Items...)
-		}
-		// Get Freight verified in upstream Stages
-		for _, upstream := range req.Sources.Stages {
-			var verifiedFreight kargoapi.FreightList
-			if err := r.listFreightFn(
-				ctx,
-				&verifiedFreight,
-				&client.ListOptions{
-					Namespace: stage.Namespace,
-					FieldSelector: fields.OneTermEqualSelector(
-						indexer.FreightByVerifiedStagesIndexField,
-						upstream,
-					),
-				},
-			); err != nil {
-				return nil, fmt.Errorf(
-					"error listing Freight verified in Stage %q in namespace %q: %w",
-					upstream,
-					stage.Namespace,
-					err,
-				)
-			}
-			availableFreight = append(availableFreight, verifiedFreight.Items...)
-		}
-	}
-
-	if includeApproved {
-		var approvedFreight kargoapi.FreightList
-		if err := r.listFreightFn(
-			ctx,
-			&approvedFreight,
-			&client.ListOptions{
-				Namespace: stage.Namespace,
-				FieldSelector: fields.OneTermEqualSelector(
-					indexer.FreightApprovedForStagesIndexField,
-					stage.Name,
-				),
-			},
-		); err != nil {
-			return nil, fmt.Errorf(
-				"error listing Freight approved for Stage %q in namespace %q: %w",
-				stage,
-				stage.Namespace,
-				err,
-			)
-		}
-		availableFreight = append(availableFreight, approvedFreight.Items...)
-	}
-
-	// De-dupe the Freight
-	slices.SortFunc(availableFreight, func(lhs, rhs kargoapi.Freight) int {
-		return strings.Compare(lhs.Name, rhs.Name)
-	})
-	availableFreight = slices.CompactFunc(availableFreight, func(lhs, rhs kargoapi.Freight) bool {
-		return lhs.Name == rhs.Name
-	})
-
-	return availableFreight, nil
 }
 
 func (r *reconciler) getAvailableFreightByOrigin(
