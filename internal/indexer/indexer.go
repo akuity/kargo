@@ -404,13 +404,13 @@ func IndexStagesByUpstreamStages(ctx context.Context, clstr cluster.Cluster) err
 		ctx,
 		&kargoapi.Stage{},
 		StagesByUpstreamStagesIndexField,
-		indexStagesByUpstreamStages,
+		StagesByUpstreamStagesIndexer,
 	)
 }
 
-// indexStagesByUpstreamStages is a client.IndexerFunc that indexes Stages by
+// StagesByUpstreamStagesIndexer is a client.IndexerFunc that indexes Stages by
 // the upstream Stages they reference.
-func indexStagesByUpstreamStages(obj client.Object) []string {
+func StagesByUpstreamStagesIndexer(obj client.Object) []string {
 	stage := obj.(*kargoapi.Stage) // nolint: forcetypeassert
 	var upstreams []string
 	for _, req := range stage.Spec.RequestedFreight {
@@ -430,13 +430,13 @@ func IndexStagesByWarehouse(ctx context.Context, clstr cluster.Cluster) error {
 		ctx,
 		&kargoapi.Stage{},
 		StagesByWarehouseIndexField,
-		indexStagesByWarehouse,
+		StagesByWarehouseIndexer,
 	)
 }
 
-// indexStagesByWarehouse is a client.IndexerFunc that indexes Stages by the
+// StagesByWarehouseIndexer is a client.IndexerFunc that indexes Stages by the
 // Warehouse they are associated with.
-func indexStagesByWarehouse(obj client.Object) []string {
+func StagesByWarehouseIndexer(obj client.Object) []string {
 	stage := obj.(*kargoapi.Stage) // nolint: forcetypeassert
 	var warehouses []string
 	for _, req := range stage.Spec.RequestedFreight {

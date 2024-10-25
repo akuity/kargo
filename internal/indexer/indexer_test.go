@@ -597,7 +597,7 @@ func TestIndexStagesByFreight(t *testing.T) {
 
 }
 
-func TestIndexStagesByUpstreamStages(t *testing.T) {
+func TestStagesByUpstreamStagesIndexer(t *testing.T) {
 	testOrigin := kargoapi.FreightOrigin{
 		Kind: kargoapi.FreightOriginKindWarehouse,
 		Name: "fake-warehouse",
@@ -648,13 +648,13 @@ func TestIndexStagesByUpstreamStages(t *testing.T) {
 			require.Equal(
 				t,
 				testCase.expected,
-				indexStagesByUpstreamStages(testCase.stage),
+				StagesByUpstreamStagesIndexer(testCase.stage),
 			)
 		})
 	}
 }
 
-func TestIndexStagesByWarehouse(t *testing.T) {
+func TestStagesByWarehouseIndexer(t *testing.T) {
 	testCases := []struct {
 		name     string
 		stage    *kargoapi.Stage
@@ -708,7 +708,7 @@ func TestIndexStagesByWarehouse(t *testing.T) {
 			require.Equal(
 				t,
 				testCase.expected,
-				indexStagesByWarehouse(testCase.stage),
+				StagesByWarehouseIndexer(testCase.stage),
 			)
 		})
 	}

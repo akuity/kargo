@@ -91,7 +91,7 @@ func Test_controlFlowStageReconciler_Reconcile(t *testing.T) {
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace:         "default",
-					Name:             "test-stage",
+					Name:              "test-stage",
 					DeletionTimestamp: &metav1.Time{Time: time.Now()},
 					Finalizers:        []string{kargoapi.FinalizerName},
 				},
@@ -112,7 +112,7 @@ func Test_controlFlowStageReconciler_Reconcile(t *testing.T) {
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace:         "default",
-					Name:             "test-stage",
+					Name:              "test-stage",
 					DeletionTimestamp: &metav1.Time{Time: time.Now()},
 					Finalizers:        []string{kargoapi.FinalizerName},
 				},
@@ -166,7 +166,7 @@ func Test_controlFlowStageReconciler_Reconcile(t *testing.T) {
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace:  "default",
-					Name:      "test-stage",
+					Name:       "test-stage",
 					Finalizers: []string{kargoapi.FinalizerName},
 				},
 				Spec: kargoapi.StageSpec{
@@ -213,7 +213,7 @@ func Test_controlFlowStageReconciler_Reconcile(t *testing.T) {
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace:  "default",
-					Name:      "test-stage",
+					Name:       "test-stage",
 					Finalizers: []string{kargoapi.FinalizerName},
 				},
 				Spec: kargoapi.StageSpec{
@@ -262,11 +262,10 @@ func Test_controlFlowStageReconciler_Reconcile(t *testing.T) {
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace:  "default",
-					Name:      "test-stage",
+					Name:       "test-stage",
 					Finalizers: []string{kargoapi.FinalizerName},
 				},
-				Spec: kargoapi.StageSpec{
-				},
+				Spec: kargoapi.StageSpec{},
 			},
 			interceptor: interceptor.Funcs{
 				SubResourcePatch: func(
@@ -275,7 +274,7 @@ func Test_controlFlowStageReconciler_Reconcile(t *testing.T) {
 					string,
 					client.Object,
 					client.Patch,
-				...client.SubResourcePatchOption,
+					...client.SubResourcePatchOption,
 				) error {
 					return fmt.Errorf("status update error")
 				},
@@ -296,11 +295,10 @@ func Test_controlFlowStageReconciler_Reconcile(t *testing.T) {
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace:  "default",
-					Name:      "test-stage",
+					Name:       "test-stage",
 					Finalizers: []string{kargoapi.FinalizerName},
 				},
-				Spec: kargoapi.StageSpec{
-				},
+				Spec: kargoapi.StageSpec{},
 			},
 			assertions: func(t *testing.T, c client.Client, result ctrl.Result, err error) {
 				require.NoError(t, err)
@@ -348,7 +346,7 @@ func Test_controlFlowStageReconciler_Reconcile(t *testing.T) {
 				WithInterceptorFuncs(tt.interceptor).
 				Build()
 
-			r := &controlFlowStageReconciler{
+			r := &ControlFlowStageReconciler{
 				client:        c,
 				eventRecorder: fakeevent.NewEventRecorder(10),
 			}
@@ -509,7 +507,7 @@ func Test_controlFlowStageReconciler_reconcile(t *testing.T) {
 					string,
 					client.Object,
 					client.Patch,
-				...client.SubResourcePatchOption,
+					...client.SubResourcePatchOption,
 				) error {
 					return fmt.Errorf("something went wrong")
 				},
@@ -599,7 +597,7 @@ func Test_controlFlowStageReconciler_reconcile(t *testing.T) {
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:       "test-stage",
-					Namespace: "default",
+					Namespace:  "default",
 					Generation: 2,
 				},
 				Status: kargoapi.StageStatus{
@@ -632,8 +630,8 @@ func Test_controlFlowStageReconciler_reconcile(t *testing.T) {
 				WithInterceptorFuncs(tt.interceptor).
 				Build()
 
-			r := &controlFlowStageReconciler{
-				client: c,
+			r := &ControlFlowStageReconciler{
+				client:        c,
 				eventRecorder: fakeevent.NewEventRecorder(10),
 			}
 
@@ -707,7 +705,7 @@ func Test_controlFlowStageReconciler_initializeStatus(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			newStatus := (&controlFlowStageReconciler{}).initializeStatus(tt.stage)
+			newStatus := (&ControlFlowStageReconciler{}).initializeStatus(tt.stage)
 			tt.assertions(t, newStatus)
 		})
 	}
@@ -718,12 +716,12 @@ func Test_controlFlowStageReconciler_getAvailableFreight(t *testing.T) {
 	require.NoError(t, kargoapi.AddToScheme(scheme))
 
 	tests := []struct {
-		name       string
-		stage      types.NamespacedName
-		objects    []client.Object
-		requested  []kargoapi.FreightRequest
+		name        string
+		stage       types.NamespacedName
+		objects     []client.Object
+		requested   []kargoapi.FreightRequest
 		interceptor interceptor.Funcs
-		assertions func(*testing.T, []kargoapi.Freight, error)
+		assertions  func(*testing.T, []kargoapi.Freight, error)
 	}{
 		{
 			name: "no freight requests returns empty list",
@@ -1145,7 +1143,7 @@ func Test_controlFlowStageReconciler_getAvailableFreight(t *testing.T) {
 				).
 				WithInterceptorFuncs(tt.interceptor).
 				Build()
-			r := &controlFlowStageReconciler{
+			r := &ControlFlowStageReconciler{
 				client: c,
 			}
 
@@ -1172,13 +1170,13 @@ func Test_controlFlowStageReconciler_verifyFreight(t *testing.T) {
 	justNow := time.Now()
 
 	tests := []struct {
-		name       string
-		stage      *kargoapi.Stage
-		freight    []kargoapi.Freight
-		startTime  time.Time
-		finishTime time.Time
+		name        string
+		stage       *kargoapi.Stage
+		freight     []kargoapi.Freight
+		startTime   time.Time
+		finishTime  time.Time
 		interceptor interceptor.Funcs
-		assertions func(*testing.T, client.Client, *fakeevent.EventRecorder, error)
+		assertions  func(*testing.T, client.Client, *fakeevent.EventRecorder, error)
 	}{
 		{
 			name: "no freight to verify",
@@ -1406,7 +1404,7 @@ func Test_controlFlowStageReconciler_verifyFreight(t *testing.T) {
 				Build()
 			recorder := fakeevent.NewEventRecorder(10)
 
-			r := &controlFlowStageReconciler{
+			r := &ControlFlowStageReconciler{
 				client:        c,
 				eventRecorder: recorder,
 			}
@@ -1426,17 +1424,17 @@ func Test_controlFlowStageReconciler_handleDelete(t *testing.T) {
 	require.NoError(t, kargoapi.AddToScheme(scheme))
 
 	tests := []struct {
-		name    string
-		stage  *kargoapi.Stage
+		name        string
+		stage       *kargoapi.Stage
 		interceptor interceptor.Funcs
-		assertions func(*testing.T, *kargoapi.Stage, error)
+		assertions  func(*testing.T, *kargoapi.Stage, error)
 	}{
 		{
 			name: "finalizer already removed",
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:       "test-stage",
-					Namespace:  "default",
+					Name:      "test-stage",
+					Namespace: "default",
 				},
 			},
 			interceptor: interceptor.Funcs{
@@ -1540,8 +1538,8 @@ func Test_controlFlowStageReconciler_handleDelete(t *testing.T) {
 				WithInterceptorFuncs(tt.interceptor).
 				Build()
 
-			r := &controlFlowStageReconciler{
-				client:        c,
+			r := &ControlFlowStageReconciler{
+				client: c,
 			}
 
 			err := r.handleDelete(context.Background(), tt.stage)
@@ -1589,7 +1587,7 @@ func Test_controlFlowStageReconciler_clearVerifications(t *testing.T) {
 					},
 					Status: kargoapi.FreightStatus{
 						VerifiedIn: map[string]kargoapi.VerifiedStage{
-							"test-stage":     {},
+							"test-stage":    {},
 							"another-stage": {},
 						},
 					},
@@ -1670,7 +1668,7 @@ func Test_controlFlowStageReconciler_clearVerifications(t *testing.T) {
 					string,
 					client.Object,
 					client.Patch,
-				...client.SubResourcePatchOption,
+					...client.SubResourcePatchOption,
 				) error {
 					return fmt.Errorf("something went wrong")
 				},
@@ -1707,7 +1705,7 @@ func Test_controlFlowStageReconciler_clearVerifications(t *testing.T) {
 					string,
 					client.Object,
 					client.Patch,
-				...client.SubResourcePatchOption,
+					...client.SubResourcePatchOption,
 				) error {
 					return apierrors.NewNotFound(
 						kargoapi.GroupVersion.WithResource("freight").GroupResource(),
@@ -1735,7 +1733,7 @@ func Test_controlFlowStageReconciler_clearVerifications(t *testing.T) {
 				WithInterceptorFuncs(tt.interceptor).
 				Build()
 
-			r := &controlFlowStageReconciler{
+			r := &ControlFlowStageReconciler{
 				client: c,
 			}
 
@@ -1783,7 +1781,7 @@ func Test_controlFlowStageReconciler_clearApprovals(t *testing.T) {
 					},
 					Status: kargoapi.FreightStatus{
 						ApprovedFor: map[string]kargoapi.ApprovedStage{
-							"test-stage":     {},
+							"test-stage":    {},
 							"another-stage": {},
 						},
 					},
@@ -1864,7 +1862,7 @@ func Test_controlFlowStageReconciler_clearApprovals(t *testing.T) {
 					string,
 					client.Object,
 					client.Patch,
-				...client.SubResourcePatchOption,
+					...client.SubResourcePatchOption,
 				) error {
 					return fmt.Errorf("something went wrong")
 				},
@@ -1901,7 +1899,7 @@ func Test_controlFlowStageReconciler_clearApprovals(t *testing.T) {
 					string,
 					client.Object,
 					client.Patch,
-				...client.SubResourcePatchOption,
+					...client.SubResourcePatchOption,
 				) error {
 					return apierrors.NewNotFound(
 						kargoapi.GroupVersion.WithResource("freight").GroupResource(),
@@ -1929,7 +1927,7 @@ func Test_controlFlowStageReconciler_clearApprovals(t *testing.T) {
 				WithInterceptorFuncs(tt.interceptor).
 				Build()
 
-			r := &controlFlowStageReconciler{
+			r := &ControlFlowStageReconciler{
 				client: c,
 			}
 
@@ -2089,7 +2087,7 @@ func Test_controlFlowStageReconciler_clearAnalysisRuns(t *testing.T) {
 				WithInterceptorFuncs(tt.interceptor).
 				Build()
 
-			r := &controlFlowStageReconciler{
+			r := &ControlFlowStageReconciler{
 				client: c,
 				cfg:    tt.cfg,
 			}

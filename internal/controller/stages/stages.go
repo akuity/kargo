@@ -17,7 +17,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -266,21 +265,14 @@ func SetupReconcilerWithManager(
 	c, err := ctrl.NewControllerManagedBy(kargoMgr).
 		For(&kargoapi.Stage{}).
 		WithEventFilter(
-			predicate.Funcs{
-				DeleteFunc: func(event.DeleteEvent) bool {
-					// We're not interested in any ACTUAL deletes. (We do care about
-					// updates where DeletionTimestamp is non-nil, but that's not a delete
-					// event.)
-					return false
-				},
-			},
-		).
-		WithEventFilter(
-			predicate.Or(
-				predicate.GenerationChangedPredicate{},
-				kargo.RefreshRequested{},
-				kargo.ReverifyRequested{},
-				kargo.VerificationAbortRequested{},
+			predicate.And(
+				IsControlFlowStage(false),
+				predicate.Or(
+					predicate.GenerationChangedPredicate{},
+					kargo.RefreshRequested{},
+					kargo.ReverifyRequested{},
+					kargo.VerificationAbortRequested{},
+				),
 			),
 		).
 		WithOptions(controller.CommonOptions()).
@@ -318,56 +310,52 @@ func SetupReconcilerWithManager(
 
 	// Watch Freight that has been marked as verified in a Stage and enqueue
 	// downstream Stages
-	verifiedFreightHandler := &verifiedFreightEventHandler[*kargoapi.Freight]{
-		kargoClient: kargoMgr.GetClient(),
-	}
 	if err := c.Watch(
 		source.Kind(
 			kargoMgr.GetCache(),
 			&kargoapi.Freight{},
-			verifiedFreightHandler,
+			&downstreamStageEnqueuer[*kargoapi.Freight]{
+				kargoClient: kargoMgr.GetClient(),
+			},
 		),
 	); err != nil {
-		return fmt.Errorf("unable to watch Freight: %w", err)
+		return fmt.Errorf("unable to watch Freight from upstream Stages: %w", err)
 	}
 
-	approveFreightHandler := &approvedFreightEventHandler[*kargoapi.Freight]{
-		kargoClient: kargoMgr.GetClient(),
-	}
 	if err := c.Watch(
 		source.Kind(
 			kargoMgr.GetCache(),
 			&kargoapi.Freight{},
-			approveFreightHandler,
+			&stageEnqueuerForApprovedFreight[*kargoapi.Freight]{
+				kargoClient: kargoMgr.GetClient(),
+			},
 		),
 	); err != nil {
-		return fmt.Errorf("unable to watch Freight: %w", err)
+		return fmt.Errorf("unable to watch approved Freight: %w", err)
 	}
 
-	createdFreightEventHandler := &createdFreightEventHandler[*kargoapi.Freight]{
-		kargoClient: kargoMgr.GetClient(),
-	}
 	if err := c.Watch(
 		source.Kind(
 			kargoMgr.GetCache(),
 			&kargoapi.Freight{},
-			createdFreightEventHandler,
+			&warehouseStageEnqueuer[*kargoapi.Freight]{
+				kargoClient: kargoMgr.GetClient(),
+			},
 		),
 	); err != nil {
-		return fmt.Errorf("unable to watch Freight: %w", err)
+		return fmt.Errorf("unable to watch Freight produced by Warehouse: %w", err)
 	}
 
 	// If Argo CD integration is disabled, this manager will be nil and we won't
 	// care about this watch anyway.
 	if argocdMgr != nil {
-		updatedArgoCDAppHandler := &updatedArgoCDAppHandler[*argocd.Application]{
-			kargoClient: kargoMgr.GetClient(),
-		}
 		if err := c.Watch(
 			source.Kind(
 				argocdMgr.GetCache(),
 				&argocd.Application{},
-				updatedArgoCDAppHandler,
+				&stageEnqueuerForArgoCDChanges[*argocd.Application]{
+					kargoClient: kargoMgr.GetClient(),
+				},
 			),
 		); err != nil {
 			return fmt.Errorf("unable to watch Applications: %w", err)
@@ -376,7 +364,7 @@ func SetupReconcilerWithManager(
 
 	// We only care about this if Rollouts integration is enabled.
 	if cfg.RolloutsIntegrationEnabled {
-		phaseChangedAnalysisRunHandler := &phaseChangedAnalysisRunHandler[*rollouts.AnalysisRun]{
+		phaseChangedAnalysisRunHandler := &stageEnqueuerForAnalysisRuns[*rollouts.AnalysisRun]{
 			kargoClient: kargoMgr.GetClient(),
 		}
 		if err := c.Watch(
@@ -447,6 +435,7 @@ func (r *reconciler) Reconcile(
 	logger := logging.LoggerFromContext(ctx).WithValues(
 		"namespace", req.NamespacedName.Namespace,
 		"stage", req.NamespacedName.Name,
+		"controlFlow", false,
 	)
 	ctx = logging.ContextWithLogger(ctx, logger)
 	logger.Debug("reconciling Stage")

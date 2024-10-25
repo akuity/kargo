@@ -15,26 +15,161 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/controller"
 	rollouts "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
 	"github.com/akuity/kargo/internal/indexer"
+	"github.com/akuity/kargo/internal/kargo"
 	"github.com/akuity/kargo/internal/kubeclient"
 	"github.com/akuity/kargo/internal/logging"
 )
 
-type controlFlowStageReconciler struct {
+type ControlFlowStageReconciler struct {
 	cfg           ReconcilerConfig
 	client        client.Client
 	eventRecorder record.EventRecorder
 }
 
+// NewControlFlowStageReconciler returns a new control flow Stage reconciler.
+// After creating the reconciler, call SetupWithManager to register it with a
+// controller manager.
+func NewControlFlowStageReconciler(
+	cfg ReconcilerConfig,
+	client client.Client,
+	eventRecorder record.EventRecorder,
+) reconcile.TypedReconciler[ctrl.Request] {
+	return &ControlFlowStageReconciler{
+		cfg:           cfg,
+		client:        client,
+		eventRecorder: eventRecorder,
+	}
+}
+
+// SetupWithManager sets up the control flow Stage reconciler with the given
+// controller manager. It registers the reconciler with the manager and sets up
+// watches on the required objects.
+func (r *ControlFlowStageReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
+	// This index is used to find all Freight that are directly available from
+	// a Warehouse. It is used to find Freight that can be sourced directly from
+	// the Warehouse for the control flow Stage.
+	if err := mgr.GetFieldIndexer().IndexField(
+		ctx,
+		&kargoapi.Freight{},
+		indexer.FreightByWarehouseIndexField,
+		indexer.FreightByWarehouseIndexer,
+	); err != nil {
+		return fmt.Errorf("error setting up index for Freight by Warehouse: %w", err)
+	}
+
+	// This index is used to find and watch all Freight that have been verified
+	// in a specific Stage (upstream) to which the control flow Stage is the
+	// downstream consumer.
+	if err := mgr.GetFieldIndexer().IndexField(
+		ctx,
+		&kargoapi.Freight{},
+		indexer.FreightByVerifiedStagesIndexField,
+		indexer.FreightByVerifiedStagesIndexer,
+	); err != nil {
+		return fmt.Errorf("error setting up index for Freight by verified Stages: %w", err)
+	}
+
+	// This index is solely used to garbage collect any Freight that was
+	// to a Stage before it became a control flow Stage. It is not used for
+	// the actual reconciliation process beyond facilitating the garbage
+	// collection of related objects when the Stage is deleted.
+	if err := mgr.GetFieldIndexer().IndexField(
+		ctx,
+		&kargoapi.Freight{},
+		indexer.FreightApprovedForStagesIndexField,
+		indexer.FreightApprovedForStagesIndexer,
+	); err != nil {
+		return fmt.Errorf("error setting up index for Freight approved for Stages: %w", err)
+	}
+
+	// This index is used by a watch on Stages to find all Stages that have a
+	// specific Stage as an upstream Stage.
+	if err := mgr.GetFieldIndexer().IndexField(
+		ctx,
+		&kargoapi.Stage{},
+		indexer.StagesByUpstreamStagesIndexField,
+		indexer.StagesByUpstreamStagesIndexer,
+	); err != nil {
+		return fmt.Errorf("error setting up index for Stages by upstream Stages: %w", err)
+	}
+
+	// This index is used by a watch on Stages to find all Stages that have a
+	// specific Warehouse as an upstream Warehouse.
+	if err := mgr.GetFieldIndexer().IndexField(
+		ctx,
+		&kargoapi.Stage{},
+		indexer.StagesByWarehouseIndexField,
+		indexer.StagesByWarehouseIndexer,
+	); err != nil {
+		return fmt.Errorf("error setting up index for Stages by Warehouse: %w", err)
+	}
+
+	// Build the controller with the reconciler.
+	c, err := ctrl.NewControllerManagedBy(mgr).
+		For(&kargoapi.Stage{}).
+		WithOptions(controller.CommonOptions()).
+		WithEventFilter(
+			predicate.And(
+				IsControlFlowStage(true),
+				predicate.Or(
+					predicate.GenerationChangedPredicate{},
+					kargo.RefreshRequested{},
+				),
+			),
+		).
+		Build(r)
+	if err != nil {
+		return fmt.Errorf("error building control flow Stage reconciler: %w", err)
+	}
+
+	// Configure the watches.
+	// Changes to these objects that match the constraints from the predicates
+	// will enqueue a reconciliation for the related Stage(s).
+
+	// Watch for Freight that are directly available from a Warehouse.
+	if err := c.Watch(
+		source.Kind(
+			mgr.GetCache(),
+			&kargoapi.Freight{},
+			&downstreamStageEnqueuer[*kargoapi.Freight]{
+				kargoClient: mgr.GetClient(),
+			},
+		),
+	); err != nil {
+		return fmt.Errorf("unable to watch Freight from upstream Stages: %w", err)
+	}
+
+	// Watch for Freight that have been verified in upstream Stages.
+	if err := c.Watch(
+		source.Kind(
+			mgr.GetCache(),
+			&kargoapi.Freight{},
+			&downstreamStageEnqueuer[*kargoapi.Freight]{
+				kargoClient:          mgr.GetClient(),
+				forControlFlowStages: true,
+			},
+		),
+	); err != nil {
+		return fmt.Errorf("unable to watch Freight verified in upstream Stages: %w", err)
+	}
+
+	return nil
+}
+
 // Reconcile reconciles the given control flow Stage.
-func (r *controlFlowStageReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *ControlFlowStageReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := logging.LoggerFromContext(ctx).WithValues(
 		"namespace", req.NamespacedName.Namespace,
 		"stage", req.NamespacedName.Name,
-		"type", "control-flow",
+		"controlFlow", true,
 	)
 	ctx = logging.ContextWithLogger(ctx, logger)
 
@@ -88,7 +223,7 @@ func (r *controlFlowStageReconciler) Reconcile(ctx context.Context, req ctrl.Req
 // updating the Stage with the returned status.
 //
 // In case of an error, the Stage status is updated with the error message.
-func (r *controlFlowStageReconciler) reconcile(
+func (r *ControlFlowStageReconciler) reconcile(
 	ctx context.Context,
 	stage *kargoapi.Stage,
 	startTime time.Time,
@@ -130,7 +265,7 @@ func (r *controlFlowStageReconciler) reconcile(
 // initializeStatus initializes the status of the given Stage with the values
 // that are common to all control flow Stages. It resets the status to a clean
 // state, recording the current refresh token as having been handled.
-func (r *controlFlowStageReconciler) initializeStatus(stage *kargoapi.Stage) kargoapi.StageStatus {
+func (r *ControlFlowStageReconciler) initializeStatus(stage *kargoapi.Stage) kargoapi.StageStatus {
 	newStatus := stage.Status.DeepCopy()
 
 	// Update the status with the new observed generation and phase.
@@ -161,7 +296,7 @@ func (r *controlFlowStageReconciler) initializeStatus(stage *kargoapi.Stage) kar
 // Stage. Freight is considered available if it can be sourced directly from
 // the Warehouse or if it has been verified in upstream Stages. It excludes
 // Freight that has already been verified in the given Stage.
-func (r *controlFlowStageReconciler) getAvailableFreight(
+func (r *ControlFlowStageReconciler) getAvailableFreight(
 	ctx context.Context,
 	stage types.NamespacedName,
 	requested []kargoapi.FreightRequest,
@@ -254,7 +389,7 @@ func (r *controlFlowStageReconciler) getAvailableFreight(
 
 // verifyFreight marks the given Freight as verified in the given Stage. It
 // records an event for each Freight that is successfully verified.
-func (r *controlFlowStageReconciler) verifyFreight(
+func (r *ControlFlowStageReconciler) verifyFreight(
 	ctx context.Context,
 	stage *kargoapi.Stage,
 	freight []kargoapi.Freight,
@@ -323,7 +458,7 @@ func (r *controlFlowStageReconciler) verifyFreight(
 //
 // It returns an error aggregate of all errors that occurred during the deletion
 // process.
-func (r *controlFlowStageReconciler) handleDelete(ctx context.Context, stage *kargoapi.Stage) error {
+func (r *ControlFlowStageReconciler) handleDelete(ctx context.Context, stage *kargoapi.Stage) error {
 	// If the Stage does not have the finalizer, there is nothing to do.
 	if !controllerutil.ContainsFinalizer(stage, kargoapi.FinalizerName) {
 		return nil
@@ -359,7 +494,7 @@ func (r *controlFlowStageReconciler) handleDelete(ctx context.Context, stage *ka
 // clearVerifications clears the verification status of all Freight that have
 // been verified in the given Stage. It removes the Stage from the VerifiedIn
 // map of each Freight.
-func (r *controlFlowStageReconciler) clearVerifications(ctx context.Context, stage *kargoapi.Stage) error {
+func (r *ControlFlowStageReconciler) clearVerifications(ctx context.Context, stage *kargoapi.Stage) error {
 	verified := kargoapi.FreightList{}
 	if err := r.client.List(
 		ctx,
@@ -403,7 +538,7 @@ func (r *controlFlowStageReconciler) clearVerifications(ctx context.Context, sta
 // clearApprovals clears the approval status of all Freight that have been
 // approved for the given Stage. It removes the Stage from the ApprovedFor map
 // of each Freight.
-func (r *controlFlowStageReconciler) clearApprovals(ctx context.Context, stage *kargoapi.Stage) error {
+func (r *ControlFlowStageReconciler) clearApprovals(ctx context.Context, stage *kargoapi.Stage) error {
 	approved := kargoapi.FreightList{}
 	if err := r.client.List(
 		ctx,
@@ -445,7 +580,7 @@ func (r *controlFlowStageReconciler) clearApprovals(ctx context.Context, stage *
 
 // clearAnalysisRuns clears all AnalysisRuns that are associated with the given
 // Stage. This is only done if the Rollouts integration is enabled.
-func (r *controlFlowStageReconciler) clearAnalysisRuns(ctx context.Context, stage *kargoapi.Stage) error {
+func (r *ControlFlowStageReconciler) clearAnalysisRuns(ctx context.Context, stage *kargoapi.Stage) error {
 	if !r.cfg.RolloutsIntegrationEnabled {
 		return nil
 	}

@@ -21,15 +21,17 @@ import (
 	"github.com/akuity/kargo/internal/logging"
 )
 
-// verifiedFreightEventHandler is an event handler that enqueues downstream
-// Stages when Freight is marked as verified in a Stage, so that those Stages
-// can reconcile and possibly create a Promotion if auto-promotion is enabled.
-type verifiedFreightEventHandler[T any] struct {
-	kargoClient client.Client
+// downstreamStageEnqueuer triggers reconciliation of downstream Stages when
+// Freight is verified in an upstream Stage. This handler can be configured
+// to process either regular Stages (where auto-promotion may occur) or
+// control flow Stages via forControlFlowStages.
+type downstreamStageEnqueuer[T any] struct {
+	kargoClient          client.Client
+	forControlFlowStages bool
 }
 
 // Create implements TypedEventHandler.
-func (v *verifiedFreightEventHandler[T]) Create(
+func (v *downstreamStageEnqueuer[T]) Create(
 	context.Context,
 	event.TypedCreateEvent[T],
 	workqueue.TypedRateLimitingInterface[reconcile.Request],
@@ -38,7 +40,7 @@ func (v *verifiedFreightEventHandler[T]) Create(
 }
 
 // Delete implements TypedEventHandler.
-func (v *verifiedFreightEventHandler[T]) Delete(
+func (v *downstreamStageEnqueuer[T]) Delete(
 	context.Context,
 	event.TypedDeleteEvent[T],
 	workqueue.TypedRateLimitingInterface[reconcile.Request],
@@ -47,7 +49,7 @@ func (v *verifiedFreightEventHandler[T]) Delete(
 }
 
 // Generic implements TypedEventHandler.
-func (v *verifiedFreightEventHandler[T]) Generic(
+func (v *downstreamStageEnqueuer[T]) Generic(
 	context.Context,
 	event.TypedGenericEvent[T],
 	workqueue.TypedRateLimitingInterface[reconcile.Request],
@@ -56,14 +58,22 @@ func (v *verifiedFreightEventHandler[T]) Generic(
 }
 
 // Update implements TypedEventHandler.
-func (v *verifiedFreightEventHandler[T]) Update(
+func (v *downstreamStageEnqueuer[T]) Update(
 	ctx context.Context,
 	evt event.TypedUpdateEvent[T],
 	wq workqueue.TypedRateLimitingInterface[reconcile.Request],
 ) {
 	logger := logging.LoggerFromContext(ctx)
-	oldFreight := any(evt.ObjectOld).(*kargoapi.Freight) // nolint: forcetypeassert
-	newFreight := any(evt.ObjectNew).(*kargoapi.Freight) // nolint: forcetypeassert
+
+	oldFreight, ok := any(evt.ObjectOld).(*kargoapi.Freight)
+	if !ok {
+		return
+	}
+	newFreight, ok := any(evt.ObjectNew).(*kargoapi.Freight)
+	if !ok {
+		return
+	}
+
 	if oldFreight == nil || newFreight == nil {
 		logger.Error(
 			nil, "Update event has no old or new object to update",
@@ -95,9 +105,13 @@ func (v *verifiedFreightEventHandler[T]) Update(
 			return
 		}
 		for _, stage := range stages.Items {
+			if stage.IsControlFlow() && !v.forControlFlowStages {
+				continue
+			}
 			downstreamStages[stage.Name] = struct{}{}
 		}
 	}
+
 	for downStreamStage := range downstreamStages {
 		wq.Add(
 			reconcile.Request{
@@ -111,6 +125,7 @@ func (v *verifiedFreightEventHandler[T]) Update(
 			"enqueued downstream Stage for reconciliation",
 			"namespace", newFreight.Namespace,
 			"stage", downStreamStage,
+			"controlFlow", v.forControlFlowStages,
 		)
 	}
 }
@@ -125,15 +140,15 @@ func getNewlyVerifiedStages(old, new *kargoapi.Freight) []string {
 	return stages
 }
 
-// approvedFreightEventHandler is an event handler that enqueues Stages when
+// stageEnqueuerForApprovedFreight is an event handler that enqueues Stages when
 // Freight is marked as approved for them, so that those Stages can reconcile
 // and possibly create a Promotion if auto-promotion is enabled.
-type approvedFreightEventHandler[T any] struct {
+type stageEnqueuerForApprovedFreight[T any] struct {
 	kargoClient client.Client
 }
 
 // Create implements TypedEventHandler.
-func (a *approvedFreightEventHandler[T]) Create(
+func (a *stageEnqueuerForApprovedFreight[T]) Create(
 	context.Context,
 	event.TypedCreateEvent[T],
 	workqueue.TypedRateLimitingInterface[reconcile.Request],
@@ -142,7 +157,7 @@ func (a *approvedFreightEventHandler[T]) Create(
 }
 
 // Delete implements TypedEventHandler.
-func (a *approvedFreightEventHandler[T]) Delete(
+func (a *stageEnqueuerForApprovedFreight[T]) Delete(
 	context.Context,
 	event.TypedDeleteEvent[T],
 	workqueue.TypedRateLimitingInterface[reconcile.Request],
@@ -151,7 +166,7 @@ func (a *approvedFreightEventHandler[T]) Delete(
 }
 
 // Generic implements TypedEventHandler.
-func (a *approvedFreightEventHandler[T]) Generic(
+func (a *stageEnqueuerForApprovedFreight[T]) Generic(
 	context.Context,
 	event.TypedGenericEvent[T],
 	workqueue.TypedRateLimitingInterface[reconcile.Request],
@@ -160,7 +175,7 @@ func (a *approvedFreightEventHandler[T]) Generic(
 }
 
 // Update implements TypedEventHandler.
-func (a *approvedFreightEventHandler[T]) Update(
+func (a *stageEnqueuerForApprovedFreight[T]) Update(
 	ctx context.Context,
 	evt event.TypedUpdateEvent[T],
 	wq workqueue.TypedRateLimitingInterface[reconcile.Request],
@@ -203,22 +218,28 @@ func getNewlyApprovedStages(old, new *kargoapi.Freight) []string {
 	return stages
 }
 
-// createdFreightEventHandler is an event handler that enqueues Stages
-// subscribed to a Freight's Warehouse whenever new Freight is created, so that
-// those Stages can reconcile and possibly create a Promotion if auto-promotion
-// is enabled.
-type createdFreightEventHandler[T any] struct {
-	kargoClient client.Client
+// warehouseStageEnqueuer triggers reconciliation of Stages that are subscribed
+// to a Warehouse when new Freight is created in that Warehouse. This handler
+// can be configured to process either regular Stages (where auto-promotion may
+// occur) or control flow Stages via forControlFlowStages.
+type warehouseStageEnqueuer[T any] struct {
+	kargoClient          client.Client
+	forControlFlowStages bool
 }
 
 // Create implements TypedEventHandler.
-func (c *createdFreightEventHandler[T]) Create(
+func (c *warehouseStageEnqueuer[T]) Create(
 	ctx context.Context,
 	evt event.TypedCreateEvent[T],
 	wq workqueue.TypedRateLimitingInterface[reconcile.Request],
 ) {
 	logger := logging.LoggerFromContext(ctx)
-	freight := any(evt.Object).(*kargoapi.Freight) // nolint: forcetypeassert
+
+	freight, ok := any(evt.Object).(*kargoapi.Freight)
+	if !ok {
+		return
+	}
+
 	stages := kargoapi.StageList{}
 	if err := c.kargoClient.List(
 		ctx,
@@ -238,7 +259,12 @@ func (c *createdFreightEventHandler[T]) Create(
 		)
 		return
 	}
+
 	for _, stage := range stages.Items {
+		if stage.IsControlFlow() && !c.forControlFlowStages {
+			continue
+		}
+
 		wq.Add(
 			reconcile.Request{
 				NamespacedName: types.NamespacedName{
@@ -256,7 +282,7 @@ func (c *createdFreightEventHandler[T]) Create(
 }
 
 // Delete implements TypedEventHandler.
-func (c *createdFreightEventHandler[T]) Delete(
+func (c *warehouseStageEnqueuer[T]) Delete(
 	context.Context,
 	event.TypedDeleteEvent[T],
 	workqueue.TypedRateLimitingInterface[reconcile.Request],
@@ -265,7 +291,7 @@ func (c *createdFreightEventHandler[T]) Delete(
 }
 
 // Generic implements TypedEventHandler.
-func (c *createdFreightEventHandler[T]) Generic(
+func (c *warehouseStageEnqueuer[T]) Generic(
 	context.Context,
 	event.TypedGenericEvent[T],
 	workqueue.TypedRateLimitingInterface[reconcile.Request],
@@ -274,7 +300,7 @@ func (c *createdFreightEventHandler[T]) Generic(
 }
 
 // Update implements EventHandler.
-func (c *createdFreightEventHandler[T]) Update(
+func (c *warehouseStageEnqueuer[T]) Update(
 	context.Context,
 	event.TypedUpdateEvent[T],
 	workqueue.TypedRateLimitingInterface[reconcile.Request],
@@ -282,15 +308,15 @@ func (c *createdFreightEventHandler[T]) Update(
 	// No-op
 }
 
-// updatedArgoCDAppHandler is an event handler that enqueues Stages associated
-// with an Argo CD Application whenever that Application's health or sync status
-// changes, so that those Stages can reconcile.
-type updatedArgoCDAppHandler[T any] struct {
+// stageEnqueuerForArgoCDChanges triggers reconciliation of Stages when their
+// associated Argo CD Application's health or sync status changes.
+// The associated Stage is determined by the Application's annotations.
+type stageEnqueuerForArgoCDChanges[T any] struct {
 	kargoClient client.Client
 }
 
 // Create implements TypedEventHandler.
-func (u *updatedArgoCDAppHandler[T]) Create(
+func (u *stageEnqueuerForArgoCDChanges[T]) Create(
 	context.Context,
 	event.TypedCreateEvent[T],
 	workqueue.TypedRateLimitingInterface[reconcile.Request],
@@ -299,7 +325,7 @@ func (u *updatedArgoCDAppHandler[T]) Create(
 }
 
 // Delete implements TypedEventHandler.
-func (u *updatedArgoCDAppHandler[T]) Delete(
+func (u *stageEnqueuerForArgoCDChanges[T]) Delete(
 	context.Context,
 	event.TypedDeleteEvent[T],
 	workqueue.TypedRateLimitingInterface[reconcile.Request],
@@ -308,7 +334,7 @@ func (u *updatedArgoCDAppHandler[T]) Delete(
 }
 
 // Generic implements TypedEventHandler.
-func (u *updatedArgoCDAppHandler[T]) Generic(
+func (u *stageEnqueuerForArgoCDChanges[T]) Generic(
 	context.Context,
 	event.TypedGenericEvent[T],
 	workqueue.TypedRateLimitingInterface[reconcile.Request],
@@ -317,61 +343,71 @@ func (u *updatedArgoCDAppHandler[T]) Generic(
 }
 
 // Update implements TypedEventHandler.
-func (u *updatedArgoCDAppHandler[T]) Update(
+func (u *stageEnqueuerForArgoCDChanges[T]) Update(
 	ctx context.Context,
 	e event.TypedUpdateEvent[T],
 	wq workqueue.TypedRateLimitingInterface[reconcile.Request],
 ) {
-	if appHealthOrSyncStatusChanged(ctx, e) {
-		newApp := any(e.ObjectNew).(*argocd.Application) // nolint: forcetypeassert
-
-		stageRef, ok := newApp.Annotations[kargoapi.AnnotationKeyAuthorizedStage]
-		if !ok {
-			return
-		}
-		parts := strings.SplitN(stageRef, ":", 2)
-		if len(parts) != 2 {
-			return
-		}
-		projectName, stageName := parts[0], parts[1]
-
-		logger := logging.LoggerFromContext(ctx)
-		stage := &kargoapi.Stage{}
-		if err := u.kargoClient.Get(
-			ctx,
-			types.NamespacedName{
-				Namespace: projectName,
-				Name:      stageName,
-			},
-			stage,
-		); err != nil {
-			if client.IgnoreNotFound(err) != nil {
-				logger.Error(
-					err,
-					"error getting Stage for Application",
-					"namespace", projectName,
-					"stage", stageName,
-					"app", newApp.Name,
-				)
-			}
-			return
-		}
-
-		wq.Add(
-			reconcile.Request{
-				NamespacedName: types.NamespacedName{
-					Namespace: stage.Namespace,
-					Name:      stage.Name,
-				},
-			},
-		)
-		logger.Debug(
-			"enqueued Stage for reconciliation",
-			"namespace", stage.Namespace,
-			"stage", stage.Name,
-			"app", newApp.Name,
-		)
+	if !appHealthOrSyncStatusChanged(ctx, e) {
+		return
 	}
+
+	newApp, ok := any(e.ObjectNew).(*argocd.Application)
+	if !ok {
+		return
+	}
+
+	stageRef, ok := newApp.Annotations[kargoapi.AnnotationKeyAuthorizedStage]
+	if !ok {
+		return
+	}
+	parts := strings.SplitN(stageRef, ":", 2)
+	if len(parts) != 2 {
+		return
+	}
+	projectName, stageName := parts[0], parts[1]
+
+	logger := logging.LoggerFromContext(ctx)
+	stage := &kargoapi.Stage{}
+	if err := u.kargoClient.Get(
+		ctx,
+		types.NamespacedName{
+			Namespace: projectName,
+			Name:      stageName,
+		},
+		stage,
+	); err != nil {
+		if client.IgnoreNotFound(err) != nil {
+			logger.Error(
+				err,
+				"error getting Stage for Application",
+				"namespace", projectName,
+				"stage", stageName,
+				"app", newApp.Name,
+			)
+		}
+		return
+	}
+
+	// If the Stage is a control flow Stage, there is no need to reconcile it.
+	if stage.IsControlFlow() {
+		return
+	}
+
+	wq.Add(
+		reconcile.Request{
+			NamespacedName: types.NamespacedName{
+				Namespace: stage.Namespace,
+				Name:      stage.Name,
+			},
+		},
+	)
+	logger.Debug(
+		"enqueued Stage for reconciliation",
+		"namespace", stage.Namespace,
+		"stage", stage.Name,
+		"app", newApp.Name,
+	)
 }
 
 func appHealthOrSyncStatusChanged[T any](ctx context.Context, e event.TypedUpdateEvent[T]) bool {
@@ -416,15 +452,14 @@ func appHealthOrSyncStatusChanged[T any](ctx context.Context, e event.TypedUpdat
 	return newHealth != oldHealth || oldSync != newSync || oldRev != newRev
 }
 
-// phaseChangedAnalysisRunHandler is an event handler that enqueues Stages
-// associated with an Argo Rollouts AnalysisRun whenever that AnalysisRun's
-// phase changes.
-type phaseChangedAnalysisRunHandler[T any] struct {
+// stageEnqueuerForAnalysisRuns triggers reconciliation of Stages when their
+// associated Argo Rollouts AnalysisRun's phase changes.
+type stageEnqueuerForAnalysisRuns[T any] struct {
 	kargoClient client.Client
 }
 
 // Create implements TypedEventHandler.
-func (p *phaseChangedAnalysisRunHandler[T]) Create(
+func (p *stageEnqueuerForAnalysisRuns[T]) Create(
 	context.Context,
 	event.TypedCreateEvent[T],
 	workqueue.TypedRateLimitingInterface[reconcile.Request],
@@ -433,7 +468,7 @@ func (p *phaseChangedAnalysisRunHandler[T]) Create(
 }
 
 // Delete implements TypedEventHandler.
-func (p *phaseChangedAnalysisRunHandler[T]) Delete(
+func (p *stageEnqueuerForAnalysisRuns[T]) Delete(
 	context.Context,
 	event.TypedDeleteEvent[T],
 	workqueue.TypedRateLimitingInterface[reconcile.Request],
@@ -442,7 +477,7 @@ func (p *phaseChangedAnalysisRunHandler[T]) Delete(
 }
 
 // Generic implements TypedEventHandler.
-func (p *phaseChangedAnalysisRunHandler[T]) Generic(
+func (p *stageEnqueuerForAnalysisRuns[T]) Generic(
 	context.Context,
 	event.TypedGenericEvent[T],
 	workqueue.TypedRateLimitingInterface[reconcile.Request],
@@ -451,7 +486,7 @@ func (p *phaseChangedAnalysisRunHandler[T]) Generic(
 }
 
 // Update implements TypedEventHandler.
-func (p *phaseChangedAnalysisRunHandler[T]) Update(
+func (p *stageEnqueuerForAnalysisRuns[T]) Update(
 	ctx context.Context,
 	e event.TypedUpdateEvent[T],
 	wq workqueue.TypedRateLimitingInterface[reconcile.Request],
@@ -478,6 +513,11 @@ func (p *phaseChangedAnalysisRunHandler[T]) Update(
 			)
 		}
 		for _, stage := range stages.Items {
+			// If the Stage is a control flow Stage, there is no need to reconcile it.
+			if stage.IsControlFlow() {
+				continue
+			}
+
 			wq.Add(
 				reconcile.Request{
 					NamespacedName: types.NamespacedName{
