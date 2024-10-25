@@ -16,7 +16,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -25,6 +24,7 @@ import (
 	"github.com/akuity/kargo/internal/indexer"
 	"github.com/akuity/kargo/internal/kargo"
 	"github.com/akuity/kargo/internal/kubeclient"
+	libEvent "github.com/akuity/kargo/internal/kubernetes/event"
 	"github.com/akuity/kargo/internal/logging"
 )
 
@@ -39,13 +39,9 @@ type ControlFlowStageReconciler struct {
 // controller manager.
 func NewControlFlowStageReconciler(
 	cfg ReconcilerConfig,
-	client client.Client,
-	eventRecorder record.EventRecorder,
-) reconcile.TypedReconciler[ctrl.Request] {
+) *ControlFlowStageReconciler {
 	return &ControlFlowStageReconciler{
-		cfg:           cfg,
-		client:        client,
-		eventRecorder: eventRecorder,
+		cfg: cfg,
 	}
 }
 
@@ -53,6 +49,10 @@ func NewControlFlowStageReconciler(
 // controller manager. It registers the reconciler with the manager and sets up
 // watches on the required objects.
 func (r *ControlFlowStageReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
+	// Configure client and event recorder using manager.
+	r.client = mgr.GetClient()
+	r.eventRecorder = libEvent.NewRecorder(ctx, mgr.GetScheme(), mgr.GetClient(), r.cfg.Name())
+
 	// This index is used to find all Freight that are directly available from
 	// a Warehouse. It is used to find Freight that can be sourced directly from
 	// the Warehouse for the control flow Stage.

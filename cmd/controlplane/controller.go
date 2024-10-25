@@ -310,6 +310,10 @@ func (o *controllerOptions) setupReconcilers(
 		return fmt.Errorf("error setting up Stages reconciler: %w", err)
 	}
 
+	if err := stages.NewControlFlowStageReconciler(stagesReconcilerCfg).SetupWithManager(ctx, kargoMgr); err != nil {
+		return fmt.Errorf("error setting up control flow Stages reconciler: %w", err)
+	}
+
 	if err := warehouses.SetupReconcilerWithManager(
 		kargoMgr,
 		credentialsDB,
