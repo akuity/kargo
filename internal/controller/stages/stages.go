@@ -515,7 +515,7 @@ func (r *reconciler) Reconcile(
 	// Stage doesn't have a current Promotion, and there are non-terminal
 	// Promotions for the Stage waiting to be handled.
 	var mustRequeue bool
-	if !stage.IsControlFlow() && newStatus.CurrentPromotion == nil {
+	if newStatus.CurrentPromotion == nil {
 		promos := kargoapi.PromotionList{}
 		if err := r.kargoClient.List(
 			ctx,
