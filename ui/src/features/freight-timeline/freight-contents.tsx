@@ -1,14 +1,12 @@
 import { faDocker, faGitAlt } from '@fortawesome/free-brands-svg-icons';
-import { IconDefinition, faAnchor } from '@fortawesome/free-solid-svg-icons';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Tooltip } from 'antd';
+import { faAnchor } from '@fortawesome/free-solid-svg-icons';
 import classNames from 'classnames';
 
 import { Freight } from '@ui/gen/v1alpha1/generated_pb';
 import { urlForImage } from '@ui/utils/url';
 
 import { CommitInfo } from '../common/commit-info';
-import { TruncateMiddle } from '../common/truncate-middle';
+import { FreightContentItem } from './freight-content-item';
 
 export const FreightContents = (props: {
   freight?: Freight;
@@ -18,43 +16,6 @@ export const FreightContents = (props: {
 }) => {
   const { freight, highlighted, horizontal, dark } = props;
   const linkClass = `${highlighted ? 'text-blue-500' : 'text-gray-400'} hover:text-blue-400 hover:underline max-w-full min-w-0 flex-shrink`;
-
-  const FreightContentItem = (props: {
-    icon: IconDefinition;
-    overlay?: React.ReactNode;
-    title?: string;
-    href?: string;
-    children?: string;
-  }) => (
-    <Tooltip
-      className={classNames('min-w-0 flex items-center justify-center my-1 rounded', {
-        'flex-col p-1 w-full': !horizontal,
-        'mr-2 p-2 max-w-60 flex-shrink': horizontal,
-        'bg-black text-white': dark,
-        'bg-white': !dark && highlighted && !horizontal,
-        'border border-solid border-gray-200': !dark && !highlighted && !horizontal,
-        'bg-gray-200': !dark && horizontal
-      })}
-      overlay={props.overlay}
-      title={props.title}
-    >
-      <FontAwesomeIcon
-        icon={props.icon}
-        style={{ fontSize: '14px' }}
-        className={classNames('px-1', {
-          'mb-2': !horizontal,
-          'mr-2': horizontal
-        })}
-      />
-      {props.href ? (
-        <a target='_blank' className={linkClass}>
-          <TruncateMiddle>{props.children || ''}</TruncateMiddle>
-        </a>
-      ) : (
-        <TruncateMiddle>{props.children || ''}</TruncateMiddle>
-      )}
-    </Tooltip>
-  );
 
   return (
     <div
@@ -69,6 +30,10 @@ export const FreightContents = (props: {
     >
       {(freight?.commits || []).map((c) => (
         <FreightContentItem
+          dark={dark}
+          horizontal={horizontal}
+          linkClass={linkClass}
+          highlighted={highlighted}
           key={c.id}
           overlay={<CommitInfo commit={c} />}
           icon={faGitAlt}
@@ -81,6 +46,10 @@ export const FreightContents = (props: {
       ))}
       {(freight?.images || []).map((i) => (
         <FreightContentItem
+          dark={dark}
+          horizontal={horizontal}
+          linkClass={linkClass}
+          highlighted={highlighted}
           key={`${i.repoURL}:${i.tag}`}
           title={`${i.repoURL}:${i.tag}`}
           icon={faDocker}
@@ -91,6 +60,10 @@ export const FreightContents = (props: {
       ))}
       {(freight?.charts || []).map((c) => (
         <FreightContentItem
+          dark={dark}
+          horizontal={horizontal}
+          linkClass={linkClass}
+          highlighted={highlighted}
           key={`${c.repoURL}:${c.version}`}
           title={`${c.repoURL}:${c.version}`}
           icon={faAnchor}
