@@ -6,6 +6,7 @@ import { Freight } from '@ui/gen/v1alpha1/generated_pb';
 import { urlForImage } from '@ui/utils/url';
 
 import { CommitInfo } from '../common/commit-info';
+
 import { FreightContentItem } from './freight-content-item';
 
 export const FreightContents = (props: {
