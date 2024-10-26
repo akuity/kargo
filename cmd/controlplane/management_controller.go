@@ -21,11 +21,17 @@ import (
 	"github.com/akuity/kargo/internal/controller/management/serviceaccounts"
 	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/internal/os"
+	"github.com/akuity/kargo/internal/types"
 	versionpkg "github.com/akuity/kargo/internal/version"
 )
 
 type managementControllerOptions struct {
 	KubeConfig string
+
+	KargoNamespace               string
+	ManageControllerRoleBindings bool
+
+	PprofBindAddress string
 
 	Logger *logging.Logger
 }
@@ -54,6 +60,9 @@ func newManagementControllerCommand() *cobra.Command {
 
 func (o *managementControllerOptions) complete() {
 	o.KubeConfig = os.GetEnv("KUBECONFIG", "")
+	o.KargoNamespace = os.GetEnv("KARGO_NAMESPACE", "kargo")
+	o.ManageControllerRoleBindings = types.MustParseBool(os.GetEnv("MANAGE_CONTROLLER_ROLE_BINDINGS", "true"))
+	o.PprofBindAddress = os.GetEnv("PPROF_BIND_ADDRESS", "")
 }
 
 func (o *managementControllerOptions) run(ctx context.Context) error {
@@ -81,7 +90,7 @@ func (o *managementControllerOptions) run(ctx context.Context) error {
 		return fmt.Errorf("error setting up Projects reconciler: %w", err)
 	}
 
-	if os.GetEnv("MANAGE_CONTROLLER_ROLE_BINDINGS", "true") == "true" {
+	if o.ManageControllerRoleBindings {
 		if err := serviceaccounts.SetupReconcilerWithManager(
 			kargoMgr,
 			serviceaccounts.ReconcilerConfigFromEnv(),
@@ -130,11 +139,12 @@ func (o *managementControllerOptions) setupManager(ctx context.Context) (manager
 			Metrics: server.Options{
 				BindAddress: "0",
 			},
+			PprofBindAddress: o.PprofBindAddress,
 			Cache: cache.Options{
 				ByObject: map[client.Object]cache.ByObject{
 					&corev1.ServiceAccount{}: {
 						Namespaces: map[string]cache.Config{
-							os.GetEnv("KARGO_NAMESPACE", "kargo"): {},
+							o.KargoNamespace: {},
 						},
 					},
 				},
