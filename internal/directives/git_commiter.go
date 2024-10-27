@@ -78,27 +78,27 @@ func (g *gitCommitter) runPromotionStep(
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
 			fmt.Errorf("error adding all changes to working tree: %w", err)
 	}
-	commitMsg, err := g.buildCommitMessage(stepCtx.SharedState, cfg)
-	if err != nil {
-		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
-			fmt.Errorf("error building commit message: %w", err)
-	}
-	commitOpts := &git.CommitOptions{}
-	if cfg.Author != nil {
-		commitOpts.Author = &git.User{}
-		if cfg.Author.Name != "" {
-			commitOpts.Author.Name = cfg.Author.Name
-		}
-		if cfg.Author.Email != "" {
-			commitOpts.Author.Email = cfg.Author.Email
-		}
-	}
 	hasDiffs, err := workTree.HasDiffs()
 	if err != nil {
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
 			fmt.Errorf("error checking for diffs in working tree: %w", err)
 	}
 	if hasDiffs {
+		var commitMsg string
+		if commitMsg, err = g.buildCommitMessage(stepCtx.SharedState, cfg); err != nil {
+			return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
+				fmt.Errorf("error building commit message: %w", err)
+		}
+		commitOpts := &git.CommitOptions{}
+		if cfg.Author != nil {
+			commitOpts.Author = &git.User{}
+			if cfg.Author.Name != "" {
+				commitOpts.Author.Name = cfg.Author.Name
+			}
+			if cfg.Author.Email != "" {
+				commitOpts.Author.Email = cfg.Author.Email
+			}
+		}
 		if err = workTree.Commit(commitMsg, commitOpts); err != nil {
 			return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
 				fmt.Errorf("error committing to working tree: %w", err)
@@ -123,15 +123,14 @@ func (g *gitCommitter) buildCommitMessage(
 	if cfg.Message != "" {
 		commitMsg = cfg.Message
 	} else if len(cfg.MessageFromSteps) > 0 {
-		commitMsgParts := make([]string, len(cfg.MessageFromSteps))
-		for i, alias := range cfg.MessageFromSteps {
+		commitMsgParts := make([]string, 0, len(cfg.MessageFromSteps))
+		for _, alias := range cfg.MessageFromSteps {
 			stepOutput, exists := sharedState.Get(alias)
 			if !exists {
-				return "", fmt.Errorf(
-					"no output found from step with alias %q; cannot construct commit "+
-						"message",
-					alias,
-				)
+				// It is valid for a previous step that MIGHT have left some output
+				// (potentially including a commit message fragment) not to have done
+				// so.
+				continue
 			}
 			stepOutputMap, ok := stepOutput.(map[string]any)
 			if !ok {
@@ -143,21 +142,30 @@ func (g *gitCommitter) buildCommitMessage(
 			}
 			commitMsgPart, exists := stepOutputMap["commitMessage"]
 			if !exists {
-				return "", fmt.Errorf(
-					"no commit message found in output from step with alias %q; cannot "+
-						"construct commit message",
-					alias,
-				)
+				// It is valid for a previous step that MIGHT have left behind a
+				// commit message fragment not to have done so.
+				continue
 			}
-			if commitMsgParts[i], ok = commitMsgPart.(string); !ok {
+			commitMsgPartStr, ok := commitMsgPart.(string)
+			if !ok {
 				return "", fmt.Errorf(
 					"commit message in output from step with alias %q is not a string; "+
 						"cannot construct commit message",
 					alias,
 				)
 			}
+			commitMsgParts = append(commitMsgParts, commitMsgPartStr)
 		}
-		if len(commitMsgParts) == 1 {
+		if len(commitMsgParts) == 0 {
+			// TODO: krancour: This message is painfully generic, but there is little
+			// else we can do and empty commit messages are not allowed. It should
+			// also be very rare that we get here. It would only occur if no previous
+			// step that the user indicated might contribute a commit message fragment
+			// actually did so -- and in that case, it is unlikely there are any
+			// differences to commit, which would preclude us from ever attempting to
+			// build a commit message in the first place.
+			commitMsg = "Kargo made some changes"
+		} else if len(commitMsgParts) == 1 {
 			commitMsg = commitMsgParts[0]
 		} else {
 			commitMsg = "Kargo applied multiple changes\n\nIncluding:\n"

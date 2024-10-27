@@ -490,7 +490,7 @@ func TestDefault(t *testing.T) {
 			assertions: func(t *testing.T, stage *kargoapi.Stage, err error) {
 				require.NoError(t, err)
 				require.Contains(t, stage.Annotations, kargoapi.AnnotationKeyAbort)
-				rr, ok := kargoapi.AbortAnnotationValue(stage.Annotations)
+				rr, ok := kargoapi.AbortVerificationAnnotationValue(stage.Annotations)
 				require.True(t, ok)
 				require.Equal(t, &kargoapi.VerificationRequest{
 					ID: "fake-id",
@@ -533,7 +533,7 @@ func TestDefault(t *testing.T) {
 			assertions: func(t *testing.T, stage *kargoapi.Stage, err error) {
 				require.NoError(t, err)
 				require.Contains(t, stage.Annotations, kargoapi.AnnotationKeyAbort)
-				rr, ok := kargoapi.AbortAnnotationValue(stage.Annotations)
+				rr, ok := kargoapi.AbortVerificationAnnotationValue(stage.Annotations)
 				require.True(t, ok)
 				require.Equal(t, &kargoapi.VerificationRequest{
 					ID: "fake-id",
@@ -576,7 +576,7 @@ func TestDefault(t *testing.T) {
 			assertions: func(t *testing.T, stage *kargoapi.Stage, err error) {
 				require.NoError(t, err)
 				require.Contains(t, stage.Annotations, kargoapi.AnnotationKeyAbort)
-				rr, ok := kargoapi.AbortAnnotationValue(stage.Annotations)
+				rr, ok := kargoapi.AbortVerificationAnnotationValue(stage.Annotations)
 				require.True(t, ok)
 				require.Equal(t, &kargoapi.VerificationRequest{
 					ID:           "fake-id",
@@ -626,7 +626,7 @@ func TestDefault(t *testing.T) {
 			assertions: func(t *testing.T, stage *kargoapi.Stage, err error) {
 				require.NoError(t, err)
 				require.Contains(t, stage.Annotations, kargoapi.AnnotationKeyAbort)
-				rr, ok := kargoapi.AbortAnnotationValue(stage.Annotations)
+				rr, ok := kargoapi.AbortVerificationAnnotationValue(stage.Annotations)
 				require.True(t, ok)
 				require.Equal(t, &kargoapi.VerificationRequest{
 					ID:    "fake-id",
@@ -676,7 +676,7 @@ func TestDefault(t *testing.T) {
 			assertions: func(t *testing.T, stage *kargoapi.Stage, err error) {
 				require.NoError(t, err)
 				require.Contains(t, stage.Annotations, kargoapi.AnnotationKeyAbort)
-				rr, ok := kargoapi.AbortAnnotationValue(stage.Annotations)
+				rr, ok := kargoapi.AbortVerificationAnnotationValue(stage.Annotations)
 				require.True(t, ok)
 				require.Equal(t, &kargoapi.VerificationRequest{
 					ID:           "fake-id",

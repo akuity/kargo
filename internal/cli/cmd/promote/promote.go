@@ -32,8 +32,10 @@ type promotionOptions struct {
 	Project        string
 	FreightName    string
 	FreightAlias   string
+	Promotion      string
 	Stage          string
 	DownstreamFrom string
+	Abort          bool
 	Wait           bool
 }
 
@@ -45,8 +47,8 @@ func NewCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams) *cobra
 	}
 
 	cmd := &cobra.Command{
-		Use: "promote [--project=project] (--freight=freight | --freight-alias=alias) " +
-			"(--stage=stage | --downstream-from=stage)",
+		Use: "promote [--project=project] (--freight=freight | --freight-alias=alias | --name=name) " +
+			"[(--stage=stage | --downstream-from=stage) | --abort]",
 		Short: "Promote a piece of freight",
 		Args:  option.NoArgs,
 		// nolint: lll
@@ -62,6 +64,9 @@ kargo promote --project=my-project --freight=abc123 --downstream-from=qa
 
 # Promote a piece of freight specified by alias to stages immediately downstream from the QA stage
 kargo promote --project=my-project --freight-alias=wonky-wombat --downstream-from=qa
+
+# Abort a Promotion by name
+kargo promote --project=my-project --name=my-promotion --abort
 
 # Promote a piece of freight specified by name to the QA stage in the default project
 kargo config set-project my-project
@@ -108,6 +113,7 @@ func (o *promotionOptions) addFlags(cmd *cobra.Command) {
 	)
 	option.Freight(cmd.Flags(), &o.FreightName, "The name of piece of freight to promote.")
 	option.FreightAlias(cmd.Flags(), &o.FreightAlias, "The alias of piece of freight to promote.")
+	option.Name(cmd.Flags(), &o.Promotion, "The name of a promotion. Only used when aborting a promotion.")
 	option.Stage(
 		cmd.Flags(), &o.Stage,
 		fmt.Sprintf(
@@ -122,13 +128,18 @@ func (o *promotionOptions) addFlags(cmd *cobra.Command) {
 			option.StageFlag,
 		),
 	)
+	option.Abort(cmd.Flags(), &o.Abort, false, fmt.Sprintf(
+		"Abort a non-terminal promotion. If set, --%s must be set.", option.NameFlag,
+	))
 	option.Wait(cmd.Flags(), &o.Wait, false, "Wait for the promotion(s) to complete.")
 
-	cmd.MarkFlagsOneRequired(option.FreightFlag, option.FreightAliasFlag)
-	cmd.MarkFlagsMutuallyExclusive(option.FreightFlag, option.FreightAliasFlag)
+	cmd.MarkFlagsOneRequired(option.FreightFlag, option.FreightAliasFlag, option.NameFlag)
+	cmd.MarkFlagsMutuallyExclusive(option.FreightFlag, option.FreightAliasFlag, option.NameFlag)
 
-	cmd.MarkFlagsOneRequired(option.StageFlag, option.DownstreamFromFlag)
-	cmd.MarkFlagsMutuallyExclusive(option.StageFlag, option.DownstreamFromFlag)
+	cmd.MarkFlagsOneRequired(option.StageFlag, option.DownstreamFromFlag, option.AbortFlag)
+	cmd.MarkFlagsMutuallyExclusive(option.StageFlag, option.DownstreamFromFlag, option.AbortFlag)
+
+	cmd.MarkFlagsRequiredTogether(option.NameFlag, option.AbortFlag)
 }
 
 // validate performs validation of the options. If the options are invalid, an
@@ -140,17 +151,23 @@ func (o *promotionOptions) validate() error {
 	if o.Project == "" {
 		errs = append(errs, fmt.Errorf("%s is required", option.ProjectFlag))
 	}
-	if o.FreightName == "" && o.FreightAlias == "" {
-		errs = append(
-			errs,
-			fmt.Errorf("either %s or %s is required", option.FreightFlag, option.FreightAliasFlag),
-		)
-	}
-	if o.Stage == "" && o.DownstreamFrom == "" {
-		errs = append(
-			errs,
-			fmt.Errorf("either %s or %s is required", option.StageFlag, option.DownstreamFromFlag),
-		)
+	if o.Abort {
+		if o.Promotion == "" {
+			errs = append(errs, fmt.Errorf("%s is required when aborting a promotion", option.NameFlag))
+		}
+	} else {
+		if o.FreightName == "" && o.FreightAlias == "" {
+			errs = append(
+				errs,
+				fmt.Errorf("either %s or %s is required", option.FreightFlag, option.FreightAliasFlag),
+			)
+		}
+		if o.Stage == "" && o.DownstreamFrom == "" {
+			errs = append(
+				errs,
+				fmt.Errorf("either %s or %s is required", option.StageFlag, option.DownstreamFromFlag),
+			)
+		}
 	}
 	return errors.Join(errs...)
 }
@@ -168,6 +185,19 @@ func (o *promotionOptions) run(ctx context.Context) error {
 	}
 
 	switch {
+	case o.Abort:
+		if _, err = kargoSvcCli.AbortPromotion(
+			ctx,
+			connect.NewRequest(
+				&v1alpha1.AbortPromotionRequest{
+					Project: o.Project,
+					Name:    o.Promotion,
+				},
+			),
+		); err != nil {
+			return fmt.Errorf("abort promotion: %w", err)
+		}
+		return nil
 	case o.Stage != "":
 		res, err := kargoSvcCli.PromoteToStage(
 			ctx,

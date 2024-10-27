@@ -199,6 +199,17 @@ func (w *workTree) Commit(message string, opts *CommitOptions) error {
 		opts = &CommitOptions{}
 	}
 	cmdTokens := []string{"commit", "-m", message}
+	if opts.Author != nil {
+		name := opts.Author.Name
+		if name == "" {
+			name = defaultUsername
+		}
+		email := opts.Author.Email
+		if email == "" {
+			email = defaultEmail
+		}
+		cmdTokens = append(cmdTokens, "--author", fmt.Sprintf("%s <%s>", name, email))
+	}
 	if opts.AllowEmpty {
 		cmdTokens = append(cmdTokens, "--allow-empty")
 	}

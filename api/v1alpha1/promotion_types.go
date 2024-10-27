@@ -28,12 +28,15 @@ const (
 	// reasons. Further information about the failure can be found in the
 	// Promotion's status.
 	PromotionPhaseErrored PromotionPhase = "Errored"
+	// PromotionPhaseAborted denotes a Promotion that has been aborted by a
+	// user.
+	PromotionPhaseAborted PromotionPhase = "Aborted"
 )
 
 // IsTerminal returns true if the PromotionPhase is a terminal one.
 func (p *PromotionPhase) IsTerminal() bool {
 	switch *p {
-	case PromotionPhaseSucceeded, PromotionPhaseFailed, PromotionPhaseErrored:
+	case PromotionPhaseSucceeded, PromotionPhaseFailed, PromotionPhaseErrored, PromotionPhaseAborted:
 		return true
 	default:
 		return false

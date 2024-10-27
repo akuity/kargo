@@ -111,6 +111,9 @@ const (
 
 	// WaitFlag is the flag name for the wait flag.
 	WaitFlag = "wait"
+
+	// AbortFlag is the flag name for the abort flag.
+	AbortFlag = "abort"
 )
 
 // Alias adds the AliasFlag to the provided flag set.
@@ -292,4 +295,9 @@ func Verbs(fs *pflag.FlagSet, verbs *[]string, usage string) {
 // Wait adds the WaitFlag to the provided flag set.
 func Wait(fs *pflag.FlagSet, wait *bool, defaultWait bool, usage string) {
 	fs.BoolVar(wait, WaitFlag, defaultWait, usage)
+}
+
+// Abort adds the AbortFlag to the provided flag set.
+func Abort(fs *pflag.FlagSet, abort *bool, defaultAbort bool, usage string) {
+	fs.BoolVar(abort, AbortFlag, defaultAbort, usage)
 }

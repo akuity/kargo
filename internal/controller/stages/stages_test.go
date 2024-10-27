@@ -20,7 +20,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/controller"
 	rollouts "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
 	"github.com/akuity/kargo/internal/directives"
 	"github.com/akuity/kargo/internal/indexer"
@@ -34,8 +33,6 @@ func TestNewReconciler(t *testing.T) {
 		RolloutsControllerInstanceID: "fake-instance-id",
 	}
 	kubeClient := fake.NewClientBuilder().Build()
-	requirement, err := controller.GetShardRequirement(testCfg.ShardName)
-	require.NoError(t, err)
 	directivesEngine := &directives.FakeEngine{}
 	recorder := &fakeevent.EventRecorder{Events: nil}
 	r := newReconciler(
@@ -43,7 +40,6 @@ func TestNewReconciler(t *testing.T) {
 		directivesEngine,
 		recorder,
 		testCfg,
-		requirement,
 	)
 	require.Equal(t, testCfg, r.cfg)
 	require.NotNil(t, r.kargoClient)
@@ -2275,7 +2271,8 @@ func TestReconciler_syncPromotions(t *testing.T) {
 			assertions: func(t *testing.T, status kargoapi.StageStatus, err error) {
 				require.NoError(t, err)
 
-				require.Equal(t, kargoapi.StagePhaseSteady, status.Phase)
+				// Phase should be Failed because the last Promotion failed.
+				require.Equal(t, kargoapi.StagePhaseFailed, status.Phase)
 				require.Nil(t, status.CurrentPromotion)
 
 				status.LastPromotion.FinishedAt = nil

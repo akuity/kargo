@@ -7,7 +7,6 @@ import (
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/fields"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/workqueue"
@@ -26,8 +25,7 @@ import (
 // Stages when Freight is marked as verified in a Stage, so that those Stages
 // can reconcile and possibly create a Promotion if auto-promotion is enabled.
 type verifiedFreightEventHandler[T any] struct {
-	kargoClient   client.Client
-	shardSelector labels.Selector
+	kargoClient client.Client
 }
 
 // Create implements TypedEventHandler.
@@ -87,7 +85,6 @@ func (v *verifiedFreightEventHandler[T]) Update(
 					indexer.StagesByUpstreamStagesIndexField,
 					newlyVerifiedStage,
 				),
-				LabelSelector: v.shardSelector,
 			},
 		); err != nil {
 			logger.Error(
@@ -211,8 +208,7 @@ func getNewlyApprovedStages(old, new *kargoapi.Freight) []string {
 // those Stages can reconcile and possibly create a Promotion if auto-promotion
 // is enabled.
 type createdFreightEventHandler[T any] struct {
-	kargoClient   client.Client
-	shardSelector labels.Selector
+	kargoClient client.Client
 }
 
 // Create implements TypedEventHandler.
@@ -233,7 +229,6 @@ func (c *createdFreightEventHandler[T]) Create(
 				indexer.StagesByWarehouseIndexField,
 				freight.Origin.Name,
 			),
-			LabelSelector: c.shardSelector,
 		},
 	); err != nil {
 		logger.Error(
@@ -291,8 +286,7 @@ func (c *createdFreightEventHandler[T]) Update(
 // with an Argo CD Application whenever that Application's health or sync status
 // changes, so that those Stages can reconcile.
 type updatedArgoCDAppHandler[T any] struct {
-	kargoClient   client.Client
-	shardSelector labels.Selector
+	kargoClient client.Client
 }
 
 // Create implements TypedEventHandler.
@@ -363,22 +357,20 @@ func (u *updatedArgoCDAppHandler[T]) Update(
 			return
 		}
 
-		if u.shardSelector.Empty() || u.shardSelector.Matches(labels.Set(stage.Labels)) {
-			wq.Add(
-				reconcile.Request{
-					NamespacedName: types.NamespacedName{
-						Namespace: stage.Namespace,
-						Name:      stage.Name,
-					},
+		wq.Add(
+			reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: stage.Namespace,
+					Name:      stage.Name,
 				},
-			)
-			logger.Debug(
-				"enqueued Stage for reconciliation",
-				"namespace", stage.Namespace,
-				"stage", stage.Name,
-				"app", newApp.Name,
-			)
-		}
+			},
+		)
+		logger.Debug(
+			"enqueued Stage for reconciliation",
+			"namespace", stage.Namespace,
+			"stage", stage.Name,
+			"app", newApp.Name,
+		)
 	}
 }
 
@@ -428,8 +420,7 @@ func appHealthOrSyncStatusChanged[T any](ctx context.Context, e event.TypedUpdat
 // associated with an Argo Rollouts AnalysisRun whenever that AnalysisRun's
 // phase changes.
 type phaseChangedAnalysisRunHandler[T any] struct {
-	kargoClient   client.Client
-	shardSelector labels.Selector
+	kargoClient client.Client
 }
 
 // Create implements TypedEventHandler.
@@ -478,7 +469,6 @@ func (p *phaseChangedAnalysisRunHandler[T]) Update(
 					indexer.StagesByAnalysisRunIndexField,
 					fmt.Sprintf("%s:%s", analysisRun.Namespace, analysisRun.Name),
 				),
-				LabelSelector: p.shardSelector,
 			},
 		); err != nil {
 			logger.Error(

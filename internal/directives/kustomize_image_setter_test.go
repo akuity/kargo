@@ -242,7 +242,7 @@ func Test_kustomizeImageSetter_buildTargetImages(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, _ map[string]kustypes.Image, err error) {
-				require.ErrorContains(t, err, "no image found")
+				require.ErrorContains(t, err, "not found in referenced Freight")
 			},
 		},
 		{

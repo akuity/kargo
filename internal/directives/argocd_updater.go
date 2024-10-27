@@ -87,7 +87,7 @@ type argocdUpdater struct {
 		update *ArgoCDAppSourceUpdate,
 		desiredRevision string,
 		src argocd.ApplicationSource,
-	) (argocd.ApplicationSource, error)
+	) (argocd.ApplicationSource, bool, error)
 
 	argoCDAppPatchFn func(
 		context.Context,
@@ -323,17 +323,19 @@ func (a *argocdUpdater) buildDesiredSources(
 			app.Name, app.Namespace, len(desiredSources), len(desiredRevisions),
 		)
 	}
-	for i := range desiredSources {
-		for j := range update.Sources {
-			srcUpdate := &update.Sources[j]
+updateLoop:
+	for i := range update.Sources {
+		srcUpdate := &update.Sources[i]
+		var updateUsed bool
+		for j := range desiredSources {
 			var err error
-			if desiredSources[i], err = a.applyArgoCDSourceUpdateFn(
+			if desiredSources[j], updateUsed, err = a.applyArgoCDSourceUpdateFn(
 				ctx,
 				stepCtx,
 				stepCfg,
 				srcUpdate,
-				desiredRevisions[i],
-				desiredSources[i],
+				desiredRevisions[j],
+				desiredSources[j],
 			); err != nil {
 				return nil, fmt.Errorf(
 					"error applying source update to Argo CD Application %q in namespace %q: %w",
@@ -342,6 +344,23 @@ func (a *argocdUpdater) buildDesiredSources(
 					err,
 				)
 			}
+			if updateUsed {
+				continue updateLoop
+			}
+		}
+		if !updateUsed {
+			if srcUpdate.Chart == "" {
+				return nil, fmt.Errorf(
+					"no source of Argo CD Application %q in namespace %q matched update "+
+						"for source with repoURL %s",
+					app.Name, app.Namespace, srcUpdate.RepoURL,
+				)
+			}
+			return nil, fmt.Errorf(
+				"no source of Argo CD Application %q in namespace %q matched update "+
+					"for source with repoURL %s and chart %q",
+				app.Name, app.Namespace, srcUpdate.RepoURL, srcUpdate.Chart,
+			)
 		}
 	}
 	return desiredSources, nil
@@ -522,13 +541,6 @@ func (a *argocdUpdater) syncApplication(
 
 	// Patch the Argo CD Application.
 	if err := a.argoCDAppPatchFn(ctx, stepCtx, app, func(src, dst unstructured.Unstructured) error {
-		// If the resource has been modified since we fetched it, an update
-		// can result in unexpected merge results. Detect this, and return an
-		// error if it occurs.
-		if src.GetGeneration() != dst.GetGeneration() {
-			return fmt.Errorf("unable to update sources to desired revisions: resource has been modified")
-		}
-
 		dst.SetAnnotations(src.GetAnnotations())
 		dst.Object["spec"] = a.recursiveMerge(src.Object["spec"], dst.Object["spec"])
 		dst.Object["operation"] = src.Object["operation"]
@@ -717,27 +729,30 @@ func (a *argocdUpdater) applyArgoCDSourceUpdate(
 	update *ArgoCDAppSourceUpdate,
 	desiredRevision string,
 	source argocd.ApplicationSource,
-) (argocd.ApplicationSource, error) {
+) (argocd.ApplicationSource, bool, error) {
 	if source.Chart != "" || update.Chart != "" {
 		if source.RepoURL != update.RepoURL || source.Chart != update.Chart {
-			// There's no change to make in this case.
-			return source, nil
+			// The update is not applicable to this source.
+			return source, false, nil
 		}
 		// If we get to here, we have confirmed that this update is applicable to
 		// this source.
 		if update.UpdateTargetRevision && desiredRevision != "" {
 			source.TargetRevision = desiredRevision
 		}
-	} else if update.UpdateTargetRevision && desiredRevision != "" {
+	} else {
 		// We're dealing with a git repo, so we should normalize the repo URLs
 		// before comparing them.
 		sourceRepoURL := git.NormalizeURL(source.RepoURL)
 		if sourceRepoURL != git.NormalizeURL(update.RepoURL) {
-			return source, nil
+			// The update is not applicable to this source.
+			return source, false, nil
 		}
 		// If we get to here, we have confirmed that this update is applicable to
 		// this source.
-		source.TargetRevision = desiredRevision
+		if update.UpdateTargetRevision && desiredRevision != "" {
+			source.TargetRevision = desiredRevision
+		}
 	}
 
 	if update.Kustomize != nil && len(update.Kustomize.Images) > 0 {
@@ -751,7 +766,7 @@ func (a *argocdUpdater) applyArgoCDSourceUpdate(
 			stepCfg,
 			update.Kustomize,
 		); err != nil {
-			return source, err
+			return source, false, err
 		}
 	}
 
@@ -769,7 +784,7 @@ func (a *argocdUpdater) applyArgoCDSourceUpdate(
 			update.Helm,
 		)
 		if err != nil {
-			return source,
+			return source, false,
 				fmt.Errorf("error building Helm parameter changes: %w", err)
 		}
 	imageUpdateLoop:
@@ -788,7 +803,7 @@ func (a *argocdUpdater) applyArgoCDSourceUpdate(
 		}
 	}
 
-	return source, nil
+	return source, true, nil
 }
 
 func (a *argocdUpdater) buildKustomizeImagesForAppSource(
@@ -813,10 +828,6 @@ func (a *argocdUpdater) buildKustomizeImagesForAppSource(
 		if err != nil {
 			return nil,
 				fmt.Errorf("error finding image from repo %q: %w", imageUpdate.RepoURL, err)
-		}
-		if image == nil {
-			// There's no change to make in this case.
-			continue
 		}
 		kustomizeImageStr := imageUpdate.RepoURL
 		if imageUpdate.NewName != "" {
@@ -863,9 +874,6 @@ func (a *argocdUpdater) buildHelmParamChangesForAppSource(
 		if err != nil {
 			return nil,
 				fmt.Errorf("error finding image from repo %q: %w", imageUpdate.RepoURL, err)
-		}
-		if image == nil {
-			continue
 		}
 		switch imageUpdate.Value {
 		case ImageAndTag:

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"slices"
+	"strconv"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
@@ -26,6 +27,7 @@ const (
 	FreightApprovedForStagesIndexField    = "approvedFor"
 	FreightByWarehouseIndexField          = "warehouse"
 	PromotionsByStageAndFreightIndexField = "stageAndFreight"
+	PromotionsByTerminalIndexField        = "terminal"
 
 	PromotionsByStageIndexField = "stage"
 
@@ -494,4 +496,25 @@ func indexServiceAccountsByOIDCClaims(obj client.Object) []string {
 
 func isPromotionPhaseNonTerminal(promo *kargoapi.Promotion) bool {
 	return !promo.Status.Phase.IsTerminal()
+}
+
+// IndexPromotionsByTerminal sets up indexing of Promotions by whether or not
+// their phase is terminal.
+//
+// It configures the cluster's field indexer to allow querying Promotions using
+// the PromotionsByTerminalField selector.
+func IndexPromotionsByTerminal(ctx context.Context, clstr cluster.Cluster) error {
+	return clstr.GetFieldIndexer().IndexField(
+		ctx,
+		&kargoapi.Promotion{},
+		PromotionsByTerminalIndexField,
+		indexPromotionsByTerminal,
+	)
+}
+
+// indexPromotionsByTerminal is a client.IndexerFunc that indexes Promotions by
+// whether or not their phase is terminal.
+func indexPromotionsByTerminal(obj client.Object) []string {
+	promo := obj.(*kargoapi.Promotion) // nolint: forcetypeassert
+	return []string{strconv.FormatBool(isPromotionPhaseNonTerminal(promo))}
 }

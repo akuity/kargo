@@ -1,6 +1,7 @@
 include $(CURDIR)/hack/tools.mk
 
-SHELL ?= /bin/bash
+SHELL	      ?= /bin/bash
+EXTENDED_PATH ?= $(CURDIR)/hack/bin:$(PATH)
 
 ARGO_CD_CHART_VERSION		:= 6.9.2
 ARGO_ROLLOUTS_CHART_VERSION := 2.35.2
@@ -15,14 +16,14 @@ VERSION_PACKAGE := github.com/akuity/kargo/internal/version
 CONTAINER_RUNTIME ?= docker
 
 IMAGE_REPO 			?= kargo
-LOCAL_REG_PORT			?= 5000
+LOCAL_REG_PORT			?= 5001
 BASE_IMAGE 			?= localhost:$(LOCAL_REG_PORT)/$(IMAGE_REPO)-base
 IMAGE_TAG 			?= dev
 IMAGE_PUSH 			?= false
 IMAGE_PLATFORMS 	?=
 DOCKER_BUILD_OPTS 	=
 
-DOCS_PORT 				?= 3000
+DOCS_PORT ?= 3000
 
 # Intelligently choose to build a multi-arch image if the intent is to push to a
 # container registry (IMAGE_PUSH=true). If not pushing, build an single-arch
@@ -101,8 +102,8 @@ format-ui:
 	pnpm --dir=ui run lint:fix
 
 .PHONY: test-unit
-test-unit:
-	go test \
+test-unit: install-helm
+	PATH=$(EXTENDED_PATH) go test \
 		-v \
 		-timeout=300s \
 		-race \
@@ -293,7 +294,7 @@ hack-codegen: hack-build-dev-tools
 .PHONY: hack-build
 hack-build: build-base-image
 	{ \
-		$(CONTAINER_RUNTIME) run -d -p 5000:$(LOCAL_REG_PORT) --name tmp-registry registry:2; \
+		$(CONTAINER_RUNTIME) run -d -p $(LOCAL_REG_PORT):5000 --name tmp-registry registry:2; \
 		trap '$(CONTAINER_RUNTIME) rm -f tmp-registry' EXIT; \
 		docker push $(BASE_IMAGE):latest-amd64; \
 		docker push $(BASE_IMAGE):latest-arm64; \

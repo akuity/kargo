@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
-	"sync"
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
@@ -14,7 +13,6 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -26,7 +24,6 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller"
 	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
-	"github.com/akuity/kargo/internal/controller/runtime"
 	"github.com/akuity/kargo/internal/directives"
 	"github.com/akuity/kargo/internal/indexer"
 	"github.com/akuity/kargo/internal/kargo"
@@ -37,7 +34,8 @@ import (
 
 // ReconcilerConfig represents configuration for the promotion reconciler.
 type ReconcilerConfig struct {
-	ShardName string `envconfig:"SHARD_NAME"`
+	ShardName        string `envconfig:"SHARD_NAME"`
+	APIServerBaseURL string `envconfig:"API_SERVER_BASE_URL"`
 }
 
 func (c ReconcilerConfig) Name() string {
@@ -63,9 +61,6 @@ type reconciler struct {
 
 	recorder record.EventRecorder
 
-	pqs            *promoQueues
-	initializeOnce sync.Once
-
 	// The following behaviors are overridable for testing purposes:
 
 	getStageFn func(
@@ -80,6 +75,13 @@ type reconciler struct {
 		*kargoapi.Stage,
 		*kargoapi.Freight,
 	) (*kargoapi.PromotionStatus, error)
+
+	terminatePromotionFn func(
+		context.Context,
+		*kargoapi.AbortPromotionRequest,
+		*kargoapi.Promotion,
+		*kargoapi.Freight,
+	) error
 }
 
 // SetupReconcilerWithManager initializes a reconciler for Promotion resources
@@ -96,16 +98,6 @@ func SetupReconcilerWithManager(
 		return fmt.Errorf("index running Promotions by Argo CD Applications: %w", err)
 	}
 
-	shardPredicate, err := controller.GetShardPredicate(cfg.ShardName)
-	if err != nil {
-		return fmt.Errorf("error creating shard selector predicate: %w", err)
-	}
-	shardRequirement, err := controller.GetShardRequirement(cfg.ShardName)
-	if err != nil {
-		return fmt.Errorf("error creating shard requirement: %w", err)
-	}
-	shardSelector := labels.NewSelector().Add(*shardRequirement)
-
 	reconciler := newReconciler(
 		kargoMgr.GetClient(),
 		libEvent.NewRecorder(ctx, kargoMgr.GetScheme(), kargoMgr.GetClient(), cfg.Name()),
@@ -118,8 +110,8 @@ func SetupReconcilerWithManager(
 		WithEventFilter(predicate.Or(
 			predicate.GenerationChangedPredicate{},
 			kargo.RefreshRequested{},
+			kargo.PromotionAbortRequested{},
 		)).
-		WithEventFilter(shardPredicate).
 		WithOptions(controller.CommonOptions()).
 		Build(reconciler)
 	if err != nil {
@@ -128,16 +120,26 @@ func SetupReconcilerWithManager(
 
 	logger := logging.LoggerFromContext(ctx)
 
-	// If Argo CD integration is disabled, this manager will be nil and we won't
+	// Watch Stages that acknowledge their next Promotion and enqueue it.
+	if err = c.Watch(
+		source.Kind(
+			kargoMgr.GetCache(),
+			&kargoapi.Stage{},
+			&PromotionAcknowledgedByStageHandler[*kargoapi.Stage]{},
+		),
+	); err != nil {
+		return fmt.Errorf("unable to watch Stages: %w", err)
+	}
+
+	// If Argo CD integration is disabled, this manager will be nil, and we won't
 	// care about this watch anyway.
 	if argocdMgr != nil {
-		if err := c.Watch(
+		if err = c.Watch(
 			source.Kind(
 				argocdMgr.GetCache(),
 				&argocd.Application{},
 				&UpdatedArgoCDAppHandler[*argocd.Application]{
-					kargoClient:   kargoMgr.GetClient(),
-					shardSelector: shardSelector,
+					kargoClient: kargoMgr.GetClient(),
 				},
 				ArgoCDAppOperationCompleted[*argocd.Application]{
 					logger: logger,
@@ -146,25 +148,6 @@ func SetupReconcilerWithManager(
 		); err != nil {
 			return fmt.Errorf("unable to watch Applications: %w", err)
 		}
-	}
-
-	// Watch Promotions that complete and enqueue the next highest promotion key
-	priorityQueueHandler := &EnqueueHighestPriorityPromotionHandler[*kargoapi.Promotion]{
-		ctx:         ctx,
-		logger:      logger,
-		kargoClient: reconciler.kargoClient,
-		pqs:         reconciler.pqs,
-	}
-	promoWentTerminal := kargo.NewPromoWentTerminalPredicate(logger)
-	if err := c.Watch(
-		source.Kind(
-			kargoMgr.GetCache(),
-			&kargoapi.Promotion{},
-			priorityQueueHandler,
-			promoWentTerminal,
-		),
-	); err != nil {
-		return fmt.Errorf("unable to watch Promotions: %w", err)
 	}
 
 	return nil
@@ -176,19 +159,15 @@ func newReconciler(
 	directivesEngine directives.Engine,
 	cfg ReconcilerConfig,
 ) *reconciler {
-	pqs := promoQueues{
-		activePromoByStage:        map[types.NamespacedName]string{},
-		pendingPromoQueuesByStage: map[types.NamespacedName]runtime.PriorityQueue{},
-	}
 	r := &reconciler{
 		kargoClient:      kargoClient,
 		directivesEngine: directivesEngine,
 		recorder:         recorder,
 		cfg:              cfg,
-		pqs:              &pqs,
 	}
 	r.getStageFn = kargoapi.GetStage
 	r.promoteFn = r.promote
+	r.terminatePromotionFn = r.terminatePromotion
 	return r
 }
 
@@ -204,25 +183,6 @@ func (r *reconciler) Reconcile(
 	)
 	ctx = logging.ContextWithLogger(ctx, logger)
 	logger.Debug("reconciling Promotion")
-
-	// Note that initialization occurs here because we basically know that the
-	// controller runtime client's cache is ready at this point. We cannot attempt
-	// to list Promotions prior to that point.
-	var err error
-	r.initializeOnce.Do(func() {
-		promos := kargoapi.PromotionList{}
-		if err = r.kargoClient.List(ctx, &promos); err != nil {
-			err = fmt.Errorf("error listing promotions: %w", err)
-		} else {
-			r.pqs.initializeQueues(ctx, promos)
-			logger.Debug(
-				"initialized Stage-specific Promotion queues from list of existing Promotions",
-			)
-		}
-	})
-	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("error initializing Promotion queues: %w", err)
-	}
 
 	// Find the Promotion
 	promo, err := kargoapi.GetPromotion(ctx, r.kargoClient, req.NamespacedName)
@@ -255,29 +215,21 @@ func (r *reconciler) Reconcile(
 		"freight", promo.Spec.Freight,
 	)
 
-	if promo.Status.Phase == kargoapi.PromotionPhaseRunning {
-		// anything we've already marked Running, we allow it to continue to reconcile
-		logger.Debug("continuing Promotion")
-	} else {
-		// promo is Pending. Try to begin it.
-		if !r.pqs.tryBegin(ctx, promo) {
-			// It wasn't our turn. Mark this promo as Pending (if it wasn't already)
-			if promo.Status.Phase != kargoapi.PromotionPhasePending {
-				err = kubeclient.PatchStatus(ctx, r.kargoClient, promo, func(status *kargoapi.PromotionStatus) {
-					status.Phase = kargoapi.PromotionPhasePending
-				})
-				return ctrl.Result{}, err
-			}
-			return ctrl.Result{}, nil
+	// Terminate the Promotion if requested by the user.
+	if req, ok := kargoapi.AbortPromotionAnnotationValue(
+		promo.GetAnnotations(),
+	); ok && req.Action == kargoapi.AbortActionTerminate {
+		if err = r.terminatePromotionFn(ctx, req, promo, freight); err != nil {
+			return ctrl.Result{}, err
 		}
-		logger.Info("began promotion")
+		return ctrl.Result{}, nil
 	}
 
-	// Update promo status as Running to give visibility in UI. Also, a promo which
-	// has already entered Running status will be allowed to continue to reconcile.
-	if promo.Status.Phase != kargoapi.PromotionPhaseRunning {
+	// If the Promotion does not have a Phase, it must be new and (initially)
+	// pending. Mark it as such.
+	if promo.Status.Phase == "" {
 		if err = kubeclient.PatchStatus(ctx, r.kargoClient, promo, func(status *kargoapi.PromotionStatus) {
-			status.Phase = kargoapi.PromotionPhaseRunning
+			status.Phase = kargoapi.PromotionPhasePending
 		}); err != nil {
 			return ctrl.Result{}, err
 		}
@@ -304,25 +256,28 @@ func (r *reconciler) Reconcile(
 			promo.Spec.Stage, promo.Namespace,
 		)
 	}
-	logger.Debug("found associated Stage")
 
 	// Confirm that the Stage is awaiting this Promotion.
-	//
-	// This is a temporary measure to ensure that the Promotion is only
-	// allowed to proceed if the Stage is expecting it. This is necessary
-	// to ensure we can derive Freight from the previous Promotion in the
-	// Stage's status to construct the Freight collection for the current
-	// Promotion.
-	//
-	// TODO(hidde): This adds tight coupling between the Promotion and the
-	// Stage (again, but without patching the Stage this time). We should
-	// explore a more loosely-coupled approach, perhaps by making the
-	// Freight self-aware of the Stages it has been promoted to, or even
-	// more radically, by making the Promotion self-aware of the Freight
-	// collection it is promoting.
+	// This effectively prevents the Promotion from running until the Stage
+	// decides it is the next Promotion to run.
 	if stage.Status.CurrentPromotion == nil || stage.Status.CurrentPromotion.Name != promo.Name {
+		// The watch on the Stage will requeue the Promotion if the Stage
+		// acknowledges it.
 		logger.Debug("Stage is not awaiting Promotion", "stage", stage.Name, "promotion", promo.Name)
-		return ctrl.Result{Requeue: true}, nil
+		return ctrl.Result{}, nil
+	}
+
+	// Update promo status as Running to give visibility in UI. Also, a promo which
+	// has already entered Running status will be allowed to continue to reconcile.
+	if promo.Status.Phase != kargoapi.PromotionPhaseRunning {
+		if err = kubeclient.PatchStatus(ctx, r.kargoClient, promo, func(status *kargoapi.PromotionStatus) {
+			status.Phase = kargoapi.PromotionPhaseRunning
+		}); err != nil {
+			return ctrl.Result{}, err
+		}
+		logger.Info("began promotion")
+	} else {
+		logger.Debug("continuing Promotion")
 	}
 
 	promoCtx := logging.ContextWithLogger(ctx, logger)
@@ -506,6 +461,7 @@ func (r *reconciler) promote(
 	}
 
 	promoCtx := directives.PromotionContext{
+		UIBaseURL:       r.cfg.APIServerBaseURL,
 		WorkDir:         filepath.Join(os.TempDir(), "promotion-"+string(workingPromo.UID)),
 		Project:         stageNamespace,
 		Stage:           stageName,
@@ -608,4 +564,60 @@ func (r *reconciler) buildTargetFreightCollection(
 	}
 	freightCol.UpdateOrPush(targetFreight)
 	return freightCol
+}
+
+// terminatePromotion terminates the given Promotion with a message indicating
+// that it was terminated on user request. It does nothing if the Promotion is
+// already in a terminal phase.
+func (r *reconciler) terminatePromotion(
+	ctx context.Context,
+	req *kargoapi.AbortPromotionRequest,
+	promo *kargoapi.Promotion,
+	freight *kargoapi.Freight,
+) error {
+	logger := logging.LoggerFromContext(ctx)
+
+	if promo.Status.Phase.IsTerminal() {
+		logger.Debug("can not terminate Promotion in terminal phase", "phase", promo.Status.Phase)
+		return nil
+	}
+
+	logger.Info("terminating Promotion")
+
+	// Normally, the actor is inherited from the creator of the Promotion for
+	// events. For an abort request, however, we do not want to inherit this
+	// as the abort request is not necessarily made by the creator of the
+	// Promotion.
+	actor := kargoapi.FormatEventControllerActor(r.cfg.Name())
+	if req.Actor != "" {
+		actor = req.Actor
+	}
+
+	newStatus := promo.Status.DeepCopy()
+	newStatus.Phase = kargoapi.PromotionPhaseAborted
+	if actor != "" {
+		newStatus.Message = fmt.Sprintf("Promotion terminated by %s", actor)
+	} else {
+		newStatus.Message = "Promotion terminated per user request"
+	}
+	newStatus.FinishedAt = &metav1.Time{Time: time.Now()}
+
+	if err := kubeclient.PatchStatus(ctx, r.kargoClient, promo, func(status *kargoapi.PromotionStatus) {
+		*status = *newStatus
+	}); err != nil {
+		return err
+	}
+
+	eventMeta := kargoapi.NewPromotionEventAnnotations(ctx, "", promo, freight)
+	eventMeta[kargoapi.AnnotationKeyEventActor] = actor
+
+	r.recorder.AnnotatedEventf(
+		promo,
+		eventMeta,
+		corev1.EventTypeNormal,
+		kargoapi.EventReasonPromotionAborted,
+		newStatus.Message,
+	)
+
+	return nil
 }

@@ -9,6 +9,8 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
@@ -16,13 +18,20 @@ import (
 	"github.com/akuity/kargo/internal/api/kubernetes"
 	"github.com/akuity/kargo/internal/controller/management/namespaces"
 	"github.com/akuity/kargo/internal/controller/management/projects"
+	"github.com/akuity/kargo/internal/controller/management/serviceaccounts"
 	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/internal/os"
+	"github.com/akuity/kargo/internal/types"
 	versionpkg "github.com/akuity/kargo/internal/version"
 )
 
 type managementControllerOptions struct {
 	KubeConfig string
+
+	KargoNamespace               string
+	ManageControllerRoleBindings bool
+
+	PprofBindAddress string
 
 	Logger *logging.Logger
 }
@@ -51,6 +60,9 @@ func newManagementControllerCommand() *cobra.Command {
 
 func (o *managementControllerOptions) complete() {
 	o.KubeConfig = os.GetEnv("KUBECONFIG", "")
+	o.KargoNamespace = os.GetEnv("KARGO_NAMESPACE", "kargo")
+	o.ManageControllerRoleBindings = types.MustParseBool(os.GetEnv("MANAGE_CONTROLLER_ROLE_BINDINGS", "true"))
+	o.PprofBindAddress = os.GetEnv("PPROF_BIND_ADDRESS", "")
 }
 
 func (o *managementControllerOptions) run(ctx context.Context) error {
@@ -76,6 +88,15 @@ func (o *managementControllerOptions) run(ctx context.Context) error {
 		projects.ReconcilerConfigFromEnv(),
 	); err != nil {
 		return fmt.Errorf("error setting up Projects reconciler: %w", err)
+	}
+
+	if o.ManageControllerRoleBindings {
+		if err := serviceaccounts.SetupReconcilerWithManager(
+			kargoMgr,
+			serviceaccounts.ReconcilerConfigFromEnv(),
+		); err != nil {
+			return fmt.Errorf("error setting up ServiceAccount reconciler: %w", err)
+		}
 	}
 
 	if err := kargoMgr.Start(ctx); err != nil {
@@ -117,6 +138,16 @@ func (o *managementControllerOptions) setupManager(ctx context.Context) (manager
 			Scheme: scheme,
 			Metrics: server.Options{
 				BindAddress: "0",
+			},
+			PprofBindAddress: o.PprofBindAddress,
+			Cache: cache.Options{
+				ByObject: map[client.Object]cache.ByObject{
+					&corev1.ServiceAccount{}: {
+						Namespaces: map[string]cache.Config{
+							o.KargoNamespace: {},
+						},
+					},
+				},
 			},
 		},
 	)

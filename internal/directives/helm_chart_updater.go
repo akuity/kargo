@@ -32,7 +32,7 @@ func init() {
 	builtins.RegisterPromotionStepRunner(
 		newHelmChartUpdater(),
 		&StepRunnerPermissions{
-			AllowArgoCDClient:  true,
+			AllowKargoClient:   true,
 			AllowCredentialsDB: true,
 		},
 	)
@@ -164,15 +164,20 @@ func (h *helmChartUpdater) processChartUpdates(
 		if err != nil {
 			return nil, fmt.Errorf("failed to find chart: %w", err)
 		}
-		if chart == nil {
-			continue
-		}
 
+		var updateUsed bool
 		for i, dep := range chartDependencies {
 			if dep.Repository == update.Repository && dep.Name == update.Name {
 				changes[fmt.Sprintf("dependencies.%d.version", i)] = chart.Version
+				updateUsed = true
 				break
 			}
+		}
+		if !updateUsed {
+			return nil, fmt.Errorf(
+				"no dependency in Chart.yaml matched update with repository %s and name %q",
+				update.Repository, update.Name,
+			)
 		}
 	}
 	return changes, nil

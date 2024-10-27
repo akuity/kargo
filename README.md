@@ -1,4 +1,5 @@
-![Kargo by Akuity, creators of Argo](kargo-logo.png)
+![Kargo by Akuity, creators of Argo](./ui/public/kargo-logo-white.png#gh-dark-mode-only)
+![Kargo by Akuity, creators of Argo](kargo-logo.png#gh-light-mode-only)
 
 ![CI](https://github.com/akuity/kargo/actions/workflows/ci.yaml/badge.svg)
 [![codecov](https://codecov.io/gh/akuity/kargo/branch/main/graph/badge.svg?token=FGUq4netA6)](https://codecov.io/gh/akuity/kargo)
@@ -16,10 +17,6 @@ automate the progressive rollout of changes across the many stages of an
 application's lifecycle.
 
 ![Screenshot](docs/static/img/screenshot.png)
-
-> ⚠️&nbsp;&nbsp;Kargo is undergoing active development and everyone is invited
-> to join us in the journey to a GA release (`v1.0.0`)! Please expect breaking changes
-> between pre-GA releases (`v0.x.x`).
 
 ## Getting Started
 
