@@ -252,10 +252,11 @@ func (r *ControlFlowStageReconciler) reconcile(
 		newStatus.Message = err.Error()
 		return newStatus, err
 	}
-	logger.Debug("found new Freight", "count", len(freight))
 
 	// If there is new Freight to verify, do so.
 	if len(freight) > 0 {
+		logger.Debug("found new Freight", "count", len(freight))
+
 		logger.Debug("verifying Freight")
 		if err = r.verifyFreight(ctx, stage, freight, startTime, time.Now()); err != nil {
 			newStatus.Message = err.Error()
