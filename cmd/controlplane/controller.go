@@ -3,12 +3,13 @@ package main
 import (
 	"context"
 	"fmt"
+	"runtime"
 	"sync"
 
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/runtime"
+	rtime "k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -84,6 +85,8 @@ func (o *controllerOptions) run(ctx context.Context) error {
 	startupLogger := o.Logger.WithValues(
 		"version", version.Version,
 		"commit", version.GitCommit,
+		"GOMAXPROCS", runtime.GOMAXPROCS(0),
+		"GOMEMLIMIT", os.GetEnv("GOMEMLIMIT", ""),
 	)
 	if o.ShardName != "" {
 		startupLogger = startupLogger.WithValues("shard", o.ShardName)
@@ -140,9 +143,9 @@ func (o *controllerOptions) setupKargoManager(
 		return nil, stagesReconcilerCfg,
 			fmt.Errorf("error loading REST config for Kargo controller manager: %w", err)
 	}
-	restCfg.ContentType = runtime.ContentTypeJSON
+	restCfg.ContentType = rtime.ContentTypeJSON
 
-	scheme := runtime.NewScheme()
+	scheme := rtime.NewScheme()
 	if err = corev1.AddToScheme(scheme); err != nil {
 		return nil, stagesReconcilerCfg, fmt.Errorf(
 			"error adding Kubernetes core API to Kargo controller manager scheme: %w",
@@ -232,7 +235,7 @@ func (o *controllerOptions) setupArgoCDManager(ctx context.Context) (manager.Man
 	if err != nil {
 		return nil, fmt.Errorf("error loading REST config for Argo CD controller manager: %w", err)
 	}
-	restCfg.ContentType = runtime.ContentTypeJSON
+	restCfg.ContentType = rtime.ContentTypeJSON
 
 	argocdNamespace := libargocd.Namespace()
 
@@ -249,7 +252,7 @@ func (o *controllerOptions) setupArgoCDManager(ctx context.Context) (manager.Man
 
 	o.Logger.Info("Argo CD integration is enabled")
 
-	scheme := runtime.NewScheme()
+	scheme := rtime.NewScheme()
 	if err = corev1.AddToScheme(scheme); err != nil {
 		return nil, fmt.Errorf(
 			"error adding Kubernetes core API to Argo CD controller manager scheme: %w",

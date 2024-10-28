@@ -3,12 +3,13 @@ package main
 import (
 	"context"
 	"fmt"
+	"runtime"
 
 	"github.com/spf13/cobra"
 	authzv1 "k8s.io/api/authorization/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
-	"k8s.io/apimachinery/pkg/runtime"
+	rtime "k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -68,6 +69,8 @@ func (o *webhooksServerOptions) run(ctx context.Context) error {
 		"Starting Kargo Webhooks Server",
 		"version", version.Version,
 		"commit", version.GitCommit,
+		"GOMAXPROCS", runtime.GOMAXPROCS(0),
+		"GOMEMLIMIT", os.GetEnv("GOMEMLIMIT", ""),
 	)
 
 	webhookCfg := libWebhook.ConfigFromEnv()
@@ -77,7 +80,7 @@ func (o *webhooksServerOptions) run(ctx context.Context) error {
 		return fmt.Errorf("error getting REST config: %w", err)
 	}
 
-	scheme := runtime.NewScheme()
+	scheme := rtime.NewScheme()
 	if err = corev1.AddToScheme(scheme); err != nil {
 		return fmt.Errorf("add corev1 to scheme: %w", err)
 	}

@@ -3,11 +3,12 @@ package main
 import (
 	"context"
 	"fmt"
+	"runtime"
 
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
-	"k8s.io/apimachinery/pkg/runtime"
+	rtime "k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -72,6 +73,8 @@ func (o *managementControllerOptions) run(ctx context.Context) error {
 		"Starting Kargo Management Controller",
 		"version", version.Version,
 		"commit", version.GitCommit,
+		"GOMAXPROCS", runtime.GOMAXPROCS(0),
+		"GOMEMLIMIT", os.GetEnv("GOMEMLIMIT", ""),
 	)
 
 	kargoMgr, err := o.setupManager(ctx)
@@ -110,9 +113,9 @@ func (o *managementControllerOptions) setupManager(ctx context.Context) (manager
 	if err != nil {
 		return nil, fmt.Errorf("error loading REST config for Kargo controller manager: %w", err)
 	}
-	restCfg.ContentType = runtime.ContentTypeJSON
+	restCfg.ContentType = rtime.ContentTypeJSON
 
-	scheme := runtime.NewScheme()
+	scheme := rtime.NewScheme()
 	if err = corev1.AddToScheme(scheme); err != nil {
 		return nil, fmt.Errorf(
 			"error adding Kubernetes core API to Kargo controller manager scheme: %w",
