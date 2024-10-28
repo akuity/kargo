@@ -418,6 +418,68 @@ export class GetPublicConfigResponse extends Message<GetPublicConfigResponse> {
 }
 
 /**
+ * @generated from message akuity.io.kargo.service.v1alpha1.WhoAmIRequest
+ */
+export class WhoAmIRequest extends Message<WhoAmIRequest> {
+  constructor(data?: PartialMessage<WhoAmIRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.WhoAmIRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): WhoAmIRequest {
+    return new WhoAmIRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): WhoAmIRequest {
+    return new WhoAmIRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): WhoAmIRequest {
+    return new WhoAmIRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: WhoAmIRequest | PlainMessage<WhoAmIRequest> | undefined, b: WhoAmIRequest | PlainMessage<WhoAmIRequest> | undefined): boolean {
+    return proto3.util.equals(WhoAmIRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message akuity.io.kargo.service.v1alpha1.WhoAmIResponse
+ */
+export class WhoAmIResponse extends Message<WhoAmIResponse> {
+  constructor(data?: PartialMessage<WhoAmIResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.WhoAmIResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): WhoAmIResponse {
+    return new WhoAmIResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): WhoAmIResponse {
+    return new WhoAmIResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): WhoAmIResponse {
+    return new WhoAmIResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: WhoAmIResponse | PlainMessage<WhoAmIResponse> | undefined, b: WhoAmIResponse | PlainMessage<WhoAmIResponse> | undefined): boolean {
+    return proto3.util.equals(WhoAmIResponse, a, b);
+  }
+}
+
+/**
  * @generated from message akuity.io.kargo.service.v1alpha1.OIDCConfig
  */
 export class OIDCConfig extends Message<OIDCConfig> {

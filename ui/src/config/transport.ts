@@ -55,13 +55,6 @@ export const newErrorHandler = (handler: (err: ConnectError) => void): Intercept
 
       handler(err);
 
-      // TODO(Marvin9)
-      // this is temporary solution and must be replaced when we have get user API in https://github.com/akuity/kargo/issues/2764
-      // ProtectedRoute components must have user info before paint, otherwise redirect to login page
-      if (err instanceof ConnectError && err?.message.includes('unauthenticated')) {
-        logout();
-      }
-
       throw err;
     });
 };
