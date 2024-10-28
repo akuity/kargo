@@ -223,7 +223,7 @@ func SetupReconcilerWithManager(
 		ctx,
 		&kargoapi.Promotion{},
 		indexer.PromotionsByStageField,
-		indexer.PromotionsByStage(),
+		indexer.PromotionsByStage,
 	); err != nil {
 		return fmt.Errorf("index non-terminal Promotions by Stage: %w", err)
 	}

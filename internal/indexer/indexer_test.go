@@ -263,39 +263,11 @@ func TestPromotionsByStage(t *testing.T) {
 			},
 			expected: []string{"fake-stage"},
 		},
-		"isPromotionPhaseNonTerminal excludes Promotions in terminal phases": {
-			input: &kargoapi.Promotion{
-				Spec: kargoapi.PromotionSpec{
-					Stage: "fake-stage",
-				},
-				Status: kargoapi.PromotionStatus{
-					Phase: kargoapi.PromotionPhaseSucceeded,
-				},
-			},
-			predicates: []func(*kargoapi.Promotion) bool{
-				isPromotionPhaseNonTerminal,
-			},
-			expected: nil,
-		},
-		"isPromotionPhaseNonTerminal selects Promotions in non-terminal phases": {
-			input: &kargoapi.Promotion{
-				Spec: kargoapi.PromotionSpec{
-					Stage: "fake-stage",
-				},
-				Status: kargoapi.PromotionStatus{
-					Phase: kargoapi.PromotionPhasePending,
-				},
-			},
-			predicates: []func(*kargoapi.Promotion) bool{
-				isPromotionPhaseNonTerminal,
-			},
-			expected: []string{"fake-stage"},
-		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			actual := PromotionsByStage(tc.predicates...)(tc.input)
+			actual := PromotionsByStage(tc.input)
 			require.ElementsMatch(t, tc.expected, actual)
 		})
 	}

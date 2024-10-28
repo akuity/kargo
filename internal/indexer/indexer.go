@@ -96,21 +96,13 @@ func StagesByAnalysisRun(shardName string) client.IndexerFunc {
 }
 
 // PromotionsByStage returns a client.IndexerFunc that indexes Promotions
-// by the Stage they reference. The provided predicates are used to further
-// filter the Promotions that are indexed.
-func PromotionsByStage(predicates ...func(*kargoapi.Promotion) bool) client.IndexerFunc {
-	return func(obj client.Object) []string {
-		promo, ok := obj.(*kargoapi.Promotion)
-		if !ok {
-			return nil
-		}
-		for _, predicate := range predicates {
-			if !predicate(promo) {
-				return nil
-			}
-		}
-		return []string{promo.Spec.Stage}
+// by the Stage they reference.
+func PromotionsByStage(obj client.Object) []string {
+	promo, ok := obj.(*kargoapi.Promotion)
+	if !ok {
+		return nil
 	}
+	return []string{promo.Spec.Stage}
 }
 
 // RunningPromotionsByArgoCDApplications returns a client.IndexerFunc that

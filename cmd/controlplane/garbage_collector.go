@@ -120,7 +120,7 @@ func (o *garbageCollectorOptions) setupManager(ctx context.Context) (manager.Man
 		ctx,
 		&kargoapi.Promotion{},
 		indexer.PromotionsByStageField,
-		indexer.PromotionsByStage(),
+		indexer.PromotionsByStage,
 	); err != nil {
 		return nil, fmt.Errorf("error indexing Promotions by Stage: %w", err)
 	}
