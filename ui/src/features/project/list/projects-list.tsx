@@ -30,6 +30,12 @@ export const ProjectsList = () => {
     filter
   });
 
+  useEffect(() => {
+    if (data && page > Math.ceil(data.total / pageSize)) {
+      setPage(Math.ceil(data.total / pageSize) || 1);
+    }
+  }, [data, page, pageSize, setPage]);
+
   const transport = useTransport();
   const stageData = useQueries({
     queries: (data?.projects || []).map((proj) => {
