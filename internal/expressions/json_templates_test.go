@@ -199,7 +199,6 @@ func TestEvaluateJSONTemplate(t *testing.T) {
 
 	t.Run("quote function is forbidden", func(t *testing.T) {
 		_, err := EvaluateJSONTemplate([]byte(`{}`), map[string]any{"quote": nil})
-		require.Error(t, err)
-		require.Contains(t, err.Error(), `"quote" is a forbidden key`)
+		require.ErrorContains(t, err, `"quote" is a forbidden key`)
 	})
 }
