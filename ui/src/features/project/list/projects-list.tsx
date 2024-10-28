@@ -1,6 +1,7 @@
 import { createQueryOptions, useQuery, useTransport } from '@connectrpc/connect-query';
 import { useQueries } from '@tanstack/react-query';
 import { Empty, Pagination } from 'antd';
+import { useEffect } from 'react';
 
 import { LoadingState } from '@ui/features/common';
 import {
