@@ -27,6 +27,7 @@ import (
 	"github.com/akuity/kargo/internal/credentials"
 	credsdb "github.com/akuity/kargo/internal/credentials/kubernetes"
 	"github.com/akuity/kargo/internal/directives"
+	"github.com/akuity/kargo/internal/indexer"
 	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/internal/os"
 	"github.com/akuity/kargo/internal/types"
@@ -287,6 +288,7 @@ func (o *controllerOptions) setupReconcilers(
 	if argocdMgr != nil {
 		argoCDClient = argocdMgr.GetClient()
 	}
+	sharedIndexer := indexer.NewSharedFieldIndexer(kargoMgr.GetFieldIndexer())
 
 	directivesEngine := directives.NewSimpleEngine(credentialsDB, kargoMgr.GetClient(), argoCDClient)
 
@@ -306,11 +308,16 @@ func (o *controllerOptions) setupReconcilers(
 		argocdMgr,
 		directivesEngine,
 		stagesReconcilerCfg,
+		sharedIndexer,
 	); err != nil {
 		return fmt.Errorf("error setting up Stages reconciler: %w", err)
 	}
 
-	if err := stages.NewControlFlowStageReconciler(stagesReconcilerCfg).SetupWithManager(ctx, kargoMgr); err != nil {
+	if err := stages.NewControlFlowStageReconciler(stagesReconcilerCfg).SetupWithManager(
+		ctx,
+		kargoMgr,
+		sharedIndexer,
+	); err != nil {
 		return fmt.Errorf("error setting up control flow Stages reconciler: %w", err)
 	}
 

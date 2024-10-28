@@ -129,14 +129,14 @@ func IndexPromotionsByStage(ctx context.Context, clstr cluster.Cluster) error {
 		ctx,
 		&kargoapi.Promotion{},
 		PromotionsByStageIndexField,
-		indexPromotionsByStage(),
+		PromotionsByStageIndexer(),
 	)
 }
 
-// indexPromotionsByStage returns a client.IndexerFunc that indexes Promotions
+// PromotionsByStageIndexer returns a client.IndexerFunc that indexes Promotions
 // by the Stage they reference. The provided predicates are used to further
 // filter the Promotions that are indexed.
-func indexPromotionsByStage(predicates ...func(*kargoapi.Promotion) bool) client.IndexerFunc {
+func PromotionsByStageIndexer(predicates ...func(*kargoapi.Promotion) bool) client.IndexerFunc {
 	return func(obj client.Object) []string {
 		promo, ok := obj.(*kargoapi.Promotion)
 		if !ok {
@@ -265,13 +265,13 @@ func IndexPromotionsByStageAndFreight(
 		ctx,
 		&kargoapi.Promotion{},
 		PromotionsByStageAndFreightIndexField,
-		indexPromotionsByStageAndFreight,
+		PromotionsByStageAndFreightIndexer,
 	)
 }
 
-// indexPromotionsByStageAndFreight is a client.IndexerFunc that indexes
+// PromotionsByStageAndFreightIndexer is a client.IndexerFunc that indexes
 // Promotions by the Freight and Stage they reference.
-func indexPromotionsByStageAndFreight(obj client.Object) []string {
+func PromotionsByStageAndFreightIndexer(obj client.Object) []string {
 	promo := obj.(*kargoapi.Promotion) // nolint: forcetypeassert
 	return []string{
 		StageAndFreightKey(promo.Spec.Stage, promo.Spec.Freight),
@@ -508,13 +508,13 @@ func IndexPromotionsByTerminal(ctx context.Context, clstr cluster.Cluster) error
 		ctx,
 		&kargoapi.Promotion{},
 		PromotionsByTerminalIndexField,
-		indexPromotionsByTerminal,
+		PromotionsByTerminalIndexer,
 	)
 }
 
-// indexPromotionsByTerminal is a client.IndexerFunc that indexes Promotions by
+// PromotionsByTerminalIndexer is a client.IndexerFunc that indexes Promotions by
 // whether or not their phase is terminal.
-func indexPromotionsByTerminal(obj client.Object) []string {
+func PromotionsByTerminalIndexer(obj client.Object) []string {
 	promo := obj.(*kargoapi.Promotion) // nolint: forcetypeassert
 	return []string{strconv.FormatBool(isPromotionPhaseNonTerminal(promo))}
 }

@@ -235,7 +235,7 @@ func TestStagesByAnalysisRunIndexer(t *testing.T) {
 	}
 }
 
-func TestIndexPromotionsByStage(t *testing.T) {
+func TestPromotionsByStageIndexer(t *testing.T) {
 	testCases := map[string]struct {
 		input      *kargoapi.Promotion
 		predicates []func(*kargoapi.Promotion) bool
@@ -295,7 +295,7 @@ func TestIndexPromotionsByStage(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			actual := indexPromotionsByStage(tc.predicates...)(tc.input)
+			actual := PromotionsByStageIndexer(tc.predicates...)(tc.input)
 			require.ElementsMatch(t, tc.expected, actual)
 		})
 	}
@@ -424,14 +424,14 @@ func TestIndexRunningPromotionsByArgoCDApplications(t *testing.T) {
 	}
 }
 
-func TestIndexPromotionsByStageAndFreight(t *testing.T) {
+func TestPromotionsByStageAndFreightIndexer(t *testing.T) {
 	promo := &kargoapi.Promotion{
 		Spec: kargoapi.PromotionSpec{
 			Stage:   "fake-stage",
 			Freight: "fake-freight",
 		},
 	}
-	res := indexPromotionsByStageAndFreight(promo)
+	res := PromotionsByStageAndFreightIndexer(promo)
 	require.Equal(t, []string{"fake-stage:fake-freight"}, res)
 }
 

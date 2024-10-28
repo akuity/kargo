@@ -48,7 +48,11 @@ func NewControlFlowStageReconciler(
 // SetupWithManager sets up the control flow Stage reconciler with the given
 // controller manager. It registers the reconciler with the manager and sets up
 // watches on the required objects.
-func (r *ControlFlowStageReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
+func (r *ControlFlowStageReconciler) SetupWithManager(
+	ctx context.Context,
+	mgr ctrl.Manager,
+	sharedIndexer client.FieldIndexer,
+) error {
 	// Configure client and event recorder using manager.
 	r.client = mgr.GetClient()
 	r.eventRecorder = libEvent.NewRecorder(ctx, mgr.GetScheme(), mgr.GetClient(), r.cfg.Name())
@@ -56,7 +60,7 @@ func (r *ControlFlowStageReconciler) SetupWithManager(ctx context.Context, mgr c
 	// This index is used to find all Freight that are directly available from
 	// a Warehouse. It is used to find Freight that can be sourced directly from
 	// the Warehouse for the control flow Stage.
-	if err := mgr.GetFieldIndexer().IndexField(
+	if err := sharedIndexer.IndexField(
 		ctx,
 		&kargoapi.Freight{},
 		indexer.FreightByWarehouseIndexField,
@@ -68,7 +72,7 @@ func (r *ControlFlowStageReconciler) SetupWithManager(ctx context.Context, mgr c
 	// This index is used to find and watch all Freight that have been verified
 	// in a specific Stage (upstream) to which the control flow Stage is the
 	// downstream consumer.
-	if err := mgr.GetFieldIndexer().IndexField(
+	if err := sharedIndexer.IndexField(
 		ctx,
 		&kargoapi.Freight{},
 		indexer.FreightByVerifiedStagesIndexField,
@@ -81,7 +85,7 @@ func (r *ControlFlowStageReconciler) SetupWithManager(ctx context.Context, mgr c
 	// to a Stage before it became a control flow Stage. It is not used for
 	// the actual reconciliation process beyond facilitating the garbage
 	// collection of related objects when the Stage is deleted.
-	if err := mgr.GetFieldIndexer().IndexField(
+	if err := sharedIndexer.IndexField(
 		ctx,
 		&kargoapi.Freight{},
 		indexer.FreightApprovedForStagesIndexField,
@@ -92,7 +96,7 @@ func (r *ControlFlowStageReconciler) SetupWithManager(ctx context.Context, mgr c
 
 	// This index is used by a watch on Stages to find all Stages that have a
 	// specific Stage as an upstream Stage.
-	if err := mgr.GetFieldIndexer().IndexField(
+	if err := sharedIndexer.IndexField(
 		ctx,
 		&kargoapi.Stage{},
 		indexer.StagesByUpstreamStagesIndexField,
@@ -103,7 +107,7 @@ func (r *ControlFlowStageReconciler) SetupWithManager(ctx context.Context, mgr c
 
 	// This index is used by a watch on Stages to find all Stages that have a
 	// specific Warehouse as an upstream Warehouse.
-	if err := mgr.GetFieldIndexer().IndexField(
+	if err := sharedIndexer.IndexField(
 		ctx,
 		&kargoapi.Stage{},
 		indexer.StagesByWarehouseIndexField,

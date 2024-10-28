@@ -216,50 +216,96 @@ func SetupReconcilerWithManager(
 	argocdMgr manager.Manager,
 	directivesEngine directives.Engine,
 	cfg ReconcilerConfig,
+	sharedIndexer *indexer.SharedFieldIndexer,
 ) error {
 	// Index Promotions by Stage
-	if err := indexer.IndexPromotionsByStage(ctx, kargoMgr); err != nil {
+	if err := sharedIndexer.IndexField(
+		ctx,
+		&kargoapi.Promotion{},
+		indexer.PromotionsByStageIndexField,
+		indexer.PromotionsByStageIndexer(),
+	); err != nil {
 		return fmt.Errorf("index non-terminal Promotions by Stage: %w", err)
 	}
 
-	// Index Promotions by whether or not they are terminal
-	if err := indexer.IndexPromotionsByTerminal(ctx, kargoMgr); err != nil {
+	// Index Promotions by whether they are terminal
+	if err := sharedIndexer.IndexField(
+		ctx,
+		&kargoapi.Promotion{},
+		indexer.PromotionsByTerminalIndexField,
+		indexer.PromotionsByTerminalIndexer,
+	); err != nil {
 		return fmt.Errorf("index Promotions by terminal status: %w", err)
 	}
 
 	// Index Promotions by Stage + Freight
-	if err := indexer.IndexPromotionsByStageAndFreight(ctx, kargoMgr); err != nil {
+	if err := sharedIndexer.IndexField(
+		ctx,
+		&kargoapi.Promotion{},
+		indexer.PromotionsByStageAndFreightIndexField,
+		indexer.PromotionsByStageAndFreightIndexer,
+	); err != nil {
 		return fmt.Errorf("index Promotions by Stage and Freight: %w", err)
 	}
 
 	// Index Freight by Warehouse
-	if err := indexer.IndexFreightByWarehouse(ctx, kargoMgr); err != nil {
+	if err := sharedIndexer.IndexField(
+		ctx,
+		&kargoapi.Freight{},
+		indexer.FreightByWarehouseIndexField,
+		indexer.FreightByWarehouseIndexer,
+	); err != nil {
 		return fmt.Errorf("index Freight by Warehouse: %w", err)
 	}
 
 	// Index Freight by Stages in which it has been verified
-	if err := indexer.IndexFreightByVerifiedStages(ctx, kargoMgr); err != nil {
+	if err := sharedIndexer.IndexField(
+		ctx,
+		&kargoapi.Freight{},
+		indexer.FreightByVerifiedStagesIndexField,
+		indexer.FreightByVerifiedStagesIndexer,
+	); err != nil {
 		return fmt.Errorf("index Freight by Stages in which it has been verified: %w", err)
 	}
 
 	// Index Freight by Stages for which it has been approved
-	if err := indexer.IndexFreightByApprovedStages(ctx, kargoMgr); err != nil {
+	if err := sharedIndexer.IndexField(
+		ctx,
+		&kargoapi.Freight{},
+		indexer.FreightApprovedForStagesIndexField,
+		indexer.FreightApprovedForStagesIndexer,
+	); err != nil {
 		return fmt.Errorf("index Freight by Stages for which it has been approved: %w", err)
 	}
 
 	// Index Stages by upstream Stages
-	if err := indexer.IndexStagesByUpstreamStages(ctx, kargoMgr); err != nil {
+	if err := sharedIndexer.IndexField(
+		ctx,
+		&kargoapi.Stage{},
+		indexer.StagesByUpstreamStagesIndexField,
+		indexer.StagesByUpstreamStagesIndexer,
+	); err != nil {
 		return fmt.Errorf("index Stages by upstream Stages: %w", err)
 	}
 
 	// Index Stages by Warehouse
-	if err := indexer.IndexStagesByWarehouse(ctx, kargoMgr); err != nil {
+	if err := sharedIndexer.IndexField(
+		ctx,
+		&kargoapi.Stage{},
+		indexer.StagesByWarehouseIndexField,
+		indexer.StagesByWarehouseIndexer,
+	); err != nil {
 		return fmt.Errorf("index Stages by Warehouse: %w", err)
 	}
 
 	// Index Stages by AnalysisRun
-	if err := indexer.IndexStagesByAnalysisRun(ctx, kargoMgr, cfg.ShardName); err != nil {
-		return fmt.Errorf("index Stages by Argo Rollouts AnalysisRun: %w", err)
+	if err := sharedIndexer.IndexField(
+		ctx,
+		&kargoapi.Stage{},
+		indexer.StagesByAnalysisRunIndexField,
+		indexer.StagesByAnalysisRunIndexer(cfg.ShardName),
+	); err != nil {
+		return fmt.Errorf("index Stages by AnalysisRun: %w", err)
 	}
 
 	c, err := ctrl.NewControllerManagedBy(kargoMgr).
