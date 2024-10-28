@@ -233,22 +233,52 @@ func newDefaultInternalClient(
 	}
 
 	// Add all indices required by the API server
-	if err = indexer.IndexPromotionsByStage(ctx, cluster); err != nil {
+	if err = cluster.GetFieldIndexer().IndexField(
+		ctx,
+		&kargoapi.Promotion{},
+		indexer.PromotionsByStageIndexField,
+		indexer.PromotionsByStageIndexer(),
+	); err != nil {
 		return nil, fmt.Errorf("error indexing Promotions by Stage: %w", err)
 	}
-	if err = indexer.IndexFreightByWarehouse(ctx, cluster); err != nil {
+	if err = cluster.GetFieldIndexer().IndexField(
+		ctx,
+		&kargoapi.Freight{},
+		indexer.FreightByWarehouseIndexField,
+		indexer.FreightByWarehouseIndexer,
+	); err != nil {
 		return nil, fmt.Errorf("error indexing Freight by Warehouse: %w", err)
 	}
-	if err = indexer.IndexFreightByVerifiedStages(ctx, cluster); err != nil {
+	if err = cluster.GetFieldIndexer().IndexField(
+		ctx,
+		&kargoapi.Freight{},
+		indexer.FreightByVerifiedStagesIndexField,
+		indexer.FreightByVerifiedStagesIndexer,
+	); err != nil {
 		return nil, fmt.Errorf("error indexing Freight by Stages in which it has been verified: %w", err)
 	}
-	if err = indexer.IndexFreightByApprovedStages(ctx, cluster); err != nil {
+	if err = cluster.GetFieldIndexer().IndexField(
+		ctx,
+		&kargoapi.Freight{},
+		indexer.FreightApprovedForStagesIndexField,
+		indexer.FreightApprovedForStagesIndexer,
+	); err != nil {
 		return nil, fmt.Errorf("error indexing Freight by Stages for which it has been approved: %w", err)
 	}
-	if err = indexer.IndexServiceAccountsByOIDCClaims(ctx, cluster); err != nil {
+	if err = cluster.GetFieldIndexer().IndexField(
+		ctx,
+		&corev1.ServiceAccount{},
+		indexer.ServiceAccountsByOIDCClaimsIndexField,
+		indexer.ServiceAccountsByOIDCClaimsIndexer,
+	); err != nil {
 		return nil, fmt.Errorf("index ServiceAccounts by OIDC claims: %w", err)
 	}
-	if err = indexer.IndexEventsByInvolvedObjectAPIGroup(ctx, cluster); err != nil {
+	if err = cluster.GetFieldIndexer().IndexField(
+		ctx,
+		&corev1.Event{},
+		indexer.EventsByInvolvedObjectAPIGroupIndexField,
+		indexer.EventsByInvolvedObjectAPIGroup,
+	); err != nil {
 		return nil, fmt.Errorf("error indexing Events by InvolvedObject's API group: %w", err)
 	}
 

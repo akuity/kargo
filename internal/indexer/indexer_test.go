@@ -17,7 +17,7 @@ import (
 	"github.com/akuity/kargo/internal/argocd"
 )
 
-func TestIndexEventsByInvolvedObjectAPIGroup(t *testing.T) {
+func TestEventsByInvolvedObjectAPIGroup(t *testing.T) {
 	t.Parallel()
 	testCases := []struct {
 		name       string
@@ -70,7 +70,7 @@ func TestIndexEventsByInvolvedObjectAPIGroup(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			tc.assertions(t, indexEventsByInvolvedObjectAPIGroup(tc.event))
+			tc.assertions(t, EventsByInvolvedObjectAPIGroup(tc.event))
 		})
 	}
 }
@@ -301,7 +301,7 @@ func TestPromotionsByStageIndexer(t *testing.T) {
 	}
 }
 
-func TestIndexRunningPromotionsByArgoCDApplications(t *testing.T) {
+func TestRunningPromotionsByArgoCDApplicationsIndexer(t *testing.T) {
 	const testShardName = "test-shard"
 
 	testCases := []struct {
@@ -415,7 +415,7 @@ func TestIndexRunningPromotionsByArgoCDApplications(t *testing.T) {
 			require.Equal(
 				t,
 				testCase.expected,
-				indexRunningPromotionsByArgoCDApplications(
+				RunningPromotionsByArgoCDApplicationsIndexer(
 					context.TODO(),
 					testCase.shardName,
 				)(testCase.obj),
@@ -540,7 +540,7 @@ func TestFreightApprovedForStagesIndexer(t *testing.T) {
 	}
 }
 
-func TestIndexStagesByFreight(t *testing.T) {
+func TestStagesByFreightIndexer(t *testing.T) {
 	testCases := []struct {
 		name     string
 		stage    *kargoapi.Stage
@@ -590,7 +590,7 @@ func TestIndexStagesByFreight(t *testing.T) {
 			require.Equal(
 				t,
 				testCase.expected,
-				indexStagesByFreight(testCase.stage),
+				StagesByFreightIndexer(testCase.stage),
 			)
 		})
 	}
@@ -714,7 +714,7 @@ func TestStagesByWarehouseIndexer(t *testing.T) {
 	}
 }
 
-func TestIndexServiceAccountsByOIDCClaims(t *testing.T) {
+func TestServiceAccountsByOIDCClaimsIndexer(t *testing.T) {
 	testCases := []struct {
 		name     string
 		sa       *corev1.ServiceAccount
@@ -741,7 +741,7 @@ func TestIndexServiceAccountsByOIDCClaims(t *testing.T) {
 			require.Equal(
 				t,
 				testCase.expected,
-				indexServiceAccountsByOIDCClaims(testCase.sa),
+				ServiceAccountsByOIDCClaimsIndexer(testCase.sa),
 			)
 		})
 	}

@@ -11,7 +11,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/cluster"
 
 	rbacapi "github.com/akuity/kargo/api/rbac/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -41,24 +40,9 @@ const (
 	ServiceAccountsByOIDCClaimsIndexField = "claims"
 )
 
-// IndexEventsByInvolvedObjectAPIGroup sets up the indexing of Events by the
-// API group of the involved object.
-//
-// It configures the field indexer of the provided cluster to allow querying
-// Events by the API group of the involved object using the
-// EventsByInvolvedObjectAPIGroupIndexField selector.
-func IndexEventsByInvolvedObjectAPIGroup(ctx context.Context, clstr cluster.Cluster) error {
-	return clstr.GetFieldIndexer().IndexField(
-		ctx,
-		&corev1.Event{},
-		EventsByInvolvedObjectAPIGroupIndexField,
-		indexEventsByInvolvedObjectAPIGroup,
-	)
-}
-
-// indexEventsByInvolvedObjectAPIGroup is a client.IndexerFunc that indexes
+// EventsByInvolvedObjectAPIGroup is a client.IndexerFunc that indexes
 // Events by the API group of the involved object.
-func indexEventsByInvolvedObjectAPIGroup(obj client.Object) []string {
+func EventsByInvolvedObjectAPIGroup(obj client.Object) []string {
 	event := obj.(*corev1.Event) // nolint: forcetypeassert
 	// Ignore invalid APIVersion
 	gv, _ := schema.ParseGroupVersion(event.InvolvedObject.APIVersion)
@@ -104,20 +88,6 @@ func StagesByAnalysisRunIndexer(shardName string) client.IndexerFunc {
 	}
 }
 
-// IndexPromotionsByStage sets up the indexing of Promotions by the Stage they
-// reference.
-//
-// It configures the field indexer of the provided cluster to allow querying
-// Promotions by the Stage they reference using the PromotionsByStageIndexField.
-func IndexPromotionsByStage(ctx context.Context, clstr cluster.Cluster) error {
-	return clstr.GetFieldIndexer().IndexField(
-		ctx,
-		&kargoapi.Promotion{},
-		PromotionsByStageIndexField,
-		PromotionsByStageIndexer(),
-	)
-}
-
 // PromotionsByStageIndexer returns a client.IndexerFunc that indexes Promotions
 // by the Stage they reference. The provided predicates are used to further
 // filter the Promotions that are indexed.
@@ -136,37 +106,14 @@ func PromotionsByStageIndexer(predicates ...func(*kargoapi.Promotion) bool) clie
 	}
 }
 
-// IndexRunningPromotionsByArgoCDApplications sets up the indexing of running
-// Promotions by the Argo CD Applications they are associated with.
-//
-// It configures the field indexer of the provided cluster to allow querying
-// running Promotions by the Argo CD Applications they are associated with using
-// the RunningPromotionsByArgoCDApplicationsIndexField selector.
-//
-// When the provided shardName is non-empty, only Promotions labeled with the
-// provided shardName are indexed. When the provided shardName is empty, only
-// Promotions not labeled with a shardName are indexed.
-func IndexRunningPromotionsByArgoCDApplications(
-	ctx context.Context,
-	clstr cluster.Cluster,
-	shardName string,
-) error {
-	return clstr.GetFieldIndexer().IndexField(
-		ctx,
-		&kargoapi.Promotion{},
-		RunningPromotionsByArgoCDApplicationsIndexField,
-		indexRunningPromotionsByArgoCDApplications(ctx, shardName),
-	)
-}
-
-// indexRunningPromotionsByArgoCDApplications returns a client.IndexerFunc that
+// RunningPromotionsByArgoCDApplicationsIndexer returns a client.IndexerFunc that
 // indexes running Promotions by the Argo CD Applications they are associated
 // with.
 //
 // When the provided shardName is non-empty, only Promotions labeled with the
 // provided shardName are indexed. When the provided shardName is empty, only
 // Promotions not labeled with a shardName are indexed.
-func indexRunningPromotionsByArgoCDApplications(
+func RunningPromotionsByArgoCDApplicationsIndexer(
 	ctx context.Context,
 	shardName string,
 ) client.IndexerFunc {
@@ -250,20 +197,6 @@ func StageAndFreightKey(stage, freight string) string {
 	return fmt.Sprintf("%s:%s", stage, freight)
 }
 
-// IndexFreightByWarehouse sets up indexing of Freight by the Warehouse they are
-// associated with.
-//
-// It configures the cluster's field indexer to allow querying Freight using the
-// FreightByWarehouseIndexField selector.
-func IndexFreightByWarehouse(ctx context.Context, clstr cluster.Cluster) error {
-	return clstr.GetFieldIndexer().IndexField(
-		ctx,
-		&kargoapi.Freight{},
-		FreightByWarehouseIndexField,
-		FreightByWarehouseIndexer,
-	)
-}
-
 // FreightByWarehouseIndexer is a client.IndexerFunc that indexes Freight by the
 // Warehouse it is associated with.
 func FreightByWarehouseIndexer(obj client.Object) []string {
@@ -272,20 +205,6 @@ func FreightByWarehouseIndexer(obj client.Object) []string {
 		return []string{freight.Origin.Name}
 	}
 	return nil
-}
-
-// IndexFreightByVerifiedStages sets up indexing of Freight by the Stages that
-// have verified it.
-//
-// It configures the cluster's field indexer to allow querying Freight using
-// the FreightByVerifiedStagesIndexField selector.
-func IndexFreightByVerifiedStages(ctx context.Context, clstr cluster.Cluster) error {
-	return clstr.GetFieldIndexer().IndexField(
-		ctx,
-		&kargoapi.Freight{},
-		FreightByVerifiedStagesIndexField,
-		FreightByVerifiedStagesIndexer,
-	)
 }
 
 // FreightByVerifiedStagesIndexer is a client.IndexerFunc that indexes Freight
@@ -301,20 +220,6 @@ func FreightByVerifiedStagesIndexer(obj client.Object) []string {
 	return verifiedStages
 }
 
-// IndexFreightByApprovedStages sets up indexing of Freight by the Stages for
-// which it has been (manually) approved.
-//
-// It configures the cluster's field indexer to allow querying Freight using
-// the FreightApprovedForStagesIndexField selector.
-func IndexFreightByApprovedStages(ctx context.Context, clstr cluster.Cluster) error {
-	return clstr.GetFieldIndexer().IndexField(
-		ctx,
-		&kargoapi.Freight{},
-		FreightApprovedForStagesIndexField,
-		FreightApprovedForStagesIndexer,
-	)
-}
-
 // FreightApprovedForStagesIndexer is a client.IndexerFunc that indexes Freight
 // by the Stages for which it has been (manually) approved.
 func FreightApprovedForStagesIndexer(obj client.Object) []string {
@@ -328,23 +233,9 @@ func FreightApprovedForStagesIndexer(obj client.Object) []string {
 	return approvedStages
 }
 
-// IndexStagesByFreight sets up indexing of Stages by the Freight they
-// reference.
-//
-// It configures the cluster's field indexer to allow querying Stages using the
-// StagesByFreightIndexField selector.
-func IndexStagesByFreight(ctx context.Context, clstr cluster.Cluster) error {
-	return clstr.GetFieldIndexer().IndexField(
-		ctx,
-		&kargoapi.Stage{},
-		StagesByFreightIndexField,
-		indexStagesByFreight,
-	)
-}
-
-// indexStagesByFreight is a client.IndexerFunc that indexes Stages by the
+// StagesByFreightIndexer is a client.IndexerFunc that indexes Stages by the
 // Freight they reference.
-func indexStagesByFreight(obj client.Object) []string {
+func StagesByFreightIndexer(obj client.Object) []string {
 	stage := obj.(*kargoapi.Stage) // nolint: forcetypeassert
 
 	current := stage.Status.FreightHistory.Current()
@@ -358,20 +249,6 @@ func indexStagesByFreight(obj client.Object) []string {
 	}
 	slices.Sort(freightIDs)
 	return freightIDs
-}
-
-// IndexStagesByUpstreamStages sets up indexing of Stages by the upstream Stages
-// they reference.
-//
-// It configures the cluster's field indexer to allow querying Stages using the
-// StagesByUpstreamStagesIndexField selector.
-func IndexStagesByUpstreamStages(ctx context.Context, clstr cluster.Cluster) error {
-	return clstr.GetFieldIndexer().IndexField(
-		ctx,
-		&kargoapi.Stage{},
-		StagesByUpstreamStagesIndexField,
-		StagesByUpstreamStagesIndexer,
-	)
 }
 
 // StagesByUpstreamStagesIndexer is a client.IndexerFunc that indexes Stages by
@@ -406,23 +283,9 @@ func FormatClaim(claimName string, claimValue string) string {
 	return claimName + "/" + claimValue
 }
 
-// IndexServiceAccountsByOIDCClaims sets up indexing of ServiceAccounts by
-// their OIDC claim annotations.
-//
-// It configures the manager's field indexer to allow querying ServiceAccounts
-// using the ServiceAccountsByOIDCClaimIndexField selector.
-func IndexServiceAccountsByOIDCClaims(ctx context.Context, clstr cluster.Cluster) error {
-	return clstr.GetFieldIndexer().IndexField(
-		ctx,
-		&corev1.ServiceAccount{},
-		ServiceAccountsByOIDCClaimsIndexField,
-		indexServiceAccountsByOIDCClaims,
-	)
-}
-
-// indexServiceAccountsByOIDCClaims is a client.IndexerFunc that indexes
+// ServiceAccountsByOIDCClaimsIndexer is a client.IndexerFunc that indexes
 // ServiceAccounts by the OIDC claims.
-func indexServiceAccountsByOIDCClaims(obj client.Object) []string {
+func ServiceAccountsByOIDCClaimsIndexer(obj client.Object) []string {
 	sa := obj.(*corev1.ServiceAccount) // nolint: forcetypeassert
 	refinedClaimValues := []string{}
 	for annotationKey, annotationValue := range sa.GetAnnotations() {
@@ -446,13 +309,13 @@ func indexServiceAccountsByOIDCClaims(obj client.Object) []string {
 	return refinedClaimValues
 }
 
-func isPromotionPhaseNonTerminal(promo *kargoapi.Promotion) bool {
-	return !promo.Status.Phase.IsTerminal()
-}
-
 // PromotionsByTerminalIndexer is a client.IndexerFunc that indexes Promotions by
 // whether or not their phase is terminal.
 func PromotionsByTerminalIndexer(obj client.Object) []string {
 	promo := obj.(*kargoapi.Promotion) // nolint: forcetypeassert
 	return []string{strconv.FormatBool(isPromotionPhaseNonTerminal(promo))}
+}
+
+func isPromotionPhaseNonTerminal(promo *kargoapi.Promotion) bool {
+	return !promo.Status.Phase.IsTerminal()
 }
