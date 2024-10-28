@@ -75,7 +75,7 @@ func TestEventsByInvolvedObjectAPIGroup(t *testing.T) {
 	}
 }
 
-func TestStagesByAnalysisRunIndexer(t *testing.T) {
+func TestStagesByAnalysisRun(t *testing.T) {
 	const testShardName = "test-shard"
 	t.Parallel()
 	testCases := []struct {
@@ -229,13 +229,13 @@ func TestStagesByAnalysisRunIndexer(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			res := StagesByAnalysisRunIndexer(tc.controllerShardName)(tc.stage)
+			res := StagesByAnalysisRun(tc.controllerShardName)(tc.stage)
 			tc.assertions(t, res)
 		})
 	}
 }
 
-func TestPromotionsByStageIndexer(t *testing.T) {
+func TestPromotionsByStage(t *testing.T) {
 	testCases := map[string]struct {
 		input      *kargoapi.Promotion
 		predicates []func(*kargoapi.Promotion) bool
@@ -295,13 +295,13 @@ func TestPromotionsByStageIndexer(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			actual := PromotionsByStageIndexer(tc.predicates...)(tc.input)
+			actual := PromotionsByStage(tc.predicates...)(tc.input)
 			require.ElementsMatch(t, tc.expected, actual)
 		})
 	}
 }
 
-func TestRunningPromotionsByArgoCDApplicationsIndexer(t *testing.T) {
+func TestRunningPromotionsByArgoCDApplications(t *testing.T) {
 	const testShardName = "test-shard"
 
 	testCases := []struct {
@@ -415,7 +415,7 @@ func TestRunningPromotionsByArgoCDApplicationsIndexer(t *testing.T) {
 			require.Equal(
 				t,
 				testCase.expected,
-				RunningPromotionsByArgoCDApplicationsIndexer(
+				RunningPromotionsByArgoCDApplications(
 					context.TODO(),
 					testCase.shardName,
 				)(testCase.obj),
@@ -424,18 +424,18 @@ func TestRunningPromotionsByArgoCDApplicationsIndexer(t *testing.T) {
 	}
 }
 
-func TestPromotionsByStageAndFreightIndexer(t *testing.T) {
+func TestPromotionsByStageAndFreight(t *testing.T) {
 	promo := &kargoapi.Promotion{
 		Spec: kargoapi.PromotionSpec{
 			Stage:   "fake-stage",
 			Freight: "fake-freight",
 		},
 	}
-	res := PromotionsByStageAndFreightIndexer(promo)
+	res := PromotionsByStageAndFreight(promo)
 	require.Equal(t, []string{"fake-stage:fake-freight"}, res)
 }
 
-func TestFreightByWarehouseIndexer(t *testing.T) {
+func TestFreightByWarehouse(t *testing.T) {
 	testCases := []struct {
 		name     string
 		freight  *kargoapi.Freight
@@ -462,13 +462,13 @@ func TestFreightByWarehouseIndexer(t *testing.T) {
 			require.Equal(
 				t,
 				testCase.expected,
-				FreightByWarehouseIndexer(testCase.freight),
+				FreightByWarehouse(testCase.freight),
 			)
 		})
 	}
 }
 
-func TestFreightByVerifiedStagesIndexer(t *testing.T) {
+func TestFreightByVerifiedStages(t *testing.T) {
 	testCases := []struct {
 		name     string
 		freight  *kargoapi.Freight
@@ -497,14 +497,14 @@ func TestFreightByVerifiedStagesIndexer(t *testing.T) {
 				require.Equal(
 					t,
 					testCase.expected,
-					FreightByVerifiedStagesIndexer(testCase.freight),
+					FreightByVerifiedStages(testCase.freight),
 				)
 			})
 		})
 	}
 }
 
-func TestFreightApprovedForStagesIndexer(t *testing.T) {
+func TestFreightApprovedForStages(t *testing.T) {
 	testCases := []struct {
 		name     string
 		freight  *kargoapi.Freight
@@ -533,14 +533,14 @@ func TestFreightApprovedForStagesIndexer(t *testing.T) {
 				require.Equal(
 					t,
 					testCase.expected,
-					FreightApprovedForStagesIndexer(testCase.freight),
+					FreightApprovedForStages(testCase.freight),
 				)
 			})
 		})
 	}
 }
 
-func TestStagesByFreightIndexer(t *testing.T) {
+func TestStagesByFreight(t *testing.T) {
 	testCases := []struct {
 		name     string
 		stage    *kargoapi.Stage
@@ -590,14 +590,14 @@ func TestStagesByFreightIndexer(t *testing.T) {
 			require.Equal(
 				t,
 				testCase.expected,
-				StagesByFreightIndexer(testCase.stage),
+				StagesByFreight(testCase.stage),
 			)
 		})
 	}
 
 }
 
-func TestStagesByUpstreamStagesIndexer(t *testing.T) {
+func TestStagesByUpstreamStages(t *testing.T) {
 	testOrigin := kargoapi.FreightOrigin{
 		Kind: kargoapi.FreightOriginKindWarehouse,
 		Name: "fake-warehouse",
@@ -648,13 +648,13 @@ func TestStagesByUpstreamStagesIndexer(t *testing.T) {
 			require.Equal(
 				t,
 				testCase.expected,
-				StagesByUpstreamStagesIndexer(testCase.stage),
+				StagesByUpstreamStages(testCase.stage),
 			)
 		})
 	}
 }
 
-func TestStagesByWarehouseIndexer(t *testing.T) {
+func TestStagesByWarehouse(t *testing.T) {
 	testCases := []struct {
 		name     string
 		stage    *kargoapi.Stage
@@ -708,13 +708,13 @@ func TestStagesByWarehouseIndexer(t *testing.T) {
 			require.Equal(
 				t,
 				testCase.expected,
-				StagesByWarehouseIndexer(testCase.stage),
+				StagesByWarehouse(testCase.stage),
 			)
 		})
 	}
 }
 
-func TestServiceAccountsByOIDCClaimsIndexer(t *testing.T) {
+func TestServiceAccountsByOIDCClaims(t *testing.T) {
 	testCases := []struct {
 		name     string
 		sa       *corev1.ServiceAccount
@@ -741,7 +741,7 @@ func TestServiceAccountsByOIDCClaimsIndexer(t *testing.T) {
 			require.Equal(
 				t,
 				testCase.expected,
-				ServiceAccountsByOIDCClaimsIndexer(testCase.sa),
+				ServiceAccountsByOIDCClaims(testCase.sa),
 			)
 		})
 	}

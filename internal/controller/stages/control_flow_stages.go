@@ -64,7 +64,7 @@ func (r *ControlFlowStageReconciler) SetupWithManager(
 		ctx,
 		&kargoapi.Freight{},
 		indexer.FreightByWarehouseIndexField,
-		indexer.FreightByWarehouseIndexer,
+		indexer.FreightByWarehouse,
 	); err != nil {
 		return fmt.Errorf("error setting up index for Freight by Warehouse: %w", err)
 	}
@@ -76,7 +76,7 @@ func (r *ControlFlowStageReconciler) SetupWithManager(
 		ctx,
 		&kargoapi.Freight{},
 		indexer.FreightByVerifiedStagesIndexField,
-		indexer.FreightByVerifiedStagesIndexer,
+		indexer.FreightByVerifiedStages,
 	); err != nil {
 		return fmt.Errorf("error setting up index for Freight by verified Stages: %w", err)
 	}
@@ -89,7 +89,7 @@ func (r *ControlFlowStageReconciler) SetupWithManager(
 		ctx,
 		&kargoapi.Freight{},
 		indexer.FreightApprovedForStagesIndexField,
-		indexer.FreightApprovedForStagesIndexer,
+		indexer.FreightApprovedForStages,
 	); err != nil {
 		return fmt.Errorf("error setting up index for Freight approved for Stages: %w", err)
 	}
@@ -100,7 +100,7 @@ func (r *ControlFlowStageReconciler) SetupWithManager(
 		ctx,
 		&kargoapi.Stage{},
 		indexer.StagesByUpstreamStagesIndexField,
-		indexer.StagesByUpstreamStagesIndexer,
+		indexer.StagesByUpstreamStages,
 	); err != nil {
 		return fmt.Errorf("error setting up index for Stages by upstream Stages: %w", err)
 	}
@@ -111,7 +111,7 @@ func (r *ControlFlowStageReconciler) SetupWithManager(
 		ctx,
 		&kargoapi.Stage{},
 		indexer.StagesByWarehouseIndexField,
-		indexer.StagesByWarehouseIndexer,
+		indexer.StagesByWarehouse,
 	); err != nil {
 		return fmt.Errorf("error setting up index for Stages by Warehouse: %w", err)
 	}

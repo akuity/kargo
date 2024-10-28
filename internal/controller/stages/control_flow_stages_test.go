@@ -330,17 +330,17 @@ func Test_controlFlowStageReconciler_Reconcile(t *testing.T) {
 				WithIndex(
 					&kargoapi.Freight{},
 					indexer.FreightByWarehouseIndexField,
-					indexer.FreightByWarehouseIndexer,
+					indexer.FreightByWarehouse,
 				).
 				WithIndex(
 					&kargoapi.Freight{},
 					indexer.FreightByVerifiedStagesIndexField,
-					indexer.FreightByVerifiedStagesIndexer,
+					indexer.FreightByVerifiedStages,
 				).
 				WithIndex(
 					&kargoapi.Freight{},
 					indexer.FreightApprovedForStagesIndexField,
-					indexer.FreightApprovedForStagesIndexer,
+					indexer.FreightApprovedForStages,
 				).
 				WithStatusSubresource(&kargoapi.Stage{}, &kargoapi.Freight{}).
 				WithInterceptorFuncs(tt.interceptor).
@@ -619,12 +619,12 @@ func Test_controlFlowStageReconciler_reconcile(t *testing.T) {
 				WithIndex(
 					&kargoapi.Freight{},
 					indexer.FreightByWarehouseIndexField,
-					indexer.FreightByWarehouseIndexer,
+					indexer.FreightByWarehouse,
 				).
 				WithIndex(
 					&kargoapi.Freight{},
 					indexer.FreightByVerifiedStagesIndexField,
-					indexer.FreightByVerifiedStagesIndexer,
+					indexer.FreightByVerifiedStages,
 				).
 				WithStatusSubresource(&kargoapi.Freight{}).
 				WithInterceptorFuncs(tt.interceptor).
@@ -1134,12 +1134,12 @@ func Test_controlFlowStageReconciler_getAvailableFreight(t *testing.T) {
 				WithIndex(
 					&kargoapi.Freight{},
 					indexer.FreightByWarehouseIndexField,
-					indexer.FreightByWarehouseIndexer,
+					indexer.FreightByWarehouse,
 				).
 				WithIndex(
 					&kargoapi.Freight{},
 					indexer.FreightByVerifiedStagesIndexField,
-					indexer.FreightByVerifiedStagesIndexer,
+					indexer.FreightByVerifiedStages,
 				).
 				WithInterceptorFuncs(tt.interceptor).
 				Build()
@@ -1528,12 +1528,12 @@ func Test_controlFlowStageReconciler_handleDelete(t *testing.T) {
 				WithIndex(
 					&kargoapi.Freight{},
 					indexer.FreightByVerifiedStagesIndexField,
-					indexer.FreightByVerifiedStagesIndexer,
+					indexer.FreightByVerifiedStages,
 				).
 				WithIndex(
 					&kargoapi.Freight{},
 					indexer.FreightApprovedForStagesIndexField,
-					indexer.FreightApprovedForStagesIndexer,
+					indexer.FreightApprovedForStages,
 				).
 				WithInterceptorFuncs(tt.interceptor).
 				Build()
@@ -1727,7 +1727,7 @@ func Test_controlFlowStageReconciler_clearVerifications(t *testing.T) {
 				WithIndex(
 					&kargoapi.Freight{},
 					indexer.FreightByVerifiedStagesIndexField,
-					indexer.FreightByVerifiedStagesIndexer,
+					indexer.FreightByVerifiedStages,
 				).
 				WithStatusSubresource(&kargoapi.Freight{}).
 				WithInterceptorFuncs(tt.interceptor).
@@ -1921,7 +1921,7 @@ func Test_controlFlowStageReconciler_clearApprovals(t *testing.T) {
 				WithIndex(
 					&kargoapi.Freight{},
 					indexer.FreightApprovedForStagesIndexField,
-					indexer.FreightApprovedForStagesIndexer,
+					indexer.FreightApprovedForStages,
 				).
 				WithStatusSubresource(&kargoapi.Freight{}).
 				WithInterceptorFuncs(tt.interceptor).

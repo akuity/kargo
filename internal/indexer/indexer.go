@@ -22,13 +22,13 @@ import (
 const (
 	EventsByInvolvedObjectAPIGroupIndexField = "involvedObject.apiGroup"
 
-	FreightByVerifiedStagesIndexField     = "verifiedIn"
-	FreightApprovedForStagesIndexField    = "approvedFor"
-	FreightByWarehouseIndexField          = "warehouse"
+	FreightByVerifiedStagesIndexField  = "verifiedIn"
+	FreightApprovedForStagesIndexField = "approvedFor"
+	FreightByWarehouseIndexField       = "warehouse"
+
 	PromotionsByStageAndFreightIndexField = "stageAndFreight"
 	PromotionsByTerminalIndexField        = "terminal"
-
-	PromotionsByStageIndexField = "stage"
+	PromotionsByStageIndexField           = "stage"
 
 	RunningPromotionsByArgoCDApplicationsIndexField = "applications"
 
@@ -43,7 +43,11 @@ const (
 // EventsByInvolvedObjectAPIGroup is a client.IndexerFunc that indexes
 // Events by the API group of the involved object.
 func EventsByInvolvedObjectAPIGroup(obj client.Object) []string {
-	event := obj.(*corev1.Event) // nolint: forcetypeassert
+	event, ok := obj.(*corev1.Event)
+	if !ok {
+		return nil
+	}
+
 	// Ignore invalid APIVersion
 	gv, _ := schema.ParseGroupVersion(event.InvolvedObject.APIVersion)
 	if gv.Empty() || gv.Group == "" {
@@ -52,9 +56,9 @@ func EventsByInvolvedObjectAPIGroup(obj client.Object) []string {
 	return []string{gv.Group}
 }
 
-// StagesByAnalysisRunIndexer is a client.IndexerFunc that indexes Stages by the
+// StagesByAnalysisRun is a client.IndexerFunc that indexes Stages by the
 // AnalysisRun they are associated with.
-func StagesByAnalysisRunIndexer(shardName string) client.IndexerFunc {
+func StagesByAnalysisRun(shardName string) client.IndexerFunc {
 	return func(obj client.Object) []string {
 		// Return early if:
 		//
@@ -69,7 +73,10 @@ func StagesByAnalysisRunIndexer(shardName string) client.IndexerFunc {
 			return nil
 		}
 
-		stage := obj.(*kargoapi.Stage) // nolint: forcetypeassert
+		stage, ok := obj.(*kargoapi.Stage)
+		if !ok {
+			return nil
+		}
 
 		currentFC := stage.Status.FreightHistory.Current()
 		if currentFC == nil {
@@ -88,10 +95,10 @@ func StagesByAnalysisRunIndexer(shardName string) client.IndexerFunc {
 	}
 }
 
-// PromotionsByStageIndexer returns a client.IndexerFunc that indexes Promotions
+// PromotionsByStage returns a client.IndexerFunc that indexes Promotions
 // by the Stage they reference. The provided predicates are used to further
 // filter the Promotions that are indexed.
-func PromotionsByStageIndexer(predicates ...func(*kargoapi.Promotion) bool) client.IndexerFunc {
+func PromotionsByStage(predicates ...func(*kargoapi.Promotion) bool) client.IndexerFunc {
 	return func(obj client.Object) []string {
 		promo, ok := obj.(*kargoapi.Promotion)
 		if !ok {
@@ -106,14 +113,14 @@ func PromotionsByStageIndexer(predicates ...func(*kargoapi.Promotion) bool) clie
 	}
 }
 
-// RunningPromotionsByArgoCDApplicationsIndexer returns a client.IndexerFunc that
+// RunningPromotionsByArgoCDApplications returns a client.IndexerFunc that
 // indexes running Promotions by the Argo CD Applications they are associated
 // with.
 //
 // When the provided shardName is non-empty, only Promotions labeled with the
 // provided shardName are indexed. When the provided shardName is empty, only
 // Promotions not labeled with a shardName are indexed.
-func RunningPromotionsByArgoCDApplicationsIndexer(
+func RunningPromotionsByArgoCDApplications(
 	ctx context.Context,
 	shardName string,
 ) client.IndexerFunc {
@@ -182,10 +189,14 @@ func RunningPromotionsByArgoCDApplicationsIndexer(
 	}
 }
 
-// PromotionsByStageAndFreightIndexer is a client.IndexerFunc that indexes
-// Promotions by the Freight and Stage they reference.
-func PromotionsByStageAndFreightIndexer(obj client.Object) []string {
-	promo := obj.(*kargoapi.Promotion) // nolint: forcetypeassert
+// PromotionsByStageAndFreight is a client.IndexerFunc that indexes Promotions
+// by the Freight and Stage they reference.
+func PromotionsByStageAndFreight(obj client.Object) []string {
+	promo, ok := obj.(*kargoapi.Promotion)
+	if !ok {
+		return nil
+	}
+
 	return []string{
 		StageAndFreightKey(promo.Spec.Stage, promo.Spec.Freight),
 	}
@@ -197,20 +208,28 @@ func StageAndFreightKey(stage, freight string) string {
 	return fmt.Sprintf("%s:%s", stage, freight)
 }
 
-// FreightByWarehouseIndexer is a client.IndexerFunc that indexes Freight by the
+// FreightByWarehouse is a client.IndexerFunc that indexes Freight by the
 // Warehouse it is associated with.
-func FreightByWarehouseIndexer(obj client.Object) []string {
-	freight := obj.(*kargoapi.Freight) // nolint: forcetypeassert
+func FreightByWarehouse(obj client.Object) []string {
+	freight, ok := obj.(*kargoapi.Freight)
+	if !ok {
+		return nil
+	}
+
 	if freight.Origin.Kind == kargoapi.FreightOriginKindWarehouse {
 		return []string{freight.Origin.Name}
 	}
 	return nil
 }
 
-// FreightByVerifiedStagesIndexer is a client.IndexerFunc that indexes Freight
-// by the Stages in which it has been verified.
-func FreightByVerifiedStagesIndexer(obj client.Object) []string {
-	freight := obj.(*kargoapi.Freight) // nolint: forcetypeassert
+// FreightByVerifiedStages is a client.IndexerFunc that indexes Freight by the
+// Stages in which it has been verified.
+func FreightByVerifiedStages(obj client.Object) []string {
+	freight, ok := obj.(*kargoapi.Freight)
+	if !ok {
+		return nil
+	}
+
 	verifiedStages := make([]string, len(freight.Status.VerifiedIn))
 	var i int
 	for stage := range freight.Status.VerifiedIn {
@@ -220,10 +239,14 @@ func FreightByVerifiedStagesIndexer(obj client.Object) []string {
 	return verifiedStages
 }
 
-// FreightApprovedForStagesIndexer is a client.IndexerFunc that indexes Freight
-// by the Stages for which it has been (manually) approved.
-func FreightApprovedForStagesIndexer(obj client.Object) []string {
-	freight := obj.(*kargoapi.Freight) // nolint: forcetypeassert
+// FreightApprovedForStages is a client.IndexerFunc that indexes Freight by the
+// Stages for which it has been (manually) approved.
+func FreightApprovedForStages(obj client.Object) []string {
+	freight, ok := obj.(*kargoapi.Freight)
+	if !ok {
+		return nil
+	}
+
 	approvedStages := make([]string, len(freight.Status.ApprovedFor))
 	var i int
 	for stages := range freight.Status.ApprovedFor {
@@ -233,10 +256,13 @@ func FreightApprovedForStagesIndexer(obj client.Object) []string {
 	return approvedStages
 }
 
-// StagesByFreightIndexer is a client.IndexerFunc that indexes Stages by the
-// Freight they reference.
-func StagesByFreightIndexer(obj client.Object) []string {
-	stage := obj.(*kargoapi.Stage) // nolint: forcetypeassert
+// StagesByFreight is a client.IndexerFunc that indexes Stages by the Freight
+// they reference.
+func StagesByFreight(obj client.Object) []string {
+	stage, ok := obj.(*kargoapi.Stage)
+	if !ok {
+		return nil
+	}
 
 	current := stage.Status.FreightHistory.Current()
 	if current == nil || len(current.Freight) == 0 {
@@ -251,10 +277,14 @@ func StagesByFreightIndexer(obj client.Object) []string {
 	return freightIDs
 }
 
-// StagesByUpstreamStagesIndexer is a client.IndexerFunc that indexes Stages by
-// the upstream Stages they reference.
-func StagesByUpstreamStagesIndexer(obj client.Object) []string {
-	stage := obj.(*kargoapi.Stage) // nolint: forcetypeassert
+// StagesByUpstreamStages is a client.IndexerFunc that indexes Stages by the
+// upstream Stages they reference.
+func StagesByUpstreamStages(obj client.Object) []string {
+	stage, ok := obj.(*kargoapi.Stage)
+	if !ok {
+		return nil
+	}
+
 	var upstreams []string
 	for _, req := range stage.Spec.RequestedFreight {
 		upstreams = append(upstreams, req.Sources.Stages...)
@@ -263,10 +293,14 @@ func StagesByUpstreamStagesIndexer(obj client.Object) []string {
 	return slices.Compact(upstreams)
 }
 
-// StagesByWarehouseIndexer is a client.IndexerFunc that indexes Stages by the
+// StagesByWarehouse is a client.IndexerFunc that indexes Stages by the
 // Warehouse they are associated with.
-func StagesByWarehouseIndexer(obj client.Object) []string {
-	stage := obj.(*kargoapi.Stage) // nolint: forcetypeassert
+func StagesByWarehouse(obj client.Object) []string {
+	stage, ok := obj.(*kargoapi.Stage)
+	if !ok {
+		return nil
+	}
+
 	var warehouses []string
 	for _, req := range stage.Spec.RequestedFreight {
 		if req.Origin.Kind == kargoapi.FreightOriginKindWarehouse && req.Sources.Direct {
@@ -283,10 +317,14 @@ func FormatClaim(claimName string, claimValue string) string {
 	return claimName + "/" + claimValue
 }
 
-// ServiceAccountsByOIDCClaimsIndexer is a client.IndexerFunc that indexes
-// ServiceAccounts by the OIDC claims.
-func ServiceAccountsByOIDCClaimsIndexer(obj client.Object) []string {
-	sa := obj.(*corev1.ServiceAccount) // nolint: forcetypeassert
+// ServiceAccountsByOIDCClaims is a client.IndexerFunc that indexes
+// ServiceAccounts by their OIDC claims.
+func ServiceAccountsByOIDCClaims(obj client.Object) []string {
+	sa, ok := obj.(*corev1.ServiceAccount)
+	if !ok {
+		return nil
+	}
+
 	refinedClaimValues := []string{}
 	for annotationKey, annotationValue := range sa.GetAnnotations() {
 		if strings.HasPrefix(annotationKey, rbacapi.AnnotationKeyOIDCClaimNamePrefix) {
@@ -309,10 +347,13 @@ func ServiceAccountsByOIDCClaimsIndexer(obj client.Object) []string {
 	return refinedClaimValues
 }
 
-// PromotionsByTerminalIndexer is a client.IndexerFunc that indexes Promotions by
-// whether or not their phase is terminal.
-func PromotionsByTerminalIndexer(obj client.Object) []string {
-	promo := obj.(*kargoapi.Promotion) // nolint: forcetypeassert
+// PromotionsByTerminal is a client.IndexerFunc that indexes Promotions if
+// their phase is terminal.
+func PromotionsByTerminal(obj client.Object) []string {
+	promo, ok := obj.(*kargoapi.Promotion)
+	if !ok {
+		return nil
+	}
 	return []string{strconv.FormatBool(isPromotionPhaseNonTerminal(promo))}
 }
 

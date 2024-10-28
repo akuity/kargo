@@ -3346,17 +3346,17 @@ func TestGetAvailableFreightByOrigin(t *testing.T) {
 				WithIndex(
 					&kargoapi.Freight{},
 					indexer.FreightByWarehouseIndexField,
-					indexer.FreightByWarehouseIndexer,
+					indexer.FreightByWarehouse,
 				).
 				WithIndex(
 					&kargoapi.Freight{},
 					indexer.FreightByVerifiedStagesIndexField,
-					indexer.FreightByVerifiedStagesIndexer,
+					indexer.FreightByVerifiedStages,
 				).
 				WithIndex(
 					&kargoapi.Freight{},
 					indexer.FreightApprovedForStagesIndexField,
-					indexer.FreightApprovedForStagesIndexer,
+					indexer.FreightApprovedForStages,
 				).
 				WithInterceptorFuncs(tc.interceptor).
 				WithObjects(tc.objects...).

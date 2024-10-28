@@ -115,7 +115,7 @@ func (o *webhooksServerOptions) run(ctx context.Context) error {
 		ctx,
 		&kargoapi.Stage{},
 		indexer.StagesByFreightIndexField,
-		indexer.StagesByFreightIndexer,
+		indexer.StagesByFreight,
 	); err != nil {
 		return fmt.Errorf("index Stages by Freight: %w", err)
 	}

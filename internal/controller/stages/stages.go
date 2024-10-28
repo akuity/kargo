@@ -223,7 +223,7 @@ func SetupReconcilerWithManager(
 		ctx,
 		&kargoapi.Promotion{},
 		indexer.PromotionsByStageIndexField,
-		indexer.PromotionsByStageIndexer(),
+		indexer.PromotionsByStage(),
 	); err != nil {
 		return fmt.Errorf("index non-terminal Promotions by Stage: %w", err)
 	}
@@ -233,7 +233,7 @@ func SetupReconcilerWithManager(
 		ctx,
 		&kargoapi.Promotion{},
 		indexer.PromotionsByTerminalIndexField,
-		indexer.PromotionsByTerminalIndexer,
+		indexer.PromotionsByTerminal,
 	); err != nil {
 		return fmt.Errorf("index Promotions by terminal status: %w", err)
 	}
@@ -243,7 +243,7 @@ func SetupReconcilerWithManager(
 		ctx,
 		&kargoapi.Promotion{},
 		indexer.PromotionsByStageAndFreightIndexField,
-		indexer.PromotionsByStageAndFreightIndexer,
+		indexer.PromotionsByStageAndFreight,
 	); err != nil {
 		return fmt.Errorf("index Promotions by Stage and Freight: %w", err)
 	}
@@ -253,7 +253,7 @@ func SetupReconcilerWithManager(
 		ctx,
 		&kargoapi.Freight{},
 		indexer.FreightByWarehouseIndexField,
-		indexer.FreightByWarehouseIndexer,
+		indexer.FreightByWarehouse,
 	); err != nil {
 		return fmt.Errorf("index Freight by Warehouse: %w", err)
 	}
@@ -263,7 +263,7 @@ func SetupReconcilerWithManager(
 		ctx,
 		&kargoapi.Freight{},
 		indexer.FreightByVerifiedStagesIndexField,
-		indexer.FreightByVerifiedStagesIndexer,
+		indexer.FreightByVerifiedStages,
 	); err != nil {
 		return fmt.Errorf("index Freight by Stages in which it has been verified: %w", err)
 	}
@@ -273,7 +273,7 @@ func SetupReconcilerWithManager(
 		ctx,
 		&kargoapi.Freight{},
 		indexer.FreightApprovedForStagesIndexField,
-		indexer.FreightApprovedForStagesIndexer,
+		indexer.FreightApprovedForStages,
 	); err != nil {
 		return fmt.Errorf("index Freight by Stages for which it has been approved: %w", err)
 	}
@@ -283,7 +283,7 @@ func SetupReconcilerWithManager(
 		ctx,
 		&kargoapi.Stage{},
 		indexer.StagesByUpstreamStagesIndexField,
-		indexer.StagesByUpstreamStagesIndexer,
+		indexer.StagesByUpstreamStages,
 	); err != nil {
 		return fmt.Errorf("index Stages by upstream Stages: %w", err)
 	}
@@ -293,7 +293,7 @@ func SetupReconcilerWithManager(
 		ctx,
 		&kargoapi.Stage{},
 		indexer.StagesByWarehouseIndexField,
-		indexer.StagesByWarehouseIndexer,
+		indexer.StagesByWarehouse,
 	); err != nil {
 		return fmt.Errorf("index Stages by Warehouse: %w", err)
 	}
@@ -303,7 +303,7 @@ func SetupReconcilerWithManager(
 		ctx,
 		&kargoapi.Stage{},
 		indexer.StagesByAnalysisRunIndexField,
-		indexer.StagesByAnalysisRunIndexer(cfg.ShardName),
+		indexer.StagesByAnalysisRun(cfg.ShardName),
 	); err != nil {
 		return fmt.Errorf("index Stages by AnalysisRun: %w", err)
 	}

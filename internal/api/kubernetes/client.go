@@ -237,7 +237,7 @@ func newDefaultInternalClient(
 		ctx,
 		&kargoapi.Promotion{},
 		indexer.PromotionsByStageIndexField,
-		indexer.PromotionsByStageIndexer(),
+		indexer.PromotionsByStage(),
 	); err != nil {
 		return nil, fmt.Errorf("error indexing Promotions by Stage: %w", err)
 	}
@@ -245,7 +245,7 @@ func newDefaultInternalClient(
 		ctx,
 		&kargoapi.Freight{},
 		indexer.FreightByWarehouseIndexField,
-		indexer.FreightByWarehouseIndexer,
+		indexer.FreightByWarehouse,
 	); err != nil {
 		return nil, fmt.Errorf("error indexing Freight by Warehouse: %w", err)
 	}
@@ -253,7 +253,7 @@ func newDefaultInternalClient(
 		ctx,
 		&kargoapi.Freight{},
 		indexer.FreightByVerifiedStagesIndexField,
-		indexer.FreightByVerifiedStagesIndexer,
+		indexer.FreightByVerifiedStages,
 	); err != nil {
 		return nil, fmt.Errorf("error indexing Freight by Stages in which it has been verified: %w", err)
 	}
@@ -261,7 +261,7 @@ func newDefaultInternalClient(
 		ctx,
 		&kargoapi.Freight{},
 		indexer.FreightApprovedForStagesIndexField,
-		indexer.FreightApprovedForStagesIndexer,
+		indexer.FreightApprovedForStages,
 	); err != nil {
 		return nil, fmt.Errorf("error indexing Freight by Stages for which it has been approved: %w", err)
 	}
@@ -269,7 +269,7 @@ func newDefaultInternalClient(
 		ctx,
 		&corev1.ServiceAccount{},
 		indexer.ServiceAccountsByOIDCClaimsIndexField,
-		indexer.ServiceAccountsByOIDCClaimsIndexer,
+		indexer.ServiceAccountsByOIDCClaims,
 	); err != nil {
 		return nil, fmt.Errorf("index ServiceAccounts by OIDC claims: %w", err)
 	}
