@@ -20,24 +20,24 @@ import (
 )
 
 const (
-	EventsByInvolvedObjectAPIGroupIndexField = "involvedObject.apiGroup"
+	EventsByInvolvedObjectAPIGroupField = "involvedObject.apiGroup"
 
-	FreightByVerifiedStagesIndexField  = "verifiedIn"
-	FreightApprovedForStagesIndexField = "approvedFor"
-	FreightByWarehouseIndexField       = "warehouse"
+	FreightByVerifiedStagesField  = "verifiedIn"
+	FreightApprovedForStagesField = "approvedFor"
+	FreightByWarehouseField       = "warehouse"
 
-	PromotionsByStageAndFreightIndexField = "stageAndFreight"
-	PromotionsByTerminalIndexField        = "terminal"
-	PromotionsByStageIndexField           = "stage"
+	PromotionsByStageAndFreightField = "stageAndFreight"
+	PromotionsByTerminalField        = "terminal"
+	PromotionsByStageField           = "stage"
 
-	RunningPromotionsByArgoCDApplicationsIndexField = "applications"
+	RunningPromotionsByArgoCDApplicationsField = "applications"
 
-	StagesByAnalysisRunIndexField    = "analysisRun"
-	StagesByFreightIndexField        = "freight"
-	StagesByUpstreamStagesIndexField = "upstreamStages"
-	StagesByWarehouseIndexField      = "warehouse"
+	StagesByAnalysisRunField    = "analysisRun"
+	StagesByFreightField        = "freight"
+	StagesByUpstreamStagesField = "upstreamStages"
+	StagesByWarehouseField      = "warehouse"
 
-	ServiceAccountsByOIDCClaimsIndexField = "claims"
+	ServiceAccountsByOIDCClaimsField = "claims"
 )
 
 // EventsByInvolvedObjectAPIGroup is a client.IndexerFunc that indexes

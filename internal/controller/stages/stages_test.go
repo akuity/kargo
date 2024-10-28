@@ -3207,7 +3207,7 @@ func TestGetAvailableFreightByOrigin(t *testing.T) {
 
 					if strings.Contains(
 						lo.FieldSelector.String(),
-						fmt.Sprintf("%s=%s", indexer.FreightByVerifiedStagesIndexField, "fake-upstream-stage"),
+						fmt.Sprintf("%s=%s", indexer.FreightByVerifiedStagesField, "fake-upstream-stage"),
 					) {
 						return fmt.Errorf("something went wrong")
 					}
@@ -3253,7 +3253,7 @@ func TestGetAvailableFreightByOrigin(t *testing.T) {
 
 					if strings.Contains(
 						lo.FieldSelector.String(),
-						fmt.Sprintf("%s=%s", indexer.FreightApprovedForStagesIndexField, "fake-stage"),
+						fmt.Sprintf("%s=%s", indexer.FreightApprovedForStagesField, "fake-stage"),
 					) {
 						return fmt.Errorf("something went wrong")
 					}
@@ -3301,11 +3301,11 @@ func TestGetAvailableFreightByOrigin(t *testing.T) {
 					lo := &client.ListOptions{}
 					lo.ApplyOptions(opts)
 
-					if strings.Contains(lo.FieldSelector.String(), indexer.FreightApprovedForStagesIndexField) {
+					if strings.Contains(lo.FieldSelector.String(), indexer.FreightApprovedForStagesField) {
 						return fmt.Errorf("something went wrong")
 					}
 
-					if strings.Contains(lo.FieldSelector.String(), indexer.FreightByVerifiedStagesIndexField) {
+					if strings.Contains(lo.FieldSelector.String(), indexer.FreightByVerifiedStagesField) {
 						return fmt.Errorf("something went wrong")
 					}
 
@@ -3345,17 +3345,17 @@ func TestGetAvailableFreightByOrigin(t *testing.T) {
 				WithScheme(s).
 				WithIndex(
 					&kargoapi.Freight{},
-					indexer.FreightByWarehouseIndexField,
+					indexer.FreightByWarehouseField,
 					indexer.FreightByWarehouse,
 				).
 				WithIndex(
 					&kargoapi.Freight{},
-					indexer.FreightByVerifiedStagesIndexField,
+					indexer.FreightByVerifiedStagesField,
 					indexer.FreightByVerifiedStages,
 				).
 				WithIndex(
 					&kargoapi.Freight{},
-					indexer.FreightApprovedForStagesIndexField,
+					indexer.FreightApprovedForStagesField,
 					indexer.FreightApprovedForStages,
 				).
 				WithInterceptorFuncs(tc.interceptor).

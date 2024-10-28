@@ -329,17 +329,17 @@ func Test_controlFlowStageReconciler_Reconcile(t *testing.T) {
 				WithObjects(objects...).
 				WithIndex(
 					&kargoapi.Freight{},
-					indexer.FreightByWarehouseIndexField,
+					indexer.FreightByWarehouseField,
 					indexer.FreightByWarehouse,
 				).
 				WithIndex(
 					&kargoapi.Freight{},
-					indexer.FreightByVerifiedStagesIndexField,
+					indexer.FreightByVerifiedStagesField,
 					indexer.FreightByVerifiedStages,
 				).
 				WithIndex(
 					&kargoapi.Freight{},
-					indexer.FreightApprovedForStagesIndexField,
+					indexer.FreightApprovedForStagesField,
 					indexer.FreightApprovedForStages,
 				).
 				WithStatusSubresource(&kargoapi.Stage{}, &kargoapi.Freight{}).
@@ -618,12 +618,12 @@ func Test_controlFlowStageReconciler_reconcile(t *testing.T) {
 				WithObjects(tt.objects...).
 				WithIndex(
 					&kargoapi.Freight{},
-					indexer.FreightByWarehouseIndexField,
+					indexer.FreightByWarehouseField,
 					indexer.FreightByWarehouse,
 				).
 				WithIndex(
 					&kargoapi.Freight{},
-					indexer.FreightByVerifiedStagesIndexField,
+					indexer.FreightByVerifiedStagesField,
 					indexer.FreightByVerifiedStages,
 				).
 				WithStatusSubresource(&kargoapi.Freight{}).
@@ -1075,7 +1075,7 @@ func Test_controlFlowStageReconciler_getAvailableFreight(t *testing.T) {
 					}
 
 					switch {
-					case strings.Contains(listOpts.FieldSelector.String(), indexer.FreightByWarehouseIndexField):
+					case strings.Contains(listOpts.FieldSelector.String(), indexer.FreightByWarehouseField):
 						return fmt.Errorf("something went wrong")
 					default:
 						return c.List(ctx, list, opts...)
@@ -1113,7 +1113,7 @@ func Test_controlFlowStageReconciler_getAvailableFreight(t *testing.T) {
 					}
 
 					switch {
-					case strings.Contains(listOpts.FieldSelector.String(), indexer.FreightByVerifiedStagesIndexField):
+					case strings.Contains(listOpts.FieldSelector.String(), indexer.FreightByVerifiedStagesField):
 						return fmt.Errorf("something went wrong")
 					default:
 						return c.List(ctx, list, opts...)
@@ -1133,12 +1133,12 @@ func Test_controlFlowStageReconciler_getAvailableFreight(t *testing.T) {
 				WithObjects(tt.objects...).
 				WithIndex(
 					&kargoapi.Freight{},
-					indexer.FreightByWarehouseIndexField,
+					indexer.FreightByWarehouseField,
 					indexer.FreightByWarehouse,
 				).
 				WithIndex(
 					&kargoapi.Freight{},
-					indexer.FreightByVerifiedStagesIndexField,
+					indexer.FreightByVerifiedStagesField,
 					indexer.FreightByVerifiedStages,
 				).
 				WithInterceptorFuncs(tt.interceptor).
@@ -1482,7 +1482,7 @@ func Test_controlFlowStageReconciler_handleDelete(t *testing.T) {
 					}
 
 					switch {
-					case strings.Contains(listOpts.FieldSelector.String(), indexer.FreightApprovedForStagesIndexField):
+					case strings.Contains(listOpts.FieldSelector.String(), indexer.FreightApprovedForStagesField):
 						return fmt.Errorf("something went wrong")
 					default:
 						return c.List(ctx, list, opts...)
@@ -1527,12 +1527,12 @@ func Test_controlFlowStageReconciler_handleDelete(t *testing.T) {
 				WithObjects(tt.stage).
 				WithIndex(
 					&kargoapi.Freight{},
-					indexer.FreightByVerifiedStagesIndexField,
+					indexer.FreightByVerifiedStagesField,
 					indexer.FreightByVerifiedStages,
 				).
 				WithIndex(
 					&kargoapi.Freight{},
-					indexer.FreightApprovedForStagesIndexField,
+					indexer.FreightApprovedForStagesField,
 					indexer.FreightApprovedForStages,
 				).
 				WithInterceptorFuncs(tt.interceptor).
@@ -1726,7 +1726,7 @@ func Test_controlFlowStageReconciler_clearVerifications(t *testing.T) {
 				WithObjects(tt.objects...).
 				WithIndex(
 					&kargoapi.Freight{},
-					indexer.FreightByVerifiedStagesIndexField,
+					indexer.FreightByVerifiedStagesField,
 					indexer.FreightByVerifiedStages,
 				).
 				WithStatusSubresource(&kargoapi.Freight{}).
@@ -1920,7 +1920,7 @@ func Test_controlFlowStageReconciler_clearApprovals(t *testing.T) {
 				WithObjects(tt.objects...).
 				WithIndex(
 					&kargoapi.Freight{},
-					indexer.FreightApprovedForStagesIndexField,
+					indexer.FreightApprovedForStagesField,
 					indexer.FreightApprovedForStages,
 				).
 				WithStatusSubresource(&kargoapi.Freight{}).

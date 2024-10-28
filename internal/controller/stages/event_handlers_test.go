@@ -259,7 +259,7 @@ func Test_downstreamStageEnqueuer_Update(t *testing.T) {
 				WithObjects(tt.objects...).
 				WithIndex(
 					&kargoapi.Stage{},
-					indexer.StagesByUpstreamStagesIndexField,
+					indexer.StagesByUpstreamStagesField,
 					indexer.StagesByUpstreamStages,
 				).
 				WithInterceptorFuncs(tt.interceptor).
@@ -633,7 +633,7 @@ func Test_warehouseStageEnqueuer_Create(t *testing.T) {
 			c := fake.NewClientBuilder().
 				WithScheme(scheme).
 				WithObjects(tt.objects...).
-				WithIndex(&kargoapi.Stage{}, indexer.StagesByWarehouseIndexField, indexer.StagesByWarehouse).
+				WithIndex(&kargoapi.Stage{}, indexer.StagesByWarehouseField, indexer.StagesByWarehouse).
 				WithInterceptorFuncs(tt.interceptor).
 				Build()
 
@@ -1304,7 +1304,7 @@ func Test_stageEnqueuerForAnalysisRuns_Update(t *testing.T) {
 				WithObjects(tt.objects...).
 				WithIndex(
 					&kargoapi.Stage{},
-					indexer.StagesByAnalysisRunIndexField,
+					indexer.StagesByAnalysisRunField,
 					indexer.StagesByAnalysisRun(""),
 				).
 				WithInterceptorFuncs(tt.interceptor).

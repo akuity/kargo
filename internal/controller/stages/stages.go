@@ -222,7 +222,7 @@ func SetupReconcilerWithManager(
 	if err := sharedIndexer.IndexField(
 		ctx,
 		&kargoapi.Promotion{},
-		indexer.PromotionsByStageIndexField,
+		indexer.PromotionsByStageField,
 		indexer.PromotionsByStage(),
 	); err != nil {
 		return fmt.Errorf("index non-terminal Promotions by Stage: %w", err)
@@ -232,7 +232,7 @@ func SetupReconcilerWithManager(
 	if err := sharedIndexer.IndexField(
 		ctx,
 		&kargoapi.Promotion{},
-		indexer.PromotionsByTerminalIndexField,
+		indexer.PromotionsByTerminalField,
 		indexer.PromotionsByTerminal,
 	); err != nil {
 		return fmt.Errorf("index Promotions by terminal status: %w", err)
@@ -242,7 +242,7 @@ func SetupReconcilerWithManager(
 	if err := sharedIndexer.IndexField(
 		ctx,
 		&kargoapi.Promotion{},
-		indexer.PromotionsByStageAndFreightIndexField,
+		indexer.PromotionsByStageAndFreightField,
 		indexer.PromotionsByStageAndFreight,
 	); err != nil {
 		return fmt.Errorf("index Promotions by Stage and Freight: %w", err)
@@ -252,7 +252,7 @@ func SetupReconcilerWithManager(
 	if err := sharedIndexer.IndexField(
 		ctx,
 		&kargoapi.Freight{},
-		indexer.FreightByWarehouseIndexField,
+		indexer.FreightByWarehouseField,
 		indexer.FreightByWarehouse,
 	); err != nil {
 		return fmt.Errorf("index Freight by Warehouse: %w", err)
@@ -262,7 +262,7 @@ func SetupReconcilerWithManager(
 	if err := sharedIndexer.IndexField(
 		ctx,
 		&kargoapi.Freight{},
-		indexer.FreightByVerifiedStagesIndexField,
+		indexer.FreightByVerifiedStagesField,
 		indexer.FreightByVerifiedStages,
 	); err != nil {
 		return fmt.Errorf("index Freight by Stages in which it has been verified: %w", err)
@@ -272,7 +272,7 @@ func SetupReconcilerWithManager(
 	if err := sharedIndexer.IndexField(
 		ctx,
 		&kargoapi.Freight{},
-		indexer.FreightApprovedForStagesIndexField,
+		indexer.FreightApprovedForStagesField,
 		indexer.FreightApprovedForStages,
 	); err != nil {
 		return fmt.Errorf("index Freight by Stages for which it has been approved: %w", err)
@@ -282,7 +282,7 @@ func SetupReconcilerWithManager(
 	if err := sharedIndexer.IndexField(
 		ctx,
 		&kargoapi.Stage{},
-		indexer.StagesByUpstreamStagesIndexField,
+		indexer.StagesByUpstreamStagesField,
 		indexer.StagesByUpstreamStages,
 	); err != nil {
 		return fmt.Errorf("index Stages by upstream Stages: %w", err)
@@ -292,7 +292,7 @@ func SetupReconcilerWithManager(
 	if err := sharedIndexer.IndexField(
 		ctx,
 		&kargoapi.Stage{},
-		indexer.StagesByWarehouseIndexField,
+		indexer.StagesByWarehouseField,
 		indexer.StagesByWarehouse,
 	); err != nil {
 		return fmt.Errorf("index Stages by Warehouse: %w", err)
@@ -302,7 +302,7 @@ func SetupReconcilerWithManager(
 	if err := sharedIndexer.IndexField(
 		ctx,
 		&kargoapi.Stage{},
-		indexer.StagesByAnalysisRunIndexField,
+		indexer.StagesByAnalysisRunField,
 		indexer.StagesByAnalysisRun(cfg.ShardName),
 	); err != nil {
 		return fmt.Errorf("index Stages by AnalysisRun: %w", err)
@@ -568,8 +568,8 @@ func (r *reconciler) Reconcile(
 			&promos,
 			client.InNamespace(stage.Namespace),
 			client.MatchingFields{
-				indexer.PromotionsByStageIndexField:    stage.Name,
-				indexer.PromotionsByTerminalIndexField: "false",
+				indexer.PromotionsByStageField:    stage.Name,
+				indexer.PromotionsByTerminalField: "false",
 			},
 			client.Limit(1),
 		); err != nil {
@@ -883,7 +883,7 @@ func (r *reconciler) syncNormalStage(
 			&client.ListOptions{
 				Namespace: stage.Namespace,
 				FieldSelector: fields.OneTermEqualSelector(
-					indexer.PromotionsByStageAndFreightIndexField,
+					indexer.PromotionsByStageAndFreightField,
 					indexer.StageAndFreightKey(stage.Name, latestFreight.Name),
 				),
 				Limit: 1,
@@ -1159,7 +1159,7 @@ func (r *reconciler) clearVerifications(
 		&client.ListOptions{
 			Namespace: stage.Namespace,
 			FieldSelector: fields.OneTermEqualSelector(
-				indexer.FreightByVerifiedStagesIndexField,
+				indexer.FreightByVerifiedStagesField,
 				stage.Name,
 			),
 		},
@@ -1201,7 +1201,7 @@ func (r *reconciler) clearApprovals(
 		&client.ListOptions{
 			Namespace: stage.Namespace,
 			FieldSelector: fields.OneTermEqualSelector(
-				indexer.FreightApprovedForStagesIndexField,
+				indexer.FreightApprovedForStagesField,
 				stage.Name,
 			),
 		},
@@ -1377,7 +1377,7 @@ func (r *reconciler) getPromotionsForStage(
 		&client.ListOptions{
 			Namespace: stageNamespace,
 			FieldSelector: fields.OneTermEqualSelector(
-				indexer.PromotionsByStageIndexField,
+				indexer.PromotionsByStageField,
 				stageName,
 			),
 		},
@@ -1413,7 +1413,7 @@ func (r *reconciler) getAvailableFreightByOrigin(
 				&client.ListOptions{
 					Namespace: stage.Namespace,
 					FieldSelector: fields.OneTermEqualSelector(
-						indexer.FreightByWarehouseIndexField,
+						indexer.FreightByWarehouseField,
 						req.Origin.Name,
 					),
 				},
@@ -1445,11 +1445,11 @@ func (r *reconciler) getAvailableFreightByOrigin(
 						// TODO(hidde): once we support more Freight origin
 						// kinds, we need to adjust this.
 						fields.OneTermEqualSelector(
-							indexer.FreightByWarehouseIndexField,
+							indexer.FreightByWarehouseField,
 							req.Origin.Name,
 						),
 						fields.OneTermEqualSelector(
-							indexer.FreightByVerifiedStagesIndexField,
+							indexer.FreightByVerifiedStagesField,
 							upstream,
 						),
 					),
@@ -1477,11 +1477,11 @@ func (r *reconciler) getAvailableFreightByOrigin(
 						// TODO(hidde): once we support more Freight origin
 						// kinds, we need to adjust this.
 						fields.OneTermEqualSelector(
-							indexer.FreightByWarehouseIndexField,
+							indexer.FreightByWarehouseField,
 							req.Origin.Name,
 						),
 						fields.OneTermEqualSelector(
-							indexer.FreightApprovedForStagesIndexField,
+							indexer.FreightApprovedForStagesField,
 							stage.Name,
 						),
 					),

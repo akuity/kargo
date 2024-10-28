@@ -227,7 +227,7 @@ func TestUpdatedArgoCDAppHandler_Update(t *testing.T) {
 				WithObjects(tt.applications...).
 				WithIndex(
 					&kargoapi.Promotion{},
-					indexer.RunningPromotionsByArgoCDApplicationsIndexField,
+					indexer.RunningPromotionsByArgoCDApplicationsField,
 					tt.indexer,
 				).
 				WithInterceptorFuncs(tt.interceptor)

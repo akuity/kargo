@@ -63,7 +63,7 @@ func (r *ControlFlowStageReconciler) SetupWithManager(
 	if err := sharedIndexer.IndexField(
 		ctx,
 		&kargoapi.Freight{},
-		indexer.FreightByWarehouseIndexField,
+		indexer.FreightByWarehouseField,
 		indexer.FreightByWarehouse,
 	); err != nil {
 		return fmt.Errorf("error setting up index for Freight by Warehouse: %w", err)
@@ -75,7 +75,7 @@ func (r *ControlFlowStageReconciler) SetupWithManager(
 	if err := sharedIndexer.IndexField(
 		ctx,
 		&kargoapi.Freight{},
-		indexer.FreightByVerifiedStagesIndexField,
+		indexer.FreightByVerifiedStagesField,
 		indexer.FreightByVerifiedStages,
 	); err != nil {
 		return fmt.Errorf("error setting up index for Freight by verified Stages: %w", err)
@@ -88,7 +88,7 @@ func (r *ControlFlowStageReconciler) SetupWithManager(
 	if err := sharedIndexer.IndexField(
 		ctx,
 		&kargoapi.Freight{},
-		indexer.FreightApprovedForStagesIndexField,
+		indexer.FreightApprovedForStagesField,
 		indexer.FreightApprovedForStages,
 	); err != nil {
 		return fmt.Errorf("error setting up index for Freight approved for Stages: %w", err)
@@ -99,7 +99,7 @@ func (r *ControlFlowStageReconciler) SetupWithManager(
 	if err := sharedIndexer.IndexField(
 		ctx,
 		&kargoapi.Stage{},
-		indexer.StagesByUpstreamStagesIndexField,
+		indexer.StagesByUpstreamStagesField,
 		indexer.StagesByUpstreamStages,
 	); err != nil {
 		return fmt.Errorf("error setting up index for Stages by upstream Stages: %w", err)
@@ -110,7 +110,7 @@ func (r *ControlFlowStageReconciler) SetupWithManager(
 	if err := sharedIndexer.IndexField(
 		ctx,
 		&kargoapi.Stage{},
-		indexer.StagesByWarehouseIndexField,
+		indexer.StagesByWarehouseField,
 		indexer.StagesByWarehouse,
 	); err != nil {
 		return fmt.Errorf("error setting up index for Stages by Warehouse: %w", err)
@@ -317,7 +317,7 @@ func (r *ControlFlowStageReconciler) getAvailableFreight(
 				&directFreight,
 				client.InNamespace(stage.Namespace),
 				client.MatchingFieldsSelector{
-					Selector: fields.OneTermEqualSelector(indexer.FreightByWarehouseIndexField, req.Origin.Name),
+					Selector: fields.OneTermEqualSelector(indexer.FreightByWarehouseField, req.Origin.Name),
 				},
 			); err != nil {
 				return nil, fmt.Errorf(
@@ -352,7 +352,7 @@ func (r *ControlFlowStageReconciler) getAvailableFreight(
 				&verifiedFreight,
 				client.InNamespace(stage.Namespace),
 				client.MatchingFieldsSelector{
-					Selector: fields.OneTermEqualSelector(indexer.FreightByVerifiedStagesIndexField, upstream),
+					Selector: fields.OneTermEqualSelector(indexer.FreightByVerifiedStagesField, upstream),
 				},
 			); err != nil {
 				return nil, fmt.Errorf(
@@ -508,7 +508,7 @@ func (r *ControlFlowStageReconciler) clearVerifications(ctx context.Context, sta
 		client.InNamespace(stage.Namespace),
 		client.MatchingFieldsSelector{
 			Selector: fields.OneTermEqualSelector(
-				indexer.FreightByVerifiedStagesIndexField,
+				indexer.FreightByVerifiedStagesField,
 				stage.Name,
 			),
 		},
@@ -552,7 +552,7 @@ func (r *ControlFlowStageReconciler) clearApprovals(ctx context.Context, stage *
 		client.InNamespace(stage.Namespace),
 		client.MatchingFieldsSelector{
 			Selector: fields.OneTermEqualSelector(
-				indexer.FreightApprovedForStagesIndexField,
+				indexer.FreightApprovedForStagesField,
 				stage.Name,
 			),
 		},
