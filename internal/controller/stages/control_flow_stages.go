@@ -119,6 +119,7 @@ func (r *ControlFlowStageReconciler) SetupWithManager(
 	// Build the controller with the reconciler.
 	c, err := ctrl.NewControllerManagedBy(mgr).
 		For(&kargoapi.Stage{}).
+		Named("control_flow_stage").
 		WithOptions(controller.CommonOptions()).
 		WithEventFilter(
 			predicate.And(
