@@ -5,8 +5,8 @@ import { AutoComplete, Button } from 'antd';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import { listProjects } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 import { paths } from '@ui/config/paths';
+import { listProjects } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 
 export const ProjectListFilter = ({
   onChange,
