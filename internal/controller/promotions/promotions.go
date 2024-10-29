@@ -25,6 +25,7 @@ import (
 	"github.com/akuity/kargo/internal/controller"
 	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
 	"github.com/akuity/kargo/internal/directives"
+	"github.com/akuity/kargo/internal/event"
 	"github.com/akuity/kargo/internal/indexer"
 	"github.com/akuity/kargo/internal/kargo"
 	"github.com/akuity/kargo/internal/kubeclient"
@@ -380,7 +381,7 @@ func (r *reconciler) Reconcile(
 			msg += fmt.Sprintf(": %s", newStatus.Message)
 		}
 
-		eventAnnotations := kargoapi.NewPromotionEventAnnotations(ctx,
+		eventAnnotations := event.NewPromotionAnnotations(ctx,
 			kargoapi.FormatEventControllerActor(r.cfg.Name()),
 			promo, freight)
 
@@ -608,7 +609,7 @@ func (r *reconciler) terminatePromotion(
 		return err
 	}
 
-	eventMeta := kargoapi.NewPromotionEventAnnotations(ctx, "", promo, freight)
+	eventMeta := event.NewPromotionAnnotations(ctx, "", promo, freight)
 	eventMeta[kargoapi.AnnotationKeyEventActor] = actor
 
 	r.recorder.AnnotatedEventf(
