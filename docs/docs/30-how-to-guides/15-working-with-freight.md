@@ -114,9 +114,17 @@ This is conveniently accomplished via the Kargo CLI:
 
 ```shell
 kargo update freight \
-  f5f87aa23c9e97f43eb83dd63768ee41f5ba3766 \
-  --alias frozen-tauntaun \
-  --project kargo-demo
+  --project=kargo-demo \
+  --name=f5f87aa23c9e97f43eb83dd63768ee41f5ba3766 \
+  --new-alias=frozen-tauntaun
+```
+Alternatively, you can reference the `Freight` to which you want to assign a new alias using its existing alias:
+
+```shell
+kargo update freight \
+  --project=kargo-demo \
+  --old-alias=mortal-dragonfly \
+  --new-alias=frozen-tauntaun
 ```
 
 This can also be accomplished via `kubectl` commands `apply`, `edit`, `patch`,
