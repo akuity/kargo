@@ -55,6 +55,12 @@ export const newErrorHandler = (handler: (err: ConnectError) => void): Intercept
 
       handler(err);
 
+      // in rare cases, token is invalid but UI could not detect it beforehand
+      // CodeUnauthenticated <- to ease the global code search
+      if (err instanceof ConnectError && err?.message.includes('unauthenticated')) {
+        logout();
+      }
+
       throw err;
     });
 };

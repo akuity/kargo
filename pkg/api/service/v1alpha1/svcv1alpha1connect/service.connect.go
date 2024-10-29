@@ -41,8 +41,6 @@ const (
 	// KargoServiceGetPublicConfigProcedure is the fully-qualified name of the KargoService's
 	// GetPublicConfig RPC.
 	KargoServiceGetPublicConfigProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/GetPublicConfig"
-	// KargoServiceWhoAmIProcedure is the fully-qualified name of the KargoService's WhoAmI RPC.
-	KargoServiceWhoAmIProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/WhoAmI"
 	// KargoServiceAdminLoginProcedure is the fully-qualified name of the KargoService's AdminLogin RPC.
 	KargoServiceAdminLoginProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/AdminLogin"
 	// KargoServiceCreateResourceProcedure is the fully-qualified name of the KargoService's
@@ -199,7 +197,6 @@ var (
 	kargoServiceGetVersionInfoMethodDescriptor                 = kargoServiceServiceDescriptor.Methods().ByName("GetVersionInfo")
 	kargoServiceGetConfigMethodDescriptor                      = kargoServiceServiceDescriptor.Methods().ByName("GetConfig")
 	kargoServiceGetPublicConfigMethodDescriptor                = kargoServiceServiceDescriptor.Methods().ByName("GetPublicConfig")
-	kargoServiceWhoAmIMethodDescriptor                         = kargoServiceServiceDescriptor.Methods().ByName("WhoAmI")
 	kargoServiceAdminLoginMethodDescriptor                     = kargoServiceServiceDescriptor.Methods().ByName("AdminLogin")
 	kargoServiceCreateResourceMethodDescriptor                 = kargoServiceServiceDescriptor.Methods().ByName("CreateResource")
 	kargoServiceCreateOrUpdateResourceMethodDescriptor         = kargoServiceServiceDescriptor.Methods().ByName("CreateOrUpdateResource")
@@ -261,7 +258,6 @@ type KargoServiceClient interface {
 	GetVersionInfo(context.Context, *connect.Request[v1alpha1.GetVersionInfoRequest]) (*connect.Response[v1alpha1.GetVersionInfoResponse], error)
 	GetConfig(context.Context, *connect.Request[v1alpha1.GetConfigRequest]) (*connect.Response[v1alpha1.GetConfigResponse], error)
 	GetPublicConfig(context.Context, *connect.Request[v1alpha1.GetPublicConfigRequest]) (*connect.Response[v1alpha1.GetPublicConfigResponse], error)
-	WhoAmI(context.Context, *connect.Request[v1alpha1.WhoAmIRequest]) (*connect.Response[v1alpha1.WhoAmIResponse], error)
 	AdminLogin(context.Context, *connect.Request[v1alpha1.AdminLoginRequest]) (*connect.Response[v1alpha1.AdminLoginResponse], error)
 	// TODO(devholic): Add ApplyResource API
 	// rpc ApplyResource(ApplyResourceRequest) returns (ApplyResourceRequest);
@@ -346,12 +342,6 @@ func NewKargoServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			httpClient,
 			baseURL+KargoServiceGetPublicConfigProcedure,
 			connect.WithSchema(kargoServiceGetPublicConfigMethodDescriptor),
-			connect.WithClientOptions(opts...),
-		),
-		whoAmI: connect.NewClient[v1alpha1.WhoAmIRequest, v1alpha1.WhoAmIResponse](
-			httpClient,
-			baseURL+KargoServiceWhoAmIProcedure,
-			connect.WithSchema(kargoServiceWhoAmIMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
 		adminLogin: connect.NewClient[v1alpha1.AdminLoginRequest, v1alpha1.AdminLoginResponse](
@@ -686,7 +676,6 @@ type kargoServiceClient struct {
 	getVersionInfo                 *connect.Client[v1alpha1.GetVersionInfoRequest, v1alpha1.GetVersionInfoResponse]
 	getConfig                      *connect.Client[v1alpha1.GetConfigRequest, v1alpha1.GetConfigResponse]
 	getPublicConfig                *connect.Client[v1alpha1.GetPublicConfigRequest, v1alpha1.GetPublicConfigResponse]
-	whoAmI                         *connect.Client[v1alpha1.WhoAmIRequest, v1alpha1.WhoAmIResponse]
 	adminLogin                     *connect.Client[v1alpha1.AdminLoginRequest, v1alpha1.AdminLoginResponse]
 	createResource                 *connect.Client[v1alpha1.CreateResourceRequest, v1alpha1.CreateResourceResponse]
 	createOrUpdateResource         *connect.Client[v1alpha1.CreateOrUpdateResourceRequest, v1alpha1.CreateOrUpdateResourceResponse]
@@ -756,11 +745,6 @@ func (c *kargoServiceClient) GetConfig(ctx context.Context, req *connect.Request
 // GetPublicConfig calls akuity.io.kargo.service.v1alpha1.KargoService.GetPublicConfig.
 func (c *kargoServiceClient) GetPublicConfig(ctx context.Context, req *connect.Request[v1alpha1.GetPublicConfigRequest]) (*connect.Response[v1alpha1.GetPublicConfigResponse], error) {
 	return c.getPublicConfig.CallUnary(ctx, req)
-}
-
-// WhoAmI calls akuity.io.kargo.service.v1alpha1.KargoService.WhoAmI.
-func (c *kargoServiceClient) WhoAmI(ctx context.Context, req *connect.Request[v1alpha1.WhoAmIRequest]) (*connect.Response[v1alpha1.WhoAmIResponse], error) {
-	return c.whoAmI.CallUnary(ctx, req)
 }
 
 // AdminLogin calls akuity.io.kargo.service.v1alpha1.KargoService.AdminLogin.
@@ -1045,7 +1029,6 @@ type KargoServiceHandler interface {
 	GetVersionInfo(context.Context, *connect.Request[v1alpha1.GetVersionInfoRequest]) (*connect.Response[v1alpha1.GetVersionInfoResponse], error)
 	GetConfig(context.Context, *connect.Request[v1alpha1.GetConfigRequest]) (*connect.Response[v1alpha1.GetConfigResponse], error)
 	GetPublicConfig(context.Context, *connect.Request[v1alpha1.GetPublicConfigRequest]) (*connect.Response[v1alpha1.GetPublicConfigResponse], error)
-	WhoAmI(context.Context, *connect.Request[v1alpha1.WhoAmIRequest]) (*connect.Response[v1alpha1.WhoAmIResponse], error)
 	AdminLogin(context.Context, *connect.Request[v1alpha1.AdminLoginRequest]) (*connect.Response[v1alpha1.AdminLoginResponse], error)
 	// TODO(devholic): Add ApplyResource API
 	// rpc ApplyResource(ApplyResourceRequest) returns (ApplyResourceRequest);
@@ -1126,12 +1109,6 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 		KargoServiceGetPublicConfigProcedure,
 		svc.GetPublicConfig,
 		connect.WithSchema(kargoServiceGetPublicConfigMethodDescriptor),
-		connect.WithHandlerOptions(opts...),
-	)
-	kargoServiceWhoAmIHandler := connect.NewUnaryHandler(
-		KargoServiceWhoAmIProcedure,
-		svc.WhoAmI,
-		connect.WithSchema(kargoServiceWhoAmIMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
 	kargoServiceAdminLoginHandler := connect.NewUnaryHandler(
@@ -1466,8 +1443,6 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 			kargoServiceGetConfigHandler.ServeHTTP(w, r)
 		case KargoServiceGetPublicConfigProcedure:
 			kargoServiceGetPublicConfigHandler.ServeHTTP(w, r)
-		case KargoServiceWhoAmIProcedure:
-			kargoServiceWhoAmIHandler.ServeHTTP(w, r)
 		case KargoServiceAdminLoginProcedure:
 			kargoServiceAdminLoginHandler.ServeHTTP(w, r)
 		case KargoServiceCreateResourceProcedure:
@@ -1595,10 +1570,6 @@ func (UnimplementedKargoServiceHandler) GetConfig(context.Context, *connect.Requ
 
 func (UnimplementedKargoServiceHandler) GetPublicConfig(context.Context, *connect.Request[v1alpha1.GetPublicConfigRequest]) (*connect.Response[v1alpha1.GetPublicConfigResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.GetPublicConfig is not implemented"))
-}
-
-func (UnimplementedKargoServiceHandler) WhoAmI(context.Context, *connect.Request[v1alpha1.WhoAmIRequest]) (*connect.Response[v1alpha1.WhoAmIResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.WhoAmI is not implemented"))
 }
 
 func (UnimplementedKargoServiceHandler) AdminLogin(context.Context, *connect.Request[v1alpha1.AdminLoginRequest]) (*connect.Response[v1alpha1.AdminLoginResponse], error) {

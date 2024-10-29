@@ -21,8 +21,6 @@ service KargoService {
   rpc GetConfig(GetConfigRequest) returns (GetConfigResponse);
   rpc GetPublicConfig(GetPublicConfigRequest) returns (GetPublicConfigResponse);
 
-  rpc WhoAmI(WhoAmIRequest) returns (WhoAmIResponse);
-
   rpc AdminLogin(AdminLoginRequest) returns (AdminLoginResponse);
 
   /* Kargo-related resources management API */
@@ -154,10 +152,6 @@ message GetPublicConfigResponse {
   bool admin_account_enabled = 2;
   bool skip_auth = 3;
 }
-
-message WhoAmIRequest {}
-
-message WhoAmIResponse {}
 
 message OIDCConfig {
   string issuer_url = 1;
