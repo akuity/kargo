@@ -29,6 +29,7 @@ import (
 	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
 	rollouts "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
 	"github.com/akuity/kargo/internal/directives"
+	kargoEvent "github.com/akuity/kargo/internal/event"
 	"github.com/akuity/kargo/internal/indexer"
 	"github.com/akuity/kargo/internal/kargo"
 	"github.com/akuity/kargo/internal/kubeclient"
@@ -982,7 +983,7 @@ func (r *reconciler) syncNormalStage(
 
 		r.recorder.AnnotatedEventf(
 			&promo,
-			libEvent.NewPromotionEventAnnotations(
+			kargoEvent.NewPromotionAnnotations(
 				ctx,
 				kargoapi.FormatEventControllerActor(r.cfg.Name()),
 				&promo,

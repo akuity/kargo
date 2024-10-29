@@ -12,8 +12,8 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api/user"
+	"github.com/akuity/kargo/internal/event"
 	"github.com/akuity/kargo/internal/kargo"
-	libEvent "github.com/akuity/kargo/internal/kubernetes/event"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
@@ -139,7 +139,7 @@ func (s *server) recordPromotionCreatedEvent(
 
 	s.recorder.AnnotatedEventf(
 		p,
-		libEvent.NewPromotionEventAnnotations(ctx, actor, p, f),
+		event.NewPromotionAnnotations(ctx, actor, p, f),
 		corev1.EventTypeNormal,
 		kargoapi.EventReasonPromotionCreated,
 		msg,
