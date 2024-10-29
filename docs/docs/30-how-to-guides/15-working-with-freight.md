@@ -119,6 +119,7 @@ kargo update freight \
   --new-alias=frozen-tauntaun
 ```
 Alternatively, you can reference the `Freight` to which you want to assign a new alias using its existing alias:
+
 ```shell
 kargo update freight \
   --project=kargo-demo \
