@@ -35,8 +35,9 @@ import (
 
 // ReconcilerConfig represents configuration for the promotion reconciler.
 type ReconcilerConfig struct {
-	ShardName        string `envconfig:"SHARD_NAME"`
-	APIServerBaseURL string `envconfig:"API_SERVER_BASE_URL"`
+	ShardName               string `envconfig:"SHARD_NAME"`
+	APIServerBaseURL        string `envconfig:"API_SERVER_BASE_URL"`
+	MaxConcurrentReconciles int    `envconfig:"MAX_CONCURRENT_PROMOTION_RECONCILES" default:"4"`
 }
 
 func (c ReconcilerConfig) Name() string {
@@ -118,7 +119,7 @@ func SetupReconcilerWithManager(
 			kargo.RefreshRequested{},
 			kargo.PromotionAbortRequested{},
 		)).
-		WithOptions(controller.CommonOptions()).
+		WithOptions(controller.CommonOptions(cfg.MaxConcurrentReconciles)).
 		Build(reconciler)
 	if err != nil {
 		return fmt.Errorf("error building Promotion controller: %w", err)
@@ -155,6 +156,11 @@ func SetupReconcilerWithManager(
 			return fmt.Errorf("unable to watch Applications: %w", err)
 		}
 	}
+
+	logging.LoggerFromContext(ctx).Info(
+		"Initialized Promotion reconciler",
+		"maxConcurrentReconciles", cfg.MaxConcurrentReconciles,
+	)
 
 	return nil
 }

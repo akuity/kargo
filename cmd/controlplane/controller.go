@@ -93,10 +93,10 @@ func (o *controllerOptions) run(ctx context.Context) error {
 	}
 	startupLogger.Info("Starting Kargo Controller")
 
-	promotionsReconcilerCfg := promotions.ReconcilerConfigFromEnv()
-	stagesReconcilerCfg := stages.ReconcilerConfigFromEnv()
-
-	kargoMgr, stagesReconcilerCfg, err := o.setupKargoManager(ctx, stagesReconcilerCfg)
+	kargoMgr, stagesReconcilerCfg, err := o.setupKargoManager(
+		ctx,
+		stages.ReconcilerConfigFromEnv(),
+	)
 	if err != nil {
 		return fmt.Errorf("error initializing Kargo controller manager: %w", err)
 	}
@@ -117,7 +117,6 @@ func (o *controllerOptions) run(ctx context.Context) error {
 		kargoMgr,
 		argocdMgr,
 		credentialsDB,
-		promotionsReconcilerCfg,
 		stagesReconcilerCfg,
 	); err != nil {
 		return fmt.Errorf("error setting up reconcilers: %w", err)
@@ -288,7 +287,6 @@ func (o *controllerOptions) setupReconcilers(
 	ctx context.Context,
 	kargoMgr, argocdMgr manager.Manager,
 	credentialsDB credentials.Database,
-	promotionsReconcilerCfg promotions.ReconcilerConfig,
 	stagesReconcilerCfg stages.ReconcilerConfig,
 ) error {
 	var argoCDClient client.Client
@@ -304,7 +302,7 @@ func (o *controllerOptions) setupReconcilers(
 		kargoMgr,
 		argocdMgr,
 		directivesEngine,
-		promotionsReconcilerCfg,
+		promotions.ReconcilerConfigFromEnv(),
 	); err != nil {
 		return fmt.Errorf("error setting up Promotions reconciler: %w", err)
 	}
@@ -329,9 +327,10 @@ func (o *controllerOptions) setupReconcilers(
 	}
 
 	if err := warehouses.SetupReconcilerWithManager(
+		ctx,
 		kargoMgr,
 		credentialsDB,
-		o.ShardName,
+		warehouses.ReconcilerConfigFromEnv(),
 	); err != nil {
 		return fmt.Errorf("error setting up Warehouses reconciler: %w", err)
 	}

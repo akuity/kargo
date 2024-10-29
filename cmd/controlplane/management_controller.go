@@ -82,11 +82,16 @@ func (o *managementControllerOptions) run(ctx context.Context) error {
 		return fmt.Errorf("error initializing Kargo controller manager: %w", err)
 	}
 
-	if err := namespaces.SetupReconcilerWithManager(kargoMgr); err != nil {
+	if err := namespaces.SetupReconcilerWithManager(
+		ctx,
+		kargoMgr,
+		namespaces.ReconcilerConfigFromEnv(),
+	); err != nil {
 		return fmt.Errorf("error setting up Namespaces reconciler: %w", err)
 	}
 
 	if err := projects.SetupReconcilerWithManager(
+		ctx,
 		kargoMgr,
 		projects.ReconcilerConfigFromEnv(),
 	); err != nil {
@@ -95,6 +100,7 @@ func (o *managementControllerOptions) run(ctx context.Context) error {
 
 	if o.ManageControllerRoleBindings {
 		if err := serviceaccounts.SetupReconcilerWithManager(
+			ctx,
 			kargoMgr,
 			serviceaccounts.ReconcilerConfigFromEnv(),
 		); err != nil {

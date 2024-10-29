@@ -37,9 +37,11 @@ import (
 
 // ReconcilerConfig represents configuration for the stage reconciler.
 type ReconcilerConfig struct {
-	ShardName                    string `envconfig:"SHARD_NAME"`
-	RolloutsIntegrationEnabled   bool   `envconfig:"ROLLOUTS_INTEGRATION_ENABLED"`
-	RolloutsControllerInstanceID string `envconfig:"ROLLOUTS_CONTROLLER_INSTANCE_ID"`
+	ShardName                          string `envconfig:"SHARD_NAME"`
+	RolloutsIntegrationEnabled         bool   `envconfig:"ROLLOUTS_INTEGRATION_ENABLED"`
+	RolloutsControllerInstanceID       string `envconfig:"ROLLOUTS_CONTROLLER_INSTANCE_ID"`
+	MaxConcurrentControlFlowReconciles int    `envconfig:"MAX_CONCURRENT_CONTROL_FLOW_RECONCILES" default:"4"`
+	MaxConcurrentReconciles            int    `envconfig:"MAX_CONCURRENT_STAGE_RECONCILES" default:"4"`
 }
 
 func (c ReconcilerConfig) Name() string {
@@ -322,7 +324,7 @@ func SetupReconcilerWithManager(
 				),
 			),
 		).
-		WithOptions(controller.CommonOptions()).
+		WithOptions(controller.CommonOptions(cfg.MaxConcurrentReconciles)).
 		Build(
 			newReconciler(
 				kargoMgr.GetClient(),
@@ -424,6 +426,11 @@ func SetupReconcilerWithManager(
 			return fmt.Errorf("unable to watch AnalysisRuns: %w", err)
 		}
 	}
+
+	logging.LoggerFromContext(ctx).Info(
+		"Initialized Stage reconciler",
+		"maxConcurrentReconciles", cfg.MaxConcurrentReconciles,
+	)
 
 	return nil
 }

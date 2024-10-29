@@ -120,7 +120,7 @@ func (r *ControlFlowStageReconciler) SetupWithManager(
 	c, err := ctrl.NewControllerManagedBy(mgr).
 		For(&kargoapi.Stage{}).
 		Named("control_flow_stage").
-		WithOptions(controller.CommonOptions()).
+		WithOptions(controller.CommonOptions(r.cfg.MaxConcurrentControlFlowReconciles)).
 		WithEventFilter(
 			predicate.And(
 				IsControlFlowStage(true),
@@ -165,6 +165,11 @@ func (r *ControlFlowStageReconciler) SetupWithManager(
 	); err != nil {
 		return fmt.Errorf("unable to watch Freight verified in upstream Stages: %w", err)
 	}
+
+	logging.LoggerFromContext(ctx).Info(
+		"Initialized control flow Stage reconciler",
+		"maxConcurrentReconciles", r.cfg.MaxConcurrentControlFlowReconciles,
+	)
 
 	return nil
 }
