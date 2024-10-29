@@ -10,6 +10,7 @@ export const paths = {
   warehouse: '/project/:name/warehouse/:warehouseName/:tab?',
   freight: '/project/:name/freight/:freightName',
   createStage: '/project/:name/create-stage',
+  user: '/user',
 
   downloads: '/downloads',
   login: '/login',
