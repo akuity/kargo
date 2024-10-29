@@ -116,15 +116,32 @@ func (o *garbageCollectorOptions) setupManager(ctx context.Context) (manager.Man
 	}
 
 	// Index Promotions by Stage
-	if err = indexer.IndexPromotionsByStage(ctx, mgr); err != nil {
+	if err = mgr.GetFieldIndexer().IndexField(
+		ctx,
+		&kargoapi.Promotion{},
+		indexer.PromotionsByStageField,
+		indexer.PromotionsByStage,
+	); err != nil {
 		return nil, fmt.Errorf("error indexing Promotions by Stage: %w", err)
 	}
+
 	// Index Freight by Warehouse
-	if err = indexer.IndexFreightByWarehouse(ctx, mgr); err != nil {
+	if err = mgr.GetFieldIndexer().IndexField(
+		ctx,
+		&kargoapi.Freight{},
+		indexer.FreightByWarehouseField,
+		indexer.FreightByWarehouse,
+	); err != nil {
 		return nil, fmt.Errorf("error indexing Freight by Warehouse: %w", err)
 	}
+
 	// Index Stages by Freight
-	if err = indexer.IndexStagesByFreight(ctx, mgr); err != nil {
+	if err = mgr.GetFieldIndexer().IndexField(
+		ctx,
+		&kargoapi.Stage{},
+		indexer.StagesByFreightField,
+		indexer.StagesByFreight,
+	); err != nil {
 		return nil, fmt.Errorf("error indexing Stages by Freight: %w", err)
 	}
 	return mgr, nil

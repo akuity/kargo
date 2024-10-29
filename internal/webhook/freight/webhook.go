@@ -298,7 +298,7 @@ func (w *webhook) ValidateDelete(
 		&list,
 		client.InNamespace(freight.GetNamespace()),
 		client.MatchingFields{
-			indexer.StagesByFreightIndexField: freight.Name,
+			indexer.StagesByFreightField: freight.Name,
 		},
 	); err != nil {
 		return nil, fmt.Errorf("list stages: %w", err)

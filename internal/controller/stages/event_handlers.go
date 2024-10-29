@@ -92,7 +92,7 @@ func (v *downstreamStageEnqueuer[T]) Update(
 			&client.ListOptions{
 				Namespace: newFreight.Namespace,
 				FieldSelector: fields.OneTermEqualSelector(
-					indexer.StagesByUpstreamStagesIndexField,
+					indexer.StagesByUpstreamStagesField,
 					newlyVerifiedStage,
 				),
 			},
@@ -247,7 +247,7 @@ func (c *warehouseStageEnqueuer[T]) Create(
 		&client.ListOptions{
 			Namespace: freight.Namespace,
 			FieldSelector: fields.OneTermEqualSelector(
-				indexer.StagesByWarehouseIndexField,
+				indexer.StagesByWarehouseField,
 				freight.Origin.Name,
 			),
 		},
@@ -501,7 +501,7 @@ func (p *stageEnqueuerForAnalysisRuns[T]) Update(
 			stages,
 			&client.ListOptions{
 				FieldSelector: fields.OneTermEqualSelector(
-					indexer.StagesByAnalysisRunIndexField,
+					indexer.StagesByAnalysisRunField,
 					fmt.Sprintf("%s:%s", analysisRun.Namespace, analysisRun.Name),
 				),
 			},

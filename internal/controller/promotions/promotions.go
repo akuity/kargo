@@ -95,7 +95,12 @@ func SetupReconcilerWithManager(
 	cfg ReconcilerConfig,
 ) error {
 	// Index running Promotions by Argo CD Applications
-	if err := indexer.IndexRunningPromotionsByArgoCDApplications(ctx, kargoMgr, cfg.ShardName); err != nil {
+	if err := kargoMgr.GetFieldIndexer().IndexField(
+		ctx,
+		&kargoapi.Promotion{},
+		indexer.RunningPromotionsByArgoCDApplicationsField,
+		indexer.RunningPromotionsByArgoCDApplications(ctx, cfg.ShardName),
+	); err != nil {
 		return fmt.Errorf("index running Promotions by Argo CD Applications: %w", err)
 	}
 

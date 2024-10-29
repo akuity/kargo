@@ -254,14 +254,14 @@ func (a *authInterceptor) listServiceAccounts(
 	for claimName, claimValue := range c {
 		if claimValuesString, ok := claimValue.(string); ok {
 			queries = append(queries, libClient.MatchingFields{
-				indexer.ServiceAccountsByOIDCClaimsIndexField: indexer.FormatClaim(claimName, claimValuesString),
+				indexer.ServiceAccountsByOIDCClaimsField: indexer.FormatClaim(claimName, claimValuesString),
 			})
 		}
 		if claimValueSlice, ok := claimValue.([]any); ok {
 			for _, claimValueSliceItem := range claimValueSlice {
 				if claimValueSliceItemString, ok := claimValueSliceItem.(string); ok {
 					queries = append(queries, libClient.MatchingFields{
-						indexer.ServiceAccountsByOIDCClaimsIndexField: indexer.FormatClaim(
+						indexer.ServiceAccountsByOIDCClaimsField: indexer.FormatClaim(
 							claimName, claimValueSliceItemString,
 						),
 					})
