@@ -1,4 +1,4 @@
-import { ConnectError, Interceptor } from '@connectrpc/connect';
+import { Code, ConnectError, Interceptor } from '@connectrpc/connect';
 import { createConnectTransport } from '@connectrpc/connect-web';
 import { notification } from 'antd';
 
@@ -57,7 +57,7 @@ export const newErrorHandler = (handler: (err: ConnectError) => void): Intercept
 
       // in rare cases, token is invalid but UI could not detect it beforehand
       // CodeUnauthenticated <- to ease the global code search
-      if (err instanceof ConnectError && err?.message.includes('unauthenticated')) {
+      if (err instanceof ConnectError && err?.code === Code.Unauthenticated) {
         logout();
       }
 
