@@ -5,9 +5,9 @@ description: Find out more about key Kargo concepts - stages, freight, warehouse
 # Key Kargo Concepts
 
 :::note
-Documentation is Under Active Development
-
-We're currently reorganizing and updating the documentation. During this process, you may encounter sections that are incomplete, repetitive, or fragmented. Please bear with us as we work to make improvements.
+We're currently reorganizing and updating the documentation.
+During this process, you may encounter sections that are incomplete,
+repetitive, or fragmented. Please bear with us as we work to make improvements.
 :::
 
 ## The Basics
