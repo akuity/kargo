@@ -379,18 +379,20 @@ controller:
 
   ## Reconciler-specific settings
   reconcilers:
+    ## @param controller.reconcilers.maxConcurrentReconciles specifies the maximum number of resources EACH of the controller's reconcilers can reconcile concurrently. This setting may also be overridden on a per-reconciler basis.
+    maxConcurrentReconciles: 4
     controlFlowStages:
-      ## @param controller.reconcilers.controlFlowStages.maxConcurrentReconciles specifies the maximum number of control flow Stage resources the controller can reconcile concurrently.
-      maxConcurrentReconciles: 4
+      ## @param controller.reconcilers.controlFlowStages.maxConcurrentReconciles optionally overrides the maximum number of control flow Stage resources the controller can reconcile concurrently.
+      maxConcurrentReconciles:
     promotions:
-      ## @param controller.reconcilers.promotions.maxConcurrentReconciles specifies the maximum number of Promotion resources the controller can reconcile concurrently.
-      maxConcurrentReconciles: 4
+      ## @param controller.reconcilers.promotions.maxConcurrentReconciles optionally overrides the maximum number of Promotion resources the controller can reconcile concurrently.
+      maxConcurrentReconciles:
     stages:
-      ## @param controller.reconcilers.stages.maxConcurrentReconciles specifies the maximum number of (non-control flow) Stage resources the controller can reconcile concurrently.
-      maxConcurrentReconciles: 4
+      ## @param controller.reconcilers.stages.maxConcurrentReconciles optionally overrides the maximum number of (non-control flow) Stage resources the controller can reconcile concurrently.
+      maxConcurrentReconciles:
     warehouses:
-      ## @param controller.reconcilers.warehouses.maxConcurrentReconciles specifies the maximum number of Warehouse resources the controller can reconcile concurrently.
-      maxConcurrentReconciles: 4
+      ## @param controller.reconcilers.warehouses.maxConcurrentReconciles optionally overrides the maximum number of Warehouse resources the controller can reconcile concurrently.
+      maxConcurrentReconciles:
 
   gitClient:
     ## @param controller.gitClient.name Specifies the name of the Kargo controller (used when authoring Git commits).
@@ -482,15 +484,17 @@ managementController:
 
   ## Reconciler-specific settings
   reconcilers:
+    ## @param managementController.reconcilers.maxConcurrentReconciles specifies the maximum number of resources EACH of the management controller's reconcilers can reconcile concurrently. This setting may also be overridden on a per-reconciler basis.
+    maxConcurrentReconciles: 4
     namespaces:
-      ## @param managementController.reconcilers.namespaces.maxConcurrentReconciles specifies the maximum number of Namespace resources the management controller can reconcile concurrently.
-      maxConcurrentReconciles: 4
+      ## @param managementController.reconcilers.namespaces.maxConcurrentReconciles optionally overrides the maximum number of Namespace resources the management controller can reconcile concurrently.
+      maxConcurrentReconciles:
     projects:
-      ## @param managementController.reconcilers.projects.maxConcurrentReconciles specifies the maximum number of Project resources the controller can reconcile concurrently.
-      maxConcurrentReconciles: 4
+      ## @param managementController.reconcilers.projects.maxConcurrentReconciles optionally overrides the maximum number of Project resources the management controller can reconcile concurrently.
+      maxConcurrentReconciles:
     serviceAccounts:
-      ## @param managementController.reconcilers.serviceAccounts.maxConcurrentReconciles specifies the maximum number ServiceAccount resources the controller can reconcile concurrently.
-      maxConcurrentReconciles: 4
+      ## @param managementController.reconcilers.serviceAccounts.maxConcurrentReconciles optionally overrides the maximum number of ServiceAccount resources the management controller can reconcile concurrently.
+      maxConcurrentReconciles:
 
   ## @param managementController.securityContext Security context for management controller pods. Defaults to `global.securityContext`.
   securityContext: {}
