@@ -377,6 +377,23 @@ controller:
     ## @param controller.globalCredentials.namespaces List of namespaces to look for shared credentials. Note that as of v1.0.0, the Kargo controller does not have cluster-wide access to Secrets. The controller receives read-only permission for Secrets on a per-Project basis as Projects are created. If you designate some namespaces as homes for "global" credentials, you will need to manually grant the controller permission to read Secrets in those namespaces.
     namespaces: []
 
+  ## Reconciler-specific settings
+  reconcilers:
+    ## @param controller.reconcilers.maxConcurrentReconciles specifies the maximum number of resources EACH of the controller's reconcilers can reconcile concurrently. This setting may also be overridden on a per-reconciler basis.
+    maxConcurrentReconciles: 4
+    controlFlowStages:
+      ## @param controller.reconcilers.controlFlowStages.maxConcurrentReconciles optionally overrides the maximum number of control flow Stage resources the controller can reconcile concurrently.
+      maxConcurrentReconciles:
+    promotions:
+      ## @param controller.reconcilers.promotions.maxConcurrentReconciles optionally overrides the maximum number of Promotion resources the controller can reconcile concurrently.
+      maxConcurrentReconciles:
+    stages:
+      ## @param controller.reconcilers.stages.maxConcurrentReconciles optionally overrides the maximum number of (non-control flow) Stage resources the controller can reconcile concurrently.
+      maxConcurrentReconciles:
+    warehouses:
+      ## @param controller.reconcilers.warehouses.maxConcurrentReconciles optionally overrides the maximum number of Warehouse resources the controller can reconcile concurrently.
+      maxConcurrentReconciles:
+
   gitClient:
     ## @param controller.gitClient.name Specifies the name of the Kargo controller (used when authoring Git commits).
     name: "Kargo"
@@ -464,6 +481,20 @@ managementController:
   podLabels: {}
   ## @param managementController.podAnnotations Optional annotations to add to pods. Merges with `global.podAnnotations`, allowing you to override or add to the global annotations.
   podAnnotations: {}
+
+  ## Reconciler-specific settings
+  reconcilers:
+    ## @param managementController.reconcilers.maxConcurrentReconciles specifies the maximum number of resources EACH of the management controller's reconcilers can reconcile concurrently. This setting may also be overridden on a per-reconciler basis.
+    maxConcurrentReconciles: 4
+    namespaces:
+      ## @param managementController.reconcilers.namespaces.maxConcurrentReconciles optionally overrides the maximum number of Namespace resources the management controller can reconcile concurrently.
+      maxConcurrentReconciles:
+    projects:
+      ## @param managementController.reconcilers.projects.maxConcurrentReconciles optionally overrides the maximum number of Project resources the management controller can reconcile concurrently.
+      maxConcurrentReconciles:
+    serviceAccounts:
+      ## @param managementController.reconcilers.serviceAccounts.maxConcurrentReconciles optionally overrides the maximum number of ServiceAccount resources the management controller can reconcile concurrently.
+      maxConcurrentReconciles:
 
   ## @param managementController.securityContext Security context for management controller pods. Defaults to `global.securityContext`.
   securityContext: {}

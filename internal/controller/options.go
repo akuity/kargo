@@ -5,8 +5,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 )
 
-func CommonOptions() controller.Options {
+func CommonOptions(maxConcurrentReconciles int) controller.Options {
 	return controller.Options{
-		RecoverPanic: ptr.To(true),
+		MaxConcurrentReconciles: maxConcurrentReconciles,
+		RecoverPanic:            ptr.To(true),
 	}
 }

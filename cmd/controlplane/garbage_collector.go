@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	stdruntime "runtime"
 
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
@@ -63,6 +64,8 @@ func (o *garbageCollectorOptions) run(ctx context.Context) error {
 		"Starting Kargo Garbage Collector",
 		"version", version.Version,
 		"commit", version.GitCommit,
+		"GOMAXPROCS", stdruntime.GOMAXPROCS(0),
+		"GOMEMLIMIT", os.GetEnv("GOMEMLIMIT", ""),
 	)
 
 	mgr, err := o.setupManager(ctx)

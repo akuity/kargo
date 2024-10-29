@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/kelseyhightower/envconfig"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -24,6 +25,17 @@ import (
 	"github.com/akuity/kargo/internal/kubeclient"
 	"github.com/akuity/kargo/internal/logging"
 )
+
+type ReconcilerConfig struct {
+	ShardName               string `envconfig:"SHARD_NAME"`
+	MaxConcurrentReconciles int    `envconfig:"MAX_CONCURRENT_WAREHOUSE_RECONCILES" default:"4"`
+}
+
+func ReconcilerConfigFromEnv() ReconcilerConfig {
+	cfg := ReconcilerConfig{}
+	envconfig.MustProcess("", &cfg)
+	return cfg
+}
 
 // reconciler reconciles Warehouse resources.
 type reconciler struct {
@@ -67,11 +79,12 @@ type reconciler struct {
 // SetupReconcilerWithManager initializes a reconciler for Warehouse resources
 // and registers it with the provided Manager.
 func SetupReconcilerWithManager(
+	ctx context.Context,
 	mgr manager.Manager,
 	credentialsDB credentials.Database,
-	shardName string,
+	cfg ReconcilerConfig,
 ) error {
-	shardPredicate, err := controller.GetShardPredicate(shardName)
+	shardPredicate, err := controller.GetShardPredicate(cfg.ShardName)
 	if err != nil {
 		return fmt.Errorf("error creating shard selector predicate: %w", err)
 	}
@@ -93,10 +106,16 @@ func SetupReconcilerWithManager(
 			),
 		).
 		WithEventFilter(shardPredicate).
-		WithOptions(controller.CommonOptions()).
+		WithOptions(controller.CommonOptions(cfg.MaxConcurrentReconciles)).
 		Complete(newReconciler(mgr.GetClient(), credentialsDB)); err != nil {
 		return fmt.Errorf("error building Warehouse reconciler: %w", err)
 	}
+
+	logging.LoggerFromContext(ctx).Info(
+		"Initialized Warehouse reconciler",
+		"maxConcurrentReconciles", cfg.MaxConcurrentReconciles,
+	)
+
 	return nil
 }
 

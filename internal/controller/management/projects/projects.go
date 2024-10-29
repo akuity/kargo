@@ -37,6 +37,7 @@ const (
 type ReconcilerConfig struct {
 	ManageControllerRoleBindings bool   `envconfig:"MANAGE_CONTROLLER_ROLE_BINDINGS" default:"true"`
 	KargoNamespace               string `envconfig:"KARGO_NAMESPACE" default:"kargo"`
+	MaxConcurrentReconciles      int    `envconfig:"MAX_CONCURRENT_PROJECT_RECONCILES" default:"4"`
 }
 
 func ReconcilerConfigFromEnv() ReconcilerConfig {
@@ -129,10 +130,11 @@ type reconciler struct {
 // SetupReconcilerWithManager initializes a reconciler for Project resources and
 // registers it with the provided Manager.
 func SetupReconcilerWithManager(
+	ctx context.Context,
 	kargoMgr manager.Manager,
 	cfg ReconcilerConfig,
 ) error {
-	return ctrl.NewControllerManagedBy(kargoMgr).
+	err := ctrl.NewControllerManagedBy(kargoMgr).
 		For(&kargoapi.Project{}).
 		WithEventFilter(
 			predicate.Funcs{
@@ -142,8 +144,17 @@ func SetupReconcilerWithManager(
 				},
 			},
 		).
-		WithOptions(controller.CommonOptions()).
+		WithOptions(controller.CommonOptions(cfg.MaxConcurrentReconciles)).
 		Complete(newReconciler(kargoMgr.GetClient(), cfg))
+
+	if err == nil {
+		logging.LoggerFromContext(ctx).Info(
+			"Initialized Project reconciler",
+			"maxConcurrentReconciles", cfg.MaxConcurrentReconciles,
+		)
+	}
+
+	return err
 }
 
 func newReconciler(kubeClient client.Client, cfg ReconcilerConfig) *reconciler {
