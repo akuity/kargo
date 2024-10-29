@@ -4,11 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"runtime"
+	stdruntime "runtime"
 
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
-	rtime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
@@ -64,7 +64,7 @@ func (o *garbageCollectorOptions) run(ctx context.Context) error {
 		"Starting Kargo Garbage Collector",
 		"version", version.Version,
 		"commit", version.GitCommit,
-		"GOMAXPROCS", runtime.GOMAXPROCS(0),
+		"GOMAXPROCS", stdruntime.GOMAXPROCS(0),
 		"GOMEMLIMIT", os.GetEnv("GOMEMLIMIT", ""),
 	)
 
@@ -96,7 +96,7 @@ func (o *garbageCollectorOptions) setupManager(ctx context.Context) (manager.Man
 		return nil, fmt.Errorf("error loading REST config: %w", err)
 	}
 
-	scheme := rtime.NewScheme()
+	scheme := runtime.NewScheme()
 	if err = corev1.AddToScheme(scheme); err != nil {
 		return nil, fmt.Errorf("error adding Kubernetes core API to scheme: %w", err)
 	}
