@@ -1,9 +1,9 @@
 ---
-description: Learn how to manage Projects
-sidebar_label: Managing Projects
+description: Learn how to work effectively with Projects
+sidebar_label: Working with Projects
 ---
 
-# Managing Projects
+# Working with Projects
 
 Each Kargo project is represented by a cluster-scoped Kubernetes resource of
 type `Project`. Reconciliation of such a resource effects all boilerplate
