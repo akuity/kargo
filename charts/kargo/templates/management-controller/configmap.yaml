@@ -16,4 +16,7 @@ data:
   {{- if .Values.kubeconfigSecrets.kargo }}
   KUBECONFIG: /etc/kargo/kubeconfigs/kubeconfig.yaml
   {{- end }}
+  MAX_CONCURRENT_NAMESPACE_RECONCILES: {{ quote .Values.managementController.reconcilers.namespaces.maxConcurrentReconciles }}
+  MAX_CONCURRENT_PROJECT_RECONCILES: {{ quote .Values.managementController.reconcilers.projects.maxConcurrentReconciles }}
+  MAX_CONCURRENT_SERVICE_ACCOUNT_RECONCILES: {{ quote .Values.managementController.reconcilers.serviceAccounts.maxConcurrentReconciles }}
 {{- end }}
