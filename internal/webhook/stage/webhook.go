@@ -3,7 +3,6 @@ package stage
 import (
 	"context"
 	"fmt"
-	"regexp"
 	"strings"
 
 	admissionv1 "k8s.io/api/admission/v1"
@@ -25,8 +24,6 @@ var (
 		Kind:  "Stage",
 	}
 )
-
-var forbiddenStepAliasRegex = regexp.MustCompile(`^step-\d+$`)
 
 type webhook struct {
 	client  client.Client
@@ -240,7 +237,7 @@ func (w *webhook) ValidatePromotionTemplate(
 	errs := field.ErrorList{}
 	for i, step := range promoTemplate.Spec.Steps {
 		stepAlias := strings.TrimSpace(step.As)
-		if forbiddenStepAliasRegex.MatchString(stepAlias) {
+		if kargoapi.ReservedStepAliasRegex.MatchString(stepAlias) {
 			errs = append(errs, field.Invalid(
 				f.Child("spec", "steps").Index(i).Child("as"),
 				stepAlias,
