@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"regexp"
+	"strings"
 
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -12,6 +14,8 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/credentials"
 )
+
+var forbiddenStepAliasRegex = regexp.MustCompile(`^step-\d+$`)
 
 // SimpleEngine is a simple engine that executes a list of PromotionSteps in
 // sequence.
@@ -87,6 +91,20 @@ func (e *SimpleEngine) Promote(
 
 		stateCopy := state.DeepCopy()
 
+		step.Alias = strings.TrimSpace(step.Alias)
+		if step.Alias == "" {
+			step.Alias = fmt.Sprintf("step-%d", i)
+		} else if forbiddenStepAliasRegex.MatchString(step.Alias) {
+			// A webhook enforces this regex as well, but we're checking here to
+			// account for the possibility of EXISTING Stages with a promotionTemplate
+			// containing a step with a now-reserved alias.
+			return PromotionResult{
+				Status:      kargoapi.PromotionPhaseErrored,
+				CurrentStep: i,
+				State:       state,
+			}, fmt.Errorf("step alias %q is forbidden", step.Alias)
+		}
+
 		stepCtx := &PromotionStepContext{
 			UIBaseURL:       promoCtx.UIBaseURL,
 			WorkDir:         workDir,
@@ -110,9 +128,7 @@ func (e *SimpleEngine) Promote(
 		}
 
 		result, err := reg.Runner.RunPromotionStep(ctx, stepCtx)
-		if step.Alias != "" {
-			state[step.Alias] = result.Output
-		}
+		state[step.Alias] = result.Output
 		if err != nil {
 			return PromotionResult{
 					Status:      kargoapi.PromotionPhaseErrored,
