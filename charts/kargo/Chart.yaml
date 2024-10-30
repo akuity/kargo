@@ -2,8 +2,8 @@ apiVersion: v2
 name: kargo
 description: Kargo
 type: application
-version: 0.1.0
-appVersion: v0.1.0
+version: 0.1.0 # This placeholder value is overridden by the release process; do not modify directly
+appVersion: v0.1.0 # This placeholder value is overridden by the release process; do not modify directly
 sources:
 - https://github.com/akuity/kargo
 maintainers:
