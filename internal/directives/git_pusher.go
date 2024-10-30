@@ -109,7 +109,7 @@ func (g *gitPushPusher) runPromotionStep(
 	}
 	// If we're supposed to generate a target branch name, do so
 	if cfg.GenerateTargetBranch {
-		pushOpts.TargetBranch = fmt.Sprintf("kargo/%s/%s/promotion", stepCtx.Project, stepCtx.Stage)
+		pushOpts.TargetBranch = fmt.Sprintf("kargo/promotion/%s", stepCtx.Promotion)
 		pushOpts.Force = true
 	}
 	targetBranch := pushOpts.TargetBranch

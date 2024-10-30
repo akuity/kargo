@@ -477,6 +477,7 @@ func (r *reconciler) promote(
 		WorkDir:         filepath.Join(os.TempDir(), "promotion-"+string(workingPromo.UID)),
 		Project:         stageNamespace,
 		Stage:           stageName,
+		Promotion:       workingPromo.Name,
 		FreightRequests: stage.Spec.RequestedFreight,
 		Freight:         *workingPromo.Status.FreightCollection.DeepCopy(),
 		StartFromStep:   promo.Status.CurrentStep,
