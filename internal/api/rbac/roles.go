@@ -353,6 +353,17 @@ func (r *rolesDatabase) GrantPermissionsToRole(
 
 	group := getGroupName(resourceDetails.ResourceType)
 
+	// Deal with wildcard verb
+	for _, verb := range resourceDetails.Verbs {
+		if strings.TrimSpace(verb) == "*" {
+			resourceDetails.Verbs = append(
+				resourceDetails.Verbs,
+				allVerbsFor(resourceDetails.ResourceType, true)...,
+			)
+			break
+		}
+	}
+
 	newRole := role
 	if newRole == nil {
 		newRole = buildNewRole(project, name)
@@ -365,7 +376,7 @@ func (r *rolesDatabase) GrantPermissionsToRole(
 	if resourceDetails.ResourceName != "" {
 		newRule.ResourceNames = []string{resourceDetails.ResourceName}
 	}
-	if newRole.Rules, err = NormalizePolicyRules(append(newRole.Rules, newRule)); err != nil {
+	if newRole.Rules, err = NormalizePolicyRules(append(newRole.Rules, newRule), nil); err != nil {
 		return nil, fmt.Errorf("error normalizing RBAC policy rules: %w", err)
 	}
 
@@ -494,14 +505,17 @@ func (r *rolesDatabase) RevokePermissionsFromRole(
 	}
 
 	// Normalize the rules before attempting to modify them
-	if role.Rules, err = NormalizePolicyRules(role.Rules); err != nil {
+	if role.Rules, err = NormalizePolicyRules(role.Rules, nil); err != nil {
 		return nil, fmt.Errorf("error normalizing RBAC policy rules: %w", err)
 	}
 
 	// Deal with wildcard verb
 	for _, verb := range resourceDetails.Verbs {
 		if strings.TrimSpace(verb) == "*" {
-			resourceDetails.Verbs = append(resourceDetails.Verbs, allVerbs...)
+			resourceDetails.Verbs = append(
+				resourceDetails.Verbs,
+				allVerbsFor(resourceDetails.ResourceType, true)...,
+			)
 			break
 		}
 	}
@@ -601,7 +615,10 @@ func (r *rolesDatabase) Update(
 	if newRole == nil {
 		newRole = buildNewRole(kargoRole.Namespace, kargoRole.Name)
 	}
-	if newRole.Rules, err = NormalizePolicyRules(kargoRole.Rules); err != nil {
+	if newRole.Rules, err = NormalizePolicyRules(
+		kargoRole.Rules,
+		&PolicyRuleNormalizationOptions{IncludeCustomVerbsInExpansion: true},
+	); err != nil {
 		return nil, fmt.Errorf("error normalizing RBAC policy rules: %w", err)
 	}
 	if role == nil {
@@ -681,7 +698,7 @@ func ResourcesToRole(
 	// underlying resources are not Kargo-managed.
 	if kargoRole.KargoManaged {
 		var err error
-		if kargoRole.Rules, err = NormalizePolicyRules(kargoRole.Rules); err != nil {
+		if kargoRole.Rules, err = NormalizePolicyRules(kargoRole.Rules, nil); err != nil {
 			return nil, fmt.Errorf("error normalizing RBAC policy rules: %w", err)
 		}
 	}
@@ -699,7 +716,10 @@ func RoleToResources(
 
 	role := buildNewRole(kargoRole.Namespace, kargoRole.Name)
 	var err error
-	if role.Rules, err = NormalizePolicyRules(kargoRole.Rules); err != nil {
+	if role.Rules, err = NormalizePolicyRules(
+		kargoRole.Rules,
+		&PolicyRuleNormalizationOptions{IncludeCustomVerbsInExpansion: true},
+	); err != nil {
 		return nil, nil, nil, fmt.Errorf("error normalizing RBAC policy rules: %w", err)
 	}
 
