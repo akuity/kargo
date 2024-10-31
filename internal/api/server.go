@@ -76,11 +76,7 @@ type server struct {
 		name string,
 		alias string,
 	) (*kargoapi.Freight, error)
-	isFreightAvailableFn func(
-		freight *kargoapi.Freight,
-		stage string,
-		upstreamStages []string,
-	) bool
+	isFreightAvailableFn func(*kargoapi.Stage, *kargoapi.Freight) bool
 
 	// Common Promotions:
 	createPromotionFn func(
@@ -90,7 +86,11 @@ type server struct {
 	) error
 
 	// Promote downstream:
-	findDownstreamStagesFn func(ctx context.Context, stage *kargoapi.Stage) ([]kargoapi.Stage, error)
+	findDownstreamStagesFn func(
+		context.Context,
+		*kargoapi.Stage,
+		kargoapi.FreightOrigin,
+	) ([]kargoapi.Stage, error)
 
 	// QueryFreight API:
 	listFreightFn func(

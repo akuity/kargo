@@ -35,7 +35,24 @@ func (r *reconciler) discoverCommits(
 	namespace string,
 	subs []kargoapi.RepoSubscription,
 ) ([]kargoapi.GitDiscoveryResult, error) {
+	logger := logging.LoggerFromContext(ctx)
+
 	results := make([]kargoapi.GitDiscoveryResult, 0, len(subs))
+
+	repos := make([]git.Repo, 0, len(subs))
+	defer func() {
+		for _, repo := range repos {
+			if err := repo.Close(); err != nil {
+				logger.Error(
+					err,
+					"failed to clean up git repo",
+					"repo", repo.URL(),
+					"home", repo.HomeDir(),
+					"path", repo.Dir(),
+				)
+			}
+		}
+	}()
 
 	for _, s := range subs {
 		if s.Git == nil {
@@ -44,7 +61,7 @@ func (r *reconciler) discoverCommits(
 
 		sub := *s.Git
 
-		logger := logging.LoggerFromContext(ctx).WithValues("repo", sub.RepoURL)
+		repoLogger := logger.WithValues("repo", sub.RepoURL)
 
 		// Obtain credentials for the Git repository.
 		creds, ok, err := r.credentialsDB.Get(ctx, namespace, credentials.TypeGit, sub.RepoURL)
@@ -62,9 +79,9 @@ func (r *reconciler) discoverCommits(
 				Password:      creds.Password,
 				SSHPrivateKey: creds.SSHPrivateKey,
 			}
-			logger.Debug("obtained credentials for git repo")
+			repoLogger.Debug("obtained credentials for git repo")
 		} else {
-			logger.Debug("found no credentials for git repo")
+			repoLogger.Debug("found no credentials for git repo")
 		}
 
 		// Clone the Git repository.
@@ -84,9 +101,18 @@ func (r *reconciler) discoverCommits(
 		if err != nil {
 			return nil, fmt.Errorf("failed to clone git repo %q: %w", sub.RepoURL, err)
 		}
+		// TODO: repos is a slice of repos that will be iterated and closed
+		// (deleted) when this function returns. Implementations of r.gitCloneFn
+		// used for testing sometimes return a nil repo since we don't have a mock
+		// implementation for the git.Repo interface at present. With as many
+		// methods as it has, it's a bit more expedient to just check that repo
+		// isn't nil before adding it to the slice of repos to be closed.
+		if repo != nil {
+			repos = append(repos, repo)
+		}
 
 		// Enrich the logger with additional fields for this subscription.
-		logger = logger.WithValues(gitDiscoveryLogFields(sub))
+		repoLogger = repoLogger.WithValues(gitDiscoveryLogFields(sub))
 
 		// Discover commits based on the subscription's commit selection strategy.
 		var discovered []kargoapi.DiscoveredCommit
@@ -112,7 +138,7 @@ func (r *reconciler) discoverCommits(
 					Committer:   meta.Committer,
 					CreatorDate: &metav1.Time{Time: meta.CreatorDate},
 				})
-				logger.Trace(
+				repoLogger.Trace(
 					"discovered commit from tag",
 					"tag", meta.Tag,
 					"commit", meta.CommitID,
@@ -138,7 +164,7 @@ func (r *reconciler) discoverCommits(
 					Committer:   meta.Committer,
 					CreatorDate: &metav1.Time{Time: meta.CommitDate},
 				})
-				logger.Trace(
+				repoLogger.Trace(
 					"discovered commit from branch",
 					"commit", meta.ID,
 					"creatorDate", meta.CommitDate.Format(time.RFC3339),
@@ -150,7 +176,7 @@ func (r *reconciler) discoverCommits(
 			results = append(results, kargoapi.GitDiscoveryResult{
 				RepoURL: sub.RepoURL,
 			})
-			logger.Debug("discovered no commits")
+			repoLogger.Debug("discovered no commits")
 			continue
 		}
 
@@ -158,7 +184,7 @@ func (r *reconciler) discoverCommits(
 			RepoURL: sub.RepoURL,
 			Commits: discovered,
 		})
-		logger.Debug(
+		repoLogger.Debug(
 			"discovered commits",
 			"count", len(discovered),
 		)

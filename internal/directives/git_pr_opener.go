@@ -3,6 +3,7 @@ package directives
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/xeipuuv/gojsonschema"
 
@@ -10,6 +11,9 @@ import (
 	"github.com/akuity/kargo/internal/controller/git"
 	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/gitprovider"
+
+	_ "github.com/akuity/kargo/internal/gitprovider/github" // GitHub provider registration
+	_ "github.com/akuity/kargo/internal/gitprovider/gitlab" // GitLab provider registration
 )
 
 const prNumberKey = "prNumber"
@@ -142,7 +146,7 @@ func (g *gitPROpener) runPromotionStep(
 	// Get the title from the commit message of the head of the source branch
 	// BEFORE we move on to ensuring the existence of the target branch because
 	// that may involve creating a new branch and committing to it.
-	title, err := repo.CommitMessage(sourceBranch)
+	commitMsg, err := repo.CommitMessage(sourceBranch)
 	if err != nil {
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, fmt.Errorf(
 			"error getting commit message from head of branch %s: %w",
@@ -161,12 +165,25 @@ func (g *gitPROpener) runPromotionStep(
 		)
 	}
 
+	title := strings.Split(commitMsg, "\n")[0]
+	description := commitMsg
+	if stepCtx.UIBaseURL != "" {
+		description = fmt.Sprintf(
+			"%s\n\n[View in Kargo UI](%s/project/%s/stage/%s)",
+			description,
+			stepCtx.UIBaseURL,
+			stepCtx.Project,
+			stepCtx.Stage,
+		)
+	}
+
 	pr, err := gitProviderSvc.CreatePullRequest(
 		ctx,
 		gitprovider.CreatePullRequestOpts{
-			Head:  sourceBranch,
-			Base:  cfg.TargetBranch,
-			Title: title,
+			Head:        sourceBranch,
+			Base:        cfg.TargetBranch,
+			Title:       title,
+			Description: description,
 		},
 	)
 	if err != nil {

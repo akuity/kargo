@@ -102,12 +102,8 @@ func Test_helmImageUpdater_runPromotionStep(t *testing.T) {
 			files: map[string]string{
 				"values.yaml": "image:\n  tag: oldtag\n",
 			},
-			assertions: func(t *testing.T, workDir string, result PromotionStepResult, err error) {
-				assert.NoError(t, err)
-				assert.Equal(t, PromotionStepResult{Status: kargoapi.PromotionPhaseSucceeded}, result)
-				content, err := os.ReadFile(path.Join(workDir, "values.yaml"))
-				require.NoError(t, err)
-				assert.Contains(t, string(content), "tag: oldtag")
+			assertions: func(t *testing.T, _ string, _ PromotionStepResult, err error) {
+				assert.ErrorContains(t, err, "not found in referenced Freight")
 			},
 		},
 
@@ -291,10 +287,8 @@ func Test_helmImageUpdater_generateImageUpdates(t *testing.T) {
 					{Key: "image.tag", Image: "docker.io/library/non-existent", Value: Tag},
 				},
 			},
-			assertions: func(t *testing.T, changes map[string]string, summary []string, err error) {
-				assert.NoError(t, err)
-				assert.Empty(t, changes)
-				assert.Empty(t, summary)
+			assertions: func(t *testing.T, _ map[string]string, _ []string, err error) {
+				assert.ErrorContains(t, err, "not found in referenced Freight")
 			},
 		},
 		{
@@ -340,10 +334,8 @@ func Test_helmImageUpdater_generateImageUpdates(t *testing.T) {
 					{Key: "image2.tag", Image: "docker.io/library/non-existent", Value: Tag},
 				},
 			},
-			assertions: func(t *testing.T, changes map[string]string, summary []string, err error) {
-				assert.NoError(t, err)
-				assert.Equal(t, map[string]string{"image1.tag": "1.19.0"}, changes)
-				assert.Equal(t, []string{"docker.io/library/nginx:1.19.0"}, summary)
+			assertions: func(t *testing.T, _ map[string]string, _ []string, err error) {
+				assert.ErrorContains(t, err, "not found in referenced Freight")
 			},
 		},
 		{

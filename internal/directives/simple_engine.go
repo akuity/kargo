@@ -88,12 +88,14 @@ func (e *SimpleEngine) Promote(
 		stateCopy := state.DeepCopy()
 
 		stepCtx := &PromotionStepContext{
+			UIBaseURL:       promoCtx.UIBaseURL,
 			WorkDir:         workDir,
 			SharedState:     stateCopy,
 			Alias:           step.Alias,
 			Config:          step.Config.DeepCopy(),
 			Project:         promoCtx.Project,
 			Stage:           promoCtx.Stage,
+			Promotion:       promoCtx.Promotion,
 			FreightRequests: promoCtx.FreightRequests,
 			Freight:         promoCtx.Freight,
 		}

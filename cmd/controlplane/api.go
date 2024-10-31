@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"runtime"
 
 	"github.com/spf13/cobra"
 
@@ -61,6 +62,8 @@ func (o *apiOptions) run(ctx context.Context) error {
 		"Starting Kargo API Server",
 		"version", version.Version,
 		"commit", version.GitCommit,
+		"GOMAXPROCS", runtime.GOMAXPROCS(0),
+		"GOMEMLIMIT", os.GetEnv("GOMEMLIMIT", ""),
 	)
 
 	serverCfg := config.ServerConfigFromEnv()

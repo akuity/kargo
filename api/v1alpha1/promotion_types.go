@@ -28,12 +28,15 @@ const (
 	// reasons. Further information about the failure can be found in the
 	// Promotion's status.
 	PromotionPhaseErrored PromotionPhase = "Errored"
+	// PromotionPhaseAborted denotes a Promotion that has been aborted by a
+	// user.
+	PromotionPhaseAborted PromotionPhase = "Aborted"
 )
 
 // IsTerminal returns true if the PromotionPhase is a terminal one.
 func (p *PromotionPhase) IsTerminal() bool {
 	switch *p {
-	case PromotionPhaseSucceeded, PromotionPhaseFailed, PromotionPhaseErrored:
+	case PromotionPhaseSucceeded, PromotionPhaseFailed, PromotionPhaseErrored, PromotionPhaseAborted:
 		return true
 	default:
 		return false
@@ -129,9 +132,6 @@ type PromotionStatus struct {
 	// i.e. If the Phase field has a value of Failed, this field can be expected
 	// to explain why.
 	Message string `json:"message,omitempty" protobuf:"bytes,2,opt,name=message"`
-	// Metadata holds arbitrary metadata set by promotion mechanisms
-	// (e.g. for display purposes, or internal bookkeeping)
-	Metadata map[string]string `json:"metadata,omitempty" protobuf:"bytes,3,rep,name=metadata" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	// Freight is the detail of the piece of freight that was referenced by this promotion.
 	Freight *FreightReference `json:"freight,omitempty" protobuf:"bytes,5,opt,name=freight"`
 	// FreightCollection contains the details of the piece of Freight referenced

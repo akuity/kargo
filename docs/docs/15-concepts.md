@@ -4,6 +4,12 @@ description: Find out more about key Kargo concepts - stages, freight, warehouse
 ---
 # Key Kargo Concepts
 
+:::note
+We're currently reorganizing and updating the documentation.
+During this process, you may encounter sections that are incomplete,
+repetitive, or fragmented. Please bear with us as we work to make improvements.
+:::
+
 ## The Basics
 
 ### What is a Project
@@ -19,10 +25,14 @@ for automatic promotions of new **freight**.
 ### What is a Stage?
 
 When you hear the term “environment”, what you envision will depend
-significantly on your perspective. To eliminate confusion, Kargo avoids the term
-"environment" altogether in favor of **stage**. The important feature of a stage
-is that its name ("test" or "prod," for instance) denotes an application
-instance's _purpose_ and not necessarily its _location_.
+significantly on your perspective. A developer, for example, may think of
+an "environment" as a specific _instance_ of an application they work on,
+while a DevOps engineer, may think of an "environment" as a particular segment
+of the infrastructure they maintain.
+
+To eliminate confusion, Kargo avoids the term "environment" altogether in favor of **stage**.
+The important feature of a stage is that its name ("test" or "prod," for instance)
+denotes an application instance's _purpose_ and not necessarily its _location_.
 [This blog post](https://akuity.io/blog/kargo-stage-not-environment/) discusses
 the rationale behind this choice.
 
@@ -45,6 +55,8 @@ include one or more:
 
 Freight can therefore be thought of as a sort of meta-artifact. Freight is what
 Kargo seeks to progress from one stage to another.
+For detailed guidance on working with Freight, refer to
+[this guide](./30-how-to-guides/15-working-with-freight.md).
 
 ### What is a Warehouse?
 

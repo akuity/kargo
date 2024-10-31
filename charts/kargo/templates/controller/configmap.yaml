@@ -8,6 +8,13 @@ metadata:
     {{- include "kargo.labels" . | nindent 4 }}
     {{- include "kargo.controller.labels" . | nindent 4 }}
 data:
+  {{- if .Values.api.enabled }}
+  {{- if or .Values.api.tls.enabled (and .Values.api.ingress.enabled .Values.api.ingress.tls.enabled) }}
+  API_SERVER_BASE_URL: https://{{ .Values.api.host }}
+  {{- else }}
+  API_SERVER_BASE_URL: http://{{ .Values.api.host }}
+  {{- end }}
+  {{- end }}
   LOG_LEVEL: {{ quote .Values.controller.logLevel }}
   {{- if .Values.controller.shardName }}
   SHARD_NAME: {{ .Values.controller.shardName }}
@@ -34,4 +41,8 @@ data:
   {{- if .Values.controller.rollouts.integrationEnabled }}
   ROLLOUTS_CONTROLLER_INSTANCE_ID: {{ quote .Values.controller.rollouts.controllerInstanceID }}
   {{- end }}
+  MAX_CONCURRENT_CONTROL_FLOW_RECONCILES: {{ .Values.controller.reconcilers.controlFlowStages.maxConcurrentReconciles | default .Values.controller.reconcilers.maxConcurrentReconciles | quote }}
+  MAX_CONCURRENT_PROMOTION_RECONCILES: {{ .Values.controller.reconcilers.promotions.maxConcurrentReconciles | default .Values.controller.reconcilers.maxConcurrentReconciles | quote }}
+  MAX_CONCURRENT_STAGE_RECONCILES: {{ .Values.controller.reconcilers.stages.maxConcurrentReconciles | default .Values.controller.reconcilers.maxConcurrentReconciles | quote }}
+  MAX_CONCURRENT_WAREHOUSE_RECONCILES: {{ .Values.controller.reconcilers.warehouses.maxConcurrentReconciles | default .Values.controller.reconcilers.maxConcurrentReconciles | quote }}
 {{- end }}

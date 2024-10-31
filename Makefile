@@ -1,6 +1,7 @@
 include $(CURDIR)/hack/tools.mk
 
-SHELL ?= /bin/bash
+SHELL	      ?= /bin/bash
+EXTENDED_PATH ?= $(CURDIR)/hack/bin:$(PATH)
 
 ARGO_CD_CHART_VERSION		:= 6.9.2
 ARGO_ROLLOUTS_CHART_VERSION := 2.35.2
@@ -15,12 +16,14 @@ VERSION_PACKAGE := github.com/akuity/kargo/internal/version
 CONTAINER_RUNTIME ?= docker
 
 IMAGE_REPO 			?= kargo
+LOCAL_REG_PORT			?= 5001
+BASE_IMAGE 			?= localhost:$(LOCAL_REG_PORT)/$(IMAGE_REPO)-base
 IMAGE_TAG 			?= dev
 IMAGE_PUSH 			?= false
-IMAGE_PLATFORMS 	=
+IMAGE_PLATFORMS 	?=
 DOCKER_BUILD_OPTS 	=
 
-DOCS_PORT 				?= 3000
+DOCS_PORT ?= 3000
 
 # Intelligently choose to build a multi-arch image if the intent is to push to a
 # container registry (IMAGE_PUSH=true). If not pushing, build an single-arch
@@ -99,8 +102,8 @@ format-ui:
 	pnpm --dir=ui run lint:fix
 
 .PHONY: test-unit
-test-unit:
-	go test \
+test-unit: install-helm
+	PATH=$(EXTENDED_PATH) go test \
 		-v \
 		-timeout=300s \
 		-race \
@@ -118,6 +121,26 @@ test-unit:
 # If you prefer to execute these tasks in a container that is pre-loaded with  #
 # required tools, refer to the hacking section toward the bottom of this file. #
 ################################################################################
+
+################################################################################
+# Build: Targets to help build                                                 #
+################################################################################
+
+.PHONY: clean
+clean:
+	rm -rf build
+
+.PHONY: build-base-image
+build-base-image:
+	mkdir -p build
+	cp kargo-base.apko.yaml build
+	docker run \
+		--rm \
+		-v $(dir $(realpath $(firstword $(MAKEFILE_LIST))))build:/build \
+		-w /build \
+		cgr.dev/chainguard/apko \
+		build kargo-base.apko.yaml $(BASE_IMAGE) kargo-base.tar.gz
+	docker image load -i build/kargo-base.tar.gz
 
 .PHONY: build-cli
 build-cli:
@@ -269,13 +292,21 @@ hack-codegen: hack-build-dev-tools
 # Build a linux/amd64 image with a docker build option to not re-use docker build cache
 # 	make hack-build IMAGE_PLATFORMS=linux/amd64 DOCKER_BUILD_OPTS=--no-cache
 .PHONY: hack-build
-hack-build:
-	$(CONTAINER_RUNTIME) buildx build \
-		$(DOCKER_BUILD_OPTS) \
-		--build-arg GIT_COMMIT=$(shell git rev-parse HEAD) \
-		--build-arg GIT_TREE_STATE=$(shell if [ -z "`git status --porcelain`" ]; then echo "clean" ; else echo "dirty"; fi) \
-		--tag $(IMAGE_REPO):$(IMAGE_TAG) \
-		.
+hack-build: build-base-image
+	{ \
+		$(CONTAINER_RUNTIME) run -d -p $(LOCAL_REG_PORT):5000 --name tmp-registry registry:2; \
+		trap '$(CONTAINER_RUNTIME) rm -f tmp-registry' EXIT; \
+		docker push $(BASE_IMAGE):latest-amd64; \
+		docker push $(BASE_IMAGE):latest-arm64; \
+		$(CONTAINER_RUNTIME) buildx build \
+			$(DOCKER_BUILD_OPTS) \
+			--network host \
+			--build-arg BASE_IMAGE=$(BASE_IMAGE) \
+			--build-arg GIT_COMMIT=$(shell git rev-parse HEAD) \
+			--build-arg GIT_TREE_STATE=$(shell if [ -z "`git status --porcelain`" ]; then echo "clean" ; else echo "dirty"; fi) \
+			--tag $(IMAGE_REPO):$(IMAGE_TAG) \
+			.;\
+	}
 
 .PHONY: hack-build-cli
 hack-build-cli: hack-build-dev-tools

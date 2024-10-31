@@ -220,6 +220,20 @@ export const getPromotion = {
 } as const;
 
 /**
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.AbortPromotion
+ */
+export const abortPromotion = {
+  localName: "abortPromotion",
+  name: "AbortPromotion",
+  kind: MethodKind.Unary,
+  I: AbortPromotionRequest,
+  O: AbortPromotionResponse,
+  service: {
+    typeName: "akuity.io.kargo.service.v1alpha1.KargoService"
+  }
+} as const;
+
+/**
  * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.DeleteProject
  */
 export const deleteProject = {

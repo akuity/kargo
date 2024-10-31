@@ -134,9 +134,6 @@ func (k *kustomizeImageSetter) buildTargetImages(
 		if err != nil {
 			return nil, fmt.Errorf("unable to discover image for %q: %w", img.Image, err)
 		}
-		if discoveredImage == nil {
-			return nil, fmt.Errorf("no image found for %q", img.Image)
-		}
 
 		targetImage := kustypes.Image{
 			Name:    img.Image,

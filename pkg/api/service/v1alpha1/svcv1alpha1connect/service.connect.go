@@ -82,6 +82,9 @@ const (
 	// KargoServiceWatchPromotionProcedure is the fully-qualified name of the KargoService's
 	// WatchPromotion RPC.
 	KargoServiceWatchPromotionProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/WatchPromotion"
+	// KargoServiceAbortPromotionProcedure is the fully-qualified name of the KargoService's
+	// AbortPromotion RPC.
+	KargoServiceAbortPromotionProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/AbortPromotion"
 	// KargoServiceDeleteProjectProcedure is the fully-qualified name of the KargoService's
 	// DeleteProject RPC.
 	KargoServiceDeleteProjectProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/DeleteProject"
@@ -218,6 +221,7 @@ var (
 	kargoServiceWatchPromotionsMethodDescriptor                = kargoServiceServiceDescriptor.Methods().ByName("WatchPromotions")
 	kargoServiceGetPromotionMethodDescriptor                   = kargoServiceServiceDescriptor.Methods().ByName("GetPromotion")
 	kargoServiceWatchPromotionMethodDescriptor                 = kargoServiceServiceDescriptor.Methods().ByName("WatchPromotion")
+	kargoServiceAbortPromotionMethodDescriptor                 = kargoServiceServiceDescriptor.Methods().ByName("AbortPromotion")
 	kargoServiceDeleteProjectMethodDescriptor                  = kargoServiceServiceDescriptor.Methods().ByName("DeleteProject")
 	kargoServiceGetProjectMethodDescriptor                     = kargoServiceServiceDescriptor.Methods().ByName("GetProject")
 	kargoServiceListProjectsMethodDescriptor                   = kargoServiceServiceDescriptor.Methods().ByName("ListProjects")
@@ -283,6 +287,7 @@ type KargoServiceClient interface {
 	WatchPromotions(context.Context, *connect.Request[v1alpha1.WatchPromotionsRequest]) (*connect.ServerStreamForClient[v1alpha1.WatchPromotionsResponse], error)
 	GetPromotion(context.Context, *connect.Request[v1alpha1.GetPromotionRequest]) (*connect.Response[v1alpha1.GetPromotionResponse], error)
 	WatchPromotion(context.Context, *connect.Request[v1alpha1.WatchPromotionRequest]) (*connect.ServerStreamForClient[v1alpha1.WatchPromotionResponse], error)
+	AbortPromotion(context.Context, *connect.Request[v1alpha1.AbortPromotionRequest]) (*connect.Response[v1alpha1.AbortPromotionResponse], error)
 	DeleteProject(context.Context, *connect.Request[v1alpha1.DeleteProjectRequest]) (*connect.Response[v1alpha1.DeleteProjectResponse], error)
 	GetProject(context.Context, *connect.Request[v1alpha1.GetProjectRequest]) (*connect.Response[v1alpha1.GetProjectResponse], error)
 	ListProjects(context.Context, *connect.Request[v1alpha1.ListProjectsRequest]) (*connect.Response[v1alpha1.ListProjectsResponse], error)
@@ -442,6 +447,12 @@ func NewKargoServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			httpClient,
 			baseURL+KargoServiceWatchPromotionProcedure,
 			connect.WithSchema(kargoServiceWatchPromotionMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		abortPromotion: connect.NewClient[v1alpha1.AbortPromotionRequest, v1alpha1.AbortPromotionResponse](
+			httpClient,
+			baseURL+KargoServiceAbortPromotionProcedure,
+			connect.WithSchema(kargoServiceAbortPromotionMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
 		deleteProject: connect.NewClient[v1alpha1.DeleteProjectRequest, v1alpha1.DeleteProjectResponse](
@@ -713,6 +724,7 @@ type kargoServiceClient struct {
 	watchPromotions                *connect.Client[v1alpha1.WatchPromotionsRequest, v1alpha1.WatchPromotionsResponse]
 	getPromotion                   *connect.Client[v1alpha1.GetPromotionRequest, v1alpha1.GetPromotionResponse]
 	watchPromotion                 *connect.Client[v1alpha1.WatchPromotionRequest, v1alpha1.WatchPromotionResponse]
+	abortPromotion                 *connect.Client[v1alpha1.AbortPromotionRequest, v1alpha1.AbortPromotionResponse]
 	deleteProject                  *connect.Client[v1alpha1.DeleteProjectRequest, v1alpha1.DeleteProjectResponse]
 	getProject                     *connect.Client[v1alpha1.GetProjectRequest, v1alpha1.GetProjectResponse]
 	listProjects                   *connect.Client[v1alpha1.ListProjectsRequest, v1alpha1.ListProjectsResponse]
@@ -845,6 +857,11 @@ func (c *kargoServiceClient) GetPromotion(ctx context.Context, req *connect.Requ
 // WatchPromotion calls akuity.io.kargo.service.v1alpha1.KargoService.WatchPromotion.
 func (c *kargoServiceClient) WatchPromotion(ctx context.Context, req *connect.Request[v1alpha1.WatchPromotionRequest]) (*connect.ServerStreamForClient[v1alpha1.WatchPromotionResponse], error) {
 	return c.watchPromotion.CallServerStream(ctx, req)
+}
+
+// AbortPromotion calls akuity.io.kargo.service.v1alpha1.KargoService.AbortPromotion.
+func (c *kargoServiceClient) AbortPromotion(ctx context.Context, req *connect.Request[v1alpha1.AbortPromotionRequest]) (*connect.Response[v1alpha1.AbortPromotionResponse], error) {
+	return c.abortPromotion.CallUnary(ctx, req)
 }
 
 // DeleteProject calls akuity.io.kargo.service.v1alpha1.KargoService.DeleteProject.
@@ -1083,6 +1100,7 @@ type KargoServiceHandler interface {
 	WatchPromotions(context.Context, *connect.Request[v1alpha1.WatchPromotionsRequest], *connect.ServerStream[v1alpha1.WatchPromotionsResponse]) error
 	GetPromotion(context.Context, *connect.Request[v1alpha1.GetPromotionRequest]) (*connect.Response[v1alpha1.GetPromotionResponse], error)
 	WatchPromotion(context.Context, *connect.Request[v1alpha1.WatchPromotionRequest], *connect.ServerStream[v1alpha1.WatchPromotionResponse]) error
+	AbortPromotion(context.Context, *connect.Request[v1alpha1.AbortPromotionRequest]) (*connect.Response[v1alpha1.AbortPromotionResponse], error)
 	DeleteProject(context.Context, *connect.Request[v1alpha1.DeleteProjectRequest]) (*connect.Response[v1alpha1.DeleteProjectResponse], error)
 	GetProject(context.Context, *connect.Request[v1alpha1.GetProjectRequest]) (*connect.Response[v1alpha1.GetProjectResponse], error)
 	ListProjects(context.Context, *connect.Request[v1alpha1.ListProjectsRequest]) (*connect.Response[v1alpha1.ListProjectsResponse], error)
@@ -1238,6 +1256,12 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 		KargoServiceWatchPromotionProcedure,
 		svc.WatchPromotion,
 		connect.WithSchema(kargoServiceWatchPromotionMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	kargoServiceAbortPromotionHandler := connect.NewUnaryHandler(
+		KargoServiceAbortPromotionProcedure,
+		svc.AbortPromotion,
+		connect.WithSchema(kargoServiceAbortPromotionMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
 	kargoServiceDeleteProjectHandler := connect.NewUnaryHandler(
@@ -1524,6 +1548,8 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 			kargoServiceGetPromotionHandler.ServeHTTP(w, r)
 		case KargoServiceWatchPromotionProcedure:
 			kargoServiceWatchPromotionHandler.ServeHTTP(w, r)
+		case KargoServiceAbortPromotionProcedure:
+			kargoServiceAbortPromotionHandler.ServeHTTP(w, r)
 		case KargoServiceDeleteProjectProcedure:
 			kargoServiceDeleteProjectHandler.ServeHTTP(w, r)
 		case KargoServiceGetProjectProcedure:
@@ -1685,6 +1711,10 @@ func (UnimplementedKargoServiceHandler) GetPromotion(context.Context, *connect.R
 
 func (UnimplementedKargoServiceHandler) WatchPromotion(context.Context, *connect.Request[v1alpha1.WatchPromotionRequest], *connect.ServerStream[v1alpha1.WatchPromotionResponse]) error {
 	return connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.WatchPromotion is not implemented"))
+}
+
+func (UnimplementedKargoServiceHandler) AbortPromotion(context.Context, *connect.Request[v1alpha1.AbortPromotionRequest]) (*connect.Response[v1alpha1.AbortPromotionResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.AbortPromotion is not implemented"))
 }
 
 func (UnimplementedKargoServiceHandler) DeleteProject(context.Context, *connect.Request[v1alpha1.DeleteProjectRequest]) (*connect.Response[v1alpha1.DeleteProjectResponse], error) {

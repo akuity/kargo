@@ -11,7 +11,7 @@ import { Description } from '../common/description';
 import { ManifestPreview } from '../common/manifest-preview';
 import { useImages } from '../project/pipelines/utils/useImages';
 
-import { PrLinks } from './pr-links';
+import { FreightHistory } from './freight-history';
 import { Promotions } from './promotions';
 import { RequestedFreight } from './requested-freight';
 import { StageActions } from './stage-actions';
@@ -42,10 +42,6 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
       .sort((a, b) => moment(b.startTime?.toDate()).diff(moment(a.startTime?.toDate())));
   }, [stage]);
 
-  const repoUrls = useMemo(() => {
-    return (stage.spec?.promotionMechanisms?.gitRepoUpdates || []).map((g) => g.repoURL || '');
-  }, [stage]);
-
   return (
     <Drawer open={!!stageName} onClose={onClose} width={'80%'} closable={false}>
       {stage && (
@@ -64,35 +60,26 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
                 <Description item={stage} loading={false} className='mt-2' />
               </div>
             </div>
-            <div className='ml-auto mr-4'>
-              <PrLinks
-                repoUrls={repoUrls}
-                metadata={stage.status?.lastPromotion?.status?.metadata}
-              />
-            </div>
             <StageActions stage={stage} verificationRunning={isVerificationRunning} />
           </div>
           <Divider style={{ marginTop: '1em' }} />
 
-          <div className='flex flex-col gap-8 flex-1'>
-            <div>
-              <Typography.Title level={3}>Requested Freight</Typography.Title>
-
-              <RequestedFreight
-                requestedFreight={stage?.spec?.requestedFreight || []}
-                projectName={projectName}
-                itemStyle={{ width: '250px' }}
-              />
-            </div>
+          <div className='flex flex-col gap-8 flex-1 pb-10'>
+            <RequestedFreight
+              requestedFreight={stage?.spec?.requestedFreight || []}
+              projectName={projectName}
+              itemStyle={{ width: '250px' }}
+              className='space-y-5'
+            />
             <Tabs
               className='flex-1'
               defaultActiveKey='1'
-              style={{ minHeight: '500px' }}
+              style={{ minHeight: 'fit-content' }}
               items={[
                 {
                   key: '1',
                   label: 'Promotions',
-                  children: <Promotions repoUrls={repoUrls} />
+                  children: <Promotions />
                 },
                 {
                   key: '2',
@@ -111,6 +98,13 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
                   children: <ManifestPreview object={stage} height='700px' />
                 }
               ]}
+            />
+
+            <FreightHistory
+              requestedFreights={stage?.spec?.requestedFreight || []}
+              freightHistory={stage?.status?.freightHistory}
+              currentActiveFreight={stage?.status?.lastPromotion?.freight?.name}
+              projectName={projectName || ''}
             />
           </div>
         </div>

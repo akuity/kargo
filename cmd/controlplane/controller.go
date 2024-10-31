@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	stdruntime "runtime"
 	"sync"
 
 	"github.com/spf13/cobra"
@@ -20,7 +21,6 @@ import (
 	libargocd "github.com/akuity/kargo/internal/argocd"
 	"github.com/akuity/kargo/internal/controller"
 	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
-	"github.com/akuity/kargo/internal/controller/promotion"
 	"github.com/akuity/kargo/internal/controller/promotions"
 	rollouts "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/stages"
@@ -28,12 +28,11 @@ import (
 	"github.com/akuity/kargo/internal/credentials"
 	credsdb "github.com/akuity/kargo/internal/credentials/kubernetes"
 	"github.com/akuity/kargo/internal/directives"
+	"github.com/akuity/kargo/internal/indexer"
 	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/internal/os"
 	"github.com/akuity/kargo/internal/types"
 	versionpkg "github.com/akuity/kargo/internal/version"
-
-	_ "github.com/akuity/kargo/internal/gitprovider/github"
 )
 
 type controllerOptions struct {
@@ -43,6 +42,8 @@ type controllerOptions struct {
 	ArgoCDEnabled       bool
 	ArgoCDKubeConfig    string
 	ArgoCDNamespaceOnly bool
+
+	PprofBindAddress string
 
 	Logger *logging.Logger
 }
@@ -75,6 +76,7 @@ func (o *controllerOptions) complete() {
 	o.ArgoCDEnabled = types.MustParseBool(os.GetEnv("ARGOCD_INTEGRATION_ENABLED", "true"))
 	o.ArgoCDKubeConfig = os.GetEnv("ARGOCD_KUBECONFIG", "")
 	o.ArgoCDNamespaceOnly = types.MustParseBool(os.GetEnv("ARGOCD_WATCH_ARGOCD_NAMESPACE_ONLY", "false"))
+	o.PprofBindAddress = os.GetEnv("PPROF_BIND_ADDRESS", "")
 }
 
 func (o *controllerOptions) run(ctx context.Context) error {
@@ -83,16 +85,18 @@ func (o *controllerOptions) run(ctx context.Context) error {
 	startupLogger := o.Logger.WithValues(
 		"version", version.Version,
 		"commit", version.GitCommit,
+		"GOMAXPROCS", stdruntime.GOMAXPROCS(0),
+		"GOMEMLIMIT", os.GetEnv("GOMEMLIMIT", ""),
 	)
 	if o.ShardName != "" {
 		startupLogger = startupLogger.WithValues("shard", o.ShardName)
 	}
 	startupLogger.Info("Starting Kargo Controller")
 
-	promotionsReconcilerCfg := promotions.ReconcilerConfigFromEnv()
-	stagesReconcilerCfg := stages.ReconcilerConfigFromEnv()
-
-	kargoMgr, stagesReconcilerCfg, err := o.setupKargoManager(ctx, stagesReconcilerCfg)
+	kargoMgr, stagesReconcilerCfg, err := o.setupKargoManager(
+		ctx,
+		stages.ReconcilerConfigFromEnv(),
+	)
 	if err != nil {
 		return fmt.Errorf("error initializing Kargo controller manager: %w", err)
 	}
@@ -113,7 +117,6 @@ func (o *controllerOptions) run(ctx context.Context) error {
 		kargoMgr,
 		argocdMgr,
 		credentialsDB,
-		promotionsReconcilerCfg,
 		stagesReconcilerCfg,
 	); err != nil {
 		return fmt.Errorf("error setting up reconcilers: %w", err)
@@ -173,20 +176,11 @@ func (o *controllerOptions) setupKargoManager(
 		}
 	}
 
-	secretReq, err := controller.GetCredentialsRequirement()
+	shardReq, err := controller.GetShardRequirement(stagesReconcilerCfg.ShardName)
 	if err != nil {
-		return nil, stagesReconcilerCfg, fmt.Errorf("error getting label requirement for credentials Secrets: %w", err)
+		return nil, stagesReconcilerCfg, fmt.Errorf("error getting shard requirement: %w", err)
 	}
-
-	cacheOpts := cache.Options{
-		ByObject: map[client.Object]cache.ByObject{
-			// Only watch Secrets matching the label requirements
-			// for credentials.
-			&corev1.Secret{}: {
-				Label: labels.NewSelector().Add(*secretReq),
-			},
-		},
-	}
+	shardSelector := labels.NewSelector().Add(*shardReq)
 
 	mgr, err := ctrl.NewManager(
 		restCfg,
@@ -195,7 +189,28 @@ func (o *controllerOptions) setupKargoManager(
 			Metrics: server.Options{
 				BindAddress: "0",
 			},
-			Cache: cacheOpts,
+			PprofBindAddress: o.PprofBindAddress,
+			Client: client.Options{
+				Cache: &client.CacheOptions{
+					// The controller does not have cluster-wide permissions, to
+					// get/list/watch Secrets. Its access to Secrets grows and shrinks
+					// dynamically as Projects are created and deleted. We disable caching
+					// here since the underlying informer will not be able to watch
+					// Secrets in all namespaces.
+					DisableFor: []client.Object{&corev1.Secret{}},
+				},
+			},
+			Cache: cache.Options{
+				// When Kargo is sharded, we expect the controller to only handle
+				// resources in the shard it is responsible for. This is enforced
+				// by the following label selectors on the informers, EXCEPT for
+				// Warehouses — which should be accessible by all controllers in
+				// a sharded setup, but handled by only one controller at a time.
+				ByObject: map[client.Object]cache.ByObject{
+					&kargoapi.Stage{}:     {Label: shardSelector},
+					&kargoapi.Promotion{}: {Label: shardSelector},
+				},
+			},
 		},
 	)
 	return mgr, stagesReconcilerCfg, err
@@ -272,24 +287,22 @@ func (o *controllerOptions) setupReconcilers(
 	ctx context.Context,
 	kargoMgr, argocdMgr manager.Manager,
 	credentialsDB credentials.Database,
-	promotionsReconcilerCfg promotions.ReconcilerConfig,
 	stagesReconcilerCfg stages.ReconcilerConfig,
 ) error {
 	var argoCDClient client.Client
 	if argocdMgr != nil {
 		argoCDClient = argocdMgr.GetClient()
 	}
+	sharedIndexer := indexer.NewSharedFieldIndexer(kargoMgr.GetFieldIndexer())
 
 	directivesEngine := directives.NewSimpleEngine(credentialsDB, kargoMgr.GetClient(), argoCDClient)
-	promoMechanisms := promotion.NewMechanisms(kargoMgr.GetClient(), argoCDClient, credentialsDB)
 
 	if err := promotions.SetupReconcilerWithManager(
 		ctx,
 		kargoMgr,
 		argocdMgr,
 		directivesEngine,
-		promoMechanisms,
-		promotionsReconcilerCfg,
+		promotions.ReconcilerConfigFromEnv(),
 	); err != nil {
 		return fmt.Errorf("error setting up Promotions reconciler: %w", err)
 	}
@@ -300,14 +313,24 @@ func (o *controllerOptions) setupReconcilers(
 		argocdMgr,
 		directivesEngine,
 		stagesReconcilerCfg,
+		sharedIndexer,
 	); err != nil {
 		return fmt.Errorf("error setting up Stages reconciler: %w", err)
 	}
 
+	if err := stages.NewControlFlowStageReconciler(stagesReconcilerCfg).SetupWithManager(
+		ctx,
+		kargoMgr,
+		sharedIndexer,
+	); err != nil {
+		return fmt.Errorf("error setting up control flow Stages reconciler: %w", err)
+	}
+
 	if err := warehouses.SetupReconcilerWithManager(
+		ctx,
 		kargoMgr,
 		credentialsDB,
-		o.ShardName,
+		warehouses.ReconcilerConfigFromEnv(),
 	); err != nil {
 		return fmt.Errorf("error setting up Warehouses reconciler: %w", err)
 	}

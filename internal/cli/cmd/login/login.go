@@ -73,7 +73,7 @@ kargo login https://kargo.example.com --admin
 kargo login https://kargo.example.com --kubeconfig
 
 # Log in using the local kubeconfig and ignore cert warnings
-kargo login https://kargo.example.com --kubeconfig --insecure-tls
+kargo login https://kargo.example.com --kubeconfig --insecure-skip-tls-verify
 `),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmdOpts.complete(args)
@@ -233,8 +233,10 @@ func kubeconfigLogin(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("error loading kubeconfig: %w", err)
 	}
 	bearerToken, err := kubeclient.GetCredential(ctx, restCfg)
-	return bearerToken,
-		fmt.Errorf("error retrieving bearer token from kubeconfig: %w", err)
+	if err != nil {
+		return "", fmt.Errorf("error retrieving bearer token from kubeconfig: %w", err)
+	}
+	return bearerToken, nil
 }
 
 // ssoLogin performs a login using OpenID Connect. It first retrieves
@@ -504,7 +506,7 @@ var splashHTML = []byte(`<!DOCTYPE html>
   <meta http-equiv='X-UA-Compatible' content='IE=edge'>
   <meta name='viewport' content='width=device-width, initial-scale=1'>
   <title>Kargo</title>
-  <link rel="shortcut icon" type="image/jpg" href="/assets/favicon.ico"/>
+  <link rel="shortcut icon" type="image/png" href="/assets/kargo.png"/>
   <link rel='stylesheet' type='text/css' media='screen' href='/assets/splash.css'>
 </head>
 <body>

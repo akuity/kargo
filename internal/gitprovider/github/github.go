@@ -98,7 +98,7 @@ func (g *GitHubProvider) CreatePullRequest(
 			Title:               &opts.Title,
 			Head:                &opts.Head,
 			Base:                &opts.Base,
-			Body:                &opts.Title,
+			Body:                &opts.Description,
 			MaintainerCanModify: github.Bool(false),
 		},
 	)

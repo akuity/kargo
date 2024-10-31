@@ -58,9 +58,19 @@ spec:
         image: {{ include "kargo.image" . }}
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         command: ["/usr/local/bin/kargo", "controller"]
-        {{- with (concat .Values.global.env .Values.controller.env) }}
         env:
-          {{- toYaml . | nindent 8 }}
+        - name: GOMEMLIMIT
+          valueFrom:
+            resourceFieldRef:
+              containerName: controller
+              resource: limits.memory
+        - name: GOMAXPROCS
+          valueFrom:
+            resourceFieldRef:
+              containerName: controller
+              resource: limits.cpu
+        {{- with (concat .Values.global.env .Values.controller.env) }}
+        {{- toYaml . | nindent 8 }}
         {{- end }}
         envFrom:
         - configMapRef:

@@ -12,15 +12,36 @@ import (
 	rolloutsapi "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
 )
 
-var allVerbs = []string{
-	"create",
-	"delete",
-	"deletecollection",
-	"get",
-	"list",
-	"patch",
-	"update",
-	"watch",
+var (
+	allVerbs = []string{
+		"create",
+		"delete",
+		"deletecollection",
+		"get",
+		"list",
+		"patch",
+		"update",
+		"watch",
+	}
+
+	allStagesVerbs = append(allVerbs, "promote")
+)
+
+func init() {
+	slices.Sort(allVerbs)
+	slices.Sort(allStagesVerbs)
+}
+
+type PolicyRuleNormalizationOptions struct {
+	// IncludeCustomVerbsInExpansion indicates whether custom verbs (like
+	// "promote" for Stages) should be included in the expansion of the "*"
+	// wildcard verb. This is optional because when normalizing PolicyRules with
+	// the intent to create or update a Role, this is how we would like "*" to be
+	// interpreted. However, when normalizing PolicyRules with the intent to
+	// display them to the user, we will not want to expand "*" to include custom
+	// verbs because Kubernetes own interpretation of "*" does not include custom
+	// verbs.
+	IncludeCustomVerbsInExpansion bool
 }
 
 // NormalizePolicyRules returns a predictably ordered slice of Normalized
@@ -30,8 +51,11 @@ var allVerbs = []string{
 // necessary such that each rule references a single APIGroup, a single
 // Resource, and at most a single ResourceName, with wildcard verbs expanded and
 // all applicable verbs de-duplicated and sorted.
-func NormalizePolicyRules(rules []rbacv1.PolicyRule) ([]rbacv1.PolicyRule, error) {
-	rulesMap, err := BuildNormalizedPolicyRulesMap(rules)
+func NormalizePolicyRules(
+	rules []rbacv1.PolicyRule,
+	opts *PolicyRuleNormalizationOptions,
+) ([]rbacv1.PolicyRule, error) {
+	rulesMap, err := BuildNormalizedPolicyRulesMap(rules, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -49,6 +73,7 @@ func NormalizePolicyRules(rules []rbacv1.PolicyRule) ([]rbacv1.PolicyRule, error
 // de-duplicated and sorted.
 func BuildNormalizedPolicyRulesMap(
 	rules []rbacv1.PolicyRule,
+	opts *PolicyRuleNormalizationOptions,
 ) (map[string]rbacv1.PolicyRule, error) {
 	rulesMap := make(map[string]rbacv1.PolicyRule)
 	for _, rule := range rules {
@@ -68,7 +93,7 @@ func BuildNormalizedPolicyRulesMap(
 				if existingRule, ok := rulesMap[key]; ok {
 					verbs = append(existingRule.Verbs, verbs...)
 				}
-				rulesMap[key] = buildRule(group, resource, resourceName, verbs)
+				rulesMap[key] = buildRule(group, resource, resourceName, verbs, opts)
 			}
 		}
 	}
@@ -115,14 +140,18 @@ func buildRule(
 	resource string,
 	resourceName string,
 	verbs []string,
+	opts *PolicyRuleNormalizationOptions,
 ) rbacv1.PolicyRule {
+	if opts == nil {
+		opts = &PolicyRuleNormalizationOptions{}
+	}
 	// De-dupe verbs and expand verb wildcards
 	verbsMap := make(map[string]struct{})
 	for _, verb := range verbs {
 		verb = strings.TrimSpace(verb)
 		if verb == "*" {
 			verbsMap = make(map[string]struct{})
-			for _, verb := range allVerbs {
+			for _, verb := range allVerbsFor(resource, opts.IncludeCustomVerbsInExpansion) {
 				verbsMap[verb] = struct{}{}
 			}
 		} else {
@@ -182,5 +211,17 @@ func getGroupName(resourceType string) string {
 		return rolloutsapi.GroupVersion.Group
 	default:
 		return "" // If the resourceType was validated, this will never happen
+	}
+}
+
+func allVerbsFor(resourceType string, includeCustom bool) []string {
+	if !includeCustom {
+		return allVerbs
+	}
+	switch resourceType {
+	case "stages":
+		return allStagesVerbs
+	default:
+		return allVerbs
 	}
 }

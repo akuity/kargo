@@ -46,6 +46,7 @@ service KargoService {
   rpc WatchPromotions(WatchPromotionsRequest) returns (stream WatchPromotionsResponse);
   rpc GetPromotion(GetPromotionRequest) returns (GetPromotionResponse);
   rpc WatchPromotion(WatchPromotionRequest) returns (stream WatchPromotionResponse);
+  rpc AbortPromotion(AbortPromotionRequest) returns (AbortPromotionResponse);
 
   /* Project APIs */
 
@@ -339,6 +340,15 @@ message WatchPromotionRequest {
 message WatchPromotionResponse {
   github.com.akuity.kargo.api.v1alpha1.Promotion promotion = 1;
   string type = 2;
+}
+
+message AbortPromotionRequest {
+  string project = 1;
+  string name = 2;
+}
+
+message AbortPromotionResponse {
+  /* explicitly empty */
 }
 
 message DeleteProjectRequest {

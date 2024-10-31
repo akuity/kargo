@@ -12,6 +12,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api/user"
+	"github.com/akuity/kargo/internal/event"
 	"github.com/akuity/kargo/internal/kargo"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
@@ -86,14 +87,7 @@ func (s *server) PromoteToStage(
 		return nil, connect.NewError(connect.CodeNotFound, err)
 	}
 
-	var upstreamStages []string
-	for _, req := range stage.Spec.RequestedFreight {
-		if req.Origin.Equals(&freight.Origin) {
-			upstreamStages = req.Sources.Stages
-			break
-		}
-	}
-	if !s.isFreightAvailableFn(freight, stage.Name, upstreamStages) {
+	if !s.isFreightAvailableFn(stage, freight) {
 		return nil, connect.NewError(
 			connect.CodeInvalidArgument,
 			fmt.Errorf(
@@ -145,7 +139,7 @@ func (s *server) recordPromotionCreatedEvent(
 
 	s.recorder.AnnotatedEventf(
 		p,
-		kargoapi.NewPromotionEventAnnotations(ctx, actor, p, f),
+		event.NewPromotionAnnotations(ctx, actor, p, f),
 		corev1.EventTypeNormal,
 		kargoapi.EventReasonPromotionCreated,
 		msg,

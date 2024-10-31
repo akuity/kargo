@@ -254,178 +254,10 @@ func (m *ArgoCDAppSyncStatus) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_ArgoCDAppSyncStatus proto.InternalMessageInfo
 
-func (m *ArgoCDAppUpdate) Reset()      { *m = ArgoCDAppUpdate{} }
-func (*ArgoCDAppUpdate) ProtoMessage() {}
-func (*ArgoCDAppUpdate) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{8}
-}
-func (m *ArgoCDAppUpdate) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *ArgoCDAppUpdate) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	b = b[:cap(b)]
-	n, err := m.MarshalToSizedBuffer(b)
-	if err != nil {
-		return nil, err
-	}
-	return b[:n], nil
-}
-func (m *ArgoCDAppUpdate) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ArgoCDAppUpdate.Merge(m, src)
-}
-func (m *ArgoCDAppUpdate) XXX_Size() int {
-	return m.Size()
-}
-func (m *ArgoCDAppUpdate) XXX_DiscardUnknown() {
-	xxx_messageInfo_ArgoCDAppUpdate.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_ArgoCDAppUpdate proto.InternalMessageInfo
-
-func (m *ArgoCDHelm) Reset()      { *m = ArgoCDHelm{} }
-func (*ArgoCDHelm) ProtoMessage() {}
-func (*ArgoCDHelm) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{9}
-}
-func (m *ArgoCDHelm) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *ArgoCDHelm) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	b = b[:cap(b)]
-	n, err := m.MarshalToSizedBuffer(b)
-	if err != nil {
-		return nil, err
-	}
-	return b[:n], nil
-}
-func (m *ArgoCDHelm) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ArgoCDHelm.Merge(m, src)
-}
-func (m *ArgoCDHelm) XXX_Size() int {
-	return m.Size()
-}
-func (m *ArgoCDHelm) XXX_DiscardUnknown() {
-	xxx_messageInfo_ArgoCDHelm.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_ArgoCDHelm proto.InternalMessageInfo
-
-func (m *ArgoCDHelmImageUpdate) Reset()      { *m = ArgoCDHelmImageUpdate{} }
-func (*ArgoCDHelmImageUpdate) ProtoMessage() {}
-func (*ArgoCDHelmImageUpdate) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{10}
-}
-func (m *ArgoCDHelmImageUpdate) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *ArgoCDHelmImageUpdate) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	b = b[:cap(b)]
-	n, err := m.MarshalToSizedBuffer(b)
-	if err != nil {
-		return nil, err
-	}
-	return b[:n], nil
-}
-func (m *ArgoCDHelmImageUpdate) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ArgoCDHelmImageUpdate.Merge(m, src)
-}
-func (m *ArgoCDHelmImageUpdate) XXX_Size() int {
-	return m.Size()
-}
-func (m *ArgoCDHelmImageUpdate) XXX_DiscardUnknown() {
-	xxx_messageInfo_ArgoCDHelmImageUpdate.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_ArgoCDHelmImageUpdate proto.InternalMessageInfo
-
-func (m *ArgoCDKustomize) Reset()      { *m = ArgoCDKustomize{} }
-func (*ArgoCDKustomize) ProtoMessage() {}
-func (*ArgoCDKustomize) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{11}
-}
-func (m *ArgoCDKustomize) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *ArgoCDKustomize) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	b = b[:cap(b)]
-	n, err := m.MarshalToSizedBuffer(b)
-	if err != nil {
-		return nil, err
-	}
-	return b[:n], nil
-}
-func (m *ArgoCDKustomize) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ArgoCDKustomize.Merge(m, src)
-}
-func (m *ArgoCDKustomize) XXX_Size() int {
-	return m.Size()
-}
-func (m *ArgoCDKustomize) XXX_DiscardUnknown() {
-	xxx_messageInfo_ArgoCDKustomize.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_ArgoCDKustomize proto.InternalMessageInfo
-
-func (m *ArgoCDKustomizeImageUpdate) Reset()      { *m = ArgoCDKustomizeImageUpdate{} }
-func (*ArgoCDKustomizeImageUpdate) ProtoMessage() {}
-func (*ArgoCDKustomizeImageUpdate) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{12}
-}
-func (m *ArgoCDKustomizeImageUpdate) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *ArgoCDKustomizeImageUpdate) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	b = b[:cap(b)]
-	n, err := m.MarshalToSizedBuffer(b)
-	if err != nil {
-		return nil, err
-	}
-	return b[:n], nil
-}
-func (m *ArgoCDKustomizeImageUpdate) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ArgoCDKustomizeImageUpdate.Merge(m, src)
-}
-func (m *ArgoCDKustomizeImageUpdate) XXX_Size() int {
-	return m.Size()
-}
-func (m *ArgoCDKustomizeImageUpdate) XXX_DiscardUnknown() {
-	xxx_messageInfo_ArgoCDKustomizeImageUpdate.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_ArgoCDKustomizeImageUpdate proto.InternalMessageInfo
-
-func (m *ArgoCDSourceUpdate) Reset()      { *m = ArgoCDSourceUpdate{} }
-func (*ArgoCDSourceUpdate) ProtoMessage() {}
-func (*ArgoCDSourceUpdate) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{13}
-}
-func (m *ArgoCDSourceUpdate) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *ArgoCDSourceUpdate) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	b = b[:cap(b)]
-	n, err := m.MarshalToSizedBuffer(b)
-	if err != nil {
-		return nil, err
-	}
-	return b[:n], nil
-}
-func (m *ArgoCDSourceUpdate) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ArgoCDSourceUpdate.Merge(m, src)
-}
-func (m *ArgoCDSourceUpdate) XXX_Size() int {
-	return m.Size()
-}
-func (m *ArgoCDSourceUpdate) XXX_DiscardUnknown() {
-	xxx_messageInfo_ArgoCDSourceUpdate.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_ArgoCDSourceUpdate proto.InternalMessageInfo
-
 func (m *Chart) Reset()      { *m = Chart{} }
 func (*Chart) ProtoMessage() {}
 func (*Chart) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{14}
+	return fileDescriptor_e26b7f7bbc391025, []int{8}
 }
 func (m *Chart) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -453,7 +285,7 @@ var xxx_messageInfo_Chart proto.InternalMessageInfo
 func (m *ChartDiscoveryResult) Reset()      { *m = ChartDiscoveryResult{} }
 func (*ChartDiscoveryResult) ProtoMessage() {}
 func (*ChartDiscoveryResult) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{15}
+	return fileDescriptor_e26b7f7bbc391025, []int{9}
 }
 func (m *ChartDiscoveryResult) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -481,7 +313,7 @@ var xxx_messageInfo_ChartDiscoveryResult proto.InternalMessageInfo
 func (m *ChartSubscription) Reset()      { *m = ChartSubscription{} }
 func (*ChartSubscription) ProtoMessage() {}
 func (*ChartSubscription) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{16}
+	return fileDescriptor_e26b7f7bbc391025, []int{10}
 }
 func (m *ChartSubscription) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -509,7 +341,7 @@ var xxx_messageInfo_ChartSubscription proto.InternalMessageInfo
 func (m *DiscoveredArtifacts) Reset()      { *m = DiscoveredArtifacts{} }
 func (*DiscoveredArtifacts) ProtoMessage() {}
 func (*DiscoveredArtifacts) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{17}
+	return fileDescriptor_e26b7f7bbc391025, []int{11}
 }
 func (m *DiscoveredArtifacts) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -537,7 +369,7 @@ var xxx_messageInfo_DiscoveredArtifacts proto.InternalMessageInfo
 func (m *DiscoveredCommit) Reset()      { *m = DiscoveredCommit{} }
 func (*DiscoveredCommit) ProtoMessage() {}
 func (*DiscoveredCommit) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{18}
+	return fileDescriptor_e26b7f7bbc391025, []int{12}
 }
 func (m *DiscoveredCommit) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -565,7 +397,7 @@ var xxx_messageInfo_DiscoveredCommit proto.InternalMessageInfo
 func (m *DiscoveredImageReference) Reset()      { *m = DiscoveredImageReference{} }
 func (*DiscoveredImageReference) ProtoMessage() {}
 func (*DiscoveredImageReference) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{19}
+	return fileDescriptor_e26b7f7bbc391025, []int{13}
 }
 func (m *DiscoveredImageReference) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -593,7 +425,7 @@ var xxx_messageInfo_DiscoveredImageReference proto.InternalMessageInfo
 func (m *Freight) Reset()      { *m = Freight{} }
 func (*Freight) ProtoMessage() {}
 func (*Freight) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{20}
+	return fileDescriptor_e26b7f7bbc391025, []int{14}
 }
 func (m *Freight) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -621,7 +453,7 @@ var xxx_messageInfo_Freight proto.InternalMessageInfo
 func (m *FreightCollection) Reset()      { *m = FreightCollection{} }
 func (*FreightCollection) ProtoMessage() {}
 func (*FreightCollection) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{21}
+	return fileDescriptor_e26b7f7bbc391025, []int{15}
 }
 func (m *FreightCollection) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -649,7 +481,7 @@ var xxx_messageInfo_FreightCollection proto.InternalMessageInfo
 func (m *FreightList) Reset()      { *m = FreightList{} }
 func (*FreightList) ProtoMessage() {}
 func (*FreightList) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{22}
+	return fileDescriptor_e26b7f7bbc391025, []int{16}
 }
 func (m *FreightList) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -677,7 +509,7 @@ var xxx_messageInfo_FreightList proto.InternalMessageInfo
 func (m *FreightOrigin) Reset()      { *m = FreightOrigin{} }
 func (*FreightOrigin) ProtoMessage() {}
 func (*FreightOrigin) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{23}
+	return fileDescriptor_e26b7f7bbc391025, []int{17}
 }
 func (m *FreightOrigin) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -705,7 +537,7 @@ var xxx_messageInfo_FreightOrigin proto.InternalMessageInfo
 func (m *FreightReference) Reset()      { *m = FreightReference{} }
 func (*FreightReference) ProtoMessage() {}
 func (*FreightReference) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{24}
+	return fileDescriptor_e26b7f7bbc391025, []int{18}
 }
 func (m *FreightReference) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -733,7 +565,7 @@ var xxx_messageInfo_FreightReference proto.InternalMessageInfo
 func (m *FreightRequest) Reset()      { *m = FreightRequest{} }
 func (*FreightRequest) ProtoMessage() {}
 func (*FreightRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{25}
+	return fileDescriptor_e26b7f7bbc391025, []int{19}
 }
 func (m *FreightRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -761,7 +593,7 @@ var xxx_messageInfo_FreightRequest proto.InternalMessageInfo
 func (m *FreightSources) Reset()      { *m = FreightSources{} }
 func (*FreightSources) ProtoMessage() {}
 func (*FreightSources) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{26}
+	return fileDescriptor_e26b7f7bbc391025, []int{20}
 }
 func (m *FreightSources) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -789,7 +621,7 @@ var xxx_messageInfo_FreightSources proto.InternalMessageInfo
 func (m *FreightStatus) Reset()      { *m = FreightStatus{} }
 func (*FreightStatus) ProtoMessage() {}
 func (*FreightStatus) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{27}
+	return fileDescriptor_e26b7f7bbc391025, []int{21}
 }
 func (m *FreightStatus) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -817,7 +649,7 @@ var xxx_messageInfo_FreightStatus proto.InternalMessageInfo
 func (m *GitCommit) Reset()      { *m = GitCommit{} }
 func (*GitCommit) ProtoMessage() {}
 func (*GitCommit) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{28}
+	return fileDescriptor_e26b7f7bbc391025, []int{22}
 }
 func (m *GitCommit) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -845,7 +677,7 @@ var xxx_messageInfo_GitCommit proto.InternalMessageInfo
 func (m *GitDiscoveryResult) Reset()      { *m = GitDiscoveryResult{} }
 func (*GitDiscoveryResult) ProtoMessage() {}
 func (*GitDiscoveryResult) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{29}
+	return fileDescriptor_e26b7f7bbc391025, []int{23}
 }
 func (m *GitDiscoveryResult) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -870,94 +702,10 @@ func (m *GitDiscoveryResult) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_GitDiscoveryResult proto.InternalMessageInfo
 
-func (m *GitHubPullRequest) Reset()      { *m = GitHubPullRequest{} }
-func (*GitHubPullRequest) ProtoMessage() {}
-func (*GitHubPullRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{30}
-}
-func (m *GitHubPullRequest) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *GitHubPullRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	b = b[:cap(b)]
-	n, err := m.MarshalToSizedBuffer(b)
-	if err != nil {
-		return nil, err
-	}
-	return b[:n], nil
-}
-func (m *GitHubPullRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_GitHubPullRequest.Merge(m, src)
-}
-func (m *GitHubPullRequest) XXX_Size() int {
-	return m.Size()
-}
-func (m *GitHubPullRequest) XXX_DiscardUnknown() {
-	xxx_messageInfo_GitHubPullRequest.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_GitHubPullRequest proto.InternalMessageInfo
-
-func (m *GitLabPullRequest) Reset()      { *m = GitLabPullRequest{} }
-func (*GitLabPullRequest) ProtoMessage() {}
-func (*GitLabPullRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{31}
-}
-func (m *GitLabPullRequest) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *GitLabPullRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	b = b[:cap(b)]
-	n, err := m.MarshalToSizedBuffer(b)
-	if err != nil {
-		return nil, err
-	}
-	return b[:n], nil
-}
-func (m *GitLabPullRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_GitLabPullRequest.Merge(m, src)
-}
-func (m *GitLabPullRequest) XXX_Size() int {
-	return m.Size()
-}
-func (m *GitLabPullRequest) XXX_DiscardUnknown() {
-	xxx_messageInfo_GitLabPullRequest.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_GitLabPullRequest proto.InternalMessageInfo
-
-func (m *GitRepoUpdate) Reset()      { *m = GitRepoUpdate{} }
-func (*GitRepoUpdate) ProtoMessage() {}
-func (*GitRepoUpdate) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{32}
-}
-func (m *GitRepoUpdate) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *GitRepoUpdate) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	b = b[:cap(b)]
-	n, err := m.MarshalToSizedBuffer(b)
-	if err != nil {
-		return nil, err
-	}
-	return b[:n], nil
-}
-func (m *GitRepoUpdate) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_GitRepoUpdate.Merge(m, src)
-}
-func (m *GitRepoUpdate) XXX_Size() int {
-	return m.Size()
-}
-func (m *GitRepoUpdate) XXX_DiscardUnknown() {
-	xxx_messageInfo_GitRepoUpdate.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_GitRepoUpdate proto.InternalMessageInfo
-
 func (m *GitSubscription) Reset()      { *m = GitSubscription{} }
 func (*GitSubscription) ProtoMessage() {}
 func (*GitSubscription) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{33}
+	return fileDescriptor_e26b7f7bbc391025, []int{24}
 }
 func (m *GitSubscription) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -985,7 +733,7 @@ var xxx_messageInfo_GitSubscription proto.InternalMessageInfo
 func (m *Health) Reset()      { *m = Health{} }
 func (*Health) ProtoMessage() {}
 func (*Health) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{34}
+	return fileDescriptor_e26b7f7bbc391025, []int{25}
 }
 func (m *Health) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1013,7 +761,7 @@ var xxx_messageInfo_Health proto.InternalMessageInfo
 func (m *HealthCheckStep) Reset()      { *m = HealthCheckStep{} }
 func (*HealthCheckStep) ProtoMessage() {}
 func (*HealthCheckStep) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{35}
+	return fileDescriptor_e26b7f7bbc391025, []int{26}
 }
 func (m *HealthCheckStep) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1038,94 +786,10 @@ func (m *HealthCheckStep) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_HealthCheckStep proto.InternalMessageInfo
 
-func (m *HelmChartDependencyUpdate) Reset()      { *m = HelmChartDependencyUpdate{} }
-func (*HelmChartDependencyUpdate) ProtoMessage() {}
-func (*HelmChartDependencyUpdate) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{36}
-}
-func (m *HelmChartDependencyUpdate) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *HelmChartDependencyUpdate) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	b = b[:cap(b)]
-	n, err := m.MarshalToSizedBuffer(b)
-	if err != nil {
-		return nil, err
-	}
-	return b[:n], nil
-}
-func (m *HelmChartDependencyUpdate) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_HelmChartDependencyUpdate.Merge(m, src)
-}
-func (m *HelmChartDependencyUpdate) XXX_Size() int {
-	return m.Size()
-}
-func (m *HelmChartDependencyUpdate) XXX_DiscardUnknown() {
-	xxx_messageInfo_HelmChartDependencyUpdate.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_HelmChartDependencyUpdate proto.InternalMessageInfo
-
-func (m *HelmImageUpdate) Reset()      { *m = HelmImageUpdate{} }
-func (*HelmImageUpdate) ProtoMessage() {}
-func (*HelmImageUpdate) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{37}
-}
-func (m *HelmImageUpdate) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *HelmImageUpdate) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	b = b[:cap(b)]
-	n, err := m.MarshalToSizedBuffer(b)
-	if err != nil {
-		return nil, err
-	}
-	return b[:n], nil
-}
-func (m *HelmImageUpdate) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_HelmImageUpdate.Merge(m, src)
-}
-func (m *HelmImageUpdate) XXX_Size() int {
-	return m.Size()
-}
-func (m *HelmImageUpdate) XXX_DiscardUnknown() {
-	xxx_messageInfo_HelmImageUpdate.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_HelmImageUpdate proto.InternalMessageInfo
-
-func (m *HelmPromotionMechanism) Reset()      { *m = HelmPromotionMechanism{} }
-func (*HelmPromotionMechanism) ProtoMessage() {}
-func (*HelmPromotionMechanism) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{38}
-}
-func (m *HelmPromotionMechanism) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *HelmPromotionMechanism) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	b = b[:cap(b)]
-	n, err := m.MarshalToSizedBuffer(b)
-	if err != nil {
-		return nil, err
-	}
-	return b[:n], nil
-}
-func (m *HelmPromotionMechanism) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_HelmPromotionMechanism.Merge(m, src)
-}
-func (m *HelmPromotionMechanism) XXX_Size() int {
-	return m.Size()
-}
-func (m *HelmPromotionMechanism) XXX_DiscardUnknown() {
-	xxx_messageInfo_HelmPromotionMechanism.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_HelmPromotionMechanism proto.InternalMessageInfo
-
 func (m *Image) Reset()      { *m = Image{} }
 func (*Image) ProtoMessage() {}
 func (*Image) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{39}
+	return fileDescriptor_e26b7f7bbc391025, []int{27}
 }
 func (m *Image) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1153,7 +817,7 @@ var xxx_messageInfo_Image proto.InternalMessageInfo
 func (m *ImageDiscoveryResult) Reset()      { *m = ImageDiscoveryResult{} }
 func (*ImageDiscoveryResult) ProtoMessage() {}
 func (*ImageDiscoveryResult) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{40}
+	return fileDescriptor_e26b7f7bbc391025, []int{28}
 }
 func (m *ImageDiscoveryResult) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1181,7 +845,7 @@ var xxx_messageInfo_ImageDiscoveryResult proto.InternalMessageInfo
 func (m *ImageSubscription) Reset()      { *m = ImageSubscription{} }
 func (*ImageSubscription) ProtoMessage() {}
 func (*ImageSubscription) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{41}
+	return fileDescriptor_e26b7f7bbc391025, []int{29}
 }
 func (m *ImageSubscription) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1206,122 +870,10 @@ func (m *ImageSubscription) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_ImageSubscription proto.InternalMessageInfo
 
-func (m *KargoRenderImageUpdate) Reset()      { *m = KargoRenderImageUpdate{} }
-func (*KargoRenderImageUpdate) ProtoMessage() {}
-func (*KargoRenderImageUpdate) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{42}
-}
-func (m *KargoRenderImageUpdate) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *KargoRenderImageUpdate) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	b = b[:cap(b)]
-	n, err := m.MarshalToSizedBuffer(b)
-	if err != nil {
-		return nil, err
-	}
-	return b[:n], nil
-}
-func (m *KargoRenderImageUpdate) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_KargoRenderImageUpdate.Merge(m, src)
-}
-func (m *KargoRenderImageUpdate) XXX_Size() int {
-	return m.Size()
-}
-func (m *KargoRenderImageUpdate) XXX_DiscardUnknown() {
-	xxx_messageInfo_KargoRenderImageUpdate.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_KargoRenderImageUpdate proto.InternalMessageInfo
-
-func (m *KargoRenderPromotionMechanism) Reset()      { *m = KargoRenderPromotionMechanism{} }
-func (*KargoRenderPromotionMechanism) ProtoMessage() {}
-func (*KargoRenderPromotionMechanism) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{43}
-}
-func (m *KargoRenderPromotionMechanism) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *KargoRenderPromotionMechanism) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	b = b[:cap(b)]
-	n, err := m.MarshalToSizedBuffer(b)
-	if err != nil {
-		return nil, err
-	}
-	return b[:n], nil
-}
-func (m *KargoRenderPromotionMechanism) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_KargoRenderPromotionMechanism.Merge(m, src)
-}
-func (m *KargoRenderPromotionMechanism) XXX_Size() int {
-	return m.Size()
-}
-func (m *KargoRenderPromotionMechanism) XXX_DiscardUnknown() {
-	xxx_messageInfo_KargoRenderPromotionMechanism.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_KargoRenderPromotionMechanism proto.InternalMessageInfo
-
-func (m *KustomizeImageUpdate) Reset()      { *m = KustomizeImageUpdate{} }
-func (*KustomizeImageUpdate) ProtoMessage() {}
-func (*KustomizeImageUpdate) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{44}
-}
-func (m *KustomizeImageUpdate) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *KustomizeImageUpdate) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	b = b[:cap(b)]
-	n, err := m.MarshalToSizedBuffer(b)
-	if err != nil {
-		return nil, err
-	}
-	return b[:n], nil
-}
-func (m *KustomizeImageUpdate) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_KustomizeImageUpdate.Merge(m, src)
-}
-func (m *KustomizeImageUpdate) XXX_Size() int {
-	return m.Size()
-}
-func (m *KustomizeImageUpdate) XXX_DiscardUnknown() {
-	xxx_messageInfo_KustomizeImageUpdate.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_KustomizeImageUpdate proto.InternalMessageInfo
-
-func (m *KustomizePromotionMechanism) Reset()      { *m = KustomizePromotionMechanism{} }
-func (*KustomizePromotionMechanism) ProtoMessage() {}
-func (*KustomizePromotionMechanism) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{45}
-}
-func (m *KustomizePromotionMechanism) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *KustomizePromotionMechanism) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	b = b[:cap(b)]
-	n, err := m.MarshalToSizedBuffer(b)
-	if err != nil {
-		return nil, err
-	}
-	return b[:n], nil
-}
-func (m *KustomizePromotionMechanism) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_KustomizePromotionMechanism.Merge(m, src)
-}
-func (m *KustomizePromotionMechanism) XXX_Size() int {
-	return m.Size()
-}
-func (m *KustomizePromotionMechanism) XXX_DiscardUnknown() {
-	xxx_messageInfo_KustomizePromotionMechanism.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_KustomizePromotionMechanism proto.InternalMessageInfo
-
 func (m *Project) Reset()      { *m = Project{} }
 func (*Project) ProtoMessage() {}
 func (*Project) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{46}
+	return fileDescriptor_e26b7f7bbc391025, []int{30}
 }
 func (m *Project) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1349,7 +901,7 @@ var xxx_messageInfo_Project proto.InternalMessageInfo
 func (m *ProjectList) Reset()      { *m = ProjectList{} }
 func (*ProjectList) ProtoMessage() {}
 func (*ProjectList) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{47}
+	return fileDescriptor_e26b7f7bbc391025, []int{31}
 }
 func (m *ProjectList) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1377,7 +929,7 @@ var xxx_messageInfo_ProjectList proto.InternalMessageInfo
 func (m *ProjectSpec) Reset()      { *m = ProjectSpec{} }
 func (*ProjectSpec) ProtoMessage() {}
 func (*ProjectSpec) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{48}
+	return fileDescriptor_e26b7f7bbc391025, []int{32}
 }
 func (m *ProjectSpec) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1405,7 +957,7 @@ var xxx_messageInfo_ProjectSpec proto.InternalMessageInfo
 func (m *ProjectStatus) Reset()      { *m = ProjectStatus{} }
 func (*ProjectStatus) ProtoMessage() {}
 func (*ProjectStatus) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{49}
+	return fileDescriptor_e26b7f7bbc391025, []int{33}
 }
 func (m *ProjectStatus) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1433,7 +985,7 @@ var xxx_messageInfo_ProjectStatus proto.InternalMessageInfo
 func (m *Promotion) Reset()      { *m = Promotion{} }
 func (*Promotion) ProtoMessage() {}
 func (*Promotion) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{50}
+	return fileDescriptor_e26b7f7bbc391025, []int{34}
 }
 func (m *Promotion) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1461,7 +1013,7 @@ var xxx_messageInfo_Promotion proto.InternalMessageInfo
 func (m *PromotionList) Reset()      { *m = PromotionList{} }
 func (*PromotionList) ProtoMessage() {}
 func (*PromotionList) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{51}
+	return fileDescriptor_e26b7f7bbc391025, []int{35}
 }
 func (m *PromotionList) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1486,38 +1038,10 @@ func (m *PromotionList) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_PromotionList proto.InternalMessageInfo
 
-func (m *PromotionMechanisms) Reset()      { *m = PromotionMechanisms{} }
-func (*PromotionMechanisms) ProtoMessage() {}
-func (*PromotionMechanisms) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{52}
-}
-func (m *PromotionMechanisms) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *PromotionMechanisms) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	b = b[:cap(b)]
-	n, err := m.MarshalToSizedBuffer(b)
-	if err != nil {
-		return nil, err
-	}
-	return b[:n], nil
-}
-func (m *PromotionMechanisms) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_PromotionMechanisms.Merge(m, src)
-}
-func (m *PromotionMechanisms) XXX_Size() int {
-	return m.Size()
-}
-func (m *PromotionMechanisms) XXX_DiscardUnknown() {
-	xxx_messageInfo_PromotionMechanisms.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_PromotionMechanisms proto.InternalMessageInfo
-
 func (m *PromotionPolicy) Reset()      { *m = PromotionPolicy{} }
 func (*PromotionPolicy) ProtoMessage() {}
 func (*PromotionPolicy) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{53}
+	return fileDescriptor_e26b7f7bbc391025, []int{36}
 }
 func (m *PromotionPolicy) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1545,7 +1069,7 @@ var xxx_messageInfo_PromotionPolicy proto.InternalMessageInfo
 func (m *PromotionReference) Reset()      { *m = PromotionReference{} }
 func (*PromotionReference) ProtoMessage() {}
 func (*PromotionReference) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{54}
+	return fileDescriptor_e26b7f7bbc391025, []int{37}
 }
 func (m *PromotionReference) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1573,7 +1097,7 @@ var xxx_messageInfo_PromotionReference proto.InternalMessageInfo
 func (m *PromotionSpec) Reset()      { *m = PromotionSpec{} }
 func (*PromotionSpec) ProtoMessage() {}
 func (*PromotionSpec) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{55}
+	return fileDescriptor_e26b7f7bbc391025, []int{38}
 }
 func (m *PromotionSpec) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1601,7 +1125,7 @@ var xxx_messageInfo_PromotionSpec proto.InternalMessageInfo
 func (m *PromotionStatus) Reset()      { *m = PromotionStatus{} }
 func (*PromotionStatus) ProtoMessage() {}
 func (*PromotionStatus) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{56}
+	return fileDescriptor_e26b7f7bbc391025, []int{39}
 }
 func (m *PromotionStatus) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1629,7 +1153,7 @@ var xxx_messageInfo_PromotionStatus proto.InternalMessageInfo
 func (m *PromotionStep) Reset()      { *m = PromotionStep{} }
 func (*PromotionStep) ProtoMessage() {}
 func (*PromotionStep) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{57}
+	return fileDescriptor_e26b7f7bbc391025, []int{40}
 }
 func (m *PromotionStep) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1657,7 +1181,7 @@ var xxx_messageInfo_PromotionStep proto.InternalMessageInfo
 func (m *PromotionTemplate) Reset()      { *m = PromotionTemplate{} }
 func (*PromotionTemplate) ProtoMessage() {}
 func (*PromotionTemplate) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{58}
+	return fileDescriptor_e26b7f7bbc391025, []int{41}
 }
 func (m *PromotionTemplate) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1685,7 +1209,7 @@ var xxx_messageInfo_PromotionTemplate proto.InternalMessageInfo
 func (m *PromotionTemplateSpec) Reset()      { *m = PromotionTemplateSpec{} }
 func (*PromotionTemplateSpec) ProtoMessage() {}
 func (*PromotionTemplateSpec) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{59}
+	return fileDescriptor_e26b7f7bbc391025, []int{42}
 }
 func (m *PromotionTemplateSpec) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1710,38 +1234,10 @@ func (m *PromotionTemplateSpec) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_PromotionTemplateSpec proto.InternalMessageInfo
 
-func (m *PullRequestPromotionMechanism) Reset()      { *m = PullRequestPromotionMechanism{} }
-func (*PullRequestPromotionMechanism) ProtoMessage() {}
-func (*PullRequestPromotionMechanism) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{60}
-}
-func (m *PullRequestPromotionMechanism) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *PullRequestPromotionMechanism) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	b = b[:cap(b)]
-	n, err := m.MarshalToSizedBuffer(b)
-	if err != nil {
-		return nil, err
-	}
-	return b[:n], nil
-}
-func (m *PullRequestPromotionMechanism) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_PullRequestPromotionMechanism.Merge(m, src)
-}
-func (m *PullRequestPromotionMechanism) XXX_Size() int {
-	return m.Size()
-}
-func (m *PullRequestPromotionMechanism) XXX_DiscardUnknown() {
-	xxx_messageInfo_PullRequestPromotionMechanism.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_PullRequestPromotionMechanism proto.InternalMessageInfo
-
 func (m *RepoSubscription) Reset()      { *m = RepoSubscription{} }
 func (*RepoSubscription) ProtoMessage() {}
 func (*RepoSubscription) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{61}
+	return fileDescriptor_e26b7f7bbc391025, []int{43}
 }
 func (m *RepoSubscription) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1769,7 +1265,7 @@ var xxx_messageInfo_RepoSubscription proto.InternalMessageInfo
 func (m *Stage) Reset()      { *m = Stage{} }
 func (*Stage) ProtoMessage() {}
 func (*Stage) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{62}
+	return fileDescriptor_e26b7f7bbc391025, []int{44}
 }
 func (m *Stage) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1797,7 +1293,7 @@ var xxx_messageInfo_Stage proto.InternalMessageInfo
 func (m *StageList) Reset()      { *m = StageList{} }
 func (*StageList) ProtoMessage() {}
 func (*StageList) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{63}
+	return fileDescriptor_e26b7f7bbc391025, []int{45}
 }
 func (m *StageList) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1825,7 +1321,7 @@ var xxx_messageInfo_StageList proto.InternalMessageInfo
 func (m *StageSpec) Reset()      { *m = StageSpec{} }
 func (*StageSpec) ProtoMessage() {}
 func (*StageSpec) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{64}
+	return fileDescriptor_e26b7f7bbc391025, []int{46}
 }
 func (m *StageSpec) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1853,7 +1349,7 @@ var xxx_messageInfo_StageSpec proto.InternalMessageInfo
 func (m *StageStatus) Reset()      { *m = StageStatus{} }
 func (*StageStatus) ProtoMessage() {}
 func (*StageStatus) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{65}
+	return fileDescriptor_e26b7f7bbc391025, []int{47}
 }
 func (m *StageStatus) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1881,7 +1377,7 @@ var xxx_messageInfo_StageStatus proto.InternalMessageInfo
 func (m *Verification) Reset()      { *m = Verification{} }
 func (*Verification) ProtoMessage() {}
 func (*Verification) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{66}
+	return fileDescriptor_e26b7f7bbc391025, []int{48}
 }
 func (m *Verification) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1909,7 +1405,7 @@ var xxx_messageInfo_Verification proto.InternalMessageInfo
 func (m *VerificationInfo) Reset()      { *m = VerificationInfo{} }
 func (*VerificationInfo) ProtoMessage() {}
 func (*VerificationInfo) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{67}
+	return fileDescriptor_e26b7f7bbc391025, []int{49}
 }
 func (m *VerificationInfo) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1937,7 +1433,7 @@ var xxx_messageInfo_VerificationInfo proto.InternalMessageInfo
 func (m *VerifiedStage) Reset()      { *m = VerifiedStage{} }
 func (*VerifiedStage) ProtoMessage() {}
 func (*VerifiedStage) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{68}
+	return fileDescriptor_e26b7f7bbc391025, []int{50}
 }
 func (m *VerifiedStage) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1965,7 +1461,7 @@ var xxx_messageInfo_VerifiedStage proto.InternalMessageInfo
 func (m *Warehouse) Reset()      { *m = Warehouse{} }
 func (*Warehouse) ProtoMessage() {}
 func (*Warehouse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{69}
+	return fileDescriptor_e26b7f7bbc391025, []int{51}
 }
 func (m *Warehouse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1993,7 +1489,7 @@ var xxx_messageInfo_Warehouse proto.InternalMessageInfo
 func (m *WarehouseList) Reset()      { *m = WarehouseList{} }
 func (*WarehouseList) ProtoMessage() {}
 func (*WarehouseList) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{70}
+	return fileDescriptor_e26b7f7bbc391025, []int{52}
 }
 func (m *WarehouseList) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -2021,7 +1517,7 @@ var xxx_messageInfo_WarehouseList proto.InternalMessageInfo
 func (m *WarehouseSpec) Reset()      { *m = WarehouseSpec{} }
 func (*WarehouseSpec) ProtoMessage() {}
 func (*WarehouseSpec) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{71}
+	return fileDescriptor_e26b7f7bbc391025, []int{53}
 }
 func (m *WarehouseSpec) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -2049,7 +1545,7 @@ var xxx_messageInfo_WarehouseSpec proto.InternalMessageInfo
 func (m *WarehouseStatus) Reset()      { *m = WarehouseStatus{} }
 func (*WarehouseStatus) ProtoMessage() {}
 func (*WarehouseStatus) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{72}
+	return fileDescriptor_e26b7f7bbc391025, []int{54}
 }
 func (m *WarehouseStatus) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -2085,12 +1581,6 @@ func init() {
 	proto.RegisterType((*ArgoCDAppHealthStatus)(nil), "github.com.akuity.kargo.api.v1alpha1.ArgoCDAppHealthStatus")
 	proto.RegisterType((*ArgoCDAppStatus)(nil), "github.com.akuity.kargo.api.v1alpha1.ArgoCDAppStatus")
 	proto.RegisterType((*ArgoCDAppSyncStatus)(nil), "github.com.akuity.kargo.api.v1alpha1.ArgoCDAppSyncStatus")
-	proto.RegisterType((*ArgoCDAppUpdate)(nil), "github.com.akuity.kargo.api.v1alpha1.ArgoCDAppUpdate")
-	proto.RegisterType((*ArgoCDHelm)(nil), "github.com.akuity.kargo.api.v1alpha1.ArgoCDHelm")
-	proto.RegisterType((*ArgoCDHelmImageUpdate)(nil), "github.com.akuity.kargo.api.v1alpha1.ArgoCDHelmImageUpdate")
-	proto.RegisterType((*ArgoCDKustomize)(nil), "github.com.akuity.kargo.api.v1alpha1.ArgoCDKustomize")
-	proto.RegisterType((*ArgoCDKustomizeImageUpdate)(nil), "github.com.akuity.kargo.api.v1alpha1.ArgoCDKustomizeImageUpdate")
-	proto.RegisterType((*ArgoCDSourceUpdate)(nil), "github.com.akuity.kargo.api.v1alpha1.ArgoCDSourceUpdate")
 	proto.RegisterType((*Chart)(nil), "github.com.akuity.kargo.api.v1alpha1.Chart")
 	proto.RegisterType((*ChartDiscoveryResult)(nil), "github.com.akuity.kargo.api.v1alpha1.ChartDiscoveryResult")
 	proto.RegisterType((*ChartSubscription)(nil), "github.com.akuity.kargo.api.v1alpha1.ChartSubscription")
@@ -2110,38 +1600,25 @@ func init() {
 	proto.RegisterMapType((map[string]VerifiedStage)(nil), "github.com.akuity.kargo.api.v1alpha1.FreightStatus.VerifiedInEntry")
 	proto.RegisterType((*GitCommit)(nil), "github.com.akuity.kargo.api.v1alpha1.GitCommit")
 	proto.RegisterType((*GitDiscoveryResult)(nil), "github.com.akuity.kargo.api.v1alpha1.GitDiscoveryResult")
-	proto.RegisterType((*GitHubPullRequest)(nil), "github.com.akuity.kargo.api.v1alpha1.GitHubPullRequest")
-	proto.RegisterType((*GitLabPullRequest)(nil), "github.com.akuity.kargo.api.v1alpha1.GitLabPullRequest")
-	proto.RegisterType((*GitRepoUpdate)(nil), "github.com.akuity.kargo.api.v1alpha1.GitRepoUpdate")
 	proto.RegisterType((*GitSubscription)(nil), "github.com.akuity.kargo.api.v1alpha1.GitSubscription")
 	proto.RegisterType((*Health)(nil), "github.com.akuity.kargo.api.v1alpha1.Health")
 	proto.RegisterType((*HealthCheckStep)(nil), "github.com.akuity.kargo.api.v1alpha1.HealthCheckStep")
-	proto.RegisterType((*HelmChartDependencyUpdate)(nil), "github.com.akuity.kargo.api.v1alpha1.HelmChartDependencyUpdate")
-	proto.RegisterType((*HelmImageUpdate)(nil), "github.com.akuity.kargo.api.v1alpha1.HelmImageUpdate")
-	proto.RegisterType((*HelmPromotionMechanism)(nil), "github.com.akuity.kargo.api.v1alpha1.HelmPromotionMechanism")
 	proto.RegisterType((*Image)(nil), "github.com.akuity.kargo.api.v1alpha1.Image")
 	proto.RegisterType((*ImageDiscoveryResult)(nil), "github.com.akuity.kargo.api.v1alpha1.ImageDiscoveryResult")
 	proto.RegisterType((*ImageSubscription)(nil), "github.com.akuity.kargo.api.v1alpha1.ImageSubscription")
-	proto.RegisterType((*KargoRenderImageUpdate)(nil), "github.com.akuity.kargo.api.v1alpha1.KargoRenderImageUpdate")
-	proto.RegisterType((*KargoRenderPromotionMechanism)(nil), "github.com.akuity.kargo.api.v1alpha1.KargoRenderPromotionMechanism")
-	proto.RegisterType((*KustomizeImageUpdate)(nil), "github.com.akuity.kargo.api.v1alpha1.KustomizeImageUpdate")
-	proto.RegisterType((*KustomizePromotionMechanism)(nil), "github.com.akuity.kargo.api.v1alpha1.KustomizePromotionMechanism")
 	proto.RegisterType((*Project)(nil), "github.com.akuity.kargo.api.v1alpha1.Project")
 	proto.RegisterType((*ProjectList)(nil), "github.com.akuity.kargo.api.v1alpha1.ProjectList")
 	proto.RegisterType((*ProjectSpec)(nil), "github.com.akuity.kargo.api.v1alpha1.ProjectSpec")
 	proto.RegisterType((*ProjectStatus)(nil), "github.com.akuity.kargo.api.v1alpha1.ProjectStatus")
 	proto.RegisterType((*Promotion)(nil), "github.com.akuity.kargo.api.v1alpha1.Promotion")
 	proto.RegisterType((*PromotionList)(nil), "github.com.akuity.kargo.api.v1alpha1.PromotionList")
-	proto.RegisterType((*PromotionMechanisms)(nil), "github.com.akuity.kargo.api.v1alpha1.PromotionMechanisms")
 	proto.RegisterType((*PromotionPolicy)(nil), "github.com.akuity.kargo.api.v1alpha1.PromotionPolicy")
 	proto.RegisterType((*PromotionReference)(nil), "github.com.akuity.kargo.api.v1alpha1.PromotionReference")
 	proto.RegisterType((*PromotionSpec)(nil), "github.com.akuity.kargo.api.v1alpha1.PromotionSpec")
 	proto.RegisterType((*PromotionStatus)(nil), "github.com.akuity.kargo.api.v1alpha1.PromotionStatus")
-	proto.RegisterMapType((map[string]string)(nil), "github.com.akuity.kargo.api.v1alpha1.PromotionStatus.MetadataEntry")
 	proto.RegisterType((*PromotionStep)(nil), "github.com.akuity.kargo.api.v1alpha1.PromotionStep")
 	proto.RegisterType((*PromotionTemplate)(nil), "github.com.akuity.kargo.api.v1alpha1.PromotionTemplate")
 	proto.RegisterType((*PromotionTemplateSpec)(nil), "github.com.akuity.kargo.api.v1alpha1.PromotionTemplateSpec")
-	proto.RegisterType((*PullRequestPromotionMechanism)(nil), "github.com.akuity.kargo.api.v1alpha1.PullRequestPromotionMechanism")
 	proto.RegisterType((*RepoSubscription)(nil), "github.com.akuity.kargo.api.v1alpha1.RepoSubscription")
 	proto.RegisterType((*Stage)(nil), "github.com.akuity.kargo.api.v1alpha1.Stage")
 	proto.RegisterType((*StageList)(nil), "github.com.akuity.kargo.api.v1alpha1.StageList")
@@ -2767,338 +2244,6 @@ func (m *ArgoCDAppSyncStatus) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i -= len(m.Status)
 	copy(dAtA[i:], m.Status)
 	i = encodeVarintGenerated(dAtA, i, uint64(len(m.Status)))
-	i--
-	dAtA[i] = 0xa
-	return len(dAtA) - i, nil
-}
-
-func (m *ArgoCDAppUpdate) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *ArgoCDAppUpdate) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *ArgoCDAppUpdate) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if m.Origin != nil {
-		{
-			size, err := m.Origin.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintGenerated(dAtA, i, uint64(size))
-		}
-		i--
-		dAtA[i] = 0x22
-	}
-	if len(m.SourceUpdates) > 0 {
-		for iNdEx := len(m.SourceUpdates) - 1; iNdEx >= 0; iNdEx-- {
-			{
-				size, err := m.SourceUpdates[iNdEx].MarshalToSizedBuffer(dAtA[:i])
-				if err != nil {
-					return 0, err
-				}
-				i -= size
-				i = encodeVarintGenerated(dAtA, i, uint64(size))
-			}
-			i--
-			dAtA[i] = 0x1a
-		}
-	}
-	i -= len(m.AppNamespace)
-	copy(dAtA[i:], m.AppNamespace)
-	i = encodeVarintGenerated(dAtA, i, uint64(len(m.AppNamespace)))
-	i--
-	dAtA[i] = 0x12
-	i -= len(m.AppName)
-	copy(dAtA[i:], m.AppName)
-	i = encodeVarintGenerated(dAtA, i, uint64(len(m.AppName)))
-	i--
-	dAtA[i] = 0xa
-	return len(dAtA) - i, nil
-}
-
-func (m *ArgoCDHelm) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *ArgoCDHelm) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *ArgoCDHelm) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if m.Origin != nil {
-		{
-			size, err := m.Origin.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintGenerated(dAtA, i, uint64(size))
-		}
-		i--
-		dAtA[i] = 0x12
-	}
-	if len(m.Images) > 0 {
-		for iNdEx := len(m.Images) - 1; iNdEx >= 0; iNdEx-- {
-			{
-				size, err := m.Images[iNdEx].MarshalToSizedBuffer(dAtA[:i])
-				if err != nil {
-					return 0, err
-				}
-				i -= size
-				i = encodeVarintGenerated(dAtA, i, uint64(size))
-			}
-			i--
-			dAtA[i] = 0xa
-		}
-	}
-	return len(dAtA) - i, nil
-}
-
-func (m *ArgoCDHelmImageUpdate) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *ArgoCDHelmImageUpdate) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *ArgoCDHelmImageUpdate) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if m.Origin != nil {
-		{
-			size, err := m.Origin.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintGenerated(dAtA, i, uint64(size))
-		}
-		i--
-		dAtA[i] = 0x22
-	}
-	i -= len(m.Value)
-	copy(dAtA[i:], m.Value)
-	i = encodeVarintGenerated(dAtA, i, uint64(len(m.Value)))
-	i--
-	dAtA[i] = 0x1a
-	i -= len(m.Key)
-	copy(dAtA[i:], m.Key)
-	i = encodeVarintGenerated(dAtA, i, uint64(len(m.Key)))
-	i--
-	dAtA[i] = 0x12
-	i -= len(m.Image)
-	copy(dAtA[i:], m.Image)
-	i = encodeVarintGenerated(dAtA, i, uint64(len(m.Image)))
-	i--
-	dAtA[i] = 0xa
-	return len(dAtA) - i, nil
-}
-
-func (m *ArgoCDKustomize) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *ArgoCDKustomize) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *ArgoCDKustomize) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if m.Origin != nil {
-		{
-			size, err := m.Origin.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintGenerated(dAtA, i, uint64(size))
-		}
-		i--
-		dAtA[i] = 0x12
-	}
-	if len(m.Images) > 0 {
-		for iNdEx := len(m.Images) - 1; iNdEx >= 0; iNdEx-- {
-			{
-				size, err := m.Images[iNdEx].MarshalToSizedBuffer(dAtA[:i])
-				if err != nil {
-					return 0, err
-				}
-				i -= size
-				i = encodeVarintGenerated(dAtA, i, uint64(size))
-			}
-			i--
-			dAtA[i] = 0xa
-		}
-	}
-	return len(dAtA) - i, nil
-}
-
-func (m *ArgoCDKustomizeImageUpdate) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *ArgoCDKustomizeImageUpdate) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *ArgoCDKustomizeImageUpdate) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if m.Origin != nil {
-		{
-			size, err := m.Origin.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintGenerated(dAtA, i, uint64(size))
-		}
-		i--
-		dAtA[i] = 0x1a
-	}
-	i--
-	if m.UseDigest {
-		dAtA[i] = 1
-	} else {
-		dAtA[i] = 0
-	}
-	i--
-	dAtA[i] = 0x10
-	i -= len(m.Image)
-	copy(dAtA[i:], m.Image)
-	i = encodeVarintGenerated(dAtA, i, uint64(len(m.Image)))
-	i--
-	dAtA[i] = 0xa
-	return len(dAtA) - i, nil
-}
-
-func (m *ArgoCDSourceUpdate) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *ArgoCDSourceUpdate) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *ArgoCDSourceUpdate) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if m.Origin != nil {
-		{
-			size, err := m.Origin.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintGenerated(dAtA, i, uint64(size))
-		}
-		i--
-		dAtA[i] = 0x32
-	}
-	if m.Helm != nil {
-		{
-			size, err := m.Helm.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintGenerated(dAtA, i, uint64(size))
-		}
-		i--
-		dAtA[i] = 0x2a
-	}
-	if m.Kustomize != nil {
-		{
-			size, err := m.Kustomize.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintGenerated(dAtA, i, uint64(size))
-		}
-		i--
-		dAtA[i] = 0x22
-	}
-	i--
-	if m.UpdateTargetRevision {
-		dAtA[i] = 1
-	} else {
-		dAtA[i] = 0
-	}
-	i--
-	dAtA[i] = 0x18
-	i -= len(m.Chart)
-	copy(dAtA[i:], m.Chart)
-	i = encodeVarintGenerated(dAtA, i, uint64(len(m.Chart)))
-	i--
-	dAtA[i] = 0x12
-	i -= len(m.RepoURL)
-	copy(dAtA[i:], m.RepoURL)
-	i = encodeVarintGenerated(dAtA, i, uint64(len(m.RepoURL)))
 	i--
 	dAtA[i] = 0xa
 	return len(dAtA) - i, nil
@@ -3950,11 +3095,6 @@ func (m *GitCommit) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i = encodeVarintGenerated(dAtA, i, uint64(len(m.Message)))
 	i--
 	dAtA[i] = 0x32
-	i -= len(m.HealthCheckCommit)
-	copy(dAtA[i:], m.HealthCheckCommit)
-	i = encodeVarintGenerated(dAtA, i, uint64(len(m.HealthCheckCommit)))
-	i--
-	dAtA[i] = 0x2a
 	i -= len(m.Tag)
 	copy(dAtA[i:], m.Tag)
 	i = encodeVarintGenerated(dAtA, i, uint64(len(m.Tag)))
@@ -4012,158 +3152,6 @@ func (m *GitDiscoveryResult) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 			dAtA[i] = 0x12
 		}
 	}
-	i -= len(m.RepoURL)
-	copy(dAtA[i:], m.RepoURL)
-	i = encodeVarintGenerated(dAtA, i, uint64(len(m.RepoURL)))
-	i--
-	dAtA[i] = 0xa
-	return len(dAtA) - i, nil
-}
-
-func (m *GitHubPullRequest) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *GitHubPullRequest) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *GitHubPullRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	return len(dAtA) - i, nil
-}
-
-func (m *GitLabPullRequest) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *GitLabPullRequest) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *GitLabPullRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	return len(dAtA) - i, nil
-}
-
-func (m *GitRepoUpdate) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *GitRepoUpdate) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *GitRepoUpdate) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if m.Origin != nil {
-		{
-			size, err := m.Origin.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintGenerated(dAtA, i, uint64(size))
-		}
-		i--
-		dAtA[i] = 0x4a
-	}
-	if m.Helm != nil {
-		{
-			size, err := m.Helm.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintGenerated(dAtA, i, uint64(size))
-		}
-		i--
-		dAtA[i] = 0x42
-	}
-	if m.Kustomize != nil {
-		{
-			size, err := m.Kustomize.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintGenerated(dAtA, i, uint64(size))
-		}
-		i--
-		dAtA[i] = 0x3a
-	}
-	if m.Render != nil {
-		{
-			size, err := m.Render.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintGenerated(dAtA, i, uint64(size))
-		}
-		i--
-		dAtA[i] = 0x32
-	}
-	if m.PullRequest != nil {
-		{
-			size, err := m.PullRequest.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintGenerated(dAtA, i, uint64(size))
-		}
-		i--
-		dAtA[i] = 0x2a
-	}
-	i -= len(m.WriteBranch)
-	copy(dAtA[i:], m.WriteBranch)
-	i = encodeVarintGenerated(dAtA, i, uint64(len(m.WriteBranch)))
-	i--
-	dAtA[i] = 0x22
-	i -= len(m.ReadBranch)
-	copy(dAtA[i:], m.ReadBranch)
-	i = encodeVarintGenerated(dAtA, i, uint64(len(m.ReadBranch)))
-	i--
-	dAtA[i] = 0x1a
-	i--
-	if m.InsecureSkipTLSVerify {
-		dAtA[i] = 1
-	} else {
-		dAtA[i] = 0
-	}
-	i--
-	dAtA[i] = 0x10
 	i -= len(m.RepoURL)
 	copy(dAtA[i:], m.RepoURL)
 	i = encodeVarintGenerated(dAtA, i, uint64(len(m.RepoURL)))
@@ -4381,174 +3369,6 @@ func (m *HealthCheckStep) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *HelmChartDependencyUpdate) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *HelmChartDependencyUpdate) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *HelmChartDependencyUpdate) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if m.Origin != nil {
-		{
-			size, err := m.Origin.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintGenerated(dAtA, i, uint64(size))
-		}
-		i--
-		dAtA[i] = 0x22
-	}
-	i -= len(m.ChartPath)
-	copy(dAtA[i:], m.ChartPath)
-	i = encodeVarintGenerated(dAtA, i, uint64(len(m.ChartPath)))
-	i--
-	dAtA[i] = 0x1a
-	i -= len(m.Name)
-	copy(dAtA[i:], m.Name)
-	i = encodeVarintGenerated(dAtA, i, uint64(len(m.Name)))
-	i--
-	dAtA[i] = 0x12
-	i -= len(m.Repository)
-	copy(dAtA[i:], m.Repository)
-	i = encodeVarintGenerated(dAtA, i, uint64(len(m.Repository)))
-	i--
-	dAtA[i] = 0xa
-	return len(dAtA) - i, nil
-}
-
-func (m *HelmImageUpdate) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *HelmImageUpdate) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *HelmImageUpdate) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if m.Origin != nil {
-		{
-			size, err := m.Origin.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintGenerated(dAtA, i, uint64(size))
-		}
-		i--
-		dAtA[i] = 0x2a
-	}
-	i -= len(m.Value)
-	copy(dAtA[i:], m.Value)
-	i = encodeVarintGenerated(dAtA, i, uint64(len(m.Value)))
-	i--
-	dAtA[i] = 0x22
-	i -= len(m.Key)
-	copy(dAtA[i:], m.Key)
-	i = encodeVarintGenerated(dAtA, i, uint64(len(m.Key)))
-	i--
-	dAtA[i] = 0x1a
-	i -= len(m.ValuesFilePath)
-	copy(dAtA[i:], m.ValuesFilePath)
-	i = encodeVarintGenerated(dAtA, i, uint64(len(m.ValuesFilePath)))
-	i--
-	dAtA[i] = 0x12
-	i -= len(m.Image)
-	copy(dAtA[i:], m.Image)
-	i = encodeVarintGenerated(dAtA, i, uint64(len(m.Image)))
-	i--
-	dAtA[i] = 0xa
-	return len(dAtA) - i, nil
-}
-
-func (m *HelmPromotionMechanism) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *HelmPromotionMechanism) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *HelmPromotionMechanism) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if m.Origin != nil {
-		{
-			size, err := m.Origin.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintGenerated(dAtA, i, uint64(size))
-		}
-		i--
-		dAtA[i] = 0x1a
-	}
-	if len(m.Charts) > 0 {
-		for iNdEx := len(m.Charts) - 1; iNdEx >= 0; iNdEx-- {
-			{
-				size, err := m.Charts[iNdEx].MarshalToSizedBuffer(dAtA[:i])
-				if err != nil {
-					return 0, err
-				}
-				i -= size
-				i = encodeVarintGenerated(dAtA, i, uint64(size))
-			}
-			i--
-			dAtA[i] = 0x12
-		}
-	}
-	if len(m.Images) > 0 {
-		for iNdEx := len(m.Images) - 1; iNdEx >= 0; iNdEx-- {
-			{
-				size, err := m.Images[iNdEx].MarshalToSizedBuffer(dAtA[:i])
-				if err != nil {
-					return 0, err
-				}
-				i -= size
-				i = encodeVarintGenerated(dAtA, i, uint64(size))
-			}
-			i--
-			dAtA[i] = 0xa
-		}
-	}
-	return len(dAtA) - i, nil
-}
-
 func (m *Image) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
@@ -4720,210 +3540,6 @@ func (m *ImageSubscription) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *KargoRenderImageUpdate) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *KargoRenderImageUpdate) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *KargoRenderImageUpdate) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if m.Origin != nil {
-		{
-			size, err := m.Origin.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintGenerated(dAtA, i, uint64(size))
-		}
-		i--
-		dAtA[i] = 0x1a
-	}
-	i--
-	if m.UseDigest {
-		dAtA[i] = 1
-	} else {
-		dAtA[i] = 0
-	}
-	i--
-	dAtA[i] = 0x10
-	i -= len(m.Image)
-	copy(dAtA[i:], m.Image)
-	i = encodeVarintGenerated(dAtA, i, uint64(len(m.Image)))
-	i--
-	dAtA[i] = 0xa
-	return len(dAtA) - i, nil
-}
-
-func (m *KargoRenderPromotionMechanism) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *KargoRenderPromotionMechanism) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *KargoRenderPromotionMechanism) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if m.Origin != nil {
-		{
-			size, err := m.Origin.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintGenerated(dAtA, i, uint64(size))
-		}
-		i--
-		dAtA[i] = 0x12
-	}
-	if len(m.Images) > 0 {
-		for iNdEx := len(m.Images) - 1; iNdEx >= 0; iNdEx-- {
-			{
-				size, err := m.Images[iNdEx].MarshalToSizedBuffer(dAtA[:i])
-				if err != nil {
-					return 0, err
-				}
-				i -= size
-				i = encodeVarintGenerated(dAtA, i, uint64(size))
-			}
-			i--
-			dAtA[i] = 0xa
-		}
-	}
-	return len(dAtA) - i, nil
-}
-
-func (m *KustomizeImageUpdate) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *KustomizeImageUpdate) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *KustomizeImageUpdate) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	i -= len(m.NewName)
-	copy(dAtA[i:], m.NewName)
-	i = encodeVarintGenerated(dAtA, i, uint64(len(m.NewName)))
-	i--
-	dAtA[i] = 0x2a
-	if m.Origin != nil {
-		{
-			size, err := m.Origin.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintGenerated(dAtA, i, uint64(size))
-		}
-		i--
-		dAtA[i] = 0x22
-	}
-	i--
-	if m.UseDigest {
-		dAtA[i] = 1
-	} else {
-		dAtA[i] = 0
-	}
-	i--
-	dAtA[i] = 0x18
-	i -= len(m.Path)
-	copy(dAtA[i:], m.Path)
-	i = encodeVarintGenerated(dAtA, i, uint64(len(m.Path)))
-	i--
-	dAtA[i] = 0x12
-	i -= len(m.Image)
-	copy(dAtA[i:], m.Image)
-	i = encodeVarintGenerated(dAtA, i, uint64(len(m.Image)))
-	i--
-	dAtA[i] = 0xa
-	return len(dAtA) - i, nil
-}
-
-func (m *KustomizePromotionMechanism) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *KustomizePromotionMechanism) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *KustomizePromotionMechanism) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if m.Origin != nil {
-		{
-			size, err := m.Origin.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintGenerated(dAtA, i, uint64(size))
-		}
-		i--
-		dAtA[i] = 0x12
-	}
-	if len(m.Images) > 0 {
-		for iNdEx := len(m.Images) - 1; iNdEx >= 0; iNdEx-- {
-			{
-				size, err := m.Images[iNdEx].MarshalToSizedBuffer(dAtA[:i])
-				if err != nil {
-					return 0, err
-				}
-				i -= size
-				i = encodeVarintGenerated(dAtA, i, uint64(size))
-			}
-			i--
-			dAtA[i] = 0xa
-		}
-	}
-	return len(dAtA) - i, nil
-}
-
 func (m *Project) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
@@ -5083,6 +3699,20 @@ func (m *ProjectStatus) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if len(m.Conditions) > 0 {
+		for iNdEx := len(m.Conditions) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.Conditions[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintGenerated(dAtA, i, uint64(size))
+			}
+			i--
+			dAtA[i] = 0x1a
+		}
+	}
 	i -= len(m.Message)
 	copy(dAtA[i:], m.Message)
 	i = encodeVarintGenerated(dAtA, i, uint64(len(m.Message)))
@@ -5193,69 +3823,6 @@ func (m *PromotionList) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	}
 	i--
 	dAtA[i] = 0xa
-	return len(dAtA) - i, nil
-}
-
-func (m *PromotionMechanisms) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *PromotionMechanisms) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *PromotionMechanisms) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if m.Origin != nil {
-		{
-			size, err := m.Origin.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintGenerated(dAtA, i, uint64(size))
-		}
-		i--
-		dAtA[i] = 0x1a
-	}
-	if len(m.ArgoCDAppUpdates) > 0 {
-		for iNdEx := len(m.ArgoCDAppUpdates) - 1; iNdEx >= 0; iNdEx-- {
-			{
-				size, err := m.ArgoCDAppUpdates[iNdEx].MarshalToSizedBuffer(dAtA[:i])
-				if err != nil {
-					return 0, err
-				}
-				i -= size
-				i = encodeVarintGenerated(dAtA, i, uint64(size))
-			}
-			i--
-			dAtA[i] = 0x12
-		}
-	}
-	if len(m.GitRepoUpdates) > 0 {
-		for iNdEx := len(m.GitRepoUpdates) - 1; iNdEx >= 0; iNdEx-- {
-			{
-				size, err := m.GitRepoUpdates[iNdEx].MarshalToSizedBuffer(dAtA[:i])
-				if err != nil {
-					return 0, err
-				}
-				i -= size
-				i = encodeVarintGenerated(dAtA, i, uint64(size))
-			}
-			i--
-			dAtA[i] = 0xa
-		}
-	}
 	return len(dAtA) - i, nil
 }
 
@@ -5496,30 +4063,6 @@ func (m *PromotionStatus) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i = encodeVarintGenerated(dAtA, i, uint64(len(m.LastHandledRefresh)))
 	i--
 	dAtA[i] = 0x22
-	if len(m.Metadata) > 0 {
-		keysForMetadata := make([]string, 0, len(m.Metadata))
-		for k := range m.Metadata {
-			keysForMetadata = append(keysForMetadata, string(k))
-		}
-		github_com_gogo_protobuf_sortkeys.Strings(keysForMetadata)
-		for iNdEx := len(keysForMetadata) - 1; iNdEx >= 0; iNdEx-- {
-			v := m.Metadata[string(keysForMetadata[iNdEx])]
-			baseI := i
-			i -= len(v)
-			copy(dAtA[i:], v)
-			i = encodeVarintGenerated(dAtA, i, uint64(len(v)))
-			i--
-			dAtA[i] = 0x12
-			i -= len(keysForMetadata[iNdEx])
-			copy(dAtA[i:], keysForMetadata[iNdEx])
-			i = encodeVarintGenerated(dAtA, i, uint64(len(keysForMetadata[iNdEx])))
-			i--
-			dAtA[i] = 0xa
-			i = encodeVarintGenerated(dAtA, i, uint64(baseI-i))
-			i--
-			dAtA[i] = 0x1a
-		}
-	}
 	i -= len(m.Message)
 	copy(dAtA[i:], m.Message)
 	i = encodeVarintGenerated(dAtA, i, uint64(len(m.Message)))
@@ -5644,53 +4187,6 @@ func (m *PromotionTemplateSpec) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 			i--
 			dAtA[i] = 0xa
 		}
-	}
-	return len(dAtA) - i, nil
-}
-
-func (m *PullRequestPromotionMechanism) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *PullRequestPromotionMechanism) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *PullRequestPromotionMechanism) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if m.GitLab != nil {
-		{
-			size, err := m.GitLab.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintGenerated(dAtA, i, uint64(size))
-		}
-		i--
-		dAtA[i] = 0x12
-	}
-	if m.GitHub != nil {
-		{
-			size, err := m.GitHub.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintGenerated(dAtA, i, uint64(size))
-		}
-		i--
-		dAtA[i] = 0xa
 	}
 	return len(dAtA) - i, nil
 }
@@ -5916,18 +4412,6 @@ func (m *StageSpec) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 		}
 		i--
 		dAtA[i] = 0x1a
-	}
-	if m.PromotionMechanisms != nil {
-		{
-			size, err := m.PromotionMechanisms.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintGenerated(dAtA, i, uint64(size))
-		}
-		i--
-		dAtA[i] = 0x12
 	}
 	return len(dAtA) - i, nil
 }
@@ -6546,128 +5030,6 @@ func (m *ArgoCDAppSyncStatus) Size() (n int) {
 	return n
 }
 
-func (m *ArgoCDAppUpdate) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	l = len(m.AppName)
-	n += 1 + l + sovGenerated(uint64(l))
-	l = len(m.AppNamespace)
-	n += 1 + l + sovGenerated(uint64(l))
-	if len(m.SourceUpdates) > 0 {
-		for _, e := range m.SourceUpdates {
-			l = e.Size()
-			n += 1 + l + sovGenerated(uint64(l))
-		}
-	}
-	if m.Origin != nil {
-		l = m.Origin.Size()
-		n += 1 + l + sovGenerated(uint64(l))
-	}
-	return n
-}
-
-func (m *ArgoCDHelm) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if len(m.Images) > 0 {
-		for _, e := range m.Images {
-			l = e.Size()
-			n += 1 + l + sovGenerated(uint64(l))
-		}
-	}
-	if m.Origin != nil {
-		l = m.Origin.Size()
-		n += 1 + l + sovGenerated(uint64(l))
-	}
-	return n
-}
-
-func (m *ArgoCDHelmImageUpdate) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	l = len(m.Image)
-	n += 1 + l + sovGenerated(uint64(l))
-	l = len(m.Key)
-	n += 1 + l + sovGenerated(uint64(l))
-	l = len(m.Value)
-	n += 1 + l + sovGenerated(uint64(l))
-	if m.Origin != nil {
-		l = m.Origin.Size()
-		n += 1 + l + sovGenerated(uint64(l))
-	}
-	return n
-}
-
-func (m *ArgoCDKustomize) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if len(m.Images) > 0 {
-		for _, e := range m.Images {
-			l = e.Size()
-			n += 1 + l + sovGenerated(uint64(l))
-		}
-	}
-	if m.Origin != nil {
-		l = m.Origin.Size()
-		n += 1 + l + sovGenerated(uint64(l))
-	}
-	return n
-}
-
-func (m *ArgoCDKustomizeImageUpdate) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	l = len(m.Image)
-	n += 1 + l + sovGenerated(uint64(l))
-	n += 2
-	if m.Origin != nil {
-		l = m.Origin.Size()
-		n += 1 + l + sovGenerated(uint64(l))
-	}
-	return n
-}
-
-func (m *ArgoCDSourceUpdate) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	l = len(m.RepoURL)
-	n += 1 + l + sovGenerated(uint64(l))
-	l = len(m.Chart)
-	n += 1 + l + sovGenerated(uint64(l))
-	n += 2
-	if m.Kustomize != nil {
-		l = m.Kustomize.Size()
-		n += 1 + l + sovGenerated(uint64(l))
-	}
-	if m.Helm != nil {
-		l = m.Helm.Size()
-		n += 1 + l + sovGenerated(uint64(l))
-	}
-	if m.Origin != nil {
-		l = m.Origin.Size()
-		n += 1 + l + sovGenerated(uint64(l))
-	}
-	return n
-}
-
 func (m *Chart) Size() (n int) {
 	if m == nil {
 		return 0
@@ -6985,8 +5347,6 @@ func (m *GitCommit) Size() (n int) {
 	n += 1 + l + sovGenerated(uint64(l))
 	l = len(m.Tag)
 	n += 1 + l + sovGenerated(uint64(l))
-	l = len(m.HealthCheckCommit)
-	n += 1 + l + sovGenerated(uint64(l))
 	l = len(m.Message)
 	n += 1 + l + sovGenerated(uint64(l))
 	l = len(m.Author)
@@ -7009,60 +5369,6 @@ func (m *GitDiscoveryResult) Size() (n int) {
 			l = e.Size()
 			n += 1 + l + sovGenerated(uint64(l))
 		}
-	}
-	return n
-}
-
-func (m *GitHubPullRequest) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	return n
-}
-
-func (m *GitLabPullRequest) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	return n
-}
-
-func (m *GitRepoUpdate) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	l = len(m.RepoURL)
-	n += 1 + l + sovGenerated(uint64(l))
-	n += 2
-	l = len(m.ReadBranch)
-	n += 1 + l + sovGenerated(uint64(l))
-	l = len(m.WriteBranch)
-	n += 1 + l + sovGenerated(uint64(l))
-	if m.PullRequest != nil {
-		l = m.PullRequest.Size()
-		n += 1 + l + sovGenerated(uint64(l))
-	}
-	if m.Render != nil {
-		l = m.Render.Size()
-		n += 1 + l + sovGenerated(uint64(l))
-	}
-	if m.Kustomize != nil {
-		l = m.Kustomize.Size()
-		n += 1 + l + sovGenerated(uint64(l))
-	}
-	if m.Helm != nil {
-		l = m.Helm.Size()
-		n += 1 + l + sovGenerated(uint64(l))
-	}
-	if m.Origin != nil {
-		l = m.Origin.Size()
-		n += 1 + l + sovGenerated(uint64(l))
 	}
 	return n
 }
@@ -7153,71 +5459,6 @@ func (m *HealthCheckStep) Size() (n int) {
 	return n
 }
 
-func (m *HelmChartDependencyUpdate) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	l = len(m.Repository)
-	n += 1 + l + sovGenerated(uint64(l))
-	l = len(m.Name)
-	n += 1 + l + sovGenerated(uint64(l))
-	l = len(m.ChartPath)
-	n += 1 + l + sovGenerated(uint64(l))
-	if m.Origin != nil {
-		l = m.Origin.Size()
-		n += 1 + l + sovGenerated(uint64(l))
-	}
-	return n
-}
-
-func (m *HelmImageUpdate) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	l = len(m.Image)
-	n += 1 + l + sovGenerated(uint64(l))
-	l = len(m.ValuesFilePath)
-	n += 1 + l + sovGenerated(uint64(l))
-	l = len(m.Key)
-	n += 1 + l + sovGenerated(uint64(l))
-	l = len(m.Value)
-	n += 1 + l + sovGenerated(uint64(l))
-	if m.Origin != nil {
-		l = m.Origin.Size()
-		n += 1 + l + sovGenerated(uint64(l))
-	}
-	return n
-}
-
-func (m *HelmPromotionMechanism) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if len(m.Images) > 0 {
-		for _, e := range m.Images {
-			l = e.Size()
-			n += 1 + l + sovGenerated(uint64(l))
-		}
-	}
-	if len(m.Charts) > 0 {
-		for _, e := range m.Charts {
-			l = e.Size()
-			n += 1 + l + sovGenerated(uint64(l))
-		}
-	}
-	if m.Origin != nil {
-		l = m.Origin.Size()
-		n += 1 + l + sovGenerated(uint64(l))
-	}
-	return n
-}
-
 func (m *Image) Size() (n int) {
 	if m == nil {
 		return 0
@@ -7284,80 +5525,6 @@ func (m *ImageSubscription) Size() (n int) {
 	return n
 }
 
-func (m *KargoRenderImageUpdate) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	l = len(m.Image)
-	n += 1 + l + sovGenerated(uint64(l))
-	n += 2
-	if m.Origin != nil {
-		l = m.Origin.Size()
-		n += 1 + l + sovGenerated(uint64(l))
-	}
-	return n
-}
-
-func (m *KargoRenderPromotionMechanism) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if len(m.Images) > 0 {
-		for _, e := range m.Images {
-			l = e.Size()
-			n += 1 + l + sovGenerated(uint64(l))
-		}
-	}
-	if m.Origin != nil {
-		l = m.Origin.Size()
-		n += 1 + l + sovGenerated(uint64(l))
-	}
-	return n
-}
-
-func (m *KustomizeImageUpdate) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	l = len(m.Image)
-	n += 1 + l + sovGenerated(uint64(l))
-	l = len(m.Path)
-	n += 1 + l + sovGenerated(uint64(l))
-	n += 2
-	if m.Origin != nil {
-		l = m.Origin.Size()
-		n += 1 + l + sovGenerated(uint64(l))
-	}
-	l = len(m.NewName)
-	n += 1 + l + sovGenerated(uint64(l))
-	return n
-}
-
-func (m *KustomizePromotionMechanism) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if len(m.Images) > 0 {
-		for _, e := range m.Images {
-			l = e.Size()
-			n += 1 + l + sovGenerated(uint64(l))
-		}
-	}
-	if m.Origin != nil {
-		l = m.Origin.Size()
-		n += 1 + l + sovGenerated(uint64(l))
-	}
-	return n
-}
-
 func (m *Project) Size() (n int) {
 	if m == nil {
 		return 0
@@ -7417,6 +5584,12 @@ func (m *ProjectStatus) Size() (n int) {
 	n += 1 + l + sovGenerated(uint64(l))
 	l = len(m.Message)
 	n += 1 + l + sovGenerated(uint64(l))
+	if len(m.Conditions) > 0 {
+		for _, e := range m.Conditions {
+			l = e.Size()
+			n += 1 + l + sovGenerated(uint64(l))
+		}
+	}
 	return n
 }
 
@@ -7448,31 +5621,6 @@ func (m *PromotionList) Size() (n int) {
 			l = e.Size()
 			n += 1 + l + sovGenerated(uint64(l))
 		}
-	}
-	return n
-}
-
-func (m *PromotionMechanisms) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if len(m.GitRepoUpdates) > 0 {
-		for _, e := range m.GitRepoUpdates {
-			l = e.Size()
-			n += 1 + l + sovGenerated(uint64(l))
-		}
-	}
-	if len(m.ArgoCDAppUpdates) > 0 {
-		for _, e := range m.ArgoCDAppUpdates {
-			l = e.Size()
-			n += 1 + l + sovGenerated(uint64(l))
-		}
-	}
-	if m.Origin != nil {
-		l = m.Origin.Size()
-		n += 1 + l + sovGenerated(uint64(l))
 	}
 	return n
 }
@@ -7541,14 +5689,6 @@ func (m *PromotionStatus) Size() (n int) {
 	n += 1 + l + sovGenerated(uint64(l))
 	l = len(m.Message)
 	n += 1 + l + sovGenerated(uint64(l))
-	if len(m.Metadata) > 0 {
-		for k, v := range m.Metadata {
-			_ = k
-			_ = v
-			mapEntrySize := 1 + len(k) + sovGenerated(uint64(len(k))) + 1 + len(v) + sovGenerated(uint64(len(v)))
-			n += mapEntrySize + 1 + sovGenerated(uint64(mapEntrySize))
-		}
-	}
 	l = len(m.LastHandledRefresh)
 	n += 1 + l + sovGenerated(uint64(l))
 	if m.Freight != nil {
@@ -7620,23 +5760,6 @@ func (m *PromotionTemplateSpec) Size() (n int) {
 	return n
 }
 
-func (m *PullRequestPromotionMechanism) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if m.GitHub != nil {
-		l = m.GitHub.Size()
-		n += 1 + l + sovGenerated(uint64(l))
-	}
-	if m.GitLab != nil {
-		l = m.GitLab.Size()
-		n += 1 + l + sovGenerated(uint64(l))
-	}
-	return n
-}
-
 func (m *RepoSubscription) Size() (n int) {
 	if m == nil {
 		return 0
@@ -7696,10 +5819,6 @@ func (m *StageSpec) Size() (n int) {
 	}
 	var l int
 	_ = l
-	if m.PromotionMechanisms != nil {
-		l = m.PromotionMechanisms.Size()
-		n += 1 + l + sovGenerated(uint64(l))
-	}
 	if m.Verification != nil {
 		l = m.Verification.Size()
 		n += 1 + l + sovGenerated(uint64(l))
@@ -8011,96 +6130,6 @@ func (this *ArgoCDAppSyncStatus) String() string {
 	}, "")
 	return s
 }
-func (this *ArgoCDAppUpdate) String() string {
-	if this == nil {
-		return "nil"
-	}
-	repeatedStringForSourceUpdates := "[]ArgoCDSourceUpdate{"
-	for _, f := range this.SourceUpdates {
-		repeatedStringForSourceUpdates += strings.Replace(strings.Replace(f.String(), "ArgoCDSourceUpdate", "ArgoCDSourceUpdate", 1), `&`, ``, 1) + ","
-	}
-	repeatedStringForSourceUpdates += "}"
-	s := strings.Join([]string{`&ArgoCDAppUpdate{`,
-		`AppName:` + fmt.Sprintf("%v", this.AppName) + `,`,
-		`AppNamespace:` + fmt.Sprintf("%v", this.AppNamespace) + `,`,
-		`SourceUpdates:` + repeatedStringForSourceUpdates + `,`,
-		`Origin:` + strings.Replace(fmt.Sprintf("%v", this.Origin), "FreightOrigin", "FreightOrigin", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *ArgoCDHelm) String() string {
-	if this == nil {
-		return "nil"
-	}
-	repeatedStringForImages := "[]ArgoCDHelmImageUpdate{"
-	for _, f := range this.Images {
-		repeatedStringForImages += strings.Replace(strings.Replace(f.String(), "ArgoCDHelmImageUpdate", "ArgoCDHelmImageUpdate", 1), `&`, ``, 1) + ","
-	}
-	repeatedStringForImages += "}"
-	s := strings.Join([]string{`&ArgoCDHelm{`,
-		`Images:` + repeatedStringForImages + `,`,
-		`Origin:` + strings.Replace(fmt.Sprintf("%v", this.Origin), "FreightOrigin", "FreightOrigin", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *ArgoCDHelmImageUpdate) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&ArgoCDHelmImageUpdate{`,
-		`Image:` + fmt.Sprintf("%v", this.Image) + `,`,
-		`Key:` + fmt.Sprintf("%v", this.Key) + `,`,
-		`Value:` + fmt.Sprintf("%v", this.Value) + `,`,
-		`Origin:` + strings.Replace(fmt.Sprintf("%v", this.Origin), "FreightOrigin", "FreightOrigin", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *ArgoCDKustomize) String() string {
-	if this == nil {
-		return "nil"
-	}
-	repeatedStringForImages := "[]ArgoCDKustomizeImageUpdate{"
-	for _, f := range this.Images {
-		repeatedStringForImages += strings.Replace(strings.Replace(f.String(), "ArgoCDKustomizeImageUpdate", "ArgoCDKustomizeImageUpdate", 1), `&`, ``, 1) + ","
-	}
-	repeatedStringForImages += "}"
-	s := strings.Join([]string{`&ArgoCDKustomize{`,
-		`Images:` + repeatedStringForImages + `,`,
-		`Origin:` + strings.Replace(fmt.Sprintf("%v", this.Origin), "FreightOrigin", "FreightOrigin", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *ArgoCDKustomizeImageUpdate) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&ArgoCDKustomizeImageUpdate{`,
-		`Image:` + fmt.Sprintf("%v", this.Image) + `,`,
-		`UseDigest:` + fmt.Sprintf("%v", this.UseDigest) + `,`,
-		`Origin:` + strings.Replace(fmt.Sprintf("%v", this.Origin), "FreightOrigin", "FreightOrigin", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *ArgoCDSourceUpdate) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&ArgoCDSourceUpdate{`,
-		`RepoURL:` + fmt.Sprintf("%v", this.RepoURL) + `,`,
-		`Chart:` + fmt.Sprintf("%v", this.Chart) + `,`,
-		`UpdateTargetRevision:` + fmt.Sprintf("%v", this.UpdateTargetRevision) + `,`,
-		`Kustomize:` + strings.Replace(this.Kustomize.String(), "ArgoCDKustomize", "ArgoCDKustomize", 1) + `,`,
-		`Helm:` + strings.Replace(this.Helm.String(), "ArgoCDHelm", "ArgoCDHelm", 1) + `,`,
-		`Origin:` + strings.Replace(fmt.Sprintf("%v", this.Origin), "FreightOrigin", "FreightOrigin", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
 func (this *Chart) String() string {
 	if this == nil {
 		return "nil"
@@ -8361,7 +6390,6 @@ func (this *GitCommit) String() string {
 		`ID:` + fmt.Sprintf("%v", this.ID) + `,`,
 		`Branch:` + fmt.Sprintf("%v", this.Branch) + `,`,
 		`Tag:` + fmt.Sprintf("%v", this.Tag) + `,`,
-		`HealthCheckCommit:` + fmt.Sprintf("%v", this.HealthCheckCommit) + `,`,
 		`Message:` + fmt.Sprintf("%v", this.Message) + `,`,
 		`Author:` + fmt.Sprintf("%v", this.Author) + `,`,
 		`Committer:` + fmt.Sprintf("%v", this.Committer) + `,`,
@@ -8381,42 +6409,6 @@ func (this *GitDiscoveryResult) String() string {
 	s := strings.Join([]string{`&GitDiscoveryResult{`,
 		`RepoURL:` + fmt.Sprintf("%v", this.RepoURL) + `,`,
 		`Commits:` + repeatedStringForCommits + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *GitHubPullRequest) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&GitHubPullRequest{`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *GitLabPullRequest) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&GitLabPullRequest{`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *GitRepoUpdate) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&GitRepoUpdate{`,
-		`RepoURL:` + fmt.Sprintf("%v", this.RepoURL) + `,`,
-		`InsecureSkipTLSVerify:` + fmt.Sprintf("%v", this.InsecureSkipTLSVerify) + `,`,
-		`ReadBranch:` + fmt.Sprintf("%v", this.ReadBranch) + `,`,
-		`WriteBranch:` + fmt.Sprintf("%v", this.WriteBranch) + `,`,
-		`PullRequest:` + strings.Replace(this.PullRequest.String(), "PullRequestPromotionMechanism", "PullRequestPromotionMechanism", 1) + `,`,
-		`Render:` + strings.Replace(this.Render.String(), "KargoRenderPromotionMechanism", "KargoRenderPromotionMechanism", 1) + `,`,
-		`Kustomize:` + strings.Replace(this.Kustomize.String(), "KustomizePromotionMechanism", "KustomizePromotionMechanism", 1) + `,`,
-		`Helm:` + strings.Replace(this.Helm.String(), "HelmPromotionMechanism", "HelmPromotionMechanism", 1) + `,`,
-		`Origin:` + strings.Replace(fmt.Sprintf("%v", this.Origin), "FreightOrigin", "FreightOrigin", 1) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -8471,55 +6463,6 @@ func (this *HealthCheckStep) String() string {
 	}, "")
 	return s
 }
-func (this *HelmChartDependencyUpdate) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&HelmChartDependencyUpdate{`,
-		`Repository:` + fmt.Sprintf("%v", this.Repository) + `,`,
-		`Name:` + fmt.Sprintf("%v", this.Name) + `,`,
-		`ChartPath:` + fmt.Sprintf("%v", this.ChartPath) + `,`,
-		`Origin:` + strings.Replace(fmt.Sprintf("%v", this.Origin), "FreightOrigin", "FreightOrigin", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *HelmImageUpdate) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&HelmImageUpdate{`,
-		`Image:` + fmt.Sprintf("%v", this.Image) + `,`,
-		`ValuesFilePath:` + fmt.Sprintf("%v", this.ValuesFilePath) + `,`,
-		`Key:` + fmt.Sprintf("%v", this.Key) + `,`,
-		`Value:` + fmt.Sprintf("%v", this.Value) + `,`,
-		`Origin:` + strings.Replace(fmt.Sprintf("%v", this.Origin), "FreightOrigin", "FreightOrigin", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *HelmPromotionMechanism) String() string {
-	if this == nil {
-		return "nil"
-	}
-	repeatedStringForImages := "[]HelmImageUpdate{"
-	for _, f := range this.Images {
-		repeatedStringForImages += strings.Replace(strings.Replace(f.String(), "HelmImageUpdate", "HelmImageUpdate", 1), `&`, ``, 1) + ","
-	}
-	repeatedStringForImages += "}"
-	repeatedStringForCharts := "[]HelmChartDependencyUpdate{"
-	for _, f := range this.Charts {
-		repeatedStringForCharts += strings.Replace(strings.Replace(f.String(), "HelmChartDependencyUpdate", "HelmChartDependencyUpdate", 1), `&`, ``, 1) + ","
-	}
-	repeatedStringForCharts += "}"
-	s := strings.Join([]string{`&HelmPromotionMechanism{`,
-		`Images:` + repeatedStringForImages + `,`,
-		`Charts:` + repeatedStringForCharts + `,`,
-		`Origin:` + strings.Replace(fmt.Sprintf("%v", this.Origin), "FreightOrigin", "FreightOrigin", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
 func (this *Image) String() string {
 	if this == nil {
 		return "nil"
@@ -8565,64 +6508,6 @@ func (this *ImageSubscription) String() string {
 		`InsecureSkipTLSVerify:` + fmt.Sprintf("%v", this.InsecureSkipTLSVerify) + `,`,
 		`DiscoveryLimit:` + fmt.Sprintf("%v", this.DiscoveryLimit) + `,`,
 		`StrictSemvers:` + fmt.Sprintf("%v", this.StrictSemvers) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *KargoRenderImageUpdate) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&KargoRenderImageUpdate{`,
-		`Image:` + fmt.Sprintf("%v", this.Image) + `,`,
-		`UseDigest:` + fmt.Sprintf("%v", this.UseDigest) + `,`,
-		`Origin:` + strings.Replace(fmt.Sprintf("%v", this.Origin), "FreightOrigin", "FreightOrigin", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *KargoRenderPromotionMechanism) String() string {
-	if this == nil {
-		return "nil"
-	}
-	repeatedStringForImages := "[]KargoRenderImageUpdate{"
-	for _, f := range this.Images {
-		repeatedStringForImages += strings.Replace(strings.Replace(f.String(), "KargoRenderImageUpdate", "KargoRenderImageUpdate", 1), `&`, ``, 1) + ","
-	}
-	repeatedStringForImages += "}"
-	s := strings.Join([]string{`&KargoRenderPromotionMechanism{`,
-		`Images:` + repeatedStringForImages + `,`,
-		`Origin:` + strings.Replace(fmt.Sprintf("%v", this.Origin), "FreightOrigin", "FreightOrigin", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *KustomizeImageUpdate) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&KustomizeImageUpdate{`,
-		`Image:` + fmt.Sprintf("%v", this.Image) + `,`,
-		`Path:` + fmt.Sprintf("%v", this.Path) + `,`,
-		`UseDigest:` + fmt.Sprintf("%v", this.UseDigest) + `,`,
-		`Origin:` + strings.Replace(fmt.Sprintf("%v", this.Origin), "FreightOrigin", "FreightOrigin", 1) + `,`,
-		`NewName:` + fmt.Sprintf("%v", this.NewName) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *KustomizePromotionMechanism) String() string {
-	if this == nil {
-		return "nil"
-	}
-	repeatedStringForImages := "[]KustomizeImageUpdate{"
-	for _, f := range this.Images {
-		repeatedStringForImages += strings.Replace(strings.Replace(f.String(), "KustomizeImageUpdate", "KustomizeImageUpdate", 1), `&`, ``, 1) + ","
-	}
-	repeatedStringForImages += "}"
-	s := strings.Join([]string{`&KustomizePromotionMechanism{`,
-		`Images:` + repeatedStringForImages + `,`,
-		`Origin:` + strings.Replace(fmt.Sprintf("%v", this.Origin), "FreightOrigin", "FreightOrigin", 1) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -8674,9 +6559,15 @@ func (this *ProjectStatus) String() string {
 	if this == nil {
 		return "nil"
 	}
+	repeatedStringForConditions := "[]Condition{"
+	for _, f := range this.Conditions {
+		repeatedStringForConditions += fmt.Sprintf("%v", f) + ","
+	}
+	repeatedStringForConditions += "}"
 	s := strings.Join([]string{`&ProjectStatus{`,
 		`Phase:` + fmt.Sprintf("%v", this.Phase) + `,`,
 		`Message:` + fmt.Sprintf("%v", this.Message) + `,`,
+		`Conditions:` + repeatedStringForConditions + `,`,
 		`}`,
 	}, "")
 	return s
@@ -8705,28 +6596,6 @@ func (this *PromotionList) String() string {
 	s := strings.Join([]string{`&PromotionList{`,
 		`ListMeta:` + strings.Replace(strings.Replace(fmt.Sprintf("%v", this.ListMeta), "ListMeta", "v1.ListMeta", 1), `&`, ``, 1) + `,`,
 		`Items:` + repeatedStringForItems + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *PromotionMechanisms) String() string {
-	if this == nil {
-		return "nil"
-	}
-	repeatedStringForGitRepoUpdates := "[]GitRepoUpdate{"
-	for _, f := range this.GitRepoUpdates {
-		repeatedStringForGitRepoUpdates += strings.Replace(strings.Replace(f.String(), "GitRepoUpdate", "GitRepoUpdate", 1), `&`, ``, 1) + ","
-	}
-	repeatedStringForGitRepoUpdates += "}"
-	repeatedStringForArgoCDAppUpdates := "[]ArgoCDAppUpdate{"
-	for _, f := range this.ArgoCDAppUpdates {
-		repeatedStringForArgoCDAppUpdates += strings.Replace(strings.Replace(f.String(), "ArgoCDAppUpdate", "ArgoCDAppUpdate", 1), `&`, ``, 1) + ","
-	}
-	repeatedStringForArgoCDAppUpdates += "}"
-	s := strings.Join([]string{`&PromotionMechanisms{`,
-		`GitRepoUpdates:` + repeatedStringForGitRepoUpdates + `,`,
-		`ArgoCDAppUpdates:` + repeatedStringForArgoCDAppUpdates + `,`,
-		`Origin:` + strings.Replace(fmt.Sprintf("%v", this.Origin), "FreightOrigin", "FreightOrigin", 1) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -8781,20 +6650,9 @@ func (this *PromotionStatus) String() string {
 		repeatedStringForHealthChecks += strings.Replace(strings.Replace(f.String(), "HealthCheckStep", "HealthCheckStep", 1), `&`, ``, 1) + ","
 	}
 	repeatedStringForHealthChecks += "}"
-	keysForMetadata := make([]string, 0, len(this.Metadata))
-	for k := range this.Metadata {
-		keysForMetadata = append(keysForMetadata, k)
-	}
-	github_com_gogo_protobuf_sortkeys.Strings(keysForMetadata)
-	mapStringForMetadata := "map[string]string{"
-	for _, k := range keysForMetadata {
-		mapStringForMetadata += fmt.Sprintf("%v: %v,", k, this.Metadata[k])
-	}
-	mapStringForMetadata += "}"
 	s := strings.Join([]string{`&PromotionStatus{`,
 		`Phase:` + fmt.Sprintf("%v", this.Phase) + `,`,
 		`Message:` + fmt.Sprintf("%v", this.Message) + `,`,
-		`Metadata:` + mapStringForMetadata + `,`,
 		`LastHandledRefresh:` + fmt.Sprintf("%v", this.LastHandledRefresh) + `,`,
 		`Freight:` + strings.Replace(this.Freight.String(), "FreightReference", "FreightReference", 1) + `,`,
 		`FinishedAt:` + strings.Replace(fmt.Sprintf("%v", this.FinishedAt), "Time", "v1.Time", 1) + `,`,
@@ -8839,17 +6697,6 @@ func (this *PromotionTemplateSpec) String() string {
 	repeatedStringForSteps += "}"
 	s := strings.Join([]string{`&PromotionTemplateSpec{`,
 		`Steps:` + repeatedStringForSteps + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *PullRequestPromotionMechanism) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&PullRequestPromotionMechanism{`,
-		`GitHub:` + strings.Replace(this.GitHub.String(), "GitHubPullRequest", "GitHubPullRequest", 1) + `,`,
-		`GitLab:` + strings.Replace(this.GitLab.String(), "GitLabPullRequest", "GitLabPullRequest", 1) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -8904,7 +6751,6 @@ func (this *StageSpec) String() string {
 	}
 	repeatedStringForRequestedFreight += "}"
 	s := strings.Join([]string{`&StageSpec{`,
-		`PromotionMechanisms:` + strings.Replace(this.PromotionMechanisms.String(), "PromotionMechanisms", "PromotionMechanisms", 1) + `,`,
 		`Verification:` + strings.Replace(this.Verification.String(), "Verification", "Verification", 1) + `,`,
 		`Shard:` + fmt.Sprintf("%v", this.Shard) + `,`,
 		`RequestedFreight:` + repeatedStringForRequestedFreight + `,`,
@@ -10190,992 +8036,6 @@ func (m *ArgoCDAppSyncStatus) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			m.Revisions = append(m.Revisions, string(dAtA[iNdEx:postIndex]))
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipGenerated(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *ArgoCDAppUpdate) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowGenerated
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: ArgoCDAppUpdate: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: ArgoCDAppUpdate: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field AppName", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGenerated
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.AppName = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field AppNamespace", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGenerated
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.AppNamespace = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 3:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field SourceUpdates", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGenerated
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.SourceUpdates = append(m.SourceUpdates, ArgoCDSourceUpdate{})
-			if err := m.SourceUpdates[len(m.SourceUpdates)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		case 4:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Origin", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGenerated
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if m.Origin == nil {
-				m.Origin = &FreightOrigin{}
-			}
-			if err := m.Origin.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipGenerated(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *ArgoCDHelm) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowGenerated
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: ArgoCDHelm: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: ArgoCDHelm: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Images", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGenerated
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Images = append(m.Images, ArgoCDHelmImageUpdate{})
-			if err := m.Images[len(m.Images)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Origin", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGenerated
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if m.Origin == nil {
-				m.Origin = &FreightOrigin{}
-			}
-			if err := m.Origin.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipGenerated(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *ArgoCDHelmImageUpdate) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowGenerated
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: ArgoCDHelmImageUpdate: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: ArgoCDHelmImageUpdate: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Image", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGenerated
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Image = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Key", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGenerated
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Key = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 3:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Value", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGenerated
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Value = ImageUpdateValueType(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 4:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Origin", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGenerated
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if m.Origin == nil {
-				m.Origin = &FreightOrigin{}
-			}
-			if err := m.Origin.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipGenerated(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *ArgoCDKustomize) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowGenerated
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: ArgoCDKustomize: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: ArgoCDKustomize: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Images", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGenerated
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Images = append(m.Images, ArgoCDKustomizeImageUpdate{})
-			if err := m.Images[len(m.Images)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Origin", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGenerated
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if m.Origin == nil {
-				m.Origin = &FreightOrigin{}
-			}
-			if err := m.Origin.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipGenerated(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *ArgoCDKustomizeImageUpdate) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowGenerated
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: ArgoCDKustomizeImageUpdate: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: ArgoCDKustomizeImageUpdate: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Image", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGenerated
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Image = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 2:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field UseDigest", wireType)
-			}
-			var v int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGenerated
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				v |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			m.UseDigest = bool(v != 0)
-		case 3:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Origin", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGenerated
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if m.Origin == nil {
-				m.Origin = &FreightOrigin{}
-			}
-			if err := m.Origin.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipGenerated(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *ArgoCDSourceUpdate) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowGenerated
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: ArgoCDSourceUpdate: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: ArgoCDSourceUpdate: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field RepoURL", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGenerated
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.RepoURL = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Chart", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGenerated
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Chart = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 3:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field UpdateTargetRevision", wireType)
-			}
-			var v int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGenerated
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				v |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			m.UpdateTargetRevision = bool(v != 0)
-		case 4:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Kustomize", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGenerated
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if m.Kustomize == nil {
-				m.Kustomize = &ArgoCDKustomize{}
-			}
-			if err := m.Kustomize.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		case 5:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Helm", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGenerated
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if m.Helm == nil {
-				m.Helm = &ArgoCDHelm{}
-			}
-			if err := m.Helm.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		case 6:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Origin", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGenerated
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if m.Origin == nil {
-				m.Origin = &FreightOrigin{}
-			}
-			if err := m.Origin.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -13991,38 +10851,6 @@ func (m *GitCommit) Unmarshal(dAtA []byte) error {
 			}
 			m.Tag = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
-		case 5:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field HealthCheckCommit", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGenerated
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.HealthCheckCommit = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
 		case 6:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Message", wireType)
@@ -14232,452 +11060,6 @@ func (m *GitDiscoveryResult) Unmarshal(dAtA []byte) error {
 			}
 			m.Commits = append(m.Commits, DiscoveredCommit{})
 			if err := m.Commits[len(m.Commits)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipGenerated(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *GitHubPullRequest) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowGenerated
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: GitHubPullRequest: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: GitHubPullRequest: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		default:
-			iNdEx = preIndex
-			skippy, err := skipGenerated(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *GitLabPullRequest) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowGenerated
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: GitLabPullRequest: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: GitLabPullRequest: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		default:
-			iNdEx = preIndex
-			skippy, err := skipGenerated(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *GitRepoUpdate) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowGenerated
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: GitRepoUpdate: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: GitRepoUpdate: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field RepoURL", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGenerated
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.RepoURL = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 2:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field InsecureSkipTLSVerify", wireType)
-			}
-			var v int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGenerated
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				v |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			m.InsecureSkipTLSVerify = bool(v != 0)
-		case 3:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field ReadBranch", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGenerated
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.ReadBranch = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 4:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field WriteBranch", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGenerated
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.WriteBranch = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 5:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field PullRequest", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGenerated
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if m.PullRequest == nil {
-				m.PullRequest = &PullRequestPromotionMechanism{}
-			}
-			if err := m.PullRequest.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		case 6:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Render", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGenerated
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if m.Render == nil {
-				m.Render = &KargoRenderPromotionMechanism{}
-			}
-			if err := m.Render.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		case 7:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Kustomize", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGenerated
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if m.Kustomize == nil {
-				m.Kustomize = &KustomizePromotionMechanism{}
-			}
-			if err := m.Kustomize.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		case 8:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Helm", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGenerated
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if m.Helm == nil {
-				m.Helm = &HelmPromotionMechanism{}
-			}
-			if err := m.Helm.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		case 9:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Origin", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGenerated
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if m.Origin == nil {
-				m.Origin = &FreightOrigin{}
-			}
-			if err := m.Origin.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
@@ -15405,556 +11787,6 @@ func (m *HealthCheckStep) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *HelmChartDependencyUpdate) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowGenerated
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: HelmChartDependencyUpdate: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: HelmChartDependencyUpdate: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Repository", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGenerated
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Repository = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Name", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGenerated
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Name = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 3:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field ChartPath", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGenerated
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.ChartPath = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 4:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Origin", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGenerated
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if m.Origin == nil {
-				m.Origin = &FreightOrigin{}
-			}
-			if err := m.Origin.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipGenerated(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *HelmImageUpdate) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowGenerated
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: HelmImageUpdate: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: HelmImageUpdate: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Image", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGenerated
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Image = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field ValuesFilePath", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGenerated
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.ValuesFilePath = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 3:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Key", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGenerated
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Key = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 4:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Value", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGenerated
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Value = ImageUpdateValueType(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 5:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Origin", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGenerated
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if m.Origin == nil {
-				m.Origin = &FreightOrigin{}
-			}
-			if err := m.Origin.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipGenerated(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *HelmPromotionMechanism) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowGenerated
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: HelmPromotionMechanism: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: HelmPromotionMechanism: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Images", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGenerated
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Images = append(m.Images, HelmImageUpdate{})
-			if err := m.Images[len(m.Images)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Charts", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGenerated
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Charts = append(m.Charts, HelmChartDependencyUpdate{})
-			if err := m.Charts[len(m.Charts)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		case 3:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Origin", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGenerated
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if m.Origin == nil {
-				m.Origin = &FreightOrigin{}
-			}
-			if err := m.Origin.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipGenerated(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
 func (m *Image) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
@@ -16614,586 +12446,6 @@ func (m *ImageSubscription) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *KargoRenderImageUpdate) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowGenerated
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: KargoRenderImageUpdate: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: KargoRenderImageUpdate: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Image", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGenerated
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Image = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 2:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field UseDigest", wireType)
-			}
-			var v int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGenerated
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				v |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			m.UseDigest = bool(v != 0)
-		case 3:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Origin", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGenerated
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if m.Origin == nil {
-				m.Origin = &FreightOrigin{}
-			}
-			if err := m.Origin.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipGenerated(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *KargoRenderPromotionMechanism) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowGenerated
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: KargoRenderPromotionMechanism: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: KargoRenderPromotionMechanism: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Images", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGenerated
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Images = append(m.Images, KargoRenderImageUpdate{})
-			if err := m.Images[len(m.Images)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Origin", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGenerated
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if m.Origin == nil {
-				m.Origin = &FreightOrigin{}
-			}
-			if err := m.Origin.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipGenerated(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *KustomizeImageUpdate) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowGenerated
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: KustomizeImageUpdate: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: KustomizeImageUpdate: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Image", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGenerated
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Image = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Path", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGenerated
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Path = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 3:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field UseDigest", wireType)
-			}
-			var v int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGenerated
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				v |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			m.UseDigest = bool(v != 0)
-		case 4:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Origin", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGenerated
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if m.Origin == nil {
-				m.Origin = &FreightOrigin{}
-			}
-			if err := m.Origin.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		case 5:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field NewName", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGenerated
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.NewName = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipGenerated(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *KustomizePromotionMechanism) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowGenerated
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: KustomizePromotionMechanism: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: KustomizePromotionMechanism: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Images", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGenerated
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Images = append(m.Images, KustomizeImageUpdate{})
-			if err := m.Images[len(m.Images)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Origin", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGenerated
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if m.Origin == nil {
-				m.Origin = &FreightOrigin{}
-			}
-			if err := m.Origin.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipGenerated(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
 func (m *Project) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
@@ -17640,6 +12892,40 @@ func (m *ProjectStatus) Unmarshal(dAtA []byte) error {
 			}
 			m.Message = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Conditions", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Conditions = append(m.Conditions, v1.Condition{})
+			if err := m.Conditions[len(m.Conditions)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
 			skippy, err := skipGenerated(dAtA[iNdEx:])
@@ -17903,160 +13189,6 @@ func (m *PromotionList) Unmarshal(dAtA []byte) error {
 			}
 			m.Items = append(m.Items, Promotion{})
 			if err := m.Items[len(m.Items)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipGenerated(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *PromotionMechanisms) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowGenerated
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: PromotionMechanisms: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: PromotionMechanisms: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field GitRepoUpdates", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGenerated
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.GitRepoUpdates = append(m.GitRepoUpdates, GitRepoUpdate{})
-			if err := m.GitRepoUpdates[len(m.GitRepoUpdates)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field ArgoCDAppUpdates", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGenerated
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.ArgoCDAppUpdates = append(m.ArgoCDAppUpdates, ArgoCDAppUpdate{})
-			if err := m.ArgoCDAppUpdates[len(m.ArgoCDAppUpdates)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		case 3:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Origin", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGenerated
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if m.Origin == nil {
-				m.Origin = &FreightOrigin{}
-			}
-			if err := m.Origin.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
@@ -18613,133 +13745,6 @@ func (m *PromotionStatus) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			m.Message = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 3:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Metadata", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGenerated
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if m.Metadata == nil {
-				m.Metadata = make(map[string]string)
-			}
-			var mapkey string
-			var mapvalue string
-			for iNdEx < postIndex {
-				entryPreIndex := iNdEx
-				var wire uint64
-				for shift := uint(0); ; shift += 7 {
-					if shift >= 64 {
-						return ErrIntOverflowGenerated
-					}
-					if iNdEx >= l {
-						return io.ErrUnexpectedEOF
-					}
-					b := dAtA[iNdEx]
-					iNdEx++
-					wire |= uint64(b&0x7F) << shift
-					if b < 0x80 {
-						break
-					}
-				}
-				fieldNum := int32(wire >> 3)
-				if fieldNum == 1 {
-					var stringLenmapkey uint64
-					for shift := uint(0); ; shift += 7 {
-						if shift >= 64 {
-							return ErrIntOverflowGenerated
-						}
-						if iNdEx >= l {
-							return io.ErrUnexpectedEOF
-						}
-						b := dAtA[iNdEx]
-						iNdEx++
-						stringLenmapkey |= uint64(b&0x7F) << shift
-						if b < 0x80 {
-							break
-						}
-					}
-					intStringLenmapkey := int(stringLenmapkey)
-					if intStringLenmapkey < 0 {
-						return ErrInvalidLengthGenerated
-					}
-					postStringIndexmapkey := iNdEx + intStringLenmapkey
-					if postStringIndexmapkey < 0 {
-						return ErrInvalidLengthGenerated
-					}
-					if postStringIndexmapkey > l {
-						return io.ErrUnexpectedEOF
-					}
-					mapkey = string(dAtA[iNdEx:postStringIndexmapkey])
-					iNdEx = postStringIndexmapkey
-				} else if fieldNum == 2 {
-					var stringLenmapvalue uint64
-					for shift := uint(0); ; shift += 7 {
-						if shift >= 64 {
-							return ErrIntOverflowGenerated
-						}
-						if iNdEx >= l {
-							return io.ErrUnexpectedEOF
-						}
-						b := dAtA[iNdEx]
-						iNdEx++
-						stringLenmapvalue |= uint64(b&0x7F) << shift
-						if b < 0x80 {
-							break
-						}
-					}
-					intStringLenmapvalue := int(stringLenmapvalue)
-					if intStringLenmapvalue < 0 {
-						return ErrInvalidLengthGenerated
-					}
-					postStringIndexmapvalue := iNdEx + intStringLenmapvalue
-					if postStringIndexmapvalue < 0 {
-						return ErrInvalidLengthGenerated
-					}
-					if postStringIndexmapvalue > l {
-						return io.ErrUnexpectedEOF
-					}
-					mapvalue = string(dAtA[iNdEx:postStringIndexmapvalue])
-					iNdEx = postStringIndexmapvalue
-				} else {
-					iNdEx = entryPreIndex
-					skippy, err := skipGenerated(dAtA[iNdEx:])
-					if err != nil {
-						return err
-					}
-					if (skippy < 0) || (iNdEx+skippy) < 0 {
-						return ErrInvalidLengthGenerated
-					}
-					if (iNdEx + skippy) > postIndex {
-						return io.ErrUnexpectedEOF
-					}
-					iNdEx += skippy
-				}
-			}
-			m.Metadata[mapkey] = mapvalue
 			iNdEx = postIndex
 		case 4:
 			if wireType != 2 {
@@ -19308,128 +14313,6 @@ func (m *PromotionTemplateSpec) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *PullRequestPromotionMechanism) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowGenerated
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: PullRequestPromotionMechanism: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: PullRequestPromotionMechanism: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field GitHub", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGenerated
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if m.GitHub == nil {
-				m.GitHub = &GitHubPullRequest{}
-			}
-			if err := m.GitHub.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field GitLab", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGenerated
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if m.GitLab == nil {
-				m.GitLab = &GitLabPullRequest{}
-			}
-			if err := m.GitLab.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipGenerated(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
 func (m *RepoSubscription) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
@@ -19883,42 +14766,6 @@ func (m *StageSpec) Unmarshal(dAtA []byte) error {
 			return fmt.Errorf("proto: StageSpec: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
-		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field PromotionMechanisms", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGenerated
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if m.PromotionMechanisms == nil {
-				m.PromotionMechanisms = &PromotionMechanisms{}
-			}
-			if err := m.PromotionMechanisms.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
 		case 3:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Verification", wireType)

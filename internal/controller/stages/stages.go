@@ -11,25 +11,23 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	libargocd "github.com/akuity/kargo/internal/argocd"
 	"github.com/akuity/kargo/internal/controller"
 	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
 	rollouts "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
 	"github.com/akuity/kargo/internal/directives"
+	kargoEvent "github.com/akuity/kargo/internal/event"
 	"github.com/akuity/kargo/internal/indexer"
 	"github.com/akuity/kargo/internal/kargo"
 	"github.com/akuity/kargo/internal/kubeclient"
@@ -39,9 +37,11 @@ import (
 
 // ReconcilerConfig represents configuration for the stage reconciler.
 type ReconcilerConfig struct {
-	ShardName                    string `envconfig:"SHARD_NAME"`
-	RolloutsIntegrationEnabled   bool   `envconfig:"ROLLOUTS_INTEGRATION_ENABLED"`
-	RolloutsControllerInstanceID string `envconfig:"ROLLOUTS_CONTROLLER_INSTANCE_ID"`
+	ShardName                          string `envconfig:"SHARD_NAME"`
+	RolloutsIntegrationEnabled         bool   `envconfig:"ROLLOUTS_INTEGRATION_ENABLED"`
+	RolloutsControllerInstanceID       string `envconfig:"ROLLOUTS_CONTROLLER_INSTANCE_ID"`
+	MaxConcurrentControlFlowReconciles int    `envconfig:"MAX_CONCURRENT_CONTROL_FLOW_RECONCILES" default:"4"`
+	MaxConcurrentReconciles            int    `envconfig:"MAX_CONCURRENT_STAGE_RECONCILES" default:"4"`
 }
 
 func (c ReconcilerConfig) Name() string {
@@ -89,10 +89,6 @@ type reconciler struct {
 		client.ObjectList,
 		...client.ListOption,
 	) error
-
-	// Health checks:
-
-	appHealth libargocd.ApplicationHealthEvaluator
 
 	// Freight verification:
 
@@ -201,12 +197,6 @@ type reconciler struct {
 
 	// Discovering Freight:
 
-	getAvailableFreightFn func(
-		ctx context.Context,
-		stage *kargoapi.Stage,
-		includeApproved bool,
-	) ([]kargoapi.Freight, error)
-
 	getAvailableFreightByOriginFn func(
 		ctx context.Context,
 		stage *kargoapi.Stage,
@@ -226,8 +216,6 @@ type reconciler struct {
 	clearApprovalsFn func(context.Context, *kargoapi.Stage) error
 
 	clearAnalysisRunsFn func(context.Context, *kargoapi.Stage) error
-
-	shardRequirement *labels.Requirement
 }
 
 // SetupReconcilerWithManager initializes a reconciler for Stage resources and
@@ -238,92 +226,118 @@ func SetupReconcilerWithManager(
 	argocdMgr manager.Manager,
 	directivesEngine directives.Engine,
 	cfg ReconcilerConfig,
+	sharedIndexer *indexer.SharedFieldIndexer,
 ) error {
 	// Index Promotions by Stage
-	if err := indexer.IndexPromotionsByStage(ctx, kargoMgr); err != nil {
+	if err := sharedIndexer.IndexField(
+		ctx,
+		&kargoapi.Promotion{},
+		indexer.PromotionsByStageField,
+		indexer.PromotionsByStage,
+	); err != nil {
 		return fmt.Errorf("index non-terminal Promotions by Stage: %w", err)
 	}
 
+	// Index Promotions by whether they are terminal
+	if err := sharedIndexer.IndexField(
+		ctx,
+		&kargoapi.Promotion{},
+		indexer.PromotionsByTerminalField,
+		indexer.PromotionsByTerminal,
+	); err != nil {
+		return fmt.Errorf("index Promotions by terminal status: %w", err)
+	}
+
 	// Index Promotions by Stage + Freight
-	if err := indexer.IndexPromotionsByStageAndFreight(ctx, kargoMgr); err != nil {
+	if err := sharedIndexer.IndexField(
+		ctx,
+		&kargoapi.Promotion{},
+		indexer.PromotionsByStageAndFreightField,
+		indexer.PromotionsByStageAndFreight,
+	); err != nil {
 		return fmt.Errorf("index Promotions by Stage and Freight: %w", err)
 	}
 
 	// Index Freight by Warehouse
-	if err := indexer.IndexFreightByWarehouse(ctx, kargoMgr); err != nil {
+	if err := sharedIndexer.IndexField(
+		ctx,
+		&kargoapi.Freight{},
+		indexer.FreightByWarehouseField,
+		indexer.FreightByWarehouse,
+	); err != nil {
 		return fmt.Errorf("index Freight by Warehouse: %w", err)
 	}
 
 	// Index Freight by Stages in which it has been verified
-	if err := indexer.IndexFreightByVerifiedStages(ctx, kargoMgr); err != nil {
+	if err := sharedIndexer.IndexField(
+		ctx,
+		&kargoapi.Freight{},
+		indexer.FreightByVerifiedStagesField,
+		indexer.FreightByVerifiedStages,
+	); err != nil {
 		return fmt.Errorf("index Freight by Stages in which it has been verified: %w", err)
 	}
 
 	// Index Freight by Stages for which it has been approved
-	if err := indexer.IndexFreightByApprovedStages(ctx, kargoMgr); err != nil {
+	if err := sharedIndexer.IndexField(
+		ctx,
+		&kargoapi.Freight{},
+		indexer.FreightApprovedForStagesField,
+		indexer.FreightApprovedForStages,
+	); err != nil {
 		return fmt.Errorf("index Freight by Stages for which it has been approved: %w", err)
 	}
 
 	// Index Stages by upstream Stages
-	if err := indexer.IndexStagesByUpstreamStages(ctx, kargoMgr); err != nil {
+	if err := sharedIndexer.IndexField(
+		ctx,
+		&kargoapi.Stage{},
+		indexer.StagesByUpstreamStagesField,
+		indexer.StagesByUpstreamStages,
+	); err != nil {
 		return fmt.Errorf("index Stages by upstream Stages: %w", err)
 	}
 
 	// Index Stages by Warehouse
-	if err := indexer.IndexStagesByWarehouse(ctx, kargoMgr); err != nil {
+	if err := sharedIndexer.IndexField(
+		ctx,
+		&kargoapi.Stage{},
+		indexer.StagesByWarehouseField,
+		indexer.StagesByWarehouse,
+	); err != nil {
 		return fmt.Errorf("index Stages by Warehouse: %w", err)
 	}
 
 	// Index Stages by AnalysisRun
-	if err := indexer.IndexStagesByAnalysisRun(ctx, kargoMgr, cfg.ShardName); err != nil {
-		return fmt.Errorf("index Stages by Argo Rollouts AnalysisRun: %w", err)
-	}
-
-	shardPredicate, err := controller.GetShardPredicate(cfg.ShardName)
-	if err != nil {
-		return fmt.Errorf("error creating shard predicate: %w", err)
-	}
-
-	shardRequirement, err := controller.GetShardRequirement(cfg.ShardName)
-	if err != nil {
-		return fmt.Errorf("error creating shard requirement: %w", err)
-	}
-	shardSelector := labels.NewSelector().Add(*shardRequirement)
-	var argocdClient client.Client
-	if argocdMgr != nil {
-		argocdClient = argocdMgr.GetClient()
+	if err := sharedIndexer.IndexField(
+		ctx,
+		&kargoapi.Stage{},
+		indexer.StagesByAnalysisRunField,
+		indexer.StagesByAnalysisRun(cfg.ShardName),
+	); err != nil {
+		return fmt.Errorf("index Stages by AnalysisRun: %w", err)
 	}
 
 	c, err := ctrl.NewControllerManagedBy(kargoMgr).
 		For(&kargoapi.Stage{}).
 		WithEventFilter(
-			predicate.Funcs{
-				DeleteFunc: func(event.DeleteEvent) bool {
-					// We're not interested in any ACTUAL deletes. (We do care about
-					// updates where DeletionTimestamp is non-nil, but that's not a delete
-					// event.)
-					return false
-				},
-			},
-		).
-		WithEventFilter(
-			predicate.Or(
-				predicate.GenerationChangedPredicate{},
-				kargo.RefreshRequested{},
-				kargo.ReverifyRequested{},
-				kargo.AbortRequested{},
+			predicate.And(
+				IsControlFlowStage(false),
+				predicate.Or(
+					predicate.GenerationChangedPredicate{},
+					kargo.RefreshRequested{},
+					kargo.ReverifyRequested{},
+					kargo.VerificationAbortRequested{},
+				),
 			),
 		).
-		WithEventFilter(shardPredicate).
-		WithOptions(controller.CommonOptions()).
+		WithOptions(controller.CommonOptions(cfg.MaxConcurrentReconciles)).
 		Build(
 			newReconciler(
 				kargoMgr.GetClient(),
-				argocdClient,
 				directivesEngine,
 				libEvent.NewRecorder(ctx, kargoMgr.GetScheme(), kargoMgr.GetClient(), cfg.Name()),
 				cfg,
-				shardRequirement,
 			),
 		)
 	if err != nil {
@@ -352,59 +366,52 @@ func SetupReconcilerWithManager(
 
 	// Watch Freight that has been marked as verified in a Stage and enqueue
 	// downstream Stages
-	verifiedFreightHandler := &verifiedFreightEventHandler[*kargoapi.Freight]{
-		kargoClient:   kargoMgr.GetClient(),
-		shardSelector: shardSelector,
-	}
 	if err := c.Watch(
 		source.Kind(
 			kargoMgr.GetCache(),
 			&kargoapi.Freight{},
-			verifiedFreightHandler,
+			&downstreamStageEnqueuer[*kargoapi.Freight]{
+				kargoClient: kargoMgr.GetClient(),
+			},
 		),
 	); err != nil {
-		return fmt.Errorf("unable to watch Freight: %w", err)
+		return fmt.Errorf("unable to watch Freight from upstream Stages: %w", err)
 	}
 
-	approveFreightHandler := &approvedFreightEventHandler[*kargoapi.Freight]{
-		kargoClient: kargoMgr.GetClient(),
-	}
 	if err := c.Watch(
 		source.Kind(
 			kargoMgr.GetCache(),
 			&kargoapi.Freight{},
-			approveFreightHandler,
+			&stageEnqueuerForApprovedFreight[*kargoapi.Freight]{
+				kargoClient: kargoMgr.GetClient(),
+			},
 		),
 	); err != nil {
-		return fmt.Errorf("unable to watch Freight: %w", err)
+		return fmt.Errorf("unable to watch approved Freight: %w", err)
 	}
 
-	createdFreightEventHandler := &createdFreightEventHandler[*kargoapi.Freight]{
-		kargoClient:   kargoMgr.GetClient(),
-		shardSelector: shardSelector,
-	}
 	if err := c.Watch(
 		source.Kind(
 			kargoMgr.GetCache(),
 			&kargoapi.Freight{},
-			createdFreightEventHandler,
+			&warehouseStageEnqueuer[*kargoapi.Freight]{
+				kargoClient: kargoMgr.GetClient(),
+			},
 		),
 	); err != nil {
-		return fmt.Errorf("unable to watch Freight: %w", err)
+		return fmt.Errorf("unable to watch Freight produced by Warehouse: %w", err)
 	}
 
 	// If Argo CD integration is disabled, this manager will be nil and we won't
 	// care about this watch anyway.
 	if argocdMgr != nil {
-		updatedArgoCDAppHandler := &updatedArgoCDAppHandler[*argocd.Application]{
-			kargoClient:   kargoMgr.GetClient(),
-			shardSelector: shardSelector,
-		}
 		if err := c.Watch(
 			source.Kind(
 				argocdMgr.GetCache(),
 				&argocd.Application{},
-				updatedArgoCDAppHandler,
+				&stageEnqueuerForArgoCDChanges[*argocd.Application]{
+					kargoClient: kargoMgr.GetClient(),
+				},
 			),
 		); err != nil {
 			return fmt.Errorf("unable to watch Applications: %w", err)
@@ -413,9 +420,8 @@ func SetupReconcilerWithManager(
 
 	// We only care about this if Rollouts integration is enabled.
 	if cfg.RolloutsIntegrationEnabled {
-		phaseChangedAnalysisRunHandler := &phaseChangedAnalysisRunHandler[*rollouts.AnalysisRun]{
-			kargoClient:   kargoMgr.GetClient(),
-			shardSelector: shardSelector,
+		phaseChangedAnalysisRunHandler := &stageEnqueuerForAnalysisRuns[*rollouts.AnalysisRun]{
+			kargoClient: kargoMgr.GetClient(),
 		}
 		if err := c.Watch(
 			source.Kind(
@@ -428,27 +434,25 @@ func SetupReconcilerWithManager(
 		}
 	}
 
+	logging.LoggerFromContext(ctx).Info(
+		"Initialized Stage reconciler",
+		"maxConcurrentReconciles", cfg.MaxConcurrentReconciles,
+	)
+
 	return nil
 }
 
 func newReconciler(
 	kargoClient client.Client,
-	argocdClient client.Client,
 	directivesEngine directives.Engine,
 	recorder record.EventRecorder,
 	cfg ReconcilerConfig,
-	shardRequirement *labels.Requirement,
 ) *reconciler {
 	r := &reconciler{
 		kargoClient:      kargoClient,
 		directivesEngine: directivesEngine,
 		recorder:         recorder,
 		cfg:              cfg,
-		appHealth: libargocd.NewApplicationHealthEvaluator(
-			kargoClient,
-			argocdClient,
-		),
-		shardRequirement: shardRequirement,
 	}
 	// The following default behaviors are overridable for testing purposes:
 	// Promotion-related:
@@ -475,7 +479,6 @@ func newReconciler(
 	r.getProjectFn = kargoapi.GetProject
 	r.createPromotionFn = kargoClient.Create
 	// Discovering Freight:
-	r.getAvailableFreightFn = r.getAvailableFreight
 	r.getAvailableFreightByOriginFn = r.getAvailableFreightByOrigin
 	r.listFreightFn = r.kargoClient.List
 	// Stage deletion:
@@ -494,6 +497,7 @@ func (r *reconciler) Reconcile(
 	logger := logging.LoggerFromContext(ctx).WithValues(
 		"namespace", req.NamespacedName.Namespace,
 		"stage", req.NamespacedName.Name,
+		"controlFlow", false,
 	)
 	ctx = logging.ContextWithLogger(ctx, logger)
 	logger.Debug("reconciling Stage")
@@ -508,11 +512,10 @@ func (r *reconciler) Reconcile(
 		// current reconciliation request was issued.
 		return ctrl.Result{}, nil // Do not requeue
 	}
-
-	if ok := r.shardRequirement.Matches(labels.Set(stage.Labels)); !ok {
-		// Ignore if stage does not belong to given shard
-		return ctrl.Result{}, err
+	if stage.IsControlFlow() {
+		return ctrl.Result{}, nil
 	}
+
 	logger.Debug("found Stage")
 
 	var newStatus kargoapi.StageStatus
@@ -527,11 +530,7 @@ func (r *reconciler) Reconcile(
 		if _, err = kargoapi.EnsureFinalizer(ctx, r.kargoClient, stage); err != nil {
 			newStatus = stage.Status
 		} else {
-			if stage.IsControlFlow() {
-				newStatus, err = r.syncControlFlowStage(ctx, stage)
-			} else {
-				newStatus, err = r.syncNormalStage(ctx, stage)
-			}
+			newStatus, err = r.syncNormalStage(ctx, stage)
 		}
 	}
 	if err != nil {
@@ -573,77 +572,34 @@ func (r *reconciler) Reconcile(
 		return ctrl.Result{}, err
 	}
 
-	// Everything succeeded, look for new changes on the defined interval.
-	//
+	// TODO: krancour: This is a bit hacky, but it's expedient. We'll simply
+	// repeat the entire reconciliation loop if we finished without error, the
+	// Stage doesn't have a current Promotion, and there are non-terminal
+	// Promotions for the Stage waiting to be handled.
+	var mustRequeue bool
+	if newStatus.CurrentPromotion == nil {
+		promos := kargoapi.PromotionList{}
+		if err := r.kargoClient.List(
+			ctx,
+			&promos,
+			client.InNamespace(stage.Namespace),
+			client.MatchingFields{
+				indexer.PromotionsByStageField:    stage.Name,
+				indexer.PromotionsByTerminalField: "false",
+			},
+			client.Limit(1),
+		); err != nil {
+			return ctrl.Result{}, err
+		}
+		mustRequeue = len(promos.Items) > 0
+	}
+
+	if mustRequeue {
+		return ctrl.Result{Requeue: true}, nil
+	}
+
 	// TODO: Make this configurable
 	return ctrl.Result{RequeueAfter: 5 * time.Minute}, nil
-}
-
-func (r *reconciler) syncControlFlowStage(
-	ctx context.Context,
-	stage *kargoapi.Stage,
-) (kargoapi.StageStatus, error) {
-	startTime := r.nowFn()
-
-	status := *stage.Status.DeepCopy()
-	status.ObservedGeneration = stage.Generation
-	status.Phase = kargoapi.StagePhaseNotApplicable
-
-	// A Stage without promotion mechanisms shouldn't have history, health, or
-	// promotions. Make sure this is empty to avoid confusion. A reason this
-	// could be non-empty to begin with is that the Stage USED TO have promotion
-	// mechanisms, but they were removed, thus becoming a control flow Stage.
-	status.FreightHistory = nil
-	status.Health = nil
-	status.CurrentPromotion = nil
-	status.LastPromotion = nil
-	status.FreightSummary = "N/A"
-
-	// Find all Freight available to this Stage, except for those that
-	// are available on account of manual approval.
-	availableFreight, err := r.getAvailableFreightFn(ctx, stage, false)
-	if err != nil {
-		return status, fmt.Errorf(
-			"error getting available Freight for control flow Stage %q in namespace %q: %w",
-			stage.Name,
-			stage.Namespace,
-			err,
-		)
-	}
-
-	finishTime := r.nowFn()
-	for _, available := range availableFreight {
-		af := available // Avoid implicit memory aliasing
-		// Only bother to mark as verified in this Stage if not already the case.
-		if _, verified := af.Status.VerifiedIn[stage.Name]; !verified {
-			newStatus := *af.Status.DeepCopy()
-			if newStatus.VerifiedIn == nil {
-				newStatus.VerifiedIn = map[string]kargoapi.VerifiedStage{}
-			}
-			newStatus.VerifiedIn[stage.Name] = kargoapi.VerifiedStage{}
-			if err := r.patchFreightStatusFn(ctx, &af, newStatus); err != nil {
-				return status, fmt.Errorf(
-					"error marking Freight %q in namespace %q as verified in Stage %q: %w",
-					af.Name,
-					stage.Namespace,
-					stage.Name,
-					err,
-				)
-			}
-
-			r.recordFreightVerificationEvent(
-				stage,
-				&af,
-				&kargoapi.VerificationInfo{
-					StartTime:  ptr.To(metav1.NewTime(startTime)),
-					FinishTime: ptr.To(metav1.NewTime(finishTime)),
-					Phase:      kargoapi.VerificationPhaseSuccessful,
-				},
-				nil, // Explicitly pass `nil` here since there is no associated AnalysisRun
-			)
-		}
-	}
-	return status, nil
 }
 
 func (r *reconciler) syncNormalStage(
@@ -680,8 +636,7 @@ func (r *reconciler) syncNormalStage(
 			"Stage has no current Freight; no health checks or verification to perform",
 		)
 	} else {
-		switch {
-		case stage.Spec.PromotionTemplate != nil:
+		if stage.Spec.PromotionTemplate != nil {
 			healthChecks := stage.Status.LastPromotion.GetHealthChecks()
 			if len(healthChecks) > 0 {
 				var steps []directives.HealthCheckStep
@@ -701,18 +656,6 @@ func (r *reconciler) syncNormalStage(
 				logger.WithValues("health", status.Health.Status).Debug("Stage health assessed")
 			} else {
 				logger.Debug("Stage has no health checks to perform for last Promotion")
-			}
-		default:
-			// Always check the health of the Argo CD Applications associated with the
-			// Stage. This is regardless of the phase of the Stage, as the health of the
-			// Argo CD Applications is always relevant.
-			if status.Health = r.appHealth.EvaluateHealth(
-				ctx,
-				stage,
-			); status.Health != nil {
-				logger.WithValues("health", status.Health.Status).Debug("Stage health assessed")
-			} else {
-				logger.Debug("Stage health deemed not applicable")
 			}
 		}
 
@@ -766,7 +709,7 @@ func (r *reconciler) syncNormalStage(
 
 					// Abort the verification if it's still running and the Stage has
 					// been marked to do so.
-					if req, _ := kargoapi.AbortAnnotationValue(
+					if req, _ := kargoapi.AbortVerificationAnnotationValue(
 						stage.GetAnnotations(),
 					); !currentVI.Phase.IsTerminal() && req.ForID(currentVI.ID) {
 						logger.Debug("aborting verification")
@@ -814,7 +757,7 @@ func (r *reconciler) syncNormalStage(
 		// THEN
 		// Mark the Freight as verified in this Stage
 		if (status.Health == nil || status.Health.Status == kargoapi.HealthStateHealthy) &&
-			currentVI.Phase == kargoapi.VerificationPhaseSuccessful {
+			(currentVI != nil && currentVI.Phase == kargoapi.VerificationPhaseSuccessful) {
 			for _, freight := range currentFC.Freight {
 				updated, err := r.verifyFreightInStageFn(
 					ctx,
@@ -956,7 +899,7 @@ func (r *reconciler) syncNormalStage(
 			&client.ListOptions{
 				Namespace: stage.Namespace,
 				FieldSelector: fields.OneTermEqualSelector(
-					indexer.PromotionsByStageAndFreightIndexField,
+					indexer.PromotionsByStageAndFreightField,
 					indexer.StageAndFreightKey(stage.Name, latestFreight.Name),
 				),
 				Limit: 1,
@@ -989,7 +932,7 @@ func (r *reconciler) syncNormalStage(
 
 		r.recorder.AnnotatedEventf(
 			&promo,
-			kargoapi.NewPromotionEventAnnotations(
+			kargoEvent.NewPromotionAnnotations(
 				ctx,
 				kargoapi.FormatEventControllerActor(r.cfg.Name()),
 				&promo,
@@ -1041,18 +984,29 @@ func (r *reconciler) syncPromotions(
 	// current state of the Stage.
 	slices.SortFunc(promotions, kargoapi.ComparePromotionByPhaseAndCreationTime)
 
-	// If the latest Promotion is in a running phase, the Stage is promoting.
-	if latestPromo := promotions[0]; !latestPromo.Status.Phase.IsTerminal() {
-		logger.WithValues("promotion", latestPromo.Name).Debug("Stage has a running Promotion")
-		status.Phase = kargoapi.StagePhasePromoting
-		status.CurrentPromotion = &kargoapi.PromotionReference{
-			Name: latestPromo.Name,
+	// The Promotion with the highest priority (i.e. a Running or Pending phase)
+	// is the one that we will consider for the current state of the Stage.
+	highestPrioPromo := promotions[0]
+
+	// If the highest priority Promotion does not match the current Promotion, or
+	// is in a terminal phase, then the current Promotion is no longer valid.
+	if curPromotion := status.CurrentPromotion; curPromotion != nil {
+		if curPromotion.Name != highestPrioPromo.Name || highestPrioPromo.Status.Phase.IsTerminal() {
+			status.CurrentPromotion = nil
 		}
-		if latestPromo.Status.Freight != nil {
-			status.CurrentPromotion.Freight = latestPromo.Status.Freight.DeepCopy()
+	}
+
+	// If there is any ongoing verification, we need to let it finish before we
+	// can continue with acknowledging the new Promotion.
+	if curFreightCol := status.FreightHistory.Current(); curFreightCol != nil {
+		for _, verification := range curFreightCol.VerificationHistory {
+			if !verification.Phase.IsTerminal() {
+				logger.WithValues("verification", verification.ID).Debug(
+					"Stage has a running verification: waiting for it to complete before promoting new Freight",
+				)
+				return status, nil
+			}
 		}
-	} else {
-		status.CurrentPromotion = nil
 	}
 
 	// Determine if there are any new Promotions that have been completed since
@@ -1098,11 +1052,76 @@ func (r *reconciler) syncPromotions(
 	for _, p := range newPromotions {
 		promo := p
 		status.LastPromotion = &promo
-		if promo.Status.Phase == kargoapi.PromotionPhaseSucceeded {
-			status.FreightHistory.Record(status.LastPromotion.Status.FreightCollection)
+		switch promo.Status.Phase {
+		case kargoapi.PromotionPhaseSucceeded:
+			status.FreightHistory.Record(promo.Status.FreightCollection)
 			if status.CurrentPromotion == nil {
 				status.Phase = kargoapi.StagePhaseSteady
 			}
+		case kargoapi.PromotionPhasePending, kargoapi.PromotionPhaseRunning:
+			// No-op for safety in case the surrounding logic ever changes
+		default:
+			status.Phase = kargoapi.StagePhaseFailed
+		}
+	}
+
+	// We already dealt with in-progress verification above. At this point we
+	// need to decide between waiting for verification of the the current Freight
+	// to start or moving on to the next Promotion.
+	if status.Phase == kargoapi.StagePhaseSteady || status.Phase == kargoapi.StagePhaseVerifying {
+		// TODO: krancour: This is hacky but expedient. We check the health
+		// elsewhere as well, but it's crucial that we have up-to-date health info
+		// here. This duplication will be dealt with in a forthcoming refactor.
+		health := kargoapi.Health{
+			Status: kargoapi.HealthStateHealthy,
+		}
+		if healthChecks := stage.Status.LastPromotion.GetHealthChecks(); len(healthChecks) > 0 {
+			var steps []directives.HealthCheckStep
+			for _, step := range healthChecks {
+				steps = append(steps, directives.HealthCheckStep{
+					Kind:   step.Uses,
+					Config: step.GetConfig(),
+				})
+			}
+			health = r.directivesEngine.CheckHealth(ctx, directives.HealthCheckContext{
+				Project: stage.Namespace,
+				Stage:   stage.Name,
+			}, steps)
+		}
+		// If the Stage is unhealthy, it probably won't ever reach a healthy state
+		// again without a new promotion, so we should only consider waiting if
+		// the Stage has some health state BESIDES unhealthy.
+		if health.Status != kargoapi.HealthStateUnhealthy {
+			if stage.Spec.Verification != nil { // nolint: revive
+				// If there were explicit verification procedures defined and we find no
+				// verification history, then we need to wait.
+				if status.FreightHistory.Current() == nil || len(status.FreightHistory.Current().VerificationHistory) == 0 {
+					logger.WithValues().Debug(
+						"Stage is waiting for explicitly defined verification process to start; not moving on to next Promotion",
+					)
+					return status, nil
+				}
+			} else if health.Status != kargoapi.HealthStateHealthy {
+				// If no explicit verification procedures were defined, we just need to
+				// wait for the Stage to become healthy.
+				logger.WithValues().Debug(
+					"Stage is waiting to reach a healthy state; not moving on to next Promotion",
+				)
+				return status, nil
+			}
+		}
+	}
+
+	// If the highest priority Promotion is in a non-terminal phase, the Stage is
+	// now promoting.
+	if !highestPrioPromo.Status.Phase.IsTerminal() {
+		logger.WithValues("promotion", highestPrioPromo.Name).Debug("Stage has a non-terminal Promotion")
+		status.Phase = kargoapi.StagePhasePromoting
+		status.CurrentPromotion = &kargoapi.PromotionReference{
+			Name: highestPrioPromo.Name,
+		}
+		if highestPrioPromo.Status.Freight != nil {
+			status.CurrentPromotion.Freight = highestPrioPromo.Status.Freight.DeepCopy()
 		}
 	}
 
@@ -1156,7 +1175,7 @@ func (r *reconciler) clearVerifications(
 		&client.ListOptions{
 			Namespace: stage.Namespace,
 			FieldSelector: fields.OneTermEqualSelector(
-				indexer.FreightByVerifiedStagesIndexField,
+				indexer.FreightByVerifiedStagesField,
 				stage.Name,
 			),
 		},
@@ -1198,7 +1217,7 @@ func (r *reconciler) clearApprovals(
 		&client.ListOptions{
 			Namespace: stage.Namespace,
 			FieldSelector: fields.OneTermEqualSelector(
-				indexer.FreightApprovedForStagesIndexField,
+				indexer.FreightApprovedForStagesField,
 				stage.Name,
 			),
 		},
@@ -1374,7 +1393,7 @@ func (r *reconciler) getPromotionsForStage(
 		&client.ListOptions{
 			Namespace: stageNamespace,
 			FieldSelector: fields.OneTermEqualSelector(
-				indexer.PromotionsByStageIndexField,
+				indexer.PromotionsByStageField,
 				stageName,
 			),
 		},
@@ -1387,95 +1406,6 @@ func (r *reconciler) getPromotionsForStage(
 		)
 	}
 	return promos.Items, nil
-}
-
-func (r *reconciler) getAvailableFreight(
-	ctx context.Context,
-	stage *kargoapi.Stage,
-	includeApproved bool,
-) ([]kargoapi.Freight, error) {
-	var availableFreight []kargoapi.Freight
-	for _, req := range stage.Spec.RequestedFreight {
-		// Get Freight direct from Warehouses if allowed
-		if req.Origin.Kind == kargoapi.FreightOriginKindWarehouse && req.Sources.Direct {
-			var freight kargoapi.FreightList
-			if err := r.listFreightFn(
-				ctx,
-				&freight,
-				&client.ListOptions{
-					Namespace: stage.Namespace,
-					FieldSelector: fields.OneTermEqualSelector(
-						indexer.FreightByWarehouseIndexField,
-						req.Origin.Name,
-					),
-				},
-			); err != nil {
-				return nil, fmt.Errorf(
-					"error listing Freight from %s in namespace %q: %w",
-					req.Origin.String(),
-					stage.Namespace,
-					err,
-				)
-			}
-			availableFreight = append(availableFreight, freight.Items...)
-		}
-		// Get Freight verified in upstream Stages
-		for _, upstream := range req.Sources.Stages {
-			var verifiedFreight kargoapi.FreightList
-			if err := r.listFreightFn(
-				ctx,
-				&verifiedFreight,
-				&client.ListOptions{
-					Namespace: stage.Namespace,
-					FieldSelector: fields.OneTermEqualSelector(
-						indexer.FreightByVerifiedStagesIndexField,
-						upstream,
-					),
-				},
-			); err != nil {
-				return nil, fmt.Errorf(
-					"error listing Freight verified in Stage %q in namespace %q: %w",
-					upstream,
-					stage.Namespace,
-					err,
-				)
-			}
-			availableFreight = append(availableFreight, verifiedFreight.Items...)
-		}
-	}
-
-	if includeApproved {
-		var approvedFreight kargoapi.FreightList
-		if err := r.listFreightFn(
-			ctx,
-			&approvedFreight,
-			&client.ListOptions{
-				Namespace: stage.Namespace,
-				FieldSelector: fields.OneTermEqualSelector(
-					indexer.FreightApprovedForStagesIndexField,
-					stage.Name,
-				),
-			},
-		); err != nil {
-			return nil, fmt.Errorf(
-				"error listing Freight approved for Stage %q in namespace %q: %w",
-				stage,
-				stage.Namespace,
-				err,
-			)
-		}
-		availableFreight = append(availableFreight, approvedFreight.Items...)
-	}
-
-	// De-dupe the Freight
-	slices.SortFunc(availableFreight, func(lhs, rhs kargoapi.Freight) int {
-		return strings.Compare(lhs.Name, rhs.Name)
-	})
-	availableFreight = slices.CompactFunc(availableFreight, func(lhs, rhs kargoapi.Freight) bool {
-		return lhs.Name == rhs.Name
-	})
-
-	return availableFreight, nil
 }
 
 func (r *reconciler) getAvailableFreightByOrigin(
@@ -1499,7 +1429,7 @@ func (r *reconciler) getAvailableFreightByOrigin(
 				&client.ListOptions{
 					Namespace: stage.Namespace,
 					FieldSelector: fields.OneTermEqualSelector(
-						indexer.FreightByWarehouseIndexField,
+						indexer.FreightByWarehouseField,
 						req.Origin.Name,
 					),
 				},
@@ -1531,11 +1461,11 @@ func (r *reconciler) getAvailableFreightByOrigin(
 						// TODO(hidde): once we support more Freight origin
 						// kinds, we need to adjust this.
 						fields.OneTermEqualSelector(
-							indexer.FreightByWarehouseIndexField,
+							indexer.FreightByWarehouseField,
 							req.Origin.Name,
 						),
 						fields.OneTermEqualSelector(
-							indexer.FreightByVerifiedStagesIndexField,
+							indexer.FreightByVerifiedStagesField,
 							upstream,
 						),
 					),
@@ -1563,11 +1493,11 @@ func (r *reconciler) getAvailableFreightByOrigin(
 						// TODO(hidde): once we support more Freight origin
 						// kinds, we need to adjust this.
 						fields.OneTermEqualSelector(
-							indexer.FreightByWarehouseIndexField,
+							indexer.FreightByWarehouseField,
 							req.Origin.Name,
 						),
 						fields.OneTermEqualSelector(
-							indexer.FreightApprovedForStagesIndexField,
+							indexer.FreightApprovedForStagesField,
 							stage.Name,
 						),
 					),

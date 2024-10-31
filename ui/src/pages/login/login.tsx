@@ -8,6 +8,7 @@ import { AdminLogin } from '@ui/features/auth/admin-login';
 import { useAuthContext } from '@ui/features/auth/context/use-auth-context';
 import { OIDCLogin } from '@ui/features/auth/oidc-login';
 import { LoadingState } from '@ui/features/common';
+import { KargoLogo } from '@ui/features/common/logo/logo';
 import { getPublicConfig } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 
 import * as styles from './login.module.less';
@@ -28,10 +29,7 @@ export const Login = () => {
 
   return (
     <div className={styles.container}>
-      <div className={styles.logo}>
-        <img src='/kargo-icon.png' alt='Kargo Icon' />
-        kargo
-      </div>
+      <KargoLogo />
       <div className={styles.box}>
         {isLoading && <LoadingState />}
         {data?.adminAccountEnabled && (

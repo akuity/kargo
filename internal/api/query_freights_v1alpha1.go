@@ -169,7 +169,7 @@ func (s *server) getAvailableFreightForStage(
 		&client.ListOptions{
 			Namespace: project,
 			FieldSelector: fields.OneTermEqualSelector(
-				indexer.FreightApprovedForStagesIndexField,
+				indexer.FreightApprovedForStagesField,
 				stage,
 			),
 		},
@@ -216,7 +216,7 @@ func (s *server) getFreightFromWarehouses(
 			&client.ListOptions{
 				Namespace: project,
 				FieldSelector: fields.OneTermEqualSelector(
-					indexer.FreightByWarehouseIndexField,
+					indexer.FreightByWarehouseField,
 					warehouse,
 				),
 			},
@@ -247,7 +247,7 @@ func (s *server) getVerifiedFreight(
 			&client.ListOptions{
 				Namespace: project,
 				FieldSelector: fields.OneTermEqualSelector(
-					indexer.FreightByVerifiedStagesIndexField,
+					indexer.FreightByVerifiedStagesField,
 					upstream,
 				),
 			},

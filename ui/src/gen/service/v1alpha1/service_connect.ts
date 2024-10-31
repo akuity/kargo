@@ -178,6 +178,15 @@ export const KargoService = {
       kind: MethodKind.ServerStreaming,
     },
     /**
+     * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.AbortPromotion
+     */
+    abortPromotion: {
+      name: "AbortPromotion",
+      I: AbortPromotionRequest,
+      O: AbortPromotionResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
      * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.DeleteProject
      */
     deleteProject: {

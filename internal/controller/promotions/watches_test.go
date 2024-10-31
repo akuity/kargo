@@ -9,7 +9,6 @@ import (
 	"github.com/stretchr/testify/require"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/workqueue"
@@ -26,13 +25,12 @@ import (
 
 func TestUpdatedArgoCDAppHandler_Update(t *testing.T) {
 	tests := []struct {
-		name          string
-		applications  []client.Object
-		indexer       client.IndexerFunc
-		interceptor   interceptor.Funcs
-		shardSelector labels.Selector
-		e             event.TypedUpdateEvent[*argocd.Application]
-		assertions    func(*testing.T, workqueue.TypedRateLimitingInterface[reconcile.Request])
+		name         string
+		applications []client.Object
+		indexer      client.IndexerFunc
+		interceptor  interceptor.Funcs
+		e            event.TypedUpdateEvent[*argocd.Application]
+		assertions   func(*testing.T, workqueue.TypedRateLimitingInterface[reconcile.Request])
 	}{
 		{
 			name: "Event without new object",
@@ -162,64 +160,6 @@ func TestUpdatedArgoCDAppHandler_Update(t *testing.T) {
 			},
 		},
 		{
-			name: "Event object with indexed Promotion and shard selector",
-			applications: []client.Object{
-				&kargoapi.Promotion{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "matching-promotion",
-						Namespace: "fake-namespace",
-						Labels: map[string]string{
-							"shard-label": "shard-value",
-						},
-					},
-				},
-				&kargoapi.Promotion{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "matching-promotion-without-shard-label",
-						Namespace: "fake-namespace",
-					},
-				},
-				&kargoapi.Promotion{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "other-promotion-with-shard-label",
-						Namespace: "fake-namespace",
-						Labels: map[string]string{
-							"shard-label": "other-shard-value",
-						},
-					},
-				},
-			},
-			indexer: func(obj client.Object) []string {
-				if strings.HasPrefix(obj.GetName(), "matching-promotion") {
-					return []string{"fake-application-namespace:fake-application-name"}
-				}
-				return nil
-			},
-			shardSelector: labels.SelectorFromSet(labels.Set{
-				"shard-label": "shard-value",
-			}),
-			e: event.TypedUpdateEvent[*argocd.Application]{
-				ObjectOld: &argocd.Application{},
-				ObjectNew: &argocd.Application{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "fake-application-name",
-						Namespace: "fake-application-namespace",
-					},
-				},
-			},
-			assertions: func(t *testing.T, wq workqueue.TypedRateLimitingInterface[reconcile.Request]) {
-				require.Equal(t, 1, wq.Len())
-
-				item, _ := wq.Get()
-				require.Equal(t, reconcile.Request{
-					NamespacedName: types.NamespacedName{
-						Namespace: "fake-namespace",
-						Name:      "matching-promotion",
-					},
-				}, item)
-			},
-		},
-		{
 			name: "Event object has no indexed Promotion",
 			applications: []client.Object{
 				&kargoapi.Promotion{
@@ -287,14 +227,13 @@ func TestUpdatedArgoCDAppHandler_Update(t *testing.T) {
 				WithObjects(tt.applications...).
 				WithIndex(
 					&kargoapi.Promotion{},
-					indexer.RunningPromotionsByArgoCDApplicationsIndexField,
+					indexer.RunningPromotionsByArgoCDApplicationsField,
 					tt.indexer,
 				).
 				WithInterceptorFuncs(tt.interceptor)
 
 			u := &UpdatedArgoCDAppHandler[*argocd.Application]{
-				kargoClient:   c.Build(),
-				shardSelector: tt.shardSelector,
+				kargoClient: c.Build(),
 			}
 
 			wq := workqueue.NewTypedRateLimitingQueue(workqueue.DefaultTypedControllerRateLimiter[reconcile.Request]())

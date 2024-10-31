@@ -1,0 +1,24 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "title": "CommonDefs",
+ "definitions": {
+  "origin": {
+   "type": "object",
+   "additionalProperties": false,
+   "properties": {
+    "kind": {
+     "type": "string",
+     "description": "The kind of origin. Currently only 'Warehouse' is supported. Required.",
+     "enum": [
+      "Warehouse"
+     ]
+    },
+    "name": {
+     "type": "string",
+     "description": "The name of the origin. Required.",
+     "minLength": 1
+    }
+   }
+  }
+ }
+}

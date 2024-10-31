@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	stdruntime "runtime"
 
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
@@ -23,6 +24,8 @@ import (
 
 type garbageCollectorOptions struct {
 	KubeConfig string
+
+	PprofBindAddress string
 
 	Logger *logging.Logger
 }
@@ -51,6 +54,7 @@ func newGarbageCollectorCommand() *cobra.Command {
 
 func (o *garbageCollectorOptions) complete() {
 	o.KubeConfig = os.GetEnv("KUBECONFIG", "")
+	o.PprofBindAddress = os.GetEnv("PPROF_BIND_ADDRESS", "")
 }
 
 func (o *garbageCollectorOptions) run(ctx context.Context) error {
@@ -60,6 +64,8 @@ func (o *garbageCollectorOptions) run(ctx context.Context) error {
 		"Starting Kargo Garbage Collector",
 		"version", version.Version,
 		"commit", version.GitCommit,
+		"GOMAXPROCS", stdruntime.GOMAXPROCS(0),
+		"GOMEMLIMIT", os.GetEnv("GOMEMLIMIT", ""),
 	)
 
 	mgr, err := o.setupManager(ctx)
@@ -105,6 +111,7 @@ func (o *garbageCollectorOptions) setupManager(ctx context.Context) (manager.Man
 			Metrics: server.Options{
 				BindAddress: "0",
 			},
+			PprofBindAddress: o.PprofBindAddress,
 		},
 	)
 	if err != nil {
@@ -112,15 +119,32 @@ func (o *garbageCollectorOptions) setupManager(ctx context.Context) (manager.Man
 	}
 
 	// Index Promotions by Stage
-	if err = indexer.IndexPromotionsByStage(ctx, mgr); err != nil {
+	if err = mgr.GetFieldIndexer().IndexField(
+		ctx,
+		&kargoapi.Promotion{},
+		indexer.PromotionsByStageField,
+		indexer.PromotionsByStage,
+	); err != nil {
 		return nil, fmt.Errorf("error indexing Promotions by Stage: %w", err)
 	}
+
 	// Index Freight by Warehouse
-	if err = indexer.IndexFreightByWarehouse(ctx, mgr); err != nil {
+	if err = mgr.GetFieldIndexer().IndexField(
+		ctx,
+		&kargoapi.Freight{},
+		indexer.FreightByWarehouseField,
+		indexer.FreightByWarehouse,
+	); err != nil {
 		return nil, fmt.Errorf("error indexing Freight by Warehouse: %w", err)
 	}
+
 	// Index Stages by Freight
-	if err = indexer.IndexStagesByFreight(ctx, mgr); err != nil {
+	if err = mgr.GetFieldIndexer().IndexField(
+		ctx,
+		&kargoapi.Stage{},
+		indexer.StagesByFreightField,
+		indexer.StagesByFreight,
+	); err != nil {
 		return nil, fmt.Errorf("error indexing Stages by Freight: %w", err)
 	}
 	return mgr, nil

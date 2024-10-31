@@ -20,6 +20,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	kargoEvent "github.com/akuity/kargo/internal/event"
 	libEvent "github.com/akuity/kargo/internal/kubernetes/event"
 	"github.com/akuity/kargo/internal/logging"
 	libWebhook "github.com/akuity/kargo/internal/webhook"
@@ -139,20 +140,28 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 	if promo.Annotations == nil {
 		promo.Annotations = make(map[string]string, 1)
 	}
-	if req.Operation == admissionv1.Create {
+
+	switch req.Operation {
+	case admissionv1.Create:
 		// Set actor as an admission request's user info when the promotion is created
 		// to allow controllers to track who created it.
 		if !w.isRequestFromKargoControlplaneFn(req) {
 			promo.Annotations[kargoapi.AnnotationKeyCreateActor] =
 				kargoapi.FormatEventKubernetesUserActor(req.UserInfo)
 		}
-	} else if req.Operation == admissionv1.Update {
+
+		// Enrich the annotation with the actor and control plane information.
+		w.setAbortAnnotationActor(req, nil, promo)
+	case admissionv1.Update:
 		// Ensure actor annotation immutability
 		if oldActor, ok := oldPromo.Annotations[kargoapi.AnnotationKeyCreateActor]; ok {
 			promo.Annotations[kargoapi.AnnotationKeyCreateActor] = oldActor
 		} else {
 			delete(promo.Annotations, kargoapi.AnnotationKeyCreateActor)
 		}
+
+		// Enrich the annotation with the actor and control plane information.
+		w.setAbortAnnotationActor(req, oldPromo, promo)
 	}
 
 	stage, err := w.getStageFn(
@@ -178,10 +187,9 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 			promo.Namespace,
 		)
 	}
-	// nolint: staticcheck
-	if len(promo.Spec.Steps) == 0 && stage.Spec.PromotionMechanisms == nil {
+	if len(promo.Spec.Steps) == 0 {
 		return fmt.Errorf(
-			"Stage %q in namespace %q has no PromotionMechanisms",
+			"Stage %q in namespace %q defines no promotion steps",
 			promo.Spec.Stage,
 			promo.Namespace,
 		)
@@ -222,15 +230,38 @@ func (w *webhook) ValidateCreate(
 		return nil, fmt.Errorf("get admission request from context: %w", err)
 	}
 
+	stage, err := w.getStageFn(ctx, w.client, types.NamespacedName{
+		Namespace: promo.Namespace,
+		Name:      promo.Spec.Stage,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("get stage: %w", err)
+	}
+
+	freight, err := w.getFreightFn(ctx, w.client, types.NamespacedName{
+		Namespace: promo.Namespace,
+		Name:      promo.Spec.Freight,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("get freight: %w", err)
+	}
+
+	if !kargoapi.IsFreightAvailable(stage, freight) {
+		return nil, apierrors.NewInvalid(
+			promotionGroupKind,
+			promo.Name,
+			field.ErrorList{
+				field.Invalid(
+					field.NewPath("spec", "freight"),
+					promo.Spec.Freight,
+					"Freight is not available to this Stage",
+				),
+			},
+		)
+	}
+
 	// Record Promotion created event if the request doesn't come from Kargo controlplane
 	if !w.isRequestFromKargoControlplaneFn(req) {
-		freight, err := w.getFreightFn(ctx, w.client, types.NamespacedName{
-			Namespace: promo.Namespace,
-			Name:      promo.Spec.Freight,
-		})
-		if err != nil {
-			return nil, fmt.Errorf("get freight: %w", err)
-		}
 		w.recordPromotionCreatedEvent(ctx, req, promo, freight)
 	}
 	return nil, nil
@@ -342,11 +373,32 @@ func (w *webhook) recordPromotionCreatedEvent(
 	actor := kargoapi.FormatEventKubernetesUserActor(req.UserInfo)
 	w.recorder.AnnotatedEventf(
 		p,
-		kargoapi.NewPromotionEventAnnotations(ctx, actor, p, f),
+		kargoEvent.NewPromotionAnnotations(ctx, actor, p, f),
 		corev1.EventTypeNormal,
 		kargoapi.EventReasonPromotionCreated,
 		"Promotion created for Stage %q by %q",
 		p.Spec.Stage,
 		actor,
 	)
+}
+
+func (w *webhook) setAbortAnnotationActor(req admission.Request, old, new *kargoapi.Promotion) {
+	if abortReq, ok := kargoapi.AbortPromotionAnnotationValue(new.Annotations); ok {
+		var oldAbortReq *kargoapi.AbortPromotionRequest
+		if old != nil {
+			oldAbortReq, _ = kargoapi.AbortPromotionAnnotationValue(old.Annotations)
+		}
+		// If the abort request has changed, enrich the annotation with the
+		// actor and control plane information.
+		if old == nil || oldAbortReq == nil || !abortReq.Equals(oldAbortReq) {
+			abortReq.ControlPlane = w.isRequestFromKargoControlplaneFn(req)
+			if !abortReq.ControlPlane {
+				// If the abort request is not from the control plane, then it's
+				// from a specific Kubernetes user. Without this check we would
+				// overwrite the actor field set by the control plane.
+				abortReq.Actor = kargoapi.FormatEventKubernetesUserActor(req.UserInfo)
+			}
+			new.Annotations[kargoapi.AnnotationKeyAbort] = abortReq.String()
+		}
+	}
 }

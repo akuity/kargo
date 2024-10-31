@@ -9,11 +9,11 @@ const darkCodeTheme = themes.dracula;
 /** @type {import('@docusaurus/types').Config} */
 const config = {
   title: 'Kargo Docs',
-  url: 'https://kargo.akuity.io',
+  url: 'https://docs.kargo.io',
   baseUrl: '/',
   onBrokenLinks: 'throw',
   onBrokenMarkdownLinks: 'warn',
-  favicon: 'img/favicon.ico',
+  favicon: 'img/kargo.png',
 
   // Even if you don't use internalization, you can use this field to set useful
   // metadata like html lang. For example, if your site is Chinese, you may want
@@ -61,6 +61,11 @@ const config = {
   themeConfig:
     /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
     ({
+      docs: {
+        sidebar: {
+          hideable: true,
+        },
+      },
       navbar: {
         title: 'Kargo Docs',
         logo: {
@@ -73,6 +78,11 @@ const config = {
           {
             href: 'https://akuity.io/',
             label: 'Akuity.io',
+            position: 'left',
+          },
+          {
+            href: 'https://kargo.io/',
+            label: 'Kargo.io',
             position: 'left',
           },
           {

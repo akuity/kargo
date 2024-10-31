@@ -2,6 +2,7 @@ package directives
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -114,11 +115,11 @@ func (a *argocdUpdater) getDesiredRevisionForSource(
 			chartName,
 		)
 		if err != nil {
+			if errors.As(err, &freight.NotFoundError{}) {
+				return "", nil
+			}
 			return "",
 				fmt.Errorf("error finding chart from repo %q: %w", repoURL, err)
-		}
-		if chart == nil {
-			return "", nil
 		}
 		return chart.Version, nil
 	case src.RepoURL != "":
@@ -133,14 +134,11 @@ func (a *argocdUpdater) getDesiredRevisionForSource(
 			src.RepoURL,
 		)
 		if err != nil {
+			if errors.As(err, &freight.NotFoundError{}) {
+				return "", nil
+			}
 			return "",
 				fmt.Errorf("error finding commit from repo %q: %w", src.RepoURL, err)
-		}
-		if commit == nil {
-			return "", nil
-		}
-		if commit.HealthCheckCommit != "" {
-			return commit.HealthCheckCommit, nil
 		}
 		return commit.ID, nil
 	}

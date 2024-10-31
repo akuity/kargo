@@ -1,14 +1,11 @@
 package v1alpha1
 
 import (
-	"context"
-	"encoding/json"
 	"time"
 
 	authnv1 "k8s.io/api/authentication/v1"
 
 	"github.com/akuity/kargo/internal/api/user"
-	"github.com/akuity/kargo/internal/logging"
 )
 
 const (
@@ -27,6 +24,7 @@ const (
 	AnnotationKeyEventVerificationPending    = "event.kargo.akuity.io/verification-pending"
 	AnnotationKeyEventVerificationStartTime  = "event.kargo.akuity.io/verification-start-time"
 	AnnotationKeyEventVerificationFinishTime = "event.kargo.akuity.io/verification-finish-time"
+	AnnotationKeyEventApplications           = "event.kargo.akuity.io/applications"
 )
 
 const (
@@ -34,6 +32,7 @@ const (
 	EventReasonPromotionSucceeded              = "PromotionSucceeded"
 	EventReasonPromotionFailed                 = "PromotionFailed"
 	EventReasonPromotionErrored                = "PromotionErrored"
+	EventReasonPromotionAborted                = "PromotionAborted"
 	EventReasonFreightApproved                 = "FreightApproved"
 	EventReasonFreightVerificationSucceeded    = "FreightVerificationSucceeded"
 	EventReasonFreightVerificationFailed       = "FreightVerificationFailed"
@@ -102,64 +101,6 @@ func NewFreightApprovedEventAnnotations(actor string, f *Freight, stageName stri
 	}
 	if actor != "" {
 		annotations[AnnotationKeyEventActor] = actor
-	}
-	return annotations
-}
-
-// NewPromotionEventAnnotations returns annotations for a Promotion related event.
-// It may skip some fields when error occurred during serialization, to record event with best-effort.
-func NewPromotionEventAnnotations(
-	ctx context.Context,
-	actor string,
-	p *Promotion,
-	f *Freight,
-) map[string]string {
-	logger := logging.LoggerFromContext(ctx)
-
-	annotations := map[string]string{
-		AnnotationKeyEventProject:             p.GetNamespace(),
-		AnnotationKeyEventPromotionName:       p.GetName(),
-		AnnotationKeyEventFreightName:         p.Spec.Freight,
-		AnnotationKeyEventStageName:           p.Spec.Stage,
-		AnnotationKeyEventPromotionCreateTime: p.GetCreationTimestamp().Format(time.RFC3339),
-	}
-
-	if actor != "" {
-		annotations[AnnotationKeyEventActor] = actor
-	}
-	// All Promotion-related events are emitted after the promotion was created.
-	// Therefore, if the promotion knows who triggered it, set them as an actor.
-	if promoteActor, ok := p.Annotations[AnnotationKeyCreateActor]; ok {
-		annotations[AnnotationKeyEventActor] = promoteActor
-	}
-
-	if f != nil {
-		annotations[AnnotationKeyEventFreightCreateTime] = f.CreationTimestamp.Format(time.RFC3339)
-		annotations[AnnotationKeyEventFreightAlias] = f.Alias
-		if len(f.Commits) > 0 {
-			data, err := json.Marshal(f.Commits)
-			if err != nil {
-				logger.Error(err, "marshal freight commits in JSON")
-			} else {
-				annotations[AnnotationKeyEventFreightCommits] = string(data)
-			}
-		}
-		if len(f.Images) > 0 {
-			data, err := json.Marshal(f.Images)
-			if err != nil {
-				logger.Error(err, "marshal freight images in JSON")
-			} else {
-				annotations[AnnotationKeyEventFreightImages] = string(data)
-			}
-		}
-		if len(f.Charts) > 0 {
-			data, err := json.Marshal(f.Charts)
-			if err != nil {
-				logger.Error(err, "marshal freight charts in JSON")
-			} else {
-				annotations[AnnotationKeyEventFreightCharts] = string(data)
-			}
-		}
 	}
 	return annotations
 }

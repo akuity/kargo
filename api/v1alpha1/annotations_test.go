@@ -1,6 +1,7 @@
 package v1alpha1
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -62,9 +63,9 @@ func TestReverifyAnnotationValue(t *testing.T) {
 	})
 }
 
-func TestAbortAnnotationValue(t *testing.T) {
+func TestAbortVerificationAnnotationValue(t *testing.T) {
 	t.Run("has abort annotation with valid JSON", func(t *testing.T) {
-		result, ok := AbortAnnotationValue(map[string]string{
+		result, ok := AbortVerificationAnnotationValue(map[string]string{
 			AnnotationKeyAbort: `{"id":"foo"}`,
 		})
 		require.True(t, ok)
@@ -72,7 +73,7 @@ func TestAbortAnnotationValue(t *testing.T) {
 	})
 
 	t.Run("has abort annotation with ID string", func(t *testing.T) {
-		result, ok := AbortAnnotationValue(map[string]string{
+		result, ok := AbortVerificationAnnotationValue(map[string]string{
 			AnnotationKeyAbort: "foo",
 		})
 		require.True(t, ok)
@@ -80,13 +81,45 @@ func TestAbortAnnotationValue(t *testing.T) {
 	})
 
 	t.Run("does not have abort annotation", func(t *testing.T) {
-		result, ok := AbortAnnotationValue(nil)
+		result, ok := AbortVerificationAnnotationValue(nil)
 		require.False(t, ok)
 		require.Nil(t, result)
 	})
 
 	t.Run("has abort annotation with empty ID", func(t *testing.T) {
-		result, ok := AbortAnnotationValue(map[string]string{
+		result, ok := AbortVerificationAnnotationValue(map[string]string{
+			AnnotationKeyAbort: "",
+		})
+		require.False(t, ok)
+		require.Nil(t, result)
+	})
+}
+
+func TestAbortPromotionAnnotationValue(t *testing.T) {
+	t.Run("has abort annotation with valid JSON", func(t *testing.T) {
+		result, ok := AbortPromotionAnnotationValue(map[string]string{
+			AnnotationKeyAbort: fmt.Sprintf(`{"action":"%s"}`, AbortActionTerminate),
+		})
+		require.True(t, ok)
+		require.Equal(t, AbortActionTerminate, result.Action)
+	})
+
+	t.Run("has abort annotation with action string", func(t *testing.T) {
+		result, ok := AbortPromotionAnnotationValue(map[string]string{
+			AnnotationKeyAbort: string(AbortActionTerminate),
+		})
+		require.True(t, ok)
+		require.Equal(t, AbortActionTerminate, result.Action)
+	})
+
+	t.Run("does not have abort annotation", func(t *testing.T) {
+		result, ok := AbortPromotionAnnotationValue(nil)
+		require.False(t, ok)
+		require.Nil(t, result)
+	})
+
+	t.Run("has abort annotation with empty action", func(t *testing.T) {
+		result, ok := AbortPromotionAnnotationValue(map[string]string{
 			AnnotationKeyAbort: "",
 		})
 		require.False(t, ok)

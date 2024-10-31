@@ -490,7 +490,7 @@ func TestDefault(t *testing.T) {
 			assertions: func(t *testing.T, stage *kargoapi.Stage, err error) {
 				require.NoError(t, err)
 				require.Contains(t, stage.Annotations, kargoapi.AnnotationKeyAbort)
-				rr, ok := kargoapi.AbortAnnotationValue(stage.Annotations)
+				rr, ok := kargoapi.AbortVerificationAnnotationValue(stage.Annotations)
 				require.True(t, ok)
 				require.Equal(t, &kargoapi.VerificationRequest{
 					ID: "fake-id",
@@ -533,7 +533,7 @@ func TestDefault(t *testing.T) {
 			assertions: func(t *testing.T, stage *kargoapi.Stage, err error) {
 				require.NoError(t, err)
 				require.Contains(t, stage.Annotations, kargoapi.AnnotationKeyAbort)
-				rr, ok := kargoapi.AbortAnnotationValue(stage.Annotations)
+				rr, ok := kargoapi.AbortVerificationAnnotationValue(stage.Annotations)
 				require.True(t, ok)
 				require.Equal(t, &kargoapi.VerificationRequest{
 					ID: "fake-id",
@@ -576,7 +576,7 @@ func TestDefault(t *testing.T) {
 			assertions: func(t *testing.T, stage *kargoapi.Stage, err error) {
 				require.NoError(t, err)
 				require.Contains(t, stage.Annotations, kargoapi.AnnotationKeyAbort)
-				rr, ok := kargoapi.AbortAnnotationValue(stage.Annotations)
+				rr, ok := kargoapi.AbortVerificationAnnotationValue(stage.Annotations)
 				require.True(t, ok)
 				require.Equal(t, &kargoapi.VerificationRequest{
 					ID:           "fake-id",
@@ -626,7 +626,7 @@ func TestDefault(t *testing.T) {
 			assertions: func(t *testing.T, stage *kargoapi.Stage, err error) {
 				require.NoError(t, err)
 				require.Contains(t, stage.Annotations, kargoapi.AnnotationKeyAbort)
-				rr, ok := kargoapi.AbortAnnotationValue(stage.Annotations)
+				rr, ok := kargoapi.AbortVerificationAnnotationValue(stage.Annotations)
 				require.True(t, ok)
 				require.Equal(t, &kargoapi.VerificationRequest{
 					ID:    "fake-id",
@@ -676,7 +676,7 @@ func TestDefault(t *testing.T) {
 			assertions: func(t *testing.T, stage *kargoapi.Stage, err error) {
 				require.NoError(t, err)
 				require.Contains(t, stage.Annotations, kargoapi.AnnotationKeyAbort)
-				rr, ok := kargoapi.AbortAnnotationValue(stage.Annotations)
+				rr, ok := kargoapi.AbortVerificationAnnotationValue(stage.Annotations)
 				require.True(t, ok)
 				require.Equal(t, &kargoapi.VerificationRequest{
 					ID:           "fake-id",
@@ -1033,8 +1033,6 @@ func TestValidateSpec(t *testing.T) {
 					testFreightRequest,
 					testFreightRequest,
 				},
-				// Doesn't actually define any mechanisms...
-				PromotionMechanisms: &kargoapi.PromotionMechanisms{},
 			},
 			assertions: func(t *testing.T, spec *kargoapi.StageSpec, errs field.ErrorList) {
 				// We really want to see that all underlying errors have been bubbled up
@@ -1048,14 +1046,6 @@ func TestValidateSpec(t *testing.T) {
 							BadValue: spec.RequestedFreight,
 							Detail: `freight with origin Warehouse/test-warehouse requested multiple ` +
 								"times in spec.requestedFreight",
-						},
-						{
-							Type:     field.ErrorTypeInvalid,
-							Field:    "spec.promotionMechanisms",
-							BadValue: spec.PromotionMechanisms, // nolint: staticcheck
-							Detail: "at least one of " +
-								"spec.promotionMechanisms.gitRepoUpdates or " +
-								"spec.promotionMechanisms.argoCDAppUpdates must be non-empty",
 						},
 					},
 					errs,
@@ -1144,253 +1134,6 @@ func TestValidateRequestedFreight(t *testing.T) {
 				w.validateRequestedFreight(
 					field.NewPath("requestedFreight"),
 					testCase.reqs,
-				),
-			)
-		})
-	}
-}
-
-func TestValidatePromotionMechanisms(t *testing.T) {
-	testCases := []struct {
-		name       string
-		promoMechs *kargoapi.PromotionMechanisms
-		assertions func(*testing.T, *kargoapi.PromotionMechanisms, field.ErrorList)
-	}{
-		{
-			name: "nil",
-			assertions: func(t *testing.T, _ *kargoapi.PromotionMechanisms, errs field.ErrorList) {
-				require.Nil(t, errs)
-			},
-		},
-
-		{
-			name: "invalid",
-			// Does not define any mechanisms
-			promoMechs: &kargoapi.PromotionMechanisms{},
-			assertions: func(
-				t *testing.T,
-				promoMechs *kargoapi.PromotionMechanisms,
-				errs field.ErrorList,
-			) {
-				require.NotNil(t, errs)
-				require.Equal(
-					t,
-					field.ErrorList{
-						{
-							Type:     field.ErrorTypeInvalid,
-							Field:    "promotionMechanisms",
-							BadValue: promoMechs,
-							Detail: "at least one of promotionMechanisms.gitRepoUpdates or " +
-								"promotionMechanisms.argoCDAppUpdates must be non-empty",
-						},
-					},
-					errs,
-				)
-			},
-		},
-
-		{
-			name: "valid",
-			promoMechs: &kargoapi.PromotionMechanisms{
-				GitRepoUpdates: []kargoapi.GitRepoUpdate{
-					{
-						Kustomize: &kargoapi.KustomizePromotionMechanism{},
-					},
-				},
-			},
-			assertions: func(t *testing.T, _ *kargoapi.PromotionMechanisms, errs field.ErrorList) {
-				require.Nil(t, errs)
-			},
-		},
-	}
-	w := &webhook{}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(
-				t,
-				testCase.promoMechs,
-				w.validatePromotionMechanisms(
-					field.NewPath("promotionMechanisms"),
-					testCase.promoMechs,
-				),
-			)
-		})
-	}
-}
-
-func TestValidateGitRepoUpdates(t *testing.T) {
-	testCases := []struct {
-		name       string
-		update     kargoapi.GitRepoUpdate
-		assertions func(*testing.T, kargoapi.GitRepoUpdate, field.ErrorList)
-	}{
-		{
-			name: "more than one config management tool specified",
-			update: kargoapi.GitRepoUpdate{
-				Render:    &kargoapi.KargoRenderPromotionMechanism{},
-				Kustomize: &kargoapi.KustomizePromotionMechanism{},
-				Helm:      &kargoapi.HelmPromotionMechanism{},
-			},
-			assertions: func(t *testing.T, update kargoapi.GitRepoUpdate, errs field.ErrorList) {
-				require.Equal(
-					t,
-					field.ErrorList{
-						{
-							Type:     field.ErrorTypeInvalid,
-							Field:    "gitRepoUpdates[0]",
-							BadValue: update,
-							Detail: "no more than one of gitRepoUpdates[0].render, or " +
-								"gitRepoUpdates[0].kustomize, or gitRepoUpdates[0].helm " +
-								"may be defined",
-						},
-					},
-					errs,
-				)
-			},
-		},
-
-		{
-			name: "valid",
-			update: kargoapi.GitRepoUpdate{
-				Kustomize: &kargoapi.KustomizePromotionMechanism{},
-			},
-			assertions: func(t *testing.T, _ kargoapi.GitRepoUpdate, errs field.ErrorList) {
-				require.Nil(t, errs)
-			},
-		},
-	}
-	w := &webhook{}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(
-				t,
-				testCase.update,
-				w.validateGitRepoUpdates(
-					field.NewPath("gitRepoUpdates"),
-					[]kargoapi.GitRepoUpdate{
-						testCase.update,
-					},
-				),
-			)
-		})
-	}
-}
-
-func TestValidateGitRepoUpdate(t *testing.T) {
-	testCases := []struct {
-		name       string
-		update     kargoapi.GitRepoUpdate
-		assertions func(*testing.T, kargoapi.GitRepoUpdate, field.ErrorList)
-	}{
-		{
-			name: "more than one config management tool specified",
-			update: kargoapi.GitRepoUpdate{
-				Render:    &kargoapi.KargoRenderPromotionMechanism{},
-				Kustomize: &kargoapi.KustomizePromotionMechanism{},
-				Helm:      &kargoapi.HelmPromotionMechanism{},
-			},
-			assertions: func(t *testing.T, update kargoapi.GitRepoUpdate, errs field.ErrorList) {
-				require.Equal(
-					t,
-					field.ErrorList{
-						{
-							Type:     field.ErrorTypeInvalid,
-							Field:    "gitRepoUpdate",
-							BadValue: update,
-							Detail: "no more than one of gitRepoUpdate.render, or " +
-								"gitRepoUpdate.kustomize, or gitRepoUpdate.helm may be " +
-								"defined",
-						},
-					},
-					errs,
-				)
-			},
-		},
-
-		{
-			name: "valid",
-			update: kargoapi.GitRepoUpdate{
-				Kustomize: &kargoapi.KustomizePromotionMechanism{},
-			},
-			assertions: func(t *testing.T, _ kargoapi.GitRepoUpdate, errs field.ErrorList) {
-				require.Nil(t, errs)
-			},
-		},
-	}
-	w := &webhook{}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(
-				t,
-				testCase.update,
-				w.validateGitRepoUpdate(
-					field.NewPath("gitRepoUpdate"),
-					testCase.update,
-				),
-			)
-		})
-	}
-}
-
-func TestValidateHelmPromotionMechanism(t *testing.T) {
-	testCases := []struct {
-		name       string
-		promoMech  *kargoapi.HelmPromotionMechanism
-		assertions func(*testing.T, *kargoapi.HelmPromotionMechanism, field.ErrorList)
-	}{
-		{
-			name: "nil",
-			assertions: func(t *testing.T, _ *kargoapi.HelmPromotionMechanism, errs field.ErrorList) {
-				require.Empty(t, errs)
-			},
-		},
-
-		{
-			name: "invalid",
-			// Doesn't define any changes
-			promoMech: &kargoapi.HelmPromotionMechanism{},
-			assertions: func(
-				t *testing.T,
-				promoMech *kargoapi.HelmPromotionMechanism,
-				errs field.ErrorList,
-			) {
-				require.Equal(
-					t,
-					field.ErrorList{
-						{
-							Type:     field.ErrorTypeInvalid,
-							Field:    "helm",
-							BadValue: promoMech,
-							Detail: "at least one of helm.images or helm.charts must be " +
-								"non-empty",
-						},
-					},
-					errs,
-				)
-			},
-		},
-
-		{
-			name: "valid",
-			promoMech: &kargoapi.HelmPromotionMechanism{
-				Images: []kargoapi.HelmImageUpdate{
-					{},
-				},
-			},
-			assertions: func(t *testing.T, _ *kargoapi.HelmPromotionMechanism, errs field.ErrorList) {
-				require.Empty(t, errs)
-			},
-		},
-	}
-	w := &webhook{}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(
-				t,
-				testCase.promoMech,
-				w.validateHelmPromotionMechanism(
-					field.NewPath("helm"),
-					testCase.promoMech,
 				),
 			)
 		})

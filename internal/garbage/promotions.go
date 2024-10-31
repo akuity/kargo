@@ -67,7 +67,7 @@ func (c *collector) cleanStagePromotions(
 		&promos,
 		client.InNamespace(project),
 		client.MatchingFields{
-			indexer.PromotionsByStageIndexField: stage,
+			indexer.PromotionsByStageField: stage,
 		},
 	); err != nil {
 		return fmt.Errorf(

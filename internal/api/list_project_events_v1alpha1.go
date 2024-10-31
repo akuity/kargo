@@ -36,7 +36,7 @@ func (s *server) ListProjectEvents(
 		// List Kargo related events only
 		client.MatchingFieldsSelector{
 			Selector: fields.OneTermEqualSelector(
-				indexer.EventsByInvolvedObjectAPIGroupIndexField,
+				indexer.EventsByInvolvedObjectAPIGroupField,
 				kargoapi.GroupVersion.Group,
 			),
 		},

@@ -11,14 +11,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	rbacapi "github.com/akuity/kargo/api/rbac/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/argocd"
 )
 
-func TestIndexEventsByInvolvedObjectAPIGroup(t *testing.T) {
+func TestEventsByInvolvedObjectAPIGroup(t *testing.T) {
 	t.Parallel()
 	testCases := []struct {
 		name       string
@@ -71,12 +70,12 @@ func TestIndexEventsByInvolvedObjectAPIGroup(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			tc.assertions(t, indexEventsByInvolvedObjectAPIGroup(tc.event))
+			tc.assertions(t, EventsByInvolvedObjectAPIGroup(tc.event))
 		})
 	}
 }
 
-func TestIndexStagesByAnalysisRun(t *testing.T) {
+func TestStagesByAnalysisRun(t *testing.T) {
 	const testShardName = "test-shard"
 	t.Parallel()
 	testCases := []struct {
@@ -230,13 +229,13 @@ func TestIndexStagesByAnalysisRun(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			res := indexStagesByAnalysisRun(tc.controllerShardName)(tc.stage)
+			res := StagesByAnalysisRun(tc.controllerShardName)(tc.stage)
 			tc.assertions(t, res)
 		})
 	}
 }
 
-func TestIndexPromotionsByStage(t *testing.T) {
+func TestPromotionsByStage(t *testing.T) {
 	testCases := map[string]struct {
 		input      *kargoapi.Promotion
 		predicates []func(*kargoapi.Promotion) bool
@@ -264,45 +263,17 @@ func TestIndexPromotionsByStage(t *testing.T) {
 			},
 			expected: []string{"fake-stage"},
 		},
-		"isPromotionPhaseNonTerminal excludes Promotions in terminal phases": {
-			input: &kargoapi.Promotion{
-				Spec: kargoapi.PromotionSpec{
-					Stage: "fake-stage",
-				},
-				Status: kargoapi.PromotionStatus{
-					Phase: kargoapi.PromotionPhaseSucceeded,
-				},
-			},
-			predicates: []func(*kargoapi.Promotion) bool{
-				isPromotionPhaseNonTerminal,
-			},
-			expected: nil,
-		},
-		"isPromotionPhaseNonTerminal selects Promotions in non-terminal phases": {
-			input: &kargoapi.Promotion{
-				Spec: kargoapi.PromotionSpec{
-					Stage: "fake-stage",
-				},
-				Status: kargoapi.PromotionStatus{
-					Phase: kargoapi.PromotionPhasePending,
-				},
-			},
-			predicates: []func(*kargoapi.Promotion) bool{
-				isPromotionPhaseNonTerminal,
-			},
-			expected: []string{"fake-stage"},
-		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			actual := indexPromotionsByStage(tc.predicates...)(tc.input)
+			actual := PromotionsByStage(tc.input)
 			require.ElementsMatch(t, tc.expected, actual)
 		})
 	}
 }
 
-func TestIndexRunningPromotionsByArgoCDApplications(t *testing.T) {
+func TestRunningPromotionsByArgoCDApplications(t *testing.T) {
 	const testShardName = "test-shard"
 
 	testCases := []struct {
@@ -408,95 +379,16 @@ func TestIndexRunningPromotionsByArgoCDApplications(t *testing.T) {
 			},
 			expected: nil,
 		},
-		{
-			name: "Related Promotion Stage does not have Argo CD Application mechanisms",
-			obj: &kargoapi.Promotion{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "fake-namespace",
-				},
-				Spec: kargoapi.PromotionSpec{
-					Stage: "fake-stage",
-				},
-				Status: kargoapi.PromotionStatus{
-					Phase: kargoapi.PromotionPhaseRunning,
-				},
-			},
-			stage: &kargoapi.Stage{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "fake-stage",
-					Namespace: "fake-namespace",
-				},
-			},
-		},
-		{
-			name: "Related Promotion Stage has Argo CD Application mechanisms",
-			obj: &kargoapi.Promotion{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "fake-namespace",
-				},
-				Spec: kargoapi.PromotionSpec{
-					Stage: "fake-stage",
-				},
-				Status: kargoapi.PromotionStatus{
-					Phase: kargoapi.PromotionPhaseRunning,
-				},
-			},
-			stage: &kargoapi.Stage{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "fake-stage",
-					Namespace: "fake-namespace",
-				},
-				Spec: kargoapi.StageSpec{
-					PromotionMechanisms: &kargoapi.PromotionMechanisms{
-						ArgoCDAppUpdates: []kargoapi.ArgoCDAppUpdate{
-							{
-								AppNamespace: "fake-app-namespace",
-								AppName:      "fake-app-name",
-							},
-							{
-								AppName: "fake-app-name-default-namespace",
-							},
-						},
-					},
-				},
-			},
-			expected: []string{
-				"fake-app-namespace:fake-app-name",
-				fmt.Sprintf("%s:%s", argocd.Namespace(), "fake-app-name-default-namespace"),
-			},
-		},
-		{
-			name: "Can not find related Promotion Stage",
-			obj: &kargoapi.Promotion{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "fake-namespace",
-				},
-				Spec: kargoapi.PromotionSpec{
-					Stage: "fake-stage",
-				},
-				Status: kargoapi.PromotionStatus{
-					Phase: kargoapi.PromotionPhaseRunning,
-				},
-			},
-			expected: nil,
-		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			scheme := runtime.NewScheme()
 			require.NoError(t, kargoapi.AddToScheme(scheme))
-
-			c := fake.NewClientBuilder().WithScheme(scheme)
-			if testCase.stage != nil {
-				c.WithObjects(testCase.stage)
-			}
-
 			require.Equal(
 				t,
 				testCase.expected,
-				indexRunningPromotionsByArgoCDApplications(
+				RunningPromotionsByArgoCDApplications(
 					context.TODO(),
-					c.Build(),
 					testCase.shardName,
 				)(testCase.obj),
 			)
@@ -504,18 +396,18 @@ func TestIndexRunningPromotionsByArgoCDApplications(t *testing.T) {
 	}
 }
 
-func TestIndexPromotionsByStageAndFreight(t *testing.T) {
+func TestPromotionsByStageAndFreight(t *testing.T) {
 	promo := &kargoapi.Promotion{
 		Spec: kargoapi.PromotionSpec{
 			Stage:   "fake-stage",
 			Freight: "fake-freight",
 		},
 	}
-	res := indexPromotionsByStageAndFreight(promo)
+	res := PromotionsByStageAndFreight(promo)
 	require.Equal(t, []string{"fake-stage:fake-freight"}, res)
 }
 
-func TestFreightByWarehouseIndexer(t *testing.T) {
+func TestFreightByWarehouse(t *testing.T) {
 	testCases := []struct {
 		name     string
 		freight  *kargoapi.Freight
@@ -542,13 +434,13 @@ func TestFreightByWarehouseIndexer(t *testing.T) {
 			require.Equal(
 				t,
 				testCase.expected,
-				FreightByWarehouseIndexer(testCase.freight),
+				FreightByWarehouse(testCase.freight),
 			)
 		})
 	}
 }
 
-func TestFreightByVerifiedStagesIndexer(t *testing.T) {
+func TestFreightByVerifiedStages(t *testing.T) {
 	testCases := []struct {
 		name     string
 		freight  *kargoapi.Freight
@@ -577,14 +469,14 @@ func TestFreightByVerifiedStagesIndexer(t *testing.T) {
 				require.Equal(
 					t,
 					testCase.expected,
-					FreightByVerifiedStagesIndexer(testCase.freight),
+					FreightByVerifiedStages(testCase.freight),
 				)
 			})
 		})
 	}
 }
 
-func TestFreightApprovedForStagesIndexer(t *testing.T) {
+func TestFreightApprovedForStages(t *testing.T) {
 	testCases := []struct {
 		name     string
 		freight  *kargoapi.Freight
@@ -613,14 +505,14 @@ func TestFreightApprovedForStagesIndexer(t *testing.T) {
 				require.Equal(
 					t,
 					testCase.expected,
-					FreightApprovedForStagesIndexer(testCase.freight),
+					FreightApprovedForStages(testCase.freight),
 				)
 			})
 		})
 	}
 }
 
-func TestIndexStagesByFreight(t *testing.T) {
+func TestStagesByFreight(t *testing.T) {
 	testCases := []struct {
 		name     string
 		stage    *kargoapi.Stage
@@ -670,14 +562,14 @@ func TestIndexStagesByFreight(t *testing.T) {
 			require.Equal(
 				t,
 				testCase.expected,
-				indexStagesByFreight(testCase.stage),
+				StagesByFreight(testCase.stage),
 			)
 		})
 	}
 
 }
 
-func TestIndexStagesByUpstreamStages(t *testing.T) {
+func TestStagesByUpstreamStages(t *testing.T) {
 	testOrigin := kargoapi.FreightOrigin{
 		Kind: kargoapi.FreightOriginKindWarehouse,
 		Name: "fake-warehouse",
@@ -728,13 +620,13 @@ func TestIndexStagesByUpstreamStages(t *testing.T) {
 			require.Equal(
 				t,
 				testCase.expected,
-				indexStagesByUpstreamStages(testCase.stage),
+				StagesByUpstreamStages(testCase.stage),
 			)
 		})
 	}
 }
 
-func TestIndexStagesByWarehouse(t *testing.T) {
+func TestStagesByWarehouse(t *testing.T) {
 	testCases := []struct {
 		name     string
 		stage    *kargoapi.Stage
@@ -788,13 +680,13 @@ func TestIndexStagesByWarehouse(t *testing.T) {
 			require.Equal(
 				t,
 				testCase.expected,
-				indexStagesByWarehouse(testCase.stage),
+				StagesByWarehouse(testCase.stage),
 			)
 		})
 	}
 }
 
-func TestIndexServiceAccountsByOIDCClaims(t *testing.T) {
+func TestServiceAccountsByOIDCClaims(t *testing.T) {
 	testCases := []struct {
 		name     string
 		sa       *corev1.ServiceAccount
@@ -821,7 +713,7 @@ func TestIndexServiceAccountsByOIDCClaims(t *testing.T) {
 			require.Equal(
 				t,
 				testCase.expected,
-				indexServiceAccountsByOIDCClaims(testCase.sa),
+				ServiceAccountsByOIDCClaims(testCase.sa),
 			)
 		})
 	}

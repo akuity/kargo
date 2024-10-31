@@ -50,6 +50,7 @@ rules:
   - delete
   - get
   - list
+  - patch
   - watch
 - apiGroups:
   - kargo.akuity.io

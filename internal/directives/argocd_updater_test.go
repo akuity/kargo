@@ -831,8 +831,8 @@ func Test_argoCDUpdater_buildDesiredSources(t *testing.T) {
 					*ArgoCDAppSourceUpdate,
 					string,
 					argocd.ApplicationSource,
-				) (argocd.ApplicationSource, error) {
-					return argocd.ApplicationSource{}, errors.New("something went wrong")
+				) (argocd.ApplicationSource, bool, error) {
+					return argocd.ApplicationSource{}, false, errors.New("something went wrong")
 				},
 			},
 			update: &ArgoCDAppUpdate{
@@ -860,23 +860,32 @@ func Test_argoCDUpdater_buildDesiredSources(t *testing.T) {
 					_ context.Context,
 					_ *PromotionStepContext,
 					_ *ArgoCDUpdateConfig,
-					_ *ArgoCDAppSourceUpdate,
+					update *ArgoCDAppSourceUpdate,
 					_ string,
 					src argocd.ApplicationSource,
-				) (argocd.ApplicationSource, error) {
-					if src.RepoURL == "fake-chart-url" && src.Chart == "fake-chart" {
+				) (argocd.ApplicationSource, bool, error) {
+					if update.RepoURL == "fake-chart-url" && update.Chart == "fake-chart" &&
+						src.RepoURL == "fake-chart-url" && src.Chart == "fake-chart" {
 						src.TargetRevision = "fake-version"
-						return src, nil
+						return src, true, nil
 					}
-					if src.RepoURL == "fake-git-url" && src.Chart == "" {
+					if update.RepoURL == "fake-git-url" && src.RepoURL == "fake-git-url" {
 						src.TargetRevision = "fake-commit"
-						return src, nil
+						return src, true, nil
 					}
-					return src, nil
+					return src, false, nil
 				},
 			},
 			update: &ArgoCDAppUpdate{
-				Sources: []ArgoCDAppSourceUpdate{{}, {}},
+				Sources: []ArgoCDAppSourceUpdate{
+					{
+						RepoURL: "fake-chart-url",
+						Chart:   "fake-chart",
+					},
+					{
+						RepoURL: "fake-git-url",
+					},
+				},
 			},
 			desiredRevisions: []string{"fake-version", "fake-commit"},
 			app: &argocd.Application{
@@ -1089,8 +1098,7 @@ func Test_argoCDUpdater_mustPerformUpdate(t *testing.T) {
 			newFreight: []kargoapi.FreightReference{{
 				Commits: []kargoapi.GitCommit{
 					{
-						RepoURL:           "https://github.com/universe/42",
-						HealthCheckCommit: "fake-revision",
+						RepoURL: "https://github.com/universe/42",
 					},
 				},
 			}},
@@ -1201,6 +1209,7 @@ func Test_argoCDUpdater_mustPerformUpdate(t *testing.T) {
 				}
 			},
 			newFreight: []kargoapi.FreightReference{{
+				Origin: testOrigin,
 				Commits: []kargoapi.GitCommit{
 					{
 						RepoURL: "https://github.com/universe/42",
@@ -1648,6 +1657,7 @@ func Test_argoCDUpdater_applyArgoCDSourceUpdate(t *testing.T) {
 		assertions      func(
 			t *testing.T,
 			originalSource argocd.ApplicationSource,
+			updated bool,
 			updatedSource argocd.ApplicationSource,
 			err error,
 		)
@@ -1663,10 +1673,12 @@ func Test_argoCDUpdater_applyArgoCDSourceUpdate(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				originalSource argocd.ApplicationSource,
+				updated bool,
 				updatedSource argocd.ApplicationSource,
 				err error,
 			) {
 				require.NoError(t, err)
+				require.False(t, updated)
 				// Source should be entirely unchanged
 				require.Equal(t, originalSource, updatedSource)
 			},
@@ -1685,10 +1697,12 @@ func Test_argoCDUpdater_applyArgoCDSourceUpdate(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				originalSource argocd.ApplicationSource,
+				updated bool,
 				updatedSource argocd.ApplicationSource,
 				err error,
 			) {
 				require.NoError(t, err)
+				require.True(t, updated)
 				// TargetRevision should be updated
 				require.Equal(t, "fake-commit", updatedSource.TargetRevision)
 				// Everything else should be unchanged
@@ -1712,10 +1726,12 @@ func Test_argoCDUpdater_applyArgoCDSourceUpdate(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				originalSource argocd.ApplicationSource,
+				updated bool,
 				updatedSource argocd.ApplicationSource,
 				err error,
 			) {
 				require.NoError(t, err)
+				require.True(t, updated)
 				// TargetRevision should be updated
 				require.Equal(t, "fake-version", updatedSource.TargetRevision)
 				// Everything else should be unchanged
@@ -1747,10 +1763,12 @@ func Test_argoCDUpdater_applyArgoCDSourceUpdate(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				originalSource argocd.ApplicationSource,
+				updated bool,
 				updatedSource argocd.ApplicationSource,
 				err error,
 			) {
 				require.NoError(t, err)
+				require.True(t, updated)
 				// Kustomize attributes should be updated
 				require.NotNil(t, updatedSource.Kustomize)
 				require.Equal(
@@ -1793,10 +1811,12 @@ func Test_argoCDUpdater_applyArgoCDSourceUpdate(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				originalSource argocd.ApplicationSource,
+				updated bool,
 				updatedSource argocd.ApplicationSource,
 				err error,
 			) {
 				require.NoError(t, err)
+				require.True(t, updated)
 				// Helm attributes should be updated
 				require.NotNil(t, updatedSource.Helm)
 				require.NotNil(t, updatedSource.Helm.Parameters)
@@ -1834,7 +1854,7 @@ func Test_argoCDUpdater_applyArgoCDSourceUpdate(t *testing.T) {
 					Sources: []ArgoCDAppSourceUpdate{testCase.update},
 				}},
 			}
-			updatedSource, err := runner.applyArgoCDSourceUpdate(
+			updatedSource, updated, err := runner.applyArgoCDSourceUpdate(
 				context.Background(),
 				&PromotionStepContext{
 					Freight: freight,
@@ -1844,7 +1864,7 @@ func Test_argoCDUpdater_applyArgoCDSourceUpdate(t *testing.T) {
 				testCase.desiredRevision,
 				testCase.source,
 			)
-			testCase.assertions(t, testCase.source, updatedSource, err)
+			testCase.assertions(t, testCase.source, updated, updatedSource, err)
 		})
 	}
 }
@@ -1886,7 +1906,6 @@ func Test_argoCDUpdater_buildKustomizeImagesForAppSource(t *testing.T) {
 							RepoURL:   "another-fake-url",
 							UseDigest: true,
 						},
-						{RepoURL: "image-that-is-not-in-list"},
 					},
 				},
 				RepoURL: "https://github.com/universe/42",
@@ -1975,11 +1994,6 @@ func Test_argoCDUpdater_buildHelmParamChangesForAppSource(t *testing.T) {
 							RepoURL: "fourth-fake-url",
 							Key:     "fourth-fake-key",
 							Value:   Digest,
-						},
-						{
-							RepoURL: "image-that-is-not-in-list",
-							Key:     "fake-key",
-							Value:   Tag,
 						},
 					},
 				},

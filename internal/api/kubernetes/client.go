@@ -233,22 +233,52 @@ func newDefaultInternalClient(
 	}
 
 	// Add all indices required by the API server
-	if err = indexer.IndexPromotionsByStage(ctx, cluster); err != nil {
+	if err = cluster.GetFieldIndexer().IndexField(
+		ctx,
+		&kargoapi.Promotion{},
+		indexer.PromotionsByStageField,
+		indexer.PromotionsByStage,
+	); err != nil {
 		return nil, fmt.Errorf("error indexing Promotions by Stage: %w", err)
 	}
-	if err = indexer.IndexFreightByWarehouse(ctx, cluster); err != nil {
+	if err = cluster.GetFieldIndexer().IndexField(
+		ctx,
+		&kargoapi.Freight{},
+		indexer.FreightByWarehouseField,
+		indexer.FreightByWarehouse,
+	); err != nil {
 		return nil, fmt.Errorf("error indexing Freight by Warehouse: %w", err)
 	}
-	if err = indexer.IndexFreightByVerifiedStages(ctx, cluster); err != nil {
+	if err = cluster.GetFieldIndexer().IndexField(
+		ctx,
+		&kargoapi.Freight{},
+		indexer.FreightByVerifiedStagesField,
+		indexer.FreightByVerifiedStages,
+	); err != nil {
 		return nil, fmt.Errorf("error indexing Freight by Stages in which it has been verified: %w", err)
 	}
-	if err = indexer.IndexFreightByApprovedStages(ctx, cluster); err != nil {
+	if err = cluster.GetFieldIndexer().IndexField(
+		ctx,
+		&kargoapi.Freight{},
+		indexer.FreightApprovedForStagesField,
+		indexer.FreightApprovedForStages,
+	); err != nil {
 		return nil, fmt.Errorf("error indexing Freight by Stages for which it has been approved: %w", err)
 	}
-	if err = indexer.IndexServiceAccountsByOIDCClaims(ctx, cluster); err != nil {
+	if err = cluster.GetFieldIndexer().IndexField(
+		ctx,
+		&corev1.ServiceAccount{},
+		indexer.ServiceAccountsByOIDCClaimsField,
+		indexer.ServiceAccountsByOIDCClaims,
+	); err != nil {
 		return nil, fmt.Errorf("index ServiceAccounts by OIDC claims: %w", err)
 	}
-	if err = indexer.IndexEventsByInvolvedObjectAPIGroup(ctx, cluster); err != nil {
+	if err = cluster.GetFieldIndexer().IndexField(
+		ctx,
+		&corev1.Event{},
+		indexer.EventsByInvolvedObjectAPIGroupField,
+		indexer.EventsByInvolvedObjectAPIGroup,
+	); err != nil {
 		return nil, fmt.Errorf("error indexing Events by InvolvedObject's API group: %w", err)
 	}
 
@@ -742,7 +772,7 @@ func getAuthorizedClient(globalServiceAccountNamespaces []string) func(
 
 		// sub is a standard claim. If the user has this claim, we can infer that
 		// they authenticated using OIDC.
-		if userInfo.Claims["sub"] != "" {
+		if _, ok := userInfo.Claims["sub"]; ok {
 			var namespacesToCheck []string
 			if key.Namespace != "" {
 				// This is written the way it is to keep key.Namespace as the first
