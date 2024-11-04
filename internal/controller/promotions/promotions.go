@@ -485,9 +485,10 @@ func (r *reconciler) promote(
 	}
 	if err := os.Mkdir(promoCtx.WorkDir, 0o700); err == nil {
 		// If we're working with a fresh directory, we should start the promotion
-		// process again from the beginning.
+		// process again from the beginning, but we DON'T clear shared state. This
+		// allows individual steps to self-discover that they've run before and
+		// examine the results of their own previous execution.
 		promoCtx.StartFromStep = 0
-		promoCtx.State = nil
 	} else if !os.IsExist(err) {
 		return nil, fmt.Errorf("error creating working directory: %w", err)
 	}
