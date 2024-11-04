@@ -34,6 +34,8 @@ type PromotionContext struct {
 	Project string
 	// Stage is the Stage that the Promotion is targeting.
 	Stage string
+	// Promotion is the name of the Promotion.
+	Promotion string
 	// FreightRequests is the list of Freight from various origins that is
 	// requested by the Stage targeted by the Promotion. This information is
 	// sometimes useful to PromotionSteps that reference a particular artifact
@@ -114,6 +116,8 @@ type PromotionStepContext struct {
 	Project string
 	// Stage is the Stage that the Promotion is targeting.
 	Stage string
+	// Promotion is the name of the Promotion.
+	Promotion string
 	// FreightRequests is the list of Freight from various origins that is
 	// requested by the Stage targeted by the Promotion. This information is
 	// sometimes useful to PromotionStep that reference a particular artifact and,

@@ -33,7 +33,7 @@ func (s *server) ListPromotions(
 		client.InNamespace(project),
 	}
 	if stage != "" {
-		opts = append(opts, client.MatchingFields{indexer.PromotionsByStageIndexField: stage})
+		opts = append(opts, client.MatchingFields{indexer.PromotionsByStageField: stage})
 	}
 	if err := s.client.List(ctx, &list, opts...); err != nil {
 		return nil, fmt.Errorf("list promotions: %w", err)

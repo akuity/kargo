@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	stdruntime "runtime"
 
 	"github.com/spf13/cobra"
 	authzv1 "k8s.io/api/authorization/v1"
@@ -68,6 +69,8 @@ func (o *webhooksServerOptions) run(ctx context.Context) error {
 		"Starting Kargo Webhooks Server",
 		"version", version.Version,
 		"commit", version.GitCommit,
+		"GOMAXPROCS", stdruntime.GOMAXPROCS(0),
+		"GOMEMLIMIT", os.GetEnv("GOMEMLIMIT", ""),
 	)
 
 	webhookCfg := libWebhook.ConfigFromEnv()
@@ -111,7 +114,12 @@ func (o *webhooksServerOptions) run(ctx context.Context) error {
 	}
 
 	// Index Stages by Freight
-	if err = indexer.IndexStagesByFreight(ctx, mgr); err != nil {
+	if err = mgr.GetFieldIndexer().IndexField(
+		ctx,
+		&kargoapi.Stage{},
+		indexer.StagesByFreightField,
+		indexer.StagesByFreight,
+	); err != nil {
 		return fmt.Errorf("index Stages by Freight: %w", err)
 	}
 

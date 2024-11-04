@@ -25,6 +25,7 @@ import (
 	"github.com/akuity/kargo/internal/controller"
 	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
 	"github.com/akuity/kargo/internal/directives"
+	"github.com/akuity/kargo/internal/event"
 	"github.com/akuity/kargo/internal/indexer"
 	"github.com/akuity/kargo/internal/kargo"
 	"github.com/akuity/kargo/internal/kubeclient"
@@ -34,8 +35,9 @@ import (
 
 // ReconcilerConfig represents configuration for the promotion reconciler.
 type ReconcilerConfig struct {
-	ShardName        string `envconfig:"SHARD_NAME"`
-	APIServerBaseURL string `envconfig:"API_SERVER_BASE_URL"`
+	ShardName               string `envconfig:"SHARD_NAME"`
+	APIServerBaseURL        string `envconfig:"API_SERVER_BASE_URL"`
+	MaxConcurrentReconciles int    `envconfig:"MAX_CONCURRENT_PROMOTION_RECONCILES" default:"4"`
 }
 
 func (c ReconcilerConfig) Name() string {
@@ -94,7 +96,12 @@ func SetupReconcilerWithManager(
 	cfg ReconcilerConfig,
 ) error {
 	// Index running Promotions by Argo CD Applications
-	if err := indexer.IndexRunningPromotionsByArgoCDApplications(ctx, kargoMgr, cfg.ShardName); err != nil {
+	if err := kargoMgr.GetFieldIndexer().IndexField(
+		ctx,
+		&kargoapi.Promotion{},
+		indexer.RunningPromotionsByArgoCDApplicationsField,
+		indexer.RunningPromotionsByArgoCDApplications(ctx, cfg.ShardName),
+	); err != nil {
 		return fmt.Errorf("index running Promotions by Argo CD Applications: %w", err)
 	}
 
@@ -112,7 +119,7 @@ func SetupReconcilerWithManager(
 			kargo.RefreshRequested{},
 			kargo.PromotionAbortRequested{},
 		)).
-		WithOptions(controller.CommonOptions()).
+		WithOptions(controller.CommonOptions(cfg.MaxConcurrentReconciles)).
 		Build(reconciler)
 	if err != nil {
 		return fmt.Errorf("error building Promotion controller: %w", err)
@@ -149,6 +156,11 @@ func SetupReconcilerWithManager(
 			return fmt.Errorf("unable to watch Applications: %w", err)
 		}
 	}
+
+	logging.LoggerFromContext(ctx).Info(
+		"Initialized Promotion reconciler",
+		"maxConcurrentReconciles", cfg.MaxConcurrentReconciles,
+	)
 
 	return nil
 }
@@ -380,7 +392,7 @@ func (r *reconciler) Reconcile(
 			msg += fmt.Sprintf(": %s", newStatus.Message)
 		}
 
-		eventAnnotations := kargoapi.NewPromotionEventAnnotations(ctx,
+		eventAnnotations := event.NewPromotionAnnotations(ctx,
 			kargoapi.FormatEventControllerActor(r.cfg.Name()),
 			promo, freight)
 
@@ -465,6 +477,7 @@ func (r *reconciler) promote(
 		WorkDir:         filepath.Join(os.TempDir(), "promotion-"+string(workingPromo.UID)),
 		Project:         stageNamespace,
 		Stage:           stageName,
+		Promotion:       workingPromo.Name,
 		FreightRequests: stage.Spec.RequestedFreight,
 		Freight:         *workingPromo.Status.FreightCollection.DeepCopy(),
 		StartFromStep:   promo.Status.CurrentStep,
@@ -608,7 +621,7 @@ func (r *reconciler) terminatePromotion(
 		return err
 	}
 
-	eventMeta := kargoapi.NewPromotionEventAnnotations(ctx, "", promo, freight)
+	eventMeta := event.NewPromotionAnnotations(ctx, "", promo, freight)
 	eventMeta[kargoapi.AnnotationKeyEventActor] = actor
 
 	r.recorder.AnnotatedEventf(

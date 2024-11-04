@@ -74,7 +74,7 @@ func (u *UpdatedArgoCDAppHandler[T]) Update(
 		promotions,
 		&client.ListOptions{
 			FieldSelector: fields.OneTermEqualSelector(
-				indexer.RunningPromotionsByArgoCDApplicationsIndexField,
+				indexer.RunningPromotionsByArgoCDApplicationsField,
 				fmt.Sprintf("%s:%s", newApp.Namespace, newApp.Name),
 			),
 		},

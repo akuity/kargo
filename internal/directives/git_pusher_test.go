@@ -190,6 +190,7 @@ func Test_gitPusher_runPromotionStep(t *testing.T) {
 		&PromotionStepContext{
 			Project:       "fake-project",
 			Stage:         "fake-stage",
+			Promotion:     "fake-promotion",
 			WorkDir:       workDir,
 			CredentialsDB: &credentials.FakeDB{},
 		},
@@ -201,7 +202,7 @@ func Test_gitPusher_runPromotionStep(t *testing.T) {
 	require.NoError(t, err)
 	branchName, ok := res.Output[branchKey]
 	require.True(t, ok)
-	require.Equal(t, "kargo/fake-project/fake-stage/promotion", branchName)
+	require.Equal(t, "kargo/promotion/fake-promotion", branchName)
 	expectedCommit, err := workTree.LastCommitID()
 	require.NoError(t, err)
 	actualCommit, ok := res.Output[commitKey]

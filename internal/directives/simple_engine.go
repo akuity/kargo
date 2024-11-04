@@ -95,6 +95,7 @@ func (e *SimpleEngine) Promote(
 			Config:          step.Config.DeepCopy(),
 			Project:         promoCtx.Project,
 			Stage:           promoCtx.Stage,
+			Promotion:       promoCtx.Promotion,
 			FreightRequests: promoCtx.FreightRequests,
 			Freight:         promoCtx.Freight,
 		}

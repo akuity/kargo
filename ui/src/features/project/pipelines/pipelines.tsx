@@ -17,7 +17,7 @@ import {
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button, Dropdown, Spin, Tooltip, message } from 'antd';
-import React, { Suspense, lazy, useEffect, useMemo } from 'react';
+import React, { Suspense, lazy, useCallback, useEffect, useMemo } from 'react';
 import { generatePath, useNavigate, useParams } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
@@ -35,6 +35,7 @@ const FreightTimelineHeader = lazy(
 );
 import { FreightTimelineWrapper } from '@ui/features/freight-timeline/freight-timeline-wrapper';
 import { clearColors } from '@ui/features/stage/utils';
+import { queryCache } from '@ui/features/utils/cache';
 import { URLStates } from '@ui/features/utils/url-query-state/states';
 import { useURLQueryState } from '@ui/features/utils/url-query-state/use-url-query-state';
 import {
@@ -86,14 +87,6 @@ export const Pipelines = ({
     refetch: refetchFreightData
   } = useQuery(queryFreight, { project: name });
 
-  // poor man's live view for images
-  // keeping this for reference
-  // TODO(Marvin9): refactor this
-  // list images re-construct data
-  // useEffect(() => {
-  //   refetchListImages();
-  // }, [freightData, data]);
-
   const { data: warehouseData } = useQuery(listWarehouses, {
     project: name
   });
@@ -141,6 +134,11 @@ export const Pipelines = ({
     `${name}-hide-images`,
     Object.keys(imageData?.images || {}).length
   );
+
+  const hideImageSection = useCallback(() => {
+    setHideImages(true);
+  }, [setHideImages]);
+
   const [isNew, setIsNew] = useLocalStorage(`${name}-is-new`, false);
 
   useEffect(() => {
@@ -191,7 +189,7 @@ export const Pipelines = ({
 
     const watcher = new Watcher(name, client);
 
-    watcher.watchStages();
+    watcher.watchStages(queryCache.imageStageMatrix.update);
     watcher.watchWarehouses(refetchFreightData);
 
     return () => {
@@ -607,7 +605,7 @@ export const Pipelines = ({
               <Images
                 project={name as string}
                 stages={sortedStages || []}
-                hide={() => setHideImages(true)}
+                hide={hideImageSection}
                 images={imageData?.images || {}}
               />
             </div>

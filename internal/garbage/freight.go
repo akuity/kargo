@@ -72,7 +72,7 @@ func (c *collector) cleanWarehouseFreight(
 		&freight,
 		client.InNamespace(project),
 		client.MatchingFields{
-			indexer.FreightByWarehouseIndexField: warehouse,
+			indexer.FreightByWarehouseField: warehouse,
 		},
 	); err != nil {
 		return fmt.Errorf(
@@ -101,7 +101,7 @@ func (c *collector) cleanWarehouseFreight(
 			&stages,
 			client.InNamespace(project),
 			client.MatchingFields{
-				indexer.StagesByFreightIndexField: f.Name,
+				indexer.StagesByFreightField: f.Name,
 			},
 		); err != nil {
 			logger.Error(

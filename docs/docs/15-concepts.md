@@ -4,6 +4,12 @@ description: Find out more about key Kargo concepts - stages, freight, warehouse
 ---
 # Key Kargo Concepts
 
+:::note
+We're currently reorganizing and updating the documentation.
+During this process, you may encounter sections that are incomplete,
+repetitive, or fragmented. Please bear with us as we work to make improvements.
+:::
+
 ## The Basics
 
 ### What is a Project
@@ -49,6 +55,8 @@ include one or more:
 
 Freight can therefore be thought of as a sort of meta-artifact. Freight is what
 Kargo seeks to progress from one stage to another.
+For detailed guidance on working with Freight, refer to
+[this guide](./30-how-to-guides/15-working-with-freight.md).
 
 ### What is a Warehouse?
 
