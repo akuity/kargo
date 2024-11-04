@@ -3,7 +3,7 @@ module tools
 go 1.23.0
 
 require (
-	github.com/bufbuild/buf v1.45.0
+	github.com/bufbuild/buf v1.46.0
 	github.com/golangci/golangci-lint v1.61.0
 	golang.org/x/tools v0.26.0
 	helm.sh/helm/v3 v3.16.2
@@ -14,12 +14,12 @@ require (
 require (
 	4d63.com/gocheckcompilerdirectives v1.2.1 // indirect
 	4d63.com/gochecknoglobals v0.2.1 // indirect
-	buf.build/gen/go/bufbuild/bufplugin/protocolbuffers/go v1.34.2-20240928190436-5e8abcfd7a7e.2 // indirect
-	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.34.2-20240920164238-5a7b106cbb87.2 // indirect
-	buf.build/gen/go/bufbuild/registry/connectrpc/go v1.17.0-20240925012807-1610ffa05635.1 // indirect
-	buf.build/gen/go/bufbuild/registry/protocolbuffers/go v1.34.2-20240925012807-1610ffa05635.2 // indirect
-	buf.build/gen/go/pluginrpc/pluginrpc/protocolbuffers/go v1.34.2-20240828222655-5345c0a56177.2 // indirect
-	buf.build/go/bufplugin v0.5.0 // indirect
+	buf.build/gen/go/bufbuild/bufplugin/protocolbuffers/go v1.35.1-20241023225133-42bdb4b67625.1 // indirect
+	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.35.1-20240920164238-5a7b106cbb87.1 // indirect
+	buf.build/gen/go/bufbuild/registry/connectrpc/go v1.17.0-20241025140216-aa40f2c93090.1 // indirect
+	buf.build/gen/go/bufbuild/registry/protocolbuffers/go v1.35.1-20241025140216-aa40f2c93090.1 // indirect
+	buf.build/gen/go/pluginrpc/pluginrpc/protocolbuffers/go v1.35.1-20241007202033-cf42259fcbfc.1 // indirect
+	buf.build/go/bufplugin v0.6.0 // indirect
 	buf.build/go/protoyaml v0.2.0 // indirect
 	buf.build/go/spdx v0.2.0 // indirect
 	connectrpc.com/connect v1.17.0 // indirect
@@ -62,7 +62,7 @@ require (
 	github.com/breml/errchkjson v0.3.6 // indirect
 	github.com/bufbuild/protocompile v0.14.1 // indirect
 	github.com/bufbuild/protoplugin v0.0.0-20240911180120-7bb73e41a54a // indirect
-	github.com/bufbuild/protovalidate-go v0.7.2 // indirect
+	github.com/bufbuild/protovalidate-go v0.7.3-0.20241015162221-1446f1e1d576 // indirect
 	github.com/butuzov/ireturn v0.3.0 // indirect
 	github.com/butuzov/mirror v1.2.0 // indirect
 	github.com/catenacyber/perfsprint v0.7.1 // indirect
@@ -73,9 +73,9 @@ require (
 	github.com/chavacava/garif v0.1.0 // indirect
 	github.com/ckaznocha/intrange v0.2.0 // indirect
 	github.com/containerd/cgroups/v3 v3.0.3 // indirect
-	github.com/containerd/containerd v1.7.22 // indirect
+	github.com/containerd/containerd v1.7.23 // indirect
 	github.com/containerd/continuity v0.4.3 // indirect
-	github.com/containerd/errdefs v0.2.0 // indirect
+	github.com/containerd/errdefs v0.3.0 // indirect
 	github.com/containerd/log v0.1.0 // indirect
 	github.com/containerd/platforms v0.2.1 // indirect
 	github.com/containerd/stargz-snapshotter/estargz v0.15.1 // indirect
@@ -146,7 +146,7 @@ require (
 	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/google/go-containerregistry v0.20.2 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
-	github.com/google/pprof v0.0.0-20241001023024-f4c0cfd0cf1d // indirect
+	github.com/google/pprof v0.0.0-20241017200806-017d972448fc // indirect
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/gordonklaus/ineffassign v0.1.0 // indirect
@@ -178,7 +178,7 @@ require (
 	github.com/karamaru-alpha/copyloopvar v1.1.0 // indirect
 	github.com/kisielk/errcheck v1.7.0 // indirect
 	github.com/kkHAIKE/contextcheck v1.1.5 // indirect
-	github.com/klauspost/compress v1.17.10 // indirect
+	github.com/klauspost/compress v1.17.11 // indirect
 	github.com/klauspost/pgzip v1.2.6 // indirect
 	github.com/kulti/thelper v0.6.3 // indirect
 	github.com/kunwardeep/paralleltest v1.0.10 // indirect
@@ -251,7 +251,7 @@ require (
 	github.com/quasilyte/regex/syntax v0.0.0-20210819130434-b3f0c404a727 // indirect
 	github.com/quasilyte/stdinfo v0.0.0-20220114132959-f7386bf02567 // indirect
 	github.com/quic-go/qpack v0.5.1 // indirect
-	github.com/quic-go/quic-go v0.47.0 // indirect
+	github.com/quic-go/quic-go v0.48.1 // indirect
 	github.com/rs/cors v1.11.1 // indirect
 	github.com/rubenv/sql-migrate v1.7.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
@@ -311,20 +311,20 @@ require (
 	go.lsp.dev/protocol v0.12.0 // indirect
 	go.lsp.dev/uri v0.3.0 // indirect
 	go.opencensus.io v0.24.0 // indirect
-	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.55.0 // indirect
-	go.opentelemetry.io/otel v1.30.0 // indirect
-	go.opentelemetry.io/otel/metric v1.30.0 // indirect
+	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.56.0 // indirect
+	go.opentelemetry.io/otel v1.31.0 // indirect
+	go.opentelemetry.io/otel/metric v1.31.0 // indirect
 	go.opentelemetry.io/otel/sdk v1.30.0 // indirect
-	go.opentelemetry.io/otel/trace v1.30.0 // indirect
+	go.opentelemetry.io/otel/trace v1.31.0 // indirect
 	go.starlark.net v0.0.0-20230525235612-a134d8f9ddca // indirect
 	go.uber.org/atomic v1.11.0 // indirect
 	go.uber.org/automaxprocs v1.5.3 // indirect
-	go.uber.org/mock v0.4.0 // indirect
+	go.uber.org/mock v0.5.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
-	go.uber.org/zap/exp v0.1.1-0.20240913022758-ede8e1888f83 // indirect
+	go.uber.org/zap/exp v0.3.0 // indirect
 	golang.org/x/crypto v0.28.0 // indirect
-	golang.org/x/exp v0.0.0-20241004190924-225e2abe05e6 // indirect
+	golang.org/x/exp v0.0.0-20241009180824-f66d83c29e7c // indirect
 	golang.org/x/exp/typeparams v0.0.0-20240314144324-c7f7c6466f7f // indirect
 	golang.org/x/mod v0.21.0 // indirect
 	golang.org/x/net v0.30.0 // indirect
@@ -337,7 +337,7 @@ require (
 	google.golang.org/genproto/googleapis/api v0.0.0-20240930140551-af27646dc61f // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240930140551-af27646dc61f // indirect
 	google.golang.org/grpc v1.67.1 // indirect
-	google.golang.org/protobuf v1.34.3-0.20240906163944-03df6c145d96 // indirect
+	google.golang.org/protobuf v1.35.1 // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
