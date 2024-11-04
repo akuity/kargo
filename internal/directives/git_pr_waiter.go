@@ -64,10 +64,10 @@ func (g *gitPRWaiter) runPromotionStep(
 	stepCtx *PromotionStepContext,
 	cfg GitWaitForPRConfig,
 ) (PromotionStepResult, error) {
-	prNumber, err := getPRNumber(stepCtx.SharedState, cfg)
+	prNumber, err := g.getPRNumber(stepCtx.SharedState, cfg)
 	if err != nil {
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
-			fmt.Errorf("error getting PR number: %w", err)
+			fmt.Errorf("error getting PR number from shared state: %w", err)
 	}
 
 	var repoCreds *git.RepoCredentials
@@ -133,7 +133,14 @@ func (g *gitPRWaiter) runPromotionStep(
 	}, nil
 }
 
-func getPRNumber(sharedState State, cfg GitWaitForPRConfig) (int64, error) {
+// getPRNumber checks shared state for output from a previous step and returns
+// any PR number from that output. If no such output is found, the output
+// contains no PR number, or the PR number is not an int64 or float64, then an
+// error is returned.
+func (g *gitPRWaiter) getPRNumber(
+	sharedState State,
+	cfg GitWaitForPRConfig,
+) (int64, error) {
 	if cfg.PRNumberFromStep == "" {
 		return cfg.PRNumber, nil
 	}
