@@ -152,7 +152,7 @@ func convertGithubPR(ghPR *github.PullRequest) *gitprovider.PullRequest {
 	case "closed":
 		prState = gitprovider.PullRequestStateClosed
 	}
-	return &gitprovider.PullRequest{
+	pr := &gitprovider.PullRequest{
 		Number:         int64(ptr.Deref(ghPR.Number, 0)),
 		URL:            ptr.Deref(ghPR.HTMLURL, ""),
 		State:          prState,
@@ -160,6 +160,10 @@ func convertGithubPR(ghPR *github.PullRequest) *gitprovider.PullRequest {
 		Object:         ghPR,
 		HeadSHA:        ptr.Deref(ghPR.Head.SHA, ""),
 	}
+	if ghPR.CreatedAt != nil {
+		pr.CreatedAt = &ghPR.CreatedAt.Time
+	}
+	return pr
 }
 
 func parseGitHubURL(repoURL string) (string, string, string, error) {

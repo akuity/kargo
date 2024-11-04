@@ -2,6 +2,7 @@ package gitprovider
 
 import (
 	"context"
+	"time"
 )
 
 // GitProviderOptions contains the options for a GitProvider.
@@ -68,6 +69,8 @@ type PullRequest struct {
 	Object any `json:"-"`
 	// HeadSHA is the SHA of the head commit
 	HeadSHA string `json:"headSHA"`
+	// CreatedAt is the time the pull request was created
+	CreatedAt *time.Time `json:"createdAt"`
 }
 
 func (pr *PullRequest) IsOpen() bool {
