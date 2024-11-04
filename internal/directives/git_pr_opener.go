@@ -136,7 +136,7 @@ func (g *gitPROpener) runPromotionStep(
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
 			fmt.Errorf("error getting PR number from shared state: %w", err)
 	}
-	if prNumber != 0 {
+	if prNumber != -1 {
 		return PromotionStepResult{
 			Status: kargoapi.PromotionPhaseSucceeded,
 			Output: map[string]any{
@@ -230,18 +230,18 @@ func (g *gitPROpener) getPRNumber(
 ) (int64, error) {
 	stepOutput, exists := sharedState.Get(stepCtx.Alias)
 	if !exists {
-		return 0, nil
+		return -1, nil
 	}
 	stepOutputMap, ok := stepOutput.(map[string]any)
 	if !ok {
-		return 0, fmt.Errorf(
+		return -1, fmt.Errorf(
 			"output from step with alias %q is not a map[string]any",
 			stepCtx.Alias,
 		)
 	}
 	prNumberAny, exists := stepOutputMap[prNumberKey]
 	if !exists {
-		return 0, nil
+		return -1, nil
 	}
 	// If the state was rehydrated from PromotionStatus, which makes use of
 	// apiextensions.JSON, the PR number will be a float64. Otherwise, it will be
@@ -252,7 +252,7 @@ func (g *gitPROpener) getPRNumber(
 	case float64:
 		return int64(prNumber), nil
 	default:
-		return 0, fmt.Errorf(
+		return -1, fmt.Errorf(
 			"PR number in output from step with alias %q is not an int64",
 			stepCtx.Alias,
 		)
