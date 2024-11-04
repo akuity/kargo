@@ -4,7 +4,7 @@
   publish = "build/"
   
 [build.environment]
-  NODE_VERSION = "22.7.0"
+  NODE_VERSION = "22.11.0"
   
 [context.deploy-preview]
   ignore = "git diff --quiet main -- docs"
