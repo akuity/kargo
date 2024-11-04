@@ -3,6 +3,7 @@ package stage
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	admissionv1 "k8s.io/api/admission/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -14,6 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/directives"
 	libWebhook "github.com/akuity/kargo/internal/webhook"
 )
 
@@ -194,7 +196,11 @@ func (w *webhook) validateSpec(
 	if spec == nil { // nil spec is caught by declarative validations
 		return nil
 	}
-	return w.validateRequestedFreight(f.Child("requestedFreight"), spec.RequestedFreight)
+	errs := w.validateRequestedFreight(f.Child("requestedFreight"), spec.RequestedFreight)
+	return append(
+		errs,
+		w.ValidatePromotionTemplate(f.Child("promotionTemplate"), spec.PromotionTemplate)...,
+	)
 }
 
 func (w *webhook) validateRequestedFreight(
@@ -220,4 +226,25 @@ func (w *webhook) validateRequestedFreight(
 		seenOrigins[req.Origin.String()] = struct{}{}
 	}
 	return nil
+}
+
+func (w *webhook) ValidatePromotionTemplate(
+	f *field.Path,
+	promoTemplate *kargoapi.PromotionTemplate,
+) field.ErrorList {
+	if promoTemplate == nil {
+		return nil
+	}
+	errs := field.ErrorList{}
+	for i, step := range promoTemplate.Spec.Steps {
+		stepAlias := strings.TrimSpace(step.As)
+		if directives.ReservedStepAliasRegex.MatchString(stepAlias) {
+			errs = append(errs, field.Invalid(
+				f.Child("spec", "steps").Index(i).Child("as"),
+				stepAlias,
+				"step alias is reserved",
+			))
+		}
+	}
+	return errs
 }
