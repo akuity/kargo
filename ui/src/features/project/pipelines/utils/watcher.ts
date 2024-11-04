@@ -55,7 +55,11 @@ export class Watcher {
     this.cancel.abort();
   }
 
-  async watchStages() {
+  async watchStages(
+    // utilise the fact that something changed in this stage
+    // avoid as much as re-construction of data as possible by using this parameter
+    onStageEvent?: (stage: Stage) => void
+  ) {
     const stream = this.promiseClient.watchStages(
       { project: this.project },
       { signal: this.cancel.signal }
@@ -82,6 +86,8 @@ export class Watcher {
           name: stage.metadata?.name
         });
         this.client.setQueryData(getStageQueryKey, { stage });
+
+        onStageEvent?.(stage);
       }
     );
   }
