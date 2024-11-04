@@ -15,6 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/directives"
 	libWebhook "github.com/akuity/kargo/internal/webhook"
 )
 
@@ -237,7 +238,7 @@ func (w *webhook) ValidatePromotionTemplate(
 	errs := field.ErrorList{}
 	for i, step := range promoTemplate.Spec.Steps {
 		stepAlias := strings.TrimSpace(step.As)
-		if kargoapi.ReservedStepAliasRegex.MatchString(stepAlias) {
+		if directives.ReservedStepAliasRegex.MatchString(stepAlias) {
 			errs = append(errs, field.Invalid(
 				f.Child("spec", "steps").Index(i).Child("as"),
 				stepAlias,

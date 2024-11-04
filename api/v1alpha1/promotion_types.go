@@ -1,8 +1,6 @@
 package v1alpha1
 
 import (
-	"regexp"
-
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
@@ -34,10 +32,6 @@ const (
 	// user.
 	PromotionPhaseAborted PromotionPhase = "Aborted"
 )
-
-// ReservedStepAliasRegex is a regular expression that matches step aliases that
-// are reserved for internal use.
-var ReservedStepAliasRegex = regexp.MustCompile(`^step-\d+$`)
 
 // IsTerminal returns true if the PromotionPhase is a terminal one.
 func (p *PromotionPhase) IsTerminal() bool {
