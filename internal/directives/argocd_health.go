@@ -210,7 +210,11 @@ func (a *argocdUpdater) getApplicationHealth(
 		// TODO: revisit this when https://github.com/argoproj/argo-cd/pull/18660
 		// 	 is merged and released.
 		if app.Status.OperationState != nil {
-			cooldown := app.Status.OperationState.FinishedAt.Time.Add(10 * time.Second)
+			cooldown := time.Now()
+			if !app.Status.OperationState.FinishedAt.IsZero() {
+				cooldown = app.Status.OperationState.FinishedAt.Time
+			}
+			cooldown = cooldown.Add(10 * time.Second)
 			if duration := time.Until(cooldown); duration > 0 {
 				time.Sleep(duration)
 				// Re-fetch the application to get the latest state.
