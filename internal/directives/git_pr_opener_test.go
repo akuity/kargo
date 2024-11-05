@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"net/http/httptest"
+	"slices"
 	"testing"
+	"time"
 
 	"github.com/sosedoff/gitkit"
 	"github.com/stretchr/testify/require"
@@ -222,4 +224,55 @@ func Test_gitPROpener_runPromotionStep(t *testing.T) {
 	exists, err := repo.RemoteBranchExists(testTargetBranch)
 	require.NoError(t, err)
 	require.True(t, exists)
+}
+
+func Test_gitPROpener_sortPullRequests(t *testing.T) {
+	newer := time.Now()
+	older := newer.Add(-time.Hour)
+	// These are laid out in the exact opposite order of how they should be
+	// sorted. After sorting, we can assert the order is correct by comparing to
+	// the reversed list.
+	orig := []gitprovider.PullRequest{
+		{
+			Number:    6,
+			Open:      false,
+			Merged:    false,
+			CreatedAt: &older,
+		},
+		{
+			Number:    5,
+			Open:      false,
+			Merged:    false,
+			CreatedAt: &newer,
+		},
+		{
+			Number:    4,
+			Open:      false,
+			Merged:    true,
+			CreatedAt: &older,
+		},
+		{
+			Number:    3,
+			Open:      false,
+			Merged:    true,
+			CreatedAt: &newer,
+		},
+		{
+			Number:    2,
+			Open:      true,
+			Merged:    false,
+			CreatedAt: &older,
+		},
+		{
+			Number:    1,
+			Open:      true,
+			Merged:    false,
+			CreatedAt: &newer,
+		},
+	}
+	sorted := make([]gitprovider.PullRequest, len(orig))
+	copy(sorted, orig)
+	(&gitPROpener{}).sortPullRequests(sorted)
+	slices.Reverse(orig)
+	require.Equal(t, orig, sorted)
 }

@@ -359,11 +359,13 @@ func (g *gitPROpener) getExistingPR(
 	if err != nil {
 		return nil, fmt.Errorf("error getting current branch: %w", err)
 	}
+	// Find any existing PRs that are identical to the one we might open.
 	prs, err := gitProv.ListPullRequests(
 		ctx,
 		&gitprovider.ListPullRequestOptions{
 			BaseBranch: targetBranch,
 			HeadBranch: sourceBranch,
+			HeadCommit: commitID,
 		},
 	)
 	if err != nil {
@@ -375,30 +377,54 @@ func (g *gitPROpener) getExistingPR(
 	// If promotion names are incorporated into PR source branches, it's highly
 	// unlikely that we would have found more than one PR matching the search
 	// criteria. Accounting for the possibility of users specifying their own
-	// source branch names using an expression, there is somewhat more of a
-	// possibility of multiple PRs being found. We sort descending by creation
-	// time before narrowing the list down to the PR with the correct head SHA.
-	// Multiple PRs with the same head SHA may be possible with some providers if
-	// a PR was closed and one exactly like it was then opened (instead of
-	// re-opening the original). Others may not allow this.
-	//
-	// In summary: We're looking for the most recent of any PRs that exactly match
-	// the PR we might otherwise open.
+	// source branch names using an expression, although still unlikely, there is
+	// somewhat more of a possibility of multiple PRs being found. In this case,
+	// we need to determine which PR is best to "adopt" as a proxy for the PR we
+	// would have otherwise opened. This requires sorting the PRs in a particular
+	// order.
+	g.sortPullRequests(prs)
+	return &prs[0], nil
+}
+
+// sortPullRequests is a specialized sorting function that sorts pull requests
+// in the following order: open PRs first, then closed PRs that have been
+// merged, then closed PRs that have not been merged. Within each of those
+// categories, PRs are sorted by creation time in descending order.
+func (g *gitPROpener) sortPullRequests(prs []gitprovider.PullRequest) {
 	slices.SortFunc(prs, func(lhs, rhs gitprovider.PullRequest) int {
-		var ltime time.Time
-		if lhs.CreatedAt != nil {
-			ltime = *lhs.CreatedAt
+		switch {
+		case lhs.Open && !rhs.Open:
+			// If the first PR is open and the second is not, the first PR should
+			// come first.
+			return -1
+		case rhs.Open && !lhs.Open:
+			// If the second PR is open and the first is not, the second PR should
+			// come first.
+			return 1
+		case !lhs.Open && !rhs.Open:
+			// If both PRs are closed, one is merged and one is not, the merged PR
+			// should come first.
+			if lhs.Merged && !rhs.Merged {
+				return -1
+			}
+			if rhs.Merged && !lhs.Merged {
+				return 1
+			}
+			// If we get to here, both PRs are closed and neither is merged. Fall
+			// through to the default case.
+			fallthrough
+		default:
+			// If we get to here, both PRs are open or both are closed and neither is
+			// merged. The most recently opened PR should come first.
+			var ltime time.Time
+			if lhs.CreatedAt != nil {
+				ltime = *lhs.CreatedAt
+			}
+			var rtime time.Time
+			if rhs.CreatedAt != nil {
+				rtime = *rhs.CreatedAt
+			}
+			return rtime.Compare(ltime)
 		}
-		var rtime time.Time
-		if rhs.CreatedAt != nil {
-			rtime = *rhs.CreatedAt
-		}
-		return rtime.Compare(ltime)
 	})
-	for _, pr := range prs {
-		if pr.HeadSHA == commitID {
-			return &pr, nil
-		}
-	}
-	return nil, nil
 }
