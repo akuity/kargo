@@ -89,7 +89,7 @@ func (g *gitPRWaiter) runPromotionStep(
 		}
 	}
 
-	gpOpts := &gitprovider.GitProviderOptions{
+	gpOpts := &gitprovider.Options{
 		InsecureSkipTLSVerify: cfg.InsecureSkipTLSVerify,
 	}
 	if repoCreds != nil {
@@ -98,35 +98,27 @@ func (g *gitPRWaiter) runPromotionStep(
 	if cfg.Provider != nil {
 		gpOpts.Name = string(*cfg.Provider)
 	}
-	gitProviderSvc, err := gitprovider.NewGitProviderService(cfg.RepoURL, gpOpts)
+	gitProv, err := gitprovider.New(cfg.RepoURL, gpOpts)
 	if err != nil {
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
 			fmt.Errorf("error creating git provider service: %w", err)
 	}
 
-	pr, err := gitProviderSvc.GetPullRequest(ctx, prNumber)
+	pr, err := gitProv.GetPullRequest(ctx, prNumber)
 	if err != nil {
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
 			fmt.Errorf("error getting pull request %d: %w", prNumber, err)
 	}
-	if pr.IsOpen() {
+
+	if pr.Open {
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseRunning}, nil
 	}
-
-	merged, err := gitProviderSvc.IsPullRequestMerged(ctx, prNumber)
-	if err != nil {
-		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, fmt.Errorf(
-			"error checking if pull request %d was merged: %w",
-			prNumber, err,
-		)
-	}
-	if !merged {
+	if !pr.Merged {
 		return PromotionStepResult{
 			Status:  kargoapi.PromotionPhaseFailed,
 			Message: fmt.Sprintf("pull request %d was closed without being merged", prNumber),
 		}, err
 	}
-
 	return PromotionStepResult{
 		Status: kargoapi.PromotionPhaseSucceeded,
 		Output: map[string]any{commitKey: pr.MergeCommitSHA},

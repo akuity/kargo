@@ -158,25 +158,25 @@ func Test_gitPROpener_runPromotionStep(t *testing.T) {
 	// Set up a fake git provider
 	const fakeGitProviderName = "fake"
 	const testPRNumber int64 = 42
-	gitprovider.RegisterProvider(
+	gitprovider.Register(
 		fakeGitProviderName,
-		gitprovider.ProviderRegistration{
-			NewService: func(
+		gitprovider.Registration{
+			NewProvider: func(
 				string,
-				*gitprovider.GitProviderOptions,
-			) (gitprovider.GitProviderService, error) {
-				return &gitprovider.FakeGitProviderService{
+				*gitprovider.Options,
+			) (gitprovider.Interface, error) {
+				return &gitprovider.Fake{
 					ListPullRequestsFn: func(
 						context.Context,
-						gitprovider.ListPullRequestOpts,
-					) ([]*gitprovider.PullRequest, error) {
+						*gitprovider.ListPullRequestOptions,
+					) ([]gitprovider.PullRequest, error) {
 						// Avoid opening of a PR being short-circuited by simulating
 						// conditions where the PR in question doesn't already exist.
 						return nil, nil
 					},
 					CreatePullRequestFn: func(
 						context.Context,
-						gitprovider.CreatePullRequestOpts,
+						*gitprovider.CreatePullRequestOpts,
 					) (*gitprovider.PullRequest, error) {
 						return &gitprovider.PullRequest{Number: testPRNumber}, nil
 					},

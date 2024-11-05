@@ -15,50 +15,48 @@ import (
 	"github.com/akuity/kargo/internal/gitprovider"
 )
 
-const (
-	GitProviderServiceName = "github"
-)
+const ProviderName = "github"
 
-var (
-	githubRegistration = gitprovider.ProviderRegistration{
-		Predicate: func(repoURL string) bool {
-			u, err := url.Parse(repoURL)
-			if err != nil {
-				return false
-			}
-			// We assume that any hostname with the word "github" in the hostname,
-			// can use this provider. NOTE: we will miss cases where the host is
-			// GitHub but doesn't incorporate the word "github" in the hostname.
-			// e.g. 'git.mycompany.com'
-			return strings.Contains(u.Host, GitProviderServiceName)
-		},
-		NewService: func(
-			repoURL string,
-			opts *gitprovider.GitProviderOptions,
-		) (gitprovider.GitProviderService, error) {
-			return NewGitHubProvider(repoURL, opts)
-		},
-	}
-)
-
-func init() {
-	gitprovider.RegisterProvider(GitProviderServiceName, githubRegistration)
+var registration = gitprovider.Registration{
+	Predicate: func(repoURL string) bool {
+		u, err := url.Parse(repoURL)
+		if err != nil {
+			return false
+		}
+		// We assume that any hostname with the word "github" in it can use this
+		// provider. NOTE: We will miss cases where the host is GitHub Enterprise
+		// but doesn't incorporate the word "github" in the hostname. e.g.
+		// 'git.mycompany.com'
+		return strings.Contains(u.Host, ProviderName)
+	},
+	NewProvider: func(
+		repoURL string,
+		opts *gitprovider.Options,
+	) (gitprovider.Interface, error) {
+		return NewProvider(repoURL, opts)
+	},
 }
 
-type GitHubProvider struct { // nolint: revive
+func init() {
+	gitprovider.Register(ProviderName, registration)
+}
+
+// provider is a GitHub implementation of gitprovider.Interface.
+type provider struct { // nolint: revive
 	owner  string
 	repo   string
 	client *github.Client
 }
 
-func NewGitHubProvider(
+// NewProvider returns a GitHub-based implementation of gitprovider.Interface.
+func NewProvider(
 	repoURL string,
-	opts *gitprovider.GitProviderOptions,
-) (gitprovider.GitProviderService, error) {
+	opts *gitprovider.Options,
+) (gitprovider.Interface, error) {
 	if opts == nil {
-		opts = &gitprovider.GitProviderOptions{}
+		opts = &gitprovider.Options{}
 	}
-	host, owner, repo, err := parseGitHubURL(repoURL)
+	host, owner, repo, err := parseRepoURL(repoURL)
 	if err != nil {
 		return nil, err
 	}
@@ -80,20 +78,24 @@ func NewGitHubProvider(
 	if opts.Token != "" {
 		client = client.WithAuthToken(opts.Token)
 	}
-	return &GitHubProvider{
+	return &provider{
 		owner:  owner,
 		repo:   repo,
 		client: client,
 	}, nil
 }
 
-func (g *GitHubProvider) CreatePullRequest(
+// CreatePullRequest implements gitprovider.Interface.
+func (p *provider) CreatePullRequest(
 	ctx context.Context,
-	opts gitprovider.CreatePullRequestOpts,
+	opts *gitprovider.CreatePullRequestOpts,
 ) (*gitprovider.PullRequest, error) {
-	ghPR, _, err := g.client.PullRequests.Create(ctx,
-		g.owner,
-		g.repo,
+	if opts == nil {
+		opts = &gitprovider.CreatePullRequestOpts{}
+	}
+	ghPR, _, err := p.client.PullRequests.Create(ctx,
+		p.owner,
+		p.repo,
 		&github.NewPullRequest{
 			Title:               &opts.Title,
 			Head:                &opts.Head,
@@ -105,57 +107,83 @@ func (g *GitHubProvider) CreatePullRequest(
 	if err != nil {
 		return nil, err
 	}
-	return convertGithubPR(ghPR), nil
+	if ghPR == nil {
+		return nil, fmt.Errorf("unexpected nil pull request")
+	}
+	pr := convertGithubPR(*ghPR)
+	return &pr, nil
 }
 
-func (g *GitHubProvider) GetPullRequest(
+// GetPullRequest implements gitprovider.Interface.
+func (p *provider) GetPullRequest(
 	ctx context.Context,
 	id int64,
 ) (*gitprovider.PullRequest, error) {
-	ghPR, _, err := g.client.PullRequests.Get(ctx, g.owner, g.repo, int(id))
+	ghPR, _, err := p.client.PullRequests.Get(ctx, p.owner, p.repo, int(id))
 	if err != nil {
 		return nil, err
 	}
-	return convertGithubPR(ghPR), nil
+	if ghPR == nil {
+		return nil, fmt.Errorf("unexpected nil pull request")
+	}
+	pr := convertGithubPR(*ghPR)
+	return &pr, nil
 }
 
-func (g *GitHubProvider) ListPullRequests(
+// ListPullRequests implements gitprovider.Interface.
+func (p *provider) ListPullRequests(
 	ctx context.Context,
-	opts gitprovider.ListPullRequestOpts,
-) ([]*gitprovider.PullRequest, error) {
+	opts *gitprovider.ListPullRequestOptions,
+) ([]gitprovider.PullRequest, error) {
+	if opts == nil {
+		opts = &gitprovider.ListPullRequestOptions{}
+	}
+	if opts.State == "" {
+		opts.State = gitprovider.PullRequestStateOpen
+	}
 	listOpts := github.PullRequestListOptions{
-		Head: opts.Head,
-		Base: opts.Base,
+		Head: opts.HeadBranch,
+		Base: opts.BaseBranch,
+		ListOptions: github.ListOptions{
+			PerPage: 100, // Max
+		},
 	}
 	switch opts.State {
-	case "", gitprovider.PullRequestStateOpen:
-		listOpts.State = "open"
+	case gitprovider.PullRequestStateAny:
+		listOpts.State = "all"
 	case gitprovider.PullRequestStateClosed:
 		listOpts.State = "closed"
+	case gitprovider.PullRequestStateOpen:
+		listOpts.State = "open"
+	default:
+		return nil, fmt.Errorf("unknown pull request state %q", opts.State)
 	}
-	ghPRs, _, err := g.client.PullRequests.List(ctx, g.owner, g.repo, &listOpts)
-	if err != nil {
-		return nil, err
+	prs := []gitprovider.PullRequest{}
+	for {
+		ghPRs, res, err := p.client.PullRequests.List(ctx, p.owner, p.repo, &listOpts)
+		if err != nil {
+			return nil, err
+		}
+		for _, ghPR := range ghPRs {
+			if opts.HeadCommit == "" || ptr.Deref(ghPR.Head.SHA, "") == opts.HeadCommit {
+				prs = append(prs, convertGithubPR(*ghPR))
+			}
+		}
+		if res == nil || res.NextPage == 0 {
+			break
+		}
+		listOpts.Page = res.NextPage
 	}
-	prs := make([]*gitprovider.PullRequest, len(ghPRs))
-	for i, ghPR := range ghPRs {
-		prs[i] = convertGithubPR(ghPR)
-	}
+
 	return prs, nil
 }
 
-func convertGithubPR(ghPR *github.PullRequest) *gitprovider.PullRequest {
-	var prState gitprovider.PullRequestState
-	switch ptr.Deref(ghPR.State, "") {
-	case "open":
-		prState = gitprovider.PullRequestStateOpen
-	case "closed":
-		prState = gitprovider.PullRequestStateClosed
-	}
-	pr := &gitprovider.PullRequest{
+func convertGithubPR(ghPR github.PullRequest) gitprovider.PullRequest {
+	pr := gitprovider.PullRequest{
 		Number:         int64(ptr.Deref(ghPR.Number, 0)),
 		URL:            ptr.Deref(ghPR.HTMLURL, ""),
-		State:          prState,
+		Open:           ptr.Deref(ghPR.State, "closed") == "open",
+		Merged:         ghPR.MergedAt != nil,
 		MergeCommitSHA: ptr.Deref(ghPR.MergeCommitSHA, ""),
 		Object:         ghPR,
 		HeadSHA:        ptr.Deref(ghPR.Head.SHA, ""),
@@ -166,7 +194,7 @@ func convertGithubPR(ghPR *github.PullRequest) *gitprovider.PullRequest {
 	return pr
 }
 
-func parseGitHubURL(repoURL string) (string, string, string, error) {
+func parseRepoURL(repoURL string) (string, string, string, error) {
 	u, err := url.Parse(git.NormalizeURL(repoURL))
 	if err != nil {
 		return "", "", "", fmt.Errorf("error parsing github repository URL %q: %w", u, err)
@@ -177,13 +205,4 @@ func parseGitHubURL(repoURL string) (string, string, string, error) {
 		return "", "", "", fmt.Errorf("could not extract repository owner and name from URL %q", u)
 	}
 	return u.Host, parts[0], parts[1], nil
-}
-
-func (g *GitHubProvider) IsPullRequestMerged(ctx context.Context, id int64) (bool, error) {
-	// https://docs.github.com/en/rest/pulls/pulls?apiVersion=2022-11-28#check-if-a-pull-request-has-been-merged
-	merged, _, err := g.client.PullRequests.IsMerged(ctx, g.owner, g.repo, int(id))
-	if err != nil {
-		return false, err
-	}
-	return merged, nil
 }

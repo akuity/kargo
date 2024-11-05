@@ -114,7 +114,7 @@ func (g *gitPROpener) runPromotionStep(
 	}
 	defer repo.Close()
 
-	gpOpts := &gitprovider.GitProviderOptions{
+	gpOpts := &gitprovider.Options{
 		InsecureSkipTLSVerify: cfg.InsecureSkipTLSVerify,
 	}
 	if repoCreds != nil {
@@ -123,7 +123,7 @@ func (g *gitPROpener) runPromotionStep(
 	if cfg.Provider != nil {
 		gpOpts.Name = string(*cfg.Provider)
 	}
-	gitProviderSvc, err := gitprovider.NewGitProviderService(cfg.RepoURL, gpOpts)
+	gitProvider, err := gitprovider.New(cfg.RepoURL, gpOpts)
 	if err != nil {
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
 			fmt.Errorf("error creating git provider service: %w", err)
@@ -150,7 +150,7 @@ func (g *gitPROpener) runPromotionStep(
 	pr, err := g.getExistingPR(
 		ctx,
 		repo,
-		gitProviderSvc,
+		gitProvider,
 		cfg.TargetBranch,
 	)
 	if err != nil {
@@ -200,9 +200,9 @@ func (g *gitPROpener) runPromotionStep(
 		)
 	}
 
-	if pr, err = gitProviderSvc.CreatePullRequest(
+	if pr, err = gitProvider.CreatePullRequest(
 		ctx,
-		gitprovider.CreatePullRequestOpts{
+		&gitprovider.CreatePullRequestOpts{
 			Head:        sourceBranch,
 			Base:        cfg.TargetBranch,
 			Title:       title,
@@ -348,7 +348,7 @@ func (g *gitPROpener) ensureRemoteTargetBranch(
 func (g *gitPROpener) getExistingPR(
 	ctx context.Context,
 	repo git.Repo,
-	gitProviderSvc gitprovider.GitProviderService,
+	gitProv gitprovider.Interface,
 	targetBranch string,
 ) (*gitprovider.PullRequest, error) {
 	commitID, err := repo.LastCommitID()
@@ -359,11 +359,11 @@ func (g *gitPROpener) getExistingPR(
 	if err != nil {
 		return nil, fmt.Errorf("error getting current branch: %w", err)
 	}
-	prs, err := gitProviderSvc.ListPullRequests(
+	prs, err := gitProv.ListPullRequests(
 		ctx,
-		gitprovider.ListPullRequestOpts{
-			Base: targetBranch,
-			Head: sourceBranch,
+		&gitprovider.ListPullRequestOptions{
+			BaseBranch: targetBranch,
+			HeadBranch: sourceBranch,
 		},
 	)
 	if err != nil {
@@ -384,7 +384,7 @@ func (g *gitPROpener) getExistingPR(
 	//
 	// In summary: We're looking for the most recent of any PRs that exactly match
 	// the PR we might otherwise open.
-	slices.SortFunc(prs, func(lhs, rhs *gitprovider.PullRequest) int {
+	slices.SortFunc(prs, func(lhs, rhs gitprovider.PullRequest) int {
 		var ltime time.Time
 		if lhs.CreatedAt != nil {
 			ltime = *lhs.CreatedAt
@@ -397,7 +397,7 @@ func (g *gitPROpener) getExistingPR(
 	})
 	for _, pr := range prs {
 		if pr.HeadSHA == commitID {
-			return pr, nil
+			return &pr, nil
 		}
 	}
 	return nil, nil
