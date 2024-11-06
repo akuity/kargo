@@ -72,6 +72,22 @@ func (g *gitPROpener) runPromotionStep(
 	stepCtx *PromotionStepContext,
 	cfg GitOpenPRConfig,
 ) (PromotionStepResult, error) {
+	// Short-circuit if shared state has output from a previous execution of this
+	// step that contains a PR number.
+	prNumber, err := g.getPRNumber(stepCtx, stepCtx.SharedState)
+	if err != nil {
+		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
+			fmt.Errorf("error getting PR number from shared state: %w", err)
+	}
+	if prNumber != -1 {
+		return PromotionStepResult{
+			Status: kargoapi.PromotionPhaseSucceeded,
+			Output: map[string]any{
+				prNumberKey: prNumber,
+			},
+		}, nil
+	}
+
 	sourceBranch, err := g.getSourceBranch(stepCtx.SharedState, cfg)
 	if err != nil {
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
@@ -129,24 +145,8 @@ func (g *gitPROpener) runPromotionStep(
 			fmt.Errorf("error creating git provider service: %w", err)
 	}
 
-	// Short-circuit if shared state has output from a previous execution of this
-	// step that contains a PR number.
-	prNumber, err := g.getPRNumber(stepCtx, stepCtx.SharedState)
-	if err != nil {
-		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
-			fmt.Errorf("error getting PR number from shared state: %w", err)
-	}
-	if prNumber != -1 {
-		return PromotionStepResult{
-			Status: kargoapi.PromotionPhaseSucceeded,
-			Output: map[string]any{
-				prNumberKey: prNumber,
-			},
-		}, nil
-	}
-
-	// Short-circuit if the exact pull request we're about to open already somehow
-	// exists. (It doesn't matter if it's open or closed.)
+	// If a PR somehow exists that is identical to the one we would open, we can
+	// potentially just adopt it.
 	pr, err := g.getExistingPR(
 		ctx,
 		repo,
@@ -157,7 +157,7 @@ func (g *gitPROpener) runPromotionStep(
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
 			fmt.Errorf("error determining if pull request already exists: %w", err)
 	}
-	if pr != nil {
+	if pr != nil && (pr.Open || pr.Merged) { // Excludes PR that is both closed AND unmerged
 		return PromotionStepResult{
 			Status: kargoapi.PromotionPhaseSucceeded,
 			Output: map[string]any{
@@ -165,6 +165,10 @@ func (g *gitPROpener) runPromotionStep(
 			},
 		}, nil
 	}
+
+	// If we get to here, we either did not find an existing PR like the one we're
+	// about to create, or we found one that is closed and not merged, which means
+	// we're free to create a new one.
 
 	// Get the title from the commit message of the head of the source branch
 	// BEFORE we move on to ensuring the existence of the target branch because
