@@ -12,5 +12,37 @@
     linear-gradient(var(--dot-bg) calc(var(--dot-space) - var(--dot-size)), transparent 1%) center /
       var(--dot-space) var(--dot-space),
     var(--dot-color);
+
+  @apply h-0;
+
+  @apply active:cursor-pointer;
 }
 
+.staticView {
+  @apply fixed;
+  @apply right-5;
+  @apply z-10;
+  @apply space-y-10;
+  @apply mt-5;
+}
+
+.pipelinesViewConfig {
+  @apply flex;
+  div {
+    @apply ml-auto;
+  }
+}
+
+.pipelinesView {
+  @apply p-10;
+
+  @apply relative;
+  @apply top-0;
+  @apply right-0;
+
+  user-select: none;
+}
+
+.imagesMatrix {
+  width: 450px;
+}

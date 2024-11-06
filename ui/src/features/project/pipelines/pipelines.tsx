@@ -17,7 +17,7 @@ import {
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button, Dropdown, Spin, Tooltip, message } from 'antd';
-import React, { Suspense, lazy, useCallback, useEffect, useMemo } from 'react';
+import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef } from 'react';
 import { generatePath, useNavigate, useParams } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
@@ -58,6 +58,7 @@ import { CollapseMode, FreightTimelineAction, NodeType } from './types';
 import { LINE_THICKNESS } from './utils/graph';
 import { isPromoting, usePipelineState } from './utils/state';
 import { usePipelineGraph } from './utils/use-pipeline-graph';
+import { usePipelinesInfiniteScroll } from './utils/use-pipelines-infinite-scroll';
 import { onError } from './utils/util';
 import { Watcher } from './utils/watcher';
 
@@ -266,6 +267,16 @@ export const Pipelines = ({
     }
   }, [stagesPerFreight, fullFreightById]);
 
+  const movingObjectsRef = useRef<HTMLDivElement>(null);
+  const zoomRef = useRef<HTMLDivElement>(null);
+
+  const registerCanvas = usePipelinesInfiniteScroll({
+    refs: {
+      movingObjectsRef,
+      zoomRef
+    }
+  });
+
   if (isLoading || isLoadingFreight || isLoadingImages) return <LoadingState />;
 
   const stage = stageName && (data?.stages || []).find((item) => item.metadata?.name === stageName);
@@ -352,13 +363,10 @@ export const Pipelines = ({
             </Suspense>
           </FreightTimelineWrapper>
         </div>
-        <div className={`flex flex-grow w-full ${styles.dag}`}>
-          <div className={`overflow-hidden flex-grow w-full h-full`}>
-            <div className='flex justify-end items-center p-4 mb-4'>
+        <div ref={registerCanvas} className={styles.dag}>
+          <div className={styles.staticView}>
+            <div className={styles.pipelinesViewConfig}>
               <div className='flex gap-2'>
-                {zoom !== 100 && (
-                  <Button onClick={() => setZoom(100)} icon={<FontAwesomeIcon icon={faExpand} />} />
-                )}
                 <Button
                   onClick={() => setZoom((prev) => Math.max(10, prev - 10))}
                   icon={<FontAwesomeIcon icon={faMagnifyingGlassMinus} />}
@@ -367,6 +375,9 @@ export const Pipelines = ({
                   onClick={() => setZoom((prev) => Math.min(200, prev + 10))}
                   icon={<FontAwesomeIcon icon={faMagnifyingGlassPlus} />}
                 />
+                {zoom !== 100 && (
+                  <Button onClick={() => setZoom(100)} icon={<FontAwesomeIcon icon={faExpand} />} />
+                )}
                 <Tooltip title='Regenerate Stage Colors'>
                   <Button
                     type='default'
@@ -421,197 +432,191 @@ export const Pipelines = ({
                 )}
               </div>
             </div>
-            <div className='overflow-auto p-6 h-full'>
-              <div
-                className='relative'
-                style={{
-                  width: box?.width,
-                  height: box?.height,
-                  margin: '0 auto',
-                  zoom: `${zoom}%`
-                }}
-              >
-                {nodes?.map((node, index) => (
-                  <div
-                    key={index}
-                    className='absolute'
-                    style={{
-                      ...node,
-                      color: 'inherit'
-                    }}
-                  >
-                    {node.type === NodeType.STAGE ? (
-                      <>
-                        <StageNode
-                          stage={node.data}
-                          color={node.color}
-                          height={node.height}
-                          projectName={name}
-                          faded={isFaded(node.data)}
-                          currentFreight={getCurrentFreight(node.data).map(
-                            (f) => fullFreightById[f.name || '']
-                          )}
-                          hasNoSubscribers={
-                            Array.from(subscribersByStage[node?.data?.metadata?.name || ''] || [])
-                              .length <= 1
+
+            {!hideImages && (
+              <div className={styles.imagesMatrix}>
+                <Images
+                  project={name as string}
+                  stages={sortedStages || []}
+                  hide={hideImageSection}
+                  images={imageData?.images || {}}
+                />
+              </div>
+            )}
+          </div>
+          <div ref={movingObjectsRef} className={styles.pipelinesView}>
+            <div
+              className='relative'
+              style={{
+                width: box?.width,
+                height: box?.height,
+                margin: '0 auto',
+                zoom: `${zoom}%`
+              }}
+              ref={zoomRef}
+            >
+              {nodes?.map((node, index) => (
+                <div
+                  key={index}
+                  className='absolute'
+                  style={{
+                    ...node,
+                    color: 'inherit'
+                  }}
+                >
+                  {node.type === NodeType.STAGE ? (
+                    <>
+                      <StageNode
+                        stage={node.data}
+                        color={node.color}
+                        height={node.height}
+                        projectName={name}
+                        faded={isFaded(node.data)}
+                        currentFreight={getCurrentFreight(node.data).map(
+                          (f) => fullFreightById[f.name || '']
+                        )}
+                        hasNoSubscribers={
+                          Array.from(subscribersByStage[node?.data?.metadata?.name || ''] || [])
+                            .length <= 1
+                        }
+                        onPromoteClick={(type: FreightTimelineAction) => {
+                          const currentFreight = getCurrentFreight(node.data);
+                          const isWarehouseKind = currentFreight.reduce(
+                            (acc, cur) => acc || cur?.origin?.kind === 'Warehouse',
+                            false
+                          );
+                          let currentWarehouse = '';
+                          if (isWarehouseKind) {
+                            currentWarehouse =
+                              currentFreight[0]?.origin?.name ||
+                              node.data?.spec?.requestedFreight[0]?.origin?.name ||
+                              '';
                           }
-                          onPromoteClick={(type: FreightTimelineAction) => {
-                            const currentFreight = getCurrentFreight(node.data);
-                            const isWarehouseKind = currentFreight.reduce(
-                              (acc, cur) => acc || cur?.origin?.kind === 'Warehouse',
-                              false
-                            );
-                            let currentWarehouse = '';
-                            if (isWarehouseKind) {
-                              currentWarehouse =
-                                currentFreight[0]?.origin?.name ||
-                                node.data?.spec?.requestedFreight[0]?.origin?.name ||
-                                '';
-                            }
-                            setSelectedWarehouse(currentWarehouse);
-                            if (state.stage === node.data?.metadata?.name) {
-                              // deselect
-                              state.clear();
-                              setSelectedWarehouse('');
-                            } else {
-                              const stageName = node.data?.metadata?.name || '';
-                              state.select(type, stageName, undefined);
-                            }
-                          }}
-                          action={state.action}
-                          onClick={
-                            state.action === FreightTimelineAction.ManualApproval
+                          setSelectedWarehouse(currentWarehouse);
+                          if (state.stage === node.data?.metadata?.name) {
+                            // deselect
+                            state.clear();
+                            setSelectedWarehouse('');
+                          } else {
+                            const stageName = node.data?.metadata?.name || '';
+                            state.select(type, stageName, undefined);
+                          }
+                        }}
+                        action={state.action}
+                        onClick={
+                          state.action === FreightTimelineAction.ManualApproval
+                            ? () => {
+                                manualApproveAction({
+                                  stage: node.data?.metadata?.name,
+                                  project: name,
+                                  name: state.freight
+                                });
+                              }
+                            : state.action === FreightTimelineAction.PromoteFreight
                               ? () => {
-                                  manualApproveAction({
-                                    stage: node.data?.metadata?.name,
+                                  state.setStage(node.data?.metadata?.name || '');
+                                  promoteAction({
+                                    stage: node.data?.metadata?.name || '',
                                     project: name,
-                                    name: state.freight
+                                    freight: state.freight
                                   });
                                 }
-                              : state.action === FreightTimelineAction.PromoteFreight
-                                ? () => {
-                                    state.setStage(node.data?.metadata?.name || '');
-                                    promoteAction({
-                                      stage: node.data?.metadata?.name || '',
-                                      project: name,
-                                      freight: state.freight
-                                    });
-                                  }
-                                : undefined
-                          }
-                          onHover={(h) => onHover(h, node.data?.metadata?.name || '', true)}
-                          highlighted={highlightedStages[node.data?.metadata?.name || '']}
-                          autoPromotion={autoPromotionMap[node.data?.metadata?.name || '']}
-                        />
-                      </>
-                    ) : (
-                      <RepoNode
-                        hidden={
-                          node.type !== NodeType.WAREHOUSE && hideSubscriptions[node.warehouseName]
+                              : undefined
                         }
-                        nodeData={node}
-                        onClick={
-                          node.type === NodeType.WAREHOUSE
-                            ? () =>
-                                navigate(
-                                  generatePath(paths.warehouse, {
-                                    name,
-                                    warehouseName: node.warehouseName
-                                  })
-                                )
-                            : undefined
-                        }
-                      >
-                        {node.type === NodeType.WAREHOUSE && (
-                          <div className='flex w-full h-full gap-2 justify-center items-center'>
-                            {(Object.keys(warehouseMap) || []).length > 1 && (
-                              <Button
-                                icon={<FontAwesomeIcon icon={faFilter} />}
-                                size='small'
-                                type={
-                                  selectedWarehouse === node.warehouseName ? 'primary' : 'default'
-                                }
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setSelectedWarehouse(
-                                    selectedWarehouse === node.warehouseName
-                                      ? ''
-                                      : node.warehouseName
-                                  );
-                                }}
-                              />
-                            )}
+                        onHover={(h) => onHover(h, node.data?.metadata?.name || '', true)}
+                        highlighted={highlightedStages[node.data?.metadata?.name || '']}
+                        autoPromotion={autoPromotionMap[node.data?.metadata?.name || '']}
+                      />
+                    </>
+                  ) : (
+                    <RepoNode
+                      hidden={
+                        node.type !== NodeType.WAREHOUSE && hideSubscriptions[node.warehouseName]
+                      }
+                      nodeData={node}
+                      onClick={
+                        node.type === NodeType.WAREHOUSE
+                          ? () =>
+                              navigate(
+                                generatePath(paths.warehouse, {
+                                  name,
+                                  warehouseName: node.warehouseName
+                                })
+                              )
+                          : undefined
+                      }
+                    >
+                      {node.type === NodeType.WAREHOUSE && (
+                        <div className='flex w-full h-full gap-2 justify-center items-center'>
+                          {(Object.keys(warehouseMap) || []).length > 1 && (
                             <Button
+                              icon={<FontAwesomeIcon icon={faFilter} />}
+                              size='small'
+                              type={
+                                selectedWarehouse === node.warehouseName ? 'primary' : 'default'
+                              }
                               onClick={(e) => {
                                 e.stopPropagation();
-                                refreshWarehouseAction({
-                                  name: node.warehouseName,
-                                  project: name
-                                });
+                                setSelectedWarehouse(
+                                  selectedWarehouse === node.warehouseName ? '' : node.warehouseName
+                                );
                               }}
-                              icon={<FontAwesomeIcon icon={faRefresh} />}
-                              size='small'
-                            >
-                              Refresh
-                            </Button>
-                          </div>
-                        )}
-                        {node.type === NodeType.WAREHOUSE && (
-                          <Nodule
-                            nodeHeight={RepoNodeDimensions().height}
-                            onClick={() =>
-                              setHideSubscriptions({
-                                ...hideSubscriptions,
-                                [node.warehouseName]: !hideSubscriptions[node.warehouseName]
-                              })
-                            }
-                            icon={hideSubscriptions[node.warehouseName] ? faEye : faEyeSlash}
-                            begin={true}
-                          />
-                        )}
-                      </RepoNode>
-                    )}
-                  </div>
-                ))}
-                {connectors?.map((connector) =>
-                  connector.map((line, i) =>
-                    hideSubscriptions[line.to] && line.from?.startsWith('subscription-') ? null : (
-                      <div
-                        className='absolute bg-gray-300 rounded-full'
-                        style={{
-                          padding: 0,
-                          margin: 0,
-                          height: LINE_THICKNESS,
-                          width: line.width,
-                          left: line.x,
-                          top: line.y,
-                          transform: `rotate(${line.angle}deg)`,
-                          backgroundColor: line.color
-                        }}
-                        key={i}
-                      />
-                    )
+                            />
+                          )}
+                          <Button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              refreshWarehouseAction({
+                                name: node.warehouseName,
+                                project: name
+                              });
+                            }}
+                            icon={<FontAwesomeIcon icon={faRefresh} />}
+                            size='small'
+                          >
+                            Refresh
+                          </Button>
+                        </div>
+                      )}
+                      {node.type === NodeType.WAREHOUSE && (
+                        <Nodule
+                          nodeHeight={RepoNodeDimensions().height}
+                          onClick={() =>
+                            setHideSubscriptions({
+                              ...hideSubscriptions,
+                              [node.warehouseName]: !hideSubscriptions[node.warehouseName]
+                            })
+                          }
+                          icon={hideSubscriptions[node.warehouseName] ? faEye : faEyeSlash}
+                          begin={true}
+                        />
+                      )}
+                    </RepoNode>
+                  )}
+                </div>
+              ))}
+              {connectors?.map((connector) =>
+                connector.map((line, i) =>
+                  hideSubscriptions[line.to] && line.from?.startsWith('subscription-') ? null : (
+                    <div
+                      className='absolute bg-gray-300 rounded-full'
+                      style={{
+                        padding: 0,
+                        margin: 0,
+                        height: LINE_THICKNESS,
+                        width: line.width,
+                        left: line.x,
+                        top: line.y,
+                        transform: `rotate(${line.angle}deg)`,
+                        backgroundColor: line.color
+                      }}
+                      key={i}
+                    />
                   )
-                )}
-              </div>
+                )
+              )}
             </div>
           </div>
-
-          {!hideImages && (
-            <div
-              className='p-6 pt-4 h-full'
-              style={{
-                width: '450px'
-              }}
-            >
-              <Images
-                project={name as string}
-                stages={sortedStages || []}
-                hide={hideImageSection}
-                images={imageData?.images || {}}
-              />
-            </div>
-          )}
         </div>
         <SuspenseSpin>
           {stage && <StageDetails stage={stage} />}
