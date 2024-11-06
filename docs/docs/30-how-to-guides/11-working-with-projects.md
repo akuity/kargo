@@ -82,32 +82,29 @@ At times, `Namespace`s may require specific configuration to
 comply with regulatory or organizational requirements. To
 account for this, Kargo supports the adoption of pre-existing
 `Namespace`s that are labeled with `kargo.akuity.io/project: "true"`.
-This enables you pre-configure such `Namespace`s according to your
+This enables pre-configuring such `Namespace`s according to your
 own requirements.
 
 :::info
-`kargo.akuity.io/project: "true"` label serves as a safeguard,
-ensuring that only designated namespaces can be adopted as Kargo `Project`s,
-thereby preventing the inadvertent integration of non-Project namespaces.
+Requiring a `Namespace` to have the `kargo.akuity.io/project: "true"` label to be eligible for adoption by a new `Project` is intended to prevent accidental or willful hijacking of an existing `Namespace`.
 :::
 
-For example, if your policy agent mandates that all `Namespace`s include
-a label identifying the internal organization responsible for them, you
-can define such a `Namespace` directly as in the following example:
+The following example demonstrates adoption of a `Namespace` that's been
+pre-configured with with a label unrelated to Kargo:
 
 ```yaml
 apiVersion: v1
 kind: Namespace
 metadata:
-    name: kargo-example
+    name: example
 labels:
     kargo.akuity.io/project: "true"
-    org.example.com: responsible-org
+    example.com/org: platform-eng
 ---
 apiVersion: kargo.akuity.io/v1alpha1
 kind: Project
 metadata:
-    name: kargo-example
+    name: example
 spec:
     # Project specifications go here
 ```
