@@ -269,11 +269,13 @@ export const Pipelines = ({
 
   const movingObjectsRef = useRef<HTMLDivElement>(null);
   const zoomRef = useRef<HTMLDivElement>(null);
+  const pipelinesConfigRef = useRef<HTMLDivElement>(null);
 
   const registerCanvas = usePipelinesInfiniteScroll({
     refs: {
       movingObjectsRef,
-      zoomRef
+      zoomRef,
+      pipelinesConfigRef
     }
   });
 
@@ -364,7 +366,7 @@ export const Pipelines = ({
           </FreightTimelineWrapper>
         </div>
         <div ref={registerCanvas} className={styles.dag}>
-          <div className={styles.staticView}>
+          <div className={styles.staticView} ref={pipelinesConfigRef}>
             <div className={styles.pipelinesViewConfig}>
               <div className='flex gap-2'>
                 <Button

@@ -6,6 +6,7 @@ export const usePipelinesInfiniteScroll = (conf: {
   refs: {
     movingObjectsRef: RefObject<HTMLDivElement>;
     zoomRef: RefObject<HTMLDivElement>;
+    pipelinesConfigRef: RefObject<HTMLDivElement>;
   };
   moveSpeed?: number; // px - default 3
   zoomSpeed?: number; // % - default 2.5
@@ -33,18 +34,16 @@ export const usePipelinesInfiniteScroll = (conf: {
         const deltaX = e.clientX - prev.clientX;
         const deltaY = e.clientY - prev.clientY;
 
-        let newTop = Number(
-          conf.refs.movingObjectsRef.current?.style.top.slice(
-            0,
-            -2
-          ) /* slice(0, -2) = without "px" */
-        );
-        let newRight = Number(conf.refs.movingObjectsRef?.current?.style.right.slice(0, -2));
+        const transform = conf.refs.movingObjectsRef.current
+          .computedStyleMap()
+          .get('transform') as CSSTransformValue;
+
+        let { e: newRight, f: newTop } = transform.toMatrix().translate();
 
         if (deltaX > 0) {
-          newRight -= moveSpeed;
-        } else if (deltaX < 0) {
           newRight += moveSpeed;
+        } else if (deltaX < 0) {
+          newRight -= moveSpeed;
         }
 
         if (deltaY > 0) {
@@ -53,8 +52,7 @@ export const usePipelinesInfiniteScroll = (conf: {
           newTop -= moveSpeed;
         }
 
-        conf.refs.movingObjectsRef.current.style.right = `${newRight}px`;
-        conf.refs.movingObjectsRef.current.style.top = `${newTop}px`;
+        conf.refs.movingObjectsRef.current.style.transform = `translate(${newRight}px, ${newTop}px)`;
 
         prev = e;
       };
@@ -75,6 +73,21 @@ export const usePipelinesInfiniteScroll = (conf: {
       if (!conf.refs.zoomRef.current) {
         return;
       }
+
+      if (conf.refs.pipelinesConfigRef.current) {
+        const { top, height, left, width } =
+          conf.refs.pipelinesConfigRef.current.getBoundingClientRect();
+
+        const { x, y } = e;
+
+        const overlapOnXAxis = x >= left && x <= left + width;
+        const overlapOnYAxis = y >= top && y <= top + height;
+
+        if (overlapOnXAxis && overlapOnYAxis) {
+          return;
+        }
+      }
+
       let currentZoom = Number(conf.refs.zoomRef.current.style.zoom.slice(0, -1)) || 100;
 
       if (e.deltaY > 0) {
