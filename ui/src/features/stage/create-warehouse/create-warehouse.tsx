@@ -3,39 +3,44 @@ import { faBook, faBoxes, faCode, faListCheck } from '@fortawesome/free-solid-sv
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Drawer, Flex, Tabs, Typography } from 'antd';
 import { JSONSchema4 } from 'json-schema';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useParams } from 'react-router-dom';
+import { z } from 'zod';
 
 import { YamlEditor } from '@ui/features/common/code-editor/yaml-editor';
 import { ModalComponentProps } from '@ui/features/common/modal/modal-context';
 import { WarehouseManifestsGen } from '@ui/features/utils/manifest-generator';
-import { URLStates } from '@ui/features/utils/url-query-state/states';
-import { useURLQueryState } from '@ui/features/utils/url-query-state/use-url-query-state';
+import { useSearchParamsState } from '@ui/features/utils/use-search-params-state';
 import warehouseSchema from '@ui/gen/schema/warehouses.kargo.akuity.io_v1alpha1.json';
 import { createResource } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 
 import { CreateWarehouseWizard } from './create-warehouse-wizard';
 
+const urlStateSchema = z.object({
+  tab: z.enum(['wizard', 'yaml']).catch('wizard'),
+  state: z.record(z.string(), z.any()).catch({})
+});
+
 const Body = () => {
   const { name: projectName } = useParams();
+
+  const urlState = useSearchParamsState(urlStateSchema);
 
   if (!projectName) {
     throw new Error(`Expected project name in URL`);
   }
 
-  const [urlQuery, setURLQuery, clearState] = useURLQueryState<URLStates['project']>();
-
   const createResourceMutation = useMutation(createResource, {
     onSuccess: () => {
-      clearState();
+      urlState.removeKeysFromSearch(['tab', 'state']);
     }
   });
 
-  const tab = urlQuery?.tab || 'wizard';
+  const tab = urlState.state.tab;
 
   const getWarehouseManifest = useCallback(() => {
-    if (urlQuery?.state) {
-      const manifest = JSON.parse(urlQuery?.state);
+    const manifest = urlState.state.state;
+    if (manifest) {
       return WarehouseManifestsGen.v1alpha1({
         projectName,
         warehouseName: manifest.name,
@@ -50,7 +55,7 @@ const Body = () => {
         subscriptions: []
       }
     });
-  }, [urlQuery?.state]);
+  }, [urlState.state.state]);
 
   const [yaml, setYaml] = useState(getWarehouseManifest);
 
@@ -62,12 +67,9 @@ const Body = () => {
     [getWarehouseManifest, createResourceMutation.mutate]
   );
 
-  const formState = useMemo(() => {
-    return JSON.parse(urlQuery?.state || '{}');
-  }, [urlQuery?.state]);
+  const formState = urlState.state.state;
 
-  const setFormState = (nextState: object) =>
-    setURLQuery({ state: JSON.stringify(nextState) }, { replace: true });
+  const setFormState = (nextState: object) => urlState.setSearchState({ state: nextState });
 
   return (
     <>
@@ -77,7 +79,7 @@ const Body = () => {
           if (tab === 'wizard' && newTab === 'yaml') {
             setYaml(getWarehouseManifest());
           }
-          setURLQuery({ ...urlQuery, tab: newTab as URLStates['project']['tab'] });
+          urlState.setSearchState({ tab: newTab as 'wizard' | 'yaml' });
         }}
         items={[
           {
