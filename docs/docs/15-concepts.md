@@ -23,8 +23,8 @@ may use projects to define policies, such as whether a **stage** is eligible
 for automatic promotions of new **freight**.
 
 :::note
-For more information on the Project Resource types, promotion policies,
-and namespace adoption refer to [Managing Projects](./30-how-to-guides/40-managing-projects.md) in the How-to guides.
+For technical information on the corresponding `Project` resource
+type, refer to [Working with Projects](./30-how-to-guides/11-working-with-projects.md).
 :::
 
 ### What is a Stage?

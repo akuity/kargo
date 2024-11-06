@@ -43,12 +43,7 @@ creation. This includes things such as project-level RBAC resources and
 `ServiceAccount` resources.
 :::
 
-:::info
-In future releases, the team also expects to also aggregate project-level status
-and statistics in `Project` resources.
-:::
-
-### Promotion Policies
+## Promotion Policies
 
 A `Project` resource can additionally define project-level configuration. At
 present, this only includes **promotion policies** that describe which `Stage`s
@@ -83,26 +78,22 @@ autoPromotionEnabled: true
 
 ## Namespace Adoption
 
-To ensure compliance with governance policies, you may need
-to pre-configure namespaces with specific labels or annotations
-required by your organization's policy agents.
+At times, `Namespace`s may require specific configuration to
+comply with regulatory or organizational requirements. To
+account for this, Kargo supports the adoption of pre-existing
+`Namespace`s that are labeled with `kargo.akuity.io/project: "true"`.
+This enables you pre-configure such `Namespace`s according to your
+own requirements.
 
-Kargo supports the adoption of pre-existing namespaces that are
-labeled with `kargo.akuity.io/project: "true"`. This enables you
-to pre-configure namespaces according to your organization's requirements.
+:::info
+`kargo.akuity.io/project: "true"` label serves as a safeguard,
+ensuring that only designated namespaces can be adopted as Kargo `Project`s,
+thereby preventing the inadvertent integration of non-Project namespaces.
+:::
 
-For example, if your policy agent mandates that all namespaces include
-a label identifying the internal organization responsible for them,
-you can define the `namespace` in your YAML manifest with
-the necessary labels and resources:
-
-* Add the label `kargo.akuity.io/project: "true"` to your `namespace` definition.
-* Ensure that in your YAML file, the `namespace` definition is listed above the
-Kargo `Project` resource to allow it to be created first.
-
-In this example, the `namespace` is pre-labeled to indicate the responsible
-internal organization. When the Kargo `Project` is created, it automatically
-adopts this pre-existing `namespace`.
+For example, if your policy agent mandates that all `Namespace`s include
+a label identifying the internal organization responsible for them, you
+can define such a `Namespace` directly as in the following example:
 
 ```yaml
 apiVersion: v1
@@ -118,7 +109,5 @@ kind: Project
 metadata:
     name: kargo-example
 spec:
-# Project specifications go here
+    # Project specifications go here
 ```
-
-This setup allows the Kargo `Project` to recognize and utilize your pre-configured `namespace` seamlessly, aligning with your compliance requirements without additional updates.
