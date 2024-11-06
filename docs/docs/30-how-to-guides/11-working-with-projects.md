@@ -17,7 +17,7 @@ A minimal `Project` resource looks like the following:
 apiVersion: kargo.akuity.io/v1alpha1
 kind: Project
 metadata:
-name: kargo-demo
+  name: example
 ```
 
 :::note
@@ -67,7 +67,7 @@ are not:
 apiVersion: kargo.akuity.io/v1alpha1
 kind: Project
 metadata:
-name: kargo-demo
+  name: example
 spec:
   promotionPolicies:
   - stage: test
