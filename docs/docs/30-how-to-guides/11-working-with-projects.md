@@ -69,11 +69,11 @@ kind: Project
 metadata:
 name: kargo-demo
 spec:
-promotionPolicies:
-- stage: test
-autoPromotionEnabled: true
-- stage: uat
-autoPromotionEnabled: true
+  promotionPolicies:
+  - stage: test
+    autoPromotionEnabled: true
+  - stage: uat
+    autoPromotionEnabled: true
 ```
 
 ## Namespace Adoption
@@ -96,15 +96,15 @@ pre-configured with with a label unrelated to Kargo:
 apiVersion: v1
 kind: Namespace
 metadata:
-    name: example
+  name: example
 labels:
-    kargo.akuity.io/project: "true"
-    example.com/org: platform-eng
+  kargo.akuity.io/project: "true"
+  example.com/org: platform-eng
 ---
 apiVersion: kargo.akuity.io/v1alpha1
 kind: Project
 metadata:
-    name: example
+  name: example
 spec:
-    # Project specifications go here
+  # ...
 ```
