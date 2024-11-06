@@ -453,7 +453,7 @@ export const Pipelines = ({
                 width: box?.width,
                 height: box?.height,
                 margin: '0 auto',
-                zoom: `${zoom}%`
+                transform: `scale(${zoom}%)`
               }}
               ref={zoomRef}
             >

@@ -88,7 +88,10 @@ export const usePipelinesInfiniteScroll = (conf: {
         }
       }
 
-      let currentZoom = Number(conf.refs.zoomRef.current.style.zoom.slice(0, -1)) || 100;
+      let currentZoom =
+        (
+          conf.refs.zoomRef.current.computedStyleMap().get('transform') as CSSTransformValue
+        ).toMatrix().a * 100;
 
       if (e.deltaY > 0) {
         currentZoom -= zoomSpeed;
@@ -96,7 +99,7 @@ export const usePipelinesInfiniteScroll = (conf: {
         currentZoom += zoomSpeed;
       }
 
-      conf.refs.zoomRef.current.style.zoom = `${currentZoom}%`;
+      conf.refs.zoomRef.current.style.transform = `scale(${currentZoom}%)`;
     };
 
     canvasNode.addEventListener('mousedown', onCanvasMouseDown);
