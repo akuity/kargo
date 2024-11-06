@@ -2,7 +2,7 @@ import { RefObject, useCallback, useEffect, useRef } from 'react';
 
 // we cannot take canvas as ref as the ref might not be available on first render
 // this is safe because once parent node (here canvasNode) is available, we are sure that child node is available as well
-export const usePipelinesInfiniteScroll = (conf: {
+export const usePipelinesInfiniteCanvas = (conf: {
   refs: {
     movingObjectsRef: RefObject<HTMLDivElement>;
     zoomRef: RefObject<HTMLDivElement>;
@@ -10,19 +10,110 @@ export const usePipelinesInfiniteScroll = (conf: {
   };
   moveSpeed?: number; // px - default 3
   zoomSpeed?: number; // % - default 2.5
+  onCanvas?(node: HTMLDivElement): void;
 }) => {
   const cleanupFunction = useRef<() => void>();
+
+  const moveSpeed = conf?.moveSpeed || 3;
+  const zoomSpeed = conf?.zoomSpeed || 2.5;
 
   useEffect(() => {
     return cleanupFunction.current;
   }, []);
 
-  return useCallback((canvasNode: HTMLDivElement | null) => {
+  const zoomOut = useCallback(() => {
+    if (!conf.refs.zoomRef.current) {
+      return;
+    }
+
+    let currentZoom =
+      (
+        conf.refs.zoomRef.current.computedStyleMap().get('transform') as CSSTransformValue
+      ).toMatrix().a * 100;
+
+    currentZoom += zoomSpeed;
+
+    conf.refs.zoomRef.current.style.transform = `scale(${currentZoom}%)`;
+  }, []);
+
+  const zoomIn = useCallback(() => {
+    if (!conf.refs.zoomRef.current) {
+      return;
+    }
+
+    let currentZoom =
+      (
+        conf.refs.zoomRef.current.computedStyleMap().get('transform') as CSSTransformValue
+      ).toMatrix().a * 100;
+
+    currentZoom -= zoomSpeed;
+
+    conf.refs.zoomRef.current.style.transform = `scale(${currentZoom}%)`;
+  }, []);
+
+  const fitToView = useCallback((canvasNode: HTMLDivElement) => {
+    if (
+      !conf.refs.pipelinesConfigRef.current ||
+      !conf.refs.zoomRef.current ||
+      !conf.refs.movingObjectsRef.current
+    ) {
+      return;
+    }
+
+    // reset previously scaled properties - must
+    conf.refs.zoomRef.current.style.transform = '';
+    conf.refs.movingObjectsRef.current.style.transform = '';
+
+    // canvas hides the overflow of pipeline so we want accurate view by screen
+    const { x, y, left, top } = canvasNode.getBoundingClientRect();
+    const canvasHeight = document.body.offsetHeight - y;
+    const canvasWidth = document.body.offsetWidth - x;
+
+    const pipelineConfigWidth =
+      document.body.offsetWidth - conf.refs.pipelinesConfigRef.current.getBoundingClientRect().x;
+
+    const padding = 50;
+
+    const W2 = canvasWidth - pipelineConfigWidth - padding;
+    const H2 = canvasHeight - padding;
+
+    const pipelineRect = conf.refs.zoomRef.current.getBoundingClientRect();
+
+    const W1 = pipelineRect.width;
+    const H1 = pipelineRect.height;
+
+    const nextZoom = Math.min(W2 / W1, H2 / H1);
+
+    if (nextZoom === 1) {
+      return;
+    }
+
+    conf.refs.zoomRef.current.style.transform = `scale(${nextZoom})`;
+
+    // now move the pipeline to fit the screen
+    const x2 = left + W2 / 2;
+    const y2 = top + H2 / 2;
+
+    const newPipelineRect /* because we did zoom */ =
+      conf.refs.zoomRef.current.getBoundingClientRect();
+
+    const x1 = newPipelineRect.left + newPipelineRect.width / 2 - padding / 2;
+    const y1 = newPipelineRect.top + newPipelineRect.height / 2 - padding / 2;
+
+    const deltaX = x2 - x1;
+    const deltaY = y2 - y1;
+
+    conf.refs.movingObjectsRef.current.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
+  }, []);
+
+  const registerCanvas = useCallback((canvasNode: HTMLDivElement | null) => {
     if (!canvasNode) {
       return;
     }
-    const moveSpeed = conf?.moveSpeed || 3;
-    const zoomSpeed = conf?.zoomSpeed || 10;
+
+    conf.onCanvas?.(canvasNode);
+
+    fitToView(canvasNode);
 
     const startMovingObjects = (init: MouseEvent) => {
       let prev = init;
@@ -88,18 +179,11 @@ export const usePipelinesInfiniteScroll = (conf: {
         }
       }
 
-      let currentZoom =
-        (
-          conf.refs.zoomRef.current.computedStyleMap().get('transform') as CSSTransformValue
-        ).toMatrix().a * 100;
-
       if (e.deltaY > 0) {
-        currentZoom -= zoomSpeed;
+        zoomIn();
       } else if (e.deltaY < 0) {
-        currentZoom += zoomSpeed;
+        zoomOut();
       }
-
-      conf.refs.zoomRef.current.style.transform = `scale(${currentZoom}%)`;
     };
 
     canvasNode.addEventListener('mousedown', onCanvasMouseDown);
@@ -112,4 +196,11 @@ export const usePipelinesInfiniteScroll = (conf: {
       canvasNode.removeEventListener('wheel', onWheel);
     };
   }, []);
+
+  return {
+    registerCanvas,
+    fitToView,
+    zoomIn,
+    zoomOut
+  };
 };

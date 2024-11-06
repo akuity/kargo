@@ -58,7 +58,7 @@ import { CollapseMode, FreightTimelineAction, NodeType } from './types';
 import { LINE_THICKNESS } from './utils/graph';
 import { isPromoting, usePipelineState } from './utils/state';
 import { usePipelineGraph } from './utils/use-pipeline-graph';
-import { usePipelinesInfiniteScroll } from './utils/use-pipelines-infinite-scroll';
+import { usePipelinesInfiniteCanvas } from './utils/use-pipelines-infinite-canvas';
 import { onError } from './utils/util';
 import { Watcher } from './utils/watcher';
 
@@ -119,8 +119,6 @@ export const Pipelines = ({
       state.clear();
     }
   });
-
-  const [zoom, setZoom] = React.useState(100);
 
   const [highlightedStages, setHighlightedStages] = React.useState<{ [key: string]: boolean }>({});
   const [hideSubscriptions, setHideSubscriptions] = useLocalStorage(
@@ -267,15 +265,19 @@ export const Pipelines = ({
     }
   }, [stagesPerFreight, fullFreightById]);
 
+  const canvasNodeRef = useRef<HTMLDivElement | null>(null);
   const movingObjectsRef = useRef<HTMLDivElement>(null);
   const zoomRef = useRef<HTMLDivElement>(null);
   const pipelinesConfigRef = useRef<HTMLDivElement>(null);
 
-  const registerCanvas = usePipelinesInfiniteScroll({
+  const infinitePipelineCanvas = usePipelinesInfiniteCanvas({
     refs: {
       movingObjectsRef,
       zoomRef,
       pipelinesConfigRef
+    },
+    onCanvas(node) {
+      canvasNodeRef.current = node;
     }
   });
 
@@ -365,24 +367,32 @@ export const Pipelines = ({
             </Suspense>
           </FreightTimelineWrapper>
         </div>
-        <div ref={registerCanvas} className={styles.dag}>
+        <div ref={infinitePipelineCanvas.registerCanvas} className={styles.dag}>
           <div className={styles.staticView} ref={pipelinesConfigRef}>
             <div className={styles.pipelinesViewConfig}>
-              <div className='flex gap-2'>
+              <div className='flex gap-2 bg-white shadow-md px-5 py-2'>
                 <Button
-                  onClick={() => setZoom((prev) => Math.max(10, prev - 10))}
+                  onClick={infinitePipelineCanvas.zoomIn}
                   icon={<FontAwesomeIcon icon={faMagnifyingGlassMinus} />}
+                  type='dashed'
                 />
                 <Button
-                  onClick={() => setZoom((prev) => Math.min(200, prev + 10))}
+                  onClick={infinitePipelineCanvas.zoomOut}
                   icon={<FontAwesomeIcon icon={faMagnifyingGlassPlus} />}
+                  type='dashed'
                 />
-                {zoom !== 100 && (
-                  <Button onClick={() => setZoom(100)} icon={<FontAwesomeIcon icon={faExpand} />} />
-                )}
+                <Button
+                  onClick={() => {
+                    if (canvasNodeRef.current) {
+                      infinitePipelineCanvas.fitToView(canvasNodeRef.current);
+                    }
+                  }}
+                  icon={<FontAwesomeIcon icon={faExpand} />}
+                  type='dashed'
+                />
                 <Tooltip title='Regenerate Stage Colors'>
                   <Button
-                    type='default'
+                    type='dashed'
                     onClick={() => {
                       clearColors(name || '');
                       clearColors(name || '', 'warehouses');
@@ -429,6 +439,7 @@ export const Pipelines = ({
                       icon={<FontAwesomeIcon icon={faDocker} />}
                       onClick={() => setHideImages(false)}
                       className='ml-2'
+                      type='dashed'
                     />
                   </Tooltip>
                 )}
@@ -452,8 +463,7 @@ export const Pipelines = ({
               style={{
                 width: box?.width,
                 height: box?.height,
-                margin: '0 auto',
-                transform: `scale(${zoom}%)`
+                margin: '0 auto'
               }}
               ref={zoomRef}
             >
