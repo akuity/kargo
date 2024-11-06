@@ -278,6 +278,13 @@ type PromotionTemplateSpec struct {
 // StageStatus describes a Stages's current and recent Freight, health, and
 // more.
 type StageStatus struct {
+	// Conditions contains the last observations of the Stage's current
+	// state.
+	// +patchMergeKey=type
+	// +patchStrategy=merge
+	// +listType=map
+	// +listMapKey=type
+	Conditions []metav1.Condition `json:"conditions,omitempty" patchMergeKey:"type" patchStrategy:"merge" protobuf:"bytes,13,rep,name=conditions"`
 	// LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh
 	// annotation that was handled by the controller. This field can be used to
 	// determine whether the request to refresh the resource has been handled.
@@ -313,6 +320,14 @@ type StageStatus struct {
 	CurrentPromotion *PromotionReference `json:"currentPromotion,omitempty" protobuf:"bytes,7,opt,name=currentPromotion"`
 	// LastPromotion is a reference to the last completed promotion.
 	LastPromotion *PromotionReference `json:"lastPromotion,omitempty" protobuf:"bytes,10,opt,name=lastPromotion"`
+}
+
+func (w *StageStatus) GetConditions() []metav1.Condition {
+	return w.Conditions
+}
+
+func (w *StageStatus) SetConditions(conditions []metav1.Condition) {
+	w.Conditions = conditions
 }
 
 // FreightReference is a simplified representation of a piece of Freight -- not
