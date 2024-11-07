@@ -85,8 +85,11 @@ spec:
             - name: h2c
               containerPort: 8080
               protocol: TCP
+
 {{- if .Values.api.probes.enabled }}
-          livenessProbe:
+          {{- with .Values.api.probes.livenessProbe }}
+          livenessProbe: {{- toYaml . | nindent 12 }}
+          {{- end }}
             exec:
               command:
                 - /usr/local/bin/grpc_health_probe
@@ -95,8 +98,9 @@ spec:
                 - -tls
                 - -tls-no-verify
 {{- end }}
-            initialDelaySeconds: 10
-          readinessProbe:
+          {{- with .Values.api.probes.readinessProbe }}
+          readinessProbe: {{- toYaml . | nindent 12 }}
+          {{- end }}
             exec:
               command:
                 - /usr/local/bin/grpc_health_probe
@@ -105,7 +109,6 @@ spec:
                 - -tls
                 - -tls-no-verify
 {{- end }}
-            initialDelaySeconds: 5
 {{- end }}
 {{- if or .Values.kubeconfigSecrets.kargo (and .Values.api.oidc.enabled .Values.api.oidc.dex.enabled) .Values.api.tls.enabled .Values.api.cabundle.configMapName .Values.api.cabundle.secretName }}
           volumeMounts:

@@ -74,25 +74,13 @@ spec:
         resources:
           {{- toYaml .Values.api.oidc.dex.resources | nindent 10 }}
         {{- if .Values.api.oidc.dex.probes.enabled }}
-        livenessProbe:
-          httpGet:
-            path: /healthz/live
-            port: 5558
-          initialDelaySeconds: 10
-          periodSeconds: 10
-          timeoutSeconds: 1
-          successThreshold: 1
-          failureThreshold: 300
-        readinessProbe:
-          httpGet:
-            path: /healthz/ready
-            port: 5558
-          initialDelaySeconds: 10
-          periodSeconds: 10
-          timeoutSeconds: 1
-          successThreshold: 1
-          failureThreshold: 300
-          {{- end }}
+        {{- with .Values.api.oidc.dex.probes.livenessProbe }}
+        livenessProbe: {{- toYaml . | nindent 12 }}
+        {{- end }}
+        {{- with .Values.api.oidc.dex.probes.readinessProbe }}
+        readinessProbe: {{- toYaml . | nindent 12 }}
+        {{- end }}
+        {{- end }}
       volumes:
       - name: config
         projected:
