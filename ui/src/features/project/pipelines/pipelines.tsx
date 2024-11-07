@@ -10,6 +10,7 @@ import {
   faMagnifyingGlassMinus,
   faMagnifyingGlassPlus,
   faMasksTheater,
+  faMouse,
   faPalette,
   faRefresh,
   faSave,
@@ -382,11 +383,16 @@ export const Pipelines = ({
             </Suspense>
           </FreightTimelineWrapper>
         </div>
-        {/* TODO: Use original canvas approach for greater performance and flexibility */}
+        {/* TODO: Use original canvas approach for greater performance, flexibility and pixel perfect */}
         <div ref={infinitePipelineCanvas.registerCanvas} className={styles.dag}>
+          {/* Scroll helper */}
+          <div className={styles.pipelinesViewNavigationHelper}>
+            <FontAwesomeIcon icon={faMouse} />
+            scroll / drag
+          </div>
           <div className={styles.staticView} ref={pipelinesConfigRef}>
             <div className={styles.pipelinesViewConfig}>
-              <div className='flex gap-2 bg-white shadow-md px-5 py-2'>
+              <div className={styles.toolbar}>
                 <Button
                   onClick={infinitePipelineCanvas.zoomIn}
                   icon={<FontAwesomeIcon icon={faMagnifyingGlassMinus} />}

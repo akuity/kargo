@@ -28,14 +28,14 @@ export const usePipelinesInfiniteCanvas = (conf: {
     zoomRef: RefObject<HTMLDivElement>;
     pipelinesConfigRef: RefObject<HTMLDivElement>;
   };
-  moveSpeed?: number; // px - default 3
+  moveSpeed?: number; // px - default 5
   zoomSpeed?: number; // % - default 2.5
   onCanvas?(node: HTMLDivElement): void;
   pipelineViewPref?: PipelineViewPref;
 }) => {
   const cleanupFunction = useRef<() => void>();
 
-  const moveSpeed = conf?.moveSpeed || 3;
+  const moveSpeed = conf?.moveSpeed || 5;
   const zoomSpeed = conf?.zoomSpeed || 2.5;
 
   useEffect(() => {

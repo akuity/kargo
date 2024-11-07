@@ -16,6 +16,8 @@
   @apply h-0;
 
   @apply cursor-pointer;
+
+  @apply active:cursor-move;
 }
 
 .staticView {
@@ -60,4 +62,31 @@
 
 .imagesMatrix {
   width: 450px;
+}
+
+.toolbar {
+  @apply flex;
+  @apply gap-2;
+  @apply bg-white;
+  @apply shadow-md;
+  @apply px-5;
+  @apply py-2;
+}
+
+.pipelinesViewNavigationHelper {
+  @apply text-xs;
+  @apply bg-white;
+  @apply shadow-lg;
+  @apply w-fit;
+  @apply absolute;
+  @apply px-5;
+  @apply py-2;
+  @apply text-gray-400;
+  @apply rounded-lg;
+  @apply absolute;
+  @apply bottom-5;
+  @apply left-5;
+  @apply flex;
+  @apply items-center;
+  @apply gap-3;
 }
