@@ -3,7 +3,9 @@ package directives
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
+	"time"
 
 	"github.com/xeipuuv/gojsonschema"
 
@@ -70,7 +72,23 @@ func (g *gitPROpener) runPromotionStep(
 	stepCtx *PromotionStepContext,
 	cfg GitOpenPRConfig,
 ) (PromotionStepResult, error) {
-	sourceBranch, err := getSourceBranch(stepCtx.SharedState, cfg)
+	// Short-circuit if shared state has output from a previous execution of this
+	// step that contains a PR number.
+	prNumber, err := g.getPRNumber(stepCtx, stepCtx.SharedState)
+	if err != nil {
+		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
+			fmt.Errorf("error getting PR number from shared state: %w", err)
+	}
+	if prNumber != -1 {
+		return PromotionStepResult{
+			Status: kargoapi.PromotionPhaseSucceeded,
+			Output: map[string]any{
+				prNumberKey: prNumber,
+			},
+		}, nil
+	}
+
+	sourceBranch, err := g.getSourceBranch(stepCtx.SharedState, cfg)
 	if err != nil {
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
 			fmt.Errorf("error determining source branch: %w", err)
@@ -112,7 +130,7 @@ func (g *gitPROpener) runPromotionStep(
 	}
 	defer repo.Close()
 
-	gpOpts := &gitprovider.GitProviderOptions{
+	gpOpts := &gitprovider.Options{
 		InsecureSkipTLSVerify: cfg.InsecureSkipTLSVerify,
 	}
 	if repoCreds != nil {
@@ -121,27 +139,36 @@ func (g *gitPROpener) runPromotionStep(
 	if cfg.Provider != nil {
 		gpOpts.Name = string(*cfg.Provider)
 	}
-	gitProviderSvc, err := gitprovider.NewGitProviderService(cfg.RepoURL, gpOpts)
+	gitProvider, err := gitprovider.New(cfg.RepoURL, gpOpts)
 	if err != nil {
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
 			fmt.Errorf("error creating git provider service: %w", err)
 	}
 
-	// Short-circuit if a pull request already exists with the same head commit
-	mustOpen, err := mustOpenPR(
+	// If a PR somehow exists that is identical to the one we would open, we can
+	// potentially just adopt it.
+	pr, err := g.getExistingPR(
 		ctx,
 		repo,
-		gitProviderSvc,
-		sourceBranch,
+		gitProvider,
 		cfg.TargetBranch,
 	)
 	if err != nil {
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
-			fmt.Errorf("error determining if pull request must be opened: %w", err)
+			fmt.Errorf("error determining if pull request already exists: %w", err)
 	}
-	if !mustOpen {
-		return PromotionStepResult{Status: kargoapi.PromotionPhaseSucceeded}, nil
+	if pr != nil && (pr.Open || pr.Merged) { // Excludes PR that is both closed AND unmerged
+		return PromotionStepResult{
+			Status: kargoapi.PromotionPhaseSucceeded,
+			Output: map[string]any{
+				prNumberKey: pr.Number,
+			},
+		}, nil
 	}
+
+	// If we get to here, we either did not find an existing PR like the one we're
+	// about to create, or we found one that is closed and not merged, which means
+	// we're free to create a new one.
 
 	// Get the title from the commit message of the head of the source branch
 	// BEFORE we move on to ensuring the existence of the target branch because
@@ -154,7 +181,7 @@ func (g *gitPROpener) runPromotionStep(
 		)
 	}
 
-	if err = ensureRemoteTargetBranch(
+	if err = g.ensureRemoteTargetBranch(
 		repo,
 		cfg.TargetBranch,
 		cfg.CreateTargetBranch,
@@ -177,16 +204,15 @@ func (g *gitPROpener) runPromotionStep(
 		)
 	}
 
-	pr, err := gitProviderSvc.CreatePullRequest(
+	if pr, err = gitProvider.CreatePullRequest(
 		ctx,
-		gitprovider.CreatePullRequestOpts{
+		&gitprovider.CreatePullRequestOpts{
 			Head:        sourceBranch,
 			Base:        cfg.TargetBranch,
 			Title:       title,
 			Description: description,
 		},
-	)
-	if err != nil {
+	); err != nil {
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
 			fmt.Errorf("error creating pull request: %w", err)
 	}
@@ -198,7 +224,49 @@ func (g *gitPROpener) runPromotionStep(
 	}, nil
 }
 
-func getSourceBranch(sharedState State, cfg GitOpenPRConfig) (string, error) {
+// getPRNumber checks shared state for output from a previous execution of this
+// step. If any is found and it contains a PR number, that number is returned.
+// 0 is returned if no PR number is found in the shared state. An error is
+// returned if the PR number is found but is neither an int64 nor a float64.
+func (g *gitPROpener) getPRNumber(
+	stepCtx *PromotionStepContext,
+	sharedState State,
+) (int64, error) {
+	stepOutput, exists := sharedState.Get(stepCtx.Alias)
+	if !exists {
+		return -1, nil
+	}
+	stepOutputMap, ok := stepOutput.(map[string]any)
+	if !ok {
+		return -1, fmt.Errorf(
+			"output from step with alias %q is not a map[string]any",
+			stepCtx.Alias,
+		)
+	}
+	prNumberAny, exists := stepOutputMap[prNumberKey]
+	if !exists {
+		return -1, nil
+	}
+	// If the state was rehydrated from PromotionStatus, which makes use of
+	// apiextensions.JSON, the PR number will be a float64. Otherwise, it will be
+	// an int64. We need to handle both cases.
+	switch prNumber := prNumberAny.(type) {
+	case int64:
+		return prNumber, nil
+	case float64:
+		return int64(prNumber), nil
+	default:
+		return -1, fmt.Errorf(
+			"PR number in output from step with alias %q is not an int64",
+			stepCtx.Alias,
+		)
+	}
+}
+
+func (g *gitPROpener) getSourceBranch(
+	sharedState State,
+	cfg GitOpenPRConfig,
+) (string, error) {
 	sourceBranch := cfg.SourceBranch
 	if cfg.SourceBranchFromStep != "" {
 		stepOutput, exists := sharedState.Get(cfg.SourceBranchFromStep)
@@ -235,7 +303,10 @@ func getSourceBranch(sharedState State, cfg GitOpenPRConfig) (string, error) {
 // ensureRemoteTargetBranch ensures the existence of a remote branch. If the
 // branch does not exist, an empty orphaned branch is created and pushed to the
 // remote.
-func ensureRemoteTargetBranch(repo git.Repo, branch string, create bool) error {
+func (g *gitPROpener) ensureRemoteTargetBranch(
+	repo git.Repo,
+	branch string, create bool,
+) error {
 	exists, err := repo.RemoteBranchExists(branch)
 	if err != nil {
 		return fmt.Errorf(
@@ -275,38 +346,89 @@ func ensureRemoteTargetBranch(repo git.Repo, branch string, create bool) error {
 	return nil
 }
 
-// mustOpenPR determines if a pull request must be opened. It returns true if no
-// PR exists for the head commit of the source branch to the target branch.
-// Whether the PR is open or closed is irrelevant as we must NOT create a new PR
-// if one already exists for the same head commit and has already been closed.
-func mustOpenPR(
+// getExistingPR searches for an existing pull request from the head of the
+// repo's current branch to the target branch. If a PR is found, it is returned.
+// If no PR is found, nil is returned.
+func (g *gitPROpener) getExistingPR(
 	ctx context.Context,
 	repo git.Repo,
-	gitProviderSvc gitprovider.GitProviderService,
-	sourceBranch,
+	gitProv gitprovider.Interface,
 	targetBranch string,
-) (bool, error) {
+) (*gitprovider.PullRequest, error) {
 	commitID, err := repo.LastCommitID()
 	if err != nil {
-		return false, fmt.Errorf("error getting last commit ID: %w", err)
+		return nil, fmt.Errorf("error getting last commit ID: %w", err)
 	}
-	prs, err := gitProviderSvc.ListPullRequests(
+	sourceBranch, err := repo.CurrentBranch()
+	if err != nil {
+		return nil, fmt.Errorf("error getting current branch: %w", err)
+	}
+	// Find any existing PRs that are identical to the one we might open.
+	prs, err := gitProv.ListPullRequests(
 		ctx,
-		gitprovider.ListPullRequestOpts{
-			Base: targetBranch,
-			Head: sourceBranch,
+		&gitprovider.ListPullRequestOptions{
+			BaseBranch: targetBranch,
+			HeadBranch: sourceBranch,
+			HeadCommit: commitID,
 		},
 	)
 	if err != nil {
-		return false, fmt.Errorf("error listing pull requests: %w", err)
+		return nil, fmt.Errorf("error listing pull requests: %w", err)
 	}
 	if len(prs) == 0 {
-		return true, nil
+		return nil, nil
 	}
-	for _, pr := range prs {
-		if pr.HeadSHA == commitID {
-			return false, nil
+	// If promotion names are incorporated into PR source branches, it's highly
+	// unlikely that we would have found more than one PR matching the search
+	// criteria. Accounting for the possibility of users specifying their own
+	// source branch names using an expression, although still unlikely, there is
+	// somewhat more of a possibility of multiple PRs being found. In this case,
+	// we need to determine which PR is best to "adopt" as a proxy for the PR we
+	// would have otherwise opened. This requires sorting the PRs in a particular
+	// order.
+	g.sortPullRequests(prs)
+	return &prs[0], nil
+}
+
+// sortPullRequests is a specialized sorting function that sorts pull requests
+// in the following order: open PRs first, then closed PRs that have been
+// merged, then closed PRs that have not been merged. Within each of those
+// categories, PRs are sorted by creation time in descending order.
+func (g *gitPROpener) sortPullRequests(prs []gitprovider.PullRequest) {
+	slices.SortFunc(prs, func(lhs, rhs gitprovider.PullRequest) int {
+		switch {
+		case lhs.Open && !rhs.Open:
+			// If the first PR is open and the second is not, the first PR should
+			// come first.
+			return -1
+		case rhs.Open && !lhs.Open:
+			// If the second PR is open and the first is not, the second PR should
+			// come first.
+			return 1
+		case !lhs.Open && !rhs.Open:
+			// If both PRs are closed, one is merged and one is not, the merged PR
+			// should come first.
+			if lhs.Merged && !rhs.Merged {
+				return -1
+			}
+			if rhs.Merged && !lhs.Merged {
+				return 1
+			}
+			// If we get to here, both PRs are closed and neither is merged. Fall
+			// through to the default case.
+			fallthrough
+		default:
+			// If we get to here, both PRs are open or both are closed and neither is
+			// merged. The most recently opened PR should come first.
+			var ltime time.Time
+			if lhs.CreatedAt != nil {
+				ltime = *lhs.CreatedAt
+			}
+			var rtime time.Time
+			if rhs.CreatedAt != nil {
+				rtime = *rhs.CreatedAt
+			}
+			return rtime.Compare(ltime)
 		}
-	}
-	return true, nil
+	})
 }
