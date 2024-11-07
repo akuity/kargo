@@ -41,6 +41,21 @@
   user-select: none;
 
   transform: translate(0px, 0px);
+
+  --start-transform: translate(0px, 0px);
+  --end-transform: translate(0px, 0px);
+
+  animation: movePipeline 0.1s ease forwards;
+}
+
+@keyframes movePipeline {
+  from {
+    transform: var(--start-transform);
+  }
+
+  to {
+    transform: var(--end-transform);
+  }
 }
 
 .imagesMatrix {

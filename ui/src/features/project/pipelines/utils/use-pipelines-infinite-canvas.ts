@@ -62,7 +62,7 @@ export const usePipelinesInfiniteCanvas = (conf: {
 
     // reset previously scaled properties - must
     conf.refs.zoomRef.current.style.transform = '';
-    conf.refs.movingObjectsRef.current.style.transform = '';
+    updatePos(0, 0);
 
     // canvas hides the overflow of pipeline so we want accurate view by screen
     const { x, y, left, top } = canvasNode.getBoundingClientRect();
@@ -103,7 +103,45 @@ export const usePipelinesInfiniteCanvas = (conf: {
     const deltaX = x2 - x1;
     const deltaY = y2 - y1;
 
-    conf.refs.movingObjectsRef.current.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
+    updatePos(deltaX, deltaY);
+  }, []);
+
+  const getPos = useCallback(() => {
+    if (conf.refs.movingObjectsRef.current) {
+      const transform = conf.refs.movingObjectsRef.current
+        .computedStyleMap()
+        .get('transform') as CSSTransformValue;
+
+      if (!(transform instanceof CSSTransformValue)) {
+        throw new Error(
+          'Canvas moving mechanism seems to be changed and unsupported! Please report this bug.'
+        );
+      }
+
+      const { e, f } = transform.toMatrix().translate();
+
+      return [e, f];
+    }
+
+    return [0, 0];
+  }, []);
+
+  const updatePos = useCallback((x: number, y: number) => {
+    const currentPos = getPos();
+
+    const newPos = [x, y];
+
+    if (!conf.refs.movingObjectsRef.current) {
+      return;
+    }
+
+    const startTransform = `translate(${currentPos[0]}px, ${currentPos[1]}px)`;
+    const endTransform = `translate(${newPos[0]}px, ${newPos[1]}px)`;
+
+    conf.refs.movingObjectsRef.current.style.animation = 'none';
+    conf.refs.movingObjectsRef.current.style.setProperty('--end-transform', endTransform);
+    conf.refs.movingObjectsRef.current.style.setProperty('--start-transform', startTransform);
+    conf.refs.movingObjectsRef.current.style.animation = '';
   }, []);
 
   const registerCanvas = useCallback((canvasNode: HTMLDivElement | null) => {
@@ -125,11 +163,7 @@ export const usePipelinesInfiniteCanvas = (conf: {
         const deltaX = e.clientX - prev.clientX;
         const deltaY = e.clientY - prev.clientY;
 
-        const transform = conf.refs.movingObjectsRef.current
-          .computedStyleMap()
-          .get('transform') as CSSTransformValue;
-
-        let { e: newRight, f: newTop } = transform.toMatrix().translate();
+        let [newRight, newTop] = getPos();
 
         if (deltaX > 0) {
           newRight += moveSpeed;
@@ -143,20 +177,28 @@ export const usePipelinesInfiniteCanvas = (conf: {
           newTop -= moveSpeed;
         }
 
-        conf.refs.movingObjectsRef.current.style.transform = `translate(${newRight}px, ${newTop}px)`;
+        updatePos(newRight, newTop);
 
         prev = e;
       };
     };
 
+    let registeredEventListener = false;
+
     let onWindowMouseMove: (e: MouseEvent) => void = () => {};
 
     const onCanvasMouseDown = (e: MouseEvent) => {
+      if (registeredEventListener) {
+        onCanvasMouseUp();
+        return;
+      }
+      registeredEventListener = true;
       onWindowMouseMove = startMovingObjects(e);
       window.addEventListener('mousemove', onWindowMouseMove);
     };
 
     const onCanvasMouseUp = () => {
+      registeredEventListener = false;
       window.removeEventListener('mousemove', onWindowMouseMove);
     };
 
