@@ -118,19 +118,6 @@ type PromotionStep struct {
 	Config *apiextensionsv1.JSON `json:"config,omitempty" protobuf:"bytes,3,opt,name=config"`
 }
 
-// GetConfig returns the Config field as unmarshalled YAML.
-func (s *PromotionStep) GetConfig() map[string]any {
-	if s.Config == nil {
-		return nil
-	}
-
-	var config map[string]any
-	if err := yaml.Unmarshal(s.Config.Raw, &config); err != nil {
-		return nil
-	}
-	return config
-}
-
 // PromotionStatus describes the current state of the transition represented by
 // a Promotion.
 type PromotionStatus struct {

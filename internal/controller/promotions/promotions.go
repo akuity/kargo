@@ -462,14 +462,18 @@ func (r *reconciler) promote(
 		stage,
 	)
 
-	// If the Promotion has steps, execute them in sequence.
-	var steps []directives.PromotionStep
-	for _, step := range workingPromo.Spec.Steps {
-		steps = append(steps, directives.PromotionStep{
+	// Prepare promotion steps and vars for the promotion execution engine.
+	steps := make([]directives.PromotionStep, len(workingPromo.Spec.Steps))
+	for i, step := range workingPromo.Spec.Steps {
+		steps[i] = directives.PromotionStep{
 			Kind:   step.Uses,
 			Alias:  step.As,
-			Config: step.GetConfig(),
-		})
+			Config: step.Config.Raw,
+		}
+	}
+	vars := make(map[string]string, len(workingPromo.Spec.Vars))
+	for _, v := range workingPromo.Spec.Vars {
+		vars[v.Name] = v.Value
 	}
 
 	promoCtx := directives.PromotionContext{
@@ -482,6 +486,7 @@ func (r *reconciler) promote(
 		Freight:         *workingPromo.Status.FreightCollection.DeepCopy(),
 		StartFromStep:   promo.Status.CurrentStep,
 		State:           directives.State(workingPromo.Status.GetState()),
+		Vars:            vars,
 	}
 	if err := os.Mkdir(promoCtx.WorkDir, 0o700); err == nil {
 		// If we're working with a fresh directory, we should start the promotion

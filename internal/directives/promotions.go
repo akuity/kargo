@@ -4,9 +4,11 @@ import (
 	"context"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	yaml "sigs.k8s.io/yaml/goyaml.v3"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/credentials"
+	"github.com/akuity/kargo/internal/expressions"
 )
 
 // PromotionStepRunner is an interface for components that implement the logic for
@@ -54,6 +56,8 @@ type PromotionContext struct {
 	StartFromStep int64
 	// State is the current state of the promotion process.
 	State State
+	// Vars is a map of string variables that can be used by the PromotionSteps.
+	Vars map[string]string
 }
 
 // PromotionStep describes a single step in a user-defined promotion process.
@@ -68,9 +72,41 @@ type PromotionStep struct {
 	// step will be keyed to this alias by the Engine and made accessible to
 	// subsequent steps.
 	Alias string
-	// Config is an opaque map of configuration values to be passed to the
-	// PromotionStepRunner executing this step.
-	Config Config
+	// Config is an opaque JSON to be passed to the PromotionStepRunner executing
+	// this step.
+	Config []byte
+}
+
+// getConfig returns the Config unmarshalled into a map. Any expr-lang
+// expressions are evaluated in the context of the provided arguments
+// prior to unmarshaling.
+func (s *PromotionStep) getConfig(
+	promoCtx PromotionContext,
+	state State,
+) (Config, error) {
+	if s.Config == nil {
+		return nil, nil
+	}
+	evaledCfgJSON, err := expressions.EvaluateJSONTemplate(
+		s.Config,
+		map[string]any{
+			"ctx": map[string]any{
+				"project":   promoCtx.Project,
+				"promotion": promoCtx.Promotion,
+				"stage":     promoCtx.Stage,
+			},
+			"outputs": state,
+			"vars":    promoCtx.Vars,
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+	var config map[string]any
+	if err := yaml.Unmarshal(evaledCfgJSON, &config); err != nil {
+		return nil, nil
+	}
+	return config, nil
 }
 
 // PromotionResult is the result of a user-defined promotion process executed by

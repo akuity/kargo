@@ -107,12 +107,21 @@ func (e *SimpleEngine) Promote(
 			}, fmt.Errorf("step alias %q is forbidden", step.Alias)
 		}
 
+		stepCfg, err := step.getConfig(promoCtx, stateCopy)
+		if err != nil {
+			return PromotionResult{
+					Status:      kargoapi.PromotionPhaseErrored,
+					CurrentStep: i,
+					State:       state,
+				},
+				fmt.Errorf("failed to get step config: %w", err)
+		}
 		stepCtx := &PromotionStepContext{
 			UIBaseURL:       promoCtx.UIBaseURL,
 			WorkDir:         workDir,
 			SharedState:     stateCopy,
 			Alias:           step.Alias,
-			Config:          step.Config.DeepCopy(),
+			Config:          stepCfg,
 			Project:         promoCtx.Project,
 			Stage:           promoCtx.Stage,
 			Promotion:       promoCtx.Promotion,
