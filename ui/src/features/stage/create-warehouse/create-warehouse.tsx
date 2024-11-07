@@ -32,7 +32,7 @@ const Body = () => {
 
   const createResourceMutation = useMutation(createResource, {
     onSuccess: () => {
-      urlState.removeKeysFromSearch(['tab', 'state']);
+      urlState.removeKeysFromSearch(['create', 'tab', 'state']);
     }
   });
 
