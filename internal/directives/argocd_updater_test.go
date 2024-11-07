@@ -297,6 +297,21 @@ func Test_argoCDUpdater_validate(t *testing.T) {
 			},
 		},
 		{
+			name: "desiredCommit and desiredCommitFromStep are both specified",
+			// These are meant to be mutually exclusive.
+			config: Config{
+				"apps": []Config{{
+					"sources": []Config{{
+						"desiredCommit":         "fake-commit",
+						"desiredCommitFromStep": "fake-step",
+					}},
+				}},
+			},
+			expectedProblems: []string{
+				"apps.0.sources.0: Must validate one and only one schema",
+			},
+		},
+		{
 			name: "valid kitchen sink",
 			config: Config{
 				"apps": []Config{{
