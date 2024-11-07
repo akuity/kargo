@@ -1,6 +1,7 @@
 import { useMutation, useQuery } from '@connectrpc/connect-query';
 import { faDocker } from '@fortawesome/free-brands-svg-icons';
 import {
+  faCheck,
   faChevronDown,
   faExpand,
   faEye,
@@ -11,12 +12,14 @@ import {
   faMasksTheater,
   faPalette,
   faRefresh,
+  faSave,
   faWandSparkles,
   faWarehouse
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button, Dropdown, Spin, Tooltip, message } from 'antd';
+import classNames from 'classnames';
 import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef } from 'react';
 import { generatePath, useNavigate, useParams } from 'react-router-dom';
 
@@ -48,6 +51,7 @@ import {
 import { Freight, Project, Stage, Warehouse } from '@ui/gen/v1alpha1/generated_pb';
 import { useDocumentEvent } from '@ui/utils/document';
 import { useLocalStorage } from '@ui/utils/use-local-storage';
+import { useTemporaryBoolean } from '@ui/utils/use-temporary';
 
 import CreateWarehouseModal from './create-warehouse-modal';
 import { Images } from './images';
@@ -58,7 +62,10 @@ import { CollapseMode, FreightTimelineAction, NodeType } from './types';
 import { LINE_THICKNESS } from './utils/graph';
 import { isPromoting, usePipelineState } from './utils/state';
 import { usePipelineGraph } from './utils/use-pipeline-graph';
-import { usePipelinesInfiniteCanvas } from './utils/use-pipelines-infinite-canvas';
+import {
+  usePipelinesInfiniteCanvas,
+  usePipelineViewPrefHook
+} from './utils/use-pipelines-infinite-canvas';
 import { onError } from './utils/util';
 import { Watcher } from './utils/watcher';
 
@@ -270,6 +277,13 @@ export const Pipelines = ({
   const zoomRef = useRef<HTMLDivElement>(null);
   const pipelinesConfigRef = useRef<HTMLDivElement>(null);
 
+  const [pipelineViewPreferenceSaved, onSavePipelineViewPref] = useTemporaryBoolean(5000);
+
+  // @ts-expect-error project name is must
+  const [pipelineViewPref, setPipelineViewPref] = usePipelineViewPrefHook(name, {
+    onSet: onSavePipelineViewPref
+  });
+
   const infinitePipelineCanvas = usePipelinesInfiniteCanvas({
     refs: {
       movingObjectsRef,
@@ -278,7 +292,8 @@ export const Pipelines = ({
     },
     onCanvas(node) {
       canvasNodeRef.current = node;
-    }
+    },
+    pipelineViewPref
   });
 
   if (isLoading || isLoadingFreight || isLoadingImages) return <LoadingState />;
@@ -367,6 +382,7 @@ export const Pipelines = ({
             </Suspense>
           </FreightTimelineWrapper>
         </div>
+        {/* TODO: Use original canvas approach for greater performance and flexibility */}
         <div ref={infinitePipelineCanvas.registerCanvas} className={styles.dag}>
           <div className={styles.staticView} ref={pipelinesConfigRef}>
             <div className={styles.pipelinesViewConfig}>
@@ -390,6 +406,14 @@ export const Pipelines = ({
                   icon={<FontAwesomeIcon icon={faExpand} />}
                   type='dashed'
                 />
+                <Tooltip title='Save current pipeline view preference'>
+                  <Button
+                    className={classNames({ 'text-green-500': pipelineViewPreferenceSaved })}
+                    icon={<FontAwesomeIcon icon={pipelineViewPreferenceSaved ? faCheck : faSave} />}
+                    type='dashed'
+                    onClick={() => setPipelineViewPref(infinitePipelineCanvas.getPipelineView())}
+                  />
+                </Tooltip>
                 <Tooltip title='Regenerate Stage Colors'>
                   <Button
                     type='dashed'

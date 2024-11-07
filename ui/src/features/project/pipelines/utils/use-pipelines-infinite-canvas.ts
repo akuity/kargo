@@ -1,7 +1,27 @@
-import { RefObject, useCallback, useEffect, useRef } from 'react';
+import { Dispatch, RefObject, SetStateAction, useCallback, useEffect, useRef } from 'react';
 
-// we cannot take canvas as ref as the ref might not be available on first render
-// this is safe because once parent node (here canvasNode) is available, we are sure that child node is available as well
+import { useLocalStorage } from '@ui/utils/use-local-storage';
+
+type PipelineViewPref = {
+  zoom?: number;
+  // coordinates - [x, y]
+  position?: [number, number];
+};
+
+export const usePipelineViewPrefHook = (project: string, opts?: { onSet?(): void }) => {
+  const [state, _setState] = useLocalStorage(`${project}-pipeline-view-pref`) as [
+    PipelineViewPref,
+    Dispatch<SetStateAction<PipelineViewPref>>
+  ];
+
+  const setState: typeof _setState = (...args) => {
+    _setState(...args);
+    opts?.onSet?.();
+  };
+
+  return [state, setState] as const;
+};
+
 export const usePipelinesInfiniteCanvas = (conf: {
   refs: {
     movingObjectsRef: RefObject<HTMLDivElement>;
@@ -11,6 +31,7 @@ export const usePipelinesInfiniteCanvas = (conf: {
   moveSpeed?: number; // px - default 3
   zoomSpeed?: number; // % - default 2.5
   onCanvas?(node: HTMLDivElement): void;
+  pipelineViewPref?: PipelineViewPref;
 }) => {
   const cleanupFunction = useRef<() => void>();
 
@@ -21,34 +42,36 @@ export const usePipelinesInfiniteCanvas = (conf: {
     return cleanupFunction.current;
   }, []);
 
-  const zoomOut = useCallback(() => {
+  const getCurrentZoom = useCallback(() => {
+    if (!conf.refs.zoomRef.current) {
+      return 0;
+    }
+
+    return (
+      (
+        conf.refs.zoomRef.current.computedStyleMap().get('transform') as CSSTransformValue
+      ).toMatrix().a * 100
+    );
+  }, []);
+
+  const zoom = useCallback((percentage: number) => {
     if (!conf.refs.zoomRef.current) {
       return;
     }
 
-    let currentZoom =
-      (
-        conf.refs.zoomRef.current.computedStyleMap().get('transform') as CSSTransformValue
-      ).toMatrix().a * 100;
+    conf.refs.zoomRef.current.style.transform = `scale(${percentage}%)`;
+  }, []);
 
-    currentZoom += zoomSpeed;
+  const zoomOut = useCallback(() => {
+    const currentZoom = getCurrentZoom();
 
-    conf.refs.zoomRef.current.style.transform = `scale(${currentZoom}%)`;
+    zoom(currentZoom + zoomSpeed);
   }, []);
 
   const zoomIn = useCallback(() => {
-    if (!conf.refs.zoomRef.current) {
-      return;
-    }
+    const currentZoom = getCurrentZoom();
 
-    let currentZoom =
-      (
-        conf.refs.zoomRef.current.computedStyleMap().get('transform') as CSSTransformValue
-      ).toMatrix().a * 100;
-
-    currentZoom -= zoomSpeed;
-
-    conf.refs.zoomRef.current.style.transform = `scale(${currentZoom}%)`;
+    zoom(currentZoom - zoomSpeed);
   }, []);
 
   const fitToView = useCallback((canvasNode: HTMLDivElement) => {
@@ -120,10 +143,10 @@ export const usePipelinesInfiniteCanvas = (conf: {
 
       const { e, f } = transform.toMatrix().translate();
 
-      return [e, f];
+      return [e, f] as const;
     }
 
-    return [0, 0];
+    return [0, 0] as const;
   }, []);
 
   const updatePos = useCallback((x: number, y: number) => {
@@ -144,6 +167,14 @@ export const usePipelinesInfiniteCanvas = (conf: {
     conf.refs.movingObjectsRef.current.style.animation = '';
   }, []);
 
+  const getPipelineView = useCallback(() => {
+    const [x = 0, y = 0] = getPos();
+    return {
+      zoom: getCurrentZoom(),
+      position: [x, y]
+    } satisfies PipelineViewPref;
+  }, []);
+
   const registerCanvas = useCallback((canvasNode: HTMLDivElement | null) => {
     if (!canvasNode) {
       return;
@@ -151,7 +182,19 @@ export const usePipelinesInfiniteCanvas = (conf: {
 
     conf.onCanvas?.(canvasNode);
 
-    fitToView(canvasNode);
+    const { pipelineViewPref } = conf;
+
+    if (pipelineViewPref) {
+      if (typeof pipelineViewPref?.zoom === 'number') {
+        zoom(pipelineViewPref.zoom);
+      }
+
+      if (pipelineViewPref?.position?.length === 2) {
+        updatePos(...pipelineViewPref.position);
+      }
+    } else {
+      fitToView(canvasNode);
+    }
 
     const startMovingObjects = (init: MouseEvent) => {
       let prev = init;
@@ -243,6 +286,7 @@ export const usePipelinesInfiniteCanvas = (conf: {
     registerCanvas,
     fitToView,
     zoomIn,
-    zoomOut
+    zoomOut,
+    getPipelineView
   };
 };
