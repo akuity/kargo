@@ -402,6 +402,18 @@ func (f *FreightCollection) References() []FreightReference {
 	return refs
 }
 
+// HasNonTerminalVerification returns true if the FreightCollection has any
+// verification which is not in a terminal state, indicating verification is
+// still in progress.
+func (f *FreightCollection) HasNonTerminalVerification() bool {
+	for _, v := range f.VerificationHistory {
+		if !v.Phase.IsTerminal() {
+			return true
+		}
+	}
+	return false
+}
+
 // FreightHistory is a linear list of FreightCollection items. The list is
 // ordered by the time at which the FreightCollection was recorded, with the
 // most recent (current) FreightCollection at the top of the list.
