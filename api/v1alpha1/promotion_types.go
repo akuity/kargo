@@ -88,7 +88,7 @@ type PromotionSpec struct {
 	Freight string `json:"freight" protobuf:"bytes,2,opt,name=freight"`
 	// Vars is a list of variables that can be referenced by expressions in
 	// promotion steps.
-	Vars []PromotionVariable `json:"vars,omitempty"`
+	Vars []PromotionVariable `json:"vars,omitempty" protobuf:"bytes,4,rep,name=vars"`
 	// Steps specifies the directives to be executed as part of this Promotion.
 	// The order in which the directives are executed is the order in which they
 	// are listed in this field.
@@ -102,8 +102,8 @@ type PromotionVariable struct {
 	//
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:Pattern=^[a-zA-Z_]\w*$
-	Name  string `json:"name"`
-	Value string `json:"value"`
+	Name  string `json:"name" protobuf:"bytes,1,opt,name=name"`
+	Value string `json:"value" protobuf:"bytes,2,opt,name=value"`
 }
 
 // PromotionStep describes a directive to be executed as part of a Promotion.

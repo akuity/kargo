@@ -48,6 +48,29 @@
                   },
                   "minItems": 1,
                   "type": "array"
+                },
+                "vars": {
+                  "description": "Vars is a list of variables that can be referenced by expressions in\npromotion steps.",
+                  "items": {
+                    "description": "PromotionVariable describes a single variable that may be referenced by\nexpressions in promotion steps.",
+                    "properties": {
+                      "name": {
+                        "description": "Name is the name of the variable.",
+                        "minLength": 1,
+                        "pattern": "^[a-zA-Z_]\\w*$",
+                        "type": "string"
+                      },
+                      "value": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "name",
+                      "value"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
                 }
               },
               "type": "object"
