@@ -22,21 +22,24 @@ export const usePipelineViewPrefHook = (project: string, opts?: { onSet?(): void
   return [state, setState] as const;
 };
 
-export const usePipelinesInfiniteCanvas = (conf: {
+type pipelineInfiniteCanvasHook = {
   refs: {
     movingObjectsRef: RefObject<HTMLDivElement>;
     zoomRef: RefObject<HTMLDivElement>;
     pipelinesConfigRef: RefObject<HTMLDivElement>;
   };
   moveSpeed?: number; // px - default 5
-  zoomSpeed?: number; // % - default 2.5
+  zoomSpeed?: number; // % - default 5
   onCanvas?(node: HTMLDivElement): void;
+  onMove?(newPref: PipelineViewPref): void;
   pipelineViewPref?: PipelineViewPref;
-}) => {
+};
+
+export const usePipelinesInfiniteCanvas = (conf: pipelineInfiniteCanvasHook) => {
   const cleanupFunction = useRef<() => void>();
 
   const moveSpeed = conf?.moveSpeed || 5;
-  const zoomSpeed = conf?.zoomSpeed || 2.5;
+  const zoomSpeed = conf?.zoomSpeed || 5;
 
   useEffect(() => {
     return cleanupFunction.current;
@@ -127,6 +130,8 @@ export const usePipelinesInfiniteCanvas = (conf: {
     const deltaY = y2 - y1;
 
     updatePos(deltaX, deltaY);
+
+    conf?.onMove?.(getPipelineView());
   }, []);
 
   const getPos = useCallback(() => {
@@ -242,6 +247,7 @@ export const usePipelinesInfiniteCanvas = (conf: {
 
     const onCanvasMouseUp = () => {
       registeredEventListener = false;
+      conf?.onMove?.(getPipelineView());
       window.removeEventListener('mousemove', onWindowMouseMove);
     };
 
@@ -269,6 +275,8 @@ export const usePipelinesInfiniteCanvas = (conf: {
       } else if (e.deltaY < 0) {
         zoomOut();
       }
+
+      conf?.onMove?.(getPipelineView());
     };
 
     canvasNode.addEventListener('mousedown', onCanvasMouseDown);
