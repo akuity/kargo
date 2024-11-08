@@ -9,13 +9,17 @@ type PipelineViewPref = {
 };
 
 export const usePipelineViewPrefHook = (project: string, opts?: { onSet?(): void }) => {
-  const [state, _setState] = useLocalStorage(`${project}-pipeline-view-pref`) as [
+  const key = `${project}-pipeline-view-pref`;
+
+  const [state] = useLocalStorage(key) as [
     PipelineViewPref,
     Dispatch<SetStateAction<PipelineViewPref>>
   ];
 
-  const setState: typeof _setState = (...args) => {
-    _setState(...args);
+  const setState = (nextPref: PipelineViewPref) => {
+    // IMPORTANT: for performance reasons we don't want react to recalculate the whole pipeline view if preference is changed
+    // this is only required on first render
+    window.localStorage.setItem(key, JSON.stringify(nextPref));
     opts?.onSet?.();
   };
 

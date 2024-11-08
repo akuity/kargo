@@ -18,6 +18,7 @@ import {
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button, Dropdown, Spin, Tooltip, message } from 'antd';
+import classNames from 'classnames';
 import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef } from 'react';
 import { generatePath, useNavigate, useParams } from 'react-router-dom';
 
@@ -461,16 +462,14 @@ export const Pipelines = ({
               </div>
             </div>
 
-            {!hideImages && (
-              <div className={styles.imagesMatrix}>
-                <Images
-                  project={name as string}
-                  stages={sortedStages || []}
-                  hide={hideImageSection}
-                  images={imageData?.images || {}}
-                />
-              </div>
-            )}
+            <div className={classNames(styles.imagesMatrix, { hidden: hideImages })}>
+              <Images
+                project={name as string}
+                stages={sortedStages || []}
+                hide={hideImageSection}
+                images={imageData?.images || {}}
+              />
+            </div>
           </div>
           <div ref={movingObjectsRef} className={styles.pipelinesView}>
             <div
