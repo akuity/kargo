@@ -77,10 +77,10 @@ type PromotionStep struct {
 	Config []byte
 }
 
-// getConfig returns the Config unmarshalled into a map. Any expr-lang
+// GetConfig returns the Config unmarshalled into a map. Any expr-lang
 // expressions are evaluated in the context of the provided arguments
 // prior to unmarshaling.
-func (s *PromotionStep) getConfig(
+func (s *PromotionStep) GetConfig(
 	promoCtx PromotionContext,
 	state State,
 ) (Config, error) {

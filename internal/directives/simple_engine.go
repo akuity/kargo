@@ -107,7 +107,7 @@ func (e *SimpleEngine) Promote(
 			}, fmt.Errorf("step alias %q is forbidden", step.Alias)
 		}
 
-		stepCfg, err := step.getConfig(promoCtx, stateCopy)
+		stepCfg, err := step.GetConfig(promoCtx, stateCopy)
 		if err != nil {
 			return PromotionResult{
 					Status:      kargoapi.PromotionPhaseErrored,

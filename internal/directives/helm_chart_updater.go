@@ -74,7 +74,7 @@ func (h *helmChartUpdater) RunPromotionStep(
 	}
 
 	// Convert the configuration into a typed struct
-	cfg, err := configToStruct[HelmUpdateChartConfig](stepCtx.Config)
+	cfg, err := ConfigToStruct[HelmUpdateChartConfig](stepCtx.Config)
 	if err != nil {
 		return failure, fmt.Errorf("could not convert config into %s config: %w", h.Name(), err)
 	}
