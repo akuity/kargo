@@ -32,7 +32,7 @@ type pipelineInfiniteCanvasHook = {
     zoomRef: RefObject<HTMLDivElement>;
     pipelinesConfigRef: RefObject<HTMLDivElement>;
   };
-  moveSpeed?: number; // px - default 5
+  moveSpeed?: number; // px - default 2.5
   zoomSpeed?: number; // % - default 5
   onCanvas?(node: HTMLDivElement): void;
   onMove?(newPref: PipelineViewPref): void;
@@ -42,7 +42,7 @@ type pipelineInfiniteCanvasHook = {
 export const usePipelinesInfiniteCanvas = (conf: pipelineInfiniteCanvasHook) => {
   const cleanupFunction = useRef<() => void>();
 
-  const moveSpeed = conf?.moveSpeed || 5;
+  const moveSpeed = conf?.moveSpeed || 2.5;
   const zoomSpeed = conf?.zoomSpeed || 5;
 
   useEffect(() => {
@@ -51,7 +51,7 @@ export const usePipelinesInfiniteCanvas = (conf: pipelineInfiniteCanvasHook) => 
 
   const getCurrentZoom = useCallback(() => {
     if (!conf.refs.zoomRef.current) {
-      return 0;
+      return 100;
     }
 
     return (
@@ -245,13 +245,29 @@ export const usePipelinesInfiniteCanvas = (conf: pipelineInfiniteCanvasHook) => 
         return;
       }
       registeredEventListener = true;
+
+      if (conf.refs.zoomRef.current) {
+        // block any pointer events in pipeline
+        // this makes only window mousemove event happen
+        // other events like hover on node will conflict and causes glitches while moving
+        conf.refs.zoomRef.current.style.pointerEvents = 'none';
+        conf.refs.zoomRef.current.style.cursor = 'cursor-move';
+      }
+
       onWindowMouseMove = startMovingObjects(e);
+
       window.addEventListener('mousemove', onWindowMouseMove);
     };
 
     const onCanvasMouseUp = () => {
       registeredEventListener = false;
       conf?.onMove?.(getPipelineView());
+
+      if (conf.refs.zoomRef.current) {
+        conf.refs.zoomRef.current.style.pointerEvents = '';
+        conf.refs.zoomRef.current.style.cursor = '';
+      }
+
       window.removeEventListener('mousemove', onWindowMouseMove);
     };
 
