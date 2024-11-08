@@ -12,5 +12,81 @@
     linear-gradient(var(--dot-bg) calc(var(--dot-space) - var(--dot-size)), transparent 1%) center /
       var(--dot-space) var(--dot-space),
     var(--dot-color);
+
+  @apply h-0;
+
+  @apply cursor-pointer;
+
+  @apply active:cursor-move;
 }
 
+.staticView {
+  @apply fixed;
+  @apply right-5;
+  @apply z-50;
+  @apply space-y-10;
+  @apply mt-5;
+}
+
+.pipelinesViewConfig {
+  @apply flex;
+  div {
+    @apply ml-auto;
+  }
+}
+
+.pipelinesView {
+  @apply p-10;
+
+  @apply relative;
+
+  user-select: none;
+
+  transform: translate(0px, 0px);
+
+  --start-transform: translate(0px, 0px);
+  --end-transform: translate(0px, 0px);
+
+  animation: movePipeline 0.1s ease forwards;
+}
+
+@keyframes movePipeline {
+  from {
+    transform: var(--start-transform);
+  }
+
+  to {
+    transform: var(--end-transform);
+  }
+}
+
+.imagesMatrix {
+  width: 450px;
+}
+
+.toolbar {
+  @apply flex;
+  @apply gap-2;
+  @apply bg-white;
+  @apply shadow-md;
+  @apply px-5;
+  @apply py-2;
+}
+
+.pipelinesViewNavigationHelper {
+  @apply text-xs;
+  @apply bg-white;
+  @apply shadow-lg;
+  @apply w-fit;
+  @apply absolute;
+  @apply px-5;
+  @apply py-2;
+  @apply text-gray-400;
+  @apply rounded-lg;
+  @apply absolute;
+  @apply bottom-5;
+  @apply left-5;
+  @apply flex;
+  @apply items-center;
+  @apply gap-3;
+}

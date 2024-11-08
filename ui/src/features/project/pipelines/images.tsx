@@ -138,7 +138,7 @@ export const Images = memo(
       : [];
 
     return (
-      <div className='text-gray-600 text-sm bg-gray-100 pb-4 rounded-md overflow-hidden'>
+      <div className='text-gray-600 text-sm bg-gray-100 pb-4 rounded-md'>
         <h3 className='bg-gray-200 px-4 py-2 flex items-center text-sm text-gray-500'>
           <FontAwesomeIcon icon={faDocker} className='mr-2' /> IMAGES
           <Tooltip title='Show history'>
@@ -152,7 +152,7 @@ export const Images = memo(
           </Tooltip>
           <HeaderButton onClick={hide} icon={faEyeSlash} className='ml-2' />
         </h3>
-        <div className='p-4'>
+        <div className='p-4 overflow-y-auto max-h-[356px]'>
           {curImage ? (
             <>
               <div className='mb-8'>
