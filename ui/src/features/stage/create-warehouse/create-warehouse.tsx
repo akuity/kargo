@@ -4,27 +4,20 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Drawer, Flex, Tabs, Typography } from 'antd';
 import { JSONSchema4 } from 'json-schema';
 import { useCallback, useState } from 'react';
-import { useParams } from 'react-router-dom';
-import { z } from 'zod';
+import { generatePath, useNavigate, useParams } from 'react-router-dom';
 
+import { paths } from '@ui/config/paths';
 import { YamlEditor } from '@ui/features/common/code-editor/yaml-editor';
 import { ModalComponentProps } from '@ui/features/common/modal/modal-context';
 import { WarehouseManifestsGen } from '@ui/features/utils/manifest-generator';
-import { useSearchParamsState } from '@ui/features/utils/use-search-params-state';
 import warehouseSchema from '@ui/gen/schema/warehouses.kargo.akuity.io_v1alpha1.json';
 import { createResource } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 
 import { CreateWarehouseWizard } from './create-warehouse-wizard';
 
-const urlStateSchema = z.object({
-  tab: z.enum(['wizard', 'yaml']).catch('wizard'),
-  state: z.record(z.string(), z.any()).catch({})
-});
-
 const Body = () => {
   const { name: projectName } = useParams();
-
-  const urlState = useSearchParamsState(urlStateSchema);
+  const navigate = useNavigate();
 
   if (!projectName) {
     throw new Error(`Expected project name in URL`);
@@ -32,18 +25,22 @@ const Body = () => {
 
   const createResourceMutation = useMutation(createResource, {
     onSuccess: () => {
-      urlState.removeKeysFromSearch(['create', 'tab', 'state']);
+      navigate(generatePath(paths.project, { name: projectName }));
     }
   });
 
-  const tab = urlState.state.tab;
+  const [tab, setTab] = useState<'wizard' | 'yaml'>('wizard');
+
+  const [form, setForm] = useState<object>();
 
   const getWarehouseManifest = useCallback(() => {
-    const manifest = urlState.state.state;
+    const manifest = form;
     if (manifest) {
       return WarehouseManifestsGen.v1alpha1({
         projectName,
+        // @ts-expect-error correct values from dynamic form
         warehouseName: manifest.name,
+        // @ts-expect-error correct values from dynamic form
         spec: manifest.spec
       });
     }
@@ -55,7 +52,7 @@ const Body = () => {
         subscriptions: []
       }
     });
-  }, [urlState.state.state]);
+  }, [form]);
 
   const [yaml, setYaml] = useState(getWarehouseManifest);
 
@@ -67,10 +64,6 @@ const Body = () => {
     [getWarehouseManifest, createResourceMutation.mutate]
   );
 
-  const formState = urlState.state.state;
-
-  const setFormState = (nextState: object) => urlState.setSearchState({ state: nextState });
-
   return (
     <>
       <Tabs
@@ -79,14 +72,19 @@ const Body = () => {
           if (tab === 'wizard' && newTab === 'yaml') {
             setYaml(getWarehouseManifest());
           }
-          urlState.setSearchState({ tab: newTab as 'wizard' | 'yaml' });
+          setTab(newTab as 'wizard' | 'yaml');
         }}
         items={[
           {
             key: 'wizard',
             icon: <FontAwesomeIcon icon={faListCheck} />,
             label: 'Form',
-            children: <CreateWarehouseWizard formState={formState} setFormState={setFormState} />
+            children: (
+              <CreateWarehouseWizard
+                formState={(form || {}) as Record<string, unknown>}
+                setFormState={(next) => setForm(next)}
+              />
+            )
           },
           {
             key: 'yaml',

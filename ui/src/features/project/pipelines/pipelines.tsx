@@ -19,7 +19,6 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Button, Dropdown, Spin, Tooltip, message } from 'antd';
 import React, { Suspense, lazy, useCallback, useEffect, useMemo } from 'react';
 import { generatePath, useNavigate, useParams } from 'react-router-dom';
-import { z } from 'zod';
 
 import { paths } from '@ui/config/paths';
 import { ColorContext } from '@ui/context/colors';
@@ -37,7 +36,6 @@ const FreightTimelineHeader = lazy(
 import { FreightTimelineWrapper } from '@ui/features/freight-timeline/freight-timeline-wrapper';
 import { clearColors } from '@ui/features/stage/utils';
 import { queryCache } from '@ui/features/utils/cache';
-import { useSearchParamsState } from '@ui/features/utils/use-search-params-state';
 import {
   approveFreight,
   listStages,
@@ -64,19 +62,15 @@ import { Watcher } from './utils/watcher';
 
 const WarehouseDetails = lazy(() => import('./warehouse/warehouse-details'));
 
-const urlStateSchema = z.object({
-  create: z.enum(['warehouse', '']).catch(''),
-  tab: z.enum(['wizard', '']).catch('')
-});
-
 export const Pipelines = ({
   project,
-  creatingStage
+  creatingStage,
+  creatingWarehouse
 }: {
   project: Project;
   creatingStage?: boolean;
+  creatingWarehouse?: boolean;
 }) => {
-  const urlState = useSearchParamsState(urlStateSchema);
   const { name, stageName, freightName, warehouseName } = useParams();
   const { data, isLoading } = useQuery(listStages, { project: name });
   const {
@@ -402,8 +396,7 @@ export const Pipelines = ({
                             Warehouse
                           </>
                         ),
-                        onClick: () =>
-                          urlState.setSearchState({ create: 'warehouse', tab: 'wizard' })
+                        onClick: () => navigate(generatePath(paths.createWarehouse, { name }))
                       }
                     ]
                   }}
@@ -631,8 +624,8 @@ export const Pipelines = ({
             />
           )}
           <CreateWarehouse
-            visible={urlState.state.create === 'warehouse'}
-            hide={() => urlState.removeKeysFromSearch(['create', 'tab', 'state'])}
+            visible={Boolean(creatingWarehouse)}
+            hide={() => navigate(generatePath(paths.project, { name }))}
           />
         </SuspenseSpin>
       </ColorContext.Provider>
