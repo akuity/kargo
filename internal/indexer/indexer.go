@@ -2,7 +2,6 @@ package indexer
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"slices"
 	"strconv"
@@ -143,19 +142,41 @@ func RunningPromotionsByArgoCDApplications(
 
 		// Extract the Argo CD Applications from the promotion steps.
 		//
-		// TODO(hidde): While this is arguably already better than the "legacy"
-		// approach further down, which had to query the Stage to get the
-		// Applications, it is still not ideal as it requires parsing the
-		// directives and treating some of them as special cases. We should
-		// consider a more general approach in the future.
+		// TODO(hidde): This is not ideal as it requires parsing the directives and
+		// treating some of them as special cases. We should consider a more general
+		// approach in the future.
 		var res []string
 		for i, step := range promo.Spec.Steps {
+			if int64(i) > promo.Status.CurrentStep {
+				// We are only interested in steps that have already been executed or
+				// are about to be. If we try to evaluate expressions in the
+				// configuration of steps we haven't reached yet, we're more likely to
+				// run into errors due to outputs from previous steps being undefined.
+				break
+			}
 			if step.Uses != "argocd-update" || step.Config == nil {
 				continue
 			}
-
-			config := directives.ArgoCDUpdateConfig{}
-			if err := json.Unmarshal(step.Config.Raw, &config); err != nil {
+			dirStep := directives.PromotionStep{
+				Kind:   step.Uses,
+				Alias:  step.As,
+				Config: step.Config.Raw,
+			}
+			stepCfg, err := dirStep.GetConfig(
+				// TODO(krancour): This is not quite ideal. We do not need to build a
+				// complete PromotionContext here because we don't need to execute the
+				// step, but we need to build enough of it to be successful in
+				// evaluating any expressions in the step's configuration. This will be
+				// difficult to keep up with as dirStep.GetConfig() becomes interested
+				// in additional, possibly new, promotion context fields.
+				directives.PromotionContext{
+					Project:   promo.Namespace,
+					Promotion: promo.Name,
+					Stage:     promo.Spec.Stage,
+				},
+				promo.GetStatus().GetState(),
+			)
+			if err != nil {
 				logger.Error(
 					err,
 					fmt.Sprintf(
@@ -168,8 +189,21 @@ func RunningPromotionsByArgoCDApplications(
 				)
 				continue
 			}
-
-			for _, app := range config.Apps {
+			appUpdateCfg, err := directives.ConfigToStruct[directives.ArgoCDUpdateConfig](stepCfg)
+			if err != nil {
+				logger.Error(
+					err,
+					fmt.Sprintf(
+						"failed to extract config from Promotion step %d:"+
+							"ignoring any Argo CD Applications from this step",
+						i,
+					),
+					"promo", promo.Name,
+					"namespace", promo.Namespace,
+				)
+				continue
+			}
+			for _, app := range appUpdateCfg.Apps {
 				namespace := app.Namespace
 				if namespace == "" {
 					namespace = libargocd.Namespace()
