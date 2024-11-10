@@ -15,7 +15,7 @@ jobs:
   test-unit:
     runs-on: ubuntu-latest
     container:
-      image: golang:1.23.2-bookworm
+      image: golang:1.23.3-bookworm
     steps:
     # Install Git from "trixie" repository to get a more recent version than
     # the one available in "stable". This can be removed once the version in
@@ -73,7 +73,7 @@ jobs:
       checks: write # Used to create checks (linting comments) on PRs
     runs-on: ubuntu-latest
     container:
-      image: golang:1.23.2-bookworm
+      image: golang:1.23.3-bookworm
     steps:
     - name: Checkout code
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -98,7 +98,7 @@ jobs:
   lint-charts:
     runs-on: ubuntu-latest
     container:
-      image: golang:1.23.2-bookworm
+      image: golang:1.23.3-bookworm
     steps:
     - name: Checkout code
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -122,7 +122,7 @@ jobs:
       checks: write # Used to create checks (linting comments) on PRs
     runs-on: ubuntu-latest
     container:
-      image: golang:1.23.2-bookworm
+      image: golang:1.23.3-bookworm
     steps:
     - name: Checkout code
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -145,7 +145,7 @@ jobs:
   check-codegen:
     runs-on: ubuntu-latest
     container:
-      image: golang:1.23.2-bookworm
+      image: golang:1.23.3-bookworm
     steps:
     - name: Checkout code
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -221,7 +221,7 @@ jobs:
     needs: [test-unit, lint-go, lint-charts, lint-proto, lint-ui, check-codegen]
     runs-on: ubuntu-latest
     container:
-      image: golang:1.23.2-bookworm
+      image: golang:1.23.3-bookworm
     steps:
     - name: Checkout code
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
