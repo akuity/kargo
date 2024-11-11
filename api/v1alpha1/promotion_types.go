@@ -102,7 +102,10 @@ type PromotionVariable struct {
 	//
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:Pattern=^[a-zA-Z_]\w*$
-	Name  string `json:"name" protobuf:"bytes,1,opt,name=name"`
+	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
+	// Value is the value of the variable. It is legal to utilize expressions
+	// the value.
+	// See https://docs.kargo.io/references/expression-language for details.
 	Value string `json:"value" protobuf:"bytes,2,opt,name=value"`
 }
 
@@ -114,7 +117,10 @@ type PromotionStep struct {
 	Uses string `json:"uses" protobuf:"bytes,1,opt,name=uses"`
 	// As is the alias this step can be referred to as.
 	As string `json:"as,omitempty" protobuf:"bytes,2,opt,name=as"`
-	// Config is the configuration for the directive.
+	// Config is opaque configuration for the PromotionStep that is understood
+	// only by each PromotionStep's implementation. It is legal to utilize
+	// expressions in defining values at any level of this block.
+	// See https://docs.kargo.io/references/expression-language for details.
 	Config *apiextensionsv1.JSON `json:"config,omitempty" protobuf:"bytes,3,opt,name=config"`
 }
 
