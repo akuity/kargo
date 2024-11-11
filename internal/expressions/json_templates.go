@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"maps"
 	"strconv"
 	"strings"
 
@@ -34,7 +33,7 @@ import (
 // expression evaluates to a string enclosed in quotes. e.g. ${{ true }} will
 // evaluated as a bool, but ${{ quote(true) }} will be evaluated as a string.
 // This behavior should be intuitive to anyone familiar with YAML.
-func EvaluateJSONTemplate(jsonBytes []byte, env map[string]any) ([]byte, error) {
+func EvaluateJSONTemplate(jsonBytes []byte, env map[string]any, exprOpts ...expr.Option) ([]byte, error) {
 	if _, ok := env["quote"]; ok {
 		return nil, fmt.Errorf(
 			`"quote" is a forbidden key in the environment map; it is reserved for internal use`,
@@ -45,7 +44,7 @@ func EvaluateJSONTemplate(jsonBytes []byte, env map[string]any) ([]byte, error) 
 		return nil,
 			fmt.Errorf("input is not valid JSON; are all expressions enclosed in quotes? %w", err)
 	}
-	if err := evaluateExpressions(parsed, env); err != nil {
+	if err := evaluateExpressions(parsed, env, exprOpts...); err != nil {
 		return nil, err
 	}
 	return json.Marshal(parsed)
@@ -55,7 +54,7 @@ func EvaluateJSONTemplate(jsonBytes []byte, env map[string]any) ([]byte, error) 
 // elements of a map[string]any or []any, updating those elements in place.
 // Passing any other type to this function will have no effect. Expressions are
 // evaluated using the provided environment map as context.
-func evaluateExpressions(collection any, env map[string]any) error {
+func evaluateExpressions(collection any, env map[string]any, exprOpts ...expr.Option) error {
 	switch col := collection.(type) {
 	case map[string]any:
 		for key, val := range col {
@@ -70,7 +69,7 @@ func evaluateExpressions(collection any, env map[string]any) error {
 				}
 			case string:
 				var err error
-				if col[key], err = EvaluateTemplate(v, env); err != nil {
+				if col[key], err = EvaluateTemplate(v, env, exprOpts...); err != nil {
 					return err
 				}
 			}
@@ -88,7 +87,7 @@ func evaluateExpressions(collection any, env map[string]any) error {
 				}
 			case string:
 				var err error
-				if col[i], err = EvaluateTemplate(v, env); err != nil {
+				if col[i], err = EvaluateTemplate(v, env, exprOpts...); err != nil {
 					return err
 				}
 			}
@@ -100,12 +99,21 @@ func evaluateExpressions(collection any, env map[string]any) error {
 // EvaluateTemplate evaluates a single template string with the provided
 // environment. Note that a single template string can contain multiple
 // expressions.
-func EvaluateTemplate(template string, env map[string]any) (any, error) {
-	env = maps.Clone(env) // We don't want to add the quote function to the user's map.
-	env["quote"] = func(a any) string { return fmt.Sprintf(`"%v"`, a) }
-	t := fasttemplate.New(template, "${{", "}}")
+func EvaluateTemplate(template string, env map[string]any, exprOpts ...expr.Option) (any, error) {
+	if exprOpts == nil {
+		exprOpts = make([]expr.Option, 0, 1)
+	}
+	exprOpts = append(exprOpts, expr.Function(
+		"quote",
+		func(a ...any) (any, error) { return fmt.Sprintf(`"%v"`, a[0]), nil },
+		new(func(any) string),
+	))
+	t, err := fasttemplate.NewTemplate(template, "${{", "}}")
+	if err != nil {
+		return nil, fmt.Errorf("error parsing template: %w", err)
+	}
 	out := &bytes.Buffer{}
-	if _, err := t.ExecuteFunc(out, getExpressionEvaluator(env)); err != nil {
+	if _, err := t.ExecuteFunc(out, getExpressionEvaluator(env, exprOpts...)); err != nil {
 		return nil, err
 	}
 	result := out.String()
@@ -142,9 +150,9 @@ func EvaluateTemplate(template string, env map[string]any) (any, error) {
 
 // getExpressionEvaluator returns a fasttemplate.TagFunc that evaluates input
 // as a single expr-lang expression with the provided map as the environment.
-func getExpressionEvaluator(env map[string]any) fasttemplate.TagFunc {
+func getExpressionEvaluator(env map[string]any, exprOpts ...expr.Option) fasttemplate.TagFunc {
 	return func(out io.Writer, expression string) (int, error) {
-		program, err := expr.Compile(expression, expr.Env(env))
+		program, err := expr.Compile(expression, exprOpts...)
 		if err != nil {
 			return 0, err
 		}
