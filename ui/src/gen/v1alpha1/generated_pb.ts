@@ -2832,7 +2832,10 @@ export class PromotionStep extends Message<PromotionStep> {
   as?: string;
 
   /**
-   * Config is the configuration for the directive.
+   * Config is opaque configuration for the PromotionStep that is understood
+   * only by each PromotionStep's implementation. It is legal to utilize
+   * expressions in defining values at any level of this block.
+   * See https://docs.kargo.io/references/expression-language for details.
    *
    * @generated from field: optional k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON config = 3;
    */
@@ -2982,6 +2985,10 @@ export class PromotionVariable extends Message<PromotionVariable> {
   name?: string;
 
   /**
+   * Value is the value of the variable. It is legal to utilize expressions
+   * the value.
+   * See https://docs.kargo.io/references/expression-language for details.
+   *
    * @generated from field: optional string value = 2;
    */
   value?: string;

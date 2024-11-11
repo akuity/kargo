@@ -913,7 +913,10 @@ message PromotionStep {
   // As is the alias this step can be referred to as.
   optional string as = 2;
 
-  // Config is the configuration for the directive.
+  // Config is opaque configuration for the PromotionStep that is understood
+  // only by each PromotionStep's implementation. It is legal to utilize
+  // expressions in defining values at any level of this block.
+  // See https://docs.kargo.io/references/expression-language for details.
   optional .k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON config = 3;
 }
 
@@ -948,6 +951,9 @@ message PromotionVariable {
   // +kubebuilder:validation:Pattern=^[a-zA-Z_]\w*$
   optional string name = 1;
 
+  // Value is the value of the variable. It is legal to utilize expressions
+  // the value.
+  // See https://docs.kargo.io/references/expression-language for details.
   optional string value = 2;
 }
 

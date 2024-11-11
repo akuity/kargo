@@ -37,7 +37,7 @@
                 "type": "string"
               },
               "config": {
-                "description": "Config is the configuration for the directive.",
+                "description": "Config is opaque configuration for the PromotionStep that is understood\nonly by each PromotionStep's implementation. It is legal to utilize\nexpressions in defining values at any level of this block.\nSee https://docs.kargo.io/references/expression-language for details.",
                 "x-kubernetes-preserve-unknown-fields": true
               },
               "uses": {
@@ -65,6 +65,7 @@
                 "type": "string"
               },
               "value": {
+                "description": "Value is the value of the variable. It is legal to utilize expressions\nthe value.\nSee https://docs.kargo.io/references/expression-language for details.",
                 "type": "string"
               }
             },
