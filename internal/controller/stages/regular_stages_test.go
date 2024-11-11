@@ -8,7 +8,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -889,7 +889,7 @@ func Test_regularStagesReconciler_verifyStageFreight(t *testing.T) {
 		name             string
 		stage            *kargoapi.Stage
 		objects          []client.Object
-		assertions       func(*testing.T, client.Client, kargoapi.StageStatus, error)
+		assertions       func(*testing.T, client.Client, *fakeevent.EventRecorder, kargoapi.StageStatus, error)
 		rolloutsDisabled bool
 	}{
 		{
@@ -903,8 +903,17 @@ func Test_regularStagesReconciler_verifyStageFreight(t *testing.T) {
 					FreightHistory: nil,
 				},
 			},
-			assertions: func(t *testing.T, _ client.Client, status kargoapi.StageStatus, err error) {
+			assertions: func(
+				t *testing.T,
+				_ client.Client,
+				recorder *fakeevent.EventRecorder,
+				status kargoapi.StageStatus,
+				err error,
+			) {
 				require.NoError(t, err)
+
+				assert.Len(t, recorder.Events, 0)
+
 				verifiedCond := conditions.Get(&status, kargoapi.ConditionTypeVerified)
 				require.NotNil(t, verifiedCond)
 				assert.Equal(t, metav1.ConditionUnknown, verifiedCond.Status)
@@ -932,8 +941,17 @@ func Test_regularStagesReconciler_verifyStageFreight(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, _ client.Client, status kargoapi.StageStatus, err error) {
+			assertions: func(
+				t *testing.T,
+				_ client.Client,
+				recorder *fakeevent.EventRecorder,
+				status kargoapi.StageStatus,
+				err error,
+			) {
 				require.NoError(t, err)
+
+				assert.Len(t, recorder.Events, 0)
+
 				verifiedCond := conditions.Get(&status, kargoapi.ConditionTypeVerified)
 				assert.Nil(t, verifiedCond)
 			},
@@ -956,14 +974,37 @@ func Test_regularStagesReconciler_verifyStageFreight(t *testing.T) {
 						{
 							ID: "test-freight-collection",
 							Freight: map[string]kargoapi.FreightReference{
-								"warehouse": {Name: "test-freight"},
+								"warehouse":   {Name: "test-freight"},
+								"warehouse-2": {Name: "test-freight-2"},
 							},
 						},
 					},
 				},
 			},
-			assertions: func(t *testing.T, _ client.Client, status kargoapi.StageStatus, err error) {
+			objects: []client.Object{
+				&kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-freight",
+						Namespace: "fake-project",
+					},
+				},
+				&kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-freight-2",
+						Namespace: "fake-project",
+					},
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				_ client.Client,
+				recorder *fakeevent.EventRecorder,
+				status kargoapi.StageStatus,
+				err error,
+			) {
 				require.NoError(t, err)
+
+				require.Len(t, recorder.Events, 2)
 
 				curFreight := status.FreightHistory.Current()
 				require.NotNil(t, curFreight)
@@ -997,7 +1038,13 @@ func Test_regularStagesReconciler_verifyStageFreight(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, _ client.Client, status kargoapi.StageStatus, err error) {
+			assertions: func(
+				t *testing.T,
+				_ client.Client,
+				_ *fakeevent.EventRecorder,
+				status kargoapi.StageStatus,
+				err error,
+			) {
 				require.NoError(t, err)
 
 				curFreight := status.FreightHistory.Current()
@@ -1029,7 +1076,13 @@ func Test_regularStagesReconciler_verifyStageFreight(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, _ client.Client, status kargoapi.StageStatus, err error) {
+			assertions: func(
+				t *testing.T,
+				_ client.Client,
+				_ *fakeevent.EventRecorder,
+				status kargoapi.StageStatus,
+				err error,
+			) {
 				require.NoError(t, err)
 
 				curFreight := status.FreightHistory.Current()
@@ -1038,7 +1091,8 @@ func Test_regularStagesReconciler_verifyStageFreight(t *testing.T) {
 			},
 		},
 		{
-			name: "error when rollouts integration is disabled",
+			name:             "error when rollouts integration is disabled",
+			rolloutsDisabled: true,
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "fake-project",
@@ -1061,9 +1115,24 @@ func Test_regularStagesReconciler_verifyStageFreight(t *testing.T) {
 					},
 				},
 			},
-			rolloutsDisabled: true,
-			assertions: func(t *testing.T, _ client.Client, status kargoapi.StageStatus, err error) {
+			objects: []client.Object{
+				&kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-freight",
+						Namespace: "fake-project",
+					},
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				_ client.Client,
+				recorder *fakeevent.EventRecorder,
+				status kargoapi.StageStatus,
+				err error,
+			) {
 				require.NoError(t, err)
+
+				assert.Len(t, recorder.Events, 1)
 
 				curFreight := status.FreightHistory.Current()
 				require.NotNil(t, curFreight)
@@ -1109,6 +1178,12 @@ func Test_regularStagesReconciler_verifyStageFreight(t *testing.T) {
 				},
 			},
 			objects: []client.Object{
+				&kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-freight",
+						Namespace: "fake-project",
+					},
+				},
 				&rolloutsapi.AnalysisRun{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-analysis-run",
@@ -1116,8 +1191,16 @@ func Test_regularStagesReconciler_verifyStageFreight(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, c client.Client, status kargoapi.StageStatus, err error) {
+			assertions: func(
+				t *testing.T,
+				c client.Client,
+				recorder *fakeevent.EventRecorder,
+				status kargoapi.StageStatus,
+				err error,
+			) {
 				require.NoError(t, err)
+
+				assert.Len(t, recorder.Events, 1)
 
 				curFreight := status.FreightHistory.Current()
 				require.NotNil(t, curFreight)
@@ -1180,8 +1263,16 @@ func Test_regularStagesReconciler_verifyStageFreight(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, c client.Client, status kargoapi.StageStatus, err error) {
+			assertions: func(
+				t *testing.T,
+				c client.Client,
+				recorder *fakeevent.EventRecorder,
+				status kargoapi.StageStatus,
+				err error,
+			) {
 				require.NoError(t, err)
+
+				assert.Len(t, recorder.Events, 0)
 
 				curFreight := status.FreightHistory.Current()
 				require.NotNil(t, curFreight)
@@ -1247,8 +1338,16 @@ func Test_regularStagesReconciler_verifyStageFreight(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, _ client.Client, status kargoapi.StageStatus, err error) {
+			assertions: func(
+				t *testing.T,
+				_ client.Client,
+				recorder *fakeevent.EventRecorder,
+				status kargoapi.StageStatus,
+				err error,
+			) {
 				require.NoError(t, err)
+
+				assert.Len(t, recorder.Events, 0)
 
 				curFreight := status.FreightHistory.Current()
 				require.NotNil(t, curFreight)
@@ -1295,8 +1394,24 @@ func Test_regularStagesReconciler_verifyStageFreight(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, _ client.Client, status kargoapi.StageStatus, err error) {
+			objects: []client.Object{
+				&kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-freight",
+						Namespace: "fake-project",
+					},
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				_ client.Client,
+				recorder *fakeevent.EventRecorder,
+				status kargoapi.StageStatus,
+				err error,
+			) {
 				require.True(t, apierrors.IsNotFound(err))
+
+				assert.Len(t, recorder.Events, 1)
 
 				curFreight := status.FreightHistory.Current()
 				require.NotNil(t, curFreight)
@@ -1332,6 +1447,12 @@ func Test_regularStagesReconciler_verifyStageFreight(t *testing.T) {
 				},
 			},
 			objects: []client.Object{
+				&kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-freight",
+						Namespace: "fake-project",
+					},
+				},
 				&rolloutsapi.AnalysisRun{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "existing-analysis",
@@ -1347,8 +1468,16 @@ func Test_regularStagesReconciler_verifyStageFreight(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, _ client.Client, status kargoapi.StageStatus, err error) {
+			assertions: func(
+				t *testing.T,
+				_ client.Client,
+				recorder *fakeevent.EventRecorder,
+				status kargoapi.StageStatus,
+				err error,
+			) {
 				require.NoError(t, err)
+
+				assert.Len(t, recorder.Events, 1)
 
 				curFreight := status.FreightHistory.Current()
 				require.NotNil(t, curFreight)
@@ -1406,7 +1535,13 @@ func Test_regularStagesReconciler_verifyStageFreight(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, _ client.Client, status kargoapi.StageStatus, err error) {
+			assertions: func(
+				t *testing.T,
+				_ client.Client,
+				_ *fakeevent.EventRecorder,
+				status kargoapi.StageStatus,
+				err error,
+			) {
 				require.NoError(t, err)
 
 				curFreight := status.FreightHistory.Current()
@@ -1459,6 +1594,12 @@ func Test_regularStagesReconciler_verifyStageFreight(t *testing.T) {
 				},
 			},
 			objects: []client.Object{
+				&kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-freight",
+						Namespace: "fake-project",
+					},
+				},
 				&rolloutsapi.AnalysisRun{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-analysis-run",
@@ -1470,8 +1611,16 @@ func Test_regularStagesReconciler_verifyStageFreight(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, _ client.Client, status kargoapi.StageStatus, err error) {
+			assertions: func(
+				t *testing.T,
+				_ client.Client,
+				recorder *fakeevent.EventRecorder,
+				status kargoapi.StageStatus,
+				err error,
+			) {
 				require.NoError(t, err)
+
+				require.Len(t, recorder.Events, 1)
 
 				curFreight := status.FreightHistory.Current()
 				require.NotNil(t, curFreight)
@@ -1494,16 +1643,18 @@ func Test_regularStagesReconciler_verifyStageFreight(t *testing.T) {
 				WithStatusSubresource(&kargoapi.Stage{}).
 				Build()
 
+			recorder := fakeevent.NewEventRecorder(10)
+
 			r := &RegularStagesReconciler{
-				client:           c,
-				directivesEngine: &directives.FakeEngine{},
+				client: c,
 				cfg: ReconcilerConfig{
 					RolloutsIntegrationEnabled: !tt.rolloutsDisabled,
 				},
+				eventRecorder: recorder,
 			}
 
 			status, err := r.verifyStageFreight(context.Background(), tt.stage, startTime, fixedEndTime)
-			tt.assertions(t, c, status, err)
+			tt.assertions(t, c, recorder, status, err)
 		})
 	}
 }
@@ -1927,6 +2078,265 @@ func Test_regularStagesReconciler_verifyFreightForStage(t *testing.T) {
 
 			status, err := r.verifyFreightForStage(context.Background(), tt.stage)
 			tt.assertions(t, c, status, err)
+		})
+	}
+}
+
+func Test_regularStagesReconciler_recordFreightVerificationEvent(t *testing.T) {
+	scheme := runtime.NewScheme()
+	require.NoError(t, kargoapi.AddToScheme(scheme))
+	require.NoError(t, rolloutsapi.AddToScheme(scheme))
+
+	now := metav1.Now()
+	startTime := metav1.NewTime(now.Add(-1 * time.Hour))
+	finishTime := metav1.NewTime(now.Add(-30 * time.Minute))
+
+	baseStage := &kargoapi.Stage{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-stage",
+			Namespace: "test-ns",
+		},
+	}
+
+	baseFreight := &kargoapi.Freight{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:              "test-freight",
+			Namespace:         "test-ns",
+			CreationTimestamp: now,
+		},
+		Alias: "test-alias",
+	}
+
+	baseFreightRef := kargoapi.FreightReference{
+		Name: "test-freight",
+	}
+
+	tests := []struct {
+		name       string
+		stage      *kargoapi.Stage
+		freightRef kargoapi.FreightReference
+		vi         *kargoapi.VerificationInfo
+		objects    []client.Object
+		assertions func(*testing.T, *fakeevent.EventRecorder)
+	}{
+		{
+			name:       "successful verification",
+			stage:      baseStage,
+			freightRef: baseFreightRef,
+			vi: &kargoapi.VerificationInfo{
+				Phase:      kargoapi.VerificationPhaseSuccessful,
+				StartTime:  &startTime,
+				FinishTime: &finishTime,
+			},
+			objects: []client.Object{baseFreight},
+			assertions: func(t *testing.T, recorder *fakeevent.EventRecorder) {
+				require.Len(t, recorder.Events, 1)
+
+				event := <-recorder.Events
+				assert.Equal(t, corev1.EventTypeNormal, event.EventType)
+				assert.Equal(t, kargoapi.EventReasonFreightVerificationSucceeded, event.Reason)
+				assert.Equal(t, "Freight verification succeeded", event.Message)
+
+				assert.Equal(t, baseStage.Name, event.Annotations[kargoapi.AnnotationKeyEventStageName])
+				assert.Equal(t, baseFreight.Alias, event.Annotations[kargoapi.AnnotationKeyEventFreightAlias])
+				assert.Equal(
+					t,
+					startTime.Format(time.RFC3339),
+					event.Annotations[kargoapi.AnnotationKeyEventVerificationStartTime],
+				)
+				assert.Equal(
+					t,
+					finishTime.Format(time.RFC3339),
+					event.Annotations[kargoapi.AnnotationKeyEventVerificationFinishTime],
+				)
+			},
+		},
+		{
+			name:       "failed verification",
+			stage:      baseStage,
+			freightRef: baseFreightRef,
+			vi: &kargoapi.VerificationInfo{
+				Phase:   kargoapi.VerificationPhaseFailed,
+				Message: "verification failed due to metrics",
+			},
+			objects: []client.Object{baseFreight},
+			assertions: func(t *testing.T, recorder *fakeevent.EventRecorder) {
+				require.Len(t, recorder.Events, 1)
+
+				event := <-recorder.Events
+				assert.Equal(t, kargoapi.EventReasonFreightVerificationFailed, event.Reason)
+				assert.Equal(t, "verification failed due to metrics", event.Message)
+			},
+		},
+		{
+			name:       "verification with analysis run and promotion",
+			stage:      baseStage,
+			freightRef: baseFreightRef,
+			vi: &kargoapi.VerificationInfo{
+				Phase: kargoapi.VerificationPhaseSuccessful,
+				AnalysisRun: &kargoapi.AnalysisRunReference{
+					Name:      "test-analysis",
+					Namespace: "test-ns",
+				},
+			},
+			objects: []client.Object{
+				baseFreight,
+				&rolloutsapi.AnalysisRun{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-analysis",
+						Namespace: "test-ns",
+						Labels: map[string]string{
+							kargoapi.PromotionLabelKey: "test-promotion",
+						},
+					},
+				},
+			},
+			assertions: func(t *testing.T, recorder *fakeevent.EventRecorder) {
+				require.Len(t, recorder.Events, 1)
+
+				event := <-recorder.Events
+				assert.Equal(t, "test-analysis", event.Annotations[kargoapi.AnnotationKeyEventAnalysisRunName])
+				assert.Equal(t, "test-promotion", event.Annotations[kargoapi.AnnotationKeyEventPromotionName])
+			},
+		},
+		{
+			name:       "verification with manual actor override",
+			stage:      baseStage,
+			freightRef: baseFreightRef,
+			vi: &kargoapi.VerificationInfo{
+				Phase: kargoapi.VerificationPhaseSuccessful,
+				Actor: "manual-user",
+			},
+			objects: []client.Object{baseFreight},
+			assertions: func(t *testing.T, recorder *fakeevent.EventRecorder) {
+				require.Len(t, recorder.Events, 1)
+
+				event := <-recorder.Events
+				assert.Equal(t, "manual-user", event.Annotations[kargoapi.AnnotationKeyEventActor])
+			},
+		},
+		{
+			name:       "freight not found",
+			stage:      baseStage,
+			freightRef: baseFreightRef,
+			vi: &kargoapi.VerificationInfo{
+				Phase: kargoapi.VerificationPhaseSuccessful,
+			},
+			objects: []client.Object{
+				// Freight does not exist
+			},
+			assertions: func(t *testing.T, recorder *fakeevent.EventRecorder) {
+				// No events should be recorded
+				assert.Len(t, recorder.Events, 0)
+			},
+		},
+		{
+			name:       "analysis run not found",
+			stage:      baseStage,
+			freightRef: baseFreightRef,
+			vi: &kargoapi.VerificationInfo{
+				Phase: kargoapi.VerificationPhaseSuccessful,
+				AnalysisRun: &kargoapi.AnalysisRunReference{
+					Name:      "missing-analysis",
+					Namespace: "test-ns",
+				},
+			},
+			objects: []client.Object{baseFreight},
+			assertions: func(t *testing.T, recorder *fakeevent.EventRecorder) {
+				require.Len(t, recorder.Events, 1)
+
+				event := <-recorder.Events
+				assert.Equal(t, "missing-analysis", event.Annotations[kargoapi.AnnotationKeyEventAnalysisRunName])
+				// Should still record event even though analysis run wasn't found
+				assert.NotContains(t, event.Annotations, kargoapi.AnnotationKeyEventPromotionName)
+			},
+		},
+		{
+			name:       "errored verification",
+			stage:      baseStage,
+			freightRef: baseFreightRef,
+			vi: &kargoapi.VerificationInfo{
+				Phase:   kargoapi.VerificationPhaseError,
+				Message: "internal error occurred",
+			},
+			objects: []client.Object{baseFreight},
+			assertions: func(t *testing.T, recorder *fakeevent.EventRecorder) {
+				require.Len(t, recorder.Events, 1)
+
+				event := <-recorder.Events
+				assert.Equal(t, kargoapi.EventReasonFreightVerificationErrored, event.Reason)
+				assert.Equal(t, "internal error occurred", event.Message)
+			},
+		},
+		{
+			name:       "aborted verification",
+			stage:      baseStage,
+			freightRef: baseFreightRef,
+			vi: &kargoapi.VerificationInfo{
+				Phase:   kargoapi.VerificationPhaseAborted,
+				Message: "verification was canceled",
+			},
+			objects: []client.Object{baseFreight},
+			assertions: func(t *testing.T, recorder *fakeevent.EventRecorder) {
+				require.Len(t, recorder.Events, 1)
+
+				event := <-recorder.Events
+				assert.Equal(t, kargoapi.EventReasonFreightVerificationAborted, event.Reason)
+				assert.Equal(t, "verification was canceled", event.Message)
+			},
+		},
+		{
+			name:       "inconclusive verification",
+			stage:      baseStage,
+			freightRef: baseFreightRef,
+			vi: &kargoapi.VerificationInfo{
+				Phase:   kargoapi.VerificationPhaseInconclusive,
+				Message: "results were inconclusive",
+			},
+			objects: []client.Object{baseFreight},
+			assertions: func(t *testing.T, recorder *fakeevent.EventRecorder) {
+				require.Len(t, recorder.Events, 1)
+
+				event := <-recorder.Events
+				assert.Equal(t, kargoapi.EventReasonFreightVerificationInconclusive, event.Reason)
+				assert.Equal(t, "results were inconclusive", event.Message)
+			},
+		},
+		{
+			name:       "unknown phase",
+			stage:      baseStage,
+			freightRef: baseFreightRef,
+			vi: &kargoapi.VerificationInfo{
+				Phase:   "invalid-phase",
+				Message: "custom message",
+			},
+			objects: []client.Object{baseFreight},
+			assertions: func(t *testing.T, recorder *fakeevent.EventRecorder) {
+				require.Len(t, recorder.Events, 1)
+
+				event := <-recorder.Events
+				assert.Equal(t, kargoapi.EventReasonFreightVerificationUnknown, event.Reason)
+				assert.Equal(t, "custom message", event.Message)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(tt.objects...).
+				Build()
+
+			recorder := fakeevent.NewEventRecorder(10)
+
+			r := &RegularStagesReconciler{
+				client:        c,
+				eventRecorder: recorder,
+			}
+
+			r.recordFreightVerificationEvent(tt.stage, tt.freightRef, tt.vi)
+			tt.assertions(t, recorder)
 		})
 	}
 }
@@ -3707,7 +4117,7 @@ func Test_regularStagesReconciler_autoPromoteFreight(t *testing.T) {
 				require.Len(t, e.Events, 1)
 
 				event := <-e.Events
-				assert.Equal(t, v1.EventTypeNormal, event.EventType)
+				assert.Equal(t, corev1.EventTypeNormal, event.EventType)
 				assert.Equal(t, "PromotionCreated", event.Reason)
 				assert.Contains(t, event.Message, "Automatically promoted Freight")
 				assert.NotEmpty(t, event.Annotations)
