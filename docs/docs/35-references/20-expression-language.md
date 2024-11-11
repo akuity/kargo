@@ -110,7 +110,7 @@ expressions. This section enumerates these variables, their structure, and use.
 |------|------|-------------|
 | `ctx` | `object` | `string` fields `project`, `stage`, and `promotion` provide convenient access to details of a `Promotion`. |
 | `outputs` | `object` | A map of output from previous promotion steps indexed by step aliases. |
-| `vars` | `object` | A user-defined map of variable names to static `string` values. Variable names must observe standard Go variable-naming rules. |
+| `vars` | `object` | A user-defined map of variable names to static values of any type. The map is derived from a `Promotion`'s `spec.promotionTemplate.spec.vars` field. Variable names must observe standard Go variable-naming rules. Variables values may, themselves, be defined using an expression. `vars` (contains previously defined variables) and `ctx` are available to expressions defining the values of variables, however, `outputs` are not. |
 
 :::info
 Expect other useful variables to be added in the future.
@@ -133,7 +133,7 @@ promotionTemplate:
     - name: outPath
       value: ./out
     - name: targetBranch
-      value: stage/test
+      value: stage/${{ ctx.stage }}
     steps:
     - uses: git-clone
       config:

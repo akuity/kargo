@@ -210,7 +210,7 @@ although other uses of this feature are anticipated in the future.
 #### Promotion Templates
 
 The `spec.promotionTemplate` field is used to describe _how_ to transition
-`Freight` into the `Stage`. The `spec.promotionTemplate.steps` field describes
+`Freight` into the `Stage`. The `spec.promotionTemplate.spec.steps` field describes
 the discrete steps of a promotion process in detail.
 
 In the following, very common example, the `promotionTemplate` describes steps
