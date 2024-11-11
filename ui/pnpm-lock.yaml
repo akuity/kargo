@@ -40,13 +40,16 @@ importers:
         version: 4.6.0(monaco-editor@0.52.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@rjsf/antd':
         specifier: ^5.21.1
-        version: 5.21.1(@ant-design/icons@5.5.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(@rjsf/core@5.21.1(@rjsf/utils@5.21.1(react@18.3.1))(react@18.3.1))(@rjsf/utils@5.21.1(react@18.3.1))(antd@5.21.2(date-fns@4.1.0)(moment@2.30.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(dayjs@1.11.13)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+        version: 5.21.1(@ant-design/icons@5.5.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(@rjsf/core@5.21.1(@rjsf/utils@5.21.2(react@18.3.1))(react@18.3.1))(@rjsf/utils@5.21.2(react@18.3.1))(antd@5.21.2(date-fns@4.1.0)(moment@2.30.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(dayjs@1.11.13)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@rjsf/core':
         specifier: ^5.21.1
-        version: 5.21.1(@rjsf/utils@5.21.1(react@18.3.1))(react@18.3.1)
+        version: 5.21.1(@rjsf/utils@5.21.2(react@18.3.1))(react@18.3.1)
+      '@rjsf/utils':
+        specifier: ^5.21.2
+        version: 5.21.2(react@18.3.1)
       '@rjsf/validator-ajv8':
         specifier: ^5.21.1
-        version: 5.21.1(@rjsf/utils@5.21.1(react@18.3.1))
+        version: 5.21.1(@rjsf/utils@5.21.2(react@18.3.1))
       '@tanstack/react-query':
         specifier: ^5.56.2
         version: 5.56.2(react@18.3.1)
@@ -734,8 +737,8 @@ packages:
       '@rjsf/utils': ^5.20.x
       react: ^16.14.0 || >=17
 
-  '@rjsf/utils@5.21.1':
-    resolution: {integrity: sha512-KEwEtIswzKE2WTLRxvh5vwMwvNMTHnRSxwaRlz3QKz5/iQr9XGJTWcmArjIN3y0ypfLk+X6qZsboamQBIhTV3w==}
+  '@rjsf/utils@5.21.2':
+    resolution: {integrity: sha512-e/Fn5rOUQCyR+QqK7tyJyleojAOkwa7N606ohiQsq2DebQ4TWuw/PuODCp3HUPAjdiwEVa2fsnGe0rELL5NGLg==}
     engines: {node: '>=14'}
     peerDependencies:
       react: ^16.14.0 || >=17
@@ -3897,11 +3900,11 @@ snapshots:
 
   '@remix-run/router@1.19.2': {}
 
-  '@rjsf/antd@5.21.1(@ant-design/icons@5.5.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(@rjsf/core@5.21.1(@rjsf/utils@5.21.1(react@18.3.1))(react@18.3.1))(@rjsf/utils@5.21.1(react@18.3.1))(antd@5.21.2(date-fns@4.1.0)(moment@2.30.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(dayjs@1.11.13)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
+  '@rjsf/antd@5.21.1(@ant-design/icons@5.5.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(@rjsf/core@5.21.1(@rjsf/utils@5.21.2(react@18.3.1))(react@18.3.1))(@rjsf/utils@5.21.2(react@18.3.1))(antd@5.21.2(date-fns@4.1.0)(moment@2.30.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(dayjs@1.11.13)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
     dependencies:
       '@ant-design/icons': 5.5.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      '@rjsf/core': 5.21.1(@rjsf/utils@5.21.1(react@18.3.1))(react@18.3.1)
-      '@rjsf/utils': 5.21.1(react@18.3.1)
+      '@rjsf/core': 5.21.1(@rjsf/utils@5.21.2(react@18.3.1))(react@18.3.1)
+      '@rjsf/utils': 5.21.2(react@18.3.1)
       antd: 5.21.2(date-fns@4.1.0)(moment@2.30.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       classnames: 2.5.1
       dayjs: 1.11.13
@@ -3912,9 +3915,9 @@ snapshots:
     transitivePeerDependencies:
       - react-dom
 
-  '@rjsf/core@5.21.1(@rjsf/utils@5.21.1(react@18.3.1))(react@18.3.1)':
+  '@rjsf/core@5.21.1(@rjsf/utils@5.21.2(react@18.3.1))(react@18.3.1)':
     dependencies:
-      '@rjsf/utils': 5.21.1(react@18.3.1)
+      '@rjsf/utils': 5.21.2(react@18.3.1)
       lodash: 4.17.21
       lodash-es: 4.17.21
       markdown-to-jsx: 7.5.0(react@18.3.1)
@@ -3922,7 +3925,7 @@ snapshots:
       prop-types: 15.8.1
       react: 18.3.1
 
-  '@rjsf/utils@5.21.1(react@18.3.1)':
+  '@rjsf/utils@5.21.2(react@18.3.1)':
     dependencies:
       json-schema-merge-allof: 0.8.1
       jsonpointer: 5.0.1
@@ -3931,9 +3934,9 @@ snapshots:
       react: 18.3.1
       react-is: 18.3.1
 
-  '@rjsf/validator-ajv8@5.21.1(@rjsf/utils@5.21.1(react@18.3.1))':
+  '@rjsf/validator-ajv8@5.21.1(@rjsf/utils@5.21.2(react@18.3.1))':
     dependencies:
-      '@rjsf/utils': 5.21.1(react@18.3.1)
+      '@rjsf/utils': 5.21.2(react@18.3.1)
       ajv: 8.17.1
       ajv-formats: 2.1.1(ajv@8.17.1)
       lodash: 4.17.21

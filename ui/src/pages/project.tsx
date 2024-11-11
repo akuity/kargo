@@ -27,10 +27,12 @@ import { Project as _Project } from '@ui/gen/v1alpha1/generated_pb';
 
 export const Project = ({
   tab = 'pipelines',
-  creatingStage
+  creatingStage,
+  creatingWarehouse
 }: {
   tab?: string;
   creatingStage?: boolean;
+  creatingWarehouse?: boolean;
 }) => {
   const { name } = useParams();
   const navigate = useNavigate();
@@ -98,7 +100,11 @@ export const Project = ({
     switch (key) {
       case 'pipelines':
         return (
-          <Pipelines project={data?.result?.value as _Project} creatingStage={creatingStage} />
+          <Pipelines
+            project={data?.result?.value as _Project}
+            creatingStage={creatingStage}
+            creatingWarehouse={creatingWarehouse}
+          />
         );
       case 'credentials':
         return config?.secretManagementEnabled ? (

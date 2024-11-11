@@ -25,11 +25,11 @@ import { generatePath, useNavigate, useParams } from 'react-router-dom';
 import { paths } from '@ui/config/paths';
 import { ColorContext } from '@ui/context/colors';
 import { LoadingState } from '@ui/features/common';
-import { useModal } from '@ui/features/common/modal/use-modal';
 const FreightDetails = lazy(() => import('@ui/features/freight/freight-details'));
 const FreightTimeline = lazy(() => import('@ui/features/freight-timeline/freight-timeline'));
 const StageDetails = lazy(() => import('@ui/features/stage/stage-details'));
 const CreateStage = lazy(() => import('@ui/features/stage/create-stage'));
+const CreateWarehouse = lazy(() => import('@ui/features/stage/create-warehouse/create-warehouse'));
 import { SuspenseSpin } from '@ui/features/common/suspense-spin';
 import { getCurrentFreight, mapToNames } from '@ui/features/common/utils';
 const FreightTimelineHeader = lazy(
@@ -51,7 +51,6 @@ import { Freight, Project, Stage, Warehouse } from '@ui/gen/v1alpha1/generated_p
 import { useDocumentEvent } from '@ui/utils/document';
 import { useLocalStorage } from '@ui/utils/use-local-storage';
 
-import CreateWarehouseModal from './create-warehouse-modal';
 import { Images } from './images';
 import { RepoNode, RepoNodeDimensions } from './nodes/repo-node';
 import { Nodule, StageNode } from './nodes/stage-node';
@@ -71,10 +70,12 @@ const WarehouseDetails = lazy(() => import('./warehouse/warehouse-details'));
 
 export const Pipelines = ({
   project,
-  creatingStage
+  creatingStage,
+  creatingWarehouse
 }: {
   project: Project;
   creatingStage?: boolean;
+  creatingWarehouse?: boolean;
 }) => {
   const { name, stageName, freightName, warehouseName } = useParams();
   const { data, isLoading } = useQuery(listStages, { project: name });
@@ -94,10 +95,6 @@ export const Pipelines = ({
   const { data: warehouseData } = useQuery(listWarehouses, {
     project: name
   });
-
-  const { show: showCreateWarehouse } = useModal(
-    name ? (p) => <CreateWarehouseModal {...p} project={name} /> : undefined
-  );
 
   const state = usePipelineState();
 
@@ -438,7 +435,7 @@ export const Pipelines = ({
                             Warehouse
                           </>
                         ),
-                        onClick: () => showCreateWarehouse()
+                        onClick: () => navigate(generatePath(paths.createWarehouse, { name }))
                       }
                     ]
                   }}
@@ -657,6 +654,10 @@ export const Pipelines = ({
               stages={mapToNames(data?.stages || [])}
             />
           )}
+          <CreateWarehouse
+            visible={Boolean(creatingWarehouse)}
+            hide={() => navigate(generatePath(paths.project, { name }))}
+          />
         </SuspenseSpin>
       </ColorContext.Provider>
     </div>
