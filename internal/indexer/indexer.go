@@ -173,6 +173,7 @@ func RunningPromotionsByArgoCDApplications(
 					Project:   promo.Namespace,
 					Promotion: promo.Name,
 					Stage:     promo.Spec.Stage,
+					Vars:      promo.Spec.Vars,
 				},
 				promo.GetStatus().GetState(),
 			)

@@ -471,10 +471,6 @@ func (r *reconciler) promote(
 			Config: step.Config.Raw,
 		}
 	}
-	vars := make(map[string]string, len(workingPromo.Spec.Vars))
-	for _, v := range workingPromo.Spec.Vars {
-		vars[v.Name] = v.Value
-	}
 
 	promoCtx := directives.PromotionContext{
 		UIBaseURL:       r.cfg.APIServerBaseURL,
@@ -486,7 +482,7 @@ func (r *reconciler) promote(
 		Freight:         *workingPromo.Status.FreightCollection.DeepCopy(),
 		StartFromStep:   promo.Status.CurrentStep,
 		State:           directives.State(workingPromo.Status.GetState()),
-		Vars:            vars,
+		Vars:            workingPromo.Spec.Vars,
 	}
 	if err := os.Mkdir(promoCtx.WorkDir, 0o700); err == nil {
 		// If we're working with a fresh directory, we should start the promotion

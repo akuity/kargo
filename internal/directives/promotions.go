@@ -2,6 +2,7 @@ package directives
 
 import (
 	"context"
+	"fmt"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	yaml "sigs.k8s.io/yaml/goyaml.v3"
@@ -56,8 +57,9 @@ type PromotionContext struct {
 	StartFromStep int64
 	// State is the current state of the promotion process.
 	State State
-	// Vars is a map of string variables that can be used by the PromotionSteps.
-	Vars map[string]string
+	// Vars is a list of variables definitions that can be used by the
+	// PromotionSteps.
+	Vars []kargoapi.PromotionVariable
 }
 
 // PromotionStep describes a single step in a user-defined promotion process.
@@ -87,6 +89,28 @@ func (s *PromotionStep) GetConfig(
 	if s.Config == nil {
 		return nil, nil
 	}
+
+	// Pre-process the variables. This allows variables to reference other
+	// variables defined before them.
+	vars := make(map[string]any, len(promoCtx.Vars))
+	for _, v := range promoCtx.Vars {
+		newVar, err := expressions.EvaluateTemplate(
+			v.Value,
+			map[string]any{
+				"ctx": map[string]any{
+					"project":   promoCtx.Project,
+					"promotion": promoCtx.Promotion,
+					"stage":     promoCtx.Stage,
+				},
+				"vars": vars,
+			},
+		)
+		if err != nil {
+			return nil, fmt.Errorf("error pre-processing promotion variable %q: %w", v.Name, err)
+		}
+		vars[v.Name] = newVar
+	}
+
 	evaledCfgJSON, err := expressions.EvaluateJSONTemplate(
 		s.Config,
 		map[string]any{
@@ -96,7 +120,7 @@ func (s *PromotionStep) GetConfig(
 				"stage":     promoCtx.Stage,
 			},
 			"outputs": state,
-			"vars":    promoCtx.Vars,
+			"vars":    vars,
 		},
 	)
 	if err != nil {
