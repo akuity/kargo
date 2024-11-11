@@ -40,8 +40,6 @@ func EvaluateJSONTemplate(jsonBytes []byte, env map[string]any) ([]byte, error) 
 			`"quote" is a forbidden key in the environment map; it is reserved for internal use`,
 		)
 	}
-	env = maps.Clone(env) // We don't want to add the quote function to the user's map.
-	env["quote"] = func(a any) string { return fmt.Sprintf(`"%v"`, a) }
 	var parsed map[string]any
 	if err := json.Unmarshal(jsonBytes, &parsed); err != nil {
 		return nil,
@@ -72,7 +70,7 @@ func evaluateExpressions(collection any, env map[string]any) error {
 				}
 			case string:
 				var err error
-				if col[key], err = evaluateTemplate(v, env); err != nil {
+				if col[key], err = EvaluateTemplate(v, env); err != nil {
 					return err
 				}
 			}
@@ -90,7 +88,7 @@ func evaluateExpressions(collection any, env map[string]any) error {
 				}
 			case string:
 				var err error
-				if col[i], err = evaluateTemplate(v, env); err != nil {
+				if col[i], err = EvaluateTemplate(v, env); err != nil {
 					return err
 				}
 			}
@@ -99,10 +97,12 @@ func evaluateExpressions(collection any, env map[string]any) error {
 	return nil
 }
 
-// evaluateTemplate evaluates a single template string with the provided
+// EvaluateTemplate evaluates a single template string with the provided
 // environment. Note that a single template string can contain multiple
 // expressions.
-func evaluateTemplate(template string, env map[string]any) (any, error) {
+func EvaluateTemplate(template string, env map[string]any) (any, error) {
+	env = maps.Clone(env) // We don't want to add the quote function to the user's map.
+	env["quote"] = func(a any) string { return fmt.Sprintf(`"%v"`, a) }
 	t := fasttemplate.New(template, "${{", "}}")
 	out := &bytes.Buffer{}
 	if _, err := t.ExecuteFunc(out, getExpressionEvaluator(env)); err != nil {
