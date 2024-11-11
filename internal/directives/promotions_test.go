@@ -41,6 +41,16 @@ func TestPromotionStep_GetConfig(t *testing.T) {
 				Value: "${{ quote(vars.numVar + 1) }}",
 			},
 		},
+		Secrets: map[string]map[string]string{
+			"secret1": {
+				"key1": "value1",
+				"key2": "value2",
+			},
+			"secret2": {
+				"key3": "value3",
+				"key4": "value4",
+			},
+		},
 	}
 	promoState := State{
 		"strOutput":  "foo",
@@ -61,6 +71,10 @@ func TestPromotionStep_GetConfig(t *testing.T) {
 			"boolStrVar": "${{ quote(vars.boolStrVar) }}",
 			"numVar": "${{ vars.numVar }}",
 			"numStrVar": "${{ quote(vars.numStrVar) }}",
+			"secret1-1": "${{ secrets.secret1.key1 }}",
+			"secret1-2": "${{ secrets.secret1.key2 }}",
+			"secret2-3": "${{ secrets.secret2.key3 }}",
+			"secret2-4": "${{ secrets.secret2.key4 }}",
 			"strOutput": "${{ outputs.strOutput }}",
 			"strOutputConcat": "${{ outputs.strOutput }}${{ outputs.strOutput }}",
 			"boolOutput": "${{ outputs.boolOutput }}",
@@ -86,6 +100,10 @@ func TestPromotionStep_GetConfig(t *testing.T) {
 			"boolStrVar":      "false",
 			"numVar":          42,
 			"numStrVar":       "43",
+			"secret1-1":       "value1",
+			"secret1-2":       "value2",
+			"secret2-3":       "value3",
+			"secret2-4":       "value4",
 			"strOutput":       "foo",
 			"strOutputConcat": "foofoo",
 			"boolOutput":      true,

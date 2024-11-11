@@ -60,6 +60,8 @@ type PromotionContext struct {
 	// Vars is a list of variables definitions that can be used by the
 	// PromotionSteps.
 	Vars []kargoapi.PromotionVariable
+	// Secrets is a map of secrets that can be used by the PromotionSteps.
+	Secrets map[string]map[string]string
 }
 
 // PromotionStep describes a single step in a user-defined promotion process.
@@ -119,8 +121,9 @@ func (s *PromotionStep) GetConfig(
 				"promotion": promoCtx.Promotion,
 				"stage":     promoCtx.Stage,
 			},
-			"outputs": state,
 			"vars":    vars,
+			"secrets": promoCtx.Secrets,
+			"outputs": state,
 		},
 	)
 	if err != nil {
