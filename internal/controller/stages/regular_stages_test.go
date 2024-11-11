@@ -957,7 +957,7 @@ func Test_regularStagesReconciler_verifyStageFreight(t *testing.T) {
 			},
 		},
 		{
-			name: "auto-verifies when no verification config",
+			name: "verifies without verification config",
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "fake-project",
@@ -1014,6 +1014,12 @@ func Test_regularStagesReconciler_verifyStageFreight(t *testing.T) {
 				assert.Equal(t, kargoapi.VerificationPhaseSuccessful, lastVerification.Phase)
 				assert.Equal(t, metav1.NewTime(startTime), *lastVerification.StartTime)
 				assert.Equal(t, metav1.NewTime(endTime), *lastVerification.FinishTime)
+
+				verifiedCond := conditions.Get(&status, kargoapi.ConditionTypeVerified)
+				require.NotNil(t, verifiedCond)
+				assert.Equal(t, metav1.ConditionTrue, verifiedCond.Status)
+				assert.Equal(t, "Verified", verifiedCond.Reason)
+				assert.Equal(t, "Freight has been verified", verifiedCond.Message)
 			},
 		},
 		{
@@ -1050,6 +1056,9 @@ func Test_regularStagesReconciler_verifyStageFreight(t *testing.T) {
 				curFreight := status.FreightHistory.Current()
 				require.NotNil(t, curFreight)
 				assert.Empty(t, curFreight.VerificationHistory)
+
+				verifiedCond := conditions.Get(&status, kargoapi.ConditionTypeVerified)
+				require.Nil(t, verifiedCond)
 			},
 		},
 		{
@@ -1088,6 +1097,9 @@ func Test_regularStagesReconciler_verifyStageFreight(t *testing.T) {
 				curFreight := status.FreightHistory.Current()
 				require.NotNil(t, curFreight)
 				assert.Empty(t, curFreight.VerificationHistory)
+
+				verifiedCond := conditions.Get(&status, kargoapi.ConditionTypeVerified)
+				require.Nil(t, verifiedCond)
 			},
 		},
 		{
@@ -1141,6 +1153,12 @@ func Test_regularStagesReconciler_verifyStageFreight(t *testing.T) {
 				require.NotNil(t, lastVerification)
 				assert.Equal(t, kargoapi.VerificationPhaseError, lastVerification.Phase)
 				assert.Contains(t, lastVerification.Message, "Rollouts integration is disabled")
+
+				verifiedCond := conditions.Get(&status, kargoapi.ConditionTypeVerified)
+				require.NotNil(t, verifiedCond)
+				assert.Equal(t, metav1.ConditionFalse, verifiedCond.Status)
+				assert.Equal(t, "VerificationError", verifiedCond.Reason)
+				assert.Contains(t, verifiedCond.Message, "Rollouts integration is disabled")
 			},
 		},
 		{
@@ -1209,6 +1227,12 @@ func Test_regularStagesReconciler_verifyStageFreight(t *testing.T) {
 				require.NotNil(t, lastVerification)
 				assert.Equal(t, kargoapi.VerificationPhaseFailed, lastVerification.Phase)
 				assert.Contains(t, lastVerification.Message, "aborted by user")
+
+				verifiedCond := conditions.Get(&status, kargoapi.ConditionTypeVerified)
+				require.NotNil(t, verifiedCond)
+				assert.Equal(t, metav1.ConditionFalse, verifiedCond.Status)
+				assert.Equal(t, "VerificationFailed", verifiedCond.Reason)
+				assert.Contains(t, verifiedCond.Message, "aborted by user")
 
 				// Verify AnalysisRun was patched to terminate
 				ar := &rolloutsapi.AnalysisRun{}
@@ -1282,6 +1306,13 @@ func Test_regularStagesReconciler_verifyStageFreight(t *testing.T) {
 				assert.Equal(t, kargoapi.VerificationPhasePending, lastVerification.Phase)
 				assert.NotEmpty(t, lastVerification.ID)
 				assert.Equal(t, "test-user", lastVerification.Actor)
+
+				// As we have a successful (previous) verification, we should have a verified condition
+				verifiedCond := conditions.Get(&status, kargoapi.ConditionTypeVerified)
+				require.NotNil(t, verifiedCond)
+				assert.Equal(t, metav1.ConditionTrue, verifiedCond.Status)
+				assert.Equal(t, "Verified", verifiedCond.Reason)
+				assert.Equal(t, "Freight has been verified", verifiedCond.Message)
 
 				// Verify new AnalysisRun was created
 				ar := &rolloutsapi.AnalysisRun{}
@@ -1358,6 +1389,12 @@ func Test_regularStagesReconciler_verifyStageFreight(t *testing.T) {
 				assert.Equal(t, "test-verification-id", lastVerification.ID)
 				assert.Equal(t, "test-analysis-run", lastVerification.AnalysisRun.Name)
 				assert.Equal(t, "Running", lastVerification.AnalysisRun.Phase)
+
+				verifiedCond := conditions.Get(&status, kargoapi.ConditionTypeVerified)
+				require.NotNil(t, verifiedCond)
+				assert.Equal(t, metav1.ConditionUnknown, verifiedCond.Status)
+				assert.Equal(t, "VerificationRunning", verifiedCond.Reason)
+				assert.Equal(t, "Freight is currently being verified", verifiedCond.Message)
 			},
 		},
 		{
@@ -1420,6 +1457,12 @@ func Test_regularStagesReconciler_verifyStageFreight(t *testing.T) {
 				require.NotNil(t, lastVerification)
 				assert.Equal(t, kargoapi.VerificationPhaseError, lastVerification.Phase)
 				assert.Contains(t, lastVerification.Message, "error getting AnalysisRun")
+
+				verifiedCond := conditions.Get(&status, kargoapi.ConditionTypeVerified)
+				require.NotNil(t, verifiedCond)
+				assert.Equal(t, metav1.ConditionFalse, verifiedCond.Status)
+				assert.Equal(t, "VerificationError", verifiedCond.Reason)
+				assert.Contains(t, verifiedCond.Message, "error getting AnalysisRun")
 			},
 		},
 		{
@@ -1486,6 +1529,12 @@ func Test_regularStagesReconciler_verifyStageFreight(t *testing.T) {
 				require.NotNil(t, lastVerification)
 				assert.Equal(t, kargoapi.VerificationPhaseSuccessful, lastVerification.Phase)
 				assert.Equal(t, "existing-analysis", lastVerification.AnalysisRun.Name)
+
+				verifiedCond := conditions.Get(&status, kargoapi.ConditionTypeVerified)
+				require.NotNil(t, verifiedCond)
+				assert.Equal(t, metav1.ConditionTrue, verifiedCond.Status)
+				assert.Equal(t, "Verified", verifiedCond.Reason)
+				assert.Equal(t, "Freight has been verified", verifiedCond.Message)
 			},
 		},
 		{
@@ -1553,6 +1602,13 @@ func Test_regularStagesReconciler_verifyStageFreight(t *testing.T) {
 				assert.Equal(t, kargoapi.VerificationPhasePending, lastVerification.Phase)
 				assert.NotEmpty(t, lastVerification.ID)
 				assert.Equal(t, "test-user", lastVerification.Actor)
+
+				// Should be true as we have a successful verification
+				verifiedCond := conditions.Get(&status, kargoapi.ConditionTypeVerified)
+				require.NotNil(t, verifiedCond)
+				assert.Equal(t, metav1.ConditionTrue, verifiedCond.Status)
+				assert.Equal(t, "Verified", verifiedCond.Reason)
+				assert.Equal(t, "Freight has been verified", verifiedCond.Message)
 
 				// Verify the previous verifications are preserved
 				assert.Equal(t, "second-verification", curFreight.VerificationHistory[1].ID)
@@ -1631,6 +1687,12 @@ func Test_regularStagesReconciler_verifyStageFreight(t *testing.T) {
 				assert.Equal(t, "test-analysis-run", lastVerification.AnalysisRun.Name)
 				assert.Equal(t, "Failed", lastVerification.AnalysisRun.Phase)
 				assert.Contains(t, lastVerification.Message, "Analysis failed")
+
+				verifiedCond := conditions.Get(&status, kargoapi.ConditionTypeVerified)
+				require.NotNil(t, verifiedCond)
+				assert.Equal(t, metav1.ConditionFalse, verifiedCond.Status)
+				assert.Equal(t, "VerificationFailed", verifiedCond.Reason)
+				assert.Contains(t, verifiedCond.Message, "Analysis failed")
 			},
 		},
 	}

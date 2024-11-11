@@ -689,6 +689,77 @@ func (r *RegularStagesReconciler) verifyStageFreight(
 		return newStatus, nil
 	}
 
+	defer func() {
+		curFreight = newStatus.FreightHistory.Current()
+		if curFreight == nil || len(curFreight.VerificationHistory) == 0 {
+			return
+		}
+
+		for _, vi := range curFreight.VerificationHistory {
+			if vi.Phase == kargoapi.VerificationPhaseSuccessful {
+				// If the Freight has at least one successful verification,
+				// then we can consider the Freight to be verified.
+				conditions.Set(&newStatus, &metav1.Condition{
+					Type:    kargoapi.ConditionTypeVerified,
+					Status:  metav1.ConditionTrue,
+					Reason:  "Verified",
+					Message: "Freight has been verified",
+				})
+				return
+			}
+		}
+
+		// If the Freight has no successful verification, then we should look
+		// for the most recent verification and set the status accordingly.
+		lastVerification := curFreight.VerificationHistory.Current()
+		if lastVerification != nil {
+			switch lastVerification.Phase {
+			case kargoapi.VerificationPhasePending:
+				conditions.Set(&newStatus, &metav1.Condition{
+					Type:    kargoapi.ConditionTypeVerified,
+					Status:  metav1.ConditionUnknown,
+					Reason:  "VerificationPending",
+					Message: "Freight is pending verification",
+				})
+			case kargoapi.VerificationPhaseRunning:
+				conditions.Set(&newStatus, &metav1.Condition{
+					Type:    kargoapi.ConditionTypeVerified,
+					Status:  metav1.ConditionUnknown,
+					Reason:  "VerificationRunning",
+					Message: "Freight is currently being verified",
+				})
+			case kargoapi.VerificationPhaseFailed, kargoapi.VerificationPhaseError:
+				conditions.Set(&newStatus, &metav1.Condition{
+					Type:    kargoapi.ConditionTypeVerified,
+					Status:  metav1.ConditionFalse,
+					Reason:  fmt.Sprintf("Verification%s", lastVerification.Phase),
+					Message: lastVerification.Message,
+				})
+			case kargoapi.VerificationPhaseAborted:
+				conditions.Set(&newStatus, &metav1.Condition{
+					Type:    kargoapi.ConditionTypeVerified,
+					Status:  metav1.ConditionFalse,
+					Reason:  "VerificationAborted",
+					Message: lastVerification.Message,
+				})
+			case kargoapi.VerificationPhaseInconclusive:
+				conditions.Set(&newStatus, &metav1.Condition{
+					Type:    kargoapi.ConditionTypeVerified,
+					Status:  metav1.ConditionUnknown,
+					Reason:  "VerificationInconclusive",
+					Message: lastVerification.Message,
+				})
+			default:
+				conditions.Set(&newStatus, &metav1.Condition{
+					Type:    kargoapi.ConditionTypeVerified,
+					Status:  metav1.ConditionUnknown,
+					Reason:  "UnknownVerificationPhase",
+					Message: fmt.Sprintf("Freight verification is in an unknown phase: %s", lastVerification.Phase),
+				})
+			}
+		}
+	}()
+
 	// Get the re-verification request, if any.
 	reverifyReq, _ := kargoapi.ReverifyAnnotationValue(stage.GetAnnotations())
 
