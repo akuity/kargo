@@ -250,7 +250,6 @@ export const usePipelinesInfiniteCanvas = (conf: pipelineInfiniteCanvasHook) => 
         // block any pointer events in pipeline
         // this makes only window mousemove event happen
         // other events like hover on node will conflict and causes glitches while moving
-        conf.refs.zoomRef.current.style.pointerEvents = 'none';
         conf.refs.zoomRef.current.style.cursor = 'cursor-move';
       }
 
