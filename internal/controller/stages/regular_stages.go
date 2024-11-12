@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/kelseyhightower/envconfig"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
@@ -37,6 +38,32 @@ import (
 	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/internal/rollouts"
 )
+
+// ReconcilerConfig represents configuration for the stage reconciler.
+type ReconcilerConfig struct {
+	ShardName                          string `envconfig:"SHARD_NAME"`
+	RolloutsIntegrationEnabled         bool   `envconfig:"ROLLOUTS_INTEGRATION_ENABLED"`
+	RolloutsControllerInstanceID       string `envconfig:"ROLLOUTS_CONTROLLER_INSTANCE_ID"`
+	MaxConcurrentControlFlowReconciles int    `envconfig:"MAX_CONCURRENT_CONTROL_FLOW_RECONCILES" default:"4"`
+	MaxConcurrentReconciles            int    `envconfig:"MAX_CONCURRENT_STAGE_RECONCILES" default:"4"`
+}
+
+// Name returns the name of the Stage controller.
+func (c ReconcilerConfig) Name() string {
+	const name = "stage-controller"
+	if c.ShardName != "" {
+		return name + "-" + c.ShardName
+	}
+	return name
+}
+
+// ReconcilerConfigFromEnv returns a new ReconcilerConfig populated from the
+// environment variables.
+func ReconcilerConfigFromEnv() ReconcilerConfig {
+	cfg := ReconcilerConfig{}
+	envconfig.MustProcess("", &cfg)
+	return cfg
+}
 
 type RegularStagesReconciler struct {
 	cfg              ReconcilerConfig
