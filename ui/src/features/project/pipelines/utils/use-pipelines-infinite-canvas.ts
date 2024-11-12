@@ -84,7 +84,9 @@ export const usePipelinesInfiniteCanvas = (conf: pipelineInfiniteCanvasHook) => 
   const zoomIn = useCallback(() => {
     const currentZoom = getCurrentZoom();
 
-    zoom(currentZoom - zoomSpeed);
+    if (currentZoom - zoomSpeed > 0) {
+      zoom(currentZoom - zoomSpeed);
+    }
   }, []);
 
   const fitToView = useCallback((canvasNode: HTMLDivElement) => {
