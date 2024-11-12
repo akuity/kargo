@@ -92,25 +92,9 @@ func (s *PromotionStep) GetConfig(
 		return nil, nil
 	}
 
-	// Pre-process the variables. This allows variables to reference other
-	// variables defined before them.
-	vars := make(map[string]any, len(promoCtx.Vars))
-	for _, v := range promoCtx.Vars {
-		newVar, err := expressions.EvaluateTemplate(
-			v.Value,
-			map[string]any{
-				"ctx": map[string]any{
-					"project":   promoCtx.Project,
-					"promotion": promoCtx.Promotion,
-					"stage":     promoCtx.Stage,
-				},
-				"vars": vars,
-			},
-		)
-		if err != nil {
-			return nil, fmt.Errorf("error pre-processing promotion variable %q: %w", v.Name, err)
-		}
-		vars[v.Name] = newVar
+	vars, err := s.GetVars(promoCtx)
+	if err != nil {
+		return nil, err
 	}
 
 	evaledCfgJSON, err := expressions.EvaluateJSONTemplate(
@@ -134,6 +118,28 @@ func (s *PromotionStep) GetConfig(
 		return nil, nil
 	}
 	return config, nil
+}
+
+func (s *PromotionStep) GetVars(promoCtx PromotionContext) (map[string]any, error) {
+	vars := make(map[string]any, len(promoCtx.Vars))
+	for _, v := range promoCtx.Vars {
+		newVar, err := expressions.EvaluateTemplate(
+			v.Value,
+			map[string]any{
+				"ctx": map[string]any{
+					"project":   promoCtx.Project,
+					"promotion": promoCtx.Promotion,
+					"stage":     promoCtx.Stage,
+				},
+				"vars": vars,
+			},
+		)
+		if err != nil {
+			return nil, fmt.Errorf("error pre-processing promotion variable %q: %w", v.Name, err)
+		}
+		vars[v.Name] = newVar
+	}
+	return vars, nil
 }
 
 // PromotionResult is the result of a user-defined promotion process executed by
