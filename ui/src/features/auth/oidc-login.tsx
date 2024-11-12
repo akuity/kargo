@@ -9,6 +9,7 @@ import { OIDCConfig } from '@ui/gen/service/v1alpha1/service_pb';
 import { useAuthContext } from './context/use-auth-context';
 
 const codeVerifierKey = 'PKCE_code_verifier';
+const stateKey = 'PKCE_state';
 
 type Props = {
   oidcConfig: OIDCConfig;
@@ -71,6 +72,8 @@ export const OIDCLogin = ({ oidcConfig }: Props) => {
 
     const code_verifier = oauth.generateRandomCodeVerifier();
     sessionStorage.setItem(codeVerifierKey, code_verifier);
+    const state = oauth.generateRandomState();
+    sessionStorage.setItem(stateKey, state);
 
     const code_challenge = await oauth.calculatePKCECodeChallenge(code_verifier);
     const url = new URL(as.authorization_endpoint);
@@ -79,6 +82,7 @@ export const OIDCLogin = ({ oidcConfig }: Props) => {
     url.searchParams.set('code_challenge_method', 'S256');
     url.searchParams.set('redirect_uri', redirectURI);
     url.searchParams.set('response_type', 'code');
+    url.searchParams.set('state', state);
     url.searchParams.set(
       'scope',
       [
@@ -95,18 +99,21 @@ export const OIDCLogin = ({ oidcConfig }: Props) => {
   React.useEffect(() => {
     (async () => {
       const code_verifier = sessionStorage.getItem(codeVerifierKey);
+      const state = sessionStorage.getItem(stateKey);
       const searchParams = new URLSearchParams(location.search);
 
-      if (!as || !code_verifier || !searchParams.get('code') || !searchParams.get('code')) {
+      if (
+        !as ||
+        !code_verifier ||
+        !searchParams.get('code') ||
+        !searchParams.get('code') ||
+        !state ||
+        !searchParams.get('state')
+      ) {
         return;
       }
 
-      // Delete empty state
-      if (searchParams.get('state') === '') {
-        searchParams.delete('state');
-      }
-
-      const params = oauth.validateAuthResponse(as, client, searchParams, oauth.expectNoState);
+      const params = oauth.validateAuthResponse(as, client, searchParams, state);
 
       if (oauth.isOAuth2Error(params)) {
         notification.error({
