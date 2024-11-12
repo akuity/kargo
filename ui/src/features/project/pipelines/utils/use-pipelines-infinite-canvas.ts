@@ -34,6 +34,8 @@ const getTranslateMatrix = (node: HTMLElement) => {
   return matrix;
 };
 
+const stageNodeClassName = '__stage_node__';
+
 type pipelineInfiniteCanvasHook = {
   refs: {
     movingObjectsRef: RefObject<HTMLDivElement>;
@@ -234,18 +236,19 @@ export const usePipelinesInfiniteCanvas = (conf: pipelineInfiniteCanvasHook) => 
     let onWindowMouseMove: (e: MouseEvent) => void = () => {};
 
     const onCanvasMouseDown = (e: MouseEvent) => {
-      // skip if this click is on stage node
-      if (
-        !conf.refs.zoomRef.current?.isEqualNode(e.target as Node) &&
-        !conf.refs.movingObjectsRef.current?.isEqualNode(e.target as Node)
-      ) {
-        return;
+      // block stage node click
+      let element = e.target as HTMLElement;
+      while (element) {
+        if (element?.classList?.contains(stageNodeClassName)) {
+          return;
+        }
+        element = element.parentNode as HTMLElement;
       }
-
       if (registeredEventListener) {
         onCanvasMouseUp();
         return;
       }
+
       registeredEventListener = true;
 
       if (conf.refs.zoomRef.current) {
@@ -304,6 +307,21 @@ export const usePipelinesInfiniteCanvas = (conf: pipelineInfiniteCanvasHook) => 
     canvasNode.addEventListener('mousedown', onCanvasMouseDown);
     canvasNode.addEventListener('mouseup', onCanvasMouseUp);
     canvasNode.addEventListener('wheel', onWheel);
+
+    // assign the classnames to stage node
+    // this is to distinguish mousedown event in pipeline view v/s actual stage node click
+    const stageNodes = conf.refs.zoomRef.current?.childNodes || [];
+
+    // BELOW CODE IS ONLY FOR UNDERSTADING PURPOSE, NOT REQUIRED
+    // if (stageNodes.length === 0) {
+    // either there are no stages or this is bug because when canvas is ready (this point of code), it will have all stages ready
+    // }
+
+    for (const stageNode of stageNodes) {
+      if (stageNode instanceof HTMLDivElement) {
+        stageNode.className = `${stageNode.className} ${stageNodeClassName}`;
+      }
+    }
 
     cleanupFunction.current = () => {
       canvasNode.removeEventListener('mousedown', onCanvasMouseDown);
