@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"slices"
-	"strconv"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
@@ -28,7 +27,6 @@ const (
 	FreightByWarehouseField       = "warehouse"
 
 	PromotionsByStageAndFreightField = "stageAndFreight"
-	PromotionsByTerminalField        = "terminal"
 	PromotionsByStageField           = "stage"
 
 	RunningPromotionsByArgoCDApplicationsField = "applications"
@@ -419,18 +417,4 @@ func ServiceAccountsByOIDCClaims(obj client.Object) []string {
 		return nil
 	}
 	return refinedClaimValues
-}
-
-// PromotionsByTerminal is a client.IndexerFunc that indexes Promotions if
-// their phase is terminal.
-func PromotionsByTerminal(obj client.Object) []string {
-	promo, ok := obj.(*kargoapi.Promotion)
-	if !ok {
-		return nil
-	}
-	return []string{strconv.FormatBool(isPromotionPhaseNonTerminal(promo))}
-}
-
-func isPromotionPhaseNonTerminal(promo *kargoapi.Promotion) bool {
-	return !promo.Status.Phase.IsTerminal()
 }
