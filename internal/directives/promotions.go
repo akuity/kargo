@@ -4,10 +4,12 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/expr-lang/expr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	yaml "sigs.k8s.io/yaml/goyaml.v3"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/controller/freight"
 	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/expressions"
 )
@@ -85,6 +87,8 @@ type PromotionStep struct {
 // expressions are evaluated in the context of the provided arguments
 // prior to unmarshaling.
 func (s *PromotionStep) GetConfig(
+	ctx context.Context,
+	cl client.Client,
 	promoCtx PromotionContext,
 	state State,
 ) (Config, error) {
@@ -109,6 +113,27 @@ func (s *PromotionStep) GetConfig(
 			"secrets": promoCtx.Secrets,
 			"outputs": state,
 		},
+		expr.Function("warehouse", warehouseFunc, new(func(string) kargoapi.FreightOrigin)),
+		expr.Function(
+			"commitFrom",
+			getCommitFunc(ctx, cl, promoCtx),
+			new(func(repoURL string) kargoapi.GitCommit),
+			new(func(repoURL string, origin kargoapi.FreightOrigin) kargoapi.GitCommit),
+		),
+		expr.Function(
+			"imageFrom",
+			getImageFunc(ctx, cl, promoCtx),
+			new(func(repoURL string) kargoapi.Image),
+			new(func(repoURL string, origin kargoapi.FreightOrigin) kargoapi.Image),
+		),
+		expr.Function(
+			"chartFrom",
+			getChartFunc(ctx, cl, promoCtx),
+			new(func(repoURL string) kargoapi.Chart),
+			new(func(repoURL string, chartName string) kargoapi.Chart),
+			new(func(repoURL string, origin kargoapi.FreightOrigin) kargoapi.Chart),
+			new(func(repoURL string, chartName string, origin kargoapi.FreightOrigin) kargoapi.Chart),
+		),
 	)
 	if err != nil {
 		return nil, err
@@ -253,4 +278,93 @@ type PromotionStepResult struct {
 	// a PromotionStepRunner's successful execution of a PromotionStep. This
 	// configuration can later be used as input to health check processes.
 	HealthCheckStep *HealthCheckStep
+}
+
+func warehouseFunc(name ...any) (any, error) { // nolint: unparam
+	return kargoapi.FreightOrigin{
+		Kind: kargoapi.FreightOriginKindWarehouse,
+		Name: name[0].(string), // nolint: forcetypeassert
+	}, nil
+}
+
+func getCommitFunc(
+	ctx context.Context,
+	cl client.Client,
+	promoCtx PromotionContext,
+) func(a ...any) (any, error) {
+	return func(a ...any) (any, error) {
+		repoURL := a[0].(string) // nolint: forcetypeassert
+		var desiredOriginPtr *kargoapi.FreightOrigin
+		if len(a) == 2 {
+			desiredOrigin := a[1].(kargoapi.FreightOrigin) // nolint: forcetypeassert
+			desiredOriginPtr = &desiredOrigin
+		}
+		return freight.FindCommit(
+			ctx,
+			cl,
+			promoCtx.Project,
+			promoCtx.FreightRequests,
+			desiredOriginPtr,
+			promoCtx.Freight.References(),
+			repoURL,
+		)
+	}
+}
+
+func getImageFunc(
+	ctx context.Context,
+	cl client.Client,
+	promoCtx PromotionContext,
+) func(a ...any) (any, error) {
+	return func(a ...any) (any, error) {
+		repoURL := a[0].(string) // nolint: forcetypeassert
+		var desiredOriginPtr *kargoapi.FreightOrigin
+		if len(a) == 2 {
+			desiredOrigin := a[1].(kargoapi.FreightOrigin) // nolint: forcetypeassert
+			desiredOriginPtr = &desiredOrigin
+		}
+		return freight.FindImage(
+			ctx,
+			cl,
+			promoCtx.Project,
+			promoCtx.FreightRequests,
+			desiredOriginPtr,
+			promoCtx.Freight.References(),
+			repoURL,
+		)
+	}
+}
+
+func getChartFunc(
+	ctx context.Context,
+	cl client.Client,
+	promoCtx PromotionContext,
+) func(a ...any) (any, error) {
+	return func(a ...any) (any, error) {
+		repoURL := a[0].(string) // nolint: forcetypeassert
+		var chartName string
+		var desiredOriginPtr *kargoapi.FreightOrigin
+		if len(a) == 2 {
+			var ok bool
+			if chartName, ok = a[1].(string); !ok {
+				desiredOrigin := a[1].(kargoapi.FreightOrigin) // nolint: forcetypeassert
+				desiredOriginPtr = &desiredOrigin
+			}
+		}
+		if len(a) == 3 {
+			chartName = a[1].(string)                      // nolint: forcetypeassert
+			desiredOrigin := a[2].(kargoapi.FreightOrigin) // nolint: forcetypeassert
+			desiredOriginPtr = &desiredOrigin
+		}
+		return freight.FindChart(
+			ctx,
+			cl,
+			promoCtx.Project,
+			promoCtx.FreightRequests,
+			desiredOriginPtr,
+			promoCtx.Freight.References(),
+			repoURL,
+			chartName,
+		)
+	}
 }

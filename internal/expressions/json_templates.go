@@ -60,11 +60,11 @@ func evaluateExpressions(collection any, env map[string]any, exprOpts ...expr.Op
 		for key, val := range col {
 			switch v := val.(type) {
 			case map[string]any:
-				if err := evaluateExpressions(v, env); err != nil {
+				if err := evaluateExpressions(v, env, exprOpts...); err != nil {
 					return err
 				}
 			case []any:
-				if err := evaluateExpressions(v, env); err != nil {
+				if err := evaluateExpressions(v, env, exprOpts...); err != nil {
 					return err
 				}
 			case string:
@@ -78,11 +78,11 @@ func evaluateExpressions(collection any, env map[string]any, exprOpts ...expr.Op
 		for i, val := range col {
 			switch v := val.(type) {
 			case map[string]any:
-				if err := evaluateExpressions(v, env); err != nil {
+				if err := evaluateExpressions(v, env, exprOpts...); err != nil {
 					return err
 				}
 			case []any:
-				if err := evaluateExpressions(v, env); err != nil {
+				if err := evaluateExpressions(v, env, exprOpts...); err != nil {
 					return err
 				}
 			case string:

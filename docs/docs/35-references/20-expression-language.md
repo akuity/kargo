@@ -187,3 +187,102 @@ At present, such re-use can be achieved only through manual copy/paste, but
 support for a new, top-level `PromotionTemplate` resource type is planned for an
 upcoming release.
 :::
+
+## Functions
+
+Several functions are built-in to Kargo's expression language. This section
+describes each of them.
+
+### `quote()`
+
+The `quote()` function takes a single argument of any type and returns a string
+representation. This is useful for scenarios where an expression evaluates to a
+non-`string` JSON type, but you wish to treat it as a `string` regardless.
+
+Example:
+
+```yaml
+config:
+  numField: ${{ 40 + 2 }} # Will be treated as a number
+  strField: ${{ quote(40 + 2) }} # Will be treated as a string
+```
+
+### `warehouse()`
+
+The `warehouse()` function takes a single argument of type `string`, which is the
+name of a `Warehouse` resource in the same `Project` as the `Promotion` being
+executed. It returns a `FreightOrigin` object representing that `Warehouse`.
+
+The `FreightOrigin` object can be used as an optional argument to the
+`commitFrom()`, `imageFrom()`, or `chartFrom()` functions to disambiguate the
+desired source of an artifact when necessary.
+
+See the next sections for examples.
+
+### `commitFrom()`
+
+The `commitFrom()` function takes the URL of a Git repository as its first
+argument and returns a corresponding `GitCommit` object from the `Promotion`'s
+`FreightCollection`.
+
+In the event that a `Stage` requests `Freight` from multiple origins
+(`Warehouse`s) and more than one of those can provide a `GitCommit` object from
+the specified repository, a `FreightOrigin` may be used as a second argument to
+disambiguate the desired source.
+
+Example:
+
+```yaml
+config:
+  commitID: ${{ commitFrom("https://github.com/example/repo.git", warehouse("my-warehouse")).ID }}
+```
+
+### `imageFrom()`
+
+The `imageFrom()` function takes the URL of a container image repository as its
+first argument and returns a corresponding `Image` object from the `Promotion`'s
+`FreightCollection`.
+
+In the event that a `Stage` requests `Freight` from multiple origins
+(`Warehouse`s) and more than one of those can provide an `Image` object from the
+specified repository, a `FreightOrigin` may be used as a second argument to
+disambiguate the desired source.
+
+Example:
+
+```yaml
+config:
+  imageTag: ${{ imageFrom("public.ecr.aws/nginx/nginx", warehouse("my-warehouse")).Tag }}
+```
+
+### `chartFrom()`
+
+The `chartFrom()` function takes the URL of a Helm chart repository as its first
+argument and returns a corresponding `Chart` object from the `Promotion`'s
+`FreightCollection`.
+
+For Helm charts stored in OCI registries, the URL should be the full path to the
+repository within that registry.
+
+For Helm charts stored in classic (http/s) repositories, which can store
+multiple different charts within a single repository, a second argument should
+be used to specify the name of the chart within the repository.
+
+In the event that a `Stage` requests `Freight` from multiple origins
+(`Warehouse`s) and more than one of those can provide a `Chart` object from the
+specified repository, a `FreightOrigin` may be used as a final argument to
+disambiguate the desired source.
+
+OCI registry example:
+
+```yaml
+config:
+  chartVersion: ${{ chartFrom("oci://example.com/my-chart", warehouse("my-warehouse")).Version }}
+```
+
+Classic repository example:
+
+```yaml
+config:
+  chartVersion: ${{ chartFrom("https://example.com/charts", "my-chart", warehouse("my-warehouse")).Version }}
+```
