@@ -235,7 +235,10 @@ export const usePipelinesInfiniteCanvas = (conf: pipelineInfiniteCanvasHook) => 
 
     const onCanvasMouseDown = (e: MouseEvent) => {
       // skip if this click is on stage node
-      if (!conf.refs.zoomRef.current?.isEqualNode(e.target as Node)) {
+      if (
+        !conf.refs.zoomRef.current?.isEqualNode(e.target as Node) &&
+        !conf.refs.movingObjectsRef.current?.isEqualNode(e.target as Node)
+      ) {
         return;
       }
 
