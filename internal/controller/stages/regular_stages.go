@@ -287,7 +287,7 @@ func (r *RegularStagesReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 	// Reconcile the Stage.
 	logger.Debug("reconciling Stage")
-	newStatus, reconcileErr := r.reconcile(ctx, stage, time.Now())
+	newStatus, needsRequeue, reconcileErr := r.reconcile(ctx, stage, time.Now())
 	logger.Debug("done reconciling Stage")
 
 	// Patch the status of the Stage.
@@ -301,17 +301,29 @@ func (r *RegularStagesReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		}
 		return ctrl.Result{}, fmt.Errorf("failed to update Stage status: %w", err)
 	}
-	return ctrl.Result{}, reconcileErr
+
+	// Return the reconcile error if it exists.
+	if reconcileErr != nil {
+		return ctrl.Result{}, reconcileErr
+	}
+	// Immediate requeue if needed.
+	if needsRequeue {
+		return ctrl.Result{Requeue: true}, nil
+	}
+	// Otherwise, requeue after a delay.
+	// TODO: Make the requeue delay configurable.
+	return ctrl.Result{RequeueAfter: 5 * time.Minute}, nil
 }
 
 func (r *RegularStagesReconciler) reconcile(
 	ctx context.Context,
 	stage *kargoapi.Stage,
 	startTime time.Time,
-) (kargoapi.StageStatus, error) {
+) (kargoapi.StageStatus, bool, error) {
 	logger := logging.LoggerFromContext(ctx)
 	newStatus := *stage.Status.DeepCopy()
 
+	var requestRequeue bool
 	subReconcilers := []struct {
 		name      string
 		reconcile func() (kargoapi.StageStatus, error)
@@ -319,9 +331,12 @@ func (r *RegularStagesReconciler) reconcile(
 		{
 			name: "syncing Promotions",
 			reconcile: func() (kargoapi.StageStatus, error) {
-				status, err := r.syncPromotions(ctx, stage)
+				status, hasPendingPromotions, err := r.syncPromotions(ctx, stage)
 				if err != nil {
 					err = fmt.Errorf("failed to sync Promotions: %w", err)
+				}
+				if status.CurrentPromotion == nil && hasPendingPromotions {
+					requestRequeue = true
 				}
 				return status, err
 			},
@@ -368,7 +383,7 @@ func (r *RegularStagesReconciler) reconcile(
 
 		var err error
 		if newStatus, err = subR.reconcile(); err != nil {
-			return newStatus, err
+			return newStatus, false, err
 		}
 
 		if err = kubeclient.PatchStatus(ctx, r.client, stage, func(status *kargoapi.StageStatus) {
@@ -378,13 +393,16 @@ func (r *RegularStagesReconciler) reconcile(
 		}
 	}
 
-	return newStatus, nil
+	return newStatus, requestRequeue, nil
 }
 
+// syncPromotions synchronizes the Promotions for a Stage. It determines the
+// current state of the Stage based on the Promotions that are running or have
+// completed.
 func (r *RegularStagesReconciler) syncPromotions(
 	ctx context.Context,
 	stage *kargoapi.Stage,
-) (kargoapi.StageStatus, error) {
+) (kargoapi.StageStatus, bool, error) {
 	logger := logging.LoggerFromContext(ctx)
 	newStatus := *stage.Status.DeepCopy()
 
@@ -410,7 +428,7 @@ func (r *RegularStagesReconciler) syncPromotions(
 			Message: err.Error(),
 		})
 
-		return newStatus, err
+		return newStatus, false, err
 	}
 
 	// If there are no Promotions, then we are not promoting any Freight.
@@ -422,7 +440,7 @@ func (r *RegularStagesReconciler) syncPromotions(
 		conditions.Delete(&newStatus, kargoapi.ConditionTypePromoting)
 		newStatus.CurrentPromotion = nil
 
-		return newStatus, nil
+		return newStatus, false, nil
 	}
 
 	// Sort the Promotions by phase and creation time to determine the current
@@ -438,6 +456,17 @@ func (r *RegularStagesReconciler) syncPromotions(
 
 	// The last Promotion which ran on the Stage.
 	lastPromo := stage.Status.LastPromotion
+
+	// Track if there are any non-terminal promotions that need handling.
+	// This is later used to determine if we should issue an immediate
+	// requeue.
+	var hasNonTerminalPromotions bool
+	for _, promo := range promotions.Items {
+		if !promo.Status.Phase.IsTerminal() {
+			hasNonTerminalPromotions = true
+			break
+		}
+	}
 
 	// If the current Promotion is not the highest priority Promotion, or the
 	// highest priority Promotion is in a terminal phase, then we must have
@@ -473,49 +502,49 @@ func (r *RegularStagesReconciler) syncPromotions(
 				}
 				newPromotions = append(newPromotions, info)
 			}
+		}
 
-			// As we will be appending to the Freight history, we need to ensure that
-			// we order the Promotions from oldest to newest. This is because the
-			// Freight history is garbage collected based on the number of entries,
-			// and we want to ensure that the oldest entries are removed first.
-			slices.SortFunc(newPromotions, func(a, b kargoapi.PromotionReference) int {
-				return strings.Compare(a.Name, b.Name)
-			})
+		// As we will be appending to the Freight history, we need to ensure that
+		// we order the Promotions from oldest to newest. This is because the
+		// Freight history is garbage collected based on the number of entries,
+		// and we want to ensure that the oldest entries are removed first.
+		slices.SortFunc(newPromotions, func(a, b kargoapi.PromotionReference) int {
+			return strings.Compare(a.Name, b.Name)
+		})
 
-			// Update the Stage status with the information about the newly terminated
-			// Promotions, and any new Freight that was successfully promoted.
-			for _, p := range newPromotions {
-				promo := p
-				newStatus.LastPromotion = &promo
-				if p.Status.Phase == kargoapi.PromotionPhaseSucceeded {
-					// If the Promotion was successful, then we should add the Freight
-					// to the history of successfully promoted Freight.
-					newStatus.FreightHistory.Record(promo.Status.FreightCollection)
+		// Update the Stage status with the information about the newly terminated
+		// Promotions, and any new Freight that was successfully promoted.
+		for _, p := range newPromotions {
+			promo := p
+			newStatus.LastPromotion = &promo
+			if p.Status.Phase == kargoapi.PromotionPhaseSucceeded {
+				// If the Promotion was successful, then we should add the Freight
+				// to the history of successfully promoted Freight.
+				newStatus.FreightHistory.Record(promo.Status.FreightCollection)
 
-					// Erase any health checks that were performed for the previous
-					// Freight, as they are no longer relevant.
-					newStatus.Health = nil
-					conditions.Set(&newStatus, &metav1.Condition{
-						Type:    kargoapi.ConditionTypeHealthy,
-						Status:  metav1.ConditionUnknown,
-						Reason:  "WaitingForHealthCheck",
-						Message: "Waiting for health check to be performed after successful promotion",
-					})
+				// Erase any health checks that were performed for the previous
+				// Freight, as they are no longer relevant.
+				newStatus.Health = nil
+				conditions.Set(&newStatus, &metav1.Condition{
+					Type:    kargoapi.ConditionTypeHealthy,
+					Status:  metav1.ConditionUnknown,
+					Reason:  "WaitingForHealthCheck",
+					Message: "Waiting for health check to be performed after successful promotion",
+				})
 
-					// Set verified condition to unknown to indicate that the
-					// new Freight needs to be verified.
-					conditions.Set(&newStatus, &metav1.Condition{
-						Type:    kargoapi.ConditionTypeVerified,
-						Status:  metav1.ConditionUnknown,
-						Reason:  "WaitingForVerification",
-						Message: "Waiting for verification to be performed after successful promotion",
-					})
-				}
+				// Set verified condition to unknown to indicate that the
+				// new Freight needs to be verified.
+				conditions.Set(&newStatus, &metav1.Condition{
+					Type:    kargoapi.ConditionTypeVerified,
+					Status:  metav1.ConditionUnknown,
+					Reason:  "WaitingForVerification",
+					Message: "Waiting for verification to be performed after successful promotion",
+				})
 			}
 		}
 
 		// Return at this point to allow the new Freight to be verified.
-		return newStatus, nil
+		return newStatus, hasNonTerminalPromotions, nil
 	}
 
 	// If the current Freight exists and has a non-terminal verification, wait
@@ -528,7 +557,7 @@ func (r *RegularStagesReconciler) syncPromotions(
 					"wait for it to complete before allowing new promotions to start",
 			)
 			conditions.Delete(&newStatus, kargoapi.ConditionTypePromoting)
-			return newStatus, nil
+			return newStatus, hasNonTerminalPromotions, nil
 		}
 
 		// If we are in a healthy state, the current Freight needs to be verified
@@ -540,7 +569,7 @@ func (r *RegularStagesReconciler) syncPromotions(
 			if curVI == nil || curVI.Phase != kargoapi.VerificationPhaseSuccessful {
 				logger.Debug("current Freight needs to be verified before allowing new promotions to start")
 				conditions.Delete(&newStatus, kargoapi.ConditionTypePromoting)
-				return newStatus, nil
+				return newStatus, hasNonTerminalPromotions, nil
 			}
 		}
 	}
@@ -564,13 +593,13 @@ func (r *RegularStagesReconciler) syncPromotions(
 		if freight := highestPrioPromo.Status.Freight; freight != nil {
 			newStatus.CurrentPromotion.Freight = freight.DeepCopy()
 		}
-		return newStatus, nil
+		return newStatus, hasNonTerminalPromotions, nil
 	}
 
 	// If the highest priority Promotion is in a terminal phase, then we are
 	// not promoting.
 	conditions.Delete(&newStatus, kargoapi.ConditionTypePromoting)
-	return newStatus, nil
+	return newStatus, hasNonTerminalPromotions, nil
 }
 
 func (r *RegularStagesReconciler) assessHealth(ctx context.Context, stage *kargoapi.Stage) kargoapi.StageStatus {

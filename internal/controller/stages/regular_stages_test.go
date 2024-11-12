@@ -38,7 +38,7 @@ func Test_regularStagesReconciler_syncPromotions(t *testing.T) {
 		stage       *kargoapi.Stage
 		objects     []client.Object
 		interceptor interceptor.Funcs
-		assertions  func(*testing.T, kargoapi.StageStatus, error)
+		assertions  func(*testing.T, kargoapi.StageStatus, bool, error)
 	}{
 		{
 			name: "list promotions error",
@@ -54,7 +54,7 @@ func Test_regularStagesReconciler_syncPromotions(t *testing.T) {
 					return fmt.Errorf("list error")
 				},
 			},
-			assertions: func(t *testing.T, status kargoapi.StageStatus, err error) {
+			assertions: func(t *testing.T, status kargoapi.StageStatus, hasPendingPromotions bool, err error) {
 				require.ErrorContains(t, err, "failed to list Promotions")
 				assert.False(t, hasPendingPromotions)
 
@@ -82,8 +82,9 @@ func Test_regularStagesReconciler_syncPromotions(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, status kargoapi.StageStatus, err error) {
+			assertions: func(t *testing.T, status kargoapi.StageStatus, hasPendingPromotions bool, err error) {
 				require.NoError(t, err)
+				assert.False(t, hasPendingPromotions)
 				assert.Nil(t, status.CurrentPromotion)
 				assert.Empty(t, status.Conditions)
 			},
@@ -132,8 +133,10 @@ func Test_regularStagesReconciler_syncPromotions(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, status kargoapi.StageStatus, err error) {
+			assertions: func(t *testing.T, status kargoapi.StageStatus, hasPendingPromotions bool, err error) {
 				require.NoError(t, err)
+
+				assert.False(t, hasPendingPromotions)
 
 				assert.Nil(t, status.CurrentPromotion)
 
@@ -194,8 +197,11 @@ func Test_regularStagesReconciler_syncPromotions(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, status kargoapi.StageStatus, err error) {
+			assertions: func(t *testing.T, status kargoapi.StageStatus, hasPendingPromotions bool, err error) {
 				require.NoError(t, err)
+
+				assert.True(t, hasPendingPromotions)
+
 				assert.Equal(t, &kargoapi.PromotionReference{
 					Name: "active-promotion",
 					Freight: &kargoapi.FreightReference{
@@ -249,8 +255,9 @@ func Test_regularStagesReconciler_syncPromotions(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, status kargoapi.StageStatus, err error) {
+			assertions: func(t *testing.T, status kargoapi.StageStatus, hasPendingPromotions bool, err error) {
 				require.NoError(t, err)
+				assert.True(t, hasPendingPromotions)
 				assert.Nil(t, status.CurrentPromotion)
 				assert.Empty(t, status.Conditions)
 			},
@@ -293,8 +300,10 @@ func Test_regularStagesReconciler_syncPromotions(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, status kargoapi.StageStatus, err error) {
+			assertions: func(t *testing.T, status kargoapi.StageStatus, hasPendingPromotions bool, err error) {
 				require.NoError(t, err)
+				assert.True(t, hasPendingPromotions)
+
 				// Should not have current promotion since verification is running
 				assert.Nil(t, status.CurrentPromotion)
 				// Should not have promoting condition
@@ -343,8 +352,10 @@ func Test_regularStagesReconciler_syncPromotions(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, status kargoapi.StageStatus, err error) {
+			assertions: func(t *testing.T, status kargoapi.StageStatus, hasPendingPromotions bool, err error) {
 				require.NoError(t, err)
+				assert.True(t, hasPendingPromotions)
+
 				// Should allow promotion after verification is complete
 				require.NotNil(t, status.CurrentPromotion)
 				assert.Equal(t, "pending-promotion", status.CurrentPromotion.Name)
@@ -390,9 +401,11 @@ func Test_regularStagesReconciler_syncPromotions(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, status kargoapi.StageStatus, err error) {
+			assertions: func(t *testing.T, status kargoapi.StageStatus, hasPendingPromotions bool, err error) {
 				require.NoError(t, err)
+				assert.True(t, hasPendingPromotions)
 				assert.Nil(t, status.CurrentPromotion)
+
 				promotingCond := conditions.Get(&status, kargoapi.ConditionTypePromoting)
 				assert.Nil(t, promotingCond)
 			},
@@ -437,8 +450,10 @@ func Test_regularStagesReconciler_syncPromotions(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, status kargoapi.StageStatus, err error) {
+			assertions: func(t *testing.T, status kargoapi.StageStatus, hasPendingPromotions bool, err error) {
 				require.NoError(t, err)
+				assert.True(t, hasPendingPromotions)
+
 				// Should allow promotion since there's no verification to wait for
 				require.NotNil(t, status.CurrentPromotion)
 				assert.Equal(t, "pending-promotion", status.CurrentPromotion.Name)
@@ -494,8 +509,10 @@ func Test_regularStagesReconciler_syncPromotions(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, status kargoapi.StageStatus, err error) {
+			assertions: func(t *testing.T, status kargoapi.StageStatus, hasPendingPromotions bool, err error) {
 				require.NoError(t, err)
+				assert.False(t, hasPendingPromotions)
+
 				assert.Equal(t, "promotion-2", status.LastPromotion.Name)
 				assert.Empty(t, status.FreightHistory)
 			},
@@ -535,8 +552,9 @@ func Test_regularStagesReconciler_syncPromotions(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, status kargoapi.StageStatus, err error) {
+			assertions: func(t *testing.T, status kargoapi.StageStatus, hasPendingPromotions bool, err error) {
 				require.NoError(t, err)
+				assert.False(t, hasPendingPromotions)
 				assert.Nil(t, status.CurrentPromotion)
 
 				require.NotNil(t, status.LastPromotion)
@@ -577,8 +595,10 @@ func Test_regularStagesReconciler_syncPromotions(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, status kargoapi.StageStatus, err error) {
+			assertions: func(t *testing.T, status kargoapi.StageStatus, hasPendingPromotions bool, err error) {
 				require.NoError(t, err)
+				assert.True(t, hasPendingPromotions)
+
 				assert.Equal(t, "transitioning-promotion", status.CurrentPromotion.Name)
 
 				promotingCond := conditions.Get(&status, kargoapi.ConditionTypePromoting)
@@ -616,9 +636,11 @@ func Test_regularStagesReconciler_syncPromotions(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, status kargoapi.StageStatus, err error) {
+			assertions: func(t *testing.T, status kargoapi.StageStatus, hasPendingPromotions bool, err error) {
 				require.NoError(t, err)
+				assert.False(t, hasPendingPromotions)
 				assert.Nil(t, status.CurrentPromotion)
+
 				promotingCond := conditions.Get(&status, kargoapi.ConditionTypePromoting)
 				assert.Nil(t, promotingCond)
 			},
@@ -643,8 +665,8 @@ func Test_regularStagesReconciler_syncPromotions(t *testing.T) {
 				client: c,
 			}
 
-			status, err := r.syncPromotions(context.Background(), tt.stage)
-			tt.assertions(t, status, err)
+			status, requeue, err := r.syncPromotions(context.Background(), tt.stage)
+			tt.assertions(t, status, requeue, err)
 		})
 	}
 }
