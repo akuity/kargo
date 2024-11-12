@@ -1575,15 +1575,3 @@ func (r *reconciler) recordFreightVerificationEvent(
 
 	r.recorder.AnnotatedEventf(fr, annotations, corev1.EventTypeNormal, reason, message)
 }
-
-func buildFreightSummary(requested int, current *kargoapi.FreightCollection) string {
-	if current == nil {
-		return fmt.Sprintf("0/%d Fulfilled", requested)
-	}
-	if requested == 1 && len(current.Freight) == 1 {
-		for _, f := range current.Freight {
-			return f.Name
-		}
-	}
-	return fmt.Sprintf("%d/%d Fulfilled", len(current.Freight), requested)
-}

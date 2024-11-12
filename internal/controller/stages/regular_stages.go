@@ -290,6 +290,11 @@ func (r *RegularStagesReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	newStatus, needsRequeue, reconcileErr := r.reconcile(ctx, stage, time.Now())
 	logger.Debug("done reconciling Stage")
 
+	// Record the current refresh token as having been handled.
+	if token, ok := kargoapi.RefreshAnnotationValue(stage.GetAnnotations()); ok {
+		newStatus.LastHandledRefresh = token
+	}
+
 	// Patch the status of the Stage.
 	if err := kubeclient.PatchStatus(ctx, r.client, stage, func(status *kargoapi.StageStatus) {
 		*status = newStatus
@@ -322,6 +327,13 @@ func (r *RegularStagesReconciler) reconcile(
 ) (kargoapi.StageStatus, bool, error) {
 	logger := logging.LoggerFromContext(ctx)
 	newStatus := *stage.Status.DeepCopy()
+
+	// Mark the Stage as reconciling.
+	conditions.Set(&newStatus, &metav1.Condition{
+		Type:               kargoapi.ConditionTypeReconciling,
+		Status:             metav1.ConditionTrue,
+		ObservedGeneration: stage.Generation,
+	})
 
 	var requestRequeue bool
 	subReconcilers := []struct {
@@ -381,16 +393,34 @@ func (r *RegularStagesReconciler) reconcile(
 	for _, subR := range subReconcilers {
 		logger.Debug(subR.name)
 
+		// Reconcile the Stage with the sub-reconciler.
 		var err error
-		if newStatus, err = subR.reconcile(); err != nil {
+		newStatus, err = subR.reconcile()
+
+		// Summarize the conditions after each sub-reconciler to ensure that
+		// we have a consistent view of the Stage status.
+		summarizeConditions(stage, &newStatus, err)
+
+		// If an error occurred during the sub-reconciler, then we should
+		// return the error and request an immediate requeue.
+		if err != nil {
 			return newStatus, false, err
 		}
 
+		// Patch the status of the Stage after each sub-reconciler to show
+		// progress.
 		if err = kubeclient.PatchStatus(ctx, r.client, stage, func(status *kargoapi.StageStatus) {
 			*status = newStatus
 		}); err != nil {
 			logger.Error(err, fmt.Sprintf("failed to update Stage status after %s", subR.name))
 		}
+	}
+
+	// If an immediate requeue was not requested, then we can delete the
+	// Reconciling condition as we have finished reconciling the Stage
+	// and did not encounter any errors.
+	if !requestRequeue {
+		conditions.Delete(&newStatus, kargoapi.ConditionTypeReconciling)
 	}
 
 	return newStatus, requestRequeue, nil
@@ -422,10 +452,11 @@ func (r *RegularStagesReconciler) syncPromotions(
 		)
 
 		conditions.Set(&newStatus, &metav1.Condition{
-			Type:    kargoapi.ConditionTypePromoting,
-			Status:  metav1.ConditionUnknown,
-			Reason:  "ListPromotionsFailed",
-			Message: err.Error(),
+			Type:               kargoapi.ConditionTypePromoting,
+			Status:             metav1.ConditionUnknown,
+			Reason:             "ListPromotionsFailed",
+			Message:            err.Error(),
+			ObservedGeneration: stage.Generation,
 		})
 
 		return newStatus, false, err
@@ -526,19 +557,21 @@ func (r *RegularStagesReconciler) syncPromotions(
 				// Freight, as they are no longer relevant.
 				newStatus.Health = nil
 				conditions.Set(&newStatus, &metav1.Condition{
-					Type:    kargoapi.ConditionTypeHealthy,
-					Status:  metav1.ConditionUnknown,
-					Reason:  "WaitingForHealthCheck",
-					Message: "Waiting for health check to be performed after successful promotion",
+					Type:               kargoapi.ConditionTypeHealthy,
+					Status:             metav1.ConditionUnknown,
+					Reason:             "WaitingForHealthCheck",
+					Message:            "Waiting for health check to be performed after successful promotion",
+					ObservedGeneration: stage.Generation,
 				})
 
 				// Set verified condition to unknown to indicate that the
 				// new Freight needs to be verified.
 				conditions.Set(&newStatus, &metav1.Condition{
-					Type:    kargoapi.ConditionTypeVerified,
-					Status:  metav1.ConditionUnknown,
-					Reason:  "WaitingForVerification",
-					Message: "Waiting for verification to be performed after successful promotion",
+					Type:               kargoapi.ConditionTypeVerified,
+					Status:             metav1.ConditionUnknown,
+					Reason:             "WaitingForVerification",
+					Message:            "Waiting for verification to be performed after successful promotion",
+					ObservedGeneration: stage.Generation,
 				})
 			}
 		}
@@ -585,6 +618,7 @@ func (r *RegularStagesReconciler) syncPromotions(
 				"Promotion %q is currently %s",
 				highestPrioPromo.Name, highestPrioPromo.Status.Phase,
 			),
+			ObservedGeneration: stage.Generation,
 		})
 
 		newStatus.CurrentPromotion = &kargoapi.PromotionReference{
@@ -610,10 +644,11 @@ func (r *RegularStagesReconciler) assessHealth(ctx context.Context, stage *kargo
 	if lastPromo == nil {
 		logger.Debug("Stage has no current Freight: no health checks to perform")
 		conditions.Set(&newStatus, &metav1.Condition{
-			Type:    kargoapi.ConditionTypeHealthy,
-			Status:  metav1.ConditionUnknown,
-			Reason:  "NoFreight",
-			Message: "Stage has no current Freight",
+			Type:               kargoapi.ConditionTypeHealthy,
+			Status:             metav1.ConditionUnknown,
+			Reason:             "NoFreight",
+			Message:            "Stage has no current Freight",
+			ObservedGeneration: stage.Generation,
 		})
 		newStatus.Health = nil
 		return newStatus
@@ -623,10 +658,11 @@ func (r *RegularStagesReconciler) assessHealth(ctx context.Context, stage *kargo
 	if len(healthChecks) == 0 {
 		logger.Debug("Stage has no health checks to perform for last Promotion")
 		conditions.Set(&newStatus, &metav1.Condition{
-			Type:    kargoapi.ConditionTypeHealthy,
-			Status:  metav1.ConditionUnknown,
-			Reason:  "NoHealthChecks",
-			Message: "Stage has no health checks to perform",
+			Type:               kargoapi.ConditionTypeHealthy,
+			Status:             metav1.ConditionUnknown,
+			Reason:             "NoHealthChecks",
+			Message:            "Stage has no health checks to perform",
+			ObservedGeneration: stage.Generation,
 		})
 		newStatus.Health = nil
 		return newStatus
@@ -649,25 +685,28 @@ func (r *RegularStagesReconciler) assessHealth(ctx context.Context, stage *kargo
 	switch health.Status {
 	case kargoapi.HealthStateHealthy:
 		conditions.Set(&newStatus, &metav1.Condition{
-			Type:    kargoapi.ConditionTypeHealthy,
-			Status:  metav1.ConditionTrue,
-			Reason:  string(health.Status),
-			Message: "Stage is healthy",
+			Type:               kargoapi.ConditionTypeHealthy,
+			Status:             metav1.ConditionTrue,
+			Reason:             string(health.Status),
+			Message:            "Stage is healthy",
+			ObservedGeneration: stage.Generation,
 		})
 	case kargoapi.HealthStateUnhealthy:
 		conditions.Set(&newStatus, &metav1.Condition{
-			Type:    kargoapi.ConditionTypeHealthy,
-			Status:  metav1.ConditionFalse,
-			Reason:  string(health.Status),
-			Message: "Stage is unhealthy",
+			Type:               kargoapi.ConditionTypeHealthy,
+			Status:             metav1.ConditionFalse,
+			Reason:             string(health.Status),
+			Message:            "Stage is unhealthy",
+			ObservedGeneration: stage.Generation,
 		})
 	case kargoapi.HealthStateNotApplicable:
 		conditions.Delete(&newStatus, kargoapi.ConditionTypeHealthy)
 	default:
 		conditions.Set(&newStatus, &metav1.Condition{
-			Type:   kargoapi.ConditionTypeHealthy,
-			Status: metav1.ConditionUnknown,
-			Reason: string(health.Status),
+			Type:               kargoapi.ConditionTypeHealthy,
+			Status:             metav1.ConditionUnknown,
+			Reason:             string(health.Status),
+			ObservedGeneration: stage.Generation,
 		})
 	}
 
@@ -703,10 +742,11 @@ func (r *RegularStagesReconciler) verifyStageFreight(
 	if curFreight == nil {
 		logger.Debug("Stage has no current Freight: no verification to perform")
 		conditions.Set(&newStatus, &metav1.Condition{
-			Type:    kargoapi.ConditionTypeVerified,
-			Status:  metav1.ConditionUnknown,
-			Reason:  "NoFreight",
-			Message: "Stage has no current Freight to verify",
+			Type:               kargoapi.ConditionTypeVerified,
+			Status:             metav1.ConditionUnknown,
+			Reason:             "NoFreight",
+			Message:            "Stage has no current Freight to verify",
+			ObservedGeneration: stage.Generation,
 		})
 		return newStatus, nil
 	}
@@ -729,10 +769,11 @@ func (r *RegularStagesReconciler) verifyStageFreight(
 				// If the Freight has at least one successful verification,
 				// then we can consider the Freight to be verified.
 				conditions.Set(&newStatus, &metav1.Condition{
-					Type:    kargoapi.ConditionTypeVerified,
-					Status:  metav1.ConditionTrue,
-					Reason:  "Verified",
-					Message: "Freight has been verified",
+					Type:               kargoapi.ConditionTypeVerified,
+					Status:             metav1.ConditionTrue,
+					Reason:             "Verified",
+					Message:            "Freight has been verified",
+					ObservedGeneration: stage.Generation,
 				})
 				return
 			}
@@ -745,38 +786,43 @@ func (r *RegularStagesReconciler) verifyStageFreight(
 			switch lastVerification.Phase {
 			case kargoapi.VerificationPhasePending:
 				conditions.Set(&newStatus, &metav1.Condition{
-					Type:    kargoapi.ConditionTypeVerified,
-					Status:  metav1.ConditionUnknown,
-					Reason:  "VerificationPending",
-					Message: "Freight is pending verification",
+					Type:               kargoapi.ConditionTypeVerified,
+					Status:             metav1.ConditionUnknown,
+					Reason:             "VerificationPending",
+					Message:            "Freight is pending verification",
+					ObservedGeneration: stage.Generation,
 				})
 			case kargoapi.VerificationPhaseRunning:
 				conditions.Set(&newStatus, &metav1.Condition{
-					Type:    kargoapi.ConditionTypeVerified,
-					Status:  metav1.ConditionUnknown,
-					Reason:  "VerificationRunning",
-					Message: "Freight is currently being verified",
+					Type:               kargoapi.ConditionTypeVerified,
+					Status:             metav1.ConditionUnknown,
+					Reason:             "VerificationRunning",
+					Message:            "Freight is currently being verified",
+					ObservedGeneration: stage.Generation,
 				})
 			case kargoapi.VerificationPhaseFailed, kargoapi.VerificationPhaseError:
 				conditions.Set(&newStatus, &metav1.Condition{
-					Type:    kargoapi.ConditionTypeVerified,
-					Status:  metav1.ConditionFalse,
-					Reason:  fmt.Sprintf("Verification%s", lastVerification.Phase),
-					Message: lastVerification.Message,
+					Type:               kargoapi.ConditionTypeVerified,
+					Status:             metav1.ConditionFalse,
+					Reason:             fmt.Sprintf("Verification%s", lastVerification.Phase),
+					Message:            lastVerification.Message,
+					ObservedGeneration: stage.Generation,
 				})
 			case kargoapi.VerificationPhaseAborted:
 				conditions.Set(&newStatus, &metav1.Condition{
-					Type:    kargoapi.ConditionTypeVerified,
-					Status:  metav1.ConditionFalse,
-					Reason:  "VerificationAborted",
-					Message: lastVerification.Message,
+					Type:               kargoapi.ConditionTypeVerified,
+					Status:             metav1.ConditionFalse,
+					Reason:             "VerificationAborted",
+					Message:            lastVerification.Message,
+					ObservedGeneration: stage.Generation,
 				})
 			case kargoapi.VerificationPhaseInconclusive:
 				conditions.Set(&newStatus, &metav1.Condition{
-					Type:    kargoapi.ConditionTypeVerified,
-					Status:  metav1.ConditionUnknown,
-					Reason:  "VerificationInconclusive",
-					Message: lastVerification.Message,
+					Type:               kargoapi.ConditionTypeVerified,
+					Status:             metav1.ConditionUnknown,
+					Reason:             "VerificationInconclusive",
+					Message:            lastVerification.Message,
+					ObservedGeneration: stage.Generation,
 				})
 			default:
 				conditions.Set(&newStatus, &metav1.Condition{
@@ -1731,4 +1777,106 @@ func (r *RegularStagesReconciler) clearAnalysisRuns(ctx context.Context, stage *
 		)
 	}
 	return nil
+}
+
+// summarizeConditions summarizes the conditions of the given Stage. It sets the
+// Ready condition based on the Promoting, Healthy and Verified conditions.
+// If there is an error, the Ready condition is set to False until the error is
+// resolved.
+func summarizeConditions(stage *kargoapi.Stage, newStatus *kargoapi.StageStatus, err error) {
+	// If there is an error, then we are not Ready until the error is resolved.
+	if err != nil {
+		conditions.Set(newStatus, &metav1.Condition{
+			Type:               kargoapi.ConditionTypeReady,
+			Status:             metav1.ConditionFalse,
+			Reason:             "ReconcileError",
+			Message:            err.Error(),
+			ObservedGeneration: stage.Generation,
+		})
+
+		// Backwards compatibility: set the Message field of the Status.
+		// TODO: Remove this in a future release.
+		newStatus.Message = err.Error()
+
+		return
+	}
+
+	// Backwards compatibility: clear the Message field of the Status
+	// and set the Freight summary.
+	// TODO: Remove this in a future release.
+	newStatus.Message = ""
+	newStatus.FreightSummary = buildFreightSummary(len(stage.Spec.RequestedFreight), newStatus.FreightHistory.Current())
+
+	// If we are currently Promoting, then we are not Ready.
+	promoCond := conditions.Get(newStatus, kargoapi.ConditionTypePromoting)
+	if promoCond != nil {
+		conditions.Set(newStatus, &metav1.Condition{
+			Type:               kargoapi.ConditionTypeReady,
+			Status:             metav1.ConditionFalse,
+			Reason:             promoCond.Reason,
+			Message:            promoCond.Message,
+			ObservedGeneration: stage.Generation,
+		})
+		return
+	}
+
+	// If we are not Healthy, then we are not Ready.
+	healthCond := conditions.Get(newStatus, kargoapi.ConditionTypeHealthy)
+	if healthCond == nil || healthCond.Status != metav1.ConditionTrue {
+		readyCond := &metav1.Condition{
+			Type:    kargoapi.ConditionTypeReady,
+			Status:  metav1.ConditionFalse,
+			Reason:  "Unhealthy",
+			Message: "Stage is not healthy",
+		}
+		if healthCond != nil {
+			readyCond.Reason = healthCond.Reason
+			readyCond.Message = healthCond.Message
+		}
+		conditions.Set(newStatus, readyCond)
+		return
+	}
+
+	// If we are not verified, then we are not Ready.
+	verificationCond := conditions.Get(newStatus, kargoapi.ConditionTypeVerified)
+	if verificationCond == nil || verificationCond.Status != metav1.ConditionTrue {
+		readyCond := &metav1.Condition{
+			Type:    kargoapi.ConditionTypeReady,
+			Status:  metav1.ConditionFalse,
+			Reason:  "PendingVerification",
+			Message: "Stage is not verified",
+		}
+		if verificationCond != nil {
+			readyCond.Reason = verificationCond.Reason
+			readyCond.Message = verificationCond.Message
+		}
+		conditions.Set(newStatus, readyCond)
+		return
+	}
+
+	// At this point, we can propagate the Ready condition from the Verified
+	// condition.
+	conditions.Set(newStatus, &metav1.Condition{
+		Type:               kargoapi.ConditionTypeReady,
+		Status:             metav1.ConditionTrue,
+		Reason:             verificationCond.Reason,
+		Message:            verificationCond.Message,
+		ObservedGeneration: stage.Generation,
+	})
+
+	// If we are Ready, then we can also mark the current generation as
+	// observed.
+	newStatus.ObservedGeneration = stage.Generation
+}
+
+func buildFreightSummary(requested int, current *kargoapi.FreightCollection) string {
+	if current == nil {
+		return fmt.Sprintf("0/%d Fulfilled", requested)
+	}
+	if requested == 1 && len(current.Freight) == 1 {
+		for _, f := range current.Freight {
+			return f.Name
+		}
+	}
+	return fmt.Sprintf("%d/%d Fulfilled", len(current.Freight), requested)
 }
