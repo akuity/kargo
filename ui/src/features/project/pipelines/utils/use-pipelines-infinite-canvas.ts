@@ -26,6 +26,16 @@ export const usePipelineViewPrefHook = (project: string, opts?: { onSet?(): void
   return [state, setState] as const;
 };
 
+const getTranslateMatrix = (node: HTMLElement) => {
+  const style = window.getComputedStyle(node);
+
+  const matrix = new DOMMatrix(style['transform']);
+
+  return matrix;
+};
+
+const stageNodeClassName = '__stage_node__';
+
 type pipelineInfiniteCanvasHook = {
   refs: {
     movingObjectsRef: RefObject<HTMLDivElement>;
@@ -54,11 +64,7 @@ export const usePipelinesInfiniteCanvas = (conf: pipelineInfiniteCanvasHook) => 
       return 100;
     }
 
-    return (
-      (
-        conf.refs.zoomRef.current.computedStyleMap().get('transform') as CSSTransformValue
-      ).toMatrix().a * 100
-    );
+    return getTranslateMatrix(conf.refs.zoomRef.current).a * 100;
   }, []);
 
   const zoom = useCallback((percentage: number) => {
@@ -78,7 +84,9 @@ export const usePipelinesInfiniteCanvas = (conf: pipelineInfiniteCanvasHook) => 
   const zoomIn = useCallback(() => {
     const currentZoom = getCurrentZoom();
 
-    zoom(currentZoom - zoomSpeed);
+    if (currentZoom - zoomSpeed > 0) {
+      zoom(currentZoom - zoomSpeed);
+    }
   }, []);
 
   const fitToView = useCallback((canvasNode: HTMLDivElement) => {
@@ -140,17 +148,7 @@ export const usePipelinesInfiniteCanvas = (conf: pipelineInfiniteCanvasHook) => 
 
   const getPos = useCallback(() => {
     if (conf.refs.movingObjectsRef.current) {
-      const transform = conf.refs.movingObjectsRef.current
-        .computedStyleMap()
-        .get('transform') as CSSTransformValue;
-
-      if (!(transform instanceof CSSTransformValue)) {
-        throw new Error(
-          'Canvas moving mechanism seems to be changed and unsupported! Please report this bug.'
-        );
-      }
-
-      const { e, f } = transform.toMatrix().translate();
+      const { e, f } = getTranslateMatrix(conf.refs.movingObjectsRef.current).translate();
 
       return [e, f] as const;
     }
@@ -240,16 +238,27 @@ export const usePipelinesInfiniteCanvas = (conf: pipelineInfiniteCanvasHook) => 
     let onWindowMouseMove: (e: MouseEvent) => void = () => {};
 
     const onCanvasMouseDown = (e: MouseEvent) => {
+      // block stage node click
+      // TODO: rewrite HTML structure and refactor this along for better control
+      let element = e.target as HTMLElement;
+      while (element) {
+        if (element?.classList?.contains(stageNodeClassName)) {
+          return;
+        }
+        element = element.parentNode as HTMLElement;
+      }
       if (registeredEventListener) {
         onCanvasMouseUp();
         return;
       }
+
       registeredEventListener = true;
 
       if (conf.refs.zoomRef.current) {
         // block any pointer events in pipeline
         // this makes only window mousemove event happen
         // other events like hover on node will conflict and causes glitches while moving
+        conf.refs.zoomRef.current.style.pointerEvents = 'none';
         conf.refs.zoomRef.current.style.cursor = 'cursor-move';
       }
 
@@ -301,6 +310,21 @@ export const usePipelinesInfiniteCanvas = (conf: pipelineInfiniteCanvasHook) => 
     canvasNode.addEventListener('mousedown', onCanvasMouseDown);
     canvasNode.addEventListener('mouseup', onCanvasMouseUp);
     canvasNode.addEventListener('wheel', onWheel);
+
+    // assign the classnames to stage node
+    // this is to distinguish mousedown event in pipeline view v/s actual stage node click
+    const stageNodes = conf.refs.zoomRef.current?.childNodes || [];
+
+    // BELOW CODE IS ONLY FOR UNDERSTADING PURPOSE, NOT REQUIRED
+    // if (stageNodes.length === 0) {
+    // either there are no stages or this is bug because when canvas is ready (this point of code), it will have all stages ready
+    // }
+
+    for (const stageNode of stageNodes) {
+      if (stageNode instanceof HTMLDivElement) {
+        stageNode.className = `${stageNode.className} ${stageNodeClassName}`;
+      }
+    }
 
     cleanupFunction.current = () => {
       canvasNode.removeEventListener('mousedown', onCanvasMouseDown);
