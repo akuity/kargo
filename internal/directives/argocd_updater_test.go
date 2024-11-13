@@ -122,6 +122,21 @@ func Test_argoCDUpdater_validate(t *testing.T) {
 			},
 		},
 		{
+			name: "desiredCommitFromStep and desiredRevision are both specified",
+			// These are meant to be mutually exclusive.
+			config: Config{
+				"apps": []Config{{
+					"sources": []Config{{
+						"desiredCommitFromStep": "fake-step",
+						"desiredRevision":       "fake-commit",
+					}},
+				}},
+			},
+			expectedProblems: []string{
+				"apps.0.sources.0: Must validate one and only one schema",
+			},
+		},
+		{
 			name: "helm images is empty array",
 			config: Config{
 				"apps": []Config{{
@@ -169,38 +184,6 @@ func Test_argoCDUpdater_validate(t *testing.T) {
 			},
 		},
 		{
-			name: "helm images update repoURL is not specified",
-			config: Config{
-				"apps": []Config{{
-					"sources": []Config{{
-						"helm": Config{
-							"images": []Config{{}},
-						},
-					}},
-				}},
-			},
-			expectedProblems: []string{
-				"apps.0.sources.0.helm.images.0: repoURL is required",
-			},
-		},
-		{
-			name: "helm images update repoURL is empty string",
-			config: Config{
-				"apps": []Config{{
-					"sources": []Config{{
-						"helm": Config{
-							"images": []Config{{
-								"repoURL": "",
-							}},
-						},
-					}},
-				}},
-			},
-			expectedProblems: []string{
-				"apps.0.sources.0.helm.images.0.repoURL: String length must be greater than or equal to 1",
-			},
-		},
-		{
 			name: "helm images update value is not specified",
 			config: Config{
 				"apps": []Config{{
@@ -216,20 +199,22 @@ func Test_argoCDUpdater_validate(t *testing.T) {
 			},
 		},
 		{
-			name: "helm images update value is invalid",
+			name: "helm images repoURL specified with invalid update value",
+			// The value is more constrained when the repoURL is specified.
 			config: Config{
 				"apps": []Config{{
 					"sources": []Config{{
 						"helm": Config{
 							"images": []Config{{
-								"value": "bogus",
+								"repoURL": "fake-image",
+								"value":   "bogus",
 							}},
 						},
 					}},
 				}},
 			},
 			expectedProblems: []string{
-				"apps.0.sources.0.helm.images.0.value must be one of the following",
+				"apps.0.sources.0.helm.images.0.value: Does not match pattern",
 			},
 		},
 		{
@@ -297,20 +282,63 @@ func Test_argoCDUpdater_validate(t *testing.T) {
 			},
 		},
 		{
-			name: "desiredCommit and desiredCommitFromStep are both specified",
+			name: "kustomize images digest and tag are both specified",
 			// These are meant to be mutually exclusive.
 			config: Config{
 				"apps": []Config{{
 					"sources": []Config{{
-						"desiredCommit":         "fake-commit",
-						"desiredCommitFromStep": "fake-step",
+						"kustomize": Config{
+							"images": []Config{{
+								"digest": "fake-digest",
+								"tag":    "fake-tag",
+							}},
+						},
 					}},
 				}},
 			},
 			expectedProblems: []string{
-				"apps.0.sources.0: Must validate one and only one schema",
+				"apps.0.sources.0.kustomize.images.0: Must validate one and only one schema (oneOf)",
 			},
 		},
+		{
+			name: "kustomize images digest and useDigest=true are both specified",
+			// These are meant to be mutually exclusive.
+			config: Config{
+				"apps": []Config{{
+					"sources": []Config{{
+						"kustomize": Config{
+							"images": []Config{{
+								"digest":    "fake-digest",
+								"useDigest": true,
+							}},
+						},
+					}},
+				}},
+			},
+			expectedProblems: []string{
+				"apps.0.sources.0.kustomize.images.0: Must validate one and only one schema (oneOf)",
+			},
+		},
+		{
+			name: "kustomize images tag and useDigest=true are both specified",
+			// These are meant to be mutually exclusive.
+			config: Config{
+				"apps": []Config{{
+					"sources": []Config{{
+						"kustomize": Config{
+							"images": []Config{{
+								"tag":       "fake-tag",
+								"useDigest": true,
+							}},
+						},
+					}},
+				}},
+			},
+			expectedProblems: []string{
+				"apps.0.sources.0.kustomize.images.0: Must validate one and only one schema (oneOf)",
+			},
+		},
+
 		{
 			name: "valid kitchen sink",
 			config: Config{
@@ -321,18 +349,53 @@ func Test_argoCDUpdater_validate(t *testing.T) {
 						"repoURL":              "fake-git-url",
 						"updateTargetRevision": true,
 						"helm": Config{
-							"images": []Config{{
-								"repoURL": "fake-image-url",
-								"key":     "fake-key",
-								"value":   Tag,
-							}},
+							"images": []Config{
+								{
+									"repoURL": "fake-image",
+									"key":     "fake-key",
+									"value":   Tag,
+								},
+								{
+									"repoURL": "another-fake-image",
+									"key":     "another-fake-key",
+									"value":   Tag,
+									"fromOrigin": Config{
+										"kind": Warehouse,
+										"name": "fake-warehouse",
+									},
+								},
+								{
+									"key":   "another-fake-key",
+									"value": "fake-tag",
+								},
+							},
 						},
 						"kustomize": Config{
-							"images": []Config{{
-								"repoURL":   "fake-image-url",
-								"newName":   "fake-new-name",
-								"useDigest": true,
-							}},
+							"images": []Config{
+								{
+									"repoURL": "fake-image",
+									"fromOrigin": Config{
+										"kind": Warehouse,
+										"name": "fake-warehouse",
+									},
+								},
+								{
+									"repoURL": "another-fake-image",
+									"digest":  "fake-digest",
+								},
+								{
+									"repoURL": "yet-another-fake-image",
+									"tag":     "fake-tag",
+								},
+								{
+									"repoURL":   "still-another-fake-image",
+									"useDigest": true,
+									"fromOrigin": Config{
+										"kind": Warehouse,
+										"name": "fake-warehouse",
+									},
+								},
+							},
 						},
 					}},
 				}},
@@ -1921,6 +1984,14 @@ func Test_argoCDUpdater_buildKustomizeImagesForAppSource(t *testing.T) {
 							RepoURL:   "another-fake-url",
 							UseDigest: true,
 						},
+						{
+							RepoURL: "yet-another-fake-url",
+							Digest:  "fake-digest",
+						},
+						{
+							RepoURL: "still-another-fake-url",
+							Tag:     "fake-tag",
+						},
 					},
 				},
 				RepoURL: "https://github.com/universe/42",
@@ -1943,6 +2014,8 @@ func Test_argoCDUpdater_buildKustomizeImagesForAppSource(t *testing.T) {
 		argocd.KustomizeImages{
 			"fake-url:fake-tag",
 			"another-fake-url@another-fake-digest",
+			"yet-another-fake-url@fake-digest",
+			"still-another-fake-url:fake-tag",
 		},
 		result,
 	)
@@ -2010,6 +2083,10 @@ func Test_argoCDUpdater_buildHelmParamChangesForAppSource(t *testing.T) {
 							Key:     "fourth-fake-key",
 							Value:   Digest,
 						},
+						{
+							Key:   "fifth-fake-key",
+							Value: "fake-value",
+						},
 					},
 				},
 			}},
@@ -2033,6 +2110,7 @@ func Test_argoCDUpdater_buildHelmParamChangesForAppSource(t *testing.T) {
 			"second-fake-key": "second-fake-tag",
 			"third-fake-key":  "third-fake-url@third-fake-digest",
 			"fourth-fake-key": "fourth-fake-digest",
+			"fifth-fake-key":  "fake-value",
 		},
 		result,
 	)
