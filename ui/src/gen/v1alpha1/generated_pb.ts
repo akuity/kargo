@@ -2985,8 +2985,8 @@ export class PromotionVariable extends Message<PromotionVariable> {
   name?: string;
 
   /**
-   * Value is the value of the variable. It is legal to utilize expressions
-   * the value.
+   * Value is the value of the variable. It is allowed to utilize expressions
+   * in the value.
    * See https://docs.kargo.io/references/expression-language for details.
    *
    * @generated from field: optional string value = 2;

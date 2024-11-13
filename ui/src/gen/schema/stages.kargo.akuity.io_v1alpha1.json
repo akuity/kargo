@@ -61,7 +61,7 @@
                         "type": "string"
                       },
                       "value": {
-                        "description": "Value is the value of the variable. It is legal to utilize expressions\nthe value.\nSee https://docs.kargo.io/references/expression-language for details.",
+                        "description": "Value is the value of the variable. It is allowed to utilize expressions\nin the value.\nSee https://docs.kargo.io/references/expression-language for details.",
                         "type": "string"
                       }
                     },
