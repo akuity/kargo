@@ -178,20 +178,17 @@ Kustomize overlay. Rendering the manifests intended for such a Stage will
 require combining the base and overlay configurations:
 
 ```yaml
+vars:
+- name: gitRepo
+  value: https://github.com/example/repo.git
 steps:
 - uses: git-clone
   config:
-    repoURL: https://github.com/example/repo.git
+    repoURL: ${{ vars.gitRepo }}
     checkout:
-    - fromFreight: true
-      fromOrigin:
-        kind: Warehouse
-        name: base
+    - commit: ${{ commitFrom(vars.gitRepo, warehouse("base")).ID }}
       path: ./src
-    - fromFreight: true
-      fromOrigin:
-        kind: Warehouse
-        name: ${{ ctx.stage }}-overlay
+    - commit: ${{ commitFrom(vars.gitRepo, warehouse(ctx.stage + "-overlay")).ID }}
       path: ./overlay
     - branch: stage/${{ ctx.stage }}
       create: true
@@ -333,12 +330,15 @@ preceded by a [`git-clear`](#git-clear) step and followed by
 <TabItem value="file" label="Rendering to a File" default>
 
 ```yaml
+vars:
+- name: gitRepo
+  value: https://github.com/example/repo.git
 steps:
 - uses: git-clone
   config:
-    repoURL: https://github.com/example/repo.git
+    repoURL: ${{ vars.gitRepo }}
     checkout:
-    - fromFreight: true
+    - commit: ${{ commitFrom(vars.gitRepo).ID }}
       path: ./src
     - branch: stage/${{ ctx.stage }}
       create: true
@@ -358,12 +358,15 @@ steps:
 <TabItem value="dir" label="Rendering to a Directory" default>
 
 ```yaml
+vars:
+- name: gitRepo
+  value: https://github.com/example/repo.git
 steps:
 - uses: git-clone
   config:
-    repoURL: https://github.com/example/repo.git
+    repoURL: ${{ vars.gitRepo }}
     checkout:
-    - fromFreight: true
+    - commit: ${{ commitFrom(vars.gitRepo).ID }}
       path: ./src
     - branch: stage/${{ ctx.stage }}
       create: true
@@ -651,12 +654,15 @@ commonly preceded by a [`git-clear`](#git-clear) step and followed by
 <TabItem value="file" label="Rendering to a File" default>
 
 ```yaml
+vars:
+- name: gitRepo
+  value: https://github.com/example/repo.git
 steps:
 - uses: git-clone
   config:
-    repoURL: https://github.com/example/repo.git
+    repoURL: ${{ vars.gitRepo }}
     checkout:
-    - fromFreight: true
+    - commit: ${{ commitFrom(vars.gitRepo).ID }}
       path: ./src
     - branch: stage/${{ ctx.stage }}
       create: true
@@ -678,12 +684,15 @@ steps:
 <TabItem value="dir" label="Rendering to a Directory">
 
 ```yaml
+vars:
+- name: gitRepo
+  value: https://github.com/example/repo.git
 steps:
 - uses: git-clone
   config:
-    repoURL: https://github.com/example/repo.git
+    repoURL: ${{ vars.gitRepo }}
     checkout:
-    - fromFreight: true
+    - commit: ${{ commitFrom(vars.gitRepo).ID }}
       path: ./src
     - branch: stage/${{ ctx.stage }}
       create: true
@@ -724,12 +733,15 @@ desired state and is commonly followed by a [`git-push`](#git-push) step.
 ### `git-commit` Example
 
 ```yaml
+vars:
+- name: gitRepo
+  value: https://github.com/example/repo.git
 steps:
 - uses: git-clone
   config:
-    repoURL: https://github.com/example/repo.git
+    repoURL: ${{ vars.gitRepo }}
     checkout:
-    - fromFreight: true
+    - commit: ${{ commitFrom(vars.gitRepo).ID }}
       path: ./src
     - branch: stage/${{ ctx.stage }}
       create: true
