@@ -144,6 +144,11 @@ func (g *gitCloner) runPromotionStep(
 				return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
 					fmt.Errorf("error ensuring existence of remote branch %s: %w", ref, err)
 			}
+		case checkout.Commit != "":
+			ref = checkout.Commit
+		case checkout.Tag != "":
+			ref = checkout.Tag
+		// TODO(krancour): Remove for v1.2.0.
 		case checkout.FromFreight:
 			var desiredOrigin *kargoapi.FreightOrigin
 			if checkout.FromOrigin != nil {
@@ -166,8 +171,6 @@ func (g *gitCloner) runPromotionStep(
 					fmt.Errorf("error finding commit from repo %s: %w", cfg.RepoURL, err)
 			}
 			ref = commit.ID
-		case checkout.Tag != "":
-			ref = checkout.Tag
 		}
 		path, err := securejoin.SecureJoin(stepCtx.WorkDir, checkout.Path)
 		if err != nil {

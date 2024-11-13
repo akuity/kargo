@@ -39,11 +39,12 @@ multiple working trees.
 | `repoURL` | `string` | Y | The URL of a remote Git repository to clone. |
 | `insecureSkipTLSVerify` | `boolean` | N | Whether to bypass TLS certificate verification when cloning (and for all subsequent operations involving this clone). Setting this to `true` is highly discouraged in production. |
 | `checkout` | `[]object` | Y | The commits, branches, or tags to check out from the repository and the paths where they should be checked out. At least one must be specified. |
-| `checkout[].branch` | `string` | N | A branch to check out. Mutually exclusive with `tag` and `fromFreight=true`. If none of these is specified, the default branch will be checked out. |
+| `checkout[].branch` | `string` | N | A branch to check out. Mutually exclusive with `commit`, `tag`, and `fromFreight=true`. If none of these is specified, the default branch will be checked out. |
 | `checkout[].create` | `boolean` | N | In the event `branch` does not already exist on the remote, whether a new, empty, orphaned branch should be created. Default is `false`, but should commonly be set to `true` for Stage-specific branches, which may not exist yet at the time of a Stage's first promotion. |
-| `checkout[].tag` | `string` | N | A tag to check out. Mutually exclusive with `branch` and `fromFreight=true`. If none of these is specified, the default branch will be checked out. |
-| `checkout[].fromFreight` | `boolean` | N | Whether a commit to check out should be obtained from the Freight being promoted. A value of `true` is mutually exclusive with `branch` and `tag`. If none of these is specified, the default branch will be checked out. Default is `false`, but is often set to `true`. |
-| `checkout[].fromOrigin` | `object` | N | See [specifying origins](#specifying-origins). |
+| `checkout[].commit` | `string` | N | A specific commit to check out. Mutually exclusive with `branch`, `tag`, and `fromFreight=true`. If none of these is specified, the default branch will be checked out. |
+| `checkout[].tag` | `string` | N | A tag to check out. Mutually exclusive with `branch`, `commit`, and `fromFreight=true`. If none of these is specified, the default branch will be checked out. |
+| `checkout[].fromFreight` | `boolean` | N | Whether a commit to check out should be obtained from the Freight being promoted. A value of `true` is mutually exclusive with `branch`, `commit`, and `tag`. If none of these is specified, the default branch will be checked out. Default is `false`, but is often set to `true`. <br/><br/>__Deprecated: Use `commit` with an expression instead. Will be removed in v1.2.0.__ |
+| `checkout[].fromOrigin` | `object` | N | See [specifying origins](#specifying-origins). <br/><br/>__Deprecated: Use `commit` with an expression instead. Will be removed in v1.2.0.__ |
 | `checkout[].path` | `string` | Y | The path for a working tree that will be created from the checked out revision. This path is relative to the temporary workspace that Kargo provisions for use by the promotion process. |
 
 ### `git-clone` Examples
@@ -58,12 +59,15 @@ likely to perform actions that revise the contents of the Stage-specific branch
 using the commit from the Freight as input.
 
 ```yaml
+vars:
+- name: gitRepo
+  value: https://github.com/example/repo.git
 steps:
 - uses: git-clone
   config:
-    repoURL: https://github.com/example/repo.git
+    repoURL: ${{ vars.gitRepo }}
     checkout:
-    - fromFreight: true
+    - commit: ${{ commitFrom(vars.gitRepo) }}
       path: ./src
     - branch: stage/${{ ctx.stage }}
       create: true
@@ -84,20 +88,17 @@ with the help of a [`copy`](#copy) step. For this case, a `git-clone` step may b
 configured similarly to the following:
 
 ```yaml
+vars:
+- name: gitRepo
+  value: https://github.com/example/repo.git
 steps:
 - uses: git-clone
   config:
-    repoURL: https://github.com/example/repo.git
+    repoURL: ${{ vars.gitRepo }}
     checkout:
-    - fromFreight: true
-      fromOrigin:
-        kind: Warehouse
-        name: base
+    - commit: ${{ commitFrom(vars.gitRepo, warehouse("base")).ID }}
       path: ./src
-    - fromFreight: true
-      fromOrigin:
-        kind: Warehouse
-        name: ${{ ctx.stage }}-overlay
+    - commit: ${{ commitFrom(vars.gitRepo, warehouse(ctx.stage + "-overlay")).ID }}
       path: ./overlay
     - branch: stage/${{ ctx.stage }}
       create: true
