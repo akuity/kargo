@@ -219,10 +219,12 @@ to executing `kustomize edit set image`. This step is commonly followed by a
 |------|------|----------|-------------|
 | `path` | `string` | Y | Path to a directory containing a `kustomization.yaml` file. This path is relative to the temporary workspace that Kargo provisions for use by the promotion process. |
 | `images` | `[]object` | Y | The details of changes to be applied to the `kustomization.yaml` file. At least one must be specified. |
-| `images[].image` | `string` | Y | Name/URL of the image being updated. The Freight being promoted presumably contains a reference to a revision of this image. |
-| `images[].fromOrigin` | `object` | N | See [specifying origins](#specifying-origins). |
+| `images[].image` | `string` | Y | Name/URL of the image being updated. |
+| `images[].tag` | `string` | N | A tag naming a specific revision of `image`. Mutually exclusive with `digest` and `useDigest=true`. If none of these are specified, the tag specified by a piece of Freight referencing `image` will be used as the value of this field. |
+| `images[].digest` | `string` | N | A digest naming a specific revision of `image`. Mutually exclusive with `tag` and `useDigest=true`. If none of these are specified, the tag specified by a piece of Freight referencing `image` will be used as the value of `tag`. |
+| `images[].useDigest` | `boolean` | N | Whether to update the `kustomization.yaml` file using the container image's digest instead of its tag. Mutually exclusive with `digest` and `tag`. If none of these are specified, the tag specified by a piece of Freight referencing `image` will be used as the value of `tag`. <br/><br/>__Deprecated: Use `digest` with an expression instead. Will be removed in v1.2.0.__ |
+| `images[].fromOrigin` | `object` | N | See [specifying origins](#specifying-origins). <br/><br/>__Deprecated: Use `digest` or `tag` with an expression instead. Will be removed in v1.2.0.__ |
 | `images[].newName` | `string` | N | A substitution for the name/URL of the image being updated. This is useful when different Stages have access to different container image repositories (assuming those different repositories contain equivalent images that are tagged identically). This may be a frequent consideration for users of Amazon's Elastic Container Registry. |
-| `images[].useDigest` | `boolean` | N | Whether to update the `kustomization.yaml` file using the container image's digest instead of its tag. |
 
 ### `kustomize-set-image` Examples
 
@@ -231,15 +233,17 @@ to executing `kustomize edit set image`. This step is commonly followed by a
 <TabItem value="common" label="Common Usage" default>
 
 ```yaml
+vars:
+- name: gitRepo
+  value: https://github.com/example/repo.git
+- name: imageRepo
+  value: my/image
 steps:
 - uses: git-clone
   config:
-    repoURL: https://github.com/example/repo.git
+    repoURL: ${{ vars.gitRepo }}
     checkout:
-    - fromFreight: true
-      fromOrigin:
-        kind: Warehouse
-        name: base
+    - commit: ${{ commitFrom(vars.gitRepo).ID }}
       path: ./src
     - branch: stage/${{ ctx.stage }}
       create: true
@@ -251,7 +255,8 @@ steps:
   config:
     path: ./src/base
     images:
-    - image: my/image
+    - image: ${{ vars.imageRepo }}
+      tag: ${{ imageFrom(vars.imageRepo).tag }}
 # Render manifests to ./out, commit, push, etc...
 ```
 
@@ -268,15 +273,15 @@ region, it will be necessary to make a substitution when updating the
 `kustomization.yaml` file. This can be accomplished like so:
 
 ```yaml
+vars:
+- name: gitRepo
+  value: https://github.com/example/repo.git
 steps:
 - uses: git-clone
   config:
-    repoURL: https://github.com/example/repo.git
+    repoURL: ${{ vars.gitRepo }}
     checkout:
-    - fromFreight: true
-      fromOrigin:
-        kind: Warehouse
-        name: base
+    - commit: ${{ commitFrom(vars.gitRepo).ID }}
       path: ./src
     - branch: stage/${{ ctx.stage }}
       create: true
