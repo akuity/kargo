@@ -199,7 +199,7 @@ desiredCommitFromStep: commit
 ```
 
 __For complete documentation of all of Kargo's built-in promotion steps, refer
-to the [Promotion Steps Reference](./35-references/10-promotion-steps.md).__
+to the [Promotion Steps Reference](../35-references/10-promotion-steps.md).__
 
 ### Verifications
 

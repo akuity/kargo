@@ -47,7 +47,7 @@ pipeline may feature a "test" or "dev" stage as its starting point, with one or
 more "prod" stages at the end.
 
 :::note
-For more information on the Stage Resource, refer to [Working with Stages](./30-how-to-guides/14-working-with-stages.md) in the How-to guides.
+For more information on the Stage Resource, refer to [Working with Stages](./30-how-to-guides/14-working-with-stages.md).
 :::
 
 ### What is Freight?
