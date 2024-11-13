@@ -397,20 +397,23 @@ step.
 |------|------|----------|-------------|
 | `path` | `string` | Y | Path to Helm values file (e.g. `values.yaml`). This path is relative to the temporary workspace that Kargo provisions for use by the promotion process. |
 | `images` | `[]object` | Y | The details of changes to be applied to the values file. At least one must be specified. |
-| `images[].image` | `string` | Y | Name/URL of the image being updated. The Freight being promoted presumably contains a reference to a revision of this image. |
-| `images[].fromOrigin` | `object` | N | See [specifying origins](#specifying-origins) |
+| `images[].image` | `string` | N | Name/URL of the image being updated. __Deprecated: Use `value` with an expression instead. Will be removed in v1.2.0.__ |
+| `images[].fromOrigin` | `object` | N | See [specifying origins](#specifying-origins). <br/><br/>__Deprecated: Use `value` with an expression instead. Will be removed in v1.2.0.__ |
 | `images[].key` | `string` | Y | The key to update within the values file. See Helm documentation on the [format and limitations](https://helm.sh/docs/intro/using_helm/#the-format-and-limitations-of---set) of the notation used in this field. |
-| `images[].value` | `string` | Y | Specifies how the value of `key` is to be updated. Possible values for this field are limited to:<ul><li>`ImageAndTag`: Replaces the value of `key` with a string in form `<image url>:<tag>`</li><li>`Tag`: Replaces the value of `key` with the image's tag</li><li>`ImageAndDigest`: Replaces the value of `key` with a string in form `<image url>@<digest>`</li><li>`Digest`: Replaces the value of `key` with the image's digest</li></ul> |
+| `images[].value` | `string` | Y | Specifies how the value of `key` is to be updated. When `image` is non-empty, possible values for this field are limited to:<ul><li>`ImageAndTag`: Replaces the value of `key` with a string in form `<image url>:<tag>`</li><li>`Tag`: Replaces the value of `key` with the image's tag</li><li>`ImageAndDigest`: Replaces the value of `key` with a string in form `<image url>@<digest>`</li><li>`Digest`: Replaces the value of `key` with the image's digest</li></ul> When `image` is empty, use an expression in this field to describe the new value. |
 
 ### `helm-update-image` Example
 
 ```yaml
+vars:
+- name: gitRepo
+  value: https://github.com/example/repo.git
 steps:
 - uses: git-clone
   config:
-    repoURL: https://github.com/example/repo.git
+    repoURL: ${{ vars.gitRepo }}
     checkout:
-    - fromFreight: true
+    - commit: ${{ commitFrom(vars.gitRepo).ID }}
       path: ./src
     - branch: stage/${{ ctx.stage }}
       create: true
@@ -422,9 +425,8 @@ steps:
   config:
     path: ./src/charts/my-chart/values.yaml
     images:
-    - image: my/image
-      key: image.tag
-      value: Tag
+    - key: image.tag
+      value: ${{ imageFrom("my/image").tag }}
 # Render manifests to ./out, commit, push, etc...
 ```
 
