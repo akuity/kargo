@@ -239,6 +239,7 @@ export const usePipelinesInfiniteCanvas = (conf: pipelineInfiniteCanvasHook) => 
 
     const onCanvasMouseDown = (e: MouseEvent) => {
       // block stage node click
+      // TODO: rewrite HTML structure and refactor this along for better control
       let element = e.target as HTMLElement;
       while (element) {
         if (element?.classList?.contains(stageNodeClassName)) {
