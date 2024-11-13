@@ -359,6 +359,7 @@ func (r *RegularStagesReconciler) reconcile(
 	conditions.Set(&newStatus, &metav1.Condition{
 		Type:               kargoapi.ConditionTypeReconciling,
 		Status:             metav1.ConditionTrue,
+		Reason:             "Reconciling",
 		ObservedGeneration: stage.Generation,
 	})
 
@@ -681,6 +682,8 @@ func (r *RegularStagesReconciler) assessHealth(ctx context.Context, stage *kargo
 		return newStatus
 	}
 
+	// If there are no health checks to perform, then we can skip the health
+	// assessment.
 	healthChecks := lastPromo.Status.HealthChecks
 	if len(healthChecks) == 0 {
 		logger.Debug("Stage has no health checks to perform for last Promotion")
@@ -695,6 +698,7 @@ func (r *RegularStagesReconciler) assessHealth(ctx context.Context, stage *kargo
 		return newStatus
 	}
 
+	// Compose the health check steps.
 	var steps []directives.HealthCheckStep
 	for _, step := range healthChecks {
 		steps = append(steps, directives.HealthCheckStep{
@@ -703,12 +707,14 @@ func (r *RegularStagesReconciler) assessHealth(ctx context.Context, stage *kargo
 		})
 	}
 
+	// Run the health checks.
 	health := r.directivesEngine.CheckHealth(ctx, directives.HealthCheckContext{
 		Project: stage.Namespace,
 		Stage:   stage.Name,
 	}, steps)
 	newStatus.Health = &health
 
+	// Set the Healthy condition based on the health status.
 	switch health.Status {
 	case kargoapi.HealthStateHealthy:
 		conditions.Set(&newStatus, &metav1.Condition{
@@ -727,7 +733,12 @@ func (r *RegularStagesReconciler) assessHealth(ctx context.Context, stage *kargo
 			ObservedGeneration: stage.Generation,
 		})
 	case kargoapi.HealthStateNotApplicable:
-		conditions.Delete(&newStatus, kargoapi.ConditionTypeHealthy)
+		conditions.Set(&newStatus, &metav1.Condition{
+			Type:               kargoapi.ConditionTypeHealthy,
+			Status:             metav1.ConditionUnknown,
+			Reason:             string(health.Status),
+			ObservedGeneration: stage.Generation,
+		})
 	default:
 		conditions.Set(&newStatus, &metav1.Condition{
 			Type:               kargoapi.ConditionTypeHealthy,
@@ -1821,8 +1832,16 @@ func summarizeConditions(stage *kargoapi.Stage, newStatus *kargoapi.StageStatus,
 			ObservedGeneration: stage.Generation,
 		})
 
-		// Backwards compatibility: set the Message field of the Status.
+		conditions.Set(newStatus, &metav1.Condition{
+			Type:               kargoapi.ConditionTypeReconciling,
+			Status:             metav1.ConditionTrue,
+			Reason:             "RetryAfterError",
+			ObservedGeneration: stage.Generation,
+		})
+
+		// Backwards compatibility: set the Phase and Message.
 		// TODO: Remove this in a future release.
+		newStatus.Phase = kargoapi.StagePhaseFailed
 		newStatus.Message = err.Error()
 
 		return
@@ -1844,40 +1863,88 @@ func summarizeConditions(stage *kargoapi.Stage, newStatus *kargoapi.StageStatus,
 			Message:            promoCond.Message,
 			ObservedGeneration: stage.Generation,
 		})
+
+		// Backwards compatibility: set Phase to Promoting.
+		// TODO: Remove this in a future release.
+		newStatus.Phase = kargoapi.StagePhasePromoting
+
+		return
+	}
+
+	// If we are not currently Promoting but the last promotion failed,
+	// then we are not Ready.
+	if lastPromo := newStatus.LastPromotion; lastPromo != nil && lastPromo.Status != nil &&
+		lastPromo.Status.Phase.IsTerminal() && lastPromo.Status.Phase != kargoapi.PromotionPhaseSucceeded {
+		conditions.Set(newStatus, &metav1.Condition{
+			Type:               kargoapi.ConditionTypeReady,
+			Status:             metav1.ConditionFalse,
+			Reason: fmt.Sprintf("LastPromotion%s", string(lastPromo.Status.Phase)),
+			Message:            lastPromo.Status.Message,
+			ObservedGeneration: stage.Generation,
+		})
+
+		// Backwards compatibility: set Phase to Failed.
+		// TODO: Remove this in a future release.
+		newStatus.Phase = kargoapi.StagePhaseFailed
+
 		return
 	}
 
 	// If we are not Healthy, then we are not Ready.
 	healthCond := conditions.Get(newStatus, kargoapi.ConditionTypeHealthy)
 	if healthCond == nil || healthCond.Status != metav1.ConditionTrue {
+		// Backwards compatibility: set Phase to Verifying.
+		// TODO: Remove this in a future release.
+		newStatus.Phase = kargoapi.StagePhaseVerifying
+
 		readyCond := &metav1.Condition{
 			Type:    kargoapi.ConditionTypeReady,
 			Status:  metav1.ConditionFalse,
 			Reason:  "Unhealthy",
 			Message: "Stage is not healthy",
+			ObservedGeneration: stage.Generation,
 		}
 		if healthCond != nil {
 			readyCond.Reason = healthCond.Reason
 			readyCond.Message = healthCond.Message
+
+			if healthCond.Status == metav1.ConditionFalse {
+				// Backwards compatibility: set Phase to Failed on health failure.
+				// TODO: Remove this in a future release.
+				newStatus.Phase = kargoapi.StagePhaseFailed
+			}
 		}
 		conditions.Set(newStatus, readyCond)
+
 		return
 	}
 
 	// If we are not verified, then we are not Ready.
 	verificationCond := conditions.Get(newStatus, kargoapi.ConditionTypeVerified)
 	if verificationCond == nil || verificationCond.Status != metav1.ConditionTrue {
+		// Backwards compatibility: set Phase to Verifying.
+		// TODO: Remove this in a future release.
+		newStatus.Phase = kargoapi.StagePhaseVerifying
+
 		readyCond := &metav1.Condition{
 			Type:    kargoapi.ConditionTypeReady,
 			Status:  metav1.ConditionFalse,
 			Reason:  "PendingVerification",
 			Message: "Stage is not verified",
+			ObservedGeneration: stage.Generation,
 		}
 		if verificationCond != nil {
 			readyCond.Reason = verificationCond.Reason
 			readyCond.Message = verificationCond.Message
+
+			// Backwards compatibility: set Phase to Failed on verification failure.
+			// TODO: Remove this in a future release.
+			if verificationCond.Status == metav1.ConditionFalse {
+				newStatus.Phase = kargoapi.StagePhaseFailed
+			}
 		}
 		conditions.Set(newStatus, readyCond)
+
 		return
 	}
 
@@ -1890,10 +1957,15 @@ func summarizeConditions(stage *kargoapi.Stage, newStatus *kargoapi.StageStatus,
 		Message:            verificationCond.Message,
 		ObservedGeneration: stage.Generation,
 	})
+	conditions.Delete(newStatus, kargoapi.ConditionTypeReconciling)
 
 	// If we are Ready, then we can also mark the current generation as
 	// observed.
 	newStatus.ObservedGeneration = stage.Generation
+
+	// Backwards compatability: set Phase to Steady.
+	// TODO: Remove this in a future release.
+	newStatus.Phase = kargoapi.StagePhaseSteady
 }
 
 func buildFreightSummary(requested int, current *kargoapi.FreightCollection) string {

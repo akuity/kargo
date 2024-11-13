@@ -2,6 +2,7 @@ package stages
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -809,12 +810,7 @@ func Test_regularStagesReconciler_assessHealth(t *testing.T) {
 					Name:      "test-stage",
 				},
 				Status: kargoapi.StageStatus{
-					Conditions: []metav1.Condition{
-						{
-							Type:   kargoapi.ConditionTypeHealthy,
-							Status: metav1.ConditionTrue,
-						},
-					},
+					Conditions: []metav1.Condition{},
 					LastPromotion: &kargoapi.PromotionReference{
 						Status: &kargoapi.PromotionStatus{
 							HealthChecks: []kargoapi.HealthCheckStep{
@@ -838,7 +834,8 @@ func Test_regularStagesReconciler_assessHealth(t *testing.T) {
 				assert.Equal(t, kargoapi.HealthStateNotApplicable, status.Health.Status)
 
 				healthyCond := conditions.Get(&status, kargoapi.ConditionTypeHealthy)
-				assert.Nil(t, healthyCond)
+				assert.NotNil(t, healthyCond)
+				assert.Equal(t, metav1.ConditionUnknown, healthyCond.Status)
 			},
 		},
 		{
@@ -4649,6 +4646,435 @@ func Test_regularStagesReconciler_autoPromotionAllowed(t *testing.T) {
 
 			allowed, err := r.autoPromotionAllowed(context.Background(), tt.stage)
 			tt.assertions(t, allowed, err)
+		})
+	}
+}
+
+func Test_summarizeConditions(t *testing.T) {
+	tests := []struct {
+		name       string
+		stage      *kargoapi.Stage
+		status     *kargoapi.StageStatus
+		err        error
+		assertions func(*testing.T, *kargoapi.StageStatus)
+	}{
+		{
+			name: "with error",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Generation: 1,
+				},
+			},
+			status: &kargoapi.StageStatus{},
+			err:    errors.New("something went wrong"),
+			assertions: func(t *testing.T, status *kargoapi.StageStatus) {
+				readyCond := conditions.Get(status, kargoapi.ConditionTypeReady)
+				require.NotNil(t, readyCond)
+				assert.Equal(t, metav1.ConditionFalse, readyCond.Status)
+				assert.Equal(t, "ReconcileError", readyCond.Reason)
+				assert.Equal(t, "something went wrong", readyCond.Message)
+				assert.Equal(t, int64(1), readyCond.ObservedGeneration)
+
+				reconcileCond := conditions.Get(status, kargoapi.ConditionTypeReconciling)
+				require.NotNil(t, reconcileCond)
+				assert.Equal(t, metav1.ConditionTrue, reconcileCond.Status)
+				assert.Equal(t, "RetryAfterError", reconcileCond.Reason)
+				assert.Equal(t, int64(1), reconcileCond.ObservedGeneration)
+
+				assert.Equal(t, kargoapi.StagePhaseFailed, status.Phase)
+				assert.Equal(t, "something went wrong", status.Message)
+			},
+		},
+		{
+			name: "promoting",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Generation: 1,
+				},
+			},
+			status: &kargoapi.StageStatus{
+				Conditions: []metav1.Condition{
+					{
+						Type:    kargoapi.ConditionTypePromoting,
+						Status:  metav1.ConditionTrue,
+						Reason:  "Promoting",
+						Message: "Stage is promoting",
+					},
+				},
+			},
+			assertions: func(t *testing.T, status *kargoapi.StageStatus) {
+				readyCond := conditions.Get(status, kargoapi.ConditionTypeReady)
+				require.NotNil(t, readyCond)
+				assert.Equal(t, metav1.ConditionFalse, readyCond.Status)
+				assert.Equal(t, "Promoting", readyCond.Reason)
+				assert.Equal(t, "Stage is promoting", readyCond.Message)
+				assert.Equal(t, int64(1), readyCond.ObservedGeneration)
+
+				assert.Equal(t, kargoapi.StagePhasePromoting, status.Phase)
+			},
+		},
+		{
+			name: "last promotion failed",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Generation: 1,
+				},
+			},
+			status: &kargoapi.StageStatus{
+				LastPromotion: &kargoapi.PromotionReference{
+					Status: &kargoapi.PromotionStatus{
+						Phase:   kargoapi.PromotionPhaseFailed,
+						Message: "Promotion failed due to error",
+					},
+				},
+			},
+			assertions: func(t *testing.T, status *kargoapi.StageStatus) {
+				readyCond := conditions.Get(status, kargoapi.ConditionTypeReady)
+				require.NotNil(t, readyCond)
+				assert.Equal(t, metav1.ConditionFalse, readyCond.Status)
+				assert.Equal(t, "LastPromotionFailed", readyCond.Reason)
+				assert.Equal(t, "Promotion failed due to error", readyCond.Message)
+				assert.Equal(t, int64(1), readyCond.ObservedGeneration)
+
+				assert.Equal(t, kargoapi.StagePhaseFailed, status.Phase)
+			},
+		},
+		{
+			name: "unhealthy",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Generation: 1,
+				},
+			},
+			status: &kargoapi.StageStatus{
+				Conditions: []metav1.Condition{
+					{
+						Type:    kargoapi.ConditionTypeHealthy,
+						Status:  metav1.ConditionFalse,
+						Reason:  "HealthCheckFailed",
+						Message: "Health check failed",
+					},
+				},
+			},
+			assertions: func(t *testing.T, status *kargoapi.StageStatus) {
+				readyCond := conditions.Get(status, kargoapi.ConditionTypeReady)
+
+				require.NotNil(t, readyCond)
+				assert.Equal(t, metav1.ConditionFalse, readyCond.Status)
+				assert.Equal(t, "HealthCheckFailed", readyCond.Reason)
+				assert.Equal(t, "Health check failed", readyCond.Message)
+				assert.Equal(t, int64(1), readyCond.ObservedGeneration)
+
+				assert.Equal(t, kargoapi.StagePhaseFailed, status.Phase)
+			},
+		},
+		{
+			name: "missing health condition",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Generation: 1,
+				},
+			},
+			status: &kargoapi.StageStatus{},
+			assertions: func(t *testing.T, status *kargoapi.StageStatus) {
+				readyCond := conditions.Get(status, kargoapi.ConditionTypeReady)
+				require.NotNil(t, readyCond)
+				assert.Equal(t, metav1.ConditionFalse, readyCond.Status)
+				assert.Equal(t, "Unhealthy", readyCond.Reason)
+				assert.Equal(t, "Stage is not healthy", readyCond.Message)
+				assert.Equal(t, int64(1), readyCond.ObservedGeneration)
+
+				assert.Equal(t, kargoapi.StagePhaseVerifying, status.Phase)
+			},
+		},
+		{
+			name: "health unknown",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Generation: 1,
+				},
+			},
+			status: &kargoapi.StageStatus{
+				Conditions: []metav1.Condition{
+					{
+						Type:    kargoapi.ConditionTypeHealthy,
+						Status:  metav1.ConditionUnknown,
+						Reason:  "HealthCheckPending",
+						Message: "Health check in progress",
+					},
+				},
+			},
+			assertions: func(t *testing.T, status *kargoapi.StageStatus) {
+				readyCond := conditions.Get(status, kargoapi.ConditionTypeReady)
+				require.NotNil(t, readyCond)
+				assert.Equal(t, metav1.ConditionFalse, readyCond.Status)
+				assert.Equal(t, "HealthCheckPending", readyCond.Reason)
+				assert.Equal(t, "Health check in progress", readyCond.Message)
+				assert.Equal(t, int64(1), readyCond.ObservedGeneration)
+
+				assert.Equal(t, kargoapi.StagePhaseVerifying, status.Phase)
+			},
+		},
+		{
+			name: "pending verification",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Generation: 1,
+				},
+			},
+			status: &kargoapi.StageStatus{
+				Conditions: []metav1.Condition{
+					{
+						Type:    kargoapi.ConditionTypeHealthy,
+						Status:  metav1.ConditionTrue,
+						Reason:  "Healthy",
+						Message: "Stage is healthy",
+					},
+					{
+						Type:    kargoapi.ConditionTypeVerified,
+						Status:  metav1.ConditionUnknown,
+						Reason:  "VerificationPending",
+						Message: "Verification is pending",
+					},
+				},
+			},
+			assertions: func(t *testing.T, status *kargoapi.StageStatus) {
+				readyCond := conditions.Get(status, kargoapi.ConditionTypeReady)
+				require.NotNil(t, readyCond)
+				assert.Equal(t, metav1.ConditionFalse, readyCond.Status)
+				assert.Equal(t, "VerificationPending", readyCond.Reason)
+				assert.Equal(t, "Verification is pending", readyCond.Message)
+				assert.Equal(t, int64(1), readyCond.ObservedGeneration)
+
+				assert.Equal(t, kargoapi.StagePhaseVerifying, status.Phase)
+			},
+		},
+		{
+			name: "verification error",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Generation: 1,
+				},
+			},
+			status: &kargoapi.StageStatus{
+				Conditions: []metav1.Condition{
+					{
+						Type:    kargoapi.ConditionTypeHealthy,
+						Status:  metav1.ConditionTrue,
+						Reason:  "Healthy",
+						Message: "Stage is healthy",
+					},
+					{
+						Type:    kargoapi.ConditionTypeVerified,
+						Status:  metav1.ConditionFalse,
+						Reason:  "VerificationError",
+						Message: "Verification failed",
+					},
+				},
+			},
+			assertions: func(t *testing.T, status *kargoapi.StageStatus) {
+				readyCond := conditions.Get(status, kargoapi.ConditionTypeReady)
+				require.NotNil(t, readyCond)
+				assert.Equal(t, metav1.ConditionFalse, readyCond.Status)
+				assert.Equal(t, "VerificationError", readyCond.Reason)
+				assert.Equal(t, "Verification failed", readyCond.Message)
+				assert.Equal(t, int64(1), readyCond.ObservedGeneration)
+
+				assert.Equal(t, kargoapi.StagePhaseFailed, status.Phase)
+			},
+		},
+		{
+			name: "missing verification condition",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Generation: 1,
+				},
+			},
+			status: &kargoapi.StageStatus{
+				Conditions: []metav1.Condition{
+					{
+						Type:    kargoapi.ConditionTypeHealthy,
+						Status:  metav1.ConditionTrue,
+						Reason:  "Healthy",
+						Message: "Stage is healthy",
+					},
+				},
+			},
+			assertions: func(t *testing.T, status *kargoapi.StageStatus) {
+				readyCond := conditions.Get(status, kargoapi.ConditionTypeReady)
+				require.NotNil(t, readyCond)
+				assert.Equal(t, metav1.ConditionFalse, readyCond.Status)
+				assert.Equal(t, "PendingVerification", readyCond.Reason)
+				assert.Equal(t, "Stage is not verified", readyCond.Message)
+				assert.Equal(t, kargoapi.StagePhaseVerifying, status.Phase)
+			},
+		},
+		{
+			name: "ready",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Generation: 1,
+				},
+			},
+			status: &kargoapi.StageStatus{
+				Conditions: []metav1.Condition{
+					{
+						Type:    kargoapi.ConditionTypeHealthy,
+						Status:  metav1.ConditionTrue,
+						Reason:  "Healthy",
+						Message: "Stage is healthy",
+					},
+					{
+						Type:    kargoapi.ConditionTypeVerified,
+						Status:  metav1.ConditionTrue,
+						Reason:  "Verified",
+						Message: "Stage is verified",
+					},
+				},
+			},
+			assertions: func(t *testing.T, status *kargoapi.StageStatus) {
+				readyCond := conditions.Get(status, kargoapi.ConditionTypeReady)
+				require.NotNil(t, readyCond)
+
+				assert.Equal(t, metav1.ConditionTrue, readyCond.Status)
+				assert.Equal(t, "Verified", readyCond.Reason)
+				assert.Equal(t, "Stage is verified", readyCond.Message)
+				assert.Equal(t, int64(1), readyCond.ObservedGeneration)
+
+				assert.Equal(t, kargoapi.StagePhaseSteady, status.Phase)
+				assert.Equal(t, int64(1), status.ObservedGeneration)
+			},
+		},
+		{
+			name: "reconciling condition cleared when ready",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Generation: 1,
+				},
+			},
+			status: &kargoapi.StageStatus{
+				Conditions: []metav1.Condition{
+					{
+						Type:    kargoapi.ConditionTypeHealthy,
+						Status:  metav1.ConditionTrue,
+						Reason:  "Healthy",
+						Message: "Stage is healthy",
+					},
+					{
+						Type:    kargoapi.ConditionTypeVerified,
+						Status:  metav1.ConditionTrue,
+						Reason:  "Verified",
+						Message: "Stage is verified",
+					},
+					{
+						Type:    kargoapi.ConditionTypeReconciling,
+						Status:  metav1.ConditionTrue,
+						Reason:  "Reconciling",
+						Message: "Stage is reconciling",
+					},
+				},
+			},
+			assertions: func(t *testing.T, status *kargoapi.StageStatus) {
+				readyCond := conditions.Get(status, kargoapi.ConditionTypeReady)
+				require.NotNil(t, readyCond)
+				assert.Equal(t, metav1.ConditionTrue, readyCond.Status)
+
+				reconcileCond := conditions.Get(status, kargoapi.ConditionTypeReconciling)
+				assert.Nil(t, reconcileCond, "Reconciling condition should be deleted when ready")
+
+				assert.Equal(t, kargoapi.StagePhaseSteady, status.Phase)
+				assert.Equal(t, int64(1), status.ObservedGeneration)
+			},
+		},
+		{
+			name: "freight summary updated and message cleared",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Generation: 1,
+				},
+				Spec: kargoapi.StageSpec{
+					RequestedFreight: []kargoapi.FreightRequest{{}, {}},
+				},
+			},
+			status: &kargoapi.StageStatus{
+				Message: "Previous error message",
+				FreightHistory: kargoapi.FreightHistory{
+					&kargoapi.FreightCollection{
+						Freight: map[string]kargoapi.FreightReference{
+							"freight1": {Name: "freight1"},
+						},
+					},
+				},
+				Conditions: []metav1.Condition{
+					{
+						Type:    kargoapi.ConditionTypeHealthy,
+						Status:  metav1.ConditionTrue,
+						Reason:  "Healthy",
+						Message: "Stage is healthy",
+					},
+					{
+						Type:    kargoapi.ConditionTypeVerified,
+						Status:  metav1.ConditionTrue,
+						Reason:  "Verified",
+						Message: "Stage is verified",
+					},
+				},
+			},
+			assertions: func(t *testing.T, status *kargoapi.StageStatus) {
+				assert.Empty(t, status.Message, "Message should be cleared")
+				assert.Equal(t, "1/2 Fulfilled", status.FreightSummary)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			summarizeConditions(tt.stage, tt.status, tt.err)
+			tt.assertions(t, tt.status)
+		})
+	}
+}
+
+func Test_buildFreightSummary(t *testing.T) {
+	tests := []struct {
+		name      string
+		requested int
+		current   *kargoapi.FreightCollection
+		expected  string
+	}{
+		{
+			name:      "nil current",
+			requested: 2,
+			current:   nil,
+			expected:  "0/2 Fulfilled",
+		},
+		{
+			name:      "single freight",
+			requested: 1,
+			current: &kargoapi.FreightCollection{
+				Freight: map[string]kargoapi.FreightReference{
+					"test": {Name: "test-freight"},
+				},
+			},
+			expected: "test-freight",
+		},
+		{
+			name:      "multiple freight",
+			requested: 3,
+			current: &kargoapi.FreightCollection{
+				Freight: map[string]kargoapi.FreightReference{
+					"test1": {Name: "test-freight-1"},
+					"test2": {Name: "test-freight-2"},
+				},
+			},
+			expected: "2/3 Fulfilled",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := buildFreightSummary(tt.requested, tt.current)
+			assert.Equal(t, tt.expected, result)
 		})
 	}
 }
