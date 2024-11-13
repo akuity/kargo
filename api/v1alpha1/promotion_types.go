@@ -103,8 +103,8 @@ type PromotionVariable struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:Pattern=^[a-zA-Z_]\w*$
 	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
-	// Value is the value of the variable. It is legal to utilize expressions
-	// the value.
+	// Value is the value of the variable. It is allowed to utilize expressions
+	// in the value.
 	// See https://docs.kargo.io/references/expression-language for details.
 	Value string `json:"value" protobuf:"bytes,2,opt,name=value"`
 }
