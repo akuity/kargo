@@ -57,7 +57,7 @@ func (f *fileCopier) RunPromotionStep(
 	}
 
 	// Convert the configuration into a typed object.
-	cfg, err := configToStruct[CopyConfig](stepCtx.Config)
+	cfg, err := ConfigToStruct[CopyConfig](stepCtx.Config)
 	if err != nil {
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
 			fmt.Errorf("could not convert config into %s config: %w", f.Name(), err)

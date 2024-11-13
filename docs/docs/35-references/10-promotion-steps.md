@@ -10,6 +10,13 @@ into Kargo. Steps are presented roughly in the order in which they might appear
 in a typical promotion process. Similarly, configuration options for each step
 are laid out in order of their applicability to typical use cases.
 
+:::info
+Promotion steps support the use of [expr-lang](https://expr-lang.org/)
+expressions in their configuration. Many examples in this reference document
+will include expressions to demonstrate their use. For more information on
+expressions, refer to our [Expression Language Reference](./20-expression-language.md).
+:::
+
 ## `git-clone`
 
 `git-clone` is often the first step in a promotion process. It creates a
@@ -58,7 +65,7 @@ steps:
     checkout:
     - fromFreight: true
       path: ./src
-    - branch: stage/test
+    - branch: stage/${{ ctx.stage }}
       create: true
       path: ./out
 # Prepare the contents of ./out ...
@@ -90,9 +97,9 @@ steps:
     - fromFreight: true
       fromOrigin:
         kind: Warehouse
-        name: test-overlay
+        name: ${{ ctx.stage }}-overlay
       path: ./overlay
-    - branch: stage/test
+    - branch: stage/${{ ctx.stage }}
       create: true
       path: ./out
 - uses: git-clear
@@ -100,11 +107,11 @@ steps:
     path: ./out
 - uses: copy
   config:
-    inPath: ./overlay/stages/test/kustomization.yaml
-    outPath: ./src/stages/test/kustomization.yaml
+    inPath: ./overlay/stages/${{ ctx.stage }}/kustomization.yaml
+    outPath: ./src/stages/${{ ctx.stage }}/kustomization.yaml
 - uses: kustomize-build
   config:
-    path: ./src/stages/test
+    path: ./src/stages/${{ ctx.stage }}
     outPath: ./out
 # Commit, push, etc...
 ```
@@ -136,7 +143,7 @@ steps:
   config:
     repoURL: https://github.com/example/repo.git
     checkout:
-    - branch: stage/test
+    - branch: stage/${{ ctx.stage }}
       create: true
       path: ./out
 - uses: git-clear
@@ -183,9 +190,9 @@ steps:
     - fromFreight: true
       fromOrigin:
         kind: Warehouse
-        name: test-overlay
+        name: ${{ ctx.stage }}-overlay
       path: ./overlay
-    - branch: stage/test
+    - branch: stage/${{ ctx.stage }}
       create: true
       path: ./out
 - uses: git-clear
@@ -193,8 +200,8 @@ steps:
     path: ./out
 - uses: copy
   config:
-    inPath: ./overlay/stages/test/kustomization.yaml
-    outPath: ./src/stages/test/kustomization.yaml
+    inPath: ./overlay/stages/${{ ctx.stage }}/kustomization.yaml
+    outPath: ./src/stages/${{ ctx.stage }}/kustomization.yaml
 # Render manifests to ./out, commit, push, etc...
 ```
 
@@ -233,7 +240,7 @@ steps:
         kind: Warehouse
         name: base
       path: ./src
-    - branch: stage/test
+    - branch: stage/${{ ctx.stage }}
       create: true
       path: ./out
 - uses: git-clear
@@ -270,7 +277,7 @@ steps:
         kind: Warehouse
         name: base
       path: ./src
-    - branch: stage/test
+    - branch: stage/${{ ctx.stage }}
       create: true
       path: ./out
 - uses: git-clear
@@ -327,7 +334,7 @@ steps:
     checkout:
     - fromFreight: true
       path: ./src
-    - branch: stage/test
+    - branch: stage/${{ ctx.stage }}
       create: true
       path: ./out
 - uses: git-clear
@@ -335,7 +342,7 @@ steps:
     path: ./out
 - uses: kustomize-build
   config:
-    path: ./src/stages/test
+    path: ./src/stages/${{ ctx.stage }}
     outPath: ./out/manifests.yaml
 # Commit, push, etc...
 ```
@@ -352,7 +359,7 @@ steps:
     checkout:
     - fromFreight: true
       path: ./src
-    - branch: stage/test
+    - branch: stage/${{ ctx.stage }}
       create: true
       path: ./out
 - uses: git-clear
@@ -360,7 +367,7 @@ steps:
     path: ./out
 - uses: kustomize-build
   config:
-    path: ./src/stages/test
+    path: ./src/stages/${{ ctx.stage }}
     outPath: ./out
 # Commit, push, etc...
 ```
@@ -399,7 +406,7 @@ steps:
     checkout:
     - fromFreight: true
       path: ./src
-    - branch: stage/test
+    - branch: stage/${{ ctx.stage }}
       create: true
       path: ./out
 - uses: git-clear
@@ -470,7 +477,7 @@ steps:
     checkout:
     - fromFreight: true
       path: ./src
-    - branch: stage/test
+    - branch: stage/${{ ctx.stage }}
       create: true
       path: ./out
 - uses: git-clear
@@ -570,7 +577,7 @@ steps:
     checkout:
     - fromFreight: true
       path: ./src
-    - branch: stage/test
+    - branch: stage/${{ ctx.stage }}
       create: true
       path: ./out
 - uses: git-clear
@@ -630,7 +637,7 @@ steps:
     checkout:
     - fromFreight: true
       path: ./src
-    - branch: stage/test
+    - branch: stage/${{ ctx.stage }}
       create: true
       path: ./out
 - uses: git-clear
@@ -640,7 +647,7 @@ steps:
   config:
     path: ./src/charts/my-chart
     valuesFiles:
-    - ./src/charts/my-chart/test-values.yaml
+    - ./src/charts/my-chart/${{ ctx.stage }}-values.yaml
     outPath: ./out/manifests.yaml
 # Commit, push, etc...
 ```
@@ -657,7 +664,7 @@ steps:
     checkout:
     - fromFreight: true
       path: ./src
-    - branch: stage/test
+    - branch: stage/${{ ctx.stage }}
       create: true
       path: ./out
 - uses: git-clear
@@ -667,7 +674,7 @@ steps:
   config:
     path: ./src/charts/my-chart
     valuesFiles:
-    - ./src/charts/my-chart/test-values.yaml
+    - ./src/charts/my-chart/${{ ctx.stage }}-values.yaml
     outPath: ./out
 # Commit, push, etc...
 ```
@@ -703,7 +710,7 @@ steps:
     checkout:
     - fromFreight: true
       path: ./src
-    - branch: stage/test
+    - branch: stage/${{ ctx.stage }}
       create: true
       path: ./out
 - uses: git-clear
@@ -716,7 +723,7 @@ steps:
     - image: my/image
 - uses: kustomize-build
   config:
-    path: ./src/stages/test
+    path: ./src/stages/${{ ctx.stage }}
     outPath: ./out
 - uses: git-commit
   config:
@@ -810,7 +817,7 @@ requests.
 | `provider` | `string` | N | The name of the Git provider to use. Currently only `github` and `gitlab` are supported. Kargo will try to infer the provider if it is not explicitly specified.  |
 | `insecureSkipTLSVerify` | `boolean` | N | Indicates whether to bypass TLS certificate verification when interfacing with the Git provider. Setting this to `true` is highly discouraged in production. |
 | `sourceBranch` | `string` | N | Specifies the source branch for the pull request. Mutually exclusive with `sourceBranchFromStep`. |
-| `sourceBranchFromStep` | `string` | N | Indicates the source branch should be determined by the `branch` key in the output of a previous promotion step with the specified alias. Mutually exclusive with `sourceBranch`. |
+| `sourceBranchFromStep` | `string` | N | Indicates the source branch should be determined by the `branch` key in the output of a previous promotion step with the specified alias. Mutually exclusive with `sourceBranch`.<br/><br/>__Deprecated: Use `sourceBranch` with an expression instead. Will be removed in v1.2.0.__  |
 | `targetBranch` | `string` | N | The branch to which the changes should be merged. |
 | `createTargetBranch` | `boolean` | N | Indicates whether a new, empty orphaned branch should be created and pushed to the remote if the target branch does not already exist there. Default is `false`. |
 
@@ -829,8 +836,8 @@ steps:
   config:
     repoURL: https://github.com/example/repo.git
     createTargetBranch: true
-    sourceBranchFromStep: push
-    targetBranch: stage/prod
+    sourceBranch: ${{ outputs.push.branch }}
+    targetBranch: stage/${{ ctx.stage }}
 # Wait for the PR to be merged or closed...
 ```
 
@@ -854,7 +861,7 @@ by an `argocd-update` step.
 | `provider` | `string` | N | The name of the Git provider to use. Currently only `github` and `gitlab` are supported. Kargo will try to infer the provider if it is not explicitly specified.  |
 | `insecureSkipTLSVerify` | `boolean` | N | Indicates whether to bypass TLS certificate verification when interfacing with the Git provider. Setting this to `true` is highly discouraged in production. |
 | `prNumber` | `string` | N | The number of the pull request to wait for. Mutually exclusive with `prNumberFromStep`. |
-| `prNumberFromStep` | `string` | N | References the `prNumber` output from a previous step. Mutually exclusive with `prNumber`. |
+| `prNumberFromStep` | `string` | N | References the `prNumber` output from a previous step. Mutually exclusive with `prNumber`.<br/><br/>__Deprecated: Use `prNumber` with an expression instead. Will be removed in v1.2.0.__ |
 
 ### `git-wait-for-pr` Output
 
@@ -877,13 +884,13 @@ steps:
   config:
     repoURL: https://github.com/example/repo.git
     createTargetBranch: true
-    sourceBranchFromStep: push
-    targetBranch: stage/prod
+    sourceBranch: ${{ outputs.push.branch }}
+    targetBranch: stage/${{ ctx.stage }}
 - uses: git-wait-for-pr
   as: wait-for-pr
   config:
     repoURL: https://github.com/example/repo.git
-    prNumberFromStep: open-pr
+    prNumber: ${{ outputs['open-pr'].prNumber }}
 ```
 
 ## `argocd-update`
@@ -899,12 +906,13 @@ promotion process.
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
 | `apps` | `[]object` | Y | Describes Argo CD `Application` resources to update and how to update them. At least one must be specified.  |
-| `apps[].name` | `string` | Y | The name of the Argo CD `Application`. |
-| `apps[].namespace` | `string` | N | The namespace of the Argo CD `Application` resource to be updated. If left unspecified, the namespace will be the Kargo controller's configured default -- typically `argocd`. |
+| `apps[].name` | `string` | Y | The name of the Argo CD `Application`. __Note:__ A small technical restriction on this field is that any [expressions](./20-expression-language.md) used therein are limited to accessing `ctx` and `vars` and may not access `secrets` or any Freight. This is because templates in this field are, at times, evaluated outside the context of an actual `Promotion` for the purposes of building an index. In practice, this restriction does not prove to be especially limiting. |
+| `apps[].namespace` | `string` | N | The namespace of the Argo CD `Application` resource to be updated. If left unspecified, the namespace will be the Kargo controller's configured default -- typically `argocd`. __Note:__ This field is subject to the same restrictions as the `name` field. See above. |
 | `apps[].sources` | `[]object` | N | Describes Argo CD `ApplicationSource`s to update and how to update them. |
 | `apps[].sources[].repoURL` | `string` | Y | The value of the target `ApplicationSource`'s  own `repoURL` field. This must match exactly. |
 | `apps[].sources[].chart` | `string` | N | Applicable only when the target `ApplicationSource` references a Helm chart repository, the value of the target `ApplicationSource`'s  own `chart` field. This must match exactly. |
-| `apps[].sources[].desiredCommitFromStep` | `string` | N | Applicable only when `repoURL` references a Git repository, this field references the `commit` output from a previous step and uses it as the desired revision for the source. If this is left undefined, the desired revision will be determined by Freight (if possible). Note that the source's `targetRevision` will not be updated to this commit unless `updateTargetRevision=true` is set. The utility of this field is to ensure that health checks on Argo CD `ApplicationSource`s can account for scenarios where the desired revision differs from what may be found in Freight, likely due to the use of rendered branches and/or PR-based promotion workflows. |
+| `apps[].sources[].desiredCommit` | `string` | N | Applicable only when `repoURL` references a Git repository, this field specifies a `commit` to use as the desired revision for the source. This field is mutually exclusive with `desiredCommitFromStep`. If both are left undefined, the desired revision will be determined by Freight (if possible). Note that the source's `targetRevision` will not be updated to this commit unless `updateTargetRevision=true` is set. The utility of this field is to ensure that health checks on Argo CD `ApplicationSource`s can account for scenarios where the desired revision differs from what may be found in Freight, likely due to the use of rendered branches and/or PR-based promotion workflows. |
+| `apps[].sources[].desiredCommitFromStep` | `string` | N | Applicable only when `repoURL` references a Git repository, this field references the `commit` output from a previous step and uses it as the desired revision for the source. This field is mutually exclusive with `desiredCommitFromStep`. If both left undefined, the desired revision will be determined by Freight (if possible). Note that the source's `targetRevision` will not be updated to this commit unless `updateTargetRevision=true` is set. The utility of this field is to ensure that health checks on Argo CD `ApplicationSource`s can account for scenarios where the desired revision differs from what may be found in Freight, likely due to the use of rendered branches and/or PR-based promotion workflows.<br/><br/>__Deprecated: Use `desiredCommit` with an expression instead. Will be removed in v1.2.0.__ |
 | `apps[].sources[].updateTargetRevision` | `boolean` | Y | Indicates whether the target `ApplicationSource` should be updated such that its `targetRevision` field points at the most recently Git commit (if `repoURL` references a Git repository) or chart version (if `repoURL` references a chart repository). |
 | `apps[].sources[].kustomize` | `object` | N | Describes updates to an Argo CD `ApplicationSource`'s Kustomize-specific properties. |
 | `apps[].sources[].kustomize.images` | `[]object` | Y | Describes how to update an Argo CD `ApplicationSource`'s Kustomize-specific properties to reference specific versions of container images. |
@@ -948,7 +956,7 @@ steps:
     - name: my-app
       sources:
       - repoURL: https://github.com/example/repo.git
-        desiredCommitFromStep: commit
+        desiredCommit: ${{ outputs.commit.commit }}
 ```
 
 </TabItem>
@@ -1108,9 +1116,9 @@ steps:
     - fromFreight: true
       fromOrigin:
         kind: Warehouse
-        name: test-overlay
+        name: ${{ ctx.stage }}-overlay
       path: ./overlay
-    - branch: stage/test
+    - branch: stage/${{ ctx.stage }}
       create: true
       path: ./out
 - uses: git-clear
@@ -1118,11 +1126,11 @@ steps:
     path: ./out
 - uses: copy
   config:
-    inPath: ./overlay/stages/test/kustomization.yaml
-    outPath: ./src/stages/test/kustomization.yaml
+    inPath: ./overlay/stages/${{ ctx.stage }}/kustomization.yaml
+    outPath: ./src/stages/${{ ctx.stage }}/kustomization.yaml
 - uses: kustomize-build
   config:
-    path: ./src/stages/test
+    path: ./src/stages/${{ ctx.stage }}
     outPath: ./out
 # Commit, push, etc...
 ```

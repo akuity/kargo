@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"strings"
 
+	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -63,6 +64,16 @@ func (e *SimpleEngine) Promote(
 		defer os.RemoveAll(workDir)
 	}
 
+	var err error
+	promoCtx.Secrets, err = e.getSecretsMap(ctx, promoCtx.Project)
+	if err != nil {
+		return PromotionResult{
+				Status:      kargoapi.PromotionPhaseErrored,
+				CurrentStep: 0,
+			},
+			err
+	}
+
 	// Initialize the shared state that will be passed to each step.
 	state := promoCtx.State.DeepCopy()
 	if state == nil {
@@ -107,12 +118,21 @@ func (e *SimpleEngine) Promote(
 			}, fmt.Errorf("step alias %q is forbidden", step.Alias)
 		}
 
+		stepCfg, err := step.GetConfig(promoCtx, stateCopy)
+		if err != nil {
+			return PromotionResult{
+					Status:      kargoapi.PromotionPhaseErrored,
+					CurrentStep: i,
+					State:       state,
+				},
+				fmt.Errorf("failed to get step config: %w", err)
+		}
 		stepCtx := &PromotionStepContext{
 			UIBaseURL:       promoCtx.UIBaseURL,
 			WorkDir:         workDir,
 			SharedState:     stateCopy,
 			Alias:           step.Alias,
-			Config:          step.Config.DeepCopy(),
+			Config:          stepCfg,
 			Project:         promoCtx.Project,
 			Stage:           promoCtx.Stage,
 			Promotion:       promoCtx.Promotion,
@@ -228,4 +248,27 @@ stepLoop:
 		Issues: healthIssues,
 		Output: &apiextensionsv1.JSON{Raw: bytes},
 	}
+}
+
+func (e *SimpleEngine) getSecretsMap(
+	ctx context.Context,
+	project string,
+) (map[string]map[string]string, error) {
+	secrets := corev1.SecretList{}
+	if err := e.kargoClient.List(
+		ctx,
+		&secrets,
+		client.InNamespace(project),
+	); err != nil {
+		return nil,
+			fmt.Errorf("error listing Secrets for Project %q: %w", project, err)
+	}
+	secretsMap := make(map[string]map[string]string, len(secrets.Items))
+	for _, secret := range secrets.Items {
+		secretsMap[secret.Name] = make(map[string]string, len(secret.Data))
+		for key, value := range secret.Data {
+			secretsMap[secret.Name][key] = string(value)
+		}
+	}
+	return secretsMap, nil
 }

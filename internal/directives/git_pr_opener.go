@@ -54,7 +54,7 @@ func (g *gitPROpener) RunPromotionStep(
 	if err := g.validate(stepCtx.Config); err != nil {
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, err
 	}
-	cfg, err := configToStruct[GitOpenPRConfig](stepCtx.Config)
+	cfg, err := ConfigToStruct[GitOpenPRConfig](stepCtx.Config)
 	if err != nil {
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
 			fmt.Errorf("could not convert config into git-open-pr config: %w", err)

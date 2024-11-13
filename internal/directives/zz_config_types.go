@@ -34,14 +34,24 @@ type ArgoCDAppSourceUpdate struct {
 	// same fields in the source. i.e. Do not match the values of these two fields to your
 	// Warehouse; match them to the Application source you wish to update.
 	Chart string `json:"chart,omitempty"`
+	// Applicable only when 'repoURL' references a Git repository, this field specifies the
+	// desired revision for the source. Mutually exclusive with 'desiredCommitFromStep'. If both
+	// are left undefined, the desired revision will be determined by Freight (if possible).
+	// Note that the source's 'targetRevision' will not be updated to this commit unless
+	// 'updateTargetRevision=true' is set. The utility of this field is to ensure that health
+	// checks on Argo CD ApplicationSources can account for scenarios where the desired revision
+	// differs from what may be found in Freight, likely due to the use of rendered branches
+	// and/or PR-based promotion workflows.
+	DesiredCommit string `json:"desiredCommit,omitempty"`
 	// Applicable only when 'repoURL' references a Git repository, this field references the
 	// 'commit' output from a previous step and uses it as the desired revision for the source.
-	// If this is left undefined, the desired revision will be determined by Freight (if
-	// possible). Note that the source's 'targetRevision' will not be updated to this commit
-	// unless 'updateTargetRevision=true' is set. The utility of this field is to ensure that
-	// health checks on Argo CD ApplicationSources can account for scenarios where the desired
-	// revision differs from what may be found in Freight, likely due to the use of rendered
-	// branches and/or PR-based promotion workflows.
+	// Mutually exclusive with 'desiredCommitFromStep'. If both are left undefined, the desired
+	// revision will be determined by Freight (if possible). Note that the source's
+	// 'targetRevision' will not be updated to this commit unless 'updateTargetRevision=true' is
+	// set. The utility of this field is to ensure that health checks on Argo CD
+	// ApplicationSources can account for scenarios where the desired revision differs from what
+	// may be found in Freight, likely due to the use of rendered branches and/or PR-based
+	// promotion workflows.
 	DesiredCommitFromStep string                       `json:"desiredCommitFromStep,omitempty"`
 	FromOrigin            *AppFromOrigin               `json:"fromOrigin,omitempty"`
 	Helm                  *ArgoCDHelmParameterUpdates  `json:"helm,omitempty"`

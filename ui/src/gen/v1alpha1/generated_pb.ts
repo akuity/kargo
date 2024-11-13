@@ -2644,6 +2644,14 @@ export class PromotionSpec extends Message<PromotionSpec> {
   freight?: string;
 
   /**
+   * Vars is a list of variables that can be referenced by expressions in
+   * promotion steps.
+   *
+   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.PromotionVariable vars = 4;
+   */
+  vars: PromotionVariable[] = [];
+
+  /**
    * Steps specifies the directives to be executed as part of this Promotion.
    * The order in which the directives are executed is the order in which they
    * are listed in this field.
@@ -2662,6 +2670,7 @@ export class PromotionSpec extends Message<PromotionSpec> {
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 1, name: "stage", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 2, name: "freight", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 4, name: "vars", kind: "message", T: PromotionVariable, repeated: true },
     { no: 3, name: "steps", kind: "message", T: PromotionStep, repeated: true },
   ]);
 
@@ -2823,7 +2832,10 @@ export class PromotionStep extends Message<PromotionStep> {
   as?: string;
 
   /**
-   * Config is the configuration for the directive.
+   * Config is opaque configuration for the PromotionStep that is understood
+   * only by each PromotionStep's implementation. It is legal to utilize
+   * expressions in defining values at any level of this block.
+   * See https://docs.kargo.io/references/expression-language for details.
    *
    * @generated from field: optional k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON config = 3;
    */
@@ -2908,6 +2920,14 @@ export class PromotionTemplate extends Message<PromotionTemplate> {
  */
 export class PromotionTemplateSpec extends Message<PromotionTemplateSpec> {
   /**
+   * Vars is a list of variables that can be referenced by expressions in
+   * promotion steps.
+   *
+   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.PromotionVariable vars = 2;
+   */
+  vars: PromotionVariable[] = [];
+
+  /**
    * Steps specifies the directives to be executed as part of a Promotion.
    * The order in which the directives are executed is the order in which they
    * are listed in this field.
@@ -2926,6 +2946,7 @@ export class PromotionTemplateSpec extends Message<PromotionTemplateSpec> {
   static readonly runtime: typeof proto2 = proto2;
   static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.PromotionTemplateSpec";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 2, name: "vars", kind: "message", T: PromotionVariable, repeated: true },
     { no: 1, name: "steps", kind: "message", T: PromotionStep, repeated: true },
   ]);
 
@@ -2943,6 +2964,61 @@ export class PromotionTemplateSpec extends Message<PromotionTemplateSpec> {
 
   static equals(a: PromotionTemplateSpec | PlainMessage<PromotionTemplateSpec> | undefined, b: PromotionTemplateSpec | PlainMessage<PromotionTemplateSpec> | undefined): boolean {
     return proto2.util.equals(PromotionTemplateSpec, a, b);
+  }
+}
+
+/**
+ * PromotionVariable describes a single variable that may be referenced by
+ * expressions in promotion steps.
+ *
+ * @generated from message github.com.akuity.kargo.api.v1alpha1.PromotionVariable
+ */
+export class PromotionVariable extends Message<PromotionVariable> {
+  /**
+   * Name is the name of the variable.
+   *
+   * +kubebuilder:validation:MinLength=1
+   * +kubebuilder:validation:Pattern=^[a-zA-Z_]\w*$
+   *
+   * @generated from field: optional string name = 1;
+   */
+  name?: string;
+
+  /**
+   * Value is the value of the variable. It is allowed to utilize expressions
+   * in the value.
+   * See https://docs.kargo.io/references/expression-language for details.
+   *
+   * @generated from field: optional string value = 2;
+   */
+  value?: string;
+
+  constructor(data?: PartialMessage<PromotionVariable>) {
+    super();
+    proto2.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto2 = proto2;
+  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.PromotionVariable";
+  static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 2, name: "value", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PromotionVariable {
+    return new PromotionVariable().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): PromotionVariable {
+    return new PromotionVariable().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): PromotionVariable {
+    return new PromotionVariable().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: PromotionVariable | PlainMessage<PromotionVariable> | undefined, b: PromotionVariable | PlainMessage<PromotionVariable> | undefined): boolean {
+    return proto2.util.equals(PromotionVariable, a, b);
   }
 }
 
