@@ -816,11 +816,12 @@ func (a *argocdUpdater) buildKustomizeImagesForAppSource(
 	for i := range update.Images {
 		imageUpdate := &update.Images[i]
 		var digest, tag string
-		if imageUpdate.Digest != "" {
+		switch {
+		case imageUpdate.Digest != "":
 			digest = imageUpdate.Digest
-		} else if imageUpdate.Tag != "" {
+		case imageUpdate.Tag != "":
 			tag = imageUpdate.Tag
-		} else {
+		default:
 			desiredOrigin := getDesiredOrigin(stepCfg, imageUpdate)
 			image, err := freight.FindImage(
 				ctx,
