@@ -1847,6 +1847,10 @@ func summarizeConditions(stage *kargoapi.Stage, newStatus *kargoapi.StageStatus,
 		return
 	}
 
+	// By default, the Stage is steady unless we find a more specific condition.
+	// TODO: Remove this in a future release.
+	newStatus.Phase = kargoapi.StagePhaseSteady
+
 	// Backwards compatibility: clear the Message field of the Status
 	// and set the Freight summary.
 	// TODO: Remove this in a future release.
@@ -1878,7 +1882,7 @@ func summarizeConditions(stage *kargoapi.Stage, newStatus *kargoapi.StageStatus,
 		conditions.Set(newStatus, &metav1.Condition{
 			Type:               kargoapi.ConditionTypeReady,
 			Status:             metav1.ConditionFalse,
-			Reason: fmt.Sprintf("LastPromotion%s", string(lastPromo.Status.Phase)),
+			Reason:             fmt.Sprintf("LastPromotion%s", string(lastPromo.Status.Phase)),
 			Message:            lastPromo.Status.Message,
 			ObservedGeneration: stage.Generation,
 		})
@@ -1893,15 +1897,11 @@ func summarizeConditions(stage *kargoapi.Stage, newStatus *kargoapi.StageStatus,
 	// If we are not Healthy, then we are not Ready.
 	healthCond := conditions.Get(newStatus, kargoapi.ConditionTypeHealthy)
 	if healthCond == nil || healthCond.Status != metav1.ConditionTrue {
-		// Backwards compatibility: set Phase to Verifying.
-		// TODO: Remove this in a future release.
-		newStatus.Phase = kargoapi.StagePhaseVerifying
-
 		readyCond := &metav1.Condition{
-			Type:    kargoapi.ConditionTypeReady,
-			Status:  metav1.ConditionFalse,
-			Reason:  "Unhealthy",
-			Message: "Stage is not healthy",
+			Type:               kargoapi.ConditionTypeReady,
+			Status:             metav1.ConditionFalse,
+			Reason:             "Unhealthy",
+			Message:            "Stage is not healthy",
 			ObservedGeneration: stage.Generation,
 		}
 		if healthCond != nil {
@@ -1927,10 +1927,10 @@ func summarizeConditions(stage *kargoapi.Stage, newStatus *kargoapi.StageStatus,
 		newStatus.Phase = kargoapi.StagePhaseVerifying
 
 		readyCond := &metav1.Condition{
-			Type:    kargoapi.ConditionTypeReady,
-			Status:  metav1.ConditionFalse,
-			Reason:  "PendingVerification",
-			Message: "Stage is not verified",
+			Type:               kargoapi.ConditionTypeReady,
+			Status:             metav1.ConditionFalse,
+			Reason:             "PendingVerification",
+			Message:            "Stage is not verified",
 			ObservedGeneration: stage.Generation,
 		}
 		if verificationCond != nil {
@@ -1963,7 +1963,7 @@ func summarizeConditions(stage *kargoapi.Stage, newStatus *kargoapi.StageStatus,
 	// observed.
 	newStatus.ObservedGeneration = stage.Generation
 
-	// Backwards compatability: set Phase to Steady.
+	// Backwards compatibility: set Phase to Steady.
 	// TODO: Remove this in a future release.
 	newStatus.Phase = kargoapi.StagePhaseSteady
 }

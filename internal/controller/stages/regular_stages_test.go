@@ -14,6 +14,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
@@ -25,6 +26,505 @@ import (
 	"github.com/akuity/kargo/internal/indexer"
 	fakeevent "github.com/akuity/kargo/internal/kubernetes/event/fake"
 )
+
+func TestRegularStageReconciler_Reconcile(t *testing.T) {
+	scheme := runtime.NewScheme()
+	require.NoError(t, kargoapi.AddToScheme(scheme))
+
+	tests := []struct {
+		name        string
+		req         ctrl.Request
+		stage       *kargoapi.Stage
+		objects     []client.Object
+		interceptor interceptor.Funcs
+		assertions  func(*testing.T, client.Client, ctrl.Result, error)
+	}{
+		{
+			name: "stage not found",
+			req: ctrl.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: "default",
+					Name:      "non-existent",
+				},
+			},
+			assertions: func(t *testing.T, _ client.Client, result ctrl.Result, err error) {
+				require.NoError(t, err)
+				assert.Equal(t, ctrl.Result{}, result)
+			},
+		},
+		{
+			name: "ignores control flow stage",
+			req: ctrl.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: "default",
+					Name:      "test-stage",
+				},
+			},
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "test-stage",
+				},
+				Spec: kargoapi.StageSpec{
+					// Not a regular stage
+					PromotionTemplate: nil,
+				},
+			},
+			assertions: func(t *testing.T, _ client.Client, result ctrl.Result, err error) {
+				require.NoError(t, err)
+				assert.Equal(t, ctrl.Result{}, result)
+			},
+		},
+		{
+			name: "handles deletion",
+			req: ctrl.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: "default",
+					Name:      "test-stage",
+				},
+			},
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace:         "default",
+					Name:              "test-stage",
+					DeletionTimestamp: &metav1.Time{Time: time.Now()},
+					Finalizers:        []string{kargoapi.FinalizerName},
+				},
+			},
+			assertions: func(t *testing.T, _ client.Client, result ctrl.Result, err error) {
+				require.NoError(t, err)
+				assert.Equal(t, ctrl.Result{}, result)
+			},
+		},
+		{
+			name: "deletion error",
+			req: ctrl.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: "default",
+					Name:      "test-stage",
+				},
+			},
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace:         "default",
+					Name:              "test-stage",
+					DeletionTimestamp: &metav1.Time{Time: time.Now()},
+					Finalizers:        []string{kargoapi.FinalizerName},
+				},
+				Spec: kargoapi.StageSpec{
+					PromotionTemplate: &kargoapi.PromotionTemplate{
+						Spec: kargoapi.PromotionTemplateSpec{
+							Steps: []kargoapi.PromotionStep{
+								{}, {},
+							},
+						},
+					},
+				},
+			},
+			interceptor: interceptor.Funcs{
+				List: func(context.Context, client.WithWatch, client.ObjectList, ...client.ListOption) error {
+					return fmt.Errorf("something went wrong")
+				},
+			},
+			assertions: func(t *testing.T, _ client.Client, result ctrl.Result, err error) {
+				require.ErrorContains(t, err, "something went wrong")
+				assert.Equal(t, ctrl.Result{}, result)
+			},
+		},
+		{
+			name: "adds finalizer and requeues",
+			req: ctrl.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: "default",
+					Name:      "test-stage",
+				},
+			},
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "test-stage",
+				},
+				Spec: kargoapi.StageSpec{
+					PromotionTemplate: &kargoapi.PromotionTemplate{
+						Spec: kargoapi.PromotionTemplateSpec{
+							Steps: []kargoapi.PromotionStep{
+								{}, {},
+							},
+						},
+					},
+				},
+			},
+			assertions: func(t *testing.T, c client.Client, result ctrl.Result, err error) {
+				require.NoError(t, err)
+				assert.True(t, result.Requeue)
+
+				// Verify finalizer was added
+				stage := &kargoapi.Stage{}
+				err = c.Get(context.Background(), types.NamespacedName{
+					Namespace: "default",
+					Name:      "test-stage",
+				}, stage)
+				require.NoError(t, err)
+				assert.Contains(t, stage.Finalizers, kargoapi.FinalizerName)
+			},
+		},
+		{
+			name: "reconcile error",
+			req: ctrl.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: "default",
+					Name:      "test-stage",
+				},
+			},
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace:  "default",
+					Name:       "test-stage",
+					Finalizers: []string{kargoapi.FinalizerName},
+				},
+				Spec: kargoapi.StageSpec{
+					PromotionTemplate: &kargoapi.PromotionTemplate{
+						Spec: kargoapi.PromotionTemplateSpec{
+							Steps: []kargoapi.PromotionStep{
+								{}, {},
+							},
+						},
+					},
+				},
+			},
+			interceptor: interceptor.Funcs{
+				List: func(context.Context, client.WithWatch, client.ObjectList, ...client.ListOption) error {
+					return fmt.Errorf("something went wrong")
+				},
+			},
+			assertions: func(t *testing.T, c client.Client, result ctrl.Result, err error) {
+				require.ErrorContains(t, err, "something went wrong")
+				assert.Equal(t, ctrl.Result{}, result)
+
+				// Verify error is recorded in status
+				stage := &kargoapi.Stage{}
+				err = c.Get(context.Background(), types.NamespacedName{
+					Namespace: "default",
+					Name:      "test-stage",
+				}, stage)
+				require.NoError(t, err)
+				assert.Contains(t, stage.Status.Message, "something went wrong")
+			},
+		},
+		{
+			name: "status update error after reconcile error",
+			req: ctrl.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: "default",
+					Name:      "test-stage",
+				},
+			},
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace:  "default",
+					Name:       "test-stage",
+					Finalizers: []string{kargoapi.FinalizerName},
+				},
+				Spec: kargoapi.StageSpec{
+					PromotionTemplate: &kargoapi.PromotionTemplate{
+						Spec: kargoapi.PromotionTemplateSpec{
+							Steps: []kargoapi.PromotionStep{
+								{}, {},
+							},
+						},
+					},
+				},
+			},
+			interceptor: interceptor.Funcs{
+				List: func(context.Context, client.WithWatch, client.ObjectList, ...client.ListOption) error {
+					return fmt.Errorf("something went wrong")
+				},
+				SubResourcePatch: func(
+					context.Context,
+					client.Client,
+					string,
+					client.Object,
+					client.Patch,
+					...client.SubResourcePatchOption,
+				) error {
+					return fmt.Errorf("status update error")
+				},
+			},
+			assertions: func(t *testing.T, _ client.Client, result ctrl.Result, err error) {
+				// Should return the reconcile error, not the status update error
+				require.ErrorContains(t, err, "something went wrong")
+				assert.Equal(t, ctrl.Result{}, result)
+			},
+		},
+		{
+			name: "status update error after successful reconcile",
+			req: ctrl.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: "default",
+					Name:      "test-stage",
+				},
+			},
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace:  "default",
+					Name:       "test-stage",
+					Finalizers: []string{kargoapi.FinalizerName},
+				},
+				Spec: kargoapi.StageSpec{
+					PromotionTemplate: &kargoapi.PromotionTemplate{
+						Spec: kargoapi.PromotionTemplateSpec{
+							Steps: []kargoapi.PromotionStep{
+								{}, {},
+							},
+						},
+					},
+				},
+			},
+			interceptor: interceptor.Funcs{
+				SubResourcePatch: func(
+					context.Context,
+					client.Client,
+					string,
+					client.Object,
+					client.Patch,
+					...client.SubResourcePatchOption,
+				) error {
+					return fmt.Errorf("status update error")
+				},
+			},
+			assertions: func(t *testing.T, _ client.Client, result ctrl.Result, err error) {
+				require.ErrorContains(t, err, "failed to update Stage status: status update error")
+				assert.Equal(t, ctrl.Result{}, result)
+			},
+		},
+		{
+			name: "successful reconciliation",
+			req: ctrl.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: "default",
+					Name:      "test-stage",
+				},
+			},
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace:  "default",
+					Name:       "test-stage",
+					Finalizers: []string{kargoapi.FinalizerName},
+				},
+				Spec: kargoapi.StageSpec{
+					PromotionTemplate: &kargoapi.PromotionTemplate{
+						Spec: kargoapi.PromotionTemplateSpec{
+							Steps: []kargoapi.PromotionStep{
+								{}, {},
+							},
+						},
+					},
+				},
+			},
+			assertions: func(t *testing.T, c client.Client, result ctrl.Result, err error) {
+				require.NoError(t, err)
+				assert.Equal(t, ctrl.Result{RequeueAfter: 5 * time.Minute}, result)
+
+				// Verify status was updated
+				stage := &kargoapi.Stage{}
+				err = c.Get(context.Background(), types.NamespacedName{
+					Namespace: "default",
+					Name:      "test-stage",
+				}, stage)
+				require.NoError(t, err)
+				assert.Equal(t, kargoapi.StagePhaseSteady, stage.Status.Phase)
+
+				readyCond := conditions.Get(&stage.Status, kargoapi.ConditionTypeReady)
+				require.NotNil(t, readyCond)
+				assert.Equal(t, metav1.ConditionFalse, readyCond.Status)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			objects := tt.objects
+			if tt.stage != nil {
+				objects = append(objects, tt.stage)
+			}
+
+			c := fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(objects...).
+				WithStatusSubresource(&kargoapi.Stage{}).
+				WithIndex(
+					&kargoapi.Promotion{},
+					indexer.PromotionsByStageField,
+					indexer.PromotionsByStage,
+				).
+				WithIndex(
+					&kargoapi.Freight{},
+					indexer.FreightByWarehouseField,
+					indexer.FreightByWarehouse,
+				).
+				WithIndex(
+					&kargoapi.Freight{},
+					indexer.FreightByVerifiedStagesField,
+					indexer.FreightByVerifiedStages,
+				).
+				WithIndex(
+					&kargoapi.Freight{},
+					indexer.FreightApprovedForStagesField,
+					indexer.FreightApprovedForStages,
+				).
+				WithIndex(
+					&kargoapi.Promotion{},
+					indexer.PromotionsByStageAndFreightField,
+					indexer.PromotionsByStageAndFreight,
+				).
+				WithInterceptorFuncs(tt.interceptor).
+				Build()
+
+			r := &RegularStagesReconciler{
+				client:        c,
+				eventRecorder: fakeevent.NewEventRecorder(10),
+			}
+
+			result, err := r.Reconcile(context.Background(), tt.req)
+			tt.assertions(t, c, result, err)
+		})
+	}
+}
+
+func TestRegularStagesReconciler_reconcile(t *testing.T) {
+	scheme := runtime.NewScheme()
+	require.NoError(t, kargoapi.AddToScheme(scheme))
+	require.NoError(t, rolloutsapi.AddToScheme(scheme))
+
+	now := time.Now()
+
+	tests := []struct {
+		name        string
+		stage       *kargoapi.Stage
+		objects     []client.Object
+		interceptor interceptor.Funcs
+		assertions  func(*testing.T, kargoapi.StageStatus, bool, error)
+	}{
+		{
+			name: "subreconciler error preserves reconciling condition",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace:  "test-project",
+					Name:       "test-stage",
+					Generation: 1,
+				},
+			},
+			interceptor: interceptor.Funcs{
+				List: func(context.Context, client.WithWatch, client.ObjectList, ...client.ListOption) error {
+					return fmt.Errorf("forced error")
+				},
+			},
+			assertions: func(t *testing.T, status kargoapi.StageStatus, requeue bool, err error) {
+				require.Error(t, err)
+				require.False(t, requeue)
+
+				reconciling := conditions.Get(&status, kargoapi.ConditionTypeReconciling)
+				require.NotNil(t, reconciling)
+				assert.Equal(t, metav1.ConditionTrue, reconciling.Status)
+				assert.Equal(t, "RetryAfterError", reconciling.Reason)
+			},
+		},
+		{
+			name: "intermediate status updates between subreconcilers",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace:  "test-project",
+					Name:       "test-stage",
+					Generation: 1,
+				},
+			},
+			assertions: func(t *testing.T, status kargoapi.StageStatus, requeue bool, err error) {
+				require.NoError(t, err)
+				require.False(t, requeue)
+
+				// Each subreconciler should have updated conditions
+				healthyCond := conditions.Get(&status, kargoapi.ConditionTypeHealthy)
+				require.NotNil(t, healthyCond)
+
+				verifiedCond := conditions.Get(&status, kargoapi.ConditionTypeVerified)
+				require.NotNil(t, verifiedCond)
+			},
+		},
+		{
+			name: "clears reconciling condition when no requeue needed",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace:  "test-project",
+					Name:       "test-stage",
+					Generation: 1,
+				},
+				Status: kargoapi.StageStatus{
+					Conditions: []metav1.Condition{
+						{
+							Type:   kargoapi.ConditionTypeReconciling,
+							Status: metav1.ConditionTrue,
+						},
+					},
+				},
+			},
+			assertions: func(t *testing.T, status kargoapi.StageStatus, requeue bool, err error) {
+				require.NoError(t, err)
+				assert.False(t, requeue)
+
+				reconciling := conditions.Get(&status, kargoapi.ConditionTypeReconciling)
+				assert.Nil(t, reconciling)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			objects := []client.Object{tt.stage}
+			objects = append(objects, tt.objects...)
+
+			c := fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(objects...).
+				WithStatusSubresource(&kargoapi.Stage{}).
+				WithIndex(
+					&kargoapi.Promotion{},
+					indexer.PromotionsByStageField,
+					indexer.PromotionsByStage,
+				).
+				WithIndex(
+					&kargoapi.Freight{},
+					indexer.FreightByWarehouseField,
+					indexer.FreightByWarehouse,
+				).
+				WithIndex(
+					&kargoapi.Freight{},
+					indexer.FreightByVerifiedStagesField,
+					indexer.FreightByVerifiedStages,
+				).
+				WithIndex(
+					&kargoapi.Freight{},
+					indexer.FreightApprovedForStagesField,
+					indexer.FreightApprovedForStages,
+				).
+				WithIndex(
+					&kargoapi.Promotion{},
+					indexer.PromotionsByStageAndFreightField,
+					indexer.PromotionsByStageAndFreight,
+				).
+				WithInterceptorFuncs(tt.interceptor).
+				Build()
+
+			r := &RegularStagesReconciler{
+				client:           c,
+				eventRecorder:    fakeevent.NewEventRecorder(10),
+				directivesEngine: &directives.FakeEngine{},
+			}
+
+			status, requeue, err := r.reconcile(context.Background(), tt.stage, now)
+			tt.assertions(t, status, requeue, err)
+		})
+	}
+}
 
 func Test_regularStagesReconciler_syncPromotions(t *testing.T) {
 	scheme := runtime.NewScheme()
@@ -2175,14 +2675,14 @@ func Test_regularStagesReconciler_recordFreightVerificationEvent(t *testing.T) {
 	baseStage := &kargoapi.Stage{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-stage",
-			Namespace: "test-ns",
+			Namespace: "test-project",
 		},
 	}
 
 	baseFreight := &kargoapi.Freight{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:              "test-freight",
-			Namespace:         "test-ns",
+			Namespace:         "test-project",
 			CreationTimestamp: now,
 		},
 		Alias: "test-alias",
@@ -2257,7 +2757,7 @@ func Test_regularStagesReconciler_recordFreightVerificationEvent(t *testing.T) {
 				Phase: kargoapi.VerificationPhaseSuccessful,
 				AnalysisRun: &kargoapi.AnalysisRunReference{
 					Name:      "test-analysis",
-					Namespace: "test-ns",
+					Namespace: "test-project",
 				},
 			},
 			objects: []client.Object{
@@ -2265,7 +2765,7 @@ func Test_regularStagesReconciler_recordFreightVerificationEvent(t *testing.T) {
 				&rolloutsapi.AnalysisRun{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-analysis",
-						Namespace: "test-ns",
+						Namespace: "test-project",
 						Labels: map[string]string{
 							kargoapi.PromotionLabelKey: "test-promotion",
 						},
@@ -2319,7 +2819,7 @@ func Test_regularStagesReconciler_recordFreightVerificationEvent(t *testing.T) {
 				Phase: kargoapi.VerificationPhaseSuccessful,
 				AnalysisRun: &kargoapi.AnalysisRunReference{
 					Name:      "missing-analysis",
-					Namespace: "test-ns",
+					Namespace: "test-project",
 				},
 			},
 			objects: []client.Object{baseFreight},
@@ -4784,7 +5284,7 @@ func Test_summarizeConditions(t *testing.T) {
 				assert.Equal(t, "Stage is not healthy", readyCond.Message)
 				assert.Equal(t, int64(1), readyCond.ObservedGeneration)
 
-				assert.Equal(t, kargoapi.StagePhaseVerifying, status.Phase)
+				assert.Equal(t, kargoapi.StagePhaseSteady, status.Phase)
 			},
 		},
 		{
@@ -4812,7 +5312,7 @@ func Test_summarizeConditions(t *testing.T) {
 				assert.Equal(t, "Health check in progress", readyCond.Message)
 				assert.Equal(t, int64(1), readyCond.ObservedGeneration)
 
-				assert.Equal(t, kargoapi.StagePhaseVerifying, status.Phase)
+				assert.Equal(t, kargoapi.StagePhaseSteady, status.Phase)
 			},
 		},
 		{
