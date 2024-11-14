@@ -274,7 +274,7 @@ func (r *RegularStageReconciler) SetupWithManager(
 	}
 
 	logging.LoggerFromContext(ctx).Info(
-		"Initialized control flow Stage reconciler",
+		"Initialized regular Stage reconciler",
 		"maxConcurrentReconciles", r.cfg.MaxConcurrentControlFlowReconciles,
 	)
 
@@ -375,6 +375,9 @@ func (r *RegularStageReconciler) reconcile(
 				if err != nil {
 					err = fmt.Errorf("failed to sync Promotions: %w", err)
 				}
+				// If we have no current Promotion and there are pending Promotions,
+				// then we should request an immediate requeue to ensure that we
+				// process the next Promotion as soon as possible.
 				if status.CurrentPromotion == nil && hasPendingPromotions {
 					requestRequeue = true
 				}
@@ -393,6 +396,13 @@ func (r *RegularStageReconciler) reconcile(
 				status, err := r.verifyStageFreight(ctx, stage, startTime, time.Now)
 				if err != nil {
 					err = fmt.Errorf("failed to verify Stage Freight: %w", err)
+				}
+				// If we have a non-terminal verification for the current Freight,
+				// then we should rely on the watcher to requeue the Stage when the
+				// verification completes.
+				curFreightCol := status.FreightHistory.Current()
+				if curFreightCol != nil && curFreightCol.HasNonTerminalVerification() {
+					requestRequeue = false
 				}
 				return status, err
 			},
@@ -430,7 +440,7 @@ func (r *RegularStageReconciler) reconcile(
 		summarizeConditions(stage, &newStatus, err)
 
 		// If an error occurred during the sub-reconciler, then we should
-		// return the error and request an immediate requeue.
+		// return the error which will cause the Stage to be requeued.
 		if err != nil {
 			return newStatus, false, err
 		}
