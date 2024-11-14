@@ -65,16 +65,16 @@ func ReconcilerConfigFromEnv() ReconcilerConfig {
 	return cfg
 }
 
-type RegularStagesReconciler struct {
+type RegularStageReconciler struct {
 	cfg              ReconcilerConfig
 	client           client.Client
 	eventRecorder    record.EventRecorder
 	directivesEngine directives.Engine
 }
 
-// NewRegularStagesReconciler creates a new Stages reconciler.
-func NewRegularStagesReconciler(cfg ReconcilerConfig, engine directives.Engine) *RegularStagesReconciler {
-	return &RegularStagesReconciler{
+// NewRegularStageReconciler creates a new Stages reconciler.
+func NewRegularStageReconciler(cfg ReconcilerConfig, engine directives.Engine) *RegularStageReconciler {
+	return &RegularStageReconciler{
 		cfg:              cfg,
 		directivesEngine: engine,
 	}
@@ -83,7 +83,7 @@ func NewRegularStagesReconciler(cfg ReconcilerConfig, engine directives.Engine) 
 // SetupWithManager sets up the Stage reconciler with the given controller
 // manager. It registers the reconciler with the manager and sets up watches
 // on the required objects.
-func (r *RegularStagesReconciler) SetupWithManager(
+func (r *RegularStageReconciler) SetupWithManager(
 	ctx context.Context,
 	kargoMgr, argocdMgr ctrl.Manager,
 	sharedIndexer client.FieldIndexer,
@@ -281,7 +281,7 @@ func (r *RegularStagesReconciler) SetupWithManager(
 	return nil
 }
 
-func (r *RegularStagesReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *RegularStageReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := logging.LoggerFromContext(ctx).WithValues(
 		"namespace", req.NamespacedName.Namespace,
 		"stage", req.NamespacedName.Name,
@@ -347,7 +347,7 @@ func (r *RegularStagesReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	return ctrl.Result{RequeueAfter: 5 * time.Minute}, nil
 }
 
-func (r *RegularStagesReconciler) reconcile(
+func (r *RegularStageReconciler) reconcile(
 	ctx context.Context,
 	stage *kargoapi.Stage,
 	startTime time.Time,
@@ -457,7 +457,7 @@ func (r *RegularStagesReconciler) reconcile(
 // syncPromotions synchronizes the Promotions for a Stage. It determines the
 // current state of the Stage based on the Promotions that are running or have
 // completed.
-func (r *RegularStagesReconciler) syncPromotions(
+func (r *RegularStageReconciler) syncPromotions(
 	ctx context.Context,
 	stage *kargoapi.Stage,
 ) (kargoapi.StageStatus, bool, error) {
@@ -664,7 +664,7 @@ func (r *RegularStagesReconciler) syncPromotions(
 	return newStatus, hasNonTerminalPromotions, nil
 }
 
-func (r *RegularStagesReconciler) assessHealth(ctx context.Context, stage *kargoapi.Stage) kargoapi.StageStatus {
+func (r *RegularStageReconciler) assessHealth(ctx context.Context, stage *kargoapi.Stage) kargoapi.StageStatus {
 	logger := logging.LoggerFromContext(ctx)
 	newStatus := *stage.Status.DeepCopy()
 
@@ -766,7 +766,7 @@ func (r *RegularStagesReconciler) assessHealth(ctx context.Context, stage *kargo
 //
 // When the Stage is unhealthy, or a Promotion is currently running, then the
 // verification is skipped.
-func (r *RegularStagesReconciler) verifyStageFreight(
+func (r *RegularStageReconciler) verifyStageFreight(
 	ctx context.Context,
 	stage *kargoapi.Stage,
 	startTime time.Time,
@@ -967,7 +967,7 @@ func (r *RegularStagesReconciler) verifyStageFreight(
 	return newStatus, err
 }
 
-func (r *RegularStagesReconciler) verifyFreightForStage(
+func (r *RegularStageReconciler) verifyFreightForStage(
 	ctx context.Context,
 	stage *kargoapi.Stage,
 ) (kargoapi.StageStatus, error) {
@@ -1028,7 +1028,7 @@ func (r *RegularStagesReconciler) verifyFreightForStage(
 	return newStatus, nil
 }
 
-func (r *RegularStagesReconciler) recordFreightVerificationEvent(
+func (r *RegularStageReconciler) recordFreightVerificationEvent(
 	stage *kargoapi.Stage,
 	freightRef kargoapi.FreightReference,
 	vi *kargoapi.VerificationInfo,
@@ -1107,7 +1107,7 @@ func (r *RegularStagesReconciler) recordFreightVerificationEvent(
 	r.eventRecorder.AnnotatedEventf(freight, annotations, corev1.EventTypeNormal, reason, message)
 }
 
-func (r *RegularStagesReconciler) startVerification(
+func (r *RegularStageReconciler) startVerification(
 	ctx context.Context,
 	stage *kargoapi.Stage,
 	freight kargoapi.FreightCollection,
@@ -1230,7 +1230,7 @@ func (r *RegularStagesReconciler) startVerification(
 	return newVI, nil
 }
 
-func (r *RegularStagesReconciler) getVerificationResult(
+func (r *RegularStageReconciler) getVerificationResult(
 	ctx context.Context,
 	freight kargoapi.FreightCollection,
 ) (*kargoapi.VerificationInfo, error) {
@@ -1296,7 +1296,7 @@ func (r *RegularStagesReconciler) getVerificationResult(
 	}, nil
 }
 
-func (r *RegularStagesReconciler) abortVerification(
+func (r *RegularStageReconciler) abortVerification(
 	ctx context.Context,
 	freight kargoapi.FreightCollection,
 	req *kargoapi.VerificationRequest,
@@ -1383,7 +1383,7 @@ func (r *RegularStagesReconciler) abortVerification(
 	}, nil
 }
 
-func (r *RegularStagesReconciler) findExistingAnalysisRun(
+func (r *RegularStageReconciler) findExistingAnalysisRun(
 	ctx context.Context,
 	stage types.NamespacedName,
 	freightColID string,
@@ -1418,7 +1418,7 @@ func (r *RegularStagesReconciler) findExistingAnalysisRun(
 	return &analysisRuns.Items[0], nil
 }
 
-func (r *RegularStagesReconciler) autoPromoteFreight(
+func (r *RegularStageReconciler) autoPromoteFreight(
 	ctx context.Context,
 	stage *kargoapi.Stage,
 ) (kargoapi.StageStatus, error) {
@@ -1529,7 +1529,7 @@ func (r *RegularStagesReconciler) autoPromoteFreight(
 	return newStatus, nil
 }
 
-func (r *RegularStagesReconciler) autoPromotionAllowed(
+func (r *RegularStageReconciler) autoPromotionAllowed(
 	ctx context.Context,
 	stage types.NamespacedName,
 ) (bool, error) {
@@ -1559,7 +1559,7 @@ func (r *RegularStagesReconciler) autoPromotionAllowed(
 	return false, nil
 }
 
-func (r *RegularStagesReconciler) getPromotableFreight(
+func (r *RegularStageReconciler) getPromotableFreight(
 	ctx context.Context,
 	stage types.NamespacedName,
 	requested []kargoapi.FreightRequest,
@@ -1673,7 +1673,7 @@ func (r *RegularStagesReconciler) getPromotableFreight(
 //
 // It returns an error aggregate of all errors that occurred during the deletion
 // process.
-func (r *RegularStagesReconciler) handleDelete(ctx context.Context, stage *kargoapi.Stage) error {
+func (r *RegularStageReconciler) handleDelete(ctx context.Context, stage *kargoapi.Stage) error {
 	// If the Stage does not have the finalizer, there is nothing to do.
 	if !controllerutil.ContainsFinalizer(stage, kargoapi.FinalizerName) {
 		return nil
@@ -1709,7 +1709,7 @@ func (r *RegularStagesReconciler) handleDelete(ctx context.Context, stage *kargo
 // clearVerifications clears the verification status of all Freight that have
 // been verified in the given Stage. It removes the Stage from the VerifiedIn
 // map of each Freight.
-func (r *RegularStagesReconciler) clearVerifications(ctx context.Context, stage *kargoapi.Stage) error {
+func (r *RegularStageReconciler) clearVerifications(ctx context.Context, stage *kargoapi.Stage) error {
 	verified := kargoapi.FreightList{}
 	if err := r.client.List(
 		ctx,
@@ -1753,7 +1753,7 @@ func (r *RegularStagesReconciler) clearVerifications(ctx context.Context, stage 
 // clearApprovals clears the approval status of all Freight that have been
 // approved for the given Stage. It removes the Stage from the ApprovedFor map
 // of each Freight.
-func (r *RegularStagesReconciler) clearApprovals(ctx context.Context, stage *kargoapi.Stage) error {
+func (r *RegularStageReconciler) clearApprovals(ctx context.Context, stage *kargoapi.Stage) error {
 	approved := kargoapi.FreightList{}
 	if err := r.client.List(
 		ctx,
@@ -1795,7 +1795,7 @@ func (r *RegularStagesReconciler) clearApprovals(ctx context.Context, stage *kar
 
 // clearAnalysisRuns clears all AnalysisRuns that are associated with the given
 // Stage. This is only done if the Rollouts integration is enabled.
-func (r *RegularStagesReconciler) clearAnalysisRuns(ctx context.Context, stage *kargoapi.Stage) error {
+func (r *RegularStageReconciler) clearAnalysisRuns(ctx context.Context, stage *kargoapi.Stage) error {
 	if !r.cfg.RolloutsIntegrationEnabled {
 		return nil
 	}

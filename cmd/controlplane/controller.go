@@ -307,7 +307,7 @@ func (o *controllerOptions) setupReconcilers(
 		return fmt.Errorf("error setting up Promotions reconciler: %w", err)
 	}
 
-	if err := stages.NewRegularStagesReconciler(stagesReconcilerCfg, directivesEngine).SetupWithManager(
+	if err := stages.NewRegularStageReconciler(stagesReconcilerCfg, directivesEngine).SetupWithManager(
 		ctx,
 		kargoMgr,
 		argocdMgr,

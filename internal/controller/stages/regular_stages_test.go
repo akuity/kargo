@@ -380,7 +380,7 @@ func TestRegularStageReconciler_Reconcile(t *testing.T) {
 				WithInterceptorFuncs(tt.interceptor).
 				Build()
 
-			r := &RegularStagesReconciler{
+			r := &RegularStageReconciler{
 				client:        c,
 				eventRecorder: fakeevent.NewEventRecorder(10),
 			}
@@ -514,7 +514,7 @@ func TestRegularStagesReconciler_reconcile(t *testing.T) {
 				WithInterceptorFuncs(tt.interceptor).
 				Build()
 
-			r := &RegularStagesReconciler{
+			r := &RegularStageReconciler{
 				client:           c,
 				eventRecorder:    fakeevent.NewEventRecorder(10),
 				directivesEngine: &directives.FakeEngine{},
@@ -526,7 +526,7 @@ func TestRegularStagesReconciler_reconcile(t *testing.T) {
 	}
 }
 
-func Test_regularStagesReconciler_syncPromotions(t *testing.T) {
+func TestRegularStageReconciler_syncPromotions(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, kargoapi.AddToScheme(scheme))
 
@@ -1162,7 +1162,7 @@ func Test_regularStagesReconciler_syncPromotions(t *testing.T) {
 				WithInterceptorFuncs(tt.interceptor).
 				Build()
 
-			r := &RegularStagesReconciler{
+			r := &RegularStageReconciler{
 				client: c,
 			}
 
@@ -1172,7 +1172,7 @@ func Test_regularStagesReconciler_syncPromotions(t *testing.T) {
 	}
 }
 
-func Test_regularStagesReconciler_assessHealth(t *testing.T) {
+func TestRegularStageReconciler_assessHealth(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, kargoapi.AddToScheme(scheme))
 
@@ -1382,7 +1382,7 @@ func Test_regularStagesReconciler_assessHealth(t *testing.T) {
 				WithScheme(scheme).
 				Build()
 
-			r := &RegularStagesReconciler{
+			r := &RegularStageReconciler{
 				client: c,
 				directivesEngine: &directives.FakeEngine{
 					CheckHealthFn: tt.checkHealthFn,
@@ -1395,7 +1395,7 @@ func Test_regularStagesReconciler_assessHealth(t *testing.T) {
 	}
 }
 
-func Test_regularStagesReconciler_verifyStageFreight(t *testing.T) {
+func TestRegularStageReconciler_verifyStageFreight(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, kargoapi.AddToScheme(scheme))
 	require.NoError(t, rolloutsapi.AddToScheme(scheme))
@@ -2226,7 +2226,7 @@ func Test_regularStagesReconciler_verifyStageFreight(t *testing.T) {
 
 			recorder := fakeevent.NewEventRecorder(10)
 
-			r := &RegularStagesReconciler{
+			r := &RegularStageReconciler{
 				client: c,
 				cfg: ReconcilerConfig{
 					RolloutsIntegrationEnabled: !tt.rolloutsDisabled,
@@ -2240,7 +2240,7 @@ func Test_regularStagesReconciler_verifyStageFreight(t *testing.T) {
 	}
 }
 
-func Test_regularStagesReconciler_verifyFreightForStage(t *testing.T) {
+func TestRegularStageReconciler_verifyFreightForStage(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, kargoapi.AddToScheme(scheme))
 
@@ -2652,7 +2652,7 @@ func Test_regularStagesReconciler_verifyFreightForStage(t *testing.T) {
 				WithStatusSubresource(&kargoapi.Stage{}, &kargoapi.Freight{}).
 				Build()
 
-			r := &RegularStagesReconciler{
+			r := &RegularStageReconciler{
 				client:           c,
 				directivesEngine: &directives.FakeEngine{},
 			}
@@ -2663,7 +2663,7 @@ func Test_regularStagesReconciler_verifyFreightForStage(t *testing.T) {
 	}
 }
 
-func Test_regularStagesReconciler_recordFreightVerificationEvent(t *testing.T) {
+func TestRegularStageReconciler_recordFreightVerificationEvent(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, kargoapi.AddToScheme(scheme))
 	require.NoError(t, rolloutsapi.AddToScheme(scheme))
@@ -2911,7 +2911,7 @@ func Test_regularStagesReconciler_recordFreightVerificationEvent(t *testing.T) {
 
 			recorder := fakeevent.NewEventRecorder(10)
 
-			r := &RegularStagesReconciler{
+			r := &RegularStageReconciler{
 				client:        c,
 				eventRecorder: recorder,
 			}
@@ -2922,7 +2922,7 @@ func Test_regularStagesReconciler_recordFreightVerificationEvent(t *testing.T) {
 	}
 }
 
-func Test_regularStagesReconciler_startVerification(t *testing.T) {
+func TestRegularStageReconciler_startVerification(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, kargoapi.AddToScheme(scheme))
 	require.NoError(t, rolloutsapi.AddToScheme(scheme))
@@ -3144,7 +3144,7 @@ func Test_regularStagesReconciler_startVerification(t *testing.T) {
 				WithStatusSubresource(&kargoapi.Stage{}, &kargoapi.Freight{}, &rolloutsapi.AnalysisRun{}).
 				Build()
 
-			r := &RegularStagesReconciler{
+			r := &RegularStageReconciler{
 				client: c,
 				cfg: ReconcilerConfig{
 					RolloutsIntegrationEnabled:   !tt.rolloutsDisabled,
@@ -3158,7 +3158,7 @@ func Test_regularStagesReconciler_startVerification(t *testing.T) {
 	}
 }
 
-func Test_regularStagesReconciler_getVerificationResult(t *testing.T) {
+func TestRegularStageReconciler_getVerificationResult(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, kargoapi.AddToScheme(scheme))
 	require.NoError(t, rolloutsapi.AddToScheme(scheme))
@@ -3469,7 +3469,7 @@ func Test_regularStagesReconciler_getVerificationResult(t *testing.T) {
 				WithStatusSubresource(&kargoapi.Stage{}, &kargoapi.Freight{}, &rolloutsapi.AnalysisRun{}).
 				Build()
 
-			r := &RegularStagesReconciler{
+			r := &RegularStageReconciler{
 				client: c,
 				cfg: ReconcilerConfig{
 					RolloutsIntegrationEnabled: !tt.rolloutsDisabled,
@@ -3482,7 +3482,7 @@ func Test_regularStagesReconciler_getVerificationResult(t *testing.T) {
 	}
 }
 
-func Test_regularStagesReconciler_abortVerification(t *testing.T) {
+func TestRegularStageReconciler_abortVerification(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, kargoapi.AddToScheme(scheme))
 	require.NoError(t, rolloutsapi.AddToScheme(scheme))
@@ -3813,7 +3813,7 @@ func Test_regularStagesReconciler_abortVerification(t *testing.T) {
 
 			c := builder.Build()
 
-			r := &RegularStagesReconciler{
+			r := &RegularStageReconciler{
 				client: c,
 				cfg: ReconcilerConfig{
 					RolloutsIntegrationEnabled: !tt.rolloutsDisabled,
@@ -3826,7 +3826,7 @@ func Test_regularStagesReconciler_abortVerification(t *testing.T) {
 	}
 }
 
-func Test_regularStagesReconciler_findExistingAnalysisRun(t *testing.T) {
+func TestRegularStageReconciler_findExistingAnalysisRun(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, kargoapi.AddToScheme(scheme))
 	require.NoError(t, rolloutsapi.AddToScheme(scheme))
@@ -4078,7 +4078,7 @@ func Test_regularStagesReconciler_findExistingAnalysisRun(t *testing.T) {
 
 			c := builder.Build()
 
-			r := &RegularStagesReconciler{
+			r := &RegularStageReconciler{
 				client: c,
 			}
 
@@ -4088,7 +4088,7 @@ func Test_regularStagesReconciler_findExistingAnalysisRun(t *testing.T) {
 	}
 }
 
-func Test_regularStagesReconciler_autoPromoteFreight(t *testing.T) {
+func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, kargoapi.AddToScheme(scheme))
 
@@ -4867,7 +4867,7 @@ func Test_regularStagesReconciler_autoPromoteFreight(t *testing.T) {
 			c := builder.Build()
 			recorder := fakeevent.NewEventRecorder(5)
 
-			r := &RegularStagesReconciler{
+			r := &RegularStageReconciler{
 				client:        c,
 				eventRecorder: recorder,
 			}
@@ -4878,7 +4878,7 @@ func Test_regularStagesReconciler_autoPromoteFreight(t *testing.T) {
 	}
 }
 
-func Test_regularStagesReconciler_autoPromotionAllowed(t *testing.T) {
+func TestRegularStageReconciler_autoPromotionAllowed(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, kargoapi.AddToScheme(scheme))
 
@@ -5140,7 +5140,7 @@ func Test_regularStagesReconciler_autoPromotionAllowed(t *testing.T) {
 
 			c := builder.Build()
 
-			r := &RegularStagesReconciler{
+			r := &RegularStageReconciler{
 				client: c,
 			}
 
