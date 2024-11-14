@@ -211,8 +211,8 @@ spec:
       project: default
       source:
         repoURL: ${GITOPS_REPO_URL}
-        targetRevision: stage/{{stage}}
-        path: .
+        targetRevision: main
+        path: stages/{{stage}}
       destination:
         server: https://kubernetes.default.svc
         namespace: kargo-demo-{{stage}}
