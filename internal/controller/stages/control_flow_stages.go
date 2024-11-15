@@ -299,6 +299,9 @@ func (r *ControlFlowStageReconciler) initializeStatus(stage *kargoapi.Stage) kar
 	newStatus.CurrentPromotion = nil
 	newStatus.LastPromotion = nil
 	newStatus.FreightSummary = "N/A"
+	// TODO(hidde): We might want to introduce simple conditions for control
+	// flow Stages at some point, but for now we just clear them.
+	newStatus.Conditions = nil
 
 	return *newStatus
 }

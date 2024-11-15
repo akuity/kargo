@@ -3272,6 +3272,18 @@ export class StageSpec extends Message<StageSpec> {
  */
 export class StageStatus extends Message<StageStatus> {
   /**
+   * Conditions contains the last observations of the Stage's current
+   * state.
+   * +patchMergeKey=type
+   * +patchStrategy=merge
+   * +listType=map
+   * +listMapKey=type
+   *
+   * @generated from field: repeated k8s.io.apimachinery.pkg.apis.meta.v1.Condition conditions = 13;
+   */
+  conditions: Condition[] = [];
+
+  /**
    * LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh
    * annotation that was handled by the controller. This field can be used to
    * determine whether the request to refresh the resource has been handled.
@@ -3359,6 +3371,7 @@ export class StageStatus extends Message<StageStatus> {
   static readonly runtime: typeof proto2 = proto2;
   static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.StageStatus";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 13, name: "conditions", kind: "message", T: Condition, repeated: true },
     { no: 11, name: "lastHandledRefresh", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 1, name: "phase", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 4, name: "freightHistory", kind: "message", T: FreightCollection, repeated: true },
