@@ -1,6 +1,6 @@
 ---
 description: Learn how to work effectively with freight
-sidebar_label: Working with freight
+sidebar_label: Working with Freight
 ---
 
 # Working With Freight

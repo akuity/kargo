@@ -1,6 +1,6 @@
 ---
 description: Find out how to sign commits when contributing to Kargo
-sidebar_label: Signing commits
+sidebar_label: Signing Commits
 ---
 
 # Signing Commits
