@@ -9,7 +9,7 @@ Each Kargo stage is represented by a Kubernetes resource of type `Stage`.
 
 A `Stage` resource's `spec` field decomposes into three main areas of concern:
 
-* Requested freight
+* Requested Freight
 
 * Promotion template
 
@@ -59,15 +59,16 @@ new `Freight` _directly_ from that origin:
 apiVersion: kargo.akuity.io/v1alpha1
 kind: Stage
 metadata:
-name: test
-namespace: kargo-demo
+  name: test
+  namespace: kargo-demo
 spec:
-requestedFreight:
-- origin:
-kind: Warehouse
-name: my-warehouse
-sources:
-direct: true
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: my-warehouse
+    sources:
+      direct: true
+  # ...
 # ...
 ```
 
@@ -79,17 +80,17 @@ only after it has been _verified_ in the `test` `Stage`:
 apiVersion: kargo.akuity.io/v1alpha1
 kind: Stage
 metadata:
-name: uat
-namespace: kargo-demo
+  name: uat
+  namespace: kargo-demo
 spec:
-requestedFreight:
-- origin:
-kind: Warehouse
-name: my-warehouse
-sources:
-stages:
-- test
-# ...
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: my-warehouse
+    sources:
+      stages:
+      - test
+  # ...
 ```
 
 Stages may also request `Freight` from multiple sources. The following example
@@ -100,21 +101,21 @@ illustrates a `Stage` that requests `Freight` from both a `microservice-a` and
 apiVersion: kargo.akuity.io/v1alpha1
 kind: Stage
 metadata:
-name: test
-namespace: kargo-demo
+  name: test
+  namespace: kargo-demo
 spec:
-requestedFreight:
-- origin:
-kind: Warehouse
-name: microservice-a
-sources:
-direct: true
-- origin:
-kind: Warehouse
-name: microservice-b
-sources:
-direct: true
-# ...
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: microservice-a
+    sources:
+      direct: true
+  - origin:
+      kind: Warehouse
+      name: microservice-b
+    sources:
+      direct: true
+  # ...
 ```
 
 :::tip
@@ -155,47 +156,47 @@ of the `stage/test` branch.
 
 ```yaml
 promotionTemplate:
-spec:
-steps:
-- uses: git-clone
-config:
-repoURL: https://github.com/example/repo.git
-checkout:
-- fromFreight: true
-path: ./src
-- branch: stage/test
-create: true
-path: ./out
-- uses: git-clear
-config:
-path: ./out
-- uses: kustomize-set-image
-as: update-image
-config:
-path: ./src/base
-images:
-- image: public.ecr.aws/nginx/nginx
-- uses: kustomize-build
-config:
-path: ./src/stages/test
-outPath: ./out
-- uses: git-commit
-as: commit
-config:
-path: ./out
-messageFromSteps:
-- update-image
-- uses: git-push
-config:
-path: ./out
-targetBranch: stage/test
-- uses: argocd-update
-config:
-apps:
-- name: kargo-demo-test
-sources:
-- repoURL: https://github.com/example/repo.git
-desiredCommitFromStep: commit
+  spec:
+    steps:
+    - uses: git-clone
+      config:
+        repoURL: https://github.com/example/repo.git
+        checkout:
+        - fromFreight: true
+          path: ./src
+        - branch: stage/test
+          create: true
+          path: ./out
+    - uses: git-clear
+      config:
+        path: ./out
+    - uses: kustomize-set-image
+      as: update-image
+      config:
+        path: ./src/base
+        images:
+        - image: public.ecr.aws/nginx/nginx
+    - uses: kustomize-build
+      config:
+        path: ./src/stages/test
+        outPath: ./out
+    - uses: git-commit
+      as: commit
+      config:
+        path: ./out
+        messageFromSteps:
+        - update-image
+    - uses: git-push
+      config:
+        path: ./out
+        targetBranch: stage/test
+    - uses: argocd-update
+      config:
+        apps:
+        - name: kargo-demo-test
+          sources:
+          - repoURL: https://github.com/example/repo.git
+            desiredCommitFromStep: commit
 ```
 
 __For complete documentation of all of Kargo's built-in promotion steps, refer
@@ -228,13 +229,13 @@ successful `Promotion`:
 apiVersion: kargo.akuity.io/v1alpha1
 kind: Stage
 metadata:
-name: test
-namespace: kargo-demo
+  name: test
+  namespace: kargo-demo
 spec:
-# ...
-verification:
-analysisTemplates:
-- name: kargo-demo
+  # ...
+  verification:
+    analysisTemplates:
+    - name: kargo-demo
 ```
 
 It is also possible to specify additional labels, annotations, and arguments
@@ -245,21 +246,21 @@ that should be applied to `AnalysisRun` resources spawned from the referenced
 apiVersion: kargo.akuity.io/v1alpha1
 kind: Stage
 metadata:
-name: test
-namespace: kargo-demo
+  name: test
+  namespace: kargo-demo
 spec:
-# ...
-verification:
-analysisTemplates:
-- name: kargo-demo
-analysisRunMetadata:
-labels:
-foo: bar
-annotations:
-bat: baz
-args:
-- name: foo
-value: bar
+  # ...
+  verification:
+    analysisTemplates:
+    - name: kargo-demo
+    analysisRunMetadata:
+      labels:
+        foo: bar
+      annotations:
+        bat: baz
+    args:
+    - name: foo
+      value: bar
 ```
 
 An `AnalysisTemplate` could be as simple as the following, which merely executes
@@ -269,25 +270,25 @@ a Kubernetes `Job` that is defined inline:
 apiVersion: argoproj.io/v1alpha1
 kind: AnalysisTemplate
 metadata:
-name: kargo-demo
-namespace: kargo-demo
+  name: kargo-demo
+  namespace: kargo-demo
 spec:
-metrics:
-- name: test
-provider:
-job:
-metadata:
-spec:
-backoffLimit: 1
-template:
-spec:
-containers:
-- name: test
-image: alpine:latest
-command:
-- sleep
-- "10"
-restartPolicy: Never
+  metrics:
+  - name: test
+    provider:
+      job:
+        metadata:
+        spec:
+          backoffLimit: 1
+          template:
+            spec:
+              containers:
+              - name: test
+                image: alpine:latest
+                command:
+                - sleep
+                - "10"
+              restartPolicy: Never
 ```
 
 :::note
@@ -326,87 +327,87 @@ For example:
 
 ```yaml
 status:
-freightHistory:
-- id: 101bca5b0e18ca7913978a1da956308d2544f741
-items:
-Warehouse/my-warehouse:
-commits:
-- healthCheckCommit: 111eaf55aa41f21bb9bb707ba1baa748b83ec51e
-id: 961cfaedbc53aacdb65110028839a2c1c281290d
-repoURL: https://github.com/example/kargo-demo.git
-images:
-- digest: sha256:b2487a28589657b318e0d63110056e11564e73b9fd3ec4c4afba5542f9d07d46
-repoURL: public.ecr.aws/nginx/nginx
-tag: 1.27.0
-name: 666209fd9755a1e48bec6b27f5f447747410dd9e
-origin:
-kind: Warehouse
-name: my-warehouse
-verificationHistory:
-- analysisRun:
-name: test.01j2w7aknhf3j7jteyqs72hnbg.101bca5
-namespace: kargo-demo-09
-phase: Successful
-finishTime: "2024-07-15T22:13:57Z"
-id: 5535a484-bbd0-4f12-8cf4-be2c8e0041c9
-phase: Successful
-startTime: "2024-07-15T22:13:34Z"
-health:
-argoCDApps:
-- healthStatus:
-status: Healthy
-name: kargo-demo-09-test
-namespace: argocd
-syncStatus:
-revision: 111eaf55aa41f21bb9bb707ba1baa748b83ec51e
-status: Synced
-status: Healthy
-lastPromotion:
-finishedAt: "2024-07-15T22:13:25Z"
-freight:
-commits:
-- healthCheckCommit: 111eaf55aa41f21bb9bb707ba1baa748b83ec51e
-id: 961cfaedbc53aacdb65110028839a2c1c281290d
-repoURL: https://github.com/example/kargo-demo.git
-name: 666209fd9755a1e48bec6b27f5f447747410dd9e
-origin:
-kind: Warehouse
-name: kargo-demo
-name: test.01j2w7a15cxjjgejresfyw6ysp.666209f
-status:
-finishedAt: "2024-07-15T22:13:25Z"
-freight:
-commits:
-- healthCheckCommit: 111eaf55aa41f21bb9bb707ba1baa748b83ec51e
-id: 961cfaedbc53aacdb65110028839a2c1c281290d
-repoURL: https://github.com/example/kargo-demo.git
-name: 666209fd9755a1e48bec6b27f5f447747410dd9e
-origin:
-kind: Warehouse
-name: kargo-demo
-freightCollection:
-id: 101bca5b0e18ca7913978a1da956308d2544f741
-items:
-Warehouse/kargo-demo:
-commits:
-- healthCheckCommit: 111eaf55aa41f21bb9bb707ba1baa748b83ec51e
-id: 961cfaedbc53aacdb65110028839a2c1c281290d
-repoURL: https://github.com/example/kargo-demo.git
-name: 666209fd9755a1e48bec6b27f5f447747410dd9e
-origin:
-kind: Warehouse
-name: kargo-demo
-verificationHistory:
-- analysisRun:
-name: test.01j2w7aknhf3j7jteyqs72hnbg.101bca5
-namespace: kargo-demo-09
-phase: ""
-id: 5535a484-bbd0-4f12-8cf4-be2c8e0041c9
-phase: Pending
-startTime: "2024-07-15T22:13:34Z"
-phase: Succeeded
-observedGeneration: 1
-phase: Steady
+  freightHistory:
+  - id: 101bca5b0e18ca7913978a1da956308d2544f741
+    items:
+      Warehouse/my-warehouse:
+        commits:
+        - healthCheckCommit: 111eaf55aa41f21bb9bb707ba1baa748b83ec51e
+          id: 961cfaedbc53aacdb65110028839a2c1c281290d
+          repoURL: https://github.com/example/kargo-demo.git
+        images:
+        - digest: sha256:b2487a28589657b318e0d63110056e11564e73b9fd3ec4c4afba5542f9d07d46
+          repoURL: public.ecr.aws/nginx/nginx
+          tag: 1.27.0
+        name: 666209fd9755a1e48bec6b27f5f447747410dd9e
+        origin:
+          kind: Warehouse
+          name: my-warehouse
+    verificationHistory:
+    - analysisRun:
+        name: test.01j2w7aknhf3j7jteyqs72hnbg.101bca5
+        namespace: kargo-demo-09
+        phase: Successful
+      finishTime: "2024-07-15T22:13:57Z"
+      id: 5535a484-bbd0-4f12-8cf4-be2c8e0041c9
+      phase: Successful
+      startTime: "2024-07-15T22:13:34Z"
+  health:
+    argoCDApps:
+    - healthStatus:
+        status: Healthy
+      name: kargo-demo-09-test
+      namespace: argocd
+      syncStatus:
+        revision: 111eaf55aa41f21bb9bb707ba1baa748b83ec51e
+        status: Synced
+    status: Healthy
+  lastPromotion:
+    finishedAt: "2024-07-15T22:13:25Z"
+    freight:
+      commits:
+      - healthCheckCommit: 111eaf55aa41f21bb9bb707ba1baa748b83ec51e
+        id: 961cfaedbc53aacdb65110028839a2c1c281290d
+        repoURL: https://github.com/example/kargo-demo.git
+      name: 666209fd9755a1e48bec6b27f5f447747410dd9e
+      origin:
+        kind: Warehouse
+        name: kargo-demo
+    name: test.01j2w7a15cxjjgejresfyw6ysp.666209f
+    status:
+      finishedAt: "2024-07-15T22:13:25Z"
+      freight:
+        commits:
+        - healthCheckCommit: 111eaf55aa41f21bb9bb707ba1baa748b83ec51e
+          id: 961cfaedbc53aacdb65110028839a2c1c281290d
+          repoURL: https://github.com/example/kargo-demo.git
+        name: 666209fd9755a1e48bec6b27f5f447747410dd9e
+        origin:
+          kind: Warehouse
+          name: kargo-demo
+      freightCollection:
+        id: 101bca5b0e18ca7913978a1da956308d2544f741
+        items:
+          Warehouse/kargo-demo:
+            commits:
+            - healthCheckCommit: 111eaf55aa41f21bb9bb707ba1baa748b83ec51e
+              id: 961cfaedbc53aacdb65110028839a2c1c281290d
+              repoURL: https://github.com/example/kargo-demo.git
+            name: 666209fd9755a1e48bec6b27f5f447747410dd9e
+            origin:
+              kind: Warehouse
+              name: kargo-demo
+        verificationHistory:
+        - analysisRun:
+            name: test.01j2w7aknhf3j7jteyqs72hnbg.101bca5
+            namespace: kargo-demo-09
+            phase: ""
+          id: 5535a484-bbd0-4f12-8cf4-be2c8e0041c9
+          phase: Pending
+          startTime: "2024-07-15T22:13:34Z"
+      phase: Succeeded
+  observedGeneration: 1
+  phase: Steady
 ```
 
 ## Refresh
