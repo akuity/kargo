@@ -13,14 +13,14 @@
     "images": {
       "type": "array",
       "description": "A list of images which should receive updates.",
+      "minItems": 1,
       "items": {
         "type": "object",
         "additionalProperties": false,
         "properties": {
           "image": {
             "type": "string",
-            "description": "The container image (without tag) at which the update is targeted.",
-            "minLength": 1
+            "description": "The container image (without tag) at which the update is targeted."
           },
           "fromOrigin": {
             "$ref": "./common.json#/definitions/origin"
@@ -32,11 +32,24 @@
           },
           "value": {
             "type": "string",
-            "enum": ["ImageAndTag", "Tag", "ImageAndDigest", "Digest"],
             "description": "Specifies the new value for the specified key in the Helm values file."
           }
         },
-        "required": ["image", "key", "value"]
+        "required": ["key", "value"],
+        "oneOf": [
+          {
+            "required": ["image"],
+            "properties": {
+              "image": { "minLength": 1 },
+              "value": { "pattern": "^(Digest|ImageAndDigest|ImageAndTag|Tag)$" }
+            }
+          },
+          {
+            "properties": {
+              "image": { "enum": ["",  null] }
+            }
+          }
+        ]
       }
     }
   }

@@ -1,6 +1,7 @@
 package directives
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -41,6 +42,40 @@ func TestPromotionStep_GetConfig(t *testing.T) {
 				Value: "${{ quote(vars.numVar + 1) }}",
 			},
 		},
+		FreightRequests: []kargoapi.FreightRequest{
+			{
+				Origin: kargoapi.FreightOrigin{
+					Kind: kargoapi.FreightOriginKindWarehouse,
+					Name: "fake-warehouse",
+				},
+				Sources: kargoapi.FreightSources{
+					Direct: true,
+				},
+			},
+		},
+		Freight: kargoapi.FreightCollection{
+			Freight: map[string]kargoapi.FreightReference{
+				"Warehouse/fake-warehouse": {
+					Origin: kargoapi.FreightOrigin{
+						Kind: kargoapi.FreightOriginKindWarehouse,
+						Name: "fake-warehouse",
+					},
+					Commits: []kargoapi.GitCommit{{
+						RepoURL: "https://fake-git-repo",
+						ID:      "fake-commit-id",
+					}},
+					Images: []kargoapi.Image{{
+						RepoURL: "fake-image-repo",
+						Tag:     "fake-image-tag",
+					}},
+					Charts: []kargoapi.Chart{{
+						RepoURL: "https://fake-chart-repo",
+						Name:    "fake-chart",
+						Version: "fake-chart-version",
+					}},
+				},
+			},
+		},
 		Secrets: map[string]map[string]string{
 			"secret1": {
 				"key1": "value1",
@@ -58,6 +93,7 @@ func TestPromotionStep_GetConfig(t *testing.T) {
 		"numOutput":  42,
 	}
 	promoStep := PromotionStep{
+		// nolint: lll
 		Config: []byte(`{
 			"project": "${{ ctx.project }}",
 			"stage": "${{ ctx.stage }}",
@@ -71,6 +107,9 @@ func TestPromotionStep_GetConfig(t *testing.T) {
 			"boolStrVar": "${{ quote(vars.boolStrVar) }}",
 			"numVar": "${{ vars.numVar }}",
 			"numStrVar": "${{ quote(vars.numStrVar) }}",
+			"commitID": "${{ commitFrom(\"https://fake-git-repo\", warehouse(\"fake-warehouse\")).ID }}",
+			"imageTag": "${{ imageFrom(\"fake-image-repo\", warehouse(\"fake-warehouse\")).Tag }}",
+			"chartVersion": "${{ chartFrom(\"https://fake-chart-repo\", \"fake-chart\", warehouse(\"fake-warehouse\")).Version }}",
 			"secret1-1": "${{ secrets.secret1.key1 }}",
 			"secret1-2": "${{ secrets.secret1.key2 }}",
 			"secret2-3": "${{ secrets.secret2.key3 }}",
@@ -83,7 +122,12 @@ func TestPromotionStep_GetConfig(t *testing.T) {
 			"numStrOutput": "${{ quote(outputs.numOutput + 1) }}"
 		}`),
 	}
-	stepCfg, err := promoStep.GetConfig(promoCtx, promoState)
+	stepCfg, err := promoStep.GetConfig(
+		context.Background(),
+		nil, // We can get away with a nil Kubernetes client because we're specifying origins
+		promoCtx,
+		promoState,
+	)
 	require.NoError(t, err)
 	require.Equal(
 		t,
@@ -100,6 +144,9 @@ func TestPromotionStep_GetConfig(t *testing.T) {
 			"boolStrVar":      "false",
 			"numVar":          42,
 			"numStrVar":       "43",
+			"commitID":        "fake-commit-id",
+			"imageTag":        "fake-image-tag",
+			"chartVersion":    "fake-chart-version",
 			"secret1-1":       "value1",
 			"secret1-2":       "value2",
 			"secret2-3":       "value3",

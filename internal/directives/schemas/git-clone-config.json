@@ -25,7 +25,11 @@
         "properties": {
           "branch": {
             "type": "string",
-            "description": "The branch to checkout. Mutually exclusive with 'tag' and 'fromFreight=true'. If none of these is specified, the default branch is checked out."
+            "description": "The branch to checkout. Mutually exclusive with 'commit', 'tag', and 'fromFreight=true'. If none of these are specified, the default branch is checked out."
+          },
+          "commit": {
+            "type": "string",
+            "description": "The commit to checkout. Mutually exclusive with 'branch', 'tag', and 'fromFreight=true'. If none of these are specified, the default branch is checked out."
           },
           "create": {
             "type": "boolean",
@@ -33,7 +37,7 @@
           },
           "fromFreight": {
             "type": "boolean",
-            "description": "Indicates whether the ID of a commit to check out may be obtained from Freight. A value of 'true' is mutually exclusive with 'branch' and 'tag'. If none of these is specified, the default branch is checked out."
+            "description": "Indicates whether the ID of a commit to check out may be obtained from Freight. A value of 'true' is mutually exclusive with 'branch', 'commit', and 'tag'. If none of these are specified, the default branch is checked out."
           },
           "fromOrigin": {
             "$ref": "./common.json#/definitions/origin"
@@ -45,13 +49,14 @@
           },
           "tag": {
             "type": "string",
-            "description": "The tag to checkout. Mutually exclusive with 'branch' and 'fromFreight=true'. If none of these is specified, the default branch is checked out."
+            "description": "The tag to checkout. Mutually exclusive with 'branch', 'commit', and 'fromFreight=true'. If none of these are specified, the default branch is checked out."
           }
         },
         "oneOf": [
           {
             "properties": {
               "branch": { "enum": [null, ""] },
+              "commit": { "enum": [null, ""] },
               "fromFreight": { "enum": [null, false] },
               "fromOrigin": { "enum": [null] },
               "tag": { "enum": [null, ""] }
@@ -61,6 +66,17 @@
             "required": ["branch"],
             "properties": {
               "branch": { "minLength": 1 },
+              "commit": { "enum": [null, ""] },
+              "fromFreight": { "enum": [null, false] },
+              "fromOrigin": { "enum": [null] },
+              "tag": { "enum": [null, ""] }
+            }
+          },
+          {
+            "required": ["commit"],
+            "properties": {
+              "branch": { "enum": [null, ""] },
+              "commit": { "minLength": 1 },
               "fromFreight": { "enum": [null, false] },
               "fromOrigin": { "enum": [null] },
               "tag": { "enum": [null, ""] }
@@ -70,6 +86,7 @@
             "required": ["fromFreight"],
             "properties": {
               "branch": { "enum": [null, ""] },
+              "commit": { "enum": [null, ""] },
               "fromFreight": { "const": true },
               "fromOrigin": { "oneOf": [{ "type": "object" }, { "enum": [null] }] },
               "tag": { "enum": [null, ""] }
@@ -79,6 +96,7 @@
             "required": ["tag"],
             "properties": {
               "branch": { "enum": [null, ""] },
+              "commit": { "enum": [null, ""] },
               "fromFreight": { "enum": [null, false] },
               "fromOrigin": { "enum": [null] },
               "tag": { "minLength": 1 }

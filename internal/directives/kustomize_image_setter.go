@@ -59,19 +59,24 @@ func (k *kustomizeImageSetter) RunPromotionStep(
 	ctx context.Context,
 	stepCtx *PromotionStepContext,
 ) (PromotionStepResult, error) {
-	// Validate the configuration against the JSON Schema.
-	if err := validate(k.schemaLoader, gojsonschema.NewGoLoader(stepCtx.Config), k.Name()); err != nil {
-		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, err
+	failure := PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}
+
+	if err := k.validate(stepCtx.Config); err != nil {
+		return failure, err
 	}
 
 	// Convert the configuration into a typed object.
 	cfg, err := ConfigToStruct[KustomizeSetImageConfig](stepCtx.Config)
 	if err != nil {
-		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
-			fmt.Errorf("could not convert config into kustomize-set-image config: %w", err)
+		return failure, fmt.Errorf("could not convert config into kustomize-set-image config: %w", err)
 	}
 
 	return k.runPromotionStep(ctx, stepCtx, cfg)
+}
+
+// validate validates kustomizeImageSetter configuration against a JSON schema.
+func (k *kustomizeImageSetter) validate(cfg Config) error {
+	return validate(k.schemaLoader, gojsonschema.NewGoLoader(cfg), k.Name())
 }
 
 func (k *kustomizeImageSetter) runPromotionStep(
@@ -112,44 +117,45 @@ func (k *kustomizeImageSetter) buildTargetImages(
 	images []KustomizeSetImageConfigImage,
 ) (map[string]kustypes.Image, error) {
 	targetImages := make(map[string]kustypes.Image, len(images))
-
 	for _, img := range images {
-		var desiredOrigin *kargoapi.FreightOrigin
-		if img.FromOrigin != nil {
-			desiredOrigin = &kargoapi.FreightOrigin{
-				Kind: kargoapi.FreightOriginKind(img.FromOrigin.Kind),
-				Name: img.FromOrigin.Name,
-			}
-		}
-
-		discoveredImage, err := freight.FindImage(
-			ctx,
-			stepCtx.KargoClient,
-			stepCtx.Project,
-			stepCtx.FreightRequests,
-			desiredOrigin,
-			stepCtx.Freight.References(),
-			img.Image,
-		)
-		if err != nil {
-			return nil, fmt.Errorf("unable to discover image for %q: %w", img.Image, err)
-		}
-
 		targetImage := kustypes.Image{
 			Name:    img.Image,
 			NewName: img.NewName,
-			NewTag:  discoveredImage.Tag,
 		}
 		if img.Name != "" {
 			targetImage.Name = img.Name
 		}
-		if img.UseDigest {
-			targetImage.Digest = discoveredImage.Digest
+		if img.Digest != "" {
+			targetImage.Digest = img.Digest
+		} else if img.Tag != "" {
+			targetImage.NewTag = img.Tag
+		} else { // TODO(krancour): Remove this for v1.2.0
+			var desiredOrigin *kargoapi.FreightOrigin
+			if img.FromOrigin != nil {
+				desiredOrigin = &kargoapi.FreightOrigin{
+					Kind: kargoapi.FreightOriginKind(img.FromOrigin.Kind),
+					Name: img.FromOrigin.Name,
+				}
+			}
+			discoveredImage, err := freight.FindImage(
+				ctx,
+				stepCtx.KargoClient,
+				stepCtx.Project,
+				stepCtx.FreightRequests,
+				desiredOrigin,
+				stepCtx.Freight.References(),
+				img.Image,
+			)
+			if err != nil {
+				return nil, fmt.Errorf("unable to discover image for %q: %w", img.Image, err)
+			}
+			targetImage.NewTag = discoveredImage.Tag
+			if img.UseDigest {
+				targetImage.Digest = discoveredImage.Digest
+			}
 		}
-
 		targetImages[targetImage.Name] = targetImage
 	}
-
 	return targetImages, nil
 }
 
