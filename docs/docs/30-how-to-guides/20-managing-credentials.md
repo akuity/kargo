@@ -119,7 +119,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: kargo-controller-read-secrets
-  namespace: kargo
+  namespace: kargo-global-creds
 subjects:
 - kind: ServiceAccount
   name: kargo-controller
@@ -132,13 +132,18 @@ roleRef:
 
 OR
 
-(Not recommended) Set `controller.serviceAccount.clusterWideSecretReadingEnabled` 
+Set `controller.serviceAccount.clusterWideSecretReadingEnabled` 
 setting to `true` in Kargo's Helm chart.
 
 :::warning
-It is important to understand the security implications of this feature. Any
-credentials stored in a global credentials `Namespace` will be available to
-_all_ Kargo projects.
+Setting `controller.serviceAccount.clusterWideSecretReadingEnabled` setting to
+`true` during Kargo installation will grant Kargo controllers cluster-wide read
+permission on `Secret` resources.
+
+This is highly discouraged, especially in sharded environments where this
+permission would have the undesirable effect of granting remote Kargo
+controllers read permissions on all `Secrets` throughout the Kargo control
+plane's cluster -- including `Secrets` having nothing to do with Kargo.
 :::
 
 :::note
