@@ -10,119 +10,15 @@ import { descriptionExpandable } from '@ui/features/common/description-expandabl
 import { useModal } from '@ui/features/common/modal/use-modal';
 import {
   AnalysisTemplate,
-  ClusterAnalysisTemplate
 } from '@ui/gen/rollouts/api/v1alpha1/generated_pb';
 import {
   deleteAnalysisTemplate,
-  deleteClusterAnalysisTemplate,
   listAnalysisTemplates,
-  listClusterAnalysisTemplates
 } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 
 import { CreateAnalysisTemplateModal } from './create-analysis-template-modal';
-import { CreateClusterAnalysisTemplateModal } from './create-cluster-analysis-template-modal';
 import { EditAnalysisTemplateModal } from './edit-analysis-template-modal';
-import { EditClusterAnalysisTemplateModal } from './edit-cluster-analysis-template-modal';
-
-const ClusterAnalysisTemplatesList = () => {
-  const confirm = useConfirmModal();
-
-  const { data, isLoading, refetch } = useQuery(listClusterAnalysisTemplates);
-
-  const { show: showEdit } = useModal();
-
-  const { show: showCreate } = useModal((p) => <CreateClusterAnalysisTemplateModal {...p} />);
-
-  const { mutate: deleteTemplate, isPending: isDeleting } = useMutation(
-    deleteClusterAnalysisTemplate,
-    {
-      onSuccess: () => refetch()
-    }
-  );
-
-  return (
-    <Table<AnalysisTemplate>
-      dataSource={data?.clusterAnalysisTemplates}
-      pagination={{ hideOnSinglePage: true }}
-      rowKey={(i) => i.metadata?.name || ''}
-      loading={isLoading}
-      expandable={descriptionExpandable()}
-      title={() => <Typography.Title>Cluster Analysis Templates</Typography.Title>}
-    >
-      <Table.Column<ClusterAnalysisTemplate>
-        title='Creation Date'
-        width={200}
-        render={(_, template) => {
-          const date = template.metadata?.creationTimestamp?.toDate();
-          return date ? format(date, 'MMM do yyyy HH:mm:ss') : '';
-        }}
-      />
-      <Table.Column<ClusterAnalysisTemplate> title='Name' dataIndex={['metadata', 'name']} />
-      <Table.Column<ClusterAnalysisTemplate>
-        width={260}
-        title={
-          <div className='text-right'>
-            <Button
-              type='primary'
-              className='ml-auto text-xs font-semibold'
-              icon={<FontAwesomeIcon icon={faPlus} />}
-              onClick={() => showCreate()}
-            >
-              ADD TEMPLATE
-            </Button>
-          </div>
-        }
-        render={(_, template) => (
-          <div className='flex gap-2 justify-end'>
-            <Button
-              icon={<FontAwesomeIcon icon={faPencil} />}
-              className='mr-2 ml-auto'
-              onClick={() => {
-                showEdit((p) => (
-                  <EditClusterAnalysisTemplateModal
-                    {...p}
-                    templateName={template.metadata?.name || ''}
-                  />
-                ));
-              }}
-            >
-              Edit
-            </Button>
-            <Button
-              icon={<FontAwesomeIcon icon={faTrash} />}
-              danger
-              loading={isDeleting}
-              onClick={() => {
-                confirm({
-                  title: (
-                    <div className='flex items-center'>
-                      <FontAwesomeIcon icon={faTrash} className='mr-2' />
-                      Delete Cluster Analysis Template
-                    </div>
-                  ),
-                  content: (
-                    <p>
-                      Are you sure you want to delete ClusterAnalysisTemplate{' '}
-                      <b>{template?.metadata?.name}</b>?
-                    </p>
-                  ),
-                  onOk: () => {
-                    deleteTemplate({ name: template?.metadata?.name || '' });
-                  },
-                  hide: () => {}
-                });
-              }}
-            >
-              Delete
-            </Button>
-          </div>
-        )}
-      />
-    </Table>
-  );
-};
-
-const AnalysisTemplatesList = () => {
+export const AnalysisTemplatesList = () => {
   const { name } = useParams();
   const confirm = useConfirmModal();
 
@@ -142,7 +38,7 @@ const AnalysisTemplatesList = () => {
       rowKey={(i) => i.metadata?.name || ''}
       loading={isLoading}
       expandable={descriptionExpandable()}
-      title={() => <Typography.Title>Project Analysis Templates</Typography.Title>}
+      title={() => <Typography.Title>Analysis Templates</Typography.Title>}
     >
       <Table.Column<AnalysisTemplate>
         title='Creation Date'
@@ -215,14 +111,5 @@ const AnalysisTemplatesList = () => {
         )}
       />
     </Table>
-  );
-};
-
-export const ScopedAnalysisTemplateList = () => {
-  return (
-    <div className='p-4'>
-      <ClusterAnalysisTemplatesList />
-      <AnalysisTemplatesList />
-    </div>
   );
 };

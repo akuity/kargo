@@ -18,6 +18,7 @@ import { Downloads } from './pages/downloads';
 import { Login } from './pages/login/login';
 import { Projects } from './pages/projects';
 import { User } from './pages/user';
+import { ClusterAnalysisTemplatesList } from './pages/analysis-templates'
 
 import './app.less';
 import 'antd/dist/reset.css';
@@ -45,6 +46,7 @@ export const App = () => (
                   <Route path={paths.warehouse} element={<Project />} />
                   <Route path={paths.downloads} element={<Downloads />} />
                   <Route path={paths.user} element={<User />} />
+                  <Route path={paths.clusterAnalysisTemplates} element={<ClusterAnalysisTemplatesList />} />
                   <Route
                     path={paths.createStage}
                     element={<Project tab='pipelines' creatingStage={true} />}

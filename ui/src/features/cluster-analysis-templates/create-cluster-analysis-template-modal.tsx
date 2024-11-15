@@ -11,7 +11,7 @@ import {
   listClusterAnalysisTemplates
 } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 
-import { getClusterAnalysisTemplateYAMLExample } from './utils/cluster-analysis-template-example';
+import { getClusterAnalysisTemplateYAMLExample } from '../utils/cluster-analysis-template-example';
 
 export const CreateClusterAnalysisTemplateModal = ({ visible, hide }: ModalProps) => {
   const queryClient = useQueryClient();
