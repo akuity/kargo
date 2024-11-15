@@ -5,7 +5,7 @@ sidebar_label: Managing credentials
 
 # Managing Credentials
 
-To manage the progression of `Freight` from `Stage` to `Stage`, Kargo will often
+To manage the progression of Freight from Stage to Stage, Kargo will often
 require read/write permissions on private GitOps repositories and read-only
 permissions on private container image and/or Helm chart repositories.
 
@@ -118,7 +118,7 @@ You can do so by creating your own `RoleBinding`s to permit the Kargo
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: kargo-controller-read-secrets-binding
+  name: kargo-controller-read-secrets
   namespace: kargo
 subjects:
 - kind: ServiceAccount
@@ -134,6 +134,12 @@ OR
 
 (Not recommended) Set `controller.serviceAccount.clusterWideSecretReadingEnabled` 
 setting to `true` in Kargo's Helm chart.
+
+:::warning
+It is important to understand the security implications of this feature. Any
+credentials stored in a global credentials `Namespace` will be available to
+_all_ Kargo projects.
+:::
 
 :::note
 Any matching credentials (exact match _or_ pattern match) found in a project's
@@ -152,12 +158,6 @@ appropriately labeled `Secret`s are considered in lexical order by name.
 When Kargo is configured with multiple global credentials `Namespace`s, they are
 searched in lexical order by name. Only after no exact match _and_ no pattern
 match is found in one global credentials `Namespace` does Kargo search the next.
-:::
-
-:::caution
-It is important to understand the security implications of this feature. Any
-credentials stored in a global credentials `Namespace` will be available to
-_all_ Kargo projects.
 :::
 
 ## Managing Credentials with the CLI
