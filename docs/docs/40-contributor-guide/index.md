@@ -1,6 +1,6 @@
 ---
 description: A comprehensive introduction for developers who are looking to get involved with contributing directly to the Kargo project
-sidebar_label: Contributor guide
+sidebar_label: Contributor Guide
 ---
 
 # Kargo Contributor Guide
