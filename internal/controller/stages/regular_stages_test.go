@@ -2240,7 +2240,7 @@ func TestRegularStageReconciler_verifyStageFreight(t *testing.T) {
 	}
 }
 
-func TestRegularStageReconciler_verifyFreightForStage(t *testing.T) {
+func TestRegularStageReconciler_markFreightVerifiedForStage(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, kargoapi.AddToScheme(scheme))
 
@@ -2657,7 +2657,7 @@ func TestRegularStageReconciler_verifyFreightForStage(t *testing.T) {
 				directivesEngine: &directives.FakeEngine{},
 			}
 
-			status, err := r.verifyFreightForStage(context.Background(), tt.stage)
+			status, err := r.markFreightVerifiedForStage(context.Background(), tt.stage)
 			tt.assertions(t, c, status, err)
 		})
 	}

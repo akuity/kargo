@@ -410,7 +410,7 @@ func (r *RegularStageReconciler) reconcile(
 		{
 			name: "verifying Freight for Stage",
 			reconcile: func() (kargoapi.StageStatus, error) {
-				status, err := r.verifyFreightForStage(ctx, stage)
+				status, err := r.markFreightVerifiedForStage(ctx, stage)
 				if err != nil {
 					err = fmt.Errorf("failed to verify Freight for Stage: %w", err)
 				}
@@ -674,6 +674,8 @@ func (r *RegularStageReconciler) syncPromotions(
 	return newStatus, hasNonTerminalPromotions, nil
 }
 
+// assessHealth assesses the health of a Stage based on the health checks from
+// the last Promotion.
 func (r *RegularStageReconciler) assessHealth(ctx context.Context, stage *kargoapi.Stage) kargoapi.StageStatus {
 	logger := logging.LoggerFromContext(ctx)
 	newStatus := *stage.Status.DeepCopy()
@@ -977,7 +979,10 @@ func (r *RegularStageReconciler) verifyStageFreight(
 	return newStatus, err
 }
 
-func (r *RegularStageReconciler) verifyFreightForStage(
+// markFreightVerifiedForStage marks the Freight that is associated with the
+// Stage as verified. If the Freight has already been verified, then no action
+// is taken.
+func (r *RegularStageReconciler) markFreightVerifiedForStage(
 	ctx context.Context,
 	stage *kargoapi.Stage,
 ) (kargoapi.StageStatus, error) {
@@ -1038,6 +1043,9 @@ func (r *RegularStageReconciler) verifyFreightForStage(
 	return newStatus, nil
 }
 
+// recordFreightVerificationEvent records an event for the verification of a
+// Freight. The event contains information about the Freight, the verification,
+// and the Stage that triggered the verification.
 func (r *RegularStageReconciler) recordFreightVerificationEvent(
 	stage *kargoapi.Stage,
 	freightRef kargoapi.FreightReference,
@@ -1117,6 +1125,17 @@ func (r *RegularStageReconciler) recordFreightVerificationEvent(
 	r.eventRecorder.AnnotatedEventf(freight, annotations, corev1.EventTypeNormal, reason, message)
 }
 
+// startVerification starts a new verification for the Freight that is associated
+// with the Stage. If the Freight has already been verified, then no verification
+// is started unless a re-verification is requested.
+//
+// If there is no verification configuration for the Stage, then the verification
+// is automatically considered successful and no verification is started.
+//
+// If the Rollouts integration is disabled, then the verification is marked as
+// failed with an appropriate message.
+//
+// To start a verification, the Stage must be healthy.
 func (r *RegularStageReconciler) startVerification(
 	ctx context.Context,
 	stage *kargoapi.Stage,
@@ -1240,6 +1259,14 @@ func (r *RegularStageReconciler) startVerification(
 	return newVI, nil
 }
 
+// getVerificationResult gets the result of the verification for the current
+// Freight of a Stage.
+//
+// If the Stage does not have an AnalysisRun associated with the verification,
+// an error is returned.
+//
+// If the Rollouts integration is disabled, then the verification is marked as
+// failed with an appropriate message.
 func (r *RegularStageReconciler) getVerificationResult(
 	ctx context.Context,
 	freight kargoapi.FreightCollection,
@@ -1306,6 +1333,7 @@ func (r *RegularStageReconciler) getVerificationResult(
 	}, nil
 }
 
+// abortVerification aborts the verification for the current Freight of a Stage.
 func (r *RegularStageReconciler) abortVerification(
 	ctx context.Context,
 	freight kargoapi.FreightCollection,
@@ -1393,6 +1421,9 @@ func (r *RegularStageReconciler) abortVerification(
 	}, nil
 }
 
+// findExistingAnalysisRun finds the most recent AnalysisRun for a Stage and
+// Freight collection in the namespace of the Stage. If no AnalysisRun is found,
+// it returns nil.
 func (r *RegularStageReconciler) findExistingAnalysisRun(
 	ctx context.Context,
 	stage types.NamespacedName,
@@ -1428,6 +1459,9 @@ func (r *RegularStageReconciler) findExistingAnalysisRun(
 	return &analysisRuns.Items[0], nil
 }
 
+// autoPromoteFreight automatically promotes the latest promotable (i.e.
+// verified) Freight for a Stage if auto-promotion is allowed (see
+// autoPromotionAllowed).
 func (r *RegularStageReconciler) autoPromoteFreight(
 	ctx context.Context,
 	stage *kargoapi.Stage,
@@ -1539,6 +1573,7 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 	return newStatus, nil
 }
 
+// autoPromotionAllowed checks if auto-promotion is allowed for the given Stage.
 func (r *RegularStageReconciler) autoPromotionAllowed(
 	ctx context.Context,
 	stage types.NamespacedName,
@@ -1569,6 +1604,8 @@ func (r *RegularStageReconciler) autoPromotionAllowed(
 	return false, nil
 }
 
+// getPromotableFreight retrieves promotable Freight for a Stage based on the
+// requested Freight in the Stage specification.
 func (r *RegularStageReconciler) getPromotableFreight(
 	ctx context.Context,
 	stage types.NamespacedName,
