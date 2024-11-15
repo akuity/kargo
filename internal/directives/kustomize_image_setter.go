@@ -65,7 +65,7 @@ func (k *kustomizeImageSetter) RunPromotionStep(
 	}
 
 	// Convert the configuration into a typed object.
-	cfg, err := configToStruct[KustomizeSetImageConfig](stepCtx.Config)
+	cfg, err := ConfigToStruct[KustomizeSetImageConfig](stepCtx.Config)
 	if err != nil {
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
 			fmt.Errorf("could not convert config into kustomize-set-image config: %w", err)

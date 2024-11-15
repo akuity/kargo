@@ -22,6 +22,11 @@ RBAC rules are also defined at the project level and project administrators
 may use projects to define policies, such as whether a **stage** is eligible
 for automatic promotions of new **freight**.
 
+:::note
+For technical information on the corresponding `Project` resource
+type, refer to [Working with Projects](./30-how-to-guides/11-working-with-projects.md).
+:::
+
 ### What is a Stage?
 
 When you hear the term “environment”, what you envision will depend
@@ -79,84 +84,6 @@ A **promotion** is a request to move a piece of freight into a specified stage.
 
 Each of Kargo's fundamental concepts maps directly onto a custom Kubernetes
 resource type.
-
-### `Project` Resources
-
-Each Kargo project is represented by a cluster-scoped Kubernetes resource of
-type `Project`. Reconciliation of such a resource effects all boilerplate
-project initialization, including the creation of a specially-labeled
-`Namespace` with the same name as the `Project`. All resources belonging to a
-given `Project` should be grouped together in that `Namespace`.
-
-A minimal `Project` resource looks like the following:
-
-```yaml
-apiVersion: kargo.akuity.io/v1alpha1
-kind: Project
-metadata:
-  name: kargo-demo
-```
-
-:::note
-Deletion of a `Project` resource results in the deletion of the corresponding
-`Namespace`. For convenience, the inverse is also true -- deletion of a
-project's `Namespace` results in the deletion of the corresponding `Project`
-resource.
-:::
-
-:::info
-There are compelling advantages to using `Project` resources instead of
-permitting users to create `Namespace` resources directly:
-
-* The required label indicating a `Namespace` is a Kargo project cannot be
-  forgotten or misapplied.
-
-* Users can be granted permission to indirectly create `Namespace` resources for
-  Kargo projects _only_ without being granted more general permissions to create
-  _any_ new `Namespace` directly.
-
-* Boilerplate configuration is automatically created at the time of `Project`
-  creation. This includes things such as project-level RBAC resources and
-  `ServiceAccount` resources.
-:::
-
-:::info
-In future releases, the team also expects to also aggregate project-level status
-and statistics in `Project` resources.
-:::
-
-#### Promotion Policies
-
-A `Project` resource can additionally define project-level configuration. At
-present, this only includes **promotion policies** that describe which `Stage`s
-are eligible for automatic promotion of newly available `Freight`.
-
-:::note
-Promotion policies are defined at the project-level because users with
-permission to update `Stage` resources in a given project `Namespace` may _not_
-have permission to create `Promotion` resources. Defining promotion policies at
-the project-level therefore restricts such users from enabling automatic
-promotions for a `Stage` to which they may lack permission to promote to
-manually. It leaves decisions about eligibility for auto-promotion squarely in
-the hands of someone like a "project admin."
-:::
-
-In the example below, the `test` and `uat` `Stage`s are eligible for automatic
-promotion of newly available `Freight`, but any other `Stage`s in the `Project`
-are not:
-
-```yaml
-apiVersion: kargo.akuity.io/v1alpha1
-kind: Project
-metadata:
-  name: kargo-demo
-spec:
-  promotionPolicies:
-  - stage: test
-    autoPromotionEnabled: true
-  - stage: uat
-    autoPromotionEnabled: true
-```
 
 ### `Stage` Resources
 
@@ -283,7 +210,7 @@ although other uses of this feature are anticipated in the future.
 #### Promotion Templates
 
 The `spec.promotionTemplate` field is used to describe _how_ to transition
-`Freight` into the `Stage`. The `spec.promotionTemplate.steps` field describes
+`Freight` into the `Stage`. The `spec.promotionTemplate.spec.steps` field describes
 the discrete steps of a promotion process in detail.
 
 In the following, very common example, the `promotionTemplate` describes steps

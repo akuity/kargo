@@ -914,7 +914,7 @@ func (r *reconciler) syncNormalStage(
 		}
 		if len(promos.Items) > 0 {
 			logger.Debug("Promotion already exists for Freight")
-			return status, nil
+			continue
 		}
 
 		// Auto-promotion of this Freight is permitted.

@@ -16,6 +16,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	libargocd "github.com/akuity/kargo/internal/argocd"
 	"github.com/akuity/kargo/internal/directives"
+	"github.com/akuity/kargo/internal/expressions"
 	"github.com/akuity/kargo/internal/logging"
 )
 
@@ -143,23 +144,38 @@ func RunningPromotionsByArgoCDApplications(
 
 		// Extract the Argo CD Applications from the promotion steps.
 		//
-		// TODO(hidde): While this is arguably already better than the "legacy"
-		// approach further down, which had to query the Stage to get the
-		// Applications, it is still not ideal as it requires parsing the
-		// directives and treating some of them as special cases. We should
-		// consider a more general approach in the future.
+		// TODO(hidde): This is not ideal as it requires parsing the directives and
+		// treating some of them as special cases. We should consider a more general
+		// approach in the future.
 		var res []string
 		for i, step := range promo.Spec.Steps {
+			if int64(i) > promo.Status.CurrentStep {
+				// We are only interested in steps that have already been executed or
+				// are about to be.
+				break
+			}
 			if step.Uses != "argocd-update" || step.Config == nil {
 				continue
 			}
-
-			config := directives.ArgoCDUpdateConfig{}
-			if err := json.Unmarshal(step.Config.Raw, &config); err != nil {
+			dirStep := directives.PromotionStep{
+				Kind:   step.Uses,
+				Alias:  step.As,
+				Config: step.Config.Raw,
+			}
+			// Build just enough context to extract the relevant config from the
+			// argocd-update promotion step.
+			promoCtx := directives.PromotionContext{
+				Project:   promo.Namespace,
+				Stage:     promo.Spec.Stage,
+				Promotion: promo.Name,
+				Vars:      promo.Spec.Vars,
+			}
+			vars, err := dirStep.GetVars(promoCtx)
+			if err != nil {
 				logger.Error(
 					err,
 					fmt.Sprintf(
-						"failed to extract config from Promotion step %d:"+
+						"failed to extract relevant config from Promotion step %d:"+
 							"ignoring any Argo CD Applications from this step",
 						i,
 					),
@@ -168,13 +184,79 @@ func RunningPromotionsByArgoCDApplications(
 				)
 				continue
 			}
-
-			for _, app := range config.Apps {
-				namespace := app.Namespace
-				if namespace == "" {
-					namespace = libargocd.Namespace()
+			// Unpack the raw config into a map. We're not unpacking it into a struct
+			// because:
+			// 1. We don't want to evaluate expressions throughout the entire config
+			//    because we may not have all context required to do so available.
+			//    We will only evaluate expressions in specific fields.
+			// 2. If there are expressions in the config, some fields that may not be
+			//    strings in the struct may be strings in the unevaluated config and
+			//    this could lead to unmarshaling errors.
+			cfgMap := map[string]any{}
+			if err = json.Unmarshal(step.Config.Raw, &cfgMap); err != nil {
+				logger.Error(
+					err,
+					fmt.Sprintf(
+						"failed to extract relevant config from Promotion step %d:"+
+							"ignoring any Argo CD Applications from this step",
+						i,
+					),
+					"promo", promo.Name,
+					"namespace", promo.Namespace,
+				)
+				continue
+			}
+			// Dig through the map to find the names and namespaces of related Argo CD
+			// Applications. Treat these as templates and evaluate expressions in
+			// these individual fields without evaluating the entire config.
+			if apps, ok := cfgMap["apps"]; ok {
+				if appsList, ok := apps.([]any); ok {
+					for _, app := range appsList {
+						if app, ok := app.(map[string]any); ok {
+							if nameTemplate, ok := app["name"].(string); ok {
+								env := map[string]any{
+									"ctx": map[string]any{
+										"project":   promoCtx.Project,
+										"promotion": promoCtx.Promotion,
+										"stage":     promoCtx.Stage,
+									},
+									"vars": vars,
+								}
+								var namespace any = libargocd.Namespace()
+								if namespaceTemplate, ok := app["namespace"].(string); ok {
+									if namespace, err = expressions.EvaluateTemplate(namespaceTemplate, env); err != nil {
+										logger.Error(
+											err,
+											fmt.Sprintf(
+												"failed to extract relevant config from Promotion step %d:"+
+													"ignoring any Argo CD Applications from this step",
+												i,
+											),
+											"promo", promo.Name,
+											"namespace", promo.Namespace,
+										)
+										continue
+									}
+								}
+								name, err := expressions.EvaluateTemplate(nameTemplate, env)
+								if err != nil {
+									logger.Error(
+										err,
+										fmt.Sprintf(
+											"failed to extract relevant config from Promotion step %d:"+
+												"ignoring any Argo CD Applications from this step",
+											i,
+										),
+										"promo", promo.Name,
+										"namespace", promo.Namespace,
+									)
+									continue
+								}
+								res = append(res, fmt.Sprintf("%s:%s", namespace, name))
+							}
+						}
+					}
 				}
-				res = append(res, fmt.Sprintf("%s:%s", namespace, app.Name))
 			}
 		}
 		return res

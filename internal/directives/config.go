@@ -32,8 +32,8 @@ func (c Config) ToJSON() []byte {
 	return b
 }
 
-// configToStruct converts a Config to a (typed) configuration struct.
-func configToStruct[T any](c Config) (T, error) {
+// ConfigToStruct converts a Config to a (typed) configuration struct.
+func ConfigToStruct[T any](c Config) (T, error) {
 	var result T
 
 	// Convert the map to JSON

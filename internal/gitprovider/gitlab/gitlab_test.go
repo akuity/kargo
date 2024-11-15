@@ -58,11 +58,9 @@ func TestCreatePullRequest(t *testing.T) {
 			WebURL:         "url",
 		},
 	}
-	g := gitLabProvider{
+	g := provider{
 		projectName: testProjectName,
-		client: &gitLabClient{
-			mergeRequests: mockClient,
-		},
+		client:      mockClient,
 	}
 
 	opts := gitprovider.CreatePullRequestOpts{
@@ -71,7 +69,7 @@ func TestCreatePullRequest(t *testing.T) {
 		Title:       "title",
 		Description: "desc",
 	}
-	pr, err := g.CreatePullRequest(context.Background(), opts)
+	pr, err := g.CreatePullRequest(context.Background(), &opts)
 
 	require.NoError(t, err)
 	require.Equal(t, testProjectName, mockClient.pid)
@@ -83,7 +81,7 @@ func TestCreatePullRequest(t *testing.T) {
 	require.Equal(t, int64(mockClient.mr.IID), pr.Number)
 	require.Equal(t, mockClient.mr.MergeCommitSHA, pr.MergeCommitSHA)
 	require.Equal(t, mockClient.mr.WebURL, pr.URL)
-	require.Equal(t, gitprovider.PullRequestStateClosed, pr.State)
+	require.False(t, pr.Open)
 }
 
 func TestGetPullRequest(t *testing.T) {
@@ -95,11 +93,9 @@ func TestGetPullRequest(t *testing.T) {
 			WebURL:         "url",
 		},
 	}
-	g := gitLabProvider{
+	g := provider{
 		projectName: testProjectName,
-		client: &gitLabClient{
-			mergeRequests: mockClient,
-		},
+		client:      mockClient,
 	}
 
 	pr, err := g.GetPullRequest(context.Background(), 1)
@@ -109,7 +105,7 @@ func TestGetPullRequest(t *testing.T) {
 	require.Equal(t, int64(mockClient.mr.IID), pr.Number)
 	require.Equal(t, mockClient.mr.MergeCommitSHA, pr.MergeCommitSHA)
 	require.Equal(t, mockClient.mr.WebURL, pr.URL)
-	require.Equal(t, gitprovider.PullRequestStateClosed, pr.State)
+	require.False(t, pr.Open)
 }
 
 func TestListPullRequests(t *testing.T) {
@@ -121,49 +117,27 @@ func TestListPullRequests(t *testing.T) {
 			WebURL:         "url",
 		},
 	}
-	g := gitLabProvider{
+	g := provider{
 		projectName: testProjectName,
-		client: &gitLabClient{
-			mergeRequests: mockClient,
-		},
+		client:      mockClient,
 	}
 
-	opts := gitprovider.ListPullRequestOpts{
-		Head: "head",
-		Base: "base",
+	opts := gitprovider.ListPullRequestOptions{
+		State:      gitprovider.PullRequestStateAny,
+		HeadBranch: "head",
+		BaseBranch: "base",
 	}
-	prs, err := g.ListPullRequests(context.Background(), opts)
-
+	prs, err := g.ListPullRequests(context.Background(), &opts)
 	require.NoError(t, err)
+
 	require.Equal(t, testProjectName, mockClient.pid)
-	require.Equal(t, opts.Head, *mockClient.listOpts.SourceBranch)
-	require.Equal(t, opts.Base, *mockClient.listOpts.TargetBranch)
+	require.Equal(t, opts.HeadBranch, *mockClient.listOpts.SourceBranch)
+	require.Equal(t, opts.BaseBranch, *mockClient.listOpts.TargetBranch)
 
 	require.Equal(t, int64(mockClient.mr.IID), prs[0].Number)
 	require.Equal(t, mockClient.mr.MergeCommitSHA, prs[0].MergeCommitSHA)
 	require.Equal(t, mockClient.mr.WebURL, prs[0].URL)
-	require.Equal(t, gitprovider.PullRequestStateClosed, prs[0].State)
-}
-
-func TestIsPullRequestMerged(t *testing.T) {
-	require.True(t, isPullRequestMerged("merged"))
-	require.False(t, isPullRequestMerged("closed"))
-	require.False(t, isPullRequestMerged("locked"))
-	require.False(t, isPullRequestMerged("opened"))
-}
-
-func isPullRequestMerged(state string) bool {
-	mockClient := &mockGitLabClient{
-		mr: &gitlab.MergeRequest{
-			IID:            1,
-			MergeCommitSHA: "sha",
-			State:          state,
-			WebURL:         "url",
-		},
-	}
-	g := gitLabProvider{client: &gitLabClient{mergeRequests: mockClient}}
-	res, _ := g.IsPullRequestMerged(context.Background(), 1)
-	return res
+	require.False(t, prs[0].Open)
 }
 
 func TestParseGitLabURL(t *testing.T) {
@@ -189,7 +163,7 @@ func TestParseGitLabURL(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.url, func(t *testing.T) {
-			host, projectName, err := parseGitLabURL(testCase.url)
+			host, projectName, err := parseRepoURL(testCase.url)
 			require.NoError(t, err)
 			require.Equal(t, testCase.expectedHost, host)
 			require.Equal(t, expectedProjectName, projectName)

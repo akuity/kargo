@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.16.4
+    controller-gen.kubebuilder.io/version: v0.16.5
   name: stages.kargo.akuity.io
 spec:
   group: kargo.akuity.io
@@ -82,7 +82,11 @@ spec:
                                 to as.
                               type: string
                             config:
-                              description: Config is the configuration for the directive.
+                              description: |-
+                                Config is opaque configuration for the PromotionStep that is understood
+                                only by each PromotionStep's implementation. It is legal to utilize
+                                expressions in defining values at any level of this block.
+                                See https://docs.kargo.io/references/expression-language for details.
                               x-kubernetes-preserve-unknown-fields: true
                             uses:
                               description: Uses identifies a runner that can execute
@@ -93,6 +97,31 @@ spec:
                           - uses
                           type: object
                         minItems: 1
+                        type: array
+                      vars:
+                        description: |-
+                          Vars is a list of variables that can be referenced by expressions in
+                          promotion steps.
+                        items:
+                          description: |-
+                            PromotionVariable describes a single variable that may be referenced by
+                            expressions in promotion steps.
+                          properties:
+                            name:
+                              description: Name is the name of the variable.
+                              minLength: 1
+                              pattern: ^[a-zA-Z_]\w*$
+                              type: string
+                            value:
+                              description: |-
+                                Value is the value of the variable. It is allowed to utilize expressions
+                                in the value.
+                                See https://docs.kargo.io/references/expression-language for details.
+                              type: string
+                          required:
+                          - name
+                          - value
+                          type: object
                         type: array
                     type: object
                 required:

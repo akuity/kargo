@@ -46,7 +46,7 @@ func (g *gitPRWaiter) RunPromotionStep(
 	if err := g.validate(stepCtx.Config); err != nil {
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, err
 	}
-	cfg, err := configToStruct[GitWaitForPRConfig](stepCtx.Config)
+	cfg, err := ConfigToStruct[GitWaitForPRConfig](stepCtx.Config)
 	if err != nil {
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
 			fmt.Errorf("could not convert config into git-wait-for-pr config: %w", err)
@@ -64,10 +64,10 @@ func (g *gitPRWaiter) runPromotionStep(
 	stepCtx *PromotionStepContext,
 	cfg GitWaitForPRConfig,
 ) (PromotionStepResult, error) {
-	prNumber, err := getPRNumber(stepCtx.SharedState, cfg)
+	prNumber, err := g.getPRNumber(stepCtx.SharedState, cfg)
 	if err != nil {
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
-			fmt.Errorf("error getting PR number: %w", err)
+			fmt.Errorf("error getting PR number from shared state: %w", err)
 	}
 
 	var repoCreds *git.RepoCredentials
@@ -89,7 +89,7 @@ func (g *gitPRWaiter) runPromotionStep(
 		}
 	}
 
-	gpOpts := &gitprovider.GitProviderOptions{
+	gpOpts := &gitprovider.Options{
 		InsecureSkipTLSVerify: cfg.InsecureSkipTLSVerify,
 	}
 	if repoCreds != nil {
@@ -98,42 +98,41 @@ func (g *gitPRWaiter) runPromotionStep(
 	if cfg.Provider != nil {
 		gpOpts.Name = string(*cfg.Provider)
 	}
-	gitProviderSvc, err := gitprovider.NewGitProviderService(cfg.RepoURL, gpOpts)
+	gitProv, err := gitprovider.New(cfg.RepoURL, gpOpts)
 	if err != nil {
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
 			fmt.Errorf("error creating git provider service: %w", err)
 	}
 
-	pr, err := gitProviderSvc.GetPullRequest(ctx, prNumber)
+	pr, err := gitProv.GetPullRequest(ctx, prNumber)
 	if err != nil {
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
 			fmt.Errorf("error getting pull request %d: %w", prNumber, err)
 	}
-	if pr.IsOpen() {
+
+	if pr.Open {
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseRunning}, nil
 	}
-
-	merged, err := gitProviderSvc.IsPullRequestMerged(ctx, prNumber)
-	if err != nil {
-		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, fmt.Errorf(
-			"error checking if pull request %d was merged: %w",
-			prNumber, err,
-		)
-	}
-	if !merged {
+	if !pr.Merged {
 		return PromotionStepResult{
 			Status:  kargoapi.PromotionPhaseFailed,
 			Message: fmt.Sprintf("pull request %d was closed without being merged", prNumber),
 		}, err
 	}
-
 	return PromotionStepResult{
 		Status: kargoapi.PromotionPhaseSucceeded,
 		Output: map[string]any{commitKey: pr.MergeCommitSHA},
 	}, nil
 }
 
-func getPRNumber(sharedState State, cfg GitWaitForPRConfig) (int64, error) {
+// getPRNumber checks shared state for output from a previous step and returns
+// any PR number from that output. If no such output is found, the output
+// contains no PR number, or the PR number is not an int64 or float64, then an
+// error is returned.
+func (g *gitPRWaiter) getPRNumber(
+	sharedState State,
+	cfg GitWaitForPRConfig,
+) (int64, error) {
 	if cfg.PRNumberFromStep == "" {
 		return cfg.PRNumber, nil
 	}

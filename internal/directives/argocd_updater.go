@@ -135,7 +135,7 @@ func (a *argocdUpdater) RunPromotionStep(
 	if err := a.validate(stepCtx.Config); err != nil {
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, err
 	}
-	cfg, err := configToStruct[ArgoCDUpdateConfig](stepCtx.Config)
+	cfg, err := ConfigToStruct[ArgoCDUpdateConfig](stepCtx.Config)
 	if err != nil {
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
 			fmt.Errorf("could not convert config into %s config: %w", a.Name(), err)

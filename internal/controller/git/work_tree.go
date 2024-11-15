@@ -262,7 +262,7 @@ func (w *workTree) CurrentBranch() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("error checking current branch for repo %q: %w", w.url, err)
 	}
-	return string(res), nil
+	return strings.TrimSpace(string(res)), nil
 }
 
 func (w *workTree) DeleteBranch(branch string) error {

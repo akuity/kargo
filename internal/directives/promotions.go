@@ -2,11 +2,14 @@ package directives
 
 import (
 	"context"
+	"fmt"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	yaml "sigs.k8s.io/yaml/goyaml.v3"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/credentials"
+	"github.com/akuity/kargo/internal/expressions"
 )
 
 // PromotionStepRunner is an interface for components that implement the logic for
@@ -54,6 +57,11 @@ type PromotionContext struct {
 	StartFromStep int64
 	// State is the current state of the promotion process.
 	State State
+	// Vars is a list of variables definitions that can be used by the
+	// PromotionSteps.
+	Vars []kargoapi.PromotionVariable
+	// Secrets is a map of secrets that can be used by the PromotionSteps.
+	Secrets map[string]map[string]string
 }
 
 // PromotionStep describes a single step in a user-defined promotion process.
@@ -68,9 +76,70 @@ type PromotionStep struct {
 	// step will be keyed to this alias by the Engine and made accessible to
 	// subsequent steps.
 	Alias string
-	// Config is an opaque map of configuration values to be passed to the
-	// PromotionStepRunner executing this step.
-	Config Config
+	// Config is an opaque JSON to be passed to the PromotionStepRunner executing
+	// this step.
+	Config []byte
+}
+
+// GetConfig returns the Config unmarshalled into a map. Any expr-lang
+// expressions are evaluated in the context of the provided arguments
+// prior to unmarshaling.
+func (s *PromotionStep) GetConfig(
+	promoCtx PromotionContext,
+	state State,
+) (Config, error) {
+	if s.Config == nil {
+		return nil, nil
+	}
+
+	vars, err := s.GetVars(promoCtx)
+	if err != nil {
+		return nil, err
+	}
+
+	evaledCfgJSON, err := expressions.EvaluateJSONTemplate(
+		s.Config,
+		map[string]any{
+			"ctx": map[string]any{
+				"project":   promoCtx.Project,
+				"promotion": promoCtx.Promotion,
+				"stage":     promoCtx.Stage,
+			},
+			"vars":    vars,
+			"secrets": promoCtx.Secrets,
+			"outputs": state,
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+	var config map[string]any
+	if err := yaml.Unmarshal(evaledCfgJSON, &config); err != nil {
+		return nil, nil
+	}
+	return config, nil
+}
+
+func (s *PromotionStep) GetVars(promoCtx PromotionContext) (map[string]any, error) {
+	vars := make(map[string]any, len(promoCtx.Vars))
+	for _, v := range promoCtx.Vars {
+		newVar, err := expressions.EvaluateTemplate(
+			v.Value,
+			map[string]any{
+				"ctx": map[string]any{
+					"project":   promoCtx.Project,
+					"promotion": promoCtx.Promotion,
+					"stage":     promoCtx.Stage,
+				},
+				"vars": vars,
+			},
+		)
+		if err != nil {
+			return nil, fmt.Errorf("error pre-processing promotion variable %q: %w", v.Name, err)
+		}
+		vars[v.Name] = newVar
+	}
+	return vars, nil
 }
 
 // PromotionResult is the result of a user-defined promotion process executed by

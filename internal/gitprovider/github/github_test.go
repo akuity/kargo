@@ -45,7 +45,7 @@ func TestParseGitHubURL(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.url, func(t *testing.T) {
-			host, owner, repo, err := parseGitHubURL(testCase.url)
+			host, owner, repo, err := parseRepoURL(testCase.url)
 			if testCase.errExpected {
 				require.Error(t, err)
 			} else {

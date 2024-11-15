@@ -86,10 +86,27 @@ type PromotionSpec struct {
 	//
 	// +kubebuilder:validation:MinLength=1
 	Freight string `json:"freight" protobuf:"bytes,2,opt,name=freight"`
+	// Vars is a list of variables that can be referenced by expressions in
+	// promotion steps.
+	Vars []PromotionVariable `json:"vars,omitempty" protobuf:"bytes,4,rep,name=vars"`
 	// Steps specifies the directives to be executed as part of this Promotion.
 	// The order in which the directives are executed is the order in which they
 	// are listed in this field.
 	Steps []PromotionStep `json:"steps,omitempty" protobuf:"bytes,3,rep,name=steps"`
+}
+
+// PromotionVariable describes a single variable that may be referenced by
+// expressions in promotion steps.
+type PromotionVariable struct {
+	// Name is the name of the variable.
+	//
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Pattern=^[a-zA-Z_]\w*$
+	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
+	// Value is the value of the variable. It is allowed to utilize expressions
+	// in the value.
+	// See https://docs.kargo.io/references/expression-language for details.
+	Value string `json:"value" protobuf:"bytes,2,opt,name=value"`
 }
 
 // PromotionStep describes a directive to be executed as part of a Promotion.
@@ -100,21 +117,11 @@ type PromotionStep struct {
 	Uses string `json:"uses" protobuf:"bytes,1,opt,name=uses"`
 	// As is the alias this step can be referred to as.
 	As string `json:"as,omitempty" protobuf:"bytes,2,opt,name=as"`
-	// Config is the configuration for the directive.
+	// Config is opaque configuration for the PromotionStep that is understood
+	// only by each PromotionStep's implementation. It is legal to utilize
+	// expressions in defining values at any level of this block.
+	// See https://docs.kargo.io/references/expression-language for details.
 	Config *apiextensionsv1.JSON `json:"config,omitempty" protobuf:"bytes,3,opt,name=config"`
-}
-
-// GetConfig returns the Config field as unmarshalled YAML.
-func (s *PromotionStep) GetConfig() map[string]any {
-	if s.Config == nil {
-		return nil
-	}
-
-	var config map[string]any
-	if err := yaml.Unmarshal(s.Config.Raw, &config); err != nil {
-		return nil
-	}
-	return config
 }
 
 // PromotionStatus describes the current state of the transition represented by

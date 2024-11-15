@@ -462,14 +462,14 @@ func (r *reconciler) promote(
 		stage,
 	)
 
-	// If the Promotion has steps, execute them in sequence.
-	var steps []directives.PromotionStep
-	for _, step := range workingPromo.Spec.Steps {
-		steps = append(steps, directives.PromotionStep{
+	// Prepare promotion steps and vars for the promotion execution engine.
+	steps := make([]directives.PromotionStep, len(workingPromo.Spec.Steps))
+	for i, step := range workingPromo.Spec.Steps {
+		steps[i] = directives.PromotionStep{
 			Kind:   step.Uses,
 			Alias:  step.As,
-			Config: step.GetConfig(),
-		})
+			Config: step.Config.Raw,
+		}
 	}
 
 	promoCtx := directives.PromotionContext{
@@ -482,12 +482,14 @@ func (r *reconciler) promote(
 		Freight:         *workingPromo.Status.FreightCollection.DeepCopy(),
 		StartFromStep:   promo.Status.CurrentStep,
 		State:           directives.State(workingPromo.Status.GetState()),
+		Vars:            workingPromo.Spec.Vars,
 	}
 	if err := os.Mkdir(promoCtx.WorkDir, 0o700); err == nil {
 		// If we're working with a fresh directory, we should start the promotion
-		// process again from the beginning.
+		// process again from the beginning, but we DON'T clear shared state. This
+		// allows individual steps to self-discover that they've run before and
+		// examine the results of their own previous execution.
 		promoCtx.StartFromStep = 0
-		promoCtx.State = nil
 	} else if !os.IsExist(err) {
 		return nil, fmt.Errorf("error creating working directory: %w", err)
 	}

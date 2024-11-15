@@ -41,12 +41,15 @@ func (a *argocdUpdater) getDesiredRevisions(
 		// specific about a previous step whose output should be used as the desired
 		// revision.
 		if sourceUpdate != nil {
-			var err error
-			if revisions[i], err = getCommitFromStep(
-				stepCtx.SharedState,
-				sourceUpdate.DesiredCommitFromStep,
-			); err != nil {
-				return nil, err
+			revisions[i] = sourceUpdate.DesiredCommit
+			if revisions[i] == "" {
+				var err error
+				if revisions[i], err = getCommitFromStep(
+					stepCtx.SharedState,
+					sourceUpdate.DesiredCommitFromStep,
+				); err != nil {
+					return nil, err
+				}
 			}
 			if revisions[i] != "" {
 				continue

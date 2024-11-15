@@ -856,6 +856,10 @@ message PromotionSpec {
   // +kubebuilder:validation:MinLength=1
   optional string freight = 2;
 
+  // Vars is a list of variables that can be referenced by expressions in
+  // promotion steps.
+  repeated PromotionVariable vars = 4;
+
   // Steps specifies the directives to be executed as part of this Promotion.
   // The order in which the directives are executed is the order in which they
   // are listed in this field.
@@ -915,7 +919,10 @@ message PromotionStep {
   // As is the alias this step can be referred to as.
   optional string as = 2;
 
-  // Config is the configuration for the directive.
+  // Config is opaque configuration for the PromotionStep that is understood
+  // only by each PromotionStep's implementation. It is legal to utilize
+  // expressions in defining values at any level of this block.
+  // See https://docs.kargo.io/references/expression-language for details.
   optional .k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON config = 3;
 }
 
@@ -929,12 +936,31 @@ message PromotionTemplate {
 // for a Stage. This is a template that can be used to create a Promotion for a
 // Stage.
 message PromotionTemplateSpec {
+  // Vars is a list of variables that can be referenced by expressions in
+  // promotion steps.
+  repeated PromotionVariable vars = 2;
+
   // Steps specifies the directives to be executed as part of a Promotion.
   // The order in which the directives are executed is the order in which they
   // are listed in this field.
   //
   // +kubebuilder:validation:MinItems=1
   repeated PromotionStep steps = 1;
+}
+
+// PromotionVariable describes a single variable that may be referenced by
+// expressions in promotion steps.
+message PromotionVariable {
+  // Name is the name of the variable.
+  //
+  // +kubebuilder:validation:MinLength=1
+  // +kubebuilder:validation:Pattern=^[a-zA-Z_]\w*$
+  optional string name = 1;
+
+  // Value is the value of the variable. It is allowed to utilize expressions
+  // in the value.
+  // See https://docs.kargo.io/references/expression-language for details.
+  optional string value = 2;
 }
 
 // RepoSubscription describes a subscription to ONE OF a Git repository, a

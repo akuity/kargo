@@ -10,6 +10,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
@@ -65,12 +68,30 @@ func TestSimpleEngine_Promote(t *testing.T) {
 		name       string
 		steps      []PromotionStep
 		ctx        context.Context
+		client     client.Client
 		assertions func(*testing.T, PromotionResult, error)
 	}{
 		{
-			name:  "success: single step",
-			steps: []PromotionStep{{Kind: successStepName}},
-			ctx:   context.Background(),
+			name: "failure: error getting secrets",
+			ctx:  context.Background(),
+			client: fake.NewClientBuilder().WithInterceptorFuncs(
+				interceptor.Funcs{
+					List: func(context.Context, client.WithWatch, client.ObjectList, ...client.ListOption) error {
+						return errors.New("something went wrong")
+					},
+				},
+			).Build(),
+			assertions: func(t *testing.T, res PromotionResult, err error) {
+				assert.Equal(t, kargoapi.PromotionPhaseErrored, res.Status)
+				assert.ErrorContains(t, err, "error listing Secrets for Project")
+				assert.ErrorContains(t, err, "something went wrong")
+			},
+		},
+		{
+			name:   "success: single step",
+			steps:  []PromotionStep{{Kind: successStepName}},
+			ctx:    context.Background(),
+			client: fake.NewClientBuilder().Build(),
 			assertions: func(t *testing.T, res PromotionResult, err error) {
 				assert.Equal(t, kargoapi.PromotionPhaseSucceeded, res.Status)
 				assert.Equal(t, []HealthCheckStep{testHealthCheckStep}, res.HealthCheckSteps)
@@ -83,7 +104,8 @@ func TestSimpleEngine_Promote(t *testing.T) {
 				{Kind: successStepName},
 				{Kind: successStepName},
 			},
-			ctx: context.Background(),
+			ctx:    context.Background(),
+			client: fake.NewClientBuilder().Build(),
 			assertions: func(t *testing.T, res PromotionResult, err error) {
 				assert.Equal(t, kargoapi.PromotionPhaseSucceeded, res.Status)
 				assert.Equal(
@@ -95,18 +117,20 @@ func TestSimpleEngine_Promote(t *testing.T) {
 			},
 		},
 		{
-			name:  "failure: runner not found",
-			steps: []PromotionStep{{Kind: "unknown"}},
-			ctx:   context.Background(),
+			name:   "failure: runner not found",
+			steps:  []PromotionStep{{Kind: "unknown"}},
+			ctx:    context.Background(),
+			client: fake.NewClientBuilder().Build(),
 			assertions: func(t *testing.T, res PromotionResult, err error) {
 				assert.Equal(t, kargoapi.PromotionPhaseErrored, res.Status)
 				assert.ErrorContains(t, err, "not found")
 			},
 		},
 		{
-			name:  "failure: runner returns error",
-			steps: []PromotionStep{{Kind: errorStepName}},
-			ctx:   context.Background(),
+			name:   "failure: runner returns error",
+			steps:  []PromotionStep{{Kind: errorStepName}},
+			ctx:    context.Background(),
+			client: fake.NewClientBuilder().Build(),
 			assertions: func(t *testing.T, res PromotionResult, err error) {
 				assert.Equal(t, kargoapi.PromotionPhaseErrored, res.Status)
 				assert.ErrorContains(t, err, "something went wrong")
@@ -126,6 +150,7 @@ func TestSimpleEngine_Promote(t *testing.T) {
 				}()
 				return ctx
 			}(),
+			client: fake.NewClientBuilder().Build(),
 			assertions: func(t *testing.T, res PromotionResult, err error) {
 				assert.Equal(t, kargoapi.PromotionPhaseErrored, res.Status)
 				assert.ErrorIs(t, err, context.Canceled)
@@ -133,11 +158,11 @@ func TestSimpleEngine_Promote(t *testing.T) {
 		},
 	}
 
-	engine := NewSimpleEngine(nil, nil, nil)
-	engine.registry = testRegistry
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			engine := NewSimpleEngine(nil, nil, nil)
+			engine.registry = testRegistry
+			engine.kargoClient = tt.client
 			res, err := engine.Promote(tt.ctx, PromotionContext{}, tt.steps)
 			tt.assertions(t, res, err)
 		})
