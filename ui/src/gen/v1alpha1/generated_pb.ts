@@ -2617,6 +2617,54 @@ export class PromotionReference extends Message<PromotionReference> {
 }
 
 /**
+ * PromotionRetry describes the retry policy for a PromotionStep.
+ *
+ * @generated from message github.com.akuity.kargo.api.v1alpha1.PromotionRetry
+ */
+export class PromotionRetry extends Message<PromotionRetry> {
+  /**
+   * Attempts is the number of times the step can be attempted before the
+   * PromotionStep is marked as failed.
+   *
+   * If this field is set to 1, the step will not be retried. If this
+   * field is set to -1, the step will be retried indefinitely.
+   *
+   * The default of this field depends on the step being executed. Refer to
+   * the documentation for the specific step for more information.
+   *
+   * @generated from field: optional int64 attempts = 1;
+   */
+  attempts?: bigint;
+
+  constructor(data?: PartialMessage<PromotionRetry>) {
+    super();
+    proto2.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto2 = proto2;
+  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.PromotionRetry";
+  static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 1, name: "attempts", kind: "scalar", T: 3 /* ScalarType.INT64 */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PromotionRetry {
+    return new PromotionRetry().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): PromotionRetry {
+    return new PromotionRetry().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): PromotionRetry {
+    return new PromotionRetry().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: PromotionRetry | PlainMessage<PromotionRetry> | undefined, b: PromotionRetry | PlainMessage<PromotionRetry> | undefined): boolean {
+    return proto2.util.equals(PromotionRetry, a, b);
+  }
+}
+
+/**
  * PromotionSpec describes the desired transition of a specific Stage into a
  * specific Freight.
  *
@@ -2834,6 +2882,13 @@ export class PromotionStep extends Message<PromotionStep> {
   as?: string;
 
   /**
+   * Retry is the retry policy for this step.
+   *
+   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.PromotionRetry retry = 4;
+   */
+  retry?: PromotionRetry;
+
+  /**
    * Config is opaque configuration for the PromotionStep that is understood
    * only by each PromotionStep's implementation. It is legal to utilize
    * expressions in defining values at any level of this block.
@@ -2853,6 +2908,7 @@ export class PromotionStep extends Message<PromotionStep> {
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 1, name: "uses", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 2, name: "as", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 4, name: "retry", kind: "message", T: PromotionRetry, opt: true },
     { no: 3, name: "config", kind: "message", T: JSON, opt: true },
   ]);
 

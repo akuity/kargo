@@ -109,6 +109,27 @@ type PromotionVariable struct {
 	Value string `json:"value" protobuf:"bytes,2,opt,name=value"`
 }
 
+// PromotionRetry describes the retry policy for a PromotionStep.
+type PromotionRetry struct {
+	// Attempts is the number of times the step can be attempted before the
+	// PromotionStep is marked as failed.
+	//
+	// If this field is set to 1, the step will not be retried. If this
+	// field is set to -1, the step will be retried indefinitely.
+	//
+	// The default of this field depends on the step being executed. Refer to
+	// the documentation for the specific step for more information.
+	Attempts int64 `json:"attempts,omitempty" protobuf:"varint,1,opt,name=attempts"`
+}
+
+// GetAttempts returns the Attempts field with the given fallback value.
+func (r *PromotionRetry) GetAttempts(fallback int64) int64 {
+	if r == nil || r.Attempts == 0 {
+		return fallback
+	}
+	return r.Attempts
+}
+
 // PromotionStep describes a directive to be executed as part of a Promotion.
 type PromotionStep struct {
 	// Uses identifies a runner that can execute this step.
@@ -117,6 +138,8 @@ type PromotionStep struct {
 	Uses string `json:"uses" protobuf:"bytes,1,opt,name=uses"`
 	// As is the alias this step can be referred to as.
 	As string `json:"as,omitempty" protobuf:"bytes,2,opt,name=as"`
+	// Retry is the retry policy for this step.
+	Retry *PromotionRetry `json:"retry,omitempty" protobuf:"bytes,4,opt,name=retry"`
 	// Config is opaque configuration for the PromotionStep that is understood
 	// only by each PromotionStep's implementation. It is legal to utilize
 	// expressions in defining values at any level of this block.
