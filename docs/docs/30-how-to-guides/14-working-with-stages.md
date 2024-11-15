@@ -5,7 +5,7 @@ sidebar_label: Working with stages
 
 # Working With Stages
 
-Each Kargo stage is represented by a Kubernetes resource of type `Stage`.
+Each Kargo Stage is represented by a Kubernetes resource of type `Stage`.
 
 A `Stage` resource's `spec` field decomposes into three main areas of concern:
 
