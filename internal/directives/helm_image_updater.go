@@ -3,7 +3,6 @@ package directives
 import (
 	"context"
 	"fmt"
-	"slices"
 	"strings"
 
 	securejoin "github.com/cyphar/filepath-securejoin"
@@ -72,7 +71,7 @@ func (h *helmImageUpdater) runPromotionStep(
 	stepCtx *PromotionStepContext,
 	cfg HelmUpdateImageConfig,
 ) (PromotionStepResult, error) {
-	updates, err := h.generateImageUpdates(ctx, stepCtx, cfg)
+	updates, fullImageRefs, err := h.generateImageUpdates(ctx, stepCtx, cfg)
 	if err != nil {
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
 			fmt.Errorf("failed to generate image updates: %w", err)
@@ -85,7 +84,7 @@ func (h *helmImageUpdater) runPromotionStep(
 				fmt.Errorf("values file update failed: %w", err)
 		}
 
-		if commitMsg := h.generateCommitMessage(cfg.Path, updates); commitMsg != "" {
+		if commitMsg := h.generateCommitMessage(cfg.Path, fullImageRefs); commitMsg != "" {
 			result.Output = map[string]any{
 				"commitMessage": commitMsg,
 			}
@@ -98,31 +97,35 @@ func (h *helmImageUpdater) generateImageUpdates(
 	ctx context.Context,
 	stepCtx *PromotionStepContext,
 	cfg HelmUpdateImageConfig,
-) (map[string]string, error) {
+) (map[string]string, []string, error) {
 	updates := make(map[string]string, len(cfg.Images))
+	fullImageRefs := make([]string, 0, len(cfg.Images))
+
 	for _, image := range cfg.Images {
-		switch image.Value {
-		case ImageAndTag, Tag, ImageAndDigest, Digest:
-			// TODO(krancour): Remove this for v1.2.0
-			desiredOrigin := h.getDesiredOrigin(image.FromOrigin)
-			targetImage, err := freight.FindImage(
-				ctx,
-				stepCtx.KargoClient,
-				stepCtx.Project,
-				stepCtx.FreightRequests,
-				desiredOrigin,
-				stepCtx.Freight.References(),
-				image.Image,
-			)
-			if err != nil {
-				return nil, fmt.Errorf("failed to find image %s: %w", image.Image, err)
-			}
-			updates[image.Key] = h.getValue(targetImage, image.Value)
-		default:
-			updates[image.Key] = image.Value
+		desiredOrigin := h.getDesiredOrigin(image.FromOrigin)
+
+		targetImage, err := freight.FindImage(
+			ctx,
+			stepCtx.KargoClient,
+			stepCtx.Project,
+			stepCtx.FreightRequests,
+			desiredOrigin,
+			stepCtx.Freight.References(),
+			image.Image,
+		)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to find image %s: %w", image.Image, err)
 		}
+
+		value, imageRef, err := h.getImageValues(targetImage, image.Value)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		updates[image.Key] = value
+		fullImageRefs = append(fullImageRefs, imageRef)
 	}
-	return updates, nil
+	return updates, fullImageRefs, nil
 }
 
 func (h *helmImageUpdater) getDesiredOrigin(fromOrigin *ChartFromOrigin) *kargoapi.FreightOrigin {
@@ -135,19 +138,20 @@ func (h *helmImageUpdater) getDesiredOrigin(fromOrigin *ChartFromOrigin) *kargoa
 	}
 }
 
-// TODO(krancour): Remove this for v1.2.0
-func (h *helmImageUpdater) getValue(image *kargoapi.Image, value string) string {
-	switch value {
+func (h *helmImageUpdater) getImageValues(image *kargoapi.Image, valueType string) (string, string, error) {
+	switch valueType {
 	case ImageAndTag:
-		return fmt.Sprintf("%s:%s", image.RepoURL, image.Tag)
+		imageRef := fmt.Sprintf("%s:%s", image.RepoURL, image.Tag)
+		return imageRef, imageRef, nil
 	case Tag:
-		return image.Tag
+		return image.Tag, fmt.Sprintf("%s:%s", image.RepoURL, image.Tag), nil
 	case ImageAndDigest:
-		return fmt.Sprintf("%s@%s", image.RepoURL, image.Digest)
+		imageRef := fmt.Sprintf("%s@%s", image.RepoURL, image.Digest)
+		return imageRef, imageRef, nil
 	case Digest:
-		return image.Digest
+		return image.Digest, fmt.Sprintf("%s@%s", image.RepoURL, image.Digest), nil
 	default:
-		return value
+		return "", "", fmt.Errorf("unknown image value type %q", valueType)
 	}
 }
 
@@ -162,20 +166,20 @@ func (h *helmImageUpdater) updateValuesFile(workDir string, path string, changes
 	return nil
 }
 
-func (h *helmImageUpdater) generateCommitMessage(path string, updates map[string]string) string {
-	if len(updates) == 0 {
+func (h *helmImageUpdater) generateCommitMessage(path string, fullImageRefs []string) string {
+	if len(fullImageRefs) == 0 {
 		return ""
 	}
 
 	var commitMsg strings.Builder
-	_, _ = commitMsg.WriteString(fmt.Sprintf("Updated %s\n", path))
-	keys := make([]string, 0, len(updates))
-	for key := range updates {
-		keys = append(keys, key)
+	_, _ = commitMsg.WriteString(fmt.Sprintf("Updated %s to use new image", path))
+	if len(fullImageRefs) > 1 {
+		_, _ = commitMsg.WriteString("s")
 	}
-	slices.Sort(keys)
-	for _, key := range keys {
-		_, _ = commitMsg.WriteString(fmt.Sprintf("\n- %s: %q", key, updates[key]))
+	_, _ = commitMsg.WriteString("\n")
+
+	for _, s := range fullImageRefs {
+		_, _ = commitMsg.WriteString(fmt.Sprintf("\n- %s", s))
 	}
 
 	return commitMsg.String()

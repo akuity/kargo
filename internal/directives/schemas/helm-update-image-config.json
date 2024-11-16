@@ -32,24 +32,12 @@
           },
           "value": {
             "type": "string",
-            "description": "Specifies the new value for the specified key in the Helm values file."
+            "description": "Specifies the new value for the specified key in the Helm values file.",
+            "minLength": 1,
+            "pattern": "^(Digest|ImageAndDigest|ImageAndTag|Tag)$"
           }
         },
-        "required": ["key", "value"],
-        "oneOf": [
-          {
-            "required": ["image"],
-            "properties": {
-              "image": { "minLength": 1 },
-              "value": { "pattern": "^(Digest|ImageAndDigest|ImageAndTag|Tag)$" }
-            }
-          },
-          {
-            "properties": {
-              "image": { "enum": ["",  null] }
-            }
-          }
-        ]
+        "required": ["image", "key", "value"]
       }
     }
   }
