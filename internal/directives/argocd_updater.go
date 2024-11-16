@@ -265,6 +265,12 @@ func (a *argocdUpdater) runPromotionStep(
 			continue
 		}
 
+		// Log the error, as it contains information about why we need to
+		// perform an update.
+		if err != nil {
+			logger.Debug(err.Error())
+		}
+
 		// Perform the update.
 		if err = a.syncApplicationFn(
 			ctx,
