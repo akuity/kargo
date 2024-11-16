@@ -295,7 +295,7 @@ type HelmUpdateImageConfig struct {
 type HelmUpdateImageConfigImage struct {
 	FromOrigin *ChartFromOrigin `json:"fromOrigin,omitempty"`
 	// The container image (without tag) at which the update is targeted.
-	Image string `json:"image,omitempty"`
+	Image string `json:"image"`
 	// The key in the Helm values file of which the value needs to be updated. For nested
 	// values, it takes a YAML dot notation path.
 	Key string `json:"key"`
@@ -353,6 +353,20 @@ type KustomizeSetImageConfigImage struct {
 	Tag string `json:"tag,omitempty"`
 	// UseDigest specifies whether to use the digest of the image instead of the tag.
 	UseDigest bool `json:"useDigest,omitempty"`
+}
+
+type YAMLUpdateConfig struct {
+	// The path to a YAML file.
+	Path string `json:"path"`
+	// A list of updates to apply to the YAML file.
+	Updates []YAMLUpdate `json:"updates"`
+}
+
+type YAMLUpdate struct {
+	// The key whose value needs to be updated. For nested values, use a YAML dot notation path.
+	Key string `json:"key"`
+	// The new value for the specified key.
+	Value string `json:"value"`
 }
 
 // The kind of origin. Currently only 'Warehouse' is supported. Required.
