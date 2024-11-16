@@ -1,7 +1,7 @@
 import { useMutation, useQuery } from '@connectrpc/connect-query';
 import { faPencil, faPlus, faTrash } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Button, Table, Typography } from 'antd';
+import { Button, Table } from 'antd';
 import { format } from 'date-fns';
 import { useParams } from 'react-router-dom';
 
@@ -16,6 +16,7 @@ import {
 
 import { CreateAnalysisTemplateModal } from './create-analysis-template-modal';
 import { EditAnalysisTemplateModal } from './edit-analysis-template-modal';
+
 export const AnalysisTemplatesList = () => {
   const { name } = useParams();
   const confirm = useConfirmModal();
@@ -36,7 +37,6 @@ export const AnalysisTemplatesList = () => {
       rowKey={(i) => i.metadata?.name || ''}
       loading={isLoading}
       expandable={descriptionExpandable()}
-      title={() => <Typography.Title>Analysis Templates</Typography.Title>}
     >
       <Table.Column<AnalysisTemplate>
         title='Creation Date'

@@ -14,7 +14,7 @@ import {
 import { RawFormat } from '@ui/gen/service/v1alpha1/service_pb';
 import { decodeRawData } from '@ui/utils/decode-raw-data';
 
-import { getClusterAnalysisTemplateYAMLExample } from '../utils/cluster-analysis-template-example';
+import { getClusterAnalysisTemplateYAMLExample } from '../../utils/cluster-analysis-template-example';
 
 type Props = ModalProps & {
   templateName: string;

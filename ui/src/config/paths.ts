@@ -12,7 +12,8 @@ export const paths = {
   createStage: '/project/:name/create-stage',
   createWarehouse: '/project/:name/create-warehouse',
   user: '/user',
-  clusterAnalysisTemplates: '/analysis-templates',
+  settings: '/settings/',
+  settingsAnalysisTemplates: '/settings/analysis-templates',
 
   downloads: '/downloads',
   login: '/login',

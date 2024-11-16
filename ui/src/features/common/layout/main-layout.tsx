@@ -1,6 +1,6 @@
 import {
   faArrowRightFromBracket,
-  faBarChart,
+  faGear,
   faBook,
   faBoxes,
   faTerminal,
@@ -42,8 +42,8 @@ export const MainLayout = () => {
               <NavItem icon={faBoxes} path={paths.projects}>
                 Projects
               </NavItem>
-              <NavItem icon={faBarChart} path={paths.clusterAnalysisTemplates}>
-                Analysis
+              <NavItem icon={faGear} path={paths.settings}>
+                Settings
               </NavItem>
               {!isJWTDirty(JWTInfo) && (
                 <NavItem icon={faUser} path={paths.user}>

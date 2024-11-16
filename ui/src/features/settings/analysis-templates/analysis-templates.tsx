@@ -1,7 +1,7 @@
 import { useMutation, useQuery } from '@connectrpc/connect-query';
 import { faPencil, faPlus, faTrash } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Button, Table, Typography } from 'antd';
+import { Button, Table } from 'antd';
 import { format } from 'date-fns';
 
 import { useConfirmModal } from '@ui/features/common/confirm-modal/use-confirm-modal';
@@ -16,8 +16,8 @@ import {
   listClusterAnalysisTemplates
 } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 
-import { CreateClusterAnalysisTemplateModal } from '../features/cluster-analysis-templates/create-cluster-analysis-template-modal';
-import { EditClusterAnalysisTemplateModal } from '../features/cluster-analysis-templates/edit-cluster-analysis-template-modal';
+import { CreateClusterAnalysisTemplateModal } from './create-cluster-analysis-template-modal';
+import { EditClusterAnalysisTemplateModal } from './edit-cluster-analysis-template-modal';
 
 export const ClusterAnalysisTemplatesList = () => {
   const confirm = useConfirmModal();
@@ -42,7 +42,6 @@ export const ClusterAnalysisTemplatesList = () => {
       rowKey={(i) => i.metadata?.name || ''}
       loading={isLoading}
       expandable={descriptionExpandable()}
-      title={() => <Typography.Title>Cluster Analysis Templates</Typography.Title>}
     >
       <Table.Column<ClusterAnalysisTemplate>
         title='Creation Date'
