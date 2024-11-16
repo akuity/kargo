@@ -86,20 +86,7 @@ func Test_helmImageUpdater_validate(t *testing.T) {
 			},
 		},
 		{
-			name: "image and value both specified",
-			config: Config{
-				"images": []Config{{
-					"image": "fake-image",
-					"key":   "fake-key",
-					"value": "fake-value",
-				}},
-			},
-			expectedProblems: []string{
-				"images.0: Must validate one and only one schema",
-			},
-		},
-		{
-			name: "valid kitchen sink",
+			name: "valid",
 			config: Config{
 				"path": "fake-path",
 				"images": []Config{
@@ -116,15 +103,6 @@ func Test_helmImageUpdater_validate(t *testing.T) {
 							"kind": Warehouse,
 							"name": "fake-name",
 						},
-					},
-					{
-						"key":   "fake-key-2",
-						"value": "fake-value",
-					},
-					{
-						"image": "",
-						"key":   "fake-key-3",
-						"value": "fake-value",
 					},
 				},
 			},
@@ -209,7 +187,7 @@ func Test_helmImageUpdater_runPromotionStep(t *testing.T) {
 				assert.Equal(t, PromotionStepResult{
 					Status: kargoapi.PromotionPhaseSucceeded,
 					Output: map[string]any{
-						"commitMessage": "Updated values.yaml\n\n- image.tag: \"1.19.0\"",
+						"commitMessage": "Updated values.yaml to use new image\n\n- docker.io/library/nginx:1.19.0",
 					},
 				}, result)
 				content, err := os.ReadFile(path.Join(workDir, "values.yaml"))
@@ -356,7 +334,7 @@ func Test_helmImageUpdater_generateImageUpdates(t *testing.T) {
 		objects    []client.Object
 		stepCtx    *PromotionStepContext
 		cfg        HelmUpdateImageConfig
-		assertions func(*testing.T, map[string]string, error)
+		assertions func(*testing.T, map[string]string, []string, error)
 	}{
 		{
 			name: "finds image update",
@@ -400,9 +378,10 @@ func Test_helmImageUpdater_generateImageUpdates(t *testing.T) {
 					{Key: "image.tag", Image: "docker.io/library/nginx", Value: Tag},
 				},
 			},
-			assertions: func(t *testing.T, changes map[string]string, err error) {
+			assertions: func(t *testing.T, changes map[string]string, summary []string, err error) {
 				assert.NoError(t, err)
 				assert.Equal(t, map[string]string{"image.tag": "1.19.0"}, changes)
+				assert.Equal(t, []string{"docker.io/library/nginx:1.19.0"}, summary)
 			},
 		},
 		{
@@ -417,7 +396,7 @@ func Test_helmImageUpdater_generateImageUpdates(t *testing.T) {
 					{Key: "image.tag", Image: "docker.io/library/non-existent", Value: Tag},
 				},
 			},
-			assertions: func(t *testing.T, _ map[string]string, err error) {
+			assertions: func(t *testing.T, _ map[string]string, _ []string, err error) {
 				assert.ErrorContains(t, err, "not found in referenced Freight")
 			},
 		},
@@ -464,7 +443,7 @@ func Test_helmImageUpdater_generateImageUpdates(t *testing.T) {
 					{Key: "image2.tag", Image: "docker.io/library/non-existent", Value: Tag},
 				},
 			},
-			assertions: func(t *testing.T, _ map[string]string, err error) {
+			assertions: func(t *testing.T, _ map[string]string, _ []string, err error) {
 				assert.ErrorContains(t, err, "not found in referenced Freight")
 			},
 		},
@@ -515,25 +494,10 @@ func Test_helmImageUpdater_generateImageUpdates(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, changes map[string]string, err error) {
+			assertions: func(t *testing.T, changes map[string]string, summary []string, err error) {
 				assert.NoError(t, err)
 				assert.Equal(t, map[string]string{"image.tag": "2.0.0"}, changes)
-			},
-		},
-		{
-			name: "value specified directly",
-			stepCtx: &PromotionStepContext{
-				Project: "test-project",
-			},
-			cfg: HelmUpdateImageConfig{
-				Images: []HelmUpdateImageConfigImage{{
-					Key:   "image.tag",
-					Value: "fake-tag",
-				}},
-			},
-			assertions: func(t *testing.T, changes map[string]string, err error) {
-				assert.NoError(t, err)
-				assert.Equal(t, map[string]string{"image.tag": "fake-tag"}, changes)
+				assert.Equal(t, []string{"docker.io/library/origin-image:2.0.0"}, summary)
 			},
 		},
 	}
@@ -548,8 +512,8 @@ func Test_helmImageUpdater_generateImageUpdates(t *testing.T) {
 			stepCtx := tt.stepCtx
 			stepCtx.KargoClient = fake.NewClientBuilder().WithScheme(scheme).WithObjects(tt.objects...).Build()
 
-			changes, err := runner.generateImageUpdates(context.Background(), stepCtx, tt.cfg)
-			tt.assertions(t, changes, err)
+			changes, summary, err := runner.generateImageUpdates(context.Background(), stepCtx, tt.cfg)
+			tt.assertions(t, changes, summary, err)
 		})
 	}
 }
@@ -591,12 +555,12 @@ func Test_helmImageUpdater_getDesiredOrigin(t *testing.T) {
 	}
 }
 
-func Test_helmImageUpdater_getValue(t *testing.T) {
+func Test_helmImageUpdater_getImageValues(t *testing.T) {
 	tests := []struct {
-		name     string
-		image    *kargoapi.Image
-		inValue  string
-		expected string
+		name       string
+		image      *kargoapi.Image
+		valueType  string
+		assertions func(*testing.T, string, string, error)
 	}{
 		{
 			name: "image and tag",
@@ -604,8 +568,12 @@ func Test_helmImageUpdater_getValue(t *testing.T) {
 				RepoURL: "docker.io/library/nginx",
 				Tag:     "1.19",
 			},
-			inValue:  ImageAndTag,
-			expected: "docker.io/library/nginx:1.19",
+			valueType: ImageAndTag,
+			assertions: func(t *testing.T, value, ref string, err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, "docker.io/library/nginx:1.19", value)
+				assert.Equal(t, "docker.io/library/nginx:1.19", ref)
+			},
 		},
 		{
 			name: "tag only",
@@ -613,8 +581,12 @@ func Test_helmImageUpdater_getValue(t *testing.T) {
 				RepoURL: "docker.io/library/nginx",
 				Tag:     "1.19",
 			},
-			inValue:  Tag,
-			expected: "1.19",
+			valueType: Tag,
+			assertions: func(t *testing.T, value, ref string, err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, "1.19", value)
+				assert.Equal(t, "docker.io/library/nginx:1.19", ref)
+			},
 		},
 		{
 			name: "image and digest",
@@ -622,8 +594,12 @@ func Test_helmImageUpdater_getValue(t *testing.T) {
 				RepoURL: "docker.io/library/nginx",
 				Digest:  "sha256:abcdef1234567890",
 			},
-			inValue:  ImageAndDigest,
-			expected: "docker.io/library/nginx@sha256:abcdef1234567890",
+			valueType: ImageAndDigest,
+			assertions: func(t *testing.T, value, ref string, err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, "docker.io/library/nginx@sha256:abcdef1234567890", value)
+				assert.Equal(t, "docker.io/library/nginx@sha256:abcdef1234567890", ref)
+			},
 		},
 		{
 			name: "digest only",
@@ -631,14 +607,22 @@ func Test_helmImageUpdater_getValue(t *testing.T) {
 				RepoURL: "docker.io/library/nginx",
 				Digest:  "sha256:abcdef1234567890",
 			},
-			inValue:  Digest,
-			expected: "sha256:abcdef1234567890",
+			valueType: Digest,
+			assertions: func(t *testing.T, value, ref string, err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, "sha256:abcdef1234567890", value)
+				assert.Equal(t, "docker.io/library/nginx@sha256:abcdef1234567890", ref)
+			},
 		},
 		{
-			name:     "any other value",
-			image:    &kargoapi.Image{},
-			inValue:  "fake-value",
-			expected: "fake-value",
+			name:      "unknown value type",
+			image:     &kargoapi.Image{},
+			valueType: "unknown",
+			assertions: func(t *testing.T, value, ref string, err error) {
+				assert.Error(t, err)
+				assert.Empty(t, value)
+				assert.Empty(t, ref)
+			},
 		},
 	}
 
@@ -646,7 +630,8 @@ func Test_helmImageUpdater_getValue(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			require.Equal(t, tt.expected, runner.getValue(tt.image, tt.inValue))
+			value, ref, err := runner.getImageValues(tt.image, tt.valueType)
+			tt.assertions(t, value, ref, err)
 		})
 	}
 }
@@ -714,40 +699,38 @@ func Test_helmImageUpdater_updateValuesFile(t *testing.T) {
 
 func Test_helmImageUpdater_generateCommitMessage(t *testing.T) {
 	tests := []struct {
-		name       string
-		path       string
-		changes    map[string]string
-		assertions func(*testing.T, string)
+		name          string
+		path          string
+		fullImageRefs []string
+		assertions    func(*testing.T, string)
 	}{
 		{
-			name: "no changes",
-			path: "values.yaml",
+			name:          "no image references",
+			path:          "values.yaml",
+			fullImageRefs: []string{},
 			assertions: func(t *testing.T, result string) {
 				assert.Empty(t, result)
 			},
 		},
 		{
-			name:    "single change",
-			path:    "values.yaml",
-			changes: map[string]string{"image": "repo/image:tag1"},
+			name:          "single image reference",
+			path:          "values.yaml",
+			fullImageRefs: []string{"repo/image:tag1"},
 			assertions: func(t *testing.T, result string) {
-				assert.Equal(t, `Updated values.yaml
+				assert.Equal(t, `Updated values.yaml to use new image
 
-- image: "repo/image:tag1"`, result)
+- repo/image:tag1`, result)
 			},
 		},
 		{
-			name: "multiple changes",
-			path: "chart/values.yaml",
-			changes: map[string]string{
-				"image1": "repo1/image1:tag1",
-				"image2": "repo2/image2:tag2",
-			},
+			name:          "multiple image references",
+			path:          "chart/values.yaml",
+			fullImageRefs: []string{"repo1/image1:tag1", "repo2/image2:tag2"},
 			assertions: func(t *testing.T, result string) {
-				assert.Equal(t, `Updated chart/values.yaml
+				assert.Equal(t, `Updated chart/values.yaml to use new images
 
-- image1: "repo1/image1:tag1"
-- image2: "repo2/image2:tag2"`, result)
+- repo1/image1:tag1
+- repo2/image2:tag2`, result)
 			},
 		},
 	}
@@ -756,7 +739,7 @@ func Test_helmImageUpdater_generateCommitMessage(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := runner.generateCommitMessage(tt.path, tt.changes)
+			result := runner.generateCommitMessage(tt.path, tt.fullImageRefs)
 			tt.assertions(t, result)
 		})
 	}
