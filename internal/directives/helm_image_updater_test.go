@@ -18,6 +18,115 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
+func Test_helmImageUpdater_validate(t *testing.T) {
+	testCases := []struct {
+		name             string
+		config           Config
+		expectedProblems []string
+	}{
+		{
+			name:   "path is not specified",
+			config: Config{},
+			expectedProblems: []string{
+				"(root): path is required",
+			},
+		},
+		{
+			name: "path is empty",
+			config: Config{
+				"path": "",
+			},
+			expectedProblems: []string{
+				"path: String length must be greater than or equal to 1",
+			},
+		},
+		{
+			name:   "images is null",
+			config: Config{},
+			expectedProblems: []string{
+				"(root): images is required",
+			},
+		},
+		{
+			name: "images is empty",
+			config: Config{
+				"images": []Config{},
+			},
+			expectedProblems: []string{
+				"images: Array must have at least 1 items",
+			},
+		},
+		{
+			name: "key not specified",
+			config: Config{
+				"images": []Config{{}},
+			},
+			expectedProblems: []string{
+				"images.0: key is required",
+			},
+		},
+		{
+			name: "key is empty",
+			config: Config{
+				"images": []Config{{
+					"key": "",
+				}},
+			},
+			expectedProblems: []string{
+				"images.0.key: String length must be greater than or equal to 1",
+			},
+		},
+		{
+			name: "value not specified",
+			config: Config{
+				"images": []Config{{}},
+			},
+			expectedProblems: []string{
+				"images.0: value is required",
+			},
+		},
+		{
+			name: "valid",
+			config: Config{
+				"path": "fake-path",
+				"images": []Config{
+					{
+						"image": "fake-image",
+						"key":   "fake-key-0",
+						"value": "ImageAndTag",
+					},
+					{
+						"image": "fake-image",
+						"key":   "fake-key-1",
+						"value": "ImageAndTag",
+						"fromOrigin": Config{
+							"kind": Warehouse,
+							"name": "fake-name",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	r := newHelmImageUpdater()
+	runner, ok := r.(*helmImageUpdater)
+	require.True(t, ok)
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			err := runner.validate(testCase.config)
+			if len(testCase.expectedProblems) == 0 {
+				require.NoError(t, err)
+			} else {
+				for _, problem := range testCase.expectedProblems {
+					require.ErrorContains(t, err, problem)
+				}
+			}
+		})
+	}
+}
+
 func Test_helmImageUpdater_runPromotionStep(t *testing.T) {
 	tests := []struct {
 		name       string
@@ -450,7 +559,7 @@ func Test_helmImageUpdater_getImageValues(t *testing.T) {
 	tests := []struct {
 		name       string
 		image      *kargoapi.Image
-		valueType  Value
+		valueType  string
 		assertions func(*testing.T, string, string, error)
 	}{
 		{

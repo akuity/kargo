@@ -48,12 +48,7 @@ func (h *helmImageUpdater) RunPromotionStep(
 ) (PromotionStepResult, error) {
 	failure := PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}
 
-	// Validate the configuration against the JSON Schema
-	if err := validate(
-		h.schemaLoader,
-		gojsonschema.NewGoLoader(stepCtx.Config),
-		h.Name(),
-	); err != nil {
+	if err := h.validate(stepCtx.Config); err != nil {
 		return failure, err
 	}
 
@@ -64,6 +59,11 @@ func (h *helmImageUpdater) RunPromotionStep(
 	}
 
 	return h.runPromotionStep(ctx, stepCtx, cfg)
+}
+
+// validate validates helmImageUpdater configuration against a JSON schema.
+func (h *helmImageUpdater) validate(cfg Config) error {
+	return validate(h.schemaLoader, gojsonschema.NewGoLoader(cfg), h.Name())
 }
 
 func (h *helmImageUpdater) runPromotionStep(
@@ -138,7 +138,7 @@ func (h *helmImageUpdater) getDesiredOrigin(fromOrigin *ChartFromOrigin) *kargoa
 	}
 }
 
-func (h *helmImageUpdater) getImageValues(image *kargoapi.Image, valueType Value) (string, string, error) {
+func (h *helmImageUpdater) getImageValues(image *kargoapi.Image, valueType string) (string, string, error) {
 	switch valueType {
 	case ImageAndTag:
 		imageRef := fmt.Sprintf("%s:%s", image.RepoURL, image.Tag)

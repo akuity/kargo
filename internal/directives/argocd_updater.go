@@ -265,6 +265,12 @@ func (a *argocdUpdater) runPromotionStep(
 			continue
 		}
 
+		// Log the error, as it contains information about why we need to
+		// perform an update.
+		if err != nil {
+			logger.Debug(err.Error())
+		}
+
 		// Perform the update.
 		if err = a.syncApplicationFn(
 			ctx,
@@ -815,28 +821,41 @@ func (a *argocdUpdater) buildKustomizeImagesForAppSource(
 	kustomizeImages := make(argocd.KustomizeImages, 0, len(update.Images))
 	for i := range update.Images {
 		imageUpdate := &update.Images[i]
-		desiredOrigin := getDesiredOrigin(stepCfg, imageUpdate)
-		image, err := freight.FindImage(
-			ctx,
-			stepCtx.KargoClient,
-			stepCtx.Project,
-			stepCtx.FreightRequests,
-			desiredOrigin,
-			stepCtx.Freight.References(),
-			imageUpdate.RepoURL,
-		)
-		if err != nil {
-			return nil,
-				fmt.Errorf("error finding image from repo %q: %w", imageUpdate.RepoURL, err)
+		var digest, tag string
+		switch {
+		case imageUpdate.Digest != "":
+			digest = imageUpdate.Digest
+		case imageUpdate.Tag != "":
+			tag = imageUpdate.Tag
+		default:
+			desiredOrigin := getDesiredOrigin(stepCfg, imageUpdate)
+			image, err := freight.FindImage(
+				ctx,
+				stepCtx.KargoClient,
+				stepCtx.Project,
+				stepCtx.FreightRequests,
+				desiredOrigin,
+				stepCtx.Freight.References(),
+				imageUpdate.RepoURL,
+			)
+			if err != nil {
+				return nil,
+					fmt.Errorf("error finding image from repo %q: %w", imageUpdate.RepoURL, err)
+			}
+			if imageUpdate.UseDigest {
+				digest = image.Digest
+			} else {
+				tag = image.Tag
+			}
 		}
 		kustomizeImageStr := imageUpdate.RepoURL
 		if imageUpdate.NewName != "" {
 			kustomizeImageStr = fmt.Sprintf("%s=%s", kustomizeImageStr, imageUpdate.NewName)
 		}
-		if imageUpdate.UseDigest {
-			kustomizeImageStr = fmt.Sprintf("%s@%s", kustomizeImageStr, image.Digest)
+		if digest != "" {
+			kustomizeImageStr = fmt.Sprintf("%s@%s", kustomizeImageStr, digest)
 		} else {
-			kustomizeImageStr = fmt.Sprintf("%s:%s", kustomizeImageStr, image.Tag)
+			kustomizeImageStr = fmt.Sprintf("%s:%s", kustomizeImageStr, tag)
 		}
 		kustomizeImages = append(
 			kustomizeImages,
@@ -857,33 +876,33 @@ func (a *argocdUpdater) buildHelmParamChangesForAppSource(
 		imageUpdate := &update.Images[i]
 		switch imageUpdate.Value {
 		case ImageAndTag, Tag, ImageAndDigest, Digest:
+			// TODO(krancour): Remove this for v1.2.0
+			desiredOrigin := getDesiredOrigin(stepCfg, imageUpdate)
+			image, err := freight.FindImage(
+				ctx,
+				stepCtx.KargoClient,
+				stepCtx.Project,
+				stepCtx.FreightRequests,
+				desiredOrigin,
+				stepCtx.Freight.References(),
+				imageUpdate.RepoURL,
+			)
+			if err != nil {
+				return nil,
+					fmt.Errorf("error finding image from repo %q: %w", imageUpdate.RepoURL, err)
+			}
+			switch imageUpdate.Value {
+			case ImageAndTag:
+				changes[imageUpdate.Key] = fmt.Sprintf("%s:%s", imageUpdate.RepoURL, image.Tag)
+			case Tag:
+				changes[imageUpdate.Key] = image.Tag
+			case ImageAndDigest:
+				changes[imageUpdate.Key] = fmt.Sprintf("%s@%s", imageUpdate.RepoURL, image.Digest)
+			case Digest:
+				changes[imageUpdate.Key] = image.Digest
+			}
 		default:
-			// This really shouldn't happen, so we'll ignore it.
-			continue
-		}
-		desiredOrigin := getDesiredOrigin(stepCfg, imageUpdate)
-		image, err := freight.FindImage(
-			ctx,
-			stepCtx.KargoClient,
-			stepCtx.Project,
-			stepCtx.FreightRequests,
-			desiredOrigin,
-			stepCtx.Freight.References(),
-			imageUpdate.RepoURL,
-		)
-		if err != nil {
-			return nil,
-				fmt.Errorf("error finding image from repo %q: %w", imageUpdate.RepoURL, err)
-		}
-		switch imageUpdate.Value {
-		case ImageAndTag:
-			changes[imageUpdate.Key] = fmt.Sprintf("%s:%s", imageUpdate.RepoURL, image.Tag)
-		case Tag:
-			changes[imageUpdate.Key] = image.Tag
-		case ImageAndDigest:
-			changes[imageUpdate.Key] = fmt.Sprintf("%s@%s", imageUpdate.RepoURL, image.Digest)
-		case Digest:
-			changes[imageUpdate.Key] = image.Digest
+			changes[imageUpdate.Key] = imageUpdate.Value
 		}
 	}
 	return changes, nil

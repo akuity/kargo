@@ -64,12 +64,7 @@ func (h *helmChartUpdater) RunPromotionStep(
 ) (PromotionStepResult, error) {
 	failure := PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}
 
-	// Validate the configuration against the JSON Schema
-	if err := validate(
-		h.schemaLoader,
-		gojsonschema.NewGoLoader(stepCtx.Config),
-		h.Name(),
-	); err != nil {
+	if err := h.validate(stepCtx.Config); err != nil {
 		return failure, err
 	}
 
@@ -80,6 +75,11 @@ func (h *helmChartUpdater) RunPromotionStep(
 	}
 
 	return h.runPromotionStep(ctx, stepCtx, cfg)
+}
+
+// validate validates helmChartUpdater configuration against a JSON schema.
+func (h *helmChartUpdater) validate(cfg Config) error {
+	return validate(h.schemaLoader, gojsonschema.NewGoLoader(cfg), h.Name())
 }
 
 func (h *helmChartUpdater) runPromotionStep(
@@ -141,34 +141,37 @@ func (h *helmChartUpdater) processChartUpdates(
 ) (map[string]string, error) {
 	changes := make(map[string]string)
 	for _, update := range cfg.Charts {
-		repoURL, chartName := normalizeChartReference(update.Repository, update.Name)
-
-		var desiredOrigin *kargoapi.FreightOrigin
-		if update.FromOrigin != nil {
-			desiredOrigin = &kargoapi.FreightOrigin{
-				Kind: kargoapi.FreightOriginKind(update.FromOrigin.Kind),
-				Name: update.FromOrigin.Name,
+		version := update.Version
+		if update.Version == "" {
+			// TODO(krancour): Remove this for v1.2.0
+			repoURL, chartName := normalizeChartReference(update.Repository, update.Name)
+			var desiredOrigin *kargoapi.FreightOrigin
+			if update.FromOrigin != nil {
+				desiredOrigin = &kargoapi.FreightOrigin{
+					Kind: kargoapi.FreightOriginKind(update.FromOrigin.Kind),
+					Name: update.FromOrigin.Name,
+				}
 			}
-		}
-
-		chart, err := freight.FindChart(
-			ctx,
-			stepCtx.KargoClient,
-			stepCtx.Project,
-			stepCtx.FreightRequests,
-			desiredOrigin,
-			stepCtx.Freight.References(),
-			repoURL,
-			chartName,
-		)
-		if err != nil {
-			return nil, fmt.Errorf("failed to find chart: %w", err)
+			chart, err := freight.FindChart(
+				ctx,
+				stepCtx.KargoClient,
+				stepCtx.Project,
+				stepCtx.FreightRequests,
+				desiredOrigin,
+				stepCtx.Freight.References(),
+				repoURL,
+				chartName,
+			)
+			if err != nil {
+				return nil, fmt.Errorf("failed to find chart: %w", err)
+			}
+			version = chart.Version
 		}
 
 		var updateUsed bool
 		for i, dep := range chartDependencies {
 			if dep.Repository == update.Repository && dep.Name == update.Name {
-				changes[fmt.Sprintf("dependencies.%d.version", i)] = chart.Version
+				changes[fmt.Sprintf("dependencies.%d.version", i)] = version
 				updateUsed = true
 				break
 			}

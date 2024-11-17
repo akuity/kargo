@@ -39,11 +39,12 @@ multiple working trees.
 | `repoURL` | `string` | Y | The URL of a remote Git repository to clone. |
 | `insecureSkipTLSVerify` | `boolean` | N | Whether to bypass TLS certificate verification when cloning (and for all subsequent operations involving this clone). Setting this to `true` is highly discouraged in production. |
 | `checkout` | `[]object` | Y | The commits, branches, or tags to check out from the repository and the paths where they should be checked out. At least one must be specified. |
-| `checkout[].branch` | `string` | N | A branch to check out. Mutually exclusive with `tag` and `fromFreight=true`. If none of these is specified, the default branch will be checked out. |
+| `checkout[].branch` | `string` | N | A branch to check out. Mutually exclusive with `commit`, `tag`, and `fromFreight=true`. If none of these is specified, the default branch will be checked out. |
 | `checkout[].create` | `boolean` | N | In the event `branch` does not already exist on the remote, whether a new, empty, orphaned branch should be created. Default is `false`, but should commonly be set to `true` for Stage-specific branches, which may not exist yet at the time of a Stage's first promotion. |
-| `checkout[].tag` | `string` | N | A tag to check out. Mutually exclusive with `branch` and `fromFreight=true`. If none of these is specified, the default branch will be checked out. |
-| `checkout[].fromFreight` | `boolean` | N | Whether a commit to check out should be obtained from the Freight being promoted. A value of `true` is mutually exclusive with `branch` and `tag`. If none of these is specified, the default branch will be checked out. Default is `false`, but is often set to `true`. |
-| `checkout[].fromOrigin` | `object` | N | See [specifying origins](#specifying-origins). |
+| `checkout[].commit` | `string` | N | A specific commit to check out. Mutually exclusive with `branch`, `tag`, and `fromFreight=true`. If none of these is specified, the default branch will be checked out. |
+| `checkout[].tag` | `string` | N | A tag to check out. Mutually exclusive with `branch`, `commit`, and `fromFreight=true`. If none of these is specified, the default branch will be checked out. |
+| `checkout[].fromFreight` | `boolean` | N | Whether a commit to check out should be obtained from the Freight being promoted. A value of `true` is mutually exclusive with `branch`, `commit`, and `tag`. If none of these is specified, the default branch will be checked out. Default is `false`, but is often set to `true`. <br/><br/>__Deprecated: Use `commit` with an expression instead. Will be removed in v1.2.0.__ |
+| `checkout[].fromOrigin` | `object` | N | See [specifying origins](#specifying-origins). <br/><br/>__Deprecated: Use `commit` with an expression instead. Will be removed in v1.2.0.__ |
 | `checkout[].path` | `string` | Y | The path for a working tree that will be created from the checked out revision. This path is relative to the temporary workspace that Kargo provisions for use by the promotion process. |
 
 ### `git-clone` Examples
@@ -58,12 +59,15 @@ likely to perform actions that revise the contents of the Stage-specific branch
 using the commit from the Freight as input.
 
 ```yaml
+vars:
+- name: gitRepo
+  value: https://github.com/example/repo.git
 steps:
 - uses: git-clone
   config:
-    repoURL: https://github.com/example/repo.git
+    repoURL: ${{ vars.gitRepo }}
     checkout:
-    - fromFreight: true
+    - commit: ${{ commitFrom(vars.gitRepo) }}
       path: ./src
     - branch: stage/${{ ctx.stage }}
       create: true
@@ -84,20 +88,17 @@ with the help of a [`copy`](#copy) step. For this case, a `git-clone` step may b
 configured similarly to the following:
 
 ```yaml
+vars:
+- name: gitRepo
+  value: https://github.com/example/repo.git
 steps:
 - uses: git-clone
   config:
-    repoURL: https://github.com/example/repo.git
+    repoURL: ${{ vars.gitRepo }}
     checkout:
-    - fromFreight: true
-      fromOrigin:
-        kind: Warehouse
-        name: base
+    - commit: ${{ commitFrom(vars.gitRepo, warehouse("base")).ID }}
       path: ./src
-    - fromFreight: true
-      fromOrigin:
-        kind: Warehouse
-        name: ${{ ctx.stage }}-overlay
+    - commit: ${{ commitFrom(vars.gitRepo, warehouse(ctx.stage + "-overlay")).ID }}
       path: ./overlay
     - branch: stage/${{ ctx.stage }}
       create: true
@@ -177,20 +178,17 @@ Kustomize overlay. Rendering the manifests intended for such a Stage will
 require combining the base and overlay configurations:
 
 ```yaml
+vars:
+- name: gitRepo
+  value: https://github.com/example/repo.git
 steps:
 - uses: git-clone
   config:
-    repoURL: https://github.com/example/repo.git
+    repoURL: ${{ vars.gitRepo }}
     checkout:
-    - fromFreight: true
-      fromOrigin:
-        kind: Warehouse
-        name: base
+    - commit: ${{ commitFrom(vars.gitRepo, warehouse("base")).ID }}
       path: ./src
-    - fromFreight: true
-      fromOrigin:
-        kind: Warehouse
-        name: ${{ ctx.stage }}-overlay
+    - commit: ${{ commitFrom(vars.gitRepo, warehouse(ctx.stage + "-overlay")).ID }}
       path: ./overlay
     - branch: stage/${{ ctx.stage }}
       create: true
@@ -218,10 +216,12 @@ to executing `kustomize edit set image`. This step is commonly followed by a
 |------|------|----------|-------------|
 | `path` | `string` | Y | Path to a directory containing a `kustomization.yaml` file. This path is relative to the temporary workspace that Kargo provisions for use by the promotion process. |
 | `images` | `[]object` | Y | The details of changes to be applied to the `kustomization.yaml` file. At least one must be specified. |
-| `images[].image` | `string` | Y | Name/URL of the image being updated. The Freight being promoted presumably contains a reference to a revision of this image. |
-| `images[].fromOrigin` | `object` | N | See [specifying origins](#specifying-origins). |
+| `images[].image` | `string` | Y | Name/URL of the image being updated. |
+| `images[].tag` | `string` | N | A tag naming a specific revision of `image`. Mutually exclusive with `digest` and `useDigest=true`. If none of these are specified, the tag specified by a piece of Freight referencing `image` will be used as the value of this field. |
+| `images[].digest` | `string` | N | A digest naming a specific revision of `image`. Mutually exclusive with `tag` and `useDigest=true`. If none of these are specified, the tag specified by a piece of Freight referencing `image` will be used as the value of `tag`. |
+| `images[].useDigest` | `boolean` | N | Whether to update the `kustomization.yaml` file using the container image's digest instead of its tag. Mutually exclusive with `digest` and `tag`. If none of these are specified, the tag specified by a piece of Freight referencing `image` will be used as the value of `tag`. <br/><br/>__Deprecated: Use `digest` with an expression instead. Will be removed in v1.2.0.__ |
+| `images[].fromOrigin` | `object` | N | See [specifying origins](#specifying-origins). <br/><br/>__Deprecated: Use `digest` or `tag` with an expression instead. Will be removed in v1.2.0.__ |
 | `images[].newName` | `string` | N | A substitution for the name/URL of the image being updated. This is useful when different Stages have access to different container image repositories (assuming those different repositories contain equivalent images that are tagged identically). This may be a frequent consideration for users of Amazon's Elastic Container Registry. |
-| `images[].useDigest` | `boolean` | N | Whether to update the `kustomization.yaml` file using the container image's digest instead of its tag. |
 
 ### `kustomize-set-image` Examples
 
@@ -230,15 +230,17 @@ to executing `kustomize edit set image`. This step is commonly followed by a
 <TabItem value="common" label="Common Usage" default>
 
 ```yaml
+vars:
+- name: gitRepo
+  value: https://github.com/example/repo.git
+- name: imageRepo
+  value: my/image
 steps:
 - uses: git-clone
   config:
-    repoURL: https://github.com/example/repo.git
+    repoURL: ${{ vars.gitRepo }}
     checkout:
-    - fromFreight: true
-      fromOrigin:
-        kind: Warehouse
-        name: base
+    - commit: ${{ commitFrom(vars.gitRepo).ID }}
       path: ./src
     - branch: stage/${{ ctx.stage }}
       create: true
@@ -250,7 +252,8 @@ steps:
   config:
     path: ./src/base
     images:
-    - image: my/image
+    - image: ${{ vars.imageRepo }}
+      tag: ${{ imageFrom(vars.imageRepo).tag }}
 # Render manifests to ./out, commit, push, etc...
 ```
 
@@ -267,15 +270,15 @@ region, it will be necessary to make a substitution when updating the
 `kustomization.yaml` file. This can be accomplished like so:
 
 ```yaml
+vars:
+- name: gitRepo
+  value: https://github.com/example/repo.git
 steps:
 - uses: git-clone
   config:
-    repoURL: https://github.com/example/repo.git
+    repoURL: ${{ vars.gitRepo }}
     checkout:
-    - fromFreight: true
-      fromOrigin:
-        kind: Warehouse
-        name: base
+    - commit: ${{ commitFrom(vars.gitRepo).ID }}
       path: ./src
     - branch: stage/${{ ctx.stage }}
       create: true
@@ -327,12 +330,15 @@ preceded by a [`git-clear`](#git-clear) step and followed by
 <TabItem value="file" label="Rendering to a File" default>
 
 ```yaml
+vars:
+- name: gitRepo
+  value: https://github.com/example/repo.git
 steps:
 - uses: git-clone
   config:
-    repoURL: https://github.com/example/repo.git
+    repoURL: ${{ vars.gitRepo }}
     checkout:
-    - fromFreight: true
+    - commit: ${{ commitFrom(vars.gitRepo).ID }}
       path: ./src
     - branch: stage/${{ ctx.stage }}
       create: true
@@ -352,12 +358,15 @@ steps:
 <TabItem value="dir" label="Rendering to a Directory" default>
 
 ```yaml
+vars:
+- name: gitRepo
+  value: https://github.com/example/repo.git
 steps:
 - uses: git-clone
   config:
-    repoURL: https://github.com/example/repo.git
+    repoURL: ${{ vars.gitRepo }}
     checkout:
-    - fromFreight: true
+    - commit: ${{ commitFrom(vars.gitRepo).ID }}
       path: ./src
     - branch: stage/${{ ctx.stage }}
       create: true
@@ -385,6 +394,8 @@ file with new version information which is referenced by the Freight being
 promoted. This step is commonly followed by a [`helm-template`](#helm-template)
 step.
 
+__Deprecated: Use the generic `yaml-update` step instead. Will be removed in v1.2.0.__
+
 ### `helm-update-image` Configuration
 
 | Name | Type | Required | Description |
@@ -399,12 +410,15 @@ step.
 ### `helm-update-image` Example
 
 ```yaml
+vars:
+- name: gitRepo
+  value: https://github.com/example/repo.git
 steps:
 - uses: git-clone
   config:
-    repoURL: https://github.com/example/repo.git
+    repoURL: ${{ vars.gitRepo }}
     checkout:
-    - fromFreight: true
+    - commit: ${{ commitFrom(vars.gitRepo).ID }}
       path: ./src
     - branch: stage/${{ ctx.stage }}
       create: true
@@ -428,6 +442,55 @@ steps:
 |------|------|-------------|
 | `commitMessage` | `string` | A description of the change(s) applied by this step. Typically, a subsequent [`git-commit`](#git-commit) step will reference this output and aggregate this commit message fragment with other like it to build a comprehensive commit message that describes all changes. |
 
+## `yaml-update`
+
+`yaml-update` updates the values of specified keys in any YAML file. This step
+most often used to update image tags or digests in a Helm values and is commonly
+followed by a [`helm-template`](#helm-template) step.
+
+### `yaml-update` Configuration
+
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| `path` | `string` | Y | Path to a YAML file. This path is relative to the temporary workspace that Kargo provisions for use by the promotion process. |
+| `updates` | `[]object` | Y | The details of changes to be applied to the file. At least one must be specified. |
+| `updates[].key` | `string` | Y | The key to update within the file. For nested values, use a YAML dot notation path. |
+| `updates[].value` | `string` | Y | The new value for the key. Typically specified using an expression. |
+
+### `yaml-update` Example
+
+```yaml
+vars:
+- name: gitRepo
+  value: https://github.com/example/repo.git
+steps:
+- uses: git-clone
+  config:
+    repoURL: ${{ vars.gitRepo }}
+    checkout:
+    - commit: ${{ commitFrom(vars.gitRepo).ID }}
+      path: ./src
+    - branch: stage/${{ ctx.stage }}
+      create: true
+      path: ./out
+- uses: git-clear
+  config:
+    path: ./out
+- uses: yaml-update
+  config:
+    path: ./src/charts/my-chart/values.yaml
+    updates:
+    - key: image.tag
+      value: ${{ imageFrom("my/image").tag }}
+# Render manifests to ./out, commit, push, etc...
+```
+
+### `yaml-update` Output
+
+| Name | Type | Description |
+|------|------|-------------|
+| `commitMessage` | `string` | A description of the change(s) applied by this step. Typically, a subsequent [`git-commit`](#git-commit) step will reference this output and aggregate this commit message fragment with other like it to build a comprehensive commit message that describes all changes. |
+
 ## `helm-update-chart`
 
 `helm-update-chart` performs specified updates on the `dependencies` section of
@@ -444,7 +507,8 @@ referenced by the Freight being promoted. This step is commonly followed by a
 | `charts` | `[]string` | Y | The details of dependency (subschart) updates to be applied to the chart's `Chart.yaml` file. |
 | `charts[].repository` | `string` | Y | The URL of the Helm chart repository in the `dependencies` entry whose `version` field is to be updated. Must _exactly_ match the `repository` field of that entry. |
 | `charts[].name` | `string` | Y | The name of the chart in in the `dependencies` entry whose `version` field is to be updated. Must exactly match the `name` field of that entry. |
-| `charts[].fromOrigin` | `object` | N | See [specifying origins](#specifying-origins) |
+| `charts[].fromOrigin` | `object` | N | See [specifying origins](#specifying-origins). <br/><br/>__Deprecated: Use `version` with an expression instead. Will be removed in v1.2.0.__ |
+| `charts[].version` | `string` | N | The version to which the dependency should be updated. If left unspecified, the version specified by a piece of Freight referencing this chart will be used. |
 
 ### `helm-update-chart` Examples
 
@@ -470,12 +534,17 @@ The `dependencies` can be updated to reflect the version of `some-chart`
 referenced by the Freight being promoted like so:
 
 ```yaml
+vars:
+- name: gitRepo
+  value: https://github.com/example/repo.git
+- name: chartRepo
+  value: https://example-chart-repo
 steps:
 - uses: git-clone
   config:
-    repoURL: https://github.com/example/repo.git
+    repoURL: ${{ vars.gitRepo }}
     checkout:
-    - fromFreight: true
+    - commit: ${{ commitFrom(vars.gitRepo).ID }}
       path: ./src
     - branch: stage/${{ ctx.stage }}
       create: true
@@ -487,8 +556,9 @@ steps:
   config:
     path: ./src/charts/my-chart
     charts:
-    - repository: https://example-chart-repo
+    - repository: ${{ chartRepo }}
       name: some-chart
+      version: ${{ chartFrom(chartRepo).Version }}
 # Render manifests to ./out, commit, push, etc...
 ```
 
@@ -570,12 +640,17 @@ The `dependencies` can be updated to reflect the version of
 promoted like so:
 
 ```yaml
+vars:
+- name: gitRepo
+  value: https://github.com/example/repo.git
+- name: chartReg
+  value: oci://example-chart-registry
 steps:
 - uses: git-clone
   config:
-    repoURL: https://github.com/example/repo.git
+    repoURL: ${{ vars.gitRepo }}
     checkout:
-    - fromFreight: true
+    - commit: ${{ commitFrom(vars.gitRepo).ID }}
       path: ./src
     - branch: stage/${{ ctx.stage }}
       create: true
@@ -587,8 +662,9 @@ steps:
   config:
     path: ./src/charts/my-chart
     charts:
-    - repository: oci://example-chart-registry
+    - repository: ${{ chartReg }}
       name: some-chart
+      version: ${{ chartFrom(chartReg + "/some-chart").Version }}
 # Render manifests to ./out, commit, push, etc...
 ```
 
@@ -630,12 +706,15 @@ commonly preceded by a [`git-clear`](#git-clear) step and followed by
 <TabItem value="file" label="Rendering to a File" default>
 
 ```yaml
+vars:
+- name: gitRepo
+  value: https://github.com/example/repo.git
 steps:
 - uses: git-clone
   config:
-    repoURL: https://github.com/example/repo.git
+    repoURL: ${{ vars.gitRepo }}
     checkout:
-    - fromFreight: true
+    - commit: ${{ commitFrom(vars.gitRepo).ID }}
       path: ./src
     - branch: stage/${{ ctx.stage }}
       create: true
@@ -657,12 +736,15 @@ steps:
 <TabItem value="dir" label="Rendering to a Directory">
 
 ```yaml
+vars:
+- name: gitRepo
+  value: https://github.com/example/repo.git
 steps:
 - uses: git-clone
   config:
-    repoURL: https://github.com/example/repo.git
+    repoURL: ${{ vars.gitRepo }}
     checkout:
-    - fromFreight: true
+    - commit: ${{ commitFrom(vars.gitRepo).ID }}
       path: ./src
     - branch: stage/${{ ctx.stage }}
       create: true
@@ -703,12 +785,15 @@ desired state and is commonly followed by a [`git-push`](#git-push) step.
 ### `git-commit` Example
 
 ```yaml
+vars:
+- name: gitRepo
+  value: https://github.com/example/repo.git
 steps:
 - uses: git-clone
   config:
-    repoURL: https://github.com/example/repo.git
+    repoURL: ${{ vars.gitRepo }}
     checkout:
-    - fromFreight: true
+    - commit: ${{ commitFrom(vars.gitRepo).ID }}
       path: ./src
     - branch: stage/${{ ctx.stage }}
       create: true
@@ -911,26 +996,28 @@ promotion process.
 | `apps[].sources` | `[]object` | N | Describes Argo CD `ApplicationSource`s to update and how to update them. |
 | `apps[].sources[].repoURL` | `string` | Y | The value of the target `ApplicationSource`'s  own `repoURL` field. This must match exactly. |
 | `apps[].sources[].chart` | `string` | N | Applicable only when the target `ApplicationSource` references a Helm chart repository, the value of the target `ApplicationSource`'s  own `chart` field. This must match exactly. |
-| `apps[].sources[].desiredCommit` | `string` | N | Applicable only when `repoURL` references a Git repository, this field specifies a `commit` to use as the desired revision for the source. This field is mutually exclusive with `desiredCommitFromStep`. If both are left undefined, the desired revision will be determined by Freight (if possible). Note that the source's `targetRevision` will not be updated to this commit unless `updateTargetRevision=true` is set. The utility of this field is to ensure that health checks on Argo CD `ApplicationSource`s can account for scenarios where the desired revision differs from what may be found in Freight, likely due to the use of rendered branches and/or PR-based promotion workflows. |
-| `apps[].sources[].desiredCommitFromStep` | `string` | N | Applicable only when `repoURL` references a Git repository, this field references the `commit` output from a previous step and uses it as the desired revision for the source. This field is mutually exclusive with `desiredCommitFromStep`. If both left undefined, the desired revision will be determined by Freight (if possible). Note that the source's `targetRevision` will not be updated to this commit unless `updateTargetRevision=true` is set. The utility of this field is to ensure that health checks on Argo CD `ApplicationSource`s can account for scenarios where the desired revision differs from what may be found in Freight, likely due to the use of rendered branches and/or PR-based promotion workflows.<br/><br/>__Deprecated: Use `desiredCommit` with an expression instead. Will be removed in v1.2.0.__ |
-| `apps[].sources[].updateTargetRevision` | `boolean` | Y | Indicates whether the target `ApplicationSource` should be updated such that its `targetRevision` field points at the most recently Git commit (if `repoURL` references a Git repository) or chart version (if `repoURL` references a chart repository). |
+| `apps[].sources[].desiredRevision` | `string` | N | Specifies the desired revision for the source. This field is mutually exclusive with `desiredCommitFromStep`. If both are left undefined, the desired revision will be determined by Freight (if possible). Note that the source's `targetRevision` will not be updated to this revision unless `updateTargetRevision=true` is also set. The utility of this field, on its own, is to specify the revision that the `ApplicationSource` should be observably synced to during a health check. |
+| `apps[].sources[].desiredCommitFromStep` | `string` | N | Applicable only when `repoURL` references a Git repository, this field references the `commit` output from a previous step and uses it as the desired revision for the source. This field is mutually exclusive with `desiredRevisionFromStep`. If both are left undefined, the desired revision will be determined by Freight (if possible). Note that the source's `targetRevision` will not be updated to this commit unless `updateTargetRevision=true` is also set. The utility of this field, on its own, is to specify the revision that the `ApplicationSource` should be observably synced to during a health check.<br/><br/>__Deprecated: Use `desiredRevision` with an expression instead. Will be removed in v1.2.0.__ |
+| `apps[].sources[].updateTargetRevision` | `boolean` | Y | Indicates whether the target `ApplicationSource` should be updated such that its `targetRevision` field points directly at the desired revision. |
 | `apps[].sources[].kustomize` | `object` | N | Describes updates to an Argo CD `ApplicationSource`'s Kustomize-specific properties. |
 | `apps[].sources[].kustomize.images` | `[]object` | Y | Describes how to update an Argo CD `ApplicationSource`'s Kustomize-specific properties to reference specific versions of container images. |
-| `apps[].sources[].kustomize.images[].repoURL` | `string` | Y | URL of the image being updated. The Freight being promoted must contain a reference to a revision of this image. |
-| `apps[].sources[].kustomize.images[].newName` | `string` | N | A substitution for the name/URL of the image being updated. This is useful when different Stages have access to different container image repositories (assuming those different repositories contain equivalent images that are tagged identically). This may be a frequent consideration for users of Amazon's Elastic Container Registry. |
+| `apps[].sources[].kustomize.images[].repoURL` | `string` | Y | URL of the image being updated. |
+| `apps[].sources[].kustomize.images[].tag` | `string` | N | A tag naming a specific revision of the image specified by `repoURL`. Mutually exclusive with `digest` and `useDigest=true`. One of `digest`, `tag`, or `useDigest=true` must be specified. |
+| `apps[].sources[].kustomize.images[].digest` | `string` | N | A digest naming a specific revision of the image specified by `repoURL`. Mutually exclusive with `tag` and `useDigest=true`. One of `digest`, `tag`, or `useDigest=true` must be specified. |
 | `apps[].sources[].kustomize.images[].useDigest` | `boolean` | N | Whether to use the container image's digest instead of its tag. |
-| `apps[].sources[].kustomize.images[].fromOrigin` | `object` | N | See [specifying origins](#specifying-origins). If not specified, may inherit a value from `apps[].sources[].kustomize.fromOrigin`. |
-| `apps[].sources[].kustomize.fromOrigin` | `object` | N | See [specifying origins](#specifying-origins). If not specified, may inherit a value from `apps[].sources[].fromOrigin`.  |
+| `apps[].sources[].kustomize.images[].newName` | `string` | N | A substitution for the name/URL of the image being updated. This is useful when different Stages have access to different container image repositories (assuming those different repositories contain equivalent images that are tagged identically). This may be a frequent consideration for users of Amazon's Elastic Container Registry. |
+| `apps[].sources[].kustomize.images[].fromOrigin` | `object` | N | See [specifying origins](#specifying-origins). If not specified, may inherit a value from `apps[].sources[].kustomize.fromOrigin`. <br/><br/>__Deprecated: Use `digest` or `tag` with an expression instead. Will be removed in v1.2.0.__ |
+| `apps[].sources[].kustomize.fromOrigin` | `object` | N | See [specifying origins](#specifying-origins). If not specified, may inherit a value from `apps[].sources[].fromOrigin`. <br/><br/>__Deprecated: Will be removed in v1.2.0.__ |
 | `apps[].sources[].helm` | `object` | N | Describes updates to an Argo CD `ApplicationSource`'s Helm parameters. |
 | `apps[].sources[].helm.images` | `[]object` | Y | Describes how to update  an Argo CD `ApplicationSource`'s Helm parameters to reference specific versions of container images. |
-| `apps[].sources[].helm.images[].repoURL` | `string` | Y | URL of the image being updated. The Freight being promoted must contain a reference to a revision of this image. |
+| `apps[].sources[].helm.images[].repoURL` | `string` | N | URL of the image being updated. __Deprecated: Use `value` with an expression instead. Will be removed in v1.2.0.__ |
 | `apps[].sources[].helm.images[].key` | `string` | Y | The key to update within the target `ApplicationSource`'s `helm.parameters` map. See Helm documentation on the [format and limitations](https://helm.sh/docs/intro/using_helm/#the-format-and-limitations-of---set) of the notation used in this field. |
-| `apps[].sources[].helm.images[].value` | `string` | Y | Specifies how the value of `key` is to be updated. Possible values for this field are limited to:<ul><li>`ImageAndTag`: Replaces the value of `key` with a string in form `<image url>:<tag>`</li><li>`Tag`: Replaces the value of `key` with the image's tag</li><li>`ImageAndDigest`: Replaces the value of `key` with a string in form `<image url>@<digest>`</li><li>`Digest`: Replaces the value of `key` with the image's digest</li></ul> |
-| `apps[].sources[].helm.images[].fromOrigin` | `object` | N | See [specifying origins](#specifying-origins). If not specified, may inherit a value from `apps[].sources[].helm.fromOrigin` |
-| `apps[].sources[].helm.fromOrigin` | `object` | N | See [specifying origins].(#specifying-origins). If not specified, may inherit a value from `apps[].sources[]`. |
-| `apps[].sources[].fromOrigin` | `object` | N | See [specifying origins](#specifying-origins). If not specified, may inherit a value from `apps[].fromOrigin`. |
-| `apps[].fromOrigin` | `object` | N | See [specifying origins](#specifying-origins). If not specified, may inherit a value from `fromOrigin`. |
-| `fromOrigin` | `object` | N | See [specifying origins](#specifying-origins) |
+| `apps[].sources[].helm.images[].value` | `string` | Y | Specifies how the value of `key` is to be updated. When `repoURL` is non-empty, possible values for this field are limited to:<ul><li>`ImageAndTag`: Replaces the value of `key` with a string in form `<image url>:<tag>`</li><li>`Tag`: Replaces the value of `key` with the image's tag</li><li>`ImageAndDigest`: Replaces the value of `key` with a string in form `<image url>@<digest>`</li><li>`Digest`: Replaces the value of `key` with the image's digest</li></ul> When `repoURL` is empty, use an expression in this field to describe the new value.  |
+| `apps[].sources[].helm.images[].fromOrigin` | `object` | N | See [specifying origins](#specifying-origins). If not specified, may inherit a value from `apps[].sources[].helm.fromOrigin`. <br/><br/>__Deprecated: Use `value` with an expression instead. Will be removed in v1.2.0.__ |
+| `apps[].sources[].helm.fromOrigin` | `object` | N | See [specifying origins].(#specifying-origins). If not specified, may inherit a value from `apps[].sources[]`. <br/><br/>__Deprecated: Will be removed in v1.2.0.__ |
+| `apps[].sources[].fromOrigin` | `object` | N | See [specifying origins](#specifying-origins). If not specified, may inherit a value from `apps[].fromOrigin`. <br/><br/>__Deprecated: Will be removed in v1.2.0.__ |
+| `apps[].fromOrigin` | `object` | N | See [specifying origins](#specifying-origins). If not specified, may inherit a value from `fromOrigin`.  <br/><br/>__Deprecated: Will be removed in v1.2.0.__ |
+| `fromOrigin` | `object` | N | See [specifying origins](#specifying-origins). <br/><br/>__Deprecated: Will be removed in v1.2.0.__  |
 
 ### `argocd-update` Examples
 
@@ -976,15 +1063,18 @@ be no remaining record of its desired state.
 :::
 
 ```yaml
+vars:
+- name: gitRepo
+  value: https://github.com/example/repo.git
 steps:
 - uses: argocd-update
   config:
     apps:
     - name: my-app
       sources:
-      - repoURL: https://example-chart-repo
+      - repoURL: ${{ chartRepo }}
         chart: my-chart
-        updateTargetRevision: true
+        targetRevision: ${{ chartFrom(chartRepo, "my-chart").Version }}
 ```
 
 </TabItem>
@@ -1003,6 +1093,9 @@ no remaining record of its desired state.
 :::
 
 ```yaml
+vars:
+- name: gitRepo
+  value: https://github.com/example/repo.git
 steps:
 - uses: argocd-update
   config:
@@ -1012,7 +1105,8 @@ steps:
       - repoURL: https://github.com/example/repo.git
         kustomize:
           images:
-          - repoURL: my/image
+          - repoURL: ${{ vars.imageRepo }}
+            tag: ${{ imageFrom(vars.imageRepo).Tag }}
 ```
 
 </TabItem>
@@ -1039,9 +1133,8 @@ steps:
       - repoURL: https://github.com/example/repo.git
         helm:
           images:
-          - repoURL: my/image
-            key: image.tag
-            value: Tag
+          - key: image.tag
+            value: ${{ imageFrom("my/image").Tag }}
 ```
 
 </TabItem>
@@ -1062,89 +1155,4 @@ without requiring Kargo to understand `Application` health directly.
 Although the `argocd-update` step is the only promotion step to currently
 utilize this health check framework, we anticipate that future built-in and
 third-party promotion steps will take advantage of it as well.
-:::
-
-## Specifying Origins
-
-Many promotion steps, or parts of those steps, will (whether optionally or
-unconditionally) attempt to learn the desired revision(s) of some artifact(s) by
-consulting the revisions of those artifact(s) references by the Freight being
-promoted.
-
-By way of example, this `kustomize-set-image` step will consult the Freight
-being promoted to learn the desired revision of the `my/image` container image:
-
-```yaml
-- uses: kustomize-set-image
-  config:
-    path: ./src/base
-    images:
-    - image: my/image
-```
-
-In some _advanced_ uses cases, Stages may request Freight from multiple origins
-(Warehouses). In such scenarios, it is possible (although somewhat rare) that
-the multiple Freight being promoted may collectively reference multiple distinct
-revisions of the same artifact. In such as case, it can become ambiguous which
-revision of an artifact referenced by a promotion step should be used.
-
-To permit disambiguation in cases such as those described above, all promotion
-steps that have the potential to reference Freight from multiple origins support
-a `fromOrigin` option that can be used to clarify which piece of Freight's
-reference to the artifact should be used by identifying the origin (Warehouse)
-from which the Freight should have originated.
-
-The best way to illustrate this involves a complex example wherein a Stage
-requests Freight from two Warehouses. Both Warehouses subscribe to the same Git
-repository, with one watching for changes to a Kustomize "base" configuration
-and the other watching for changes to a Stage-specific Kustomize overlay.
-Rendering the manifests intended for such a Stage will require combining the
-base and overlay configurations with the help of a [`copy`](#copy) step. For
-this case, a `git-clone` step may be configured similarly to the following:
-
-```yaml
-steps:
-- uses: git-clone
-  config:
-    repoURL: https://github.com/example/repo.git
-    checkout:
-    - fromFreight: true
-      fromOrigin:
-        kind: Warehouse
-        name: base
-      path: ./src
-    - fromFreight: true
-      fromOrigin:
-        kind: Warehouse
-        name: ${{ ctx.stage }}-overlay
-      path: ./overlay
-    - branch: stage/${{ ctx.stage }}
-      create: true
-      path: ./out
-- uses: git-clear
-  config:
-    path: ./out
-- uses: copy
-  config:
-    inPath: ./overlay/stages/${{ ctx.stage }}/kustomization.yaml
-    outPath: ./src/stages/${{ ctx.stage }}/kustomization.yaml
-- uses: kustomize-build
-  config:
-    path: ./src/stages/${{ ctx.stage }}
-    outPath: ./out
-# Commit, push, etc...
-```
-
-Note that when checking out specific revisions of the
-`https://github.com/example/repo.git` repository to different working trees, the
-`git-clone` step has twice utilized `fromOrigin` to clarify which of the Freight
-being promoted should be used to determine the revision to check out.
-
-:::info
-`fromOrigin` never needs to be specified in the majority of use cases wherein
-there is no inherent ambiguity. Kargo will automatically select the correct
-revision of an artifact when there is only one possibility. When Kargo detects
-that there may be multiple possibilities, it will fail and raise an error
-indicating that the user must disambiguate by specifying `fromOrigin` in
-applicable steps.
 :::

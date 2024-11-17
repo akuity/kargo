@@ -1031,6 +1031,14 @@ message StageSpec {
 // StageStatus describes a Stages's current and recent Freight, health, and
 // more.
 message StageStatus {
+  // Conditions contains the last observations of the Stage's current
+  // state.
+  // +patchMergeKey=type
+  // +patchStrategy=merge
+  // +listType=map
+  // +listMapKey=type
+  repeated .k8s.io.apimachinery.pkg.apis.meta.v1.Condition conditions = 13;
+
   // LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh
   // annotation that was handled by the controller. This field can be used to
   // determine whether the request to refresh the resource has been handled.

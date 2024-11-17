@@ -4474,6 +4474,20 @@ func (m *StageStatus) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if len(m.Conditions) > 0 {
+		for iNdEx := len(m.Conditions) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.Conditions[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintGenerated(dAtA, i, uint64(size))
+			}
+			i--
+			dAtA[i] = 0x6a
+		}
+	}
 	i -= len(m.FreightSummary)
 	copy(dAtA[i:], m.FreightSummary)
 	i = encodeVarintGenerated(dAtA, i, uint64(len(m.FreightSummary)))
@@ -5934,6 +5948,12 @@ func (m *StageStatus) Size() (n int) {
 	n += 1 + l + sovGenerated(uint64(l))
 	l = len(m.FreightSummary)
 	n += 1 + l + sovGenerated(uint64(l))
+	if len(m.Conditions) > 0 {
+		for _, e := range m.Conditions {
+			l = e.Size()
+			n += 1 + l + sovGenerated(uint64(l))
+		}
+	}
 	return n
 }
 
@@ -6854,6 +6874,11 @@ func (this *StageStatus) String() string {
 		repeatedStringForFreightHistory += strings.Replace(f.String(), "FreightCollection", "FreightCollection", 1) + ","
 	}
 	repeatedStringForFreightHistory += "}"
+	repeatedStringForConditions := "[]Condition{"
+	for _, f := range this.Conditions {
+		repeatedStringForConditions += fmt.Sprintf("%v", f) + ","
+	}
+	repeatedStringForConditions += "}"
 	s := strings.Join([]string{`&StageStatus{`,
 		`Phase:` + fmt.Sprintf("%v", this.Phase) + `,`,
 		`FreightHistory:` + repeatedStringForFreightHistory + `,`,
@@ -6864,6 +6889,7 @@ func (this *StageStatus) String() string {
 		`LastPromotion:` + strings.Replace(this.LastPromotion.String(), "PromotionReference", "PromotionReference", 1) + `,`,
 		`LastHandledRefresh:` + fmt.Sprintf("%v", this.LastHandledRefresh) + `,`,
 		`FreightSummary:` + fmt.Sprintf("%v", this.FreightSummary) + `,`,
+		`Conditions:` + repeatedStringForConditions + `,`,
 		`}`,
 	}, "")
 	return s
@@ -15510,6 +15536,40 @@ func (m *StageStatus) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			m.FreightSummary = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 13:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Conditions", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Conditions = append(m.Conditions, v1.Condition{})
+			if err := m.Conditions[len(m.Conditions)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
