@@ -512,18 +512,13 @@ export const Pipelines = ({
                             .length <= 1
                         }
                         onPromoteClick={(type: FreightTimelineAction) => {
-                          let selectWarehouse = '';
-
                           // which warehouse to select?
                           // check if they have filter applied in freight timeline
-                          if (selectedWarehouse !== '') {
-                            selectWarehouse = selectedWarehouse;
-                          } // if not, then select the warehouse of latest promoted freight
-                          else {
-                            selectWarehouse = getCurrentFreightWarehouse(node.data);
+                          // if not, then select the warehouse of latest promoted freight
+                          if (selectedWarehouse === '') {
+                            setSelectedWarehouse(getCurrentFreightWarehouse(node.data));
                           }
 
-                          setSelectedWarehouse(selectWarehouse);
                           if (state.stage === node.data?.metadata?.name) {
                             // deselect
                             state.clear();
@@ -579,7 +574,7 @@ export const Pipelines = ({
                       }
                     >
                       {node.type === NodeType.WAREHOUSE && (
-                        <div className='flex w-full h-full gap-2 justify-center items-center'>
+                        <div className={'flex w-full h-full gap-2 justify-center items-center'}>
                           {(Object.keys(warehouseMap) || []).length > 1 && (
                             <Button
                               icon={<FontAwesomeIcon icon={faFilter} />}
@@ -596,6 +591,9 @@ export const Pipelines = ({
                                 setSelectedWarehouse(newSelectedWarehouse);
                                 lastExplicitlySelectedWarehouse.current = newSelectedWarehouse;
                               }}
+                              className={classNames({
+                                'scale-110': selectedWarehouse === node.warehouseName
+                              })}
                             />
                           )}
                           <Button
