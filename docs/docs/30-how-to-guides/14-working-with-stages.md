@@ -1,13 +1,18 @@
 ---
 description: Learn how to work effectively with stages
-sidebar_label: Working with stages
+sidebar_label: Working with Stages
 ---
 
-# Working With Stages
+# Working with Stages
 
 Each Kargo Stage is represented by a Kubernetes resource of type `Stage`.
 
-A `Stage` resource's `spec` field decomposes into three main areas of concern:
+## The `Stage` Resource Type
+
+Like most Kubernetes resources, a `Stage` is composed of a user-defined `spec` field
+and a system-populated `status` field.
+
+A `Stage` resource's `spec` field is itself composed of three main areas of concern:
 
 * Requested Freight
 
@@ -15,7 +20,7 @@ A `Stage` resource's `spec` field decomposes into three main areas of concern:
 
 * Verification
 
-The following sections will explore each of these in greater detail.
+The following sections will explore each of these `spec` sections as well as `status` in greater detail.
 
 ### Requested Freight
 
@@ -121,9 +126,7 @@ spec:
 :::tip
 By requesting `Freight` from multiple sources, a `Stage` can effectively
 participate in _multiple pipelines_ that may each deliver different collections
-of artifacts independently of the others. At present, this is most useful for
-the delivery of microservices that are developed and deployed in parallel,
-although other uses of this feature are anticipated in the future.
+of artifacts independently of the others.
 :::
 
 ### Promotion Templates
@@ -298,18 +301,6 @@ of the Argo Rollouts documentation for comprehensive coverage of the full range
 of `AnalysisTemplate` capabilities.
 :::
 
-To manage this verification process for `Stage`s you can use the `kargo verify` command. It allows you to rerun or abort the verification of a `Stage`'s current `Freight`.
-
-To rerun the verification for `test` `Stage`:
-```shell
-kargo verify stage --project=kargo-demo test
-```
-
-If you need to stop an ongoing verification process in a `Stage`, you can use the `--abort` flag:
-```shell
-kargo verify stage --project=kargo-demo test --abort
-```
-
 ### Status
 
 A `Stage` resource's `status` field records:
@@ -410,12 +401,121 @@ status:
   phase: Steady
 ```
 
-## Refresh
+## Interacting with Stages
 
-Refreshing a `Stage` helps update its state based on any new changes in `Freight` or configuration. By refreshing, you can ensure that the `Stage` reflects the latest deployment status or artifact updates.
+Kargo provides tools to manage Stages using either the Kargo Dashboard or the
+Kargo CLI. This section explains how to handle Stages effectively through both interfaces.
 
-```shell
-kargo refresh stage --project=kargo-demo staging
-```
+### Creating a Stage
 
-Running this command updates the `staging` `Stage` of the `kargo-demo` project to reflect the most recent `Freight` or configuration changes.
+<Tabs groupId="create-stage">
+  <TabItem value="ui" label="Create a Stage using the Kargo Dashboard" default>
+    TODO
+  </TabItem>
+  <TabItem value="cli" label="Create a Stage using the Kargo CLI">
+    To create a `Stage`, define it in a YAML file and apply it using the `kargo create` command:
+
+    ```yaml
+    apiVersion: kargo.akuity.io/v1alpha1
+    kind: Stage
+    metadata:
+      name: test
+      namespace: kargo-demo
+    spec:
+      ### Stage specifications go here
+    ```
+    Save the YAML as `stages.yaml` and apply it with:
+
+    ```shell
+    kargo create -f stages.yaml
+    ```
+
+    Example Output:
+    ```shell
+    stage.kargo.akuity.io/test created
+    ```
+
+    To confirm the creation, use the following command to view the Stage resource:
+
+    ```shell
+    kargo get stage test --project kargo-demo
+    ```
+
+    Example Output:
+    ```shell
+    NAME    SHARD   CURRENT FREIGHT   HEALTH   PHASE  AGE
+    test                                              70s
+    ```
+  </TabItem>
+</Tabs>
+
+### Deleting a Stage
+
+<Tabs groupId="delete-stage">
+  <TabItem value="ui" label="Delete a Stage using the Kargo Dashboard" default>
+    TODO
+  </TabItem>
+  <TabItem value="cli" label="Delete a Stage using the Kargo CLI">
+    To delete a `Stage`, run the following command:
+
+    ```shell
+    kargo delete stage --project <project-name> <stage-name>
+        ```
+
+        **Example Output:**
+        ```shell
+        stage.kargo.akuity.io/<stage-name> deleted
+          ```
+  </TabItem>
+</Tabs>
+
+### Refreshing a Stage
+
+Refreshing a `Stage` ensures that its state is updated to reflect any recent changes in
+`Freight` or configuration. This keeps the `Stage` aligned with the latest deployment and artifact information.
+
+<Tabs groupId="refresh-stage">
+  <TabItem value="ui" label="Refresh a Stage using the Kargo Dashboard" default>
+    TODO
+  </TabItem>
+  <TabItem value="cli" label="Refresh a Stage using the Kargo CLI">
+    Use the `kargo refresh` command to update a `Stage`:
+
+    ```shell
+    kargo refresh stage --project=kargo-demo test
+    ```
+
+    **Example Output:**
+    ```shell
+    stage 'kargo-demo/test' refreshed
+    ```
+
+    This ensures the `test` Stage in the `kargo-demo` project reflects the latest `Freight` or configuration updates.
+  </TabItem>
+</Tabs>
+
+### Verifying a Stage's Current Freight
+
+Verifying a `Stage` checks its current `Freight` and ensures it is
+functioning correctly. You can also rerun or abort the verification process.
+
+<Tabs groupId="verify-stage">
+  <TabItem value="ui" label="Verify a Stage using the Kargo Dashboard" default>
+    TODO
+  </TabItem>
+  <TabItem value="cli" label="Verify a Stage using the Kargo CLI">
+    To rerun the verification of the `test` Stage, run:
+
+    ```shell
+    kargo verify stage --project=kargo-demo test
+    ```
+
+    If you need to stop an ongoing verification, use the `--abort` flag:
+
+    ```shell
+    kargo verify stage --project=kargo-demo test --abort
+    ```
+  </TabItem>
+</Tabs>
+
+**Note:** For more details on promoting a Stage, visit the **Working with Promotions** page.
