@@ -529,6 +529,7 @@ export const Pipelines = ({
                             state.select(type, stageName, undefined);
                           }
                         }}
+                        selectedWarehouse={selectedWarehouse}
                         action={state.action}
                         onClick={
                           state.action === FreightTimelineAction.ManualApproval
