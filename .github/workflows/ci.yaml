@@ -44,7 +44,7 @@ jobs:
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
   
-  lint-ui:
+  lint-and-typecheck-ui:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
@@ -65,6 +65,8 @@ jobs:
         node-version: "22.8.0"
         cache: "pnpm"
         cache-dependency-path: "**/pnpm-lock.yaml"
+    - name: Run typecheck
+      run: make typecheck-ui
     - name: Run linter
       run: make lint-ui
 

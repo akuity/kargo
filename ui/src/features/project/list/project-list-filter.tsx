@@ -20,13 +20,15 @@ export const ProjectListFilter = ({
   const navigate = useNavigate();
 
   const filteredProjects = data?.projects.filter((p) =>
-    p.metadata?.name.toLowerCase().includes(filter.toLowerCase())
+    p.metadata?.name?.toLowerCase().includes(filter.toLowerCase())
   );
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && filteredProjects?.length === 1) {
       const selectedProject = filteredProjects[0].metadata?.name;
-      navigate(paths.project.replace(':name', selectedProject));
+      if (selectedProject) {
+        navigate(paths.project.replace(':name', selectedProject));
+      }
     }
   };
 

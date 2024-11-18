@@ -96,6 +96,11 @@ lint-ui:
 	pnpm --dir=ui install --dev
 	pnpm --dir=ui run lint
 
+.PHONY: typecheck-ui
+typecheck-ui:
+	pnpm --dir=ui install
+	pnpm --dir=ui run typecheck
+
 .PHONY: format-ui
 format-ui:
 	pnpm --dir=ui install --dev

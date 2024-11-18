@@ -21,5 +21,6 @@
       "@kargo-public/*": ["./public/*"]
     }
   },
-  "include": ["src/**/*.d.ts", "src/**/*.ts", "src/**/*.tsx"]
+  "include": ["src/**/*.d.ts", "src/**/*.ts", "src/**/*.tsx"],
+  "exclude": ["src/**/*.test.ts"]
 }

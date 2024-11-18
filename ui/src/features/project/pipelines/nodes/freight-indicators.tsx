@@ -32,7 +32,7 @@ export const FreightIndicators = ({
             style={{
               width: '10px',
               height: '10px',
-              backgroundColor: warehouseColorMap[freight?.warehouse || '']
+              backgroundColor: warehouseColorMap[freight?.origin?.name || '']
             }}
             onClick={(e) => {
               e.stopPropagation();
