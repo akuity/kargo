@@ -57,7 +57,8 @@ spec:
       - name: management-controller
         image: {{ include "kargo.image" . }}
         imagePullPolicy: {{ .Values.image.pullPolicy }}
-        command: ["/usr/local/bin/kargo", "management-controller"]
+        command: ["/sbin/tini", "--", "/usr/local/bin/kargo"]
+        args: ["management-controller"]
         env:
         - name: GOMEMLIMIT
           valueFrom:
