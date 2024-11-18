@@ -75,36 +75,29 @@ func Test_gitCloner_validate(t *testing.T) {
 			},
 		},
 		{
-			name: "neither branch nor fromFreight nor tag specified",
-			// This is ok. The behavior should be to clone the default branch.
-			config: Config{ // Should be completely valid
-				"repoURL": "https://github.com/example/repo.git",
-				"checkout": []Config{{
-					"path": "/fake/path",
-				}},
-			},
-		},
-		{
-			name: "branch is empty string, fromFreight is explicitly false, and tag is empty string",
-			// This is ok. The behavior should be to clone the default branch.
-			config: Config{ // Should be completely valid
-				"repoURL": "https://github.com/example/repo.git",
-				"checkout": []Config{{
-					"branch":      "",
-					"fromFreight": false,
-					"tag":         "",
-					"path":        "/fake/path",
-				}},
-			},
-		},
-		{
-			name: "just branch is specified",
-			config: Config{ // Should be completely valid
-				"repoURL": "https://github.com/example/repo.git",
+			name: "branch and commit are both specified",
+			// These are meant to be mutually exclusive.
+			config: Config{
 				"checkout": []Config{{
 					"branch": "fake-branch",
-					"path":   "/fake/path",
+					"commit": "fake-commit",
 				}},
+			},
+			expectedProblems: []string{
+				"checkout.0: Must validate one and only one schema",
+			},
+		},
+		{
+			name: "branch and tag are both specified",
+			// These are meant to be mutually exclusive.
+			config: Config{
+				"checkout": []Config{{
+					"branch": "fake-branch",
+					"tag":    "fake-tag",
+				}},
+			},
+			expectedProblems: []string{
+				"checkout.0: Must validate one and only one schema",
 			},
 		},
 		{
@@ -134,11 +127,11 @@ func Test_gitCloner_validate(t *testing.T) {
 			},
 		},
 		{
-			name: "branch and tag are both specified",
+			name: "commit and tag are both specified",
 			// These are meant to be mutually exclusive.
 			config: Config{
 				"checkout": []Config{{
-					"branch": "fake-branch",
+					"commit": "fake-commit",
 					"tag":    "fake-tag",
 				}},
 			},
@@ -147,36 +140,51 @@ func Test_gitCloner_validate(t *testing.T) {
 			},
 		},
 		{
-			name: "just fromFreight is true",
-			config: Config{ // Should be completely valid
-				"repoURL": "https://github.com/example/repo.git",
-				"checkout": []Config{{
-					"fromFreight": true,
-					"path":        "/fake/path",
-				}},
-			},
-		},
-		{
-			name: "fromFreight is true and fromOrigin is specified",
-			config: Config{ // Should be completely valid
-				"repoURL": "https://github.com/example/repo.git",
-				"checkout": []Config{{
-					"fromFreight": true,
-					"fromOrigin": Config{
-						"kind": "Warehouse",
-						"name": "fake-warehouse",
-					},
-					"path": "/fake/path",
-				}},
-			},
-		},
-		{
-			name: "fromFreight is true and tag is specified",
+			name: "commit is specified and fromFreight is true",
 			// These are meant to be mutually exclusive.
 			config: Config{
 				"checkout": []Config{{
+					"commit":      "fake-commit",
 					"fromFreight": true,
+				}},
+			},
+			expectedProblems: []string{
+				"checkout.0: Must validate one and only one schema",
+			},
+		},
+		{
+			name: "commit and fromOrigin are both specified",
+			// These are not meant to be used together.
+			config: Config{
+				"checkout": []Config{{
+					"commit":     "fake-commit",
+					"fromOrigin": Config{},
+				}},
+			},
+			expectedProblems: []string{
+				"checkout.0: Must validate one and only one schema",
+			},
+		},
+		{
+			name: "tag is specified and fromFreight is true",
+			// These are meant to be mutually exclusive.
+			config: Config{
+				"checkout": []Config{{
 					"tag":         "fake-tag",
+					"fromFreight": true,
+				}},
+			},
+			expectedProblems: []string{
+				"checkout.0: Must validate one and only one schema",
+			},
+		},
+		{
+			name: "tag and fromOrigin are both specified",
+			// These are not meant to be used together.
+			config: Config{
+				"checkout": []Config{{
+					"tag":        "fake-tag",
+					"fromOrigin": Config{},
 				}},
 			},
 			expectedProblems: []string{
@@ -196,29 +204,6 @@ func Test_gitCloner_validate(t *testing.T) {
 			},
 		},
 		{
-			name: "fromOrigin and tag are both specified",
-			// These are not meant to be used together.
-			config: Config{
-				"checkout": []Config{{
-					"fromOrigin": Config{},
-					"tag":        "fake-tag",
-				}},
-			},
-			expectedProblems: []string{
-				"checkout.0: Must validate one and only one schema",
-			},
-		},
-		{
-			name: "just tag is specified",
-			config: Config{ // Should be completely valid
-				"repoURL": "https://github.com/example/repo.git",
-				"checkout": []Config{{
-					"tag":  "fake-tag",
-					"path": "/fake/path",
-				}},
-			},
-		},
-		{
 			name: "valid kitchen sink",
 			config: Config{
 				"repoURL": "https://github.com/example/repo.git",
@@ -227,12 +212,55 @@ func Test_gitCloner_validate(t *testing.T) {
 						"path": "/fake/path/0",
 					},
 					{
+						"branch":      "",
+						"commit":      "",
+						"tag":         "",
+						"fromFreight": false,
+						"path":        "/fake/path/1",
+					},
+					{
 						"branch": "fake-branch",
-						"path":   "/fake/path/1",
+						"path":   "/fake/path/2",
+					},
+					{
+						"branch":      "fake-branch",
+						"commit":      "",
+						"tag":         "",
+						"fromFreight": false,
+						"path":        "/fake/path/3",
+					},
+					{
+						"commit": "fake-commit",
+						"path":   "/fake/path/4",
+					},
+					{
+						"branch":      "",
+						"commit":      "fake-commit",
+						"tag":         "",
+						"fromFreight": false,
+						"path":        "/fake/path/5",
+					},
+					{
+						"tag":  "fake-tag",
+						"path": "/fake/path/6",
+					},
+					{
+						"branch":      "",
+						"commit":      "",
+						"tag":         "fake-tag",
+						"fromFreight": false,
+						"path":        "/fake/path/7",
 					},
 					{
 						"fromFreight": true,
-						"path":        "/fake/path/2",
+						"path":        "/fake/path/8",
+					},
+					{
+						"branch":      "",
+						"commit":      "",
+						"tag":         "",
+						"fromFreight": true,
+						"path":        "/fake/path/9",
 					},
 					{
 						"fromFreight": true,
@@ -240,11 +268,7 @@ func Test_gitCloner_validate(t *testing.T) {
 							"kind": "Warehouse",
 							"name": "fake-warehouse",
 						},
-						"path": "/fake/path/3",
-					},
-					{
-						"tag":  "fake-tag",
-						"path": "/fake/path/4",
+						"path": "/fake/path/10",
 					},
 				},
 			},
@@ -295,6 +319,9 @@ func Test_gitCloner_runPromotionStep(t *testing.T) {
 	err = repo.Push(nil)
 	require.NoError(t, err)
 
+	commitID, err := repo.LastCommitID()
+	require.NoError(t, err)
+
 	// Now we can proceed to test gitCloner...
 
 	r := newGitCloner()
@@ -313,29 +340,27 @@ func Test_gitCloner_runPromotionStep(t *testing.T) {
 			RepoURL: fmt.Sprintf("%s/test.git", server.URL),
 			Checkout: []Checkout{
 				{
-					// "master" is still the default branch name for a new repository
-					// unless you configure it otherwise.
-					Branch: "master",
-					Path:   "master",
+					Commit: commitID,
+					Path:   "src",
 				},
 				{
 					Branch: "stage/dev",
-					Path:   "dev",
+					Path:   "out",
 				},
 			},
 		},
 	)
 	require.NoError(t, err)
 	require.Equal(t, kargoapi.PromotionPhaseSucceeded, res.Status)
-	require.DirExists(t, filepath.Join(stepCtx.WorkDir, "master"))
+	require.DirExists(t, filepath.Join(stepCtx.WorkDir, "src"))
 	// The checked out master branch should have the content we know is in the
 	// test remote's master branch.
-	require.FileExists(t, filepath.Join(stepCtx.WorkDir, "master", "test.txt"))
-	require.DirExists(t, filepath.Join(stepCtx.WorkDir, "dev"))
+	require.FileExists(t, filepath.Join(stepCtx.WorkDir, "src", "test.txt"))
+	require.DirExists(t, filepath.Join(stepCtx.WorkDir, "out"))
 	// The stage/dev branch is a new orphan branch with a single empty commit.
 	// It should lack any content.
-	dirEntries, err := os.ReadDir(filepath.Join(stepCtx.WorkDir, "dev"))
+	dirEntries, err := os.ReadDir(filepath.Join(stepCtx.WorkDir, "out"))
 	require.NoError(t, err)
 	require.Len(t, dirEntries, 1) // Just the .git file
-	require.FileExists(t, filepath.Join(stepCtx.WorkDir, "dev", ".git"))
+	require.FileExists(t, filepath.Join(stepCtx.WorkDir, "out", ".git"))
 }

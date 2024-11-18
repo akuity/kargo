@@ -307,15 +307,13 @@ func (o *controllerOptions) setupReconcilers(
 		return fmt.Errorf("error setting up Promotions reconciler: %w", err)
 	}
 
-	if err := stages.SetupReconcilerWithManager(
+	if err := stages.NewRegularStageReconciler(stagesReconcilerCfg, directivesEngine).SetupWithManager(
 		ctx,
 		kargoMgr,
 		argocdMgr,
-		directivesEngine,
-		stagesReconcilerCfg,
 		sharedIndexer,
 	); err != nil {
-		return fmt.Errorf("error setting up Stages reconciler: %w", err)
+		return fmt.Errorf("error setting up regular Stages reconciler: %w", err)
 	}
 
 	if err := stages.NewControlFlowStageReconciler(stagesReconcilerCfg).SetupWithManager(

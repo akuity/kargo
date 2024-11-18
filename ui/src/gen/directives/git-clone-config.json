@@ -22,7 +22,11 @@
     "properties": {
      "branch": {
       "type": "string",
-      "description": "The branch to checkout. Mutually exclusive with 'tag' and 'fromFreight=true'. If none of these is specified, the default branch is checked out."
+      "description": "The branch to checkout. Mutually exclusive with 'commit', 'tag', and 'fromFreight=true'. If none of these are specified, the default branch is checked out."
+     },
+     "commit": {
+      "type": "string",
+      "description": "The commit to checkout. Mutually exclusive with 'branch', 'tag', and 'fromFreight=true'. If none of these are specified, the default branch is checked out."
      },
      "create": {
       "type": "boolean",
@@ -30,7 +34,7 @@
      },
      "fromFreight": {
       "type": "boolean",
-      "description": "Indicates whether the ID of a commit to check out may be obtained from Freight. A value of 'true' is mutually exclusive with 'branch' and 'tag'. If none of these is specified, the default branch is checked out."
+      "description": "Indicates whether the ID of a commit to check out may be obtained from Freight. A value of 'true' is mutually exclusive with 'branch', 'commit', and 'tag'. If none of these are specified, the default branch is checked out."
      },
      "fromOrigin": {
       "type": "object",
@@ -57,7 +61,7 @@
      },
      "tag": {
       "type": "string",
-      "description": "The tag to checkout. Mutually exclusive with 'branch' and 'fromFreight=true'. If none of these is specified, the default branch is checked out."
+      "description": "The tag to checkout. Mutually exclusive with 'branch', 'commit', and 'fromFreight=true'. If none of these are specified, the default branch is checked out."
      }
     }
    }

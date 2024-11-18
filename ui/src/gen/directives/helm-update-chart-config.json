@@ -23,7 +23,8 @@
      },
      "name": {
       "type": "string",
-      "description": "The name of the subchart, as defined in `Chart.yaml`."
+      "description": "The name of the subchart, as defined in `Chart.yaml`.",
+      "minLength": 1
      },
      "fromOrigin": {
       "type": "object",
@@ -42,6 +43,10 @@
         "minLength": 1
        }
       }
+     },
+     "version": {
+      "type": "string",
+      "description": "The version of the subchart to update to. If not specified, a version referenced by the Freight is used."
      }
     }
    }

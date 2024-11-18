@@ -26,7 +26,7 @@ import (
 	fakeevent "github.com/akuity/kargo/internal/kubernetes/event/fake"
 )
 
-func Test_controlFlowStageReconciler_Reconcile(t *testing.T) {
+func TestControlFlowStageReconciler_Reconcile(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, kargoapi.AddToScheme(scheme))
 
@@ -357,7 +357,7 @@ func Test_controlFlowStageReconciler_Reconcile(t *testing.T) {
 	}
 }
 
-func Test_controlFlowStageReconciler_reconcile(t *testing.T) {
+func TestControlFlowStageReconciler_reconcile(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, kargoapi.AddToScheme(scheme))
 
@@ -641,7 +641,7 @@ func Test_controlFlowStageReconciler_reconcile(t *testing.T) {
 	}
 }
 
-func Test_controlFlowStageReconciler_initializeStatus(t *testing.T) {
+func TestControlFlowStageReconciler_initializeStatus(t *testing.T) {
 	tests := []struct {
 		name       string
 		stage      *kargoapi.Stage
@@ -711,7 +711,7 @@ func Test_controlFlowStageReconciler_initializeStatus(t *testing.T) {
 	}
 }
 
-func Test_controlFlowStageReconciler_getAvailableFreight(t *testing.T) {
+func TestControlFlowStageReconciler_getAvailableFreight(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, kargoapi.AddToScheme(scheme))
 
@@ -1153,7 +1153,7 @@ func Test_controlFlowStageReconciler_getAvailableFreight(t *testing.T) {
 	}
 }
 
-func Test_controlFlowStageReconciler_verifyFreight(t *testing.T) {
+func TestControlFlowStageReconciler_verifyFreight(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, kargoapi.AddToScheme(scheme))
 
@@ -1419,7 +1419,7 @@ func Test_controlFlowStageReconciler_verifyFreight(t *testing.T) {
 	}
 }
 
-func Test_controlFlowStageReconciler_handleDelete(t *testing.T) {
+func TestControlFlowStageReconciler_handleDelete(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, kargoapi.AddToScheme(scheme))
 
@@ -1548,7 +1548,7 @@ func Test_controlFlowStageReconciler_handleDelete(t *testing.T) {
 	}
 }
 
-func Test_controlFlowStageReconciler_clearVerifications(t *testing.T) {
+func TestControlFlowStageReconciler_clearVerifications(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, kargoapi.AddToScheme(scheme))
 
@@ -1742,7 +1742,7 @@ func Test_controlFlowStageReconciler_clearVerifications(t *testing.T) {
 	}
 }
 
-func Test_controlFlowStageReconciler_clearApprovals(t *testing.T) {
+func TestControlFlowStageReconciler_clearApprovals(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, kargoapi.AddToScheme(scheme))
 
@@ -1936,7 +1936,7 @@ func Test_controlFlowStageReconciler_clearApprovals(t *testing.T) {
 	}
 }
 
-func Test_controlFlowStageReconciler_clearAnalysisRuns(t *testing.T) {
+func TestControlFlowStageReconciler_clearAnalysisRuns(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, kargoapi.AddToScheme(scheme))
 	require.NoError(t, rollouts.AddToScheme(scheme))

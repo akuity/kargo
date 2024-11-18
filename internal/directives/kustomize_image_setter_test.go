@@ -18,6 +18,178 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
+func Test_kustomizeImageSetter_validate(t *testing.T) {
+	testCases := []struct {
+		name             string
+		config           Config
+		expectedProblems []string
+	}{
+		{
+			name:   "path is not specified",
+			config: Config{},
+			expectedProblems: []string{
+				"(root): path is required",
+			},
+		},
+		{
+			name: "path is empty",
+			config: Config{
+				"path": "",
+			},
+			expectedProblems: []string{
+				"path: String length must be greater than or equal to 1",
+			},
+		},
+		{
+			name:   "images is null",
+			config: Config{},
+			expectedProblems: []string{
+				"(root): images is required",
+			},
+		},
+		{
+			name: "images is empty",
+			config: Config{
+				"images": []Config{},
+			},
+			expectedProblems: []string{
+				"images: Array must have at least 1 items",
+			},
+		},
+		{
+			name: "image not specified",
+			config: Config{
+				"images": []Config{{}},
+			},
+			expectedProblems: []string{
+				"images.0: image is required",
+			},
+		},
+		{
+			name: "image is empty",
+			config: Config{
+				"images": []Config{{
+					"image": "",
+				}},
+			},
+			expectedProblems: []string{
+				"images.0.image: String length must be greater than or equal to 1",
+			},
+		},
+		{
+			name: "digest and tag are both specified",
+			// These should be mutually exclusive.
+			config: Config{
+				"images": []Config{{
+					"digest": "fake-digest",
+					"tag":    "fake-tag",
+				}},
+			},
+			expectedProblems: []string{
+				"images.0: Must validate one and only one schema (oneOf)",
+			},
+		},
+		{
+			name: "digest and useDigest are both specified",
+			// These should be mutually exclusive.
+			config: Config{
+				"images": []Config{{
+					"digest":    "fake-digest",
+					"useDigest": true,
+				}},
+			},
+			expectedProblems: []string{
+				"images.0: Must validate one and only one schema (oneOf)",
+			},
+		},
+		{
+			name: "tag and useDigest are both specified",
+			// These should be mutually exclusive.
+			config: Config{
+				"images": []Config{{
+					"tag":       "fake-tag",
+					"useDigest": true,
+				}},
+			},
+			expectedProblems: []string{
+				"images.0: Must validate one and only one schema (oneOf)",
+			},
+		},
+		{
+			name: "valid kitchen sink",
+			config: Config{
+				"path": "fake-path",
+				"images": []Config{
+					{
+						"image": "fake-image-0",
+					},
+					{
+						"image":     "fake-image-1",
+						"digest":    "",
+						"tag":       "",
+						"useDigest": false,
+					},
+					{
+						"image":  "fake-image-2",
+						"digest": "fake-digest",
+					},
+					{
+						"image":     "fake-image-3",
+						"digest":    "fake-digest",
+						"tag":       "",
+						"useDigest": false,
+					},
+					{
+						"image": "fake-image-4",
+						"tag":   "fake-tag",
+					},
+					{
+						"image":     "fake-image-5",
+						"digest":    "",
+						"tag":       "fake-tag",
+						"useDigest": false,
+					},
+					{
+						"image":     "fake-image-6",
+						"useDigest": true,
+					},
+					{
+						"image":     "fake-image-7",
+						"digest":    "",
+						"tag":       "",
+						"useDigest": true,
+					},
+					{
+						"image":     "fake-image-8",
+						"useDigest": true,
+						"fromOrigin": Config{
+							"kind": Warehouse,
+							"name": "fake-warehouse",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	r := newKustomizeImageSetter()
+	runner, ok := r.(*kustomizeImageSetter)
+	require.True(t, ok)
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			err := runner.validate(testCase.config)
+			if len(testCase.expectedProblems) == 0 {
+				require.NoError(t, err)
+			} else {
+				for _, problem := range testCase.expectedProblems {
+					require.ErrorContains(t, err, problem)
+				}
+			}
+		})
+	}
+}
+
 func Test_kustomizeImageSetter_runPromotionStep(t *testing.T) {
 	const testNamespace = "test-project-run"
 
@@ -180,6 +352,26 @@ func Test_kustomizeImageSetter_buildTargetImages(t *testing.T) {
 		freightReferences map[string]kargoapi.FreightReference
 		assertions        func(*testing.T, map[string]kustypes.Image, error)
 	}{
+		{
+			name: "digest or tag specified",
+			images: []KustomizeSetImageConfigImage{
+				{
+					Image: "nginx",
+					Tag:   "fake-tag",
+				},
+				{
+					Image:  "redis",
+					Digest: "fake-digest",
+				},
+			},
+			assertions: func(t *testing.T, result map[string]kustypes.Image, err error) {
+				require.NoError(t, err)
+				assert.Equal(t, map[string]kustypes.Image{
+					"nginx": {Name: "nginx", NewTag: "fake-tag"},
+					"redis": {Name: "redis", Digest: "fake-digest"},
+				}, result)
+			},
+		},
 		{
 			name: "discovers origins and builds target images",
 			images: []KustomizeSetImageConfigImage{

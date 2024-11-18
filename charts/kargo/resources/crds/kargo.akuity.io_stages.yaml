@@ -82,7 +82,11 @@ spec:
                                 to as.
                               type: string
                             config:
-                              description: Config is the configuration for the directive.
+                              description: |-
+                                Config is opaque configuration for the PromotionStep that is understood
+                                only by each PromotionStep's implementation. It is legal to utilize
+                                expressions in defining values at any level of this block.
+                                See https://docs.kargo.io/references/expression-language for details.
                               x-kubernetes-preserve-unknown-fields: true
                             uses:
                               description: Uses identifies a runner that can execute
@@ -93,6 +97,31 @@ spec:
                           - uses
                           type: object
                         minItems: 1
+                        type: array
+                      vars:
+                        description: |-
+                          Vars is a list of variables that can be referenced by expressions in
+                          promotion steps.
+                        items:
+                          description: |-
+                            PromotionVariable describes a single variable that may be referenced by
+                            expressions in promotion steps.
+                          properties:
+                            name:
+                              description: Name is the name of the variable.
+                              minLength: 1
+                              pattern: ^[a-zA-Z_]\w*$
+                              type: string
+                            value:
+                              description: |-
+                                Value is the value of the variable. It is allowed to utilize expressions
+                                in the value.
+                                See https://docs.kargo.io/references/expression-language for details.
+                              type: string
+                          required:
+                          - name
+                          - value
+                          type: object
                         type: array
                     type: object
                 required:
@@ -235,6 +264,68 @@ spec:
             description: Status describes the Stage's current and recent Freight,
               health, and more.
             properties:
+              conditions:
+                description: |-
+                  Conditions contains the last observations of the Stage's current
+                  state.
+                items:
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
               currentPromotion:
                 description: CurrentPromotion is a reference to the currently Running
                   promotion.

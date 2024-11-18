@@ -342,18 +342,20 @@ func TestRunningPromotionsByArgoCDApplications(t *testing.T) {
 						{
 							Uses: "argocd-update",
 							Config: &apiextensionsv1.JSON{
-								Raw: []byte(`{"apps":[{"name":"fake-app-2"}]}`),
+								// Note that this uses an expression
+								Raw: []byte(`{"apps":[{"name":"fake-app-${{ ctx.stage }}"}]}`),
 							},
 						},
 					},
 				},
 				Status: kargoapi.PromotionStatus{
-					Phase: kargoapi.PromotionPhaseRunning,
+					Phase:       kargoapi.PromotionPhaseRunning,
+					CurrentStep: 2, // Ensure all steps above are considered
 				},
 			},
 			expected: []string{
 				"fake-namespace:fake-app",
-				fmt.Sprintf("%s:%s", argocd.Namespace(), "fake-app-2"),
+				fmt.Sprintf("%s:%s", argocd.Namespace(), "fake-app-fake-stage"),
 			},
 		},
 		{
@@ -374,7 +376,8 @@ func TestRunningPromotionsByArgoCDApplications(t *testing.T) {
 					},
 				},
 				Status: kargoapi.PromotionStatus{
-					Phase: kargoapi.PromotionPhaseRunning,
+					Phase:       kargoapi.PromotionPhaseRunning,
+					CurrentStep: 1, // Ensure all steps above are considered
 				},
 			},
 			expected: nil,

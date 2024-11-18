@@ -60,6 +60,7 @@ func NewPromotion(
 		},
 	}
 	if stage.Spec.PromotionTemplate != nil {
+		promotion.Spec.Vars = stage.Spec.PromotionTemplate.Spec.Vars
 		promotion.Spec.Steps = stage.Spec.PromotionTemplate.Spec.Steps
 	}
 	return promotion

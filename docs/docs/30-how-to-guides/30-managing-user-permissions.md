@@ -1,6 +1,6 @@
 ---
 description: Learn how to manage user permissions
-sidebar_label: Managing user permissions
+sidebar_label: Managing User Permissions
 ---
 
 # Managing User Permissions

@@ -2,11 +2,16 @@ package directives
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/expr-lang/expr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	yaml "sigs.k8s.io/yaml/goyaml.v3"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/controller/freight"
 	"github.com/akuity/kargo/internal/credentials"
+	"github.com/akuity/kargo/internal/expressions"
 )
 
 // PromotionStepRunner is an interface for components that implement the logic for
@@ -54,6 +59,11 @@ type PromotionContext struct {
 	StartFromStep int64
 	// State is the current state of the promotion process.
 	State State
+	// Vars is a list of variables definitions that can be used by the
+	// PromotionSteps.
+	Vars []kargoapi.PromotionVariable
+	// Secrets is a map of secrets that can be used by the PromotionSteps.
+	Secrets map[string]map[string]string
 }
 
 // PromotionStep describes a single step in a user-defined promotion process.
@@ -68,9 +78,93 @@ type PromotionStep struct {
 	// step will be keyed to this alias by the Engine and made accessible to
 	// subsequent steps.
 	Alias string
-	// Config is an opaque map of configuration values to be passed to the
-	// PromotionStepRunner executing this step.
-	Config Config
+	// Config is an opaque JSON to be passed to the PromotionStepRunner executing
+	// this step.
+	Config []byte
+}
+
+// GetConfig returns the Config unmarshalled into a map. Any expr-lang
+// expressions are evaluated in the context of the provided arguments
+// prior to unmarshaling.
+func (s *PromotionStep) GetConfig(
+	ctx context.Context,
+	cl client.Client,
+	promoCtx PromotionContext,
+	state State,
+) (Config, error) {
+	if s.Config == nil {
+		return nil, nil
+	}
+
+	vars, err := s.GetVars(promoCtx)
+	if err != nil {
+		return nil, err
+	}
+
+	evaledCfgJSON, err := expressions.EvaluateJSONTemplate(
+		s.Config,
+		map[string]any{
+			"ctx": map[string]any{
+				"project":   promoCtx.Project,
+				"promotion": promoCtx.Promotion,
+				"stage":     promoCtx.Stage,
+			},
+			"vars":    vars,
+			"secrets": promoCtx.Secrets,
+			"outputs": state,
+		},
+		expr.Function("warehouse", warehouseFunc, new(func(string) kargoapi.FreightOrigin)),
+		expr.Function(
+			"commitFrom",
+			getCommitFunc(ctx, cl, promoCtx),
+			new(func(repoURL string) kargoapi.GitCommit),
+			new(func(repoURL string, origin kargoapi.FreightOrigin) kargoapi.GitCommit),
+		),
+		expr.Function(
+			"imageFrom",
+			getImageFunc(ctx, cl, promoCtx),
+			new(func(repoURL string) kargoapi.Image),
+			new(func(repoURL string, origin kargoapi.FreightOrigin) kargoapi.Image),
+		),
+		expr.Function(
+			"chartFrom",
+			getChartFunc(ctx, cl, promoCtx),
+			new(func(repoURL string) kargoapi.Chart),
+			new(func(repoURL string, chartName string) kargoapi.Chart),
+			new(func(repoURL string, origin kargoapi.FreightOrigin) kargoapi.Chart),
+			new(func(repoURL string, chartName string, origin kargoapi.FreightOrigin) kargoapi.Chart),
+		),
+	)
+	if err != nil {
+		return nil, err
+	}
+	var config map[string]any
+	if err := yaml.Unmarshal(evaledCfgJSON, &config); err != nil {
+		return nil, nil
+	}
+	return config, nil
+}
+
+func (s *PromotionStep) GetVars(promoCtx PromotionContext) (map[string]any, error) {
+	vars := make(map[string]any, len(promoCtx.Vars))
+	for _, v := range promoCtx.Vars {
+		newVar, err := expressions.EvaluateTemplate(
+			v.Value,
+			map[string]any{
+				"ctx": map[string]any{
+					"project":   promoCtx.Project,
+					"promotion": promoCtx.Promotion,
+					"stage":     promoCtx.Stage,
+				},
+				"vars": vars,
+			},
+		)
+		if err != nil {
+			return nil, fmt.Errorf("error pre-processing promotion variable %q: %w", v.Name, err)
+		}
+		vars[v.Name] = newVar
+	}
+	return vars, nil
 }
 
 // PromotionResult is the result of a user-defined promotion process executed by
@@ -184,4 +278,93 @@ type PromotionStepResult struct {
 	// a PromotionStepRunner's successful execution of a PromotionStep. This
 	// configuration can later be used as input to health check processes.
 	HealthCheckStep *HealthCheckStep
+}
+
+func warehouseFunc(name ...any) (any, error) { // nolint: unparam
+	return kargoapi.FreightOrigin{
+		Kind: kargoapi.FreightOriginKindWarehouse,
+		Name: name[0].(string), // nolint: forcetypeassert
+	}, nil
+}
+
+func getCommitFunc(
+	ctx context.Context,
+	cl client.Client,
+	promoCtx PromotionContext,
+) func(a ...any) (any, error) {
+	return func(a ...any) (any, error) {
+		repoURL := a[0].(string) // nolint: forcetypeassert
+		var desiredOriginPtr *kargoapi.FreightOrigin
+		if len(a) == 2 {
+			desiredOrigin := a[1].(kargoapi.FreightOrigin) // nolint: forcetypeassert
+			desiredOriginPtr = &desiredOrigin
+		}
+		return freight.FindCommit(
+			ctx,
+			cl,
+			promoCtx.Project,
+			promoCtx.FreightRequests,
+			desiredOriginPtr,
+			promoCtx.Freight.References(),
+			repoURL,
+		)
+	}
+}
+
+func getImageFunc(
+	ctx context.Context,
+	cl client.Client,
+	promoCtx PromotionContext,
+) func(a ...any) (any, error) {
+	return func(a ...any) (any, error) {
+		repoURL := a[0].(string) // nolint: forcetypeassert
+		var desiredOriginPtr *kargoapi.FreightOrigin
+		if len(a) == 2 {
+			desiredOrigin := a[1].(kargoapi.FreightOrigin) // nolint: forcetypeassert
+			desiredOriginPtr = &desiredOrigin
+		}
+		return freight.FindImage(
+			ctx,
+			cl,
+			promoCtx.Project,
+			promoCtx.FreightRequests,
+			desiredOriginPtr,
+			promoCtx.Freight.References(),
+			repoURL,
+		)
+	}
+}
+
+func getChartFunc(
+	ctx context.Context,
+	cl client.Client,
+	promoCtx PromotionContext,
+) func(a ...any) (any, error) {
+	return func(a ...any) (any, error) {
+		repoURL := a[0].(string) // nolint: forcetypeassert
+		var chartName string
+		var desiredOriginPtr *kargoapi.FreightOrigin
+		if len(a) == 2 {
+			var ok bool
+			if chartName, ok = a[1].(string); !ok {
+				desiredOrigin := a[1].(kargoapi.FreightOrigin) // nolint: forcetypeassert
+				desiredOriginPtr = &desiredOrigin
+			}
+		}
+		if len(a) == 3 {
+			chartName = a[1].(string)                      // nolint: forcetypeassert
+			desiredOrigin := a[2].(kargoapi.FreightOrigin) // nolint: forcetypeassert
+			desiredOriginPtr = &desiredOrigin
+		}
+		return freight.FindChart(
+			ctx,
+			cl,
+			promoCtx.Project,
+			promoCtx.FreightRequests,
+			desiredOriginPtr,
+			promoCtx.Freight.References(),
+			repoURL,
+			chartName,
+		)
+	}
 }

@@ -48,7 +48,7 @@ func (g *gitPushPusher) RunPromotionStep(
 	if err := g.validate(stepCtx.Config); err != nil {
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, err
 	}
-	cfg, err := configToStruct[GitPushConfig](stepCtx.Config)
+	cfg, err := ConfigToStruct[GitPushConfig](stepCtx.Config)
 	if err != nil {
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
 			fmt.Errorf("could not convert config into git-push config: %w", err)

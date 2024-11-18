@@ -1,6 +1,6 @@
 ---
 description: A comprehensive introduction for developers who are looking to get involved with contributing directly to the Kargo project
-sidebar_label: Contributor guide
+sidebar_label: Contributor Guide
 ---
 
 # Kargo Contributor Guide
@@ -12,5 +12,5 @@ Kargo project.
 This guide is decomposed into the following, high-level topics:
 
 * [Hacking on Kargo](./10-hacking-on-kargo.md)
-* [Signing commits](./20-signing-commits.md)
-* [Code of conduct](./30-code-of-conduct.md)
+* [Signing Commits](./20-signing-commits.md)
+* [Code of Conduct](./30-code-of-conduct.md)

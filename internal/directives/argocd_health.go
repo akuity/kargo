@@ -59,7 +59,7 @@ func (a *argocdUpdater) RunHealthCheckStep(
 	ctx context.Context,
 	healthCtx *HealthCheckStepContext,
 ) HealthCheckStepResult {
-	cfg, err := configToStruct[ArgoCDHealthConfig](healthCtx.Config)
+	cfg, err := ConfigToStruct[ArgoCDHealthConfig](healthCtx.Config)
 	if err != nil {
 		return HealthCheckStepResult{
 			Status: kargoapi.HealthStateUnknown,

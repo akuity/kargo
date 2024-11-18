@@ -63,4 +63,23 @@ const (
 	// the presence of the condition with a status of "True" indicates that
 	// the resource is operating as expected.
 	ConditionTypeHealthy = "Healthy"
+
+	// ConditionTypePromoting denotes that Freight is currently being promoted
+	// to a Stage.
+	//
+	// This is a "normal-false" or "negative polarity" condition, meaning
+	// that the presence of the condition with a status of "True" indicates
+	// that the Stage is being promoted, and the absence of the condition
+	// or a status of "False" indicates that the resource is not being
+	// promoted.
+	ConditionTypePromoting = "Promoting"
+
+	// ConditionTypeVerified denotes that the current Freight of a Stage has
+	// been verified.
+	//
+	// This is a "normal-true" or "positive polarity" condition, meaning that
+	// the presence of the condition with a status of "True" indicates that
+	// the Freight has been verified, and the absence of the condition or a
+	// status of "False" indicates that the Freight has not been verified.
+	ConditionTypeVerified = "Verified"
 )

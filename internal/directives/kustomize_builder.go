@@ -62,7 +62,7 @@ func (k *kustomizeBuilder) RunPromotionStep(
 	}
 
 	// Convert the configuration into a typed object.
-	cfg, err := configToStruct[KustomizeBuildConfig](stepCtx.Config)
+	cfg, err := ConfigToStruct[KustomizeBuildConfig](stepCtx.Config)
 	if err != nil {
 		return failure, fmt.Errorf("could not convert config into %s config: %w", k.Name(), err)
 	}
