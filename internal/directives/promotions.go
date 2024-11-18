@@ -27,6 +27,14 @@ type PromotionStepRunner interface {
 	RunPromotionStep(context.Context, *PromotionStepContext) (PromotionStepResult, error)
 }
 
+// RetryableStepRunner is an interface for PromotionStepRunners that can be
+// retried in the event of a failure.
+type RetryableStepRunner interface {
+	// DefaultAttempts returns the default number of attempts the step is
+	// allowed to make before failing.
+	DefaultAttempts() int64
+}
+
 // PromotionContext is the context of a user-defined promotion process that is
 // executed by the Engine.
 type PromotionContext struct {
@@ -50,10 +58,12 @@ type PromotionContext struct {
 	// resolve.
 	FreightRequests []kargoapi.FreightRequest
 	// Freight is the collection of all Freight referenced by the Promotion. This
-	// collection contains both the Freight that is actively being promoted as
-	// well as any Freight that has been inherited from the target Stage's current
+	// collection contains both the Freight that is actively being promoted and
+	// any Freight that has been inherited from the target Stage's current
 	// state.
 	Freight kargoapi.FreightCollection
+	// Retry is the retry configuration for the Promotion.
+	Retry *kargoapi.PromotionRetry
 	// SharedState is the index of the step from which the promotion should begin
 	// execution.
 	StartFromStep int64
@@ -145,6 +155,8 @@ func (s *PromotionStep) GetConfig(
 	return config, nil
 }
 
+// GetVars returns the variables defined in the PromotionStep. The variables are
+// evaluated in the context of the provided PromotionContext.
 func (s *PromotionStep) GetVars(promoCtx PromotionContext) (map[string]any, error) {
 	vars := make(map[string]any, len(promoCtx.Vars))
 	for _, v := range promoCtx.Vars {
@@ -166,6 +178,10 @@ func (s *PromotionStep) GetVars(promoCtx PromotionContext) (map[string]any, erro
 	}
 	return vars, nil
 }
+
+// stateKeyAttempts is the key used to store the number of attempts that
+// have been made to execute a step in the shared State.
+const stateKeyAttempts = "attempts"
 
 // PromotionResult is the result of a user-defined promotion process executed by
 // the Engine. It aggregates the status and output of the individual

@@ -105,9 +105,10 @@ func (e *SimpleEngine) Promote(
 		stateCopy := state.DeepCopy()
 
 		step.Alias = strings.TrimSpace(step.Alias)
-		if step.Alias == "" {
+		switch {
+		case step.Alias == "":
 			step.Alias = fmt.Sprintf("step-%d", i)
-		} else if ReservedStepAliasRegex.MatchString(step.Alias) {
+		case ReservedStepAliasRegex.MatchString(step.Alias):
 			// A webhook enforces this regex as well, but we're checking here to
 			// account for the possibility of EXISTING Stages with a promotionTemplate
 			// containing a step with a now-reserved alias.
@@ -150,7 +151,31 @@ func (e *SimpleEngine) Promote(
 			stepCtx.ArgoCDClient = e.argoCDClient
 		}
 
+		var maxAttempts int64
+		if retryCfg, isRetryable := reg.Runner.(RetryableStepRunner); isRetryable {
+			maxAttempts = promoCtx.Retry.GetAttempts(retryCfg.DefaultAttempts())
+		}
+		var attempts int64
+		if stepState, ok := stateCopy[step.Alias].(State); ok {
+			if v, ok := stepState.Get(stateKeyAttempts); ok {
+				attempts, _ = v.(int64)
+			}
+		}
+		if maxAttempts > 0 && attempts >= maxAttempts {
+			return PromotionResult{
+				Status:      kargoapi.PromotionPhaseErrored,
+				CurrentStep: i,
+				State:       state,
+			}, fmt.Errorf("step %q exceeded max attempts (%d/%d)", step.Alias, attempts, maxAttempts)
+		}
+
 		result, err := reg.Runner.RunPromotionStep(ctx, stepCtx)
+
+		if result.Output == nil {
+			result.Output = make(State, 1)
+		}
+		result.Output[stateKeyAttempts] = attempts + 1
+
 		state[step.Alias] = result.Output
 		if err != nil {
 			return PromotionResult{
