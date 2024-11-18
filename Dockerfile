@@ -79,7 +79,7 @@ RUN GRPC_HEALTH_PROBE_VERSION=v0.4.15 && \
 ####################################################################################################
 FROM alpine:latest AS back-end-dev
 
-RUN apk update && apk add ca-certificates git gpg gpg-agent openssh-client
+RUN apk update && apk add ca-certificates git gpg gpg-agent openssh-client tini
 
 COPY bin/credential-helper /usr/local/bin/credential-helper
 COPY bin/controlplane/kargo /usr/local/bin/kargo
@@ -87,6 +87,7 @@ COPY bin/controlplane/kargo /usr/local/bin/kargo
 RUN adduser -D -H -u 1000 kargo
 USER 1000:0
 
+ENTRYPOINT ["/sbin/tini", "--"]
 CMD ["/usr/local/bin/kargo"]
 
 ####################################################################################################
@@ -119,4 +120,5 @@ FROM ${BASE_IMAGE}:latest-${TARGETARCH} AS final
 COPY --from=back-end-builder /kargo/bin/ /usr/local/bin/
 COPY --from=tools /tools/ /usr/local/bin/
 
+ENTRYPOINT ["/sbin/tini", "--"]
 CMD ["/usr/local/bin/kargo"]

@@ -57,7 +57,8 @@ spec:
       - name: controller
         image: {{ include "kargo.image" . }}
         imagePullPolicy: {{ .Values.image.pullPolicy }}
-        command: ["/usr/local/bin/kargo", "controller"]
+        command: ["/sbin/tini", "--", "/usr/local/bin/kargo"]
+        args: ["controller"]
         {{- with (concat .Values.global.env .Values.controller.env) }}
         env:
           {{- toYaml . | nindent 8 }}
