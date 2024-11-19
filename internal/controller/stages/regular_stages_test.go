@@ -1204,7 +1204,7 @@ func TestRegularStageReconciler_assessHealth(t *testing.T) {
 			},
 		},
 		{
-			name: "no health checks",
+			name: "unsuccessful last promotion",
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "fake-project",
@@ -1213,6 +1213,7 @@ func TestRegularStageReconciler_assessHealth(t *testing.T) {
 				Status: kargoapi.StageStatus{
 					LastPromotion: &kargoapi.PromotionReference{
 						Status: &kargoapi.PromotionStatus{
+							Phase:        kargoapi.PromotionPhaseAborted,
 							HealthChecks: nil,
 						},
 					},
@@ -1224,8 +1225,35 @@ func TestRegularStageReconciler_assessHealth(t *testing.T) {
 				healthyCond := conditions.Get(&status, kargoapi.ConditionTypeHealthy)
 				require.NotNil(t, healthyCond)
 				assert.Equal(t, metav1.ConditionUnknown, healthyCond.Status)
-				assert.Equal(t, "NoHealthChecks", healthyCond.Reason)
-				assert.Equal(t, "Stage has no health checks to perform", healthyCond.Message)
+				assert.Equal(t, "LastPromotionAborted", healthyCond.Reason)
+				assert.Equal(t, "No health checks to perform for unsuccessful Promotion", healthyCond.Message)
+			},
+		},
+		{
+			name: "no health checks",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-project",
+					Name:      "test-stage",
+				},
+				Status: kargoapi.StageStatus{
+					LastPromotion: &kargoapi.PromotionReference{
+						Status: &kargoapi.PromotionStatus{
+							Phase:        kargoapi.PromotionPhaseSucceeded,
+							HealthChecks: nil,
+						},
+					},
+				},
+			},
+			assertions: func(t *testing.T, status kargoapi.StageStatus) {
+				assert.NotNil(t, status.Health)
+				assert.Equal(t, kargoapi.HealthStateHealthy, status.Health.Status)
+
+				healthyCond := conditions.Get(&status, kargoapi.ConditionTypeHealthy)
+				require.NotNil(t, healthyCond)
+				assert.Equal(t, metav1.ConditionTrue, healthyCond.Status)
+				assert.Equal(t, kargoapi.ConditionTypeHealthy, healthyCond.Reason)
+				assert.Contains(t, healthyCond.Message, "Stage is healthy")
 			},
 		},
 		{
@@ -1238,6 +1266,7 @@ func TestRegularStageReconciler_assessHealth(t *testing.T) {
 				Status: kargoapi.StageStatus{
 					LastPromotion: &kargoapi.PromotionReference{
 						Status: &kargoapi.PromotionStatus{
+							Phase: kargoapi.PromotionPhaseSucceeded,
 							HealthChecks: []kargoapi.HealthCheckStep{
 								{
 									Uses: "test-check",
@@ -1262,7 +1291,7 @@ func TestRegularStageReconciler_assessHealth(t *testing.T) {
 				require.NotNil(t, healthyCond)
 				assert.Equal(t, metav1.ConditionTrue, healthyCond.Status)
 				assert.Equal(t, string(kargoapi.HealthStateHealthy), healthyCond.Reason)
-				assert.Equal(t, "Stage is healthy", healthyCond.Message)
+				assert.Contains(t, healthyCond.Message, "Stage is healthy")
 			},
 		},
 		{
@@ -1275,6 +1304,7 @@ func TestRegularStageReconciler_assessHealth(t *testing.T) {
 				Status: kargoapi.StageStatus{
 					LastPromotion: &kargoapi.PromotionReference{
 						Status: &kargoapi.PromotionStatus{
+							Phase: kargoapi.PromotionPhaseSucceeded,
 							HealthChecks: []kargoapi.HealthCheckStep{
 								{
 									Uses: "test-check",
@@ -1289,7 +1319,12 @@ func TestRegularStageReconciler_assessHealth(t *testing.T) {
 				directives.HealthCheckContext,
 				[]directives.HealthCheckStep,
 			) kargoapi.Health {
-				return kargoapi.Health{Status: kargoapi.HealthStateUnhealthy}
+				return kargoapi.Health{
+					Status: kargoapi.HealthStateUnhealthy,
+					Issues: []string{
+						"issue-1", "issue-2",
+					},
+				}
 			},
 			assertions: func(t *testing.T, status kargoapi.StageStatus) {
 				require.NotNil(t, status.Health)
@@ -1299,7 +1334,8 @@ func TestRegularStageReconciler_assessHealth(t *testing.T) {
 				require.NotNil(t, healthyCond)
 				assert.Equal(t, metav1.ConditionFalse, healthyCond.Status)
 				assert.Equal(t, string(kargoapi.HealthStateUnhealthy), healthyCond.Reason)
-				assert.Equal(t, "Stage is unhealthy", healthyCond.Message)
+				assert.Contains(t, healthyCond.Message, "Stage is unhealthy")
+				assert.Contains(t, healthyCond.Message, "2 issues in 1 health check")
 			},
 		},
 		{
@@ -1313,6 +1349,7 @@ func TestRegularStageReconciler_assessHealth(t *testing.T) {
 					Conditions: []metav1.Condition{},
 					LastPromotion: &kargoapi.PromotionReference{
 						Status: &kargoapi.PromotionStatus{
+							Phase: kargoapi.PromotionPhaseSucceeded,
 							HealthChecks: []kargoapi.HealthCheckStep{
 								{
 									Uses: "test-check",
@@ -1348,6 +1385,7 @@ func TestRegularStageReconciler_assessHealth(t *testing.T) {
 				Status: kargoapi.StageStatus{
 					LastPromotion: &kargoapi.PromotionReference{
 						Status: &kargoapi.PromotionStatus{
+							Phase: kargoapi.PromotionPhaseSucceeded,
 							HealthChecks: []kargoapi.HealthCheckStep{
 								{
 									Uses: "test-check",
