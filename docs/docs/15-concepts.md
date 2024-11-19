@@ -192,9 +192,28 @@ spec:
 Kargo uses [semver](https://github.com/masterminds/semver#checking-version-constraints) to handle semantic versioning constraints.
 :::
 
-#### Git Subscription Path Filtering
+#### Image Subscription
 
-In some cases, it may be necessary to constrain the paths within a Git
+For subscriptions to container image repositories, the `imageSelectionStrategy` field specifies the method for selecting
+the desired image. The available strategies are:
+
+- `Digest`: Selects the image with the specified digest.
+- `Lexical`: Selects the image with the lexicographically greatest tag.
+- `NewestBuild`: Selects the image with the most recent build time.
+- `SemVer`: Selects the image that best matches a semantic versioning constraint.
+
+#### Git Subscription
+
+In subscriptions to Git repositories, the `commitSelectionStrategy` field
+specifies the method for selecting the desired commit.
+The available strategies are:
+
+- `Lexical`: Selects the commit with the lexicographically greatest reference.
+- `NewestFromBranch`: Selects the most recent commit from a specified branch.
+- `NewestTag`: Selects the most recent commit associated with a tag.
+- `SemVer`: Selects the commit that best matches a semantic versioning constraint.
+
+Additionally, in some cases, it may be necessary to constrain the paths within a Git
 repository that a `Warehouse` will consider as triggers for `Freight`
 production. This is especially useful for GitOps repositories that are
 "monorepos" containing configuration for multiple applications.
