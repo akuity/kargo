@@ -35,6 +35,10 @@ type RetryableStepRunner interface {
 	DefaultAttempts() int64
 }
 
+// stateKeyAttempts is the key used to store the number of attempts that
+// have been made to execute a step in the shared State.
+const stateKeyAttempts = "attempts"
+
 // PromotionContext is the context of a user-defined promotion process that is
 // executed by the Engine.
 type PromotionContext struct {
@@ -88,9 +92,57 @@ type PromotionStep struct {
 	// step will be keyed to this alias by the Engine and made accessible to
 	// subsequent steps.
 	Alias string
+	// Retry is the retry configuration for the PromotionStep.
+	Retry *kargoapi.PromotionRetry
 	// Config is an opaque JSON to be passed to the PromotionStepRunner executing
 	// this step.
 	Config []byte
+}
+
+// GetAttempts returns the number of attempts that have been made to execute
+// the step using the provided State. If no attempts have been made, 0 is
+// returned.
+func (s *PromotionStep) GetAttempts(state State) int64 {
+	if stepV, ok := state.Get(s.Alias); ok {
+		if stepState, ok := stepV.(map[string]any); ok {
+			if attemptsV, ok := stepState[stateKeyAttempts]; ok {
+				switch attempts := attemptsV.(type) {
+				case int64:
+					return attempts
+				case int:
+					return int64(attempts)
+				// If the State has been rehydrated from a JSON representation,
+				// the attempts value may be a float64. Convert it to an int64.
+				case float64:
+					return int64(attempts)
+				}
+			}
+		}
+	}
+	return 0
+}
+
+// GetMaxAttempts returns the maximum number of attempts that can be made to
+// execute the step using the provided runner. If the runner is a
+// RetryableStepRunner, the value of its retry configuration is used as the
+// maximum default. Otherwise, the default is 1.
+func (s *PromotionStep) GetMaxAttempts(runner any) int64 {
+	fallback := int64(1)
+	if retryCfg, isRetryable := runner.(RetryableStepRunner); isRetryable {
+		fallback = retryCfg.DefaultAttempts()
+	}
+	return s.Retry.GetAttempts(fallback)
+}
+
+// RecordAttempt records an attempt to execute a step in the provided
+// output.
+func (s *PromotionStep) RecordAttempt(state State, output map[string]any) map[string]any {
+	attempts := s.GetAttempts(state)
+	if output == nil {
+		output = make(map[string]any, 1)
+	}
+	output[stateKeyAttempts] = attempts + 1
+	return output
 }
 
 // GetConfig returns the Config unmarshalled into a map. Any expr-lang
@@ -178,10 +230,6 @@ func (s *PromotionStep) GetVars(promoCtx PromotionContext) (map[string]any, erro
 	}
 	return vars, nil
 }
-
-// stateKeyAttempts is the key used to store the number of attempts that
-// have been made to execute a step in the shared State.
-const stateKeyAttempts = "attempts"
 
 // PromotionResult is the result of a user-defined promotion process executed by
 // the Engine. It aggregates the status and output of the individual

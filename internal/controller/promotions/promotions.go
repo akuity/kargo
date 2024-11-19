@@ -468,6 +468,7 @@ func (r *reconciler) promote(
 		steps[i] = directives.PromotionStep{
 			Kind:   step.Uses,
 			Alias:  step.As,
+			Retry:  step.Retry,
 			Config: step.Config.Raw,
 		}
 	}
