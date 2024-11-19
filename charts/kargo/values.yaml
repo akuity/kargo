@@ -313,7 +313,7 @@ api:
       ## Azure Example
       # - id: microsoft
       #   name: microsoft
-      #   type: Microsoft
+      #   type: microsoft
       #   config:
       #     clientID: <your client ID>
       #     clientSecret: "$CLIENT_SECRET"
