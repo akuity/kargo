@@ -406,39 +406,60 @@ status:
 Kargo provides tools to manage Stages using either the Kargo Dashboard or the
 Kargo CLI. This section explains how to handle Stages effectively through both interfaces.
 
+Kargo simplifies managing `Stage`s through the Kargo Dashboard or the Kargo CLI. This section
+explains how to effectively perform key actions—like creating, deleting, refreshing Stages and
+verifying it's Freight—using both interfaces.
+
 ### Creating a Stage
 
 <Tabs groupId="create-stage">
-  <TabItem value="ui" label="Create a Stage using the Kargo Dashboard" default>
-    TODO
+  <TabItem value="ui" label="Using the Kargo Dashboard" default>
+
+    Navigate to your Project dashboard and locate the action menu in the right corner of the pipeline:
+
+    ![create-stage](../../static/img/create-stage.png)
+
+    Click the magic wand icon to open the dropdown, then select <Hlt>Create Stage</Hlt>.
+    A form will appear to input details for the new `Stage`:
+
+    ![create-stage](../../static/img/create-stage-2.png)
+
+    Complete the form with the necessary details and submit it.
+    The new `Stage` will be added to the pipeline, connected to other
+    `Stage`s based on your configuration:
+
+    ![create-stage](../../static/img/create-stage-3.png)
   </TabItem>
-  <TabItem value="cli" label="Create a Stage using the Kargo CLI">
-    To create a `Stage`, define it in a YAML file and apply it using the `kargo create` command:
+
+  <TabItem value="cli" label="Using the Kargo CLI">
+
+    Define the `Stage` in a YAML file, for example:
 
     ```yaml
     apiVersion: kargo.akuity.io/v1alpha1
     kind: Stage
     metadata:
-      name: test
-      namespace: kargo-demo
+      name: <stage-name>
+      namespace: <project-name>
     spec:
-      ### Stage specifications go here
+      ### Add your Stage specifications here
     ```
-    Save the YAML as `stages.yaml` and apply it with:
+
+    Save the file and run:
 
     ```shell
-    kargo create -f stages.yaml
+    kargo create -f <stage-filename>
     ```
 
     Example Output:
     ```shell
-    stage.kargo.akuity.io/test created
+    stage.kargo.akuity.io/<stage-name> created
     ```
 
-    To confirm the creation, use the following command to view the Stage resource:
+    Verify the creation by listing the `Stage`:
 
     ```shell
-    kargo get stage test --project kargo-demo
+    kargo get stage <stage-name> --project <project-name>
     ```
 
     Example Output:
@@ -452,70 +473,84 @@ Kargo CLI. This section explains how to handle Stages effectively through both i
 ### Deleting a Stage
 
 <Tabs groupId="delete-stage">
-  <TabItem value="ui" label="Delete a Stage using the Kargo Dashboard" default>
-    TODO
+  <TabItem value="ui" label="Using the Kargo Dashboard" default>
+
+    Select the `Stage` you want to remove and click <Hlt>Delete</Hlt> in the top-right corner of the pop-up window:
+
+    ![delete-stage](../../static/img/delete-stage.png)
   </TabItem>
-  <TabItem value="cli" label="Delete a Stage using the Kargo CLI">
-    To delete a `Stage`, run the following command:
+
+  <TabItem value="cli" label="Using the Kargo CLI">
+    To delete a `Stage` using the CLI, run:
 
     ```shell
     kargo delete stage --project <project-name> <stage-name>
-        ```
+    ```
 
-        **Example Output:**
-        ```shell
-        stage.kargo.akuity.io/<stage-name> deleted
-          ```
+    Example Output:
+    ```shell
+      stage.kargo.akuity.io/<stage-name> deleted
+    ```
   </TabItem>
 </Tabs>
 
 ### Refreshing a Stage
 
-Refreshing a `Stage` ensures that its state is updated to reflect any recent changes in
-`Freight` or configuration. This keeps the `Stage` aligned with the latest deployment and artifact information.
+Refreshing ensures the `Stage` reflects the latest updates,
+including changes in `Freight` or configuration.
 
 <Tabs groupId="refresh-stage">
-  <TabItem value="ui" label="Refresh a Stage using the Kargo Dashboard" default>
-    TODO
+  <TabItem value="ui" label="Using the Kargo Dashboard" default>
+    Select the `Stage` you want to refresh and click <Hlt>Refresh</Hlt> in the top-right
+    corner of the pop-up window:
+
+    ![refresh-stage](../../static/img/refresh-stage.png)
   </TabItem>
-  <TabItem value="cli" label="Refresh a Stage using the Kargo CLI">
-    Use the `kargo refresh` command to update a `Stage`:
+
+  <TabItem value="cli" label="Using the Kargo CLI">
+    To refresh a `Stage`, run:
 
     ```shell
-    kargo refresh stage --project=kargo-demo test
+    kargo refresh stage --project=<project-name> <stage-name>
     ```
 
-    **Example Output:**
+    Example Output:
     ```shell
-    stage 'kargo-demo/test' refreshed
+    stage 'kargo-demo/<stage-name>' refreshed
     ```
-
-    This ensures the `test` Stage in the `kargo-demo` project reflects the latest `Freight` or configuration updates.
   </TabItem>
 </Tabs>
 
-### Verifying a Stage's Current Freight
+### Reverifying a Stage's Current Freight
 
-Verifying a `Stage` checks its current `Freight` and ensures it is
-functioning correctly. You can also rerun or abort the verification process.
+Reverification ensures that the `Freight` associated with a `Stage` is functioning as expected. This can include rerunning or aborting verification.
 
 <Tabs groupId="verify-stage">
-  <TabItem value="ui" label="Verify a Stage using the Kargo Dashboard" default>
-    TODO
+  <TabItem value="ui" label="Using the Kargo Dashboard" default>
+    Select the `Stage` you want to reverify and click <Hlt>Reverify</Hlt> at the top of the menu:
+
+    ![verify-stage](../../static/img/reverify-freight.png)
+
+    To confirm the `Stage(s)` where the `Freight` has been verified, return
+    to the <Hlt>Freight Timeline</Hlt> and select the `Freight`.
+    Verified `Stage` names will appear under <Hlt>VERIFIED IN</Hlt>:
+
+    ![verify-stage](../../static/img/verified-in.png)
   </TabItem>
-  <TabItem value="cli" label="Verify a Stage using the Kargo CLI">
-    To rerun the verification of the `test` Stage, run:
+
+  <TabItem value="cli" label="Using the Kargo CLI">
+    To rerun verification using the CLI run:
 
     ```shell
-    kargo verify stage --project=kargo-demo test
+    kargo verify stage --project=<project-name> <stage-name>
     ```
 
-    If you need to stop an ongoing verification, use the `--abort` flag:
+    To stop an ongoing verification process, use:
 
     ```shell
-    kargo verify stage --project=kargo-demo test --abort
+    kargo verify stage --project=<project-name> <stage-name> --abort
     ```
   </TabItem>
 </Tabs>
 
-**Note:** For more details on promoting a Stage, visit the **Working with Promotions** page.
+Note: For detailed instructions on promoting a `Stage`, refer to the Working with Promotions page.
