@@ -1,0 +1,144 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "title": "HTTPConfig",
+ "definitions": {
+  "httpHeader": {
+   "type": "object",
+   "additionalProperties": false,
+   "properties": {
+    "name": {
+     "type": "string",
+     "minLength": 1,
+     "description": "The name of the header."
+    },
+    "value": {
+     "type": "string",
+     "minLength": 1,
+     "description": "The value of the header."
+    }
+   }
+  },
+  "httpQueryParam": {
+   "type": "object",
+   "additionalProperties": false,
+   "properties": {
+    "name": {
+     "type": "string",
+     "minLength": 1,
+     "description": "The name of the query parameter."
+    },
+    "value": {
+     "type": "string",
+     "minLength": 1,
+     "description": "The value of the query parameter."
+    }
+   }
+  },
+  "httpOutput": {
+   "type": "object",
+   "additionalProperties": false,
+   "properties": {
+    "name": {
+     "type": "string",
+     "minLength": 1,
+     "description": "The name of the output."
+    },
+    "fromExpression": {
+     "type": "string",
+     "minLength": 1,
+     "description": "An expression to evaluate to extract the output from the HTTP response."
+    }
+   }
+  }
+ },
+ "type": "object",
+ "additionalProperties": false,
+ "properties": {
+  "method": {
+   "type": "string",
+   "description": "The HTTP method to use for the request.",
+   "pattern": "^(DELETE|GET|HEAD|PATCH|POST|PUT)$"
+  },
+  "url": {
+   "type": "string",
+   "minLength": 1,
+   "description": "The URL to send the HTTP request to."
+  },
+  "headers": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+     "name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The name of the header."
+     },
+     "value": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The value of the header."
+     }
+    }
+   },
+   "description": "Headers to include in the HTTP request."
+  },
+  "queryParams": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+     "name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The name of the query parameter."
+     },
+     "value": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The value of the query parameter."
+     }
+    }
+   },
+   "description": "Query parameters to include in the HTTP request."
+  },
+  "body": {
+   "type": "string",
+   "description": "The body of the HTTP request."
+  },
+  "insecureSkipTLSVerify": {
+   "type": "boolean",
+   "description": "Whether to skip TLS verification when making the request. (Not recommended.)"
+  },
+  "outputs": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+     "name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The name of the output."
+     },
+     "fromExpression": {
+      "type": "string",
+      "minLength": 1,
+      "description": "An expression to evaluate to extract the output from the HTTP response."
+     }
+    }
+   },
+   "description": "Outputs to extract from the HTTP response."
+  },
+  "successExpression": {
+   "type": "string",
+   "description": "An expression to evaluate to determine if the request was successful."
+  },
+  "failureExpression": {
+   "type": "string",
+   "description": "An expression to evaluate to determine if the request failed."
+  }
+ }
+}
