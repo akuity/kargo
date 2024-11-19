@@ -30,10 +30,7 @@ export function getCurrentFreight(stage: Stage): FreightReference[] {
 
 export function getCurrentFreightWarehouse(stage: Stage) {
   const freightRef = getCurrentFreight(stage);
-  const isWarehouseKind = freightRef.reduce(
-    (acc, cur) => acc || cur?.origin?.kind === 'Warehouse',
-    false
-  );
+  const isWarehouseKind = freightRef.some((freight) => freight?.origin?.kind === 'Warehouse');
 
   if (isWarehouseKind) {
     return freightRef[0]?.origin?.name || stage?.spec?.requestedFreight[0]?.origin?.name || '';
