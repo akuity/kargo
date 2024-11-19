@@ -188,7 +188,7 @@ jobs:
       run: git diff --exit-code -- .
 
   build-image:
-    needs: [test-unit, lint-go, lint-charts, lint-proto, lint-ui, check-codegen]
+    needs: [test-unit, lint-go, lint-charts, lint-proto, lint-and-typecheck-ui, check-codegen]
     runs-on: ubuntu-latest
     services:
       registry:
@@ -220,7 +220,7 @@ jobs:
         cache-to: type=gha,mode=max
 
   build-cli:
-    needs: [test-unit, lint-go, lint-charts, lint-proto, lint-ui, check-codegen]
+    needs: [test-unit, lint-go, lint-charts, lint-proto, lint-and-typecheck-ui, check-codegen]
     runs-on: ubuntu-latest
     container:
       image: golang:1.23.3-bookworm
