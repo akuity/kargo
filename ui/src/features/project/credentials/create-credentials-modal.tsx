@@ -10,11 +10,11 @@ import { FieldContainer } from '@ui/features/common/form/field-container';
 import { ModalComponentProps } from '@ui/features/common/modal/modal-context';
 import { SegmentLabel } from '@ui/features/common/segment-label';
 import { dnsRegex } from '@ui/features/common/utils';
+import { Secret } from '@ui/gen/k8s.io/api/core/v1/generated_pb';
 import {
   createCredentials,
   updateCredentials
 } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
-import { Secret } from '@ui/gen/v1alpha1/types_pb';
 import { zodValidators } from '@ui/utils/validators';
 
 import { constructDefaults, labelForKey, typeLabel } from './utils';
@@ -151,6 +151,7 @@ export const CreateCredentialsModal = ({ project, onSuccess, editing, init, ...p
             control={control}
           >
             {({ field }) => (
+              // @ts-expect-error repoUrlInRegex won't be here so no boolean only strings
               <Input
                 {...field}
                 type={key === 'password' ? 'password' : 'text'}
