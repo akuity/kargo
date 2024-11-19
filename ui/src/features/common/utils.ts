@@ -46,19 +46,9 @@ export function selectFreightByWarehouse(
   freightsInOrder /* they should be in order as if applied latest to old */ : Freight[],
   warehouse?: string
 ) {
-  const LATEST_FREIGHT = 0;
-  if (warehouse) {
-    const order = freightsInOrder?.findIndex((freight) => freight?.origin?.name === warehouse);
+  const order = freightsInOrder?.findIndex((freight) => freight?.origin?.name === warehouse);
 
-    if (order === -1) {
-      return LATEST_FREIGHT;
-    }
-
-    return order;
-  }
-
-  // latest freight default
-  return LATEST_FREIGHT;
+  return order > -1 ? order : 0;
 }
 
 export function currentFreightHasVerification(stage: Stage): boolean {
