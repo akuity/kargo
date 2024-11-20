@@ -3581,6 +3581,8 @@ export class CreateCredentialsRequest extends Message<CreateCredentialsRequest> 
   description = "";
 
   /**
+   * type is git, helm, image or generic
+   *
    * @generated from field: string type = 3;
    */
   type = "";
@@ -3605,6 +3607,13 @@ export class CreateCredentialsRequest extends Message<CreateCredentialsRequest> 
    */
   password = "";
 
+  /**
+   * when type is generic, this field as to create kubernetes Secret resource
+   *
+   * @generated from field: map<string, string> data = 9;
+   */
+  data: { [key: string]: string } = {};
+
   constructor(data?: PartialMessage<CreateCredentialsRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -3621,6 +3630,7 @@ export class CreateCredentialsRequest extends Message<CreateCredentialsRequest> 
     { no: 5, name: "repo_url_is_regex", jsonName: "repoURLIsRegex", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 6, name: "username", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 7, name: "password", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 9, name: "data", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 9 /* ScalarType.STRING */} },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateCredentialsRequest {

@@ -1,5 +1,5 @@
 import { faDocker, faGit } from '@fortawesome/free-brands-svg-icons';
-import { faAnchor, faQuestionCircle } from '@fortawesome/free-solid-svg-icons';
+import { faAnchor, faDharmachakra, faQuestionCircle } from '@fortawesome/free-solid-svg-icons';
 
 import { SegmentLabel } from '@ui/features/common/segment-label';
 import { DESCRIPTION_ANNOTATION_KEY } from '@ui/features/common/utils';
@@ -19,6 +19,8 @@ export const iconForCredentialsType = (type: CredentialsType) => {
       return faAnchor;
     case 'image':
       return faDocker;
+    case 'generic':
+      return faDharmachakra;
     default:
       return faQuestionCircle;
   }
@@ -41,9 +43,11 @@ export const constructDefaults = (init?: Secret) => {
       repoUrl: '',
       repoUrlIsRegex: false,
       username: '',
-      password: ''
+      password: '',
+      data: {}
     };
   }
+
   return {
     name: init?.metadata?.name || '',
     description: init?.metadata?.annotations[DESCRIPTION_ANNOTATION_KEY],
@@ -51,6 +55,17 @@ export const constructDefaults = (init?: Secret) => {
     repoUrl: init?.stringData[CredentialsDataKey.RepoUrl],
     repoUrlIsRegex: init?.stringData[CredentialsDataKey.RepoUrlIsRegex] === 'true',
     username: init?.stringData[CredentialsDataKey.Username],
-    password: ''
+    password: '',
+    data: redactSecretStringData(init)
   };
+};
+
+export const redactSecretStringData = (secret: Secret) => {
+  const data = secret?.stringData;
+
+  for (const key of Object.keys(data)) {
+    data[key] = '';
+  }
+
+  return data;
 };

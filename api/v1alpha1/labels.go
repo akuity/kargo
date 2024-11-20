@@ -8,6 +8,8 @@ const (
 	CredentialTypeLabelValueGit   = "git"
 	CredentialTypeLabelValueHelm  = "helm"
 	CredentialTypeLabelValueImage = "image"
+	// TODO: Should we explicitly keep this label or agree that absence of this label should implicitly say that credential is generic?
+	CredentialTypeLabelValueGeneric = "generic"
 
 	// Kargo core API
 	FreightCollectionLabelKey = "kargo.akuity.io/freight-collection"

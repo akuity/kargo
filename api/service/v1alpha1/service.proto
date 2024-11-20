@@ -536,11 +536,14 @@ message CreateCredentialsRequest {
   string project = 1;
   string name = 2;
   string description = 8;
+  // type is git, helm, image or generic
   string type = 3;
   string repo_url = 4 [json_name = "repoURL"];
   bool repo_url_is_regex = 5 [json_name = "repoURLIsRegex"];
   string username = 6;
   string password = 7;
+  // when type is generic, this field as to create kubernetes Secret resource
+  map<string, string> data = 9;
 }
 
 message CreateCredentialsResponse {
