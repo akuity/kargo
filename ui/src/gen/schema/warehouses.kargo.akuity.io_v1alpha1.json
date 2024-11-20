@@ -18,7 +18,7 @@
       "properties": {
         "freightCreationPolicy": {
           "default": "Automatic",
-          "description": "FreightCreationPolicy describes how Freight is created by this Warehouse.\nThis field is optional. When left unspecified, the field is implicitly\ntreated as if its value were \"Automatic\".",
+          "description": "FreightCreationPolicy describes how Freight is created by this Warehouse.\nThis field is optional. When left unspecified, the field is implicitly\ntreated as if its value were \"Automatic\".\nAccepted values: Automatic, Manual",
           "enum": [
             "Automatic",
             "Manual"
@@ -86,7 +86,7 @@
                   },
                   "commitSelectionStrategy": {
                     "default": "NewestFromBranch",
-                    "description": "CommitSelectionStrategy specifies the rules for how to identify the newest\ncommit of interest in the repository specified by the RepoURL field. This\nfield is optional. When left unspecified, the field is implicitly treated\nas if its value were \"NewestFromBranch\".",
+                    "description": "CommitSelectionStrategy specifies the rules for how to identify the newest\ncommit of interest in the repository specified by the RepoURL field. This\nfield is optional. When left unspecified, the field is implicitly treated\nas if its value were \"NewestFromBranch\".\nAccepted values: Lexical, NewestFromBranch, NewestTag, SemVer",
                     "enum": [
                       "Lexical",
                       "NewestFromBranch",
@@ -179,7 +179,7 @@
                   },
                   "imageSelectionStrategy": {
                     "default": "SemVer",
-                    "description": "ImageSelectionStrategy specifies the rules for how to identify the newest version\nof the image specified by the RepoURL field. This field is optional. When\nleft unspecified, the field is implicitly treated as if its value were\n\"SemVer\".",
+                    "description": "ImageSelectionStrategy specifies the rules for how to identify the newest version\nof the image specified by the RepoURL field. This field is optional. When\nleft unspecified, the field is implicitly treated as if its value were\n\"SemVer\".\nAccepted values: Digest, Lexical, NewestBuild, SemVer",
                     "enum": [
                       "Digest",
                       "Lexical",
