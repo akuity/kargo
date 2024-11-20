@@ -67,6 +67,7 @@ type WarehouseSpec struct {
 	// FreightCreationPolicy describes how Freight is created by this Warehouse.
 	// This field is optional. When left unspecified, the field is implicitly
 	// treated as if its value were "Automatic".
+	// Accepted values: Automatic, Manual
 	//
 	// +kubebuilder:default=Automatic
 	// +kubebuilder:validation:Optional
@@ -111,6 +112,7 @@ type GitSubscription struct {
 	// commit of interest in the repository specified by the RepoURL field. This
 	// field is optional. When left unspecified, the field is implicitly treated
 	// as if its value were "NewestFromBranch".
+	// Accepted values: Lexical, NewestFromBranch, NewestTag, SemVer
 	//
 	// +kubebuilder:default=NewestFromBranch
 	CommitSelectionStrategy CommitSelectionStrategy `json:"commitSelectionStrategy,omitempty" protobuf:"bytes,2,opt,name=commitSelectionStrategy"`
@@ -224,6 +226,7 @@ type ImageSubscription struct {
 	// of the image specified by the RepoURL field. This field is optional. When
 	// left unspecified, the field is implicitly treated as if its value were
 	// "SemVer".
+	// Accepted values: Digest, Lexical, NewestBuild, SemVer
 	//
 	// +kubebuilder:default=SemVer
 	ImageSelectionStrategy ImageSelectionStrategy `json:"imageSelectionStrategy,omitempty" protobuf:"bytes,3,opt,name=imageSelectionStrategy"`
