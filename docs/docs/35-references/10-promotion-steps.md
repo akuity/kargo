@@ -987,30 +987,30 @@ branch referenced by the `Application`. This step is commonly the last step in a
 promotion process.
 
 :::note
-    For Kargo `Stage`s to modify and manage Argo CD `Application` resources,
-    explicit authorization must be granted in the `Application` manifests.
-    This is achieved by including the `kargo.akuity.io/authorized-stage` annotation.
+For Kargo `Stage`s to modify and manage Argo CD `Application` resources,
+explicit authorization must be granted in the `Application` manifests.
+This is achieved by including the `kargo.akuity.io/authorized-stage` annotation.
 
-    The annotation must be formatted as follows:
+The annotation must be formatted as follows:
 
-    ```yaml
-    kargo.akuity.io/authorized-stage: "<project-name>:<stage-name>"
-    ```
+```yaml
+kargo.akuity.io/authorized-stage: "<project-name>:<stage-name>"
+```
 
-    The following example shows how to configure an Argo CD `Application`
-    manifest to authorize the `test` `Stage` of the `kargo-demo` `Project`:
+The following example shows how to configure an Argo CD `Application`
+manifest to authorize the `test` `Stage` of the `kargo-demo` `Project`:
 
-    ```yaml
-    apiVersion: argoproj.io/v1alpha1
-    kind: Application
-    metadata:
-      name: kargo-demo-test
-      namespace: argocd
-      annotations:
-        kargo.akuity.io/authorized-stage: kargo-demo:test
-    spec:
-      # Application specifications go here
-    ```
+```yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kargo-demo-test
+  namespace: argocd
+  annotations:
+    kargo.akuity.io/authorized-stage: kargo-demo:test
+spec:
+  # Application specifications go here
+```
 :::
 
 ### `argocd-update` Configuration
