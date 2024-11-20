@@ -986,6 +986,33 @@ an Argo CD `Application` to sync after previous steps have updated a remote
 branch referenced by the `Application`. This step is commonly the last step in a
 promotion process.
 
+:::note
+    For Kargo `Stage`s to modify and manage Argo CD `Application` resources,
+    explicit authorization must be granted in the `Application` manifests.
+    This is achieved by including the `kargo.akuity.io/authorized-stage` annotation.
+
+    The annotation must be formatted as follows:
+
+    ```yaml
+    kargo.akuity.io/authorized-stage: "<project-name>:<stage-name>"
+    ```
+
+    The following example shows how to configure an Argo CD `Application`
+    manifest to authorize the `test` `Stage` of the `kargo-demo` `Project`:
+
+    ```yaml
+    apiVersion: argoproj.io/v1alpha1
+    kind: Application
+    metadata:
+      name: kargo-demo-test
+      namespace: argocd
+      annotations:
+        kargo.akuity.io/authorized-stage: kargo-demo:test
+    spec:
+      # Application specifications go here
+    ```
+:::
+
 ### `argocd-update` Configuration
 
 | Name | Type | Required | Description |
@@ -1156,34 +1183,3 @@ Although the `argocd-update` step is the only promotion step to currently
 utilize this health check framework, we anticipate that future built-in and
 third-party promotion steps will take advantage of it as well.
 :::
-
-### Authorizing Kargo to Update Argo CD Applications
-
-For Kargo `Stage`s to modify and manage Argo CD `Application` resources,
-explicit authorization must be granted in the `Application` manifests.
-This is achieved by including the `kargo.akuity.io/authorized-stage` annotation.
-
-The annotation must be formatted as follows:
-
-```yaml
-  kargo.akuity.io/authorized-stage: "<project-name>:<stage-name>"
-```
-
-Here:
-- `<project-name>` specifies the name of the Kargo `Project`.
-- `<stage-name>` specifies the name of the `Stage` within the `Project`.
-
-The following example shows how to configure an Argo CD `Application`
-manifest to authorize the `test` `Stage` of the `kargo-demo` `Project`:
-
-```yaml
-  apiVersion: argoproj.io/v1alpha1
-  kind: Application
-  metadata:
-    name: kargo-demo-test
-    namespace: argocd
-    annotations:
-      kargo.akuity.io/authorized-stage: kargo-demo:test
-  spec:
-    # Application specifications go here
-```
