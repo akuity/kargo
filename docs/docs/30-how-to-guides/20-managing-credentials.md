@@ -106,29 +106,38 @@ Refer to
 [the advanced section of the installation guide](./10-installing-kargo.md#advanced-installation)
 for more details.
 
-While doing this you must ensure that the Kargo controller has the appropriate
-permissions to read `Secret` resources in these namespaces. This is necessary because,
-as of Kargo v1.0.0, the controller does not have cluster-wide access to `Secret`s. Permissions
-are granted dynamically on a per-Project basis as `Projects` are created.
-
-You can do so by creating your own `RoleBinding`s to permit the Kargo
- controller(s) to read Secret(s) from each of those namespaces:
+:::note
+Operators must manually ensure Kargo controllers receive read-only access
+to `Secret`s in the designated namespaces. For example, if `kargo-global-creds`
+is designated as a global credentials namespace, the following `RoleBinding`
+should be created within that `Namespace`:
 
 ```yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: kargo-controller-read-secrets
-  namespace: kargo-global-creds
+    name: kargo-controller-read-secrets
+    namespace: kargo-global-creds
 subjects:
-- kind: ServiceAccount
-  name: kargo-controller
-  namespace: kargo
+    - kind: ServiceAccount
+      name: kargo-controller
+      namespace: kargo
 roleRef:
-  kind: Role
-  name: kargo-controller-read-secrets
-  apiGroup: rbac.authorization.k8s.io
+    kind: Role
+    name: kargo-controller-read-secrets
+    apiGroup: rbac.authorization.k8s.io
 ```
+:::
+
+:::info
+By default, Kargo controllers lack cluster-wide permissions on `Secret`
+resources. Instead, the Kargo _management controller_ dynamically expands
+controller access to `Secret`s on a namespace-by-namespace basis as new
+`Project`s are created.
+
+_It is because this process does not account for "global" credential namespaces
+that these bindings must be created manually by an operator._
+:::
 
 :::warning
 Setting `controller.serviceAccount.clusterWideSecretReadingEnabled` setting to
