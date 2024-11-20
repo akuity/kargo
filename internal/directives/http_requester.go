@@ -162,6 +162,10 @@ func (h *httpRequester) buildExprEnv(resp *http.Response) (map[string]any, error
 	if err != nil {
 		return nil, fmt.Errorf("error reading response body: %w", err)
 	}
+	const maxMBs = 2
+	if len(bodyBytes) > maxMBs<<20 { // Technically, these are MiBs.
+		return nil, fmt.Errorf("response body exceeds maximum length of %d MBs", maxMBs)
+	}
 	env := map[string]any{
 		"response": map[string]any{
 			"status":  resp.StatusCode,
