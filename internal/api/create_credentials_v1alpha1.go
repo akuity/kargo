@@ -29,6 +29,11 @@ func (s *server) CreateCredentials(
 	ctx context.Context,
 	req *connect.Request[svcv1alpha1.CreateCredentialsRequest],
 ) (*connect.Response[svcv1alpha1.CreateCredentialsResponse], error) {
+	// Check if secret management is enabled
+	if !s.cfg.SecretManagementEnabled {
+		return nil, connect.NewError(connect.CodeUnimplemented, errSecretManagementDisabled)
+	}
+
 	creds := credentials{
 		project:        req.Msg.GetProject(),
 		name:           req.Msg.GetName(),
