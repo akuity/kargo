@@ -44,6 +44,14 @@ func (s *server) createResource(
 	ctx context.Context,
 	obj *unstructured.Unstructured,
 ) (*svcv1alpha1.CreateResourceResult, error) {
+	if obj.GroupVersionKind() == secretGVK && !s.cfg.SecretManagementEnabled {
+		return &svcv1alpha1.CreateResourceResult{
+			Result: &svcv1alpha1.CreateResourceResult_Error{
+				Error: errSecretManagementDisabled.Error(),
+			},
+		}, nil
+	}
+
 	// Note: We don't blindly attempt creating the resource because many resource
 	// types have defaulting and/or validating webhooks and what we do not want is
 	// for some error from a webhook to obscure the fact that the resource already

@@ -36,6 +36,14 @@ func (s *server) deleteResource(
 	ctx context.Context,
 	obj *unstructured.Unstructured,
 ) *svcv1alpha1.DeleteResourceResult {
+	if obj.GroupVersionKind() == secretGVK && !s.cfg.SecretManagementEnabled {
+		return &svcv1alpha1.DeleteResourceResult{
+			Result: &svcv1alpha1.DeleteResourceResult_Error{
+				Error: errSecretManagementDisabled.Error(),
+			},
+		}
+	}
+
 	if err := s.client.Delete(ctx, obj); err != nil {
 		return &svcv1alpha1.DeleteResourceResult{
 			Result: &svcv1alpha1.DeleteResourceResult_Error{

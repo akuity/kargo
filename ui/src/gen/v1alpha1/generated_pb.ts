@@ -1558,6 +1558,7 @@ export class GitSubscription extends Message<GitSubscription> {
    * commit of interest in the repository specified by the RepoURL field. This
    * field is optional. When left unspecified, the field is implicitly treated
    * as if its value were "NewestFromBranch".
+   * Accepted values: Lexical, NewestFromBranch, NewestTag, SemVer
    *
    * +kubebuilder:default=NewestFromBranch
    *
@@ -2035,6 +2036,7 @@ export class ImageSubscription extends Message<ImageSubscription> {
    * of the image specified by the RepoURL field. This field is optional. When
    * left unspecified, the field is implicitly treated as if its value were
    * "SemVer".
+   * Accepted values: Digest, Lexical, NewestBuild, SemVer
    *
    * +kubebuilder:default=SemVer
    *
@@ -3731,6 +3733,7 @@ export class WarehouseSpec extends Message<WarehouseSpec> {
    * FreightCreationPolicy describes how Freight is created by this Warehouse.
    * This field is optional. When left unspecified, the field is implicitly
    * treated as if its value were "Automatic".
+   * Accepted values: Automatic, Manual
    *
    * +kubebuilder:default=Automatic
    * +kubebuilder:validation:Optional
