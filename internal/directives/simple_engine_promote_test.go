@@ -350,6 +350,46 @@ func TestSimpleEngine_executeStep(t *testing.T) {
 				assert.Equal(t, kargoapi.PromotionPhaseErrored, result.Status)
 			},
 		},
+		{
+			name: "retry within max attempts",
+			promoCtx: PromotionContext{
+				State: State{
+					"step1": map[string]any{
+						"attempts": int64(1),
+					},
+				},
+			},
+			step: PromotionStep{
+				Kind:  "error-step",
+				Alias: "step1",
+				Retry: &kargoapi.PromotionRetry{Attempts: 3},
+			},
+			assertions: func(t *testing.T, result PromotionStepResult, err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, kargoapi.PromotionPhaseRunning, result.Status)
+				assert.Contains(t, result.Message, "attempt 2")
+			},
+		},
+		{
+			name: "unlimited retries with negative max attempts",
+			step: PromotionStep{
+				Kind:  "error-step",
+				Alias: "unlimited",
+				Retry: &kargoapi.PromotionRetry{Attempts: -1},
+			},
+			promoCtx: PromotionContext{
+				State: State{
+					"unlimited": map[string]any{
+						"attempts": int64(100),
+					},
+				},
+			},
+			assertions: func(t *testing.T, result PromotionStepResult, err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, kargoapi.PromotionPhaseRunning, result.Status)
+				assert.Contains(t, result.Message, "attempt 101")
+			},
+		},
 	}
 
 	for _, tt := range tests {

@@ -137,7 +137,9 @@ func (e *SimpleEngine) executeStep(
 	}
 
 	// Check if the step has exceeded the maximum number of attempts.
-	if step.GetAttempts(promoCtx.State) >= step.GetMaxAttempts(reg.Runner) {
+	attempts := step.GetAttempts(promoCtx.State)
+	maxAttempts := step.GetMaxAttempts(reg.Runner)
+	if maxAttempts > 0 && attempts >= maxAttempts {
 		return PromotionStepResult{
 			Status: kargoapi.PromotionPhaseErrored,
 		}, fmt.Errorf("step %q exceeded max attempts", step.Alias)
@@ -150,6 +152,30 @@ func (e *SimpleEngine) executeStep(
 	if err != nil {
 		err = fmt.Errorf("failed to run step %q: %w", step.Kind, err)
 	}
+
+	// If the step failed, and the maximum number of attempts has not been
+	// reached, we are still "Running" the step and will retry it.
+	if err != nil || result.Status == kargoapi.PromotionPhaseErrored || result.Status == kargoapi.PromotionPhaseFailed {
+		if maxAttempts < 0 || attempts+1 < maxAttempts {
+			result.Status = kargoapi.PromotionPhaseRunning
+
+			var message strings.Builder
+			_, _ = message.WriteString(fmt.Sprintf("step %q failed (attempt %d)", step.Alias, attempts+1))
+			if result.Message != "" {
+				_, _ = message.WriteString(": ")
+				_, _ = message.WriteString(result.Message)
+			}
+			if err != nil {
+				_, _ = message.WriteString(": ")
+				_, _ = message.WriteString(err.Error())
+			}
+			result.Message = message.String()
+
+			// Swallow the error if the step is being retried.
+			return result, nil
+		}
+	}
+
 	return result, err
 }
 
