@@ -987,15 +987,16 @@ branch referenced by the `Application`. This step is commonly the last step in a
 promotion process.
 
 :::note
-For Kargo `Stage`s to modify and manage Argo CD `Application` resources,
-explicit authorization must be granted in the `Application` manifests.
-This is achieved by including the `kargo.akuity.io/authorized-stage` annotation.
-
-The annotation must be formatted as follows:
+For an Argo CD `Application` resource to be managed by a Kargo `Stage`,
+the `Application` _must_ have an annotation of the following form:
 
 ```yaml
 kargo.akuity.io/authorized-stage: "<project-name>:<stage-name>"
 ```
+
+Such an annotation offers proof that a user who is themselves authorized
+to update the `Application` in question has consented to a specific
+`Stage` updating the `Application` as well.
 
 The following example shows how to configure an Argo CD `Application`
 manifest to authorize the `test` `Stage` of the `kargo-demo` `Project`:
