@@ -16,6 +16,11 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
+const (
+	contentTypeHeader = "Content-Type"
+	contentTypeJSON   = "application/json"
+)
+
 func init() {
 	builtins.RegisterPromotionStepRunner(newHTTPRequester(), nil)
 }
@@ -156,7 +161,7 @@ func (h *httpRequester) buildExprEnv(resp *http.Response) (map[string]any, error
 			"body":    map[string]any{},
 		},
 	}
-	if len(bodyBytes) > 0 {
+	if len(bodyBytes) > 0 && resp.Header.Get(contentTypeHeader) == contentTypeJSON {
 		body := map[string]any{}
 		if err = json.Unmarshal(bodyBytes, &body); err != nil {
 			return nil, err

@@ -185,13 +185,6 @@ func Test_httpRequester_validate(t *testing.T) {
 }
 
 func Test_httpRequester_runPromotionStep(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		// We'll just respond with a 200 OK for all cases and use different
-		// configurations to test the different code paths.
-		w.WriteHeader(http.StatusOK)
-	}))
-	t.Cleanup(srv.Close)
-
 	testCases := []struct {
 		name       string
 		cfg        HTTPConfig
@@ -199,24 +192,107 @@ func Test_httpRequester_runPromotionStep(t *testing.T) {
 		assertions func(*testing.T, PromotionStepResult, error)
 	}{
 		{
-			name: "success and not failed",
+			name:    "success and not failed; no body",
+			handler: func(_ http.ResponseWriter, _ *http.Request) {},
 			cfg: HTTPConfig{
 				SuccessExpression: "true",
-				Outputs: []HTTPOutput{{
-					Name:           "theMeaningOfLife",
-					FromExpression: "42",
-				}},
+				Outputs: []HTTPOutput{
+					{
+						Name:           "status",
+						FromExpression: "response.status",
+					},
+					{
+						Name:           "theMeaningOfLife",
+						FromExpression: "response.body.theMeaningOfLife",
+					},
+				},
 			},
 			assertions: func(t *testing.T, res PromotionStepResult, err error) {
 				require.NoError(t, err)
 				require.Equal(t, kargoapi.PromotionPhaseSucceeded, res.Status)
-				require.Equal(t, map[string]any{"theMeaningOfLife": 42}, res.Output)
+				require.Equal(
+					t,
+					map[string]any{
+						"status":           http.StatusOK,
+						"theMeaningOfLife": nil,
+					},
+					res.Output,
+				)
+			},
+		},
+		{
+			name: "success and not failed; non-json body",
+			handler: func(w http.ResponseWriter, _ *http.Request) {
+				// This is JSON, but the content type is not set to application/json
+				_, err := w.Write([]byte(`{"theMeaningOfLife": 42}`))
+				require.NoError(t, err)
+			},
+			cfg: HTTPConfig{
+				SuccessExpression: "true",
+				Outputs: []HTTPOutput{
+					{
+						Name:           "status",
+						FromExpression: "response.status",
+					},
+					{
+						Name:           "theMeaningOfLife",
+						FromExpression: "response.body.theMeaningOfLife",
+					},
+				},
+			},
+			assertions: func(t *testing.T, res PromotionStepResult, err error) {
+				require.NoError(t, err)
+				require.Equal(t, kargoapi.PromotionPhaseSucceeded, res.Status)
+				require.Equal(
+					t,
+					map[string]any{
+						"status":           http.StatusOK,
+						"theMeaningOfLife": nil,
+					},
+					res.Output,
+				)
+			},
+		},
+		{
+			name: "success and not failed with json body",
+			handler: func(w http.ResponseWriter, _ *http.Request) {
+				w.Header().Set(contentTypeHeader, contentTypeJSON)
+				_, err := w.Write([]byte(`{"theMeaningOfLife": 42}`))
+				require.NoError(t, err)
+			},
+			cfg: HTTPConfig{
+				SuccessExpression: "true",
+				Outputs: []HTTPOutput{
+					{
+						Name:           "status",
+						FromExpression: "response.status",
+					},
+					{
+						Name:           "theMeaningOfLife",
+						FromExpression: "response.body.theMeaningOfLife",
+					},
+				},
+			},
+			assertions: func(t *testing.T, res PromotionStepResult, err error) {
+				require.NoError(t, err)
+				require.Equal(t, kargoapi.PromotionPhaseSucceeded, res.Status)
+				require.Equal(
+					t,
+					map[string]any{
+						"status":           http.StatusOK,
+						"theMeaningOfLife": float64(42),
+					},
+					res.Output,
+				)
 			},
 		},
 		{
 			name: "failed and not success",
+			handler: func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(http.StatusNotFound)
+			},
 			cfg: HTTPConfig{
-				FailureExpression: "true",
+				FailureExpression: "response.status == 404",
 			},
 			assertions: func(t *testing.T, res PromotionStepResult, err error) {
 				require.ErrorContains(t, err, "HTTP response met failure criteria")
@@ -224,10 +300,11 @@ func Test_httpRequester_runPromotionStep(t *testing.T) {
 			},
 		},
 		{
-			name: "success AND failed", // Treated like a failure
+			name:    "success AND failed", // Treated like a failure
+			handler: func(_ http.ResponseWriter, _ *http.Request) {},
 			cfg: HTTPConfig{
-				SuccessExpression: "true",
-				FailureExpression: "true",
+				SuccessExpression: "response.status == 200",
+				FailureExpression: "response.status == 200",
 			},
 			assertions: func(t *testing.T, res PromotionStepResult, err error) {
 				require.ErrorContains(t, err, "HTTP response met failure criteria")
@@ -236,9 +313,12 @@ func Test_httpRequester_runPromotionStep(t *testing.T) {
 		},
 		{
 			name: "neither success nor failed",
+			handler: func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(http.StatusBadGateway)
+			},
 			cfg: HTTPConfig{
-				SuccessExpression: "false",
-				FailureExpression: "false",
+				SuccessExpression: "response.status == 200",
+				FailureExpression: "response.status == 404",
 			},
 			assertions: func(t *testing.T, res PromotionStepResult, err error) {
 				require.NoError(t, err)
@@ -251,6 +331,8 @@ func Test_httpRequester_runPromotionStep(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
+			srv := httptest.NewServer(testCase.handler)
+			t.Cleanup(srv.Close)
 			testCase.cfg.URL = srv.URL
 			res, err := h.runPromotionStep(context.Background(), nil, testCase.cfg)
 			testCase.assertions(t, res, err)
