@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 
 	"github.com/expr-lang/expr"
 	"github.com/hashicorp/go-cleanhttp"
@@ -161,7 +162,10 @@ func (h *httpRequester) buildExprEnv(resp *http.Response) (map[string]any, error
 			"body":    map[string]any{},
 		},
 	}
-	if len(bodyBytes) > 0 && resp.Header.Get(contentTypeHeader) == contentTypeJSON {
+	contentType := strings.TrimSpace(
+		strings.Split(resp.Header.Get(contentTypeHeader), ";")[0],
+	)
+	if len(bodyBytes) > 0 && contentType == contentTypeJSON {
 		body := map[string]any{}
 		if err = json.Unmarshal(bodyBytes, &body); err != nil {
 			return nil, err
