@@ -125,6 +125,24 @@ func Test_httpRequester_validate(t *testing.T) {
 			},
 		},
 		{
+			name: "timeoutSeconds < 1",
+			config: Config{
+				"timeoutSeconds": 0,
+			},
+			expectedProblems: []string{
+				"timeoutSeconds: Must be greater than or equal to 1",
+			},
+		},
+		{
+			name: "timeoutSeconds > 60",
+			config: Config{
+				"timeoutSeconds": 61,
+			},
+			expectedProblems: []string{
+				"timeoutSeconds: Must be less than or equal to 60",
+			},
+		},
+		{
 			name: "output name not specified",
 			config: Config{
 				"outputs": []Config{{}},

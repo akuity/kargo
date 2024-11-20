@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/expr-lang/expr"
 	"github.com/hashicorp/go-cleanhttp"
@@ -144,8 +145,15 @@ func (h *httpRequester) getClient(cfg HTTPConfig) *http.Client {
 			InsecureSkipVerify: true, // nolint: gosec
 		}
 	}
+	var timeoutSeconds int64
+	if cfg.TimeoutSeconds != nil {
+		timeoutSeconds = *cfg.TimeoutSeconds
+	} else {
+		timeoutSeconds = 10
+	}
 	return &http.Client{
 		Transport: httpTransport,
+		Timeout:   time.Duration(timeoutSeconds) * time.Second,
 	}
 }
 
