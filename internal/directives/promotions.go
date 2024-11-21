@@ -35,10 +35,6 @@ type RetryableStepRunner interface {
 	DefaultAttempts() int64
 }
 
-// stateKeyAttempts is the key used to store the number of attempts that
-// have been made to execute a step in the shared State.
-const stateKeyAttempts = "attempts"
-
 // PromotionContext is the context of a user-defined promotion process that is
 // executed by the Engine.
 type PromotionContext struct {
@@ -66,11 +62,12 @@ type PromotionContext struct {
 	// any Freight that has been inherited from the target Stage's current
 	// state.
 	Freight kargoapi.FreightCollection
-	// Retry is the retry configuration for the Promotion.
-	Retry *kargoapi.PromotionRetry
-	// SharedState is the index of the step from which the promotion should begin
-	// execution.
+	// StartFromStep is the index of the step from which the promotion should
+	// begin execution.
 	StartFromStep int64
+	// Attempts is the number of attempts that have been made to execute
+	// the current step.
+	Attempts int64
 	// State is the current state of the promotion process.
 	State State
 	// Vars is a list of variables definitions that can be used by the
@@ -99,29 +96,6 @@ type PromotionStep struct {
 	Config []byte
 }
 
-// GetAttempts returns the number of attempts that have been made to execute
-// the step using the provided State. If no attempts have been made, 0 is
-// returned.
-func (s *PromotionStep) GetAttempts(state State) int64 {
-	if stepV, ok := state.Get(s.Alias); ok {
-		if stepState, ok := stepV.(map[string]any); ok {
-			if attemptsV, ok := stepState[stateKeyAttempts]; ok {
-				switch attempts := attemptsV.(type) {
-				case int64:
-					return attempts
-				case int:
-					return int64(attempts)
-				// If the State has been rehydrated from a JSON representation,
-				// the attempts value may be a float64. Convert it to an int64.
-				case float64:
-					return int64(attempts)
-				}
-			}
-		}
-	}
-	return 0
-}
-
 // GetMaxAttempts returns the maximum number of attempts that can be made to
 // execute the step using the provided runner. If the runner is a
 // RetryableStepRunner, the value of its retry configuration is used as the
@@ -132,17 +106,6 @@ func (s *PromotionStep) GetMaxAttempts(runner any) int64 {
 		fallback = retryCfg.DefaultAttempts()
 	}
 	return s.Retry.GetAttempts(fallback)
-}
-
-// RecordAttempt records an attempt to execute a step in the provided
-// output.
-func (s *PromotionStep) RecordAttempt(state State, output map[string]any) map[string]any {
-	attempts := s.GetAttempts(state)
-	if output == nil {
-		output = make(map[string]any, 1)
-	}
-	output[stateKeyAttempts] = attempts + 1
-	return output
 }
 
 // GetConfig returns the Config unmarshalled into a map. Any expr-lang
@@ -248,9 +211,11 @@ type PromotionResult struct {
 	// health check processes.
 	HealthCheckSteps []HealthCheckStep
 	// If the promotion process remains in-progress, perhaps waiting for a change
-	// in some external state, the value of this field will indicated where to
+	// in some external state, the value of this field will indicate where to
 	// resume the process in the next reconciliation.
 	CurrentStep int64
+	// Attempt tracks the current execution attempt of the current step.
+	Attempt int64
 	// State is the current state of the promotion process.
 	State State
 }

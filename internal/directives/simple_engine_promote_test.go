@@ -154,16 +154,15 @@ func TestSimpleEngine_executeSteps(t *testing.T) {
 				assert.NoError(t, err)
 				assert.Equal(t, kargoapi.PromotionPhaseSucceeded, result.Status)
 				assert.Equal(t, int64(1), result.CurrentStep)
+				assert.Equal(t, int64(0), result.Attempt)
 
 				// Verify state contains outputs from both steps
 				assert.Equal(t, State{
 					"step1": map[string]any{
-						"attempts": int64(1),
-						"key":      "value",
+						"key": "value",
 					},
 					"step2": map[string]any{
-						"attempts": int64(1),
-						"key":      "value",
+						"key": "value",
 					},
 				}, result.State)
 			},
@@ -181,12 +180,12 @@ func TestSimpleEngine_executeSteps(t *testing.T) {
 				assert.NoError(t, err)
 				assert.Equal(t, kargoapi.PromotionPhaseSucceeded, result.Status)
 				assert.Equal(t, int64(1), result.CurrentStep)
+				assert.Equal(t, int64(0), result.Attempt)
 
 				// Verify only second step output is in state
 				assert.Equal(t, State{
 					"step2": map[string]any{
-						"attempts": int64(1),
-						"key":      "value",
+						"key": "value",
 					},
 				}, result.State)
 			},
@@ -201,16 +200,14 @@ func TestSimpleEngine_executeSteps(t *testing.T) {
 				assert.ErrorContains(t, err, "something went wrong")
 				assert.Equal(t, kargoapi.PromotionPhaseErrored, result.Status)
 				assert.Equal(t, int64(1), result.CurrentStep)
+				assert.Equal(t, int64(1), result.Attempt)
 
 				// Verify first step output is preserved in state
 				assert.Equal(t, State{
 					"step1": map[string]any{
-						"attempts": int64(1),
-						"key":      "value",
+						"key": "value",
 					},
-					"step2": map[string]any{
-						"attempts": int64(1),
-					},
+					"step2": map[string]any(nil),
 				}, result.State)
 			},
 		},
@@ -234,6 +231,46 @@ func TestSimpleEngine_executeSteps(t *testing.T) {
 				assert.ErrorIs(t, err, context.Canceled)
 				assert.Equal(t, kargoapi.PromotionPhaseErrored, result.Status)
 				assert.Equal(t, int64(0), result.CurrentStep)
+			},
+		},
+		{
+			name: "retry failed step within max attempts",
+			promoCtx: PromotionContext{
+				Attempts: 1,
+			},
+			steps: []PromotionStep{
+				{
+					Kind:  "error-step",
+					Alias: "step1",
+					Retry: &kargoapi.PromotionRetry{Attempts: 3},
+				},
+			},
+			assertions: func(t *testing.T, result PromotionResult, err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, kargoapi.PromotionPhaseRunning, result.Status)
+				assert.Equal(t, int64(0), result.CurrentStep)
+				assert.Equal(t, int64(2), result.Attempt)
+				assert.Contains(t, result.Message, "attempt 2")
+			},
+		},
+		{
+			name: "max attempts exceeded",
+			promoCtx: PromotionContext{
+				Attempts: 3,
+			},
+			steps: []PromotionStep{
+				{
+					Kind:  "error-step",
+					Alias: "step1",
+					Retry: &kargoapi.PromotionRetry{Attempts: 3},
+				},
+			},
+			assertions: func(t *testing.T, result PromotionResult, err error) {
+				assert.Error(t, err)
+				assert.Equal(t, kargoapi.PromotionPhaseErrored, result.Status)
+				assert.Equal(t, int64(0), result.CurrentStep)
+				assert.Equal(t, int64(3), result.Attempt)
+				assert.Contains(t, err.Error(), "exceeded max attempts")
 			},
 		},
 	}
@@ -290,136 +327,51 @@ func TestSimpleEngine_executeStep(t *testing.T) {
 		name       string
 		promoCtx   PromotionContext
 		step       PromotionStep
+		reg        PromotionStepRunnerRegistration
 		assertions func(*testing.T, PromotionStepResult, error)
 	}{
 		{
 			name: "successful step execution",
-			step: PromotionStep{Kind: "success-step"},
+			reg: PromotionStepRunnerRegistration{
+				Runner: &mockPromotionStepRunner{
+					name: "success-step",
+					runResult: PromotionStepResult{
+						Status: kargoapi.PromotionPhaseSucceeded,
+					},
+				},
+			},
 			assertions: func(t *testing.T, result PromotionStepResult, err error) {
 				assert.NoError(t, err)
 				assert.Equal(t, kargoapi.PromotionPhaseSucceeded, result.Status)
-
-				// Verify attempts counter is added to output
-				assert.Equal(t, int64(1), result.Output["attempts"])
-				assert.Equal(t, "test-value", result.Output["key"])
-			},
-		},
-		{
-			name: "step execution with existing attempts",
-			promoCtx: PromotionContext{
-				State: State{"test-step": map[string]any{"attempts": 0}},
-			},
-			step: PromotionStep{Kind: "success-step", Alias: "test-step"},
-			assertions: func(t *testing.T, result PromotionStepResult, err error) {
-				assert.NoError(t, err)
-				assert.Equal(t, kargoapi.PromotionPhaseSucceeded, result.Status)
-
-				// Verify attempts counter is incremented in output
-				assert.Equal(t, int64(1), result.Output["attempts"])
-				assert.Equal(t, "test-value", result.Output["key"])
 			},
 		},
 		{
 			name: "step execution failure",
 			step: PromotionStep{Kind: "error-step"},
+			reg: PromotionStepRunnerRegistration{
+				Runner: &mockPromotionStepRunner{
+					name: "error-step",
+					runResult: PromotionStepResult{
+						Status: kargoapi.PromotionPhaseErrored,
+					},
+					runErr: errors.New("something went wrong"),
+				},
+			},
 			assertions: func(t *testing.T, result PromotionStepResult, err error) {
 				assert.ErrorContains(t, err, "failed to run step \"error-step\"")
 				assert.ErrorContains(t, err, "something went wrong")
 				assert.Equal(t, kargoapi.PromotionPhaseErrored, result.Status)
-
-				// Verify attempts counter is still added to output even on failure
-				assert.Equal(t, int64(1), result.Output["attempts"])
-			},
-		},
-		{
-			name: "unregistered step kind",
-			step: PromotionStep{Kind: "unknown"},
-			assertions: func(t *testing.T, result PromotionStepResult, err error) {
-				assert.Error(t, err)
-				assert.Equal(t, kargoapi.PromotionPhaseErrored, result.Status)
-			},
-		},
-		{
-			name: "max attempts exceeded",
-			step: PromotionStep{Kind: "success-step", Alias: "test"},
-			promoCtx: PromotionContext{
-				State: State{"test": map[string]any{"attempts": 3}},
-			},
-			assertions: func(t *testing.T, result PromotionStepResult, err error) {
-				assert.ErrorContains(t, err, "exceeded max attempts")
-				assert.Equal(t, kargoapi.PromotionPhaseErrored, result.Status)
-			},
-		},
-		{
-			name: "retry within max attempts",
-			promoCtx: PromotionContext{
-				State: State{
-					"step1": map[string]any{
-						"attempts": int64(1),
-					},
-				},
-			},
-			step: PromotionStep{
-				Kind:  "error-step",
-				Alias: "step1",
-				Retry: &kargoapi.PromotionRetry{Attempts: 3},
-			},
-			assertions: func(t *testing.T, result PromotionStepResult, err error) {
-				assert.NoError(t, err)
-				assert.Equal(t, kargoapi.PromotionPhaseRunning, result.Status)
-				assert.Contains(t, result.Message, "attempt 2")
-			},
-		},
-		{
-			name: "unlimited retries with negative max attempts",
-			step: PromotionStep{
-				Kind:  "error-step",
-				Alias: "unlimited",
-				Retry: &kargoapi.PromotionRetry{Attempts: -1},
-			},
-			promoCtx: PromotionContext{
-				State: State{
-					"unlimited": map[string]any{
-						"attempts": int64(100),
-					},
-				},
-			},
-			assertions: func(t *testing.T, result PromotionStepResult, err error) {
-				assert.NoError(t, err)
-				assert.Equal(t, kargoapi.PromotionPhaseRunning, result.Status)
-				assert.Contains(t, result.Message, "attempt 101")
 			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			testRegistry := NewStepRunnerRegistry()
-			testRegistry.RegisterPromotionStepRunner(
-				&mockPromotionStepRunner{
-					name: "success-step",
-					runResult: PromotionStepResult{
-						Status: kargoapi.PromotionPhaseSucceeded,
-						Output: map[string]any{"key": "test-value"},
-					},
-				},
-				&StepRunnerPermissions{},
-			)
-			testRegistry.RegisterPromotionStepRunner(
-				&mockPromotionStepRunner{
-					name:      "error-step",
-					runResult: PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
-					runErr:    errors.New("something went wrong"),
-				},
-				&StepRunnerPermissions{},
-			)
-
 			engine := &SimpleEngine{
-				registry:    testRegistry,
 				kargoClient: fake.NewClientBuilder().Build(),
 			}
 
-			result, err := engine.executeStep(context.Background(), tt.promoCtx, tt.step, t.TempDir(), make(State))
+			result, err := engine.executeStep(context.Background(), tt.promoCtx, tt.step, tt.reg, t.TempDir(), make(State))
 			tt.assertions(t, result, err)
 		})
 	}
@@ -460,9 +412,7 @@ func TestSimpleEngine_preparePromotionStepContext(t *testing.T) {
 			name:        "permissions control client access",
 			promoCtx:    PromotionContext{},
 			step:        PromotionStep{Kind: "test-step"},
-			permissions: StepRunnerPermissions{
-				// Nothing allowed
-			},
+			permissions: StepRunnerPermissions{},
 			assertions: func(t *testing.T, ctx *PromotionStepContext, err error) {
 				assert.NoError(t, err)
 				assert.Nil(t, ctx.CredentialsDB)
@@ -474,27 +424,20 @@ func TestSimpleEngine_preparePromotionStepContext(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			testRegistry := NewStepRunnerRegistry()
-			testRegistry.RegisterPromotionStepRunner(
-				&mockPromotionStepRunner{name: "test-step"},
-				&tt.permissions,
-			)
-
 			engine := &SimpleEngine{
-				registry:      testRegistry,
+				registry:      NewStepRunnerRegistry(),
 				kargoClient:   fake.NewClientBuilder().Build(),
 				argoCDClient:  fake.NewClientBuilder().Build(),
 				credentialsDB: &credentials.FakeDB{},
 			}
 
-			reg, _ := testRegistry.GetPromotionStepRunnerRegistration("test-step")
 			stepCtx, err := engine.preparePromotionStepContext(
 				context.Background(),
 				tt.promoCtx,
 				tt.step,
+				tt.permissions,
 				t.TempDir(),
 				make(State),
-				reg,
 			)
 			tt.assertions(t, stepCtx, err)
 		})
