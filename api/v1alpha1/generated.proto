@@ -913,6 +913,10 @@ message PromotionStatus {
   // subsequent reconciliations attempts.
   optional int64 currentStep = 9;
 
+  // CurrentStepAttempt is the number of times the current step has been
+  // attempted.
+  optional int64 currentStepAttempt = 11;
+
   // State stores the state of the promotion process between reconciliation
   // attempts.
   optional .k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON state = 10;

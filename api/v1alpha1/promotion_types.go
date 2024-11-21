@@ -177,6 +177,9 @@ type PromotionStatus struct {
 	// permits steps that have already run successfully to be skipped on
 	// subsequent reconciliations attempts.
 	CurrentStep int64 `json:"currentStep,omitempty" protobuf:"varint,9,opt,name=currentStep"`
+	// CurrentStepAttempt is the number of times the current step has been
+	// attempted.
+	CurrentStepAttempt int64 `json:"currentStepAttempt,omitempty" protobuf:"varint,11,opt,name=currentStepAttempt"`
 	// State stores the state of the promotion process between reconciliation
 	// attempts.
 	State *apiextensionsv1.JSON `json:"state,omitempty" protobuf:"bytes,10,opt,name=state"`

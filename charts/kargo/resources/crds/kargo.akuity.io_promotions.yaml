@@ -161,6 +161,12 @@ spec:
                   subsequent reconciliations attempts.
                 format: int64
                 type: integer
+              currentStepAttempt:
+                description: |-
+                  CurrentStepAttempt is the number of times the current step has been
+                  attempted.
+                format: int64
+                type: integer
               finishedAt:
                 description: FinishedAt is the time when the promotion was completed.
                 format: date-time

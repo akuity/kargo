@@ -2816,6 +2816,14 @@ export class PromotionStatus extends Message<PromotionStatus> {
   currentStep?: bigint;
 
   /**
+   * CurrentStepAttempt is the number of times the current step has been
+   * attempted.
+   *
+   * @generated from field: optional int64 currentStepAttempt = 11;
+   */
+  currentStepAttempt?: bigint;
+
+  /**
    * State stores the state of the promotion process between reconciliation
    * attempts.
    *
@@ -2839,6 +2847,7 @@ export class PromotionStatus extends Message<PromotionStatus> {
     { no: 8, name: "healthChecks", kind: "message", T: HealthCheckStep, repeated: true },
     { no: 6, name: "finishedAt", kind: "message", T: Time, opt: true },
     { no: 9, name: "currentStep", kind: "scalar", T: 3 /* ScalarType.INT64 */, opt: true },
+    { no: 11, name: "currentStepAttempt", kind: "scalar", T: 3 /* ScalarType.INT64 */, opt: true },
     { no: 10, name: "state", kind: "message", T: JSON, opt: true },
   ]);
 

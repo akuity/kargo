@@ -425,6 +425,13 @@
                   "minimum": -9223372036854776000,
                   "type": "integer"
                 },
+                "currentStepAttempt": {
+                  "description": "CurrentStepAttempt is the number of times the current step has been\nattempted.",
+                  "format": "int64",
+                  "maximum": 9223372036854776000,
+                  "minimum": -9223372036854776000,
+                  "type": "integer"
+                },
                 "finishedAt": {
                   "description": "FinishedAt is the time when the promotion was completed.",
                   "format": "date-time",
@@ -1209,6 +1216,13 @@
               "properties": {
                 "currentStep": {
                   "description": "CurrentStep is the index of the current promotion step being executed. This\npermits steps that have already run successfully to be skipped on\nsubsequent reconciliations attempts.",
+                  "format": "int64",
+                  "maximum": 9223372036854776000,
+                  "minimum": -9223372036854776000,
+                  "type": "integer"
+                },
+                "currentStepAttempt": {
+                  "description": "CurrentStepAttempt is the number of times the current step has been\nattempted.",
                   "format": "int64",
                   "maximum": 9223372036854776000,
                   "minimum": -9223372036854776000,
