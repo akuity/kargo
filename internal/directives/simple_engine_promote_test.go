@@ -242,7 +242,7 @@ func TestSimpleEngine_executeSteps(t *testing.T) {
 				{
 					Kind:  "error-step",
 					Alias: "step1",
-					Retry: &kargoapi.PromotionRetry{Attempts: 3},
+					Retry: &kargoapi.PromotionStepRetry{Attempts: 3},
 				},
 			},
 			assertions: func(t *testing.T, result PromotionResult, err error) {
@@ -262,7 +262,7 @@ func TestSimpleEngine_executeSteps(t *testing.T) {
 				{
 					Kind:  "error-step",
 					Alias: "step1",
-					Retry: &kargoapi.PromotionRetry{Attempts: 3},
+					Retry: &kargoapi.PromotionStepRetry{Attempts: 3},
 				},
 			},
 			assertions: func(t *testing.T, result PromotionResult, err error) {

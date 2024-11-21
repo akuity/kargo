@@ -37,7 +37,7 @@ func TestPromotionStep_GetMaxAttempts(t *testing.T) {
 		{
 			name: "returns configured attempts for non-retryable runner",
 			step: &PromotionStep{
-				Retry: &kargoapi.PromotionRetry{
+				Retry: &kargoapi.PromotionStepRetry{
 					Attempts: 5,
 				},
 			},
@@ -49,7 +49,7 @@ func TestPromotionStep_GetMaxAttempts(t *testing.T) {
 		{
 			name: "returns configured attempts for retryable runner",
 			step: &PromotionStep{
-				Retry: &kargoapi.PromotionRetry{
+				Retry: &kargoapi.PromotionStepRetry{
 					Attempts: 5,
 				},
 			},
@@ -61,7 +61,7 @@ func TestPromotionStep_GetMaxAttempts(t *testing.T) {
 		{
 			name: "returns default attempts when retry config returns 0",
 			step: &PromotionStep{
-				Retry: &kargoapi.PromotionRetry{
+				Retry: &kargoapi.PromotionStepRetry{
 					Attempts: 0,
 				},
 			},

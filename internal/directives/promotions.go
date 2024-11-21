@@ -90,7 +90,7 @@ type PromotionStep struct {
 	// subsequent steps.
 	Alias string
 	// Retry is the retry configuration for the PromotionStep.
-	Retry *kargoapi.PromotionRetry
+	Retry *kargoapi.PromotionStepRetry
 	// Config is an opaque JSON to be passed to the PromotionStepRunner executing
 	// this step.
 	Config []byte

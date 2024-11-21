@@ -9,7 +9,7 @@ import (
 func TestPromotionRetry_GetAttempts(t *testing.T) {
 	tests := []struct {
 		name     string
-		retry    *PromotionRetry
+		retry    *PromotionStepRetry
 		fallback int64
 		want     int64
 	}{
@@ -21,13 +21,13 @@ func TestPromotionRetry_GetAttempts(t *testing.T) {
 		},
 		{
 			name:     "attempts is not set",
-			retry:    &PromotionRetry{},
+			retry:    &PromotionStepRetry{},
 			fallback: -1,
 			want:     -1,
 		},
 		{
 			name: "attempts is set",
-			retry: &PromotionRetry{
+			retry: &PromotionStepRetry{
 				Attempts: 3,
 			},
 			want: 3,
