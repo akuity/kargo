@@ -158,13 +158,33 @@ func (h *httpRequester) getClient(cfg HTTPConfig) *http.Client {
 }
 
 func (h *httpRequester) buildExprEnv(resp *http.Response) (map[string]any, error) {
-	bodyBytes, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("error reading response body: %w", err)
+	const maxBytes = 2 << 20
+
+	// Early check of Content-Length if available
+	if contentLength := resp.ContentLength; contentLength > maxBytes {
+		return nil, fmt.Errorf("response body size %d exceeds limit of %d bytes", contentLength, maxBytes)
 	}
-	const maxMBs = 2
-	if len(bodyBytes) > maxMBs<<20 { // Technically, these are MiBs.
-		return nil, fmt.Errorf("response body exceeds maximum length of %d MBs", maxMBs)
+
+	// Create a limited reader that will stop after max bytes
+	bodyReader := io.LimitReader(resp.Body, maxBytes)
+	
+	// Read as far as we are allowed to
+	bodyBytes, err := io.ReadAll(bodyReader)
+	if err != nil {
+		return nil, fmt.Errorf("reading response body: %w", err)
+	}
+
+	// If we read exactly the maximum, the body might be larger
+	if len(bodyBytes) == maxBytes {
+		// Try to read one more byte
+		buf := make([]byte, 1)
+		n, err := resp.Body.Read(buf)
+		if err != nil && err != io.EOF {
+			return nil, fmt.Errorf("checking for additional content: %w", err)
+		}
+		if n > 0 || err != io.EOF {
+			return nil, fmt.Errorf("response body exceeds maximum size of %d bytes", maxBytes)
+		}
 	}
 	env := map[string]any{
 		"response": map[string]any{
