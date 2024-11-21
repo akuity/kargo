@@ -167,7 +167,7 @@ func (h *httpRequester) buildExprEnv(resp *http.Response) (map[string]any, error
 
 	// Create a limited reader that will stop after max bytes
 	bodyReader := io.LimitReader(resp.Body, maxBytes)
-	
+
 	// Read as far as we are allowed to
 	bodyBytes, err := io.ReadAll(bodyReader)
 	if err != nil {
@@ -178,8 +178,8 @@ func (h *httpRequester) buildExprEnv(resp *http.Response) (map[string]any, error
 	if len(bodyBytes) == maxBytes {
 		// Try to read one more byte
 		buf := make([]byte, 1)
-		n, err := resp.Body.Read(buf)
-		if err != nil && err != io.EOF {
+		var n int
+		if n, err = resp.Body.Read(buf); err != nil && err != io.EOF {
 			return nil, fmt.Errorf("checking for additional content: %w", err)
 		}
 		if n > 0 || err != io.EOF {
