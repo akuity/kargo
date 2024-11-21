@@ -108,7 +108,9 @@ func (s *server) UpdateCredentials(
 
 		applyGenericCredentialsUpdateToSecret(&secret, genericCredsUpdate)
 	default:
-		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("type should be one of git, helm, image or generic"))
+		return nil, connect.NewError(
+			connect.CodeInvalidArgument, errors.New("type should be one of git, helm, image or generic"),
+		)
 	}
 
 	if err := s.client.Update(ctx, &secret); err != nil {

@@ -92,7 +92,10 @@ func (s *server) CreateCredentials(
 		}), nil
 	}
 
-	return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("type should be one of git, helm, image or generic"))
+	return nil, connect.NewError(
+		connect.CodeInvalidArgument,
+		errors.New("type should be one of git, helm, image or generic"),
+	)
 }
 
 func (s *server) createGenericCredentials(ctx context.Context, creds genericCredentials) (*corev1.Secret, error) {
@@ -156,7 +159,8 @@ func (s *server) genericCredentialsToSecret(creds genericCredentials) *corev1.Se
 	return kubernetesSecret
 }
 
-// creates credentials used for known purpose; specifically external subscriptions to private git repo or helm OCI or docker image
+// creates credentials used for known purpose; specifically external subscriptions
+// to private git repo or helm OCI or docker image
 func (s *server) createSpecificCredentials(ctx context.Context, creds specificCredentials) (*corev1.Secret, error) {
 	if err := s.validateCredentials(creds); err != nil {
 		return nil, err
