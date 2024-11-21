@@ -49,7 +49,7 @@ func TestCreateCredentials(t *testing.T) {
 			cfg:    cfg,
 		}
 
-		resp, err := s.CreateCredentials(ctx, connect.NewRequest[svcv1alpha1.CreateCredentialsRequest](&svcv1alpha1.CreateCredentialsRequest{
+		resp, err := s.CreateCredentials(ctx, connect.NewRequest(&svcv1alpha1.CreateCredentialsRequest{
 			Project:     "kargo-demo",
 			Name:        "external",
 			Description: "my external secret",
