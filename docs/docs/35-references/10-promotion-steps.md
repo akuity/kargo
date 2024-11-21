@@ -894,6 +894,34 @@ an Argo CD `Application` to sync after previous steps have updated a remote
 branch referenced by the `Application`. This step is commonly the last step in a
 promotion process.
 
+:::note
+For an Argo CD `Application` resource to be managed by a Kargo `Stage`,
+the `Application` _must_ have an annotation of the following form:
+
+```yaml
+kargo.akuity.io/authorized-stage: "<project-name>:<stage-name>"
+```
+
+Such an annotation offers proof that a user who is themselves authorized
+to update the `Application` in question has consented to a specific
+`Stage` updating the `Application` as well.
+
+The following example shows how to configure an Argo CD `Application`
+manifest to authorize the `test` `Stage` of the `kargo-demo` `Project`:
+
+```yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kargo-demo-test
+  namespace: argocd
+  annotations:
+    kargo.akuity.io/authorized-stage: kargo-demo:test
+spec:
+  # Application specifications go here
+```
+:::
+
 ### `argocd-update` Configuration
 
 | Name | Type | Required | Description |
