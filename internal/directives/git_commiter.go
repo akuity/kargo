@@ -11,7 +11,8 @@ import (
 	"github.com/akuity/kargo/internal/controller/git"
 )
 
-const commitKey = "commit"
+// stateKeyCommit is the key used to store the commit ID in the shared State.
+const stateKeyCommit = "commit"
 
 func init() {
 	builtins.RegisterPromotionStepRunner(newGitCommitter(), nil)
@@ -111,7 +112,7 @@ func (g *gitCommitter) runPromotionStep(
 	}
 	return PromotionStepResult{
 		Status: kargoapi.PromotionPhaseSucceeded,
-		Output: map[string]any{commitKey: commitID},
+		Output: map[string]any{stateKeyCommit: commitID},
 	}, nil
 }
 

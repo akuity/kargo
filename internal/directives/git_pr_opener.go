@@ -18,7 +18,8 @@ import (
 	_ "github.com/akuity/kargo/internal/gitprovider/gitlab" // GitLab provider registration
 )
 
-const prNumberKey = "prNumber"
+// stateKeyPRNumber is the key used to store the PR number in the shared State.
+const stateKeyPRNumber = "prNumber"
 
 func init() {
 	builtins.RegisterPromotionStepRunner(
@@ -83,7 +84,7 @@ func (g *gitPROpener) runPromotionStep(
 		return PromotionStepResult{
 			Status: kargoapi.PromotionPhaseSucceeded,
 			Output: map[string]any{
-				prNumberKey: prNumber,
+				stateKeyPRNumber: prNumber,
 			},
 		}, nil
 	}
@@ -161,7 +162,7 @@ func (g *gitPROpener) runPromotionStep(
 		return PromotionStepResult{
 			Status: kargoapi.PromotionPhaseSucceeded,
 			Output: map[string]any{
-				prNumberKey: pr.Number,
+				stateKeyPRNumber: pr.Number,
 			},
 		}, nil
 	}
@@ -219,7 +220,7 @@ func (g *gitPROpener) runPromotionStep(
 	return PromotionStepResult{
 		Status: kargoapi.PromotionPhaseSucceeded,
 		Output: map[string]any{
-			prNumberKey: pr.Number,
+			stateKeyPRNumber: pr.Number,
 		},
 	}, nil
 }
@@ -243,7 +244,7 @@ func (g *gitPROpener) getPRNumber(
 			stepCtx.Alias,
 		)
 	}
-	prNumberAny, exists := stepOutputMap[prNumberKey]
+	prNumberAny, exists := stepOutputMap[stateKeyPRNumber]
 	if !exists {
 		return -1, nil
 	}
@@ -283,7 +284,7 @@ func (g *gitPROpener) getSourceBranch(
 				cfg.SourceBranchFromStep,
 			)
 		}
-		sourceBranchAny, exists := stepOutputMap[branchKey]
+		sourceBranchAny, exists := stepOutputMap[stateKeyBranch]
 		if !exists {
 			return "", fmt.Errorf(
 				"no branch found in output from step with alias %q",

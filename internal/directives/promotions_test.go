@@ -4,10 +4,81 @@ import (
 	"context"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
+
+type mockRetryableRunner struct {
+	defaultAttempts int64
+}
+
+func (m mockRetryableRunner) DefaultAttempts() int64 {
+	return m.defaultAttempts
+}
+
+func TestPromotionStep_GetMaxAttempts(t *testing.T) {
+	tests := []struct {
+		name       string
+		step       *PromotionStep
+		runner     any
+		assertions func(t *testing.T, result int64)
+	}{
+		{
+			name: "returns 1 with no retry config",
+			step: &PromotionStep{
+				Retry: nil,
+			},
+			assertions: func(t *testing.T, result int64) {
+				assert.Equal(t, int64(1), result)
+			},
+		},
+		{
+			name: "returns configured attempts for non-retryable runner",
+			step: &PromotionStep{
+				Retry: &kargoapi.PromotionStepRetry{
+					Attempts: 5,
+				},
+			},
+			runner: nil,
+			assertions: func(t *testing.T, result int64) {
+				assert.Equal(t, int64(5), result)
+			},
+		},
+		{
+			name: "returns configured attempts for retryable runner",
+			step: &PromotionStep{
+				Retry: &kargoapi.PromotionStepRetry{
+					Attempts: 5,
+				},
+			},
+			runner: mockRetryableRunner{defaultAttempts: 3},
+			assertions: func(t *testing.T, result int64) {
+				assert.Equal(t, int64(5), result)
+			},
+		},
+		{
+			name: "returns default attempts when retry config returns 0",
+			step: &PromotionStep{
+				Retry: &kargoapi.PromotionStepRetry{
+					Attempts: 0,
+				},
+			},
+			runner: mockRetryableRunner{defaultAttempts: 3},
+			assertions: func(t *testing.T, result int64) {
+				assert.Equal(t, int64(3), result)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tt.step.GetMaxAttempts(tt.runner)
+			tt.assertions(t, result)
+		})
+	}
+}
 
 func TestPromotionStep_GetConfig(t *testing.T) {
 	promoCtx := PromotionContext{

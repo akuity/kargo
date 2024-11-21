@@ -468,6 +468,7 @@ func (r *reconciler) promote(
 		steps[i] = directives.PromotionStep{
 			Kind:   step.Uses,
 			Alias:  step.As,
+			Retry:  step.Retry,
 			Config: step.Config.Raw,
 		}
 	}
@@ -481,6 +482,7 @@ func (r *reconciler) promote(
 		FreightRequests: stage.Spec.RequestedFreight,
 		Freight:         *workingPromo.Status.FreightCollection.DeepCopy(),
 		StartFromStep:   promo.Status.CurrentStep,
+		Attempts:        promo.Status.CurrentStepAttempt,
 		State:           directives.State(workingPromo.Status.GetState()),
 		Vars:            workingPromo.Spec.Vars,
 	}
@@ -490,6 +492,7 @@ func (r *reconciler) promote(
 		// allows individual steps to self-discover that they've run before and
 		// examine the results of their own previous execution.
 		promoCtx.StartFromStep = 0
+		promoCtx.Attempts = 0
 	} else if !os.IsExist(err) {
 		return nil, fmt.Errorf("error creating working directory: %w", err)
 	}
@@ -505,6 +508,7 @@ func (r *reconciler) promote(
 	workingPromo.Status.Phase = res.Status
 	workingPromo.Status.Message = res.Message
 	workingPromo.Status.CurrentStep = res.CurrentStep
+	workingPromo.Status.CurrentStepAttempt = res.Attempt
 	workingPromo.Status.State = &apiextensionsv1.JSON{Raw: res.State.ToJSON()}
 	if res.Status == kargoapi.PromotionPhaseSucceeded {
 		var healthChecks []kargoapi.HealthCheckStep

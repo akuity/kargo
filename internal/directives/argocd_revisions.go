@@ -177,7 +177,7 @@ func getCommitFromStep(sharedState State, stepAlias string) (string, error) {
 		return "",
 			fmt.Errorf("output from step with alias %q is not a map[string]any", stepAlias)
 	}
-	commitAny, exists := stepOutputMap[commitKey]
+	commitAny, exists := stepOutputMap[stateKeyCommit]
 	if !exists {
 		return "",
 			fmt.Errorf("no commit found in output from step with alias %q", stepAlias)

@@ -2768,6 +2768,14 @@ export class PromotionStatus extends Message<PromotionStatus> {
   currentStep?: bigint;
 
   /**
+   * CurrentStepAttempt is the number of times the current step has been
+   * attempted.
+   *
+   * @generated from field: optional int64 currentStepAttempt = 11;
+   */
+  currentStepAttempt?: bigint;
+
+  /**
    * State stores the state of the promotion process between reconciliation
    * attempts.
    *
@@ -2791,6 +2799,7 @@ export class PromotionStatus extends Message<PromotionStatus> {
     { no: 8, name: "healthChecks", kind: "message", T: HealthCheckStep, repeated: true },
     { no: 6, name: "finishedAt", kind: "message", T: Time, opt: true },
     { no: 9, name: "currentStep", kind: "scalar", T: 3 /* ScalarType.INT64 */, opt: true },
+    { no: 11, name: "currentStepAttempt", kind: "scalar", T: 3 /* ScalarType.INT64 */, opt: true },
     { no: 10, name: "state", kind: "message", T: JSON, opt: true },
   ]);
 
@@ -2834,6 +2843,13 @@ export class PromotionStep extends Message<PromotionStep> {
   as?: string;
 
   /**
+   * Retry is the retry policy for this step.
+   *
+   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.PromotionStepRetry retry = 4;
+   */
+  retry?: PromotionStepRetry;
+
+  /**
    * Config is opaque configuration for the PromotionStep that is understood
    * only by each PromotionStep's implementation. It is legal to utilize
    * expressions in defining values at any level of this block.
@@ -2853,6 +2869,7 @@ export class PromotionStep extends Message<PromotionStep> {
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 1, name: "uses", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 2, name: "as", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 4, name: "retry", kind: "message", T: PromotionStepRetry, opt: true },
     { no: 3, name: "config", kind: "message", T: JSON, opt: true },
   ]);
 
@@ -2870,6 +2887,54 @@ export class PromotionStep extends Message<PromotionStep> {
 
   static equals(a: PromotionStep | PlainMessage<PromotionStep> | undefined, b: PromotionStep | PlainMessage<PromotionStep> | undefined): boolean {
     return proto2.util.equals(PromotionStep, a, b);
+  }
+}
+
+/**
+ * PromotionStepRetry describes the retry policy for a PromotionStep.
+ *
+ * @generated from message github.com.akuity.kargo.api.v1alpha1.PromotionStepRetry
+ */
+export class PromotionStepRetry extends Message<PromotionStepRetry> {
+  /**
+   * Attempts is the number of times the step can be attempted before the
+   * PromotionStep is marked as failed.
+   *
+   * If this field is set to 1, the step will not be retried. If this
+   * field is set to -1, the step will be retried indefinitely.
+   *
+   * The default of this field depends on the step being executed. Refer to
+   * the documentation for the specific step for more information.
+   *
+   * @generated from field: optional int64 attempts = 1;
+   */
+  attempts?: bigint;
+
+  constructor(data?: PartialMessage<PromotionStepRetry>) {
+    super();
+    proto2.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto2 = proto2;
+  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.PromotionStepRetry";
+  static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 1, name: "attempts", kind: "scalar", T: 3 /* ScalarType.INT64 */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PromotionStepRetry {
+    return new PromotionStepRetry().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): PromotionStepRetry {
+    return new PromotionStepRetry().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): PromotionStepRetry {
+    return new PromotionStepRetry().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: PromotionStepRetry | PlainMessage<PromotionStepRetry> | undefined, b: PromotionStepRetry | PlainMessage<PromotionStepRetry> | undefined): boolean {
+    return proto2.util.equals(PromotionStepRetry, a, b);
   }
 }
 

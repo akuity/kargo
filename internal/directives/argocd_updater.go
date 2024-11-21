@@ -127,6 +127,11 @@ func (a *argocdUpdater) Name() string {
 	return "argocd-update"
 }
 
+// DefaultAttempts implements the RetryableStepRunner interface.
+func (a *argocdUpdater) DefaultAttempts() int64 {
+	return -1
+}
+
 // RunPromotionStep implements the PromotionStepRunner interface.
 func (a *argocdUpdater) RunPromotionStep(
 	ctx context.Context,
