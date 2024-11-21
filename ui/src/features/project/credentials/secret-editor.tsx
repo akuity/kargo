@@ -4,10 +4,6 @@ import { Button, Flex, Input } from 'antd';
 import TextArea from 'antd/es/input/TextArea';
 
 type SecretEditorProps = {
-  // TODO(Marvin9): implement
-  // when the operation is "update" secret, its tricky to decide what should be updated and what not
-  // the reason is we get "redacted" values and send this again to API, there needs to be consensus for which key is updated/deleted
-  patchMode?: boolean;
   secret: Record<string, string>;
   onChange: (newSecret: Record<string, string>) => void;
 };

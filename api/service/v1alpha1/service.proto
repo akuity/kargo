@@ -589,6 +589,7 @@ message UpdateCredentialsRequest {
   bool repo_url_is_regex = 5 [json_name = "repoURLIsRegex"];
   string username = 6;
   string password = 7;
+  map<string, string> data = 9;
 }
 
 message UpdateCredentialsResponse {

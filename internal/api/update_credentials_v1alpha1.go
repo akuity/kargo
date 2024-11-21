@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"connectrpc.com/connect"
@@ -33,22 +34,19 @@ func (s *server) UpdateCredentials(
 		return nil, connect.NewError(connect.CodeUnimplemented, errSecretManagementDisabled)
 	}
 
-	credsUpdate := credentialsUpdate{
-		project:        req.Msg.GetProject(),
-		name:           req.Msg.GetName(),
-		description:    req.Msg.GetDescription(),
-		credType:       req.Msg.GetType(),
-		repoURL:        req.Msg.GetRepoUrl(),
-		repoURLISRegex: req.Msg.GetRepoUrlIsRegex(),
-		username:       req.Msg.GetUsername(),
-		password:       req.Msg.GetPassword(),
-	}
+	credType := req.Msg.GetType()
+	project := req.Msg.GetProject()
+	name := req.Msg.GetName()
 
-	if err := validateFieldNotEmpty("project", credsUpdate.project); err != nil {
+	if err := validateFieldNotEmpty("type", credType); err != nil {
 		return nil, err
 	}
 
-	if err := validateFieldNotEmpty("name", credsUpdate.name); err != nil {
+	if err := validateFieldNotEmpty("project", project); err != nil {
+		return nil, err
+	}
+
+	if err := validateFieldNotEmpty("name", name); err != nil {
 		return nil, err
 	}
 
@@ -56,8 +54,8 @@ func (s *server) UpdateCredentials(
 	if err := s.client.Get(
 		ctx,
 		types.NamespacedName{
-			Namespace: credsUpdate.project,
-			Name:      credsUpdate.name,
+			Namespace: project,
+			Name:      name,
 		},
 		&secret,
 	); err != nil {
@@ -80,7 +78,38 @@ func (s *server) UpdateCredentials(
 		)
 	}
 
-	applyCredentialsUpdateToSecret(&secret, credsUpdate)
+	switch credType {
+	case kargoapi.CredentialTypeLabelValueGit:
+	case kargoapi.CredentialTypeLabelValueHelm:
+	case kargoapi.CredentialTypeLabelValueImage:
+
+		credsUpdate := credentialsUpdate{
+			project:        req.Msg.GetProject(),
+			name:           req.Msg.GetName(),
+			description:    req.Msg.GetDescription(),
+			credType:       req.Msg.GetType(),
+			repoURL:        req.Msg.GetRepoUrl(),
+			repoURLISRegex: req.Msg.GetRepoUrlIsRegex(),
+			username:       req.Msg.GetUsername(),
+			password:       req.Msg.GetPassword(),
+		}
+
+		applyCredentialsUpdateToSecret(&secret, credsUpdate)
+
+	case kargoapi.CredentialTypeLabelValueGeneric:
+		genericCredsUpdate := genericCredentials{
+			data:        req.Msg.GetData(),
+			description: req.Msg.GetDescription(),
+		}
+
+		if len(genericCredsUpdate.data) == 0 {
+			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("cannot create empty secret"))
+		}
+
+		applyGenericCredentialsUpdateToSecret(&secret, genericCredsUpdate)
+	default:
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("type should be one of git, helm, image or generic"))
+	}
 
 	if err := s.client.Update(ctx, &secret); err != nil {
 		return nil, fmt.Errorf("update secret: %w", err)
@@ -91,6 +120,36 @@ func (s *server) UpdateCredentials(
 			Credentials: sanitizeCredentialSecret(secret),
 		},
 	), nil
+}
+
+func applyGenericCredentialsUpdateToSecret(secret *corev1.Secret, genericCredsUpdate genericCredentials) {
+	if genericCredsUpdate.description != "" {
+		if secret.Annotations == nil {
+			secret.Annotations = make(map[string]string, 1)
+		}
+		secret.Annotations[kargoapi.AnnotationKeyDescription] = genericCredsUpdate.description
+	} else {
+		delete(secret.Annotations, kargoapi.AnnotationKeyDescription)
+	}
+
+	// delete the keys that exist in secret but not in updater
+	for key := range secret.Data {
+		_, exist := genericCredsUpdate.data[key]
+
+		if !exist {
+			delete(secret.Data, key)
+		}
+	}
+
+	// upsert
+	for key, value := range genericCredsUpdate.data {
+		_, existInSecret := secret.Data[key]
+
+		if !existInSecret || (existInSecret && value != "") {
+			secret.Data[key] = []byte(value)
+			continue
+		}
+	}
 }
 
 func applyCredentialsUpdateToSecret(

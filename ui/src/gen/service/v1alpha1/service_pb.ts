@@ -3980,6 +3980,11 @@ export class UpdateCredentialsRequest extends Message<UpdateCredentialsRequest> 
    */
   password = "";
 
+  /**
+   * @generated from field: map<string, string> data = 9;
+   */
+  data: { [key: string]: string } = {};
+
   constructor(data?: PartialMessage<UpdateCredentialsRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -3996,6 +4001,7 @@ export class UpdateCredentialsRequest extends Message<UpdateCredentialsRequest> 
     { no: 5, name: "repo_url_is_regex", jsonName: "repoURLIsRegex", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 6, name: "username", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 7, name: "password", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 9, name: "data", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 9 /* ScalarType.STRING */} },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateCredentialsRequest {

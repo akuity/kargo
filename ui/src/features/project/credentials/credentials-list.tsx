@@ -67,7 +67,7 @@ export const CredentialsList = () => {
         ADD CREDENTIALS
       </Button>
       <Flex gap={16}>
-        <Card title='Specific Credentials' className='w-1/2'>
+        <Card title='Repo Credentials' className='w-1/2'>
           <Table
             key={specificCredentials.length}
             dataSource={specificCredentials}

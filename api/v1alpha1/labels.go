@@ -4,11 +4,10 @@ const (
 	AliasLabelKey = "kargo.akuity.io/alias"
 
 	// Credentials
-	CredentialTypeLabelKey        = "kargo.akuity.io/cred-type" // nolint: gosec
-	CredentialTypeLabelValueGit   = "git"
-	CredentialTypeLabelValueHelm  = "helm"
-	CredentialTypeLabelValueImage = "image"
-	// TODO: Should we explicitly keep this label or agree that absence of this label should implicitly say that credential is generic?
+	CredentialTypeLabelKey          = "kargo.akuity.io/cred-type" // nolint: gosec
+	CredentialTypeLabelValueGit     = "git"
+	CredentialTypeLabelValueHelm    = "helm"
+	CredentialTypeLabelValueImage   = "image"
 	CredentialTypeLabelValueGeneric = "generic"
 
 	// Kargo core API

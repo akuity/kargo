@@ -78,14 +78,14 @@ export const CreateCredentialsModal = ({ project, onSuccess, editing, init, ...p
     resolver: zodResolver(createFormSchema(editing))
   });
 
-  const { mutate } = useMutation(createCredentials, {
+  const createCredentialsMutation = useMutation(createCredentials, {
     onSuccess: () => {
       props.hide();
       onSuccess();
     }
   });
 
-  const { mutate: update } = useMutation(updateCredentials, {
+  const updateCredentialsMutation = useMutation(updateCredentials, {
     onSuccess: () => {
       props.hide();
       onSuccess();
@@ -99,11 +99,19 @@ export const CreateCredentialsModal = ({ project, onSuccess, editing, init, ...p
   return (
     <Modal
       onCancel={props.hide}
+      okButtonProps={{
+        loading: createCredentialsMutation.isPending || updateCredentialsMutation.isPending
+      }}
+      okText={editing ? 'Update' : 'Create'}
       onOk={handleSubmit((values) => {
         if (editing) {
-          return update({ ...values, project, name: init?.metadata?.name || '' });
+          return updateCredentialsMutation.mutate({
+            ...values,
+            project,
+            name: init?.metadata?.name || ''
+          });
         } else {
-          mutate({ ...values, project });
+          createCredentialsMutation.mutate({ ...values, project });
         }
       })}
       title={
@@ -196,7 +204,6 @@ export const CreateCredentialsModal = ({ project, onSuccess, editing, init, ...p
             <SecretEditor
               secret={field.value as Record<string, string>}
               onChange={field.onChange}
-              patchMode={editing}
             />
           )}
         </FieldContainer>
