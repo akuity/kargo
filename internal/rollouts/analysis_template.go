@@ -124,18 +124,18 @@ func flattenArgs(templates []*rolloutsapi.AnalysisTemplate) ([]rolloutsapi.Argum
 
 // validateAndUpdateArg checks for conflicts between arguments and updates the
 // existing argument if needed.
-func validateAndUpdateArg(existing *rolloutsapi.Argument, new rolloutsapi.Argument) error {
-	if existing.Value != nil && new.Value != nil && *existing.Value != *new.Value {
+func validateAndUpdateArg(existing *rolloutsapi.Argument, updated rolloutsapi.Argument) error {
+	if existing.Value != nil && updated.Value != nil && *existing.Value != *updated.Value {
 		return fmt.Errorf(
 			"conflicting values for argument %q: %q and %q",
-			existing.Name, *existing.Value, *new.Value,
+			existing.Name, *existing.Value, *updated.Value,
 		)
 	}
 
 	// Update existing argument only if it has no value and new argument has
 	// one.
-	if existing.Value == nil && new.Value != nil {
-		existing.Value = new.Value
+	if existing.Value == nil && updated.Value != nil {
+		existing.Value = updated.Value
 	}
 
 	return nil

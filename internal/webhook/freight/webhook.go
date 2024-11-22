@@ -506,35 +506,35 @@ func validateFreightArtifacts(
 // compareFreight compares two Freight objects and returns the first field path
 // that differs between them, the new value, and a boolean indicating whether
 // the two Freight objects are equal.
-func compareFreight(old, new *kargoapi.Freight) (*field.Path, any, bool) {
-	if !old.Origin.Equals(&new.Origin) {
-		return field.NewPath("origin"), new.Origin, false
+func compareFreight(existing, updated *kargoapi.Freight) (*field.Path, any, bool) {
+	if !existing.Origin.Equals(&updated.Origin) {
+		return field.NewPath("origin"), updated.Origin, false
 	}
 
-	if len(old.Commits) != len(new.Commits) {
-		return field.NewPath("commits"), new.Commits, false
+	if len(existing.Commits) != len(updated.Commits) {
+		return field.NewPath("commits"), updated.Commits, false
 	}
-	for i, commit := range old.Commits {
-		if !commit.DeepEquals(&new.Commits[i]) {
-			return field.NewPath("commits").Index(i), new.Commits[i], false
+	for i, commit := range existing.Commits {
+		if !commit.DeepEquals(&updated.Commits[i]) {
+			return field.NewPath("commits").Index(i), updated.Commits[i], false
 		}
 	}
 
-	if len(old.Images) != len(new.Images) {
-		return field.NewPath("images"), new.Images, false
+	if len(existing.Images) != len(updated.Images) {
+		return field.NewPath("images"), updated.Images, false
 	}
-	for i, image := range old.Images {
-		if !image.DeepEquals(&new.Images[i]) {
-			return field.NewPath("images").Index(i), new.Images[i], false
+	for i, image := range existing.Images {
+		if !image.DeepEquals(&updated.Images[i]) {
+			return field.NewPath("images").Index(i), updated.Images[i], false
 		}
 	}
 
-	if len(old.Charts) != len(new.Charts) {
-		return field.NewPath("charts"), new.Charts, false
+	if len(existing.Charts) != len(updated.Charts) {
+		return field.NewPath("charts"), updated.Charts, false
 	}
-	for i, chart := range old.Charts {
-		if !chart.DeepEquals(&new.Charts[i]) {
-			return field.NewPath("charts").Index(i), new.Charts[i], false
+	for i, chart := range existing.Charts {
+		if !chart.DeepEquals(&updated.Charts[i]) {
+			return field.NewPath("charts").Index(i), updated.Charts[i], false
 		}
 	}
 
