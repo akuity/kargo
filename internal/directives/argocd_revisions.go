@@ -1,14 +1,9 @@
 package directives
 
 import (
-	"context"
-	"errors"
 	"fmt"
-	"strings"
 
-	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
-	"github.com/akuity/kargo/internal/controller/freight"
 )
 
 // getDesiredRevisions returns the desired revisions for all sources of the given
@@ -18,9 +13,7 @@ import (
 // Sources slice. For any source whose desired revision cannot be determined,
 // the slice will contain an empty string at the corresponding index.
 func (a *argocdUpdater) getDesiredRevisions(
-	ctx context.Context,
 	stepCtx *PromotionStepContext,
-	stepCfg *ArgoCDUpdateConfig,
 	update *ArgoCDAppUpdate,
 	app *argocd.Application,
 ) ([]string, error) {
@@ -51,102 +44,9 @@ func (a *argocdUpdater) getDesiredRevisions(
 					return nil, err
 				}
 			}
-			if revisions[i] != "" {
-				continue
-			}
 		}
-		var desiredOrigin *kargoapi.FreightOrigin
-		// If there is a source update that targets this source, it might be
-		// specific about which origin the desired revision should come from.
-		if sourceUpdate != nil {
-			desiredOrigin = getDesiredOrigin(stepCfg, sourceUpdate)
-		} else {
-			desiredOrigin = getDesiredOrigin(stepCfg, update)
-		}
-		desiredRevision, err := a.getDesiredRevisionForSource(
-			ctx,
-			stepCtx,
-			&src,
-			desiredOrigin,
-		)
-		if err != nil {
-			return nil, err
-		}
-		revisions[i] = desiredRevision
 	}
 	return revisions, nil
-}
-
-func (a *argocdUpdater) getDesiredRevisionForSource(
-	ctx context.Context,
-	stepCtx *PromotionStepContext,
-	src *argocd.ApplicationSource,
-	desiredOrigin *kargoapi.FreightOrigin,
-) (string, error) {
-	switch {
-	case src.Chart != "":
-		// This source points to a Helm chart.
-		repoURL := src.RepoURL
-		chartName := src.Chart
-		if !strings.Contains(repoURL, "://") {
-			// In Argo CD ApplicationSource, if a repo URL specifies no protocol and a
-			// chart name is set (already confirmed at this point), we can assume that
-			// the repo URL is an OCI registry URL. Kargo Warehouses and Freight,
-			// however, do use oci:// at the beginning of such URLs.
-			//
-			// Additionally, where OCI is concerned, an ApplicationSource's repoURL is
-			// really a registry URL, and the chart name is a repository within that
-			// registry. Warehouses and Freight, however, handle things more correctly
-			// where a repoURL points directly to a repository and chart name is
-			// irrelevant / blank. We need to account for this when we search our
-			// Freight for the chart.
-			repoURL = fmt.Sprintf(
-				"oci://%s/%s",
-				strings.TrimSuffix(repoURL, "/"),
-				chartName,
-			)
-			chartName = ""
-		}
-		chart, err := freight.FindChart(
-			ctx,
-			stepCtx.KargoClient,
-			stepCtx.Project,
-			stepCtx.FreightRequests,
-			desiredOrigin,
-			stepCtx.Freight.References(),
-			repoURL,
-			chartName,
-		)
-		if err != nil {
-			if errors.As(err, &freight.NotFoundError{}) {
-				return "", nil
-			}
-			return "",
-				fmt.Errorf("error finding chart from repo %q: %w", repoURL, err)
-		}
-		return chart.Version, nil
-	case src.RepoURL != "":
-		// This source points to a Git repository.
-		commit, err := freight.FindCommit(
-			ctx,
-			stepCtx.KargoClient,
-			stepCtx.Project,
-			stepCtx.FreightRequests,
-			desiredOrigin,
-			stepCtx.Freight.References(),
-			src.RepoURL,
-		)
-		if err != nil {
-			if errors.As(err, &freight.NotFoundError{}) {
-				return "", nil
-			}
-			return "",
-				fmt.Errorf("error finding commit from repo %q: %w", src.RepoURL, err)
-		}
-		return commit.ID, nil
-	}
-	// If we end up here, no desired revision was found.
-	return "", nil
 }
 
 // findSourceUpdate finds and returns the ArgoCDSourceUpdate that targets the

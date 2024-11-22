@@ -65,9 +65,7 @@ type argocdUpdater struct {
 	) (argocd.ApplicationSources, error)
 
 	mustPerformUpdateFn func(
-		context.Context,
 		*PromotionStepContext,
-		*ArgoCDUpdateConfig,
 		*ArgoCDAppUpdate,
 		*argocd.Application,
 		argocd.ApplicationSources,
@@ -189,13 +187,7 @@ func (a *argocdUpdater) runPromotionStep(
 			)
 		}
 
-		desiredRevisions, err := a.getDesiredRevisions(
-			ctx,
-			stepCtx,
-			&stepCfg,
-			update,
-			app,
-		)
+		desiredRevisions, err := a.getDesiredRevisions(stepCtx, update, app)
 		if err != nil {
 			return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, fmt.Errorf(
 				"error determining desired revisions for Argo CD Application %q in "+
@@ -226,14 +218,7 @@ func (a *argocdUpdater) runPromotionStep(
 		}
 
 		// Check if the update needs to be performed and retrieve its phase.
-		phase, mustUpdate, err := a.mustPerformUpdateFn(
-			ctx,
-			stepCtx,
-			&stepCfg,
-			update,
-			app,
-			desiredSources,
-		)
+		phase, mustUpdate, err := a.mustPerformUpdateFn(stepCtx, update, app, desiredSources)
 
 		// If we have a phase, append it to the results.
 		if phase != "" {
@@ -378,9 +363,7 @@ updateLoop:
 }
 
 func (a *argocdUpdater) mustPerformUpdate(
-	ctx context.Context,
 	stepCtx *PromotionStepContext,
-	stepCfg *ArgoCDUpdateConfig,
 	update *ArgoCDAppUpdate,
 	app *argocd.Application,
 	desiredSources argocd.ApplicationSources,
@@ -458,13 +441,7 @@ func (a *argocdUpdater) mustPerformUpdate(
 	}
 
 	// Check if the desired revisions were applied.
-	desiredRevisions, err := a.getDesiredRevisions(
-		ctx,
-		stepCtx,
-		stepCfg,
-		update,
-		app,
-	)
+	desiredRevisions, err := a.getDesiredRevisions(stepCtx, update, app)
 	if err != nil {
 		return "", true, fmt.Errorf("error determining desired revisions: %w", err)
 	}
