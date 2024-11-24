@@ -7,7 +7,7 @@ require (
 	github.com/golangci/golangci-lint v1.62.0
 	golang.org/x/tools v0.27.0
 	helm.sh/helm/v3 v3.16.3
-	k8s.io/code-generator v0.31.2
+	k8s.io/code-generator v0.31.3
 	sigs.k8s.io/controller-tools v0.16.5
 )
 
@@ -350,7 +350,7 @@ require (
 	honnef.co/go/tools v0.5.1 // indirect
 	k8s.io/api v0.31.2 // indirect
 	k8s.io/apiextensions-apiserver v0.31.2 // indirect
-	k8s.io/apimachinery v0.31.2 // indirect
+	k8s.io/apimachinery v0.31.3 // indirect
 	k8s.io/apiserver v0.31.2 // indirect
 	k8s.io/cli-runtime v0.31.1 // indirect
 	k8s.io/client-go v0.31.2 // indirect
