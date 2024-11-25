@@ -24,7 +24,7 @@ func TestConfig_DeepCopy(t *testing.T) {
 			config: Config{},
 			assertions: func(t *testing.T, original, copied Config) {
 				assert.Empty(t, copied, "Expected empty result for empty input")
-				assert.NotSame(t, original, copied, "Expected a new instance, not the same reference")
+				assert.NotSame(t, &original, &copied, "Expected a new instance, not the same reference")
 			},
 		},
 		{
@@ -36,7 +36,7 @@ func TestConfig_DeepCopy(t *testing.T) {
 			},
 			assertions: func(t *testing.T, original, copied Config) {
 				assert.Equal(t, original, copied, "Expected equal content")
-				assert.NotSame(t, original, copied, "Expected a new instance, not the same reference")
+				assert.NotSame(t, &original, &copied, "Expected a new instance, not the same reference")
 
 				// Modify original to ensure deep copy
 				original["key1"] = "modified"
@@ -55,13 +55,13 @@ func TestConfig_DeepCopy(t *testing.T) {
 			},
 			assertions: func(t *testing.T, original, copied Config) {
 				assert.Equal(t, original, copied, "Expected equal content")
-				assert.NotSame(t, original, copied, "Expected a new instance, not the same reference")
+				assert.NotSame(t, &original, &copied, "Expected a new instance, not the same reference")
 
 				// Check nested map
 				originalNested := original["key2"].(map[string]any) // nolint: forcetypeassert
 				copiedNested := copied["key2"].(map[string]any)     // nolint: forcetypeassert
 				assert.Equal(t, originalNested, copiedNested, "Expected equal nested content")
-				assert.NotSame(t, originalNested, copiedNested, "Expected a new instance for nested map")
+				assert.NotSame(t, &originalNested, &copiedNested, "Expected a new instance for nested map")
 
 				// Modify original nested map
 				originalNested["nested1"] = "modified"
@@ -71,7 +71,7 @@ func TestConfig_DeepCopy(t *testing.T) {
 				originalSlice := original["key3"].([]any) // nolint: forcetypeassert
 				copiedSlice := copied["key3"].([]any)     // nolint: forcetypeassert
 				assert.Equal(t, originalSlice, copiedSlice, "Expected equal slice content")
-				assert.NotSame(t, originalSlice, copiedSlice, "Expected a new instance for slice")
+				assert.NotSame(t, &originalSlice, &copiedSlice, "Expected a new instance for slice")
 
 				// Modify original slice
 				originalSlice[0] = 999
