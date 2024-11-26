@@ -26,6 +26,7 @@ import (
 	"github.com/akuity/kargo/internal/kubeclient"
 	libEvent "github.com/akuity/kargo/internal/kubernetes/event"
 	"github.com/akuity/kargo/internal/logging"
+	intpredicate "github.com/akuity/kargo/internal/predicate"
 )
 
 type ControlFlowStageReconciler struct {
@@ -121,6 +122,7 @@ func (r *ControlFlowStageReconciler) SetupWithManager(
 		For(&kargoapi.Stage{}).
 		Named("control_flow_stage").
 		WithOptions(controller.CommonOptions(r.cfg.MaxConcurrentControlFlowReconciles)).
+		WithEventFilter(intpredicate.IgnoreDelete[client.Object]{}).
 		WithEventFilter(
 			predicate.And(
 				IsControlFlowStage(true),
