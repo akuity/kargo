@@ -142,8 +142,8 @@ func (s *PromotionStep) GetConfig(
 		expr.Function(
 			"commitFrom",
 			getCommitFunc(ctx, cl, promoCtx),
-			new(func(repoURL string) kargoapi.GitCommit),
 			new(func(repoURL string, origin kargoapi.FreightOrigin) kargoapi.GitCommit),
+			new(func(repoURL string) kargoapi.GitCommit),
 		),
 		expr.Function(
 			"imageFrom",
@@ -154,10 +154,10 @@ func (s *PromotionStep) GetConfig(
 		expr.Function(
 			"chartFrom",
 			getChartFunc(ctx, cl, promoCtx),
-			new(func(repoURL string) kargoapi.Chart),
+			new(func(repoURL string, chartName string, origin kargoapi.FreightOrigin) kargoapi.Chart),
 			new(func(repoURL string, chartName string) kargoapi.Chart),
 			new(func(repoURL string, origin kargoapi.FreightOrigin) kargoapi.Chart),
-			new(func(repoURL string, chartName string, origin kargoapi.FreightOrigin) kargoapi.Chart),
+			new(func(repoURL string) kargoapi.Chart),
 		),
 	)
 	if err != nil {
