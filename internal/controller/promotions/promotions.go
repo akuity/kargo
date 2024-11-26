@@ -31,6 +31,7 @@ import (
 	"github.com/akuity/kargo/internal/kubeclient"
 	libEvent "github.com/akuity/kargo/internal/kubernetes/event"
 	"github.com/akuity/kargo/internal/logging"
+	intpredicate "github.com/akuity/kargo/internal/predicate"
 )
 
 // ReconcilerConfig represents configuration for the promotion reconciler.
@@ -114,6 +115,7 @@ func SetupReconcilerWithManager(
 
 	c, err := ctrl.NewControllerManagedBy(kargoMgr).
 		For(&kargoapi.Promotion{}).
+		WithEventFilter(intpredicate.IgnoreDelete[client.Object]{}).
 		WithEventFilter(predicate.Or(
 			predicate.GenerationChangedPredicate{},
 			kargo.RefreshRequested{},
