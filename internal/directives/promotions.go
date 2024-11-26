@@ -148,8 +148,8 @@ func (s *PromotionStep) GetConfig(
 		expr.Function(
 			"imageFrom",
 			getImageFunc(ctx, cl, promoCtx),
-			new(func(repoURL string) kargoapi.Image),
 			new(func(repoURL string, origin kargoapi.FreightOrigin) kargoapi.Image),
+			new(func(repoURL string) kargoapi.Image),
 		),
 		expr.Function(
 			"chartFrom",
