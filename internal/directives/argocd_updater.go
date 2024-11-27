@@ -858,7 +858,7 @@ func (a *argocdUpdater) buildHelmParamChangesForAppSource(
 		imageUpdate := &update.Images[i]
 		switch imageUpdate.Value {
 		case ImageAndTag, Tag, ImageAndDigest, Digest:
-			// TODO(krancour): Remove this for v1.2.0
+			// TODO(krancour): Remove this for v1.3.0
 			desiredOrigin := getDesiredOrigin(stepCfg, imageUpdate)
 			image, err := freight.FindImage(
 				ctx,

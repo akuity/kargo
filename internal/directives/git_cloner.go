@@ -148,7 +148,7 @@ func (g *gitCloner) runPromotionStep(
 			ref = checkout.Commit
 		case checkout.Tag != "":
 			ref = checkout.Tag
-		// TODO(krancour): Remove for v1.2.0.
+		// TODO(krancour): Remove for v1.3.0.
 		case checkout.FromFreight:
 			var desiredOrigin *kargoapi.FreightOrigin
 			if checkout.FromOrigin != nil {
