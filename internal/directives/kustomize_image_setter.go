@@ -129,7 +129,7 @@ func (k *kustomizeImageSetter) buildTargetImages(
 			targetImage.Digest = img.Digest
 		} else if img.Tag != "" {
 			targetImage.NewTag = img.Tag
-		} else { // TODO(krancour): Remove this for v1.2.0
+		} else { // TODO(krancour): Remove this for v1.3.0
 			var desiredOrigin *kargoapi.FreightOrigin
 			if img.FromOrigin != nil {
 				desiredOrigin = &kargoapi.FreightOrigin{

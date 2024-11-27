@@ -24,6 +24,8 @@ func init() {
 
 // helmImageUpdater is an implementation of the PromotionStepRunner interface
 // that updates image references in a Helm values file.
+//
+// TODO(krancour): Remove for v1.3.0.
 type helmImageUpdater struct {
 	schemaLoader gojsonschema.JSONLoader
 }
