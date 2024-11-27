@@ -43,8 +43,8 @@ multiple working trees.
 | `checkout[].create` | `boolean` | N | In the event `branch` does not already exist on the remote, whether a new, empty, orphaned branch should be created. Default is `false`, but should commonly be set to `true` for Stage-specific branches, which may not exist yet at the time of a Stage's first promotion. |
 | `checkout[].commit` | `string` | N | A specific commit to check out. Mutually exclusive with `branch`, `tag`, and `fromFreight=true`. If none of these is specified, the default branch will be checked out. |
 | `checkout[].tag` | `string` | N | A tag to check out. Mutually exclusive with `branch`, `commit`, and `fromFreight=true`. If none of these is specified, the default branch will be checked out. |
-| `checkout[].fromFreight` | `boolean` | N | Whether a commit to check out should be obtained from the Freight being promoted. A value of `true` is mutually exclusive with `branch`, `commit`, and `tag`. If none of these is specified, the default branch will be checked out. Default is `false`, but is often set to `true`. <br/><br/>__Deprecated: Use `commit` with an expression instead. Will be removed in v1.2.0.__ |
-| `checkout[].fromOrigin` | `object` | N | See [specifying origins](#specifying-origins). <br/><br/>__Deprecated: Use `commit` with an expression instead. Will be removed in v1.2.0.__ |
+| `checkout[].fromFreight` | `boolean` | N | Whether a commit to check out should be obtained from the Freight being promoted. A value of `true` is mutually exclusive with `branch`, `commit`, and `tag`. If none of these is specified, the default branch will be checked out. Default is `false`, but is often set to `true`. <br/><br/>__Deprecated: Use `commit` with an expression instead. Will be removed in v1.3.0.__ |
+| `checkout[].fromOrigin` | `object` | N | See [specifying origins](#specifying-origins). <br/><br/>__Deprecated: Use `commit` with an expression instead. Will be removed in v1.3.0.__ |
 | `checkout[].path` | `string` | Y | The path for a working tree that will be created from the checked out revision. This path is relative to the temporary workspace that Kargo provisions for use by the promotion process. |
 
 ### `git-clone` Examples
@@ -219,8 +219,8 @@ to executing `kustomize edit set image`. This step is commonly followed by a
 | `images[].image` | `string` | Y | Name/URL of the image being updated. |
 | `images[].tag` | `string` | N | A tag naming a specific revision of `image`. Mutually exclusive with `digest` and `useDigest=true`. If none of these are specified, the tag specified by a piece of Freight referencing `image` will be used as the value of this field. |
 | `images[].digest` | `string` | N | A digest naming a specific revision of `image`. Mutually exclusive with `tag` and `useDigest=true`. If none of these are specified, the tag specified by a piece of Freight referencing `image` will be used as the value of `tag`. |
-| `images[].useDigest` | `boolean` | N | Whether to update the `kustomization.yaml` file using the container image's digest instead of its tag. Mutually exclusive with `digest` and `tag`. If none of these are specified, the tag specified by a piece of Freight referencing `image` will be used as the value of `tag`. <br/><br/>__Deprecated: Use `digest` with an expression instead. Will be removed in v1.2.0.__ |
-| `images[].fromOrigin` | `object` | N | See [specifying origins](#specifying-origins). <br/><br/>__Deprecated: Use `digest` or `tag` with an expression instead. Will be removed in v1.2.0.__ |
+| `images[].useDigest` | `boolean` | N | Whether to update the `kustomization.yaml` file using the container image's digest instead of its tag. Mutually exclusive with `digest` and `tag`. If none of these are specified, the tag specified by a piece of Freight referencing `image` will be used as the value of `tag`. <br/><br/>__Deprecated: Use `digest` with an expression instead. Will be removed in v1.3.0.__ |
+| `images[].fromOrigin` | `object` | N | See [specifying origins](#specifying-origins). <br/><br/>__Deprecated: Use `digest` or `tag` with an expression instead. Will be removed in v1.3.0.__ |
 | `images[].newName` | `string` | N | A substitution for the name/URL of the image being updated. This is useful when different Stages have access to different container image repositories (assuming those different repositories contain equivalent images that are tagged identically). This may be a frequent consideration for users of Amazon's Elastic Container Registry. |
 
 ### `kustomize-set-image` Examples
@@ -394,7 +394,7 @@ file with new version information which is referenced by the Freight being
 promoted. This step is commonly followed by a [`helm-template`](#helm-template)
 step.
 
-__Deprecated: Use the generic `yaml-update` step instead. Will be removed in v1.2.0.__
+__Deprecated: Use the generic `yaml-update` step instead. Will be removed in v1.3.0.__
 
 ### `helm-update-image` Configuration
 
@@ -507,7 +507,7 @@ referenced by the Freight being promoted. This step is commonly followed by a
 | `charts` | `[]string` | Y | The details of dependency (subschart) updates to be applied to the chart's `Chart.yaml` file. |
 | `charts[].repository` | `string` | Y | The URL of the Helm chart repository in the `dependencies` entry whose `version` field is to be updated. Must _exactly_ match the `repository` field of that entry. |
 | `charts[].name` | `string` | Y | The name of the chart in in the `dependencies` entry whose `version` field is to be updated. Must exactly match the `name` field of that entry. |
-| `charts[].fromOrigin` | `object` | N | See [specifying origins](#specifying-origins). <br/><br/>__Deprecated: Use `version` with an expression instead. Will be removed in v1.2.0.__ |
+| `charts[].fromOrigin` | `object` | N | See [specifying origins](#specifying-origins). <br/><br/>__Deprecated: Use `version` with an expression instead. Will be removed in v1.3.0.__ |
 | `charts[].version` | `string` | N | The version to which the dependency should be updated. If left unspecified, the version specified by a piece of Freight referencing this chart will be used. |
 
 ### `helm-update-chart` Examples
@@ -902,7 +902,7 @@ requests.
 | `provider` | `string` | N | The name of the Git provider to use. Currently only `github` and `gitlab` are supported. Kargo will try to infer the provider if it is not explicitly specified.  |
 | `insecureSkipTLSVerify` | `boolean` | N | Indicates whether to bypass TLS certificate verification when interfacing with the Git provider. Setting this to `true` is highly discouraged in production. |
 | `sourceBranch` | `string` | N | Specifies the source branch for the pull request. Mutually exclusive with `sourceBranchFromStep`. |
-| `sourceBranchFromStep` | `string` | N | Indicates the source branch should be determined by the `branch` key in the output of a previous promotion step with the specified alias. Mutually exclusive with `sourceBranch`.<br/><br/>__Deprecated: Use `sourceBranch` with an expression instead. Will be removed in v1.2.0.__  |
+| `sourceBranchFromStep` | `string` | N | Indicates the source branch should be determined by the `branch` key in the output of a previous promotion step with the specified alias. Mutually exclusive with `sourceBranch`.<br/><br/>__Deprecated: Use `sourceBranch` with an expression instead. Will be removed in v1.3.0.__  |
 | `targetBranch` | `string` | N | The branch to which the changes should be merged. |
 | `createTargetBranch` | `boolean` | N | Indicates whether a new, empty orphaned branch should be created and pushed to the remote if the target branch does not already exist there. Default is `false`. |
 
@@ -946,7 +946,7 @@ by an `argocd-update` step.
 | `provider` | `string` | N | The name of the Git provider to use. Currently only `github` and `gitlab` are supported. Kargo will try to infer the provider if it is not explicitly specified.  |
 | `insecureSkipTLSVerify` | `boolean` | N | Indicates whether to bypass TLS certificate verification when interfacing with the Git provider. Setting this to `true` is highly discouraged in production. |
 | `prNumber` | `string` | N | The number of the pull request to wait for. Mutually exclusive with `prNumberFromStep`. |
-| `prNumberFromStep` | `string` | N | References the `prNumber` output from a previous step. Mutually exclusive with `prNumber`.<br/><br/>__Deprecated: Use `prNumber` with an expression instead. Will be removed in v1.2.0.__ |
+| `prNumberFromStep` | `string` | N | References the `prNumber` output from a previous step. Mutually exclusive with `prNumber`.<br/><br/>__Deprecated: Use `prNumber` with an expression instead. Will be removed in v1.3.0.__ |
 
 ### `git-wait-for-pr` Output
 
@@ -1025,7 +1025,7 @@ spec:
 | `apps[].sources[].repoURL` | `string` | Y | The value of the target `ApplicationSource`'s  own `repoURL` field. This must match exactly. |
 | `apps[].sources[].chart` | `string` | N | Applicable only when the target `ApplicationSource` references a Helm chart repository, the value of the target `ApplicationSource`'s  own `chart` field. This must match exactly. |
 | `apps[].sources[].desiredRevision` | `string` | N | Specifies the desired revision for the source. i.e. The revision to which the source must be observably synced when performing a health check. This field is mutually exclusive with `desiredCommitFromStep`. Prior to v1.1.0, if both were left undefined, the desired revision was determined by Freight (if possible). Beginning with v1.1.0, if both are left undefined, Kargo will not require the source to be observably synced to any particular source to be considered healthy. Note that the source's `targetRevision` will not be updated to this revision unless `updateTargetRevision=true` is also set. |
-| `apps[].sources[].desiredCommitFromStep` | `string` | N | Applicable only when `repoURL` references a Git repository, this field references the `commit` output from a previous step and uses it as the desired revision for the source. i.e. The revision to which the source must be observably synced when performing a health check. This field is mutually exclusive with `desiredRevisionFromStep`. Prior to v1.1.0, if both were left undefined, the desired revision was determined by Freight (if possible). Beginning with v1.1.0, if both are left undefined, Kargo will not require the source to be observably synced to any particular source to be considered healthy. Note that the source's `targetRevision` will not be updated to this commit unless `updateTargetRevision=true` is also set.<br/><br/>__Deprecated: Use `desiredRevision` with an expression instead. Will be removed in v1.2.0.__ |
+| `apps[].sources[].desiredCommitFromStep` | `string` | N | Applicable only when `repoURL` references a Git repository, this field references the `commit` output from a previous step and uses it as the desired revision for the source. i.e. The revision to which the source must be observably synced when performing a health check. This field is mutually exclusive with `desiredRevisionFromStep`. Prior to v1.1.0, if both were left undefined, the desired revision was determined by Freight (if possible). Beginning with v1.1.0, if both are left undefined, Kargo will not require the source to be observably synced to any particular source to be considered healthy. Note that the source's `targetRevision` will not be updated to this commit unless `updateTargetRevision=true` is also set.<br/><br/>__Deprecated: Use `desiredRevision` with an expression instead. Will be removed in v1.3.0.__ |
 | `apps[].sources[].updateTargetRevision` | `boolean` | Y | Indicates whether the target `ApplicationSource` should be updated such that its `targetRevision` field points directly at the desired revision. A `true` value in this field has no effect if `desiredRevision` and `desiredCommitFromStep` are both undefined. |
 | `apps[].sources[].kustomize` | `object` | N | Describes updates to an Argo CD `ApplicationSource`'s Kustomize-specific properties. |
 | `apps[].sources[].kustomize.images` | `[]object` | Y | Describes how to update an Argo CD `ApplicationSource`'s Kustomize-specific properties to reference specific versions of container images. |
@@ -1034,18 +1034,18 @@ spec:
 | `apps[].sources[].kustomize.images[].digest` | `string` | N | A digest naming a specific revision of the image specified by `repoURL`. Mutually exclusive with `tag` and `useDigest=true`. One of `digest`, `tag`, or `useDigest=true` must be specified. |
 | `apps[].sources[].kustomize.images[].useDigest` | `boolean` | N | Whether to use the container image's digest instead of its tag. |
 | `apps[].sources[].kustomize.images[].newName` | `string` | N | A substitution for the name/URL of the image being updated. This is useful when different Stages have access to different container image repositories (assuming those different repositories contain equivalent images that are tagged identically). This may be a frequent consideration for users of Amazon's Elastic Container Registry. |
-| `apps[].sources[].kustomize.images[].fromOrigin` | `object` | N | See [specifying origins](#specifying-origins). If not specified, may inherit a value from `apps[].sources[].kustomize.fromOrigin`. <br/><br/>__Deprecated: Use `digest` or `tag` with an expression instead. Will be removed in v1.2.0.__ |
-| `apps[].sources[].kustomize.fromOrigin` | `object` | N | See [specifying origins](#specifying-origins). If not specified, may inherit a value from `apps[].sources[].fromOrigin`. <br/><br/>__Deprecated: Will be removed in v1.2.0.__ |
+| `apps[].sources[].kustomize.images[].fromOrigin` | `object` | N | See [specifying origins](#specifying-origins). If not specified, may inherit a value from `apps[].sources[].kustomize.fromOrigin`. <br/><br/>__Deprecated: Use `digest` or `tag` with an expression instead. Will be removed in v1.3.0.__ |
+| `apps[].sources[].kustomize.fromOrigin` | `object` | N | See [specifying origins](#specifying-origins). If not specified, may inherit a value from `apps[].sources[].fromOrigin`. <br/><br/>__Deprecated: Will be removed in v1.3.0.__ |
 | `apps[].sources[].helm` | `object` | N | Describes updates to an Argo CD `ApplicationSource`'s Helm parameters. |
 | `apps[].sources[].helm.images` | `[]object` | Y | Describes how to update  an Argo CD `ApplicationSource`'s Helm parameters to reference specific versions of container images. |
-| `apps[].sources[].helm.images[].repoURL` | `string` | N | URL of the image being updated. __Deprecated: Use `value` with an expression instead. Will be removed in v1.2.0.__ |
+| `apps[].sources[].helm.images[].repoURL` | `string` | N | URL of the image being updated. __Deprecated: Use `value` with an expression instead. Will be removed in v1.3.0.__ |
 | `apps[].sources[].helm.images[].key` | `string` | Y | The key to update within the target `ApplicationSource`'s `helm.parameters` map. See Helm documentation on the [format and limitations](https://helm.sh/docs/intro/using_helm/#the-format-and-limitations-of---set) of the notation used in this field. |
 | `apps[].sources[].helm.images[].value` | `string` | Y | Specifies how the value of `key` is to be updated. When `repoURL` is non-empty, possible values for this field are limited to:<ul><li>`ImageAndTag`: Replaces the value of `key` with a string in form `<image url>:<tag>`</li><li>`Tag`: Replaces the value of `key` with the image's tag</li><li>`ImageAndDigest`: Replaces the value of `key` with a string in form `<image url>@<digest>`</li><li>`Digest`: Replaces the value of `key` with the image's digest</li></ul> When `repoURL` is empty, use an expression in this field to describe the new value.  |
-| `apps[].sources[].helm.images[].fromOrigin` | `object` | N | See [specifying origins](#specifying-origins). If not specified, may inherit a value from `apps[].sources[].helm.fromOrigin`. <br/><br/>__Deprecated: Use `value` with an expression instead. Will be removed in v1.2.0.__ |
-| `apps[].sources[].helm.fromOrigin` | `object` | N | See [specifying origins].(#specifying-origins). If not specified, may inherit a value from `apps[].sources[]`. <br/><br/>__Deprecated: Will be removed in v1.2.0.__ |
-| `apps[].sources[].fromOrigin` | `object` | N | See [specifying origins](#specifying-origins). If not specified, may inherit a value from `apps[].fromOrigin`. <br/><br/>__Deprecated: Will be removed in v1.2.0.__ |
-| `apps[].fromOrigin` | `object` | N | See [specifying origins](#specifying-origins). If not specified, may inherit a value from `fromOrigin`.  <br/><br/>__Deprecated: Will be removed in v1.2.0.__ |
-| `fromOrigin` | `object` | N | See [specifying origins](#specifying-origins). <br/><br/>__Deprecated: Will be removed in v1.2.0.__  |
+| `apps[].sources[].helm.images[].fromOrigin` | `object` | N | See [specifying origins](#specifying-origins). If not specified, may inherit a value from `apps[].sources[].helm.fromOrigin`. <br/><br/>__Deprecated: Use `value` with an expression instead. Will be removed in v1.3.0.__ |
+| `apps[].sources[].helm.fromOrigin` | `object` | N | See [specifying origins].(#specifying-origins). If not specified, may inherit a value from `apps[].sources[]`. <br/><br/>__Deprecated: Will be removed in v1.3.0.__ |
+| `apps[].sources[].fromOrigin` | `object` | N | See [specifying origins](#specifying-origins). If not specified, may inherit a value from `apps[].fromOrigin`. <br/><br/>__Deprecated: Will be removed in v1.3.0.__ |
+| `apps[].fromOrigin` | `object` | N | See [specifying origins](#specifying-origins). If not specified, may inherit a value from `fromOrigin`.  <br/><br/>__Deprecated: Will be removed in v1.3.0.__ |
+| `fromOrigin` | `object` | N | See [specifying origins](#specifying-origins). <br/><br/>__Deprecated: Will be removed in v1.3.0.__  |
 
 ### `argocd-update` Examples
 
