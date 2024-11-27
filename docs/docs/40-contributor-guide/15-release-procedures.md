@@ -154,6 +154,29 @@ release date -- which is always a Friday.
       [automated release process](https://github.com/akuity/kargo/actions/workflows/release.yaml)
       to complete.
 
+1. Update Homebrew Formula.
+
+    * Clone the Homebrew tap repository:
+        ```bash
+        git clone https://github.com/akuity/homebrew-tap.git
+        cd homebrew-tap
+        ```
+    * Run the update script with the new version:
+        ```bash
+        ./update.sh kargo vM.m.0
+        ```
+    * Verify the updated formula:
+        ```bash
+        brew install --build-from-source ./kargo.rb
+        kargo --version
+        ```
+    * Commit and push the changes to the Homebrew tap repository:
+        ```bash
+        git add kargo.rb
+        git commit -m "Update Kargo formula to version vM.m.0"
+        git push origin main
+        ```
+
 1. Mark the release branch (`release-M.m`) as the __"Production branch"__
    [in Netlify](https://app.netlify.com/sites/docs-kargo-akuity-io/configuration/deploys#branches-and-deploy-contexts).
 
