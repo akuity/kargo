@@ -154,7 +154,7 @@ release date -- which is always a Friday.
       [automated release process](https://github.com/akuity/kargo/actions/workflows/release.yaml)
       to complete.
 
-1. Update Homebrew Formula.
+1. Update [Homebrew Formula](https://github.com/akuity/homebrew-tap).
 
     * Clone the Homebrew tap repository:
         ```bash
