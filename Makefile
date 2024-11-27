@@ -347,7 +347,7 @@ hack-install-cert-manager: install-helm
 		--install \
 		--create-namespace \
 		--namespace cert-manager \
-		--set installCRDs=true \
+		--set crds.enabled=true \
 		--wait
 
 .PHONY: hack-install-argocd
