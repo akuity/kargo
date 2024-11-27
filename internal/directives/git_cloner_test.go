@@ -346,6 +346,7 @@ func Test_gitCloner_runPromotionStep(t *testing.T) {
 				{
 					Branch: "stage/dev",
 					Path:   "out",
+					Create: true,
 				},
 			},
 		},
