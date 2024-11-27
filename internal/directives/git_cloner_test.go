@@ -320,7 +320,8 @@ func Test_gitCloner_runPromotionStep(t *testing.T) {
 				},
 				{
 					Branch: "stage/dev",
-					Path:   "dev",
+					Path:   "out",
+					Create: true,
 				},
 			},
 		},
@@ -331,11 +332,11 @@ func Test_gitCloner_runPromotionStep(t *testing.T) {
 	// The checked out master branch should have the content we know is in the
 	// test remote's master branch.
 	require.FileExists(t, filepath.Join(stepCtx.WorkDir, "master", "test.txt"))
-	require.DirExists(t, filepath.Join(stepCtx.WorkDir, "dev"))
+	require.DirExists(t, filepath.Join(stepCtx.WorkDir, "out"))
 	// The stage/dev branch is a new orphan branch with a single empty commit.
 	// It should lack any content.
-	dirEntries, err := os.ReadDir(filepath.Join(stepCtx.WorkDir, "dev"))
+	dirEntries, err := os.ReadDir(filepath.Join(stepCtx.WorkDir, "out"))
 	require.NoError(t, err)
 	require.Len(t, dirEntries, 1) // Just the .git file
-	require.FileExists(t, filepath.Join(stepCtx.WorkDir, "dev", ".git"))
+	require.FileExists(t, filepath.Join(stepCtx.WorkDir, "out", ".git"))
 }
