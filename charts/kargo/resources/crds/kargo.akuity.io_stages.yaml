@@ -158,6 +158,23 @@ spec:
                 required:
                 - spec
                 type: object
+              promotionTemplateRef:
+                description: |-
+                  PromotionTemplateRef is a reference to a PromotionTemplate that describes
+                  how to incorporate Freight into the Stage using a Promotion. This field is
+                  mutually exclusive with the PromotionTemplate field.
+                properties:
+                  name:
+                    description: |-
+                      Name is the name of the PromotionTemplate in the same project/namespace as
+                      the Stage.
+                    maxLength: 253
+                    minLength: 1
+                    pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                    type: string
+                required:
+                - name
+                type: object
               requestedFreight:
                 description: |-
                   RequestedFreight expresses the Stage's need for certain pieces of Freight,
@@ -188,7 +205,7 @@ spec:
                         name:
                           description: |-
                             Name is the name of the resource of the kind indicated by the Kind field
-                            from which Freight may originated.
+                            from which Freight may originate.
                           type: string
                       required:
                       - kind
@@ -291,6 +308,10 @@ spec:
             required:
             - requestedFreight
             type: object
+            x-kubernetes-validations:
+            - message: only one of PromotionTemplateRef or PromotionTemplate can be
+                set
+              rule: (has(self.promotionTemplateRef)?1:0)+(has(self.promotionTemplate)?1:0)<=1
           status:
             description: Status describes the Stage's current and recent Freight,
               health, and more.
@@ -480,7 +501,7 @@ spec:
                           name:
                             description: |-
                               Name is the name of the resource of the kind indicated by the Kind field
-                              from which Freight may originated.
+                              from which Freight may originate.
                             type: string
                         required:
                         - kind
@@ -627,7 +648,7 @@ spec:
                               name:
                                 description: |-
                                   Name is the name of the resource of the kind indicated by the Kind field
-                                  from which Freight may originated.
+                                  from which Freight may originate.
                                 type: string
                             required:
                             - kind
@@ -764,7 +785,7 @@ spec:
                                     name:
                                       description: |-
                                         Name is the name of the resource of the kind indicated by the Kind field
-                                        from which Freight may originated.
+                                        from which Freight may originate.
                                       type: string
                                   required:
                                   - kind
@@ -1023,7 +1044,7 @@ spec:
                               name:
                                 description: |-
                                   Name is the name of the resource of the kind indicated by the Kind field
-                                  from which Freight may originated.
+                                  from which Freight may originate.
                                 type: string
                             required:
                             - kind
@@ -1307,7 +1328,7 @@ spec:
                           name:
                             description: |-
                               Name is the name of the resource of the kind indicated by the Kind field
-                              from which Freight may originated.
+                              from which Freight may originate.
                             type: string
                         required:
                         - kind
@@ -1454,7 +1475,7 @@ spec:
                               name:
                                 description: |-
                                   Name is the name of the resource of the kind indicated by the Kind field
-                                  from which Freight may originated.
+                                  from which Freight may originate.
                                 type: string
                             required:
                             - kind
@@ -1591,7 +1612,7 @@ spec:
                                     name:
                                       description: |-
                                         Name is the name of the resource of the kind indicated by the Kind field
-                                        from which Freight may originated.
+                                        from which Freight may originate.
                                       type: string
                                   required:
                                   - kind

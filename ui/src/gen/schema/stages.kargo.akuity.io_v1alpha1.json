@@ -106,6 +106,22 @@
           ],
           "type": "object"
         },
+        "promotionTemplateRef": {
+          "description": "PromotionTemplateRef is a reference to a PromotionTemplate that describes\nhow to incorporate Freight into the Stage using a Promotion. This field is\nmutually exclusive with the PromotionTemplate field.",
+          "properties": {
+            "name": {
+              "description": "Name is the name of the PromotionTemplate in the same project/namespace as\nthe Stage.",
+              "maxLength": 253,
+              "minLength": 1,
+              "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$",
+              "type": "string"
+            }
+          },
+          "required": [
+            "name"
+          ],
+          "type": "object"
+        },
         "requestedFreight": {
           "description": "RequestedFreight expresses the Stage's need for certain pieces of Freight,\neach having originated from a particular Warehouse. This list must be\nnon-empty. In the common case, a Stage will request Freight having\noriginated from just one specific Warehouse. In advanced cases, requesting\nFreight from multiple Warehouses provides a method of advancing new\nartifacts of different types through parallel pipelines at different\nspeeds. This can be useful, for instance, if a Stage is home to multiple\nmicroservices that are independently versioned.",
           "items": {
@@ -122,7 +138,7 @@
                     "type": "string"
                   },
                   "name": {
-                    "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originated.",
+                    "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originate.",
                     "type": "string"
                   }
                 },
@@ -232,7 +248,13 @@
       "required": [
         "requestedFreight"
       ],
-      "type": "object"
+      "type": "object",
+      "x-kubernetes-validations": [
+        {
+          "message": "only one of PromotionTemplateRef or PromotionTemplate can be set",
+          "rule": "(has(self.promotionTemplateRef)?1:0)+(has(self.promotionTemplate)?1:0)<=1"
+        }
+      ]
     },
     "status": {
       "description": "Status describes the Stage's current and recent Freight, health, and more.",
@@ -409,7 +431,7 @@
                       "type": "string"
                     },
                     "name": {
-                      "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originated.",
+                      "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originate.",
                       "type": "string"
                     }
                   },
@@ -552,7 +574,7 @@
                           "type": "string"
                         },
                         "name": {
-                          "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originated.",
+                          "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originate.",
                           "type": "string"
                         }
                       },
@@ -677,7 +699,7 @@
                                 "type": "string"
                               },
                               "name": {
-                                "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originated.",
+                                "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originate.",
                                 "type": "string"
                               }
                             },
@@ -919,7 +941,7 @@
                           "type": "string"
                         },
                         "name": {
-                          "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originated.",
+                          "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originate.",
                           "type": "string"
                         }
                       },
@@ -1205,7 +1227,7 @@
                       "type": "string"
                     },
                     "name": {
-                      "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originated.",
+                      "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originate.",
                       "type": "string"
                     }
                   },
@@ -1348,7 +1370,7 @@
                           "type": "string"
                         },
                         "name": {
-                          "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originated.",
+                          "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originate.",
                           "type": "string"
                         }
                       },
@@ -1473,7 +1495,7 @@
                                 "type": "string"
                               },
                               "name": {
-                                "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originated.",
+                                "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originate.",
                                 "type": "string"
                               }
                             },

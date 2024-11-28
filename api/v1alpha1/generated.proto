@@ -335,7 +335,7 @@ message FreightOrigin {
   optional string kind = 1;
 
   // Name is the name of the resource of the kind indicated by the Kind field
-  // from which Freight may originated.
+  // from which Freight may originate.
   //
   // +kubebuilder:validation:Required
   optional string name = 2;
@@ -955,6 +955,19 @@ message PromotionTemplate {
   optional PromotionTemplateSpec spec = 2;
 }
 
+// PromotionTemplateReference is a reference to a PromotionTemplate in the same
+// project/namespace as the Stage.
+message PromotionTemplateReference {
+  // Name is the name of the PromotionTemplate in the same project/namespace as
+  // the Stage.
+  //
+  // +kubebuilder:validation:Required
+  // +kubebuilder:validation:MinLength=1
+  // +kubebuilder:validation:MaxLength=253
+  // +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+  optional string name = 1;
+}
+
 // PromotionTemplateSpec describes the (partial) specification of a Promotion
 // for a Stage. This is a template that can be used to create a Promotion for a
 // Stage.
@@ -1022,6 +1035,8 @@ message StageList {
 
 // StageSpec describes the sources of Freight used by a Stage and how to
 // incorporate Freight into the Stage.
+//
+// +kubebuilder:validation:XValidation:rule="(has(self.promotionTemplateRef)?1:0)+(has(self.promotionTemplate)?1:0)<=1",message="only one of PromotionTemplateRef or PromotionTemplate can be set"
 message StageSpec {
   // Shard is the name of the shard that this Stage belongs to. This is an
   // optional field. If not specified, the Stage will belong to the default
@@ -1041,6 +1056,11 @@ message StageSpec {
   //
   // +kubebuilder:validation:MinItems=1
   repeated FreightRequest requestedFreight = 5;
+
+  // PromotionTemplateRef is a reference to a PromotionTemplate that describes
+  // how to incorporate Freight into the Stage using a Promotion. This field is
+  // mutually exclusive with the PromotionTemplate field.
+  optional PromotionTemplateReference promotionTemplateRef = 7;
 
   // PromotionTemplate describes how to incorporate Freight into the Stage
   // using a Promotion.
