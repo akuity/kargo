@@ -140,7 +140,7 @@ func (g *gitCloner) runPromotionStep(
 		switch {
 		case checkout.Branch != "":
 			ref = checkout.Branch
-			if err = ensureRemoteBranch(repo, ref); err != nil {
+			if err = ensureRemoteBranch(repo, ref, checkout.Create); err != nil {
 				return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
 					fmt.Errorf("error ensuring existence of remote branch %s: %w", ref, err)
 			}
@@ -219,9 +219,12 @@ func mustCloneRepo(stepCtx *PromotionStepContext, cfg GitCloneConfig) (bool, err
 	return false, nil
 }
 
-// ensureRemoteBranch ensures the existence of a remote branch. If the branch
-// does not exist, an empty orphaned branch is created and pushed to the remote.
-func ensureRemoteBranch(repo git.BareRepo, branch string) error {
+// ensureRemoteBranch checks for the existence of a remote branch. If the remote
+// branch exists, no action is taken and nil is returned. If the branch does not
+// exist and create == true, an empty orphaned branch is created and pushed to
+// the remote. If the branch does not exist and create == false, an error is
+// returned.
+func ensureRemoteBranch(repo git.BareRepo, branch string, create bool) error {
 	exists, err := repo.RemoteBranchExists(branch)
 	if err != nil {
 		return fmt.Errorf(
@@ -231,6 +234,15 @@ func ensureRemoteBranch(repo git.BareRepo, branch string) error {
 	}
 	if exists {
 		return nil
+	}
+	if !create {
+		return fmt.Errorf(
+			"remote branch %q of repo %s does not exist; set create=true if you'd "+
+				"like a non-existent remote branch to be automatically created at "+
+				"checkout",
+			branch,
+			repo.URL(),
+		)
 	}
 	tmpDir, err := os.MkdirTemp("", "repo-")
 	if err != nil {
