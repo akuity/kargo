@@ -333,3 +333,42 @@ jobs:
       base64-subjects: "${{ needs.combine_hashes.outputs.hashes }}"
       upload-assets: true # Optional: Upload to a new release
       provenance-name: kargo-cli.intoto.jsonl
+  update-homebrew-formula:
+    if: github.event_name == 'release'
+    permissions:
+      contents: write # Needed to push changes
+      pull-requests: write # Needed to create a pull request
+    runs-on: ubuntu-latest
+    needs: [ publish-image, publish-cli ]
+    steps:
+      - name: Checkout bottle Repository
+        uses: actions/checkout@v4
+        with:
+          repository: akuity/homebrew-tap
+          token: ${{ secrets.GITHUB_TOKEN }}
+          path: homebrew-tap
+
+      - name: Update Homebrew formula
+        run: |
+          cd homebrew-tap
+          ./update.sh kargo ${{ github.ref_name }}
+
+      - name: Configure Git and Commit changes
+        run: |
+          git config user.name "${{ github.actor }}"
+          git config user.email "${{ github.actor }}@users.noreply.github.com"
+          cd homebrew-tap
+          git checkout -b update-kargo-${{ github.ref_name }}
+          git add kargo.rb
+          git commit -m "chore: update Kargo cli to version ${{ github.ref_name }}"
+
+      - name: Push changes and open PR
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "Update Kargo formula to version ${{ github.ref_name }}"
+          branch: update-kargo-${{ github.ref_name }}
+          base: main
+          title: "chore: update Kargo formula to version ${{ github.ref_name }}"
+          body: "This PR updates the Homebrew formula for Kargo to version ${{ github.ref_name }}."
+          delete-branch: 'true'
