@@ -168,6 +168,8 @@ func (s *Stage) GetStatus() *StageStatus {
 
 // StageSpec describes the sources of Freight used by a Stage and how to
 // incorporate Freight into the Stage.
+//
+// +kubebuilder:validation:XValidation:rule="(has(self.promotionTemplateRef)?1:0)+(has(self.promotionTemplate)?1:0)<=1",message="only one of PromotionTemplateRef or PromotionTemplate can be set"
 type StageSpec struct {
 	// Shard is the name of the shard that this Stage belongs to. This is an
 	// optional field. If not specified, the Stage will belong to the default
@@ -186,6 +188,10 @@ type StageSpec struct {
 	//
 	// +kubebuilder:validation:MinItems=1
 	RequestedFreight []FreightRequest `json:"requestedFreight" protobuf:"bytes,5,rep,name=requestedFreight"`
+	// PromotionTemplateRef is a reference to a PromotionTemplate that describes
+	// how to incorporate Freight into the Stage using a Promotion. This field is
+	// mutually exclusive with the PromotionTemplate field.
+	PromotionTemplateRef *PromotionTemplateReference `json:"promotionTemplateRef,omitempty" protobuf:"bytes,7,opt,name=promotionTemplateRef"`
 	// PromotionTemplate describes how to incorporate Freight into the Stage
 	// using a Promotion.
 	PromotionTemplate *PromotionTemplate `json:"promotionTemplate,omitempty" protobuf:"bytes,6,opt,name=promotionTemplate"`
@@ -218,7 +224,7 @@ type FreightOrigin struct {
 	// +kubebuilder:validation:Required
 	Kind FreightOriginKind `json:"kind" protobuf:"bytes,1,opt,name=kind"`
 	// Name is the name of the resource of the kind indicated by the Kind field
-	// from which Freight may originated.
+	// from which Freight may originate.
 	//
 	// +kubebuilder:validation:Required
 	Name string `json:"name" protobuf:"bytes,2,opt,name=name"`
@@ -252,6 +258,19 @@ type FreightSources struct {
 	// Direct field must be true. i.e. Between the two fields, at least on source
 	// must be specified.
 	Stages []string `json:"stages,omitempty" protobuf:"bytes,2,rep,name=stages"`
+}
+
+// PromotionTemplateReference is a reference to a PromotionTemplate in the same
+// project/namespace as the Stage.
+type PromotionTemplateReference struct {
+	// Name is the name of the PromotionTemplate in the same project/namespace as
+	// the Stage.
+	//
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
 }
 
 // StageStatus describes a Stages's current and recent Freight, health, and
