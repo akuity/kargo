@@ -1,0 +1,91 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "description": "PromotionTemplate defines a template for a Promotion that can be used to\nincorporate Freight into a Stage.",
+  "properties": {
+    "apiVersion": {
+      "description": "APIVersion defines the versioned schema of this representation of an object.\nServers should convert recognized schemas to the latest internal value, and\nmay reject unrecognized values.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
+      "type": "string"
+    },
+    "kind": {
+      "description": "Kind is a string value representing the REST resource this object represents.\nServers may infer this from the endpoint the client submits requests to.\nCannot be updated.\nIn CamelCase.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+      "type": "string"
+    },
+    "metadata": {
+      "type": "object"
+    },
+    "spec": {
+      "description": "Spec describes how to create a Promotion for a Stage using this template.",
+      "properties": {
+        "steps": {
+          "description": "Steps specifies the directives to be executed as part of a Promotion.\nThe order in which the directives are executed is the order in which they\nare listed in this field.",
+          "items": {
+            "description": "PromotionStep describes a directive to be executed as part of a Promotion.",
+            "properties": {
+              "as": {
+                "description": "As is the alias this step can be referred to as.",
+                "type": "string"
+              },
+              "config": {
+                "description": "Config is opaque configuration for the PromotionStep that is understood\nonly by each PromotionStep's implementation. It is legal to utilize\nexpressions in defining values at any level of this block.\nSee https://docs.kargo.io/references/expression-language for details.",
+                "x-kubernetes-preserve-unknown-fields": true
+              },
+              "retry": {
+                "description": "Retry is the retry policy for this step.",
+                "properties": {
+                  "attempts": {
+                    "description": "Attempts is the number of times the step can be attempted before the\nPromotionStep is marked as failed.\n\nIf this field is set to 1, the step will not be retried. If this\nfield is set to -1, the step will be retried indefinitely.\n\nThe default of this field depends on the step being executed. Refer to\nthe documentation for the specific step for more information.",
+                    "format": "int64",
+                    "maximum": 9223372036854776000,
+                    "minimum": -9223372036854776000,
+                    "type": "integer"
+                  }
+                },
+                "type": "object"
+              },
+              "uses": {
+                "description": "Uses identifies a runner that can execute this step.",
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "uses"
+            ],
+            "type": "object"
+          },
+          "minItems": 1,
+          "type": "array"
+        },
+        "vars": {
+          "description": "Vars is a list of variables that can be referenced by expressions in\npromotion steps.",
+          "items": {
+            "description": "PromotionVariable describes a single variable that may be referenced by\nexpressions in promotion steps.",
+            "properties": {
+              "name": {
+                "description": "Name is the name of the variable.",
+                "minLength": 1,
+                "pattern": "^[a-zA-Z_]\\w*$",
+                "type": "string"
+              },
+              "value": {
+                "description": "Value is the value of the variable. It is allowed to utilize expressions\nin the value.\nSee https://docs.kargo.io/references/expression-language for details.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "name",
+              "value"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    }
+  },
+  "required": [
+    "spec"
+  ],
+  "type": "object"
+}

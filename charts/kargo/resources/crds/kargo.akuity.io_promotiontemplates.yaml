@@ -1,0 +1,125 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.16.5
+  name: promotiontemplates.kargo.akuity.io
+spec:
+  group: kargo.akuity.io
+  names:
+    kind: PromotionTemplate
+    listKind: PromotionTemplateList
+    plural: promotiontemplates
+    singular: promotiontemplate
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: |-
+          PromotionTemplate defines a template for a Promotion that can be used to
+          incorporate Freight into a Stage.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: Spec describes how to create a Promotion for a Stage using
+              this template.
+            properties:
+              steps:
+                description: |-
+                  Steps specifies the directives to be executed as part of a Promotion.
+                  The order in which the directives are executed is the order in which they
+                  are listed in this field.
+                items:
+                  description: PromotionStep describes a directive to be executed
+                    as part of a Promotion.
+                  properties:
+                    as:
+                      description: As is the alias this step can be referred to as.
+                      type: string
+                    config:
+                      description: |-
+                        Config is opaque configuration for the PromotionStep that is understood
+                        only by each PromotionStep's implementation. It is legal to utilize
+                        expressions in defining values at any level of this block.
+                        See https://docs.kargo.io/references/expression-language for details.
+                      x-kubernetes-preserve-unknown-fields: true
+                    retry:
+                      description: Retry is the retry policy for this step.
+                      properties:
+                        attempts:
+                          description: |-
+                            Attempts is the number of times the step can be attempted before the
+                            PromotionStep is marked as failed.
+
+                            If this field is set to 1, the step will not be retried. If this
+                            field is set to -1, the step will be retried indefinitely.
+
+                            The default of this field depends on the step being executed. Refer to
+                            the documentation for the specific step for more information.
+                          format: int64
+                          type: integer
+                      type: object
+                    uses:
+                      description: Uses identifies a runner that can execute this
+                        step.
+                      minLength: 1
+                      type: string
+                  required:
+                  - uses
+                  type: object
+                minItems: 1
+                type: array
+              vars:
+                description: |-
+                  Vars is a list of variables that can be referenced by expressions in
+                  promotion steps.
+                items:
+                  description: |-
+                    PromotionVariable describes a single variable that may be referenced by
+                    expressions in promotion steps.
+                  properties:
+                    name:
+                      description: Name is the name of the variable.
+                      minLength: 1
+                      pattern: ^[a-zA-Z_]\w*$
+                      type: string
+                    value:
+                      description: |-
+                        Value is the value of the variable. It is allowed to utilize expressions
+                        in the value.
+                        See https://docs.kargo.io/references/expression-language for details.
+                      type: string
+                  required:
+                  - name
+                  - value
+                  type: object
+                type: array
+            type: object
+        required:
+        - spec
+        type: object
+    served: true
+    storage: true
+    subresources: {}

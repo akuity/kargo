@@ -2954,7 +2954,16 @@ export class PromotionStepRetry extends Message<PromotionStepRetry> {
  */
 export class PromotionTemplate extends Message<PromotionTemplate> {
   /**
-   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.PromotionTemplateSpec spec = 1;
+   * @generated from field: optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
+   */
+  metadata?: ObjectMeta;
+
+  /**
+   * Spec describes how to create a Promotion for a Stage using this template.
+   *
+   * +kubebuilder:validation:Required
+   *
+   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.PromotionTemplateSpec spec = 2;
    */
   spec?: PromotionTemplateSpec;
 
@@ -2966,7 +2975,8 @@ export class PromotionTemplate extends Message<PromotionTemplate> {
   static readonly runtime: typeof proto2 = proto2;
   static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.PromotionTemplate";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
-    { no: 1, name: "spec", kind: "message", T: PromotionTemplateSpec, opt: true },
+    { no: 1, name: "metadata", kind: "message", T: ObjectMeta, opt: true },
+    { no: 2, name: "spec", kind: "message", T: PromotionTemplateSpec, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PromotionTemplate {

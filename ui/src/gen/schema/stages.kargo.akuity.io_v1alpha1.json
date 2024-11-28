@@ -19,8 +19,19 @@
         "promotionTemplate": {
           "description": "PromotionTemplate describes how to incorporate Freight into the Stage\nusing a Promotion.",
           "properties": {
+            "apiVersion": {
+              "description": "APIVersion defines the versioned schema of this representation of an object.\nServers should convert recognized schemas to the latest internal value, and\nmay reject unrecognized values.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
+              "type": "string"
+            },
+            "kind": {
+              "description": "Kind is a string value representing the REST resource this object represents.\nServers may infer this from the endpoint the client submits requests to.\nCannot be updated.\nIn CamelCase.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
             "spec": {
-              "description": "PromotionTemplateSpec describes the (partial) specification of a Promotion\nfor a Stage. This is a template that can be used to create a Promotion for a\nStage.",
+              "description": "Spec describes how to create a Promotion for a Stage using this template.",
               "properties": {
                 "steps": {
                   "description": "Steps specifies the directives to be executed as part of a Promotion.\nThe order in which the directives are executed is the order in which they\nare listed in this field.",
