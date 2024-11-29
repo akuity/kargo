@@ -30,3 +30,12 @@ type PromotionTemplateSpec struct {
 	// +kubebuilder:validation:MinItems=1
 	Steps []PromotionStep `json:"steps,omitempty" protobuf:"bytes,1,rep,name=steps"`
 }
+
+// +kubebuilder:object:root=true
+
+// PromotionTemplateList is a list of Promotion resources.
+type PromotionTemplateList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+	Items           []PromotionTemplate `json:"items" protobuf:"bytes,2,rep,name=items"`
+}

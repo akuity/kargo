@@ -2997,6 +2997,51 @@ export class PromotionTemplate extends Message<PromotionTemplate> {
 }
 
 /**
+ * PromotionTemplateList is a list of Promotion resources.
+ *
+ * @generated from message github.com.akuity.kargo.api.v1alpha1.PromotionTemplateList
+ */
+export class PromotionTemplateList extends Message<PromotionTemplateList> {
+  /**
+   * @generated from field: optional k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
+   */
+  metadata?: ListMeta;
+
+  /**
+   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.PromotionTemplate items = 2;
+   */
+  items: PromotionTemplate[] = [];
+
+  constructor(data?: PartialMessage<PromotionTemplateList>) {
+    super();
+    proto2.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto2 = proto2;
+  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.PromotionTemplateList";
+  static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 1, name: "metadata", kind: "message", T: ListMeta, opt: true },
+    { no: 2, name: "items", kind: "message", T: PromotionTemplate, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PromotionTemplateList {
+    return new PromotionTemplateList().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): PromotionTemplateList {
+    return new PromotionTemplateList().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): PromotionTemplateList {
+    return new PromotionTemplateList().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: PromotionTemplateList | PlainMessage<PromotionTemplateList> | undefined, b: PromotionTemplateList | PlainMessage<PromotionTemplateList> | undefined): boolean {
+    return proto2.util.equals(PromotionTemplateList, a, b);
+  }
+}
+
+/**
  * PromotionTemplateReference is a reference to a PromotionTemplate in the same
  * project/namespace as the Stage.
  *

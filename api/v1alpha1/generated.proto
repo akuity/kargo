@@ -955,6 +955,13 @@ message PromotionTemplate {
   optional PromotionTemplateSpec spec = 2;
 }
 
+// PromotionTemplateList is a list of Promotion resources.
+message PromotionTemplateList {
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
+
+  repeated PromotionTemplate items = 2;
+}
+
 // PromotionTemplateReference is a reference to a PromotionTemplate in the same
 // project/namespace as the Stage.
 message PromotionTemplateReference {
