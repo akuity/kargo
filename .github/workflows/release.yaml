@@ -355,9 +355,9 @@ jobs:
 
       - name: Configure Git and Commit changes
         run: |
+          cd homebrew-tap
           git config user.name "${{ github.actor }}"
           git config user.email "${{ github.actor }}@users.noreply.github.com"
-          cd homebrew-tap
           git checkout -b update-kargo-${{ github.ref_name }}
           git add kargo.rb
           git commit -m "chore: update Kargo cli to version ${{ github.ref_name }}"
