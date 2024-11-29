@@ -55,6 +55,7 @@ rules:
 - apiGroups:
   - kargo.akuity.io
   resources:
+  - promotiontemplates
   - warehouses
   verbs:
   - get
