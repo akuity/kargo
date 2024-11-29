@@ -25,21 +25,34 @@ func TestNewPromotion(t *testing.T) {
 	t.Parallel()
 	testCases := []struct {
 		name       string
-		stage      kargoapi.Stage
+		template   kargoapi.PromotionTemplate
+		namespace  string
+		stage      string
 		freight    string
-		assertions func(*testing.T, kargoapi.Stage, kargoapi.Promotion)
+		assertions func(*testing.T, kargoapi.Promotion)
 	}{
 		{
 			name: "Promote stage",
-			stage: kargoapi.Stage{
-				ObjectMeta: metav1.ObjectMeta{
-					UID:       "80b44831-ac8d-4900-9df9-ee95f80c0fae",
-					Name:      "test",
-					Namespace: "kargo-demo",
+			template: kargoapi.PromotionTemplate{
+				Spec: kargoapi.PromotionTemplateSpec{
+					Vars: []kargoapi.PromotionVariable{
+						{
+							Name:  "foo",
+							Value: "bar",
+						},
+					},
+					Steps: []kargoapi.PromotionStep{
+						{
+							Uses: "test-step",
+							As: "test-step",
+						},
+					},
 				},
 			},
-			freight: testFreight,
-			assertions: func(t *testing.T, _ kargoapi.Stage, promo kargoapi.Promotion) {
+			namespace: "kargo-demo",
+			stage:     "test",
+			freight:   testFreight,
+			assertions: func(t *testing.T, promo kargoapi.Promotion) {
 				parts := strings.Split(promo.Name, ".")
 				require.Equal(t, "test", parts[0])
 				require.Equal(t, testFreight[0:7], parts[2])
@@ -47,15 +60,10 @@ func TestNewPromotion(t *testing.T) {
 		},
 		{
 			name: "Promote stage with very long name",
-			stage: kargoapi.Stage{
-				ObjectMeta: metav1.ObjectMeta{
-					UID:       "80b44831-ac8d-4900-9df9-ee95f80c0fae",
-					Name:      veryLongResourceName,
-					Namespace: "kargo-demo",
-				},
-			},
+			namespace: "kargo-demo",
+			stage: veryLongResourceName,
 			freight: testFreight,
-			assertions: func(t *testing.T, _ kargoapi.Stage, promo kargoapi.Promotion) {
+			assertions: func(t *testing.T, promo kargoapi.Promotion) {
 				require.Len(t, promo.Name, 253)
 				parts := strings.Split(promo.Name, ".")
 				require.Equal(t, veryLongResourceName[0:maxStageNamePrefixLength], parts[0])
@@ -65,12 +73,12 @@ func TestNewPromotion(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			promo := NewPromotion(context.TODO(), tc.stage, tc.freight)
+			promo := NewPromotion(context.TODO(), tc.template, tc.namespace, tc.stage, tc.freight)
 			require.Equal(t, tc.freight, promo.Spec.Freight)
-			require.Equal(t, tc.stage.Name, promo.Spec.Stage)
+			require.Equal(t, tc.stage, promo.Spec.Stage)
 			require.Equal(t, tc.freight, promo.Spec.Freight)
 			require.LessOrEqual(t, len(promo.Name), 253)
-			tc.assertions(t, tc.stage, promo)
+			tc.assertions(t, promo)
 		})
 	}
 }

@@ -115,7 +115,25 @@ func (s *server) PromoteToStage(
 		return nil, err
 	}
 
-	promotion := kargo.NewPromotion(ctx, *stage, freight.Name)
+	template := stage.Spec.PromotionTemplate
+	if template == nil {
+		if stage.Spec.PromotionTemplateRef == nil || stage.Spec.PromotionTemplateRef.Name == "" {
+			return nil, connect.NewError(
+				connect.CodeInvalidArgument,
+				fmt.Errorf("Stage %q has no promotion template", stageName),
+			)
+		}
+
+		template = &kargoapi.PromotionTemplate{}
+		if err = s.client.Get(ctx, types.NamespacedName{
+			Namespace: project,
+			Name:      stage.Spec.PromotionTemplateRef.Name,
+		}, template); err != nil {
+			return nil, fmt.Errorf("get PromotionTemplate %q: %w", stage.Spec.PromotionTemplateRef.Name, err)
+		}
+	}
+
+	promotion := kargo.NewPromotion(ctx, *template, project, stageName, freightName)
 	if err := s.createPromotionFn(ctx, &promotion); err != nil {
 		return nil, fmt.Errorf("create promotion: %w", err)
 	}

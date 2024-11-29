@@ -26,15 +26,15 @@ const (
 // naming convention.
 func NewPromotion(
 	ctx context.Context,
-	stage kargoapi.Stage,
-	freight string,
+	template kargoapi.PromotionTemplate,
+	namespace, stage, freight string,
 ) kargoapi.Promotion {
 	shortHash := freight
 	if len(shortHash) > 7 {
 		shortHash = freight[0:7]
 	}
-	shortStageName := stage.Name
-	if len(stage.Name) > maxStageNamePrefixLength {
+	shortStageName := stage
+	if len(shortStageName) > maxStageNamePrefixLength {
 		shortStageName = shortStageName[0:maxStageNamePrefixLength]
 	}
 
@@ -51,18 +51,18 @@ func NewPromotion(
 	promotion := kargoapi.Promotion{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        promoName,
-			Namespace:   stage.Namespace,
+			Namespace:   namespace,
 			Annotations: annotations,
 		},
 		Spec: kargoapi.PromotionSpec{
-			Stage:   stage.Name,
+			Stage:   stage,
 			Freight: freight,
 		},
 	}
-	if stage.Spec.PromotionTemplate != nil {
-		promotion.Spec.Vars = stage.Spec.PromotionTemplate.Spec.Vars
-		promotion.Spec.Steps = stage.Spec.PromotionTemplate.Spec.Steps
-	}
+
+	promotion.Spec.Vars = template.Spec.Vars
+	promotion.Spec.Steps = template.Spec.Steps
+
 	return promotion
 }
 

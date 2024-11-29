@@ -134,6 +134,7 @@ func (s *server) PromoteDownstream(
 		}
 	}
 
+	templates := make(map[string]*kargoapi.PromotionTemplate, len(downstreams))
 	promoteErrs := make([]error, 0, len(downstreams))
 	createdPromos := make([]*kargoapi.Promotion, 0, len(downstreams))
 	for _, downstream := range downstreams {
@@ -142,7 +143,32 @@ func (s *server) PromoteDownstream(
 			// flow Stage, as it does not have a template for a Promotion.
 			continue
 		}
-		newPromo := kargo.NewPromotion(ctx, downstream, freight.Name)
+
+		template := downstream.Spec.PromotionTemplate
+		if template == nil {
+			if downstream.Spec.PromotionTemplateRef == nil || downstream.Spec.PromotionTemplateRef.Name == "" {
+				promoteErrs = append(promoteErrs, fmt.Errorf("Stage %q has no PromotionTemplate", downstream.Name))
+				continue
+			}
+
+			var ok bool
+			if template, ok = templates[downstream.Spec.PromotionTemplateRef.Name]; !ok {
+				template = &kargoapi.PromotionTemplate{}
+				if err = s.client.Get(ctx, types.NamespacedName{
+					Namespace: downstream.Namespace,
+					Name:      downstream.Spec.PromotionTemplateRef.Name,
+				}, template); err != nil {
+					promoteErrs = append(promoteErrs, fmt.Errorf("get PromotionTemplate %q: %w", downstream.Spec.PromotionTemplateRef.Name, err))
+					continue
+				}
+
+				templates[downstream.Spec.PromotionTemplateRef.Name] = template.DeepCopy()
+			} else {
+				template = template.DeepCopy()
+			}
+		}
+
+		newPromo := kargo.NewPromotion(ctx, *template, stage.Namespace, stage.Name, freight.Name)
 		if err = s.createPromotionFn(ctx, &newPromo); err != nil {
 			promoteErrs = append(promoteErrs, err)
 			continue

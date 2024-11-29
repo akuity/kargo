@@ -1515,6 +1515,7 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 	currentFreight := newStatus.FreightHistory.Current()
 
 	// Check if there is any new Freight which can be auto-promoted.
+	template := stage.Spec.PromotionTemplate.DeepCopy()
 	for origin, freight := range promotableFreight {
 		if len(freight) == 0 {
 			logger.Debug("no Freight from origin available for auto-promotion", "origin", origin)
@@ -1564,8 +1565,34 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 			continue
 		}
 
+		// If we do not have a PromotionTemplate, then we should attempt to
+		// retrieve it based on the defined reference.
+		if template == nil {
+			if stage.Spec.PromotionTemplateRef == nil || stage.Spec.PromotionTemplateRef.Name == "" {
+				freightLogger.Debug("no PromotionTemplate defined for Stage")
+				// To be able to recover from this, we need a change to the Stage
+				// specification which will trigger a new reconciliation. Because
+				// of this, we swallow the error.
+				return newStatus, nil
+			}
+
+			// Get the PromotionTemplate based on the defined reference.
+			template = &kargoapi.PromotionTemplate{}
+			if err = r.client.Get(
+				ctx,
+				types.NamespacedName{
+					Namespace: stage.Namespace,
+					Name:      stage.Spec.PromotionTemplateRef.Name,
+				},
+				template,
+			); err != nil {
+				// Return the error to attempt to recover from this.
+				return newStatus, err
+			}
+		}
+
 		// Auto promote the latest available Freight and record an event.
-		promotion := kargo.NewPromotion(ctx, *stage, latestFreight.Name)
+		promotion := kargo.NewPromotion(ctx, *template, stage.Namespace, stage.Name, latestFreight.Name)
 		if err := r.client.Create(ctx, &promotion); err != nil {
 			return newStatus, fmt.Errorf(
 				"error creating Promotion for Freight %q in namespace %q: %w",

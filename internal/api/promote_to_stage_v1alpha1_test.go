@@ -19,6 +19,13 @@ import (
 
 func TestPromoteToStage(t *testing.T) {
 	testStageSpec := kargoapi.StageSpec{
+		PromotionTemplate: &kargoapi.PromotionTemplate{
+			Spec: kargoapi.PromotionTemplateSpec{
+				Steps: []kargoapi.PromotionStep{
+					{},
+				},
+			},
+		},
 		RequestedFreight: []kargoapi.FreightRequest{{
 			Origin: kargoapi.FreightOrigin{
 				Kind: kargoapi.FreightOriginKindWarehouse,
