@@ -42,6 +42,7 @@ export const ClusterAnalysisTemplatesList = () => {
       rowKey={(i) => i.metadata?.name || ''}
       loading={isLoading}
       expandable={descriptionExpandable()}
+      className='w-full'
     >
       <Table.Column<ClusterAnalysisTemplate>
         title='Creation Date'

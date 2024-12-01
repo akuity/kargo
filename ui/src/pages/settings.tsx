@@ -1,10 +1,11 @@
 import { faBarChart } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { MenuProps } from 'antd';
-import { Menu } from 'antd';
+import { Menu, Flex } from 'antd';
 import { useNavigate, generatePath } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
+import { PageTitle } from '@ui/features/common';
 import { ClusterAnalysisTemplatesList } from '@ui/features/settings/analysis-templates/analysis-templates';
 
 export const Settings = ({ section = 'verification' }: { section?: string }) => {
@@ -31,10 +32,14 @@ export const Settings = ({ section = 'verification' }: { section?: string }) => 
 
   return (
     <div className='p-6'>
-      <div className='p-7 float left'>
-        <Menu mode='horizontal' items={items} />
-      </div>
-      {renderSection(section)}
+      <Flex justify='space-between'>
+        <PageTitle title='Settings' />
+        <div className='text-2xl font-semibold flex items-center'>Cluster Analysis Templates</div>
+      </Flex>
+      <Flex justify='space-between'>
+        <Menu mode='vertical' items={items} />
+        {renderSection(section)}
+      </Flex>
     </div>
   );
 };
