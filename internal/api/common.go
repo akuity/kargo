@@ -8,12 +8,23 @@ import (
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/yaml"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	sigyaml "sigs.k8s.io/yaml"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
+)
+
+var (
+	secretGVK = schema.GroupVersionKind{
+		Group:   "",
+		Version: "v1",
+		Kind:    "Secret",
+	}
+
+	errSecretManagementDisabled = fmt.Errorf("secret management is not enabled")
 )
 
 // splitYAML splits YAML bytes into unstructured objects. It separates Project

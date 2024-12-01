@@ -3,7 +3,7 @@ import { faAnchor, faQuestionCircle } from '@fortawesome/free-solid-svg-icons';
 
 import { SegmentLabel } from '@ui/features/common/segment-label';
 import { DESCRIPTION_ANNOTATION_KEY } from '@ui/features/common/utils';
-import { Secret } from '@ui/gen/v1alpha1/types_pb';
+import { Secret } from '@ui/gen/k8s.io/api/core/v1/generated_pb';
 
 import { CredentialTypeLabelKey, CredentialsDataKey, CredentialsType } from './types';
 

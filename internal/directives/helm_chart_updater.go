@@ -143,7 +143,7 @@ func (h *helmChartUpdater) processChartUpdates(
 	for _, update := range cfg.Charts {
 		version := update.Version
 		if update.Version == "" {
-			// TODO(krancour): Remove this for v1.2.0
+			// TODO(krancour): Remove this for v1.3.0
 			repoURL, chartName := normalizeChartReference(update.Repository, update.Name)
 			var desiredOrigin *kargoapi.FreightOrigin
 			if update.FromOrigin != nil {

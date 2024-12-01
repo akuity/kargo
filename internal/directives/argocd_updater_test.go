@@ -516,9 +516,7 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 					return []argocd.ApplicationSource{{}}, nil
 				},
 				mustPerformUpdateFn: func(
-					context.Context,
 					*PromotionStepContext,
-					*ArgoCDUpdateConfig,
 					*ArgoCDAppUpdate,
 					*argocd.Application,
 					argocd.ApplicationSources,
@@ -558,9 +556,7 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 					return []argocd.ApplicationSource{{}}, nil
 				},
 				mustPerformUpdateFn: func(
-					context.Context,
 					*PromotionStepContext,
-					*ArgoCDUpdateConfig,
 					*ArgoCDAppUpdate,
 					*argocd.Application,
 					argocd.ApplicationSources,
@@ -608,9 +604,7 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 					return []argocd.ApplicationSource{{}}, nil
 				},
 				mustPerformUpdateFn: func(
-					context.Context,
 					*PromotionStepContext,
-					*ArgoCDUpdateConfig,
 					*ArgoCDAppUpdate,
 					*argocd.Application,
 					argocd.ApplicationSources,
@@ -650,9 +644,7 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 					return []argocd.ApplicationSource{{}}, nil
 				},
 				mustPerformUpdateFn: func(
-					context.Context,
 					*PromotionStepContext,
-					*ArgoCDUpdateConfig,
 					*ArgoCDAppUpdate,
 					*argocd.Application,
 					argocd.ApplicationSources,
@@ -692,9 +684,7 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 					return []argocd.ApplicationSource{{}}, nil
 				},
 				mustPerformUpdateFn: func(
-					context.Context,
 					*PromotionStepContext,
-					*ArgoCDUpdateConfig,
 					*ArgoCDAppUpdate,
 					*argocd.Application,
 					argocd.ApplicationSources,
@@ -743,18 +733,14 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 					return []argocd.ApplicationSource{{}}, nil
 				},
 				mustPerformUpdateFn: func() func(
-					context.Context,
 					*PromotionStepContext,
-					*ArgoCDUpdateConfig,
 					*ArgoCDAppUpdate,
 					*argocd.Application,
 					argocd.ApplicationSources,
 				) (argocd.OperationPhase, bool, error) {
 					var count uint
 					return func(
-						context.Context,
 						*PromotionStepContext,
-						*ArgoCDUpdateConfig,
 						*ArgoCDAppUpdate,
 						*argocd.Application,
 						argocd.ApplicationSources,
@@ -810,9 +796,7 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 					return []argocd.ApplicationSource{{}}, nil
 				},
 				mustPerformUpdateFn: func(
-					context.Context,
 					*PromotionStepContext,
-					*ArgoCDUpdateConfig,
 					*ArgoCDAppUpdate,
 					*argocd.Application,
 					argocd.ApplicationSources,
@@ -852,9 +836,7 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 					return []argocd.ApplicationSource{{}}, nil
 				},
 				mustPerformUpdateFn: func(
-					context.Context,
 					*PromotionStepContext,
-					*ArgoCDUpdateConfig,
 					*ArgoCDAppUpdate,
 					*argocd.Application,
 					argocd.ApplicationSources,
@@ -1008,14 +990,9 @@ func Test_argoCDUpdater_buildDesiredSources(t *testing.T) {
 
 func Test_argoCDUpdater_mustPerformUpdate(t *testing.T) {
 	testFreightCollectionID := "fake-freight-collection"
-	testOrigin := kargoapi.FreightOrigin{
-		Kind: kargoapi.FreightOriginKindWarehouse,
-		Name: "fake-warehouse",
-	}
 	testCases := []struct {
 		name              string
 		modifyApplication func(*argocd.Application)
-		newFreight        []kargoapi.FreightReference
 		desiredSources    argocd.ApplicationSources
 		assertions        func(t *testing.T, phase argocd.OperationPhase, mustUpdate bool, err error)
 	}{
@@ -1173,13 +1150,6 @@ func Test_argoCDUpdater_mustPerformUpdate(t *testing.T) {
 					},
 				}
 			},
-			newFreight: []kargoapi.FreightReference{{
-				Commits: []kargoapi.GitCommit{
-					{
-						RepoURL: "https://github.com/universe/42",
-					},
-				},
-			}},
 			assertions: func(t *testing.T, phase argocd.OperationPhase, mustUpdate bool, err error) {
 				require.ErrorContains(t, err, "operation completed without a sync result")
 				require.Empty(t, phase)
@@ -1208,15 +1178,6 @@ func Test_argoCDUpdater_mustPerformUpdate(t *testing.T) {
 					},
 				}
 			},
-			newFreight: []kargoapi.FreightReference{{
-				Origin: testOrigin,
-				Commits: []kargoapi.GitCommit{
-					{
-						RepoURL: "https://github.com/universe/42",
-						ID:      "fake-revision",
-					},
-				},
-			}},
 			assertions: func(t *testing.T, phase argocd.OperationPhase, mustUpdate bool, err error) {
 				require.ErrorContains(t, err, "sync result revisions")
 				require.ErrorContains(t, err, "do not match desired revisions")
@@ -1286,15 +1247,6 @@ func Test_argoCDUpdater_mustPerformUpdate(t *testing.T) {
 					},
 				}
 			},
-			newFreight: []kargoapi.FreightReference{{
-				Origin: testOrigin,
-				Commits: []kargoapi.GitCommit{
-					{
-						RepoURL: "https://github.com/universe/42",
-						ID:      "fake-revision",
-					},
-				},
-			}},
 			assertions: func(t *testing.T, phase argocd.OperationPhase, mustUpdate bool, err error) {
 				require.NoError(t, err)
 				require.Equal(t, argocd.OperationSucceeded, phase)
@@ -1317,31 +1269,22 @@ func Test_argoCDUpdater_mustPerformUpdate(t *testing.T) {
 				testCase.modifyApplication(app)
 			}
 
-			freight := kargoapi.FreightCollection{}
-			for _, ref := range testCase.newFreight {
-				freight.UpdateOrPush(ref)
-			}
-			// Tamper with the freight collection ID for testing purposes
-			freight.ID = testFreightCollectionID
-
 			stepCfg := &ArgoCDUpdateConfig{
 				Apps: []ArgoCDAppUpdate{{
 					Sources: []ArgoCDAppSourceUpdate{{
-						FromOrigin: &AppFromOrigin{
-							Kind: Kind(testOrigin.Kind),
-							Name: testOrigin.Name,
-						},
-						RepoURL: "https://github.com/universe/42",
+						RepoURL:         "https://github.com/universe/42",
+						DesiredRevision: "fake-revision",
 					}},
 				}},
 			}
 
 			phase, mustUpdate, err := runner.mustPerformUpdate(
-				context.Background(),
 				&PromotionStepContext{
-					Freight: freight,
+					Freight: kargoapi.FreightCollection{
+						// Hard-coded for testing purposes
+						ID: testFreightCollectionID,
+					},
 				},
-				stepCfg,
 				&stepCfg.Apps[0],
 				app,
 				testCase.desiredSources,

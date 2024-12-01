@@ -9,11 +9,15 @@ import {
   faCodePullRequest,
   faCopy,
   faDraftingCompass,
+  faEdit,
+  faExchangeAlt,
   faFileCode,
   faFileEdit,
   faFileImage,
+  faGlobe,
   faHammer,
   faHeart,
+  faNetworkWired,
   faRedoAlt,
   faSyncAlt,
   faUpDown,
@@ -34,8 +38,10 @@ import gitWaitForPR from '@ui/gen/directives/git-wait-for-pr-config.json';
 import helmTemplateConfig from '@ui/gen/directives/helm-template-config.json';
 import helmUpdateChartConfig from '@ui/gen/directives/helm-update-chart-config.json';
 import helmUpdateImageConfig from '@ui/gen/directives/helm-update-image-config.json';
+import httpConfig from '@ui/gen/directives/http-config.json';
 import kustomizeBuildConfig from '@ui/gen/directives/kustomize-build-config.json';
 import kustomizeSetImageConfig from '@ui/gen/directives/kustomize-set-image-config.json';
+import yamlUpdateConfig from '@ui/gen/directives/yaml-update-config.json';
 
 import { PromotionDirectivesRegistry } from './types';
 
@@ -81,6 +87,11 @@ export const useDiscoverPromotionDirectivesRegistries = (): PromotionDirectivesR
         config: gitWaitForPR as unknown as JSONSchema7
       },
       {
+        identifier: 'yaml-update',
+        config: yamlUpdateConfig as unknown as JSONSchema7,
+        unstable_icons: [faFileCode, faSyncAlt, faEdit]
+      },
+      {
         identifier: 'git-push',
         unstable_icons: [faArrowUp, faCloudUploadAlt],
         config: gitPushConfig as unknown as JSONSchema7
@@ -114,6 +125,11 @@ export const useDiscoverPromotionDirectivesRegistries = (): PromotionDirectivesR
         identifier: 'kustomize-set-image',
         unstable_icons: [faFileImage, faFileEdit],
         config: kustomizeSetImageConfig as JSONSchema7
+      },
+      {
+        identifier: 'http',
+        unstable_icons: [faGlobe, faNetworkWired, faExchangeAlt],
+        config: httpConfig as JSONSchema7
       }
     ]
   };

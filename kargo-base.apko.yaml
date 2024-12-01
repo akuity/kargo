@@ -11,6 +11,7 @@ contents:
   - gpg-agent~2
   - helm~3 # Required for Kustomize Helm plugin
   - openssh-client~9
+  - tini
 
 accounts:
   groups:

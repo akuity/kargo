@@ -11,10 +11,10 @@ in a typical promotion process. Similarly, configuration options for each step
 are laid out in order of their applicability to typical use cases.
 
 :::info
-Promotion steps support the use of [expr-lang](https://expr-lang.org/)
-expressions in their configuration. Many examples in this reference document
-will include expressions to demonstrate their use. For more information on
-expressions, refer to our [Expression Language Reference](./20-expression-language.md).
+Promotion steps support the use of [expr-lang] expressions in their
+configuration. Many examples in this reference document will include expressions
+to demonstrate their use. For more information on expressions, refer to our
+[Expression Language Reference](./20-expression-language.md).
 :::
 
 ## `git-clone`
@@ -43,8 +43,8 @@ multiple working trees.
 | `checkout[].create` | `boolean` | N | In the event `branch` does not already exist on the remote, whether a new, empty, orphaned branch should be created. Default is `false`, but should commonly be set to `true` for Stage-specific branches, which may not exist yet at the time of a Stage's first promotion. |
 | `checkout[].commit` | `string` | N | A specific commit to check out. Mutually exclusive with `branch`, `tag`, and `fromFreight=true`. If none of these is specified, the default branch will be checked out. |
 | `checkout[].tag` | `string` | N | A tag to check out. Mutually exclusive with `branch`, `commit`, and `fromFreight=true`. If none of these is specified, the default branch will be checked out. |
-| `checkout[].fromFreight` | `boolean` | N | Whether a commit to check out should be obtained from the Freight being promoted. A value of `true` is mutually exclusive with `branch`, `commit`, and `tag`. If none of these is specified, the default branch will be checked out. Default is `false`, but is often set to `true`. <br/><br/>__Deprecated: Use `commit` with an expression instead. Will be removed in v1.2.0.__ |
-| `checkout[].fromOrigin` | `object` | N | See [specifying origins](#specifying-origins). <br/><br/>__Deprecated: Use `commit` with an expression instead. Will be removed in v1.2.0.__ |
+| `checkout[].fromFreight` | `boolean` | N | Whether a commit to check out should be obtained from the Freight being promoted. A value of `true` is mutually exclusive with `branch`, `commit`, and `tag`. If none of these is specified, the default branch will be checked out. Default is `false`, but is often set to `true`. <br/><br/>__Deprecated: Use `commit` with an expression instead. Will be removed in v1.3.0.__ |
+| `checkout[].fromOrigin` | `object` | N | See [specifying origins](#specifying-origins). <br/><br/>__Deprecated: Use `commit` with an expression instead. Will be removed in v1.3.0.__ |
 | `checkout[].path` | `string` | Y | The path for a working tree that will be created from the checked out revision. This path is relative to the temporary workspace that Kargo provisions for use by the promotion process. |
 
 ### `git-clone` Examples
@@ -219,8 +219,8 @@ to executing `kustomize edit set image`. This step is commonly followed by a
 | `images[].image` | `string` | Y | Name/URL of the image being updated. |
 | `images[].tag` | `string` | N | A tag naming a specific revision of `image`. Mutually exclusive with `digest` and `useDigest=true`. If none of these are specified, the tag specified by a piece of Freight referencing `image` will be used as the value of this field. |
 | `images[].digest` | `string` | N | A digest naming a specific revision of `image`. Mutually exclusive with `tag` and `useDigest=true`. If none of these are specified, the tag specified by a piece of Freight referencing `image` will be used as the value of `tag`. |
-| `images[].useDigest` | `boolean` | N | Whether to update the `kustomization.yaml` file using the container image's digest instead of its tag. Mutually exclusive with `digest` and `tag`. If none of these are specified, the tag specified by a piece of Freight referencing `image` will be used as the value of `tag`. <br/><br/>__Deprecated: Use `digest` with an expression instead. Will be removed in v1.2.0.__ |
-| `images[].fromOrigin` | `object` | N | See [specifying origins](#specifying-origins). <br/><br/>__Deprecated: Use `digest` or `tag` with an expression instead. Will be removed in v1.2.0.__ |
+| `images[].useDigest` | `boolean` | N | Whether to update the `kustomization.yaml` file using the container image's digest instead of its tag. Mutually exclusive with `digest` and `tag`. If none of these are specified, the tag specified by a piece of Freight referencing `image` will be used as the value of `tag`. <br/><br/>__Deprecated: Use `digest` with an expression instead. Will be removed in v1.3.0.__ |
+| `images[].fromOrigin` | `object` | N | See [specifying origins](#specifying-origins). <br/><br/>__Deprecated: Use `digest` or `tag` with an expression instead. Will be removed in v1.3.0.__ |
 | `images[].newName` | `string` | N | A substitution for the name/URL of the image being updated. This is useful when different Stages have access to different container image repositories (assuming those different repositories contain equivalent images that are tagged identically). This may be a frequent consideration for users of Amazon's Elastic Container Registry. |
 
 ### `kustomize-set-image` Examples
@@ -394,7 +394,7 @@ file with new version information which is referenced by the Freight being
 promoted. This step is commonly followed by a [`helm-template`](#helm-template)
 step.
 
-__Deprecated: Use the generic `yaml-update` step instead. Will be removed in v1.2.0.__
+__Deprecated: Use the generic `yaml-update` step instead. Will be removed in v1.3.0.__
 
 ### `helm-update-image` Configuration
 
@@ -507,7 +507,7 @@ referenced by the Freight being promoted. This step is commonly followed by a
 | `charts` | `[]string` | Y | The details of dependency (subschart) updates to be applied to the chart's `Chart.yaml` file. |
 | `charts[].repository` | `string` | Y | The URL of the Helm chart repository in the `dependencies` entry whose `version` field is to be updated. Must _exactly_ match the `repository` field of that entry. |
 | `charts[].name` | `string` | Y | The name of the chart in in the `dependencies` entry whose `version` field is to be updated. Must exactly match the `name` field of that entry. |
-| `charts[].fromOrigin` | `object` | N | See [specifying origins](#specifying-origins). <br/><br/>__Deprecated: Use `version` with an expression instead. Will be removed in v1.2.0.__ |
+| `charts[].fromOrigin` | `object` | N | See [specifying origins](#specifying-origins). <br/><br/>__Deprecated: Use `version` with an expression instead. Will be removed in v1.3.0.__ |
 | `charts[].version` | `string` | N | The version to which the dependency should be updated. If left unspecified, the version specified by a piece of Freight referencing this chart will be used. |
 
 ### `helm-update-chart` Examples
@@ -902,7 +902,7 @@ requests.
 | `provider` | `string` | N | The name of the Git provider to use. Currently only `github` and `gitlab` are supported. Kargo will try to infer the provider if it is not explicitly specified.  |
 | `insecureSkipTLSVerify` | `boolean` | N | Indicates whether to bypass TLS certificate verification when interfacing with the Git provider. Setting this to `true` is highly discouraged in production. |
 | `sourceBranch` | `string` | N | Specifies the source branch for the pull request. Mutually exclusive with `sourceBranchFromStep`. |
-| `sourceBranchFromStep` | `string` | N | Indicates the source branch should be determined by the `branch` key in the output of a previous promotion step with the specified alias. Mutually exclusive with `sourceBranch`.<br/><br/>__Deprecated: Use `sourceBranch` with an expression instead. Will be removed in v1.2.0.__  |
+| `sourceBranchFromStep` | `string` | N | Indicates the source branch should be determined by the `branch` key in the output of a previous promotion step with the specified alias. Mutually exclusive with `sourceBranch`.<br/><br/>__Deprecated: Use `sourceBranch` with an expression instead. Will be removed in v1.3.0.__  |
 | `targetBranch` | `string` | N | The branch to which the changes should be merged. |
 | `createTargetBranch` | `boolean` | N | Indicates whether a new, empty orphaned branch should be created and pushed to the remote if the target branch does not already exist there. Default is `false`. |
 
@@ -946,7 +946,7 @@ by an `argocd-update` step.
 | `provider` | `string` | N | The name of the Git provider to use. Currently only `github` and `gitlab` are supported. Kargo will try to infer the provider if it is not explicitly specified.  |
 | `insecureSkipTLSVerify` | `boolean` | N | Indicates whether to bypass TLS certificate verification when interfacing with the Git provider. Setting this to `true` is highly discouraged in production. |
 | `prNumber` | `string` | N | The number of the pull request to wait for. Mutually exclusive with `prNumberFromStep`. |
-| `prNumberFromStep` | `string` | N | References the `prNumber` output from a previous step. Mutually exclusive with `prNumber`.<br/><br/>__Deprecated: Use `prNumber` with an expression instead. Will be removed in v1.2.0.__ |
+| `prNumberFromStep` | `string` | N | References the `prNumber` output from a previous step. Mutually exclusive with `prNumber`.<br/><br/>__Deprecated: Use `prNumber` with an expression instead. Will be removed in v1.3.0.__ |
 
 ### `git-wait-for-pr` Output
 
@@ -986,6 +986,34 @@ an Argo CD `Application` to sync after previous steps have updated a remote
 branch referenced by the `Application`. This step is commonly the last step in a
 promotion process.
 
+:::note
+For an Argo CD `Application` resource to be managed by a Kargo `Stage`,
+the `Application` _must_ have an annotation of the following form:
+
+```yaml
+kargo.akuity.io/authorized-stage: "<project-name>:<stage-name>"
+```
+
+Such an annotation offers proof that a user who is themselves authorized
+to update the `Application` in question has consented to a specific
+`Stage` updating the `Application` as well.
+
+The following example shows how to configure an Argo CD `Application`
+manifest to authorize the `test` `Stage` of the `kargo-demo` `Project`:
+
+```yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kargo-demo-test
+  namespace: argocd
+  annotations:
+    kargo.akuity.io/authorized-stage: kargo-demo:test
+spec:
+  # Application specifications go here
+```
+:::
+
 ### `argocd-update` Configuration
 
 | Name | Type | Required | Description |
@@ -996,9 +1024,9 @@ promotion process.
 | `apps[].sources` | `[]object` | N | Describes Argo CD `ApplicationSource`s to update and how to update them. |
 | `apps[].sources[].repoURL` | `string` | Y | The value of the target `ApplicationSource`'s  own `repoURL` field. This must match exactly. |
 | `apps[].sources[].chart` | `string` | N | Applicable only when the target `ApplicationSource` references a Helm chart repository, the value of the target `ApplicationSource`'s  own `chart` field. This must match exactly. |
-| `apps[].sources[].desiredRevision` | `string` | N | Specifies the desired revision for the source. This field is mutually exclusive with `desiredCommitFromStep`. If both are left undefined, the desired revision will be determined by Freight (if possible). Note that the source's `targetRevision` will not be updated to this revision unless `updateTargetRevision=true` is also set. The utility of this field, on its own, is to specify the revision that the `ApplicationSource` should be observably synced to during a health check. |
-| `apps[].sources[].desiredCommitFromStep` | `string` | N | Applicable only when `repoURL` references a Git repository, this field references the `commit` output from a previous step and uses it as the desired revision for the source. This field is mutually exclusive with `desiredRevisionFromStep`. If both are left undefined, the desired revision will be determined by Freight (if possible). Note that the source's `targetRevision` will not be updated to this commit unless `updateTargetRevision=true` is also set. The utility of this field, on its own, is to specify the revision that the `ApplicationSource` should be observably synced to during a health check.<br/><br/>__Deprecated: Use `desiredRevision` with an expression instead. Will be removed in v1.2.0.__ |
-| `apps[].sources[].updateTargetRevision` | `boolean` | Y | Indicates whether the target `ApplicationSource` should be updated such that its `targetRevision` field points directly at the desired revision. |
+| `apps[].sources[].desiredRevision` | `string` | N | Specifies the desired revision for the source. i.e. The revision to which the source must be observably synced when performing a health check. This field is mutually exclusive with `desiredCommitFromStep`. Prior to v1.1.0, if both were left undefined, the desired revision was determined by Freight (if possible). Beginning with v1.1.0, if both are left undefined, Kargo will not require the source to be observably synced to any particular source to be considered healthy. Note that the source's `targetRevision` will not be updated to this revision unless `updateTargetRevision=true` is also set. |
+| `apps[].sources[].desiredCommitFromStep` | `string` | N | Applicable only when `repoURL` references a Git repository, this field references the `commit` output from a previous step and uses it as the desired revision for the source. i.e. The revision to which the source must be observably synced when performing a health check. This field is mutually exclusive with `desiredRevisionFromStep`. Prior to v1.1.0, if both were left undefined, the desired revision was determined by Freight (if possible). Beginning with v1.1.0, if both are left undefined, Kargo will not require the source to be observably synced to any particular source to be considered healthy. Note that the source's `targetRevision` will not be updated to this commit unless `updateTargetRevision=true` is also set.<br/><br/>__Deprecated: Use `desiredRevision` with an expression instead. Will be removed in v1.3.0.__ |
+| `apps[].sources[].updateTargetRevision` | `boolean` | Y | Indicates whether the target `ApplicationSource` should be updated such that its `targetRevision` field points directly at the desired revision. A `true` value in this field has no effect if `desiredRevision` and `desiredCommitFromStep` are both undefined. |
 | `apps[].sources[].kustomize` | `object` | N | Describes updates to an Argo CD `ApplicationSource`'s Kustomize-specific properties. |
 | `apps[].sources[].kustomize.images` | `[]object` | Y | Describes how to update an Argo CD `ApplicationSource`'s Kustomize-specific properties to reference specific versions of container images. |
 | `apps[].sources[].kustomize.images[].repoURL` | `string` | Y | URL of the image being updated. |
@@ -1006,18 +1034,18 @@ promotion process.
 | `apps[].sources[].kustomize.images[].digest` | `string` | N | A digest naming a specific revision of the image specified by `repoURL`. Mutually exclusive with `tag` and `useDigest=true`. One of `digest`, `tag`, or `useDigest=true` must be specified. |
 | `apps[].sources[].kustomize.images[].useDigest` | `boolean` | N | Whether to use the container image's digest instead of its tag. |
 | `apps[].sources[].kustomize.images[].newName` | `string` | N | A substitution for the name/URL of the image being updated. This is useful when different Stages have access to different container image repositories (assuming those different repositories contain equivalent images that are tagged identically). This may be a frequent consideration for users of Amazon's Elastic Container Registry. |
-| `apps[].sources[].kustomize.images[].fromOrigin` | `object` | N | See [specifying origins](#specifying-origins). If not specified, may inherit a value from `apps[].sources[].kustomize.fromOrigin`. <br/><br/>__Deprecated: Use `digest` or `tag` with an expression instead. Will be removed in v1.2.0.__ |
-| `apps[].sources[].kustomize.fromOrigin` | `object` | N | See [specifying origins](#specifying-origins). If not specified, may inherit a value from `apps[].sources[].fromOrigin`. <br/><br/>__Deprecated: Will be removed in v1.2.0.__ |
+| `apps[].sources[].kustomize.images[].fromOrigin` | `object` | N | See [specifying origins](#specifying-origins). If not specified, may inherit a value from `apps[].sources[].kustomize.fromOrigin`. <br/><br/>__Deprecated: Use `digest` or `tag` with an expression instead. Will be removed in v1.3.0.__ |
+| `apps[].sources[].kustomize.fromOrigin` | `object` | N | See [specifying origins](#specifying-origins). If not specified, may inherit a value from `apps[].sources[].fromOrigin`. <br/><br/>__Deprecated: Will be removed in v1.3.0.__ |
 | `apps[].sources[].helm` | `object` | N | Describes updates to an Argo CD `ApplicationSource`'s Helm parameters. |
 | `apps[].sources[].helm.images` | `[]object` | Y | Describes how to update  an Argo CD `ApplicationSource`'s Helm parameters to reference specific versions of container images. |
-| `apps[].sources[].helm.images[].repoURL` | `string` | N | URL of the image being updated. __Deprecated: Use `value` with an expression instead. Will be removed in v1.2.0.__ |
+| `apps[].sources[].helm.images[].repoURL` | `string` | N | URL of the image being updated. __Deprecated: Use `value` with an expression instead. Will be removed in v1.3.0.__ |
 | `apps[].sources[].helm.images[].key` | `string` | Y | The key to update within the target `ApplicationSource`'s `helm.parameters` map. See Helm documentation on the [format and limitations](https://helm.sh/docs/intro/using_helm/#the-format-and-limitations-of---set) of the notation used in this field. |
 | `apps[].sources[].helm.images[].value` | `string` | Y | Specifies how the value of `key` is to be updated. When `repoURL` is non-empty, possible values for this field are limited to:<ul><li>`ImageAndTag`: Replaces the value of `key` with a string in form `<image url>:<tag>`</li><li>`Tag`: Replaces the value of `key` with the image's tag</li><li>`ImageAndDigest`: Replaces the value of `key` with a string in form `<image url>@<digest>`</li><li>`Digest`: Replaces the value of `key` with the image's digest</li></ul> When `repoURL` is empty, use an expression in this field to describe the new value.  |
-| `apps[].sources[].helm.images[].fromOrigin` | `object` | N | See [specifying origins](#specifying-origins). If not specified, may inherit a value from `apps[].sources[].helm.fromOrigin`. <br/><br/>__Deprecated: Use `value` with an expression instead. Will be removed in v1.2.0.__ |
-| `apps[].sources[].helm.fromOrigin` | `object` | N | See [specifying origins].(#specifying-origins). If not specified, may inherit a value from `apps[].sources[]`. <br/><br/>__Deprecated: Will be removed in v1.2.0.__ |
-| `apps[].sources[].fromOrigin` | `object` | N | See [specifying origins](#specifying-origins). If not specified, may inherit a value from `apps[].fromOrigin`. <br/><br/>__Deprecated: Will be removed in v1.2.0.__ |
-| `apps[].fromOrigin` | `object` | N | See [specifying origins](#specifying-origins). If not specified, may inherit a value from `fromOrigin`.  <br/><br/>__Deprecated: Will be removed in v1.2.0.__ |
-| `fromOrigin` | `object` | N | See [specifying origins](#specifying-origins). <br/><br/>__Deprecated: Will be removed in v1.2.0.__  |
+| `apps[].sources[].helm.images[].fromOrigin` | `object` | N | See [specifying origins](#specifying-origins). If not specified, may inherit a value from `apps[].sources[].helm.fromOrigin`. <br/><br/>__Deprecated: Use `value` with an expression instead. Will be removed in v1.3.0.__ |
+| `apps[].sources[].helm.fromOrigin` | `object` | N | See [specifying origins].(#specifying-origins). If not specified, may inherit a value from `apps[].sources[]`. <br/><br/>__Deprecated: Will be removed in v1.3.0.__ |
+| `apps[].sources[].fromOrigin` | `object` | N | See [specifying origins](#specifying-origins). If not specified, may inherit a value from `apps[].fromOrigin`. <br/><br/>__Deprecated: Will be removed in v1.3.0.__ |
+| `apps[].fromOrigin` | `object` | N | See [specifying origins](#specifying-origins). If not specified, may inherit a value from `fromOrigin`.  <br/><br/>__Deprecated: Will be removed in v1.3.0.__ |
+| `fromOrigin` | `object` | N | See [specifying origins](#specifying-origins). <br/><br/>__Deprecated: Will be removed in v1.3.0.__  |
 
 ### `argocd-update` Examples
 
@@ -1156,3 +1184,193 @@ Although the `argocd-update` step is the only promotion step to currently
 utilize this health check framework, we anticipate that future built-in and
 third-party promotion steps will take advantage of it as well.
 :::
+
+## `http`
+
+`http` is a generic step that makes an HTTP/S request to enable basic integration
+with a wide variety of external services.
+
+### `http` Configuration
+
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| `method` | `string` | Y | The HTTP method to use. |
+| `url` | `string` | Y | The URL to which the request should be made. |
+| `headers` | `[]object` | N | A list of headers to include in the request. |
+| `headers[].name` | `string` | Y | The name of the header. |
+| `headers[].value` | `string` | Y | The value of the header. |
+| `queryParams` | `[]object` | N | A list of query parameters to include in the request. |
+| `queryParams[].name` | `string` | Y | The name of the query parameter. |
+| `queryParams[].value` | `string` | Y | The value of the query parameter. The provided value will automatically be URL-encoded if necessary. |
+| `body` | `string` | N | The body of the request. |
+| `insecureSkipTLSVerify` | `boolean` | N | Indicates whether to bypass TLS certificate verification when making the request. Setting this to `true` is highly discouraged. |
+| `timeoutSeconds` | `number` | N | The maximum number of seconds to wait for a request to complete. If this is not specified, the default timeout is 10 seconds. The minimum permissible value is `1` and the maximum is `60`. _This is the timeout for an individual HTTP request. If a request is retried, each attempt is independently subject to this timeout._ |
+| `successExpression` | `string` | N | An [expr-lang] expression that can evaluate the response to determine success. If this is left undefined and `failureExpression` _is_ defined, the default success criteria will be the inverse of the specified failure criteria. If both are left undefined, success is `true` when the HTTP status code is `2xx`. If `successExpression` and `failureExpression` are both defined and both evaluate to `true`, the failure takes precedence. Note that this expression should _not_ be offset by `${{` and `}}`. See examples for more details. |
+| `failureExpression` | `string` | N | An [expr-lang] expression that can evaluate the response to determine failure. If this is left undefined and `successExpression` _is_ defined, the default failure criteria will be the inverse of the specified success criteria. If both are left undefined, failure is `true` when the HTTP status code is _not_ `2xx`. If `successExpression` and `failureExpression` are both defined and both evaluate to `true`, the failure takes precedence. Note that this expression should _not_ be offset by `${{` and `}}`. See examples for more details. |
+| `outputs` | `[]object` | N | A list of rules for extracting outputs from the HTTP response. These are only applied to responses deemed successful. |
+| `outputs[].name` | `string` | Y | The name of the output. |
+| `outputs[].fromExpression` | `string` | Y | An [expr-lang] expression that can extract a value from the HTTP response. Note that this expression should _not_ be offset by `${{` and `}}`. See examples for more details. |
+
+:::note
+An HTTP response that is not conclusively determined to have succeeded or failed
+will result in the step reporting a result of `Running`. Kargo will retry such
+a step on its next attempt at reconciling the `Promotion` resource. This will
+continue until the step succeeds, fails, exhausts the configured maximum number
+of retries, or a configured timeout has elapsed.
+:::
+
+### `http` Expressions
+
+The `successExpression`, `failureExpression`, and `outputs[].fromExpression`
+fields all support [expr-lang] expressions.
+
+:::note
+The expressions included in the `successExpression`, `failureExpression`, and
+`outputs[].fromExpression` fields should _not_ be offset by `${{` and `}}`. This
+is to prevent the expressions from being evaluated by Kargo during
+pre-processing of step configurations. The `http` step itself will evaluate
+these expressions.
+:::
+
+A `response` object (a `map[string]any`) is available to these expressions. It
+is structured as follows:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `status` | `int` | The HTTP status code of the response. |
+| `headers` | `http.Header` | The headers of the response. See applicable [Go documentation](https://pkg.go.dev/net/http#Header). |
+| `header` | `func(string) string` | `headers` can be inconvenient to work with directly. This function allows you to access a header by name. |
+| `body` | `map[string]any` | The body of the response, if any, unmarshaled into a map. If the response body is empty, this map will also be empty. |
+
+### `http` Examples
+
+<Tabs groupId="http">
+
+<TabItem value="basic" label="Basic Usage" default>
+
+This examples configuration makes a `GET` request to the
+[Cat Facts API.](https://www.catfacts.net/api/) and uses the default
+success/failure criteria.
+
+```yaml
+steps:
+# ...
+- uses: http
+  as: cat-facts
+  config:
+    method: GET
+    url: https://www.catfacts.net/api/
+    outputs:
+    - name: status
+      fromExpression: response.status
+    - name: fact1
+      fromExpression: response.body.facts[0]
+    - name: fact2
+      fromExpression: response.body.facts[1]
+```
+
+Assuming a `200` response with the following JSON body:
+
+```json
+{
+    "facts": [
+        {
+            "fact_number": 1,
+            "fact": "Kittens have baby teeth, which are replaced by permanent teeth around the age of 7 months."
+        },
+        {
+            "fact_number": 2,
+            "fact": "Each day in the US, animal shelters are forced to destroy 30,000 dogs and cats."
+        }
+    ]
+}
+```
+
+The step would succeed and produce the following outputs:
+
+```yaml
+| Name     | Type | Value |
+|----------|------|-------|
+| `status` | `int` | `200` |
+| `fact1` | `string` | `Kittens have baby teeth, which are replaced by permanent teeth around the age of 7 months.` |
+| `fact2` | `string` | `Each day in the US, animal shelters are forced to destroy 30,000 dogs and cats.` |
+```
+
+</TabItem>
+
+<TabItem value="polling" label="Polling">
+
+Building on the basic example, this configuration defines explicit success and
+failure criteria. Any response meeting neither of these criteria will result in
+the step reporting a result of `Running` and being retried.
+
+```yaml
+steps:
+# ...
+- uses: http
+  as: cat-facts
+  config:
+    method: GET
+    url: https://www.catfacts.net/api/
+    successExpression: response.status == 200
+    failureExpression: response.status == 404
+    outputs:
+    - name: status
+      fromExpression: response.status
+    - name: fact1
+      fromExpression: response.body.facts[0]
+    - name: fact2
+      fromExpression: response.body.facts[1]
+```
+
+Our request is considered:
+
+- Successful if the response status is `200`.
+- A failure if the response status is `404`.
+- Running if the response status is anything else. i.e. Any other status code
+  will result in a retry.
+
+</TabItem>
+
+<TabItem value="slack" label="Posting to Slack">
+
+This examples is adapted from
+[Slack's own documentation](https://api.slack.com/tutorials/tracks/posting-messages-with-curl):
+
+```yaml
+steps:
+# ...
+- uses: http
+  config:
+    method: POST
+    url: https://slack.com/api/chat.postMessage
+    headers:
+    - name: Authorization
+      value: Bearer ${{ secrets.slack.token }}
+    - name: Content-Type
+      value: application/json
+    body: |
+      {
+        "channel": ${{ vars.slackChannel }},
+        "blocks": [
+          {
+            "type": "section",
+            "text": {
+              "type": "mrkdwn",
+              "text": "Hi I am a bot that can post *_fancy_* messages to any public channel."
+            }
+          }
+        ]
+      }
+```
+
+</TabItem>
+
+</Tabs>
+
+### `http` Outputs
+
+The `http` step only produces the outputs described by the `outputs` field of
+its configuration.
+
+[expr-lang]: https://expr-lang.org/

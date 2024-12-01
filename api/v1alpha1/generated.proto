@@ -463,6 +463,7 @@ message GitSubscription {
   // commit of interest in the repository specified by the RepoURL field. This
   // field is optional. When left unspecified, the field is implicitly treated
   // as if its value were "NewestFromBranch".
+  // Accepted values: Lexical, NewestFromBranch, NewestTag, SemVer
   //
   // +kubebuilder:default=NewestFromBranch
   optional string commitSelectionStrategy = 2;
@@ -661,6 +662,7 @@ message ImageSubscription {
   // of the image specified by the RepoURL field. This field is optional. When
   // left unspecified, the field is implicitly treated as if its value were
   // "SemVer".
+  // Accepted values: Digest, Lexical, NewestBuild, SemVer
   //
   // +kubebuilder:default=SemVer
   optional string imageSelectionStrategy = 3;
@@ -904,6 +906,10 @@ message PromotionStatus {
   // subsequent reconciliations attempts.
   optional int64 currentStep = 9;
 
+  // CurrentStepAttempt is the number of times the current step has been
+  // attempted.
+  optional int64 currentStepAttempt = 11;
+
   // State stores the state of the promotion process between reconciliation
   // attempts.
   optional .k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON state = 10;
@@ -919,11 +925,27 @@ message PromotionStep {
   // As is the alias this step can be referred to as.
   optional string as = 2;
 
+  // Retry is the retry policy for this step.
+  optional PromotionStepRetry retry = 4;
+
   // Config is opaque configuration for the PromotionStep that is understood
   // only by each PromotionStep's implementation. It is legal to utilize
   // expressions in defining values at any level of this block.
   // See https://docs.kargo.io/references/expression-language for details.
   optional .k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON config = 3;
+}
+
+// PromotionStepRetry describes the retry policy for a PromotionStep.
+message PromotionStepRetry {
+  // Attempts is the number of times the step can be attempted before the
+  // PromotionStep is marked as failed.
+  //
+  // If this field is set to 1, the step will not be retried. If this
+  // field is set to -1, the step will be retried indefinitely.
+  //
+  // The default of this field depends on the step being executed. Refer to
+  // the documentation for the specific step for more information.
+  optional int64 attempts = 1;
 }
 
 // PromotionTemplate defines a template for a Promotion that can be used to
@@ -1181,6 +1203,7 @@ message WarehouseSpec {
   // FreightCreationPolicy describes how Freight is created by this Warehouse.
   // This field is optional. When left unspecified, the field is implicitly
   // treated as if its value were "Automatic".
+  // Accepted values: Automatic, Manual
   //
   // +kubebuilder:default=Automatic
   // +kubebuilder:validation:Optional

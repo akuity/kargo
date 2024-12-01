@@ -28,6 +28,27 @@ export function getCurrentFreight(stage: Stage): FreightReference[] {
     : [];
 }
 
+export function getCurrentFreightWarehouse(stage: Stage) {
+  const freightRef = getCurrentFreight(stage);
+  const isWarehouseKind = freightRef.some((freight) => freight?.origin?.kind === 'Warehouse');
+
+  if (isWarehouseKind) {
+    return freightRef[0]?.origin?.name || stage?.spec?.requestedFreight[0]?.origin?.name || '';
+  }
+
+  return '';
+}
+
+export function selectFreightByWarehouse(
+  freightsInOrder /* they should be in order as if applied latest to old */ : Freight[],
+  warehouse?: string
+) {
+  const LATEST_FREIGHT = 0;
+  const order = freightsInOrder?.findIndex((freight) => freight?.origin?.name === warehouse);
+
+  return order > -1 ? order : LATEST_FREIGHT;
+}
+
 export function currentFreightHasVerification(stage: Stage): boolean {
   const collection = stage?.status?.freightHistory[0];
   return (collection && (collection.verificationHistory || []).length > 0) || false;

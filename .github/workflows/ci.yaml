@@ -40,11 +40,11 @@ jobs:
         grep -v .pb.go coverage.txt | grep -v zz_generated | grep -v service.connect.go > coverage.tmp
         mv coverage.tmp coverage.txt
     - name: Upload coverage reports
-      uses: codecov/codecov-action@b9fd7d16f6d7d1b5d2bec1a2887e65ceed900238 # v4.6.0
+      uses: codecov/codecov-action@015f24e6818733317a2da2edd6290ab26238649a # v5.0.7
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
   
-  lint-ui:
+  lint-and-typecheck-ui:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
@@ -65,6 +65,8 @@ jobs:
         node-version: "22.8.0"
         cache: "pnpm"
         cache-dependency-path: "**/pnpm-lock.yaml"
+    - name: Run typecheck
+      run: make typecheck-ui
     - name: Run linter
       run: make lint-ui
 
@@ -186,7 +188,7 @@ jobs:
       run: git diff --exit-code -- .
 
   build-image:
-    needs: [test-unit, lint-go, lint-charts, lint-proto, lint-ui, check-codegen]
+    needs: [test-unit, lint-go, lint-charts, lint-proto, lint-and-typecheck-ui, check-codegen]
     runs-on: ubuntu-latest
     services:
       registry:
@@ -218,7 +220,7 @@ jobs:
         cache-to: type=gha,mode=max
 
   build-cli:
-    needs: [test-unit, lint-go, lint-charts, lint-proto, lint-ui, check-codegen]
+    needs: [test-unit, lint-go, lint-charts, lint-proto, lint-and-typecheck-ui, check-codegen]
     runs-on: ubuntu-latest
     container:
       image: golang:1.23.3-bookworm

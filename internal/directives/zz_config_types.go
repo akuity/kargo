@@ -303,6 +303,51 @@ type HelmUpdateImageConfigImage struct {
 	Value string `json:"value"`
 }
 
+type HTTPConfig struct {
+	// The body of the HTTP request.
+	Body string `json:"body,omitempty"`
+	// An expression to evaluate to determine if the request failed.
+	FailureExpression string `json:"failureExpression,omitempty"`
+	// Headers to include in the HTTP request.
+	Headers []HTTPHeader `json:"headers,omitempty"`
+	// Whether to skip TLS verification when making the request. (Not recommended.)
+	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty"`
+	// The HTTP method to use for the request.
+	Method string `json:"method,omitempty"`
+	// Outputs to extract from the HTTP response.
+	Outputs []HTTPOutput `json:"outputs,omitempty"`
+	// Query parameters to include in the HTTP request.
+	QueryParams []HTTPQueryParam `json:"queryParams,omitempty"`
+	// An expression to evaluate to determine if the request was successful.
+	SuccessExpression string `json:"successExpression,omitempty"`
+	// The number of seconds to wait for the request to complete. If not specified, the default
+	// is 10 seconds.
+	TimeoutSeconds *int64 `json:"timeoutSeconds,omitempty"`
+	// The URL to send the HTTP request to.
+	URL string `json:"url"`
+}
+
+type HTTPHeader struct {
+	// The name of the header.
+	Name string `json:"name"`
+	// The value of the header.
+	Value string `json:"value"`
+}
+
+type HTTPOutput struct {
+	// An expression to evaluate to extract the output from the HTTP response.
+	FromExpression string `json:"fromExpression"`
+	// The name of the output.
+	Name string `json:"name"`
+}
+
+type HTTPQueryParam struct {
+	// The name of the query parameter.
+	Name string `json:"name"`
+	// The value of the query parameter.
+	Value string `json:"value"`
+}
+
 type KustomizeBuildConfig struct {
 	// OutPath is the file path to write the built manifests to.
 	OutPath string `json:"outPath"`

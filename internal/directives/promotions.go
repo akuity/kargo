@@ -27,6 +27,14 @@ type PromotionStepRunner interface {
 	RunPromotionStep(context.Context, *PromotionStepContext) (PromotionStepResult, error)
 }
 
+// RetryableStepRunner is an interface for PromotionStepRunners that can be
+// retried in the event of a failure.
+type RetryableStepRunner interface {
+	// DefaultAttempts returns the default number of attempts the step is
+	// allowed to make before failing.
+	DefaultAttempts() int64
+}
+
 // PromotionContext is the context of a user-defined promotion process that is
 // executed by the Engine.
 type PromotionContext struct {
@@ -50,13 +58,16 @@ type PromotionContext struct {
 	// resolve.
 	FreightRequests []kargoapi.FreightRequest
 	// Freight is the collection of all Freight referenced by the Promotion. This
-	// collection contains both the Freight that is actively being promoted as
-	// well as any Freight that has been inherited from the target Stage's current
+	// collection contains both the Freight that is actively being promoted and
+	// any Freight that has been inherited from the target Stage's current
 	// state.
 	Freight kargoapi.FreightCollection
-	// SharedState is the index of the step from which the promotion should begin
-	// execution.
+	// StartFromStep is the index of the step from which the promotion should
+	// begin execution.
 	StartFromStep int64
+	// Attempts is the number of attempts that have been made to execute
+	// the current step.
+	Attempts int64
 	// State is the current state of the promotion process.
 	State State
 	// Vars is a list of variables definitions that can be used by the
@@ -78,9 +89,23 @@ type PromotionStep struct {
 	// step will be keyed to this alias by the Engine and made accessible to
 	// subsequent steps.
 	Alias string
+	// Retry is the retry configuration for the PromotionStep.
+	Retry *kargoapi.PromotionStepRetry
 	// Config is an opaque JSON to be passed to the PromotionStepRunner executing
 	// this step.
 	Config []byte
+}
+
+// GetMaxAttempts returns the maximum number of attempts that can be made to
+// execute the step using the provided runner. If the runner is a
+// RetryableStepRunner, the value of its retry configuration is used as the
+// maximum default. Otherwise, the default is 1.
+func (s *PromotionStep) GetMaxAttempts(runner any) int64 {
+	fallback := int64(1)
+	if retryCfg, isRetryable := runner.(RetryableStepRunner); isRetryable {
+		fallback = retryCfg.DefaultAttempts()
+	}
+	return s.Retry.GetAttempts(fallback)
 }
 
 // GetConfig returns the Config unmarshalled into a map. Any expr-lang
@@ -117,22 +142,22 @@ func (s *PromotionStep) GetConfig(
 		expr.Function(
 			"commitFrom",
 			getCommitFunc(ctx, cl, promoCtx),
-			new(func(repoURL string) kargoapi.GitCommit),
 			new(func(repoURL string, origin kargoapi.FreightOrigin) kargoapi.GitCommit),
+			new(func(repoURL string) kargoapi.GitCommit),
 		),
 		expr.Function(
 			"imageFrom",
 			getImageFunc(ctx, cl, promoCtx),
-			new(func(repoURL string) kargoapi.Image),
 			new(func(repoURL string, origin kargoapi.FreightOrigin) kargoapi.Image),
+			new(func(repoURL string) kargoapi.Image),
 		),
 		expr.Function(
 			"chartFrom",
 			getChartFunc(ctx, cl, promoCtx),
-			new(func(repoURL string) kargoapi.Chart),
+			new(func(repoURL string, chartName string, origin kargoapi.FreightOrigin) kargoapi.Chart),
 			new(func(repoURL string, chartName string) kargoapi.Chart),
 			new(func(repoURL string, origin kargoapi.FreightOrigin) kargoapi.Chart),
-			new(func(repoURL string, chartName string, origin kargoapi.FreightOrigin) kargoapi.Chart),
+			new(func(repoURL string) kargoapi.Chart),
 		),
 	)
 	if err != nil {
@@ -145,6 +170,8 @@ func (s *PromotionStep) GetConfig(
 	return config, nil
 }
 
+// GetVars returns the variables defined in the PromotionStep. The variables are
+// evaluated in the context of the provided PromotionContext.
 func (s *PromotionStep) GetVars(promoCtx PromotionContext) (map[string]any, error) {
 	vars := make(map[string]any, len(promoCtx.Vars))
 	for _, v := range promoCtx.Vars {
@@ -184,9 +211,11 @@ type PromotionResult struct {
 	// health check processes.
 	HealthCheckSteps []HealthCheckStep
 	// If the promotion process remains in-progress, perhaps waiting for a change
-	// in some external state, the value of this field will indicated where to
+	// in some external state, the value of this field will indicate where to
 	// resume the process in the next reconciliation.
 	CurrentStep int64
+	// Attempt tracks the current execution attempt of the current step.
+	Attempt int64
 	// State is the current state of the promotion process.
 	State State
 }

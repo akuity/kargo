@@ -35,6 +35,19 @@
                         "description": "Config is opaque configuration for the PromotionStep that is understood\nonly by each PromotionStep's implementation. It is legal to utilize\nexpressions in defining values at any level of this block.\nSee https://docs.kargo.io/references/expression-language for details.",
                         "x-kubernetes-preserve-unknown-fields": true
                       },
+                      "retry": {
+                        "description": "Retry is the retry policy for this step.",
+                        "properties": {
+                          "attempts": {
+                            "description": "Attempts is the number of times the step can be attempted before the\nPromotionStep is marked as failed.\n\nIf this field is set to 1, the step will not be retried. If this\nfield is set to -1, the step will be retried indefinitely.\n\nThe default of this field depends on the step being executed. Refer to\nthe documentation for the specific step for more information.",
+                            "format": "int64",
+                            "maximum": 9223372036854776000,
+                            "minimum": -9223372036854776000,
+                            "type": "integer"
+                          }
+                        },
+                        "type": "object"
+                      },
                       "uses": {
                         "description": "Uses identifies a runner that can execute this step.",
                         "minLength": 1,
@@ -411,6 +424,13 @@
               "properties": {
                 "currentStep": {
                   "description": "CurrentStep is the index of the current promotion step being executed. This\npermits steps that have already run successfully to be skipped on\nsubsequent reconciliations attempts.",
+                  "format": "int64",
+                  "maximum": 9223372036854776000,
+                  "minimum": -9223372036854776000,
+                  "type": "integer"
+                },
+                "currentStepAttempt": {
+                  "description": "CurrentStepAttempt is the number of times the current step has been\nattempted.",
                   "format": "int64",
                   "maximum": 9223372036854776000,
                   "minimum": -9223372036854776000,
@@ -1200,6 +1220,13 @@
               "properties": {
                 "currentStep": {
                   "description": "CurrentStep is the index of the current promotion step being executed. This\npermits steps that have already run successfully to be skipped on\nsubsequent reconciliations attempts.",
+                  "format": "int64",
+                  "maximum": 9223372036854776000,
+                  "minimum": -9223372036854776000,
+                  "type": "integer"
+                },
+                "currentStepAttempt": {
+                  "description": "CurrentStepAttempt is the number of times the current step has been\nattempted.",
                   "format": "int64",
                   "maximum": 9223372036854776000,
                   "minimum": -9223372036854776000,

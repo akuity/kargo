@@ -31,7 +31,11 @@ const StageDetails = lazy(() => import('@ui/features/stage/stage-details'));
 const CreateStage = lazy(() => import('@ui/features/stage/create-stage'));
 const CreateWarehouse = lazy(() => import('@ui/features/stage/create-warehouse/create-warehouse'));
 import { SuspenseSpin } from '@ui/features/common/suspense-spin';
-import { getCurrentFreight, mapToNames } from '@ui/features/common/utils';
+import {
+  getCurrentFreight,
+  getCurrentFreightWarehouse,
+  mapToNames
+} from '@ui/features/common/utils';
 const FreightTimelineHeader = lazy(
   () => import('@ui/features/freight-timeline/freight-timeline-header')
 );
@@ -129,6 +133,8 @@ export const Pipelines = ({
   );
 
   const [selectedWarehouse, setSelectedWarehouse] = React.useState('');
+  // remember what user selected explicitly
+  const lastExplicitlySelectedWarehouse = useRef('');
   const [freightTimelineCollapsed, setFreightTimelineCollapsed] = React.useState(
     CollapseMode.Expanded
   );
@@ -338,7 +344,10 @@ export const Pipelines = ({
             }}
             downstreamSubs={Array.from(subscribersByStage[state.stage || ''] || [])}
             selectedWarehouse={selectedWarehouse || ''}
-            setSelectedWarehouse={setSelectedWarehouse}
+            setSelectedWarehouse={(explicitlySelectedWarehouse) => {
+              lastExplicitlySelectedWarehouse.current = explicitlySelectedWarehouse;
+              setSelectedWarehouse(explicitlySelectedWarehouse);
+            }}
             warehouses={warehouseMap}
             collapsed={freightTimelineCollapsed}
             setCollapsed={setFreightTimelineCollapsed}
@@ -503,28 +512,24 @@ export const Pipelines = ({
                             .length <= 1
                         }
                         onPromoteClick={(type: FreightTimelineAction) => {
-                          const currentFreight = getCurrentFreight(node.data);
-                          const isWarehouseKind = currentFreight.reduce(
-                            (acc, cur) => acc || cur?.origin?.kind === 'Warehouse',
-                            false
-                          );
-                          let currentWarehouse = '';
-                          if (isWarehouseKind) {
-                            currentWarehouse =
-                              currentFreight[0]?.origin?.name ||
-                              node.data?.spec?.requestedFreight[0]?.origin?.name ||
-                              '';
+                          // which warehouse to select?
+                          // check if they have filter applied in freight timeline
+                          // if not, then select the warehouse of latest promoted freight
+                          if (selectedWarehouse === '') {
+                            setSelectedWarehouse(getCurrentFreightWarehouse(node.data));
                           }
-                          setSelectedWarehouse(currentWarehouse);
+
                           if (state.stage === node.data?.metadata?.name) {
                             // deselect
                             state.clear();
-                            setSelectedWarehouse('');
+
+                            setSelectedWarehouse(lastExplicitlySelectedWarehouse.current);
                           } else {
                             const stageName = node.data?.metadata?.name || '';
                             state.select(type, stageName, undefined);
                           }
                         }}
+                        selectedWarehouse={selectedWarehouse}
                         action={state.action}
                         onClick={
                           state.action === FreightTimelineAction.ManualApproval
@@ -570,7 +575,7 @@ export const Pipelines = ({
                       }
                     >
                       {node.type === NodeType.WAREHOUSE && (
-                        <div className='flex w-full h-full gap-2 justify-center items-center'>
+                        <div className={'flex w-full h-full gap-2 justify-center items-center'}>
                           {(Object.keys(warehouseMap) || []).length > 1 && (
                             <Button
                               icon={<FontAwesomeIcon icon={faFilter} />}
@@ -580,10 +585,16 @@ export const Pipelines = ({
                               }
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setSelectedWarehouse(
-                                  selectedWarehouse === node.warehouseName ? '' : node.warehouseName
-                                );
+                                const newSelectedWarehouse =
+                                  selectedWarehouse === node.warehouseName
+                                    ? ''
+                                    : node.warehouseName;
+                                setSelectedWarehouse(newSelectedWarehouse);
+                                lastExplicitlySelectedWarehouse.current = newSelectedWarehouse;
                               }}
+                              className={classNames({
+                                'scale-110': selectedWarehouse === node.warehouseName
+                              })}
                             />
                           )}
                           <Button

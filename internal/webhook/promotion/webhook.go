@@ -382,15 +382,15 @@ func (w *webhook) recordPromotionCreatedEvent(
 	)
 }
 
-func (w *webhook) setAbortAnnotationActor(req admission.Request, old, new *kargoapi.Promotion) {
-	if abortReq, ok := kargoapi.AbortPromotionAnnotationValue(new.Annotations); ok {
+func (w *webhook) setAbortAnnotationActor(req admission.Request, existing, updated *kargoapi.Promotion) {
+	if abortReq, ok := kargoapi.AbortPromotionAnnotationValue(updated.Annotations); ok {
 		var oldAbortReq *kargoapi.AbortPromotionRequest
-		if old != nil {
-			oldAbortReq, _ = kargoapi.AbortPromotionAnnotationValue(old.Annotations)
+		if existing != nil {
+			oldAbortReq, _ = kargoapi.AbortPromotionAnnotationValue(existing.Annotations)
 		}
 		// If the abort request has changed, enrich the annotation with the
 		// actor and control plane information.
-		if old == nil || oldAbortReq == nil || !abortReq.Equals(oldAbortReq) {
+		if existing == nil || oldAbortReq == nil || !abortReq.Equals(oldAbortReq) {
 			abortReq.ControlPlane = w.isRequestFromKargoControlplaneFn(req)
 			if !abortReq.ControlPlane {
 				// If the abort request is not from the control plane, then it's
@@ -398,7 +398,7 @@ func (w *webhook) setAbortAnnotationActor(req admission.Request, old, new *kargo
 				// overwrite the actor field set by the control plane.
 				abortReq.Actor = kargoapi.FormatEventKubernetesUserActor(req.UserInfo)
 			}
-			new.Annotations[kargoapi.AnnotationKeyAbort] = abortReq.String()
+			updated.Annotations[kargoapi.AnnotationKeyAbort] = abortReq.String()
 		}
 	}
 }

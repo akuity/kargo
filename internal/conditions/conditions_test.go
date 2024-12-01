@@ -129,7 +129,7 @@ func TestSet(t *testing.T) {
 		name       string
 		on         Setter
 		conditions []*metav1.Condition
-		assertions func(t *testing.T, old, new Setter)
+		assertions func(t *testing.T, existing, updated Setter)
 	}{
 		{
 			name: "sets new condition",
@@ -143,10 +143,10 @@ func TestSet(t *testing.T) {
 					ObservedGeneration: 12,
 				},
 			},
-			assertions: func(t *testing.T, _, new Setter) {
-				require.NotNil(t, new)
+			assertions: func(t *testing.T, _, updated Setter) {
+				require.NotNil(t, updated)
 
-				conditions := new.GetConditions()
+				conditions := updated.GetConditions()
 				require.Len(t, conditions, 1)
 
 				require.Equal(t, mockType, conditions[0].Type)
@@ -177,16 +177,16 @@ func TestSet(t *testing.T) {
 					Message: "MockMessage",
 				},
 			},
-			assertions: func(t *testing.T, old, new Setter) {
-				require.NotNil(t, new)
+			assertions: func(t *testing.T, existing, updated Setter) {
+				require.NotNil(t, updated)
 
-				conditions := new.GetConditions()
+				conditions := updated.GetConditions()
 				require.Len(t, conditions, 1)
 
-				oldCondition := Get(old, mockType)
+				oldCondition := Get(existing, mockType)
 				require.NotNil(t, oldCondition)
 
-				newCondition := Get(new, mockType)
+				newCondition := Get(updated, mockType)
 				require.NotNil(t, newCondition)
 
 				require.NotEqual(t, oldCondition, newCondition)
@@ -214,13 +214,13 @@ func TestSet(t *testing.T) {
 					Message: "MockMessage",
 				},
 			},
-			assertions: func(t *testing.T, _, new Setter) {
-				require.NotNil(t, new)
+			assertions: func(t *testing.T, _, updated Setter) {
+				require.NotNil(t, updated)
 
-				conditions := new.GetConditions()
+				conditions := updated.GetConditions()
 				require.Len(t, conditions, 2)
 
-				condition := Get(new, mockType)
+				condition := Get(updated, mockType)
 				require.NotNil(t, condition)
 			},
 		},
@@ -241,17 +241,17 @@ func TestSet(t *testing.T) {
 					Message: "MockMessage2",
 				},
 			},
-			assertions: func(t *testing.T, _, new Setter) {
-				require.NotNil(t, new)
+			assertions: func(t *testing.T, _, updated Setter) {
+				require.NotNil(t, updated)
 
-				conditions := new.GetConditions()
+				conditions := updated.GetConditions()
 				require.Len(t, conditions, 2)
 
-				condition1 := Get(new, mockType)
+				condition1 := Get(updated, mockType)
 				require.NotNil(t, condition1)
 				require.Equal(t, metav1.ConditionTrue, condition1.Status)
 
-				condition2 := Get(new, "OtherType")
+				condition2 := Get(updated, "OtherType")
 				require.NotNil(t, condition2)
 				require.Equal(t, metav1.ConditionFalse, condition2.Status)
 			},
@@ -283,17 +283,17 @@ func TestSet(t *testing.T) {
 					ObservedGeneration: 41, // Should not be overwritten
 				},
 			},
-			assertions: func(t *testing.T, _, new Setter) {
-				require.NotNil(t, new)
+			assertions: func(t *testing.T, _, updated Setter) {
+				require.NotNil(t, updated)
 
-				conditions := new.GetConditions()
+				conditions := updated.GetConditions()
 				require.Len(t, conditions, 2)
 
-				condition := Get(new, mockType)
+				condition := Get(updated, mockType)
 				require.NotNil(t, condition)
 				require.Equal(t, int64(42), condition.ObservedGeneration)
 
-				otherCondition := Get(new, "OtherType")
+				otherCondition := Get(updated, "OtherType")
 				require.NotNil(t, otherCondition)
 				require.Equal(t, int64(41), otherCondition.ObservedGeneration)
 			},
@@ -320,11 +320,11 @@ func TestSet(t *testing.T) {
 					ObservedGeneration: 42,
 				},
 			},
-			assertions: func(t *testing.T, old, new Setter) {
-				require.NotNil(t, new)
+			assertions: func(t *testing.T, existing, updated Setter) {
+				require.NotNil(t, updated)
 
-				oldCondition := Get(old, mockType)
-				newCondition := Get(new, mockType)
+				oldCondition := Get(existing, mockType)
+				newCondition := Get(updated, mockType)
 
 				require.Equal(t, oldCondition, newCondition)
 			},
@@ -351,13 +351,13 @@ func TestSet(t *testing.T) {
 					ObservedGeneration: 43,
 				},
 			},
-			assertions: func(t *testing.T, old, new Setter) {
-				require.NotNil(t, new)
+			assertions: func(t *testing.T, existing, updated Setter) {
+				require.NotNil(t, updated)
 
-				oldCondition := Get(old, mockType)
+				oldCondition := Get(existing, mockType)
 				require.NotNil(t, oldCondition)
 
-				newCondition := Get(new, mockType)
+				newCondition := Get(updated, mockType)
 				require.NotNil(t, newCondition)
 
 				require.NotEqual(t, oldCondition, newCondition)
@@ -385,11 +385,11 @@ func TestSet(t *testing.T) {
 					Message: "MockMessage",
 				},
 			},
-			assertions: func(t *testing.T, old, new Setter) {
-				oldCondition := Get(old, mockType)
+			assertions: func(t *testing.T, existing, updated Setter) {
+				oldCondition := Get(existing, mockType)
 				require.NotNil(t, oldCondition)
 
-				newCondition := Get(new, mockType)
+				newCondition := Get(updated, mockType)
 				require.NotNil(t, newCondition)
 
 				require.Equal(t, oldCondition.LastTransitionTime, newCondition.LastTransitionTime)
@@ -417,11 +417,11 @@ func TestSet(t *testing.T) {
 					// LastTransitionTime is intentionally left as zero value
 				},
 			},
-			assertions: func(t *testing.T, old, new Setter) {
-				oldCondition := Get(old, mockType)
+			assertions: func(t *testing.T, existing, updated Setter) {
+				oldCondition := Get(existing, mockType)
 				require.NotNil(t, oldCondition)
 
-				newCondition := Get(new, mockType)
+				newCondition := Get(updated, mockType)
 				require.NotNil(t, newCondition)
 
 				require.NotEqual(t, oldCondition.Status, newCondition.Status)
@@ -457,11 +457,11 @@ func TestSet(t *testing.T) {
 					LastTransitionTime: metav1.Time{Time: frozenTime.Add(-1 * time.Hour)},
 				},
 			},
-			assertions: func(t *testing.T, old, new Setter) {
-				oldCondition := Get(old, mockType)
+			assertions: func(t *testing.T, existing, updated Setter) {
+				oldCondition := Get(existing, mockType)
 				require.NotNil(t, oldCondition)
 
-				newCondition := Get(new, mockType)
+				newCondition := Get(updated, mockType)
 				require.NotNil(t, newCondition)
 
 				require.NotEqual(t, oldCondition.LastTransitionTime, newCondition.LastTransitionTime)
@@ -483,9 +483,9 @@ func TestSet(t *testing.T) {
 				},
 			},
 			conditions: nil,
-			assertions: func(t *testing.T, old, new Setter) {
-				require.NotNil(t, new)
-				require.Equal(t, old.GetConditions(), new.GetConditions())
+			assertions: func(t *testing.T, existing, updated Setter) {
+				require.NotNil(t, updated)
+				require.Equal(t, existing.GetConditions(), updated.GetConditions())
 			},
 		},
 	}

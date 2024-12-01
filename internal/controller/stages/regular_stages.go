@@ -36,6 +36,7 @@ import (
 	"github.com/akuity/kargo/internal/kubeclient"
 	libEvent "github.com/akuity/kargo/internal/kubernetes/event"
 	"github.com/akuity/kargo/internal/logging"
+	intpredicate "github.com/akuity/kargo/internal/predicate"
 	"github.com/akuity/kargo/internal/rollouts"
 )
 
@@ -151,6 +152,7 @@ func (r *RegularStageReconciler) SetupWithManager(
 	c, err := ctrl.NewControllerManagedBy(kargoMgr).
 		For(&kargoapi.Stage{}).
 		WithOptions(controller.CommonOptions(r.cfg.MaxConcurrentReconciles)).
+		WithEventFilter(intpredicate.IgnoreDelete[client.Object]{}).
 		WithEventFilter(
 			predicate.And(
 				IsControlFlowStage(false),
@@ -694,23 +696,27 @@ func (r *RegularStageReconciler) assessHealth(ctx context.Context, stage *kargoa
 		return newStatus
 	}
 
-	// If there are no health checks to perform, then we can skip the health
-	// assessment.
-	healthChecks := lastPromo.Status.HealthChecks
-	if len(healthChecks) == 0 {
-		logger.Debug("Stage has no health checks to perform for last Promotion")
+	// If the last Promotion did not succeed, then we cannot perform any health
+	// checks because they are only available after a successful Promotion.
+	//
+	// TODO(hidde): Long term, this should probably be changed to allow to
+	//  continue to run health checks from the last successful Promotion,
+	//  even if the current Promotion did not succeed (e.g. because it was
+	//  aborted).
+	if lastPromo.Status.Phase != kargoapi.PromotionPhaseSucceeded {
+		logger.Debug("Last promotion did not succeed: no health checks to perform")
 		conditions.Set(&newStatus, &metav1.Condition{
 			Type:               kargoapi.ConditionTypeHealthy,
 			Status:             metav1.ConditionUnknown,
-			Reason:             "NoHealthChecks",
-			Message:            "Stage has no health checks to perform",
+			Reason:             fmt.Sprintf("LastPromotion%s", lastPromo.Status.Phase),
+			Message:            "No health checks to perform for unsuccessful Promotion",
 			ObservedGeneration: stage.Generation,
 		})
-		newStatus.Health = nil
 		return newStatus
 	}
 
 	// Compose the health check steps.
+	healthChecks := lastPromo.Status.HealthChecks
 	var steps []directives.HealthCheckStep
 	for _, step := range healthChecks {
 		steps = append(steps, directives.HealthCheckStep{
@@ -733,22 +739,18 @@ func (r *RegularStageReconciler) assessHealth(ctx context.Context, stage *kargoa
 			Type:               kargoapi.ConditionTypeHealthy,
 			Status:             metav1.ConditionTrue,
 			Reason:             string(health.Status),
-			Message:            "Stage is healthy",
+			Message:            fmt.Sprintf("Stage is healthy (performed %d health checks)", len(healthChecks)),
 			ObservedGeneration: stage.Generation,
 		})
 	case kargoapi.HealthStateUnhealthy:
 		conditions.Set(&newStatus, &metav1.Condition{
-			Type:               kargoapi.ConditionTypeHealthy,
-			Status:             metav1.ConditionFalse,
-			Reason:             string(health.Status),
-			Message:            "Stage is unhealthy",
-			ObservedGeneration: stage.Generation,
-		})
-	case kargoapi.HealthStateNotApplicable:
-		conditions.Set(&newStatus, &metav1.Condition{
-			Type:               kargoapi.ConditionTypeHealthy,
-			Status:             metav1.ConditionUnknown,
-			Reason:             string(health.Status),
+			Type:   kargoapi.ConditionTypeHealthy,
+			Status: metav1.ConditionFalse,
+			Reason: string(health.Status),
+			Message: fmt.Sprintf(
+				"Stage is unhealthy (%d issues in %d health checks)",
+				len(health.Issues), len(healthChecks),
+			),
 			ObservedGeneration: stage.Generation,
 		})
 	default:
