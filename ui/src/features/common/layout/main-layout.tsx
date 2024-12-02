@@ -42,14 +42,14 @@ export const MainLayout = () => {
               <NavItem icon={faBoxes} path={paths.projects}>
                 Projects
               </NavItem>
-              <NavItem icon={faGear} path={paths.settings}>
-                Settings
-              </NavItem>
               {!isJWTDirty(JWTInfo) && (
                 <NavItem icon={faUser} path={paths.user}>
                   User
                 </NavItem>
               )}
+              <NavItem icon={faGear} path={paths.settings}>
+                Settings
+              </NavItem>
               <NavItem icon={faBook} path='https://docs.kargo.io' target='_blank'>
                 Docs
               </NavItem>
