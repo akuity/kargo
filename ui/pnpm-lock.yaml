@@ -12,14 +12,14 @@ importers:
         specifier: 1.10.0
         version: 1.10.0
       '@connectrpc/connect':
-        specifier: 2.0.0
-        version: 2.0.0(@bufbuild/protobuf@1.10.0)
+        specifier: 1.5.0
+        version: 1.5.0(@bufbuild/protobuf@1.10.0)
       '@connectrpc/connect-query':
-        specifier: 2.0.0
-        version: 2.0.0(@bufbuild/protobuf@1.10.0)(@connectrpc/connect@2.0.0(@bufbuild/protobuf@1.10.0))(@tanstack/query-core@5.56.2)(@tanstack/react-query@5.56.2(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+        specifier: 1.4.2
+        version: 1.4.2(@bufbuild/protobuf@1.10.0)(@connectrpc/connect@1.5.0(@bufbuild/protobuf@1.10.0))(@tanstack/react-query@5.56.2(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@connectrpc/connect-web':
-        specifier: 2.0.0
-        version: 2.0.0(@bufbuild/protobuf@1.10.0)(@connectrpc/connect@2.0.0(@bufbuild/protobuf@1.10.0))
+        specifier: 1.5.0
+        version: 1.5.0(@bufbuild/protobuf@1.10.0)(@connectrpc/connect@1.5.0(@bufbuild/protobuf@1.10.0))
       '@fortawesome/fontawesome-svg-core':
         specifier: ^6.6.0
         version: 6.6.0
@@ -78,8 +78,8 @@ importers:
         specifier: ^5.2.2
         version: 5.2.2(monaco-editor@0.52.0)
       oauth4webapi:
-        specifier: ^3.1.3
-        version: 3.1.3
+        specifier: ^2.17.0
+        version: 2.17.0
       react:
         specifier: ^18.3.1
         version: 18.3.1
@@ -353,32 +353,25 @@ packages:
   '@bufbuild/protobuf@1.10.0':
     resolution: {integrity: sha512-QDdVFLoN93Zjg36NoQPZfsVH9tZew7wKDKyV5qRdj8ntT4wQCOradQjRaTdwMhWUYsgKsvCINKKm87FdEk96Ag==}
 
-  '@connectrpc/connect-query-core@2.0.0':
-    resolution: {integrity: sha512-IYn3Nw37yOihg6W/8WqsioorxO9E4K2ypvyk5/JQ1A0s4l/UOwNVrPlUv3uhF4eW++R4NMCn25B4iKBDygS2yg==}
+  '@connectrpc/connect-query@1.4.2':
+    resolution: {integrity: sha512-ZjBLtaGoBPDMtdRu4KiX7KpSigifiZiVaenhXHUsmNRjLj9r4OxQM+O2OqvTQ1YJhP4/h1xL+HX7YB0gcQ0FoA==}
     peerDependencies:
-      '@bufbuild/protobuf': 2.x
-      '@connectrpc/connect': ^2.0.0
-      '@tanstack/query-core': 5.x
-
-  '@connectrpc/connect-query@2.0.0':
-    resolution: {integrity: sha512-1xLeS+aT4QZvMbP4TrZrrcV9w4fIsOPVg8WtMtINoYYGpQOp9sSW/EGp9NgwiTWfyA3DoJDLttXCIf3eIHvOlA==}
-    peerDependencies:
-      '@bufbuild/protobuf': 2.x
-      '@connectrpc/connect': ^2.0.0
+      '@bufbuild/protobuf': ^1.10.0
+      '@connectrpc/connect': ^1.1.2
       '@tanstack/react-query': 5.x
       react: ^18.3.1
       react-dom: ^18.3.1
 
-  '@connectrpc/connect-web@2.0.0':
-    resolution: {integrity: sha512-oeCxqHXLXlWJdmcvp9L3scgAuK+FjNSn+twyhUxc8yvDbTumnt5Io+LnBzSYxAdUdYqTw5yHfTSCJ4hj0QID0g==}
+  '@connectrpc/connect-web@1.5.0':
+    resolution: {integrity: sha512-xjiiQ932Kibddaka18fGZ6yQL7xjXuLcYFYh/cU+q1WWEIrFPkZfViG/Ee6yrZbrlZkjcBuDibng+q7baTndfg==}
     peerDependencies:
-      '@bufbuild/protobuf': ^2.2.0
-      '@connectrpc/connect': 2.0.0
+      '@bufbuild/protobuf': ^1.10.0
+      '@connectrpc/connect': 1.5.0
 
-  '@connectrpc/connect@2.0.0':
-    resolution: {integrity: sha512-Usm8jgaaULANJU8vVnhWssSA6nrZ4DJEAbkNtXSoZay2YD5fDyMukCxu8NEhCvFzfHvrhxhcjttvgpyhOM7xAQ==}
+  '@connectrpc/connect@1.5.0':
+    resolution: {integrity: sha512-1gGg0M6c2Y3lnr5itis9dNj9r8hbOIuBMqoGSbUy7L7Vjw4MAttjJzJfj9HCDgytGCJkGanYEYI6MQVDijdVQw==}
     peerDependencies:
-      '@bufbuild/protobuf': ^2.2.0
+      '@bufbuild/protobuf': ^1.10.0
 
   '@ctrl/tinycolor@3.6.1':
     resolution: {integrity: sha512-SITSV6aIXsuVNV3f3O0f2n/cgyEDWoSqtZMYiAmcsYHydcKrOz3gUxB/iXd/Qf08+IZX4KpgNbvUdMBmWz+kcA==}
@@ -2387,8 +2380,8 @@ packages:
   nth-check@2.1.1:
     resolution: {integrity: sha512-lqjrjmaOoAnWfMmBPL+XNnynZh2+swxiX3WUE0s4yEHI6m+AwrK2UZOimIRl3X/4QctVqS8AiZjFqyOGrMXb/w==}
 
-  oauth4webapi@3.1.3:
-    resolution: {integrity: sha512-dik5wEMdFL5p3JlijYvM7wMNCgaPhblLIDCZtdXcaZp5wgu5Iwmsu7lMzgFhIDTi5d0BJo03LVoOoFQvXMeOeQ==}
+  oauth4webapi@2.17.0:
+    resolution: {integrity: sha512-lbC0Z7uzAFNFyzEYRIC+pkSVvDHJTbEW+dYlSBAlCYDe6RxUkJ26bClhk8ocBZip1wfI9uKTe0fm4Ib4RHn6uQ==}
 
   object-assign@4.1.1:
     resolution: {integrity: sha512-rJgTQnkUnH1sFw8yT6VSU3zD3sWmu6sZhIseY8VX+GRu3P6F7Fu+JNDoXfklElbLJSnc3FUQHVe4cU5hj+BcUg==}
@@ -3186,6 +3179,9 @@ packages:
     resolution: {integrity: sha512-UjgapumWlbMhkBgzT7Ykc5YXUT46F0iKu8SGXq0bcwP5dz/h0Plj6enJqjz1Zbq2l5WaqYnrVbwWOWMyF3F47g==}
     engines: {node: '>=0.10.0'}
 
+  stable-hash@0.0.4:
+    resolution: {integrity: sha512-LjdcbuBeLcdETCrPn9i8AYAZ1eCtu4ECAWtP7UleOiZ9LzVxRzzUZEoZ8zB24nhkQnDWyET0I+3sWokSDS3E7g==}
+
   stackback@0.0.2:
     resolution: {integrity: sha512-1XMJE5fQo1jGH6Y/7ebnwPOBEkIEnT4QF32d5R1+VXdXveM0IBMJt8zfaxX1P3QhVwrYe+576+jkANtSS2mBbw==}
 
@@ -3834,29 +3830,21 @@ snapshots:
 
   '@bufbuild/protobuf@1.10.0': {}
 
-  '@connectrpc/connect-query-core@2.0.0(@bufbuild/protobuf@1.10.0)(@connectrpc/connect@2.0.0(@bufbuild/protobuf@1.10.0))(@tanstack/query-core@5.56.2)':
+  '@connectrpc/connect-query@1.4.2(@bufbuild/protobuf@1.10.0)(@connectrpc/connect@1.5.0(@bufbuild/protobuf@1.10.0))(@tanstack/react-query@5.56.2(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
     dependencies:
       '@bufbuild/protobuf': 1.10.0
-      '@connectrpc/connect': 2.0.0(@bufbuild/protobuf@1.10.0)
-      '@tanstack/query-core': 5.56.2
-
-  '@connectrpc/connect-query@2.0.0(@bufbuild/protobuf@1.10.0)(@connectrpc/connect@2.0.0(@bufbuild/protobuf@1.10.0))(@tanstack/query-core@5.56.2)(@tanstack/react-query@5.56.2(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
-    dependencies:
-      '@bufbuild/protobuf': 1.10.0
-      '@connectrpc/connect': 2.0.0(@bufbuild/protobuf@1.10.0)
-      '@connectrpc/connect-query-core': 2.0.0(@bufbuild/protobuf@1.10.0)(@connectrpc/connect@2.0.0(@bufbuild/protobuf@1.10.0))(@tanstack/query-core@5.56.2)
+      '@connectrpc/connect': 1.5.0(@bufbuild/protobuf@1.10.0)
       '@tanstack/react-query': 5.56.2(react@18.3.1)
       react: 18.3.1
       react-dom: 18.3.1(react@18.3.1)
-    transitivePeerDependencies:
-      - '@tanstack/query-core'
+      stable-hash: 0.0.4
 
-  '@connectrpc/connect-web@2.0.0(@bufbuild/protobuf@1.10.0)(@connectrpc/connect@2.0.0(@bufbuild/protobuf@1.10.0))':
+  '@connectrpc/connect-web@1.5.0(@bufbuild/protobuf@1.10.0)(@connectrpc/connect@1.5.0(@bufbuild/protobuf@1.10.0))':
     dependencies:
       '@bufbuild/protobuf': 1.10.0
-      '@connectrpc/connect': 2.0.0(@bufbuild/protobuf@1.10.0)
+      '@connectrpc/connect': 1.5.0(@bufbuild/protobuf@1.10.0)
 
-  '@connectrpc/connect@2.0.0(@bufbuild/protobuf@1.10.0)':
+  '@connectrpc/connect@1.5.0(@bufbuild/protobuf@1.10.0)':
     dependencies:
       '@bufbuild/protobuf': 1.10.0
 
@@ -5973,7 +5961,7 @@ snapshots:
     dependencies:
       boolbase: 1.0.0
 
-  oauth4webapi@3.1.3: {}
+  oauth4webapi@2.17.0: {}
 
   object-assign@4.1.1: {}
 
@@ -6874,6 +6862,8 @@ snapshots:
 
   source-map@0.6.1:
     optional: true
+
+  stable-hash@0.0.4: {}
 
   stackback@0.0.2: {}
 
