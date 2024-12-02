@@ -10,12 +10,15 @@ import (
 	"github.com/google/uuid"
 	"github.com/kelseyhightower/envconfig"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	kerrors "k8s.io/apimachinery/pkg/util/errors"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/util/retry"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -1297,11 +1300,26 @@ func (r *RegularStageReconciler) getVerificationResult(
 		}, nil
 	}
 
+	// TODO(hidde): This retry logic has been put in place because we have
+	// observed the cache not being up-to-date with the API server in some
+	// edge case scenarios. While this is not a long-term solution, it cures
+	// the symptoms for now. We should investigate the root cause of this
+	// issue and remove this retry logic when the root cause has been resolved.
 	ar := rolloutsapi.AnalysisRun{}
-	if err := r.client.Get(ctx, types.NamespacedName{
-		Namespace: currentVI.AnalysisRun.Namespace,
-		Name:      currentVI.AnalysisRun.Name,
-	}, &ar); err != nil {
+	if err := retry.OnError(wait.Backoff{
+		Duration: 1 * time.Second,
+		Factor:   2,
+		Steps:    10,
+		Cap:      2 * time.Minute,
+		Jitter:   0.1,
+	}, func(err error) bool {
+		return apierrors.IsNotFound(err)
+	}, func() error {
+		return r.client.Get(ctx, types.NamespacedName{
+			Namespace: currentVI.AnalysisRun.Namespace,
+			Name:      currentVI.AnalysisRun.Name,
+		}, &ar)
+	}); err != nil {
 		return &kargoapi.VerificationInfo{
 			ID:         currentVI.ID,
 			Actor:      currentVI.Actor,
