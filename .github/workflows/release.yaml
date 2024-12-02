@@ -341,34 +341,33 @@ jobs:
     runs-on: ubuntu-latest
     needs: [ publish-image, publish-cli ]
     steps:
-      - name: Checkout bottle Repository
-        uses: actions/checkout@v4
-        with:
-          repository: akuity/homebrew-tap
-          token: ${{ secrets.GITHUB_TOKEN }}
-          path: homebrew-tap
+    - name: Checkout tap repository
+      uses: actions/checkout@v4
+      with:
+        repository: akuity/homebrew-tap
+        token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Update Homebrew formula
-        run: |
-          cd homebrew-tap
-          ./update.sh kargo ${{ github.ref_name }}
+    - name: Setup Git User
+      uses: fregante/setup-git-user@v2
+      with:
+        name: ${{ github.actor }}
+        email: ${{ github.actor }}@users.noreply.github.com
 
-      - name: Configure Git and Commit changes
-        run: |
-          cd homebrew-tap
-          git config user.name "${{ github.actor }}"
-          git config user.email "${{ github.actor }}@users.noreply.github.com"
-          git checkout -b update-kargo-${{ github.ref_name }}
-          git add kargo.rb
-          git commit -m "chore: update Kargo cli to version ${{ github.ref_name }}"
+    - name: Update formula and push
+      run: |
+        git checkout -b update-kargo-${{ github.ref_name }}
+        ./update.sh kargo ${{ github.ref_name }}
+        git add kargo.rb
+        git commit -m "chore: update Kargo cli to version ${{ github.ref_name }}"
+        git push origin update-kargo-${{ github.ref_name }}
 
-      - name: Push changes and open PR
-        uses: peter-evans/create-pull-request@v5
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: "Update Kargo formula to version ${{ github.ref_name }}"
-          branch: update-kargo-${{ github.ref_name }}
-          base: main
-          title: "chore: update Kargo formula to version ${{ github.ref_name }}"
-          body: "This PR updates the Homebrew formula for Kargo to version ${{ github.ref_name }}."
-          delete-branch: 'true'
+    - name: Open PR
+      uses: peter-evans/create-pull-request@v5
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        commit-message: "Update Kargo formula to version ${{ github.ref_name }}"
+        branch: update-kargo-${{ github.ref_name }}
+        base: main
+        title: "chore: update Kargo formula to version ${{ github.ref_name }}"
+        body: "This PR updates the Homebrew formula for Kargo to version ${{ github.ref_name }}."
+        delete-branch: 'true'
