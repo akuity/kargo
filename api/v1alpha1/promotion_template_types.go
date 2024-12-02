@@ -27,6 +27,7 @@ type PromotionTemplateSpec struct {
 	// The order in which the directives are executed is the order in which they
 	// are listed in this field.
 	//
+	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:MinItems=1
 	Steps []PromotionStep `json:"steps,omitempty" protobuf:"bytes,1,rep,name=steps"`
 }

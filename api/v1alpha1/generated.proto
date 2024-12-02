@@ -987,6 +987,7 @@ message PromotionTemplateSpec {
   // The order in which the directives are executed is the order in which they
   // are listed in this field.
   //
+  // +kubebuilder:validation:Required
   // +kubebuilder:validation:MinItems=1
   repeated PromotionStep steps = 1;
 }

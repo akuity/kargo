@@ -154,6 +154,8 @@ spec:
                           - value
                           type: object
                         type: array
+                    required:
+                    - steps
                     type: object
                 required:
                 - spec

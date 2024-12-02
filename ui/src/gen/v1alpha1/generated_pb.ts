@@ -3110,6 +3110,7 @@ export class PromotionTemplateSpec extends Message<PromotionTemplateSpec> {
    * The order in which the directives are executed is the order in which they
    * are listed in this field.
    *
+   * +kubebuilder:validation:Required
    * +kubebuilder:validation:MinItems=1
    *
    * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.PromotionStep steps = 1;

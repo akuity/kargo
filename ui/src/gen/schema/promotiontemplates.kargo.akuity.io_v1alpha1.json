@@ -81,6 +81,9 @@
           "type": "array"
         }
       },
+      "required": [
+        "steps"
+      ],
       "type": "object"
     }
   },
