@@ -120,7 +120,7 @@ func (s *server) PromoteDownstream(
 	}
 
 	for _, downstream := range downstreams {
-		if err := s.authorizeFn(
+		if err = s.authorizeFn(
 			ctx,
 			"promote",
 			kargoapi.GroupVersion.WithResource("stages"),
@@ -158,7 +158,9 @@ func (s *server) PromoteDownstream(
 					Namespace: downstream.Namespace,
 					Name:      downstream.Spec.PromotionTemplateRef.Name,
 				}, template); err != nil {
-					promoteErrs = append(promoteErrs, fmt.Errorf("get PromotionTemplate %q: %w", downstream.Spec.PromotionTemplateRef.Name, err))
+					promoteErrs = append(promoteErrs, fmt.Errorf(
+						"get PromotionTemplate %q: %w", downstream.Spec.PromotionTemplateRef.Name, err,
+					))
 					continue
 				}
 

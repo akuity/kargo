@@ -44,7 +44,7 @@ func TestNewPromotion(t *testing.T) {
 					Steps: []kargoapi.PromotionStep{
 						{
 							Uses: "test-step",
-							As: "test-step",
+							As:   "test-step",
 						},
 					},
 				},
@@ -59,10 +59,10 @@ func TestNewPromotion(t *testing.T) {
 			},
 		},
 		{
-			name: "Promote stage with very long name",
+			name:      "Promote stage with very long name",
 			namespace: "kargo-demo",
-			stage: veryLongResourceName,
-			freight: testFreight,
+			stage:     veryLongResourceName,
+			freight:   testFreight,
 			assertions: func(t *testing.T, promo kargoapi.Promotion) {
 				require.Len(t, promo.Name, 253)
 				parts := strings.Split(promo.Name, ".")

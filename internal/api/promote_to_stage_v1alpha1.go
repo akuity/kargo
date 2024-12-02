@@ -98,7 +98,7 @@ func (s *server) PromoteToStage(
 		)
 	}
 
-	if err := s.authorizeFn(
+	if err = s.authorizeFn(
 		ctx,
 		"promote",
 		schema.GroupVersionResource{

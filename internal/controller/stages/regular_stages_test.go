@@ -246,7 +246,7 @@ func TestRegularStageReconciler_Reconcile(t *testing.T) {
 					string,
 					client.Object,
 					client.Patch,
-				...client.SubResourcePatchOption,
+					...client.SubResourcePatchOption,
 				) error {
 					return fmt.Errorf("status update error")
 				},
@@ -288,7 +288,7 @@ func TestRegularStageReconciler_Reconcile(t *testing.T) {
 					string,
 					client.Object,
 					client.Patch,
-				...client.SubResourcePatchOption,
+					...client.SubResourcePatchOption,
 				) error {
 					return fmt.Errorf("status update error")
 				},
@@ -3658,7 +3658,7 @@ func TestRegularStageReconciler_abortVerification(t *testing.T) {
 					client.WithWatch,
 					client.Object,
 					client.Patch,
-				...client.PatchOption,
+					...client.PatchOption,
 				) error {
 					return fmt.Errorf("something went wrong")
 				},
@@ -3910,7 +3910,7 @@ func TestRegularStageReconciler_findExistingAnalysisRun(t *testing.T) {
 					context.Context,
 					client.WithWatch,
 					client.ObjectList,
-				...client.ListOption,
+					...client.ListOption,
 				) error {
 					return fmt.Errorf("list error")
 				},
@@ -5077,7 +5077,7 @@ func TestRegularStageReconciler_autoPromotionAllowed(t *testing.T) {
 					client.WithWatch,
 					client.ObjectKey,
 					client.Object,
-				...client.GetOption,
+					...client.GetOption,
 				) error {
 					return fmt.Errorf("something went wrong")
 				},
