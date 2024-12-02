@@ -155,7 +155,7 @@ type Stage struct {
 // one or more downstream Stages.
 func (s *Stage) IsControlFlow() bool {
 	switch {
-	case s.Spec.PromotionTemplateRef != nil && len(s.Spec.PromotionTemplate.Name) > 0:
+	case s.Spec.PromotionTemplateRef != nil && len(s.Spec.PromotionTemplateRef.Name) > 0:
 		return false
 	case s.Spec.PromotionTemplate != nil && len(s.Spec.PromotionTemplate.Spec.Steps) > 0:
 		return false

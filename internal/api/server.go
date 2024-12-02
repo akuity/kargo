@@ -69,6 +69,12 @@ type server struct {
 		client.Client,
 		types.NamespacedName,
 	) (*kargoapi.Stage, error)
+	getPromotionTemplateFn func(
+		context.Context,
+		client.ObjectKey,
+		client.Object,
+		...client.GetOption,
+	) error
 	getFreightByNameOrAliasFn func(
 		ctx context.Context,
 		c client.Client,
@@ -175,6 +181,7 @@ func NewServer(
 	s.getFreightByNameOrAliasFn = kargoapi.GetFreightByNameOrAlias
 	s.isFreightAvailableFn = kargoapi.IsFreightAvailable
 	s.createPromotionFn = kubeClient.Create
+	s.getPromotionTemplateFn = kubeClient.Get
 	s.findDownstreamStagesFn = s.findDownstreamStages
 	s.listFreightFn = kubeClient.List
 	s.getAvailableFreightForStageFn = s.getAvailableFreightForStage

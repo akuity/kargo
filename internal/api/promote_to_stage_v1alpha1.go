@@ -125,7 +125,7 @@ func (s *server) PromoteToStage(
 		}
 
 		template = &kargoapi.PromotionTemplate{}
-		if err = s.client.Get(ctx, types.NamespacedName{
+		if err = s.getPromotionTemplateFn(ctx, types.NamespacedName{
 			Namespace: project,
 			Name:      stage.Spec.PromotionTemplateRef.Name,
 		}, template); err != nil {

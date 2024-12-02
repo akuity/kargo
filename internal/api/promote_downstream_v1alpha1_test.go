@@ -443,6 +443,93 @@ func TestPromoteDownstream(t *testing.T) {
 			},
 		},
 		{
+			name: "PromotionTemplate reference not found",
+			req: &svcv1alpha1.PromoteDownstreamRequest{
+				Project: "fake-project",
+				Stage:   "fake-stage",
+				Freight: "fake-freight",
+			},
+			server: &server{
+				validateProjectExistsFn: func(context.Context, string) error {
+					return nil
+				},
+				getStageFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Stage, error) {
+					return &kargoapi.Stage{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: "fake-project",
+							Name:      "fake-stage",
+						},
+						Spec: testStageSpec,
+					}, nil
+				},
+				getFreightByNameOrAliasFn: func(
+					context.Context,
+					client.Client,
+					string, string, string,
+				) (*kargoapi.Freight, error) {
+					return &kargoapi.Freight{
+						Status: kargoapi.FreightStatus{
+							VerifiedIn: map[string]kargoapi.VerifiedStage{
+								"fake-stage": {},
+							},
+						},
+					}, nil
+				},
+				getPromotionTemplateFn: func(
+					context.Context,
+					client.ObjectKey,
+					client.Object,
+					...client.GetOption,
+				) error {
+					return errors.New("not found")
+				},
+				findDownstreamStagesFn: func(
+					context.Context,
+					*kargoapi.Stage,
+					kargoapi.FreightOrigin,
+				) ([]kargoapi.Stage, error) {
+					return []kargoapi.Stage{
+						{
+							Spec: kargoapi.StageSpec{
+								PromotionTemplateRef: &kargoapi.PromotionTemplateReference{
+									Name: "fake-promotion-template",
+								},
+							},
+						},
+					}, nil
+				},
+				authorizeFn: func(
+					context.Context,
+					string,
+					schema.GroupVersionResource,
+					string,
+					client.ObjectKey,
+				) error {
+					return nil
+				},
+				createPromotionFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return nil
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				_ *fakeevent.EventRecorder,
+				_ *connect.Response[svcv1alpha1.PromoteDownstreamResponse],
+				err error,
+			) {
+				require.ErrorContains(t, err, "get PromotionTemplate")
+				require.ErrorContains(t, err, "not found")
+			},
+		},
+		{
 			name: "error creating Promotion",
 			req: &svcv1alpha1.PromoteDownstreamRequest{
 				Project: "fake-project",

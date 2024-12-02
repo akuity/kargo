@@ -154,7 +154,7 @@ func (s *server) PromoteDownstream(
 			var ok bool
 			if template, ok = templates[downstream.Spec.PromotionTemplateRef.Name]; !ok {
 				template = &kargoapi.PromotionTemplate{}
-				if err = s.client.Get(ctx, types.NamespacedName{
+				if err = s.getPromotionTemplateFn(ctx, types.NamespacedName{
 					Namespace: downstream.Namespace,
 					Name:      downstream.Spec.PromotionTemplateRef.Name,
 				}, template); err != nil {
