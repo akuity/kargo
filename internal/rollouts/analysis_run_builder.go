@@ -278,7 +278,10 @@ func (b *AnalysisRunBuilder) getAnalysisTemplates(
 
 // combineAnalysisTemplateSpecs combines the specs of analysis
 // templates and cluster analysis templates into one array
-func combineAnalysisTemplateSpecs(analysisTemplates []*rolloutsapi.AnalysisTemplate, clusterAnalysisTemplates []*rolloutsapi.ClusterAnalysisTemplate) []*rolloutsapi.AnalysisTemplateSpec {
+func combineAnalysisTemplateSpecs(
+	analysisTemplates []*rolloutsapi.AnalysisTemplate,
+	clusterAnalysisTemplates []*rolloutsapi.ClusterAnalysisTemplate,
+) []*rolloutsapi.AnalysisTemplateSpec {
 	templateSpecs := make([]*rolloutsapi.AnalysisTemplateSpec, 0, len(analysisTemplates)+len(clusterAnalysisTemplates))
 	for _, template := range analysisTemplates {
 		templateSpecs = append(templateSpecs, &template.Spec)

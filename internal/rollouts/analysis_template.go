@@ -9,7 +9,9 @@ import (
 // flattenTemplates combines multiple analysis templates into a single
 // template. It merges metrics, dry-run metrics, measurement retention
 // metrics, and arguments.
-func flattenTemplates(analysisTemplateSpecs []*rolloutsapi.AnalysisTemplateSpec) (*rolloutsapi.AnalysisTemplate, error) {
+func flattenTemplates(
+	analysisTemplateSpecs []*rolloutsapi.AnalysisTemplateSpec,
+) (*rolloutsapi.AnalysisTemplate, error) {
 	metrics, err := flattenMetrics(analysisTemplateSpecs)
 	if err != nil {
 		return nil, fmt.Errorf("flatten metrics: %w", err)
