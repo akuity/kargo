@@ -57,7 +57,8 @@ spec:
       - name: webhooks-server
         image: {{ include "kargo.image" . }}
         imagePullPolicy: {{ .Values.image.pullPolicy }}
-        command: ["/usr/local/bin/kargo", "webhooks-server"]
+        command: ["/sbin/tini", "--", "/usr/local/bin/kargo"]
+        args: ["webhooks-server"]
         {{- with (concat .Values.global.env .Values.webhooksServer.env) }}
         env:
           {{- toYaml . | nindent 8 }}
