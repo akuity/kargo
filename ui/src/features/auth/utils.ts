@@ -42,7 +42,7 @@ export const getUserEmail = (user?: JWTInfo | null) => {
 };
 
 export const oidcClientAuth: ClientAuth = () => {
-  // placeholder function because UI won't have client secret
+  // equivalent function for token_endpoint_auth_method: 'none'
 };
 
 export const shouldAllowIdpHttpRequest = () => __UI_VERSION__ === 'development';
