@@ -498,7 +498,7 @@ metadata:
     kargo.akuity.io/cred-type: image
 stringData:
   gcpServiceAccountKey: <base64-encoded service account key>
-  repoURL: <ecr url>
+  repoURL: <artifact registry url>
 ```
 
 :::note
