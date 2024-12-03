@@ -1148,7 +1148,7 @@ steps:
     - name: my-app
       sources:
       - repoURL: https://github.com/example/repo.git
-        desiredCommit: ${{ outputs.commit.commit }}
+        desiredRevision: ${{ outputs.commit.commit }}
 ```
 
 </TabItem>
