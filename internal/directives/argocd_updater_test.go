@@ -137,6 +137,19 @@ func Test_argoCDUpdater_validate(t *testing.T) {
 			},
 		},
 		{
+			name: "targetRevision=true with desiredCommitFromStep and desiredRevision unspecified",
+			config: Config{
+				"apps": []Config{{
+					"sources": []Config{{
+						"updateTargetRevision": true,
+					}},
+				}},
+			},
+			expectedProblems: []string{
+				"apps.0.sources.0: Must validate one and only one schema",
+			},
+		},
+		{
 			name: "helm images is empty array",
 			config: Config{
 				"apps": []Config{{
@@ -347,6 +360,7 @@ func Test_argoCDUpdater_validate(t *testing.T) {
 					"namespace": "argocd",
 					"sources": []Config{{
 						"repoURL":              "fake-git-url",
+						"desiredRevision":      "fake-commit",
 						"updateTargetRevision": true,
 						"helm": Config{
 							"images": []Config{

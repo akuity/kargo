@@ -223,7 +223,7 @@
        },
        "updateTargetRevision": {
         "type": "boolean",
-        "description": "Indicates whether the source should be updated such that its 'targetRevision' field points directly at the desired revision."
+        "description": "Indicates whether the source should be updated such that its 'targetRevision' field points directly at the desired revision. If set to true, exactly one of 'desiredCommitFromStep' or 'desiredRevision' must be specified."
        }
       }
      }
@@ -416,7 +416,7 @@
     },
     "updateTargetRevision": {
      "type": "boolean",
-     "description": "Indicates whether the source should be updated such that its 'targetRevision' field points directly at the desired revision."
+     "description": "Indicates whether the source should be updated such that its 'targetRevision' field points directly at the desired revision. If set to true, exactly one of 'desiredCommitFromStep' or 'desiredRevision' must be specified."
     }
    }
   },
@@ -893,7 +893,7 @@
         },
         "updateTargetRevision": {
          "type": "boolean",
-         "description": "Indicates whether the source should be updated such that its 'targetRevision' field points directly at the desired revision."
+         "description": "Indicates whether the source should be updated such that its 'targetRevision' field points directly at the desired revision. If set to true, exactly one of 'desiredCommitFromStep' or 'desiredRevision' must be specified."
         }
        }
       }
