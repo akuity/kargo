@@ -179,6 +179,10 @@ func (e *SimpleEngine) executeStep(
 ) (PromotionStepResult, error) {
 	stepCtx, err := e.preparePromotionStepContext(ctx, promoCtx, step, reg.Permissions, workDir, state)
 	if err != nil {
+		// TODO(krancour): We're not yet distinguishing between retryable and
+		// non-retryable errors. When we start to do this, failure to prepare the
+		// step context (likely due to invalid configuration) should be considered
+		// non-retryable.
 		return PromotionStepResult{
 			Status: kargoapi.PromotionPhaseErrored,
 		}, err
