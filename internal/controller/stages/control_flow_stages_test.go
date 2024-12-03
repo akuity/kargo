@@ -1165,9 +1165,9 @@ func TestControlFlowStageReconciler_verifyFreight(t *testing.T) {
 		return ptrs
 	}
 
-	oneHourAgo := time.Now().Add(-time.Hour)
-	oneMinuteAgo := time.Now().Add(-time.Minute)
 	justNow := time.Now()
+	oneHourAgo := justNow.Add(-time.Hour)
+	oneMinuteAgo := justNow.Add(-time.Minute)
 
 	tests := []struct {
 		name        string
@@ -1240,6 +1240,7 @@ func TestControlFlowStageReconciler_verifyFreight(t *testing.T) {
 					},
 				},
 			},
+			finishTime: justNow,
 			assertions: func(t *testing.T, c client.Client, recorder *fakeevent.EventRecorder, err error) {
 				require.NoError(t, err)
 				assert.Len(t, recorder.Events, 2)
@@ -1250,6 +1251,11 @@ func TestControlFlowStageReconciler_verifyFreight(t *testing.T) {
 					Name:      "freight-1",
 				}, freight1))
 				assert.Contains(t, freight1.Status.VerifiedIn, "test-stage")
+				assert.Equal(
+					t,
+					justNow.Unix(),
+					freight1.Status.VerifiedIn["test-stage"].VerifiedAt.Unix(),
+				)
 
 				freight2 := &kargoapi.Freight{}
 				require.NoError(t, c.Get(context.Background(), types.NamespacedName{
@@ -1257,6 +1263,11 @@ func TestControlFlowStageReconciler_verifyFreight(t *testing.T) {
 					Name:      "freight-2",
 				}, freight2))
 				assert.Contains(t, freight2.Status.VerifiedIn, "test-stage")
+				assert.Equal(
+					t,
+					justNow.Unix(),
+					freight2.Status.VerifiedIn["test-stage"].VerifiedAt.Unix(),
+				)
 			},
 		},
 		{

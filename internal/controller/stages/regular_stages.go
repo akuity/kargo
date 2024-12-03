@@ -1035,7 +1035,9 @@ func (r *RegularStageReconciler) markFreightVerifiedForStage(
 			if status.VerifiedIn == nil {
 				status.VerifiedIn = make(map[string]kargoapi.VerifiedStage)
 			}
-			status.VerifiedIn[stage.Name] = kargoapi.VerifiedStage{}
+			status.VerifiedIn[stage.Name] = kargoapi.VerifiedStage{
+				VerifiedAt: curFreight.VerificationHistory.Current().FinishTime.DeepCopy(),
+			}
 		}); err != nil {
 			return newStatus, fmt.Errorf(
 				"error marking Freight %q as verified in Stage: %w",
