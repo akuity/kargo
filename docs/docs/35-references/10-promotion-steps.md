@@ -5,6 +5,81 @@ description: Learn about all of Kargo's built-in promotion steps
 
 # Promotion Steps Reference
 
+Kargo's promotion steps are the building blocks of a promotion process. They
+perform the actions necessary to promote a piece of Freight into a Stage.
+Promotion steps are designed to be composable, allowing users to construct
+complex promotion processes from simple, reusable components.
+
+## Defining a Promotion Step
+
+A promotion step is a YAML object with at least one key, `uses`, whose value is
+the name of the step to be executed. The step's configuration is provided in a
+subsequent key, `config`. The `config` key's value is an object whose keys are
+the configuration options for the step.
+
+```yaml
+steps:
+- uses: step-name
+  config:
+    option1: value1
+    option2: value2
+```
+
+:::info
+For a list of built-in promotion steps and configuration options, see the
+[Built-in Steps](#built-in-steps) section.
+:::
+
+### Step Aliases
+
+A step can be given an alias by providing an `as` key in the step definition.
+The value of the `as` key is the alias to be used to reference the
+[step's output](#step-outputs).
+
+```yaml
+steps:
+- uses: step-name
+  as: alias
+```
+
+### Step Outputs
+
+A promotion step may produce output that can be referenced by subsequent steps,
+allowing the output of one step to be used as input to another. The output of a
+step is defined by the step itself and is typically documented in the step's
+reference.
+
+```yaml
+steps:
+- uses: step-name
+  as: alias
+- uses: another-step
+  config:
+    input: ${{ outputs.alias.someOutput }}
+```
+
+### Step Retry
+
+A step can be given a `retry` configuration to specify the number of `attempts`
+it should make to complete successfully. By default, steps will not be retried
+unless they imply polling behavior, like [`argocd-update`](#argocd-update) and
+[`git-wait-for-pr`](#git-wait-for-pr) which will poll indefinitely until a
+condition is met.
+
+```yaml
+steps:
+- uses: step-name
+  retry:
+    attempts: 3
+```
+
+:::info
+This feature was introduced in Kargo v1.1.0, and is still undergoing refinements
+and improvements to better distinguish between transient and non-transient errors,
+and to provide more control over retry behavior like backoff strategies or time
+limits.
+:::
+
 ## Built-in Steps
 
 This section describes the promotion steps that are built directly into Kargo.
