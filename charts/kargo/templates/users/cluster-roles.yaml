@@ -108,6 +108,7 @@ rules:
   - freights
   - projects
   - promotions
+  - promotiontemplates
   - stages
   - warehouses
   verbs:

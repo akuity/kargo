@@ -120,7 +120,7 @@ func (s *server) PromoteDownstream(
 	}
 
 	for _, downstream := range downstreams {
-		if err := s.authorizeFn(
+		if err = s.authorizeFn(
 			ctx,
 			"promote",
 			kargoapi.GroupVersion.WithResource("stages"),
@@ -134,17 +134,44 @@ func (s *server) PromoteDownstream(
 		}
 	}
 
+	templates := make(map[string]*kargoapi.PromotionTemplate, len(downstreams))
 	promoteErrs := make([]error, 0, len(downstreams))
 	createdPromos := make([]*kargoapi.Promotion, 0, len(downstreams))
 	for _, downstream := range downstreams {
-		newPromo := kargo.NewPromotion(ctx, downstream, freight.Name)
-		if downstream.Spec.PromotionTemplate != nil &&
-			len(downstream.Spec.PromotionTemplate.Spec.Steps) == 0 {
-			// Avoid creating a Promotion if the downstream Stage has no promotion
-			// steps and is therefore a "control flow" Stage.
+		if downstream.IsControlFlow() {
+			// Avoid creating a Promotion if the downstream is a control
+			// flow Stage, as it does not have a template for a Promotion.
 			continue
 		}
-		if err := s.createPromotionFn(ctx, &newPromo); err != nil {
+
+		template := downstream.Spec.PromotionTemplate
+		if template == nil {
+			if downstream.Spec.PromotionTemplateRef == nil || downstream.Spec.PromotionTemplateRef.Name == "" {
+				promoteErrs = append(promoteErrs, fmt.Errorf("Stage %q has no PromotionTemplate", downstream.Name))
+				continue
+			}
+
+			var ok bool
+			if template, ok = templates[downstream.Spec.PromotionTemplateRef.Name]; !ok {
+				template = &kargoapi.PromotionTemplate{}
+				if err = s.getPromotionTemplateFn(ctx, types.NamespacedName{
+					Namespace: downstream.Namespace,
+					Name:      downstream.Spec.PromotionTemplateRef.Name,
+				}, template); err != nil {
+					promoteErrs = append(promoteErrs, fmt.Errorf(
+						"get PromotionTemplate %q: %w", downstream.Spec.PromotionTemplateRef.Name, err,
+					))
+					continue
+				}
+
+				templates[downstream.Spec.PromotionTemplateRef.Name] = template.DeepCopy()
+			} else {
+				template = template.DeepCopy()
+			}
+		}
+
+		newPromo := kargo.NewPromotion(ctx, *template, stage.Namespace, stage.Name, freight.Name)
+		if err = s.createPromotionFn(ctx, &newPromo); err != nil {
 			promoteErrs = append(promoteErrs, err)
 			continue
 		}

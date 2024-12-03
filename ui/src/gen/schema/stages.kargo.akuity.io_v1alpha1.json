@@ -19,8 +19,19 @@
         "promotionTemplate": {
           "description": "PromotionTemplate describes how to incorporate Freight into the Stage\nusing a Promotion.",
           "properties": {
+            "apiVersion": {
+              "description": "APIVersion defines the versioned schema of this representation of an object.\nServers should convert recognized schemas to the latest internal value, and\nmay reject unrecognized values.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
+              "type": "string"
+            },
+            "kind": {
+              "description": "Kind is a string value representing the REST resource this object represents.\nServers may infer this from the endpoint the client submits requests to.\nCannot be updated.\nIn CamelCase.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
             "spec": {
-              "description": "PromotionTemplateSpec describes the (partial) specification of a Promotion\nfor a Stage. This is a template that can be used to create a Promotion for a\nStage.",
+              "description": "Spec describes how to create a Promotion for a Stage using this template.",
               "properties": {
                 "steps": {
                   "description": "Steps specifies the directives to be executed as part of a Promotion.\nThe order in which the directives are executed is the order in which they\nare listed in this field.",
@@ -87,11 +98,30 @@
                   "type": "array"
                 }
               },
+              "required": [
+                "steps"
+              ],
               "type": "object"
             }
           },
           "required": [
             "spec"
+          ],
+          "type": "object"
+        },
+        "promotionTemplateRef": {
+          "description": "PromotionTemplateRef is a reference to a PromotionTemplate that describes\nhow to incorporate Freight into the Stage using a Promotion. This field is\nmutually exclusive with the PromotionTemplate field.",
+          "properties": {
+            "name": {
+              "description": "Name is the name of the PromotionTemplate in the same project/namespace as\nthe Stage.",
+              "maxLength": 253,
+              "minLength": 1,
+              "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$",
+              "type": "string"
+            }
+          },
+          "required": [
+            "name"
           ],
           "type": "object"
         },
@@ -111,7 +141,7 @@
                     "type": "string"
                   },
                   "name": {
-                    "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originated.",
+                    "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originate.",
                     "type": "string"
                   }
                 },
@@ -221,7 +251,13 @@
       "required": [
         "requestedFreight"
       ],
-      "type": "object"
+      "type": "object",
+      "x-kubernetes-validations": [
+        {
+          "message": "only one of PromotionTemplateRef or PromotionTemplate can be set",
+          "rule": "(has(self.promotionTemplateRef)?1:0)+(has(self.promotionTemplate)?1:0)<=1"
+        }
+      ]
     },
     "status": {
       "description": "Status describes the Stage's current and recent Freight, health, and more.",
@@ -398,7 +434,7 @@
                       "type": "string"
                     },
                     "name": {
-                      "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originated.",
+                      "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originate.",
                       "type": "string"
                     }
                   },
@@ -541,7 +577,7 @@
                           "type": "string"
                         },
                         "name": {
-                          "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originated.",
+                          "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originate.",
                           "type": "string"
                         }
                       },
@@ -666,7 +702,7 @@
                                 "type": "string"
                               },
                               "name": {
-                                "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originated.",
+                                "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originate.",
                                 "type": "string"
                               }
                             },
@@ -908,7 +944,7 @@
                           "type": "string"
                         },
                         "name": {
-                          "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originated.",
+                          "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originate.",
                           "type": "string"
                         }
                       },
@@ -1194,7 +1230,7 @@
                       "type": "string"
                     },
                     "name": {
-                      "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originated.",
+                      "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originate.",
                       "type": "string"
                     }
                   },
@@ -1337,7 +1373,7 @@
                           "type": "string"
                         },
                         "name": {
-                          "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originated.",
+                          "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originate.",
                           "type": "string"
                         }
                       },
@@ -1462,7 +1498,7 @@
                                 "type": "string"
                               },
                               "name": {
-                                "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originated.",
+                                "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originate.",
                                 "type": "string"
                               }
                             },

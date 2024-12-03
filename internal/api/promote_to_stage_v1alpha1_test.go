@@ -19,6 +19,13 @@ import (
 
 func TestPromoteToStage(t *testing.T) {
 	testStageSpec := kargoapi.StageSpec{
+		PromotionTemplate: &kargoapi.PromotionTemplate{
+			Spec: kargoapi.PromotionTemplateSpec{
+				Steps: []kargoapi.PromotionStep{
+					{},
+				},
+			},
+		},
 		RequestedFreight: []kargoapi.FreightRequest{{
 			Origin: kargoapi.FreightOrigin{
 				Kind: kargoapi.FreightOriginKindWarehouse,
@@ -74,8 +81,7 @@ func TestPromoteToStage(t *testing.T) {
 				_ *connect.Response[svcv1alpha1.PromoteToStageResponse],
 				err error,
 			) {
-				require.Error(t, err)
-				require.Equal(t, "something went wrong", err.Error())
+				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
 		{
@@ -103,8 +109,7 @@ func TestPromoteToStage(t *testing.T) {
 				_ *connect.Response[svcv1alpha1.PromoteToStageResponse],
 				err error,
 			) {
-				require.Error(t, err)
-				require.Equal(t, "get stage: something went wrong", err.Error())
+				require.ErrorContains(t, err, "get stage: something went wrong")
 			},
 		},
 		{
@@ -174,8 +179,7 @@ func TestPromoteToStage(t *testing.T) {
 				_ *connect.Response[svcv1alpha1.PromoteToStageResponse],
 				err error,
 			) {
-				require.Error(t, err)
-				require.Equal(t, "get freight: something went wrong", err.Error())
+				require.ErrorContains(t, err, "get freight: something went wrong")
 			},
 		},
 		{
@@ -313,8 +317,77 @@ func TestPromoteToStage(t *testing.T) {
 				_ *connect.Response[svcv1alpha1.PromoteToStageResponse],
 				err error,
 			) {
-				require.Error(t, err)
-				require.Equal(t, "not authorized", err.Error())
+				require.ErrorContains(t, err, "not authorized")
+			},
+		},
+		{
+			name: "PromotionTemplate not found",
+			req: &svcv1alpha1.PromoteToStageRequest{
+				Project: "fake-project",
+				Stage:   "fake-stage",
+				Freight: "fake-freight",
+			},
+			server: &server{
+				validateProjectExistsFn: func(context.Context, string) error {
+					return nil
+				},
+				getStageFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Stage, error) {
+					return &kargoapi.Stage{
+						Spec: kargoapi.StageSpec{
+							PromotionTemplateRef: &kargoapi.PromotionTemplateReference{
+								Name: "fake-promotion-template",
+							},
+							RequestedFreight: testStageSpec.RequestedFreight,
+						},
+					}, nil
+				},
+				getPromotionTemplateFn: func(
+					context.Context,
+					client.ObjectKey,
+					client.Object,
+					...client.GetOption,
+				) error {
+					return errors.New("not found")
+				},
+				getFreightByNameOrAliasFn: func(
+					context.Context,
+					client.Client,
+					string, string, string,
+				) (*kargoapi.Freight, error) {
+					return &kargoapi.Freight{}, nil
+				},
+				isFreightAvailableFn: func(*kargoapi.Stage, *kargoapi.Freight) bool {
+					return true
+				},
+				authorizeFn: func(
+					context.Context,
+					string,
+					schema.GroupVersionResource,
+					string,
+					client.ObjectKey,
+				) error {
+					return nil
+				},
+				createPromotionFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return nil
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				_ *fakeevent.EventRecorder,
+				_ *connect.Response[svcv1alpha1.PromoteToStageResponse],
+				err error,
+			) {
+				require.ErrorContains(t, err, "get PromotionTemplate")
+				require.ErrorContains(t, err, "not found")
 			},
 		},
 		{
@@ -370,8 +443,7 @@ func TestPromoteToStage(t *testing.T) {
 				_ *connect.Response[svcv1alpha1.PromoteToStageResponse],
 				err error,
 			) {
-				require.Error(t, err)
-				require.Equal(t, "create promotion: something went wrong", err.Error())
+				require.ErrorContains(t, err, "create promotion: something went wrong")
 			},
 		},
 		{

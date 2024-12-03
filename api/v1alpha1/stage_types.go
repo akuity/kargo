@@ -155,6 +155,8 @@ type Stage struct {
 // one or more downstream Stages.
 func (s *Stage) IsControlFlow() bool {
 	switch {
+	case s.Spec.PromotionTemplateRef != nil && len(s.Spec.PromotionTemplateRef.Name) > 0:
+		return false
 	case s.Spec.PromotionTemplate != nil && len(s.Spec.PromotionTemplate.Spec.Steps) > 0:
 		return false
 	default:
@@ -168,6 +170,8 @@ func (s *Stage) GetStatus() *StageStatus {
 
 // StageSpec describes the sources of Freight used by a Stage and how to
 // incorporate Freight into the Stage.
+//
+// +kubebuilder:validation:XValidation:rule="(has(self.promotionTemplateRef)?1:0)+(has(self.promotionTemplate)?1:0)<=1",message="only one of PromotionTemplateRef or PromotionTemplate can be set"
 type StageSpec struct {
 	// Shard is the name of the shard that this Stage belongs to. This is an
 	// optional field. If not specified, the Stage will belong to the default
@@ -186,6 +190,10 @@ type StageSpec struct {
 	//
 	// +kubebuilder:validation:MinItems=1
 	RequestedFreight []FreightRequest `json:"requestedFreight" protobuf:"bytes,5,rep,name=requestedFreight"`
+	// PromotionTemplateRef is a reference to a PromotionTemplate that describes
+	// how to incorporate Freight into the Stage using a Promotion. This field is
+	// mutually exclusive with the PromotionTemplate field.
+	PromotionTemplateRef *PromotionTemplateReference `json:"promotionTemplateRef,omitempty" protobuf:"bytes,7,opt,name=promotionTemplateRef"`
 	// PromotionTemplate describes how to incorporate Freight into the Stage
 	// using a Promotion.
 	PromotionTemplate *PromotionTemplate `json:"promotionTemplate,omitempty" protobuf:"bytes,6,opt,name=promotionTemplate"`
@@ -218,7 +226,7 @@ type FreightOrigin struct {
 	// +kubebuilder:validation:Required
 	Kind FreightOriginKind `json:"kind" protobuf:"bytes,1,opt,name=kind"`
 	// Name is the name of the resource of the kind indicated by the Kind field
-	// from which Freight may originated.
+	// from which Freight may originate.
 	//
 	// +kubebuilder:validation:Required
 	Name string `json:"name" protobuf:"bytes,2,opt,name=name"`
@@ -254,25 +262,17 @@ type FreightSources struct {
 	Stages []string `json:"stages,omitempty" protobuf:"bytes,2,rep,name=stages"`
 }
 
-// PromotionTemplate defines a template for a Promotion that can be used to
-// incorporate Freight into a Stage.
-type PromotionTemplate struct {
-	Spec PromotionTemplateSpec `json:"spec" protobuf:"bytes,1,opt,name=spec"`
-}
-
-// PromotionTemplateSpec describes the (partial) specification of a Promotion
-// for a Stage. This is a template that can be used to create a Promotion for a
-// Stage.
-type PromotionTemplateSpec struct {
-	// Vars is a list of variables that can be referenced by expressions in
-	// promotion steps.
-	Vars []PromotionVariable `json:"vars,omitempty" protobuf:"bytes,2,rep,name=vars"`
-	// Steps specifies the directives to be executed as part of a Promotion.
-	// The order in which the directives are executed is the order in which they
-	// are listed in this field.
+// PromotionTemplateReference is a reference to a PromotionTemplate in the same
+// project/namespace as the Stage.
+type PromotionTemplateReference struct {
+	// Name is the name of the PromotionTemplate in the same project/namespace as
+	// the Stage.
 	//
-	// +kubebuilder:validation:MinItems=1
-	Steps []PromotionStep `json:"steps,omitempty" protobuf:"bytes,1,rep,name=steps"`
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
 }
 
 // StageStatus describes a Stages's current and recent Freight, health, and
