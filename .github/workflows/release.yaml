@@ -333,6 +333,7 @@ jobs:
       base64-subjects: "${{ needs.combine_hashes.outputs.hashes }}"
       upload-assets: true # Optional: Upload to a new release
       provenance-name: kargo-cli.intoto.jsonl
+
   update-homebrew-formula:
     if: github.event_name == 'release'
     permissions:
