@@ -59,7 +59,8 @@ type ArgoCDAppSourceUpdate struct {
 	// to your Warehouse; match them to the Application source you wish to update.
 	RepoURL string `json:"repoURL"`
 	// Indicates whether the source should be updated such that its 'targetRevision' field
-	// points directly at the desired revision.
+	// points directly at the desired revision. If set to true, exactly one of
+	// 'desiredCommitFromStep' or 'desiredRevision' must be specified.
 	UpdateTargetRevision bool `json:"updateTargetRevision,omitempty"`
 }
 
