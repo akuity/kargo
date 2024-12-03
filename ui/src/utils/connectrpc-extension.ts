@@ -3,6 +3,9 @@ import { Timestamp, timestampDate } from '@bufbuild/protobuf/wkt';
 import { Time } from '@ui/gen/k8s.io/apimachinery/pkg/apis/meta/v1/generated_pb';
 
 export const k8sApiMachineryTimestampDate = (t?: Time | PlainMessage<Time>) => {
+  if (!t) {
+    return null;
+  }
   // apimachinery time is same as google.protobuf.Timestamp
   return timestampDate(t as unknown as Timestamp);
 };
