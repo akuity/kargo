@@ -1,4 +1,4 @@
-import { createPromiseClient } from '@connectrpc/connect';
+import { createClient } from '@connectrpc/connect';
 import { createConnectQueryKey, useQuery } from '@connectrpc/connect-query';
 import { useQueryClient } from '@tanstack/react-query';
 import { Spin, Table, Tooltip } from 'antd';
@@ -18,9 +18,10 @@ import {
   getFreight,
   listPromotions
 } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
-import { KargoService } from '@ui/gen/service/v1alpha1/service_connect';
+import { KargoService } from '@ui/gen/service/v1alpha1/service_pb';
 import { ListPromotionsResponse } from '@ui/gen/service/v1alpha1/service_pb';
 import { Freight, Promotion } from '@ui/gen/v1alpha1/generated_pb';
+import { k8sApiMachineryTimestampDate } from '@ui/utils/connectrpc-extension';
 
 import { PromotionDetailsModal } from './promotion-details-modal';
 import { hasAbortRequest, promotionCompareFn } from './utils/promotion';
@@ -55,7 +56,7 @@ export const Promotions = () => {
     const cancel = new AbortController();
 
     const watchPromotions = async () => {
-      const promiseClient = createPromiseClient(KargoService, transportWithAuth);
+      const promiseClient = createClient(KargoService, transportWithAuth);
       const stream = promiseClient.watchPromotions(
         { project: projectName, stage: stageName },
         { signal: cancel.signal }
@@ -84,9 +85,13 @@ export const Promotions = () => {
         }
 
         // Update Promotions list
-        const listPromotionsQueryKey = createConnectQueryKey(listPromotions, {
-          project: projectName,
-          stage: stageName
+        const listPromotionsQueryKey = createConnectQueryKey({
+          cardinality: 'finite',
+          schema: listPromotions,
+          input: {
+            project: projectName,
+            stage: stageName
+          }
         });
         client.setQueryData(listPromotionsQueryKey, { promotions });
       }
@@ -127,7 +132,7 @@ export const Promotions = () => {
     {
       title: 'Date',
       render: (_, promotion) => {
-        const date = promotion.metadata?.creationTimestamp?.toDate();
+        const date = k8sApiMachineryTimestampDate(promotion.metadata?.creationTimestamp);
         return date ? format(date, 'MMM do yyyy HH:mm:ss') : '';
       }
     },

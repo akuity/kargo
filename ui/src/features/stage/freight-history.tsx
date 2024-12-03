@@ -1,3 +1,4 @@
+import { create } from '@bufbuild/protobuf';
 import { useQuery } from '@connectrpc/connect-query';
 import { faHistory } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -8,13 +9,16 @@ import { generatePath, Link, useNavigate } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
 import freightTimelineStyles from '@ui/features/freight-timeline/freight-timeline.module.less';
+import { ObjectMetaSchema } from '@ui/gen/k8s.io/apimachinery/pkg/apis/meta/v1/generated_pb';
 import { queryFreight } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 import {
   Freight,
   FreightReference,
   FreightRequest,
+  FreightSchema,
   StageStatus
 } from '@ui/gen/v1alpha1/generated_pb';
+import { PlainMessage } from '@ui/utils/connectrpc-extension';
 
 import { LoadingState } from '../common';
 import { FreightContents } from '../freight-timeline/freight-contents';
@@ -62,7 +66,7 @@ export const FreightHistory = ({
     // to show the history
     const freightHistoryPerWarehouse: Record<
       string /* warehouse eg. Warehouse/w-1 or Warehouse/w-2 */,
-      FreightReference[]
+      PlainMessage<FreightReference>[]
     > = {};
 
     for (const freightCollection of freightHistory || []) {
@@ -138,20 +142,26 @@ export const FreightHistory = ({
                             )
                           }
                         >
-                          <FreightContents highlighted={false} freight={freightReference} />
+                          <FreightContents
+                            highlighted={false}
+                            freight={create(FreightSchema, {
+                              metadata: {
+                                name: freightReference.name
+                              },
+                              ...freightReference
+                            })}
+                          />
                           <div className='text-xs mt-auto'>
                             <FreightItemLabel
-                              freight={
-                                {
-                                  ...freightReference,
-                                  metadata: {
-                                    name: freightReference?.name
-                                  },
-                                  alias:
-                                    freightMap[freightReference?.name || '']?.alias ||
-                                    freightReference.name
-                                } as Freight
-                              }
+                              freight={{
+                                ...freightReference,
+                                metadata: create(ObjectMetaSchema, {
+                                  name: freightReference?.name
+                                }),
+                                alias:
+                                  freightMap[freightReference?.name || '']?.alias ||
+                                  freightReference.name
+                              }}
                             />
                           </div>
                         </div>

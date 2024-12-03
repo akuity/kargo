@@ -36,7 +36,7 @@ export const FreightDetails = ({
 
   useEffect(() => {
     if (freight) {
-      setAlias(getAlias(freight));
+      setAlias(getAlias(freight as Freight));
     }
   }, [freight]);
 

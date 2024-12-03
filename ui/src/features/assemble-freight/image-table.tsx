@@ -3,6 +3,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Radio, Table } from 'antd';
 
 import { DiscoveredImageReference } from '@ui/gen/v1alpha1/generated_pb';
+import { k8sApiMachineryTimestampDate } from '@ui/utils/connectrpc-extension';
 
 import { TruncatedCopyable } from './truncated-copyable';
 
@@ -45,7 +46,8 @@ export const ImageTable = ({
         },
         {
           title: 'Created At',
-          render: (record: DiscoveredImageReference) => record.createdAt?.toDate().toLocaleString()
+          render: (record: DiscoveredImageReference) =>
+            k8sApiMachineryTimestampDate(record.createdAt).toLocaleString()
         }
       ]}
     />

@@ -1,11 +1,12 @@
 import { ObjectMeta } from '@ui/gen/k8s.io/apimachinery/pkg/apis/meta/v1/generated_pb';
 import { Freight, FreightReference, Stage } from '@ui/gen/v1alpha1/generated_pb';
+import { PlainMessageRecursive } from '@ui/utils/connectrpc-extension';
 
 export const ALIAS_LABEL_KEY = 'kargo.akuity.io/alias';
 export const DESCRIPTION_ANNOTATION_KEY = 'kargo.akuity.io/description';
 
-export const getAlias = (freight?: Freight): string | undefined => {
-  return freight?.alias || freight?.metadata?.labels[ALIAS_LABEL_KEY] || undefined;
+export const getAlias = (freight?: PlainMessageRecursive<Freight>): string | undefined => {
+  return freight?.alias || freight?.metadata?.labels?.[ALIAS_LABEL_KEY] || undefined;
 };
 
 export const dnsRegex = /^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/;

@@ -78,7 +78,9 @@ export const StageActions = ({
     }
 
     if (refreshRequest === refreshStatus && shouldRefetchFreights) {
-      queryClient.invalidateQueries({ queryKey: createConnectQueryKey(queryFreight) });
+      queryClient.invalidateQueries({
+        queryKey: createConnectQueryKey({ schema: queryFreight, cardinality: 'finite' })
+      });
       setShouldRefetchFreights(false);
     }
   }, [stage, shouldRefetchFreights]);

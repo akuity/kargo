@@ -11,7 +11,7 @@ export const ManifestPreview = ({
   object: Stage | Freight | Promotion;
   height?: string;
 }) => {
-  const encodedObject = yaml.stringify(object.toJson(), (_, v) => {
+  const encodedObject = yaml.stringify(object, (_, v) => {
     if (typeof v === 'string' && v === '') {
       return;
     }
