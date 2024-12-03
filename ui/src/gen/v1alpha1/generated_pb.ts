@@ -186,6 +186,16 @@ export class AnalysisTemplateReference extends Message<AnalysisTemplateReference
    */
   name?: string;
 
+  /**
+   * ClusterScope determines whether the template is an
+   * AnalysisTemplate or a ClusterAnalysisTemplate resource
+   *
+   * +kubebuilder:validation:Optional
+   *
+   * @generated from field: optional bool clusterScope = 2;
+   */
+  clusterScope?: boolean;
+
   constructor(data?: PartialMessage<AnalysisTemplateReference>) {
     super();
     proto2.util.initPartial(data, this);
@@ -195,6 +205,7 @@ export class AnalysisTemplateReference extends Message<AnalysisTemplateReference
   static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.AnalysisTemplateReference";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 2, name: "clusterScope", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AnalysisTemplateReference {

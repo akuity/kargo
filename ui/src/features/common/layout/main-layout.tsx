@@ -1,5 +1,6 @@
 import {
   faArrowRightFromBracket,
+  faGear,
   faBook,
   faBoxes,
   faTerminal,
@@ -46,6 +47,9 @@ export const MainLayout = () => {
                   User
                 </NavItem>
               )}
+              <NavItem icon={faGear} path={paths.settings}>
+                Settings
+              </NavItem>
               <NavItem icon={faBook} path='https://docs.kargo.io' target='_blank'>
                 Docs
               </NavItem>

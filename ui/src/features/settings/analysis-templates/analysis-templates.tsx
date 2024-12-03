@@ -3,42 +3,48 @@ import { faPencil, faPlus, faTrash } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Table } from 'antd';
 import { format } from 'date-fns';
-import { useParams } from 'react-router-dom';
 
 import { useConfirmModal } from '@ui/features/common/confirm-modal/use-confirm-modal';
 import { descriptionExpandable } from '@ui/features/common/description-expandable';
 import { useModal } from '@ui/features/common/modal/use-modal';
-import { AnalysisTemplate } from '@ui/gen/rollouts/api/v1alpha1/generated_pb';
 import {
-  deleteAnalysisTemplate,
-  listAnalysisTemplates
+  AnalysisTemplate,
+  ClusterAnalysisTemplate
+} from '@ui/gen/rollouts/api/v1alpha1/generated_pb';
+import {
+  deleteClusterAnalysisTemplate,
+  listClusterAnalysisTemplates
 } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 
-import { CreateAnalysisTemplateModal } from './create-analysis-template-modal';
-import { EditAnalysisTemplateModal } from './edit-analysis-template-modal';
+import { CreateClusterAnalysisTemplateModal } from './create-cluster-analysis-template-modal';
+import { EditClusterAnalysisTemplateModal } from './edit-cluster-analysis-template-modal';
 
-export const AnalysisTemplatesList = () => {
-  const { name } = useParams();
+export const ClusterAnalysisTemplatesList = () => {
   const confirm = useConfirmModal();
 
-  const { data, isLoading, refetch } = useQuery(listAnalysisTemplates, { project: name });
+  const { data, isLoading, refetch } = useQuery(listClusterAnalysisTemplates);
+
   const { show: showEdit } = useModal();
-  const { show: showCreate } = useModal((p) => (
-    <CreateAnalysisTemplateModal {...p} namespace={name || ''} />
-  ));
-  const { mutate: deleteTemplate, isPending: isDeleting } = useMutation(deleteAnalysisTemplate, {
-    onSuccess: () => refetch()
-  });
+
+  const { show: showCreate } = useModal((p) => <CreateClusterAnalysisTemplateModal {...p} />);
+
+  const { mutate: deleteTemplate, isPending: isDeleting } = useMutation(
+    deleteClusterAnalysisTemplate,
+    {
+      onSuccess: () => refetch()
+    }
+  );
 
   return (
     <Table<AnalysisTemplate>
-      dataSource={data?.analysisTemplates}
+      dataSource={data?.clusterAnalysisTemplates}
       pagination={{ hideOnSinglePage: true }}
       rowKey={(i) => i.metadata?.name || ''}
       loading={isLoading}
       expandable={descriptionExpandable()}
+      className='w-full'
     >
-      <Table.Column<AnalysisTemplate>
+      <Table.Column<ClusterAnalysisTemplate>
         title='Creation Date'
         width={200}
         render={(_, template) => {
@@ -46,8 +52,8 @@ export const AnalysisTemplatesList = () => {
           return date ? format(date, 'MMM do yyyy HH:mm:ss') : '';
         }}
       />
-      <Table.Column<AnalysisTemplate> title='Name' dataIndex={['metadata', 'name']} />
-      <Table.Column<AnalysisTemplate>
+      <Table.Column<ClusterAnalysisTemplate> title='Name' dataIndex={['metadata', 'name']} />
+      <Table.Column<ClusterAnalysisTemplate>
         width={260}
         title={
           <div className='text-right'>
@@ -68,10 +74,9 @@ export const AnalysisTemplatesList = () => {
               className='mr-2 ml-auto'
               onClick={() => {
                 showEdit((p) => (
-                  <EditAnalysisTemplateModal
+                  <EditClusterAnalysisTemplateModal
                     {...p}
                     templateName={template.metadata?.name || ''}
-                    projectName={name || ''}
                   />
                 ));
               }}
@@ -87,17 +92,17 @@ export const AnalysisTemplatesList = () => {
                   title: (
                     <div className='flex items-center'>
                       <FontAwesomeIcon icon={faTrash} className='mr-2' />
-                      Delete Analysis Template
+                      Delete Cluster Analysis Template
                     </div>
                   ),
                   content: (
                     <p>
-                      Are you sure you want to delete AnalysisTemplate{' '}
+                      Are you sure you want to delete ClusterAnalysisTemplate{' '}
                       <b>{template?.metadata?.name}</b>?
                     </p>
                   ),
                   onOk: () => {
-                    deleteTemplate({ project: name || '', name: template?.metadata?.name || '' });
+                    deleteTemplate({ name: template?.metadata?.name || '' });
                   },
                   hide: () => {}
                 });
