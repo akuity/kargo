@@ -60,6 +60,8 @@ message AnalysisTemplateReference {
 // ApprovedStage describes a Stage for which Freight has been (manually)
 // approved.
 message ApprovedStage {
+  // ApprovedAt is the time at which the Freight was approved for the Stage.
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time approvedAt = 1;
 }
 
 // ArgoCDAppHealthStatus describes the health of an ArgoCD Application.
@@ -1149,6 +1151,8 @@ message VerificationInfo {
 
 // VerifiedStage describes a Stage in which Freight has been verified.
 message VerifiedStage {
+  // VerifiedAt is the time at which the Freight was verified in the Stage.
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time verifiedAt = 1;
 }
 
 // Warehouse is a source of Freight.

@@ -130,6 +130,13 @@
         "approvedFor": {
           "additionalProperties": {
             "description": "ApprovedStage describes a Stage for which Freight has been (manually)\napproved.",
+            "properties": {
+              "approvedAt": {
+                "description": "ApprovedAt is the time at which the Freight was approved for the Stage.",
+                "format": "date-time",
+                "type": "string"
+              }
+            },
             "type": "object"
           },
           "description": "ApprovedFor describes the Stages for which this Freight has been approved\npreemptively/manually by a user. This is useful for hotfixes, where one\nmight wish to promote a piece of Freight to a given Stage without\ntransiting the entire pipeline.",
@@ -138,6 +145,13 @@
         "verifiedIn": {
           "additionalProperties": {
             "description": "VerifiedStage describes a Stage in which Freight has been verified.",
+            "properties": {
+              "verifiedAt": {
+                "description": "VerifiedAt is the time at which the Freight was verified in the Stage.",
+                "format": "date-time",
+                "type": "string"
+              }
+            },
             "type": "object"
           },
           "description": "VerifiedIn describes the Stages in which this Freight has been verified\nthrough promotion and subsequent health checks.",

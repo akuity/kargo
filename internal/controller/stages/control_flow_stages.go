@@ -8,10 +8,12 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/types"
 	kerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -423,9 +425,11 @@ func (r *ControlFlowStageReconciler) verifyFreight(
 		// Verify the Freight.
 		newStatus := f.Status.DeepCopy()
 		if newStatus.VerifiedIn == nil {
-			newStatus.VerifiedIn = map[string]kargoapi.VerifiedStage{}
+			newStatus.VerifiedIn = make(map[string]kargoapi.VerifiedStage)
 		}
-		newStatus.VerifiedIn[stage.Name] = kargoapi.VerifiedStage{}
+		newStatus.VerifiedIn[stage.Name] = kargoapi.VerifiedStage{
+			VerifiedAt: ptr.To(metav1.NewTime(finishTime)),
+		}
 		if err := kubeclient.PatchStatus(ctx, r.client, &f, func(status *kargoapi.FreightStatus) {
 			*status = *newStatus
 		}); err != nil {
