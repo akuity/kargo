@@ -145,8 +145,10 @@ api:
     ## @param api.probes.enabled Whether liveness and readiness probes should be included in the API server deployment. It is sometimes advantageous to disable these during local development.
     enabled: true
     livenessProbe:
+      ## @param api.probes.livenessProbe.initialDelaySeconds Number of seconds after the container has started before liveness probes are initiated.
       initialDelaySeconds: 10
       exec:
+        ## @param api.probes.livenessProbe.exec.command Command is the command line to execute inside the container.
         command:
           - /usr/local/bin/grpc_health_probe
           - -addr=:8080
@@ -154,8 +156,10 @@ api:
           - -tls
           - -tls-no-verify
     readinessProbe:
+      ## @param api.probes.readinessProbe.initialDelaySeconds Number of seconds after the container has started before liveness probes are initiated.
       initialDelaySeconds: 5
       exec:
+        ## @param api.probes.readinessProbe.exec.command Command is the command line to execute inside the container.
         command:
           - /usr/local/bin/grpc_health_probe
           - -addr=:8080
@@ -303,21 +307,35 @@ api:
         enabled: true
         livenessProbe:
           httpGet:
+            ## @param api.oidc.dex.probes.livenessProbe.httpGet.path Path to access on the HTTP server.
             path: /healthz/live
+            ## @param api.oidc.dex.probes.livenessProbe.httpGet.port Name or number of the port to access on the container.
             port: 5558
+          ## @param api.oidc.dex.probes.livenessProbe.initialDelaySeconds Number of seconds after the container has started before liveness probes are initiated.
           initialDelaySeconds: 10
+          ## @param api.oidc.dex.probes.livenessProbe.periodSeconds How often (in seconds) to perform the probe.
           periodSeconds: 10
+          ## @param api.oidc.dex.probes.livenessProbe.timeoutSeconds Number of seconds after which the probe times out.
           timeoutSeconds: 1
+          ## @param api.oidc.dex.probes.livenessProbe.successThreshold Minimum consecutive successes for the probe to be considered successful after having failed.
           successThreshold: 1
+          ## @param api.oidc.dex.probes.livenessProbe.failureThreshold Minimum consecutive failures for the probe to be considered failed after having succeeded.
           failureThreshold: 300
         readinessProbe:
           httpGet:
+            ## @param api.oidc.dex.probes.readinessProbe.httpGet.path Path to access on the HTTP server.
             path: /healthz/ready
+            ## @param api.oidc.dex.probes.readinessProbe.httpGet.port Name or number of the port to access on the container.
             port: 5558
+          ## @param api.oidc.dex.probes.readinessProbe.initialDelaySeconds Number of seconds after the container has started before liveness probes are initiated.
           initialDelaySeconds: 10
+          ## @param api.oidc.dex.probes.readinessProbe.periodSeconds How often (in seconds) to perform the probe.
           periodSeconds: 10
+          ## @param api.oidc.dex.probes.readinessProbe.timeoutSeconds Number of seconds after which the probe times out.
           timeoutSeconds: 1
+          ## @param api.oidc.dex.probes.readinessProbe.successThreshold Minimum consecutive successes for the probe to be considered successful after having failed.
           successThreshold: 1
+          ## @param api.oidc.dex.probes.readinessProbe.failureThreshold Minimum consecutive failures for the probe to be considered failed after having succeeded.
           failureThreshold: 300
       tls:
         ## @param api.oidc.dex.tls.selfSignedCert Whether to generate a self-signed certificate for use with Dex. If `true`, `cert-manager` CRDs **must** be present in the cluster. Kargo will create and use its own namespaced issuer. If `false`, a cert secret named `kargo-dex-server-cert` **must** be provided in the same namespace as Kargo. There is no provision for running Dex without TLS.
