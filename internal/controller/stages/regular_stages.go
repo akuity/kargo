@@ -636,11 +636,20 @@ func (r *RegularStageReconciler) syncPromotions(
 			return newStatus, hasNonTerminalPromotions, nil
 		}
 
-		// If we are in a healthy state, the current Freight needs to be verified
-		// before we can allow the next Promotion to start. If we are unhealthy,
-		// then we can allow the next Promotion to start immediately as the
-		// expectation is that the Promotion can fix the issue.
-		if stage.Status.Health == nil || stage.Status.Health.Status != kargoapi.HealthStateUnhealthy {
+		// As long as the last Promotion was successful and the Stage isn't
+		// unhealthy, we need to wait for the current Freight to complete
+		// verification (regardless of outcome) before we can allow the next
+		// Promotion to start.
+		//
+		// N.B.: If the last Promotion failed or was aborted then the current
+		// Freight did not arrive via that Promotion. It may have arrived prior to
+		// v1.1.0 when we began creating Freight history in the event of an implicit
+		// verification. What we are trying to avoid is a scenario where we're
+		// waiting on verification of Freight that might have been verified long ago
+		// and isn't being verified now because the unsuccessful promotion has
+		// prevented further health checks and verifications from running.
+		if (lastPromo != nil && lastPromo.Status != nil && lastPromo.Status.Phase == kargoapi.PromotionPhaseSucceeded) &&
+			(stage.Status.Health == nil || stage.Status.Health.Status != kargoapi.HealthStateUnhealthy) {
 			curVI := curFreight.VerificationHistory.Current()
 			if curVI == nil || curVI.Phase != kargoapi.VerificationPhaseSuccessful {
 				logger.Debug("current Freight needs to be verified before allowing new promotions to start")
