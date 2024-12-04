@@ -1246,7 +1246,7 @@ steps:
 
 </Tabs>
 
-### `argocd-update` Health Checks
+#### `argocd-update` Health Checks
 
 The `argocd-update` step is unique among all other built-in promotion steps in
 that, on successful completion, it will register health checks to be performed
