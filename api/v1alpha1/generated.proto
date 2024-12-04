@@ -571,9 +571,6 @@ message Health {
   // state. This field will always be the empty when a Stage is Healthy.
   repeated string issues = 2;
 
-  // ArgoCDApps describes the current state of any related ArgoCD Applications.
-  repeated ArgoCDAppStatus argoCDApps = 3;
-
   // Config is the opaque configuration of all health checks performed on this
   // Stage.
   optional .k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON config = 4;

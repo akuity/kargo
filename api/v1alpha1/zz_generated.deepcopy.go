@@ -595,13 +595,6 @@ func (in *Health) DeepCopyInto(out *Health) {
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
-	if in.ArgoCDApps != nil {
-		in, out := &in.ArgoCDApps, &out.ArgoCDApps
-		*out = make([]ArgoCDAppStatus, len(*in))
-		for i := range *in {
-			(*in)[i].DeepCopyInto(&(*out)[i])
-		}
-	}
 	if in.Config != nil {
 		in, out := &in.Config, &out.Config
 		*out = new(apiextensionsv1.JSON)

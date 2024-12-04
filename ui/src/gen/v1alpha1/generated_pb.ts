@@ -1767,13 +1767,6 @@ export class Health extends Message<Health> {
   issues: string[] = [];
 
   /**
-   * ArgoCDApps describes the current state of any related ArgoCD Applications.
-   *
-   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.ArgoCDAppStatus argoCDApps = 3;
-   */
-  argoCDApps: ArgoCDAppStatus[] = [];
-
-  /**
    * Config is the opaque configuration of all health checks performed on this
    * Stage.
    *
@@ -1798,7 +1791,6 @@ export class Health extends Message<Health> {
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 1, name: "status", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 2, name: "issues", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 3, name: "argoCDApps", kind: "message", T: ArgoCDAppStatus, repeated: true },
     { no: 4, name: "config", kind: "message", T: JSON, opt: true },
     { no: 5, name: "output", kind: "message", T: JSON, opt: true },
   ]);
