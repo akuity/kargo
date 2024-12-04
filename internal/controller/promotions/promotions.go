@@ -476,17 +476,17 @@ func (r *reconciler) promote(
 	}
 
 	promoCtx := directives.PromotionContext{
-		UIBaseURL:       r.cfg.APIServerBaseURL,
-		WorkDir:         filepath.Join(os.TempDir(), "promotion-"+string(workingPromo.UID)),
-		Project:         stageNamespace,
-		Stage:           stageName,
-		Promotion:       workingPromo.Name,
-		FreightRequests: stage.Spec.RequestedFreight,
-		Freight:         *workingPromo.Status.FreightCollection.DeepCopy(),
-		StartFromStep:   promo.Status.CurrentStep,
-		Attempts:        promo.Status.CurrentStepAttempt,
-		State:           directives.State(workingPromo.Status.GetState()),
-		Vars:            workingPromo.Spec.Vars,
+		UIBaseURL:             r.cfg.APIServerBaseURL,
+		WorkDir:               filepath.Join(os.TempDir(), "promotion-"+string(workingPromo.UID)),
+		Project:               stageNamespace,
+		Stage:                 stageName,
+		Promotion:             workingPromo.Name,
+		FreightRequests:       stage.Spec.RequestedFreight,
+		Freight:               *workingPromo.Status.FreightCollection.DeepCopy(),
+		StartFromStep:         promo.Status.CurrentStep,
+		StepExecutionMetadata: promo.Status.StepExecutionMetadata,
+		State:                 directives.State(workingPromo.Status.GetState()),
+		Vars:                  workingPromo.Spec.Vars,
 	}
 	if err := os.Mkdir(promoCtx.WorkDir, 0o700); err == nil {
 		// If we're working with a fresh directory, we should start the promotion
@@ -494,7 +494,7 @@ func (r *reconciler) promote(
 		// allows individual steps to self-discover that they've run before and
 		// examine the results of their own previous execution.
 		promoCtx.StartFromStep = 0
-		promoCtx.Attempts = 0
+		promoCtx.StepExecutionMetadata = nil
 	} else if !os.IsExist(err) {
 		return nil, fmt.Errorf("error creating working directory: %w", err)
 	}
@@ -510,7 +510,7 @@ func (r *reconciler) promote(
 	workingPromo.Status.Phase = res.Status
 	workingPromo.Status.Message = res.Message
 	workingPromo.Status.CurrentStep = res.CurrentStep
-	workingPromo.Status.CurrentStepAttempt = res.Attempt
+	workingPromo.Status.StepExecutionMetadata = res.StepExecutionMetadata
 	workingPromo.Status.State = &apiextensionsv1.JSON{Raw: res.State.ToJSON()}
 	if res.Status == kargoapi.PromotionPhaseSucceeded {
 		var healthChecks []kargoapi.HealthCheckStep

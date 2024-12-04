@@ -7,6 +7,8 @@ import (
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -55,9 +57,9 @@ func (e *SimpleEngine) executeSteps(
 	}
 
 	var (
-		healthChecks []HealthCheckStep
-		err          error
-		attempt      = promoCtx.Attempts
+		healthChecks  []HealthCheckStep
+		err           error
+		stepExecMetas = promoCtx.StepExecutionMetadata.DeepCopy()
 	)
 
 	// Execute each step in sequence, starting from the step index
@@ -66,9 +68,11 @@ func (e *SimpleEngine) executeSteps(
 		select {
 		case <-ctx.Done():
 			return PromotionResult{
-				Status:      kargoapi.PromotionPhaseErrored,
-				CurrentStep: i,
-				State:       state,
+				Status:                kargoapi.PromotionPhaseErrored,
+				CurrentStep:           i,
+				StepExecutionMetadata: stepExecMetas,
+				State:                 state,
+				HealthCheckSteps:      healthChecks,
 			}, ctx.Err()
 		default:
 		}
@@ -77,94 +81,129 @@ func (e *SimpleEngine) executeSteps(
 		step := steps[i]
 		if step.Alias, err = e.stepAlias(step.Alias, i); err != nil {
 			return PromotionResult{
-				Status:      kargoapi.PromotionPhaseErrored,
-				CurrentStep: i,
-				State:       state,
-			}, err
+				Status:                kargoapi.PromotionPhaseErrored,
+				CurrentStep:           i,
+				StepExecutionMetadata: stepExecMetas,
+				State:                 state,
+				HealthCheckSteps:      healthChecks,
+			}, fmt.Errorf("error getting step alias for step %d: %w", i, err)
 		}
 
 		// Get the PromotionStepRunner for the step.
 		reg, err := e.registry.GetPromotionStepRunnerRegistration(step.Kind)
 		if err != nil {
 			return PromotionResult{
-				Status:      kargoapi.PromotionPhaseErrored,
-				CurrentStep: i,
-				State:       state,
-			}, err
+				Status:                kargoapi.PromotionPhaseErrored,
+				CurrentStep:           i,
+				StepExecutionMetadata: stepExecMetas,
+				State:                 state,
+				HealthCheckSteps:      healthChecks,
+			}, fmt.Errorf("error getting runner for step %d: %w", i, err)
 		}
 
-		// Check if the step has exceeded the maximum number of attempts.
-		maxAttempts := step.GetMaxAttempts(reg.Runner)
-		if maxAttempts > 0 && attempt >= maxAttempts {
-			return PromotionResult{
-				Status:      kargoapi.PromotionPhaseErrored,
-				CurrentStep: i,
-				State:       state,
-				Attempt:     attempt,
-			}, fmt.Errorf("step %q exceeded max attempts", step.Alias)
+		// If we don't have metadata for this step yet, create it.
+		if int64(len(stepExecMetas)) == i {
+			stepExecMetas = append(stepExecMetas, kargoapi.StepExecutionMetadata{
+				Alias:     step.Alias,
+				StartedAt: ptr.To(metav1.Now()),
+			})
 		}
+		stepExecMeta := &stepExecMetas[i]
 
-		// Count the attempt we are about to make.
-		attempt++
-
-		// Execute the step.
+		// Execute the step
 		result, err := e.executeStep(ctx, promoCtx, step, reg, workDir, state)
+		if err != nil {
+			// Let a hard error take precedence over the result status and message.
+			stepExecMeta.Status = kargoapi.PromotionPhaseErrored
+			stepExecMeta.Message = err.Error()
+		} else {
+			stepExecMeta.Status = result.Status
+			stepExecMeta.Message = result.Message
+		}
+		state[step.Alias] = result.Output
 
-		// If the step failed, and the maximum number of attempts has not been
-		// reached, we are still "Running" the step and will retry it.
-		if err != nil || result.Status == kargoapi.PromotionPhaseErrored || result.Status == kargoapi.PromotionPhaseFailed {
-			if maxAttempts < 0 || attempt < maxAttempts {
-				var message strings.Builder
-				_, _ = message.WriteString(fmt.Sprintf("step %q failed (attempt %d)", step.Alias, attempt))
-				if result.Message != "" {
-					_, _ = message.WriteString(": ")
-					_, _ = message.WriteString(result.Message)
-				}
-				if err != nil {
-					_, _ = message.WriteString(": ")
-					_, _ = message.WriteString(err.Error())
-				}
+		if stepExecMeta.Status == kargoapi.PromotionPhaseSucceeded {
+			stepExecMeta.FinishedAt = ptr.To(metav1.Now())
+			stepExecMeta.ErrorCount = 0
+			if healthCheck := result.HealthCheckStep; healthCheck != nil {
+				healthChecks = append(healthChecks, *healthCheck)
+			}
+			continue // Move on to the next step
+		}
 
-				// Update the result to indicate that the step is still running.
-				result.Status = kargoapi.PromotionPhaseRunning
-				result.Message = message.String()
-
-				// Swallow the error if the step failed, as we are still
-				// retrying it.
-				err = nil
+		// Treat errors and logical failures the same for now.
+		// TODO(krancour): These may be handled differently in the future.
+		if stepExecMeta.Status != kargoapi.PromotionPhaseRunning {
+			stepExecMeta.ErrorCount++
+			// Check if the error threshold has been met.
+			errorThreshold := step.GetErrorThreshold(reg.Runner)
+			if stepExecMeta.ErrorCount >= errorThreshold {
+				// The error threshold has been met.
+				stepExecMeta.FinishedAt = ptr.To(metav1.Now())
+				return PromotionResult{
+						Status:                kargoapi.PromotionPhaseErrored,
+						CurrentStep:           i,
+						StepExecutionMetadata: stepExecMetas,
+						State:                 state,
+						HealthCheckSteps:      healthChecks,
+					}, fmt.Errorf(
+						"step %d met error threshold of %d: %s", i,
+						errorThreshold, stepExecMeta.Message,
+					)
 			}
 		}
 
-		// Update the state with the step output, regardless of the result.
-		state[step.Alias] = result.Output
-
-		// If the step was not successful, return the result to wait for
-		// a next attempt or to fail the promotion.
-		if result.Status != kargoapi.PromotionPhaseSucceeded {
+		// If we get to here, the step is either running (waiting for some external
+		// condition to be met) or it errored/failed but did not meet the error
+		// threshold. Now we need to check if the timeout has elapsed. A nil timeout
+		// or any non-positive timeout interval are treated as NO timeout, although
+		// a nil timeout really shouldn't happen.
+		timeout := step.GetTimeout(reg.Runner)
+		if timeout != nil && *timeout > 0 && metav1.Now().Sub(stepExecMeta.StartedAt.Time) > *timeout {
+			// Timeout has elapsed.
+			stepExecMeta.FinishedAt = ptr.To(metav1.Now())
 			return PromotionResult{
-				Status:      result.Status,
-				Message:     result.Message,
-				CurrentStep: i,
-				Attempt:     attempt,
-				State:       state,
-			}, err
+				Status:                kargoapi.PromotionPhaseErrored,
+				CurrentStep:           i,
+				StepExecutionMetadata: stepExecMetas,
+				State:                 state,
+				HealthCheckSteps:      healthChecks,
+			}, fmt.Errorf("step %d timeout of %s has elapsed", i, timeout.String())
 		}
 
-		// If the step was successful, reset the attempts counter and add its
-		// health check to the list.
-		attempt = 0
-		if healthCheck := result.HealthCheckStep; healthCheck != nil {
-			healthChecks = append(healthChecks, *healthCheck)
+		if stepExecMeta.Status != kargoapi.PromotionPhaseRunning {
+			// Treat the error/failure as if the step is still running so that the
+			// Promotion will be requeued. The step will be retried on the next
+			// reconciliation.
+			stepExecMeta.Message += "; step will be retried"
+			return PromotionResult{
+				Status:                kargoapi.PromotionPhaseRunning,
+				CurrentStep:           i,
+				StepExecutionMetadata: stepExecMetas,
+				State:                 state,
+				HealthCheckSteps:      healthChecks,
+			}, nil
 		}
+
+		// If we get to here, the step is still running (waiting for some external
+		// condition to be met).
+		stepExecMeta.ErrorCount = 0 // Reset the error count
+		return PromotionResult{
+			Status:                kargoapi.PromotionPhaseRunning,
+			CurrentStep:           i,
+			StepExecutionMetadata: stepExecMetas,
+			State:                 state,
+			HealthCheckSteps:      healthChecks,
+		}, nil
 	}
 
 	// All steps have succeeded, return the final state.
 	return PromotionResult{
-		Status:           kargoapi.PromotionPhaseSucceeded,
-		HealthCheckSteps: healthChecks,
-		CurrentStep:      int64(len(steps)) - 1,
-		Attempt:          0,
-		State:            state,
+		Status:                kargoapi.PromotionPhaseSucceeded,
+		CurrentStep:           int64(len(steps)) - 1,
+		StepExecutionMetadata: stepExecMetas,
+		State:                 state,
+		HealthCheckSteps:      healthChecks,
 	}, nil
 }
 

@@ -5,10 +5,12 @@ import (
 	"errors"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
@@ -65,9 +67,11 @@ func TestSimpleEngine_Promote(t *testing.T) {
 				{Kind: "context-waiter"},
 			},
 			assertions: func(t *testing.T, result PromotionResult, err error) {
-				assert.Error(t, err)
+				assert.ErrorContains(t, err, "met error threshold")
 				assert.Equal(t, kargoapi.PromotionPhaseErrored, result.Status)
-				assert.ErrorIs(t, err, context.Canceled)
+				assert.Len(t, result.StepExecutionMetadata, 1)
+				assert.Equal(t, kargoapi.PromotionPhaseErrored, result.StepExecutionMetadata[0].Status)
+				assert.Contains(t, result.StepExecutionMetadata[0].Message, context.Canceled.Error())
 			},
 		},
 		{
@@ -145,6 +149,26 @@ func TestSimpleEngine_executeSteps(t *testing.T) {
 		assertions func(*testing.T, PromotionResult, error)
 	}{
 		{
+			name: "fail on invalid step alias",
+			steps: []PromotionStep{
+				{Kind: "success-step", Alias: "step-1"},
+			},
+			assertions: func(t *testing.T, result PromotionResult, err error) {
+				assert.ErrorContains(t, err, "is forbidden")
+				assert.Equal(t, kargoapi.PromotionPhaseErrored, result.Status)
+				assert.Equal(t, int64(0), result.CurrentStep)
+			},
+		},
+		{
+			name:  "runner not found",
+			steps: []PromotionStep{{Kind: "unknown-step"}},
+			assertions: func(t *testing.T, result PromotionResult, err error) {
+				assert.ErrorContains(t, err, "error getting runner for step")
+				assert.Equal(t, kargoapi.PromotionPhaseErrored, result.Status)
+				assert.Equal(t, int64(0), result.CurrentStep)
+			},
+		},
+		{
 			name: "execute all steps successfully",
 			steps: []PromotionStep{
 				{Kind: "success-step", Alias: "step1"},
@@ -154,7 +178,14 @@ func TestSimpleEngine_executeSteps(t *testing.T) {
 				assert.NoError(t, err)
 				assert.Equal(t, kargoapi.PromotionPhaseSucceeded, result.Status)
 				assert.Equal(t, int64(1), result.CurrentStep)
-				assert.Equal(t, int64(0), result.Attempt)
+
+				// Verify the result contains metadata from both steps
+				assert.Len(t, result.StepExecutionMetadata, 2)
+				for _, metadata := range result.StepExecutionMetadata {
+					assert.Equal(t, kargoapi.PromotionPhaseSucceeded, metadata.Status)
+					assert.NotNil(t, metadata.StartedAt)
+					assert.NotNil(t, metadata.FinishedAt)
+				}
 
 				// Verify state contains outputs from both steps
 				assert.Equal(t, State{
@@ -171,16 +202,29 @@ func TestSimpleEngine_executeSteps(t *testing.T) {
 			name: "start from middle step",
 			promoCtx: PromotionContext{
 				StartFromStep: 1,
+				// Dummy metadata for the 0 step, which must have succeeded already if
+				// we're starting from step 1
+				StepExecutionMetadata: kargoapi.StepExecutionMetadataList{{}},
 			},
 			steps: []PromotionStep{
-				{Kind: "error-step", Alias: "step1"}, // This step should be skipped
+				// This step must have already succeeded and should not be run again
+				// this time.
+				{Kind: "error-step", Alias: "step1"},
+				// This step should be run
 				{Kind: "success-step", Alias: "step2"},
 			},
 			assertions: func(t *testing.T, result PromotionResult, err error) {
 				assert.NoError(t, err)
 				assert.Equal(t, kargoapi.PromotionPhaseSucceeded, result.Status)
 				assert.Equal(t, int64(1), result.CurrentStep)
-				assert.Equal(t, int64(0), result.Attempt)
+
+				// Verify the result contains metadata from both steps
+				assert.Len(t, result.StepExecutionMetadata, 2)
+				// We're not bothering with assertions on the dummy metadata for the 0
+				// step.
+				assert.Equal(t, kargoapi.PromotionPhaseSucceeded, result.StepExecutionMetadata[1].Status)
+				assert.NotNil(t, result.StepExecutionMetadata[1].StartedAt)
+				assert.NotNil(t, result.StepExecutionMetadata[1].FinishedAt)
 
 				// Verify only second step output is in state
 				assert.Equal(t, State{
@@ -191,16 +235,23 @@ func TestSimpleEngine_executeSteps(t *testing.T) {
 			},
 		},
 		{
-			name: "fail on step execution",
+			name: "error on step execution; error threshold met",
 			steps: []PromotionStep{
 				{Kind: "success-step", Alias: "step1"},
 				{Kind: "error-step", Alias: "step2"},
 			},
 			assertions: func(t *testing.T, result PromotionResult, err error) {
-				assert.ErrorContains(t, err, "something went wrong")
+				assert.ErrorContains(t, err, "met error threshold")
 				assert.Equal(t, kargoapi.PromotionPhaseErrored, result.Status)
 				assert.Equal(t, int64(1), result.CurrentStep)
-				assert.Equal(t, int64(1), result.Attempt)
+				assert.Len(t, result.StepExecutionMetadata, 2)
+				assert.Equal(t, kargoapi.PromotionPhaseSucceeded, result.StepExecutionMetadata[0].Status)
+				assert.NotNil(t, result.StepExecutionMetadata[0].StartedAt)
+				assert.NotNil(t, result.StepExecutionMetadata[0].FinishedAt)
+				assert.Equal(t, kargoapi.PromotionPhaseErrored, result.StepExecutionMetadata[1].Status)
+				assert.NotNil(t, result.StepExecutionMetadata[1].StartedAt)
+				assert.NotNil(t, result.StepExecutionMetadata[1].FinishedAt)
+				assert.Contains(t, result.StepExecutionMetadata[1].Message, "something went wrong")
 
 				// Verify first step output is preserved in state
 				assert.Equal(t, State{
@@ -212,14 +263,61 @@ func TestSimpleEngine_executeSteps(t *testing.T) {
 			},
 		},
 		{
-			name: "fail on invalid step alias",
+			name: "error on step execution; error threshold not met",
 			steps: []PromotionStep{
-				{Kind: "success-step", Alias: "step-1"},
+				{
+					Kind:  "error-step",
+					Alias: "step1",
+					Retry: &kargoapi.PromotionStepRetry{ErrorThreshold: 3},
+				},
 			},
 			assertions: func(t *testing.T, result PromotionResult, err error) {
-				assert.ErrorContains(t, err, "is forbidden")
+				assert.NoError(t, err)
+				assert.Equal(t, kargoapi.PromotionPhaseRunning, result.Status)
+				assert.Equal(t, int64(0), result.CurrentStep)
+				assert.Len(t, result.StepExecutionMetadata, 1)
+				assert.Equal(t, kargoapi.PromotionPhaseErrored, result.StepExecutionMetadata[0].Status)
+				assert.NotNil(t, result.StepExecutionMetadata[0].StartedAt)
+				assert.Nil(t, result.StepExecutionMetadata[0].FinishedAt)
+				assert.Equal(t, uint32(1), result.StepExecutionMetadata[0].ErrorCount)
+				assert.Contains(t, result.StepExecutionMetadata[0].Message, "will be retried")
+			},
+		},
+		{
+			name: "step is still running; timeout elapsed",
+			promoCtx: PromotionContext{
+				StepExecutionMetadata: kargoapi.StepExecutionMetadataList{{
+					// Start time is set to an hour ago
+					StartedAt: ptr.To(metav1.NewTime(time.Now().Add(-time.Hour))),
+				}},
+			},
+			steps: []PromotionStep{
+				{
+					Kind: "running-step",
+					Retry: &kargoapi.PromotionStepRetry{
+						Timeout: &metav1.Duration{
+							Duration: time.Hour,
+						},
+					},
+				},
+			},
+			assertions: func(t *testing.T, result PromotionResult, err error) {
+				assert.ErrorContains(t, err, "timeout")
+				assert.ErrorContains(t, err, "has elapsed")
 				assert.Equal(t, kargoapi.PromotionPhaseErrored, result.Status)
 				assert.Equal(t, int64(0), result.CurrentStep)
+			},
+		},
+		{
+			name:  "step is still running; timeout not elapsed",
+			steps: []PromotionStep{{Kind: "running-step"}},
+			assertions: func(t *testing.T, result PromotionResult, err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, kargoapi.PromotionPhaseRunning, result.Status)
+				assert.Equal(t, int64(0), result.CurrentStep)
+				assert.Len(t, result.StepExecutionMetadata, 1)
+				assert.Equal(t, kargoapi.PromotionPhaseRunning, result.StepExecutionMetadata[0].Status)
+				assert.NotNil(t, result.StepExecutionMetadata[0].StartedAt)
 			},
 		},
 		{
@@ -228,49 +326,12 @@ func TestSimpleEngine_executeSteps(t *testing.T) {
 				{Kind: "context-waiter", Alias: "step1"},
 			},
 			assertions: func(t *testing.T, result PromotionResult, err error) {
-				assert.ErrorIs(t, err, context.Canceled)
+				assert.ErrorContains(t, err, "met error threshold")
 				assert.Equal(t, kargoapi.PromotionPhaseErrored, result.Status)
 				assert.Equal(t, int64(0), result.CurrentStep)
-			},
-		},
-		{
-			name: "retry failed step within max attempts",
-			promoCtx: PromotionContext{
-				Attempts: 1,
-			},
-			steps: []PromotionStep{
-				{
-					Kind:  "error-step",
-					Alias: "step1",
-					Retry: &kargoapi.PromotionStepRetry{Attempts: 3},
-				},
-			},
-			assertions: func(t *testing.T, result PromotionResult, err error) {
-				assert.NoError(t, err)
-				assert.Equal(t, kargoapi.PromotionPhaseRunning, result.Status)
-				assert.Equal(t, int64(0), result.CurrentStep)
-				assert.Equal(t, int64(2), result.Attempt)
-				assert.Contains(t, result.Message, "attempt 2")
-			},
-		},
-		{
-			name: "max attempts exceeded",
-			promoCtx: PromotionContext{
-				Attempts: 3,
-			},
-			steps: []PromotionStep{
-				{
-					Kind:  "error-step",
-					Alias: "step1",
-					Retry: &kargoapi.PromotionStepRetry{Attempts: 3},
-				},
-			},
-			assertions: func(t *testing.T, result PromotionResult, err error) {
-				assert.Error(t, err)
-				assert.Equal(t, kargoapi.PromotionPhaseErrored, result.Status)
-				assert.Equal(t, int64(0), result.CurrentStep)
-				assert.Equal(t, int64(3), result.Attempt)
-				assert.Contains(t, err.Error(), "exceeded max attempts")
+				assert.Len(t, result.StepExecutionMetadata, 1)
+				assert.Equal(t, kargoapi.PromotionPhaseErrored, result.StepExecutionMetadata[0].Status)
+				assert.Contains(t, result.StepExecutionMetadata[0].Message, context.Canceled.Error())
 			},
 		},
 	}
@@ -287,6 +348,15 @@ func TestSimpleEngine_executeSteps(t *testing.T) {
 					runResult: PromotionStepResult{
 						Status: kargoapi.PromotionPhaseSucceeded,
 						Output: map[string]any{"key": "value"},
+					},
+				},
+				&StepRunnerPermissions{},
+			)
+			testRegistry.RegisterPromotionStepRunner(
+				&mockPromotionStepRunner{
+					name: "running-step",
+					runResult: PromotionStepResult{
+						Status: kargoapi.PromotionPhaseRunning,
 					},
 				},
 				&StepRunnerPermissions{},
