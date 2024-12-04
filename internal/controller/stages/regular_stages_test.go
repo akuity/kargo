@@ -1220,13 +1220,15 @@ func TestRegularStageReconciler_assessHealth(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, status kargoapi.StageStatus) {
-				assert.Nil(t, status.Health)
+				assert.NotNil(t, status.Health)
+				assert.Equal(t, kargoapi.HealthStateUnhealthy, status.Health.Status)
+				assert.Equal(t, []string{"Last Promotion did not succeed"}, status.Health.Issues)
 
 				healthyCond := conditions.Get(&status, kargoapi.ConditionTypeHealthy)
 				require.NotNil(t, healthyCond)
-				assert.Equal(t, metav1.ConditionUnknown, healthyCond.Status)
+				assert.Equal(t, metav1.ConditionFalse, healthyCond.Status)
 				assert.Equal(t, "LastPromotionAborted", healthyCond.Reason)
-				assert.Equal(t, "No health checks to perform for unsuccessful Promotion", healthyCond.Message)
+				assert.Equal(t, "Last Promotion did not succeed", healthyCond.Message)
 			},
 		},
 		{

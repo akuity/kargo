@@ -998,64 +998,6 @@
         "health": {
           "description": "Health is the Stage's last observed health.",
           "properties": {
-            "argoCDApps": {
-              "description": "ArgoCDApps describes the current state of any related ArgoCD Applications.",
-              "items": {
-                "description": "ArgoCDAppStatus describes the current state of a single ArgoCD Application.",
-                "properties": {
-                  "healthStatus": {
-                    "description": "HealthStatus is the health of the ArgoCD Application.",
-                    "properties": {
-                      "message": {
-                        "type": "string"
-                      },
-                      "status": {
-                        "type": "string"
-                      }
-                    },
-                    "required": [
-                      "status"
-                    ],
-                    "type": "object"
-                  },
-                  "name": {
-                    "description": "Name is the name of the ArgoCD Application.",
-                    "type": "string"
-                  },
-                  "namespace": {
-                    "description": "Namespace is the namespace of the ArgoCD Application.",
-                    "type": "string"
-                  },
-                  "syncStatus": {
-                    "description": "SyncStatus is the sync status of the ArgoCD Application.",
-                    "properties": {
-                      "revision": {
-                        "type": "string"
-                      },
-                      "revisions": {
-                        "items": {
-                          "type": "string"
-                        },
-                        "type": "array"
-                      },
-                      "status": {
-                        "type": "string"
-                      }
-                    },
-                    "required": [
-                      "status"
-                    ],
-                    "type": "object"
-                  }
-                },
-                "required": [
-                  "name",
-                  "namespace"
-                ],
-                "type": "object"
-              },
-              "type": "array"
-            },
             "config": {
               "description": "Config is the opaque configuration of all health checks performed on this\nStage.",
               "x-kubernetes-preserve-unknown-fields": true
