@@ -146,9 +146,22 @@ api:
     enabled: true
     livenessProbe:
       initialDelaySeconds: 10
-
+      exec:
+        command:
+          - /usr/local/bin/grpc_health_probe
+          - -addr=:8080
+          # Manually disable if TLS is not used
+          - -tls
+          - -tls-no-verify
     readinessProbe:
       initialDelaySeconds: 5
+      exec:
+        command:
+          - /usr/local/bin/grpc_health_probe
+          - -addr=:8080
+          # Manually disable if TLS is not used
+          - -tls
+          - -tls-no-verify
 
   tls:
     ## @param api.tls.enabled Whether to enable TLS directly on the API server. This is helpful if you do not intend to use an ingress controller or if you require TLS end-to-end. All other settings in this section will be ignored when this is set to `false`.

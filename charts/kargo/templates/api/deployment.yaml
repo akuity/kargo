@@ -90,25 +90,9 @@ spec:
           {{- with .Values.api.probes.livenessProbe }}
           livenessProbe: {{- toYaml . | nindent 12 }}
           {{- end }}
-            exec:
-              command:
-                - /usr/local/bin/grpc_health_probe
-                - -addr=:8080
-{{- if .Values.api.tls.enabled }}
-                - -tls
-                - -tls-no-verify
-{{- end }}
           {{- with .Values.api.probes.readinessProbe }}
           readinessProbe: {{- toYaml . | nindent 12 }}
           {{- end }}
-            exec:
-              command:
-                - /usr/local/bin/grpc_health_probe
-                - -addr=:8080
-{{- if .Values.api.tls.enabled }}
-                - -tls
-                - -tls-no-verify
-{{- end }}
 {{- end }}
 {{- if or .Values.kubeconfigSecrets.kargo (and .Values.api.oidc.enabled .Values.api.oidc.dex.enabled) .Values.api.tls.enabled .Values.api.cabundle.configMapName .Values.api.cabundle.secretName }}
           volumeMounts:
