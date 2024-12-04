@@ -495,8 +495,12 @@ func (a *argocdUpdater) syncApplication(
 	// Initiate a new operation.
 	app.Operation = &argocd.Operation{
 		InitiatedBy: argocd.OperationInitiator{
-			Username:  applicationOperationInitiator,
-			Automated: true,
+			Username: applicationOperationInitiator,
+			// NB: While this field may make it look like the operation was
+			// initiated by a machine, it is actually dedicated to indicate
+			// whether the operation was initiated by Argo CD's own
+			// application controller (i.e. auto-sync), which we are not.
+			Automated: false,
 		},
 		Info: []*argocd.Info{
 			{
