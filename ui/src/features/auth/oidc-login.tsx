@@ -73,7 +73,7 @@ export const OIDCLogin = ({ oidcConfig }: Props) => {
   React.useEffect(() => {
     if (error) {
       const errorMessage = error instanceof Error ? error.message : 'OIDC config fetch error';
-      notification.error({ message: errorMessage, placement: 'bottomRight' });
+      notification.error({ message: `OIDC: ${errorMessage}`, placement: 'bottomRight' });
     }
   }, [error]);
 
