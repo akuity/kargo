@@ -123,7 +123,7 @@ subjects:
       name: kargo-controller
       namespace: kargo
 roleRef:
-    kind: Role
+    kind: ClusterRole
     name: kargo-controller-read-secrets
     apiGroup: rbac.authorization.k8s.io
 ```
