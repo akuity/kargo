@@ -321,9 +321,9 @@ type HTTPConfig struct {
 	QueryParams []HTTPQueryParam `json:"queryParams,omitempty"`
 	// An expression to evaluate to determine if the request was successful.
 	SuccessExpression string `json:"successExpression,omitempty"`
-	// The number of seconds to wait for the request to complete. If not specified, the default
-	// is 10 seconds.
-	TimeoutSeconds *int64 `json:"timeoutSeconds,omitempty"`
+	// The maximum time to wait for the request to complete. If not specified, the default is 10
+	// seconds.
+	Timeout string `json:"timeout,omitempty"`
 	// The URL to send the HTTP request to.
 	URL string `json:"url"`
 }
