@@ -411,7 +411,7 @@ start-controller-local:
 
 .PHONY: hack-serve-docs
 hack-serve-docs: hack-build-dev-tools
-	$(CONTAINER_RUNTIME) run $(DOCKER_OPTS) -p $(DOCS_PORT):$(DOCS_PORT) kargo:dev-tools make serve-docs
+	$(CONTAINER_RUNTIME) run $(DOCKER_OPTS) --user $(id -u):$(id -g) -p $(DOCS_PORT):$(DOCS_PORT) kargo:dev-tools make serve-docs
 
 .PHONY: serve-docs
 serve-docs:
