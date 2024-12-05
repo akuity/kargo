@@ -38,11 +38,6 @@ func (g *gitPRWaiter) Name() string {
 	return "git-wait-for-pr"
 }
 
-// DefaultAttempts implements the RetryableStepRunner interface.
-func (g *gitPRWaiter) DefaultAttempts() int64 {
-	return -1
-}
-
 // RunPromotionStep implements the PromotionStepRunner interface.
 func (g *gitPRWaiter) RunPromotionStep(
 	ctx context.Context,
