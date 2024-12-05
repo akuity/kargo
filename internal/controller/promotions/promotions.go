@@ -495,6 +495,7 @@ func (r *reconciler) promote(
 		// examine the results of their own previous execution.
 		promoCtx.StartFromStep = 0
 		promoCtx.StepExecutionMetadata = nil
+		workingPromo.Status.HealthChecks = nil
 	} else if !os.IsExist(err) {
 		return nil, fmt.Errorf("error creating working directory: %w", err)
 	}
@@ -512,15 +513,14 @@ func (r *reconciler) promote(
 	workingPromo.Status.CurrentStep = res.CurrentStep
 	workingPromo.Status.StepExecutionMetadata = res.StepExecutionMetadata
 	workingPromo.Status.State = &apiextensionsv1.JSON{Raw: res.State.ToJSON()}
-	if res.Status == kargoapi.PromotionPhaseSucceeded {
-		var healthChecks []kargoapi.HealthCheckStep
-		for _, step := range res.HealthCheckSteps {
-			healthChecks = append(healthChecks, kargoapi.HealthCheckStep{
+	for _, step := range res.HealthCheckSteps {
+		workingPromo.Status.HealthChecks = append(
+			workingPromo.Status.HealthChecks,
+			kargoapi.HealthCheckStep{
 				Uses:   step.Kind,
 				Config: &apiextensionsv1.JSON{Raw: step.Config.ToJSON()},
-			})
-		}
-		workingPromo.Status.HealthChecks = healthChecks
+			},
+		)
 	}
 	if err != nil {
 		workingPromo.Status.Phase = kargoapi.PromotionPhaseErrored
