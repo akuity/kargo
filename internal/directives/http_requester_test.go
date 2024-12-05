@@ -125,21 +125,12 @@ func Test_httpRequester_validate(t *testing.T) {
 			},
 		},
 		{
-			name: "timeoutSeconds < 1",
+			name: "invalid timeout",
 			config: Config{
-				"timeoutSeconds": 0,
+				"timeout": "invalid",
 			},
 			expectedProblems: []string{
-				"timeoutSeconds: Must be greater than or equal to 1",
-			},
-		},
-		{
-			name: "timeoutSeconds > 60",
-			config: Config{
-				"timeoutSeconds": 61,
-			},
-			expectedProblems: []string{
-				"timeoutSeconds: Must be less than or equal to 60",
+				"timeout: Does not match pattern",
 			},
 		},
 		{
@@ -180,6 +171,35 @@ func Test_httpRequester_validate(t *testing.T) {
 			},
 			expectedProblems: []string{
 				"outputs.0.fromExpression: String length must be greater than or equal to 1",
+			},
+		},
+		{
+			name: "valid kitchen sink",
+			config: Config{
+				"method": "GET",
+				"url":    "https://example.com",
+				"headers": []Config{{
+					"name":  "Accept",
+					"value": "application/json",
+				}},
+				"queryParams": []Config{{
+					"name":  "foo",
+					"value": "bar",
+				}},
+				"insecureSkipTLSVerify": true,
+				"timeout":               "30s",
+				"successExpression":     "response.status == 200",
+				"failureExpression":     "response.status == 404",
+				"outputs": []Config{
+					{
+						"name":           "fact1",
+						"fromExpression": "response.body.facts[0]",
+					},
+					{
+						"name":           "fact2",
+						"fromExpression": "response.body.facts[1]",
+					},
+				},
 			},
 		},
 	}
@@ -381,11 +401,12 @@ func Test_httpRequester_getClient(t *testing.T) {
 	testCases := []struct {
 		name       string
 		cfg        HTTPConfig
-		assertions func(*testing.T, *http.Client)
+		assertions func(*testing.T, *http.Client, error)
 	}{
 		{
 			name: "without insecureSkipTLSVerify",
-			assertions: func(t *testing.T, client *http.Client) {
+			assertions: func(t *testing.T, client *http.Client, err error) {
+				require.NoError(t, err)
 				require.NotNil(t, client)
 				transport, ok := client.Transport.(*http.Transport)
 				require.True(t, ok)
@@ -397,7 +418,8 @@ func Test_httpRequester_getClient(t *testing.T) {
 			cfg: HTTPConfig{
 				InsecureSkipTLSVerify: true,
 			},
-			assertions: func(t *testing.T, client *http.Client) {
+			assertions: func(t *testing.T, client *http.Client, err error) {
+				require.NoError(t, err)
 				require.NotNil(t, client)
 				transport, ok := client.Transport.(*http.Transport)
 				require.True(t, ok)
@@ -405,12 +427,21 @@ func Test_httpRequester_getClient(t *testing.T) {
 				require.True(t, transport.TLSClientConfig.InsecureSkipVerify)
 			},
 		},
+		{
+			name: "with invalid timeout",
+			cfg: HTTPConfig{
+				Timeout: "invalid",
+			},
+			assertions: func(t *testing.T, _ *http.Client, err error) {
+				require.ErrorContains(t, err, "error parsing timeout")
+			},
+		},
 	}
 	h := &httpRequester{}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			client := h.getClient(testCase.cfg)
-			testCase.assertions(t, client)
+			client, err := h.getClient(testCase.cfg)
+			testCase.assertions(t, client, err)
 		})
 	}
 }
