@@ -127,7 +127,7 @@ type PromotionStepRetry struct {
 	//
 	// A value of 0 will cause the step to be retried indefinitely unless the
 	// ErrorThreshold is reached.
-	Timeout *metav1.Duration `json:"timeout,omitempty"`
+	Timeout *metav1.Duration `json:"timeout,omitempty" protobuf:"bytes,1,opt,name=timeout"`
 	// ErrorThreshold is the number of consecutive times the step must fail (for
 	// any reason) before retries are abandoned and the entire Promotion is marked
 	// as failed.
@@ -147,7 +147,7 @@ type PromotionStepRetry struct {
 	// planned that unrecoverable failures will not be subject to this threshold
 	// and will immediately cause the Promotion to be marked as failed without
 	// further condition.
-	ErrorThreshold uint32 `json:"errorThreshold,omitempty"`
+	ErrorThreshold uint32 `json:"errorThreshold,omitempty" protobuf:"varint,2,opt,name=errorThreshold"`
 }
 
 // GetTimeout returns the Timeout field with the given fallback value.
@@ -216,7 +216,7 @@ type PromotionStatus struct {
 	CurrentStep int64 `json:"currentStep,omitempty" protobuf:"varint,9,opt,name=currentStep"`
 	// StepExecutionMetadata tracks metadata pertaining to the execution
 	// of individual promotion steps.
-	StepExecutionMetadata StepExecutionMetadataList `json:"stepExecutionMetadata,omitempty"`
+	StepExecutionMetadata StepExecutionMetadataList `json:"stepExecutionMetadata,omitempty" protobuf:"bytes,11,rep,name=stepExecutionMetadata"`
 	// State stores the state of the promotion process between reconciliation
 	// attempts.
 	State *apiextensionsv1.JSON `json:"state,omitempty" protobuf:"bytes,10,opt,name=state"`
@@ -283,17 +283,17 @@ type StepExecutionMetadataList []StepExecutionMetadata
 // a promotion step.
 type StepExecutionMetadata struct {
 	// Alias is the alias of the step.
-	Alias string `json:"alias,omitempty"`
+	Alias string `json:"alias,omitempty" protobuf:"bytes,1,opt,name=alias"`
 	// StartedAt is the time at which the first attempt to execute the step
 	// began.
-	StartedAt *metav1.Time `json:"startedAt,omitempty"`
+	StartedAt *metav1.Time `json:"startedAt,omitempty" protobuf:"bytes,2,opt,name=startedAt"`
 	// FinishedAt is the time at which the final attempt to execute the step
 	// completed.
-	FinishedAt *metav1.Time `json:"finishedAt,omitempty"`
+	FinishedAt *metav1.Time `json:"finishedAt,omitempty" protobuf:"bytes,3,opt,name=finishedAt"`
 	// ErrorCount tracks consecutive failed attempts to execute the step.
-	ErrorCount uint32 `json:"errorCount,omitempty"`
+	ErrorCount uint32 `json:"errorCount,omitempty" protobuf:"varint,4,opt,name=errorCount"`
 	// Status is the high-level outcome of the step.
-	Status PromotionPhase `json:"status,omitempty"`
+	Status PromotionPhase `json:"status,omitempty" protobuf:"bytes,5,opt,name=status"`
 	// Message is a display message about the step, including any errors.
-	Message string `json:"message,omitempty"`
+	Message string `json:"message,omitempty" protobuf:"bytes,6,opt,name=message"`
 }
