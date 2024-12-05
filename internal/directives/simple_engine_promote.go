@@ -124,7 +124,6 @@ func (e *SimpleEngine) executeSteps(
 
 		if stepExecMeta.Status == kargoapi.PromotionPhaseSucceeded {
 			stepExecMeta.FinishedAt = ptr.To(metav1.Now())
-			stepExecMeta.ErrorCount = 0
 			if healthCheck := result.HealthCheckStep; healthCheck != nil {
 				healthChecks = append(healthChecks, *healthCheck)
 			}
@@ -132,7 +131,9 @@ func (e *SimpleEngine) executeSteps(
 		}
 
 		// Treat errors and logical failures the same for now.
-		// TODO(krancour): These may be handled differently in the future.
+		// TODO(krancour): In the future, we should fail without retry for logical
+		// failures and unrecoverable errors and retry only those errors with a
+		// chance of recovery.
 		if stepExecMeta.Status != kargoapi.PromotionPhaseRunning {
 			stepExecMeta.ErrorCount++
 			// Check if the error threshold has been met.

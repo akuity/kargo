@@ -23,13 +23,13 @@ func TestPromotionRetry_GetTimeout(t *testing.T) {
 			want:     ptr.To(time.Hour),
 		},
 		{
-			name:     "threshold is not set",
+			name:     "timeout is not set",
 			retry:    &PromotionStepRetry{},
 			fallback: ptr.To(time.Hour),
 			want:     ptr.To(time.Hour),
 		},
 		{
-			name: "threshold is set",
+			name: "timeout is set",
 			retry: &PromotionStepRetry{
 				Timeout: &metav1.Duration{
 					Duration: 3 * time.Hour,
