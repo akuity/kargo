@@ -47,7 +47,7 @@ export const ImageTable = ({
         {
           title: 'Created At',
           render: (record: DiscoveredImageReference) =>
-            k8sApiMachineryTimestampDate(record.createdAt).toLocaleString()
+            k8sApiMachineryTimestampDate(record.createdAt)?.toLocaleString()
         }
       ]}
     />

@@ -42,6 +42,10 @@ export const FreightItemLabel = ({ freight }: { freight?: PlainMessageRecursive<
     }
   );
 
+  const freightCreationTimestamp = freight?.metadata?.creationTimestamp
+    ? k8sApiMachineryTimestampDate(freight?.metadata?.creationTimestamp)
+    : null;
+
   return (
     (alias || id) && (
       <div
@@ -68,13 +72,10 @@ export const FreightItemLabel = ({ freight }: { freight?: PlainMessageRecursive<
               <Info title='ID'>
                 <div className='font-mono'>{id}</div>
               </Info>
-              {freight?.metadata?.creationTimestamp && (
+              {freightCreationTimestamp && (
                 <Info title='Created'>
                   <div className='text-right'>
-                    {format(
-                      k8sApiMachineryTimestampDate(freight?.metadata?.creationTimestamp),
-                      'MMM do yyyy HH:mm:ss'
-                    )}
+                    {format(freightCreationTimestamp, 'MMM do yyyy HH:mm:ss')}
                     <br />({humanReadable})
                   </div>
                 </Info>

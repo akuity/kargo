@@ -189,7 +189,9 @@ export const StageNode = ({
           )}
         </div>
         <StageNodeFooter
-          lastPromotion={k8sApiMachineryTimestampDate(stage?.status?.lastPromotion?.finishedAt)}
+          lastPromotion={
+            k8sApiMachineryTimestampDate(stage?.status?.lastPromotion?.finishedAt) || undefined
+          }
         />
       </div>
       {action !== FreightTimelineAction.ManualApproval &&

@@ -59,7 +59,7 @@ export const FreightLabel = ({ freight }: { freight?: Freight }) => {
           {freight?.metadata?.creationTimestamp && (
             <Tooltip
               title={format(
-                k8sApiMachineryTimestampDate(freight?.metadata?.creationTimestamp),
+                k8sApiMachineryTimestampDate(freight?.metadata?.creationTimestamp) || '',
                 'MMM do yyyy HH:mm:ss'
               )}
               className={style.smallLabel}

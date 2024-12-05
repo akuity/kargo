@@ -48,7 +48,7 @@ export const CommitTable = ({
           {
             title: 'Date',
             render: (record: DiscoveredCommit) =>
-              k8sApiMachineryTimestampDate(record.creatorDate).toLocaleString()
+              k8sApiMachineryTimestampDate(record.creatorDate)?.toLocaleString()
           }
         ]}
       />

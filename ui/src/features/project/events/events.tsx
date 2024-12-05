@@ -76,7 +76,7 @@ const HumanReadableTimestamp = ({ timestamp }: { timestamp?: Time }) => {
   }
 
   const date = k8sApiMachineryTimestampDate(timestamp);
-  const fullTimestamp = format(date, 'MMM do yyyy HH:mm:ss');
+  const fullTimestamp = format(date || '', 'MMM do yyyy HH:mm:ss');
   const fromNow = moment(date).fromNow();
 
   return (

@@ -126,9 +126,9 @@ export const MetricChart = ({
   yAxisLabel
 }: MetricChartProps) => {
   // show ticks at boundaries of analysis
-  const startingTick = k8sApiMachineryTimestampDate(data[0]?.startedAt).toLocaleTimeString() ?? '';
+  const startingTick = k8sApiMachineryTimestampDate(data[0]?.startedAt)?.toLocaleTimeString() ?? '';
   const endingTick =
-    k8sApiMachineryTimestampDate(data[data.length - 1]?.finishedAt).toLocaleTimeString() ?? '';
+    k8sApiMachineryTimestampDate(data[data.length - 1]?.finishedAt)?.toLocaleTimeString() ?? '';
   const timeTicks: (string | number)[] = [startingTick, endingTick];
 
   return (
