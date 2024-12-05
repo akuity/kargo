@@ -707,14 +707,18 @@ func (r *RegularStageReconciler) assessHealth(ctx context.Context, stage *kargoa
 	//  even if the current Promotion did not succeed (e.g. because it was
 	//  aborted).
 	if lastPromo.Status.Phase != kargoapi.PromotionPhaseSucceeded {
-		logger.Debug("Last promotion did not succeed: no health checks to perform")
+		logger.Debug("Last promotion did not succeed: defaulting Stage health to Unhealthy")
 		conditions.Set(&newStatus, &metav1.Condition{
 			Type:               kargoapi.ConditionTypeHealthy,
-			Status:             metav1.ConditionUnknown,
+			Status:             metav1.ConditionFalse,
 			Reason:             fmt.Sprintf("LastPromotion%s", lastPromo.Status.Phase),
-			Message:            "No health checks to perform for unsuccessful Promotion",
+			Message:            "Last Promotion did not succeed",
 			ObservedGeneration: stage.Generation,
 		})
+		newStatus.Health = &kargoapi.Health{
+			Status: kargoapi.HealthStateUnhealthy,
+			Issues: []string{"Last Promotion did not succeed"},
+		}
 		return newStatus
 	}
 
@@ -1035,7 +1039,9 @@ func (r *RegularStageReconciler) markFreightVerifiedForStage(
 			if status.VerifiedIn == nil {
 				status.VerifiedIn = make(map[string]kargoapi.VerifiedStage)
 			}
-			status.VerifiedIn[stage.Name] = kargoapi.VerifiedStage{}
+			status.VerifiedIn[stage.Name] = kargoapi.VerifiedStage{
+				VerifiedAt: curFreight.VerificationHistory.Current().FinishTime.DeepCopy(),
+			}
 		}); err != nil {
 			return newStatus, fmt.Errorf(
 				"error marking Freight %q as verified in Stage: %w",

@@ -14,6 +14,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -1220,13 +1221,15 @@ func TestRegularStageReconciler_assessHealth(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, status kargoapi.StageStatus) {
-				assert.Nil(t, status.Health)
+				assert.NotNil(t, status.Health)
+				assert.Equal(t, kargoapi.HealthStateUnhealthy, status.Health.Status)
+				assert.Equal(t, []string{"Last Promotion did not succeed"}, status.Health.Issues)
 
 				healthyCond := conditions.Get(&status, kargoapi.ConditionTypeHealthy)
 				require.NotNil(t, healthyCond)
-				assert.Equal(t, metav1.ConditionUnknown, healthyCond.Status)
+				assert.Equal(t, metav1.ConditionFalse, healthyCond.Status)
 				assert.Equal(t, "LastPromotionAborted", healthyCond.Reason)
-				assert.Equal(t, "No health checks to perform for unsuccessful Promotion", healthyCond.Message)
+				assert.Equal(t, "Last Promotion did not succeed", healthyCond.Message)
 			},
 		},
 		{
@@ -2282,6 +2285,8 @@ func TestRegularStageReconciler_markFreightVerifiedForStage(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, kargoapi.AddToScheme(scheme))
 
+	endTime := metav1.Now()
+
 	tests := []struct {
 		name       string
 		stage      *kargoapi.Stage
@@ -2446,7 +2451,8 @@ func TestRegularStageReconciler_markFreightVerifiedForStage(t *testing.T) {
 							},
 							VerificationHistory: []kargoapi.VerificationInfo{
 								{
-									Phase: kargoapi.VerificationPhaseSuccessful,
+									Phase:      kargoapi.VerificationPhaseSuccessful,
+									FinishTime: endTime.DeepCopy(),
 								},
 							},
 						},
@@ -2473,7 +2479,7 @@ func TestRegularStageReconciler_markFreightVerifiedForStage(t *testing.T) {
 
 				verifiedStage, ok := freight.Status.VerifiedIn["test-stage"]
 				require.True(t, ok)
-				assert.Equal(t, kargoapi.VerifiedStage{}, verifiedStage)
+				assert.Equal(t, endTime.Unix(), verifiedStage.VerifiedAt.Unix())
 			},
 		},
 		{
@@ -2547,7 +2553,8 @@ func TestRegularStageReconciler_markFreightVerifiedForStage(t *testing.T) {
 							},
 							VerificationHistory: []kargoapi.VerificationInfo{
 								{
-									Phase: kargoapi.VerificationPhaseSuccessful,
+									Phase:      kargoapi.VerificationPhaseSuccessful,
+									FinishTime: ptr.To(endTime.Rfc3339Copy()),
 								},
 							},
 						},
@@ -2583,7 +2590,7 @@ func TestRegularStageReconciler_markFreightVerifiedForStage(t *testing.T) {
 
 					verifiedStage, ok := freight.Status.VerifiedIn["test-stage"]
 					require.True(t, ok, "freight %s should be verified", name)
-					assert.Equal(t, kargoapi.VerifiedStage{}, verifiedStage)
+					assert.Equal(t, endTime.Unix(), verifiedStage.VerifiedAt.Unix())
 				}
 			},
 		},

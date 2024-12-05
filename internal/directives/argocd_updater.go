@@ -11,6 +11,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -125,9 +126,14 @@ func (a *argocdUpdater) Name() string {
 	return "argocd-update"
 }
 
-// DefaultAttempts implements the RetryableStepRunner interface.
-func (a *argocdUpdater) DefaultAttempts() int64 {
-	return -1
+// DefaultTimeout implements the RetryableStepRunner interface.
+func (a *argocdUpdater) DefaultTimeout() *time.Duration {
+	return ptr.To(5 * time.Minute)
+}
+
+// DefaultErrorThreshold implements the RetryableStepRunner interface.
+func (a *argocdUpdater) DefaultErrorThreshold() uint32 {
+	return 0 // Will fall back to the system default.
 }
 
 // RunPromotionStep implements the PromotionStepRunner interface.
@@ -495,8 +501,12 @@ func (a *argocdUpdater) syncApplication(
 	// Initiate a new operation.
 	app.Operation = &argocd.Operation{
 		InitiatedBy: argocd.OperationInitiator{
-			Username:  applicationOperationInitiator,
-			Automated: true,
+			Username: applicationOperationInitiator,
+			// NB: While this field may make it look like the operation was
+			// initiated by a machine, it is actually dedicated to indicate
+			// whether the operation was initiated by Argo CD's own
+			// application controller (i.e. auto-sync), which we are not.
+			Automated: false,
 		},
 		Info: []*argocd.Info{
 			{

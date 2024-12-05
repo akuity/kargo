@@ -5,10 +5,107 @@ description: Learn about all of Kargo's built-in promotion steps
 
 # Promotion Steps Reference
 
-This reference document describes the promotion steps that are built directly
-into Kargo. Steps are presented roughly in the order in which they might appear
-in a typical promotion process. Similarly, configuration options for each step
-are laid out in order of their applicability to typical use cases.
+Kargo's promotion steps are the building blocks of a promotion process. They
+perform the actions necessary to promote a piece of Freight into a Stage.
+Promotion steps are designed to be composable, allowing users to construct
+complex promotion processes from simple, reusable components.
+
+## Defining a Promotion Step
+
+A promotion step is a YAML object with at least one key, `uses`, whose value is
+the name of the step to be executed. The step's configuration is provided in a
+subsequent key, `config`. The `config` key's value is an object whose keys are
+the configuration options for the step.
+
+```yaml
+steps:
+- uses: step-name
+  config:
+    option1: value1
+    option2: value2
+```
+
+:::info
+For a list of built-in promotion steps and configuration options, see the
+[Built-in Steps](#built-in-steps) section.
+:::
+
+### Step Aliases
+
+A step can be given an alias by providing an `as` key in the step definition.
+The value of the `as` key is the alias to be used to reference the
+[step's output](#step-outputs).
+
+```yaml
+steps:
+- uses: step-name
+  as: alias
+```
+
+### Step Outputs
+
+A promotion step may produce output that can be referenced by subsequent steps,
+allowing the output of one step to be used as input to another. The output of a
+step is defined by the step itself and is typically documented in the step's
+reference.
+
+```yaml
+steps:
+- uses: step-name
+  as: alias
+- uses: another-step
+  config:
+    input: ${{ outputs.alias.someOutput }}
+```
+
+### Step Retries
+
+When a step fails for any reason, it can be retried instead of immediately
+failing the entire `Promotion`. An _error threshold_ specifies the number of
+_consecutive_ failures required for retry attempts to be abandoned and the
+`Promotion` to fail.
+
+Independent of the error threshold, steps are also subject to a _timeout_. Any
+step that doesn't achieve its goal within that interval will cause the
+`Promotion` to fail. For steps that exhibit any kind of polling behavior, the
+timeout can cause a `Promotion` to fail with no _other_ failure having occurred.
+
+System-wide, the default error threshold is 1 and the default timeout is
+indefinite. Thus, default behavior is effectively no retries when a step fails
+for any reason and steps with any kind of polling behavior will poll
+indefinitely _as long a no other failure occurs._
+
+The implementations of individual steps can override these defaults. Users also
+may override these defaults through configuration. In the following example, the
+`git-wait-for-pr` step is configured not to fail the `Promotion` until three
+consecutive failed attempts to execute it. It is also configured to wait a
+maximum of 48 hours for the step to complete successfully (i.e. for the PR to be
+merged).
+
+```yaml
+steps:
+# ...
+- uses: wait-for-pr
+  retry:
+    errorThreshold: 3
+    timeout: 48h
+  config:
+    prNumber: ${{ outputs['open-pr'].prNumber }}
+```
+
+:::info
+This feature was introduced in Kargo v1.1.0, and is still undergoing refinements
+and improvements to better distinguish between transient and non-transient
+errors, and to provide more control over retry behavior like backoff strategies
+or time limits.
+:::
+
+## Built-in Steps
+
+This section describes the promotion steps that are built directly into Kargo.
+Steps are presented roughly in the order in which they might appear in a typical
+promotion process. Similarly, configuration options for each step are laid out
+in order of their applicability to typical use cases.
 
 :::info
 Promotion steps support the use of [expr-lang] expressions in their
@@ -17,7 +114,7 @@ to demonstrate their use. For more information on expressions, refer to our
 [Expression Language Reference](./20-expression-language.md).
 :::
 
-## `git-clone`
+### `git-clone`
 
 `git-clone` is often the first step in a promotion process. It creates a
 [bare clone](https://git-scm.com/docs/git-clone#Documentation/git-clone.txt-code--barecode)
@@ -32,7 +129,7 @@ It is a noteworthy limitation of Git that one branch cannot be checked out in
 multiple working trees.
 :::
 
-### `git-clone` Configuration
+#### `git-clone` Configuration
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
@@ -47,7 +144,7 @@ multiple working trees.
 | `checkout[].fromOrigin` | `object` | N | See [specifying origins](#specifying-origins). <br/><br/>__Deprecated: Use `commit` with an expression instead. Will be removed in v1.3.0.__ |
 | `checkout[].path` | `string` | Y | The path for a working tree that will be created from the checked out revision. This path is relative to the temporary workspace that Kargo provisions for use by the promotion process. |
 
-### `git-clone` Examples
+#### `git-clone` Examples
 
 <Tabs groupId="git-clone-examples">
 
@@ -121,7 +218,7 @@ steps:
 
 </Tabs>
 
-## `git-clear`
+### `git-clear`
 
 `git-clear` deletes the _the entire contents_ of a specified Git working tree
 (except for the `.git` file). It is equivalent to executing
@@ -130,13 +227,13 @@ scenario where the entire content of a Stage-specific branch is to be replaced
 with content from another branch or with content rendered using some
 configuration management tool.
 
-### `git-clear` Configuration
+#### `git-clear` Configuration
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
 | `path` | `string` | Y | Path to a Git working tree whose entire contents are to be deleted. |
 
-### `git-clear` Example
+#### `git-clear` Example
 
 ```yaml
 steps:
@@ -154,19 +251,19 @@ steps:
 # Commit, push, etc...
 ```
 
-## `copy`
+### `copy`
 
 `copy` copies files or the contents of entire directories from one specified
 location to another.
 
-### `copy` Configuration
+#### `copy` Configuration
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
 | `inPath` | `string` | Y | Path to the file or directory to be copied. This path is relative to the temporary workspace that Kargo provisions for use by the promotion process. |
 | `outPath` | `string` | Y | Path to the destination. This path is relative to the temporary workspace that Kargo provisions for use by the promotion process. |
 
-### `copy` Example
+#### `copy` Example
 
 The most common (though still advanced) usage of this step is to combine content
 from two working trees to use as input to a subsequent step, such as one that
@@ -203,14 +300,14 @@ steps:
 # Render manifests to ./out, commit, push, etc...
 ```
 
-## `kustomize-set-image`
+### `kustomize-set-image`
 
 `kustomize-set-image` updates the `kustomization.yaml` file in a specified
 directory to reflect a different revision of a container image. It is equivalent
 to executing `kustomize edit set image`. This step is commonly followed by a
 [`kustomize-build`](#kustomize-build) step.
 
-### `kustomize-set-image` Configuration
+#### `kustomize-set-image` Configuration
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
@@ -223,7 +320,7 @@ to executing `kustomize edit set image`. This step is commonly followed by a
 | `images[].fromOrigin` | `object` | N | See [specifying origins](#specifying-origins). <br/><br/>__Deprecated: Use `digest` or `tag` with an expression instead. Will be removed in v1.3.0.__ |
 | `images[].newName` | `string` | N | A substitution for the name/URL of the image being updated. This is useful when different Stages have access to different container image repositories (assuming those different repositories contain equivalent images that are tagged identically). This may be a frequent consideration for users of Amazon's Elastic Container Registry. |
 
-### `kustomize-set-image` Examples
+#### `kustomize-set-image` Examples
 
 <Tabs groupId="kustomize-set-image">
 
@@ -299,13 +396,13 @@ steps:
 
 </Tabs>
 
-### `kustomize-set-image` Output
+#### `kustomize-set-image` Output
 
 | Name | Type | Description |
 |------|------|-------------|
 | `commitMessage` | `string` | A description of the change(s) applied by this step. Typically, a subsequent [`git-commit`](#git-commit) step will reference this output and aggregate this commit message fragment with other like it to build a comprehensive commit message that describes all changes. |
 
-## `kustomize-build`
+### `kustomize-build`
 
 `kustomize-build` renders manifests from a specified directory containing a
 `kustomization.yaml` file to a specified file or to many files in a specified
@@ -314,7 +411,7 @@ Stage-specific manifests to a Stage-specific branch. This step is commonly
 preceded by a [`git-clear`](#git-clear) step and followed by
 [`git-commit`](#git-commit) and [`git-push`](#git-push) steps.
 
-### `kustomize-build` Configuration
+#### `kustomize-build` Configuration
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
@@ -323,7 +420,7 @@ preceded by a [`git-clear`](#git-clear) step and followed by
 | `plugin.helm.apiVersions` | `[]string` | N | Optionally specifies a list of supported API versions to be used when rendering manifests using Kustomize's Helm chart plugin. This is useful for charts that may contain logic specific to different Kubernetes API versions. |
 | `plugin.helm.kubeVersion` | `string` | N | Optionally specifies a Kubernetes version to be assumed when rendering manifests using Kustomize's Helm chart plugin. This is useful for charts that may contain logic specific to different Kubernetes versions. |
 
-### `kustomize-build` Examples
+#### `kustomize-build` Examples
 
 <Tabs groupId="kustomize-build">
 
@@ -385,7 +482,7 @@ steps:
 
 </Tabs>
 
-## `helm-update-image`
+### `helm-update-image`
 
 `helm-update-image` updates the values of specified keys in a specified Helm
 values file (e.g. `values.yaml`) to reflect a new version of a container image.
@@ -396,7 +493,7 @@ step.
 
 __Deprecated: Use the generic `yaml-update` step instead. Will be removed in v1.3.0.__
 
-### `helm-update-image` Configuration
+#### `helm-update-image` Configuration
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
@@ -407,7 +504,7 @@ __Deprecated: Use the generic `yaml-update` step instead. Will be removed in v1.
 | `images[].key` | `string` | Y | The key to update within the values file. See Helm documentation on the [format and limitations](https://helm.sh/docs/intro/using_helm/#the-format-and-limitations-of---set) of the notation used in this field. |
 | `images[].value` | `string` | Y | Specifies how the value of `key` is to be updated. Possible values for this field are limited to:<ul><li>`ImageAndTag`: Replaces the value of `key` with a string in form `<image url>:<tag>`</li><li>`Tag`: Replaces the value of `key` with the image's tag</li><li>`ImageAndDigest`: Replaces the value of `key` with a string in form `<image url>@<digest>`</li><li>`Digest`: Replaces the value of `key` with the image's digest</li></ul> |
 
-### `helm-update-image` Example
+#### `helm-update-image` Example
 
 ```yaml
 vars:
@@ -436,19 +533,19 @@ steps:
 # Render manifests to ./out, commit, push, etc...
 ```
 
-### `helm-update-image` Output
+#### `helm-update-image` Output
 
 | Name | Type | Description |
 |------|------|-------------|
 | `commitMessage` | `string` | A description of the change(s) applied by this step. Typically, a subsequent [`git-commit`](#git-commit) step will reference this output and aggregate this commit message fragment with other like it to build a comprehensive commit message that describes all changes. |
 
-## `yaml-update`
+### `yaml-update`
 
 `yaml-update` updates the values of specified keys in any YAML file. This step
 most often used to update image tags or digests in a Helm values and is commonly
 followed by a [`helm-template`](#helm-template) step.
 
-### `yaml-update` Configuration
+#### `yaml-update` Configuration
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
@@ -457,7 +554,7 @@ followed by a [`helm-template`](#helm-template) step.
 | `updates[].key` | `string` | Y | The key to update within the file. For nested values, use a YAML dot notation path. |
 | `updates[].value` | `string` | Y | The new value for the key. Typically specified using an expression. |
 
-### `yaml-update` Example
+#### `yaml-update` Example
 
 ```yaml
 vars:
@@ -485,13 +582,13 @@ steps:
 # Render manifests to ./out, commit, push, etc...
 ```
 
-### `yaml-update` Output
+#### `yaml-update` Output
 
 | Name | Type | Description |
 |------|------|-------------|
 | `commitMessage` | `string` | A description of the change(s) applied by this step. Typically, a subsequent [`git-commit`](#git-commit) step will reference this output and aggregate this commit message fragment with other like it to build a comprehensive commit message that describes all changes. |
 
-## `helm-update-chart`
+### `helm-update-chart`
 
 `helm-update-chart` performs specified updates on the `dependencies` section of
 a specified Helm chart's `Chart.yaml` file. This step is useful for the common
@@ -499,7 +596,7 @@ scenario of updating a chart's dependencies to reflect new versions of charts
 referenced by the Freight being promoted. This step is commonly followed by a
 [`helm-template`](#helm-template) step.
 
-### `helm-update-chart` Configuration
+#### `helm-update-chart` Configuration
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
@@ -510,7 +607,7 @@ referenced by the Freight being promoted. This step is commonly followed by a
 | `charts[].fromOrigin` | `object` | N | See [specifying origins](#specifying-origins). <br/><br/>__Deprecated: Use `version` with an expression instead. Will be removed in v1.3.0.__ |
 | `charts[].version` | `string` | N | The version to which the dependency should be updated. If left unspecified, the version specified by a piece of Freight referencing this chart will be used. |
 
-### `helm-update-chart` Examples
+#### `helm-update-chart` Examples
 
 <Tabs groupId="helm-update-chart">
 
@@ -672,13 +769,13 @@ steps:
 
 </Tabs>
 
-### `helm-update-chart` Output
+#### `helm-update-chart` Output
 
 | Name | Type | Description |
 |------|------|-------------|
 | `commitMessage` | `string` | A description of the change(s) applied by this step. Typically, a subsequent [`git-commit`](#git-commit) step will reference this output and aggregate this commit message fragment with other like it to build a comprehensive commit message that describes all changes. |
 
-## `helm-template`
+### `helm-template`
 
 `helm-template` renders a specified Helm chart to a specified directory or to
 many files in a specified directory. This step is useful for the common scenario
@@ -686,7 +783,7 @@ of rendering Stage-specific manifests to a Stage-specific branch. This step is
 commonly preceded by a [`git-clear`](#git-clear) step and followed by
 [`git-commit`](#git-commit) and [`git-push`](#git-push) steps.
 
-### `helm-template` Configuration
+#### `helm-template` Configuration
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
@@ -699,7 +796,7 @@ commonly preceded by a [`git-clear`](#git-clear) step and followed by
 | `kubeVersion` | `string` | N | Optionally specifies a Kubernetes version to be assumed when rendering manifests. This is useful for charts that may contain logic specific to different Kubernetes versions. |
 | `apiVersions` | `[]string` | N | Allows a manual set of supported API versions to be specified. |
 
-### `helm-template` Examples
+#### `helm-template` Examples
 
 <Tabs groupId="kustomize-build">
 
@@ -765,13 +862,13 @@ steps:
 
 </Tabs>
 
-## `git-commit`
+### `git-commit`
 
 `git-commit` commits all changes in a working tree to its checked out branch.
 This step is often used after previous steps have put the working tree into the
 desired state and is commonly followed by a [`git-push`](#git-push) step.
 
-### `git-commit` Configuration
+#### `git-commit` Configuration
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
@@ -782,7 +879,7 @@ desired state and is commonly followed by a [`git-push`](#git-push) step.
 | `author.name` | `string` | N | The committer's name. |
 | `author.email` | `string` | N | The committer's email address. |
 
-### `git-commit` Example
+#### `git-commit` Example
 
 ```yaml
 vars:
@@ -818,18 +915,18 @@ steps:
 # Push, etc...
 ```
 
-### `git-commit` Output
+#### `git-commit` Output
 
 | Name | Type | Description |
 |------|------|-------------|
 | `commit` | `string` | The ID (SHA) of the commit created by this step. If the step short-circuited and did not create a new commit because there were no differences from the current head of the branch, this value will be the ID of the existing commit at the head of the branch instead. Typically, a subsequent [`argocd-update`](#argocd-update) step will reference this output to learn the ID of the commit that an applicable Argo CD `ApplicationSource` should be observably synced to under healthy conditions. |
 
-## `git-push`
+### `git-push`
 
 `git-push` pushes the committed changes in a specified working tree to a
 specified branch in the remote repository. This step typically follows a `git-commit` step and is often followed by a `git-open-pr` step.
 
-### `git-push` Configuration
+#### `git-push` Configuration
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
@@ -837,7 +934,7 @@ specified branch in the remote repository. This step typically follows a `git-co
 | `targetBranch` | `string` | N | The branch to push to in the remote repository. Mutually exclusive with `generateTargetBranch=true`. If neither of these is provided, the target branch will be the same as the branch currently checked out in the working tree. |
 | `generateTargetBranch` | `boolean` | N | Whether to push to a remote branch named like `kargo/<project>/<stage>/promotion`. If such a branch does not already exist, it will be created. A value of 'true' is mutually exclusive with `targetBranch`. If neither of these is provided, the target branch will be the currently checked out branch. This option is useful when a subsequent promotion step will open a pull request against a Stage-specific branch. In such a case, the generated target branch pushed to by the `git-push` step can later be utilized as the source branch of the pull request. |
 
-### `git-push` Examples
+#### `git-push` Examples
 
 <Tabs groupId="git-push">
 
@@ -878,14 +975,14 @@ steps:
 
 </Tabs>
 
-### `git-push` Output
+#### `git-push` Output
 
 | Name | Type | Description |
 |------|------|-------------|
 | `branch` | `string` | The name of the remote branch pushed to by this step. This is especially useful when the `generateTargetBranch=true` option has been used, in which case a subsequent [`git-open-pr`](#git-open-pr) will typically reference this output to learn what branch to use as the head branch of a new pull request. |
 | `commit` | `string` | The ID (SHA) of the commit pushed by this step. |
 
-## `git-open-pr`
+### `git-open-pr`
 
 `git-open-pr` opens a pull request in a specified remote repository using
 specified source and target branches. This step is often used after a `git-push`
@@ -894,7 +991,7 @@ and is commonly followed by a `git-wait-for-pr` step.
 At present, this feature only supports GitHub pull requests and GitLab merge
 requests.
 
-### `git-open-pr` Configuration
+#### `git-open-pr` Configuration
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
@@ -906,7 +1003,7 @@ requests.
 | `targetBranch` | `string` | N | The branch to which the changes should be merged. |
 | `createTargetBranch` | `boolean` | N | Indicates whether a new, empty orphaned branch should be created and pushed to the remote if the target branch does not already exist there. Default is `false`. |
 
-### `git-open-pr`  Example
+#### `git-open-pr`  Example
 
 ```yaml
 steps:
@@ -926,19 +1023,19 @@ steps:
 # Wait for the PR to be merged or closed...
 ```
 
-### `git-open-pr` Output
+#### `git-open-pr` Output
 
 | Name | Type | Description |
 |------|------|-------------|
 | `prNumber` | `number` | The numeric identifier of the pull request opened by this step. Typically, a subsequent [`git-wait-for-pr`](#git-wait-for-pr) step will reference this output to learn what pull request to monitor. |
 
-## `git-wait-for-pr`
+### `git-wait-for-pr`
 
 `git-wait-for-pr` waits for a specified open pull request to be merged or
 closed. This step commonly follows a `git-open-pr` step and is commonly followed
 by an `argocd-update` step.
 
-### `git-wait-for-pr` Configuration
+#### `git-wait-for-pr` Configuration
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
@@ -948,13 +1045,13 @@ by an `argocd-update` step.
 | `prNumber` | `string` | N | The number of the pull request to wait for. Mutually exclusive with `prNumberFromStep`. |
 | `prNumberFromStep` | `string` | N | References the `prNumber` output from a previous step. Mutually exclusive with `prNumber`.<br/><br/>__Deprecated: Use `prNumber` with an expression instead. Will be removed in v1.3.0.__ |
 
-### `git-wait-for-pr` Output
+#### `git-wait-for-pr` Output
 
 | Name | Type | Description |
 |------|------|-------------|
 | `commit` | `string` | The ID (SHA) of the new commit at the head of the target branch after merge. Typically, a subsequent [`argocd-update`](#argocd-update) step will reference this output to learn the ID of the commit that an applicable Argo CD `ApplicationSource` should be observably synced to under healthy conditions. |
 
-### `git-wait-for-pr` Example
+#### `git-wait-for-pr` Example
 
 ```yaml
 steps:
@@ -978,7 +1075,7 @@ steps:
     prNumber: ${{ outputs['open-pr'].prNumber }}
 ```
 
-## `argocd-update`
+### `argocd-update`
 
 `argocd-update` updates one or more Argo CD `Application` resources in various
 ways. Among other scenarios, this step is useful for the common one of forcing
@@ -1014,7 +1111,7 @@ spec:
 ```
 :::
 
-### `argocd-update` Configuration
+#### `argocd-update` Configuration
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
@@ -1026,7 +1123,7 @@ spec:
 | `apps[].sources[].chart` | `string` | N | Applicable only when the target `ApplicationSource` references a Helm chart repository, the value of the target `ApplicationSource`'s  own `chart` field. This must match exactly. |
 | `apps[].sources[].desiredRevision` | `string` | N | Specifies the desired revision for the source. i.e. The revision to which the source must be observably synced when performing a health check. This field is mutually exclusive with `desiredCommitFromStep`. Prior to v1.1.0, if both were left undefined, the desired revision was determined by Freight (if possible). Beginning with v1.1.0, if both are left undefined, Kargo will not require the source to be observably synced to any particular source to be considered healthy. Note that the source's `targetRevision` will not be updated to this revision unless `updateTargetRevision=true` is also set. |
 | `apps[].sources[].desiredCommitFromStep` | `string` | N | Applicable only when `repoURL` references a Git repository, this field references the `commit` output from a previous step and uses it as the desired revision for the source. i.e. The revision to which the source must be observably synced when performing a health check. This field is mutually exclusive with `desiredRevisionFromStep`. Prior to v1.1.0, if both were left undefined, the desired revision was determined by Freight (if possible). Beginning with v1.1.0, if both are left undefined, Kargo will not require the source to be observably synced to any particular source to be considered healthy. Note that the source's `targetRevision` will not be updated to this commit unless `updateTargetRevision=true` is also set.<br/><br/>__Deprecated: Use `desiredRevision` with an expression instead. Will be removed in v1.3.0.__ |
-| `apps[].sources[].updateTargetRevision` | `boolean` | Y | Indicates whether the target `ApplicationSource` should be updated such that its `targetRevision` field points directly at the desired revision. A `true` value in this field has no effect if `desiredRevision` and `desiredCommitFromStep` are both undefined. |
+| `apps[].sources[].updateTargetRevision` | `boolean` | Y | Indicates whether the target `ApplicationSource` should be updated such that its `targetRevision` field points directly at the desired revision. A `true` value in this field requires exactly one of `desiredCommitFromStep` or `desiredRevision` to be specified. |
 | `apps[].sources[].kustomize` | `object` | N | Describes updates to an Argo CD `ApplicationSource`'s Kustomize-specific properties. |
 | `apps[].sources[].kustomize.images` | `[]object` | Y | Describes how to update an Argo CD `ApplicationSource`'s Kustomize-specific properties to reference specific versions of container images. |
 | `apps[].sources[].kustomize.images[].repoURL` | `string` | Y | URL of the image being updated. |
@@ -1047,7 +1144,7 @@ spec:
 | `apps[].fromOrigin` | `object` | N | See [specifying origins](#specifying-origins). If not specified, may inherit a value from `fromOrigin`.  <br/><br/>__Deprecated: Will be removed in v1.3.0.__ |
 | `fromOrigin` | `object` | N | See [specifying origins](#specifying-origins). <br/><br/>__Deprecated: Will be removed in v1.3.0.__  |
 
-### `argocd-update` Examples
+#### `argocd-update` Examples
 
 <Tabs groupId="argocd-update">
 
@@ -1071,7 +1168,7 @@ steps:
     - name: my-app
       sources:
       - repoURL: https://github.com/example/repo.git
-        desiredCommit: ${{ outputs.commit.commit }}
+        desiredRevision: ${{ outputs.commit.commit }}
 ```
 
 </TabItem>
@@ -1082,7 +1179,7 @@ steps:
 Without making any modifications to a Git repository, this example simply
 updates a "live" Argo CD `Application` resource to point its `targetRevision`
 field at a specific version of a Helm chart, which Argo CD will pull directly
-from the the chart repository.
+from the chart repository.
 
 While this can be a useful technique, it should be used with caution. This is
 not "real GitOps" since the state of the `Application` resource is not backed
@@ -1169,7 +1266,7 @@ steps:
 
 </Tabs>
 
-### `argocd-update` Health Checks
+#### `argocd-update` Health Checks
 
 The `argocd-update` step is unique among all other built-in promotion steps in
 that, on successful completion, it will register health checks to be performed
@@ -1185,12 +1282,12 @@ utilize this health check framework, we anticipate that future built-in and
 third-party promotion steps will take advantage of it as well.
 :::
 
-## `http`
+### `http`
 
 `http` is a generic step that makes an HTTP/S request to enable basic integration
 with a wide variety of external services.
 
-### `http` Configuration
+#### `http` Configuration
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
@@ -1213,13 +1310,14 @@ with a wide variety of external services.
 
 :::note
 An HTTP response that is not conclusively determined to have succeeded or failed
-will result in the step reporting a result of `Running`. Kargo will retry such
-a step on its next attempt at reconciling the `Promotion` resource. This will
-continue until the step succeeds, fails, exhausts the configured maximum number
-of retries, or a configured timeout has elapsed.
+will result in the step reporting a result of `Running`. Kargo will
+[retry](#step-retries) such a step on its next attempt at reconciling the
+`Promotion` resource. This will continue until the step succeeds, fails,
+exhausts the configured maximum number of retries, or a configured timeout has
+elapsed.
 :::
 
-### `http` Expressions
+#### `http` Expressions
 
 The `successExpression`, `failureExpression`, and `outputs[].fromExpression`
 fields all support [expr-lang] expressions.
@@ -1242,7 +1340,7 @@ is structured as follows:
 | `header` | `func(string) string` | `headers` can be inconvenient to work with directly. This function allows you to access a header by name. |
 | `body` | `map[string]any` | The body of the response, if any, unmarshaled into a map. If the response body is empty, this map will also be empty. |
 
-### `http` Examples
+#### `http` Examples
 
 <Tabs groupId="http">
 
@@ -1302,13 +1400,16 @@ The step would succeed and produce the following outputs:
 
 Building on the basic example, this configuration defines explicit success and
 failure criteria. Any response meeting neither of these criteria will result in
-the step reporting a result of `Running` and being retried.
+the step reporting a result of `Running` and being retried. Note the use of
+[retry](#step-retries) configuration to set a timeout for the step.
 
 ```yaml
 steps:
 # ...
 - uses: http
   as: cat-facts
+  retry:
+    timeout: 10m
   config:
     method: GET
     url: https://www.catfacts.net/api/
@@ -1368,7 +1469,7 @@ steps:
 
 </Tabs>
 
-### `http` Outputs
+#### `http` Outputs
 
 The `http` step only produces the outputs described by the `outputs` field of
 its configuration.
