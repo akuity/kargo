@@ -58,26 +58,46 @@ steps:
     input: ${{ outputs.alias.someOutput }}
 ```
 
-### Step Retry
+### Step Retries
 
-A step can be given a `retry` configuration to specify the number of `attempts`
-it should make to complete successfully. By default, steps will not be retried
-unless they imply polling behavior, like [`argocd-update`](#argocd-update) and
-[`git-wait-for-pr`](#git-wait-for-pr) which will poll indefinitely until a
-condition is met.
+When a step fails for any reason, it can be retried instead of immediately
+failing the entire `Promotion`. An _error threshold_ specifies the number of
+_consecutive_ failures required for retry attempts to be abandoned and the
+`Promotion` to fail.
+
+Independent of the error threshold, steps are also subject to a _timeout_. Any
+step that doesn't achieve its goal within that interval will cause the
+`Promotion` to fail. For steps that exhibit any kind of polling behavior, the
+timeout can cause a `Promotion` to fail with no _other_ failure having occurred.
+
+System-wide, the default error threshold is 1 and the default timeout is
+indefinite. Thus, default behavior is effectively no retries when a step fails
+for any reason and steps with any kind of polling behavior will poll
+indefinitely _as long a no other failure occurs._
+
+The implementations of individual steps can override these defaults. Users also
+may override these defaults through configuration. In the following example, the
+`git-wait-for-pr` step is configured not to fail the `Promotion` until three
+consecutive failed attempts to execute it. It is also configured to wait a
+maximum of 48 hours for the step to complete successfully (i.e. for the PR to be
+merged).
 
 ```yaml
 steps:
-- uses: step-name
+# ...
+- uses: wait-for-pr
   retry:
-    attempts: 3
+    errorThreshold: 3
+    timeout: 48h
+  config:
+    prNumber: ${{ outputs['open-pr'].prNumber }}
 ```
 
 :::info
 This feature was introduced in Kargo v1.1.0, and is still undergoing refinements
-and improvements to better distinguish between transient and non-transient errors,
-and to provide more control over retry behavior like backoff strategies or time
-limits.
+and improvements to better distinguish between transient and non-transient
+errors, and to provide more control over retry behavior like backoff strategies
+or time limits.
 :::
 
 ## Built-in Steps
@@ -1290,10 +1310,11 @@ with a wide variety of external services.
 
 :::note
 An HTTP response that is not conclusively determined to have succeeded or failed
-will result in the step reporting a result of `Running`. Kargo will retry such
-a step on its next attempt at reconciling the `Promotion` resource. This will
-continue until the step succeeds, fails, exhausts the configured maximum number
-of retries, or a configured timeout has elapsed.
+will result in the step reporting a result of `Running`. Kargo will
+[retry](#step-retries) such a step on its next attempt at reconciling the
+`Promotion` resource. This will continue until the step succeeds, fails,
+exhausts the configured maximum number of retries, or a configured timeout has
+elapsed.
 :::
 
 #### `http` Expressions
@@ -1379,13 +1400,16 @@ The step would succeed and produce the following outputs:
 
 Building on the basic example, this configuration defines explicit success and
 failure criteria. Any response meeting neither of these criteria will result in
-the step reporting a result of `Running` and being retried.
+the step reporting a result of `Running` and being retried. Note the use of
+[retry](#step-retries) configuration to set a timeout for the step.
 
 ```yaml
 steps:
 # ...
 - uses: http
   as: cat-facts
+  retry:
+    timeout: 10m
   config:
     method: GET
     url: https://www.catfacts.net/api/
