@@ -76,7 +76,12 @@ func (h *httpRequester) runPromotionStep(
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
 			fmt.Errorf("error building HTTP request: %w", err)
 	}
-	resp, err := h.getClient(cfg).Do(req)
+	client, err := h.getClient(cfg)
+	if err != nil {
+		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
+			fmt.Errorf("error creating HTTP client: %w", err)
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
 			fmt.Errorf("error sending HTTP request: %w", err)
@@ -138,23 +143,25 @@ func (h *httpRequester) buildRequest(cfg HTTPConfig) (*http.Request, error) {
 	return req, nil
 }
 
-func (h *httpRequester) getClient(cfg HTTPConfig) *http.Client {
+func (h *httpRequester) getClient(cfg HTTPConfig) (*http.Client, error) {
 	httpTransport := cleanhttp.DefaultTransport()
 	if cfg.InsecureSkipTLSVerify {
 		httpTransport.TLSClientConfig = &tls.Config{
 			InsecureSkipVerify: true, // nolint: gosec
 		}
 	}
-	var timeoutSeconds int64
-	if cfg.TimeoutSeconds != nil {
-		timeoutSeconds = *cfg.TimeoutSeconds
-	} else {
-		timeoutSeconds = 10
+	timeout := 10 * time.Second
+	if cfg.Timeout != "" {
+		var err error
+		if timeout, err = time.ParseDuration(cfg.Timeout); err != nil {
+			// Input is validated, so this really should not happen
+			return nil, fmt.Errorf("error parsing timeout: %w", err)
+		}
 	}
 	return &http.Client{
 		Transport: httpTransport,
-		Timeout:   time.Duration(timeoutSeconds) * time.Second,
-	}
+		Timeout:   timeout,
+	}, nil
 }
 
 func (h *httpRequester) buildExprEnv(resp *http.Response) (map[string]any, error) {
