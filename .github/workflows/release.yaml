@@ -353,8 +353,11 @@ jobs:
 
     - name: Update formula and push
       run: |
+        VERSION_SUFFIX=$(echo "${{ github.ref_name }}" | grep -oP "^v\d+\.\d+" | sed 's/^v/@/')
+        echo "version_suffix=$VERSION_SUFFIX" >> $GITHUB_ENV
+
         git checkout -b update-kargo-${{ github.ref_name }}
-        ./update.sh kargo ${{ github.ref_name }}
+        ./update.sh kargo ${{ github.ref_name }} ${{ env.version_suffix }}
         git add kargo.rb
         git commit -m "chore: update Kargo cli to version ${{ github.ref_name }}"
         git push origin update-kargo-${{ github.ref_name }}
