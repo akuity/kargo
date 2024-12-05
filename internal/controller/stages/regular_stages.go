@@ -74,6 +74,8 @@ type RegularStageReconciler struct {
 	client           client.Client
 	eventRecorder    record.EventRecorder
 	directivesEngine directives.Engine
+
+	backoffCfg wait.Backoff
 }
 
 // NewRegularStageReconciler creates a new Stages reconciler.
@@ -81,6 +83,13 @@ func NewRegularStageReconciler(cfg ReconcilerConfig, engine directives.Engine) *
 	return &RegularStageReconciler{
 		cfg:              cfg,
 		directivesEngine: engine,
+		backoffCfg: wait.Backoff{
+			Duration: 1 * time.Second,
+			Factor:   2,
+			Steps:    10,
+			Cap:      2 * time.Minute,
+			Jitter:   0.1,
+		},
 	}
 }
 
@@ -1312,13 +1321,7 @@ func (r *RegularStageReconciler) getVerificationResult(
 	// the symptoms for now. We should investigate the root cause of this
 	// issue and remove this retry logic when the root cause has been resolved.
 	ar := rolloutsapi.AnalysisRun{}
-	if err := retry.OnError(wait.Backoff{
-		Duration: 1 * time.Second,
-		Factor:   2,
-		Steps:    10,
-		Cap:      2 * time.Minute,
-		Jitter:   0.1,
-	}, func(err error) bool {
+	if err := retry.OnError(r.backoffCfg, func(err error) bool {
 		return apierrors.IsNotFound(err)
 	}, func() error {
 		return r.client.Get(ctx, types.NamespacedName{

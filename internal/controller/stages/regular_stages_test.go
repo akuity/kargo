@@ -14,6 +14,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -2273,6 +2274,13 @@ func TestRegularStageReconciler_verifyStageFreight(t *testing.T) {
 					RolloutsIntegrationEnabled: !tt.rolloutsDisabled,
 				},
 				eventRecorder: recorder,
+				backoffCfg: wait.Backoff{
+					Duration: 1 * time.Second,
+					Factor:   2,
+					Steps:    2,
+					Cap:      2 * time.Second,
+					Jitter:   0.1,
+				},
 			}
 
 			status, err := r.verifyStageFreight(context.Background(), tt.stage, startTime, fixedEndTime)
@@ -3518,6 +3526,13 @@ func TestRegularStageReconciler_getVerificationResult(t *testing.T) {
 				client: c,
 				cfg: ReconcilerConfig{
 					RolloutsIntegrationEnabled: !tt.rolloutsDisabled,
+				},
+				backoffCfg: wait.Backoff{
+					Duration: 1 * time.Second,
+					Factor:   2,
+					Steps:    2,
+					Cap:      1 * time.Second,
+					Jitter:   0.1,
 				},
 			}
 
