@@ -2,10 +2,15 @@ import { Timestamp, timestampDate } from '@bufbuild/protobuf/wkt';
 
 import { Time } from '@ui/gen/k8s.io/apimachinery/pkg/apis/meta/v1/generated_pb';
 
-export const k8sApiMachineryTimestampDate = (t?: Time | PlainMessage<Time>) => {
+export const k8sApiMachineryTimestampDate = (t?: Time | PlainMessage<Time> | string) => {
   if (!t) {
     return null;
   }
+
+  if (typeof t === 'string') {
+    return new Date(t);
+  }
+
   // apimachinery time is same as google.protobuf.Timestamp
   return timestampDate(t as unknown as Timestamp);
 };

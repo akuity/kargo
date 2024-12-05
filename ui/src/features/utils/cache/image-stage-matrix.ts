@@ -2,6 +2,7 @@ import { create } from '@bufbuild/protobuf';
 import { createConnectQueryKey } from '@connectrpc/connect-query';
 
 import { queryClient } from '@ui/config/query-client';
+import { transportWithAuth } from '@ui/config/transport';
 import { PromotionStatusPhase } from '@ui/features/common/promotion-status/utils';
 import { listImages } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 import {
@@ -46,7 +47,8 @@ export default {
       createConnectQueryKey({
         schema: listImages,
         input: { project: projectName },
-        cardinality: 'finite'
+        cardinality: 'finite',
+        transport: transportWithAuth
       })
     ) || {}) as ListImagesResponse;
 
@@ -106,7 +108,8 @@ export default {
       createConnectQueryKey({
         schema: listImages,
         input: create(ListImagesRequestSchema, { project: projectName }),
-        cardinality: 'finite'
+        cardinality: 'finite',
+        transport: transportWithAuth
       }),
       imageStageMatrix
     );

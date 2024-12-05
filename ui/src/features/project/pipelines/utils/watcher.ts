@@ -79,7 +79,8 @@ export class Watcher {
           createConnectQueryKey({
             schema: listStages,
             input: create(ListStagesRequestSchema, { project: this.project }),
-            cardinality: 'finite'
+            cardinality: 'finite',
+            transport: transportWithAuth
           })
         );
 
@@ -91,7 +92,8 @@ export class Watcher {
         const listStagesQueryKey = createConnectQueryKey({
           schema: listStages,
           input: create(ListStagesRequestSchema, { project: this.project }),
-          cardinality: 'finite'
+          cardinality: 'finite',
+          transport: transportWithAuth
         });
         this.client.setQueryData(listStagesQueryKey, { stages: data });
 
@@ -102,7 +104,8 @@ export class Watcher {
             project: this.project,
             name: stage.metadata?.name
           }),
-          cardinality: 'finite'
+          cardinality: 'finite',
+          transport: transportWithAuth
         });
         this.client.setQueryData(getStageQueryKey, { stage });
 
@@ -125,7 +128,8 @@ export class Watcher {
           createConnectQueryKey({
             schema: listWarehouses,
             input: create(ListWarehousesRequestSchema, { project: this.project }),
-            cardinality: 'finite'
+            cardinality: 'finite',
+            transport: transportWithAuth
           })
         );
 
@@ -150,7 +154,8 @@ export class Watcher {
           input: create(ListWarehousesRequestSchema, {
             project: this.project
           }),
-          cardinality: 'finite'
+          cardinality: 'finite',
+          transport: transportWithAuth
         });
         this.client.setQueryData(listWarehousesQueryKey, { warehouses: data });
 
@@ -161,7 +166,8 @@ export class Watcher {
             project: this.project,
             name: warehouse.metadata?.name
           }),
-          cardinality: 'finite'
+          cardinality: 'finite',
+          transport: transportWithAuth
         });
         this.client.setQueryData(getWarehouseQueryKey, { warehouse });
       }

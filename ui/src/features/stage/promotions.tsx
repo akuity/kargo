@@ -91,7 +91,8 @@ export const Promotions = () => {
           input: {
             project: projectName,
             stage: stageName
-          }
+          },
+          transport: transportWithAuth
         });
         client.setQueryData(listPromotionsQueryKey, { promotions });
       }
