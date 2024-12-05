@@ -1,4 +1,4 @@
-export type CredentialsType = 'git' | 'helm' | 'image';
+export type CredentialsType = 'git' | 'helm' | 'image' | 'generic';
 export const CredentialTypeLabelKey = 'kargo.akuity.io/cred-type';
 
 export enum CredentialsDataKey {
