@@ -11,6 +11,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -125,9 +126,14 @@ func (a *argocdUpdater) Name() string {
 	return "argocd-update"
 }
 
-// DefaultAttempts implements the RetryableStepRunner interface.
-func (a *argocdUpdater) DefaultAttempts() int64 {
-	return -1
+// DefaultTimeout implements the RetryableStepRunner interface.
+func (a *argocdUpdater) DefaultTimeout() *time.Duration {
+	return ptr.To(5 * time.Minute)
+}
+
+// DefaultErrorThreshold implements the RetryableStepRunner interface.
+func (a *argocdUpdater) DefaultErrorThreshold() uint32 {
+	return 0 // Will fall back to the system default.
 }
 
 // RunPromotionStep implements the PromotionStepRunner interface.
