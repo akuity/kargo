@@ -536,6 +536,15 @@ func (a *argocdUpdater) syncApplication(
 	for _, source := range app.Spec.Sources {
 		app.Operation.Sync.Revisions = append(app.Operation.Sync.Revisions, source.TargetRevision)
 	}
+	// TODO(krancour): This is a workaround for the Argo CD Application controller
+	// not handling this correctly itself. It is Argo CD's API server that usually
+	// handles this, but we are bypassing the API server here.
+	//
+	// See issue: https://github.com/argoproj/argo-cd/issues/20875
+	//
+	// We can remove this hack once the issue is resolved and all Argo CD versions
+	// without the fix have reached their EOL.
+	app.Status.OperationState = nil
 
 	// Patch the Argo CD Application.
 	if err := a.argoCDAppPatchFn(ctx, stepCtx, app, func(src, dst unstructured.Unstructured) error {
