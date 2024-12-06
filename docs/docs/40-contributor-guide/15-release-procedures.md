@@ -160,7 +160,7 @@ release date -- which is always a Friday.
     * Also add the previous release branch (`release-M.m-1` or
       `release-M-1.L`) to __"Branch deploys"__.
     * After changing the __"Production branch"__, it will be necessary to
-      [manually trigger a deployment](https://app.netlify.com/sites/docs-kargo-akuity-io/deploys)
+      [manually trigger a deployment](https://app.netlify.com/sites/docs-kargo-io/deploys)
       of the production documentation.
 
 1. Open a PR to revert the changes from step 6.
