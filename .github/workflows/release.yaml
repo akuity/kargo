@@ -345,17 +345,33 @@ jobs:
         repository: akuity/homebrew-tap
         token: ${{ secrets.TAP_PAT }}
 
+    - name: Export LATEST_TAG and VERSION_SUFFIX
+      run: |
+        LATEST_TAG=$(curl -qsSL \
+          -H 'Accept: application/vnd.github+json' \
+          -H 'Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}' \
+          -H 'X-GitHub-Api-Version: 2022-11-28' \
+          '${{ github.api_url }}/repos/${{ github.repository }}/releases/latest' \
+        | jq -r .tag_name)
+        echo "LATEST_TAG=$LATEST_TAG" >> $GITHUB_ENV
+
+        VERSION_SUFFIX=$(echo "${{ github.ref_name }}" | grep -oP "^v\d+\.\d+" | sed 's/^v/@/')
+        echo "VERSION_SUFFIX=$VERSION_SUFFIX" >> $GITHUB_ENV
+
     - name: Setup Git User
       uses: fregante/setup-git-user@v2
 
-    - name: Update formula and push
+    - name: Update formula and push changes
       run: |
-        VERSION_SUFFIX=$(echo "${{ github.ref_name }}" | grep -oP "^v\d+\.\d+" | sed 's/^v/@/')
-        echo "version_suffix=$VERSION_SUFFIX" >> $GITHUB_ENV
-
         git checkout -b update-kargo-${{ github.ref_name }}
-        ./update.sh kargo ${{ github.ref_name }} ${{ env.version_suffix }}
-        git add kargo.rb
+ 
+        if [[ ${{ github.ref_name }} == ${{ env.LATEST_TAG }} ]]; then
+          ./update.sh kargo ${{ github.ref_name }}
+          git add kargo.rb
+        fi
+        
+        ./update.sh kargo ${{ github.ref_name }} ${{ env.VERSION_SUFFIX }}
+        git add kargo${{ env.VERSION_SUFFIX }}.rb
         git commit -m "chore: update Kargo cli to version ${{ github.ref_name }}"
         git push origin update-kargo-${{ github.ref_name }}
 
