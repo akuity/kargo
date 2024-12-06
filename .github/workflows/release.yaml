@@ -347,9 +347,6 @@ jobs:
 
     - name: Setup Git User
       uses: fregante/setup-git-user@v2
-      with:
-        name: ${{ github.actor }}
-        email: ${{ github.actor }}@users.noreply.github.com
 
     - name: Update formula and push
       run: |
