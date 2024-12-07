@@ -350,7 +350,7 @@ steps:
     path: ./src/base
     images:
     - image: ${{ vars.imageRepo }}
-      tag: ${{ imageFrom(vars.imageRepo).tag }}
+      tag: ${{ imageFrom(vars.imageRepo).Tag }}
 # Render manifests to ./out, commit, push, etc...
 ```
 
@@ -578,7 +578,7 @@ steps:
     path: ./src/charts/my-chart/values.yaml
     updates:
     - key: image.tag
-      value: ${{ imageFrom("my/image").tag }}
+      value: ${{ imageFrom("my/image").Tag }}
 # Render manifests to ./out, commit, push, etc...
 ```
 
