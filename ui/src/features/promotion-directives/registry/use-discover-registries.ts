@@ -29,6 +29,7 @@ import { JSONSchema7 } from 'json-schema';
 // IMPORTANT(Marvin9): this must be replaced with proper discovery mechanism
 import argocdUpdateConfig from '@ui/gen/directives/argocd-update-config.json';
 import copyConfig from '@ui/gen/directives/copy-config.json';
+import deleteConfig from '@ui/gen/directives/delete-config.json';
 import gitOverwriteConfig from '@ui/gen/directives/git-clear-config.json';
 import gitCloneConfig from '@ui/gen/directives/git-clone-config.json';
 import gitCommitConfig from '@ui/gen/directives/git-commit-config.json';
@@ -60,6 +61,11 @@ export const useDiscoverPromotionDirectivesRegistries = (): PromotionDirectivesR
         identifier: 'copy',
         unstable_icons: [faCopy],
         config: copyConfig as JSONSchema7
+      },
+      {
+        identifier: 'delete',
+        unstable_icons: [],
+        config: deleteConfig as JSONSchema7
       },
       {
         identifier: 'git-clone',

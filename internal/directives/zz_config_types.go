@@ -117,6 +117,11 @@ type CopyConfig struct {
 	OutPath string `json:"outPath"`
 }
 
+type DeleteConfig struct {
+	// Path is the path to the file or directory to delete.
+	Path string `json:"path"`
+}
+
 type GitClearConfig struct {
 	// Path to a working directory of a local repository from which to remove all files,
 	// excluding the .git/ directory.
