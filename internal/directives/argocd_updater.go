@@ -537,6 +537,18 @@ func (a *argocdUpdater) syncApplication(
 		dst.SetAnnotations(src.GetAnnotations())
 		dst.Object["spec"] = a.recursiveMerge(src.Object["spec"], dst.Object["spec"])
 		dst.Object["operation"] = src.Object["operation"]
+		// TODO(krancour): This is a workaround for the Argo CD Application
+		// controller not handling this correctly itself. It is Argo CD's API server
+		// that usually handles this, but we are bypassing the API server here.
+		//
+		// See issue: https://github.com/argoproj/argo-cd/issues/20875
+		//
+		// We can remove this hack once the issue is resolved and all Argo CD
+		// versions without the fix have reached their EOL.
+		//
+		// nolint: forcetypeassert
+		dst.Object["status"].(map[string]any)["operationState"] =
+			src.Object["status"].(map[string]any)["operationState"]
 		return nil
 	}); err != nil {
 		return fmt.Errorf("error patching Argo CD Application %q: %w", app.Name, err)
