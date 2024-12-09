@@ -1,4 +1,4 @@
-import { PartialMessage } from '@bufbuild/protobuf';
+import { create } from '@bufbuild/protobuf';
 import { useMutation } from '@connectrpc/connect-query';
 import { faPeopleGroup } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -12,7 +12,7 @@ import { FieldContainer } from '@ui/features/common/form/field-container';
 import { MultiStringEditor } from '@ui/features/common/form/multi-string-editor';
 import { DESCRIPTION_ANNOTATION_KEY, dnsRegex } from '@ui/features/common/utils';
 import { PolicyRule } from '@ui/gen/k8s.io/api/rbac/v1/generated_pb';
-import { Claim, Role } from '@ui/gen/rbac/v1alpha1/generated_pb';
+import { Claim, ClaimSchema, Role } from '@ui/gen/rbac/v1alpha1/generated_pb';
 import { createRole, updateRole } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 import { zodValidators } from '@ui/utils/validators';
 
@@ -97,10 +97,10 @@ export const CreateRole = ({ editing, onSuccess, project, hide }: Props) => {
 
   const onSubmit = handleSubmit((values) => {
     const annotations = annotationsWithDescription(values.description);
-    const getClaims = (): PartialMessage<Claim>[] => {
-      const claimsArray: PartialMessage<Claim>[] = [];
+    const getClaims = (): Claim[] => {
+      const claimsArray: Claim[] = [];
       multiFields.map((field) => {
-        const newClaim = new Claim({
+        const newClaim = create(ClaimSchema, {
           name: String(field.name)
         });
         if (newClaim.name === 'email') {

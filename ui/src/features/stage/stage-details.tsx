@@ -1,3 +1,4 @@
+import { toJson } from '@bufbuild/protobuf';
 import { Divider, Drawer, Tabs, Typography } from 'antd';
 import moment from 'moment';
 import { useMemo, useState } from 'react';
@@ -5,7 +6,8 @@ import { generatePath, useNavigate, useParams } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
 import { HealthStatusIcon } from '@ui/features/common/health-status/health-status-icon';
-import { Stage, VerificationInfo } from '@ui/gen/v1alpha1/generated_pb';
+import { Stage, StageSchema, VerificationInfo } from '@ui/gen/v1alpha1/generated_pb';
+import { k8sApiMachineryTimestampDate } from '@ui/utils/connectrpc-extension';
 
 import { Description } from '../common/description';
 import { ManifestPreview } from '../common/manifest-preview';
@@ -39,7 +41,11 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
           } as VerificationInfo;
         })
       )
-      .sort((a, b) => moment(b.startTime?.toDate()).diff(moment(a.startTime?.toDate())));
+      .sort((a, b) =>
+        moment(k8sApiMachineryTimestampDate(b.startTime)).diff(
+          moment(k8sApiMachineryTimestampDate(a.startTime))
+        )
+      );
   }, [stage]);
 
   return (
@@ -95,7 +101,7 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
                   key: '3',
                   label: 'Live Manifest',
                   className: 'h-full pb-2',
-                  children: <ManifestPreview object={stage} height='700px' />
+                  children: <ManifestPreview object={toJson(StageSchema, stage)} height='700px' />
                 }
               ]}
             />

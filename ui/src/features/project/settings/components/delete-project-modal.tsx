@@ -22,7 +22,9 @@ export const DeleteProjectModal = ({ visible, hide }: ModalComponentProps) => {
 
   const { mutate, isPending } = useMutation(deleteResource, {
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: createConnectQueryKey(listProjects) });
+      queryClient.invalidateQueries({
+        queryKey: createConnectQueryKey({ schema: listProjects, cardinality: 'finite' })
+      });
       navigate(paths.projects);
     }
   });
