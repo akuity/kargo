@@ -4601,6 +4601,103 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 			},
 		},
 		{
+			name: "handles verified freight from upstream stages with verification duration requirement",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-project",
+					Name:      "test-stage",
+				},
+				Spec: kargoapi.StageSpec{
+					RequestedFreight: []kargoapi.FreightRequest{
+						{
+							Origin: kargoapi.FreightOrigin{
+								Kind: kargoapi.FreightOriginKindWarehouse,
+								Name: "test-warehouse",
+							},
+							Sources: kargoapi.FreightSources{
+								Stages:      []string{"upstream-stage"},
+								VerifiedFor: &metav1.Duration{Duration: time.Hour},
+							},
+						},
+					},
+				},
+			},
+			objects: []client.Object{
+				&kargoapi.Project{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "fake-project",
+					},
+					Spec: &kargoapi.ProjectSpec{
+						PromotionPolicies: []kargoapi.PromotionPolicy{
+							{
+								Stage:                "test-stage",
+								AutoPromotionEnabled: true,
+							},
+						},
+					},
+				},
+				&kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace:         "fake-project",
+						Name:              "test-freight-1",
+						CreationTimestamp: metav1.Time{Time: now},
+					},
+					Status: kargoapi.FreightStatus{
+						VerifiedIn: map[string]kargoapi.VerifiedStage{
+							// Ignored because it does not have a timestamp.
+							"upstream-stage": {},
+						},
+					},
+				},
+				&kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace:         "fake-project",
+						Name:              "test-freight-2",
+						CreationTimestamp: metav1.Time{Time: now.Add(-2 * time.Hour)},
+					},
+					Status: kargoapi.FreightStatus{
+						VerifiedIn: map[string]kargoapi.VerifiedStage{
+							"upstream-stage": {
+								// Should be selected because it was verified
+								// after the required duration.
+								VerifiedAt: &metav1.Time{Time: now.Add(-2 * time.Hour)},
+							},
+						},
+					},
+				},
+				&kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace:         "fake-project",
+						Name:              "test-freight-3",
+						CreationTimestamp: metav1.Time{Time: now.Add(-40 * time.Minute)},
+					},
+					Status: kargoapi.FreightStatus{
+						VerifiedIn: map[string]kargoapi.VerifiedStage{
+							"upstream-stage": {
+								// Should be ignored because it is too recent.
+								VerifiedAt: &metav1.Time{Time: now.Add(-39 * time.Minute)},
+							},
+						},
+					},
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				_ *fakeevent.EventRecorder,
+				c client.Client,
+				_ kargoapi.StageStatus,
+				err error,
+			) {
+				require.NoError(t, err)
+
+				// Verify promotion was created
+				promoList := &kargoapi.PromotionList{}
+				require.NoError(t, c.List(context.Background(), promoList, client.InNamespace("fake-project")))
+				require.Len(t, promoList.Items, 1)
+				assert.Equal(t, "test-freight-2", promoList.Items[0].Spec.Freight)
+			},
+		},
+		{
 			name: "handles freight approved for stage",
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
