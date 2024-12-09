@@ -1694,6 +1694,29 @@ func (r *RegularStageReconciler) getPromotableFreight(
 				)
 			}
 
+			// We have specific requirements for how long the Freight has been
+			// verified in the upstream Stage. Further filter the list of
+			// verified Freight based on the requirement.
+			if req.Sources.VerifiedFor != nil {
+				for _, verified := range verifiedFreight.Items {
+					// NB: If there is no verification timestamp for the Freight,
+					// then we cannot determine how long it has been verified in
+					// the upstream Stage. In this case, we skip the Freight
+					// from the list of promotable Freight.
+					if verifiedSince := verified.Status.VerifiedIn[upstream].VerifiedAt; verifiedSince != nil {
+						if time.Since(verifiedSince.Time) > req.Sources.VerifiedFor.Duration {
+							promotableFreight[originID] = append(promotableFreight[originID], verified)
+						}
+					}
+				}
+
+				// Continue to the next Stage in the list of upstream Stages.
+				continue
+			}
+
+			// We have no specific requirement for how long the Freight has
+			// been verified in the upstream Stage, so we can add all verified
+			// Freight to the promotable list.
 			promotableFreight[originID] = append(promotableFreight[originID], verifiedFreight.Items...)
 		}
 
