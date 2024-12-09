@@ -201,6 +201,9 @@ type GitOpenPRConfig struct {
 	// The branch to which the changes should be merged. This branch must already exist and be
 	// up to date on the remote.
 	TargetBranch string `json:"targetBranch"`
+	// The title for the pull request. Kargo generates a title based on the commit messages if
+	// it is not explicitly specified.
+	Title string `json:"title,omitempty"`
 }
 
 type GitPushConfig struct {

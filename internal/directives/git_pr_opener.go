@@ -193,7 +193,12 @@ func (g *gitPROpener) runPromotionStep(
 		)
 	}
 
-	title := strings.Split(commitMsg, "\n")[0]
+	var title string
+	if cfg.Title != "" {
+		title = cfg.Title
+	} else {
+		title = strings.Split(commitMsg, "\n")[0]
+	}
 	description := commitMsg
 	if stepCtx.UIBaseURL != "" {
 		description = fmt.Sprintf(
