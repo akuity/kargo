@@ -107,6 +107,16 @@ func Test_gitPROpener_validate(t *testing.T) {
 				"targetBranch":         "fake-branch",
 			},
 		},
+		{
+			name: "valid with custom title",
+			config: Config{
+				"provider":     "github",
+				"repoURL":      "https://github.com/example/repo.git",
+				"sourceBranch": "fake-branch",
+				"targetBranch": "another-fake-branch",
+				"title":        "custom title",
+			},
+		},
 	}
 
 	r := newGitPROpener()
@@ -213,6 +223,7 @@ func Test_gitPROpener_runPromotionStep(t *testing.T) {
 			TargetBranch:         testTargetBranch,
 			CreateTargetBranch:   true,
 			Provider:             ptr.To(Provider(fakeGitProviderName)),
+			Title:                "kargo",
 		},
 	)
 	require.NoError(t, err)

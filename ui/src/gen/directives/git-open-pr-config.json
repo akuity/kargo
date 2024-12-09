@@ -40,6 +40,11 @@
    "type": "string",
    "description": "The branch to which the changes should be merged. This branch must already exist and be up to date on the remote.",
    "minLength": 1
+  },
+  "title": {
+   "type": "string",
+   "description": "The title for the pull request. Kargo generates a title based on the commit messages if it is not explicitly specified.",
+   "minLength": 1
   }
  }
 }
