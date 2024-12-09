@@ -218,7 +218,7 @@ type FreightOrigin struct {
 	// +kubebuilder:validation:Required
 	Kind FreightOriginKind `json:"kind" protobuf:"bytes,1,opt,name=kind"`
 	// Name is the name of the resource of the kind indicated by the Kind field
-	// from which Freight may originated.
+	// from which Freight may originate.
 	//
 	// +kubebuilder:validation:Required
 	Name string `json:"name" protobuf:"bytes,2,opt,name=name"`
@@ -252,6 +252,14 @@ type FreightSources struct {
 	// Direct field must be true. i.e. Between the two fields, at least on source
 	// must be specified.
 	Stages []string `json:"stages,omitempty" protobuf:"bytes,2,rep,name=stages"`
+	// VerifiedFor specifies the duration for which the requested Freight must
+	// have been verified in the upstream Stages before it can be considered
+	// for promotion to this Stage. This is an optional field, and if not set,
+	// the default value is "0s" (i.e. immediate promotion is allowed).
+	//
+	// +kubebuilder:validation:Type=string
+	// +kubebuilder:validation:Pattern="^([0-9]+(\\.[0-9]+)?(s|m|h))+$"
+	VerifiedFor *metav1.Duration `json:"verifiedFor,omitempty" protobuf:"bytes,3,opt,name=verifiedFor"`
 }
 
 // PromotionTemplate defines a template for a Promotion that can be used to
