@@ -970,6 +970,65 @@ func TestRegularStageReconciler_syncPromotions(t *testing.T) {
 			},
 		},
 		{
+			name: "allows promotion when verification failed",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-project",
+					Name:      "test-stage",
+				},
+				Status: kargoapi.StageStatus{
+					Health: &kargoapi.Health{
+						Status: kargoapi.HealthStateHealthy,
+					},
+					FreightHistory: kargoapi.FreightHistory{
+						{
+							ID: "current-collection",
+							Freight: map[string]kargoapi.FreightReference{
+								"warehouse-1": {Name: "current-freight"},
+							},
+							VerificationHistory: []kargoapi.VerificationInfo{
+								{
+									Phase: kargoapi.VerificationPhaseFailed,
+								},
+							},
+						},
+					},
+				},
+			},
+			objects: []client.Object{
+				&kargoapi.Promotion{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "pending-promotion",
+						Namespace: "fake-project",
+					},
+					Spec: kargoapi.PromotionSpec{
+						Stage: "test-stage",
+					},
+					Status: kargoapi.PromotionStatus{
+						Phase: kargoapi.PromotionPhasePending,
+						Freight: &kargoapi.FreightReference{
+							Name: "new-freight",
+						},
+					},
+				},
+			},
+			assertions: func(t *testing.T, status kargoapi.StageStatus, hasPendingPromotions bool, err error) {
+				require.NoError(t, err)
+				assert.True(t, hasPendingPromotions)
+
+				// Should allow promotion since there's no verification to wait for
+				require.NotNil(t, status.CurrentPromotion)
+				assert.Equal(t, "pending-promotion", status.CurrentPromotion.Name)
+				assert.Equal(t, "new-freight", status.CurrentPromotion.Freight.Name)
+
+				promotingCond := conditions.Get(&status, kargoapi.ConditionTypePromoting)
+				require.NotNil(t, promotingCond)
+				assert.Equal(t, metav1.ConditionTrue, promotingCond.Status)
+				assert.Equal(t, "ActivePromotion", promotingCond.Reason)
+				assert.Contains(t, promotingCond.Message, "Pending")
+			},
+		},
+		{
 			name: "skips older promotions after last promotion",
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
