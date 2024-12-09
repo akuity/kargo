@@ -114,7 +114,7 @@
           "type": "string"
         },
         "name": {
-          "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originated.",
+          "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originate.",
           "type": "string"
         }
       },
