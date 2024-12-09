@@ -646,12 +646,13 @@ func (r *RegularStageReconciler) syncPromotions(
 		}
 
 		// If we are in a healthy state, the current Freight needs to be verified
-		// before we can allow the next Promotion to start. If we are unhealthy,
-		// then we can allow the next Promotion to start immediately as the
-		// expectation is that the Promotion can fix the issue.
+		// before we can allow the next Promotion to start. If we are unhealthy
+		// or the verification failed, then we can allow the next Promotion to
+		// start immediately as the expectation is that the Promotion can fix the
+		// issue.
 		if stage.Status.Health == nil || stage.Status.Health.Status != kargoapi.HealthStateUnhealthy {
 			curVI := curFreight.VerificationHistory.Current()
-			if curVI == nil || curVI.Phase != kargoapi.VerificationPhaseSuccessful {
+			if curVI == nil || !curVI.Phase.IsTerminal() {
 				logger.Debug("current Freight needs to be verified before allowing new promotions to start")
 				conditions.Delete(&newStatus, kargoapi.ConditionTypePromoting)
 				return newStatus, hasNonTerminalPromotions, nil
