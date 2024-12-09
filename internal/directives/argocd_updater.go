@@ -25,7 +25,7 @@ import (
 
 const (
 	applicationOperationInitiator = "kargo-controller"
-	freightCollectionInfoKey      = "kargo.akuity.io/freight-collection"
+	promotionInfoKey              = "kargo.akuity.io/promotion"
 )
 
 func init() {
@@ -69,7 +69,6 @@ type argocdUpdater struct {
 		*PromotionStepContext,
 		*ArgoCDAppUpdate,
 		*argocd.Application,
-		argocd.ApplicationSources,
 	) (argocd.OperationPhase, bool, error)
 
 	syncApplicationFn func(
@@ -207,24 +206,8 @@ func (a *argocdUpdater) runPromotionStep(
 			DesiredRevisions: desiredRevisions,
 		}
 
-		// Build the desired source(s) for the Argo CD Application.
-		desiredSources, err := a.buildDesiredSourcesFn(
-			ctx,
-			stepCtx,
-			&stepCfg,
-			update,
-			desiredRevisions,
-			app,
-		)
-		if err != nil {
-			return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, fmt.Errorf(
-				"error building desired sources for Argo CD Application %q in namespace %q: %w",
-				app.Name, app.Namespace, err,
-			)
-		}
-
 		// Check if the update needs to be performed and retrieve its phase.
-		phase, mustUpdate, err := a.mustPerformUpdateFn(stepCtx, update, app, desiredSources)
+		phase, mustUpdate, err := a.mustPerformUpdateFn(stepCtx, update, app)
 
 		// If we have a phase, append it to the results.
 		if phase != "" {
@@ -265,6 +248,22 @@ func (a *argocdUpdater) runPromotionStep(
 		// perform an update.
 		if err != nil {
 			logger.Debug(err.Error())
+		}
+
+		// Build the desired source(s) for the Argo CD Application.
+		desiredSources, err := a.buildDesiredSourcesFn(
+			ctx,
+			stepCtx,
+			&stepCfg,
+			update,
+			desiredRevisions,
+			app,
+		)
+		if err != nil {
+			return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, fmt.Errorf(
+				"error building desired sources for Argo CD Application %q in namespace %q: %w",
+				app.Name, app.Namespace, err,
+			)
 		}
 
 		// Perform the update.
@@ -372,7 +371,6 @@ func (a *argocdUpdater) mustPerformUpdate(
 	stepCtx *PromotionStepContext,
 	update *ArgoCDAppUpdate,
 	app *argocd.Application,
-	desiredSources argocd.ApplicationSources,
 ) (phase argocd.OperationPhase, mustUpdate bool, err error) {
 	status := app.Status.OperationState
 	if status == nil {
@@ -400,23 +398,23 @@ func (a *argocdUpdater) mustPerformUpdate(
 
 	// Deal with the possibility that the operation was not initiated for the
 	// current freight collection. i.e. Not related to the current promotion.
-	var correctFreightColIDFound bool
+	var correctPromotionIDFound bool
 	for _, info := range status.Operation.Info {
-		if info.Name == freightCollectionInfoKey {
-			correctFreightColIDFound = info.Value == stepCtx.Freight.ID
+		if info.Name == promotionInfoKey {
+			correctPromotionIDFound = info.Value == stepCtx.Promotion
 			break
 		}
 	}
-	if !correctFreightColIDFound {
-		// The operation was not initiated for the current freight collection.
+	if !correctPromotionIDFound {
+		// The operation was not initiated for the current Promotion.
 		if !status.Phase.Completed() {
 			// We should wait for the operation to complete before attempting to
 			// apply an update ourselves.
 			// NB: We return the current phase here because we want the caller
 			//     to know that an operation is still running.
 			return status.Phase, false, fmt.Errorf(
-				"current operation was not initiated for freight collection %q: waiting for operation to complete",
-				stepCtx.Freight.ID,
+				"current operation was not initiated for Promotion %s: waiting for operation to complete",
+				stepCtx.Promotion,
 			)
 		}
 		// Initiate our own operation.
@@ -432,18 +430,6 @@ func (a *argocdUpdater) mustPerformUpdate(
 		// We do not have a sync result, so we cannot determine if the operation
 		// was successful. The best recourse is to retry the operation.
 		return "", true, errors.New("operation completed without a sync result")
-	}
-
-	// Check if the desired sources were applied.
-	if len(update.Sources) > 0 {
-		if (status.SyncResult.Source.RepoURL != "" && !status.SyncResult.Source.Equals(&desiredSources[0])) ||
-			(status.SyncResult.Source.RepoURL == "" && !status.SyncResult.Sources.Equals(desiredSources)) {
-			// The operation did not result in the desired sources being applied. We
-			// should attempt to retry the operation.
-			return "", true, fmt.Errorf(
-				"operation result source does not match desired source",
-			)
-		}
 	}
 
 	// Check if the desired revisions were applied.
@@ -514,8 +500,8 @@ func (a *argocdUpdater) syncApplication(
 				Value: "Promotion triggered a sync of this Application resource.",
 			},
 			{
-				Name:  freightCollectionInfoKey,
-				Value: stepCtx.Freight.ID,
+				Name:  promotionInfoKey,
+				Value: stepCtx.Promotion,
 			},
 		},
 		Sync: &argocd.SyncOperation{
