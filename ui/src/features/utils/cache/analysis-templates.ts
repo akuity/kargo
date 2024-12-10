@@ -1,14 +1,20 @@
+import { create } from '@bufbuild/protobuf';
 import { createConnectQueryKey, createProtobufSafeUpdater } from '@connectrpc/connect-query';
 
 import { queryClient } from '@ui/config/query-client';
 import { AnalysisTemplate } from '@ui/gen/rollouts/api/v1alpha1/generated_pb';
 import { listAnalysisTemplates } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
+import { ListAnalysisTemplatesResponseSchema } from '@ui/gen/service/v1alpha1/service_pb';
 
 export default {
   add: (project: string, templates: AnalysisTemplate[]) => {
     queryClient.setQueriesData(
       {
-        queryKey: createConnectQueryKey(listAnalysisTemplates, { project }),
+        queryKey: createConnectQueryKey({
+          schema: listAnalysisTemplates,
+          cardinality: 'finite',
+          input: { project }
+        }),
         exact: false
       },
       createProtobufSafeUpdater(listAnalysisTemplates, (prev) => {
@@ -18,10 +24,9 @@ export default {
           newTemplates = newTemplates.concat(templates);
         }
 
-        return {
-          ...prev,
+        return create(ListAnalysisTemplatesResponseSchema, {
           analysisTemplates: newTemplates
-        };
+        });
       })
     );
   }

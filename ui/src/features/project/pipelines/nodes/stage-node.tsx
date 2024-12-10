@@ -20,6 +20,7 @@ import { PromotionStatusIcon } from '@ui/features/common/promotion-status/promot
 import { selectFreightByWarehouse } from '@ui/features/common/utils';
 import { willStagePromotionOpenPR } from '@ui/features/promotion-directives/utils';
 import { Freight, Stage } from '@ui/gen/v1alpha1/generated_pb';
+import { timestampDate } from '@ui/utils/connectrpc-utils';
 import { useLocalStorage } from '@ui/utils/use-local-storage';
 
 import { FreightTimelineAction, NodeDimensions } from '../types';
@@ -187,7 +188,9 @@ export const StageNode = ({
             </div>
           )}
         </div>
-        <StageNodeFooter lastPromotion={stage?.status?.lastPromotion?.finishedAt?.toDate()} />
+        <StageNodeFooter
+          lastPromotion={timestampDate(stage?.status?.lastPromotion?.finishedAt) || undefined}
+        />
       </div>
       {action !== FreightTimelineAction.ManualApproval &&
         action !== FreightTimelineAction.PromoteFreight && (

@@ -17,6 +17,8 @@ import {
 } from 'recharts';
 import { NameType, ValueType } from 'recharts/types/component/DefaultTooltipContent';
 
+import { timestampDate } from '@ui/utils/connectrpc-utils';
+
 import { StatusIndicator } from '../status-indicator/status-indicator';
 import { AnalysisStatus, TransformedMeasurement } from '../types';
 import { chartDotColors } from '../utils';
@@ -124,8 +126,8 @@ export const MetricChart = ({
   yAxisLabel
 }: MetricChartProps) => {
   // show ticks at boundaries of analysis
-  const startingTick = data[0]?.startedAt?.toDate()?.toLocaleTimeString() ?? '';
-  const endingTick = data[data.length - 1]?.finishedAt?.toDate()?.toLocaleTimeString() ?? '';
+  const startingTick = timestampDate(data[0]?.startedAt)?.toLocaleTimeString() ?? '';
+  const endingTick = timestampDate(data[data.length - 1]?.finishedAt)?.toLocaleTimeString() ?? '';
   const timeTicks: (string | number)[] = [startingTick, endingTick];
 
   return (

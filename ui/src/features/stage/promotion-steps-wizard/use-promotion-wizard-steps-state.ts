@@ -1,17 +1,15 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { useState } from 'react';
 import { parse, stringify } from 'yaml';
 
 import { usePromotionDirectivesRegistryContext } from '@ui/features/promotion-directives/registry/context/use-registry-context';
 import { Runner } from '@ui/features/promotion-directives/registry/types';
 import { PromotionStep } from '@ui/gen/v1alpha1/generated_pb';
+import { PlainMessage } from '@ui/utils/connectrpc-utils';
 
 import { RunnerWithConfiguration } from './types';
 
 // separation is required as each component has separate requirement for YAML <-> Wizard transformation
-export const usePromotionWizardStepsState = (
-  initialValue: string | PlainMessage<PromotionStep>[] = ''
-) => {
+export const usePromotionWizardStepsState = (initialValue: string | PromotionStep[] = '') => {
   // TODO: move this to props instead?
   const { registry } = usePromotionDirectivesRegistryContext();
 
@@ -32,7 +30,7 @@ export const usePromotionWizardStepsState = (
 };
 
 const APIPromotionStepsToLocalStateEquivalent = (
-  steps: PlainMessage<PromotionStep>[],
+  steps: PromotionStep[],
   runnersRegistry: Runner[]
 ): RunnerWithConfiguration[] => {
   const runnerWithConfig: RunnerWithConfiguration[] = [];
@@ -78,8 +76,9 @@ const stateToYAML = (state: RunnerWithConfiguration[]): string => {
   for (const step of state) {
     promotionSteps.push({
       uses: step.identifier,
+      // @ts-expect-error this will be object but its hard to convey in types after migration of connectrpc to v2
       config: step.state,
-      as: step.as
+      as: step.as || ''
     });
   }
 

@@ -1,6 +1,7 @@
 import { Radio, Table } from 'antd';
 
 import { DiscoveredCommit } from '@ui/gen/v1alpha1/generated_pb';
+import { timestampDate } from '@ui/utils/connectrpc-utils';
 
 import { TruncatedCopyable } from './truncated-copyable';
 
@@ -46,7 +47,8 @@ export const CommitTable = ({
           },
           {
             title: 'Date',
-            render: (record: DiscoveredCommit) => record.creatorDate?.toDate().toLocaleString()
+            render: (record: DiscoveredCommit) =>
+              timestampDate(record.creatorDate)?.toLocaleString()
           }
         ]}
       />
