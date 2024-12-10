@@ -98,7 +98,7 @@ func (k *kustomizeImageSetter) runPromotionStep(
 		targetImages, err = k.buildTargetImagesFromConfig(ctx, stepCtx, cfg.Images)
 	default:
 		// Attempt to automatically set target images based on the Freight references.
-		targetImages, err = k.buildTargetImagesAutomatically(stepCtx)
+		targetImages, err = k.buildTargetImagesAutomatically(ctx, stepCtx)
 	}
 	if err != nil {
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, err
@@ -167,8 +167,24 @@ func (k *kustomizeImageSetter) buildTargetImagesFromConfig(
 }
 
 func (k *kustomizeImageSetter) buildTargetImagesAutomatically(
+	ctx context.Context,
 	stepCtx *PromotionStepContext,
 ) (map[string]kustypes.Image, error) {
+	// Check if there are any ambiguous image requests.
+	//
+	// We do this based on the request because the Freight references may not
+	// contain all the images that are requested, which could lead eventually
+	// to an ambiguous result.
+	if ambiguous, ambErr := freight.HasAmbiguousImageRequest(
+		ctx, stepCtx.KargoClient, stepCtx.Project, stepCtx.FreightRequests,
+	); ambErr != nil || ambiguous {
+		err := errors.New("manual configuration required due to ambiguous result")
+		if ambErr != nil {
+			err = fmt.Errorf("%w: %v", err, ambErr)
+		}
+		return nil, err
+	}
+
 	var images = make(map[string]kustypes.Image)
 	for _, freightRef := range stepCtx.Freight.References() {
 		if len(freightRef.Images) == 0 {
@@ -176,13 +192,6 @@ func (k *kustomizeImageSetter) buildTargetImagesAutomatically(
 		}
 
 		for _, img := range freightRef.Images {
-			if _, ok := images[img.RepoURL]; ok {
-				return nil, fmt.Errorf(
-					"manual configuration required due to ambiguous result: found multiple images for repository %q",
-					img.RepoURL,
-				)
-			}
-
 			images[img.RepoURL] = kustypes.Image{
 				Name:   img.RepoURL,
 				NewTag: img.Tag,

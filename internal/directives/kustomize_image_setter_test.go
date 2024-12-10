@@ -591,9 +591,13 @@ func Test_kustomizeImageSetter_buildTargetImages(t *testing.T) {
 }
 
 func Test_kustomizeImageSetter_buildTargetImagesAutomatically(t *testing.T) {
+	const testNamespace = "test-project"
+
 	tests := []struct {
 		name              string
 		freightReferences map[string]kargoapi.FreightReference
+		freightRequests   []kargoapi.FreightRequest
+		objects           []runtime.Object
 		assertions        func(*testing.T, map[string]kustypes.Image, error)
 	}{
 		{
@@ -614,6 +618,28 @@ func Test_kustomizeImageSetter_buildTargetImagesAutomatically(t *testing.T) {
 						{RepoURL: "postgres", Digest: "sha256:abcdef1234567890"},
 					},
 				},
+			},
+			freightRequests: []kargoapi.FreightRequest{
+				{Origin: kargoapi.FreightOrigin{Name: "warehouse1", Kind: kargoapi.FreightOriginKindWarehouse}},
+				{Origin: kargoapi.FreightOrigin{Name: "warehouse2", Kind: kargoapi.FreightOriginKindWarehouse}},
+				{Origin: kargoapi.FreightOrigin{Name: "warehouse3", Kind: kargoapi.FreightOriginKindWarehouse}},
+			},
+			objects: []runtime.Object{
+				mockWarehouse(testNamespace, "warehouse1", kargoapi.WarehouseSpec{
+					Subscriptions: []kargoapi.RepoSubscription{
+						{Image: &kargoapi.ImageSubscription{RepoURL: "nginx"}},
+					},
+				}),
+				mockWarehouse(testNamespace, "warehouse2", kargoapi.WarehouseSpec{
+					Subscriptions: []kargoapi.RepoSubscription{
+						{Image: &kargoapi.ImageSubscription{RepoURL: "redis"}},
+					},
+				}),
+				mockWarehouse(testNamespace, "warehouse3", kargoapi.WarehouseSpec{
+					Subscriptions: []kargoapi.RepoSubscription{
+						{Image: &kargoapi.ImageSubscription{RepoURL: "postgres"}},
+					},
+				}),
 			},
 			assertions: func(t *testing.T, result map[string]kustypes.Image, err error) {
 				require.NoError(t, err)
@@ -638,6 +664,22 @@ func Test_kustomizeImageSetter_buildTargetImagesAutomatically(t *testing.T) {
 					},
 				},
 			},
+			freightRequests: []kargoapi.FreightRequest{
+				{Origin: kargoapi.FreightOrigin{Name: "warehouse1", Kind: kargoapi.FreightOriginKindWarehouse}},
+				{Origin: kargoapi.FreightOrigin{Name: "warehouse2", Kind: kargoapi.FreightOriginKindWarehouse}},
+			},
+			objects: []runtime.Object{
+				mockWarehouse(testNamespace, "warehouse1", kargoapi.WarehouseSpec{
+					Subscriptions: []kargoapi.RepoSubscription{
+						{Image: &kargoapi.ImageSubscription{RepoURL: "nginx"}},
+					},
+				}),
+				mockWarehouse(testNamespace, "warehouse2", kargoapi.WarehouseSpec{
+					Subscriptions: []kargoapi.RepoSubscription{
+						{Image: &kargoapi.ImageSubscription{RepoURL: "nginx"}},
+					},
+				}),
+			},
 			assertions: func(t *testing.T, _ map[string]kustypes.Image, err error) {
 				require.ErrorContains(t, err, "manual configuration required due to ambiguous result")
 			},
@@ -648,13 +690,20 @@ func Test_kustomizeImageSetter_buildTargetImagesAutomatically(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			scheme := runtime.NewScheme()
+			require.NoError(t, kargoapi.AddToScheme(scheme))
+			fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(tt.objects...).Build()
+
 			stepCtx := &PromotionStepContext{
+				KargoClient:     fakeClient,
+				Project:         testNamespace,
+				FreightRequests: tt.freightRequests,
 				Freight: kargoapi.FreightCollection{
 					Freight: tt.freightReferences,
 				},
 			}
 
-			result, err := runner.buildTargetImagesAutomatically(stepCtx)
+			result, err := runner.buildTargetImagesAutomatically(context.Background(), stepCtx)
 			tt.assertions(t, result, err)
 		})
 	}
