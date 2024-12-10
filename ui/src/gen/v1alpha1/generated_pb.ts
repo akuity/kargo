@@ -2922,11 +2922,22 @@ export class PromotionStep extends Message<PromotionStep> {
   /**
    * Uses identifies a runner that can execute this step.
    *
+   * +kubebuilder:validation:Optional
    * +kubebuilder:validation:MinLength=1
    *
    * @generated from field: optional string uses = 1;
    */
   uses?: string;
+
+  /**
+   * Task is a reference to a PromotionTask that should be deflated into a
+   * Promotion when it is built from a PromotionTemplate.
+   *
+   * +kubebuilder:validation:Optional
+   *
+   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.PromotionTaskReference task = 5;
+   */
+  task?: PromotionTaskReference;
 
   /**
    * As is the alias this step can be referred to as.
@@ -2961,6 +2972,7 @@ export class PromotionStep extends Message<PromotionStep> {
   static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.PromotionStep";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 1, name: "uses", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 5, name: "task", kind: "message", T: PromotionTaskReference, opt: true },
     { no: 2, name: "as", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 4, name: "retry", kind: "message", T: PromotionStepRetry, opt: true },
     { no: 3, name: "config", kind: "message", T: JSON, opt: true },
@@ -3214,6 +3226,64 @@ export class PromotionTaskList extends Message<PromotionTaskList> {
 
   static equals(a: PromotionTaskList | PlainMessage<PromotionTaskList> | undefined, b: PromotionTaskList | PlainMessage<PromotionTaskList> | undefined): boolean {
     return proto2.util.equals(PromotionTaskList, a, b);
+  }
+}
+
+/**
+ * PromotionTaskReference describes a reference to a PromotionTask.
+ *
+ * @generated from message github.com.akuity.kargo.api.v1alpha1.PromotionTaskReference
+ */
+export class PromotionTaskReference extends Message<PromotionTaskReference> {
+  /**
+   * Name is the name of the (Cluster)PromotionTask.
+   *
+   * +kubebuilder:validation:Required
+   * +kubebuilder:validation:MinLength=1
+   * +kubebuilder:validation:MaxLength=253
+   * +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+   *
+   * @generated from field: optional string name = 1;
+   */
+  name?: string;
+
+  /**
+   * Kind is the type of the PromotionTask. Can be either PromotionTask or
+   * ClusterPromotionTask, default is PromotionTask.
+   *
+   * +kubebuilder:validation:Optional
+   * +kubebuilder:validation:Enum=PromotionTask;ClusterPromotionTask
+   *
+   * @generated from field: optional string kind = 2;
+   */
+  kind?: string;
+
+  constructor(data?: PartialMessage<PromotionTaskReference>) {
+    super();
+    proto2.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto2 = proto2;
+  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.PromotionTaskReference";
+  static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 2, name: "kind", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PromotionTaskReference {
+    return new PromotionTaskReference().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): PromotionTaskReference {
+    return new PromotionTaskReference().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): PromotionTaskReference {
+    return new PromotionTaskReference().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: PromotionTaskReference | PlainMessage<PromotionTaskReference> | undefined, b: PromotionTaskReference | PlainMessage<PromotionTaskReference> | undefined): boolean {
+    return proto2.util.equals(PromotionTaskReference, a, b);
   }
 }
 

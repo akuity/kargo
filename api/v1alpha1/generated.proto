@@ -929,8 +929,15 @@ message PromotionStatus {
 message PromotionStep {
   // Uses identifies a runner that can execute this step.
   //
+  // +kubebuilder:validation:Optional
   // +kubebuilder:validation:MinLength=1
   optional string uses = 1;
+
+  // Task is a reference to a PromotionTask that should be deflated into a
+  // Promotion when it is built from a PromotionTemplate.
+  //
+  // +kubebuilder:validation:Optional
+  optional PromotionTaskReference task = 5;
 
   // As is the alias this step can be referred to as.
   optional string as = 2;
@@ -1021,6 +1028,24 @@ message PromotionTaskList {
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
 
   repeated PromotionTaskList items = 2;
+}
+
+// PromotionTaskReference describes a reference to a PromotionTask.
+message PromotionTaskReference {
+  // Name is the name of the (Cluster)PromotionTask.
+  //
+  // +kubebuilder:validation:Required
+  // +kubebuilder:validation:MinLength=1
+  // +kubebuilder:validation:MaxLength=253
+  // +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+  optional string name = 1;
+
+  // Kind is the type of the PromotionTask. Can be either PromotionTask or
+  // ClusterPromotionTask, default is PromotionTask.
+  //
+  // +kubebuilder:validation:Optional
+  // +kubebuilder:validation:Enum=PromotionTask;ClusterPromotionTask
+  optional string kind = 2;
 }
 
 message PromotionTaskSpec {

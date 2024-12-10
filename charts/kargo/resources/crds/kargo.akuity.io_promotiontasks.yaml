@@ -139,13 +139,33 @@ spec:
                             ErrorThreshold is reached.
                           type: string
                       type: object
+                    task:
+                      description: |-
+                        Task is a reference to a PromotionTask that should be deflated into a
+                        Promotion when it is built from a PromotionTemplate.
+                      properties:
+                        kind:
+                          description: |-
+                            Kind is the type of the PromotionTask. Can be either PromotionTask or
+                            ClusterPromotionTask, default is PromotionTask.
+                          enum:
+                          - PromotionTask
+                          - ClusterPromotionTask
+                          type: string
+                        name:
+                          description: Name is the name of the (Cluster)PromotionTask.
+                          maxLength: 253
+                          minLength: 1
+                          pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                          type: string
+                      required:
+                      - name
+                      type: object
                     uses:
                       description: Uses identifies a runner that can execute this
                         step.
                       minLength: 1
                       type: string
-                  required:
-                  - uses
                   type: object
                 minItems: 1
                 type: array
