@@ -455,13 +455,11 @@ make hack-serve-docs
 ```
 
 :::info
-If you wish to opt-out of executing code-generation within a container (for
-performance reasons, perhaps), drop the `hack-` prefix from the target to run the docs natively on your system:
+If you want to build and serve the docs on your local machine, run the following command:
 
 ```shell
 make serve-docs
 ```
 
-This will require quite a variety of tools to be installed locally, so we do not
-recommend this if you can avoid it.
+This will require you to install the [`pnpm`](https://pnpm.io/installation) tool locally on your machine.
 :::
