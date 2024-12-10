@@ -7,7 +7,7 @@ import { useEffect, useState } from 'react';
 
 import { CommitInfo } from '@ui/features/common/commit-info';
 import { Freight } from '@ui/gen/v1alpha1/generated_pb';
-import { k8sApiMachineryTimestampDate } from '@ui/utils/connectrpc-extension';
+import { timestampDate } from '@ui/utils/connectrpc-utils';
 
 import { getAlias } from '../../../common/utils';
 
@@ -27,7 +27,7 @@ export const FreightLabel = ({ freight }: { freight?: Freight }) => {
   const alias = getAlias(freight);
 
   const humanReadable = formatDistance(
-    k8sApiMachineryTimestampDate(freight?.metadata?.creationTimestamp) || 0,
+    timestampDate(freight?.metadata?.creationTimestamp) || 0,
     new Date(),
     {
       addSuffix: true
@@ -59,7 +59,7 @@ export const FreightLabel = ({ freight }: { freight?: Freight }) => {
           {freight?.metadata?.creationTimestamp && (
             <Tooltip
               title={format(
-                k8sApiMachineryTimestampDate(freight?.metadata?.creationTimestamp) || '',
+                timestampDate(freight?.metadata?.creationTimestamp) || '',
                 'MMM do yyyy HH:mm:ss'
               )}
               className={style.smallLabel}

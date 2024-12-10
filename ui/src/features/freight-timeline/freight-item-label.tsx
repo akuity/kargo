@@ -5,10 +5,7 @@ import { format, formatDistance } from 'date-fns';
 import { useEffect, useState } from 'react';
 
 import { Freight } from '@ui/gen/v1alpha1/generated_pb';
-import {
-  k8sApiMachineryTimestampDate,
-  PlainMessageRecursive
-} from '@ui/utils/connectrpc-extension';
+import { timestampDate, PlainMessageRecursive } from '@ui/utils/connectrpc-utils';
 
 import { getAlias } from '../common/utils';
 
@@ -35,7 +32,7 @@ export const FreightItemLabel = ({ freight }: { freight?: PlainMessageRecursive<
       : alias;
 
   const humanReadable = formatDistance(
-    k8sApiMachineryTimestampDate(freight?.metadata?.creationTimestamp) || 0,
+    timestampDate(freight?.metadata?.creationTimestamp) || 0,
     new Date(),
     {
       addSuffix: true
@@ -43,7 +40,7 @@ export const FreightItemLabel = ({ freight }: { freight?: PlainMessageRecursive<
   );
 
   const freightCreationTimestamp = freight?.metadata?.creationTimestamp
-    ? k8sApiMachineryTimestampDate(freight?.metadata?.creationTimestamp)
+    ? timestampDate(freight?.metadata?.creationTimestamp)
     : null;
 
   return (

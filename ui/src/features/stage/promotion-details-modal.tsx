@@ -29,7 +29,7 @@ import { Runner } from '@ui/features/promotion-directives/registry/types';
 import { canAbortPromotion } from '@ui/features/stage/utils/promotion';
 import { abortPromotion } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 import { Promotion, PromotionSchema, PromotionStep } from '@ui/gen/v1alpha1/generated_pb';
-import { k8sApiMachineryTimestampDate } from '@ui/utils/connectrpc-extension';
+import { timestampDate } from '@ui/utils/connectrpc-utils';
 import { decodeRawData } from '@ui/utils/decode-raw-data';
 
 const Step = ({
@@ -220,9 +220,7 @@ export const PromotionDetailsModal = ({
             {
               key: 'date',
               label: 'Start Date',
-              children: k8sApiMachineryTimestampDate(
-                promotion.metadata?.creationTimestamp
-              )?.toString()
+              children: timestampDate(promotion.metadata?.creationTimestamp)?.toString()
             }
           ]}
         />

@@ -21,7 +21,7 @@ import {
 import { KargoService } from '@ui/gen/service/v1alpha1/service_pb';
 import { ListPromotionsResponse } from '@ui/gen/service/v1alpha1/service_pb';
 import { Freight, Promotion } from '@ui/gen/v1alpha1/generated_pb';
-import { k8sApiMachineryTimestampDate } from '@ui/utils/connectrpc-extension';
+import { timestampDate } from '@ui/utils/connectrpc-utils';
 
 import { PromotionDetailsModal } from './promotion-details-modal';
 import { hasAbortRequest, promotionCompareFn } from './utils/promotion';
@@ -133,7 +133,7 @@ export const Promotions = () => {
     {
       title: 'Date',
       render: (_, promotion) => {
-        const date = k8sApiMachineryTimestampDate(promotion.metadata?.creationTimestamp);
+        const date = timestampDate(promotion.metadata?.creationTimestamp);
         return date ? format(date, 'MMM do yyyy HH:mm:ss') : '';
       }
     },

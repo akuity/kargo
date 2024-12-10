@@ -3,7 +3,6 @@ import { faAnchor } from '@fortawesome/free-solid-svg-icons';
 import classNames from 'classnames';
 
 import { Freight } from '@ui/gen/v1alpha1/generated_pb';
-import { PlainMessage } from '@ui/utils/connectrpc-extension';
 import { urlForImage } from '@ui/utils/url';
 
 import { CommitInfo } from '../common/commit-info';
@@ -11,7 +10,7 @@ import { CommitInfo } from '../common/commit-info';
 import { FreightContentItem } from './freight-content-item';
 
 export const FreightContents = (props: {
-  freight?: PlainMessage<Freight>;
+  freight?: Freight;
   highlighted: boolean;
   horizontal?: boolean;
   dark?: boolean;

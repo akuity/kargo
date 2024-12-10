@@ -17,7 +17,7 @@ import {
 } from 'recharts';
 import { NameType, ValueType } from 'recharts/types/component/DefaultTooltipContent';
 
-import { k8sApiMachineryTimestampDate } from '@ui/utils/connectrpc-extension';
+import { timestampDate } from '@ui/utils/connectrpc-utils';
 
 import { StatusIndicator } from '../status-indicator/status-indicator';
 import { AnalysisStatus, TransformedMeasurement } from '../types';
@@ -126,9 +126,8 @@ export const MetricChart = ({
   yAxisLabel
 }: MetricChartProps) => {
   // show ticks at boundaries of analysis
-  const startingTick = k8sApiMachineryTimestampDate(data[0]?.startedAt)?.toLocaleTimeString() ?? '';
-  const endingTick =
-    k8sApiMachineryTimestampDate(data[data.length - 1]?.finishedAt)?.toLocaleTimeString() ?? '';
+  const startingTick = timestampDate(data[0]?.startedAt)?.toLocaleTimeString() ?? '';
+  const endingTick = timestampDate(data[data.length - 1]?.finishedAt)?.toLocaleTimeString() ?? '';
   const timeTicks: (string | number)[] = [startingTick, endingTick];
 
   return (

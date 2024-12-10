@@ -5,7 +5,7 @@ import {
   isPromotionPhaseTerminal
 } from '@ui/features/common/promotion-status/utils';
 import { Promotion } from '@ui/gen/v1alpha1/generated_pb';
-import { k8sApiMachineryTimestampDate } from '@ui/utils/connectrpc-extension';
+import { timestampDate } from '@ui/utils/connectrpc-utils';
 
 export const canAbortPromotion = (promotion: Promotion) =>
   !isPromotionPhaseTerminal(getPromotionStatusPhase(promotion));
@@ -25,8 +25,8 @@ export const promotionCompareFn = (
   promotion1: Partial<Promotion>,
   promotion2: Partial<Promotion>
 ) => {
-  const promo1Date = k8sApiMachineryTimestampDate(promotion1.metadata?.creationTimestamp);
-  const promo2Date = k8sApiMachineryTimestampDate(promotion2.metadata?.creationTimestamp);
+  const promo1Date = timestampDate(promotion1.metadata?.creationTimestamp);
+  const promo2Date = timestampDate(promotion2.metadata?.creationTimestamp);
 
   if (promo1Date && promo2Date) {
     // latest promotion should have lower index in array

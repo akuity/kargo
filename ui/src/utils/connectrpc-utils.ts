@@ -1,8 +1,8 @@
-import { Timestamp, timestampDate } from '@bufbuild/protobuf/wkt';
+import { Timestamp, timestampDate as coreTimestampDate } from '@bufbuild/protobuf/wkt';
 
 import { Time } from '@ui/gen/k8s.io/apimachinery/pkg/apis/meta/v1/generated_pb';
 
-export const k8sApiMachineryTimestampDate = (t?: Time | PlainMessage<Time> | string) => {
+export const timestampDate = (t?: Time | PlainMessage<Time> | string) => {
   if (!t) {
     return null;
   }
@@ -12,7 +12,7 @@ export const k8sApiMachineryTimestampDate = (t?: Time | PlainMessage<Time> | str
   }
 
   // apimachinery time is same as google.protobuf.Timestamp
-  return timestampDate(t as unknown as Timestamp);
+  return coreTimestampDate(t as unknown as Timestamp);
 };
 
 export type PlainMessage<T> = Omit<T, '$typeName' | '$unknown'>;

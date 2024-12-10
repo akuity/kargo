@@ -13,7 +13,7 @@ import {
   getPromotion
 } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 import { Freight, FreightReference, Promotion, Stage } from '@ui/gen/v1alpha1/generated_pb';
-import { k8sApiMachineryTimestampDate } from '@ui/utils/connectrpc-extension';
+import { timestampDate } from '@ui/utils/connectrpc-utils';
 
 export const StagePopover = ({ project, stage }: { project?: string; stage?: Stage }) => {
   const { data: promotionData } = useQuery(
@@ -53,7 +53,7 @@ export const StagePopover = ({ project, stage }: { project?: string; stage?: Sta
       <div className='flex items-center mb-4'>
         <FontAwesomeIcon icon={faClock} className='mr-2' />
         <div>
-          {moment(k8sApiMachineryTimestampDate(promotion?.metadata?.creationTimestamp)).format(
+          {moment(timestampDate(promotion?.metadata?.creationTimestamp)).format(
             'MMM do yyyy HH:mm:ss'
           )}
         </div>

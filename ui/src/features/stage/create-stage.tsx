@@ -23,7 +23,7 @@ import { JSON } from '@ui/gen/k8s.io/apiextensions-apiserver/pkg/apis/apiextensi
 import schema from '@ui/gen/schema/stages.kargo.akuity.io_v1alpha1.json';
 import { createResource } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 import { PromotionStep, Stage } from '@ui/gen/v1alpha1/generated_pb';
-import { PlainMessage } from '@ui/utils/connectrpc-extension';
+import { PlainMessage } from '@ui/utils/connectrpc-utils';
 import { zodValidators } from '@ui/utils/validators';
 
 import { getStageYAMLExample } from '../project/pipelines/utils/stage-yaml-example';

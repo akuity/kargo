@@ -18,7 +18,7 @@ import {
   FreightSchema,
   StageStatus
 } from '@ui/gen/v1alpha1/generated_pb';
-import { PlainMessage } from '@ui/utils/connectrpc-extension';
+import { PlainMessage } from '@ui/utils/connectrpc-utils';
 
 import { LoadingState } from '../common';
 import { FreightContents } from '../freight-timeline/freight-contents';

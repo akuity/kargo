@@ -3,7 +3,7 @@ import Link from 'antd/es/typography/Link';
 import { format } from 'date-fns';
 
 import { VerificationInfo } from '@ui/gen/v1alpha1/generated_pb';
-import { k8sApiMachineryTimestampDate } from '@ui/utils/connectrpc-extension';
+import { timestampDate } from '@ui/utils/connectrpc-utils';
 
 import { AnalysisModal } from '../common/analysis-modal/analysis-modal';
 import { useModal } from '../common/modal/use-modal';
@@ -46,7 +46,7 @@ export const Verifications = ({ verifications, images }: Props) => {
       <Table.Column<(typeof verifications)[number]>
         title='Date'
         render={(_, verification) => {
-          const date = k8sApiMachineryTimestampDate(verification.startTime);
+          const date = timestampDate(verification.startTime);
           return date ? format(date, 'MMM do yyyy HH:mm:ss') : '';
         }}
       />
