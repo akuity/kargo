@@ -1123,7 +1123,7 @@ export class FreightOrigin extends Message<FreightOrigin> {
 
   /**
    * Name is the name of the resource of the kind indicated by the Kind field
-   * from which Freight may originated.
+   * from which Freight may originate.
    *
    * +kubebuilder:validation:Required
    *
@@ -1314,6 +1314,19 @@ export class FreightSources extends Message<FreightSources> {
    */
   stages: string[] = [];
 
+  /**
+   * VerifiedFor specifies the duration for which the requested Freight must
+   * have been verified in the upstream Stages before it can be considered
+   * for promotion to this Stage. This is an optional field, and if not set,
+   * the default value is "0s" (i.e. immediate promotion is allowed).
+   *
+   * +kubebuilder:validation:Type=string
+   * +kubebuilder:validation:Pattern="^([0-9]+(\\.[0-9]+)?(s|m|h))+$"
+   *
+   * @generated from field: optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration verifiedFor = 3;
+   */
+  verifiedFor?: Duration;
+
   constructor(data?: PartialMessage<FreightSources>) {
     super();
     proto2.util.initPartial(data, this);
@@ -1324,6 +1337,7 @@ export class FreightSources extends Message<FreightSources> {
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 1, name: "direct", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
     { no: 2, name: "stages", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 3, name: "verifiedFor", kind: "message", T: Duration, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FreightSources {
