@@ -280,7 +280,7 @@ func (g *gitPROpener) getSourceBranch(
 		stepOutputMap, ok := stepOutput.(map[string]any)
 		if !ok {
 			return "", fmt.Errorf(
-				"output from step with alias %q is not a mao[string]any",
+				"output from step with alias %q is not a map[string]any",
 				cfg.SourceBranchFromStep,
 			)
 		}
