@@ -18,7 +18,8 @@ import (
 	_ "github.com/akuity/kargo/internal/gitprovider/gitlab" // GitLab provider registration
 )
 
-const prNumberKey = "prNumber"
+// stateKeyPRNumber is the key used to store the PR number in the shared State.
+const stateKeyPRNumber = "prNumber"
 
 func init() {
 	builtins.RegisterPromotionStepRunner(
@@ -83,7 +84,7 @@ func (g *gitPROpener) runPromotionStep(
 		return PromotionStepResult{
 			Status: kargoapi.PromotionPhaseSucceeded,
 			Output: map[string]any{
-				prNumberKey: prNumber,
+				stateKeyPRNumber: prNumber,
 			},
 		}, nil
 	}
@@ -161,7 +162,7 @@ func (g *gitPROpener) runPromotionStep(
 		return PromotionStepResult{
 			Status: kargoapi.PromotionPhaseSucceeded,
 			Output: map[string]any{
-				prNumberKey: pr.Number,
+				stateKeyPRNumber: pr.Number,
 			},
 		}, nil
 	}
@@ -192,7 +193,12 @@ func (g *gitPROpener) runPromotionStep(
 		)
 	}
 
-	title := strings.Split(commitMsg, "\n")[0]
+	var title string
+	if cfg.Title != "" {
+		title = cfg.Title
+	} else {
+		title = strings.Split(commitMsg, "\n")[0]
+	}
 	description := commitMsg
 	if stepCtx.UIBaseURL != "" {
 		description = fmt.Sprintf(
@@ -219,7 +225,7 @@ func (g *gitPROpener) runPromotionStep(
 	return PromotionStepResult{
 		Status: kargoapi.PromotionPhaseSucceeded,
 		Output: map[string]any{
-			prNumberKey: pr.Number,
+			stateKeyPRNumber: pr.Number,
 		},
 	}, nil
 }
@@ -243,7 +249,7 @@ func (g *gitPROpener) getPRNumber(
 			stepCtx.Alias,
 		)
 	}
-	prNumberAny, exists := stepOutputMap[prNumberKey]
+	prNumberAny, exists := stepOutputMap[stateKeyPRNumber]
 	if !exists {
 		return -1, nil
 	}
@@ -279,11 +285,11 @@ func (g *gitPROpener) getSourceBranch(
 		stepOutputMap, ok := stepOutput.(map[string]any)
 		if !ok {
 			return "", fmt.Errorf(
-				"output from step with alias %q is not a mao[string]any",
+				"output from step with alias %q is not a map[string]any",
 				cfg.SourceBranchFromStep,
 			)
 		}
-		sourceBranchAny, exists := stepOutputMap[branchKey]
+		sourceBranchAny, exists := stepOutputMap[stateKeyBranch]
 		if !exists {
 			return "", fmt.Errorf(
 				"no branch found in output from step with alias %q",

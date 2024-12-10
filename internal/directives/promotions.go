@@ -3,8 +3,10 @@ package directives
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/expr-lang/expr"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	yaml "sigs.k8s.io/yaml/goyaml.v3"
 
@@ -25,6 +27,17 @@ type PromotionStepRunner interface {
 	// indirectly modify that context through the returned PromotionStepResult to
 	// allow subsequent promotion steps to access the results of its execution.
 	RunPromotionStep(context.Context, *PromotionStepContext) (PromotionStepResult, error)
+}
+
+// RetryableStepRunner is an interface for PromotionStepRunners that can be
+// retried in the event of a failure.
+type RetryableStepRunner interface {
+	// DefaultTimeout returns the default timeout for the step.
+	DefaultTimeout() *time.Duration
+	// DefaultErrorThreshold returns the number of consecutive times the step must
+	// fail (for any reason) before retries are abandoned and the entire Promotion
+	// is marked as failed.
+	DefaultErrorThreshold() uint32
 }
 
 // PromotionContext is the context of a user-defined promotion process that is
@@ -50,13 +63,16 @@ type PromotionContext struct {
 	// resolve.
 	FreightRequests []kargoapi.FreightRequest
 	// Freight is the collection of all Freight referenced by the Promotion. This
-	// collection contains both the Freight that is actively being promoted as
-	// well as any Freight that has been inherited from the target Stage's current
+	// collection contains both the Freight that is actively being promoted and
+	// any Freight that has been inherited from the target Stage's current
 	// state.
 	Freight kargoapi.FreightCollection
-	// SharedState is the index of the step from which the promotion should begin
-	// execution.
+	// StartFromStep is the index of the step from which the promotion should
+	// begin execution.
 	StartFromStep int64
+	// StepExecutionMetadata tracks metadata pertaining to the execution
+	// of individual promotion steps.
+	StepExecutionMetadata kargoapi.StepExecutionMetadataList
 	// State is the current state of the promotion process.
 	State State
 	// Vars is a list of variables definitions that can be used by the
@@ -78,9 +94,36 @@ type PromotionStep struct {
 	// step will be keyed to this alias by the Engine and made accessible to
 	// subsequent steps.
 	Alias string
+	// Retry is the retry configuration for the PromotionStep.
+	Retry *kargoapi.PromotionStepRetry
 	// Config is an opaque JSON to be passed to the PromotionStepRunner executing
 	// this step.
 	Config []byte
+}
+
+// GetTimeout returns the maximum interval the provided runner may spend
+// attempting to execute the step before retries are abandoned and the entire
+// Promotion is marked as failed. If the runner is a RetryableStepRunner, its
+// timeout is used as the default. Otherwise, the default is 0 (no limit).
+func (s *PromotionStep) GetTimeout(runner any) *time.Duration {
+	fallback := ptr.To(time.Duration(0))
+	if retryCfg, isRetryable := runner.(RetryableStepRunner); isRetryable {
+		fallback = retryCfg.DefaultTimeout()
+	}
+	return s.Retry.GetTimeout(fallback)
+}
+
+// GetErrorThreshold returns the number of consecutive times the provided runner
+// must fail to execute the step (for any reason) before retries are abandoned
+// and the entire Promotion is marked as failed. If the runner is a
+// RetryableStepRunner, its threshold is used as the default. Otherwise, the
+// default is 1.
+func (s *PromotionStep) GetErrorThreshold(runner any) uint32 {
+	fallback := uint32(1)
+	if retryCfg, isRetryable := runner.(RetryableStepRunner); isRetryable {
+		fallback = retryCfg.DefaultErrorThreshold()
+	}
+	return s.Retry.GetErrorThreshold(fallback)
 }
 
 // GetConfig returns the Config unmarshalled into a map. Any expr-lang
@@ -117,22 +160,22 @@ func (s *PromotionStep) GetConfig(
 		expr.Function(
 			"commitFrom",
 			getCommitFunc(ctx, cl, promoCtx),
-			new(func(repoURL string) kargoapi.GitCommit),
 			new(func(repoURL string, origin kargoapi.FreightOrigin) kargoapi.GitCommit),
+			new(func(repoURL string) kargoapi.GitCommit),
 		),
 		expr.Function(
 			"imageFrom",
 			getImageFunc(ctx, cl, promoCtx),
-			new(func(repoURL string) kargoapi.Image),
 			new(func(repoURL string, origin kargoapi.FreightOrigin) kargoapi.Image),
+			new(func(repoURL string) kargoapi.Image),
 		),
 		expr.Function(
 			"chartFrom",
 			getChartFunc(ctx, cl, promoCtx),
-			new(func(repoURL string) kargoapi.Chart),
+			new(func(repoURL string, chartName string, origin kargoapi.FreightOrigin) kargoapi.Chart),
 			new(func(repoURL string, chartName string) kargoapi.Chart),
 			new(func(repoURL string, origin kargoapi.FreightOrigin) kargoapi.Chart),
-			new(func(repoURL string, chartName string, origin kargoapi.FreightOrigin) kargoapi.Chart),
+			new(func(repoURL string) kargoapi.Chart),
 		),
 	)
 	if err != nil {
@@ -145,6 +188,8 @@ func (s *PromotionStep) GetConfig(
 	return config, nil
 }
 
+// GetVars returns the variables defined in the PromotionStep. The variables are
+// evaluated in the context of the provided PromotionContext.
 func (s *PromotionStep) GetVars(promoCtx PromotionContext) (map[string]any, error) {
 	vars := make(map[string]any, len(promoCtx.Vars))
 	for _, v := range promoCtx.Vars {
@@ -184,9 +229,12 @@ type PromotionResult struct {
 	// health check processes.
 	HealthCheckSteps []HealthCheckStep
 	// If the promotion process remains in-progress, perhaps waiting for a change
-	// in some external state, the value of this field will indicated where to
+	// in some external state, the value of this field will indicate where to
 	// resume the process in the next reconciliation.
 	CurrentStep int64
+	// StepExecutionMetadata tracks metadata pertaining to the execution
+	// of individual promotion steps.
+	StepExecutionMetadata kargoapi.StepExecutionMetadataList
 	// State is the current state of the promotion process.
 	State State
 }

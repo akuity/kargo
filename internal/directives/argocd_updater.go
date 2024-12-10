@@ -11,6 +11,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -24,7 +25,7 @@ import (
 
 const (
 	applicationOperationInitiator = "kargo-controller"
-	freightCollectionInfoKey      = "kargo.akuity.io/freight-collection"
+	promotionInfoKey              = "kargo.akuity.io/promotion"
 )
 
 func init() {
@@ -65,12 +66,9 @@ type argocdUpdater struct {
 	) (argocd.ApplicationSources, error)
 
 	mustPerformUpdateFn func(
-		context.Context,
 		*PromotionStepContext,
-		*ArgoCDUpdateConfig,
 		*ArgoCDAppUpdate,
 		*argocd.Application,
-		argocd.ApplicationSources,
 	) (argocd.OperationPhase, bool, error)
 
 	syncApplicationFn func(
@@ -125,6 +123,16 @@ func newArgocdUpdater() *argocdUpdater {
 // Name implements the PromotionStepRunner interface.
 func (a *argocdUpdater) Name() string {
 	return "argocd-update"
+}
+
+// DefaultTimeout implements the RetryableStepRunner interface.
+func (a *argocdUpdater) DefaultTimeout() *time.Duration {
+	return ptr.To(5 * time.Minute)
+}
+
+// DefaultErrorThreshold implements the RetryableStepRunner interface.
+func (a *argocdUpdater) DefaultErrorThreshold() uint32 {
+	return 0 // Will fall back to the system default.
 }
 
 // RunPromotionStep implements the PromotionStepRunner interface.
@@ -184,13 +192,7 @@ func (a *argocdUpdater) runPromotionStep(
 			)
 		}
 
-		desiredRevisions, err := a.getDesiredRevisions(
-			ctx,
-			stepCtx,
-			&stepCfg,
-			update,
-			app,
-		)
+		desiredRevisions, err := a.getDesiredRevisions(stepCtx, update, app)
 		if err != nil {
 			return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, fmt.Errorf(
 				"error determining desired revisions for Argo CD Application %q in "+
@@ -204,31 +206,8 @@ func (a *argocdUpdater) runPromotionStep(
 			DesiredRevisions: desiredRevisions,
 		}
 
-		// Build the desired source(s) for the Argo CD Application.
-		desiredSources, err := a.buildDesiredSourcesFn(
-			ctx,
-			stepCtx,
-			&stepCfg,
-			update,
-			desiredRevisions,
-			app,
-		)
-		if err != nil {
-			return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, fmt.Errorf(
-				"error building desired sources for Argo CD Application %q in namespace %q: %w",
-				app.Name, app.Namespace, err,
-			)
-		}
-
 		// Check if the update needs to be performed and retrieve its phase.
-		phase, mustUpdate, err := a.mustPerformUpdateFn(
-			ctx,
-			stepCtx,
-			&stepCfg,
-			update,
-			app,
-			desiredSources,
-		)
+		phase, mustUpdate, err := a.mustPerformUpdateFn(stepCtx, update, app)
 
 		// If we have a phase, append it to the results.
 		if phase != "" {
@@ -269,6 +248,22 @@ func (a *argocdUpdater) runPromotionStep(
 		// perform an update.
 		if err != nil {
 			logger.Debug(err.Error())
+		}
+
+		// Build the desired source(s) for the Argo CD Application.
+		desiredSources, err := a.buildDesiredSourcesFn(
+			ctx,
+			stepCtx,
+			&stepCfg,
+			update,
+			desiredRevisions,
+			app,
+		)
+		if err != nil {
+			return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, fmt.Errorf(
+				"error building desired sources for Argo CD Application %q in namespace %q: %w",
+				app.Name, app.Namespace, err,
+			)
 		}
 
 		// Perform the update.
@@ -373,12 +368,9 @@ updateLoop:
 }
 
 func (a *argocdUpdater) mustPerformUpdate(
-	ctx context.Context,
 	stepCtx *PromotionStepContext,
-	stepCfg *ArgoCDUpdateConfig,
 	update *ArgoCDAppUpdate,
 	app *argocd.Application,
-	desiredSources argocd.ApplicationSources,
 ) (phase argocd.OperationPhase, mustUpdate bool, err error) {
 	status := app.Status.OperationState
 	if status == nil {
@@ -406,23 +398,23 @@ func (a *argocdUpdater) mustPerformUpdate(
 
 	// Deal with the possibility that the operation was not initiated for the
 	// current freight collection. i.e. Not related to the current promotion.
-	var correctFreightColIDFound bool
+	var correctPromotionIDFound bool
 	for _, info := range status.Operation.Info {
-		if info.Name == freightCollectionInfoKey {
-			correctFreightColIDFound = info.Value == stepCtx.Freight.ID
+		if info.Name == promotionInfoKey {
+			correctPromotionIDFound = info.Value == stepCtx.Promotion
 			break
 		}
 	}
-	if !correctFreightColIDFound {
-		// The operation was not initiated for the current freight collection.
+	if !correctPromotionIDFound {
+		// The operation was not initiated for the current Promotion.
 		if !status.Phase.Completed() {
 			// We should wait for the operation to complete before attempting to
 			// apply an update ourselves.
 			// NB: We return the current phase here because we want the caller
 			//     to know that an operation is still running.
 			return status.Phase, false, fmt.Errorf(
-				"current operation was not initiated for freight collection %q: waiting for operation to complete",
-				stepCtx.Freight.ID,
+				"current operation was not initiated for Promotion %s: waiting for operation to complete",
+				stepCtx.Promotion,
 			)
 		}
 		// Initiate our own operation.
@@ -440,26 +432,8 @@ func (a *argocdUpdater) mustPerformUpdate(
 		return "", true, errors.New("operation completed without a sync result")
 	}
 
-	// Check if the desired sources were applied.
-	if len(update.Sources) > 0 {
-		if (status.SyncResult.Source.RepoURL != "" && !status.SyncResult.Source.Equals(&desiredSources[0])) ||
-			(status.SyncResult.Source.RepoURL == "" && !status.SyncResult.Sources.Equals(desiredSources)) {
-			// The operation did not result in the desired sources being applied. We
-			// should attempt to retry the operation.
-			return "", true, fmt.Errorf(
-				"operation result source does not match desired source",
-			)
-		}
-	}
-
 	// Check if the desired revisions were applied.
-	desiredRevisions, err := a.getDesiredRevisions(
-		ctx,
-		stepCtx,
-		stepCfg,
-		update,
-		app,
-	)
+	desiredRevisions, err := a.getDesiredRevisions(stepCtx, update, app)
 	if err != nil {
 		return "", true, fmt.Errorf("error determining desired revisions: %w", err)
 	}
@@ -513,8 +487,12 @@ func (a *argocdUpdater) syncApplication(
 	// Initiate a new operation.
 	app.Operation = &argocd.Operation{
 		InitiatedBy: argocd.OperationInitiator{
-			Username:  applicationOperationInitiator,
-			Automated: true,
+			Username: applicationOperationInitiator,
+			// NB: While this field may make it look like the operation was
+			// initiated by a machine, it is actually dedicated to indicate
+			// whether the operation was initiated by Argo CD's own
+			// application controller (i.e. auto-sync), which we are not.
+			Automated: false,
 		},
 		Info: []*argocd.Info{
 			{
@@ -522,8 +500,8 @@ func (a *argocdUpdater) syncApplication(
 				Value: "Promotion triggered a sync of this Application resource.",
 			},
 			{
-				Name:  freightCollectionInfoKey,
-				Value: stepCtx.Freight.ID,
+				Name:  promotionInfoKey,
+				Value: stepCtx.Promotion,
 			},
 		},
 		Sync: &argocd.SyncOperation{
@@ -544,12 +522,33 @@ func (a *argocdUpdater) syncApplication(
 	for _, source := range app.Spec.Sources {
 		app.Operation.Sync.Revisions = append(app.Operation.Sync.Revisions, source.TargetRevision)
 	}
+	// TODO(krancour): This is a workaround for the Argo CD Application controller
+	// not handling this correctly itself. It is Argo CD's API server that usually
+	// handles this, but we are bypassing the API server here.
+	//
+	// See issue: https://github.com/argoproj/argo-cd/issues/20875
+	//
+	// We can remove this hack once the issue is resolved and all Argo CD versions
+	// without the fix have reached their EOL.
+	app.Status.OperationState = nil
 
 	// Patch the Argo CD Application.
 	if err := a.argoCDAppPatchFn(ctx, stepCtx, app, func(src, dst unstructured.Unstructured) error {
 		dst.SetAnnotations(src.GetAnnotations())
 		dst.Object["spec"] = a.recursiveMerge(src.Object["spec"], dst.Object["spec"])
 		dst.Object["operation"] = src.Object["operation"]
+		// TODO(krancour): This is a workaround for the Argo CD Application
+		// controller not handling this correctly itself. It is Argo CD's API server
+		// that usually handles this, but we are bypassing the API server here.
+		//
+		// See issue: https://github.com/argoproj/argo-cd/issues/20875
+		//
+		// We can remove this hack once the issue is resolved and all Argo CD
+		// versions without the fix have reached their EOL.
+		//
+		// nolint: forcetypeassert
+		dst.Object["status"].(map[string]any)["operationState"] =
+			src.Object["status"].(map[string]any)["operationState"]
 		return nil
 	}); err != nil {
 		return fmt.Errorf("error patching Argo CD Application %q: %w", app.Name, err)
@@ -876,7 +875,7 @@ func (a *argocdUpdater) buildHelmParamChangesForAppSource(
 		imageUpdate := &update.Images[i]
 		switch imageUpdate.Value {
 		case ImageAndTag, Tag, ImageAndDigest, Digest:
-			// TODO(krancour): Remove this for v1.2.0
+			// TODO(krancour): Remove this for v1.3.0
 			desiredOrigin := getDesiredOrigin(stepCfg, imageUpdate)
 			image, err := freight.FindImage(
 				ctx,

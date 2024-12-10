@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"strconv"
 	"time"
@@ -138,7 +139,14 @@ func (a *appCredentialHelper) getAccessToken(
 ) (string, error) {
 	decodedKey, err := base64.StdEncoding.DecodeString(encodedPrivateKey)
 	if err != nil {
-		return "", fmt.Errorf("error decoding private key: %w", err)
+		if corruptInputErr := new(base64.CorruptInputError); !errors.As(err, &corruptInputErr) {
+			return "", fmt.Errorf("error decoding private key: %w", err)
+		}
+
+		// If the key is not base64 encoded, it may be a raw key. Try using it
+		// as-is. We do this because initially, we required the PEM-encoded key
+		// to be base64 encoded (for reasons unknown today).
+		decodedKey = []byte(encodedPrivateKey)
 	}
 	appTokenSource, err := githubauth.NewApplicationTokenSource(appID, decodedKey)
 	if err != nil {

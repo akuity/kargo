@@ -88,6 +88,50 @@ spec:
                                 expressions in defining values at any level of this block.
                                 See https://docs.kargo.io/references/expression-language for details.
                               x-kubernetes-preserve-unknown-fields: true
+                            retry:
+                              description: Retry is the retry policy for this step.
+                              properties:
+                                errorThreshold:
+                                  description: |-
+                                    ErrorThreshold is the number of consecutive times the step must fail (for
+                                    any reason) before retries are abandoned and the entire Promotion is marked
+                                    as failed.
+
+                                    If this field is set to 0, the effective default will be a step-specific
+                                    one. If no step-specific default exists (i.e. is also 0), the effective
+                                    default will be the system-wide default of 1.
+
+                                    A value of 1 will cause the Promotion to be marked as failed after just
+                                    a single failure; i.e. no retries will be attempted.
+
+                                    There is no option to specify an infinite number of retries using a value
+                                    such as -1.
+
+                                    In a future release, Kargo is likely to become capable of distinguishing
+                                    between recoverable and non-recoverable step failures. At that time, it is
+                                    planned that unrecoverable failures will not be subject to this threshold
+                                    and will immediately cause the Promotion to be marked as failed without
+                                    further condition.
+                                  format: int32
+                                  type: integer
+                                timeout:
+                                  description: |-
+                                    Timeout is the soft maximum interval in which a step that returns a Running
+                                    status (which typically indicates it's waiting for something to happen)
+                                    may be retried.
+
+                                    The maximum is a soft one because the check for whether the interval has
+                                    elapsed occurs AFTER the step has run. This effectively means a step may
+                                    run ONCE beyond the close of the interval.
+
+                                    If this field is set to nil, the effective default will be a step-specific
+                                    one. If no step-specific default exists (i.e. is also nil), the effective
+                                    default will be the system-wide default of 0.
+
+                                    A value of 0 will cause the step to be retried indefinitely unless the
+                                    ErrorThreshold is reached.
+                                  type: string
+                              type: object
                             uses:
                               description: Uses identifies a runner that can execute
                                 this step.
@@ -847,6 +891,45 @@ spec:
                           State stores the state of the promotion process between reconciliation
                           attempts.
                         x-kubernetes-preserve-unknown-fields: true
+                      stepExecutionMetadata:
+                        description: |-
+                          StepExecutionMetadata tracks metadata pertaining to the execution
+                          of individual promotion steps.
+                        items:
+                          description: |-
+                            StepExecutionMetadata tracks metadata pertaining to the execution of
+                            a promotion step.
+                          properties:
+                            alias:
+                              description: Alias is the alias of the step.
+                              type: string
+                            errorCount:
+                              description: ErrorCount tracks consecutive failed attempts
+                                to execute the step.
+                              format: int32
+                              type: integer
+                            finishedAt:
+                              description: |-
+                                FinishedAt is the time at which the final attempt to execute the step
+                                completed.
+                              format: date-time
+                              type: string
+                            message:
+                              description: Message is a display message about the
+                                step, including any errors.
+                              type: string
+                            startedAt:
+                              description: |-
+                                StartedAt is the time at which the first attempt to execute the step
+                                began.
+                              format: date-time
+                              type: string
+                            status:
+                              description: Status is the high-level outcome of the
+                                step.
+                              type: string
+                          type: object
+                        type: array
                     type: object
                 required:
                 - name
@@ -1079,49 +1162,6 @@ spec:
               health:
                 description: Health is the Stage's last observed health.
                 properties:
-                  argoCDApps:
-                    description: ArgoCDApps describes the current state of any related
-                      ArgoCD Applications.
-                    items:
-                      description: ArgoCDAppStatus describes the current state of
-                        a single ArgoCD Application.
-                      properties:
-                        healthStatus:
-                          description: HealthStatus is the health of the ArgoCD Application.
-                          properties:
-                            message:
-                              type: string
-                            status:
-                              type: string
-                          required:
-                          - status
-                          type: object
-                        name:
-                          description: Name is the name of the ArgoCD Application.
-                          type: string
-                        namespace:
-                          description: Namespace is the namespace of the ArgoCD Application.
-                          type: string
-                        syncStatus:
-                          description: SyncStatus is the sync status of the ArgoCD
-                            Application.
-                          properties:
-                            revision:
-                              type: string
-                            revisions:
-                              items:
-                                type: string
-                              type: array
-                            status:
-                              type: string
-                          required:
-                          - status
-                          type: object
-                      required:
-                      - name
-                      - namespace
-                      type: object
-                    type: array
                   config:
                     description: |-
                       Config is the opaque configuration of all health checks performed on this
@@ -1668,6 +1708,45 @@ spec:
                           State stores the state of the promotion process between reconciliation
                           attempts.
                         x-kubernetes-preserve-unknown-fields: true
+                      stepExecutionMetadata:
+                        description: |-
+                          StepExecutionMetadata tracks metadata pertaining to the execution
+                          of individual promotion steps.
+                        items:
+                          description: |-
+                            StepExecutionMetadata tracks metadata pertaining to the execution of
+                            a promotion step.
+                          properties:
+                            alias:
+                              description: Alias is the alias of the step.
+                              type: string
+                            errorCount:
+                              description: ErrorCount tracks consecutive failed attempts
+                                to execute the step.
+                              format: int32
+                              type: integer
+                            finishedAt:
+                              description: |-
+                                FinishedAt is the time at which the final attempt to execute the step
+                                completed.
+                              format: date-time
+                              type: string
+                            message:
+                              description: Message is a display message about the
+                                step, including any errors.
+                              type: string
+                            startedAt:
+                              description: |-
+                                StartedAt is the time at which the first attempt to execute the step
+                                began.
+                              format: date-time
+                              type: string
+                            status:
+                              description: Status is the high-level outcome of the
+                                step.
+                              type: string
+                          type: object
+                        type: array
                     type: object
                 required:
                 - name

@@ -1,7 +1,6 @@
 package directives
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -41,45 +40,42 @@ func Test_argoCDUpdater_getDesiredRevisions(t *testing.T) {
 							// in this case.
 						},
 						{
-							// This has an update and a matching artifact in the Freight. We
-							// should know what revision we want.
+							// This has a matching artifact in the Freight, but no update
+							// that specifies the desired revision.
+							//
+							// Before v1.1, we would have inferred the desired revision from
+							// the Freight.
+							//
+							// Beginning with v1.1, we make no attempt to infer the desired
+							// revision when it is not explicitly specified.
+							//
+							// This case is here purely as validation of the updated behavior.
 							RepoURL: "https://example.com",
 							Chart:   "fake-chart",
 						},
 						{
-							// This has no matching update, but does have a matching artifact
-							// in the Freight. We should know what revision we want.
+							// This has an update that directly specifies the desired
+							// revision.
 							RepoURL: "https://example.com",
 							Chart:   "another-fake-chart",
 						},
 						{
-							// This has no matching update, but does have a matching artifact
-							// in the Freight. We should know what revision we want.
+							// This has a matching artifact in the Freight, but no update
+							// that specifies the desired revision.
 							//
-							// OCI is a special case.
-							RepoURL: "example.com",
-							Chart:   "fake-chart",
-						},
-						{
-							// This has no matching artifact in the Freight. We should not
-							// know what revision we want.
-							RepoURL: "https://example.com",
-							Chart:   "yet-another-fake-chart",
-						},
-						{
-							// This has an update and a matching artifact in the Freight. We
-							// should know what revision we want.
+							// Before v1.1, we would have inferred the desired revision from
+							// the Freight.
+							//
+							// Beginning with v1.1, we make no attempt to infer the desired
+							// revision when it is not explicitly specified.
+							//
+							// This case is here purely as validation of the updated behavior.
 							RepoURL: "https://github.com/universe/42",
 						},
 						{
-							// This has no matching update, but does have a matching artifact
-							// in the Freight. We should know what revision we want.
+							// This has an update that directly specifies the desired
+							// revision.
 							RepoURL: "https://github.com/another-universe/42",
-						},
-						{
-							// This has no matching artifact in the Freight. We should not
-							// know what revision we want.
-							RepoURL: "https://github.com/yet-another-universe/42",
 						},
 					},
 				},
@@ -91,16 +87,7 @@ func Test_argoCDUpdater_getDesiredRevisions(t *testing.T) {
 						{
 							RepoURL: "https://example.com",
 							Name:    "fake-chart",
-							Version: "v2.0.0",
-						},
-						{
-							RepoURL: "https://example.com",
-							Name:    "another-fake-chart",
-							Version: "v1.0.0",
-						},
-						{
-							RepoURL: "oci://example.com/fake-chart",
-							Version: "v3.0.0",
+							Version: "fake-version",
 						},
 					},
 					Commits: []kargoapi.GitCommit{
@@ -108,14 +95,10 @@ func Test_argoCDUpdater_getDesiredRevisions(t *testing.T) {
 							RepoURL: "https://github.com/universe/42",
 							ID:      "fake-commit",
 						},
-						{
-							RepoURL: "https://github.com/another-universe/42",
-							ID:      "another-fake-commit",
-						},
 					},
 				},
 			},
-			want: []string{"", "v2.0.0", "v1.0.0", "v3.0.0", "", "fake-commit", "another-fake-commit", ""},
+			want: []string{"", "", "another-fake-version", "", "another-fake-commit"},
 		},
 	}
 
@@ -129,28 +112,25 @@ func Test_argoCDUpdater_getDesiredRevisions(t *testing.T) {
 			for _, freight := range testCase.freight {
 				stepCtx.Freight.UpdateOrPush(freight)
 			}
-			stepCfg := &ArgoCDUpdateConfig{
-				Apps: []ArgoCDAppUpdate{{
+			revisions, err := runner.getDesiredRevisions(
+				stepCtx,
+				&ArgoCDAppUpdate{
 					FromOrigin: &AppFromOrigin{
 						Kind: Kind(testOrigin.Kind),
 						Name: testOrigin.Name,
 					},
 					Sources: []ArgoCDAppSourceUpdate{
 						{
-							RepoURL: "https://example.com",
-							Chart:   "fake-chart",
+							RepoURL:         "https://example.com",
+							Chart:           "another-fake-chart",
+							DesiredRevision: "another-fake-version",
 						},
 						{
-							RepoURL: "https://github.com/universe/42",
+							RepoURL:         "https://github.com/another-universe/42",
+							DesiredRevision: "another-fake-commit",
 						},
 					},
-				}},
-			}
-			revisions, err := runner.getDesiredRevisions(
-				context.Background(),
-				stepCtx,
-				stepCfg,
-				&stepCfg.Apps[0],
+				},
 				testCase.app,
 			)
 			require.NoError(t, err)

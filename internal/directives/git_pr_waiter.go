@@ -121,7 +121,7 @@ func (g *gitPRWaiter) runPromotionStep(
 	}
 	return PromotionStepResult{
 		Status: kargoapi.PromotionPhaseSucceeded,
-		Output: map[string]any{commitKey: pr.MergeCommitSHA},
+		Output: map[string]any{stateKeyCommit: pr.MergeCommitSHA},
 	}, nil
 }
 
@@ -150,7 +150,7 @@ func (g *gitPRWaiter) getPRNumber(
 			cfg.PRNumberFromStep,
 		)
 	}
-	prNumberAny, exists := stepOutputMap[prNumberKey]
+	prNumberAny, exists := stepOutputMap[stateKeyPRNumber]
 	if !exists {
 		return 0, fmt.Errorf(
 			"no PR number found in output from step with alias %q",

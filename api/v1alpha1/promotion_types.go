@@ -1,6 +1,8 @@
 package v1alpha1
 
 import (
+	"time"
+
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
@@ -109,6 +111,62 @@ type PromotionVariable struct {
 	Value string `json:"value" protobuf:"bytes,2,opt,name=value"`
 }
 
+// PromotionStepRetry describes the retry policy for a PromotionStep.
+type PromotionStepRetry struct {
+	// Timeout is the soft maximum interval in which a step that returns a Running
+	// status (which typically indicates it's waiting for something to happen)
+	// may be retried.
+	//
+	// The maximum is a soft one because the check for whether the interval has
+	// elapsed occurs AFTER the step has run. This effectively means a step may
+	// run ONCE beyond the close of the interval.
+	//
+	// If this field is set to nil, the effective default will be a step-specific
+	// one. If no step-specific default exists (i.e. is also nil), the effective
+	// default will be the system-wide default of 0.
+	//
+	// A value of 0 will cause the step to be retried indefinitely unless the
+	// ErrorThreshold is reached.
+	Timeout *metav1.Duration `json:"timeout,omitempty" protobuf:"bytes,1,opt,name=timeout"`
+	// ErrorThreshold is the number of consecutive times the step must fail (for
+	// any reason) before retries are abandoned and the entire Promotion is marked
+	// as failed.
+	//
+	// If this field is set to 0, the effective default will be a step-specific
+	// one. If no step-specific default exists (i.e. is also 0), the effective
+	// default will be the system-wide default of 1.
+	//
+	// A value of 1 will cause the Promotion to be marked as failed after just
+	// a single failure; i.e. no retries will be attempted.
+	//
+	// There is no option to specify an infinite number of retries using a value
+	// such as -1.
+	//
+	// In a future release, Kargo is likely to become capable of distinguishing
+	// between recoverable and non-recoverable step failures. At that time, it is
+	// planned that unrecoverable failures will not be subject to this threshold
+	// and will immediately cause the Promotion to be marked as failed without
+	// further condition.
+	ErrorThreshold uint32 `json:"errorThreshold,omitempty" protobuf:"varint,2,opt,name=errorThreshold"`
+}
+
+// GetTimeout returns the Timeout field with the given fallback value.
+func (r *PromotionStepRetry) GetTimeout(fallback *time.Duration) *time.Duration {
+	if r == nil || r.Timeout == nil {
+		return fallback
+	}
+	return &r.Timeout.Duration
+}
+
+// GetErrorThreshold returns the ErrorThreshold field with the given fallback
+// value.
+func (r *PromotionStepRetry) GetErrorThreshold(fallback uint32) uint32 {
+	if r == nil || r.ErrorThreshold == 0 {
+		return fallback
+	}
+	return r.ErrorThreshold
+}
+
 // PromotionStep describes a directive to be executed as part of a Promotion.
 type PromotionStep struct {
 	// Uses identifies a runner that can execute this step.
@@ -117,6 +175,8 @@ type PromotionStep struct {
 	Uses string `json:"uses" protobuf:"bytes,1,opt,name=uses"`
 	// As is the alias this step can be referred to as.
 	As string `json:"as,omitempty" protobuf:"bytes,2,opt,name=as"`
+	// Retry is the retry policy for this step.
+	Retry *PromotionStepRetry `json:"retry,omitempty" protobuf:"bytes,4,opt,name=retry"`
 	// Config is opaque configuration for the PromotionStep that is understood
 	// only by each PromotionStep's implementation. It is legal to utilize
 	// expressions in defining values at any level of this block.
@@ -154,6 +214,9 @@ type PromotionStatus struct {
 	// permits steps that have already run successfully to be skipped on
 	// subsequent reconciliations attempts.
 	CurrentStep int64 `json:"currentStep,omitempty" protobuf:"varint,9,opt,name=currentStep"`
+	// StepExecutionMetadata tracks metadata pertaining to the execution
+	// of individual promotion steps.
+	StepExecutionMetadata StepExecutionMetadataList `json:"stepExecutionMetadata,omitempty" protobuf:"bytes,11,rep,name=stepExecutionMetadata"`
 	// State stores the state of the promotion process between reconciliation
 	// attempts.
 	State *apiextensionsv1.JSON `json:"state,omitempty" protobuf:"bytes,10,opt,name=state"`
@@ -198,8 +261,8 @@ func (s *HealthCheckStep) GetConfig() map[string]any {
 }
 
 // WithPhase returns a copy of PromotionStatus with the given phase
-func (p *PromotionStatus) WithPhase(phase PromotionPhase) *PromotionStatus {
-	status := p.DeepCopy()
+func (s *PromotionStatus) WithPhase(phase PromotionPhase) *PromotionStatus {
+	status := s.DeepCopy()
 	status.Phase = phase
 	return status
 }
@@ -211,4 +274,26 @@ type PromotionList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 	Items           []Promotion `json:"items" protobuf:"bytes,2,rep,name=items"`
+}
+
+// StepExecutionMetadataList is a list of StepExecutionMetadata.
+type StepExecutionMetadataList []StepExecutionMetadata
+
+// StepExecutionMetadata tracks metadata pertaining to the execution of
+// a promotion step.
+type StepExecutionMetadata struct {
+	// Alias is the alias of the step.
+	Alias string `json:"alias,omitempty" protobuf:"bytes,1,opt,name=alias"`
+	// StartedAt is the time at which the first attempt to execute the step
+	// began.
+	StartedAt *metav1.Time `json:"startedAt,omitempty" protobuf:"bytes,2,opt,name=startedAt"`
+	// FinishedAt is the time at which the final attempt to execute the step
+	// completed.
+	FinishedAt *metav1.Time `json:"finishedAt,omitempty" protobuf:"bytes,3,opt,name=finishedAt"`
+	// ErrorCount tracks consecutive failed attempts to execute the step.
+	ErrorCount uint32 `json:"errorCount,omitempty" protobuf:"varint,4,opt,name=errorCount"`
+	// Status is the high-level outcome of the step.
+	Status PromotionPhase `json:"status,omitempty" protobuf:"bytes,5,opt,name=status"`
+	// Message is a display message about the step, including any errors.
+	Message string `json:"message,omitempty" protobuf:"bytes,6,opt,name=message"`
 }

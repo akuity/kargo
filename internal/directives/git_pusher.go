@@ -12,7 +12,9 @@ import (
 	"github.com/akuity/kargo/internal/credentials"
 )
 
-const branchKey = "branch"
+// stateKeyBranch is the key used to store the branch that was pushed to in the
+// shared State.
+const stateKeyBranch = "branch"
 
 func init() {
 	builtins.RegisterPromotionStepRunner(
@@ -134,8 +136,8 @@ func (g *gitPushPusher) runPromotionStep(
 	return PromotionStepResult{
 		Status: kargoapi.PromotionPhaseSucceeded,
 		Output: map[string]any{
-			branchKey: targetBranch,
-			commitKey: commitID,
+			stateKeyBranch: targetBranch,
+			stateKeyCommit: commitID,
 		},
 	}, nil
 }

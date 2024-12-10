@@ -60,6 +60,8 @@ message AnalysisTemplateReference {
 // ApprovedStage describes a Stage for which Freight has been (manually)
 // approved.
 message ApprovedStage {
+  // ApprovedAt is the time at which the Freight was approved for the Stage.
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time approvedAt = 1;
 }
 
 // ArgoCDAppHealthStatus describes the health of an ArgoCD Application.
@@ -569,9 +571,6 @@ message Health {
   // state. This field will always be the empty when a Stage is Healthy.
   repeated string issues = 2;
 
-  // ArgoCDApps describes the current state of any related ArgoCD Applications.
-  repeated ArgoCDAppStatus argoCDApps = 3;
-
   // Config is the opaque configuration of all health checks performed on this
   // Stage.
   optional .k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON config = 4;
@@ -900,6 +899,10 @@ message PromotionStatus {
   // subsequent reconciliations attempts.
   optional int64 currentStep = 9;
 
+  // StepExecutionMetadata tracks metadata pertaining to the execution
+  // of individual promotion steps.
+  repeated StepExecutionMetadata stepExecutionMetadata = 11;
+
   // State stores the state of the promotion process between reconciliation
   // attempts.
   optional .k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON state = 10;
@@ -915,11 +918,54 @@ message PromotionStep {
   // As is the alias this step can be referred to as.
   optional string as = 2;
 
+  // Retry is the retry policy for this step.
+  optional PromotionStepRetry retry = 4;
+
   // Config is opaque configuration for the PromotionStep that is understood
   // only by each PromotionStep's implementation. It is legal to utilize
   // expressions in defining values at any level of this block.
   // See https://docs.kargo.io/references/expression-language for details.
   optional .k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON config = 3;
+}
+
+// PromotionStepRetry describes the retry policy for a PromotionStep.
+message PromotionStepRetry {
+  // Timeout is the soft maximum interval in which a step that returns a Running
+  // status (which typically indicates it's waiting for something to happen)
+  // may be retried.
+  //
+  // The maximum is a soft one because the check for whether the interval has
+  // elapsed occurs AFTER the step has run. This effectively means a step may
+  // run ONCE beyond the close of the interval.
+  //
+  // If this field is set to nil, the effective default will be a step-specific
+  // one. If no step-specific default exists (i.e. is also nil), the effective
+  // default will be the system-wide default of 0.
+  //
+  // A value of 0 will cause the step to be retried indefinitely unless the
+  // ErrorThreshold is reached.
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Duration timeout = 1;
+
+  // ErrorThreshold is the number of consecutive times the step must fail (for
+  // any reason) before retries are abandoned and the entire Promotion is marked
+  // as failed.
+  //
+  // If this field is set to 0, the effective default will be a step-specific
+  // one. If no step-specific default exists (i.e. is also 0), the effective
+  // default will be the system-wide default of 1.
+  //
+  // A value of 1 will cause the Promotion to be marked as failed after just
+  // a single failure; i.e. no retries will be attempted.
+  //
+  // There is no option to specify an infinite number of retries using a value
+  // such as -1.
+  //
+  // In a future release, Kargo is likely to become capable of distinguishing
+  // between recoverable and non-recoverable step failures. At that time, it is
+  // planned that unrecoverable failures will not be subject to this threshold
+  // and will immediately cause the Promotion to be marked as failed without
+  // further condition.
+  optional uint32 errorThreshold = 2;
 }
 
 // PromotionTemplate defines a template for a Promotion that can be used to
@@ -1080,6 +1126,30 @@ message StageStatus {
   optional PromotionReference lastPromotion = 10;
 }
 
+// StepExecutionMetadata tracks metadata pertaining to the execution of
+// a promotion step.
+message StepExecutionMetadata {
+  // Alias is the alias of the step.
+  optional string alias = 1;
+
+  // StartedAt is the time at which the first attempt to execute the step
+  // began.
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time startedAt = 2;
+
+  // FinishedAt is the time at which the final attempt to execute the step
+  // completed.
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time finishedAt = 3;
+
+  // ErrorCount tracks consecutive failed attempts to execute the step.
+  optional uint32 errorCount = 4;
+
+  // Status is the high-level outcome of the step.
+  optional string status = 5;
+
+  // Message is a display message about the step, including any errors.
+  optional string message = 6;
+}
+
 // Verification describes how to verify that a Promotion has been successful
 // using Argo Rollouts AnalysisTemplates.
 message Verification {
@@ -1129,6 +1199,8 @@ message VerificationInfo {
 
 // VerifiedStage describes a Stage in which Freight has been verified.
 message VerifiedStage {
+  // VerifiedAt is the time at which the Freight was verified in the Stage.
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time verifiedAt = 1;
 }
 
 // Warehouse is a source of Freight.

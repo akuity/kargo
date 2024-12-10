@@ -297,7 +297,7 @@ in question, Kargo will also lose access.
         kargo.akuity.io/cred-type: git
     stringData:
       githubAppID: <app id>
-      githubAppPrivateKey: <base64-encoded private key>
+      githubAppPrivateKey: <PEM-encoded private key>
       githubAppInstallationID: <installation id>
       repoURL: <repo url>
       repoURLIsRegex: <true if repoURL is a pattern matching multiple repositories>
@@ -498,7 +498,7 @@ metadata:
     kargo.akuity.io/cred-type: image
 stringData:
   gcpServiceAccountKey: <base64-encoded service account key>
-  repoURL: <ecr url>
+  repoURL: <artifact registry url>
 ```
 
 :::note

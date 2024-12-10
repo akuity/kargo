@@ -200,12 +200,12 @@ func Test_gitPusher_runPromotionStep(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
-	branchName, ok := res.Output[branchKey]
+	branchName, ok := res.Output[stateKeyBranch]
 	require.True(t, ok)
 	require.Equal(t, "kargo/promotion/fake-promotion", branchName)
 	expectedCommit, err := workTree.LastCommitID()
 	require.NoError(t, err)
-	actualCommit, ok := res.Output[commitKey]
+	actualCommit, ok := res.Output[stateKeyCommit]
 	require.True(t, ok)
 	require.Equal(t, expectedCommit, actualCommit)
 }

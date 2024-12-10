@@ -32,7 +32,7 @@ helm install cert-manager cert-manager \
   --version $cert_manager_chart_version \
   --namespace cert-manager \
   --create-namespace \
-  --set installCRDs=true \
+  --set crds.enabled=true \
   --wait
 
 helm install argocd argo-cd \

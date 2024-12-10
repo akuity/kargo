@@ -221,6 +221,13 @@ export class AnalysisTemplateReference extends Message<AnalysisTemplateReference
  * @generated from message github.com.akuity.kargo.api.v1alpha1.ApprovedStage
  */
 export class ApprovedStage extends Message<ApprovedStage> {
+  /**
+   * ApprovedAt is the time at which the Freight was approved for the Stage.
+   *
+   * @generated from field: optional k8s.io.apimachinery.pkg.apis.meta.v1.Time approvedAt = 1;
+   */
+  approvedAt?: Time;
+
   constructor(data?: PartialMessage<ApprovedStage>) {
     super();
     proto2.util.initPartial(data, this);
@@ -229,6 +236,7 @@ export class ApprovedStage extends Message<ApprovedStage> {
   static readonly runtime: typeof proto2 = proto2;
   static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.ApprovedStage";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 1, name: "approvedAt", kind: "message", T: Time, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ApprovedStage {
@@ -1759,13 +1767,6 @@ export class Health extends Message<Health> {
   issues: string[] = [];
 
   /**
-   * ArgoCDApps describes the current state of any related ArgoCD Applications.
-   *
-   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.ArgoCDAppStatus argoCDApps = 3;
-   */
-  argoCDApps: ArgoCDAppStatus[] = [];
-
-  /**
    * Config is the opaque configuration of all health checks performed on this
    * Stage.
    *
@@ -1790,7 +1791,6 @@ export class Health extends Message<Health> {
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 1, name: "status", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 2, name: "issues", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 3, name: "argoCDApps", kind: "message", T: ArgoCDAppStatus, repeated: true },
     { no: 4, name: "config", kind: "message", T: JSON, opt: true },
     { no: 5, name: "output", kind: "message", T: JSON, opt: true },
   ]);
@@ -2768,6 +2768,14 @@ export class PromotionStatus extends Message<PromotionStatus> {
   currentStep?: bigint;
 
   /**
+   * StepExecutionMetadata tracks metadata pertaining to the execution
+   * of individual promotion steps.
+   *
+   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.StepExecutionMetadata stepExecutionMetadata = 11;
+   */
+  stepExecutionMetadata: StepExecutionMetadata[] = [];
+
+  /**
    * State stores the state of the promotion process between reconciliation
    * attempts.
    *
@@ -2791,6 +2799,7 @@ export class PromotionStatus extends Message<PromotionStatus> {
     { no: 8, name: "healthChecks", kind: "message", T: HealthCheckStep, repeated: true },
     { no: 6, name: "finishedAt", kind: "message", T: Time, opt: true },
     { no: 9, name: "currentStep", kind: "scalar", T: 3 /* ScalarType.INT64 */, opt: true },
+    { no: 11, name: "stepExecutionMetadata", kind: "message", T: StepExecutionMetadata, repeated: true },
     { no: 10, name: "state", kind: "message", T: JSON, opt: true },
   ]);
 
@@ -2834,6 +2843,13 @@ export class PromotionStep extends Message<PromotionStep> {
   as?: string;
 
   /**
+   * Retry is the retry policy for this step.
+   *
+   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.PromotionStepRetry retry = 4;
+   */
+  retry?: PromotionStepRetry;
+
+  /**
    * Config is opaque configuration for the PromotionStep that is understood
    * only by each PromotionStep's implementation. It is legal to utilize
    * expressions in defining values at any level of this block.
@@ -2853,6 +2869,7 @@ export class PromotionStep extends Message<PromotionStep> {
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 1, name: "uses", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 2, name: "as", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 4, name: "retry", kind: "message", T: PromotionStepRetry, opt: true },
     { no: 3, name: "config", kind: "message", T: JSON, opt: true },
   ]);
 
@@ -2870,6 +2887,86 @@ export class PromotionStep extends Message<PromotionStep> {
 
   static equals(a: PromotionStep | PlainMessage<PromotionStep> | undefined, b: PromotionStep | PlainMessage<PromotionStep> | undefined): boolean {
     return proto2.util.equals(PromotionStep, a, b);
+  }
+}
+
+/**
+ * PromotionStepRetry describes the retry policy for a PromotionStep.
+ *
+ * @generated from message github.com.akuity.kargo.api.v1alpha1.PromotionStepRetry
+ */
+export class PromotionStepRetry extends Message<PromotionStepRetry> {
+  /**
+   * Timeout is the soft maximum interval in which a step that returns a Running
+   * status (which typically indicates it's waiting for something to happen)
+   * may be retried.
+   *
+   * The maximum is a soft one because the check for whether the interval has
+   * elapsed occurs AFTER the step has run. This effectively means a step may
+   * run ONCE beyond the close of the interval.
+   *
+   * If this field is set to nil, the effective default will be a step-specific
+   * one. If no step-specific default exists (i.e. is also nil), the effective
+   * default will be the system-wide default of 0.
+   *
+   * A value of 0 will cause the step to be retried indefinitely unless the
+   * ErrorThreshold is reached.
+   *
+   * @generated from field: optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration timeout = 1;
+   */
+  timeout?: Duration;
+
+  /**
+   * ErrorThreshold is the number of consecutive times the step must fail (for
+   * any reason) before retries are abandoned and the entire Promotion is marked
+   * as failed.
+   *
+   * If this field is set to 0, the effective default will be a step-specific
+   * one. If no step-specific default exists (i.e. is also 0), the effective
+   * default will be the system-wide default of 1.
+   *
+   * A value of 1 will cause the Promotion to be marked as failed after just
+   * a single failure; i.e. no retries will be attempted.
+   *
+   * There is no option to specify an infinite number of retries using a value
+   * such as -1.
+   *
+   * In a future release, Kargo is likely to become capable of distinguishing
+   * between recoverable and non-recoverable step failures. At that time, it is
+   * planned that unrecoverable failures will not be subject to this threshold
+   * and will immediately cause the Promotion to be marked as failed without
+   * further condition.
+   *
+   * @generated from field: optional uint32 errorThreshold = 2;
+   */
+  errorThreshold?: number;
+
+  constructor(data?: PartialMessage<PromotionStepRetry>) {
+    super();
+    proto2.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto2 = proto2;
+  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.PromotionStepRetry";
+  static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 1, name: "timeout", kind: "message", T: Duration, opt: true },
+    { no: 2, name: "errorThreshold", kind: "scalar", T: 13 /* ScalarType.UINT32 */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PromotionStepRetry {
+    return new PromotionStepRetry().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): PromotionStepRetry {
+    return new PromotionStepRetry().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): PromotionStepRetry {
+    return new PromotionStepRetry().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: PromotionStepRetry | PlainMessage<PromotionStepRetry> | undefined, b: PromotionStepRetry | PlainMessage<PromotionStepRetry> | undefined): boolean {
+    return proto2.util.equals(PromotionStepRetry, a, b);
   }
 }
 
@@ -3403,6 +3500,90 @@ export class StageStatus extends Message<StageStatus> {
 }
 
 /**
+ * StepExecutionMetadata tracks metadata pertaining to the execution of
+ * a promotion step.
+ *
+ * @generated from message github.com.akuity.kargo.api.v1alpha1.StepExecutionMetadata
+ */
+export class StepExecutionMetadata extends Message<StepExecutionMetadata> {
+  /**
+   * Alias is the alias of the step.
+   *
+   * @generated from field: optional string alias = 1;
+   */
+  alias?: string;
+
+  /**
+   * StartedAt is the time at which the first attempt to execute the step
+   * began.
+   *
+   * @generated from field: optional k8s.io.apimachinery.pkg.apis.meta.v1.Time startedAt = 2;
+   */
+  startedAt?: Time;
+
+  /**
+   * FinishedAt is the time at which the final attempt to execute the step
+   * completed.
+   *
+   * @generated from field: optional k8s.io.apimachinery.pkg.apis.meta.v1.Time finishedAt = 3;
+   */
+  finishedAt?: Time;
+
+  /**
+   * ErrorCount tracks consecutive failed attempts to execute the step.
+   *
+   * @generated from field: optional uint32 errorCount = 4;
+   */
+  errorCount?: number;
+
+  /**
+   * Status is the high-level outcome of the step.
+   *
+   * @generated from field: optional string status = 5;
+   */
+  status?: string;
+
+  /**
+   * Message is a display message about the step, including any errors.
+   *
+   * @generated from field: optional string message = 6;
+   */
+  message?: string;
+
+  constructor(data?: PartialMessage<StepExecutionMetadata>) {
+    super();
+    proto2.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto2 = proto2;
+  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.StepExecutionMetadata";
+  static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 1, name: "alias", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 2, name: "startedAt", kind: "message", T: Time, opt: true },
+    { no: 3, name: "finishedAt", kind: "message", T: Time, opt: true },
+    { no: 4, name: "errorCount", kind: "scalar", T: 13 /* ScalarType.UINT32 */, opt: true },
+    { no: 5, name: "status", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 6, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StepExecutionMetadata {
+    return new StepExecutionMetadata().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): StepExecutionMetadata {
+    return new StepExecutionMetadata().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): StepExecutionMetadata {
+    return new StepExecutionMetadata().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: StepExecutionMetadata | PlainMessage<StepExecutionMetadata> | undefined, b: StepExecutionMetadata | PlainMessage<StepExecutionMetadata> | undefined): boolean {
+    return proto2.util.equals(StepExecutionMetadata, a, b);
+  }
+}
+
+/**
  * Verification describes how to verify that a Promotion has been successful
  * using Argo Rollouts AnalysisTemplates.
  *
@@ -3565,6 +3746,13 @@ export class VerificationInfo extends Message<VerificationInfo> {
  * @generated from message github.com.akuity.kargo.api.v1alpha1.VerifiedStage
  */
 export class VerifiedStage extends Message<VerifiedStage> {
+  /**
+   * VerifiedAt is the time at which the Freight was verified in the Stage.
+   *
+   * @generated from field: optional k8s.io.apimachinery.pkg.apis.meta.v1.Time verifiedAt = 1;
+   */
+  verifiedAt?: Time;
+
   constructor(data?: PartialMessage<VerifiedStage>) {
     super();
     proto2.util.initPartial(data, this);
@@ -3573,6 +3761,7 @@ export class VerifiedStage extends Message<VerifiedStage> {
   static readonly runtime: typeof proto2 = proto2;
   static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.VerifiedStage";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 1, name: "verifiedAt", kind: "message", T: Time, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): VerifiedStage {

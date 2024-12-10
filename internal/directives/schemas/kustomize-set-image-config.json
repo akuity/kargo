@@ -12,8 +12,7 @@
     },
     "images": {
       "type": "array",
-      "description": "Images is a list of container images to set or update in the Kustomization file.",
-      "minItems": 1,
+      "description": "Images is a list of container images to set or update in the Kustomization file. When left unspecified, all images from the Freight collection will be set in the Kustomization file. Unless there is an ambiguous image name (for example, due to two Warehouses subscribing to the same repository), which requires manual configuration.",
       "items": {
         "type": "object",
         "additionalProperties": false,

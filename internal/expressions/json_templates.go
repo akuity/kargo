@@ -105,7 +105,13 @@ func EvaluateTemplate(template string, env map[string]any, exprOpts ...expr.Opti
 	}
 	exprOpts = append(exprOpts, expr.Function(
 		"quote",
-		func(a ...any) (any, error) { return fmt.Sprintf(`"%v"`, a[0]), nil },
+		func(a ...any) (any, error) {
+			jsonBytes, err := json.Marshal(a[0])
+			if err != nil {
+				return nil, fmt.Errorf("error applying quote() function: %w", err)
+			}
+			return fmt.Sprintf(`"%s"`, jsonBytes), nil
+		},
 		new(func(any) string),
 	))
 	t, err := fasttemplate.NewTemplate(template, "${{", "}}")

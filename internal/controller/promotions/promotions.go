@@ -31,6 +31,7 @@ import (
 	"github.com/akuity/kargo/internal/kubeclient"
 	libEvent "github.com/akuity/kargo/internal/kubernetes/event"
 	"github.com/akuity/kargo/internal/logging"
+	intpredicate "github.com/akuity/kargo/internal/predicate"
 )
 
 // ReconcilerConfig represents configuration for the promotion reconciler.
@@ -114,6 +115,7 @@ func SetupReconcilerWithManager(
 
 	c, err := ctrl.NewControllerManagedBy(kargoMgr).
 		For(&kargoapi.Promotion{}).
+		WithEventFilter(intpredicate.IgnoreDelete[client.Object]{}).
 		WithEventFilter(predicate.Or(
 			predicate.GenerationChangedPredicate{},
 			kargo.RefreshRequested{},
@@ -468,21 +470,23 @@ func (r *reconciler) promote(
 		steps[i] = directives.PromotionStep{
 			Kind:   step.Uses,
 			Alias:  step.As,
+			Retry:  step.Retry,
 			Config: step.Config.Raw,
 		}
 	}
 
 	promoCtx := directives.PromotionContext{
-		UIBaseURL:       r.cfg.APIServerBaseURL,
-		WorkDir:         filepath.Join(os.TempDir(), "promotion-"+string(workingPromo.UID)),
-		Project:         stageNamespace,
-		Stage:           stageName,
-		Promotion:       workingPromo.Name,
-		FreightRequests: stage.Spec.RequestedFreight,
-		Freight:         *workingPromo.Status.FreightCollection.DeepCopy(),
-		StartFromStep:   promo.Status.CurrentStep,
-		State:           directives.State(workingPromo.Status.GetState()),
-		Vars:            workingPromo.Spec.Vars,
+		UIBaseURL:             r.cfg.APIServerBaseURL,
+		WorkDir:               filepath.Join(os.TempDir(), "promotion-"+string(workingPromo.UID)),
+		Project:               stageNamespace,
+		Stage:                 stageName,
+		Promotion:             workingPromo.Name,
+		FreightRequests:       stage.Spec.RequestedFreight,
+		Freight:               *workingPromo.Status.FreightCollection.DeepCopy(),
+		StartFromStep:         promo.Status.CurrentStep,
+		StepExecutionMetadata: promo.Status.StepExecutionMetadata,
+		State:                 directives.State(workingPromo.Status.GetState()),
+		Vars:                  workingPromo.Spec.Vars,
 	}
 	if err := os.Mkdir(promoCtx.WorkDir, 0o700); err == nil {
 		// If we're working with a fresh directory, we should start the promotion
@@ -490,6 +494,8 @@ func (r *reconciler) promote(
 		// allows individual steps to self-discover that they've run before and
 		// examine the results of their own previous execution.
 		promoCtx.StartFromStep = 0
+		promoCtx.StepExecutionMetadata = nil
+		workingPromo.Status.HealthChecks = nil
 	} else if !os.IsExist(err) {
 		return nil, fmt.Errorf("error creating working directory: %w", err)
 	}
@@ -505,16 +511,16 @@ func (r *reconciler) promote(
 	workingPromo.Status.Phase = res.Status
 	workingPromo.Status.Message = res.Message
 	workingPromo.Status.CurrentStep = res.CurrentStep
+	workingPromo.Status.StepExecutionMetadata = res.StepExecutionMetadata
 	workingPromo.Status.State = &apiextensionsv1.JSON{Raw: res.State.ToJSON()}
-	if res.Status == kargoapi.PromotionPhaseSucceeded {
-		var healthChecks []kargoapi.HealthCheckStep
-		for _, step := range res.HealthCheckSteps {
-			healthChecks = append(healthChecks, kargoapi.HealthCheckStep{
+	for _, step := range res.HealthCheckSteps {
+		workingPromo.Status.HealthChecks = append(
+			workingPromo.Status.HealthChecks,
+			kargoapi.HealthCheckStep{
 				Uses:   step.Kind,
 				Config: &apiextensionsv1.JSON{Raw: step.Config.ToJSON()},
-			})
-		}
-		workingPromo.Status.HealthChecks = healthChecks
+			},
+		)
 	}
 	if err != nil {
 		workingPromo.Status.Phase = kargoapi.PromotionPhaseErrored

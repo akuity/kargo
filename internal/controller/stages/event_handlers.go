@@ -130,10 +130,10 @@ func (v *downstreamStageEnqueuer[T]) Update(
 	}
 }
 
-func getNewlyVerifiedStages(old, new *kargoapi.Freight) []string {
+func getNewlyVerifiedStages(existing, updated *kargoapi.Freight) []string {
 	var stages []string
-	for stage := range new.Status.VerifiedIn {
-		if _, ok := old.Status.VerifiedIn[stage]; !ok {
+	for stage := range updated.Status.VerifiedIn {
+		if _, ok := existing.Status.VerifiedIn[stage]; !ok {
 			stages = append(stages, stage)
 		}
 	}
@@ -208,10 +208,10 @@ func (a *stageEnqueuerForApprovedFreight[T]) Update(
 	}
 }
 
-func getNewlyApprovedStages(old, new *kargoapi.Freight) []string {
+func getNewlyApprovedStages(existing, updated *kargoapi.Freight) []string {
 	var stages []string
-	for stage := range new.Status.ApprovedFor {
-		if _, ok := old.Status.ApprovedFor[stage]; !ok {
+	for stage := range updated.Status.ApprovedFor {
+		if _, ok := existing.Status.ApprovedFor[stage]; !ok {
 			stages = append(stages, stage)
 		}
 	}
