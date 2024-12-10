@@ -205,7 +205,17 @@ func (k *kustomizeImageSetter) generateCommitMessage(path string, images map[str
 	}
 	_, _ = commitMsg.WriteString("\n")
 
-	for _, i := range images {
+	// Sort the images by name, in descending order for consistency.
+	imageNames := make([]string, 0, len(images))
+	for name := range images {
+		imageNames = append(imageNames, name)
+	}
+	slices.Sort(imageNames)
+
+	// Append each image to the commit message.
+	for _, name := range imageNames {
+		i := images[name]
+
 		ref := i.Name
 		if i.NewName != "" {
 			ref = i.NewName
