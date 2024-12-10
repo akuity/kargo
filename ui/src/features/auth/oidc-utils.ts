@@ -16,7 +16,5 @@ export const getOIDCScopes = (userOIDCConfig: OIDCConfig, idp: AuthorizationServ
     scopes.push('offline_access');
   }
 
-  alert(scopes);
-
   return scopes;
 };
