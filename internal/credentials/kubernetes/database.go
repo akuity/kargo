@@ -160,14 +160,20 @@ func (k *database) getCredentialsSecret(
 		return strings.Compare(lhs.Name, rhs.Name)
 	})
 
-	// Normalize the repository URL. These normalizations should be safe even
-	// if not applicable to the URL type.
-	repoURL = helm.NormalizeChartRepositoryURL(git.NormalizeURL(repoURL))
+	// Note: We formerly applied these normalizations to any URL, thinking them
+	// generally safe. We no longer do this as it was discovered that an image
+	// repository URL with a port number could be mistaken for an SCP-style URL of
+	// the form host.xz:path/to/repo
+	switch credType {
+	case credentials.TypeGit:
+		repoURL = git.NormalizeURL(repoURL)
+	case credentials.TypeHelm:
+		repoURL = helm.NormalizeChartRepositoryURL(repoURL)
+	}
 
 	logger := logging.LoggerFromContext(ctx)
 
 	// Search for a matching Secret.
-	var matchingSecret *corev1.Secret
 	for _, secret := range secrets.Items {
 		if secret.Data == nil {
 			continue
@@ -190,12 +196,22 @@ func (k *database) getCredentialsSecret(
 				continue
 			}
 			if regex.MatchString(repoURL) {
-				matchingSecret = &secret
-				break
+				return &secret, nil
 			}
-		} else if repoURL == helm.NormalizeChartRepositoryURL(git.NormalizeURL(string(urlBytes))) {
+			continue
+		}
+
+		// Not a regex
+		secretURL := string(urlBytes)
+		switch credType {
+		case credentials.TypeGit:
+			secretURL = git.NormalizeURL(secretURL)
+		case credentials.TypeHelm:
+			secretURL = helm.NormalizeChartRepositoryURL(secretURL)
+		}
+		if secretURL == repoURL {
 			return &secret, nil
 		}
 	}
-	return matchingSecret, nil
+	return nil, nil
 }
