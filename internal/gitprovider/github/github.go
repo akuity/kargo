@@ -111,6 +111,17 @@ func (p *provider) CreatePullRequest(
 		return nil, fmt.Errorf("unexpected nil pull request")
 	}
 	pr := convertGithubPR(*ghPR)
+	if len(opts.Labels) > 0 {
+		_, _, err = p.client.Issues.AddLabelsToIssue(ctx,
+			p.owner,
+			p.repo,
+			int(pr.Number),
+			opts.Labels,
+		)
+	}
+	if err != nil {
+		return nil, err
+	}
 	return &pr, nil
 }
 
