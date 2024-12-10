@@ -111,6 +111,24 @@ type PromotionVariable struct {
 	Value string `json:"value" protobuf:"bytes,2,opt,name=value"`
 }
 
+// PromotionTaskReference describes a reference to a PromotionTask.
+type PromotionTaskReference struct {
+	// Name is the name of the (Cluster)PromotionTask.
+	//
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
+
+	// Kind is the type of the PromotionTask. Can be either PromotionTask or
+	// ClusterPromotionTask, default is PromotionTask.
+	//
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Enum=PromotionTask;ClusterPromotionTask
+	Kind string `json:"kind,omitempty" protobuf:"bytes,2,opt,name=kind"`
+}
+
 // PromotionStepRetry describes the retry policy for a PromotionStep.
 type PromotionStepRetry struct {
 	// Timeout is the soft maximum interval in which a step that returns a Running
@@ -171,8 +189,14 @@ func (r *PromotionStepRetry) GetErrorThreshold(fallback uint32) uint32 {
 type PromotionStep struct {
 	// Uses identifies a runner that can execute this step.
 	//
+	// +kubebuilder:validation:Optional
 	// +kubebuilder:validation:MinLength=1
 	Uses string `json:"uses" protobuf:"bytes,1,opt,name=uses"`
+	// Task is a reference to a PromotionTask that should be deflated into a
+	// Promotion when it is built from a PromotionTemplate.
+	//
+	// +kubebuilder:validation:Optional
+	Task *PromotionTaskReference `json:"task,omitempty" protobuf:"bytes,5,opt,name=task"`
 	// As is the alias this step can be referred to as.
 	As string `json:"as,omitempty" protobuf:"bytes,2,opt,name=as"`
 	// Retry is the retry policy for this step.
