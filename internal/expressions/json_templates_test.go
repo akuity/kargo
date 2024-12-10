@@ -179,13 +179,43 @@ func TestEvaluateJSONTemplate(t *testing.T) {
 			},
 		},
 		{
-			name:         "quote function forces string result",
-			jsonTemplate: `{ "AString": "${{ quote(anInt) }}" }`,
+			name:         "quote function forces null to string",
+			jsonTemplate: `{ "AString": "${{ quote(null) }}" }`,
 			assertions: func(t *testing.T, jsonOutput []byte, err error) {
 				require.NoError(t, err)
 				parsed := testStruct{}
 				require.NoError(t, json.Unmarshal(jsonOutput, &parsed))
-				require.Equal(t, fmt.Sprintf("%d", testEnv["anInt"]), parsed.AString)
+				require.Equal(t, "null", parsed.AString)
+			},
+		},
+		{
+			name:         "quote function forces bool to string",
+			jsonTemplate: `{ "AString": "${{ quote(true) }}" }`,
+			assertions: func(t *testing.T, jsonOutput []byte, err error) {
+				require.NoError(t, err)
+				parsed := testStruct{}
+				require.NoError(t, json.Unmarshal(jsonOutput, &parsed))
+				require.Equal(t, "true", parsed.AString)
+			},
+		},
+		{
+			name:         "quote function forces number to string",
+			jsonTemplate: `{ "AString": "${{ quote(42) }}" }`,
+			assertions: func(t *testing.T, jsonOutput []byte, err error) {
+				require.NoError(t, err)
+				parsed := testStruct{}
+				require.NoError(t, json.Unmarshal(jsonOutput, &parsed))
+				require.Equal(t, "42", parsed.AString)
+			},
+		},
+		{
+			name:         "quote function forces object to string",
+			jsonTemplate: `{ "AString": "${{ quote({ 'foo': 'bar' }) }}" }`,
+			assertions: func(t *testing.T, jsonOutput []byte, err error) {
+				require.NoError(t, err)
+				parsed := testStruct{}
+				require.NoError(t, json.Unmarshal(jsonOutput, &parsed))
+				require.Equal(t, `{"foo":"bar"}`, parsed.AString)
 			},
 		},
 	}
