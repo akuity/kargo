@@ -649,6 +649,99 @@ export class ChartSubscription extends Message<ChartSubscription> {
 }
 
 /**
+ * @generated from message github.com.akuity.kargo.api.v1alpha1.ClusterPromotionTask
+ */
+export class ClusterPromotionTask extends Message<ClusterPromotionTask> {
+  /**
+   * @generated from field: optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
+   */
+  metadata?: ObjectMeta;
+
+  /**
+   * Spec describes the desired transition of a specific Stage into a specific
+   * Freight.
+   *
+   * +kubebuilder:validation:Required
+   *
+   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.PromotionTaskSpec spec = 2;
+   */
+  spec?: PromotionTaskSpec;
+
+  constructor(data?: PartialMessage<ClusterPromotionTask>) {
+    super();
+    proto2.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto2 = proto2;
+  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.ClusterPromotionTask";
+  static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 1, name: "metadata", kind: "message", T: ObjectMeta, opt: true },
+    { no: 2, name: "spec", kind: "message", T: PromotionTaskSpec, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ClusterPromotionTask {
+    return new ClusterPromotionTask().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ClusterPromotionTask {
+    return new ClusterPromotionTask().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ClusterPromotionTask {
+    return new ClusterPromotionTask().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ClusterPromotionTask | PlainMessage<ClusterPromotionTask> | undefined, b: ClusterPromotionTask | PlainMessage<ClusterPromotionTask> | undefined): boolean {
+    return proto2.util.equals(ClusterPromotionTask, a, b);
+  }
+}
+
+/**
+ * ClusterPromotionTaskList contains a list of PromotionTasks.
+ *
+ * @generated from message github.com.akuity.kargo.api.v1alpha1.ClusterPromotionTaskList
+ */
+export class ClusterPromotionTaskList extends Message<ClusterPromotionTaskList> {
+  /**
+   * @generated from field: optional k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
+   */
+  metadata?: ListMeta;
+
+  /**
+   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.ClusterPromotionTaskList items = 2;
+   */
+  items: ClusterPromotionTaskList[] = [];
+
+  constructor(data?: PartialMessage<ClusterPromotionTaskList>) {
+    super();
+    proto2.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto2 = proto2;
+  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.ClusterPromotionTaskList";
+  static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 1, name: "metadata", kind: "message", T: ListMeta, opt: true },
+    { no: 2, name: "items", kind: "message", T: ClusterPromotionTaskList, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ClusterPromotionTaskList {
+    return new ClusterPromotionTaskList().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ClusterPromotionTaskList {
+    return new ClusterPromotionTaskList().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ClusterPromotionTaskList {
+    return new ClusterPromotionTaskList().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ClusterPromotionTaskList | PlainMessage<ClusterPromotionTaskList> | undefined, b: ClusterPromotionTaskList | PlainMessage<ClusterPromotionTaskList> | undefined): boolean {
+    return proto2.util.equals(ClusterPromotionTaskList, a, b);
+  }
+}
+
+/**
  * DiscoveredArtifacts holds the artifacts discovered by the Warehouse for its
  * subscriptions.
  *
