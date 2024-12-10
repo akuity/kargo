@@ -217,6 +217,7 @@ func (g *gitPROpener) runPromotionStep(
 			Base:        cfg.TargetBranch,
 			Title:       title,
 			Description: description,
+			Labels:      cfg.Labels,
 		},
 	); err != nil {
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
