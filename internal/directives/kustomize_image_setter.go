@@ -91,8 +91,15 @@ func (k *kustomizeImageSetter) runPromotionStep(
 			fmt.Errorf("could not discover kustomization file: %w", err)
 	}
 
-	// Discover image origins and collect target images.
-	targetImages, err := k.buildTargetImages(ctx, stepCtx, cfg.Images)
+	var targetImages map[string]kustypes.Image
+	switch {
+	case len(cfg.Images) > 0:
+		// Discover image origins and collect target images.
+		targetImages, err = k.buildTargetImagesFromConfig(ctx, stepCtx, cfg.Images)
+	default:
+		// Attempt to automatically set target images based on the Freight references.
+		targetImages, err = k.buildTargetImagesAutomatically(stepCtx)
+	}
 	if err != nil {
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, err
 	}
@@ -111,7 +118,7 @@ func (k *kustomizeImageSetter) runPromotionStep(
 	return result, nil
 }
 
-func (k *kustomizeImageSetter) buildTargetImages(
+func (k *kustomizeImageSetter) buildTargetImagesFromConfig(
 	ctx context.Context,
 	stepCtx *PromotionStepContext,
 	images []KustomizeSetImageConfigImage,
@@ -157,6 +164,33 @@ func (k *kustomizeImageSetter) buildTargetImages(
 		targetImages[targetImage.Name] = targetImage
 	}
 	return targetImages, nil
+}
+
+func (k *kustomizeImageSetter) buildTargetImagesAutomatically(
+	stepCtx *PromotionStepContext,
+) (map[string]kustypes.Image, error) {
+	var images = make(map[string]kustypes.Image)
+	for _, freightRef := range stepCtx.Freight.References() {
+		if len(freightRef.Images) == 0 {
+			continue
+		}
+
+		for _, img := range freightRef.Images {
+			if _, ok := images[img.RepoURL]; ok {
+				return nil, fmt.Errorf(
+					"manual configuration required due to ambiguous result: found multiple images for repository %q",
+					img.RepoURL,
+				)
+			}
+
+			images[img.RepoURL] = kustypes.Image{
+				Name:   img.RepoURL,
+				NewTag: img.Tag,
+				Digest: img.Digest,
+			}
+		}
+	}
+	return images, nil
 }
 
 func (k *kustomizeImageSetter) generateCommitMessage(path string, images map[string]kustypes.Image) string {
