@@ -181,6 +181,23 @@ message ChartSubscription {
   optional int32 discoveryLimit = 4;
 }
 
+message ClusterPromotionTask {
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
+
+  // Spec describes the desired transition of a specific Stage into a specific
+  // Freight.
+  //
+  // +kubebuilder:validation:Required
+  optional PromotionTaskSpec spec = 2;
+}
+
+// ClusterPromotionTaskList contains a list of PromotionTasks.
+message ClusterPromotionTaskList {
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
+
+  repeated ClusterPromotionTaskList items = 2;
+}
+
 // DiscoveredArtifacts holds the artifacts discovered by the Warehouse for its
 // subscriptions.
 message DiscoveredArtifacts {

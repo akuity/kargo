@@ -1,0 +1,160 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.16.5
+  name: clusterpromotiontasks.kargo.akuity.io
+spec:
+  group: kargo.akuity.io
+  names:
+    kind: ClusterPromotionTask
+    listKind: ClusterPromotionTaskList
+    plural: clusterpromotiontasks
+    shortNames:
+    - clusterpromotask
+    - clusterpromotasks
+    singular: clusterpromotiontask
+  scope: Cluster
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: |-
+              Spec describes the desired transition of a specific Stage into a specific
+              Freight.
+            properties:
+              inputs:
+                description: |-
+                  Inputs specifies the inputs available to the PromotionTask. These inputs
+                  can be specified in the PromotionTemplate as configuration for the task,
+                  and can be used in the Steps to parameterize the execution of the task.
+                items:
+                  description: |-
+                    PromotionTaskInput defines an input parameter for a PromotionTask. This input
+                    can be specified in the PromotionTemplate as configuration for the task, and
+                    can be used in the Steps to parameterize the execution of the task.
+                  properties:
+                    default:
+                      description: |-
+                        Default specifies a default value for the parameter. This value will be
+                        used if the parameter is not specified in the PromotionTemplate.
+                        If left unspecified, the input value is required to be specified in the
+                        configuration of the step referencing this task.
+                      type: string
+                    name:
+                      description: |-
+                        Name of the configuration parameter, which should be unique within the
+                        PromotionTask. This name can be used to reference the parameter in the
+                        PromotionTaskSpec.Steps.
+                      minLength: 1
+                      type: string
+                  required:
+                  - name
+                  type: object
+                type: array
+              steps:
+                description: |-
+                  Steps specifies the directives to be executed as part of this
+                  PromotionTask. The steps as defined here are deflated into a
+                  Promotion when it is built from a PromotionTemplate.
+                items:
+                  description: PromotionStep describes a directive to be executed
+                    as part of a Promotion.
+                  properties:
+                    as:
+                      description: As is the alias this step can be referred to as.
+                      type: string
+                    config:
+                      description: |-
+                        Config is opaque configuration for the PromotionStep that is understood
+                        only by each PromotionStep's implementation. It is legal to utilize
+                        expressions in defining values at any level of this block.
+                        See https://docs.kargo.io/references/expression-language for details.
+                      x-kubernetes-preserve-unknown-fields: true
+                    retry:
+                      description: Retry is the retry policy for this step.
+                      properties:
+                        errorThreshold:
+                          description: |-
+                            ErrorThreshold is the number of consecutive times the step must fail (for
+                            any reason) before retries are abandoned and the entire Promotion is marked
+                            as failed.
+
+                            If this field is set to 0, the effective default will be a step-specific
+                            one. If no step-specific default exists (i.e. is also 0), the effective
+                            default will be the system-wide default of 1.
+
+                            A value of 1 will cause the Promotion to be marked as failed after just
+                            a single failure; i.e. no retries will be attempted.
+
+                            There is no option to specify an infinite number of retries using a value
+                            such as -1.
+
+                            In a future release, Kargo is likely to become capable of distinguishing
+                            between recoverable and non-recoverable step failures. At that time, it is
+                            planned that unrecoverable failures will not be subject to this threshold
+                            and will immediately cause the Promotion to be marked as failed without
+                            further condition.
+                          format: int32
+                          type: integer
+                        timeout:
+                          description: |-
+                            Timeout is the soft maximum interval in which a step that returns a Running
+                            status (which typically indicates it's waiting for something to happen)
+                            may be retried.
+
+                            The maximum is a soft one because the check for whether the interval has
+                            elapsed occurs AFTER the step has run. This effectively means a step may
+                            run ONCE beyond the close of the interval.
+
+                            If this field is set to nil, the effective default will be a step-specific
+                            one. If no step-specific default exists (i.e. is also nil), the effective
+                            default will be the system-wide default of 0.
+
+                            A value of 0 will cause the step to be retried indefinitely unless the
+                            ErrorThreshold is reached.
+                          type: string
+                      type: object
+                    uses:
+                      description: Uses identifies a runner that can execute this
+                        step.
+                      minLength: 1
+                      type: string
+                  required:
+                  - uses
+                  type: object
+                minItems: 1
+                type: array
+            required:
+            - steps
+            type: object
+        required:
+        - spec
+        type: object
+    served: true
+    storage: true
+    subresources: {}
