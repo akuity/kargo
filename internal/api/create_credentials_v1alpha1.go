@@ -48,9 +48,9 @@ func (s *server) CreateCredentials(
 	}
 
 	switch credType {
-	case kargoapi.CredentialTypeLabelValueGit:
-	case kargoapi.CredentialTypeLabelValueHelm:
-	case kargoapi.CredentialTypeLabelValueImage:
+	case kargoapi.CredentialTypeLabelValueGit,
+		kargoapi.CredentialTypeLabelValueHelm,
+		kargoapi.CredentialTypeLabelValueImage:
 		creds := specificCredentials{
 			project:        req.Msg.GetProject(),
 			name:           req.Msg.GetName(),
