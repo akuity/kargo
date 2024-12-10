@@ -1,0 +1,95 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "properties": {
+    "apiVersion": {
+      "description": "APIVersion defines the versioned schema of this representation of an object.\nServers should convert recognized schemas to the latest internal value, and\nmay reject unrecognized values.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
+      "type": "string"
+    },
+    "kind": {
+      "description": "Kind is a string value representing the REST resource this object represents.\nServers may infer this from the endpoint the client submits requests to.\nCannot be updated.\nIn CamelCase.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+      "type": "string"
+    },
+    "metadata": {
+      "type": "object"
+    },
+    "spec": {
+      "description": "Spec describes the composition of a PromotionTask, including the inputs\navailable to the task and the steps.",
+      "properties": {
+        "inputs": {
+          "description": "Inputs specifies the inputs available to the PromotionTask. These inputs\ncan be specified in the PromotionTemplate as configuration for the task,\nand can be used in the Steps to parameterize the execution of the task.",
+          "items": {
+            "description": "PromotionTaskInput defines an input parameter for a PromotionTask. This input\ncan be specified in the PromotionTemplate as configuration for the task, and\ncan be used in the Steps to parameterize the execution of the task.",
+            "properties": {
+              "default": {
+                "description": "Default specifies a default value for the parameter. This value will be\nused if the parameter is not specified in the PromotionTemplate.\nIf left unspecified, the input value is required to be specified in the\nconfiguration of the step referencing this task.",
+                "type": "string"
+              },
+              "name": {
+                "description": "Name of the configuration parameter, which should be unique within the\nPromotionTask. This name can be used to reference the parameter in the\nPromotionTaskSpec.Steps.",
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "name"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "steps": {
+          "description": "Steps specifies the directives to be executed as part of this\nPromotionTask. The steps as defined here are deflated into a\nPromotion when it is built from a PromotionTemplate.",
+          "items": {
+            "description": "PromotionStep describes a directive to be executed as part of a Promotion.",
+            "properties": {
+              "as": {
+                "description": "As is the alias this step can be referred to as.",
+                "type": "string"
+              },
+              "config": {
+                "description": "Config is opaque configuration for the PromotionStep that is understood\nonly by each PromotionStep's implementation. It is legal to utilize\nexpressions in defining values at any level of this block.\nSee https://docs.kargo.io/references/expression-language for details.",
+                "x-kubernetes-preserve-unknown-fields": true
+              },
+              "retry": {
+                "description": "Retry is the retry policy for this step.",
+                "properties": {
+                  "errorThreshold": {
+                    "description": "ErrorThreshold is the number of consecutive times the step must fail (for\nany reason) before retries are abandoned and the entire Promotion is marked\nas failed.\n\nIf this field is set to 0, the effective default will be a step-specific\none. If no step-specific default exists (i.e. is also 0), the effective\ndefault will be the system-wide default of 1.\n\nA value of 1 will cause the Promotion to be marked as failed after just\na single failure; i.e. no retries will be attempted.\n\nThere is no option to specify an infinite number of retries using a value\nsuch as -1.\n\nIn a future release, Kargo is likely to become capable of distinguishing\nbetween recoverable and non-recoverable step failures. At that time, it is\nplanned that unrecoverable failures will not be subject to this threshold\nand will immediately cause the Promotion to be marked as failed without\nfurther condition.",
+                    "format": "int32",
+                    "maximum": 2147483647,
+                    "minimum": -2147483648,
+                    "type": "integer"
+                  },
+                  "timeout": {
+                    "description": "Timeout is the soft maximum interval in which a step that returns a Running\nstatus (which typically indicates it's waiting for something to happen)\nmay be retried.\n\nThe maximum is a soft one because the check for whether the interval has\nelapsed occurs AFTER the step has run. This effectively means a step may\nrun ONCE beyond the close of the interval.\n\nIf this field is set to nil, the effective default will be a step-specific\none. If no step-specific default exists (i.e. is also nil), the effective\ndefault will be the system-wide default of 0.\n\nA value of 0 will cause the step to be retried indefinitely unless the\nErrorThreshold is reached.",
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              },
+              "uses": {
+                "description": "Uses identifies a runner that can execute this step.",
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "uses"
+            ],
+            "type": "object"
+          },
+          "minItems": 1,
+          "type": "array"
+        }
+      },
+      "required": [
+        "steps"
+      ],
+      "type": "object"
+    }
+  },
+  "required": [
+    "spec"
+  ],
+  "type": "object"
+}

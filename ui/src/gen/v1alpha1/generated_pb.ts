@@ -2971,6 +2971,214 @@ export class PromotionStepRetry extends Message<PromotionStepRetry> {
 }
 
 /**
+ * @generated from message github.com.akuity.kargo.api.v1alpha1.PromotionTask
+ */
+export class PromotionTask extends Message<PromotionTask> {
+  /**
+   * @generated from field: optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
+   */
+  metadata?: ObjectMeta;
+
+  /**
+   * Spec describes the composition of a PromotionTask, including the inputs
+   * available to the task and the steps.
+   *
+   * +kubebuilder:validation:Required
+   *
+   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.PromotionTaskSpec spec = 2;
+   */
+  spec?: PromotionTaskSpec;
+
+  constructor(data?: PartialMessage<PromotionTask>) {
+    super();
+    proto2.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto2 = proto2;
+  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.PromotionTask";
+  static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 1, name: "metadata", kind: "message", T: ObjectMeta, opt: true },
+    { no: 2, name: "spec", kind: "message", T: PromotionTaskSpec, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PromotionTask {
+    return new PromotionTask().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): PromotionTask {
+    return new PromotionTask().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): PromotionTask {
+    return new PromotionTask().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: PromotionTask | PlainMessage<PromotionTask> | undefined, b: PromotionTask | PlainMessage<PromotionTask> | undefined): boolean {
+    return proto2.util.equals(PromotionTask, a, b);
+  }
+}
+
+/**
+ * PromotionTaskInput defines an input parameter for a PromotionTask. This input
+ * can be specified in the PromotionTemplate as configuration for the task, and
+ * can be used in the Steps to parameterize the execution of the task.
+ *
+ * @generated from message github.com.akuity.kargo.api.v1alpha1.PromotionTaskInput
+ */
+export class PromotionTaskInput extends Message<PromotionTaskInput> {
+  /**
+   * Name of the configuration parameter, which should be unique within the
+   * PromotionTask. This name can be used to reference the parameter in the
+   * PromotionTaskSpec.Steps.
+   *
+   * +kubebuilder:validation:Required
+   * +kubebuilder:validation:MinLength=1
+   *
+   * @generated from field: optional string name = 1;
+   */
+  name?: string;
+
+  /**
+   * Default specifies a default value for the parameter. This value will be
+   * used if the parameter is not specified in the PromotionTemplate.
+   * If left unspecified, the input value is required to be specified in the
+   * configuration of the step referencing this task.
+   *
+   * +kubebuilder:validation:Optional
+   *
+   * @generated from field: optional string default = 2;
+   */
+  default?: string;
+
+  constructor(data?: PartialMessage<PromotionTaskInput>) {
+    super();
+    proto2.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto2 = proto2;
+  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.PromotionTaskInput";
+  static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 2, name: "default", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PromotionTaskInput {
+    return new PromotionTaskInput().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): PromotionTaskInput {
+    return new PromotionTaskInput().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): PromotionTaskInput {
+    return new PromotionTaskInput().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: PromotionTaskInput | PlainMessage<PromotionTaskInput> | undefined, b: PromotionTaskInput | PlainMessage<PromotionTaskInput> | undefined): boolean {
+    return proto2.util.equals(PromotionTaskInput, a, b);
+  }
+}
+
+/**
+ * PromotionTaskList contains a list of PromotionTasks.
+ *
+ * @generated from message github.com.akuity.kargo.api.v1alpha1.PromotionTaskList
+ */
+export class PromotionTaskList extends Message<PromotionTaskList> {
+  /**
+   * @generated from field: optional k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
+   */
+  metadata?: ListMeta;
+
+  /**
+   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.PromotionTaskList items = 2;
+   */
+  items: PromotionTaskList[] = [];
+
+  constructor(data?: PartialMessage<PromotionTaskList>) {
+    super();
+    proto2.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto2 = proto2;
+  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.PromotionTaskList";
+  static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 1, name: "metadata", kind: "message", T: ListMeta, opt: true },
+    { no: 2, name: "items", kind: "message", T: PromotionTaskList, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PromotionTaskList {
+    return new PromotionTaskList().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): PromotionTaskList {
+    return new PromotionTaskList().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): PromotionTaskList {
+    return new PromotionTaskList().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: PromotionTaskList | PlainMessage<PromotionTaskList> | undefined, b: PromotionTaskList | PlainMessage<PromotionTaskList> | undefined): boolean {
+    return proto2.util.equals(PromotionTaskList, a, b);
+  }
+}
+
+/**
+ * @generated from message github.com.akuity.kargo.api.v1alpha1.PromotionTaskSpec
+ */
+export class PromotionTaskSpec extends Message<PromotionTaskSpec> {
+  /**
+   * Inputs specifies the inputs available to the PromotionTask. These inputs
+   * can be specified in the PromotionTemplate as configuration for the task,
+   * and can be used in the Steps to parameterize the execution of the task.
+   *
+   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.PromotionTaskInput inputs = 1;
+   */
+  inputs: PromotionTaskInput[] = [];
+
+  /**
+   * Steps specifies the directives to be executed as part of this
+   * PromotionTask. The steps as defined here are deflated into a
+   * Promotion when it is built from a PromotionTemplate.
+   *
+   * +kubebuilder:validation:Required
+   * +kubebuilder:validation:MinItems=1
+   *
+   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.PromotionStep steps = 2;
+   */
+  steps: PromotionStep[] = [];
+
+  constructor(data?: PartialMessage<PromotionTaskSpec>) {
+    super();
+    proto2.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto2 = proto2;
+  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.PromotionTaskSpec";
+  static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 1, name: "inputs", kind: "message", T: PromotionTaskInput, repeated: true },
+    { no: 2, name: "steps", kind: "message", T: PromotionStep, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PromotionTaskSpec {
+    return new PromotionTaskSpec().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): PromotionTaskSpec {
+    return new PromotionTaskSpec().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): PromotionTaskSpec {
+    return new PromotionTaskSpec().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: PromotionTaskSpec | PlainMessage<PromotionTaskSpec> | undefined, b: PromotionTaskSpec | PlainMessage<PromotionTaskSpec> | undefined): boolean {
+    return proto2.util.equals(PromotionTaskSpec, a, b);
+  }
+}
+
+/**
  * PromotionTemplate defines a template for a Promotion that can be used to
  * incorporate Freight into a Stage.
  *
