@@ -7,7 +7,7 @@ import { Navigate } from 'react-router-dom';
 import { redirectToQueryParam } from '@ui/config/auth';
 import { paths } from '@ui/config/paths';
 import { useAuthContext } from '@ui/features/auth/context/use-auth-context';
-import { isAdmin, isJWTDirty } from '@ui/features/auth/utils';
+import { isAdmin, isJWTDirty } from '@ui/features/auth/jwt-utils';
 import { PageTitle } from '@ui/features/common';
 
 export const User = () => {

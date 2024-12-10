@@ -18,7 +18,11 @@ import { useLocation } from 'react-router-dom';
 import { OIDCConfig } from '@ui/gen/service/v1alpha1/service_pb';
 
 import { useAuthContext } from './context/use-auth-context';
-import { oidcClientAuth, shouldAllowIdpHttpRequest as shouldAllowHttpRequest } from './utils';
+import {
+  getOIDCScopes,
+  oidcClientAuth,
+  shouldAllowIdpHttpRequest as shouldAllowHttpRequest
+} from './oidc-utils';
 
 const codeVerifierKey = 'PKCE_code_verifier';
 
@@ -92,14 +96,7 @@ export const OIDCLogin = ({ oidcConfig }: Props) => {
     url.searchParams.set('code_challenge_method', 'S256');
     url.searchParams.set('redirect_uri', redirectURI);
     url.searchParams.set('response_type', 'code');
-    url.searchParams.set(
-      'scope',
-      [
-        ...oidcConfig.scopes,
-        // Add offline_access scope if it does not exist
-        ...(oidcConfig.scopes.includes('offline_access') ? [] : ['offline_access'])
-      ].join(' ')
-    );
+    url.searchParams.set('scope', getOIDCScopes(oidcConfig, as).join(' '));
 
     window.location.replace(url.toString());
   };

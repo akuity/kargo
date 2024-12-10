@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { JWTInfo } from '../utils';
+import { JWTInfo } from '../jwt-utils';
 
 export interface AuthContextType {
   isLoggedIn: boolean;
