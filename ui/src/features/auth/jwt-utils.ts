@@ -1,5 +1,3 @@
-import { ClientAuth } from 'oauth4webapi';
-
 // https://openid.net/specs/openid-connect-core-1_0.html#StandardClaims
 export type JWTInfo = {
   sub: string;
@@ -40,9 +38,3 @@ export const getUserEmail = (user?: JWTInfo | null) => {
 
   return meta;
 };
-
-export const oidcClientAuth: ClientAuth = () => {
-  // equivalent function for token_endpoint_auth_method: 'none'
-};
-
-export const shouldAllowIdpHttpRequest = () => __UI_VERSION__ === 'development';
