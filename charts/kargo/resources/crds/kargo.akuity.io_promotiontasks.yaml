@@ -167,6 +167,10 @@ spec:
                       minLength: 1
                       type: string
                   type: object
+                  x-kubernetes-validations:
+                  - message: PromotionTask step must have uses set and must not reference
+                      another task
+                    rule: has(self.uses) && !has(self.task)
                 minItems: 1
                 type: array
             required:

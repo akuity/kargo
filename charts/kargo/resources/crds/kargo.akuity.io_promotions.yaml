@@ -66,13 +66,16 @@ spec:
                 description: |-
                   Freight specifies the piece of Freight to be promoted into the Stage
                   referenced by the Stage field.
+                maxLength: 253
                 minLength: 1
+                pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
                 type: string
               stage:
                 description: |-
                   Stage specifies the name of the Stage to which this Promotion
                   applies. The Stage referenced by this field MUST be in the same
                   namespace as the Promotion.
+                maxLength: 253
                 minLength: 1
                 pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
                 type: string
@@ -167,6 +170,11 @@ spec:
                       minLength: 1
                       type: string
                   type: object
+                  x-kubernetes-validations:
+                  - message: Promotion step must have uses set and must not reference
+                      a task
+                    rule: has(self.uses) && !has(self.task)
+                minItems: 1
                 type: array
               vars:
                 description: |-
@@ -196,6 +204,7 @@ spec:
             required:
             - freight
             - stage
+            - steps
             type: object
           status:
             description: |-

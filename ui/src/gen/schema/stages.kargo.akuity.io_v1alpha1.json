@@ -82,7 +82,13 @@
                         "type": "string"
                       }
                     },
-                    "type": "object"
+                    "type": "object",
+                    "x-kubernetes-validations": [
+                      {
+                        "message": "PromotionTemplate step must have exactly one of uses or task set",
+                        "rule": "(has(self.uses) ? !has(self.task) : has(self.task))"
+                      }
+                    ]
                   },
                   "minItems": 1,
                   "type": "array"
