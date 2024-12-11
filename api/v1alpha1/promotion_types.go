@@ -195,6 +195,8 @@ func (r *PromotionStepRetry) GetErrorThreshold(fallback uint32) uint32 {
 }
 
 // PromotionStep describes a directive to be executed as part of a Promotion.
+//
+// +kubebuilder:validation:XValidation:message="inputs must not be set when task is set",rule="!(has(self.task) && self.inputs.size() > 0)"
 type PromotionStep struct {
 	// Uses identifies a runner that can execute this step.
 	//
@@ -208,6 +210,13 @@ type PromotionStep struct {
 	As string `json:"as,omitempty" protobuf:"bytes,2,opt,name=as"`
 	// Retry is the retry policy for this step.
 	Retry *PromotionStepRetry `json:"retry,omitempty" protobuf:"bytes,4,opt,name=retry"`
+	// Inputs is a map of inputs that can used to parameterize the execution
+	// of the PromotionStep and can be referenced by expressions in the Config.
+	//
+	// When a PromotionStep is inflated from a PromotionTask, the inputs
+	// specified in the PromotionTask are set based on the inputs specified
+	// in the Config of the PromotionStep that references the PromotionTask.
+	Inputs map[string]string `json:"inputs,omitempty" protobuf:"bytes,6,rep,name=inputs"`
 	// Config is opaque configuration for the PromotionStep that is understood
 	// only by each PromotionStep's implementation. It is legal to utilize
 	// expressions in defining values at any level of this block.

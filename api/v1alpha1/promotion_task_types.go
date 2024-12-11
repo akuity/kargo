@@ -31,6 +31,7 @@ type PromotionTaskSpec struct {
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:MinItems=1
 	// +kubebuilder:validation:items:XValidation:message="PromotionTask step must have uses set and must not reference another task",rule="has(self.uses) && !has(self.task)"
+	// +kubebuilder:validation:items:XValidation:message="PromotionTask step must not have inputs set",rule="self.inputs.size() == 0"
 	Steps []PromotionStep `json:"steps" protobuf:"bytes,2,rep,name=steps"`
 }
 
