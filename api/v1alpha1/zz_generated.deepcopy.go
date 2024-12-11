@@ -1079,6 +1079,13 @@ func (in *PromotionStep) DeepCopyInto(out *PromotionStep) {
 		*out = new(PromotionStepRetry)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.Inputs != nil {
+		in, out := &in.Inputs, &out.Inputs
+		*out = make(map[string]string, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val
+		}
+	}
 	if in.Config != nil {
 		in, out := &in.Config, &out.Config
 		*out = new(apiextensionsv1.JSON)

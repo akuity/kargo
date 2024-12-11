@@ -959,6 +959,8 @@ message PromotionStatus {
 }
 
 // PromotionStep describes a directive to be executed as part of a Promotion.
+//
+// +kubebuilder:validation:XValidation:message="inputs must not be set when task is set",rule="!(has(self.task) && self.inputs.size() > 0)"
 message PromotionStep {
   // Uses identifies a runner that can execute this step.
   //
@@ -975,6 +977,14 @@ message PromotionStep {
 
   // Retry is the retry policy for this step.
   optional PromotionStepRetry retry = 4;
+
+  // Inputs is a map of inputs that can used to parameterize the execution
+  // of the PromotionStep and can be referenced by expressions in the Config.
+  //
+  // When a PromotionStep is inflated from a PromotionTask, the inputs
+  // specified in the PromotionTask are set based on the inputs specified
+  // in the Config of the PromotionStep that references the PromotionTask.
+  map<string, string> inputs = 6;
 
   // Config is opaque configuration for the PromotionStep that is understood
   // only by each PromotionStep's implementation. It is legal to utilize
@@ -1092,6 +1102,7 @@ message PromotionTaskSpec {
   // +kubebuilder:validation:Required
   // +kubebuilder:validation:MinItems=1
   // +kubebuilder:validation:items:XValidation:message="PromotionTask step must have uses set and must not reference another task",rule="has(self.uses) && !has(self.task)"
+  // +kubebuilder:validation:items:XValidation:message="PromotionTask step must not have inputs set",rule="self.inputs.size() == 0"
   repeated PromotionStep steps = 2;
 }
 
