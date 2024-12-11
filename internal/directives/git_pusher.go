@@ -3,9 +3,12 @@ package directives
 import (
 	"context"
 	"fmt"
+	"time"
 
 	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/xeipuuv/gojsonschema"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/util/retry"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/git"
@@ -127,7 +130,20 @@ func (g *gitPushPusher) runPromotionStep(
 				fmt.Errorf("error getting current branch: %w", err)
 		}
 	}
-	if err = workTree.Push(pushOpts); err != nil {
+
+	if err = retry.OnError(
+		wait.Backoff{ // TODO(krancour): Make this at least partially configurable
+			Duration: 1 * time.Second,
+			Factor:   2,
+			Steps:    10,
+			Cap:      2 * time.Minute,
+			Jitter:   0.1,
+		},
+		git.IsNonFastForward,
+		func() error {
+			return workTree.Push(pushOpts)
+		},
+	); err != nil {
 		if git.IsMergeConflict(err) {
 			// Special case: A merge conflict requires manual resolution and no amount
 			// of retries will fix that.
@@ -137,6 +153,7 @@ func (g *gitPushPusher) runPromotionStep(
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
 			fmt.Errorf("error pushing commits to remote: %w", err)
 	}
+
 	commitID, err := workTree.LastCommitID()
 	if err != nil {
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
