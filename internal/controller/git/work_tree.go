@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -516,6 +517,11 @@ type PushOptions struct {
 	PullRebase bool
 }
 
+// https://regex101.com/r/aNYjHP/1
+//
+// nolint: lll
+var nonFastForwardRegex = regexp.MustCompile(`(?m)^\s*!\s+\[(?:remote )?rejected].+\((?:non-fast-forward|fetch first|cannot lock ref.*)\)\s*$`)
+
 func (w *workTree) Push(opts *PushOptions) error {
 	if opts == nil {
 		opts = &PushOptions{}
@@ -551,7 +557,10 @@ func (w *workTree) Push(opts *PushOptions) error {
 	if opts.Force {
 		args = append(args, "--force")
 	}
-	if _, err := libExec.Exec(w.buildGitCommand(args...)); err != nil {
+	if res, err := libExec.Exec(w.buildGitCommand(args...)); err != nil {
+		if nonFastForwardRegex.MatchString(string(res)) {
+			return fmt.Errorf("error pushing branch: %w", ErrNonFastForward)
+		}
 		return fmt.Errorf("error pushing branch: %w", err)
 	}
 	return nil
