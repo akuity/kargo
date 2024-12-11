@@ -80,13 +80,18 @@ type PromotionSpec struct {
 	// applies. The Stage referenced by this field MUST be in the same
 	// namespace as the Promotion.
 	//
+	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
 	Stage string `json:"stage" protobuf:"bytes,1,opt,name=stage"`
 	// Freight specifies the piece of Freight to be promoted into the Stage
 	// referenced by the Stage field.
 	//
+	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
 	Freight string `json:"freight" protobuf:"bytes,2,opt,name=freight"`
 	// Vars is a list of variables that can be referenced by expressions in
 	// promotion steps.
@@ -94,7 +99,11 @@ type PromotionSpec struct {
 	// Steps specifies the directives to be executed as part of this Promotion.
 	// The order in which the directives are executed is the order in which they
 	// are listed in this field.
-	Steps []PromotionStep `json:"steps,omitempty" protobuf:"bytes,3,rep,name=steps"`
+	//
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:items:XValidation:message="Promotion step must have uses set and must not reference a task",rule="has(self.uses) && !has(self.task)"
+	Steps []PromotionStep `json:"steps" protobuf:"bytes,3,rep,name=steps"`
 }
 
 // PromotionVariable describes a single variable that may be referenced by
@@ -191,11 +200,9 @@ type PromotionStep struct {
 	//
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:validation:MinLength=1
-	Uses string `json:"uses" protobuf:"bytes,1,opt,name=uses"`
+	Uses string `json:"uses,omitempty" protobuf:"bytes,1,opt,name=uses"`
 	// Task is a reference to a PromotionTask that should be deflated into a
 	// Promotion when it is built from a PromotionTemplate.
-	//
-	// +kubebuilder:validation:Optional
 	Task *PromotionTaskReference `json:"task,omitempty" protobuf:"bytes,5,opt,name=task"`
 	// As is the alias this step can be referred to as.
 	As string `json:"as,omitempty" protobuf:"bytes,2,opt,name=as"`
