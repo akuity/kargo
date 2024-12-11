@@ -1882,7 +1882,9 @@ export type PromotionSpec = Message<"github.com.akuity.kargo.api.v1alpha1.Promot
    * applies. The Stage referenced by this field MUST be in the same
    * namespace as the Promotion.
    *
+   * +kubebuilder:validation:Required
    * +kubebuilder:validation:MinLength=1
+   * +kubebuilder:validation:MaxLength=253
    * +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
    *
    * @generated from field: optional string stage = 1;
@@ -1893,7 +1895,10 @@ export type PromotionSpec = Message<"github.com.akuity.kargo.api.v1alpha1.Promot
    * Freight specifies the piece of Freight to be promoted into the Stage
    * referenced by the Stage field.
    *
+   * +kubebuilder:validation:Required
    * +kubebuilder:validation:MinLength=1
+   * +kubebuilder:validation:MaxLength=253
+   * +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
    *
    * @generated from field: optional string freight = 2;
    */
@@ -1911,6 +1916,10 @@ export type PromotionSpec = Message<"github.com.akuity.kargo.api.v1alpha1.Promot
    * Steps specifies the directives to be executed as part of this Promotion.
    * The order in which the directives are executed is the order in which they
    * are listed in this field.
+   *
+   * +kubebuilder:validation:Required
+   * +kubebuilder:validation:MinItems=1
+   * +kubebuilder:validation:items:XValidation:message="Promotion step must have uses set and must not reference a task",rule="has(self.uses) && !has(self.task)"
    *
    * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.PromotionStep steps = 3;
    */
@@ -2041,8 +2050,6 @@ export type PromotionStep = Message<"github.com.akuity.kargo.api.v1alpha1.Promot
   /**
    * Task is a reference to a PromotionTask that should be deflated into a
    * Promotion when it is built from a PromotionTemplate.
-   *
-   * +kubebuilder:validation:Optional
    *
    * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.PromotionTaskReference task = 5;
    */
@@ -2287,6 +2294,7 @@ export type PromotionTaskSpec = Message<"github.com.akuity.kargo.api.v1alpha1.Pr
    *
    * +kubebuilder:validation:Required
    * +kubebuilder:validation:MinItems=1
+   * +kubebuilder:validation:items:XValidation:message="PromotionTask step must have uses set and must not reference another task",rule="has(self.uses) && !has(self.task)"
    *
    * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.PromotionStep steps = 2;
    */
@@ -2342,6 +2350,7 @@ export type PromotionTemplateSpec = Message<"github.com.akuity.kargo.api.v1alpha
    * are listed in this field.
    *
    * +kubebuilder:validation:MinItems=1
+   * +kubebuilder:validation:items:XValidation:message="PromotionTemplate step must have exactly one of uses or task set",rule="(has(self.uses) ? !has(self.task) : has(self.task))"
    *
    * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.PromotionStep steps = 1;
    */

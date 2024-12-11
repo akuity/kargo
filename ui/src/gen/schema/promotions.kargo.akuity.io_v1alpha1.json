@@ -18,11 +18,14 @@
       "properties": {
         "freight": {
           "description": "Freight specifies the piece of Freight to be promoted into the Stage\nreferenced by the Stage field.",
+          "maxLength": 253,
           "minLength": 1,
+          "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$",
           "type": "string"
         },
         "stage": {
           "description": "Stage specifies the name of the Stage to which this Promotion\napplies. The Stage referenced by this field MUST be in the same\nnamespace as the Promotion.",
+          "maxLength": 253,
           "minLength": 1,
           "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$",
           "type": "string"
@@ -87,8 +90,15 @@
                 "type": "string"
               }
             },
-            "type": "object"
+            "type": "object",
+            "x-kubernetes-validations": [
+              {
+                "message": "Promotion step must have uses set and must not reference a task",
+                "rule": "has(self.uses) && !has(self.task)"
+              }
+            ]
           },
+          "minItems": 1,
           "type": "array"
         },
         "vars": {
@@ -118,7 +128,8 @@
       },
       "required": [
         "freight",
-        "stage"
+        "stage",
+        "steps"
       ],
       "type": "object"
     },
