@@ -137,19 +137,23 @@ func (s *server) PromoteDownstream(
 	promoteErrs := make([]error, 0, len(downstreams))
 	createdPromos := make([]*kargoapi.Promotion, 0, len(downstreams))
 	for _, downstream := range downstreams {
-		newPromo := kargo.NewPromotion(ctx, downstream, freight.Name)
 		if downstream.Spec.PromotionTemplate != nil &&
 			len(downstream.Spec.PromotionTemplate.Spec.Steps) == 0 {
 			// Avoid creating a Promotion if the downstream Stage has no promotion
 			// steps and is therefore a "control flow" Stage.
 			continue
 		}
-		if err := s.createPromotionFn(ctx, &newPromo); err != nil {
+		newPromo, err := kargo.NewPromotionBuilder(s.client).Build(ctx, downstream, freight.Name)
+		if err != nil {
 			promoteErrs = append(promoteErrs, err)
 			continue
 		}
-		s.recordPromotionCreatedEvent(ctx, &newPromo, freight)
-		createdPromos = append(createdPromos, &newPromo)
+		if err = s.createPromotionFn(ctx, newPromo); err != nil {
+			promoteErrs = append(promoteErrs, err)
+			continue
+		}
+		s.recordPromotionCreatedEvent(ctx, newPromo, freight)
+		createdPromos = append(createdPromos, newPromo)
 	}
 
 	res := connect.NewResponse(&svcv1alpha1.PromoteDownstreamResponse{

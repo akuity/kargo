@@ -1573,19 +1573,25 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 		}
 
 		// Auto promote the latest available Freight and record an event.
-		promotion := kargo.NewPromotion(ctx, *stage, latestFreight.Name)
-		if err := r.client.Create(ctx, &promotion); err != nil {
+		promotion, err := kargo.NewPromotionBuilder(r.client).Build(ctx, *stage, latestFreight.Name)
+		if err != nil {
+			return newStatus, fmt.Errorf(
+				"error building Promotion for Freight %q in namespace %q: %w",
+				latestFreight.Name, stage.Namespace, err,
+			)
+		}
+		if err = r.client.Create(ctx, promotion); err != nil {
 			return newStatus, fmt.Errorf(
 				"error creating Promotion for Freight %q in namespace %q: %w",
 				latestFreight.Name, stage.Namespace, err,
 			)
 		}
 		r.eventRecorder.AnnotatedEventf(
-			&promotion,
+			promotion,
 			kargoEvent.NewPromotionAnnotations(
 				ctx,
 				kargoapi.FormatEventControllerActor(r.cfg.Name()),
-				&promotion,
+				promotion,
 				&latestFreight,
 			),
 			corev1.EventTypeNormal,
