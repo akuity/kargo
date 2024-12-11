@@ -326,14 +326,20 @@ func (w *workTree) IsRebasing() (bool, error) {
 		return false, fmt.Errorf("error determining rebase status: %w", err)
 	}
 	rebaseMerge := filepath.Join(w.dir, strings.TrimSpace(string(res)))
-	if _, err = os.Stat(rebaseMerge); err == nil {
+	if _, err = os.Stat(rebaseMerge); !os.IsNotExist(err) {
+		if err != nil {
+			return false, err
+		}
 		return true, nil
 	}
 	if res, err = libExec.Exec(w.buildGitCommand("rev-parse", "--git-path", "rebase-apply")); err != nil {
 		return false, fmt.Errorf("error determining rebase status: %w", err)
 	}
 	rebaseApply := filepath.Join(w.dir, strings.TrimSpace(string(res)))
-	if _, err = os.Stat(rebaseApply); err == nil {
+	if _, err = os.Stat(rebaseApply); !os.IsNotExist(err) {
+		if err != nil {
+			return false, err
+		}
 		return true, nil
 	}
 	return false, nil
