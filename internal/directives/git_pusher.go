@@ -106,8 +106,11 @@ func (g *gitPushPusher) runPromotionStep(
 			fmt.Errorf("error loading working tree from %s: %w", cfg.Path, err)
 	}
 	pushOpts := &git.PushOptions{
-		// Start with whatever was specified in the config, which may be empty
+		// Start with whatever was specified in the config, which may be empty.
 		TargetBranch: cfg.TargetBranch,
+		// Attempt to rebase on top of the state of the remote branch to help
+		// avoid conflicts.
+		PullRebase: true,
 	}
 	// If we're supposed to generate a target branch name, do so
 	if cfg.GenerateTargetBranch {
@@ -116,7 +119,7 @@ func (g *gitPushPusher) runPromotionStep(
 	}
 	targetBranch := pushOpts.TargetBranch
 	if targetBranch == "" {
-		// If retBranch is still empty, we want to set it to the current branch
+		// If targetBranch is still empty, we want to set it to the current branch
 		// because we will want to return the branch that was pushed to, but we
 		// don't want to mess with the options any further.
 		if targetBranch, err = workTree.CurrentBranch(); err != nil {
@@ -125,6 +128,12 @@ func (g *gitPushPusher) runPromotionStep(
 		}
 	}
 	if err = workTree.Push(pushOpts); err != nil {
+		if git.IsMergeConflict(err) {
+			// Special case: A merge conflict requires manual resolution and no amount
+			// of retries will fix that.
+			return PromotionStepResult{Status: kargoapi.PromotionPhaseFailed},
+				&terminalError{err: err}
+		}
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
 			fmt.Errorf("error pushing commits to remote: %w", err)
 	}
