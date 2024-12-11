@@ -216,7 +216,7 @@ type PromotionStep struct {
 	// When a PromotionStep is inflated from a PromotionTask, the inputs
 	// specified in the PromotionTask are set based on the inputs specified
 	// in the Config of the PromotionStep that references the PromotionTask.
-	Inputs map[string]string `json:"inputs,omitempty" protobuf:"bytes,6,rep,name=inputs"`
+	Inputs map[string]string `json:"inputs,omitempty" protobuf:"bytes,6,rep,name=inputs" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	// Config is opaque configuration for the PromotionStep that is understood
 	// only by each PromotionStep's implementation. It is legal to utilize
 	// expressions in defining values at any level of this block.
