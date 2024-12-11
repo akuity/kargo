@@ -30,7 +30,8 @@ type PromotionTaskSpec struct {
 	//
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:MinItems=1
-	Steps []PromotionStep `json:"steps,omitempty" protobuf:"bytes,2,rep,name=steps"`
+	// +kubebuilder:validation:items:XValidation:message="PromotionTask step must have uses set and must not reference another task",rule="has(self.uses) && !has(self.task)"
+	Steps []PromotionStep `json:"steps" protobuf:"bytes,2,rep,name=steps"`
 }
 
 // PromotionTaskInput defines an input parameter for a PromotionTask. This input
