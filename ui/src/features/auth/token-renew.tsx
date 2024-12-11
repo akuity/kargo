@@ -18,7 +18,7 @@ import { getPublicConfig } from '@ui/gen/service/v1alpha1/service-KargoService_c
 import { LoadingState } from '../common';
 
 import { useAuthContext } from './context/use-auth-context';
-import { oidcClientAuth, shouldAllowIdpHttpRequest as shouldAllowHttpRequest } from './utils';
+import { oidcClientAuth, shouldAllowIdpHttpRequest as shouldAllowHttpRequest } from './oidc-utils';
 
 export const TokenRenew = () => {
   const navigate = useNavigate();
