@@ -1,6 +1,7 @@
 package v1alpha1
 
 import (
+	"fmt"
 	"time"
 
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -222,6 +223,21 @@ type PromotionStep struct {
 	// expressions in defining values at any level of this block.
 	// See https://docs.kargo.io/references/expression-language for details.
 	Config *apiextensionsv1.JSON `json:"config,omitempty" protobuf:"bytes,3,opt,name=config"`
+}
+
+// GetAlias returns the As field, or a default value in the form of "step-<i>"
+// or "task-<i>" if the As field is empty. The index i is provided as an
+// argument to this method and should be the index of the PromotionStep in the
+// list it belongs to.
+func (s *PromotionStep) GetAlias(i int) string {
+	switch {
+	case s.As != "":
+		return s.As
+	case s.Task != nil:
+		return fmt.Sprintf("task-%d", i)
+	default:
+		return fmt.Sprintf("step-%d", i)
+	}
 }
 
 // PromotionStatus describes the current state of the transition represented by

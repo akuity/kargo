@@ -98,7 +98,7 @@ func (s *server) PromoteToStage(
 		)
 	}
 
-	if err := s.authorizeFn(
+	if err = s.authorizeFn(
 		ctx,
 		"promote",
 		schema.GroupVersionResource{
@@ -115,13 +115,16 @@ func (s *server) PromoteToStage(
 		return nil, err
 	}
 
-	promotion := kargo.NewPromotion(ctx, *stage, freight.Name)
-	if err := s.createPromotionFn(ctx, &promotion); err != nil {
+	promotion, err := kargo.NewPromotionBuilder(s.client).Build(ctx, *stage, freight.Name)
+	if err != nil {
+		return nil, fmt.Errorf("build promotion: %w", err)
+	}
+	if err := s.createPromotionFn(ctx, promotion); err != nil {
 		return nil, fmt.Errorf("create promotion: %w", err)
 	}
-	s.recordPromotionCreatedEvent(ctx, &promotion, freight)
+	s.recordPromotionCreatedEvent(ctx, promotion, freight)
 	return connect.NewResponse(&svcv1alpha1.PromoteToStageResponse{
-		Promotion: &promotion,
+		Promotion: promotion,
 	}), nil
 }
 
