@@ -79,25 +79,35 @@ export const TokenRenew = () => {
     }
 
     (async () => {
-      const response = await refreshTokenGrantRequest(as, client, oidcClientAuth, refreshToken, {
-        [allowInsecureRequests]: shouldAllowHttpRequest(),
-        additionalParameters: [['client_id', client.client_id]]
-      });
+      try {
+        const response = await refreshTokenGrantRequest(as, client, oidcClientAuth, refreshToken, {
+          [allowInsecureRequests]: shouldAllowHttpRequest(),
+          additionalParameters: [['client_id', client.client_id]]
+        });
 
-      const result = await processRefreshTokenResponse(as, client, response);
+        const result = await processRefreshTokenResponse(as, client, response);
 
-      if (!result.id_token) {
+        if (!result.id_token) {
+          notification.error({
+            message: 'OIDC: Proccess Authorization Code Grant Response error',
+            placement: 'bottomRight'
+          });
+          logout();
+          navigate(paths.login);
+          return;
+        }
+
+        onLogin(result.id_token, result.refresh_token);
+        navigate(searchParams.get(redirectToQueryParam) || paths.home);
+      } catch (err) {
         notification.error({
-          message: 'OIDC: Proccess Authorization Code Grant Response error',
+          message: `OIDC: ${JSON.stringify(err)}`,
           placement: 'bottomRight'
         });
+
         logout();
         navigate(paths.login);
-        return;
       }
-
-      onLogin(result.id_token, result.refresh_token);
-      navigate(searchParams.get(redirectToQueryParam) || paths.home);
     })();
   }, [as, client]);
 
