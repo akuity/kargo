@@ -2925,6 +2925,8 @@ export class PromotionStatus extends Message<PromotionStatus> {
 /**
  * PromotionStep describes a directive to be executed as part of a Promotion.
  *
+ * +kubebuilder:validation:XValidation:message="inputs must not be set when task is set",rule="!(has(self.task) && self.inputs.size() > 0)"
+ *
  * @generated from message github.com.akuity.kargo.api.v1alpha1.PromotionStep
  */
 export class PromotionStep extends Message<PromotionStep> {
@@ -2961,6 +2963,18 @@ export class PromotionStep extends Message<PromotionStep> {
   retry?: PromotionStepRetry;
 
   /**
+   * Inputs is a map of inputs that can used to parameterize the execution
+   * of the PromotionStep and can be referenced by expressions in the Config.
+   *
+   * When a PromotionStep is inflated from a PromotionTask, the inputs
+   * specified in the PromotionTask are set based on the inputs specified
+   * in the Config of the PromotionStep that references the PromotionTask.
+   *
+   * @generated from field: map<string, string> inputs = 6;
+   */
+  inputs: { [key: string]: string } = {};
+
+  /**
    * Config is opaque configuration for the PromotionStep that is understood
    * only by each PromotionStep's implementation. It is legal to utilize
    * expressions in defining values at any level of this block.
@@ -2982,6 +2996,7 @@ export class PromotionStep extends Message<PromotionStep> {
     { no: 5, name: "task", kind: "message", T: PromotionTaskReference, opt: true },
     { no: 2, name: "as", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 4, name: "retry", kind: "message", T: PromotionStepRetry, opt: true },
+    { no: 6, name: "inputs", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 9 /* ScalarType.STRING */} },
     { no: 3, name: "config", kind: "message", T: JSON, opt: true },
   ]);
 
@@ -3315,6 +3330,7 @@ export class PromotionTaskSpec extends Message<PromotionTaskSpec> {
    * +kubebuilder:validation:Required
    * +kubebuilder:validation:MinItems=1
    * +kubebuilder:validation:items:XValidation:message="PromotionTask step must have uses set and must not reference another task",rule="has(self.uses) && !has(self.task)"
+   * +kubebuilder:validation:items:XValidation:message="PromotionTask step must not have inputs set",rule="self.inputs.size() == 0"
    *
    * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.PromotionStep steps = 2;
    */

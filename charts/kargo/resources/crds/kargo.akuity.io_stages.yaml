@@ -88,6 +88,17 @@ spec:
                                 expressions in defining values at any level of this block.
                                 See https://docs.kargo.io/references/expression-language for details.
                               x-kubernetes-preserve-unknown-fields: true
+                            inputs:
+                              additionalProperties:
+                                type: string
+                              description: |-
+                                Inputs is a map of inputs that can used to parameterize the execution
+                                of the PromotionStep and can be referenced by expressions in the Config.
+
+                                When a PromotionStep is inflated from a PromotionTask, the inputs
+                                specified in the PromotionTask are set based on the inputs specified
+                                in the Config of the PromotionStep that references the PromotionTask.
+                              type: object
                             retry:
                               description: Retry is the retry policy for this step.
                               properties:
@@ -164,6 +175,8 @@ spec:
                           - message: PromotionTemplate step must have exactly one
                               of uses or task set
                             rule: '(has(self.uses) ? !has(self.task) : has(self.task))'
+                          - message: inputs must not be set when task is set
+                            rule: '!(has(self.task) && self.inputs.size() > 0)'
                         minItems: 1
                         type: array
                       vars:
