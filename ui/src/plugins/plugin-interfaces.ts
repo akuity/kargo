@@ -12,13 +12,13 @@
 import { ReactNode } from 'react';
 
 import { PromotionDirectiveStepStatus } from '@ui/features/common/promotion-directive-step-status/utils';
-import { PromotionStep } from '@ui/gen/v1alpha1/generated_pb';
+import { Promotion, PromotionStep } from '@ui/gen/v1alpha1/generated_pb';
 
 export interface DeepLinkPluginsInstallation {
   // Scopes
 
   // Plugin generates information from given plugin step and renders in the step view in Promotion steps modal
-  PromotionStep: {
+  PromotionStep?: {
     // thoughts.. instead of coupling this to name of step, this would open doors for plugin development based on combination of promotion steps
     shouldRender: (opts: { step: PromotionStep; result: PromotionDirectiveStepStatus }) => boolean;
     render: (props: {
@@ -30,11 +30,17 @@ export interface DeepLinkPluginsInstallation {
       output?: Record<string, unknown>;
     }) => ReactNode;
   };
+
+  // Plugin summarises promotion and provide useful link(s) and renders in the promotion list view
+  Promotion?: {
+    shouldRender: (opts: { promotion: Promotion }) => boolean;
+    render: (props: { promotion: Promotion }) => ReactNode;
+  };
 }
 
 export interface PluginsInstallation {
   identity?: string;
   description?: string;
 
-  DeepLinkPlugin: DeepLinkPluginsInstallation;
+  DeepLinkPlugin?: DeepLinkPluginsInstallation;
 }

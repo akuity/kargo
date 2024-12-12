@@ -106,8 +106,8 @@ const Step = ({
   };
 
   const UiPlugins = uiPlugins
-    .filter((plugin) => plugin.DeepLinkPlugin.PromotionStep.shouldRender({ step, result }))
-    .map((plugin) => plugin.DeepLinkPlugin.PromotionStep.render);
+    .filter((plugin) => plugin.DeepLinkPlugin?.PromotionStep?.shouldRender({ step, result }))
+    .map((plugin) => plugin.DeepLinkPlugin?.PromotionStep?.render);
 
   return {
     className: classNames('', {
@@ -130,14 +130,17 @@ const Step = ({
           <span className='font-semibold text-base '>{meta.spec.identifier}</span>
           {UiPlugins.length > 0 && (
             <UiPluginHoles.DeepLinks.PromotionStep className='ml-2'>
-              {UiPlugins.map((ApplyPlugin, idx) => (
-                <ApplyPlugin
-                  result={result}
-                  step={step}
-                  output={output as Record<string, unknown>}
-                  key={idx}
-                />
-              ))}
+              {UiPlugins.map(
+                (ApplyPlugin, idx) =>
+                  ApplyPlugin && (
+                    <ApplyPlugin
+                      result={result}
+                      step={step}
+                      output={output as Record<string, unknown>}
+                      key={idx}
+                    />
+                  )
+              )}
             </UiPluginHoles.DeepLinks.PromotionStep>
           )}
           {!!step?.as && (

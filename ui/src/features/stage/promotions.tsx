@@ -21,6 +21,8 @@ import {
 import { KargoService } from '@ui/gen/service/v1alpha1/service_connect';
 import { ListPromotionsResponse } from '@ui/gen/service/v1alpha1/service_pb';
 import { Freight, Promotion } from '@ui/gen/v1alpha1/generated_pb';
+import uiPlugins from '@ui/plugins';
+import { UiPluginHoles } from '@ui/plugins/ui-plugin-hole/ui-plugin-holes';
 
 import { PromotionDetailsModal } from './promotion-details-modal';
 import { hasAbortRequest, promotionCompareFn } from './utils/promotion';
@@ -171,6 +173,26 @@ export const Promotions = () => {
           </Link>
         </Tooltip>
       )
+    },
+    {
+      title: 'Extra',
+      render: (_, promotion) => {
+        const UiPlugins = uiPlugins
+          .filter((plugin) => plugin.DeepLinkPlugin?.Promotion?.shouldRender({ promotion }))
+          .map((plugin) => plugin.DeepLinkPlugin?.Promotion?.render);
+
+        if (UiPlugins?.length > 0) {
+          return (
+            <UiPluginHoles.DeepLinks.Promotion className='w-fit'>
+              {UiPlugins.map(
+                (ApplyPlugin, idx) => ApplyPlugin && <ApplyPlugin key={idx} promotion={promotion} />
+              )}
+            </UiPluginHoles.DeepLinks.Promotion>
+          );
+        }
+
+        return '-';
+      }
     }
   ];
 
