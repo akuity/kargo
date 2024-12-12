@@ -4342,6 +4342,15 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 							},
 						},
 					},
+					PromotionTemplate: &kargoapi.PromotionTemplate{
+						Spec: kargoapi.PromotionTemplateSpec{
+							Steps: []kargoapi.PromotionStep{
+								{
+									Uses: "fake-step",
+								},
+							},
+						},
+					},
 				},
 			},
 			objects: []client.Object{
@@ -4555,6 +4564,15 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 							},
 						},
 					},
+					PromotionTemplate: &kargoapi.PromotionTemplate{
+						Spec: kargoapi.PromotionTemplateSpec{
+							Steps: []kargoapi.PromotionStep{
+								{
+									Uses: "fake-step",
+								},
+							},
+						},
+					},
 				},
 			},
 			objects: []client.Object{
@@ -4613,6 +4631,15 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 							Origin: kargoapi.FreightOrigin{
 								Kind: kargoapi.FreightOriginKindWarehouse,
 								Name: "test-warehouse",
+							},
+						},
+					},
+					PromotionTemplate: &kargoapi.PromotionTemplate{
+						Spec: kargoapi.PromotionTemplateSpec{
+							Steps: []kargoapi.PromotionStep{
+								{
+									Uses: "fake-step",
+								},
 							},
 						},
 					},
@@ -4690,6 +4717,15 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 							},
 							Sources: kargoapi.FreightSources{
 								Direct: true,
+							},
+						},
+					},
+					PromotionTemplate: &kargoapi.PromotionTemplate{
+						Spec: kargoapi.PromotionTemplateSpec{
+							Steps: []kargoapi.PromotionStep{
+								{
+									Uses: "fake-step",
+								},
 							},
 						},
 					},
@@ -4777,6 +4813,15 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 							},
 						},
 					},
+					PromotionTemplate: &kargoapi.PromotionTemplate{
+						Spec: kargoapi.PromotionTemplateSpec{
+							Steps: []kargoapi.PromotionStep{
+								{
+									Uses: "fake-step",
+								},
+							},
+						},
+					},
 				},
 			},
 			objects: []client.Object{
@@ -4842,6 +4887,15 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 							},
 						},
 					},
+					PromotionTemplate: &kargoapi.PromotionTemplate{
+						Spec: kargoapi.PromotionTemplateSpec{
+							Steps: []kargoapi.PromotionStep{
+								{
+									Uses: "fake-step",
+								},
+							},
+						},
+					},
 				},
 			},
 			objects: []client.Object{
@@ -4891,6 +4945,66 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 			},
 		},
 		{
+			name: "handles promotion build error",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-project",
+					Name:      "test-stage",
+				},
+				Spec: kargoapi.StageSpec{
+					RequestedFreight: []kargoapi.FreightRequest{
+						{
+							Origin: kargoapi.FreightOrigin{
+								Kind: kargoapi.FreightOriginKindWarehouse,
+								Name: "test-warehouse",
+							},
+							Sources: kargoapi.FreightSources{
+								Direct: true,
+							},
+						},
+					},
+					// Missing template to build Promotion
+					PromotionTemplate: nil,
+				},
+			},
+			objects: []client.Object{
+				&kargoapi.Project{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "fake-project",
+					},
+					Spec: &kargoapi.ProjectSpec{
+						PromotionPolicies: []kargoapi.PromotionPolicy{
+							{
+								Stage:                "test-stage",
+								AutoPromotionEnabled: true,
+							},
+						},
+					},
+				},
+				&kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace:         "fake-project",
+						Name:              "test-freight",
+						CreationTimestamp: metav1.Time{Time: now},
+					},
+					Origin: kargoapi.FreightOrigin{
+						Kind: kargoapi.FreightOriginKindWarehouse,
+						Name: "test-warehouse",
+					},
+					Status: kargoapi.FreightStatus{},
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				_ *fakeevent.EventRecorder,
+				_ client.Client,
+				_ kargoapi.StageStatus,
+				err error,
+			) {
+				require.ErrorContains(t, err, "error building Promotion")
+			},
+		},
+		{
 			name: "handles promotion creation error",
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
@@ -4906,6 +5020,15 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 							},
 							Sources: kargoapi.FreightSources{
 								Direct: true,
+							},
+						},
+					},
+					PromotionTemplate: &kargoapi.PromotionTemplate{
+						Spec: kargoapi.PromotionTemplateSpec{
+							Steps: []kargoapi.PromotionStep{
+								{
+									Uses: "fake-step",
+								},
 							},
 						},
 					},
