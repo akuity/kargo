@@ -8,6 +8,7 @@ import (
 	"connectrpc.com/connect"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -28,6 +29,11 @@ func TestPromoteToStage(t *testing.T) {
 				Stages: []string{"fake-upstream-stage"},
 			},
 		}},
+		PromotionTemplate: &kargoapi.PromotionTemplate{
+			Spec: kargoapi.PromotionTemplateSpec{
+				Steps: []kargoapi.PromotionStep{{}},
+			},
+		},
 	}
 	testCases := []struct {
 		name       string
@@ -74,8 +80,7 @@ func TestPromoteToStage(t *testing.T) {
 				_ *connect.Response[svcv1alpha1.PromoteToStageResponse],
 				err error,
 			) {
-				require.Error(t, err)
-				require.Equal(t, "something went wrong", err.Error())
+				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
 		{
@@ -103,8 +108,7 @@ func TestPromoteToStage(t *testing.T) {
 				_ *connect.Response[svcv1alpha1.PromoteToStageResponse],
 				err error,
 			) {
-				require.Error(t, err)
-				require.Equal(t, "get stage: something went wrong", err.Error())
+				require.ErrorContains(t, err, "get stage: something went wrong")
 			},
 		},
 		{
@@ -174,8 +178,7 @@ func TestPromoteToStage(t *testing.T) {
 				_ *connect.Response[svcv1alpha1.PromoteToStageResponse],
 				err error,
 			) {
-				require.Error(t, err)
-				require.Equal(t, "get freight: something went wrong", err.Error())
+				require.ErrorContains(t, err, "get freight: something went wrong")
 			},
 		},
 		{
@@ -313,8 +316,60 @@ func TestPromoteToStage(t *testing.T) {
 				_ *connect.Response[svcv1alpha1.PromoteToStageResponse],
 				err error,
 			) {
-				require.Error(t, err)
-				require.Equal(t, "not authorized", err.Error())
+				require.Error(t, err, "not authorized")
+			},
+		},
+		{
+			name: "error building Promotion",
+			req: &svcv1alpha1.PromoteToStageRequest{
+				Project: "fake-project",
+				Stage:   "fake-stage",
+				Freight: "fake-freight",
+			},
+			server: &server{
+				validateProjectExistsFn: func(context.Context, string) error {
+					return nil
+				},
+				getStageFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Stage, error) {
+					return &kargoapi.Stage{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: "fake-project",
+							Name:      "fake-stage",
+						},
+						Spec: testStageSpec,
+					}, nil
+				},
+				getFreightByNameOrAliasFn: func(
+					context.Context,
+					client.Client,
+					string, string, string,
+				) (*kargoapi.Freight, error) {
+					return &kargoapi.Freight{}, nil
+				},
+				isFreightAvailableFn: func(*kargoapi.Stage, *kargoapi.Freight) bool {
+					return true
+				},
+				authorizeFn: func(
+					context.Context,
+					string,
+					schema.GroupVersionResource,
+					string,
+					client.ObjectKey,
+				) error {
+					return nil
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				_ *fakeevent.EventRecorder,
+				_ *connect.Response[svcv1alpha1.PromoteToStageResponse],
+				err error,
+			) {
+				require.ErrorContains(t, err, "build promotion")
 			},
 		},
 		{
@@ -334,6 +389,10 @@ func TestPromoteToStage(t *testing.T) {
 					types.NamespacedName,
 				) (*kargoapi.Stage, error) {
 					return &kargoapi.Stage{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: "fake-project",
+							Name:      "fake-stage",
+						},
 						Spec: testStageSpec,
 					}, nil
 				},
@@ -342,7 +401,12 @@ func TestPromoteToStage(t *testing.T) {
 					client.Client,
 					string, string, string,
 				) (*kargoapi.Freight, error) {
-					return &kargoapi.Freight{}, nil
+					return &kargoapi.Freight{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: "fake-project",
+							Name:      "fake-freight",
+						},
+					}, nil
 				},
 				isFreightAvailableFn: func(*kargoapi.Stage, *kargoapi.Freight) bool {
 					return true
@@ -370,8 +434,7 @@ func TestPromoteToStage(t *testing.T) {
 				_ *connect.Response[svcv1alpha1.PromoteToStageResponse],
 				err error,
 			) {
-				require.Error(t, err)
-				require.Equal(t, "create promotion: something went wrong", err.Error())
+				require.Error(t, err, "create promotion: something went wrong")
 			},
 		},
 		{
@@ -391,6 +454,10 @@ func TestPromoteToStage(t *testing.T) {
 					types.NamespacedName,
 				) (*kargoapi.Stage, error) {
 					return &kargoapi.Stage{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: "fake-project",
+							Name:      "fake-stage",
+						},
 						Spec: testStageSpec,
 					}, nil
 				},
@@ -399,7 +466,12 @@ func TestPromoteToStage(t *testing.T) {
 					client.Client,
 					string, string, string,
 				) (*kargoapi.Freight, error) {
-					return &kargoapi.Freight{}, nil
+					return &kargoapi.Freight{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: "fake-project",
+							Name:      "fake-freight",
+						},
+					}, nil
 				},
 				isFreightAvailableFn: func(*kargoapi.Stage, *kargoapi.Freight) bool {
 					return true

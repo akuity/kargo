@@ -30,6 +30,7 @@ func TestPromoteDownstream(t *testing.T) {
 			},
 		}},
 	}
+
 	testCases := []struct {
 		name       string
 		req        *svcv1alpha1.PromoteDownstreamRequest
@@ -74,8 +75,7 @@ func TestPromoteDownstream(t *testing.T) {
 				_ *connect.Response[svcv1alpha1.PromoteDownstreamResponse],
 				err error,
 			) {
-				require.Error(t, err)
-				require.Equal(t, "something went wrong", err.Error())
+				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
 		{
@@ -103,8 +103,7 @@ func TestPromoteDownstream(t *testing.T) {
 				_ *connect.Response[svcv1alpha1.PromoteDownstreamResponse],
 				err error,
 			) {
-				require.Error(t, err)
-				require.Equal(t, "get stage: something went wrong", err.Error())
+				require.ErrorContains(t, err, "get stage: something went wrong")
 			},
 		},
 		{
@@ -174,8 +173,7 @@ func TestPromoteDownstream(t *testing.T) {
 				_ *connect.Response[svcv1alpha1.PromoteDownstreamResponse],
 				err error,
 			) {
-				require.Error(t, err)
-				require.Equal(t, "get freight: something went wrong", err.Error())
+				require.ErrorContains(t, err, "get freight: something went wrong")
 			},
 		},
 		{
@@ -313,8 +311,7 @@ func TestPromoteDownstream(t *testing.T) {
 				_ *connect.Response[svcv1alpha1.PromoteDownstreamResponse],
 				err error,
 			) {
-				require.Error(t, err)
-				require.Equal(t, "find downstream stages: something went wrong", err.Error())
+				require.ErrorContains(t, err, "find downstream stages: something went wrong")
 			},
 		},
 		{
@@ -438,12 +435,11 @@ func TestPromoteDownstream(t *testing.T) {
 				_ *connect.Response[svcv1alpha1.PromoteDownstreamResponse],
 				err error,
 			) {
-				require.Error(t, err)
-				require.Equal(t, "not authorized", err.Error())
+				require.ErrorContains(t, err, "not authorized")
 			},
 		},
 		{
-			name: "error creating Promotion",
+			name: "error building Promotion",
 			req: &svcv1alpha1.PromoteDownstreamRequest{
 				Project: "fake-project",
 				Stage:   "fake-stage",
@@ -486,6 +482,94 @@ func TestPromoteDownstream(t *testing.T) {
 				) ([]kargoapi.Stage, error) {
 					return []kargoapi.Stage{
 						{
+							Spec: kargoapi.StageSpec{
+								PromotionTemplate: &kargoapi.PromotionTemplate{
+									Spec: kargoapi.PromotionTemplateSpec{
+										Steps: []kargoapi.PromotionStep{{}},
+									},
+								},
+							},
+						},
+					}, nil
+				},
+				authorizeFn: func(
+					context.Context,
+					string,
+					schema.GroupVersionResource,
+					string,
+					client.ObjectKey,
+				) error {
+					return nil
+				},
+				createPromotionFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return nil
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				_ *fakeevent.EventRecorder,
+				_ *connect.Response[svcv1alpha1.PromoteDownstreamResponse],
+				err error,
+			) {
+				require.ErrorContains(t, err, "stage is required")
+			},
+		},
+		{
+			name: "error creating Promotion",
+			req: &svcv1alpha1.PromoteDownstreamRequest{
+				Project: "fake-project",
+				Stage:   "fake-stage",
+				Freight: "fake-freight",
+			},
+			server: &server{
+				validateProjectExistsFn: func(context.Context, string) error {
+					return nil
+				},
+				getStageFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Stage, error) {
+					return &kargoapi.Stage{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: "fake-project",
+							Name:      "fake-stage",
+						},
+						Spec: testStageSpec,
+					}, nil
+				},
+				getFreightByNameOrAliasFn: func(
+					context.Context,
+					client.Client,
+					string, string, string,
+				) (*kargoapi.Freight, error) {
+					return &kargoapi.Freight{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: "fake-project",
+							Name:      "fake-freight",
+						},
+						Status: kargoapi.FreightStatus{
+							VerifiedIn: map[string]kargoapi.VerifiedStage{
+								"fake-stage": {},
+							},
+						},
+					}, nil
+				},
+				findDownstreamStagesFn: func(
+					context.Context,
+					*kargoapi.Stage,
+					kargoapi.FreightOrigin,
+				) ([]kargoapi.Stage, error) {
+					return []kargoapi.Stage{
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Namespace: "fake-project",
+								Name:      "fake-downstream-stage",
+							},
 							Spec: kargoapi.StageSpec{
 								PromotionTemplate: &kargoapi.PromotionTemplate{
 									Spec: kargoapi.PromotionTemplateSpec{
@@ -556,6 +640,10 @@ func TestPromoteDownstream(t *testing.T) {
 					string, string, string,
 				) (*kargoapi.Freight, error) {
 					return &kargoapi.Freight{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: "fake-project",
+							Name:      "fake-freight",
+						},
 						Status: kargoapi.FreightStatus{
 							VerifiedIn: map[string]kargoapi.VerifiedStage{
 								"fake-stage": {},
@@ -570,6 +658,10 @@ func TestPromoteDownstream(t *testing.T) {
 				) ([]kargoapi.Stage, error) {
 					return []kargoapi.Stage{
 						{
+							ObjectMeta: metav1.ObjectMeta{
+								Namespace: "fake-project",
+								Name:      "fake-downstream-stage",
+							},
 							Spec: kargoapi.StageSpec{
 								PromotionTemplate: &kargoapi.PromotionTemplate{
 									Spec: kargoapi.PromotionTemplateSpec{
