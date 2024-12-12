@@ -3,6 +3,7 @@ import { faChevronDown, faCodePullRequest } from '@fortawesome/free-solid-svg-ic
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Flex, Space } from 'antd';
 import Dropdown from 'antd/es/dropdown/dropdown';
+import gitUrlParse from 'git-url-parse';
 import { ReactNode, useMemo } from 'react';
 
 import { PromotionDirectiveStepStatus } from '@ui/features/common/promotion-directive-step-status/utils';
@@ -18,7 +19,8 @@ const getPullRequestLink = (
   const stepConfig = getPromotionStepConfig(promotionStep);
 
   // plugins responsibility to keep up to date with actual promotion step config
-  const provider = stepConfig?.provider as 'github' | 'gitlab';
+  const provider =
+    (stepConfig?.provider as 'github' | 'gitlab') || 'github'; /* default provider is github */
 
   const repoURL = stepConfig?.repoURL as string;
 
@@ -31,8 +33,9 @@ const getPullRequestLink = (
     );
   }
 
-  // url without slash at the end so it is easy to append path
-  const url = repoURL?.endsWith?.('/') ? repoURL.slice(0, -1) : repoURL;
+  const parsedUrl = gitUrlParse(repoURL);
+
+  const url = `${parsedUrl.protocol}://${parsedUrl.resource}/${parsedUrl.full_name}`;
 
   if (provider === 'github') {
     return `${url}/pull/${prNumber}`;
@@ -56,7 +59,7 @@ const plugin: PluginsInstallation = {
         const stepConfig = useMemo(() => getPromotionStepConfig(props.step), [props.step]);
 
         // plugins responsibility to keep up to date with actual promotion step config
-        const provider = stepConfig?.provider as 'github' | 'gitlab';
+        const provider = (stepConfig?.provider as 'github' | 'gitlab') || 'github';
 
         const repoURL = stepConfig?.repoURL as string;
 
