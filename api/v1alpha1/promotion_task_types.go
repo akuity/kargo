@@ -45,6 +45,7 @@ type PromotionTaskInput struct {
 	//
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Pattern=^[a-zA-Z_]\w*$
 	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
 	// Default specifies a default value for the parameter. This value will be
 	// used if the parameter is not specified in the PromotionTemplate.
