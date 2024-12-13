@@ -30,11 +30,18 @@ export const Settings = ({ section = 'verification' }: { section?: string }) => 
     }
   };
 
+  const getSectionTitle = (section: string) => {
+    switch (section) {
+      case 'verification':
+        return 'Cluster Analysis Templates';
+    }
+  };
+
   return (
     <div className='p-6'>
       <Flex justify='space-between'>
         <PageTitle title='Settings' />
-        <div className='text-2xl font-semibold flex items-center'>Cluster Analysis Templates</div>
+        <div className='text-2xl font-semibold flex items-top'>{getSectionTitle(section)}</div>
       </Flex>
       <Flex justify='space-between'>
         <Menu mode='vertical' items={items} />

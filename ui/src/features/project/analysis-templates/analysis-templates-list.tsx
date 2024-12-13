@@ -31,83 +31,85 @@ export const AnalysisTemplatesList = () => {
   });
 
   return (
-    <Table<AnalysisTemplate>
-      dataSource={data?.analysisTemplates}
-      pagination={{ hideOnSinglePage: true }}
-      rowKey={(i) => i.metadata?.name || ''}
-      loading={isLoading}
-      expandable={descriptionExpandable()}
-    >
-      <Table.Column<AnalysisTemplate>
-        title='Creation Date'
-        width={200}
-        render={(_, template) => {
-          const date = template.metadata?.creationTimestamp?.toDate();
-          return date ? format(date, 'MMM do yyyy HH:mm:ss') : '';
-        }}
-      />
-      <Table.Column<AnalysisTemplate> title='Name' dataIndex={['metadata', 'name']} />
-      <Table.Column<AnalysisTemplate>
-        width={260}
-        title={
-          <div className='text-right'>
-            <Button
-              type='primary'
-              className='ml-auto text-xs font-semibold'
-              icon={<FontAwesomeIcon icon={faPlus} />}
-              onClick={() => showCreate()}
-            >
-              ADD TEMPLATE
-            </Button>
-          </div>
-        }
-        render={(_, template) => (
-          <div className='flex gap-2 justify-end'>
-            <Button
-              icon={<FontAwesomeIcon icon={faPencil} />}
-              className='mr-2 ml-auto'
-              onClick={() => {
-                showEdit((p) => (
-                  <EditAnalysisTemplateModal
-                    {...p}
-                    templateName={template.metadata?.name || ''}
-                    projectName={name || ''}
-                  />
-                ));
-              }}
-            >
-              Edit
-            </Button>
-            <Button
-              icon={<FontAwesomeIcon icon={faTrash} />}
-              danger
-              loading={isDeleting}
-              onClick={() => {
-                confirm({
-                  title: (
-                    <div className='flex items-center'>
-                      <FontAwesomeIcon icon={faTrash} className='mr-2' />
-                      Delete Analysis Template
-                    </div>
-                  ),
-                  content: (
-                    <p>
-                      Are you sure you want to delete AnalysisTemplate{' '}
-                      <b>{template?.metadata?.name}</b>?
-                    </p>
-                  ),
-                  onOk: () => {
-                    deleteTemplate({ project: name || '', name: template?.metadata?.name || '' });
-                  },
-                  hide: () => {}
-                });
-              }}
-            >
-              Delete
-            </Button>
-          </div>
-        )}
-      />
-    </Table>
+    <div className='p-4'>
+      <Table<AnalysisTemplate>
+        dataSource={data?.analysisTemplates}
+        pagination={{ hideOnSinglePage: true }}
+        rowKey={(i) => i.metadata?.name || ''}
+        loading={isLoading}
+        expandable={descriptionExpandable()}
+      >
+        <Table.Column<AnalysisTemplate>
+          title='Creation Date'
+          width={200}
+          render={(_, template) => {
+            const date = template.metadata?.creationTimestamp?.toDate();
+            return date ? format(date, 'MMM do yyyy HH:mm:ss') : '';
+          }}
+        />
+        <Table.Column<AnalysisTemplate> title='Name' dataIndex={['metadata', 'name']} />
+        <Table.Column<AnalysisTemplate>
+          width={260}
+          title={
+            <div className='text-right'>
+              <Button
+                type='primary'
+                className='ml-auto text-xs font-semibold'
+                icon={<FontAwesomeIcon icon={faPlus} />}
+                onClick={() => showCreate()}
+              >
+                ADD TEMPLATE
+              </Button>
+            </div>
+          }
+          render={(_, template) => (
+            <div className='flex gap-2 justify-end'>
+              <Button
+                icon={<FontAwesomeIcon icon={faPencil} />}
+                className='mr-2 ml-auto'
+                onClick={() => {
+                  showEdit((p) => (
+                    <EditAnalysisTemplateModal
+                      {...p}
+                      templateName={template.metadata?.name || ''}
+                      projectName={name || ''}
+                    />
+                  ));
+                }}
+              >
+                Edit
+              </Button>
+              <Button
+                icon={<FontAwesomeIcon icon={faTrash} />}
+                danger
+                loading={isDeleting}
+                onClick={() => {
+                  confirm({
+                    title: (
+                      <div className='flex items-center'>
+                        <FontAwesomeIcon icon={faTrash} className='mr-2' />
+                        Delete Analysis Template
+                      </div>
+                    ),
+                    content: (
+                      <p>
+                        Are you sure you want to delete AnalysisTemplate{' '}
+                        <b>{template?.metadata?.name}</b>?
+                      </p>
+                    ),
+                    onOk: () => {
+                      deleteTemplate({ project: name || '', name: template?.metadata?.name || '' });
+                    },
+                    hide: () => {}
+                  });
+                }}
+              >
+                Delete
+              </Button>
+            </div>
+          )}
+        />
+      </Table>
+    </div>
   );
 };
