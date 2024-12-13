@@ -168,6 +168,50 @@ func FindImage(
 	}
 }
 
+func HasAmbiguousImageRequest(
+	ctx context.Context,
+	cl client.Client,
+	project string,
+	freightReqs []kargoapi.FreightRequest,
+) (bool, error) {
+	var subscribedRepositories = make(map[string]any)
+
+	for i := range freightReqs {
+		requestedFreight := freightReqs[i]
+		warehouse, err := kargoapi.GetWarehouse(
+			ctx,
+			cl,
+			types.NamespacedName{
+				Name:      requestedFreight.Origin.Name,
+				Namespace: project,
+			},
+		)
+		if err != nil {
+			return false, err
+		}
+		if warehouse == nil {
+			return false, fmt.Errorf(
+				"Warehouse %q not found in namespace %q",
+				requestedFreight.Origin.Name, project,
+			)
+		}
+
+		for _, sub := range warehouse.Spec.Subscriptions {
+			if sub.Image != nil {
+				if _, ok := subscribedRepositories[sub.Image.RepoURL]; ok {
+					return true, fmt.Errorf(
+						"multiple requested Freight could potentially provide a container image from repository %s",
+						sub.Image.RepoURL,
+					)
+				}
+				subscribedRepositories[sub.Image.RepoURL] = struct{}{}
+			}
+		}
+	}
+
+	return false, nil
+}
+
 func FindChart(
 	ctx context.Context,
 	cl client.Client,

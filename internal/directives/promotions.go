@@ -3,8 +3,10 @@ package directives
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/expr-lang/expr"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	yaml "sigs.k8s.io/yaml/goyaml.v3"
 
@@ -30,9 +32,12 @@ type PromotionStepRunner interface {
 // RetryableStepRunner is an interface for PromotionStepRunners that can be
 // retried in the event of a failure.
 type RetryableStepRunner interface {
-	// DefaultAttempts returns the default number of attempts the step is
-	// allowed to make before failing.
-	DefaultAttempts() int64
+	// DefaultTimeout returns the default timeout for the step.
+	DefaultTimeout() *time.Duration
+	// DefaultErrorThreshold returns the number of consecutive times the step must
+	// fail (for any reason) before retries are abandoned and the entire Promotion
+	// is marked as failed.
+	DefaultErrorThreshold() uint32
 }
 
 // PromotionContext is the context of a user-defined promotion process that is
@@ -65,9 +70,9 @@ type PromotionContext struct {
 	// StartFromStep is the index of the step from which the promotion should
 	// begin execution.
 	StartFromStep int64
-	// Attempts is the number of attempts that have been made to execute
-	// the current step.
-	Attempts int64
+	// StepExecutionMetadata tracks metadata pertaining to the execution
+	// of individual promotion steps.
+	StepExecutionMetadata kargoapi.StepExecutionMetadataList
 	// State is the current state of the promotion process.
 	State State
 	// Vars is a list of variables definitions that can be used by the
@@ -96,16 +101,29 @@ type PromotionStep struct {
 	Config []byte
 }
 
-// GetMaxAttempts returns the maximum number of attempts that can be made to
-// execute the step using the provided runner. If the runner is a
-// RetryableStepRunner, the value of its retry configuration is used as the
-// maximum default. Otherwise, the default is 1.
-func (s *PromotionStep) GetMaxAttempts(runner any) int64 {
-	fallback := int64(1)
+// GetTimeout returns the maximum interval the provided runner may spend
+// attempting to execute the step before retries are abandoned and the entire
+// Promotion is marked as failed. If the runner is a RetryableStepRunner, its
+// timeout is used as the default. Otherwise, the default is 0 (no limit).
+func (s *PromotionStep) GetTimeout(runner any) *time.Duration {
+	fallback := ptr.To(time.Duration(0))
 	if retryCfg, isRetryable := runner.(RetryableStepRunner); isRetryable {
-		fallback = retryCfg.DefaultAttempts()
+		fallback = retryCfg.DefaultTimeout()
 	}
-	return s.Retry.GetAttempts(fallback)
+	return s.Retry.GetTimeout(fallback)
+}
+
+// GetErrorThreshold returns the number of consecutive times the provided runner
+// must fail to execute the step (for any reason) before retries are abandoned
+// and the entire Promotion is marked as failed. If the runner is a
+// RetryableStepRunner, its threshold is used as the default. Otherwise, the
+// default is 1.
+func (s *PromotionStep) GetErrorThreshold(runner any) uint32 {
+	fallback := uint32(1)
+	if retryCfg, isRetryable := runner.(RetryableStepRunner); isRetryable {
+		fallback = retryCfg.DefaultErrorThreshold()
+	}
+	return s.Retry.GetErrorThreshold(fallback)
 }
 
 // GetConfig returns the Config unmarshalled into a map. Any expr-lang
@@ -214,8 +232,9 @@ type PromotionResult struct {
 	// in some external state, the value of this field will indicate where to
 	// resume the process in the next reconciliation.
 	CurrentStep int64
-	// Attempt tracks the current execution attempt of the current step.
-	Attempt int64
+	// StepExecutionMetadata tracks metadata pertaining to the execution
+	// of individual promotion steps.
+	StepExecutionMetadata kargoapi.StepExecutionMetadataList
 	// State is the current state of the promotion process.
 	State State
 }

@@ -174,7 +174,7 @@ promotionTemplate:
         - name: example-${{ ctx.stage }}
           sources:
           - repoURL: ${{ vars.gitRepo }}
-            desiredCommit: ${{ outputs.commit.commit }}
+            desiredRevision: ${{ outputs.commit.commit }}
 ```
 
 :::info

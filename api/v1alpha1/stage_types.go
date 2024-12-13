@@ -511,8 +511,6 @@ type Health struct {
 	// Issues clarifies why a Stage in any state other than Healthy is in that
 	// state. This field will always be the empty when a Stage is Healthy.
 	Issues []string `json:"issues,omitempty" protobuf:"bytes,2,rep,name=issues"`
-	// ArgoCDApps describes the current state of any related ArgoCD Applications.
-	ArgoCDApps []ArgoCDAppStatus `json:"argoCDApps,omitempty" protobuf:"bytes,3,rep,name=argoCDApps"`
 	// Config is the opaque configuration of all health checks performed on this
 	// Stage.
 	Config *apiextensionsv1.JSON `json:"config,omitempty" protobuf:"bytes,4,opt,name=config"`

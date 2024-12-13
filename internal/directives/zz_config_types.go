@@ -59,7 +59,8 @@ type ArgoCDAppSourceUpdate struct {
 	// to your Warehouse; match them to the Application source you wish to update.
 	RepoURL string `json:"repoURL"`
 	// Indicates whether the source should be updated such that its 'targetRevision' field
-	// points directly at the desired revision.
+	// points directly at the desired revision. If set to true, exactly one of
+	// 'desiredCommitFromStep' or 'desiredRevision' must be specified.
 	UpdateTargetRevision bool `json:"updateTargetRevision,omitempty"`
 }
 
@@ -200,6 +201,9 @@ type GitOpenPRConfig struct {
 	// The branch to which the changes should be merged. This branch must already exist and be
 	// up to date on the remote.
 	TargetBranch string `json:"targetBranch"`
+	// The title for the pull request. Kargo generates a title based on the commit messages if
+	// it is not explicitly specified.
+	Title string `json:"title,omitempty"`
 }
 
 type GitPushConfig struct {
@@ -320,9 +324,9 @@ type HTTPConfig struct {
 	QueryParams []HTTPQueryParam `json:"queryParams,omitempty"`
 	// An expression to evaluate to determine if the request was successful.
 	SuccessExpression string `json:"successExpression,omitempty"`
-	// The number of seconds to wait for the request to complete. If not specified, the default
-	// is 10 seconds.
-	TimeoutSeconds *int64 `json:"timeoutSeconds,omitempty"`
+	// The maximum time to wait for the request to complete. If not specified, the default is 10
+	// seconds.
+	Timeout string `json:"timeout,omitempty"`
 	// The URL to send the HTTP request to.
 	URL string `json:"url"`
 }
@@ -374,7 +378,10 @@ type Helm struct {
 }
 
 type KustomizeSetImageConfig struct {
-	// Images is a list of container images to set or update in the Kustomization file.
+	// Images is a list of container images to set or update in the Kustomization file. When
+	// left unspecified, all images from the Freight collection will be set in the Kustomization
+	// file. Unless there is an ambiguous image name (for example, due to two Warehouses
+	// subscribing to the same repository), which requires manual configuration.
 	Images []KustomizeSetImageConfigImage `json:"images"`
 	// Path to the directory containing the Kustomization file.
 	Path string `json:"path"`

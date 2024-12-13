@@ -10,12 +10,15 @@ import (
 	"github.com/google/uuid"
 	"github.com/kelseyhightower/envconfig"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	kerrors "k8s.io/apimachinery/pkg/util/errors"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/util/retry"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -71,6 +74,8 @@ type RegularStageReconciler struct {
 	client           client.Client
 	eventRecorder    record.EventRecorder
 	directivesEngine directives.Engine
+
+	backoffCfg wait.Backoff
 }
 
 // NewRegularStageReconciler creates a new Stages reconciler.
@@ -78,6 +83,13 @@ func NewRegularStageReconciler(cfg ReconcilerConfig, engine directives.Engine) *
 	return &RegularStageReconciler{
 		cfg:              cfg,
 		directivesEngine: engine,
+		backoffCfg: wait.Backoff{
+			Duration: 1 * time.Second,
+			Factor:   2,
+			Steps:    10,
+			Cap:      2 * time.Minute,
+			Jitter:   0.1,
+		},
 	}
 }
 
@@ -634,12 +646,13 @@ func (r *RegularStageReconciler) syncPromotions(
 		}
 
 		// If we are in a healthy state, the current Freight needs to be verified
-		// before we can allow the next Promotion to start. If we are unhealthy,
-		// then we can allow the next Promotion to start immediately as the
-		// expectation is that the Promotion can fix the issue.
+		// before we can allow the next Promotion to start. If we are unhealthy
+		// or the verification failed, then we can allow the next Promotion to
+		// start immediately as the expectation is that the Promotion can fix the
+		// issue.
 		if stage.Status.Health == nil || stage.Status.Health.Status != kargoapi.HealthStateUnhealthy {
 			curVI := curFreight.VerificationHistory.Current()
-			if curVI == nil || curVI.Phase != kargoapi.VerificationPhaseSuccessful {
+			if curVI == nil || !curVI.Phase.IsTerminal() {
 				logger.Debug("current Freight needs to be verified before allowing new promotions to start")
 				conditions.Delete(&newStatus, kargoapi.ConditionTypePromoting)
 				return newStatus, hasNonTerminalPromotions, nil
@@ -704,14 +717,18 @@ func (r *RegularStageReconciler) assessHealth(ctx context.Context, stage *kargoa
 	//  even if the current Promotion did not succeed (e.g. because it was
 	//  aborted).
 	if lastPromo.Status.Phase != kargoapi.PromotionPhaseSucceeded {
-		logger.Debug("Last promotion did not succeed: no health checks to perform")
+		logger.Debug("Last promotion did not succeed: defaulting Stage health to Unhealthy")
 		conditions.Set(&newStatus, &metav1.Condition{
 			Type:               kargoapi.ConditionTypeHealthy,
-			Status:             metav1.ConditionUnknown,
+			Status:             metav1.ConditionFalse,
 			Reason:             fmt.Sprintf("LastPromotion%s", lastPromo.Status.Phase),
-			Message:            "No health checks to perform for unsuccessful Promotion",
+			Message:            "Last Promotion did not succeed",
 			ObservedGeneration: stage.Generation,
 		})
+		newStatus.Health = &kargoapi.Health{
+			Status: kargoapi.HealthStateUnhealthy,
+			Issues: []string{"Last Promotion did not succeed"},
+		}
 		return newStatus
 	}
 
@@ -1032,7 +1049,9 @@ func (r *RegularStageReconciler) markFreightVerifiedForStage(
 			if status.VerifiedIn == nil {
 				status.VerifiedIn = make(map[string]kargoapi.VerifiedStage)
 			}
-			status.VerifiedIn[stage.Name] = kargoapi.VerifiedStage{}
+			status.VerifiedIn[stage.Name] = kargoapi.VerifiedStage{
+				VerifiedAt: curFreight.VerificationHistory.Current().FinishTime.DeepCopy(),
+			}
 		}); err != nil {
 			return newStatus, fmt.Errorf(
 				"error marking Freight %q as verified in Stage: %w",
@@ -1297,11 +1316,20 @@ func (r *RegularStageReconciler) getVerificationResult(
 		}, nil
 	}
 
+	// TODO(hidde): This retry logic has been put in place because we have
+	// observed the cache not being up-to-date with the API server in some
+	// edge case scenarios. While this is not a long-term solution, it cures
+	// the symptoms for now. We should investigate the root cause of this
+	// issue and remove this retry logic when the root cause has been resolved.
 	ar := rolloutsapi.AnalysisRun{}
-	if err := r.client.Get(ctx, types.NamespacedName{
-		Namespace: currentVI.AnalysisRun.Namespace,
-		Name:      currentVI.AnalysisRun.Name,
-	}, &ar); err != nil {
+	if err := retry.OnError(r.backoffCfg, func(err error) bool {
+		return apierrors.IsNotFound(err)
+	}, func() error {
+		return r.client.Get(ctx, types.NamespacedName{
+			Namespace: currentVI.AnalysisRun.Namespace,
+			Name:      currentVI.AnalysisRun.Name,
+		}, &ar)
+	}); err != nil {
 		return &kargoapi.VerificationInfo{
 			ID:         currentVI.ID,
 			Actor:      currentVI.Actor,

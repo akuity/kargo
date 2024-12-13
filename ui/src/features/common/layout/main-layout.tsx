@@ -14,7 +14,7 @@ import { Outlet } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
 import { useAuthContext } from '@ui/features/auth/context/use-auth-context';
-import { isJWTDirty } from '@ui/features/auth/utils';
+import { isJWTDirty } from '@ui/features/auth/jwt-utils';
 import { KargoLogo } from '@ui/features/common/logo/logo';
 
 import * as styles from './main-layout.module.less';
