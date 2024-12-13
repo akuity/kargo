@@ -36,11 +36,28 @@
                         "x-kubernetes-preserve-unknown-fields": true
                       },
                       "inputs": {
-                        "additionalProperties": {
-                          "type": "string"
+                        "description": "Inputs is a list of inputs that can used to parameterize the execution\nof the PromotionStep and can be referenced by expressions in the Config.\n\nWhen a PromotionStep is inflated from a PromotionTask, the inputs\nspecified in the PromotionTask are set based on the inputs specified\nin the Config of the PromotionStep that references the PromotionTask.",
+                        "items": {
+                          "description": "PromotionStepInput describes a single input value for a PromotionStep that may\nbe referenced by expressions in the step.",
+                          "properties": {
+                            "name": {
+                              "description": "Name is the name of the input to which the value is assigned.",
+                              "minLength": 1,
+                              "pattern": "^[a-zA-Z_]\\w*$",
+                              "type": "string"
+                            },
+                            "value": {
+                              "description": "Value is the input value.",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "name",
+                            "value"
+                          ],
+                          "type": "object"
                         },
-                        "description": "Inputs is a map of inputs that can used to parameterize the execution\nof the PromotionStep and can be referenced by expressions in the Config.\n\nWhen a PromotionStep is inflated from a PromotionTask, the inputs\nspecified in the PromotionTask are set based on the inputs specified\nin the Config of the PromotionStep that references the PromotionTask.",
-                        "type": "object"
+                        "type": "array"
                       },
                       "retry": {
                         "description": "Retry is the retry policy for this step.",
