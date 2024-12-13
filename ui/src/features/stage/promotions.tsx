@@ -19,7 +19,7 @@ import {
   listPromotions
 } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 import { KargoService } from '@ui/gen/service/v1alpha1/service_connect';
-import { ListPromotionsResponse } from '@ui/gen/service/v1alpha1/service_pb';
+import { ArgoCDShard, ListPromotionsResponse } from '@ui/gen/service/v1alpha1/service_pb';
 import { Freight, Promotion } from '@ui/gen/v1alpha1/generated_pb';
 import uiPlugins from '@ui/plugins';
 import { UiPluginHoles } from '@ui/plugins/ui-plugin-hole/ui-plugin-holes';
@@ -27,7 +27,7 @@ import { UiPluginHoles } from '@ui/plugins/ui-plugin-hole/ui-plugin-holes';
 import { PromotionDetailsModal } from './promotion-details-modal';
 import { hasAbortRequest, promotionCompareFn } from './utils/promotion';
 
-export const Promotions = () => {
+export const Promotions = ({ argocdShard }: { argocdShard?: ArgoCDShard }) => {
   const client = useQueryClient();
 
   const { name: projectName, stageName } = useParams();
@@ -176,16 +176,29 @@ export const Promotions = () => {
     },
     {
       title: 'Extra',
-      render: (_, promotion) => {
+      render: (_, promotion, promotionIndex) => {
         const UiPlugins = uiPlugins
-          .filter((plugin) => plugin.DeepLinkPlugin?.Promotion?.shouldRender({ promotion }))
+          .filter((plugin) =>
+            plugin.DeepLinkPlugin?.Promotion?.shouldRender({
+              promotion,
+              isLatestPromotion: promotionIndex === 0
+            })
+          )
           .map((plugin) => plugin.DeepLinkPlugin?.Promotion?.render);
 
         if (UiPlugins?.length > 0) {
           return (
             <UiPluginHoles.DeepLinks.Promotion className='w-fit'>
               {UiPlugins.map(
-                (ApplyPlugin, idx) => ApplyPlugin && <ApplyPlugin key={idx} promotion={promotion} />
+                (ApplyPlugin, idx) =>
+                  ApplyPlugin && (
+                    <ApplyPlugin
+                      key={idx}
+                      promotion={promotion}
+                      unstable_argocdShardUrl={argocdShard?.url}
+                      isLatestPromotion={promotionIndex === 0}
+                    />
+                  )
               )}
             </UiPluginHoles.DeepLinks.Promotion>
           );

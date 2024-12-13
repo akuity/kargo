@@ -49,7 +49,7 @@ const getPullRequestLink = (
 };
 
 // TODO: refactor as it is getting bigger
-const plugin: PluginsInstallation = {
+const prPlugin: PluginsInstallation = {
   DeepLinkPlugin: {
     PromotionStep: {
       shouldRender({ step, result }) {
@@ -153,4 +153,4 @@ const plugin: PluginsInstallation = {
   }
 };
 
-export default plugin;
+export default prPlugin;
