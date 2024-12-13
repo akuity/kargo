@@ -7,7 +7,7 @@ sidebar_label: Resources
 
 Learn more about Kargo through talks and webinars presented at conferences like KubeCon, ArgoCon, GitOpsCon, etc!
 
-### Kargo GA Webinar 🎉
+## Kargo GA Webinar 🎉
 By Kelsey Hightower & Jesse Suen
 
 <center>
@@ -16,7 +16,7 @@ By Kelsey Hightower & Jesse Suen
 </div>
 </center>
 
-### Streamlining Kubernetes with Kargo
+## Streamlining Kubernetes with Kargo
 By Christian Hernandez | GitHub OpenSourceFriday 2024
 
 <center>
@@ -27,7 +27,7 @@ By Christian Hernandez | GitHub OpenSourceFriday 2024
 
 ---
 
-### GitOps Pipelines: Everything Everywhere All at Once
+## GitOps Pipelines: Everything Everywhere All at Once
 By Christian Hernandez | GitOpsCon North America 2024
 
 <center>
@@ -38,7 +38,7 @@ By Christian Hernandez | GitOpsCon North America 2024
 
 ---
 
-### Multi-Stage Deployment Pipelines the GitOps Way
+## Multi-Stage Deployment Pipelines the GitOps Way
 By Jesse Suen & Kent Rancourt | GitOpsCon Europe 2023
 
 <center>
