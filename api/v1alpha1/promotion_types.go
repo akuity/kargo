@@ -195,6 +195,18 @@ func (r *PromotionStepRetry) GetErrorThreshold(fallback uint32) uint32 {
 	return r.ErrorThreshold
 }
 
+// PromotionStepInput describes a single input value for a PromotionStep that may
+// be referenced by expressions in the step.
+type PromotionStepInput struct {
+	// Name is the name of the input to which the value is assigned.
+	//
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Pattern=^[a-zA-Z_]\w*$
+	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
+	// Value is the input value.
+	Value string `json:"value" protobuf:"bytes,2,opt,name=value"`
+}
+
 // PromotionStep describes a directive to be executed as part of a Promotion.
 //
 // +kubebuilder:validation:XValidation:message="inputs must not be set when task is set",rule="!(has(self.task) && self.inputs.size() > 0)"
@@ -211,13 +223,13 @@ type PromotionStep struct {
 	As string `json:"as,omitempty" protobuf:"bytes,2,opt,name=as"`
 	// Retry is the retry policy for this step.
 	Retry *PromotionStepRetry `json:"retry,omitempty" protobuf:"bytes,4,opt,name=retry"`
-	// Inputs is a map of inputs that can used to parameterize the execution
+	// Inputs is a list of inputs that can used to parameterize the execution
 	// of the PromotionStep and can be referenced by expressions in the Config.
 	//
 	// When a PromotionStep is inflated from a PromotionTask, the inputs
 	// specified in the PromotionTask are set based on the inputs specified
 	// in the Config of the PromotionStep that references the PromotionTask.
-	Inputs map[string]string `json:"inputs,omitempty" protobuf:"bytes,6,rep,name=inputs" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Inputs []PromotionStepInput `json:"inputs,omitempty" protobuf:"bytes,6,rep,name=inputs"`
 	// Config is opaque configuration for the PromotionStep that is understood
 	// only by each PromotionStep's implementation. It is legal to utilize
 	// expressions in defining values at any level of this block.

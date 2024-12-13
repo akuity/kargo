@@ -187,7 +187,9 @@ func TestPromotionBuilder_Build(t *testing.T) {
 				require.Len(t, promotion.Spec.Steps, 1)
 				assert.Equal(t, "task-step::sub-step", promotion.Spec.Steps[0].As)
 				assert.Equal(t, "other-fake-step", promotion.Spec.Steps[0].Uses)
-				assert.Equal(t, map[string]string{"input1": "value1"}, promotion.Spec.Steps[0].Inputs)
+				assert.ElementsMatch(t, []kargoapi.PromotionStepInput{
+					{Name: "input1", Value: "value1"},
+				}, promotion.Spec.Steps[0].Inputs)
 			},
 		},
 	}
@@ -331,7 +333,9 @@ func TestPromotionBuilder_buildSteps(t *testing.T) {
 				// Check inflated task step
 				assert.Equal(t, "task-step::sub-step", steps[1].As)
 				assert.Equal(t, "other-fake-step", steps[1].Uses)
-				assert.Equal(t, map[string]string{"input1": "value1"}, steps[1].Inputs)
+				assert.ElementsMatch(t, []kargoapi.PromotionStepInput{
+					{Name: "input1", Value: "value1"},
+				}, steps[1].Inputs)
 			},
 		},
 		{
@@ -410,11 +414,15 @@ func TestPromotionBuilder_buildSteps(t *testing.T) {
 
 				assert.Equal(t, "task1::step1", steps[0].As)
 				assert.Equal(t, "fake-step", steps[0].Uses)
-				assert.Equal(t, map[string]string{"input1": "value1"}, steps[0].Inputs)
+				assert.ElementsMatch(t, []kargoapi.PromotionStepInput{
+					{Name: "input1", Value: "value1"},
+				}, steps[0].Inputs)
 
 				assert.Equal(t, "task2::step2", steps[1].As)
 				assert.Equal(t, "other-fake-step", steps[1].Uses)
-				assert.Equal(t, map[string]string{"input2": "value2"}, steps[1].Inputs)
+				assert.ElementsMatch(t, []kargoapi.PromotionStepInput{
+					{Name: "input2", Value: "value2"},
+				}, steps[1].Inputs)
 			},
 		},
 	}
@@ -530,16 +538,16 @@ func TestPromotionBuilder_inflateTaskSteps(t *testing.T) {
 
 				assert.Equal(t, "task-1::step1", steps[0].As)
 				assert.Equal(t, "fake-step", steps[0].Uses)
-				assert.Equal(t, map[string]string{
-					"input1": "value1",
-					"input2": "value2",
+				assert.ElementsMatch(t, []kargoapi.PromotionStepInput{
+					{Name: "input1", Value: "value1"},
+					{Name: "input2", Value: "value2"},
 				}, steps[0].Inputs)
 
 				assert.Equal(t, "task-1::step2", steps[1].As)
 				assert.Equal(t, "other-fake-step", steps[1].Uses)
-				assert.Equal(t, map[string]string{
-					"input1": "value1",
-					"input2": "value2",
+				assert.ElementsMatch(t, []kargoapi.PromotionStepInput{
+					{Name: "input1", Value: "value1"},
+					{Name: "input2", Value: "value2"},
 				}, steps[1].Inputs)
 			},
 		},
@@ -961,18 +969,18 @@ func Test_generatePromotionTaskStepName(t *testing.T) {
 	}
 }
 
-func Test_validateAndMapTaskInputs(t *testing.T) {
+func Test_promotionTaskInputsToStepInputs(t *testing.T) {
 	tests := []struct {
 		name       string
 		taskInputs []kargoapi.PromotionTaskInput
 		config     map[string]any
-		assertions func(t *testing.T, result map[string]string, err error)
+		assertions func(t *testing.T, result []kargoapi.PromotionStepInput, err error)
 	}{
 		{
 			name:       "nil inputs returns nil map and no error",
 			taskInputs: nil,
 			config:     nil,
-			assertions: func(t *testing.T, result map[string]string, err error) {
+			assertions: func(t *testing.T, result []kargoapi.PromotionStepInput, err error) {
 				require.NoError(t, err)
 				assert.Nil(t, result)
 			},
@@ -981,7 +989,7 @@ func Test_validateAndMapTaskInputs(t *testing.T) {
 			name:       "empty inputs returns nil map and no error",
 			taskInputs: []kargoapi.PromotionTaskInput{},
 			config:     nil,
-			assertions: func(t *testing.T, result map[string]string, err error) {
+			assertions: func(t *testing.T, result []kargoapi.PromotionStepInput, err error) {
 				require.NoError(t, err)
 				assert.Nil(t, result)
 			},
@@ -992,7 +1000,7 @@ func Test_validateAndMapTaskInputs(t *testing.T) {
 				{Name: "input1"},
 			},
 			config: nil,
-			assertions: func(t *testing.T, result map[string]string, err error) {
+			assertions: func(t *testing.T, result []kargoapi.PromotionStepInput, err error) {
 				assert.ErrorContains(t, err, "missing step config")
 				assert.Nil(t, result)
 			},
@@ -1005,7 +1013,7 @@ func Test_validateAndMapTaskInputs(t *testing.T) {
 			config: map[string]any{
 				"input1": 123, // number instead of string
 			},
-			assertions: func(t *testing.T, result map[string]string, err error) {
+			assertions: func(t *testing.T, result []kargoapi.PromotionStepInput, err error) {
 				assert.ErrorContains(t, err, "input \"input1\" must be a string")
 				assert.Nil(t, result)
 			},
@@ -1018,7 +1026,7 @@ func Test_validateAndMapTaskInputs(t *testing.T) {
 			config: map[string]any{
 				"input1": "", // empty string is not allowed without default
 			},
-			assertions: func(t *testing.T, result map[string]string, err error) {
+			assertions: func(t *testing.T, result []kargoapi.PromotionStepInput, err error) {
 				assert.ErrorContains(t, err, "missing required input \"input1\"")
 				assert.Nil(t, result)
 			},
@@ -1029,9 +1037,11 @@ func Test_validateAndMapTaskInputs(t *testing.T) {
 				{Name: "input1", Default: "default1"},
 			},
 			config: map[string]any{},
-			assertions: func(t *testing.T, result map[string]string, err error) {
+			assertions: func(t *testing.T, result []kargoapi.PromotionStepInput, err error) {
 				require.NoError(t, err)
-				assert.Equal(t, map[string]string{"input1": "default1"}, result)
+				assert.ElementsMatch(t, []kargoapi.PromotionStepInput{
+					{Name: "input1", Value: "default1"},
+				}, result)
 			},
 		},
 		{
@@ -1042,9 +1052,11 @@ func Test_validateAndMapTaskInputs(t *testing.T) {
 			config: map[string]any{
 				"input1": "override1",
 			},
-			assertions: func(t *testing.T, result map[string]string, err error) {
+			assertions: func(t *testing.T, result []kargoapi.PromotionStepInput, err error) {
 				require.NoError(t, err)
-				assert.Equal(t, map[string]string{"input1": "override1"}, result)
+				assert.ElementsMatch(t, []kargoapi.PromotionStepInput{
+					{Name: "input1", Value: "override1"},
+				}, result)
 			},
 		},
 		{
@@ -1058,12 +1070,12 @@ func Test_validateAndMapTaskInputs(t *testing.T) {
 				"input1": "override1",
 				"input3": "value3",
 			},
-			assertions: func(t *testing.T, result map[string]string, err error) {
+			assertions: func(t *testing.T, result []kargoapi.PromotionStepInput, err error) {
 				require.NoError(t, err)
-				assert.Equal(t, map[string]string{
-					"input1": "override1",
-					"input2": "default2",
-					"input3": "value3",
+				assert.ElementsMatch(t, []kargoapi.PromotionStepInput{
+					{Name: "input1", Value: "override1"},
+					{Name: "input2", Value: "default2"},
+					{Name: "input3", Value: "value3"},
 				}, result)
 			},
 		},
@@ -1078,7 +1090,7 @@ func Test_validateAndMapTaskInputs(t *testing.T) {
 				configJSON = &apiextensionsv1.JSON{Raw: configBytes}
 			}
 
-			result, err := validateAndMapTaskInputs(tt.taskInputs, configJSON)
+			result, err := promotionTaskInputsToStepInputs(tt.taskInputs, configJSON)
 			tt.assertions(t, result, err)
 		})
 	}

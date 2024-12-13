@@ -128,7 +128,7 @@ func (b *PromotionBuilder) inflateTaskSteps(
 		return nil, err
 	}
 
-	inputs, err := validateAndMapTaskInputs(task.Inputs, taskStep.Config)
+	inputs, err := promotionTaskInputsToStepInputs(task.Inputs, taskStep.Config)
 	if err != nil {
 		return nil, err
 	}
@@ -215,12 +215,12 @@ func generatePromotionTaskStepAlias(taskAlias, stepAlias string) string {
 	return fmt.Sprintf("%s%s%s", taskAlias, aliasSeparator, stepAlias)
 }
 
-// validateAndMapTaskInputs validates the task step config against the task
+// promotionTaskInputsToStepInputs validates the task step config against the task
 // inputs, and maps the config to inputs for the inflated steps.
-func validateAndMapTaskInputs(
+func promotionTaskInputsToStepInputs(
 	taskInputs []kargoapi.PromotionTaskInput,
 	stepConfig *apiextensionsv1.JSON,
-) (map[string]string, error) {
+) ([]kargoapi.PromotionStepInput, error) {
 	if len(taskInputs) == 0 {
 		return nil, nil
 	}
@@ -234,7 +234,7 @@ func validateAndMapTaskInputs(
 		return nil, fmt.Errorf("unmarshal step config: %w", err)
 	}
 
-	inputs := make(map[string]string, len(taskInputs))
+	inputs := make([]kargoapi.PromotionStepInput, 0, len(taskInputs))
 	for _, input := range taskInputs {
 		iv := input.Default
 		if cv, exists := config[input.Name]; exists {
@@ -247,7 +247,10 @@ func validateAndMapTaskInputs(
 		if iv == "" {
 			return nil, fmt.Errorf("missing required input %q", input.Name)
 		}
-		inputs[input.Name] = iv
+		inputs = append(inputs, kargoapi.PromotionStepInput{
+			Name:  input.Name,
+			Value: iv,
+		})
 	}
 	return inputs, nil
 }
