@@ -954,19 +954,32 @@ message PromotionStep {
   // Retry is the retry policy for this step.
   optional PromotionStepRetry retry = 4;
 
-  // Inputs is a map of inputs that can used to parameterize the execution
+  // Inputs is a list of inputs that can used to parameterize the execution
   // of the PromotionStep and can be referenced by expressions in the Config.
   //
   // When a PromotionStep is inflated from a PromotionTask, the inputs
   // specified in the PromotionTask are set based on the inputs specified
   // in the Config of the PromotionStep that references the PromotionTask.
-  map<string, string> inputs = 6;
+  repeated PromotionStepInput inputs = 6;
 
   // Config is opaque configuration for the PromotionStep that is understood
   // only by each PromotionStep's implementation. It is legal to utilize
   // expressions in defining values at any level of this block.
   // See https://docs.kargo.io/references/expression-language for details.
   optional .k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON config = 3;
+}
+
+// PromotionStepInput describes a single input value for a PromotionStep that may
+// be referenced by expressions in the step.
+message PromotionStepInput {
+  // Name is the name of the input to which the value is assigned.
+  //
+  // +kubebuilder:validation:MinLength=1
+  // +kubebuilder:validation:Pattern=^[a-zA-Z_]\w*$
+  optional string name = 1;
+
+  // Value is the input value.
+  optional string value = 2;
 }
 
 // PromotionStepRetry describes the retry policy for a PromotionStep.
@@ -1029,6 +1042,7 @@ message PromotionTaskInput {
   //
   // +kubebuilder:validation:Required
   // +kubebuilder:validation:MinLength=1
+  // +kubebuilder:validation:Pattern=^[a-zA-Z_]\w*$
   optional string name = 1;
 
   // Default specifies a default value for the parameter. This value will be

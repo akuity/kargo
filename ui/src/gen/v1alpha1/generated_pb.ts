@@ -2963,16 +2963,16 @@ export class PromotionStep extends Message<PromotionStep> {
   retry?: PromotionStepRetry;
 
   /**
-   * Inputs is a map of inputs that can used to parameterize the execution
+   * Inputs is a list of inputs that can used to parameterize the execution
    * of the PromotionStep and can be referenced by expressions in the Config.
    *
    * When a PromotionStep is inflated from a PromotionTask, the inputs
    * specified in the PromotionTask are set based on the inputs specified
    * in the Config of the PromotionStep that references the PromotionTask.
    *
-   * @generated from field: map<string, string> inputs = 6;
+   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.PromotionStepInput inputs = 6;
    */
-  inputs: { [key: string]: string } = {};
+  inputs: PromotionStepInput[] = [];
 
   /**
    * Config is opaque configuration for the PromotionStep that is understood
@@ -2996,7 +2996,7 @@ export class PromotionStep extends Message<PromotionStep> {
     { no: 5, name: "task", kind: "message", T: PromotionTaskReference, opt: true },
     { no: 2, name: "as", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 4, name: "retry", kind: "message", T: PromotionStepRetry, opt: true },
-    { no: 6, name: "inputs", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 9 /* ScalarType.STRING */} },
+    { no: 6, name: "inputs", kind: "message", T: PromotionStepInput, repeated: true },
     { no: 3, name: "config", kind: "message", T: JSON, opt: true },
   ]);
 
@@ -3014,6 +3014,59 @@ export class PromotionStep extends Message<PromotionStep> {
 
   static equals(a: PromotionStep | PlainMessage<PromotionStep> | undefined, b: PromotionStep | PlainMessage<PromotionStep> | undefined): boolean {
     return proto2.util.equals(PromotionStep, a, b);
+  }
+}
+
+/**
+ * PromotionStepInput describes a single input value for a PromotionStep that may
+ * be referenced by expressions in the step.
+ *
+ * @generated from message github.com.akuity.kargo.api.v1alpha1.PromotionStepInput
+ */
+export class PromotionStepInput extends Message<PromotionStepInput> {
+  /**
+   * Name is the name of the input to which the value is assigned.
+   *
+   * +kubebuilder:validation:MinLength=1
+   * +kubebuilder:validation:Pattern=^[a-zA-Z_]\w*$
+   *
+   * @generated from field: optional string name = 1;
+   */
+  name?: string;
+
+  /**
+   * Value is the input value.
+   *
+   * @generated from field: optional string value = 2;
+   */
+  value?: string;
+
+  constructor(data?: PartialMessage<PromotionStepInput>) {
+    super();
+    proto2.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto2 = proto2;
+  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.PromotionStepInput";
+  static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 2, name: "value", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PromotionStepInput {
+    return new PromotionStepInput().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): PromotionStepInput {
+    return new PromotionStepInput().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): PromotionStepInput {
+    return new PromotionStepInput().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: PromotionStepInput | PlainMessage<PromotionStepInput> | undefined, b: PromotionStepInput | PlainMessage<PromotionStepInput> | undefined): boolean {
+    return proto2.util.equals(PromotionStepInput, a, b);
   }
 }
 
@@ -3160,6 +3213,7 @@ export class PromotionTaskInput extends Message<PromotionTaskInput> {
    *
    * +kubebuilder:validation:Required
    * +kubebuilder:validation:MinLength=1
+   * +kubebuilder:validation:Pattern=^[a-zA-Z_]\w*$
    *
    * @generated from field: optional string name = 1;
    */
