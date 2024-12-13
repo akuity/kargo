@@ -96,6 +96,8 @@ type PromotionStep struct {
 	Alias string
 	// Retry is the retry configuration for the PromotionStep.
 	Retry *kargoapi.PromotionStepRetry
+	// Inputs is a list of inputs to be made available to the Config of this step.
+	Inputs []kargoapi.PromotionStepInput
 	// Config is an opaque JSON to be passed to the PromotionStepRunner executing
 	// this step.
 	Config []byte
@@ -144,6 +146,8 @@ func (s *PromotionStep) GetConfig(
 		return nil, err
 	}
 
+	inputs := s.GetInputs()
+
 	evaledCfgJSON, err := expressions.EvaluateJSONTemplate(
 		s.Config,
 		map[string]any{
@@ -153,6 +157,7 @@ func (s *PromotionStep) GetConfig(
 				"stage":     promoCtx.Stage,
 			},
 			"vars":    vars,
+			"inputs":  inputs,
 			"secrets": promoCtx.Secrets,
 			"outputs": state,
 		},
@@ -210,6 +215,15 @@ func (s *PromotionStep) GetVars(promoCtx PromotionContext) (map[string]any, erro
 		vars[v.Name] = newVar
 	}
 	return vars, nil
+}
+
+// GetInputs returns the inputs of the PromotionStep as a map.
+func (s *PromotionStep) GetInputs() map[string]any {
+	inputs := make(map[string]any, len(s.Inputs))
+	for _, i := range s.Inputs {
+		inputs[i.Name] = i.Value
+	}
+	return inputs
 }
 
 // PromotionResult is the result of a user-defined promotion process executed by

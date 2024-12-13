@@ -471,6 +471,7 @@ func (r *reconciler) promote(
 			Kind:   step.Uses,
 			Alias:  step.As,
 			Retry:  step.Retry,
+			Inputs: step.Inputs,
 			Config: step.Config.Raw,
 		}
 	}
