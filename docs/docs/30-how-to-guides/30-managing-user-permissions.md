@@ -283,7 +283,7 @@ The table below outlines the maximum rules required based on the `kargo-admin` C
 | `rbac.authorization.k8s.io` | `rolebindings`, `roles`                        | `get`, `list`, `watch`                              |
 | `kargo.akuity.io`           | `freights`, `projects`, `stages`, `warehouses` | `*`                                                 |
 | `kargo.akuity.io`           | `stages`                                       | `promote`                                           |
-| `kargo.akuity.io`           | `promotions`                                   | `create`, `delete`, `get`, `list`, `watch`          |
+| `kargo.akuity.io`           | `promotions`                                   | `create`, `delete`, `get`, `list`, `patch`, `watch` |
 | `kargo.akuity.io`           | `freights/status`                              | `patch`                                             |
 | `argoproj.io`               | `analysisruns`                                 | `delete`, `get`, `list`, `watch`                    |
 | `argoproj.io`               | `analysistemplates`                            | `*`                                                 |
