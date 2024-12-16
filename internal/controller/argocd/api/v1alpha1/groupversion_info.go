@@ -20,7 +20,13 @@ var (
 )
 
 func addKnownTypes(scheme *runtime.Scheme) error {
-	scheme.AddKnownTypes(GroupVersion, &Application{}, &ApplicationList{})
+	scheme.AddKnownTypes(
+		GroupVersion,
+		&Application{},
+		&ApplicationList{},
+		&AppProject{},
+		&AppProjectList{},
+	)
 	metav1.AddToGroupVersion(scheme, GroupVersion)
 	return nil
 }

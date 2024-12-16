@@ -18,9 +18,11 @@ type Application struct {
 }
 
 type ApplicationSpec struct {
-	Source     *ApplicationSource `json:"source,omitempty"`
-	SyncPolicy *SyncPolicy        `json:"syncPolicy,omitempty"`
-	Sources    ApplicationSources `json:"sources,omitempty"`
+	Source      *ApplicationSource     `json:"source,omitempty"`
+	Destination ApplicationDestination `json:"destination"`
+	Project     string                 `json:"project"`
+	SyncPolicy  *SyncPolicy            `json:"syncPolicy,omitempty"`
+	Sources     ApplicationSources     `json:"sources,omitempty"`
 }
 
 type ApplicationSource struct {
@@ -80,6 +82,12 @@ type KustomizeImages []KustomizeImage
 
 type ApplicationSourceKustomize struct {
 	Images KustomizeImages `json:"images,omitempty"`
+}
+
+type ApplicationDestination struct {
+	Server    string `json:"server,omitempty"`
+	Namespace string `json:"namespace,omitempty"`
+	Name      string `json:"name,omitempty"`
 }
 
 type ApplicationStatus struct {
