@@ -12,48 +12,26 @@ type PromotionTask struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 
-	// Spec describes the composition of a PromotionTask, including the inputs
-	// available to the task and the steps.
+	// Spec describes the composition of a PromotionTask, including the
+	// variables available to the task and the steps.
 	//
 	// +kubebuilder:validation:Required
 	Spec PromotionTaskSpec `json:"spec" protobuf:"bytes,2,opt,name=spec"`
 }
 
 type PromotionTaskSpec struct {
-	// Inputs specifies the inputs available to the PromotionTask. These inputs
-	// can be specified in the PromotionTemplate as configuration for the task,
-	// and can be used in the Steps to parameterize the execution of the task.
-	Inputs []PromotionTaskInput `json:"inputs,omitempty" protobuf:"bytes,1,rep,name=inputs"`
+	// Vars specifies the variables available to the PromotionTask. The
+	// values of these variables are the default values that can be
+	// overridden by the step referencing the task.
+	Vars []PromotionVariable `json:"vars,omitempty" protobuf:"bytes,1,rep,name=vars"`
 	// Steps specifies the directives to be executed as part of this
-	// PromotionTask. The steps as defined here are deflated into a
+	// PromotionTask. The steps as defined here are inflated into a
 	// Promotion when it is built from a PromotionTemplate.
 	//
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:MinItems=1
 	// +kubebuilder:validation:items:XValidation:message="PromotionTask step must have uses set and must not reference another task",rule="has(self.uses) && !has(self.task)"
-	// +kubebuilder:validation:items:XValidation:message="PromotionTask step must not have inputs set",rule="self.inputs.size() == 0"
 	Steps []PromotionStep `json:"steps" protobuf:"bytes,2,rep,name=steps"`
-}
-
-// PromotionTaskInput defines an input parameter for a PromotionTask. This input
-// can be specified in the PromotionTemplate as configuration for the task, and
-// can be used in the Steps to parameterize the execution of the task.
-type PromotionTaskInput struct {
-	// Name of the configuration parameter, which should be unique within the
-	// PromotionTask. This name can be used to reference the parameter in the
-	// PromotionTaskSpec.Steps.
-	//
-	// +kubebuilder:validation:Required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Pattern=^[a-zA-Z_]\w*$
-	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
-	// Default specifies a default value for the parameter. This value will be
-	// used if the parameter is not specified in the PromotionTemplate.
-	// If left unspecified, the input value is required to be specified in the
-	// configuration of the step referencing this task.
-	//
-	// +kubebuilder:validation:Optional
-	Default string `json:"default,omitempty" protobuf:"bytes,2,opt,name=default"`
 }
 
 // +kubebuilder:object:root=true
