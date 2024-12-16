@@ -3,6 +3,7 @@ package directives
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/expr-lang/expr"
@@ -147,6 +148,20 @@ func (s *PromotionStep) GetConfig(
 		return nil, err
 	}
 
+	// If the alias has a namespace, filter the state to only include keys that
+	// belong to that namespace.
+	outputs := state
+	if namespace := getAliasNamespace(s.Alias); namespace != "" {
+		outputs = make(State)
+		for k, v := range state.DeepCopy() {
+			if getAliasNamespace(k) == namespace {
+				// Strip the namespace from the key before adding it to the
+				// filtered outputs.
+				outputs[k[len(namespace)+2:]] = v
+			}
+		}
+	}
+
 	evaledCfgJSON, err := expressions.EvaluateJSONTemplate(
 		s.Config,
 		map[string]any{
@@ -157,7 +172,7 @@ func (s *PromotionStep) GetConfig(
 			},
 			"vars":    vars,
 			"secrets": promoCtx.Secrets,
-			"outputs": state,
+			"outputs": outputs,
 		},
 		expr.Function("warehouse", warehouseFunc, new(func(string) kargoapi.FreightOrigin)),
 		expr.Function(
@@ -426,4 +441,15 @@ func getChartFunc(
 			chartName,
 		)
 	}
+}
+
+// getAliasNamespace returns the namespace part of an alias, if it exists.
+// The namespace part is the part before the first "::" separator. Typically,
+// this is used for steps inflated from a task.
+func getAliasNamespace(alias string) string {
+	parts := strings.Split(alias, "::")
+	if len(parts) != 2 {
+		return ""
+	}
+	return parts[0]
 }
