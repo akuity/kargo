@@ -71,6 +71,12 @@ type argocdUpdater struct {
 		*argocd.Application,
 	) (argocd.OperationPhase, bool, error)
 
+	isSyncWindowOpenFn func(
+		context.Context,
+		*PromotionStepContext,
+		*argocd.Application,
+	) (bool, error)
+
 	syncApplicationFn func(
 		ctx context.Context,
 		stepCtx *PromotionStepContext,
@@ -113,6 +119,7 @@ func newArgocdUpdater() *argocdUpdater {
 	r.getAuthorizedApplicationFn = r.getAuthorizedApplication
 	r.buildDesiredSourcesFn = r.buildDesiredSources
 	r.mustPerformUpdateFn = r.mustPerformUpdate
+	r.isSyncWindowOpenFn = r.isSyncWindowOpen
 	r.syncApplicationFn = r.syncApplication
 	r.applyArgoCDSourceUpdateFn = r.applyArgoCDSourceUpdate
 	r.argoCDAppPatchFn = r.argoCDAppPatch
@@ -248,6 +255,26 @@ func (a *argocdUpdater) runPromotionStep(
 		// perform an update.
 		if err != nil {
 			logger.Debug(err.Error())
+		}
+
+		canSync, err := a.isSyncWindowOpenFn(ctx, stepCtx, app)
+		if err != nil {
+			return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
+				fmt.Errorf(
+					"error checking if sync window is open for Argo CD Application %q "+
+						"in namespace %q: %w",
+					app.Name, app.Namespace, err,
+				)
+		}
+		if !canSync {
+			return PromotionStepResult{
+				Status: kargoapi.PromotionPhaseRunning,
+				Message: fmt.Sprintf(
+					"Waiting for sync window to open for Argo CD Application %q in "+
+						"namespace %q",
+					app.Name, app.Namespace,
+				),
+			}, nil
 		}
 
 		// Build the desired source(s) for the Argo CD Application.
@@ -463,6 +490,30 @@ func (a *argocdUpdater) mustPerformUpdate(
 
 	// The operation has completed.
 	return status.Phase, false, nil
+}
+
+func (a *argocdUpdater) isSyncWindowOpen(
+	ctx context.Context,
+	stepCtx *PromotionStepContext,
+	app *argocd.Application,
+) (bool, error) {
+	// Find the AppProject to determine if the sync window is open.
+	project := &argocd.AppProject{}
+	if err := stepCtx.ArgoCDClient.Get(
+		ctx,
+		client.ObjectKey{
+			Namespace: app.Namespace,
+			Name:      app.Spec.Project,
+		},
+		project,
+	); err != nil {
+		return false, err
+	}
+	canSync, err := project.Spec.SyncWindows.Matches(app).CanSync(false)
+	if err != nil {
+		return false, err
+	}
+	return canSync, nil
 }
 
 func (a *argocdUpdater) syncApplication(

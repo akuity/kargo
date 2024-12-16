@@ -27,6 +27,7 @@ func Test_newArgocdUpdater(t *testing.T) {
 	require.NotNil(t, runner.getAuthorizedApplicationFn)
 	require.NotNil(t, runner.buildDesiredSourcesFn)
 	require.NotNil(t, runner.mustPerformUpdateFn)
+	require.NotNil(t, runner.isSyncWindowOpenFn)
 	require.NotNil(t, runner.syncApplicationFn)
 	require.NotNil(t, runner.applyArgoCDSourceUpdateFn)
 	require.NotNil(t, runner.argoCDAppPatchFn)
@@ -532,6 +533,13 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 				) (argocd.OperationPhase, bool, error) {
 					return "", true, errors.New("something went wrong")
 				},
+				isSyncWindowOpenFn: func(
+					context.Context,
+					*PromotionStepContext,
+					*argocd.Application,
+				) (bool, error) {
+					return true, nil
+				},
 				syncApplicationFn: func(
 					context.Context,
 					*PromotionStepContext,
@@ -550,6 +558,43 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 			assertions: func(t *testing.T, res PromotionStepResult, err error) {
 				require.Equal(t, kargoapi.PromotionPhaseRunning, res.Status)
 				require.NoError(t, err)
+			},
+		},
+		{
+			name: "sync window is closed",
+			runner: &argocdUpdater{
+				getAuthorizedApplicationFn: func(
+					context.Context,
+					*PromotionStepContext,
+					client.ObjectKey,
+				) (*v1alpha1.Application, error) {
+					return &argocd.Application{}, nil
+				},
+				mustPerformUpdateFn: func(
+					*PromotionStepContext,
+					*ArgoCDAppUpdate,
+					*argocd.Application,
+				) (argocd.OperationPhase, bool, error) {
+					return "", true, nil
+				},
+				isSyncWindowOpenFn: func(
+					context.Context,
+					*PromotionStepContext,
+					*argocd.Application,
+				) (bool, error) {
+					return false, nil
+				},
+			},
+			stepCtx: &PromotionStepContext{
+				ArgoCDClient: fake.NewFakeClient(),
+			},
+			stepCfg: ArgoCDUpdateConfig{
+				Apps: []ArgoCDAppUpdate{{}},
+			},
+			assertions: func(t *testing.T, res PromotionStepResult, err error) {
+				require.NoError(t, err)
+				require.Equal(t, kargoapi.PromotionPhaseRunning, res.Status)
+				require.Contains(t, res.Message, "Waiting for sync window to open")
 			},
 		},
 		{
@@ -627,6 +672,13 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 				) (argocd.OperationPhase, bool, error) {
 					return "", true, nil
 				},
+				isSyncWindowOpenFn: func(
+					context.Context,
+					*PromotionStepContext,
+					*argocd.Application,
+				) (bool, error) {
+					return true, nil
+				},
 				buildDesiredSourcesFn: func(
 					context.Context,
 					*PromotionStepContext,
@@ -666,6 +718,13 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 					*argocd.Application,
 				) (argocd.OperationPhase, bool, error) {
 					return "", true, nil
+				},
+				isSyncWindowOpenFn: func(
+					context.Context,
+					*PromotionStepContext,
+					*argocd.Application,
+				) (bool, error) {
+					return true, nil
 				},
 				buildDesiredSourcesFn: func(
 					context.Context,
@@ -726,6 +785,13 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 						return "", true, nil
 					}
 				}(),
+				isSyncWindowOpenFn: func(
+					context.Context,
+					*PromotionStepContext,
+					*argocd.Application,
+				) (bool, error) {
+					return true, nil
+				},
 				buildDesiredSourcesFn: func(
 					context.Context,
 					*PromotionStepContext,
