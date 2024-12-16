@@ -125,7 +125,8 @@ export const CreateStage = ({
         promotionWizardStepsState.state?.map((step) => ({
           uses: step?.identifier,
           as: step?.as,
-          config: step?.state
+          config: step?.state,
+          vars: []
         }))
       );
       setValue('value', unmarshalled);
@@ -176,7 +177,8 @@ export const CreateStage = ({
                 promotionWizardStepsState.state?.map((step) => ({
                   uses: step?.identifier,
                   as: step?.as,
-                  config: step?.state
+                  config: step?.state,
+                  vars: []
                 }))
               )
             );

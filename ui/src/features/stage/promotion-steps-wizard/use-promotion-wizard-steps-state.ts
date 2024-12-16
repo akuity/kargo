@@ -79,7 +79,8 @@ const stateToYAML = (state: RunnerWithConfiguration[]): string => {
     promotionSteps.push({
       uses: step.identifier,
       config: step.state,
-      as: step.as
+      as: step.as,
+      vars: []
     });
   }
 
