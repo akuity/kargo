@@ -88,33 +88,6 @@ spec:
                                 expressions in defining values at any level of this block.
                                 See https://docs.kargo.io/references/expression-language for details.
                               x-kubernetes-preserve-unknown-fields: true
-                            inputs:
-                              description: |-
-                                Inputs is a list of inputs that can used to parameterize the execution
-                                of the PromotionStep and can be referenced by expressions in the Config.
-
-                                When a PromotionStep is inflated from a PromotionTask, the inputs
-                                specified in the PromotionTask are set based on the inputs specified
-                                in the Config of the PromotionStep that references the PromotionTask.
-                              items:
-                                description: |-
-                                  PromotionStepInput describes a single input value for a PromotionStep that may
-                                  be referenced by expressions in the step.
-                                properties:
-                                  name:
-                                    description: Name is the name of the input to
-                                      which the value is assigned.
-                                    minLength: 1
-                                    pattern: ^[a-zA-Z_]\w*$
-                                    type: string
-                                  value:
-                                    description: Value is the input value.
-                                    type: string
-                                required:
-                                - name
-                                - value
-                                type: object
-                              type: array
                             retry:
                               description: Retry is the retry policy for this step.
                               properties:
@@ -161,7 +134,7 @@ spec:
                               type: object
                             task:
                               description: |-
-                                Task is a reference to a PromotionTask that should be deflated into a
+                                Task is a reference to a PromotionTask that should be inflated into a
                                 Promotion when it is built from a PromotionTemplate.
                               properties:
                                 kind:
@@ -186,13 +159,36 @@ spec:
                                 this step.
                               minLength: 1
                               type: string
+                            vars:
+                              description: |-
+                                Vars is a list of variables that can be referenced by expressions in
+                                the step's Config. The values override the values specified in the
+                                PromotionSpec.
+                              items:
+                                description: |-
+                                  PromotionVariable describes a single variable that may be referenced by
+                                  expressions in promotion steps.
+                                properties:
+                                  name:
+                                    description: Name is the name of the variable.
+                                    minLength: 1
+                                    pattern: ^[a-zA-Z_]\w*$
+                                    type: string
+                                  value:
+                                    description: |-
+                                      Value is the value of the variable. It is allowed to utilize expressions
+                                      in the value.
+                                      See https://docs.kargo.io/references/expression-language for details.
+                                    type: string
+                                required:
+                                - name
+                                type: object
+                              type: array
                           type: object
                           x-kubernetes-validations:
                           - message: PromotionTemplate step must have exactly one
                               of uses or task set
                             rule: '(has(self.uses) ? !has(self.task) : has(self.task))'
-                          - message: inputs must not be set when task is set
-                            rule: '!(has(self.task) && self.inputs.size() > 0)'
                         minItems: 1
                         type: array
                       vars:
@@ -217,7 +213,6 @@ spec:
                               type: string
                           required:
                           - name
-                          - value
                           type: object
                         type: array
                     type: object
