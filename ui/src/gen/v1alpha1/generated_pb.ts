@@ -2925,8 +2925,6 @@ export class PromotionStatus extends Message<PromotionStatus> {
 /**
  * PromotionStep describes a directive to be executed as part of a Promotion.
  *
- * +kubebuilder:validation:XValidation:message="inputs must not be set when task is set",rule="!(has(self.task) && self.inputs.size() > 0)"
- *
  * @generated from message github.com.akuity.kargo.api.v1alpha1.PromotionStep
  */
 export class PromotionStep extends Message<PromotionStep> {
@@ -2941,7 +2939,7 @@ export class PromotionStep extends Message<PromotionStep> {
   uses?: string;
 
   /**
-   * Task is a reference to a PromotionTask that should be deflated into a
+   * Task is a reference to a PromotionTask that should be inflated into a
    * Promotion when it is built from a PromotionTemplate.
    *
    * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.PromotionTaskReference task = 5;
@@ -2963,16 +2961,13 @@ export class PromotionStep extends Message<PromotionStep> {
   retry?: PromotionStepRetry;
 
   /**
-   * Inputs is a list of inputs that can used to parameterize the execution
-   * of the PromotionStep and can be referenced by expressions in the Config.
+   * Vars is a list of variables that can be referenced by expressions in
+   * the step's Config. The values override the values specified in the
+   * PromotionSpec.
    *
-   * When a PromotionStep is inflated from a PromotionTask, the inputs
-   * specified in the PromotionTask are set based on the inputs specified
-   * in the Config of the PromotionStep that references the PromotionTask.
-   *
-   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.PromotionStepInput inputs = 6;
+   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.PromotionVariable vars = 6;
    */
-  inputs: PromotionStepInput[] = [];
+  vars: PromotionVariable[] = [];
 
   /**
    * Config is opaque configuration for the PromotionStep that is understood
@@ -2996,7 +2991,7 @@ export class PromotionStep extends Message<PromotionStep> {
     { no: 5, name: "task", kind: "message", T: PromotionTaskReference, opt: true },
     { no: 2, name: "as", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 4, name: "retry", kind: "message", T: PromotionStepRetry, opt: true },
-    { no: 6, name: "inputs", kind: "message", T: PromotionStepInput, repeated: true },
+    { no: 6, name: "vars", kind: "message", T: PromotionVariable, repeated: true },
     { no: 3, name: "config", kind: "message", T: JSON, opt: true },
   ]);
 
@@ -3014,59 +3009,6 @@ export class PromotionStep extends Message<PromotionStep> {
 
   static equals(a: PromotionStep | PlainMessage<PromotionStep> | undefined, b: PromotionStep | PlainMessage<PromotionStep> | undefined): boolean {
     return proto2.util.equals(PromotionStep, a, b);
-  }
-}
-
-/**
- * PromotionStepInput describes a single input value for a PromotionStep that may
- * be referenced by expressions in the step.
- *
- * @generated from message github.com.akuity.kargo.api.v1alpha1.PromotionStepInput
- */
-export class PromotionStepInput extends Message<PromotionStepInput> {
-  /**
-   * Name is the name of the input to which the value is assigned.
-   *
-   * +kubebuilder:validation:MinLength=1
-   * +kubebuilder:validation:Pattern=^[a-zA-Z_]\w*$
-   *
-   * @generated from field: optional string name = 1;
-   */
-  name?: string;
-
-  /**
-   * Value is the input value.
-   *
-   * @generated from field: optional string value = 2;
-   */
-  value?: string;
-
-  constructor(data?: PartialMessage<PromotionStepInput>) {
-    super();
-    proto2.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto2 = proto2;
-  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.PromotionStepInput";
-  static readonly fields: FieldList = proto2.util.newFieldList(() => [
-    { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 2, name: "value", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PromotionStepInput {
-    return new PromotionStepInput().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): PromotionStepInput {
-    return new PromotionStepInput().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): PromotionStepInput {
-    return new PromotionStepInput().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: PromotionStepInput | PlainMessage<PromotionStepInput> | undefined, b: PromotionStepInput | PlainMessage<PromotionStepInput> | undefined): boolean {
-    return proto2.util.equals(PromotionStepInput, a, b);
   }
 }
 
@@ -3160,8 +3102,8 @@ export class PromotionTask extends Message<PromotionTask> {
   metadata?: ObjectMeta;
 
   /**
-   * Spec describes the composition of a PromotionTask, including the inputs
-   * available to the task and the steps.
+   * Spec describes the composition of a PromotionTask, including the
+   * variables available to the task and the steps.
    *
    * +kubebuilder:validation:Required
    *
@@ -3195,68 +3137,6 @@ export class PromotionTask extends Message<PromotionTask> {
 
   static equals(a: PromotionTask | PlainMessage<PromotionTask> | undefined, b: PromotionTask | PlainMessage<PromotionTask> | undefined): boolean {
     return proto2.util.equals(PromotionTask, a, b);
-  }
-}
-
-/**
- * PromotionTaskInput defines an input parameter for a PromotionTask. This input
- * can be specified in the PromotionTemplate as configuration for the task, and
- * can be used in the Steps to parameterize the execution of the task.
- *
- * @generated from message github.com.akuity.kargo.api.v1alpha1.PromotionTaskInput
- */
-export class PromotionTaskInput extends Message<PromotionTaskInput> {
-  /**
-   * Name of the configuration parameter, which should be unique within the
-   * PromotionTask. This name can be used to reference the parameter in the
-   * PromotionTaskSpec.Steps.
-   *
-   * +kubebuilder:validation:Required
-   * +kubebuilder:validation:MinLength=1
-   * +kubebuilder:validation:Pattern=^[a-zA-Z_]\w*$
-   *
-   * @generated from field: optional string name = 1;
-   */
-  name?: string;
-
-  /**
-   * Default specifies a default value for the parameter. This value will be
-   * used if the parameter is not specified in the PromotionTemplate.
-   * If left unspecified, the input value is required to be specified in the
-   * configuration of the step referencing this task.
-   *
-   * +kubebuilder:validation:Optional
-   *
-   * @generated from field: optional string default = 2;
-   */
-  default?: string;
-
-  constructor(data?: PartialMessage<PromotionTaskInput>) {
-    super();
-    proto2.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto2 = proto2;
-  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.PromotionTaskInput";
-  static readonly fields: FieldList = proto2.util.newFieldList(() => [
-    { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 2, name: "default", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PromotionTaskInput {
-    return new PromotionTaskInput().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): PromotionTaskInput {
-    return new PromotionTaskInput().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): PromotionTaskInput {
-    return new PromotionTaskInput().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: PromotionTaskInput | PlainMessage<PromotionTaskInput> | undefined, b: PromotionTaskInput | PlainMessage<PromotionTaskInput> | undefined): boolean {
-    return proto2.util.equals(PromotionTaskInput, a, b);
   }
 }
 
@@ -3368,23 +3248,22 @@ export class PromotionTaskReference extends Message<PromotionTaskReference> {
  */
 export class PromotionTaskSpec extends Message<PromotionTaskSpec> {
   /**
-   * Inputs specifies the inputs available to the PromotionTask. These inputs
-   * can be specified in the PromotionTemplate as configuration for the task,
-   * and can be used in the Steps to parameterize the execution of the task.
+   * Vars specifies the variables available to the PromotionTask. The
+   * values of these variables are the default values that can be
+   * overridden by the step referencing the task.
    *
-   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.PromotionTaskInput inputs = 1;
+   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.PromotionVariable vars = 1;
    */
-  inputs: PromotionTaskInput[] = [];
+  vars: PromotionVariable[] = [];
 
   /**
    * Steps specifies the directives to be executed as part of this
-   * PromotionTask. The steps as defined here are deflated into a
+   * PromotionTask. The steps as defined here are inflated into a
    * Promotion when it is built from a PromotionTemplate.
    *
    * +kubebuilder:validation:Required
    * +kubebuilder:validation:MinItems=1
    * +kubebuilder:validation:items:XValidation:message="PromotionTask step must have uses set and must not reference another task",rule="has(self.uses) && !has(self.task)"
-   * +kubebuilder:validation:items:XValidation:message="PromotionTask step must not have inputs set",rule="self.inputs.size() == 0"
    *
    * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.PromotionStep steps = 2;
    */
@@ -3398,7 +3277,7 @@ export class PromotionTaskSpec extends Message<PromotionTaskSpec> {
   static readonly runtime: typeof proto2 = proto2;
   static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.PromotionTaskSpec";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
-    { no: 1, name: "inputs", kind: "message", T: PromotionTaskInput, repeated: true },
+    { no: 1, name: "vars", kind: "message", T: PromotionVariable, repeated: true },
     { no: 2, name: "steps", kind: "message", T: PromotionStep, repeated: true },
   ]);
 
