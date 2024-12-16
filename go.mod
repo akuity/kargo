@@ -42,6 +42,7 @@ require (
 	github.com/technosophos/moniker v0.0.0-20210218184952-3ea787d3943b
 	github.com/valyala/fasttemplate v1.2.2
 	github.com/xeipuuv/gojsonschema v1.2.0
+	gitlab.com/gitlab-org/api/client-go v0.116.0
 	go.uber.org/ratelimit v0.3.1
 	golang.org/x/crypto v0.31.0
 	golang.org/x/net v0.32.0
