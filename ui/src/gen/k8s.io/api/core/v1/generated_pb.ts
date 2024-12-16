@@ -544,7 +544,6 @@ export class AzureFileVolumeSource extends Message<AzureFileVolumeSource> {
 
 /**
  * Binding ties one object to another; for example, a pod is bound to a node by a scheduler.
- * Deprecated in 1.7, please use the bindings subresource of pods instead.
  *
  * @generated from message k8s.io.api.core.v1.Binding
  */
@@ -595,7 +594,7 @@ export class Binding extends Message<Binding> {
 }
 
 /**
- * Represents storage that is managed by an external CSI volume driver (Beta feature)
+ * Represents storage that is managed by an external CSI volume driver
  *
  * @generated from message k8s.io.api.core.v1.CSIPersistentVolumeSource
  */
@@ -2922,7 +2921,7 @@ export class ContainerStatus extends Message<ContainerStatus> {
    * AllocatedResources represents the compute resources allocated for this container by the
    * node. Kubelet sets this value to Container.Resources.Requests upon successful pod admission
    * and after successfully admitting desired pod resize.
-   * +featureGate=InPlacePodVerticalScaling
+   * +featureGate=InPlacePodVerticalScalingAllocatedStatus
    * +optional
    *
    * @generated from field: map<string, k8s.io.apimachinery.pkg.api.resource.Quantity> allocatedResources = 10;
@@ -5121,6 +5120,8 @@ export class GCEPersistentDiskVolumeSource extends Message<GCEPersistentDiskVolu
 }
 
 /**
+ * GRPCAction specifies an action involving a GRPC service.
+ *
  * @generated from message k8s.io.api.core.v1.GRPCAction
  */
 export class GRPCAction extends Message<GRPCAction> {
@@ -6142,7 +6143,7 @@ export class Lifecycle extends Message<Lifecycle> {
  */
 export class LifecycleHandler extends Message<LifecycleHandler> {
   /**
-   * Exec specifies the action to take.
+   * Exec specifies a command to execute in the container.
    * +optional
    *
    * @generated from field: optional k8s.io.api.core.v1.ExecAction exec = 1;
@@ -6150,7 +6151,7 @@ export class LifecycleHandler extends Message<LifecycleHandler> {
   exec?: ExecAction;
 
   /**
-   * HTTPGet specifies the http request to perform.
+   * HTTPGet specifies an HTTP GET request to perform.
    * +optional
    *
    * @generated from field: optional k8s.io.api.core.v1.HTTPGetAction httpGet = 2;
@@ -6159,8 +6160,8 @@ export class LifecycleHandler extends Message<LifecycleHandler> {
 
   /**
    * Deprecated. TCPSocket is NOT supported as a LifecycleHandler and kept
-   * for the backward compatibility. There are no validation of this field and
-   * lifecycle hooks will fail in runtime when tcp handler is specified.
+   * for backward compatibility. There is no validation of this field and
+   * lifecycle hooks will fail at runtime when it is specified.
    * +optional
    *
    * @generated from field: optional k8s.io.api.core.v1.TCPSocketAction tcpSocket = 3;
@@ -6168,7 +6169,7 @@ export class LifecycleHandler extends Message<LifecycleHandler> {
   tcpSocket?: TCPSocketAction;
 
   /**
-   * Sleep represents the duration that the container should sleep before being terminated.
+   * Sleep represents a duration that the container should sleep.
    * +featureGate=PodLifecycleSleepAction
    * +optional
    *
@@ -6676,6 +6677,17 @@ export class LoadBalancerStatus extends Message<LoadBalancerStatus> {
 /**
  * LocalObjectReference contains enough information to let you locate the
  * referenced object inside the same namespace.
+ * ---
+ * New uses of this type are discouraged because of difficulty describing its usage when embedded in APIs.
+ *  1. Invalid usage help.  It is impossible to add specific help for individual usage.  In most embedded usages, there are particular
+ *     restrictions like, "must refer only to types A and B" or "UID not honored" or "name must be restricted".
+ *     Those cannot be well described when embedded.
+ *  2. Inconsistent validation.  Because the usages are different, the validation rules are different by usage, which makes it hard for users to predict what will happen.
+ *  3. We cannot easily change it.  Because this type is embedded in many locations, updates to this type
+ *     will affect numerous schemas.  Don't make new APIs embed an underspecified API type they do not control.
+ *
+ * Instead of using this type, create a locally provided and used type that is well-focused on your reference.
+ * For example, ServiceReferences for admission registration: https://github.com/kubernetes/api/blob/release-1.17/admissionregistration/v1/types.go#L533 .
  * +structType=atomic
  *
  * @generated from message k8s.io.api.core.v1.LocalObjectReference
@@ -6686,7 +6698,6 @@ export class LocalObjectReference extends Message<LocalObjectReference> {
    * This field is effectively required, but due to backwards compatibility is
    * allowed to be empty. Instances of this type with an empty value here are
    * almost certainly wrong.
-   * TODO: Add other useful fields. apiVersion, kind, uid?
    * More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
    * +optional
    * +default=""
@@ -6726,7 +6737,7 @@ export class LocalObjectReference extends Message<LocalObjectReference> {
 }
 
 /**
- * Local represents directly-attached storage with node affinity (Beta feature)
+ * Local represents directly-attached storage with node affinity
  *
  * @generated from message k8s.io.api.core.v1.LocalVolumeSource
  */
@@ -6985,6 +6996,7 @@ export class NamespaceCondition extends Message<NamespaceCondition> {
   status?: string;
 
   /**
+   * Last time the condition transitioned from one status to another.
    * +optional
    *
    * @generated from field: optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastTransitionTime = 4;
@@ -6992,6 +7004,7 @@ export class NamespaceCondition extends Message<NamespaceCondition> {
   lastTransitionTime?: Time;
 
   /**
+   * Unique, one-word, CamelCase reason for the condition's last transition.
    * +optional
    *
    * @generated from field: optional string reason = 5;
@@ -6999,6 +7012,7 @@ export class NamespaceCondition extends Message<NamespaceCondition> {
   reason?: string;
 
   /**
+   * Human-readable message indicating details about last transition.
    * +optional
    *
    * @generated from field: optional string message = 6;
@@ -8184,7 +8198,7 @@ export class NodeStatus extends Message<NodeStatus> {
 
   /**
    * Conditions is an array of current observed node conditions.
-   * More info: https://kubernetes.io/docs/concepts/nodes/node/#condition
+   * More info: https://kubernetes.io/docs/reference/node/node-status/#condition
    * +optional
    * +patchMergeKey=type
    * +patchStrategy=merge
@@ -8198,7 +8212,7 @@ export class NodeStatus extends Message<NodeStatus> {
   /**
    * List of addresses reachable to the node.
    * Queried from cloud provider, if available.
-   * More info: https://kubernetes.io/docs/concepts/nodes/node/#addresses
+   * More info: https://kubernetes.io/docs/reference/node/node-status/#addresses
    * Note: This field is declared as mergeable, but the merge key is not sufficiently
    * unique, which can cause data corruption when it is merged. Callers should instead
    * use a full-replacement patch. See https://pr.k8s.io/79391 for an example.
@@ -8226,7 +8240,7 @@ export class NodeStatus extends Message<NodeStatus> {
 
   /**
    * Set of ids/uuids to uniquely identify the node.
-   * More info: https://kubernetes.io/docs/concepts/nodes/node/#info
+   * More info: https://kubernetes.io/docs/reference/node/node-status/#info
    * +optional
    *
    * @generated from field: optional k8s.io.api.core.v1.NodeSystemInfo nodeInfo = 7;
@@ -8760,11 +8774,18 @@ export class PersistentVolumeClaim extends Message<PersistentVolumeClaim> {
  */
 export class PersistentVolumeClaimCondition extends Message<PersistentVolumeClaimCondition> {
   /**
+   * Type is the type of the condition.
+   * More info: https://kubernetes.io/docs/reference/kubernetes-api/config-and-storage-resources/persistent-volume-claim-v1/#:~:text=set%20to%20%27ResizeStarted%27.-,PersistentVolumeClaimCondition,-contains%20details%20about
+   *
    * @generated from field: optional string type = 1;
    */
   type?: string;
 
   /**
+   * Status is the status of the condition.
+   * Can be True, False, Unknown.
+   * More info: https://kubernetes.io/docs/reference/kubernetes-api/config-and-storage-resources/persistent-volume-claim-v1/#:~:text=state%20of%20pvc-,conditions.status,-(string)%2C%20required
+   *
    * @generated from field: optional string status = 2;
    */
   status?: string;
@@ -9402,6 +9423,8 @@ export class PersistentVolumeSource extends Message<PersistentVolumeSource> {
   /**
    * gcePersistentDisk represents a GCE Disk resource that is attached to a
    * kubelet's host machine and then exposed to the pod. Provisioned by an admin.
+   * Deprecated: GCEPersistentDisk is deprecated. All operations for the in-tree
+   * gcePersistentDisk type are redirected to the pd.csi.storage.gke.io CSI driver.
    * More info: https://kubernetes.io/docs/concepts/storage/volumes#gcepersistentdisk
    * +optional
    *
@@ -9412,6 +9435,8 @@ export class PersistentVolumeSource extends Message<PersistentVolumeSource> {
   /**
    * awsElasticBlockStore represents an AWS Disk resource that is attached to a
    * kubelet's host machine and then exposed to the pod.
+   * Deprecated: AWSElasticBlockStore is deprecated. All operations for the in-tree
+   * awsElasticBlockStore type are redirected to the ebs.csi.aws.com CSI driver.
    * More info: https://kubernetes.io/docs/concepts/storage/volumes#awselasticblockstore
    * +optional
    *
@@ -9434,6 +9459,7 @@ export class PersistentVolumeSource extends Message<PersistentVolumeSource> {
   /**
    * glusterfs represents a Glusterfs volume that is attached to a host and
    * exposed to the pod. Provisioned by an admin.
+   * Deprecated: Glusterfs is deprecated and the in-tree glusterfs type is no longer supported.
    * More info: https://examples.k8s.io/volumes/glusterfs/README.md
    * +optional
    *
@@ -9452,6 +9478,7 @@ export class PersistentVolumeSource extends Message<PersistentVolumeSource> {
 
   /**
    * rbd represents a Rados Block Device mount on the host that shares a pod's lifetime.
+   * Deprecated: RBD is deprecated and the in-tree rbd type is no longer supported.
    * More info: https://examples.k8s.io/volumes/rbd/README.md
    * +optional
    *
@@ -9470,6 +9497,8 @@ export class PersistentVolumeSource extends Message<PersistentVolumeSource> {
 
   /**
    * cinder represents a cinder volume attached and mounted on kubelets host machine.
+   * Deprecated: Cinder is deprecated. All operations for the in-tree cinder type
+   * are redirected to the cinder.csi.openstack.org CSI driver.
    * More info: https://examples.k8s.io/mysql-cinder-pd/README.md
    * +optional
    *
@@ -9478,7 +9507,8 @@ export class PersistentVolumeSource extends Message<PersistentVolumeSource> {
   cinder?: CinderPersistentVolumeSource;
 
   /**
-   * cephFS represents a Ceph FS mount on the host that shares a pod's lifetime
+   * cephFS represents a Ceph FS mount on the host that shares a pod's lifetime.
+   * Deprecated: CephFS is deprecated and the in-tree cephfs type is no longer supported.
    * +optional
    *
    * @generated from field: optional k8s.io.api.core.v1.CephFSPersistentVolumeSource cephfs = 9;
@@ -9494,7 +9524,8 @@ export class PersistentVolumeSource extends Message<PersistentVolumeSource> {
   fc?: FCVolumeSource;
 
   /**
-   * flocker represents a Flocker volume attached to a kubelet's host machine and exposed to the pod for its usage. This depends on the Flocker control service being running
+   * flocker represents a Flocker volume attached to a kubelet's host machine and exposed to the pod for its usage. This depends on the Flocker control service being running.
+   * Deprecated: Flocker is deprecated and the in-tree flocker type is no longer supported.
    * +optional
    *
    * @generated from field: optional k8s.io.api.core.v1.FlockerVolumeSource flocker = 11;
@@ -9504,6 +9535,7 @@ export class PersistentVolumeSource extends Message<PersistentVolumeSource> {
   /**
    * flexVolume represents a generic volume resource that is
    * provisioned/attached using an exec based plugin.
+   * Deprecated: FlexVolume is deprecated. Consider using a CSIDriver instead.
    * +optional
    *
    * @generated from field: optional k8s.io.api.core.v1.FlexPersistentVolumeSource flexVolume = 12;
@@ -9512,6 +9544,8 @@ export class PersistentVolumeSource extends Message<PersistentVolumeSource> {
 
   /**
    * azureFile represents an Azure File Service mount on the host and bind mount to the pod.
+   * Deprecated: AzureFile is deprecated. All operations for the in-tree azureFile type
+   * are redirected to the file.csi.azure.com CSI driver.
    * +optional
    *
    * @generated from field: optional k8s.io.api.core.v1.AzureFilePersistentVolumeSource azureFile = 13;
@@ -9519,7 +9553,9 @@ export class PersistentVolumeSource extends Message<PersistentVolumeSource> {
   azureFile?: AzureFilePersistentVolumeSource;
 
   /**
-   * vsphereVolume represents a vSphere volume attached and mounted on kubelets host machine
+   * vsphereVolume represents a vSphere volume attached and mounted on kubelets host machine.
+   * Deprecated: VsphereVolume is deprecated. All operations for the in-tree vsphereVolume type
+   * are redirected to the csi.vsphere.vmware.com CSI driver.
    * +optional
    *
    * @generated from field: optional k8s.io.api.core.v1.VsphereVirtualDiskVolumeSource vsphereVolume = 14;
@@ -9527,7 +9563,8 @@ export class PersistentVolumeSource extends Message<PersistentVolumeSource> {
   vsphereVolume?: VsphereVirtualDiskVolumeSource;
 
   /**
-   * quobyte represents a Quobyte mount on the host that shares a pod's lifetime
+   * quobyte represents a Quobyte mount on the host that shares a pod's lifetime.
+   * Deprecated: Quobyte is deprecated and the in-tree quobyte type is no longer supported.
    * +optional
    *
    * @generated from field: optional k8s.io.api.core.v1.QuobyteVolumeSource quobyte = 15;
@@ -9536,6 +9573,8 @@ export class PersistentVolumeSource extends Message<PersistentVolumeSource> {
 
   /**
    * azureDisk represents an Azure Data Disk mount on the host and bind mount to the pod.
+   * Deprecated: AzureDisk is deprecated. All operations for the in-tree azureDisk type
+   * are redirected to the disk.csi.azure.com CSI driver.
    * +optional
    *
    * @generated from field: optional k8s.io.api.core.v1.AzureDiskVolumeSource azureDisk = 16;
@@ -9543,14 +9582,18 @@ export class PersistentVolumeSource extends Message<PersistentVolumeSource> {
   azureDisk?: AzureDiskVolumeSource;
 
   /**
-   * photonPersistentDisk represents a PhotonController persistent disk attached and mounted on kubelets host machine
+   * photonPersistentDisk represents a PhotonController persistent disk attached and mounted on kubelets host machine.
+   * Deprecated: PhotonPersistentDisk is deprecated and the in-tree photonPersistentDisk type is no longer supported.
    *
    * @generated from field: optional k8s.io.api.core.v1.PhotonPersistentDiskVolumeSource photonPersistentDisk = 17;
    */
   photonPersistentDisk?: PhotonPersistentDiskVolumeSource;
 
   /**
-   * portworxVolume represents a portworx volume attached and mounted on kubelets host machine
+   * portworxVolume represents a portworx volume attached and mounted on kubelets host machine.
+   * Deprecated: PortworxVolume is deprecated. All operations for the in-tree portworxVolume type
+   * are redirected to the pxd.portworx.com CSI driver when the CSIMigrationPortworx feature-gate
+   * is on.
    * +optional
    *
    * @generated from field: optional k8s.io.api.core.v1.PortworxVolumeSource portworxVolume = 18;
@@ -9559,6 +9602,7 @@ export class PersistentVolumeSource extends Message<PersistentVolumeSource> {
 
   /**
    * scaleIO represents a ScaleIO persistent volume attached and mounted on Kubernetes nodes.
+   * Deprecated: ScaleIO is deprecated and the in-tree scaleIO type is no longer supported.
    * +optional
    *
    * @generated from field: optional k8s.io.api.core.v1.ScaleIOPersistentVolumeSource scaleIO = 19;
@@ -9574,7 +9618,8 @@ export class PersistentVolumeSource extends Message<PersistentVolumeSource> {
   local?: LocalVolumeSource;
 
   /**
-   * storageOS represents a StorageOS volume that is attached to the kubelet's host machine and mounted into the pod
+   * storageOS represents a StorageOS volume that is attached to the kubelet's host machine and mounted into the pod.
+   * Deprecated: StorageOS is deprecated and the in-tree storageos type is no longer supported.
    * More info: https://examples.k8s.io/volumes/storageos/README.md
    * +optional
    *
@@ -9583,7 +9628,7 @@ export class PersistentVolumeSource extends Message<PersistentVolumeSource> {
   storageos?: StorageOSPersistentVolumeSource;
 
   /**
-   * csi represents storage that is handled by an external CSI driver (Beta feature).
+   * csi represents storage that is handled by an external CSI driver.
    * +optional
    *
    * @generated from field: optional k8s.io.api.core.v1.CSIPersistentVolumeSource csi = 22;
@@ -10487,6 +10532,7 @@ export class PodDNSConfig extends Message<PodDNSConfig> {
  */
 export class PodDNSConfigOption extends Message<PodDNSConfigOption> {
   /**
+   * Name is this DNS resolver option's name.
    * Required.
    *
    * @generated from field: optional string name = 1;
@@ -10494,6 +10540,7 @@ export class PodDNSConfigOption extends Message<PodDNSConfigOption> {
   name?: string;
 
   /**
+   * Value is this DNS resolver option's value.
    * +optional
    *
    * @generated from field: optional string value = 2;
@@ -10779,7 +10826,8 @@ export class PodLogOptions extends Message<PodLogOptions> {
 
   /**
    * If set, the number of lines from the end of the logs to show. If not specified,
-   * logs are shown from the creation of the container or sinceSeconds or sinceTime
+   * logs are shown from the creation of the container or sinceSeconds or sinceTime.
+   * Note that when "TailLines" is specified, "Stream" can only be set to nil or "All".
    * +optional
    *
    * @generated from field: optional int64 tailLines = 7;
@@ -10809,6 +10857,18 @@ export class PodLogOptions extends Message<PodLogOptions> {
    */
   insecureSkipTLSVerifyBackend?: boolean;
 
+  /**
+   * Specify which container log stream to return to the client.
+   * Acceptable values are "All", "Stdout" and "Stderr". If not specified, "All" is used, and both stdout and stderr
+   * are returned interleaved.
+   * Note that when "TailLines" is specified, "Stream" can only be set to nil or "All".
+   * +featureGate=PodLogsQuerySplitStreams
+   * +optional
+   *
+   * @generated from field: optional string stream = 10;
+   */
+  stream?: string;
+
   constructor(data?: PartialMessage<PodLogOptions>) {
     super();
     proto2.util.initPartial(data, this);
@@ -10826,6 +10886,7 @@ export class PodLogOptions extends Message<PodLogOptions> {
     { no: 7, name: "tailLines", kind: "scalar", T: 3 /* ScalarType.INT64 */, opt: true },
     { no: 8, name: "limitBytes", kind: "scalar", T: 3 /* ScalarType.INT64 */, opt: true },
     { no: 9, name: "insecureSkipTLSVerifyBackend", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+    { no: 10, name: "stream", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PodLogOptions {
@@ -11364,6 +11425,37 @@ export class PodSecurityContext extends Message<PodSecurityContext> {
    */
   appArmorProfile?: AppArmorProfile;
 
+  /**
+   * seLinuxChangePolicy defines how the container's SELinux label is applied to all volumes used by the Pod.
+   * It has no effect on nodes that do not support SELinux or to volumes does not support SELinux.
+   * Valid values are "MountOption" and "Recursive".
+   *
+   * "Recursive" means relabeling of all files on all Pod volumes by the container runtime.
+   * This may be slow for large volumes, but allows mixing privileged and unprivileged Pods sharing the same volume on the same node.
+   *
+   * "MountOption" mounts all eligible Pod volumes with `-o context` mount option.
+   * This requires all Pods that share the same volume to use the same SELinux label.
+   * It is not possible to share the same volume among privileged and unprivileged Pods.
+   * Eligible volumes are in-tree FibreChannel and iSCSI volumes, and all CSI volumes
+   * whose CSI driver announces SELinux support by setting spec.seLinuxMount: true in their
+   * CSIDriver instance. Other volumes are always re-labelled recursively.
+   * "MountOption" value is allowed only when SELinuxMount feature gate is enabled.
+   *
+   * If not specified and SELinuxMount feature gate is enabled, "MountOption" is used.
+   * If not specified and SELinuxMount feature gate is disabled, "MountOption" is used for ReadWriteOncePod volumes
+   * and "Recursive" for all other volumes.
+   *
+   * This field affects only Pods that have SELinux label set, either in PodSecurityContext or in SecurityContext of all containers.
+   *
+   * All Pods that use the same volume should use the same seLinuxChangePolicy, otherwise some pods can get stuck in ContainerCreating state.
+   * Note that this field cannot be set when spec.os.name is windows.
+   * +featureGate=SELinuxChangePolicy
+   * +optional
+   *
+   * @generated from field: optional string seLinuxChangePolicy = 13;
+   */
+  seLinuxChangePolicy?: string;
+
   constructor(data?: PartialMessage<PodSecurityContext>) {
     super();
     proto2.util.initPartial(data, this);
@@ -11384,6 +11476,7 @@ export class PodSecurityContext extends Message<PodSecurityContext> {
     { no: 9, name: "fsGroupChangePolicy", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 10, name: "seccompProfile", kind: "message", T: SeccompProfile, opt: true },
     { no: 11, name: "appArmorProfile", kind: "message", T: AppArmorProfile, opt: true },
+    { no: 13, name: "seLinuxChangePolicy", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PodSecurityContext {
@@ -11954,6 +12047,25 @@ export class PodSpec extends Message<PodSpec> {
    */
   resourceClaims: PodResourceClaim[] = [];
 
+  /**
+   * Resources is the total amount of CPU and Memory resources required by all
+   * containers in the pod. It supports specifying Requests and Limits for
+   * "cpu" and "memory" resource names only. ResourceClaims are not supported.
+   *
+   * This field enables fine-grained control over resource allocation for the
+   * entire pod, allowing resource sharing among containers in a pod.
+   * TODO: For beta graduation, expand this comment with a detailed explanation.
+   *
+   * This is an alpha field and requires enabling the PodLevelResources feature
+   * gate.
+   *
+   * +featureGate=PodLevelResources
+   * +optional
+   *
+   * @generated from field: optional k8s.io.api.core.v1.ResourceRequirements resources = 40;
+   */
+  resources?: ResourceRequirements;
+
   constructor(data?: PartialMessage<PodSpec>) {
     super();
     proto2.util.initPartial(data, this);
@@ -12001,6 +12113,7 @@ export class PodSpec extends Message<PodSpec> {
     { no: 37, name: "hostUsers", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
     { no: 38, name: "schedulingGates", kind: "message", T: PodSchedulingGate, repeated: true },
     { no: 39, name: "resourceClaims", kind: "message", T: PodResourceClaim, repeated: true },
+    { no: 40, name: "resources", kind: "message", T: ResourceRequirements, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PodSpec {
@@ -12154,10 +12267,16 @@ export class PodStatus extends Message<PodStatus> {
   startTime?: Time;
 
   /**
-   * The list has one entry per init container in the manifest. The most recent successful
+   * Statuses of init containers in this pod. The most recent successful non-restartable
    * init container will have ready = true, the most recently started container will have
    * startTime set.
-   * More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#pod-and-container-status
+   * Each init container in the pod should have at most one status in this list,
+   * and all statuses should be for containers in the pod.
+   * However this is not enforced.
+   * If a status for a non-existent container is present in the list, or the list has duplicate names,
+   * the behavior of various Kubernetes components is not defined and those statuses might be
+   * ignored.
+   * More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#pod-and-container-status
    * +listType=atomic
    *
    * @generated from field: repeated k8s.io.api.core.v1.ContainerStatus initContainerStatuses = 10;
@@ -12165,7 +12284,13 @@ export class PodStatus extends Message<PodStatus> {
   initContainerStatuses: ContainerStatus[] = [];
 
   /**
-   * The list has one entry per container in the manifest.
+   * Statuses of containers in this pod.
+   * Each container in the pod should have at most one status in this list,
+   * and all statuses should be for containers in the pod.
+   * However this is not enforced.
+   * If a status for a non-existent container is present in the list, or the list has duplicate names,
+   * the behavior of various Kubernetes components is not defined and those statuses might be
+   * ignored.
    * More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#pod-and-container-status
    * +optional
    * +listType=atomic
@@ -12185,7 +12310,14 @@ export class PodStatus extends Message<PodStatus> {
   qosClass?: string;
 
   /**
-   * Status for any ephemeral containers that have run in this pod.
+   * Statuses for any ephemeral containers that have run in this pod.
+   * Each ephemeral container in the pod should have at most one status in this list,
+   * and all statuses should be for containers in the pod.
+   * However this is not enforced.
+   * If a status for a non-existent container is present in the list, or the list has duplicate names,
+   * the behavior of various Kubernetes components is not defined and those statuses might be
+   * ignored.
+   * More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#pod-and-container-status
    * +optional
    * +listType=atomic
    *
@@ -12474,6 +12606,8 @@ export class PodTemplateSpec extends Message<PodTemplateSpec> {
 }
 
 /**
+ * PortStatus represents the error condition of a service port
+ *
  * @generated from message k8s.io.api.core.v1.PortStatus
  */
 export class PortStatus extends Message<PortStatus> {
@@ -12881,7 +13015,7 @@ export class Probe extends Message<Probe> {
  */
 export class ProbeHandler extends Message<ProbeHandler> {
   /**
-   * Exec specifies the action to take.
+   * Exec specifies a command to execute in the container.
    * +optional
    *
    * @generated from field: optional k8s.io.api.core.v1.ExecAction exec = 1;
@@ -12889,7 +13023,7 @@ export class ProbeHandler extends Message<ProbeHandler> {
   exec?: ExecAction;
 
   /**
-   * HTTPGet specifies the http request to perform.
+   * HTTPGet specifies an HTTP GET request to perform.
    * +optional
    *
    * @generated from field: optional k8s.io.api.core.v1.HTTPGetAction httpGet = 2;
@@ -12897,7 +13031,7 @@ export class ProbeHandler extends Message<ProbeHandler> {
   httpGet?: HTTPGetAction;
 
   /**
-   * TCPSocket specifies an action involving a TCP port.
+   * TCPSocket specifies a connection to a TCP port.
    * +optional
    *
    * @generated from field: optional k8s.io.api.core.v1.TCPSocketAction tcpSocket = 3;
@@ -12905,7 +13039,7 @@ export class ProbeHandler extends Message<ProbeHandler> {
   tcpSocket?: TCPSocketAction;
 
   /**
-   * GRPC specifies an action involving a GRPC port.
+   * GRPC specifies a GRPC HealthCheckRequest.
    * +optional
    *
    * @generated from field: optional k8s.io.api.core.v1.GRPCAction grpc = 4;
@@ -13888,7 +14022,7 @@ export class ResourceFieldSelector extends Message<ResourceFieldSelector> {
 
 /**
  * ResourceHealth represents the health of a resource. It has the latest device health information.
- * This is a part of KEP https://kep.k8s.io/4680 and historical health changes are planned to be added in future iterations of a KEP.
+ * This is a part of KEP https://kep.k8s.io/4680.
  *
  * @generated from message k8s.io.api.core.v1.ResourceHealth
  */
@@ -14252,11 +14386,15 @@ export class ResourceRequirements extends Message<ResourceRequirements> {
 }
 
 /**
+ * ResourceStatus represents the status of a single resource allocated to a Pod.
+ *
  * @generated from message k8s.io.api.core.v1.ResourceStatus
  */
 export class ResourceStatus extends Message<ResourceStatus> {
   /**
-   * Name of the resource. Must be unique within the pod and match one of the resources from the pod spec.
+   * Name of the resource. Must be unique within the pod and in case of non-DRA resource, match one of the resources from the pod spec.
+   * For DRA resources, the value must be "claim:<claim_name>/<request>".
+   * When this status is reported about a container, the "claim_name" and "request" must match one of the claims of this container.
    * +required
    *
    * @generated from field: optional string name = 1;
@@ -14264,10 +14402,10 @@ export class ResourceStatus extends Message<ResourceStatus> {
   name?: string;
 
   /**
-   * List of unique Resources health. Each element in the list contains an unique resource ID and resource health.
-   * At a minimum, ResourceID must uniquely identify the Resource
-   * allocated to the Pod on the Node for the lifetime of a Pod.
-   * See ResourceID type for it's definition.
+   * List of unique resources health. Each element in the list contains an unique resource ID and its health.
+   * At a minimum, for the lifetime of a Pod, resource ID must uniquely identify the resource allocated to the Pod on the Node.
+   * If other Pod on the same Node reports the status with the same resource ID, it must be the same resource they share.
+   * See ResourceID type definition for a specific format it has in various use cases.
    * +listType=map
    * +listMapKey=resourceID
    *
@@ -15579,6 +15717,8 @@ export class ServiceAccount extends Message<ServiceAccount> {
   /**
    * Secrets is a list of the secrets in the same namespace that pods running using this ServiceAccount are allowed to use.
    * Pods are only limited to this list if this service account has a "kubernetes.io/enforce-mountable-secrets" annotation set to "true".
+   * The "kubernetes.io/enforce-mountable-secrets" annotation is deprecated since v1.32.
+   * Prefer separate namespaces to isolate access to mounted secrets.
    * This field should not be used to find auto-generated service account token secrets for use outside of pods.
    * Instead, tokens can be requested directly using the TokenRequest API, or service account token secrets can be manually created.
    * More info: https://kubernetes.io/docs/concepts/configuration/secret
@@ -16306,7 +16446,7 @@ export class ServiceSpec extends Message<ServiceSpec> {
    * not set, the implementation will apply its default routing strategy. If set
    * to "PreferClose", implementations should prioritize endpoints that are
    * topologically close (e.g., same zone).
-   * This is an alpha field and requires enabling ServiceTrafficDistribution feature.
+   * This is a beta field and requires enabling ServiceTrafficDistribution feature.
    * +featureGate=ServiceTrafficDistribution
    * +optional
    *
@@ -17233,6 +17373,20 @@ export class TopologySpreadConstraint extends Message<TopologySpreadConstraint> 
 /**
  * TypedLocalObjectReference contains enough information to let you locate the
  * typed referenced object inside the same namespace.
+ * ---
+ * New uses of this type are discouraged because of difficulty describing its usage when embedded in APIs.
+ *  1. Invalid usage help.  It is impossible to add specific help for individual usage.  In most embedded usages, there are particular
+ *     restrictions like, "must refer only to types A and B" or "UID not honored" or "name must be restricted".
+ *     Those cannot be well described when embedded.
+ *  2. Inconsistent validation.  Because the usages are different, the validation rules are different by usage, which makes it hard for users to predict what will happen.
+ *  3. The fields are both imprecise and overly precise.  Kind is not a precise mapping to a URL. This can produce ambiguity
+ *     during interpretation and require a REST mapping.  In most cases, the dependency is on the group,resource tuple
+ *     and the version of the actual struct is irrelevant.
+ *  4. We cannot easily change it.  Because this type is embedded in many locations, updates to this type
+ *     will affect numerous schemas.  Don't make new APIs embed an underspecified API type they do not control.
+ *
+ * Instead of using this type, create a locally provided and used type that is well-focused on your reference.
+ * For example, ServiceReferences for admission registration: https://github.com/kubernetes/api/blob/release-1.17/admissionregistration/v1/types.go#L533 .
  * +structType=atomic
  *
  * @generated from message k8s.io.api.core.v1.TypedLocalObjectReference
@@ -17293,6 +17447,8 @@ export class TypedLocalObjectReference extends Message<TypedLocalObjectReference
 }
 
 /**
+ * TypedObjectReference contains enough information to let you locate the typed referenced object
+ *
  * @generated from message k8s.io.api.core.v1.TypedObjectReference
  */
 export class TypedObjectReference extends Message<TypedObjectReference> {
@@ -17879,6 +18035,8 @@ export class VolumeSource extends Message<VolumeSource> {
   /**
    * gcePersistentDisk represents a GCE Disk resource that is attached to a
    * kubelet's host machine and then exposed to the pod.
+   * Deprecated: GCEPersistentDisk is deprecated. All operations for the in-tree
+   * gcePersistentDisk type are redirected to the pd.csi.storage.gke.io CSI driver.
    * More info: https://kubernetes.io/docs/concepts/storage/volumes#gcepersistentdisk
    * +optional
    *
@@ -17889,6 +18047,8 @@ export class VolumeSource extends Message<VolumeSource> {
   /**
    * awsElasticBlockStore represents an AWS Disk resource that is attached to a
    * kubelet's host machine and then exposed to the pod.
+   * Deprecated: AWSElasticBlockStore is deprecated. All operations for the in-tree
+   * awsElasticBlockStore type are redirected to the ebs.csi.aws.com CSI driver.
    * More info: https://kubernetes.io/docs/concepts/storage/volumes#awselasticblockstore
    * +optional
    *
@@ -17898,7 +18058,7 @@ export class VolumeSource extends Message<VolumeSource> {
 
   /**
    * gitRepo represents a git repository at a particular revision.
-   * DEPRECATED: GitRepo is deprecated. To provision a container with a git repo, mount an
+   * Deprecated: GitRepo is deprecated. To provision a container with a git repo, mount an
    * EmptyDir into an InitContainer that clones the repo using git, then mount the EmptyDir
    * into the Pod's container.
    * +optional
@@ -17937,6 +18097,7 @@ export class VolumeSource extends Message<VolumeSource> {
 
   /**
    * glusterfs represents a Glusterfs mount on the host that shares a pod's lifetime.
+   * Deprecated: Glusterfs is deprecated and the in-tree glusterfs type is no longer supported.
    * More info: https://examples.k8s.io/volumes/glusterfs/README.md
    * +optional
    *
@@ -17956,6 +18117,7 @@ export class VolumeSource extends Message<VolumeSource> {
 
   /**
    * rbd represents a Rados Block Device mount on the host that shares a pod's lifetime.
+   * Deprecated: RBD is deprecated and the in-tree rbd type is no longer supported.
    * More info: https://examples.k8s.io/volumes/rbd/README.md
    * +optional
    *
@@ -17966,6 +18128,7 @@ export class VolumeSource extends Message<VolumeSource> {
   /**
    * flexVolume represents a generic volume resource that is
    * provisioned/attached using an exec based plugin.
+   * Deprecated: FlexVolume is deprecated. Consider using a CSIDriver instead.
    * +optional
    *
    * @generated from field: optional k8s.io.api.core.v1.FlexVolumeSource flexVolume = 12;
@@ -17974,6 +18137,8 @@ export class VolumeSource extends Message<VolumeSource> {
 
   /**
    * cinder represents a cinder volume attached and mounted on kubelets host machine.
+   * Deprecated: Cinder is deprecated. All operations for the in-tree cinder type
+   * are redirected to the cinder.csi.openstack.org CSI driver.
    * More info: https://examples.k8s.io/mysql-cinder-pd/README.md
    * +optional
    *
@@ -17982,7 +18147,8 @@ export class VolumeSource extends Message<VolumeSource> {
   cinder?: CinderVolumeSource;
 
   /**
-   * cephFS represents a Ceph FS mount on the host that shares a pod's lifetime
+   * cephFS represents a Ceph FS mount on the host that shares a pod's lifetime.
+   * Deprecated: CephFS is deprecated and the in-tree cephfs type is no longer supported.
    * +optional
    *
    * @generated from field: optional k8s.io.api.core.v1.CephFSVolumeSource cephfs = 14;
@@ -17990,7 +18156,8 @@ export class VolumeSource extends Message<VolumeSource> {
   cephfs?: CephFSVolumeSource;
 
   /**
-   * flocker represents a Flocker volume attached to a kubelet's host machine. This depends on the Flocker control service being running
+   * flocker represents a Flocker volume attached to a kubelet's host machine. This depends on the Flocker control service being running.
+   * Deprecated: Flocker is deprecated and the in-tree flocker type is no longer supported.
    * +optional
    *
    * @generated from field: optional k8s.io.api.core.v1.FlockerVolumeSource flocker = 15;
@@ -18015,6 +18182,8 @@ export class VolumeSource extends Message<VolumeSource> {
 
   /**
    * azureFile represents an Azure File Service mount on the host and bind mount to the pod.
+   * Deprecated: AzureFile is deprecated. All operations for the in-tree azureFile type
+   * are redirected to the file.csi.azure.com CSI driver.
    * +optional
    *
    * @generated from field: optional k8s.io.api.core.v1.AzureFileVolumeSource azureFile = 18;
@@ -18030,7 +18199,9 @@ export class VolumeSource extends Message<VolumeSource> {
   configMap?: ConfigMapVolumeSource;
 
   /**
-   * vsphereVolume represents a vSphere volume attached and mounted on kubelets host machine
+   * vsphereVolume represents a vSphere volume attached and mounted on kubelets host machine.
+   * Deprecated: VsphereVolume is deprecated. All operations for the in-tree vsphereVolume type
+   * are redirected to the csi.vsphere.vmware.com CSI driver.
    * +optional
    *
    * @generated from field: optional k8s.io.api.core.v1.VsphereVirtualDiskVolumeSource vsphereVolume = 20;
@@ -18038,7 +18209,8 @@ export class VolumeSource extends Message<VolumeSource> {
   vsphereVolume?: VsphereVirtualDiskVolumeSource;
 
   /**
-   * quobyte represents a Quobyte mount on the host that shares a pod's lifetime
+   * quobyte represents a Quobyte mount on the host that shares a pod's lifetime.
+   * Deprecated: Quobyte is deprecated and the in-tree quobyte type is no longer supported.
    * +optional
    *
    * @generated from field: optional k8s.io.api.core.v1.QuobyteVolumeSource quobyte = 21;
@@ -18047,6 +18219,8 @@ export class VolumeSource extends Message<VolumeSource> {
 
   /**
    * azureDisk represents an Azure Data Disk mount on the host and bind mount to the pod.
+   * Deprecated: AzureDisk is deprecated. All operations for the in-tree azureDisk type
+   * are redirected to the disk.csi.azure.com CSI driver.
    * +optional
    *
    * @generated from field: optional k8s.io.api.core.v1.AzureDiskVolumeSource azureDisk = 22;
@@ -18054,7 +18228,8 @@ export class VolumeSource extends Message<VolumeSource> {
   azureDisk?: AzureDiskVolumeSource;
 
   /**
-   * photonPersistentDisk represents a PhotonController persistent disk attached and mounted on kubelets host machine
+   * photonPersistentDisk represents a PhotonController persistent disk attached and mounted on kubelets host machine.
+   * Deprecated: PhotonPersistentDisk is deprecated and the in-tree photonPersistentDisk type is no longer supported.
    *
    * @generated from field: optional k8s.io.api.core.v1.PhotonPersistentDiskVolumeSource photonPersistentDisk = 23;
    */
@@ -18068,7 +18243,10 @@ export class VolumeSource extends Message<VolumeSource> {
   projected?: ProjectedVolumeSource;
 
   /**
-   * portworxVolume represents a portworx volume attached and mounted on kubelets host machine
+   * portworxVolume represents a portworx volume attached and mounted on kubelets host machine.
+   * Deprecated: PortworxVolume is deprecated. All operations for the in-tree portworxVolume type
+   * are redirected to the pxd.portworx.com CSI driver when the CSIMigrationPortworx feature-gate
+   * is on.
    * +optional
    *
    * @generated from field: optional k8s.io.api.core.v1.PortworxVolumeSource portworxVolume = 24;
@@ -18077,6 +18255,7 @@ export class VolumeSource extends Message<VolumeSource> {
 
   /**
    * scaleIO represents a ScaleIO persistent volume attached and mounted on Kubernetes nodes.
+   * Deprecated: ScaleIO is deprecated and the in-tree scaleIO type is no longer supported.
    * +optional
    *
    * @generated from field: optional k8s.io.api.core.v1.ScaleIOVolumeSource scaleIO = 25;
@@ -18085,6 +18264,7 @@ export class VolumeSource extends Message<VolumeSource> {
 
   /**
    * storageOS represents a StorageOS volume attached and mounted on Kubernetes nodes.
+   * Deprecated: StorageOS is deprecated and the in-tree storageos type is no longer supported.
    * +optional
    *
    * @generated from field: optional k8s.io.api.core.v1.StorageOSVolumeSource storageos = 27;
@@ -18092,7 +18272,7 @@ export class VolumeSource extends Message<VolumeSource> {
   storageos?: StorageOSVolumeSource;
 
   /**
-   * csi (Container Storage Interface) represents ephemeral storage that is handled by certain external CSI drivers (Beta feature).
+   * csi (Container Storage Interface) represents ephemeral storage that is handled by certain external CSI drivers.
    * +optional
    *
    * @generated from field: optional k8s.io.api.core.v1.CSIVolumeSource csi = 28;
