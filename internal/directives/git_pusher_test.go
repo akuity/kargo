@@ -3,6 +3,7 @@ package directives
 import (
 	"context"
 	"fmt"
+	"math"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
@@ -35,6 +36,24 @@ func Test_gitPusher_validate(t *testing.T) {
 			},
 			expectedProblems: []string{
 				"path: String length must be greater than or equal to 1",
+			},
+		},
+		{
+			name: "maxAttempts < 1",
+			config: Config{
+				"maxAttempts": 0,
+			},
+			expectedProblems: []string{
+				"maxAttempts: Must be greater than or equal to 1",
+			},
+		},
+		{
+			name: fmt.Sprintf("maxAttempts > %d", math.MaxInt32),
+			config: Config{
+				"maxAttempts": math.MaxInt32 + 1,
+			},
+			expectedProblems: []string{
+				fmt.Sprintf("maxAttempts: Must be less than or equal to %.9e", float64(math.MaxInt32)),
 			},
 		},
 		{

@@ -3,11 +3,9 @@ package directives
 import (
 	"context"
 	"fmt"
-	"time"
 
 	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/xeipuuv/gojsonschema"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/retry"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -131,14 +129,25 @@ func (g *gitPushPusher) runPromotionStep(
 		}
 	}
 
+	backoff := retry.DefaultBackoff
+	if cfg.MaxAttempts != nil {
+		// Note, the docs for this field say:
+		//
+		//   The remaining number of iterations in which the duration
+		//   parameter may change...
+		//
+		// This is misleading, as it implies that the total number of attempts may
+		// exceed the value of Steps and that Steps only dictates the maximum number
+		// of adjustments to the interval between retries.
+		//
+		// Reading the implementation of retry.DefaultBackoff reveals that Steps
+		// is indeed the maximum number of attempts.
+		backoff.Steps = int(*cfg.MaxAttempts)
+	} else {
+		backoff.Steps = 50
+	}
 	if err = retry.OnError(
-		wait.Backoff{ // TODO(krancour): Make this at least partially configurable
-			Duration: 1 * time.Second,
-			Factor:   2,
-			Steps:    10,
-			Cap:      2 * time.Minute,
-			Jitter:   0.1,
-		},
+		backoff,
 		git.IsNonFastForward,
 		func() error {
 			return workTree.Push(pushOpts)
