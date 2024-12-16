@@ -108,6 +108,14 @@ rules:
   - list
   - patch
   - watch
+- apiGroups:
+  - argoproj.io
+  resources:
+  - appprojects
+  verbs:
+  - get
+  - list
+  - watch
 {{- end }}
 {{- if .Values.controller.rollouts.integrationEnabled }}
 ---
