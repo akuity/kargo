@@ -1,3 +1,4 @@
+import { toJson } from '@bufbuild/protobuf';
 import { useMutation } from '@connectrpc/connect-query';
 import {
   faCheck,
@@ -27,7 +28,8 @@ import { usePromotionDirectivesRegistryContext } from '@ui/features/promotion-di
 import { Runner } from '@ui/features/promotion-directives/registry/types';
 import { canAbortPromotion } from '@ui/features/stage/utils/promotion';
 import { abortPromotion } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
-import { Promotion, PromotionStep } from '@ui/gen/v1alpha1/generated_pb';
+import { Promotion, PromotionSchema, PromotionStep } from '@ui/gen/v1alpha1/generated_pb';
+import { timestampDate } from '@ui/utils/connectrpc-utils';
 import { decodeRawData } from '@ui/utils/decode-raw-data';
 
 const Step = ({
@@ -218,7 +220,7 @@ export const PromotionDetailsModal = ({
             {
               key: 'date',
               label: 'Start Date',
-              children: promotion.metadata?.creationTimestamp?.toDate().toString()
+              children: timestampDate(promotion.metadata?.creationTimestamp)?.toString()
             }
           ]}
         />
@@ -268,7 +270,7 @@ export const PromotionDetailsModal = ({
           </Tabs.TabPane>
         )}
         <Tabs.TabPane tab='YAML' key='2' icon={<FontAwesomeIcon icon={faFileLines} />}>
-          <ManifestPreview object={promotion} height='500px' />
+          <ManifestPreview object={toJson(PromotionSchema, promotion)} height='500px' />
         </Tabs.TabPane>
       </Tabs>
     </Modal>

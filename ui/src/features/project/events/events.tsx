@@ -14,6 +14,7 @@ import { useParams } from 'react-router-dom';
 import { Event } from '@ui/gen/k8s.io/api/core/v1/generated_pb';
 import { Time } from '@ui/gen/k8s.io/apimachinery/pkg/apis/meta/v1/generated_pb';
 import { listProjectEvents } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
+import { timestampDate } from '@ui/utils/connectrpc-utils';
 
 const EventValue = ({ label, children }: { label: string; children: React.ReactNode }) => {
   return (
@@ -74,8 +75,8 @@ const HumanReadableTimestamp = ({ timestamp }: { timestamp?: Time }) => {
     return <>Unknown</>;
   }
 
-  const date = timestamp.toDate();
-  const fullTimestamp = format(date, 'MMM do yyyy HH:mm:ss');
+  const date = timestampDate(timestamp);
+  const fullTimestamp = format(date || '', 'MMM do yyyy HH:mm:ss');
   const fromNow = moment(date).fromNow();
 
   return (
