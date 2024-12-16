@@ -96,8 +96,9 @@ type PromotionStep struct {
 	Alias string
 	// Retry is the retry configuration for the PromotionStep.
 	Retry *kargoapi.PromotionStepRetry
-	// Inputs is a list of inputs to be made available to the Config of this step.
-	Inputs []kargoapi.PromotionStepInput
+	// Vars is a list of variables definitions that can be used by the
+	// PromotionStep.
+	Vars []kargoapi.PromotionVariable
 	// Config is an opaque JSON to be passed to the PromotionStepRunner executing
 	// this step.
 	Config []byte
@@ -146,8 +147,6 @@ func (s *PromotionStep) GetConfig(
 		return nil, err
 	}
 
-	inputs := s.GetInputs()
-
 	evaledCfgJSON, err := expressions.EvaluateJSONTemplate(
 		s.Config,
 		map[string]any{
@@ -157,7 +156,6 @@ func (s *PromotionStep) GetConfig(
 				"stage":     promoCtx.Stage,
 			},
 			"vars":    vars,
-			"inputs":  inputs,
 			"secrets": promoCtx.Secrets,
 			"outputs": state,
 		},
@@ -196,10 +194,18 @@ func (s *PromotionStep) GetConfig(
 // GetVars returns the variables defined in the PromotionStep. The variables are
 // evaluated in the context of the provided PromotionContext.
 func (s *PromotionStep) GetVars(promoCtx PromotionContext) (map[string]any, error) {
-	vars := make(map[string]any, len(promoCtx.Vars))
+	var rawVars = make(map[string]string, len(promoCtx.Vars))
 	for _, v := range promoCtx.Vars {
+		rawVars[v.Name] = v.Value
+	}
+	for _, v := range s.Vars {
+		rawVars[v.Name] = v.Value
+	}
+
+	vars := make(map[string]any, len(rawVars))
+	for k, v := range rawVars {
 		newVar, err := expressions.EvaluateTemplate(
-			v.Value,
+			v,
 			map[string]any{
 				"ctx": map[string]any{
 					"project":   promoCtx.Project,
@@ -210,20 +216,11 @@ func (s *PromotionStep) GetVars(promoCtx PromotionContext) (map[string]any, erro
 			},
 		)
 		if err != nil {
-			return nil, fmt.Errorf("error pre-processing promotion variable %q: %w", v.Name, err)
+			return nil, fmt.Errorf("error pre-processing promotion variable %q: %w", k, err)
 		}
-		vars[v.Name] = newVar
+		vars[k] = newVar
 	}
 	return vars, nil
-}
-
-// GetInputs returns the inputs of the PromotionStep as a map.
-func (s *PromotionStep) GetInputs() map[string]any {
-	inputs := make(map[string]any, len(s.Inputs))
-	for _, i := range s.Inputs {
-		inputs[i.Name] = i.Value
-	}
-	return inputs
 }
 
 // PromotionResult is the result of a user-defined promotion process executed by

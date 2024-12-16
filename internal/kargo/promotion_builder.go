@@ -7,10 +7,8 @@ import (
 	"strings"
 
 	"github.com/oklog/ulid/v2"
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/yaml"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api/user"
@@ -103,7 +101,13 @@ func (b *PromotionBuilder) buildSteps(ctx context.Context, stage kargoapi.Stage)
 		switch {
 		case step.Task != nil:
 			alias := step.GetAlias(i)
-			taskSteps, err := b.inflateTaskSteps(ctx, stage.Namespace, alias, step)
+			taskSteps, err := b.inflateTaskSteps(
+				ctx,
+				stage.Namespace,
+				alias,
+				stage.Spec.PromotionTemplate.Spec.Vars,
+				step,
+			)
 			if err != nil {
 				return nil, fmt.Errorf("inflate tasks steps for task %q (%q): %w", step.Task.Name, alias, err)
 			}
@@ -121,6 +125,7 @@ func (b *PromotionBuilder) buildSteps(ctx context.Context, stage kargoapi.Stage)
 func (b *PromotionBuilder) inflateTaskSteps(
 	ctx context.Context,
 	project, taskAlias string,
+	promoVars []kargoapi.PromotionVariable,
 	taskStep kargoapi.PromotionStep,
 ) ([]kargoapi.PromotionStep, error) {
 	task, err := b.getTaskSpec(ctx, project, taskStep.Task)
@@ -128,7 +133,7 @@ func (b *PromotionBuilder) inflateTaskSteps(
 		return nil, err
 	}
 
-	inputs, err := promotionTaskInputsToStepInputs(task.Inputs, taskStep.Config)
+	vars, err := promotionTaskVarsToStepVars(task.Vars, promoVars, taskStep.Vars)
 	if err != nil {
 		return nil, err
 	}
@@ -142,9 +147,9 @@ func (b *PromotionBuilder) inflateTaskSteps(
 		// the Promotion.
 		step.As = generatePromotionTaskStepAlias(taskAlias, step.GetAlias(i))
 
-		// With the inputs validated and mapped, they are now available to
+		// With the variables validated and mapped, they are now available to
 		// the Config of the step during the Promotion execution.
-		step.Inputs = inputs
+		step.Vars = vars
 
 		// Append the inflated step to the list of steps.
 		steps = append(steps, *step)
@@ -215,42 +220,45 @@ func generatePromotionTaskStepAlias(taskAlias, stepAlias string) string {
 	return fmt.Sprintf("%s%s%s", taskAlias, aliasSeparator, stepAlias)
 }
 
-// promotionTaskInputsToStepInputs validates the task step config against the task
-// inputs, and maps the config to inputs for the inflated steps.
-func promotionTaskInputsToStepInputs(
-	taskInputs []kargoapi.PromotionTaskInput,
-	stepConfig *apiextensionsv1.JSON,
-) ([]kargoapi.PromotionStepInput, error) {
-	if len(taskInputs) == 0 {
+// promotionTaskVarsToStepVars validates the presence of the PromotionTask
+// variables and maps them to variables which can be used by the inflated
+// PromotionStep.
+func promotionTaskVarsToStepVars(
+	taskVars, promoVars, stepVars []kargoapi.PromotionVariable,
+) ([]kargoapi.PromotionVariable, error) {
+	if len(taskVars) == 0 {
 		return nil, nil
 	}
 
-	if stepConfig == nil {
-		return nil, errors.New("missing step config")
+	promoVarsMap := make(map[string]kargoapi.PromotionVariable, len(promoVars))
+	for _, v := range promoVars {
+		promoVarsMap[v.Name] = v
 	}
 
-	config := make(map[string]any, len(taskInputs))
-	if err := yaml.Unmarshal(stepConfig.Raw, &config); err != nil {
-		return nil, fmt.Errorf("unmarshal step config: %w", err)
+	stepVarsMap := make(map[string]kargoapi.PromotionVariable, len(stepVars))
+	for _, v := range stepVars {
+		stepVarsMap[v.Name] = v
 	}
 
-	inputs := make([]kargoapi.PromotionStepInput, 0, len(taskInputs))
-	for _, input := range taskInputs {
-		iv := input.Default
-		if cv, exists := config[input.Name]; exists {
-			strVal, ok := cv.(string)
-			if !ok {
-				return nil, fmt.Errorf("input %q must be a string", input.Name)
-			}
-			iv = strVal
+	vars := make([]kargoapi.PromotionVariable, 0, len(taskVars))
+	for _, v := range taskVars {
+		if stepVar, ok := stepVarsMap[v.Name]; ok && stepVar.Value != "" {
+			vars = append(vars, stepVar)
+			continue
 		}
-		if iv == "" {
-			return nil, fmt.Errorf("missing required input %q", input.Name)
+
+		if promoVar, ok := promoVarsMap[v.Name]; ok && promoVar.Value != "" {
+			// If the variable is defined in the Promotion, the engine will
+			// automatically use the value from the Promotion, and we do not
+			// have to explicitly set it here.
+			continue
 		}
-		inputs = append(inputs, kargoapi.PromotionStepInput{
-			Name:  input.Name,
-			Value: iv,
-		})
+
+		if v.Value == "" {
+			return nil, fmt.Errorf("missing value for variable %q", v.Name)
+		}
+
+		vars = append(vars, v)
 	}
-	return inputs, nil
+	return vars, nil
 }
