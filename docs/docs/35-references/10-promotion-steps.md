@@ -1085,6 +1085,18 @@ branch referenced by the `Application`. This step is commonly the last step in a
 promotion process.
 
 :::note
+Beginning with Kargo v1.2.0, the `argocd-update` step will honor
+[Argo CD sync windows](https://argo-cd.readthedocs.io/en/stable/user-guide/sync_windows/).
+
+If an `Appliction` update/sync needs to be performed and the sync window is
+closed, the `argocd-update` step will wait for the sync window to re-open.
+
+In cases where the `argocd-update` step may encounter a closed sync window, it
+is recommended to increase the step's [timeout](#step-retries) to exceed the
+duration of the sync window closure.
+:::
+
+:::note
 For an Argo CD `Application` resource to be managed by a Kargo `Stage`,
 the `Application` _must_ have an annotation of the following form:
 
@@ -1164,6 +1176,9 @@ steps:
   config:
     path: ./out
 - uses: argocd-update
+  retry:
+    # Tolerates a hypothetical closure of the sync window every weekend
+    timeout: 48h
   config:
     apps:
     - name: my-app
