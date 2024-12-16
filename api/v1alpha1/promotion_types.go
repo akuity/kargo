@@ -118,7 +118,7 @@ type PromotionVariable struct {
 	// Value is the value of the variable. It is allowed to utilize expressions
 	// in the value.
 	// See https://docs.kargo.io/references/expression-language for details.
-	Value string `json:"value" protobuf:"bytes,2,opt,name=value"`
+	Value string `json:"value,omitempty" protobuf:"bytes,2,opt,name=value"`
 }
 
 // PromotionTaskReference describes a reference to a PromotionTask.
@@ -195,41 +195,24 @@ func (r *PromotionStepRetry) GetErrorThreshold(fallback uint32) uint32 {
 	return r.ErrorThreshold
 }
 
-// PromotionStepInput describes a single input value for a PromotionStep that may
-// be referenced by expressions in the step.
-type PromotionStepInput struct {
-	// Name is the name of the input to which the value is assigned.
-	//
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Pattern=^[a-zA-Z_]\w*$
-	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
-	// Value is the input value.
-	Value string `json:"value" protobuf:"bytes,2,opt,name=value"`
-}
-
 // PromotionStep describes a directive to be executed as part of a Promotion.
-//
-// +kubebuilder:validation:XValidation:message="inputs must not be set when task is set",rule="!(has(self.task) && self.inputs.size() > 0)"
 type PromotionStep struct {
 	// Uses identifies a runner that can execute this step.
 	//
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:validation:MinLength=1
 	Uses string `json:"uses,omitempty" protobuf:"bytes,1,opt,name=uses"`
-	// Task is a reference to a PromotionTask that should be deflated into a
+	// Task is a reference to a PromotionTask that should be inflated into a
 	// Promotion when it is built from a PromotionTemplate.
 	Task *PromotionTaskReference `json:"task,omitempty" protobuf:"bytes,5,opt,name=task"`
 	// As is the alias this step can be referred to as.
 	As string `json:"as,omitempty" protobuf:"bytes,2,opt,name=as"`
 	// Retry is the retry policy for this step.
 	Retry *PromotionStepRetry `json:"retry,omitempty" protobuf:"bytes,4,opt,name=retry"`
-	// Inputs is a list of inputs that can used to parameterize the execution
-	// of the PromotionStep and can be referenced by expressions in the Config.
-	//
-	// When a PromotionStep is inflated from a PromotionTask, the inputs
-	// specified in the PromotionTask are set based on the inputs specified
-	// in the Config of the PromotionStep that references the PromotionTask.
-	Inputs []PromotionStepInput `json:"inputs,omitempty" protobuf:"bytes,6,rep,name=inputs"`
+	// Vars is a list of variables that can be referenced by expressions in
+	// the step's Config. The values override the values specified in the
+	// PromotionSpec.
+	Vars []PromotionVariable `json:"vars,omitempty" protobuf:"bytes,6,rep,name=vars"`
 	// Config is opaque configuration for the PromotionStep that is understood
 	// only by each PromotionStep's implementation. It is legal to utilize
 	// expressions in defining values at any level of this block.
