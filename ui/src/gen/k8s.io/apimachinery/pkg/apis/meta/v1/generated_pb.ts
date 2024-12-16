@@ -732,6 +732,25 @@ export class DeleteOptions extends Message<DeleteOptions> {
    */
   dryRun: string[] = [];
 
+  /**
+   * if set to true, it will trigger an unsafe deletion of the resource in
+   * case the normal deletion flow fails with a corrupt object error.
+   * A resource is considered corrupt if it can not be retrieved from
+   * the underlying storage successfully because of a) its data can
+   * not be transformed e.g. decryption failure, or b) it fails
+   * to decode into an object.
+   * NOTE: unsafe deletion ignores finalizer constraints, skips
+   * precondition checks, and removes the object from the storage.
+   * WARNING: This may potentially break the cluster if the workload
+   * associated with the resource being unsafe-deleted relies on normal
+   * deletion flow. Use only if you REALLY know what you are doing.
+   * The default value is false, and the user must opt in to enable it
+   * +optional
+   *
+   * @generated from field: optional bool ignoreStoreReadErrorWithClusterBreakingPotential = 6;
+   */
+  ignoreStoreReadErrorWithClusterBreakingPotential?: boolean;
+
   constructor(data?: PartialMessage<DeleteOptions>) {
     super();
     proto2.util.initPartial(data, this);
@@ -745,6 +764,7 @@ export class DeleteOptions extends Message<DeleteOptions> {
     { no: 3, name: "orphanDependents", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
     { no: 4, name: "propagationPolicy", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 5, name: "dryRun", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 6, name: "ignoreStoreReadErrorWithClusterBreakingPotential", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteOptions {
