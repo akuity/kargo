@@ -22,6 +22,7 @@ require (
 	github.com/fatih/structtag v1.2.0
 	github.com/fluxcd/pkg/kustomize v1.15.0
 	github.com/go-git/go-git/v5 v5.12.0
+	github.com/gobwas/glob v0.2.3
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang-jwt/jwt/v5 v5.2.1
 	github.com/google/go-containerregistry v0.20.2
@@ -33,6 +34,7 @@ require (
 	github.com/oklog/ulid/v2 v2.1.0
 	github.com/otiai10/copy v1.14.0
 	github.com/patrickmn/go-cache v2.1.0+incompatible
+	github.com/robfig/cron/v3 v3.0.1
 	github.com/rs/cors v1.11.1
 	github.com/sirupsen/logrus v1.9.3
 	github.com/sosedoff/gitkit v0.4.0
@@ -95,7 +97,6 @@ require (
 	github.com/go-git/gcfg v1.5.1-0.20230307220236-3a3c6141e376 // indirect
 	github.com/go-git/go-billy/v5 v5.6.0 // indirect
 	github.com/go-gorp/gorp/v3 v3.1.0 // indirect
-	github.com/gobwas/glob v0.2.3 // indirect
 	github.com/gofrs/uuid v4.0.0+incompatible // indirect
 	github.com/google/go-github/v64 v64.0.0 // indirect
 	github.com/google/s2a-go v0.1.8 // indirect
@@ -197,7 +198,6 @@ require (
 	github.com/prometheus/common v0.55.0 // indirect
 	github.com/prometheus/procfs v0.15.1 // indirect
 	github.com/vbatts/tar-split v0.11.3 // indirect
-	github.com/xanzy/go-gitlab v0.115.0
 	github.com/xlab/treeprint v1.2.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.54.0 // indirect
 	go.opentelemetry.io/otel v1.31.0 // indirect
