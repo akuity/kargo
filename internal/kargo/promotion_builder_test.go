@@ -8,14 +8,12 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
-	"sigs.k8s.io/yaml"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api/user"
@@ -144,9 +142,9 @@ func TestPromotionBuilder_Build(t *testing.T) {
 									Task: &kargoapi.PromotionTaskReference{
 										Name: "test-task",
 									},
-									Config: makeJSONObj(t, map[string]any{
-										"input1": "value1",
-									}),
+									Vars: []kargoapi.PromotionVariable{
+										{Name: "input1", Value: "value1"},
+									},
 								},
 							},
 						},
@@ -164,7 +162,7 @@ func TestPromotionBuilder_Build(t *testing.T) {
 						Namespace: "test-project",
 					},
 					Spec: kargoapi.PromotionTaskSpec{
-						Inputs: []kargoapi.PromotionTaskInput{
+						Vars: []kargoapi.PromotionVariable{
 							{Name: "input1"},
 						},
 						Steps: []kargoapi.PromotionStep{
@@ -187,9 +185,9 @@ func TestPromotionBuilder_Build(t *testing.T) {
 				require.Len(t, promotion.Spec.Steps, 1)
 				assert.Equal(t, "task-step::sub-step", promotion.Spec.Steps[0].As)
 				assert.Equal(t, "other-fake-step", promotion.Spec.Steps[0].Uses)
-				assert.ElementsMatch(t, []kargoapi.PromotionStepInput{
+				assert.ElementsMatch(t, []kargoapi.PromotionVariable{
 					{Name: "input1", Value: "value1"},
-				}, promotion.Spec.Steps[0].Inputs)
+				}, promotion.Spec.Steps[0].Vars)
 			},
 		},
 	}
@@ -294,9 +292,9 @@ func TestPromotionBuilder_buildSteps(t *testing.T) {
 									Task: &kargoapi.PromotionTaskReference{
 										Name: "test-task",
 									},
-									Config: makeJSONObj(t, map[string]any{
-										"input1": "value1",
-									}),
+									Vars: []kargoapi.PromotionVariable{
+										{Name: "input1", Value: "value1"},
+									},
 								},
 							},
 						},
@@ -310,7 +308,7 @@ func TestPromotionBuilder_buildSteps(t *testing.T) {
 						Namespace: "test-project",
 					},
 					Spec: kargoapi.PromotionTaskSpec{
-						Inputs: []kargoapi.PromotionTaskInput{
+						Vars: []kargoapi.PromotionVariable{
 							{Name: "input1"},
 						},
 						Steps: []kargoapi.PromotionStep{
@@ -333,9 +331,9 @@ func TestPromotionBuilder_buildSteps(t *testing.T) {
 				// Check inflated task step
 				assert.Equal(t, "task-step::sub-step", steps[1].As)
 				assert.Equal(t, "other-fake-step", steps[1].Uses)
-				assert.ElementsMatch(t, []kargoapi.PromotionStepInput{
+				assert.ElementsMatch(t, []kargoapi.PromotionVariable{
 					{Name: "input1", Value: "value1"},
-				}, steps[1].Inputs)
+				}, steps[1].Vars)
 			},
 		},
 		{
@@ -354,9 +352,9 @@ func TestPromotionBuilder_buildSteps(t *testing.T) {
 									Task: &kargoapi.PromotionTaskReference{
 										Name: "test-task-1",
 									},
-									Config: makeJSONObj(t, map[string]any{
-										"input1": "value1",
-									}),
+									Vars: []kargoapi.PromotionVariable{
+										{Name: "input1", Value: "value1"},
+									},
 								},
 								{
 									As: "task2",
@@ -364,9 +362,9 @@ func TestPromotionBuilder_buildSteps(t *testing.T) {
 										Kind: "ClusterPromotionTask",
 										Name: "test-task-2",
 									},
-									Config: makeJSONObj(t, map[string]any{
-										"input2": "value2",
-									}),
+									Vars: []kargoapi.PromotionVariable{
+										{Name: "input2", Value: "value2"},
+									},
 								},
 							},
 						},
@@ -380,7 +378,7 @@ func TestPromotionBuilder_buildSteps(t *testing.T) {
 						Namespace: "test-project",
 					},
 					Spec: kargoapi.PromotionTaskSpec{
-						Inputs: []kargoapi.PromotionTaskInput{
+						Vars: []kargoapi.PromotionVariable{
 							{Name: "input1"},
 						},
 						Steps: []kargoapi.PromotionStep{
@@ -396,7 +394,7 @@ func TestPromotionBuilder_buildSteps(t *testing.T) {
 						Name: "test-task-2",
 					},
 					Spec: kargoapi.PromotionTaskSpec{
-						Inputs: []kargoapi.PromotionTaskInput{
+						Vars: []kargoapi.PromotionVariable{
 							{Name: "input2"},
 						},
 						Steps: []kargoapi.PromotionStep{
@@ -414,15 +412,15 @@ func TestPromotionBuilder_buildSteps(t *testing.T) {
 
 				assert.Equal(t, "task1::step1", steps[0].As)
 				assert.Equal(t, "fake-step", steps[0].Uses)
-				assert.ElementsMatch(t, []kargoapi.PromotionStepInput{
+				assert.ElementsMatch(t, []kargoapi.PromotionVariable{
 					{Name: "input1", Value: "value1"},
-				}, steps[0].Inputs)
+				}, steps[0].Vars)
 
 				assert.Equal(t, "task2::step2", steps[1].As)
 				assert.Equal(t, "other-fake-step", steps[1].Uses)
-				assert.ElementsMatch(t, []kargoapi.PromotionStepInput{
+				assert.ElementsMatch(t, []kargoapi.PromotionVariable{
 					{Name: "input2", Value: "value2"},
-				}, steps[1].Inputs)
+				}, steps[1].Vars)
 			},
 		},
 	}
@@ -449,6 +447,7 @@ func TestPromotionBuilder_inflateTaskSteps(t *testing.T) {
 		name       string
 		project    string
 		taskAlias  string
+		promoVars  []kargoapi.PromotionVariable
 		taskStep   kargoapi.PromotionStep
 		objects    []client.Object
 		assertions func(*testing.T, []kargoapi.PromotionStep, error)
@@ -468,14 +467,15 @@ func TestPromotionBuilder_inflateTaskSteps(t *testing.T) {
 			},
 		},
 		{
-			name:    "invalid config for task inputs",
+			name:    "invalid config for task variables",
 			project: "test-project",
 
 			taskStep: kargoapi.PromotionStep{
 				Task: &kargoapi.PromotionTaskReference{
 					Name: "test-task",
 				},
-				Config: &apiextensionsv1.JSON{Raw: []byte(`{invalid json`)},
+				// Missing values
+				Vars: nil,
 			},
 			objects: []client.Object{
 				&kargoapi.PromotionTask{
@@ -484,14 +484,14 @@ func TestPromotionBuilder_inflateTaskSteps(t *testing.T) {
 						Namespace: "test-project",
 					},
 					Spec: kargoapi.PromotionTaskSpec{
-						Inputs: []kargoapi.PromotionTaskInput{
+						Vars: []kargoapi.PromotionVariable{
 							{Name: "input1"},
 						},
 					},
 				},
 			},
 			assertions: func(t *testing.T, steps []kargoapi.PromotionStep, err error) {
-				assert.ErrorContains(t, err, "unmarshal step config")
+				assert.ErrorContains(t, err, "missing value for variable")
 				assert.Nil(t, steps)
 			},
 		},
@@ -499,14 +499,17 @@ func TestPromotionBuilder_inflateTaskSteps(t *testing.T) {
 			name:      "successful task step inflation",
 			project:   "test-project",
 			taskAlias: "task-1",
+			promoVars: []kargoapi.PromotionVariable{
+				{Name: "input3", Value: "value1"},
+			},
 			taskStep: kargoapi.PromotionStep{
 				Task: &kargoapi.PromotionTaskReference{
 					Name: "test-task",
 				},
-				Config: makeJSONObj(t, map[string]any{
-					"input1": "value1",
-					"input2": "value2",
-				}),
+				Vars: []kargoapi.PromotionVariable{
+					{Name: "input1", Value: "value1"},
+					{Name: "input2", Value: "value2"},
+				},
 			},
 			objects: []client.Object{
 				&kargoapi.PromotionTask{
@@ -515,9 +518,10 @@ func TestPromotionBuilder_inflateTaskSteps(t *testing.T) {
 						Namespace: "test-project",
 					},
 					Spec: kargoapi.PromotionTaskSpec{
-						Inputs: []kargoapi.PromotionTaskInput{
+						Vars: []kargoapi.PromotionVariable{
 							{Name: "input1"},
-							{Name: "input2", Default: "default2"},
+							{Name: "input2", Value: "default2"},
+							{Name: "input3"},
 						},
 						Steps: []kargoapi.PromotionStep{
 							{
@@ -538,17 +542,17 @@ func TestPromotionBuilder_inflateTaskSteps(t *testing.T) {
 
 				assert.Equal(t, "task-1::step1", steps[0].As)
 				assert.Equal(t, "fake-step", steps[0].Uses)
-				assert.ElementsMatch(t, []kargoapi.PromotionStepInput{
+				assert.ElementsMatch(t, []kargoapi.PromotionVariable{
 					{Name: "input1", Value: "value1"},
 					{Name: "input2", Value: "value2"},
-				}, steps[0].Inputs)
+				}, steps[0].Vars)
 
 				assert.Equal(t, "task-1::step2", steps[1].As)
 				assert.Equal(t, "other-fake-step", steps[1].Uses)
-				assert.ElementsMatch(t, []kargoapi.PromotionStepInput{
+				assert.ElementsMatch(t, []kargoapi.PromotionVariable{
 					{Name: "input1", Value: "value1"},
 					{Name: "input2", Value: "value2"},
-				}, steps[1].Inputs)
+				}, steps[1].Vars)
 			},
 		},
 		{
@@ -559,9 +563,9 @@ func TestPromotionBuilder_inflateTaskSteps(t *testing.T) {
 				Task: &kargoapi.PromotionTaskReference{
 					Name: "test-task",
 				},
-				Config: makeJSONObj(t, map[string]any{
-					"input1": "value1",
-				}),
+				Vars: []kargoapi.PromotionVariable{
+					{Name: "input1", Value: "value1"},
+				},
 			},
 			objects: []client.Object{
 				&kargoapi.PromotionTask{
@@ -570,7 +574,7 @@ func TestPromotionBuilder_inflateTaskSteps(t *testing.T) {
 						Namespace: "test-project",
 					},
 					Spec: kargoapi.PromotionTaskSpec{
-						Inputs: []kargoapi.PromotionTaskInput{
+						Vars: []kargoapi.PromotionVariable{
 							{Name: "input1"},
 						},
 						Steps: []kargoapi.PromotionStep{
@@ -601,9 +605,9 @@ func TestPromotionBuilder_inflateTaskSteps(t *testing.T) {
 					Kind: "ClusterPromotionTask",
 					Name: "test-cluster-task",
 				},
-				Config: makeJSONObj(t, map[string]any{
-					"input1": "value1",
-				}),
+				Vars: []kargoapi.PromotionVariable{
+					{Name: "input1", Value: "value1"},
+				},
 			},
 			objects: []client.Object{
 				&kargoapi.ClusterPromotionTask{
@@ -611,7 +615,7 @@ func TestPromotionBuilder_inflateTaskSteps(t *testing.T) {
 						Name: "test-cluster-task",
 					},
 					Spec: kargoapi.PromotionTaskSpec{
-						Inputs: []kargoapi.PromotionTaskInput{
+						Vars: []kargoapi.PromotionVariable{
 							{Name: "input1"},
 						},
 						Steps: []kargoapi.PromotionStep{
@@ -639,7 +643,7 @@ func TestPromotionBuilder_inflateTaskSteps(t *testing.T) {
 				Build()
 
 			b := NewPromotionBuilder(c)
-			steps, err := b.inflateTaskSteps(context.Background(), tt.project, tt.taskAlias, tt.taskStep)
+			steps, err := b.inflateTaskSteps(context.Background(), tt.project, tt.taskAlias, tt.promoVars, tt.taskStep)
 			tt.assertions(t, steps, err)
 		})
 	}
@@ -738,8 +742,8 @@ func TestPromotionBuilder_getTaskSpec(t *testing.T) {
 						Namespace: "test-project",
 					},
 					Spec: kargoapi.PromotionTaskSpec{
-						Inputs: []kargoapi.PromotionTaskInput{
-							{Name: "input1", Default: "value1"},
+						Vars: []kargoapi.PromotionVariable{
+							{Name: "input1", Value: "value1"},
 						},
 					},
 				},
@@ -748,9 +752,9 @@ func TestPromotionBuilder_getTaskSpec(t *testing.T) {
 				require.NoError(t, err)
 				require.NotNil(t, result)
 
-				assert.Len(t, result.Inputs, 1)
-				assert.Equal(t, "input1", result.Inputs[0].Name)
-				assert.Equal(t, "value1", result.Inputs[0].Default)
+				assert.Len(t, result.Vars, 1)
+				assert.Equal(t, "input1", result.Vars[0].Name)
+				assert.Equal(t, "value1", result.Vars[0].Value)
 			},
 		},
 		{
@@ -766,8 +770,8 @@ func TestPromotionBuilder_getTaskSpec(t *testing.T) {
 						Name: "test-cluster-task",
 					},
 					Spec: kargoapi.PromotionTaskSpec{
-						Inputs: []kargoapi.PromotionTaskInput{
-							{Name: "input1", Default: "value1"},
+						Vars: []kargoapi.PromotionVariable{
+							{Name: "input1", Value: "value1"},
 						},
 					},
 				},
@@ -776,9 +780,9 @@ func TestPromotionBuilder_getTaskSpec(t *testing.T) {
 				require.NoError(t, err)
 				require.NotNil(t, result)
 
-				assert.Len(t, result.Inputs, 1)
-				assert.Equal(t, "input1", result.Inputs[0].Name)
-				assert.Equal(t, "value1", result.Inputs[0].Default)
+				assert.Len(t, result.Vars, 1)
+				assert.Equal(t, "input1", result.Vars[0].Name)
+				assert.Equal(t, "value1", result.Vars[0].Value)
 			},
 		},
 		{
@@ -795,8 +799,8 @@ func TestPromotionBuilder_getTaskSpec(t *testing.T) {
 						Namespace: "test-project",
 					},
 					Spec: kargoapi.PromotionTaskSpec{
-						Inputs: []kargoapi.PromotionTaskInput{
-							{Name: "input1", Default: "value1"},
+						Vars: []kargoapi.PromotionVariable{
+							{Name: "input1", Value: "value1"},
 						},
 					},
 				},
@@ -805,9 +809,9 @@ func TestPromotionBuilder_getTaskSpec(t *testing.T) {
 				require.NoError(t, err)
 				require.NotNil(t, result)
 
-				assert.Len(t, result.Inputs, 1)
-				assert.Equal(t, "input1", result.Inputs[0].Name)
-				assert.Equal(t, "value1", result.Inputs[0].Default)
+				assert.Len(t, result.Vars, 1)
+				assert.Equal(t, "input1", result.Vars[0].Name)
+				assert.Equal(t, "value1", result.Vars[0].Value)
 			},
 		},
 	}
@@ -969,110 +973,102 @@ func Test_generatePromotionTaskStepName(t *testing.T) {
 	}
 }
 
-func Test_promotionTaskInputsToStepInputs(t *testing.T) {
+func Test_promotionTaskVarsToStepVars(t *testing.T) {
 	tests := []struct {
 		name       string
-		taskInputs []kargoapi.PromotionTaskInput
-		config     map[string]any
-		assertions func(t *testing.T, result []kargoapi.PromotionStepInput, err error)
+		taskVars   []kargoapi.PromotionVariable
+		promoVars  []kargoapi.PromotionVariable
+		stepVars   []kargoapi.PromotionVariable
+		assertions func(t *testing.T, result []kargoapi.PromotionVariable, err error)
 	}{
 		{
-			name:       "nil inputs returns nil map and no error",
-			taskInputs: nil,
-			config:     nil,
-			assertions: func(t *testing.T, result []kargoapi.PromotionStepInput, err error) {
+			name:     "nil inputs returns nil map and no error",
+			taskVars: nil,
+			stepVars: nil,
+			assertions: func(t *testing.T, result []kargoapi.PromotionVariable, err error) {
 				require.NoError(t, err)
 				assert.Nil(t, result)
 			},
 		},
 		{
-			name:       "empty inputs returns nil map and no error",
-			taskInputs: []kargoapi.PromotionTaskInput{},
-			config:     nil,
-			assertions: func(t *testing.T, result []kargoapi.PromotionStepInput, err error) {
+			name:     "empty inputs returns nil map and no error",
+			taskVars: []kargoapi.PromotionVariable{},
+			stepVars: nil,
+			assertions: func(t *testing.T, result []kargoapi.PromotionVariable, err error) {
 				require.NoError(t, err)
 				assert.Nil(t, result)
 			},
 		},
 		{
-			name: "missing config when inputs required returns error",
-			taskInputs: []kargoapi.PromotionTaskInput{
+			name: "missing required variable returns error",
+			taskVars: []kargoapi.PromotionVariable{
 				{Name: "input1"},
 			},
-			config: nil,
-			assertions: func(t *testing.T, result []kargoapi.PromotionStepInput, err error) {
-				assert.ErrorContains(t, err, "missing step config")
-				assert.Nil(t, result)
+			stepVars: []kargoapi.PromotionVariable{
+				{Name: "input1", Value: ""},
 			},
-		},
-		{
-			name: "non-string input value returns error",
-			taskInputs: []kargoapi.PromotionTaskInput{
-				{Name: "input1"},
-			},
-			config: map[string]any{
-				"input1": 123, // number instead of string
-			},
-			assertions: func(t *testing.T, result []kargoapi.PromotionStepInput, err error) {
-				assert.ErrorContains(t, err, "input \"input1\" must be a string")
-				assert.Nil(t, result)
-			},
-		},
-		{
-			name: "missing required input returns error",
-			taskInputs: []kargoapi.PromotionTaskInput{
-				{Name: "input1"},
-			},
-			config: map[string]any{
-				"input1": "", // empty string is not allowed without default
-			},
-			assertions: func(t *testing.T, result []kargoapi.PromotionStepInput, err error) {
-				assert.ErrorContains(t, err, "missing required input \"input1\"")
+			assertions: func(t *testing.T, result []kargoapi.PromotionVariable, err error) {
+				assert.ErrorContains(t, err, "missing value for variable \"input1\"")
 				assert.Nil(t, result)
 			},
 		},
 		{
 			name: "default value used when config value not provided",
-			taskInputs: []kargoapi.PromotionTaskInput{
-				{Name: "input1", Default: "default1"},
+			taskVars: []kargoapi.PromotionVariable{
+				{Name: "input1", Value: "default1"},
 			},
-			config: map[string]any{},
-			assertions: func(t *testing.T, result []kargoapi.PromotionStepInput, err error) {
+			stepVars: nil,
+			assertions: func(t *testing.T, result []kargoapi.PromotionVariable, err error) {
 				require.NoError(t, err)
-				assert.ElementsMatch(t, []kargoapi.PromotionStepInput{
+				assert.ElementsMatch(t, []kargoapi.PromotionVariable{
 					{Name: "input1", Value: "default1"},
 				}, result)
 			},
 		},
 		{
-			name: "config value overrides default value",
-			taskInputs: []kargoapi.PromotionTaskInput{
-				{Name: "input1", Default: "default1"},
+			name: "step value overrides default value",
+			taskVars: []kargoapi.PromotionVariable{
+				{Name: "input1", Value: "default1"},
 			},
-			config: map[string]any{
-				"input1": "override1",
+			stepVars: []kargoapi.PromotionVariable{
+				{Name: "input1", Value: "override1"},
 			},
-			assertions: func(t *testing.T, result []kargoapi.PromotionStepInput, err error) {
+			assertions: func(t *testing.T, result []kargoapi.PromotionVariable, err error) {
 				require.NoError(t, err)
-				assert.ElementsMatch(t, []kargoapi.PromotionStepInput{
+				assert.ElementsMatch(t, []kargoapi.PromotionVariable{
 					{Name: "input1", Value: "override1"},
 				}, result)
 			},
 		},
 		{
+			name: "promotion variable overrides default value",
+			taskVars: []kargoapi.PromotionVariable{
+				{Name: "input1", Value: "default1"},
+			},
+			promoVars: []kargoapi.PromotionVariable{
+				{Name: "input1", Value: "override1"},
+			},
+			stepVars: nil,
+			assertions: func(t *testing.T, result []kargoapi.PromotionVariable, err error) {
+				require.NoError(t, err)
+				// Variable is set by engine at runtime
+				assert.Empty(t, result)
+			},
+		},
+		{
 			name: "multiple inputs processed correctly",
-			taskInputs: []kargoapi.PromotionTaskInput{
-				{Name: "input1", Default: "default1"},
-				{Name: "input2", Default: "default2"},
+			taskVars: []kargoapi.PromotionVariable{
+				{Name: "input1", Value: "default1"},
+				{Name: "input2", Value: "default2"},
 				{Name: "input3"},
 			},
-			config: map[string]any{
-				"input1": "override1",
-				"input3": "value3",
+			stepVars: []kargoapi.PromotionVariable{
+				{Name: "input1", Value: "override1"},
+				{Name: "input3", Value: "value3"},
 			},
-			assertions: func(t *testing.T, result []kargoapi.PromotionStepInput, err error) {
+			assertions: func(t *testing.T, result []kargoapi.PromotionVariable, err error) {
 				require.NoError(t, err)
-				assert.ElementsMatch(t, []kargoapi.PromotionStepInput{
+				assert.ElementsMatch(t, []kargoapi.PromotionVariable{
 					{Name: "input1", Value: "override1"},
 					{Name: "input2", Value: "default2"},
 					{Name: "input3", Value: "value3"},
@@ -1083,23 +1079,8 @@ func Test_promotionTaskInputsToStepInputs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var configJSON *apiextensionsv1.JSON
-			if tt.config != nil {
-				configBytes, err := yaml.Marshal(tt.config)
-				require.NoError(t, err)
-				configJSON = &apiextensionsv1.JSON{Raw: configBytes}
-			}
-
-			result, err := promotionTaskInputsToStepInputs(tt.taskInputs, configJSON)
+			result, err := promotionTaskVarsToStepVars(tt.taskVars, tt.promoVars, tt.stepVars)
 			tt.assertions(t, result, err)
 		})
 	}
-}
-
-// makeJSONObj is a helper function to create an API extension JSON object from
-// a map.
-func makeJSONObj(t *testing.T, m map[string]any) *apiextensionsv1.JSON {
-	data, err := yaml.Marshal(m)
-	require.NoError(t, err)
-	return &apiextensionsv1.JSON{Raw: data}
 }
