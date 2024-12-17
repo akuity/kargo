@@ -30,7 +30,6 @@ require (
 	github.com/jferrl/go-githubauth v1.1.1
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/klauspost/compress v1.17.11
-	github.com/microsoft/azure-devops-go-api/azuredevops/v7 v7.1.0
 	github.com/oklog/ulid/v2 v2.1.0
 	github.com/otiai10/copy v1.14.0
 	github.com/patrickmn/go-cache v2.1.0+incompatible
@@ -122,7 +121,6 @@ require (
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/shopspring/decimal v1.4.0 // indirect
 	github.com/spf13/cast v1.7.0 // indirect
-	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb // indirect
@@ -199,6 +197,7 @@ require (
 	github.com/prometheus/common v0.55.0 // indirect
 	github.com/prometheus/procfs v0.15.1 // indirect
 	github.com/vbatts/tar-split v0.11.3 // indirect
+	github.com/xanzy/go-gitlab v0.115.0
 	github.com/xlab/treeprint v1.2.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.54.0 // indirect
 	go.opentelemetry.io/otel v1.31.0 // indirect
