@@ -22,7 +22,7 @@ import { KargoService } from '@ui/gen/service/v1alpha1/service_connect';
 import { ArgoCDShard, ListPromotionsResponse } from '@ui/gen/service/v1alpha1/service_pb';
 import { Freight, Promotion } from '@ui/gen/v1alpha1/generated_pb';
 import uiPlugins from '@ui/plugins';
-import { UiPluginHoles } from '@ui/plugins/ui-plugin-hole/ui-plugin-holes';
+import { UiPluginHoles } from '@ui/plugins/atoms/ui-plugin-hole/ui-plugin-holes';
 
 import { PromotionDetailsModal } from './promotion-details-modal';
 import { hasAbortRequest, promotionCompareFn } from './utils/promotion';
@@ -177,7 +177,7 @@ export const Promotions = ({ argocdShard }: { argocdShard?: ArgoCDShard }) => {
     {
       title: 'Extra',
       render: (_, promotion, promotionIndex) => {
-        const UiPlugins = uiPlugins
+        const filteredUiPlugins = uiPlugins
           .filter((plugin) =>
             plugin.DeepLinkPlugin?.Promotion?.shouldRender({
               promotion,
@@ -186,17 +186,17 @@ export const Promotions = ({ argocdShard }: { argocdShard?: ArgoCDShard }) => {
           )
           .map((plugin) => plugin.DeepLinkPlugin?.Promotion?.render);
 
-        if (UiPlugins?.length > 0) {
+        if (filteredUiPlugins?.length > 0) {
           return (
             <UiPluginHoles.DeepLinks.Promotion className='w-fit'>
-              {UiPlugins.map(
+              {filteredUiPlugins.map(
                 (ApplyPlugin, idx) =>
                   ApplyPlugin && (
                     <ApplyPlugin
                       key={idx}
                       promotion={promotion}
-                      unstable_argocdShardUrl={argocdShard?.url}
                       isLatestPromotion={promotionIndex === 0}
+                      unstable_argocdShardUrl={argocdShard?.url}
                     />
                   )
               )}
