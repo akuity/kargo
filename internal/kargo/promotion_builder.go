@@ -15,12 +15,12 @@ import (
 )
 
 const (
+	// PromotionAliasSeparator is the separator used in the Promotion step alias
+	// to separate the task alias from the step alias.
+	PromotionAliasSeparator = "::"
+
 	// nameSeparator is the separator used in the Promotion name.
 	nameSeparator = "."
-
-	// aliasSeparator is the separator used in the Promotion step alias
-	// to separate the task alias from the step alias.
-	aliasSeparator = "::"
 
 	// ulidLength is the length of the ULID string.
 	ulidLength = ulid.EncodedSize
@@ -217,7 +217,7 @@ func generatePromotionName(stageName, freight string) string {
 // generatePromotionTaskStepAlias generates an alias for a PromotionTask step
 // by combining the task alias and the step alias.
 func generatePromotionTaskStepAlias(taskAlias, stepAlias string) string {
-	return fmt.Sprintf("%s%s%s", taskAlias, aliasSeparator, stepAlias)
+	return fmt.Sprintf("%s%s%s", taskAlias, PromotionAliasSeparator, stepAlias)
 }
 
 // promotionTaskVarsToStepVars validates the presence of the PromotionTask

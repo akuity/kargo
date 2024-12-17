@@ -15,6 +15,7 @@ import (
 	"github.com/akuity/kargo/internal/controller/freight"
 	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/expressions"
+	"github.com/akuity/kargo/internal/kargo"
 )
 
 // PromotionStepRunner is an interface for components that implement the logic for
@@ -472,7 +473,7 @@ func getChartFunc(
 // The namespace part is the part before the first "::" separator. Typically,
 // this is used for steps inflated from a task.
 func getAliasNamespace(alias string) string {
-	parts := strings.Split(alias, "::")
+	parts := strings.Split(alias, kargo.PromotionAliasSeparator)
 	if len(parts) != 2 {
 		return ""
 	}
