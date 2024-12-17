@@ -169,7 +169,7 @@ func RunningPromotionsByArgoCDApplications(
 				Promotion: promo.Name,
 				Vars:      promo.Spec.Vars,
 			}
-			vars, err := dirStep.GetVars(promoCtx)
+			vars, err := dirStep.GetVars(promoCtx, promoCtx.State)
 			if err != nil {
 				logger.Error(
 					err,
