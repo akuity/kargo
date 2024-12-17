@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -115,7 +116,7 @@ func (h *httpRequester) runPromotionStep(
 		}, nil
 	case failure:
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseFailed},
-			fmt.Errorf("HTTP response met failure criteria")
+			&terminalError{err: errors.New("HTTP response met failure criteria")}
 	default:
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseRunning}, nil
 	}
