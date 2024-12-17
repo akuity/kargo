@@ -238,7 +238,7 @@ func (in *ClusterPromotionTaskList) DeepCopyInto(out *ClusterPromotionTaskList) 
 	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
-		*out = make([]ClusterPromotionTaskList, len(*in))
+		*out = make([]ClusterPromotionTask, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
@@ -1154,7 +1154,7 @@ func (in *PromotionTaskList) DeepCopyInto(out *PromotionTaskList) {
 	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
-		*out = make([]PromotionTaskList, len(*in))
+		*out = make([]PromotionTask, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}

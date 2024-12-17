@@ -195,7 +195,7 @@ message ClusterPromotionTask {
 message ClusterPromotionTaskList {
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
 
-  repeated ClusterPromotionTaskList items = 2;
+  repeated ClusterPromotionTask items = 2;
 }
 
 // CurrentStage reflects a Stage's current use of Freight.
@@ -1042,7 +1042,7 @@ message PromotionTask {
 message PromotionTaskList {
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
 
-  repeated PromotionTaskList items = 2;
+  repeated PromotionTask items = 2;
 }
 
 // PromotionTaskReference describes a reference to a PromotionTask.
