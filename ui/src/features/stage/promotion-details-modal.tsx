@@ -29,7 +29,7 @@ import { canAbortPromotion } from '@ui/features/stage/utils/promotion';
 import { abortPromotion } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 import { Promotion, PromotionStep } from '@ui/gen/v1alpha1/generated_pb';
 import uiPlugins from '@ui/plugins';
-import { UiPluginHoles } from '@ui/plugins/ui-plugin-hole/ui-plugin-holes';
+import { UiPluginHoles } from '@ui/plugins/atoms/ui-plugin-hole/ui-plugin-holes';
 import { decodeRawData } from '@ui/utils/decode-raw-data';
 
 const Step = ({
@@ -105,7 +105,7 @@ const Step = ({
     output: output ? JSON.stringify(output || {}, null, ' ') : ''
   };
 
-  const UiPlugins = uiPlugins
+  const filteredUiPlugins = uiPlugins
     .filter((plugin) => plugin.DeepLinkPlugin?.PromotionStep?.shouldRender({ step, result }))
     .map((plugin) => plugin.DeepLinkPlugin?.PromotionStep?.render);
 
@@ -128,9 +128,9 @@ const Step = ({
         </Flex>
         <Flex className={'w-full'} align='center'>
           <span className='font-semibold text-base '>{meta.spec.identifier}</span>
-          {UiPlugins.length > 0 && (
+          {filteredUiPlugins.length > 0 && (
             <UiPluginHoles.DeepLinks.PromotionStep className='ml-2'>
-              {UiPlugins.map(
+              {filteredUiPlugins.map(
                 (ApplyPlugin, idx) =>
                   ApplyPlugin && (
                     <ApplyPlugin
