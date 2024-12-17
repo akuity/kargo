@@ -7,7 +7,7 @@ import { transport, transportWithAuth } from '@ui/config/transport';
 import { PromotionDirectivesRegistryContextProvider } from '@ui/features/promotion-directives/registry/context/registry-context-provider';
 import { getPublicConfig } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 
-import { ModalContextProvider } from '../common/modal/modal-context';
+import { ModalContextProvider } from '../common/modal/modal-context-provider';
 
 import { useAuthContext } from './context/use-auth-context';
 
