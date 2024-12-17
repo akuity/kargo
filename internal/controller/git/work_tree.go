@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -57,6 +59,9 @@ type WorkTree interface {
 	GetDiffPathsForCommitID(commitID string) ([]string, error)
 	// IsAncestor returns true if parent branch is an ancestor of child
 	IsAncestor(parent string, child string) (bool, error)
+	// IsRebasing returns a bool indicating whether the working tree is currently
+	// in the middle of a rebase operation.
+	IsRebasing() (bool, error)
 	// LastCommitID returns the ID (sha) of the most recent commit to the current
 	// branch.
 	LastCommitID() (string, error)
@@ -316,6 +321,31 @@ func (w *workTree) IsAncestor(parent string, child string) (bool, error) {
 	return false, fmt.Errorf("error testing ancestry of branches %q, %q: %w", parent, child, err)
 }
 
+func (w *workTree) IsRebasing() (bool, error) {
+	res, err := libExec.Exec(w.buildGitCommand("rev-parse", "--git-path", "rebase-merge"))
+	if err != nil {
+		return false, fmt.Errorf("error determining rebase status: %w", err)
+	}
+	rebaseMerge := filepath.Join(w.dir, strings.TrimSpace(string(res)))
+	if _, err = os.Stat(rebaseMerge); !os.IsNotExist(err) {
+		if err != nil {
+			return false, err
+		}
+		return true, nil
+	}
+	if res, err = libExec.Exec(w.buildGitCommand("rev-parse", "--git-path", "rebase-apply")); err != nil {
+		return false, fmt.Errorf("error determining rebase status: %w", err)
+	}
+	rebaseApply := filepath.Join(w.dir, strings.TrimSpace(string(res)))
+	if _, err = os.Stat(rebaseApply); !os.IsNotExist(err) {
+		if err != nil {
+			return false, err
+		}
+		return true, nil
+	}
+	return false, nil
+}
+
 func (w *workTree) LastCommitID() (string, error) {
 	shaBytes, err := libExec.Exec(w.buildGitCommand("rev-parse", "HEAD"))
 	if err != nil {
@@ -481,22 +511,56 @@ type PushOptions struct {
 	// TargetBranch specifies the branch to push to. If empty, the current branch
 	// will be pushed to a remote branch by the same name.
 	TargetBranch string
+	// PullRebase indicates whether to pull and rebase before pushing. This can
+	// be useful when pushing changes to a remote branch that has been updated
+	// in the time since the local branch was last pulled.
+	PullRebase bool
 }
+
+// https://regex101.com/r/aNYjHP/1
+//
+// nolint: lll
+var nonFastForwardRegex = regexp.MustCompile(`(?m)^\s*!\s+\[(?:remote )?rejected].+\((?:non-fast-forward|fetch first|cannot lock ref.*)\)\s*$`)
 
 func (w *workTree) Push(opts *PushOptions) error {
 	if opts == nil {
 		opts = &PushOptions{}
 	}
-	args := []string{"push", "origin"}
-	if opts.TargetBranch != "" {
-		args = append(args, fmt.Sprintf("HEAD:%s", opts.TargetBranch))
-	} else {
-		args = append(args, "HEAD")
+	targetBranch := opts.TargetBranch
+	if targetBranch == "" {
+		var err error
+		if targetBranch, err = w.CurrentBranch(); err != nil {
+			return err
+		}
 	}
+	if opts.PullRebase {
+		exists, err := w.RemoteBranchExists(targetBranch)
+		if err != nil {
+			return err
+		}
+		// We only want to pull and rebase if the remote branch exists.
+		if exists {
+			if _, err = libExec.Exec(w.buildGitCommand("pull", "--rebase", "origin", targetBranch)); err != nil {
+				// The error we're most concerned with is a merge conflict requiring
+				// manual resolution, because it's an error that no amount of retries
+				// will fix. If we find that a rebase is in progress, this is what
+				// has happened.
+				if isRebasing, isRebasingErr := w.IsRebasing(); isRebasingErr == nil && isRebasing {
+					return ErrMergeConflict
+				}
+				// If we get to here, the error isn't a merge conflict.
+				return fmt.Errorf("error pulling and rebasing branch: %w", err)
+			}
+		}
+	}
+	args := []string{"push", "origin", fmt.Sprintf("HEAD:%s", targetBranch)}
 	if opts.Force {
 		args = append(args, "--force")
 	}
-	if _, err := libExec.Exec(w.buildGitCommand(args...)); err != nil {
+	if res, err := libExec.Exec(w.buildGitCommand(args...)); err != nil {
+		if nonFastForwardRegex.MatchString(string(res)) {
+			return fmt.Errorf("error pushing branch: %w", ErrNonFastForward)
+		}
 		return fmt.Errorf("error pushing branch: %w", err)
 	}
 	return nil
