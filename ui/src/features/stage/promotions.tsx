@@ -175,7 +175,7 @@ export const Promotions = () => {
       )
     },
     {
-      title: 'Extra',
+      title: '',
       render: (_, promotion) => {
         const filteredUiPlugins = uiPlugins
           .filter((plugin) => plugin.DeepLinkPlugin?.Promotion?.shouldRender({ promotion }))
