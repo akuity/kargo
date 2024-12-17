@@ -203,6 +203,7 @@ func Test_gitPusher_runPromotionStep(t *testing.T) {
 	r := newGitPusher()
 	runner, ok := r.(*gitPushPusher)
 	require.True(t, ok)
+	require.NotNil(t, runner.branchMus)
 
 	res, err := runner.runPromotionStep(
 		context.Background(),
