@@ -143,37 +143,35 @@ func (s *PromotionStep) GetConfig(
 		return nil, nil
 	}
 
-	vars, err := s.GetVars(promoCtx)
+	vars, err := s.GetVars(promoCtx, state)
 	if err != nil {
 		return nil, err
 	}
 
-	// If the alias has a namespace, filter the state to only include keys that
-	// belong to that namespace.
-	outputs := state
-	if namespace := getAliasNamespace(s.Alias); namespace != "" {
-		outputs = make(State)
-		for k, v := range state.DeepCopy() {
-			if getAliasNamespace(k) == namespace {
-				// Strip the namespace from the key before adding it to the
-				// filtered outputs.
-				outputs[k[len(namespace)+2:]] = v
-			}
+	env := map[string]any{
+		"ctx": map[string]any{
+			"project":   promoCtx.Project,
+			"promotion": promoCtx.Promotion,
+			"stage":     promoCtx.Stage,
+		},
+		"vars":    vars,
+		"secrets": promoCtx.Secrets,
+		"outputs": state,
+	}
+
+	// Ensure that if the PromotionStep originated from a task, the task outputs
+	// are available to the PromotionStep. This allows inflated steps to access
+	// the outputs of the other steps in the task without needing to know the
+	// alias (namespace) of the task.
+	if taskOutput := s.getTaskOutputs(state); taskOutput != nil {
+		env["task"] = map[string]any{
+			"outputs": taskOutput,
 		}
 	}
 
 	evaledCfgJSON, err := expressions.EvaluateJSONTemplate(
 		s.Config,
-		map[string]any{
-			"ctx": map[string]any{
-				"project":   promoCtx.Project,
-				"promotion": promoCtx.Promotion,
-				"stage":     promoCtx.Stage,
-			},
-			"vars":    vars,
-			"secrets": promoCtx.Secrets,
-			"outputs": outputs,
-		},
+		env,
 		expr.Function("warehouse", warehouseFunc, new(func(string) kargoapi.FreightOrigin)),
 		expr.Function(
 			"commitFrom",
@@ -208,7 +206,10 @@ func (s *PromotionStep) GetConfig(
 
 // GetVars returns the variables defined in the PromotionStep. The variables are
 // evaluated in the context of the provided PromotionContext.
-func (s *PromotionStep) GetVars(promoCtx PromotionContext) (map[string]any, error) {
+func (s *PromotionStep) GetVars(
+	promoCtx PromotionContext,
+	state State,
+) (map[string]any, error) {
 	var rawVars = make(map[string]string, len(promoCtx.Vars))
 	for _, v := range promoCtx.Vars {
 		rawVars[v.Name] = v.Value
@@ -217,25 +218,49 @@ func (s *PromotionStep) GetVars(promoCtx PromotionContext) (map[string]any, erro
 		rawVars[v.Name] = v.Value
 	}
 
+	taskOutput := s.getTaskOutputs(state)
+
 	vars := make(map[string]any, len(rawVars))
 	for k, v := range rawVars {
-		newVar, err := expressions.EvaluateTemplate(
-			v,
-			map[string]any{
-				"ctx": map[string]any{
-					"project":   promoCtx.Project,
-					"promotion": promoCtx.Promotion,
-					"stage":     promoCtx.Stage,
-				},
-				"vars": vars,
+		env := map[string]any{
+			"ctx": map[string]any{
+				"project":   promoCtx.Project,
+				"promotion": promoCtx.Promotion,
+				"stage":     promoCtx.Stage,
 			},
-		)
+			"vars":    vars,
+			"outputs": state,
+		}
+
+		if taskOutput != nil {
+			env["task"] = map[string]any{
+				"outputs": taskOutput,
+			}
+		}
+
+		newVar, err := expressions.EvaluateTemplate(v, env)
 		if err != nil {
 			return nil, fmt.Errorf("error pre-processing promotion variable %q: %w", k, err)
 		}
 		vars[k] = newVar
 	}
 	return vars, nil
+}
+
+// getTaskOutputs returns the outputs of a task that are relevant to the current
+// step. This is useful when a step is inflated from a task and needs to access
+// the outputs of that task.
+func (s *PromotionStep) getTaskOutputs(state State) State {
+	if namespace := getAliasNamespace(s.Alias); namespace != "" {
+		taskOutputs := make(State)
+		for k, v := range state.DeepCopy() {
+			if getAliasNamespace(k) == namespace {
+				taskOutputs[k[len(namespace)+2:]] = v
+			}
+		}
+		return taskOutputs
+	}
+	return nil
 }
 
 // PromotionResult is the result of a user-defined promotion process executed by
