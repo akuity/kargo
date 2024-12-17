@@ -34,12 +34,12 @@ export const labelForKey = (s: string) =>
     .replace(/^./, (str) => str.toUpperCase())
     .replace('Url', 'URL');
 
-export const constructDefaults = (init?: Secret) => {
+export const constructDefaults = (init?: Secret, type?: string) => {
   if (!init) {
     return {
       name: '',
       description: '',
-      type: 'git',
+      type: type || 'git',
       repoUrl: '',
       repoUrlIsRegex: false,
       username: '',
@@ -51,7 +51,7 @@ export const constructDefaults = (init?: Secret) => {
   return {
     name: init?.metadata?.name || '',
     description: init?.metadata?.annotations[DESCRIPTION_ANNOTATION_KEY],
-    type: init?.metadata?.labels[CredentialTypeLabelKey] || 'git',
+    type: init?.metadata?.labels[CredentialTypeLabelKey] || type || 'git',
     repoUrl: init?.stringData[CredentialsDataKey.RepoUrl],
     repoUrlIsRegex: init?.stringData[CredentialsDataKey.RepoUrlIsRegex] === 'true',
     username: init?.stringData[CredentialsDataKey.Username],

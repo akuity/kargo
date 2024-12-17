@@ -1,9 +1,9 @@
 import { useQuery } from '@connectrpc/connect-query';
 import {
+  faAsterisk,
   faChartBar,
   faClockRotateLeft,
   faDiagramProject,
-  faIdBadge,
   faPeopleGroup
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -52,8 +52,8 @@ export const Project = ({
           ? {
               credentials: {
                 path: paths.projectCredentials,
-                label: 'Credentials',
-                icon: faIdBadge
+                label: 'Secrets',
+                icon: faAsterisk
               }
             }
           : {}),

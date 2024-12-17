@@ -1,5 +1,5 @@
 import { useMutation } from '@connectrpc/connect-query';
-import { faCode, faExternalLink, faIdBadge } from '@fortawesome/free-solid-svg-icons';
+import { faAsterisk, faCode, faExternalLink } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Input, Modal, Segmented } from 'antd';
@@ -70,11 +70,12 @@ type Props = ModalComponentProps & {
   onSuccess: () => void;
   init?: Secret;
   editing?: boolean;
+  type: 'repo' | 'generic';
 };
 
 export const CreateCredentialsModal = ({ project, onSuccess, editing, init, ...props }: Props) => {
   const { control, handleSubmit, watch } = useForm({
-    defaultValues: constructDefaults(init),
+    defaultValues: { ...constructDefaults(init, props.type === 'generic' ? props.type : 'git') },
     resolver: zodResolver(createFormSchema(editing))
   });
 
@@ -94,7 +95,7 @@ export const CreateCredentialsModal = ({ project, onSuccess, editing, init, ...p
 
   const repoUrlIsRegex = watch('repoUrlIsRegex');
 
-  const credentialType = watch('type') as CredentialsType;
+  const credentialType = (props.type === 'repo' ? watch('type') : 'generic') as CredentialsType;
 
   return (
     <Modal
@@ -116,35 +117,36 @@ export const CreateCredentialsModal = ({ project, onSuccess, editing, init, ...p
       })}
       title={
         <>
-          <FontAwesomeIcon icon={faIdBadge} className='mr-2' />
-          {editing ? 'Edit' : 'Create'} Credentials
+          <FontAwesomeIcon icon={faAsterisk} className='mr-2' />
+          {editing ? 'Edit' : 'Create'} Secrets
         </>
       }
       {...props}
       width='612px'
     >
-      <div className='mb-4'>
-        <label className='block mb-2'>Type</label>
-        <Controller
-          name='type'
-          control={control}
-          render={({ field }) => (
-            <Segmented
-              className='w-full'
-              block
-              {...field}
-              options={[
-                { label: typeLabel('git'), value: 'git' },
-                { label: typeLabel('helm'), value: 'helm' },
-                { label: typeLabel('image'), value: 'image' },
-                { label: typeLabel('generic'), value: 'generic' }
-              ]}
-              onChange={(newValue) => field.onChange(newValue)}
-              value={field.value}
-            />
-          )}
-        />
-      </div>
+      {props.type === 'repo' && (
+        <div className='mb-4'>
+          <label className='block mb-2'>Type</label>
+          <Controller
+            name='type'
+            control={control}
+            render={({ field }) => (
+              <Segmented
+                className='w-full'
+                block
+                {...field}
+                options={[
+                  { label: typeLabel('git'), value: 'git' },
+                  { label: typeLabel('helm'), value: 'helm' },
+                  { label: typeLabel('image'), value: 'image' }
+                ]}
+                onChange={(newValue) => field.onChange(newValue)}
+                value={field.value}
+              />
+            )}
+          />
+        </div>
+      )}
       {Object.keys(credentialType === 'generic' ? genericCredentialPlaceholders : placeholders).map(
         (key) => (
           <div key={key}>

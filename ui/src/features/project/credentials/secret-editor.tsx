@@ -1,7 +1,8 @@
-import { faTrash } from '@fortawesome/free-solid-svg-icons';
+import { faPencil, faTrash } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Button, Flex, Input } from 'antd';
+import { Button, Flex, Input, Tooltip } from 'antd';
 import TextArea from 'antd/es/input/TextArea';
+import { useEffect, useState } from 'react';
 
 type SecretEditorProps = {
   secret: Record<string, string>;
@@ -10,6 +11,14 @@ type SecretEditorProps = {
 
 export const SecretEditor = (props: SecretEditorProps) => {
   const secretEntries = Object.entries(props.secret);
+
+  const [lockedSecrets, setLockedSecrets] = useState<string[]>([]);
+
+  // if first render of this component has redacted secrets then it is edit mode
+  // lock the existing secrets
+  useEffect(() => {
+    setLockedSecrets(Object.keys(props.secret || {}));
+  }, []);
 
   return (
     <>
@@ -31,17 +40,38 @@ export const SecretEditor = (props: SecretEditorProps) => {
             }}
             placeholder='key'
           />
-          {/* MULTI-LINE SECRET */}
-          <TextArea
-            value={value as string}
-            placeholder='secret'
-            rows={1}
-            onChange={(e) => {
-              const newValue = e.target.value;
+          {lockedSecrets.includes(key) && (
+            <>
+              <Input type='password' disabled value='redacted' />
+              <Tooltip title='Edit this secret'>
+                <Button
+                  type='text'
+                  icon={
+                    <FontAwesomeIcon
+                      icon={faPencil}
+                      className='p-5'
+                      onClick={() => setLockedSecrets(lockedSecrets.filter((s) => s !== key))}
+                    />
+                  }
+                />
+              </Tooltip>
+            </>
+          )}
 
-              props.onChange({ ...(props.secret || {}), [key]: newValue });
-            }}
-          />
+          {/* MULTI-LINE SECRET */}
+          {!lockedSecrets.includes(key) && (
+            <TextArea
+              value={value as string}
+              placeholder='secret'
+              rows={1}
+              onChange={(e) => {
+                const newValue = e.target.value;
+
+                props.onChange({ ...(props.secret || {}), [key]: newValue });
+              }}
+            />
+          )}
+
           <Button
             icon={<FontAwesomeIcon icon={faTrash} className='p-5' />}
             type='text'

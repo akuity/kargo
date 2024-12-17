@@ -54,20 +54,32 @@ export const CredentialsList = () => {
 
   return (
     <div className='p-4'>
-      <Button
-        type='primary'
-        className='mb-4 text-xs font-semibold'
-        icon={<FontAwesomeIcon icon={faPlus} />}
-        onClick={() => {
-          showCreate((p) => (
-            <CreateCredentialsModal project={name || ''} onSuccess={refetch} {...p} />
-          ));
-        }}
-      >
-        ADD CREDENTIALS
-      </Button>
       <Flex gap={16}>
-        <Card title='Repo Credentials' className='w-1/2'>
+        <Card
+          title={
+            <Flex align='center'>
+              Repo Credentials
+              <Button
+                type='primary'
+                className='ml-auto text-xs font-semibold'
+                icon={<FontAwesomeIcon icon={faPlus} />}
+                onClick={() => {
+                  showCreate((p) => (
+                    <CreateCredentialsModal
+                      type='repo'
+                      project={name || ''}
+                      onSuccess={refetch}
+                      {...p}
+                    />
+                  ));
+                }}
+              >
+                ADD CREDENTIALS
+              </Button>
+            </Flex>
+          }
+          className='w-1/2'
+        >
           <Table
             key={specificCredentials.length}
             dataSource={specificCredentials}
@@ -128,6 +140,7 @@ export const CredentialsList = () => {
                       onClick={() => {
                         showCreate((p) => (
                           <CreateCredentialsModal
+                            type='repo'
                             project={name || ''}
                             onSuccess={refetch}
                             editing
@@ -175,10 +188,27 @@ export const CredentialsList = () => {
 
         <Card
           title={
-            <>
-              <FontAwesomeIcon icon={faDharmachakra} className='mr-2' />
+            <Flex align='center'>
+              <FontAwesomeIcon className='mr-2' icon={faDharmachakra} />
               Generic Kubernetes Secrets
-            </>
+              <Button
+                type='primary'
+                className='ml-auto text-xs font-semibold'
+                icon={<FontAwesomeIcon icon={faPlus} />}
+                onClick={() => {
+                  showCreate((p) => (
+                    <CreateCredentialsModal
+                      type='generic'
+                      project={name || ''}
+                      onSuccess={refetch}
+                      {...p}
+                    />
+                  ));
+                }}
+              >
+                ADD SECRETS
+              </Button>
+            </Flex>
           }
           className='w-1/2'
         >
@@ -219,6 +249,7 @@ export const CredentialsList = () => {
                       onClick={() => {
                         showCreate((p) => (
                           <CreateCredentialsModal
+                            type='generic'
                             project={name || ''}
                             onSuccess={refetch}
                             editing
