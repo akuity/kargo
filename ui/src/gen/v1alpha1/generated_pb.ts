@@ -708,9 +708,9 @@ export class ClusterPromotionTaskList extends Message<ClusterPromotionTaskList> 
   metadata?: ListMeta;
 
   /**
-   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.ClusterPromotionTaskList items = 2;
+   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.ClusterPromotionTask items = 2;
    */
-  items: ClusterPromotionTaskList[] = [];
+  items: ClusterPromotionTask[] = [];
 
   constructor(data?: PartialMessage<ClusterPromotionTaskList>) {
     super();
@@ -721,7 +721,7 @@ export class ClusterPromotionTaskList extends Message<ClusterPromotionTaskList> 
   static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.ClusterPromotionTaskList";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 1, name: "metadata", kind: "message", T: ListMeta, opt: true },
-    { no: 2, name: "items", kind: "message", T: ClusterPromotionTaskList, repeated: true },
+    { no: 2, name: "items", kind: "message", T: ClusterPromotionTask, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ClusterPromotionTaskList {
@@ -3152,9 +3152,9 @@ export class PromotionTaskList extends Message<PromotionTaskList> {
   metadata?: ListMeta;
 
   /**
-   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.PromotionTaskList items = 2;
+   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.PromotionTask items = 2;
    */
-  items: PromotionTaskList[] = [];
+  items: PromotionTask[] = [];
 
   constructor(data?: PartialMessage<PromotionTaskList>) {
     super();
@@ -3165,7 +3165,7 @@ export class PromotionTaskList extends Message<PromotionTaskList> {
   static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.PromotionTaskList";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 1, name: "metadata", kind: "message", T: ListMeta, opt: true },
-    { no: 2, name: "items", kind: "message", T: PromotionTaskList, repeated: true },
+    { no: 2, name: "items", kind: "message", T: PromotionTask, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PromotionTaskList {
