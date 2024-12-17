@@ -756,8 +756,8 @@ export class JobSpec extends Message<JobSpec> {
    * characters as defined by RFC 3986. The value cannot exceed 63 characters.
    * This field is immutable.
    *
-   * This field is alpha-level. The job controller accepts setting the field
-   * when the feature gate JobManagedBy is enabled (disabled by default).
+   * This field is beta-level. The job controller accepts setting the field
+   * when the feature gate JobManagedBy is enabled (enabled by default).
    * +optional
    *
    * @generated from field: optional string managedBy = 15;
