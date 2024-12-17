@@ -175,7 +175,7 @@ export const Promotions = ({ argocdShard }: { argocdShard?: ArgoCDShard }) => {
       )
     },
     {
-      title: 'Extra',
+      title: '',
       render: (_, promotion, promotionIndex) => {
         const filteredUiPlugins = uiPlugins
           .filter((plugin) =>

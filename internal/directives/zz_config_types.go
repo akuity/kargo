@@ -211,6 +211,12 @@ type GitPushConfig struct {
 	// with 'targetBranch'. If neither of these is provided, the target branch will be the
 	// currently checked out branch.
 	GenerateTargetBranch bool `json:"generateTargetBranch,omitempty"`
+	// This step implements its own internal retry logic for cases where a push is determined to
+	// have failed due to the remote branch having commits that that are not present locally.
+	// Each attempt, including the first, rebases prior to pushing. This field configures the
+	// maximum number of attempts to push to the remote repository. If not specified, the
+	// default is 50.
+	MaxAttempts *int64 `json:"maxAttempts,omitempty"`
 	// The path to a working directory of a local repository.
 	Path string `json:"path"`
 	// The target branch to push to. Mutually exclusive with 'generateTargetBranch=true'. If
