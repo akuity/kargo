@@ -104,6 +104,14 @@ func (j *jsonUpdater) updateFile(workDir string, path string, changes map[string
 	}
 
 	for key, value := range changes {
+		switch value.(type) {
+		case int, int8, int16, int32, int64,
+			uint, uint8, uint16, uint32, uint64,
+			float32, float64,
+			string, bool:
+		default:
+			return fmt.Errorf("value for key %q is not a scalar type", key)
+		}
 		updatedContent, setErr := sjson.Set(string(fileContent), key, value)
 		if setErr != nil {
 			return fmt.Errorf("error setting key %q in JSON file: %w", key, setErr)
@@ -137,10 +145,6 @@ func (j *jsonUpdater) generateCommitMessage(path string, updates map[string]any)
 		switch v := value.(type) {
 		case string:
 			_, _ = commitMsg.WriteString(fmt.Sprintf("\n- %s: %q", key, v))
-		case bool:
-			_, _ = commitMsg.WriteString(fmt.Sprintf("\n- %s: \"%v\"", key, v))
-		case int, float64:
-			_, _ = commitMsg.WriteString(fmt.Sprintf("\n- %s: %v", key, v))
 		default:
 			_, _ = commitMsg.WriteString(fmt.Sprintf("\n- %s: %v", key, v))
 		}

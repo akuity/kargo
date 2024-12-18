@@ -163,6 +163,39 @@ func Test_jsonUpdater_updateValuesFile(t *testing.T) {
 				assert.JSONEq(t, `{"key": "value"}`, string(content))
 			},
 		},
+		{
+			name: "preserve formatting after update",
+			valuesContent: `{
+				"key": "value",
+				"nested": {
+					"key1": "value1",
+					"key2": "value2"
+				}
+			}`,
+			changes: map[string]any{"key": "newvalue"},
+			assertions: func(t *testing.T, valuesFilePath string, err error) {
+				require.NoError(t, err)
+
+				require.FileExists(t, valuesFilePath)
+				content, err := os.ReadFile(valuesFilePath)
+				require.NoError(t, err)
+
+				updatedContent := `{
+					"key": "newvalue",
+					"nested": {
+						"key1": "value1",
+						"key2": "value2"
+					}
+				}`
+
+				assert.JSONEq(t, updatedContent, string(content))
+
+				var result map[string]any
+				err = json.Unmarshal(content, &result)
+				require.NoError(t, err)
+				assert.Equal(t, "newvalue", result["key"])
+			},
+		},
 	}
 
 	runner := &jsonUpdater{}
@@ -271,7 +304,7 @@ func Test_jsonUpdater_runPromotionStep(t *testing.T) {
 					Output: map[string]any{
 						"commitMessage": "Updated config.json\n\n" +
 							"- app.version: \"1.0.1\"\n" +
-							"- features.newFeature: \"true\"\n" +
+							"- features.newFeature: true\n" +
 							"- threshold: 100",
 					},
 				}, result)
