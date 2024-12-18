@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/url"
-	"slices"
 	"strings"
 
 	"github.com/akuity/kargo/internal/git"
@@ -19,11 +18,14 @@ const ProviderName = "azure"
 
 // Azure DevOps URLs can be of two different forms:
 //
-//   - https://dev.azure.com/org/project/_git/repo
-//   - https://org.visualstudio.com/project/_git/repo
+//   - https://dev.azure.com/org/<project>/_git/<repo>
+//   - https://<org>.visualstudio.com/<project>/_git/<repo>
 //
 // We support both forms.
-var providerSuffixes = []string{"dev.azure.com", "visualstudio.com"}
+const (
+	legacyHostSuffix = "visualstudio.com"
+	modernHostSuffix = "dev.azure.com"
+)
 
 var registration = gitprovider.Registration{
 	Predicate: func(repoURL string) bool {
@@ -31,9 +33,7 @@ var registration = gitprovider.Registration{
 		if err != nil {
 			return false
 		}
-		return slices.ContainsFunc(providerSuffixes, func(suffix string) bool {
-			return strings.HasSuffix(u.Host, suffix)
-		})
+		return u.Host == modernHostSuffix || strings.HasSuffix(u.Host, legacyHostSuffix)
 	},
 	NewProvider: func(
 		repoURL string,
@@ -60,13 +60,13 @@ func NewProvider(
 	opts *gitprovider.Options,
 ) (gitprovider.Interface, error) {
 	if opts == nil || opts.Token == "" {
-		return nil, fmt.Errorf("options are required for Azure DevOps provider")
+		return nil, fmt.Errorf("token is required for Azure DevOps provider")
 	}
 	org, project, repo, err := parseRepoURL(repoURL)
 	if err != nil {
-		return nil, fmt.Errorf("error creating Azure DevOps provider: %w", err)
+		return nil, err
 	}
-	organizationUrl := fmt.Sprintf("https://dev.azure.com/%s", org)
+	organizationUrl := fmt.Sprintf("https://%s/%s", modernHostSuffix, org)
 	connection := azuredevops.NewPatConnection(organizationUrl, opts.Token)
 
 	return &provider{
@@ -84,14 +84,14 @@ func (p *provider) CreatePullRequest(
 ) (*gitprovider.PullRequest, error) {
 	gitClient, err := adogit.NewClient(ctx, p.connection)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error creating Azure DevOps client: %w", err)
 	}
 	repository, err := gitClient.GetRepository(ctx, adogit.GetRepositoryArgs{
 		Project:      &p.project,
 		RepositoryId: &p.repo,
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error getting repository %q: %w", p.repo, err)
 	}
 	repoID := ptr.To(repository.Id.String())
 	sourceRefName := ptr.To(fmt.Sprintf("refs/heads/%s", opts.Head))
@@ -206,9 +206,9 @@ func parseRepoURL(repoURL string) (string, string, string, error) {
 	if err != nil {
 		return "", "", "", fmt.Errorf("error parsing Azure DevOps repository URL %q: %w", repoURL, err)
 	}
-	if u.Host == "dev.azure.com" {
+	if u.Host == modernHostSuffix {
 		return parseModernRepoURL(u)
-	} else if strings.HasSuffix(u.Host, ".visualstudio.com") {
+	} else if strings.HasSuffix(u.Host, legacyHostSuffix) {
 		return parseLegacyRepoURL(u)
 	}
 	return "", "", "", fmt.Errorf("unsupported host %q", u.Host)
