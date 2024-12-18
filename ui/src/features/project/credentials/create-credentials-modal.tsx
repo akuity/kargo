@@ -43,7 +43,7 @@ const createFormSchema = (editing?: boolean) =>
         ),
         description: z.string().optional(),
         type: zodValidators.requiredString,
-        data: z.record(z.string(), z.string())
+        data: z.array(z.array(z.string()))
       })
     )
     .refine((data) => ['git', 'helm', 'image', 'generic'].includes(data.type), {
@@ -105,14 +105,23 @@ export const CreateCredentialsModal = ({ project, onSuccess, editing, init, ...p
       }}
       okText={editing ? 'Update' : 'Create'}
       onOk={handleSubmit((values) => {
+        const data: Record<string, string> = {};
+
+        if (values?.data?.length > 0) {
+          for (const [k, v] of values.data) {
+            data[k] = v;
+          }
+        }
+
         if (editing) {
           return updateCredentialsMutation.mutate({
             ...values,
             project,
-            name: init?.metadata?.name || ''
+            name: init?.metadata?.name || '',
+            data
           });
         } else {
-          createCredentialsMutation.mutate({ ...values, project });
+          createCredentialsMutation.mutate({ ...values, project, data });
         }
       })}
       title={
@@ -203,10 +212,7 @@ export const CreateCredentialsModal = ({ project, onSuccess, editing, init, ...p
       {credentialType === 'generic' && (
         <FieldContainer control={control} name='data' label='Secrets'>
           {({ field }) => (
-            <SecretEditor
-              secret={field.value as Record<string, string>}
-              onChange={field.onChange}
-            />
+            <SecretEditor secret={field.value as [string, string][]} onChange={field.onChange} />
           )}
         </FieldContainer>
       )}

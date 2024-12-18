@@ -5,19 +5,19 @@ import TextArea from 'antd/es/input/TextArea';
 import { useEffect, useState } from 'react';
 
 type SecretEditorProps = {
-  secret: Record<string, string>;
-  onChange: (newSecret: Record<string, string>) => void;
+  secret: [string, string][];
+  onChange: (newSecret: [string, string][]) => void;
 };
 
 export const SecretEditor = (props: SecretEditorProps) => {
-  const secretEntries = Object.entries(props.secret);
+  const secretEntries = props.secret;
 
   const [lockedSecrets, setLockedSecrets] = useState<string[]>([]);
 
   // if first render of this component has redacted secrets then it is edit mode
   // lock the existing secrets
   useEffect(() => {
-    setLockedSecrets(Object.keys(props.secret || {}));
+    setLockedSecrets(props.secret.map((secret) => secret[0]));
   }, []);
 
   return (
@@ -30,13 +30,15 @@ export const SecretEditor = (props: SecretEditorProps) => {
             onChange={(e) => {
               const newKey = e.target.value;
 
-              const newSecretData: Record<string, string> = { ...(props.secret || {}) };
+              props.onChange(
+                secretEntries.map((entry, origIdx) => {
+                  if (idx === origIdx) {
+                    return [newKey, value];
+                  }
 
-              delete newSecretData[key];
-
-              newSecretData[newKey] = value as string;
-
-              props.onChange(newSecretData);
+                  return entry;
+                })
+              );
             }}
             placeholder='key'
           />
@@ -67,7 +69,15 @@ export const SecretEditor = (props: SecretEditorProps) => {
               onChange={(e) => {
                 const newValue = e.target.value;
 
-                props.onChange({ ...(props.secret || {}), [key]: newValue });
+                props.onChange(
+                  secretEntries.map((entry) => {
+                    if (key === entry[0]) {
+                      return [key, newValue];
+                    }
+
+                    return entry;
+                  })
+                );
               }}
             />
           )}
@@ -77,16 +87,12 @@ export const SecretEditor = (props: SecretEditorProps) => {
             type='text'
             danger
             onClick={() => {
-              const newSecretData: Record<string, string> = { ...props.secret };
-
-              delete newSecretData[key];
-
-              props.onChange(newSecretData);
+              props.onChange(secretEntries.filter((_, origIdx) => idx !== origIdx));
             }}
           />
         </Flex>
       ))}
-      <Button onClick={() => props.onChange({ ...props.secret, '': '' })} className='mt-2'>
+      <Button onClick={() => props.onChange(secretEntries.concat([['', '']]))} className='mt-2'>
         Add k8s Secret
       </Button>
     </>

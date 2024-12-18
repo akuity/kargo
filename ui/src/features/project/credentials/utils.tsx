@@ -44,7 +44,7 @@ export const constructDefaults = (init?: Secret, type?: string) => {
       repoUrlIsRegex: false,
       username: '',
       password: '',
-      data: {}
+      data: []
     };
   }
 
@@ -67,5 +67,5 @@ export const redactSecretStringData = (secret: Secret) => {
     data[key] = '';
   }
 
-  return data;
+  return Object.entries(data);
 };
