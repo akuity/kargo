@@ -106,7 +106,13 @@ const Step = ({
   };
 
   const filteredUiPlugins = uiPlugins
-    .filter((plugin) => plugin.DeepLinkPlugin?.PromotionStep?.shouldRender({ step, result }))
+    .filter((plugin) =>
+      plugin.DeepLinkPlugin?.PromotionStep?.shouldRender({
+        step,
+        result,
+        output: output as Record<string, unknown>
+      })
+    )
     .map((plugin) => plugin.DeepLinkPlugin?.PromotionStep?.render);
 
   return {
