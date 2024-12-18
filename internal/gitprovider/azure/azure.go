@@ -6,12 +6,12 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/akuity/kargo/internal/git"
-	"github.com/akuity/kargo/internal/gitprovider"
-	"k8s.io/utils/ptr"
-
 	"github.com/microsoft/azure-devops-go-api/azuredevops/v7"
 	adogit "github.com/microsoft/azure-devops-go-api/azuredevops/v7/git"
+	"k8s.io/utils/ptr"
+
+	"github.com/akuity/kargo/internal/git"
+	"github.com/akuity/kargo/internal/gitprovider"
 )
 
 const ProviderName = "azure"
@@ -214,7 +214,7 @@ func parseRepoURL(repoURL string) (string, string, string, error) {
 	return "", "", "", fmt.Errorf("unsupported host %q", u.Host)
 }
 
-// parseModernRepoURL parses a modern Azure DevOps repository URL. example: https://dev.azure.com/org/project/_git/repo
+// parseModernRepoURL parses a modern Azure DevOps repository URL.
 func parseModernRepoURL(u *url.URL) (string, string, string, error) {
 	parts := strings.Split(u.Path, "/")
 	if len(parts) != 5 {
@@ -223,7 +223,7 @@ func parseModernRepoURL(u *url.URL) (string, string, string, error) {
 	return parts[1], parts[2], parts[4], nil
 }
 
-// parseLegacyRepoURL parses a legacy Azure DevOps repository URL. example: https://org.visualstudio.com/project/_git/repo
+// parseLegacyRepoURL parses a legacy Azure DevOps repository URL.
 func parseLegacyRepoURL(u *url.URL) (string, string, string, error) {
 	organization := strings.TrimSuffix(u.Host, ".visualstudio.com")
 	parts := strings.Split(u.Path, "/")
