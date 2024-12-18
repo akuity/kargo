@@ -1,4 +1,4 @@
-import { Promotion, PromotionStep } from '@ui/gen/v1alpha1/generated_pb';
+import { HealthCheckStep, Promotion, PromotionStep } from '@ui/gen/v1alpha1/generated_pb';
 import { decodeRawData } from '@ui/utils/decode-raw-data';
 
 export const getPromotionStepConfig = (step: PromotionStep): Record<string, unknown> =>
@@ -17,6 +17,16 @@ export const getPromotionState = (promotion: Promotion): Record<string, Record<s
       result: {
         case: 'raw',
         value: promotion?.status?.state?.raw || new Uint8Array()
+      }
+    })
+  );
+
+export const getPromotionHealthCheckConfig = (hc: HealthCheckStep): Record<string, unknown> =>
+  JSON.parse(
+    decodeRawData({
+      result: {
+        case: 'raw',
+        value: hc?.config?.raw || new Uint8Array()
       }
     })
   );

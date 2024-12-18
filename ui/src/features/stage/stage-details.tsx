@@ -1,3 +1,4 @@
+import { useQuery } from '@connectrpc/connect-query';
 import { Divider, Drawer, Tabs, Typography } from 'antd';
 import moment from 'moment';
 import { useMemo, useState } from 'react';
@@ -5,6 +6,7 @@ import { generatePath, useNavigate, useParams } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
 import { HealthStatusIcon } from '@ui/features/common/health-status/health-status-icon';
+import { getConfig } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 import { Stage, VerificationInfo } from '@ui/gen/v1alpha1/generated_pb';
 
 import { Description } from '../common/description';
@@ -41,6 +43,11 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
       )
       .sort((a, b) => moment(b.startTime?.toDate()).diff(moment(a.startTime?.toDate())));
   }, [stage]);
+
+  const { data: config } = useQuery(getConfig);
+
+  const shardKey = stage?.metadata?.labels['kargo.akuity.io/shard'] || '';
+  const argocdShard = config?.argocdShards?.[shardKey];
 
   return (
     <Drawer open={!!stageName} onClose={onClose} width={'80%'} closable={false}>
@@ -79,7 +86,7 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
                 {
                   key: '1',
                   label: 'Promotions',
-                  children: <Promotions />
+                  children: <Promotions argocdShard={argocdShard} />
                 },
                 {
                   key: '2',
