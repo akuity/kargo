@@ -28,16 +28,18 @@ import { Runner } from '@ui/features/promotion-directives/registry/types';
 import { canAbortPromotion } from '@ui/features/stage/utils/promotion';
 import { abortPromotion } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 import { Promotion, PromotionStep } from '@ui/gen/v1alpha1/generated_pb';
+import uiPlugins from '@ui/plugins';
+import { UiPluginHoles } from '@ui/plugins/atoms/ui-plugin-hole/ui-plugin-holes';
 import { decodeRawData } from '@ui/utils/decode-raw-data';
 
 const Step = ({
   step,
   result,
-  logs
+  output
 }: {
   step: PromotionStep;
   result: PromotionDirectiveStepStatus;
-  logs?: object;
+  output?: object;
 }) => {
   const [showDetails, setShowDetails] = useState(false);
 
@@ -75,7 +77,7 @@ const Step = ({
 
   const opts: SegmentedOptions<string> = [];
 
-  if (logs) {
+  if (output) {
     opts.push({
       label: 'Output',
       value: 'output',
@@ -100,8 +102,18 @@ const Step = ({
 
   const yamlView = {
     config: meta?.config,
-    output: logs ? JSON.stringify(logs || {}, null, ' ') : ''
+    output: output ? JSON.stringify(output || {}, null, ' ') : ''
   };
+
+  const filteredUiPlugins = uiPlugins
+    .filter((plugin) =>
+      plugin.DeepLinkPlugin?.PromotionStep?.shouldRender({
+        step,
+        result,
+        output: output as Record<string, unknown>
+      })
+    )
+    .map((plugin) => plugin.DeepLinkPlugin?.PromotionStep?.render);
 
   return {
     className: classNames('', {
@@ -120,23 +132,28 @@ const Step = ({
           {success && <FontAwesomeIcon icon={faCheck} className='text-green-500' />}
           {failed && <FontAwesomeIcon icon={faTimes} className='text-red-500' />}
         </Flex>
-        <Flex className={'font-semibold text-base w-full'} align='center'>
-          {meta.spec.identifier}
+        <Flex className={'w-full'} align='center'>
+          <span className='font-semibold text-base '>{meta.spec.identifier}</span>
+          {filteredUiPlugins.length > 0 && (
+            <UiPluginHoles.DeepLinks.PromotionStep className='ml-2'>
+              {filteredUiPlugins.map(
+                (ApplyPlugin, idx) =>
+                  ApplyPlugin && (
+                    <ApplyPlugin
+                      result={result}
+                      step={step}
+                      output={output as Record<string, unknown>}
+                      key={idx}
+                    />
+                  )
+              )}
+            </UiPluginHoles.DeepLinks.PromotionStep>
+          )}
           {!!step?.as && (
             <Tag className='text-xs ml-auto mr-5' color='blue'>
               {step.as}
             </Tag>
           )}
-          <Flex className={classNames({ 'ml-auto': !step?.as })} align='center'>
-            <Flex
-              align='center'
-              className='bg-gray-500 text-white uppercase p-2 rounded-md font-medium mr-3 gap-2 text-sm'
-            >
-              {meta.spec.unstable_icons.map((icon, i) => (
-                <FontAwesomeIcon key={i} icon={icon} />
-              ))}
-            </Flex>
-          </Flex>
         </Flex>
       </Flex>
     ),
@@ -178,7 +195,7 @@ export const PromotionDetailsModal = ({
       })
   });
 
-  const logsByStepAlias: Record<string, object> = useMemo(() => {
+  const outputsByStepAlias: Record<string, object> = useMemo(() => {
     if (promotion?.status?.state?.raw) {
       try {
         const raw = decodeRawData({ result: { case: 'raw', value: promotion.status.state.raw } });
@@ -258,7 +275,7 @@ export const PromotionDetailsModal = ({
                 return Step({
                   step,
                   result: getPromotionDirectiveStepStatus(i, promotion.status),
-                  logs: logsByStepAlias?.[step?.as || '']
+                  output: outputsByStepAlias?.[step?.as || '']
                 });
               })}
             />
