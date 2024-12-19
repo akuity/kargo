@@ -57,13 +57,13 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
       {stage && (
         <div className='flex flex-col h-full'>
           <div className='flex items-center justify-between'>
-            <div className='flex gap-1 items-start'>
-              <StagePhaseIcon className='mt-2 mr-2' phase={stage.status?.phase as StagePhase} />
+            <div className='flex gap-1 items-center'>
+              <StagePhaseIcon
+                className='mr-2'
+                phase={StagePhase.NotApplicable || (stage.status?.phase as StagePhase)}
+              />
               {!!stage.status?.health && (
-                <HealthStatusIcon
-                  health={stage.status?.health}
-                  style={{ marginRight: '10px', marginTop: '10px' }}
-                />
+                <HealthStatusIcon health={stage.status?.health} style={{ marginRight: '10px' }} />
               )}
               <div>
                 <Typography.Title level={1} style={{ margin: 0 }}>

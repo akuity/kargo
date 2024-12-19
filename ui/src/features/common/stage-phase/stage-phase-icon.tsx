@@ -9,6 +9,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Tooltip } from 'antd';
 import classNames from 'classnames';
 
+import styles from './styles.module.less';
 import { TruckIcon } from './truck-icon/truck-icon';
 import { StagePhase } from './utils';
 
@@ -30,7 +31,13 @@ export const StagePhaseIcon = (props: { phase: StagePhase; className?: string })
   }
 
   return (
-    <Tooltip title={`Stage phase: ${props.phase}`}>
+    <Tooltip
+      title={
+        <>
+          <b>Stage phase:</b> {props.phase}
+        </>
+      }
+    >
       {props.phase === StagePhase.Promoting ? (
         <>
           <TruckIcon />
@@ -38,11 +45,12 @@ export const StagePhaseIcon = (props: { phase: StagePhase; className?: string })
       ) : (
         <FontAwesomeIcon
           icon={icon}
-          className={classNames(props.className, 'text-xl', {
+          className={classNames(props.className, {
             'text-gray-400': props.phase === StagePhase.NotApplicable,
             'text-red-400': props.phase === StagePhase.Failed,
             'text-green-400': props.phase === StagePhase.Steady,
-            'text-blue-500': props.phase === StagePhase.Verifying
+            'text-blue-500': props.phase === StagePhase.Verifying,
+            [styles.magnifyingGlass]: props.phase === StagePhase.Verifying
           })}
         />
       )}
