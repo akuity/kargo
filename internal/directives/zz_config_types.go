@@ -187,8 +187,8 @@ type GitOpenPRConfig struct {
 	CreateTargetBranch bool `json:"createTargetBranch,omitempty"`
 	// Indicates whether to skip TLS verification when cloning the repository. Default is false.
 	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty"`
-	// The name of the Git provider to use. Currently only 'github' and 'gitlab' are supported.
-	// Kargo will try to infer the provider if it is not explicitly specified.
+	// The name of the Git provider to use. Currently only 'github', 'gitlab' and 'azure' are
+	// supported. Kargo will try to infer the provider if it is not explicitly specified.
 	Provider *Provider `json:"provider,omitempty"`
 	// The URL of a remote Git repository to clone.
 	RepoURL string `json:"repoURL"`
@@ -232,8 +232,8 @@ type GitWaitForPRConfig struct {
 	// This field references the 'prNumber' output from a previous step and uses it as the
 	// number of the pull request to wait for.
 	PRNumberFromStep string `json:"prNumberFromStep,omitempty"`
-	// The name of the Git provider to use. Currently only 'github' and 'gitlab' are supported.
-	// Kargo will try to infer the provider if it is not explicitly specified.
+	// The name of the Git provider to use. Currently only 'github', 'gitlab' and 'azure' are
+	// supported. Kargo will try to infer the provider if it is not explicitly specified.
 	Provider *Provider `json:"provider,omitempty"`
 	// The URL of a remote Git repository to clone.
 	RepoURL string `json:"repoURL"`
@@ -434,11 +434,12 @@ const (
 	Warehouse Kind = "Warehouse"
 )
 
-// The name of the Git provider to use. Currently only 'github' and 'gitlab' are supported.
-// Kargo will try to infer the provider if it is not explicitly specified.
+// The name of the Git provider to use. Currently only 'github', 'gitlab' and 'azure' are
+// supported. Kargo will try to infer the provider if it is not explicitly specified.
 type Provider string
 
 const (
+	Azure  Provider = "azure"
 	Github Provider = "github"
 	Gitlab Provider = "gitlab"
 )

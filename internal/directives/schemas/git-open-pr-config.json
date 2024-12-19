@@ -15,8 +15,8 @@
     },
     "provider": {
       "type": "string",
-      "description": "The name of the Git provider to use. Currently only 'github' and 'gitlab' are supported. Kargo will try to infer the provider if it is not explicitly specified.",
-      "enum": ["github", "gitlab"]
+      "description": "The name of the Git provider to use. Currently only 'github', 'gitlab' and 'azure' are supported. Kargo will try to infer the provider if it is not explicitly specified.",
+      "enum": ["github", "gitlab", "azure"]
     },
     "repoURL": {
       "type": "string",
