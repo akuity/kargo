@@ -120,13 +120,16 @@ func Test_jsonUpdater_updateValuesFile(t *testing.T) {
 	tests := []struct {
 		name          string
 		valuesContent string
-		changes       map[string]any
+		changes       []JSONUpdate
 		assertions    func(*testing.T, string, error)
 	}{
 		{
 			name:          "successful update",
 			valuesContent: `{"key": "value"}`,
-			changes:       map[string]any{"key": "newvalue"},
+			changes: []JSONUpdate{{
+				Key:   "key",
+				Value: "newvalue",
+			}},
 			assertions: func(t *testing.T, valuesFilePath string, err error) {
 				require.NoError(t, err)
 
@@ -143,7 +146,10 @@ func Test_jsonUpdater_updateValuesFile(t *testing.T) {
 		{
 			name:          "file does not exist",
 			valuesContent: "",
-			changes:       map[string]any{"key": "value"},
+			changes: []JSONUpdate{{
+				Key:   "key",
+				Value: "value",
+			}},
 			assertions: func(t *testing.T, valuesFilePath string, err error) {
 				require.ErrorContains(t, err, "no such file or directory")
 				require.NoFileExists(t, valuesFilePath)
@@ -152,7 +158,7 @@ func Test_jsonUpdater_updateValuesFile(t *testing.T) {
 		{
 			name:          "empty changes",
 			valuesContent: `{"key": "value"}`,
-			changes:       map[string]any{},
+			changes:       []JSONUpdate{},
 			assertions: func(t *testing.T, valuesFilePath string, err error) {
 				require.NoError(t, err)
 				require.FileExists(t, valuesFilePath)
@@ -172,7 +178,10 @@ func Test_jsonUpdater_updateValuesFile(t *testing.T) {
 					"key2": "value2"
 				}
 			}`,
-			changes: map[string]any{"key": "newvalue"},
+			changes: []JSONUpdate{{
+				Key:   "key",
+				Value: "newvalue",
+			}},
 			assertions: func(t *testing.T, valuesFilePath string, err error) {
 				require.NoError(t, err)
 
@@ -220,7 +229,7 @@ func Test_jsonUpdater_generateCommitMessage(t *testing.T) {
 	tests := []struct {
 		name       string
 		path       string
-		changes    map[string]any
+		changes    []JSONUpdate
 		assertions func(*testing.T, string)
 	}{
 		{
@@ -231,9 +240,12 @@ func Test_jsonUpdater_generateCommitMessage(t *testing.T) {
 			},
 		},
 		{
-			name:    "single change",
-			path:    "values.json",
-			changes: map[string]any{"image": "repo/image:tag1"},
+			name: "single change",
+			path: "values.json",
+			changes: []JSONUpdate{{
+				Key:   "image",
+				Value: "repo/image:tag1",
+			}},
 			assertions: func(t *testing.T, result string) {
 				assert.Equal(t, `Updated values.json
 
@@ -243,9 +255,15 @@ func Test_jsonUpdater_generateCommitMessage(t *testing.T) {
 		{
 			name: "multiple changes",
 			path: "chart/values.json",
-			changes: map[string]any{
-				"image1": "repo1/image1:tag1",
-				"image2": "repo2/image2:tag2",
+			changes: []JSONUpdate{
+				{
+					Key:   "image1",
+					Value: "repo1/image1:tag1",
+				},
+				{
+					Key:   "image2",
+					Value: "repo2/image2:tag2",
+				},
 			},
 			assertions: func(t *testing.T, result string) {
 				assert.Equal(t, `Updated chart/values.json
