@@ -49,7 +49,12 @@ export const CreateAnalysisTemplateModal = ({ visible, hide, namespace }: Props)
       },
       {
         onSuccess: () =>
-          queryClient.invalidateQueries({ queryKey: createConnectQueryKey(listAnalysisTemplates) })
+          queryClient.invalidateQueries({
+            queryKey: createConnectQueryKey({
+              schema: listAnalysisTemplates,
+              cardinality: 'finite'
+            })
+          })
       }
     );
   });

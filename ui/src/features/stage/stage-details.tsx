@@ -1,3 +1,4 @@
+import { toJson } from '@bufbuild/protobuf';
 import { useQuery } from '@connectrpc/connect-query';
 import { Divider, Drawer, Tabs, Typography } from 'antd';
 import moment from 'moment';
@@ -7,7 +8,8 @@ import { generatePath, useNavigate, useParams } from 'react-router-dom';
 import { paths } from '@ui/config/paths';
 import { HealthStatusIcon } from '@ui/features/common/health-status/health-status-icon';
 import { getConfig } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
-import { Stage, VerificationInfo } from '@ui/gen/v1alpha1/generated_pb';
+import { Stage, StageSchema, VerificationInfo } from '@ui/gen/v1alpha1/generated_pb';
+import { timestampDate } from '@ui/utils/connectrpc-utils';
 
 import { Description } from '../common/description';
 import { ManifestPreview } from '../common/manifest-preview';
@@ -41,7 +43,7 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
           } as VerificationInfo;
         })
       )
-      .sort((a, b) => moment(b.startTime?.toDate()).diff(moment(a.startTime?.toDate())));
+      .sort((a, b) => moment(timestampDate(b.startTime)).diff(moment(timestampDate(a.startTime))));
   }, [stage]);
 
   const { data: config } = useQuery(getConfig);
@@ -102,7 +104,7 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
                   key: '3',
                   label: 'Live Manifest',
                   className: 'h-full pb-2',
-                  children: <ManifestPreview object={stage} height='700px' />
+                  children: <ManifestPreview object={toJson(StageSchema, stage)} height='700px' />
                 }
               ]}
             />
