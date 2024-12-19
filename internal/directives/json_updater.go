@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"slices"
 	"strings"
 
 	securejoin "github.com/cyphar/filepath-securejoin"
@@ -48,7 +47,6 @@ func (j *jsonUpdater) RunPromotionStep(
 		return failure, err
 	}
 
-	// Convert the configuration into a typed struct
 	cfg, err := ConfigToStruct[JSONUpdateConfig](stepCtx.Config)
 	if err != nil {
 		return failure, fmt.Errorf("could not convert config into %s config: %w", j.Name(), err)
@@ -67,23 +65,15 @@ func (j *jsonUpdater) runPromotionStep(
 	stepCtx *PromotionStepContext,
 	cfg JSONUpdateConfig,
 ) (PromotionStepResult, error) {
-	updates := make(map[string]any, len(cfg.Updates))
-	for _, update := range cfg.Updates {
-		var value any
-		if update.Value != nil {
-			value = update.Value
-		}
-		updates[update.Key] = value
-	}
-
 	result := PromotionStepResult{Status: kargoapi.PromotionPhaseSucceeded}
-	if len(updates) > 0 {
-		if err := j.updateFile(stepCtx.WorkDir, cfg.Path, updates); err != nil {
+
+	if len(cfg.Updates) > 0 {
+		if err := j.updateFile(stepCtx.WorkDir, cfg.Path, cfg.Updates); err != nil {
 			return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
 				fmt.Errorf("JSON file update failed: %w", err)
 		}
 
-		if commitMsg := j.generateCommitMessage(cfg.Path, updates); commitMsg != "" {
+		if commitMsg := j.generateCommitMessage(cfg.Path, cfg.Updates); commitMsg != "" {
 			result.Output = map[string]any{
 				"commitMessage": commitMsg,
 			}
@@ -92,7 +82,7 @@ func (j *jsonUpdater) runPromotionStep(
 	return result, nil
 }
 
-func (j *jsonUpdater) updateFile(workDir string, path string, changes map[string]any) error {
+func (j *jsonUpdater) updateFile(workDir string, path string, updates []JSONUpdate) error {
 	absFilePath, err := securejoin.SecureJoin(workDir, path)
 	if err != nil {
 		return fmt.Errorf("error joining path %q: %w", path, err)
@@ -103,18 +93,13 @@ func (j *jsonUpdater) updateFile(workDir string, path string, changes map[string
 		return fmt.Errorf("error reading JSON file %q: %w", absFilePath, err)
 	}
 
-	for key, value := range changes {
-		switch value.(type) {
-		case int, int8, int16, int32, int64,
-			uint, uint8, uint16, uint32, uint64,
-			float32, float64,
-			string, bool:
-		default:
-			return fmt.Errorf("value for key %q is not a scalar type", key)
+	for _, update := range updates {
+		if !isValidScalar(update.Value) {
+			return fmt.Errorf("value for key %q is not a scalar type", update.Key)
 		}
-		updatedContent, setErr := sjson.Set(string(fileContent), key, value)
+		updatedContent, setErr := sjson.Set(string(fileContent), update.Key, update.Value)
 		if setErr != nil {
-			return fmt.Errorf("error setting key %q in JSON file: %w", key, setErr)
+			return fmt.Errorf("error setting key %q in JSON file: %w", update.Key, setErr)
 		}
 		fileContent = []byte(updatedContent)
 	}
@@ -127,26 +112,32 @@ func (j *jsonUpdater) updateFile(workDir string, path string, changes map[string
 	return nil
 }
 
-func (j *jsonUpdater) generateCommitMessage(path string, updates map[string]any) string {
+func isValidScalar(value any) bool {
+	switch value.(type) {
+	case int, int8, int16, int32, int64,
+		uint, uint8, uint16, uint32, uint64,
+		float32, float64,
+		string, bool:
+		return true
+	default:
+		return false
+	}
+}
+
+func (j *jsonUpdater) generateCommitMessage(path string, updates []JSONUpdate) string {
 	if len(updates) == 0 {
 		return ""
 	}
 
 	var commitMsg strings.Builder
 	_, _ = commitMsg.WriteString(fmt.Sprintf("Updated %s\n", path))
-	keys := make([]string, 0, len(updates))
-	for key := range updates {
-		keys = append(keys, key)
-	}
-	slices.Sort(keys)
 
-	for _, key := range keys {
-		value := updates[key]
-		switch v := value.(type) {
+	for _, update := range updates {
+		switch v := update.Value.(type) {
 		case string:
-			_, _ = commitMsg.WriteString(fmt.Sprintf("\n- %s: %q", key, v))
+			_, _ = commitMsg.WriteString(fmt.Sprintf("\n- %s: %q", update.Key, v))
 		default:
-			_, _ = commitMsg.WriteString(fmt.Sprintf("\n- %s: %v", key, v))
+			_, _ = commitMsg.WriteString(fmt.Sprintf("\n- %s: %v", update.Key, v))
 		}
 	}
 
