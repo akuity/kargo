@@ -28,7 +28,6 @@ func TestPromotionBuilder_Build(t *testing.T) {
 		stage      kargoapi.Stage
 		freight    string
 		userInfo   user.Info
-		objects    []client.Object
 		assertions func(*testing.T, *kargoapi.Promotion, error)
 	}{
 		{
@@ -127,7 +126,7 @@ func TestPromotionBuilder_Build(t *testing.T) {
 			},
 		},
 		{
-			name: "successful build with task steps and user info",
+			name: "successful build with user info",
 			stage: kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-stage",
@@ -155,39 +154,12 @@ func TestPromotionBuilder_Build(t *testing.T) {
 			userInfo: user.Info{
 				IsAdmin: true,
 			},
-			objects: []client.Object{
-				&kargoapi.PromotionTask{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-task",
-						Namespace: "test-project",
-					},
-					Spec: kargoapi.PromotionTaskSpec{
-						Vars: []kargoapi.PromotionVariable{
-							{Name: "input1"},
-						},
-						Steps: []kargoapi.PromotionStep{
-							{
-								As:   "sub-step",
-								Uses: "other-fake-step",
-							},
-						},
-					},
-				},
-			},
 			assertions: func(t *testing.T, promotion *kargoapi.Promotion, err error) {
 				require.NoError(t, err)
 				require.NotNil(t, promotion)
 
 				// Check metadata including user annotation
 				assert.Equal(t, kargoapi.EventActorAdmin, promotion.Annotations[kargoapi.AnnotationKeyCreateActor])
-
-				// Check steps
-				require.Len(t, promotion.Spec.Steps, 1)
-				assert.Equal(t, "task-step::sub-step", promotion.Spec.Steps[0].As)
-				assert.Equal(t, "other-fake-step", promotion.Spec.Steps[0].Uses)
-				assert.ElementsMatch(t, []kargoapi.PromotionVariable{
-					{Name: "input1", Value: "value1"},
-				}, promotion.Spec.Steps[0].Vars)
 			},
 		},
 	}
@@ -198,7 +170,6 @@ func TestPromotionBuilder_Build(t *testing.T) {
 
 			c := fake.NewClientBuilder().
 				WithScheme(s).
-				WithObjects(tt.objects...).
 				Build()
 
 			b := NewPromotionBuilder(c)
@@ -208,58 +179,49 @@ func TestPromotionBuilder_Build(t *testing.T) {
 	}
 }
 
-func TestPromotionBuilder_buildSteps(t *testing.T) {
+func TestPromotionBuilder_InflateSteps(t *testing.T) {
 	s := runtime.NewScheme()
 	require.NoError(t, kargoapi.AddToScheme(s))
 
 	tests := []struct {
 		name       string
-		stage      kargoapi.Stage
+		promo      kargoapi.Promotion
 		objects    []client.Object
 		assertions func(*testing.T, []kargoapi.PromotionStep, error)
 	}{
 		{
 			name: "task not found returns error",
-			stage: kargoapi.Stage{
+			promo: kargoapi.Promotion{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-stage",
+					Name:      "test-promotion",
 					Namespace: "test-project",
 				},
-				Spec: kargoapi.StageSpec{
-					PromotionTemplate: &kargoapi.PromotionTemplate{
-						Spec: kargoapi.PromotionTemplateSpec{
-							Steps: []kargoapi.PromotionStep{
-								{
-									Task: &kargoapi.PromotionTaskReference{
-										Name: "missing-task",
-									},
-								},
+				Spec: kargoapi.PromotionSpec{
+					Steps: []kargoapi.PromotionStep{
+						{
+							Task: &kargoapi.PromotionTaskReference{
+								Name: "missing-task",
 							},
 						},
 					},
 				},
 			},
-			assertions: func(t *testing.T, steps []kargoapi.PromotionStep, err error) {
+			assertions: func(t *testing.T, _ []kargoapi.PromotionStep, err error) {
 				assert.ErrorContains(t, err, "not found")
-				assert.Nil(t, steps)
 			},
 		},
 		{
 			name: "single direct step",
-			stage: kargoapi.Stage{
+			promo: kargoapi.Promotion{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-stage",
+					Name:      "test-promotion",
 					Namespace: "test-project",
 				},
-				Spec: kargoapi.StageSpec{
-					PromotionTemplate: &kargoapi.PromotionTemplate{
-						Spec: kargoapi.PromotionTemplateSpec{
-							Steps: []kargoapi.PromotionStep{
-								{
-									As:   "direct-step",
-									Uses: "fake-step",
-								},
-							},
+				Spec: kargoapi.PromotionSpec{
+					Steps: []kargoapi.PromotionStep{
+						{
+							As:   "direct-step",
+							Uses: "fake-step",
 						},
 					},
 				},
@@ -274,28 +236,24 @@ func TestPromotionBuilder_buildSteps(t *testing.T) {
 		},
 		{
 			name: "mix of direct and task steps",
-			stage: kargoapi.Stage{
+			promo: kargoapi.Promotion{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-stage",
+					Name:      "test-promotion",
 					Namespace: "test-project",
 				},
-				Spec: kargoapi.StageSpec{
-					PromotionTemplate: &kargoapi.PromotionTemplate{
-						Spec: kargoapi.PromotionTemplateSpec{
-							Steps: []kargoapi.PromotionStep{
-								{
-									As:   "direct-step",
-									Uses: "fake-step",
-								},
-								{
-									As: "task-step",
-									Task: &kargoapi.PromotionTaskReference{
-										Name: "test-task",
-									},
-									Vars: []kargoapi.PromotionVariable{
-										{Name: "input1", Value: "value1"},
-									},
-								},
+				Spec: kargoapi.PromotionSpec{
+					Steps: []kargoapi.PromotionStep{
+						{
+							As:   "direct-step",
+							Uses: "fake-step",
+						},
+						{
+							As: "task-step",
+							Task: &kargoapi.PromotionTaskReference{
+								Name: "test-task",
+							},
+							Vars: []kargoapi.PromotionVariable{
+								{Name: "input1", Value: "value1"},
 							},
 						},
 					},
@@ -338,34 +296,30 @@ func TestPromotionBuilder_buildSteps(t *testing.T) {
 		},
 		{
 			name: "multiple task steps",
-			stage: kargoapi.Stage{
+			promo: kargoapi.Promotion{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-stage",
+					Name:      "test-promotion",
 					Namespace: "test-project",
 				},
-				Spec: kargoapi.StageSpec{
-					PromotionTemplate: &kargoapi.PromotionTemplate{
-						Spec: kargoapi.PromotionTemplateSpec{
-							Steps: []kargoapi.PromotionStep{
-								{
-									As: "task1",
-									Task: &kargoapi.PromotionTaskReference{
-										Name: "test-task-1",
-									},
-									Vars: []kargoapi.PromotionVariable{
-										{Name: "input1", Value: "value1"},
-									},
-								},
-								{
-									As: "task2",
-									Task: &kargoapi.PromotionTaskReference{
-										Kind: "ClusterPromotionTask",
-										Name: "test-task-2",
-									},
-									Vars: []kargoapi.PromotionVariable{
-										{Name: "input2", Value: "value2"},
-									},
-								},
+				Spec: kargoapi.PromotionSpec{
+					Steps: []kargoapi.PromotionStep{
+						{
+							As: "task1",
+							Task: &kargoapi.PromotionTaskReference{
+								Name: "test-task-1",
+							},
+							Vars: []kargoapi.PromotionVariable{
+								{Name: "input1", Value: "value1"},
+							},
+						},
+						{
+							As: "task2",
+							Task: &kargoapi.PromotionTaskReference{
+								Kind: "ClusterPromotionTask",
+								Name: "test-task-2",
+							},
+							Vars: []kargoapi.PromotionVariable{
+								{Name: "input2", Value: "value2"},
 							},
 						},
 					},
@@ -433,8 +387,9 @@ func TestPromotionBuilder_buildSteps(t *testing.T) {
 				Build()
 
 			b := NewPromotionBuilder(c)
-			steps, err := b.buildSteps(context.Background(), tt.stage)
-			tt.assertions(t, steps, err)
+			p := tt.promo.DeepCopy()
+			err := b.InflateSteps(context.Background(), p)
+			tt.assertions(t, p.Spec.Steps, err)
 		})
 	}
 }

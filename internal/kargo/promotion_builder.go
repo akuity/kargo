@@ -70,12 +70,6 @@ func (b *PromotionBuilder) Build(
 		annotations[kargoapi.AnnotationKeyCreateActor] = kargoapi.FormatEventUserActor(u)
 	}
 
-	// Build steps
-	steps, err := b.buildSteps(ctx, stage)
-	if err != nil {
-		return nil, fmt.Errorf("failed to build promotion steps: %w", err)
-	}
-
 	promotion := kargoapi.Promotion{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        generatePromotionName(stage.Name, freight),
@@ -86,37 +80,38 @@ func (b *PromotionBuilder) Build(
 			Stage:   stage.Name,
 			Freight: freight,
 			Vars:    stage.Spec.PromotionTemplate.Spec.Vars,
-			Steps:   steps,
+			Steps:   stage.Spec.PromotionTemplate.Spec.Steps,
 		},
 	}
 	return &promotion, nil
 }
 
-// buildSteps processes the Promotion steps from the PromotionTemplate of the
-// given Stage. If a PromotionStep references a PromotionTask, the task is
-// retrieved and its steps are inflated with the given task inputs.
-func (b *PromotionBuilder) buildSteps(ctx context.Context, stage kargoapi.Stage) ([]kargoapi.PromotionStep, error) {
-	steps := make([]kargoapi.PromotionStep, 0, len(stage.Spec.PromotionTemplate.Spec.Steps))
-	for i, step := range stage.Spec.PromotionTemplate.Spec.Steps {
+// InflateSteps inflates the Promotion steps by resolving any references to
+// PromotionTasks and expanding them into their individual steps. The inflated
+// steps are then set on the Promotion, replacing the original steps.
+func (b *PromotionBuilder) InflateSteps(ctx context.Context, promo *kargoapi.Promotion) error {
+	steps := make([]kargoapi.PromotionStep, 0, len(promo.Spec.Steps))
+	for i, step := range promo.Spec.Steps {
 		switch {
 		case step.Task != nil:
 			alias := step.GetAlias(i)
 			taskSteps, err := b.inflateTaskSteps(
 				ctx,
-				stage.Namespace,
+				promo.Namespace,
 				alias,
-				stage.Spec.PromotionTemplate.Spec.Vars,
+				promo.Spec.Vars,
 				step,
 			)
 			if err != nil {
-				return nil, fmt.Errorf("inflate tasks steps for task %q (%q): %w", step.Task.Name, alias, err)
+				return fmt.Errorf("inflate tasks steps for task %q (%q): %w", step.Task.Name, alias, err)
 			}
 			steps = append(steps, taskSteps...)
 		default:
 			steps = append(steps, step)
 		}
 	}
-	return steps, nil
+	promo.Spec.Steps = steps
+	return nil
 }
 
 // inflateTaskSteps inflates the PromotionSteps for the given PromotionStep
