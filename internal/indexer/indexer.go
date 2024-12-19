@@ -159,6 +159,7 @@ func RunningPromotionsByArgoCDApplications(
 			dirStep := directives.PromotionStep{
 				Kind:   step.Uses,
 				Alias:  step.As,
+				Vars:	step.Vars,
 				Config: step.Config.Raw,
 			}
 			// Build just enough context to extract the relevant config from the
@@ -169,7 +170,9 @@ func RunningPromotionsByArgoCDApplications(
 				Promotion: promo.Name,
 				Vars:      promo.Spec.Vars,
 			}
-			vars, err := dirStep.GetVars(promoCtx, promoCtx.State)
+			// As we are not evaluating expressions in the entire config, we do not
+			// pass any state.
+			vars, err := dirStep.GetVars(promoCtx, promo.Status.GetState())
 			if err != nil {
 				logger.Error(
 					err,
