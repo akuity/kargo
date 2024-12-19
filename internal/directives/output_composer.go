@@ -26,11 +26,11 @@ func init() {
 //
 // An example configuration for this step would look like this:
 //
-//   step: compose-output
-//   as: custom-outputs
-//   config:
-//     prURL: ${{ vars.repoURL }}/pull/${{ outputs['open-pr'].prNumber }}
-//     mergeCommit: ${{ outputs['wait-for-pr'].commit }}
+//	step: compose-output
+//	as: custom-outputs
+//	config:
+//	  prURL: ${{ vars.repoURL }}/pull/${{ outputs['open-pr'].prNumber }}
+//	  mergeCommit: ${{ outputs['wait-for-pr'].commit }}
 //
 // This would create a new output named `custom-outputs` with the keys
 // `prURL` and `mergeCommit`, which could be used in subsequent steps
