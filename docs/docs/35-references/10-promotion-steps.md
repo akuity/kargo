@@ -302,7 +302,7 @@ steps:
 
 ### `delete`
 
-`delete` deletes the files or the directory,
+`delete` deletes a file or directory.
 
 #### `delete` Configuration
 
