@@ -1129,6 +1129,18 @@ spec:
 ```
 :::
 
+:::info
+Enforcement of Argo CD
+[sync windows](https://argo-cd.readthedocs.io/en/stable/user-guide/sync_windows/)
+was improved substantially in Argo CD v2.11.0. If you wish for the `argocd-update`
+step to honor sync windows, you must use Argo CD v2.11.0 or later.
+
+_Additionally, it is recommended that if a promotion process is expected to
+sometimes encounter an active deny window, the `argocd-update` step should be
+configured with a timeout that is at least as long as the longest expected deny
+window. (The step's default timeout is five minutes.)_
+:::
+
 #### `argocd-update` Configuration
 
 | Name | Type | Required | Description |
