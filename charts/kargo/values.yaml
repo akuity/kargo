@@ -155,17 +155,19 @@ api:
   permissiveCORSPolicyEnabled: false
 
   ingress:
-    ## @param api.ingress.enabled Whether to enable ingress. By default, this is disabled. Enabling ingress is advanced usage.
+    ## @param api.ingress.enabled Whether to enable ingress by creating an Ingress resource. By default, this is disabled. Enabling ingress is advanced usage.
     enabled: false
-    ## @param api.ingress.annotations Annotations specified by your ingress controller to customize the behavior of the ingress resource.
+    ## @param api.ingress.annotations Annotations specified by your ingress controller to customize the behavior of the Ingress resource.
     annotations: {}
       # kubernetes.io/ingress.class: nginx
-    ## @param api.ingress.ingressClassName From Kubernetes 1.18+, this field is supported if implemented by your ingress controller. When set, you do not need to add the ingress class as annotation.
+    ## @param api.ingress.ingressClassName If implemented by your ingress controller, specifies the ingress class. If your ingress controller does not support this, use the `kubernetes.io/ingress.class` annotation instead.
     ingressClassName:
     tls:
-      ## @param api.ingress.tls.enabled Whether to enable TLS for the ingress. All other settings in this section will be ignored when this is set to `false`.
+      ## @param api.ingress.tls.enabled Whether to associate a certificate with the Ingress resource.
       enabled: true
-      ## @param api.ingress.tls.selfSignedCert Whether to generate a self-signed certificate for use with the API server's Ingress resource. If `true`, `cert-manager` CRDs **must** be present in the cluster. Kargo will create and use its own namespaced issuer. If `false`, a cert secret named `kargo-api-ingress-cert` **must** be provided in the same namespace as Kargo.
+      ## @param api.ingress.tls.usesControllerCert Whether the ingress controller has been configured to terminate SSL using its own certificate instead of the certificate, if any, referenced by the Ingress resource. This is an uncommon configuration.
+      usesControllerCert: false
+      ## @param api.ingress.tls.selfSignedCert Whether to generate a self-signed certificate for use with the API server's Ingress resource. If `true`, `cert-manager` CRDs **must** be present in the cluster. Kargo will create and use its own namespaced issuer. If `false`, a cert secret named `kargo-api-ingress-cert` **must** be provided in the same namespace as Kargo. The value in this field has no effect if `api.ingress.tls.enabled` is `false`.
       selfSignedCert: true
     ## @param api.ingress.pathType You may want to use `Prefix` for some controllers (like AWS LoadBalancer Ingress controller), which don't support `/` as wildcard path when pathType is set to `ImplementationSpecific`
     pathType: ImplementationSpecific

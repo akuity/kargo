@@ -91,6 +91,14 @@ app.kubernetes.io/component: management-controller
 app.kubernetes.io/component: webhooks-server
 {{- end -}}
 
+{{- define "kargo.api.baseURL" -}}
+{{- if or .Values.api.tls.enabled (and .Values.api.ingress.enabled (or .Values.api.ingress.tls.enabled .Values.api.ingress.tls.usesControllerCert)) -}}
+{{- printf "https://%s" .Values.api.host -}}
+{{- else -}}
+{{- printf "http://%s" .Values.api.host -}}
+{{- end -}}
+{{- end -}}
+
 {{- define "call-nested" }}
 {{- $dot := index . 0 }}
 {{- $subchart := index . 1 }}
