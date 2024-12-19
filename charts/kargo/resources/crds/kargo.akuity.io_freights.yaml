@@ -160,7 +160,7 @@ spec:
               name:
                 description: |-
                   Name is the name of the resource of the kind indicated by the Kind field
-                  from which Freight may originated.
+                  from which Freight may originate.
                 type: string
             required:
             - kind
