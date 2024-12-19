@@ -3,9 +3,9 @@ include $(CURDIR)/hack/tools.mk
 SHELL	      ?= /bin/bash
 EXTENDED_PATH ?= $(CURDIR)/hack/bin:$(PATH)
 
-ARGO_CD_CHART_VERSION		:= 6.9.2
-ARGO_ROLLOUTS_CHART_VERSION := 2.35.2
-CERT_MANAGER_CHART_VERSION 	:= 1.14.5
+ARGO_CD_CHART_VERSION		:= 7.7.0
+ARGO_ROLLOUTS_CHART_VERSION := 2.37.7
+CERT_MANAGER_CHART_VERSION 	:= 1.16.1
 
 BUF_LINT_ERROR_FORMAT	?= text
 GO_LINT_ERROR_FORMAT 	?= colored-line-number
@@ -95,6 +95,11 @@ lint-charts: install-helm
 lint-ui:
 	pnpm --dir=ui install --dev
 	pnpm --dir=ui run lint
+
+.PHONY: typecheck-ui
+typecheck-ui:
+	pnpm --dir=ui install
+	pnpm --dir=ui run typecheck
 
 .PHONY: format-ui
 format-ui:
@@ -342,7 +347,7 @@ hack-install-cert-manager: install-helm
 		--install \
 		--create-namespace \
 		--namespace cert-manager \
-		--set installCRDs=true \
+		--set crds.enabled=true \
 		--wait
 
 .PHONY: hack-install-argocd

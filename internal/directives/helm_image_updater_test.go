@@ -16,7 +16,117 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	intyaml "github.com/akuity/kargo/internal/yaml"
 )
+
+func Test_helmImageUpdater_validate(t *testing.T) {
+	testCases := []struct {
+		name             string
+		config           Config
+		expectedProblems []string
+	}{
+		{
+			name:   "path is not specified",
+			config: Config{},
+			expectedProblems: []string{
+				"(root): path is required",
+			},
+		},
+		{
+			name: "path is empty",
+			config: Config{
+				"path": "",
+			},
+			expectedProblems: []string{
+				"path: String length must be greater than or equal to 1",
+			},
+		},
+		{
+			name:   "images is null",
+			config: Config{},
+			expectedProblems: []string{
+				"(root): images is required",
+			},
+		},
+		{
+			name: "images is empty",
+			config: Config{
+				"images": []Config{},
+			},
+			expectedProblems: []string{
+				"images: Array must have at least 1 items",
+			},
+		},
+		{
+			name: "key not specified",
+			config: Config{
+				"images": []Config{{}},
+			},
+			expectedProblems: []string{
+				"images.0: key is required",
+			},
+		},
+		{
+			name: "key is empty",
+			config: Config{
+				"images": []Config{{
+					"key": "",
+				}},
+			},
+			expectedProblems: []string{
+				"images.0.key: String length must be greater than or equal to 1",
+			},
+		},
+		{
+			name: "value not specified",
+			config: Config{
+				"images": []Config{{}},
+			},
+			expectedProblems: []string{
+				"images.0: value is required",
+			},
+		},
+		{
+			name: "valid",
+			config: Config{
+				"path": "fake-path",
+				"images": []Config{
+					{
+						"image": "fake-image",
+						"key":   "fake-key-0",
+						"value": "ImageAndTag",
+					},
+					{
+						"image": "fake-image",
+						"key":   "fake-key-1",
+						"value": "ImageAndTag",
+						"fromOrigin": Config{
+							"kind": Warehouse,
+							"name": "fake-name",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	r := newHelmImageUpdater()
+	runner, ok := r.(*helmImageUpdater)
+	require.True(t, ok)
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			err := runner.validate(testCase.config)
+			if len(testCase.expectedProblems) == 0 {
+				require.NoError(t, err)
+			} else {
+				for _, problem := range testCase.expectedProblems {
+					require.ErrorContains(t, err, problem)
+				}
+			}
+		})
+	}
+}
 
 func Test_helmImageUpdater_runPromotionStep(t *testing.T) {
 	tests := []struct {
@@ -225,7 +335,7 @@ func Test_helmImageUpdater_generateImageUpdates(t *testing.T) {
 		objects    []client.Object
 		stepCtx    *PromotionStepContext
 		cfg        HelmUpdateImageConfig
-		assertions func(*testing.T, map[string]string, []string, error)
+		assertions func(*testing.T, []intyaml.Update, []string, error)
 	}{
 		{
 			name: "finds image update",
@@ -269,9 +379,13 @@ func Test_helmImageUpdater_generateImageUpdates(t *testing.T) {
 					{Key: "image.tag", Image: "docker.io/library/nginx", Value: Tag},
 				},
 			},
-			assertions: func(t *testing.T, changes map[string]string, summary []string, err error) {
+			assertions: func(t *testing.T, updates []intyaml.Update, summary []string, err error) {
 				assert.NoError(t, err)
-				assert.Equal(t, map[string]string{"image.tag": "1.19.0"}, changes)
+				assert.Equal(
+					t,
+					[]intyaml.Update{{Key: "image.tag", Value: "1.19.0"}},
+					updates,
+				)
 				assert.Equal(t, []string{"docker.io/library/nginx:1.19.0"}, summary)
 			},
 		},
@@ -287,7 +401,7 @@ func Test_helmImageUpdater_generateImageUpdates(t *testing.T) {
 					{Key: "image.tag", Image: "docker.io/library/non-existent", Value: Tag},
 				},
 			},
-			assertions: func(t *testing.T, _ map[string]string, _ []string, err error) {
+			assertions: func(t *testing.T, _ []intyaml.Update, _ []string, err error) {
 				assert.ErrorContains(t, err, "not found in referenced Freight")
 			},
 		},
@@ -334,7 +448,7 @@ func Test_helmImageUpdater_generateImageUpdates(t *testing.T) {
 					{Key: "image2.tag", Image: "docker.io/library/non-existent", Value: Tag},
 				},
 			},
-			assertions: func(t *testing.T, _ map[string]string, _ []string, err error) {
+			assertions: func(t *testing.T, _ []intyaml.Update, _ []string, err error) {
 				assert.ErrorContains(t, err, "not found in referenced Freight")
 			},
 		},
@@ -385,9 +499,13 @@ func Test_helmImageUpdater_generateImageUpdates(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, changes map[string]string, summary []string, err error) {
+			assertions: func(t *testing.T, updates []intyaml.Update, summary []string, err error) {
 				assert.NoError(t, err)
-				assert.Equal(t, map[string]string{"image.tag": "2.0.0"}, changes)
+				assert.Equal(
+					t,
+					[]intyaml.Update{{Key: "image.tag", Value: "2.0.0"}},
+					updates,
+				)
 				assert.Equal(t, []string{"docker.io/library/origin-image:2.0.0"}, summary)
 			},
 		},
@@ -403,8 +521,8 @@ func Test_helmImageUpdater_generateImageUpdates(t *testing.T) {
 			stepCtx := tt.stepCtx
 			stepCtx.KargoClient = fake.NewClientBuilder().WithScheme(scheme).WithObjects(tt.objects...).Build()
 
-			changes, summary, err := runner.generateImageUpdates(context.Background(), stepCtx, tt.cfg)
-			tt.assertions(t, changes, summary, err)
+			updates, summary, err := runner.generateImageUpdates(context.Background(), stepCtx, tt.cfg)
+			tt.assertions(t, updates, summary, err)
 		})
 	}
 }
@@ -450,7 +568,7 @@ func Test_helmImageUpdater_getImageValues(t *testing.T) {
 	tests := []struct {
 		name       string
 		image      *kargoapi.Image
-		valueType  Value
+		valueType  string
 		assertions func(*testing.T, string, string, error)
 	}{
 		{
@@ -531,13 +649,13 @@ func Test_helmImageUpdater_updateValuesFile(t *testing.T) {
 	tests := []struct {
 		name          string
 		valuesContent string
-		changes       map[string]string
+		updates       []intyaml.Update
 		assertions    func(*testing.T, string, error)
 	}{
 		{
 			name:          "successful update",
 			valuesContent: "key: value\n",
-			changes:       map[string]string{"key": "newvalue"},
+			updates:       []intyaml.Update{{Key: "key", Value: "newvalue"}},
 			assertions: func(t *testing.T, valuesFilePath string, err error) {
 				require.NoError(t, err)
 
@@ -550,7 +668,7 @@ func Test_helmImageUpdater_updateValuesFile(t *testing.T) {
 		{
 			name:          "file does not exist",
 			valuesContent: "",
-			changes:       map[string]string{"key": "value"},
+			updates:       []intyaml.Update{{Key: "key", Value: "value"}},
 			assertions: func(t *testing.T, valuesFilePath string, err error) {
 				require.ErrorContains(t, err, "no such file or directory")
 				require.NoFileExists(t, valuesFilePath)
@@ -559,13 +677,21 @@ func Test_helmImageUpdater_updateValuesFile(t *testing.T) {
 		{
 			name:          "empty changes",
 			valuesContent: "key: value\n",
-			changes:       map[string]string{},
+			updates:       []intyaml.Update{},
 			assertions: func(t *testing.T, valuesFilePath string, err error) {
 				require.NoError(t, err)
 				require.FileExists(t, valuesFilePath)
 				content, err := os.ReadFile(valuesFilePath)
 				require.NoError(t, err)
 				assert.Equal(t, "key: value\n", string(content))
+			},
+		},
+		{
+			name:          "update specified for non-existent key",
+			valuesContent: "key: value\n",
+			updates:       []intyaml.Update{{Key: "non-existent-key", Value: "newvalue"}},
+			assertions: func(t *testing.T, _ string, err error) {
+				require.ErrorContains(t, err, "key path not found")
 			},
 		},
 	}
@@ -582,7 +708,7 @@ func Test_helmImageUpdater_updateValuesFile(t *testing.T) {
 				require.NoError(t, err)
 			}
 
-			err := runner.updateValuesFile(workDir, path.Base(valuesFile), tt.changes)
+			err := runner.updateValuesFile(workDir, path.Base(valuesFile), tt.updates)
 			tt.assertions(t, valuesFile, err)
 		})
 	}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/kelseyhightower/envconfig"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -18,6 +19,16 @@ import (
 	"github.com/akuity/kargo/internal/controller"
 	"github.com/akuity/kargo/internal/logging"
 )
+
+type ReconcilerConfig struct {
+	MaxConcurrentReconciles int `envconfig:"MAX_CONCURRENT_NAMESPACE_RECONCILES" default:"4"`
+}
+
+func ReconcilerConfigFromEnv() ReconcilerConfig {
+	cfg := ReconcilerConfig{}
+	envconfig.MustProcess("", &cfg)
+	return cfg
+}
 
 // reconciler reconciles Namespace resources.
 type reconciler struct {
@@ -47,8 +58,12 @@ type reconciler struct {
 
 // SetupReconcilerWithManager initializes a reconciler for Namespace resources
 // and registers it with the provided Manager.
-func SetupReconcilerWithManager(kargoMgr manager.Manager) error {
-	return ctrl.NewControllerManagedBy(kargoMgr).
+func SetupReconcilerWithManager(
+	ctx context.Context,
+	kargoMgr manager.Manager,
+	cfg ReconcilerConfig,
+) error {
+	err := ctrl.NewControllerManagedBy(kargoMgr).
 		For(&corev1.Namespace{}).
 		WithEventFilter(
 			predicate.Funcs{
@@ -60,8 +75,17 @@ func SetupReconcilerWithManager(kargoMgr manager.Manager) error {
 				},
 			},
 		).
-		WithOptions(controller.CommonOptions()).
+		WithOptions(controller.CommonOptions(cfg.MaxConcurrentReconciles)).
 		Complete(newReconciler(kargoMgr.GetClient()))
+
+	if err == nil {
+		logging.LoggerFromContext(ctx).Info(
+			"Initialized Namespace reconciler",
+			"maxConcurrentReconciles", cfg.MaxConcurrentReconciles,
+		)
+	}
+
+	return err
 }
 
 func newReconciler(kubeClient client.Client) *reconciler {

@@ -1,6 +1,5 @@
+import { JsonValue } from '@bufbuild/protobuf';
 import yaml from 'yaml';
-
-import { Freight, Promotion, Stage } from '@ui/gen/v1alpha1/generated_pb';
 
 import YamlEditor from './code-editor/yaml-editor-lazy';
 
@@ -8,10 +7,14 @@ export const ManifestPreview = ({
   object,
   height = '100%'
 }: {
-  object: Stage | Freight | Promotion;
+  object: JsonValue;
   height?: string;
 }) => {
-  const encodedObject = yaml.stringify(object.toJson(), (_, v) => {
+  const encodedObject = yaml.stringify(object, (_, v) => {
+    if (!v) {
+      return;
+    }
+
     if (typeof v === 'string' && v === '') {
       return;
     }

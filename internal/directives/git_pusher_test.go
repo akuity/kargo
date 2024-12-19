@@ -3,6 +3,7 @@ package directives
 import (
 	"context"
 	"fmt"
+	"math"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
@@ -35,6 +36,24 @@ func Test_gitPusher_validate(t *testing.T) {
 			},
 			expectedProblems: []string{
 				"path: String length must be greater than or equal to 1",
+			},
+		},
+		{
+			name: "maxAttempts < 1",
+			config: Config{
+				"maxAttempts": 0,
+			},
+			expectedProblems: []string{
+				"maxAttempts: Must be greater than or equal to 1",
+			},
+		},
+		{
+			name: fmt.Sprintf("maxAttempts > %d", math.MaxInt32),
+			config: Config{
+				"maxAttempts": math.MaxInt32 + 1,
+			},
+			expectedProblems: []string{
+				fmt.Sprintf("maxAttempts: Must be less than or equal to %.9e", float64(math.MaxInt32)),
 			},
 		},
 		{
@@ -184,12 +203,14 @@ func Test_gitPusher_runPromotionStep(t *testing.T) {
 	r := newGitPusher()
 	runner, ok := r.(*gitPushPusher)
 	require.True(t, ok)
+	require.NotNil(t, runner.branchMus)
 
 	res, err := runner.runPromotionStep(
 		context.Background(),
 		&PromotionStepContext{
 			Project:       "fake-project",
 			Stage:         "fake-stage",
+			Promotion:     "fake-promotion",
 			WorkDir:       workDir,
 			CredentialsDB: &credentials.FakeDB{},
 		},
@@ -199,12 +220,12 @@ func Test_gitPusher_runPromotionStep(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
-	branchName, ok := res.Output[branchKey]
+	branchName, ok := res.Output[stateKeyBranch]
 	require.True(t, ok)
-	require.Equal(t, "kargo/fake-project/fake-stage/promotion", branchName)
+	require.Equal(t, "kargo/promotion/fake-promotion", branchName)
 	expectedCommit, err := workTree.LastCommitID()
 	require.NoError(t, err)
-	actualCommit, ok := res.Output[commitKey]
+	actualCommit, ok := res.Output[stateKeyCommit]
 	require.True(t, ok)
 	require.Equal(t, expectedCommit, actualCommit)
 }

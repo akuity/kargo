@@ -13,6 +13,7 @@ import {
   deleteAnalysisTemplate,
   listAnalysisTemplates
 } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
+import { timestampDate } from '@ui/utils/connectrpc-utils';
 
 import { CreateAnalysisTemplateModal } from './create-analysis-template-modal';
 import { EditAnalysisTemplateModal } from './edit-analysis-template-modal';
@@ -43,7 +44,7 @@ export const AnalysisTemplatesList = () => {
           title='Creation Date'
           width={200}
           render={(_, template) => {
-            const date = template.metadata?.creationTimestamp?.toDate();
+            const date = timestampDate(template.metadata?.creationTimestamp);
             return date ? format(date, 'MMM do yyyy HH:mm:ss') : '';
           }}
         />

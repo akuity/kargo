@@ -2,11 +2,18 @@ package directives
 
 import (
 	"context"
+	"fmt"
+	"time"
 
+	"github.com/expr-lang/expr"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	yaml "sigs.k8s.io/yaml/goyaml.v3"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/controller/freight"
 	"github.com/akuity/kargo/internal/credentials"
+	"github.com/akuity/kargo/internal/expressions"
 )
 
 // PromotionStepRunner is an interface for components that implement the logic for
@@ -22,6 +29,17 @@ type PromotionStepRunner interface {
 	RunPromotionStep(context.Context, *PromotionStepContext) (PromotionStepResult, error)
 }
 
+// RetryableStepRunner is an interface for PromotionStepRunners that can be
+// retried in the event of a failure.
+type RetryableStepRunner interface {
+	// DefaultTimeout returns the default timeout for the step.
+	DefaultTimeout() *time.Duration
+	// DefaultErrorThreshold returns the number of consecutive times the step must
+	// fail (for any reason) before retries are abandoned and the entire Promotion
+	// is marked as failed.
+	DefaultErrorThreshold() uint32
+}
+
 // PromotionContext is the context of a user-defined promotion process that is
 // executed by the Engine.
 type PromotionContext struct {
@@ -34,6 +52,8 @@ type PromotionContext struct {
 	Project string
 	// Stage is the Stage that the Promotion is targeting.
 	Stage string
+	// Promotion is the name of the Promotion.
+	Promotion string
 	// FreightRequests is the list of Freight from various origins that is
 	// requested by the Stage targeted by the Promotion. This information is
 	// sometimes useful to PromotionSteps that reference a particular artifact
@@ -43,15 +63,23 @@ type PromotionContext struct {
 	// resolve.
 	FreightRequests []kargoapi.FreightRequest
 	// Freight is the collection of all Freight referenced by the Promotion. This
-	// collection contains both the Freight that is actively being promoted as
-	// well as any Freight that has been inherited from the target Stage's current
+	// collection contains both the Freight that is actively being promoted and
+	// any Freight that has been inherited from the target Stage's current
 	// state.
 	Freight kargoapi.FreightCollection
-	// SharedState is the index of the step from which the promotion should begin
-	// execution.
+	// StartFromStep is the index of the step from which the promotion should
+	// begin execution.
 	StartFromStep int64
+	// StepExecutionMetadata tracks metadata pertaining to the execution
+	// of individual promotion steps.
+	StepExecutionMetadata kargoapi.StepExecutionMetadataList
 	// State is the current state of the promotion process.
 	State State
+	// Vars is a list of variables definitions that can be used by the
+	// PromotionSteps.
+	Vars []kargoapi.PromotionVariable
+	// Secrets is a map of secrets that can be used by the PromotionSteps.
+	Secrets map[string]map[string]string
 }
 
 // PromotionStep describes a single step in a user-defined promotion process.
@@ -66,9 +94,122 @@ type PromotionStep struct {
 	// step will be keyed to this alias by the Engine and made accessible to
 	// subsequent steps.
 	Alias string
-	// Config is an opaque map of configuration values to be passed to the
-	// PromotionStepRunner executing this step.
-	Config Config
+	// Retry is the retry configuration for the PromotionStep.
+	Retry *kargoapi.PromotionStepRetry
+	// Config is an opaque JSON to be passed to the PromotionStepRunner executing
+	// this step.
+	Config []byte
+}
+
+// GetTimeout returns the maximum interval the provided runner may spend
+// attempting to execute the step before retries are abandoned and the entire
+// Promotion is marked as failed. If the runner is a RetryableStepRunner, its
+// timeout is used as the default. Otherwise, the default is 0 (no limit).
+func (s *PromotionStep) GetTimeout(runner any) *time.Duration {
+	fallback := ptr.To(time.Duration(0))
+	if retryCfg, isRetryable := runner.(RetryableStepRunner); isRetryable {
+		fallback = retryCfg.DefaultTimeout()
+	}
+	return s.Retry.GetTimeout(fallback)
+}
+
+// GetErrorThreshold returns the number of consecutive times the provided runner
+// must fail to execute the step (for any reason) before retries are abandoned
+// and the entire Promotion is marked as failed. If the runner is a
+// RetryableStepRunner, its threshold is used as the default. Otherwise, the
+// default is 1.
+func (s *PromotionStep) GetErrorThreshold(runner any) uint32 {
+	fallback := uint32(1)
+	if retryCfg, isRetryable := runner.(RetryableStepRunner); isRetryable {
+		fallback = retryCfg.DefaultErrorThreshold()
+	}
+	return s.Retry.GetErrorThreshold(fallback)
+}
+
+// GetConfig returns the Config unmarshalled into a map. Any expr-lang
+// expressions are evaluated in the context of the provided arguments
+// prior to unmarshaling.
+func (s *PromotionStep) GetConfig(
+	ctx context.Context,
+	cl client.Client,
+	promoCtx PromotionContext,
+	state State,
+) (Config, error) {
+	if s.Config == nil {
+		return nil, nil
+	}
+
+	vars, err := s.GetVars(promoCtx)
+	if err != nil {
+		return nil, err
+	}
+
+	evaledCfgJSON, err := expressions.EvaluateJSONTemplate(
+		s.Config,
+		map[string]any{
+			"ctx": map[string]any{
+				"project":   promoCtx.Project,
+				"promotion": promoCtx.Promotion,
+				"stage":     promoCtx.Stage,
+			},
+			"vars":    vars,
+			"secrets": promoCtx.Secrets,
+			"outputs": state,
+		},
+		expr.Function("warehouse", warehouseFunc, new(func(string) kargoapi.FreightOrigin)),
+		expr.Function(
+			"commitFrom",
+			getCommitFunc(ctx, cl, promoCtx),
+			new(func(repoURL string, origin kargoapi.FreightOrigin) kargoapi.GitCommit),
+			new(func(repoURL string) kargoapi.GitCommit),
+		),
+		expr.Function(
+			"imageFrom",
+			getImageFunc(ctx, cl, promoCtx),
+			new(func(repoURL string, origin kargoapi.FreightOrigin) kargoapi.Image),
+			new(func(repoURL string) kargoapi.Image),
+		),
+		expr.Function(
+			"chartFrom",
+			getChartFunc(ctx, cl, promoCtx),
+			new(func(repoURL string, chartName string, origin kargoapi.FreightOrigin) kargoapi.Chart),
+			new(func(repoURL string, chartName string) kargoapi.Chart),
+			new(func(repoURL string, origin kargoapi.FreightOrigin) kargoapi.Chart),
+			new(func(repoURL string) kargoapi.Chart),
+		),
+	)
+	if err != nil {
+		return nil, err
+	}
+	var config map[string]any
+	if err := yaml.Unmarshal(evaledCfgJSON, &config); err != nil {
+		return nil, nil
+	}
+	return config, nil
+}
+
+// GetVars returns the variables defined in the PromotionStep. The variables are
+// evaluated in the context of the provided PromotionContext.
+func (s *PromotionStep) GetVars(promoCtx PromotionContext) (map[string]any, error) {
+	vars := make(map[string]any, len(promoCtx.Vars))
+	for _, v := range promoCtx.Vars {
+		newVar, err := expressions.EvaluateTemplate(
+			v.Value,
+			map[string]any{
+				"ctx": map[string]any{
+					"project":   promoCtx.Project,
+					"promotion": promoCtx.Promotion,
+					"stage":     promoCtx.Stage,
+				},
+				"vars": vars,
+			},
+		)
+		if err != nil {
+			return nil, fmt.Errorf("error pre-processing promotion variable %q: %w", v.Name, err)
+		}
+		vars[v.Name] = newVar
+	}
+	return vars, nil
 }
 
 // PromotionResult is the result of a user-defined promotion process executed by
@@ -88,9 +229,12 @@ type PromotionResult struct {
 	// health check processes.
 	HealthCheckSteps []HealthCheckStep
 	// If the promotion process remains in-progress, perhaps waiting for a change
-	// in some external state, the value of this field will indicated where to
+	// in some external state, the value of this field will indicate where to
 	// resume the process in the next reconciliation.
 	CurrentStep int64
+	// StepExecutionMetadata tracks metadata pertaining to the execution
+	// of individual promotion steps.
+	StepExecutionMetadata kargoapi.StepExecutionMetadataList
 	// State is the current state of the promotion process.
 	State State
 }
@@ -114,6 +258,8 @@ type PromotionStepContext struct {
 	Project string
 	// Stage is the Stage that the Promotion is targeting.
 	Stage string
+	// Promotion is the name of the Promotion.
+	Promotion string
 	// FreightRequests is the list of Freight from various origins that is
 	// requested by the Stage targeted by the Promotion. This information is
 	// sometimes useful to PromotionStep that reference a particular artifact and,
@@ -180,4 +326,93 @@ type PromotionStepResult struct {
 	// a PromotionStepRunner's successful execution of a PromotionStep. This
 	// configuration can later be used as input to health check processes.
 	HealthCheckStep *HealthCheckStep
+}
+
+func warehouseFunc(name ...any) (any, error) { // nolint: unparam
+	return kargoapi.FreightOrigin{
+		Kind: kargoapi.FreightOriginKindWarehouse,
+		Name: name[0].(string), // nolint: forcetypeassert
+	}, nil
+}
+
+func getCommitFunc(
+	ctx context.Context,
+	cl client.Client,
+	promoCtx PromotionContext,
+) func(a ...any) (any, error) {
+	return func(a ...any) (any, error) {
+		repoURL := a[0].(string) // nolint: forcetypeassert
+		var desiredOriginPtr *kargoapi.FreightOrigin
+		if len(a) == 2 {
+			desiredOrigin := a[1].(kargoapi.FreightOrigin) // nolint: forcetypeassert
+			desiredOriginPtr = &desiredOrigin
+		}
+		return freight.FindCommit(
+			ctx,
+			cl,
+			promoCtx.Project,
+			promoCtx.FreightRequests,
+			desiredOriginPtr,
+			promoCtx.Freight.References(),
+			repoURL,
+		)
+	}
+}
+
+func getImageFunc(
+	ctx context.Context,
+	cl client.Client,
+	promoCtx PromotionContext,
+) func(a ...any) (any, error) {
+	return func(a ...any) (any, error) {
+		repoURL := a[0].(string) // nolint: forcetypeassert
+		var desiredOriginPtr *kargoapi.FreightOrigin
+		if len(a) == 2 {
+			desiredOrigin := a[1].(kargoapi.FreightOrigin) // nolint: forcetypeassert
+			desiredOriginPtr = &desiredOrigin
+		}
+		return freight.FindImage(
+			ctx,
+			cl,
+			promoCtx.Project,
+			promoCtx.FreightRequests,
+			desiredOriginPtr,
+			promoCtx.Freight.References(),
+			repoURL,
+		)
+	}
+}
+
+func getChartFunc(
+	ctx context.Context,
+	cl client.Client,
+	promoCtx PromotionContext,
+) func(a ...any) (any, error) {
+	return func(a ...any) (any, error) {
+		repoURL := a[0].(string) // nolint: forcetypeassert
+		var chartName string
+		var desiredOriginPtr *kargoapi.FreightOrigin
+		if len(a) == 2 {
+			var ok bool
+			if chartName, ok = a[1].(string); !ok {
+				desiredOrigin := a[1].(kargoapi.FreightOrigin) // nolint: forcetypeassert
+				desiredOriginPtr = &desiredOrigin
+			}
+		}
+		if len(a) == 3 {
+			chartName = a[1].(string)                      // nolint: forcetypeassert
+			desiredOrigin := a[2].(kargoapi.FreightOrigin) // nolint: forcetypeassert
+			desiredOriginPtr = &desiredOrigin
+		}
+		return freight.FindChart(
+			ctx,
+			cl,
+			promoCtx.Project,
+			promoCtx.FreightRequests,
+			desiredOriginPtr,
+			promoCtx.Freight.References(),
+			repoURL,
+			chartName,
+		)
+	}
 }

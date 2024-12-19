@@ -2,7 +2,8 @@ import {
   faArrowRightFromBracket,
   faBook,
   faBoxes,
-  faTerminal
+  faTerminal,
+  faUser
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Spin, Tooltip } from 'antd';
@@ -12,13 +13,14 @@ import { Outlet } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
 import { useAuthContext } from '@ui/features/auth/context/use-auth-context';
+import { isJWTDirty } from '@ui/features/auth/jwt-utils';
 import { KargoLogo } from '@ui/features/common/logo/logo';
 
 import * as styles from './main-layout.module.less';
 import { NavItem } from './nav-item/nav-item';
 
 export const MainLayout = () => {
-  const { logout } = useAuthContext();
+  const { logout, JWTInfo } = useAuthContext();
 
   return (
     <ErrorBoundary>
@@ -39,6 +41,11 @@ export const MainLayout = () => {
               <NavItem icon={faBoxes} path={paths.projects}>
                 Projects
               </NavItem>
+              {!isJWTDirty(JWTInfo) && (
+                <NavItem icon={faUser} path={paths.user}>
+                  User
+                </NavItem>
+              )}
               <NavItem icon={faBook} path='https://docs.kargo.io' target='_blank'>
                 Docs
               </NavItem>

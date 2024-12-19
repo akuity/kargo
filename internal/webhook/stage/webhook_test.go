@@ -1033,6 +1033,12 @@ func TestValidateSpec(t *testing.T) {
 					testFreightRequest,
 					testFreightRequest,
 				},
+				PromotionTemplate: &kargoapi.PromotionTemplate{
+					Spec: kargoapi.PromotionTemplateSpec{
+						// This step alias matches a reserved pattern
+						Steps: []kargoapi.PromotionStep{{As: "step-42"}},
+					},
+				},
 			},
 			assertions: func(t *testing.T, spec *kargoapi.StageSpec, errs field.ErrorList) {
 				// We really want to see that all underlying errors have been bubbled up
@@ -1046,6 +1052,12 @@ func TestValidateSpec(t *testing.T) {
 							BadValue: spec.RequestedFreight,
 							Detail: `freight with origin Warehouse/test-warehouse requested multiple ` +
 								"times in spec.requestedFreight",
+						},
+						{
+							Type:     field.ErrorTypeInvalid,
+							Field:    "spec.promotionTemplate.spec.steps[0].as",
+							BadValue: "step-42",
+							Detail:   "step alias is reserved",
 						},
 					},
 					errs,
@@ -1134,6 +1146,72 @@ func TestValidateRequestedFreight(t *testing.T) {
 				w.validateRequestedFreight(
 					field.NewPath("requestedFreight"),
 					testCase.reqs,
+				),
+			)
+		})
+	}
+}
+
+func TestValidatePromotionTemplate(t *testing.T) {
+	testCases := []struct {
+		name          string
+		promoTemplate *kargoapi.PromotionTemplate
+		assertions    func(*testing.T, field.ErrorList)
+	}{
+		{
+			name: "promotionTemplate is nil",
+			assertions: func(t *testing.T, errs field.ErrorList) {
+				require.Empty(t, errs)
+			},
+		},
+		{
+			name: "promotionTemplate is valid",
+			promoTemplate: &kargoapi.PromotionTemplate{
+				Spec: kargoapi.PromotionTemplateSpec{
+					Steps: []kargoapi.PromotionStep{
+						{},
+						{As: "fake-step"},
+					},
+				},
+			},
+			assertions: func(t *testing.T, errs field.ErrorList) {
+				require.Empty(t, errs)
+			},
+		},
+		{
+			name: "promotionTemplate is invalid",
+			promoTemplate: &kargoapi.PromotionTemplate{
+				Spec: kargoapi.PromotionTemplateSpec{
+					Steps: []kargoapi.PromotionStep{
+						{},
+						{As: "step-42"}, // This step alias matches a reserved pattern
+					},
+				},
+			},
+			assertions: func(t *testing.T, errs field.ErrorList) {
+				require.Equal(
+					t,
+					field.ErrorList{
+						{
+							Type:     field.ErrorTypeInvalid,
+							Field:    "promotionTemplate.spec.steps[1].as",
+							BadValue: "step-42",
+							Detail:   "step alias is reserved",
+						},
+					},
+					errs,
+				)
+			},
+		},
+	}
+	w := &webhook{}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			testCase.assertions(
+				t,
+				w.ValidatePromotionTemplate(
+					field.NewPath("promotionTemplate"),
+					testCase.promoTemplate,
 				),
 			)
 		})

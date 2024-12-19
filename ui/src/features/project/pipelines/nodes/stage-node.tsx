@@ -17,8 +17,10 @@ import { generatePath, useNavigate } from 'react-router-dom';
 import { paths } from '@ui/config/paths';
 import { HealthStatusIcon } from '@ui/features/common/health-status/health-status-icon';
 import { PromotionStatusIcon } from '@ui/features/common/promotion-status/promotion-status-icon';
+import { selectFreightByWarehouse } from '@ui/features/common/utils';
 import { willStagePromotionOpenPR } from '@ui/features/promotion-directives/utils';
 import { Freight, Stage } from '@ui/gen/v1alpha1/generated_pb';
+import { timestampDate } from '@ui/utils/connectrpc-utils';
 import { useLocalStorage } from '@ui/utils/use-local-storage';
 
 import { FreightTimelineAction, NodeDimensions } from '../types';
@@ -49,7 +51,8 @@ export const StageNode = ({
   onClick,
   onHover,
   highlighted,
-  autoPromotion
+  autoPromotion,
+  selectedWarehouse
 }: {
   stage: Stage;
   color: string;
@@ -64,12 +67,19 @@ export const StageNode = ({
   onHover: (hovering: boolean) => void;
   highlighted?: boolean;
   autoPromotion?: boolean;
+  selectedWarehouse?: string;
 }) => {
   const navigate = useNavigate();
-  const [visibleFreight, setVisibleFreight] = useLocalStorage(
+  const [_visibleFreight, setVisibleFreight] = useLocalStorage(
     `${projectName}-${stage.metadata?.name}`,
-    0
+    selectFreightByWarehouse(currentFreight, selectedWarehouse)
   );
+
+  let visibleFreight = _visibleFreight;
+
+  if (selectedWarehouse) {
+    visibleFreight = selectFreightByWarehouse(currentFreight, selectedWarehouse);
+  }
 
   return (
     <>
@@ -178,7 +188,9 @@ export const StageNode = ({
             </div>
           )}
         </div>
-        <StageNodeFooter lastPromotion={stage?.status?.lastPromotion?.finishedAt?.toDate()} />
+        <StageNodeFooter
+          lastPromotion={timestampDate(stage?.status?.lastPromotion?.finishedAt) || undefined}
+        />
       </div>
       {action !== FreightTimelineAction.ManualApproval &&
         action !== FreightTimelineAction.PromoteFreight && (

@@ -18,6 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/controller"
 	"github.com/akuity/kargo/internal/logging"
 )
 
@@ -29,7 +30,8 @@ const (
 const controllerReadSecretsClusterRoleName = "kargo-controller-read-secrets"
 
 type ReconcilerConfig struct {
-	KargoNamespace string `envconfig:"KARGO_NAMESPACE" default:"kargo"`
+	KargoNamespace          string `envconfig:"KARGO_NAMESPACE" default:"kargo"`
+	MaxConcurrentReconciles int    `envconfig:"MAX_CONCURRENT_SERVICE_ACCOUNT_RECONCILES" default:"4"`
 }
 
 func ReconcilerConfigFromEnv() ReconcilerConfig {
@@ -46,8 +48,12 @@ type reconciler struct {
 
 // SetupReconcilerWithManager initializes a reconciler for ServiceAccount
 // resources and registers it with the provided Manager.
-func SetupReconcilerWithManager(kargoMgr manager.Manager, cfg ReconcilerConfig) error {
-	return ctrl.NewControllerManagedBy(kargoMgr).
+func SetupReconcilerWithManager(
+	ctx context.Context,
+	kargoMgr manager.Manager,
+	cfg ReconcilerConfig,
+) error {
+	err := ctrl.NewControllerManagedBy(kargoMgr).
 		For(&corev1.ServiceAccount{}).
 		WithEventFilter(
 			predicate.Funcs{
@@ -57,7 +63,17 @@ func SetupReconcilerWithManager(kargoMgr manager.Manager, cfg ReconcilerConfig) 
 				},
 			},
 		).
+		WithOptions(controller.CommonOptions(cfg.MaxConcurrentReconciles)).
 		Complete(newReconciler(kargoMgr.GetClient(), cfg))
+
+	if err == nil {
+		logging.LoggerFromContext(ctx).Info(
+			"Initialized ServiceAccount reconciler",
+			"maxConcurrentReconciles", cfg.MaxConcurrentReconciles,
+		)
+	}
+
+	return err
 }
 
 func newReconciler(kubeClient client.Client, cfg ReconcilerConfig) *reconciler {

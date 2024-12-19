@@ -1,4 +1,5 @@
 import {
+  faBuilding,
   faBullseye,
   faCalendarPlus,
   faCalendarXmark,
@@ -65,6 +66,28 @@ export const FreightTimelineHeader = ({
 
   const navigate = useNavigate();
 
+  const WarehouseSelector = (
+    <Select
+      className='w-48 ml-4'
+      value={selectedWarehouse}
+      onChange={(value) => setSelectedWarehouse(value)}
+      size='small'
+      labelRender={({ label }) => <div className='text-xs font-medium'>{label}</div>}
+      optionRender={(opt) => (
+        <div className='text-xs font-normal w-full h-full flex items-center'>
+          <div>{opt.label}</div>
+        </div>
+      )}
+      options={[
+        ...(Object.keys(warehouses) || []).map((w) => ({ value: w, label: w })),
+        {
+          value: '',
+          label: 'All warehouses'
+        }
+      ]}
+    />
+  );
+
   return (
     <div className='w-full pl-6 flex items-center font-semibold text-sm h-8 pt-2'>
       {action ? (
@@ -107,6 +130,13 @@ export const FreightTimelineHeader = ({
               </>
             )}
           </div>
+
+          {(Object.keys(warehouses) || []).length > 1 && (
+            <div className='ml-4'>
+              <FontAwesomeIcon icon={faBuilding} className='mr-2' /> WAREHOUSE
+              {WarehouseSelector}
+            </div>
+          )}
 
           <div
             className='ml-auto mr-4 cursor-pointer px-2 py-1 text-white bg-gray-700 rounded hover:bg-gray-600 font-semibold text-xs'
@@ -183,27 +213,7 @@ export const FreightTimelineHeader = ({
             />
           </Tooltip>
           {(Object.keys(warehouses) || []).length > 1 && (
-            <div className='mr-4 -mb-1'>
-              <Select
-                className='w-48'
-                value={selectedWarehouse}
-                onChange={(value) => setSelectedWarehouse(value)}
-                size='small'
-                labelRender={({ label }) => <div className='text-xs font-medium'>{label}</div>}
-                optionRender={(opt) => (
-                  <div className='text-xs font-normal w-full h-full flex items-center'>
-                    <div>{opt.label}</div>
-                  </div>
-                )}
-                options={[
-                  ...(Object.keys(warehouses) || []).map((w) => ({ value: w, label: w })),
-                  {
-                    value: '',
-                    label: 'All warehouses'
-                  }
-                ]}
-              />
-            </div>
+            <div className='mr-4 -mb-1'>{WarehouseSelector}</div>
           )}
         </>
       )}

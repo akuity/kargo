@@ -264,6 +264,9 @@ type PromotionTemplate struct {
 // for a Stage. This is a template that can be used to create a Promotion for a
 // Stage.
 type PromotionTemplateSpec struct {
+	// Vars is a list of variables that can be referenced by expressions in
+	// promotion steps.
+	Vars []PromotionVariable `json:"vars,omitempty" protobuf:"bytes,2,rep,name=vars"`
 	// Steps specifies the directives to be executed as part of a Promotion.
 	// The order in which the directives are executed is the order in which they
 	// are listed in this field.
@@ -275,6 +278,13 @@ type PromotionTemplateSpec struct {
 // StageStatus describes a Stages's current and recent Freight, health, and
 // more.
 type StageStatus struct {
+	// Conditions contains the last observations of the Stage's current
+	// state.
+	// +patchMergeKey=type
+	// +patchStrategy=merge
+	// +listType=map
+	// +listMapKey=type
+	Conditions []metav1.Condition `json:"conditions,omitempty" patchMergeKey:"type" patchStrategy:"merge" protobuf:"bytes,13,rep,name=conditions"`
 	// LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh
 	// annotation that was handled by the controller. This field can be used to
 	// determine whether the request to refresh the resource has been handled.
@@ -310,6 +320,14 @@ type StageStatus struct {
 	CurrentPromotion *PromotionReference `json:"currentPromotion,omitempty" protobuf:"bytes,7,opt,name=currentPromotion"`
 	// LastPromotion is a reference to the last completed promotion.
 	LastPromotion *PromotionReference `json:"lastPromotion,omitempty" protobuf:"bytes,10,opt,name=lastPromotion"`
+}
+
+func (w *StageStatus) GetConditions() []metav1.Condition {
+	return w.Conditions
+}
+
+func (w *StageStatus) SetConditions(conditions []metav1.Condition) {
+	w.Conditions = conditions
 }
 
 // FreightReference is a simplified representation of a piece of Freight -- not
@@ -382,6 +400,18 @@ func (f *FreightCollection) References() []FreightReference {
 		refs = append(refs, f.Freight[o])
 	}
 	return refs
+}
+
+// HasNonTerminalVerification returns true if the FreightCollection has any
+// verification which is not in a terminal state, indicating verification is
+// still in progress.
+func (f *FreightCollection) HasNonTerminalVerification() bool {
+	for _, v := range f.VerificationHistory {
+		if !v.Phase.IsTerminal() {
+			return true
+		}
+	}
+	return false
 }
 
 // FreightHistory is a linear list of FreightCollection items. The list is
@@ -481,8 +511,6 @@ type Health struct {
 	// Issues clarifies why a Stage in any state other than Healthy is in that
 	// state. This field will always be the empty when a Stage is Healthy.
 	Issues []string `json:"issues,omitempty" protobuf:"bytes,2,rep,name=issues"`
-	// ArgoCDApps describes the current state of any related ArgoCD Applications.
-	ArgoCDApps []ArgoCDAppStatus `json:"argoCDApps,omitempty" protobuf:"bytes,3,rep,name=argoCDApps"`
 	// Config is the opaque configuration of all health checks performed on this
 	// Stage.
 	Config *apiextensionsv1.JSON `json:"config,omitempty" protobuf:"bytes,4,opt,name=config"`

@@ -1,6 +1,6 @@
 ---
 description: Learn how to manage user permissions
-sidebar_label: Managing user permissions
+sidebar_label: Managing User Permissions
 ---
 
 # Managing User Permissions
@@ -272,6 +272,21 @@ kargo delete role developer --project kargo-demo
 ```shell
 role.rbac.kargo.akuity.io/developer deleted
 ```
+
+## Kargo Role Matrix
+
+The table below outlines the maximum rules required based on the `kargo-admin` ClusterRole. When specifying verbs, it's recommended to apply the principle of least privilege, ensuring access is limited to what is necessary for the specific role.
+
+| **API Groups**              | **Resources**                                  | **Verbs**                                           |
+|-----------------------------|------------------------------------------------|-----------------------------------------------------|
+| `""`                        | `events`, `namespaces`, `serviceaccounts`      | `get`, `list`, `watch`                              |
+| `rbac.authorization.k8s.io` | `rolebindings`, `roles`                        | `get`, `list`, `watch`                              |
+| `kargo.akuity.io`           | `freights`, `projects`, `stages`, `warehouses` | `*`                                                 |
+| `kargo.akuity.io`           | `stages`                                       | `promote`                                           |
+| `kargo.akuity.io`           | `promotions`                                   | `create`, `delete`, `get`, `list`, `patch`, `watch` |
+| `kargo.akuity.io`           | `freights/status`                              | `patch`                                             |
+| `argoproj.io`               | `analysisruns`                                 | `delete`, `get`, `list`, `watch`                    |
+| `argoproj.io`               | `analysistemplates`                            | `*`                                                 |
 
 ## Global Mappings
 

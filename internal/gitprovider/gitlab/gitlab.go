@@ -8,40 +8,36 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/xanzy/go-gitlab"
+	gitlab "gitlab.com/gitlab-org/api/client-go"
 
 	"github.com/akuity/kargo/internal/git"
 	"github.com/akuity/kargo/internal/gitprovider"
 )
 
-const (
-	GitProviderServiceName = "gitlab"
-)
+const ProviderName = "gitlab"
 
-var (
-	registration = gitprovider.ProviderRegistration{
-		Predicate: func(repoURL string) bool {
-			u, err := url.Parse(repoURL)
-			if err != nil {
-				return false
-			}
-			// We assume that any hostname with the word "gitlab" in the hostname,
-			// can use this provider. NOTE: we will miss cases where the host is
-			// Gitlab but doesn't incorporate the word "gitlab" in the hostname.
-			// e.g. 'git.mycompany.com'
-			return strings.Contains(u.Host, GitProviderServiceName)
-		},
-		NewService: func(
-			repoURL string,
-			opts *gitprovider.GitProviderOptions,
-		) (gitprovider.GitProviderService, error) {
-			return NewGitLabProvider(repoURL, opts)
-		},
-	}
-)
+var registration = gitprovider.Registration{
+	Predicate: func(repoURL string) bool {
+		u, err := url.Parse(repoURL)
+		if err != nil {
+			return false
+		}
+		// We assume that any hostname with the word "gitlab" in it, can use this
+		// provider. NOTE: We will miss cases where the host is self-hosted Gitlab
+		// but doesn't incorporate the word "gitlab" in the hostname. e.g.
+		// 'git.mycompany.com'
+		return strings.Contains(u.Host, ProviderName)
+	},
+	NewProvider: func(
+		repoURL string,
+		opts *gitprovider.Options,
+	) (gitprovider.Interface, error) {
+		return NewProvider(repoURL, opts)
+	},
+}
 
 func init() {
-	gitprovider.RegisterProvider(GitProviderServiceName, registration)
+	gitprovider.Register(ProviderName, registration)
 }
 
 type mergeRequestClient interface {
@@ -65,23 +61,21 @@ type mergeRequestClient interface {
 	) (*gitlab.MergeRequest, *gitlab.Response, error)
 }
 
-type gitLabClient struct { // nolint: revive
-	mergeRequests mergeRequestClient
-}
-
-type gitLabProvider struct { // nolint: revive
+// provider is a GitLab-based implementation of gitprovider.Interface.
+type provider struct { // nolint: revive
 	projectName string
-	client      *gitLabClient
+	client      mergeRequestClient
 }
 
-func NewGitLabProvider(
+// NewProvider returns a GitLab-based implementation of gitprovider.Interface.
+func NewProvider(
 	repoURL string,
-	opts *gitprovider.GitProviderOptions,
-) (gitprovider.GitProviderService, error) {
+	opts *gitprovider.Options,
+) (gitprovider.Interface, error) {
 	if opts == nil {
-		opts = &gitprovider.GitProviderOptions{}
+		opts = &gitprovider.Options{}
 	}
-	host, projectName, err := parseGitLabURL(repoURL)
+	host, projectName, err := parseRepoURL(repoURL)
 	if err != nil {
 		return nil, err
 	}
@@ -108,17 +102,21 @@ func NewGitLabProvider(
 	if err != nil {
 		return nil, err
 	}
-	return &gitLabProvider{
+	return &provider{
 		projectName: projectName,
-		client:      &gitLabClient{mergeRequests: client.MergeRequests},
+		client:      client.MergeRequests,
 	}, nil
 }
 
-func (g *gitLabProvider) CreatePullRequest(
+// CreatePullRequest implements gitprovider.Interface.
+func (p *provider) CreatePullRequest(
 	_ context.Context,
-	opts gitprovider.CreatePullRequestOpts,
+	opts *gitprovider.CreatePullRequestOpts,
 ) (*gitprovider.PullRequest, error) {
-	glMR, _, err := g.client.mergeRequests.CreateMergeRequest(g.projectName, &gitlab.CreateMergeRequestOptions{
+	if opts == nil {
+		opts = &gitprovider.CreatePullRequestOpts{}
+	}
+	glMR, _, err := p.client.CreateMergeRequest(p.projectName, &gitlab.CreateMergeRequestOptions{
 		Title:              &opts.Title,
 		Description:        &opts.Description,
 		SourceBranch:       &opts.Head,
@@ -128,76 +126,94 @@ func (g *gitLabProvider) CreatePullRequest(
 	if err != nil {
 		return nil, err
 	}
-	return convertGitlabMR(glMR), nil
+	if glMR == nil {
+		return nil, fmt.Errorf("unexpected nil merge request")
+	}
+	pr := convertGitlabMR(*glMR)
+	return &pr, nil
 }
 
-func (g *gitLabProvider) GetPullRequest(
+// GetPullRequest implements gitprovider.Interface.
+func (p *provider) GetPullRequest(
 	_ context.Context,
 	id int64,
 ) (*gitprovider.PullRequest, error) {
-	glMR, err := g.getMergeRequest(id)
+	glMR, _, err := p.client.GetMergeRequest(p.projectName, int(id), nil)
 	if err != nil {
 		return nil, err
 	}
-	return convertGitlabMR(glMR), nil
+	if glMR == nil {
+		return nil, fmt.Errorf("unexpected nil merge request")
+	}
+	pr := convertGitlabMR(*glMR)
+	return &pr, nil
 }
 
-func (g *gitLabProvider) ListPullRequests(
+// ListPullRequests implements gitprovider.Interface.
+func (p *provider) ListPullRequests(
 	_ context.Context,
-	opts gitprovider.ListPullRequestOpts,
-) ([]*gitprovider.PullRequest, error) {
+	opts *gitprovider.ListPullRequestOptions,
+) ([]gitprovider.PullRequest, error) {
+	if opts == nil {
+		opts = &gitprovider.ListPullRequestOptions{}
+	}
+	if opts.State == "" {
+		opts.State = gitprovider.PullRequestStateOpen
+	}
+	switch opts.State {
+	case gitprovider.PullRequestStateAny, gitprovider.PullRequestStateClosed,
+		gitprovider.PullRequestStateOpen:
+	default:
+		return nil, fmt.Errorf("unknown pull request state %q", opts.State)
+	}
 	listOpts := &gitlab.ListProjectMergeRequestsOptions{
-		SourceBranch: &opts.Head,
-		TargetBranch: &opts.Base,
+		SourceBranch: &opts.HeadBranch,
+		TargetBranch: &opts.BaseBranch,
+		ListOptions: gitlab.ListOptions{
+			// The max isn't documented, but this doesn't produce an error.
+			PerPage: 100,
+		},
 	}
-	glMRs, _, err := g.client.mergeRequests.ListProjectMergeRequests(g.projectName, listOpts)
-	if err != nil {
-		return nil, err
-	}
-	prs := make([]*gitprovider.PullRequest, 0, len(glMRs))
-	for _, glMR := range glMRs {
-		if (opts.State == gitprovider.PullRequestStateOpen) == isMROpen(glMR) {
-			prs = append(prs, convertGitlabMR(glMR))
+	prs := []gitprovider.PullRequest{}
+	for {
+		glMRs, res, err := p.client.ListProjectMergeRequests(p.projectName, listOpts)
+		if err != nil {
+			return nil, err
 		}
+		for _, glMR := range glMRs {
+			if (opts.State == gitprovider.PullRequestStateAny ||
+				((opts.State == gitprovider.PullRequestStateOpen) == isMROpen(*glMR))) &&
+				(opts.HeadCommit == "" || glMR.SHA == opts.HeadCommit) {
+				prs = append(prs, convertGitlabMR(*glMR))
+			}
+		}
+		if res == nil || res.NextPage == 0 {
+			break
+		}
+		listOpts.Page = res.NextPage
 	}
 	return prs, nil
 }
 
-func (g *gitLabProvider) IsPullRequestMerged(_ context.Context, id int64) (bool, error) {
-	glMR, err := g.getMergeRequest(id)
-	if err != nil {
-		return false, err
-	}
-	return glMR.State == "merged", nil
-}
-
-func convertGitlabMR(glMR *gitlab.MergeRequest) *gitprovider.PullRequest {
-	var prState gitprovider.PullRequestState
-	if isMROpen(glMR) {
-		prState = gitprovider.PullRequestStateOpen
-	} else {
-		prState = gitprovider.PullRequestStateClosed
-	}
-	return &gitprovider.PullRequest{
+func convertGitlabMR(glMR gitlab.MergeRequest) gitprovider.PullRequest {
+	fmt.Println(glMR.MergeCommitSHA)
+	return gitprovider.PullRequest{
 		Number:         int64(glMR.IID),
 		URL:            glMR.WebURL,
-		State:          prState,
+		Open:           isMROpen(glMR),
+		Merged:         glMR.State == "merged",
 		MergeCommitSHA: glMR.MergeCommitSHA,
 		Object:         glMR,
 		HeadSHA:        glMR.SHA,
+		CreatedAt:      glMR.CreatedAt,
 	}
 }
 
-func isMROpen(glMR *gitlab.MergeRequest) bool {
+func isMROpen(glMR gitlab.MergeRequest) bool {
 	return glMR.State == "opened" || glMR.State == "locked"
 }
 
-func (g *gitLabProvider) getMergeRequest(id int64) (*gitlab.MergeRequest, error) {
-	glMR, _, err := g.client.mergeRequests.GetMergeRequest(g.projectName, int(id), nil)
-	return glMR, err
-}
-
-func parseGitLabURL(repoURL string) (string, string, error) {
+func parseRepoURL(repoURL string) (string, string, error) {
 	u, err := url.Parse(git.NormalizeURL(repoURL))
 	if err != nil {
 		return "", "", fmt.Errorf("error parsing gitlab repository URL %q: %w", u, err)

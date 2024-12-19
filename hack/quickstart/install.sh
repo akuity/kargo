@@ -2,16 +2,16 @@
 
 set -x
 
-argo_cd_chart_version=6.9.2
-argo_rollouts_chart_version=2.35.0
-cert_manager_chart_version=1.14.5
+argo_cd_chart_version=7.7.0
+argo_rollouts_chart_version=2.37.7
+cert_manager_chart_version=1.16.1
 
 helm install cert-manager cert-manager \
   --repo https://charts.jetstack.io \
   --version $cert_manager_chart_version \
   --namespace cert-manager \
   --create-namespace \
-  --set installCRDs=true \
+  --set crds.enabled=true \
   --wait
 
 helm install argocd argo-cd \

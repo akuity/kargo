@@ -1,4 +1,4 @@
-import { createPromiseClient } from '@connectrpc/connect';
+import { createClient } from '@connectrpc/connect';
 import { createConnectQueryKey, useQuery } from '@connectrpc/connect-query';
 import { useQueryClient } from '@tanstack/react-query';
 import { Spin, Table, Tooltip } from 'antd';
@@ -18,14 +18,18 @@ import {
   getFreight,
   listPromotions
 } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
-import { KargoService } from '@ui/gen/service/v1alpha1/service_connect';
 import { ListPromotionsResponse } from '@ui/gen/service/v1alpha1/service_pb';
+import { KargoService } from '@ui/gen/service/v1alpha1/service_pb';
+import { ArgoCDShard } from '@ui/gen/service/v1alpha1/service_pb';
 import { Freight, Promotion } from '@ui/gen/v1alpha1/generated_pb';
+import uiPlugins from '@ui/plugins';
+import { UiPluginHoles } from '@ui/plugins/atoms/ui-plugin-hole/ui-plugin-holes';
+import { timestampDate } from '@ui/utils/connectrpc-utils';
 
 import { PromotionDetailsModal } from './promotion-details-modal';
 import { hasAbortRequest, promotionCompareFn } from './utils/promotion';
 
-export const Promotions = () => {
+export const Promotions = ({ argocdShard }: { argocdShard?: ArgoCDShard }) => {
   const client = useQueryClient();
 
   const { name: projectName, stageName } = useParams();
@@ -55,7 +59,7 @@ export const Promotions = () => {
     const cancel = new AbortController();
 
     const watchPromotions = async () => {
-      const promiseClient = createPromiseClient(KargoService, transportWithAuth);
+      const promiseClient = createClient(KargoService, transportWithAuth);
       const stream = promiseClient.watchPromotions(
         { project: projectName, stage: stageName },
         { signal: cancel.signal }
@@ -84,9 +88,14 @@ export const Promotions = () => {
         }
 
         // Update Promotions list
-        const listPromotionsQueryKey = createConnectQueryKey(listPromotions, {
-          project: projectName,
-          stage: stageName
+        const listPromotionsQueryKey = createConnectQueryKey({
+          cardinality: 'finite',
+          schema: listPromotions,
+          input: {
+            project: projectName,
+            stage: stageName
+          },
+          transport: transportWithAuth
         });
         client.setQueryData(listPromotionsQueryKey, { promotions });
       }
@@ -127,7 +136,7 @@ export const Promotions = () => {
     {
       title: 'Date',
       render: (_, promotion) => {
-        const date = promotion.metadata?.creationTimestamp?.toDate();
+        const date = timestampDate(promotion.metadata?.creationTimestamp);
         return date ? format(date, 'MMM do yyyy HH:mm:ss') : '';
       }
     },
@@ -171,6 +180,39 @@ export const Promotions = () => {
           </Link>
         </Tooltip>
       )
+    },
+    {
+      title: '',
+      render: (_, promotion, promotionIndex) => {
+        const filteredUiPlugins = uiPlugins
+          .filter((plugin) =>
+            plugin.DeepLinkPlugin?.Promotion?.shouldRender({
+              promotion,
+              isLatestPromotion: promotionIndex === 0
+            })
+          )
+          .map((plugin) => plugin.DeepLinkPlugin?.Promotion?.render);
+
+        if (filteredUiPlugins?.length > 0) {
+          return (
+            <UiPluginHoles.DeepLinks.Promotion className='w-fit'>
+              {filteredUiPlugins.map(
+                (ApplyPlugin, idx) =>
+                  ApplyPlugin && (
+                    <ApplyPlugin
+                      key={idx}
+                      promotion={promotion}
+                      isLatestPromotion={promotionIndex === 0}
+                      unstable_argocdShardUrl={argocdShard?.url}
+                    />
+                  )
+              )}
+            </UiPluginHoles.DeepLinks.Promotion>
+          );
+        }
+
+        return '-';
+      }
     }
   ];
 

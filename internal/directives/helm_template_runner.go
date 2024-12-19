@@ -76,7 +76,7 @@ func (h *helmTemplateRunner) RunPromotionStep(
 	}
 
 	// Convert the configuration into a typed struct
-	cfg, err := configToStruct[HelmTemplateConfig](stepCtx.Config)
+	cfg, err := ConfigToStruct[HelmTemplateConfig](stepCtx.Config)
 	if err != nil {
 		return failure, fmt.Errorf("could not convert config into %s config: %w", h.Name(), err)
 	}
@@ -275,15 +275,15 @@ func isTestHook(h *release.Hook) bool {
 // Licensed under the Apache License 2.0.
 
 // writeToHelmFile writes the given data to the output directory with the given
-// name. If the append flag is set to true, the data is appended to the file.
-func writeToHelmFile(outputDir string, name string, data string, append bool) (err error) {
+// name. If the appendMode flag is set to true, the data is appended to the file.
+func writeToHelmFile(outputDir string, name string, data string, appendMode bool) (err error) {
 	outfileName := strings.Join([]string{outputDir, name}, string(filepath.Separator))
 
 	if err = ensureDirectoryForHelmFile(outfileName); err != nil {
 		return err
 	}
 
-	f, err := createOrOpenHelmFile(outfileName, append)
+	f, err := createOrOpenHelmFile(outfileName, appendMode)
 	if err != nil {
 		return err
 	}
@@ -302,8 +302,8 @@ func writeToHelmFile(outputDir string, name string, data string, append bool) (e
 
 // createOrOpenHelmFile creates or opens the file with the given name. If the
 // append flag is set to true, the file is opened in append mode.
-func createOrOpenHelmFile(filename string, append bool) (*os.File, error) {
-	if append {
+func createOrOpenHelmFile(filename string, appendMode bool) (*os.File, error) {
+	if appendMode {
 		return os.OpenFile(filename, os.O_APPEND|os.O_WRONLY, 0o600)
 	}
 	return os.Create(filename)

@@ -26,7 +26,145 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/helm"
+	intyaml "github.com/akuity/kargo/internal/yaml"
 )
+
+func Test_helmChartUpdater_validate(t *testing.T) {
+	testCases := []struct {
+		name             string
+		config           Config
+		expectedProblems []string
+	}{
+		{
+			name:   "path is not specified",
+			config: Config{},
+			expectedProblems: []string{
+				"(root): path is required",
+			},
+		},
+		{
+			name: "path is empty",
+			config: Config{
+				"path": "",
+			},
+			expectedProblems: []string{
+				"path: String length must be greater than or equal to 1",
+			},
+		},
+		{
+			name:   "charts is null",
+			config: Config{},
+			expectedProblems: []string{
+				"(root): charts is required",
+			},
+		},
+		{
+			name: "charts is empty",
+			config: Config{
+				"charts": []Config{},
+			},
+			expectedProblems: []string{
+				"charts: Array must have at least 1 items",
+			},
+		},
+		{
+			name: "repository not specified",
+			config: Config{
+				"charts": []Config{{}},
+			},
+			expectedProblems: []string{
+				"charts.0: repository is required",
+			},
+		},
+		{
+			name: "repository is empty",
+			config: Config{
+				"charts": []Config{{
+					"repository": "",
+				}},
+			},
+			expectedProblems: []string{
+				"charts.0.repository: String length must be greater than or equal to 1",
+			},
+		},
+		{
+			name: "name not specified",
+			config: Config{
+				"charts": []Config{{}},
+			},
+			expectedProblems: []string{
+				"charts.0: name is required",
+			},
+		},
+		{
+			name: "name is empty",
+			config: Config{
+				"charts": []Config{{
+					"name": "",
+				}},
+			},
+			expectedProblems: []string{
+				"charts.0.name: String length must be greater than or equal to 1",
+			},
+		},
+		{
+			name: "valid kitchen sink",
+			config: Config{
+				"path": "fake-path",
+				"charts": []Config{
+					{
+						"repository": "fake-repository",
+						"name":       "fake-chart-0",
+					},
+					{
+						"repository": "fake-repository",
+						"name":       "fake-chart-1",
+						"version":    "",
+					},
+					{
+						"repository": "fake-repository",
+						"name":       "fake-chart-2",
+						"fromOrigin": Config{
+							"kind": Warehouse,
+							"name": "fake-warehouse",
+						},
+					},
+					{
+						"repository": "fake-repository",
+						"name":       "fake-chart-3",
+						"version":    "",
+						"fromOrigin": Config{
+							"kind": Warehouse,
+							"name": "fake-warehouse",
+						},
+					},
+					{
+						"repository": "fake-repository",
+						"name":       "fake-chart-4",
+						"version":    "fake-version",
+					},
+				},
+			},
+		},
+	}
+
+	r := newHelmChartUpdater()
+	runner, ok := r.(*helmChartUpdater)
+	require.True(t, ok)
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			err := runner.validate(testCase.config)
+			if len(testCase.expectedProblems) == 0 {
+				require.NoError(t, err)
+			} else {
+				for _, problem := range testCase.expectedProblems {
+					require.ErrorContains(t, err, problem)
+				}
+			}
+		})
+	}
+}
 
 func Test_helmChartUpdater_runPromotionStep(t *testing.T) {
 	tests := []struct {
@@ -173,7 +311,7 @@ func Test_helmChartUpdater_processChartUpdates(t *testing.T) {
 		context           *PromotionStepContext
 		cfg               HelmUpdateChartConfig
 		chartDependencies []chartDependency
-		assertions        func(*testing.T, map[string]string, error)
+		assertions        func(*testing.T, []intyaml.Update, error)
 	}{
 		{
 			name: "finds chart update",
@@ -221,9 +359,13 @@ func Test_helmChartUpdater_processChartUpdates(t *testing.T) {
 			chartDependencies: []chartDependency{
 				{Repository: "https://charts.example.com", Name: "test-chart"},
 			},
-			assertions: func(t *testing.T, changes map[string]string, err error) {
+			assertions: func(t *testing.T, updates []intyaml.Update, err error) {
 				assert.NoError(t, err)
-				assert.Equal(t, map[string]string{"dependencies.0.version": "1.0.0"}, changes)
+				assert.Equal(
+					t,
+					[]intyaml.Update{{Key: "dependencies.0.version", Value: "1.0.0"}},
+					updates,
+				)
 			},
 		},
 		{
@@ -241,7 +383,7 @@ func Test_helmChartUpdater_processChartUpdates(t *testing.T) {
 			chartDependencies: []chartDependency{
 				{Repository: "https://charts.example.com", Name: "non-existent-chart"},
 			},
-			assertions: func(t *testing.T, _ map[string]string, err error) {
+			assertions: func(t *testing.T, _ []intyaml.Update, err error) {
 				assert.ErrorContains(t, err, "not found in referenced Freight")
 			},
 		},
@@ -293,7 +435,7 @@ func Test_helmChartUpdater_processChartUpdates(t *testing.T) {
 				{Repository: "https://charts.example.com", Name: "chart1"},
 				{Repository: "https://charts.example.com", Name: "chart2"},
 			},
-			assertions: func(t *testing.T, _ map[string]string, err error) {
+			assertions: func(t *testing.T, _ []intyaml.Update, err error) {
 				assert.ErrorContains(t, err, "not found in referenced Freight")
 			},
 		},
@@ -347,9 +489,58 @@ func Test_helmChartUpdater_processChartUpdates(t *testing.T) {
 			chartDependencies: []chartDependency{
 				{Repository: "https://charts.example.com", Name: "origin-chart"},
 			},
-			assertions: func(t *testing.T, changes map[string]string, err error) {
+			assertions: func(t *testing.T, updates []intyaml.Update, err error) {
 				assert.NoError(t, err)
-				assert.Equal(t, map[string]string{"dependencies.0.version": "2.0.0"}, changes)
+				assert.Equal(
+					t,
+					[]intyaml.Update{{Key: "dependencies.0.version", Value: "2.0.0"}},
+					updates,
+				)
+			},
+		},
+		{
+			name: "chart with version specified",
+			context: &PromotionStepContext{
+				Project: "test-project",
+			},
+			cfg: HelmUpdateChartConfig{
+				Charts: []Chart{
+					{
+						Repository: "https://charts.example.com",
+						Name:       "origin-chart",
+						Version:    "fake-version",
+					},
+				},
+			},
+			chartDependencies: []chartDependency{
+				{Repository: "https://charts.example.com", Name: "origin-chart"},
+			},
+			assertions: func(t *testing.T, updates []intyaml.Update, err error) {
+				assert.NoError(t, err)
+				assert.Equal(
+					t,
+					[]intyaml.Update{{Key: "dependencies.0.version", Value: "fake-version"}},
+					updates,
+				)
+			},
+		},
+		{
+			name: "update specified for non-existent chart dependency",
+			context: &PromotionStepContext{
+				Project: "test-project",
+			},
+			cfg: HelmUpdateChartConfig{
+				Charts: []Chart{
+					{
+						Repository: "https://charts.example.com",
+						Name:       "origin-chart",
+						Version:    "fake-version",
+					},
+				},
+			},
+			chartDependencies: []chartDependency{},
+			assertions: func(t *testing.T, _ []intyaml.Update, err error) {
+				assert.ErrorContains(t, err, "no dependency in Chart.yaml matched update")
 			},
 		},
 	}
@@ -364,8 +555,8 @@ func Test_helmChartUpdater_processChartUpdates(t *testing.T) {
 			stepCtx := tt.context
 			stepCtx.KargoClient = fake.NewClientBuilder().WithScheme(scheme).WithObjects(tt.objects...).Build()
 
-			changes, err := runner.processChartUpdates(context.Background(), stepCtx, tt.cfg, tt.chartDependencies)
-			tt.assertions(t, changes, err)
+			updates, err := runner.processChartUpdates(context.Background(), stepCtx, tt.cfg, tt.chartDependencies)
+			tt.assertions(t, updates, err)
 		})
 	}
 }

@@ -56,10 +56,21 @@ spec:
           - name: garbage-collector
             image: {{ include "kargo.image" . }}
             imagePullPolicy: {{ .Values.image.pullPolicy }}
-            command: ["/usr/local/bin/kargo", "garbage-collector"]
-            {{- with (concat .Values.global.env .Values.garbageCollector.env) }}
+            command: ["/sbin/tini", "--", "/usr/local/bin/kargo"]
+            args: ["garbage-collector"]
             env:
-              {{- toYaml . | nindent 12 }}
+            - name: GOMEMLIMIT
+              valueFrom:
+                resourceFieldRef:
+                  containerName: garbage-collector
+                  resource: limits.memory
+            - name: GOMAXPROCS
+              valueFrom:
+                resourceFieldRef:
+                  containerName: garbage-collector
+                  resource: limits.cpu
+            {{- with (concat .Values.global.env .Values.garbageCollector.env) }}
+            {{- toYaml . | nindent 12 }}
             {{- end }}
             envFrom:
             - configMapRef:

@@ -11,13 +11,18 @@
   },
   "images": {
    "type": "array",
-   "description": "Images is a list of container images to set or update in the Kustomization file.",
+   "description": "Images is a list of container images to set or update in the Kustomization file. When left unspecified, all images from the Freight collection will be set in the Kustomization file. Unless there is an ambiguous image name (for example, due to two Warehouses subscribing to the same repository), which requires manual configuration.",
    "items": {
     "type": "object",
     "additionalProperties": false,
     "properties": {
+     "digest": {
+      "type": "string",
+      "description": "Digest of the image to set in the Kustomization file. Mutually exclusive with 'tag' and 'useDigest=true'."
+     },
      "image": {
       "type": "string",
+      "minLength": 1,
       "description": "Image name of the repository from which to pick the version. This is the image name Kargo is subscribed to, and produces Freight for."
      },
      "fromOrigin": {
@@ -45,6 +50,10 @@
      "newName": {
       "type": "string",
       "description": "NewName for the image. This can be used to rename the container image name in the manifests."
+     },
+     "tag": {
+      "type": "string",
+      "description": "Tag of the image to set in the Kustomization file. Mutually exclusive with 'digest' and 'useDigest=true'."
      },
      "useDigest": {
       "type": "boolean",

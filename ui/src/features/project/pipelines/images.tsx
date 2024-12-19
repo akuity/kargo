@@ -3,7 +3,7 @@ import { IconDefinition, faBook, faEyeSlash } from '@fortawesome/free-solid-svg-
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Tooltip } from 'antd';
 import classNames from 'classnames';
-import { useContext, useEffect, useMemo, useState } from 'react';
+import { memo, useContext, useEffect, useState } from 'react';
 import { generatePath, useNavigate } from 'react-router-dom';
 import semver from 'semver';
 
@@ -37,6 +37,12 @@ const ImageTagRow = ({
         const cur = imageStageMap?.[stage.metadata?.name || ''];
         const len = stages?.length || 0;
 
+        let opacity = 0;
+
+        if (!isNaN(cur)) {
+          opacity = len > 0 && showHistory ? 1 - cur / len : 1;
+        }
+
         return (
           <Tooltip key={stage.metadata?.name} title={stage.metadata?.name}>
             <div
@@ -47,7 +53,7 @@ const ImageTagRow = ({
                 borderRadius: '5px',
                 height: '30px',
                 width: '30px',
-                opacity: len > 0 && showHistory ? 1 - cur / len : 1,
+                opacity,
                 backgroundColor:
                   (showHistory && cur >= 0) || cur === 0
                     ? stageColorMap?.[stage?.metadata?.name || '']
@@ -98,89 +104,86 @@ const HeaderButton = ({
   </div>
 );
 
-export const Images = ({
-  project,
-  stages,
-  hide,
-  images
-}: {
-  project: string;
-  stages: Stage[];
-  hide: () => void;
-  images: { [key: string]: TagMap };
-}) => {
-  const [imageURL, setImageURL] = useState(Object.keys(images || {})?.[0]);
-  const [showHistory, setShowHistory] = useLocalStorage(`${project}-show-history`, true);
+// IMPORTANT: keep this wrapped in memo please
+export const Images = memo(
+  ({
+    project,
+    stages,
+    hide,
+    images
+  }: {
+    project: string;
+    stages: Stage[];
+    hide: () => void;
+    images: { [key: string]: TagMap };
+  }) => {
+    const [imageURL, setImageURL] = useState(Object.keys(images || {})?.[0]);
+    const [showHistory, setShowHistory] = useLocalStorage(`${project}-show-history`, true);
 
-  useEffect(() => {
-    setImageURL(Object.keys(images || {})?.[0]);
-  }, [images]);
+    useEffect(() => {
+      setImageURL(Object.keys(images || {})?.[0]);
+    }, [images]);
 
-  const curImage = useMemo(() => {
-    return images[imageURL];
-  }, [imageURL, images]);
+    const curImage = images[imageURL];
 
-  const sortedTags = useMemo(() => {
-    if (curImage?.tags) {
-      return (Object.keys(curImage.tags || {}) || []).sort((a, b) => {
-        try {
-          return semver.compare(b, a);
-        } catch (e) {
-          // no chance of dirty semver but just-in-case
-          return 0;
-        }
-      });
-    }
+    const sortedTags = curImage?.tags
+      ? (Object.keys(curImage.tags || {}) || []).sort((a, b) => {
+          try {
+            return semver.compare(b, a);
+          } catch (e) {
+            // no chance of dirty semver but just-in-case
+            return 0;
+          }
+        })
+      : [];
 
-    return [];
-  }, [curImage]);
-
-  return (
-    <div className='text-gray-600 text-sm bg-gray-100 pb-4 rounded-md overflow-hidden'>
-      <h3 className='bg-gray-200 px-4 py-2 flex items-center text-sm text-gray-500'>
-        <FontAwesomeIcon icon={faDocker} className='mr-2' /> IMAGES
-        <Tooltip title='Show history'>
-          <div className='ml-auto'>
-            <HeaderButton
-              onClick={() => setShowHistory(!showHistory)}
-              icon={faBook}
-              selected={showHistory}
-            />
-          </div>
-        </Tooltip>
-        <HeaderButton onClick={hide} icon={faEyeSlash} className='ml-2' />
-      </h3>
-      <div className='p-4'>
-        {curImage ? (
-          <>
-            <div className='mb-8'>
-              <Select
-                value={imageURL}
-                onChange={(value) => setImageURL(value as string)}
-                options={Object.keys(images || []).map((image) => ({
-                  label: image.split('/').pop(),
-                  value: image
-                }))}
+    return (
+      <div className='text-gray-600 text-sm bg-gray-100 pb-4 rounded-md'>
+        <h3 className='bg-gray-200 px-4 py-2 flex items-center text-sm text-gray-500'>
+          <FontAwesomeIcon icon={faDocker} className='mr-2' /> IMAGES
+          <Tooltip title='Show history'>
+            <div className='ml-auto'>
+              <HeaderButton
+                onClick={() => setShowHistory(!showHistory)}
+                icon={faBook}
+                selected={showHistory}
               />
             </div>
-            {sortedTags.map((tag) => (
-              <ImageTagRow
-                key={tag}
-                projectName={project}
-                tag={tag}
-                stages={stages}
-                imageStageMap={curImage.tags[tag]?.stages}
-                showHistory={showHistory}
-              />
-            ))}
-          </>
-        ) : (
-          <p>No images available</p>
-        )}
+          </Tooltip>
+          <HeaderButton onClick={hide} icon={faEyeSlash} className='ml-2' />
+        </h3>
+        <div className='p-4 overflow-y-auto max-h-[356px]'>
+          {curImage ? (
+            <>
+              <div className='mb-8'>
+                <Select
+                  value={imageURL}
+                  onChange={(value) => setImageURL(value as string)}
+                  options={Object.keys(images || []).map((image) => ({
+                    label: image.split('/').pop(),
+                    value: image
+                  }))}
+                />
+              </div>
+              {sortedTags.map((tag) => (
+                <ImageTagRow
+                  key={tag}
+                  projectName={project}
+                  tag={tag}
+                  stages={stages}
+                  imageStageMap={curImage.tags[tag]?.stages}
+                  showHistory={showHistory}
+                />
+              ))}
+            </>
+          ) : (
+            <p>No images available</p>
+          )}
+        </div>
       </div>
-    </div>
-  );
-};
+    );
+  }
+);
 
 const Select = ({
   value,

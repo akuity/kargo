@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	stdruntime "runtime"
 	"sync"
 
 	"github.com/spf13/cobra"
@@ -84,16 +85,18 @@ func (o *controllerOptions) run(ctx context.Context) error {
 	startupLogger := o.Logger.WithValues(
 		"version", version.Version,
 		"commit", version.GitCommit,
+		"GOMAXPROCS", stdruntime.GOMAXPROCS(0),
+		"GOMEMLIMIT", os.GetEnv("GOMEMLIMIT", ""),
 	)
 	if o.ShardName != "" {
 		startupLogger = startupLogger.WithValues("shard", o.ShardName)
 	}
 	startupLogger.Info("Starting Kargo Controller")
 
-	promotionsReconcilerCfg := promotions.ReconcilerConfigFromEnv()
-	stagesReconcilerCfg := stages.ReconcilerConfigFromEnv()
-
-	kargoMgr, stagesReconcilerCfg, err := o.setupKargoManager(ctx, stagesReconcilerCfg)
+	kargoMgr, stagesReconcilerCfg, err := o.setupKargoManager(
+		ctx,
+		stages.ReconcilerConfigFromEnv(),
+	)
 	if err != nil {
 		return fmt.Errorf("error initializing Kargo controller manager: %w", err)
 	}
@@ -114,7 +117,6 @@ func (o *controllerOptions) run(ctx context.Context) error {
 		kargoMgr,
 		argocdMgr,
 		credentialsDB,
-		promotionsReconcilerCfg,
 		stagesReconcilerCfg,
 	); err != nil {
 		return fmt.Errorf("error setting up reconcilers: %w", err)
@@ -285,7 +287,6 @@ func (o *controllerOptions) setupReconcilers(
 	ctx context.Context,
 	kargoMgr, argocdMgr manager.Manager,
 	credentialsDB credentials.Database,
-	promotionsReconcilerCfg promotions.ReconcilerConfig,
 	stagesReconcilerCfg stages.ReconcilerConfig,
 ) error {
 	var argoCDClient client.Client
@@ -301,20 +302,18 @@ func (o *controllerOptions) setupReconcilers(
 		kargoMgr,
 		argocdMgr,
 		directivesEngine,
-		promotionsReconcilerCfg,
+		promotions.ReconcilerConfigFromEnv(),
 	); err != nil {
 		return fmt.Errorf("error setting up Promotions reconciler: %w", err)
 	}
 
-	if err := stages.SetupReconcilerWithManager(
+	if err := stages.NewRegularStageReconciler(stagesReconcilerCfg, directivesEngine).SetupWithManager(
 		ctx,
 		kargoMgr,
 		argocdMgr,
-		directivesEngine,
-		stagesReconcilerCfg,
 		sharedIndexer,
 	); err != nil {
-		return fmt.Errorf("error setting up Stages reconciler: %w", err)
+		return fmt.Errorf("error setting up regular Stages reconciler: %w", err)
 	}
 
 	if err := stages.NewControlFlowStageReconciler(stagesReconcilerCfg).SetupWithManager(
@@ -326,9 +325,10 @@ func (o *controllerOptions) setupReconcilers(
 	}
 
 	if err := warehouses.SetupReconcilerWithManager(
+		ctx,
 		kargoMgr,
 		credentialsDB,
-		o.ShardName,
+		warehouses.ReconcilerConfigFromEnv(),
 	); err != nil {
 		return fmt.Errorf("error setting up Warehouses reconciler: %w", err)
 	}

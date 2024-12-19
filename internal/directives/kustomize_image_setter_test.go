@@ -18,6 +18,162 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
+func Test_kustomizeImageSetter_validate(t *testing.T) {
+	testCases := []struct {
+		name             string
+		config           Config
+		expectedProblems []string
+	}{
+		{
+			name:   "path is not specified",
+			config: Config{},
+			expectedProblems: []string{
+				"(root): path is required",
+			},
+		},
+		{
+			name: "path is empty",
+			config: Config{
+				"path": "",
+			},
+			expectedProblems: []string{
+				"path: String length must be greater than or equal to 1",
+			},
+		},
+		{
+			name: "image not specified",
+			config: Config{
+				"images": []Config{{}},
+			},
+			expectedProblems: []string{
+				"images.0: image is required",
+			},
+		},
+		{
+			name: "image is empty",
+			config: Config{
+				"images": []Config{{
+					"image": "",
+				}},
+			},
+			expectedProblems: []string{
+				"images.0.image: String length must be greater than or equal to 1",
+			},
+		},
+		{
+			name: "digest and tag are both specified",
+			// These should be mutually exclusive.
+			config: Config{
+				"images": []Config{{
+					"digest": "fake-digest",
+					"tag":    "fake-tag",
+				}},
+			},
+			expectedProblems: []string{
+				"images.0: Must validate one and only one schema (oneOf)",
+			},
+		},
+		{
+			name: "digest and useDigest are both specified",
+			// These should be mutually exclusive.
+			config: Config{
+				"images": []Config{{
+					"digest":    "fake-digest",
+					"useDigest": true,
+				}},
+			},
+			expectedProblems: []string{
+				"images.0: Must validate one and only one schema (oneOf)",
+			},
+		},
+		{
+			name: "tag and useDigest are both specified",
+			// These should be mutually exclusive.
+			config: Config{
+				"images": []Config{{
+					"tag":       "fake-tag",
+					"useDigest": true,
+				}},
+			},
+			expectedProblems: []string{
+				"images.0: Must validate one and only one schema (oneOf)",
+			},
+		},
+		{
+			name: "valid kitchen sink",
+			config: Config{
+				"path": "fake-path",
+				"images": []Config{
+					{
+						"image": "fake-image-0",
+					},
+					{
+						"image":     "fake-image-1",
+						"digest":    "",
+						"tag":       "",
+						"useDigest": false,
+					},
+					{
+						"image":  "fake-image-2",
+						"digest": "fake-digest",
+					},
+					{
+						"image":     "fake-image-3",
+						"digest":    "fake-digest",
+						"tag":       "",
+						"useDigest": false,
+					},
+					{
+						"image": "fake-image-4",
+						"tag":   "fake-tag",
+					},
+					{
+						"image":     "fake-image-5",
+						"digest":    "",
+						"tag":       "fake-tag",
+						"useDigest": false,
+					},
+					{
+						"image":     "fake-image-6",
+						"useDigest": true,
+					},
+					{
+						"image":     "fake-image-7",
+						"digest":    "",
+						"tag":       "",
+						"useDigest": true,
+					},
+					{
+						"image":     "fake-image-8",
+						"useDigest": true,
+						"fromOrigin": Config{
+							"kind": Warehouse,
+							"name": "fake-warehouse",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	r := newKustomizeImageSetter()
+	runner, ok := r.(*kustomizeImageSetter)
+	require.True(t, ok)
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			err := runner.validate(testCase.config)
+			if len(testCase.expectedProblems) == 0 {
+				require.NoError(t, err)
+			} else {
+				for _, problem := range testCase.expectedProblems {
+					require.ErrorContains(t, err, problem)
+				}
+			}
+		})
+	}
+}
+
 func Test_kustomizeImageSetter_runPromotionStep(t *testing.T) {
 	const testNamespace = "test-project-run"
 
@@ -85,6 +241,51 @@ kind: Kustomization
 				b, err := os.ReadFile(filepath.Join(workDir, "kustomization.yaml"))
 				require.NoError(t, err)
 				assert.Contains(t, string(b), "newTag: 1.21.0")
+			},
+		},
+		{
+			name: "automatically sets image",
+			setupFiles: func(t *testing.T) string {
+				tempDir := t.TempDir()
+				kustomizationContent := `apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+`
+				err := os.WriteFile(filepath.Join(tempDir, "kustomization.yaml"), []byte(kustomizationContent), 0o600)
+				require.NoError(t, err)
+				return tempDir
+			},
+			cfg: KustomizeSetImageConfig{
+				Path:   ".",
+				Images: nil, // Automatically set all images
+			},
+			setupStepCtx: func(_ *testing.T, workDir string) *PromotionStepContext {
+				return &PromotionStepContext{
+					WorkDir: workDir,
+					Freight: kargoapi.FreightCollection{
+						Freight: map[string]kargoapi.FreightReference{
+							"Warehouse/warehouse1": {
+								Images: []kargoapi.Image{{RepoURL: "nginx", Digest: "sha256:123"}},
+							},
+							"Warehouse/warehouse2": {
+								Images: []kargoapi.Image{{RepoURL: "redis", Tag: "6.2.5"}},
+							},
+						},
+					},
+				}
+			},
+			assertions: func(t *testing.T, workDir string, result PromotionStepResult, err error) {
+				require.NoError(t, err)
+				assert.Equal(t, PromotionStepResult{
+					Status: kargoapi.PromotionPhaseSucceeded,
+					Output: map[string]any{
+						"commitMessage": "Updated . to use new images\n\n- nginx@sha256:123\n- redis:6.2.5",
+					},
+				}, result)
+
+				b, err := os.ReadFile(filepath.Join(workDir, "kustomization.yaml"))
+				require.NoError(t, err)
+				assert.Contains(t, string(b), "newTag: 6.2.5")
+				assert.Contains(t, string(b), "digest: sha256:123")
 			},
 		},
 		{
@@ -180,6 +381,26 @@ func Test_kustomizeImageSetter_buildTargetImages(t *testing.T) {
 		freightReferences map[string]kargoapi.FreightReference
 		assertions        func(*testing.T, map[string]kustypes.Image, error)
 	}{
+		{
+			name: "digest or tag specified",
+			images: []KustomizeSetImageConfigImage{
+				{
+					Image: "nginx",
+					Tag:   "fake-tag",
+				},
+				{
+					Image:  "redis",
+					Digest: "fake-digest",
+				},
+			},
+			assertions: func(t *testing.T, result map[string]kustypes.Image, err error) {
+				require.NoError(t, err)
+				assert.Equal(t, map[string]kustypes.Image{
+					"nginx": {Name: "nginx", NewTag: "fake-tag"},
+					"redis": {Name: "redis", Digest: "fake-digest"},
+				}, result)
+			},
+		},
 		{
 			name: "discovers origins and builds target images",
 			images: []KustomizeSetImageConfigImage{
@@ -363,7 +584,126 @@ func Test_kustomizeImageSetter_buildTargetImages(t *testing.T) {
 				},
 			}
 
-			result, err := runner.buildTargetImages(context.Background(), stepCtx, tt.images)
+			result, err := runner.buildTargetImagesFromConfig(context.Background(), stepCtx, tt.images)
+			tt.assertions(t, result, err)
+		})
+	}
+}
+
+func Test_kustomizeImageSetter_buildTargetImagesAutomatically(t *testing.T) {
+	const testNamespace = "test-project"
+
+	tests := []struct {
+		name              string
+		freightReferences map[string]kargoapi.FreightReference
+		freightRequests   []kargoapi.FreightRequest
+		objects           []runtime.Object
+		assertions        func(*testing.T, map[string]kustypes.Image, error)
+	}{
+		{
+			name: "successfully builds target images",
+			freightReferences: map[string]kargoapi.FreightReference{
+				"Warehouse/warehouse1": {
+					Images: []kargoapi.Image{
+						{RepoURL: "nginx", Tag: "1.21.0", Digest: "sha256:abcdef1234567890"},
+					},
+				},
+				"Warehouse/warehouse2": {
+					Images: []kargoapi.Image{
+						{RepoURL: "redis", Tag: "6.2.5"},
+					},
+				},
+				"Warehouse/warehouse3": {
+					Images: []kargoapi.Image{
+						{RepoURL: "postgres", Digest: "sha256:abcdef1234567890"},
+					},
+				},
+			},
+			freightRequests: []kargoapi.FreightRequest{
+				{Origin: kargoapi.FreightOrigin{Name: "warehouse1", Kind: kargoapi.FreightOriginKindWarehouse}},
+				{Origin: kargoapi.FreightOrigin{Name: "warehouse2", Kind: kargoapi.FreightOriginKindWarehouse}},
+				{Origin: kargoapi.FreightOrigin{Name: "warehouse3", Kind: kargoapi.FreightOriginKindWarehouse}},
+			},
+			objects: []runtime.Object{
+				mockWarehouse(testNamespace, "warehouse1", kargoapi.WarehouseSpec{
+					Subscriptions: []kargoapi.RepoSubscription{
+						{Image: &kargoapi.ImageSubscription{RepoURL: "nginx"}},
+					},
+				}),
+				mockWarehouse(testNamespace, "warehouse2", kargoapi.WarehouseSpec{
+					Subscriptions: []kargoapi.RepoSubscription{
+						{Image: &kargoapi.ImageSubscription{RepoURL: "redis"}},
+					},
+				}),
+				mockWarehouse(testNamespace, "warehouse3", kargoapi.WarehouseSpec{
+					Subscriptions: []kargoapi.RepoSubscription{
+						{Image: &kargoapi.ImageSubscription{RepoURL: "postgres"}},
+					},
+				}),
+			},
+			assertions: func(t *testing.T, result map[string]kustypes.Image, err error) {
+				require.NoError(t, err)
+				assert.Equal(t, map[string]kustypes.Image{
+					"nginx":    {Name: "nginx", NewTag: "1.21.0", Digest: "sha256:abcdef1234567890"},
+					"redis":    {Name: "redis", NewTag: "6.2.5"},
+					"postgres": {Name: "postgres", Digest: "sha256:abcdef1234567890"},
+				}, result)
+			},
+		},
+		{
+			name: "error on ambiguous image match",
+			freightReferences: map[string]kargoapi.FreightReference{
+				"Warehouse/warehouse1": {
+					Images: []kargoapi.Image{
+						{RepoURL: "nginx", Tag: "1.21.0", Digest: "sha256:abcdef1234567890"},
+					},
+				},
+				"Warehouse/warehouse2": {
+					Images: []kargoapi.Image{
+						{RepoURL: "nginx", Tag: "1.21.0", Digest: "sha256:abcdef1234567890"},
+					},
+				},
+			},
+			freightRequests: []kargoapi.FreightRequest{
+				{Origin: kargoapi.FreightOrigin{Name: "warehouse1", Kind: kargoapi.FreightOriginKindWarehouse}},
+				{Origin: kargoapi.FreightOrigin{Name: "warehouse2", Kind: kargoapi.FreightOriginKindWarehouse}},
+			},
+			objects: []runtime.Object{
+				mockWarehouse(testNamespace, "warehouse1", kargoapi.WarehouseSpec{
+					Subscriptions: []kargoapi.RepoSubscription{
+						{Image: &kargoapi.ImageSubscription{RepoURL: "nginx"}},
+					},
+				}),
+				mockWarehouse(testNamespace, "warehouse2", kargoapi.WarehouseSpec{
+					Subscriptions: []kargoapi.RepoSubscription{
+						{Image: &kargoapi.ImageSubscription{RepoURL: "nginx"}},
+					},
+				}),
+			},
+			assertions: func(t *testing.T, _ map[string]kustypes.Image, err error) {
+				require.ErrorContains(t, err, "manual configuration required due to ambiguous result")
+			},
+		},
+	}
+
+	runner := &kustomizeImageSetter{}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			scheme := runtime.NewScheme()
+			require.NoError(t, kargoapi.AddToScheme(scheme))
+			fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(tt.objects...).Build()
+
+			stepCtx := &PromotionStepContext{
+				KargoClient:     fakeClient,
+				Project:         testNamespace,
+				FreightRequests: tt.freightRequests,
+				Freight: kargoapi.FreightCollection{
+					Freight: tt.freightReferences,
+				},
+			}
+
+			result, err := runner.buildTargetImagesAutomatically(context.Background(), stepCtx)
 			tt.assertions(t, result, err)
 		})
 	}

@@ -43,9 +43,14 @@
           "description": "If applicable, identifies a specific chart within the Helm chart repository specified by the 'repoURL' field. When the source to be updated references a Helm chart repository, the values of the 'repoURL' and 'chart' fields should exactly match the values of the same fields in the source. i.e. Do not match the values of these two fields to your Warehouse; match them to the Application source you wish to update.",
           "minLength": 1
         },
+        "desiredRevision": {
+          "type": "string",
+          "description": "Specifies the desired revision for the source. Mutually exclusive with 'desiredCommitFromStep'. If both are left undefined, the desired revision will be determined by Freight (if possible). Note that the source's 'targetRevision' will not be updated to this commit unless 'updateTargetRevision=true' is set. The utility of this field, on its own, is to specify the revision that the source should be observably synced to during a health check.",
+          "minLength": 1
+        },
         "desiredCommitFromStep": {
           "type": "string",
-          "description": "Applicable only when 'repoURL' references a Git repository, this field references the 'commit' output from a previous step and uses it as the desired revision for the source. If this is left undefined, the desired revision will be determined by Freight (if possible). Note that the source's 'targetRevision' will not be updated to this commit unless 'updateTargetRevision=true' is set. The utility of this field is to ensure that health checks on Argo CD ApplicationSources can account for scenarios where the desired revision differs from what may be found in Freight, likely due to the use of rendered branches and/or PR-based promotion workflows.",
+          "description": "Applicable only when 'repoURL' references a Git repository, this field references the 'commit' output from a previous step and uses it as the desired revision for the source. Mutually exclusive with 'desiredRevision'. If both are left undefined, the desired revision will be determined by Freight (if possible). Note that the source's 'targetRevision' will not be updated to this commit unless 'updateTargetRevision=true' is set. The utility of this field, on its own, is to specify the revision that the source should be observably synced to during a health check.",
           "minLength": 1
         },
         "fromOrigin": {
@@ -64,9 +69,32 @@
         },
         "updateTargetRevision": {
           "type": "boolean",
-          "description": "Indicates whether the source should be updated such that its TargetRevision field points at the most recently git commit (if 'repoURL' references a Git repository) or chart version (if 'repoURL' references a chart repository)."
+          "description": "Indicates whether the source should be updated such that its 'targetRevision' field points directly at the desired revision. If set to true, exactly one of 'desiredCommitFromStep' or 'desiredRevision' must be specified."
         }
-      }
+      },
+      "oneOf": [
+        {
+          "properties": {
+            "desiredCommitFromStep": {  "enum": ["", null] },
+            "desiredRevision": {  "enum": ["", null] },
+            "updateTargetRevision": {  "enum": [false, null] }
+          }
+        },
+        {
+          "required": ["desiredCommitFromStep"],
+          "properties": {
+            "desiredCommitFromStep": {  "minLength": 1 },
+            "desiredRevision": {  "enum": [0, null] }
+          }
+        },
+        {
+          "required": ["desiredRevision"],
+          "properties": {
+            "desiredCommitFromStep": {  "enum": ["", null] },
+            "desiredRevision": {  "minLength": 1 }
+          }
+        }
+      ]
     },
 
     "argoCDHelmParameterUpdates": {
@@ -92,7 +120,7 @@
       "type": "object",
       "description": "Describes how to update a Helm parameter to reference a specific version of a container image.",
       "additionalProperties": false,
-      "required": ["key", "repoURL", "value"],
+      "required": ["key", "value"],
       "properties": {
         "fromOrigin": {
           "$ref": "#/definitions/origin"
@@ -109,10 +137,23 @@
         },
         "value": {
           "type": "string",
-          "description": "Specifies a new value for the setting within an Argo CD Application source's Helm parameters identified by the 'key' field.",
-          "enum": ["Digest", "ImageAndDigest", "ImageAndTag", "Tag"]
+          "description": "Specifies a new value for the setting within an Argo CD Application source's Helm parameters identified by the 'key' field."
         }
-      }
+      },
+      "oneOf": [
+        {
+          "required": ["repoURL"],
+          "properties": {
+            "repoURL": { "minLength": 1 },
+            "value": { "pattern": "^(Digest|ImageAndDigest|ImageAndTag|Tag)$" }
+          }
+        },
+        {
+          "properties": {
+            "repoURL": { "enum": ["",  null] }
+          }
+        }
+      ]
     },
 
     "argoCDKustomizeImageUpdates": {
@@ -139,6 +180,10 @@
       "additionalProperties": false,
       "required": ["repoURL"],
       "properties": {
+        "digest": {
+          "type": "string",
+          "description": "Digest of the image to set. Mutually exclusive with 'tag' and 'useDigest=true'."
+        },
         "fromOrigin": {
           "$ref": "#/definitions/origin"
         },
@@ -152,11 +197,48 @@
           "description": "The URL of a container image repository.",
           "minLength": 1
         },
+        "tag": {
+          "type": "string",
+          "description": "Tag of the image to set. Mutually exclusive with 'digest' and 'useDigest=true'."
+        },
         "useDigest": {
           "type": "boolean",
-          "description": "Specifies whether the image's digest should be used instead of its tag."
+          "description": "Specifies whether the image's digest should be used instead of its tag. Mutually exclusive with 'digest' and 'tag'."
         }
-      }
+      },
+      "oneOf": [
+        {
+          "properties": {
+            "digest": { "enum": [null, ""] },
+            "tag": { "enum": [null, ""] },
+            "useDigest": { "enum": [null, false] }
+          }
+        },
+        {
+          "required": ["digest"],
+          "properties": {
+            "digest": { "minLength": 1 },
+            "tag": { "enum": [null, ""] },
+            "useDigest": { "enum": [null, false] }
+          }
+        },
+        {
+          "required": ["tag"],
+          "properties": {
+            "digest": { "enum": [null, ""] },
+            "tag": { "minLength": 1 },
+            "useDigest": { "enum": [null, false] }
+          }
+        },
+        {
+          "required": ["useDigest"],
+          "properties": {
+            "digest": { "enum": [null, ""] },
+            "tag": { "enum": [null, ""] },
+            "useDigest": { "const": true }
+          }
+        }
+      ]
     },
 
     "origin": {

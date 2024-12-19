@@ -1,3 +1,5 @@
+import { toJson } from '@bufbuild/protobuf';
+import { useQuery } from '@connectrpc/connect-query';
 import { Divider, Drawer, Tabs, Typography } from 'antd';
 import moment from 'moment';
 import { useMemo, useState } from 'react';
@@ -10,7 +12,9 @@ import { ManifestPreview } from '@ui/features/common/manifest-preview';
 import { StagePhaseIcon } from '@ui/features/common/stage-phase/stage-phase-icon';
 import { StagePhase } from '@ui/features/common/stage-phase/utils';
 import { useImages } from '@ui/features/project/pipelines/utils/useImages';
-import { Stage, VerificationInfo } from '@ui/gen/v1alpha1/generated_pb';
+import { getConfig } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
+import { Stage, StageSchema, VerificationInfo } from '@ui/gen/v1alpha1/generated_pb';
+import { timestampDate } from '@ui/utils/connectrpc-utils';
 
 import { FreightHistory } from './freight-history';
 import { Promotions } from './promotions';
@@ -40,8 +44,13 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
           } as VerificationInfo;
         })
       )
-      .sort((a, b) => moment(b.startTime?.toDate()).diff(moment(a.startTime?.toDate())));
+      .sort((a, b) => moment(timestampDate(b.startTime)).diff(moment(timestampDate(a.startTime))));
   }, [stage]);
+
+  const { data: config } = useQuery(getConfig);
+
+  const shardKey = stage?.metadata?.labels['kargo.akuity.io/shard'] || '';
+  const argocdShard = config?.argocdShards?.[shardKey];
 
   return (
     <Drawer open={!!stageName} onClose={onClose} width={'80%'} closable={false}>
@@ -83,7 +92,7 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
                 {
                   key: '1',
                   label: 'Promotions',
-                  children: <Promotions />
+                  children: <Promotions argocdShard={argocdShard} />
                 },
                 {
                   key: '2',
@@ -99,7 +108,7 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
                   key: '3',
                   label: 'Live Manifest',
                   className: 'h-full pb-2',
-                  children: <ManifestPreview object={stage} height='700px' />
+                  children: <ManifestPreview object={toJson(StageSchema, stage)} height='700px' />
                 }
               ]}
             />

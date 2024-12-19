@@ -15,7 +15,7 @@ jobs:
   test-unit:
     runs-on: ubuntu-latest
     container:
-      image: golang:1.23.2-bookworm
+      image: golang:1.23.4-bookworm
     steps:
     # Install Git from "trixie" repository to get a more recent version than
     # the one available in "stable". This can be removed once the version in
@@ -27,7 +27,7 @@ jobs:
         apt update && apt install -y -t trixie git
     - name: Checkout code
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-    - uses: actions/cache@6849a6489940f00c2f30c0fb92c6274307ccb58a # v4.1.2
+    - uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4.2.0
       with:
         path: /go/pkg/mod
         key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
@@ -40,16 +40,16 @@ jobs:
         grep -v .pb.go coverage.txt | grep -v zz_generated | grep -v service.connect.go > coverage.tmp
         mv coverage.tmp coverage.txt
     - name: Upload coverage reports
-      uses: codecov/codecov-action@b9fd7d16f6d7d1b5d2bec1a2887e65ceed900238 # v4.6.0
+      uses: codecov/codecov-action@7f8b4b4bde536c465e797be725718b88c5d95e0e # v5.1.1
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
   
-  lint-ui:
+  lint-and-typecheck-ui:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-    - uses: actions/cache@6849a6489940f00c2f30c0fb92c6274307ccb58a # v4.1.2
+    - uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4.2.0
       with:
         path: ~/.pnpm-store
         key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
@@ -65,6 +65,8 @@ jobs:
         node-version: "22.8.0"
         cache: "pnpm"
         cache-dependency-path: "**/pnpm-lock.yaml"
+    - name: Run typecheck
+      run: make typecheck-ui
     - name: Run linter
       run: make lint-ui
 
@@ -73,13 +75,13 @@ jobs:
       checks: write # Used to create checks (linting comments) on PRs
     runs-on: ubuntu-latest
     container:
-      image: golang:1.23.2-bookworm
+      image: golang:1.23.4-bookworm
     steps:
     - name: Checkout code
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
     - name: Cache golangci-lint
       id: cache-golangci-lint
-      uses: actions/cache@6849a6489940f00c2f30c0fb92c6274307ccb58a # v4.1.2
+      uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4.2.0
       with:
         path: |
           hack/bin/golangci-lint
@@ -92,19 +94,19 @@ jobs:
       run: git config --global --add safe.directory '*'
     - name: Run linter
       env:
-        GO_LINT_ERROR_FORMAT: github-actions
+        GO_LINT_ERROR_FORMAT: colored-line-number
       run: make lint-go
 
   lint-charts:
     runs-on: ubuntu-latest
     container:
-      image: golang:1.23.2-bookworm
+      image: golang:1.23.4-bookworm
     steps:
     - name: Checkout code
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
     - name: Cache helm
       id: cache-helm
-      uses: actions/cache@6849a6489940f00c2f30c0fb92c6274307ccb58a # v4.1.2
+      uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4.2.0
       with:
         path: |
           hack/bin/helm
@@ -122,13 +124,13 @@ jobs:
       checks: write # Used to create checks (linting comments) on PRs
     runs-on: ubuntu-latest
     container:
-      image: golang:1.23.2-bookworm
+      image: golang:1.23.4-bookworm
     steps:
     - name: Checkout code
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
     - name: Cache buf
       id: cache-buf
-      uses: actions/cache@6849a6489940f00c2f30c0fb92c6274307ccb58a # v4.1.2
+      uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4.2.0
       with:
         path: |
           hack/bin/buf
@@ -145,7 +147,7 @@ jobs:
   check-codegen:
     runs-on: ubuntu-latest
     container:
-      image: golang:1.23.2-bookworm
+      image: golang:1.23.4-bookworm
     steps:
     - name: Checkout code
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -165,12 +167,12 @@ jobs:
       run: pnpm install --dev
       working-directory: ./ui
     - name: Cache Go modules
-      uses: actions/cache@6849a6489940f00c2f30c0fb92c6274307ccb58a # v4.1.2
+      uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4.2.0
       with:
         path: /go/pkg/mod
         key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
     - name: Cache tools
-      uses: actions/cache@6849a6489940f00c2f30c0fb92c6274307ccb58a # v4.1.2
+      uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4.2.0
       with:
         path: |
           hack/bin
@@ -186,7 +188,7 @@ jobs:
       run: git diff --exit-code -- .
 
   build-image:
-    needs: [test-unit, lint-go, lint-charts, lint-proto, lint-ui, check-codegen]
+    needs: [test-unit, lint-go, lint-charts, lint-proto, lint-and-typecheck-ui, check-codegen]
     runs-on: ubuntu-latest
     services:
       registry:
@@ -218,14 +220,14 @@ jobs:
         cache-to: type=gha,mode=max
 
   build-cli:
-    needs: [test-unit, lint-go, lint-charts, lint-proto, lint-ui, check-codegen]
+    needs: [test-unit, lint-go, lint-charts, lint-proto, lint-and-typecheck-ui, check-codegen]
     runs-on: ubuntu-latest
     container:
-      image: golang:1.23.2-bookworm
+      image: golang:1.23.4-bookworm
     steps:
     - name: Checkout code
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-    - uses: actions/cache@6849a6489940f00c2f30c0fb92c6274307ccb58a # v4.1.2
+    - uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4.2.0
       with:
         path: /go/pkg/mod
         key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}

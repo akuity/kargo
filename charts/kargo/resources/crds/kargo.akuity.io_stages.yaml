@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.16.4
+    controller-gen.kubebuilder.io/version: v0.16.5
   name: stages.kargo.akuity.io
 spec:
   group: kargo.akuity.io
@@ -82,8 +82,56 @@ spec:
                                 to as.
                               type: string
                             config:
-                              description: Config is the configuration for the directive.
+                              description: |-
+                                Config is opaque configuration for the PromotionStep that is understood
+                                only by each PromotionStep's implementation. It is legal to utilize
+                                expressions in defining values at any level of this block.
+                                See https://docs.kargo.io/references/expression-language for details.
                               x-kubernetes-preserve-unknown-fields: true
+                            retry:
+                              description: Retry is the retry policy for this step.
+                              properties:
+                                errorThreshold:
+                                  description: |-
+                                    ErrorThreshold is the number of consecutive times the step must fail (for
+                                    any reason) before retries are abandoned and the entire Promotion is marked
+                                    as failed.
+
+                                    If this field is set to 0, the effective default will be a step-specific
+                                    one. If no step-specific default exists (i.e. is also 0), the effective
+                                    default will be the system-wide default of 1.
+
+                                    A value of 1 will cause the Promotion to be marked as failed after just
+                                    a single failure; i.e. no retries will be attempted.
+
+                                    There is no option to specify an infinite number of retries using a value
+                                    such as -1.
+
+                                    In a future release, Kargo is likely to become capable of distinguishing
+                                    between recoverable and non-recoverable step failures. At that time, it is
+                                    planned that unrecoverable failures will not be subject to this threshold
+                                    and will immediately cause the Promotion to be marked as failed without
+                                    further condition.
+                                  format: int32
+                                  type: integer
+                                timeout:
+                                  description: |-
+                                    Timeout is the soft maximum interval in which a step that returns a Running
+                                    status (which typically indicates it's waiting for something to happen)
+                                    may be retried.
+
+                                    The maximum is a soft one because the check for whether the interval has
+                                    elapsed occurs AFTER the step has run. This effectively means a step may
+                                    run ONCE beyond the close of the interval.
+
+                                    If this field is set to nil, the effective default will be a step-specific
+                                    one. If no step-specific default exists (i.e. is also nil), the effective
+                                    default will be the system-wide default of 0.
+
+                                    A value of 0 will cause the step to be retried indefinitely unless the
+                                    ErrorThreshold is reached.
+                                  type: string
+                              type: object
                             uses:
                               description: Uses identifies a runner that can execute
                                 this step.
@@ -93,6 +141,31 @@ spec:
                           - uses
                           type: object
                         minItems: 1
+                        type: array
+                      vars:
+                        description: |-
+                          Vars is a list of variables that can be referenced by expressions in
+                          promotion steps.
+                        items:
+                          description: |-
+                            PromotionVariable describes a single variable that may be referenced by
+                            expressions in promotion steps.
+                          properties:
+                            name:
+                              description: Name is the name of the variable.
+                              minLength: 1
+                              pattern: ^[a-zA-Z_]\w*$
+                              type: string
+                            value:
+                              description: |-
+                                Value is the value of the variable. It is allowed to utilize expressions
+                                in the value.
+                                See https://docs.kargo.io/references/expression-language for details.
+                              type: string
+                          required:
+                          - name
+                          - value
+                          type: object
                         type: array
                     type: object
                 required:
@@ -235,6 +308,68 @@ spec:
             description: Status describes the Stage's current and recent Freight,
               health, and more.
             properties:
+              conditions:
+                description: |-
+                  Conditions contains the last observations of the Stage's current
+                  state.
+                items:
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
               currentPromotion:
                 description: CurrentPromotion is a reference to the currently Running
                   promotion.
@@ -756,6 +891,45 @@ spec:
                           State stores the state of the promotion process between reconciliation
                           attempts.
                         x-kubernetes-preserve-unknown-fields: true
+                      stepExecutionMetadata:
+                        description: |-
+                          StepExecutionMetadata tracks metadata pertaining to the execution
+                          of individual promotion steps.
+                        items:
+                          description: |-
+                            StepExecutionMetadata tracks metadata pertaining to the execution of
+                            a promotion step.
+                          properties:
+                            alias:
+                              description: Alias is the alias of the step.
+                              type: string
+                            errorCount:
+                              description: ErrorCount tracks consecutive failed attempts
+                                to execute the step.
+                              format: int32
+                              type: integer
+                            finishedAt:
+                              description: |-
+                                FinishedAt is the time at which the final attempt to execute the step
+                                completed.
+                              format: date-time
+                              type: string
+                            message:
+                              description: Message is a display message about the
+                                step, including any errors.
+                              type: string
+                            startedAt:
+                              description: |-
+                                StartedAt is the time at which the first attempt to execute the step
+                                began.
+                              format: date-time
+                              type: string
+                            status:
+                              description: Status is the high-level outcome of the
+                                step.
+                              type: string
+                          type: object
+                        type: array
                     type: object
                 required:
                 - name
@@ -988,49 +1162,6 @@ spec:
               health:
                 description: Health is the Stage's last observed health.
                 properties:
-                  argoCDApps:
-                    description: ArgoCDApps describes the current state of any related
-                      ArgoCD Applications.
-                    items:
-                      description: ArgoCDAppStatus describes the current state of
-                        a single ArgoCD Application.
-                      properties:
-                        healthStatus:
-                          description: HealthStatus is the health of the ArgoCD Application.
-                          properties:
-                            message:
-                              type: string
-                            status:
-                              type: string
-                          required:
-                          - status
-                          type: object
-                        name:
-                          description: Name is the name of the ArgoCD Application.
-                          type: string
-                        namespace:
-                          description: Namespace is the namespace of the ArgoCD Application.
-                          type: string
-                        syncStatus:
-                          description: SyncStatus is the sync status of the ArgoCD
-                            Application.
-                          properties:
-                            revision:
-                              type: string
-                            revisions:
-                              items:
-                                type: string
-                              type: array
-                            status:
-                              type: string
-                          required:
-                          - status
-                          type: object
-                      required:
-                      - name
-                      - namespace
-                      type: object
-                    type: array
                   config:
                     description: |-
                       Config is the opaque configuration of all health checks performed on this
@@ -1577,6 +1708,45 @@ spec:
                           State stores the state of the promotion process between reconciliation
                           attempts.
                         x-kubernetes-preserve-unknown-fields: true
+                      stepExecutionMetadata:
+                        description: |-
+                          StepExecutionMetadata tracks metadata pertaining to the execution
+                          of individual promotion steps.
+                        items:
+                          description: |-
+                            StepExecutionMetadata tracks metadata pertaining to the execution of
+                            a promotion step.
+                          properties:
+                            alias:
+                              description: Alias is the alias of the step.
+                              type: string
+                            errorCount:
+                              description: ErrorCount tracks consecutive failed attempts
+                                to execute the step.
+                              format: int32
+                              type: integer
+                            finishedAt:
+                              description: |-
+                                FinishedAt is the time at which the final attempt to execute the step
+                                completed.
+                              format: date-time
+                              type: string
+                            message:
+                              description: Message is a display message about the
+                                step, including any errors.
+                              type: string
+                            startedAt:
+                              description: |-
+                                StartedAt is the time at which the first attempt to execute the step
+                                began.
+                              format: date-time
+                              type: string
+                            status:
+                              description: Status is the high-level outcome of the
+                                step.
+                              type: string
+                          type: object
+                        type: array
                     type: object
                 required:
                 - name

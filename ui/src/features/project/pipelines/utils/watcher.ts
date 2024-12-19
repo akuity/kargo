@@ -1,4 +1,5 @@
-import { PromiseClient, createPromiseClient } from '@connectrpc/connect';
+import { create } from '@bufbuild/protobuf';
+import { Client, createClient } from '@connectrpc/connect';
 import { createConnectQueryKey } from '@connectrpc/connect-query';
 import { QueryClient } from '@tanstack/react-query';
 
@@ -9,8 +10,14 @@ import {
   listStages,
   listWarehouses
 } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
-import { KargoService } from '@ui/gen/service/v1alpha1/service_connect';
-import { ListStagesResponse, ListWarehousesResponse } from '@ui/gen/service/v1alpha1/service_pb';
+import {
+  GetStageRequestSchema,
+  KargoService,
+  ListStagesRequestSchema,
+  ListStagesResponse,
+  ListWarehousesRequestSchema,
+  ListWarehousesResponse
+} from '@ui/gen/service/v1alpha1/service_pb';
 import { Stage, Warehouse } from '@ui/gen/v1alpha1/generated_pb';
 
 async function ProcessEvents<T extends { type: string }, S extends { metadata?: ObjectMeta }>(
@@ -41,21 +48,25 @@ async function ProcessEvents<T extends { type: string }, S extends { metadata?: 
 export class Watcher {
   cancel: AbortController;
   client: QueryClient;
-  promiseClient: PromiseClient<typeof KargoService>;
+  promiseClient: Client<typeof KargoService>;
   project: string;
 
   constructor(project: string, client: QueryClient) {
     this.cancel = new AbortController();
     this.client = client;
     this.project = project;
-    this.promiseClient = createPromiseClient(KargoService, transportWithAuth);
+    this.promiseClient = createClient(KargoService, transportWithAuth);
   }
 
   cancelWatch() {
     this.cancel.abort();
   }
 
-  async watchStages() {
+  async watchStages(
+    // utilise the fact that something changed in this stage
+    // avoid as much as re-construction of data as possible by using this parameter
+    onStageEvent?: (stage: Stage) => void
+  ) {
     const stream = this.promiseClient.watchStages(
       { project: this.project },
       { signal: this.cancel.signal }
@@ -65,7 +76,12 @@ export class Watcher {
       stream,
       () => {
         const data = this.client.getQueryData(
-          createConnectQueryKey(listStages, { project: this.project })
+          createConnectQueryKey({
+            schema: listStages,
+            input: create(ListStagesRequestSchema, { project: this.project }),
+            cardinality: 'finite',
+            transport: transportWithAuth
+          })
         );
 
         return (data as ListStagesResponse)?.stages || [];
@@ -73,15 +89,27 @@ export class Watcher {
       (e) => e.stage as Stage,
       (stage, data) => {
         // update Stages list
-        const listStagesQueryKey = createConnectQueryKey(listStages, { project: this.project });
+        const listStagesQueryKey = createConnectQueryKey({
+          schema: listStages,
+          input: create(ListStagesRequestSchema, { project: this.project }),
+          cardinality: 'finite',
+          transport: transportWithAuth
+        });
         this.client.setQueryData(listStagesQueryKey, { stages: data });
 
         // update Stage details
-        const getStageQueryKey = createConnectQueryKey(getStage, {
-          project: this.project,
-          name: stage.metadata?.name
+        const getStageQueryKey = createConnectQueryKey({
+          schema: getStage,
+          input: create(GetStageRequestSchema, {
+            project: this.project,
+            name: stage.metadata?.name
+          }),
+          cardinality: 'finite',
+          transport: transportWithAuth
         });
         this.client.setQueryData(getStageQueryKey, { stage });
+
+        onStageEvent?.(stage);
       }
     );
   }
@@ -97,7 +125,12 @@ export class Watcher {
       stream,
       () => {
         const data = this.client.getQueryData(
-          createConnectQueryKey(listWarehouses, { project: this.project })
+          createConnectQueryKey({
+            schema: listWarehouses,
+            input: create(ListWarehousesRequestSchema, { project: this.project }),
+            cardinality: 'finite',
+            transport: transportWithAuth
+          })
         );
 
         return (data as ListWarehousesResponse)?.warehouses || [];
@@ -116,15 +149,25 @@ export class Watcher {
         }
 
         // update Warehouse list
-        const listWarehousesQueryKey = createConnectQueryKey(listWarehouses, {
-          project: this.project
+        const listWarehousesQueryKey = createConnectQueryKey({
+          schema: listWarehouses,
+          input: create(ListWarehousesRequestSchema, {
+            project: this.project
+          }),
+          cardinality: 'finite',
+          transport: transportWithAuth
         });
         this.client.setQueryData(listWarehousesQueryKey, { warehouses: data });
 
         // update Warehouse details
-        const getWarehouseQueryKey = createConnectQueryKey(getStage, {
-          project: this.project,
-          name: warehouse.metadata?.name
+        const getWarehouseQueryKey = createConnectQueryKey({
+          schema: getStage,
+          input: create(GetStageRequestSchema, {
+            project: this.project,
+            name: warehouse.metadata?.name
+          }),
+          cardinality: 'finite',
+          transport: transportWithAuth
         });
         this.client.setQueryData(getWarehouseQueryKey, { warehouse });
       }

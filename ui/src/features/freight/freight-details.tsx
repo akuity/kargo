@@ -1,3 +1,4 @@
+import { toJson } from '@bufbuild/protobuf';
 import { faFile, faInfoCircle, faPencil } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Drawer, Tabs, Tooltip, Typography } from 'antd';
@@ -6,7 +7,7 @@ import { useEffect, useState } from 'react';
 import { generatePath, useNavigate, useParams } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
-import { Freight } from '@ui/gen/v1alpha1/generated_pb';
+import { Freight, FreightSchema } from '@ui/gen/v1alpha1/generated_pb';
 
 import { Description } from '../common/description';
 import { ManifestPreview } from '../common/manifest-preview';
@@ -36,7 +37,7 @@ export const FreightDetails = ({
 
   useEffect(() => {
     if (freight) {
-      setAlias(getAlias(freight));
+      setAlias(getAlias(freight as Freight));
     }
   }, [freight]);
 
@@ -111,7 +112,9 @@ export const FreightDetails = ({
                   label: 'Live Manifest',
                   icon: <FontAwesomeIcon icon={faFile} />,
                   className: 'h-full pb-2',
-                  children: <ManifestPreview object={freight} height='900px' />
+                  children: (
+                    <ManifestPreview object={toJson(FreightSchema, freight)} height='900px' />
+                  )
                 }
               ]}
             />

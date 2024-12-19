@@ -1,8 +1,10 @@
-import React, { PropsWithChildren } from 'react';
+import React, { PropsWithChildren, useMemo } from 'react';
 
 import { authTokenKey, refreshTokenKey } from '@ui/config/auth';
 
-import { AuthContext } from './auth-context';
+import { extractInfoFromJWT, JWTInfo } from '../jwt-utils';
+
+import { AuthContext, AuthContextType } from './auth-context';
 
 export const AuthContextProvider = ({ children }: PropsWithChildren) => {
   const [token, setToken] = React.useState(localStorage.getItem(authTokenKey));
@@ -24,13 +26,29 @@ export const AuthContextProvider = ({ children }: PropsWithChildren) => {
     setToken(null);
   }, []);
 
-  const ctx = React.useMemo(
+  const jwtInfo: JWTInfo | null = useMemo(() => {
+    if (token) {
+      try {
+        return extractInfoFromJWT(token);
+      } catch {
+        // if "something" is off with token (assume isLoggedIn is true because it just check whether token is present or not ie. not validity of token)
+        // authHandler interceptor will find before any API call and redirect to login page anyways
+        // consumer will decide whats the best UX at that point
+        return null;
+      }
+    }
+
+    return null;
+  }, [token]);
+
+  const ctx: AuthContextType = React.useMemo(
     () => ({
       isLoggedIn: !!token,
       login,
-      logout
+      logout,
+      JWTInfo: jwtInfo
     }),
-    [login, logout, token]
+    [login, logout, token, jwtInfo]
   );
 
   return <AuthContext.Provider value={ctx}>{children}</AuthContext.Provider>;

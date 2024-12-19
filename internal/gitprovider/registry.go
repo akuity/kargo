@@ -1,48 +1,46 @@
 package gitprovider
 
-import (
-	"fmt"
-)
+import "fmt"
 
-// ProviderRegistration holds details on how to instantiate the correct git provider
-// based on parameters (i.e. repo URL). It allows programs to selectively register
-// GitProviderService implementations by anonymously importing implementation packages.
-type ProviderRegistration struct {
-	// Predicate is a function which should return true if the given repoURL is appropriate
-	// for the provider to handle (e.g. github.com is the domain name)
+// Registration holds details on how to instantiate a correct implementation of
+// Interface based on parameters (i.e. repo URL). It allows programs to
+// selectively register implementations by anonymously importing their packages.
+type Registration struct {
+	// Predicate is a function which should return true if the given repoURL is
+	// appropriate for the provider to handle (e.g. github.com is the domain
+	// name).
 	Predicate func(repoURL string) bool
-	// NewService instantiates the git provider
-	NewService func(repoURL string, opts *GitProviderOptions) (GitProviderService, error)
+	// NewProvider instantiates the registered provider implementation.
+	NewProvider func(repoURL string, opts *Options) (Interface, error)
 }
 
-var (
-	// registeredProviders is a mapping between provider name and provider registration
-	registeredProviders = map[string]ProviderRegistration{}
-)
+// registeredProviders is a mapping between provider name and provider registration
+var registeredProviders = map[string]Registration{}
 
-// NewGitProviderService returns an implementation of the GitProviderService
-// interface.
-func NewGitProviderService(repoURL string, opts *GitProviderOptions) (GitProviderService, error) {
+// New returns an implementation of Interface suitable for the provided
+// repository URL and options. It will return an error if no suitable
+// implementation is found.
+func New(repoURL string, opts *Options) (Interface, error) {
 	if opts == nil {
-		opts = &GitProviderOptions{}
+		opts = &Options{}
 	}
 	if opts.Name != "" {
 		if reg, found := registeredProviders[opts.Name]; found {
-			return reg.NewService(repoURL, opts)
+			return reg.NewProvider(repoURL, opts)
 		}
 		return nil, fmt.Errorf("No registered providers with name %q", opts.Name)
 	}
 	for _, reg := range registeredProviders {
 		if reg.Predicate(repoURL) {
-			return reg.NewService(repoURL, opts)
+			return reg.NewProvider(repoURL, opts)
 		}
 	}
 	return nil, fmt.Errorf("No registered providers for %s", repoURL)
 }
 
-// RegisterProvider is called by provider implementation packages to register themselves as
-// a git provider.
-func RegisterProvider(name string, reg ProviderRegistration) {
+// Register is called by provider implementation packages to register themselves
+// as a git provider.
+func Register(name string, reg Registration) {
 	if _, alreadyRegistered := registeredProviders[name]; alreadyRegistered {
 		panic(fmt.Sprintf("Provider %q already registered", name))
 	}

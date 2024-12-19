@@ -59,9 +59,19 @@ spec:
           image: {{ include "kargo.image" . }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           command: ["/usr/local/bin/kargo", "api"]
-          {{- with (concat .Values.global.env .Values.api.env) }}
           env:
-            {{- toYaml . | nindent 10 }}
+          - name: GOMEMLIMIT
+            valueFrom:
+              resourceFieldRef:
+                containerName: api
+                resource: limits.memory
+          - name: GOMAXPROCS
+            valueFrom:
+              resourceFieldRef:
+                containerName: api
+                resource: limits.cpu
+          {{- with (concat .Values.global.env .Values.api.env) }}
+          {{- toYaml . | nindent 10 }}
           {{- end }}
           envFrom:
           - configMapRef:
@@ -77,24 +87,30 @@ spec:
               protocol: TCP
 {{- if .Values.api.probes.enabled }}
           livenessProbe:
+            {{- if .Values.api.tls.enabled }}
             exec:
               command:
                 - /usr/local/bin/grpc_health_probe
                 - -addr=:8080
-{{- if .Values.api.tls.enabled }}
                 - -tls
                 - -tls-no-verify
-{{- end }}
+            {{- else }}
+            grpc:
+              port: 8080
+            {{- end }}
             initialDelaySeconds: 10
           readinessProbe:
+            {{- if .Values.api.tls.enabled }}
             exec:
               command:
                 - /usr/local/bin/grpc_health_probe
                 - -addr=:8080
-{{- if .Values.api.tls.enabled }}
                 - -tls
                 - -tls-no-verify
-{{- end }}
+            {{- else }}
+            grpc:
+              port: 8080
+            {{- end }}
             initialDelaySeconds: 5
 {{- end }}
 {{- if or .Values.kubeconfigSecrets.kargo (and .Values.api.oidc.enabled .Values.api.oidc.dex.enabled) .Values.api.tls.enabled .Values.api.cabundle.configMapName .Values.api.cabundle.secretName }}

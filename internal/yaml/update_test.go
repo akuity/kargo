@@ -43,6 +43,34 @@ func TestUpdateField(t *testing.T) {
 			},
 		},
 		{
+			name: "update nested field with a number for a key",
+			yaml: `root:
+    0: old value`,
+			path:  "root.0",
+			value: "new value",
+			assertions: func(t *testing.T, node *yaml.Node, result string, err error) {
+				require.NoError(t, err)
+				assert.Equal(t, "new value", node.Content[0].Content[1].Content[1].Value)
+				assert.Equal(t, `root:
+    0: new value
+`, result)
+			},
+		},
+		{
+			name: "update nested field with a number for a key (with colon)",
+			yaml: `root:
+    0: old value`,
+			path:  "root.:0",
+			value: "new value",
+			assertions: func(t *testing.T, node *yaml.Node, result string, err error) {
+				require.NoError(t, err)
+				assert.Equal(t, "new value", node.Content[0].Content[1].Content[1].Value)
+				assert.Equal(t, `root:
+    0: new value
+`, result)
+			},
+		},
+		{
 			name:  "create new nested field",
 			yaml:  `root:`,
 			path:  "root.new.nested",
@@ -57,7 +85,7 @@ func TestUpdateField(t *testing.T) {
 			},
 		},
 		{
-			name: "add new scalar to end of sequence",
+			name: "add new scalar to end of sequence (legacy syntax)",
 			yaml: `
 root:
   array:
@@ -76,7 +104,26 @@ root:
 			},
 		},
 		{
-			name: "add new mapping to end of sequence",
+			name: "add new scalar to end of sequence",
+			yaml: `
+root:
+  array:
+    - item1
+    - item2`,
+			path:  "root.array.-1",
+			value: "item3",
+			assertions: func(t *testing.T, _ *yaml.Node, result string, err error) {
+				require.NoError(t, err)
+				assert.Equal(t, `root:
+    array:
+        - item1
+        - item2
+        - item3
+`, result)
+			},
+		},
+		{
+			name: "add new mapping to end of sequence (legacy syntax)",
 			yaml: `
 root:
   array:
@@ -95,7 +142,26 @@ root:
 			},
 		},
 		{
-			name: "add new item beyond current length",
+			name: "add new mapping to end of sequence",
+			yaml: `
+root:
+  array:
+    - item1
+    - item2`,
+			path:  "root.array.-1.key",
+			value: "value",
+			assertions: func(t *testing.T, _ *yaml.Node, result string, err error) {
+				require.NoError(t, err)
+				assert.Equal(t, `root:
+    array:
+        - item1
+        - item2
+        - key: value
+`, result)
+			},
+		},
+		{
+			name: "add new item beyond current length (legacy syntax)",
 			yaml: `
 root:
   array:
@@ -112,7 +178,24 @@ root:
 			},
 		},
 		{
-			name: "update existing item in sequence",
+			name: "add new item beyond current length",
+			yaml: `
+root:
+  array:
+    - item1`,
+			path:  "root.array.-1",
+			value: "item2",
+			assertions: func(t *testing.T, _ *yaml.Node, result string, err error) {
+				require.NoError(t, err)
+				assert.Equal(t, `root:
+    array:
+        - item1
+        - item2
+`, result)
+			},
+		},
+		{
+			name: "update existing item in sequence (legacy syntax)",
 			yaml: `
 root:
   array:
@@ -132,12 +215,50 @@ root:
 			},
 		},
 		{
-			name: "add new sequence to end of sequence",
+			name: "update existing item in sequence",
+			yaml: `
+root:
+  array:
+    - item1
+    - item2
+    - item3`,
+			path:  "root.array.1",
+			value: "updated_item",
+			assertions: func(t *testing.T, _ *yaml.Node, result string, err error) {
+				require.NoError(t, err)
+				assert.Equal(t, `root:
+    array:
+        - item1
+        - updated_item
+        - item3
+`, result)
+			},
+		},
+		{
+			name: "add new sequence to end of sequence (legacy syntax)",
 			yaml: `
 root:
   array:
     - item1`,
 			path:  "root.array.[1]",
+			value: []string{"sub1", "sub2"},
+			assertions: func(t *testing.T, _ *yaml.Node, result string, err error) {
+				require.NoError(t, err)
+				assert.Equal(t, `root:
+    array:
+        - item1
+        - - sub1
+          - sub2
+`, result)
+			},
+		},
+		{
+			name: "add new sequence to end of sequence",
+			yaml: `
+root:
+  array:
+    - item1`,
+			path:  "root.array.-1",
 			value: []string{"sub1", "sub2"},
 			assertions: func(t *testing.T, _ *yaml.Node, result string, err error) {
 				require.NoError(t, err)
@@ -175,7 +296,7 @@ root:
 			path:  "",
 			value: "new value",
 			assertions: func(t *testing.T, _ *yaml.Node, _ string, err error) {
-				assert.EqualError(t, err, "empty field path")
+				assert.EqualError(t, err, "empty key")
 			},
 		},
 		{
@@ -186,8 +307,7 @@ root:
 			path:  "root.nested.", // Note the trailing dot, which will result in an empty part
 			value: "new value",
 			assertions: func(t *testing.T, _ *yaml.Node, result string, err error) {
-				require.Error(t, err)
-				assert.Equal(t, "empty field path", err.Error())
+				assert.ErrorContains(t, err, "empty key part in key")
 				assert.Empty(t, result)
 			},
 		},
@@ -202,6 +322,22 @@ root:
 			},
 		},
 		{
+			name: "error on negative array index (legacy syntax)",
+			yaml: `
+root:
+  array:
+    - item1
+    - item2
+    - item3`,
+			path:  "root.array.[-2]",
+			value: "new value",
+			assertions: func(t *testing.T, _ *yaml.Node, result string, err error) {
+				require.Error(t, err)
+				assert.Equal(t, "invalid negative index: -2", err.Error())
+				assert.Empty(t, result)
+			},
+		},
+		{
 			name: "error on negative array index",
 			yaml: `
 root:
@@ -209,11 +345,11 @@ root:
     - item1
     - item2
     - item3`,
-			path:  "root.array.[-1]",
+			path:  "root.array.-2",
 			value: "new value",
 			assertions: func(t *testing.T, _ *yaml.Node, result string, err error) {
 				require.Error(t, err)
-				assert.Equal(t, "invalid negative index: -1", err.Error())
+				assert.Equal(t, "invalid negative index: -2", err.Error())
 				assert.Empty(t, result)
 			},
 		},
@@ -388,6 +524,76 @@ root:
 				result = string(output)
 			}
 			tt.assertions(t, &node, result, err)
+		})
+	}
+}
+
+func TestSplitKey(t *testing.T) {
+	testCases := []struct {
+		name        string
+		key         string
+		expected    []string
+		errContains string
+	}{
+		{
+			name:        "empty key",
+			errContains: "empty key",
+		},
+		{
+			name:        "starts with dot",
+			key:         ".foo",
+			errContains: "empty key part in key",
+		},
+		{
+			name:        "ends with dot",
+			key:         "foo.",
+			errContains: "empty key part in key",
+		},
+		{
+			name:        "double dots",
+			key:         "foo..bar",
+			errContains: "empty key part in key",
+		},
+		{
+			name:        "invalid escape sequence",
+			key:         `foo\nbar`,
+			errContains: "invalid escape sequence",
+		},
+		{
+			name:        "invalid use of colon",
+			key:         `foo:bar`,
+			errContains: "unexpected colon in key",
+		},
+		{
+			name:     "basic split",
+			key:      "foo.bar.bat.baz",
+			expected: []string{"foo", "bar", "bat", "baz"},
+		},
+		{
+			name:     "split key with escaped dots",
+			key:      `foo\.bar.bat\.baz`,
+			expected: []string{"foo.bar", "bat.baz"},
+		},
+		{
+			name:     "split key with escaped colon",
+			key:      `foo.bar\:bat.baz`,
+			expected: []string{"foo", "bar:bat", "baz"},
+		},
+		{
+			name:     "split key with unescaped colon",
+			key:      `foo.bar.:2.baz`,
+			expected: []string{"foo", "bar", "2", "baz"},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			parts, err := splitKey(testCase.key)
+			if testCase.errContains != "" {
+				require.ErrorContains(t, err, testCase.errContains)
+			} else {
+				require.NoError(t, err)
+				assert.Equal(t, testCase.expected, parts)
+			}
 		})
 	}
 }

@@ -20,7 +20,7 @@ RUN NODE_ENV='production' VERSION=${VERSION} pnpm run build
 ####################################################################################################
 # back-end-builder
 ####################################################################################################
-FROM --platform=$BUILDPLATFORM golang:1.23.2-bookworm AS back-end-builder
+FROM --platform=$BUILDPLATFORM golang:1.23.4-bookworm AS back-end-builder
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -59,14 +59,14 @@ WORKDIR /kargo/bin
 ####################################################################################################
 # `tools` stage allows us to take the leverage of the parallel build.
 # For example, this stage can be cached and re-used when we have to rebuild code base.
-FROM curlimages/curl:8.10.1 AS tools
+FROM curlimages/curl:8.11.1 AS tools
 
 ARG TARGETOS
 ARG TARGETARCH
 
 WORKDIR /tools
 
-RUN GRPC_HEALTH_PROBE_VERSION=v0.4.15 && \
+RUN GRPC_HEALTH_PROBE_VERSION=v0.4.35 && \
     curl -fL -o /tools/grpc_health_probe https://github.com/grpc-ecosystem/grpc-health-probe/releases/download/${GRPC_HEALTH_PROBE_VERSION}/grpc_health_probe-${TARGETOS}-${TARGETARCH} && \
     chmod +x /tools/grpc_health_probe
 
@@ -79,7 +79,7 @@ RUN GRPC_HEALTH_PROBE_VERSION=v0.4.15 && \
 ####################################################################################################
 FROM alpine:latest AS back-end-dev
 
-RUN apk update && apk add ca-certificates git gpg gpg-agent openssh-client
+RUN apk update && apk add ca-certificates git gpg gpg-agent openssh-client tini
 
 COPY bin/credential-helper /usr/local/bin/credential-helper
 COPY bin/controlplane/kargo /usr/local/bin/kargo
@@ -87,6 +87,7 @@ COPY bin/controlplane/kargo /usr/local/bin/kargo
 RUN adduser -D -H -u 1000 kargo
 USER 1000:0
 
+ENTRYPOINT ["/sbin/tini", "--"]
 CMD ["/usr/local/bin/kargo"]
 
 ####################################################################################################
@@ -119,4 +120,5 @@ FROM ${BASE_IMAGE}:latest-${TARGETARCH} AS final
 COPY --from=back-end-builder /kargo/bin/ /usr/local/bin/
 COPY --from=tools /tools/ /usr/local/bin/
 
+ENTRYPOINT ["/sbin/tini", "--"]
 CMD ["/usr/local/bin/kargo"]

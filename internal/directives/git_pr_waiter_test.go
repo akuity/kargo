@@ -100,12 +100,12 @@ func Test_gitPRWaiter_validate(t *testing.T) {
 func Test_gitPRWaiter_runPromotionStep(t *testing.T) {
 	testCases := []struct {
 		name       string
-		provider   gitprovider.GitProviderService
+		provider   gitprovider.Interface
 		assertions func(*testing.T, PromotionStepResult, error)
 	}{
 		{
 			name: "error finding PR",
-			provider: &gitprovider.FakeGitProviderService{
+			provider: &gitprovider.Fake{
 				GetPullRequestFn: func(
 					context.Context,
 					int64,
@@ -121,13 +121,13 @@ func Test_gitPRWaiter_runPromotionStep(t *testing.T) {
 		},
 		{
 			name: "PR is open",
-			provider: &gitprovider.FakeGitProviderService{
+			provider: &gitprovider.Fake{
 				GetPullRequestFn: func(
 					context.Context,
 					int64,
 				) (*gitprovider.PullRequest, error) {
 					return &gitprovider.PullRequest{
-						State: gitprovider.PullRequestStateOpen,
+						Open: true,
 					}, nil
 				},
 			},
@@ -137,61 +137,35 @@ func Test_gitPRWaiter_runPromotionStep(t *testing.T) {
 			},
 		},
 		{
-			name: "error checking if PR was merged",
-			provider: &gitprovider.FakeGitProviderService{
-				GetPullRequestFn: func(
-					context.Context,
-					int64,
-				) (*gitprovider.PullRequest, error) {
-					return &gitprovider.PullRequest{
-						State: gitprovider.PullRequestStateClosed,
-					}, nil
-				},
-				IsPullRequestMergedFn: func(context.Context, int64) (bool, error) {
-					return false, errors.New("something went wrong")
-				},
-			},
-			assertions: func(t *testing.T, res PromotionStepResult, err error) {
-				require.ErrorContains(t, err, "error checking if pull request")
-				require.ErrorContains(t, err, "was merged")
-				require.ErrorContains(t, err, "something went wrong")
-				require.Equal(t, kargoapi.PromotionPhaseErrored, res.Status)
-			},
-		},
-		{
 			name: "PR is closed and not merged",
-			provider: &gitprovider.FakeGitProviderService{
+			provider: &gitprovider.Fake{
 				GetPullRequestFn: func(
 					context.Context,
 					int64,
 				) (*gitprovider.PullRequest, error) {
 					return &gitprovider.PullRequest{
-						State: gitprovider.PullRequestStateClosed,
+						Open:   false,
+						Merged: false,
 					}, nil
-				},
-				IsPullRequestMergedFn: func(context.Context, int64) (bool, error) {
-					return false, nil
 				},
 			},
 			assertions: func(t *testing.T, res PromotionStepResult, err error) {
-				require.NoError(t, err)
-				require.Contains(t, res.Message, "closed without being merged")
+				require.ErrorContains(t, err, "closed without being merged")
+				require.True(t, isTerminal(err))
 				require.Equal(t, kargoapi.PromotionPhaseFailed, res.Status)
 			},
 		},
 		{
 			name: "PR is closed and merged",
-			provider: &gitprovider.FakeGitProviderService{
+			provider: &gitprovider.Fake{
 				GetPullRequestFn: func(
 					context.Context,
 					int64,
 				) (*gitprovider.PullRequest, error) {
 					return &gitprovider.PullRequest{
-						State: gitprovider.PullRequestStateClosed,
+						Open:   false,
+						Merged: true,
 					}, nil
-				},
-				IsPullRequestMergedFn: func(context.Context, int64) (bool, error) {
-					return true, nil
 				},
 			},
 			assertions: func(t *testing.T, res PromotionStepResult, err error) {
@@ -211,13 +185,13 @@ func Test_gitPRWaiter_runPromotionStep(t *testing.T) {
 			// care of that problem
 			testGitProviderName := uuid.NewString()
 
-			gitprovider.RegisterProvider(
+			gitprovider.Register(
 				testGitProviderName,
-				gitprovider.ProviderRegistration{
-					NewService: func(
+				gitprovider.Registration{
+					NewProvider: func(
 						string,
-						*gitprovider.GitProviderOptions,
-					) (gitprovider.GitProviderService, error) {
+						*gitprovider.Options,
+					) (gitprovider.Interface, error) {
 						return testCase.provider, nil
 					},
 				},

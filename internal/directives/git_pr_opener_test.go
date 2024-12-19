@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"net/http/httptest"
+	"slices"
 	"testing"
+	"time"
 
 	"github.com/sosedoff/gitkit"
 	"github.com/stretchr/testify/require"
@@ -105,6 +107,16 @@ func Test_gitPROpener_validate(t *testing.T) {
 				"targetBranch":         "fake-branch",
 			},
 		},
+		{
+			name: "valid with custom title",
+			config: Config{
+				"provider":     "github",
+				"repoURL":      "https://github.com/example/repo.git",
+				"sourceBranch": "fake-branch",
+				"targetBranch": "another-fake-branch",
+				"title":        "custom title",
+			},
+		},
 	}
 
 	r := newGitPROpener()
@@ -158,25 +170,25 @@ func Test_gitPROpener_runPromotionStep(t *testing.T) {
 	// Set up a fake git provider
 	const fakeGitProviderName = "fake"
 	const testPRNumber int64 = 42
-	gitprovider.RegisterProvider(
+	gitprovider.Register(
 		fakeGitProviderName,
-		gitprovider.ProviderRegistration{
-			NewService: func(
+		gitprovider.Registration{
+			NewProvider: func(
 				string,
-				*gitprovider.GitProviderOptions,
-			) (gitprovider.GitProviderService, error) {
-				return &gitprovider.FakeGitProviderService{
+				*gitprovider.Options,
+			) (gitprovider.Interface, error) {
+				return &gitprovider.Fake{
 					ListPullRequestsFn: func(
 						context.Context,
-						gitprovider.ListPullRequestOpts,
-					) ([]*gitprovider.PullRequest, error) {
+						*gitprovider.ListPullRequestOptions,
+					) ([]gitprovider.PullRequest, error) {
 						// Avoid opening of a PR being short-circuited by simulating
 						// conditions where the PR in question doesn't already exist.
 						return nil, nil
 					},
 					CreatePullRequestFn: func(
 						context.Context,
-						gitprovider.CreatePullRequestOpts,
+						*gitprovider.CreatePullRequestOpts,
 					) (*gitprovider.PullRequest, error) {
 						return &gitprovider.PullRequest{Number: testPRNumber}, nil
 					},
@@ -200,7 +212,7 @@ func Test_gitPROpener_runPromotionStep(t *testing.T) {
 			CredentialsDB: &credentials.FakeDB{},
 			SharedState: State{
 				"fake-step": map[string]any{
-					branchKey: testSourceBranch,
+					stateKeyBranch: testSourceBranch,
 				},
 			},
 		},
@@ -211,10 +223,11 @@ func Test_gitPROpener_runPromotionStep(t *testing.T) {
 			TargetBranch:         testTargetBranch,
 			CreateTargetBranch:   true,
 			Provider:             ptr.To(Provider(fakeGitProviderName)),
+			Title:                "kargo",
 		},
 	)
 	require.NoError(t, err)
-	prNumber, ok := res.Output[prNumberKey]
+	prNumber, ok := res.Output[stateKeyPRNumber]
 	require.True(t, ok)
 	require.Equal(t, testPRNumber, prNumber)
 
@@ -222,4 +235,55 @@ func Test_gitPROpener_runPromotionStep(t *testing.T) {
 	exists, err := repo.RemoteBranchExists(testTargetBranch)
 	require.NoError(t, err)
 	require.True(t, exists)
+}
+
+func Test_gitPROpener_sortPullRequests(t *testing.T) {
+	newer := time.Now()
+	older := newer.Add(-time.Hour)
+	// These are laid out in the exact opposite order of how they should be
+	// sorted. After sorting, we can assert the order is correct by comparing to
+	// the reversed list.
+	orig := []gitprovider.PullRequest{
+		{
+			Number:    6,
+			Open:      false,
+			Merged:    false,
+			CreatedAt: &older,
+		},
+		{
+			Number:    5,
+			Open:      false,
+			Merged:    false,
+			CreatedAt: &newer,
+		},
+		{
+			Number:    4,
+			Open:      false,
+			Merged:    true,
+			CreatedAt: &older,
+		},
+		{
+			Number:    3,
+			Open:      false,
+			Merged:    true,
+			CreatedAt: &newer,
+		},
+		{
+			Number:    2,
+			Open:      true,
+			Merged:    false,
+			CreatedAt: &older,
+		},
+		{
+			Number:    1,
+			Open:      true,
+			Merged:    false,
+			CreatedAt: &newer,
+		},
+	}
+	sorted := make([]gitprovider.PullRequest, len(orig))
+	copy(sorted, orig)
+	(&gitPROpener{}).sortPullRequests(sorted)
+	slices.Reverse(orig)
+	require.Equal(t, orig, sorted)
 }

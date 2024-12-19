@@ -31,12 +31,14 @@ import (
 	"github.com/akuity/kargo/internal/kubeclient"
 	libEvent "github.com/akuity/kargo/internal/kubernetes/event"
 	"github.com/akuity/kargo/internal/logging"
+	intpredicate "github.com/akuity/kargo/internal/predicate"
 )
 
 // ReconcilerConfig represents configuration for the promotion reconciler.
 type ReconcilerConfig struct {
-	ShardName        string `envconfig:"SHARD_NAME"`
-	APIServerBaseURL string `envconfig:"API_SERVER_BASE_URL"`
+	ShardName               string `envconfig:"SHARD_NAME"`
+	APIServerBaseURL        string `envconfig:"API_SERVER_BASE_URL"`
+	MaxConcurrentReconciles int    `envconfig:"MAX_CONCURRENT_PROMOTION_RECONCILES" default:"4"`
 }
 
 func (c ReconcilerConfig) Name() string {
@@ -113,12 +115,13 @@ func SetupReconcilerWithManager(
 
 	c, err := ctrl.NewControllerManagedBy(kargoMgr).
 		For(&kargoapi.Promotion{}).
+		WithEventFilter(intpredicate.IgnoreDelete[client.Object]{}).
 		WithEventFilter(predicate.Or(
 			predicate.GenerationChangedPredicate{},
 			kargo.RefreshRequested{},
 			kargo.PromotionAbortRequested{},
 		)).
-		WithOptions(controller.CommonOptions()).
+		WithOptions(controller.CommonOptions(cfg.MaxConcurrentReconciles)).
 		Build(reconciler)
 	if err != nil {
 		return fmt.Errorf("error building Promotion controller: %w", err)
@@ -155,6 +158,11 @@ func SetupReconcilerWithManager(
 			return fmt.Errorf("unable to watch Applications: %w", err)
 		}
 	}
+
+	logging.LoggerFromContext(ctx).Info(
+		"Initialized Promotion reconciler",
+		"maxConcurrentReconciles", cfg.MaxConcurrentReconciles,
+	)
 
 	return nil
 }
@@ -456,31 +464,38 @@ func (r *reconciler) promote(
 		stage,
 	)
 
-	// If the Promotion has steps, execute them in sequence.
-	var steps []directives.PromotionStep
-	for _, step := range workingPromo.Spec.Steps {
-		steps = append(steps, directives.PromotionStep{
+	// Prepare promotion steps and vars for the promotion execution engine.
+	steps := make([]directives.PromotionStep, len(workingPromo.Spec.Steps))
+	for i, step := range workingPromo.Spec.Steps {
+		steps[i] = directives.PromotionStep{
 			Kind:   step.Uses,
 			Alias:  step.As,
-			Config: step.GetConfig(),
-		})
+			Retry:  step.Retry,
+			Config: step.Config.Raw,
+		}
 	}
 
 	promoCtx := directives.PromotionContext{
-		UIBaseURL:       r.cfg.APIServerBaseURL,
-		WorkDir:         filepath.Join(os.TempDir(), "promotion-"+string(workingPromo.UID)),
-		Project:         stageNamespace,
-		Stage:           stageName,
-		FreightRequests: stage.Spec.RequestedFreight,
-		Freight:         *workingPromo.Status.FreightCollection.DeepCopy(),
-		StartFromStep:   promo.Status.CurrentStep,
-		State:           directives.State(workingPromo.Status.GetState()),
+		UIBaseURL:             r.cfg.APIServerBaseURL,
+		WorkDir:               filepath.Join(os.TempDir(), "promotion-"+string(workingPromo.UID)),
+		Project:               stageNamespace,
+		Stage:                 stageName,
+		Promotion:             workingPromo.Name,
+		FreightRequests:       stage.Spec.RequestedFreight,
+		Freight:               *workingPromo.Status.FreightCollection.DeepCopy(),
+		StartFromStep:         promo.Status.CurrentStep,
+		StepExecutionMetadata: promo.Status.StepExecutionMetadata,
+		State:                 directives.State(workingPromo.Status.GetState()),
+		Vars:                  workingPromo.Spec.Vars,
 	}
 	if err := os.Mkdir(promoCtx.WorkDir, 0o700); err == nil {
 		// If we're working with a fresh directory, we should start the promotion
-		// process again from the beginning.
+		// process again from the beginning, but we DON'T clear shared state. This
+		// allows individual steps to self-discover that they've run before and
+		// examine the results of their own previous execution.
 		promoCtx.StartFromStep = 0
-		promoCtx.State = nil
+		promoCtx.StepExecutionMetadata = nil
+		workingPromo.Status.HealthChecks = nil
 	} else if !os.IsExist(err) {
 		return nil, fmt.Errorf("error creating working directory: %w", err)
 	}
@@ -496,16 +511,16 @@ func (r *reconciler) promote(
 	workingPromo.Status.Phase = res.Status
 	workingPromo.Status.Message = res.Message
 	workingPromo.Status.CurrentStep = res.CurrentStep
+	workingPromo.Status.StepExecutionMetadata = res.StepExecutionMetadata
 	workingPromo.Status.State = &apiextensionsv1.JSON{Raw: res.State.ToJSON()}
-	if res.Status == kargoapi.PromotionPhaseSucceeded {
-		var healthChecks []kargoapi.HealthCheckStep
-		for _, step := range res.HealthCheckSteps {
-			healthChecks = append(healthChecks, kargoapi.HealthCheckStep{
+	for _, step := range res.HealthCheckSteps {
+		workingPromo.Status.HealthChecks = append(
+			workingPromo.Status.HealthChecks,
+			kargoapi.HealthCheckStep{
 				Uses:   step.Kind,
 				Config: &apiextensionsv1.JSON{Raw: step.Config.ToJSON()},
-			})
-		}
-		workingPromo.Status.HealthChecks = healthChecks
+			},
+		)
 	}
 	if err != nil {
 		workingPromo.Status.Phase = kargoapi.PromotionPhaseErrored

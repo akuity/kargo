@@ -1,8 +1,6 @@
-import { createConnectQueryKey, useMutation, useQuery } from '@connectrpc/connect-query';
+import { createConnectQueryKey, useMutation } from '@connectrpc/connect-query';
 import {
-  faChevronDown,
   faExclamationCircle,
-  faExternalLinkAlt,
   faPen,
   faRedo,
   faRefresh,
@@ -10,15 +8,15 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useQueryClient } from '@tanstack/react-query';
-import { Button, Dropdown, Space, Tooltip } from 'antd';
+import { Button, Space } from 'antd';
 import React from 'react';
 import { generatePath, useNavigate, useParams } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
+import { transportWithAuth } from '@ui/config/transport';
 import {
   abortVerification,
   deleteStage,
-  getConfig,
   queryFreight,
   refreshStage,
   reverify
@@ -28,7 +26,6 @@ import { Stage } from '@ui/gen/v1alpha1/generated_pb';
 import { useConfirmModal } from '../common/confirm-modal/use-confirm-modal';
 import { useModal } from '../common/modal/use-modal';
 import { currentFreightHasVerification } from '../common/utils';
-import { getPromotionArgoCDApps } from '../promotion-directives/utils';
 
 import { EditStageModal } from './edit-stage-modal';
 
@@ -78,27 +75,16 @@ export const StageActions = ({
     }
 
     if (refreshRequest === refreshStatus && shouldRefetchFreights) {
-      queryClient.invalidateQueries({ queryKey: createConnectQueryKey(queryFreight) });
+      queryClient.invalidateQueries({
+        queryKey: createConnectQueryKey({
+          schema: queryFreight,
+          cardinality: 'finite',
+          transport: transportWithAuth
+        })
+      });
       setShouldRefetchFreights(false);
     }
   }, [stage, shouldRefetchFreights]);
-
-  const { data: config } = useQuery(getConfig);
-  const argoCDAppsLinks = React.useMemo(() => {
-    const shardKey = stage?.metadata?.labels['kargo.akuity.io/shard'] || '';
-    const shard = config?.argocdShards?.[shardKey];
-
-    const argocdApps = getPromotionArgoCDApps(stage);
-
-    if (!shard || !argocdApps.length) {
-      return [];
-    }
-
-    return argocdApps.map((appName) => ({
-      label: appName,
-      url: `${shard.url}/applications/${shard.namespace}/${appName}`
-    }));
-  }, [config, stage]);
 
   const { mutate: reverifyStage, isPending } = useMutation(reverify);
   const { mutate: abortVerificationAction } = useMutation(abortVerification);
@@ -107,38 +93,6 @@ export const StageActions = ({
 
   return (
     <Space size={16}>
-      {argoCDAppsLinks.length === 1 && (
-        <Tooltip title={argoCDAppsLinks[0]?.label}>
-          <Button
-            type='link'
-            onClick={() => window.open(argoCDAppsLinks[0]?.url, '_blank', 'noreferrer')}
-            size='small'
-            icon={<FontAwesomeIcon icon={faExternalLinkAlt} />}
-          >
-            Argo CD
-          </Button>
-        </Tooltip>
-      )}
-      {argoCDAppsLinks.length > 1 && (
-        <Dropdown
-          menu={{
-            items: argoCDAppsLinks.map((item, i) => ({
-              label: (
-                <a href={item?.url} target='_blank' rel='noreferrer' className='flex items-center'>
-                  <FontAwesomeIcon icon={faExternalLinkAlt} className='mr-2' />
-                  {item?.label}
-                </a>
-              ),
-              key: i
-            }))
-          }}
-          trigger={['click']}
-        >
-          <Button type='link' size='small' icon={<FontAwesomeIcon icon={faChevronDown} />}>
-            Argo CD
-          </Button>
-        </Dropdown>
-      )}
       {currentFreightHasVerification(stage) && (
         <>
           {verificationEnabled && (
