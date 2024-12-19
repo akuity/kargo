@@ -74,6 +74,8 @@ type RegularStageReconciler struct {
 	client           client.Client
 	eventRecorder    record.EventRecorder
 	directivesEngine directives.Engine
+
+	backoffCfg wait.Backoff
 }
 
 // NewRegularStageReconciler creates a new Stages reconciler.
@@ -81,6 +83,13 @@ func NewRegularStageReconciler(cfg ReconcilerConfig, engine directives.Engine) *
 	return &RegularStageReconciler{
 		cfg:              cfg,
 		directivesEngine: engine,
+		backoffCfg: wait.Backoff{
+			Duration: 1 * time.Second,
+			Factor:   2,
+			Steps:    10,
+			Cap:      2 * time.Minute,
+			Jitter:   0.1,
+		},
 	}
 }
 
@@ -637,12 +646,13 @@ func (r *RegularStageReconciler) syncPromotions(
 		}
 
 		// If we are in a healthy state, the current Freight needs to be verified
-		// before we can allow the next Promotion to start. If we are unhealthy,
-		// then we can allow the next Promotion to start immediately as the
-		// expectation is that the Promotion can fix the issue.
+		// before we can allow the next Promotion to start. If we are unhealthy
+		// or the verification failed, then we can allow the next Promotion to
+		// start immediately as the expectation is that the Promotion can fix the
+		// issue.
 		if stage.Status.Health == nil || stage.Status.Health.Status != kargoapi.HealthStateUnhealthy {
 			curVI := curFreight.VerificationHistory.Current()
-			if curVI == nil || curVI.Phase != kargoapi.VerificationPhaseSuccessful {
+			if curVI == nil || !curVI.Phase.IsTerminal() {
 				logger.Debug("current Freight needs to be verified before allowing new promotions to start")
 				conditions.Delete(&newStatus, kargoapi.ConditionTypePromoting)
 				return newStatus, hasNonTerminalPromotions, nil
@@ -1312,13 +1322,7 @@ func (r *RegularStageReconciler) getVerificationResult(
 	// the symptoms for now. We should investigate the root cause of this
 	// issue and remove this retry logic when the root cause has been resolved.
 	ar := rolloutsapi.AnalysisRun{}
-	if err := retry.OnError(wait.Backoff{
-		Duration: 1 * time.Second,
-		Factor:   2,
-		Steps:    10,
-		Cap:      2 * time.Minute,
-		Jitter:   0.1,
-	}, func(err error) bool {
+	if err := retry.OnError(r.backoffCfg, func(err error) bool {
 		return apierrors.IsNotFound(err)
 	}, func() error {
 		return r.client.Get(ctx, types.NamespacedName{

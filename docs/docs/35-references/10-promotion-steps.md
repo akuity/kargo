@@ -312,7 +312,7 @@ to executing `kustomize edit set image`. This step is commonly followed by a
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
 | `path` | `string` | Y | Path to a directory containing a `kustomization.yaml` file. This path is relative to the temporary workspace that Kargo provisions for use by the promotion process. |
-| `images` | `[]object` | Y | The details of changes to be applied to the `kustomization.yaml` file. At least one must be specified. |
+| `images` | `[]object` | N | The details of changes to be applied to the `kustomization.yaml` file. When left unspecified, all images from the Freight collection will be set in the Kustomization file. Unless there is an ambiguous image name (for example, due to two Warehouses subscribing to the same repository), which requires manual configuration. |
 | `images[].image` | `string` | Y | Name/URL of the image being updated. |
 | `images[].tag` | `string` | N | A tag naming a specific revision of `image`. Mutually exclusive with `digest` and `useDigest=true`. If none of these are specified, the tag specified by a piece of Freight referencing `image` will be used as the value of this field. |
 | `images[].digest` | `string` | N | A digest naming a specific revision of `image`. Mutually exclusive with `tag` and `useDigest=true`. If none of these are specified, the tag specified by a piece of Freight referencing `image` will be used as the value of `tag`. |
@@ -350,7 +350,7 @@ steps:
     path: ./src/base
     images:
     - image: ${{ vars.imageRepo }}
-      tag: ${{ imageFrom(vars.imageRepo).tag }}
+      tag: ${{ imageFrom(vars.imageRepo).Tag }}
 # Render manifests to ./out, commit, push, etc...
 ```
 
@@ -578,7 +578,7 @@ steps:
     path: ./src/charts/my-chart/values.yaml
     updates:
     - key: image.tag
-      value: ${{ imageFrom("my/image").tag }}
+      value: ${{ imageFrom("my/image").Tag }}
 # Render manifests to ./out, commit, push, etc...
 ```
 
@@ -924,7 +924,24 @@ steps:
 ### `git-push`
 
 `git-push` pushes the committed changes in a specified working tree to a
-specified branch in the remote repository. This step typically follows a `git-commit` step and is often followed by a `git-open-pr` step.
+specified branch in the remote repository. This step typically follows a
+`git-commit` step and is often followed by a `git-open-pr` step.
+
+This step also implements its own, internal retry logic. If a push fails, with
+the cause determined to be the presence of new commits in the remote branch that
+are not present in the local branch, the step will attempt to rebase before
+retrying the push. Any merge conflict requiring manual resolution will
+immediately halt further attempts.
+
+:::info
+This step's internal retry logic is helpful in scenarios when concurrent
+Promotions to multiple Stages may all write to the same branch of the same
+repository.
+
+Because conflicts requiring manual resolution will halt further attempts, it is
+recommended to design your Promotion processes such that Promotions to multiple
+Stages that write to the same branch do not write to the same files.
+:::
 
 #### `git-push` Configuration
 
@@ -932,6 +949,7 @@ specified branch in the remote repository. This step typically follows a `git-co
 |------|------|----------|-------------|
 | `path` | `string` | Y | Path to a Git working tree containing committed changes. |
 | `targetBranch` | `string` | N | The branch to push to in the remote repository. Mutually exclusive with `generateTargetBranch=true`. If neither of these is provided, the target branch will be the same as the branch currently checked out in the working tree. |
+| `maxAttempts` | `int32` | N | The maximum number of attempts to make when pushing to the remote repository. Default is 50. |
 | `generateTargetBranch` | `boolean` | N | Whether to push to a remote branch named like `kargo/<project>/<stage>/promotion`. If such a branch does not already exist, it will be created. A value of 'true' is mutually exclusive with `targetBranch`. If neither of these is provided, the target branch will be the currently checked out branch. This option is useful when a subsequent promotion step will open a pull request against a Stage-specific branch. In such a case, the generated target branch pushed to by the `git-push` step can later be utilized as the source branch of the pull request. |
 
 #### `git-push` Examples
@@ -1002,6 +1020,7 @@ requests.
 | `sourceBranchFromStep` | `string` | N | Indicates the source branch should be determined by the `branch` key in the output of a previous promotion step with the specified alias. Mutually exclusive with `sourceBranch`.<br/><br/>__Deprecated: Use `sourceBranch` with an expression instead. Will be removed in v1.3.0.__  |
 | `targetBranch` | `string` | N | The branch to which the changes should be merged. |
 | `createTargetBranch` | `boolean` | N | Indicates whether a new, empty orphaned branch should be created and pushed to the remote if the target branch does not already exist there. Default is `false`. |
+| `title` | `string` | N | The title for the pull request. Kargo generates a title based on the commit messages if it is not explicitly specified. |
 
 #### `git-open-pr`  Example
 
@@ -1109,6 +1128,18 @@ metadata:
 spec:
   # Application specifications go here
 ```
+:::
+
+:::info
+Enforcement of Argo CD
+[sync windows](https://argo-cd.readthedocs.io/en/stable/user-guide/sync_windows/)
+was improved substantially in Argo CD v2.11.0. If you wish for the `argocd-update`
+step to honor sync windows, you must use Argo CD v2.11.0 or later.
+
+_Additionally, it is recommended that if a promotion process is expected to
+sometimes encounter an active deny window, the `argocd-update` step should be
+configured with a timeout that is at least as long as the longest expected deny
+window. (The step's default timeout is five minutes.)_
 :::
 
 #### `argocd-update` Configuration
@@ -1299,9 +1330,9 @@ with a wide variety of external services.
 | `queryParams` | `[]object` | N | A list of query parameters to include in the request. |
 | `queryParams[].name` | `string` | Y | The name of the query parameter. |
 | `queryParams[].value` | `string` | Y | The value of the query parameter. The provided value will automatically be URL-encoded if necessary. |
-| `body` | `string` | N | The body of the request. |
+| `body` | `string` | N | The body of the request. __Note:__ As this field is a `string`, take care to utilize [`quote()`](./20-expression-language.md#quote) if the body is a valid JSON `object`. Refer to the example below of posting a message to a Slack channel. |
 | `insecureSkipTLSVerify` | `boolean` | N | Indicates whether to bypass TLS certificate verification when making the request. Setting this to `true` is highly discouraged. |
-| `timeoutSeconds` | `number` | N | The maximum number of seconds to wait for a request to complete. If this is not specified, the default timeout is 10 seconds. The minimum permissible value is `1` and the maximum is `60`. _This is the timeout for an individual HTTP request. If a request is retried, each attempt is independently subject to this timeout._ |
+| `timeout` | `string` | N | A string representation of the maximum time interval to wait for a request to complete. _This is the timeout for an individual HTTP request. If a request is retried, each attempt is independently subject to this timeout._ See Go's [`time` package docs](https://pkg.go.dev/time#ParseDuration) for a description of the accepted format. |
 | `successExpression` | `string` | N | An [expr-lang] expression that can evaluate the response to determine success. If this is left undefined and `failureExpression` _is_ defined, the default success criteria will be the inverse of the specified failure criteria. If both are left undefined, success is `true` when the HTTP status code is `2xx`. If `successExpression` and `failureExpression` are both defined and both evaluate to `true`, the failure takes precedence. Note that this expression should _not_ be offset by `${{` and `}}`. See examples for more details. |
 | `failureExpression` | `string` | N | An [expr-lang] expression that can evaluate the response to determine failure. If this is left undefined and `successExpression` _is_ defined, the default failure criteria will be the inverse of the specified success criteria. If both are left undefined, failure is `true` when the HTTP status code is _not_ `2xx`. If `successExpression` and `failureExpression` are both defined and both evaluate to `true`, the failure takes precedence. Note that this expression should _not_ be offset by `${{` and `}}`. See examples for more details. |
 | `outputs` | `[]object` | N | A list of rules for extracting outputs from the HTTP response. These are only applied to responses deemed successful. |
@@ -1439,6 +1470,9 @@ This examples is adapted from
 [Slack's own documentation](https://api.slack.com/tutorials/tracks/posting-messages-with-curl):
 
 ```yaml
+vars:
+- name: slackChannel
+  value: C123456
 steps:
 # ...
 - uses: http
@@ -1451,8 +1485,8 @@ steps:
     - name: Content-Type
       value: application/json
     body: |
-      {
-        "channel": ${{ vars.slackChannel }},
+      ${{ quote({
+        "channel": vars.slackChannel,
         "blocks": [
           {
             "type": "section",
@@ -1462,7 +1496,7 @@ steps:
             }
           }
         ]
-      }
+      }) }}
 ```
 
 </TabItem>

@@ -91,8 +91,15 @@ func (k *kustomizeImageSetter) runPromotionStep(
 			fmt.Errorf("could not discover kustomization file: %w", err)
 	}
 
-	// Discover image origins and collect target images.
-	targetImages, err := k.buildTargetImages(ctx, stepCtx, cfg.Images)
+	var targetImages map[string]kustypes.Image
+	switch {
+	case len(cfg.Images) > 0:
+		// Discover image origins and collect target images.
+		targetImages, err = k.buildTargetImagesFromConfig(ctx, stepCtx, cfg.Images)
+	default:
+		// Attempt to automatically set target images based on the Freight references.
+		targetImages, err = k.buildTargetImagesAutomatically(ctx, stepCtx)
+	}
 	if err != nil {
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, err
 	}
@@ -111,7 +118,7 @@ func (k *kustomizeImageSetter) runPromotionStep(
 	return result, nil
 }
 
-func (k *kustomizeImageSetter) buildTargetImages(
+func (k *kustomizeImageSetter) buildTargetImagesFromConfig(
 	ctx context.Context,
 	stepCtx *PromotionStepContext,
 	images []KustomizeSetImageConfigImage,
@@ -159,6 +166,42 @@ func (k *kustomizeImageSetter) buildTargetImages(
 	return targetImages, nil
 }
 
+func (k *kustomizeImageSetter) buildTargetImagesAutomatically(
+	ctx context.Context,
+	stepCtx *PromotionStepContext,
+) (map[string]kustypes.Image, error) {
+	// Check if there are any ambiguous image requests.
+	//
+	// We do this based on the request because the Freight references may not
+	// contain all the images that are requested, which could lead eventually
+	// to an ambiguous result.
+	if ambiguous, ambErr := freight.HasAmbiguousImageRequest(
+		ctx, stepCtx.KargoClient, stepCtx.Project, stepCtx.FreightRequests,
+	); ambErr != nil || ambiguous {
+		err := errors.New("manual configuration required due to ambiguous result")
+		if ambErr != nil {
+			err = fmt.Errorf("%w: %v", err, ambErr)
+		}
+		return nil, err
+	}
+
+	var images = make(map[string]kustypes.Image)
+	for _, freightRef := range stepCtx.Freight.References() {
+		if len(freightRef.Images) == 0 {
+			continue
+		}
+
+		for _, img := range freightRef.Images {
+			images[img.RepoURL] = kustypes.Image{
+				Name:   img.RepoURL,
+				NewTag: img.Tag,
+				Digest: img.Digest,
+			}
+		}
+	}
+	return images, nil
+}
+
 func (k *kustomizeImageSetter) generateCommitMessage(path string, images map[string]kustypes.Image) string {
 	if len(images) == 0 {
 		return ""
@@ -171,7 +214,17 @@ func (k *kustomizeImageSetter) generateCommitMessage(path string, images map[str
 	}
 	_, _ = commitMsg.WriteString("\n")
 
-	for _, i := range images {
+	// Sort the images by name, in descending order for consistency.
+	imageNames := make([]string, 0, len(images))
+	for name := range images {
+		imageNames = append(imageNames, name)
+	}
+	slices.Sort(imageNames)
+
+	// Append each image to the commit message.
+	for _, name := range imageNames {
+		i := images[name]
+
 		ref := i.Name
 		if i.NewName != "" {
 			ref = i.NewName

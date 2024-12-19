@@ -201,6 +201,9 @@ type GitOpenPRConfig struct {
 	// The branch to which the changes should be merged. This branch must already exist and be
 	// up to date on the remote.
 	TargetBranch string `json:"targetBranch"`
+	// The title for the pull request. Kargo generates a title based on the commit messages if
+	// it is not explicitly specified.
+	Title string `json:"title,omitempty"`
 }
 
 type GitPushConfig struct {
@@ -208,6 +211,12 @@ type GitPushConfig struct {
 	// with 'targetBranch'. If neither of these is provided, the target branch will be the
 	// currently checked out branch.
 	GenerateTargetBranch bool `json:"generateTargetBranch,omitempty"`
+	// This step implements its own internal retry logic for cases where a push is determined to
+	// have failed due to the remote branch having commits that that are not present locally.
+	// Each attempt, including the first, rebases prior to pushing. This field configures the
+	// maximum number of attempts to push to the remote repository. If not specified, the
+	// default is 50.
+	MaxAttempts *int64 `json:"maxAttempts,omitempty"`
 	// The path to a working directory of a local repository.
 	Path string `json:"path"`
 	// The target branch to push to. Mutually exclusive with 'generateTargetBranch=true'. If
@@ -321,9 +330,9 @@ type HTTPConfig struct {
 	QueryParams []HTTPQueryParam `json:"queryParams,omitempty"`
 	// An expression to evaluate to determine if the request was successful.
 	SuccessExpression string `json:"successExpression,omitempty"`
-	// The number of seconds to wait for the request to complete. If not specified, the default
-	// is 10 seconds.
-	TimeoutSeconds *int64 `json:"timeoutSeconds,omitempty"`
+	// The maximum time to wait for the request to complete. If not specified, the default is 10
+	// seconds.
+	Timeout string `json:"timeout,omitempty"`
 	// The URL to send the HTTP request to.
 	URL string `json:"url"`
 }
@@ -375,7 +384,10 @@ type Helm struct {
 }
 
 type KustomizeSetImageConfig struct {
-	// Images is a list of container images to set or update in the Kustomization file.
+	// Images is a list of container images to set or update in the Kustomization file. When
+	// left unspecified, all images from the Freight collection will be set in the Kustomization
+	// file. Unless there is an ambiguous image name (for example, due to two Warehouses
+	// subscribing to the same repository), which requires manual configuration.
 	Images []KustomizeSetImageConfigImage `json:"images"`
 	// Path to the directory containing the Kustomization file.
 	Path string `json:"path"`

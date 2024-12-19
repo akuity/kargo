@@ -14,6 +14,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -931,6 +932,65 @@ func TestRegularStageReconciler_syncPromotions(t *testing.T) {
 							},
 							// Empty verification history
 							VerificationHistory: []kargoapi.VerificationInfo{},
+						},
+					},
+				},
+			},
+			objects: []client.Object{
+				&kargoapi.Promotion{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "pending-promotion",
+						Namespace: "fake-project",
+					},
+					Spec: kargoapi.PromotionSpec{
+						Stage: "test-stage",
+					},
+					Status: kargoapi.PromotionStatus{
+						Phase: kargoapi.PromotionPhasePending,
+						Freight: &kargoapi.FreightReference{
+							Name: "new-freight",
+						},
+					},
+				},
+			},
+			assertions: func(t *testing.T, status kargoapi.StageStatus, hasPendingPromotions bool, err error) {
+				require.NoError(t, err)
+				assert.True(t, hasPendingPromotions)
+
+				// Should allow promotion since there's no verification to wait for
+				require.NotNil(t, status.CurrentPromotion)
+				assert.Equal(t, "pending-promotion", status.CurrentPromotion.Name)
+				assert.Equal(t, "new-freight", status.CurrentPromotion.Freight.Name)
+
+				promotingCond := conditions.Get(&status, kargoapi.ConditionTypePromoting)
+				require.NotNil(t, promotingCond)
+				assert.Equal(t, metav1.ConditionTrue, promotingCond.Status)
+				assert.Equal(t, "ActivePromotion", promotingCond.Reason)
+				assert.Contains(t, promotingCond.Message, "Pending")
+			},
+		},
+		{
+			name: "allows promotion when verification failed",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-project",
+					Name:      "test-stage",
+				},
+				Status: kargoapi.StageStatus{
+					Health: &kargoapi.Health{
+						Status: kargoapi.HealthStateHealthy,
+					},
+					FreightHistory: kargoapi.FreightHistory{
+						{
+							ID: "current-collection",
+							Freight: map[string]kargoapi.FreightReference{
+								"warehouse-1": {Name: "current-freight"},
+							},
+							VerificationHistory: []kargoapi.VerificationInfo{
+								{
+									Phase: kargoapi.VerificationPhaseFailed,
+								},
+							},
 						},
 					},
 				},
@@ -2273,6 +2333,13 @@ func TestRegularStageReconciler_verifyStageFreight(t *testing.T) {
 					RolloutsIntegrationEnabled: !tt.rolloutsDisabled,
 				},
 				eventRecorder: recorder,
+				backoffCfg: wait.Backoff{
+					Duration: 1 * time.Second,
+					Factor:   2,
+					Steps:    2,
+					Cap:      2 * time.Second,
+					Jitter:   0.1,
+				},
 			}
 
 			status, err := r.verifyStageFreight(context.Background(), tt.stage, startTime, fixedEndTime)
@@ -3518,6 +3585,13 @@ func TestRegularStageReconciler_getVerificationResult(t *testing.T) {
 				client: c,
 				cfg: ReconcilerConfig{
 					RolloutsIntegrationEnabled: !tt.rolloutsDisabled,
+				},
+				backoffCfg: wait.Backoff{
+					Duration: 1 * time.Second,
+					Factor:   2,
+					Steps:    2,
+					Cap:      1 * time.Second,
+					Jitter:   0.1,
 				},
 			}
 

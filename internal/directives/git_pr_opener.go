@@ -193,7 +193,12 @@ func (g *gitPROpener) runPromotionStep(
 		)
 	}
 
-	title := strings.Split(commitMsg, "\n")[0]
+	var title string
+	if cfg.Title != "" {
+		title = cfg.Title
+	} else {
+		title = strings.Split(commitMsg, "\n")[0]
+	}
 	description := commitMsg
 	if stepCtx.UIBaseURL != "" {
 		description = fmt.Sprintf(
@@ -280,7 +285,7 @@ func (g *gitPROpener) getSourceBranch(
 		stepOutputMap, ok := stepOutput.(map[string]any)
 		if !ok {
 			return "", fmt.Errorf(
-				"output from step with alias %q is not a mao[string]any",
+				"output from step with alias %q is not a map[string]any",
 				cfg.SourceBranchFromStep,
 			)
 		}
