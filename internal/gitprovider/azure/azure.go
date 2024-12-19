@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/microsoft/azure-devops-go-api/azuredevops/v7"
+	adocore "github.com/microsoft/azure-devops-go-api/azuredevops/v7/core"
 	adogit "github.com/microsoft/azure-devops-go-api/azuredevops/v7/git"
 	"k8s.io/utils/ptr"
 
@@ -94,6 +95,12 @@ func (p *provider) CreatePullRequest(
 		return nil, fmt.Errorf("error getting repository %q: %w", p.repo, err)
 	}
 	repoID := ptr.To(repository.Id.String())
+	labels := make([]adocore.WebApiTagDefinition, 0, len(opts.Labels))
+	for _, label := range opts.Labels {
+		labels = append(labels, adocore.WebApiTagDefinition{
+			Name: &label,
+		})
+	}
 	sourceRefName := ptr.To(fmt.Sprintf("refs/heads/%s", opts.Head))
 	targetRefName := ptr.To(fmt.Sprintf("refs/heads/%s", opts.Base))
 	adoPR, err := gitClient.CreatePullRequest(ctx, adogit.CreatePullRequestArgs{
@@ -102,6 +109,7 @@ func (p *provider) CreatePullRequest(
 		GitPullRequestToCreate: &adogit.GitPullRequest{
 			Title:         &opts.Title,
 			Description:   &opts.Description,
+			Labels:        &labels,
 			SourceRefName: sourceRefName,
 			TargetRefName: targetRefName,
 		},
