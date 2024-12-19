@@ -1,8 +1,6 @@
 package kargo
 
 import (
-	"context"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -13,90 +11,6 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/logging"
 )
-
-func TestNewPromotion(t *testing.T) {
-	const (
-		testFreight          = "f08b2e72c9b2b7b263da6d55f9536e49b5ce972c"
-		veryLongResourceName = "the-kubernetes-maximum-length-of-a-label-value-is-only-sixty-" +
-			"three-characters-meanwhile-the-maximum-length-of-a-kubernetes-resource-name-" +
-			"is-two-hundred-and-fifty-three-characters-but-this-string-is-two-hundred-" +
-			"and-thirty-seven-characters"
-	)
-	t.Parallel()
-	testCases := []struct {
-		name       string
-		stage      kargoapi.Stage
-		freight    string
-		assertions func(*testing.T, kargoapi.Stage, kargoapi.Promotion)
-	}{
-		{
-			name: "Promote stage",
-			stage: kargoapi.Stage{
-				ObjectMeta: metav1.ObjectMeta{
-					UID:       "80b44831-ac8d-4900-9df9-ee95f80c0fae",
-					Name:      "test",
-					Namespace: "kargo-demo",
-				},
-				Spec: kargoapi.StageSpec{
-					PromotionTemplate: &kargoapi.PromotionTemplate{
-						Spec: kargoapi.PromotionTemplateSpec{
-							Steps: []kargoapi.PromotionStep{
-								{
-									Uses: "fake-step",
-								},
-							},
-						},
-					},
-				},
-			},
-			freight: testFreight,
-			assertions: func(t *testing.T, _ kargoapi.Stage, promo kargoapi.Promotion) {
-				parts := strings.Split(promo.Name, ".")
-				require.Equal(t, "test", parts[0])
-				require.Equal(t, testFreight[0:7], parts[2])
-			},
-		},
-		{
-			name: "Promote stage with very long name",
-			stage: kargoapi.Stage{
-				ObjectMeta: metav1.ObjectMeta{
-					UID:       "80b44831-ac8d-4900-9df9-ee95f80c0fae",
-					Name:      veryLongResourceName,
-					Namespace: "kargo-demo",
-				},
-				Spec: kargoapi.StageSpec{
-					PromotionTemplate: &kargoapi.PromotionTemplate{
-						Spec: kargoapi.PromotionTemplateSpec{
-							Steps: []kargoapi.PromotionStep{
-								{
-									Uses: "fake-step",
-								},
-							},
-						},
-					},
-				},
-			},
-			freight: testFreight,
-			assertions: func(t *testing.T, _ kargoapi.Stage, promo kargoapi.Promotion) {
-				require.Len(t, promo.Name, 253)
-				parts := strings.Split(promo.Name, ".")
-				require.Equal(t, veryLongResourceName[0:maxStageNamePrefixLength], parts[0])
-				require.Equal(t, testFreight[0:7], parts[2])
-			},
-		},
-	}
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			promo, err := NewPromotionBuilder(nil).Build(context.TODO(), tc.stage, tc.freight)
-			require.NoError(t, err)
-			require.Equal(t, tc.freight, promo.Spec.Freight)
-			require.Equal(t, tc.stage.Name, promo.Spec.Stage)
-			require.Equal(t, tc.freight, promo.Spec.Freight)
-			require.LessOrEqual(t, len(promo.Name), 253)
-			tc.assertions(t, tc.stage, *promo)
-		})
-	}
-}
 
 func TestPromoPhaseChanged_Update(t *testing.T) {
 	tests := []struct {
