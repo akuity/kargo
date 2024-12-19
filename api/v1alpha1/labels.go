@@ -4,10 +4,11 @@ const (
 	AliasLabelKey = "kargo.akuity.io/alias"
 
 	// Credentials
-	CredentialTypeLabelKey        = "kargo.akuity.io/cred-type" // nolint: gosec
-	CredentialTypeLabelValueGit   = "git"
-	CredentialTypeLabelValueHelm  = "helm"
-	CredentialTypeLabelValueImage = "image"
+	CredentialTypeLabelKey          = "kargo.akuity.io/cred-type" // nolint: gosec
+	CredentialTypeLabelValueGit     = "git"
+	CredentialTypeLabelValueHelm    = "helm"
+	CredentialTypeLabelValueImage   = "image"
+	CredentialTypeLabelValueGeneric = "generic"
 
 	// Kargo core API
 	FreightCollectionLabelKey = "kargo.akuity.io/freight-collection"
