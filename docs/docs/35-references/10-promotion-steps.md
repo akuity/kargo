@@ -1021,6 +1021,7 @@ requests.
 | `targetBranch` | `string` | N | The branch to which the changes should be merged. |
 | `createTargetBranch` | `boolean` | N | Indicates whether a new, empty orphaned branch should be created and pushed to the remote if the target branch does not already exist there. Default is `false`. |
 | `title` | `string` | N | The title for the pull request. Kargo generates a title based on the commit messages if it is not explicitly specified. |
+| `labels` | `[]string` | N | Labels to add to the pull request. |
 
 #### `git-open-pr`  Example
 
