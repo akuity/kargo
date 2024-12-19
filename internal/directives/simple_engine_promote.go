@@ -114,7 +114,21 @@ func (e *SimpleEngine) executeSteps(
 		result, err := e.executeStep(ctx, promoCtx, step, reg, workDir, state)
 		stepExecMeta.Status = result.Status
 		stepExecMeta.Message = result.Message
-		state[step.Alias] = result.Output
+
+		// TODO(hidde): until we have a better way to handle the output of steps
+		// inflated from tasks, we need to apply a special treatment to the output
+		// to allow it to become available under the alias of the "task".
+		aliasNamespace := getAliasNamespace(step.Alias)
+		if aliasNamespace != "" && reg.Runner.Name() == (&outputComposer{}).Name() {
+			if state[aliasNamespace] == nil {
+				state[aliasNamespace] = make(map[string]any)
+			}
+			for k, v := range result.Output {
+				state[aliasNamespace].(map[string]any)[k] = v // nolint: forcetypeassert
+			}
+		} else {
+			state[step.Alias] = result.Output
+		}
 
 		switch result.Status {
 		case kargoapi.PromotionPhaseErrored, kargoapi.PromotionPhaseFailed,

@@ -1,6 +1,7 @@
 package v1alpha1
 
 import (
+	"fmt"
 	"time"
 
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -80,13 +81,18 @@ type PromotionSpec struct {
 	// applies. The Stage referenced by this field MUST be in the same
 	// namespace as the Promotion.
 	//
+	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
 	Stage string `json:"stage" protobuf:"bytes,1,opt,name=stage"`
 	// Freight specifies the piece of Freight to be promoted into the Stage
 	// referenced by the Stage field.
 	//
+	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
 	Freight string `json:"freight" protobuf:"bytes,2,opt,name=freight"`
 	// Vars is a list of variables that can be referenced by expressions in
 	// promotion steps.
@@ -94,7 +100,11 @@ type PromotionSpec struct {
 	// Steps specifies the directives to be executed as part of this Promotion.
 	// The order in which the directives are executed is the order in which they
 	// are listed in this field.
-	Steps []PromotionStep `json:"steps,omitempty" protobuf:"bytes,3,rep,name=steps"`
+	//
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:items:XValidation:message="Promotion step must have uses set and must not reference a task",rule="has(self.uses) && !has(self.task)"
+	Steps []PromotionStep `json:"steps" protobuf:"bytes,3,rep,name=steps"`
 }
 
 // PromotionVariable describes a single variable that may be referenced by
@@ -108,7 +118,25 @@ type PromotionVariable struct {
 	// Value is the value of the variable. It is allowed to utilize expressions
 	// in the value.
 	// See https://docs.kargo.io/references/expression-language for details.
-	Value string `json:"value" protobuf:"bytes,2,opt,name=value"`
+	Value string `json:"value,omitempty" protobuf:"bytes,2,opt,name=value"`
+}
+
+// PromotionTaskReference describes a reference to a PromotionTask.
+type PromotionTaskReference struct {
+	// Name is the name of the (Cluster)PromotionTask.
+	//
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
+
+	// Kind is the type of the PromotionTask. Can be either PromotionTask or
+	// ClusterPromotionTask, default is PromotionTask.
+	//
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Enum=PromotionTask;ClusterPromotionTask
+	Kind string `json:"kind,omitempty" protobuf:"bytes,2,opt,name=kind"`
 }
 
 // PromotionStepRetry describes the retry policy for a PromotionStep.
@@ -171,17 +199,40 @@ func (r *PromotionStepRetry) GetErrorThreshold(fallback uint32) uint32 {
 type PromotionStep struct {
 	// Uses identifies a runner that can execute this step.
 	//
+	// +kubebuilder:validation:Optional
 	// +kubebuilder:validation:MinLength=1
-	Uses string `json:"uses" protobuf:"bytes,1,opt,name=uses"`
+	Uses string `json:"uses,omitempty" protobuf:"bytes,1,opt,name=uses"`
+	// Task is a reference to a PromotionTask that should be inflated into a
+	// Promotion when it is built from a PromotionTemplate.
+	Task *PromotionTaskReference `json:"task,omitempty" protobuf:"bytes,5,opt,name=task"`
 	// As is the alias this step can be referred to as.
 	As string `json:"as,omitempty" protobuf:"bytes,2,opt,name=as"`
 	// Retry is the retry policy for this step.
 	Retry *PromotionStepRetry `json:"retry,omitempty" protobuf:"bytes,4,opt,name=retry"`
+	// Vars is a list of variables that can be referenced by expressions in
+	// the step's Config. The values override the values specified in the
+	// PromotionSpec.
+	Vars []PromotionVariable `json:"vars,omitempty" protobuf:"bytes,6,rep,name=vars"`
 	// Config is opaque configuration for the PromotionStep that is understood
 	// only by each PromotionStep's implementation. It is legal to utilize
 	// expressions in defining values at any level of this block.
 	// See https://docs.kargo.io/references/expression-language for details.
 	Config *apiextensionsv1.JSON `json:"config,omitempty" protobuf:"bytes,3,opt,name=config"`
+}
+
+// GetAlias returns the As field, or a default value in the form of "step-<i>"
+// or "task-<i>" if the As field is empty. The index i is provided as an
+// argument to this method and should be the index of the PromotionStep in the
+// list it belongs to.
+func (s *PromotionStep) GetAlias(i int) string {
+	switch {
+	case s.As != "":
+		return s.As
+	case s.Task != nil:
+		return fmt.Sprintf("task-%d", i)
+	default:
+		return fmt.Sprintf("step-%d", i)
+	}
 }
 
 // PromotionStatus describes the current state of the transition represented by

@@ -1,70 +1,12 @@
 package kargo
 
 import (
-	"context"
-	"fmt"
-	"strings"
-
-	"github.com/oklog/ulid/v2"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/api/user"
 	"github.com/akuity/kargo/internal/logging"
 )
-
-const (
-	// maximum length of the stage name used in the promotion name prefix before it exceeds
-	// kubernetes resource name limit of 253
-	// 253 - 1 (.) - 26 (ulid) - 1 (.) - 7 (sha) = 218
-	maxStageNamePrefixLength = 218
-)
-
-// NewPromotion returns a new Promotion from a given stage and freight with our
-// naming convention.
-func NewPromotion(
-	ctx context.Context,
-	stage kargoapi.Stage,
-	freight string,
-) kargoapi.Promotion {
-	shortHash := freight
-	if len(shortHash) > 7 {
-		shortHash = freight[0:7]
-	}
-	shortStageName := stage.Name
-	if len(stage.Name) > maxStageNamePrefixLength {
-		shortStageName = shortStageName[0:maxStageNamePrefixLength]
-	}
-
-	annotations := make(map[string]string, 1)
-	// Put actor information to track on the controller side
-	if u, ok := user.InfoFromContext(ctx); ok {
-		annotations[kargoapi.AnnotationKeyCreateActor] = kargoapi.FormatEventUserActor(u)
-	}
-
-	// ulid.Make() is pseudo-random, not crypto-random, but we don't care.
-	// We just want a unique ID that can be sorted lexicographically
-	promoName := strings.ToLower(fmt.Sprintf("%s.%s.%s", shortStageName, ulid.Make(), shortHash))
-
-	promotion := kargoapi.Promotion{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:        promoName,
-			Namespace:   stage.Namespace,
-			Annotations: annotations,
-		},
-		Spec: kargoapi.PromotionSpec{
-			Stage:   stage.Name,
-			Freight: freight,
-		},
-	}
-	if stage.Spec.PromotionTemplate != nil {
-		promotion.Spec.Vars = stage.Spec.PromotionTemplate.Spec.Vars
-		promotion.Spec.Steps = stage.Spec.PromotionTemplate.Spec.Steps
-	}
-	return promotion
-}
 
 func NewPromoWentTerminalPredicate(logger *logging.Logger) PromoWentTerminal[*kargoapi.Promotion] {
 	return PromoWentTerminal[*kargoapi.Promotion]{

@@ -37,6 +37,17 @@ func TestNewPromotion(t *testing.T) {
 					Name:      "test",
 					Namespace: "kargo-demo",
 				},
+				Spec: kargoapi.StageSpec{
+					PromotionTemplate: &kargoapi.PromotionTemplate{
+						Spec: kargoapi.PromotionTemplateSpec{
+							Steps: []kargoapi.PromotionStep{
+								{
+									Uses: "fake-step",
+								},
+							},
+						},
+					},
+				},
 			},
 			freight: testFreight,
 			assertions: func(t *testing.T, _ kargoapi.Stage, promo kargoapi.Promotion) {
@@ -53,6 +64,17 @@ func TestNewPromotion(t *testing.T) {
 					Name:      veryLongResourceName,
 					Namespace: "kargo-demo",
 				},
+				Spec: kargoapi.StageSpec{
+					PromotionTemplate: &kargoapi.PromotionTemplate{
+						Spec: kargoapi.PromotionTemplateSpec{
+							Steps: []kargoapi.PromotionStep{
+								{
+									Uses: "fake-step",
+								},
+							},
+						},
+					},
+				},
 			},
 			freight: testFreight,
 			assertions: func(t *testing.T, _ kargoapi.Stage, promo kargoapi.Promotion) {
@@ -65,12 +87,13 @@ func TestNewPromotion(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			promo := NewPromotion(context.TODO(), tc.stage, tc.freight)
+			promo, err := NewPromotionBuilder(nil).Build(context.TODO(), tc.stage, tc.freight)
+			require.NoError(t, err)
 			require.Equal(t, tc.freight, promo.Spec.Freight)
 			require.Equal(t, tc.stage.Name, promo.Spec.Stage)
 			require.Equal(t, tc.freight, promo.Spec.Freight)
 			require.LessOrEqual(t, len(promo.Name), 253)
-			tc.assertions(t, tc.stage, promo)
+			tc.assertions(t, tc.stage, *promo)
 		})
 	}
 }

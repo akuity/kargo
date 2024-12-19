@@ -272,6 +272,7 @@ type PromotionTemplateSpec struct {
 	// are listed in this field.
 	//
 	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:items:XValidation:message="PromotionTemplate step must have exactly one of uses or task set",rule="(has(self.uses) ? !has(self.task) : has(self.task))"
 	Steps []PromotionStep `json:"steps,omitempty" protobuf:"bytes,1,rep,name=steps"`
 }
 

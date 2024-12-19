@@ -649,6 +649,99 @@ export class ChartSubscription extends Message<ChartSubscription> {
 }
 
 /**
+ * @generated from message github.com.akuity.kargo.api.v1alpha1.ClusterPromotionTask
+ */
+export class ClusterPromotionTask extends Message<ClusterPromotionTask> {
+  /**
+   * @generated from field: optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
+   */
+  metadata?: ObjectMeta;
+
+  /**
+   * Spec describes the desired transition of a specific Stage into a specific
+   * Freight.
+   *
+   * +kubebuilder:validation:Required
+   *
+   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.PromotionTaskSpec spec = 2;
+   */
+  spec?: PromotionTaskSpec;
+
+  constructor(data?: PartialMessage<ClusterPromotionTask>) {
+    super();
+    proto2.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto2 = proto2;
+  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.ClusterPromotionTask";
+  static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 1, name: "metadata", kind: "message", T: ObjectMeta, opt: true },
+    { no: 2, name: "spec", kind: "message", T: PromotionTaskSpec, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ClusterPromotionTask {
+    return new ClusterPromotionTask().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ClusterPromotionTask {
+    return new ClusterPromotionTask().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ClusterPromotionTask {
+    return new ClusterPromotionTask().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ClusterPromotionTask | PlainMessage<ClusterPromotionTask> | undefined, b: ClusterPromotionTask | PlainMessage<ClusterPromotionTask> | undefined): boolean {
+    return proto2.util.equals(ClusterPromotionTask, a, b);
+  }
+}
+
+/**
+ * ClusterPromotionTaskList contains a list of PromotionTasks.
+ *
+ * @generated from message github.com.akuity.kargo.api.v1alpha1.ClusterPromotionTaskList
+ */
+export class ClusterPromotionTaskList extends Message<ClusterPromotionTaskList> {
+  /**
+   * @generated from field: optional k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
+   */
+  metadata?: ListMeta;
+
+  /**
+   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.ClusterPromotionTask items = 2;
+   */
+  items: ClusterPromotionTask[] = [];
+
+  constructor(data?: PartialMessage<ClusterPromotionTaskList>) {
+    super();
+    proto2.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto2 = proto2;
+  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.ClusterPromotionTaskList";
+  static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 1, name: "metadata", kind: "message", T: ListMeta, opt: true },
+    { no: 2, name: "items", kind: "message", T: ClusterPromotionTask, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ClusterPromotionTaskList {
+    return new ClusterPromotionTaskList().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ClusterPromotionTaskList {
+    return new ClusterPromotionTaskList().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ClusterPromotionTaskList {
+    return new ClusterPromotionTaskList().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ClusterPromotionTaskList | PlainMessage<ClusterPromotionTaskList> | undefined, b: ClusterPromotionTaskList | PlainMessage<ClusterPromotionTaskList> | undefined): boolean {
+    return proto2.util.equals(ClusterPromotionTaskList, a, b);
+  }
+}
+
+/**
  * DiscoveredArtifacts holds the artifacts discovered by the Warehouse for its
  * subscriptions.
  *
@@ -2628,7 +2721,9 @@ export class PromotionSpec extends Message<PromotionSpec> {
    * applies. The Stage referenced by this field MUST be in the same
    * namespace as the Promotion.
    *
+   * +kubebuilder:validation:Required
    * +kubebuilder:validation:MinLength=1
+   * +kubebuilder:validation:MaxLength=253
    * +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
    *
    * @generated from field: optional string stage = 1;
@@ -2639,7 +2734,10 @@ export class PromotionSpec extends Message<PromotionSpec> {
    * Freight specifies the piece of Freight to be promoted into the Stage
    * referenced by the Stage field.
    *
+   * +kubebuilder:validation:Required
    * +kubebuilder:validation:MinLength=1
+   * +kubebuilder:validation:MaxLength=253
+   * +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
    *
    * @generated from field: optional string freight = 2;
    */
@@ -2657,6 +2755,10 @@ export class PromotionSpec extends Message<PromotionSpec> {
    * Steps specifies the directives to be executed as part of this Promotion.
    * The order in which the directives are executed is the order in which they
    * are listed in this field.
+   *
+   * +kubebuilder:validation:Required
+   * +kubebuilder:validation:MinItems=1
+   * +kubebuilder:validation:items:XValidation:message="Promotion step must have uses set and must not reference a task",rule="has(self.uses) && !has(self.task)"
    *
    * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.PromotionStep steps = 3;
    */
@@ -2829,11 +2931,20 @@ export class PromotionStep extends Message<PromotionStep> {
   /**
    * Uses identifies a runner that can execute this step.
    *
+   * +kubebuilder:validation:Optional
    * +kubebuilder:validation:MinLength=1
    *
    * @generated from field: optional string uses = 1;
    */
   uses?: string;
+
+  /**
+   * Task is a reference to a PromotionTask that should be inflated into a
+   * Promotion when it is built from a PromotionTemplate.
+   *
+   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.PromotionTaskReference task = 5;
+   */
+  task?: PromotionTaskReference;
 
   /**
    * As is the alias this step can be referred to as.
@@ -2848,6 +2959,15 @@ export class PromotionStep extends Message<PromotionStep> {
    * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.PromotionStepRetry retry = 4;
    */
   retry?: PromotionStepRetry;
+
+  /**
+   * Vars is a list of variables that can be referenced by expressions in
+   * the step's Config. The values override the values specified in the
+   * PromotionSpec.
+   *
+   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.PromotionVariable vars = 6;
+   */
+  vars: PromotionVariable[] = [];
 
   /**
    * Config is opaque configuration for the PromotionStep that is understood
@@ -2868,8 +2988,10 @@ export class PromotionStep extends Message<PromotionStep> {
   static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.PromotionStep";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 1, name: "uses", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 5, name: "task", kind: "message", T: PromotionTaskReference, opt: true },
     { no: 2, name: "as", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 4, name: "retry", kind: "message", T: PromotionStepRetry, opt: true },
+    { no: 6, name: "vars", kind: "message", T: PromotionVariable, repeated: true },
     { no: 3, name: "config", kind: "message", T: JSON, opt: true },
   ]);
 
@@ -2971,6 +3093,212 @@ export class PromotionStepRetry extends Message<PromotionStepRetry> {
 }
 
 /**
+ * @generated from message github.com.akuity.kargo.api.v1alpha1.PromotionTask
+ */
+export class PromotionTask extends Message<PromotionTask> {
+  /**
+   * @generated from field: optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
+   */
+  metadata?: ObjectMeta;
+
+  /**
+   * Spec describes the composition of a PromotionTask, including the
+   * variables available to the task and the steps.
+   *
+   * +kubebuilder:validation:Required
+   *
+   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.PromotionTaskSpec spec = 2;
+   */
+  spec?: PromotionTaskSpec;
+
+  constructor(data?: PartialMessage<PromotionTask>) {
+    super();
+    proto2.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto2 = proto2;
+  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.PromotionTask";
+  static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 1, name: "metadata", kind: "message", T: ObjectMeta, opt: true },
+    { no: 2, name: "spec", kind: "message", T: PromotionTaskSpec, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PromotionTask {
+    return new PromotionTask().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): PromotionTask {
+    return new PromotionTask().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): PromotionTask {
+    return new PromotionTask().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: PromotionTask | PlainMessage<PromotionTask> | undefined, b: PromotionTask | PlainMessage<PromotionTask> | undefined): boolean {
+    return proto2.util.equals(PromotionTask, a, b);
+  }
+}
+
+/**
+ * PromotionTaskList contains a list of PromotionTasks.
+ *
+ * @generated from message github.com.akuity.kargo.api.v1alpha1.PromotionTaskList
+ */
+export class PromotionTaskList extends Message<PromotionTaskList> {
+  /**
+   * @generated from field: optional k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
+   */
+  metadata?: ListMeta;
+
+  /**
+   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.PromotionTask items = 2;
+   */
+  items: PromotionTask[] = [];
+
+  constructor(data?: PartialMessage<PromotionTaskList>) {
+    super();
+    proto2.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto2 = proto2;
+  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.PromotionTaskList";
+  static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 1, name: "metadata", kind: "message", T: ListMeta, opt: true },
+    { no: 2, name: "items", kind: "message", T: PromotionTask, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PromotionTaskList {
+    return new PromotionTaskList().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): PromotionTaskList {
+    return new PromotionTaskList().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): PromotionTaskList {
+    return new PromotionTaskList().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: PromotionTaskList | PlainMessage<PromotionTaskList> | undefined, b: PromotionTaskList | PlainMessage<PromotionTaskList> | undefined): boolean {
+    return proto2.util.equals(PromotionTaskList, a, b);
+  }
+}
+
+/**
+ * PromotionTaskReference describes a reference to a PromotionTask.
+ *
+ * @generated from message github.com.akuity.kargo.api.v1alpha1.PromotionTaskReference
+ */
+export class PromotionTaskReference extends Message<PromotionTaskReference> {
+  /**
+   * Name is the name of the (Cluster)PromotionTask.
+   *
+   * +kubebuilder:validation:Required
+   * +kubebuilder:validation:MinLength=1
+   * +kubebuilder:validation:MaxLength=253
+   * +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+   *
+   * @generated from field: optional string name = 1;
+   */
+  name?: string;
+
+  /**
+   * Kind is the type of the PromotionTask. Can be either PromotionTask or
+   * ClusterPromotionTask, default is PromotionTask.
+   *
+   * +kubebuilder:validation:Optional
+   * +kubebuilder:validation:Enum=PromotionTask;ClusterPromotionTask
+   *
+   * @generated from field: optional string kind = 2;
+   */
+  kind?: string;
+
+  constructor(data?: PartialMessage<PromotionTaskReference>) {
+    super();
+    proto2.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto2 = proto2;
+  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.PromotionTaskReference";
+  static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 2, name: "kind", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PromotionTaskReference {
+    return new PromotionTaskReference().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): PromotionTaskReference {
+    return new PromotionTaskReference().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): PromotionTaskReference {
+    return new PromotionTaskReference().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: PromotionTaskReference | PlainMessage<PromotionTaskReference> | undefined, b: PromotionTaskReference | PlainMessage<PromotionTaskReference> | undefined): boolean {
+    return proto2.util.equals(PromotionTaskReference, a, b);
+  }
+}
+
+/**
+ * @generated from message github.com.akuity.kargo.api.v1alpha1.PromotionTaskSpec
+ */
+export class PromotionTaskSpec extends Message<PromotionTaskSpec> {
+  /**
+   * Vars specifies the variables available to the PromotionTask. The
+   * values of these variables are the default values that can be
+   * overridden by the step referencing the task.
+   *
+   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.PromotionVariable vars = 1;
+   */
+  vars: PromotionVariable[] = [];
+
+  /**
+   * Steps specifies the directives to be executed as part of this
+   * PromotionTask. The steps as defined here are inflated into a
+   * Promotion when it is built from a PromotionTemplate.
+   *
+   * +kubebuilder:validation:Required
+   * +kubebuilder:validation:MinItems=1
+   * +kubebuilder:validation:items:XValidation:message="PromotionTask step must have uses set and must not reference another task",rule="has(self.uses) && !has(self.task)"
+   *
+   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.PromotionStep steps = 2;
+   */
+  steps: PromotionStep[] = [];
+
+  constructor(data?: PartialMessage<PromotionTaskSpec>) {
+    super();
+    proto2.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto2 = proto2;
+  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.PromotionTaskSpec";
+  static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 1, name: "vars", kind: "message", T: PromotionVariable, repeated: true },
+    { no: 2, name: "steps", kind: "message", T: PromotionStep, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PromotionTaskSpec {
+    return new PromotionTaskSpec().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): PromotionTaskSpec {
+    return new PromotionTaskSpec().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): PromotionTaskSpec {
+    return new PromotionTaskSpec().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: PromotionTaskSpec | PlainMessage<PromotionTaskSpec> | undefined, b: PromotionTaskSpec | PlainMessage<PromotionTaskSpec> | undefined): boolean {
+    return proto2.util.equals(PromotionTaskSpec, a, b);
+  }
+}
+
+/**
  * PromotionTemplate defines a template for a Promotion that can be used to
  * incorporate Freight into a Stage.
  *
@@ -3032,6 +3360,7 @@ export class PromotionTemplateSpec extends Message<PromotionTemplateSpec> {
    * are listed in this field.
    *
    * +kubebuilder:validation:MinItems=1
+   * +kubebuilder:validation:items:XValidation:message="PromotionTemplate step must have exactly one of uses or task set",rule="(has(self.uses) ? !has(self.task) : has(self.task))"
    *
    * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.PromotionStep steps = 1;
    */
