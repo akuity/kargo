@@ -138,9 +138,9 @@ func (h *helmChartUpdater) processChartUpdates(
 	stepCtx *PromotionStepContext,
 	cfg HelmUpdateChartConfig,
 	chartDependencies []chartDependency,
-) (map[string]string, error) {
-	changes := make(map[string]string)
-	for _, update := range cfg.Charts {
+) ([]intyaml.Update, error) {
+	updates := make([]intyaml.Update, len(cfg.Charts))
+	for i, update := range cfg.Charts {
 		version := update.Version
 		if update.Version == "" {
 			// TODO(krancour): Remove this for v1.3.0
@@ -169,9 +169,12 @@ func (h *helmChartUpdater) processChartUpdates(
 		}
 
 		var updateUsed bool
-		for i, dep := range chartDependencies {
+		for j, dep := range chartDependencies {
 			if dep.Repository == update.Repository && dep.Name == update.Name {
-				changes[fmt.Sprintf("dependencies.%d.version", i)] = version
+				updates[i] = intyaml.Update{
+					Key:   fmt.Sprintf("dependencies.%d.version", j),
+					Value: version,
+				}
 				updateUsed = true
 				break
 			}
@@ -183,7 +186,7 @@ func (h *helmChartUpdater) processChartUpdates(
 			)
 		}
 	}
-	return changes, nil
+	return updates, nil
 }
 
 func (h *helmChartUpdater) updateDependencies(

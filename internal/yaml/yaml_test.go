@@ -12,7 +12,7 @@ func TestSetStringsInBytes(t *testing.T) {
 	testCases := []struct {
 		name       string
 		inBytes    []byte
-		changes    map[string]string
+		updates    []Update
 		assertions func(*testing.T, []byte, error)
 	}{
 		{
@@ -35,8 +35,11 @@ characters:
 - name: Anakin
   affiliation: Light side
 `),
-			changes: map[string]string{
-				"characters.0.affiliation": "Dark side",
+			updates: []Update{
+				{
+					Key:   "characters.0.affiliation",
+					Value: "Dark side",
+				},
 			},
 			assertions: func(t *testing.T, bytes []byte, err error) {
 				require.NoError(t, err)
@@ -54,7 +57,7 @@ characters:
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			b, err := SetStringsInBytes(testCase.inBytes, testCase.changes)
+			b, err := SetStringsInBytes(testCase.inBytes, testCase.updates)
 			testCase.assertions(t, b, err)
 		})
 	}

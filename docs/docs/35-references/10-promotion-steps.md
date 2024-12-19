@@ -551,7 +551,7 @@ followed by a [`helm-template`](#helm-template) step.
 |------|------|----------|-------------|
 | `path` | `string` | Y | Path to a YAML file. This path is relative to the temporary workspace that Kargo provisions for use by the promotion process. |
 | `updates` | `[]object` | Y | The details of changes to be applied to the file. At least one must be specified. |
-| `updates[].key` | `string` | Y | The key to update within the file. For nested values, use a YAML dot notation path. |
+| `updates[].key` | `string` | Y | The key to update within the file. For nested values, use dots to delimit key parts. e.g. `image.tag`. The syntax is identical to that supported by the `json-update` step and is documented in more detail [here](https://github.com/tidwall/sjson?tab=readme-ov-file#path-syntax). |
 | `updates[].value` | `string` | Y | The new value for the key. Typically specified using an expression. |
 
 #### `yaml-update` Example

@@ -3,14 +3,13 @@ package directives
 import (
 	"context"
 	"fmt"
-	"slices"
 	"strings"
 
 	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/xeipuuv/gojsonschema"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	libYAML "github.com/akuity/kargo/internal/yaml"
+	intyaml "github.com/akuity/kargo/internal/yaml"
 )
 
 func init() {
@@ -66,9 +65,12 @@ func (y *yamlUpdater) runPromotionStep(
 	stepCtx *PromotionStepContext,
 	cfg YAMLUpdateConfig,
 ) (PromotionStepResult, error) {
-	updates := make(map[string]string, len(cfg.Updates))
-	for _, image := range cfg.Updates {
-		updates[image.Key] = image.Value
+	updates := make([]intyaml.Update, len(cfg.Updates))
+	for i, update := range cfg.Updates {
+		updates[i] = intyaml.Update{
+			Key:   update.Key,
+			Value: update.Value,
+		}
 	}
 
 	result := PromotionStepResult{Status: kargoapi.PromotionPhaseSucceeded}
@@ -78,7 +80,7 @@ func (y *yamlUpdater) runPromotionStep(
 				fmt.Errorf("values file update failed: %w", err)
 		}
 
-		if commitMsg := y.generateCommitMessage(cfg.Path, updates); commitMsg != "" {
+		if commitMsg := y.generateCommitMessage(cfg.Path, cfg.Updates); commitMsg != "" {
 			result.Output = map[string]any{
 				"commitMessage": commitMsg,
 			}
@@ -87,31 +89,26 @@ func (y *yamlUpdater) runPromotionStep(
 	return result, nil
 }
 
-func (y *yamlUpdater) updateFile(workDir string, path string, changes map[string]string) error {
+func (y *yamlUpdater) updateFile(workDir string, path string, updates []intyaml.Update) error {
 	absValuesFile, err := securejoin.SecureJoin(workDir, path)
 	if err != nil {
 		return fmt.Errorf("error joining path %q: %w", path, err)
 	}
-	if err := libYAML.SetStringsInFile(absValuesFile, changes); err != nil {
+	if err := intyaml.SetStringsInFile(absValuesFile, updates); err != nil {
 		return fmt.Errorf("error updating image references in values file %q: %w", path, err)
 	}
 	return nil
 }
 
-func (y *yamlUpdater) generateCommitMessage(path string, updates map[string]string) string {
+func (y *yamlUpdater) generateCommitMessage(path string, updates []YAMLUpdate) string {
 	if len(updates) == 0 {
 		return ""
 	}
 
 	var commitMsg strings.Builder
 	_, _ = commitMsg.WriteString(fmt.Sprintf("Updated %s\n", path))
-	keys := make([]string, 0, len(updates))
-	for key := range updates {
-		keys = append(keys, key)
-	}
-	slices.Sort(keys)
-	for _, key := range keys {
-		_, _ = commitMsg.WriteString(fmt.Sprintf("\n- %s: %q", key, updates[key]))
+	for _, update := range updates {
+		_, _ = commitMsg.WriteString(fmt.Sprintf("\n- %s: %q", update.Key, update.Value))
 	}
 
 	return commitMsg.String()
