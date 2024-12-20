@@ -312,14 +312,8 @@ steps:
 
 #### `delete` Example
 
-The most common usage of this step is to clean up unwanted files
-or directories before proceeding to subsequent steps in the promotion
-process. For instance, you might use the delete step to remove
-intermediate configurations or artifacts generated in earlier steps.
-
-Consider a scenario where a Stage combines content from two working trees
-to render Stage-specific manifests. If temporary files are generated during
-this process, you can use the delete step to clean them up:
+One, common usage of this step is to remove intermediate files
+produced by the promotion process prior to a `git-commit` step:
 
 ```yaml
 vars:
@@ -330,21 +324,20 @@ steps:
   config:
     repoURL: ${{ vars.gitRepo }}
     checkout:
-    - commit: ${{ commitFrom(vars.gitRepo, warehouse("base")).ID }}
+    - commit: ${{ commitFrom(vars.gitRepo) }}
       path: ./src
-    - commit: ${{ commitFrom(vars.gitRepo, warehouse(ctx.stage + "-overlay")).ID }}
-      path: ./overlay
     - branch: stage/${{ ctx.stage }}
       create: true
       path: ./out
-- uses: copy
-  config:
-    inPath: ./overlay/stages/${{ ctx.stage }}/kustomization.yaml
-    outPath: ./src/stages/${{ ctx.stage }}/kustomization.yaml
+
+# Steps that produce intermediate files in ./out...
+
 - uses: delete
   config:
-    path: ./overlay/stages/${{ ctx.stage }}/temp-file.yaml
-# Render manifests to ./out, commit, push, etc...
+    path: ./out/unwanted/file
+- uses: git-commit
+  config:
+    path: ./out
 ```
 
 ### `kustomize-set-image`
