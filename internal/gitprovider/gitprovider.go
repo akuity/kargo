@@ -64,6 +64,8 @@ type CreatePullRequestOpts struct {
 	Head string
 	// Base is the name of the target branch.
 	Base string
+	// Labels is an array of strings that should be added as labels to the pull request.
+	Labels []string
 }
 
 // ListPullRequestOptions encapsulates the options used when listing pull

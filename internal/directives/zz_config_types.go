@@ -187,6 +187,8 @@ type GitOpenPRConfig struct {
 	CreateTargetBranch bool `json:"createTargetBranch,omitempty"`
 	// Indicates whether to skip TLS verification when cloning the repository. Default is false.
 	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty"`
+	// Labels to add to the pull request.
+	Labels []string `json:"labels,omitempty"`
 	// The name of the Git provider to use. Currently only 'github', 'gitlab' and 'azure' are
 	// supported. Kargo will try to infer the provider if it is not explicitly specified.
 	Provider *Provider `json:"provider,omitempty"`
