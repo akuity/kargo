@@ -333,3 +333,55 @@ jobs:
       base64-subjects: "${{ needs.combine_hashes.outputs.hashes }}"
       upload-assets: true # Optional: Upload to a new release
       provenance-name: kargo-cli.intoto.jsonl
+
+  update-homebrew-formula:
+    if: github.event_name == 'release' && github.event.action == 'released' # Runs only for stable releases
+    runs-on: ubuntu-latest
+    needs: [ publish-image, publish-cli ]
+    steps:
+    - name: Checkout tap repository
+      uses: actions/checkout@v4
+      with:
+        repository: akuity/homebrew-tap
+        token: ${{ secrets.TAP_PAT }}
+
+    - name: Export LATEST_TAG and VERSION_SUFFIX
+      run: |
+        LATEST_TAG=$(curl -qsSL \
+          -H 'Accept: application/vnd.github+json' \
+          -H 'Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}' \
+          -H 'X-GitHub-Api-Version: 2022-11-28' \
+          '${{ github.api_url }}/repos/${{ github.repository }}/releases/latest' \
+        | jq -r .tag_name)
+        echo "LATEST_TAG=$LATEST_TAG" >> $GITHUB_ENV
+
+        VERSION_SUFFIX=$(echo "${{ github.ref_name }}" | grep -oP "^v\d+\.\d+" | sed 's/^v/@/')
+        echo "VERSION_SUFFIX=$VERSION_SUFFIX" >> $GITHUB_ENV
+
+    - name: Setup Git User
+      uses: fregante/setup-git-user@v2
+
+    - name: Update formula and push changes
+      run: |
+        git checkout -b update-kargo-${{ github.ref_name }}
+ 
+        if [[ ${{ github.ref_name }} == ${{ env.LATEST_TAG }} ]]; then
+          ./update.sh kargo ${{ github.ref_name }}
+          git add kargo.rb
+        fi
+        
+        ./update.sh kargo ${{ github.ref_name }} ${{ env.VERSION_SUFFIX }}
+        git add kargo${{ env.VERSION_SUFFIX }}.rb
+        git commit -m "chore: update Kargo cli to version ${{ github.ref_name }}"
+        git push origin update-kargo-${{ github.ref_name }}
+
+    - name: Open PR
+      uses: peter-evans/create-pull-request@v5
+      with:
+        token: ${{ secrets.TAP_PAT }}
+        commit-message: "Update Kargo formula to version ${{ github.ref_name }}"
+        branch: update-kargo-${{ github.ref_name }}
+        base: main
+        title: "chore: update Kargo formula to version ${{ github.ref_name }}"
+        body: "This PR updates the Homebrew formula for Kargo to version ${{ github.ref_name }}."
+        delete-branch: 'true'
