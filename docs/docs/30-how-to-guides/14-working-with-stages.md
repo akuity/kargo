@@ -1,5 +1,5 @@
 ---
-description: Learn how to work effectively with stages
+description: Learn how to work effectively with Stages
 sidebar_label: Working with Stages
 ---
 
@@ -174,43 +174,43 @@ promotionTemplate:
     steps:
     - uses: git-clone
       config:
-        repoURL: \${{ vars.gitopsRepo }}
+        repoURL: ${{ vars.gitopsRepo }}
         checkout:
         - branch: main
-          path: \${{ vars.srcPath }}
-        - branch: stage/\${{ ctx.stage }}
+          path: ${{ vars.srcPath }}
+        - branch: stage/${{ ctx.stage }}
           create: true
-          path: \${{ vars.outPath }}
+          path: ${{ vars.outPath }}
     - uses: git-clear
       config:
-        path: \${{ vars.outPath }}
+        path: ${{ vars.outPath }}
     - uses: kustomize-set-image
       as: update-image
       config:
-        path: \${{ vars.srcPath }}/base
+        path: ${{ vars.srcPath }}/base
         images:
-        - image: \${{ vars.imageRepo }}
+        - image: ${{ vars.imageRepo }}
     - uses: kustomize-build
       config:
-        path: \${{ vars.srcPath }}/stages/\${{ ctx.stage }}
-        outPath: \${{ vars.outPath }}/manifests.yaml
+        path: ${{ vars.srcPath }}/stages/${{ ctx.stage }}
+        outPath: ${{ vars.outPath }}/manifests.yaml
     - uses: git-commit
       as: commit
       config:
-        path: \${{ vars.outPath }}
+        path: ${{ vars.outPath }}
         messageFromSteps:
         - update-image
     - uses: git-push
       config:
-        path: \${{ vars.outPath }}
-        branch: \${{ vars.targetBranch }}
+        path: ${{ vars.outPath }}
+        branch: ${{ vars.targetBranch }}
     - uses: argocd-update
       config:
         apps:
-        - name: kargo-demo-\${{ ctx.stage }}
+        - name: kargo-demo-${{ ctx.stage }}
           sources:
-          - repoURL: \${{ vars.gitopsRepo }}
-            desiredRevision: \${{ outputs.commit.commit }}
+          - repoURL: ${{ vars.gitopsRepo }}
+            desiredRevision: ${{ outputs.commit.commit }}
 ```
 
 __For complete documentation of all of Kargo's built-in promotion steps, refer
@@ -317,10 +317,14 @@ of `AnalysisTemplate` capabilities.
 The `status` field of a `Stage` resource records:
 
   * Conditions containing the last observations of the `Stage`'s current state.
-  * The current phase of the `Stage`'s lifecycle.
+
+  * The current phase of the `Stage`'s lifecycle (distilled from the conditions).
+
   * Details about the last `Promotion` and any in-progress `Promotion`.
+
   * History of `Freight` that has been deployed to the `Stage` (from most to
-  least recent) along with the results of any associated verification processes.
+    least recent) along with the results of any associated verification processes.
+
   * The health status of related Argo CD `Application` resources.
 
 For example:
@@ -346,7 +350,7 @@ status:
     verificationHistory:
     - analysisRun:
         name: test.01j2w7aknhf3j7jteyqs72hnbg.101bca5
-        namespace: kargo-demo-09
+        namespace: kargo-demo
         phase: Successful
       finishTime: "2024-07-15T22:13:57Z"
       id: 5535a484-bbd0-4f12-8cf4-be2c8e0041c9
@@ -356,7 +360,7 @@ status:
     argoCDApps:
     - healthStatus:
         status: Healthy
-      name: kargo-demo-09-test
+      name: kargo-demo-test
       namespace: argocd
       syncStatus:
         revision: 111eaf55aa41f21bb9bb707ba1baa748b83ec51e
@@ -400,7 +404,7 @@ status:
         verificationHistory:
         - analysisRun:
             name: test.01j2w7aknhf3j7jteyqs72hnbg.101bca5
-            namespace: kargo-demo-09
+            namespace: kargo-demo
             phase: ""
           id: 5535a484-bbd0-4f12-8cf4-be2c8e0041c9
           phase: Pending
@@ -412,31 +416,38 @@ status:
 
 ## Interacting with Stages
 
-Kargo provides tools to manage Stages using either the Kargo Dashboard or the
-Kargo CLI. This section explains how to handle Stages effectively through both interfaces.
+Kargo provides tools to manage Stages using either its UI or
+CLI. This section explains how to handle Stages effectively through both interfaces.
+
+:::info
+Users with credentials for and sufficient permissions within the Kargo control plane's Kubernetes cluster can also manage `Stage` resources using `kubectl`.
+:::
 
 ### Creating a Stage
 
 <Tabs groupId="create-stage">
-<TabItem value="ui" label="Using the Kargo Dashboard" default>
+<TabItem value="ui" label="Using the UI" default>
 
-1. Navigate to your Project dashboard and locate the action menu in the right corner of the pipeline:
+1. Navigate to your Project in the Kargo UI and locate the action menu in the upper right corner of the pipeline:
 
    ![create-stage](../../static/img/create-stage.png)
 
-2. Click the magic wand icon to open the dropdown, then select <Hlt>Create Stage</Hlt>.
-   A form will appear to input details for the new `Stage`:
+1. Click the magic wand icon to open the dropdown, then select <Hlt>Create Stage</Hlt>.
+
+   A form will appear to input details for a new `Stage`:
 
    ![create-stage](../../static/img/create-stage-2.png)
 
-3. Complete the form with the necessary details and submit it.
+1. Complete the form with the necessary details and submit it.
+
    The new `Stage` will be added to the pipeline, connected to other
    `Stage`s based on your configuration:
 
    ![create-stage](../../static/img/create-stage-3.png)
+
 </TabItem>
 
-<TabItem value="cli" label="Using the Kargo CLI">
+<TabItem value="cli" label="Using the CLI">
 
 1. Define the `Stage` in a YAML file, for example:
 
@@ -444,22 +455,22 @@ Kargo CLI. This section explains how to handle Stages effectively through both i
 apiVersion: kargo.akuity.io/v1alpha1
 kind: Stage
 metadata:
-  name: <stage-name>
-  namespace: <project-name>
+  name: <stage>
+  namespace: <project>
 spec:
   ### Add your Stage specifications here
 ```
 
-2. Save the file and run:
+1. Save the file and run:
 
 ```shell
-kargo create -f <stage-filename>
+kargo create -f <filename>
 ```
 
-3. Verify the creation by listing the `Stage`:
+1. Verify the creation by listing `Stage`s:
 
 ```shell
-kargo get stage <stage-name> --project <project-name>
+kargo get stage <stage> --project <project>
 ```
 
 </TabItem>
@@ -468,19 +479,22 @@ kargo get stage <stage-name> --project <project-name>
 ### Deleting a Stage
 
 <Tabs groupId="delete-stage">
-<TabItem value="ui" label="Using the Kargo Dashboard" default>
+<TabItem value="ui" label="Using the UI" default>
 
 1. Select the `Stage` you want to remove.
-2. Click <Hlt>Delete</Hlt> in the top-right corner of the pop-up window:
+
+1. Click <Hlt>Delete</Hlt> in the upper right corner of the pop-up window:
 
    ![delete-stage](../../static/img/delete-stage.png)
+
 </TabItem>
 
-<TabItem value="cli" label="Using the Kargo CLI">
+<TabItem value="cli" label="Using the CLI">
+
 To delete a `Stage` using the CLI, run:
 
 ```shell
-kargo delete stage --project <project-name> <stage-name>
+kargo delete stage <stage> --project <project>
 ```
 
 </TabItem>
@@ -488,25 +502,28 @@ kargo delete stage --project <project-name> <stage-name>
 
 ### Refreshing a Stage
 
-Refreshing a `Stage` triggers a reconciliation process that
-performs essential tasks, including checking for completed 
-Promotions, running health checks, verifying the current 
-Freight, and determining if any pending Promotions can proceed. 
-This ensures that the `Stage` reflects the latest state and operational readiness.
+Refreshing a `Stage` triggers its reconciliation process, which
+includes checking for any newly-completed Promotions, queueing
+up the next, pending Promotion, when applicable, and executing
+any applicable health check processes.
 
 <Tabs groupId="refresh-stage">
-<TabItem value="ui" label="Using the Kargo Dashboard" default>
+<TabItem value="ui" label="Using the UI" default>
+
 1. Select the `Stage` you want to refresh.
-2. Click <Hlt>Refresh</Hlt> in the top-right corner of the pop-up window:
+
+1. Click <Hlt>Refresh</Hlt> in the top-right corner of the pop-up window:
 
    ![refresh-stage](../../static/img/refresh-stage.png)
+
 </TabItem>
 
-<TabItem value="cli" label="Using the Kargo CLI">
+<TabItem value="cli" label="Using the CLI">
+
 To refresh a `Stage`, run:
 
 ```shell
-kargo refresh stage --project=<project-name> <stage-name>
+kargo refresh stage <stage> --project <project>
 ```
 
 </TabItem>
@@ -514,35 +531,44 @@ kargo refresh stage --project=<project-name> <stage-name>
 
 ### Reverifying a Stage's Current Freight
 
-Reverification ensures that the `Freight` associated with a `Stage` is functioning as expected. This can include rerunning or aborting verification.
+Verification processes, which run automatically following each successful Promotion,
+can also be re-run on-demand. This is useful for re-attempting a failed verification
+process or just to validate that applications within the `Stage` are performing
+as desired.
 
 <Tabs groupId="verify-stage">
-<TabItem value="ui" label="Using the Kargo Dashboard" default>
+<TabItem value="ui" label="Using the UI" default>
+
 1. Select the `Stage` you want to reverify and click <Hlt>Reverify</Hlt> at the top of the menu:
 
 ![verify-stage](../../static/img/reverify-freight.png)
 
-2. To confirm the `Stage(s)` where the `Freight` has been verified, return
+1. To see the `Stage`s where the `Freight` has been successfully verified, return
 to the <Hlt>Freight Timeline</Hlt> and select the `Freight`.
+
 Verified `Stage` names will appear under <Hlt>VERIFIED IN</Hlt>:
 
 ![verify-stage](../../static/img/verified-in.png)
+
 </TabItem>
 
-<TabItem value="cli" label="Using the Kargo CLI">
+<TabItem value="cli" label="Using the CLI">
+
 1. To rerun verification using the CLI run:
 
 ```shell
-kargo verify stage --project=<project-name> <stage-name>
+kargo verify stage <stage> --project <project> 
 ```
 
-2. To stop an ongoing verification process, use:
+1. To stop an ongoing verification process, use:
 
 ```shell
-kargo verify stage --project=<project-name> <stage-name> --abort
+kargo verify stage <stage> --project <project> --abort
 ```
 
 </TabItem>
 </Tabs>
 
-Note: For detailed instructions on promoting a `Stage`, refer to the Working with Promotions page.
+:::note
+For detailed instructions on promoting a `Stage`, refer to the Working with Promotions page.
+:::
