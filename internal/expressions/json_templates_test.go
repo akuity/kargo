@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"sigs.k8s.io/yaml"
 )
 
 func TestEvaluateJSONTemplate(t *testing.T) {
@@ -44,6 +45,7 @@ func TestEvaluateJSONTemplate(t *testing.T) {
 	testCases := []struct {
 		name         string
 		jsonTemplate string
+		yamlTemplate string
 		assertions   func(t *testing.T, jsonOutput []byte, err error)
 	}{
 		{
@@ -218,10 +220,59 @@ func TestEvaluateJSONTemplate(t *testing.T) {
 				require.Equal(t, `{"foo":"bar"}`, parsed.AString)
 			},
 		},
+		{
+			name: "a variety of tricky cases dealing with YAML and quotes",
+			yamlTemplate: `
+value1: {"foo": "bar"} # This is a JSON object
+value2: '${{ quote({"foo": "bar"}) }}' # This is a string
+value3: | # This is a string
+  {"foo": "bar"}
+value4: | # This is a JSON object
+  ${{ {"foo": "bar"} }}
+value5: | # This is a string
+  ${{ quote({"foo": "bar"}) }}
+value6: | # Make sure we're not tripped up by multiple newlines
+  ${{ quote({"foo": "bar"}) }}
+  
+value7: 42 # This is a number
+value8: "42" # This is a string
+value9: '42'	# This is a string
+value10: '${{ quote(42) }}' # This is a string
+value11: | # This is a string
+  42
+value12: | # This is a number
+  ${{ 42 }}
+value13: | # This is a string
+  ${{ quote(42) }}
+`,
+			assertions: func(t *testing.T, jsonOutput []byte, err error) {
+				require.NoError(t, err)
+				parsed := map[string]any{}
+				require.NoError(t, json.Unmarshal(jsonOutput, &parsed))
+				require.Equal(t, map[string]any{"foo": "bar"}, parsed["value1"])
+				require.Equal(t, `{"foo":"bar"}`, parsed["value2"])
+				require.Equal(t, "{\"foo\": \"bar\"}\n", parsed["value3"])
+				require.Equal(t, map[string]any{"foo": "bar"}, parsed["value4"])
+				require.Equal(t, "{\"foo\":\"bar\"}\n", parsed["value5"])
+				require.Equal(t, "{\"foo\":\"bar\"}\n", parsed["value6"])
+				require.Equal(t, float64(42), parsed["value7"])
+				require.Equal(t, "42", parsed["value8"])
+				require.Equal(t, "42", parsed["value9"])
+				require.Equal(t, "42", parsed["value10"])
+				require.Equal(t, "42\n", parsed["value11"])
+				require.Equal(t, float64(42), parsed["value12"])
+				require.Equal(t, "42\n", parsed["value13"])
+			},
+		},
 	}
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
+			if testCase.yamlTemplate != "" {
+				jsonBytes, err := yaml.YAMLToJSON([]byte(testCase.yamlTemplate))
+				require.NoError(t, err)
+				testCase.jsonTemplate = string(jsonBytes)
+			}
 			jsonOutput, err := EvaluateJSONTemplate([]byte(testCase.jsonTemplate), testEnv)
 			testCase.assertions(t, jsonOutput, err)
 		})
