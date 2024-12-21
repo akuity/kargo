@@ -14,6 +14,7 @@ import helmTemplateConfig from '@ui/gen/directives/helm-template-config.json';
 import helmUpdateChartConfig from '@ui/gen/directives/helm-update-chart-config.json';
 import helmUpdateImageConfig from '@ui/gen/directives/helm-update-image-config.json';
 import httpConfig from '@ui/gen/directives/http-config.json';
+import jsonUpdateConfig from '@ui/gen/directives/json-update-config.json';
 import kustomizeBuildConfig from '@ui/gen/directives/kustomize-build-config.json';
 import kustomizeSetImageConfig from '@ui/gen/directives/kustomize-set-image-config.json';
 import yamlUpdateConfig from '@ui/gen/directives/yaml-update-config.json';
@@ -62,6 +63,10 @@ export const useDiscoverPromotionDirectivesRegistries = (): PromotionDirectivesR
       {
         identifier: 'yaml-update',
         config: yamlUpdateConfig as unknown as JSONSchema7
+      },
+      {
+        identifier: 'json-update',
+        config: jsonUpdateConfig as unknown as JSONSchema7
       },
       {
         identifier: 'git-push',

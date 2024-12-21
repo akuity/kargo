@@ -365,6 +365,20 @@ type HTTPQueryParam struct {
 	Value string `json:"value"`
 }
 
+type JSONUpdateConfig struct {
+	// The path to a JSON file.
+	Path string `json:"path"`
+	// A list of updates to apply to the JSON file.
+	Updates []JSONUpdate `json:"updates"`
+}
+
+type JSONUpdate struct {
+	// The key whose value needs to be updated. For nested values, use a JSON dot notation path.
+	Key string `json:"key"`
+	// The new value for the specified key.
+	Value interface{} `json:"value"`
+}
+
 type KustomizeBuildConfig struct {
 	// OutPath is the file path to write the built manifests to.
 	OutPath string `json:"outPath"`
