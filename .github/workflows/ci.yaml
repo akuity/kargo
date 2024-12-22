@@ -62,7 +62,7 @@ jobs:
     - name: Install nodejs
       uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
       with:
-        node-version: "22.8.0"
+        node-version: "23.5.0"
         cache: "pnpm"
         cache-dependency-path: "**/pnpm-lock.yaml"
     - name: Run typecheck
@@ -160,7 +160,7 @@ jobs:
     - name: Install nodejs
       uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
       with:
-        node-version: "22.8.0"
+        node-version: "23.5.0"
         cache: "pnpm"
         cache-dependency-path: "**/pnpm-lock.yaml"
     - name: Install nodejs dependencies
