@@ -203,7 +203,7 @@
                     "type": "string"
                   },
                   "semverConstraint": {
-                    "description": "SemverConstraint specifies constraints on what new image versions are\npermissible. The value in this field only has any effect when the\nImageSelectionStrategy is SemVer or left unspecified (which is implicitly\nthe same as SemVer). This field is also optional. When left unspecified,\n(and the ImageSelectionStrategy is SemVer or unspecified), there will be no\nconstraints, which means the latest semantically tagged version of an image\nwill always be used. Care should be taken with leaving this field\nunspecified, as it can lead to the unanticipated rollout of breaking\nchanges. Refer to Image Updater documentation for more details.\nMore info: https://github.com/masterminds/semver#checking-version-constraints",
+                    "description": "SemverConstraint specifies constraints on what new image versions are\npermissible. The value in this field only has any effect when the\nImageSelectionStrategy is SemVer or left unspecified (which is implicitly\nthe same as SemVer). This field is also optional. When left unspecified,\n(and the ImageSelectionStrategy is SemVer or unspecified), there will be no\nconstraints, which means the latest semantically tagged version of an image\nwill always be used. Care should be taken with leaving this field\nunspecified, as it can lead to the unanticipated rollout of breaking\nchanges.\nMore info: https://github.com/masterminds/semver#checking-version-constraints",
                     "type": "string"
                   },
                   "strictSemvers": {
