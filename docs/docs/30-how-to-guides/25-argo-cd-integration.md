@@ -23,7 +23,7 @@ In the course of orchestrating the transition of an application instance
 from one state to another, it is common for Kargo to updated Argo CD
 `Application` resources in some way. Such updates are enabled through the
 use of the
-[`argocd-update` promotion step](./35-references/10-promotion-steps.md#argocd-update).
+[`argocd-update` promotion step](../35-references/10-promotion-steps.md#argocd-update).
 Often, these updates entail little more than modifying an `Application`'s 
 `operation` field to force the `Application` to be synced to recently
 updated desired state.
