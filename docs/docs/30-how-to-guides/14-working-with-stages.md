@@ -451,27 +451,27 @@ Users with credentials for and sufficient permissions within the Kargo control p
 
 1. Define the `Stage` in a YAML file, for example:
 
-```yaml
-apiVersion: kargo.akuity.io/v1alpha1
-kind: Stage
-metadata:
-  name: <stage>
-  namespace: <project>
-spec:
-  ### Add your Stage specifications here
-```
+    ```yaml
+    apiVersion: kargo.akuity.io/v1alpha1
+    kind: Stage
+    metadata:
+      name: <stage>
+      namespace: <project>
+    spec:
+      ### Add your Stage specifications here
+    ```
 
 1. Save the file and run:
 
-```shell
-kargo create -f <filename>
-```
+    ```shell
+    kargo create -f <filename>
+    ```
 
 1. Verify the creation by listing `Stage`s:
 
-```shell
-kargo get stage <stage> --project <project>
-```
+    ```shell
+    kargo get stage <stage> --project <project>
+    ```
 
 </TabItem>
 </Tabs>
@@ -541,14 +541,14 @@ as desired.
 
 1. Select the `Stage` you want to reverify and click <Hlt>Reverify</Hlt> at the top of the menu:
 
-![verify-stage](../../static/img/reverify-freight.png)
+    ![verify-stage](../../static/img/reverify-freight.png)
 
-1. To see the `Stage`s where the `Freight` has been successfully verified, return
-to the <Hlt>Freight Timeline</Hlt> and select the `Freight`.
+    If you want to stop the verification process mid-way, you can click the <Hlt>Abort Verification</Hlt> button next to the Reverify option.
 
-Verified `Stage` names will appear under <Hlt>VERIFIED IN</Hlt>:
+1. To check the `Stage`s where the `Freight` has been successfully verified, return to 
+    the <Hlt>Freight Timeline</Hlt> and select the `Freight`. Verified `Stage` names will appear under <Hlt>VERIFIED IN</Hlt>:
 
-![verify-stage](../../static/img/verified-in.png)
+    ![verify-stage](../../static/img/verified-in.png)
 
 </TabItem>
 
@@ -556,15 +556,22 @@ Verified `Stage` names will appear under <Hlt>VERIFIED IN</Hlt>:
 
 1. To rerun verification using the CLI run:
 
-```shell
-kargo verify stage <stage> --project <project> 
-```
+    ```shell
+    kargo verify stage <stage> --project <project> 
+    ```
 
-1. To stop an ongoing verification process, use:
+    If you want to *stop* this ongoing verification process, use:
 
-```shell
-kargo verify stage <stage> --project <project> --abort
-```
+    ```shell
+    kargo verify stage <stage> --project <project> --abort
+    ```
+1. To check the `Stage`s where the `Freight` has been successfully verified, run:
+
+    ```shell
+    kargo get freight \
+    --project <project> \
+    --output jsonpath-as-json={.status}
+    ```
 
 </TabItem>
 </Tabs>
