@@ -100,6 +100,13 @@ func evaluateExpressions(collection any, env map[string]any, exprOpts ...expr.Op
 // environment. Note that a single template string can contain multiple
 // expressions.
 func EvaluateTemplate(template string, env map[string]any, exprOpts ...expr.Option) (any, error) {
+	if !strings.Contains(template, "${{") {
+		// Don't do anything fancy if the "template" doesn't contain any
+		// expressions. If we did, a simple string like "42" would be evaluated as
+		// the number 42. That would force users to use ${{ quote(42) }} when it
+		// would be more intuitive to just use "42".
+		return template, nil
+	}
 	if exprOpts == nil {
 		exprOpts = make([]expr.Option, 0, 1)
 	}
@@ -122,7 +129,15 @@ func EvaluateTemplate(template string, env map[string]any, exprOpts ...expr.Opti
 	if _, err := t.ExecuteFunc(out, getExpressionEvaluator(env, exprOpts...)); err != nil {
 		return nil, err
 	}
+	// If there is a trailing newline, remove it. If the | operator was used in
+	// the original YAML, the result will have a trailing newline, which can
+	// cause problems with the logic that follows.
 	result := out.String()
+	var removedNewline bool
+	if strings.HasSuffix(result, "\n") {
+		result = strings.TrimSuffix(out.String(), "\n")
+		removedNewline = true
+	}
 	// If the result is enclosed in quotes, this is probably the result of an
 	// expression that deliberately enclosed the result in quotes to prevent it
 	// from being mistaken for a number, bool, etc. e.g. ${{ quote(true) }}
@@ -134,7 +149,11 @@ func EvaluateTemplate(template string, env map[string]any, exprOpts ...expr.Opti
 	// which we are using this function is so low that it's not worth sacrificing
 	// the convenience of this behavior.
 	if len(result) > 1 && strings.HasPrefix(result, `"`) && strings.HasSuffix(result, `"`) {
-		return result[1 : len(result)-1], nil
+		result = result[1 : len(result)-1]
+		if removedNewline {
+			result += "\n"
+		}
+		return result, nil
 	}
 	// If the result is parseable as a bool return that.
 	if resBool, err := strconv.ParseBool(result); err == nil {
@@ -151,6 +170,9 @@ func EvaluateTemplate(template string, env map[string]any, exprOpts ...expr.Opti
 		return resMap, nil
 	}
 	// If we get to here, just return the string.
+	if removedNewline {
+		result += "\n"
+	}
 	return result, nil
 }
 
