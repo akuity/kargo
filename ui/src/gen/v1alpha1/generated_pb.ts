@@ -1426,7 +1426,7 @@ export type ImageSubscription = Message<"github.com.akuity.kargo.api.v1alpha1.Im
    * constraints, which means the latest semantically tagged version of an image
    * will always be used. Care should be taken with leaving this field
    * unspecified, as it can lead to the unanticipated rollout of breaking
-   * changes. Refer to Image Updater documentation for more details.
+   * changes.
    * More info: https://github.com/masterminds/semver#checking-version-constraints
    *
    * +kubebuilder:validation:Optional
