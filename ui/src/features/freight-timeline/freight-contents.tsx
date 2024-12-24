@@ -14,6 +14,8 @@ export const FreightContents = (props: {
   highlighted: boolean;
   horizontal?: boolean;
   dark?: boolean;
+  // don't truncate any content
+  fullContentVisibility?: boolean;
 }) => {
   const { freight, highlighted, horizontal, dark } = props;
   const linkClass = `${highlighted ? 'text-blue-500' : 'text-gray-400'} hover:text-blue-400 hover:underline max-w-full min-w-0 flex-shrink`;
@@ -39,6 +41,7 @@ export const FreightContents = (props: {
           overlay={<CommitInfo commit={c} />}
           icon={faGitAlt}
           href={`${c.repoURL?.replace('.git', '')}/commit/${c.id}`}
+          fullContentVisibility={props.fullContentVisibility}
         >
           {c.tag && c.tag.length > 12
             ? c.tag.substring(0, 12) + '...'
@@ -55,6 +58,7 @@ export const FreightContents = (props: {
           title={`${i.repoURL}:${i.tag}`}
           icon={faDocker}
           href={urlForImage(i.repoURL || '')}
+          fullContentVisibility={props.fullContentVisibility}
         >
           {`${props.horizontal ? i.repoURL + ':' : ''}${i.tag}`}
         </FreightContentItem>
@@ -67,6 +71,7 @@ export const FreightContents = (props: {
           highlighted={highlighted}
           key={`${c.repoURL}:${c.version}`}
           title={`${c.repoURL}:${c.version}`}
+          fullContentVisibility={props.fullContentVisibility}
           icon={faAnchor}
         >
           {c.version}
