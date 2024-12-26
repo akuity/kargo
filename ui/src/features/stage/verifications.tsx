@@ -37,7 +37,7 @@ export const Verifications = ({ verifications, images }: Props) => {
       {hasImplicitVerifications && (
         <Flex className='mb-4'>
           <Tooltip
-            title={`Implicit verifications are meta info if stage does not have any explicit verifications defined in spec. Kargo fallback stage's health to how last promotion performed.`}
+            title={`Implicit verifications occur when a stage with no explicit verification process first reaches a healthy state following a promotion.`}
           >
             <Checkbox
               onChange={(e) => setShowImplicitVerifications(e.target.checked)}
