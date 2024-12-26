@@ -101,7 +101,12 @@ export const FreightDetails = ({
                     <>
                       <div className='mb-4'>
                         <div className='font-semibold mb-2 text-xs'>ARTIFACTS</div>
-                        <FreightContents freight={freight} highlighted={true} horizontal={true} />
+                        <FreightContents
+                          freight={freight}
+                          highlighted={true}
+                          horizontal={true}
+                          fullContentVisibility
+                        />
                       </div>
                       <FreightStatusList freight={freight} />
                     </>
