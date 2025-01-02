@@ -6,14 +6,15 @@ import { useMemo, useState } from 'react';
 import { generatePath, useNavigate, useParams } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
+import { Description } from '@ui/features/common/description';
 import { HealthStatusIcon } from '@ui/features/common/health-status/health-status-icon';
+import { ManifestPreview } from '@ui/features/common/manifest-preview';
+import { StagePhaseIcon } from '@ui/features/common/stage-phase/stage-phase-icon';
+import { StagePhase } from '@ui/features/common/stage-phase/utils';
+import { useImages } from '@ui/features/project/pipelines/utils/useImages';
 import { getConfig } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 import { Stage, StageSchema, VerificationInfo } from '@ui/gen/v1alpha1/generated_pb';
 import { timestampDate } from '@ui/utils/connectrpc-utils';
-
-import { Description } from '../common/description';
-import { ManifestPreview } from '../common/manifest-preview';
-import { useImages } from '../project/pipelines/utils/useImages';
 
 import { FreightHistory } from './freight-history';
 import { Promotions } from './promotions';
@@ -56,11 +57,11 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
       {stage && (
         <div className='flex flex-col h-full'>
           <div className='flex items-center justify-between'>
-            <div className='flex gap-1 items-start'>
-              <HealthStatusIcon
-                health={stage.status?.health}
-                style={{ marginRight: '10px', marginTop: '10px' }}
-              />
+            <div className='flex gap-1 items-center'>
+              <StagePhaseIcon className='mr-2' phase={stage.status?.phase as StagePhase} />
+              {!!stage.status?.health && (
+                <HealthStatusIcon health={stage.status?.health} style={{ marginRight: '10px' }} />
+              )}
               <div>
                 <Typography.Title level={1} style={{ margin: 0 }}>
                   {stage.metadata?.name}
