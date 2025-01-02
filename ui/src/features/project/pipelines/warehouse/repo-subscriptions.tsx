@@ -1,8 +1,7 @@
 import { Descriptions, Typography } from 'antd';
 
-import { urlForImage } from '@ui/utils/url';
-
 import { RepoSubscription } from '@ui/gen/v1alpha1/generated_pb';
+import { urlForImage } from '@ui/utils/url';
 
 type Props = {
   subscriptions?: RepoSubscription[];
