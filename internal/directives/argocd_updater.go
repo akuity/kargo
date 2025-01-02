@@ -388,8 +388,8 @@ func (a *argocdUpdater) mustPerformUpdate(
 			// NB: We return the current phase here because we want the caller
 			//     to know that an operation is still running.
 			return status.Phase, false, fmt.Errorf(
-				"current operation was not initiated by %q and not by %q: waiting for operation to complete",
-				applicationOperationInitiator, status.Operation.InitiatedBy.Username,
+				"current operation was initiated by %q and not by %q: waiting for operation to complete",
+				status.Operation.InitiatedBy.Username, applicationOperationInitiator,
 			)
 		}
 		// Initiate our own operation.
