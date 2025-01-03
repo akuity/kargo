@@ -1,4 +1,5 @@
 import { ThemeConfig } from 'antd/es/config-provider';
+import { ComponentToken } from 'antd/es/menu/style';
 import { MapToken } from 'antd/es/theme/interface';
 
 export const token: Partial<MapToken> = {
@@ -13,7 +14,14 @@ export const token: Partial<MapToken> = {
   fontFamily: 'Poppins, sans-serif'
 };
 
+const Menu: Partial<ComponentToken> = {
+  itemSelectedBg: 'lightgray'
+};
+
 export const themeConfig: ThemeConfig = {
   // ...token,
-  token
+  token,
+  components: {
+    Menu
+  }
 };
