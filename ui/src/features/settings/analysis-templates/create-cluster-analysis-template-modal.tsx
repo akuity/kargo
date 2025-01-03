@@ -3,6 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Modal } from 'antd';
 import { useForm } from 'react-hook-form';
 
+import { transportWithAuth } from '@ui/config/transport';
 import YamlEditor from '@ui/features/common/code-editor/yaml-editor-lazy';
 import { FieldContainer } from '@ui/features/common/form/field-container';
 import { ModalProps } from '@ui/features/common/modal/use-modal';
@@ -35,7 +36,11 @@ export const CreateClusterAnalysisTemplateModal = ({ visible, hide }: ModalProps
       {
         onSuccess: () =>
           queryClient.invalidateQueries({
-            queryKey: createConnectQueryKey(listClusterAnalysisTemplates)
+            queryKey: createConnectQueryKey({
+              schema: listClusterAnalysisTemplates,
+              cardinality: 'finite',
+              transport: transportWithAuth
+            })
           })
       }
     );

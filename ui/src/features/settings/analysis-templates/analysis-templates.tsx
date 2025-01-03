@@ -7,14 +7,12 @@ import { format } from 'date-fns';
 import { useConfirmModal } from '@ui/features/common/confirm-modal/use-confirm-modal';
 import { descriptionExpandable } from '@ui/features/common/description-expandable';
 import { useModal } from '@ui/features/common/modal/use-modal';
-import {
-  AnalysisTemplate,
-  ClusterAnalysisTemplate
-} from '@ui/gen/rollouts/api/v1alpha1/generated_pb';
+import { ClusterAnalysisTemplate } from '@ui/gen/rollouts/api/v1alpha1/generated_pb';
 import {
   deleteClusterAnalysisTemplate,
   listClusterAnalysisTemplates
 } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
+import { timestampDate } from '@ui/utils/connectrpc-utils';
 
 import { CreateClusterAnalysisTemplateModal } from './create-cluster-analysis-template-modal';
 import { EditClusterAnalysisTemplateModal } from './edit-cluster-analysis-template-modal';
@@ -36,7 +34,7 @@ export const ClusterAnalysisTemplatesList = () => {
   );
 
   return (
-    <Table<AnalysisTemplate>
+    <Table<ClusterAnalysisTemplate>
       dataSource={data?.clusterAnalysisTemplates}
       pagination={{ hideOnSinglePage: true }}
       rowKey={(i) => i.metadata?.name || ''}
@@ -48,7 +46,7 @@ export const ClusterAnalysisTemplatesList = () => {
         title='Creation Date'
         width={200}
         render={(_, template) => {
-          const date = template.metadata?.creationTimestamp?.toDate();
+          const date = timestampDate(template.metadata?.creationTimestamp);
           return date ? format(date, 'MMM do yyyy HH:mm:ss') : '';
         }}
       />
