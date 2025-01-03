@@ -127,7 +127,7 @@ export const CreateCredentialsModal = ({ project, onSuccess, editing, init, ...p
       title={
         <>
           <FontAwesomeIcon icon={faAsterisk} className='mr-2' />
-          {editing ? 'Edit' : 'Create'} Secrets
+          {editing ? 'Edit' : 'Create'} {props.type === 'repo' ? 'Credentials' : 'Secret'}
         </>
       }
       {...props}
