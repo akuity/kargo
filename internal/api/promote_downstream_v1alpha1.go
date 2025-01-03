@@ -93,24 +93,6 @@ func (s *server) PromoteDownstream(
 		return nil, connect.NewError(connect.CodeNotFound, err)
 	}
 
-	var directAllowed bool
-	for _, req := range stage.Spec.RequestedFreight {
-		if req.Origin.Equals(&freight.Origin) && req.Sources.Direct {
-			directAllowed = true
-			break
-		}
-	}
-	if _, verified := freight.Status.VerifiedIn[stage.Name]; !verified && !directAllowed {
-		return nil, connect.NewError(
-			connect.CodeInvalidArgument,
-			fmt.Errorf(
-				"Freight %q is not available to Stages down stream from %q",
-				freightName,
-				stageName,
-			),
-		)
-	}
-
 	downstreams, err := s.findDownstreamStagesFn(ctx, stage, freight.Origin)
 	if err != nil {
 		return nil, fmt.Errorf("find downstream stages: %w", err)
@@ -131,6 +113,19 @@ func (s *server) PromoteDownstream(
 			},
 		); err != nil {
 			return nil, err
+		}
+	}
+
+	for _, downstream := range downstreams {
+		if !downstream.IsFreightAvailable(freight) {
+			return nil, connect.NewError(
+				connect.CodeInvalidArgument,
+				fmt.Errorf(
+					"Freight %q is not available to downstream Stage %q",
+					freight.Name,
+					downstream.Name,
+				),
+			)
 		}
 	}
 

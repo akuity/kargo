@@ -125,6 +125,13 @@ func (s *server) PromoteToStage(
 	}), nil
 }
 
+func (s *server) isFreightAvailable(
+	stage *kargoapi.Stage,
+	freight *kargoapi.Freight,
+) bool {
+	return stage.IsFreightAvailable(freight)
+}
+
 func (s *server) recordPromotionCreatedEvent(
 	ctx context.Context,
 	p *kargoapi.Promotion,
