@@ -1,16 +1,18 @@
 import { faBarChart } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import type { MenuProps } from 'antd';
-import { Menu, Flex } from 'antd';
+import { Layout, Menu, MenuProps } from 'antd';
 import { useNavigate, generatePath } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
 import { PageTitle } from '@ui/features/common';
 import { ClusterAnalysisTemplatesList } from '@ui/features/settings/analysis-templates/analysis-templates';
 
+const { Sider, Content } = Layout;
+
+type MenuItem = Required<MenuProps>['items'][number];
+
 export const Settings = ({ section = 'verification' }: { section?: string }) => {
   const navigate = useNavigate();
-  type MenuItem = Required<MenuProps>['items'][number];
 
   const items: MenuItem[] = [
     {
@@ -38,15 +40,19 @@ export const Settings = ({ section = 'verification' }: { section?: string }) => 
   };
 
   return (
-    <div className='p-6'>
-      <Flex justify='space-between'>
-        <PageTitle title='Settings' />
-        <div className='text-2xl font-semibold flex items-top'>{getSectionTitle(section)}</div>
-      </Flex>
-      <Flex justify='space-between'>
-        <Menu mode='vertical' items={items} />
-        {renderSection(section)}
-      </Flex>
-    </div>
+    <Layout className='min-h-screen'>
+      <Sider width={250} className='bg-white border-r border-gray-300 shadow-sm'>
+        <div className='p-4'>
+          <PageTitle title='Settings' />
+        </div>
+        <Menu mode='vertical' defaultSelectedKeys={[section]} items={items} />
+      </Sider>
+      <Layout>
+        <Content className='p-6 bg-gray-100'>
+          <div className='text-2xl font-semibold mb-4'>{getSectionTitle(section)}</div>
+          {renderSection(section)}
+        </Content>
+      </Layout>
+    </Layout>
   );
 };
