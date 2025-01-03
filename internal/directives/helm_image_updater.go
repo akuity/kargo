@@ -10,7 +10,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/freight"
-	libYAML "github.com/akuity/kargo/internal/yaml"
+	intyaml "github.com/akuity/kargo/internal/yaml"
 )
 
 func init() {
@@ -99,11 +99,11 @@ func (h *helmImageUpdater) generateImageUpdates(
 	ctx context.Context,
 	stepCtx *PromotionStepContext,
 	cfg HelmUpdateImageConfig,
-) (map[string]string, []string, error) {
-	updates := make(map[string]string, len(cfg.Images))
+) ([]intyaml.Update, []string, error) {
+	updates := make([]intyaml.Update, len(cfg.Images))
 	fullImageRefs := make([]string, 0, len(cfg.Images))
 
-	for _, image := range cfg.Images {
+	for i, image := range cfg.Images {
 		desiredOrigin := h.getDesiredOrigin(image.FromOrigin)
 
 		targetImage, err := freight.FindImage(
@@ -124,7 +124,10 @@ func (h *helmImageUpdater) generateImageUpdates(
 			return nil, nil, err
 		}
 
-		updates[image.Key] = value
+		updates[i] = intyaml.Update{
+			Key:   image.Key,
+			Value: value,
+		}
 		fullImageRefs = append(fullImageRefs, imageRef)
 	}
 	return updates, fullImageRefs, nil
@@ -157,12 +160,12 @@ func (h *helmImageUpdater) getImageValues(image *kargoapi.Image, valueType strin
 	}
 }
 
-func (h *helmImageUpdater) updateValuesFile(workDir string, path string, changes map[string]string) error {
+func (h *helmImageUpdater) updateValuesFile(workDir string, path string, updates []intyaml.Update) error {
 	absValuesFile, err := securejoin.SecureJoin(workDir, path)
 	if err != nil {
 		return fmt.Errorf("error joining path %q: %w", path, err)
 	}
-	if err := libYAML.SetStringsInFile(absValuesFile, changes); err != nil {
+	if err := intyaml.SetStringsInFile(absValuesFile, updates); err != nil {
 		return fmt.Errorf("error updating image references in values file %q: %w", path, err)
 	}
 	return nil

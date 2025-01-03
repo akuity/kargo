@@ -8,7 +8,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/xanzy/go-gitlab"
+	gitlab "gitlab.com/gitlab-org/api/client-go"
 
 	"github.com/akuity/kargo/internal/git"
 	"github.com/akuity/kargo/internal/gitprovider"
@@ -119,6 +119,7 @@ func (p *provider) CreatePullRequest(
 	glMR, _, err := p.client.CreateMergeRequest(p.projectName, &gitlab.CreateMergeRequestOptions{
 		Title:              &opts.Title,
 		Description:        &opts.Description,
+		Labels:             (*gitlab.LabelOptions)(&opts.Labels),
 		SourceBranch:       &opts.Head,
 		TargetBranch:       &opts.Base,
 		RemoveSourceBranch: gitlab.Ptr(true),

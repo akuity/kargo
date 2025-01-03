@@ -117,6 +117,11 @@ type CopyConfig struct {
 	OutPath string `json:"outPath"`
 }
 
+type DeleteConfig struct {
+	// Path is the path to the file or directory to delete.
+	Path string `json:"path"`
+}
+
 type GitClearConfig struct {
 	// Path to a working directory of a local repository from which to remove all files,
 	// excluding the .git/ directory.
@@ -187,8 +192,10 @@ type GitOpenPRConfig struct {
 	CreateTargetBranch bool `json:"createTargetBranch,omitempty"`
 	// Indicates whether to skip TLS verification when cloning the repository. Default is false.
 	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty"`
-	// The name of the Git provider to use. Currently only 'github' and 'gitlab' are supported.
-	// Kargo will try to infer the provider if it is not explicitly specified.
+	// Labels to add to the pull request.
+	Labels []string `json:"labels,omitempty"`
+	// The name of the Git provider to use. Currently only 'github', 'gitlab' and 'azure' are
+	// supported. Kargo will try to infer the provider if it is not explicitly specified.
 	Provider *Provider `json:"provider,omitempty"`
 	// The URL of a remote Git repository to clone.
 	RepoURL string `json:"repoURL"`
@@ -211,6 +218,12 @@ type GitPushConfig struct {
 	// with 'targetBranch'. If neither of these is provided, the target branch will be the
 	// currently checked out branch.
 	GenerateTargetBranch bool `json:"generateTargetBranch,omitempty"`
+	// This step implements its own internal retry logic for cases where a push is determined to
+	// have failed due to the remote branch having commits that that are not present locally.
+	// Each attempt, including the first, rebases prior to pushing. This field configures the
+	// maximum number of attempts to push to the remote repository. If not specified, the
+	// default is 50.
+	MaxAttempts *int64 `json:"maxAttempts,omitempty"`
 	// The path to a working directory of a local repository.
 	Path string `json:"path"`
 	// The target branch to push to. Mutually exclusive with 'generateTargetBranch=true'. If
@@ -226,8 +239,8 @@ type GitWaitForPRConfig struct {
 	// This field references the 'prNumber' output from a previous step and uses it as the
 	// number of the pull request to wait for.
 	PRNumberFromStep string `json:"prNumberFromStep,omitempty"`
-	// The name of the Git provider to use. Currently only 'github' and 'gitlab' are supported.
-	// Kargo will try to infer the provider if it is not explicitly specified.
+	// The name of the Git provider to use. Currently only 'github', 'gitlab' and 'azure' are
+	// supported. Kargo will try to infer the provider if it is not explicitly specified.
 	Provider *Provider `json:"provider,omitempty"`
 	// The URL of a remote Git repository to clone.
 	RepoURL string `json:"repoURL"`
@@ -352,6 +365,20 @@ type HTTPQueryParam struct {
 	Value string `json:"value"`
 }
 
+type JSONUpdateConfig struct {
+	// The path to a JSON file.
+	Path string `json:"path"`
+	// A list of updates to apply to the JSON file.
+	Updates []JSONUpdate `json:"updates"`
+}
+
+type JSONUpdate struct {
+	// The key whose value needs to be updated. For nested values, use a JSON dot notation path.
+	Key string `json:"key"`
+	// The new value for the specified key.
+	Value interface{} `json:"value"`
+}
+
 type KustomizeBuildConfig struct {
 	// OutPath is the file path to write the built manifests to.
 	OutPath string `json:"outPath"`
@@ -428,11 +455,12 @@ const (
 	Warehouse Kind = "Warehouse"
 )
 
-// The name of the Git provider to use. Currently only 'github' and 'gitlab' are supported.
-// Kargo will try to infer the provider if it is not explicitly specified.
+// The name of the Git provider to use. Currently only 'github', 'gitlab' and 'azure' are
+// supported. Kargo will try to infer the provider if it is not explicitly specified.
 type Provider string
 
 const (
+	Azure  Provider = "azure"
 	Github Provider = "github"
 	Gitlab Provider = "gitlab"
 )

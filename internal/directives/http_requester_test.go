@@ -334,6 +334,7 @@ func Test_httpRequester_runPromotionStep(t *testing.T) {
 			},
 			assertions: func(t *testing.T, res PromotionStepResult, err error) {
 				require.ErrorContains(t, err, "HTTP response met failure criteria")
+				require.True(t, isTerminal(err))
 				require.Equal(t, kargoapi.PromotionPhaseFailed, res.Status)
 			},
 		},
@@ -346,6 +347,7 @@ func Test_httpRequester_runPromotionStep(t *testing.T) {
 			},
 			assertions: func(t *testing.T, res PromotionStepResult, err error) {
 				require.ErrorContains(t, err, "HTTP response met failure criteria")
+				require.True(t, isTerminal(err))
 				require.Equal(t, kargoapi.PromotionPhaseFailed, res.Status)
 			},
 		},

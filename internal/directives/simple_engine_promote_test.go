@@ -235,7 +235,35 @@ func TestSimpleEngine_executeSteps(t *testing.T) {
 			},
 		},
 		{
-			name: "error on step execution; error threshold met",
+			name: "terminal error on step execution",
+			steps: []PromotionStep{
+				{Kind: "success-step", Alias: "step1"},
+				{Kind: "terminal-error-step", Alias: "step2"},
+			},
+			assertions: func(t *testing.T, result PromotionResult, err error) {
+				assert.ErrorContains(t, err, "an unrecoverable error occurred")
+				assert.Equal(t, kargoapi.PromotionPhaseErrored, result.Status)
+				assert.Equal(t, int64(1), result.CurrentStep)
+				assert.Len(t, result.StepExecutionMetadata, 2)
+				assert.Equal(t, kargoapi.PromotionPhaseSucceeded, result.StepExecutionMetadata[0].Status)
+				assert.NotNil(t, result.StepExecutionMetadata[0].StartedAt)
+				assert.NotNil(t, result.StepExecutionMetadata[0].FinishedAt)
+				assert.Equal(t, kargoapi.PromotionPhaseErrored, result.StepExecutionMetadata[1].Status)
+				assert.NotNil(t, result.StepExecutionMetadata[1].StartedAt)
+				assert.NotNil(t, result.StepExecutionMetadata[1].FinishedAt)
+				assert.Contains(t, result.StepExecutionMetadata[1].Message, "something went wrong")
+
+				// Verify first step output is preserved in state
+				assert.Equal(t, State{
+					"step1": map[string]any{
+						"key": "value",
+					},
+					"step2": map[string]any(nil),
+				}, result.State)
+			},
+		},
+		{
+			name: "non-terminal error on step execution; error threshold met",
 			steps: []PromotionStep{
 				{Kind: "success-step", Alias: "step1"},
 				{Kind: "error-step", Alias: "step2"},
@@ -263,7 +291,7 @@ func TestSimpleEngine_executeSteps(t *testing.T) {
 			},
 		},
 		{
-			name: "error on step execution; error threshold not met",
+			name: "non-terminal error on step execution; error threshold not met",
 			steps: []PromotionStep{
 				{
 					Kind:  "error-step",
@@ -281,6 +309,37 @@ func TestSimpleEngine_executeSteps(t *testing.T) {
 				assert.Nil(t, result.StepExecutionMetadata[0].FinishedAt)
 				assert.Equal(t, uint32(1), result.StepExecutionMetadata[0].ErrorCount)
 				assert.Contains(t, result.StepExecutionMetadata[0].Message, "will be retried")
+			},
+		},
+		{
+			name: "non-terminal error on step execution; timeout elapsed",
+			promoCtx: PromotionContext{
+				StepExecutionMetadata: kargoapi.StepExecutionMetadataList{{
+					// Start time is set to an hour ago
+					StartedAt: ptr.To(metav1.NewTime(time.Now().Add(-time.Hour))),
+				}},
+			},
+			steps: []PromotionStep{
+				{
+					Kind: "error-step",
+					Retry: &kargoapi.PromotionStepRetry{
+						ErrorThreshold: 3,
+						Timeout: &metav1.Duration{
+							Duration: time.Hour,
+						},
+					},
+				},
+			},
+			assertions: func(t *testing.T, result PromotionResult, err error) {
+				assert.ErrorContains(t, err, "timeout")
+				assert.ErrorContains(t, err, "has elapsed")
+				assert.Equal(t, kargoapi.PromotionPhaseErrored, result.Status)
+				assert.Equal(t, int64(0), result.CurrentStep)
+				assert.Len(t, result.StepExecutionMetadata, 1)
+				assert.Equal(t, kargoapi.PromotionPhaseErrored, result.StepExecutionMetadata[0].Status)
+				assert.NotNil(t, result.StepExecutionMetadata[0].StartedAt)
+				assert.NotNil(t, result.StepExecutionMetadata[0].FinishedAt)
+				assert.Equal(t, uint32(1), result.StepExecutionMetadata[0].ErrorCount)
 			},
 		},
 		{
@@ -306,6 +365,10 @@ func TestSimpleEngine_executeSteps(t *testing.T) {
 				assert.ErrorContains(t, err, "has elapsed")
 				assert.Equal(t, kargoapi.PromotionPhaseErrored, result.Status)
 				assert.Equal(t, int64(0), result.CurrentStep)
+				assert.Len(t, result.StepExecutionMetadata, 1)
+				assert.Equal(t, kargoapi.PromotionPhaseRunning, result.StepExecutionMetadata[0].Status)
+				assert.NotNil(t, result.StepExecutionMetadata[0].StartedAt)
+				assert.NotNil(t, result.StepExecutionMetadata[0].FinishedAt)
 			},
 		},
 		{
@@ -318,13 +381,12 @@ func TestSimpleEngine_executeSteps(t *testing.T) {
 				assert.Len(t, result.StepExecutionMetadata, 1)
 				assert.Equal(t, kargoapi.PromotionPhaseRunning, result.StepExecutionMetadata[0].Status)
 				assert.NotNil(t, result.StepExecutionMetadata[0].StartedAt)
+				assert.Nil(t, result.StepExecutionMetadata[0].FinishedAt)
 			},
 		},
 		{
-			name: "context cancellation",
-			steps: []PromotionStep{
-				{Kind: "context-waiter", Alias: "step1"},
-			},
+			name:  "context cancellation",
+			steps: []PromotionStep{{Kind: "context-waiter"}},
 			assertions: func(t *testing.T, result PromotionResult, err error) {
 				assert.ErrorContains(t, err, "met error threshold")
 				assert.Equal(t, kargoapi.PromotionPhaseErrored, result.Status)
@@ -366,6 +428,14 @@ func TestSimpleEngine_executeSteps(t *testing.T) {
 					name:      "error-step",
 					runResult: PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
 					runErr:    errors.New("something went wrong"),
+				},
+				&StepRunnerPermissions{},
+			)
+			testRegistry.RegisterPromotionStepRunner(
+				&mockPromotionStepRunner{
+					name:      "terminal-error-step",
+					runResult: PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
+					runErr:    &terminalError{err: errors.New("something went wrong")},
 				},
 				&StepRunnerPermissions{},
 			)

@@ -24,11 +24,7 @@ data:
   PERMISSIVE_CORS_POLICY_ENABLED: {{ quote .Values.api.permissiveCORSPolicyEnabled }}
   {{- if .Values.api.adminAccount.enabled }}
   ADMIN_ACCOUNT_ENABLED: "true"
-  {{- if or .Values.api.tls.enabled (and .Values.api.ingress.enabled .Values.api.ingress.tls.enabled) }}
-  ADMIN_ACCOUNT_TOKEN_ISSUER: https://{{ .Values.api.host }}
-  {{- else }}
-  ADMIN_ACCOUNT_TOKEN_ISSUER: http://{{ .Values.api.host }}
-  {{- end }}
+  ADMIN_ACCOUNT_TOKEN_ISSUER: {{ include "kargo.api.baseURL" . }}
   ADMIN_ACCOUNT_TOKEN_AUDIENCE: {{ quote .Values.api.host }}
   ADMIN_ACCOUNT_TOKEN_TTL: {{ quote .Values.api.adminAccount.tokenTTL }}
   {{- end }}
@@ -41,11 +37,7 @@ data:
   GLOBAL_SERVICE_ACCOUNT_NAMESPACES: {{ .Release.Namespace }}
   {{- end }}
   {{- if .Values.api.oidc.dex.enabled }}
-  {{- if or .Values.api.tls.enabled (and .Values.api.ingress.enabled .Values.api.ingress.tls.enabled) }}
-  OIDC_ISSUER_URL: https://{{ .Values.api.host }}/dex
-  {{- else }}
-  OIDC_ISSUER_URL: http://{{ .Values.api.host }}/dex
-  {{- end }}
+  OIDC_ISSUER_URL: {{ include "kargo.api.baseURL" . }}/dex
   OIDC_CLIENT_ID: {{ quote .Values.api.host }}
   OIDC_CLI_CLIENT_ID: {{ .Values.api.host }}-cli
   DEX_ENABLED: "true"

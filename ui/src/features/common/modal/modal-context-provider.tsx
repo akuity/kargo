@@ -4,24 +4,8 @@ import { delay } from '@ui/utils/delay';
 
 import { Portal } from '../portal';
 
-export interface ModalComponentProps {
-  hide: () => void;
-  visible: boolean;
-}
+import { ModalComponent, ModalContext, ModalItem } from './modal-context';
 
-export type ModalComponent = React.FC<ModalComponentProps>;
-
-type ModalItem = {
-  component: ModalComponent;
-  visible: boolean;
-};
-
-interface ModalContextValue {
-  show: (key: string, element: ModalComponent) => void;
-  hide: (key: string) => void;
-}
-
-export const ModalContext = React.createContext<ModalContextValue | null>(null);
 interface ModalProviderProps {
   children: React.ReactNode;
   container: HTMLElement | null;
