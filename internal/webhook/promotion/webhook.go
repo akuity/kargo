@@ -246,7 +246,7 @@ func (w *webhook) ValidateCreate(
 		return nil, fmt.Errorf("get freight: %w", err)
 	}
 
-	if !kargoapi.IsFreightAvailable(stage, freight) {
+	if !stage.IsFreightAvailable(freight) {
 		return nil, apierrors.NewInvalid(
 			promotionGroupKind,
 			promo.Name,
