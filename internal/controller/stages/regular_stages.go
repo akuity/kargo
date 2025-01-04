@@ -1514,7 +1514,7 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 	}
 
 	// Retrieve promotable Freight for the Stage.
-	promotableFreight, err := r.getPromotableFreight(ctx, stageRef, stage.Spec.RequestedFreight)
+	promotableFreight, err := r.getPromotableFreight(ctx, stage)
 	if err != nil {
 		return newStatus, err
 	}
@@ -1634,133 +1634,28 @@ func (r *RegularStageReconciler) autoPromotionAllowed(
 	return false, nil
 }
 
-// getPromotableFreight retrieves promotable Freight for a Stage based on the
-// requested Freight in the Stage specification.
+// getPromotableFreight retrieves a map of []Freight promotable to the specified
+// Stage, indexed by origin.
 func (r *RegularStageReconciler) getPromotableFreight(
 	ctx context.Context,
-	stage types.NamespacedName,
-	requested []kargoapi.FreightRequest,
+	stage *kargoapi.Stage,
 ) (map[string][]kargoapi.Freight, error) {
-	var promotableFreight = make(map[string][]kargoapi.Freight)
-
-	for _, req := range requested {
-		originID := req.Origin.String()
-		if _, ok := promotableFreight[originID]; !ok {
-			promotableFreight[originID] = nil
-		}
-
-		// Get Freight directly from the Warehouse if allowed.
-		if req.Origin.Kind == kargoapi.FreightOriginKindWarehouse && req.Sources.Direct {
-			var directFreight kargoapi.FreightList
-			if err := r.client.List(
-				ctx,
-				&directFreight,
-				client.InNamespace(stage.Namespace),
-				client.MatchingFieldsSelector{
-					Selector: fields.OneTermEqualSelector(indexer.FreightByWarehouseField, req.Origin.Name),
-				},
-			); err != nil {
-				return nil, fmt.Errorf(
-					"error listing Freight from %q in namespace %q: %w",
-					originID,
-					stage.Namespace,
-					err,
-				)
-			}
-
-			promotableFreight[originID] = append(promotableFreight[originID], directFreight.Items...)
-
-			// If we allow direct Freight, we do not need to look for Freight
-			// from other sources. Continue to the next requested Freight.
-			continue
-		}
-
-		// Get Freight verified in upstream Stages.
-		for _, upstream := range req.Sources.Stages {
-			var verifiedFreight kargoapi.FreightList
-			if err := r.client.List(
-				ctx,
-				&verifiedFreight,
-				client.InNamespace(stage.Namespace),
-				client.MatchingFieldsSelector{
-					Selector: fields.OneTermEqualSelector(indexer.FreightByVerifiedStagesField, upstream),
-				},
-			); err != nil {
-				return nil, fmt.Errorf(
-					"error listing Freight from %q in namespace %q: %w",
-					upstream,
-					stage.Namespace,
-					err,
-				)
-			}
-
-			// We have specific requirements for how long the Freight has been
-			// verified in the upstream Stage. Further filter the list of
-			// verified Freight based on the requirement.
-			if req.Sources.VerifiedFor != nil {
-				for _, verified := range verifiedFreight.Items {
-					// NB: If there is no verification timestamp for the Freight,
-					// then we cannot determine how long it has been verified in
-					// the upstream Stage. In this case, we skip the Freight
-					// from the list of promotable Freight.
-					if verifiedSince := verified.Status.VerifiedIn[upstream].VerifiedAt; verifiedSince != nil {
-						if time.Since(verifiedSince.Time) > req.Sources.VerifiedFor.Duration {
-							promotableFreight[originID] = append(promotableFreight[originID], verified)
-						}
-					}
-				}
-
-				// Continue to the next Stage in the list of upstream Stages.
-				continue
-			}
-
-			// We have no specific requirement for how long the Freight has
-			// been verified in the upstream Stage, so we can add all verified
-			// Freight to the promotable list.
-			promotableFreight[originID] = append(promotableFreight[originID], verifiedFreight.Items...)
-		}
-
-		// Get Freight approved for the Stage.
-		var approvedFreight kargoapi.FreightList
-		if err := r.client.List(
-			ctx,
-			&approvedFreight,
-			client.InNamespace(stage.Namespace),
-			client.MatchingFieldsSelector{
-				Selector: fields.AndSelectors(
-					// TODO(hidde): once we support more Freight origin
-					// kinds, we need to adjust this.
-					fields.OneTermEqualSelector(
-						indexer.FreightByWarehouseField,
-						req.Origin.Name,
-					),
-					fields.OneTermEqualSelector(
-						indexer.FreightApprovedForStagesField,
-						stage.Name,
-					),
-				),
-			},
-		); err != nil {
-			return nil, fmt.Errorf(
-				"error listing Freight approved for Stage %q in namespace %q: %w",
-				stage.Name,
-				stage.Namespace,
-				err,
-			)
-		}
-		promotableFreight[originID] = append(promotableFreight[originID], approvedFreight.Items...)
+	availableFreight, err := stage.ListAvailableFreight(ctx, r.client)
+	if err != nil {
+		return nil, fmt.Errorf(
+			"error listing available Freight for Stage %q: %w",
+			stage.Name, err,
+		)
 	}
 
-	// As the same Freight may be available due to multiple reasons (e.g.
-	// verified in upstream Stages and approved), we need to deduplicate
-	// the list.
-	for origin := range promotableFreight {
-		slices.SortFunc(promotableFreight[origin], func(lhs, rhs kargoapi.Freight) int {
-			return strings.Compare(lhs.Name, rhs.Name)
-		})
-		promotableFreight[origin] = slices.CompactFunc(promotableFreight[origin], func(lhs, rhs kargoapi.Freight) bool {
-			return lhs.Name == rhs.Name
-		})
+	var promotableFreight = make(map[string][]kargoapi.Freight)
+	for _, freight := range availableFreight {
+		originID := freight.Origin.String()
+		if _, ok := promotableFreight[originID]; !ok {
+			promotableFreight[originID] = []kargoapi.Freight{freight}
+		} else {
+			promotableFreight[originID] = append(promotableFreight[originID], freight)
+		}
 	}
 
 	return promotableFreight, nil

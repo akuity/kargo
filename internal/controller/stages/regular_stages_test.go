@@ -4358,6 +4358,12 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 						},
 					},
 				},
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "fake-project",
+						Name:      "test-warehouse",
+					},
+				},
 				&kargoapi.Freight{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace:         "fake-project",
@@ -4421,7 +4427,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 					FreightHistory: kargoapi.FreightHistory{
 						{
 							Freight: map[string]kargoapi.FreightReference{
-								"test-warehouse": {Name: "test-freight-1"},
+								"Warehouse/test-warehouse": {Name: "test-freight-1"},
 							},
 						},
 					},
@@ -4441,11 +4447,21 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 						},
 					},
 				},
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "fake-project",
+						Name:      "test-warehouse",
+					},
+				},
 				&kargoapi.Freight{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace:         "fake-project",
 						Name:              "test-freight-1",
 						CreationTimestamp: metav1.Time{Time: now},
+					},
+					Origin: kargoapi.FreightOrigin{
+						Kind: kargoapi.FreightOriginKindWarehouse,
+						Name: "test-warehouse",
 					},
 				},
 			},
@@ -4499,11 +4515,21 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 						},
 					},
 				},
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "fake-project",
+						Name:      "test-warehouse",
+					},
+				},
 				&kargoapi.Freight{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace:         "fake-project",
 						Name:              "test-freight-1",
 						CreationTimestamp: metav1.Time{Time: now},
+					},
+					Origin: kargoapi.FreightOrigin{
+						Kind: kargoapi.FreightOriginKindWarehouse,
+						Name: "test-warehouse",
 					},
 				},
 				&kargoapi.Promotion{
@@ -4571,11 +4597,21 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 						},
 					},
 				},
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "fake-project",
+						Name:      "test-warehouse",
+					},
+				},
 				&kargoapi.Freight{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace:         "fake-project",
 						Name:              "test-freight-1",
 						CreationTimestamp: metav1.Time{Time: now},
+					},
+					Origin: kargoapi.FreightOrigin{
+						Kind: kargoapi.FreightOriginKindWarehouse,
+						Name: "test-warehouse",
 					},
 					Status: kargoapi.FreightStatus{
 						VerifiedIn: map[string]kargoapi.VerifiedStage{
@@ -4636,11 +4672,21 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 						},
 					},
 				},
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "fake-project",
+						Name:      "test-warehouse",
+					},
+				},
 				&kargoapi.Freight{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace:         "fake-project",
 						Name:              "test-freight-1",
 						CreationTimestamp: metav1.Time{Time: now},
+					},
+					Origin: kargoapi.FreightOrigin{
+						Kind: kargoapi.FreightOriginKindWarehouse,
+						Name: "test-warehouse",
 					},
 					Status: kargoapi.FreightStatus{
 						VerifiedIn: map[string]kargoapi.VerifiedStage{
@@ -4654,6 +4700,10 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 						Namespace:         "fake-project",
 						Name:              "test-freight-2",
 						CreationTimestamp: metav1.Time{Time: now.Add(-2 * time.Hour)},
+					},
+					Origin: kargoapi.FreightOrigin{
+						Kind: kargoapi.FreightOriginKindWarehouse,
+						Name: "test-warehouse",
 					},
 					Status: kargoapi.FreightStatus{
 						VerifiedIn: map[string]kargoapi.VerifiedStage{
@@ -4727,6 +4777,12 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 								AutoPromotionEnabled: true,
 							},
 						},
+					},
+				},
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "fake-project",
+						Name:      "test-warehouse",
 					},
 				},
 				&kargoapi.Freight{
@@ -4804,6 +4860,18 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 								AutoPromotionEnabled: true,
 							},
 						},
+					},
+				},
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "fake-project",
+						Name:      "warehouse-1",
+					},
+				},
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "fake-project",
+						Name:      "warehouse-2",
 					},
 				},
 				&kargoapi.Freight{
@@ -4890,6 +4958,12 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 						},
 					},
 				},
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "fake-project",
+						Name:      "test-warehouse",
+					},
+				},
 				&kargoapi.Freight{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace:         "fake-project",
@@ -4955,13 +5029,22 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 						},
 					},
 				},
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "fake-project",
+						Name:      "test-warehouse",
+					},
+				},
 				&kargoapi.Freight{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace:         "fake-project",
 						Name:              "test-freight",
 						CreationTimestamp: metav1.Time{Time: now},
 					},
-
+					Origin: kargoapi.FreightOrigin{
+						Kind: kargoapi.FreightOriginKindWarehouse,
+						Name: "test-warehouse",
+					},
 					Status: kargoapi.FreightStatus{
 						VerifiedIn: map[string]kargoapi.VerifiedStage{
 							"upstream-stage": {},
@@ -5020,6 +5103,12 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 								AutoPromotionEnabled: true,
 							},
 						},
+					},
+				},
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "fake-project",
+						Name:      "test-warehouse",
 					},
 				},
 				&kargoapi.Freight{

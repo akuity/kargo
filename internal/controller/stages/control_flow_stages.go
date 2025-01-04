@@ -3,14 +3,11 @@ package stages
 import (
 	"context"
 	"fmt"
-	"slices"
-	"strings"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
-	"k8s.io/apimachinery/pkg/types"
 	kerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/ptr"
@@ -249,14 +246,7 @@ func (r *ControlFlowStageReconciler) reconcile(
 
 	// Get the available Freight for the Stage.
 	logger.Debug("getting available Freight")
-	freight, err := r.getAvailableFreight(
-		ctx,
-		types.NamespacedName{
-			Namespace: stage.Namespace,
-			Name:      stage.Name,
-		},
-		stage.Spec.RequestedFreight,
-	)
+	freight, err := stage.ListAvailableFreight(ctx, r.client)
 	if err != nil {
 		newStatus.Message = err.Error()
 		return newStatus, err
@@ -264,14 +254,14 @@ func (r *ControlFlowStageReconciler) reconcile(
 
 	// If there is new Freight to verify, do so.
 	if len(freight) > 0 {
-		logger.Debug("found new Freight", "count", len(freight))
-
-		logger.Debug("verifying Freight")
-		if err = r.verifyFreight(ctx, stage, freight, startTime, time.Now()); err != nil {
+		newlyVerified, err := r.markFreightVerifiedForStage(ctx, stage, freight, startTime, time.Now())
+		if newlyVerified > 0 {
+			logger.Debug("verified Freight", "count", newlyVerified)
+		}
+		if err != nil {
 			newStatus.Message = err.Error()
 			return newStatus, err
 		}
-		logger.Debug("verified Freight", "count", len(freight))
 	}
 
 	return newStatus, nil
@@ -310,114 +300,28 @@ func (r *ControlFlowStageReconciler) initializeStatus(stage *kargoapi.Stage) kar
 	return *newStatus
 }
 
-// getAvailableFreight returns the list of available Freight for the given
-// Stage. Freight is considered available if it can be sourced directly from
-// the Warehouse or if it has been verified in upstream Stages. It excludes
-// Freight that has already been verified in the given Stage.
-func (r *ControlFlowStageReconciler) getAvailableFreight(
-	ctx context.Context,
-	stage types.NamespacedName,
-	requested []kargoapi.FreightRequest,
-) ([]kargoapi.Freight, error) {
-	var availableFreight []kargoapi.Freight
-	for _, req := range requested {
-		// Get Freight directly from the Warehouse if allowed.
-		if req.Sources.Direct && req.Origin.Kind == kargoapi.FreightOriginKindWarehouse {
-			var directFreight kargoapi.FreightList
-			if err := r.client.List(
-				ctx,
-				&directFreight,
-				client.InNamespace(stage.Namespace),
-				client.MatchingFieldsSelector{
-					Selector: fields.OneTermEqualSelector(indexer.FreightByWarehouseField, req.Origin.Name),
-				},
-			); err != nil {
-				return nil, fmt.Errorf(
-					"error listing Freight from %q in namespace %q: %w",
-					req.Origin.String(),
-					stage.Namespace,
-					err,
-				)
-			}
-
-			for _, f := range directFreight.Items {
-				// TODO(hidde): It would be better to use a fields.AndSelectors
-				// above in combination with a fields.OneTermNotEqualSelector
-				// to filter out Freight that has already been verified in this
-				// Stage.
-				//
-				// However, the fake client does not support != field selectors,
-				// and we would need a "real" Kubernetes API server to test it.
-				// Until we (finally) make use of testenv, this will have to do.
-				if _, ok := f.Status.VerifiedIn[stage.Name]; ok {
-					continue
-				}
-				availableFreight = append(availableFreight, f)
-			}
-		}
-
-		// Get Freight verified in upstream Stages.
-		for _, upstream := range req.Sources.Stages {
-			var verifiedFreight kargoapi.FreightList
-			if err := r.client.List(
-				ctx,
-				&verifiedFreight,
-				client.InNamespace(stage.Namespace),
-				client.MatchingFieldsSelector{
-					Selector: fields.OneTermEqualSelector(indexer.FreightByVerifiedStagesField, upstream),
-				},
-			); err != nil {
-				return nil, fmt.Errorf(
-					"error listing Freight from %q in namespace %q: %w",
-					upstream,
-					stage.Namespace,
-					err,
-				)
-			}
-
-			for _, f := range verifiedFreight.Items {
-				// TODO(hidde): It would be better to use a fields.AndSelectors
-				// above in combination with a fields.OneTermNotEqualSelector
-				// to filter out Freight that has already been verified in this
-				// Stage.
-				//
-				// However, the fake client does not support != field selectors,
-				// and we would need a "real" Kubernetes API server to test it.
-				// Until we (finally) make use of testenv, this will have to do.
-				if _, ok := f.Status.VerifiedIn[stage.Name]; ok {
-					continue
-				}
-				availableFreight = append(availableFreight, f)
-			}
-		}
-	}
-
-	// As the same Freight may be available due to multiple reasons (e.g. direct
-	// from Warehouse and verified in upstream Stages), we need to deduplicate
-	// the list.
-	slices.SortFunc(availableFreight, func(lhs, rhs kargoapi.Freight) int {
-		return strings.Compare(lhs.Name, rhs.Name)
-	})
-	availableFreight = slices.CompactFunc(availableFreight, func(lhs, rhs kargoapi.Freight) bool {
-		return lhs.Name == rhs.Name
-	})
-
-	return availableFreight, nil
-}
-
-// verifyFreight marks the given Freight as verified in the given Stage. It
-// records an event for each Freight that is successfully verified.
-func (r *ControlFlowStageReconciler) verifyFreight(
+// markFreightVerifiedForStage marks the given Freight as verified in the given
+// Stage, unless it already has been. It records an event for each Freight newly
+// marked as verified and returns the total number of Freight that were
+// marked as verified.
+func (r *ControlFlowStageReconciler) markFreightVerifiedForStage(
 	ctx context.Context,
 	stage *kargoapi.Stage,
 	freight []kargoapi.Freight,
 	startTime, finishTime time.Time,
-) error {
+) (int, error) {
 	logger := logging.LoggerFromContext(ctx)
 
+	var newlyVerified int
 	var failures int
 	for _, f := range freight {
 		// Skip Freight that has already been verified in this Stage.
+		//
+		// TODO(hidde + krancour): It would be better to filter out Freight that has
+		// already been verified in this Stage at retrieval time, but the fake
+		// client does not support != field selectors, so we would need a "real"
+		// Kubernetes API server to test it. Until we (finally) make use of testenv,
+		// this will have to do.
 		if _, ok := f.Status.VerifiedIn[stage.Name]; ok {
 			continue
 		}
@@ -444,6 +348,8 @@ func (r *ControlFlowStageReconciler) verifyFreight(
 			continue
 		}
 
+		newlyVerified++
+
 		// Record an event for the verification.
 		r.eventRecorder.AnnotatedEventf(
 			stage,
@@ -466,9 +372,9 @@ func (r *ControlFlowStageReconciler) verifyFreight(
 	if failures > 0 {
 		// Return an error if any of the verifications failed.
 		// This will cause the Stage to be requeued.
-		return fmt.Errorf("failed to verify %d Freight", failures)
+		return newlyVerified, fmt.Errorf("failed to verify %d Freight", failures)
 	}
-	return nil
+	return newlyVerified, nil
 }
 
 // handleDelete handles the deletion of the given control flow Stage. It clears
