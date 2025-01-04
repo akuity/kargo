@@ -84,27 +84,3 @@ func GetFreightByAlias(
 	}
 	return &freightList.Items[0], nil
 }
-
-// IsFreightAvailable answers whether the specified Freight is available to the
-// specified Stage.
-func IsFreightAvailable(stage *Stage, freight *Freight) bool {
-	if stage == nil || freight == nil || stage.Namespace != freight.Namespace {
-		return false
-	}
-	if _, approved := freight.Status.ApprovedFor[stage.Name]; approved {
-		return true
-	}
-	for _, req := range stage.Spec.RequestedFreight {
-		if freight.Origin.Equals(&req.Origin) {
-			if req.Sources.Direct {
-				return true
-			}
-			for _, source := range req.Sources.Stages {
-				if _, verified := freight.Status.VerifiedIn[source]; verified {
-					return true
-				}
-			}
-		}
-	}
-	return false
-}

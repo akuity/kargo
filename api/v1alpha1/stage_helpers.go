@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
+	"strings"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -95,6 +97,100 @@ func GetStage(
 		)
 	}
 	return &stage, nil
+}
+
+// ListAvailableFreight lists all Freight available to the Stage for any reason.
+// This includes:
+//
+// 1. Any Freight from a Warehouse that the Stage subscribes to directly
+// 2. Any Freight that is verified in any upstream Stages (with any applicable soak time elapsed)
+// 3. Any Freight that is approved for the Stage
+func (s *Stage) ListAvailableFreight(
+	ctx context.Context,
+	c client.Client,
+) ([]Freight, error) {
+	availableFreight := []Freight{}
+
+	for _, req := range s.Spec.RequestedFreight {
+		// Get the Warehouse of origin
+		warehouse, err := GetWarehouse(
+			ctx,
+			c,
+			types.NamespacedName{
+				Namespace: s.Namespace,
+				Name:      req.Origin.Name,
+			},
+		)
+		if err != nil {
+			return nil, err
+		}
+		if warehouse == nil {
+			return nil, fmt.Errorf(
+				"Warehouse %q not found in namespace %q",
+				req.Origin.Name,
+				s.Namespace,
+			)
+		}
+		// Get applicable Freight from the Warehouse
+		var listOpts *ListWarehouseFreightOptions
+		if !req.Sources.Direct {
+			listOpts = &ListWarehouseFreightOptions{
+				ApprovedFor: s.Name,
+				VerifiedIn:  req.Sources.Stages,
+			}
+			if verifiedFor := req.Sources.VerifiedFor; verifiedFor != nil {
+				listOpts.VerifiedBefore = &metav1.Time{Time: time.Now().Add(-verifiedFor.Duration)}
+			}
+		}
+		freightFromWarehouse, err := warehouse.ListFreight(ctx, c, listOpts)
+		if err != nil {
+			return nil, err
+		}
+		availableFreight = append(availableFreight, freightFromWarehouse...)
+	}
+
+	// Sort and de-dupe the available Freight
+	slices.SortFunc(availableFreight, func(lhs, rhs Freight) int {
+		return strings.Compare(lhs.Name, rhs.Name)
+	})
+	availableFreight = slices.CompactFunc(availableFreight, func(lhs, rhs Freight) bool {
+		return lhs.Name == rhs.Name
+	})
+
+	return availableFreight, nil
+}
+
+// IsFreightAvailable answers whether the specified Freight is available to the
+// Stage.
+func (s *Stage) IsFreightAvailable(freight *Freight) bool {
+	if s == nil || freight == nil || s.Namespace != freight.Namespace {
+		return false
+	}
+	if _, approved := freight.Status.ApprovedFor[s.Name]; approved {
+		return true
+	}
+	for _, req := range s.Spec.RequestedFreight {
+		if freight.Origin.Equals(&req.Origin) {
+			if req.Sources.Direct {
+				return true
+			}
+			for _, source := range req.Sources.Stages {
+				if _, verified := freight.Status.VerifiedIn[source]; verified {
+					if req.Sources.VerifiedFor == nil {
+						return true // No soak time required
+					}
+					// NB: If there is no verification timestamp for the Freight, then we
+					// cannot determine how long it has been verified in the upstream
+					// Stage. In this case, we keep looking.
+					verifiedSince := freight.Status.VerifiedIn[source].VerifiedAt
+					if verifiedSince != nil {
+						return time.Since(verifiedSince.Time) > req.Sources.VerifiedFor.Duration
+					}
+				}
+			}
+		}
+	}
+	return false
 }
 
 // RefreshStage forces reconciliation of a Stage by setting an annotation
