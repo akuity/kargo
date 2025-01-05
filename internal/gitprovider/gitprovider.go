@@ -43,7 +43,7 @@ type Interface interface {
 	// CreatePullRequest creates a pull request.
 	CreatePullRequest(context.Context, *CreatePullRequestOpts) (*PullRequest, error)
 
-	// GetPullRequest Get gets an existing pull request by ID
+	// GetPullRequest gets an existing pull request by ID
 	GetPullRequest(context.Context, int64) (*PullRequest, error)
 
 	// ListPullRequests lists pull requests by the given options. Implementations
