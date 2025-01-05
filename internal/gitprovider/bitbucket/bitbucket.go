@@ -7,6 +7,7 @@ import (
 	"github.com/akuity/kargo/internal/git"
 	"github.com/akuity/kargo/internal/gitprovider"
 	"strconv"
+	"time"
 
 	"github.com/ktrysmt/go-bitbucket"
 
@@ -144,18 +145,40 @@ func (p *provider) ListPullRequests(
 	if err != nil {
 		return nil, err
 	}
+
+	// Type assert bbPRs to the correct type
+	prList, ok := bbPRs.([]map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("unexpected type for bbPRs: %T", bbPRs)
+	}
+
 	var prs []gitprovider.PullRequest
-	for _, bbPR := range bbPRs {
+	for _, bbPR := range prList {
 		prs = append(prs, convertBitbucketPR(bbPR))
 	}
 	return prs, nil
 }
 
-func convertBitbucketPR(pr bitbucket.PullRequestsOptions) gitprovider.PullRequest {
+func convertBitbucketPR(pr interface{}) gitprovider.PullRequest {
+	bbPR, ok := pr.(bbPullRequest)
+	if !ok {
+		return gitprovider.PullRequest{}
+	}
+
+	createdOn, err := time.Parse("2006-01-02T15:04:05Z", bbPR.CreatedOn)
+	if err != nil {
+		fmt.Println("Error parsing CreatedOn:", err)
+	}
+
 	return gitprovider.PullRequest{
-		Number: pr.ID,
-		URL:    pr.Links.HTML.Href,
-		// TODO: Need to add fields currently bitbucket library only return interface{}.
+		Number:         bbPR.ID,
+		URL:            bbPR.Links.HTML.Href,
+		Open:           bbPR.State == "OPEN",
+		Merged:         bbPR.State == "MERGED",
+		MergeCommitSHA: bbPR.MergeCommit.Hash,
+		Object:         pr,
+		HeadSHA:        bbPR.Source.Commit.Hash,
+		CreatedAt:      &createdOn,
 	}
 }
 
