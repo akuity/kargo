@@ -10,7 +10,10 @@ export const DeepLinkPromotionStep = ({
   return (
     <PluginErrorBoundary>
       <div
-        className={classNames(className, 'bg-gray-100 px-2 py-1 rounded-md text-sm w-fit')}
+        className={classNames(
+          className,
+          'bg-gray-100 px-2 py-1 rounded-md text-sm w-fit flex gap-2'
+        )}
         onClick={(e) => {
           // prevent opening the collapsible menu
           e.stopPropagation();

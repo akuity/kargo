@@ -49,7 +49,12 @@ export const EditAnalysisTemplateModal = ({ visible, hide, templateName, project
       },
       {
         onSuccess: () =>
-          queryClient.invalidateQueries({ queryKey: createConnectQueryKey(listAnalysisTemplates) })
+          queryClient.invalidateQueries({
+            queryKey: createConnectQueryKey({
+              schema: listAnalysisTemplates,
+              cardinality: 'finite'
+            })
+          })
       }
     );
   });

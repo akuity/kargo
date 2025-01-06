@@ -21,7 +21,9 @@ export const WarehouseActions = ({ warehouse }: { warehouse: Warehouse }) => {
 
   const { mutate, isPending: isLoadingDelete } = useMutation(deleteWarehouse, {
     onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: createConnectQueryKey(listWarehouses) })
+      queryClient.invalidateQueries({
+        queryKey: createConnectQueryKey({ schema: listWarehouses, cardinality: 'finite' })
+      })
   });
 
   const onClose = () => navigate(generatePath(paths.project, { name: projectName }));

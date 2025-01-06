@@ -100,8 +100,6 @@ function main() {
   buf generate api \
     --include-imports \
     --template=buf.ui.gen.yaml
-  pnpm --dir=ui install --dev
-  pnpm run --dir=ui generate:proto-extensions
 }
 
 (

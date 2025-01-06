@@ -5,10 +5,11 @@ import { format, formatDistance } from 'date-fns';
 import { useEffect, useState } from 'react';
 
 import { Freight } from '@ui/gen/v1alpha1/generated_pb';
+import { timestampDate, PlainMessageRecursive } from '@ui/utils/connectrpc-utils';
 
 import { getAlias } from '../common/utils';
 
-export const FreightItemLabel = ({ freight }: { freight?: Freight }) => {
+export const FreightItemLabel = ({ freight }: { freight?: PlainMessageRecursive<Freight> }) => {
   const [copied, setCopied] = useState<boolean>(false);
 
   useEffect(() => {
@@ -31,12 +32,16 @@ export const FreightItemLabel = ({ freight }: { freight?: Freight }) => {
       : alias;
 
   const humanReadable = formatDistance(
-    freight?.metadata?.creationTimestamp?.toDate() || 0,
+    timestampDate(freight?.metadata?.creationTimestamp) || 0,
     new Date(),
     {
       addSuffix: true
     }
   );
+
+  const freightCreationTimestamp = freight?.metadata?.creationTimestamp
+    ? timestampDate(freight?.metadata?.creationTimestamp)
+    : null;
 
   return (
     (alias || id) && (
@@ -64,10 +69,10 @@ export const FreightItemLabel = ({ freight }: { freight?: Freight }) => {
               <Info title='ID'>
                 <div className='font-mono'>{id}</div>
               </Info>
-              {freight?.metadata?.creationTimestamp && (
+              {freightCreationTimestamp && (
                 <Info title='Created'>
                   <div className='text-right'>
-                    {format(freight?.metadata?.creationTimestamp.toDate(), 'MMM do yyyy HH:mm:ss')}
+                    {format(freightCreationTimestamp, 'MMM do yyyy HH:mm:ss')}
                     <br />({humanReadable})
                   </div>
                 </Info>

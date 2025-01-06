@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/yaml"
 )
 
 func Test_yamlUpdater_validate(t *testing.T) {
@@ -191,13 +192,13 @@ func Test_yamlUpdater_updateValuesFile(t *testing.T) {
 	tests := []struct {
 		name          string
 		valuesContent string
-		changes       map[string]string
+		updates       []yaml.Update
 		assertions    func(*testing.T, string, error)
 	}{
 		{
 			name:          "successful update",
 			valuesContent: "key: value\n",
-			changes:       map[string]string{"key": "newvalue"},
+			updates:       []yaml.Update{{Key: "key", Value: "newvalue"}},
 			assertions: func(t *testing.T, valuesFilePath string, err error) {
 				require.NoError(t, err)
 
@@ -210,7 +211,7 @@ func Test_yamlUpdater_updateValuesFile(t *testing.T) {
 		{
 			name:          "file does not exist",
 			valuesContent: "",
-			changes:       map[string]string{"key": "value"},
+			updates:       []yaml.Update{{Key: "key", Value: "value"}},
 			assertions: func(t *testing.T, valuesFilePath string, err error) {
 				require.ErrorContains(t, err, "no such file or directory")
 				require.NoFileExists(t, valuesFilePath)
@@ -219,7 +220,7 @@ func Test_yamlUpdater_updateValuesFile(t *testing.T) {
 		{
 			name:          "empty changes",
 			valuesContent: "key: value\n",
-			changes:       map[string]string{},
+			updates:       []yaml.Update{},
 			assertions: func(t *testing.T, valuesFilePath string, err error) {
 				require.NoError(t, err)
 				require.FileExists(t, valuesFilePath)
@@ -242,7 +243,7 @@ func Test_yamlUpdater_updateValuesFile(t *testing.T) {
 				require.NoError(t, err)
 			}
 
-			err := runner.updateFile(workDir, path.Base(valuesFile), tt.changes)
+			err := runner.updateFile(workDir, path.Base(valuesFile), tt.updates)
 			tt.assertions(t, valuesFile, err)
 		})
 	}
@@ -252,7 +253,7 @@ func Test_yamlUpdater_generateCommitMessage(t *testing.T) {
 	tests := []struct {
 		name       string
 		path       string
-		changes    map[string]string
+		updates    []YAMLUpdate
 		assertions func(*testing.T, string)
 	}{
 		{
@@ -265,7 +266,7 @@ func Test_yamlUpdater_generateCommitMessage(t *testing.T) {
 		{
 			name:    "single change",
 			path:    "values.yaml",
-			changes: map[string]string{"image": "repo/image:tag1"},
+			updates: []YAMLUpdate{{Key: "image", Value: "repo/image:tag1"}},
 			assertions: func(t *testing.T, result string) {
 				assert.Equal(t, `Updated values.yaml
 
@@ -275,9 +276,9 @@ func Test_yamlUpdater_generateCommitMessage(t *testing.T) {
 		{
 			name: "multiple changes",
 			path: "chart/values.yaml",
-			changes: map[string]string{
-				"image1": "repo1/image1:tag1",
-				"image2": "repo2/image2:tag2",
+			updates: []YAMLUpdate{
+				{Key: "image1", Value: "repo1/image1:tag1"},
+				{Key: "image2", Value: "repo2/image2:tag2"},
 			},
 			assertions: func(t *testing.T, result string) {
 				assert.Equal(t, `Updated chart/values.yaml
@@ -292,7 +293,7 @@ func Test_yamlUpdater_generateCommitMessage(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := runner.generateCommitMessage(tt.path, tt.changes)
+			result := runner.generateCommitMessage(tt.path, tt.updates)
 			tt.assertions(t, result)
 		})
 	}

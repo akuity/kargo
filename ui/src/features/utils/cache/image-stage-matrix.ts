@@ -1,9 +1,16 @@
+import { create } from '@bufbuild/protobuf';
 import { createConnectQueryKey } from '@connectrpc/connect-query';
 
 import { queryClient } from '@ui/config/query-client';
+import { transportWithAuth } from '@ui/config/transport';
 import { PromotionStatusPhase } from '@ui/features/common/promotion-status/utils';
 import { listImages } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
-import { ImageStageMap, ListImagesResponse, TagMap } from '@ui/gen/service/v1alpha1/service_pb';
+import {
+  ImageStageMap,
+  ListImagesRequestSchema,
+  ListImagesResponse,
+  TagMap
+} from '@ui/gen/service/v1alpha1/service_pb';
 import { Stage } from '@ui/gen/v1alpha1/generated_pb';
 
 export default {
@@ -37,7 +44,12 @@ export default {
     }
 
     const imageStageMatrix = (queryClient.getQueryData(
-      createConnectQueryKey(listImages, { project: projectName })
+      createConnectQueryKey({
+        schema: listImages,
+        input: { project: projectName },
+        cardinality: 'finite',
+        transport: transportWithAuth
+      })
     ) || {}) as ListImagesResponse;
 
     const lastPromotionFreight = lastPromotion?.freight;
@@ -55,10 +67,8 @@ export default {
     }
 
     for (const image of images) {
-      // @ts-expect-error repoURL is required field when create warehouse
       const repoURL: string = image.repoURL;
 
-      // @ts-expect-error tag is freight tag that was available in freight when promoted
       const tag: string = image.tag;
 
       // check the existance in matrix
@@ -95,7 +105,12 @@ export default {
     }
 
     queryClient.setQueryData(
-      createConnectQueryKey(listImages, { project: projectName }),
+      createConnectQueryKey({
+        schema: listImages,
+        input: create(ListImagesRequestSchema, { project: projectName }),
+        cardinality: 'finite',
+        transport: transportWithAuth
+      }),
       imageStageMatrix
     );
   }

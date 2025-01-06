@@ -2,12 +2,9 @@ package yaml
 
 import (
 	"fmt"
-	"strings"
 
 	yaml "sigs.k8s.io/yaml/goyaml.v3"
 )
-
-const pathSeparator = "."
 
 // FieldNotFoundErr is an error type that is returned when a field is not found
 // in the YAML document.
@@ -24,7 +21,10 @@ func (e FieldNotFoundErr) Error() string {
 // and decodes it into the provided value. The path is specified using a
 // dot-separated string, similar to the UpdateField function.
 func DecodeField(node *yaml.Node, path string, out any) error {
-	parts := strings.Split(path, pathSeparator)
+	parts, err := splitKey(path)
+	if err != nil {
+		return err
+	}
 	targetNode, err := findNode(node, parts)
 	if err != nil {
 		return err

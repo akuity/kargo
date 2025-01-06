@@ -978,7 +978,8 @@ func Test_argoCDUpdater_mustPerformUpdate(t *testing.T) {
 				}
 			},
 			assertions: func(t *testing.T, phase argocd.OperationPhase, mustUpdate bool, err error) {
-				require.ErrorContains(t, err, "current operation was not initiated by")
+				require.ErrorContains(t, err, "current operation was initiated by")
+				require.ErrorContains(t, err, "and not by")
 				require.ErrorContains(t, err, "waiting for operation to complete")
 				require.Equal(t, argocd.OperationRunning, phase)
 				require.False(t, mustUpdate)

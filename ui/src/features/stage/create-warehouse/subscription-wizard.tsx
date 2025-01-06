@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { faDocker, faGit } from '@fortawesome/free-brands-svg-icons';
 import { faEye, faTrash, IconDefinition } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -16,6 +15,7 @@ import { ObjectFieldTemplate } from '@ui/features/common/form/rjsf/object-field-
 import { IconSetByKargoTerminology } from '@ui/features/common/icons';
 import { ObjectDescription } from '@ui/features/common/object-description';
 import { RepoSubscription } from '@ui/gen/v1alpha1/generated_pb';
+import { PlainMessage } from '@ui/utils/connectrpc-utils';
 
 import { warehouseCreateFormJSONSchema } from './schema';
 
@@ -25,7 +25,7 @@ const subscriptionTypes = Object.keys(
 );
 
 export const SubscriptionWizard = (props: {
-  subscriptions: PlainMessage<RepoSubscription>[];
+  subscriptions: RepoSubscription[];
   onChange(subscriptions: PlainMessage<RepoSubscription>[]): void;
 }) => {
   const [selectedNewSubscription, setSelectedNewSubscription] = useState(
@@ -110,7 +110,7 @@ export const SubscriptionWizard = (props: {
 };
 
 SubscriptionWizard.Subscription = (props: {
-  subscription: PlainMessage<RepoSubscription>;
+  subscription: RepoSubscription;
   className?: string;
   onDelete(): void;
 }) => {
@@ -118,7 +118,7 @@ SubscriptionWizard.Subscription = (props: {
 
   // one of git, image or chart
   const subscriptionType = (Object.keys(props.subscription)[0] || '') as
-    | keyof PlainMessage<RepoSubscription>
+    | keyof RepoSubscription
     | '';
 
   if (subscriptionType === '') {
@@ -154,7 +154,9 @@ SubscriptionWizard.Subscription = (props: {
             Modal.confirm({
               width: '756px',
               title: subscriptionType,
-              content: <ObjectDescription data={props.subscription[subscriptionType] || {}} />,
+              content: (
+                <ObjectDescription data={(props.subscription[subscriptionType] as object) || {}} />
+              ),
               cancelButtonProps: {
                 hidden: true
               }
