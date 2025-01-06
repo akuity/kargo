@@ -69,6 +69,15 @@ func (r *ControlFlowStageReconciler) SetupWithManager(
 		return fmt.Errorf("error setting up index for Freight by Warehouse: %w", err)
 	}
 
+	if err := sharedIndexer.IndexField(
+		ctx,
+		&kargoapi.Freight{},
+		indexer.FreightByCurrentStagesField,
+		indexer.FreightByCurrentStages,
+	); err != nil {
+		return fmt.Errorf("error setting up index for Freight by current Stages: %w", err)
+	}
+
 	// This index is used to find and watch all Freight that have been verified
 	// in a specific Stage (upstream) to which the control flow Stage is the
 	// downstream consumer.

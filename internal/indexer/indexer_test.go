@@ -443,6 +443,40 @@ func TestFreightByWarehouse(t *testing.T) {
 	}
 }
 
+func TestFreightByCurrentStages(t *testing.T) {
+	testCases := []struct {
+		name     string
+		freight  *kargoapi.Freight
+		expected []string
+	}{
+		{
+			name:     "Freight is not currently in use by any Stages",
+			freight:  &kargoapi.Freight{},
+			expected: []string{},
+		},
+		{
+			name: "Freight is currently in use by a Stage",
+			freight: &kargoapi.Freight{
+				Status: kargoapi.FreightStatus{
+					CurrentlyIn: map[string]kargoapi.CurrentStage{"fake-stage": {}},
+				},
+			},
+			expected: []string{"fake-stage"},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Run(testCase.name, func(t *testing.T) {
+				require.Equal(
+					t,
+					testCase.expected,
+					FreightByCurrentStages(testCase.freight),
+				)
+			})
+		})
+	}
+}
+
 func TestFreightByVerifiedStages(t *testing.T) {
 	testCases := []struct {
 		name     string

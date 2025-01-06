@@ -22,9 +22,10 @@ import (
 const (
 	EventsByInvolvedObjectAPIGroupField = "involvedObject.apiGroup"
 
+	FreightByWarehouseField       = "warehouse"
+	FreightByCurrentStagesField   = "currentlyIn"
 	FreightByVerifiedStagesField  = "verifiedIn"
 	FreightApprovedForStagesField = "approvedFor"
-	FreightByWarehouseField       = "warehouse"
 
 	PromotionsByStageAndFreightField = "stageAndFreight"
 	PromotionsByStageField           = "stage"
@@ -292,6 +293,23 @@ func FreightByWarehouse(obj client.Object) []string {
 		return []string{freight.Origin.Name}
 	}
 	return nil
+}
+
+// FreightByCurrentStages is a client.IndexerFunc that indexes Freight by the
+// Stages in which it is currently in use.
+func FreightByCurrentStages(obj client.Object) []string {
+	freight, ok := obj.(*kargoapi.Freight)
+	if !ok {
+		return nil
+	}
+
+	currentStages := make([]string, len(freight.Status.CurrentlyIn))
+	var i int
+	for stage := range freight.Status.CurrentlyIn {
+		currentStages[i] = stage
+		i++
+	}
+	return currentStages
 }
 
 // FreightByVerifiedStages is a client.IndexerFunc that indexes Freight by the
