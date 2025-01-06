@@ -172,6 +172,9 @@ api:
     ## @param api.ingress.pathType You may want to use `Prefix` for some controllers (like AWS LoadBalancer Ingress controller), which don't support `/` as wildcard path when pathType is set to `ImplementationSpecific`
     pathType: ImplementationSpecific
 
+  # Force using https in baseUTL. This is useful when terminating TLS on AWS LB and setting api and ingress tls to false.
+  forceHttps: true
+
   service:
     ## @param api.service.type If you're not going to use an ingress controller, you may want to change this value to `LoadBalancer` for production deployments. If running locally, you may want to change it to `NodePort` OR leave it as `ClusterIP` and use `kubectl port-forward` to map a port on the local network interface to the service.
     type: ClusterIP
