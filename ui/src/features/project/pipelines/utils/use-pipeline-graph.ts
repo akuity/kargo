@@ -1,3 +1,4 @@
+import { Edge, MarkerType, Node, Position } from '@xyflow/react';
 import { graphlib, layout } from 'dagre';
 import { useMemo } from 'react';
 
@@ -11,6 +12,7 @@ import {
   DagreNode,
   NewWarehouseNode,
   NodeType,
+  RepoNodeDimensions,
   RepoNodeType,
   getNodeDimensions
 } from '../types';
@@ -60,6 +62,96 @@ const initializeNodes = (
 
   nodes.push(...Object.values(warehouseNodeMap));
   return [nodes, warehouseColorMap];
+};
+
+export const useReactFlowPipelineGraph = (
+  project: string | undefined,
+  stages: Stage[],
+  warehouses: Warehouse[]
+) => {
+  return useMemo(() => {
+    const graph = new graphlib.Graph({ multigraph: true });
+
+    graph.setGraph({ rankdir: 'LR' });
+    graph.setDefaultEdgeLabel(() => ({}));
+
+    // subscriptions and warehouses
+    for (const warehouse of warehouses) {
+      const warehouseNodeIndex = `${warehouse.metadata?.name}`;
+      graph.setNode(warehouseNodeIndex, RepoNodeDimensions());
+
+      for (const subscription of warehouse.spec?.subscriptions || []) {
+        const repoURL =
+          subscription.image?.repoURL || subscription.git?.repoURL || subscription.chart?.repoURL;
+
+        const subscriptionNodeIndex = `${warehouse.metadata?.name}-${repoURL}`;
+
+        graph.setNode(subscriptionNodeIndex, RepoNodeDimensions());
+
+        // subscription -> warehouse
+        graph.setEdge(subscriptionNodeIndex, warehouseNodeIndex);
+      }
+    }
+
+    // stages
+    for (const stage of stages) {
+      const stageNodeIndex = `${stage.metadata?.name}`;
+      graph.setNode(stageNodeIndex, getNodeDimensions(NodeType.STAGE));
+
+      for (const requestedOrigin of stage.spec?.requestedFreight || []) {
+        // check if source is warehouse
+        if (requestedOrigin?.sources?.direct) {
+          const warehouseNodeIndex = `${requestedOrigin.origin?.name}`;
+
+          graph.setEdge(warehouseNodeIndex, stageNodeIndex);
+        }
+
+        // check if source is other stage
+        for (const sourceStage of requestedOrigin?.sources?.stages || []) {
+          graph.setEdge(sourceStage, stageNodeIndex);
+        }
+      }
+    }
+
+    layout(graph, { lablepos: 'c' });
+
+    const reactFlowNodes: Node[] = [];
+    const reactFlowEdges: Edge[] = [];
+
+    for (const node of graph.nodes()) {
+      const dagreNode = graph.node(node);
+
+      reactFlowNodes.push({
+        id: node,
+        position: {
+          x: dagreNode?.x,
+          y: dagreNode?.y
+        },
+        targetPosition: Position.Left,
+        sourcePosition: Position.Right,
+        data: {
+          label: node
+        }
+      });
+    }
+
+    for (const edge of graph.edges()) {
+      reactFlowEdges.push({
+        id: `${edge.v}->${edge.w}`,
+        source: edge.v,
+        target: edge.w,
+        animated: false,
+        markerEnd: {
+          type: MarkerType.ArrowClosed
+        }
+      });
+    }
+
+    return {
+      nodes: reactFlowNodes,
+      edges: reactFlowEdges
+    };
+  }, [project, stages, warehouses]);
 };
 
 export const usePipelineGraph = (

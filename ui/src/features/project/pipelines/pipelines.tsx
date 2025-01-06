@@ -2,21 +2,15 @@ import { useMutation, useQuery } from '@connectrpc/connect-query';
 import { faDocker } from '@fortawesome/free-brands-svg-icons';
 import {
   faChevronDown,
-  faExpand,
-  faEye,
-  faEyeSlash,
-  faFilter,
-  faMagnifyingGlassMinus,
-  faMagnifyingGlassPlus,
   faMasksTheater,
   faMouse,
   faPalette,
-  faRefresh,
   faWandSparkles,
   faWarehouse
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useQueryClient } from '@tanstack/react-query';
+import { ReactFlow } from '@xyflow/react';
 import { Button, Dropdown, Spin, Tooltip, message } from 'antd';
 import classNames from 'classnames';
 import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef } from 'react';
@@ -31,11 +25,7 @@ const StageDetails = lazy(() => import('@ui/features/stage/stage-details'));
 const CreateStage = lazy(() => import('@ui/features/stage/create-stage'));
 const CreateWarehouse = lazy(() => import('@ui/features/stage/create-warehouse/create-warehouse'));
 import { SuspenseSpin } from '@ui/features/common/suspense-spin';
-import {
-  getCurrentFreight,
-  getCurrentFreightWarehouse,
-  mapToNames
-} from '@ui/features/common/utils';
+import { getCurrentFreight, mapToNames } from '@ui/features/common/utils';
 const FreightTimelineHeader = lazy(
   () => import('@ui/features/freight-timeline/freight-timeline-header')
 );
@@ -56,19 +46,14 @@ import { useDocumentEvent } from '@ui/utils/document';
 import { useLocalStorage } from '@ui/utils/use-local-storage';
 
 import { Images } from './images';
-import { RepoNode, RepoNodeDimensions } from './nodes/repo-node';
-import { Nodule, StageNode } from './nodes/stage-node';
 import styles from './project-details.module.less';
-import { CollapseMode, FreightTimelineAction, NodeType } from './types';
-import { LINE_THICKNESS } from './utils/graph';
+import { CollapseMode, FreightTimelineAction } from './types';
 import { isPromoting, usePipelineState } from './utils/state';
-import { usePipelineGraph } from './utils/use-pipeline-graph';
-import {
-  usePipelinesInfiniteCanvas,
-  usePipelineViewPrefHook
-} from './utils/use-pipelines-infinite-canvas';
+import { usePipelineGraph, useReactFlowPipelineGraph } from './utils/use-pipeline-graph';
 import { onError } from './utils/util';
 import { Watcher } from './utils/watcher';
+
+import '@xyflow/react/dist/style.css';
 
 const WarehouseDetails = lazy(() => import('./warehouse/warehouse-details'));
 
@@ -206,7 +191,13 @@ export const Pipelines = ({
     };
   }, [name, client, isVisible]);
 
-  const [nodes, connectors, box, sortedStages, stageColorMap, warehouseColorMap] = usePipelineGraph(
+  const [, , , sortedStages, stageColorMap, warehouseColorMap] = usePipelineGraph(
+    name,
+    data?.stages || [],
+    warehouseData?.warehouses || []
+  );
+
+  const { nodes: reactFlowNodes, edges: reactFlowEdges } = useReactFlowPipelineGraph(
     name,
     data?.stages || [],
     warehouseData?.warehouses || []
@@ -273,26 +264,7 @@ export const Pipelines = ({
     }
   }, [stagesPerFreight, fullFreightById]);
 
-  const canvasNodeRef = useRef<HTMLDivElement | null>(null);
-  const movingObjectsRef = useRef<HTMLDivElement>(null);
-  const zoomRef = useRef<HTMLDivElement>(null);
   const pipelinesConfigRef = useRef<HTMLDivElement>(null);
-
-  // @ts-expect-error project name is must
-  const [pipelineViewPref, setPipelineViewPref] = usePipelineViewPrefHook(name);
-
-  const infinitePipelineCanvas = usePipelinesInfiniteCanvas({
-    refs: {
-      movingObjectsRef,
-      zoomRef,
-      pipelinesConfigRef
-    },
-    onCanvas(node) {
-      canvasNodeRef.current = node;
-    },
-    onMove: setPipelineViewPref,
-    pipelineViewPref
-  });
 
   if (isLoading || isLoadingFreight || isLoadingImages) return <LoadingState />;
 
@@ -384,7 +356,7 @@ export const Pipelines = ({
           </FreightTimelineWrapper>
         </div>
         {/* TODO: Use original canvas approach for greater performance, flexibility and pixel perfect */}
-        <div ref={infinitePipelineCanvas.registerCanvas} className={styles.dag}>
+        <div className={styles.dag}>
           {/* Scroll helper */}
           <div className={styles.pipelinesViewNavigationHelper}>
             <FontAwesomeIcon icon={faMouse} />
@@ -393,25 +365,6 @@ export const Pipelines = ({
           <div className={styles.staticView} ref={pipelinesConfigRef}>
             <div className={styles.pipelinesViewConfig}>
               <div className={styles.toolbar}>
-                <Button
-                  onClick={infinitePipelineCanvas.zoomIn}
-                  icon={<FontAwesomeIcon icon={faMagnifyingGlassMinus} />}
-                  type='dashed'
-                />
-                <Button
-                  onClick={infinitePipelineCanvas.zoomOut}
-                  icon={<FontAwesomeIcon icon={faMagnifyingGlassPlus} />}
-                  type='dashed'
-                />
-                <Button
-                  onClick={() => {
-                    if (canvasNodeRef.current) {
-                      infinitePipelineCanvas.fitToView(canvasNodeRef.current);
-                    }
-                  }}
-                  icon={<FontAwesomeIcon icon={faExpand} />}
-                  type='dashed'
-                />
                 <Tooltip title='Regenerate Stage Colors'>
                   <Button
                     type='dashed'
@@ -477,180 +430,8 @@ export const Pipelines = ({
               />
             </div>
           </div>
-          <div ref={movingObjectsRef} className={styles.pipelinesView}>
-            <div
-              className='relative'
-              style={{
-                width: box?.width,
-                height: box?.height,
-                margin: '0 auto'
-              }}
-              ref={zoomRef}
-            >
-              {nodes?.map((node, index) => (
-                <div
-                  key={index}
-                  className='absolute'
-                  style={{
-                    ...node,
-                    color: 'inherit'
-                  }}
-                >
-                  {node.type === NodeType.STAGE ? (
-                    <>
-                      <StageNode
-                        stage={node.data}
-                        color={node.color}
-                        height={node.height}
-                        projectName={name}
-                        faded={isFaded(node.data)}
-                        currentFreight={getCurrentFreight(node.data).map(
-                          (f) => fullFreightById[f.name || '']
-                        )}
-                        hasNoSubscribers={
-                          Array.from(subscribersByStage[node?.data?.metadata?.name || ''] || [])
-                            .length <= 1
-                        }
-                        onPromoteClick={(type: FreightTimelineAction) => {
-                          // which warehouse to select?
-                          // check if they have filter applied in freight timeline
-                          // if not, then select the warehouse of latest promoted freight
-                          if (selectedWarehouse === '') {
-                            setSelectedWarehouse(getCurrentFreightWarehouse(node.data));
-                          }
 
-                          if (state.stage === node.data?.metadata?.name) {
-                            // deselect
-                            state.clear();
-
-                            setSelectedWarehouse(lastExplicitlySelectedWarehouse.current);
-                          } else {
-                            const stageName = node.data?.metadata?.name || '';
-                            state.select(type, stageName, undefined);
-                          }
-                        }}
-                        selectedWarehouse={selectedWarehouse}
-                        action={state.action}
-                        onClick={
-                          state.action === FreightTimelineAction.ManualApproval
-                            ? () => {
-                                manualApproveAction({
-                                  stage: node.data?.metadata?.name,
-                                  project: name,
-                                  name: state.freight
-                                });
-                              }
-                            : state.action === FreightTimelineAction.PromoteFreight
-                              ? () => {
-                                  state.setStage(node.data?.metadata?.name || '');
-                                  promoteAction({
-                                    stage: node.data?.metadata?.name || '',
-                                    project: name,
-                                    freight: state.freight
-                                  });
-                                }
-                              : undefined
-                        }
-                        onHover={(h) => onHover(h, node.data?.metadata?.name || '', true)}
-                        highlighted={highlightedStages[node.data?.metadata?.name || '']}
-                        autoPromotion={autoPromotionMap[node.data?.metadata?.name || '']}
-                      />
-                    </>
-                  ) : (
-                    <RepoNode
-                      hidden={
-                        node.type !== NodeType.WAREHOUSE && hideSubscriptions[node.warehouseName]
-                      }
-                      nodeData={node}
-                      onClick={
-                        node.type === NodeType.WAREHOUSE
-                          ? () =>
-                              navigate(
-                                generatePath(paths.warehouse, {
-                                  name,
-                                  warehouseName: node.warehouseName
-                                })
-                              )
-                          : undefined
-                      }
-                    >
-                      {node.type === NodeType.WAREHOUSE && (
-                        <div className={'flex w-full h-full gap-2 justify-center items-center'}>
-                          {(Object.keys(warehouseMap) || []).length > 1 && (
-                            <Button
-                              icon={<FontAwesomeIcon icon={faFilter} />}
-                              size='small'
-                              type={
-                                selectedWarehouse === node.warehouseName ? 'primary' : 'default'
-                              }
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                const newSelectedWarehouse =
-                                  selectedWarehouse === node.warehouseName
-                                    ? ''
-                                    : node.warehouseName;
-                                setSelectedWarehouse(newSelectedWarehouse);
-                                lastExplicitlySelectedWarehouse.current = newSelectedWarehouse;
-                              }}
-                              className={classNames({
-                                'scale-110': selectedWarehouse === node.warehouseName
-                              })}
-                            />
-                          )}
-                          <Button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              refreshWarehouseAction({
-                                name: node.warehouseName,
-                                project: name
-                              });
-                            }}
-                            icon={<FontAwesomeIcon icon={faRefresh} />}
-                            size='small'
-                          >
-                            Refresh
-                          </Button>
-                        </div>
-                      )}
-                      {node.type === NodeType.WAREHOUSE && (
-                        <Nodule
-                          nodeHeight={RepoNodeDimensions().height}
-                          onClick={() =>
-                            setHideSubscriptions({
-                              ...hideSubscriptions,
-                              [node.warehouseName]: !hideSubscriptions[node.warehouseName]
-                            })
-                          }
-                          icon={hideSubscriptions[node.warehouseName] ? faEye : faEyeSlash}
-                          begin={true}
-                        />
-                      )}
-                    </RepoNode>
-                  )}
-                </div>
-              ))}
-              {connectors?.map((connector) =>
-                connector.map((line, i) =>
-                  hideSubscriptions[line.to] && line.from?.startsWith('subscription-') ? null : (
-                    <div
-                      className='absolute bg-gray-300 rounded-full'
-                      style={{
-                        padding: 0,
-                        margin: 0,
-                        height: LINE_THICKNESS,
-                        width: line.width,
-                        left: line.x,
-                        top: line.y,
-                        transform: `rotate(${line.angle}deg)`,
-                        backgroundColor: line.color
-                      }}
-                      key={i}
-                    />
-                  )
-                )
-              )}
-            </div>
-          </div>
+          <ReactFlow nodes={reactFlowNodes} edges={reactFlowEdges} />
         </div>
         <SuspenseSpin>
           {stage && <StageDetails stage={stage} />}
