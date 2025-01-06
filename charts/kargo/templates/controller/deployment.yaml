@@ -129,7 +129,7 @@ spec:
           mountPath: /tmp/target
       {{- end }}
       volumes:
-      - name: tmp-data
+      - name: tmpData
         emptyDir: {}
       {{- if or .Values.kubeconfigSecrets.kargo .Values.kubeconfigSecrets.argocd }}
       - name: kubeconfigs
