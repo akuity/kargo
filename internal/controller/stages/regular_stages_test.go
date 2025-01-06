@@ -1233,6 +1233,150 @@ func TestRegularStageReconciler_syncPromotions(t *testing.T) {
 	}
 }
 
+func TestRegularStageReconciler_syncFreight(t *testing.T) {
+	testProject := "fake-project"
+
+	testStage := &kargoapi.Stage{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: testProject,
+			Name:      "fake-stage",
+		},
+		Status: kargoapi.StageStatus{
+			FreightHistory: kargoapi.FreightHistory{{
+				Freight: map[string]kargoapi.FreightReference{
+					"fake-warehouse-1": {Name: "fake-freight-1"},
+					"fake-warehouse-2": {Name: "fake-freight-2"},
+				},
+			}},
+		},
+	}
+
+	testCases := []struct {
+		name        string
+		objects     []client.Object
+		interceptor interceptor.Funcs
+		assertions  func(*testing.T, client.Client, error)
+	}{
+		{
+			name: "error listing Freight",
+			interceptor: interceptor.Funcs{
+				List: func(context.Context, client.WithWatch, client.ObjectList, ...client.ListOption) error {
+					return fmt.Errorf("something went wrong")
+				},
+			},
+			assertions: func(t *testing.T, _ client.Client, err error) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "error listing Freight in namespace")
+				require.Contains(t, err.Error(), "something went wrong")
+			},
+		},
+		{
+			name: "error getting Freight",
+			interceptor: interceptor.Funcs{
+				Get: func(context.Context, client.WithWatch, client.ObjectKey, client.Object, ...client.GetOption) error {
+					return fmt.Errorf("something went wrong")
+				},
+			},
+			assertions: func(t *testing.T, _ client.Client, err error) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "error getting Freight")
+				require.Contains(t, err.Error(), "something went wrong")
+			},
+		},
+		{
+			name: "successful sync",
+			objects: []client.Object{
+				&kargoapi.Freight{ // The Stage is using this, but the Freight doesn't know it.
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProject,
+						Name:      "fake-freight-1",
+					},
+				},
+				&kargoapi.Freight{ // The Stage is using this, but the Freight doesn't know it.
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProject,
+						Name:      "fake-freight-2",
+					},
+				},
+				&kargoapi.Freight{ // The Freight thinks the Stage is using this, but it's not.
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProject,
+						Name:      "fake-freight-3",
+					},
+					Status: kargoapi.FreightStatus{
+						CurrentlyIn: map[string]kargoapi.CurrentStage{testStage.Name: {}},
+					},
+				},
+				&kargoapi.Freight{ // The Freight thinks the Stage is using this, but it's not.
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProject,
+						Name:      "fake-freight-4",
+					},
+					Status: kargoapi.FreightStatus{
+						CurrentlyIn: map[string]kargoapi.CurrentStage{testStage.Name: {}},
+					},
+				},
+			},
+			assertions: func(t *testing.T, c client.Client, err error) {
+				require.NoError(t, err)
+				freight := &kargoapi.Freight{}
+				err = c.Get(
+					context.Background(),
+					types.NamespacedName{Namespace: testProject, Name: "fake-freight-1"},
+					freight,
+				)
+				require.NoError(t, err)
+				require.Contains(t, freight.Status.CurrentlyIn, testStage.Name)
+				err = c.Get(
+					context.Background(),
+					types.NamespacedName{Namespace: testProject, Name: "fake-freight-2"},
+					freight,
+				)
+				require.NoError(t, err)
+				require.Contains(t, freight.Status.CurrentlyIn, testStage.Name)
+				err = c.Get(
+					context.Background(),
+					types.NamespacedName{Namespace: testProject, Name: "fake-freight-3"},
+					freight,
+				)
+				require.NoError(t, err)
+				require.NotContains(t, freight.Status.CurrentlyIn, testStage.Name)
+				err = c.Get(
+					context.Background(),
+					types.NamespacedName{Namespace: testProject, Name: "fake-freight-4"},
+					freight,
+				)
+				require.NoError(t, err)
+				require.NotContains(t, freight.Status.CurrentlyIn, testStage.Name)
+			},
+		},
+	}
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, kargoapi.AddToScheme(scheme))
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			c := fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(testCase.objects...).
+				WithIndex(
+					&kargoapi.Freight{},
+					indexer.FreightByCurrentStagesField,
+					indexer.FreightByCurrentStages,
+				).
+				WithStatusSubresource(&kargoapi.Stage{}, &kargoapi.Freight{}).
+				WithInterceptorFuncs(testCase.interceptor).
+				Build()
+
+			r := &RegularStageReconciler{client: c}
+
+			err := r.syncFreight(context.Background(), testStage)
+			testCase.assertions(t, c, err)
+		})
+	}
+}
+
 func TestRegularStageReconciler_assessHealth(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, kargoapi.AddToScheme(scheme))

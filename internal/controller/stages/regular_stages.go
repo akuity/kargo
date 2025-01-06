@@ -399,6 +399,15 @@ func (r *RegularStageReconciler) reconcile(
 			},
 		},
 		{
+			name: "syncing Freight",
+			reconcile: func() (kargoapi.StageStatus, error) {
+				if err := r.syncFreight(ctx, stage); err != nil {
+					return stage.Status, fmt.Errorf("failed to sync Freight: %w", err)
+				}
+				return stage.Status, nil
+			},
+		},
+		{
 			name: "assessing health",
 			reconcile: func() (kargoapi.StageStatus, error) {
 				return r.assessHealth(ctx, stage), nil
@@ -780,6 +789,82 @@ func (r *RegularStageReconciler) assessHealth(ctx context.Context, stage *kargoa
 	}
 
 	return newStatus
+}
+
+// syncFreight ensures that all Freight statuses accurately reflect whether they
+// are currently in use by the Stage.
+func (r *RegularStageReconciler) syncFreight(ctx context.Context, stage *kargoapi.Stage) error {
+	// Get the Stage's current FreightCollection.
+	curFreight := stage.Status.FreightHistory.Current()
+	// Find all Freight that think they're currently in use by this Stage.
+	var freight []kargoapi.Freight
+	freight, err := kargoapi.ListFreightByCurrentStage(ctx, r.client, stage)
+	if err != nil {
+		return err
+	}
+	// Step through all the Freight that think they're currently used by this
+	// Stage and, if they're not, patch their status to accurately reflect that.
+	for _, f := range freight {
+		if !curFreight.Includes(f.Name) {
+			newStatus := f.Status.DeepCopy()
+			delete(newStatus.CurrentlyIn, stage.Name)
+			if err := kubeclient.PatchStatus(ctx, r.client, &f, func(status *kargoapi.FreightStatus) {
+				*status = *newStatus
+			}); err != nil {
+				return fmt.Errorf(
+					"error patching status of Freight %q in namespace %q: %w",
+					f.Name, f.Namespace, err,
+				)
+			}
+		}
+	}
+	// Iterate over every piece of Freight that the Stage is actually using to
+	// make sure that their status accurately reflects that.
+	//
+	// This is the timestamp we'll use to track when the Freight came into use
+	// by the Stage. There are edge cases where this won't be perfectly accurate,
+	// but it's close enough, especially given that we use it for calculating
+	// "soak time," which requires a certain MINIMUM amount of time to pass. Any
+	// inaccuracy in the timestamp only means the Freight has actually "soaked"
+	// LONGER than what we calculate.
+	now := metav1.Now()
+	for _, fr := range curFreight.References() {
+		f, err := kargoapi.GetFreight(
+			ctx,
+			r.client,
+			types.NamespacedName{
+				Namespace: stage.Namespace,
+				Name:      fr.Name,
+			},
+		)
+		if err != nil {
+			return fmt.Errorf(
+				"error getting Freight %q in namespace %q: %w",
+				fr.Name, stage.Namespace, err,
+			)
+		}
+		if f == nil {
+			return fmt.Errorf("Freight %q not found in namespace %q", fr.Name, stage.Namespace)
+		}
+		if _, currentlyIn := f.Status.CurrentlyIn[stage.Name]; !currentlyIn {
+			newStatus := f.Status.DeepCopy()
+			if newStatus.CurrentlyIn == nil {
+				newStatus.CurrentlyIn = map[string]kargoapi.CurrentStage{}
+			}
+			newStatus.CurrentlyIn[stage.Name] = kargoapi.CurrentStage{
+				Since: &now,
+			}
+			if err = kubeclient.PatchStatus(ctx, r.client, f, func(status *kargoapi.FreightStatus) {
+				*status = *newStatus
+			}); err != nil {
+				return fmt.Errorf(
+					"error patching status of Freight %q in namespace %q: %w",
+					f.Name, f.Namespace, err,
+				)
+			}
+		}
+	}
+	return nil
 }
 
 // verifyStageFreight verifies the current Freight of a Stage. If the Stage has
