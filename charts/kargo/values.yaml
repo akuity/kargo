@@ -212,6 +212,9 @@ api:
     additionalScopes:
     - groups
 
+    # This option is useful when you turn off TLS on ingress and api, while terminating TLS on AWS, Azure, GCP Load Balancers etc.
+    forceHttpsInBaseUrl: true
+
     admins:
       ## @param api.oidc.admins.claims Subjects having any of these claims will automatically be Kargo admins.
       claims: {}
