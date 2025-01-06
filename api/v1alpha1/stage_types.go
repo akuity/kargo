@@ -370,6 +370,20 @@ type FreightCollection struct {
 	VerificationHistory VerificationInfoStack `json:"verificationHistory,omitempty" protobuf:"bytes,2,rep,name=verificationHistory"`
 }
 
+// Includes returns true if the FreightCollection includes Freight with the
+// specified name and false otherwise.
+func (f *FreightCollection) Includes(freightName string) bool {
+	if f == nil {
+		return false
+	}
+	for _, freight := range f.Freight {
+		if freight.Name == freightName {
+			return true
+		}
+	}
+	return false
+}
+
 // UpdateOrPush updates the entry in the FreightCollection based on the
 // Warehouse name of the provided FreightReference. If no such entry exists, the
 // provided FreightReference is appended to the FreightCollection. This function
