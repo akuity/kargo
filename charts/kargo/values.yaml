@@ -212,7 +212,7 @@ api:
     additionalScopes:
     - groups
 
-    # This option is useful when you turn off TLS on ingress and api, while terminating TLS on AWS, Azure, GCP Load Balancers etc.
+    # This option is useful when you turn off TLS on ingress and api, while terminating TLS on external service (AWS, Azure, GCP Load Balancers ...)
     forceHttpsInBaseUrl: true
 
     admins:
