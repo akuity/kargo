@@ -84,3 +84,27 @@ func GetFreightByAlias(
 	}
 	return &freightList.Items[0], nil
 }
+
+// ListFreightByCurrentStage returns a list of Freight resources that think
+// they're currently in use by the Stage specified.
+func ListFreightByCurrentStage(
+	ctx context.Context,
+	c client.Client,
+	stage *Stage,
+) ([]Freight, error) {
+	freightList := FreightList{}
+	if err := c.List(
+		ctx,
+		&freightList,
+		client.InNamespace(stage.Namespace),
+		client.MatchingFields{"currentlyIn": stage.Name},
+	); err != nil {
+		return nil, fmt.Errorf(
+			"error listing Freight in namespace %q with current stage %q: %w",
+			stage.Namespace,
+			stage.Name,
+			err,
+		)
+	}
+	return freightList.Items, nil
+}
