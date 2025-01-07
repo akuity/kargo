@@ -166,7 +166,7 @@ func (s *Stage) IsFreightAvailable(freight *Freight) bool {
 	if s == nil || freight == nil || s.Namespace != freight.Namespace {
 		return false
 	}
-	if _, approved := freight.Status.ApprovedFor[s.Name]; approved {
+	if freight.IsApprovedFor(s.Name) {
 		return true
 	}
 	for _, req := range s.Spec.RequestedFreight {
@@ -175,17 +175,9 @@ func (s *Stage) IsFreightAvailable(freight *Freight) bool {
 				return true
 			}
 			for _, source := range req.Sources.Stages {
-				if _, verified := freight.Status.VerifiedIn[source]; verified {
-					if req.Sources.VerifiedFor == nil {
-						return true // No soak time required
-					}
-					// NB: If there is no verification timestamp for the Freight, then we
-					// cannot determine how long it has been verified in the upstream
-					// Stage. In this case, we keep looking.
-					verifiedSince := freight.Status.VerifiedIn[source].VerifiedAt
-					if verifiedSince != nil {
-						return time.Since(verifiedSince.Time) > req.Sources.VerifiedFor.Duration
-					}
+				if freight.IsVerifiedIn(source) {
+					return req.Sources.VerifiedFor == nil ||
+						freight.GetLongestSoak(source) >= req.Sources.VerifiedFor.Duration
 				}
 			}
 		}

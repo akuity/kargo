@@ -6,11 +6,9 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	kerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/client-go/tools/record"
-	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -331,7 +329,7 @@ func (r *ControlFlowStageReconciler) markFreightVerifiedForStage(
 		// client does not support != field selectors, so we would need a "real"
 		// Kubernetes API server to test it. Until we (finally) make use of testenv,
 		// this will have to do.
-		if _, ok := f.Status.VerifiedIn[stage.Name]; ok {
+		if f.IsVerifiedIn(stage.Name) {
 			continue
 		}
 
@@ -340,9 +338,7 @@ func (r *ControlFlowStageReconciler) markFreightVerifiedForStage(
 		if newStatus.VerifiedIn == nil {
 			newStatus.VerifiedIn = make(map[string]kargoapi.VerifiedStage)
 		}
-		newStatus.VerifiedIn[stage.Name] = kargoapi.VerifiedStage{
-			VerifiedAt: ptr.To(metav1.NewTime(finishTime)),
-		}
+		newStatus.AddVerifiedStage(stage.Name, finishTime)
 		if err := kubeclient.PatchStatus(ctx, r.client, &f, func(status *kargoapi.FreightStatus) {
 			*status = *newStatus
 		}); err != nil {

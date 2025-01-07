@@ -366,6 +366,11 @@ func TestRegularStageReconciler_Reconcile(t *testing.T) {
 				).
 				WithIndex(
 					&kargoapi.Freight{},
+					indexer.FreightByCurrentStagesField,
+					indexer.FreightByCurrentStages,
+				).
+				WithIndex(
+					&kargoapi.Freight{},
 					indexer.FreightByVerifiedStagesField,
 					indexer.FreightByVerifiedStages,
 				).
@@ -497,6 +502,11 @@ func TestRegularStagesReconciler_reconcile(t *testing.T) {
 					&kargoapi.Freight{},
 					indexer.FreightByWarehouseField,
 					indexer.FreightByWarehouse,
+				).
+				WithIndex(
+					&kargoapi.Freight{},
+					indexer.FreightByCurrentStagesField,
+					indexer.FreightByCurrentStages,
 				).
 				WithIndex(
 					&kargoapi.Freight{},
@@ -2824,7 +2834,8 @@ func TestRegularStageReconciler_markFreightVerifiedForStage(t *testing.T) {
 							},
 							VerificationHistory: []kargoapi.VerificationInfo{
 								{
-									Phase: kargoapi.VerificationPhaseSuccessful,
+									Phase:      kargoapi.VerificationPhaseSuccessful,
+									FinishTime: &metav1.Time{Time: endTime.Time},
 								},
 							},
 						},

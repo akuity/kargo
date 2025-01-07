@@ -167,7 +167,7 @@ func (w *Warehouse) ListFreight(
 freightLoop:
 	for _, f := range freight {
 		if opts.ApprovedFor != "" {
-			if _, approved := f.Status.ApprovedFor[opts.ApprovedFor]; approved {
+			if f.IsApprovedFor(opts.ApprovedFor) {
 				filtered = append(filtered, f)
 				continue
 			}

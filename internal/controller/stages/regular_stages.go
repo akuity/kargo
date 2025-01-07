@@ -827,7 +827,7 @@ func (r *RegularStageReconciler) syncFreight(ctx context.Context, stage *kargoap
 	// "soak time," which requires a certain MINIMUM amount of time to pass. Any
 	// inaccuracy in the timestamp only means the Freight has actually "soaked"
 	// LONGER than what we calculate.
-	now := metav1.Now()
+	now := time.Now()
 	for _, fr := range curFreight.References() {
 		f, err := kargoapi.GetFreight(
 			ctx,
@@ -846,14 +846,9 @@ func (r *RegularStageReconciler) syncFreight(ctx context.Context, stage *kargoap
 		if f == nil {
 			return fmt.Errorf("Freight %q not found in namespace %q", fr.Name, stage.Namespace)
 		}
-		if _, currentlyIn := f.Status.CurrentlyIn[stage.Name]; !currentlyIn {
+		if !f.IsCurrentlyIn(stage.Name) {
 			newStatus := f.Status.DeepCopy()
-			if newStatus.CurrentlyIn == nil {
-				newStatus.CurrentlyIn = map[string]kargoapi.CurrentStage{}
-			}
-			newStatus.CurrentlyIn[stage.Name] = kargoapi.CurrentStage{
-				Since: &now,
-			}
+			newStatus.AddCurrentStage(stage.Name, now)
 			if err = kubeclient.PatchStatus(ctx, r.client, f, func(status *kargoapi.FreightStatus) {
 				*status = *newStatus
 			}); err != nil {
@@ -1124,7 +1119,7 @@ func (r *RegularStageReconciler) markFreightVerifiedForStage(
 
 		// If the Freight has already been verified, then there is no need to
 		// verify it again.
-		if _, ok := freight.Status.VerifiedIn[stage.Name]; ok {
+		if freight.IsVerifiedIn(stage.Name) {
 			logger.Debug("Freight has already been verified in Stage")
 			continue
 		}
@@ -1134,9 +1129,7 @@ func (r *RegularStageReconciler) markFreightVerifiedForStage(
 			if status.VerifiedIn == nil {
 				status.VerifiedIn = make(map[string]kargoapi.VerifiedStage)
 			}
-			status.VerifiedIn[stage.Name] = kargoapi.VerifiedStage{
-				VerifiedAt: curFreight.VerificationHistory.Current().FinishTime.DeepCopy(),
-			}
+			status.AddVerifiedStage(stage.Name, curFreight.VerificationHistory.Current().FinishTime.Time)
 		}); err != nil {
 			return newStatus, fmt.Errorf(
 				"error marking Freight %q as verified in Stage: %w",

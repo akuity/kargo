@@ -469,7 +469,7 @@ func TestStage_IsFreightAvailable(t *testing.T) {
 			expected: true,
 		},
 		{
-			name: "freight is verified in an upstream stage with no timestamp; soak not required",
+			name: "freight is verified in an upstream; soak not required",
 			stage: &Stage{
 				ObjectMeta: testStageMeta,
 				Spec: StageSpec{
@@ -493,7 +493,7 @@ func TestStage_IsFreightAvailable(t *testing.T) {
 			expected: true,
 		},
 		{
-			name: "freight is verified in an upstream stage with no timestamp; soak required",
+			name: "freight is verified in an upstream stage with no longestCompletedSoak; soak required",
 			stage: &Stage{
 				ObjectMeta: testStageMeta,
 				Spec: StageSpec{
@@ -518,33 +518,7 @@ func TestStage_IsFreightAvailable(t *testing.T) {
 			expected: false,
 		},
 		{
-			name: "freight is verified in an upstream stage with timestamp; soak not required",
-			stage: &Stage{
-				ObjectMeta: testStageMeta,
-				Spec: StageSpec{
-					RequestedFreight: []FreightRequest{{
-						Origin: testOrigin,
-						Sources: FreightSources{
-							Stages: []string{"upstream-stage"},
-						},
-					}},
-				},
-			},
-			freight: &Freight{
-				ObjectMeta: testFreightMeta,
-				Origin:     testOrigin,
-				Status: FreightStatus{
-					VerifiedIn: map[string]VerifiedStage{
-						"upstream-stage": {
-							VerifiedAt: &metav1.Time{Time: time.Now().Add(-time.Hour)},
-						},
-					},
-				},
-			},
-			expected: true,
-		},
-		{
-			name: "freight is verified in an upstream stage with timestamp; soak required but not elapsed",
+			name: "freight is verified in an upstream stage with longestCompletedSoak; soak required but not elapsed",
 			stage: &Stage{
 				ObjectMeta: testStageMeta,
 				Spec: StageSpec{
@@ -552,7 +526,7 @@ func TestStage_IsFreightAvailable(t *testing.T) {
 						Origin: testOrigin,
 						Sources: FreightSources{
 							Stages:      []string{"upstream-stage"},
-							VerifiedFor: &metav1.Duration{Duration: time.Hour},
+							VerifiedFor: &metav1.Duration{Duration: 2 * time.Hour},
 						},
 					}},
 				},
@@ -563,7 +537,7 @@ func TestStage_IsFreightAvailable(t *testing.T) {
 				Status: FreightStatus{
 					VerifiedIn: map[string]VerifiedStage{
 						"upstream-stage": {
-							VerifiedAt: &metav1.Time{Time: time.Now()},
+							LongestCompletedSoak: &metav1.Duration{Duration: time.Hour},
 						},
 					},
 				},
@@ -571,7 +545,7 @@ func TestStage_IsFreightAvailable(t *testing.T) {
 			expected: false,
 		},
 		{
-			name: "freight is verified in an upstream stage with timestamp; soak required and is elapsed",
+			name: "freight is verified in an upstream stage with longestCompletedSoak; soak required and is elapsed",
 			stage: &Stage{
 				ObjectMeta: testStageMeta,
 				Spec: StageSpec{
@@ -590,7 +564,7 @@ func TestStage_IsFreightAvailable(t *testing.T) {
 				Status: FreightStatus{
 					VerifiedIn: map[string]VerifiedStage{
 						"upstream-stage": {
-							VerifiedAt: &metav1.Time{Time: time.Now().Add(-time.Hour * 2)},
+							LongestCompletedSoak: &metav1.Duration{Duration: time.Hour},
 						},
 					},
 				},
