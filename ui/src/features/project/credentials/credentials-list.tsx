@@ -77,6 +77,7 @@ export const CredentialsList = () => {
           className='w-1/2'
         >
           <Table
+            scroll={{ x: 'max-content' }}
             key={specificCredentials.length}
             dataSource={specificCredentials}
             rowKey={(record: Secret) => record?.metadata?.name || ''}
@@ -212,6 +213,7 @@ export const CredentialsList = () => {
           className='w-1/2'
         >
           <Table
+            scroll={{ x: 'max-content' }}
             key={genericCredentials.length}
             dataSource={genericCredentials}
             rowKey={(record: Secret) => record?.metadata?.name || ''}
