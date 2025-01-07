@@ -476,6 +476,12 @@ Users with credentials for and sufficient permissions within the Kargo control p
 </TabItem>
 </Tabs>
 
+### Promoting Freight to a Stage
+
+:::note
+For comprehensive guidance on promoting `Freight` to a `Stage`, refer to [Working with Promotions](../15-concepts.md#promotion-resources).
+:::
+
 ### Deleting a Stage
 
 <Tabs groupId="delete-stage">
@@ -543,7 +549,9 @@ as desired.
 
     ![verify-stage](../../static/img/reverify-freight.png)
 
-    If you want to stop the verification process mid-way, you can click the <Hlt>Abort Verification</Hlt> button next to the Reverify option.
+    :::note
+    If you wish to stop the in-progress verification, you can click <Hlt>Abort Verification</Hlt>.
+    :::
 
 1. To check the `Stage`s where the `Freight` has been successfully verified, return to 
     the <Hlt>Freight Timeline</Hlt> and select the `Freight`. Verified `Stage` names will appear under <Hlt>VERIFIED IN</Hlt>:
@@ -575,7 +583,3 @@ as desired.
 
 </TabItem>
 </Tabs>
-
-:::note
-For detailed instructions on promoting a `Stage`, refer to the Working with Promotions page.
-:::
