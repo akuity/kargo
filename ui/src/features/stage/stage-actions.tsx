@@ -13,6 +13,7 @@ import React from 'react';
 import { generatePath, useNavigate, useParams } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
+import { transportWithAuth } from '@ui/config/transport';
 import {
   abortVerification,
   deleteStage,
@@ -74,7 +75,13 @@ export const StageActions = ({
     }
 
     if (refreshRequest === refreshStatus && shouldRefetchFreights) {
-      queryClient.invalidateQueries({ queryKey: createConnectQueryKey(queryFreight) });
+      queryClient.invalidateQueries({
+        queryKey: createConnectQueryKey({
+          schema: queryFreight,
+          cardinality: 'finite',
+          transport: transportWithAuth
+        })
+      });
       setShouldRefetchFreights(false);
     }
   }, [stage, shouldRefetchFreights]);

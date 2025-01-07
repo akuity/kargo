@@ -2,6 +2,7 @@ package yaml
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	yaml "sigs.k8s.io/yaml/goyaml.v3"
@@ -15,7 +16,10 @@ import (
 // the yaml package. This includes basic types (string, int, bool, etc.), maps,
 // slices, and structs.
 func UpdateField(node *yaml.Node, key string, value any) error {
-	parts := strings.Split(key, pathSeparator)
+	parts, err := splitKey(key)
+	if err != nil {
+		return err
+	}
 	return updateNodeRecursively(node, parts, value)
 }
 
@@ -23,10 +27,6 @@ func UpdateField(node *yaml.Node, key string, value any) error {
 // the specified field. It recursively descends into mapping nodes and sequence
 // nodes to find the target field. If the field does not exist, it is created.
 func updateNodeRecursively(node *yaml.Node, parts []string, newValue any) error {
-	if len(parts) == 0 || (len(parts) == 1 && parts[0] == "") {
-		return fmt.Errorf("empty field path")
-	}
-
 	currentPart := parts[0]
 	remainingParts := parts[1:]
 
@@ -100,12 +100,7 @@ func updateSequenceNode(node *yaml.Node, currentPart string, remainingParts []st
 	if err != nil {
 		return err
 	}
-
-	if index < 0 {
-		return fmt.Errorf("invalid negative index: %d", index)
-	}
-
-	if index >= len(node.Content) {
+	if index == -1 || index >= len(node.Content) {
 		// Add new node at the end of the sequence
 		var newNode *yaml.Node
 		if len(remainingParts) > 0 {
@@ -164,12 +159,83 @@ func preserveComments(oldNode, newNode *yaml.Node) {
 	}
 }
 
-// parseIndex extracts and returns the numeric index from a string in the
-// format "[n]".
+// splitKey splits a key string into parts separated by dots. It observes the
+// same basic syntax rules as tidwall/sjson. Dots are separators unless escaped.
+// Colons, unless escaped, are hints that a numeric-looking key part should be
+// treated as a key in an object, rather than an index in a sequence.
+func splitKey(key string) ([]string, error) {
+	key = strings.TrimSpace(key)
+	if key == "" {
+		return nil, fmt.Errorf("empty key")
+	}
+	parts := make([]string, 0, strings.Count(key, ".")+1)
+	currentPart := strings.Builder{}
+	escaped := false
+	for i := 0; i < len(key); i++ {
+		char := key[i]
+		if !escaped {
+			switch char {
+			case '\\':
+				escaped = true // Enter escape mode.
+			case '.':
+				// We've reached the end of the current part.
+				if currentPart.Len() == 0 {
+					return nil, fmt.Errorf("empty key part in key %q", key)
+				}
+				parts = append(parts, currentPart.String())
+				currentPart.Reset()
+			case ':':
+				if currentPart.Len() > 0 {
+					// An unescaped colon is only valid as the first character of a key
+					// part.
+					return nil, fmt.Errorf("unexpected colon in key %q", key)
+				}
+				// We don't actually need to KEEP the colon, since the code that uses
+				// the key parts returned from this function requires no hint that a
+				// numeric-looking key part should be treated as a key in an object,
+				// rather than an index in a sequence.
+			default:
+				// Any other character is added to the current part as is.
+				if err := currentPart.WriteByte(char); err != nil {
+					return nil, err
+				}
+			}
+			continue
+		}
+		// If we get to here, we're currently in escape mode.
+		switch char {
+		case '.', ':':
+			if err := currentPart.WriteByte(char); err != nil {
+				return nil, err
+			}
+			escaped = false // Exit escape mode.
+		default:
+			return nil, fmt.Errorf("invalid escape sequence in key %q", key)
+		}
+	}
+	// Don't forget about whatever is left over in currentPart.
+	if currentPart.Len() == 0 {
+		return nil, fmt.Errorf("empty key part in key %q", key)
+	}
+	return append(parts, currentPart.String()), nil
+}
+
+// parseIndex attempts to parse the provided string as an int. If it is unable
+// to do so, it falls back on parsing according to legacy syntax rules, i.e.
+// extracting n from from a string in the  format "[n]".
 func parseIndex(s string) (int, error) {
+	if index, err := strconv.Atoi(s); err == nil {
+		if index < -1 {
+			return 0, fmt.Errorf("invalid negative index: %d", index)
+		}
+		return index, nil
+	}
 	var index int
 	if _, err := fmt.Sscanf(s, "[%d]", &index); err != nil {
 		return 0, fmt.Errorf("invalid index format: %s", s)
+	}
+	if index < -1 {
+		return 0, fmt.Errorf("invalid negative index: %d", index)
 	}
 	return index, nil
 }

@@ -1,6 +1,7 @@
 import { Descriptions, Typography } from 'antd';
 
 import { RepoSubscription } from '@ui/gen/v1alpha1/generated_pb';
+import { urlForImage } from '@ui/utils/url';
 
 type Props = {
   subscriptions?: RepoSubscription[];
@@ -38,7 +39,7 @@ export const RepoSubscriptions = ({ subscriptions }: Props) => {
             {subscription.image && (
               <Descriptions.Item label='Image'>
                 <Typography.Link
-                  href={subscription.image?.repoURL}
+                  href={urlForImage(subscription.image?.repoURL)}
                   target='_blank'
                   rel='noreferrer'
                 >

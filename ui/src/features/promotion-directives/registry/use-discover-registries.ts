@@ -3,6 +3,7 @@ import { JSONSchema7 } from 'json-schema';
 // IMPORTANT(Marvin9): this must be replaced with proper discovery mechanism
 import argocdUpdateConfig from '@ui/gen/directives/argocd-update-config.json';
 import copyConfig from '@ui/gen/directives/copy-config.json';
+import deleteConfig from '@ui/gen/directives/delete-config.json';
 import gitOverwriteConfig from '@ui/gen/directives/git-clear-config.json';
 import gitCloneConfig from '@ui/gen/directives/git-clone-config.json';
 import gitCommitConfig from '@ui/gen/directives/git-commit-config.json';
@@ -13,6 +14,7 @@ import helmTemplateConfig from '@ui/gen/directives/helm-template-config.json';
 import helmUpdateChartConfig from '@ui/gen/directives/helm-update-chart-config.json';
 import helmUpdateImageConfig from '@ui/gen/directives/helm-update-image-config.json';
 import httpConfig from '@ui/gen/directives/http-config.json';
+import jsonUpdateConfig from '@ui/gen/directives/json-update-config.json';
 import kustomizeBuildConfig from '@ui/gen/directives/kustomize-build-config.json';
 import kustomizeSetImageConfig from '@ui/gen/directives/kustomize-set-image-config.json';
 import yamlUpdateConfig from '@ui/gen/directives/yaml-update-config.json';
@@ -32,6 +34,11 @@ export const useDiscoverPromotionDirectivesRegistries = (): PromotionDirectivesR
       {
         identifier: 'copy',
         config: copyConfig as JSONSchema7
+      },
+      {
+        identifier: 'delete',
+        unstable_icons: [],
+        config: deleteConfig as JSONSchema7
       },
       {
         identifier: 'git-clone',
@@ -56,6 +63,10 @@ export const useDiscoverPromotionDirectivesRegistries = (): PromotionDirectivesR
       {
         identifier: 'yaml-update',
         config: yamlUpdateConfig as unknown as JSONSchema7
+      },
+      {
+        identifier: 'json-update',
+        config: jsonUpdateConfig as unknown as JSONSchema7
       },
       {
         identifier: 'git-push',

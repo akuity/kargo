@@ -26,6 +26,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/helm"
+	intyaml "github.com/akuity/kargo/internal/yaml"
 )
 
 func Test_helmChartUpdater_validate(t *testing.T) {
@@ -310,7 +311,7 @@ func Test_helmChartUpdater_processChartUpdates(t *testing.T) {
 		context           *PromotionStepContext
 		cfg               HelmUpdateChartConfig
 		chartDependencies []chartDependency
-		assertions        func(*testing.T, map[string]string, error)
+		assertions        func(*testing.T, []intyaml.Update, error)
 	}{
 		{
 			name: "finds chart update",
@@ -358,9 +359,13 @@ func Test_helmChartUpdater_processChartUpdates(t *testing.T) {
 			chartDependencies: []chartDependency{
 				{Repository: "https://charts.example.com", Name: "test-chart"},
 			},
-			assertions: func(t *testing.T, changes map[string]string, err error) {
+			assertions: func(t *testing.T, updates []intyaml.Update, err error) {
 				assert.NoError(t, err)
-				assert.Equal(t, map[string]string{"dependencies.0.version": "1.0.0"}, changes)
+				assert.Equal(
+					t,
+					[]intyaml.Update{{Key: "dependencies.0.version", Value: "1.0.0"}},
+					updates,
+				)
 			},
 		},
 		{
@@ -378,7 +383,7 @@ func Test_helmChartUpdater_processChartUpdates(t *testing.T) {
 			chartDependencies: []chartDependency{
 				{Repository: "https://charts.example.com", Name: "non-existent-chart"},
 			},
-			assertions: func(t *testing.T, _ map[string]string, err error) {
+			assertions: func(t *testing.T, _ []intyaml.Update, err error) {
 				assert.ErrorContains(t, err, "not found in referenced Freight")
 			},
 		},
@@ -430,7 +435,7 @@ func Test_helmChartUpdater_processChartUpdates(t *testing.T) {
 				{Repository: "https://charts.example.com", Name: "chart1"},
 				{Repository: "https://charts.example.com", Name: "chart2"},
 			},
-			assertions: func(t *testing.T, _ map[string]string, err error) {
+			assertions: func(t *testing.T, _ []intyaml.Update, err error) {
 				assert.ErrorContains(t, err, "not found in referenced Freight")
 			},
 		},
@@ -484,9 +489,13 @@ func Test_helmChartUpdater_processChartUpdates(t *testing.T) {
 			chartDependencies: []chartDependency{
 				{Repository: "https://charts.example.com", Name: "origin-chart"},
 			},
-			assertions: func(t *testing.T, changes map[string]string, err error) {
+			assertions: func(t *testing.T, updates []intyaml.Update, err error) {
 				assert.NoError(t, err)
-				assert.Equal(t, map[string]string{"dependencies.0.version": "2.0.0"}, changes)
+				assert.Equal(
+					t,
+					[]intyaml.Update{{Key: "dependencies.0.version", Value: "2.0.0"}},
+					updates,
+				)
 			},
 		},
 		{
@@ -506,9 +515,32 @@ func Test_helmChartUpdater_processChartUpdates(t *testing.T) {
 			chartDependencies: []chartDependency{
 				{Repository: "https://charts.example.com", Name: "origin-chart"},
 			},
-			assertions: func(t *testing.T, changes map[string]string, err error) {
+			assertions: func(t *testing.T, updates []intyaml.Update, err error) {
 				assert.NoError(t, err)
-				assert.Equal(t, map[string]string{"dependencies.0.version": "fake-version"}, changes)
+				assert.Equal(
+					t,
+					[]intyaml.Update{{Key: "dependencies.0.version", Value: "fake-version"}},
+					updates,
+				)
+			},
+		},
+		{
+			name: "update specified for non-existent chart dependency",
+			context: &PromotionStepContext{
+				Project: "test-project",
+			},
+			cfg: HelmUpdateChartConfig{
+				Charts: []Chart{
+					{
+						Repository: "https://charts.example.com",
+						Name:       "origin-chart",
+						Version:    "fake-version",
+					},
+				},
+			},
+			chartDependencies: []chartDependency{},
+			assertions: func(t *testing.T, _ []intyaml.Update, err error) {
+				assert.ErrorContains(t, err, "no dependency in Chart.yaml matched update")
 			},
 		},
 	}
@@ -523,8 +555,8 @@ func Test_helmChartUpdater_processChartUpdates(t *testing.T) {
 			stepCtx := tt.context
 			stepCtx.KargoClient = fake.NewClientBuilder().WithScheme(scheme).WithObjects(tt.objects...).Build()
 
-			changes, err := runner.processChartUpdates(context.Background(), stepCtx, tt.cfg, tt.chartDependencies)
-			tt.assertions(t, changes, err)
+			updates, err := runner.processChartUpdates(context.Background(), stepCtx, tt.cfg, tt.chartDependencies)
+			tt.assertions(t, updates, err)
 		})
 	}
 }

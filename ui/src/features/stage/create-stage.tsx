@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { useMutation } from '@connectrpc/connect-query';
 import {
   faBook,
@@ -20,9 +19,11 @@ import { z } from 'zod';
 import { paths } from '@ui/config/paths';
 import { YamlEditor } from '@ui/features/common/code-editor/yaml-editor';
 import { FieldContainer } from '@ui/features/common/form/field-container';
+import { JSON } from '@ui/gen/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1/generated_pb';
 import schema from '@ui/gen/schema/stages.kargo.akuity.io_v1alpha1.json';
 import { createResource } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 import { PromotionStep, Stage } from '@ui/gen/v1alpha1/generated_pb';
+import { PlainMessage } from '@ui/utils/connectrpc-utils';
 import { cleanEmptyObjectValues } from '@ui/utils/helpers';
 import { zodValidators } from '@ui/utils/validators';
 
@@ -124,8 +125,8 @@ export const CreateStage = ({
         project || '',
         promotionWizardStepsState.state?.map((step) => ({
           uses: step?.identifier,
-          as: step?.as,
-          config: step?.state
+          as: step?.as || '',
+          config: step?.state as JSON // step.state is type 'object' and it is safe to fake JSON type because it doesn't matter for stageFormToYAML function
         }))
       );
       setValue('value', unmarshalled);
@@ -175,8 +176,8 @@ export const CreateStage = ({
                 project || '',
                 promotionWizardStepsState.state?.map((step) => ({
                   uses: step?.identifier,
-                  as: step?.as,
-                  config: step?.state
+                  as: step?.as || '',
+                  config: step?.state as JSON // step.state is type 'object' and it is safe to fake JSON type because it doesn't matter for stageFormToYAML function
                 }))
               )
             );

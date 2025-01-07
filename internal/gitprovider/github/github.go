@@ -41,11 +41,42 @@ func init() {
 	gitprovider.Register(ProviderName, registration)
 }
 
+type githubClient interface {
+	CreatePullRequest(
+		ctx context.Context,
+		owner string,
+		repo string,
+		pull *github.NewPullRequest,
+	) (*github.PullRequest, *github.Response, error)
+
+	ListPullRequests(
+		ctx context.Context,
+		owner string,
+		repo string,
+		opts *github.PullRequestListOptions,
+	) ([]*github.PullRequest, *github.Response, error)
+
+	GetPullRequests(
+		ctx context.Context,
+		owner string,
+		repo string,
+		number int,
+	) (*github.PullRequest, *github.Response, error)
+
+	AddLabelsToIssue(
+		ctx context.Context,
+		owner string,
+		repo string,
+		number int,
+		labels []string,
+	) ([]*github.Label, *github.Response, error)
+}
+
 // provider is a GitHub implementation of gitprovider.Interface.
 type provider struct { // nolint: revive
 	owner  string
 	repo   string
-	client *github.Client
+	client githubClient
 }
 
 // NewProvider returns a GitHub-based implementation of gitprovider.Interface.
@@ -81,8 +112,49 @@ func NewProvider(
 	return &provider{
 		owner:  owner,
 		repo:   repo,
-		client: client,
+		client: &githubClientWrapper{client},
 	}, nil
+}
+
+type githubClientWrapper struct {
+	client *github.Client
+}
+
+func (g githubClientWrapper) CreatePullRequest(
+	ctx context.Context,
+	owner string,
+	repo string,
+	pull *github.NewPullRequest,
+) (*github.PullRequest, *github.Response, error) {
+	return g.client.PullRequests.Create(ctx, owner, repo, pull)
+}
+
+func (g githubClientWrapper) ListPullRequests(
+	ctx context.Context,
+	owner string,
+	repo string,
+	opts *github.PullRequestListOptions,
+) ([]*github.PullRequest, *github.Response, error) {
+	return g.client.PullRequests.List(ctx, owner, repo, opts)
+}
+
+func (g githubClientWrapper) GetPullRequests(
+	ctx context.Context,
+	owner string,
+	repo string,
+	number int,
+) (*github.PullRequest, *github.Response, error) {
+	return g.client.PullRequests.Get(ctx, owner, repo, number)
+}
+
+func (g githubClientWrapper) AddLabelsToIssue(
+	ctx context.Context,
+	owner string,
+	repo string,
+	number int,
+	labels []string,
+) ([]*github.Label, *github.Response, error) {
+	return g.client.Issues.AddLabelsToIssue(ctx, owner, repo, number, labels)
 }
 
 // CreatePullRequest implements gitprovider.Interface.
@@ -93,7 +165,7 @@ func (p *provider) CreatePullRequest(
 	if opts == nil {
 		opts = &gitprovider.CreatePullRequestOpts{}
 	}
-	ghPR, _, err := p.client.PullRequests.Create(ctx,
+	ghPR, _, err := p.client.CreatePullRequest(ctx,
 		p.owner,
 		p.repo,
 		&github.NewPullRequest{
@@ -111,6 +183,17 @@ func (p *provider) CreatePullRequest(
 		return nil, fmt.Errorf("unexpected nil pull request")
 	}
 	pr := convertGithubPR(*ghPR)
+	if len(opts.Labels) > 0 {
+		_, _, err = p.client.AddLabelsToIssue(ctx,
+			p.owner,
+			p.repo,
+			int(pr.Number),
+			opts.Labels,
+		)
+	}
+	if err != nil {
+		return nil, err
+	}
 	return &pr, nil
 }
 
@@ -119,7 +202,7 @@ func (p *provider) GetPullRequest(
 	ctx context.Context,
 	id int64,
 ) (*gitprovider.PullRequest, error) {
-	ghPR, _, err := p.client.PullRequests.Get(ctx, p.owner, p.repo, int(id))
+	ghPR, _, err := p.client.GetPullRequests(ctx, p.owner, p.repo, int(id))
 	if err != nil {
 		return nil, err
 	}
@@ -160,7 +243,7 @@ func (p *provider) ListPullRequests(
 	}
 	prs := []gitprovider.PullRequest{}
 	for {
-		ghPRs, res, err := p.client.PullRequests.List(ctx, p.owner, p.repo, &listOpts)
+		ghPRs, res, err := p.client.ListPullRequests(ctx, p.owner, p.repo, &listOpts)
 		if err != nil {
 			return nil, err
 		}

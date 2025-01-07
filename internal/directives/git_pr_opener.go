@@ -14,6 +14,7 @@ import (
 	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/gitprovider"
 
+	_ "github.com/akuity/kargo/internal/gitprovider/azure"  // Azure provider registration
 	_ "github.com/akuity/kargo/internal/gitprovider/github" // GitHub provider registration
 	_ "github.com/akuity/kargo/internal/gitprovider/gitlab" // GitLab provider registration
 )
@@ -217,6 +218,7 @@ func (g *gitPROpener) runPromotionStep(
 			Base:        cfg.TargetBranch,
 			Title:       title,
 			Description: description,
+			Labels:      cfg.Labels,
 		},
 	); err != nil {
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},

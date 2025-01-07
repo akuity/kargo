@@ -300,6 +300,46 @@ steps:
 # Render manifests to ./out, commit, push, etc...
 ```
 
+### `delete`
+
+`delete` deletes a file or directory.
+
+#### `delete` Configuration
+
+| Name      | Type | Required | Description                              |
+|-----------|------|----------|------------------------------------------|
+| `path`    | `string` | Y | Path to the file or directory to delete. |
+
+#### `delete` Example
+
+One, common usage of this step is to remove intermediate files
+produced by the promotion process prior to a `git-commit` step:
+
+```yaml
+vars:
+- name: gitRepo
+  value: https://github.com/example/repo.git
+steps:
+- uses: git-clone
+  config:
+    repoURL: ${{ vars.gitRepo }}
+    checkout:
+    - commit: ${{ commitFrom(vars.gitRepo) }}
+      path: ./src
+    - branch: stage/${{ ctx.stage }}
+      create: true
+      path: ./out
+
+# Steps that produce intermediate files in ./out...
+
+- uses: delete
+  config:
+    path: ./out/unwanted/file
+- uses: git-commit
+  config:
+    path: ./out
+```
+
 ### `kustomize-set-image`
 
 `kustomize-set-image` updates the `kustomization.yaml` file in a specified
@@ -539,6 +579,53 @@ steps:
 |------|------|-------------|
 | `commitMessage` | `string` | A description of the change(s) applied by this step. Typically, a subsequent [`git-commit`](#git-commit) step will reference this output and aggregate this commit message fragment with other like it to build a comprehensive commit message that describes all changes. |
 
+### `json-update`
+
+`json-update` updates the values of specified keys in any JSON file.
+
+#### `json-update` Configuration
+
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| `path` | `string` | Y | Path to a JSON file. This path is relative to the temporary workspace that Kargo provisions for use by the promotion process. |                      |
+| `updates` | `[]object` | Y | The details of changes to be applied to the file. At least one must be specified. |
+| `updates[].key` | `string` | Y | The key to update within the file. For nested values, use a JSON dot notation path. See [sjson documentation](https://github.com/tidwall/sjson) for supported syntax. |
+| `updates[].value`| `any` | Y | The new value for the key. Typically specified using an expression. Supports strings, numbers, booleans, arrays, and objects. |
+
+#### `json-update` Example
+
+```yaml
+vars:
+- name: gitRepo
+  value: https://github.com/example/repo.git
+steps:
+- uses: git-clone
+  config:
+    repoURL: ${{ vars.gitRepo }}
+    checkout:
+    - commit: ${{ commitFrom(vars.gitRepo).ID }}
+      path: ./src
+    - branch: stage/${{ ctx.stage }}
+      create: true
+      path: ./out
+    - uses: git-clear
+      config:
+        path: ./out
+- uses: json-update
+  config:
+    path: configs/settings.json
+    updates:
+    - key: image.tag
+      value: ${{ imageFrom("my/image").Tag }}
+# Render manifests to ./out, commit, push, etc...
+```
+
+#### `json-update` Output
+
+| Name | Type | Description |
+|------|------|-------------|
+| `commitMessage` | `string` | A description of the change(s) applied by this step. Typically, a subsequent [`git-commit`](#git-commit) step will reference this output and aggregate this commit message fragment with other like it to build a comprehensive commit message that describes all changes. |
+
 ### `yaml-update`
 
 `yaml-update` updates the values of specified keys in any YAML file. This step
@@ -551,7 +638,7 @@ followed by a [`helm-template`](#helm-template) step.
 |------|------|----------|-------------|
 | `path` | `string` | Y | Path to a YAML file. This path is relative to the temporary workspace that Kargo provisions for use by the promotion process. |
 | `updates` | `[]object` | Y | The details of changes to be applied to the file. At least one must be specified. |
-| `updates[].key` | `string` | Y | The key to update within the file. For nested values, use a YAML dot notation path. |
+| `updates[].key` | `string` | Y | The key to update within the file. For nested values, use dots to delimit key parts. e.g. `image.tag`. The syntax is identical to that supported by the `json-update` step and is documented in more detail [here](https://github.com/tidwall/sjson?tab=readme-ov-file#path-syntax). |
 | `updates[].value` | `string` | Y | The new value for the key. Typically specified using an expression. |
 
 #### `yaml-update` Example
@@ -1021,6 +1108,7 @@ requests.
 | `targetBranch` | `string` | N | The branch to which the changes should be merged. |
 | `createTargetBranch` | `boolean` | N | Indicates whether a new, empty orphaned branch should be created and pushed to the remote if the target branch does not already exist there. Default is `false`. |
 | `title` | `string` | N | The title for the pull request. Kargo generates a title based on the commit messages if it is not explicitly specified. |
+| `labels` | `[]string` | N | Labels to add to the pull request. |
 
 #### `git-open-pr`  Example
 
@@ -1128,6 +1216,18 @@ metadata:
 spec:
   # Application specifications go here
 ```
+:::
+
+:::info
+Enforcement of Argo CD
+[sync windows](https://argo-cd.readthedocs.io/en/stable/user-guide/sync_windows/)
+was improved substantially in Argo CD v2.11.0. If you wish for the `argocd-update`
+step to honor sync windows, you must use Argo CD v2.11.0 or later.
+
+_Additionally, it is recommended that if a promotion process is expected to
+sometimes encounter an active deny window, the `argocd-update` step should be
+configured with a timeout that is at least as long as the longest expected deny
+window. (The step's default timeout is five minutes.)_
 :::
 
 #### `argocd-update` Configuration
