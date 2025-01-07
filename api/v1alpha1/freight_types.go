@@ -186,6 +186,12 @@ type CurrentStage struct {
 type VerifiedStage struct {
 	// VerifiedAt is the time at which the Freight was verified in the Stage.
 	VerifiedAt *metav1.Time `json:"verifiedAt,omitempty" protobuf:"bytes,1,opt,name=verifiedAt"`
+	// LongestCompletedSoak represents the longest definite time interval wherein
+	// the Freight was in CONTINUOUS use by the Stage. This value is updated as
+	// Freight EXITS the Stage. If the Freight is currently in use by the Stage,
+	// the time elapsed since the Freight ENTERED the Stage is its current soak
+	// time, which may exceed the value of this field.
+	LongestCompletedSoak *metav1.Duration `json:"longestSoak,omitempty"`
 }
 
 // ApprovedStage describes a Stage for which Freight has been (manually)
