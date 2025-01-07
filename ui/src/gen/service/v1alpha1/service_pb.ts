@@ -3562,6 +3562,340 @@ export class RefreshWarehouseResponse extends Message<RefreshWarehouseResponse> 
 }
 
 /**
+ * @generated from message akuity.io.kargo.service.v1alpha1.ListSecretsRequest
+ */
+export class ListSecretsRequest extends Message<ListSecretsRequest> {
+  /**
+   * @generated from field: string project = 1;
+   */
+  project = "";
+
+  constructor(data?: PartialMessage<ListSecretsRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.ListSecretsRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "project", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListSecretsRequest {
+    return new ListSecretsRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListSecretsRequest {
+    return new ListSecretsRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListSecretsRequest {
+    return new ListSecretsRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ListSecretsRequest | PlainMessage<ListSecretsRequest> | undefined, b: ListSecretsRequest | PlainMessage<ListSecretsRequest> | undefined): boolean {
+    return proto3.util.equals(ListSecretsRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message akuity.io.kargo.service.v1alpha1.ListSecretsResponse
+ */
+export class ListSecretsResponse extends Message<ListSecretsResponse> {
+  /**
+   * @generated from field: repeated k8s.io.api.core.v1.Secret secrets = 1;
+   */
+  secrets: Secret[] = [];
+
+  constructor(data?: PartialMessage<ListSecretsResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.ListSecretsResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "secrets", kind: "message", T: Secret, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListSecretsResponse {
+    return new ListSecretsResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListSecretsResponse {
+    return new ListSecretsResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListSecretsResponse {
+    return new ListSecretsResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ListSecretsResponse | PlainMessage<ListSecretsResponse> | undefined, b: ListSecretsResponse | PlainMessage<ListSecretsResponse> | undefined): boolean {
+    return proto3.util.equals(ListSecretsResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message akuity.io.kargo.service.v1alpha1.CreateSecretsRequest
+ */
+export class CreateSecretsRequest extends Message<CreateSecretsRequest> {
+  /**
+   * @generated from field: string project = 1;
+   */
+  project = "";
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name = "";
+
+  /**
+   * @generated from field: string description = 3;
+   */
+  description = "";
+
+  /**
+   * @generated from field: map<string, string> data = 4;
+   */
+  data: { [key: string]: string } = {};
+
+  constructor(data?: PartialMessage<CreateSecretsRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.CreateSecretsRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "project", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "description", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "data", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 9 /* ScalarType.STRING */} },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateSecretsRequest {
+    return new CreateSecretsRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateSecretsRequest {
+    return new CreateSecretsRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateSecretsRequest {
+    return new CreateSecretsRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: CreateSecretsRequest | PlainMessage<CreateSecretsRequest> | undefined, b: CreateSecretsRequest | PlainMessage<CreateSecretsRequest> | undefined): boolean {
+    return proto3.util.equals(CreateSecretsRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message akuity.io.kargo.service.v1alpha1.CreateSecretsResponse
+ */
+export class CreateSecretsResponse extends Message<CreateSecretsResponse> {
+  /**
+   * @generated from field: k8s.io.api.core.v1.Secret secret = 1;
+   */
+  secret?: Secret;
+
+  constructor(data?: PartialMessage<CreateSecretsResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.CreateSecretsResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "secret", kind: "message", T: Secret },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateSecretsResponse {
+    return new CreateSecretsResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateSecretsResponse {
+    return new CreateSecretsResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateSecretsResponse {
+    return new CreateSecretsResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: CreateSecretsResponse | PlainMessage<CreateSecretsResponse> | undefined, b: CreateSecretsResponse | PlainMessage<CreateSecretsResponse> | undefined): boolean {
+    return proto3.util.equals(CreateSecretsResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message akuity.io.kargo.service.v1alpha1.UpdateSecretsRequest
+ */
+export class UpdateSecretsRequest extends Message<UpdateSecretsRequest> {
+  /**
+   * @generated from field: string project = 1;
+   */
+  project = "";
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name = "";
+
+  /**
+   * @generated from field: string description = 3;
+   */
+  description = "";
+
+  /**
+   * @generated from field: map<string, string> data = 4;
+   */
+  data: { [key: string]: string } = {};
+
+  constructor(data?: PartialMessage<UpdateSecretsRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.UpdateSecretsRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "project", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "description", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "data", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 9 /* ScalarType.STRING */} },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateSecretsRequest {
+    return new UpdateSecretsRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateSecretsRequest {
+    return new UpdateSecretsRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateSecretsRequest {
+    return new UpdateSecretsRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UpdateSecretsRequest | PlainMessage<UpdateSecretsRequest> | undefined, b: UpdateSecretsRequest | PlainMessage<UpdateSecretsRequest> | undefined): boolean {
+    return proto3.util.equals(UpdateSecretsRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message akuity.io.kargo.service.v1alpha1.UpdateSecretsResponse
+ */
+export class UpdateSecretsResponse extends Message<UpdateSecretsResponse> {
+  /**
+   * @generated from field: k8s.io.api.core.v1.Secret secret = 1;
+   */
+  secret?: Secret;
+
+  constructor(data?: PartialMessage<UpdateSecretsResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.UpdateSecretsResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "secret", kind: "message", T: Secret },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateSecretsResponse {
+    return new UpdateSecretsResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateSecretsResponse {
+    return new UpdateSecretsResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateSecretsResponse {
+    return new UpdateSecretsResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UpdateSecretsResponse | PlainMessage<UpdateSecretsResponse> | undefined, b: UpdateSecretsResponse | PlainMessage<UpdateSecretsResponse> | undefined): boolean {
+    return proto3.util.equals(UpdateSecretsResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message akuity.io.kargo.service.v1alpha1.DeleteSecretsRequest
+ */
+export class DeleteSecretsRequest extends Message<DeleteSecretsRequest> {
+  /**
+   * @generated from field: string project = 1;
+   */
+  project = "";
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name = "";
+
+  constructor(data?: PartialMessage<DeleteSecretsRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.DeleteSecretsRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "project", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteSecretsRequest {
+    return new DeleteSecretsRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeleteSecretsRequest {
+    return new DeleteSecretsRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeleteSecretsRequest {
+    return new DeleteSecretsRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DeleteSecretsRequest | PlainMessage<DeleteSecretsRequest> | undefined, b: DeleteSecretsRequest | PlainMessage<DeleteSecretsRequest> | undefined): boolean {
+    return proto3.util.equals(DeleteSecretsRequest, a, b);
+  }
+}
+
+/**
+ * explicitly empty 
+ *
+ * @generated from message akuity.io.kargo.service.v1alpha1.DeleteSecretsResponse
+ */
+export class DeleteSecretsResponse extends Message<DeleteSecretsResponse> {
+  constructor(data?: PartialMessage<DeleteSecretsResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.DeleteSecretsResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteSecretsResponse {
+    return new DeleteSecretsResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeleteSecretsResponse {
+    return new DeleteSecretsResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeleteSecretsResponse {
+    return new DeleteSecretsResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DeleteSecretsResponse | PlainMessage<DeleteSecretsResponse> | undefined, b: DeleteSecretsResponse | PlainMessage<DeleteSecretsResponse> | undefined): boolean {
+    return proto3.util.equals(DeleteSecretsResponse, a, b);
+  }
+}
+
+/**
  * @generated from message akuity.io.kargo.service.v1alpha1.CreateCredentialsRequest
  */
 export class CreateCredentialsRequest extends Message<CreateCredentialsRequest> {
@@ -3581,7 +3915,7 @@ export class CreateCredentialsRequest extends Message<CreateCredentialsRequest> 
   description = "";
 
   /**
-   * type is git, helm, image or generic
+   * type is git, helm, image
    *
    * @generated from field: string type = 3;
    */
@@ -3607,13 +3941,6 @@ export class CreateCredentialsRequest extends Message<CreateCredentialsRequest> 
    */
   password = "";
 
-  /**
-   * when type is generic, this field as to create kubernetes Secret resource
-   *
-   * @generated from field: map<string, string> data = 9;
-   */
-  data: { [key: string]: string } = {};
-
   constructor(data?: PartialMessage<CreateCredentialsRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -3630,7 +3957,6 @@ export class CreateCredentialsRequest extends Message<CreateCredentialsRequest> 
     { no: 5, name: "repo_url_is_regex", jsonName: "repoURLIsRegex", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 6, name: "username", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 7, name: "password", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 9, name: "data", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 9 /* ScalarType.STRING */} },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateCredentialsRequest {
@@ -3980,11 +4306,6 @@ export class UpdateCredentialsRequest extends Message<UpdateCredentialsRequest> 
    */
   password = "";
 
-  /**
-   * @generated from field: map<string, string> data = 9;
-   */
-  data: { [key: string]: string } = {};
-
   constructor(data?: PartialMessage<UpdateCredentialsRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -4001,7 +4322,6 @@ export class UpdateCredentialsRequest extends Message<UpdateCredentialsRequest> 
     { no: 5, name: "repo_url_is_regex", jsonName: "repoURLIsRegex", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 6, name: "username", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 7, name: "password", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 9, name: "data", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 9 /* ScalarType.STRING */} },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateCredentialsRequest {

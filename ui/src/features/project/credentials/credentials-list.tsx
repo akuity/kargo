@@ -17,7 +17,9 @@ import { useModal } from '@ui/features/common/modal/use-modal';
 import { Secret } from '@ui/gen/k8s.io/api/core/v1/generated_pb';
 import {
   deleteCredentials,
-  listCredentials
+  deleteSecrets,
+  listCredentials,
+  listSecrets
 } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 
 import { CreateCredentialsModal } from './create-credentials-modal';
@@ -29,28 +31,22 @@ export const CredentialsList = () => {
   const { show: showCreate } = useModal();
   const confirm = useConfirmModal();
 
-  const { data, isLoading, refetch } = useQuery(listCredentials, { project: name });
-  const { mutate } = useMutation(deleteCredentials, {
+  const listCredentialsQuery = useQuery(listCredentials, { project: name });
+
+  const listSecretsQuery = useQuery(listSecrets, { project: name });
+
+  const deleteCredentialsMutation = useMutation(deleteCredentials, {
     onSuccess: () => {
-      refetch();
+      listCredentialsQuery.refetch();
     }
   });
 
-  const specificCredentials: Secret[] = [];
-  const genericCredentials: Secret[] = [];
+  const deleteSecretsMutation = useMutation(deleteSecrets, {
+    onSuccess: () => listSecretsQuery.refetch()
+  });
 
-  for (const credential of data?.credentials || []) {
-    const credentialType = credential?.metadata?.labels?.[
-      CredentialTypeLabelKey
-    ] as CredentialsType;
-
-    if (credentialType !== 'generic') {
-      specificCredentials.push(credential);
-      continue;
-    }
-
-    genericCredentials.push(credential);
-  }
+  const specificCredentials: Secret[] = listCredentialsQuery.data?.credentials || [];
+  const genericCredentials: Secret[] = listSecretsQuery.data?.secrets || [];
 
   return (
     <div className='p-4'>
@@ -68,7 +64,7 @@ export const CredentialsList = () => {
                     <CreateCredentialsModal
                       type='repo'
                       project={name || ''}
-                      onSuccess={refetch}
+                      onSuccess={listCredentialsQuery.refetch}
                       {...p}
                     />
                   ));
@@ -84,7 +80,7 @@ export const CredentialsList = () => {
             key={specificCredentials.length}
             dataSource={specificCredentials}
             rowKey={(record: Secret) => record?.metadata?.name || ''}
-            loading={isLoading}
+            loading={listCredentialsQuery.isLoading}
             columns={[
               {
                 title: 'Name',
@@ -142,7 +138,7 @@ export const CredentialsList = () => {
                           <CreateCredentialsModal
                             type='repo'
                             project={name || ''}
-                            onSuccess={refetch}
+                            onSuccess={listCredentialsQuery.refetch}
                             editing
                             init={record}
                             {...p}
@@ -170,7 +166,10 @@ export const CredentialsList = () => {
                             </p>
                           ),
                           onOk: () => {
-                            mutate({ project: name || '', name: record?.metadata?.name || '' });
+                            deleteCredentialsMutation.mutate({
+                              project: name || '',
+                              name: record?.metadata?.name || ''
+                            });
                           },
                           hide: () => {}
                         });
@@ -200,7 +199,7 @@ export const CredentialsList = () => {
                     <CreateCredentialsModal
                       type='generic'
                       project={name || ''}
-                      onSuccess={refetch}
+                      onSuccess={listSecretsQuery.refetch}
                       {...p}
                     />
                   ));
@@ -251,7 +250,7 @@ export const CredentialsList = () => {
                           <CreateCredentialsModal
                             type='generic'
                             project={name || ''}
-                            onSuccess={refetch}
+                            onSuccess={listSecretsQuery.refetch}
                             editing
                             init={record}
                             {...p}
@@ -279,7 +278,10 @@ export const CredentialsList = () => {
                             </p>
                           ),
                           onOk: () => {
-                            mutate({ project: name || '', name: record?.metadata?.name || '' });
+                            deleteSecretsMutation.mutate({
+                              project: name || '',
+                              name: record?.metadata?.name || ''
+                            });
                           },
                           hide: () => {}
                         });
@@ -292,7 +294,7 @@ export const CredentialsList = () => {
               }
             ]}
             expandable={descriptionExpandable()}
-            loading={isLoading}
+            loading={listSecretsQuery.isLoading}
           />
         </Card>
       </Flex>

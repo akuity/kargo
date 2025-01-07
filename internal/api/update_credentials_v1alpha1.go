@@ -96,20 +96,9 @@ func (s *server) UpdateCredentials(
 
 		applyCredentialsUpdateToSecret(&secret, credsUpdate)
 
-	case kargoapi.CredentialTypeLabelValueGeneric:
-		genericCredsUpdate := genericCredentials{
-			data:        req.Msg.GetData(),
-			description: req.Msg.GetDescription(),
-		}
-
-		if len(genericCredsUpdate.data) == 0 {
-			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("cannot create empty secret"))
-		}
-
-		applyGenericCredentialsUpdateToSecret(&secret, genericCredsUpdate)
 	default:
 		return nil, connect.NewError(
-			connect.CodeInvalidArgument, errors.New("type should be one of git, helm, image or generic"),
+			connect.CodeInvalidArgument, errors.New("type should be one of git, helm, image"),
 		)
 	}
 
@@ -122,36 +111,6 @@ func (s *server) UpdateCredentials(
 			Credentials: sanitizeCredentialSecret(secret),
 		},
 	), nil
-}
-
-func applyGenericCredentialsUpdateToSecret(secret *corev1.Secret, genericCredsUpdate genericCredentials) {
-	if genericCredsUpdate.description != "" {
-		if secret.Annotations == nil {
-			secret.Annotations = make(map[string]string, 1)
-		}
-		secret.Annotations[kargoapi.AnnotationKeyDescription] = genericCredsUpdate.description
-	} else {
-		delete(secret.Annotations, kargoapi.AnnotationKeyDescription)
-	}
-
-	// delete the keys that exist in secret but not in updater
-	for key := range secret.Data {
-		_, exist := genericCredsUpdate.data[key]
-
-		if !exist {
-			delete(secret.Data, key)
-		}
-	}
-
-	// upsert
-	for key, value := range genericCredsUpdate.data {
-		_, existInSecret := secret.Data[key]
-
-		if !existInSecret || (existInSecret && value != "") {
-			secret.Data[key] = []byte(value)
-			continue
-		}
-	}
 }
 
 func applyCredentialsUpdateToSecret(

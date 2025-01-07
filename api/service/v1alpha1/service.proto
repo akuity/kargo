@@ -85,6 +85,13 @@ service KargoService {
   rpc ListCredentials(ListCredentialsRequest) returns (ListCredentialsResponse);
   rpc UpdateCredentials(UpdateCredentialsRequest) returns (UpdateCredentialsResponse);
 
+  /* Secrets APIs */
+
+  rpc ListSecrets(ListSecretsRequest) returns (ListSecretsResponse);
+  rpc CreateSecrets(CreateSecretsRequest) returns (CreateSecretsResponse);
+  rpc UpdateSecrets(UpdateSecretsRequest) returns (UpdateSecretsResponse);
+  rpc DeleteSecrets(DeleteSecretsRequest) returns (DeleteSecretsResponse);
+
   /* Analysis APIs */
 
   rpc ListAnalysisTemplates(ListAnalysisTemplatesRequest) returns (ListAnalysisTemplatesResponse);
@@ -532,18 +539,55 @@ message RefreshWarehouseResponse {
   github.com.akuity.kargo.api.v1alpha1.Warehouse warehouse = 1;
 }
 
+message ListSecretsRequest {
+  string project = 1;
+}
+
+message ListSecretsResponse {
+  repeated k8s.io.api.core.v1.Secret secrets = 1;
+}
+
+message CreateSecretsRequest {
+  string project = 1;
+  string name = 2;
+  string description = 3;
+  map<string, string> data = 4;
+}
+
+message CreateSecretsResponse {
+  k8s.io.api.core.v1.Secret secret = 1;
+}
+
+message UpdateSecretsRequest {
+  string project = 1;
+  string name = 2;
+  string description = 3;
+  map<string, string> data = 4;
+}
+
+message UpdateSecretsResponse {
+  k8s.io.api.core.v1.Secret secret = 1;
+}
+
+message DeleteSecretsRequest {
+  string project = 1;
+  string name = 2;
+}
+
+message DeleteSecretsResponse {
+  /* explicitly empty */
+}
+
 message CreateCredentialsRequest {
   string project = 1;
   string name = 2;
   string description = 8;
-  // type is git, helm, image or generic
+  // type is git, helm, image
   string type = 3;
   string repo_url = 4 [json_name = "repoURL"];
   bool repo_url_is_regex = 5 [json_name = "repoURLIsRegex"];
   string username = 6;
   string password = 7;
-  // when type is generic, this field as to create kubernetes Secret resource
-  map<string, string> data = 9;
 }
 
 message CreateCredentialsResponse {
@@ -589,7 +633,6 @@ message UpdateCredentialsRequest {
   bool repo_url_is_regex = 5 [json_name = "repoURLIsRegex"];
   string username = 6;
   string password = 7;
-  map<string, string> data = 9;
 }
 
 message UpdateCredentialsResponse {

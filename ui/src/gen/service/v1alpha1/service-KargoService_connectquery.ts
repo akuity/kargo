@@ -4,7 +4,7 @@
 // @ts-nocheck
 
 import { MethodKind } from "@bufbuild/protobuf";
-import { AbortPromotionRequest, AbortPromotionResponse, AbortVerificationRequest, AbortVerificationResponse, AdminLoginRequest, AdminLoginResponse, ApproveFreightRequest, ApproveFreightResponse, CreateCredentialsRequest, CreateCredentialsResponse, CreateOrUpdateResourceRequest, CreateOrUpdateResourceResponse, CreateResourceRequest, CreateResourceResponse, CreateRoleRequest, CreateRoleResponse, DeleteAnalysisTemplateRequest, DeleteAnalysisTemplateResponse, DeleteCredentialsRequest, DeleteCredentialsResponse, DeleteFreightRequest, DeleteFreightResponse, DeleteProjectRequest, DeleteProjectResponse, DeleteResourceRequest, DeleteResourceResponse, DeleteRoleRequest, DeleteRoleResponse, DeleteStageRequest, DeleteStageResponse, DeleteWarehouseRequest, DeleteWarehouseResponse, GetAnalysisRunRequest, GetAnalysisRunResponse, GetAnalysisTemplateConfigMapRequest, GetAnalysisTemplateConfigMapResponse, GetAnalysisTemplateRequest, GetAnalysisTemplateResponse, GetAnalysisTemplateSecretRequest, GetAnalysisTemplateSecretResponse, GetConfigRequest, GetConfigResponse, GetCredentialsRequest, GetCredentialsResponse, GetFreightRequest, GetFreightResponse, GetProjectRequest, GetProjectResponse, GetPromotionRequest, GetPromotionResponse, GetPublicConfigRequest, GetPublicConfigResponse, GetRoleRequest, GetRoleResponse, GetStageRequest, GetStageResponse, GetVersionInfoRequest, GetVersionInfoResponse, GetWarehouseRequest, GetWarehouseResponse, GrantRequest, GrantResponse, ListAnalysisTemplateConfigMapsRequest, ListAnalysisTemplateConfigMapsResponse, ListAnalysisTemplateSecretsRequest, ListAnalysisTemplateSecretsResponse, ListAnalysisTemplatesRequest, ListAnalysisTemplatesResponse, ListCredentialsRequest, ListCredentialsResponse, ListImagesRequest, ListImagesResponse, ListProjectEventsRequest, ListProjectEventsResponse, ListProjectsRequest, ListProjectsResponse, ListPromotionsRequest, ListPromotionsResponse, ListRolesRequest, ListRolesResponse, ListStagesRequest, ListStagesResponse, ListWarehousesRequest, ListWarehousesResponse, PromoteDownstreamRequest, PromoteDownstreamResponse, PromoteToStageRequest, PromoteToStageResponse, QueryFreightRequest, QueryFreightResponse, RefreshStageRequest, RefreshStageResponse, RefreshWarehouseRequest, RefreshWarehouseResponse, ReverifyRequest, ReverifyResponse, RevokeRequest, RevokeResponse, UpdateCredentialsRequest, UpdateCredentialsResponse, UpdateFreightAliasRequest, UpdateFreightAliasResponse, UpdateResourceRequest, UpdateResourceResponse, UpdateRoleRequest, UpdateRoleResponse } from "./service_pb.js";
+import { AbortPromotionRequest, AbortPromotionResponse, AbortVerificationRequest, AbortVerificationResponse, AdminLoginRequest, AdminLoginResponse, ApproveFreightRequest, ApproveFreightResponse, CreateCredentialsRequest, CreateCredentialsResponse, CreateOrUpdateResourceRequest, CreateOrUpdateResourceResponse, CreateResourceRequest, CreateResourceResponse, CreateRoleRequest, CreateRoleResponse, CreateSecretsRequest, CreateSecretsResponse, DeleteAnalysisTemplateRequest, DeleteAnalysisTemplateResponse, DeleteCredentialsRequest, DeleteCredentialsResponse, DeleteFreightRequest, DeleteFreightResponse, DeleteProjectRequest, DeleteProjectResponse, DeleteResourceRequest, DeleteResourceResponse, DeleteRoleRequest, DeleteRoleResponse, DeleteSecretsRequest, DeleteSecretsResponse, DeleteStageRequest, DeleteStageResponse, DeleteWarehouseRequest, DeleteWarehouseResponse, GetAnalysisRunRequest, GetAnalysisRunResponse, GetAnalysisTemplateConfigMapRequest, GetAnalysisTemplateConfigMapResponse, GetAnalysisTemplateRequest, GetAnalysisTemplateResponse, GetAnalysisTemplateSecretRequest, GetAnalysisTemplateSecretResponse, GetConfigRequest, GetConfigResponse, GetCredentialsRequest, GetCredentialsResponse, GetFreightRequest, GetFreightResponse, GetProjectRequest, GetProjectResponse, GetPromotionRequest, GetPromotionResponse, GetPublicConfigRequest, GetPublicConfigResponse, GetRoleRequest, GetRoleResponse, GetStageRequest, GetStageResponse, GetVersionInfoRequest, GetVersionInfoResponse, GetWarehouseRequest, GetWarehouseResponse, GrantRequest, GrantResponse, ListAnalysisTemplateConfigMapsRequest, ListAnalysisTemplateConfigMapsResponse, ListAnalysisTemplateSecretsRequest, ListAnalysisTemplateSecretsResponse, ListAnalysisTemplatesRequest, ListAnalysisTemplatesResponse, ListCredentialsRequest, ListCredentialsResponse, ListImagesRequest, ListImagesResponse, ListProjectEventsRequest, ListProjectEventsResponse, ListProjectsRequest, ListProjectsResponse, ListPromotionsRequest, ListPromotionsResponse, ListRolesRequest, ListRolesResponse, ListSecretsRequest, ListSecretsResponse, ListStagesRequest, ListStagesResponse, ListWarehousesRequest, ListWarehousesResponse, PromoteDownstreamRequest, PromoteDownstreamResponse, PromoteToStageRequest, PromoteToStageResponse, QueryFreightRequest, QueryFreightResponse, RefreshStageRequest, RefreshStageResponse, RefreshWarehouseRequest, RefreshWarehouseResponse, ReverifyRequest, ReverifyResponse, RevokeRequest, RevokeResponse, UpdateCredentialsRequest, UpdateCredentialsResponse, UpdateFreightAliasRequest, UpdateFreightAliasResponse, UpdateResourceRequest, UpdateResourceResponse, UpdateRoleRequest, UpdateRoleResponse, UpdateSecretsRequest, UpdateSecretsResponse } from "./service_pb.js";
 
 /**
  * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.GetVersionInfo
@@ -522,6 +522,62 @@ export const updateCredentials = {
   kind: MethodKind.Unary,
   I: UpdateCredentialsRequest,
   O: UpdateCredentialsResponse,
+  service: {
+    typeName: "akuity.io.kargo.service.v1alpha1.KargoService"
+  }
+} as const;
+
+/**
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.ListSecrets
+ */
+export const listSecrets = {
+  localName: "listSecrets",
+  name: "ListSecrets",
+  kind: MethodKind.Unary,
+  I: ListSecretsRequest,
+  O: ListSecretsResponse,
+  service: {
+    typeName: "akuity.io.kargo.service.v1alpha1.KargoService"
+  }
+} as const;
+
+/**
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.CreateSecrets
+ */
+export const createSecrets = {
+  localName: "createSecrets",
+  name: "CreateSecrets",
+  kind: MethodKind.Unary,
+  I: CreateSecretsRequest,
+  O: CreateSecretsResponse,
+  service: {
+    typeName: "akuity.io.kargo.service.v1alpha1.KargoService"
+  }
+} as const;
+
+/**
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.UpdateSecrets
+ */
+export const updateSecrets = {
+  localName: "updateSecrets",
+  name: "UpdateSecrets",
+  kind: MethodKind.Unary,
+  I: UpdateSecretsRequest,
+  O: UpdateSecretsResponse,
+  service: {
+    typeName: "akuity.io.kargo.service.v1alpha1.KargoService"
+  }
+} as const;
+
+/**
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.DeleteSecrets
+ */
+export const deleteSecrets = {
+  localName: "deleteSecrets",
+  name: "DeleteSecrets",
+  kind: MethodKind.Unary,
+  I: DeleteSecretsRequest,
+  O: DeleteSecretsResponse,
   service: {
     typeName: "akuity.io.kargo.service.v1alpha1.KargoService"
   }

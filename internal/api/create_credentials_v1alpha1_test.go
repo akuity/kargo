@@ -90,47 +90,6 @@ func TestCreateCredentials(t *testing.T) {
 		assert.Equal(t, "password", string(d[libCreds.FieldPassword]))
 	})
 
-	t.Run("create generic secret", func(t *testing.T) {
-		t.Parallel()
-
-		resp, err := s.CreateCredentials(ctx, connect.NewRequest(&svcv1alpha1.CreateCredentialsRequest{
-			Project:     "kargo-demo",
-			Name:        "external",
-			Description: "my external secret",
-			Type:        "generic",
-			Data: map[string]string{
-				"TOKEN_1": "foo",
-				"TOKEN_2": "bar",
-			},
-		}))
-
-		require.NoError(t, err)
-
-		respSecret := resp.Msg.GetCredentials()
-
-		assert.Equal(t, "kargo-demo", respSecret.Namespace)
-		assert.Equal(t, "external", respSecret.ObjectMeta.Name)
-		assert.Equal(t, "my external secret", respSecret.ObjectMeta.Annotations[kargoapi.AnnotationKeyDescription])
-		assert.Equal(t, redacted, respSecret.StringData["TOKEN_1"])
-		assert.Equal(t, redacted, respSecret.StringData["TOKEN_2"])
-
-		kubernetesSecret := corev1.Secret{}
-
-		require.NoError(t, cl.Get(ctx, types.NamespacedName{
-			Namespace: "kargo-demo",
-			Name:      "external",
-		}, &kubernetesSecret),
-		)
-
-		d := kubernetesSecret.DeepCopy().Data
-
-		assert.Equal(t, "kargo-demo", kubernetesSecret.Namespace)
-		assert.Equal(t, "external", kubernetesSecret.ObjectMeta.Name)
-		assert.Equal(t, "my external secret", kubernetesSecret.ObjectMeta.Annotations[kargoapi.AnnotationKeyDescription])
-		assert.Equal(t, "foo", string(d["TOKEN_1"]))
-		assert.Equal(t, "bar", string(d["TOKEN_2"]))
-	})
-
 	t.Run("invalid secret", func(t *testing.T) {
 		t.Parallel()
 

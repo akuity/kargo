@@ -13,7 +13,9 @@ import { dnsRegex } from '@ui/features/common/utils';
 import { Secret } from '@ui/gen/k8s.io/api/core/v1/generated_pb';
 import {
   createCredentials,
-  updateCredentials
+  createSecrets,
+  updateCredentials,
+  updateSecrets
 } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 import { zodValidators } from '@ui/utils/validators';
 
@@ -93,9 +95,56 @@ export const CreateCredentialsModal = ({ project, onSuccess, editing, init, ...p
     }
   });
 
+  const createSecretsMutation = useMutation(createSecrets, {
+    onSuccess: () => {
+      props.hide();
+      onSuccess();
+    }
+  });
+
+  const updateSecretsMutation = useMutation(updateSecrets, {
+    onSuccess: () => {
+      props.hide();
+      onSuccess();
+    }
+  });
+
   const repoUrlIsRegex = watch('repoUrlIsRegex');
 
   const credentialType = (props.type === 'repo' ? watch('type') : 'generic') as CredentialsType;
+
+  const onSubmit = handleSubmit((values) => {
+    if (credentialType === 'generic') {
+      const data: Record<string, string> = {};
+
+      if (values?.data?.length > 0) {
+        for (const [k, v] of values.data) {
+          data[k] = v;
+        }
+      }
+
+      if (editing) {
+        return updateSecretsMutation.mutate({
+          ...values,
+          project,
+          name: init?.metadata?.name || '',
+          data
+        });
+      }
+
+      return createSecretsMutation.mutate({ ...values, project, data });
+    }
+
+    if (editing) {
+      return updateCredentialsMutation.mutate({
+        ...values,
+        project,
+        name: init?.metadata?.name || ''
+      });
+    }
+
+    return createCredentialsMutation.mutate({ ...values, project });
+  });
 
   return (
     <Modal
@@ -104,26 +153,7 @@ export const CreateCredentialsModal = ({ project, onSuccess, editing, init, ...p
         loading: createCredentialsMutation.isPending || updateCredentialsMutation.isPending
       }}
       okText={editing ? 'Update' : 'Create'}
-      onOk={handleSubmit((values) => {
-        const data: Record<string, string> = {};
-
-        if (values?.data?.length > 0) {
-          for (const [k, v] of values.data) {
-            data[k] = v;
-          }
-        }
-
-        if (editing) {
-          return updateCredentialsMutation.mutate({
-            ...values,
-            project,
-            name: init?.metadata?.name || '',
-            data
-          });
-        } else {
-          createCredentialsMutation.mutate({ ...values, project, data });
-        }
-      })}
+      onOk={onSubmit}
       title={
         <>
           <FontAwesomeIcon icon={faAsterisk} className='mr-2' />
