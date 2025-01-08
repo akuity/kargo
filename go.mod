@@ -11,7 +11,7 @@ require (
 	github.com/aws/aws-sdk-go-v2 v1.32.7
 	github.com/aws/aws-sdk-go-v2/config v1.28.7
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.48
-	github.com/aws/aws-sdk-go-v2/service/ecr v1.38.0
+	github.com/aws/aws-sdk-go-v2/service/ecr v1.38.1
 	github.com/aws/aws-sdk-go-v2/service/sts v1.33.3
 	github.com/bacongobbler/browser v1.1.0
 	github.com/bombsimon/logrusr/v4 v4.1.0
@@ -21,7 +21,7 @@ require (
 	github.com/expr-lang/expr v1.16.9
 	github.com/fatih/structtag v1.2.0
 	github.com/fluxcd/pkg/kustomize v1.15.0
-	github.com/go-git/go-git/v5 v5.13.0
+	github.com/go-git/go-git/v5 v5.13.1
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang-jwt/jwt/v5 v5.2.1
 	github.com/google/go-containerregistry v0.20.2
@@ -95,7 +95,7 @@ require (
 	github.com/fatih/color v1.16.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.7.0 // indirect
 	github.com/go-git/gcfg v1.5.1-0.20230307220236-3a3c6141e376 // indirect
-	github.com/go-git/go-billy/v5 v5.6.0 // indirect
+	github.com/go-git/go-billy/v5 v5.6.1 // indirect
 	github.com/go-gorp/gorp/v3 v3.1.0 // indirect
 	github.com/gobwas/glob v0.2.3 // indirect
 	github.com/gofrs/uuid v4.0.0+incompatible // indirect
