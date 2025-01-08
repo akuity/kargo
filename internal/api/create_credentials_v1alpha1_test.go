@@ -90,6 +90,114 @@ func TestCreateCredentials(t *testing.T) {
 		assert.Equal(t, "password", string(d[libCreds.FieldPassword]))
 	})
 
+	t.Run("validate credentials", func(t *testing.T) {
+		t.Parallel()
+
+		invalidCreds := specificCredentials{
+			project:  "",
+			name:     "test",
+			credType: "git",
+			repoURL:  "abc",
+			username: "test",
+			password: "test",
+		}
+
+		err := s.validateCredentials(invalidCreds)
+
+		require.Error(t, err)
+
+		invalidCreds = specificCredentials{
+			project:  "kargo-demo",
+			name:     "",
+			credType: "git",
+			repoURL:  "abc",
+			username: "test",
+			password: "test",
+		}
+
+		err = s.validateCredentials(invalidCreds)
+
+		require.Error(t, err)
+
+		invalidCreds = specificCredentials{
+			project:  "kargo-demo",
+			name:     "test",
+			credType: "",
+			repoURL:  "abc",
+			username: "test",
+			password: "test",
+		}
+
+		err = s.validateCredentials(invalidCreds)
+
+		require.Error(t, err)
+
+		invalidCreds = specificCredentials{
+			project:  "kargo-demo",
+			name:     "test",
+			credType: "invalid",
+			repoURL:  "abc",
+			username: "test",
+			password: "test",
+		}
+
+		err = s.validateCredentials(invalidCreds)
+
+		require.Error(t, err)
+
+		invalidCreds = specificCredentials{
+			project:  "kargo-demo",
+			name:     "test",
+			credType: "git",
+			repoURL:  "",
+			username: "test",
+			password: "test",
+		}
+
+		err = s.validateCredentials(invalidCreds)
+
+		require.Error(t, err)
+
+		invalidCreds = specificCredentials{
+			project:  "kargo-demo",
+			name:     "test",
+			credType: "git",
+			repoURL:  "https://github.com/akuity/kargo",
+			username: "",
+			password: "test",
+		}
+
+		err = s.validateCredentials(invalidCreds)
+
+		require.Error(t, err)
+
+		invalidCreds = specificCredentials{
+			project:  "kargo-demo",
+			name:     "test",
+			credType: "git",
+			repoURL:  "https://github.com/akuity/kargo",
+			username: "test",
+			password: "",
+		}
+
+		err = s.validateCredentials(invalidCreds)
+
+		require.Error(t, err)
+
+		validCreds := specificCredentials{
+			project:  "kargo-demo",
+			name:     "test",
+			credType: "git",
+			repoURL:  "https://github.com/akuity/kargo",
+			username: "test",
+			password: "test",
+		}
+
+		err = s.validateCredentials(validCreds)
+
+		require.NoError(t, err)
+	})
+
 	t.Run("invalid secret", func(t *testing.T) {
 		t.Parallel()
 
