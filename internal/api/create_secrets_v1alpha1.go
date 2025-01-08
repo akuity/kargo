@@ -85,9 +85,7 @@ func (s *server) createGenericCredentials(ctx context.Context, creds genericCred
 		return nil, fmt.Errorf("create secret: %w", err)
 	}
 
-	// redact
-	// TODO: current function does not redact some keys, create new function
-	redactedSecret := sanitizeCredentialSecret(*kubernetesSecret)
+	redactedSecret := sanitizeSecret(*kubernetesSecret, []string{})
 
 	return redactedSecret, nil
 }

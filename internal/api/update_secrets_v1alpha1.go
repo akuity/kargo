@@ -80,7 +80,7 @@ func (s *server) UpdateSecrets(
 
 	return connect.NewResponse(
 		&svcv1alpha1.UpdateSecretsResponse{
-			Secret: sanitizeCredentialSecret(secret),
+			Secret: sanitizeSecret(secret, []string{}),
 		},
 	), nil
 }

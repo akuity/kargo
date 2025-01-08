@@ -51,10 +51,49 @@ func (s *server) ListSecrets(
 
 	secrets := make([]*corev1.Secret, len(secretsList.Items))
 	for i, secret := range secretsList.Items {
-		secrets[i] = sanitizeCredentialSecret(secret)
+		secrets[i] = sanitizeSecret(secret, []string{})
 	}
 
 	return connect.NewResponse(&svcv1alpha1.ListSecretsResponse{
 		Secrets: secrets,
 	}), nil
+}
+
+func sanitizeSecret(secret corev1.Secret, exemptKeys []string) *corev1.Secret {
+	s := secret.DeepCopy()
+
+	s.StringData = make(map[string]string, len(s.Data))
+
+	for k, v := range s.Annotations {
+		switch k {
+		case kargoapi.AnnotationKeyDescription:
+			s.Annotations[k] = v
+		default:
+			s.Annotations[k] = redacted
+		}
+	}
+
+	for k := range s.Labels {
+		if k == kargoapi.CredentialTypeLabelKey {
+			continue
+		}
+
+		s.Labels[k] = redacted
+	}
+
+	for k := range s.Data {
+		s.StringData[k] = redacted
+	}
+
+	for _, exemptKey := range exemptKeys {
+		value, exist := s.Data[exemptKey]
+
+		if exist {
+			s.StringData[exemptKey] = string(value)
+		}
+	}
+
+	s.Data = nil
+
+	return s
 }
