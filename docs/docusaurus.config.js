@@ -31,7 +31,7 @@ const config = {
         docs: {
           sidebarPath: require.resolve('./sidebars.js'),
           sidebarCollapsible: false,
-          routeBasePath: '/', // Serve the docs at the site's roo
+          routeBasePath: '/', // Serve the docs at the site's root
         },
         blog: false,
         pages: false,

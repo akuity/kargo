@@ -13,7 +13,7 @@ technologies, like [Argo CD](https://argoproj.github.io/cd/), to streamline and
 automate the progressive rollout of changes across the many stages of an
 application's lifecycle.
 
-![Screenshot](../static/img/kargo-dashboard.png)
+![Screenshot](./assets/kargo-dashboard.png)
 
 Kargo's goal is to provide an intuitive and flexible layer "above" existing GitOps tooling, wherein you can describe the relationships between various application instances deployed to different environments as well as procedures for progressing changes from one application instance's source of truth to the next.
 
