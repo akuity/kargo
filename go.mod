@@ -15,7 +15,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sts v1.33.3
 	github.com/bacongobbler/browser v1.1.0
 	github.com/bombsimon/logrusr/v4 v4.1.0
-	github.com/coreos/go-oidc/v3 v3.11.0
+	github.com/coreos/go-oidc/v3 v3.12.0
 	github.com/cyphar/filepath-securejoin v0.3.6
 	github.com/evanphx/json-patch/v5 v5.9.0
 	github.com/expr-lang/expr v1.16.9
@@ -48,7 +48,7 @@ require (
 	go.uber.org/ratelimit v0.3.1
 	golang.org/x/crypto v0.31.0
 	golang.org/x/net v0.33.0
-	golang.org/x/oauth2 v0.24.0
+	golang.org/x/oauth2 v0.25.0
 	golang.org/x/sync v0.10.0
 	google.golang.org/api v0.214.0
 	google.golang.org/grpc v1.69.2
