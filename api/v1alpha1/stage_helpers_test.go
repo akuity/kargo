@@ -282,8 +282,8 @@ func TestStage_ListAvailableFreight(t *testing.T) {
 				{
 					Origin: testWarehouse2Origin,
 					Sources: FreightSources{
-						Stages:      []string{testStage},
-						VerifiedFor: &metav1.Duration{Duration: time.Hour},
+						Stages:           []string{testStage},
+						RequiredSoakTime: &metav1.Duration{Duration: time.Hour},
 					},
 				},
 			},
@@ -500,8 +500,8 @@ func TestStage_IsFreightAvailable(t *testing.T) {
 					RequestedFreight: []FreightRequest{{
 						Origin: testOrigin,
 						Sources: FreightSources{
-							Stages:      []string{"upstream-stage"},
-							VerifiedFor: &metav1.Duration{Duration: time.Hour},
+							Stages:           []string{"upstream-stage"},
+							RequiredSoakTime: &metav1.Duration{Duration: time.Hour},
 						},
 					}},
 				},
@@ -525,8 +525,8 @@ func TestStage_IsFreightAvailable(t *testing.T) {
 					RequestedFreight: []FreightRequest{{
 						Origin: testOrigin,
 						Sources: FreightSources{
-							Stages:      []string{"upstream-stage"},
-							VerifiedFor: &metav1.Duration{Duration: 2 * time.Hour},
+							Stages:           []string{"upstream-stage"},
+							RequiredSoakTime: &metav1.Duration{Duration: 2 * time.Hour},
 						},
 					}},
 				},
@@ -552,8 +552,8 @@ func TestStage_IsFreightAvailable(t *testing.T) {
 					RequestedFreight: []FreightRequest{{
 						Origin: testOrigin,
 						Sources: FreightSources{
-							Stages:      []string{"upstream-stage"},
-							VerifiedFor: &metav1.Duration{Duration: time.Hour},
+							Stages:           []string{"upstream-stage"},
+							RequiredSoakTime: &metav1.Duration{Duration: time.Hour},
 						},
 					}},
 				},

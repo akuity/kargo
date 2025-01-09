@@ -138,8 +138,8 @@ func (s *Stage) ListAvailableFreight(
 				ApprovedFor: s.Name,
 				VerifiedIn:  req.Sources.Stages,
 			}
-			if verifiedFor := req.Sources.VerifiedFor; verifiedFor != nil {
-				listOpts.VerifiedBefore = &metav1.Time{Time: time.Now().Add(-verifiedFor.Duration)}
+			if requiredSoak := req.Sources.RequiredSoakTime; requiredSoak != nil {
+				listOpts.VerifiedBefore = &metav1.Time{Time: time.Now().Add(-requiredSoak.Duration)}
 			}
 		}
 		freightFromWarehouse, err := warehouse.ListFreight(ctx, c, listOpts)
@@ -176,8 +176,8 @@ func (s *Stage) IsFreightAvailable(freight *Freight) bool {
 			}
 			for _, source := range req.Sources.Stages {
 				if freight.IsVerifiedIn(source) {
-					return req.Sources.VerifiedFor == nil ||
-						freight.GetLongestSoak(source) >= req.Sources.VerifiedFor.Duration
+					return req.Sources.RequiredSoakTime == nil ||
+						freight.GetLongestSoak(source) >= req.Sources.RequiredSoakTime.Duration
 				}
 			}
 		}

@@ -252,14 +252,18 @@ type FreightSources struct {
 	// Direct field must be true. i.e. Between the two fields, at least on source
 	// must be specified.
 	Stages []string `json:"stages,omitempty" protobuf:"bytes,2,rep,name=stages"`
-	// VerifiedFor specifies the duration for which the requested Freight must
-	// have been verified in the upstream Stages before it can be considered
-	// for promotion to this Stage. This is an optional field, and if not set,
-	// the default value is "0s" (i.e. immediate promotion is allowed).
+	// RequiredSoakTime specifies a minimum duration for which the requested
+	// Freight must have continuously occupied ("soaked in") in an upstream Stage
+	// before becoming available for promotion to this Stage. This is an optional
+	// field. If nil or zero, no soak time is required. Any soak time requirement
+	// is in ADDITION to the requirement that Freight be verified in an upstream
+	// Stage to become available for promotion to this Stage, although a manual
+	// approval for promotion to this Stage will supersede any soak time
+	// requirement.
 	//
 	// +kubebuilder:validation:Type=string
 	// +kubebuilder:validation:Pattern="^([0-9]+(\\.[0-9]+)?(s|m|h))+$"
-	VerifiedFor *metav1.Duration `json:"verifiedFor,omitempty" protobuf:"bytes,3,opt,name=verifiedFor"`
+	RequiredSoakTime *metav1.Duration `json:"requiredSoakTime,omitempty" protobuf:"bytes,3,opt,name=requiredSoakTime"`
 }
 
 // PromotionTemplate defines a template for a Promotion that can be used to

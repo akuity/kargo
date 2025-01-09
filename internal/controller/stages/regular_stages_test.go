@@ -4806,8 +4806,8 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 								Name: "test-warehouse",
 							},
 							Sources: kargoapi.FreightSources{
-								Stages:      []string{"upstream-stage"},
-								VerifiedFor: &metav1.Duration{Duration: time.Hour},
+								Stages:           []string{"upstream-stage"},
+								RequiredSoakTime: &metav1.Duration{Duration: time.Hour},
 							},
 						},
 					},
