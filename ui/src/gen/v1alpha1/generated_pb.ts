@@ -1059,7 +1059,7 @@ export type GitSubscription = Message<"github.com.akuity.kargo.api.v1alpha1.GitS
    * subscription is implicitly to the repository's default branch.
    *
    * +kubebuilder:validation:MinLength=1
-   * +kubebuilder:validation:Pattern=`^\w+([-/]\w+)*$`
+   * +kubebuilder:validation:Pattern=`^\w+([-/]\w+)*(\.\d+)?$`
    *
    * @generated from field: optional string branch = 3;
    */
