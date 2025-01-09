@@ -14,630 +14,639 @@ spec:
     singular: warehouse
   scope: Namespaced
   versions:
-  - additionalPrinterColumns:
-    - jsonPath: .spec.shard
-      name: Shard
-      type: string
-    - jsonPath: .metadata.creationTimestamp
-      name: Age
-      type: date
-    name: v1alpha1
-    schema:
-      openAPIV3Schema:
-        description: Warehouse is a source of Freight.
-        properties:
-          apiVersion:
-            description: |-
-              APIVersion defines the versioned schema of this representation of an object.
-              Servers should convert recognized schemas to the latest internal value, and
-              may reject unrecognized values.
-              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
-            type: string
-          kind:
-            description: |-
-              Kind is a string value representing the REST resource this object represents.
-              Servers may infer this from the endpoint the client submits requests to.
-              Cannot be updated.
-              In CamelCase.
-              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
-            type: string
-          metadata:
-            type: object
-          spec:
-            description: Spec describes sources of artifacts.
-            properties:
-              freightCreationPolicy:
-                default: Automatic
-                description: |-
-                  FreightCreationPolicy describes how Freight is created by this Warehouse.
-                  This field is optional. When left unspecified, the field is implicitly
-                  treated as if its value were "Automatic".
-                  Accepted values: Automatic, Manual
-                enum:
-                - Automatic
-                - Manual
-                type: string
-              interval:
-                default: 5m0s
-                description: |-
-                  Interval is the reconciliation interval for this Warehouse. On each
-                  reconciliation, the Warehouse will discover new artifacts and optionally
-                  produce new Freight. This field is optional. When left unspecified, the
-                  field is implicitly treated as if its value were "5m0s".
-                pattern: ^([0-9]+(\.[0-9]+)?(s|m|h))+$
-                type: string
-              shard:
-                description: |-
-                  Shard is the name of the shard that this Warehouse belongs to. This is an
-                  optional field. If not specified, the Warehouse will belong to the default
-                  shard. A defaulting webhook will sync this field with the value of the
-                  kargo.akuity.io/shard label. When the shard label is not present or differs
-                  from the value of this field, the defaulting webhook will set the label to
-                  the value of this field. If the shard label is present and this field is
-                  empty, the defaulting webhook will set the value of this field to the value
-                  of the shard label.
-                type: string
-              subscriptions:
-                description: |-
-                  Subscriptions describes sources of artifacts to be included in Freight
-                  produced by this Warehouse.
-                items:
+    - additionalPrinterColumns:
+        - jsonPath: .spec.shard
+          name: Shard
+          type: string
+        - jsonPath: .metadata.creationTimestamp
+          name: Age
+          type: date
+      name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: Warehouse is a source of Freight.
+          properties:
+            apiVersion:
+              description: |-
+                APIVersion defines the versioned schema of this representation of an object.
+                Servers should convert recognized schemas to the latest internal value, and
+                may reject unrecognized values.
+                More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+              type: string
+            kind:
+              description: |-
+                Kind is a string value representing the REST resource this object represents.
+                Servers may infer this from the endpoint the client submits requests to.
+                Cannot be updated.
+                In CamelCase.
+                More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+              type: string
+            metadata:
+              type: object
+            spec:
+              description: Spec describes sources of artifacts.
+              properties:
+                freightCreationPolicy:
+                  default: Automatic
                   description: |-
-                    RepoSubscription describes a subscription to ONE OF a Git repository, a
-                    container image repository, or a Helm chart repository.
+                    FreightCreationPolicy describes how Freight is created by this Warehouse.
+                    This field is optional. When left unspecified, the field is implicitly
+                    treated as if its value were "Automatic".
+                    Accepted values: Automatic, Manual
+                  enum:
+                    - Automatic
+                    - Manual
+                  type: string
+                interval:
+                  default: 5m0s
+                  description: |-
+                    Interval is the reconciliation interval for this Warehouse. On each
+                    reconciliation, the Warehouse will discover new artifacts and optionally
+                    produce new Freight. This field is optional. When left unspecified, the
+                    field is implicitly treated as if its value were "5m0s".
+                  pattern: ^([0-9]+(\.[0-9]+)?(s|m|h))+$
+                  type: string
+                shard:
+                  description: |-
+                    Shard is the name of the shard that this Warehouse belongs to. This is an
+                    optional field. If not specified, the Warehouse will belong to the default
+                    shard. A defaulting webhook will sync this field with the value of the
+                    kargo.akuity.io/shard label. When the shard label is not present or differs
+                    from the value of this field, the defaulting webhook will set the label to
+                    the value of this field. If the shard label is present and this field is
+                    empty, the defaulting webhook will set the value of this field to the value
+                    of the shard label.
+                  type: string
+                subscriptions:
+                  description: |-
+                    Subscriptions describes sources of artifacts to be included in Freight
+                    produced by this Warehouse.
+                  items:
+                    description: |-
+                      RepoSubscription describes a subscription to ONE OF a Git repository, a
+                      container image repository, or a Helm chart repository.
+                    properties:
+                      chart:
+                        description:
+                          Chart describes a subscription to a Helm chart
+                          repository.
+                        properties:
+                          discoveryLimit:
+                            default: 20
+                            description: |-
+                              DiscoveryLimit is an optional limit on the number of chart versions that
+                              can be discovered for this subscription. The limit is applied after
+                              filtering charts based on the SemverConstraint field.
+                              When left unspecified, the field is implicitly treated as if its value
+                              were "20". The upper limit for this field is 100.
+                            format: int32
+                            maximum: 100
+                            minimum: 1
+                            type: integer
+                          name:
+                            description: |-
+                              Name specifies the name of a Helm chart to subscribe to within a classic
+                              chart repository specified by the RepoURL field. This field is required
+                              when the RepoURL field points to a classic chart repository and MUST
+                              otherwise be empty.
+                            type: string
+                          repoURL:
+                            description: |-
+                              RepoURL specifies the URL of a Helm chart repository. It may be a classic
+                              chart repository (using HTTP/S) OR a repository within an OCI registry.
+                              Classic chart repositories can contain differently named charts. When this
+                              field points to such a repository, the Name field MUST also be used
+                              to specify the name of the desired chart within that repository. In the
+                              case of a repository within an OCI registry, the URL implicitly points to
+                              a specific chart and the Name field MUST NOT be used. The RepoURL field is
+                              required.
+                            minLength: 1
+                            pattern: ^(((https?)|(oci))://)([\w\d\.\-]+)(:[\d]+)?(/.*)*$
+                            type: string
+                          semverConstraint:
+                            description: |-
+                              SemverConstraint specifies constraints on what new chart versions are
+                              permissible. This field is optional. When left unspecified, there will be
+                              no constraints, which means the latest version of the chart will always be
+                              used. Care should be taken with leaving this field unspecified, as it can
+                              lead to the unanticipated rollout of breaking changes.
+                              More info: https://github.com/masterminds/semver#checking-version-constraints
+                            type: string
+                        required:
+                          - repoURL
+                        type: object
+                      git:
+                        description: Git describes a subscriptions to a Git repository.
+                        properties:
+                          allowTags:
+                            description: |-
+                              AllowTags is a regular expression that can optionally be used to limit the
+                              tags that are considered in determining the newest commit of interest. The
+                              value in this field only has any effect when the CommitSelectionStrategy is
+                              Lexical, NewestTag, or SemVer. This field is optional.
+                            type: string
+                          branch:
+                            description: |-
+                              Branch references a particular branch of the repository. The value in this
+                              field only has any effect when the CommitSelectionStrategy is
+                              NewestFromBranch or left unspecified (which is implicitly the same as
+                              NewestFromBranch). This field is optional. When left unspecified, (and the
+                              CommitSelectionStrategy is NewestFromBranch or unspecified), the
+                              subscription is implicitly to the repository's default branch.
+                            minLength: 1
+                            pattern: ^\w+([-\/]\w+)*(-\d+\.\d+)?$
+                            type: string
+                          commitSelectionStrategy:
+                            default: NewestFromBranch
+                            description: |-
+                              CommitSelectionStrategy specifies the rules for how to identify the newest
+                              commit of interest in the repository specified by the RepoURL field. This
+                              field is optional. When left unspecified, the field is implicitly treated
+                              as if its value were "NewestFromBranch".
+                              Accepted values: Lexical, NewestFromBranch, NewestTag, SemVer
+                            enum:
+                              - Lexical
+                              - NewestFromBranch
+                              - NewestTag
+                              - SemVer
+                            type: string
+                          discoveryLimit:
+                            default: 20
+                            description: |-
+                              DiscoveryLimit is an optional limit on the number of commits that can be
+                              discovered for this subscription. The limit is applied after filtering
+                              commits based on the AllowTags and IgnoreTags fields.
+                              When left unspecified, the field is implicitly treated as if its value
+                              were "20". The upper limit for this field is 100.
+                            format: int32
+                            maximum: 100
+                            minimum: 1
+                            type: integer
+                          excludePaths:
+                            description: |-
+                              ExcludePaths is a list of selectors that designate paths in the repository
+                              that should NOT trigger the production of new Freight when changes are
+                              detected therein. When specified, changes in the identified paths will not
+                              trigger Freight production. When not specified, paths that should trigger
+                              Freight production will be defined solely by IncludePaths. Selectors may be
+                              defined using:
+                                1. Exact paths to files or directories (ex. "charts/foo")
+                                2. Glob patterns (prefix the pattern with "glob:"; ex. "glob:*.yaml")
+                                3. Regular expressions (prefix the pattern with "regex:" or "regexp:";
+                                   ex. "regexp:^.*\.yaml$")
+                              Paths selected by IncludePaths may be unselected by ExcludePaths. This
+                              is a useful method for including a broad set of paths and then excluding a
+                              subset of them.
+                            items:
+                              type: string
+                            type: array
+                          ignoreTags:
+                            description: |-
+                              IgnoreTags is a list of tags that must be ignored when determining the
+                              newest commit of interest. No regular expressions or glob patterns are
+                              supported yet. The value in this field only has any effect when the
+                              CommitSelectionStrategy is Lexical, NewestTag, or SemVer. This field is
+                              optional.
+                            items:
+                              type: string
+                            type: array
+                          includePaths:
+                            description: |-
+                              IncludePaths is a list of selectors that designate paths in the repository
+                              that should trigger the production of new Freight when changes are detected
+                              therein. When specified, only changes in the identified paths will trigger
+                              Freight production. When not specified, changes in any path will trigger
+                              Freight production. Selectors may be defined using:
+                                1. Exact paths to files or directories (ex. "charts/foo")
+                                2. Glob patterns (prefix the pattern with "glob:"; ex. "glob:*.yaml")
+                                3. Regular expressions (prefix the pattern with "regex:" or "regexp:";
+                                   ex. "regexp:^.*\.yaml$")
+                              Paths selected by IncludePaths may be unselected by ExcludePaths. This
+                              is a useful method for including a broad set of paths and then excluding a
+                              subset of them.
+                            items:
+                              type: string
+                            type: array
+                          insecureSkipTLSVerify:
+                            description: |-
+                              InsecureSkipTLSVerify specifies whether certificate verification errors
+                              should be ignored when connecting to the repository. This should be enabled
+                              only with great caution.
+                            type: boolean
+                          repoURL:
+                            description:
+                              URL is the repository's URL. This is a required
+                              field.
+                            minLength: 1
+                            pattern: (?:^(https?)://(?:([\w-]+):(.+)@)?([\w-]+(?:\.[\w-]+)*)(?::(\d{1,5}))?(/.*)$)|(?:^([\w-]+)@([\w+]+(?:\.[\w-]+)*):(/?.*))
+                            type: string
+                          semverConstraint:
+                            description: |-
+                              SemverConstraint specifies constraints on what new tagged commits are
+                              considered in determining the newest commit of interest. The value in this
+                              field only has any effect when the CommitSelectionStrategy is SemVer. This
+                              field is optional. When left unspecified, there will be no constraints,
+                              which means the latest semantically tagged commit will always be used. Care
+                              should be taken with leaving this field unspecified, as it can lead to the
+                              unanticipated rollout of breaking changes.
+                            type: string
+                          strictSemvers:
+                            default: true
+                            description: |-
+                              StrictSemvers specifies whether only "strict" semver tags should be
+                              considered. A "strict" semver tag is one containing ALL of major, minor,
+                              and patch version components. This is enabled by default, but only has any
+                              effect when the CommitSelectionStrategy is SemVer. This should be disabled
+                              cautiously, as it creates the potential for any tag containing numeric
+                              characters only to be mistaken for a semver string containing the major
+                              version number only.
+                            type: boolean
+                        required:
+                          - repoURL
+                          - strictSemvers
+                        type: object
+                      image:
+                        description:
+                          Image describes a subscription to container image
+                          repository.
+                        properties:
+                          allowTags:
+                            description: |-
+                              AllowTags is a regular expression that can optionally be used to limit the
+                              image tags that are considered in determining the newest version of an
+                              image. This field is optional.
+                            type: string
+                          discoveryLimit:
+                            default: 20
+                            description: |-
+                              DiscoveryLimit is an optional limit on the number of image references
+                              that can be discovered for this subscription. The limit is applied after
+                              filtering images based on the AllowTags and IgnoreTags fields.
+                              When left unspecified, the field is implicitly treated as if its value
+                              were "20". The upper limit for this field is 100.
+                            format: int32
+                            maximum: 100
+                            minimum: 1
+                            type: integer
+                          gitRepoURL:
+                            description: |-
+                              GitRepoURL optionally specifies the URL of a Git repository that contains
+                              the source code for the image repository referenced by the RepoURL field.
+                              When this is specified, Kargo MAY be able to infer and link to the exact
+                              revision of that source code that was used to build the image.
+                            pattern: ^https?://(\w+([\.-]\w+)*@)?\w+([\.-]\w+)*(:[\d]+)?(/.*)?$
+                            type: string
+                          ignoreTags:
+                            description: |-
+                              IgnoreTags is a list of tags that must be ignored when determining the
+                              newest version of an image. No regular expressions or glob patterns are
+                              supported yet. This field is optional.
+                            items:
+                              type: string
+                            type: array
+                          imageSelectionStrategy:
+                            default: SemVer
+                            description: |-
+                              ImageSelectionStrategy specifies the rules for how to identify the newest version
+                              of the image specified by the RepoURL field. This field is optional. When
+                              left unspecified, the field is implicitly treated as if its value were
+                              "SemVer".
+                              Accepted values: Digest, Lexical, NewestBuild, SemVer
+                            enum:
+                              - Digest
+                              - Lexical
+                              - NewestBuild
+                              - SemVer
+                            type: string
+                          insecureSkipTLSVerify:
+                            description: |-
+                              InsecureSkipTLSVerify specifies whether certificate verification errors
+                              should be ignored when connecting to the repository. This should be enabled
+                              only with great caution.
+                            type: boolean
+                          platform:
+                            description: |-
+                              Platform is a string of the form <os>/<arch> that limits the tags that can
+                              be considered when searching for new versions of an image. This field is
+                              optional. When left unspecified, it is implicitly equivalent to the
+                              OS/architecture of the Kargo controller. Care should be taken to set this
+                              value correctly in cases where the image referenced by this
+                              ImageRepositorySubscription will run on a Kubernetes node with a different
+                              OS/architecture than the Kargo controller. At present this is uncommon, but
+                              not unheard of.
+                            type: string
+                          repoURL:
+                            description: |-
+                              RepoURL specifies the URL of the image repository to subscribe to. The
+                              value in this field MUST NOT include an image tag. This field is required.
+                            minLength: 1
+                            pattern: ^(\w+([\.-]\w+)*(:[\d]+)?/)?(\w+([\.-]\w+)*)(/\w+([\.-]\w+)*)*$
+                            type: string
+                          semverConstraint:
+                            description: |-
+                              SemverConstraint specifies constraints on what new image versions are
+                              permissible. The value in this field only has any effect when the
+                              ImageSelectionStrategy is SemVer or left unspecified (which is implicitly
+                              the same as SemVer). This field is also optional. When left unspecified,
+                              (and the ImageSelectionStrategy is SemVer or unspecified), there will be no
+                              constraints, which means the latest semantically tagged version of an image
+                              will always be used. Care should be taken with leaving this field
+                              unspecified, as it can lead to the unanticipated rollout of breaking
+                              changes.
+                              More info: https://github.com/masterminds/semver#checking-version-constraints
+                            type: string
+                          strictSemvers:
+                            default: true
+                            description: |-
+                              StrictSemvers specifies whether only "strict" semver tags should be
+                              considered. A "strict" semver tag is one containing ALL of major, minor,
+                              and patch version components. This is enabled by default, but only has any
+                              effect when the ImageSelectionStrategy is SemVer. This should be disabled
+                              cautiously, as it is not uncommon to tag container images with short Git
+                              commit hashes, which have the potential to contain numeric characters only
+                              and could be mistaken for a semver string containing the major version
+                              number only.
+                            type: boolean
+                        required:
+                          - repoURL
+                          - strictSemvers
+                        type: object
+                    type: object
+                  minItems: 1
+                  type: array
+              required:
+                - interval
+                - subscriptions
+              type: object
+            status:
+              description: Status describes the Warehouse's most recently observed state.
+              properties:
+                conditions:
+                  description: |-
+                    Conditions contains the last observations of the Warehouse's current
+                    state.
+                  items:
+                    description:
+                      Condition contains details for one aspect of the current
+                      state of this API Resource.
+                    properties:
+                      lastTransitionTime:
+                        description: |-
+                          lastTransitionTime is the last time the condition transitioned from one status to another.
+                          This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                        format: date-time
+                        type: string
+                      message:
+                        description: |-
+                          message is a human readable message indicating details about the transition.
+                          This may be an empty string.
+                        maxLength: 32768
+                        type: string
+                      observedGeneration:
+                        description: |-
+                          observedGeneration represents the .metadata.generation that the condition was set based upon.
+                          For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                          with respect to the current state of the instance.
+                        format: int64
+                        minimum: 0
+                        type: integer
+                      reason:
+                        description: |-
+                          reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                          Producers of specific condition types may define expected values and meanings for this field,
+                          and whether the values are considered a guaranteed API.
+                          The value should be a CamelCase string.
+                          This field may not be empty.
+                        maxLength: 1024
+                        minLength: 1
+                        pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                        type: string
+                      status:
+                        description: status of the condition, one of True, False, Unknown.
+                        enum:
+                          - "True"
+                          - "False"
+                          - Unknown
+                        type: string
+                      type:
+                        description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                        maxLength: 316
+                        pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                        type: string
+                    required:
+                      - lastTransitionTime
+                      - message
+                      - reason
+                      - status
+                      - type
+                    type: object
+                  type: array
+                  x-kubernetes-list-map-keys:
+                    - type
+                  x-kubernetes-list-type: map
+                discoveredArtifacts:
+                  description:
+                    DiscoveredArtifacts holds the artifacts discovered by
+                    the Warehouse.
                   properties:
-                    chart:
-                      description: Chart describes a subscription to a Helm chart
-                        repository.
-                      properties:
-                        discoveryLimit:
-                          default: 20
-                          description: |-
-                            DiscoveryLimit is an optional limit on the number of chart versions that
-                            can be discovered for this subscription. The limit is applied after
-                            filtering charts based on the SemverConstraint field.
-                            When left unspecified, the field is implicitly treated as if its value
-                            were "20". The upper limit for this field is 100.
-                          format: int32
-                          maximum: 100
-                          minimum: 1
-                          type: integer
-                        name:
-                          description: |-
-                            Name specifies the name of a Helm chart to subscribe to within a classic
-                            chart repository specified by the RepoURL field. This field is required
-                            when the RepoURL field points to a classic chart repository and MUST
-                            otherwise be empty.
-                          type: string
-                        repoURL:
-                          description: |-
-                            RepoURL specifies the URL of a Helm chart repository. It may be a classic
-                            chart repository (using HTTP/S) OR a repository within an OCI registry.
-                            Classic chart repositories can contain differently named charts. When this
-                            field points to such a repository, the Name field MUST also be used
-                            to specify the name of the desired chart within that repository. In the
-                            case of a repository within an OCI registry, the URL implicitly points to
-                            a specific chart and the Name field MUST NOT be used. The RepoURL field is
-                            required.
-                          minLength: 1
-                          pattern: ^(((https?)|(oci))://)([\w\d\.\-]+)(:[\d]+)?(/.*)*$
-                          type: string
-                        semverConstraint:
-                          description: |-
-                            SemverConstraint specifies constraints on what new chart versions are
-                            permissible. This field is optional. When left unspecified, there will be
-                            no constraints, which means the latest version of the chart will always be
-                            used. Care should be taken with leaving this field unspecified, as it can
-                            lead to the unanticipated rollout of breaking changes.
-                            More info: https://github.com/masterminds/semver#checking-version-constraints
-                          type: string
-                      required:
-                      - repoURL
-                      type: object
-                    git:
-                      description: Git describes a subscriptions to a Git repository.
-                      properties:
-                        allowTags:
-                          description: |-
-                            AllowTags is a regular expression that can optionally be used to limit the
-                            tags that are considered in determining the newest commit of interest. The
-                            value in this field only has any effect when the CommitSelectionStrategy is
-                            Lexical, NewestTag, or SemVer. This field is optional.
-                          type: string
-                        branch:
-                          description: |-
-                            Branch references a particular branch of the repository. The value in this
-                            field only has any effect when the CommitSelectionStrategy is
-                            NewestFromBranch or left unspecified (which is implicitly the same as
-                            NewestFromBranch). This field is optional. When left unspecified, (and the
-                            CommitSelectionStrategy is NewestFromBranch or unspecified), the
-                            subscription is implicitly to the repository's default branch.
-                          minLength: 1
-                          pattern: ^\w+([-/]\w+)*(\.\d+)?$
-                          type: string
-                        commitSelectionStrategy:
-                          default: NewestFromBranch
-                          description: |-
-                            CommitSelectionStrategy specifies the rules for how to identify the newest
-                            commit of interest in the repository specified by the RepoURL field. This
-                            field is optional. When left unspecified, the field is implicitly treated
-                            as if its value were "NewestFromBranch".
-                            Accepted values: Lexical, NewestFromBranch, NewestTag, SemVer
-                          enum:
-                          - Lexical
-                          - NewestFromBranch
-                          - NewestTag
-                          - SemVer
-                          type: string
-                        discoveryLimit:
-                          default: 20
-                          description: |-
-                            DiscoveryLimit is an optional limit on the number of commits that can be
-                            discovered for this subscription. The limit is applied after filtering
-                            commits based on the AllowTags and IgnoreTags fields.
-                            When left unspecified, the field is implicitly treated as if its value
-                            were "20". The upper limit for this field is 100.
-                          format: int32
-                          maximum: 100
-                          minimum: 1
-                          type: integer
-                        excludePaths:
-                          description: |-
-                            ExcludePaths is a list of selectors that designate paths in the repository
-                            that should NOT trigger the production of new Freight when changes are
-                            detected therein. When specified, changes in the identified paths will not
-                            trigger Freight production. When not specified, paths that should trigger
-                            Freight production will be defined solely by IncludePaths. Selectors may be
-                            defined using:
-                              1. Exact paths to files or directories (ex. "charts/foo")
-                              2. Glob patterns (prefix the pattern with "glob:"; ex. "glob:*.yaml")
-                              3. Regular expressions (prefix the pattern with "regex:" or "regexp:";
-                                 ex. "regexp:^.*\.yaml$")
-                            Paths selected by IncludePaths may be unselected by ExcludePaths. This
-                            is a useful method for including a broad set of paths and then excluding a
-                            subset of them.
-                          items:
-                            type: string
-                          type: array
-                        ignoreTags:
-                          description: |-
-                            IgnoreTags is a list of tags that must be ignored when determining the
-                            newest commit of interest. No regular expressions or glob patterns are
-                            supported yet. The value in this field only has any effect when the
-                            CommitSelectionStrategy is Lexical, NewestTag, or SemVer. This field is
-                            optional.
-                          items:
-                            type: string
-                          type: array
-                        includePaths:
-                          description: |-
-                            IncludePaths is a list of selectors that designate paths in the repository
-                            that should trigger the production of new Freight when changes are detected
-                            therein. When specified, only changes in the identified paths will trigger
-                            Freight production. When not specified, changes in any path will trigger
-                            Freight production. Selectors may be defined using:
-                              1. Exact paths to files or directories (ex. "charts/foo")
-                              2. Glob patterns (prefix the pattern with "glob:"; ex. "glob:*.yaml")
-                              3. Regular expressions (prefix the pattern with "regex:" or "regexp:";
-                                 ex. "regexp:^.*\.yaml$")
-                            Paths selected by IncludePaths may be unselected by ExcludePaths. This
-                            is a useful method for including a broad set of paths and then excluding a
-                            subset of them.
-                          items:
-                            type: string
-                          type: array
-                        insecureSkipTLSVerify:
-                          description: |-
-                            InsecureSkipTLSVerify specifies whether certificate verification errors
-                            should be ignored when connecting to the repository. This should be enabled
-                            only with great caution.
-                          type: boolean
-                        repoURL:
-                          description: URL is the repository's URL. This is a required
-                            field.
-                          minLength: 1
-                          pattern: (?:^(https?)://(?:([\w-]+):(.+)@)?([\w-]+(?:\.[\w-]+)*)(?::(\d{1,5}))?(/.*)$)|(?:^([\w-]+)@([\w+]+(?:\.[\w-]+)*):(/?.*))
-                          type: string
-                        semverConstraint:
-                          description: |-
-                            SemverConstraint specifies constraints on what new tagged commits are
-                            considered in determining the newest commit of interest. The value in this
-                            field only has any effect when the CommitSelectionStrategy is SemVer. This
-                            field is optional. When left unspecified, there will be no constraints,
-                            which means the latest semantically tagged commit will always be used. Care
-                            should be taken with leaving this field unspecified, as it can lead to the
-                            unanticipated rollout of breaking changes.
-                          type: string
-                        strictSemvers:
-                          default: true
-                          description: |-
-                            StrictSemvers specifies whether only "strict" semver tags should be
-                            considered. A "strict" semver tag is one containing ALL of major, minor,
-                            and patch version components. This is enabled by default, but only has any
-                            effect when the CommitSelectionStrategy is SemVer. This should be disabled
-                            cautiously, as it creates the potential for any tag containing numeric
-                            characters only to be mistaken for a semver string containing the major
-                            version number only.
-                          type: boolean
-                      required:
-                      - repoURL
-                      - strictSemvers
-                      type: object
-                    image:
-                      description: Image describes a subscription to container image
-                        repository.
-                      properties:
-                        allowTags:
-                          description: |-
-                            AllowTags is a regular expression that can optionally be used to limit the
-                            image tags that are considered in determining the newest version of an
-                            image. This field is optional.
-                          type: string
-                        discoveryLimit:
-                          default: 20
-                          description: |-
-                            DiscoveryLimit is an optional limit on the number of image references
-                            that can be discovered for this subscription. The limit is applied after
-                            filtering images based on the AllowTags and IgnoreTags fields.
-                            When left unspecified, the field is implicitly treated as if its value
-                            were "20". The upper limit for this field is 100.
-                          format: int32
-                          maximum: 100
-                          minimum: 1
-                          type: integer
-                        gitRepoURL:
-                          description: |-
-                            GitRepoURL optionally specifies the URL of a Git repository that contains
-                            the source code for the image repository referenced by the RepoURL field.
-                            When this is specified, Kargo MAY be able to infer and link to the exact
-                            revision of that source code that was used to build the image.
-                          pattern: ^https?://(\w+([\.-]\w+)*@)?\w+([\.-]\w+)*(:[\d]+)?(/.*)?$
-                          type: string
-                        ignoreTags:
-                          description: |-
-                            IgnoreTags is a list of tags that must be ignored when determining the
-                            newest version of an image. No regular expressions or glob patterns are
-                            supported yet. This field is optional.
-                          items:
-                            type: string
-                          type: array
-                        imageSelectionStrategy:
-                          default: SemVer
-                          description: |-
-                            ImageSelectionStrategy specifies the rules for how to identify the newest version
-                            of the image specified by the RepoURL field. This field is optional. When
-                            left unspecified, the field is implicitly treated as if its value were
-                            "SemVer".
-                            Accepted values: Digest, Lexical, NewestBuild, SemVer
-                          enum:
-                          - Digest
-                          - Lexical
-                          - NewestBuild
-                          - SemVer
-                          type: string
-                        insecureSkipTLSVerify:
-                          description: |-
-                            InsecureSkipTLSVerify specifies whether certificate verification errors
-                            should be ignored when connecting to the repository. This should be enabled
-                            only with great caution.
-                          type: boolean
-                        platform:
-                          description: |-
-                            Platform is a string of the form <os>/<arch> that limits the tags that can
-                            be considered when searching for new versions of an image. This field is
-                            optional. When left unspecified, it is implicitly equivalent to the
-                            OS/architecture of the Kargo controller. Care should be taken to set this
-                            value correctly in cases where the image referenced by this
-                            ImageRepositorySubscription will run on a Kubernetes node with a different
-                            OS/architecture than the Kargo controller. At present this is uncommon, but
-                            not unheard of.
-                          type: string
-                        repoURL:
-                          description: |-
-                            RepoURL specifies the URL of the image repository to subscribe to. The
-                            value in this field MUST NOT include an image tag. This field is required.
-                          minLength: 1
-                          pattern: ^(\w+([\.-]\w+)*(:[\d]+)?/)?(\w+([\.-]\w+)*)(/\w+([\.-]\w+)*)*$
-                          type: string
-                        semverConstraint:
-                          description: |-
-                            SemverConstraint specifies constraints on what new image versions are
-                            permissible. The value in this field only has any effect when the
-                            ImageSelectionStrategy is SemVer or left unspecified (which is implicitly
-                            the same as SemVer). This field is also optional. When left unspecified,
-                            (and the ImageSelectionStrategy is SemVer or unspecified), there will be no
-                            constraints, which means the latest semantically tagged version of an image
-                            will always be used. Care should be taken with leaving this field
-                            unspecified, as it can lead to the unanticipated rollout of breaking
-                            changes.
-                            More info: https://github.com/masterminds/semver#checking-version-constraints
-                          type: string
-                        strictSemvers:
-                          default: true
-                          description: |-
-                            StrictSemvers specifies whether only "strict" semver tags should be
-                            considered. A "strict" semver tag is one containing ALL of major, minor,
-                            and patch version components. This is enabled by default, but only has any
-                            effect when the ImageSelectionStrategy is SemVer. This should be disabled
-                            cautiously, as it is not uncommon to tag container images with short Git
-                            commit hashes, which have the potential to contain numeric characters only
-                            and could be mistaken for a semver string containing the major version
-                            number only.
-                          type: boolean
-                      required:
-                      - repoURL
-                      - strictSemvers
-                      type: object
-                  type: object
-                minItems: 1
-                type: array
-            required:
-            - interval
-            - subscriptions
-            type: object
-          status:
-            description: Status describes the Warehouse's most recently observed state.
-            properties:
-              conditions:
-                description: |-
-                  Conditions contains the last observations of the Warehouse's current
-                  state.
-                items:
-                  description: Condition contains details for one aspect of the current
-                    state of this API Resource.
-                  properties:
-                    lastTransitionTime:
+                    charts:
                       description: |-
-                        lastTransitionTime is the last time the condition transitioned from one status to another.
-                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                        Charts holds the charts discovered by the Warehouse for the chart
+                        subscriptions.
+                      items:
+                        description: |-
+                          ChartDiscoveryResult represents the result of a chart discovery operation for
+                          a ChartSubscription.
+                        properties:
+                          name:
+                            description:
+                              Name is the name of the Helm chart, as specified
+                              in the ChartSubscription.
+                            type: string
+                          repoURL:
+                            description: |-
+                              RepoURL is the repository URL of the Helm chart, as specified in the
+                              ChartSubscription.
+                            minLength: 1
+                            type: string
+                          semverConstraint:
+                            description: |-
+                              SemverConstraint is the constraint for which versions were discovered.
+                              This field is optional, and only populated if the ChartSubscription
+                              specifies a SemverConstraint.
+                            type: string
+                          versions:
+                            description: |-
+                              Versions is a list of versions discovered by the Warehouse for the
+                              ChartSubscription. An empty list indicates that the discovery operation was
+                              successful, but no versions matching the ChartSubscription criteria were
+                              found.
+                            items:
+                              type: string
+                            type: array
+                        required:
+                          - repoURL
+                        type: object
+                      type: array
+                    discoveredAt:
+                      description:
+                        DiscoveredAt is the time at which the Warehouse discovered
+                        the artifacts.
                       format: date-time
                       type: string
-                    message:
+                    git:
                       description: |-
-                        message is a human readable message indicating details about the transition.
-                        This may be an empty string.
-                      maxLength: 32768
-                      type: string
-                    observedGeneration:
-                      description: |-
-                        observedGeneration represents the .metadata.generation that the condition was set based upon.
-                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
-                        with respect to the current state of the instance.
-                      format: int64
-                      minimum: 0
-                      type: integer
-                    reason:
-                      description: |-
-                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
-                        Producers of specific condition types may define expected values and meanings for this field,
-                        and whether the values are considered a guaranteed API.
-                        The value should be a CamelCase string.
-                        This field may not be empty.
-                      maxLength: 1024
-                      minLength: 1
-                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
-                      type: string
-                    status:
-                      description: status of the condition, one of True, False, Unknown.
-                      enum:
-                      - "True"
-                      - "False"
-                      - Unknown
-                      type: string
-                    type:
-                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
-                      maxLength: 316
-                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
-                      type: string
-                  required:
-                  - lastTransitionTime
-                  - message
-                  - reason
-                  - status
-                  - type
-                  type: object
-                type: array
-                x-kubernetes-list-map-keys:
-                - type
-                x-kubernetes-list-type: map
-              discoveredArtifacts:
-                description: DiscoveredArtifacts holds the artifacts discovered by
-                  the Warehouse.
-                properties:
-                  charts:
-                    description: |-
-                      Charts holds the charts discovered by the Warehouse for the chart
-                      subscriptions.
-                    items:
-                      description: |-
-                        ChartDiscoveryResult represents the result of a chart discovery operation for
-                        a ChartSubscription.
-                      properties:
-                        name:
-                          description: Name is the name of the Helm chart, as specified
-                            in the ChartSubscription.
-                          type: string
-                        repoURL:
-                          description: |-
-                            RepoURL is the repository URL of the Helm chart, as specified in the
-                            ChartSubscription.
-                          minLength: 1
-                          type: string
-                        semverConstraint:
-                          description: |-
-                            SemverConstraint is the constraint for which versions were discovered.
-                            This field is optional, and only populated if the ChartSubscription
-                            specifies a SemverConstraint.
-                          type: string
-                        versions:
-                          description: |-
-                            Versions is a list of versions discovered by the Warehouse for the
-                            ChartSubscription. An empty list indicates that the discovery operation was
-                            successful, but no versions matching the ChartSubscription criteria were
-                            found.
-                          items:
+                        Git holds the commits discovered by the Warehouse for the Git
+                        subscriptions.
+                      items:
+                        description: |-
+                          GitDiscoveryResult represents the result of a Git discovery operation for a
+                          GitSubscription.
+                        properties:
+                          commits:
+                            description: |-
+                              Commits is a list of commits discovered by the Warehouse for the
+                              GitSubscription. An empty list indicates that the discovery operation was
+                              successful, but no commits matching the GitSubscription criteria were found.
+                            items:
+                              description: |-
+                                DiscoveredCommit represents a commit discovered by a Warehouse for a
+                                GitSubscription.
+                              properties:
+                                author:
+                                  description: Author is the author of the commit.
+                                  type: string
+                                branch:
+                                  description: |-
+                                    Branch is the branch in which the commit was found. This field is
+                                    optional, and populated based on the CommitSelectionStrategy of the
+                                    GitSubscription.
+                                  type: string
+                                committer:
+                                  description:
+                                    Committer is the person who committed
+                                    the commit.
+                                  type: string
+                                creatorDate:
+                                  description: |-
+                                    CreatorDate is the commit creation date as specified by the commit, or
+                                    the tagger date if the commit belongs to an annotated tag.
+                                  format: date-time
+                                  type: string
+                                id:
+                                  description:
+                                    ID is the identifier of the commit. This
+                                    typically is a SHA-1 hash.
+                                  minLength: 1
+                                  type: string
+                                subject:
+                                  description: |-
+                                    Subject is the subject of the commit (i.e. the first line of the commit
+                                    message).
+                                  type: string
+                                tag:
+                                  description: |-
+                                    Tag is the tag that resolved to this commit. This field is optional, and
+                                    populated based on the CommitSelectionStrategy of the GitSubscription.
+                                  type: string
+                              type: object
+                            type: array
+                          repoURL:
+                            description: RepoURL is the repository URL of the GitSubscription.
+                            minLength: 1
+                            pattern: (?:^(https?)://(?:([\w-]+):(.+)@)?([\w-]+(?:\.[\w-]+)*)(?::(\d{1,5}))?(/.*)$)|(?:^([\w-]+)@([\w+]+(?:\.[\w-]+)*):(/?.*))
                             type: string
-                          type: array
-                      required:
-                      - repoURL
-                      type: object
-                    type: array
-                  discoveredAt:
-                    description: DiscoveredAt is the time at which the Warehouse discovered
-                      the artifacts.
-                    format: date-time
-                    type: string
-                  git:
-                    description: |-
-                      Git holds the commits discovered by the Warehouse for the Git
-                      subscriptions.
-                    items:
+                        required:
+                          - repoURL
+                        type: object
+                      type: array
+                    images:
                       description: |-
-                        GitDiscoveryResult represents the result of a Git discovery operation for a
-                        GitSubscription.
-                      properties:
-                        commits:
-                          description: |-
-                            Commits is a list of commits discovered by the Warehouse for the
-                            GitSubscription. An empty list indicates that the discovery operation was
-                            successful, but no commits matching the GitSubscription criteria were found.
-                          items:
+                        Images holds the image references discovered by the Warehouse for the
+                        image subscriptions.
+                      items:
+                        description: |-
+                          ImageDiscoveryResult represents the result of an image discovery operation
+                          for an ImageSubscription.
+                        properties:
+                          platform:
                             description: |-
-                              DiscoveredCommit represents a commit discovered by a Warehouse for a
-                              GitSubscription.
-                            properties:
-                              author:
-                                description: Author is the author of the commit.
-                                type: string
-                              branch:
-                                description: |-
-                                  Branch is the branch in which the commit was found. This field is
-                                  optional, and populated based on the CommitSelectionStrategy of the
-                                  GitSubscription.
-                                type: string
-                              committer:
-                                description: Committer is the person who committed
-                                  the commit.
-                                type: string
-                              creatorDate:
-                                description: |-
-                                  CreatorDate is the commit creation date as specified by the commit, or
-                                  the tagger date if the commit belongs to an annotated tag.
-                                format: date-time
-                                type: string
-                              id:
-                                description: ID is the identifier of the commit. This
-                                  typically is a SHA-1 hash.
-                                minLength: 1
-                                type: string
-                              subject:
-                                description: |-
-                                  Subject is the subject of the commit (i.e. the first line of the commit
-                                  message).
-                                type: string
-                              tag:
-                                description: |-
-                                  Tag is the tag that resolved to this commit. This field is optional, and
-                                  populated based on the CommitSelectionStrategy of the GitSubscription.
-                                type: string
-                            type: object
-                          type: array
-                        repoURL:
-                          description: RepoURL is the repository URL of the GitSubscription.
-                          minLength: 1
-                          pattern: (?:^(https?)://(?:([\w-]+):(.+)@)?([\w-]+(?:\.[\w-]+)*)(?::(\d{1,5}))?(/.*)$)|(?:^([\w-]+)@([\w+]+(?:\.[\w-]+)*):(/?.*))
-                          type: string
-                      required:
-                      - repoURL
-                      type: object
-                    type: array
-                  images:
-                    description: |-
-                      Images holds the image references discovered by the Warehouse for the
-                      image subscriptions.
-                    items:
-                      description: |-
-                        ImageDiscoveryResult represents the result of an image discovery operation
-                        for an ImageSubscription.
-                      properties:
-                        platform:
-                          description: |-
-                            Platform is the target platform constraint of the ImageSubscription
-                            for which references were discovered. This field is optional, and
-                            only populated if the ImageSubscription specifies a Platform.
-                          type: string
-                        references:
-                          description: |-
-                            References is a list of image references discovered by the Warehouse for
-                            the ImageSubscription. An empty list indicates that the discovery
-                            operation was successful, but no images matching the ImageSubscription
-                            criteria were found.
-                          items:
+                              Platform is the target platform constraint of the ImageSubscription
+                              for which references were discovered. This field is optional, and
+                              only populated if the ImageSubscription specifies a Platform.
+                            type: string
+                          references:
                             description: |-
-                              DiscoveredImageReference represents an image reference discovered by a
-                              Warehouse for an ImageSubscription.
-                            properties:
-                              createdAt:
-                                description: |-
-                                  CreatedAt is the time the image was created. This field is optional, and
-                                  not populated for every ImageSelectionStrategy.
-                                format: date-time
-                                type: string
-                              digest:
-                                description: Digest is the digest of the image.
-                                minLength: 1
-                                pattern: ^[a-z0-9]+:[a-f0-9]+$
-                                type: string
-                              gitRepoURL:
-                                description: |-
-                                  GitRepoURL is the URL of the Git repository that contains the source
-                                  code for this image. This field is optional, and only populated if the
-                                  ImageSubscription specifies a GitRepoURL.
-                                type: string
-                              tag:
-                                description: Tag is the tag of the image.
-                                maxLength: 128
-                                minLength: 1
-                                pattern: ^[\w.\-\_]+$
-                                type: string
-                            required:
-                            - digest
-                            - tag
-                            type: object
-                          type: array
-                        repoURL:
-                          description: |-
-                            RepoURL is the repository URL of the image, as specified in the
-                            ImageSubscription.
-                          minLength: 1
-                          type: string
-                      required:
-                      - repoURL
-                      type: object
-                    type: array
-                type: object
-              lastFreightID:
-                description: |-
-                  LastFreightID is a reference to the system-assigned identifier (name) of
-                  the most recent Freight produced by the Warehouse.
-                type: string
-              lastHandledRefresh:
-                description: |-
-                  LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh
-                  annotation that was handled by the controller. This field can be used to
-                  determine whether the request to refresh the resource has been handled.
-                type: string
-              observedGeneration:
-                description: |-
-                  ObservedGeneration represents the .metadata.generation that this Warehouse
-                  was reconciled against.
-                format: int64
-                type: integer
-            type: object
-        required:
-        - spec
-        type: object
-    served: true
-    storage: true
-    subresources:
-      status: {}
+                              References is a list of image references discovered by the Warehouse for
+                              the ImageSubscription. An empty list indicates that the discovery
+                              operation was successful, but no images matching the ImageSubscription
+                              criteria were found.
+                            items:
+                              description: |-
+                                DiscoveredImageReference represents an image reference discovered by a
+                                Warehouse for an ImageSubscription.
+                              properties:
+                                createdAt:
+                                  description: |-
+                                    CreatedAt is the time the image was created. This field is optional, and
+                                    not populated for every ImageSelectionStrategy.
+                                  format: date-time
+                                  type: string
+                                digest:
+                                  description: Digest is the digest of the image.
+                                  minLength: 1
+                                  pattern: ^[a-z0-9]+:[a-f0-9]+$
+                                  type: string
+                                gitRepoURL:
+                                  description: |-
+                                    GitRepoURL is the URL of the Git repository that contains the source
+                                    code for this image. This field is optional, and only populated if the
+                                    ImageSubscription specifies a GitRepoURL.
+                                  type: string
+                                tag:
+                                  description: Tag is the tag of the image.
+                                  maxLength: 128
+                                  minLength: 1
+                                  pattern: ^[\w.\-\_]+$
+                                  type: string
+                              required:
+                                - digest
+                                - tag
+                              type: object
+                            type: array
+                          repoURL:
+                            description: |-
+                              RepoURL is the repository URL of the image, as specified in the
+                              ImageSubscription.
+                            minLength: 1
+                            type: string
+                        required:
+                          - repoURL
+                        type: object
+                      type: array
+                  type: object
+                lastFreightID:
+                  description: |-
+                    LastFreightID is a reference to the system-assigned identifier (name) of
+                    the most recent Freight produced by the Warehouse.
+                  type: string
+                lastHandledRefresh:
+                  description: |-
+                    LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh
+                    annotation that was handled by the controller. This field can be used to
+                    determine whether the request to refresh the resource has been handled.
+                  type: string
+                observedGeneration:
+                  description: |-
+                    ObservedGeneration represents the .metadata.generation that this Warehouse
+                    was reconciled against.
+                  format: int64
+                  type: integer
+              type: object
+          required:
+            - spec
+          type: object
+      served: true
+      storage: true
+      subresources:
+        status: {}
