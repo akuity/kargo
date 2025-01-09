@@ -25,11 +25,9 @@ func freightByCurrentStagesIndexer(obj client.Object) []string {
 	if !ok {
 		return nil
 	}
-	currentStages := make([]string, len(freight.Status.CurrentlyIn))
-	var i int
+	currentStages := make([]string, 0, len(freight.Status.CurrentlyIn))
 	for stage := range freight.Status.CurrentlyIn {
-		currentStages[i] = stage
-		i++
+		currentStages = append(currentStages, stage)
 	}
 	return currentStages
 }
