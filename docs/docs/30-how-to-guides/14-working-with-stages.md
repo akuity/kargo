@@ -127,6 +127,10 @@ spec:
 By requesting `Freight` from multiple sources, a `Stage` can effectively
 participate in _multiple pipelines_ that may each deliver different collections
 of artifacts independently of the others.
+
+__This is _advanced_ configuration. If you're very new to Kargo
+and requesting `Freight` from multiple origins, you probably
+didn't mean to.__
 :::
 
 ### Promotion Templates
@@ -213,8 +217,10 @@ promotionTemplate:
             desiredRevision: ${{ outputs.commit.commit }}
 ```
 
-__For complete documentation of all of Kargo's built-in promotion steps, refer
-to the [Promotion Steps Reference](../35-references/10-promotion-steps.md).__
+:::info
+For complete documentation of all Kargo's built-in promotion steps, refer
+to the [Promotion Steps Reference](../35-references/10-promotion-steps.md).
+:::
 
 ### Verifications
 
