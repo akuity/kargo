@@ -141,6 +141,16 @@ func RunningPromotionsByArgoCDApplications(
 			return nil
 		}
 
+		// Build just enough context to extract the relevant config from the
+		// argocd-update promotion step.
+		promoCtx := directives.PromotionContext{
+			Project:   promo.Namespace,
+			Stage:     promo.Spec.Stage,
+			Promotion: promo.Name,
+			State:     promo.Status.GetState(),
+			Vars:      promo.Spec.Vars,
+		}
+
 		// Extract the Argo CD Applications from the promotion steps.
 		//
 		// TODO(hidde): This is not ideal as it requires parsing the directives and
@@ -156,23 +166,17 @@ func RunningPromotionsByArgoCDApplications(
 			if step.Uses != "argocd-update" || step.Config == nil {
 				continue
 			}
+
 			dirStep := directives.PromotionStep{
 				Kind:   step.Uses,
 				Alias:  step.As,
-				Vars:	step.Vars,
+				Vars:   step.Vars,
 				Config: step.Config.Raw,
 			}
-			// Build just enough context to extract the relevant config from the
-			// argocd-update promotion step.
-			promoCtx := directives.PromotionContext{
-				Project:   promo.Namespace,
-				Stage:     promo.Spec.Stage,
-				Promotion: promo.Name,
-				Vars:      promo.Spec.Vars,
-			}
-			// As we are not evaluating expressions in the entire config, we do not
-			// pass any state.
-			vars, err := dirStep.GetVars(promoCtx, promo.Status.GetState())
+
+			// As step-level variables are allowed to reference to output, we
+			// need to provide the state.
+			vars, err := dirStep.GetVars(promoCtx, promoCtx.State)
 			if err != nil {
 				logger.Error(
 					err,
@@ -216,14 +220,12 @@ func RunningPromotionsByArgoCDApplications(
 					for _, app := range appsList {
 						if app, ok := app.(map[string]any); ok {
 							if nameTemplate, ok := app["name"].(string); ok {
-								env := map[string]any{
-									"ctx": map[string]any{
-										"project":   promoCtx.Project,
-										"promotion": promoCtx.Promotion,
-										"stage":     promoCtx.Stage,
-									},
-									"vars": vars,
-								}
+								env := dirStep.BuildEnv(
+									promoCtx,
+									promo.Status.GetState(),
+									directives.StepEnvWithVars(vars),
+								)
+
 								var namespace any = libargocd.Namespace()
 								if namespaceTemplate, ok := app["namespace"].(string); ok {
 									if namespace, err = expressions.EvaluateTemplate(namespaceTemplate, env); err != nil {
