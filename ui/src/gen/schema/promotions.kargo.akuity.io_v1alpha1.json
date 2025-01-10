@@ -18,11 +18,14 @@
       "properties": {
         "freight": {
           "description": "Freight specifies the piece of Freight to be promoted into the Stage\nreferenced by the Stage field.",
+          "maxLength": 253,
           "minLength": 1,
+          "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$",
           "type": "string"
         },
         "stage": {
           "description": "Stage specifies the name of the Stage to which this Promotion\napplies. The Stage referenced by this field MUST be in the same\nnamespace as the Promotion.",
+          "maxLength": 253,
           "minLength": 1,
           "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$",
           "type": "string"
@@ -57,17 +60,68 @@
                 },
                 "type": "object"
               },
+              "task": {
+                "description": "Task is a reference to a PromotionTask that should be inflated into a\nPromotion when it is built from a PromotionTemplate.",
+                "properties": {
+                  "kind": {
+                    "description": "Kind is the type of the PromotionTask. Can be either PromotionTask or\nClusterPromotionTask, default is PromotionTask.",
+                    "enum": [
+                      "PromotionTask",
+                      "ClusterPromotionTask"
+                    ],
+                    "type": "string"
+                  },
+                  "name": {
+                    "description": "Name is the name of the (Cluster)PromotionTask.",
+                    "maxLength": 253,
+                    "minLength": 1,
+                    "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name"
+                ],
+                "type": "object"
+              },
               "uses": {
                 "description": "Uses identifies a runner that can execute this step.",
                 "minLength": 1,
                 "type": "string"
+              },
+              "vars": {
+                "description": "Vars is a list of variables that can be referenced by expressions in\nthe step's Config. The values override the values specified in the\nPromotionSpec.",
+                "items": {
+                  "description": "PromotionVariable describes a single variable that may be referenced by\nexpressions in promotion steps.",
+                  "properties": {
+                    "name": {
+                      "description": "Name is the name of the variable.",
+                      "minLength": 1,
+                      "pattern": "^[a-zA-Z_]\\w*$",
+                      "type": "string"
+                    },
+                    "value": {
+                      "description": "Value is the value of the variable. It is allowed to utilize expressions\nin the value.\nSee https://docs.kargo.io/references/expression-language for details.",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "name"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
               }
             },
-            "required": [
-              "uses"
-            ],
-            "type": "object"
+            "type": "object",
+            "x-kubernetes-validations": [
+              {
+                "message": "Promotion step must have uses set and must not reference a task",
+                "rule": "has(self.uses) && !has(self.task)"
+              }
+            ]
           },
+          "minItems": 1,
           "type": "array"
         },
         "vars": {
@@ -87,8 +141,7 @@
               }
             },
             "required": [
-              "name",
-              "value"
+              "name"
             ],
             "type": "object"
           },
@@ -97,7 +150,8 @@
       },
       "required": [
         "freight",
-        "stage"
+        "stage",
+        "steps"
       ],
       "type": "object"
     },
