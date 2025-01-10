@@ -181,6 +181,14 @@ message ChartSubscription {
   optional int32 discoveryLimit = 4;
 }
 
+// CurrentStage reflects a Stage's current use of Freight.
+message CurrentStage {
+  // Since is the time at which the Stage most recently started using the
+  // Freight. This can be used to calculate how long the Freight has been in use
+  // by the Stage.
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time since = 1;
+}
+
 // DiscoveredArtifacts holds the artifacts discovered by the Warehouse for its
 // subscriptions.
 message DiscoveredArtifacts {
@@ -335,7 +343,7 @@ message FreightOrigin {
   optional string kind = 1;
 
   // Name is the name of the resource of the kind indicated by the Kind field
-  // from which Freight may originated.
+  // from which Freight may originate.
   //
   // +kubebuilder:validation:Required
   optional string name = 2;
@@ -388,10 +396,26 @@ message FreightSources {
   // Direct field must be true. i.e. Between the two fields, at least on source
   // must be specified.
   repeated string stages = 2;
+
+  // RequiredSoakTime specifies a minimum duration for which the requested
+  // Freight must have continuously occupied ("soaked in") in an upstream Stage
+  // before becoming available for promotion to this Stage. This is an optional
+  // field. If nil or zero, no soak time is required. Any soak time requirement
+  // is in ADDITION to the requirement that Freight be verified in an upstream
+  // Stage to become available for promotion to this Stage, although a manual
+  // approval for promotion to this Stage will supersede any soak time
+  // requirement.
+  //
+  // +kubebuilder:validation:Type=string
+  // +kubebuilder:validation:Pattern="^([0-9]+(\\.[0-9]+)?(s|m|h))+$"
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Duration requiredSoakTime = 3;
 }
 
 // FreightStatus describes a piece of Freight's most recently observed state.
 message FreightStatus {
+  // CurrentlyIn describes the Stages in which this Freight is currently in use.
+  map<string, CurrentStage> currentlyIn = 3;
+
   // VerifiedIn describes the Stages in which this Freight has been verified
   // through promotion and subsequent health checks.
   map<string, VerifiedStage> verifiedIn = 1;
@@ -1201,6 +1225,13 @@ message VerificationInfo {
 message VerifiedStage {
   // VerifiedAt is the time at which the Freight was verified in the Stage.
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time verifiedAt = 1;
+
+  // LongestCompletedSoak represents the longest definite time interval wherein
+  // the Freight was in CONTINUOUS use by the Stage. This value is updated as
+  // Freight EXITS the Stage. If the Freight is currently in use by the Stage,
+  // the time elapsed since the Freight ENTERED the Stage is its current soak
+  // time, which may exceed the value of this field.
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Duration longestSoak = 2;
 }
 
 // Warehouse is a source of Freight.

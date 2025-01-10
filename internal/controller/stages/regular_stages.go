@@ -399,6 +399,15 @@ func (r *RegularStageReconciler) reconcile(
 			},
 		},
 		{
+			name: "syncing Freight",
+			reconcile: func() (kargoapi.StageStatus, error) {
+				if err := r.syncFreight(ctx, stage); err != nil {
+					return stage.Status, fmt.Errorf("failed to sync Freight: %w", err)
+				}
+				return stage.Status, nil
+			},
+		},
+		{
 			name: "assessing health",
 			reconcile: func() (kargoapi.StageStatus, error) {
 				return r.assessHealth(ctx, stage), nil
@@ -782,6 +791,77 @@ func (r *RegularStageReconciler) assessHealth(ctx context.Context, stage *kargoa
 	return newStatus
 }
 
+// syncFreight ensures that all Freight statuses accurately reflect whether they
+// are currently in use by the Stage.
+func (r *RegularStageReconciler) syncFreight(ctx context.Context, stage *kargoapi.Stage) error {
+	// Get the Stage's current FreightCollection.
+	curFreight := stage.Status.FreightHistory.Current()
+	// Find all Freight that think they're currently in use by this Stage.
+	var freight []kargoapi.Freight
+	freight, err := kargoapi.ListFreightByCurrentStage(ctx, r.client, stage)
+	if err != nil {
+		return err
+	}
+	// Step through all the Freight that think they're currently used by this
+	// Stage and, if they're not, patch their status to accurately reflect that.
+	for _, f := range freight {
+		if !curFreight.Includes(f.Name) {
+			newStatus := f.Status.DeepCopy()
+			delete(newStatus.CurrentlyIn, stage.Name)
+			if err := kubeclient.PatchStatus(ctx, r.client, &f, func(status *kargoapi.FreightStatus) {
+				*status = *newStatus
+			}); err != nil {
+				return fmt.Errorf(
+					"error patching status of Freight %q in namespace %q: %w",
+					f.Name, f.Namespace, err,
+				)
+			}
+		}
+	}
+	// Iterate over every piece of Freight that the Stage is actually using to
+	// make sure that their status accurately reflects that.
+	//
+	// This is the timestamp we'll use to track when the Freight came into use
+	// by the Stage. There are edge cases where this won't be perfectly accurate,
+	// but it's close enough, especially given that we use it for calculating
+	// "soak time," which requires a certain MINIMUM amount of time to pass. Any
+	// inaccuracy in the timestamp only means the Freight has actually "soaked"
+	// LONGER than what we calculate.
+	now := time.Now()
+	for _, fr := range curFreight.References() {
+		f, err := kargoapi.GetFreight(
+			ctx,
+			r.client,
+			types.NamespacedName{
+				Namespace: stage.Namespace,
+				Name:      fr.Name,
+			},
+		)
+		if err != nil {
+			return fmt.Errorf(
+				"error getting Freight %q in namespace %q: %w",
+				fr.Name, stage.Namespace, err,
+			)
+		}
+		if f == nil {
+			return fmt.Errorf("Freight %q not found in namespace %q", fr.Name, stage.Namespace)
+		}
+		if !f.IsCurrentlyIn(stage.Name) {
+			newStatus := f.Status.DeepCopy()
+			newStatus.AddCurrentStage(stage.Name, now)
+			if err = kubeclient.PatchStatus(ctx, r.client, f, func(status *kargoapi.FreightStatus) {
+				*status = *newStatus
+			}); err != nil {
+				return fmt.Errorf(
+					"error patching status of Freight %q in namespace %q: %w",
+					f.Name, f.Namespace, err,
+				)
+			}
+		}
+	}
+	return nil
+}
+
 // verifyStageFreight verifies the current Freight of a Stage. If the Stage has
 // no current Freight, or the Freight has already been verified, then no action
 // is taken. If the Freight has not been verified yet, then a new verification
@@ -1039,7 +1119,7 @@ func (r *RegularStageReconciler) markFreightVerifiedForStage(
 
 		// If the Freight has already been verified, then there is no need to
 		// verify it again.
-		if _, ok := freight.Status.VerifiedIn[stage.Name]; ok {
+		if freight.IsVerifiedIn(stage.Name) {
 			logger.Debug("Freight has already been verified in Stage")
 			continue
 		}
@@ -1049,9 +1129,7 @@ func (r *RegularStageReconciler) markFreightVerifiedForStage(
 			if status.VerifiedIn == nil {
 				status.VerifiedIn = make(map[string]kargoapi.VerifiedStage)
 			}
-			status.VerifiedIn[stage.Name] = kargoapi.VerifiedStage{
-				VerifiedAt: curFreight.VerificationHistory.Current().FinishTime.DeepCopy(),
-			}
+			status.AddVerifiedStage(stage.Name, curFreight.VerificationHistory.Current().FinishTime.Time)
 		}); err != nil {
 			return newStatus, fmt.Errorf(
 				"error marking Freight %q as verified in Stage: %w",
@@ -1514,7 +1592,7 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 	}
 
 	// Retrieve promotable Freight for the Stage.
-	promotableFreight, err := r.getPromotableFreight(ctx, stageRef, stage.Spec.RequestedFreight)
+	promotableFreight, err := r.getPromotableFreight(ctx, stage)
 	if err != nil {
 		return newStatus, err
 	}
@@ -1634,110 +1712,28 @@ func (r *RegularStageReconciler) autoPromotionAllowed(
 	return false, nil
 }
 
-// getPromotableFreight retrieves promotable Freight for a Stage based on the
-// requested Freight in the Stage specification.
+// getPromotableFreight retrieves a map of []Freight promotable to the specified
+// Stage, indexed by origin.
 func (r *RegularStageReconciler) getPromotableFreight(
 	ctx context.Context,
-	stage types.NamespacedName,
-	requested []kargoapi.FreightRequest,
+	stage *kargoapi.Stage,
 ) (map[string][]kargoapi.Freight, error) {
-	var promotableFreight = make(map[string][]kargoapi.Freight)
-
-	for _, req := range requested {
-		originID := req.Origin.String()
-		if _, ok := promotableFreight[originID]; !ok {
-			promotableFreight[originID] = nil
-		}
-
-		// Get Freight directly from the Warehouse if allowed.
-		if req.Origin.Kind == kargoapi.FreightOriginKindWarehouse && req.Sources.Direct {
-			var directFreight kargoapi.FreightList
-			if err := r.client.List(
-				ctx,
-				&directFreight,
-				client.InNamespace(stage.Namespace),
-				client.MatchingFieldsSelector{
-					Selector: fields.OneTermEqualSelector(indexer.FreightByWarehouseField, req.Origin.Name),
-				},
-			); err != nil {
-				return nil, fmt.Errorf(
-					"error listing Freight from %q in namespace %q: %w",
-					originID,
-					stage.Namespace,
-					err,
-				)
-			}
-
-			promotableFreight[originID] = append(promotableFreight[originID], directFreight.Items...)
-
-			// If we allow direct Freight, we do not need to look for Freight
-			// from other sources. Continue to the next requested Freight.
-			continue
-		}
-
-		// Get Freight verified in upstream Stages.
-		for _, upstream := range req.Sources.Stages {
-			var verifiedFreight kargoapi.FreightList
-			if err := r.client.List(
-				ctx,
-				&verifiedFreight,
-				client.InNamespace(stage.Namespace),
-				client.MatchingFieldsSelector{
-					Selector: fields.OneTermEqualSelector(indexer.FreightByVerifiedStagesField, upstream),
-				},
-			); err != nil {
-				return nil, fmt.Errorf(
-					"error listing Freight from %q in namespace %q: %w",
-					upstream,
-					stage.Namespace,
-					err,
-				)
-			}
-
-			promotableFreight[originID] = append(promotableFreight[originID], verifiedFreight.Items...)
-		}
-
-		// Get Freight approved for the Stage.
-		var approvedFreight kargoapi.FreightList
-		if err := r.client.List(
-			ctx,
-			&approvedFreight,
-			client.InNamespace(stage.Namespace),
-			client.MatchingFieldsSelector{
-				Selector: fields.AndSelectors(
-					// TODO(hidde): once we support more Freight origin
-					// kinds, we need to adjust this.
-					fields.OneTermEqualSelector(
-						indexer.FreightByWarehouseField,
-						req.Origin.Name,
-					),
-					fields.OneTermEqualSelector(
-						indexer.FreightApprovedForStagesField,
-						stage.Name,
-					),
-				),
-			},
-		); err != nil {
-			return nil, fmt.Errorf(
-				"error listing Freight approved for Stage %q in namespace %q: %w",
-				stage.Name,
-				stage.Namespace,
-				err,
-			)
-		}
-		promotableFreight[originID] = append(promotableFreight[originID], approvedFreight.Items...)
+	availableFreight, err := stage.ListAvailableFreight(ctx, r.client)
+	if err != nil {
+		return nil, fmt.Errorf(
+			"error listing available Freight for Stage %q: %w",
+			stage.Name, err,
+		)
 	}
 
-	// As the same Freight may be available due to multiple reasons (e.g.
-	// verified in upstream Stages and approved), we need to deduplicate
-	// the list.
-	for origin := range promotableFreight {
-		slices.SortFunc(promotableFreight[origin], func(lhs, rhs kargoapi.Freight) int {
-			return strings.Compare(lhs.Name, rhs.Name)
-		})
-		promotableFreight[origin] = slices.CompactFunc(promotableFreight[origin], func(lhs, rhs kargoapi.Freight) bool {
-			return lhs.Name == rhs.Name
-		})
+	var promotableFreight = make(map[string][]kargoapi.Freight)
+	for _, freight := range availableFreight {
+		originID := freight.Origin.String()
+		if _, ok := promotableFreight[originID]; !ok {
+			promotableFreight[originID] = []kargoapi.Freight{freight}
+		} else {
+			promotableFreight[originID] = append(promotableFreight[originID], freight)
+		}
 	}
 
 	return promotableFreight, nil

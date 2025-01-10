@@ -4,13 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"connectrpc.com/connect"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -101,18 +100,15 @@ func (s *server) ApproveFreight(
 		return nil, err
 	}
 
+	if freight.IsApprovedFor(stageName) {
+		return &connect.Response[svcv1alpha1.ApproveFreightResponse]{}, nil
+	}
+
 	newStatus := *freight.Status.DeepCopy()
 	if newStatus.ApprovedFor == nil {
 		newStatus.ApprovedFor = make(map[string]kargoapi.ApprovedStage)
 	}
-
-	if _, ok := newStatus.ApprovedFor[stageName]; ok {
-		return &connect.Response[svcv1alpha1.ApproveFreightResponse]{}, nil
-	}
-
-	newStatus.ApprovedFor[stageName] = kargoapi.ApprovedStage{
-		ApprovedAt: ptr.To(metav1.Now()),
-	}
+	newStatus.AddApprovedStage(stageName, time.Now())
 
 	if err := s.patchFreightStatusFn(ctx, freight, newStatus); err != nil {
 		return nil, fmt.Errorf("patch status: %w", err)

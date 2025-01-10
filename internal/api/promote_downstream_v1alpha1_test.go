@@ -221,48 +221,6 @@ func TestPromoteDownstream(t *testing.T) {
 			},
 		},
 		{
-			name: "Freight not available",
-			req: &svcv1alpha1.PromoteDownstreamRequest{
-				Project: "fake-project",
-				Stage:   "fake-stage",
-				Freight: "fake-freight",
-			},
-			server: &server{
-				validateProjectExistsFn: func(context.Context, string) error {
-					return nil
-				},
-				getStageFn: func(
-					context.Context,
-					client.Client,
-					types.NamespacedName,
-				) (*kargoapi.Stage, error) {
-					return &kargoapi.Stage{
-						Spec: testStageSpec,
-					}, nil
-				},
-				getFreightByNameOrAliasFn: func(
-					context.Context,
-					client.Client,
-					string, string, string,
-				) (*kargoapi.Freight, error) {
-					return &kargoapi.Freight{}, nil
-				},
-			},
-			assertions: func(
-				t *testing.T,
-				_ *fakeevent.EventRecorder,
-				_ *connect.Response[svcv1alpha1.PromoteDownstreamResponse],
-				err error,
-			) {
-				require.Error(t, err)
-				var connErr *connect.Error
-				require.True(t, errors.As(err, &connErr))
-				require.Equal(t, connect.CodeInvalidArgument, connErr.Code())
-				require.Contains(t, connErr.Message(), "Freight")
-				require.Contains(t, connErr.Message(), "not available to Stage")
-			},
-		},
-		{
 			name: "error finding downstream Stages",
 			req: &svcv1alpha1.PromoteDownstreamRequest{
 				Project: "fake-project",
@@ -443,6 +401,64 @@ func TestPromoteDownstream(t *testing.T) {
 			},
 		},
 		{
+			name: "Freight not available",
+			req: &svcv1alpha1.PromoteDownstreamRequest{
+				Project: "fake-project",
+				Stage:   "fake-stage",
+				Freight: "fake-freight",
+			},
+			server: &server{
+				validateProjectExistsFn: func(context.Context, string) error {
+					return nil
+				},
+				getStageFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Stage, error) {
+					return &kargoapi.Stage{
+						Spec: testStageSpec,
+					}, nil
+				},
+				getFreightByNameOrAliasFn: func(
+					context.Context,
+					client.Client,
+					string, string, string,
+				) (*kargoapi.Freight, error) {
+					return &kargoapi.Freight{}, nil
+				},
+				findDownstreamStagesFn: func(
+					context.Context,
+					*kargoapi.Stage,
+					kargoapi.FreightOrigin,
+				) ([]kargoapi.Stage, error) {
+					return []kargoapi.Stage{{}}, nil
+				},
+				authorizeFn: func(
+					context.Context,
+					string,
+					schema.GroupVersionResource,
+					string,
+					client.ObjectKey,
+				) error {
+					return nil
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				_ *fakeevent.EventRecorder,
+				_ *connect.Response[svcv1alpha1.PromoteDownstreamResponse],
+				err error,
+			) {
+				require.Error(t, err)
+				var connErr *connect.Error
+				require.True(t, errors.As(err, &connErr))
+				require.Equal(t, connect.CodeInvalidArgument, connErr.Code())
+				require.Contains(t, connErr.Message(), "Freight")
+				require.Contains(t, connErr.Message(), "is not available to downstream Stage")
+			},
+		},
+		{
 			name: "error creating Promotion",
 			req: &svcv1alpha1.PromoteDownstreamRequest{
 				Project: "fake-project",
@@ -487,11 +503,11 @@ func TestPromoteDownstream(t *testing.T) {
 					return []kargoapi.Stage{
 						{
 							Spec: kargoapi.StageSpec{
-								PromotionTemplate: &kargoapi.PromotionTemplate{
-									Spec: kargoapi.PromotionTemplateSpec{
-										Steps: []kargoapi.PromotionStep{{}},
+								RequestedFreight: []kargoapi.FreightRequest{{
+									Sources: kargoapi.FreightSources{
+										Stages: []string{"fake-stage"},
 									},
-								},
+								}},
 							},
 						},
 					}, nil
@@ -571,11 +587,11 @@ func TestPromoteDownstream(t *testing.T) {
 					return []kargoapi.Stage{
 						{
 							Spec: kargoapi.StageSpec{
-								PromotionTemplate: &kargoapi.PromotionTemplate{
-									Spec: kargoapi.PromotionTemplateSpec{
-										Steps: []kargoapi.PromotionStep{{}},
+								RequestedFreight: []kargoapi.FreightRequest{{
+									Sources: kargoapi.FreightSources{
+										Stages: []string{"fake-stage"},
 									},
-								},
+								}},
 							},
 						},
 					}, nil

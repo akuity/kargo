@@ -201,7 +201,7 @@ spec:
                         name:
                           description: |-
                             Name is the name of the resource of the kind indicated by the Kind field
-                            from which Freight may originated.
+                            from which Freight may originate.
                           type: string
                       required:
                       - kind
@@ -219,6 +219,18 @@ spec:
                             the value of the Stages field must be non-empty. i.e. Between the two
                             fields, at least one source must be specified.
                           type: boolean
+                        requiredSoakTime:
+                          description: |-
+                            RequiredSoakTime specifies a minimum duration for which the requested
+                            Freight must have continuously occupied ("soaked in") in an upstream Stage
+                            before becoming available for promotion to this Stage. This is an optional
+                            field. If nil or zero, no soak time is required. Any soak time requirement
+                            is in ADDITION to the requirement that Freight be verified in an upstream
+                            Stage to become available for promotion to this Stage, although a manual
+                            approval for promotion to this Stage will supersede any soak time
+                            requirement.
+                          pattern: ^([0-9]+(\.[0-9]+)?(s|m|h))+$
+                          type: string
                         stages:
                           description: |-
                             Stages identifies other "upstream" Stages as potential sources of the
@@ -493,7 +505,7 @@ spec:
                           name:
                             description: |-
                               Name is the name of the resource of the kind indicated by the Kind field
-                              from which Freight may originated.
+                              from which Freight may originate.
                             type: string
                         required:
                         - kind
@@ -634,7 +646,7 @@ spec:
                               name:
                                 description: |-
                                   Name is the name of the resource of the kind indicated by the Kind field
-                                  from which Freight may originated.
+                                  from which Freight may originate.
                                 type: string
                             required:
                             - kind
@@ -771,7 +783,7 @@ spec:
                                     name:
                                       description: |-
                                         Name is the name of the resource of the kind indicated by the Kind field
-                                        from which Freight may originated.
+                                        from which Freight may originate.
                                       type: string
                                   required:
                                   - kind
@@ -1069,7 +1081,7 @@ spec:
                               name:
                                 description: |-
                                   Name is the name of the resource of the kind indicated by the Kind field
-                                  from which Freight may originated.
+                                  from which Freight may originate.
                                 type: string
                             required:
                             - kind
@@ -1310,7 +1322,7 @@ spec:
                           name:
                             description: |-
                               Name is the name of the resource of the kind indicated by the Kind field
-                              from which Freight may originated.
+                              from which Freight may originate.
                             type: string
                         required:
                         - kind
@@ -1451,7 +1463,7 @@ spec:
                               name:
                                 description: |-
                                   Name is the name of the resource of the kind indicated by the Kind field
-                                  from which Freight may originated.
+                                  from which Freight may originate.
                                 type: string
                             required:
                             - kind
@@ -1588,7 +1600,7 @@ spec:
                                     name:
                                       description: |-
                                         Name is the name of the resource of the kind indicated by the Kind field
-                                        from which Freight may originated.
+                                        from which Freight may originate.
                                       type: string
                                   required:
                                   - kind

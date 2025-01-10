@@ -277,7 +277,7 @@ func (w *webhook) ValidateUpdate(
 	// Record Freight approved events if the request doesn't come from Kargo controlplane.
 	if !w.isRequestFromKargoControlplaneFn(req) {
 		for approvedStage := range newFreight.Status.ApprovedFor {
-			if _, ok := oldFreight.Status.ApprovedFor[approvedStage]; !ok {
+			if !oldFreight.IsApprovedFor(approvedStage) {
 				w.recordFreightApprovedEvent(req, newFreight, approvedStage)
 			}
 		}
