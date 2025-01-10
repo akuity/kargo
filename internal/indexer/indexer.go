@@ -222,7 +222,8 @@ func RunningPromotionsByArgoCDApplications(
 							if nameTemplate, ok := app["name"].(string); ok {
 								env := dirStep.BuildEnv(
 									promoCtx,
-									promo.Status.GetState(),
+									directives.StepEnvWithOutputs(promoCtx.State),
+									directives.StepEnvWithTaskOutputs(dirStep.Alias, promoCtx.State),
 									directives.StepEnvWithVars(vars),
 								)
 

@@ -126,6 +126,30 @@ func StepEnvWithSecrets(secrets map[string]map[string]string) PromotionStepEnvOp
 	}
 }
 
+// StepEnvWithOutputs returns a PromotionStepEnvOption that adds the provided outputs
+// to the environment of the PromotionStep.
+func StepEnvWithOutputs(outputs State) PromotionStepEnvOption {
+	return func(env map[string]any) {
+		env["outputs"] = outputs
+	}
+}
+
+// StepEnvWithTaskOutputs returns a PromotionStepEnvOption that adds the provided
+// task outputs to the environment of the PromotionStep.
+func StepEnvWithTaskOutputs(alias string, outputs State) PromotionStepEnvOption {
+	return func(env map[string]any) {
+		// Ensure that if the PromotionStep originated from a task, the task outputs
+		// are available to the PromotionStep. This allows inflated steps to access
+		// the outputs of the other steps in the task without needing to know the
+		// alias (namespace) of the task.
+		if taskOutput := getTaskOutputs(alias, outputs); taskOutput != nil {
+			env["task"] = map[string]any{
+				"outputs": taskOutput,
+			}
+		}
+	}
+}
+
 // GetTimeout returns the maximum interval the provided runner may spend
 // attempting to execute the step before retries are abandoned and the entire
 // Promotion is marked as failed. If the runner is a RetryableStepRunner, its
@@ -152,14 +176,13 @@ func (s *PromotionStep) GetErrorThreshold(runner any) uint32 {
 }
 
 // BuildEnv returns the environment for the PromotionStep. The environment
-// includes the context of the Promotion, the outputs of the previous steps,
-// and any additional options provided.
+// includes the context of the Promotion and any additional options provided
+// (e.g. outputs, task outputs, vars, secrets).
 //
 // The environment is a (nested) map of string keys to any values. The keys
 // are used as variables in the PromotionStep configuration.
 func (s *PromotionStep) BuildEnv(
 	promoCtx PromotionContext,
-	state State,
 	opts ...PromotionStepEnvOption,
 ) map[string]any {
 	env := map[string]any{
@@ -168,17 +191,6 @@ func (s *PromotionStep) BuildEnv(
 			"promotion": promoCtx.Promotion,
 			"stage":     promoCtx.Stage,
 		},
-		"outputs": state,
-	}
-
-	// Ensure that if the PromotionStep originated from a task, the task outputs
-	// are available to the PromotionStep. This allows inflated steps to access
-	// the outputs of the other steps in the task without needing to know the
-	// alias (namespace) of the task.
-	if taskOutput := s.getTaskOutputs(state); taskOutput != nil {
-		env["task"] = map[string]any{
-			"outputs": taskOutput,
-		}
 	}
 
 	// Apply all provided options
@@ -207,7 +219,13 @@ func (s *PromotionStep) GetConfig(
 		return nil, err
 	}
 
-	env := s.BuildEnv(promoCtx, state, StepEnvWithVars(vars), StepEnvWithSecrets(promoCtx.Secrets))
+	env := s.BuildEnv(
+		promoCtx,
+		StepEnvWithOutputs(state),
+		StepEnvWithTaskOutputs(s.Alias, state),
+		StepEnvWithVars(vars),
+		StepEnvWithSecrets(promoCtx.Secrets),
+	)
 
 	evaledCfgJSON, err := expressions.EvaluateJSONTemplate(
 		s.Config,
@@ -250,41 +268,40 @@ func (s *PromotionStep) GetVars(
 	promoCtx PromotionContext,
 	state State,
 ) (map[string]any, error) {
-	var rawVars = make(map[string]string, len(promoCtx.Vars))
+	vars := make(map[string]any)
+
+	// Evaluate the global variables defined in the Promotion itself, these
+	// variables DO NOT have access to the (task) outputs.
 	for _, v := range promoCtx.Vars {
-		rawVars[v.Name] = v.Value
-	}
-	for _, v := range s.Vars {
-		rawVars[v.Name] = v.Value
-	}
-
-	vars := make(map[string]any, len(rawVars))
-	for k, v := range rawVars {
-		env := s.BuildEnv(promoCtx, state, StepEnvWithVars(vars))
-
-		newVar, err := expressions.EvaluateTemplate(v, env)
+		newVar, err := expressions.EvaluateTemplate(
+			v.Value,
+			s.BuildEnv(promoCtx, StepEnvWithVars(vars)),
+		)
 		if err != nil {
-			return nil, fmt.Errorf("error pre-processing promotion variable %q: %w", k, err)
+			return nil, fmt.Errorf("error pre-processing promotion variable %q: %w", v.Name, err)
 		}
-		vars[k] = newVar
+		vars[v.Name] = newVar
 	}
-	return vars, nil
-}
 
-// getTaskOutputs returns the outputs of a task that are relevant to the current
-// step. This is useful when a step is inflated from a task and needs to access
-// the outputs of that task.
-func (s *PromotionStep) getTaskOutputs(state State) State {
-	if namespace := getAliasNamespace(s.Alias); namespace != "" {
-		taskOutputs := make(State)
-		for k, v := range state.DeepCopy() {
-			if getAliasNamespace(k) == namespace {
-				taskOutputs[k[len(namespace)+2:]] = v
-			}
+	// Evaluate the variables defined in the PromotionStep, these variables
+	// DO have access to the (task) outputs.
+	for _, v := range s.Vars {
+		newVar, err := expressions.EvaluateTemplate(
+			v.Value,
+			s.BuildEnv(
+				promoCtx,
+				StepEnvWithOutputs(state),
+				StepEnvWithTaskOutputs(s.Alias, state),
+				StepEnvWithVars(vars),
+			),
+		)
+		if err != nil {
+			return nil, fmt.Errorf("error pre-processing promotion variable %q: %w", v.Name, err)
 		}
-		return taskOutputs
+		vars[v.Name] = newVar
 	}
-	return nil
+
+	return vars, nil
 }
 
 // PromotionResult is the result of a user-defined promotion process executed by
@@ -490,6 +507,22 @@ func getChartFunc(
 			chartName,
 		)
 	}
+}
+
+// getTaskOutputs returns the outputs of a task that are relevant to the current
+// step. This is useful when a step is inflated from a task and needs to access
+// the outputs of that task.
+func getTaskOutputs(alias string, state State) State {
+	if namespace := getAliasNamespace(alias); namespace != "" {
+		taskOutputs := make(State)
+		for k, v := range state.DeepCopy() {
+			if getAliasNamespace(k) == namespace {
+				taskOutputs[k[len(namespace)+2:]] = v
+			}
+		}
+		return taskOutputs
+	}
+	return nil
 }
 
 // getAliasNamespace returns the namespace part of an alias, if it exists.

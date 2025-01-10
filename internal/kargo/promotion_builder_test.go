@@ -486,6 +486,9 @@ func TestPromotionBuilder_inflateTaskSteps(t *testing.T) {
 							{
 								As:   "step2",
 								Uses: "other-fake-step",
+								Vars: []kargoapi.PromotionVariable{
+									{Name: "input4", Value: "value4"},
+								},
 							},
 						},
 					},
@@ -498,6 +501,7 @@ func TestPromotionBuilder_inflateTaskSteps(t *testing.T) {
 				assert.Equal(t, "task-1::step1", steps[0].As)
 				assert.Equal(t, "fake-step", steps[0].Uses)
 				assert.ElementsMatch(t, []kargoapi.PromotionVariable{
+					{Name: "input2", Value: "default2"},
 					{Name: "input1", Value: "value1"},
 					{Name: "input2", Value: "value2"},
 				}, steps[0].Vars)
@@ -505,8 +509,10 @@ func TestPromotionBuilder_inflateTaskSteps(t *testing.T) {
 				assert.Equal(t, "task-1::step2", steps[1].As)
 				assert.Equal(t, "other-fake-step", steps[1].Uses)
 				assert.ElementsMatch(t, []kargoapi.PromotionVariable{
+					{Name: "input2", Value: "default2"},
 					{Name: "input1", Value: "value1"},
 					{Name: "input2", Value: "value2"},
+					{Name: "input4", Value: "value4"},
 				}, steps[1].Vars)
 			},
 		},
@@ -981,7 +987,7 @@ func Test_promotionTaskVarsToStepVars(t *testing.T) {
 			},
 		},
 		{
-			name: "step value overrides default value",
+			name: "step value appends task default value",
 			taskVars: []kargoapi.PromotionVariable{
 				{Name: "input1", Value: "default1"},
 			},
@@ -991,6 +997,7 @@ func Test_promotionTaskVarsToStepVars(t *testing.T) {
 			assertions: func(t *testing.T, result []kargoapi.PromotionVariable, err error) {
 				require.NoError(t, err)
 				assert.ElementsMatch(t, []kargoapi.PromotionVariable{
+					{Name: "input1", Value: "default1"},
 					{Name: "input1", Value: "override1"},
 				}, result)
 			},
@@ -1024,8 +1031,9 @@ func Test_promotionTaskVarsToStepVars(t *testing.T) {
 			assertions: func(t *testing.T, result []kargoapi.PromotionVariable, err error) {
 				require.NoError(t, err)
 				assert.ElementsMatch(t, []kargoapi.PromotionVariable{
-					{Name: "input1", Value: "override1"},
+					{Name: "input1", Value: "default1"},
 					{Name: "input2", Value: "default2"},
+					{Name: "input1", Value: "override1"},
 					{Name: "input3", Value: "value3"},
 				}, result)
 			},

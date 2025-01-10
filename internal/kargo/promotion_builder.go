@@ -144,7 +144,7 @@ func (b *PromotionBuilder) inflateTaskSteps(
 
 		// With the variables validated and mapped, they are now available to
 		// the Config of the step during the Promotion execution.
-		step.Vars = vars
+		step.Vars = append(vars, step.Vars...)
 
 		// Append the inflated step to the list of steps.
 		steps = append(steps, *step)
@@ -221,39 +221,52 @@ func generatePromotionTaskStepAlias(taskAlias, stepAlias string) string {
 func promotionTaskVarsToStepVars(
 	taskVars, promoVars, stepVars []kargoapi.PromotionVariable,
 ) ([]kargoapi.PromotionVariable, error) {
-	if len(taskVars) == 0 {
-		return nil, nil
-	}
-
-	promoVarsMap := make(map[string]kargoapi.PromotionVariable, len(promoVars))
+	// Promotion variables can be used to set (or override) the variables
+	// required by the PromotionTask, but they are not inflated into the
+	// variables for the step. This map is used to check if a variable is
+	// set on the Promotion, to avoid overriding it with the default value
+	// and to validate that the variable is set.
+	promoVarsMap := make(map[string]struct{}, len(promoVars))
 	for _, v := range promoVars {
-		promoVarsMap[v.Name] = v
+		if v.Value != "" {
+			promoVarsMap[v.Name] = struct{}{}
+		}
 	}
 
-	stepVarsMap := make(map[string]kargoapi.PromotionVariable, len(stepVars))
+	// Step variables are inflated into the variables for the step. This map
+	// is used to ensure all variables required by the PromotionTask without
+	// a default value are set.
+	stepVarsMap := make(map[string]struct{}, len(stepVars))
 	for _, v := range stepVars {
-		stepVarsMap[v.Name] = v
+		if v.Value != "" {
+			stepVarsMap[v.Name] = struct{}{}
+		}
 	}
 
-	vars := make([]kargoapi.PromotionVariable, 0, len(taskVars))
+	var vars []kargoapi.PromotionVariable
+
+	// Set the PromotionTask variable default values, but only if the variable
+	// is not set on the Promotion.
 	for _, v := range taskVars {
-		if stepVar, ok := stepVarsMap[v.Name]; ok && stepVar.Value != "" {
-			vars = append(vars, stepVar)
+		// Variable is set on the Promotion, we do not need to set the default.
+		if _, ok := promoVarsMap[v.Name]; ok {
 			continue
 		}
 
-		if promoVar, ok := promoVarsMap[v.Name]; ok && promoVar.Value != "" {
-			// If the variable is defined in the Promotion, the engine will
-			// automatically use the value from the Promotion, and we do not
-			// have to explicitly set it here.
+		// Set the variable if it has a default value.
+		if v.Value != "" {
+			vars = append(vars, v)
 			continue
 		}
 
-		if v.Value == "" {
+		// If not, the variable must be set in the step variables.
+		if _, ok := stepVarsMap[v.Name]; !ok {
 			return nil, fmt.Errorf("missing value for variable %q", v.Name)
 		}
-
-		vars = append(vars, v)
 	}
+
+	// Set the step variables.
+	vars = append(vars, stepVars...)
+
 	return vars, nil
 }
