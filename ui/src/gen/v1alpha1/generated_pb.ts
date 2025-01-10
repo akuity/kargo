@@ -1575,7 +1575,7 @@ export class GitSubscription extends Message<GitSubscription> {
    * subscription is implicitly to the repository's default branch.
    *
    * +kubebuilder:validation:MinLength=1
-   * +kubebuilder:validation:Pattern=`^\w+([-/]\w+)*$`
+   * +kubebuilder:validation:Pattern=`^\w+([-/\.]\w+)*$`
    *
    * @generated from field: optional string branch = 3;
    */
