@@ -472,7 +472,7 @@ message GitSubscription {
   // subscription is implicitly to the repository's default branch.
   //
   // +kubebuilder:validation:MinLength=1
-  // +kubebuilder:validation:Pattern=`^\w+([-\/]\w+)*(-\d+\.\d+)?$`
+  // +kubebuilder:validation:Pattern=`^\w+([-/\.]\w+)*$`
   optional string branch = 3;
 
   // StrictSemvers specifies whether only "strict" semver tags should be

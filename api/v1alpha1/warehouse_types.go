@@ -124,7 +124,7 @@ type GitSubscription struct {
 	// subscription is implicitly to the repository's default branch.
 	//
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Pattern=`^\w+([-\/]\w+)*(-\d+\.\d+)?$`
+	// +kubebuilder:validation:Pattern=`^\w+([-/\.]\w+)*$`
 	Branch string `json:"branch,omitempty" protobuf:"bytes,3,opt,name=branch"`
 	// StrictSemvers specifies whether only "strict" semver tags should be
 	// considered. A "strict" semver tag is one containing ALL of major, minor,
