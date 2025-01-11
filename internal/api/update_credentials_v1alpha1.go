@@ -65,22 +65,19 @@ func (s *server) UpdateCredentials(
 	}
 
 	// If this isn't labeled as repository credentials, return not found.
-	var isCredentials bool
-	if secret.Labels != nil {
-		_, isCredentials = secret.Labels[kargoapi.CredentialTypeLabelKey]
-	}
-	if !isCredentials {
+	if _, isCredentials := secret.Labels[kargoapi.CredentialTypeLabelKey]; !isCredentials {
 		return nil, connect.NewError(
 			connect.CodeNotFound,
 			fmt.Errorf(
-				"secret %q exists, but is not labeled with %q",
+				"secret %s/%s exists, but is not labeled with %s",
+				secret.Namespace,
 				secret.Name,
 				kargoapi.CredentialTypeLabelKey,
 			),
 		)
 	}
 
-	applyCredentialsUpdateToSecret(&secret, credsUpdate)
+	applyCredentialsUpdateToK8sSecret(&secret, credsUpdate)
 
 	if err := s.client.Update(ctx, &secret); err != nil {
 		return nil, fmt.Errorf("update secret: %w", err)
@@ -93,7 +90,7 @@ func (s *server) UpdateCredentials(
 	), nil
 }
 
-func applyCredentialsUpdateToSecret(
+func applyCredentialsUpdateToK8sSecret(
 	secret *corev1.Secret,
 	credsUpdate credentialsUpdate,
 ) {

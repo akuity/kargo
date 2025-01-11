@@ -1,5 +1,5 @@
 import { faDocker, faGit } from '@fortawesome/free-brands-svg-icons';
-import { faAnchor, faQuestionCircle } from '@fortawesome/free-solid-svg-icons';
+import { faAnchor, faDharmachakra, faQuestionCircle } from '@fortawesome/free-solid-svg-icons';
 
 import { SegmentLabel } from '@ui/features/common/segment-label';
 import { DESCRIPTION_ANNOTATION_KEY } from '@ui/features/common/utils';
@@ -19,6 +19,8 @@ export const iconForCredentialsType = (type: CredentialsType) => {
       return faAnchor;
     case 'image':
       return faDocker;
+    case 'generic':
+      return faDharmachakra;
     default:
       return faQuestionCircle;
   }
@@ -32,25 +34,38 @@ export const labelForKey = (s: string) =>
     .replace(/^./, (str) => str.toUpperCase())
     .replace('Url', 'URL');
 
-export const constructDefaults = (init?: Secret) => {
+export const constructDefaults = (init?: Secret, type?: string) => {
   if (!init) {
     return {
       name: '',
       description: '',
-      type: 'git',
+      type: type || 'git',
       repoUrl: '',
       repoUrlIsRegex: false,
       username: '',
-      password: ''
+      password: '',
+      data: []
     };
   }
+
   return {
     name: init?.metadata?.name || '',
     description: init?.metadata?.annotations[DESCRIPTION_ANNOTATION_KEY],
-    type: init?.metadata?.labels[CredentialTypeLabelKey] || 'git',
+    type: init?.metadata?.labels[CredentialTypeLabelKey] || type || 'git',
     repoUrl: init?.stringData[CredentialsDataKey.RepoUrl],
     repoUrlIsRegex: init?.stringData[CredentialsDataKey.RepoUrlIsRegex] === 'true',
     username: init?.stringData[CredentialsDataKey.Username],
-    password: ''
+    password: '',
+    data: redactSecretStringData(init)
   };
+};
+
+export const redactSecretStringData = (secret: Secret) => {
+  const data = secret?.stringData;
+
+  for (const key of Object.keys(data)) {
+    data[key] = '';
+  }
+
+  return Object.entries(data);
 };

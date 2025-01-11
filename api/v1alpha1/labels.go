@@ -9,6 +9,9 @@ const (
 	CredentialTypeLabelValueHelm  = "helm"
 	CredentialTypeLabelValueImage = "image"
 
+	// Project Secrets
+	ProjectSecretLabelKey = "kargo.akuity.io/project-secret" // nolint: gosec
+
 	// Kargo core API
 	FreightCollectionLabelKey = "kargo.akuity.io/freight-collection"
 	ProjectLabelKey           = "kargo.akuity.io/project"
