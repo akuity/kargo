@@ -1,7 +1,6 @@
 import { useMutation, useQuery } from '@connectrpc/connect-query';
 import {
   faCode,
-  faDharmachakra,
   faExternalLink,
   faPencil,
   faPlus,
@@ -17,9 +16,9 @@ import { useModal } from '@ui/features/common/modal/use-modal';
 import { Secret } from '@ui/gen/k8s.io/api/core/v1/generated_pb';
 import {
   deleteCredentials,
-  deleteSecrets,
+  deleteProjectSecret,
   listCredentials,
-  listSecrets
+  listProjectSecrets
 } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 
 import { CreateCredentialsModal } from './create-credentials-modal';
@@ -33,7 +32,7 @@ export const CredentialsList = () => {
 
   const listCredentialsQuery = useQuery(listCredentials, { project: name });
 
-  const listSecretsQuery = useQuery(listSecrets, { project: name });
+  const listSecretsQuery = useQuery(listProjectSecrets, { project: name });
 
   const deleteCredentialsMutation = useMutation(deleteCredentials, {
     onSuccess: () => {
@@ -41,7 +40,7 @@ export const CredentialsList = () => {
     }
   });
 
-  const deleteSecretsMutation = useMutation(deleteSecrets, {
+  const deleteSecretsMutation = useMutation(deleteProjectSecret, {
     onSuccess: () => listSecretsQuery.refetch()
   });
 
@@ -189,8 +188,7 @@ export const CredentialsList = () => {
         <Card
           title={
             <Flex align='center'>
-              <FontAwesomeIcon className='mr-2' icon={faDharmachakra} />
-              Generic Kubernetes Secrets
+              Generic Project Secrets
               <Button
                 type='primary'
                 className='ml-auto text-xs font-semibold'
@@ -206,7 +204,7 @@ export const CredentialsList = () => {
                   ));
                 }}
               >
-                ADD SECRETS
+                ADD SECRET
               </Button>
             </Flex>
           }
@@ -219,12 +217,12 @@ export const CredentialsList = () => {
             rowKey={(record: Secret) => record?.metadata?.name || ''}
             columns={[
               {
-                title: 'Secret Resource Name',
+                title: 'Name',
                 key: 'name',
                 render: (record) => record?.metadata?.name
               },
               {
-                title: 'Available Secrets',
+                title: 'Keys',
                 key: 'secrets',
                 render: (_, record) => {
                   const secretsKeys = Object.keys(record?.stringData) || [];

@@ -13,9 +13,9 @@ import { dnsRegex } from '@ui/features/common/utils';
 import { Secret } from '@ui/gen/k8s.io/api/core/v1/generated_pb';
 import {
   createCredentials,
-  createSecrets,
+  createProjectSecret,
   updateCredentials,
-  updateSecrets
+  updateProjectSecret
 } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 import { zodValidators } from '@ui/utils/validators';
 
@@ -95,14 +95,14 @@ export const CreateCredentialsModal = ({ project, onSuccess, editing, init, ...p
     }
   });
 
-  const createSecretsMutation = useMutation(createSecrets, {
+  const createSecretsMutation = useMutation(createProjectSecret, {
     onSuccess: () => {
       props.hide();
       onSuccess();
     }
   });
 
-  const updateSecretsMutation = useMutation(updateSecrets, {
+  const updateSecretsMutation = useMutation(updateProjectSecret, {
     onSuccess: () => {
       props.hide();
       onSuccess();
@@ -240,7 +240,7 @@ export const CreateCredentialsModal = ({ project, onSuccess, editing, init, ...p
         )
       )}
       {credentialType === 'generic' && (
-        <FieldContainer control={control} name='data' label='Secrets'>
+        <FieldContainer control={control} name='data' label='Data'>
           {({ field }) => (
             <SecretEditor secret={field.value as [string, string][]} onChange={field.onChange} />
           )}

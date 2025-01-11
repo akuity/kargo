@@ -64,7 +64,7 @@ export const SecretEditor = (props: SecretEditorProps) => {
           {!lockedSecrets.includes(key) && (
             <TextArea
               value={value as string}
-              placeholder='secret'
+              placeholder='value'
               rows={1}
               onChange={(e) => {
                 const newValue = e.target.value;
@@ -93,7 +93,7 @@ export const SecretEditor = (props: SecretEditorProps) => {
         </Flex>
       ))}
       <Button onClick={() => props.onChange(secretEntries.concat([['', '']]))} className='mt-2'>
-        Add k8s Secret
+        Add Data
       </Button>
     </>
   );
