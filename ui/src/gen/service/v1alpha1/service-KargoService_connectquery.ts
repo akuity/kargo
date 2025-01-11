@@ -193,24 +193,24 @@ export const listCredentials = KargoService.method.listCredentials;
 export const updateCredentials = KargoService.method.updateCredentials;
 
 /**
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.ListSecrets
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.ListProjectSecrets
  */
-export const listSecrets = KargoService.method.listSecrets;
+export const listProjectSecrets = KargoService.method.listProjectSecrets;
 
 /**
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.CreateSecrets
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.CreateProjectSecret
  */
-export const createSecrets = KargoService.method.createSecrets;
+export const createProjectSecret = KargoService.method.createProjectSecret;
 
 /**
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.UpdateSecrets
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.UpdateProjectSecret
  */
-export const updateSecrets = KargoService.method.updateSecrets;
+export const updateProjectSecret = KargoService.method.updateProjectSecret;
 
 /**
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.DeleteSecrets
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.DeleteProjectSecret
  */
-export const deleteSecrets = KargoService.method.deleteSecrets;
+export const deleteProjectSecret = KargoService.method.deleteProjectSecret;
 
 /**
  * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.ListAnalysisTemplates
