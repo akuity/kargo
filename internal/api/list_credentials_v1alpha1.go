@@ -8,8 +8,6 @@ import (
 
 	"connectrpc.com/connect"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/selection"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -34,28 +32,12 @@ func (s *server) ListCredentials(
 		return nil, err
 	}
 
-	specificCredentialSecretLabelSelector := labels.NewSelector()
-
-	labelSelectorRequirement, err := labels.NewRequirement(kargoapi.CredentialTypeLabelKey, selection.In, []string{
-		kargoapi.CredentialTypeLabelValueGit,
-		kargoapi.CredentialTypeLabelValueHelm,
-		kargoapi.CredentialTypeLabelValueImage,
-	})
-
-	if err != nil {
-		return nil, fmt.Errorf("list secrets: %w", err)
-	}
-
-	specificCredentialSecretLabelSelector = specificCredentialSecretLabelSelector.Add(*labelSelectorRequirement)
-
 	var secretsList corev1.SecretList
 	if err := s.client.List(
 		ctx,
 		&secretsList,
 		client.InNamespace(req.Msg.GetProject()),
-		client.MatchingLabelsSelector{
-			Selector: specificCredentialSecretLabelSelector,
-		},
+		client.HasLabels{kargoapi.CredentialTypeLabelKey},
 	); err != nil {
 		return nil, fmt.Errorf("list secrets: %w", err)
 	}

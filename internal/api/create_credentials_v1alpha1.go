@@ -14,7 +14,7 @@ import (
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
-type specificCredentials struct {
+type credentials struct {
 	project        string
 	name           string
 	credType       string
@@ -34,63 +34,34 @@ func (s *server) CreateCredentials(
 		return nil, connect.NewError(connect.CodeUnimplemented, errSecretManagementDisabled)
 	}
 
-	credType := req.Msg.GetType()
-
-	if err := validateFieldNotEmpty("type", credType); err != nil {
-		return nil, err
+	creds := credentials{
+		project:        req.Msg.GetProject(),
+		name:           req.Msg.GetName(),
+		description:    req.Msg.GetDescription(),
+		credType:       req.Msg.GetType(),
+		repoURL:        req.Msg.GetRepoUrl(),
+		repoURLIsRegex: req.Msg.GetRepoUrlIsRegex(),
+		username:       req.Msg.GetUsername(),
+		password:       req.Msg.GetPassword(),
 	}
 
-	switch credType {
-	case kargoapi.CredentialTypeLabelValueGit,
-		kargoapi.CredentialTypeLabelValueHelm,
-		kargoapi.CredentialTypeLabelValueImage:
-		creds := specificCredentials{
-			project:        req.Msg.GetProject(),
-			name:           req.Msg.GetName(),
-			description:    req.Msg.GetDescription(),
-			credType:       req.Msg.GetType(),
-			repoURL:        req.Msg.GetRepoUrl(),
-			repoURLIsRegex: req.Msg.GetRepoUrlIsRegex(),
-			username:       req.Msg.GetUsername(),
-			password:       req.Msg.GetPassword(),
-		}
-
-		kubernetesSecret, err := s.createSpecificCredentials(ctx, creds)
-
-		if err != nil {
-			return nil, err
-		}
-
-		return connect.NewResponse(
-			&svcv1alpha1.CreateCredentialsResponse{
-				Credentials: kubernetesSecret,
-			},
-		), nil
-	}
-
-	return nil, connect.NewError(
-		connect.CodeInvalidArgument,
-		errors.New("type should be one of git, helm, image"),
-	)
-}
-
-// creates credentials used for known purpose; specifically external subscriptions
-// to private git repo or helm OCI or docker image
-func (s *server) createSpecificCredentials(ctx context.Context, creds specificCredentials) (*corev1.Secret, error) {
 	if err := s.validateCredentials(creds); err != nil {
 		return nil, err
 	}
 
-	secret := credentialsToSecret(creds)
-
+	secret := credentialsToK8sSecret(creds)
 	if err := s.client.Create(ctx, secret); err != nil {
 		return nil, fmt.Errorf("create secret: %w", err)
 	}
 
-	return sanitizeCredentialSecret(*secret), nil
+	return connect.NewResponse(
+		&svcv1alpha1.CreateCredentialsResponse{
+			Credentials: sanitizeCredentialSecret(*secret),
+		},
+	), nil
 }
 
-func (s *server) validateCredentials(creds specificCredentials) error {
+func (s *server) validateCredentials(creds credentials) error {
 	if err := validateFieldNotEmpty("project", creds.project); err != nil {
 		return err
 	}
@@ -122,7 +93,7 @@ func (s *server) validateCredentials(creds specificCredentials) error {
 	return validateFieldNotEmpty("password", creds.password)
 }
 
-func credentialsToSecret(creds specificCredentials) *corev1.Secret {
+func credentialsToK8sSecret(creds credentials) *corev1.Secret {
 	s := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: creds.project,

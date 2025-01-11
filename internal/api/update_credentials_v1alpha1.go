@@ -2,7 +2,6 @@ package api
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"connectrpc.com/connect"
@@ -34,19 +33,22 @@ func (s *server) UpdateCredentials(
 		return nil, connect.NewError(connect.CodeUnimplemented, errSecretManagementDisabled)
 	}
 
-	credType := req.Msg.GetType()
-	project := req.Msg.GetProject()
-	name := req.Msg.GetName()
+	credsUpdate := credentialsUpdate{
+		project:        req.Msg.GetProject(),
+		name:           req.Msg.GetName(),
+		description:    req.Msg.GetDescription(),
+		credType:       req.Msg.GetType(),
+		repoURL:        req.Msg.GetRepoUrl(),
+		repoURLISRegex: req.Msg.GetRepoUrlIsRegex(),
+		username:       req.Msg.GetUsername(),
+		password:       req.Msg.GetPassword(),
+	}
 
-	if err := validateFieldNotEmpty("type", credType); err != nil {
+	if err := validateFieldNotEmpty("project", credsUpdate.project); err != nil {
 		return nil, err
 	}
 
-	if err := validateFieldNotEmpty("project", project); err != nil {
-		return nil, err
-	}
-
-	if err := validateFieldNotEmpty("name", name); err != nil {
+	if err := validateFieldNotEmpty("name", credsUpdate.name); err != nil {
 		return nil, err
 	}
 
@@ -54,8 +56,8 @@ func (s *server) UpdateCredentials(
 	if err := s.client.Get(
 		ctx,
 		types.NamespacedName{
-			Namespace: project,
-			Name:      name,
+			Namespace: credsUpdate.project,
+			Name:      credsUpdate.name,
 		},
 		&secret,
 	); err != nil {
@@ -63,44 +65,19 @@ func (s *server) UpdateCredentials(
 	}
 
 	// If this isn't labeled as repository credentials, return not found.
-	var isCredentials bool
-	if secret.Labels != nil {
-		_, isCredentials = secret.Labels[kargoapi.CredentialTypeLabelKey]
-	}
-	if !isCredentials {
+	if _, isCredentials := secret.Labels[kargoapi.CredentialTypeLabelKey]; !isCredentials {
 		return nil, connect.NewError(
 			connect.CodeNotFound,
 			fmt.Errorf(
-				"secret %q exists, but is not labeled with %q",
+				"secret %s/%s exists, but is not labeled with %s",
+				secret.Namespace,
 				secret.Name,
 				kargoapi.CredentialTypeLabelKey,
 			),
 		)
 	}
 
-	switch credType {
-	case kargoapi.CredentialTypeLabelValueGit:
-	case kargoapi.CredentialTypeLabelValueHelm:
-	case kargoapi.CredentialTypeLabelValueImage:
-
-		credsUpdate := credentialsUpdate{
-			project:        req.Msg.GetProject(),
-			name:           req.Msg.GetName(),
-			description:    req.Msg.GetDescription(),
-			credType:       req.Msg.GetType(),
-			repoURL:        req.Msg.GetRepoUrl(),
-			repoURLISRegex: req.Msg.GetRepoUrlIsRegex(),
-			username:       req.Msg.GetUsername(),
-			password:       req.Msg.GetPassword(),
-		}
-
-		applyCredentialsUpdateToSecret(&secret, credsUpdate)
-
-	default:
-		return nil, connect.NewError(
-			connect.CodeInvalidArgument, errors.New("type should be one of git, helm, image"),
-		)
-	}
+	applyCredentialsUpdateToK8sSecret(&secret, credsUpdate)
 
 	if err := s.client.Update(ctx, &secret); err != nil {
 		return nil, fmt.Errorf("update secret: %w", err)
@@ -113,7 +90,7 @@ func (s *server) UpdateCredentials(
 	), nil
 }
 
-func applyCredentialsUpdateToSecret(
+func applyCredentialsUpdateToK8sSecret(
 	secret *corev1.Secret,
 	credsUpdate credentialsUpdate,
 ) {

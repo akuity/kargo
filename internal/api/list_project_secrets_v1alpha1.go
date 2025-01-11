@@ -14,10 +14,10 @@ import (
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
-func (s *server) ListSecrets(
+func (s *server) ListProjectSecrets(
 	ctx context.Context,
-	req *connect.Request[svcv1alpha1.ListSecretsRequest],
-) (*connect.Response[svcv1alpha1.ListSecretsResponse], error) {
+	req *connect.Request[svcv1alpha1.ListProjectSecretsRequest],
+) (*connect.Response[svcv1alpha1.ListProjectSecretsResponse], error) {
 	// Check if secret management is enabled
 	if !s.cfg.SecretManagementEnabled {
 		return nil, connect.NewError(connect.CodeUnimplemented, errSecretManagementDisabled)
@@ -38,7 +38,7 @@ func (s *server) ListSecrets(
 		&secretsList,
 		client.InNamespace(req.Msg.GetProject()),
 		client.MatchingLabels{
-			kargoapi.CredentialTypeLabelKey: kargoapi.CredentialTypeLabelValueGeneric,
+			kargoapi.ProjectSecretLabelKey: kargoapi.LabelTrueValue,
 		},
 	); err != nil {
 		return nil, fmt.Errorf("list secrets: %w", err)
@@ -51,19 +51,24 @@ func (s *server) ListSecrets(
 
 	secrets := make([]*corev1.Secret, len(secretsList.Items))
 	for i, secret := range secretsList.Items {
-		secrets[i] = sanitizeSecret(secret, []string{})
+		secrets[i] = sanitizeProjectSecret(secret)
 	}
 
-	return connect.NewResponse(&svcv1alpha1.ListSecretsResponse{
+	return connect.NewResponse(&svcv1alpha1.ListProjectSecretsResponse{
 		Secrets: secrets,
 	}), nil
 }
 
-func sanitizeSecret(secret corev1.Secret, exemptKeys []string) *corev1.Secret {
+// sanitizeProjectSecret returns a copy of the secret with all values in the
+// stringData map redacted. All annotations are also redacted because AT LEAST
+// "last-applied-configuration" is a known vector for leaking sensitive
+// information and unknown configuration management tools may use other
+// annotations in a manner similar to "last-applied-configuration". There is no
+// concern over labels because the constraints on label values rule out use in a
+// manner similar to that of the "last-applied-configuration" annotation.
+func sanitizeProjectSecret(secret corev1.Secret) *corev1.Secret {
 	s := secret.DeepCopy()
-
 	s.StringData = make(map[string]string, len(s.Data))
-
 	for k, v := range s.Annotations {
 		switch k {
 		case kargoapi.AnnotationKeyDescription:
@@ -72,28 +77,9 @@ func sanitizeSecret(secret corev1.Secret, exemptKeys []string) *corev1.Secret {
 			s.Annotations[k] = redacted
 		}
 	}
-
-	for k := range s.Labels {
-		if k == kargoapi.CredentialTypeLabelKey {
-			continue
-		}
-
-		s.Labels[k] = redacted
-	}
-
 	for k := range s.Data {
 		s.StringData[k] = redacted
 	}
-
-	for _, exemptKey := range exemptKeys {
-		value, exist := s.Data[exemptKey]
-
-		if exist {
-			s.StringData[exemptKey] = string(value)
-		}
-	}
-
 	s.Data = nil
-
 	return s
 }
