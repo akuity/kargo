@@ -382,6 +382,13 @@ message FreightRequest {
   // Sources describes where the requested Freight may be obtained from. This is
   // a required field.
   optional FreightSources sources = 2;
+
+  // AvailabilityStrategy specifies the semantics for how requested Freight is
+  // made available to the Stage. This field is optional. When left unspecified,
+  // the field is implicitly treated as if its value were "AnyUpstream".
+  //
+  // +kubebuilder:default=AnyUpstream
+  optional string availabilityStrategy = 3;
 }
 
 message FreightSources {

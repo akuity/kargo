@@ -104,6 +104,15 @@
           "items": {
             "description": "FreightRequest expresses a Stage's need for Freight having originated from a\nparticular Warehouse.",
             "properties": {
+              "availabilityStrategy": {
+                "default": "AnyUpstream",
+                "description": "AvailabilityStrategy specifies the semantics for how requested Freight is\nmade available to the Stage. This field is optional. When left unspecified,\nthe field is implicitly treated as if its value were \"AnyUpstream\".",
+                "enum": [
+                  "AllUpstream",
+                  "AnyUpstream"
+                ],
+                "type": "string"
+              },
               "origin": {
                 "description": "Origin specifies from where the requested Freight must have originated.\nThis is a required field.",
                 "properties": {
@@ -149,6 +158,7 @@
               }
             },
             "required": [
+              "availabilityStrategy",
               "origin",
               "sources"
             ],

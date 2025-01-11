@@ -128,6 +128,14 @@ type FreightOriginKind string
 
 const FreightOriginKindWarehouse FreightOriginKind = "Warehouse"
 
+// +kubebuilder:validation:Enum={AllUpstream,AnyUpstream}
+type FreightAvailabilityStrategy string
+
+const (
+	FreightAvailabilityStrategyAllUpstream FreightAvailabilityStrategy = "AllUpstream"
+	FreightAvailabilityStrategyAnyUpstream FreightAvailabilityStrategy = "AnyUpstream"
+)
+
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name=Shard,type=string,JSONPath=`.spec.shard`
@@ -205,6 +213,12 @@ type FreightRequest struct {
 	// Sources describes where the requested Freight may be obtained from. This is
 	// a required field.
 	Sources FreightSources `json:"sources" protobuf:"bytes,2,opt,name=sources"`
+	// AvailabilityStrategy specifies the semantics for how requested Freight is
+	// made available to the Stage. This field is optional. When left unspecified,
+	// the field is implicitly treated as if its value were "AnyUpstream".
+	//
+	// +kubebuilder:default=AnyUpstream
+	AvailabilityStrategy FreightAvailabilityStrategy `json:"availabilityStrategy" protobuf:"bytes,3,opt,name=availabilityStrategy"`
 }
 
 // FreightOrigin describes a kind of Freight in terms of where it may have
