@@ -252,14 +252,18 @@ export const AssembleFreight = ({
   );
 };
 
-const DiscoveryTable = ({ selected, chosenItems, select }: {
-  selected?: DiscoveryResult,
+const DiscoveryTable = ({
+  selected,
+  chosenItems,
+  select
+}: {
+  selected?: DiscoveryResult;
   chosenItems: {
     [key: string]: {
       artifact: DiscoveryResult;
       info: FreightInfo;
     };
-  },
+  };
   select: (item?: FreightInfo) => void;
 }) => {
   if (!selected) {

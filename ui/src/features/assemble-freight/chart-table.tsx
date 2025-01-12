@@ -1,6 +1,7 @@
-import { calculatePageForSelectedRow } from '@ui/utils/pagination';
 import { Radio, Table } from 'antd';
 import { useState } from 'react';
+
+import { calculatePageForSelectedRow } from '@ui/utils/pagination';
 
 export const ChartTable = ({
   versions,
@@ -11,7 +12,9 @@ export const ChartTable = ({
   selected: string | undefined;
   select: (version?: string) => void;
 }) => {
-  const [defaultPage] = useState<number>(() => calculatePageForSelectedRow(selected, versions, (version) => version));
+  const [defaultPage] = useState<number>(() =>
+    calculatePageForSelectedRow(selected, versions, (version) => version)
+  );
 
   return (
     <Table

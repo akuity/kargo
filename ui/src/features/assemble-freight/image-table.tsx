@@ -1,13 +1,13 @@
 import { faQuestionCircle } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Radio, Table } from 'antd';
+import { useState } from 'react';
 
 import { DiscoveredImageReference } from '@ui/gen/v1alpha1/generated_pb';
 import { timestampDate } from '@ui/utils/connectrpc-utils';
+import { calculatePageForSelectedRow } from '@ui/utils/pagination';
 
 import { TruncatedCopyable } from './truncated-copyable';
-import { useState } from 'react';
-import { calculatePageForSelectedRow } from '@ui/utils/pagination';
 
 export const ImageTable = ({
   references,
@@ -18,7 +18,9 @@ export const ImageTable = ({
   selected: DiscoveredImageReference | undefined;
   select: (reference?: DiscoveredImageReference) => void;
 }) => {
-  const [defaultPage] = useState<number>(() => calculatePageForSelectedRow(selected, references, (ref) => ref.tag));
+  const [defaultPage] = useState<number>(() =>
+    calculatePageForSelectedRow(selected, references, (ref) => ref.tag)
+  );
 
   return (
     <>
@@ -37,7 +39,9 @@ export const ImageTable = ({
           { title: 'Tag', dataIndex: 'tag' },
           {
             title: 'Digest',
-            render: (record: DiscoveredImageReference) => <TruncatedCopyable text={record?.digest} />
+            render: (record: DiscoveredImageReference) => (
+              <TruncatedCopyable text={record?.digest} />
+            )
           },
           {
             title: 'Source Repo',
@@ -58,5 +62,5 @@ export const ImageTable = ({
         ]}
       />
     </>
-  )
+  );
 };

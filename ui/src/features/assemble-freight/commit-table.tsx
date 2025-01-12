@@ -1,11 +1,11 @@
 import { Radio, Table } from 'antd';
+import { useState } from 'react';
 
 import { DiscoveredCommit } from '@ui/gen/v1alpha1/generated_pb';
 import { timestampDate } from '@ui/utils/connectrpc-utils';
+import { calculatePageForSelectedRow } from '@ui/utils/pagination';
 
 import { TruncatedCopyable } from './truncated-copyable';
-import { calculatePageForSelectedRow } from '@ui/utils/pagination';
-import { useState } from 'react';
 
 export const CommitTable = ({
   commits,
@@ -16,7 +16,9 @@ export const CommitTable = ({
   selected: DiscoveredCommit | undefined;
   select: (commit?: DiscoveredCommit) => void;
 }) => {
-  const [defaultPage] = useState<number>(() => calculatePageForSelectedRow(selected, commits, (commit) => commit.id));
+  const [defaultPage] = useState<number>(() =>
+    calculatePageForSelectedRow(selected, commits, (commit) => commit.id)
+  );
 
   return (
     <>
