@@ -138,6 +138,23 @@ errors, and to provide more control over retry behavior like backoff strategies
 or time limits.
 :::
 
+### Promotion Task Step
+
+A step can be used to reference a
+[`PromotionTask` or `ClusterPromotionTask`](30-promotion-tasks.md)
+using the `task` key, whose value is an object with a `name` key that specifies
+the name of the task and optionally a `kind` key to specify if the task is a
+`ClusterPromotionTask`.
+
+```yaml
+steps:
+- task:
+    name: task-name
+    kind: ClusterPromotionTask
+```
+
+When a task is referenced, the `uses` key is not required.
+
 ## Built-in Steps
 
 This section describes the promotion steps that are built directly into Kargo.
