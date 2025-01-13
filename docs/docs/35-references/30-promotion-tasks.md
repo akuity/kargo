@@ -109,6 +109,29 @@ spec:
             value: feature-branch
 ```
 
+When the Promotion Template defines a
+[`vars` section](../30-how-to-guides/14-working-with-stages.md#promotion-templates)
+the variables are inherited by the `PromotionTask` and do not require redefinition
+unless they need to be overridden.
+
+```yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+# ...omitted for brevity
+spec:
+  promotionTemplate:
+    spec:
+      vars:
+      - name: repoURL
+        value: https://github.com/example/repository.git
+      steps:
+        - task:
+            name: my-promotion-task
+            vars:
+            - name: sourceBranch
+              value: feature-branch
+```
+
 ### Promotion Task Steps
 
 The `spec.steps` section of a `PromotionTask` define the sequence of steps that
