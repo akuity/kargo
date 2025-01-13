@@ -166,6 +166,63 @@ spec:
       prNumber: ${{ task.outputs['open-pr'].prNumber }}
 ```
 
+### Promotion Task Outputs
+
+Outputs of a `PromotionTask` can be made more accessible by defining them using
+a [`compose-output` step](10-promotion-steps.md#compose-output). The outputs are
+then made available under the alias defined in the
+[`as` field](10-promotion-steps.md#step-aliases) of the step referencing the
+`PromotionTask`.
+
+```yaml
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: PromotionTask
+metadata:
+  name: open-pr-and-wait
+  namespace: kargo-demo
+spec:
+    # ...omitted for brevity
+    - uses: compose-output
+      as: output
+      config:
+        mergeCommit: ${{ task.outputs['wait-for-pr'].commit }}
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+# ...omitted for brevity
+spec:
+  promotionTemplate:
+    spec:
+      steps:
+      - task:
+          name: open-pr-and-wait
+          as: pr
+          # ...additional configuration
+      - uses: http
+        config:
+          method: POST
+          url: https://slack.com/api/chat.postMessage
+          headers:
+          - name: Authorization
+            value: Bearer ${{ secrets.slack.token }}
+          - name: Content-Type
+            value: application/json
+          body: |
+            ${{ quote({
+              "channel": "C123456",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "A new commit was merged: ${{ outputs.pr.mergeCommit }}"
+                  }
+                }
+              ]
+            }) }}
+```
+
 ### Cluster Promotion Task
 
 A `ClusterPromotionTask` is a `PromotionTask` that is available to all
