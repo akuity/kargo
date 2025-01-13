@@ -211,7 +211,13 @@ config:
 
 The `warehouse()` function takes a single argument of type `string`, which is the
 name of a `Warehouse` resource in the same `Project` as the `Promotion` being
-executed. It returns a `FreightOrigin` object representing that `Warehouse`.
+executed. It returns a `FreightOrigin` object representing that `Warehouse`
+with the following fields:
+
+| Field | Description |
+|-------|-------------|
+| `Kind` | The kind of the `FreightOrigin`. Always equals `Warehouse` for this function. |
+| `Name` | The name of the `Warehouse` resource. |
 
 The `FreightOrigin` object can be used as an optional argument to the
 `commitFrom()`, `imageFrom()`, or `chartFrom()` functions to disambiguate the
@@ -223,7 +229,17 @@ See the next sections for examples.
 
 The `commitFrom()` function takes the URL of a Git repository as its first
 argument and returns a corresponding `GitCommit` object from the `Promotion`'s
-`FreightCollection`.
+`FreightCollection` with the following fields:
+
+| Field | Description |
+|-------|-------------|
+| `RepoURL` | The URL of the Git repository the commit originates from. |
+| `ID`      | The ID of the Git commit. |
+| `Branch`  | The branch of the repository where this commit was found. Only present if the `Warehouse`'s Git subscription is configured to track branches. |
+| `Tag`     | The tag of the repository where this commit was found. Only present if the `Warehouse`'s Git subscription is configured to track tags. |
+| `Message` | The first line of the commit message (up to 80 characters). |
+| `Author` | The name and email address of the commit author. |
+| `Committer` | The name and email address of the committer. |
 
 In the event that a `Stage` requests `Freight` from multiple origins
 (`Warehouse`s) and more than one of those can provide a `GitCommit` object from
@@ -241,7 +257,14 @@ config:
 
 The `imageFrom()` function takes the URL of a container image repository as its
 first argument and returns a corresponding `Image` object from the `Promotion`'s
-`FreightCollection`.
+`FreightCollection` with the following fields:
+
+| Field | Description |
+|-------|-------------|
+| `RepoURL` | The URL of the container image repository the image originates from. |
+| `GitRepoURL` | The URL of the Git repository which contains the source code for the image. Only present if Kargo was able to infer it from the URL. |
+| `Tag` | The tag of the image. |
+| `Digest` | The digest of the image. |
 
 In the event that a `Stage` requests `Freight` from multiple origins
 (`Warehouse`s) and more than one of those can provide an `Image` object from the
@@ -259,7 +282,13 @@ config:
 
 The `chartFrom()` function takes the URL of a Helm chart repository as its first
 argument and returns a corresponding `Chart` object from the `Promotion`'s
-`FreightCollection`.
+`FreightCollection` with the following fields:
+
+| Field | Description |
+|-------|-------------|
+| `RepoURL` | The URL of the Helm chart repository the chart originates from. For HTTP/S repositories, this is the URL of the repository. For OCI repositories, this is the URL of the container image repository including the chart's name. |
+| `Name` | The name of the Helm chart. Only present for HTTP/S repositories. |
+| `Version` | The version of the Helm chart. |
 
 For Helm charts stored in OCI registries, the URL should be the full path to the
 repository within that registry.
