@@ -1,0 +1,8 @@
+.version_dropdown {
+    background-color: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0.2rem;
+    font-size: 1rem;
+    font-weight: bold;
+  }
