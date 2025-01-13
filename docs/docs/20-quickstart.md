@@ -227,7 +227,7 @@ all three Argo CD `Application`s have not yet synced because they're not
 configured to do so automatically, and in fact, the branches referenced by their
 `targetRevision` fields do not even exist yet.
 
-![Argo-dashboard-screenshot](./assets/argo-dashboard.png)
+![Argo-dashboard-screenshot](../static/img/argo-dashboard.png)
 
 ## Your First Kargo Project
 
@@ -787,7 +787,7 @@ the previous section.
       This will take you to a list of `Project`s.  It currently includes only
       the one created in the previous step.
 
-      ![Kargo-dashboard](./assets/kargo-projects.png)
+      ![Kargo-dashboard](../static/img/kargo-projects.png)
 
    1. Select <Hlt>kargo-demo</Hlt>:
 
@@ -801,13 +801,13 @@ the previous section.
         * Three `Stage`s representing distinct instances of our demo
           application.
 
-        ![Kargo-dashboard-screenshot](./assets/kargo-dashboard-projects.png)
+        ![Kargo-dashboard-screenshot](../static/img/kargo-dashboard-projects.png)
 
       * An interactive <Hlt>Freight Timeline</Hlt> with `Freight` ordered
         chronologically, with newer `Freight` to the left and older `Freight` to
         the right.
 
-        ![Kargo-Freight-Timeline](./assets/kargo-frieght-timeline.png)
+        ![Kargo-Freight-Timeline](../static/img/kargo-frieght-timeline.png)
 
 1. After a few seconds, a piece of `Freight` should appear in the <Hlt>Freight
    Timeline</Hlt>, if it isn't there already.
@@ -838,17 +838,17 @@ the previous section.
 1. To promote `Freight` to the `test` `Stage`, select the target icon on the
    left border of <Hlt>test</Hlt>:
 
-    ![Kargo-Promote](./assets/kargo-promote-option.png)
+    ![Kargo-Promote](../static/img/kargo-promote-option.png)
 
     Next, select the `Freight` from the <Hlt>Freight Timeline</Hlt> and confirm
     the promotion by selecting <Hlt>Yes</Hlt>:
 
-    ![Kargo-Promote](./assets/kargo-promote-option-2.png)
+    ![Kargo-Promote](../static/img/kargo-promote-option-2.png)
 
     When promotion process is complete, you'll see a check mark next to
     <Hlt>test</Hlt>, indicating that the promotion was successful.
 
-    ![Kargo-dashboard-screenshot](./assets/kargo-dashboard-promotion.png)
+    ![Kargo-dashboard-screenshot](../static/img/kargo-dashboard-promotion.png)
 
     Following the promotion, health checks will run periodically. When a `Stage`
     is in a healthy state, this will be reflected with a heart icon. You can
@@ -868,7 +868,7 @@ the previous section.
    `test`, which designates it as eligible for promotion to the next `Stage` --
    in our case, `uat`.
 
-   ![Kargo-Freight-Verified](./assets/kargo-freight-verified.png)
+   ![Kargo-Freight-Verified](../static/img/kargo-freight-verified.png)
 
     :::note
     Although this example does not demonstrate it, it is also possible to verify
