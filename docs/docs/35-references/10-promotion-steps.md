@@ -42,6 +42,44 @@ steps:
   as: alias
 ```
 
+### Step Variables
+
+A step can define variables that can be referenced in its configuration by
+providing a `vars` key in the step definition. The value of the `vars` key is a
+list of variables, each of which is an object with `name` and `value` keys.
+
+```yaml
+steps:
+- uses: step-name
+  vars:
+  - name: var1
+    value: value1
+  - name: var2
+    value: value2
+  config:
+    option1: ${{ vars.var1 }}
+    option2: ${{ vars.var2 }}
+```
+
+Variables defined in a step are scoped to that step and are not accessible to
+other steps. The values of variables may contain [expressions](./20-expression-language.md).
+In addition, the values of step variables may be references to the
+[outputs](#step-outputs) of other steps.
+
+```yaml
+steps:
+- uses: step1
+  as: step1
+- uses: step2
+  vars:
+  - name: var1
+    value: ${{ outputs.step1.someOutput }}
+```
+
+When a variable in a step is also defined as a global variable in the [Promotion
+Template](../30-how-to-guides/14-working-with-stages.md#promotion-templates),
+the step variable takes precedence over the global variable.
+
 ### Step Outputs
 
 A promotion step may produce output that can be referenced by subsequent steps,
