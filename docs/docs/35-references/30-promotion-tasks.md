@@ -136,7 +136,7 @@ spec:
 
 The `spec.steps` section of a `PromotionTask` define the sequence of steps that
 are inflated when a `Promotion` is created from a Promotion Template that
-references the task. Each step works the as a[regular step](10-promotion-steps.md)
+references the task. Each step works the as a [regular step](10-promotion-steps.md)
 in a Promotion Template, except that references to other tasks are not allowed.
 
 #### Promotion Task Context
