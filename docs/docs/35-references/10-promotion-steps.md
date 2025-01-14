@@ -1505,13 +1505,11 @@ Assuming a `200` response with the following JSON body:
 
 The step would succeed and produce the following outputs:
 
-```yaml
 | Name     | Type | Value |
 |----------|------|-------|
 | `status` | `int` | `200` |
 | `fact1` | `string` | `Kittens have baby teeth, which are replaced by permanent teeth around the age of 7 months.` |
 | `fact2` | `string` | `Each day in the US, animal shelters are forced to destroy 30,000 dogs and cats.` |
-```
 
 </TabItem>
 
