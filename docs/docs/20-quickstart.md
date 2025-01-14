@@ -54,7 +54,7 @@ curl -L https://raw.githubusercontent.com/akuity/kargo/main/hack/quickstart/inst
 <TabItem value="orbstack" label="OrbStack">
 
 [OrbStack](https://orbstack.dev/) is a fast, lightweight, drop-in replacement
-for Docker Desktop for Mac OS only. You can follow
+for Docker Desktop for macOS only. You can follow
 [these instructions](https://docs.orbstack.dev/kubernetes/) to enable its
 built-in Kubernetes support.
 
@@ -873,8 +873,8 @@ the previous section.
     :::note
     Although this example does not demonstrate it, it is also possible to verify
     the `Freight` in a `Stage` using user-defined processes. See the
-    [relevant section](./15-concepts.md#verifications) of the concepts page to
-    learn more.
+    [relevant section](./30-how-to-guides/14-working-with-stages.md#verifications)
+    to learn more.
     :::
 
 ## Behind the Scenes
@@ -929,7 +929,7 @@ Now let's clean up!
 <TabItem value="docker-desktop" label="Docker Desktop">
 
 Docker Desktop supports only a _single_ Kubernetes cluster. If you are
-comfortable deleting not just just Kargo-related resources, but _all_ your
+comfortable deleting not just Kargo-related resources, but _all_ your
 workloads and data, the cluster can be reset from the Docker Desktop
 Dashboard.
 
@@ -944,7 +944,7 @@ curl -L https://raw.githubusercontent.com/akuity/kargo/main/hack/quickstart/unin
 <TabItem value="orbstack" label="OrbStack">
 
 OrbStack supports only a _single_ Kubernetes cluster. If you are
-comfortable deleting not just just Kargo-related resources, but _all_ your
+comfortable deleting not just Kargo-related resources, but _all_ your
 workloads and data, you can destroy the cluster with:
 
 ```shell
