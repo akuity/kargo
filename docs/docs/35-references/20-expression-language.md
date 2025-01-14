@@ -17,7 +17,7 @@ For an overview of Promotions, refer to the
 [concepts doc](../concepts#promotions).
 
 For detailed coverage of individual promotion steps, refer to the
-[Promotion Steps Reference](./10-promotion-steps.md).
+[Promotion Steps Reference](./10-promotion-steps/index.md).
 :::
 
 ## Syntax

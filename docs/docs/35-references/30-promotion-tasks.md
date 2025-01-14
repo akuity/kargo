@@ -6,7 +6,7 @@ description: Learn about Kargo's promotion tasks that can define reusable promot
 # Promotion Tasks Reference
 
 `PromotionTask`s allow you to define a set of
-[Promotion Steps](./10-promotion-steps.md) on a project or global
+[Promotion Steps](./10-promotion-steps/index.md) on a project or global
 (`ClusterPromotionTask`) level that can be reused across multiple
 [Promotion Templates](../30-how-to-guides/14-working-with-stages.md#promotion-templates).
 
@@ -136,7 +136,7 @@ spec:
 
 The `spec.steps` section of a `PromotionTask` define the sequence of steps that
 are inflated when a `Promotion` is created from a Promotion Template that
-references the task. Each step works the as a [regular step](10-promotion-steps.md)
+references the task. Each step works the as a [regular step](10-promotion-steps/index.md)
 in a Promotion Template, except that references to other tasks are not allowed.
 
 #### Promotion Task Context
@@ -169,9 +169,9 @@ spec:
 ### Promotion Task Outputs
 
 Outputs of a `PromotionTask` can be made more accessible by defining them using
-a [`compose-output` step](10-promotion-steps.md#compose-output). The outputs are
-then made available under the alias defined in the
-[`as` field](10-promotion-steps.md#step-aliases) of the step referencing the
+a [`compose-output` step](10-promotion-steps/70-compose-output.md). The outputs
+are then made available under the alias defined in the
+[`as` field](10-promotion-steps/index.md#step-aliases) of the step referencing the
 `PromotionTask`.
 
 ```yaml

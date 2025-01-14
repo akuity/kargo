@@ -873,8 +873,8 @@ the previous section.
     :::note
     Although this example does not demonstrate it, it is also possible to verify
     the `Freight` in a `Stage` using user-defined processes. See the
-    [relevant section](./15-concepts.md#verifications) of the concepts page to
-    learn more.
+    [relevant section](./30-how-to-guides/14-working-with-stages.md#verifications)
+    of the concepts page to learn more.
     :::
 
 ## Behind the Scenes
