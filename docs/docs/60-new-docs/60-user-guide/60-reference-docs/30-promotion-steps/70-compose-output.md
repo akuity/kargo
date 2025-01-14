@@ -8,14 +8,14 @@ description: Composes output from one or more steps into new output.
 `compose-output` is a step that composes a new output from one or more existing
 outputs. This step can be useful when subsequent steps need to reference a
 combination of outputs from previous steps, or to allow a
-[`PromotionTask`](../30-promotion-tasks.md) to provide easy access to outputs from
+[`PromotionTask`](../35-promotion-tasks.md) to provide easy access to outputs from
 the steps it contains.
 
 ## Configuration
 
 The `compose-output` step accepts an arbitrary set of key-value pairs, where the
 key is the name of the output to be created and the value is arbitrary and can
-be an [Expression Language](../20-expression-language.md) expression.
+be an [Expression Language](../20-expressions.md) expression.
 
 ## Output
 

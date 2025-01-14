@@ -20,7 +20,7 @@ with a wide variety of external services.
 | `queryParams` | `[]object` | N | A list of query parameters to include in the request. |
 | `queryParams[].name` | `string` | Y | The name of the query parameter. |
 | `queryParams[].value` | `string` | Y | The value of the query parameter. The provided value will automatically be URL-encoded if necessary. |
-| `body` | `string` | N | The body of the request. __Note:__ As this field is a `string`, take care to utilize [`quote()`](../20-expression-language.md#quote) if the body is a valid JSON `object`. Refer to the example below of posting a message to a Slack channel. |
+| `body` | `string` | N | The body of the request. __Note:__ As this field is a `string`, take care to utilize [`quote()`](../20-expressions.md#quote) if the body is a valid JSON `object`. Refer to the example below of posting a message to a Slack channel. |
 | `insecureSkipTLSVerify` | `boolean` | N | Indicates whether to bypass TLS certificate verification when making the request. Setting this to `true` is highly discouraged. |
 | `timeout` | `string` | N | A string representation of the maximum time interval to wait for a request to complete. _This is the timeout for an individual HTTP request. If a request is retried, each attempt is independently subject to this timeout._ See Go's [`time` package docs](https://pkg.go.dev/time#ParseDuration) for a description of the accepted format. |
 | `successExpression` | `string` | N | An [expr-lang] expression that can evaluate the response to determine success. If this is left undefined and `failureExpression` _is_ defined, the default success criteria will be the inverse of the specified failure criteria. If both are left undefined, success is `true` when the HTTP status code is `2xx`. If `successExpression` and `failureExpression` are both defined and both evaluate to `true`, the failure takes precedence. Note that this expression should _not_ be offset by `${{` and `}}`. See examples for more details. |
@@ -32,10 +32,10 @@ with a wide variety of external services.
 :::note
 An HTTP response that is not conclusively determined to have succeeded or failed
 will result in the step reporting a result of `Running`. Kargo will
-[retry](index.md#step-retries) such a step on its next attempt at reconciling the
-`Promotion` resource. This will continue until the step succeeds, fails,
-exhausts the configured maximum number of retries, or a configured timeout has
-elapsed.
+[retry](../15-promotion-templates.md#step-retries) such a step on its next
+attempt at reconciling the`Promotion` resource. This will continue until the step
+succeeds, fails, exhausts the configured maximum number of retries, or a configured
+timeout has elapsed.
 :::
 
 ## Expressions
@@ -121,7 +121,8 @@ The step would succeed and produce the following outputs:
 Building on the basic example, this configuration defines explicit success and
 failure criteria. Any response meeting neither of these criteria will result in
 the step reporting a result of `Running` and being retried. Note the use of
-[retry](index.md#step-retries) configuration to set a timeout for the step.
+[retry](../15-promotion-templates.md#step-retries) configuration to set a timeout
+for the step.
 
 ```yaml
 steps:
