@@ -185,7 +185,7 @@ as native processes.
     <TabItem value="orbstack" label="OrbStack">
 
     [OrbStack](https://orbstack.dev/) is a fast, lightweight, drop-in replacement
-    for Docker Desktop for Mac OS only. You can follow
+    for Docker Desktop for macOS only. You can follow
     [these instructions](https://docs.docker.com/desktop/kubernetes/) to enable
     its built-in Kubernetes support.
 
@@ -348,7 +348,7 @@ as native processes.
     <TabItem value="docker-desktop" label="Docker Desktop">
 
     Docker Desktop supports only a _single_ Kubernetes cluster. If you are
-    comfortable deleting not just just Kargo-related resources, but _all_ your
+    comfortable deleting not just Kargo-related resources, but _all_ your
     workloads and data, the cluster can be reset from the Docker Desktop
     Dashboard.
 
@@ -363,7 +363,7 @@ as native processes.
     <TabItem value="orbstack" label="OrbStack">
 
     OrbStack supports only a _single_ Kubernetes cluster. If you are
-    comfortable deleting not just just Kargo-related resources, but _all_ your
+    comfortable deleting not just Kargo-related resources, but _all_ your
     workloads and data, you can destroy the cluster with:
 
     ```shell

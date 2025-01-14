@@ -14,7 +14,7 @@ and indirect integration with Argo CD, this page details certain key
 elements of the interactions between the two systems.
 
 :::note
-This page is a work in progress. Thank you for your patience as as we work to add more details.
+This page is a work in progress. Thank you for your patience as we work to add more details.
 :::
 
 ## Updating Argo CD Applications
