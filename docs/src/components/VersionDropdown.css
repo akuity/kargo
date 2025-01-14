@@ -1,8 +1,18 @@
 .version_dropdown {
+    appearance: none;
+    -webkit-appearance: none; /* For Safari */
+    -moz-appearance: none; /* For Firefox */
+    position: relative;
     background-color: transparent;
-    border: none;
+    border: 1px solid #ccc;
+    border-radius: 5px;
     cursor: pointer;
-    padding: 0.2rem;
+    padding: 5px 10px;
     font-size: 1rem;
+    font-family: 'Monospace', 'Roboto', 'Open Sans', 'Lato', 'Courier New', monospace;
     font-weight: bold;
-  }
+}
+
+.version_dropdown option {
+    font-weight: normal; /* Keeps options normal weight */
+}
