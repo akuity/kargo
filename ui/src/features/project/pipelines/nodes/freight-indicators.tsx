@@ -22,7 +22,7 @@ export const FreightIndicators = ({
   }
 
   return (
-    <div className='flex gap-2 justify-center items-center py-1 absolute top-1'>
+    <div className='flex gap-2 justify-center items-center py-1 top-1'>
       {freight.map((freight, idx) => (
         <Tooltip placement='right' title={getAlias(freight)} key={freight?.metadata?.name || idx}>
           <div

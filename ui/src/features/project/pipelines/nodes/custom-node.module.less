@@ -1,0 +1,50 @@
+@node-min-width: 150px;
+@node-max-width: 350px;
+
+.container {
+    @apply h-full;
+    @apply w-full;
+    @apply rounded-lg;
+    @apply bg-gray-50;
+
+    // base font-size
+    @apply text-xs;
+}
+
+// node header
+.header {
+    @apply w-full;
+    @apply px-3;
+    @apply py-3;
+    @apply bg-gray-100;
+    @apply rounded-lg;
+    @apply flex;
+    @apply gap-5;
+
+    h3 {
+        margin: 0;
+    }
+}
+
+// node body
+.body {
+    @apply px-4;
+    @apply py-2;
+}
+
+// node footer
+.footer {
+    @apply bg-gray-200;
+    @apply rounded-lg;
+    @apply p-1;
+}
+
+.repoSubscriptionNode, .warehouseNode {
+    min-width: @node-min-width;
+    max-width: @node-max-width;
+}
+
+.stageNode {
+    min-width: 200px;
+    // max-width: @node-max-width;
+}

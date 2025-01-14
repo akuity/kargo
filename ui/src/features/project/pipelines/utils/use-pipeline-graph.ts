@@ -1,9 +1,9 @@
-import { Edge, MarkerType, Node, Position } from '@xyflow/react';
+import { Edge, MarkerType, Node, useEdgesState, useNodesState } from '@xyflow/react';
 import { graphlib, layout } from 'dagre';
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 
 import { ColorMap, getColors } from '@ui/features/stage/utils';
-import { Stage, Warehouse } from '@ui/gen/v1alpha1/generated_pb';
+import { RepoSubscription, Stage, Warehouse } from '@ui/gen/v1alpha1/generated_pb';
 
 import {
   AnyNodeType,
@@ -64,21 +64,38 @@ const initializeNodes = (
   return [nodes, warehouseColorMap];
 };
 
+export const reactFlowNodeConstants = {
+  CUSTOM_NODE: 'custom-node'
+};
+
+export type GraphMeta = {
+  warehouse?: Warehouse;
+  subscription?: RepoSubscription;
+  stage?: Stage;
+};
+
 export const useReactFlowPipelineGraph = (
   project: string | undefined,
   stages: Stage[],
   warehouses: Warehouse[]
 ) => {
-  return useMemo(() => {
-    const graph = new graphlib.Graph({ multigraph: true });
+  const calculatedNodesAndEdges = useMemo(() => {
+    if (!project || stages?.length === 0 || warehouses?.length === 0) {
+      return {
+        nodes: [],
+        edges: []
+      };
+    }
 
-    graph.setGraph({ rankdir: 'LR' });
+    const graph = new graphlib.Graph<GraphMeta>({ multigraph: true });
+
+    graph.setGraph({ rankdir: 'LR', ranksep: 100 });
     graph.setDefaultEdgeLabel(() => ({}));
 
     // subscriptions and warehouses
     for (const warehouse of warehouses) {
       const warehouseNodeIndex = `${warehouse.metadata?.name}`;
-      graph.setNode(warehouseNodeIndex, RepoNodeDimensions());
+      graph.setNode(warehouseNodeIndex, { ...RepoNodeDimensions(), warehouse });
 
       for (const subscription of warehouse.spec?.subscriptions || []) {
         const repoURL =
@@ -86,7 +103,7 @@ export const useReactFlowPipelineGraph = (
 
         const subscriptionNodeIndex = `${warehouse.metadata?.name}-${repoURL}`;
 
-        graph.setNode(subscriptionNodeIndex, RepoNodeDimensions());
+        graph.setNode(subscriptionNodeIndex, { ...RepoNodeDimensions(), subscription });
 
         // subscription -> warehouse
         graph.setEdge(subscriptionNodeIndex, warehouseNodeIndex);
@@ -96,7 +113,7 @@ export const useReactFlowPipelineGraph = (
     // stages
     for (const stage of stages) {
       const stageNodeIndex = `${stage.metadata?.name}`;
-      graph.setNode(stageNodeIndex, getNodeDimensions(NodeType.STAGE));
+      graph.setNode(stageNodeIndex, { ...getNodeDimensions(NodeType.STAGE), stage });
 
       for (const requestedOrigin of stage.spec?.requestedFreight || []) {
         // check if source is warehouse
@@ -123,14 +140,16 @@ export const useReactFlowPipelineGraph = (
 
       reactFlowNodes.push({
         id: node,
+        type: reactFlowNodeConstants.CUSTOM_NODE,
         position: {
           x: dagreNode?.x,
           y: dagreNode?.y
         },
-        targetPosition: Position.Left,
-        sourcePosition: Position.Right,
+        initialWidth: dagreNode?.width,
+        initialHeight: dagreNode?.height,
         data: {
-          label: node
+          label: node,
+          value: dagreNode?.warehouse || dagreNode?.subscription || dagreNode?.stage
         }
       });
     }
@@ -143,6 +162,10 @@ export const useReactFlowPipelineGraph = (
         animated: false,
         markerEnd: {
           type: MarkerType.ArrowClosed
+        },
+        style: {
+          strokeWidth: 2,
+          visibility: 'visible'
         }
       });
     }
@@ -152,6 +175,23 @@ export const useReactFlowPipelineGraph = (
       edges: reactFlowEdges
     };
   }, [project, stages, warehouses]);
+
+  const controlledNodes = useNodesState(calculatedNodesAndEdges.nodes);
+
+  const controlledEdges = useEdgesState(calculatedNodesAndEdges.edges);
+
+  useEffect(() => {
+    controlledNodes[1](calculatedNodesAndEdges.nodes);
+  }, [calculatedNodesAndEdges.nodes]);
+
+  useEffect(() => {
+    controlledEdges[1](calculatedNodesAndEdges.edges);
+  }, [calculatedNodesAndEdges.edges]);
+
+  return {
+    controlledNodes,
+    controlledEdges
+  };
 };
 
 export const usePipelineGraph = (

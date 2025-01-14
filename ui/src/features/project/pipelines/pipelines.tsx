@@ -10,7 +10,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useQueryClient } from '@tanstack/react-query';
-import { ReactFlow } from '@xyflow/react';
+import { addEdge, ReactFlow, useEdgesState, useNodesState } from '@xyflow/react';
 import { Button, Dropdown, Spin, Tooltip, message } from 'antd';
 import classNames from 'classnames';
 import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef } from 'react';
@@ -45,17 +45,27 @@ import { Freight, Project, Stage, Warehouse } from '@ui/gen/v1alpha1/generated_p
 import { useDocumentEvent } from '@ui/utils/document';
 import { useLocalStorage } from '@ui/utils/use-local-storage';
 
+import { PipelineContext } from './context/pipeline-context';
 import { Images } from './images';
+import { CustomNode } from './nodes/custom-node';
 import styles from './project-details.module.less';
 import { CollapseMode, FreightTimelineAction } from './types';
 import { isPromoting, usePipelineState } from './utils/state';
-import { usePipelineGraph, useReactFlowPipelineGraph } from './utils/use-pipeline-graph';
+import {
+  reactFlowNodeConstants,
+  usePipelineGraph,
+  useReactFlowPipelineGraph
+} from './utils/use-pipeline-graph';
 import { onError } from './utils/util';
 import { Watcher } from './utils/watcher';
 
 import '@xyflow/react/dist/style.css';
 
 const WarehouseDetails = lazy(() => import('./warehouse/warehouse-details'));
+
+const nodeTypes = {
+  [reactFlowNodeConstants.CUSTOM_NODE]: CustomNode
+};
 
 export const Pipelines = ({
   project,
@@ -197,12 +207,6 @@ export const Pipelines = ({
     warehouseData?.warehouses || []
   );
 
-  const { nodes: reactFlowNodes, edges: reactFlowEdges } = useReactFlowPipelineGraph(
-    name,
-    data?.stages || [],
-    warehouseData?.warehouses || []
-  );
-
   const { mutate: manualApproveAction } = useMutation(approveFreight, {
     onError,
     onSuccess: () => {
@@ -265,6 +269,11 @@ export const Pipelines = ({
   }, [stagesPerFreight, fullFreightById]);
 
   const pipelinesConfigRef = useRef<HTMLDivElement>(null);
+  const { controlledNodes, controlledEdges } = useReactFlowPipelineGraph(
+    name,
+    data?.stages || [],
+    warehouseData?.warehouses || []
+  );
 
   if (isLoading || isLoadingFreight || isLoadingImages) return <LoadingState />;
 
@@ -431,7 +440,25 @@ export const Pipelines = ({
             </div>
           </div>
 
-          <ReactFlow nodes={reactFlowNodes} edges={reactFlowEdges} />
+          <PipelineContext.Provider
+            value={{
+              state,
+              autoPromotionMap,
+              highlightedStages,
+              fullFreightById,
+              subscribersByStage,
+              selectedWarehouse,
+              project: project?.metadata?.name || ''
+            }}
+          >
+            <ReactFlow
+              nodes={controlledNodes[0]}
+              edges={controlledEdges[0]}
+              nodeTypes={nodeTypes}
+              fitView
+              minZoom={0.1}
+            />
+          </PipelineContext.Provider>
         </div>
         <SuspenseSpin>
           {stage && <StageDetails stage={stage} />}
