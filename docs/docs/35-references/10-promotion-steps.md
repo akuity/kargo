@@ -42,6 +42,44 @@ steps:
   as: alias
 ```
 
+### Step Variables
+
+A step can define variables that can be referenced in its configuration by
+providing a `vars` key in the step definition. The value of the `vars` key is a
+list of variables, each of which is an object with `name` and `value` keys.
+
+```yaml
+steps:
+- uses: step-name
+  vars:
+  - name: var1
+    value: value1
+  - name: var2
+    value: value2
+  config:
+    option1: ${{ vars.var1 }}
+    option2: ${{ vars.var2 }}
+```
+
+Variables defined in a step are scoped to that step and are not accessible to
+other steps. The values of variables may contain [expressions](./20-expression-language.md).
+In addition, the values of step variables may be references to the
+[outputs](#step-outputs) of other steps.
+
+```yaml
+steps:
+- uses: step1
+  as: step1
+- uses: step2
+  vars:
+  - name: var1
+    value: ${{ outputs.step1.someOutput }}
+```
+
+When a variable in a step is also defined as a global variable in the
+[Promotion Template](../30-how-to-guides/14-working-with-stages.md#promotion-templates),
+the step variable takes precedence over the global variable.
+
 ### Step Outputs
 
 A promotion step may produce output that can be referenced by subsequent steps,
@@ -99,6 +137,23 @@ and improvements to better distinguish between transient and non-transient
 errors, and to provide more control over retry behavior like backoff strategies
 or time limits.
 :::
+
+### Promotion Task Step
+
+A step can be used to reference a
+[`PromotionTask` or `ClusterPromotionTask`](30-promotion-tasks.md)
+using the `task` key, whose value is an object with a `name` key that specifies
+the name of the task and optionally a `kind` key to specify if the task is a
+`ClusterPromotionTask`.
+
+```yaml
+steps:
+- task:
+    name: task-name
+    kind: ClusterPromotionTask
+```
+
+When a task is referenced, the `uses` key is not required.
 
 ## Built-in Steps
 
@@ -1595,5 +1650,61 @@ steps:
 
 The `http` step only produces the outputs described by the `outputs` field of
 its configuration.
+
+### `compose-output`
+
+`compose-output` is a step that composes a new output from one or more existing
+outputs. This step can be useful when subsequent steps need to reference a
+combination of outputs from previous steps, or to allow a
+[`PromotionTask`](30-promotion-tasks.md) to provide easy access to outputs from
+the steps it contains.
+
+#### `compose-output` Configuration
+
+The `compose-output` step accepts an arbitrary set of key-value pairs, where the
+key is the name of the output to be created and the value is arbitrary and can
+be an [Expression Language](./20-expression-language.md) expression.
+
+#### `compose-output` Example
+
+```yaml
+vars:
+- name: repoURL
+  value: https://github.com/example/repo
+steps:
+- uses: git-open-pr
+  as: open-pr
+  config:
+    repoURL: ${{ vars.repoURL }}
+    createTargetBranch: true
+    sourceBranch: ${{ outputs.push.branch }}
+    targetBranch: stage/${{ ctx.stage }}
+- uses: compose-output
+  as: pr-link
+  config:
+    url: ${{ vars.repoURL }}/pull/${{ outputs['open-pr'].prNumber }}
+- uses: http
+  config:
+    method: POST
+    url: https://slack.com/api/chat.postMessage
+    headers:
+    - name: Authorization
+      value: Bearer ${{ secrets.slack.token }}
+    - name: Content-Type
+      value: application/json
+    body: |
+      ${{ quote({
+        "channel": "C123456",
+        "blocks": [
+          {
+            "type": "section",
+            "text": {
+              "type": "mrkdwn",
+              "text": "A new PR has been opened: ${{ outputs['pr-link'].url }}"
+            }
+          }
+        ]
+      }) }}
+```
 
 [expr-lang]: https://expr-lang.org/
