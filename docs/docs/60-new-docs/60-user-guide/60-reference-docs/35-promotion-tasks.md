@@ -1,8 +1,8 @@
 ---
-sidebar_label: Expression Language
+sidebar_label: Promotion Tasks
 ---
 
-# Expression Language Reference
+# Promotion Tasks Reference
 
 :::warning
 Hidde to put something here by the end of the week
