@@ -9,10 +9,17 @@
     cursor: pointer;
     padding: 5px 10px;
     font-size: 1rem;
-    font-family: 'Monospace', 'Roboto', 'Open Sans', 'Lato', 'Courier New', monospace;
     font-weight: bold;
+    width: 73px;
+    text-align: center;
 }
 
 .version_dropdown option {
     font-weight: normal; /* Keeps options normal weight */
+}
+
+@media (max-width: 996px) {
+    .navbar__items--right .version_dropdown {
+        display: none;
+    }
 }
