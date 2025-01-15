@@ -79,7 +79,7 @@ Find us [on GitHub](https://github.com/akuity/kargo). Open issues. Ask
 questions... or even _answer_ questions!
 
 If you're interested in contributing code, our
-[Contributor Guide](./50-contributor-guide) will help you get started. You'll also
+[Contributor Guide](./50-contributor-guide/index.md) will help you get started. You'll also
 find a lot of open issues labeled as
 [good first issue](https://github.com/akuity/kargo/labels/good%20first%20issue)
 or [help wanted](https://github.com/akuity/kargo/labels/help-wanted). If you
