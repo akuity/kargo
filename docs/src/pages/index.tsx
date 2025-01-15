@@ -18,7 +18,7 @@ export default function Home(): JSX.Element {
     <Layout
       // TODO: change title and description?
       title={`Kargo - GitOps Promotion Tool`}
-      description="Do stage to stage GitOps promotion right way using Kargo">
+      description="Stage to stage GitOps Promotion Made Easy With Kargo">
       <main className='landing-page'>
         <header className={styles.header}>
           <h1 style={{margin: 0}}>Kargo</h1>
