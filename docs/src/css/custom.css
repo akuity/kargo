@@ -40,3 +40,42 @@
   --aa-input-border-color-rgb: 126, 126, 126 !important;
   --aa-input-background-color-rgb: 32, 32, 32 !important;
 }
+
+.btn {
+  font-family: 'Arial', sans-serif;
+  font-size: 16px;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-align: center;
+  display: inline-block;
+}
+
+.btn-primary {
+  background-color: var(--ifm-color-primary-dark);
+  color: white;
+  box-shadow: 0 4px 6px var(--ifm-color-primary-lightest);
+}
+
+.btn-primary:hover {
+  background-color: var(--ifm-color-primary-darker);
+  box-shadow: 0 6px 8px var(--ifm-color-primary-lighter);
+}
+
+.btn-primary:active {
+  background-color: var(--ifm-color-primary-darkest);
+  box-shadow: 0 3px 4px var(--ifm-color-primary-lightest);
+  transform: translateY(2px);
+}
+
+main.landing-page {
+  a.highlight {
+    text-decoration: underline;
+  }
+
+  a:hover {
+    text-decoration: none !important;
+  }
+}
