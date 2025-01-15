@@ -1,5 +1,5 @@
 ---
-sidebar_label: Deprecations
+sidebar_label: Deprecations and Breaking Changes
 description: Overview of deprecated features, their removal timeline, reasons for deprecation, and suggested replacements.
 ---
 
@@ -14,12 +14,7 @@ their scheduled removal dates and suggested replacements, if any.
 
 ## Removed items by Release
 
-### [v1.2.0](https://github.com/akuity/kargo/releases/tag/v1.2.0)
-
-No deprecated features in this release. The focus was on introducing new features like `PromotionTasks`, `Soak Time`, and enhancements to
-promotion steps, along with UI and chart improvements.
-
-### [v1.1.0](https://github.com/akuity/kargo/releases/tag/v1.1.0)
+### [v1.1.0](./80-release-notes/98-v1.1.0.md#-new-and-updated-promotion-steps)
 
 #### Deprecated Promotion Steps Fields
 
@@ -40,13 +35,13 @@ This provides a broader and more versatile approach.
 
 This step is scheduled for removal in **v1.3.0**.
 
-Please refer to the [promotion steps reference documentation](https://docs.kargo.io/references/promotion-steps) for
+Please refer to the [promotion steps reference documentation](./60-user-guide/60-reference-docs/30-promotion-steps/10-git-clone.md) for
 detailed information about the deprecated promotion steps and fields.
 
-### [v1.0.0](https://github.com/akuity/kargo/releases/tag/v1.0.0)
+### [v1.0.0](./80-release-notes/99-v1.0.0.md#%EF%B8%8F-breaking-changes)
 
 No deprecated features in this release. The focus was on stability and completing the transition to flexible promotion steps started in v0.9.0.
 
 ## What Next?
 
-For detailed information on updates and deprecated features, please refer to the respective [release notes](https://github.com/akuity/kargo/releases).
+For detailed information on updates and deprecated features, please refer to the respective [release notes](https://github.com/akuity/kargo/releases/).
