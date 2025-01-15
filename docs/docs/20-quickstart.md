@@ -336,43 +336,43 @@ the previous section.
           steps:
           - uses: git-clone
             config:
-              repoURL: \${{ vars.gitopsRepo }}
+              repoURL: ${{ vars.gitopsRepo }}
               checkout:
               - branch: main
-                path: \${{ vars.srcPath }}
-              - branch: stage/\${{ ctx.stage }}
+                path: ${{ vars.srcPath }}
+              - branch: stage/${{ ctx.stage }}
                 create: true
-                path: \${{ vars.outPath }}
+                path: ${{ vars.outPath }}
           - uses: git-clear
             config:
-              path: \${{ vars.outPath }}
+              path: ${{ vars.outPath }}
           - uses: kustomize-set-image
             as: update-image
             config:
-              path: \${{ vars.srcPath }}/base
+              path: ${{ vars.srcPath }}/base
               images:
-              - image: \${{ vars.imageRepo }}
-                tag: \${{ imageFrom(vars.imageRepo).Tag }}
+              - image: ${{ vars.imageRepo }}
+                tag: ${{ imageFrom(vars.imageRepo).Tag }}
           - uses: kustomize-build
             config:
-              path: \${{ vars.srcPath }}/stages/\${{ ctx.stage }}
-              outPath: \${{ vars.outPath }}/manifests.yaml
+              path: ${{ vars.srcPath }}/stages/${{ ctx.stage }}
+              outPath: ${{ vars.outPath }}/manifests.yaml
           - uses: git-commit
             as: commit
             config:
-              path: \${{ vars.outPath }}
+              path: ${{ vars.outPath }}
               messageFromSteps:
               - update-image
           - uses: git-push
             config:
-              path: \${{ vars.outPath }}
+              path: ${{ vars.outPath }}
           - uses: argocd-update
             config:
               apps:
-              - name: kargo-demo-\${{ ctx.stage }}
+              - name: kargo-demo-${{ ctx.stage }}
                 sources:
-                - repoURL: \${{ vars.gitopsRepo }}
-                  desiredRevision: \${{ outputs.commit.commit }}
+                - repoURL: ${{ vars.gitopsRepo }}
+                  desiredRevision: ${{ outputs.commit.commit }}
     ---
     apiVersion: kargo.akuity.io/v1alpha1
     kind: Stage
@@ -401,43 +401,43 @@ the previous section.
           steps:
           - uses: git-clone
             config:
-              repoURL: \${{ vars.gitopsRepo }}
+              repoURL: ${{ vars.gitopsRepo }}
               checkout:
               - branch: main
-                path: \${{ vars.srcPath }}
-              - branch: stage/\${{ ctx.stage }}
+                path: ${{ vars.srcPath }}
+              - branch: stage/${{ ctx.stage }}
                 create: true
-                path: \${{ vars.outPath }}
+                path: ${{ vars.outPath }}
           - uses: git-clear
             config:
-              path: \${{ vars.outPath }}
+              path: ${{ vars.outPath }}
           - uses: kustomize-set-image
             as: update-image
             config:
-              path: \${{ vars.srcPath }}/base
+              path: ${{ vars.srcPath }}/base
               images:
-              - image: \${{ vars.imageRepo }}
-                tag: \${{ imageFrom(vars.imageRepo).Tag }}
+              - image: ${{ vars.imageRepo }}
+                tag: ${{ imageFrom(vars.imageRepo).Tag }}
           - uses: kustomize-build
             config:
-              path: \${{ vars.srcPath }}/stages/\${{ ctx.stage }}
-              outPath: \${{ vars.outPath }}/manifests.yaml
+              path: ${{ vars.srcPath }}/stages/${{ ctx.stage }}
+              outPath: ${{ vars.outPath }}/manifests.yaml
           - uses: git-commit
             as: commit
             config:
-              path: \${{ vars.outPath }}
+              path: ${{ vars.outPath }}
               messageFromSteps:
               - update-image
           - uses: git-push
             config:
-              path: \${{ vars.outPath }}
+              path: ${{ vars.outPath }}
           - uses: argocd-update
             config:
               apps:
-              - name: kargo-demo-\${{ ctx.stage }}
+              - name: kargo-demo-${{ ctx.stage }}
                 sources:
-                - repoURL: \${{ vars.gitopsRepo }}
-                  desiredRevision: \${{ outputs.commit.commit }}
+                - repoURL: ${{ vars.gitopsRepo }}
+                  desiredRevision: ${{ outputs.commit.commit }}
     ---
     apiVersion: kargo.akuity.io/v1alpha1
     kind: Stage
@@ -466,43 +466,43 @@ the previous section.
           steps:
           - uses: git-clone
             config:
-              repoURL: \${{ vars.gitopsRepo }}
+              repoURL: ${{ vars.gitopsRepo }}
               checkout:
               - branch: main
-                path: \${{ vars.srcPath }}
-              - branch: stage/\${{ ctx.stage }}
+                path: ${{ vars.srcPath }}
+              - branch: stage/${{ ctx.stage }}
                 create: true
-                path: \${{ vars.outPath }}
+                path: ${{ vars.outPath }}
           - uses: git-clear
             config:
-              path: \${{ vars.outPath }}
+              path: ${{ vars.outPath }}
           - uses: kustomize-set-image
             as: update-image
             config:
-              path: \${{ vars.srcPath }}/base
+              path: ${{ vars.srcPath }}/base
               images:
-              - image: \${{ vars.imageRepo }}
-                tag: \${{ imageFrom(vars.imageRepo).Tag }}
+              - image: ${{ vars.imageRepo }}
+                tag: ${{ imageFrom(vars.imageRepo).Tag }}
           - uses: kustomize-build
             config:
-              path: \${{ vars.srcPath }}/stages/\${{ ctx.stage }}
-              outPath: \${{ vars.outPath }}/manifests.yaml
+              path: ${{ vars.srcPath }}/stages/${{ ctx.stage }}
+              outPath: ${{ vars.outPath }}/manifests.yaml
           - uses: git-commit
             as: commit
             config:
-              path: \${{ vars.outPath }}
+              path: ${{ vars.outPath }}
               messageFromSteps:
               - update-image
           - uses: git-push
             config:
-              path: \${{ vars.outPath }}
+              path: ${{ vars.outPath }}
           - uses: argocd-update
             config:
               apps:
-              - name: kargo-demo-\${{ ctx.stage }}
+              - name: kargo-demo-${{ ctx.stage }}
                 sources:
-                - repoURL: \${{ vars.gitopsRepo }}
-                  desiredRevision: \${{ outputs.commit.commit }}
+                - repoURL: ${{ vars.gitopsRepo }}
+                  desiredRevision: ${{ outputs.commit.commit }}
     EOF
     ```
 
@@ -607,43 +607,43 @@ the previous section.
           steps:
           - uses: git-clone
             config:
-              repoURL: \${{ vars.gitopsRepo }}
+              repoURL: ${{ vars.gitopsRepo }}
               checkout:
               - branch: main
-                path: \${{ vars.srcPath }}
-              - branch: stage/\${{ ctx.stage }}
+                path: ${{ vars.srcPath }}
+              - branch: stage/${{ ctx.stage }}
                 create: true
-                path: \${{ vars.outPath }}
+                path: ${{ vars.outPath }}
           - uses: git-clear
             config:
-              path: \${{ vars.outPath }}
+              path: ${{ vars.outPath }}
           - uses: kustomize-set-image
             as: update-image
             config:
-              path: \${{ vars.srcPath }}/base
+              path: ${{ vars.srcPath }}/base
               images:
-              - image: \${{ vars.imageRepo }}
-                tag: \${{ imageFrom(vars.imageRepo).Tag }}
+              - image: ${{ vars.imageRepo }}
+                tag: ${{ imageFrom(vars.imageRepo).Tag }}
           - uses: kustomize-build
             config:
-              path: \${{ vars.srcPath }}/stages/\${{ ctx.stage }}
-              outPath: \${{ vars.outPath }}/manifests.yaml
+              path: ${{ vars.srcPath }}/stages/${{ ctx.stage }}
+              outPath: ${{ vars.outPath }}/manifests.yaml
           - uses: git-commit
             as: commit
             config:
-              path: \${{ vars.outPath }}
+              path: ${{ vars.outPath }}
               messageFromSteps:
               - update-image
           - uses: git-push
             config:
-              path: \${{ vars.outPath }}
+              path: ${{ vars.outPath }}
           - uses: argocd-update
             config:
               apps:
-              - name: kargo-demo-\${{ ctx.stage }}
+              - name: kargo-demo-${{ ctx.stage }}
                 sources:
-                - repoURL: \${{ vars.gitopsRepo }}
-                  desiredRevision: \${{ outputs.commit.commit }}
+                - repoURL: ${{ vars.gitopsRepo }}
+                  desiredRevision: ${{ outputs.commit.commit }}
     ---
     apiVersion: kargo.akuity.io/v1alpha1
     kind: Stage
@@ -672,43 +672,43 @@ the previous section.
           steps:
           - uses: git-clone
             config:
-              repoURL: \${{ vars.gitopsRepo }}
+              repoURL: ${{ vars.gitopsRepo }}
               checkout:
               - branch: main
-                path: \${{ vars.srcPath }}
-              - branch: stage/\${{ ctx.stage }}
+                path: ${{ vars.srcPath }}
+              - branch: stage/${{ ctx.stage }}
                 create: true
-                path: \${{ vars.outPath }}
+                path: ${{ vars.outPath }}
           - uses: git-clear
             config:
-              path: \${{ vars.outPath }}
+              path: ${{ vars.outPath }}
           - uses: kustomize-set-image
             as: update-image
             config:
-              path: \${{ vars.srcPath }}/base
+              path: ${{ vars.srcPath }}/base
               images:
-              - image: \${{ vars.imageRepo }}
-                tag: \${{ imageFrom(vars.imageRepo).Tag }}
+              - image: ${{ vars.imageRepo }}
+                tag: ${{ imageFrom(vars.imageRepo).Tag }}
           - uses: kustomize-build
             config:
-              path: \${{ vars.srcPath }}/stages/\${{ ctx.stage }}
-              outPath: \${{ vars.outPath }}/manifests.yaml
+              path: ${{ vars.srcPath }}/stages/${{ ctx.stage }}
+              outPath: ${{ vars.outPath }}/manifests.yaml
           - uses: git-commit
             as: commit
             config:
-              path: \${{ vars.outPath }}
+              path: ${{ vars.outPath }}
               messageFromSteps:
               - update-image
           - uses: git-push
             config:
-              path: \${{ vars.outPath }}
+              path: ${{ vars.outPath }}
           - uses: argocd-update
             config:
               apps:
-              - name: kargo-demo-\${{ ctx.stage }}
+              - name: kargo-demo-${{ ctx.stage }}
                 sources:
-                - repoURL: \${{ vars.gitopsRepo }}
-                  desiredRevision: \${{ outputs.commit.commit }}
+                - repoURL: ${{ vars.gitopsRepo }}
+                  desiredRevision: ${{ outputs.commit.commit }}
     ---
     apiVersion: kargo.akuity.io/v1alpha1
     kind: Stage
@@ -737,43 +737,43 @@ the previous section.
           steps:
           - uses: git-clone
             config:
-              repoURL: \${{ vars.gitopsRepo }}
+              repoURL: ${{ vars.gitopsRepo }}
               checkout:
               - branch: main
-                path: \${{ vars.srcPath }}
-              - branch: stage/\${{ ctx.stage }}
+                path: ${{ vars.srcPath }}
+              - branch: stage/${{ ctx.stage }}
                 create: true
-                path: \${{ vars.outPath }}
+                path: ${{ vars.outPath }}
           - uses: git-clear
             config:
-              path: \${{ vars.outPath }}
+              path: ${{ vars.outPath }}
           - uses: kustomize-set-image
             as: update-image
             config:
-              path: \${{ vars.srcPath }}/base
+              path: ${{ vars.srcPath }}/base
               images:
-              - image: \${{ vars.imageRepo }}
-                tag: \${{ imageFrom(vars.imageRepo).Tag }}
+              - image: ${{ vars.imageRepo }}
+                tag: ${{ imageFrom(vars.imageRepo).Tag }}
           - uses: kustomize-build
             config:
-              path: \${{ vars.srcPath }}/stages/\${{ ctx.stage }}
-              outPath: \${{ vars.outPath }}/manifests.yaml
+              path: ${{ vars.srcPath }}/stages/${{ ctx.stage }}
+              outPath: ${{ vars.outPath }}/manifests.yaml
           - uses: git-commit
             as: commit
             config:
-              path: \${{ vars.outPath }}
+              path: ${{ vars.outPath }}
               messageFromSteps:
               - update-image
           - uses: git-push
             config:
-              path: \${{ vars.outPath }}
+              path: ${{ vars.outPath }}
           - uses: argocd-update
             config:
               apps:
-              - name: kargo-demo-\${{ ctx.stage }}
+              - name: kargo-demo-${{ ctx.stage }}
                 sources:
-                - repoURL: \${{ vars.gitopsRepo }}
-                  desiredRevision: \${{ outputs.commit.commit }}
+                - repoURL: ${{ vars.gitopsRepo }}
+                  desiredRevision: ${{ outputs.commit.commit }}
     EOF
     ```
 
