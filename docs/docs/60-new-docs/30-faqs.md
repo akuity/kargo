@@ -39,14 +39,14 @@ then perform the heavy lifting.
 
 ### _So “stage” is just another word for “environment?”_
 
-Not exactly, but you could think of it that way if you like.
+Not exactly, but you could think of it that way if it suits your use case.
 
-"Environment" can be an overloaded term to begin with. We didn't want to make
-things worse. Beyond that, we find more flexibility in the term "stage." _Stage
-can mean whatever you need it to._ It could be a cluster. It could be a
-particular instance of your entire application. It could be one of just several
-microservices comprising your application. Or it could be a group of related
-microservices.
+Technically, a stage is a _promotion target_. It represents a certain set of
+desired state that needs to be altered by a promotion process. The underlying
+resources that a GitOps agent will reconcile against that desired state can be
+varied according to your needs. It could be a particular instance of your entire
+application or just a few microservices that are part of a larger whole. It
+could even be an entire Kubernetes cluster if that's what fits your use case.
 
 ### _Is Kargo open source?_
 
@@ -92,6 +92,26 @@ feature first and discuss with maintainers before putting a lot of effort into
 the implementation.
 
 ## Technical Questions
+
+### _Does Kargo force me to work with a separate branch per stage?_
+
+No, it doesn't, although it's a common misconception that it does.
+
+Fundamentally, Kargo needs a place to _store_ the output of your promotion
+processes so that it can be picked up and applied by a GitOps agent like Argo
+CD. For all intents and purposes, this may as well be an S3 bucket, but as
+the term "GitOps agent" implies, the output of those processes will be most
+accessible to those agents if it is stored in a Git repository.
+
+Storing the output of your promotion processes in stage-specific branches is a
+practice that's been unfairly maligned through misunderstanding of a certain
+infamous blog post, which was actually asserting that _GitFlow_ has no place in
+GitOps.
+
+Leveraging stage-specific branches is a practice that we do in fact encourage,
+but it is by no means a requirement. It is equally tenable to store the output
+of promotion processes within a well-thought-out directory structure within a
+single branch -- even your `main` branch.
 
 ### _Does Kargo support monorepos?_
 
