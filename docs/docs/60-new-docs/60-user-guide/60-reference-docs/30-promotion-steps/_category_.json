@@ -1,0 +1,11 @@
+{
+  "label": "Promotion Steps",
+  "link": {
+    "type": "generated-index",
+    "title": "Promotion Steps Reference",
+    "description": "Reference documentation for the steps available to use in promotions.",
+    "slug": "new-docs/user-guide/reference-docs/promotion-steps"
+  },
+  "collapsible": true,
+  "collapsed": true
+}

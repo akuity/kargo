@@ -1,8 +1,8 @@
 ---
-sidebar_label: Expression Language
+sidebar_label: Promotion Templates
 ---
 
-# Promotion Steps Reference
+# Promotion Templates Reference
 
 :::warning
 Hidde to put something here by the end of the week
