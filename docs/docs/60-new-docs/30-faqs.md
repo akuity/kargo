@@ -57,8 +57,8 @@ If you like what we're doing, please give us a 🌟!
 ### _How do I get started?_
 
 These very docs are a great place to start. In particular, we recommend checking
-out the [Core Concepts](./user-guide/core-concepts) section or, if you're ready to
-get your hands dirty, our [Quickstart](./quickstart).
+out the [Core Concepts](./60-user-guide/10-core-concepts.md) section or, if you're ready to
+get your hands dirty, our [Quickstart](./20-quickstart.md).
 
 ### _Where can I get support?_
 
@@ -79,7 +79,7 @@ Find us [on GitHub](https://github.com/akuity/kargo). Open issues. Ask
 questions... or even _answer_ questions!
 
 If you're interested in contributing code, our
-[Contributor Guide](./contributor-guide) will help you get started. You'll also
+[Contributor Guide](./50-contributor-guide) will help you get started. You'll also
 find a lot of open issues labeled as
 [good first issue](https://github.com/akuity/kargo/labels/good%20first%20issue)
 or [help wanted](https://github.com/akuity/kargo/labels/help-wanted). If you
@@ -104,7 +104,7 @@ repositories, but it _is_ important that you segregate the configurations for
 individual applications or services such that commits to your repository can
 easily be selected or ignored on the basis of what paths they affect.
 
-Our [Patterns](./user-guide/patterns) section will provide suggestions for how
+Our [Patterns](./60-user-guide/30-patterns.md) section will provide suggestions for how
 to structure monorepos to enable various scenarios.
 
 ### _Does Kargo support microservices?_
@@ -120,20 +120,20 @@ ensure that state changes for a number of related microservices are promoted
 together as a unit. There are a number of different ways to achieve this with
 Kargo, depending on your specific needs.
 
-Our [Patterns](./user-guide/patterns) section provides additional guidance on
+Our [Patterns](./60-user-guide/30-patterns.md) section provides additional guidance on
 this topic.
 
 **_Follow up question: What if I need to promote several microservices in a
 specific order?_**
 
 Kargo can accommodate this as well, and once again there are a number of ways
-to approach it depending on your needs and our [Patterns](./user-guide/patterns)
-section should help.
+to approach it depending on your needs and our
+[Patterns](./60-user-guide/30-patterns.md) section should help.
 
 ### _How do I integrate with multiple Argo CD control planes?_
 
 To get an overview of how this can be achieved, head on over to our
-[Architecture](./operator-guide/architecture) section to learn about the topology of
+[Architecture](./40-operator-guide/30-architecture.md) section to learn about the topology of
 a large-scale Kargo deployment.
 
 ### _How do I integrate Kargo into my CI pipelines?_
@@ -178,5 +178,5 @@ can also integrate with a variety of identity providers that either don't
 support PKCE or don't support OpenID Connect at all (GitHub, for example).
 
 Refer to our
-[OpenID Connect integration docs](./operator-guide/security/openid-connect)
+[OpenID Connect integration docs](./40-operator-guide/40-security/20-openid-connect.md)
 for comprehensive coverage of this topic.
