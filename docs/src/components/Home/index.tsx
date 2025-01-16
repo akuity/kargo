@@ -17,6 +17,10 @@ export default function Home(): JSX.Element {
     document.body.style.background = 'linear-gradient(90deg,var(--generic-bg) calc(25px - 1px),transparent 1%) 50% / 25px 25px,linear-gradient(var(--generic-bg) calc(25px - 1px),transparent 1%) 50% /25px 25px,var(--generic-color)';
     return () => {
       document.body.style.background = '';
+
+      if (breadcrumb) {
+        breadcrumb.style.display = '';
+      }
     }
   }, []);
 
