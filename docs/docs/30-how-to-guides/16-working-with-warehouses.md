@@ -45,10 +45,31 @@ Kargo uses [semver](https://github.com/masterminds/semver#checking-version-const
 For subscriptions to container image repositories, the `imageSelectionStrategy` field specifies the method for selecting
 the desired image. The available strategies for subscribing to an image repository are:
 
-- `Digest`: Selects the image with the specified digest.
-- `Lexical`: Selects the image with the lexicographically greatest tag.
-- `NewestBuild`: Selects the image with the most recent build time.
-- `SemVer`: Selects the image that best matches a semantic versioning constraint.
+- `Digest`: This strategy is used when subscribing to a specific mutable tag, such as `latest`, which is generally
+    discouraged due to best practices favoring immutable tags. Users must supply a value in the `constraint` field,
+    specifying the mutable tag they wish to track. The strategy will retrieve the latest details for the image
+    tagged in this way, including any new or updated digest.
+
+- `Lexical`: This strategy selects the image with the lexicographically greatest tag, making it suitable
+    for scenarios where tags incorporate date/time stamps in formats like `yyyymmdd`. When using this
+    strategy, it's recommended to pair it with a regular expression in the `allowTags` field to limit
+    eligibility to tags that match the expected format, ensuring the correct selection of tags.
+
+- `NewestBuild`: This strategy selects the image with the most recent build time.
+
+    :::warning
+
+    `NewestBuild` requires retrieving metadata for every eligible tag, which can be slow and might 
+    exceed the registry's rate limits. It's advisable to use the `allowTags` field to limit 
+    the number of tags for which metadata is retrieved, thereby reducing the risk of hitting rate limits.
+    :::
+
+- **SemVer**: This strategy selects the image that best matches a semantic versioning constraint. 
+
+    :::info
+    Kargo uses [semver](https://github.com/masterminds/semver#checking-version-constraints) to handle these contraints, 
+    allowing users to define and manage versions precisely.
+    :::
 
 ### Git Subscription
 
@@ -56,10 +77,18 @@ In subscriptions to Git repositories, the `commitSelectionStrategy` field
 specifies the method for selecting the desired commit.
 The available strategies for subscribing to a git repository are:
 
-- `Lexical`: Selects the commit with the lexicographically greatest reference.
-- `NewestFromBranch`: Selects the most recent commit from a specified branch.
-- `NewestTag`: Selects the most recent commit associated with a tag.
-- `SemVer`: Selects the commit that best matches a semantic versioning constraint.
+- `Lexical`: Selects the commit referenced by the lexicographically greatest tag.
+    It is particularly useful in scenarios where commit references, such as tags or branches,
+    incorporate date/time stamps in formats like `yyyymmdd`.
+    To ensure the correct selection, it's advisable to use regular expressions in the
+`allowTags` or `allowBranches` field, which limit the acceptable format of the references,
+    preventing the selection of undesired tags like `zzz-custom` over something like `nightly-20241211`.
+- `NewestFromBranch`: Selects the most recent commit from a specified branch. It's useful when tracking the latest changes in a branch that receives regular updates.
+- `NewestTag`: Selects the most recent commit associated with a tag. Since tags are typically immutable,
+    there should be only one commit per tag.
+    To optimize this strategy, it's recommended to constrain the eligible tags using regular expressions or specific patterns,
+    ensuring the selection is limited to tags that follow a consistent naming convention.
+- `SemVer`: Selects the commit referenced by a *tag* that best matches the constraint.
 
 #### Git Subscription Path Filtering
 
