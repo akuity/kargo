@@ -4,7 +4,6 @@ contents:
   repositories:
   - https://packages.wolfi.dev/os
   packages:
-  - busybox # TODO: Remove this if we can figure out how to get by without a shell
   - ca-certificates
   - git~2
   - gpg~2
@@ -22,6 +21,10 @@ accounts:
     uid: 65532
     gid: 65532
   run-as: "65532"
+
+entrypoint:
+  command: /usr/bin/helm
+cmd: help
   
 archs:
 - arm64
