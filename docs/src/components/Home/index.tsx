@@ -8,6 +8,12 @@ import Link, { NavLinkProps } from '@docusaurus/Link';
 
 export default function Home(): JSX.Element {
   useEffect(() => {
+    const breadcrumb = document.querySelector('[aria-label="Breadcrumbs"]') as HTMLElement;
+
+    if (breadcrumb) {
+      breadcrumb.style.display = 'none';
+    }
+
     document.body.style.background = 'linear-gradient(90deg,var(--generic-bg) calc(25px - 1px),transparent 1%) 50% / 25px 25px,linear-gradient(var(--generic-bg) calc(25px - 1px),transparent 1%) 50% /25px 25px,var(--generic-color)';
     return () => {
       document.body.style.background = '';
@@ -15,10 +21,6 @@ export default function Home(): JSX.Element {
   }, []);
 
   return (
-    <Layout
-      // TODO: change title and description?
-      title={`Kargo - GitOps Promotion Tool`}
-      description="Stage to stage GitOps Promotion Made Easy With Kargo">
       <main className='landing-page'>
         <header className={styles.header}>
           <h1 style={{margin: 0}}>Kargo</h1>
@@ -132,7 +134,6 @@ export default function Home(): JSX.Element {
           />
         </div>
       </main>
-    </Layout>
   );
 }
 
