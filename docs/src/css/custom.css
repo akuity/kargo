@@ -6,6 +6,9 @@
 
 /* You can override the default Infima variables here. */
 :root {
+  --generic-bg: #fff;
+  --generic-color: #000;
+
   --ifm-color-primary: #e87878;
   --ifm-color-primary-dark: #e35a5a;
   --ifm-color-primary-darker: #e04b4b;
@@ -19,10 +22,20 @@
   /* Search */
   --aa-primary-color-rgb: 120, 120, 120 !important;
   --aa-muted-color-rgb: 120, 120, 120 !important;
+
+  --btn-primary-bg: var(--ifm-color-primary-dark);
+  --btn-primary-shadow: var(--ifm-color-primary-lightest);
+  --btn-primary-hover-bg: var(--ifm-color-primary-darker);
+  --btn-primary-hover-shadow: var(--ifm-color-primary-lighter);
+  --btn-primary-active-bg: var(--ifm-color-primary-darkest);
+  --btn-primary-active-shadow: var(--ifm-color-primary-lightest);
 }
 
 /* For readability concerns, you should choose a lighter palette in dark mode. */
 [data-theme='dark'] {
+  --generic-bg: #252526;
+  --generic-color: #fff;
+
   --ifm-color-primary: #e87878;
   --ifm-color-primary-dark: #e35a5a;
   --ifm-color-primary-darker: #e04b4b;
@@ -39,6 +52,14 @@
   --aa-selected-color-rgb: 70, 70, 70 !important;
   --aa-input-border-color-rgb: 126, 126, 126 !important;
   --aa-input-background-color-rgb: 32, 32, 32 !important;
+
+
+  --btn-primary-bg: #252526;
+  --btn-primary-shadow: transparent;
+  --btn-primary-hover-bg: #252526;
+  --btn-primary-hover-shadow: transparent;
+  --btn-primary-active-bg: #252526;
+  --btn-primary-active-shadow: transparent;
 }
 
 .btn {
@@ -54,19 +75,19 @@
 }
 
 .btn-primary {
-  background-color: var(--ifm-color-primary-dark);
+  background-color: var(--btn-primary-bg);
   color: white;
-  box-shadow: 0 4px 6px var(--ifm-color-primary-lightest);
+  box-shadow: 0 4px 6px var(--btn-primary-shadow);
 }
 
 .btn-primary:hover {
-  background-color: var(--ifm-color-primary-darker);
-  box-shadow: 0 6px 8px var(--ifm-color-primary-lighter);
+  background-color: var(--btn-primary-hover-bg);
+  box-shadow: 0 6px 8px var(--btn-primary-hover-shadow);
 }
 
 .btn-primary:active {
-  background-color: var(--ifm-color-primary-darkest);
-  box-shadow: 0 3px 4px var(--ifm-color-primary-lightest);
+  background-color: var(--btn-primary-active-bg);
+  box-shadow: 0 3px 4px var(--btn-primary-active-shadow);
   transform: translateY(2px);
 }
 

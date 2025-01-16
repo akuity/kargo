@@ -39,10 +39,11 @@
   width: 250px;
   transition: 0.2s;
   cursor: pointer;
-  background-color: white;
-  color: black;
   text-decoration: none !important;
   height: 100%;
+
+  background-color: var(--generic-bg);
+  color: var(--generic-color);
 
   &:hover {
     box-shadow: 6px 8px 7px -5px rgba(0,0,0,0.1);

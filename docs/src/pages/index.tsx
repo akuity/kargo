@@ -1,14 +1,14 @@
 import React, { CSSProperties, ReactNode, useEffect } from 'react';
 import Layout from '@theme/Layout';
 
-import styles from './index.module.css';
+import styles from './index.module.scss';
 import clsx from 'clsx';
 import { FaRocket, FaTruck } from 'react-icons/fa';
 import Link, { NavLinkProps } from '@docusaurus/Link';
 
 export default function Home(): JSX.Element {
   useEffect(() => {
-    document.body.style.background = 'linear-gradient(90deg,#fff calc(25px - 1px),transparent 1%) 50% / 25px 25px,linear-gradient(#fff calc(25px - 1px),transparent 1%) 50% /25px 25px,#333';
+    document.body.style.background = 'linear-gradient(90deg,var(--generic-bg) calc(25px - 1px),transparent 1%) 50% / 25px 25px,linear-gradient(var(--generic-bg) calc(25px - 1px),transparent 1%) 50% /25px 25px,var(--generic-color)';
     return () => {
       document.body.style.background = '';
     }
@@ -87,16 +87,21 @@ export default function Home(): JSX.Element {
             title={<><FaTruck /> Advance in Kargo</>}
             nodes={[
               {
-                id: 'crd',
-                title: 'CRD Documentation',
-                description: 'Read full CRD documentation',
+                id: 'ref-docs',
+                title: 'References',
+                description: (
+                  <>
+                    <Link to='/new-docs/user-guide/reference-docs/crds' className='highlight'>CRD Docs</Link>
+                    <br />
+                    <Link to='/new-docs/user-guide/reference-docs/promotion-steps' className='highlight'>Promotion Steps</Link>
+                    <br />
+                    <Link to='/new-docs/user-guide/reference-docs/expressions' className='highlight'>Expression Language</Link>
+                  </>
+                ),
                 headerStyle: {
                   background: '#f1619b',
                   color: 'white'
                 },
-                link: {
-                  to: '/new-docs/user-guide/reference-docs/crds'
-                }
               },
               {
                 id: 'community',
@@ -136,11 +141,11 @@ type NodeProps = {
   title: string;
   description: ReactNode;
   headerStyle?: CSSProperties;
-  link: Pick<NavLinkProps, 'to' | 'target'>;
+  link?: Pick<NavLinkProps, 'to' | 'target'>;
 };
 
 const Node = (props: NodeProps) => (
-  <Link to={props.link.to as string} target={props.link.target}>
+  <Link to={props.link?.to as string} target={props.link?.target}>
     <li className={styles.node} >
       <h4 className={styles.nodeHeader} style={props.headerStyle}>{props.title}</h4>
       <p className={styles.nodeBody}>{props.description}</p>
