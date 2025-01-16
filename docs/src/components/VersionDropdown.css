@@ -9,6 +9,7 @@
     cursor: pointer;
     padding: 5px 10px;
     font-size: 1rem;
+    width: fit-content;
     font-weight: bold;
     text-align: center;
 }
@@ -21,4 +22,18 @@
     .navbar__items--right .version_dropdown {
         display: none;
     }
+
+    .version_dropdown {
+        display: flex;
+        flex-direction: column;
+        order: -1;
+        width: fit-content;
+        margin: 10px 0px 10px 10px;
+    }
+
+    .menu__list {
+        display: flex;
+        flex-direction: column;
+    }
+
 }
