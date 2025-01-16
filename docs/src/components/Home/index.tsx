@@ -1,10 +1,10 @@
 import React, { CSSProperties, ReactNode, useEffect } from 'react';
-import Layout from '@theme/Layout';
 
 import styles from './index.module.scss';
 import clsx from 'clsx';
 import { FaRocket, FaTruck } from 'react-icons/fa';
 import Link, { NavLinkProps } from '@docusaurus/Link';
+import { Button } from '../Button';
 
 export default function Home(): JSX.Element {
   useEffect(() => {
@@ -31,10 +31,10 @@ export default function Home(): JSX.Element {
           <span>Learn how to use Kargo for GitOps promotions of stages</span>
           <div style={{marginTop: '24px'}}>
             <Link to='/new-docs/user-guide/core-concepts'>
-              <button className='btn'>Overview</button>
+              <Button>Overview</Button>
             </Link>
             <Link to='/new-docs/user-guide/examples'>
-              <button className='btn btn-primary' style={{marginLeft: '24px'}}>Learn By Examples</button>
+              <Button btnType='primary' style={{marginLeft: '24px'}}>Learn By Examples</Button>
             </Link>
           </div>
         </header>

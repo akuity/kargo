@@ -62,35 +62,6 @@
   --btn-primary-active-shadow: transparent;
 }
 
-.btn {
-  font-family: 'Arial', sans-serif;
-  font-size: 16px;
-  padding: 10px 20px;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  text-align: center;
-  display: inline-block;
-}
-
-.btn-primary {
-  background-color: var(--btn-primary-bg);
-  color: white;
-  box-shadow: 0 4px 6px var(--btn-primary-shadow);
-}
-
-.btn-primary:hover {
-  background-color: var(--btn-primary-hover-bg);
-  box-shadow: 0 6px 8px var(--btn-primary-hover-shadow);
-}
-
-.btn-primary:active {
-  background-color: var(--btn-primary-active-bg);
-  box-shadow: 0 3px 4px var(--btn-primary-active-shadow);
-  transform: translateY(2px);
-}
-
 main.landing-page {
   a.highlight {
     text-decoration: underline;
