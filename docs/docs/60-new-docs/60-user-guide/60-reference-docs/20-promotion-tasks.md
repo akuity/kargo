@@ -138,7 +138,7 @@ workflow.
 #### Task Context
 
 Steps within a promotion task have access to an additional
-[pre-defined variable](20-expressions.md#pre-defined-variables) called
+[pre-defined variable](40-expressions.md#pre-defined-variables) called
 `task` that provides access to outputs from previous steps in the task. The
 `task.outputs` property is a map of step aliases within the `PromotionTask`
 to their outputs.

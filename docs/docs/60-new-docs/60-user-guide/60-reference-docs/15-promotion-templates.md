@@ -89,7 +89,7 @@ steps:
 ```
 
 :::info
-Global variables can use [expressions](20-expressions.md) within `${{ }}` to
+Global variables can use [expressions](40-expressions.md) within `${{ }}` to
 compute values dynamically, including references to context variables like
 `ctx.stage`.
 
@@ -130,7 +130,7 @@ For a list of built-in promotion steps and configuration options, see the
 #### Promotion Task Steps
 
 A step can be used to reference a
-[`PromotionTask` or `ClusterPromotionTask`](35-promotion-tasks.md)
+[`PromotionTask` or `ClusterPromotionTask`](20-promotion-tasks.md)
 using the `task` key, whose value is an object with a `name` key that specifies
 the name of the task and optionally a `kind` key that specifies the kind of task
 to reference. The `kind` key is optional and defaults to `PromotionTask`.
@@ -146,7 +146,7 @@ steps:
 Steps referencing `PromotionTask` or `ClusterPromotionTask` do not support
 configuration or retry options like built-in step, as the steps within the
 task define their own configuration. For more information, see the
-[Promotion Tasks Reference](35-promotion-tasks.md).
+[Promotion Tasks Reference](20-promotion-tasks.md).
 :::
 
 #### Step Variables
@@ -170,7 +170,7 @@ steps:
 
 Variables defined in a step are scoped to that step and are not accessible to
 other steps like [global variables](#global-variables) are. The values of
-variables may  contain [expressions](./20-expressions.md). In addition, the
+variables may  contain [expressions](40-expressions.md). In addition, the
 values of step variables  may contain references to the
 [outputs](#step-outputs) of other steps.
 

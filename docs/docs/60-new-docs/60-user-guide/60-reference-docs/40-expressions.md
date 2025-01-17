@@ -24,7 +24,7 @@ For detailed coverage of individual promotion steps, refer to the
 
 All steps in a user-defined promotion processes (i.e. those described by a
 [Promotion Template](15-promotion-templates.md) and
-[PromotionTasks](35-promotion-tasks.md)) support the use of
+[PromotionTasks](20-promotion-tasks.md)) support the use of
 [expr-lang](https://expr-lang.org/) as a means of dynamically resolving values
 in their configuration at promotion time.
 
