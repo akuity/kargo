@@ -5,70 +5,83 @@ description: Learn how to do a basic installation of Kargo using Helm
 
 # Basic Installation
 
-Installing Kargo with its default configuration is straightforward and quick. Follow this guide to get Kargo up and running using Helm.
+Installing Kargo with default configuration is quick and easy.
 
-### Prerequisites
+:::caution
+The default configuration is suitable only for trying Kargo in a local cluster
+that is not internet-facing.
 
-Ensure you have the following tools and environment set up before proceeding:
-
-- **[Helm](https://helm.sh/docs/)**: These instructions are verified for Helm v3.13.1 and higher.
-- A **Kubernetes cluster** with the following components installed (or higher versions):
-    - [cert-manager](https://cert-manager.io/) v1.11.5+
-    - [Argo CD](https://argo-cd.readthedocs.io) v2.9.3+
-    - [Argo Rollouts](https://argoproj.github.io/argo-rollouts/) v1.6.4+
-    - Kubernetes v1.27.4+
-
-#### Important Notes
-
-:::info
-`cert-manager` is used to self-sign the certificate for Kargo's webhook server, allowing secure communication with
-the Kubernetes API server. If you prefer not to use `cert-manager` for this purpose, you can provision your own
-certificate. For details, Refer to the [Advanced Installation](./advanced-installation/advanced-with-helm) page for more information.
+For detailed instructions for a secure installation, refer to
+[Secure Configuration](./40-security/10-secure-configuration.md).
 :::
 
-:::info
-The Argo CD and Argo Rollouts components are currently required but may become *suggested* dependencies in future releases.
-:::
+## Prerequisites
 
-:::note
-If Argo CD manages multiple clusters, install Kargo in the same cluster
-as the Argo CD control plane, *not* in the individual clusters.
-:::
+You will need:
 
-### Installation Steps
+- [Helm](https://helm.sh/docs/): These instructions were tested with v3.13.1.
 
-To install Kargo with the default configuration and set a user-specified admin password, run the following command:
+- A Kubernetes cluster with [cert-manager](https://cert-manager.io/)
+  pre-installed.
+
+  :::note
+  cert-manager is not an absolute dependency, but _is_ required for installation
+  with the default configuration.
+  :::
+
+The following dependencies are optional, but highly recommended to be
+pre-installed in your Kubernetes cluster:
+
+- [Argo CD](https://argo-cd.readthedocs.io)
+
+  :::info
+  Kargo works best when paired with Argo CD.
+  :::
+
+- [Argo Rollouts](https://argoproj.github.io/argo-rollouts/)
+
+  :::info
+  Kargo's verification feature makes use of Argo Rollouts `AnalysisTemplate` and
+  `AnalysisRun` resources internally.
+
+  **Kargo does not require that your application deployments also use Argo
+  Rollouts.**
+  :::
+
+These instructions were tested with:
+
+- Kubernetes: v1.29.3
+- cert-manager: v1.16.1
+- Argo CD: v2.13.0
+- Argo Rollouts: v1.7.2
+
+## Installation Steps
+
+The following command will install Kargo with default configuration and a
+an admin account password of `admin`:
 
 ```shell
 helm install kargo \
-oci://ghcr.io/akuity/kargo-charts/kargo \
---namespace kargo \
---create-namespace \
---set api.adminAccount.passwordHash='$2a$10$Zrhhie4vLz5ygtVSaif6o.qN36jgs6vjtMBdM6yrU1FOeiAAMMxOm' \
---set api.adminAccount.tokenSigningKey=iwishtowashmyirishwristwatch \
---wait
+  oci://ghcr.io/akuity/kargo-charts/kargo \
+  --namespace kargo \
+  --create-namespace \
+  --set api.adminAccount.passwordHash='$2a$10$Zrhhie4vLz5ygtVSaif6o.qN36jgs6vjtMBdM6yrU1FOeiAAMMxOm' \
+  --set api.adminAccount.tokenSigningKey=iwishtowashmyirishwristwatch \
+  --wait
 ```
 
-#### Security Note
+## Troubleshooting
 
-:::caution
-For clusters exposed to the internet, consider the following options for securing your installation:
-- Disable the admin account: `--set api.adminAccount.enabled=false`
-- Use a strong, custom password and signing key.
-:::
+### Kargo installation fails with a `401`
 
-If Kargo is deployed successfully, you can access its dashboard at [localhost:31444](https://localhost:31444/), and you may need to log in using default credentials (`admin` for both username and password unless specified otherwise).
+Verify that you are using Helm v3.13.1 or greater.
 
-:::note
-If Kargo installation fails with a `401`, verify that you are using Helm v3.13.1
-or greater.
+### Kargo installation fails with a `403`
 
-If Kargo installation fails with a `403`, it is likely that Docker is configured
-to authenticate to `ghcr.io` with an expired token. The Kargo chart and images
-are accessible anonymously, so this issue can be resolved simply by logging out:
+It is likely that Docker is configured to authenticate to `ghcr.io` with an
+expired token. The Kargo Helm chart and images are publicly accessible, so this
+issue can be resolved simply by logging out:
 
 ```shell
 docker logout ghcr.io
 ```
-
-:::
