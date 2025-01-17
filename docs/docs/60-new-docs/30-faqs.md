@@ -124,8 +124,8 @@ repositories, but it _is_ important that you segregate the configurations for
 individual applications or services such that commits to your repository can
 easily be selected or ignored on the basis of what paths they affect.
 
-Our [Patterns](./60-user-guide/30-patterns.md) section will provide suggestions for how
-to structure monorepos to enable various scenarios.
+Our [Patterns](./60-user-guide/30-patterns/index.md) section will provide
+suggestions for how to structure monorepos to enable various scenarios.
 
 ### _Does Kargo support microservices?_
 
@@ -140,15 +140,15 @@ ensure that state changes for a number of related microservices are promoted
 together as a unit. There are a number of different ways to achieve this with
 Kargo, depending on your specific needs.
 
-Our [Patterns](./60-user-guide/30-patterns.md) section provides additional guidance on
-this topic.
+Our [Patterns](./60-user-guide/30-patterns/index.md) section provides additional
+guidance on this topic.
 
 **_Follow up question: What if I need to promote several microservices in a
 specific order?_**
 
 Kargo can accommodate this as well, and once again there are a number of ways
 to approach it depending on your needs and our
-[Patterns](./60-user-guide/30-patterns.md) section should help.
+[Patterns](./60-user-guide/30-patterns/index.md) section should help.
 
 ### _How do I integrate with multiple Argo CD control planes?_
 
