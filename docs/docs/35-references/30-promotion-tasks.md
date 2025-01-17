@@ -8,7 +8,7 @@ description: Learn about Kargo's promotion tasks that can define reusable promot
 `PromotionTask`s allow you to define a set of
 [Promotion Steps](./10-promotion-steps.md) on a project or global
 (`ClusterPromotionTask`) level that can be reused across multiple
-[Promotion Templates](../30-how-to-guides/14-working-with-stages.md#promotion-templates).
+[Promotion Templates](../60-new-docs/60-user-guide/20-how-guides/14-working-with-stages.md#promotion-templates).
 
 ## Defining a Promotion Task
 
@@ -110,7 +110,7 @@ spec:
 ```
 
 When the Promotion Template defines a
-[`vars` section](../30-how-to-guides/14-working-with-stages.md#promotion-templates)
+[`vars` section](../60-new-docs/60-user-guide/20-how-guides/14-working-with-stages.md#promotion-templates)
 the variables are inherited by the `PromotionTask` and do not require redefinition
 unless they need to be overridden.
 
@@ -226,7 +226,7 @@ spec:
 ### Cluster Promotion Task
 
 A `ClusterPromotionTask` is a `PromotionTask` that is available to all
-[projects](../30-how-to-guides/11-working-with-projects.md)
+[projects](../60-new-docs/60-user-guide/20-how-guides/11-working-with-projects.md)
 in the cluster. The `ClusterPromotionTask` is defined the same way as a
 `PromotionTask`, but without the `namespace` field in the metadata.
 
