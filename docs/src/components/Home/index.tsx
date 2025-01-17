@@ -77,7 +77,7 @@ export default function Home(): JSX.Element {
               {
                 id: 'quickstart',
                 title: 'Quickstart',
-                description: 'Get your hands dirty with kargo by following quickstart',
+                description: 'Basic introduction to kargo in your kubernetes cluster',
                 headerStyle: {
                   background: '#1DCECA',
                   color: 'white'
@@ -125,7 +125,7 @@ export default function Home(): JSX.Element {
               {
                 id: 'contribute',
                 title: 'Contribute',
-                description: 'Want to contribute to Kargo?',
+                description: 'Want to contribute to Kargo? Read Contributer\'s guide',
                 headerStyle: {
                   background: '#6380E1',
                   color: 'white'
