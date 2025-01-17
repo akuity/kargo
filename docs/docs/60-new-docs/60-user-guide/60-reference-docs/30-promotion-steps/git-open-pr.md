@@ -7,8 +7,8 @@ description: Opens a pull request in a specified remote repository using specifi
 
 `git-open-pr` opens a pull request in a specified remote repository using
 specified source and target branches. This step is often used after a
-[`git-push` step](16-git-push.md) and is commonly followed by a
-[`git-wait-for-pr` step](19-git-wait-for-pr.md).
+[`git-push` step](git-push.md) and is commonly followed by a
+[`git-wait-for-pr` step](git-wait-for-pr.md).
 
 At present, this feature only supports GitHub pull requests and GitLab merge
 requests.
@@ -31,7 +31,7 @@ requests.
 
 | Name | Type | Description |
 |------|------|-------------|
-| `prNumber` | `number` | The numeric identifier of the pull request opened by this step. Typically, a subsequent [`git-wait-for-pr` step](19-git-wait-for-pr.md) will reference this output to learn what pull request to monitor. |
+| `prNumber` | `number` | The numeric identifier of the pull request opened by this step. Typically, a subsequent [`git-wait-for-pr` step](git-wait-for-pr.md) will reference this output to learn what pull request to monitor. |
 
 ## Examples
 

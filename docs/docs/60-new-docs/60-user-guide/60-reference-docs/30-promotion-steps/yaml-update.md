@@ -7,7 +7,7 @@ description: Updates the values of specified keys in any YAML file.
 
 `yaml-update` updates the values of specified keys in any YAML file. This step
 most often used to update image tags or digests in a Helm values and is commonly
-followed by a [`helm-template` step](49-helm-template.md).
+followed by a [`helm-template` step](helm-template.md).
 
 ## Configuration
 
@@ -22,7 +22,7 @@ followed by a [`helm-template` step](49-helm-template.md).
 
 | Name | Type | Description |
 |------|------|-------------|
-| `commitMessage` | `string` | A description of the change(s) applied by this step. Typically, a subsequent [`git-commit` step](15-git-commit.md) will reference this output and aggregate this commit message fragment with other like it to build a comprehensive commit message that describes all changes. |
+| `commitMessage` | `string` | A description of the change(s) applied by this step. Typically, a subsequent [`git-commit` step](git-commit.md) will reference this output and aggregate this commit message fragment with other like it to build a comprehensive commit message that describes all changes. |
 
 ## Examples
 
