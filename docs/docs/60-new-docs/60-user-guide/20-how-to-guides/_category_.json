@@ -3,7 +3,8 @@
   "link": {
     "type": "generated-index",
     "title": "How-to guides index",
-    "description": "How-to guides for using Kargo"
+    "description": "How-to guides for using Kargo",
+    "slug": "new-docs/user-guide/how-to-guides"
   },
   "collapsible": true,
   "collapsed": true

@@ -113,7 +113,7 @@ Kargo projects, the administrator/operator installing Kargo may opt-in to
 designating one or more `Namespace`s as homes for "global" credentials using the
 `controller.globalCredentials.namespaces` setting in Kargo's Helm chart.
 Refer to
-[the advanced section of the installation guide](./10-installing-kargo.md#advanced-installation)
+[Secure Configuration](../../40-operator-guide/40-security/10-secure-configuration.md)
 for more details.
 
 :::note
@@ -463,7 +463,7 @@ To use IRSA, you will additionally need to specify the
 [ARN](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference-arns.html) of
 the controller's IAM role as the value of the
 `controller.serviceAccount.iamRole` setting in Kargo's Helm chart. Refer to
-[the advanced section of the installation guide](./10-installing-kargo.md#advanced-installation)
+[Secure Configuration](../../40-operator-guide/40-security/10-secure-configuration.md)
 for more details.
 :::
 

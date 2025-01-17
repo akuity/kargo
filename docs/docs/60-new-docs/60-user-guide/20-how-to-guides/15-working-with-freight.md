@@ -19,7 +19,7 @@ Kargo seeks to progress from one stage to another.
 
 :::info
 To learn the fundamentals of freight and the warehouses that produce freight,
-visit the [concepts doc](../10-core-concepts.md).
+see [Core Concepts](../10-core-concepts/index.md).
 :::
 
 The remainder of this page describes features of freight that will enable you
@@ -145,7 +145,13 @@ field and label values, but this is expected to be a rare occurrence.
 
 ## Manual Approvals
 
-The [concepts doc](../10-core-concepts.md#verifications) describes the
+:::note
+**Maintainers Note**
+
+This section references docs that have been moved or not written yet.
+:::
+
+The [Core Concepts](../10-core-concepts/index.md) describes the
 usual process by which `Freight` resources are _verified_ at each `Stage` in a
 pipeline before becoming available to the next `Stage` or `Stage`s. In brief, it
 typically requires the `Stage` to reach a healthy state _and_, if applicable,

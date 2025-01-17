@@ -485,7 +485,9 @@ Users with credentials for and sufficient permissions within the Kargo control p
 ### Promoting Freight to a Stage
 
 :::note
-For comprehensive guidance on promoting `Freight` to a `Stage`, refer to [Working with Promotions](../10-core-concepts.md#promotion-resources).
+**Maintainers Note**
+
+Placeholder
 :::
 
 ### Deleting a Stage

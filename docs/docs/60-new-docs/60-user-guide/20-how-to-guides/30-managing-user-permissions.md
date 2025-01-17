@@ -24,7 +24,7 @@ identity provider that implements the
 
 :::info
 Refer to
-[the advanced section of the installation guide](./10-installing-kargo.md#advanced-installation)
+[this section](../../40-operator-guide/40-security/20-openid-connect.md)
 for more details on how to configure Kargo to use an external identity provider.
 :::
 
@@ -51,7 +51,7 @@ API server validates and decodes the token to obtain trusted information about
 the user which, importantly, includes _claims_ such as username, email address,
 and group membership. The exact claims available depend on the identity provider
 and the configuration of the Kargo API server. (Refer again to
-[the advanced section of the installation guide](./10-installing-kargo.md#advanced-installation).)
+[OpenID Connect](../../40-operator-guide/40-security/20-openid-connect.md).)
 
 Also at the time of authentication, the Kargo API server queries the Kubernetes
 API server to obtain a list of all `ServiceAccount` resources to which the user
@@ -307,7 +307,7 @@ numbers of users, the administrator/operator installing Kargo may opt-in to
 designating one or more namespaces as homes for "global" `ServiceAccount`
 resources using the `api.oidc.globalServiceAccounts` setting in Kargo's Helm
 chart. Refer to
-[the advanced section of the installation guide](./10-installing-kargo.md#advanced-installation)
+[Secure Configuration](../../40-operator-guide/40-security/10-secure-configuration.md)
 for more details.
 
 Note that `ServiceAccount` resources in designated namespaces are not _truly_
