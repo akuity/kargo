@@ -9,8 +9,8 @@ description: Renders manifests from a specified directory containing a `kustomiz
 `kustomization.yaml` file to a specified file or to many files in a specified
 directory. This step is useful for the common scenario of rendering
 Stage-specific manifests to a Stage-specific branch. This step is commonly
-preceded by a [`git-clear`](11-git-clear.md) step and followed by
-[`git-commit`](15-git-commit.md) and [`git-push`](16-git-push.md) steps.
+preceded by a [`git-clear`](git-clear.md) step and followed by
+[`git-commit`](git-commit.md) and [`git-push`](git-push.md) steps.
 
 ## Configuration
 

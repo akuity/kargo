@@ -66,7 +66,7 @@ For this more advanced example, consider a Stage that requests Freight from two
 Warehouses, where one provides Kustomize "base" configuration, while the other
 provides a Stage-specific Kustomize overlay. Rendering the manifests intended
 for such a Stage will require combining the base and overlay configurations
-with the help of a [`copy`](20-copy.md) step. For this case, a `git-clone` step
+with the help of a [`copy`](copy.md) step. For this case, a `git-clone` step
 may be configured similarly to the following:
 
 ```yaml

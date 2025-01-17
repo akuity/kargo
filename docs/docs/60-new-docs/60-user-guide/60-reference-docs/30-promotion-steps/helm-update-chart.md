@@ -9,7 +9,7 @@ description: Updates the `dependencies` section of a specified Helm chart's `Cha
 a specified Helm chart's `Chart.yaml` file. This step is useful for the common
 scenario of updating a chart's dependencies to reflect new versions of charts
 referenced by the Freight being promoted. This step is commonly followed by a
-[`helm-template` step](49-helm-template.md).
+[`helm-template` step](helm-template.md).
 
 ## Configuration
 
@@ -26,7 +26,7 @@ referenced by the Freight being promoted. This step is commonly followed by a
 
 | Name | Type | Description |
 |------|------|-------------|
-| `commitMessage` | `string` | A description of the change(s) applied by this step. Typically, a subsequent [`git-commit` step](15-git-commit.md) will reference this output and aggregate this commit message fragment with other like it to build a comprehensive commit message that describes all changes. |
+| `commitMessage` | `string` | A description of the change(s) applied by this step. Typically, a subsequent [`git-commit` step](git-commit.md) will reference this output and aggregate this commit message fragment with other like it to build a comprehensive commit message that describes all changes. |
 
 ## Examples
 

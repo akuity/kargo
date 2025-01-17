@@ -7,7 +7,7 @@ description: Commits all changes in a working tree to its checked out branch.
 
 `git-commit` commits all changes in a working tree to its checked out branch.
 This step is often used after previous steps have put the working tree into the
-desired state and is commonly followed by a [`git-push` step](16-git-push.md).
+desired state and is commonly followed by a [`git-push` step](git-push.md).
 
 ## Configuration
 
@@ -24,7 +24,7 @@ desired state and is commonly followed by a [`git-push` step](16-git-push.md).
 
 | Name | Type | Description |
 |------|------|-------------|
-| `commit` | `string` | The ID (SHA) of the commit created by this step. If the step short-circuited and did not create a new commit because there were no differences from the current head of the branch, this value will be the ID of the existing commit at the head of the branch instead. Typically, a subsequent [`argocd-update`](50-argocd-update.md) step will reference this output to learn the ID of the commit that an applicable Argo CD `ApplicationSource` should be observably synced to under healthy conditions. |
+| `commit` | `string` | The ID (SHA) of the commit created by this step. If the step short-circuited and did not create a new commit because there were no differences from the current head of the branch, this value will be the ID of the existing commit at the head of the branch instead. Typically, a subsequent [`argocd-update`](argocd-update.md) step will reference this output to learn the ID of the commit that an applicable Argo CD `ApplicationSource` should be observably synced to under healthy conditions. |
 
 ## Examples
 
