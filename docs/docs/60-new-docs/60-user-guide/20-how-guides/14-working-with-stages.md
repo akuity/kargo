@@ -219,7 +219,7 @@ promotionTemplate:
 
 :::info
 For complete documentation of all Kargo's built-in promotion steps, refer
-to the [Promotion Steps Reference](../35-references/10-promotion-steps.md).
+to the [Promotion Steps Reference](../60-reference-docs/30-promotion-steps/).
 :::
 
 ### Verifications
@@ -436,20 +436,20 @@ Users with credentials for and sufficient permissions within the Kargo control p
 
 1. Navigate to your Project in the Kargo UI and locate the action menu in the upper right corner of the pipeline:
 
-   ![create-stage](../../static/img/create-stage.png)
+   ![create-stage](../../../../static/img/create-stage.png)
 
 1. Click the magic wand icon to open the dropdown, then select <Hlt>Create Stage</Hlt>.
 
    A form will appear to input details for a new `Stage`:
 
-   ![create-stage](../../static/img/create-stage-2.png)
+   ![create-stage](../../../../static/img/create-stage-2.png)
 
 1. Complete the form with the necessary details and submit it.
 
    The new `Stage` will be added to the pipeline, connected to other
    `Stage`s based on your configuration:
 
-   ![create-stage](../../static/img/create-stage-3.png)
+   ![create-stage](../../../../static/img/create-stage-3.png)
 
 </TabItem>
 
@@ -485,7 +485,7 @@ Users with credentials for and sufficient permissions within the Kargo control p
 ### Promoting Freight to a Stage
 
 :::note
-For comprehensive guidance on promoting `Freight` to a `Stage`, refer to [Working with Promotions](../15-concepts.md#promotion-resources).
+For comprehensive guidance on promoting `Freight` to a `Stage`, refer to [Working with Promotions](../10-core-concepts.md#promotion-resources).
 :::
 
 ### Deleting a Stage
@@ -497,7 +497,7 @@ For comprehensive guidance on promoting `Freight` to a `Stage`, refer to [Workin
 
 1. Click <Hlt>Delete</Hlt> in the upper right corner of the pop-up window:
 
-   ![delete-stage](../../static/img/delete-stage.png)
+   ![delete-stage](../../../../static/img/delete-stage.png)
 
 </TabItem>
 
@@ -526,7 +526,7 @@ any applicable health check processes.
 
 1. Click <Hlt>Refresh</Hlt> in the top-right corner of the pop-up window:
 
-   ![refresh-stage](../../static/img/refresh-stage.png)
+   ![refresh-stage](../../../../static/img/refresh-stage.png)
 
 </TabItem>
 
@@ -553,7 +553,7 @@ as desired.
 
 1. Select the `Stage` you want to reverify and click <Hlt>Reverify</Hlt> at the top of the menu:
 
-    ![verify-stage](../../static/img/reverify-freight.png)
+    ![verify-stage](../../../../static/img/reverify-freight.png)
 
     :::note
     If you wish to stop the in-progress verification, you can click <Hlt>Abort Verification</Hlt>.
@@ -562,7 +562,7 @@ as desired.
 1. To check the `Stage`s where the `Freight` has been successfully verified, return to 
     the <Hlt>Freight Timeline</Hlt> and select the `Freight`. Verified `Stage` names will appear under <Hlt>VERIFIED IN</Hlt>:
 
-    ![verify-stage](../../static/img/verified-in.png)
+    ![verify-stage](../../../../static/img/verified-in.png)
 
 </TabItem>
 
