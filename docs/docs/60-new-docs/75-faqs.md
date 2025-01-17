@@ -57,7 +57,7 @@ If you like what we're doing, please give us a 🌟!
 ### _How do I get started?_
 
 These very docs are a great place to start. In particular, we recommend checking
-out the [Core Concepts](./60-user-guide/10-core-concepts/index.md) section or,
+out the [Core Concepts](./50-user-guide/10-core-concepts/index.md) section or,
 if you're ready to get your hands dirty, our [Quickstart](./20-quickstart.md).
 
 ### _Where can I get support?_
@@ -79,7 +79,7 @@ Find us [on GitHub](https://github.com/akuity/kargo). Open issues. Ask
 questions... or even _answer_ questions!
 
 If you're interested in contributing code, our
-[Contributor Guide](./50-contributor-guide/index.md) will help you get started. You'll also
+[Contributor Guide](./60-contributor-guide/index.md) will help you get started. You'll also
 find a lot of open issues labeled as
 [good first issue](https://github.com/akuity/kargo/labels/good%20first%20issue)
 or [help wanted](https://github.com/akuity/kargo/labels/help-wanted). If you
@@ -124,7 +124,7 @@ repositories, but it _is_ important that you segregate the configurations for
 individual applications or services such that commits to your repository can
 easily be selected or ignored on the basis of what paths they affect.
 
-Our [Patterns](./60-user-guide/30-patterns/index.md) section will provide
+Our [Patterns](./50-user-guide/30-patterns/index.md) section will provide
 suggestions for how to structure monorepos to enable various scenarios.
 
 ### _Does Kargo support microservices?_
@@ -140,7 +140,7 @@ ensure that state changes for a number of related microservices are promoted
 together as a unit. There are a number of different ways to achieve this with
 Kargo, depending on your specific needs.
 
-Our [Patterns](./60-user-guide/30-patterns/index.md) section provides additional
+Our [Patterns](./50-user-guide/30-patterns/index.md) section provides additional
 guidance on this topic.
 
 **_Follow up question: What if I need to promote several microservices in a
@@ -148,7 +148,7 @@ specific order?_**
 
 Kargo can accommodate this as well, and once again there are a number of ways
 to approach it depending on your needs and our
-[Patterns](./60-user-guide/30-patterns/index.md) section should help.
+[Patterns](./50-user-guide/30-patterns/index.md) section should help.
 
 ### _How do I integrate with multiple Argo CD control planes?_
 
