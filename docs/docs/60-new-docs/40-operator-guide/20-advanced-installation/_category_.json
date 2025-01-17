@@ -1,4 +1,6 @@
 {
   "label": "Advanced Installation",
-  "link":  null
+  "link":  null,
+  "collapsible": true,
+  "collapsed": true
 }
