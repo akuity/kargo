@@ -275,7 +275,7 @@ steps:
 
 ### `git-clear`
 
-`git-clear` deletes the _the entire contents_ of a specified Git working tree
+`git-clear` deletes _the entire contents_ of a specified Git working tree
 (except for the `.git` file). It is equivalent to executing
 `git add . && git rm -rf --ignore-unmatch .`. This step is useful for the common
 scenario where the entire content of a Stage-specific branch is to be replaced
@@ -1607,7 +1607,7 @@ Our request is considered:
 
 <TabItem value="slack" label="Posting to Slack">
 
-This examples is adapted from
+This example is adapted from
 [Slack's own documentation](https://api.slack.com/tutorials/tracks/posting-messages-with-curl):
 
 ```yaml

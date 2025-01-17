@@ -236,7 +236,7 @@ repository URL:
 
 ```shell
 kargo update credentials --project kargo-demo my-credentials \
-  --repo-url '^http://github.com/' --regex
+  --repo-url '^https://github.com/' --regex
 ```
 
 ```shell

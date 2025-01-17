@@ -8,8 +8,8 @@ description: Renders a specified Helm chart to one or more files in a specified 
 `helm-template` renders a specified Helm chart to a specified directory or to
 many files in a specified directory. This step is useful for the common scenario
 of rendering Stage-specific manifests to a Stage-specific branch. This step is
-commonly preceded by a [`git-clear` step](11-git-clear.md) and followed by
-[`git-commit`](15-git-commit.md) and [`git-push`](16-git-push.md) steps.
+commonly preceded by a [`git-clear` step](git-clear.md) and followed by
+[`git-commit`](git-commit.md) and [`git-push`](git-push.md) steps.
 
 ## Configuration
 

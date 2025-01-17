@@ -5,14 +5,17 @@ description: Updates the values of specified keys in a specified Helm values fil
 
 # `helm-update-image`
 
+:::warning
+**Deprecated:** Use the generic [`yaml-update` step](yaml-update.md) instead.
+Will be removed in v1.3.0.
+:::
+
 `helm-update-image` updates the values of specified keys in a specified Helm
 values file (e.g. `values.yaml`) to reflect a new version of a container image.
 This step is useful for the common scenario of updating such a `values.yaml`
 file with new version information which is referenced by the Freight being
 promoted. This step is commonly followed by a
-[`helm-template` step](49-helm-template.md).
-
-__Deprecated: Use the generic `yaml-update` step instead. Will be removed in v1.3.0.__
+[`helm-template` step](helm-template.md).
 
 ## Configuration
 
@@ -29,7 +32,7 @@ __Deprecated: Use the generic `yaml-update` step instead. Will be removed in v1.
 
 | Name | Type | Description |
 |------|------|-------------|
-| `commitMessage` | `string` | A description of the change(s) applied by this step. Typically, a subsequent [`git-commit` step](15-git-commit.md) will reference this output and aggregate this commit message fragment with other like it to build a comprehensive commit message that describes all changes. |
+| `commitMessage` | `string` | A description of the change(s) applied by this step. Typically, a subsequent [`git-commit` step](git-commit.md) will reference this output and aggregate this commit message fragment with other like it to build a comprehensive commit message that describes all changes. |
 
 ## Examples
 

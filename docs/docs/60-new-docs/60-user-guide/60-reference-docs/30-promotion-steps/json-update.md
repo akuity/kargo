@@ -20,7 +20,7 @@ description: Updates the values of specified keys in any JSON file.
 
 | Name | Type | Description |
 |------|------|-------------|
-| `commitMessage` | `string` | A description of the change(s) applied by this step. Typically, a subsequent [`git-commit` step](15-git-commit.md) reference this output and aggregate this commit message fragment with other like it to build a comprehensive commit message that describes all changes. |
+| `commitMessage` | `string` | A description of the change(s) applied by this step. Typically, a subsequent [`git-commit` step](git-commit.md) reference this output and aggregate this commit message fragment with other like it to build a comprehensive commit message that describes all changes. |
 
 ## Examples
 
