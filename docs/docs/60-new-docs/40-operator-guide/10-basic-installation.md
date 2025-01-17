@@ -58,3 +58,17 @@ For clusters exposed to the internet, consider the following options for securin
 :::
 
 If Kargo is deployed successfully, you can access its dashboard at [localhost:31444](https://localhost:31444/), and you may need to log in using default credentials (`admin` for both username and password unless specified otherwise).
+
+:::note
+If Kargo installation fails with a `401`, verify that you are using Helm v3.13.1
+or greater.
+
+If Kargo installation fails with a `403`, it is likely that Docker is configured
+to authenticate to `ghcr.io` with an expired token. The Kargo chart and images
+are accessible anonymously, so this issue can be resolved simply by logging out:
+
+```shell
+docker logout ghcr.io
+```
+
+:::
