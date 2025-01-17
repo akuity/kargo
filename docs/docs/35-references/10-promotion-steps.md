@@ -77,7 +77,7 @@ steps:
 ```
 
 When a variable in a step is also defined as a global variable in the
-[Promotion Template](../60-new-docs/60-user-guide/20-how-guides/14-working-with-stages.md#promotion-templates),
+[Promotion Template](../30-how-to-guides/14-working-with-stages.md#promotion-templates),
 the step variable takes precedence over the global variable.
 
 ### Step Outputs

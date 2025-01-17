@@ -24,7 +24,7 @@ for automatic promotions of new **freight**.
 
 :::note
 For technical information on the corresponding `Project` resource
-type, refer to [Working with Projects](./60-new-docs/60-user-guide/20-how-guides/11-working-with-projects.md).
+type, refer to [Working with Projects](./30-how-to-guides/11-working-with-projects.md).
 :::
 
 ### What is a Stage?
@@ -48,7 +48,7 @@ more "prod" stages at the end.
 
 :::note
 For technical details of the corresponding `Stage` resource type,
-refer to [Working with Stages](./60-new-docs/60-user-guide/20-how-guides/14-working-with-stages.md).
+refer to [Working with Stages](./30-how-to-guides/14-working-with-stages.md).
 :::
 
 ### What is Freight?
@@ -66,7 +66,7 @@ include one or more:
 Freight can therefore be thought of as a sort of meta-artifact. Freight is what
 Kargo seeks to progress from one stage to another.
 For detailed guidance on working with Freight, refer to
-[this guide](./60-new-docs/60-user-guide/20-how-guides/15-working-with-freight.md).
+[this guide](./30-how-to-guides/15-working-with-freight.md).
 
 ### What is a Warehouse?
 
@@ -122,8 +122,8 @@ traversing your pipeline(s) can make it easier to track their progress from one
 :::
 
 :::note
-For more information on aliases, refer to the [aliases](./60-new-docs/60-user-guide/20-how-guides/15-working-with-freight.md#aliases)
-and [updating aliases](./60-new-docs/60-user-guide/20-how-guides/15-working-with-freight.md#updating-aliases)
+For more information on aliases, refer to the [aliases](./30-how-to-guides/15-working-with-freight.md#aliases)
+and [updating aliases](./30-how-to-guides/15-working-with-freight.md#updating-aliases)
 sections of the "Working with Freight" how-to guide.
 :::
 
