@@ -8,7 +8,7 @@ description: Updates the `kustomization.yaml` file in a specified directory to r
 `kustomize-set-image` updates the `kustomization.yaml` file in a specified
 directory to reflect a different revision of a container image. It is equivalent
 to executing `kustomize edit set image`. This step is commonly followed by a
-[`kustomize-build` step](39-kustomize-build.md).
+[`kustomize-build` step](kustomize-build).
 
 ## Configuration
 
@@ -28,7 +28,7 @@ to executing `kustomize edit set image`. This step is commonly followed by a
 
 | Name | Type | Description |
 |------|------|-------------|
-| `commitMessage` | `string` | A description of the change(s) applied by this step. Typically, a subsequent [`git-commit` step](15-git-commit.md) will reference this output and aggregate this commit message fragment with other like it to build a comprehensive commit message that describes all changes. |
+| `commitMessage` | `string` | A description of the change(s) applied by this step. Typically, a subsequent [`git-commit` step](git-commit.md) will reference this output and aggregate this commit message fragment with other like it to build a comprehensive commit message that describes all changes. |
 
 
 ## Examples
