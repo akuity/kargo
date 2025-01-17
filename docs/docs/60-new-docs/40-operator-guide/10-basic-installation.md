@@ -56,3 +56,5 @@ For clusters exposed to the internet, consider the following options for securin
 - Disable the admin account: `--set api.adminAccount.enabled=false`
 - Use a strong, custom password and signing key.
 :::
+
+If Kargo is deployed successfully, you can access its dashboard at [localhost:31444](https://localhost:31444/), and you may need to log in using default credentials (`admin` for both username and password unless specified otherwise).
