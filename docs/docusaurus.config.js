@@ -82,6 +82,10 @@ const config = {
             position: 'left',
           },
           {
+            type: 'custom-version-dropdown',
+            position: 'right',
+          },
+          {
             href: 'https://kargo.io/',
             label: 'Kargo.io',
             position: 'left',
