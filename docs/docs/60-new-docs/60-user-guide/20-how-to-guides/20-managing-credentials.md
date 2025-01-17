@@ -5,6 +5,16 @@ sidebar_label: Managing Credentials
 
 # Managing Credentials
 
+:::note
+**Maintainers Note**
+
+This page is to be broken up with portions of the content moving to:
+
+- [../security/managing-credentials](../50-security/30-managing-credentials.md)
+- [../../operator-guide/security/managing-credentials](../../40-operator-guide/40-security/40-managing-credentials.md)
+
+:::
+
 To manage the progression of Freight from Stage to Stage, Kargo will often
 require read/write permissions on private GitOps repositories and read-only
 permissions on private container image and/or Helm chart repositories.
