@@ -7,8 +7,8 @@ description: Pushes the committed changes in a specified working tree to a speci
 
 `git-push` pushes the committed changes in a specified working tree to a
 specified branch in the remote repository. This step typically follows a
-[`git-commit` step](15-git-commit.md) and is often followed by a
-[`git-open-pr` step](18-git-open-pr.md).
+[`git-commit` step](git-commit.md) and is often followed by a
+[`git-open-pr` step](git-open-pr.md).
 
 This step also implements its own, internal retry logic. If a push fails, with
 the cause determined to be the presence of new commits in the remote branch that
@@ -39,7 +39,7 @@ Stages that write to the same branch do not write to the same files.
 
 | Name | Type | Description |
 |------|------|-------------|
-| `branch` | `string` | The name of the remote branch pushed to by this step. This is especially useful when the `generateTargetBranch=true` option has been used, in which case a subsequent [`git-open-pr`](18-git-open-pr.md) will typically reference this output to learn what branch to use as the head branch of a new pull request. |
+| `branch` | `string` | The name of the remote branch pushed to by this step. This is especially useful when the `generateTargetBranch=true` option has been used, in which case a subsequent [`git-open-pr`](git-open-pr.md) will typically reference this output to learn what branch to use as the head branch of a new pull request. |
 | `commit` | `string` | The ID (SHA) of the commit pushed by this step. |
 
 ## Examples
