@@ -82,6 +82,8 @@ spec:
         volumeMounts:
         - mountPath: /tmp
           name: tmp-data
+        - mountPath: /home/nonroot
+          name: home-nonroot-data
         {{- if or .Values.kubeconfigSecrets.kargo .Values.kubeconfigSecrets.argocd }}
         - mountPath: /etc/kargo/kubeconfigs
           name: kubeconfigs
@@ -130,6 +132,8 @@ spec:
       {{- end }}
       volumes:
       - name: tmp-data
+        emptyDir: {}
+      - name: home-nonroot-data
         emptyDir: {}
       {{- if or .Values.kubeconfigSecrets.kargo .Values.kubeconfigSecrets.argocd }}
       - name: kubeconfigs
