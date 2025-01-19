@@ -15,6 +15,7 @@ import (
 	"github.com/akuity/kargo/internal/gitprovider"
 
 	_ "github.com/akuity/kargo/internal/gitprovider/azure"  // Azure provider registration
+	_ "github.com/akuity/kargo/internal/gitprovider/gitea"  // Gitea provider registration
 	_ "github.com/akuity/kargo/internal/gitprovider/github" // GitHub provider registration
 	_ "github.com/akuity/kargo/internal/gitprovider/gitlab" // GitLab provider registration
 )
