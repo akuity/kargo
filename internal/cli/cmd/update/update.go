@@ -16,7 +16,7 @@ func NewCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams) *cobra
 		Args:  option.NoArgs,
 		Example: templates.Example(`
 # Update the alias of a freight for a specified project
-kargo update freight --project=my-project abc123 --alias=my-new-alias
+kargo update freight --project=my-project --name=abc123 --new-alias=my-new-alias
 `),
 	}
 
