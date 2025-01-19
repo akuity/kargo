@@ -3,6 +3,7 @@ module github.com/akuity/kargo
 go 1.23.4
 
 require (
+	code.gitea.io/sdk/gitea v0.20.0
 	connectrpc.com/connect v1.18.1
 	connectrpc.com/grpchealth v1.3.0
 	github.com/AlecAivazis/survey/v2 v2.3.7
@@ -72,6 +73,7 @@ require (
 	cloud.google.com/go/auth/oauth2adapt v0.2.7 // indirect
 	dario.cat/mergo v1.0.1 // indirect
 	github.com/BurntSushi/toml v1.4.0 // indirect
+	github.com/42wim/httpsig v1.2.1 // indirect
 	github.com/MakeNowJust/heredoc v1.0.0 // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/sprig/v3 v3.3.0 // indirect
@@ -90,11 +92,13 @@ require (
 	github.com/chai2010/gettext-go v1.0.2 // indirect
 	github.com/containerd/errdefs v0.3.0 // indirect
 	github.com/containerd/platforms v0.2.1 // indirect
+	github.com/davidmz/go-pageant v1.0.2 // indirect
 	github.com/evanphx/json-patch v5.9.0+incompatible // indirect
 	github.com/exponent-io/jsonpath v0.0.0-20210407135951-1de76d718b3f // indirect
 	github.com/fatih/color v1.16.0 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.7.0 // indirect
+	github.com/go-fed/httpsig v1.1.0 // indirect
 	github.com/go-git/gcfg v1.5.1-0.20230307220236-3a3c6141e376 // indirect
 	github.com/go-git/go-billy/v5 v5.6.1 // indirect
 	github.com/go-gorp/gorp/v3 v3.1.0 // indirect
@@ -108,6 +112,7 @@ require (
 	github.com/gosuri/uitable v0.0.4 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
+	github.com/hashicorp/go-version v1.6.0 // indirect
 	github.com/huandu/xstrings v1.5.0 // indirect
 	github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 // indirect
 	github.com/jmoiron/sqlx v1.4.0 // indirect
