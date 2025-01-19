@@ -3,6 +3,7 @@ package gitea
 import (
 	"context"
 	"testing"
+	"time"
 
 	"code.gitea.io/sdk/gitea"
 	"github.com/stretchr/testify/mock"
@@ -191,6 +192,7 @@ func TestCreatePullRequestWithLabels(t *testing.T) {
 				URL:            *gitea.OptionalString("http://localhost:8080"),
 				MergedCommitID: gitea.OptionalString("BaseSha"),
 				HasMerged:      false,
+				Created:        &time.Time{},
 			},
 			&gitea.Response{},
 			nil,
@@ -249,6 +251,7 @@ func TestGetPullRequest(t *testing.T) {
 			URL:            *gitea.OptionalString("http://localhost:8080"),
 			MergedCommitID: gitea.OptionalString("2994fd93"),
 			HasMerged:      false,
+			Created:        &time.Time{},
 		},
 	}
 
@@ -337,6 +340,7 @@ func TestListPullRequests(t *testing.T) {
 				URL:            *gitea.OptionalString("http://localhost:8080"),
 				MergedCommitID: gitea.OptionalString("BaseSha"),
 				HasMerged:      false,
+				Created:        &time.Time{},
 			}},
 			&gitea.Response{},
 			nil,
