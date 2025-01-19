@@ -60,10 +60,10 @@ func TestParsegiteaURL(t *testing.T) {
 
 type mockGiteaClient struct {
 	mock.Mock
+	newPr    *gitea.CreatePullRequestOption
 	pr       *gitea.PullRequest
 	owner    string
 	repo     string
-	newPr    *gitea.PullRequest
 	labels   []string
 	listOpts *gitea.ListPullRequestsOptions
 }
@@ -138,6 +138,7 @@ func (m *mockGiteaClient) CreatePullRequest(
 	args := m.Called(ctx, owner, repo, opts)
 	m.owner = owner
 	m.repo = repo
+	m.newPr = opts
 
 	pr, ok := args.Get(0).(*gitea.PullRequest)
 	if !ok {
@@ -162,21 +163,40 @@ func TestCreatePullRequestWithLabels(t *testing.T) {
 	// set up mock
 	mockClient := &mockGiteaClient{
 		pr: &gitea.PullRequest{
-			ID: *gitea.OptionalInt64(42),
+			ID:    *gitea.OptionalInt64(42),
+			State: "open",
+			Head: &gitea.PRBranchInfo{
+				Sha: "HeadSha",
+			},
+			Base: &gitea.PRBranchInfo{
+				Sha: "BaseSha",
+			},
+			URL:            *gitea.OptionalString("http://localhost:8080"),
+			MergedCommitID: gitea.OptionalString("2994fd93"),
+			HasMerged:      false,
 		},
 	}
 	mockClient.
 		On("CreatePullRequest", context.Background(), testRepoOwner, testRepoName, mock.Anything).
 		Return(
 			&gitea.PullRequest{
-				State:   mockClient.pr.State,
-				HTMLURL: mockClient.pr.URL,
+				ID:    *gitea.OptionalInt64(42),
+				State: "open",
+				Head: &gitea.PRBranchInfo{
+					Sha: "HeadSha",
+				},
+				Base: &gitea.PRBranchInfo{
+					Sha: "BaseSha",
+				},
+				URL:            *gitea.OptionalString("http://localhost:8080"),
+				MergedCommitID: gitea.OptionalString("BaseSha"),
+				HasMerged:      false,
 			},
 			&gitea.Response{},
 			nil,
 		)
 	mockClient.
-		On("AddLabelsToIssue", context.Background(), testRepoOwner, testRepoName, mockClient.pr.ID, mock.Anything).
+		On("AddLabelsToIssue", context.Background(), testRepoOwner, testRepoName, int(mockClient.pr.ID), mock.Anything).
 		Return(
 			[]*gitea.Label{},
 			&gitea.Response{},
@@ -218,18 +238,35 @@ func TestGetPullRequest(t *testing.T) {
 	// set up mock
 	mockClient := &mockGiteaClient{
 		pr: &gitea.PullRequest{
-			ID:  *gitea.OptionalInt64(42),
-			URL: *gitea.OptionalString("http://localhost:8080"),
+			ID:    *gitea.OptionalInt64(42),
+			State: "open",
+			Head: &gitea.PRBranchInfo{
+				Sha: "HeadSha",
+			},
+			Base: &gitea.PRBranchInfo{
+				Sha: "BaseSha",
+			},
+			URL:            *gitea.OptionalString("http://localhost:8080"),
+			MergedCommitID: gitea.OptionalString("2994fd93"),
+			HasMerged:      false,
 		},
 	}
 
 	mockClient.
-		On("GetPullRequests", context.Background(), testRepoOwner, testRepoName, mockClient.pr.ID).
+		On("GetPullRequests", context.Background(), testRepoOwner, testRepoName, int(mockClient.pr.ID)).
 		Return(
 			&gitea.PullRequest{
-				ID:      mockClient.pr.ID,
-				State:   mockClient.pr.State,
-				HTMLURL: mockClient.pr.URL,
+				ID:    *gitea.OptionalInt64(42),
+				State: "open",
+				Head: &gitea.PRBranchInfo{
+					Sha: "HeadSha",
+				},
+				Base: &gitea.PRBranchInfo{
+					Sha: "BaseSha",
+				},
+				URL:            *gitea.OptionalString("http://localhost:8080"),
+				MergedCommitID: gitea.OptionalString("BaseSha"),
+				HasMerged:      false,
 			},
 			&gitea.Response{},
 			nil,
@@ -267,20 +304,39 @@ func TestListPullRequests(t *testing.T) {
 	// set up mock
 	mockClient := &mockGiteaClient{
 		pr: &gitea.PullRequest{
-			ID: *gitea.OptionalInt64(42),
+			ID:    *gitea.OptionalInt64(42),
+			State: "open",
+			Head: &gitea.PRBranchInfo{
+				Sha: "HeadSha",
+			},
+			Base: &gitea.PRBranchInfo{
+				Sha: "BaseSha",
+			},
+			URL:            *gitea.OptionalString("http://localhost:8080"),
+			MergedCommitID: gitea.OptionalString("BaseSha"),
+			HasMerged:      false,
 		},
 	}
 	mockClient.
 		On("ListPullRequests", context.Background(), testRepoOwner, testRepoName, &gitea.ListPullRequestsOptions{
 			State: "all",
 			ListOptions: gitea.ListOptions{
-				Page:     0,
-				PageSize: 100,
+				Page: 0,
 			},
 		}).
 		Return(
 			[]*gitea.PullRequest{{
-				ID: mockClient.pr.ID,
+				ID:    *gitea.OptionalInt64(42),
+				State: "open",
+				Head: &gitea.PRBranchInfo{
+					Sha: "HeadSha",
+				},
+				Base: &gitea.PRBranchInfo{
+					Sha: "BaseSha",
+				},
+				URL:            *gitea.OptionalString("http://localhost:8080"),
+				MergedCommitID: gitea.OptionalString("BaseSha"),
+				HasMerged:      false,
 			}},
 			&gitea.Response{},
 			nil,

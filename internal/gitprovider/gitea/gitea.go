@@ -203,7 +203,9 @@ func (p *provider) ListPullRequests(
 	if opts.State == "" {
 		opts.State = gitprovider.PullRequestStateOpen
 	}
-	listOpts := gitea.ListPullRequestsOptions{}
+	listOpts := gitea.ListPullRequestsOptions{
+		ListOptions: gitea.ListOptions{},
+	}
 	switch opts.State {
 	case gitprovider.PullRequestStateAny:
 		listOpts.State = "all"
@@ -235,6 +237,7 @@ func (p *provider) ListPullRequests(
 }
 
 func convertGiteaPR(giteaPR gitea.PullRequest) gitprovider.PullRequest {
+	fmt.Println(giteaPR.Head)
 	pr := gitprovider.PullRequest{
 		Number:         giteaPR.ID,
 		URL:            giteaPR.URL,
