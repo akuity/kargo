@@ -1,7 +1,8 @@
 import { createContext } from 'react';
 
-import { Freight } from '@ui/gen/v1alpha1/generated_pb';
+import { Freight, Stage } from '@ui/gen/v1alpha1/generated_pb';
 
+import { FreightTimelineAction } from '../types';
 import { PipelineStateHook } from '../utils/state';
 
 export interface PipelineContextType {
@@ -12,6 +13,8 @@ export interface PipelineContextType {
   autoPromotionMap: { [key: string]: boolean };
   selectedWarehouse: string;
   project: string;
+  onHover: (hover: boolean, id: string, isStage?: boolean) => void;
+  onPromoteClick: (stage: Stage, type: FreightTimelineAction) => void;
 }
 
 export const PipelineContext = createContext<PipelineContextType | null>(null);

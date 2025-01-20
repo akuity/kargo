@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from '@connectrpc/connect-query';
+import { useQuery } from '@connectrpc/connect-query';
 import { faDocker } from '@fortawesome/free-brands-svg-icons';
 import {
   faChevronDown,
@@ -10,8 +10,8 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useQueryClient } from '@tanstack/react-query';
-import { addEdge, ReactFlow, useEdgesState, useNodesState } from '@xyflow/react';
-import { Button, Dropdown, Spin, Tooltip, message } from 'antd';
+import { ReactFlow } from '@xyflow/react';
+import { Button, Dropdown, Spin, Tooltip } from 'antd';
 import classNames from 'classnames';
 import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef } from 'react';
 import { generatePath, useNavigate, useParams } from 'react-router-dom';
@@ -25,7 +25,11 @@ const StageDetails = lazy(() => import('@ui/features/stage/stage-details'));
 const CreateStage = lazy(() => import('@ui/features/stage/create-stage'));
 const CreateWarehouse = lazy(() => import('@ui/features/stage/create-warehouse/create-warehouse'));
 import { SuspenseSpin } from '@ui/features/common/suspense-spin';
-import { getCurrentFreight, mapToNames } from '@ui/features/common/utils';
+import {
+  getCurrentFreight,
+  getCurrentFreightWarehouse,
+  mapToNames
+} from '@ui/features/common/utils';
 const FreightTimelineHeader = lazy(
   () => import('@ui/features/freight-timeline/freight-timeline-header')
 );
@@ -33,13 +37,10 @@ import { FreightTimelineWrapper } from '@ui/features/freight-timeline/freight-ti
 import { clearColors } from '@ui/features/stage/utils';
 import { queryCache } from '@ui/features/utils/cache';
 import {
-  approveFreight,
   listStages,
   listImages,
   listWarehouses,
-  promoteToStage,
-  queryFreight,
-  refreshWarehouse
+  queryFreight
 } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 import { Freight, Project, Stage, Warehouse } from '@ui/gen/v1alpha1/generated_pb';
 import { useDocumentEvent } from '@ui/utils/document';
@@ -50,13 +51,12 @@ import { Images } from './images';
 import { CustomNode } from './nodes/custom-node';
 import styles from './project-details.module.less';
 import { CollapseMode, FreightTimelineAction } from './types';
-import { isPromoting, usePipelineState } from './utils/state';
+import { usePipelineState } from './utils/state';
 import {
   reactFlowNodeConstants,
   usePipelineGraph,
   useReactFlowPipelineGraph
 } from './utils/use-pipeline-graph';
-import { onError } from './utils/util';
 import { Watcher } from './utils/watcher';
 
 import '@xyflow/react/dist/style.css';
@@ -102,30 +102,7 @@ export const Pipelines = ({
     () => document.visibilityState === 'visible'
   );
 
-  const { mutate: refreshWarehouseAction } = useMutation(refreshWarehouse, {
-    onError,
-    onSuccess: () => {
-      message.success('Warehouse successfully refreshed');
-      state.clear();
-      refetchFreightData();
-    }
-  });
-
-  const { mutate: promoteAction } = useMutation(promoteToStage, {
-    onError,
-    onSuccess: () => {
-      message.success(
-        `Promotion request for stage "${state.stage}" has been successfully submitted.`
-      );
-      state.clear();
-    }
-  });
-
   const [highlightedStages, setHighlightedStages] = React.useState<{ [key: string]: boolean }>({});
-  const [hideSubscriptions, setHideSubscriptions] = useLocalStorage(
-    `${name}-hideSubscriptions`,
-    false
-  );
 
   const [selectedWarehouse, setSelectedWarehouse] = React.useState('');
   // remember what user selected explicitly
@@ -207,15 +184,6 @@ export const Pipelines = ({
     warehouseData?.warehouses || []
   );
 
-  const { mutate: manualApproveAction } = useMutation(approveFreight, {
-    onError,
-    onSuccess: () => {
-      message.success(`Freight ${state.freight} has been manually approved.`);
-      refetchFreightData();
-      state.clear();
-    }
-  });
-
   const [stagesPerFreight, subscribersByStage, stagesWithFreight] = useMemo(() => {
     const stagesPerFreight: { [key: string]: Stage[] } = {};
     const subscribersByStage = {} as { [key: string]: Set<string> };
@@ -281,21 +249,6 @@ export const Pipelines = ({
   const freight = freightName && fullFreightById[freightName];
   const warehouse = warehouseName && warehouseMap[warehouseName];
 
-  const isFaded = (stage: Stage): boolean => {
-    if (!isPromoting(state)) {
-      return false;
-    }
-    if (state.action === 'promote') {
-      return state.stage !== stage?.metadata?.name;
-    }
-    if (state.action === 'promoteSubscribers') {
-      return (
-        !stage?.metadata?.name || !subscribersByStage[state.stage || '']?.has(stage.metadata.name)
-      );
-    }
-    return false;
-  };
-
   const onHover = (h: boolean, id: string, isStage?: boolean) => {
     const stages = {} as { [key: string]: boolean };
     if (!h) {
@@ -310,6 +263,25 @@ export const Pipelines = ({
       });
     }
     setHighlightedStages(stages);
+  };
+
+  const onPromoteClick = (stage: Stage, type: FreightTimelineAction) => {
+    // which warehouse to select?
+    // check if they have filter applied in freight timeline
+    // if not, then select the warehouse of latest promoted freight
+    if (selectedWarehouse === '') {
+      setSelectedWarehouse(getCurrentFreightWarehouse(stage));
+    }
+
+    if (state.stage === stage?.metadata?.name) {
+      // deselect
+      state.clear();
+
+      setSelectedWarehouse(lastExplicitlySelectedWarehouse.current);
+    } else {
+      const stageName = stage?.metadata?.name || '';
+      state.select(type, stageName, undefined);
+    }
   };
 
   return (
@@ -448,7 +420,9 @@ export const Pipelines = ({
               fullFreightById,
               subscribersByStage,
               selectedWarehouse,
-              project: project?.metadata?.name || ''
+              project: project?.metadata?.name || '',
+              onHover,
+              onPromoteClick
             }}
           >
             <ReactFlow

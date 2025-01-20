@@ -224,7 +224,7 @@ export const Nodule = (props: {
   icon?: IconDefinition;
 }) => {
   const noduleHeight = 30;
-  const top = props.nodeHeight / 2 - noduleHeight / 2;
+  const top = -15;
   return (
     <Tooltip
       title={
