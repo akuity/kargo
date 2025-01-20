@@ -235,9 +235,9 @@ metadata:
   name: my-warehouse
   namespace: kargo-demo
 spec:
-    subscriptions:
-    - git:
-        repoURL: https://github.com/example/kargo-demo.git
+  subscriptions:
+  - git:
+      repoURL: https://github.com/example/kargo-demo.git
       excludePaths:
       - docs
 ```
