@@ -80,7 +80,7 @@ export const useReactFlowPipelineGraph = (
   warehouses: Warehouse[]
 ) => {
   const calculatedNodesAndEdges = useMemo(() => {
-    if (!project || stages?.length === 0 || warehouses?.length === 0) {
+    if (!project && stages?.length === 0 && warehouses?.length === 0) {
       return {
         nodes: [],
         edges: []

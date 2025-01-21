@@ -138,6 +138,8 @@ CustomNode.WarehouseNode = (props: { warehouse: Warehouse }) => {
 
   const pipelineContext = usePipelineContext();
 
+  const navigate = useNavigate();
+
   const refeshWarehouseMutation = useMutation(refreshWarehouse, {
     onError,
     onSuccess: () => {
@@ -183,7 +185,17 @@ CustomNode.WarehouseNode = (props: { warehouse: Warehouse }) => {
   }
 
   return (
-    <div className={classNames(styles.warehouseNode)}>
+    <div
+      className={classNames(styles.warehouseNode)}
+      onClick={() =>
+        navigate(
+          generatePath(paths.warehouse, {
+            name: pipelineContext?.project,
+            warehouseName: props.warehouse?.metadata?.name
+          })
+        )
+      }
+    >
       <div className={classNames(styles.header)}>
         <h3>{warehouseName}</h3>
 
@@ -228,12 +240,14 @@ CustomNode.WarehouseNode = (props: { warehouse: Warehouse }) => {
           icon={<FontAwesomeIcon icon={faRefresh} />}
           size='small'
           className='mx-auto'
-          onClick={() =>
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
             refeshWarehouseMutation.mutate({
               name: props.warehouse?.metadata?.name,
               project: pipelineContext?.project
-            })
-          }
+            });
+          }}
         >
           Refresh
         </Button>
