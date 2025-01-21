@@ -35,6 +35,18 @@ requests.
 
 ## Examples
 
+### Common Usage
+
+The following example demonstrates a common use case for `git-open-pr`. It
+follows a `git-push` step that has pushed changes to a remote repository to
+a branch with a generated name. The `git-open-pr` step then opens a pull
+request to merge the changes from the source branch which was created by the
+`git-push` step into the `stage/${{ ctx.stage }}` branch.
+
+This is a common pattern when implementing GitOps-based promotion workflows,
+where changes are first pushed to an intermediate branch and then merged into
+a stage-specific branch through a pull request.
+
 ```yaml
 steps:
 # Clone, prepare the contents of ./out, commit, etc...
@@ -51,4 +63,52 @@ steps:
     sourceBranch: ${{ outputs.push.branch }}
     targetBranch: stage/${{ ctx.stage }}
 # Wait for the PR to be merged or closed...
+```
+
+### Custom Title and Labels
+
+The following example demonstrates how to specify a custom title and labels for
+the pull request opened by `git-open-pr`. After pushing changes to a generated
+branch, the `git-open-pr` step creates a pull request with a title that
+references the current stage (`Deploy to ${{ ctx.stage }}`) and adds two
+labels: "infra" and "needs-review".
+
+This is useful when you want to provide more context about the changes being
+proposed or need to integrate with existing PR review workflows that rely on
+specific labels for automation or filtering.
+
+```yaml
+
+steps:
+# Clone, prepare the contents of ./out, commit, etc...
+- uses: git-push
+  as: push
+  config:
+    path: ./out
+    generateTargetBranch: true
+- uses: git-open-pr
+  config:
+    repoURL: https://github.com/example/repo.git
+    sourceBranch: ${{ outputs.push.branch }}
+    targetBranch: stage/${{ ctx.stage }}
+    title: Deploy to ${{ ctx.stage }}
+    labels: ["infra", "needs-review"]
+# Wait for the PR to be merged or closed...
+```
+
+### Custom Git Provider
+
+The following example demonstrates how to specify a custom Git provider for
+`git-open-pr`. This is useful when the provider cannot be inferred from the
+`repoURL`. For example, if the repository is hosted on a self-hosted GitLab
+instance, the provider must be specified as `gitlab`.
+
+```yaml
+steps:
+# Clone, push, prepare the contents of ./out, commit, etc...
+- uses: git-open-pr
+  config:
+    repoURL: https://gitlab.example.com/example/repo.git
+    provider: gitlab
+    # Additional configuration...
 ```

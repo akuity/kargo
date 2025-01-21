@@ -25,6 +25,16 @@ preceded by a [`git-clear`](git-clear.md) step and followed by
 
 ### Rendering to a File
 
+In this example, Kustomize manifests are rendered to a single output file. After
+cloning the repository and clearing the output directory, the `kustomize-build`
+step processes the Kustomize configuration from the stage-specific directory
+(`./src/stages/${{ ctx.stage }}`) and writes all rendered manifests to a single
+file at `./out/manifests.yaml`.
+
+This approach is useful when you want to maintain all manifests in a single file
+for easier tracking or when working with tools that expect a consolidated input
+file.
+
 ```yaml
 vars:
 - name: gitRepo
@@ -50,6 +60,18 @@ steps:
 ```
 
 ### Rendering to a Directory
+
+In this example, Kustomize manifests are rendered with output split across
+multiple files in a directory. Similar to the
+[previous example](#rendering-to-a-file), it clones the repository and
+clears the output directory, but instead of specifying a single output file,
+it directs the `kustomize-build` step to write to the `./out` directory. This
+means each Kubernetes resource will be written to its own file, maintaining a
+clear separation between resources.
+
+This pattern is useful when you want to maintain distinct files for different
+resources or when working with tools that expect resources to be in separate
+files.
 
 ```yaml
 vars:

@@ -23,17 +23,29 @@ to executing `kustomize edit set image`. This step is commonly followed by a
 | `images[].fromOrigin` | `object` | N | See [specifying origins](#specifying-origins). <br/><br/>__Deprecated: Use `digest` or `tag` with an expression instead. Will be removed in v1.3.0.__ |
 | `images[].newName` | `string` | N | A substitution for the name/URL of the image being updated. This is useful when different Stages have access to different container image repositories (assuming those different repositories contain equivalent images that are tagged identically). This may be a frequent consideration for users of Amazon's Elastic Container Registry. |
 
-
 ## Output
 
 | Name | Type | Description |
 |------|------|-------------|
 | `commitMessage` | `string` | A description of the change(s) applied by this step. Typically, a subsequent [`git-commit` step](git-commit.md) will reference this output and aggregate this commit message fragment with other like it to build a comprehensive commit message that describes all changes. |
 
-
 ## Examples
 
 ### Common Usage
+
+In this example, a Kustomize overlay is updated to use a new container image
+tag. After cloning the repository and clearing the output directory, the
+`kustomize-set-image` step modifies the `kustomization.yaml` file to use the
+image tag from the Freight being promoted. The image reference is parameterized
+using variables to make the configuration more maintainable.
+
+This pattern is commonly used when you want to update the version of a container
+image that will be deployed to a specific stage.
+
+:::info
+For more information on `imageFrom` and expressions, see the
+[Expressions](../40-expressions.md#functions) documentation.
+:::
 
 ```yaml
 vars:
