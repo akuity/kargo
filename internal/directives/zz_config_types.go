@@ -436,6 +436,25 @@ type KustomizeSetImageConfigImage struct {
 	UseDigest bool `json:"useDigest,omitempty"`
 }
 
+type ParseFileConfig struct {
+	// An array of file configurations to parse.
+	Files []File `json:"files"`
+}
+
+type File struct {
+	// An array of outputs to extract from the file.
+	Outputs []FileOutput `json:"outputs"`
+	// The path to the file to be parsed.
+	Path string `json:"path"`
+}
+
+type FileOutput struct {
+	// The expression used to extract data from the file.
+	FromExpression string `json:"fromExpression"`
+	// The name of the output variable to store the result.
+	Name string `json:"name"`
+}
+
 type YAMLUpdateConfig struct {
 	// The path to a YAML file.
 	Path string `json:"path"`
