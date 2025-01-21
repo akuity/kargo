@@ -8,8 +8,12 @@ const (
 	CredentialTypeLabelValueGit   = "git"
 	CredentialTypeLabelValueHelm  = "helm"
 	CredentialTypeLabelValueImage = "image"
+	CredentialTypeLabelGeneric    = "generic"
 
 	// Project Secrets
+	// Deprecated: Use CredentialTypeLabelGeneric instead. This label should not
+	// be used and won't be documented, but for now we plan to support it
+	// indefinitely for backwards compatibility.
 	ProjectSecretLabelKey = "kargo.akuity.io/project-secret" // nolint: gosec
 
 	// Kargo core API
