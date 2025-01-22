@@ -4,7 +4,7 @@ sidebar_label: With Argo CD
 
 # Installation with Argo CD
 
-This section outlines the various advanced installation options available for deploying Kargo on a Kubernetes cluster using Argo CD.
+This section outlines a few generalized approaches to installing and managing Kargo with non-default configuration options using Argo CD.
 
 :::warning
 This section assumes that you have already installed any dependencies or prerequisites required for running Kargo on a Kubernetes cluster. Please see the [installation guide](../../40-operator-guide/10-basic-installation.md#prerequisites) for more information.
