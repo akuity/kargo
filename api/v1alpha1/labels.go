@@ -24,10 +24,6 @@ const (
 	ShardLabelKey             = "kargo.akuity.io/shard"
 	StageLabelKey             = "kargo.akuity.io/stage"
 
-	// AnalysisRunTemplate labels
-	AnalysisRunTemplateLabelKey         = "kargo.akuity.io/analysis-run-template"
-	AnalysisRunTemplateLabelValueConfig = "config"
-
 	LabelTrueValue = "true"
 
 	FinalizerName = "kargo.akuity.io/finalizer"
