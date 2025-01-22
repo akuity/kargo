@@ -24,6 +24,15 @@ according to its configuration.
 
 ## Examples
 
+### Compose a Pull Request Link
+
+In this example, a pull request link is constructed and sent to Slack. First, a
+pull request is opened using the [`git-open-pr` step](git-open-pr.md). Then, the
+`compose-output` step creates a new output named URL by combining the repository
+URL with the PR number to form a complete PR link. Finally, the
+[`http` step](http.md) uses this composed URL to send a formatted message to a
+Slack channel using Slack's API.
+
 ```yaml
 vars:
 - name: repoURL

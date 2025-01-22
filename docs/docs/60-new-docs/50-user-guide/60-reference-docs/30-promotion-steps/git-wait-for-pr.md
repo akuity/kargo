@@ -27,6 +27,18 @@ and is commonly followed by an `argocd-update` step.
 
 ## Examples
 
+### Common Usage
+
+In this example, a complete promotion flow is demonstrated where changes are
+pushed to a generated branch, a pull request is opened, and then the process
+waits for the pull request to be merged or closed. The `git-wait-for-pr` step
+references both the repository URL and the PR number (obtained from the
+`open-pr` step's output) to track the PR's status.
+
+This pattern is common when you want to ensure changes have been properly
+reviewed and merged before proceeding with subsequent steps in your promotion
+process, such as [updating Argo CD applications](argocd-update.md).
+
 ```yaml
 steps:
 # Clone, prepare the contents of ./out, commit, etc...

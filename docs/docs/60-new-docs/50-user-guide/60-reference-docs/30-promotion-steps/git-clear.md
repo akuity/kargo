@@ -20,6 +20,19 @@ configuration management tool.
 
 ## Examples
 
+### Common Usage
+
+In this example, all content in a stage-specific branch is removed before new
+content is added. After cloning the repository with a stage-specific branch
+checked out to `./out`, the `git-clear` step removes all files from this
+working directory (except the `.git` directory).
+
+This pattern is commonly used when you want to completely replace the contents
+of a branch with newly generated content, rather than updating existing files.
+This ensures there are no stale files left over from previous states of the
+branch, providing a clean slate for the new content that will be added by
+subsequent steps.
+
 ```yaml
 steps:
 - uses: git-clone
