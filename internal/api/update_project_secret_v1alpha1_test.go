@@ -32,7 +32,22 @@ func TestUpdateProjectSecret(t *testing.T) {
 			NewInternalClient: func(_ context.Context, _ *rest.Config, s *runtime.Scheme) (client.Client, error) {
 				return fake.NewClientBuilder().
 					WithScheme(s).
-					WithObjects(mustNewObject[corev1.Namespace]("testdata/namespace.yaml")).
+					WithObjects(
+						mustNewObject[corev1.Namespace]("testdata/namespace.yaml"),
+						&corev1.Secret{
+							ObjectMeta: metav1.ObjectMeta{
+								Namespace: "kargo-demo",
+								Name:      "secret",
+								Labels: map[string]string{
+									kargoapi.ProjectSecretLabelKey: kargoapi.LabelTrueValue,
+								},
+							},
+							StringData: map[string]string{
+								"TOKEN_1": "foo",
+								"TOKEN_2": "baz",
+							},
+						},
+					).
 					Build(), nil
 			},
 		},
@@ -44,24 +59,6 @@ func TestUpdateProjectSecret(t *testing.T) {
 		cfg:                       config.ServerConfig{SecretManagementEnabled: true},
 		externalValidateProjectFn: validation.ValidateProject,
 	}
-
-	err = s.client.Create(
-		ctx,
-		&corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "kargo-demo",
-				Name:      "secret",
-				Labels: map[string]string{
-					kargoapi.ProjectSecretLabelKey: kargoapi.LabelTrueValue,
-				},
-			},
-			StringData: map[string]string{
-				"TOKEN_1": "foo",
-				"TOKEN_2": "baz",
-			},
-		},
-	)
-	require.NoError(t, err)
 
 	_, err = s.UpdateProjectSecret(ctx, connect.NewRequest(&svcv1alpha1.UpdateProjectSecretRequest{
 		Project: "kargo-demo",
@@ -94,7 +91,7 @@ func TestApplyProjectSecretUpdateToK8sSecret(t *testing.T) {
 			Namespace: "kargo-demo",
 			Name:      "secret",
 			Labels: map[string]string{
-				kargoapi.ProjectSecretLabelKey: kargoapi.LabelTrueValue,
+				kargoapi.CredentialTypeLabelKey: kargoapi.CredentialTypeLabelGeneric,
 			},
 		},
 		Data: map[string][]byte{
@@ -143,5 +140,18 @@ func TestApplyProjectSecretUpdateToK8sSecret(t *testing.T) {
 			},
 		})
 		require.Equal(t, expectedSecret, secret)
+	})
+
+	t.Run("legacy project secret label gets converted", func(t *testing.T) {
+		expectedSecret := baseSecret.DeepCopy()
+		expectedSecret.Labels = map[string]string{
+			kargoapi.CredentialTypeLabelKey: kargoapi.CredentialTypeLabelGeneric,
+		}
+		secret := baseSecret.DeepCopy()
+		secret.Labels = map[string]string{
+			kargoapi.ProjectSecretLabelKey: kargoapi.LabelTrueValue,
+		}
+		applyProjectSecretUpdateToK8sSecret(secret, projectSecret{data: nil})
+		require.Equal(t, expectedSecret.Labels, secret.Labels)
 	})
 }
