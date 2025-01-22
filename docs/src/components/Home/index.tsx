@@ -99,7 +99,7 @@ export default function Home(): JSX.Element {
                   color: 'white'
                 },
                 link: {
-                  to: '/new-docs/quickstart/'
+                  to: '/quickstart/'
                 }
               },
             ]}
