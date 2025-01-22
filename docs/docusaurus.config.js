@@ -34,7 +34,7 @@ const config = {
           routeBasePath: '/', // Serve the docs at the site's roo
         },
         blog: false,
-        pages: false,
+        pages: {},
         theme: {
           customCss: require.resolve('./src/css/custom.css'),
         },
@@ -55,7 +55,8 @@ const config = {
       {
         indexBlog: false,
       },
-    ]
+    ],
+    'docusaurus-plugin-sass'
   ],
 
   themeConfig:
