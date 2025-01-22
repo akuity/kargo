@@ -38,10 +38,10 @@ requests.
 ### Common Usage
 
 The following example demonstrates a common use case for `git-open-pr`. It
-follows a `git-push` step that has pushed changes to a remote repository to
-a branch with a generated name. The `git-open-pr` step then opens a pull
-request to merge the changes from the source branch which was created by the
-`git-push` step into the `stage/${{ ctx.stage }}` branch.
+follows a [`git-push` step](git-push.md) that has pushed changes to a remote
+repository to a branch with a generated name. The `git-open-pr` step then
+opens a pull request to merge the changes from the source branch which was
+created by the `git-push` step into the `stage/${{ ctx.stage }}` branch.
 
 This is a common pattern when implementing GitOps-based promotion workflows,
 where changes are first pushed to an intermediate branch and then merged into
