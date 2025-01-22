@@ -88,9 +88,9 @@ that was updated by the `argocd-update` step as part of the `Stage` health.
 
 :::info
 It is important to note that `Stage` health is not determined solely by the
-health of the `Application` that the `Stage` is managing. The health of the
+health of the `Application`(s) that the `Stage` is managing. The health of the
 `Stage` is determined by the health of all `Application` resources that the
-`Stage` is managing, as well as any other indicators of health that are
+`Stage` is managing, _as well as_ any other indicators of health that are
 part of the `Stage`'s definition. For example, a `Stage` may be considered
 unhealthy if the latest `Promotion` to that `Stage` failed.
 :::
