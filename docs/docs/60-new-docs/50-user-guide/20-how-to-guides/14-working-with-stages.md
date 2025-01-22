@@ -219,7 +219,7 @@ promotionTemplate:
 
 :::info
 For complete documentation of all Kargo's built-in promotion steps, refer
-to the [Promotion Steps Reference](../reference-docs/promotion-steps).
+to the [Promotion Steps Reference](../60-reference-docs/30-promotion-steps/index.md).
 :::
 
 ### Verifications
