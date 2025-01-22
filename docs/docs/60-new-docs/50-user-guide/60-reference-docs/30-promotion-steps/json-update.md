@@ -28,12 +28,13 @@ description: Updates the values of specified keys in any JSON file.
 
 In this example, a JSON file's values are updated according to changes in a
 container image tag. After cloning the repository and clearing the output
-directory, the json-update step updates the `image.tag` field in
+directory, the `json-update` step updates the `image.tag` field in
 `configs/settings.json` to match the tag of the image being promoted.
 This demonstrates how to modify nested JSON values using dot notation
-(similar to how you would reference nested object properties). This pattern
-is commonly used when managing configuration files that need to stay
-synchronized with deployed container versions.
+(similar to how you would reference nested object properties).
+
+This pattern is commonly used when managing configuration files that need to
+stay synchronized with deployed container versions.
 
 :::info
 For more information on `imageFrom` and expressions, see the
