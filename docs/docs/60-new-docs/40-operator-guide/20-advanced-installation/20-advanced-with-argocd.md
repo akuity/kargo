@@ -10,9 +10,9 @@ This section outlines a few generalized approaches to installing and managing Ka
 This section assumes that you have already installed any dependencies or prerequisites required for running Kargo on a Kubernetes cluster. Please refer to [Basic Installation](../../40-operator-guide/10-basic-installation.md#prerequisites) for more details.
 :::
 
-## Argo CD Helm Application
+## Direct Chart Installation
 
-The most common way to deploy Kargo using Argo CD is to create a Helm `Application`, and use the `.spec.source.helm.parameters` section to specify any parameters you may need. This is the most straightforward way to deploy Kargo using Argo CD.
+The most common way to deploy Kargo using Argo CD is to create an `Application` and use the Helm chart directly. Using this method, you can use the `.spec.source.helm.parameters` section to specify any parameters you may need. This is the most straightforward way to deploy Kargo using Argo CD.
 
 :::info
 If using the `api.adminAccount.passwordHash` parameter, you must escape the `$` character with `$$` to prevent Helm from interpreting it as a variable. Please see [this discussion](https://discord.com/channels/1138942074998235187/1138946346217394407/1267966083168469102) for more information.
