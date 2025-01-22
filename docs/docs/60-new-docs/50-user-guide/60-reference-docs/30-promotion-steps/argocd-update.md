@@ -88,16 +88,21 @@ window. (The step's default timeout is five minutes.)_
 
 The `argocd-update` step is unique among all other built-in promotion steps in
 that, on successful completion, it will register health checks to be performed
-upon the target Stage on an ongoing basis. This health check configuration is
+upon the target `Stage` on an ongoing basis. This health check configuration is
 _opaque_ to the rest of Kargo and is understood only by health check
 functionality built into the step. This permits Kargo to factor the health and
-sync state of Argo CD `Application` resources into the overall health of a Stage
-without requiring Kargo to understand `Application` health directly.
+sync state of Argo CD `Application` resources into the overall health of a
+`Stage` without requiring Kargo to understand `Application` health directly.
 
 :::info
 Although the `argocd-update` step is the only promotion step to currently
 utilize this health check framework, we anticipate that future built-in and
 third-party promotion steps will take advantage of it as well.
+
+Because of this, the health of a `Stage` is not necessarily a simple
+reflection of the `Application` resource it manages. It can also be influenced
+by other `Application` resources that are updated by other promotion steps,
+or by a `Promotion` which failed to complete successfully.
 :::
 
 ## Examples
