@@ -10,7 +10,6 @@ sidebar_label: Managing User Permissions
 
 This page is to be broken up with portions of the content moving to:
 
-- [../security/openid-connect](../50-security/10-openid-connect.md)
 - [../security/access-controls](../50-security/20-access-controls.md)
 - [../../operator-guide/security/openid-connect](../../40-operator-guide/40-security/20-openid-connect.md)
 - [../../operator-guide/security/access-controls](../../40-operator-guide/40-security/30-access-controls.md)
