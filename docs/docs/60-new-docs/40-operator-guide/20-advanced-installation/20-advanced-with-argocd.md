@@ -86,7 +86,7 @@ spec:
     - CreateNamespace=true
 ```
 
-Here, the `parametes` seciton isn't used and instead, the `values.yaml` file is hosted in a separate repository and is referenced using the `ref` field.
+Here, the `parametes` section isn't used and instead, the `values.yaml` file is hosted in a separate repository and is referenced using the `ref` field.
 
 ## Argo CD Kustomize Application
 
