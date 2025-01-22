@@ -54,6 +54,10 @@ spec:
 
 Conversely, insetad of using the `parameters` field under the `.spec.source.helm` section; you can use the `values` block or `valuesObject` object to specify the values for the Kargo Helm chart.
 
+:::info
+The parameters used in the above `Application` are just examples, and you should use the values that are appropriate for your environment. Detailed information about available options can also be found in the [Kargo Helm Chart's README.md](https://github.com/akuity/kargo/tree/main/charts/kargo).
+:::
+
 Another method is to use `.spec.sources` and store your values files in a separate repository. This is useful if you are using GitOps to track your values configuration changes, which still use the public Helm chart repository.
 
 ```yaml
@@ -86,11 +90,15 @@ spec:
     - CreateNamespace=true
 ```
 
+:::info
+We recommend using the above approach as it more closely aligns with GitOps principles and best practices.
+:::
+
 Here, the `parametes` section isn't used and instead, the `values.yaml` file is hosted in a separate repository and is referenced using the `ref` field.
 
-## Argo CD Kustomize Application
+## Using Kustomize Overlays
 
-Another method to deploy Kargo using Argo CD is to use a Kustomize. This method is useful if you want to customize the Kargo deployment using Kustomize overlays or patching. To do this, you will need to add the Kargo Helm chart to your `kustomization.yaml` file using the `helmCharts` field.
+Another method to deploy Kargo using Argo CD is to use a Kustomize. This method is useful if you want to customize the Kargo deployment using Kustomize overlays or patching. Since Kargo's installation manifests are packaged as a Helm chart, you will need to add the Kargo Helm chart to your `kustomization.yaml` file using the `helmCharts` field.
 
 :::info
 The `valueFile` field references a `values.yaml` file in the same directory as the `kustomization.yaml` file.
