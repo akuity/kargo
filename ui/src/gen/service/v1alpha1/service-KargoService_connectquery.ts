@@ -233,26 +233,6 @@ export const deleteAnalysisTemplate = KargoService.method.deleteAnalysisTemplate
 export const getAnalysisRun = KargoService.method.getAnalysisRun;
 
 /**
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.ListAnalysisTemplateConfigMaps
- */
-export const listAnalysisTemplateConfigMaps = KargoService.method.listAnalysisTemplateConfigMaps;
-
-/**
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.GetAnalysisTemplateConfigMap
- */
-export const getAnalysisTemplateConfigMap = KargoService.method.getAnalysisTemplateConfigMap;
-
-/**
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.ListAnalysisTemplateSecrets
- */
-export const listAnalysisTemplateSecrets = KargoService.method.listAnalysisTemplateSecrets;
-
-/**
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.GetAnalysisTemplateSecret
- */
-export const getAnalysisTemplateSecret = KargoService.method.getAnalysisTemplateSecret;
-
-/**
  * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.ListProjectEvents
  */
 export const listProjectEvents = KargoService.method.listProjectEvents;

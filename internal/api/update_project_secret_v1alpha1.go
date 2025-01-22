@@ -47,7 +47,10 @@ func (s *server) UpdateProjectSecret(
 	}
 
 	// If this isn't labeled as a project secret, return not found.
-	if secret.Labels[kargoapi.ProjectSecretLabelKey] != kargoapi.LabelTrueValue {
+	// Check for either of the two possible labels (newer and legacy) that
+	// indicate the secret is a generic project secret.
+	if secret.Labels[kargoapi.CredentialTypeLabelKey] != kargoapi.CredentialTypeLabelGeneric &&
+		secret.Labels[kargoapi.ProjectSecretLabelKey] != kargoapi.LabelTrueValue {
 		return nil, connect.NewError(
 			connect.CodeNotFound,
 			fmt.Errorf(
@@ -83,6 +86,11 @@ func (s *server) UpdateProjectSecret(
 }
 
 func applyProjectSecretUpdateToK8sSecret(secret *corev1.Secret, projectSecretUpdate projectSecret) {
+	// Ensure the Secret is labeled according to newer conventions and not legacy
+	// ones.
+	secret.Labels[kargoapi.CredentialTypeLabelKey] = kargoapi.CredentialTypeLabelGeneric
+	delete(secret.Labels, kargoapi.ProjectSecretLabelKey)
+
 	if projectSecretUpdate.description != "" {
 		if secret.Annotations == nil {
 			secret.Annotations = make(map[string]string, 1)
