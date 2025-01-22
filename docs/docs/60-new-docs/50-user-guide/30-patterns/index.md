@@ -640,8 +640,8 @@ such as Argo CD. There are a few viable options by which to approach this:
 
 Being mostly unopinionated, Kargo does not pre-define any specific promotion
 processes. Instead, it provides a number of fine-grained
-[Promotion Steps](../reference-docs/promotion-steps) that can be combined to
-implement a user-defined promotion process.
+[Promotion Steps](../60-reference-docs/30-promotion-steps/index.md) that can
+be combined to implement a user-defined promotion process.
 
 This section documents a "typical" promotion process as well as a few common
 techniques.
