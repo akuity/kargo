@@ -160,4 +160,4 @@ spec:
 
 ## What's Next?
 
-Now that you have deployed Kargo using Argo CD, you can explore the various features and capabilities of Kargo. Please see the [Operator Guide](../../40-operator-guide/) or the [User Guide](../../50-user-guide/) for futher information.
+Now that you have deployed Kargo using Argo CD, you can explore the various features and capabilities of Kargo. Please see the [Operator Guide](../../operator-guide/) or the [User Guide](../../user-guide/) for futher information.
