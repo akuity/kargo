@@ -26,6 +26,23 @@ followed by a [`helm-template` step](helm-template.md).
 
 ## Examples
 
+### Common Usage
+
+In this example, a Helm values file is updated to use a new container image
+tag. After cloning the repository and clearing the output directory, the
+`yaml-update` step modifies `values.yaml` to use the image tag from the
+`Freight` being promoted. Using dot notation (`image.tag`), it updates
+the nested value in the YAML file.
+
+This pattern is commonly used when you need to update Helm values files or
+other YAML-based configuration files with new versions or settings during the
+promotion process.
+
+:::info
+For more information on `imageFrom` and expressions, see the
+[Expressions](../40-expressions.md#functions) documentation.
+:::
+
 ```yaml
 vars:
 - name: gitRepo

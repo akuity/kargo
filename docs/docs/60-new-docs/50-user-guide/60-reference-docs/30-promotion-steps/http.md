@@ -41,7 +41,7 @@ timeout has elapsed.
 ## Expressions
 
 The `successExpression`, `failureExpression`, and `outputs[].fromExpression`
-fields all support [expr-lang] expressions.
+fields all support [expr-lang][] expressions.
 
 :::note
 The expressions included in the `successExpression`, `failureExpression`, and
@@ -70,8 +70,8 @@ its configuration.
 
 ### Basic Usage
 
-This examples configuration makes a `GET` request to the
-[Cat Facts API.](https://www.catfacts.net/api/) and uses the default
+This example configuration makes a `GET` request to the
+[Cat Facts API](https://www.catfacts.net/api/) and uses the default
 success/failure criteria.
 
 ```yaml
@@ -118,11 +118,13 @@ The step would succeed and produce the following outputs:
 
 ### Polling
 
-Building on the basic example, this configuration defines explicit success and
-failure criteria. Any response meeting neither of these criteria will result in
-the step reporting a result of `Running` and being retried. Note the use of
-[retry](../15-promotion-templates.md#step-retries) configuration to set a timeout
-for the step.
+Building on the [basic example](#basic-usage), this configuration defines
+explicit success and failure criteria. Any response meeting neither of these
+criteria will result in the step reporting a result of `Running` and being
+retried.
+
+Note the use of [retry](../15-promotion-templates.md#step-retries) configuration
+to set a timeout for the step.
 
 ```yaml
 steps:
@@ -154,8 +156,9 @@ Our request is considered:
 
 ### Posting to Slack
 
-This examples is adapted from
-[Slack's own documentation](https://api.slack.com/tutorials/tracks/posting-messages-with-curl):
+This example is adapted from
+[Slack's own documentation](https://api.slack.com/tutorials/tracks/posting-messages-with-curl),
+showing how to post a message to a Slack channel.
 
 ```yaml
 vars:
@@ -186,3 +189,5 @@ steps:
         ]
       }) }}
 ```
+
+[expr-lang]: https://expr-lang.org/

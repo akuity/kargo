@@ -78,6 +78,11 @@ steps:
 # Render manifests to ./out, commit, push, etc...
 ```
 
+:::info
+For more information on `chartFrom` and expressions, see the
+[Expressions](../40-expressions.md#functions) documentation.
+:::
+
 ### OCI Chart Repository
 
 :::caution
@@ -181,3 +186,8 @@ steps:
       version: ${{ chartFrom(chartReg + "/some-chart").Version }}
 # Render manifests to ./out, commit, push, etc...
 ```
+
+:::info
+For more information on `chartFrom` and expressions, see the
+[Expressions](../40-expressions.md#functions) documentation.
+:::
