@@ -2,7 +2,7 @@ import React, { CSSProperties, ReactNode, useEffect } from 'react';
 
 import styles from './index.module.scss';
 import clsx from 'clsx';
-import { FaRocket, FaTruck } from 'react-icons/fa';
+import { FaRocket, FaTruck, FaTools } from 'react-icons/fa';
 import Link, { NavLinkProps } from '@docusaurus/Link';
 import { Button } from '../Button';
 
@@ -14,7 +14,7 @@ export default function Home(): JSX.Element {
       breadcrumb.style.display = 'none';
     }
 
-    document.body.style.background = 'linear-gradient(90deg,var(--generic-bg) calc(25px - 1px),transparent 1%) 50% / 25px 25px,linear-gradient(var(--generic-bg) calc(25px - 1px),transparent 1%) 50% /25px 25px,var(--generic-color)';
+    // document.body.style.background = 'linear-gradient(90deg,var(--generic-bg) calc(25px - 1px),transparent 1%) 50% / 25px 25px,linear-gradient(var(--generic-bg) calc(25px - 1px),transparent 1%) 50% /25px 25px,var(--generic-color)';
     return () => {
       document.body.style.background = '';
 
@@ -36,6 +36,22 @@ export default function Home(): JSX.Element {
             <Link to='/new-docs/user-guide/examples'>
               <Button btnType='primary' style={{marginLeft: '24px'}}>Learn By Examples</Button>
             </Link>
+            <div style={{
+              marginTop: '24px',
+              padding: '16px',
+              border: '1px solid #ffcc00',
+              backgroundColor: '#fff8e1',
+              borderRadius: '4px',
+              color: '#ff6f00'
+            }}>
+              <p>
+                <FaTools style={{ marginRight: '8px' }} />
+                <strong>We are actively re-writing and re-organizing this documentation.</strong>
+              </p>
+              <p>
+                During this transition, both the old and new, work-in-progress documentation are available.
+              </p>
+            </div>
           </div>
         </header>
         <div className='container'>

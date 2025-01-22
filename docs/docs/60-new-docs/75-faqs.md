@@ -58,7 +58,7 @@ If you like what we're doing, please give us a 🌟!
 
 These very docs are a great place to start. In particular, we recommend checking
 out the [Core Concepts](./50-user-guide/10-core-concepts/index.md) section or,
-if you're ready to get your hands dirty, our [Quickstart](./20-quickstart.md).
+if you're ready to get your hands dirty, our [Quickstart](./20-quickstart/index.md).
 
 ### _Where can I get support?_
 

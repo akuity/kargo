@@ -1,6 +1,7 @@
 ---
 description: Learn about Kargo by progressing a change through multiple stages in a local Kubernetes cluster
 sidebar_label: Quickstart
+slug: /quickstart
 ---
 
 # Kargo Quickstart
@@ -22,7 +23,7 @@ This guide presents a basic introduction to Kargo. Together, we will:
 
 :::info
 If you're looking to contribute to Kargo, you may wish to consult the
-[contributor guide](./contributor-guide) instead.
+[contributor guide](../60-contributor-guide/index.md) instead.
 :::
 
 ## Starting a Local Cluster
@@ -227,7 +228,7 @@ all three Argo CD `Application`s have not yet synced because they're not
 configured to do so automatically, and in fact, the branches referenced by their
 `targetRevision` fields do not even exist yet.
 
-![Argo-dashboard-screenshot](../../static/img/argo-dashboard.png)
+![Argo-dashboard-screenshot](img/argo-dashboard.png)
 
 ## Your First Kargo Project
 
@@ -787,7 +788,7 @@ the previous section.
       This will take you to a list of `Project`s.  It currently includes only
       the one created in the previous step.
 
-      ![Kargo-dashboard](../../static/img/kargo-projects.png)
+      ![Kargo-dashboard](img/kargo-projects.png)
 
    1. Select <Hlt>kargo-demo</Hlt>:
 
@@ -801,13 +802,13 @@ the previous section.
         * Three `Stage`s representing distinct instances of our demo
           application.
 
-        ![Kargo-dashboard-screenshot](../../static/img/kargo-dashboard-projects.png)
+        ![Kargo-dashboard-screenshot](img/kargo-dashboard-projects.png)
 
       * An interactive <Hlt>Freight Timeline</Hlt> with `Freight` ordered
         chronologically, with newer `Freight` to the left and older `Freight` to
         the right.
 
-        ![Kargo-Freight-Timeline](../../static/img/kargo-frieght-timeline.png)
+        ![Kargo-Freight-Timeline](img/kargo-frieght-timeline.png)
 
 1. After a few seconds, a piece of `Freight` should appear in the <Hlt>Freight
    Timeline</Hlt>, if it isn't there already.
@@ -838,17 +839,17 @@ the previous section.
 1. To promote `Freight` to the `test` `Stage`, select the target icon on the
    left border of <Hlt>test</Hlt>:
 
-    ![Kargo-Promote](../../static/img/kargo-promote-option.png)
+    ![Kargo-Promote](img/kargo-promote-option.png)
 
     Next, select the `Freight` from the <Hlt>Freight Timeline</Hlt> and confirm
     the promotion by selecting <Hlt>Yes</Hlt>:
 
-    ![Kargo-Promote](../../static/img/kargo-promote-option-2.png)
+    ![Kargo-Promote](img/kargo-promote-option-2.png)
 
     When promotion process is complete, you'll see a check mark next to
     <Hlt>test</Hlt>, indicating that the promotion was successful.
 
-    ![Kargo-dashboard-screenshot](../../static/img/kargo-dashboard-promotion.png)
+    ![Kargo-dashboard-screenshot](img/kargo-dashboard-promotion.png)
 
     Following the promotion, health checks will run periodically. When a `Stage`
     is in a healthy state, this will be reflected with a heart icon. You can
@@ -868,7 +869,7 @@ the previous section.
    `test`, which designates it as eligible for promotion to the next `Stage` --
    in our case, `uat`.
 
-   ![Kargo-Freight-Verified](../../static/img/kargo-freight-verified.png)
+   ![Kargo-Freight-Verified](img/kargo-freight-verified.png)
 
     :::note
     Although this example does not demonstrate it, it is also possible to verify
