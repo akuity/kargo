@@ -42,6 +42,11 @@ Freight being promoted as well as a Stage-specific branch. Subsequent steps are
 likely to perform actions that revise the contents of the Stage-specific branch
 using the commit from the Freight as input.
 
+:::info
+For more information on `commitFrom` and expressions, see the
+[Expressions](../40-expressions.md#functions) documentation.
+:::
+
 ```yaml
 vars:
 - name: gitRepo
@@ -67,7 +72,12 @@ Warehouses, where one provides Kustomize "base" configuration, while the other
 provides a Stage-specific Kustomize overlay. Rendering the manifests intended
 for such a Stage will require combining the base and overlay configurations
 with the help of a [`copy`](copy.md) step. For this case, a `git-clone` step
-may be configured similarly to the following:
+may be configured similarly to the following.
+
+:::info
+For more information on `commitFrom` and expressions, see the
+[Expressions](../40-expressions.md#functions) documentation.
+:::
 
 ```yaml
 vars:

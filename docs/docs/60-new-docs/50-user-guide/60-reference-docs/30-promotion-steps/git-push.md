@@ -33,7 +33,7 @@ Stages that write to the same branch do not write to the same files.
 | `path` | `string` | Y | Path to a Git working tree containing committed changes. |
 | `targetBranch` | `string` | N | The branch to push to in the remote repository. Mutually exclusive with `generateTargetBranch=true`. If neither of these is provided, the target branch will be the same as the branch currently checked out in the working tree. |
 | `maxAttempts` | `int32` | N | The maximum number of attempts to make when pushing to the remote repository. Default is 50. |
-| `generateTargetBranch` | `boolean` | N | Whether to push to a remote branch named like `kargo/<project>/<stage>/promotion`. If such a branch does not already exist, it will be created. A value of 'true' is mutually exclusive with `targetBranch`. If neither of these is provided, the target branch will be the currently checked out branch. This option is useful when a subsequent promotion step will open a pull request against a Stage-specific branch. In such a case, the generated target branch pushed to by the `git-push` step can later be utilized as the source branch of the pull request. |
+| `generateTargetBranch` | `boolean` | N | Whether to push to a remote branch named like `kargo/promotion/<promotionName>`. If such a branch does not already exist, it will be created. A value of 'true' is mutually exclusive with `targetBranch`. If neither of these is provided, the target branch will be the currently checked out branch. This option is useful when a subsequent promotion step will open a pull request against a Stage-specific branch. In such a case, the generated target branch pushed to by the `git-push` step can later be utilized as the source branch of the pull request. |
 
 ## Output
 
@@ -45,6 +45,14 @@ Stages that write to the same branch do not write to the same files.
 ## Examples
 
 ### Common Usage
+
+In this example, changes prepared in a working directory are committed and
+pushed to the same branch that was checked out. The `git-push` step takes the
+path to the working directory containing the committed changes and pushes them
+to the remote repository.
+
+This is the most basic and common pattern for updating a branch with new changes
+during a promotion process.
 
 ```yaml
 steps:
@@ -59,6 +67,16 @@ steps:
 ```
 
 ### For Use With a Pull Request
+
+In this example, changes are pushed to a generated branch name that follows
+the pattern `kargo/promotion/<promotionName>`. By setting
+`generateTargetBranch: true`, the step creates a unique branch name that can
+be referenced by subsequent steps. 
+
+This is commonly used as part of a pull request workflow, where changes are
+first pushed to an intermediate branch before being proposed as a pull request.
+The step's output includes the generated branch name, which can then be used by
+a subsequent [`git-open-pr` step](git-open-pr.md).
 
 ```yaml
 steps:

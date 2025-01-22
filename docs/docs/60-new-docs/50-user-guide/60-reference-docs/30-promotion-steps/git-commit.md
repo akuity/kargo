@@ -28,6 +28,12 @@ desired state and is commonly followed by a [`git-push` step](git-push.md).
 
 ## Examples
 
+### Common Usage
+
+In this example, the working tree is prepared by previous steps and then committed
+with a message from the [`kustomize-set-image` step](kustomize-set-image.md) that
+updated the `kustomization.yaml` file, summarizing the changes made.
+
 ```yaml
 vars:
 - name: gitRepo
@@ -57,7 +63,49 @@ steps:
 - uses: git-commit
   config:
     path: ./out
-    messageFromSteps:
-    - update-image
+    message: ${{ outputs.update-image.commitMessage }}
 # Push, etc...
+```
+
+### Composed Commit Message
+
+The `message` field can be used to compose a commit message and enrich it with
+contextual information. In this example, the commit message is prefixed with the
+current stage using the
+[pre-defined `ctx.stage` variable](../40-expressions.md#pre-defined-variables).
+
+:::tip
+The `message` field supports multi-line strings. Use `|` to indicate a block
+scalar and preserve newlines.
+
+This allows for multi-line commits, which can be useful for providing detailed
+commit messages when several changes are being committed together.
+:::
+
+```yaml
+steps:
+# Update Kustomize manifests, etc...
+- uses: git-commit
+  config:
+    path: ./out
+    message: |
+      ${{ ctx.stage }}: ${{ outputs.update-image.commitMessage }}
+```
+
+### Commit with Custom Author
+
+The `author` field can be used to specify the committer's name and email address
+for the commit. This can be useful when the committer's identity should be
+different from Kargo's default identity.
+
+```yaml
+steps:
+# Update Kustomize manifests, etc...
+- uses: git-commit
+  config:
+    path: ./out
+    message: ${{ outputs.update-image.commitMessage }}
+    author:
+      name: Kargo
+      email: kargo@example.com
 ```

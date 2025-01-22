@@ -17,6 +17,8 @@ location to another.
 
 ## Examples
 
+### Common Usage
+
 The most common (though still advanced) usage of this step is to combine content
 from two working trees to use as input to a subsequent step, such as one that
 renders Stage-specific manifests.

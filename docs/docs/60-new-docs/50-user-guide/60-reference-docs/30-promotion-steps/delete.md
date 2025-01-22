@@ -7,6 +7,11 @@ description: Deletes a file or directory.
 
 `delete` deletes a file or directory.
 
+:::note
+If you need to delete the entire contents of a Git working tree, consider using
+the [`git-clear` step](git-clear.md) instead.
+:::
+
 ## Configuration
 
 | Name      | Type | Required | Description                              |
@@ -15,8 +20,12 @@ description: Deletes a file or directory.
 
 ## Examples
 
+### Common Usage
+
 One common usage of this step is to remove intermediate files produced by the
-promotion process prior to a `git-commit` step:
+promotion process prior to a [`git-commit` step](git-commit.md). This is useful
+when you want to ensure that only the final, desired files are committed to the
+repository.
 
 ```yaml
 vars:
