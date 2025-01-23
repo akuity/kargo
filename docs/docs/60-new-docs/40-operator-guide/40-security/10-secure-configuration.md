@@ -4,7 +4,7 @@ sidebar_label: Secure Configuration
 
 # Secure Configuration
 
-This purpose of this document is to direct operators' attention to specific
+The purpose of this document is to direct operators' attention to specific
 security considerations that should be taken into account at installation time,
 as well as calling out the specific configuration options that address them.
 
