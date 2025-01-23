@@ -32,8 +32,27 @@ func TestDeleteProjectSecret(t *testing.T) {
 			NewInternalClient: func(_ context.Context, _ *rest.Config, s *runtime.Scheme) (client.Client, error) {
 				return fake.NewClientBuilder().
 					WithScheme(s).
-					WithObjects(mustNewObject[corev1.Namespace]("testdata/namespace.yaml")).
-					Build(), nil
+					WithObjects(
+						mustNewObject[corev1.Namespace]("testdata/namespace.yaml"),
+						&corev1.Secret{
+							ObjectMeta: metav1.ObjectMeta{
+								Namespace: "kargo-demo",
+								Name:      "secret-a",
+								Labels: map[string]string{
+									kargoapi.CredentialTypeLabelKey: kargoapi.CredentialTypeLabelGeneric,
+								},
+							},
+						},
+						&corev1.Secret{
+							ObjectMeta: metav1.ObjectMeta{
+								Namespace: "kargo-demo",
+								Name:      "secret-b",
+								Labels: map[string]string{
+									kargoapi.ProjectSecretLabelKey: kargoapi.LabelTrueValue, // Legacy label
+								},
+							},
+						},
+					).Build(), nil
 			},
 		},
 	)
@@ -45,27 +64,34 @@ func TestDeleteProjectSecret(t *testing.T) {
 		externalValidateProjectFn: validation.ValidateProject,
 	}
 
-	err = s.client.Create(
-		ctx,
-		&corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "kargo-demo",
-				Name:      "secret",
-				Labels: map[string]string{
-					kargoapi.ProjectSecretLabelKey: kargoapi.LabelTrueValue,
-				},
-			},
-		},
-	)
-	require.NoError(t, err)
-
-	secret := corev1.Secret{}
 	_, err = s.DeleteProjectSecret(
 		ctx,
 		connect.NewRequest(
 			&svcv1alpha1.DeleteProjectSecretRequest{
 				Project: "kargo-demo",
-				Name:    "secret",
+				Name:    "secret-a",
+			},
+		),
+	)
+	require.NoError(t, err)
+
+	secret := corev1.Secret{}
+	err = s.client.Get(
+		ctx,
+		types.NamespacedName{
+			Namespace: "kargo-demo",
+			Name:      "secret-a",
+		},
+		&secret,
+	)
+	require.Error(t, err)
+
+	_, err = s.DeleteProjectSecret(
+		ctx,
+		connect.NewRequest(
+			&svcv1alpha1.DeleteProjectSecretRequest{
+				Project: "kargo-demo",
+				Name:    "secret-b", // Has the legacy label
 			},
 		),
 	)
@@ -75,9 +101,10 @@ func TestDeleteProjectSecret(t *testing.T) {
 		ctx,
 		types.NamespacedName{
 			Namespace: "kargo-demo",
-			Name:      "secret",
+			Name:      "secret-b",
 		},
 		&secret,
 	)
 	require.Error(t, err)
+
 }
