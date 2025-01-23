@@ -255,7 +255,7 @@ func (o *controllerOptions) setupArgoCDManager(ctx context.Context) (manager.Man
 	// Application resources in a single namespace, so we will use that
 	// namespace when attempting to determine if Argo CD CRDs are installed.
 	var exists bool
-	if exists, err = argoCDExists(ctx, restCfg, argocdNamespace); !exists {
+	if exists, err = argoCDExists(ctx, restCfg, argocdNamespace); !exists || err != nil {
 		// If we are unable to determine if Argo CD is installed, we will
 		// return an error and fail to start the controller. Note this
 		// will only happen if we get an inconclusive response from the API

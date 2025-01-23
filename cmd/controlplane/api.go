@@ -83,7 +83,7 @@ func (o *apiOptions) run(ctx context.Context) error {
 
 	if serverCfg.RolloutsIntegrationEnabled {
 		var exists bool
-		if exists, err = argoRolloutsExists(ctx, restCfg); !exists {
+		if exists, err = argoRolloutsExists(ctx, restCfg); !exists || err != nil {
 			// If we are unable to determine if Argo Rollouts is installed, we
 			// will return an error and fail to start the server. Note this
 			// will only happen if we get an inconclusive response from the API
