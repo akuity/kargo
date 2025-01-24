@@ -3,15 +3,11 @@ sidebar_label: Roadmap
 Description: See what's on the roadmap of Kargo and find out more about the latest releases
 ---
 
-:::warning
-Kent will refresh this by the end of the week.
-:::
-
 # Kargo Roadmap
 
 Over a series of releases, Kargo's maintainers have settled into a cadence of a
-minor release roughly every five weeks, with two or three major features
-completed per release.
+minor release roughly every six weeks, with two or three major features
+completed per release, although this varies slightly by scope.
 
 :::caution
 This roadmap tracks only _major_ features and is subject to change at any time,
@@ -21,41 +17,40 @@ Project](https://github.com/akuity/kargo/milestones)
 
 ## In Progress
 
-### v1.1.0
+### v1.3.0
 
-__Expected:__ 22 November 2024
+__Expected:__ TBD
 
-This release will focus on improving the flexibility of the promotion steps
-introduced in v0.9.0 through the addition of support for an expression language.
-
-This release also kicks off a three phase plan with the end goal of enabling
-custom/third-party promotion steps.
+v1.3.0 will focus on isolating user-defined promotion processes (or possibly
+individual steps thereof) in their own ephemeral execution environments. This
+is intended to pave the way for eventual support for custom/third-party
+promotion steps.
 
 ## Upcoming
 
-### v1.2.0
-
-This release is to be the second phase of three advancing Kargo toward support
-for custom/third-party promotion steps, with a focus on ensuring a secure and
-isolated execution environment for those steps.
-
-### v1.3.0
-
-The third and final phase of the three advancing Kargo toward support for
-custom/third-party promotion steps will focus on:
-
-* Establishing a formal specification for developers wishing to implement their
-  own promotion steps.
-
-* Building the mechanisms whereby operators may install and users may leverage
-  versioned, custom/third-party promotion steps.
-
 ### v1.4.0 and Beyond
 
-* Packaging common workflows as pre-defined, composite promotion steps.
-* TBD
+__Expected:__ TBD
+
+v1.4.0 will leverage the improved isolation of user-defined promotion processes
+to begin supporting custom/third-party promotion steps. This work will include
+establishing a formal specification for developers wishing to implement their
+own promotion steps, as well as building the mechanisms whereby operators may
+install and users may leverage such promotion steps.
 
 ## Completed
+
+### v1.2.0
+
+This release focused on three large features: The ability to define reusable
+sequences of promotion steps via `PromotionTask` or `ClusterPromotionTask`
+resources, "soak times" (time criteria for a Promotion), and management of
+generic Project `Secret`s.
+
+### v1.1.0
+
+This release dramatically improved the flexibility of the promotion steps
+introduced in v0.9.0 through the addition of support for an expression language.
 
 ### v1.0.0
 
