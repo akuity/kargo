@@ -46,6 +46,169 @@ For a full list of supported configurations, refer to the
 or the component-specific parameters in the chart documentation.
 :::
 
+## API Configuration
+
+Kargo supports a number of API-related configurations that can be set at
+installation time. These configurations are used to control the behavior of
+Kargo's API server and its web-based user interface.
+
+:::info
+The sections below outline common configurations for the API server. For a full
+list of supported configurations, refer to the
+[API Parameters](](https://github.com/akuity/kargo/blob/main/charts/kargo/README.md#api).
+
+### API Host
+
+By default, the API server host (i.e. the domain or IP address that the API is
+accessible at) is set to `localhost`. This host is used for generation of
+Ingress resources, certificates, the OpenID Connect issuer and callback URLs,
+and any URLs that are exposed to users.
+
+To configure the API host, set the following configuration:
+
+```yaml
+api:
+  host: kargo.example.com
+```
+
+:::note
+The host is allowed to include a port number, e.g. `kargo.example.com:8080`,
+but should not include a protocol (e.g. `http://` or `https://`) as this is
+automatically inferred from other configuration options.
+:::
+
+### API Service
+
+By default, Kargo will create a `Service` resource for the API server with the
+type `ClusterIP`, which is only accessible within the cluster or through
+[port forwarding](https://kubernetes.io/docs/tasks/access-application-cluster/port-forward-access-application-cluster/).
+
+:::caution
+Changing the API server service type can expose the API server to the internet
+in an insecure manner. Refer to the
+[Secure Configuration](../40-security/10-secure-configuration.md) section for
+more information on securing the API server.
+:::
+
+:::info
+Instead of making use of a `Service` resource, you can also expose the API
+server using an [Ingress resource](#api-ingress).
+:::
+
+If you want to expose the API server to the internet, but do not want to make
+use of an [Ingress resource](#api-ingress), you can change the service type:
+
+```yaml
+api:
+  service:
+    type: LoadBalancer
+```
+
+In addition, when using a `LoadBalancer` or `NodePort` service type, you can
+configure the service to use a specific port:
+
+```yaml
+api:
+  service:
+    type: LoadBalancer
+    port: 443
+```
+
+### API TLS
+
+By default, Kargo will enable TLS directly on the API server using a
+self-signed certificate issued by [cert-manager](https://cert-manager.io/).
+
+:::note
+When making use of the self-signed certificate option, cert-manager must be
+installed in the cluster.
+:::
+
+To supply your own certificate, set the following configuration:
+
+```yaml
+api:
+  tls:
+    selfSignedCert: false
+```
+
+When setting `selfSignedCert` to `false`, a
+[TLS `Secret`](https://kubernetes.io/docs/concepts/configuration/secret/#tls-secrets)
+with the name `kargo-api-cert` is expected to exist in the same namespace as
+the API server.
+
+#### Terminating TLS
+
+In certain cases, you may want to disable TLS on the API server because it is
+terminated at the [`Ingress`](#api-ingress) level. To do this, set the following
+configuration:
+
+```yaml
+api:
+  tls:
+    enabled: false
+    terminatedUpstream: true
+```
+
+:::info
+When setting `terminatedUpstream` to `true`, the API server will continue to
+generate URLs with the `https` scheme, but will not enforce TLS.
+:::
+
+### API Ingress
+
+:::info
+Instead of making use of an `Ingress` resource, you can also expose the API
+server using a `LoadBalancer` or `NodePort` service type. Refer to the
+[API Service](#api-service) section for more information.
+:::
+
+By default, Kargo will not create an `Ingress` resource for the API server
+and will only be accessible within the cluster or through the API server's
+[`Service` resource](#api-service). To expose the API server to the internet,
+an `Ingress` resource can be created.
+
+:::caution
+Enabling the API server Ingress without proper configuration can expose the API
+server to the internet in an insecure manner. Refer to the
+[Secure Configuration](../40-security/10-secure-configuration.md) section for
+more information on securing the API server.
+:::
+
+To configure the API server to use an `Ingress` resource, set the following
+configuration:
+
+```yaml
+api:
+  ingress:
+    enabled: true
+    ingressClassName: nginx
+```
+
+#### Ingress TLS
+
+By default, Kargo will enable TLS on the `Ingress` resource using a self-signed
+certificate using [cert-manager](https://cert-manager.io). 
+
+:::note
+When making use of the self-signed certificate option, cert-manager must be
+installed in the cluster.
+:::
+
+To supply your own certificate, set the following configuration:
+
+```yaml
+api:
+  ingress:
+    tls:
+      selfSignedCert: false
+```
+
+When setting `selfSignedCert` to `false`, the `Ingress` resource expects a
+[TLS `Secret`](https://kubernetes.io/docs/concepts/services-networking/ingress/#tls)
+with the name `kargo-api-ingress-cert` to exist in the same namespace as the
+API server.
+
 ## Git Configuration
 
 Kargo supports a number of Git-related configurations that can be set at
@@ -133,6 +296,19 @@ controller:
   argocd:
     namespace: argocd
 ```
+
+In certain cases, you may not want Kargo to be able to look up Argo CD resources
+in other namespaces than the configured default. This can be enforced by setting
+the following configuration:
+
+```yaml
+controller:
+  argocd:
+    watchArgocdNamespaceOnly: true
+```
+
+When enabled, the controller will only watch for `Application` resources in the
+namespace specified by `controller.argocd.namespace`.
 
 ## Argo Rollouts Configuration
 
