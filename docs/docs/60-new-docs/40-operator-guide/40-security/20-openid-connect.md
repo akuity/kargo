@@ -60,7 +60,7 @@ so.
 
 The callback URLs you will need to register are:
 
-- `https://<hostname for api server>/auth/callback` (for the UI)
+- `https://<hostname for api server>/login` (for the UI)
 - `https://localhost/auth/callback` (for the CLI)
 
 :::info
