@@ -141,11 +141,14 @@ the API server.
 
 #### Terminating TLS
 
-In some cases, TLS may be terminated upstream of the API server by various
-components like reverse proxies, load balancers, or `Ingress` controllers using
-wildcard certificates.
+If you have opted out of all the chart's built-in TLS options, but TLS is
+terminated upstream from the API server by a component such as a reverse proxy,
+load balancer, or `Ingress` controller using a wildcard certificate, Kargo will be
+unable to infer from its own configuration that any generated URLs should use
+HTTPS.
 
-For these cases, the API server can be configured to not enforce TLS:
+For such cases, you can explicitly declare that TLS is terminated upstream and
+Kargo will sort out the rest:
 
 ```yaml
 api:
@@ -155,13 +158,8 @@ api:
 ```
 
 :::info
-When setting `terminatedUpstream` to `true`, the API server will generate URLs
-with the `https` scheme but will not enforce TLS. This option serves as an
-escape hatch for scenarios where HTTPS should be used for links, but Kargo
-cannot infer this from its own configuration.
-
-When you are using the [built-in `Ingress` resource](#api-ingress), this
-configuration is typically not required.
+If you exercise any of the chart's built-in TLS configuration options,
+setting `terminatedUpstream` is never required.
 :::
 
 ### API Ingress
