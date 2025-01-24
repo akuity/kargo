@@ -161,7 +161,7 @@ kind: Kustomization
 			},
 			cfg: KustomizeSetImageConfig{
 				Path: ".",
-				Images: []KustomizeSetImageConfigImage{
+				Images: []Image{
 					{Image: "nginx", Tag: "1.21.0"},
 				},
 			},
@@ -259,7 +259,7 @@ kind: Kustomization
 			},
 			cfg: KustomizeSetImageConfig{
 				Path: ".",
-				Images: []KustomizeSetImageConfigImage{
+				Images: []Image{
 					{Image: "nginx"},
 				},
 			},
@@ -297,12 +297,12 @@ kind: Kustomization
 func Test_kustomizeImageSetter_buildTargetImages(t *testing.T) {
 	tests := []struct {
 		name       string
-		images     []KustomizeSetImageConfigImage
+		images     []Image
 		assertions func(*testing.T, map[string]kustypes.Image)
 	}{
 		{
 			name: "digest or tag specified",
-			images: []KustomizeSetImageConfigImage{
+			images: []Image{
 				{
 					Image: "nginx",
 					Tag:   "fake-tag",
