@@ -43,7 +43,7 @@ controller:
 :::note
 For a full list of supported configurations, refer to the
 [Global Parameters](https://github.com/akuity/kargo/blob/main/charts/kargo/README.md#global-parameters)
-or the component-specific parameters in the chart documentation.
+or the component-specific parameter sections in the chart documentation.
 :::
 
 ## API Configuration
@@ -55,13 +55,15 @@ Kargo's API server and its web-based user interface.
 :::info
 The sections below outline common configurations for the API server. For a full
 list of supported configurations, refer to the
-[API Parameters](](https://github.com/akuity/kargo/blob/main/charts/kargo/README.md#api).
+[API Parameters](https://github.com/akuity/kargo/blob/main/charts/kargo/README.md#api).
+section in the chart documentation.
+:::
 
 ### API Host
 
 By default, the API server host (i.e. the domain or IP address that the API is
 accessible at) is set to `localhost`. This host is used for generation of
-Ingress resources, certificates, the OpenID Connect issuer and callback URLs,
+`Ingress` resources, certificates, the OpenID Connect issuer and callback URLs,
 and any URLs that are exposed to users.
 
 To configure the API host, set the following configuration:
@@ -92,11 +94,11 @@ more information on securing the API server.
 
 :::info
 Instead of making use of a `Service` resource, you can also expose the API
-server using an [Ingress resource](#api-ingress).
+server using an [`Ingress` resource](#api-ingress).
 :::
 
 If you want to expose the API server to the internet, but do not want to make
-use of an [Ingress resource](#api-ingress), you can change the service type:
+use of an `Ingress` resource, you can change the service type:
 
 ```yaml
 api:
