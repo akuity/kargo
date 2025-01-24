@@ -119,7 +119,7 @@ func (k *kustomizeImageSetter) runPromotionStep(
 }
 
 func (k *kustomizeImageSetter) buildTargetImagesFromConfig(
-	images []KustomizeSetImageConfigImage,
+	images []Image,
 ) map[string]kustypes.Image {
 	targetImages := make(map[string]kustypes.Image, len(images))
 	for _, img := range images {

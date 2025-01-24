@@ -264,24 +264,6 @@ type Origin struct {
 	Name string `json:"name"`
 }
 
-type HelmUpdateImageConfig struct {
-	// A list of images which should receive updates.
-	Images []HelmUpdateImageConfigImage `json:"images"`
-	// The path at which the Helm values file can be found.
-	Path string `json:"path"`
-}
-
-type HelmUpdateImageConfigImage struct {
-	FromOrigin *Origin `json:"fromOrigin,omitempty"`
-	// The container image (without tag) at which the update is targeted.
-	Image string `json:"image"`
-	// The key in the Helm values file of which the value needs to be updated. For nested
-	// values, it takes a YAML dot notation path.
-	Key string `json:"key"`
-	// Specifies the new value for the specified key in the Helm values file.
-	Value string `json:"value"`
-}
-
 type HTTPConfig struct {
 	// The body of the HTTP request.
 	Body string `json:"body,omitempty"`
@@ -371,12 +353,12 @@ type KustomizeSetImageConfig struct {
 	// left unspecified, all images from the Freight collection will be set in the Kustomization
 	// file. Unless there is an ambiguous image name (for example, due to two Warehouses
 	// subscribing to the same repository), which requires manual configuration.
-	Images []KustomizeSetImageConfigImage `json:"images"`
+	Images []Image `json:"images"`
 	// Path to the directory containing the Kustomization file.
 	Path string `json:"path"`
 }
 
-type KustomizeSetImageConfigImage struct {
+type Image struct {
 	// Digest of the image to set in the Kustomization file. Mutually exclusive with 'tag'.
 	Digest string `json:"digest,omitempty"`
 	// Image name of the repository from which to pick the version. This is the image name Kargo
