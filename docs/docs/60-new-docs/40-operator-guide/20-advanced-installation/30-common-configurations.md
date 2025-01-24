@@ -141,9 +141,11 @@ the API server.
 
 #### Terminating TLS
 
-In certain cases, you may want to disable TLS on the API server because it is
-terminated at the [`Ingress`](#api-ingress) level. To do this, set the following
-configuration:
+In some cases, TLS may be terminated upstream of the API server by various
+components like reverse proxies, load balancers, or `Ingress` controllers using
+wildcard certificates.
+
+For these cases, the API server can be configured to not enforce TLS:
 
 ```yaml
 api:
@@ -153,8 +155,13 @@ api:
 ```
 
 :::info
-When setting `terminatedUpstream` to `true`, the API server will continue to
-generate URLs with the `https` scheme, but will not enforce TLS.
+When setting `terminatedUpstream` to `true`, the API server will generate URLs
+with the `https` scheme but will not enforce TLS. This option serves as an
+escape hatch for scenarios where HTTPS should be used for links, but Kargo
+cannot infer this from its own configuration.
+
+When you are using the [built-in `Ingress` resource](#api-ingress), this
+configuration is typically not required.
 :::
 
 ### API Ingress
@@ -279,9 +286,15 @@ controller:
     integrationEnabled: false
 ```
 
-When not enabled, the controller will not watch Argo CD `Application` resources
-and disable Argo CD specific features. Explicitly disabling is preferred if this
-integration is not desired, as it will grant fewer permissions to the controller.
+When disabled, the controller will not watch Argo CD `Application` resources
+and disable Argo CD specific features.
+
+:::info
+If the integration is enabled without Argo CD installed, the controller will
+disable the Argo CD specific features on boot. Explicitly disabling is preferred
+if this integration is not desired, as it will grant fewer permissions to the
+controller.
+:::
 
 ### Argo CD Namespace
 
@@ -328,18 +341,24 @@ controller:
     integrationEnabled: false
 ```
 
-When not enabled, the controller will not reconcile Argo Rollouts `AnalysisRun`
-resources and attempts to verify Stages via `Analysis` will fail. Explicitly
-disabling is preferred if this integration is not desired, as it will grant
-fewer permissions to the controller.
+When disabled, the controller will not reconcile Argo Rollouts `AnalysisRun`
+resources and attempts to verify Stages via `Analysis` will fail.
+
+:::info
+If the integration is enabled without Argo Rollouts installed, the controller
+will disable the Argo Rollouts specific features on boot. Explicitly disabling
+is preferred if this integration is not desired, as it will grant fewer
+permissions to the controller.
+:::
 
 ## Resource Management
 
 ### Tuning Concurrent Reconciliation Limits
 
-By default, Kargo will reconcile up to 4 resources of the same kind concurrently
-(e.g. 4 `Stage` resources at a time). It is possible to tune this limit by
-setting a new global value, or by setting a limit per resource kind:
+By default, Kargo will reconcile up to four resources of the same kind
+concurrently (e.g. four `Stage` resources at a time). It is possible to tune
+this limit by setting a new global value, or by setting a limit per resource
+kind:
 
 ```yaml
 controller:
