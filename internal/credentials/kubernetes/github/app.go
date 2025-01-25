@@ -4,9 +4,9 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/base64"
-	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/jferrl/go-githubauth"
@@ -137,16 +137,9 @@ func (a *appCredentialHelper) getAccessToken(
 	installationID int64,
 	encodedPrivateKey string,
 ) (string, error) {
-	decodedKey, err := base64.StdEncoding.DecodeString(encodedPrivateKey)
+	decodedKey, err := decodeKey(encodedPrivateKey)
 	if err != nil {
-		if corruptInputErr := new(base64.CorruptInputError); !errors.As(err, &corruptInputErr) {
-			return "", fmt.Errorf("error decoding private key: %w", err)
-		}
-
-		// If the key is not base64 encoded, it may be a raw key. Try using it
-		// as-is. We do this because initially, we required the PEM-encoded key
-		// to be base64 encoded (for reasons unknown today).
-		decodedKey = []byte(encodedPrivateKey)
+		return "", err
 	}
 	appTokenSource, err := githubauth.NewApplicationTokenSource(appID, decodedKey)
 	if err != nil {
@@ -158,4 +151,21 @@ func (a *appCredentialHelper) getAccessToken(
 		return "", fmt.Errorf("error getting installation access token: %w", err)
 	}
 	return token.AccessToken, nil
+}
+
+// decodeKey checks if the key passed to it begins with the standard PEM header.
+// If it does, it returns the key as-is. If it does not, it guesses that the key
+// is base64 encoded and attempts to decode it. This function is necessary
+// because we initially required the PEM-encoded key to be base64 encoded (for
+// reasons unknown today) and then we later dropped that requirement.
+func decodeKey(key string) ([]byte, error) {
+	if strings.HasPrefix(key, "-----BEGIN") {
+		// Was not base64 encoded
+		return []byte(key), nil
+	}
+	decodedKey, err := base64.StdEncoding.DecodeString(key)
+	if err != nil {
+		return nil, fmt.Errorf("error decoding private key: %w", err)
+	}
+	return decodedKey, nil
 }
