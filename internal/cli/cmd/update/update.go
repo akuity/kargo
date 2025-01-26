@@ -6,7 +6,6 @@ import (
 
 	"github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/option"
-	"github.com/akuity/kargo/internal/cli/templates"
 )
 
 func NewCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams) *cobra.Command {
