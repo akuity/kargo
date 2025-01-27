@@ -113,32 +113,20 @@ type GitCloneConfig struct {
 }
 
 type Checkout struct {
-	// The branch to checkout. Mutually exclusive with 'commit', 'tag', and 'fromFreight=true'.
-	// If none of these are specified, the default branch is checked out.
+	// The branch to checkout. Mutually exclusive with 'commit' and 'tag'. If none of these are
+	// specified, the default branch is checked out.
 	Branch string `json:"branch,omitempty"`
-	// The commit to checkout. Mutually exclusive with 'branch', 'tag', and 'fromFreight=true'.
-	// If none of these are specified, the default branch is checked out.
+	// The commit to checkout. Mutually exclusive with 'branch' and 'tag''. If none of these are
+	// specified, the default branch is checked out.
 	Commit string `json:"commit,omitempty"`
 	// Indicates whether a new, empty orphan branch should be created if the branch does not
 	// already exist. Default is false.
 	Create bool `json:"create,omitempty"`
-	// Indicates whether the ID of a commit to check out may be obtained from Freight. A value
-	// of 'true' is mutually exclusive with 'branch', 'commit', and 'tag'. If none of these are
-	// specified, the default branch is checked out.
-	FromFreight bool                `json:"fromFreight,omitempty"`
-	FromOrigin  *CheckoutFromOrigin `json:"fromOrigin,omitempty"`
 	// The path where the repository should be checked out.
 	Path string `json:"path"`
-	// The tag to checkout. Mutually exclusive with 'branch', 'commit', and 'fromFreight=true'.
-	// If none of these are specified, the default branch is checked out.
+	// The tag to checkout. Mutually exclusive with 'branch' and 'commit'. If none of these are
+	// specified, the default branch is checked out.
 	Tag string `json:"tag,omitempty"`
-}
-
-type CheckoutFromOrigin struct {
-	// The kind of origin. Currently only 'Warehouse' is supported. Required.
-	Kind Kind `json:"kind"`
-	// The name of the origin. Required.
-	Name string `json:"name"`
 }
 
 type GitCommitConfig struct {
@@ -258,7 +246,7 @@ type HelmUpdateChartConfig struct {
 }
 
 type Chart struct {
-	FromOrigin *ChartFromOrigin `json:"fromOrigin,omitempty"`
+	FromOrigin *Origin `json:"fromOrigin,omitempty"`
 	// The name of the subchart, as defined in `Chart.yaml`.
 	Name string `json:"name"`
 	// The repository of the subchart, as defined in `Chart.yaml`. It also supports OCI charts
@@ -269,7 +257,7 @@ type Chart struct {
 	Version string `json:"version,omitempty"`
 }
 
-type ChartFromOrigin struct {
+type Origin struct {
 	// The kind of origin. Currently only 'Warehouse' is supported. Required.
 	Kind Kind `json:"kind"`
 	// The name of the origin. Required.
@@ -284,7 +272,7 @@ type HelmUpdateImageConfig struct {
 }
 
 type HelmUpdateImageConfigImage struct {
-	FromOrigin *ChartFromOrigin `json:"fromOrigin,omitempty"`
+	FromOrigin *Origin `json:"fromOrigin,omitempty"`
 	// The container image (without tag) at which the update is targeted.
 	Image string `json:"image"`
 	// The key in the Helm values file of which the value needs to be updated. For nested
@@ -417,13 +405,6 @@ type YAMLUpdate struct {
 	Value string `json:"value"`
 }
 
-// The kind of origin. Currently only 'Warehouse' is supported. Required.
-type Kind string
-
-const (
-	Warehouse Kind = "Warehouse"
-)
-
 // The name of the Git provider to use. Currently only 'github', 'gitlab' and 'azure' are
 // supported. Kargo will try to infer the provider if it is not explicitly specified.
 type Provider string
@@ -432,4 +413,11 @@ const (
 	Azure  Provider = "azure"
 	Github Provider = "github"
 	Gitlab Provider = "gitlab"
+)
+
+// The kind of origin. Currently only 'Warehouse' is supported. Required.
+type Kind string
+
+const (
+	Warehouse Kind = "Warehouse"
 )
