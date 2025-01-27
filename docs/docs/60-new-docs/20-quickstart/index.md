@@ -511,14 +511,14 @@ the previous section.
 
     <TabItem value="kargo-cli" label="Using the Kargo CLI">
 
-    Install the Kargo CLI for your operating system from the <Hlt>CLI</Hlt> Tab
-    in the [Kargo Dashboard](https://localhost:31444/downloads):
+    Download the Kargo CLI for your operating system and CPU architecture from
+    the [Kargo Dashboard's Downloads page](https://localhost:31444/downloads):
 
     ![CLI Tab in Kargo UI](./img/cli-installation.png)
 
-    Then move the `kargo` binary (for Mac, Linux, or WSL) or `kargo.exe` (for Windows)
-    to a location in your file system that is included in the
-    value of your `PATH` environment variable.
+    Rename the downloaded binary to `kargo` (or `kargo.exe` for Windows) and
+    move it to a location in your file system that is included in the value of
+    your `PATH` environment variable.
 
     Log in:
 

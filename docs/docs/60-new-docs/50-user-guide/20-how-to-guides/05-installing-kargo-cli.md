@@ -4,35 +4,47 @@ sidebar_label: Installing the CLI
 
 # Installing the Kargo CLI
 
-The Kargo CLI provides a command-line interface to manage Kargo efficiently.
+Although its web-based UI provides the best user experience, Kargo also offers a
+command line interface (CLI) for users who may prefer it.
 
-The simplest and recommended way to install the CLI is via the <Hlt>CLI Tab</Hlt> in the Kargo UI.
-This ensures the Kargo CLI version matches the Kargo version installed in your cluster,
-making it easier to maintain compatibility and avoid issues.
+1. Download the CLI binary.
+    The easiest method of downloading the binary is by selecting
+    <Hlt>CLI</Hlt> tab from the left navbar of the UI. There, you can select
+    the appropriate binary for your operating system and CPU architecture.
 
-![CLI Tab in Kargo UI](./img/cli-installation.png)
+    CLI downloads offered at this location will automatically match the version
+    of your Kargo API server for optimum compatibility.
 
-_Alternatively_, if you prefer to install the CLI manually, you can run the following command:
+    Your downloaded binary will be suffixed with your OS and CPU architecture
+    (e.g. `kargo-darwin-arm64`), so be sure to rename it to simply `kargo` (or
+    `kargo.exe` for Windows).
 
-<Tabs groupId="os">
-<TabItem value="mac-linux-wsl" label="Mac, Linux, or WSL" default>
+    ![CLI Tab in Kargo UI](./img/cli-installation.png)
 
-```shell
-arch=$(uname -m)
-[ "$arch" = "x86_64" ] && arch=amd64
-curl -L -o kargo https://github.com/akuity/kargo/releases/latest/download/kargo-"$(uname -s | tr '[:upper:]' '[:lower:]')-${arch}"
+    If you prefer, the following commands will download the latest version of
+    the CLI for your specific OS and CPU architecture and will also rename the
+    binary to `kargo` (or `kargo.exe` on Windows.)
+
+    <Tabs groupId="os">
+    <TabItem value="mac-linux-wsl" label="Mac, Linux, or WSL" default>
+
+    ```shell
+    arch=$(uname -m)
+    [ "$arch" = "x86_64" ] && arch=amd64
+    curl -L -o kargo https://github.com/akuity/kargo/releases/latest/download/kargo-"$(uname -s | tr '[:upper:]' '[:lower:]')-${arch}"
 chmod +x kargo
-```
+    ```
 
-</TabItem>
-<TabItem value="windows" label="Windows Powershell">
+    </TabItem>
+    <TabItem value="windows" label="Windows Powershell">
 
-```shell
-Invoke-WebRequest -URI https://github.com/akuity/kargo/releases/latest/download/kargo-windows-amd64.exe -OutFile kargo.exe
-```
+    ```shell
+    Invoke-WebRequest -URI https://github.com/akuity/kargo/releases/latest/download/kargo-windows-amd64.exe -OutFile kargo.exe
+    ```
 
-</TabItem>
-</Tabs>
+    </TabItem>
+    </Tabs>
 
-After downloading, move the `kargo` binary (for Mac, Linux, or WSL) or `kargo.exe` (for Windows) to a
-folder included in your `PATH` environment variable. This makes it accessible from anywhere in the terminal.
+1. Regardless of your chosen download method, complete the installation by
+   moving the binary to a location in your file system that is included in the
+   value of your `PATH` environment variable.
