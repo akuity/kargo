@@ -417,7 +417,11 @@ export const Pipelines = ({
               selectedWarehouse,
               project: project?.metadata?.name || '',
               onHover,
-              onPromoteClick
+              onPromoteClick,
+              setSelectedWarehouse(newWarehouse) {
+                lastExplicitlySelectedWarehouse.current = newWarehouse;
+                setSelectedWarehouse(newWarehouse);
+              }
             }}
           >
             <ReactFlow

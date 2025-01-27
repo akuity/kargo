@@ -149,7 +149,8 @@ export const useReactFlowPipelineGraph = (
         initialHeight: dagreNode?.height,
         data: {
           label: node,
-          value: dagreNode?.warehouse || dagreNode?.subscription || dagreNode?.stage
+          value: dagreNode?.warehouse || dagreNode?.subscription || dagreNode?.stage,
+          warehouses: warehouses?.length || 0
         }
       });
     }

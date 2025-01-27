@@ -12,6 +12,7 @@ export interface PipelineContextType {
   highlightedStages: { [key: string]: boolean };
   autoPromotionMap: { [key: string]: boolean };
   selectedWarehouse: string;
+  setSelectedWarehouse: (newWarehouse: string) => void;
   project: string;
   onHover: (hover: boolean, id: string, isStage?: boolean) => void;
   onPromoteClick: (stage: Stage, type: FreightTimelineAction) => void;

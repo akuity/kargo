@@ -10,6 +10,7 @@ import {
   faCodePullRequest,
   faExclamationCircle,
   faExclamationTriangle,
+  faFilter,
   faGear,
   faQuestion,
   faRefresh,
@@ -29,7 +30,7 @@ import { HealthStatusIcon } from '@ui/features/common/health-status/health-statu
 import { PromotionStatusIcon } from '@ui/features/common/promotion-status/promotion-status-icon';
 import { getCurrentFreight, selectFreightByWarehouse } from '@ui/features/common/utils';
 import { willStagePromotionOpenPR } from '@ui/features/promotion-directives/utils';
-import { ColorMapHex, parseColorAnnotation } from '@ui/features/stage/utils';
+import { getColors } from '@ui/features/stage/utils';
 import {
   approveFreight,
   promoteToStage,
@@ -57,7 +58,7 @@ export const CustomNode = ({
   data: {
     label: string;
     value: Warehouse | RepoSubscription | Stage;
-    freightMap: { [key: string]: Freight };
+    warehouses?: number;
   };
 }) => {
   // todo: why there'd be no data.value?
@@ -68,7 +69,7 @@ export const CustomNode = ({
   if (data.value.$typeName === 'github.com.akuity.kargo.api.v1alpha1.Warehouse') {
     return (
       <CustomNode.Container>
-        <CustomNode.WarehouseNode warehouse={data.value} />
+        <CustomNode.WarehouseNode warehouse={data.value} warehouses={data.warehouses} />
       </CustomNode.Container>
     );
   }
@@ -133,7 +134,7 @@ CustomNode.SubscriptionNode = (props: { subscription: RepoSubscription }) => {
   );
 };
 
-CustomNode.WarehouseNode = (props: { warehouse: Warehouse }) => {
+CustomNode.WarehouseNode = (props: { warehouse: Warehouse; warehouses?: number }) => {
   const { warehouseColorMap } = useContext(ColorContext);
 
   const pipelineContext = usePipelineContext();
@@ -236,6 +237,27 @@ CustomNode.WarehouseNode = (props: { warehouse: Warehouse }) => {
       </div>
 
       <div className={classNames(styles.body, 'flex')}>
+        {(props.warehouses || 0) > 0 && (
+          <Button
+            icon={<FontAwesomeIcon icon={faFilter} />}
+            size='small'
+            type={
+              pipelineContext?.selectedWarehouse === props.warehouse?.metadata?.name
+                ? 'primary'
+                : 'default'
+            }
+            onClick={(e) => {
+              e.stopPropagation();
+
+              const newSelectedWarehouse =
+                pipelineContext?.selectedWarehouse === props.warehouse?.metadata?.name
+                  ? ''
+                  : props.warehouse?.metadata?.name;
+
+              pipelineContext?.setSelectedWarehouse(newSelectedWarehouse || '');
+            }}
+          />
+        )}
         <Button
           icon={<FontAwesomeIcon icon={faRefresh} />}
           size='small'
@@ -257,17 +279,13 @@ CustomNode.WarehouseNode = (props: { warehouse: Warehouse }) => {
 };
 
 CustomNode.StageNode = (props: { stage: Stage }) => {
-  const { warehouseColorMap } = useContext(ColorContext);
-
   const navigate = useNavigate();
 
-  let stageColor =
-    parseColorAnnotation(props.stage) ||
-    warehouseColorMap[props.stage?.spec?.requestedFreight?.[0]?.origin?.name || ''];
-
-  stageColor = ColorMapHex[stageColor] || stageColor;
-
   const pipelineContext = usePipelineContext();
+
+  const colorMap = getColors(pipelineContext?.project || '', [props.stage]);
+
+  const stageColor = colorMap[props.stage?.metadata?.name || ''];
 
   const currentFreight = getCurrentFreight(props.stage)
     ?.map((freight) => pipelineContext?.fullFreightById[freight?.name || ''])
