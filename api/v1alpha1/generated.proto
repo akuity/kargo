@@ -187,6 +187,31 @@ message ChartSubscription {
   optional int32 discoveryLimit = 4;
 }
 
+message ClusterPromotionTask {
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
+
+  // Spec describes the desired transition of a specific Stage into a specific
+  // Freight.
+  //
+  // +kubebuilder:validation:Required
+  optional PromotionTaskSpec spec = 2;
+}
+
+// ClusterPromotionTaskList contains a list of PromotionTasks.
+message ClusterPromotionTaskList {
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
+
+  repeated ClusterPromotionTask items = 2;
+}
+
+// CurrentStage reflects a Stage's current use of Freight.
+message CurrentStage {
+  // Since is the time at which the Stage most recently started using the
+  // Freight. This can be used to calculate how long the Freight has been in use
+  // by the Stage.
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time since = 1;
+}
+
 // DiscoveredArtifacts holds the artifacts discovered by the Warehouse for its
 // subscriptions.
 message DiscoveredArtifacts {
@@ -341,7 +366,7 @@ message FreightOrigin {
   optional string kind = 1;
 
   // Name is the name of the resource of the kind indicated by the Kind field
-  // from which Freight may originated.
+  // from which Freight may originate.
   //
   // +kubebuilder:validation:Required
   optional string name = 2;
@@ -394,10 +419,26 @@ message FreightSources {
   // Direct field must be true. i.e. Between the two fields, at least on source
   // must be specified.
   repeated string stages = 2;
+
+  // RequiredSoakTime specifies a minimum duration for which the requested
+  // Freight must have continuously occupied ("soaked in") in an upstream Stage
+  // before becoming available for promotion to this Stage. This is an optional
+  // field. If nil or zero, no soak time is required. Any soak time requirement
+  // is in ADDITION to the requirement that Freight be verified in an upstream
+  // Stage to become available for promotion to this Stage, although a manual
+  // approval for promotion to this Stage will supersede any soak time
+  // requirement.
+  //
+  // +kubebuilder:validation:Type=string
+  // +kubebuilder:validation:Pattern="^([0-9]+(\\.[0-9]+)?(s|m|h))+$"
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Duration requiredSoakTime = 3;
 }
 
 // FreightStatus describes a piece of Freight's most recently observed state.
 message FreightStatus {
+  // CurrentlyIn describes the Stages in which this Freight is currently in use.
+  map<string, CurrentStage> currentlyIn = 3;
+
   // VerifiedIn describes the Stages in which this Freight has been verified
   // through promotion and subsequent health checks.
   map<string, VerifiedStage> verifiedIn = 1;
@@ -478,7 +519,7 @@ message GitSubscription {
   // subscription is implicitly to the repository's default branch.
   //
   // +kubebuilder:validation:MinLength=1
-  // +kubebuilder:validation:Pattern=`^\w+([-/]\w+)*$`
+  // +kubebuilder:validation:Pattern=`^\w+([-/\.]\w+)*$`
   optional string branch = 3;
 
   // StrictSemvers specifies whether only "strict" semver tags should be
@@ -847,14 +888,19 @@ message PromotionSpec {
   // applies. The Stage referenced by this field MUST be in the same
   // namespace as the Promotion.
   //
+  // +kubebuilder:validation:Required
   // +kubebuilder:validation:MinLength=1
+  // +kubebuilder:validation:MaxLength=253
   // +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
   optional string stage = 1;
 
   // Freight specifies the piece of Freight to be promoted into the Stage
   // referenced by the Stage field.
   //
+  // +kubebuilder:validation:Required
   // +kubebuilder:validation:MinLength=1
+  // +kubebuilder:validation:MaxLength=253
+  // +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
   optional string freight = 2;
 
   // Vars is a list of variables that can be referenced by expressions in
@@ -864,6 +910,10 @@ message PromotionSpec {
   // Steps specifies the directives to be executed as part of this Promotion.
   // The order in which the directives are executed is the order in which they
   // are listed in this field.
+  //
+  // +kubebuilder:validation:Required
+  // +kubebuilder:validation:MinItems=1
+  // +kubebuilder:validation:items:XValidation:message="Promotion step must have uses set and must not reference a task",rule="has(self.uses) && !has(self.task)"
   repeated PromotionStep steps = 3;
 }
 
@@ -918,14 +968,24 @@ message PromotionStatus {
 message PromotionStep {
   // Uses identifies a runner that can execute this step.
   //
+  // +kubebuilder:validation:Optional
   // +kubebuilder:validation:MinLength=1
   optional string uses = 1;
+
+  // Task is a reference to a PromotionTask that should be inflated into a
+  // Promotion when it is built from a PromotionTemplate.
+  optional PromotionTaskReference task = 5;
 
   // As is the alias this step can be referred to as.
   optional string as = 2;
 
   // Retry is the retry policy for this step.
   optional PromotionStepRetry retry = 4;
+
+  // Vars is a list of variables that can be referenced by expressions in
+  // the step's Config. The values override the values specified in the
+  // PromotionSpec.
+  repeated PromotionVariable vars = 6;
 
   // Config is opaque configuration for the PromotionStep that is understood
   // only by each PromotionStep's implementation. It is legal to utilize
@@ -974,6 +1034,57 @@ message PromotionStepRetry {
   optional uint32 errorThreshold = 2;
 }
 
+message PromotionTask {
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
+
+  // Spec describes the composition of a PromotionTask, including the
+  // variables available to the task and the steps.
+  //
+  // +kubebuilder:validation:Required
+  optional PromotionTaskSpec spec = 2;
+}
+
+// PromotionTaskList contains a list of PromotionTasks.
+message PromotionTaskList {
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
+
+  repeated PromotionTask items = 2;
+}
+
+// PromotionTaskReference describes a reference to a PromotionTask.
+message PromotionTaskReference {
+  // Name is the name of the (Cluster)PromotionTask.
+  //
+  // +kubebuilder:validation:Required
+  // +kubebuilder:validation:MinLength=1
+  // +kubebuilder:validation:MaxLength=253
+  // +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+  optional string name = 1;
+
+  // Kind is the type of the PromotionTask. Can be either PromotionTask or
+  // ClusterPromotionTask, default is PromotionTask.
+  //
+  // +kubebuilder:validation:Optional
+  // +kubebuilder:validation:Enum=PromotionTask;ClusterPromotionTask
+  optional string kind = 2;
+}
+
+message PromotionTaskSpec {
+  // Vars specifies the variables available to the PromotionTask. The
+  // values of these variables are the default values that can be
+  // overridden by the step referencing the task.
+  repeated PromotionVariable vars = 1;
+
+  // Steps specifies the directives to be executed as part of this
+  // PromotionTask. The steps as defined here are inflated into a
+  // Promotion when it is built from a PromotionTemplate.
+  //
+  // +kubebuilder:validation:Required
+  // +kubebuilder:validation:MinItems=1
+  // +kubebuilder:validation:items:XValidation:message="PromotionTask step must have uses set and must not reference another task",rule="has(self.uses) && !has(self.task)"
+  repeated PromotionStep steps = 2;
+}
+
 // PromotionTemplate defines a template for a Promotion that can be used to
 // incorporate Freight into a Stage.
 message PromotionTemplate {
@@ -993,6 +1104,7 @@ message PromotionTemplateSpec {
   // are listed in this field.
   //
   // +kubebuilder:validation:MinItems=1
+  // +kubebuilder:validation:items:XValidation:message="PromotionTemplate step must have exactly one of uses or task set",rule="(has(self.uses) ? !has(self.task) : has(self.task))"
   repeated PromotionStep steps = 1;
 }
 
@@ -1207,6 +1319,13 @@ message VerificationInfo {
 message VerifiedStage {
   // VerifiedAt is the time at which the Freight was verified in the Stage.
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time verifiedAt = 1;
+
+  // LongestCompletedSoak represents the longest definite time interval wherein
+  // the Freight was in CONTINUOUS use by the Stage. This value is updated as
+  // Freight EXITS the Stage. If the Freight is currently in use by the Stage,
+  // the time elapsed since the Freight ENTERED the Stage is its current soak
+  // time, which may exceed the value of this field.
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Duration longestSoak = 2;
 }
 
 // Warehouse is a source of Freight.

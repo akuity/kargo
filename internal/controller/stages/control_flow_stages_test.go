@@ -27,8 +27,28 @@ import (
 )
 
 func TestControlFlowStageReconciler_Reconcile(t *testing.T) {
-	scheme := runtime.NewScheme()
-	require.NoError(t, kargoapi.AddToScheme(scheme))
+	testProject := "test-project"
+	const testWarehouseName = "test-warehouse"
+	testWarehouse := &kargoapi.Warehouse{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: testProject,
+			Name:      testWarehouseName,
+		},
+	}
+	testStageName := "test-stage"
+	testStage := types.NamespacedName{
+		Namespace: testProject,
+		Name:      testStageName,
+	}
+	testStageMeta := metav1.ObjectMeta{
+		Namespace:  testProject,
+		Name:       testStageName,
+		Finalizers: []string{kargoapi.FinalizerName},
+	}
+	testWarehouseOrigin := kargoapi.FreightOrigin{
+		Kind: kargoapi.FreightOriginKindWarehouse,
+		Name: testWarehouseName,
+	}
 
 	tests := []struct {
 		name        string
@@ -42,7 +62,7 @@ func TestControlFlowStageReconciler_Reconcile(t *testing.T) {
 			name: "stage not found",
 			req: ctrl.Request{
 				NamespacedName: types.NamespacedName{
-					Namespace: "default",
+					Namespace: testProject,
 					Name:      "non-existent",
 				},
 			},
@@ -53,24 +73,14 @@ func TestControlFlowStageReconciler_Reconcile(t *testing.T) {
 		},
 		{
 			name: "ignores non-control flow stage",
-			req: ctrl.Request{
-				NamespacedName: types.NamespacedName{
-					Namespace: "default",
-					Name:      "test-stage",
-				},
-			},
+			req:  ctrl.Request{NamespacedName: testStage},
 			stage: &kargoapi.Stage{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "default",
-					Name:      "test-stage",
-				},
+				ObjectMeta: testStageMeta,
 				Spec: kargoapi.StageSpec{
 					// Not a control flow stage
 					PromotionTemplate: &kargoapi.PromotionTemplate{
 						Spec: kargoapi.PromotionTemplateSpec{
-							Steps: []kargoapi.PromotionStep{
-								{},
-							},
+							Steps: []kargoapi.PromotionStep{{}},
 						},
 					},
 				},
@@ -82,16 +92,11 @@ func TestControlFlowStageReconciler_Reconcile(t *testing.T) {
 		},
 		{
 			name: "handles deletion",
-			req: ctrl.Request{
-				NamespacedName: types.NamespacedName{
-					Namespace: "default",
-					Name:      "test-stage",
-				},
-			},
+			req:  ctrl.Request{NamespacedName: testStage},
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
-					Namespace:         "default",
-					Name:              "test-stage",
+					Namespace:         testProject,
+					Name:              testStageName,
 					DeletionTimestamp: &metav1.Time{Time: time.Now()},
 					Finalizers:        []string{kargoapi.FinalizerName},
 				},
@@ -103,16 +108,11 @@ func TestControlFlowStageReconciler_Reconcile(t *testing.T) {
 		},
 		{
 			name: "deletion error",
-			req: ctrl.Request{
-				NamespacedName: types.NamespacedName{
-					Namespace: "default",
-					Name:      "test-stage",
-				},
-			},
+			req:  ctrl.Request{NamespacedName: testStage},
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
-					Namespace:         "default",
-					Name:              "test-stage",
+					Namespace:         testProject,
+					Name:              testStageName,
 					DeletionTimestamp: &metav1.Time{Time: time.Now()},
 					Finalizers:        []string{kargoapi.FinalizerName},
 				},
@@ -129,16 +129,11 @@ func TestControlFlowStageReconciler_Reconcile(t *testing.T) {
 		},
 		{
 			name: "adds finalizer and requeues",
-			req: ctrl.Request{
-				NamespacedName: types.NamespacedName{
-					Namespace: "default",
-					Name:      "test-stage",
-				},
-			},
+			req:  ctrl.Request{NamespacedName: testStage},
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "default",
-					Name:      "test-stage",
+					Namespace: testProject,
+					Name:      testStageName,
 				},
 			},
 			assertions: func(t *testing.T, c client.Client, result ctrl.Result, err error) {
@@ -147,43 +142,26 @@ func TestControlFlowStageReconciler_Reconcile(t *testing.T) {
 
 				// Verify finalizer was added
 				stage := &kargoapi.Stage{}
-				err = c.Get(context.Background(), types.NamespacedName{
-					Namespace: "default",
-					Name:      "test-stage",
-				}, stage)
+				err = c.Get(context.Background(), testStage, stage)
 				require.NoError(t, err)
 				assert.Contains(t, stage.Finalizers, kargoapi.FinalizerName)
 			},
 		},
 		{
 			name: "reconcile error",
-			req: ctrl.Request{
-				NamespacedName: types.NamespacedName{
-					Namespace: "default",
-					Name:      "test-stage",
-				},
-			},
+			req:  ctrl.Request{NamespacedName: testStage},
 			stage: &kargoapi.Stage{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace:  "default",
-					Name:       "test-stage",
-					Finalizers: []string{kargoapi.FinalizerName},
-				},
+				ObjectMeta: testStageMeta,
 				Spec: kargoapi.StageSpec{
-					RequestedFreight: []kargoapi.FreightRequest{
-						{
-							Sources: kargoapi.FreightSources{
-								Direct: true,
-							},
-							Origin: kargoapi.FreightOrigin{
-								Kind: kargoapi.FreightOriginKindWarehouse,
-								Name: "warehouse-1",
-							},
-						},
-					},
+					RequestedFreight: []kargoapi.FreightRequest{{
+						Origin:  testWarehouseOrigin,
+						Sources: kargoapi.FreightSources{Direct: true},
+					}},
 				},
 			},
+			objects: []client.Object{testWarehouse},
 			interceptor: interceptor.Funcs{
+				// This will force an error when attempting to list available Freight
 				List: func(context.Context, client.WithWatch, client.ObjectList, ...client.ListOption) error {
 					return fmt.Errorf("something went wrong")
 				},
@@ -194,46 +172,30 @@ func TestControlFlowStageReconciler_Reconcile(t *testing.T) {
 
 				// Verify error is recorded in status
 				stage := &kargoapi.Stage{}
-				err = c.Get(context.Background(), types.NamespacedName{
-					Namespace: "default",
-					Name:      "test-stage",
-				}, stage)
+				err = c.Get(context.Background(), testStage, stage)
 				require.NoError(t, err)
 				assert.Contains(t, stage.Status.Message, "something went wrong")
 			},
 		},
 		{
 			name: "status update error after reconcile error",
-			req: ctrl.Request{
-				NamespacedName: types.NamespacedName{
-					Namespace: "default",
-					Name:      "test-stage",
-				},
-			},
+			req:  ctrl.Request{NamespacedName: testStage},
 			stage: &kargoapi.Stage{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace:  "default",
-					Name:       "test-stage",
-					Finalizers: []string{kargoapi.FinalizerName},
-				},
+				ObjectMeta: testStageMeta,
 				Spec: kargoapi.StageSpec{
-					RequestedFreight: []kargoapi.FreightRequest{
-						{
-							Sources: kargoapi.FreightSources{
-								Direct: true,
-							},
-							Origin: kargoapi.FreightOrigin{
-								Kind: kargoapi.FreightOriginKindWarehouse,
-								Name: "warehouse-1",
-							},
-						},
-					},
+					RequestedFreight: []kargoapi.FreightRequest{{
+						Origin:  testWarehouseOrigin,
+						Sources: kargoapi.FreightSources{Direct: true},
+					}},
 				},
 			},
+			objects: []client.Object{testWarehouse},
 			interceptor: interceptor.Funcs{
+				// This will force an error when attempting to list available Freight
 				List: func(context.Context, client.WithWatch, client.ObjectList, ...client.ListOption) error {
 					return fmt.Errorf("something went wrong")
 				},
+				// This will force an error when attempting to update the Stage status
 				SubResourcePatch: func(
 					context.Context,
 					client.Client,
@@ -252,22 +214,11 @@ func TestControlFlowStageReconciler_Reconcile(t *testing.T) {
 			},
 		},
 		{
-			name: "status update error after successful reconcile",
-			req: ctrl.Request{
-				NamespacedName: types.NamespacedName{
-					Namespace: "default",
-					Name:      "test-stage",
-				},
-			},
-			stage: &kargoapi.Stage{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace:  "default",
-					Name:       "test-stage",
-					Finalizers: []string{kargoapi.FinalizerName},
-				},
-				Spec: kargoapi.StageSpec{},
-			},
+			name:  "status update error after successful reconcile",
+			req:   ctrl.Request{NamespacedName: testStage},
+			stage: &kargoapi.Stage{ObjectMeta: testStageMeta},
 			interceptor: interceptor.Funcs{
+				// This will force an error when attempting to update the Stage status
 				SubResourcePatch: func(
 					context.Context,
 					client.Client,
@@ -285,37 +236,25 @@ func TestControlFlowStageReconciler_Reconcile(t *testing.T) {
 			},
 		},
 		{
-			name: "successful reconciliation",
-			req: ctrl.Request{
-				NamespacedName: types.NamespacedName{
-					Namespace: "default",
-					Name:      "test-stage",
-				},
-			},
-			stage: &kargoapi.Stage{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace:  "default",
-					Name:       "test-stage",
-					Finalizers: []string{kargoapi.FinalizerName},
-				},
-				Spec: kargoapi.StageSpec{},
-			},
+			name:  "successful reconciliation",
+			req:   ctrl.Request{NamespacedName: testStage},
+			stage: &kargoapi.Stage{ObjectMeta: testStageMeta},
 			assertions: func(t *testing.T, c client.Client, result ctrl.Result, err error) {
 				require.NoError(t, err)
 				assert.Equal(t, ctrl.Result{}, result)
 
 				// Verify status was updated
 				stage := &kargoapi.Stage{}
-				err = c.Get(context.Background(), types.NamespacedName{
-					Namespace: "default",
-					Name:      "test-stage",
-				}, stage)
+				err = c.Get(context.Background(), testStage, stage)
 				require.NoError(t, err)
 				assert.Equal(t, kargoapi.StagePhaseNotApplicable, stage.Status.Phase)
 				assert.Empty(t, stage.Status.Message)
 			},
 		},
 	}
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, kargoapi.AddToScheme(scheme))
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -358,146 +297,132 @@ func TestControlFlowStageReconciler_Reconcile(t *testing.T) {
 }
 
 func TestControlFlowStageReconciler_reconcile(t *testing.T) {
-	scheme := runtime.NewScheme()
-	require.NoError(t, kargoapi.AddToScheme(scheme))
-
-	startTime := time.Now()
+	const testProject = "test-project"
+	const testWarehouseName = "test-warehouse"
+	testWarehouse := &kargoapi.Warehouse{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: testProject,
+			Name:      testWarehouseName,
+		},
+	}
+	const testStage = "test-stage"
+	testStageMeta := metav1.ObjectMeta{
+		Namespace: testProject,
+		Name:      testStage,
+	}
+	testWarehouseOrigin := kargoapi.FreightOrigin{
+		Kind: kargoapi.FreightOriginKindWarehouse,
+		Name: testWarehouseName,
+	}
 
 	tests := []struct {
 		name        string
 		stage       *kargoapi.Stage
 		objects     []client.Object
 		interceptor interceptor.Funcs
-		assertions  func(*testing.T, kargoapi.StageStatus, error)
+		assertions  func(*testing.T, kargoapi.StageStatus, client.Client, error)
 	}{
 		{
-			name: "successful reconciliation with no freight",
+			name: "no available Freight",
 			stage: &kargoapi.Stage{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-stage",
-					Namespace: "default",
-				},
+				ObjectMeta: testStageMeta,
 				Spec: kargoapi.StageSpec{
-					RequestedFreight: []kargoapi.FreightRequest{
-						{
-							Sources: kargoapi.FreightSources{
-								Direct: true,
-							},
-							Origin: kargoapi.FreightOrigin{
-								Kind: kargoapi.FreightOriginKindWarehouse,
-								Name: "warehouse-1",
-							},
-						},
-					},
-				},
-			},
-			assertions: func(t *testing.T, status kargoapi.StageStatus, err error) {
-				require.NoError(t, err)
-				assert.Equal(t, kargoapi.StagePhaseNotApplicable, status.Phase)
-				assert.Empty(t, status.Message)
-			},
-		},
-		{
-			name: "successful reconciliation with new freight",
-			stage: &kargoapi.Stage{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-stage",
-					Namespace: "default",
-				},
-				Spec: kargoapi.StageSpec{
-					RequestedFreight: []kargoapi.FreightRequest{
-						{
-							Sources: kargoapi.FreightSources{
-								Direct: true,
-							},
-							Origin: kargoapi.FreightOrigin{
-								Kind: kargoapi.FreightOriginKindWarehouse,
-								Name: "warehouse-1",
-							},
-						},
-					},
+					RequestedFreight: []kargoapi.FreightRequest{{
+						Sources: kargoapi.FreightSources{Direct: true},
+						Origin:  testWarehouseOrigin,
+					}},
 				},
 			},
 			objects: []client.Object{
-				&kargoapi.Freight{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "freight-1",
-					},
-					Origin: kargoapi.FreightOrigin{
-						Kind: kargoapi.FreightOriginKindWarehouse,
-						Name: "warehouse-1",
-					},
-				},
+				testWarehouse,
+				// No Freight exists from this Warehouse
 			},
-			assertions: func(t *testing.T, status kargoapi.StageStatus, err error) {
+			assertions: func(t *testing.T, status kargoapi.StageStatus, _ client.Client, err error) {
 				require.NoError(t, err)
 				assert.Equal(t, kargoapi.StagePhaseNotApplicable, status.Phase)
 				assert.Empty(t, status.Message)
 			},
 		},
 		{
-			name: "error getting available freight",
+			name: "available Freight not yet marked as verified",
 			stage: &kargoapi.Stage{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-stage",
-					Namespace: "default",
-				},
+				ObjectMeta: testStageMeta,
 				Spec: kargoapi.StageSpec{
-					RequestedFreight: []kargoapi.FreightRequest{
-						{
-							Sources: kargoapi.FreightSources{
-								Direct: true,
-							},
-							Origin: kargoapi.FreightOrigin{
-								Kind: kargoapi.FreightOriginKindWarehouse,
-								Name: "warehouse-1",
-							},
-						},
+					RequestedFreight: []kargoapi.FreightRequest{{
+						Sources: kargoapi.FreightSources{Direct: true},
+						Origin:  testWarehouseOrigin,
+					}},
+				},
+			},
+			objects: []client.Object{
+				testWarehouse,
+				&kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProject,
+						Name:      "fake-freight",
 					},
+					Origin: testWarehouseOrigin,
+				},
+			},
+			assertions: func(t *testing.T, status kargoapi.StageStatus, c client.Client, err error) {
+				require.NoError(t, err)
+				assert.Equal(t, kargoapi.StagePhaseNotApplicable, status.Phase)
+				assert.Empty(t, status.Message)
+				updatedFreight := &kargoapi.Freight{}
+				err = c.Get(
+					context.Background(),
+					types.NamespacedName{
+						Namespace: testProject,
+						Name:      "fake-freight",
+					},
+					updatedFreight,
+				)
+				require.NoError(t, err)
+				assert.Contains(t, updatedFreight.Status.VerifiedIn, testStage)
+			},
+		},
+		{
+			name: "error listing available Freight",
+			stage: &kargoapi.Stage{
+				ObjectMeta: testStageMeta,
+				Spec: kargoapi.StageSpec{
+					RequestedFreight: []kargoapi.FreightRequest{{
+						Sources: kargoapi.FreightSources{Direct: true},
+						Origin:  testWarehouseOrigin,
+					}},
 				},
 			},
 			interceptor: interceptor.Funcs{
-				List: func(context.Context, client.WithWatch, client.ObjectList, ...client.ListOption) error {
+				// Listing Freight begins with a Get call to the Warehouse, so this
+				// will force an error
+				Get: func(context.Context, client.WithWatch, client.ObjectKey, client.Object, ...client.GetOption) error {
 					return fmt.Errorf("something went wrong")
 				},
 			},
-			assertions: func(t *testing.T, status kargoapi.StageStatus, err error) {
+			assertions: func(t *testing.T, status kargoapi.StageStatus, _ client.Client, err error) {
 				require.ErrorContains(t, err, "something went wrong")
 				assert.Contains(t, status.Message, "something went wrong")
 			},
 		},
 		{
-			name: "error verifying freight",
+			name: "error marking Freight as verified",
 			stage: &kargoapi.Stage{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-stage",
-					Namespace: "default",
-				},
+				ObjectMeta: testStageMeta,
 				Spec: kargoapi.StageSpec{
-					RequestedFreight: []kargoapi.FreightRequest{
-						{
-							Sources: kargoapi.FreightSources{
-								Direct: true,
-							},
-							Origin: kargoapi.FreightOrigin{
-								Kind: kargoapi.FreightOriginKindWarehouse,
-								Name: "warehouse-1",
-							},
-						},
-					},
+					RequestedFreight: []kargoapi.FreightRequest{{
+						Sources: kargoapi.FreightSources{Direct: true},
+						Origin:  testWarehouseOrigin,
+					}},
 				},
 			},
 			objects: []client.Object{
+				testWarehouse,
 				&kargoapi.Freight{
 					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "freight-1",
+						Namespace: testProject,
+						Name:      "fake-freight",
 					},
-					Origin: kargoapi.FreightOrigin{
-						Kind: kargoapi.FreightOriginKindWarehouse,
-						Name: "warehouse-1",
-					},
+					Origin: testWarehouseOrigin,
 				},
 			},
 			interceptor: interceptor.Funcs{
@@ -512,7 +437,7 @@ func TestControlFlowStageReconciler_reconcile(t *testing.T) {
 					return fmt.Errorf("something went wrong")
 				},
 			},
-			assertions: func(t *testing.T, status kargoapi.StageStatus, err error) {
+			assertions: func(t *testing.T, status kargoapi.StageStatus, _ client.Client, err error) {
 				require.ErrorContains(t, err, "failed to verify 1 Freight")
 				assert.Contains(t, status.Message, "failed to verify 1 Freight")
 			},
@@ -520,72 +445,63 @@ func TestControlFlowStageReconciler_reconcile(t *testing.T) {
 		{
 			name: "already verified freight",
 			stage: &kargoapi.Stage{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-stage",
-					Namespace: "default",
-				},
+				ObjectMeta: testStageMeta,
 				Spec: kargoapi.StageSpec{
-					RequestedFreight: []kargoapi.FreightRequest{
-						{
-							Sources: kargoapi.FreightSources{
-								Direct: true,
-							},
-							Origin: kargoapi.FreightOrigin{
-								Kind: kargoapi.FreightOriginKindWarehouse,
-								Name: "warehouse-1",
-							},
-						},
-					},
+					RequestedFreight: []kargoapi.FreightRequest{{
+						Sources: kargoapi.FreightSources{Direct: true},
+						Origin:  testWarehouseOrigin,
+					}},
 				},
 			},
 			objects: []client.Object{
+				testWarehouse,
 				&kargoapi.Freight{
 					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "freight-1",
+						Namespace: testProject,
+						Name:      "fake-freight",
 					},
-					Origin: kargoapi.FreightOrigin{
-						Kind: kargoapi.FreightOriginKindWarehouse,
-						Name: "warehouse-1",
-					},
+					Origin: testWarehouseOrigin,
 					Status: kargoapi.FreightStatus{
 						VerifiedIn: map[string]kargoapi.VerifiedStage{
-							"test-stage": {},
+							testStage: {},
 						},
 					},
 				},
 			},
-			assertions: func(t *testing.T, status kargoapi.StageStatus, err error) {
+			interceptor: interceptor.Funcs{
+				// This is intended to force an error if there is an unexpected attempt
+				// to patch the Freight status, which should not happen if the Freight
+				// is already marked as verified.
+				SubResourcePatch: func(
+					context.Context,
+					client.Client,
+					string,
+					client.Object,
+					client.Patch,
+					...client.SubResourcePatchOption,
+				) error {
+					return fmt.Errorf("something went wrong")
+				},
+			},
+			assertions: func(t *testing.T, status kargoapi.StageStatus, _ client.Client, err error) {
 				require.NoError(t, err)
 				assert.Equal(t, kargoapi.StagePhaseNotApplicable, status.Phase)
 				assert.Empty(t, status.Message)
 			},
 		},
 		{
-			name: "handles stage with refresh annotation",
+			name: "handles refresh annotation",
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-stage",
-					Namespace: "default",
+					Name:      testStage,
+					Namespace: testProject,
 					Annotations: map[string]string{
 						kargoapi.AnnotationKeyRefresh: "refresh-token",
 					},
 				},
-				Spec: kargoapi.StageSpec{
-					RequestedFreight: []kargoapi.FreightRequest{
-						{
-							Sources: kargoapi.FreightSources{
-								Direct: true,
-							},
-							Origin: kargoapi.FreightOrigin{
-								Kind: kargoapi.FreightOriginKindWarehouse,
-								Name: "warehouse-1",
-							},
-						},
-					},
-				},
 			},
-			assertions: func(t *testing.T, status kargoapi.StageStatus, err error) {
+			objects: []client.Object{testWarehouse},
+			assertions: func(t *testing.T, status kargoapi.StageStatus, _ client.Client, err error) {
 				require.NoError(t, err)
 				assert.Equal(t, kargoapi.StagePhaseNotApplicable, status.Phase)
 				assert.Equal(t, "refresh-token", status.LastHandledRefresh)
@@ -596,20 +512,23 @@ func TestControlFlowStageReconciler_reconcile(t *testing.T) {
 			name: "observes generation on reconciliation",
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:       "test-stage",
-					Namespace:  "default",
+					Name:       testStage,
+					Namespace:  testProject,
 					Generation: 2,
 				},
 				Status: kargoapi.StageStatus{
 					ObservedGeneration: 1,
 				},
 			},
-			assertions: func(t *testing.T, status kargoapi.StageStatus, err error) {
+			assertions: func(t *testing.T, status kargoapi.StageStatus, _ client.Client, err error) {
 				require.NoError(t, err)
 				assert.Equal(t, int64(2), status.ObservedGeneration)
 			},
 		},
 	}
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, kargoapi.AddToScheme(scheme))
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -635,8 +554,8 @@ func TestControlFlowStageReconciler_reconcile(t *testing.T) {
 				eventRecorder: fakeevent.NewEventRecorder(10),
 			}
 
-			status, err := r.reconcile(context.Background(), tt.stage, startTime)
-			tt.assertions(t, status, err)
+			status, err := r.reconcile(context.Background(), tt.stage, time.Now())
+			tt.assertions(t, status, c, err)
 		})
 	}
 }
@@ -711,449 +630,7 @@ func TestControlFlowStageReconciler_initializeStatus(t *testing.T) {
 	}
 }
 
-func TestControlFlowStageReconciler_getAvailableFreight(t *testing.T) {
-	scheme := runtime.NewScheme()
-	require.NoError(t, kargoapi.AddToScheme(scheme))
-
-	tests := []struct {
-		name        string
-		stage       types.NamespacedName
-		objects     []client.Object
-		requested   []kargoapi.FreightRequest
-		interceptor interceptor.Funcs
-		assertions  func(*testing.T, []kargoapi.Freight, error)
-	}{
-		{
-			name: "no freight requests returns empty list",
-			stage: types.NamespacedName{
-				Namespace: "default",
-				Name:      "test-stage",
-			},
-			requested: []kargoapi.FreightRequest{},
-			assertions: func(t *testing.T, got []kargoapi.Freight, err error) {
-				require.NoError(t, err)
-				assert.Empty(t, got)
-			},
-		},
-		{
-			name: "direct warehouse freight",
-			stage: types.NamespacedName{
-				Namespace: "default",
-				Name:      "test-stage",
-			},
-			objects: []client.Object{
-				&kargoapi.Freight{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "freight-1",
-					},
-					Origin: kargoapi.FreightOrigin{
-						Kind: kargoapi.FreightOriginKindWarehouse,
-						Name: "warehouse-1",
-					},
-				},
-				&kargoapi.Freight{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "other-freight-1",
-					},
-					Origin: kargoapi.FreightOrigin{
-						Kind: kargoapi.FreightOriginKindWarehouse,
-						Name: "warehouse-2",
-					},
-				},
-				&kargoapi.Freight{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "freight-2",
-					},
-					Origin: kargoapi.FreightOrigin{
-						Kind: kargoapi.FreightOriginKindWarehouse,
-						Name: "warehouse-1",
-					},
-				},
-			},
-			requested: []kargoapi.FreightRequest{
-				{
-					Sources: kargoapi.FreightSources{
-						Direct: true,
-					},
-					Origin: kargoapi.FreightOrigin{
-						Kind: kargoapi.FreightOriginKindWarehouse,
-						Name: "warehouse-1",
-					},
-				},
-			},
-			assertions: func(t *testing.T, got []kargoapi.Freight, err error) {
-				require.NoError(t, err)
-				assert.Len(t, got, 2)
-				assert.Equal(t, "freight-1", got[0].Name)
-				assert.Equal(t, "freight-2", got[1].Name)
-			},
-		},
-		{
-			name: "ignores already verified direct warehouse freight",
-			stage: types.NamespacedName{
-				Namespace: "default",
-				Name:      "test-stage",
-			},
-			objects: []client.Object{
-				&kargoapi.Freight{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "freight-1",
-					},
-					Origin: kargoapi.FreightOrigin{
-						Kind: kargoapi.FreightOriginKindWarehouse,
-						Name: "warehouse-1",
-					},
-					Status: kargoapi.FreightStatus{
-						VerifiedIn: map[string]kargoapi.VerifiedStage{
-							"test-stage": {},
-						},
-					},
-				},
-			},
-			requested: []kargoapi.FreightRequest{
-				{
-					Sources: kargoapi.FreightSources{
-						Direct: true,
-					},
-					Origin: kargoapi.FreightOrigin{
-						Kind: kargoapi.FreightOriginKindWarehouse,
-						Name: "warehouse-1",
-					},
-				},
-			},
-			assertions: func(t *testing.T, got []kargoapi.Freight, err error) {
-				require.NoError(t, err)
-				assert.Empty(t, got)
-			},
-		},
-		{
-			name: "upstream warehouse freight",
-			stage: types.NamespacedName{
-				Namespace: "default",
-				Name:      "test-stage",
-			},
-			objects: []client.Object{
-				&kargoapi.Freight{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "freight-1",
-					},
-					Origin: kargoapi.FreightOrigin{
-						Kind: kargoapi.FreightOriginKindWarehouse,
-						Name: "warehouse-1",
-					},
-					Status: kargoapi.FreightStatus{
-						VerifiedIn: map[string]kargoapi.VerifiedStage{
-							"upstream-stage": {},
-						},
-					},
-				},
-				&kargoapi.Freight{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "other-freight-1",
-					},
-					Origin: kargoapi.FreightOrigin{
-						Kind: kargoapi.FreightOriginKindWarehouse,
-						Name: "warehouse-1",
-					},
-					Status: kargoapi.FreightStatus{
-						VerifiedIn: map[string]kargoapi.VerifiedStage{
-							"other-stage": {},
-						},
-					},
-				},
-				&kargoapi.Freight{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "freight-2",
-					},
-					Origin: kargoapi.FreightOrigin{
-						Kind: kargoapi.FreightOriginKindWarehouse,
-						Name: "warehouse-1",
-					},
-					Status: kargoapi.FreightStatus{
-						VerifiedIn: map[string]kargoapi.VerifiedStage{
-							"upstream-stage": {},
-						},
-					},
-				},
-			},
-			requested: []kargoapi.FreightRequest{
-				{
-					Sources: kargoapi.FreightSources{
-						Stages: []string{"upstream-stage"},
-					},
-				},
-			},
-			assertions: func(t *testing.T, freights []kargoapi.Freight, err error) {
-				require.NoError(t, err)
-				assert.Len(t, freights, 2)
-				assert.Equal(t, "freight-1", freights[0].Name)
-				assert.Equal(t, "freight-2", freights[1].Name)
-			},
-		},
-		{
-			name: "ignores already verified upstream warehouse freight",
-			stage: types.NamespacedName{
-				Namespace: "default",
-				Name:      "test-stage",
-			},
-			objects: []client.Object{
-				&kargoapi.Freight{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "freight-1",
-					},
-					Origin: kargoapi.FreightOrigin{
-						Kind: kargoapi.FreightOriginKindWarehouse,
-						Name: "warehouse-1",
-					},
-					Status: kargoapi.FreightStatus{
-						VerifiedIn: map[string]kargoapi.VerifiedStage{
-							"upstream-stage": {},
-							"test-stage":     {},
-						},
-					},
-				},
-			},
-			requested: []kargoapi.FreightRequest{
-				{
-					Sources: kargoapi.FreightSources{
-						Stages: []string{"upstream-stage"},
-					},
-				},
-			},
-			assertions: func(t *testing.T, freights []kargoapi.Freight, err error) {
-				require.NoError(t, err)
-				assert.Empty(t, freights)
-			},
-		},
-		{
-			name: "multiple freight requests",
-			stage: types.NamespacedName{
-				Namespace: "default",
-				Name:      "test-stage",
-			},
-			objects: []client.Object{
-				&kargoapi.Freight{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "direct-freight-1",
-					},
-					Origin: kargoapi.FreightOrigin{
-						Kind: kargoapi.FreightOriginKindWarehouse,
-						Name: "warehouse-1",
-					},
-				},
-				&kargoapi.Freight{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "upstream-freight-1",
-					},
-					Origin: kargoapi.FreightOrigin{
-						Kind: kargoapi.FreightOriginKindWarehouse,
-						Name: "warehouse-2",
-					},
-					Status: kargoapi.FreightStatus{
-						VerifiedIn: map[string]kargoapi.VerifiedStage{
-							"upstream-stage": {},
-						},
-					},
-				},
-				&kargoapi.Freight{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "upstream-freight-2",
-					},
-					Origin: kargoapi.FreightOrigin{
-						Kind: kargoapi.FreightOriginKindWarehouse,
-						Name: "warehouse-2",
-					},
-					Status: kargoapi.FreightStatus{
-						VerifiedIn: map[string]kargoapi.VerifiedStage{
-							"upstream-stage": {},
-						},
-					},
-				},
-			},
-			requested: []kargoapi.FreightRequest{
-				{
-					Origin: kargoapi.FreightOrigin{
-						Kind: kargoapi.FreightOriginKindWarehouse,
-						Name: "warehouse-1",
-					},
-					Sources: kargoapi.FreightSources{
-						Direct: true,
-					},
-				},
-				{
-					Sources: kargoapi.FreightSources{
-						Stages: []string{"upstream-stage"},
-					},
-				},
-			},
-			assertions: func(t *testing.T, freights []kargoapi.Freight, err error) {
-				require.NoError(t, err)
-				assert.Len(t, freights, 3)
-				assert.Equal(t, "direct-freight-1", freights[0].Name)
-				assert.Equal(t, "upstream-freight-1", freights[1].Name)
-				assert.Equal(t, "upstream-freight-2", freights[2].Name)
-			},
-		},
-		{
-			name: "deduplicates freight",
-			stage: types.NamespacedName{
-				Namespace: "default",
-			},
-			objects: []client.Object{
-				&kargoapi.Freight{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "freight-1",
-					},
-					Origin: kargoapi.FreightOrigin{
-						Kind: kargoapi.FreightOriginKindWarehouse,
-						Name: "warehouse-1",
-					},
-					Status: kargoapi.FreightStatus{
-						VerifiedIn: map[string]kargoapi.VerifiedStage{
-							"upstream-stage": {},
-						},
-					},
-				},
-			},
-			requested: []kargoapi.FreightRequest{
-				{
-					Origin: kargoapi.FreightOrigin{
-						Kind: kargoapi.FreightOriginKindWarehouse,
-						Name: "warehouse-1",
-					},
-					Sources: kargoapi.FreightSources{
-						Direct: true,
-						Stages: []string{"upstream-stage"},
-					},
-				},
-			},
-			assertions: func(t *testing.T, freights []kargoapi.Freight, err error) {
-				require.NoError(t, err)
-				assert.Len(t, freights, 1)
-				assert.Equal(t, "freight-1", freights[0].Name)
-			},
-		},
-		{
-			name: "warehouse list error",
-			stage: types.NamespacedName{
-				Namespace: "default",
-				Name:      "test-stage",
-			},
-			requested: []kargoapi.FreightRequest{
-				{
-					Sources: kargoapi.FreightSources{
-						Direct: true,
-					},
-					Origin: kargoapi.FreightOrigin{
-						Kind: kargoapi.FreightOriginKindWarehouse,
-						Name: "warehouse-1",
-					},
-				},
-			},
-			interceptor: interceptor.Funcs{
-				List: func(
-					ctx context.Context,
-					c client.WithWatch,
-					list client.ObjectList,
-					opts ...client.ListOption,
-				) error {
-					listOpts := &client.ListOptions{}
-					for _, opt := range opts {
-						opt.ApplyToList(listOpts)
-					}
-
-					switch {
-					case strings.Contains(listOpts.FieldSelector.String(), indexer.FreightByWarehouseField):
-						return fmt.Errorf("something went wrong")
-					default:
-						return c.List(ctx, list, opts...)
-					}
-				},
-			},
-			assertions: func(t *testing.T, got []kargoapi.Freight, err error) {
-				require.ErrorContains(t, err, "something went wrong")
-				assert.Nil(t, got)
-			},
-		},
-		{
-			name: "stage list error",
-			stage: types.NamespacedName{
-				Namespace: "default",
-				Name:      "test-stage",
-			},
-			requested: []kargoapi.FreightRequest{
-				{
-					Sources: kargoapi.FreightSources{
-						Stages: []string{"upstream-stage"},
-					},
-				},
-			},
-			interceptor: interceptor.Funcs{
-				List: func(
-					ctx context.Context,
-					c client.WithWatch,
-					list client.ObjectList,
-					opts ...client.ListOption,
-				) error {
-					listOpts := &client.ListOptions{}
-					for _, opt := range opts {
-						opt.ApplyToList(listOpts)
-					}
-
-					switch {
-					case strings.Contains(listOpts.FieldSelector.String(), indexer.FreightByVerifiedStagesField):
-						return fmt.Errorf("something went wrong")
-					default:
-						return c.List(ctx, list, opts...)
-					}
-				},
-			},
-			assertions: func(t *testing.T, got []kargoapi.Freight, err error) {
-				require.ErrorContains(t, err, "something went wrong")
-				assert.Nil(t, got)
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			c := fake.NewClientBuilder().
-				WithScheme(scheme).
-				WithObjects(tt.objects...).
-				WithIndex(
-					&kargoapi.Freight{},
-					indexer.FreightByWarehouseField,
-					indexer.FreightByWarehouse,
-				).
-				WithIndex(
-					&kargoapi.Freight{},
-					indexer.FreightByVerifiedStagesField,
-					indexer.FreightByVerifiedStages,
-				).
-				WithInterceptorFuncs(tt.interceptor).
-				Build()
-			r := &ControlFlowStageReconciler{
-				client: c,
-			}
-
-			got, err := r.getAvailableFreight(context.Background(), tt.stage, tt.requested)
-			tt.assertions(t, got, err)
-		})
-	}
-}
-
-func TestControlFlowStageReconciler_verifyFreight(t *testing.T) {
+func TestControlFlowStageReconciler_markFreightVerifiedForStage(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, kargoapi.AddToScheme(scheme))
 
@@ -1420,12 +897,8 @@ func TestControlFlowStageReconciler_verifyFreight(t *testing.T) {
 				eventRecorder: recorder,
 			}
 
-			tt.assertions(
-				t,
-				c,
-				recorder,
-				r.verifyFreight(context.Background(), tt.stage, tt.freight, tt.startTime, tt.finishTime),
-			)
+			_, err := r.markFreightVerifiedForStage(context.Background(), tt.stage, tt.freight, tt.startTime, tt.finishTime)
+			tt.assertions(t, c, recorder, err)
 		})
 	}
 }

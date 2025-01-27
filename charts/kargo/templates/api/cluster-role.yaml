@@ -76,7 +76,9 @@ rules:
   - apiGroups:
       - kargo.akuity.io
     resources:
+      - clusterpromotiontasks
       - projects
+      - promotiontasks
       - stages
       - warehouses
     verbs:

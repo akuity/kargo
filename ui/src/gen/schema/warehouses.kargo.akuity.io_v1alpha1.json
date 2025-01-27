@@ -81,7 +81,7 @@
                   "branch": {
                     "description": "Branch references a particular branch of the repository. The value in this\nfield only has any effect when the CommitSelectionStrategy is\nNewestFromBranch or left unspecified (which is implicitly the same as\nNewestFromBranch). This field is optional. When left unspecified, (and the\nCommitSelectionStrategy is NewestFromBranch or unspecified), the\nsubscription is implicitly to the repository's default branch.",
                     "minLength": 1,
-                    "pattern": "^\\w+([-/]\\w+)*$",
+                    "pattern": "^\\w+([-/\\.]\\w+)*$",
                     "type": "string"
                   },
                   "commitSelectionStrategy": {

@@ -49,7 +49,7 @@ func (s *server) CreateCredentials(
 		return nil, err
 	}
 
-	secret := credentialsToSecret(creds)
+	secret := credentialsToK8sSecret(creds)
 	if err := s.client.Create(ctx, secret); err != nil {
 		return nil, fmt.Errorf("create secret: %w", err)
 	}
@@ -93,7 +93,7 @@ func (s *server) validateCredentials(creds credentials) error {
 	return validateFieldNotEmpty("password", creds.password)
 }
 
-func credentialsToSecret(creds credentials) *corev1.Secret {
+func credentialsToK8sSecret(creds credentials) *corev1.Secret {
 	s := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: creds.project,

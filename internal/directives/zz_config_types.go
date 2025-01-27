@@ -4,6 +4,8 @@ package directives
 
 type CommonDefs interface{}
 
+type ComposeOutput map[string]interface{}
+
 type ArgoCDUpdateConfig struct {
 	Apps       []ArgoCDAppUpdate `json:"apps"`
 	FromOrigin *AppFromOrigin    `json:"fromOrigin,omitempty"`

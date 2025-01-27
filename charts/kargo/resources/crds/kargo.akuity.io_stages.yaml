@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.16.5
+    controller-gen.kubebuilder.io/version: v0.17.1
   name: stages.kargo.akuity.io
 spec:
   group: kargo.akuity.io
@@ -132,14 +132,63 @@ spec:
                                     ErrorThreshold is reached.
                                   type: string
                               type: object
+                            task:
+                              description: |-
+                                Task is a reference to a PromotionTask that should be inflated into a
+                                Promotion when it is built from a PromotionTemplate.
+                              properties:
+                                kind:
+                                  description: |-
+                                    Kind is the type of the PromotionTask. Can be either PromotionTask or
+                                    ClusterPromotionTask, default is PromotionTask.
+                                  enum:
+                                  - PromotionTask
+                                  - ClusterPromotionTask
+                                  type: string
+                                name:
+                                  description: Name is the name of the (Cluster)PromotionTask.
+                                  maxLength: 253
+                                  minLength: 1
+                                  pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                  type: string
+                              required:
+                              - name
+                              type: object
                             uses:
                               description: Uses identifies a runner that can execute
                                 this step.
                               minLength: 1
                               type: string
-                          required:
-                          - uses
+                            vars:
+                              description: |-
+                                Vars is a list of variables that can be referenced by expressions in
+                                the step's Config. The values override the values specified in the
+                                PromotionSpec.
+                              items:
+                                description: |-
+                                  PromotionVariable describes a single variable that may be referenced by
+                                  expressions in promotion steps.
+                                properties:
+                                  name:
+                                    description: Name is the name of the variable.
+                                    minLength: 1
+                                    pattern: ^[a-zA-Z_]\w*$
+                                    type: string
+                                  value:
+                                    description: |-
+                                      Value is the value of the variable. It is allowed to utilize expressions
+                                      in the value.
+                                      See https://docs.kargo.io/references/expression-language for details.
+                                    type: string
+                                required:
+                                - name
+                                type: object
+                              type: array
                           type: object
+                          x-kubernetes-validations:
+                          - message: PromotionTemplate step must have exactly one
+                              of uses or task set
+                            rule: '(has(self.uses) ? !has(self.task) : has(self.task))'
                         minItems: 1
                         type: array
                       vars:
@@ -164,7 +213,6 @@ spec:
                               type: string
                           required:
                           - name
-                          - value
                           type: object
                         type: array
                     type: object
@@ -201,7 +249,7 @@ spec:
                         name:
                           description: |-
                             Name is the name of the resource of the kind indicated by the Kind field
-                            from which Freight may originated.
+                            from which Freight may originate.
                           type: string
                       required:
                       - kind
@@ -219,6 +267,18 @@ spec:
                             the value of the Stages field must be non-empty. i.e. Between the two
                             fields, at least one source must be specified.
                           type: boolean
+                        requiredSoakTime:
+                          description: |-
+                            RequiredSoakTime specifies a minimum duration for which the requested
+                            Freight must have continuously occupied ("soaked in") in an upstream Stage
+                            before becoming available for promotion to this Stage. This is an optional
+                            field. If nil or zero, no soak time is required. Any soak time requirement
+                            is in ADDITION to the requirement that Freight be verified in an upstream
+                            Stage to become available for promotion to this Stage, although a manual
+                            approval for promotion to this Stage will supersede any soak time
+                            requirement.
+                          pattern: ^([0-9]+(\.[0-9]+)?(s|m|h))+$
+                          type: string
                         stages:
                           description: |-
                             Stages identifies other "upstream" Stages as potential sources of the
@@ -498,7 +558,7 @@ spec:
                           name:
                             description: |-
                               Name is the name of the resource of the kind indicated by the Kind field
-                              from which Freight may originated.
+                              from which Freight may originate.
                             type: string
                         required:
                         - kind
@@ -639,7 +699,7 @@ spec:
                               name:
                                 description: |-
                                   Name is the name of the resource of the kind indicated by the Kind field
-                                  from which Freight may originated.
+                                  from which Freight may originate.
                                 type: string
                             required:
                             - kind
@@ -776,7 +836,7 @@ spec:
                                     name:
                                       description: |-
                                         Name is the name of the resource of the kind indicated by the Kind field
-                                        from which Freight may originated.
+                                        from which Freight may originate.
                                       type: string
                                   required:
                                   - kind
@@ -1074,7 +1134,7 @@ spec:
                               name:
                                 description: |-
                                   Name is the name of the resource of the kind indicated by the Kind field
-                                  from which Freight may originated.
+                                  from which Freight may originate.
                                 type: string
                             required:
                             - kind
@@ -1315,7 +1375,7 @@ spec:
                           name:
                             description: |-
                               Name is the name of the resource of the kind indicated by the Kind field
-                              from which Freight may originated.
+                              from which Freight may originate.
                             type: string
                         required:
                         - kind
@@ -1456,7 +1516,7 @@ spec:
                               name:
                                 description: |-
                                   Name is the name of the resource of the kind indicated by the Kind field
-                                  from which Freight may originated.
+                                  from which Freight may originate.
                                 type: string
                             required:
                             - kind
@@ -1593,7 +1653,7 @@ spec:
                                     name:
                                       description: |-
                                         Name is the name of the resource of the kind indicated by the Kind field
-                                        from which Freight may originated.
+                                        from which Freight may originate.
                                       type: string
                                   required:
                                   - kind
