@@ -24,13 +24,9 @@ refer to the [Warehouse section of the Core Concepts doc](./../10-core-concepts/
 ## The `Warehouse` Resource Type
 
 A `Warehouse` resource's most important field is its `spec.subscriptions` field,
-which is used to subscribe to one or more:
+which is used to subscribe to one or more artifact sources.
 
-- Container image repositories
-- Git repositories
-- Helm charts repositories
-
-The following example shows a `Warehouse` resource that subscribes to a
+Here's an example of a `Warehouse` subscribing to both a
 container image repository and a Git repository:
 
 ```yaml
