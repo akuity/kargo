@@ -84,7 +84,9 @@ spec:
 
 ## `spec.source.helm.values`
 
-Alternatively, instead of using `spec.source.helm`'s `parameters` field, you can use the either of the `values` or `valuesObject` fields to specify configuration options for the chart:
+Alternatively, instead of using `spec.source.helm`'s `parameters` field, you can
+use either of its `values` or `valuesObject` fields to specify configuration
+options for the chart:
 
 ```yaml
 apiVersion: argoproj.io/v1alpha1
