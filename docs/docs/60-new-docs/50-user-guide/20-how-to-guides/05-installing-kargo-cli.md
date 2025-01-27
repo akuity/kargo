@@ -12,7 +12,7 @@ To install:
 
 1. Download the CLI binary.
 
-    The easiest method of downloading the binary is by selecting
+    The easiest method of downloading the binary is by selecting the
     <Hlt>CLI</Hlt> tab from the left navbar of the UI. There, you can select
     the appropriate binary for your operating system and CPU architecture.
 
