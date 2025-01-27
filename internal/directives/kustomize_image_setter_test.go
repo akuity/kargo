@@ -74,32 +74,6 @@ func Test_kustomizeImageSetter_validate(t *testing.T) {
 			},
 		},
 		{
-			name: "digest and useDigest are both specified",
-			// These should be mutually exclusive.
-			config: Config{
-				"images": []Config{{
-					"digest":    "fake-digest",
-					"useDigest": true,
-				}},
-			},
-			expectedProblems: []string{
-				"images.0: Must validate one and only one schema (oneOf)",
-			},
-		},
-		{
-			name: "tag and useDigest are both specified",
-			// These should be mutually exclusive.
-			config: Config{
-				"images": []Config{{
-					"tag":       "fake-tag",
-					"useDigest": true,
-				}},
-			},
-			expectedProblems: []string{
-				"images.0: Must validate one and only one schema (oneOf)",
-			},
-		},
-		{
 			name: "valid kitchen sink",
 			config: Config{
 				"path": "fake-path",
@@ -108,48 +82,38 @@ func Test_kustomizeImageSetter_validate(t *testing.T) {
 						"image": "fake-image-0",
 					},
 					{
-						"image":     "fake-image-1",
-						"digest":    "",
-						"tag":       "",
-						"useDigest": false,
+						"image":  "fake-image-1",
+						"digest": "",
+						"tag":    "",
 					},
 					{
 						"image":  "fake-image-2",
 						"digest": "fake-digest",
 					},
 					{
-						"image":     "fake-image-3",
-						"digest":    "fake-digest",
-						"tag":       "",
-						"useDigest": false,
+						"image":  "fake-image-3",
+						"digest": "fake-digest",
+						"tag":    "",
 					},
 					{
 						"image": "fake-image-4",
 						"tag":   "fake-tag",
 					},
 					{
-						"image":     "fake-image-5",
-						"digest":    "",
-						"tag":       "fake-tag",
-						"useDigest": false,
+						"image":  "fake-image-5",
+						"digest": "",
+						"tag":    "fake-tag",
 					},
 					{
-						"image":     "fake-image-6",
-						"useDigest": true,
+						"image": "fake-image-6",
 					},
 					{
-						"image":     "fake-image-7",
-						"digest":    "",
-						"tag":       "",
-						"useDigest": true,
+						"image":  "fake-image-7",
+						"digest": "",
+						"tag":    "",
 					},
 					{
-						"image":     "fake-image-8",
-						"useDigest": true,
-						"fromOrigin": Config{
-							"kind": Warehouse,
-							"name": "fake-warehouse",
-						},
+						"image": "fake-image-8",
 					},
 				},
 			},
@@ -198,7 +162,7 @@ kind: Kustomization
 			cfg: KustomizeSetImageConfig{
 				Path: ".",
 				Images: []KustomizeSetImageConfigImage{
-					{Image: "nginx"},
+					{Image: "nginx", Tag: "1.21.0"},
 				},
 			},
 			setupStepCtx: func(t *testing.T, workDir string) *PromotionStepContext {
@@ -315,46 +279,6 @@ kind: Kustomization
 				assert.Equal(t, PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, result)
 			},
 		},
-		{
-			name: "image origin not found",
-			setupFiles: func(t *testing.T) string {
-				tempDir := t.TempDir()
-				kustomizationContent := `
-apiVersion: kustomize.config.k8s.io/v1beta1
-kind: Kustomization
-images:
-- name: nginx
-  newTag: 1.19.0
-`
-				err := os.WriteFile(filepath.Join(tempDir, "kustomization.yaml"), []byte(kustomizationContent), 0o600)
-				require.NoError(t, err)
-				return tempDir
-			},
-			cfg: KustomizeSetImageConfig{
-				Path: ".",
-				Images: []KustomizeSetImageConfigImage{
-					{Image: "nginx"},
-				},
-			},
-			setupStepCtx: func(t *testing.T, workDir string) *PromotionStepContext {
-				scheme := runtime.NewScheme()
-				require.NoError(t, kargoapi.AddToScheme(scheme))
-				fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
-
-				return &PromotionStepContext{
-					WorkDir:     workDir,
-					KargoClient: fakeClient,
-					Project:     testNamespace,
-					FreightRequests: []kargoapi.FreightRequest{
-						{Origin: kargoapi.FreightOrigin{Name: "non-existent-warehouse", Kind: "Warehouse"}},
-					},
-				}
-			},
-			assertions: func(t *testing.T, _ string, result PromotionStepResult, err error) {
-				require.ErrorContains(t, err, "unable to discover image")
-				assert.Equal(t, PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, result)
-			},
-		},
 	}
 
 	runner := &kustomizeImageSetter{}
@@ -371,15 +295,10 @@ images:
 }
 
 func Test_kustomizeImageSetter_buildTargetImages(t *testing.T) {
-	const testNamespace = "test-project"
-
 	tests := []struct {
-		name              string
-		images            []KustomizeSetImageConfigImage
-		freightRequests   []kargoapi.FreightRequest
-		objects           []runtime.Object
-		freightReferences map[string]kargoapi.FreightReference
-		assertions        func(*testing.T, map[string]kustypes.Image, error)
+		name       string
+		images     []KustomizeSetImageConfigImage
+		assertions func(*testing.T, map[string]kustypes.Image)
 	}{
 		{
 			name: "digest or tag specified",
@@ -393,176 +312,11 @@ func Test_kustomizeImageSetter_buildTargetImages(t *testing.T) {
 					Digest: "fake-digest",
 				},
 			},
-			assertions: func(t *testing.T, result map[string]kustypes.Image, err error) {
-				require.NoError(t, err)
+			assertions: func(t *testing.T, result map[string]kustypes.Image) {
 				assert.Equal(t, map[string]kustypes.Image{
 					"nginx": {Name: "nginx", NewTag: "fake-tag"},
 					"redis": {Name: "redis", Digest: "fake-digest"},
 				}, result)
-			},
-		},
-		{
-			name: "discovers origins and builds target images",
-			images: []KustomizeSetImageConfigImage{
-				{Image: "nginx"},
-				{Image: "redis"},
-			},
-			freightRequests: []kargoapi.FreightRequest{
-				{Origin: kargoapi.FreightOrigin{Name: "warehouse1", Kind: "Warehouse"}},
-				{Origin: kargoapi.FreightOrigin{Name: "warehouse2", Kind: "Warehouse"}},
-			},
-			objects: []runtime.Object{
-				mockWarehouse(testNamespace, "warehouse1", kargoapi.WarehouseSpec{
-					Subscriptions: []kargoapi.RepoSubscription{
-						{Image: &kargoapi.ImageSubscription{RepoURL: "nginx"}},
-					},
-				}),
-				mockWarehouse(testNamespace, "warehouse2", kargoapi.WarehouseSpec{
-					Subscriptions: []kargoapi.RepoSubscription{
-						{Image: &kargoapi.ImageSubscription{RepoURL: "redis"}},
-					},
-				}),
-			},
-			freightReferences: map[string]kargoapi.FreightReference{
-				"Warehouse/warehouse1": {
-					Origin: kargoapi.FreightOrigin{Kind: "Warehouse", Name: "warehouse1"},
-					Images: []kargoapi.Image{{RepoURL: "nginx", Tag: "1.21.0", Digest: "sha256:123"}},
-				},
-				"Warehouse/warehouse2": {
-					Origin: kargoapi.FreightOrigin{Kind: "Warehouse", Name: "warehouse2"},
-					Images: []kargoapi.Image{{RepoURL: "redis", Tag: "6.2.5", Digest: "sha256:456"}},
-				},
-			},
-			assertions: func(t *testing.T, result map[string]kustypes.Image, err error) {
-				require.NoError(t, err)
-				assert.Equal(t, map[string]kustypes.Image{
-					"nginx": {Name: "nginx", NewTag: "1.21.0"},
-					"redis": {Name: "redis", NewTag: "6.2.5"},
-				}, result)
-			},
-		},
-		{
-			name: "error when no origin found",
-			images: []KustomizeSetImageConfigImage{
-				{Image: "mysql"},
-			},
-			freightRequests: []kargoapi.FreightRequest{
-				{Origin: kargoapi.FreightOrigin{Name: "warehouse1", Kind: "Warehouse"}},
-			},
-			objects: []runtime.Object{
-				mockWarehouse(testNamespace, "warehouse1", kargoapi.WarehouseSpec{
-					Subscriptions: []kargoapi.RepoSubscription{
-						{Image: &kargoapi.ImageSubscription{RepoURL: "nginx"}},
-					},
-				}),
-			},
-			freightReferences: map[string]kargoapi.FreightReference{
-				"Warehouse/warehouse1": {
-					Origin: kargoapi.FreightOrigin{Kind: "Warehouse", Name: "warehouse1"},
-					Images: []kargoapi.Image{{RepoURL: "nginx", Tag: "1.21.0", Digest: "sha256:123"}},
-				},
-			},
-			assertions: func(t *testing.T, _ map[string]kustypes.Image, err error) {
-				require.ErrorContains(t, err, "not found in referenced Freight")
-			},
-		},
-		{
-			name: "uses provided origin",
-			images: []KustomizeSetImageConfigImage{
-				{Image: "nginx", FromOrigin: &ChartFromOrigin{Kind: "Warehouse", Name: "warehouse1"}},
-			},
-			freightRequests: []kargoapi.FreightRequest{
-				{Origin: kargoapi.FreightOrigin{Name: "warehouse1", Kind: "Warehouse"}},
-			},
-			objects: []runtime.Object{
-				mockWarehouse(testNamespace, "warehouse1", kargoapi.WarehouseSpec{
-					Subscriptions: []kargoapi.RepoSubscription{
-						{Image: &kargoapi.ImageSubscription{RepoURL: "nginx"}},
-					},
-				}),
-			},
-			freightReferences: map[string]kargoapi.FreightReference{
-				"Warehouse/warehouse1": {
-					Origin: kargoapi.FreightOrigin{Kind: "Warehouse", Name: "warehouse1"},
-					Images: []kargoapi.Image{{RepoURL: "nginx", Tag: "1.21.0", Digest: "sha256:123"}},
-				},
-			},
-			assertions: func(t *testing.T, result map[string]kustypes.Image, err error) {
-				require.NoError(t, err)
-				assert.Equal(t, map[string]kustypes.Image{
-					"nginx": {Name: "nginx", NewTag: "1.21.0"},
-				}, result)
-			},
-		},
-		{
-			name: "uses custom name and digest",
-			images: []KustomizeSetImageConfigImage{
-				{
-					Image:     "nginx",
-					Name:      "custom-nginx",
-					UseDigest: true,
-					FromOrigin: &ChartFromOrigin{
-						Kind: "Warehouse",
-						Name: "warehouse1",
-					},
-				},
-			},
-			freightRequests: []kargoapi.FreightRequest{
-				{Origin: kargoapi.FreightOrigin{Name: "warehouse1", Kind: "Warehouse"}},
-			},
-			objects: []runtime.Object{
-				mockWarehouse(testNamespace, "warehouse1", kargoapi.WarehouseSpec{
-					Subscriptions: []kargoapi.RepoSubscription{
-						{Image: &kargoapi.ImageSubscription{RepoURL: "nginx"}},
-					},
-				}),
-			},
-			freightReferences: map[string]kargoapi.FreightReference{
-				"Warehouse/warehouse1": {
-					Origin: kargoapi.FreightOrigin{Kind: "Warehouse", Name: "warehouse1"},
-					Images: []kargoapi.Image{{RepoURL: "nginx", Tag: "1.21.0", Digest: "sha256:123"}},
-				},
-			},
-			assertions: func(t *testing.T, result map[string]kustypes.Image, err error) {
-				require.NoError(t, err)
-				assert.Equal(t, map[string]kustypes.Image{
-					"custom-nginx": {Name: "custom-nginx", NewTag: "1.21.0", Digest: "sha256:123"},
-				}, result)
-			},
-		},
-		{
-			name: "error when multiple origins found",
-			images: []KustomizeSetImageConfigImage{
-				{Image: "nginx"},
-			},
-			freightRequests: []kargoapi.FreightRequest{
-				{Origin: kargoapi.FreightOrigin{Name: "warehouse1", Kind: "Warehouse"}},
-				{Origin: kargoapi.FreightOrigin{Name: "warehouse2", Kind: "Warehouse"}},
-			},
-			objects: []runtime.Object{
-				mockWarehouse(testNamespace, "warehouse1", kargoapi.WarehouseSpec{
-					Subscriptions: []kargoapi.RepoSubscription{
-						{Image: &kargoapi.ImageSubscription{RepoURL: "nginx"}},
-					},
-				}),
-				mockWarehouse(testNamespace, "warehouse2", kargoapi.WarehouseSpec{
-					Subscriptions: []kargoapi.RepoSubscription{
-						{Image: &kargoapi.ImageSubscription{RepoURL: "nginx"}},
-					},
-				}),
-			},
-			freightReferences: map[string]kargoapi.FreightReference{
-				"Warehouse/warehouse1": {
-					Origin: kargoapi.FreightOrigin{Kind: "Warehouse", Name: "warehouse1"},
-					Images: []kargoapi.Image{{RepoURL: "nginx", Tag: "1.21.0", Digest: "sha256:123"}},
-				},
-				"Warehouse/warehouse2": {
-					Origin: kargoapi.FreightOrigin{Kind: "Warehouse", Name: "warehouse2"},
-					Images: []kargoapi.Image{{RepoURL: "nginx", Tag: "1.21.0", Digest: "sha256:456"}},
-				},
-			},
-			assertions: func(t *testing.T, _ map[string]kustypes.Image, err error) {
-				require.ErrorContains(t, err, "multiple requested Freight could potentially provide a container image")
 			},
 		},
 	}
@@ -571,21 +325,8 @@ func Test_kustomizeImageSetter_buildTargetImages(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			scheme := runtime.NewScheme()
-			require.NoError(t, kargoapi.AddToScheme(scheme))
-			fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(tt.objects...).Build()
-
-			stepCtx := &PromotionStepContext{
-				KargoClient:     fakeClient,
-				Project:         testNamespace,
-				FreightRequests: tt.freightRequests,
-				Freight: kargoapi.FreightCollection{
-					Freight: tt.freightReferences,
-				},
-			}
-
-			result, err := runner.buildTargetImagesFromConfig(context.Background(), stepCtx, tt.images)
-			tt.assertions(t, result, err)
+			result := runner.buildTargetImagesFromConfig(tt.images)
+			tt.assertions(t, result)
 		})
 	}
 }

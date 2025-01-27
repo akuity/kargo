@@ -417,10 +417,8 @@ type KustomizeSetImageConfig struct {
 }
 
 type KustomizeSetImageConfigImage struct {
-	// Digest of the image to set in the Kustomization file. Mutually exclusive with 'tag' and
-	// 'useDigest=true'.
-	Digest     string           `json:"digest,omitempty"`
-	FromOrigin *ChartFromOrigin `json:"fromOrigin,omitempty"`
+	// Digest of the image to set in the Kustomization file. Mutually exclusive with 'tag'.
+	Digest string `json:"digest,omitempty"`
 	// Image name of the repository from which to pick the version. This is the image name Kargo
 	// is subscribed to, and produces Freight for.
 	Image string `json:"image"`
@@ -429,11 +427,8 @@ type KustomizeSetImageConfigImage struct {
 	// NewName for the image. This can be used to rename the container image name in the
 	// manifests.
 	NewName string `json:"newName,omitempty"`
-	// Tag of the image to set in the Kustomization file. Mutually exclusive with 'digest' and
-	// 'useDigest=true'.
+	// Tag of the image to set in the Kustomization file. Mutually exclusive with 'digest'.
 	Tag string `json:"tag,omitempty"`
-	// UseDigest specifies whether to use the digest of the image instead of the tag.
-	UseDigest bool `json:"useDigest,omitempty"`
 }
 
 type YAMLUpdateConfig struct {
