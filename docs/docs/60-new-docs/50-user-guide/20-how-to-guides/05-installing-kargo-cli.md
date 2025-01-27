@@ -7,7 +7,6 @@ sidebar_label: Installing the CLI
 Although its web-based UI provides the best user experience, Kargo also offers a
 command line interface (CLI) for users who may prefer it.
 
-
 To install:
 
 1. Download the CLI binary.
@@ -36,7 +35,7 @@ To install:
     arch=$(uname -m)
     [ "$arch" = "x86_64" ] && arch=amd64
     curl -L -o kargo https://github.com/akuity/kargo/releases/latest/download/kargo-"$(uname -s | tr '[:upper:]' '[:lower:]')-${arch}"
-chmod +x kargo
+    chmod +x kargo
     ```
 
     </TabItem>
