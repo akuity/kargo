@@ -57,18 +57,36 @@ These instructions were tested with:
 
 ## Installation Steps
 
-The following command will install Kargo with default configuration and a
-an admin account password of `admin`:
+1. Generate a password and a signing key.
 
-```shell
-helm install kargo \
-  oci://ghcr.io/akuity/kargo-charts/kargo \
-  --namespace kargo \
-  --create-namespace \
-  --set api.adminAccount.passwordHash='$2a$10$Zrhhie4vLz5ygtVSaif6o.qN36jgs6vjtMBdM6yrU1FOeiAAMMxOm' \
-  --set api.adminAccount.tokenSigningKey=iwishtowashmyirishwristwatch \
-  --wait
-```
+    There are no default values for these two fields, so you _must_ provide your
+    own.
+
+    Recommended commands for generating a complex password and signing key, and
+    for hashing the password as required are:
+
+    ```console
+    pass=$(openssl rand -base64 48 | tr -d "=+/" | head -c 32)
+    echo "Password: $pass"
+    hashed_pass=$(htpasswd -bnBC 10 "" $pass | tr -d ':\n')
+    signing_key=$(openssl rand -base64 48 | tr -d "=+/" | head -c 32)
+    ```
+
+    The above commands will leave you with values assigned to `$hashed_pass` and
+    `$signing_key`. These will be used in the next step.
+
+1. Install Kargo with default configuration and your chosen admin account
+   password:
+
+    ```shell
+    helm install kargo \
+      oci://ghcr.io/akuity/kargo-charts/kargo \
+      --namespace kargo \
+      --create-namespace \
+      --set api.adminAccount.passwordHash=$hashed_pass \
+      --set api.adminAccount.tokenSigningKey=$signing_key \
+      --wait
+    ```
 
 ## Troubleshooting
 
