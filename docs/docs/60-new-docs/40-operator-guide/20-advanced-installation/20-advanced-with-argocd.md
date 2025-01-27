@@ -10,9 +10,30 @@ This section outlines a few generalized approaches to installing and managing Ka
 This section assumes that you have already installed any dependencies or prerequisites required for running Kargo on a Kubernetes cluster. Please refer to [Basic Installation](../../operator-guide/basic-installation#prerequisites) for more details.
 :::
 
-## Direct Argo CD Application 
+All methods described here will involve deploying Kargo using an Argo CD
+`Application` resource that is configured to obtain Kargo's Helm chart directly
+from its official repo. We will demonstrate a variety of ways to specify
+your own configuration values using `api.adminAccount.passwordHash` and `api.adminAccount.tokenSigningKey` as examples since you are _required_ to
+provide values for these anyway (unless
+[the admin account is disabled instead](../40-security/10-secure-configuration.md#disabling-the-admin-account)).
 
-The most common way to deploy Kargo using Argo CD is to create an `Application` and use the Helm chart directly. Using this method, you can use the `.spec.source.helm.parameters` section to specify any parameters you may need. This is the most straightforward way to deploy Kargo using Argo CD.
+Recommended commands for generating a complex password and signing key, and for hashing the password as required are:
+
+```console
+pass=$(openssl rand -base64 48 | tr -d "=+/" | head -c 32)
+echo "Password: $pass"
+echo "Password Hash: $(htpasswd -bnBC 10 "" $pass | tr -d ':\n')"
+echo "Signing Key: $(openssl rand -base64 48 | tr -d "=+/" | head -c 32)"
+```
+
+:::note
+Methods of securing the admin account are explored in greater detail [here](../40-security/10-secure-configuration.md#securing-the-admin-account).
+:::
+
+## `spec.source.helm.parameters`
+
+The most straightforward way to specify chart configuration options is by using the
+`Application`'s `spec.source.helm.parameters` field:
 
 :::info
 The parameters used are just examples, and you should use the values that are appropriate for your environment. Detailed information about available options can also be found in the [Kargo Helm Chart's README.md](https://github.com/akuity/kargo/tree/main/charts/kargo).
@@ -37,13 +58,11 @@ spec:
     helm:
       parameters:
         - name: api.adminAccount.passwordHash
-          value: "$$2a$$10$$Zrhhie4vLz5ygtVSaif6o.qN36jgs6vjtMBdM6yrU1FOeiAAMMxOm"
-        - name: controller.logLevel
-          value: "DEBUG"
-        - name: api.adminAccount.tokenTTL
-          value: "24h"
+          # Note: A bcrypt-hashed password will contain `$` characters that
+          # MUST each be escaped as `$$`
+          value: <bcrypt-hashed password>
         - name: api.adminAccount.tokenSigningKey
-          value: "iwishtowashmyirishwristwatch"
+          value: <token signing key>
   syncPolicy:
     automated:
       prune: true
@@ -52,14 +71,12 @@ spec:
     - CreateNamespace=true
 ```
 
-:::info
-If using the `api.adminAccount.passwordHash` parameter in this method, you must escape the `$` character with `$$` to prevent Helm from interpreting it as a variable. Please see [this discussion](https://discord.com/channels/1138942074998235187/1138946346217394407/1267966083168469102) for more information.
-:::
 
-Conversely, insetad of using the `parameters` field under the `.spec.source.helm` section; you can use the `values` block or `valuesObject` object to specify the values for the Kargo Helm chart. Below is an example of how to use `valuesObject` to specify the values.
+## `spec.source.helm.values`
+
+Alternatively, instead of using `spec.source.helm`'s `parameters` field, you can use the either of the `values` or `valuesObject` fields to specify configuration options for the chart:
 
 ```yaml
----
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -78,8 +95,8 @@ spec:
       valuesObject:
         api:
           adminAccount:
-            passwordHash: $2a$10$Zrhhie4vLz5ygtVSaif6o.qN36jgs6vjtMBdM6yrU1FOeiAAMMxOm
-            tokenSigningKey: iwishtowashmyirishwristwatch
+            passwordHash: <bcrypt-hashed password>
+            tokenSigningKey: <token signing key>
             tokenTTL: 24h
         controller:
           logLevel: DEBUG
@@ -93,14 +110,17 @@ spec:
 
 ## Multi-Source Argo CD Application
 
-Another method is to use a Multi-Source Argo CD Application. Here, you'd use the `.spec.sources` field and store your values files in a separate repository. This is useful if you are using GitOps to track your values configuration changes, but will still use the public Helm chart repository.
+__Our recommended method__ is to use an `Application` with
+[multiple sources](https://argo-cd.readthedocs.io/en/stable/user-guide/multiple_sources/) to reference _both_ the Kargo Helm chart repository a `values.yaml`
+of your own from your own Git repository.
 
-:::info
-We recommend using this method as it more closely aligns with GitOps principles and best practices.
-:::
+__This is our recommendation because it aligns best with with GitOps principles.__
+
+
+In the configuration below, the second source (the one with `repoURL` pointed at your own Git repository) is assigned a `ref` of `values`. This permits content from that
+repository (in particular, a `values.yaml` file) to be referenced by the _other_ source:
 
 ```yaml
----
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -128,9 +148,3 @@ spec:
     syncOptions:
     - CreateNamespace=true
 ```
-
-The `parametes` section isn't used in this method, instead the `values.yaml` file is hosted in a separate repository and is referenced using the `ref` field.
-
-## What's Next?
-
-Now that you have deployed Kargo using Argo CD, you can explore the various features and capabilities of Kargo. Please see the [Operator Guide](../../operator-guide/) or the [User Guide](../../user-guide/) for futher information.
