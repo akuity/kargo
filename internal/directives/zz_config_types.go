@@ -7,12 +7,10 @@ type CommonDefs interface{}
 type ComposeOutput map[string]interface{}
 
 type ArgoCDUpdateConfig struct {
-	Apps       []ArgoCDAppUpdate `json:"apps"`
-	FromOrigin *AppFromOrigin    `json:"fromOrigin,omitempty"`
+	Apps []ArgoCDAppUpdate `json:"apps"`
 }
 
 type ArgoCDAppUpdate struct {
-	FromOrigin *AppFromOrigin `json:"fromOrigin,omitempty"`
 	// Specifies the name of an Argo CD Application resource to be updated.
 	Name string `json:"name"`
 	// Specifies the namespace of an Argo CD Application resource to be updated. If left
@@ -22,13 +20,6 @@ type ArgoCDAppUpdate struct {
 	Sources []ArgoCDAppSourceUpdate `json:"sources,omitempty"`
 }
 
-type AppFromOrigin struct {
-	// The kind of origin. Currently only 'Warehouse' is supported. Required.
-	Kind Kind `json:"kind"`
-	// The name of the origin. Required.
-	Name string `json:"name"`
-}
-
 type ArgoCDAppSourceUpdate struct {
 	// If applicable, identifies a specific chart within the Helm chart repository specified by
 	// the 'repoURL' field. When the source to be updated references a Helm chart repository,
@@ -36,22 +27,12 @@ type ArgoCDAppSourceUpdate struct {
 	// same fields in the source. i.e. Do not match the values of these two fields to your
 	// Warehouse; match them to the Application source you wish to update.
 	Chart string `json:"chart,omitempty"`
-	// Applicable only when 'repoURL' references a Git repository, this field references the
-	// 'commit' output from a previous step and uses it as the desired revision for the source.
-	// Mutually exclusive with 'desiredRevision'. If both are left undefined, the desired
-	// revision will be determined by Freight (if possible). Note that the source's
-	// 'targetRevision' will not be updated to this commit unless 'updateTargetRevision=true' is
-	// set. The utility of this field, on its own, is to specify the revision that the source
-	// should be observably synced to during a health check.
-	DesiredCommitFromStep string `json:"desiredCommitFromStep,omitempty"`
-	// Specifies the desired revision for the source. Mutually exclusive with
-	// 'desiredCommitFromStep'. If both are left undefined, the desired revision will be
-	// determined by Freight (if possible). Note that the source's 'targetRevision' will not be
-	// updated to this commit unless 'updateTargetRevision=true' is set. The utility of this
-	// field, on its own, is to specify the revision that the source should be observably synced
-	// to during a health check.
+	// Specifies the desired revision for the source. If left undefined, the desired revision
+	// will be determined by Freight (if possible). Note that the source's 'targetRevision' will
+	// not be updated to this commit unless 'updateTargetRevision=true' is set. The utility of
+	// this field, on its own, is to specify the revision that the source should be observably
+	// synced to during a health check.
 	DesiredRevision string                       `json:"desiredRevision,omitempty"`
-	FromOrigin      *AppFromOrigin               `json:"fromOrigin,omitempty"`
 	Helm            *ArgoCDHelmParameterUpdates  `json:"helm,omitempty"`
 	Kustomize       *ArgoCDKustomizeImageUpdates `json:"kustomize,omitempty"`
 	// With possible help from the 'chart' field, identifies which of an Argo CD Application's
@@ -61,26 +42,22 @@ type ArgoCDAppSourceUpdate struct {
 	// to your Warehouse; match them to the Application source you wish to update.
 	RepoURL string `json:"repoURL"`
 	// Indicates whether the source should be updated such that its 'targetRevision' field
-	// points directly at the desired revision. If set to true, exactly one of
-	// 'desiredCommitFromStep' or 'desiredRevision' must be specified.
+	// points directly at the desired revision. If set to true, 'desiredRevision' must be
+	// specified.
 	UpdateTargetRevision bool `json:"updateTargetRevision,omitempty"`
 }
 
 // Describes updates to an Argo CD Application source's Helm parameters.
 type ArgoCDHelmParameterUpdates struct {
-	FromOrigin *AppFromOrigin          `json:"fromOrigin,omitempty"`
-	Images     []ArgoCDHelmImageUpdate `json:"images"`
+	Images []ArgoCDHelmImageUpdate `json:"images"`
 }
 
 // Describes how to update a Helm parameter to reference a specific version of a container
 // image.
 type ArgoCDHelmImageUpdate struct {
-	FromOrigin *AppFromOrigin `json:"fromOrigin,omitempty"`
 	// Specifies a key within an Argo CD Application source's Helm parameters that is to be
 	// updated.
 	Key string `json:"key"`
-	// The URL of a container image repository.
-	RepoURL string `json:"repoURL,omitempty"`
 	// Specifies a new value for the setting within an Argo CD Application source's Helm
 	// parameters identified by the 'key' field.
 	Value string `json:"value"`
@@ -88,25 +65,20 @@ type ArgoCDHelmImageUpdate struct {
 
 // Describes updates to an Argo CD Application source's Kustomize images.
 type ArgoCDKustomizeImageUpdates struct {
-	FromOrigin *AppFromOrigin               `json:"fromOrigin,omitempty"`
-	Images     []ArgoCDKustomizeImageUpdate `json:"images,omitempty"`
+	Images []ArgoCDKustomizeImageUpdate `json:"images,omitempty"`
 }
 
 // Describes how to update a Kustomize image to reference a specific version of a container
 // image.
 type ArgoCDKustomizeImageUpdate struct {
-	// Digest of the image to set. Mutually exclusive with 'tag' and 'useDigest=true'.
-	Digest     string         `json:"digest,omitempty"`
-	FromOrigin *AppFromOrigin `json:"fromOrigin,omitempty"`
+	// Digest of the image to set. Mutually exclusive with 'tag'.
+	Digest string `json:"digest,omitempty"`
 	// Specifies a container image name override.
 	NewName string `json:"newName,omitempty"`
 	// The URL of a container image repository.
 	RepoURL string `json:"repoURL"`
-	// Tag of the image to set. Mutually exclusive with 'digest' and 'useDigest=true'.
+	// Tag of the image to set. Mutually exclusive with 'digest'.
 	Tag string `json:"tag,omitempty"`
-	// Specifies whether the image's digest should be used instead of its tag. Mutually
-	// exclusive with 'digest' and 'tag'.
-	UseDigest bool `json:"useDigest,omitempty"`
 }
 
 type CopyConfig struct {
