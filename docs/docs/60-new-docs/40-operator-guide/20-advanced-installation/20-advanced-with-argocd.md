@@ -160,7 +160,7 @@ spec:
       helm:
         valueFiles:
           - $values/kargo/values.yaml
-    - repoURL: https://github.com/<username>/kargo-helm-values
+    - repoURL: https://github.com/example/repo.git
       targetRevision: main
       ref: values
       path: kargo/additional-manifests
