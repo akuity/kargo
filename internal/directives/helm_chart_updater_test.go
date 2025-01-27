@@ -18,10 +18,7 @@ import (
 	"helm.sh/helm/v3/pkg/helmpath"
 	helmregistry "helm.sh/helm/v3/pkg/registry"
 	"helm.sh/helm/v3/pkg/repo"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/kustomize/kyaml/yaml"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -109,39 +106,33 @@ func Test_helmChartUpdater_validate(t *testing.T) {
 			},
 		},
 		{
+			name: "version not specified",
+			config: Config{
+				"charts": []Config{{}},
+			},
+			expectedProblems: []string{
+				"charts.0: version is required",
+			},
+		},
+		{
+			name: "version is empty",
+			config: Config{
+				"charts": []Config{{
+					"version": "",
+				}},
+			},
+			expectedProblems: []string{
+				"charts.0.version: String length must be greater than or equal to 1",
+			},
+		},
+		{
 			name: "valid kitchen sink",
 			config: Config{
 				"path": "fake-path",
 				"charts": []Config{
 					{
 						"repository": "fake-repository",
-						"name":       "fake-chart-0",
-					},
-					{
-						"repository": "fake-repository",
-						"name":       "fake-chart-1",
-						"version":    "",
-					},
-					{
-						"repository": "fake-repository",
-						"name":       "fake-chart-2",
-						"fromOrigin": Config{
-							"kind": Warehouse,
-							"name": "fake-warehouse",
-						},
-					},
-					{
-						"repository": "fake-repository",
-						"name":       "fake-chart-3",
-						"version":    "",
-						"fromOrigin": Config{
-							"kind": Warehouse,
-							"name": "fake-warehouse",
-						},
-					},
-					{
-						"repository": "fake-repository",
-						"name":       "fake-chart-4",
+						"name":       "fake-chart",
 						"version":    "fake-version",
 					},
 				},
@@ -202,10 +193,7 @@ func Test_helmChartUpdater_runPromotionStep(t *testing.T) {
 					{
 						Repository: "https://charts.example.com",
 						Name:       "examplechart",
-						FromOrigin: &Origin{
-							Kind: "Warehouse",
-							Name: "test-warehouse",
-						},
+						Version:    "0.1.0",
 					},
 				},
 			},
@@ -315,202 +303,12 @@ func Test_helmChartUpdater_runPromotionStep(t *testing.T) {
 func Test_helmChartUpdater_processChartUpdates(t *testing.T) {
 	tests := []struct {
 		name              string
-		objects           []client.Object
-		context           *PromotionStepContext
 		cfg               HelmUpdateChartConfig
 		chartDependencies []chartDependency
 		assertions        func(*testing.T, []intyaml.Update, error)
 	}{
 		{
-			name: "finds chart update",
-			objects: []client.Object{
-				&kargoapi.Warehouse{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-warehouse",
-						Namespace: "test-project",
-					},
-					Spec: kargoapi.WarehouseSpec{
-						Subscriptions: []kargoapi.RepoSubscription{
-							{
-								Chart: &kargoapi.ChartSubscription{
-									RepoURL: "https://charts.example.com",
-									Name:    "test-chart",
-								},
-							},
-						},
-					},
-				},
-			},
-			context: &PromotionStepContext{
-				Project: "test-project",
-				Freight: kargoapi.FreightCollection{
-					Freight: map[string]kargoapi.FreightReference{
-						"Warehouse/test-warehouse": {
-							Origin: kargoapi.FreightOrigin{Kind: "Warehouse", Name: "test-warehouse"},
-							Charts: []kargoapi.Chart{
-								{RepoURL: "https://charts.example.com", Name: "test-chart", Version: "1.0.0"},
-							},
-						},
-					},
-				},
-				FreightRequests: []kargoapi.FreightRequest{
-					{
-						Origin: kargoapi.FreightOrigin{Kind: "Warehouse", Name: "test-warehouse"},
-					},
-				},
-			},
-			cfg: HelmUpdateChartConfig{
-				Charts: []Chart{
-					{Repository: "https://charts.example.com", Name: "test-chart"},
-				},
-			},
-			chartDependencies: []chartDependency{
-				{Repository: "https://charts.example.com", Name: "test-chart"},
-			},
-			assertions: func(t *testing.T, updates []intyaml.Update, err error) {
-				assert.NoError(t, err)
-				assert.Equal(
-					t,
-					[]intyaml.Update{{Key: "dependencies.0.version", Value: "1.0.0"}},
-					updates,
-				)
-			},
-		},
-		{
-			name: "chart not found",
-			context: &PromotionStepContext{
-				Project:         "test-project",
-				Freight:         kargoapi.FreightCollection{},
-				FreightRequests: []kargoapi.FreightRequest{},
-			},
-			cfg: HelmUpdateChartConfig{
-				Charts: []Chart{
-					{Repository: "https://charts.example.com", Name: "non-existent-chart"},
-				},
-			},
-			chartDependencies: []chartDependency{
-				{Repository: "https://charts.example.com", Name: "non-existent-chart"},
-			},
-			assertions: func(t *testing.T, _ []intyaml.Update, err error) {
-				assert.ErrorContains(t, err, "not found in referenced Freight")
-			},
-		},
-		{
-			name: "multiple charts, one not found",
-			objects: []client.Object{
-				&kargoapi.Warehouse{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-warehouse",
-						Namespace: "test-project",
-					},
-					Spec: kargoapi.WarehouseSpec{
-						Subscriptions: []kargoapi.RepoSubscription{
-							{
-								Chart: &kargoapi.ChartSubscription{
-									RepoURL: "https://charts.example.com",
-									Name:    "chart1",
-								},
-							},
-						},
-					},
-				},
-			},
-			context: &PromotionStepContext{
-				Project: "test-project",
-				Freight: kargoapi.FreightCollection{
-					Freight: map[string]kargoapi.FreightReference{
-						"Warehouse/test-warehouse": {
-							Origin: kargoapi.FreightOrigin{Kind: "Warehouse", Name: "test-warehouse"},
-							Charts: []kargoapi.Chart{
-								{RepoURL: "https://charts.example.com", Name: "chart1", Version: "1.0.0"},
-							},
-						},
-					},
-				},
-				FreightRequests: []kargoapi.FreightRequest{
-					{
-						Origin: kargoapi.FreightOrigin{Kind: "Warehouse", Name: "test-warehouse"},
-					},
-				},
-			},
-			cfg: HelmUpdateChartConfig{
-				Charts: []Chart{
-					{Repository: "https://charts.example.com", Name: "chart1"},
-					{Repository: "https://charts.example.com", Name: "chart2"},
-				},
-			},
-			chartDependencies: []chartDependency{
-				{Repository: "https://charts.example.com", Name: "chart1"},
-				{Repository: "https://charts.example.com", Name: "chart2"},
-			},
-			assertions: func(t *testing.T, _ []intyaml.Update, err error) {
-				assert.ErrorContains(t, err, "not found in referenced Freight")
-			},
-		},
-		{
-			name: "chart with FromOrigin specified",
-			objects: []client.Object{
-				&kargoapi.Warehouse{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-warehouse",
-						Namespace: "test-project",
-					},
-					Spec: kargoapi.WarehouseSpec{
-						Subscriptions: []kargoapi.RepoSubscription{
-							{
-								Chart: &kargoapi.ChartSubscription{
-									RepoURL: "https://charts.example.com",
-									Name:    "origin-chart",
-								},
-							},
-						},
-					},
-				},
-			},
-			context: &PromotionStepContext{
-				Project: "test-project",
-				Freight: kargoapi.FreightCollection{
-					Freight: map[string]kargoapi.FreightReference{
-						"Warehouse/test-warehouse": {
-							Origin: kargoapi.FreightOrigin{Kind: "Warehouse", Name: "test-warehouse"},
-							Charts: []kargoapi.Chart{
-								{RepoURL: "https://charts.example.com", Name: "origin-chart", Version: "2.0.0"},
-							},
-						},
-					},
-				},
-				FreightRequests: []kargoapi.FreightRequest{
-					{
-						Origin: kargoapi.FreightOrigin{Kind: "Warehouse", Name: "test-warehouse"},
-					},
-				},
-			},
-			cfg: HelmUpdateChartConfig{
-				Charts: []Chart{
-					{
-						Repository: "https://charts.example.com",
-						Name:       "origin-chart",
-						FromOrigin: &Origin{Kind: "Warehouse", Name: "test-warehouse"},
-					},
-				},
-			},
-			chartDependencies: []chartDependency{
-				{Repository: "https://charts.example.com", Name: "origin-chart"},
-			},
-			assertions: func(t *testing.T, updates []intyaml.Update, err error) {
-				assert.NoError(t, err)
-				assert.Equal(
-					t,
-					[]intyaml.Update{{Key: "dependencies.0.version", Value: "2.0.0"}},
-					updates,
-				)
-			},
-		},
-		{
 			name: "chart with version specified",
-			context: &PromotionStepContext{
-				Project: "test-project",
-			},
 			cfg: HelmUpdateChartConfig{
 				Charts: []Chart{
 					{
@@ -534,9 +332,6 @@ func Test_helmChartUpdater_processChartUpdates(t *testing.T) {
 		},
 		{
 			name: "update specified for non-existent chart dependency",
-			context: &PromotionStepContext{
-				Project: "test-project",
-			},
 			cfg: HelmUpdateChartConfig{
 				Charts: []Chart{
 					{
@@ -557,13 +352,7 @@ func Test_helmChartUpdater_processChartUpdates(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			scheme := runtime.NewScheme()
-			require.NoError(t, kargoapi.AddToScheme(scheme))
-
-			stepCtx := tt.context
-			stepCtx.KargoClient = fake.NewClientBuilder().WithScheme(scheme).WithObjects(tt.objects...).Build()
-
-			updates, err := runner.processChartUpdates(context.Background(), stepCtx, tt.cfg, tt.chartDependencies)
+			updates, err := runner.processChartUpdates(tt.cfg, tt.chartDependencies)
 			tt.assertions(t, updates, err)
 		})
 	}

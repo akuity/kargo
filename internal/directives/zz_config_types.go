@@ -240,22 +240,13 @@ type HelmUpdateChartConfig struct {
 }
 
 type Chart struct {
-	FromOrigin *Origin `json:"fromOrigin,omitempty"`
 	// The name of the subchart, as defined in `Chart.yaml`.
 	Name string `json:"name"`
 	// The repository of the subchart, as defined in `Chart.yaml`. It also supports OCI charts
 	// using `oci://`.
 	Repository string `json:"repository"`
-	// The version of the subchart to update to. If not specified, a version referenced by the
-	// Freight is used.
-	Version string `json:"version,omitempty"`
-}
-
-type Origin struct {
-	// The kind of origin. Currently only 'Warehouse' is supported. Required.
-	Kind Kind `json:"kind"`
-	// The name of the origin. Required.
-	Name string `json:"name"`
+	// The version of the subchart to update to.
+	Version string `json:"version"`
 }
 
 type HTTPConfig struct {
@@ -389,11 +380,4 @@ const (
 	Azure  Provider = "azure"
 	Github Provider = "github"
 	Gitlab Provider = "gitlab"
-)
-
-// The kind of origin. Currently only 'Warehouse' is supported. Required.
-type Kind string
-
-const (
-	Warehouse Kind = "Warehouse"
 )
