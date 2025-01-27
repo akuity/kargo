@@ -261,9 +261,11 @@ CustomNode.StageNode = (props: { stage: Stage }) => {
 
   const navigate = useNavigate();
 
-  const stageColor =
+  let stageColor =
     parseColorAnnotation(props.stage) ||
     warehouseColorMap[props.stage?.spec?.requestedFreight?.[0]?.origin?.name || ''];
+
+  stageColor = ColorMapHex[stageColor] || stageColor;
 
   const pipelineContext = usePipelineContext();
 
@@ -438,7 +440,7 @@ CustomNode.StageNode = (props: { stage: Stage }) => {
       className={classNames(styles.stageNode, {
         [styles.highlightedNode]:
           pipelineContext?.highlightedStages?.[props.stage?.metadata?.name || ''],
-        'opacity-70': isFaded()
+        'opacity-50': isFaded()
       })}
       onMouseEnter={() => pipelineContext?.onHover(true, props.stage?.metadata?.name || '', true)}
       onMouseLeave={() => pipelineContext?.onHover(false, props.stage?.metadata?.name || '', true)}
@@ -446,7 +448,7 @@ CustomNode.StageNode = (props: { stage: Stage }) => {
     >
       <div
         className={classNames(styles.header, 'text-white text-base')}
-        style={{ backgroundColor: ColorMapHex[stageColor] }}
+        style={{ backgroundColor: stageColor }}
       >
         <h3>{props.stage?.metadata?.name}</h3>
 

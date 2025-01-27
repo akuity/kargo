@@ -3,14 +3,13 @@ import { faDocker } from '@fortawesome/free-brands-svg-icons';
 import {
   faChevronDown,
   faMasksTheater,
-  faMouse,
   faPalette,
   faWandSparkles,
   faWarehouse
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useQueryClient } from '@tanstack/react-query';
-import { ReactFlow } from '@xyflow/react';
+import { Controls, ReactFlow } from '@xyflow/react';
 import { Button, Dropdown, Spin, Tooltip } from 'antd';
 import classNames from 'classnames';
 import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef } from 'react';
@@ -91,7 +90,7 @@ export const Pipelines = ({
     refetch: refetchFreightData
   } = useQuery(queryFreight, { project: name });
 
-  const { data: warehouseData } = useQuery(listWarehouses, {
+  const { data: warehouseData, isLoading: isLoadingWarehouse } = useQuery(listWarehouses, {
     project: name
   });
 
@@ -243,7 +242,8 @@ export const Pipelines = ({
     warehouseData?.warehouses || []
   );
 
-  if (isLoading || isLoadingFreight || isLoadingImages) return <LoadingState />;
+  if (isLoading || isLoadingFreight || isLoadingImages || isLoadingWarehouse)
+    return <LoadingState />;
 
   const stage = stageName && (data?.stages || []).find((item) => item.metadata?.name === stageName);
   const freight = freightName && fullFreightById[freightName];
@@ -338,11 +338,6 @@ export const Pipelines = ({
         </div>
         {/* TODO: Use original canvas approach for greater performance, flexibility and pixel perfect */}
         <div className={styles.dag}>
-          {/* Scroll helper */}
-          <div className={styles.pipelinesViewNavigationHelper}>
-            <FontAwesomeIcon icon={faMouse} />
-            scroll / drag
-          </div>
           <div className={styles.staticView} ref={pipelinesConfigRef}>
             <div className={styles.pipelinesViewConfig}>
               <div className={styles.toolbar}>
@@ -431,7 +426,10 @@ export const Pipelines = ({
               nodeTypes={nodeTypes}
               fitView
               minZoom={0.1}
-            />
+              nodesConnectable={false}
+            >
+              <Controls />
+            </ReactFlow>
           </PipelineContext.Provider>
         </div>
         <SuspenseSpin>
