@@ -4,9 +4,10 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/base64"
+	"errors"
 	"fmt"
+	"regexp"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/jferrl/go-githubauth"
@@ -23,6 +24,8 @@ const (
 
 	accessTokenUsername = "kargo"
 )
+
+var base64Regex = regexp.MustCompile(`^[a-zA-Z0-9+/]*={0,2}$`)
 
 type appCredentialHelper struct {
 	tokenCache *cache.Cache
@@ -153,19 +156,27 @@ func (a *appCredentialHelper) getAccessToken(
 	return token.AccessToken, nil
 }
 
-// decodeKey checks if the key passed to it begins with the standard PEM header.
-// If it does, it returns the key as-is. If it does not, it guesses that the key
-// is base64 encoded and attempts to decode it. This function is necessary
-// because we initially required the PEM-encoded key to be base64 encoded (for
-// reasons unknown today) and then we later dropped that requirement.
+// decodeKey attempts to base64 decode a key. If successful, it returns the
+// result. If it fails, it attempts to infer whether the input was simply NOT
+// base64 encoded or whether it appears to have been base64 encoded but
+// corrupted -- due perhaps to a copy/paste error. This inference determines
+// whether to return the input as is or surface the decoding error. All other
+// errors are surfaced as is. This function is necessary because we initially
+// required the PEM-encoded key to be base64 encoded (for reasons unknown today)
+// and then we later dropped that requirement.
 func decodeKey(key string) ([]byte, error) {
-	if strings.HasPrefix(key, "-----BEGIN") {
-		// Was not base64 encoded
-		return []byte(key), nil
-	}
 	decodedKey, err := base64.StdEncoding.DecodeString(key)
 	if err != nil {
-		return nil, fmt.Errorf("error decoding private key: %w", err)
+		if !errors.As(err, new(base64.CorruptInputError)) {
+			return nil, fmt.Errorf("error decoding private key: %w", err)
+		}
+		if base64Regex.MatchString(key) {
+			return nil, fmt.Errorf(
+				"probable corrupt base64 encoding of private key; base64 encoding "+
+					"this key is no longer required and is discouraged: %w", err,
+			)
+		}
+		return []byte(key), nil
 	}
 	return decodedKey, nil
 }
