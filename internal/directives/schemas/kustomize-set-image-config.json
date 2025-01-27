@@ -20,15 +20,12 @@
         "properties": {
           "digest": {
             "type": "string",
-            "description": "Digest of the image to set in the Kustomization file. Mutually exclusive with 'tag' and 'useDigest=true'."
+            "description": "Digest of the image to set in the Kustomization file. Mutually exclusive with 'tag'."
           },
           "image": {
             "type": "string",
             "minLength": 1,
             "description": "Image name of the repository from which to pick the version. This is the image name Kargo is subscribed to, and produces Freight for."
-          },
-          "fromOrigin": {
-            "$ref": "./common.json#/definitions/origin"
           },
           "name": {
             "type": "string",
@@ -40,43 +37,28 @@
           },
           "tag": {
             "type": "string",
-            "description": "Tag of the image to set in the Kustomization file. Mutually exclusive with 'digest' and 'useDigest=true'."
-          },
-          "useDigest": {
-            "type": "boolean",
-            "description": "UseDigest specifies whether to use the digest of the image instead of the tag."
+            "description": "Tag of the image to set in the Kustomization file. Mutually exclusive with 'digest'."
           }
         },
         "oneOf": [
           {
             "properties": {
               "digest": { "enum": ["", null] },
-              "tag": { "enum": ["", null] },
-              "useDigest": { "enum": [null, false] }
+              "tag": { "enum": ["", null] }
             }
           },
           {
             "required": ["digest"],
             "properties": {
               "digest": { "minLength": 1 },
-              "tag": { "enum": ["", null] },
-              "useDigest": { "enum": [null, false] }
+              "tag": { "enum": ["", null] }
             }
           },
           {
             "required": ["tag"],
             "properties": {
               "digest": { "enum": ["", null] },
-              "tag": { "minLength": 1 },
-              "useDigest": { "enum": [null, false] }
-            }
-          },
-          {
-            "required": ["useDigest"],
-            "properties": {
-              "digest": { "enum": ["", null] },
-              "tag": { "enum": ["", null] },
-              "useDigest": { "const": true }
+              "tag": { "minLength": 1 }
             }
           }
         ]
