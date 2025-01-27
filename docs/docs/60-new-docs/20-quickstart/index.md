@@ -511,33 +511,14 @@ the previous section.
 
     <TabItem value="kargo-cli" label="Using the Kargo CLI">
 
-    Install the Kargo CLI:
+    Download the Kargo CLI for your operating system and CPU architecture from
+    the [Kargo Dashboard's Downloads page](https://localhost:31444/downloads):
 
-    <Tabs groupId="os">
-    <TabItem value="general" label="Mac, Linux, or WSL" default>
+    ![CLI Tab in Kargo UI](./img/cli-installation.png)
 
-    ```shell
-    arch=$(uname -m)
-    [ "$arch" = "x86_64" ] && arch=amd64
-    curl -L -o kargo https://github.com/akuity/kargo/releases/latest/download/kargo-"$(uname -s | tr '[:upper:]' '[:lower:]')-${arch}"
-    chmod +x kargo
-    ```
-
-    Then move `kargo` to a location in your file system that is included in the
-    value of your `PATH` environment variable.
-
-    </TabItem>
-    <TabItem value="windows" label="Windows Powershell">
-
-    ```shell
-    Invoke-WebRequest -URI https://github.com/akuity/kargo/releases/latest/download/kargo-windows-amd64.exe -OutFile kargo.exe
-    ```
-
-    Then move `kargo.exe` to a location in your file system that is included in the value
-    of your `PATH` environment variable.
-
-    </TabItem>
-    </Tabs>
+    Rename the downloaded binary to `kargo` (or `kargo.exe` for Windows) and
+    move it to a location in your file system that is included in the value of
+    your `PATH` environment variable.
 
     Log in:
 
