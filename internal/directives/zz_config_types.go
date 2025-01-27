@@ -194,10 +194,7 @@ type GitWaitForPRConfig struct {
 	// Indicates whether to skip TLS verification when cloning the repository. Default is false.
 	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty"`
 	// The number of the pull request to wait for.
-	PRNumber int64 `json:"prNumber,omitempty"`
-	// This field references the 'prNumber' output from a previous step and uses it as the
-	// number of the pull request to wait for.
-	PRNumberFromStep string `json:"prNumberFromStep,omitempty"`
+	PRNumber int64 `json:"prNumber"`
 	// The name of the Git provider to use. Currently only 'github', 'gitlab' and 'azure' are
 	// supported. Kargo will try to infer the provider if it is not explicitly specified.
 	Provider *Provider `json:"provider,omitempty"`
