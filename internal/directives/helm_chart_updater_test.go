@@ -202,7 +202,7 @@ func Test_helmChartUpdater_runPromotionStep(t *testing.T) {
 					{
 						Repository: "https://charts.example.com",
 						Name:       "examplechart",
-						FromOrigin: &ChartFromOrigin{
+						FromOrigin: &Origin{
 							Kind: "Warehouse",
 							Name: "test-warehouse",
 						},
@@ -490,7 +490,7 @@ func Test_helmChartUpdater_processChartUpdates(t *testing.T) {
 					{
 						Repository: "https://charts.example.com",
 						Name:       "origin-chart",
-						FromOrigin: &ChartFromOrigin{Kind: "Warehouse", Name: "test-warehouse"},
+						FromOrigin: &Origin{Kind: "Warehouse", Name: "test-warehouse"},
 					},
 				},
 			},
