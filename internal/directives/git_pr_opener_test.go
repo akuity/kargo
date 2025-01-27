@@ -56,20 +56,12 @@ func Test_gitPROpener_validate(t *testing.T) {
 			},
 		},
 		{
-			name:   "neither sourceBranch nor sourceBranchFromStep specified",
-			config: Config{},
-			expectedProblems: []string{
-				"(root): Must validate one and only one schema",
-			},
-		},
-		{
-			name: "both sourceBranch and sourceBranchFromStep specified",
+			name: "sourceBranch is empty string",
 			config: Config{
-				"sourceBranch":         "main",
-				"sourceBranchFromStep": "push",
+				"sourceBranch": "",
 			},
 			expectedProblems: []string{
-				"(root): Must validate one and only one schema",
+				"sourceBranch: String length must be greater than or equal to 1",
 			},
 		},
 		{
@@ -96,15 +88,6 @@ func Test_gitPROpener_validate(t *testing.T) {
 				"repoURL":      "https://github.com/example/repo.git",
 				"sourceBranch": "fake-branch",
 				"targetBranch": "another-fake-branch",
-			},
-		},
-		{
-			name: "valid with source branch from push",
-			config: Config{
-				"provider":             "github",
-				"repoURL":              "https://github.com/example/repo.git",
-				"sourceBranchFromStep": "fake-step",
-				"targetBranch":         "fake-branch",
 			},
 		},
 		{
@@ -210,20 +193,15 @@ func Test_gitPROpener_runPromotionStep(t *testing.T) {
 			Stage:         "fake-stage",
 			WorkDir:       workDir,
 			CredentialsDB: &credentials.FakeDB{},
-			SharedState: State{
-				"fake-step": map[string]any{
-					stateKeyBranch: testSourceBranch,
-				},
-			},
 		},
 		GitOpenPRConfig{
 			RepoURL: testRepoURL,
 			// We get slightly better coverage by using this option
-			SourceBranchFromStep: "fake-step",
-			TargetBranch:         testTargetBranch,
-			CreateTargetBranch:   true,
-			Provider:             ptr.To(Provider(fakeGitProviderName)),
-			Title:                "kargo",
+			SourceBranch:       testSourceBranch,
+			TargetBranch:       testTargetBranch,
+			CreateTargetBranch: true,
+			Provider:           ptr.To(Provider(fakeGitProviderName)),
+			Title:              "kargo",
 		},
 	)
 	require.NoError(t, err)
