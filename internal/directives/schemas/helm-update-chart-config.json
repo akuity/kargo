@@ -28,15 +28,13 @@
             "description": "The name of the subchart, as defined in `Chart.yaml`.",
             "minLength": 1
           },
-          "fromOrigin": {
-            "$ref": "./common.json#/definitions/origin"
-          },
           "version": {
             "type": "string",
-            "description": "The version of the subchart to update to. If not specified, a version referenced by the Freight is used."
+            "description": "The version of the subchart to update to.",
+            "minLength": 1
           }
         },
-        "required": ["repository", "name"]
+        "required": ["repository", "name", "version"]
       }
     }
   }

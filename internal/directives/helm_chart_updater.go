@@ -23,7 +23,6 @@ import (
 	yaml "sigs.k8s.io/yaml/goyaml.v3"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/controller/freight"
 	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/helm"
 	"github.com/akuity/kargo/internal/logging"
@@ -103,7 +102,7 @@ func (h *helmChartUpdater) runPromotionStep(
 		}, fmt.Errorf("failed to load chart dependencies from %q: %w", chartFilePath, err)
 	}
 
-	changes, err := h.processChartUpdates(ctx, stepCtx, cfg, chartDependencies)
+	changes, err := h.processChartUpdates(cfg, chartDependencies)
 	if err != nil {
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, err
 	}
@@ -136,46 +135,17 @@ func (h *helmChartUpdater) runPromotionStep(
 }
 
 func (h *helmChartUpdater) processChartUpdates(
-	ctx context.Context,
-	stepCtx *PromotionStepContext,
 	cfg HelmUpdateChartConfig,
 	chartDependencies []chartDependency,
 ) ([]intyaml.Update, error) {
 	updates := make([]intyaml.Update, len(cfg.Charts))
 	for i, update := range cfg.Charts {
-		version := update.Version
-		if update.Version == "" {
-			// TODO(krancour): Remove this for v1.3.0
-			repoURL, chartName := normalizeChartReference(update.Repository, update.Name)
-			var desiredOrigin *kargoapi.FreightOrigin
-			if update.FromOrigin != nil {
-				desiredOrigin = &kargoapi.FreightOrigin{
-					Kind: kargoapi.FreightOriginKind(update.FromOrigin.Kind),
-					Name: update.FromOrigin.Name,
-				}
-			}
-			chart, err := freight.FindChart(
-				ctx,
-				stepCtx.KargoClient,
-				stepCtx.Project,
-				stepCtx.FreightRequests,
-				desiredOrigin,
-				stepCtx.Freight.References(),
-				repoURL,
-				chartName,
-			)
-			if err != nil {
-				return nil, fmt.Errorf("failed to find chart: %w", err)
-			}
-			version = chart.Version
-		}
-
 		var updateUsed bool
 		for j, dep := range chartDependencies {
 			if dep.Repository == update.Repository && dep.Name == update.Name {
 				updates[i] = intyaml.Update{
 					Key:   fmt.Sprintf("dependencies.%d.version", j),
-					Value: version,
+					Value: update.Version,
 				}
 				updateUsed = true
 				break
