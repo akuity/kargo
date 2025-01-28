@@ -1,8 +1,9 @@
+import { useMutation } from '@connectrpc/connect-query';
 import {
   IconDefinition,
   faArrowRight,
   faBullseye,
-  faCircleCheck,
+  faCircle,
   faCircleNotch,
   faCodePullRequest,
   faExclamationTriangle,
@@ -11,25 +12,34 @@ import {
   faTruckArrowRight
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Button, Tooltip } from 'antd';
+import { Button, message, Tooltip } from 'antd';
+import classNames from 'classnames';
+import { formatDistance } from 'date-fns';
+import { ReactNode } from 'react';
 import { generatePath, useNavigate } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
 import { HealthStatusIcon } from '@ui/features/common/health-status/health-status-icon';
 import { PromotionStatusIcon } from '@ui/features/common/promotion-status/promotion-status-icon';
-import { selectFreightByWarehouse } from '@ui/features/common/utils';
+import { getCurrentFreight, selectFreightByWarehouse } from '@ui/features/common/utils';
 import { willStagePromotionOpenPR } from '@ui/features/promotion-directives/utils';
+import { getColors } from '@ui/features/stage/utils';
+import {
+  approveFreight,
+  promoteToStage
+} from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 import { Freight, Stage } from '@ui/gen/v1alpha1/generated_pb';
 import { timestampDate } from '@ui/utils/connectrpc-utils';
 import { useLocalStorage } from '@ui/utils/use-local-storage';
 
+import { usePipelineContext } from '../context/use-pipeline-context';
 import { FreightTimelineAction, NodeDimensions } from '../types';
-import { isStageControlFlow } from '../utils/util';
+import { isPromoting, PipelineStateHook } from '../utils/state';
+import { isStageControlFlow, onError } from '../utils/util';
 
+import styles from './custom-node.module.less';
 import { FreightIndicators } from './freight-indicators';
 import { FreightLabel } from './freight-label';
-import { StageNodeFooter } from './stage-node-footer';
-import * as styles from './stage-node.module.less';
 import { lastVerificationErrored } from './util';
 
 export const StageNodeDimensions = () =>
@@ -39,185 +49,280 @@ export const StageNodeDimensions = () =>
     height: 198
   }) as NodeDimensions;
 
-export const StageNode = ({
-  stage,
-  color,
-  height,
-  faded,
-  onPromoteClick,
-  projectName,
-  hasNoSubscribers,
-  action,
-  currentFreight,
-  onClick,
-  onHover,
-  highlighted,
-  autoPromotion,
-  selectedWarehouse
-}: {
+type StageNodeProps = {
   stage: Stage;
-  color: string;
-  height: number;
-  faded: boolean;
-  projectName?: string;
-  hasNoSubscribers?: boolean;
-  action?: FreightTimelineAction;
-  onPromoteClick: (type: FreightTimelineAction) => void;
-  currentFreight: Freight[];
-  onClick?: () => void;
-  onHover: (hovering: boolean) => void;
-  highlighted?: boolean;
-  autoPromotion?: boolean;
-  selectedWarehouse?: string;
-}) => {
+};
+
+export const StageNode = (props: StageNodeProps) => {
   const navigate = useNavigate();
+
+  const pipelineContext = usePipelineContext();
+
+  const colorMap = getColors(pipelineContext?.project || '', [props.stage]);
+
+  const stageColor = colorMap[props.stage?.metadata?.name || ''];
+
+  const currentFreight = getCurrentFreight(props.stage)
+    ?.map((freight) => pipelineContext?.fullFreightById[freight?.name || ''])
+    .filter(Boolean) as Freight[];
+
+  const hasNoSubscribers =
+    (pipelineContext?.subscribersByStage[props.stage?.metadata?.name || '']?.size || 0) <= 1;
+
   const [_visibleFreight, setVisibleFreight] = useLocalStorage(
-    `${projectName}-${stage.metadata?.name}`,
-    selectFreightByWarehouse(currentFreight, selectedWarehouse)
+    `${pipelineContext?.project}-${props.stage?.metadata?.name}`,
+    selectFreightByWarehouse(currentFreight, pipelineContext?.selectedWarehouse || '')
   );
 
   let visibleFreight = _visibleFreight;
-
-  if (selectedWarehouse) {
-    visibleFreight = selectFreightByWarehouse(currentFreight, selectedWarehouse);
+  if (pipelineContext?.selectedWarehouse) {
+    visibleFreight = selectFreightByWarehouse(currentFreight, pipelineContext.selectedWarehouse);
   }
 
-  return (
-    <>
-      <div
-        className={`${styles.node} ${faded ? styles.faded : ''} ${
-          highlighted ? styles.highlighted : ''
-        }`}
-        style={{
-          backgroundColor: color,
-          borderColor: color,
-          position: 'relative',
-          cursor: 'pointer'
-        }}
-        onClick={() => {
-          if (onClick) {
-            onClick();
-          } else {
-            navigate(
-              generatePath(paths.stage, { name: projectName, stageName: stage.metadata?.name })
-            );
+  const manualApproveActionMutation = useMutation(approveFreight, {
+    onError,
+    onSuccess: () => {
+      message.success(`Freight ${pipelineContext?.state?.freight} has been manually approved.`);
+      // TODO: refetchFreightData
+      pipelineContext?.state?.clear();
+    }
+  });
+
+  const promoteActionMutation = useMutation(promoteToStage, {
+    onError,
+    onSuccess: () => {
+      message.success(
+        `Promotion request for stage ${pipelineContext?.state?.stage} has been successfully submitted.`
+      );
+      pipelineContext?.state?.clear();
+    }
+  });
+
+  let onClick = () => {
+    navigate(
+      generatePath(paths.stage, {
+        name: pipelineContext?.project,
+        stageName: props.stage?.metadata?.name || ''
+      })
+    );
+  };
+
+  if (pipelineContext?.state?.action === FreightTimelineAction.ManualApproval) {
+    onClick = () => {
+      manualApproveActionMutation.mutate({
+        stage: props.stage?.metadata?.name || '',
+        project: pipelineContext?.project,
+        name: pipelineContext?.state?.freight
+      });
+    };
+  }
+
+  if (pipelineContext?.state?.action === FreightTimelineAction.PromoteFreight) {
+    onClick = () => {
+      pipelineContext?.state?.setStage(props.stage?.metadata?.name || '');
+      promoteActionMutation.mutate({
+        stage: props.stage?.metadata?.name || '',
+        project: pipelineContext?.project,
+        freight: pipelineContext?.state?.freight
+      });
+    };
+  }
+
+  let Body: ReactNode;
+
+  if (
+    pipelineContext?.state?.action === FreightTimelineAction.ManualApproval ||
+    pipelineContext?.state?.action === FreightTimelineAction.PromoteFreight
+  ) {
+    Body = (
+      <div className='text-sm flex flex-col items-center justify-center py-5'>
+        <Button
+          icon={
+            <FontAwesomeIcon
+              icon={
+                pipelineContext?.state?.action === FreightTimelineAction.ManualApproval
+                  ? faCircle
+                  : faArrowRight
+              }
+            />
           }
-        }}
-        onMouseEnter={() => onHover(true)}
-        onMouseLeave={() => onHover(false)}
-      >
-        <h3>
-          <div className='truncate pb-1 mr-auto'>{stage.metadata?.name}</div>
-          <div className='flex gap-1'>
-            {willStagePromotionOpenPR(stage) && (
-              <Tooltip title='contains git-open-pr'>
-                <FontAwesomeIcon icon={faCodePullRequest} />
-              </Tooltip>
-            )}
-            {autoPromotion && (
-              <Tooltip title='Auto Promotion Enabled'>
-                <FontAwesomeIcon icon={faRobot} />
-              </Tooltip>
-            )}
-            {!stage?.status?.currentPromotion && stage.status?.lastPromotion && (
-              <PromotionStatusIcon
-                placement='top'
-                status={stage.status?.lastPromotion.status}
-                color='white'
-              />
-            )}
-            {stage.status?.currentPromotion ? (
-              <Tooltip
-                title={`Freight ${stage.status?.currentPromotion.freight?.name} is being promoted`}
-              >
-                <FontAwesomeIcon icon={faGear} spin={true} />
-              </Tooltip>
-            ) : stage.status?.phase === 'Verifying' ? (
-              <Tooltip title='Verifying Current Freight'>
-                <FontAwesomeIcon icon={faCircleNotch} spin={true} />
-              </Tooltip>
-            ) : (
-              stage.status?.health && (
-                <HealthStatusIcon health={stage.status?.health} hideColor={true} />
-              )
-            )}
-            {lastVerificationErrored(stage) && (
-              <Tooltip
-                title={
-                  <>
-                    <div>
-                      <b>Verification Failure:</b>
-                    </div>
-                    {stage?.status?.freightHistory?.[0]?.verificationHistory?.[0]?.message}
-                  </>
-                }
-              >
-                <FontAwesomeIcon icon={faExclamationTriangle} />
-              </Tooltip>
-            )}
-          </div>
-        </h3>
-        <div
-          className={styles.body}
-          style={currentFreight && currentFreight?.length > 1 ? { paddingTop: '15px' } : undefined}
+          disabled={isStageControlFlow(props.stage)}
+          className='uppercase'
         >
-          {action === FreightTimelineAction.ManualApproval ||
-          action === FreightTimelineAction.PromoteFreight ? (
-            <div className='h-full flex items-center justify-center font-bold cursor-pointer text-blue-500 hover:text-blue-400'>
-              <Button
-                icon={
-                  <FontAwesomeIcon
-                    icon={
-                      action === FreightTimelineAction.ManualApproval ? faCircleCheck : faArrowRight
-                    }
-                  />
-                }
-                disabled={isStageControlFlow(stage)}
-                className='uppercase'
-              >
-                {action === FreightTimelineAction.ManualApproval ? 'Approve' : 'Promote'}
-              </Button>
-            </div>
+          {pipelineContext?.state?.action === FreightTimelineAction.ManualApproval
+            ? 'Approve'
+            : 'Promote'}
+        </Button>
+      </div>
+    );
+  } else {
+    Body = (
+      <div className='text-sm flex flex-col items-center justify-center'>
+        <FreightIndicators
+          freight={currentFreight}
+          selectedFreight={visibleFreight}
+          onClick={(idx) => setVisibleFreight(idx)}
+        />
+
+        <FreightLabel freight={currentFreight[visibleFreight]} />
+      </div>
+    );
+  }
+
+  let Promoters: ReactNode;
+
+  if (
+    pipelineContext?.state?.action !== FreightTimelineAction.ManualApproval &&
+    pipelineContext?.state?.action !== FreightTimelineAction.PromoteFreight
+  ) {
+    Promoters = (
+      <>
+        {!isStageControlFlow(props.stage) && (
+          <div className='absolute top-[50%]'>
+            <Nodule
+              begin
+              nodeHeight={20}
+              onClick={() =>
+                pipelineContext?.onPromoteClick(props.stage, FreightTimelineAction.Promote)
+              }
+              selected={pipelineContext?.state?.action === FreightTimelineAction.Promote}
+            />
+          </div>
+        )}
+        {!hasNoSubscribers && (
+          <div className='absolute top-[50%] right-0'>
+            <Nodule
+              nodeHeight={20}
+              onClick={() =>
+                pipelineContext?.onPromoteClick(
+                  props.stage,
+                  FreightTimelineAction.PromoteSubscribers
+                )
+              }
+              selected={pipelineContext?.state?.action === FreightTimelineAction.PromoteSubscribers}
+            />
+          </div>
+        )}
+      </>
+    );
+  }
+
+  const isFaded = () => {
+    if (!isPromoting(pipelineContext?.state as PipelineStateHook)) {
+      return false;
+    }
+
+    if (pipelineContext?.state?.action === FreightTimelineAction.Promote) {
+      return pipelineContext?.state?.stage !== props.stage?.metadata?.name;
+    }
+
+    if (pipelineContext?.state?.action === FreightTimelineAction.PromoteSubscribers) {
+      return (
+        !props.stage?.metadata?.name ||
+        !pipelineContext?.subscribersByStage[pipelineContext?.state?.stage || '']?.has(
+          props.stage?.metadata?.name
+        )
+      );
+    }
+
+    return false;
+  };
+
+  return (
+    <div
+      className={classNames(styles.stageNode, {
+        [styles.highlightedNode]:
+          pipelineContext?.highlightedStages?.[props.stage?.metadata?.name || ''],
+        'opacity-50': isFaded()
+      })}
+      onMouseEnter={() => pipelineContext?.onHover(true, props.stage?.metadata?.name || '', true)}
+      onMouseLeave={() => pipelineContext?.onHover(false, props.stage?.metadata?.name || '', true)}
+      onClick={onClick}
+    >
+      <div
+        className={classNames(styles.header, 'text-white text-base')}
+        style={{ backgroundColor: stageColor }}
+      >
+        <h3>{props.stage?.metadata?.name}</h3>
+
+        {/* TODO(Marvin9): Make plugin hole here */}
+        <div className='ml-auto space-x-1'>
+          {willStagePromotionOpenPR(props.stage) && (
+            <Tooltip title='contains git-open-pr'>
+              <FontAwesomeIcon icon={faCodePullRequest} />
+            </Tooltip>
+          )}
+
+          {pipelineContext?.autoPromotionMap[props.stage?.metadata?.name || ''] && (
+            <Tooltip title='Auto Promotion Enabled'>
+              <FontAwesomeIcon icon={faRobot} />
+            </Tooltip>
+          )}
+
+          {!props.stage?.status?.currentPromotion && props.stage?.status?.lastPromotion && (
+            <PromotionStatusIcon
+              placement='top'
+              status={props.stage?.status?.lastPromotion?.status}
+              color='white'
+            />
+          )}
+
+          {props.stage.status?.currentPromotion ? (
+            <Tooltip
+              title={`Freight ${props.stage.status?.currentPromotion.freight?.name} is being promoted`}
+            >
+              <FontAwesomeIcon icon={faGear} spin={true} />
+            </Tooltip>
+          ) : props.stage.status?.phase === 'Verifying' ? (
+            <Tooltip title='Verifying Current Freight'>
+              <FontAwesomeIcon icon={faCircleNotch} spin={true} />
+            </Tooltip>
           ) : (
-            <div className='text-sm h-full flex flex-col items-center justify-center'>
-              <FreightIndicators
-                freight={currentFreight}
-                selectedFreight={visibleFreight}
-                onClick={(idx) => setVisibleFreight(idx)}
-              />
-              <FreightLabel freight={currentFreight[visibleFreight]} />
-            </div>
+            props.stage.status?.health && (
+              <HealthStatusIcon health={props.stage.status?.health} hideColor={true} />
+            )
+          )}
+
+          {lastVerificationErrored(props.stage) && (
+            <Tooltip
+              title={
+                <>
+                  <div>
+                    <b>Verification Failure:</b>
+                  </div>
+                  {props.stage?.status?.freightHistory?.[0]?.verificationHistory?.[0]?.message}
+                </>
+              }
+            >
+              <FontAwesomeIcon icon={faExclamationTriangle} />
+            </Tooltip>
           )}
         </div>
-        <StageNodeFooter
-          lastPromotion={timestampDate(stage?.status?.lastPromotion?.finishedAt) || undefined}
-        />
       </div>
-      {action !== FreightTimelineAction.ManualApproval &&
-        action !== FreightTimelineAction.PromoteFreight && (
-          <>
-            {!isStageControlFlow(stage) && (
-              <Nodule
-                begin={true}
-                nodeHeight={height}
-                onClick={() => onPromoteClick(FreightTimelineAction.Promote)}
-                selected={action === FreightTimelineAction.Promote}
-              />
+
+      <div className={classNames(styles.body)}>{Body}</div>
+
+      {props.stage?.status?.lastPromotion?.finishedAt && (
+        <div className={classNames(styles.footer)}>
+          <span className='uppercase text-xs text-gray-400'>Last Promo: </span>
+          <b>
+            {formatDistance(
+              timestampDate(props.stage.status.lastPromotion.finishedAt) as Date,
+              new Date(),
+              {
+                addSuffix: true
+              }
             )}
-            {!hasNoSubscribers && (
-              <Nodule
-                nodeHeight={height}
-                onClick={() => onPromoteClick(FreightTimelineAction.PromoteSubscribers)}
-                selected={action === FreightTimelineAction.PromoteSubscribers}
-              />
-            )}
-          </>
-        )}
-    </>
+          </b>
+        </div>
+      )}
+
+      {Promoters}
+    </div>
   );
 };
 
-export const Nodule = (props: {
+const Nodule = (props: {
   begin?: boolean;
   nodeHeight: number;
   onClick?: () => void;
