@@ -208,7 +208,7 @@ func (p *provider) ListPullRequests(
 	}
 	switch opts.State {
 	case gitprovider.PullRequestStateAny:
-		listOpts.State = "all"
+		listOpts.State = gitea.StateAll
 	case gitprovider.PullRequestStateClosed:
 		listOpts.State = "closed"
 	case gitprovider.PullRequestStateOpen:
