@@ -9,7 +9,6 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useQueryClient } from '@tanstack/react-query';
-import { Controls, ReactFlow } from '@xyflow/react';
 import { Button, Dropdown, Spin, Tooltip } from 'antd';
 import classNames from 'classnames';
 import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef } from 'react';
@@ -46,25 +45,17 @@ import { useDocumentEvent } from '@ui/utils/document';
 import { useLocalStorage } from '@ui/utils/use-local-storage';
 
 import { PipelineContext } from './context/pipeline-context';
+import { Graph } from './graph';
 import { Images } from './images';
-import { CustomNode } from './nodes/custom-node';
 import styles from './project-details.module.less';
 import { CollapseMode, FreightTimelineAction } from './types';
 import { usePipelineState } from './utils/state';
-import {
-  reactFlowNodeConstants,
-  usePipelineGraph,
-  useReactFlowPipelineGraph
-} from './utils/use-pipeline-graph';
+import { usePipelineGraph } from './utils/use-pipeline-graph';
 import { Watcher } from './utils/watcher';
 
 import '@xyflow/react/dist/style.css';
 
 const WarehouseDetails = lazy(() => import('./warehouse/warehouse-details'));
-
-const nodeTypes = {
-  [reactFlowNodeConstants.CUSTOM_NODE]: CustomNode
-};
 
 export const Pipelines = ({
   project,
@@ -236,10 +227,46 @@ export const Pipelines = ({
   }, [stagesPerFreight, fullFreightById]);
 
   const pipelinesConfigRef = useRef<HTMLDivElement>(null);
-  const { controlledNodes, controlledEdges } = useReactFlowPipelineGraph(
-    name,
-    data?.stages || [],
-    warehouseData?.warehouses || []
+
+  const onHover = useCallback(
+    (h: boolean, id: string, isStage?: boolean) => {
+      const stages = {} as { [key: string]: boolean };
+      if (!h) {
+        setHighlightedStages(stages);
+        return;
+      }
+      if (isStage) {
+        stages[id] = true;
+      } else {
+        (stagesPerFreight[id] || []).forEach((stage) => {
+          stages[stage.metadata?.name || ''] = true;
+        });
+      }
+      setHighlightedStages(stages);
+    },
+    [stagesPerFreight]
+  );
+
+  const onPromoteClick = useCallback(
+    (stage: Stage, type: FreightTimelineAction) => {
+      // which warehouse to select?
+      // check if they have filter applied in freight timeline
+      // if not, then select the warehouse of latest promoted freight
+      if (selectedWarehouse === '') {
+        setSelectedWarehouse(getCurrentFreightWarehouse(stage));
+      }
+
+      if (state.stage === stage?.metadata?.name) {
+        // deselect
+        state.clear();
+
+        setSelectedWarehouse(lastExplicitlySelectedWarehouse.current);
+      } else {
+        const stageName = stage?.metadata?.name || '';
+        state.select(type, stageName, undefined);
+      }
+    },
+    [state]
   );
 
   if (isLoading || isLoadingFreight || isLoadingImages || isLoadingWarehouse)
@@ -248,41 +275,6 @@ export const Pipelines = ({
   const stage = stageName && (data?.stages || []).find((item) => item.metadata?.name === stageName);
   const freight = freightName && fullFreightById[freightName];
   const warehouse = warehouseName && warehouseMap[warehouseName];
-
-  const onHover = (h: boolean, id: string, isStage?: boolean) => {
-    const stages = {} as { [key: string]: boolean };
-    if (!h) {
-      setHighlightedStages(stages);
-      return;
-    }
-    if (isStage) {
-      stages[id] = true;
-    } else {
-      (stagesPerFreight[id] || []).forEach((stage) => {
-        stages[stage.metadata?.name || ''] = true;
-      });
-    }
-    setHighlightedStages(stages);
-  };
-
-  const onPromoteClick = (stage: Stage, type: FreightTimelineAction) => {
-    // which warehouse to select?
-    // check if they have filter applied in freight timeline
-    // if not, then select the warehouse of latest promoted freight
-    if (selectedWarehouse === '') {
-      setSelectedWarehouse(getCurrentFreightWarehouse(stage));
-    }
-
-    if (state.stage === stage?.metadata?.name) {
-      // deselect
-      state.clear();
-
-      setSelectedWarehouse(lastExplicitlySelectedWarehouse.current);
-    } else {
-      const stageName = stage?.metadata?.name || '';
-      state.select(type, stageName, undefined);
-    }
-  };
 
   return (
     <div className='flex flex-col flex-grow'>
@@ -424,16 +416,11 @@ export const Pipelines = ({
               }
             }}
           >
-            <ReactFlow
-              nodes={controlledNodes[0]}
-              edges={controlledEdges[0]}
-              nodeTypes={nodeTypes}
-              fitView
-              minZoom={0.1}
-              nodesConnectable={false}
-            >
-              <Controls />
-            </ReactFlow>
+            <Graph
+              project={name || ''}
+              stages={data?.stages || []}
+              warehouses={warehouseData?.warehouses || []}
+            />
           </PipelineContext.Provider>
         </div>
         <SuspenseSpin>

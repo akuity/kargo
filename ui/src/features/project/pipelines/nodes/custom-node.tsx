@@ -237,7 +237,7 @@ CustomNode.WarehouseNode = (props: { warehouse: Warehouse; warehouses?: number }
       </div>
 
       <div className={classNames(styles.body, 'flex')}>
-        {(props.warehouses || 0) > 0 && (
+        {(props.warehouses || 0) > 1 && (
           <Button
             icon={<FontAwesomeIcon icon={faFilter} />}
             size='small'

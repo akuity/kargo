@@ -10,8 +10,9 @@ import { StageNodeDimensions } from './nodes/stage-node';
 
 export const RepoNodeDimensions = () =>
   ({
-    width: 185,
-    height: 110
+    // MUST BE SAME AS DEFINED IN custom-node.module.less .repoSubscriptionNode and .warehouseNode
+    width: 180,
+    height: 106
   }) as NodeDimensions;
 
 export enum NodeType {

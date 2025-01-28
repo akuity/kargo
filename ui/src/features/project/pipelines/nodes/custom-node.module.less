@@ -5,7 +5,6 @@
     @apply h-full;
     @apply w-full;
     @apply rounded-lg;
-    @apply bg-gray-50;
 
     // base font-size
     @apply text-xs;
@@ -30,6 +29,8 @@
 .body {
     @apply px-4;
     @apply py-4;
+    @apply w-full;
+    @apply my-auto;
 }
 
 // node footer
@@ -41,13 +42,18 @@
 }
 
 .repoSubscriptionNode, .warehouseNode {
-    min-width: @node-min-width;
-    max-width: @node-max-width;
+    width: 180px;
+    height: 106px;
+    @apply bg-gray-50;
 }
 
 .stageNode {
-    min-width: 250px;
-    // max-width: @node-max-width;
+    width: 250px;
+    height: 198px;
+    @apply relative;
+    @apply bg-gray-50;
+    @apply flex;
+    @apply flex-col;
 }
 
 .highlightedNode {

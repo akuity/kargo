@@ -1,7 +1,8 @@
 import { Edge, MarkerType, Node, useEdgesState, useNodesState } from '@xyflow/react';
 import { graphlib, layout } from 'dagre';
-import { useEffect, useMemo } from 'react';
+import { useContext, useEffect, useMemo } from 'react';
 
+import { ColorContext } from '@ui/context/colors';
 import { ColorMap, getColors } from '@ui/features/stage/utils';
 import { RepoSubscription, Stage, Warehouse } from '@ui/gen/v1alpha1/generated_pb';
 
@@ -79,6 +80,8 @@ export const useReactFlowPipelineGraph = (
   stages: Stage[],
   warehouses: Warehouse[]
 ) => {
+  const { warehouseColorMap } = useContext(ColorContext);
+
   const calculatedNodesAndEdges = useMemo(() => {
     if (!project && stages?.length === 0 && warehouses?.length === 0) {
       return {
@@ -116,16 +119,18 @@ export const useReactFlowPipelineGraph = (
       graph.setNode(stageNodeIndex, { ...getNodeDimensions(NodeType.STAGE), stage });
 
       for (const requestedOrigin of stage.spec?.requestedFreight || []) {
+        const warehouseNodeIndex = `${requestedOrigin.origin?.name}`;
+
         // check if source is warehouse
         if (requestedOrigin?.sources?.direct) {
-          const warehouseNodeIndex = `${requestedOrigin.origin?.name}`;
-
           graph.setEdge(warehouseNodeIndex, stageNodeIndex);
         }
 
+        const edgeColor = warehouseColorMap[warehouseNodeIndex];
+
         // check if source is other stage
         for (const sourceStage of requestedOrigin?.sources?.stages || []) {
-          graph.setEdge(sourceStage, stageNodeIndex);
+          graph.setEdge(sourceStage, stageNodeIndex, { edgeColor });
         }
       }
     }
@@ -142,8 +147,8 @@ export const useReactFlowPipelineGraph = (
         id: node,
         type: reactFlowNodeConstants.CUSTOM_NODE,
         position: {
-          x: dagreNode?.x,
-          y: dagreNode?.y
+          x: dagreNode?.x - dagreNode?.width / 2,
+          y: dagreNode?.y - dagreNode?.height / 2
         },
         initialWidth: dagreNode?.width,
         initialHeight: dagreNode?.height,
@@ -156,17 +161,21 @@ export const useReactFlowPipelineGraph = (
     }
 
     for (const edge of graph.edges()) {
+      const dagreEdge = graph.edge(edge);
+
       reactFlowEdges.push({
         id: `${edge.v}->${edge.w}`,
         source: edge.v,
         target: edge.w,
         animated: false,
         markerEnd: {
-          type: MarkerType.ArrowClosed
+          type: MarkerType.ArrowClosed,
+          color: dagreEdge?.edgeColor
         },
         style: {
           strokeWidth: 2,
-          visibility: 'visible'
+          visibility: 'visible',
+          stroke: dagreEdge?.edgeColor
         }
       });
     }
@@ -175,7 +184,7 @@ export const useReactFlowPipelineGraph = (
       nodes: reactFlowNodes,
       edges: reactFlowEdges
     };
-  }, [project, stages, warehouses]);
+  }, [project, stages, warehouses, warehouseColorMap]);
 
   const controlledNodes = useNodesState(calculatedNodesAndEdges.nodes);
 

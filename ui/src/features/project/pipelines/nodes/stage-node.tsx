@@ -34,8 +34,9 @@ import { lastVerificationErrored } from './util';
 
 export const StageNodeDimensions = () =>
   ({
-    width: 215,
-    height: 165
+    // MUST BE SAME AS DEFINED IN custom-node.module.less .stageNode
+    width: 250,
+    height: 198
   }) as NodeDimensions;
 
 export const StageNode = ({
