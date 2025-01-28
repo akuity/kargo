@@ -237,7 +237,6 @@ func (p *provider) ListPullRequests(
 }
 
 func convertGiteaPR(giteaPR gitea.PullRequest) gitprovider.PullRequest {
-	fmt.Println(giteaPR.Head)
 	pr := gitprovider.PullRequest{
 		Number:         giteaPR.ID,
 		URL:            giteaPR.URL,
