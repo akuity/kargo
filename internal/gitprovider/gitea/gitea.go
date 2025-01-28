@@ -240,7 +240,7 @@ func convertGiteaPR(giteaPR gitea.PullRequest) gitprovider.PullRequest {
 	pr := gitprovider.PullRequest{
 		Number:         giteaPR.ID,
 		URL:            giteaPR.URL,
-		Open:           giteaPR.State == "open",
+		Open:           giteaPR.State == gitea.StateOpen,
 		Merged:         giteaPR.HasMerged,
 		MergeCommitSHA: *giteaPR.MergedCommitID,
 		Object:         giteaPR,
