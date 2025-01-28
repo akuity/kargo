@@ -163,15 +163,14 @@ func (p *provider) CreatePullRequest(
 	}
 	pr := convertGiteaPR(*giteaPR)
 	if len(opts.Labels) > 0 {
-		_, _, err = p.client.AddLabelsToIssue(ctx,
+		if _, _, err = p.client.AddLabelsToIssue(ctx,
 			p.owner,
 			p.repo,
 			int(pr.Number),
 			opts.Labels,
-		)
-	}
-	if err != nil {
-		return nil, err
+		); err != nil {
+			return nil, err
+		}
 	}
 	return &pr, nil
 }
