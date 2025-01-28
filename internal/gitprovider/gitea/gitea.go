@@ -212,7 +212,7 @@ func (p *provider) ListPullRequests(
 	case gitprovider.PullRequestStateClosed:
 		listOpts.State = gitea.StateClosed
 	case gitprovider.PullRequestStateOpen:
-		listOpts.State = "open"
+		listOpts.State = gitea.StateOpen
 	default:
 		return nil, fmt.Errorf("unknown pull request state %q", opts.State)
 	}
