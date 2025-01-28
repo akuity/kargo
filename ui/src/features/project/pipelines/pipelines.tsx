@@ -32,7 +32,7 @@ const FreightTimelineHeader = lazy(
   () => import('@ui/features/freight-timeline/freight-timeline-header')
 );
 import { FreightTimelineWrapper } from '@ui/features/freight-timeline/freight-timeline-wrapper';
-import { clearColors } from '@ui/features/stage/utils';
+import { clearColors, getColors } from '@ui/features/stage/utils';
 import { queryCache } from '@ui/features/utils/cache';
 import {
   listStages,
@@ -50,7 +50,6 @@ import { Images } from './images';
 import styles from './project-details.module.less';
 import { CollapseMode, FreightTimelineAction } from './types';
 import { usePipelineState } from './utils/state';
-import { usePipelineGraph } from './utils/use-pipeline-graph';
 import { Watcher } from './utils/watcher';
 
 import '@xyflow/react/dist/style.css';
@@ -168,12 +167,6 @@ export const Pipelines = ({
     };
   }, [name, client, isVisible]);
 
-  const [, , , sortedStages, stageColorMap, warehouseColorMap] = usePipelineGraph(
-    name,
-    data?.stages || [],
-    warehouseData?.warehouses || []
-  );
-
   const [stagesPerFreight, subscribersByStage, stagesWithFreight] = useMemo(() => {
     const stagesPerFreight: { [key: string]: Stage[] } = {};
     const subscribersByStage = {} as { [key: string]: Set<string> };
@@ -267,6 +260,16 @@ export const Pipelines = ({
       }
     },
     [state]
+  );
+
+  const warehouseColorMap = useMemo(
+    () => getColors(name || '', warehouseData?.warehouses || [], 'warehouses'),
+    [name, warehouseData?.warehouses]
+  );
+
+  const stageColorMap = useMemo(
+    () => getColors(name || '', data?.stages || []),
+    [name, data?.stages]
   );
 
   if (isLoading || isLoadingFreight || isLoadingImages || isLoadingWarehouse)
@@ -392,7 +395,8 @@ export const Pipelines = ({
             <div className={classNames(styles.imagesMatrix, { hidden: hideImages })}>
               <Images
                 project={name as string}
-                stages={sortedStages || []}
+                // TODO(Marvin9): does sortedStages matter?
+                stages={data?.stages || []}
                 hide={hideImageSection}
                 images={imageData?.images || {}}
               />
