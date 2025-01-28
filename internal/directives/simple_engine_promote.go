@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
@@ -114,7 +115,21 @@ func (e *SimpleEngine) executeSteps(
 		result, err := e.executeStep(ctx, promoCtx, step, reg, workDir, state)
 		stepExecMeta.Status = result.Status
 		stepExecMeta.Message = result.Message
-		state[step.Alias] = result.Output
+
+		// TODO(hidde): until we have a better way to handle the output of steps
+		// inflated from tasks, we need to apply a special treatment to the output
+		// to allow it to become available under the alias of the "task".
+		aliasNamespace := getAliasNamespace(step.Alias)
+		if aliasNamespace != "" && reg.Runner.Name() == (&outputComposer{}).Name() {
+			if state[aliasNamespace] == nil {
+				state[aliasNamespace] = make(map[string]any)
+			}
+			for k, v := range result.Output {
+				state[aliasNamespace].(map[string]any)[k] = v // nolint: forcetypeassert
+			}
+		} else {
+			state[step.Alias] = result.Output
+		}
 
 		switch result.Status {
 		case kargoapi.PromotionPhaseErrored, kargoapi.PromotionPhaseFailed,
@@ -352,16 +367,40 @@ func (e *SimpleEngine) getProjectSecrets(
 	ctx context.Context,
 	project string,
 ) (map[string]map[string]string, error) {
-	secrets := corev1.SecretList{}
+	secretList := corev1.SecretList{}
 	if err := e.kargoClient.List(
 		ctx,
-		&secrets,
+		&secretList,
 		client.InNamespace(project),
+		client.MatchingLabels{
+			// Newer label
+			kargoapi.CredentialTypeLabelKey: kargoapi.CredentialTypeLabelGeneric,
+		},
 	); err != nil {
 		return nil, fmt.Errorf("error listing Secrets for Project %q: %w", project, err)
 	}
-	secretsMap := make(map[string]map[string]string, len(secrets.Items))
-	for _, secret := range secrets.Items {
+	secrets := secretList.Items
+	if err := e.kargoClient.List(
+		ctx,
+		&secretList,
+		client.InNamespace(project),
+		client.MatchingLabels{
+			// Legacy label
+			kargoapi.ProjectSecretLabelKey: kargoapi.LabelTrueValue,
+		},
+	); err != nil {
+		return nil, fmt.Errorf("error listing Secrets for Project %q: %w", project, err)
+	}
+	secrets = append(secrets, secretList.Items...)
+	// Sort and de-dupe
+	slices.SortFunc(secrets, func(lhs, rhs corev1.Secret) int {
+		return strings.Compare(lhs.Name, rhs.Name)
+	})
+	secrets = slices.CompactFunc(secrets, func(lhs, rhs corev1.Secret) bool {
+		return lhs.Name == rhs.Name
+	})
+	secretsMap := make(map[string]map[string]string, len(secrets))
+	for _, secret := range secrets {
 		secretsMap[secret.Name] = make(map[string]string, len(secret.Data))
 		for key, value := range secret.Data {
 			secretsMap[secret.Name][key] = string(value)

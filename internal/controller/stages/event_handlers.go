@@ -133,7 +133,7 @@ func (v *downstreamStageEnqueuer[T]) Update(
 func getNewlyVerifiedStages(existing, updated *kargoapi.Freight) []string {
 	var stages []string
 	for stage := range updated.Status.VerifiedIn {
-		if _, ok := existing.Status.VerifiedIn[stage]; !ok {
+		if !existing.IsVerifiedIn(stage) {
 			stages = append(stages, stage)
 		}
 	}
@@ -211,7 +211,7 @@ func (a *stageEnqueuerForApprovedFreight[T]) Update(
 func getNewlyApprovedStages(existing, updated *kargoapi.Freight) []string {
 	var stages []string
 	for stage := range updated.Status.ApprovedFor {
-		if _, ok := existing.Status.ApprovedFor[stage]; !ok {
+		if !existing.IsApprovedFor(stage) {
 			stages = append(stages, stage)
 		}
 	}

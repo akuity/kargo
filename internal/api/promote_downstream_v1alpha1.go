@@ -93,24 +93,6 @@ func (s *server) PromoteDownstream(
 		return nil, connect.NewError(connect.CodeNotFound, err)
 	}
 
-	var directAllowed bool
-	for _, req := range stage.Spec.RequestedFreight {
-		if req.Origin.Equals(&freight.Origin) && req.Sources.Direct {
-			directAllowed = true
-			break
-		}
-	}
-	if _, verified := freight.Status.VerifiedIn[stage.Name]; !verified && !directAllowed {
-		return nil, connect.NewError(
-			connect.CodeInvalidArgument,
-			fmt.Errorf(
-				"Freight %q is not available to Stages down stream from %q",
-				freightName,
-				stageName,
-			),
-		)
-	}
-
 	downstreams, err := s.findDownstreamStagesFn(ctx, stage, freight.Origin)
 	if err != nil {
 		return nil, fmt.Errorf("find downstream stages: %w", err)
@@ -134,22 +116,39 @@ func (s *server) PromoteDownstream(
 		}
 	}
 
+	for _, downstream := range downstreams {
+		if !downstream.IsFreightAvailable(freight) {
+			return nil, connect.NewError(
+				connect.CodeInvalidArgument,
+				fmt.Errorf(
+					"Freight %q is not available to downstream Stage %q",
+					freight.Name,
+					downstream.Name,
+				),
+			)
+		}
+	}
+
 	promoteErrs := make([]error, 0, len(downstreams))
 	createdPromos := make([]*kargoapi.Promotion, 0, len(downstreams))
 	for _, downstream := range downstreams {
-		newPromo := kargo.NewPromotion(ctx, downstream, freight.Name)
 		if downstream.Spec.PromotionTemplate != nil &&
 			len(downstream.Spec.PromotionTemplate.Spec.Steps) == 0 {
 			// Avoid creating a Promotion if the downstream Stage has no promotion
 			// steps and is therefore a "control flow" Stage.
 			continue
 		}
-		if err := s.createPromotionFn(ctx, &newPromo); err != nil {
+		newPromo, err := kargo.NewPromotionBuilder(s.client).Build(ctx, downstream, freight.Name)
+		if err != nil {
 			promoteErrs = append(promoteErrs, err)
 			continue
 		}
-		s.recordPromotionCreatedEvent(ctx, &newPromo, freight)
-		createdPromos = append(createdPromos, &newPromo)
+		if err = s.createPromotionFn(ctx, newPromo); err != nil {
+			promoteErrs = append(promoteErrs, err)
+			continue
+		}
+		s.recordPromotionCreatedEvent(ctx, newPromo, freight)
+		createdPromos = append(createdPromos, newPromo)
 	}
 
 	res := connect.NewResponse(&svcv1alpha1.PromoteDownstreamResponse{

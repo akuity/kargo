@@ -2,7 +2,9 @@ package v1alpha1
 
 import (
 	"context"
+	"errors"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -10,6 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 )
 
 func TestVerificationRequest_Equals(t *testing.T) {
@@ -189,6 +192,420 @@ func TestGetStage(t *testing.T) {
 				},
 			)
 			testCase.assertions(t, stage, err)
+		})
+	}
+}
+
+func TestStage_ListAvailableFreight(t *testing.T) {
+	const testProject = "fake-namespace"
+	const testWarehouse1 = "fake-warehouse1"
+	const testWarehouse2 = "fake-warehouse2"
+	const testStage = "fake-stage"
+
+	testWarehouse1Origin := FreightOrigin{
+		Kind: FreightOriginKindWarehouse,
+		Name: testWarehouse1,
+	}
+
+	testWarehouse2Origin := FreightOrigin{
+		Kind: FreightOriginKindWarehouse,
+		Name: testWarehouse2,
+	}
+
+	testCases := []struct {
+		name        string
+		reqs        []FreightRequest
+		objects     []client.Object
+		interceptor interceptor.Funcs
+		assertions  func(*testing.T, []Freight, error)
+	}{
+		{
+			name: "error getting Warehouse",
+			reqs: []FreightRequest{{}},
+			interceptor: interceptor.Funcs{
+				Get: func(
+					context.Context,
+					client.WithWatch,
+					client.ObjectKey,
+					client.Object,
+					...client.GetOption,
+				) error {
+					return errors.New("something went wrong")
+				},
+			},
+			assertions: func(t *testing.T, _ []Freight, err error) {
+				require.ErrorContains(t, err, "error getting Warehouse")
+				require.ErrorContains(t, err, "something went wrong")
+			},
+		},
+		{
+			name: "Warehouse not found",
+			reqs: []FreightRequest{{}},
+			assertions: func(t *testing.T, _ []Freight, err error) {
+				require.ErrorContains(t, err, "Warehouse")
+				require.ErrorContains(t, err, "not found")
+			},
+		},
+		{
+			name: "error listing Freight",
+			reqs: []FreightRequest{{Origin: testWarehouse1Origin}},
+			objects: []client.Object{
+				&Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProject,
+						Name:      testWarehouse1,
+					},
+				},
+			},
+			interceptor: interceptor.Funcs{
+				List: func(
+					context.Context,
+					client.WithWatch,
+					client.ObjectList,
+					...client.ListOption,
+				) error {
+					return errors.New("something went wrong")
+				},
+			},
+			assertions: func(t *testing.T, _ []Freight, err error) {
+				require.ErrorContains(t, err, "error listing Freight for Warehouse")
+				require.ErrorContains(t, err, "something went wrong")
+			},
+		},
+		{
+			name: "success",
+			reqs: []FreightRequest{
+				{
+					Origin:  testWarehouse1Origin,
+					Sources: FreightSources{Direct: true},
+				},
+				{
+					Origin: testWarehouse2Origin,
+					Sources: FreightSources{
+						Stages:           []string{testStage},
+						RequiredSoakTime: &metav1.Duration{Duration: time.Hour},
+					},
+				},
+			},
+			objects: []client.Object{
+				&Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProject,
+						Name:      testWarehouse1,
+					},
+				},
+				&Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProject,
+						Name:      testWarehouse2,
+					},
+				},
+				&Freight{ // Available because Freight is requested directly from this Warehouse
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProject,
+						Name:      "fake-freight-1",
+					},
+					Origin: testWarehouse1Origin,
+				},
+				&Freight{ // Not available because Freight is not verified in upstream Stage
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProject,
+						Name:      "fake-freight-2",
+					},
+					Origin: testWarehouse2Origin,
+				},
+				&Freight{ // Not available because verification time not recorded
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProject,
+						Name:      "fake-freight-3",
+					},
+					Origin: testWarehouse2Origin,
+					Status: FreightStatus{
+						VerifiedIn: map[string]VerifiedStage{
+							testStage: {},
+						},
+					},
+				},
+				&Freight{ // Not available because soak time has not elapsed
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProject,
+						Name:      "fake-freight-4",
+					},
+					Origin: testWarehouse2Origin,
+					Status: FreightStatus{
+						VerifiedIn: map[string]VerifiedStage{
+							testStage: {
+								VerifiedAt: &metav1.Time{Time: time.Now()},
+							},
+						},
+					},
+				},
+				&Freight{ // Available because soak time has elapsed
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProject,
+						Name:      "fake-freight-5",
+					},
+					Origin: testWarehouse2Origin,
+					Status: FreightStatus{
+						VerifiedIn: map[string]VerifiedStage{
+							testStage: {
+								VerifiedAt: &metav1.Time{Time: time.Now().Add(-time.Hour * 2)},
+							},
+						},
+					},
+				},
+			},
+			assertions: func(t *testing.T, freight []Freight, err error) {
+				require.NoError(t, err)
+				require.Len(t, freight, 2)
+				require.Equal(t, "fake-freight-1", freight[0].Name)
+				require.Equal(t, "fake-freight-5", freight[1].Name)
+			},
+		},
+	}
+
+	testScheme := k8sruntime.NewScheme()
+	err := SchemeBuilder.AddToScheme(testScheme)
+	require.NoError(t, err)
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			c := fake.NewClientBuilder().WithScheme(testScheme).
+				WithScheme(testScheme).
+				WithIndex(&Freight{}, warehouseField, warehouseIndexer).
+				WithIndex(&Freight{}, approvedField, approvedForIndexer).
+				WithIndex(&Freight{}, verifiedInField, verifiedInIndexer).
+				WithObjects(testCase.objects...).
+				WithInterceptorFuncs(testCase.interceptor).
+				Build()
+
+			stage := &Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: testProject,
+					Name:      testStage,
+				},
+				Spec: StageSpec{
+					RequestedFreight: testCase.reqs,
+				},
+			}
+			freight, err := stage.ListAvailableFreight(context.Background(), c)
+			testCase.assertions(t, freight, err)
+		})
+	}
+}
+
+func TestStage_IsFreightAvailable(t *testing.T) {
+	const testNamespace = "fake-namespace"
+	const testWarehouse = "fake-warehouse"
+	const testStage = "fake-stage"
+	const testFreight = "fake-freight"
+	testStageMeta := metav1.ObjectMeta{
+		Namespace: testNamespace,
+		Name:      testStage,
+	}
+	testFreightMeta := metav1.ObjectMeta{
+		Namespace: testNamespace,
+		Name:      testFreight,
+	}
+	testOrigin := FreightOrigin{
+		Kind: FreightOriginKindWarehouse,
+		Name: testWarehouse,
+	}
+
+	testCases := []struct {
+		name     string
+		stage    *Stage
+		freight  *Freight
+		expected bool
+	}{
+		{
+			name:     "stage is nil",
+			freight:  &Freight{ObjectMeta: testFreightMeta},
+			expected: false,
+		},
+		{
+			name:     "freight is nil",
+			stage:    &Stage{ObjectMeta: testStageMeta},
+			expected: false,
+		},
+		{
+			name:  "stage and freight are in different namespaces",
+			stage: &Stage{ObjectMeta: testStageMeta},
+			freight: &Freight{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "wrong-namespace"},
+			},
+			expected: false,
+		},
+		{
+			name:  "freight is approved for stage",
+			stage: &Stage{ObjectMeta: testStageMeta},
+			freight: &Freight{
+				ObjectMeta: testFreightMeta,
+				Status: FreightStatus{
+					ApprovedFor: map[string]ApprovedStage{
+						testStage: {},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "stage accepts freight direct from origin",
+			stage: &Stage{
+				ObjectMeta: testStageMeta,
+				Spec: StageSpec{
+					RequestedFreight: []FreightRequest{{
+						Origin: testOrigin,
+						Sources: FreightSources{
+							Direct: true,
+						},
+					}},
+				},
+			},
+			freight: &Freight{
+				ObjectMeta: testFreightMeta,
+				Origin:     testOrigin,
+			},
+			expected: true,
+		},
+		{
+			name: "freight is verified in an upstream; soak not required",
+			stage: &Stage{
+				ObjectMeta: testStageMeta,
+				Spec: StageSpec{
+					RequestedFreight: []FreightRequest{{
+						Origin: testOrigin,
+						Sources: FreightSources{
+							Stages: []string{"upstream-stage"},
+						},
+					}},
+				},
+			},
+			freight: &Freight{
+				ObjectMeta: testFreightMeta,
+				Origin:     testOrigin,
+				Status: FreightStatus{
+					VerifiedIn: map[string]VerifiedStage{
+						"upstream-stage": {},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "freight is verified in an upstream stage with no longestCompletedSoak; soak required",
+			stage: &Stage{
+				ObjectMeta: testStageMeta,
+				Spec: StageSpec{
+					RequestedFreight: []FreightRequest{{
+						Origin: testOrigin,
+						Sources: FreightSources{
+							Stages:           []string{"upstream-stage"},
+							RequiredSoakTime: &metav1.Duration{Duration: time.Hour},
+						},
+					}},
+				},
+			},
+			freight: &Freight{
+				ObjectMeta: testFreightMeta,
+				Origin:     testOrigin,
+				Status: FreightStatus{
+					VerifiedIn: map[string]VerifiedStage{
+						"upstream-stage": {},
+					},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "freight is verified in an upstream stage with longestCompletedSoak; soak required but not elapsed",
+			stage: &Stage{
+				ObjectMeta: testStageMeta,
+				Spec: StageSpec{
+					RequestedFreight: []FreightRequest{{
+						Origin: testOrigin,
+						Sources: FreightSources{
+							Stages:           []string{"upstream-stage"},
+							RequiredSoakTime: &metav1.Duration{Duration: 2 * time.Hour},
+						},
+					}},
+				},
+			},
+			freight: &Freight{
+				ObjectMeta: testFreightMeta,
+				Origin:     testOrigin,
+				Status: FreightStatus{
+					VerifiedIn: map[string]VerifiedStage{
+						"upstream-stage": {
+							LongestCompletedSoak: &metav1.Duration{Duration: time.Hour},
+						},
+					},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "freight is verified in an upstream stage with longestCompletedSoak; soak required and is elapsed",
+			stage: &Stage{
+				ObjectMeta: testStageMeta,
+				Spec: StageSpec{
+					RequestedFreight: []FreightRequest{{
+						Origin: testOrigin,
+						Sources: FreightSources{
+							Stages:           []string{"upstream-stage"},
+							RequiredSoakTime: &metav1.Duration{Duration: time.Hour},
+						},
+					}},
+				},
+			},
+			freight: &Freight{
+				ObjectMeta: testFreightMeta,
+				Origin:     testOrigin,
+				Status: FreightStatus{
+					VerifiedIn: map[string]VerifiedStage{
+						"upstream-stage": {
+							LongestCompletedSoak: &metav1.Duration{Duration: time.Hour},
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "freight from origin not requested",
+			stage: &Stage{
+				ObjectMeta: testStageMeta,
+				Spec: StageSpec{
+					RequestedFreight: []FreightRequest{{
+						Origin: testOrigin,
+						Sources: FreightSources{
+							Stages: []string{"upstream-stage"},
+						},
+					}},
+				},
+			},
+			freight: &Freight{
+				ObjectMeta: testFreightMeta,
+				Origin: FreightOrigin{
+					Kind: FreightOriginKindWarehouse,
+					Name: "wrong-warehouse",
+				},
+				Status: FreightStatus{
+					VerifiedIn: map[string]VerifiedStage{
+						"upstream-stage": {},
+					},
+				},
+			},
+			expected: false,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			require.Equal(
+				t,
+				testCase.expected,
+				testCase.stage.IsFreightAvailable(testCase.freight),
+			)
 		})
 	}
 }

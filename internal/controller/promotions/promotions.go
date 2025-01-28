@@ -435,7 +435,7 @@ func (r *reconciler) promote(
 		return nil, fmt.Errorf("Freight %q not found in namespace %q", promo.Spec.Freight, promo.Namespace)
 	}
 
-	if !kargoapi.IsFreightAvailable(stage, targetFreight) {
+	if !stage.IsFreightAvailable(targetFreight) {
 		return nil, fmt.Errorf(
 			"Freight %q is not available to Stage %q in namespace %q",
 			promo.Spec.Freight,
@@ -471,6 +471,7 @@ func (r *reconciler) promote(
 			Kind:   step.Uses,
 			Alias:  step.As,
 			Retry:  step.Retry,
+			Vars:   step.Vars,
 			Config: step.Config.Raw,
 		}
 	}

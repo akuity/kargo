@@ -329,6 +329,12 @@ func TestRunningPromotionsByArgoCDApplications(t *testing.T) {
 				},
 				Spec: kargoapi.PromotionSpec{
 					Stage: "fake-stage",
+					Vars: []kargoapi.PromotionVariable{
+						{
+							Name:  "app",
+							Value: "fake-app-from-var",
+						},
+					},
 					Steps: []kargoapi.PromotionStep{
 						{
 							Uses: "argocd-update",
@@ -346,16 +352,74 @@ func TestRunningPromotionsByArgoCDApplications(t *testing.T) {
 								Raw: []byte(`{"apps":[{"name":"fake-app-${{ ctx.stage }}"}]}`),
 							},
 						},
+						{
+							Uses: "argocd-update",
+							Config: &apiextensionsv1.JSON{
+								// Note that this uses a variable within the expression
+								Raw: []byte(`{"apps":[{"name":"${{ vars.app }}"}]}`),
+							},
+						},
+						{
+							Uses: "argocd-update",
+							Vars: []kargoapi.PromotionVariable{
+								{
+									Name:  "app",
+									Value: "fake-app-from-step-var",
+								},
+							},
+							Config: &apiextensionsv1.JSON{
+								// Note that this uses a step-level variable within the expression
+								Raw: []byte(`{"apps":[{"name":"${{ vars.app }}"}]}`),
+							},
+						},
+						{
+							Uses: "argocd-update",
+							Config: &apiextensionsv1.JSON{
+								// Note that this uses output from a (fake) previous step within the expression
+								Raw: []byte(`{"apps":[{"name":"fake-app-${{ outputs.push.branch }}"}]}`),
+							},
+						},
+						{
+							Uses: "argocd-update",
+							Vars: []kargoapi.PromotionVariable{
+								{
+									Name:  "input",
+									Value: "${{ outputs.composition.name }}",
+								},
+							},
+							Config: &apiextensionsv1.JSON{
+								// Note that this uses output from a previous step through a variable
+								Raw: []byte(`{"apps":[{"name":"fake-app-${{ vars.input }}"}]}`),
+							},
+						},
+						{
+							Uses: "argocd-update",
+							As:   "task-1::update",
+							Config: &apiextensionsv1.JSON{
+								// Note that this uses output from a "task" step within the expression
+								Raw: []byte(`{"apps":[{"name":"fake-app-${{ task.outputs.fake.name }}"}]}`),
+							},
+						},
 					},
 				},
 				Status: kargoapi.PromotionStatus{
-					Phase:       kargoapi.PromotionPhaseRunning,
-					CurrentStep: 2, // Ensure all steps above are considered
+					Phase: kargoapi.PromotionPhaseRunning,
+					State: &apiextensionsv1.JSON{
+						// Mock the output of the previous steps
+						// nolint:lll
+						Raw: []byte(`{"push":{"branch":"from-branch"},"composition":{"name":"from-composition"},"task-1::fake":{"name":"from-task"}}`),
+					},
+					CurrentStep: 7, // Ensure all steps above are considered
 				},
 			},
 			expected: []string{
 				"fake-namespace:fake-app",
 				fmt.Sprintf("%s:%s", argocd.Namespace(), "fake-app-fake-stage"),
+				fmt.Sprintf("%s:%s", argocd.Namespace(), "fake-app-from-var"),
+				fmt.Sprintf("%s:%s", argocd.Namespace(), "fake-app-from-step-var"),
+				fmt.Sprintf("%s:%s", argocd.Namespace(), "fake-app-from-branch"),
+				fmt.Sprintf("%s:%s", argocd.Namespace(), "fake-app-from-composition"),
+				fmt.Sprintf("%s:%s", argocd.Namespace(), "fake-app-from-task"),
 			},
 		},
 		{
@@ -439,6 +503,40 @@ func TestFreightByWarehouse(t *testing.T) {
 				testCase.expected,
 				FreightByWarehouse(testCase.freight),
 			)
+		})
+	}
+}
+
+func TestFreightByCurrentStages(t *testing.T) {
+	testCases := []struct {
+		name     string
+		freight  *kargoapi.Freight
+		expected []string
+	}{
+		{
+			name:     "Freight is not currently in use by any Stages",
+			freight:  &kargoapi.Freight{},
+			expected: []string{},
+		},
+		{
+			name: "Freight is currently in use by a Stage",
+			freight: &kargoapi.Freight{
+				Status: kargoapi.FreightStatus{
+					CurrentlyIn: map[string]kargoapi.CurrentStage{"fake-stage": {}},
+				},
+			},
+			expected: []string{"fake-stage"},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Run(testCase.name, func(t *testing.T) {
+				require.Equal(
+					t,
+					testCase.expected,
+					FreightByCurrentStages(testCase.freight),
+				)
+			})
 		})
 	}
 }
