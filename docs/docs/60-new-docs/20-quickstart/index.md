@@ -314,7 +314,7 @@ the previous section.
     apiVersion: kargo.akuity.io/v1alpha1
     kind: PromotionTask
     metadata:
-      name: promo-process
+      name: demo-promo-process
       namespace: kargo-demo
     spec:
       vars:
@@ -379,7 +379,8 @@ the previous section.
         spec:
           steps:
           - task:
-              name: promo-process
+              name: demo-promo-process
+            as: promo-process
     ---
     apiVersion: kargo.akuity.io/v1alpha1
     kind: Stage
@@ -398,7 +399,8 @@ the previous section.
         spec:
           steps:
           - task:
-              name: promo-process
+              name: demo-promo-process
+            as: promo-process
     ---
     apiVersion: kargo.akuity.io/v1alpha1
     kind: Stage
@@ -417,7 +419,8 @@ the previous section.
         spec:
           steps:
           - task:
-              name: promo-process
+              name: demo-promo-process
+            as: promo-process
     EOF
     ```
 
@@ -545,7 +548,8 @@ the previous section.
         spec:
           steps:
           - task:
-              name: promo-process
+              name: demo-promo-process
+            as: promo-process
     ---
     apiVersion: kargo.akuity.io/v1alpha1
     kind: Stage
@@ -564,7 +568,8 @@ the previous section.
         spec:
           steps:
           - task:
-              name: promo-process
+              name: demo-promo-process
+            as: promo-process
     ---
     apiVersion: kargo.akuity.io/v1alpha1
     kind: Stage
@@ -583,7 +588,8 @@ the previous section.
         spec:
           steps:
           - task:
-              name: promo-process
+              name: demo-promo-process
+            as: promo-process
     EOF
     ```
 
