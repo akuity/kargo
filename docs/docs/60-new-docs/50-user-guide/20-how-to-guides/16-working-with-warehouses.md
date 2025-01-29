@@ -122,9 +122,15 @@ strategies are:
     for detailed information on version constraint syntax.
     :::
 
-    :::warning
-    TODO: Add an example
-    :::
+    Example:
+
+    ```yaml
+    spec:
+      subscriptions:
+      - image:
+          repoURL: public.ecr.aws/nginx/nginx
+          semverConstraint: ^1.26.0
+    ```
 
 - `Lexical`: This strategy selects the image with the lexicographically greatest
    tag.
@@ -134,9 +140,16 @@ strategies are:
    stamp. When using this strategy, it is recommended to use the `allowTags`
    field to limit eligibility to tags that match the expected format.
 
-    :::warning
-    TODO: Add an example
-    :::
+    Example:
+
+    ```yaml
+    spec:
+      subscriptions:
+      - image:
+          repoURL: public.ecr.aws/nginx/nginx
+          imageSelectionStrategy: Lexical
+          allowTags: ^nightly-\d{8}$
+    ```
 
 - `Digest`: This selects the image _currently_ referenced by some "mutable tag,"
    such as `latest`.
@@ -157,9 +170,16 @@ strategies are:
     Whenever possible, it is recommended to use immutable tags.
     :::
 
-    :::warning
-    TODO: Add an example
-    :::
+    Example:
+
+    ```yaml
+    spec:
+      subscriptions:
+      - image:
+          repoURL: public.ecr.aws/nginx/nginx
+          imageSelectionStrategy: Digest
+          semverConstraint: latest
+    ```
 
 - `NewestBuild`: This strategy selects the image with the most recent build
   time.
@@ -175,9 +195,14 @@ strategies are:
     require periodic adjustment as a repository grows.
     :::
 
-    :::warning
-    TODO: Add an example
-    :::
+    ```yaml
+    spec:
+      subscriptions:
+      - image:
+          repoURL: public.ecr.aws/nginx/nginx
+          imageSelectionStrategy: NewestBuild
+          allowTags: ^nightly
+    ```
 
 ### Git Repository Subscriptions
 
@@ -236,9 +261,14 @@ strategies are:
     __`NewestFromBranch` is the default selection strategy if one is not
     specified.__
 
-    :::warning
-    TODO: Add an example
-    :::
+    Example:
+
+    ```yaml
+    spec:
+      subscriptions:
+      - git:
+          repoURL: https://github.com/example/repo.git
+    ```
 
 - `SemVer`: Selects the commit referenced by the tag that best matches a
   semantic versioning constraint. All tags that are not valid semantic versions
@@ -263,9 +293,16 @@ strategies are:
     for detailed information on version constraint syntax.
     :::
 
-    :::warning
-    TODO: Add an example
-    :::
+    Example:
+
+    ```yaml
+    spec:
+      subscriptions:
+      - git:
+          repoURL: https://github.com/example/repo.git
+          commitSelectionStrategy: SemVer
+          semverConstraint: ^1.0.0
+    ```
 
 - `Lexical`: Selects the commit referenced by the lexicographically greatest
   tag.
@@ -276,18 +313,32 @@ strategies are:
     When using this strategy, it is recommended to use the `allowTags` field to
     limit eligibility to tags that match the expected format.
 
-    :::warning
-    TODO: Add an example
-    :::
+    Example:
+
+    ```yaml
+    spec:
+      subscriptions:
+      - git:
+          repoURL: https://github.com/example/repo.git
+          commitSelectionStrategy: Lexical
+          allowTags: ^nightly-\d{8}$
+    ```
 
 - `NewestTag`: Selects the commit referenced by the most recently created tag.
   
     When using this strategy, it is recommended to use the `allowTags` field to
     limit eligibility to tags that match the expected format.
 
-    :::warning
-    TODO: Add an example
-    :::
+    Example:
+
+    ```yaml
+    spec:
+      subscriptions:
+      - git:
+          repoURL: https://github.com/example/repo.git
+          commitSelectionStrategy: NewestTag
+          allowTags: ^nightly
+    ```
 
 #### Git Subscription Path Filtering
 
@@ -389,3 +440,51 @@ Paths may _also_ be specified using glob patterns (by prefixing the string with
 :::
 
 ### Helm Chart Repository Subscriptions
+
+Helm chart repository subscriptions can be defined using the following fields:
+
+- `repoURL`: The URL of the Helm chart repository. This field is required.
+
+  Chart repositories using http/s may contain versions of many _different_
+  charts. Subscriptions to all chart repositories using http/s __must__
+  additionally specify the chart's name in the `name` field.
+
+  For chart repositories in OCI registries, the repository URL points only to
+  revisions of a _single_ chart. Subscriptions to chart repositories in OCI
+  registries __must__ leave the `name` field empty.
+
+- `name`: See above.
+
+- `semverConstraint`: Selects the chart version best matching this constraint.
+  If left unspecified, the subscription implicitly selects the semantically
+  greatest version of the chart.
+
+  :::info
+  Helm _requires_ charts to be semantically versioned.
+  :::
+
+  :::info
+  Kargo uses the [semver](https://github.com/masterminds/semver) package for
+  parsing and comparing semantic versions and semantic version constraints.
+  Refer to
+  [these docs](https://github.com/masterminds/semver#checking-version-constraints)
+  for detailed information on version constraint syntax.
+  :::
+
+- `discoveryLimit`: A chart repository subscription does not actually select a
+  _single_ chart version; rather it selects the n best fits for the specified
+  constraints. The _best_ fit is the zero element in the list of selected
+  charts. `discoveryLimit` specifies how many chart versions to discover.
+  
+  The default is `20`.
+
+  Example:
+
+  ```yaml
+  spec:
+    subscriptions:
+    - helm:
+        repoURL: https://charts.example.com
+        name: my-chart
+        semverConstraint: ^1.0.0
+  ```
