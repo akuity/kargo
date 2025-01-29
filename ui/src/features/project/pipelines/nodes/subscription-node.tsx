@@ -31,7 +31,7 @@ export const SubscriptionNode = (props: SubscriptionNodeProps) => {
 
   return (
     <div className={classNames(styles.repoSubscriptionNode)}>
-      <div className={classNames(styles.header)}>
+      <div className={classNames(styles.header, 'header')}>
         <h3>Subscription</h3>
 
         <FontAwesomeIcon className='ml-auto text-base' icon={icon} />
