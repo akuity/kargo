@@ -5,7 +5,8 @@ sidebar_label: Working with Warehouses
 
 # Working with Warehouses
 
-Kargo `Warehouse` resources each manage subscriptions to one or more of various types of artifact sources, including:
+Kargo `Warehouse` resources each manage subscriptions to one or more of various
+types of artifact sources, including:
 
 - Container image repositories
 - Git repositories
@@ -24,11 +25,11 @@ to other Kargo concepts, refer to
 
 ## The `Warehouse` Resource Type
 
-A `Warehouse` resource's most important field is its `spec.subscriptions` field,
-which is used to subscribe to one or more artifact sources.
+A `Warehouse`'s subscriptions are all defined within its `spec.subscriptions`
+field.
 
-Here's an example of a `Warehouse` subscribing to both a
-container image repository and a Git repository:
+In this example, a `Warehouse` subscribes to both a container image repository
+and a Git repository:
 
 ```yaml
 apiVersion: kargo.akuity.io/v1alpha1
@@ -45,35 +46,23 @@ spec:
       repoURL: https://github.com/example/kargo-demo.git
 ```
 
-:::info
-Kargo uses [semver](https://github.com/masterminds/semver#checking-version-constraints) to handle semantic versioning constraints.
-:::
+The remainder of this document focuses on the configuration of the individual
+subscription types.
 
 ### Container Image Subscriptions
+
+#### Image Selection Strategies
 
 For subscriptions to container image repositories, the `imageSelectionStrategy`
 field specifies a method for selecting the desired image. The available
 strategies are:
 
-- `Digest`: This strategy is used when subscribing to a specific mutable tag, such as `latest`, which is generally
-    discouraged due to best practices favoring immutable tags. Users must supply a value in the `constraint` field,
-    specifying the mutable tag they wish to track. The strategy will retrieve the latest details for the image
-    tagged in this way, including any new or updated digest.
+- `SemVer`: Selects the image with the tag that best matches a semantic
+  versioning constraint. All tags that are not valid semantic versions are
+  ignored. With no constraint specified, the strategy simply selects the image
+  with the semantically greatest tag.
 
-- `Lexical`: This strategy selects the image with the lexicographically greatest tag, making it suitable
-    for scenarios where tags incorporate date/time stamps in formats like `yyyymmdd`. When using this
-    strategy, it's recommended to pair it with a regular expression in the `allowTags` field to limit
-    eligibility to tags that match the expected format, ensuring the correct selection of tags.
-
-- `NewestBuild`: This strategy selects the image with the most recent build time.
-
-    :::warning
-    `NewestBuild` requires retrieving metadata for every eligible tag, which can be slow and is likely to
-    exceed the registry's rate limits. It's advisable to use the `allowTags` field to limit
-    the number of tags for which metadata is retrieved, thereby reducing the risk of hitting rate limits.
-    :::
-
-- `SemVer`: This strategy selects the image that best matches a semantic versioning constraint.
+    __`SemVer`__ is the default strategy if one is not specified. 
 
     :::info
     Kargo uses the [semver](https://github.com/masterminds/semver) package for
@@ -83,29 +72,122 @@ strategies are:
     for detailed information on version constraint syntax.
     :::
 
+    :::warning
+    TODO: Add an example
+    :::
+
+- `Lexical`: This strategy selects the image with the lexicographically greatest
+   tag.
+
+   This is useful in scenarios wherein tags incorporate date/time stamps in
+   formats such as `yyyymmdd` and you wish to select the tag with the latest
+   stamp. When using this strategy, it is recommended to use the `allowTags`
+   field to limit eligibility to tags that match the expected format.
+
+    :::warning
+    TODO: Add an example
+    :::
+
+- `Digest`: This selects the image _currently_ referenced by some "mutable tag,"
+   such as `latest`. The tag name must be specified using the `constraint`
+   field. Importantly, the _digest_ will change every time the tag is updated.
+
+    :::warning
+    "Mutable tags": Tags like `latest` that are sometimes, perhaps frequently,
+    updated to point to a different, presumably newer image.
+
+    "Immutable tags": Tags that have version or date information embedded within
+    them, along with an expectation of never being updated to reference a
+    different image.
+
+    Using mutable tags like `latest` _is a widely discouraged practice._
+    Whenever possible, it is recommended to use immutable tags.
+    :::
+
+    :::warning
+    TODO: Add an example
+    :::
+
+- `NewestBuild`: This strategy selects the image with the most recent build
+  time.
+
+    :::warning
+    `NewestBuild` requires retrieving metadata for every eligible tag, which can
+    be slow and is likely to exceed the registry's rate limits. __This can
+    result in system-wide performance degradation.__
+
+    If using this strategy is unavoidable, it is recommended to use the
+    `allowTags` field to limit the number of tags for which metadata is
+    retrieved to reduce the risk of encountering rate limits. `allowTags` may
+    require periodic adjustment as a repository grows.
+    :::
+
+    :::warning
+    TODO: Add an example
+    :::
+
 ### Git Repository Subscriptions
+
+#### Commit Selection Strategies
 
 For subscriptions to Git repositories, the `commitSelectionStrategy`
 field specifies a method for selecting the desired commit. The available
 strategies are:
 
-The available strategies for subscribing to a Git repository are:
+- `NewestFromBranch`: Selects the most recent commit from a specified branch.
+  
+    This is useful for the average case, wherein you wish for the `Warehouse` to
+    continuously discover the latest changes to a branch that receives regular
+    updates.
 
-- `Lexical`: Selects the commit referenced by the lexicographically greatest tag.
-    It is particularly useful in scenarios where commit references, such as tags or branches,
-    incorporate date/time stamps in formats like `yyyymmdd`.
-    To ensure the correct selection, it's advisable to use regular expressions in the
-    `allowTags` or `allowBranches` field, which limit the acceptable format of the references,
-    preventing the selection of undesired tags like `zzz-custom` over something like `nightly-20241211`.
+    `NewestFromBranch` is the default strategy if one is not specified.
 
-- `NewestFromBranch`: Selects the most recent commit from a specified branch. It's useful when tracking the latest changes in a branch that receives regular updates.
+    :::warning
+    TODO: Add an example
+    :::
 
-- `NewestTag`: Selects the most recent commit associated with a tag. Since tags are typically immutable,
-    there should be only one commit per tag.
-    To optimize this strategy, it's recommended to constrain the eligible tags using regular expressions or specific patterns,
-    ensuring the selection is limited to tags that follow a consistent naming convention.
+- `SemVer`: Selects the commit referenced by the tag that best matches a
+  semantic versioning constraint. All tags that are not valid semantic versions
+  are ignored. With no constraint specified, the strategy simply selects the
+  commit referenced by the semantically greatest tag.
 
-- `SemVer`: Selects the commit referenced by a *tag* that best matches the constraint.
+    This is useful in scenarios wherein you do not wish for the `Warehouse` to
+    continuously discover _every new commit_ and would like limit selection to
+    commits tagged with a semantic version, and possibly within a certain range.
+
+    :::info
+    Kargo uses the [semver](https://github.com/masterminds/semver) package for
+    parsing and comparing semantic versions and semantic version constraints.
+    Refer to
+    [these docs](https://github.com/masterminds/semver#checking-version-constraints)
+    for detailed information on version constraint syntax.
+    :::
+
+    :::warning
+    TODO: Add an example
+    :::
+
+- `Lexical`: Selects the commit referenced by the lexicographically greatest
+  tag.
+
+    This is useful in scenarios wherein you do not wish for the `Warehouse` to
+    discover _every new commit_ and tags incorporate date/time stamps in formats
+    such as `yyyymmdd` and you wish to select the tag with the latest stamp.
+    When using this strategy, it is recommended to use the `allowTags` field to
+    limit eligibility to tags that match the expected format.
+
+    :::warning
+    TODO: Add an example
+    :::
+
+- `NewestTag`: Selects the commit referenced by the most recently created tag.
+  
+    When using this strategy, it is recommended to use the `allowTags` field to
+    limit eligibility to tags that match the expected format.
+
+    :::warning
+    TODO: Add an example
+    :::
 
 #### Git Subscription Path Filtering
 
@@ -205,3 +287,5 @@ Paths may _also_ be specified using glob patterns (by prefixing the string with
 `glob:`) or regular expressions (by prefixing the string with `regex:` or
 `regexp:`).
 :::
+
+### Helm Chart Repository Subscriptions
