@@ -132,8 +132,8 @@ const FreightOriginKindWarehouse FreightOriginKind = "Warehouse"
 type FreightAvailabilityStrategy string
 
 const (
-	FreightAvailabilityStrategyAllUpstream FreightAvailabilityStrategy = "AllUpstream"
-	FreightAvailabilityStrategyAnyUpstream FreightAvailabilityStrategy = "AnyUpstream"
+	FreightAvailabilityStrategyAll   FreightAvailabilityStrategy = "All"
+	FreightAvailabilityStrategyOneOf FreightAvailabilityStrategy = "OneOf"
 )
 
 // +kubebuilder:object:root=true
@@ -213,12 +213,6 @@ type FreightRequest struct {
 	// Sources describes where the requested Freight may be obtained from. This is
 	// a required field.
 	Sources FreightSources `json:"sources" protobuf:"bytes,2,opt,name=sources"`
-	// AvailabilityStrategy specifies the semantics for how requested Freight is
-	// made available to the Stage. This field is optional. When left unspecified,
-	// the field is implicitly treated as if its value were "AnyUpstream".
-	//
-	// +kubebuilder:default=AnyUpstream
-	AvailabilityStrategy FreightAvailabilityStrategy `json:"availabilityStrategy" protobuf:"bytes,3,opt,name=availabilityStrategy"`
 }
 
 // FreightOrigin describes a kind of Freight in terms of where it may have
@@ -278,6 +272,12 @@ type FreightSources struct {
 	// +kubebuilder:validation:Type=string
 	// +kubebuilder:validation:Pattern="^([0-9]+(\\.[0-9]+)?(s|m|h))+$"
 	RequiredSoakTime *metav1.Duration `json:"requiredSoakTime,omitempty" protobuf:"bytes,3,opt,name=requiredSoakTime"`
+	// AvailabilityStrategy specifies the semantics for how requested Freight is
+	// made available to the Stage. This field is optional. When left unspecified,
+	// the field is implicitly treated as if its value were "AnyUpstream".
+	//
+	// +kubebuilder:default=AnyUpstream
+	AvailabilityStrategy FreightAvailabilityStrategy `json:"availabilityStrategy" protobuf:"bytes,4,opt,name=availabilityStrategy"`
 }
 
 // PromotionTemplate defines a template for a Promotion that can be used to
