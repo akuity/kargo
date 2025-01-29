@@ -34,7 +34,7 @@ export const useReactFlowPipelineGraph = (
 
     const graph = new graphlib.Graph<GraphMeta>({ multigraph: true });
 
-    graph.setGraph({ rankdir: 'LR', ranksep: 100 });
+    graph.setGraph({ rankdir: 'LR', ranksep: 100, edgesep: 0 });
     graph.setDefaultEdgeLabel(() => ({}));
 
     // subscriptions and warehouses
