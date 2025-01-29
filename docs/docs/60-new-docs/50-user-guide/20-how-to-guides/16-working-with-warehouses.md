@@ -252,7 +252,9 @@ For subscriptions to Git repositories, the `commitSelectionStrategy`
 field specifies a method for selecting the desired commit. The available
 strategies are:
 
-- `NewestFromBranch`: Selects the most recent commit from a specified branch.
+- `NewestFromBranch`: Selects the most recent commit from a branch specified
+  by the `branch` field. If a branch is not specified, the strategy selects
+  commits from the repository's default branch (typically `main` or `master`).
   
     This is useful for the average case, wherein you wish for the `Warehouse` to
     continuously discover the latest changes to a branch that receives regular
@@ -268,6 +270,7 @@ strategies are:
       subscriptions:
       - git:
           repoURL: https://github.com/example/repo.git
+          branch: main
     ```
 
 - `SemVer`: Selects the commit referenced by the tag that best matches a
