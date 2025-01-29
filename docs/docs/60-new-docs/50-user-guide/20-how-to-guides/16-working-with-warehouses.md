@@ -5,20 +5,21 @@ sidebar_label: Working with Warehouses
 
 # Working with Warehouses
 
-A `Warehouse` is a fundamental Kargo resource that manages and tracks various 
-artifact sources. It acts as a central hub for subscribing to and monitoring changes in:
+Kargo `Warehouse` resources each manage subscriptions to one or more of various types of artifact sources, including:
 
 - Container image repositories
 - Git repositories
 - Helm chart repositories
 
-`Warehouse`s are responsible for watching these sources and producing new `Freight` whenever changes are
-detected in the subscribed repositories. Each piece of `Freight` represents a collection of specific
-versions of artifacts that can be promoted through your deployment pipeline.
+When a `Warehouse` observes a new revision of any artifact to which it
+subscribes, it creates a new `Freight` resource representing a specific
+collection of artifact revisions that can be promoted from `Stage` to `Stage`
+_as a unit_.
 
 :::info
-To see how `Warehouse` fits into the overall architecture,
-refer to the [Warehouse section of the Core Concepts doc](./../10-core-concepts/index.md#warehouses).
+For a broader, conceptual understanding of warehouses and their relation
+to other Kargo concepts, refer to 
+[Core Concepts](./../10-core-concepts/index.md).
 :::
 
 ## The `Warehouse` Resource Type
@@ -48,10 +49,11 @@ spec:
 Kargo uses [semver](https://github.com/masterminds/semver#checking-version-constraints) to handle semantic versioning constraints.
 :::
 
-### Image Subscription
+### Container Image Subscriptions
 
-For subscriptions to container image repositories, the `imageSelectionStrategy` field specifies the method for selecting
-the desired image. The available strategies for subscribing to an image repository are:
+For subscriptions to container image repositories, the `imageSelectionStrategy`
+field specifies a method for selecting the desired image. The available
+strategies are:
 
 - `Digest`: This strategy is used when subscribing to a specific mutable tag, such as `latest`, which is generally
     discouraged due to best practices favoring immutable tags. Users must supply a value in the `constraint` field,
@@ -71,17 +73,21 @@ the desired image. The available strategies for subscribing to an image reposito
     the number of tags for which metadata is retrieved, thereby reducing the risk of hitting rate limits.
     :::
 
-- **SemVer**: This strategy selects the image that best matches a semantic versioning constraint.
+- `SemVer`: This strategy selects the image that best matches a semantic versioning constraint.
 
     :::info
-    Kargo uses [semver](https://github.com/masterminds/semver#checking-version-constraints) to handle these contraints,
-    allowing users to define and manage versions precisely.
+    Kargo uses the [semver](https://github.com/masterminds/semver) package for
+    parsing and comparing semantic versions and semantic version constraints.
+    Refer to
+    [these docs](https://github.com/masterminds/semver#checking-version-constraints)
+    for detailed information on version constraint syntax.
     :::
 
-### Git Subscription
+### Git Repository Subscriptions
 
-In subscriptions to Git repositories, the `commitSelectionStrategy` field
-specifies the method for selecting the desired commit.
+For subscriptions to Git repositories, the `commitSelectionStrategy`
+field specifies a method for selecting the desired commit. The available
+strategies are:
 
 The available strategies for subscribing to a Git repository are:
 
@@ -91,11 +97,14 @@ The available strategies for subscribing to a Git repository are:
     To ensure the correct selection, it's advisable to use regular expressions in the
     `allowTags` or `allowBranches` field, which limit the acceptable format of the references,
     preventing the selection of undesired tags like `zzz-custom` over something like `nightly-20241211`.
+
 - `NewestFromBranch`: Selects the most recent commit from a specified branch. It's useful when tracking the latest changes in a branch that receives regular updates.
+
 - `NewestTag`: Selects the most recent commit associated with a tag. Since tags are typically immutable,
     there should be only one commit per tag.
     To optimize this strategy, it's recommended to constrain the eligible tags using regular expressions or specific patterns,
     ensuring the selection is limited to tags that follow a consistent naming convention.
+
 - `SemVer`: Selects the commit referenced by a *tag* that best matches the constraint.
 
 #### Git Subscription Path Filtering
@@ -187,7 +196,7 @@ _even a single change_ that is:
 2. Not explicitly excluded via `excludePaths`.
 :::
 
-:::info
+:::note
 By default, the strings in the `includePaths` and `excludePaths` fields are
 treated as exact paths to files or directories. (Selecting a directory will
 implicitly select all paths within that directory.)
