@@ -348,7 +348,8 @@ strategies are:
 In some cases, it may be necessary to constrain the paths within a Git
 repository that a `Warehouse` will consider as triggers for `Freight`
 production. This is especially useful for GitOps repositories that are
-"monorepos" containing configuration for multiple applications.
+["monorepos"](../30-patterns/index.md#monorepo-layout) containing configuration
+for multiple applications.
 
 The paths that may or must not trigger `Freight` production may be specified
 using a combination of the `includePaths` and `excludePaths` fields of a Git
