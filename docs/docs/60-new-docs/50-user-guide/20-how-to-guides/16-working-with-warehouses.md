@@ -84,7 +84,7 @@ fields:
     encountering rate limits -- decreasing this limit may improve performance.
     :::
 
-- `gitRepoURL`: An optional metadata to inform Kargo of the Git repository that
+- `gitRepoURL`: Optional metadata to inform Kargo of the Git repository that
   contains the image's Dockerfile or other build context.
 
 - `insecureSkipTLSVerify`: Set to `true` to disable validation of the
