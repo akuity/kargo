@@ -46,7 +46,7 @@ export const StageNodeDimensions = () =>
   ({
     // MUST BE SAME AS DEFINED IN custom-node.module.less .stageNode
     width: 250,
-    height: 198
+    height: 210
   }) as NodeDimensions;
 
 type StageNodeProps = {
