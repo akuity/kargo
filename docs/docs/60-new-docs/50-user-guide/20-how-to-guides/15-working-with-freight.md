@@ -110,7 +110,22 @@ sometimes wish to override that alias with one of their own choosing. This can
 make it easier to identify a particularly important (or problematic) `Freight`
 resource as it progresses through the `Stage`s of a pipeline.
 
-This is conveniently accomplished via the Kargo CLI:
+To update the `Freight` Alias:
+
+<Tabs groupId="update-alias">
+<TabItem value="ui" label="Using the UI" default>
+
+1. Click the three dots on the `Freight` in the <Hlt>Freight Timeline</Hlt>,
+    then select <Hlt>Change Alias</Hlt>:
+
+    ![update-freight-alias](img/freight-alias.png)
+1. Update Alias and submit it.
+
+    ![update-freight-alias](img/freight-alias-2.png)
+
+</TabItem>
+
+<TabItem value="cli" label="Using the CLI">
 
 ```shell
 kargo update freight \
@@ -129,6 +144,9 @@ kargo update freight \
 
 This can also be accomplished via `kubectl` commands `apply`, `edit`, `patch`,
 etc. by updating the `alias` field of the `Freight` resource.
+
+</TabItem>
+</Tabs>
 
 :::info
 The `alias` field is a convenient way to update the `Freight` resource's
@@ -164,8 +182,23 @@ arise, in which case it may sometimes be desirable to bypass one or more
 `Stage`s in the pipeline.
 
 To enable this, Kargo provides the ability to manually approve a `Freight`
-resource for promotion to any given `Stage`. This is conveniently accomplished
-via the Kargo CLI:
+resource for promotion to any given `Stage`. To manually approve the `Freight`:
+
+<Tabs groupId="manual-approval">
+<TabItem value="ui" label="Using the UI" default>
+
+1. Click the three dots on the `Freight` in the <Hlt>Freight Timeline</Hlt>,
+    then select <Hlt>Manually Approve</Hlt>:
+
+    ![update-freight-alias](img/freight-approval.png)
+
+1. Select <Hlt>Approve</Hlt> on the `Stage` where you'd want to promote the `Freight`.
+
+    ![update-freight-alias](img/freight-approval-2.png)
+
+</TabItem>
+
+<TabItem value="cli" label="Using the CLI">
 
 ```shell
 kargo approve \
@@ -178,6 +211,9 @@ kargo approve \
 Manual approvals cannot be granted via `kubectl` due to technical factors
 preventing `kubectl` from updating `status` subresources of Kargo resources.
 :::
+
+</TabItem>
+</Tabs>
 
 :::note
 Manually granting approval for a `Freight` resource to be promoted to any given
@@ -193,7 +229,18 @@ reflect that approval.
 The following depicts a `Freight` resource that has been verified in a `test`
 `Stage` through the usual process, but has been manually approved for promotion
 to the `prod` `Stage`. i.e. Any `Stage`s between `test` and `prod` may be
-bypassed.
+bypassed:
+
+<Tabs groupId="freight-status">
+<TabItem value="ui" label="To check using the UI" default>
+
+1. Click on the `Freight` in the <Hlt>Freight Timeline</Hlt>:
+
+    ![freight-status](img/freight-status.png)
+
+</TabItem>
+
+<TabItem value="cli" label="To check using the CLI">
 
 ```shell
 kargo get freight \
@@ -213,3 +260,33 @@ kargo get freight \
     }
 ]
 ```
+
+</TabItem>
+</Tabs>
+
+## Promoting a Freight to a Stage
+
+<Tabs groupId="promoting-freight-to-a-stage">
+<TabItem value="ui" label="Using the UI" default>
+
+1. Click the three dots on the `Freight` in the <Hlt>Freight Timeline</Hlt>,
+    then select <Hlt>Promote</Hlt>:
+
+    ![Promote Freight to a Stage](img/freight-promotion.png)
+
+2. Select the `Stage` and click <Hlt>Promote</Hlt>:
+
+    ![Promote Freight to a Stage](img/freight-promotion-2.png)
+
+</TabItem>
+
+<TabItem value="cli" label="Using the CLI">
+
+To promote `Freight` to a `Stage` using the CLI, run:
+
+```shell
+kargo promote --stage <stage> --project <project> --freight <freight>
+```
+
+</TabItem>
+</Tabs>
