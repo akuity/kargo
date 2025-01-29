@@ -80,7 +80,7 @@ In the following example, the `ServiceAccount` resource is mapped to all of:
 
 * Users with a `sub` claim identifying them as either `alice` or `bob`.
 * A user with the `email` claim `carl@example.com`.
-* All users with a `groups` claim  containing _either_ the `devops` or
+* All users with a `groups` claim containing _either_ the `devops` or
   `kargo-admin` group.
 
 ```yaml

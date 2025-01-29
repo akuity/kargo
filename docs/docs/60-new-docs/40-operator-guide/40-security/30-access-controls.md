@@ -5,8 +5,8 @@ sidebar_label: Access Controls
 # Access Controls
 
 Most access controls in Kargo are within the purview of highly-privileged
-_users_ -- ones who might be considered to be "project admins." There are but a
-few access controls that an operator might need to be concerned with and this
+_users_ -- ones who might be considered to be "project admins." There are only
+a few access controls that an operator might need to be concerned with and this
 documentation focuses on those.
 
 :::note
