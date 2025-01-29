@@ -543,9 +543,11 @@ resemble this:
 :::warning
 When storing configuration for many applications in a single repository, any
 `Warehouse` resources that subscribe to that repository should be carefully
-configured with path filters such that only changes to _relevant_ configuration
-are detected. A `guestbook` `Warehouse`, for instance, should be unconcerned
-with changes to `portal` configuration.
+configured with
+[path filters](../20-how-to-guides/16-working-with-warehouses.md#git-subscription-path-filtering)
+such that only changes to _relevant_ configuration are detected. A `guestbook`
+`Warehouse`, for instance, should be unconcerned with changes to `portal`
+configuration.
 :::
 
 ### Storage Options
