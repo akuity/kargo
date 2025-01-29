@@ -56,7 +56,10 @@ export const TokenRenew = () => {
       })
         .then((response) => processDiscoveryResponse(issuerUrl, response))
         .then((response) => {
-          if (response.code_challenge_methods_supported?.includes('S256') !== true) {
+          if (
+            response.code_challenge_methods_supported?.includes('S256') !== true &&
+            !issuerUrl.toString().startsWith('https://login.microsoftonline.com')
+          ) {
             throw new Error('OIDC config fetch error');
           }
 

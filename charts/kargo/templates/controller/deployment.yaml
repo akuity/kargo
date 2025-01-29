@@ -81,7 +81,7 @@ spec:
         {{- end }}
         volumeMounts:
         - mountPath: /tmp
-          name: tmpData
+          name: tmp-data
         {{- if or .Values.kubeconfigSecrets.kargo .Values.kubeconfigSecrets.argocd }}
         - mountPath: /etc/kargo/kubeconfigs
           name: kubeconfigs
@@ -129,7 +129,7 @@ spec:
           mountPath: /tmp/target
       {{- end }}
       volumes:
-      - name: tmpData
+      - name: tmp-data
         emptyDir: {}
       {{- if or .Values.kubeconfigSecrets.kargo .Values.kubeconfigSecrets.argocd }}
       - name: kubeconfigs
