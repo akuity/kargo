@@ -51,6 +51,49 @@ subscription types.
 
 ### Container Image Subscriptions
 
+Container image repository subscriptions can be defined using the following
+fields:
+
+- `repoURL`: The URL of the container image repository _without any tag_. This field is required.
+
+- `imageSelectionStrategy`: One of four pre-defined strategies for selecting the
+  desired image. (See next section.)
+
+- `allowTags`: An optional regular expression that limits the eligibility for
+  selection to tags that match the pattern.
+
+- `ignoreTags`: An optional list of tags that should explicitly be ignored.
+
+- `platform`: An optional identifier that constrains image selection to those
+  images supporting the specified operating system and system architecture.
+  e.g., `linux/amd64`.
+
+    :::note
+    It is seldom necessary to specify this field.
+    :::
+
+- `discoveryLimit`: Many selection strategies (see next section) do not actually
+  select a _single_ image; rather they select the n best fits for the specified
+  constraints. The _best_ fit is the zero element in the list of selected
+  images. `discoveryLimit` specifies how many images to discover.
+  
+    The default is `20`.
+
+    :::note
+    For poorly performing `Warehouse`s -- for instance ones frequently
+    encountering rate limits -- decreasing this limit may improve performance.
+    :::
+
+- `gitRepoURL`: An optional metadata to inform Kargo of the Git repository that
+  contains the image's Dockerfile or other build context.
+
+- `insecureSkipTLSVerify`: Set to `true` to disable validation of the
+  repository's TLS certificate.
+
+    :::warning
+    This is a security risk and should only be used in development environments.
+    :::
+
 #### Image Selection Strategies
 
 For subscriptions to container image repositories, the `imageSelectionStrategy`
@@ -58,11 +101,18 @@ field specifies a method for selecting the desired image. The available
 strategies are:
 
 - `SemVer`: Selects the image with the tag that best matches a semantic
-  versioning constraint. All tags that are not valid semantic versions are
-  ignored. With no constraint specified, the strategy simply selects the image
-  with the semantically greatest tag.
+  versioning constraint specified by the `semverConstraint` field. With no
+  constraint specified, the strategy simply selects the image with the
+  semantically greatest tag. All tags that are not valid semantic versions are
+  ignored.
 
-    __`SemVer`__ is the default strategy if one is not specified. 
+   The `strictSemvers` field defaults to `true`, meaning only tags containing
+   all three parts of a semantic version (major, minor, and patch) are
+   considered. Disabling this should be approached with caution because any
+   image tagged only with decimal characters will be considered a valid semantic
+   version (containing only the major element).
+
+    __`SemVer` is the default strategy if one is not specified.__
 
     :::info
     Kargo uses the [semver](https://github.com/masterminds/semver) package for
@@ -89,8 +139,11 @@ strategies are:
     :::
 
 - `Digest`: This selects the image _currently_ referenced by some "mutable tag,"
-   such as `latest`. The tag name must be specified using the `constraint`
-   field. Importantly, the _digest_ will change every time the tag is updated.
+   such as `latest`.
+   
+    __Unintuitively, the mutable tag name must be specified using the
+    `semverConstraint` field.__ Importantly, the _digest_ will change every time
+    the tag is updated.
 
     :::warning
     "Mutable tags": Tags like `latest` that are sometimes, perhaps frequently,
@@ -128,6 +181,46 @@ strategies are:
 
 ### Git Repository Subscriptions
 
+Git repository subscriptions can be defined using the following fields:
+
+- `repoURL`: The URL of the Git repository. This field is required.
+
+- `commitSelectionStrategy`: One of four pre-defined strategies for selecting
+  the desired commit. (See next section.)
+
+- `allowTags`: An optional regular expression that limits the eligibility for
+  selection to commits with tags that match the pattern. (This is not applicable
+  to selection strategies that do not involve tags.)
+
+- `ignoreTags`: An optional list of tags that should explicitly be ignored.
+  (This is not applicable to selection strategies that do not involve tags.)
+
+- `includePaths`: See
+  [Git Subscription Path Filtering](#git-subscription-path-filtering).
+
+- `excludePaths`: See
+  [Git Subscription Path Filtering](#git-subscription-path-filtering).
+
+- `discoveryLimit`: Many selection strategies (see next section) do not actually
+  select a _single_ commit; rather they select the n best fits for the specified
+  constraints. The _best_ fit is the zero element in the list of selected
+  commits. `discoveryLimit` specifies how many commits to discover.
+  
+    The default is `20`.
+
+   :::note
+   Lowering this limit for a Git repository subscription does not improve
+   performance by the margins that it does for a container image repository
+   subscription.
+   :::
+
+- `insecureSkipTLSVerify`: Set to `true` to disable validation of the
+  repository's TLS certificate.
+
+    :::warning
+    This is a security risk and should only be used in development environments.
+    :::
+
 #### Commit Selection Strategies
 
 For subscriptions to Git repositories, the `commitSelectionStrategy`
@@ -140,7 +233,8 @@ strategies are:
     continuously discover the latest changes to a branch that receives regular
     updates.
 
-    `NewestFromBranch` is the default strategy if one is not specified.
+    __`NewestFromBranch` is the default selection strategy if one is not
+    specified.__
 
     :::warning
     TODO: Add an example
@@ -154,6 +248,12 @@ strategies are:
     This is useful in scenarios wherein you do not wish for the `Warehouse` to
     continuously discover _every new commit_ and would like limit selection to
     commits tagged with a semantic version, and possibly within a certain range.
+
+    The `strictSemvers` field defaults to `true`, meaning only tags containing
+    all three parts of a semantic version (major, minor, and patch) are
+    considered. Disabling this should be approached with caution because any
+    image tagged only with decimal characters will be considered a valid
+    semantic version (containing only the major element).
 
     :::info
     Kargo uses the [semver](https://github.com/masterminds/semver) package for
