@@ -34,6 +34,7 @@ import (
 	rolloutsapi "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
 	"github.com/akuity/kargo/internal/directives"
 	kargoEvent "github.com/akuity/kargo/internal/event"
+	"github.com/akuity/kargo/internal/expressions"
 	"github.com/akuity/kargo/internal/indexer"
 	"github.com/akuity/kargo/internal/kargo"
 	"github.com/akuity/kargo/internal/kubeclient"
@@ -1307,6 +1308,21 @@ func (r *RegularStageReconciler) startVerification(
 			kargoapi.StageLabelKey:             stage.Name,
 			kargoapi.FreightCollectionLabelKey: freight.ID,
 		}),
+		rollouts.WithArgumentEvaluationConfig{
+			Env: map[string]any{
+				"ctx": map[string]any{
+					"project": stage.Namespace,
+					"stage":   stage.Name,
+				},
+			},
+			Options: expressions.FreightFunctions(
+				ctx,
+				r.client,
+				stage.Namespace,
+				stage.Spec.RequestedFreight,
+				freight.References(),
+			),
+		},
 	}
 	for _, freightRef := range freight.Freight {
 		builderOpts = append(builderOpts, rollouts.WithOwner{
