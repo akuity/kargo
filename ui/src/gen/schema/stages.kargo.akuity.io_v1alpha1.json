@@ -238,9 +238,13 @@
               "items": {
                 "description": "AnalysisTemplateReference is a reference to an AnalysisTemplate.",
                 "properties": {
-                  "clusterScope": {
-                    "description": "ClusterScope determines whether the template is an\nAnalysisTemplate or a ClusterAnalysisTemplate resource",
-                    "type": "boolean"
+                  "kind": {
+                    "description": "Kind is the type of the AnalysisTemplate. Can be either AnalysisTemplate or\nClusterAnalysisTemplate, default is AnalysisTemplate.",
+                    "enum": [
+                      "AnalysisTemplate",
+                      "ClusterAnalysisTemplate"
+                    ],
+                    "type": "string"
                   },
                   "name": {
                     "description": "Name is the name of the AnalysisTemplate in the same project/namespace as\nthe Stage.",

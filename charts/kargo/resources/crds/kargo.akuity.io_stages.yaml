@@ -333,11 +333,14 @@ spec:
                       description: AnalysisTemplateReference is a reference to an
                         AnalysisTemplate.
                       properties:
-                        clusterScope:
+                        kind:
                           description: |-
-                            ClusterScope determines whether the template is an
-                            AnalysisTemplate or a ClusterAnalysisTemplate resource
-                          type: boolean
+                            Kind is the type of the AnalysisTemplate. Can be either AnalysisTemplate or
+                            ClusterAnalysisTemplate, default is AnalysisTemplate.
+                          enum:
+                          - AnalysisTemplate
+                          - ClusterAnalysisTemplate
+                          type: string
                         name:
                           description: |-
                             Name is the name of the AnalysisTemplate in the same project/namespace as

@@ -56,11 +56,12 @@ message AnalysisTemplateReference {
   // +kubebuilder:validation:Required
   optional string name = 1;
 
-  // ClusterScope determines whether the template is an
-  // AnalysisTemplate or a ClusterAnalysisTemplate resource
+  // Kind is the type of the AnalysisTemplate. Can be either AnalysisTemplate or
+  // ClusterAnalysisTemplate, default is AnalysisTemplate.
   //
   // +kubebuilder:validation:Optional
-  optional bool clusterScope = 2;
+  // +kubebuilder:validation:Enum=AnalysisTemplate;ClusterAnalysisTemplate
+  optional string kind = 2;
 }
 
 // ApprovedStage describes a Stage for which Freight has been (manually)

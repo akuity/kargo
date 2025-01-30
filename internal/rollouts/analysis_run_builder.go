@@ -244,7 +244,7 @@ func (b *AnalysisRunBuilder) getAnalysisTemplates(
 	analysisTemplates := []*rolloutsapi.AnalysisTemplate{}
 	clusterAnalysisTemplates := []*rolloutsapi.ClusterAnalysisTemplate{}
 	for _, ref := range references {
-		if ref.ClusterScope {
+		if ref.Kind == "ClusterAnalysisTemplate" {
 			template := &rolloutsapi.ClusterAnalysisTemplate{}
 			if err := b.client.Get(ctx, types.NamespacedName{
 				Name: ref.Name,

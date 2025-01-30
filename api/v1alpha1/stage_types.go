@@ -621,11 +621,12 @@ type AnalysisTemplateReference struct {
 	//
 	// +kubebuilder:validation:Required
 	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
-	// ClusterScope determines whether the template is an
-	// AnalysisTemplate or a ClusterAnalysisTemplate resource
+	// Kind is the type of the AnalysisTemplate. Can be either AnalysisTemplate or
+	// ClusterAnalysisTemplate, default is AnalysisTemplate.
 	//
 	// +kubebuilder:validation:Optional
-	ClusterScope bool `json:"clusterScope" protobuf:"varint,2,opt,name=clusterScope"`
+	// +kubebuilder:validation:Enum=AnalysisTemplate;ClusterAnalysisTemplate
+	Kind string `json:"kind,omitempty" protobuf:"bytes,2,opt,name=kind"`
 }
 
 // AnalysisRunMetadata contains optional metadata that should be applied to all
