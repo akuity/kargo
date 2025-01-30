@@ -505,6 +505,12 @@ To promote `Freight` to a `Stage` using the CLI, run:
 kargo promote --stage <stage> --project <project> --freight <freight>
 ```
 
+_Alternatively_, you can reference the `Freight` you want to promote usings its alias:
+
+```shell
+kargo promote --stage <stage> --project <project> --freight-alias <freight-alias>
+```
+
 </TabItem>
 </Tabs>
 
