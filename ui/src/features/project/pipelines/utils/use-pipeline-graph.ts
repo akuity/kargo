@@ -63,16 +63,22 @@ export const useReactFlowPipelineGraph = (
       for (const requestedOrigin of stage.spec?.requestedFreight || []) {
         const warehouseNodeIndex = `${requestedOrigin.origin?.name}`;
 
+        const edgeColor = warehouseColorMap[warehouseNodeIndex];
+
         // check if source is warehouse
         if (requestedOrigin?.sources?.direct) {
-          graph.setEdge(warehouseNodeIndex, stageNodeIndex);
+          graph.setEdge(warehouseNodeIndex, stageNodeIndex, { edgeColor });
         }
-
-        const edgeColor = warehouseColorMap[warehouseNodeIndex];
 
         // check if source is other stage
         for (const sourceStage of requestedOrigin?.sources?.stages || []) {
-          graph.setEdge(sourceStage, stageNodeIndex, { edgeColor });
+          graph.setEdge(
+            sourceStage,
+            stageNodeIndex,
+            { edgeColor },
+            // preserve the source warehouse because there will be multiple edges (for multiple warehouses) for 2 stage
+            warehouseNodeIndex
+          );
         }
       }
     }
@@ -105,11 +111,16 @@ export const useReactFlowPipelineGraph = (
     for (const edge of graph.edges()) {
       const dagreEdge = graph.edge(edge);
 
+      const belongsToWarehouse = edge.name || '';
+
       reactFlowEdges.push({
-        id: `${edge.v}->${edge.w}`,
+        id: `${belongsToWarehouse}-${edge.v}->${edge.w}`,
+        type: 'smoothstep',
         source: edge.v,
         target: edge.w,
         animated: false,
+        sourceHandle: belongsToWarehouse,
+        targetHandle: belongsToWarehouse,
         markerEnd: {
           type: MarkerType.ArrowClosed,
           color: dagreEdge?.edgeColor

@@ -83,7 +83,7 @@ export const Graph = memo((props: GraphProps) => {
         })
       );
     }
-  }, [controlledEdges, pipelineContext?.state]);
+  }, [controlledEdges, pipelineContext?.state, pipelineContext?.selectedWarehouse]);
 
   return (
     <ReactFlow
