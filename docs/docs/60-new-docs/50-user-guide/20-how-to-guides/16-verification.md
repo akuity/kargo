@@ -5,17 +5,18 @@ sidebar_label: Verifying Freight in a Stage
 
 # Verifying a Stage after Promotion
 
-After successfully promoting a Freight into a Stage, it is often desired to verify the update was successful. Verification is an optional, user-defined process that qualifies Freight in a Stage. Common examples of verification include:
+After successfully promoting `Freight` to a `Stage`, it is often desired to verify the update was successful. Verification is an optional, user-defined process that qualifies `Freight` in a `Stage`. Common examples of verification include:
+
 * Executing containerized integration test scripts
 * Querying monitoring tools (e.g. DataDog, Prometheus) and measuring application KPIs
 * Performing HTTP requests to internal services or systems and interpreting response as success/fail
 * Running load generation tests
 
-When a Stage with verification acts as an upstream to other Stages, Freight must pass verification in that Stage before it is eligible to be promoted to the downstream Stages in the pipeline.
+When a `Stage` with verification is upstream from other `Stages`, `Freight` must pass verification there before becoming eligible to be promoted downstream.
 
 ## Configuring Verification
 
-A Stage can be configured with verification by referencing one or more `AnalysisTemplates` in its `spec.verification` field. In the following example, the `dev` `Stage` references an `AnalysisTemplate` named `integration-test`, which executes after any successful Promotion.
+A `Stage` can be configured with verification by referencing one or more `AnalysisTemplates` in its `spec.verification` field. In the following example, the `dev` `Stage` references an `AnalysisTemplate` named `integration-test`, which executes after any successful `Promotion`:
 
 ```yaml
 apiVersion: kargo.akuity.io/v1alpha1
@@ -32,7 +33,7 @@ spec:
 
 ## Configuring AnalysisTemplates
 
-An [AnalysisTemplate](../60-reference-docs/50-analysis-templates.md) defines instructions how to perform verification. It might include running a Kubernetes Job, query monitoring tools, interpreting their result, performing HTTP requests, or any combination of these actions. AnalysisTemplates reside in the same `Project` Namespace of the `Stage` from which they are referenced. The following simple `AnalysisTemplate` example will create a Kubernetes `Job` that runs an alpine container that sleeps for 10 seconds.
+An [AnalysisTemplate](../60-reference-docs/50-analysis-templates.md) defines instructions for how to perform verification. It might include running a Kubernetes `Job`, querying monitoring tools, interpreting their result, performing HTTP requests, or any combination of these actions. `AnalysisTemplate`s reside in the same `Project` namespace as the `Stage` from which they are referenced. The following simple `AnalysisTemplate` example will create a Kubernetes `Job` that runs an alpine container that sleeps for 10 seconds:
 
 ```yaml
 apiVersion: argoproj.io/v1alpha1
@@ -57,7 +58,7 @@ spec:
 ```
 
 :::info
-For further documentation and examples of AnalysisTemplates, refer to the
+For further documentation and examples of `AnalysisTemplate`s, refer to the
 [`AnalysisTemplate` reference](../60-reference-docs/50-analysis-templates.md).
 :::
 
@@ -66,19 +67,19 @@ For further documentation and examples of AnalysisTemplates, refer to the
 Upon successful promotion, a Stage enters the `Verifying` phase. Any AnalysisTemplates which were referenced in the Stage are invoked into an resource called an `AnalysisRun`, which represents a single invocation of the templates into a batch-like object. 
 
 
-When the `AnalysisRun` completes and is `Successful`, the verification is considered successful and Freight is marked as "verified" in that Stage. This makes it possible for the Freight to promoted to any immediate downstream Stages, either automatically (with auto-promotion) or manually (via UI, API, CLI). Freight which have not passed verification in a Stage are blocked from being able to continue to downstream Stages.
+When the `AnalysisRun` completes and is `Successful`, the verification is considered successful and the `Freight` is marked as "verified" in that `Stage`, which makes it available for promotion to any immediate downstream `Stage`s, either automatically (with auto-promotion) or manually (via UI, API, CLI). `Freight` which have not passed verification in a `Stage` are blocked continuing further downstream.
 
 
 :::tip
-It is sometimes desired to skip the verification process entirely (e.g. a hotfix needs to be fast-tracked to production). Verification (and the entire Pipeline for that matter) can be bypassed by [manually approving](working-with-freight#manual-approvals) a Freight for a specified Stage.
+It is sometimes desired to skip the verification process entirely (e.g. a hotfix needs to be fast-tracked to production). Verification (and the entire Pipeline for that matter) can be bypassed by [manually approving](./15-working-with-freight.md#manual-approvals) `Freight` for a specified `Stage`.
 :::
 
 
-While a Stage is verifying (i.e. the `AnalysisRun` is not yet completed) no new Promotions will run until verification has completed (either successfully or unsuccessfully). Once verification has completed, the next queued Promotion will run.
+While a `Stage` is verifying (i.e. the `AnalysisRun` is not yet completed) no other `Promotion`s to that `Stage` will run until verification has completed (either successfully or unsuccessfully). Once verification has completed, the next queued `Promotion` will run.
 
 ## AnalysisRun
 
-An AnalysisRun is a resource representing a verification attempt for a combination of Freight and Stage. AnalysisRuns have a lifecycle (e.g. Running, Successful, Failed) and record the measurements taken during the run. AnalysisRuns appear in the Kargo UI under the Verifications tab of a stage:
+An `AnalysisRun` is a resource representing a verification attempt for a `Freight` + `Stage` pair. `AnalysisRun`s have a lifecycle (e.g. `Running`, `Successful`, `Failed`) and also record measurements taken during the run. `AnalysisRun`s appear in the Kargo UI under the <Hlt>Verifications</Hlt> tab of a `Stage`:
 
 ![AnalysisRun in Kargo UI](./img/analysisrun.png)
 
@@ -141,7 +142,9 @@ status:
 ```
 
 :::note
-The difference between an `AnalysisTemplate` versus an `AnalysisRun` is that an `AnalysisTemplate` is the _definition_ how to perform verification, and the `AnalysisRun` tracks the _progress and result_ of an run of one or more template(s).
+__`AnalysisTemplate` vs `AnalysisRun`__
+
+An `AnalysisTemplate` _defines_ a verification process, while an `AnalysisRun` tracks the _progress and result_ of an execution of that process.
 :::
 
 
@@ -174,18 +177,20 @@ spec:
 
 ## Implicit Argo CD Verification
 
-It is usually the desire to wait until a deployment is fully rolled out and updated, before performing any testing and verification. For example, it would be premature to start running tests if a Deployment's Pods were still coming up and or not fully updated to the desired version. Promotions might only include the apply/sync of new manifests to the cluster, but do not not necessarily wait until the rollout was fully complete (which might take minutes depending on many factors like Pod startup time).
+It is usually desirable for changes to be fully rolled out before performing any verification. For example, it would be premature to start running tests if a `Deployment`'s `Pod`s were still starting or not fully transitioned to the desired version. `Promotion`s that integrate with Argo CD do wait for any sync operations they initiate to complete, but it is possible for an Argo CD `Application` to still be `Progressing` even after sync operations have completed and the `Promotion` process is considered complete.
 
-In order to prevent verification from starting before Applications are ready, Kargo has a built in understanding of Argo CD health, and will delay beginning verification until the Application had reached a Healthy state.
+In order to prevent verification from starting before `Application`s are ready, Kargo has a built-in understanding of Argo CD `Application` health and will delay verification until `Application`s have reached a `Healthy` state.
 
-If a Stage references one ore more Argo CD Applications as part of its promotion steps, after Promotion, Kargo will automatically wait until the Argo CD Applications reach a `Healthy` state. This is an built-in, "implicit" form of verification that is not configured explicitly in the `spec.verifications`. After the Applications reaches the `Healthy` state, Kargo will then run the specified verifications in `spec.verifications` (if any). This ensures that testing begins only after all resources of the Application have been successfully updated after the promotion.
+:::note
+If a `Stage` references one ore more Argo CD `Application`s as part of its promotion process, but does not explicitly define any verification process, successful verification is implicitly contingent on the `Application`s reaching a `Healthy` state.
+:::
 
 
 ## Soak Times
 
-In some scenarios, automated testing may be unavailable or insufficient to ensure confidence before promoting software to critical environments. To mitigate this, users often resort to letting the release run in a lower environment for a period of time, monitoring its behavior and stability before proceeding with promotion. This practice is commonly known as 'soaking' or 'baking' the release before it reaches production.
+In some scenarios, automated testing may be unavailable or insufficient to ensure confidence before promoting software to critical environments. To mitigate this, users often resort to letting the release run in a lower environment for a period of time, monitoring its behavior and stability before proceeding with promotion. This practice is commonly known as "soaking" or "baking" the release before it reaches production.
 
-Kargo features a "soak time" option in Stages when it requests Freight from upstream stages. To configure a soak time, a duration string can `spec.requestedFreight[].requiredSoakTime`. Valid durations are in seconds, minutes or hours (e.g. `180s`, `30m`, `48h`). This duration is the minimum duration (beginning after successful promotion), for which the requested Freight must have continuously occupied ("soaked in") in an upstream Stage before becoming available for promotion to this Stage. Automated and manual promotions would be blocked until the soakTime requirement was met.
+`Stage`s may optionally specify a "soak time" when requesting `Freight` from upstream `Stage`s. To configure this, a duration can be specified using the `spec.requestedFreight[].requiredSoakTime` field. Valid durations are expressed in seconds, minutes or hours (e.g. `180s`, `30m`, `48h`). This duration is the minimum duration (following a successful promotion), for which the requested `Freight` must have continuously occupied ("soaked in") in an upstream `Stage` before becoming available for promotion to this `Stage`. Both automated and manual promotions are blocked until the soak time requirement is met.
 
 ```yaml
 apiVersion: kargo.akuity.io/v1alpha1
@@ -206,10 +211,12 @@ spec:
 ```
 
 :::note
-Soak Time is not technically a verification feature, but is documented alongside verification since both features are closely related and may be used in conjunction with each other. Both relate to prevention of Freight promotion from upstream Stages based on required conditions and behavior.
+Soak Time is not technically a verification feature, but is documented alongside it because both relate to preventing `Freight` from moving downstream until required conditions have been met. These two features may even be used in conjunction with one another.
 :::
 
-
+:::info
+[Manually approving](./15-working-with-freight.md#manual-approvals) `Freight` for a `Stage` makes it immediately available to that `Stage` _regardless_ of whether any required soak time has elapsed.
+:::
 ## ClusterAnalysisTemplates
 
-References to ClusterAnalysisTemplates are currently unsupported but is expected to be in a future release.
+Referencing `ClusterAnalysisTemplate`s is currently unsupported but is expected to be in a future release.

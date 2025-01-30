@@ -3,22 +3,24 @@ sidebar_label: Analysis Templates
 description: Learn about AnalysisTemplate for verification
 ---
 
-# Analysis Template Reference
+# AnalysisTemplate Reference
 
 An `AnalysisTemplate` is a resource that defines how to perform verification testing, including:
-* container images and commands to run
-* queries to external monitoring tools
-* how to interpret results from metric providers
-* success or failure criteria
-* frequency and duration of measurements
+
+* Container images and commands to run
+* Queries to external monitoring tools
+* How to interpret results from metric providers
+* Success or failure criteria
+* Frequency and duration of measurements
 
 `AnalysisTemplate` resources (and the `AnalysisRun` resources that are spawned from them) are CRDs re-used from the [Argo Rollouts](https://argoproj.github.io/argo-rollouts) project. They were intentionally built to be useful in contexts other than Argo Rollouts. Re-using this resource type to define verification processes means those processes benefit from this rich and battle-tested feature of Argo Rollouts.
 
 :::info
-This reference guide is intended to give a brief introduction to AnalysisTemplates for some common use cases. Please consult the [relevant sections](https://argoproj.github.io/argo-rollouts/features/analysis/) of the Argo Rollouts documentation for comprehensive coverage of the full range of `AnalysisTemplate` capabilities.
+This reference guide is intended to give a brief introduction to `AnalysisTemplate`s for some common use cases. Please consult the [relevant sections](https://argoproj.github.io/argo-rollouts/features/analysis/) of the Argo Rollouts documentation for comprehensive coverage of the full range of `AnalysisTemplate` capabilities.
 :::
 
-AnalysisTemplates integrate natively with many popular open-source and commercial monitoring tools, including:
+`AnalysisTemplate`s integrate natively with many popular open-source and commercial monitoring tools, including:
+
 * [Prometheus](https://prometheus.io/)
 * [DataDog](https://www.datadoghq.com/)
 * [Amazon CloudWatch](https://aws.amazon.com/cloudwatch/)
@@ -28,15 +30,16 @@ AnalysisTemplates integrate natively with many popular open-source and commercia
 * [Graphite](https://graphiteapp.org/)
 
 In addition to monitoring tools, analysis can integrate with internal systems by:
-* Running containerized process as a Kubernetes Job
-* Making HTTP requests to URLs and interpreting JSON responses
+
+* Running containerized processes as Kubernetes `Job`s
+* Making HTTP requests and interpreting JSON responses
 
 
 ## Arguments
 
-AnalysisTemplates may declare a set of arguments that can be "passed" in by the `Stage`. The arguments are resolved at the time the AnalysisRun is created and can then be referenced in metrics configuration. Arguments are dereferenced using the syntax: `{{ args.<name> }}`.
+`AnalysisTemplate`s may declare a set of arguments that can be "passed" in by the `Stage`. The arguments are resolved at the time the `AnalysisRun` is created and can then be referenced in metrics configuration. Arguments are dereferenced using the syntax: `{{ args.<name> }}`.
 
-The following example shows an `AnalysisTemplate` with three arguments. Values for arguments can have a default value, supplied by the Stage, or obtained from a Secret if the value is sensitive (e.g. a bearer token for an HTTP request):
+The following example shows an `AnalysisTemplate` with three arguments. Values for arguments can have a default value, supplied by the `Stage`, or obtained from a `Secret` if the value is sensitive (e.g. a bearer token for an HTTP request):
 
 ```yaml
 apiVersion: argoproj.io/v1alpha1
@@ -102,7 +105,7 @@ spec:
 
 ## Failure Conditions and Limits
 
-As an alternative to `successCondition`, a `failureCondition` can be used to describe how a measurement is considered failed. Additionally, `failureLimit` can also be used to specify the maximum number of failed measurements that are allowed before the entire `AnalysisRun` is considered `Failed`.
+As an alternative to `successCondition`, a `failureCondition` can be used to describe when a measurement is considered failed. Additionally, `failureLimit` can also be used to specify the maximum number of failed measurements that are allowed before the entire `AnalysisRun` is considered `Failed`.
 
 The following example continually polls a Prometheus server to get the total number of errors (i.e., HTTP response code >= 500) every 5 minutes, causing the measurement to fail if ten or more errors are encountered. The entire analysis run is considered as Failed after three failed measurements.
 
@@ -125,7 +128,6 @@ spec:
             istio_requests_total{reporter="source",response_code=~"5.*"}[5m]
           ))
 ```
-
 
 ## Delaying Measurements
 
@@ -191,7 +193,7 @@ spec:
 
 ### Job
 
-A Kubernetes Job can be used to perform analysis. When a Job is used, the metric is considered successful if the Job completes and had an exit code of zero, otherwise it is failed.
+A Kubernetes `Job` can be used to perform analysis. When a `Job` is used, the metric is considered successful if the `Job` completes with an exit code of zero and is otherwise considered to have failed.
 
 ```yaml
 apiVersion: argoproj.io/v1alpha1

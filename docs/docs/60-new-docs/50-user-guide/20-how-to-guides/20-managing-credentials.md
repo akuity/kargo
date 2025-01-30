@@ -53,8 +53,7 @@ are covered in the next section.
 
 The label key `kargo.akuity.io/cred-type` and its value, one of `git`, `helm`,
 `image`, or `generic` is important, as it designates the `Secret` as representing
-credentials for a Git repository, a Helm chart repository, or a container image
-repository, respectively.
+credentials for a Git, Helm chart, or container image repository, or _something else_, respectively.
 
 The `Secret`'s `data` field (set above using plaintext in the `stringData`
 field), MUST contain the following keys:
