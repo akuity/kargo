@@ -125,7 +125,6 @@ To update the `Freight` Alias:
    ![update-freight-alias](img/freight-alias-2.png)
 
 </TabItem>
-
 <TabItem value="cli" label="Using the CLI">
 
 ```shell
@@ -198,7 +197,6 @@ resource for promotion to any given `Stage`. To manually approve the `Freight`:
    ![update-freight-alias](img/freight-approval-2.png)
 
 </TabItem>
-
 <TabItem value="cli" label="Using the CLI">
 
 ```shell
@@ -240,7 +238,6 @@ bypassed:
    ![freight-status](img/freight-status.png)
 
 </TabItem>
-
 <TabItem value="cli" label="Using the CLI">
 
 ```shell
@@ -280,7 +277,6 @@ kargo get freight \
    ![Promote Freight to a Stage](img/freight-promotion-2.png)
 
 </TabItem>
-
 <TabItem value="cli" label="Using the CLI">
 
 To promote `Freight` to a `Stage` using the CLI, run:
