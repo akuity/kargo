@@ -129,17 +129,17 @@ To update the `Freight` Alias:
 
 ```shell
 kargo update freight \
-  --project=kargo-demo \
-  --name=f5f87aa23c9e97f43eb83dd63768ee41f5ba3766 \
-  --new-alias=frozen-tauntaun
+  --project kargo-demo \
+  --name f5f87aa23c9e97f43eb83dd63768ee41f5ba3766 \
+  --new-alias frozen-tauntaun
 ```
 Alternatively, you can reference the `Freight` to which you want to assign a new alias using its existing alias:
 
 ```shell
 kargo update freight \
-  --project=kargo-demo \
-  --old-alias=mortal-dragonfly \
-  --new-alias=frozen-tauntaun
+  --project kargo-demo \
+  --old-alias mortal-dragonfly \
+  --new-alias frozen-tauntaun
 ```
 
 This can also be accomplished via `kubectl` commands `apply`, `edit`, `patch`,
@@ -201,9 +201,9 @@ resource for promotion to any given `Stage`. To manually approve the `Freight`:
 
 ```shell
 kargo approve \
+  --project kargo-demo \
   --freight f5f87aa23c9e97f43eb83dd63768ee41f5ba3766 \
-  --stage prod \
-  --project kargo-demo
+  --stage prod
 ```
 
 :::note
