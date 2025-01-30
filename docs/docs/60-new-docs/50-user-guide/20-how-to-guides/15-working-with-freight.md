@@ -78,12 +78,6 @@ NAME                                       ALIAS              AGE
 f5f87aa23c9e97f43eb83dd63768ee41f5ba3766   mortal-dragonfly   35s
 ```
 
-It is also displayed when using `kubectl` to query for `Freight` resources:
-
-```shell
-kubectl get freight --namespace kargo-demo
-```
-
 Sample output:
 
 ```shell
@@ -142,24 +136,8 @@ kargo update freight \
   --new-alias frozen-tauntaun
 ```
 
-This can also be accomplished via `kubectl` commands `apply`, `edit`, `patch`,
-etc. by updating the `alias` field of the `Freight` resource.
-
 </TabItem>
 </Tabs>
-
-:::info
-The `alias` field is a convenient way to update the `Freight` resource's
-`kargo.akuity.io/alias` label, which causes a webhook to sync the field value
-to the label value. The precedence rules for syncing between the field and
-label values are as follows:
-
-- If the field has a non-empty value, the label will assume the field's value.
-- If the field has an empty value, the field will assume the label's value.
-
-It's worth noting that removing an alias entirely requires clearing both the
-field and label values, but this is expected to be a rare occurrence.
-:::
 
 ## Manual Approvals
 
@@ -205,11 +183,6 @@ kargo approve \
   --freight f5f87aa23c9e97f43eb83dd63768ee41f5ba3766 \
   --stage prod
 ```
-
-:::note
-Manual approvals cannot be granted via `kubectl` due to technical factors
-preventing `kubectl` from updating `status` subresources of Kargo resources.
-:::
 
 </TabItem>
 </Tabs>
