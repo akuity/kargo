@@ -49,7 +49,7 @@ export const CredentialsList = () => {
 
   return (
     <div className='p-4'>
-      <Flex gap={16}>
+      <Flex gap={16} vertical>
         <Card
           title={
             <Flex align='center'>
@@ -73,7 +73,6 @@ export const CredentialsList = () => {
               </Button>
             </Flex>
           }
-          className='w-1/2'
         >
           <Table
             scroll={{ x: 'max-content' }}
@@ -81,6 +80,7 @@ export const CredentialsList = () => {
             dataSource={specificCredentials}
             rowKey={(record: Secret) => record?.metadata?.name || ''}
             loading={listCredentialsQuery.isLoading}
+            pagination={{ defaultPageSize: 5 }}
             columns={[
               {
                 title: 'Name',
@@ -208,7 +208,6 @@ export const CredentialsList = () => {
               </Button>
             </Flex>
           }
-          className='w-1/2'
         >
           <Table
             scroll={{ x: 'max-content' }}
