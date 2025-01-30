@@ -120,7 +120,7 @@ To update the `Freight` Alias:
 
    ![update-freight-alias](img/freight-alias.png)
 
-1. Update the Alias and submit it.
+1. Specify a value in the <hlt>New Alias</hlt> field and click <hlt>Submit</hlt>:
 
    ![update-freight-alias](img/freight-alias-2.png)
 
