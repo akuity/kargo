@@ -570,7 +570,7 @@ as desired.
 
 <TabItem value="cli" label="Using the CLI">
 
-1. To rerun verification using the CLI run:
+1. To rerun verification using the CLI, run:
 
     ```shell
     kargo verify stage <stage> --project <project> 

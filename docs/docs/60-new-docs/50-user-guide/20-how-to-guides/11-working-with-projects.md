@@ -108,3 +108,95 @@ metadata:
 spec:
   # ...
 ```
+
+## Interacting with Projects
+
+Kargo provides tools to manage `Project`s using either its UI or
+CLI. This section explains how to handle `Project`s effectively through both interfaces.
+
+:::info
+Users with credentials for and sufficient permissions within the Kargo control plane's Kubernetes cluster can also manage `Project` resources using `kubectl`.
+:::
+
+### Creating a Project
+
+<Tabs groupId="create-project">
+<TabItem value="ui" label="Using the UI" default>
+
+1. Navigate to the Kargo UI and select <Hlt>Create</Hlt> in the top right corner.
+
+   A <Hlt>Form</Hlt> tab will appear where you can enter the name of your `Project`:
+
+   ![create-project](img/create-project.png)
+
+   _Alternatively_, you can define the `Project` and other related configurations using the <Hlt>YAML</Hlt> tab:
+
+   ![create-project](img/create-project-2.png)
+
+1. After completing the <Hlt>Form</Hlt> or defining the `Project` in the <Hlt>YAML</Hlt> tab, select <Hlt>Create</Hlt>. 
+
+   The new `Project` will then be added to the UI:
+
+   ![create-project](img/create-project-3.png)
+
+</TabItem>
+
+<TabItem value="cli" label="Using the CLI">
+
+1. To create a `Project` using the CLI, run:
+
+   ```bash
+   kargo create project <project>
+   ```
+
+   _Alternatively_, define the `Project` in a YAML file, for example:
+
+   ```yaml
+   apiVersion: kargo.akuity.io/v1alpha1
+   kind: Project
+   metadata:
+     name: <project>
+   ```
+
+   Save the file and run:
+
+   ```shell
+   kargo create -f <filename>
+   ```
+
+1. To verify creation of the `Project`, run:
+
+   ```shell
+   kargo get project <project>
+   ```
+
+</TabItem>
+</Tabs>
+
+### Deleting a Project
+
+<Tabs groupId="delete-project">
+<TabItem value="ui" label="Using the UI" default>
+
+1. Select the `Project` you want to remove.
+
+1. Click the dropdown next to the `Project`'s name in the upper-left corner of the `Project` dashboard and select <Hlt>Delete</Hlt>:
+
+   ![delete-project](img/delete-project.png)
+
+1. To confirm deletion, enter the `Project`'s name and click <Hlt>Delete</Hlt> to permanently remove it:
+
+   ![delete-project](img/delete-project-2.png)
+
+</TabItem>
+
+<TabItem value="cli" label="Using the CLI">
+
+To delete a `Project` using the CLI, run:
+
+```shell
+kargo delete project <project>
+```
+
+</TabItem>
+</Tabs>
