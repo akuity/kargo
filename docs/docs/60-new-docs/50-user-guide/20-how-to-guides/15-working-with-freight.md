@@ -193,7 +193,7 @@ resource for promotion to any given `Stage`. To manually approve the `Freight`:
 
    ![update-freight-alias](img/freight-approval.png)
 
-1. Select <Hlt>Approve</Hlt> on the `Stage` for which you want to approve promotion of the `Freight`.
+1. Select <Hlt>Approve</Hlt> on the `Stage` for which you want to approve promotion of the `Freight`:
 
    ![update-freight-alias](img/freight-approval-2.png)
 
@@ -286,13 +286,19 @@ kargo get freight \
 To promote `Freight` to a `Stage` using the CLI, run:
 
 ```shell
-kargo promote --stage <stage> --project <project> --freight <freight>
+kargo promote \
+  --project kargo-demo \
+  --freight f5f87aa23c9e97f43eb83dd63768ee41f5ba3766 \
+  --stage prod
 ```
 
 Alternatively, you can reference the `Freight` you wish to promote using its alias:
 
 ```shell
-kargo promote --stage <stage> --project <project> --freight-alias <freight-alias>
+kargo promote \
+  --project kargo-demo \
+  --freight-alias frozen-tauntaun \
+  --stage prod
 ```
 
 </TabItem>
