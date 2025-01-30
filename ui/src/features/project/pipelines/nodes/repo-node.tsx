@@ -14,7 +14,6 @@ import { useContext, useMemo } from 'react';
 import { ColorContext } from '@ui/context/colors';
 import { urlForImage } from '@ui/utils/url';
 
-import { MessageTooltip } from '../message-tooltip';
 import { NodeDimensions, NodeType, RepoNodeType } from '../types';
 
 import * as styles from './repo-node.module.less';
@@ -52,9 +51,8 @@ export const RepoNode = ({ nodeData, children, onClick, hidden }: Props) => {
   if (hidden) {
     return null;
   }
-  const [hasError, message, refreshing] = useMemo(() => {
+  const [hasError, refreshing] = useMemo(() => {
     let hasError = false;
-    let message: string | null = null;
     let refreshing = nodeData.refreshing;
 
     if (type === NodeType.WAREHOUSE) {
@@ -64,7 +62,6 @@ export const RepoNode = ({ nodeData, children, onClick, hidden }: Props) => {
       for (const condition of nodeData?.data?.status?.conditions || []) {
         if (condition.type === 'Healthy' && condition.status === 'False') {
           hasError = true;
-          message = condition.message || null;
         }
         if (condition.type === 'Reconciling') {
           hasReconcilingCondition = true;
@@ -74,7 +71,6 @@ export const RepoNode = ({ nodeData, children, onClick, hidden }: Props) => {
         }
         if (condition.type === 'Ready' && condition.status === 'False') {
           notReady = true;
-          message = condition.message || null;
         }
       }
       if (notReady && !hasReconcilingCondition) {
@@ -82,7 +78,7 @@ export const RepoNode = ({ nodeData, children, onClick, hidden }: Props) => {
       }
     }
 
-    return [hasError, message, refreshing];
+    return [hasError, refreshing];
   }, [nodeData]);
 
   return (
@@ -107,27 +103,7 @@ export const RepoNode = ({ nodeData, children, onClick, hidden }: Props) => {
         <div className='flex items-center gap-1'>
           {refreshing && <FontAwesomeIcon icon={faCircleNotch} spin className='mr-2' />}
           {nodeData.type === NodeType.WAREHOUSE && hasError && (
-            <MessageTooltip
-              message={
-                <div className='flex flex-col gap-4 overflow-y-scroll text-wrap max-h-48'>
-                  <div
-                    className='cursor-pointer min-w-0'
-                    onClick={() => {
-                      if (message) {
-                        navigator.clipboard.writeText(message);
-                      }
-                    }}
-                  >
-                    <div className='flex text-wrap'>
-                      <FontAwesomeIcon icon={faExclamationCircle} className='mr-2 mt-1 pl-1' />
-                      {message}
-                    </div>
-                  </div>
-                </div>
-              }
-              icon={faExclamationCircle}
-              iconClassName='text-red-500'
-            />
+            <FontAwesomeIcon icon={faExclamationCircle} className='text-red-500' />
           )}
           {type && (
             <FontAwesomeIcon
