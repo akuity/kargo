@@ -222,100 +222,31 @@ For complete documentation of all Kargo's built-in promotion steps, refer
 to the [Promotion Steps Reference](../60-reference-docs/30-promotion-steps/index.md).
 :::
 
-### Verifications
+### Verification
 
 The `spec.verification` field is used to describe optional verification
 processes that should be executed after a `Promotion` has successfully deployed
 `Freight` to a `Stage`, and if applicable, after the `Stage` has reached a
-healthy state.
+healthy state. The following example depicts a `Stage` resource that references
+an `AnalysisTemplate` named `integration-test` to validate the `dev` `Stage` after
+any successful promotion:
 
-Verification processes are defined through _references_ to one or more
-[Argo Rollouts `AnalysisTemplate` resources](https://argoproj.github.io/argo-rollouts/features/analysis/)
-that reside in the same `Project`/`Namespace` as the `Stage` resource.
+```yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: dev
+  namespace: guestbook
+spec:
+  # ...
+  verification:
+    analysisTemplates:
+    - name: integration-test
+```
 
 :::info
-Argo Rollouts `AnalysisTemplate` resources (and the `AnalysisRun` resources that
-are spawned from them) were intentionally built to be re-usable in contexts
-other than Argo Rollouts. Re-using this resource type to define verification
-processes means those processes benefit from this rich and battle-tested feature
-of Argo Rollouts.
-:::
-
-The following example depicts a `Stage` resource that references an
-`AnalysisTemplate` named `kargo-demo` to validate the `test` `Stage` after any
-successful `Promotion`:
-
-```yaml
-apiVersion: kargo.akuity.io/v1alpha1
-kind: Stage
-metadata:
-  name: test
-  namespace: kargo-demo
-spec:
-  # ...
-  verification:
-    analysisTemplates:
-    - name: kargo-demo
-```
-
-It is also possible to specify additional labels, annotations, and arguments
-that should be applied to `AnalysisRun` resources spawned from the referenced
-`AnalysisTemplate`:
-
-```yaml
-apiVersion: kargo.akuity.io/v1alpha1
-kind: Stage
-metadata:
-  name: test
-  namespace: kargo-demo
-spec:
-  # ...
-  verification:
-    analysisTemplates:
-    - name: kargo-demo
-    analysisRunMetadata:
-      labels:
-        foo: bar
-      annotations:
-        bat: baz
-    args:
-    - name: foo
-      value: bar
-```
-
-An `AnalysisTemplate` could be as simple as the following, which merely executes
-a Kubernetes `Job` that is defined inline:
-
-```yaml
-apiVersion: argoproj.io/v1alpha1
-kind: AnalysisTemplate
-metadata:
-  name: kargo-demo
-  namespace: kargo-demo
-spec:
-  metrics:
-  - name: test
-    provider:
-      job:
-        metadata:
-        spec:
-          backoffLimit: 1
-          template:
-            spec:
-              containers:
-              - name: test
-                image: alpine:latest
-                command:
-                - sleep
-                - "10"
-              restartPolicy: Never
-```
-
-:::note
-Please consult the
-[relevant sections](https://argoproj.github.io/argo-rollouts/features/analysis/)
-of the Argo Rollouts documentation for comprehensive coverage of the full range
-of `AnalysisTemplate` capabilities.
+For complete documentation of how to perform verification, refer to the
+[Verification Guide](./verification).
 :::
 
 ### Status
