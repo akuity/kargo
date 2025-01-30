@@ -123,6 +123,10 @@ func warehouse(a ...any) (any, error) {
 		return nil, fmt.Errorf("argument must be string, got %T", a[0])
 	}
 
+	if name == "" {
+		return nil, fmt.Errorf("name must not be empty")
+	}
+
 	return kargoapi.FreightOrigin{
 		Kind: kargoapi.FreightOriginKindWarehouse,
 		Name: name,
