@@ -116,12 +116,12 @@ To update the `Freight` Alias:
 <TabItem value="ui" label="Using the UI" default>
 
 1. Click the three dots on the `Freight` in the <Hlt>Freight Timeline</Hlt>,
-    then select <Hlt>Change Alias</Hlt>:
+   then select <Hlt>Change Alias</Hlt>:
 
-    ![update-freight-alias](img/freight-alias.png)
-1. Update Alias and submit it.
+   ![update-freight-alias](img/freight-alias.png)
+1. Update the Alias and submit it.
 
-    ![update-freight-alias](img/freight-alias-2.png)
+   ![update-freight-alias](img/freight-alias-2.png)
 
 </TabItem>
 
@@ -188,13 +188,13 @@ resource for promotion to any given `Stage`. To manually approve the `Freight`:
 <TabItem value="ui" label="Using the UI" default>
 
 1. Click the three dots on the `Freight` in the <Hlt>Freight Timeline</Hlt>,
-    then select <Hlt>Manually Approve</Hlt>:
+   then select <Hlt>Manually Approve</Hlt>:
 
-    ![update-freight-alias](img/freight-approval.png)
+   ![update-freight-alias](img/freight-approval.png)
 
-1. Select <Hlt>Approve</Hlt> on the `Stage` where you'd want to promote the `Freight`.
+1. Select <Hlt>Approve</Hlt> on the `Stage` for which you want to approve promotion of the `Freight`.
 
-    ![update-freight-alias](img/freight-approval-2.png)
+   ![update-freight-alias](img/freight-approval-2.png)
 
 </TabItem>
 
@@ -236,7 +236,7 @@ bypassed:
 
 1. Click on the `Freight` in the <Hlt>Freight Timeline</Hlt>:
 
-    ![freight-status](img/freight-status.png)
+   ![freight-status](img/freight-status.png)
 
 </TabItem>
 
@@ -270,13 +270,13 @@ kargo get freight \
 <TabItem value="ui" label="Using the UI" default>
 
 1. Click the three dots on the `Freight` in the <Hlt>Freight Timeline</Hlt>,
-    then select <Hlt>Promote</Hlt>:
+   then select <Hlt>Promote</Hlt>:
 
-    ![Promote Freight to a Stage](img/freight-promotion.png)
+   ![Promote Freight to a Stage](img/freight-promotion.png)
 
 2. Select the `Stage` and click <Hlt>Promote</Hlt>:
 
-    ![Promote Freight to a Stage](img/freight-promotion-2.png)
+   ![Promote Freight to a Stage](img/freight-promotion-2.png)
 
 </TabItem>
 
@@ -286,6 +286,12 @@ To promote `Freight` to a `Stage` using the CLI, run:
 
 ```shell
 kargo promote --stage <stage> --project <project> --freight <freight>
+```
+
+_Alternatively_, you can reference the `Freight` you want to promote using its alias:
+
+```shell
+kargo promote --stage <stage> --project <project> --freight-alias <freight-alias>
 ```
 
 </TabItem>
