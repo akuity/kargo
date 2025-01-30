@@ -119,6 +119,7 @@ To update the `Freight` Alias:
    then select <Hlt>Change Alias</Hlt>:
 
    ![update-freight-alias](img/freight-alias.png)
+
 1. Update the Alias and submit it.
 
    ![update-freight-alias](img/freight-alias-2.png)
@@ -232,7 +233,7 @@ to the `prod` `Stage`. i.e. Any `Stage`s between `test` and `prod` may be
 bypassed:
 
 <Tabs groupId="freight-status">
-<TabItem value="ui" label="To check using the UI" default>
+<TabItem value="ui" label="Using the UI" default>
 
 1. Click on the `Freight` in the <Hlt>Freight Timeline</Hlt>:
 
@@ -240,7 +241,7 @@ bypassed:
 
 </TabItem>
 
-<TabItem value="cli" label="To check using the CLI">
+<TabItem value="cli" label="Using the CLI">
 
 ```shell
 kargo get freight \
@@ -264,9 +265,9 @@ kargo get freight \
 </TabItem>
 </Tabs>
 
-## Promoting a Freight to a Stage
+## Promoting Freight to a Stage
 
-<Tabs groupId="promoting-freight-to-a-stage">
+<Tabs groupId="promoting">
 <TabItem value="ui" label="Using the UI" default>
 
 1. Click the three dots on the `Freight` in the <Hlt>Freight Timeline</Hlt>,
@@ -288,7 +289,7 @@ To promote `Freight` to a `Stage` using the CLI, run:
 kargo promote --stage <stage> --project <project> --freight <freight>
 ```
 
-_Alternatively_, you can reference the `Freight` you want to promote using its alias:
+Alternatively, you can reference the `Freight` you wish to promote using its alias:
 
 ```shell
 kargo promote --stage <stage> --project <project> --freight-alias <freight-alias>
