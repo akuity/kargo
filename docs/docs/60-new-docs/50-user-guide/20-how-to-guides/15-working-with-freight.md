@@ -141,12 +141,6 @@ kargo update freight \
 
 ## Manual Approvals
 
-:::note
-**Maintainers Note**
-
-This section references docs that have been moved or not written yet.
-:::
-
 The [Core Concepts](../10-core-concepts/index.md) describes the
 usual process by which `Freight` resources are _verified_ at each `Stage` in a
 pipeline before becoming available to the next `Stage` or `Stage`s. In brief, it
