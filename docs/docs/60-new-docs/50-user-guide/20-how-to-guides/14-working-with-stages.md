@@ -484,10 +484,10 @@ Users with credentials for and sufficient permissions within the Kargo control p
 
 ### Promoting Freight to a Stage
 
-<Tabs groupId="promoting-freight-to-a-stage">
+<Tabs groupId="promoting">
 <TabItem value="ui" label="Using the UI" default>
 
-1. Click on the target icon to the left of the `Stage`.
+1. Click on the target icon to the left of the `Stage`:
 
     ![Promote Freight to a Stage](img/promote-freight-to-a-stage.png)
 
@@ -496,19 +496,24 @@ Users with credentials for and sufficient permissions within the Kargo control p
     ![Promote Freight to a Stage](img/promote-freight-to-a-stage-2.png)
 
 </TabItem>
-
 <TabItem value="cli" label="Using the CLI">
 
 To promote `Freight` to a `Stage` using the CLI, run:
 
 ```shell
-kargo promote --stage <stage> --project <project> --freight <freight>
+kargo promote \
+  --project kargo-demo \
+  --freight f5f87aa23c9e97f43eb83dd63768ee41f5ba3766 \
+  --stage prod
 ```
 
-_Alternatively_, you can reference the `Freight` you want to promote using its alias:
+Alternatively, you can reference the `Freight` you wish to promote using its alias:
 
 ```shell
-kargo promote --stage <stage> --project <project> --freight-alias <freight-alias>
+kargo promote \
+  --project kargo-demo \
+  --freight-alias frozen-tauntaun \
+  --stage prod
 ```
 
 </TabItem>
