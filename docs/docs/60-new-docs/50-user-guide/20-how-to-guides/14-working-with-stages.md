@@ -491,7 +491,7 @@ Users with credentials for and sufficient permissions within the Kargo control p
 
     ![Promote Freight to a Stage](img/promote-freight-to-a-stage.png)
 
-2. Select the detected `Freight` from the <Hlt>Freight Timeline</Hlt>, and click <Hlt>Yes</Hlt> to promote:
+2. Select the desired `Freight` from the <Hlt>Freight Timeline</Hlt>, and click <Hlt>Yes</Hlt> to promote:
 
     ![Promote Freight to a Stage](img/promote-freight-to-a-stage-2.png)
 
