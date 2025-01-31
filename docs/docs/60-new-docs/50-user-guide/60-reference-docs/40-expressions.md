@@ -32,7 +32,7 @@ For information on Analysis Templates, refer to the
 All steps in a user-defined promotion processes (i.e. those described by a
 [Promotion Template](15-promotion-templates.md) and
 [PromotionTasks](20-promotion-tasks.md)) support the use of
-[Expression Language](https://expr-lang.org) as a means of dynamically resolving
+an [Expression Language](https://expr-lang.org) as a means of dynamically resolving
 values in their configuration at promotion time.
 
 In addition, [`Stage` verification arguments](../20-how-to-guides/16-verification.md#arguments-and-metadata)
