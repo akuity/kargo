@@ -5,7 +5,8 @@ description: Learn about AnalysisTemplate for verification
 
 # Analysis Templates Reference
 
-An `AnalysisTemplate` is a resource that defines how to perform verification testing, including:
+An `AnalysisTemplate` is a resource that defines how to perform verification
+testing, including:
 
 * Container images and commands to run
 * Queries to external monitoring tools
@@ -13,13 +14,23 @@ An `AnalysisTemplate` is a resource that defines how to perform verification tes
 * Success or failure criteria
 * Frequency and duration of measurements
 
-`AnalysisTemplate` resources (and the `AnalysisRun` resources that are spawned from them) are CRDs re-used from the [Argo Rollouts](https://argoproj.github.io/argo-rollouts) project. They were intentionally built to be useful in contexts other than Argo Rollouts. Re-using this resource type to define verification processes means those processes benefit from this rich and battle-tested feature of Argo Rollouts.
+`AnalysisTemplate` resources (and the `AnalysisRun` resources that are spawned
+from them) are CRDs re-used from the
+[Argo Rollouts](https://argoproj.github.io/argo-rollouts) project. They were
+intentionally built to be useful in contexts other than Argo Rollouts. Re-using
+this resource type to define verification processes means those processes
+benefit from this rich and battle-tested feature of Argo Rollouts.
 
 :::info
-This reference guide is intended to give a brief introduction to `AnalysisTemplate`s for some common use cases. Please consult the [relevant sections](https://argoproj.github.io/argo-rollouts/features/analysis/) of the Argo Rollouts documentation for comprehensive coverage of the full range of `AnalysisTemplate` capabilities.
+This reference guide is intended to give a brief introduction to
+`AnalysisTemplate`s for some common use cases. Please consult the
+[relevant sections](https://argoproj.github.io/argo-rollouts/features/analysis/)
+of the Argo Rollouts documentation for comprehensive coverage of the full
+range of `AnalysisTemplate` capabilities.
 :::
 
-`AnalysisTemplate`s integrate natively with many popular open-source and commercial monitoring tools, including:
+`AnalysisTemplate`s integrate natively with many popular open-source and
+commercial monitoring tools, including:
 
 * [Prometheus](https://prometheus.io/)
 * [DataDog](https://www.datadoghq.com/)
@@ -29,21 +40,29 @@ This reference guide is intended to give a brief introduction to `AnalysisTempla
 * [Apache SkyWalking](https://skywalking.apache.org/)
 * [Graphite](https://graphiteapp.org/)
 
-In addition to monitoring tools, analysis can integrate with internal systems by:
+In addition to monitoring tools, analysis can integrate with internal systems
+by:
 
 * Running containerized processes as Kubernetes `Job`s
 * Making HTTP requests and interpreting JSON responses
 
-
 ## Arguments
 
-`AnalysisTemplate`s may declare a set of arguments that can be "passed" in by the `Stage`. The arguments are resolved at the time the `AnalysisRun` is created and can then be referenced in metrics configuration. Arguments are dereferenced using the syntax: `{{ args.<name> }}`.
+`AnalysisTemplate`s may declare a set of arguments that can be "passed" in by
+the `Stage`. The arguments are resolved at the time the `AnalysisRun` is
+created and can then be referenced in metrics configuration. Arguments are
+dereferenced using the syntax: `{{ args.<name> }}`.
 
 :::caution
-Unlike Kargo promotion processes, which require expressions to be enclosed within `${{ }}`, Argo Rollouts `AnalysisTemplate`s require expressions to be enclosed within `{{ }}` (i.e. no `$`).
+Unlike Kargo promotion processes, which require expressions to be enclosed
+within `${{ }}`, Argo Rollouts `AnalysisTemplate`s require expressions to be
+enclosed within `{{ }}` (i.e. without `$`).
 :::
 
-The following example shows an `AnalysisTemplate` with three arguments. Values for arguments can have a default value, supplied by the `Stage`, or obtained from a `Secret` if the value is sensitive (e.g. a bearer token for an HTTP request):
+The following example shows an `AnalysisTemplate` with three arguments. Values
+for arguments can have a default value, supplied by the `Stage`, or obtained
+from a `Secret` if the value is sensitive (e.g. a bearer token for an HTTP
+request):
 
 ```yaml
 apiVersion: argoproj.io/v1alpha1
@@ -80,8 +99,11 @@ spec:
 
 ## Success Condition
 
-When interpreting the result of a query, an [expr](https://expr-lang.org/) expression can be used to evaluate the response. The response payload is set in a variable `result`. The following will interpret the response of a Prometheus query, and require that the element of the returned vector is greater than or equal to `0.95`:
-
+When interpreting the result of a query, an
+[Expression Language](https://expr-lang.org) expression can be used to evaluate
+the response. The response payload is set in a variable `result`. The following
+will interpret the response of a Prometheus query, and require that the element
+of the returned vector is greater than or equal to `0.95`:
 
 ```yaml
 apiVersion: argoproj.io/v1alpha1
@@ -109,9 +131,15 @@ spec:
 
 ## Failure Conditions and Limits
 
-As an alternative to `successCondition`, a `failureCondition` can be used to describe when a measurement is considered failed. Additionally, `failureLimit` can also be used to specify the maximum number of failed measurements that are allowed before the entire `AnalysisRun` is considered `Failed`.
+As an alternative to `successCondition`, a `failureCondition` can be used to
+describe when a measurement is considered failed. Additionally, `failureLimit`
+can also be used to specify the maximum number of failed measurements that are
+allowed before the entire `AnalysisRun` is considered `Failed`.
 
-The following example continually polls a Prometheus server to get the total number of errors (i.e., HTTP response code >= 500) every five minutes, causing the measurement to fail if ten or more errors are encountered. The entire `AnalysisRun` is considered to have `Failed` after three failed measurements.
+The following example continually polls a Prometheus server to get the total
+number of errors (i.e., HTTP response code >= 500) every five minutes, causing
+the measurement to fail if ten or more errors are encountered. The entire
+`AnalysisRun` is considered to have `Failed` after three failed measurements.
 
 ```yaml
 apiVersion: argoproj.io/v1alpha1
@@ -135,7 +163,11 @@ spec:
 
 ## Delaying Measurements
 
-In some scenarios, it may be necessary to delay the start of a metric measurement. For example, some time may need to pass after an update in order for new data to populate in the monitoring services. The `initialDelay` option can be used to delay the start of measurements. Each metric can be configured to have a different delay.
+In some scenarios, it may be necessary to delay the start of a metric
+measurement. For example, some time may need to pass after an update in order
+for new data to populate in the monitoring services. The `initialDelay` option
+can be used to delay the start of measurements. Each metric can be configured
+to have a different delay.
 
 ```yaml
 apiVersion: argoproj.io/v1alpha1
@@ -158,7 +190,8 @@ spec:
 
 ### Web
 
-An HTTP request can be performed against some external service to obtain the measurements.
+An HTTP request can be performed against some external service to obtain the
+measurements.
 
 ```yaml
 apiVersion: argoproj.io/v1alpha1
@@ -197,7 +230,9 @@ spec:
 
 ### Job
 
-A Kubernetes `Job` can be used to perform analysis. When a `Job` is used, the metric is considered successful if the `Job` completes with an exit code of zero and is otherwise considered to have failed.
+A Kubernetes `Job` can be used to perform analysis. When a `Job` is used, the
+metric is considered successful if the `Job` completes with an exit code of
+zero and is otherwise considered to have failed.
 
 ```yaml
 apiVersion: argoproj.io/v1alpha1
