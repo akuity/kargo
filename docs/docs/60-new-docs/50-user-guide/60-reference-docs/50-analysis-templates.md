@@ -3,7 +3,7 @@ sidebar_label: Analysis Templates
 description: Learn about AnalysisTemplate for verification
 ---
 
-# AnalysisTemplate Reference
+# Analysis Templates Reference
 
 An `AnalysisTemplate` is a resource that defines how to perform verification testing, including:
 
@@ -107,7 +107,7 @@ spec:
 
 As an alternative to `successCondition`, a `failureCondition` can be used to describe when a measurement is considered failed. Additionally, `failureLimit` can also be used to specify the maximum number of failed measurements that are allowed before the entire `AnalysisRun` is considered `Failed`.
 
-The following example continually polls a Prometheus server to get the total number of errors (i.e., HTTP response code >= 500) every 5 minutes, causing the measurement to fail if ten or more errors are encountered. The entire analysis run is considered as Failed after three failed measurements.
+The following example continually polls a Prometheus server to get the total number of errors (i.e., HTTP response code >= 500) every five minutes, causing the measurement to fail if ten or more errors are encountered. The entire `AnalysisRun` is considered to have `Failed` after three failed measurements.
 
 ```yaml
 apiVersion: argoproj.io/v1alpha1
