@@ -5,7 +5,7 @@ sidebar_label: Verifying Freight
 
 # Verifying Freight in a Stage
 
-Following a successful `Promotion` (i.e. the _process_ succeeded), it is often desired to further verify that updated code or configuration meets expectations. Verification is an optional, user-defined process that asserts `Freight` in a `Stage`. Common examples of verification include:
+Following a successful `Promotion` (i.e. the _process_ succeeded), it is often desired to assert whether updated code or configuration meets expectations. Verification is an optional, user-defined process to test the `Freight` in a given `Stage`. Common examples of verification include:
 
 * Executing containerized integration test scripts
 * Querying monitoring tools (e.g. DataDog, Prometheus) and measuring application KPIs
