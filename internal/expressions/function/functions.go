@@ -1,4 +1,4 @@
-package expressions
+package function
 
 import (
 	"context"
@@ -13,14 +13,14 @@ import (
 
 type exprFn func(params ...any) (any, error)
 
-// FreightFunctions returns a slice of expr.Option containing functions for
+// FreightOperations returns a slice of expr.Option containing functions for
 // Freight operations.
 //
 // It provides `warehouse()`, `commitFrom()`, `imageFrom()`, and `chartFrom()`
 // functions that can be used within expressions. The functions operate within
 // the context of a given project with the provided freight requests and
 // references.
-func FreightFunctions(
+func FreightOperations(
 	ctx context.Context,
 	c client.Client,
 	project string,
@@ -28,29 +28,29 @@ func FreightFunctions(
 	freightRefs []kargoapi.FreightReference,
 ) []expr.Option {
 	return []expr.Option{
-		WarehouseFunction(),
-		CommitFromFunction(ctx, c, project, freightRequests, freightRefs),
-		ImageFromFunction(ctx, c, project, freightRequests, freightRefs),
-		ChartFromFunction(ctx, c, project, freightRequests, freightRefs),
+		Warehouse(),
+		CommitFrom(ctx, c, project, freightRequests, freightRefs),
+		ImageFrom(ctx, c, project, freightRequests, freightRefs),
+		ChartFrom(ctx, c, project, freightRequests, freightRefs),
 	}
 }
 
-// WarehouseFunction returns an expr.Option that provides a `warehouse()`
-// function for use in expressions.
+// Warehouse returns an expr.Option that provides a `warehouse()` function
+// for use in expressions.
 //
 // The warehouse function creates a v1alpha1.FreightOrigin of kind
 // v1alpha1.Warehouse with the specified name.
-func WarehouseFunction() expr.Option {
+func Warehouse() expr.Option {
 	return expr.Function("warehouse", warehouse, new(func(name string) kargoapi.FreightOrigin))
 }
 
-// CommitFromFunction returns an expr.Option that provides a `commitFrom()`
-// function for use in expressions.
+// CommitFrom returns an expr.Option that provides a `commitFrom()` function
+// for use in expressions.
 //
 // The commitFrom function finds Git commits based on repository URL and
 // optional origin, using the provided freight requests and references within
 // the project context.
-func CommitFromFunction(
+func CommitFrom(
 	ctx context.Context,
 	c client.Client,
 	project string,
@@ -65,13 +65,13 @@ func CommitFromFunction(
 	)
 }
 
-// ImageFromFunction returns an expr.Option that provides an `imageFrom()`
-// function for use in expressions.
+// ImageFrom returns an expr.Option that provides an `imageFrom()` function for
+// use in expressions.
 //
 // The imageFrom function finds container images based on repository URL and
 // optional origin, using the provided freight requests and references within
 // the project context.
-func ImageFromFunction(
+func ImageFrom(
 	ctx context.Context,
 	c client.Client,
 	project string,
@@ -86,13 +86,13 @@ func ImageFromFunction(
 	)
 }
 
-// ChartFromFunction returns an expr.Option that provides a `chartFrom()`
-// function for use in expressions.
+// ChartFrom returns an expr.Option that provides a `chartFrom()` function for
+// use in expressions.
 //
 // The chartFrom function finds Helm charts based on repository URL, optional
-// hart name, and optional origin, using the provided freight requests and
+// chart name, and optional origin, using the provided freight requests and
 // references within the project context.
-func ChartFromFunction(
+func ChartFrom(
 	ctx context.Context,
 	c client.Client,
 	project string,
@@ -144,7 +144,7 @@ func getCommit(
 	project string,
 	freightReqs []kargoapi.FreightRequest,
 	freightRefs []kargoapi.FreightReference,
-) func(a ...any) (any, error) {
+) exprFn {
 	return func(a ...any) (any, error) {
 		if len(a) == 0 || len(a) > 2 {
 			return nil, fmt.Errorf("expected 1-2 arguments, got %d", len(a))
@@ -187,7 +187,7 @@ func getImage(
 	project string,
 	freightRequests []kargoapi.FreightRequest,
 	freightRefs []kargoapi.FreightReference,
-) func(a ...any) (any, error) {
+) exprFn {
 	return func(a ...any) (any, error) {
 		if len(a) == 0 || len(a) > 2 {
 			return nil, fmt.Errorf("expected 1-2 arguments, got %d", len(a))

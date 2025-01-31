@@ -13,6 +13,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/expressions"
+	exprfn "github.com/akuity/kargo/internal/expressions/function"
 	"github.com/akuity/kargo/internal/kargo"
 )
 
@@ -228,7 +229,7 @@ func (s *PromotionStep) GetConfig(
 	evaledCfgJSON, err := expressions.EvaluateJSONTemplate(
 		s.Config,
 		env,
-		expressions.FreightFunctions(
+		exprfn.FreightOperations(
 			ctx,
 			cl,
 			promoCtx.Project,

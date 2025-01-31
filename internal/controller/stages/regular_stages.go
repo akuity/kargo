@@ -34,7 +34,7 @@ import (
 	rolloutsapi "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
 	"github.com/akuity/kargo/internal/directives"
 	kargoEvent "github.com/akuity/kargo/internal/event"
-	"github.com/akuity/kargo/internal/expressions"
+	exprfn "github.com/akuity/kargo/internal/expressions/function"
 	"github.com/akuity/kargo/internal/indexer"
 	"github.com/akuity/kargo/internal/kargo"
 	"github.com/akuity/kargo/internal/kubeclient"
@@ -1315,7 +1315,7 @@ func (r *RegularStageReconciler) startVerification(
 					"stage":   stage.Name,
 				},
 			},
-			Options: expressions.FreightFunctions(
+			Options: exprfn.FreightOperations(
 				ctx,
 				r.client,
 				stage.Namespace,
