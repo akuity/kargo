@@ -28,62 +28,49 @@ export const Graph = memo((props: GraphProps) => {
   const pipelineContext = usePipelineContext();
 
   useEffect(() => {
-    const [edges, setEdges] = controlledEdges;
     const action = pipelineContext?.state?.action;
 
-    let willFallInInfiniteLoopIfSetEdges = false;
+    const setEdges = controlledEdges[1];
 
     if (action === FreightTimelineAction.Promote) {
-      willFallInInfiniteLoopIfSetEdges = Boolean(
-        edges?.find((e) => e.target === pipelineContext?.state?.stage && e.animated)
-      );
-    }
-
-    if (action === FreightTimelineAction.PromoteSubscribers) {
-      willFallInInfiniteLoopIfSetEdges = Boolean(
-        edges?.find((e) => e.source === pipelineContext?.state?.stage && e.animated)
-      );
-    }
-
-    if (action === FreightTimelineAction.Promote) {
-      if (!willFallInInfiniteLoopIfSetEdges) {
-        setEdges(
-          edges.map((e) => {
-            return {
-              ...e,
-              animated: e.target === pipelineContext?.state?.stage
-            };
-          })
-        );
-      }
-      return;
-    }
-
-    if (action === FreightTimelineAction.PromoteSubscribers) {
-      if (!willFallInInfiniteLoopIfSetEdges) {
-        setEdges(
-          edges.map((e) => {
-            return {
-              ...e,
-              animated: e.source === pipelineContext?.state?.stage
-            };
-          })
-        );
-      }
-      return;
-    }
-
-    if (edges?.find((e) => e.animated)) {
-      setEdges(
+      setEdges((edges) =>
         edges.map((e) => {
+          const isTargetStage = e.target === pipelineContext?.state?.stage;
+
+          const isEdgeBelongsToSelectedWarehouse =
+            pipelineContext?.selectedWarehouse === '' ||
+            e.targetHandle === pipelineContext?.selectedWarehouse;
+
           return {
             ...e,
-            animated: false
+            animated: isTargetStage && isEdgeBelongsToSelectedWarehouse
           };
         })
       );
+      return;
     }
-  }, [controlledEdges, pipelineContext?.state, pipelineContext?.selectedWarehouse]);
+
+    if (action === FreightTimelineAction.PromoteSubscribers) {
+      setEdges((edges) =>
+        edges.map((e) => {
+          return {
+            ...e,
+            animated: e.source === pipelineContext?.state?.stage
+          };
+        })
+      );
+      return;
+    }
+
+    setEdges((edges) =>
+      edges.map((e) => {
+        return {
+          ...e,
+          animated: false
+        };
+      })
+    );
+  }, [controlledEdges[1], pipelineContext?.state, pipelineContext?.selectedWarehouse]);
 
   return (
     <ReactFlow

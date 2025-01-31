@@ -24,7 +24,7 @@ export const CustomNode = ({
 
   if (data.value.$typeName === 'github.com.akuity.kargo.api.v1alpha1.Warehouse') {
     return (
-      <CustomNode.Container>
+      <CustomNode.Container warehouse={data.value}>
         <WarehouseNode warehouse={data.value} warehouses={data.warehouses} />
       </CustomNode.Container>
     );
@@ -49,7 +49,7 @@ export const CustomNode = ({
   return <CustomNode.Container>Unknown Node</CustomNode.Container>;
 };
 
-CustomNode.Container = (props: PropsWithChildren<{ stage?: Stage }>) => {
+CustomNode.Container = (props: PropsWithChildren<{ stage?: Stage; warehouse?: Warehouse }>) => {
   if (props.stage?.metadata?.name) {
     const howManyStagesDoThisStageSubscribe = props.stage?.spec?.requestedFreight?.length || 0;
 
@@ -80,9 +80,9 @@ CustomNode.Container = (props: PropsWithChildren<{ stage?: Stage }>) => {
 
   return (
     <>
-      <Handle type='target' position={Position.Left} />
+      <Handle id={props.warehouse?.metadata?.name || ''} type='target' position={Position.Left} />
       <div className={styles.container}>{props.children}</div>
-      <Handle type='source' position={Position.Right} />
+      <Handle id={props.warehouse?.metadata?.name || ''} type='source' position={Position.Right} />
     </>
   );
 };

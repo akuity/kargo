@@ -67,7 +67,7 @@ export const useReactFlowPipelineGraph = (
 
         // check if source is warehouse
         if (requestedOrigin?.sources?.direct) {
-          graph.setEdge(warehouseNodeIndex, stageNodeIndex, { edgeColor });
+          graph.setEdge(warehouseNodeIndex, stageNodeIndex, { edgeColor }, warehouseNodeIndex);
         }
 
         // check if source is other stage
