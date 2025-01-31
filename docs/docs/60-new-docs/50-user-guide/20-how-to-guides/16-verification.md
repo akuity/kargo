@@ -208,6 +208,40 @@ spec:
       value: bar
 ```
 
+The values specified in `args` support
+[expressions](../60-reference-docs/40-expressions.md) to dynamically set values
+based on the context of the `Freight` being verified.
+
+For example, the following defines an argument `commit` with a value set to the
+commit hash that is being verified using the
+[`commitFrom` expression function](../60-reference-docs/40-expressions.md#commitfromrepourl-freightorigin):
+
+```yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: test
+  namespace: kargo-demo
+spec:
+  # ...
+  verification:
+    analysisTemplates:
+      - name: kargo-demo
+    args:
+      - name: commit
+        value: ${{ commitFrom("https://github.com/example/repo.git").ID }}
+```
+
+:::caution
+Kargo promotion processes require expressions to be enclosed within `${{ }}`,
+Argo Rollouts `AnalysisTemplate`s require expressions to be  enclosed within
+`{{ }}` (i.e. without `$`).
+
+Ensure that expressions are enclosed within the correct syntax for the
+type of resource you are working with, recognizable by the `apiVersion` and
+`kind` fields.
+:::
+
 ## Implicit Argo CD Verification
 
 It is usually desirable for changes to be fully rolled out before performing
