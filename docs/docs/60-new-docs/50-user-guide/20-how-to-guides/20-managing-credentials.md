@@ -23,11 +23,6 @@ This section presents an overview of how these credentials can be managed.
 
 ## Credentials as Kubernetes `Secret` Resources
 
-:::caution
-Kargo formerly borrowed its general credential-management approach from Argo CD,
-but has since diverged.
-:::
-
 Kargo expects any credentials it requires to have been stored as specially
 labeled Kubernetes `Secret` resources containing specially-formatted data. These
 `Secret`s take the following form:
@@ -57,9 +52,8 @@ are covered in the next section.
 :::
 
 The label key `kargo.akuity.io/cred-type` and its value, one of `git`, `helm`,
-or `image`, is important, as it designates the `Secret` as representing
-credentials for a Git repository, a Helm chart repository, or a container image
-repository, respectively.
+`image`, or `generic` is important, as it designates the `Secret` as representing
+credentials for a Git, Helm chart, or container image repository, or _something else_, respectively.
 
 The `Secret`'s `data` field (set above using plaintext in the `stringData`
 field), MUST contain the following keys:
