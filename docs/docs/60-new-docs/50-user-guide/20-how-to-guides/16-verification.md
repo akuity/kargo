@@ -234,7 +234,7 @@ spec:
 
 :::caution
 Kargo promotion processes require expressions to be enclosed within `${{ }}`,
-Argo Rollouts `AnalysisTemplate`s require expressions to be  enclosed within
+Argo Rollouts `AnalysisTemplate`s require expressions to be enclosed within
 `{{ }}` (i.e. without `$`).
 
 Ensure that expressions are enclosed within the correct syntax for the
