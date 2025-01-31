@@ -179,7 +179,7 @@ spec:
 
 It is usually desirable for changes to be fully rolled out before performing any verification. For example, it would be premature to start running tests if a `Deployment`'s `Pod`s were still starting or not fully transitioned to the desired version. `Promotion`s that integrate with Argo CD do wait for any sync operations they initiate to complete, but it is possible for an Argo CD `Application` to still be `Progressing` even after sync operations have completed and the `Promotion` process is considered complete.
 
-In order to prevent verification from starting before `Application`s are ready, Kargo has a built-in understanding of Argo CD `Application` health and will delay verification until `Application`s have reached a `Healthy` state.
+In order to prevent verification from starting before `Application`s are ready, Kargo has a built-in understanding of [Argo CD `Application` health](https://argo-cd.readthedocs.io/en/latest/operator-manual/health/) and will delay verification until `Application`s have reached a `Healthy` state.
 
 :::note
 If a `Stage` references one ore more Argo CD `Application`s as part of its promotion process, but does not explicitly define any verification process, successful verification is implicitly contingent on the `Application`s reaching a `Healthy` state.

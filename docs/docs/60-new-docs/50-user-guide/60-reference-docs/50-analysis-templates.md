@@ -39,6 +39,10 @@ In addition to monitoring tools, analysis can integrate with internal systems by
 
 `AnalysisTemplate`s may declare a set of arguments that can be "passed" in by the `Stage`. The arguments are resolved at the time the `AnalysisRun` is created and can then be referenced in metrics configuration. Arguments are dereferenced using the syntax: `{{ args.<name> }}`.
 
+:::caution
+Unlike Kargo promotion processes, which require expressions to be enclosed within `${{ }}`, Argo Rollouts `AnalysisTemplate`s require expressions to be enclosed within `{{ }}` (i.e. no `$`).
+:::
+
 The following example shows an `AnalysisTemplate` with three arguments. Values for arguments can have a default value, supplied by the `Stage`, or obtained from a `Secret` if the value is sensitive (e.g. a bearer token for an HTTP request):
 
 ```yaml
