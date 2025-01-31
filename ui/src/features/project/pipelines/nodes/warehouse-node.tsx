@@ -18,7 +18,6 @@ import { refreshWarehouse } from '@ui/gen/service/v1alpha1/service-KargoService_
 import { Warehouse } from '@ui/gen/v1alpha1/generated_pb';
 
 import { usePipelineContext } from '../context/use-pipeline-context';
-import { MessageTooltip } from '../message-tooltip';
 import { onError } from '../utils/util';
 
 import styles from './custom-node.module.less';
@@ -57,12 +56,10 @@ export const WarehouseNode = (props: WarehouseNodeProps) => {
   let hasError = false;
   let notReady = false;
   let hasReconcilingCondition = false;
-  let errMessage = '';
 
   for (const condition of props.warehouse?.status?.conditions || []) {
     if (condition.type === 'Healthy' && condition.status === 'False') {
       hasError = true;
-      errMessage = condition.message || '';
     }
 
     if (condition.type === 'Reconciling') {
@@ -71,7 +68,6 @@ export const WarehouseNode = (props: WarehouseNodeProps) => {
 
     if (condition.type === 'Ready' && condition.status === 'False') {
       notReady = true;
-      errMessage = condition.message || '';
     }
   }
 
@@ -96,30 +92,7 @@ export const WarehouseNode = (props: WarehouseNodeProps) => {
 
         <div className='ml-auto space-x-2'>
           {refreshing && <FontAwesomeIcon icon={faCircleNotch} spin />}
-          {/* TODO: make this error tooltip beautiful */}
-          {hasError && (
-            <MessageTooltip
-              message={
-                <div className='flex flex-col gap-4 overflow-y-scroll text-wrap max-h-48'>
-                  <div
-                    className='cursor-pointer min-w-0'
-                    onClick={() => {
-                      if (message) {
-                        navigator.clipboard.writeText(errMessage);
-                      }
-                    }}
-                  >
-                    <div className='flex text-wrap'>
-                      <FontAwesomeIcon icon={faExclamationCircle} className='mr-2 mt-1 pl-1' />
-                      {errMessage}
-                    </div>
-                  </div>
-                </div>
-              }
-              icon={faExclamationCircle}
-              iconClassName='text-red-500'
-            />
-          )}
+          {hasError && <FontAwesomeIcon icon={faExclamationCircle} />}
           <FontAwesomeIcon
             icon={faBuilding}
             className='text-base'

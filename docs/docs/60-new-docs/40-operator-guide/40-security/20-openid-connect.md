@@ -165,10 +165,9 @@ When installing Kargo with Helm, all options related to OIDC are grouped under
     :::
 
     :::note
-    It is common to grant the `viewer` role to all users who can successfully
-    authenticate, as this role includes the ability to list all `Project`
-    resources. `Project` resources are _cluster-scoped_, and as such, permission
-    to perform operations upon them cannot be granted at the project level.
+    It is common to map _all_ authenticated users to the `kargo-viewer`
+    `ServiceAccount` to effect broad read-only permissions. These permissions
+    _do not_ extend to credentials and other project `Secret`s.
     :::
 
 ### Adapting Incompatible IDPs
