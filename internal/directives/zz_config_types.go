@@ -124,6 +124,25 @@ type DeleteConfig struct {
 	Path string `json:"path"`
 }
 
+type FileParseConfig struct {
+	// An array of file configurations to parse.
+	Files []File `json:"files"`
+}
+
+type File struct {
+	// An array of outputs to extract from the file.
+	Outputs []FileOutput `json:"outputs"`
+	// The path to the file to be parsed.
+	Path string `json:"path"`
+}
+
+type FileOutput struct {
+	// The expression used to extract data from the file.
+	FromExpression string `json:"fromExpression"`
+	// The name of the output variable to store the result.
+	Name string `json:"name"`
+}
+
 type GitClearConfig struct {
 	// Path to a working directory of a local repository from which to remove all files,
 	// excluding the .git/ directory.
