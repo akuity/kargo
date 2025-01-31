@@ -114,9 +114,6 @@ spec:
 Kargo provides tools to manage `Project`s using either its UI or
 CLI. This section explains how to handle `Project`s effectively through both interfaces.
 
-:::info
-Users with credentials for and sufficient permissions within the Kargo control plane's Kubernetes cluster can also manage `Project` resources using `kubectl`.
-:::
 
 ### Creating a Project
 
@@ -129,18 +126,17 @@ Users with credentials for and sufficient permissions within the Kargo control p
 
    ![create-project](img/create-project.png)
 
-   _Alternatively_, you can define the `Project` and other related configurations using the <Hlt>YAML</Hlt> tab:
+   Alternatively, you can define the `Project` and other related configurations using the <Hlt>YAML</Hlt> tab:
 
    ![create-project](img/create-project-2.png)
 
-1. After completing the <Hlt>Form</Hlt> or defining the `Project` in the <Hlt>YAML</Hlt> tab, select <Hlt>Create</Hlt>. 
+1. After completing the <Hlt>Form</Hlt> or defining the `Project` in the <Hlt>YAML</Hlt> tab, click <Hlt>Create</Hlt>. 
 
-   The new `Project` will then be added to the UI:
+   The new `Project` will appear a card on the UI's home page:
 
    ![create-project](img/create-project-3.png)
 
 </TabItem>
-
 <TabItem value="cli" label="Using the CLI">
 
 1. To create a `Project` using the CLI, run:
@@ -149,7 +145,7 @@ Users with credentials for and sufficient permissions within the Kargo control p
    kargo create project <project>
    ```
 
-   _Alternatively_, define the `Project` in a YAML file, for example:
+   Alternatively, define the `Project` in a YAML file, for example:
 
    ```yaml
    apiVersion: kargo.akuity.io/v1alpha1
@@ -180,7 +176,7 @@ Users with credentials for and sufficient permissions within the Kargo control p
 
 1. Select the `Project` you want to remove.
 
-1. Click the dropdown next to the `Project`'s name in the upper-left corner of the `Project` dashboard and select <Hlt>Delete</Hlt>:
+1. Click the dropdown next to the `Project`'s name in the upper left corner of the `Project` dashboard and click <Hlt>Delete</Hlt>:
 
    ![delete-project](img/delete-project.png)
 
@@ -189,7 +185,6 @@ Users with credentials for and sufficient permissions within the Kargo control p
    ![delete-project](img/delete-project-2.png)
 
 </TabItem>
-
 <TabItem value="cli" label="Using the CLI">
 
 To delete a `Project` using the CLI, run:
