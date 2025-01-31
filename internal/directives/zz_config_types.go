@@ -196,7 +196,7 @@ type GitOpenPRConfig struct {
 	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty"`
 	// Labels to add to the pull request.
 	Labels []string `json:"labels,omitempty"`
-	// The name of the Git provider to use. Currently only 'github', 'gitlab' and 'azure' are
+	// The name of the Git provider to use. Currently only 'github', 'gitlab', 'azure' and 'bitbucket' are
 	// supported. Kargo will try to infer the provider if it is not explicitly specified.
 	Provider *Provider `json:"provider,omitempty"`
 	// The URL of a remote Git repository to clone.
@@ -241,7 +241,7 @@ type GitWaitForPRConfig struct {
 	// This field references the 'prNumber' output from a previous step and uses it as the
 	// number of the pull request to wait for.
 	PRNumberFromStep string `json:"prNumberFromStep,omitempty"`
-	// The name of the Git provider to use. Currently only 'github', 'gitlab' and 'azure' are
+	// The name of the Git provider to use. Currently only 'github', 'gitlab', 'azure' and 'bitbucket' are
 	// supported. Kargo will try to infer the provider if it is not explicitly specified.
 	Provider *Provider `json:"provider,omitempty"`
 	// The URL of a remote Git repository to clone.
@@ -457,12 +457,13 @@ const (
 	Warehouse Kind = "Warehouse"
 )
 
-// The name of the Git provider to use. Currently only 'github', 'gitlab' and 'azure' are
+// The name of the Git provider to use. Currently only 'github', 'gitlab', 'azure' and 'bitbucket' are
 // supported. Kargo will try to infer the provider if it is not explicitly specified.
 type Provider string
 
 const (
-	Azure  Provider = "azure"
-	Github Provider = "github"
-	Gitlab Provider = "gitlab"
+	Azure     Provider = "azure"
+	Github    Provider = "github"
+	Gitlab    Provider = "gitlab"
+	Bitbucket Provider = "bitbucket"
 )
