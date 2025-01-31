@@ -1,0 +1,28 @@
+.btn {
+  font-family: 'Arial', sans-serif !important;
+  font-size: 16px !important;
+  padding: 10px 20px !important;
+  border: none !important;
+  border-radius: 8px !important;
+  cursor: pointer !important;
+  transition: all 0.3s ease !important;
+  text-align: center !important;
+  display: inline-block !important;
+}
+
+.primary {
+    background-color: var(--btn-primary-bg);
+    color: white;
+    box-shadow: 0 4px 6px var(--btn-primary-shadow);
+
+    &:hover {
+        background-color: var(--btn-primary-hover-bg);
+        box-shadow: 0 6px 8px var(--btn-primary-hover-shadow);
+    }
+
+    &:active {
+        background-color: var(--btn-primary-active-bg);
+        box-shadow: 0 3px 4px var(--btn-primary-active-shadow);
+        transform: translateY(2px);
+    }
+}

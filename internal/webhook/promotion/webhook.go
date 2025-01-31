@@ -21,6 +21,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	kargoEvent "github.com/akuity/kargo/internal/event"
+	"github.com/akuity/kargo/internal/kargo"
 	libEvent "github.com/akuity/kargo/internal/kubernetes/event"
 	"github.com/akuity/kargo/internal/logging"
 	libWebhook "github.com/akuity/kargo/internal/webhook"
@@ -116,8 +117,7 @@ func newWebhook(
 	w.authorizeFn = w.authorize
 	w.admissionRequestFromContextFn = admission.RequestFromContext
 	w.createSubjectAccessReviewFn = w.client.Create
-	w.isRequestFromKargoControlplaneFn =
-		libWebhook.IsRequestFromKargoControlplane(cfg.ControlplaneUserRegex)
+	w.isRequestFromKargoControlplaneFn = libWebhook.IsRequestFromKargoControlplane(cfg.ControlplaneUserRegex)
 	return w
 }
 
@@ -146,12 +146,16 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 		// Set actor as an admission request's user info when the promotion is created
 		// to allow controllers to track who created it.
 		if !w.isRequestFromKargoControlplaneFn(req) {
-			promo.Annotations[kargoapi.AnnotationKeyCreateActor] =
-				kargoapi.FormatEventKubernetesUserActor(req.UserInfo)
+			promo.Annotations[kargoapi.AnnotationKeyCreateActor] = kargoapi.FormatEventKubernetesUserActor(req.UserInfo)
 		}
 
 		// Enrich the annotation with the actor and control plane information.
 		w.setAbortAnnotationActor(req, nil, promo)
+
+		// Inflate any PromotionTasks in the Promotion's steps
+		if err = kargo.NewPromotionBuilder(w.client).InflateSteps(ctx, promo); err != nil {
+			return fmt.Errorf("failed to inflate Promotion steps: %w", err)
+		}
 	case admissionv1.Update:
 		// Ensure actor annotation immutability
 		if oldActor, ok := oldPromo.Annotations[kargoapi.AnnotationKeyCreateActor]; ok {
@@ -205,8 +209,7 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 		delete(promo.Labels, kargoapi.ShardLabelKey)
 	}
 
-	ownerRef :=
-		metav1.NewControllerRef(stage, kargoapi.GroupVersion.WithKind("Stage"))
+	ownerRef := metav1.NewControllerRef(stage, kargoapi.GroupVersion.WithKind("Stage"))
 	promo.ObjectMeta.OwnerReferences = []metav1.OwnerReference{*ownerRef}
 	return nil
 }
@@ -246,7 +249,7 @@ func (w *webhook) ValidateCreate(
 		return nil, fmt.Errorf("get freight: %w", err)
 	}
 
-	if !kargoapi.IsFreightAvailable(stage, freight) {
+	if !stage.IsFreightAvailable(freight) {
 		return nil, apierrors.NewInvalid(
 			promotionGroupKind,
 			promo.Name,

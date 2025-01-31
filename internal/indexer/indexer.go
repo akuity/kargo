@@ -22,9 +22,10 @@ import (
 const (
 	EventsByInvolvedObjectAPIGroupField = "involvedObject.apiGroup"
 
+	FreightByWarehouseField       = "warehouse"
+	FreightByCurrentStagesField   = "currentlyIn"
 	FreightByVerifiedStagesField  = "verifiedIn"
 	FreightApprovedForStagesField = "approvedFor"
-	FreightByWarehouseField       = "warehouse"
 
 	PromotionsByStageAndFreightField = "stageAndFreight"
 	PromotionsByStageField           = "stage"
@@ -140,6 +141,16 @@ func RunningPromotionsByArgoCDApplications(
 			return nil
 		}
 
+		// Build just enough context to extract the relevant config from the
+		// argocd-update promotion step.
+		promoCtx := directives.PromotionContext{
+			Project:   promo.Namespace,
+			Stage:     promo.Spec.Stage,
+			Promotion: promo.Name,
+			State:     promo.Status.GetState(),
+			Vars:      promo.Spec.Vars,
+		}
+
 		// Extract the Argo CD Applications from the promotion steps.
 		//
 		// TODO(hidde): This is not ideal as it requires parsing the directives and
@@ -155,20 +166,17 @@ func RunningPromotionsByArgoCDApplications(
 			if step.Uses != "argocd-update" || step.Config == nil {
 				continue
 			}
+
 			dirStep := directives.PromotionStep{
 				Kind:   step.Uses,
 				Alias:  step.As,
+				Vars:   step.Vars,
 				Config: step.Config.Raw,
 			}
-			// Build just enough context to extract the relevant config from the
-			// argocd-update promotion step.
-			promoCtx := directives.PromotionContext{
-				Project:   promo.Namespace,
-				Stage:     promo.Spec.Stage,
-				Promotion: promo.Name,
-				Vars:      promo.Spec.Vars,
-			}
-			vars, err := dirStep.GetVars(promoCtx)
+
+			// As step-level variables are allowed to reference to output, we
+			// need to provide the state.
+			vars, err := dirStep.GetVars(promoCtx, promoCtx.State)
 			if err != nil {
 				logger.Error(
 					err,
@@ -212,14 +220,13 @@ func RunningPromotionsByArgoCDApplications(
 					for _, app := range appsList {
 						if app, ok := app.(map[string]any); ok {
 							if nameTemplate, ok := app["name"].(string); ok {
-								env := map[string]any{
-									"ctx": map[string]any{
-										"project":   promoCtx.Project,
-										"promotion": promoCtx.Promotion,
-										"stage":     promoCtx.Stage,
-									},
-									"vars": vars,
-								}
+								env := dirStep.BuildEnv(
+									promoCtx,
+									directives.StepEnvWithOutputs(promoCtx.State),
+									directives.StepEnvWithTaskOutputs(dirStep.Alias, promoCtx.State),
+									directives.StepEnvWithVars(vars),
+								)
+
 								var namespace any = libargocd.Namespace()
 								if namespaceTemplate, ok := app["namespace"].(string); ok {
 									if namespace, err = expressions.EvaluateTemplate(namespaceTemplate, env); err != nil {
@@ -292,6 +299,23 @@ func FreightByWarehouse(obj client.Object) []string {
 		return []string{freight.Origin.Name}
 	}
 	return nil
+}
+
+// FreightByCurrentStages is a client.IndexerFunc that indexes Freight by the
+// Stages in which it is currently in use.
+func FreightByCurrentStages(obj client.Object) []string {
+	freight, ok := obj.(*kargoapi.Freight)
+	if !ok {
+		return nil
+	}
+
+	currentStages := make([]string, len(freight.Status.CurrentlyIn))
+	var i int
+	for stage := range freight.Status.CurrentlyIn {
+		currentStages[i] = stage
+		i++
+	}
+	return currentStages
 }
 
 // FreightByVerifiedStages is a client.IndexerFunc that indexes Freight by the

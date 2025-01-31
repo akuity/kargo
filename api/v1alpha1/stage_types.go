@@ -218,7 +218,7 @@ type FreightOrigin struct {
 	// +kubebuilder:validation:Required
 	Kind FreightOriginKind `json:"kind" protobuf:"bytes,1,opt,name=kind"`
 	// Name is the name of the resource of the kind indicated by the Kind field
-	// from which Freight may originated.
+	// from which Freight may originate.
 	//
 	// +kubebuilder:validation:Required
 	Name string `json:"name" protobuf:"bytes,2,opt,name=name"`
@@ -252,6 +252,18 @@ type FreightSources struct {
 	// Direct field must be true. i.e. Between the two fields, at least on source
 	// must be specified.
 	Stages []string `json:"stages,omitempty" protobuf:"bytes,2,rep,name=stages"`
+	// RequiredSoakTime specifies a minimum duration for which the requested
+	// Freight must have continuously occupied ("soaked in") in an upstream Stage
+	// before becoming available for promotion to this Stage. This is an optional
+	// field. If nil or zero, no soak time is required. Any soak time requirement
+	// is in ADDITION to the requirement that Freight be verified in an upstream
+	// Stage to become available for promotion to this Stage, although a manual
+	// approval for promotion to this Stage will supersede any soak time
+	// requirement.
+	//
+	// +kubebuilder:validation:Type=string
+	// +kubebuilder:validation:Pattern="^([0-9]+(\\.[0-9]+)?(s|m|h))+$"
+	RequiredSoakTime *metav1.Duration `json:"requiredSoakTime,omitempty" protobuf:"bytes,3,opt,name=requiredSoakTime"`
 }
 
 // PromotionTemplate defines a template for a Promotion that can be used to
@@ -272,6 +284,7 @@ type PromotionTemplateSpec struct {
 	// are listed in this field.
 	//
 	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:items:XValidation:message="PromotionTemplate step must have exactly one of uses or task set",rule="(has(self.uses) ? !has(self.task) : has(self.task))"
 	Steps []PromotionStep `json:"steps,omitempty" protobuf:"bytes,1,rep,name=steps"`
 }
 
@@ -360,6 +373,20 @@ type FreightCollection struct {
 	// VerificationHistory is a stack of recent VerificationInfo. By default,
 	// the last ten VerificationInfo are stored.
 	VerificationHistory VerificationInfoStack `json:"verificationHistory,omitempty" protobuf:"bytes,2,rep,name=verificationHistory"`
+}
+
+// Includes returns true if the FreightCollection includes Freight with the
+// specified name and false otherwise.
+func (f *FreightCollection) Includes(freightName string) bool {
+	if f == nil {
+		return false
+	}
+	for _, freight := range f.Freight {
+		if freight.Name == freightName {
+			return true
+		}
+	}
+	return false
 }
 
 // UpdateOrPush updates the entry in the FreightCollection based on the

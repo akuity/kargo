@@ -79,8 +79,9 @@ spec:
         {{- with (concat .Values.global.envFrom .Values.controller.envFrom) }}
           {{- toYaml . | nindent 8 }}
         {{- end }}
-        {{- if or .Values.kubeconfigSecrets.kargo .Values.kubeconfigSecrets.argocd .Values.controller.gitClient.signingKeySecret.name .Values.controller.cabundle.configMapName .Values.controller.cabundle.secretName }}
         volumeMounts:
+        - mountPath: /tmp
+          name: tmp-data
         {{- if or .Values.kubeconfigSecrets.kargo .Values.kubeconfigSecrets.argocd }}
         - mountPath: /etc/kargo/kubeconfigs
           name: kubeconfigs
@@ -95,13 +96,13 @@ spec:
         - mountPath: /etc/ssl/certs
           name: certs
         {{- end }}
-        {{- end }}
         {{- with .Values.controller.securityContext | default .Values.global.securityContext }}
         securityContext:
           {{- toYaml . | nindent 10 }}
         {{- end }}
         resources:
           {{- toYaml .Values.controller.resources | nindent 10 }}
+
       {{- if or .Values.controller.cabundle.configMapName .Values.controller.cabundle.secretName }}
       initContainers:
       - name: parse-cabundle
@@ -127,8 +128,9 @@ spec:
         - name: certs
           mountPath: /tmp/target
       {{- end }}
-      {{- if or .Values.kubeconfigSecrets.kargo .Values.kubeconfigSecrets.argocd .Values.controller.gitClient.signingKeySecret.name .Values.controller.cabundle.configMapName .Values.controller.cabundle.secretName }}
       volumes:
+      - name: tmp-data
+        emptyDir: {}
       {{- if or .Values.kubeconfigSecrets.kargo .Values.kubeconfigSecrets.argocd }}
       - name: kubeconfigs
         projected:
@@ -168,7 +170,6 @@ spec:
         secret:
           secretName: {{ .Values.controller.gitClient.signingKeySecret.name }}
           defaultMode: 0644
-      {{- end }}
       {{- end }}
       {{- with .Values.controller.nodeSelector | default .Values.global.nodeSelector }}
       nodeSelector:

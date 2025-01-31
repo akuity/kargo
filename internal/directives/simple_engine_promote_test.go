@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
@@ -672,6 +673,10 @@ func TestSimpleEngine_setupWorkDir(t *testing.T) {
 }
 
 func TestSimpleEngine_getProjectSecrets(t *testing.T) {
+	testData := map[string][]byte{
+		"key1": []byte("value1"),
+		"key2": []byte("value2"),
+	}
 	tests := []struct {
 		name        string
 		project     string
@@ -683,21 +688,54 @@ func TestSimpleEngine_getProjectSecrets(t *testing.T) {
 			name:    "successful retrieval",
 			project: "test-project",
 			objects: []client.Object{
-				&corev1.Secret{
+				&corev1.Secret{ // Not labeled; should not be included
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-secret",
+						Name:      "test-secret-a",
 						Namespace: "test-project",
 					},
-					Data: map[string][]byte{
-						"key1": []byte("value1"),
-						"key2": []byte("value2"),
+					Data: testData,
+				},
+				&corev1.Secret{ // Labeled with new label; should be included
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-secret-b",
+						Namespace: "test-project",
+						Labels: map[string]string{
+							kargoapi.CredentialTypeLabelKey: kargoapi.CredentialTypeLabelGeneric,
+						},
 					},
+					Data: testData,
+				},
+				&corev1.Secret{ // Labeled with legacy label; should be included
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-secret-c",
+						Namespace: "test-project",
+						Labels: map[string]string{
+							kargoapi.ProjectSecretLabelKey: kargoapi.LabelTrueValue,
+						},
+					},
+					Data: testData,
+				},
+				&corev1.Secret{ // Labeled both ways; should be included ONCE
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-secret-d",
+						Namespace: "test-project",
+						Labels: map[string]string{
+							kargoapi.CredentialTypeLabelKey: kargoapi.CredentialTypeLabelGeneric,
+							kargoapi.ProjectSecretLabelKey:  kargoapi.LabelTrueValue,
+						},
+					},
+					Data: testData,
 				},
 			},
 			assertions: func(t *testing.T, secrets map[string]map[string]string, err error) {
 				assert.NoError(t, err)
-				assert.Equal(t, "value1", secrets["test-secret"]["key1"])
-				assert.Equal(t, "value2", secrets["test-secret"]["key2"])
+				require.Len(t, secrets, 3)
+				assert.Equal(t, "value1", secrets["test-secret-b"]["key1"])
+				assert.Equal(t, "value2", secrets["test-secret-b"]["key2"])
+				assert.Equal(t, "value1", secrets["test-secret-c"]["key1"])
+				assert.Equal(t, "value2", secrets["test-secret-c"]["key2"])
+				assert.Equal(t, "value1", secrets["test-secret-d"]["key1"])
+				assert.Equal(t, "value2", secrets["test-secret-d"]["key2"])
 			},
 		},
 		{

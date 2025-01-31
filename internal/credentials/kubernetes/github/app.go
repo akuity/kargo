@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"regexp"
 	"strconv"
 	"time"
 
@@ -23,6 +24,8 @@ const (
 
 	accessTokenUsername = "kargo"
 )
+
+var base64Regex = regexp.MustCompile(`^[a-zA-Z0-9+/]*={0,2}$`)
 
 type appCredentialHelper struct {
 	tokenCache *cache.Cache
@@ -137,16 +140,9 @@ func (a *appCredentialHelper) getAccessToken(
 	installationID int64,
 	encodedPrivateKey string,
 ) (string, error) {
-	decodedKey, err := base64.StdEncoding.DecodeString(encodedPrivateKey)
+	decodedKey, err := decodeKey(encodedPrivateKey)
 	if err != nil {
-		if corruptInputErr := new(base64.CorruptInputError); !errors.As(err, &corruptInputErr) {
-			return "", fmt.Errorf("error decoding private key: %w", err)
-		}
-
-		// If the key is not base64 encoded, it may be a raw key. Try using it
-		// as-is. We do this because initially, we required the PEM-encoded key
-		// to be base64 encoded (for reasons unknown today).
-		decodedKey = []byte(encodedPrivateKey)
+		return "", err
 	}
 	appTokenSource, err := githubauth.NewApplicationTokenSource(appID, decodedKey)
 	if err != nil {
@@ -158,4 +154,29 @@ func (a *appCredentialHelper) getAccessToken(
 		return "", fmt.Errorf("error getting installation access token: %w", err)
 	}
 	return token.AccessToken, nil
+}
+
+// decodeKey attempts to base64 decode a key. If successful, it returns the
+// result. If it fails, it attempts to infer whether the input was simply NOT
+// base64 encoded or whether it appears to have been base64 encoded but
+// corrupted -- due perhaps to a copy/paste error. This inference determines
+// whether to return the input as is or surface the decoding error. All other
+// errors are surfaced as is. This function is necessary because we initially
+// required the PEM-encoded key to be base64 encoded (for reasons unknown today)
+// and then we later dropped that requirement.
+func decodeKey(key string) ([]byte, error) {
+	decodedKey, err := base64.StdEncoding.DecodeString(key)
+	if err != nil {
+		if !errors.As(err, new(base64.CorruptInputError)) {
+			return nil, fmt.Errorf("error decoding private key: %w", err)
+		}
+		if base64Regex.MatchString(key) {
+			return nil, fmt.Errorf(
+				"probable corrupt base64 encoding of private key; base64 encoding "+
+					"this key is no longer required and is discouraged: %w", err,
+			)
+		}
+		return []byte(key), nil
+	}
+	return decodedKey, nil
 }

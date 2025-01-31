@@ -2,6 +2,8 @@ name: CI
 
 on:
   pull_request:
+    branches-ignore:
+    - newdocs
   merge_group:
   push:
     branches:
@@ -15,7 +17,7 @@ jobs:
   test-unit:
     runs-on: ubuntu-latest
     container:
-      image: golang:1.23.4-bookworm
+      image: golang:1.23.5-bookworm
     steps:
     # Install Git from "trixie" repository to get a more recent version than
     # the one available in "stable". This can be removed once the version in
@@ -40,7 +42,7 @@ jobs:
         grep -v .pb.go coverage.txt | grep -v zz_generated | grep -v service.connect.go > coverage.tmp
         mv coverage.tmp coverage.txt
     - name: Upload coverage reports
-      uses: codecov/codecov-action@1e68e06f1dbfde0e4cefc87efeba9e4643565303 # v5.1.2
+      uses: codecov/codecov-action@13ce06bfc6bbe3ecf90edbbf1bc32fe5978ca1d3 # v5.3.1
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
   
@@ -62,7 +64,7 @@ jobs:
     - name: Install nodejs
       uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
       with:
-        node-version: "22.8.0"
+        node-version: "22.13.1"
         cache: "pnpm"
         cache-dependency-path: "**/pnpm-lock.yaml"
     - name: Run typecheck
@@ -75,7 +77,7 @@ jobs:
       checks: write # Used to create checks (linting comments) on PRs
     runs-on: ubuntu-latest
     container:
-      image: golang:1.23.4-bookworm
+      image: golang:1.23.5-bookworm
     steps:
     - name: Checkout code
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -100,7 +102,7 @@ jobs:
   lint-charts:
     runs-on: ubuntu-latest
     container:
-      image: golang:1.23.4-bookworm
+      image: golang:1.23.5-bookworm
     steps:
     - name: Checkout code
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -124,7 +126,7 @@ jobs:
       checks: write # Used to create checks (linting comments) on PRs
     runs-on: ubuntu-latest
     container:
-      image: golang:1.23.4-bookworm
+      image: golang:1.23.5-bookworm
     steps:
     - name: Checkout code
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -147,7 +149,7 @@ jobs:
   check-codegen:
     runs-on: ubuntu-latest
     container:
-      image: golang:1.23.4-bookworm
+      image: golang:1.23.5-bookworm
     steps:
     - name: Checkout code
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -160,7 +162,7 @@ jobs:
     - name: Install nodejs
       uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
       with:
-        node-version: "22.8.0"
+        node-version: "22.13.1"
         cache: "pnpm"
         cache-dependency-path: "**/pnpm-lock.yaml"
     - name: Install nodejs dependencies
@@ -197,7 +199,7 @@ jobs:
         - 5000:5000
     steps:
     - name: Set up QEMU
-      uses: docker/setup-qemu-action@49b3bc8e6bdd4a60e6116a5414239cba5943d3cf # v3.2.0
+      uses: docker/setup-qemu-action@53851d14592bedcffcf25ea515637cff71ef929a # v3.3.0
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@6524bf65af31da8d45b59e8c27de4bd072b392f5 # v3.8.0
       with:
@@ -223,7 +225,7 @@ jobs:
     needs: [test-unit, lint-go, lint-charts, lint-proto, lint-and-typecheck-ui, check-codegen]
     runs-on: ubuntu-latest
     container:
-      image: golang:1.23.4-bookworm
+      image: golang:1.23.5-bookworm
     steps:
     - name: Checkout code
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2

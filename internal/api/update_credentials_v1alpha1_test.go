@@ -11,7 +11,7 @@ import (
 	libCreds "github.com/akuity/kargo/internal/credentials"
 )
 
-func TestApplyCredentialsUpdateToSecret(t *testing.T) {
+func TestApplyCredentialsUpdateToK8sSecret(t *testing.T) {
 	baseSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: map[string]string{
@@ -29,7 +29,7 @@ func TestApplyCredentialsUpdateToSecret(t *testing.T) {
 		expectedSecret := baseSecret.DeepCopy()
 		expectedSecret.Data[libCreds.FieldRepoURL] = []byte("new-fake-url")
 		secret := baseSecret.DeepCopy()
-		applyCredentialsUpdateToSecret(
+		applyCredentialsUpdateToK8sSecret(
 			secret,
 			credentialsUpdate{
 				repoURL: "new-fake-url",
@@ -43,7 +43,7 @@ func TestApplyCredentialsUpdateToSecret(t *testing.T) {
 		expectedSecret.Data[libCreds.FieldRepoURL] = []byte("new-fake-url")
 		expectedSecret.Data[libCreds.FieldRepoURLIsRegex] = []byte("true")
 		secret := baseSecret.DeepCopy()
-		applyCredentialsUpdateToSecret(
+		applyCredentialsUpdateToK8sSecret(
 			secret,
 			credentialsUpdate{
 				repoURL:        "new-fake-url",
@@ -57,7 +57,7 @@ func TestApplyCredentialsUpdateToSecret(t *testing.T) {
 		expectedSecret := baseSecret.DeepCopy()
 		expectedSecret.Data["username"] = []byte("new-fake-username")
 		secret := baseSecret.DeepCopy()
-		applyCredentialsUpdateToSecret(
+		applyCredentialsUpdateToK8sSecret(
 			secret,
 			credentialsUpdate{
 				username: "new-fake-username",
@@ -70,7 +70,7 @@ func TestApplyCredentialsUpdateToSecret(t *testing.T) {
 		expectedSecret := baseSecret.DeepCopy()
 		expectedSecret.Data["password"] = []byte("new-fake-password")
 		secret := baseSecret.DeepCopy()
-		applyCredentialsUpdateToSecret(
+		applyCredentialsUpdateToK8sSecret(
 			secret,
 			credentialsUpdate{
 				password: "new-fake-password",
@@ -85,7 +85,7 @@ func TestApplyCredentialsUpdateToSecret(t *testing.T) {
 			kargoapi.AnnotationKeyDescription: "new description",
 		}
 		secret := baseSecret.DeepCopy()
-		applyCredentialsUpdateToSecret(
+		applyCredentialsUpdateToK8sSecret(
 			secret,
 			credentialsUpdate{
 				description: "new description",

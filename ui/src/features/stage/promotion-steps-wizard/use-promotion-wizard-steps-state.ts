@@ -78,7 +78,8 @@ const stateToYAML = (state: RunnerWithConfiguration[]): string => {
       uses: step.identifier,
       // @ts-expect-error this will be object but its hard to convey in types after migration of connectrpc to v2
       config: step.state,
-      as: step.as || ''
+      as: step.as || '',
+      vars: []
     });
   }
 

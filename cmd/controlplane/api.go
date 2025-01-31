@@ -81,17 +81,28 @@ func (o *apiOptions) run(ctx context.Context) error {
 		return fmt.Errorf("error creating Kubernetes client for Kargo API server: %w", err)
 	}
 
-	switch {
-	case !serverCfg.RolloutsIntegrationEnabled:
-		o.Logger.Info("Argo Rollouts integration is disabled")
-	case !argoRolloutsExists(ctx, restCfg):
-		o.Logger.Info(
-			"Argo Rollouts integration was enabled, but no Argo Rollouts " +
-				"CRDs were found. Proceeding without Argo Rollouts integration.",
-		)
-		serverCfg.RolloutsIntegrationEnabled = false
-	default:
-		o.Logger.Info("Argo Rollouts integration is enabled")
+	if serverCfg.RolloutsIntegrationEnabled {
+		var exists bool
+		if exists, err = argoRolloutsExists(ctx, restCfg); !exists || err != nil {
+			// If we are unable to determine if Argo Rollouts is installed, we
+			// will return an error and fail to start the server. Note this
+			// will only happen if we get an inconclusive response from the API
+			// server (e.g. due to network issues), and not if Argo Rollouts is
+			// not installed.
+			if err != nil {
+				return fmt.Errorf("unable to determine if Argo Rollouts is installed: %w", err)
+			}
+
+			o.Logger.Info(
+				"Argo Rollouts integration was enabled, but no Argo Rollouts " +
+					"CRDs were found. Proceeding without Argo Rollouts integration.",
+			)
+			serverCfg.RolloutsIntegrationEnabled = false
+		} else {
+			o.Logger.Debug("Argo Rollouts integration is enabled")
+		}
+	} else {
+		o.Logger.Debug("Argo Rollouts integration is disabled")
 	}
 
 	if serverCfg.AdminConfig != nil {

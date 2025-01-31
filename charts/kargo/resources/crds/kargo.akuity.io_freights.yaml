@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.16.5
+    controller-gen.kubebuilder.io/version: v0.17.1
   name: freights.kargo.akuity.io
 spec:
   group: kargo.akuity.io
@@ -160,7 +160,7 @@ spec:
               name:
                 description: |-
                   Name is the name of the resource of the kind indicated by the Kind field
-                  from which Freight may originated.
+                  from which Freight may originate.
                 type: string
             required:
             - kind
@@ -187,11 +187,34 @@ spec:
                   might wish to promote a piece of Freight to a given Stage without
                   transiting the entire pipeline.
                 type: object
+              currentlyIn:
+                additionalProperties:
+                  description: CurrentStage reflects a Stage's current use of Freight.
+                  properties:
+                    since:
+                      description: |-
+                        Since is the time at which the Stage most recently started using the
+                        Freight. This can be used to calculate how long the Freight has been in use
+                        by the Stage.
+                      format: date-time
+                      type: string
+                  type: object
+                description: CurrentlyIn describes the Stages in which this Freight
+                  is currently in use.
+                type: object
               verifiedIn:
                 additionalProperties:
                   description: VerifiedStage describes a Stage in which Freight has
                     been verified.
                   properties:
+                    longestSoak:
+                      description: |-
+                        LongestCompletedSoak represents the longest definite time interval wherein
+                        the Freight was in CONTINUOUS use by the Stage. This value is updated as
+                        Freight EXITS the Stage. If the Freight is currently in use by the Stage,
+                        the time elapsed since the Freight ENTERED the Stage is its current soak
+                        time, which may exceed the value of this field.
+                      type: string
                     verifiedAt:
                       description: VerifiedAt is the time at which the Freight was
                         verified in the Stage.

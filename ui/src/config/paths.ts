@@ -2,7 +2,7 @@ export const paths = {
   home: '/',
   projects: '/',
   project: '/project/:name',
-  projectCredentials: '/project/:name/credentials',
+  projectCredentials: '/project/:name/secrets',
   projectAnalysisTemplates: '/project/:name/analysis-templates',
   projectEvents: '/project/:name/events',
   projectRoles: '/project/:name/roles',

@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"helm.sh/helm/v3/pkg/chart"
+	"helm.sh/helm/v3/pkg/helmpath"
 	helmregistry "helm.sh/helm/v3/pkg/registry"
 	"helm.sh/helm/v3/pkg/repo"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -263,6 +264,10 @@ func Test_helmChartUpdater_runPromotionStep(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			// Set up a fake Helm cache directory to ensure it is not used
+			h := t.TempDir()
+			t.Setenv(helmpath.CacheHomeEnvVar, h)
+
 			scheme := runtime.NewScheme()
 			require.NoError(t, kargoapi.AddToScheme(scheme))
 
@@ -300,6 +305,9 @@ func Test_helmChartUpdater_runPromotionStep(t *testing.T) {
 
 			result, err := runner.runPromotionStep(context.Background(), stepCtx, tt.cfg)
 			tt.assertions(t, stepCtx.WorkDir, result, err)
+
+			// Assert that the Helm cache directory was not used
+			assert.NoDirExistsf(t, helmpath.CachePath("repository"), "Helm home directory was used")
 		})
 	}
 }
@@ -896,7 +904,7 @@ func Test_helmChartUpdater_validateFileDependency(t *testing.T) {
 	}
 }
 
-func Test_helmChartUpdater_loadDependencyCredentials(t *testing.T) {
+func Test_helmChartUpdater_setupDependencyRepositories(t *testing.T) {
 	tests := []struct {
 		name              string
 		credentialsDB     credentials.Database
@@ -907,7 +915,7 @@ func Test_helmChartUpdater_loadDependencyCredentials(t *testing.T) {
 		assertions        func(*testing.T, string, string, *repo.File, error)
 	}{
 		{
-			name: "HTTP credentials",
+			name: "HTTPS repository with credentials",
 			credentialsDB: &credentials.FakeDB{
 				GetFn: func(context.Context, string, credentials.Type, string) (credentials.Credentials, bool, error) {
 					return credentials.Credentials{
@@ -934,6 +942,87 @@ func Test_helmChartUpdater_loadDependencyCredentials(t *testing.T) {
 				assert.Equal(t, "https://charts.example.com", repositoryFile.Repositories[0].URL)
 				assert.Equal(t, "username", repositoryFile.Repositories[0].Username)
 				assert.Equal(t, "password", repositoryFile.Repositories[0].Password)
+			},
+		},
+		{
+			name: "HTTP repository without credentials",
+			credentialsDB: &credentials.FakeDB{
+				GetFn: func(context.Context, string, credentials.Type, string) (credentials.Credentials, bool, error) {
+					return credentials.Credentials{
+						Username: "username",
+						Password: "password",
+					}, true, nil
+				},
+			},
+			repositoryFile: repo.NewFile(),
+			newRegistryClient: func(*testing.T) (string, *helmregistry.Client) {
+				return "", nil
+			},
+			buildDependencies: func(string) []chartDependency {
+				return []chartDependency{
+					{
+						Name:       "dep1",
+						Repository: "http://charts.example.com",
+					},
+				}
+			},
+			assertions: func(t *testing.T, _, _ string, repositoryFile *repo.File, err error) {
+				require.NoError(t, err)
+				require.Len(t, repositoryFile.Repositories, 1)
+				assert.Equal(t, "http://charts.example.com", repositoryFile.Repositories[0].URL)
+				assert.Empty(t, repositoryFile.Repositories[0].Username)
+				assert.Empty(t, repositoryFile.Repositories[0].Password)
+			},
+		},
+		{
+			name: "mixed HTTP and HTTPS repositories",
+			credentialsDB: &credentials.FakeDB{
+				GetFn: func(context.Context, string, credentials.Type, string) (credentials.Credentials, bool, error) {
+					return credentials.Credentials{
+						Username: "username",
+						Password: "password",
+					}, true, nil
+				},
+			},
+			repositoryFile: repo.NewFile(),
+			newRegistryClient: func(*testing.T) (string, *helmregistry.Client) {
+				return "", nil
+			},
+			buildDependencies: func(string) []chartDependency {
+				return []chartDependency{
+					{
+						Name:       "dep1",
+						Repository: "https://charts.example.com",
+					},
+					{
+						Name:       "dep2",
+						Repository: "http://charts.example.com",
+					},
+				}
+			},
+			assertions: func(t *testing.T, _, _ string, repositoryFile *repo.File, err error) {
+				require.NoError(t, err)
+				require.Len(t, repositoryFile.Repositories, 2)
+
+				// Find HTTPS repository
+				var httpsRepo, httpRepo *repo.Entry
+				for _, r := range repositoryFile.Repositories {
+					if strings.HasPrefix(r.URL, "https://") {
+						httpsRepo = r
+					} else if strings.HasPrefix(r.URL, "http://") {
+						httpRepo = r
+					}
+				}
+
+				require.NotNil(t, httpsRepo)
+				assert.Equal(t, "https://charts.example.com", httpsRepo.URL)
+				assert.Equal(t, "username", httpsRepo.Username)
+				assert.Equal(t, "password", httpsRepo.Password)
+
+				require.NotNil(t, httpRepo)
+				assert.Equal(t, "http://charts.example.com", httpRepo.URL)
+				assert.Empty(t, httpRepo.Username)
+				assert.Empty(t, httpRepo.Password)
 			},
 		},
 		{
@@ -968,14 +1057,13 @@ func Test_helmChartUpdater_loadDependencyCredentials(t *testing.T) {
 			},
 			assertions: func(t *testing.T, home, registryURL string, _ *repo.File, err error) {
 				require.NoError(t, err)
-
 				require.FileExists(t, filepath.Join(home, ".docker", "config.json"))
 				b, _ := os.ReadFile(filepath.Join(home, ".docker", "config.json"))
 				assert.Contains(t, string(b), registryURL)
 			},
 		},
 		{
-			name: "multiple dependencies",
+			name: "multiple HTTPS repositories",
 			credentialsDB: &credentials.FakeDB{
 				GetFn: func(context.Context, string, credentials.Type, string) (credentials.Credentials, bool, error) {
 					return credentials.Credentials{
@@ -1035,12 +1123,13 @@ func Test_helmChartUpdater_loadDependencyCredentials(t *testing.T) {
 			},
 		},
 		{
-			name: "unauthenticated repository",
+			name: "unauthenticated HTTPS repository",
 			credentialsDB: &credentials.FakeDB{
 				GetFn: func(context.Context, string, credentials.Type, string) (credentials.Credentials, bool, error) {
 					return credentials.Credentials{}, false, nil
 				},
 			},
+			repositoryFile: repo.NewFile(),
 			buildDependencies: func(string) []chartDependency {
 				return []chartDependency{
 					{
@@ -1052,8 +1141,30 @@ func Test_helmChartUpdater_loadDependencyCredentials(t *testing.T) {
 			newRegistryClient: func(*testing.T) (string, *helmregistry.Client) {
 				return "", nil
 			},
-			assertions: func(t *testing.T, _, _ string, _ *repo.File, err error) {
+			assertions: func(t *testing.T, _, _ string, repositoryFile *repo.File, err error) {
 				require.NoError(t, err)
+				require.Len(t, repositoryFile.Repositories, 1)
+				assert.Equal(t, "https://charts.example.com", repositoryFile.Repositories[0].URL)
+			},
+		},
+		{
+			name:           "file repository",
+			credentialsDB:  &credentials.FakeDB{},
+			repositoryFile: repo.NewFile(),
+			buildDependencies: func(string) []chartDependency {
+				return []chartDependency{
+					{
+						Name:       "dep1",
+						Repository: "file:///path/to/charts",
+					},
+				}
+			},
+			newRegistryClient: func(*testing.T) (string, *helmregistry.Client) {
+				return "", nil
+			},
+			assertions: func(t *testing.T, _, _ string, repositoryFile *repo.File, err error) {
+				require.NoError(t, err)
+				assert.Empty(t, repositoryFile.Repositories)
 			},
 		},
 	}
@@ -1071,7 +1182,7 @@ func Test_helmChartUpdater_loadDependencyCredentials(t *testing.T) {
 
 			dependencies := tt.buildDependencies(registryURL)
 
-			err := runner.loadDependencyCredentials(
+			err := runner.setupDependencyRepositories(
 				context.Background(),
 				tt.credentialsDB,
 				registryClient,

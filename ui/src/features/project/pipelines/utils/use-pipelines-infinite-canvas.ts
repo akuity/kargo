@@ -38,9 +38,9 @@ const stageNodeClassName = '__stage_node__';
 
 type pipelineInfiniteCanvasHook = {
   refs: {
-    movingObjectsRef: RefObject<HTMLDivElement>;
-    zoomRef: RefObject<HTMLDivElement>;
-    pipelinesConfigRef: RefObject<HTMLDivElement>;
+    movingObjectsRef: RefObject<HTMLDivElement | null>;
+    zoomRef: RefObject<HTMLDivElement | null>;
+    pipelinesConfigRef: RefObject<HTMLDivElement | null>;
   };
   moveSpeed?: number; // px - default 2.5
   zoomSpeed?: number; // % - default 5
@@ -50,7 +50,7 @@ type pipelineInfiniteCanvasHook = {
 };
 
 export const usePipelinesInfiniteCanvas = (conf: pipelineInfiniteCanvasHook) => {
-  const cleanupFunction = useRef<() => void>();
+  const cleanupFunction = useRef<() => void>(() => {});
 
   const moveSpeed = conf?.moveSpeed || 2.5;
   const zoomSpeed = conf?.zoomSpeed || 5;

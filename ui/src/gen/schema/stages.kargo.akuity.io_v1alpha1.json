@@ -52,16 +52,66 @@
                         },
                         "type": "object"
                       },
+                      "task": {
+                        "description": "Task is a reference to a PromotionTask that should be inflated into a\nPromotion when it is built from a PromotionTemplate.",
+                        "properties": {
+                          "kind": {
+                            "description": "Kind is the type of the PromotionTask. Can be either PromotionTask or\nClusterPromotionTask, default is PromotionTask.",
+                            "enum": [
+                              "PromotionTask",
+                              "ClusterPromotionTask"
+                            ],
+                            "type": "string"
+                          },
+                          "name": {
+                            "description": "Name is the name of the (Cluster)PromotionTask.",
+                            "maxLength": 253,
+                            "minLength": 1,
+                            "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "name"
+                        ],
+                        "type": "object"
+                      },
                       "uses": {
                         "description": "Uses identifies a runner that can execute this step.",
                         "minLength": 1,
                         "type": "string"
+                      },
+                      "vars": {
+                        "description": "Vars is a list of variables that can be referenced by expressions in\nthe step's Config. The values override the values specified in the\nPromotionSpec.",
+                        "items": {
+                          "description": "PromotionVariable describes a single variable that may be referenced by\nexpressions in promotion steps.",
+                          "properties": {
+                            "name": {
+                              "description": "Name is the name of the variable.",
+                              "minLength": 1,
+                              "pattern": "^[a-zA-Z_]\\w*$",
+                              "type": "string"
+                            },
+                            "value": {
+                              "description": "Value is the value of the variable. It is allowed to utilize expressions\nin the value.\nSee https://docs.kargo.io/references/expression-language for details.",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "name"
+                          ],
+                          "type": "object"
+                        },
+                        "type": "array"
                       }
                     },
-                    "required": [
-                      "uses"
-                    ],
-                    "type": "object"
+                    "type": "object",
+                    "x-kubernetes-validations": [
+                      {
+                        "message": "PromotionTemplate step must have exactly one of uses or task set",
+                        "rule": "(has(self.uses) ? !has(self.task) : has(self.task))"
+                      }
+                    ]
                   },
                   "minItems": 1,
                   "type": "array"
@@ -83,8 +133,7 @@
                       }
                     },
                     "required": [
-                      "name",
-                      "value"
+                      "name"
                     ],
                     "type": "object"
                   },
@@ -115,7 +164,7 @@
                     "type": "string"
                   },
                   "name": {
-                    "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originated.",
+                    "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originate.",
                     "type": "string"
                   }
                 },
@@ -131,6 +180,11 @@
                   "direct": {
                     "description": "Direct indicates the requested Freight may be obtained directly from the\nWarehouse from which it originated. If this field's value is false, then\nthe value of the Stages field must be non-empty. i.e. Between the two\nfields, at least one source must be specified.",
                     "type": "boolean"
+                  },
+                  "requiredSoakTime": {
+                    "description": "RequiredSoakTime specifies a minimum duration for which the requested\nFreight must have continuously occupied (\"soaked in\") in an upstream Stage\nbefore becoming available for promotion to this Stage. This is an optional\nfield. If nil or zero, no soak time is required. Any soak time requirement\nis in ADDITION to the requirement that Freight be verified in an upstream\nStage to become available for promotion to this Stage, although a manual\napproval for promotion to this Stage will supersede any soak time\nrequirement.",
+                    "pattern": "^([0-9]+(\\.[0-9]+)?(s|m|h))+$",
+                    "type": "string"
                   },
                   "stages": {
                     "description": "Stages identifies other \"upstream\" Stages as potential sources of the\nrequested Freight. If this field's value is empty, then the value of the\nDirect field must be true. i.e. Between the two fields, at least on source\nmust be specified.",
@@ -402,7 +456,7 @@
                       "type": "string"
                     },
                     "name": {
-                      "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originated.",
+                      "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originate.",
                       "type": "string"
                     }
                   },
@@ -538,7 +592,7 @@
                           "type": "string"
                         },
                         "name": {
-                          "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originated.",
+                          "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originate.",
                           "type": "string"
                         }
                       },
@@ -663,7 +717,7 @@
                                 "type": "string"
                               },
                               "name": {
-                                "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originated.",
+                                "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originate.",
                                 "type": "string"
                               }
                             },
@@ -944,7 +998,7 @@
                           "type": "string"
                         },
                         "name": {
-                          "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originated.",
+                          "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originate.",
                           "type": "string"
                         }
                       },
@@ -1172,7 +1226,7 @@
                       "type": "string"
                     },
                     "name": {
-                      "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originated.",
+                      "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originate.",
                       "type": "string"
                     }
                   },
@@ -1308,7 +1362,7 @@
                           "type": "string"
                         },
                         "name": {
-                          "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originated.",
+                          "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originate.",
                           "type": "string"
                         }
                       },
@@ -1433,7 +1487,7 @@
                                 "type": "string"
                               },
                               "name": {
-                                "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originated.",
+                                "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originate.",
                                 "type": "string"
                               }
                             },

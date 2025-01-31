@@ -126,7 +126,8 @@ export const CreateStage = ({
         promotionWizardStepsState.state?.map((step) => ({
           uses: step?.identifier,
           as: step?.as || '',
-          config: step?.state as JSON // step.state is type 'object' and it is safe to fake JSON type because it doesn't matter for stageFormToYAML function
+          config: step?.state as JSON, // step.state is type 'object' and it is safe to fake JSON type because it doesn't matter for stageFormToYAML function
+          vars: []
         }))
       );
       setValue('value', unmarshalled);
@@ -177,7 +178,8 @@ export const CreateStage = ({
                 promotionWizardStepsState.state?.map((step) => ({
                   uses: step?.identifier,
                   as: step?.as || '',
-                  config: step?.state as JSON // step.state is type 'object' and it is safe to fake JSON type because it doesn't matter for stageFormToYAML function
+                  config: step?.state as JSON, // step.state is type 'object' and it is safe to fake JSON type because it doesn't matter for stageFormToYAML function
+                  vars: []
                 }))
               )
             );

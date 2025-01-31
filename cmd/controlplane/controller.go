@@ -158,7 +158,8 @@ func (o *controllerOptions) setupKargoManager(
 		)
 	}
 	if stagesReconcilerCfg.RolloutsIntegrationEnabled {
-		if argoRolloutsExists(ctx, restCfg) {
+		var exists bool
+		if exists, err = argoRolloutsExists(ctx, restCfg); exists {
 			o.Logger.Info("Argo Rollouts integration is enabled")
 			if err = rollouts.AddToScheme(scheme); err != nil {
 				return nil, stagesReconcilerCfg, fmt.Errorf(
@@ -167,6 +168,18 @@ func (o *controllerOptions) setupKargoManager(
 				)
 			}
 		} else {
+			// If we are unable to determine if Argo Rollouts is installed, we
+			// will return an error and fail to start the controller. Note this
+			// will only happen if we get an inconclusive response from the API
+			// server (e.g. due to network issues), and not if Argo Rollouts is
+			// not installed.
+			if err != nil {
+				return nil, stagesReconcilerCfg, fmt.Errorf(
+					"unable to determine if Argo Rollouts is installed: %w",
+					err,
+				)
+			}
+
 			// Disable Argo Rollouts integration if the CRDs are not found.
 			stagesReconcilerCfg.RolloutsIntegrationEnabled = false
 			o.Logger.Info(
@@ -241,7 +254,16 @@ func (o *controllerOptions) setupArgoCDManager(ctx context.Context) (manager.Man
 	// There's a chance there is only permission to interact with Argo CD
 	// Application resources in a single namespace, so we will use that
 	// namespace when attempting to determine if Argo CD CRDs are installed.
-	if !argoCDExists(ctx, restCfg, argocdNamespace) {
+	var exists bool
+	if exists, err = argoCDExists(ctx, restCfg, argocdNamespace); !exists || err != nil {
+		// If we are unable to determine if Argo CD is installed, we will
+		// return an error and fail to start the controller. Note this
+		// will only happen if we get an inconclusive response from the API
+		// server (e.g. due to network issues), and not if Argo CD is not
+		// installed.
+		if err != nil {
+			return nil, fmt.Errorf("unable to determine if Argo CD is installed: %w", err)
+		}
 		o.Logger.Info(
 			"Argo CD integration was enabled, but no Argo CD CRDs were found. " +
 				"Proceeding without Argo CD integration.",

@@ -37,6 +37,50 @@ func TestVerificationInfo_HasAnalysisRun(t *testing.T) {
 	}
 }
 
+func TestFreightCollectionIncludes(t *testing.T) {
+	const testFreight = "test-freight"
+	testCases := []struct {
+		name       string
+		collection *FreightCollection
+		expected   bool
+	}{
+		{
+			name:       "collection is nil",
+			collection: nil,
+			expected:   false,
+		},
+		{
+			name:       "collection.Freight is nil",
+			collection: &FreightCollection{},
+			expected:   false,
+		},
+		{
+			name: "collection does not include Freight",
+			collection: &FreightCollection{
+				Freight: map[string]FreightReference{
+					"fake-warehouse":         {Name: "wrong-freight"},
+					"another-fake-warehouse": {Name: "another-wrong-freight"},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "collection includes Freight",
+			collection: &FreightCollection{
+				Freight: map[string]FreightReference{
+					"fake-warehouse": {Name: testFreight},
+				},
+			},
+			expected: true,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			require.Equal(t, testCase.expected, testCase.collection.Includes(testFreight))
+		})
+	}
+}
+
 func TestFreightCollectionUpdateOrPush(t *testing.T) {
 	fooOrigin := FreightOrigin{
 		Kind: FreightOriginKindWarehouse,

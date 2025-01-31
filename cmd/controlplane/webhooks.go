@@ -24,6 +24,7 @@ import (
 	"github.com/akuity/kargo/internal/webhook/freight"
 	"github.com/akuity/kargo/internal/webhook/project"
 	"github.com/akuity/kargo/internal/webhook/promotion"
+	"github.com/akuity/kargo/internal/webhook/promotiontask"
 	"github.com/akuity/kargo/internal/webhook/stage"
 	"github.com/akuity/kargo/internal/webhook/warehouse"
 )
@@ -134,6 +135,9 @@ func (o *webhooksServerOptions) run(ctx context.Context) error {
 	}
 	if err = promotion.SetupWebhookWithManager(ctx, webhookCfg, mgr); err != nil {
 		return fmt.Errorf("setup Promotion webhook: %w", err)
+	}
+	if err = promotiontask.SetupWebhookWithManager(mgr); err != nil {
+		return fmt.Errorf("setup PromotionTask webhook: %w", err)
 	}
 	if err = stage.SetupWebhookWithManager(webhookCfg, mgr); err != nil {
 		return fmt.Errorf("setup Stage webhook: %w", err)

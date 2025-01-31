@@ -162,6 +162,8 @@ func (g *GitCommit) Equals(rhs *GitCommit) bool {
 
 // FreightStatus describes a piece of Freight's most recently observed state.
 type FreightStatus struct {
+	// CurrentlyIn describes the Stages in which this Freight is currently in use.
+	CurrentlyIn map[string]CurrentStage `json:"currentlyIn,omitempty" protobuf:"bytes,3,rep,name=currentlyIn" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	// VerifiedIn describes the Stages in which this Freight has been verified
 	// through promotion and subsequent health checks.
 	VerifiedIn map[string]VerifiedStage `json:"verifiedIn,omitempty" protobuf:"bytes,1,rep,name=verifiedIn" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
@@ -172,10 +174,24 @@ type FreightStatus struct {
 	ApprovedFor map[string]ApprovedStage `json:"approvedFor,omitempty" protobuf:"bytes,2,rep,name=approvedFor" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 }
 
+// CurrentStage reflects a Stage's current use of Freight.
+type CurrentStage struct {
+	// Since is the time at which the Stage most recently started using the
+	// Freight. This can be used to calculate how long the Freight has been in use
+	// by the Stage.
+	Since *metav1.Time `json:"since,omitempty" protobuf:"bytes,1,opt,name=since"`
+}
+
 // VerifiedStage describes a Stage in which Freight has been verified.
 type VerifiedStage struct {
 	// VerifiedAt is the time at which the Freight was verified in the Stage.
 	VerifiedAt *metav1.Time `json:"verifiedAt,omitempty" protobuf:"bytes,1,opt,name=verifiedAt"`
+	// LongestCompletedSoak represents the longest definite time interval wherein
+	// the Freight was in CONTINUOUS use by the Stage. This value is updated as
+	// Freight EXITS the Stage. If the Freight is currently in use by the Stage,
+	// the time elapsed since the Freight ENTERED the Stage is its current soak
+	// time, which may exceed the value of this field.
+	LongestCompletedSoak *metav1.Duration `json:"longestSoak,omitempty" protobuf:"bytes,2,opt,name=longestSoak"`
 }
 
 // ApprovedStage describes a Stage for which Freight has been (manually)

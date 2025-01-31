@@ -99,10 +99,8 @@ type server struct {
 		...client.ListOption,
 	) error
 	getAvailableFreightForStageFn func(
-		ctx context.Context,
-		project string,
-		stage string,
-		requestedFreight []kargoapi.FreightRequest,
+		context.Context,
+		*kargoapi.Stage,
 	) ([]kargoapi.Freight, error)
 	getFreightFromWarehousesFn func(
 		ctx context.Context,
@@ -173,7 +171,7 @@ func NewServer(
 	s.externalValidateProjectFn = validation.ValidateProject
 	s.getStageFn = kargoapi.GetStage
 	s.getFreightByNameOrAliasFn = kargoapi.GetFreightByNameOrAlias
-	s.isFreightAvailableFn = kargoapi.IsFreightAvailable
+	s.isFreightAvailableFn = s.isFreightAvailable
 	s.createPromotionFn = kubeClient.Create
 	s.findDownstreamStagesFn = s.findDownstreamStages
 	s.listFreightFn = kubeClient.List
