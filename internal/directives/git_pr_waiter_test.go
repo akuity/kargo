@@ -37,20 +37,21 @@ func Test_gitPRWaiter_validate(t *testing.T) {
 			},
 		},
 		{
-			name:   "neither prNumber nor prNumberFromStep specified",
-			config: Config{},
+			name: "prNumber not specified",
+			config: Config{
+				"repoURL": "https://github.com/example/repo.git",
+			},
 			expectedProblems: []string{
-				"(root): Must validate one and only one schema",
+				"(root): prNumber is required",
 			},
 		},
 		{
-			name: "both prNumber and prNumberFromStep specified",
+			name: "prNumber is less than 1",
 			config: Config{
-				"prNumber":         42,
-				"prNumberFromStep": "fake-step",
+				"prNumber": 0,
 			},
 			expectedProblems: []string{
-				"(root): Must validate one and only one schema",
+				"prNumber: Must be greater than or equal to 1",
 			},
 		},
 		{

@@ -19,8 +19,7 @@ referenced by the Freight being promoted. This step is commonly followed by a
 | `charts` | `[]string` | Y | The details of dependency (subschart) updates to be applied to the chart's `Chart.yaml` file. |
 | `charts[].repository` | `string` | Y | The URL of the Helm chart repository in the `dependencies` entry whose `version` field is to be updated. Must _exactly_ match the `repository` field of that entry. |
 | `charts[].name` | `string` | Y | The name of the chart in in the `dependencies` entry whose `version` field is to be updated. Must exactly match the `name` field of that entry. |
-| `charts[].fromOrigin` | `object` | N | See [specifying origins](#specifying-origins). <br/><br/>__Deprecated: Use `version` with an expression instead. Will be removed in v1.3.0.__ |
-| `charts[].version` | `string` | N | The version to which the dependency should be updated. If left unspecified, the version specified by a piece of Freight referencing this chart will be used. |
+| `charts[].version` | `string` | Y | The version to which the dependency should be updated. |
 
 ## Output
 
