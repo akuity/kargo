@@ -64,10 +64,10 @@ For further documentation and examples of `AnalysisTemplate`s, refer to the
 
 ## How Verification Works
 
-Upon successful promotion, a Stage enters the `Verifying` phase. Any AnalysisTemplates which were referenced in the Stage are invoked into an resource called an `AnalysisRun`, which represents a single invocation of the templates into a batch-like object. 
+After a successful `Promotion`, a `Stage` enters the `Verifying` phase. Any `AnalysisTemplate`s which were referenced by the `Stage` are are used to spawn a resource called an `AnalysisRun`, which represents a single execution of those templates. 
 
 
-When the `AnalysisRun` completes and is `Successful`, the verification is considered successful and the `Freight` is marked as "verified" in that `Stage`, which makes it available for promotion to any immediate downstream `Stage`s, either automatically (with auto-promotion) or manually (via UI, API, CLI). `Freight` which have not passed verification in a `Stage` are blocked continuing further downstream.
+When the `AnalysisRun` completes and is `Successful`, the verification is considered successful and the `Freight` is marked as "verified" in that `Stage`, which makes it available for promotion to any immediate downstream `Stage`s, either automatically (with auto-promotion) or manually (via UI, API, CLI). `Freight` which have not passed verification in a `Stage` are blocked from continuing further downstream.
 
 
 :::tip
