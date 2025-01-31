@@ -16,6 +16,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	rolloutsapi "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
+	"github.com/akuity/kargo/internal/expressions"
 )
 
 // controllerInstanceIDLabelKey is the key for the Argo Rollouts controller
@@ -76,7 +77,7 @@ func (b *AnalysisRunBuilder) Build(
 		return nil, fmt.Errorf("get analysis templates: %w", err)
 	}
 
-	spec, err := b.buildSpec(templates, cfg.Args)
+	spec, err := b.buildSpec(templates, cfg.Args, opts.ExpressionConfig)
 	if err != nil {
 		return nil, fmt.Errorf("build spec: %w", err)
 	}
@@ -151,13 +152,14 @@ func (b *AnalysisRunBuilder) buildMetadata(
 func (b *AnalysisRunBuilder) buildSpec(
 	templates []*rolloutsapi.AnalysisTemplate,
 	args []kargoapi.AnalysisRunArgument,
+	exprCfg *ArgumentEvaluationConfig,
 ) (rolloutsapi.AnalysisRunSpec, error) {
 	template, err := flattenTemplates(templates)
 	if err != nil {
 		return rolloutsapi.AnalysisRunSpec{}, fmt.Errorf("flatten templates: %w", err)
 	}
 
-	finalArgs, err := b.buildArgs(template, args)
+	finalArgs, err := b.buildArgs(template, args, exprCfg)
 	if err != nil {
 		return rolloutsapi.AnalysisRunSpec{}, fmt.Errorf("build arguments: %w", err)
 	}
@@ -175,14 +177,27 @@ func (b *AnalysisRunBuilder) buildSpec(
 func (b *AnalysisRunBuilder) buildArgs(
 	template *rolloutsapi.AnalysisTemplate,
 	args []kargoapi.AnalysisRunArgument,
+	exprCfg *ArgumentEvaluationConfig,
 ) ([]rolloutsapi.Argument, error) {
+	if exprCfg == nil {
+		exprCfg = &ArgumentEvaluationConfig{}
+	}
+
 	rolloutsArgs := make([]rolloutsapi.Argument, len(args))
 	for i, arg := range args {
 		rolloutsArgs[i] = rolloutsapi.Argument{
 			Name: arg.Name,
 		}
 		if arg.Value != "" {
-			rolloutsArgs[i].Value = &arg.Value
+			value, err := expressions.EvaluateTemplate(arg.Value, exprCfg.Env, exprCfg.Options...)
+			if err != nil {
+				return nil, fmt.Errorf("evaluate argument %q: %w", arg.Name, err)
+			}
+			strValue, ok := value.(string)
+			if !ok {
+				return nil, fmt.Errorf("evaluated argument %q value is not a string but %T", arg.Name, value)
+			}
+			rolloutsArgs[i].Value = &strValue
 		}
 	}
 
