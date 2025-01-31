@@ -33,7 +33,7 @@ spec:
 
 ## Configuring AnalysisTemplates
 
-An [AnalysisTemplate](../60-reference-docs/50-analysis-templates.md) defines instructions for how to perform verification. It might include running a Kubernetes `Job`, querying monitoring tools, interpreting their result, performing HTTP requests, or any combination of these actions. `AnalysisTemplate`s reside in the same `Project` namespace as the `Stage` from which they are referenced. The following simple `AnalysisTemplate` example will create a Kubernetes `Job` that runs an alpine container that sleeps for 10 seconds:
+An [AnalysisTemplate](../60-reference-docs/50-analysis-templates.md) defines instructions for how to perform verification. It might include running a Kubernetes `Job`, querying monitoring tools, interpreting their result, performing HTTP requests, or any combination of these actions. `AnalysisTemplate`s reside in the same project namespace as the `Stage` from which they are referenced. The following simple `AnalysisTemplate` example will create a Kubernetes `Job` that runs an alpine container that sleeps for 10 seconds:
 
 ```yaml
 apiVersion: argoproj.io/v1alpha1
