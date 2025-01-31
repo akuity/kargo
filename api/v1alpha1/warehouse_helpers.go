@@ -10,6 +10,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -86,6 +87,11 @@ type ListWarehouseFreightOptions struct {
 	// This is useful for filtering out Freight whose soak time has not yet
 	// elapsed.
 	VerifiedBefore *metav1.Time
+	// RequireAllVerifiedIn specifies whether ALL of the Stages defined in VerifiedIn
+	// must have verified a given Freight for it to match.
+	// IMPORTANT: This is also applied to Freight matched using the VerifiedBefore
+	// condition.
+	RequireAllVerifiedIn bool
 }
 
 // ListFreight returns a list of all Freight resources that originated from the
@@ -149,6 +155,32 @@ func (w *Warehouse) ListFreight(
 		freight = append(freight, res.Items...)
 	}
 
+	// Filter out identified Freight that has not been verified in all of the
+	// specified VerifiedIn Stages if RequireAllVerifiedIn is true.
+	// Default behavior is to return Freight that is verified in any of the
+	// specified VerifiedIn Stages.
+	if opts.RequireAllVerifiedIn && len(opts.VerifiedIn) > 0 {
+		// Reduce Freight to only items that are verified in ALL upstream
+		// Stages.  Freight that has been approved for a Stage is considered
+		// verified in this check.
+		filtered := make([]Freight, 0, len(freight))
+
+		for _, f := range freight {
+			if opts.ApprovedFor != "" {
+				if f.IsApprovedFor(opts.ApprovedFor) {
+					filtered = append(filtered, f)
+					continue
+				}
+			}
+			if f.IsVerifiedInAll(opts.VerifiedIn) {
+				filtered = append(filtered, f)
+				continue
+			}
+		}
+
+		freight = filtered
+	}
+
 	// Sort and de-dupe
 	slices.SortFunc(freight, func(lhs, rhs Freight) int {
 		return strings.Compare(lhs.Name, rhs.Name)
@@ -164,7 +196,6 @@ func (w *Warehouse) ListFreight(
 
 	// Filter out Freight whose soak time has not yet elapsed
 	filtered := make([]Freight, 0, len(freight))
-freightLoop:
 	for _, f := range freight {
 		if opts.ApprovedFor != "" {
 			if f.IsApprovedFor(opts.ApprovedFor) {
@@ -172,13 +203,34 @@ freightLoop:
 				continue
 			}
 		}
-		for _, ver := range f.Status.VerifiedIn {
+
+		// Track set of Stages that have passed the verification soak time
+		// for the Freight.
+		verifiedStages := sets.New[string]()
+		for stage, ver := range f.Status.VerifiedIn {
 			if verifiedAt := ver.VerifiedAt; verifiedAt != nil {
 				if verifiedAt.Time.Before(opts.VerifiedBefore.Time) {
-					filtered = append(filtered, f)
-					continue freightLoop
+					verifiedStages.Insert(stage)
 				}
 			}
+		}
+
+		// Filter out Freight that has not been verified in all of the specified
+		// VerifiedIn Stages if RequireAllVerifiedIn is true.
+		// Otherwise, include Freight if it has passed the soak time in a single
+		// Stage.
+		if opts.RequireAllVerifiedIn {
+			// If Freight is verified in ALL upstream Stages, then it is
+			// available.
+			if verifiedStages.Equal(sets.New(opts.VerifiedIn...)) {
+				filtered = append(filtered, f)
+			}
+			continue
+		}
+
+		// If Freight is verified in ANY upstream Stage, then it is available.
+		if verifiedStages.Len() > 0 {
+			filtered = append(filtered, f)
 		}
 	}
 	return filtered, nil
