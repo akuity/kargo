@@ -9,10 +9,10 @@ Following a successful `Promotion` (i.e. the _process_ succeeded), it is often d
 
 * Executing containerized integration test scripts
 * Querying monitoring tools (e.g. DataDog, Prometheus) and measuring application KPIs
-* Performing HTTP requests to internal services or systems and interpreting response as success/fail
+* Performing HTTP requests to internal services or systems and interpreting responses as success/fail
 * Running load generation tests
 
-When a `Stage` with verification is upstream from other `Stages`, `Freight` must pass verification there before becoming eligible to be promoted downstream.
+When a `Stage` with verification is upstream from other `Stage`s, `Freight` must pass verification there before becoming eligible to be promoted downstream.
 
 ## Configuring Verification
 
@@ -83,7 +83,7 @@ An `AnalysisRun` is a resource representing a verification attempt for a `Freigh
 
 ![AnalysisRun in Kargo UI](./img/analysisrun.png)
 
-The following might be an example of a `AnalysisRun` spawned from the `integration-test` template:
+The following might be an example of an `AnalysisRun` spawned from the `integration-test` template:
 
 ```yaml
 apiVersion: argoproj.io/v1alpha1
@@ -211,7 +211,7 @@ spec:
 ```
 
 :::note
-Soak Time is not technically a verification feature, but is documented alongside it because both relate to preventing `Freight` from moving downstream until required conditions have been met. These two features may even be used in conjunction with one another.
+Soak time is not technically a verification feature, but is documented alongside it because both relate to preventing `Freight` from moving downstream until required conditions have been met. These two features may even be used in conjunction with one another.
 :::
 
 :::info
@@ -219,4 +219,4 @@ Soak Time is not technically a verification feature, but is documented alongside
 :::
 ## ClusterAnalysisTemplates
 
-Referencing `ClusterAnalysisTemplate`s is currently unsupported but is expected to be in a future release.
+Referencing `ClusterAnalysisTemplate`s is currently unsupported but is expected to be possible in a future release.
