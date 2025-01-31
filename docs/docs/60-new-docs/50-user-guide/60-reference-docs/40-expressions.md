@@ -6,7 +6,7 @@ description: Learn about expression language support in promotion step configura
 # Expression Language Reference
 
 The [steps](15-promotion-templates.md#steps) of a user-defined promotion process
-and arguments in a `Stage`'s
+as well as a `Stage`'s
 [verification arguments](../20-how-to-guides/16-verification.md#arguments-and-metadata)
 may take advantage of expressions in their configuration.
 
