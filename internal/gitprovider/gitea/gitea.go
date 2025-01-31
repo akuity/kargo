@@ -2,7 +2,9 @@ package gitea
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
+	"net/http"
 	"net/url"
 	"strings"
 
@@ -77,14 +79,31 @@ type provider struct { // nolint: revive
 // NewProvider returns a Gitea-based implementation of gitprovider.Interface.
 func NewProvider(
 	repoURL string,
-	_ *gitprovider.Options,
+	opts *gitprovider.Options,
 ) (gitprovider.Interface, error) {
+	if opts == nil {
+		opts = &gitprovider.Options{}
+	}
 
 	host, owner, repo, err := parseRepoURL(repoURL)
 	if err != nil {
 		return nil, err
 	}
-	client, err := gitea.NewClient(host)
+
+	var clientOpts []gitea.ClientOption
+	if opts.Token != "" {
+		clientOpts = append(clientOpts, gitea.SetToken(opts.Token))
+	}
+	if opts.InsecureSkipTLSVerify {
+		clientOpts = append(clientOpts, gitea.SetHTTPClient(&http.Client{
+			Transport: &http.Transport{
+				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+			},
+		}))
+	}
+
+	baseURL := "https://" + host
+	client, err := gitea.NewClient(baseURL, clientOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -237,13 +256,15 @@ func (p *provider) ListPullRequests(
 
 func convertGiteaPR(giteaPR gitea.PullRequest) gitprovider.PullRequest {
 	pr := gitprovider.PullRequest{
-		Number:         giteaPR.ID,
-		URL:            giteaPR.URL,
-		Open:           giteaPR.State == gitea.StateOpen,
-		Merged:         giteaPR.HasMerged,
-		MergeCommitSHA: *giteaPR.MergedCommitID,
-		Object:         giteaPR,
-		HeadSHA:        giteaPR.Head.Sha,
+		Number:  giteaPR.Index,
+		URL:     giteaPR.URL,
+		Open:    giteaPR.State == gitea.StateOpen,
+		Merged:  giteaPR.HasMerged,
+		Object:  giteaPR,
+		HeadSHA: giteaPR.Head.Sha,
+	}
+	if giteaPR.MergedCommitID != nil {
+		pr.MergeCommitSHA = *giteaPR.MergedCommitID
 	}
 	if giteaPR.Created != nil {
 		pr.CreatedAt = giteaPR.Created
