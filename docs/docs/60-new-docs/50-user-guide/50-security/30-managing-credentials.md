@@ -107,7 +107,7 @@ _first_ iterates over all appropriately labeled `Secret`s _without_
 `repoIsRegex` set to `true` looking for a `repoURL` value matching the
 repository URL exactly.
 
-Only if no exact match is found does found does it iterate over all
+Only if no exact match is found does it iterate over all
 appropriately labeled `Secret`s with `repoIsRegex` set to `true` looking for a
 regular expression matching the repository URL.
 
