@@ -191,8 +191,8 @@ this section is intended for operators and cloud platform administrators.
 
 ### Amazon Elastic Container Registry (ECR)
 
-This section covers configuring Kargo to authenticate to ECR repositories using
-EKS Pod Identity _or_ IAM Roles for Service Accounts (IRSA).
+Kargo can be configured to authenticate to ECR repositories using EKS Pod
+Identity _or_ IAM Roles for Service Accounts (IRSA).
 
 If Kargo locates no `Secret` resources matching a repository URL and is deployed
 within an EKS cluster, it will attempt to use
@@ -255,7 +255,8 @@ obtain a token that is valid for 12 hours and cached for 10.
 
 ### Google Artifact Registry
 
-This section covers configuring Kargo to authenticate to Google Artifact Registry repositories using Workload Identity Federation.
+Kargo can be configured to authenticate to Google Artifact Registry repositories
+using Workload Identity Federation.
 
 If Kargo locates no `Secret` resources matching a repository URL, and if Kargo
 is deployed within a GKE cluster, it will attempt to use
