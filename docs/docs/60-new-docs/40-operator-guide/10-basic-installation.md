@@ -57,10 +57,16 @@ These instructions were tested with:
 
 ## Installation Steps
 
+### 1. Install Kargo
+
 1. Generate a password and a signing key.
 
-    There are no default values for these two fields, so you _must_ provide your
-    own.
+    :::note
+    
+    There are no default values for *password* and *signing key* fields, so you _must_ provide your
+    own value.
+    
+    :::
 
     Recommended commands for generating a complex password and signing key, and
     for hashing the password as required are:
@@ -75,7 +81,7 @@ These instructions were tested with:
     The above commands will leave you with values assigned to `$hashed_pass` and
     `$signing_key`. These will be used in the next step.
 
-1. Install Kargo with default configuration and your chosen admin account
+2. Install Kargo with default configuration and your chosen admin account
    password:
 
     ```shell
@@ -87,6 +93,46 @@ These instructions were tested with:
       --set api.adminAccount.tokenSigningKey=$signing_key \
       --wait
     ```
+
+    :::info
+    Please take a look at the [**Kargo chart documentation**](https://github.com/akuity/kargo/tree/main/charts/kargo) to know all other options that can be set while installing Kargo.
+    :::
+
+### 2. Download Kargo CLI
+
+Go through the [Kargo CLI Installation documentation](../50-user-guide/20-how-to-guides/05-installing-kargo-cli.md) to install the Kargo CLI.
+
+### 3. Access The Kargo API Server
+
+By default, the Kargo API server is not exposed with an external IP. To access the API server, choose one of the following techniques to expose the Kargo API server:
+
+- ### Service Type Load Balancer
+
+Change the kargo-api service type to `LoadBalancer`:
+
+```shell
+kubectl patch svc kargo-api -n kargo -p '{"spec": {"type": "LoadBalancer"}}'
+```
+
+- ### Port Forwarding
+
+Kubectl port-forwarding can also be used to connect to the API server without exposing the service.
+
+```shell
+kubectl port-forward svc/kargo-api -n kargo 9090:443
+```
+
+The API server can then be accessed using `https://localhost:9090`
+
+### 4. Login Using The CLI
+
+Using the username `admin` and the password generated from Step 1, login to Kargo's IP or hostname:
+
+```shell
+kargo login <KARGO_SERVER> \
+  --admin \
+  --password <password> \
+```
 
 ## Troubleshooting
 

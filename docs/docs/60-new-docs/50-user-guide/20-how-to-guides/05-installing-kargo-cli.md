@@ -50,4 +50,8 @@ To install:
 
 1. Regardless of your chosen download method, complete the installation by
    moving the binary to a location in your file system that is included in the
-   value of your `PATH` environment variable.
+   value of your `PATH` environment variable. For example,
+
+   ```shell
+   sudo mv kargo /usr/local/bin
+   ```
