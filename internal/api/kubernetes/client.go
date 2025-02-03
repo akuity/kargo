@@ -338,6 +338,10 @@ func (c *client) List(
 			key.Namespace = string(n)
 			break
 		}
+		if clOpt, ok := opt.(*libClient.ListOptions); ok {
+			key.Namespace = clOpt.Namespace
+			break
+		}
 	}
 	client, err := c.getAuthorizedClientFn(
 		ctx,
@@ -462,6 +466,10 @@ func (c *client) DeleteAllOf(
 	for _, opt := range opts { // Need to find namespace, if any, from opts
 		if n, ok := opt.(libClient.InNamespace); ok {
 			key.Namespace = string(n)
+			break
+		}
+		if clOpt, ok := opt.(*libClient.DeleteAllOfOptions); ok {
+			key.Namespace = clOpt.Namespace
 			break
 		}
 	}

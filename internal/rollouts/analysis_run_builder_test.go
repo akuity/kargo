@@ -52,6 +52,7 @@ func TestAnalysisRunBuilder_Build(t *testing.T) {
 				},
 				Args: []kargoapi.AnalysisRunArgument{
 					{Name: "arg1", Value: "val1"},
+					{Name: "arg2", Value: "${{ ctx.test }}"},
 				},
 				AnalysisRunMetadata: &kargoapi.AnalysisRunMetadata{
 					Labels: map[string]string{
@@ -74,6 +75,7 @@ func TestAnalysisRunBuilder_Build(t *testing.T) {
 						},
 						Args: []rolloutsapi.Argument{
 							{Name: "arg1"},
+							{Name: "arg2"},
 						},
 					},
 				},
@@ -82,6 +84,13 @@ func TestAnalysisRunBuilder_Build(t *testing.T) {
 				WithNamePrefix("prefix"),
 				WithNameSuffix("suffix"),
 				WithExtraLabels(map[string]string{"extra": "label"}),
+				WithArgumentEvaluationConfig{
+					Env: map[string]any{
+						"ctx": map[string]any{
+							"test": "val2",
+						},
+					},
+				},
 			},
 			assertions: func(t *testing.T, ar *rolloutsapi.AnalysisRun, err error) {
 				require.NoError(t, err)
@@ -97,9 +106,12 @@ func TestAnalysisRunBuilder_Build(t *testing.T) {
 
 				assert.Len(t, ar.Spec.Metrics, 1)
 				assert.Equal(t, "metric1", ar.Spec.Metrics[0].Name)
-				assert.Len(t, ar.Spec.Args, 1)
+				assert.Len(t, ar.Spec.Args, 2)
 				assert.Equal(t, "arg1", ar.Spec.Args[0].Name)
 				assert.Equal(t, "val1", *ar.Spec.Args[0].Value)
+				assert.Equal(t, "arg2", ar.Spec.Args[1].Name)
+				assert.Equal(t, "val2", *ar.Spec.Args[1].Value)
+
 			},
 		},
 		{
@@ -401,6 +413,7 @@ func TestAnalysisRunBuilder_buildSpec(t *testing.T) {
 		name          string
 		templateSpecs []*rolloutsapi.AnalysisTemplateSpec
 		args          []kargoapi.AnalysisRunArgument
+		exprCfg       *ArgumentEvaluationConfig
 		assertions    func(*testing.T, rolloutsapi.AnalysisRunSpec, error)
 	}{
 		{
@@ -433,6 +446,14 @@ func TestAnalysisRunBuilder_buildSpec(t *testing.T) {
 			}},
 			args: []kargoapi.AnalysisRunArgument{
 				{Name: "param1", Value: "value1"},
+				{Name: "param2", Value: "${{ ctx.test }}"},
+			},
+			exprCfg: &ArgumentEvaluationConfig{
+				Env: map[string]any{
+					"ctx": map[string]any{
+						"test": "value1",
+					},
+				},
 			},
 			assertions: func(t *testing.T, spec rolloutsapi.AnalysisRunSpec, err error) {
 				require.NoError(t, err)
@@ -488,7 +509,7 @@ func TestAnalysisRunBuilder_buildSpec(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			builder := &AnalysisRunBuilder{}
-			spec, err := builder.buildSpec(tt.templateSpecs, tt.args)
+			spec, err := builder.buildSpec(tt.templateSpecs, tt.args, tt.exprCfg)
 			tt.assertions(t, spec, err)
 		})
 	}
@@ -499,6 +520,7 @@ func TestAnalysisRunBuilder_buildArgs(t *testing.T) {
 		name       string
 		template   *rolloutsapi.AnalysisTemplate
 		args       []kargoapi.AnalysisRunArgument
+		exprCfg    *ArgumentEvaluationConfig
 		assertions func(*testing.T, []rolloutsapi.Argument, error)
 	}{
 		{
@@ -539,6 +561,31 @@ func TestAnalysisRunBuilder_buildArgs(t *testing.T) {
 			},
 		},
 		{
+			name: "evaluate argument",
+			template: &rolloutsapi.AnalysisTemplate{
+				Spec: rolloutsapi.AnalysisTemplateSpec{
+					Args: []rolloutsapi.Argument{
+						{Name: "param1"},
+					},
+				},
+			},
+			args: []kargoapi.AnalysisRunArgument{
+				{Name: "param1", Value: "${{ ctx.test }}"},
+			},
+			exprCfg: &ArgumentEvaluationConfig{
+				Env: map[string]any{
+					"ctx": map[string]any{
+						"test": "value1",
+					},
+				},
+			},
+			assertions: func(t *testing.T, args []rolloutsapi.Argument, err error) {
+				require.NoError(t, err)
+				assert.Len(t, args, 1)
+				assert.Equal(t, "value1", *args[0].Value)
+			},
+		},
+		{
 			name: "argument conflict",
 			template: &rolloutsapi.AnalysisTemplate{
 				Spec: rolloutsapi.AnalysisTemplateSpec{
@@ -555,12 +602,29 @@ func TestAnalysisRunBuilder_buildArgs(t *testing.T) {
 				assert.Contains(t, err.Error(), "merge arguments")
 			},
 		},
+		{
+			name: "argument evaluation error",
+			template: &rolloutsapi.AnalysisTemplate{
+				Spec: rolloutsapi.AnalysisTemplateSpec{
+					Args: []rolloutsapi.Argument{
+						{Name: "param1"},
+					},
+				},
+			},
+			args: []kargoapi.AnalysisRunArgument{
+				{Name: "param1", Value: "${{ ctx.test }}"},
+			},
+			exprCfg: nil,
+			assertions: func(t *testing.T, _ []rolloutsapi.Argument, err error) {
+				require.ErrorContains(t, err, "evaluate argument \"param1\"")
+			},
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			builder := &AnalysisRunBuilder{}
-			args, err := builder.buildArgs(tt.template, tt.args)
+			args, err := builder.buildArgs(tt.template, tt.args, tt.exprCfg)
 			tt.assertions(t, args, err)
 		})
 	}

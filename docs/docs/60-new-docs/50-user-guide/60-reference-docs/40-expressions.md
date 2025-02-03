@@ -5,19 +5,26 @@ description: Learn about expression language support in promotion step configura
 
 # Expression Language Reference
 
-The [steps](15-promotion-templates.md#steps) of a user-defined promotion process may
-take advantage of expressions in their configuration.
+The [steps](15-promotion-templates.md#steps) of a user-defined promotion process
+as well as a `Stage`'s
+[verification arguments](../20-how-to-guides/16-verification.md#arguments-and-metadata)
+may take advantage of expressions in their configuration.
 
 :::info
-The documentation on this page assumes a general familiarity with the concept of
-Promotion Templates and some knowledge of how a promotion process is defined as a
-sequence of discrete steps.
+The documentation on this page assumes a general familiarity with the concepts
+of Promotion Templates and Analysis Templates, as well as some knowledge of how
+a promotion process is defined as a sequence of discrete steps and how
+verification is defined in a `Stage`.
 
 For more information on Promotion Templates, refer to the
 [Promotion Templates Reference](15-promotion-templates.md).
 
 For detailed coverage of individual promotion steps, refer to the
-[Promotion Steps Reference](./promotion-steps).
+[Promotion Steps Reference](30-promotion-steps/index.md).
+
+For information on Analysis Templates, refer to the
+[Verification Guide](../20-how-to-guides/16-verification.md) and
+[Analysis Templates Reference](50-analysis-templates.md).
 :::
 
 ## Syntax
@@ -25,8 +32,12 @@ For detailed coverage of individual promotion steps, refer to the
 All steps in a user-defined promotion processes (i.e. those described by a
 [Promotion Template](15-promotion-templates.md) and
 [PromotionTasks](20-promotion-tasks.md)) support the use of
-[expr-lang](https://expr-lang.org/) as a means of dynamically resolving values
-in their configuration at promotion time.
+an [Expression Language](https://expr-lang.org) as a means of dynamically resolving
+values in their configuration at promotion time.
+
+In addition, [`Stage` verification arguments](../20-how-to-guides/16-verification.md#arguments-and-metadata)
+may also use expressions to inject dynamic values into the `AnalysisRun` that
+is created from an `AnalysisTemplate`.
 
 All expressions must be enclosed within the `${{` and `}}` delimiters. This is
 not universally true for all applications of expr-lang. Kargo selected these
@@ -53,13 +64,30 @@ provide a comprehensive overview of the language's syntax and capabilities, so
 this reference will continue to focus only on Kargo-specific extensions and
 usage.
 
-## Behavior
+## Structure and Behavior
 
-Kargo will evaluate expressions just-in-time as each step of a promotion process
-is executed. It will _only_ evaluate expressions within _values_ of a
-configuration block and will _not_ evaluate expressions within keys. Expressions
-in values are evaluated recursively, so expressions may be nested any number of
-levels deep within a configuration block.
+### Config Blocks
+
+In promotion steps, expressions appear within configuration blocks that can
+have nested values. Kargo will evaluate expressions just-in-time as each step
+of a promotion process is executed. It will _only_ evaluate expressions within
+_values_ of a configuration block and will _not_ evaluate expressions within
+keys. Expressions in values are evaluated recursively, so expressions may be
+nested any number of levels deep within a configuration block.
+
+```yaml
+config:
+  nested:
+    value: ${{ foo.bar }}
+  other: ${{ baz.qux }}
+```
+
+### Variables
+
+In promotion step and verification arguments, expressions appear in a flat list
+of argument name-value pairs. Each argument has a name and a single value that
+can contain an expression. Unlike configuration blocks, these arguments do not
+support nested values.
 
 ### Validation
 
@@ -107,6 +135,12 @@ config:
 Kargo provides a number of pre-defined variables that are accessible within
 expressions. This section enumerates these variables, their structure, and use.
 
+:::info
+Expect other useful variables to be added in the future.
+:::
+
+### Promotion Variables
+
 | Name | Type | Description |
 |------|------|-------------|
 | `ctx` | `object` | `string` fields `project`, `stage`, and `promotion` provide convenient access to details of a `Promotion`. |
@@ -114,10 +148,6 @@ expressions. This section enumerates these variables, their structure, and use.
 | `secrets` | `object` | A map of maps indexed by the names of all Kubernetes `Secret`s in the `Promotion`'s `Project` and the keys within the `Data` block of each. |
 | `vars` | `object` | A user-defined map of variable names to static values of any type. The map is derived from a `Promotion`'s `spec.promotionTemplate.spec.vars` field. Variable names must observe standard Go variable-naming rules. Variables values may, themselves, be defined using an expression. `vars` (contains previously defined variables) and `ctx` are available to expressions defining the values of variables, however, `outputs` and `secrets` are not. |
 | `task` | `object` | A map containing output from previous steps within the same PromotionTask under the `outputs` field, indexed by step aliases. Only available within `(Cluster)PromotionTask` steps. |
-
-:::info
-Expect other useful variables to be added in the future.
-:::
 
 The following example promotion process clones a repository and checks out
 two branches to different directories, uses Kustomize with source from one
@@ -186,6 +216,12 @@ other `Projects` or `Stages` with few, if any, modifications (other than the
 definition of the static variables).
 :::
 
+### Verification Variables
+
+| Name | Type | Description |
+|------|------|-------------|
+| `ctx` | `object` | `string` fields `project` and `stage` provide convenient access to details of a `Stage`. |
+
 ## Functions
 
 Several functions are built-in to Kargo's expression language. This section
@@ -231,7 +267,8 @@ desired source of an artifact when necessary.
 ### `commitFrom(repoURL, [freightOrigin])`
 
 The `commitFrom()` function returns a corresponding `GitCommit` object from the
-`Promotion`'s `FreightCollection`. It has one required and one optional argument:
+`Promotion` or `Stage` their `FreightCollection`. It has one required and one
+optional argument:
 
 - `repoURL` (Required): The URL of a Git repository.
 - `freightOrigin` (Optional): A `FreightOrigin` object (obtained from
@@ -269,8 +306,8 @@ config:
 ### `imageFrom(repoURL, [freightOrigin])`
 
 The `imageFrom()` function returns a corresponding `Image` object from the
-`Promotion`'s `FreightCollection`. It has one required and one optional
-argument:
+`Promotion` or `Stage` their `FreightCollection`. It has one required and
+one optional argument:
 
 - `repoURL` (Required): The URL of a container image repository.
 - `freightOrigin` (Optional): A `FreightOrigin` object (obtained from
@@ -305,8 +342,8 @@ config:
 ### `chartFrom(repoURL, [chartName], [freightOrigin])`
 
 The `chartFrom()` function returns a corresponding `Chart` object from the
-`Promotion`'s `FreightCollection`. It has one required and two optional
-arguments:
+`Promotion` or `Stage` their `FreightCollection`. It has one required and two
+optional arguments:
 
 - `repoURL` (Required): The URL of a Helm chart repository.
 - `chartName` (Optional): The name of the chart (required for HTTP/S

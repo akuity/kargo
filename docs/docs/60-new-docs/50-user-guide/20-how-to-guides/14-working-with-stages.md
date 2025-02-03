@@ -222,100 +222,31 @@ For complete documentation of all Kargo's built-in promotion steps, refer
 to the [Promotion Steps Reference](../60-reference-docs/30-promotion-steps/index.md).
 :::
 
-### Verifications
+### Verification
 
 The `spec.verification` field is used to describe optional verification
 processes that should be executed after a `Promotion` has successfully deployed
 `Freight` to a `Stage`, and if applicable, after the `Stage` has reached a
-healthy state.
+healthy state. The following example depicts a `Stage` resource that references
+an `AnalysisTemplate` named `integration-test` to validate the `dev` `Stage` after
+any successful promotion:
 
-Verification processes are defined through _references_ to one or more
-[Argo Rollouts `AnalysisTemplate` resources](https://argoproj.github.io/argo-rollouts/features/analysis/)
-that reside in the same `Project`/`Namespace` as the `Stage` resource.
+```yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: dev
+  namespace: guestbook
+spec:
+  # ...
+  verification:
+    analysisTemplates:
+    - name: integration-test
+```
 
 :::info
-Argo Rollouts `AnalysisTemplate` resources (and the `AnalysisRun` resources that
-are spawned from them) were intentionally built to be re-usable in contexts
-other than Argo Rollouts. Re-using this resource type to define verification
-processes means those processes benefit from this rich and battle-tested feature
-of Argo Rollouts.
-:::
-
-The following example depicts a `Stage` resource that references an
-`AnalysisTemplate` named `kargo-demo` to validate the `test` `Stage` after any
-successful `Promotion`:
-
-```yaml
-apiVersion: kargo.akuity.io/v1alpha1
-kind: Stage
-metadata:
-  name: test
-  namespace: kargo-demo
-spec:
-  # ...
-  verification:
-    analysisTemplates:
-    - name: kargo-demo
-```
-
-It is also possible to specify additional labels, annotations, and arguments
-that should be applied to `AnalysisRun` resources spawned from the referenced
-`AnalysisTemplate`:
-
-```yaml
-apiVersion: kargo.akuity.io/v1alpha1
-kind: Stage
-metadata:
-  name: test
-  namespace: kargo-demo
-spec:
-  # ...
-  verification:
-    analysisTemplates:
-    - name: kargo-demo
-    analysisRunMetadata:
-      labels:
-        foo: bar
-      annotations:
-        bat: baz
-    args:
-    - name: foo
-      value: bar
-```
-
-An `AnalysisTemplate` could be as simple as the following, which merely executes
-a Kubernetes `Job` that is defined inline:
-
-```yaml
-apiVersion: argoproj.io/v1alpha1
-kind: AnalysisTemplate
-metadata:
-  name: kargo-demo
-  namespace: kargo-demo
-spec:
-  metrics:
-  - name: test
-    provider:
-      job:
-        metadata:
-        spec:
-          backoffLimit: 1
-          template:
-            spec:
-              containers:
-              - name: test
-                image: alpine:latest
-                command:
-                - sleep
-                - "10"
-              restartPolicy: Never
-```
-
-:::note
-Please consult the
-[relevant sections](https://argoproj.github.io/argo-rollouts/features/analysis/)
-of the Argo Rollouts documentation for comprehensive coverage of the full range
-of `AnalysisTemplate` capabilities.
+For complete documentation of how to perform verification, refer to the
+[Verification Guide](./16-verification.md).
 :::
 
 ### Status
@@ -484,11 +415,40 @@ Users with credentials for and sufficient permissions within the Kargo control p
 
 ### Promoting Freight to a Stage
 
-:::note
-**Maintainers Note**
+<Tabs groupId="promoting">
+<TabItem value="ui" label="Using the UI" default>
 
-Placeholder
-:::
+1. Click on the target icon to the left of the `Stage`:
+
+    ![Promote Freight to a Stage](img/promote-freight-to-a-stage.png)
+
+2. Select the desired `Freight` from the <Hlt>Freight Timeline</Hlt>, and click <Hlt>Yes</Hlt> to promote:
+
+    ![Promote Freight to a Stage](img/promote-freight-to-a-stage-2.png)
+
+</TabItem>
+<TabItem value="cli" label="Using the CLI">
+
+To promote `Freight` to a `Stage` using the CLI, run:
+
+```shell
+kargo promote \
+  --project kargo-demo \
+  --freight f5f87aa23c9e97f43eb83dd63768ee41f5ba3766 \
+  --stage prod
+```
+
+Alternatively, you can reference the `Freight` you wish to promote using its alias:
+
+```shell
+kargo promote \
+  --project kargo-demo \
+  --freight-alias frozen-tauntaun \
+  --stage prod
+```
+
+</TabItem>
+</Tabs>
 
 ### Deleting a Stage
 
@@ -570,7 +530,7 @@ as desired.
 
 <TabItem value="cli" label="Using the CLI">
 
-1. To rerun verification using the CLI run:
+1. To rerun verification using the CLI, run:
 
     ```shell
     kargo verify stage <stage> --project <project> 

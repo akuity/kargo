@@ -78,12 +78,6 @@ NAME                                       ALIAS              AGE
 f5f87aa23c9e97f43eb83dd63768ee41f5ba3766   mortal-dragonfly   35s
 ```
 
-It is also displayed when using `kubectl` to query for `Freight` resources:
-
-```shell
-kubectl get freight --namespace kargo-demo
-```
-
 Sample output:
 
 ```shell
@@ -110,46 +104,42 @@ sometimes wish to override that alias with one of their own choosing. This can
 make it easier to identify a particularly important (or problematic) `Freight`
 resource as it progresses through the `Stage`s of a pipeline.
 
-This is conveniently accomplished via the Kargo CLI:
+To update the `Freight` Alias:
+
+<Tabs groupId="update-alias">
+<TabItem value="ui" label="Using the UI" default>
+
+1. Click the three dots on the `Freight` in the <Hlt>Freight Timeline</Hlt>,
+   then select <Hlt>Change Alias</Hlt>:
+
+   ![update-freight-alias](img/freight-alias.png)
+
+1. Specify a value in the <Hlt>New Alias</Hlt> field and click <Hlt>Submit</Hlt>:
+
+   ![update-freight-alias](img/freight-alias-2.png)
+
+</TabItem>
+<TabItem value="cli" label="Using the CLI">
 
 ```shell
 kargo update freight \
-  --project=kargo-demo \
-  --name=f5f87aa23c9e97f43eb83dd63768ee41f5ba3766 \
-  --new-alias=frozen-tauntaun
+  --project kargo-demo \
+  --name f5f87aa23c9e97f43eb83dd63768ee41f5ba3766 \
+  --new-alias frozen-tauntaun
 ```
 Alternatively, you can reference the `Freight` to which you want to assign a new alias using its existing alias:
 
 ```shell
 kargo update freight \
-  --project=kargo-demo \
-  --old-alias=mortal-dragonfly \
-  --new-alias=frozen-tauntaun
+  --project kargo-demo \
+  --old-alias mortal-dragonfly \
+  --new-alias frozen-tauntaun
 ```
 
-This can also be accomplished via `kubectl` commands `apply`, `edit`, `patch`,
-etc. by updating the `alias` field of the `Freight` resource.
-
-:::info
-The `alias` field is a convenient way to update the `Freight` resource's
-`kargo.akuity.io/alias` label, which causes a webhook to sync the field value
-to the label value. The precedence rules for syncing between the field and
-label values are as follows:
-
-- If the field has a non-empty value, the label will assume the field's value.
-- If the field has an empty value, the field will assume the label's value.
-
-It's worth noting that removing an alias entirely requires clearing both the
-field and label values, but this is expected to be a rare occurrence.
-:::
+</TabItem>
+</Tabs>
 
 ## Manual Approvals
-
-:::note
-**Maintainers Note**
-
-This section references docs that have been moved or not written yet.
-:::
 
 The [Core Concepts](../10-core-concepts/index.md) describes the
 usual process by which `Freight` resources are _verified_ at each `Stage` in a
@@ -164,20 +154,32 @@ arise, in which case it may sometimes be desirable to bypass one or more
 `Stage`s in the pipeline.
 
 To enable this, Kargo provides the ability to manually approve a `Freight`
-resource for promotion to any given `Stage`. This is conveniently accomplished
-via the Kargo CLI:
+resource for promotion to any given `Stage`. To manually approve the `Freight`:
+
+<Tabs groupId="manual-approval">
+<TabItem value="ui" label="Using the UI" default>
+
+1. Click the three dots on the `Freight` in the <Hlt>Freight Timeline</Hlt>,
+   then select <Hlt>Manually Approve</Hlt>:
+
+   ![update-freight-alias](img/freight-approval.png)
+
+1. Select <Hlt>Approve</Hlt> on the `Stage` for which you want to approve promotion of the `Freight`:
+
+   ![update-freight-alias](img/freight-approval-2.png)
+
+</TabItem>
+<TabItem value="cli" label="Using the CLI">
 
 ```shell
 kargo approve \
+  --project kargo-demo \
   --freight f5f87aa23c9e97f43eb83dd63768ee41f5ba3766 \
-  --stage prod \
-  --project kargo-demo
+  --stage prod
 ```
 
-:::note
-Manual approvals cannot be granted via `kubectl` due to technical factors
-preventing `kubectl` from updating `status` subresources of Kargo resources.
-:::
+</TabItem>
+</Tabs>
 
 :::note
 Manually granting approval for a `Freight` resource to be promoted to any given
@@ -193,7 +195,17 @@ reflect that approval.
 The following depicts a `Freight` resource that has been verified in a `test`
 `Stage` through the usual process, but has been manually approved for promotion
 to the `prod` `Stage`. i.e. Any `Stage`s between `test` and `prod` may be
-bypassed.
+bypassed:
+
+<Tabs groupId="freight-status">
+<TabItem value="ui" label="Using the UI" default>
+
+1. Click on the `Freight` in the <Hlt>Freight Timeline</Hlt>:
+
+   ![freight-status](img/freight-status.png)
+
+</TabItem>
+<TabItem value="cli" label="Using the CLI">
 
 ```shell
 kargo get freight \
@@ -213,3 +225,44 @@ kargo get freight \
     }
 ]
 ```
+
+</TabItem>
+</Tabs>
+
+## Promoting Freight to a Stage
+
+<Tabs groupId="promoting">
+<TabItem value="ui" label="Using the UI" default>
+
+1. Click the three dots on the `Freight` in the <Hlt>Freight Timeline</Hlt>,
+   then select <Hlt>Promote</Hlt>:
+
+   ![Promote Freight to a Stage](img/freight-promotion.png)
+
+2. Select the `Stage` and click <Hlt>Promote</Hlt>:
+
+   ![Promote Freight to a Stage](img/freight-promotion-2.png)
+
+</TabItem>
+<TabItem value="cli" label="Using the CLI">
+
+To promote `Freight` to a `Stage` using the CLI, run:
+
+```shell
+kargo promote \
+  --project kargo-demo \
+  --freight f5f87aa23c9e97f43eb83dd63768ee41f5ba3766 \
+  --stage prod
+```
+
+Alternatively, you can reference the `Freight` you wish to promote using its alias:
+
+```shell
+kargo promote \
+  --project kargo-demo \
+  --freight-alias frozen-tauntaun \
+  --stage prod
+```
+
+</TabItem>
+</Tabs>

@@ -312,6 +312,58 @@ the previous section.
           discoveryLimit: 5
     ---
     apiVersion: kargo.akuity.io/v1alpha1
+    kind: PromotionTask
+    metadata:
+      name: demo-promo-process
+      namespace: kargo-demo
+    spec:
+      vars:
+      - name: gitopsRepo
+        value: ${GITOPS_REPO_URL}
+      - name: imageRepo
+        value: public.ecr.aws/nginx/nginx
+      steps:
+      - uses: git-clone
+        config:
+          repoURL: \${{ vars.gitopsRepo }}
+          checkout:
+          - branch: main
+            path: ./src
+          - branch: stage/\${{ ctx.stage }}
+            create: true
+            path: ./out
+      - uses: git-clear
+        config:
+          path: ./out
+      - uses: kustomize-set-image
+        as: update-image
+        config:
+          path: ./src/base
+          images:
+          - image: \${{ vars.imageRepo }}
+            tag: \${{ imageFrom(vars.imageRepo).Tag }}
+      - uses: kustomize-build
+        config:
+          path: ./src/stages/\${{ ctx.stage }}
+          outPath: ./out
+      - uses: git-commit
+        as: commit
+        config:
+          path: ./out
+          messageFromSteps:
+          - update-image
+      - uses: git-push
+        config:
+          path: ./out
+      - uses: argocd-update
+        config:
+          apps:
+          - name: kargo-demo-\${{ ctx.stage }}
+            sources:
+            - repoURL: \${{ vars.gitopsRepo }}
+              desiredRevision: \${{ task.outputs.commit.commit }}
+    ---
+    apiVersion: kargo.akuity.io/v1alpha1
     kind: Stage
     metadata:
       name: test
@@ -325,55 +377,10 @@ the previous section.
           direct: true
       promotionTemplate:
         spec:
-          vars:
-          - name: gitopsRepo
-            value: ${GITOPS_REPO_URL}
-          - name: imageRepo
-            value: public.ecr.aws/nginx/nginx
-          - name: srcPath
-            value: ./src
-          - name: outPath
-            value: ./out
           steps:
-          - uses: git-clone
-            config:
-              repoURL: \${{ vars.gitopsRepo }}
-              checkout:
-              - branch: main
-                path: \${{ vars.srcPath }}
-              - branch: stage/\${{ ctx.stage }}
-                create: true
-                path: \${{ vars.outPath }}
-          - uses: git-clear
-            config:
-              path: \${{ vars.outPath }}
-          - uses: kustomize-set-image
-            as: update-image
-            config:
-              path: \${{ vars.srcPath }}/base
-              images:
-              - image: \${{ vars.imageRepo }}
-                tag: \${{ imageFrom(vars.imageRepo).Tag }}
-          - uses: kustomize-build
-            config:
-              path: \${{ vars.srcPath }}/stages/\${{ ctx.stage }}
-              outPath: \${{ vars.outPath }}/manifests.yaml
-          - uses: git-commit
-            as: commit
-            config:
-              path: \${{ vars.outPath }}
-              messageFromSteps:
-              - update-image
-          - uses: git-push
-            config:
-              path: \${{ vars.outPath }}
-          - uses: argocd-update
-            config:
-              apps:
-              - name: kargo-demo-\${{ ctx.stage }}
-                sources:
-                - repoURL: \${{ vars.gitopsRepo }}
-                  desiredRevision: \${{ outputs.commit.commit }}
+          - task:
+              name: demo-promo-process
+            as: promo-process
     ---
     apiVersion: kargo.akuity.io/v1alpha1
     kind: Stage
@@ -390,55 +397,10 @@ the previous section.
           - test
       promotionTemplate:
         spec:
-          vars:
-          - name: gitopsRepo
-            value: ${GITOPS_REPO_URL}
-          - name: imageRepo
-            value: public.ecr.aws/nginx/nginx
-          - name: srcPath
-            value: ./src
-          - name: outPath
-            value: ./out
           steps:
-          - uses: git-clone
-            config:
-              repoURL: \${{ vars.gitopsRepo }}
-              checkout:
-              - branch: main
-                path: \${{ vars.srcPath }}
-              - branch: stage/\${{ ctx.stage }}
-                create: true
-                path: \${{ vars.outPath }}
-          - uses: git-clear
-            config:
-              path: \${{ vars.outPath }}
-          - uses: kustomize-set-image
-            as: update-image
-            config:
-              path: \${{ vars.srcPath }}/base
-              images:
-              - image: \${{ vars.imageRepo }}
-                tag: \${{ imageFrom(vars.imageRepo).Tag }}
-          - uses: kustomize-build
-            config:
-              path: \${{ vars.srcPath }}/stages/\${{ ctx.stage }}
-              outPath: \${{ vars.outPath }}/manifests.yaml
-          - uses: git-commit
-            as: commit
-            config:
-              path: \${{ vars.outPath }}
-              messageFromSteps:
-              - update-image
-          - uses: git-push
-            config:
-              path: \${{ vars.outPath }}
-          - uses: argocd-update
-            config:
-              apps:
-              - name: kargo-demo-\${{ ctx.stage }}
-                sources:
-                - repoURL: \${{ vars.gitopsRepo }}
-                  desiredRevision: \${{ outputs.commit.commit }}
+          - task:
+              name: demo-promo-process
+            as: promo-process
     ---
     apiVersion: kargo.akuity.io/v1alpha1
     kind: Stage
@@ -455,55 +417,10 @@ the previous section.
           - uat
       promotionTemplate:
         spec:
-          vars:
-          - name: gitopsRepo
-            value: ${GITOPS_REPO_URL}
-          - name: imageRepo
-            value: public.ecr.aws/nginx/nginx
-          - name: srcPath
-            value: ./src
-          - name: outPath
-            value: ./out
           steps:
-          - uses: git-clone
-            config:
-              repoURL: \${{ vars.gitopsRepo }}
-              checkout:
-              - branch: main
-                path: \${{ vars.srcPath }}
-              - branch: stage/\${{ ctx.stage }}
-                create: true
-                path: \${{ vars.outPath }}
-          - uses: git-clear
-            config:
-              path: \${{ vars.outPath }}
-          - uses: kustomize-set-image
-            as: update-image
-            config:
-              path: \${{ vars.srcPath }}/base
-              images:
-              - image: \${{ vars.imageRepo }}
-                tag: \${{ imageFrom(vars.imageRepo).Tag }}
-          - uses: kustomize-build
-            config:
-              path: \${{ vars.srcPath }}/stages/\${{ ctx.stage }}
-              outPath: \${{ vars.outPath }}/manifests.yaml
-          - uses: git-commit
-            as: commit
-            config:
-              path: \${{ vars.outPath }}
-              messageFromSteps:
-              - update-image
-          - uses: git-push
-            config:
-              path: \${{ vars.outPath }}
-          - uses: argocd-update
-            config:
-              apps:
-              - name: kargo-demo-\${{ ctx.stage }}
-                sources:
-                - repoURL: \${{ vars.gitopsRepo }}
-                  desiredRevision: \${{ outputs.commit.commit }}
+          - task:
+              name: demo-promo-process
+            as: promo-process
     EOF
     ```
 
@@ -511,33 +428,14 @@ the previous section.
 
     <TabItem value="kargo-cli" label="Using the Kargo CLI">
 
-    Install the Kargo CLI:
+    Download the Kargo CLI for your operating system and CPU architecture from
+    the [Kargo Dashboard's Downloads page](https://localhost:31444/downloads):
 
-    <Tabs groupId="os">
-    <TabItem value="general" label="Mac, Linux, or WSL" default>
+    ![CLI Tab in Kargo UI](./img/cli-installation.png)
 
-    ```shell
-    arch=$(uname -m)
-    [ "$arch" = "x86_64" ] && arch=amd64
-    curl -L -o kargo https://github.com/akuity/kargo/releases/latest/download/kargo-"$(uname -s | tr '[:upper:]' '[:lower:]')-${arch}"
-    chmod +x kargo
-    ```
-
-    Then move `kargo` to a location in your file system that is included in the
-    value of your `PATH` environment variable.
-
-    </TabItem>
-    <TabItem value="windows" label="Windows Powershell">
-
-    ```shell
-    Invoke-WebRequest -URI https://github.com/akuity/kargo/releases/latest/download/kargo-windows-amd64.exe -OutFile kargo.exe
-    ```
-
-    Then move `kargo.exe` to a location in your file system that is included in the value
-    of your `PATH` environment variable.
-
-    </TabItem>
-    </Tabs>
+    Rename the downloaded binary to `kargo` (or `kargo.exe` for Windows) and
+    move it to a location in your file system that is included in the value of
+    your `PATH` environment variable.
 
     Log in:
 
@@ -583,6 +481,58 @@ the previous section.
           discoveryLimit: 5
     ---
     apiVersion: kargo.akuity.io/v1alpha1
+    kind: PromotionTask
+    metadata:
+      name: promo-process
+      namespace: kargo-demo
+    spec:
+      vars:
+      - name: gitopsRepo
+        value: ${GITOPS_REPO_URL}
+      - name: imageRepo
+        value: public.ecr.aws/nginx/nginx
+      steps:
+      - uses: git-clone
+        config:
+          repoURL: \${{ vars.gitopsRepo }}
+          checkout:
+          - branch: main
+            path: ./src
+          - branch: stage/\${{ ctx.stage }}
+            create: true
+            path: ./out
+      - uses: git-clear
+        config:
+          path: ./out
+      - uses: kustomize-set-image
+        as: update-image
+        config:
+          path: ./src/base
+          images:
+          - image: \${{ vars.imageRepo }}
+            tag: \${{ imageFrom(vars.imageRepo).Tag }}
+      - uses: kustomize-build
+        config:
+          path: ./src/stages/\${{ ctx.stage }}
+          outPath: ./out
+      - uses: git-commit
+        as: commit
+        config:
+          path: ./out
+          messageFromSteps:
+          - update-image
+      - uses: git-push
+        config:
+          path: ./out
+      - uses: argocd-update
+        config:
+          apps:
+          - name: kargo-demo-\${{ ctx.stage }}
+            sources:
+            - repoURL: \${{ vars.gitopsRepo }}
+              desiredRevision: \${{ task.outputs.commit.commit }}
+    ---
+    apiVersion: kargo.akuity.io/v1alpha1
     kind: Stage
     metadata:
       name: test
@@ -596,55 +546,10 @@ the previous section.
           direct: true
       promotionTemplate:
         spec:
-          vars:
-          - name: gitopsRepo
-            value: ${GITOPS_REPO_URL}
-          - name: imageRepo
-            value: public.ecr.aws/nginx/nginx
-          - name: srcPath
-            value: ./src
-          - name: outPath
-            value: ./out
           steps:
-          - uses: git-clone
-            config:
-              repoURL: \${{ vars.gitopsRepo }}
-              checkout:
-              - branch: main
-                path: \${{ vars.srcPath }}
-              - branch: stage/\${{ ctx.stage }}
-                create: true
-                path: \${{ vars.outPath }}
-          - uses: git-clear
-            config:
-              path: \${{ vars.outPath }}
-          - uses: kustomize-set-image
-            as: update-image
-            config:
-              path: \${{ vars.srcPath }}/base
-              images:
-              - image: \${{ vars.imageRepo }}
-                tag: \${{ imageFrom(vars.imageRepo).Tag }}
-          - uses: kustomize-build
-            config:
-              path: \${{ vars.srcPath }}/stages/\${{ ctx.stage }}
-              outPath: \${{ vars.outPath }}/manifests.yaml
-          - uses: git-commit
-            as: commit
-            config:
-              path: \${{ vars.outPath }}
-              messageFromSteps:
-              - update-image
-          - uses: git-push
-            config:
-              path: \${{ vars.outPath }}
-          - uses: argocd-update
-            config:
-              apps:
-              - name: kargo-demo-\${{ ctx.stage }}
-                sources:
-                - repoURL: \${{ vars.gitopsRepo }}
-                  desiredRevision: \${{ outputs.commit.commit }}
+          - task:
+              name: demo-promo-process
+            as: promo-process
     ---
     apiVersion: kargo.akuity.io/v1alpha1
     kind: Stage
@@ -661,55 +566,10 @@ the previous section.
           - test
       promotionTemplate:
         spec:
-          vars:
-          - name: gitopsRepo
-            value: ${GITOPS_REPO_URL}
-          - name: imageRepo
-            value: public.ecr.aws/nginx/nginx
-          - name: srcPath
-            value: ./src
-          - name: outPath
-            value: ./out
           steps:
-          - uses: git-clone
-            config:
-              repoURL: \${{ vars.gitopsRepo }}
-              checkout:
-              - branch: main
-                path: \${{ vars.srcPath }}
-              - branch: stage/\${{ ctx.stage }}
-                create: true
-                path: \${{ vars.outPath }}
-          - uses: git-clear
-            config:
-              path: \${{ vars.outPath }}
-          - uses: kustomize-set-image
-            as: update-image
-            config:
-              path: \${{ vars.srcPath }}/base
-              images:
-              - image: \${{ vars.imageRepo }}
-                tag: \${{ imageFrom(vars.imageRepo).Tag }}
-          - uses: kustomize-build
-            config:
-              path: \${{ vars.srcPath }}/stages/\${{ ctx.stage }}
-              outPath: \${{ vars.outPath }}/manifests.yaml
-          - uses: git-commit
-            as: commit
-            config:
-              path: \${{ vars.outPath }}
-              messageFromSteps:
-              - update-image
-          - uses: git-push
-            config:
-              path: \${{ vars.outPath }}
-          - uses: argocd-update
-            config:
-              apps:
-              - name: kargo-demo-\${{ ctx.stage }}
-                sources:
-                - repoURL: \${{ vars.gitopsRepo }}
-                  desiredRevision: \${{ outputs.commit.commit }}
+          - task:
+              name: demo-promo-process
+            as: promo-process
     ---
     apiVersion: kargo.akuity.io/v1alpha1
     kind: Stage
@@ -726,55 +586,10 @@ the previous section.
           - uat
       promotionTemplate:
         spec:
-          vars:
-          - name: gitopsRepo
-            value: ${GITOPS_REPO_URL}
-          - name: imageRepo
-            value: public.ecr.aws/nginx/nginx
-          - name: srcPath
-            value: ./src
-          - name: outPath
-            value: ./out
           steps:
-          - uses: git-clone
-            config:
-              repoURL: \${{ vars.gitopsRepo }}
-              checkout:
-              - branch: main
-                path: \${{ vars.srcPath }}
-              - branch: stage/\${{ ctx.stage }}
-                create: true
-                path: \${{ vars.outPath }}
-          - uses: git-clear
-            config:
-              path: \${{ vars.outPath }}
-          - uses: kustomize-set-image
-            as: update-image
-            config:
-              path: \${{ vars.srcPath }}/base
-              images:
-              - image: \${{ vars.imageRepo }}
-                tag: \${{ imageFrom(vars.imageRepo).Tag }}
-          - uses: kustomize-build
-            config:
-              path: \${{ vars.srcPath }}/stages/\${{ ctx.stage }}
-              outPath: \${{ vars.outPath }}/manifests.yaml
-          - uses: git-commit
-            as: commit
-            config:
-              path: \${{ vars.outPath }}
-              messageFromSteps:
-              - update-image
-          - uses: git-push
-            config:
-              path: \${{ vars.outPath }}
-          - uses: argocd-update
-            config:
-              apps:
-              - name: kargo-demo-\${{ ctx.stage }}
-                sources:
-                - repoURL: \${{ vars.gitopsRepo }}
-                  desiredRevision: \${{ outputs.commit.commit }}
+          - task:
+              name: demo-promo-process
+            as: promo-process
     EOF
     ```
 
