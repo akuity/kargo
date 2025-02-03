@@ -7,7 +7,7 @@ description: Learn about expression language support in promotion step configura
 
 The [steps](15-promotion-templates.md#steps) of a user-defined promotion process
 as well as a `Stage`'s
-[verification arguments](../20-how-to-guides/16-verification.md#arguments-and-metadata)
+[verification arguments](../20-how-to-guides/60-verification.md#arguments-and-metadata)
 may take advantage of expressions in their configuration.
 
 :::info
@@ -23,7 +23,7 @@ For detailed coverage of individual promotion steps, refer to the
 [Promotion Steps Reference](30-promotion-steps/index.md).
 
 For information on Analysis Templates, refer to the
-[Verification Guide](../20-how-to-guides/16-verification.md) and
+[Verification Guide](../20-how-to-guides/60-verification.md) and
 [Analysis Templates Reference](50-analysis-templates.md).
 :::
 
@@ -35,7 +35,7 @@ All steps in a user-defined promotion processes (i.e. those described by a
 an [Expression Language](https://expr-lang.org) as a means of dynamically resolving
 values in their configuration at promotion time.
 
-In addition, [`Stage` verification arguments](../20-how-to-guides/16-verification.md#arguments-and-metadata)
+In addition, [`Stage` verification arguments](../20-how-to-guides/60-verification.md#arguments-and-metadata)
 may also use expressions to inject dynamic values into the `AnalysisRun` that
 is created from an `AnalysisTemplate`.
 

@@ -96,7 +96,7 @@ from continuing further downstream.
 It is sometimes desired to skip the verification process entirely (e.g. a 
 hotfix needs to be fast-tracked to production). Verification (and the entire
 Pipeline for that matter) can be bypassed by
-[manually approving](./15-working-with-freight.md#manual-approvals) `Freight`
+[manually approving](./50-working-with-freight.md#manual-approvals) `Freight`
 for a specified `Stage`.
 :::
 
@@ -308,7 +308,7 @@ conjunction with one another.
 :::
 
 :::info
-[Manually approving](./15-working-with-freight.md#manual-approvals) `Freight`
+[Manually approving](./50-working-with-freight.md#manual-approvals) `Freight`
 for a `Stage` makes it immediately available to that `Stage` _regardless_ of
 whether any required soak time has elapsed.
 :::
