@@ -4,7 +4,7 @@
     "type": "generated-index",
     "title": "How-to Guides",
     "description": "How-to guides for using Kargo",
-    "slug": "new-docs/user-guide/how-to-guides"
+    "slug": "user-guide/how-to-guides"
   },
   "collapsible": true,
   "collapsed": true

@@ -4,7 +4,6 @@ import styles from './index.module.scss';
 import clsx from 'clsx';
 import { FaRocket, FaTruck, FaTools } from 'react-icons/fa';
 import Link, { NavLinkProps } from '@docusaurus/Link';
-import { Button } from '../Button';
 
 export default function Home(): JSX.Element {
   useEffect(() => {
@@ -26,34 +25,18 @@ export default function Home(): JSX.Element {
 
   return (
       <main className='landing-page'>
-        <header className={styles.header}>
+        {/* <header className={styles.header}>
           <h1 style={{margin: 0}}>Kargo</h1>
           <span>Learn how to use Kargo for GitOps promotions of stages</span>
           <div style={{marginTop: '24px'}}>
-            <Link to='/new-docs/user-guide/core-concepts'>
+            <Link to='/user-guide/core-concepts'>
               <Button>Overview</Button>
             </Link>
-            <Link to='/new-docs/user-guide/examples'>
+            <Link to='/user-guide/examples'>
               <Button btnType='primary' style={{marginLeft: '24px'}}>Learn By Examples</Button>
             </Link>
-            <div style={{
-              marginTop: '24px',
-              padding: '16px',
-              border: '1px solid #ffcc00',
-              backgroundColor: '#fff8e1',
-              borderRadius: '4px',
-              color: '#ff6f00'
-            }}>
-              <p>
-                <FaTools style={{ marginRight: '8px' }} />
-                <strong>We are actively re-writing and re-organizing this documentation.</strong>
-              </p>
-              <p>
-                During this transition, both the old and new, work-in-progress documentation are available.
-              </p>
-            </div>
           </div>
-        </header>
+        </header> */}
         <div className='container'>
           <Section 
             title={<><FaRocket /> Get Started</>}
@@ -63,11 +46,9 @@ export default function Home(): JSX.Element {
                 title: 'Installation',
                 description: (
                   <>
-                    <Link to='/new-docs/operator-guide/basic-installation' className='highlight'>Basic Installation</Link>
+                    <Link to='/operator-guide/basic-installation' className='highlight'>Install with Helm</Link>
                     <br />
-                    <Link to='/new-docs/operator-guide/advanced-installation/advanced-with-helm' className='highlight'>With Helm</Link>
-                    <br />
-                    <Link to='/new-docs/operator-guide/advanced-installation/advanced-with-argocd' className='highlight'>With ArgoCD</Link>
+                    <Link to='/operator-guide/advanced-installation/advanced-with-argocd' className='highlight'>Install with ArgoCD</Link>
                   </>
                 ),
                 headerStyle: {
@@ -75,7 +56,7 @@ export default function Home(): JSX.Element {
                   color: 'white'
                 },
                 link: {
-                  to: '/new-docs/operator-guide/'
+                  to: '/operator-guide/'
                 }
               },
               {
@@ -87,7 +68,7 @@ export default function Home(): JSX.Element {
                   color: 'white'
                 },
                 link: {
-                  to: '/new-docs/user-guide/'
+                  to: '/user-guide/'
                 }
               },
               {
@@ -113,11 +94,11 @@ export default function Home(): JSX.Element {
                 title: 'References',
                 description: (
                   <>
-                    <Link to='/new-docs/user-guide/reference-docs/crds' className='highlight'>CRD Docs</Link>
+                    <Link to='https://doc.crds.dev/github.com/akuity/kargo' className='highlight'>CRD Docs</Link>
                     <br />
-                    <Link to='/new-docs/user-guide/reference-docs/promotion-steps' className='highlight'>Promotion Steps</Link>
+                    <Link to='/user-guide/reference-docs/promotion-steps' className='highlight'>Promotion Steps</Link>
                     <br />
-                    <Link to='/new-docs/user-guide/reference-docs/expressions' className='highlight'>Expression Language</Link>
+                    <Link to='/user-guide/reference-docs/expressions' className='highlight'>Expression Language</Link>
                   </>
                 ),
                 headerStyle: {
@@ -128,7 +109,7 @@ export default function Home(): JSX.Element {
               {
                 id: 'community',
                 title: 'Join Community',
-                description: 'Ask, learn and improve in Akuity Discord community',
+                description: 'Ask, learn, and improve in the Akuity Discord community',
                 headerStyle: {
                   background: '#A9499D',
                   color: 'white'
@@ -141,13 +122,13 @@ export default function Home(): JSX.Element {
               {
                 id: 'contribute',
                 title: 'Contribute',
-                description: 'Want to contribute to Kargo? Read Contributer\'s guide',
+                description: 'Want to contribute to Kargo?',
                 headerStyle: {
                   background: '#6380E1',
                   color: 'white'
                 },
                 link: {
-                  to: '/new-docs/contributor-guide/'
+                  to: '/contributor-guide/'
                 }
               }
             ]}
