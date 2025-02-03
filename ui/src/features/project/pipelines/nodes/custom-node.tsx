@@ -61,7 +61,10 @@ CustomNode.Container = (props: PropsWithChildren<{ stage?: Stage; warehouse?: Wa
             id={freight.origin?.name}
             type='target'
             position={Position.Left}
-            style={{ top: `${50 - howManyStagesDoThisStageSubscribe + idx * EDGE_GAP}%` }}
+            style={{
+              top: `${50 - howManyStagesDoThisStageSubscribe + idx * EDGE_GAP}%`,
+              backgroundColor: 'transparent'
+            }}
           />
         ))}
         <div className={styles.container}>{props.children}</div>
@@ -71,7 +74,10 @@ CustomNode.Container = (props: PropsWithChildren<{ stage?: Stage; warehouse?: Wa
             id={freight.origin?.name}
             type='source'
             position={Position.Right}
-            style={{ top: `${50 - howManyStagesDoThisStageSubscribe + idx * EDGE_GAP}%` }}
+            style={{
+              top: `${50 - howManyStagesDoThisStageSubscribe + idx * EDGE_GAP}%`,
+              backgroundColor: 'transparent'
+            }}
           />
         ))}
       </>
@@ -80,9 +86,23 @@ CustomNode.Container = (props: PropsWithChildren<{ stage?: Stage; warehouse?: Wa
 
   return (
     <>
-      <Handle id={props.warehouse?.metadata?.name || ''} type='target' position={Position.Left} />
+      <Handle
+        id={props.warehouse?.metadata?.name || ''}
+        type='target'
+        position={Position.Left}
+        style={{
+          backgroundColor: 'transparent'
+        }}
+      />
       <div className={styles.container}>{props.children}</div>
-      <Handle id={props.warehouse?.metadata?.name || ''} type='source' position={Position.Right} />
+      <Handle
+        id={props.warehouse?.metadata?.name || ''}
+        type='source'
+        position={Position.Right}
+        style={{
+          backgroundColor: 'transparent'
+        }}
+      />
     </>
   );
 };
