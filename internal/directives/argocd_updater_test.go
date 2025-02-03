@@ -122,21 +122,6 @@ func Test_argoCDUpdater_validate(t *testing.T) {
 			},
 		},
 		{
-			name: "desiredCommitFromStep and desiredRevision are both specified",
-			// These are meant to be mutually exclusive.
-			config: Config{
-				"apps": []Config{{
-					"sources": []Config{{
-						"desiredCommitFromStep": "fake-step",
-						"desiredRevision":       "fake-commit",
-					}},
-				}},
-			},
-			expectedProblems: []string{
-				"apps.0.sources.0: Must validate one and only one schema",
-			},
-		},
-		{
 			name: "targetRevision=true with desiredCommitFromStep and desiredRevision unspecified",
 			config: Config{
 				"apps": []Config{{
@@ -209,25 +194,6 @@ func Test_argoCDUpdater_validate(t *testing.T) {
 			},
 			expectedProblems: []string{
 				"apps.0.sources.0.helm.images.0: value is required",
-			},
-		},
-		{
-			name: "helm images repoURL specified with invalid update value",
-			// The value is more constrained when the repoURL is specified.
-			config: Config{
-				"apps": []Config{{
-					"sources": []Config{{
-						"helm": Config{
-							"images": []Config{{
-								"repoURL": "fake-image",
-								"value":   "bogus",
-							}},
-						},
-					}},
-				}},
-			},
-			expectedProblems: []string{
-				"apps.0.sources.0.helm.images.0.value: Does not match pattern",
 			},
 		},
 		{
@@ -314,45 +280,6 @@ func Test_argoCDUpdater_validate(t *testing.T) {
 			},
 		},
 		{
-			name: "kustomize images digest and useDigest=true are both specified",
-			// These are meant to be mutually exclusive.
-			config: Config{
-				"apps": []Config{{
-					"sources": []Config{{
-						"kustomize": Config{
-							"images": []Config{{
-								"digest":    "fake-digest",
-								"useDigest": true,
-							}},
-						},
-					}},
-				}},
-			},
-			expectedProblems: []string{
-				"apps.0.sources.0.kustomize.images.0: Must validate one and only one schema (oneOf)",
-			},
-		},
-		{
-			name: "kustomize images tag and useDigest=true are both specified",
-			// These are meant to be mutually exclusive.
-			config: Config{
-				"apps": []Config{{
-					"sources": []Config{{
-						"kustomize": Config{
-							"images": []Config{{
-								"tag":       "fake-tag",
-								"useDigest": true,
-							}},
-						},
-					}},
-				}},
-			},
-			expectedProblems: []string{
-				"apps.0.sources.0.kustomize.images.0: Must validate one and only one schema (oneOf)",
-			},
-		},
-
-		{
 			name: "valid kitchen sink",
 			config: Config{
 				"apps": []Config{{
@@ -365,20 +292,6 @@ func Test_argoCDUpdater_validate(t *testing.T) {
 						"helm": Config{
 							"images": []Config{
 								{
-									"repoURL": "fake-image",
-									"key":     "fake-key",
-									"value":   Tag,
-								},
-								{
-									"repoURL": "another-fake-image",
-									"key":     "another-fake-key",
-									"value":   Tag,
-									"fromOrigin": Config{
-										"kind": Warehouse,
-										"name": "fake-warehouse",
-									},
-								},
-								{
 									"key":   "another-fake-key",
 									"value": "fake-tag",
 								},
@@ -387,27 +300,12 @@ func Test_argoCDUpdater_validate(t *testing.T) {
 						"kustomize": Config{
 							"images": []Config{
 								{
-									"repoURL": "fake-image",
-									"fromOrigin": Config{
-										"kind": Warehouse,
-										"name": "fake-warehouse",
-									},
-								},
-								{
 									"repoURL": "another-fake-image",
 									"digest":  "fake-digest",
 								},
 								{
 									"repoURL": "yet-another-fake-image",
 									"tag":     "fake-tag",
-								},
-								{
-									"repoURL":   "still-another-fake-image",
-									"useDigest": true,
-									"fromOrigin": Config{
-										"kind": Warehouse,
-										"name": "fake-warehouse",
-									},
 								},
 							},
 						},
@@ -516,9 +414,6 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 					return &argocd.Application{}, nil
 				},
 				buildDesiredSourcesFn: func(
-					context.Context,
-					*PromotionStepContext,
-					*ArgoCDUpdateConfig,
 					*ArgoCDAppUpdate,
 					[]string,
 					*argocd.Application,
@@ -628,9 +523,6 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 					return "", true, nil
 				},
 				buildDesiredSourcesFn: func(
-					context.Context,
-					*PromotionStepContext,
-					*ArgoCDUpdateConfig,
 					*ArgoCDAppUpdate,
 					[]string,
 					*argocd.Application,
@@ -668,9 +560,6 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 					return "", true, nil
 				},
 				buildDesiredSourcesFn: func(
-					context.Context,
-					*PromotionStepContext,
-					*ArgoCDUpdateConfig,
 					*ArgoCDAppUpdate,
 					[]string,
 					*argocd.Application,
@@ -727,9 +616,6 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 					}
 				}(),
 				buildDesiredSourcesFn: func(
-					context.Context,
-					*PromotionStepContext,
-					*ArgoCDUpdateConfig,
 					*ArgoCDAppUpdate,
 					[]string,
 					*argocd.Application,
@@ -844,58 +730,23 @@ func Test_argoCDUpdater_buildDesiredSources(t *testing.T) {
 		)
 	}{
 		{
-			name: "error applying update to source",
-			runner: &argocdUpdater{
-				applyArgoCDSourceUpdateFn: func(
-					context.Context,
-					*PromotionStepContext,
-					*ArgoCDUpdateConfig,
-					*ArgoCDAppSourceUpdate,
-					string,
-					argocd.ApplicationSource,
-				) (argocd.ApplicationSource, bool, error) {
-					return argocd.ApplicationSource{}, false, errors.New("something went wrong")
-				},
-			},
-			update: &ArgoCDAppUpdate{
-				Sources: []ArgoCDAppSourceUpdate{{}},
-			},
-			desiredRevisions: []string{"fake-version"},
-			app: &argocd.Application{
-				Spec: argocd.ApplicationSpec{
-					Source: &argocd.ApplicationSource{},
-				},
-			},
-			assertions: func(
-				t *testing.T,
-				desiredSources argocd.ApplicationSources,
-				err error,
-			) {
-				require.ErrorContains(t, err, "something went wrong")
-				require.Nil(t, desiredSources)
-			},
-		},
-		{
 			name: "applies updates to sources",
 			runner: &argocdUpdater{
 				applyArgoCDSourceUpdateFn: func(
-					_ context.Context,
-					_ *PromotionStepContext,
-					_ *ArgoCDUpdateConfig,
 					update *ArgoCDAppSourceUpdate,
 					_ string,
 					src argocd.ApplicationSource,
-				) (argocd.ApplicationSource, bool, error) {
+				) (argocd.ApplicationSource, bool) {
 					if update.RepoURL == "fake-chart-url" && update.Chart == "fake-chart" &&
 						src.RepoURL == "fake-chart-url" && src.Chart == "fake-chart" {
 						src.TargetRevision = "fake-version"
-						return src, true, nil
+						return src, true
 					}
 					if update.RepoURL == "fake-git-url" && src.RepoURL == "fake-git-url" {
 						src.TargetRevision = "fake-commit"
-						return src, true, nil
+						return src, true
 					}
-					return src, false, nil
+					return src, false
 				},
 			},
 			update: &ArgoCDAppUpdate{
@@ -938,9 +789,6 @@ func Test_argoCDUpdater_buildDesiredSources(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			desiredSources, err := testCase.runner.buildDesiredSources(
-				context.Background(),
-				&PromotionStepContext{},
-				&ArgoCDUpdateConfig{},
 				testCase.update,
 				testCase.desiredRevisions,
 				testCase.app,
@@ -1581,14 +1429,9 @@ func Test_argoCDUpdater_authorizeArgoCDAppUpdate(t *testing.T) {
 }
 
 func Test_argoCDUpdater_applyArgoCDSourceUpdate(t *testing.T) {
-	testOrigin := kargoapi.FreightOrigin{
-		Kind: kargoapi.FreightOriginKindWarehouse,
-		Name: "fake-warehouse",
-	}
 	testCases := []struct {
 		name            string
 		source          argocd.ApplicationSource
-		freight         []kargoapi.FreightReference
 		update          ArgoCDAppSourceUpdate
 		desiredRevision string
 		assertions      func(
@@ -1596,7 +1439,6 @@ func Test_argoCDUpdater_applyArgoCDSourceUpdate(t *testing.T) {
 			originalSource argocd.ApplicationSource,
 			updated bool,
 			updatedSource argocd.ApplicationSource,
-			err error,
 		)
 	}{
 		{
@@ -1612,9 +1454,7 @@ func Test_argoCDUpdater_applyArgoCDSourceUpdate(t *testing.T) {
 				originalSource argocd.ApplicationSource,
 				updated bool,
 				updatedSource argocd.ApplicationSource,
-				err error,
 			) {
-				require.NoError(t, err)
 				require.False(t, updated)
 				// Source should be entirely unchanged
 				require.Equal(t, originalSource, updatedSource)
@@ -1636,9 +1476,7 @@ func Test_argoCDUpdater_applyArgoCDSourceUpdate(t *testing.T) {
 				originalSource argocd.ApplicationSource,
 				updated bool,
 				updatedSource argocd.ApplicationSource,
-				err error,
 			) {
-				require.NoError(t, err)
 				require.True(t, updated)
 				// TargetRevision should be updated
 				require.Equal(t, "fake-commit", updatedSource.TargetRevision)
@@ -1665,9 +1503,7 @@ func Test_argoCDUpdater_applyArgoCDSourceUpdate(t *testing.T) {
 				originalSource argocd.ApplicationSource,
 				updated bool,
 				updatedSource argocd.ApplicationSource,
-				err error,
 			) {
-				require.NoError(t, err)
 				require.True(t, updated)
 				// TargetRevision should be updated
 				require.Equal(t, "fake-version", updatedSource.TargetRevision)
@@ -1682,18 +1518,12 @@ func Test_argoCDUpdater_applyArgoCDSourceUpdate(t *testing.T) {
 			source: argocd.ApplicationSource{
 				RepoURL: "fake-url",
 			},
-			freight: []kargoapi.FreightReference{{
-				Origin: testOrigin,
-				Images: []kargoapi.Image{{
-					RepoURL: "fake-image-url",
-					Tag:     "fake-tag",
-				}},
-			}},
 			update: ArgoCDAppSourceUpdate{
 				RepoURL: "fake-url",
 				Kustomize: &ArgoCDKustomizeImageUpdates{
 					Images: []ArgoCDKustomizeImageUpdate{{
 						RepoURL: "fake-image-url",
+						Tag:     "fake-tag",
 					}},
 				},
 			},
@@ -1702,16 +1532,14 @@ func Test_argoCDUpdater_applyArgoCDSourceUpdate(t *testing.T) {
 				originalSource argocd.ApplicationSource,
 				updated bool,
 				updatedSource argocd.ApplicationSource,
-				err error,
 			) {
-				require.NoError(t, err)
 				require.True(t, updated)
 				// Kustomize attributes should be updated
 				require.NotNil(t, updatedSource.Kustomize)
 				require.Equal(
 					t,
 					argocd.KustomizeImages{
-						argocd.KustomizeImage("fake-image-url:fake-tag"),
+						"fake-image-url:fake-tag",
 					},
 					updatedSource.Kustomize.Images,
 				)
@@ -1726,21 +1554,13 @@ func Test_argoCDUpdater_applyArgoCDSourceUpdate(t *testing.T) {
 			source: argocd.ApplicationSource{
 				RepoURL: "fake-url",
 			},
-			freight: []kargoapi.FreightReference{{
-				Origin: testOrigin,
-				Images: []kargoapi.Image{{
-					RepoURL: "fake-image-url",
-					Tag:     "fake-tag",
-				}},
-			}},
 			update: ArgoCDAppSourceUpdate{
 				RepoURL: "fake-url",
 				Helm: &ArgoCDHelmParameterUpdates{
 					Images: []ArgoCDHelmImageUpdate{
 						{
-							RepoURL: "fake-image-url",
-							Key:     "image",
-							Value:   ImageAndTag,
+							Key:   "image",
+							Value: "fake-image-url:fake-tag",
 						},
 					},
 				},
@@ -1750,9 +1570,7 @@ func Test_argoCDUpdater_applyArgoCDSourceUpdate(t *testing.T) {
 				originalSource argocd.ApplicationSource,
 				updated bool,
 				updatedSource argocd.ApplicationSource,
-				err error,
 			) {
-				require.NoError(t, err)
 				require.True(t, updated)
 				// Helm attributes should be updated
 				require.NotNil(t, updatedSource.Helm)
@@ -1778,71 +1596,27 @@ func Test_argoCDUpdater_applyArgoCDSourceUpdate(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			freight := kargoapi.FreightCollection{}
-			for _, ref := range testCase.freight {
-				freight.UpdateOrPush(ref)
-			}
 			stepCfg := &ArgoCDUpdateConfig{
 				Apps: []ArgoCDAppUpdate{{
-					FromOrigin: &AppFromOrigin{
-						Kind: Kind(testOrigin.Kind),
-						Name: testOrigin.Name,
-					},
 					Sources: []ArgoCDAppSourceUpdate{testCase.update},
 				}},
 			}
-			updatedSource, updated, err := runner.applyArgoCDSourceUpdate(
-				context.Background(),
-				&PromotionStepContext{
-					Freight: freight,
-				},
-				stepCfg,
+			updatedSource, updated := runner.applyArgoCDSourceUpdate(
 				&stepCfg.Apps[0].Sources[0],
 				testCase.desiredRevision,
 				testCase.source,
 			)
-			testCase.assertions(t, testCase.source, updated, updatedSource, err)
+			testCase.assertions(t, testCase.source, updated, updatedSource)
 		})
 	}
 }
 
 func Test_argoCDUpdater_buildKustomizeImagesForAppSource(t *testing.T) {
-	testOrigin := kargoapi.FreightOrigin{
-		Kind: kargoapi.FreightOriginKindWarehouse,
-		Name: "fake-warehouse",
-	}
-
-	freight := kargoapi.FreightCollection{}
-	freight.UpdateOrPush(kargoapi.FreightReference{
-		Origin: testOrigin,
-		Images: []kargoapi.Image{
-			{
-				RepoURL: "fake-url",
-				Tag:     "fake-tag",
-				Digest:  "fake-digest",
-			},
-			{
-				RepoURL: "another-fake-url",
-				Tag:     "another-fake-tag",
-				Digest:  "another-fake-digest",
-			},
-		},
-	})
-
 	stepCfg := &ArgoCDUpdateConfig{
 		Apps: []ArgoCDAppUpdate{{
 			Sources: []ArgoCDAppSourceUpdate{{
 				Kustomize: &ArgoCDKustomizeImageUpdates{
-					FromOrigin: &AppFromOrigin{
-						Kind: Kind(testOrigin.Kind),
-						Name: testOrigin.Name,
-					},
 					Images: []ArgoCDKustomizeImageUpdate{
-						{RepoURL: "fake-url"},
-						{
-							RepoURL:   "another-fake-url",
-							UseDigest: true,
-						},
 						{
 							RepoURL: "yet-another-fake-url",
 							Digest:  "fake-digest",
@@ -1851,6 +1625,11 @@ func Test_argoCDUpdater_buildKustomizeImagesForAppSource(t *testing.T) {
 							RepoURL: "still-another-fake-url",
 							Tag:     "fake-tag",
 						},
+						{
+							RepoURL: "another-fake-url",
+							NewName: "another-fake-name",
+							Tag:     "another-fake-tag",
+						},
 					},
 				},
 				RepoURL: "https://github.com/universe/42",
@@ -1858,93 +1637,31 @@ func Test_argoCDUpdater_buildKustomizeImagesForAppSource(t *testing.T) {
 		}},
 	}
 
-	result, err := (&argocdUpdater{}).
-		buildKustomizeImagesForAppSource(
-			context.Background(),
-			&PromotionStepContext{
-				Freight: freight,
-			},
-			stepCfg,
-			stepCfg.Apps[0].Sources[0].Kustomize,
-		)
-	require.NoError(t, err)
+	result := (&argocdUpdater{}).buildKustomizeImagesForAppSource(stepCfg.Apps[0].Sources[0].Kustomize)
 	require.Equal(
 		t,
 		argocd.KustomizeImages{
-			"fake-url:fake-tag",
-			"another-fake-url@another-fake-digest",
 			"yet-another-fake-url@fake-digest",
 			"still-another-fake-url:fake-tag",
+			"another-fake-url=another-fake-name:another-fake-tag",
 		},
 		result,
 	)
 }
 
 func Test_argoCDUpdater_buildHelmParamChangesForAppSource(t *testing.T) {
-	testOrigin := kargoapi.FreightOrigin{
-		Kind: kargoapi.FreightOriginKindWarehouse,
-		Name: "fake-warehouse",
-	}
-
-	freight := kargoapi.FreightCollection{}
-	freight.UpdateOrPush(kargoapi.FreightReference{
-		Origin: testOrigin,
-		Images: []kargoapi.Image{
-			{
-				RepoURL: "fake-url",
-				Tag:     "fake-tag",
-				Digest:  "fake-digest",
-			},
-			{
-				RepoURL: "second-fake-url",
-				Tag:     "second-fake-tag",
-				Digest:  "second-fake-digest",
-			},
-			{
-				RepoURL: "third-fake-url",
-				Tag:     "third-fake-tag",
-				Digest:  "third-fake-digest",
-			},
-			{
-				RepoURL: "fourth-fake-url",
-				Tag:     "fourth-fake-tag",
-				Digest:  "fourth-fake-digest",
-			},
-		},
-	})
-
 	stepCfg := &ArgoCDUpdateConfig{
 		Apps: []ArgoCDAppUpdate{{
 			Sources: []ArgoCDAppSourceUpdate{{
 				Helm: &ArgoCDHelmParameterUpdates{
-					FromOrigin: &AppFromOrigin{
-						Kind: Kind(testOrigin.Kind),
-						Name: testOrigin.Name,
-					},
 					Images: []ArgoCDHelmImageUpdate{
 						{
-							RepoURL: "fake-url",
-							Key:     "fake-key",
-							Value:   ImageAndTag,
-						},
-						{
-							RepoURL: "second-fake-url",
-							Key:     "second-fake-key",
-							Value:   Tag,
-						},
-						{
-							RepoURL: "third-fake-url",
-							Key:     "third-fake-key",
-							Value:   ImageAndDigest,
-						},
-						{
-							RepoURL: "fourth-fake-url",
-							Key:     "fourth-fake-key",
-							Value:   Digest,
-						},
-						{
-							Key:   "fifth-fake-key",
+							Key:   "first-fake-key",
 							Value: "fake-value",
+						},
+						{
+							Key:   "second-fake-key",
+							Value: "another-fake-value",
 						},
 					},
 				},
@@ -1952,24 +1669,12 @@ func Test_argoCDUpdater_buildHelmParamChangesForAppSource(t *testing.T) {
 		}},
 	}
 
-	result, err := (&argocdUpdater{}).
-		buildHelmParamChangesForAppSource(
-			context.Background(),
-			&PromotionStepContext{
-				Freight: freight,
-			},
-			stepCfg,
-			stepCfg.Apps[0].Sources[0].Helm,
-		)
-	require.NoError(t, err)
+	result := (&argocdUpdater{}).buildHelmParamChangesForAppSource(stepCfg.Apps[0].Sources[0].Helm)
 	require.Equal(
 		t,
 		map[string]string{
-			"fake-key":        "fake-url:fake-tag",
-			"second-fake-key": "second-fake-tag",
-			"third-fake-key":  "third-fake-url@third-fake-digest",
-			"fourth-fake-key": "fourth-fake-digest",
-			"fifth-fake-key":  "fake-value",
+			"first-fake-key":  "fake-value",
+			"second-fake-key": "another-fake-value",
 		},
 		result,
 	)

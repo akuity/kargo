@@ -7,12 +7,10 @@ type CommonDefs interface{}
 type ComposeOutput map[string]interface{}
 
 type ArgoCDUpdateConfig struct {
-	Apps       []ArgoCDAppUpdate `json:"apps"`
-	FromOrigin *AppFromOrigin    `json:"fromOrigin,omitempty"`
+	Apps []ArgoCDAppUpdate `json:"apps"`
 }
 
 type ArgoCDAppUpdate struct {
-	FromOrigin *AppFromOrigin `json:"fromOrigin,omitempty"`
 	// Specifies the name of an Argo CD Application resource to be updated.
 	Name string `json:"name"`
 	// Specifies the namespace of an Argo CD Application resource to be updated. If left
@@ -22,13 +20,6 @@ type ArgoCDAppUpdate struct {
 	Sources []ArgoCDAppSourceUpdate `json:"sources,omitempty"`
 }
 
-type AppFromOrigin struct {
-	// The kind of origin. Currently only 'Warehouse' is supported. Required.
-	Kind Kind `json:"kind"`
-	// The name of the origin. Required.
-	Name string `json:"name"`
-}
-
 type ArgoCDAppSourceUpdate struct {
 	// If applicable, identifies a specific chart within the Helm chart repository specified by
 	// the 'repoURL' field. When the source to be updated references a Helm chart repository,
@@ -36,22 +27,12 @@ type ArgoCDAppSourceUpdate struct {
 	// same fields in the source. i.e. Do not match the values of these two fields to your
 	// Warehouse; match them to the Application source you wish to update.
 	Chart string `json:"chart,omitempty"`
-	// Applicable only when 'repoURL' references a Git repository, this field references the
-	// 'commit' output from a previous step and uses it as the desired revision for the source.
-	// Mutually exclusive with 'desiredRevision'. If both are left undefined, the desired
-	// revision will be determined by Freight (if possible). Note that the source's
-	// 'targetRevision' will not be updated to this commit unless 'updateTargetRevision=true' is
-	// set. The utility of this field, on its own, is to specify the revision that the source
-	// should be observably synced to during a health check.
-	DesiredCommitFromStep string `json:"desiredCommitFromStep,omitempty"`
-	// Specifies the desired revision for the source. Mutually exclusive with
-	// 'desiredCommitFromStep'. If both are left undefined, the desired revision will be
-	// determined by Freight (if possible). Note that the source's 'targetRevision' will not be
-	// updated to this commit unless 'updateTargetRevision=true' is set. The utility of this
-	// field, on its own, is to specify the revision that the source should be observably synced
-	// to during a health check.
+	// Specifies the desired revision for the source. If left undefined, the desired revision
+	// will be determined by Freight (if possible). Note that the source's 'targetRevision' will
+	// not be updated to this commit unless 'updateTargetRevision=true' is set. The utility of
+	// this field, on its own, is to specify the revision that the source should be observably
+	// synced to during a health check.
 	DesiredRevision string                       `json:"desiredRevision,omitempty"`
-	FromOrigin      *AppFromOrigin               `json:"fromOrigin,omitempty"`
 	Helm            *ArgoCDHelmParameterUpdates  `json:"helm,omitempty"`
 	Kustomize       *ArgoCDKustomizeImageUpdates `json:"kustomize,omitempty"`
 	// With possible help from the 'chart' field, identifies which of an Argo CD Application's
@@ -61,26 +42,22 @@ type ArgoCDAppSourceUpdate struct {
 	// to your Warehouse; match them to the Application source you wish to update.
 	RepoURL string `json:"repoURL"`
 	// Indicates whether the source should be updated such that its 'targetRevision' field
-	// points directly at the desired revision. If set to true, exactly one of
-	// 'desiredCommitFromStep' or 'desiredRevision' must be specified.
+	// points directly at the desired revision. If set to true, 'desiredRevision' must be
+	// specified.
 	UpdateTargetRevision bool `json:"updateTargetRevision,omitempty"`
 }
 
 // Describes updates to an Argo CD Application source's Helm parameters.
 type ArgoCDHelmParameterUpdates struct {
-	FromOrigin *AppFromOrigin          `json:"fromOrigin,omitempty"`
-	Images     []ArgoCDHelmImageUpdate `json:"images"`
+	Images []ArgoCDHelmImageUpdate `json:"images"`
 }
 
 // Describes how to update a Helm parameter to reference a specific version of a container
 // image.
 type ArgoCDHelmImageUpdate struct {
-	FromOrigin *AppFromOrigin `json:"fromOrigin,omitempty"`
 	// Specifies a key within an Argo CD Application source's Helm parameters that is to be
 	// updated.
 	Key string `json:"key"`
-	// The URL of a container image repository.
-	RepoURL string `json:"repoURL,omitempty"`
 	// Specifies a new value for the setting within an Argo CD Application source's Helm
 	// parameters identified by the 'key' field.
 	Value string `json:"value"`
@@ -88,25 +65,20 @@ type ArgoCDHelmImageUpdate struct {
 
 // Describes updates to an Argo CD Application source's Kustomize images.
 type ArgoCDKustomizeImageUpdates struct {
-	FromOrigin *AppFromOrigin               `json:"fromOrigin,omitempty"`
-	Images     []ArgoCDKustomizeImageUpdate `json:"images,omitempty"`
+	Images []ArgoCDKustomizeImageUpdate `json:"images,omitempty"`
 }
 
 // Describes how to update a Kustomize image to reference a specific version of a container
 // image.
 type ArgoCDKustomizeImageUpdate struct {
-	// Digest of the image to set. Mutually exclusive with 'tag' and 'useDigest=true'.
-	Digest     string         `json:"digest,omitempty"`
-	FromOrigin *AppFromOrigin `json:"fromOrigin,omitempty"`
+	// Digest of the image to set. Mutually exclusive with 'tag'.
+	Digest string `json:"digest,omitempty"`
 	// Specifies a container image name override.
 	NewName string `json:"newName,omitempty"`
 	// The URL of a container image repository.
 	RepoURL string `json:"repoURL"`
-	// Tag of the image to set. Mutually exclusive with 'digest' and 'useDigest=true'.
+	// Tag of the image to set. Mutually exclusive with 'digest'.
 	Tag string `json:"tag,omitempty"`
-	// Specifies whether the image's digest should be used instead of its tag. Mutually
-	// exclusive with 'digest' and 'tag'.
-	UseDigest bool `json:"useDigest,omitempty"`
 }
 
 type CopyConfig struct {
@@ -141,32 +113,20 @@ type GitCloneConfig struct {
 }
 
 type Checkout struct {
-	// The branch to checkout. Mutually exclusive with 'commit', 'tag', and 'fromFreight=true'.
-	// If none of these are specified, the default branch is checked out.
+	// The branch to checkout. Mutually exclusive with 'commit' and 'tag'. If none of these are
+	// specified, the default branch is checked out.
 	Branch string `json:"branch,omitempty"`
-	// The commit to checkout. Mutually exclusive with 'branch', 'tag', and 'fromFreight=true'.
-	// If none of these are specified, the default branch is checked out.
+	// The commit to checkout. Mutually exclusive with 'branch' and 'tag''. If none of these are
+	// specified, the default branch is checked out.
 	Commit string `json:"commit,omitempty"`
 	// Indicates whether a new, empty orphan branch should be created if the branch does not
 	// already exist. Default is false.
 	Create bool `json:"create,omitempty"`
-	// Indicates whether the ID of a commit to check out may be obtained from Freight. A value
-	// of 'true' is mutually exclusive with 'branch', 'commit', and 'tag'. If none of these are
-	// specified, the default branch is checked out.
-	FromFreight bool                `json:"fromFreight,omitempty"`
-	FromOrigin  *CheckoutFromOrigin `json:"fromOrigin,omitempty"`
 	// The path where the repository should be checked out.
 	Path string `json:"path"`
-	// The tag to checkout. Mutually exclusive with 'branch', 'commit', and 'fromFreight=true'.
-	// If none of these are specified, the default branch is checked out.
+	// The tag to checkout. Mutually exclusive with 'branch' and 'commit'. If none of these are
+	// specified, the default branch is checked out.
 	Tag string `json:"tag,omitempty"`
-}
-
-type CheckoutFromOrigin struct {
-	// The kind of origin. Currently only 'Warehouse' is supported. Required.
-	Kind Kind `json:"kind"`
-	// The name of the origin. Required.
-	Name string `json:"name"`
 }
 
 type GitCommitConfig struct {
@@ -203,10 +163,7 @@ type GitOpenPRConfig struct {
 	RepoURL string `json:"repoURL"`
 	// The branch containing the changes to be merged. This branch must already exist and be up
 	// to date on the remote.
-	SourceBranch string `json:"sourceBranch,omitempty"`
-	// References the 'branch' output from a previous step. This step will use that value as the
-	// source branch.
-	SourceBranchFromStep string `json:"sourceBranchFromStep,omitempty"`
+	SourceBranch string `json:"sourceBranch"`
 	// The branch to which the changes should be merged. This branch must already exist and be
 	// up to date on the remote.
 	TargetBranch string `json:"targetBranch"`
@@ -237,10 +194,7 @@ type GitWaitForPRConfig struct {
 	// Indicates whether to skip TLS verification when cloning the repository. Default is false.
 	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty"`
 	// The number of the pull request to wait for.
-	PRNumber int64 `json:"prNumber,omitempty"`
-	// This field references the 'prNumber' output from a previous step and uses it as the
-	// number of the pull request to wait for.
-	PRNumberFromStep string `json:"prNumberFromStep,omitempty"`
+	PRNumber int64 `json:"prNumber"`
 	// The name of the Git provider to use. Currently only 'github', 'gitlab' and 'azure' are
 	// supported. Kargo will try to infer the provider if it is not explicitly specified.
 	Provider *Provider `json:"provider,omitempty"`
@@ -286,40 +240,13 @@ type HelmUpdateChartConfig struct {
 }
 
 type Chart struct {
-	FromOrigin *ChartFromOrigin `json:"fromOrigin,omitempty"`
 	// The name of the subchart, as defined in `Chart.yaml`.
 	Name string `json:"name"`
 	// The repository of the subchart, as defined in `Chart.yaml`. It also supports OCI charts
 	// using `oci://`.
 	Repository string `json:"repository"`
-	// The version of the subchart to update to. If not specified, a version referenced by the
-	// Freight is used.
-	Version string `json:"version,omitempty"`
-}
-
-type ChartFromOrigin struct {
-	// The kind of origin. Currently only 'Warehouse' is supported. Required.
-	Kind Kind `json:"kind"`
-	// The name of the origin. Required.
-	Name string `json:"name"`
-}
-
-type HelmUpdateImageConfig struct {
-	// A list of images which should receive updates.
-	Images []HelmUpdateImageConfigImage `json:"images"`
-	// The path at which the Helm values file can be found.
-	Path string `json:"path"`
-}
-
-type HelmUpdateImageConfigImage struct {
-	FromOrigin *ChartFromOrigin `json:"fromOrigin,omitempty"`
-	// The container image (without tag) at which the update is targeted.
-	Image string `json:"image"`
-	// The key in the Helm values file of which the value needs to be updated. For nested
-	// values, it takes a YAML dot notation path.
-	Key string `json:"key"`
-	// Specifies the new value for the specified key in the Helm values file.
-	Value string `json:"value"`
+	// The version of the subchart to update to.
+	Version string `json:"version"`
 }
 
 type HTTPConfig struct {
@@ -411,16 +338,14 @@ type KustomizeSetImageConfig struct {
 	// left unspecified, all images from the Freight collection will be set in the Kustomization
 	// file. Unless there is an ambiguous image name (for example, due to two Warehouses
 	// subscribing to the same repository), which requires manual configuration.
-	Images []KustomizeSetImageConfigImage `json:"images"`
+	Images []Image `json:"images"`
 	// Path to the directory containing the Kustomization file.
 	Path string `json:"path"`
 }
 
-type KustomizeSetImageConfigImage struct {
-	// Digest of the image to set in the Kustomization file. Mutually exclusive with 'tag' and
-	// 'useDigest=true'.
-	Digest     string           `json:"digest,omitempty"`
-	FromOrigin *ChartFromOrigin `json:"fromOrigin,omitempty"`
+type Image struct {
+	// Digest of the image to set in the Kustomization file. Mutually exclusive with 'tag'.
+	Digest string `json:"digest,omitempty"`
 	// Image name of the repository from which to pick the version. This is the image name Kargo
 	// is subscribed to, and produces Freight for.
 	Image string `json:"image"`
@@ -429,11 +354,8 @@ type KustomizeSetImageConfigImage struct {
 	// NewName for the image. This can be used to rename the container image name in the
 	// manifests.
 	NewName string `json:"newName,omitempty"`
-	// Tag of the image to set in the Kustomization file. Mutually exclusive with 'digest' and
-	// 'useDigest=true'.
+	// Tag of the image to set in the Kustomization file. Mutually exclusive with 'digest'.
 	Tag string `json:"tag,omitempty"`
-	// UseDigest specifies whether to use the digest of the image instead of the tag.
-	UseDigest bool `json:"useDigest,omitempty"`
 }
 
 type YAMLUpdateConfig struct {
@@ -449,13 +371,6 @@ type YAMLUpdate struct {
 	// The new value for the specified key.
 	Value string `json:"value"`
 }
-
-// The kind of origin. Currently only 'Warehouse' is supported. Required.
-type Kind string
-
-const (
-	Warehouse Kind = "Warehouse"
-)
 
 // The name of the Git provider to use. Currently only 'github', 'gitlab' and 'azure' are
 // supported. Kargo will try to infer the provider if it is not explicitly specified.

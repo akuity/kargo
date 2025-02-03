@@ -6,24 +6,6 @@
    "type": "object",
    "additionalProperties": false,
    "properties": {
-    "fromOrigin": {
-     "type": "object",
-     "additionalProperties": false,
-     "properties": {
-      "kind": {
-       "type": "string",
-       "description": "The kind of origin. Currently only 'Warehouse' is supported. Required.",
-       "enum": [
-        "Warehouse"
-       ]
-      },
-      "name": {
-       "type": "string",
-       "description": "The name of the origin. Required.",
-       "minLength": 1
-      }
-     }
-    },
     "name": {
      "type": "string",
      "description": "Specifies the name of an Argo CD Application resource to be updated.",
@@ -48,55 +30,14 @@
        },
        "desiredRevision": {
         "type": "string",
-        "description": "Specifies the desired revision for the source. Mutually exclusive with 'desiredCommitFromStep'. If both are left undefined, the desired revision will be determined by Freight (if possible). Note that the source's 'targetRevision' will not be updated to this commit unless 'updateTargetRevision=true' is set. The utility of this field, on its own, is to specify the revision that the source should be observably synced to during a health check.",
+        "description": "Specifies the desired revision for the source. If left undefined, the desired revision will be determined by Freight (if possible). Note that the source's 'targetRevision' will not be updated to this commit unless 'updateTargetRevision=true' is set. The utility of this field, on its own, is to specify the revision that the source should be observably synced to during a health check.",
         "minLength": 1
-       },
-       "desiredCommitFromStep": {
-        "type": "string",
-        "description": "Applicable only when 'repoURL' references a Git repository, this field references the 'commit' output from a previous step and uses it as the desired revision for the source. Mutually exclusive with 'desiredRevision'. If both are left undefined, the desired revision will be determined by Freight (if possible). Note that the source's 'targetRevision' will not be updated to this commit unless 'updateTargetRevision=true' is set. The utility of this field, on its own, is to specify the revision that the source should be observably synced to during a health check.",
-        "minLength": 1
-       },
-       "fromOrigin": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-         "kind": {
-          "type": "string",
-          "description": "The kind of origin. Currently only 'Warehouse' is supported. Required.",
-          "enum": [
-           "Warehouse"
-          ]
-         },
-         "name": {
-          "type": "string",
-          "description": "The name of the origin. Required.",
-          "minLength": 1
-         }
-        }
        },
        "helm": {
         "type": "object",
         "description": "Describes updates to an Argo CD Application source's Helm parameters.",
         "additionalProperties": false,
         "properties": {
-         "fromOrigin": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-           "kind": {
-            "type": "string",
-            "description": "The kind of origin. Currently only 'Warehouse' is supported. Required.",
-            "enum": [
-             "Warehouse"
-            ]
-           },
-           "name": {
-            "type": "string",
-            "description": "The name of the origin. Required.",
-            "minLength": 1
-           }
-          }
-         },
          "images": {
           "type": "array",
           "items": {
@@ -104,32 +45,9 @@
            "description": "Describes how to update a Helm parameter to reference a specific version of a container image.",
            "additionalProperties": false,
            "properties": {
-            "fromOrigin": {
-             "type": "object",
-             "additionalProperties": false,
-             "properties": {
-              "kind": {
-               "type": "string",
-               "description": "The kind of origin. Currently only 'Warehouse' is supported. Required.",
-               "enum": [
-                "Warehouse"
-               ]
-              },
-              "name": {
-               "type": "string",
-               "description": "The name of the origin. Required.",
-               "minLength": 1
-              }
-             }
-            },
             "key": {
              "type": "string",
              "description": "Specifies a key within an Argo CD Application source's Helm parameters that is to be updated.",
-             "minLength": 1
-            },
-            "repoURL": {
-             "type": "string",
-             "description": "The URL of a container image repository.",
              "minLength": 1
             },
             "value": {
@@ -146,24 +64,6 @@
         "description": "Describes updates to an Argo CD Application source's Kustomize images.",
         "additionalProperties": false,
         "properties": {
-         "fromOrigin": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-           "kind": {
-            "type": "string",
-            "description": "The kind of origin. Currently only 'Warehouse' is supported. Required.",
-            "enum": [
-             "Warehouse"
-            ]
-           },
-           "name": {
-            "type": "string",
-            "description": "The name of the origin. Required.",
-            "minLength": 1
-           }
-          }
-         },
          "images": {
           "type": "array",
           "items": {
@@ -173,25 +73,7 @@
            "properties": {
             "digest": {
              "type": "string",
-             "description": "Digest of the image to set. Mutually exclusive with 'tag' and 'useDigest=true'."
-            },
-            "fromOrigin": {
-             "type": "object",
-             "additionalProperties": false,
-             "properties": {
-              "kind": {
-               "type": "string",
-               "description": "The kind of origin. Currently only 'Warehouse' is supported. Required.",
-               "enum": [
-                "Warehouse"
-               ]
-              },
-              "name": {
-               "type": "string",
-               "description": "The name of the origin. Required.",
-               "minLength": 1
-              }
-             }
+             "description": "Digest of the image to set. Mutually exclusive with 'tag'."
             },
             "newName": {
              "type": "string",
@@ -205,11 +87,7 @@
             },
             "tag": {
              "type": "string",
-             "description": "Tag of the image to set. Mutually exclusive with 'digest' and 'useDigest=true'."
-            },
-            "useDigest": {
-             "type": "boolean",
-             "description": "Specifies whether the image's digest should be used instead of its tag. Mutually exclusive with 'digest' and 'tag'."
+             "description": "Tag of the image to set. Mutually exclusive with 'digest'."
             }
            }
           }
@@ -223,7 +101,7 @@
        },
        "updateTargetRevision": {
         "type": "boolean",
-        "description": "Indicates whether the source should be updated such that its 'targetRevision' field points directly at the desired revision. If set to true, exactly one of 'desiredCommitFromStep' or 'desiredRevision' must be specified."
+        "description": "Indicates whether the source should be updated such that its 'targetRevision' field points directly at the desired revision. If set to true, 'desiredRevision' must be specified."
        }
       }
      }
@@ -241,55 +119,14 @@
     },
     "desiredRevision": {
      "type": "string",
-     "description": "Specifies the desired revision for the source. Mutually exclusive with 'desiredCommitFromStep'. If both are left undefined, the desired revision will be determined by Freight (if possible). Note that the source's 'targetRevision' will not be updated to this commit unless 'updateTargetRevision=true' is set. The utility of this field, on its own, is to specify the revision that the source should be observably synced to during a health check.",
+     "description": "Specifies the desired revision for the source. If left undefined, the desired revision will be determined by Freight (if possible). Note that the source's 'targetRevision' will not be updated to this commit unless 'updateTargetRevision=true' is set. The utility of this field, on its own, is to specify the revision that the source should be observably synced to during a health check.",
      "minLength": 1
-    },
-    "desiredCommitFromStep": {
-     "type": "string",
-     "description": "Applicable only when 'repoURL' references a Git repository, this field references the 'commit' output from a previous step and uses it as the desired revision for the source. Mutually exclusive with 'desiredRevision'. If both are left undefined, the desired revision will be determined by Freight (if possible). Note that the source's 'targetRevision' will not be updated to this commit unless 'updateTargetRevision=true' is set. The utility of this field, on its own, is to specify the revision that the source should be observably synced to during a health check.",
-     "minLength": 1
-    },
-    "fromOrigin": {
-     "type": "object",
-     "additionalProperties": false,
-     "properties": {
-      "kind": {
-       "type": "string",
-       "description": "The kind of origin. Currently only 'Warehouse' is supported. Required.",
-       "enum": [
-        "Warehouse"
-       ]
-      },
-      "name": {
-       "type": "string",
-       "description": "The name of the origin. Required.",
-       "minLength": 1
-      }
-     }
     },
     "helm": {
      "type": "object",
      "description": "Describes updates to an Argo CD Application source's Helm parameters.",
      "additionalProperties": false,
      "properties": {
-      "fromOrigin": {
-       "type": "object",
-       "additionalProperties": false,
-       "properties": {
-        "kind": {
-         "type": "string",
-         "description": "The kind of origin. Currently only 'Warehouse' is supported. Required.",
-         "enum": [
-          "Warehouse"
-         ]
-        },
-        "name": {
-         "type": "string",
-         "description": "The name of the origin. Required.",
-         "minLength": 1
-        }
-       }
-      },
       "images": {
        "type": "array",
        "items": {
@@ -297,32 +134,9 @@
         "description": "Describes how to update a Helm parameter to reference a specific version of a container image.",
         "additionalProperties": false,
         "properties": {
-         "fromOrigin": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-           "kind": {
-            "type": "string",
-            "description": "The kind of origin. Currently only 'Warehouse' is supported. Required.",
-            "enum": [
-             "Warehouse"
-            ]
-           },
-           "name": {
-            "type": "string",
-            "description": "The name of the origin. Required.",
-            "minLength": 1
-           }
-          }
-         },
          "key": {
           "type": "string",
           "description": "Specifies a key within an Argo CD Application source's Helm parameters that is to be updated.",
-          "minLength": 1
-         },
-         "repoURL": {
-          "type": "string",
-          "description": "The URL of a container image repository.",
           "minLength": 1
          },
          "value": {
@@ -339,24 +153,6 @@
      "description": "Describes updates to an Argo CD Application source's Kustomize images.",
      "additionalProperties": false,
      "properties": {
-      "fromOrigin": {
-       "type": "object",
-       "additionalProperties": false,
-       "properties": {
-        "kind": {
-         "type": "string",
-         "description": "The kind of origin. Currently only 'Warehouse' is supported. Required.",
-         "enum": [
-          "Warehouse"
-         ]
-        },
-        "name": {
-         "type": "string",
-         "description": "The name of the origin. Required.",
-         "minLength": 1
-        }
-       }
-      },
       "images": {
        "type": "array",
        "items": {
@@ -366,25 +162,7 @@
         "properties": {
          "digest": {
           "type": "string",
-          "description": "Digest of the image to set. Mutually exclusive with 'tag' and 'useDigest=true'."
-         },
-         "fromOrigin": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-           "kind": {
-            "type": "string",
-            "description": "The kind of origin. Currently only 'Warehouse' is supported. Required.",
-            "enum": [
-             "Warehouse"
-            ]
-           },
-           "name": {
-            "type": "string",
-            "description": "The name of the origin. Required.",
-            "minLength": 1
-           }
-          }
+          "description": "Digest of the image to set. Mutually exclusive with 'tag'."
          },
          "newName": {
           "type": "string",
@@ -398,11 +176,7 @@
          },
          "tag": {
           "type": "string",
-          "description": "Tag of the image to set. Mutually exclusive with 'digest' and 'useDigest=true'."
-         },
-         "useDigest": {
-          "type": "boolean",
-          "description": "Specifies whether the image's digest should be used instead of its tag. Mutually exclusive with 'digest' and 'tag'."
+          "description": "Tag of the image to set. Mutually exclusive with 'digest'."
          }
         }
        }
@@ -416,7 +190,7 @@
     },
     "updateTargetRevision": {
      "type": "boolean",
-     "description": "Indicates whether the source should be updated such that its 'targetRevision' field points directly at the desired revision. If set to true, exactly one of 'desiredCommitFromStep' or 'desiredRevision' must be specified."
+     "description": "Indicates whether the source should be updated such that its 'targetRevision' field points directly at the desired revision. If set to true, 'desiredRevision' must be specified."
     }
    }
   },
@@ -425,24 +199,6 @@
    "description": "Describes updates to an Argo CD Application source's Helm parameters.",
    "additionalProperties": false,
    "properties": {
-    "fromOrigin": {
-     "type": "object",
-     "additionalProperties": false,
-     "properties": {
-      "kind": {
-       "type": "string",
-       "description": "The kind of origin. Currently only 'Warehouse' is supported. Required.",
-       "enum": [
-        "Warehouse"
-       ]
-      },
-      "name": {
-       "type": "string",
-       "description": "The name of the origin. Required.",
-       "minLength": 1
-      }
-     }
-    },
     "images": {
      "type": "array",
      "items": {
@@ -450,32 +206,9 @@
       "description": "Describes how to update a Helm parameter to reference a specific version of a container image.",
       "additionalProperties": false,
       "properties": {
-       "fromOrigin": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-         "kind": {
-          "type": "string",
-          "description": "The kind of origin. Currently only 'Warehouse' is supported. Required.",
-          "enum": [
-           "Warehouse"
-          ]
-         },
-         "name": {
-          "type": "string",
-          "description": "The name of the origin. Required.",
-          "minLength": 1
-         }
-        }
-       },
        "key": {
         "type": "string",
         "description": "Specifies a key within an Argo CD Application source's Helm parameters that is to be updated.",
-        "minLength": 1
-       },
-       "repoURL": {
-        "type": "string",
-        "description": "The URL of a container image repository.",
         "minLength": 1
        },
        "value": {
@@ -492,32 +225,9 @@
    "description": "Describes how to update a Helm parameter to reference a specific version of a container image.",
    "additionalProperties": false,
    "properties": {
-    "fromOrigin": {
-     "type": "object",
-     "additionalProperties": false,
-     "properties": {
-      "kind": {
-       "type": "string",
-       "description": "The kind of origin. Currently only 'Warehouse' is supported. Required.",
-       "enum": [
-        "Warehouse"
-       ]
-      },
-      "name": {
-       "type": "string",
-       "description": "The name of the origin. Required.",
-       "minLength": 1
-      }
-     }
-    },
     "key": {
      "type": "string",
      "description": "Specifies a key within an Argo CD Application source's Helm parameters that is to be updated.",
-     "minLength": 1
-    },
-    "repoURL": {
-     "type": "string",
-     "description": "The URL of a container image repository.",
      "minLength": 1
     },
     "value": {
@@ -531,24 +241,6 @@
    "description": "Describes updates to an Argo CD Application source's Kustomize images.",
    "additionalProperties": false,
    "properties": {
-    "fromOrigin": {
-     "type": "object",
-     "additionalProperties": false,
-     "properties": {
-      "kind": {
-       "type": "string",
-       "description": "The kind of origin. Currently only 'Warehouse' is supported. Required.",
-       "enum": [
-        "Warehouse"
-       ]
-      },
-      "name": {
-       "type": "string",
-       "description": "The name of the origin. Required.",
-       "minLength": 1
-      }
-     }
-    },
     "images": {
      "type": "array",
      "items": {
@@ -558,25 +250,7 @@
       "properties": {
        "digest": {
         "type": "string",
-        "description": "Digest of the image to set. Mutually exclusive with 'tag' and 'useDigest=true'."
-       },
-       "fromOrigin": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-         "kind": {
-          "type": "string",
-          "description": "The kind of origin. Currently only 'Warehouse' is supported. Required.",
-          "enum": [
-           "Warehouse"
-          ]
-         },
-         "name": {
-          "type": "string",
-          "description": "The name of the origin. Required.",
-          "minLength": 1
-         }
-        }
+        "description": "Digest of the image to set. Mutually exclusive with 'tag'."
        },
        "newName": {
         "type": "string",
@@ -590,11 +264,7 @@
        },
        "tag": {
         "type": "string",
-        "description": "Tag of the image to set. Mutually exclusive with 'digest' and 'useDigest=true'."
-       },
-       "useDigest": {
-        "type": "boolean",
-        "description": "Specifies whether the image's digest should be used instead of its tag. Mutually exclusive with 'digest' and 'tag'."
+        "description": "Tag of the image to set. Mutually exclusive with 'digest'."
        }
       }
      }
@@ -608,25 +278,7 @@
    "properties": {
     "digest": {
      "type": "string",
-     "description": "Digest of the image to set. Mutually exclusive with 'tag' and 'useDigest=true'."
-    },
-    "fromOrigin": {
-     "type": "object",
-     "additionalProperties": false,
-     "properties": {
-      "kind": {
-       "type": "string",
-       "description": "The kind of origin. Currently only 'Warehouse' is supported. Required.",
-       "enum": [
-        "Warehouse"
-       ]
-      },
-      "name": {
-       "type": "string",
-       "description": "The name of the origin. Required.",
-       "minLength": 1
-      }
-     }
+     "description": "Digest of the image to set. Mutually exclusive with 'tag'."
     },
     "newName": {
      "type": "string",
@@ -640,29 +292,7 @@
     },
     "tag": {
      "type": "string",
-     "description": "Tag of the image to set. Mutually exclusive with 'digest' and 'useDigest=true'."
-    },
-    "useDigest": {
-     "type": "boolean",
-     "description": "Specifies whether the image's digest should be used instead of its tag. Mutually exclusive with 'digest' and 'tag'."
-    }
-   }
-  },
-  "origin": {
-   "type": "object",
-   "additionalProperties": false,
-   "properties": {
-    "kind": {
-     "type": "string",
-     "description": "The kind of origin. Currently only 'Warehouse' is supported. Required.",
-     "enum": [
-      "Warehouse"
-     ]
-    },
-    "name": {
-     "type": "string",
-     "description": "The name of the origin. Required.",
-     "minLength": 1
+     "description": "Tag of the image to set. Mutually exclusive with 'digest'."
     }
    }
   }
@@ -676,24 +306,6 @@
     "type": "object",
     "additionalProperties": false,
     "properties": {
-     "fromOrigin": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-       "kind": {
-        "type": "string",
-        "description": "The kind of origin. Currently only 'Warehouse' is supported. Required.",
-        "enum": [
-         "Warehouse"
-        ]
-       },
-       "name": {
-        "type": "string",
-        "description": "The name of the origin. Required.",
-        "minLength": 1
-       }
-      }
-     },
      "name": {
       "type": "string",
       "description": "Specifies the name of an Argo CD Application resource to be updated.",
@@ -718,55 +330,14 @@
         },
         "desiredRevision": {
          "type": "string",
-         "description": "Specifies the desired revision for the source. Mutually exclusive with 'desiredCommitFromStep'. If both are left undefined, the desired revision will be determined by Freight (if possible). Note that the source's 'targetRevision' will not be updated to this commit unless 'updateTargetRevision=true' is set. The utility of this field, on its own, is to specify the revision that the source should be observably synced to during a health check.",
+         "description": "Specifies the desired revision for the source. If left undefined, the desired revision will be determined by Freight (if possible). Note that the source's 'targetRevision' will not be updated to this commit unless 'updateTargetRevision=true' is set. The utility of this field, on its own, is to specify the revision that the source should be observably synced to during a health check.",
          "minLength": 1
-        },
-        "desiredCommitFromStep": {
-         "type": "string",
-         "description": "Applicable only when 'repoURL' references a Git repository, this field references the 'commit' output from a previous step and uses it as the desired revision for the source. Mutually exclusive with 'desiredRevision'. If both are left undefined, the desired revision will be determined by Freight (if possible). Note that the source's 'targetRevision' will not be updated to this commit unless 'updateTargetRevision=true' is set. The utility of this field, on its own, is to specify the revision that the source should be observably synced to during a health check.",
-         "minLength": 1
-        },
-        "fromOrigin": {
-         "type": "object",
-         "additionalProperties": false,
-         "properties": {
-          "kind": {
-           "type": "string",
-           "description": "The kind of origin. Currently only 'Warehouse' is supported. Required.",
-           "enum": [
-            "Warehouse"
-           ]
-          },
-          "name": {
-           "type": "string",
-           "description": "The name of the origin. Required.",
-           "minLength": 1
-          }
-         }
         },
         "helm": {
          "type": "object",
          "description": "Describes updates to an Argo CD Application source's Helm parameters.",
          "additionalProperties": false,
          "properties": {
-          "fromOrigin": {
-           "type": "object",
-           "additionalProperties": false,
-           "properties": {
-            "kind": {
-             "type": "string",
-             "description": "The kind of origin. Currently only 'Warehouse' is supported. Required.",
-             "enum": [
-              "Warehouse"
-             ]
-            },
-            "name": {
-             "type": "string",
-             "description": "The name of the origin. Required.",
-             "minLength": 1
-            }
-           }
-          },
           "images": {
            "type": "array",
            "items": {
@@ -774,32 +345,9 @@
             "description": "Describes how to update a Helm parameter to reference a specific version of a container image.",
             "additionalProperties": false,
             "properties": {
-             "fromOrigin": {
-              "type": "object",
-              "additionalProperties": false,
-              "properties": {
-               "kind": {
-                "type": "string",
-                "description": "The kind of origin. Currently only 'Warehouse' is supported. Required.",
-                "enum": [
-                 "Warehouse"
-                ]
-               },
-               "name": {
-                "type": "string",
-                "description": "The name of the origin. Required.",
-                "minLength": 1
-               }
-              }
-             },
              "key": {
               "type": "string",
               "description": "Specifies a key within an Argo CD Application source's Helm parameters that is to be updated.",
-              "minLength": 1
-             },
-             "repoURL": {
-              "type": "string",
-              "description": "The URL of a container image repository.",
               "minLength": 1
              },
              "value": {
@@ -816,24 +364,6 @@
          "description": "Describes updates to an Argo CD Application source's Kustomize images.",
          "additionalProperties": false,
          "properties": {
-          "fromOrigin": {
-           "type": "object",
-           "additionalProperties": false,
-           "properties": {
-            "kind": {
-             "type": "string",
-             "description": "The kind of origin. Currently only 'Warehouse' is supported. Required.",
-             "enum": [
-              "Warehouse"
-             ]
-            },
-            "name": {
-             "type": "string",
-             "description": "The name of the origin. Required.",
-             "minLength": 1
-            }
-           }
-          },
           "images": {
            "type": "array",
            "items": {
@@ -843,25 +373,7 @@
             "properties": {
              "digest": {
               "type": "string",
-              "description": "Digest of the image to set. Mutually exclusive with 'tag' and 'useDigest=true'."
-             },
-             "fromOrigin": {
-              "type": "object",
-              "additionalProperties": false,
-              "properties": {
-               "kind": {
-                "type": "string",
-                "description": "The kind of origin. Currently only 'Warehouse' is supported. Required.",
-                "enum": [
-                 "Warehouse"
-                ]
-               },
-               "name": {
-                "type": "string",
-                "description": "The name of the origin. Required.",
-                "minLength": 1
-               }
-              }
+              "description": "Digest of the image to set. Mutually exclusive with 'tag'."
              },
              "newName": {
               "type": "string",
@@ -875,11 +387,7 @@
              },
              "tag": {
               "type": "string",
-              "description": "Tag of the image to set. Mutually exclusive with 'digest' and 'useDigest=true'."
-             },
-             "useDigest": {
-              "type": "boolean",
-              "description": "Specifies whether the image's digest should be used instead of its tag. Mutually exclusive with 'digest' and 'tag'."
+              "description": "Tag of the image to set. Mutually exclusive with 'digest'."
              }
             }
            }
@@ -893,29 +401,11 @@
         },
         "updateTargetRevision": {
          "type": "boolean",
-         "description": "Indicates whether the source should be updated such that its 'targetRevision' field points directly at the desired revision. If set to true, exactly one of 'desiredCommitFromStep' or 'desiredRevision' must be specified."
+         "description": "Indicates whether the source should be updated such that its 'targetRevision' field points directly at the desired revision. If set to true, 'desiredRevision' must be specified."
         }
        }
       }
      }
-    }
-   }
-  },
-  "fromOrigin": {
-   "type": "object",
-   "additionalProperties": false,
-   "properties": {
-    "kind": {
-     "type": "string",
-     "description": "The kind of origin. Currently only 'Warehouse' is supported. Required.",
-     "enum": [
-      "Warehouse"
-     ]
-    },
-    "name": {
-     "type": "string",
-     "description": "The name of the origin. Required.",
-     "minLength": 1
     }
    }
   }

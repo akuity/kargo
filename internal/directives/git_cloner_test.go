@@ -101,102 +101,12 @@ func Test_gitCloner_validate(t *testing.T) {
 			},
 		},
 		{
-			name: "branch is specified and fromFreight is true",
-			// These are meant to be mutually exclusive.
-			config: Config{
-				"checkout": []Config{{
-					"branch":      "fake-branch",
-					"fromFreight": true,
-				}},
-			},
-			expectedProblems: []string{
-				"checkout.0: Must validate one and only one schema",
-			},
-		},
-		{
-			name: "branch and fromOrigin are both specified",
-			// These are not meant to be used together.
-			config: Config{
-				"checkout": []Config{{
-					"branch":     "fake-branch",
-					"fromOrigin": Config{},
-				}},
-			},
-			expectedProblems: []string{
-				"checkout.0: Must validate one and only one schema",
-			},
-		},
-		{
 			name: "commit and tag are both specified",
 			// These are meant to be mutually exclusive.
 			config: Config{
 				"checkout": []Config{{
 					"commit": "fake-commit",
 					"tag":    "fake-tag",
-				}},
-			},
-			expectedProblems: []string{
-				"checkout.0: Must validate one and only one schema",
-			},
-		},
-		{
-			name: "commit is specified and fromFreight is true",
-			// These are meant to be mutually exclusive.
-			config: Config{
-				"checkout": []Config{{
-					"commit":      "fake-commit",
-					"fromFreight": true,
-				}},
-			},
-			expectedProblems: []string{
-				"checkout.0: Must validate one and only one schema",
-			},
-		},
-		{
-			name: "commit and fromOrigin are both specified",
-			// These are not meant to be used together.
-			config: Config{
-				"checkout": []Config{{
-					"commit":     "fake-commit",
-					"fromOrigin": Config{},
-				}},
-			},
-			expectedProblems: []string{
-				"checkout.0: Must validate one and only one schema",
-			},
-		},
-		{
-			name: "tag is specified and fromFreight is true",
-			// These are meant to be mutually exclusive.
-			config: Config{
-				"checkout": []Config{{
-					"tag":         "fake-tag",
-					"fromFreight": true,
-				}},
-			},
-			expectedProblems: []string{
-				"checkout.0: Must validate one and only one schema",
-			},
-		},
-		{
-			name: "tag and fromOrigin are both specified",
-			// These are not meant to be used together.
-			config: Config{
-				"checkout": []Config{{
-					"tag":        "fake-tag",
-					"fromOrigin": Config{},
-				}},
-			},
-			expectedProblems: []string{
-				"checkout.0: Must validate one and only one schema",
-			},
-		},
-		{
-			name: "just fromOrigin is specified",
-			// This is not meant to be used without fromFreight=true.
-			config: Config{
-				"checkout": []Config{{
-					"fromOrigin": Config{},
 				}},
 			},
 			expectedProblems: []string{
@@ -212,62 +122,51 @@ func Test_gitCloner_validate(t *testing.T) {
 						"path": "/fake/path/0",
 					},
 					{
-						"branch":      "",
-						"commit":      "",
-						"tag":         "",
-						"fromFreight": false,
-						"path":        "/fake/path/1",
+						"branch": "",
+						"commit": "",
+						"tag":    "",
+						"path":   "/fake/path/1",
 					},
 					{
 						"branch": "fake-branch",
 						"path":   "/fake/path/2",
 					},
 					{
-						"branch":      "fake-branch",
-						"commit":      "",
-						"tag":         "",
-						"fromFreight": false,
-						"path":        "/fake/path/3",
+						"branch": "fake-branch",
+						"commit": "",
+						"tag":    "",
+						"path":   "/fake/path/3",
 					},
 					{
 						"commit": "fake-commit",
 						"path":   "/fake/path/4",
 					},
 					{
-						"branch":      "",
-						"commit":      "fake-commit",
-						"tag":         "",
-						"fromFreight": false,
-						"path":        "/fake/path/5",
+						"branch": "",
+						"commit": "fake-commit",
+						"tag":    "",
+						"path":   "/fake/path/5",
 					},
 					{
 						"tag":  "fake-tag",
 						"path": "/fake/path/6",
 					},
 					{
-						"branch":      "",
-						"commit":      "",
-						"tag":         "fake-tag",
-						"fromFreight": false,
-						"path":        "/fake/path/7",
+						"branch": "",
+						"commit": "",
+						"tag":    "fake-tag",
+						"path":   "/fake/path/7",
 					},
 					{
-						"fromFreight": true,
-						"path":        "/fake/path/8",
+						"path": "/fake/path/8",
 					},
 					{
-						"branch":      "",
-						"commit":      "",
-						"tag":         "",
-						"fromFreight": true,
-						"path":        "/fake/path/9",
+						"branch": "",
+						"commit": "",
+						"tag":    "",
+						"path":   "/fake/path/9",
 					},
 					{
-						"fromFreight": true,
-						"fromOrigin": Config{
-							"kind": "Warehouse",
-							"name": "fake-warehouse",
-						},
 						"path": "/fake/path/10",
 					},
 				},
