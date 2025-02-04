@@ -57,7 +57,7 @@ it's [CLI](../../05-installing-the-cli/index.md), you will need to log in first.
     <TabItem value="cli" label="Using the CLI">
 
     * To log in as the admin user, run the following command and
-    then enter the admin user's password when prompted:
+      then enter the admin user's password when prompted:
 
       ```shell
       kargo login https://kargo.example.com --admin
