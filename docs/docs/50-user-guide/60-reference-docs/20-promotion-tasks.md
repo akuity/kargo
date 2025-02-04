@@ -106,10 +106,10 @@ spec:
       steps:
       - task:
           name: my-task
-          # Step-level vars override inherited values
-          vars:
-          - name: targetBranch
-            value: feature-branch
+        # Step-level vars override inherited values
+        vars:
+        - name: targetBranch
+          value: feature-branch
 ```
 
 ### Task Steps
