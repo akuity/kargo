@@ -1,0 +1,132 @@
+.----------------------------------------------------------------------------------.
+|     _                            _                    _          _ _             |
+|    | | ____ _ _ __ __ _  ___    | |__  _   _     __ _| | ___   _(_) |_ _   _     |
+|    | |/ / _` | '__/ _` |/ _ \   | '_ \| | | |   / _` | |/ / | | | | __| | | |    |
+|    |   < (_| | | | (_| | (_) |  | |_) | |_| |  | (_| |   <| |_| | | |_| |_| |    |
+|    |_|\_\__,_|_|  \__, |\___/   |_.__/ \__, |   \__,_|_|\_\\__,_|_|\__|\__, |    |
+|                   |___/                |___/                           |___/     |
+'----------------------------------------------------------------------------------'
+
+{{- if .Values.api.enabled }}
+
+{{- $https := false }}
+{{- $selfSignedCert := false }}
+{{- $url := "" }}
+
+Ready to get started?
+
+{{- if .Values.api.ingress.enabled }}
+
+{{- $https = or .Values.api.ingress.tls.enabled .Values.api.tls.terminatedUpstream }}
+{{- $selfSignedCert = and .Values.api.ingress.tls.enabled .Values.api.ingress.tls.selfSignedCert (not .Values.api.tls.terminatedUpstream) }}
+{{- $url = include "kargo.api.baseURL" . }}
+
+⚙️  You've configured Kargo's API server to be accessible through an Ingress
+   controller.
+
+   If DNS and your Ingress controller are configured correctly, the Kargo API
+   server is reachable at:
+
+{{- else if eq .Values.api.service.type "LoadBalancer" }}
+
+{{- $https = or .Values.api.tls.enabled .Values.api.tls.terminatedUpstream }}
+{{- $selfSignedCert = and .Values.api.tls.enabled .Values.api.tls.selfSignedCert (not .Values.api.tls.terminatedUpstream) }}
+{{- $url = include "kargo.api.baseURL" . }}
+
+⚙️  You've configured Kargo's API server with a Service of type LoadBalancer.
+
+   If DNS and your load balancer are configured correctly, the Kargo API server is
+   reachable at:
+
+{{- else if eq .Values.api.service.type "NodePort" }}
+
+{{- $https = or .Values.api.tls.enabled }}
+{{- $selfSignedCert = and .Values.api.tls.enabled .Values.api.tls.selfSignedCert }}
+{{- $nodePort := 3000 }}
+{{- if .Values.api.service.nodePort }}
+{{- $nodePort = .Values.api.service.nodePort }}
+{{- end }}
+{{- if $https }}
+{{- $url = printf "https://localhost:%d" $nodePort -}}
+{{- else }}
+{{- $url = printf "http://localhost:%d" $nodePort -}}
+{{- end }}
+
+⚙️  You've configured Kargo's API server with a Service of type NodePort.
+
+{{- if .Values.api.service.nodePort }}
+
+   The Kargo API server is reachable on port {{ $nodePort }} of any reachable node in
+   your Kubernetes cluster.
+
+   If a node in a local cluster were addressable as localhost, the Kargo API
+   server would be reachable at:
+
+{{- else }}
+
+   You did not specify a node port in your configuration.
+
+   You may determine the node port Kubernetes selected for you by running:
+
+      kubectl get service --namespace {{ .Release.Namespace }} kargo-api -o jsonpath='{.spec.ports[0].nodePort}'
+
+   If a node in a local cluster were addressable as localhost, and the node port
+   assigned by Kubernetes were {{ $nodePort }}, the Kargo API server would be reachable at:
+
+{{- end }}
+
+{{- else if eq .Values.api.service.type "ClusterIP" }}
+
+{{- $https = or .Values.api.tls.enabled }}
+{{- $selfSignedCert = and .Values.api.tls.enabled .Values.api.tls.selfSignedCert }}
+{{- $localPort := 3000 -}}
+{{- if $https }}
+{{- $url = printf "https://localhost:%d" $localPort -}}
+{{- else }}
+{{- $url = printf "http://localhost:%d" $localPort -}}
+{{- end }}
+
+⚙️  You've configured Kargo's API server with a Service of type ClusterIP, so the
+   Kargo API server can only be reached through port forwarding.
+
+   For instance, to forward traffic from localhost:{{ $localPort }} to the API server:
+
+      kubectl port-forward --namespace {{ .Release.Namespace }} svc/kargo-api {{ $localPort }}:{{ if .Values.api.tls.enabled }}443{{ else }}80{{ end }}
+
+   While port-forwarding is in effect, the address of your API server will be:
+
+{{- end }}
+
+      {{ $url }}
+
+🖥️  To access Kargo's web-based UI, navigate to the address above.
+
+{{- if and $https $selfSignedCert }}
+
+⚠️  Your API server is using a self-signed certificate and you should expect a
+   warning from your browser. You may safely disregard this.
+{{- end }}
+
+⬇️  The latest version of the Kargo CLI can be downloaded from:
+
+      https://github.com/akuity/kargo/releases/latest
+
+🛠️  To log in using the Kargo CLI:
+
+{{- $loginFlags := "--sso" -}}
+{{- if not .Values.api.oidc.enabled }}
+{{- $loginFlags = "--admin" -}}
+{{- end }}
+{{- if and $https $selfSignedCert }}
+{{- $loginFlags = printf "%s --insecure-skip-tls-verify" $loginFlags -}}
+{{- end }}
+
+      kargo login {{ $url }} {{ $loginFlags }}
+
+{{- end }}
+
+📚  Kargo documentation can be found at:
+
+      https://docs.kargo.io
+
+🙂  Happy promoting!
