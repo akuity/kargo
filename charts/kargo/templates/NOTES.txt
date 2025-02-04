@@ -1,0 +1,44 @@
+Thank you for installing {{ .Chart.Name }}
+
+## Accessing the Kargo API Server
+The Kargo API server has been deployed. You can access it using one of the following methods:
+
+1. **Port Forwarding**:
+ ```bash
+ kubectl port-forward service/kargo-api -n kargo 8080:443
+ ```
+and then open the browser on http://localhost:8080 and accept the certificate
+
+2. **Ingress**:
+{{- if .Values.api.ingress.enabled }}
+The API server is accessible via Ingress at:
+http{{ if .Values.api.ingress.tls.enabled }}s{{ end }}://{{ .Values.api.host }}
+{{- else }}
+To enable Ingress, set api.ingress.enabled=true in your values file.
+Read the Ingress docs: https://docs.kargo.io/operator-guide/advanced-installation/common-configurations#api-ingress
+{{- end }}
+
+3. **LoadBalancer**:
+{{- if eq .Values.api.service.type "LoadBalancer" }}
+Retrieve the external IP with:
+```bash
+kubectl get svc {{ .Release.Name }}-api -n {{ .Release.Namespace }} -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
+```
+{{- else }}
+To expose the API server via LoadBalancer, set api.service.type=LoadBalancer in your values file.
+{{- end }}
+
+After reaching the UI the first time you can login with username: admin and the password set during the installation.
+
+## Authentication
+
+{{- if .Values.api.adminAccount.enabled}}
+An admin account is enabled. Ensure you have securely configured the admin password hash and token signing key.
+Read how to secure the Admin Account: https://docs.kargo.io/operator-guide/security/secure-configuration
+{{- else }}
+Admin account is disabled.
+{{- end }}
+
+OIDC Authentication: {{ if .Values.api.oidc.enabled }}Enabled{{ else }}Disabled{{ end }}
+
+For more information, refer to the Kargo documentation: https://docs.kargo.io/
