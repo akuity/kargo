@@ -16,7 +16,7 @@ refer to
 [Advanced Installation](./20-advanced-installation/10-advanced-with-helm.md)
 for steps, and
 [Common Configurations](./20-advanced-installation/30-common-configurations.md)
-for guidance on configuration Kargo to address common operational concerns.
+for guidance on configuring Kargo to address common operational concerns.
 
 If you're a developer looking for instructions for installing the Kargo CLI, see
 [Installing the CLI](../50-user-guide/05-installing-the-cli/index.md).
