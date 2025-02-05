@@ -375,6 +375,18 @@ func TestWarehouse_ListFreight(t *testing.T) {
 				require.Equal(t, "fake-freight-2", freight[1].Name)
 			},
 		},
+		{
+			name: "failure with invalid AvailabilityStrategy",
+			opts: &ListWarehouseFreightOptions{
+				AvailabilityStrategy: "Invalid",
+				ApprovedFor:          testStage,
+				VerifiedIn:           []string{testUpstreamStage, testUpstreamStage2},
+				VerifiedBefore:       &metav1.Time{Time: time.Now().Add(-1 * time.Hour)},
+			},
+			assertions: func(t *testing.T, freight []Freight, err error) {
+				require.ErrorContains(t, err, "unsupported AvailabilityStrategy")
+			},
+		},
 	}
 
 	testScheme := k8sruntime.NewScheme()
